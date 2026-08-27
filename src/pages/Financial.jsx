@@ -17,13 +17,17 @@ import PaymentModal from "@/components/financial/PaymentModal";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { DollarSign } from "lucide-react";
 import PageFullscreen from "@/components/admin/PageFullscreen";
+import { useSecureRole } from "@/components/hooks/useSecureRole";
+import { ADMIN_ROLES } from "@/lib/roles";
 
 const FinancialExpense = plataforma.entities.FinancialExpense;
 
 export default function Financial() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
+  // 🔴 PONTO 122 (21/08/2026) — antes esta tela conferia role sozinha, direto
+  // do localStorage, e só aceitava a string exata 'admin' — o dono, logado
+  // como 'super_admin', ficava bloqueado. Migrado pro hook já existente e já
+  // usado em outras telas admin (valida contra o banco, não só o cache local).
+  const { status: authStatus } = useSecureRole(ADMIN_ROLES, 'Home');
   const [showForm, setShowForm] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -36,36 +40,6 @@ export default function Financial() {
   const [activeTab, setActiveTab] = useState("expenses");
   const [paymentExpense, setPaymentExpense] = useState(null);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      // 1. Verifica usuário customizado (AppUser) no localStorage
-      const saved = localStorage.getItem("currentUser");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setCurrentUser(parsed);
-        if (parsed.role === "admin") {
-          setIsAdmin(true);
-          setAuthChecked(true);
-          return;
-        }
-      }
-      // 2. Fallback: verifica usuário da plataforma Base44
-      try {
-        const platformUser = await plataforma.auth.me();
-        if (platformUser) {
-          setCurrentUser(platformUser);
-          if (platformUser.role === "admin") {
-            setIsAdmin(true);
-          }
-        }
-      } catch (e) {
-        // Não logado na plataforma
-      }
-      setAuthChecked(true);
-    };
-    checkAuth();
-  }, []);
 
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ["financial-expenses"],
@@ -97,18 +71,14 @@ export default function Financial() {
     });
   }, [expenses]);
 
-  if (!authChecked) {
+  if (authStatus !== 'authorized') {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-400 text-lg">Acesso restrito a administradores.</p>
+        {authStatus === 'unauthorized' ? (
+          <p className="text-gray-400 text-lg">Acesso restrito a administradores.</p>
+        ) : (
+          <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+        )}
       </div>
     );
   }

@@ -15,6 +15,7 @@ import ImportarLotesModal from '@/components/lotes/ImportarLotesModal';
 import AtualizarGradesModal from '@/components/lotes/AtualizarGradesModal';
 import ArrematantesModal from '@/components/lotes/ArrematantesModal';
 import { useSecureRole } from '@/components/hooks/useSecureRole';
+import { ADMIN_ROLES } from '@/lib/roles';
 
 const Auction = plataforma.entities.Auction;
 const AppUser = plataforma.entities.AppUser;
@@ -132,8 +133,9 @@ function LoteDetalheModal({ lote, onClose }) {
 }
 
 export default function GestaoLotes() {
-    // SEGURANÇA: Valida role 'admin' diretamente no banco de dados
-    const { status: authStatus } = useSecureRole(['admin'], 'SistemaDeArremate');
+    // SEGURANÇA: Valida role admin diretamente no banco de dados.
+    // 🔴 PONTO 122 (21/08/2026) — só aceitava 'admin', excluindo 'super_admin'.
+    const { status: authStatus } = useSecureRole(ADMIN_ROLES, 'SistemaDeArremate');
 
     const [lotes, setLotes] = useState([]);
     const [investidores, setInvestidores] = useState([]);

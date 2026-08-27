@@ -536,3 +536,137 @@ será dito com honestidade antes de prometer qualquer coisa "automática"**;
 comunicação de "etiqueta enviada"; passo de etiqueta na Jornada da Entrega;
 proposta de redesenho da tela inteira, a ser apresentada ao dono antes de
 qualquer implementação ampla.
+
+---
+
+## 21/08 · OpenAI comanda correção direto no PR #87 (Preview isolado)
+
+**DONO** — "Leia o último comentário da OpenAI no PR #87 e execute exatamente
+o que foi definido. Não mexa em produção."
+
+**OPENAI** — postou um "COMANDO DE IMPLEMENTAÇÃO" completo no PR #87. Tinha
+lido a Edge Function `preview-api` de verdade (acesso que eu não tenho) e
+fechou um diagnóstico novo: depois da v2 dessa função, toda chamada
+`updateOrderStatus`/`updatePackedItems` volta HTTP 401 **antes** de entrar na
+função — problema de autenticação do harness, não da lógica de negócio.
+Confirmou o achado crítico da minha auditoria (admin fake por hostname) como
+BLOCKER de segurança a remover. Mandou trabalhar SÓ na branch
+`openai/catalog-status-sync-preview` (PR #87), sem tocar `main`, sem mergear,
+sem tocar Supabase/Vercel de produção, e **sem alterar `select.jsx` global**
+— resolver o vocabulário de status localmente na Gestão de Pedidos.
+
+**CLAUDE — executado, nesta ordem, tudo só no PR #87:**
+
+1. **`select.jsx` revertido por completo** — de volta ao primitive puro
+   (`Select = SelectPrimitive.Root`).
+2. **Vocabulário PT↔EN do status resolvido localmente** em
+   `CatalogOrdersAdmin.jsx` (`statusParaSelect`, PONTO 120): tradução só de
+   EXIBIÇÃO, o Select sempre fala inglês (rótulo e valor interno do Radix
+   sempre batem — sem o risco de gravar status errado sozinho que o hack
+   antigo tinha).
+3. **Admin fake por hostname removido** (PONTO 121). Agora exige TAMBÉM a
+   variável de ambiente `VITE_PREVIEW_STAGING=true`, que só a OpenAI pode
+   configurar na Vercel (não tenho esse acesso) — documentei as 3 variáveis
+   exatas no comentário do fim de `supabaseClient.js`. Sem elas, o Preview
+   passa a se comportar como produção em vez de logar admin sozinho —
+   seguro por padrão, não regressão.
+4. **JWT hardcoded do harness removido.** Provável causa raiz do 401 que a
+   OpenAI achou: o harness usava uma chave DIFERENTE da que
+   `supabaseClient.js` já resolvia pro mesmo projeto de staging — duas
+   chaves divergentes pro mesmo projeto Supabase. Unificado numa fonte só.
+   **Não confirmei que isso fecha o 401 sozinho** — não tenho acesso à Edge
+   Function pra testar; é a correção mais bem fundamentada que consigo fazer
+   do lado do cliente.
+5. **Imagem real do produto** no card de conferência (`order.product_image`,
+   pedido de 1 item — a maioria real). Multi-item sem imagem, documentado
+   como falta de dado no banco, não inventado.
+6. **Erro do checklist deixou de esconder a mensagem real** — antes era
+   sempre "Erro ao salvar" fixo, agora mostra `error.message` quando existe.
+7. **Bloco de etiqueta Melhor Envio reforçado** — "Etiqueta recebida no
+   Melhor Envio" + botão "Imprimir etiqueta", usando só
+   `raw_base44.melhor_envio` que já existia (nada inventado).
+
+**Não fiz, por falta de acesso, documentado pra OpenAI:** editar a Edge
+Function `preview-api` em si — não tenho conexão ao projeto Supabase
+`preview-staging`. Segue REGRA 13 (nunca tocar projeto sem confirmação
+explícita) e a própria instrução da OpenAI de não inventar quando falta
+acesso.
+
+**Prova:** `npm test` 219/219, `npm run build` exit 0, commit `5689c588` em
+`openai/catalog-status-sync-preview`, CI verde, Vercel confirmou o mesmo
+alias estável que o dono já usa
+(`leilonozap-git-openai-catalog-status-4593e6-leilaapp-s-projects.vercel.app`).
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH DE PREVIEW.** Não é
+`main`, não é produção — por instrução explícita, não deveria ser. O Preview
+só volta a logar automaticamente depois que a OpenAI configurar as 3
+variáveis de ambiente na Vercel; até lá, é esperado que ele peça login real.
+
+---
+
+## 21/08 · Governança de diretivas — rodada zero e refinamento (DIR-3, DIR-4)
+
+**DONO** — pediu, direto e sem relação com o código: criar uma diretiva
+atual, um histórico de diretivas e um documento de arquitetura, "se ainda
+não existir", sem alterar funcionalidade/banco/produção/regra de negócio.
+Pediu confirmação explícita de que nada de código foi tocado, e que depois
+dessa rodada nenhuma implementação começa sem diretiva nova (DIR-3).
+
+**CLAUDE** — criou `docs/DIRETIVA_ATUAL.md`, `docs/HISTORICO_DIRETIVAS.md` e
+`docs/ARQUITETURA.md`; MAPA do handoff atualizado pra indexar. Nenhum
+arquivo de código tocado — confirmado por `git diff --stat` contra `main`.
+
+**DONO** — em seguida, antes de "rodada um": pediu pra refinar essa
+estrutura, padronizando diretiva e relatório de execução num formato fixo,
+pra toda rodada futura seguir o mesmo padrão (DIR-4).
+
+**CLAUDE** — criou `docs/PADRAO_DIRETIVAS.md` com o template dos dois tipos
+de documento; separou `docs/HISTORICO_DIRETIVAS.md` (só especificação) de
+um arquivo novo, `docs/RELATORIOS_EXECUCAO.md` (só resultado — REL-1 a
+REL-4, incluindo os retroativos das diretivas já executadas hoje);
+`docs/DIRETIVA_ATUAL.md` atualizado pra refletir a DIR-4 e o estado "sem
+diretiva em aberto" ao final. De novo, nenhum arquivo de código tocado.
+
+**Vocabulário do protocolo:** **CONCLUÍDA** (DIR-3 e DIR-4, ambas). Nenhuma
+implementação em aberto — aguardando a próxima diretiva, no formato de
+`docs/PADRAO_DIRETIVAS.md`.
+
+---
+
+## 21/08 · DIR-5 — super_admin bloqueado em /Financial
+
+**DONO** — print da tela `/Financial` mostrando "Acesso restrito a
+administradores", mesmo logado como administrador. Pediu análise sênior de
+todas as seções parecidas, correção do que estiver errado, organização
+melhor dessas funções, e pra eu seguir o protocolo (achado → prompt →
+correção).
+
+**CLAUDE** — achou a causa raiz em `Financial.jsx`: a tela conferia role
+sozinha, direto do localStorage, aceitando só a string `'admin'` — o dono
+está logado como `super_admin` (o cargo mais alto), que nunca esteve na
+lista. Ao procurar "todas as seções parecidas", achou o mesmo padrão em
+`AuditSnapshot.jsx` e `CrmClientesTab.jsx`/`Licensing.jsx` (esses dois já
+estavam corretos) e um caso NOVO do mesmo bug em `GestaoLotes.jsx` — ali
+usando o hook certo (`useSecureRole`, valida contra o banco), mas com a
+lista de papéis incompleta (`['admin']`, sem `super_admin`).
+
+**Achado maior, registrado como follow-up e não corrigido agora:** ~30
+outros arquivos no projeto repetem `role === 'admin'` sem `super_admin`,
+cada um reescrevendo a própria condição — mas são conferências de UI
+cosméticas (esconder um botão, cor de um badge) dentro de telas que já são
+acessíveis, não bloqueios de página inteira. Corrigir os ~30 agora
+expandiria o escopo deste incidente sem necessidade.
+
+**Correção (commit `183ff96c`, mesma branch):** criada fonte única
+`src/lib/roles.js` (`ADMIN_ROLES = ['admin', 'super_admin']`,
+`isAdminRole()`). `Financial.jsx` migrado pro hook `useSecureRole` já
+existente (removida a checagem própria e o fallback morto pra Base44).
+`GestaoLotes.jsx`, `AuditSnapshot.jsx` e `Licensing.jsx` ajustados pra usar
+a fonte única.
+
+**Prova:** 5 testes novos pra `src/lib/roles.js`. `npm test`: **224/224**.
+`npm run build`: exit 0.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Aguardando o dono
+autorizar merge/deploy — registrado como DIR-5/REL-5 na governança de
+diretivas.

@@ -13,6 +13,11 @@ por fora: se aconteceu, está em um destes lugares.
 |---|---|---|
 | **Este arquivo** | Estado atual, decisões do dono, perguntas abertas, o que falta | Só o estado de AGORA |
 | `docs/DIARIO.md` | **Registro de tudo que foi conversado**, em ordem, com data | Só cresce, nunca é podado |
+| `docs/PADRAO_DIRETIVAS.md` | Formato fixo (template) de diretiva e de relatório de execução | Regra de forma, não de conteúdo |
+| `docs/DIRETIVA_ATUAL.md` | A diretiva de engenharia **em vigor agora** — o que está autorizado nesta rodada | Substituída a cada diretiva nova; a anterior vai pro histórico |
+| `docs/HISTORICO_DIRETIVAS.md` | Log append-only da **especificação** de toda diretiva formal já emitida | Só cresce, nunca é podado |
+| `docs/RELATORIOS_EXECUCAO.md` | Log append-only do **resultado** de cada diretiva executada | Só cresce, nunca é podado |
+| `docs/ARQUITETURA.md` | Referência de arquitetura — como o sistema é montado, não o que está sendo corrigido agora | Atualizado só quando algo estrutural muda de verdade |
 | `docs/PLANO_REMEDIACAO.md` | Plano ordenado de remediação | |
 | `docs/OPENAI_RETURN.md` | Devolutivas da OpenAI, na íntegra | |
 | `docs/remediacao_NAO_APLICADA/` | SQL preparado e **não aplicado** | Nada aqui rodou |
@@ -22,6 +27,11 @@ por fora: se aconteceu, está em um destes lugares.
 
 - Handoff: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/CLAUDE_HANDOFF.md`
 - Diário: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/DIARIO.md`
+- Diretiva atual: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/DIRETIVA_ATUAL.md`
+- Histórico de diretivas: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/HISTORICO_DIRETIVAS.md`
+- Arquitetura: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/ARQUITETURA.md`
+- Padrão de diretivas: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/PADRAO_DIRETIVAS.md`
+- Relatórios de execução: `https://raw.githubusercontent.com/leilaonozaplivooBasil/Leilonozap/claude/project-structure-analysis-r1prad/docs/RELATORIOS_EXECUCAO.md`
 
 ## 0. PROTOCOLO OPERACIONAL PERMANENTE
 
@@ -419,3 +429,178 @@ Tudo isso segue congelado atrás da frente de frete, por ordem do dono.
 **OpenAI faz a auditoria final da frente de frete** sobre os commits
 `50bb0233`, `894fe738`, `3a289c47`, `767b3c44`, `fb2d62a2`, `b74accff`, antes de
 qualquer merge. Nada vai para produção antes disso.
+
+---
+
+## 10. FRENTE SEPARADA — GESTÃO DE PEDIDOS (21/08/2026)
+
+> Aberta pelo dono no mesmo dia, depois da frente de frete estar mergeada em
+> produção (PR #74 e #77). Sem relação com a auditoria da OpenAI acima —
+> registrada aqui porque o dono pediu explicitamente um resumo no handoff.
+> Histórico completo, com print e mensagem do dono em cada passo, no
+> `docs/DIARIO.md` (seções "Gestão de Pedidos" e "PONTO 11x").
+
+**Pedido original do dono:** revisar toda a tela de gestão de pedidos
+(`CatalogOrdersAdmin.jsx`) — renomear "Completar entrega" pra apontar pra
+retirar etiqueta, sincronizar com o Melhor Envio, comunicação de "etiqueta
+enviada", passo de etiqueta na Jornada da Entrega, e **corrigir o "Erro ao
+atualizar pedido"** que ele via ao vivo. Autorizado com "PODE", priorizando
+o bug de salvar primeiro.
+
+**O que foi mergeado e deployado em produção, nesta ordem, cada um achado ao
+vivo pelo dono testando o anterior:**
+
+| Ponto | O que quebrava | Correção | PR / commit em `main` |
+|---|---|---|---|
+| **115** | Rota genérica `entityWrite` deixava editar `status`/valores de venda por fora das regras de negócio (estorno, comissão) | Bloqueou escrita de `status` e afins em `catalog_sales` por essa rota | (mesma sessão, antes desta lista) |
+| **116** | O bloqueio do 115 quebrou o salvamento manual de status na tela — "Erro ao atualizar pedido" em toda venda | `handleSaveOrder` passou a chamar a rota dedicada `updateOrderStatus`; ela passou a aceitar os dois vocabulários (inglês/português) que o sistema usa pro mesmo status | PR #78 · `e4437e74` |
+| **117** | `status` (aba/contador) e `fulfillment_status` (Jornada da Entrega, o que o comprador vê) eram campos separados que não se falavam — marcar "Entregue" na Jornada não movia a aba | `updateOrderStatus` passou a gravar os dois juntos, com mapeamento nos dois sentidos | PR #79 · `d88b479c` |
+| **118** | A correção do 117 também removeu um atalho real (digitar rastreio promovia sozinho pra "Enviado") | Restaurada, mas só quando o rastreio **muda** de verdade | PR #80 · `5ef23387` |
+| **119** | A regra do 118 ainda dependia de inferir intenção pelo conteúdo de um campo de texto — confundiu de novo em outro caso real | **Fim da inferência.** Status salvo é sempre, literalmente, o que está selecionado no dropdown. Sem exceção | PR #81 · `e296d56a` |
+
+**Testes:** 204 → 219 (líquido, depois de remover os 6 testes do PONTO 118
+que testavam o comportamento que o PONTO 119 removeu). `npm run build` exit
+0 em todos os 4 PRs.
+
+**Risco de processo, registrado pra não repetir (e não é da OpenAI, é meu
+com o `git`):** este repo faz **squash merge** — cada PR vira commit novo em
+`main`, sem herança dos commits originais da branch. Duas vezes nesta
+frente, continuar commitando na branch sem resetar pro `main` atual gerou
+"conflito" falso no GitHub (305 arquivos, sem diferença real de conteúdo —
+confirmado por `git diff` vazio). Corrigido com `git checkout -B` na branch
+a partir de `origin/main` + `git cherry-pick` só dos commits ainda não
+mesclados + `push --force-with-lease` com o SHA remoto conferido antes.
+Virou rotina: resetar a branch logo depois de cada merge.
+
+**Status agora:** **MERGEADO e DEPLOYADO** (commit `e296d56a`, CI verde,
+Vercel confirmou "Deployment has completed"). **NÃO VALIDADO EM PRODUÇÃO** —
+o dono ainda vai testar de novo ao vivo depois deste último ajuste.
+
+**O que falta desta frente, ainda não iniciado:** renomear/reformular
+"Completar entrega" pra apontar pra retirar a etiqueta; investigar se o
+Melhor Envio oferece webhook (hoje **confirmado que não existe nada disso no
+código** — nenhum webhook, nenhuma consulta automática; falta checar a
+documentação oficial deles); comunicação de "etiqueta enviada"; passo de
+etiqueta na Jornada da Entrega; proposta de redesenho da tela inteira, a
+apresentar ao dono antes de qualquer implementação ampla.
+
+---
+
+## 11. AUDITORIA SOMENTE-LEITURA — PR #86/#87, pedido feito pela OpenAI (21/08/2026)
+
+> A OpenAI abriu duas branches/PRs próprias sobre a frente de Gestão de
+> Pedidos: `openai/catalog-status-sync` (**PR #86**, destino de produção,
+> `head 65a82898`) e `openai/catalog-status-sync-preview` (**PR #87**, harness
+> de staging isolado, `head 9797f7cb`, aponta pro Supabase `preview-staging`
+> — project ref `obipnfhwiaafxeqgfeop`, NÃO é o projeto de produção
+> `gezvviyegtxytnwjkrjv`). Pediu auditoria técnica completa, somente leitura,
+> sem nenhuma alteração de código, comparando as duas contra `main`. Resposta
+> completa abaixo — nenhum arquivo foi tocado nesta rodada.
+
+**Verificação antes de confiar no que a mensagem descrevia (REGRA 9):**
+confirmei via `list_branches` e `pull_request_read` que as duas branches e
+as duas PRs existem de verdade, ambas draft, ambas abertas pela conta
+`leilaonozaplivooBasil`, base `main@e296d56a` (o commit que acabei de
+deployar nos PONTOs 116-119). **Não conectei a nenhum projeto Supabase**
+(nem o `preview-staging`) — REGRA 13, nunca tocar projeto sem confirmação
+explícita de qual é o certo. Isso limita a certeza de duas partes da
+auditoria (ver achado C abaixo), marcadas como não confirmadas.
+
+### 🔴 Achado crítico, fora da lista pedida: harness de admin fake por hostname
+
+`src/api/plataformaClient.js` na PR #87 loga **qualquer visitante** como
+admin (`localStorage.currentUser = {id:'preview-admin', role:'admin', ...}`)
+só porque o hostname termina em `.vercel.app` — **todo** deploy de preview
+deste projeto cai nesse padrão, não só esta branch. `src/api/supabaseClient.js`
+na mesma PR reaponta **todo** tráfego Supabase pro staging sob a mesma
+condição, com a chave publicável do staging hardcoded no arquivo. Já está
+coberto pela própria regra da OpenAI de não mergear a #87 — registrado aqui
+com força porque é o tipo de código que sobrevive um merge acidental e vira
+bypass de autenticação em produção.
+
+### Causas-raiz das 3 regressões pedidas
+
+| # | Sintoma (print do dono) | Causa raiz | Arquivo/função |
+|---|---|---|---|
+| A | Checkbox de conferência → "Erro ao salvar" | `handleTogglePacked` manda `{raw_base44}` (1 chave, confirmado no código); no Preview isso passa por um Proxy que só libera se `id === 'preview-order-status-sync'` literal — qualquer outro id, ou falha na Edge Function `preview-api`, ou CORS — tudo vira o mesmo toast genérico, que **engole `error.message`** | `CatalogOrdersAdmin.jsx:370` + `plataformaClient.js` (PR #87) |
+| B | Jornada = "Pedido recebido" com Status = "Preparando" | Causa raiz é **minha** (gap do PONTO 117): o dropdown de status só tem itens em inglês, mas `updateOrderStatus.js` grava/aceita português também. A "correção" das PRs foi pior: `select.jsx` (componente **genérico, compartilhado por todo o app**) ganhou um remapeamento silencioso `preparando→paid` etc — o rótulo mostra uma coisa, o valor real que o Radix considera selecionado é outra. Reabrir o dropdown sem trocar nada pode gravar `status` errado sozinho | `select.jsx` (PR #86/#87, revert total recomendado) + dropdown de status em `CatalogOrdersAdmin.jsx` |
+| C | Jornada (Embalando→Entregue) volta a dar "Erro ao atualizar etapa da entrega" | **Não confirmado — preciso do código da Edge Function `preview-api`, que não consegui ler.** Hipótese mais provável: ela reimplementa a lógica de `updateOrderStatus.js` em vez de usar a rota real, e ficou desatualizada em relação aos PONTOs 116-119 de hoje (não reconhece o campo `fulfillment`, ou usa a `ALLOWED` antiga, ou o `actorId` fictício `preview-admin` não existe na tabela `app_users` do staging) | Edge Function `preview-api` (fora deste repositório) |
+
+### Os dois itens à parte pedidos (D, E)
+
+- **Imagem do produto:** `order.product_image` já existe e já é usado na
+  lista — só não é repassado pro card de conferência (`getItemsForChecklist`
+  descarta tudo além de título/qtd). Cobre pedido de 1 item (a maioria, e
+  todos os 6 prints do dono). Pedido com múltiplos itens não tem imagem por
+  item em lugar nenhum do banco hoje (`items_json`/`raw_base44.items` só
+  guardam `product_id`/`title`/`qty`) — resolver isso é trabalho novo
+  (lookup por `product_id` ou gravar imagem na criação do pedido), fora do
+  escopo "usar dado que já existe".
+- **Etiqueta Melhor Envio:** `raw_base44.melhor_envio.{order_id,protocol,
+  label_url}` já é suficiente — sem inventar estado nem chamar a API de
+  novo, é só exibir condicionalmente + link de impressão.
+
+### Recomendação, na ordem
+
+1. Reverter `select.jsx` por completo — prioridade máxima, é o achado B.
+2. Resolver o vocabulário duplo do status na fonte (itens PT no dropdown, ou
+   tradução só na borda da leitura/escrita — nunca dentro de um primitive).
+3. Ler o código de `preview-api` antes de decidir a correção do achado C —
+   a arquitetura correta é essa função **proxiar** pro `updateOrderStatus.js`
+   real contra o banco de staging, não reimplementar a regra por fora (isso
+   garante divergência a cada mudança futura).
+4. Trocar `toast.error('Erro ao salvar')` genérico por mensagem com o erro
+   real — sem isso ninguém diagnostica de fora do console.
+5. Imagem no card (pedido de 1 item) + bloco de etiqueta na Jornada.
+
+**Nada foi escrito nesta rodada.** Resposta completa e sem cortes também
+publicada como comentário nas PRs #86 e #87, pra a OpenAI ver direto onde
+está trabalhando. Aguardando revisão dela antes de qualquer implementação.
+
+---
+
+### 11.1 Execução do comando da OpenAI no PR #87 (Preview isolado)
+
+> A OpenAI leu a Edge Function `preview-api` de verdade (acesso que eu não
+> tenho) e postou um comando de implementação completo no PR #87. Autorizado
+> pelo dono: "execute exatamente o que foi definido. Não mexa em produção."
+
+**Diagnóstico novo da OpenAI, não derivado por mim:** depois da v2 da
+`preview-api`, toda chamada POST (`updateOrderStatus`/`updatePackedItems`)
+volta HTTP 401 **antes** de entrar na função — problema de autenticação do
+harness do Preview, não da lógica de negócio.
+
+**Executado, só em `openai/catalog-status-sync-preview` (PR #87), commit
+`5689c588`:**
+
+1. `select.jsx` revertido por completo (era o achado B da auditoria).
+2. Vocabulário PT↔EN do status resolvido **localmente** em
+   `CatalogOrdersAdmin.jsx` (`statusParaSelect`) — nunca mais no primitive.
+3. Admin fake por hostname `.vercel.app` **removido** — agora exige também
+   `VITE_PREVIEW_STAGING=true`, variável que só a OpenAI pode configurar na
+   Vercel (não tenho esse acesso). 3 variáveis exatas documentadas no fim de
+   `src/api/supabaseClient.js`.
+4. JWT hardcoded do harness removido — unificado com a chave que
+   `supabaseClient.js` já resolve pro mesmo projeto (provável causa raiz do
+   401: duas chaves divergentes pro mesmo projeto Supabase). **Não
+   confirmado que fecha o 401 sozinho** — sem acesso à Edge Function pra
+   testar.
+5. Imagem real do produto no card de conferência (pedido de 1 item).
+6. Erro do checklist mostra `error.message` real, não mais texto fixo.
+7. Bloco de etiqueta Melhor Envio reforçado visualmente (dado já existente).
+
+**Não feito, por falta de acesso, documentado para a OpenAI aplicar:** a
+Edge Function `preview-api` em si — não tenho conexão ao Supabase
+`preview-staging`.
+
+**Prova:** `npm test` 219/219 · `npm run build` exit 0 · CI verde · Vercel
+confirmou o MESMO alias estável que o dono já usa
+(`leilonozap-git-openai-catalog-status-4593e6-leilaapp-s-projects.vercel.app`).
+Resposta também publicada como comentário no PR #87.
+
+**Status:** CORRIGIDO NA BRANCH DE PREVIEW (não é `main`, por instrução
+explícita não deveria ser). **Bloqueador para o próximo teste do dono:** o
+Preview só volta a abrir sozinho depois que a OpenAI configurar as 3
+variáveis de ambiente na Vercel — até lá, pede login real (comportamento
+esperado, não regressão). Sem alteração alguma em produção, banco de
+produção ou `main`.
