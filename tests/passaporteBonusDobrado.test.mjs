@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 const motor    = ler('../api/_lib/passaporteCoupon.js');
 const finalize = ler('../api/_lib/finalizeAuctionCore.js');
+const modeloA  = ler('../api/_lib/passaporteBonus.js');
 const carteira = ler('../src/components/wallet/WalletDrawer.jsx');
 const beneficios = ler('../src/components/passaporte/BeneficiosPassaporte.jsx');
 const cartao   = ler('../src/components/wallet/PassaporteCard.jsx');
@@ -79,6 +80,26 @@ test('a Carteira nao diz "esperando o leilao" para bonus que ja foi pago', () =>
   const bloco = motor.slice(motor.indexOf('export async function statusCupons'));
   assert.match(bloco, /if \(c\.bonus_creditado_em\) return s;/,
     'tem_bloqueado voltou a contar cupom do modelo antigo — a tela mente de novo');
+});
+
+// ---------------------------------------------------------------------------
+// O espelho do bug, do lado de COBRAR
+// ---------------------------------------------------------------------------
+test('so recolhe da carteira bonus que REALMENTE foi pago na carteira', () => {
+  // 'creditado' e um rotulo, e rotulo pode estar errado. Achado no banco um cupom do
+  // modelo NOVO marcado como 'creditado' com bonus_creditado_em vazio — o bonus nunca
+  // foi pra carteira. Se a pessoa arrematasse, o recolhimento tirava ate R$ 50,00 do
+  // saldo dela pra devolver um bonus que ela nunca recebeu.
+  const fn = corpo(modeloA, 'export async function recolherBonusPorArremate(');
+  assert.match(fn, /status=eq\.creditado/, 'o filtro de status sumiu');
+  assert.match(fn, /bonus_creditado_em=not\.is\.null/,
+    'voltou a recolher da carteira por rotulo, sem provar que o bonus foi pago');
+});
+
+test('o recolhimento continua limitado ao saldo que existe', () => {
+  // Trava antiga que nao pode cair junto: recolher nunca deixa saldo negativo.
+  assert.match(modeloA, /const aplicar = delta < 0 \? -money\(Math\.min\(Math\.abs\(delta\), atual\)\) : money\(delta\)/,
+    'o recolhimento pode voltar a deixar saldo negativo');
 });
 
 // ---------------------------------------------------------------------------

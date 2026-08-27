@@ -142,8 +142,24 @@ export async function recolherBonusPorArremate(userId, auctionId = null, valorAr
     const alvo = money((base * PCT_BONUS) / 100);
     if (alvo <= 0) return { recolhido: 0, reason: 'alvo_zero' };
 
+    // 🔴 27/08/2026 — O ESPELHO DO BUG DO PAGAMENTO EM DOBRO, DO LADO DE COBRAR.
+    //
+    // Este filtro era só `status=eq.creditado`. Só que 'creditado' é um RÓTULO, e rótulo
+    // pode estar errado: achado no banco um cupom do modelo NOVO (depósito de R$ 500 pago
+    // em 25/08, seis dias depois da virada) marcado como 'creditado' com
+    // bonus_creditado_em VAZIO — ou seja, o bônus NUNCA foi pra carteira dessa pessoa.
+    //
+    // Se ela arrematasse qualquer coisa, este recolhimento encontrava o cupom pelo rótulo
+    // e tirava até R$ 50,00 do saldo_disponivel dela para "devolver" um bônus que ela
+    // jamais recebeu. Dinheiro sumindo da carteira de um cliente, sem contrapartida.
+    //
+    // A prova de que o bônus foi pago na carteira não é o status: é bonus_creditado_em,
+    // que só o creditarBonusPassaporte preenche. O filtro passa a exigir os dois — o
+    // rótulo E a marca. Isso só ESTREITA o que é recolhido: nenhum cupom do modelo A
+    // legítimo deixa de ser recolhido, porque todos eles têm essa coluna preenchida.
     const rows = await (await sb(
-      `passaporte_coupons?select=id,valor_credito,bonus_recolhido_valor&user_id=eq.${enc(uid)}&status=eq.creditado&order=created_at.asc`
+      `passaporte_coupons?select=id,valor_credito,bonus_recolhido_valor&user_id=eq.${enc(uid)}` +
+      `&status=eq.creditado&bonus_creditado_em=not.is.null&order=created_at.asc`
     )).json();
     const lista = Array.isArray(rows) ? rows : [];
     if (!lista.length) return { recolhido: 0, reason: 'sem_bonus_ativo' };
