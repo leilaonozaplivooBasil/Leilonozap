@@ -31,9 +31,30 @@ test('o documento esta na hierarquia do VERDADE.md', () => {
 });
 
 test('o documento declara a regra do dono, sem suavizar', () => {
+  // As tres frases que o dono ditou em 27/08/2026, por escrito e em audio.
   assert.match(doc, /Jamais o cliente pode usar/);
-  assert.match(doc, /Nao haverá unificação|Não haverá unificação/,
-    'a decisao de recusar a unificacao sumiu do documento');
+  assert.match(doc, /O depósito da carteira é somente pro leilão/);
+  assert.match(doc, /seu dinheiro volta com mais 10%/,
+    'sumiu o desfecho da regra: o valor do lance volta acrescido de 10%');
+});
+
+test('o documento admite onde o sistema NAO cumpre a regra', () => {
+  // Documento que so descreve a regra e esconde a divergencia serve para
+  // discussao, nao para operar. A secao 7 tem que continuar existindo.
+  assert.match(doc, /ONDE O SISTEMA NÃO CUMPRE ESTA REGRA HOJE/);
+  assert.match(doc, /O principal do lance não chega na Loja Virtual/);
+  assert.match(doc, /A Loja Virtual não aceita saldo de carteira/);
+});
+
+test('a frase errada do HANDOFF-SKILLS nao voltou, nas duas copias', () => {
+  // Ela dizia "bonus automatico de 10% na carteira" — modelo que acabou em 19/08.
+  for (const rel of ['../docs/HANDOFF-SKILLS.md', '../src/docs/HANDOFF-SKILLS.md']) {
+    const t = ler(rel);
+    assert.ok(!/Passaporte de Lances \(produto com bônus automático de 10% na carteira\)/.test(t),
+      `voltou a descricao errada do Passaporte em ${rel}`);
+    assert.match(t, /DOCUMENTO-OFICIAL-PASSAPORTE\.md/,
+      `${rel} parou de apontar para o documento oficial`);
+  }
 });
 
 test('as travas declaradas batem com o codigo — libera so no encerramento', () => {
@@ -49,7 +70,7 @@ test('as travas declaradas batem com o codigo — modelo antigo isolado', () => 
 });
 
 test('as travas declaradas batem com o codigo — ser coberto nao libera', () => {
-  assert.match(doc, /Ser coberto \*\*não\*\* libera nada/);
+  assert.match(doc, /Ser coberto \*\*não\*\* libera nada para a loja/);
   const bidHold = ler('../api/_lib/bidHold.js');
   assert.ok(!/^\s*[^/]*\bliberarCupomPassaporte\(/m.test(bidHold),
     'voltou a liberar credito quando o cliente e apenas coberto');
