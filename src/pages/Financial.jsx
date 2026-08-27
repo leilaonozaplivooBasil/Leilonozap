@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { plataforma } from "@/api/plataformaClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List } from "lucide-react";
 import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
+import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
 
 import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards";
 import ExpenseTable from "@/components/financial/ExpenseTable";
@@ -61,15 +62,24 @@ export default function Financial() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["financial-expenses"] }),
   });
 
-  // Auto-detect overdue
+  // 🔴 PONTO 123 (21/08/2026) — auto-detecção de vencido disparava um PATCH
+  // por gasto, TODA vez que a lista recarregava (a cada refetch/invalidação),
+  // mesmo pra gastos que ela mesma já tinha marcado numa carga anterior —
+  // porque nenhuma chamada avisava a lista local que o status tinha mudado
+  // (faltava invalidateQueries), então o próximo refetch via a mesma lista
+  // "pendente" de novo e repetia o PATCH. `jaMarcadosRef` lembra, na sessão
+  // atual, quais IDs já foram marcados, pra nunca reenviar o mesmo PATCH duas
+  // vezes; e o `invalidateQueries` no final faz a tela refletir na hora, sem
+  // precisar de F5.
+  const jaMarcadosRef = useRef(new Set());
   useEffect(() => {
-    const today = startOfDay(new Date());
-    expenses.forEach(exp => {
-      if (exp.payment_status === "pendente" && isBefore(startOfDay(toDate(exp.due_date)), today)) {
-        FinancialExpense.update(exp.id, { payment_status: "vencido" });
-      }
-    });
-  }, [expenses]);
+    const vencidosNovos = encontrarVencidosNaoMarcados(expenses, jaMarcadosRef.current);
+    if (vencidosNovos.length === 0) return;
+    vencidosNovos.forEach((exp) => jaMarcadosRef.current.add(exp.id));
+    Promise.allSettled(
+      vencidosNovos.map((exp) => FinancialExpense.update(exp.id, { payment_status: "vencido" }))
+    ).then(() => queryClient.invalidateQueries({ queryKey: ["financial-expenses"] }));
+  }, [expenses, queryClient]);
 
   if (authStatus !== 'authorized') {
     return (
@@ -189,7 +199,22 @@ export default function Financial() {
               <p className="text-gray-500">Carregando...</p>
             </div>
           ) : (
-            <FinancialDashboard expenses={expenses} />
+            <>
+              {/* 🔴 PONTO 123 — o Dashboard é só visualização (gráficos agregados por
+                  categoria, sem um gasto individual pra editar em cada linha). Editar
+                  só existe na aba "Gastos" — sem este atalho, quem só conhece o
+                  Dashboard não sabia que dava pra corrigir um lançamento errado. */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => setActiveTab("expenses")}
+                  variant="outline"
+                  className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2"
+                >
+                  <List className="w-4 h-4" /> Ver e editar gastos
+                </Button>
+              </div>
+              <FinancialDashboard expenses={expenses} />
+            </>
           )
         ) : (
           <>
