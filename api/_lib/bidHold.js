@@ -92,7 +92,30 @@ export async function releaseHold(userId, amount, auctionId = null) {
         });
         // 🎟️ Foi coberto = disputou e perdeu → libera o Cupom Passaporte dele.
         // Best effort: nunca pode derrubar a devolução do saldo.
-        try { await liberarCupomPassaporte(uid, auctionId); } catch (_) { /* secundário */ }
+        //
+        // 🔴 PONTO 131 (26/08/2026) — FALTAVA O TERCEIRO ARGUMENTO, E POR ISSO
+        //    NUNCA LIBERAVA NADA.
+        // A assinatura é liberarCupomPassaporte(userId, auctionId, valorLance).
+        // Esta chamada passava só dois. Com `valorLance` indefinido, a primeira
+        // linha da função faz:
+        //
+        //     const alvo = money((money(valorLance) * PCT_PASSAPORTE) / 100);   // 0
+        //     if (alvo <= 0) return { released: 0, reason: 'valor_lance_invalido' };
+        //
+        // Saía calado, sem liberar um centavo — enquanto o cliente recebia no
+        // WhatsApp "Seu crédito Passaporte foi liberado para usar na loja".
+        // Caso real: Alexandre Walenkamp, aporte de R$ 100, crédito de R$ 10,
+        // liberado R$ 0,00 no banco. Ele reclamou que a opção não aparecia na
+        // loja — e não aparecia porque o saldo do cupom era zero.
+        //
+        // O valor certo já estava aqui do lado: `liberar` é exatamente quanto da
+        // reserva voltou, ou seja, o lance que foi coberto. É sobre ele que
+        // incidem os 10% ("10% do valor daquele lance específico", como o
+        // finalizeAuctionCore já fazia com `maiorLance`).
+        //
+        // Não libera a mais: consumirBloqueado nunca tira além de
+        // (valor_credito − valor_liberado − valor_cancelado) de cada cupom.
+        try { await liberarCupomPassaporte(uid, auctionId, liberar); } catch (_) { /* secundário */ }
         return {
           released: liberar,
           new_balance: money(row.saldo_disponivel),
