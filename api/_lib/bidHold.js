@@ -12,7 +12,6 @@ const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL 
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-import { liberarCupomPassaporte } from './passaporteCoupon.js';
 // 📒 Livro-caixa da reserva (18/08/2026). Import de MESMO diretório (./) — a mesma
 // forma segura já usada acima. Nunca usar import de 2 níveis dentro de api/functions/.
 import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
@@ -90,32 +89,31 @@ export async function releaseHold(userId, amount, auctionId = null) {
           saldoDepois: money(row.saldo_reservado),
           origem: '_lib/bidHold.releaseHold',
         });
-        // 🎟️ Foi coberto = disputou e perdeu → libera o Cupom Passaporte dele.
-        // Best effort: nunca pode derrubar a devolução do saldo.
+        // ══════════════════════════════════════════════════════════════════
+        // 🔴 PONTO 132 (27/08/2026) — A LIBERAÇÃO DO PASSAPORTE SAIU DAQUI.
+        // ══════════════════════════════════════════════════════════════════
+        // Aqui existia `liberarCupomPassaporte(uid, auctionId)` — sem o terceiro
+        // argumento, então nunca liberava nada. Hoje eu "consertei" passando o
+        // valor (PONTO 131, PR #121). Foi a correção ERRADA: a chamada não devia
+        // existir neste lugar.
         //
-        // 🔴 PONTO 131 (26/08/2026) — FALTAVA O TERCEIRO ARGUMENTO, E POR ISSO
-        //    NUNCA LIBERAVA NADA.
-        // A assinatura é liberarCupomPassaporte(userId, auctionId, valorLance).
-        // Esta chamada passava só dois. Com `valorLance` indefinido, a primeira
-        // linha da função faz:
+        // A regra está escrita na própria função e no finalizeAuctionCore:
         //
-        //     const alvo = money((money(valorLance) * PCT_PASSAPORTE) / 100);   // 0
-        //     if (alvo <= 0) return { released: 0, reason: 'valor_lance_invalido' };
+        //   "Roda só no ENCERRAMENTO do leilão, nunca no meio, quando a pessoa
+        //    é só coberta por um lance (ela ainda pode relançar e vencer)."
         //
-        // Saía calado, sem liberar um centavo — enquanto o cliente recebia no
-        // WhatsApp "Seu crédito Passaporte foi liberado para usar na loja".
-        // Caso real: Alexandre Walenkamp, aporte de R$ 100, crédito de R$ 10,
-        // liberado R$ 0,00 no banco. Ele reclamou que a opção não aparecia na
-        // loja — e não aparecia porque o saldo do cupom era zero.
+        // Ser coberto NÃO é perder — é ser superado. A pessoa ainda pode
+        // relançar e ganhar. Quem libera é o finalizeAuctionCore, no martelo,
+        // para cada participante que não arrematou, sobre o MAIOR lance dele
+        // naquele leilão. Já cobre todo mundo, e cobre certo.
         //
-        // O valor certo já estava aqui do lado: `liberar` é exatamente quanto da
-        // reserva voltou, ou seja, o lance que foi coberto. É sobre ele que
-        // incidem os 10% ("10% do valor daquele lance específico", como o
-        // finalizeAuctionCore já fazia com `maiorLance`).
+        // Se a liberação ficasse aqui, quem fosse coberto e depois VENCESSE
+        // levaria crédito de perdedor; e quem fosse coberto várias vezes no
+        // mesmo leilão receberia uma fatia por cobertura.
         //
-        // Não libera a mais: consumirBloqueado nunca tira além de
-        // (valor_credito − valor_liberado − valor_cancelado) de cada cupom.
-        try { await liberarCupomPassaporte(uid, auctionId, liberar); } catch (_) { /* secundário */ }
+        // Por isso a chamada foi removida em vez de corrigida. A devolução do
+        // saldo reservado, que é o que esta função existe para fazer, segue
+        // exatamente igual.
         return {
           released: liberar,
           new_balance: money(row.saldo_disponivel),

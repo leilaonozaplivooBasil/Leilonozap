@@ -20,25 +20,35 @@ test('a funcao continua exigindo o valor do lance', () => {
   assert.match(cupom, /if \(alvo <= 0\) return \{ released: 0, reason: 'valor_lance_invalido' \}/);
 });
 
-test('quem foi coberto tem o valor do lance passado na liberacao', () => {
-  assert.match(
-    hold,
-    /liberarCupomPassaporte\(uid, auctionId, liberar\)/,
-    'voltou a chamar sem o valor do lance — nao libera nada e nao avisa'
+test('ser coberto NAO libera credito — a liberacao saiu do bidHold', () => {
+  // Correcao da correcao (PONTO 132). Ser coberto nao e perder: a pessoa ainda
+  // pode relancar e vencer. Se liberasse aqui, quem fosse coberto e depois
+  // VENCESSE levaria credito de perdedor, e quem fosse coberto varias vezes no
+  // mesmo leilao receberia uma fatia por cobertura.
+  assert.ok(
+    !/await liberarCupomPassaporte\(/.test(hold),
+    'a liberacao do Passaporte voltou para o caminho da cobertura'
+  );
+  assert.ok(
+    !/^import .*liberarCupomPassaporte/m.test(hold),
+    'o import ficou sobrando'
   );
 });
 
-test('nenhuma chamada com so dois argumentos sobrou', () => {
-  const chamadas = [...hold.matchAll(/liberarCupomPassaporte\(([^)]*)\)/g)]
-    .map((m) => m[1].split(',').length)
-    .filter((n) => n > 0);
-  for (const n of chamadas) {
-    assert.equal(n, 3, 'chamada de liberarCupomPassaporte sem os tres argumentos');
-  }
+test('a devolucao do saldo reservado continua intacta', () => {
+  // E para isso que releaseHold existe. Nada disso podia mudar.
+  assert.match(hold, /saldo_disponivel: money\(disponivel \+ liberar\)/);
+  assert.match(hold, /saldo_reservado: money\(reservado - liberar\)/);
+  assert.match(hold, /tipo: TIPOS\.DEVOLUCAO_COBERTURA/);
 });
 
-test('o outro caminho (fim do leilao) ja passava o valor — segue igual', () => {
+test('quem libera e o fim do leilao, para quem nao arrematou', () => {
   assert.match(finalize, /liberarCupomPassaporte\(participanteId, auctionId, maiorLance\)/);
+  assert.match(finalize, /if \(participanteId === winnerId\) continue;/, 'o vencedor nao pode receber credito de perdedor');
+});
+
+test('a regra esta escrita na propria funcao', () => {
+  assert.match(cupom, /Chamado só\s*\n?\s*\*? ?na RESOLUÇÃO do leilão \(fim\), nunca no meio de uma simples cobertura/);
 });
 
 test('liberar a mais e impossivel: o consumo e limitado ao credito do cupom', () => {
