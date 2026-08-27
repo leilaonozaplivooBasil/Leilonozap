@@ -863,17 +863,33 @@ const TOOLS_ZECA: ToolDef[] = [
 // Slack — registro paralelo de toda solicitação/decisão da Heloim, igual fazia no Base44
 // antigo. Best-effort: falha aqui NUNCA derruba a resposta pro WhatsApp — o registro em
 // heloim_solicitacoes já é a fonte de verdade auditável, o Slack é conveniência extra.
-async function postarNoSlack(texto: string) {
-  if (!SLACK_WEBHOOK_URL) return;
+type ResultadoSlack = { ok: boolean; status: number | null; corpo: string };
+
+async function postarNoSlack(texto: string): Promise<ResultadoSlack> {
+  if (!SLACK_WEBHOOK_URL) {
+    // Antes daqui saía um `return` seco, sem log nenhum. Visto de fora era idêntico a
+    // "o Slack está ligado e ninguém pediu nada" — e foi exatamente o que aconteceu: o
+    // canal ficou sem uma linha de 18/08/2026 (última postagem do agente do Base44 antigo)
+    // até 27/08/2026, e ninguém descobriu que o secret nunca tinha sido criado. Agora fala.
+    console.warn(
+      '[whatsapp-router] tinha registro pra publicar no Slack, mas SLACK_WEBHOOK_URL não está ' +
+      'configurada — nada foi pro canal. Configure o secret no Supabase (ver DEPLOY.md, seção 2).'
+    );
+    return { ok: false, status: null, corpo: 'SLACK_WEBHOOK_URL não configurada' };
+  }
   try {
     const r = await fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: texto }),
     });
-    if (!r.ok) console.error('[whatsapp-router] Slack recusou o post:', r.status, await r.text().catch(() => ''));
+    const corpo = await r.text().catch(() => '');
+    if (!r.ok) console.error('[whatsapp-router] Slack recusou o post:', r.status, corpo);
+    else console.log('[whatsapp-router] registro publicado no Slack.');
+    return { ok: r.ok, status: r.status, corpo };
   } catch (e) {
     console.error('[whatsapp-router] falha ao postar no Slack (segue sem registrar lá):', e);
+    return { ok: false, status: null, corpo: String((e as Error)?.message || e) };
   }
 }
 
@@ -1042,6 +1058,41 @@ const TOOLS_HELOIM: ToolDef[] = [
       if (!solicitacao) return { rejeitado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
       await postarNoSlack(`⛔ *Solicitação #${solicitacao.id} rejeitada* por ${ctx.remetenteNome || ctx.remetente}${input.motivo ? `\n*Motivo:* ${input.motivo}` : ''}\n*Pedido:* ${solicitacao.descricao}`);
       return { rejeitado: true, id: solicitacao.id };
+    },
+  },
+  {
+    name: 'checar_slack',
+    description:
+      'Diagnóstico da ligação com o Slack. Diz se o webhook do canal está configurado e, se estiver, ' +
+      'publica uma mensagem de teste e devolve o que o Slack respondeu. Use quando alguém disser que ' +
+      'o Slack parou de receber os registros, ou perguntar se o Slack está funcionando. Só admin.',
+    input_schema: { type: 'object', properties: {} },
+    executar: async (_input, ctx) => {
+      if (!ehAdmin(ctx.remetente)) return { ok: false, erro: 'só um admin pode testar o Slack' };
+      if (!SLACK_WEBHOOK_URL) {
+        return {
+          ok: false,
+          configurado: false,
+          diagnostico:
+            'O secret SLACK_WEBHOOK_URL não existe no Supabase. Sem ele nada é publicado no canal e ' +
+            'nenhum erro aparece — fica silencioso. Precisa criar um Incoming Webhook apontando pro ' +
+            'canal e rodar "supabase secrets set SLACK_WEBHOOK_URL=..." (passo a passo no DEPLOY.md).',
+        };
+      }
+      const r = await postarNoSlack(
+        `🔎 Teste de ligação com o Slack pedido por ${ctx.remetenteNome || ctx.remetente}. ` +
+        'Se você está lendo isto no canal, o webhook está funcionando.'
+      );
+      return {
+        ok: r.ok,
+        configurado: true,
+        status: r.status,
+        resposta_do_slack: r.corpo,
+        diagnostico: r.ok
+          ? 'Mensagem de teste publicada — confira o canal.'
+          : 'O webhook está configurado, mas o Slack recusou. Normalmente é webhook revogado, ' +
+            'app removido do canal, ou URL colada pela metade.',
+      };
     },
   },
   {
