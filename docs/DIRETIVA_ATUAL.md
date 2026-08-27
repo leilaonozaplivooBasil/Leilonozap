@@ -28,17 +28,17 @@ financeira; expandir a correção pra conferências de UI cosméticas fora do
 padrão de bloqueio de página (registradas como follow-up, não corrigidas).
 **Regras fixas:** análise sênior antes da correção; reportar no formato do
 Protocolo-Mestre (`ENTENDI QUE VOCÊ QUER` etc.) antes do merge/deploy.
-**Status:** EXECUTADA NA BRANCH. Relatório em `docs/RELATORIOS_EXECUCAO.md`
-→ `REL-5`. Aguardando confirmação do dono pra merge/deploy em produção.
+**Status:** CONCLUÍDA. PR #128 mergeado por squash em `main` (commit
+`f05532b9`), CI verde, Vercel confirmou deploy em produção. Relatório
+completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-5`.
 
 ---
 
 ## Estado agora
 
-**DIR-5 corrigida e testada na branch, aguardando decisão do dono sobre
-merge/deploy.** DIR-1 a DIR-4 seguem executadas (ver
+**Nenhuma diretiva em aberto.** DIR-1 a DIR-5 estão todas executadas (ver
 `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
-esta diretiva:
+diretiva nenhuma em curso:
 - `REL-2`: 3 variáveis de ambiente na Vercel + confirmação do 401 na Edge
   Function `preview-api`, do lado da OpenAI.
 

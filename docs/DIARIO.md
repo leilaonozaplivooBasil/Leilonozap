@@ -670,3 +670,21 @@ a fonte única.
 **Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Aguardando o dono
 autorizar merge/deploy — registrado como DIR-5/REL-5 na governança de
 diretivas.
+
+---
+
+**Atualização — dono autorizou ("sim pode fazer").** PR #128 aberto. No
+meio do caminho, `git fetch` mostrou que `main` tinha avançado bastante
+desde a última sincronização — outro trabalho (PR #126/#127, correção de
+bônus dobrado do Passaporte) foi mergeado por outra sessão/agente enquanto
+esta rodada estava em curso. Sem sobreposição de arquivo nenhum com o que
+esta correção tocava — confirmado por `git diff --stat` antes de mexer.
+Rebase limpo, sem conflito. Suite de testes cresceu de 224 pra **334**
+(os novos testes vieram junto no rebase); todos passando. Build limpo.
+
+CI verde, `mergeable_state: clean`. Merge por squash: commit `f05532b9`.
+CI de `main` verde. Vercel confirmou "Deployment has completed".
+
+**Vocabulário do protocolo:** **MERGEADO e DEPLOYADO.** Ainda **NÃO
+VALIDADO EM PRODUÇÃO** pelo dono — falta ele testar `/Financial` ao vivo de
+novo, logado como `super_admin`.

@@ -148,12 +148,14 @@ banco, produção ou variável de ambiente alterado.
   dentro de telas já acessíveis — não bloqueiam acesso a página nenhuma.
   Registrado como follow-up, não corrigido agora, pra não expandir o
   escopo deste incidente.
-- Merge/deploy em produção não executado — aguardando confirmação do dono.
-**Testes:** 224/224 (5 novos pra `src/lib/roles.js`).
+**Testes:** 224/224 (5 novos pra `src/lib/roles.js`); depois do rebase pra
+absorver outro trabalho que chegou em `main` no meio da rodada, **334/334**.
 **Build:** exit 0.
 **Confirmação de escopo:** só os arquivos citados acima foram tocados.
 Nenhum banco, produção, variável de ambiente ou regra de negócio
 financeira alterada.
-**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre.
-**Status final:** PARCIAL — implementação e testes concluídos na branch;
-falta o dono autorizar merge/deploy.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#128; `docs/CLAUDE_HANDOFF.md`.
+**Status final:** CONCLUÍDA. Dono autorizou ("sim pode fazer"). PR #128
+mergeado por squash em `main`, commit `f05532b9`. CI verde. Vercel
+confirmou "Deployment has completed" — em produção.
