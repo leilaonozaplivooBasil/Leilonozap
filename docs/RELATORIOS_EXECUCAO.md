@@ -213,3 +213,46 @@ Protection da própria Vercel ativado em cima de todo link `.vercel.app`
 (`all_except_custom_domains`) — quem não é membro do time da Vercel precisa
 de um link de acesso temporário (`get_access_to_vercel_url`) pra abrir um
 Preview bruto.
+
+---
+
+## REL-7 — Execução da DIR-7 (Fase 2)
+
+**Data:** 27/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad` (PR #132).
+**Commit(s):** `7077fdbd`.
+**O que foi feito:**
+1. Análise do Nibo (Conciliador Open Finance) e ContaAzul, a pedido do dono,
+   pra decidir o desenho de centro de custo e do que conta como receita.
+2. Migration `financial_income` (livro-razão de receita, gravado no momento
+   da confirmação) + coluna `cost_center` em `financial_expenses`.
+3. Regra de reconhecimento de receita fechada com o dono, e VERIFICADA no
+   código antes de implementar (não foi suposição): só comissão de venda
+   liquidada (Loja/Leilão/PDV) e taxa sem repasse (adesão, plano parceiro)
+   contam como receita. Depósito de saldo/carteira NÃO conta — confirmado
+   lendo `settleAuctionWithBalance.js` (arremate consome `saldo_disponivel`,
+   o mesmo saldo que `wallet_deposit` credita) e o comentário de
+   `creditWalletDeposit` em `mpWebhook.js` — contar o depósito E a comissão
+   da compra feita com ele depois contaria o mesmo dinheiro duas vezes.
+4. Gravação automática (best-effort, nunca desfaz um pagamento já
+   confirmado) em 5 pontos: `mpWebhook.js` (loja, arremate/genérico,
+   adesão, adesão de vendedor, plano parceiro), `settleAuctionWithBalance.js`
+   (arremate pago com saldo), `pdvSettle.js` (venda de balcão).
+5. UI: centro de custo no formulário de gasto; aba "Receitas" (listagem,
+   sem lançamento manual nesta fase); aba "Visão Geral" cruzando receita x
+   despesa paga por centro de custo.
+**O que NÃO foi feito / blockers:** conciliação bancária via Open Finance
+(decisão adiada pro dono pra Fase 3, junto com automação via webhook do
+Mercado Pago já existente — sem custo de API externa); nenhum backfill de
+receita histórica (tabela nasce vazia, só grava daqui pra frente).
+**Testes:** 377/377.
+**Build:** exit 0.
+**Lint:** `npx eslint` nos arquivos alterados, sem erros.
+**Confirmação de escopo:** só os arquivos citados acima e a migration nova
+foram tocados. Nenhum dado de produção alterado nesta rodada — a migration
+só roda quando a PR for mergeada em `main` (workflow
+`deploy-migrations.yml`, automático).
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#132.
+**Status final:** PARCIAL — implementação, testes e PR abertos; falta o
+dono conferir no Preview e autorizar merge/deploy.

@@ -60,13 +60,16 @@ cruzando por categoria e por centro de custo — pronta pra Aline usar.
 autorização, não expandir escopo, reportar no formato Protocolo-Mestre
 antes do merge/deploy, preview real testado com login de verdade antes de
 pedir aprovação).
-**Status:** EM VIGOR.
+**Status:** EM VIGOR. Implementação pronta, PR #132 aberta. Relatório
+completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-7`. Aguardando o dono
+conferir no Preview e autorizar merge/deploy.
 
 ---
 
 ## Estado agora
 
-**DIR-7 (Fase 2) em execução.** DIR-1 a DIR-6 concluídas (ver
+**DIR-7 (Fase 2) implementada, PR #132 aberta, aguardando conferência e
+aprovação do dono.** DIR-1 a DIR-6 concluídas (ver
 `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
 esta diretiva:
 - `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
