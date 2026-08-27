@@ -106,3 +106,21 @@ conferências de UI cosméticas fora do padrão de bloqueio de página.
 **Regras fixas:** análise sênior antes da correção; reportar no formato do
 Protocolo-Mestre antes do merge/deploy.
 **Status:** EXECUTADA. Ver `REL-5`.
+
+---
+
+## DIR-6 — Modernização do módulo Financeiro (Fase 1)
+
+**Emitida por:** dono (Luiz), diretamente.
+**Data:** 21/08/2026.
+**Objetivo:** Fase 1 de 3 — correções rápidas de baixo risco no Financeiro
+(edição de gastos acessível, fim de PATCH redundante), antes de qualquer
+mudança de arquitetura de dados. Decisão de arquitetura pra Fase 2 já
+tomada: livro-razão de entradas (Opção B), pela necessidade de números
+auditáveis por um profissional de contabilidade.
+**Escopo autorizado:** correções na tela Financeiro que não envolvem
+banco/esquema novo.
+**Fora do escopo / proibido:** criar tabela nova ou sincronizar receita
+real nesta rodada — isso é Fase 2, diretiva própria.
+**Regras fixas:** nenhuma além da DIR-5.
+**Status:** EXECUTADA. Ver `REL-6`.

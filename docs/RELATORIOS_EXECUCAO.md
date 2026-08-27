@@ -148,12 +148,48 @@ banco, produção ou variável de ambiente alterado.
   dentro de telas já acessíveis — não bloqueiam acesso a página nenhuma.
   Registrado como follow-up, não corrigido agora, pra não expandir o
   escopo deste incidente.
-- Merge/deploy em produção não executado — aguardando confirmação do dono.
-**Testes:** 224/224 (5 novos pra `src/lib/roles.js`).
+**Testes:** 224/224 (5 novos pra `src/lib/roles.js`); depois do rebase pra
+absorver outro trabalho que chegou em `main` no meio da rodada, **334/334**.
 **Build:** exit 0.
 **Confirmação de escopo:** só os arquivos citados acima foram tocados.
 Nenhum banco, produção, variável de ambiente ou regra de negócio
 financeira alterada.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#128; `docs/CLAUDE_HANDOFF.md`.
+**Status final:** CONCLUÍDA. Dono autorizou ("sim pode fazer"). PR #128
+mergeado por squash em `main`, commit `f05532b9`. CI verde. Vercel
+confirmou "Deployment has completed" — em produção.
+
+---
+
+## REL-6 — Execução da DIR-6 (Fase 1)
+
+**Data:** 21/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** `643839dc`.
+**O que foi feito:**
+1. Investigação de fundo do módulo Financeiro inteiro (8 arquivos, ~2150
+   linhas) — confirmado que o botão de editar já existia (`ExpenseTable.jsx`),
+   mas só na aba "Gastos"; a aba "Dashboard" é 100% visualização agregada,
+   sem alvo de edição por linha (a tabela ali é por categoria, não por
+   gasto individual).
+2. Adicionado atalho "Ver e editar gastos" na aba Dashboard, levando direto
+   pra aba onde a edição existe.
+3. Achado e corrigido: a auto-detecção de gasto vencido disparava um PATCH
+   por gasto a cada refetch da lista, inclusive pra gastos já marcados numa
+   carga anterior (faltava `invalidateQueries`). Extraída a decisão pra
+   `src/lib/financeiroVencidos.js` (função pura) com guarda por sessão.
+4. Decisão de arquitetura pra Fase 2 apresentada e aprovada pelo dono:
+   livro-razão de entradas (tabela nova espelhando `financial_expenses`),
+   não cálculo ao vivo — critério: auditabilidade pra uso profissional
+   (contabilidade), não só visualização pra leigo.
+**O que NÃO foi feito / blockers:** Fase 2 (unificar receita real) e Fase 3
+(automação de conciliação) não iniciadas — são diretivas futuras.
+**Testes:** 341/341 (7 novos pra `encontrarVencidosNaoMarcados`).
+**Build:** exit 0.
+**Confirmação de escopo:** só `Financial.jsx` (mais os 2 arquivos novos)
+tocados. Nenhuma tabela nova, nenhum dado de receita real, nenhuma
+produção alterada.
 **Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre.
 **Status final:** PARCIAL — implementação e testes concluídos na branch;
 falta o dono autorizar merge/deploy.
