@@ -42,6 +42,8 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
   });
   const [customCategory, setCustomCategory] = useState("");
   const [useCustomCategory, setUseCustomCategory] = useState(false);
+  const [customCostCenter, setCustomCostCenter] = useState("");
+  const [useCustomCostCenter, setUseCustomCostCenter] = useState(false);
 
   useEffect(() => {
     if (editingExpense) {
@@ -68,6 +70,10 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         setUseCustomCategory(true);
         setCustomCategory(editingExpense.category);
       }
+      if (editingExpense.cost_center && !COST_CENTERS.includes(editingExpense.cost_center)) {
+        setUseCustomCostCenter(true);
+        setCustomCostCenter(editingExpense.cost_center);
+      }
     } else {
       setForm({
         description: "", company: "", category: "", expense_type: "unico",
@@ -78,16 +84,20 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
       });
       setCustomCategory("");
       setUseCustomCategory(false);
+      setCustomCostCenter("");
+      setUseCustomCostCenter(false);
     }
   }, [editingExpense, open]);
 
   const handleSave = () => {
     const cat = useCustomCategory ? customCategory : form.category;
+    const costCenter = useCustomCostCenter ? customCostCenter : form.cost_center;
     const amount = parseFloat(form.amount) || 0;
     const interest = parseFloat(form.interest_amount) || 0;
     const data = {
       ...form,
       category: cat,
+      cost_center: costCenter,
       amount,
       interest_amount: interest,
       total_amount: amount + interest,
@@ -176,19 +186,36 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
             )}
           </div>
 
-          {/* Centro de custo — DIR-7: qual unidade de negócio é dona deste gasto */}
+          {/* Centro de custo — DIR-7: qual unidade de negócio é dona deste gasto.
+              "+ Nova" (pedido do dono) deixa crescer a lista sem depender de mim pra
+              cada unidade de negócio nova — mesmo padrão já usado em Categoria. */}
           <div>
             <Label className="text-gray-300 text-sm">Centro de Custo</Label>
-            <Select value={form.cost_center} onValueChange={v => updateField("cost_center", v)}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                <SelectValue placeholder="Selecione (opcional)" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                {COST_CENTERS.map(cc => (
-                  <SelectItem key={cc} value={cc}>{cc}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!useCustomCostCenter ? (
+              <div className="flex gap-2 mt-1">
+                <Select value={form.cost_center} onValueChange={v => updateField("cost_center", v)}>
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white flex-1">
+                    <SelectValue placeholder="Selecione (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    {COST_CENTERS.map(cc => (
+                      <SelectItem key={cc} value={cc}>{cc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 text-xs whitespace-nowrap"
+                  onClick={() => setUseCustomCostCenter(true)}>+ Novo</Button>
+              </div>
+            ) : (
+              <div className="flex gap-2 mt-1">
+                <Input value={customCostCenter} onChange={e => setCustomCostCenter(e.target.value)}
+                  placeholder="Digite o centro de custo" className="bg-gray-800 border-gray-700 text-white flex-1" />
+                <Button variant="outline" size="sm" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 text-xs"
+                  onClick={() => { setUseCustomCostCenter(false); setCustomCostCenter(""); }}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Tipo de gasto */}

@@ -12,110 +12,45 @@
 
 ---
 
-## DIR-7 — Modernização do módulo Financeiro (Fase 2: receita real + centro de custo)
+## DIR-9 — Centro de custo customizável ("+ Novo")
 
-**Emitida por:** dono (Luiz), diretamente, depois de pedir análise do Nibo
-(Conciliador Open Finance) e do ContaAzul pra trazer o que fizer sentido.
+**Emitida por:** dono (Luiz), diretamente, ao lado do print do formulário de
+gasto: "ao lado do centro de custo, acrescentar botão + Nova pra quando
+faltar eu mesmo poder adicionar e crescer a ferramenta".
 **Data:** 27/08/2026.
-**Objetivo:** Fase 2 de 3. Hoje o Financeiro só enxerga saída de dinheiro
-(`financial_expenses`) — não existe nenhum jeito de ver entrada (venda
-confirmada, depósito confirmado) dentro do módulo. Esta fase resolve isso
-com duas peças, decididas com o dono a partir da análise de Nibo/ContaAzul:
-1. **Livro-razão de receita** — tabela `financial_income`, gravada no
-   momento em que a venda ou o depósito é CONFIRMADO (não recalculada ao
-   vivo), espelhando `financial_expenses`. Decisão de arquitetura (Opção B)
-   já registrada na DIR-6: número contábil auditável pela Aline não pode
-   mudar sozinho depois — se um pedido de ontem for editado hoje, o
-   relatório de ontem tem que continuar igual.
-2. **Centro de custo** — dimensão nova, separada de categoria, presente em
-   `financial_expenses` E `financial_income` (padrão confirmado tanto no
-   Nibo quanto no ContaAzul: cada lançamento tem categoria E centro de
-   custo, e os relatórios cruzam por qualquer um dos dois). Lista inicial:
-   Leilões / Loja Virtual / Operacional.
-A Visão Geral do Financeiro passa a mostrar entrada x saída de verdade,
-cruzando por categoria e por centro de custo — pronta pra Aline usar.
+**Objetivo:** a lista de centro de custo (Leilões/Loja Virtual/Operacional,
+`src/lib/costCenters.js`) é fixa — se faltar uma unidade de negócio nova, só
+eu poderia adicionar no código. Corrigir dando ao dono o mesmo poder que já
+existe em Categoria: digitar um centro de custo novo direto no formulário,
+sem depender de uma rodada de engenharia pra cada unidade de negócio nova.
 **Escopo autorizado:**
-- Migration Supabase: tabela nova `financial_income`; coluna `cost_center`
-  em `financial_expenses` (e na `financial_income` nova).
-- Entidade `FinancialIncome` no adapter/client, espelhando `FinancialExpense`.
-- Hook de gravação automática no momento da confirmação de uma venda
-  (`catalog_sales`) e de um depósito confirmado — só transações que já têm
-  origem clara no sistema (venda no catálogo, depósito confirmado);
-  nenhum lançamento manual "avulso" de receita nesta fase, a menos que o
-  dono peça.
-- UI: campo de centro de custo no formulário de gasto; visualização de
-  receita (nova aba ou seção) e Visão Geral cruzando categoria x centro de
-  custo.
-- A tabela nasce vazia — populada só a partir de agora, sem backfill de
-  histórico, a menos que o dono peça explicitamente.
-**Fora do escopo / proibido:**
-- Conciliação bancária via Open Finance / qualquer API paga de terceiro
-  (Pluggy, Belvo etc.) — decisão adiada pra Fase 3, junto com a automação
-  de conciliação já prevista (usar os webhooks que já existem do Mercado
-  Pago pra casar pagamento com venda, sem custo de API externa).
-- Nenhum "match" automático de recebimento avulso sem origem clara no
-  sistema (isso é chute de dinheiro, não é seguro).
-- Alterar produção sem autorização explícita antes do merge.
-**Regras fixas:** nenhuma além da DIR-5/DIR-6 (não mexer em produção sem
-autorização, não expandir escopo, reportar no formato Protocolo-Mestre
-antes do merge/deploy, preview real testado com login de verdade antes de
-pedir aprovação).
-**Status:** EM VIGOR. Implementação pronta, PR #132 aberta. Relatório
-completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-7`. Aguardando o dono
-conferir no Preview e autorizar merge/deploy.
-
----
-
-## DIR-8 — Recorrência de gasto fixo não gera lançamento novo
-
-**Emitida por:** dono (Luiz), reportando ao vivo (print da Aline logada no
-Financeiro): um gasto "Fixo Mensal" (Consórcio Nacional Volkswagen,
-vencimento 21/07/2026) aparece com uma única linha, "Vencido há 37 dia(s)",
-em vez de mostrar quantos meses estão em aberto.
-**Data:** 27/08/2026.
-**Objetivo:** causa raiz investigada e confirmada por busca no código:
-`expense_type: 'fixo'` e `recurring_day` são só campos salvos — não existe,
-em lugar nenhum do repositório, nenhum código que gera o lançamento do mês
-seguinte. Corrigir isso com um job diário (mesmo padrão dos outros crons já
-registrados em `vercel.json`) que, pra cada gasto fixo, garante um
-lançamento pendente por mês, inclusive fazendo o backfill dos meses que já
-ficaram pra trás (como o caso do Consórcio) — cada mês em aberto vira sua
-própria linha "vencido", pra Aline ver exatamente quantos estão atrasados.
-**Escopo autorizado:**
-- Migration: coluna nova em `financial_expenses` pra agrupar as linhas da
-  mesma recorrência (ex.: `recurring_group_id`), com backfill das linhas
-  "fixo" já existentes (cada uma vira dona do próprio grupo).
-- Função pura testável que decide quais meses estão faltando pra um gasto
-  fixo (mesmo padrão de `src/lib/financeiroVencidos.js`).
-- Endpoint novo (`api/functions/...`) chamado 1x por dia via Vercel Cron,
-  que aplica essa função e cria os lançamentos pendentes que faltam.
-- Limite de segurança no backfill (não gerar centenas de meses de uma vez
-  se `recurring_day`/`due_date` estiver mal configurado).
-**Fora do escopo / proibido:** mexer em gasto "parcelado" (tem lógica
-própria, parcela é digitada manualmente); qualquer geração automática de
-receita (isso é `financial_income`, DIR-7); alterar produção sem
-autorização antes do merge.
-**Regras fixas:** nenhuma além da DIR-5/6/7 (não mexer em produção sem
-autorização, reportar no formato Protocolo-Mestre, preview real testado
-antes de pedir aprovação).
-**Status:** EM VIGOR. Implementação pronta, na mesma PR #132. Relatório
-completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-8`. Aguardando o dono
-conferir no Preview e autorizar merge/deploy.
+- Botão "+ Novo" ao lado do campo Centro de Custo em `ExpenseFormModal.jsx`,
+  mesmo padrão já usado em Categoria (alterna pra um campo de texto livre).
+- `FinancialOverview.jsx` (Visão Geral) passa a incluir na tabela por
+  centro de custo qualquer valor já lançado, não só os 3 da lista fixa —
+  sem isso, um centro de custo digitado como "+ Novo" gravava no gasto mas
+  sumia do relatório.
+**Fora do escopo / proibido:** criar uma tela de administração dedicada pra
+gerenciar centros de custo (renomear/excluir); mexer em `financial_income`
+nesta rodada (a receita já é gravada automaticamente pelo servidor, sem
+formulário manual — DIR-7).
+**Regras fixas:** nenhuma além da DIR-5/6/7/8 (não mexer em produção sem
+autorização, reportar no formato Protocolo-Mestre antes do merge/deploy).
+**Status:** EM VIGOR.
 
 ---
 
 ## Estado agora
 
-**DIR-7 (Fase 2) implementada, PR #132 aberta, aguardando conferência e
-aprovação do dono. DIR-8 (recorrência de gasto fixo) em execução.**
-DIR-1 a DIR-6 concluídas (ver
+**DIR-9 em execução.** DIR-1 a DIR-8 concluídas (ver
 `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
 esta diretiva:
 - `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
   OpenAI (as variáveis de ambiente de Preview já foram resolvidas — mesmo
   problema de fundo do achado da REL-6).
 - Fase 3 do Financeiro (conciliação automática via webhook Mercado Pago,
-  decisão sobre Open Finance) — depois da Fase 2 no ar.
+  decisão sobre Open Finance) — depois da Fase 2 no ar (já está, desde a
+  DIR-7/DIR-8, PR #132).
 
 **Nenhuma implementação nova começa até uma diretiva nova ser registrada
 aqui,** no formato de `docs/PADRAO_DIRETIVAS.md`.
