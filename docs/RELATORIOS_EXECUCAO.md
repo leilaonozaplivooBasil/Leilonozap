@@ -256,3 +256,43 @@ só roda quando a PR for mergeada em `main` (workflow
 #132.
 **Status final:** PARCIAL — implementação, testes e PR abertos; falta o
 dono conferir no Preview e autorizar merge/deploy.
+
+---
+
+## REL-8 — Execução da DIR-8
+
+**Data:** 27/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad` (mesma PR #132 —
+achado reportado enquanto o dono conferia a REL-7 no Preview).
+**Commit(s):** `bc7ff1cd`.
+**O que foi feito:**
+1. Causa raiz confirmada por busca no repositório inteiro: `expense_type:
+   'fixo'` e `recurring_day` nunca foram lidos por nenhum código — não
+   existia geração automática de lançamento mensal. Achado a partir do
+   print da Aline (Consórcio Nacional Volkswagen, vencimento 21/07/2026,
+   uma linha só, "Vencido há 37 dia(s)").
+2. Migration: coluna `recurring_group_id` em `financial_expenses`, com
+   backfill das linhas `fixo` já existentes (cada uma vira dona do próprio
+   grupo).
+3. Função pura testável `mesesFaltandoParaGastoFixo`
+   (`api/_lib/gastosFixosRecorrentes.js`) — decide quais meses faltam pra
+   um gasto fixo, do mês seguinte ao último vencimento conhecido até o mês
+   atual, com teto de segurança de 24 meses.
+4. Cron diário novo `api/functions/gerarGastosFixos.js` (registrado em
+   `vercel.json`, mesmo padrão dos outros crons do projeto) — por grupo de
+   recorrência, gera um lançamento "pendente" por mês que faltar. Um gasto
+   esquecido há 3 meses passa a aparecer como 3 linhas "vencido", não uma
+   só com contagem de dias.
+**O que NÃO foi feito / blockers:** gasto "parcelado" não foi tocado (lógica
+própria, fora do escopo); nenhuma geração de receita (isso é `financial_income`,
+DIR-7); o cron ainda não rodou em produção — só roda depois do merge.
+**Testes:** 384/384 (7 novos pra `mesesFaltandoParaGastoFixo`).
+**Build:** exit 0.
+**Lint:** sem erros nos arquivos alterados.
+**Confirmação de escopo:** só os arquivos citados acima e a migration nova
+foram tocados. Nenhum dado de produção alterado — a migration e o cron novo
+só entram em vigor depois do merge em `main`.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#132 (mesma PR da REL-7).
+**Status final:** PARCIAL — implementação e testes concluídos; falta o
+dono conferir no Preview e autorizar merge/deploy.

@@ -98,7 +98,9 @@ autorização antes do merge.
 **Regras fixas:** nenhuma além da DIR-5/6/7 (não mexer em produção sem
 autorização, reportar no formato Protocolo-Mestre, preview real testado
 antes de pedir aprovação).
-**Status:** EM VIGOR.
+**Status:** EM VIGOR. Implementação pronta, na mesma PR #132. Relatório
+completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-8`. Aguardando o dono
+conferir no Preview e autorizar merge/deploy.
 
 ---
 
