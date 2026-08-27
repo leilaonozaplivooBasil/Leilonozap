@@ -492,7 +492,11 @@ async function buscarClientePorTelefone(remetente: string): Promise<{ nome?: str
 // derruba a conversa: memória é conveniência, não requisito.
 // ============================================================================
 type Turno = { role: 'user' | 'assistant'; content: string };
-const HISTORICO_MAX_MSGS = 12; // 6 idas-e-voltas — contexto suficiente, custo de token baixo
+// 27/08/2026: 12 -> 20. Com 12 (6 idas e voltas) o Zeca esquecia o começo de uma conversa
+// de venda um pouco mais longa e repetia pergunta que o cliente já tinha respondido — o
+// jeito mais rápido de parecer robô. 20 cobre ~10 idas e voltas; o custo de token continua
+// baixo porque a resposta dele é curta por regra.
+const HISTORICO_MAX_MSGS = 20;
 
 async function carregarHistorico(remetente: string, agente: string): Promise<Turno[]> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
@@ -629,19 +633,127 @@ async function heloimFoiChamada(msg: MensagemExtraida): Promise<boolean> {
   return await conversaAberta(msg.remetente);
 }
 
-async function salvarTurno(remetente: string, agente: string, role: 'user' | 'assistant', content: string) {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+/**
+ * Grava um turno da conversa e devolve o `created_at` que o BANCO carimbou.
+ *
+ * A hora vem do banco, não daqui, de propósito: a janela de agrupamento compara horários
+ * de mensagens gravadas por execuções diferentes da function, e cada execução tem o
+ * relógio dela. Comparar hora do banco com hora do banco é a única forma de a conta
+ * fechar. Devolve null se não gravou — quem chama trata isso como "sem agrupamento".
+ */
+async function salvarTurno(
+  remetente: string, agente: string, role: 'user' | 'assistant', content: string,
+): Promise<string | null> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/ai_conversas`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/ai_conversas`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json', Prefer: 'return=minimal',
+        'Content-Type': 'application/json', Prefer: 'return=representation',
       },
       body: JSON.stringify({ remetente, agente, role, content }),
     });
+    if (!r.ok) return null;
+    const linhas = await r.json().catch(() => []);
+    const quando = Array.isArray(linhas) ? linhas[0]?.created_at : null;
+    return quando ? String(quando) : null;
   } catch (e) {
     console.error('[whatsapp-router] falha ao salvar turno (memória segue incompleta):', e);
+    return null;
+  }
+}
+
+// ============================================================================
+// 🧍 O QUE FAZ PARECER GENTE — 27/08/2026
+//
+// O texto do prompt já pedia conversa humanizada. O que denunciava a máquina não era o
+// texto, eram três comportamentos:
+//
+//  ① Cliente escreve em pedaços ("oi" / "tenho uma dúvida" / "sobre o leilão de ontem") e
+//    levava TRÊS respostas atropelando uma na outra. Nenhuma pessoa faz isso: gente espera
+//    a outra terminar de escrever. É o sinal número um de robô no WhatsApp.
+//  ② A resposta chegava sempre num bloco só. Gente manda duas ou três mensagens curtas.
+//  ③ Ele nunca "lia" a mensagem — sem tique azul, a resposta aparecia do nada.
+//
+// Nada disso se resolve com prompt. Está resolvido aqui embaixo.
+// ============================================================================
+
+/** Quanto tempo esperar o cliente terminar de escrever antes de responder. */
+const JANELA_AGRUPAMENTO_MS = 6000;
+
+/** Pausa entre um pedaço e outro da resposta — o tempo de digitar a próxima. */
+const PAUSA_ENTRE_PEDACOS_MS = 1200;
+
+const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Chegou mensagem nova desta mesma pessoa depois da que estou processando?
+ * Se chegou, esta execução DESISTE de responder: a mais nova responde por todas, e o
+ * histórico dela já contém esta. Falha de rede devolve false — no pior caso responde duas
+ * vezes, que é o comportamento de antes, nunca ficar sem resposta.
+ */
+async function chegouMensagemMaisNova(remetente: string, agente: string, desde: string): Promise<boolean> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/ai_conversas?select=id&remetente=eq.${encodeURIComponent(remetente)}` +
+        `&agente=eq.${agente}&role=eq.user&created_at=gt.${encodeURIComponent(desde)}&limit=1`,
+      { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
+    );
+    if (!r.ok) return false;
+    const linhas = await r.json().catch(() => []);
+    return Array.isArray(linhas) && linhas.length > 0;
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao checar mensagem mais nova (responde assim mesmo):', e);
+    return false;
+  }
+}
+
+/**
+ * Separa o histórico da fala PENDENTE do cliente. A fala pendente é a sequência de
+ * mensagens dele no fim do histórico que ainda não teve resposta — uma só no caso normal,
+ * duas ou três quando ele escreveu em pedaços. Vão todas juntas para a Claude, como uma
+ * fala só, que é como uma pessoa leria.
+ */
+function separarPendentes(historico: Turno[]): { anteriores: Turno[]; pendente: string } {
+  const anteriores = [...historico];
+  const falas: string[] = [];
+  while (anteriores.length && anteriores[anteriores.length - 1].role === 'user') {
+    falas.unshift(String(anteriores.pop()?.content || ''));
+  }
+  return { anteriores, pendente: falas.join('\n') };
+}
+
+/**
+ * Quebra a resposta em mensagens separadas, pelos parágrafos. Teto de 3: mais que isso
+ * deixa de parecer conversa e vira metralhadora — o excedente vai junto no último.
+ */
+function pedacosDaResposta(texto: string): string[] {
+  const inteiro = String(texto || '').trim();
+  if (!inteiro) return [];
+  const partes = inteiro.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean);
+  if (partes.length <= 1) return [inteiro];
+  if (partes.length <= 3) return partes;
+  return [...partes.slice(0, 2), partes.slice(2).join('\n\n')];
+}
+
+/**
+ * Marca a mensagem do cliente como lida (os dois tiques azuis). Best-effort: se falhar,
+ * o atendimento segue exatamente igual — só não aparece o tique.
+ */
+async function marcarComoLida(telefone: string, messageId: string | null) {
+  if (!messageId || !ZAPI_INSTANCE_ID || !ZAPI_TOKEN) return;
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (ZAPI_CLIENT_TOKEN) headers['Client-Token'] = ZAPI_CLIENT_TOKEN;
+    await fetch(`${ZAPI_BASE_URL}/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/read-message`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ phone: telefone.includes('-group') ? telefone : apenasDigitos(telefone), messageId }),
+    });
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao marcar como lida (segue normal):', e);
   }
 }
 
@@ -1119,6 +1231,9 @@ Isto é WhatsApp, não e-mail. Texto comprido faz o cliente parar de ler e some 
   ajudado", sem emoji em fileira.
 - Sem bullet, sem negrito, sem título de seção na conversa normal — gente não escreve assim
   no zap. Frase corrida.
+- Quando tiver DUAS coisas a dizer (ex: a resposta e o próximo passo), separe com uma linha
+  em branco. Cada bloco vira uma mensagem separada no WhatsApp, com pausa entre elas — é
+  assim que gente escreve. Não force: se é uma coisa só, mande num bloco só.
 - Não jogue a tabela de comissões/níveis inteira de uma vez. Responda o nível que ele
   perguntou e ofereça o resto se ele quiser.
 ${FRAMEWORK_DISC}
@@ -1272,7 +1387,19 @@ function delayTypingPara(texto: string): number {
   return Math.max(2, Math.min(15, Math.round(texto.length / 25)));
 }
 
+/**
+ * Manda a resposta como uma pessoa manda: em pedaços, com pausa entre eles, cada um com o
+ * "digitando…" proporcional ao tamanho. Um parágrafo só continua sendo uma mensagem só.
+ */
 async function enviarWhatsApp(telefone: string, texto: string) {
+  const pedacos = pedacosDaResposta(texto);
+  for (let i = 0; i < pedacos.length; i++) {
+    if (i > 0) await dormir(PAUSA_ENTRE_PEDACOS_MS);
+    await enviarUmaMensagem(telefone, pedacos[i]);
+  }
+}
+
+async function enviarUmaMensagem(telefone: string, texto: string) {
   const url = `${ZAPI_BASE_URL}/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (ZAPI_CLIENT_TOKEN) headers['Client-Token'] = ZAPI_CLIENT_TOKEN;
@@ -1381,6 +1508,30 @@ async function processarMensagem(msg: MensagemExtraida) {
     // 📣 Em grupo, só fala quando é chamada — ver heloimFoiChamada(). Sai ANTES de qualquer
     // custo: sem Claude, sem download de mídia, sem gravar memória, sem envio.
     if (emGrupo && !(await heloimFoiChamada(msg))) return;
+
+    // 👀 Tique azul primeiro: gente lê a mensagem e SÓ ENTÃO começa a escrever.
+    await marcarComoLida(msg.grupoId ?? msg.remetente, msg.messageId);
+
+    // 👁️ Se veio print/foto/PDF, o arquivo vai junto da mensagem — a Claude enxerga de
+    // verdade. Formato que ela não lê (docx, zip) vira aviso em texto pra ele pedir print.
+    const { blocos, aviso } = await blocosDeMidia(msg);
+    const textoParaClaude = aviso ? `${msg.texto}\n[aviso: ${aviso} — peça um print ou PDF]` : msg.texto;
+
+    // A fala do cliente é gravada AGORA, antes de responder. É isso que permite agrupar:
+    // se ele mandar mais um pedaço em seguida, aquela execução vai encontrar esta no
+    // histórico e responder as duas de uma vez.
+    const marca = await salvarTurno(msg.remetente, agente, 'user', textoParaClaude);
+
+    // ⏳ Espera ele terminar de escrever. Só no 1:1 — no grupo a Heloim já tem o freio de
+    // "só falo quando me chamam", e mexer no que está funcionando lá não vale o risco.
+    if (!emGrupo && marca) {
+      await dormir(JANELA_AGRUPAMENTO_MS);
+      if (await chegouMensagemMaisNova(msg.remetente, agente, marca)) {
+        console.log('[whatsapp-router] cliente ainda estava escrevendo — a próxima mensagem responde por esta.');
+        return;
+      }
+    }
+
     const cliente = agente === 'zeca' ? await buscarClientePorTelefone(msg.remetente) : null;
     const systemPrompt = agente === 'heloim'
       ? montarSystemPromptHeloim({ emGrupo, grupoNome: msg.grupoNome, remetenteEhAdmin: admin, remetenteNome: msg.remetenteNome })
@@ -1388,22 +1539,20 @@ async function processarMensagem(msg: MensagemExtraida) {
     const tools = agente === 'heloim' ? TOOLS_HELOIM : TOOLS_ZECA;
 
     const ctx: ToolCtx = { remetente: msg.remetente, remetenteNome: msg.remetenteNome, grupoId: msg.grupoId, grupoNome: msg.grupoNome };
+
+    // O histórico já inclui a fala que acabou de ser gravada — e as do lote, se ele
+    // escreveu em pedaços. separarPendentes tira todas do fim e junta numa fala só.
     const historico = await carregarHistorico(msg.remetente, agente);
+    const { anteriores, pendente } = separarPendentes(historico);
+    const textoFinal = pendente || textoParaClaude; // banco fora do ar: segue com esta mensagem
 
-    // 👁️ Se veio print/foto/PDF, o arquivo vai junto da mensagem — a Claude enxerga de
-    // verdade. Formato que ela não lê (docx, zip) vira aviso em texto pra ele pedir print.
-    const { blocos, aviso } = await blocosDeMidia(msg);
-    const textoParaClaude = aviso ? `${msg.texto}\n[aviso: ${aviso} — peça um print ou PDF]` : msg.texto;
     const conteudoUsuario = blocos.length
-      ? [...blocos, { type: 'text', text: textoParaClaude }]
-      : textoParaClaude;
+      ? [...blocos, { type: 'text', text: textoFinal }]
+      : textoFinal;
 
-    const resposta = await responderComAgente(systemPrompt, tools, historico, conteudoUsuario, ctx);
+    const resposta = await responderComAgente(systemPrompt, tools, anteriores, conteudoUsuario, ctx);
 
-    await Promise.all([
-      salvarTurno(msg.remetente, agente, 'user', textoParaClaude),
-      salvarTurno(msg.remetente, agente, 'assistant', resposta),
-    ]);
+    await salvarTurno(msg.remetente, agente, 'assistant', resposta);
 
     // Em grupo, a resposta vai pro GRUPO (todo mundo vê a classificação/decisão) — não pro
     // DM de quem escreveu. Fora de grupo, comportamento de sempre: responde a quem escreveu.
