@@ -190,6 +190,109 @@ confirmou "Deployment has completed" — em produção.
 **Confirmação de escopo:** só `Financial.jsx` (mais os 2 arquivos novos)
 tocados. Nenhuma tabela nova, nenhum dado de receita real, nenhuma
 produção alterada.
-**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre.
-**Status final:** PARCIAL — implementação e testes concluídos na branch;
-falta o dono autorizar merge/deploy.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#130; `docs/CLAUDE_HANDOFF.md`.
+**Status final:** CONCLUÍDA. Antes da aprovação, foi preciso destravar o
+Preview de verdade pro dono conferir a mudança logado com a própria conta
+(achado à parte, registrado abaixo). Dono conferiu o botão "Ver e editar
+gastos" ao vivo no Preview e autorizou ("agora pode deoplar"). PR #130
+mergeado por squash em `main`, commit `5fb996f2`. CI verde
+(lint · build · testes) antes do merge.
+
+**Achado à parte, fora do escopo da DIR-6 — Preview do projeto não logava:**
+o Preview da própria PR #130 (e de toda PR deste projeto) retornava "Config
+do servidor ausente" ao tentar logar, porque a variável
+`SUPABASE_SERVICE_ROLE_KEY` na Vercel estava configurada só pro ambiente
+"Production" — faltava marcar também "Preview". `SUPABASE_URL` já estava
+correta nos dois ambientes. O dono corrigiu isso direto no painel da Vercel
+(`Settings → Environment Variables → SUPABASE_SERVICE_ROLE_KEY → Edit →
+marcar Preview`) e redeployou o Preview da branch; depois disso o login real
+passou a funcionar em qualquer Preview deste projeto, não só na PR #130.
+Também identificado, sem relação com o financeiro: o projeto tem SSO
+Protection da própria Vercel ativado em cima de todo link `.vercel.app`
+(`all_except_custom_domains`) — quem não é membro do time da Vercel precisa
+de um link de acesso temporário (`get_access_to_vercel_url`) pra abrir um
+Preview bruto.
+
+---
+
+## REL-7 — Execução da DIR-7 (Fase 2)
+
+**Data:** 27/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad` (PR #132).
+**Commit(s):** `7077fdbd`.
+**O que foi feito:**
+1. Análise do Nibo (Conciliador Open Finance) e ContaAzul, a pedido do dono,
+   pra decidir o desenho de centro de custo e do que conta como receita.
+2. Migration `financial_income` (livro-razão de receita, gravado no momento
+   da confirmação) + coluna `cost_center` em `financial_expenses`.
+3. Regra de reconhecimento de receita fechada com o dono, e VERIFICADA no
+   código antes de implementar (não foi suposição): só comissão de venda
+   liquidada (Loja/Leilão/PDV) e taxa sem repasse (adesão, plano parceiro)
+   contam como receita. Depósito de saldo/carteira NÃO conta — confirmado
+   lendo `settleAuctionWithBalance.js` (arremate consome `saldo_disponivel`,
+   o mesmo saldo que `wallet_deposit` credita) e o comentário de
+   `creditWalletDeposit` em `mpWebhook.js` — contar o depósito E a comissão
+   da compra feita com ele depois contaria o mesmo dinheiro duas vezes.
+4. Gravação automática (best-effort, nunca desfaz um pagamento já
+   confirmado) em 5 pontos: `mpWebhook.js` (loja, arremate/genérico,
+   adesão, adesão de vendedor, plano parceiro), `settleAuctionWithBalance.js`
+   (arremate pago com saldo), `pdvSettle.js` (venda de balcão).
+5. UI: centro de custo no formulário de gasto; aba "Receitas" (listagem,
+   sem lançamento manual nesta fase); aba "Visão Geral" cruzando receita x
+   despesa paga por centro de custo.
+**O que NÃO foi feito / blockers:** conciliação bancária via Open Finance
+(decisão adiada pro dono pra Fase 3, junto com automação via webhook do
+Mercado Pago já existente — sem custo de API externa); nenhum backfill de
+receita histórica (tabela nasce vazia, só grava daqui pra frente).
+**Testes:** 377/377.
+**Build:** exit 0.
+**Lint:** `npx eslint` nos arquivos alterados, sem erros.
+**Confirmação de escopo:** só os arquivos citados acima e a migration nova
+foram tocados. Nenhum dado de produção alterado nesta rodada — a migration
+só roda quando a PR for mergeada em `main` (workflow
+`deploy-migrations.yml`, automático).
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#132.
+**Status final:** PARCIAL — implementação, testes e PR abertos; falta o
+dono conferir no Preview e autorizar merge/deploy.
+
+---
+
+## REL-8 — Execução da DIR-8
+
+**Data:** 27/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad` (mesma PR #132 —
+achado reportado enquanto o dono conferia a REL-7 no Preview).
+**Commit(s):** `bc7ff1cd`.
+**O que foi feito:**
+1. Causa raiz confirmada por busca no repositório inteiro: `expense_type:
+   'fixo'` e `recurring_day` nunca foram lidos por nenhum código — não
+   existia geração automática de lançamento mensal. Achado a partir do
+   print da Aline (Consórcio Nacional Volkswagen, vencimento 21/07/2026,
+   uma linha só, "Vencido há 37 dia(s)").
+2. Migration: coluna `recurring_group_id` em `financial_expenses`, com
+   backfill das linhas `fixo` já existentes (cada uma vira dona do próprio
+   grupo).
+3. Função pura testável `mesesFaltandoParaGastoFixo`
+   (`api/_lib/gastosFixosRecorrentes.js`) — decide quais meses faltam pra
+   um gasto fixo, do mês seguinte ao último vencimento conhecido até o mês
+   atual, com teto de segurança de 24 meses.
+4. Cron diário novo `api/functions/gerarGastosFixos.js` (registrado em
+   `vercel.json`, mesmo padrão dos outros crons do projeto) — por grupo de
+   recorrência, gera um lançamento "pendente" por mês que faltar. Um gasto
+   esquecido há 3 meses passa a aparecer como 3 linhas "vencido", não uma
+   só com contagem de dias.
+**O que NÃO foi feito / blockers:** gasto "parcelado" não foi tocado (lógica
+própria, fora do escopo); nenhuma geração de receita (isso é `financial_income`,
+DIR-7); o cron ainda não rodou em produção — só roda depois do merge.
+**Testes:** 384/384 (7 novos pra `mesesFaltandoParaGastoFixo`).
+**Build:** exit 0.
+**Lint:** sem erros nos arquivos alterados.
+**Confirmação de escopo:** só os arquivos citados acima e a migration nova
+foram tocados. Nenhum dado de produção alterado — a migration e o cron novo
+só entram em vigor depois do merge em `main`.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#132 (mesma PR da REL-7).
+**Status final:** PARCIAL — implementação e testes concluídos; falta o
+dono conferir no Preview e autorizar merge/deploy.

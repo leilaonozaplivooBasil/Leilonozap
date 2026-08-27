@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List } from "lucide-react";
+import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale } from "lucide-react";
 import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
 import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
@@ -14,6 +14,8 @@ import ExpenseTable from "@/components/financial/ExpenseTable";
 import ExpenseFormModal from "@/components/financial/ExpenseFormModal";
 import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
+import IncomeTable from "@/components/financial/IncomeTable";
+import FinancialOverview from "@/components/financial/FinancialOverview";
 import PaymentModal from "@/components/financial/PaymentModal";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { DollarSign } from "lucide-react";
@@ -22,6 +24,7 @@ import { useSecureRole } from "@/components/hooks/useSecureRole";
 import { ADMIN_ROLES } from "@/lib/roles";
 
 const FinancialExpense = plataforma.entities.FinancialExpense;
+const FinancialIncome = plataforma.entities.FinancialIncome;
 
 export default function Financial() {
   // 🔴 PONTO 122 (21/08/2026) — antes esta tela conferia role sozinha, direto
@@ -45,6 +48,14 @@ export default function Financial() {
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ["financial-expenses"],
     queryFn: () => FinancialExpense.list("-due_date", 500),
+  });
+
+  // DIR-7 (Fase 2) — livro-razão de receita: gravado automaticamente no servidor no
+  // momento da confirmação (comissão de venda, taxa de adesão/plano). Sem criação
+  // manual nesta fase — só leitura aqui.
+  const { data: income = [], isLoading: isLoadingIncome } = useQuery({
+    queryKey: ["financial-income"],
+    queryFn: () => FinancialIncome.list("-received_date", 500),
   });
 
   const createMutation = useMutation({
@@ -190,6 +201,26 @@ export default function Financial() {
           >
             <LayoutDashboard className="w-4 h-4" /> Dashboard
           </button>
+          <button
+            onClick={() => setActiveTab("income")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "income"
+                ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
+                : "bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:text-white hover:border-gray-600"
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" /> Receitas
+          </button>
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "overview"
+                ? "bg-purple-600/20 text-purple-400 border border-purple-500/30"
+                : "bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:text-white hover:border-gray-600"
+            }`}
+          >
+            <Scale className="w-4 h-4" /> Visão Geral
+          </button>
         </div>
 
         {activeTab === "dashboard" ? (
@@ -215,6 +246,26 @@ export default function Financial() {
               </div>
               <FinancialDashboard expenses={expenses} />
             </>
+          )
+        ) : activeTab === "income" ? (
+          isLoadingIncome ? (
+            <div className="text-center py-12">
+              <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />
+              <p className="text-gray-500">Carregando...</p>
+            </div>
+          ) : (
+            <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
+              <IncomeTable income={income} />
+            </div>
+          )
+        ) : activeTab === "overview" ? (
+          (isLoading || isLoadingIncome) ? (
+            <div className="text-center py-12">
+              <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />
+              <p className="text-gray-500">Carregando...</p>
+            </div>
+          ) : (
+            <FinancialOverview expenses={expenses} income={income} />
           )
         ) : (
           <>

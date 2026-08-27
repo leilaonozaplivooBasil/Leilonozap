@@ -12,6 +12,7 @@ import { liberarRepasseEstoqueProprio } from './repasseEstoqueProprio.js';
 // 🤝 consignado: a dívida da peça morre nesta venda (aqui o cliente pagou PIX,
 // então o custo fica retido na plataforma — nada é debitado do saldo dele)
 import { liquidarConsignado } from './consignadoSettle.js';
+import { registrarReceita } from './financialIncome.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -64,6 +65,8 @@ export async function settlePdvPixSale(sale) {
   } catch (e) {
     console.warn('PDV PIX: comissão falhou (venda segue paga):', e?.message);
   }
+  // 💰 DIR-7 — mesma regra do webhook: só a comissão da venda de balcão é receita.
+  await registrarReceita({ description: `Comissão — venda balcão #${sale.id}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: commission, source: 'venda', saleId: sale.id });
 
   // 🤝 peça consignada vendida: a dívida dela morre agora, retida no próprio PIX
   if (consumos.some((c) => c.origem === 'consignado')) {

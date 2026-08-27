@@ -77,7 +77,12 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
                   )}
                 </td>
                 <td className="py-3 px-3 text-gray-300 hidden md:table-cell">{exp.company || "-"}</td>
-                <td className="py-3 px-3 text-gray-300 hidden lg:table-cell">{exp.category || "-"}</td>
+                <td className="py-3 px-3 text-gray-300 hidden lg:table-cell">
+                  {exp.category || "-"}
+                  {exp.cost_center && (
+                    <div className="text-xs text-gray-500 mt-0.5">{exp.cost_center}</div>
+                  )}
+                </td>
                 <td className="py-3 px-3">
                   <span className="text-gray-300 text-xs">{TYPE_LABELS[exp.expense_type] || exp.expense_type}</span>
                   {exp.expense_type === "parcelado" && exp.installment_current && (

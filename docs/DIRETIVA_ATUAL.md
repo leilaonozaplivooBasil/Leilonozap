@@ -12,67 +12,110 @@
 
 ---
 
-## DIR-5 — Super_admin bloqueado em painéis administrativos
+## DIR-7 — Modernização do módulo Financeiro (Fase 2: receita real + centro de custo)
 
-**Emitida por:** dono (Luiz), diretamente, reportando bloqueio ao vivo em
-`/Financial`.
-**Data:** 21/08/2026.
-**Objetivo:** analisar todas as telas com o mesmo padrão de bloqueio
-("Acesso restrito a administradores"), corrigir o que estiver errado, e
-organizar essa lógica de forma melhor — evitando cada tela reescrever a
-própria checagem de administrador.
-**Escopo autorizado:** correção de código nas telas com esse padrão de
-bloqueio; criação de uma fonte única pro conceito de "administrador".
-**Fora do escopo / proibido:** alterar banco, produção, regra de negócio
-financeira; expandir a correção pra conferências de UI cosméticas fora do
-padrão de bloqueio de página (registradas como follow-up, não corrigidas).
-**Regras fixas:** análise sênior antes da correção; reportar no formato do
-Protocolo-Mestre (`ENTENDI QUE VOCÊ QUER` etc.) antes do merge/deploy.
-**Status:** CONCLUÍDA. PR #128 mergeado por squash em `main` (commit
-`f05532b9`), CI verde, Vercel confirmou deploy em produção. Relatório
-completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-5`.
+**Emitida por:** dono (Luiz), diretamente, depois de pedir análise do Nibo
+(Conciliador Open Finance) e do ContaAzul pra trazer o que fizer sentido.
+**Data:** 27/08/2026.
+**Objetivo:** Fase 2 de 3. Hoje o Financeiro só enxerga saída de dinheiro
+(`financial_expenses`) — não existe nenhum jeito de ver entrada (venda
+confirmada, depósito confirmado) dentro do módulo. Esta fase resolve isso
+com duas peças, decididas com o dono a partir da análise de Nibo/ContaAzul:
+1. **Livro-razão de receita** — tabela `financial_income`, gravada no
+   momento em que a venda ou o depósito é CONFIRMADO (não recalculada ao
+   vivo), espelhando `financial_expenses`. Decisão de arquitetura (Opção B)
+   já registrada na DIR-6: número contábil auditável pela Aline não pode
+   mudar sozinho depois — se um pedido de ontem for editado hoje, o
+   relatório de ontem tem que continuar igual.
+2. **Centro de custo** — dimensão nova, separada de categoria, presente em
+   `financial_expenses` E `financial_income` (padrão confirmado tanto no
+   Nibo quanto no ContaAzul: cada lançamento tem categoria E centro de
+   custo, e os relatórios cruzam por qualquer um dos dois). Lista inicial:
+   Leilões / Loja Virtual / Operacional.
+A Visão Geral do Financeiro passa a mostrar entrada x saída de verdade,
+cruzando por categoria e por centro de custo — pronta pra Aline usar.
+**Escopo autorizado:**
+- Migration Supabase: tabela nova `financial_income`; coluna `cost_center`
+  em `financial_expenses` (e na `financial_income` nova).
+- Entidade `FinancialIncome` no adapter/client, espelhando `FinancialExpense`.
+- Hook de gravação automática no momento da confirmação de uma venda
+  (`catalog_sales`) e de um depósito confirmado — só transações que já têm
+  origem clara no sistema (venda no catálogo, depósito confirmado);
+  nenhum lançamento manual "avulso" de receita nesta fase, a menos que o
+  dono peça.
+- UI: campo de centro de custo no formulário de gasto; visualização de
+  receita (nova aba ou seção) e Visão Geral cruzando categoria x centro de
+  custo.
+- A tabela nasce vazia — populada só a partir de agora, sem backfill de
+  histórico, a menos que o dono peça explicitamente.
+**Fora do escopo / proibido:**
+- Conciliação bancária via Open Finance / qualquer API paga de terceiro
+  (Pluggy, Belvo etc.) — decisão adiada pra Fase 3, junto com a automação
+  de conciliação já prevista (usar os webhooks que já existem do Mercado
+  Pago pra casar pagamento com venda, sem custo de API externa).
+- Nenhum "match" automático de recebimento avulso sem origem clara no
+  sistema (isso é chute de dinheiro, não é seguro).
+- Alterar produção sem autorização explícita antes do merge.
+**Regras fixas:** nenhuma além da DIR-5/DIR-6 (não mexer em produção sem
+autorização, não expandir escopo, reportar no formato Protocolo-Mestre
+antes do merge/deploy, preview real testado com login de verdade antes de
+pedir aprovação).
+**Status:** EM VIGOR. Implementação pronta, PR #132 aberta. Relatório
+completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-7`. Aguardando o dono
+conferir no Preview e autorizar merge/deploy.
 
 ---
 
-## DIR-6 — Modernização do módulo Financeiro (Fase 1)
+## DIR-8 — Recorrência de gasto fixo não gera lançamento novo
 
-**Emitida por:** dono (Luiz), diretamente, pedindo análise sênior do
-Financeiro (edição de gastos, trazer receita real da empresa, deixar mais
-automático e profissional — leigo e profissional, ex.: Aline).
-**Data:** 21/08/2026.
-**Objetivo:** Fase 1 de 3 — correções rápidas e de baixo risco antes de
-qualquer mudança de arquitetura de dados. Fases 2 (unificar receita real —
-vendas e depósitos — numa Visão Geral/DRE) e 3 (automação de conciliação)
-ficam pra diretivas futuras, com a decisão de arquitetura já registrada no
-chat: **Opção B — livro-razão de entradas** (uma tabela `financial_income`
-gravada no momento em que a venda/depósito é confirmado, espelhando
-`financial_expenses`), escolhida sobre "calcular na hora" porque um número
-financeiro auditável por um profissional de contabilidade (a Aline) precisa
-de um registro histórico estável — se um relatório de ontem mudasse sozinho
-porque um dado de origem foi alterado hoje, isso não serve pra
-contabilidade real.
-**Escopo autorizado:** correções na tela Financeiro (`Financial.jsx` e
-dependências diretas) que não envolvem banco/esquema novo.
-**Fora do escopo / proibido:** criar a tabela `financial_income` ou
-qualquer sincronização de receita real nesta rodada — isso é Fase 2,
-diretiva própria.
-**Regras fixas:** nenhuma além da DIR-5 (não mexer em produção sem
-autorização, não expandir escopo).
-**Status:** EXECUTADA. Relatório em `docs/RELATORIOS_EXECUCAO.md` →
-`REL-6`. Aguardando confirmação do dono pra merge/deploy.
+**Emitida por:** dono (Luiz), reportando ao vivo (print da Aline logada no
+Financeiro): um gasto "Fixo Mensal" (Consórcio Nacional Volkswagen,
+vencimento 21/07/2026) aparece com uma única linha, "Vencido há 37 dia(s)",
+em vez de mostrar quantos meses estão em aberto.
+**Data:** 27/08/2026.
+**Objetivo:** causa raiz investigada e confirmada por busca no código:
+`expense_type: 'fixo'` e `recurring_day` são só campos salvos — não existe,
+em lugar nenhum do repositório, nenhum código que gera o lançamento do mês
+seguinte. Corrigir isso com um job diário (mesmo padrão dos outros crons já
+registrados em `vercel.json`) que, pra cada gasto fixo, garante um
+lançamento pendente por mês, inclusive fazendo o backfill dos meses que já
+ficaram pra trás (como o caso do Consórcio) — cada mês em aberto vira sua
+própria linha "vencido", pra Aline ver exatamente quantos estão atrasados.
+**Escopo autorizado:**
+- Migration: coluna nova em `financial_expenses` pra agrupar as linhas da
+  mesma recorrência (ex.: `recurring_group_id`), com backfill das linhas
+  "fixo" já existentes (cada uma vira dona do próprio grupo).
+- Função pura testável que decide quais meses estão faltando pra um gasto
+  fixo (mesmo padrão de `src/lib/financeiroVencidos.js`).
+- Endpoint novo (`api/functions/...`) chamado 1x por dia via Vercel Cron,
+  que aplica essa função e cria os lançamentos pendentes que faltam.
+- Limite de segurança no backfill (não gerar centenas de meses de uma vez
+  se `recurring_day`/`due_date` estiver mal configurado).
+**Fora do escopo / proibido:** mexer em gasto "parcelado" (tem lógica
+própria, parcela é digitada manualmente); qualquer geração automática de
+receita (isso é `financial_income`, DIR-7); alterar produção sem
+autorização antes do merge.
+**Regras fixas:** nenhuma além da DIR-5/6/7 (não mexer em produção sem
+autorização, reportar no formato Protocolo-Mestre, preview real testado
+antes de pedir aprovação).
+**Status:** EM VIGOR. Implementação pronta, na mesma PR #132. Relatório
+completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-8`. Aguardando o dono
+conferir no Preview e autorizar merge/deploy.
 
 ---
 
 ## Estado agora
 
-**DIR-6 (Fase 1) corrigida e testada na branch, aguardando decisão do dono
-sobre merge/deploy.** DIR-1 a DIR-5 seguem executadas (ver
+**DIR-7 (Fase 2) implementada, PR #132 aberta, aguardando conferência e
+aprovação do dono. DIR-8 (recorrência de gasto fixo) em execução.**
+DIR-1 a DIR-6 concluídas (ver
 `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
 esta diretiva:
-- `REL-2`: 3 variáveis de ambiente na Vercel + confirmação do 401 na Edge
-  Function `preview-api`, do lado da OpenAI.
-- Fase 2 do Financeiro (receita real) e Fase 3 (automação) — aguardando o
-  dono decidir quando começar.
+- `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
+  OpenAI (as variáveis de ambiente de Preview já foram resolvidas — mesmo
+  problema de fundo do achado da REL-6).
+- Fase 3 do Financeiro (conciliação automática via webhook Mercado Pago,
+  decisão sobre Open Finance) — depois da Fase 2 no ar.
 
 **Nenhuma implementação nova começa até uma diretiva nova ser registrada
 aqui,** no formato de `docs/PADRAO_DIRETIVAS.md`.

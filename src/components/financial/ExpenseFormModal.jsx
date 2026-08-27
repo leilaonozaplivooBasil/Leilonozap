@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import BoletoUploader from "./BoletoUploader";
+import { COST_CENTERS } from "@/lib/costCenters";
 
 const PRESET_CATEGORIES = [
   "Aluguel", "Energia", "Internet", "Telefone", "Água", "Gás",
@@ -37,7 +38,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
     amount: "", due_date: "", payment_method: "pix", pix_or_card_info: "",
     payment_status: "pendente", amount_paid: "", payment_date: "",
     installment_current: "", installment_total: "", notes: "",
-    interest_amount: "", recurring_day: ""
+    interest_amount: "", recurring_day: "", cost_center: ""
   });
   const [customCategory, setCustomCategory] = useState("");
   const [useCustomCategory, setUseCustomCategory] = useState(false);
@@ -60,7 +61,8 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         installment_total: editingExpense.installment_total || "",
         notes: editingExpense.notes || "",
         interest_amount: editingExpense.interest_amount || "",
-        recurring_day: editingExpense.recurring_day || ""
+        recurring_day: editingExpense.recurring_day || "",
+        cost_center: editingExpense.cost_center || ""
       });
       if (editingExpense.category && !PRESET_CATEGORIES.includes(editingExpense.category)) {
         setUseCustomCategory(true);
@@ -72,7 +74,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         amount: "", due_date: "", payment_method: "pix", pix_or_card_info: "",
         payment_status: "pendente", amount_paid: "", payment_date: "",
         installment_current: "", installment_total: "", notes: "",
-        interest_amount: "", recurring_day: ""
+        interest_amount: "", recurring_day: "", cost_center: ""
       });
       setCustomCategory("");
       setUseCustomCategory(false);
@@ -172,6 +174,21 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
                 </Button>
               </div>
             )}
+          </div>
+
+          {/* Centro de custo — DIR-7: qual unidade de negócio é dona deste gasto */}
+          <div>
+            <Label className="text-gray-300 text-sm">Centro de Custo</Label>
+            <Select value={form.cost_center} onValueChange={v => updateField("cost_center", v)}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                <SelectValue placeholder="Selecione (opcional)" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                {COST_CENTERS.map(cc => (
+                  <SelectItem key={cc} value={cc}>{cc}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Tipo de gasto */}

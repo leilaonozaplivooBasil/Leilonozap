@@ -64,6 +64,7 @@ const TABLE_MAP = {
   FavoriteAuction: 'favorite_auctions',
   FeaturedProduct: 'featured_products',
   FinancialExpense: 'financial_expenses',
+  FinancialIncome: 'financial_income',
   FooterSettings: 'footer_settings',
   FreteSettings: 'frete_settings',
   InfluencerLead: 'influencer_leads',
