@@ -7,6 +7,7 @@ import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { gerarEnvioAutomatico } from '../_lib/melhorEnvioShipment.js';
 import { montarRawArremate } from '../_lib/rawArremate.js';
+import { registrarReceita } from '../_lib/financialIncome.js';
 
 import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -240,6 +241,9 @@ export default async function handler(req, res) {
       const rr = await fulfillStoreOrder(sale);
       commission = rr?.commission ?? 0;
       await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
+      // 💰 DIR-7 — só a comissão é receita da empresa; o resto do saldo debitado do
+      // vencedor (produtoAmount) é repassado ao vendedor, não fica com a plataforma.
+      await registrarReceita({ description: `Comissão — arremate #${saleId}`, category: 'comissao_leilao', costCenter: 'Leilões', amount: commission, source: 'venda', saleId });
     } catch (e) {
       console.warn('settle: comissão falhou (venda segue paga):', e?.message);
     }

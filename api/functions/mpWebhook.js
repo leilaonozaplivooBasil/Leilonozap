@@ -10,6 +10,7 @@ import { settlePdvPixSale } from '../_lib/pdvSettle.js';
 import { aplicarReposicao } from '../_lib/supplySettle.js';
 import { debitarCupomDaVenda, criarCupomPassaporte } from '../_lib/passaporteCoupon.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
+import { registrarReceita } from '../_lib/financialIncome.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -575,14 +576,18 @@ export default async function handler(req, res) {
     }
     if (sale.kind === 'adesao') {
       const r = await activateAdesao(sale);
+      // 💰 DIR-7 — taxa de adesão: empresa fica com o valor cheio, sem repasse a terceiro.
+      await registrarReceita({ description: `Adesão — ${sale.buyer_name || sale.id}`, category: 'taxa_adesao', costCenter: 'Operacional', amount: sale.total_amount, source: 'taxa', saleId: sale.id });
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
     if (sale.kind === 'seller_adhesion') {
       const r = await creditSellerAdhesion(sale);
+      await registrarReceita({ description: `Adesão de vendedor — ${sale.buyer_name || sale.id}`, category: 'taxa_adesao_vendedor', costCenter: 'Operacional', amount: sale.total_amount, source: 'taxa', saleId: sale.id });
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, seller_adhesion: true, ...r });
     }
     if (sale.kind === 'partner_plan') {
       const r = await activatePartnerPlan(sale);
+      await registrarReceita({ description: `Plano parceiro — ${sale.buyer_name || sale.id}`, category: 'plano_parceiro', costCenter: 'Operacional', amount: sale.total_amount, source: 'taxa', saleId: sale.id });
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r });
     }
     if (sale.kind === 'seller_freight') {
@@ -597,6 +602,8 @@ export default async function handler(req, res) {
       // 🚚 Frete automático: adiciona ao carrinho e compra a etiqueta na Melhor Envio.
       // Best-effort — nunca bloqueia a venda já paga/comissionada acima.
       const envio = await gerarEnvioAutomatico(sale);
+      // 💰 DIR-7 — só a COMISSÃO é receita da empresa (o resto vai pro vendedor terceiro).
+      await registrarReceita({ description: `Comissão — venda Loja Virtual #${sale.id}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: r?.commission, source: 'venda', saleId: sale.id });
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom, envio });
     }
     // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não
@@ -605,6 +612,14 @@ export default async function handler(req, res) {
     const commission = rr?.commission ?? 0;
     await sb(`catalog_sales?id=eq.${sale.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: commission }) });
     const envio2 = await gerarEnvioAutomatico(sale);
+    // 💰 DIR-7 — arremate de leilão cai aqui (kind 'arremate'); qualquer outro produto
+    // avulso sem kind específico também. Separa por centro de custo pra não misturar.
+    await registrarReceita({
+      description: `Comissão — ${sale.kind === 'arremate' ? 'arremate' : 'venda'} #${sale.id}`,
+      category: sale.kind === 'arremate' ? 'comissao_leilao' : 'comissao_loja',
+      costCenter: sale.kind === 'arremate' ? 'Leilões' : 'Loja Virtual',
+      amount: commission, source: 'venda', saleId: sale.id,
+    });
     return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, commission, envio: envio2 });
   } catch (e) {
     // 🔴 PONTO 121 (21/08/2026) — EXCEÇÃO DEPOIS DO FLIP NÃO PODE SAIR COM 200.
