@@ -151,10 +151,14 @@ test('a migracao da tabela existe e nao apaga nada', () => {
   const sql = readFileSync(new URL('../supabase/migrations/20260827_wa_mensagens_bot.sql', import.meta.url), 'utf8');
   assert.match(sql, /create table if not exists public\.wa_mensagens_bot/);
   assert.match(sql, /message_id\s+text primary key/);
+  assert.match(sql, /enable row level security/, 'a tabela ficou legivel pela chave anon do projeto');
   // Sem os comentarios: a nota de limpeza no fim cita "delete where created_at ..." de exemplo.
   const comandos = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
-  assert.ok(!/\bdrop\b|\bdelete\b|\btruncate\b|\balter table\b/i.test(comandos),
-    'a migracao mexe em coisa que ja existe');
+  assert.ok(!/\bdrop\b|\bdelete\b|\btruncate\b/i.test(comandos), 'a migracao apaga coisa');
+  // ALTER so pode ser na tabela que ela mesma acabou de criar (o enable RLS).
+  for (const m of comandos.matchAll(/alter table\s+(\S+)/gi)) {
+    assert.equal(m[1], 'public.wa_mensagens_bot', `a migracao altera tabela de fora: ${m[1]}`);
+  }
 });
 
 // ---------------------------------------------------------------------------

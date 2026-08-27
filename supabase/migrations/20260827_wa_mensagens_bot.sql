@@ -18,5 +18,11 @@ create table if not exists public.wa_mensagens_bot (
 comment on table public.wa_mensagens_bot is
   'IDs das mensagens que o whatsapp-router ENVIOU. Serve para reconhecer que um reply (referenceMessageId do Z-API) aponta para uma mensagem do proprio bot — sem isso, responder a mensagem dele no grupo nao o acorda.';
 
+-- RLS ligada e SEM nenhuma policy: ninguem de fora enxerga esta tabela. A function usa a
+-- service_role, que passa por cima de RLS por definicao — entao ela continua lendo e
+-- gravando normal. Sem isso, uma tabela em `public` fica legivel pela chave anon do
+-- projeto, e nao ha motivo nenhum pra isso aqui.
+alter table public.wa_mensagens_bot enable row level security;
+
 -- Mesma nota de limpeza da wa_mensagens_processadas: tabela pequena (so um id por resposta).
 -- Se um dia crescer demais, "delete where created_at < now() - interval '30 days'" resolve.
