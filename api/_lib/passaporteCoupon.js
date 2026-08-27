@@ -75,6 +75,29 @@ export async function criarCupomPassaporte(sale) {
  * Consome `alvo` do saldo BLOQUEADO do usuário, em FIFO pelos cupons mais antigos,
  * gravando o resultado no campo indicado ('valor_liberado' ou 'valor_cancelado').
  * Nunca consome mais do que existe de bloqueado em cada cupom. CAS por linha.
+ *
+ * 🔴 BUG CORRIGIDO EM 27/08/2026 — BÔNUS PAGO DUAS VEZES.
+ *
+ * Esta consulta lia TODOS os cupons do usuário, sem filtro nenhum. Entre 01/08 e
+ * 19/08 valeu o modelo A (passaporteBonus.js): o bônus era somado DIRETO em
+ * app_users.saldo_disponivel no ato do depósito, e o cupom ficava só como registro
+ * de auditoria, com status 'creditado'.
+ *
+ * Só que um cupom desses guarda valor_credito = 10 com valor_liberado e
+ * valor_cancelado zerados — que é EXATAMENTE a aparência de um cupom bloqueado do
+ * modelo B. A conta `valor_credito - valor_liberado - valor_cancelado` dava 10, e o
+ * encerramento do leilão liberava, como crédito de Loja Virtual, um bônus que já
+ * tinha sido pago na carteira semanas antes.
+ *
+ * Medido no banco em 27/08/2026: R$ 76,09 pagos em dobro, 10 cupons, 8 pessoas —
+ * R$ 6,06 pelo encerramento automático e R$ 70,03 amplificados por uma liberação
+ * retroativa em lote. Nada tinha sido gasto ainda.
+ *
+ * A separação certa é por dono: cupom do modelo A pertence a passaporteBonus.js
+ * (credita no depósito, recolhe no arremate). Cupom do modelo B pertence a este
+ * arquivo. `bonus_creditado_em` é a marca que distingue os dois — só o modelo A
+ * preenche essa coluna. O filtro abaixo vale para liberação E para cancelamento:
+ * nenhum dos dois tem o que fazer num cupom que não é dele.
  */
 async function consumirBloqueado(userId, alvo, campo, extraFields = {}) {
   const uid = String(userId || '').trim();
@@ -82,7 +105,8 @@ async function consumirBloqueado(userId, alvo, campo, extraFields = {}) {
   if (!uid || total <= 0) return { consumido: 0 };
 
   const rows = await (await sb(
-    `passaporte_coupons?select=id,valor_credito,valor_liberado,valor_cancelado,saldo_restante&user_id=eq.${enc(uid)}&order=created_at.asc`
+    `passaporte_coupons?select=id,valor_credito,valor_liberado,valor_cancelado,saldo_restante` +
+    `&user_id=eq.${enc(uid)}&bonus_creditado_em=is.null&order=created_at.asc`
   )).json().catch(() => []);
   const lista = Array.isArray(rows) ? rows : [];
 
@@ -156,13 +180,34 @@ export async function cancelarCuponsBloqueados(userId, valorArrematado = null) {
   }
 }
 
-/** Situação agregada dos cupons do usuário (para a Carteira e o carrinho). */
+/**
+ * Situação agregada dos cupons do usuário (para a Carteira e o carrinho).
+ *
+ * 27/08/2026 — duas correções, pelo mesmo motivo do bug acima:
+ *
+ * ① `tem_bloqueado` passou a contar SÓ cupom do modelo B. Um cupom do modelo A
+ *    (bonus_creditado_em preenchido) tem valor_credito cheio e nada consumido, então
+ *    entrava na conta e a Carteira dizia "seu crédito libera quando o leilão
+ *    terminar" — para um bônus que já estava no saldo da pessoa e que nunca vai
+ *    liberar nada. Era a mesma mentira do bug, só que na tela.
+ *
+ * ② passou a devolver QUANTO está bloqueado, não só se existe. A Carteira mostrava
+ *    "você tem crédito bloqueado" sem dizer o valor, e o cliente ficava sem saber se
+ *    eram R$ 10 ou R$ 45 esperando o leilão fechar — o que alimentava a sensação de
+ *    que o bônus tinha sumido (pedido do dono: "isso precisa ficar explícito na
+ *    carteira").
+ *
+ * O saldo GASTÁVEL continua somando todos os cupons: um cupom do modelo A corrigido
+ * tem saldo_restante zero e não soma nada, e cupom antigo já liberado de verdade
+ * precisa continuar valendo.
+ */
 export async function statusCupons(userId) {
-  if (!ok()) return { liberado: null, tem_bloqueado: false };
+  const vazio = { liberado: null, tem_bloqueado: false, bloqueado: null };
+  if (!ok()) return vazio;
   const uid = String(userId || '').trim();
-  if (!uid) return { liberado: null, tem_bloqueado: false };
+  if (!uid) return vazio;
   const rows = await (await sb(
-    `passaporte_coupons?select=id,valor_credito,valor_liberado,valor_cancelado,saldo_restante,valor_aportado` +
+    `passaporte_coupons?select=id,valor_credito,valor_liberado,valor_cancelado,saldo_restante,valor_aportado,bonus_creditado_em` +
     `&user_id=eq.${enc(uid)}&order=created_at.asc`
   )).json().catch(() => []);
   const lista = Array.isArray(rows) ? rows : [];
@@ -170,13 +215,20 @@ export async function statusCupons(userId) {
   const gastavelTotal = lista.reduce((s, c) => s + money(c.saldo_restante), 0);
   const creditoLiberadoTotal = lista.reduce((s, c) => s + money(c.valor_liberado), 0);
   const aporteTotal = lista.reduce((s, c) => s + money(c.valor_aportado), 0);
-  const temBloqueado = lista.some((c) => money(c.valor_credito) - money(c.valor_liberado) - money(c.valor_cancelado) > 0);
+
+  // só cupom do modelo B (bonus_creditado_em vazio) tem crédito esperando leilão
+  const bloqueadoTotal = lista.reduce((s, c) => {
+    if (c.bonus_creditado_em) return s;
+    const resta = money(c.valor_credito) - money(c.valor_liberado) - money(c.valor_cancelado);
+    return resta > 0 ? s + resta : s;
+  }, 0);
 
   return {
     liberado: gastavelTotal > 0
       ? { saldo: money(gastavelTotal), credito: money(creditoLiberadoTotal), aporte: money(aporteTotal) }
       : null,
-    tem_bloqueado: temBloqueado,
+    tem_bloqueado: bloqueadoTotal > 0,
+    bloqueado: bloqueadoTotal > 0 ? { saldo: money(bloqueadoTotal) } : null,
   };
 }
 

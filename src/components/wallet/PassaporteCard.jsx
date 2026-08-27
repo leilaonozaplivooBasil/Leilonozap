@@ -54,11 +54,17 @@ export default function PassaporteCard({ user }) {
   }
 
   if (status.tem_bloqueado) {
+    // 27/08/2026: passou a mostrar QUANTO está guardado. Antes só dizia que existia
+    // crédito bloqueado, sem o valor — e o cliente não tinha como saber se eram R$ 10
+    // ou R$ 45 esperando o leilão fechar, o que virava "o meu bônus sumiu".
+    const guardado = status.bloqueado?.saldo;
     return (
       <div className="rounded-2xl border border-white/10 bg-gray-800/40 backdrop-blur-xl p-5 shadow-lg shadow-black/10 flex items-start gap-3">
         <Lock className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
         <div className="min-w-0">
-          <h2 className="font-bold text-white">Crédito Passaporte de 10% — saldo potencializado</h2>
+          <h2 className="font-bold text-white">
+            Crédito Passaporte guardado{guardado ? <>: <span className="text-amber-300">{money(guardado)}</span></> : null}
+          </h2>
           <p className="text-sm text-gray-400 mt-1">
             Este crédito é à parte do seu saldo de lance — <strong className="text-gray-300">não pode ser usado pra dar lance em leilão</strong>.
           </p>
