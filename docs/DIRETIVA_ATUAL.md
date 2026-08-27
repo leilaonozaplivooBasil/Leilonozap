@@ -66,10 +66,47 @@ conferir no Preview e autorizar merge/deploy.
 
 ---
 
+## DIR-8 — Recorrência de gasto fixo não gera lançamento novo
+
+**Emitida por:** dono (Luiz), reportando ao vivo (print da Aline logada no
+Financeiro): um gasto "Fixo Mensal" (Consórcio Nacional Volkswagen,
+vencimento 21/07/2026) aparece com uma única linha, "Vencido há 37 dia(s)",
+em vez de mostrar quantos meses estão em aberto.
+**Data:** 27/08/2026.
+**Objetivo:** causa raiz investigada e confirmada por busca no código:
+`expense_type: 'fixo'` e `recurring_day` são só campos salvos — não existe,
+em lugar nenhum do repositório, nenhum código que gera o lançamento do mês
+seguinte. Corrigir isso com um job diário (mesmo padrão dos outros crons já
+registrados em `vercel.json`) que, pra cada gasto fixo, garante um
+lançamento pendente por mês, inclusive fazendo o backfill dos meses que já
+ficaram pra trás (como o caso do Consórcio) — cada mês em aberto vira sua
+própria linha "vencido", pra Aline ver exatamente quantos estão atrasados.
+**Escopo autorizado:**
+- Migration: coluna nova em `financial_expenses` pra agrupar as linhas da
+  mesma recorrência (ex.: `recurring_group_id`), com backfill das linhas
+  "fixo" já existentes (cada uma vira dona do próprio grupo).
+- Função pura testável que decide quais meses estão faltando pra um gasto
+  fixo (mesmo padrão de `src/lib/financeiroVencidos.js`).
+- Endpoint novo (`api/functions/...`) chamado 1x por dia via Vercel Cron,
+  que aplica essa função e cria os lançamentos pendentes que faltam.
+- Limite de segurança no backfill (não gerar centenas de meses de uma vez
+  se `recurring_day`/`due_date` estiver mal configurado).
+**Fora do escopo / proibido:** mexer em gasto "parcelado" (tem lógica
+própria, parcela é digitada manualmente); qualquer geração automática de
+receita (isso é `financial_income`, DIR-7); alterar produção sem
+autorização antes do merge.
+**Regras fixas:** nenhuma além da DIR-5/6/7 (não mexer em produção sem
+autorização, reportar no formato Protocolo-Mestre, preview real testado
+antes de pedir aprovação).
+**Status:** EM VIGOR.
+
+---
+
 ## Estado agora
 
 **DIR-7 (Fase 2) implementada, PR #132 aberta, aguardando conferência e
-aprovação do dono.** DIR-1 a DIR-6 concluídas (ver
+aprovação do dono. DIR-8 (recorrência de gasto fixo) em execução.**
+DIR-1 a DIR-6 concluídas (ver
 `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
 esta diretiva:
 - `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
