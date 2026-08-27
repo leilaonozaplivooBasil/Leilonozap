@@ -119,6 +119,21 @@ function ultimosDigitos(v: string | null | undefined, n = 10): string {
   return apenasDigitos(v).slice(-n);
 }
 
+// @marcação dentro do TEXTO (27/08/2026). Conferido na documentação do webhook "ao receber"
+// do Z-API: NÃO existe campo de menção no payload (não tem mentionedPhones, mentioned nem
+// mentions — a tabela de campos deles vai de `text.message` a `sticker.stickerUrl` e menção
+// não aparece em lugar nenhum). O que o WhatsApp manda de verdade é o "@" escrito no corpo
+// da mensagem seguido do número: "@5521984072064 dá uma olhada nisso". É isso que a gente
+// confere agora — o que existia antes era chute em campo inexistente e dava SEMPRE false.
+function marcaONumeroNoTexto(texto: string, numero: string): boolean {
+  const fim = ultimosDigitos(numero, 8);
+  if (!fim) return false;
+  for (const m of String(texto || '').matchAll(/@\s*(\d[\d\s.-]{5,25})/g)) {
+    if (apenasDigitos(m[1]).endsWith(fim)) return true;
+  }
+  return false;
+}
+
 function ehAdmin(remetente: string): boolean {
   if (!ADMIN_PHONE_NUMBERS.length) return false; // sem admin configurado, ninguém vira Heloim — padrão seguro
   const digitos = ultimosDigitos(remetente);
@@ -139,6 +154,7 @@ type MensagemExtraida = {
   grupoNome: string | null;
   texto: string; // pra mídia sem conteúdo legível, um texto sintético descrevendo o que chegou
   audioUrl: string | null; // se veio áudio, a URL do arquivo — ver transcreverAudio()
+  audioMime: string | null; // o que o Z-API declarou em audio.mimeType — o Whisper precisa disso
   // Imagem/PDF que o Zeca precisa VER de verdade (print de erro, comprovante, catálogo).
   // A Claude lê os dois nativamente — ver baixarMidia()/blocosDeMidia().
   midiaUrl: string | null;
@@ -146,16 +162,32 @@ type MensagemExtraida = {
   midiaMime: string | null;   // o que o Z-API declarou; conferido/corrigido no download
   midiaNome: string | null;   // nome do arquivo, quando vem (só documento)
   // Em grupo, a Heloim só fala quando é chamada — ver heloimFoiChamada().
-  mencionaBot: boolean;     // o número do bot foi @marcado na mensagem
-  respondeuBot: boolean;    // a mensagem é resposta (reply) a uma mensagem do próprio bot
+  mencionaBot: boolean;     // o número do bot foi @marcado no texto da mensagem
+  // Reply: o Z-API manda só o ID da mensagem citada (referenceMessageId), não o autor dela.
+  // Saber se aquele ID é de uma mensagem NOSSA é consulta em wa_mensagens_bot — feita depois,
+  // em heloimFoiChamada(), porque extrairMensagem() é síncrona de propósito (o webhook tem
+  // que devolver 200 rápido, ver processarMensagem).
+  respondidaMessageId: string | null;
   messageId: string | null; // usado pra idempotência — ver jaProcessada()
 };
 
 // Heloim é a ÚNICA que opera em grupo (pedido do dono, 22/08/2026) — Zeca continua 1:1 só.
 // Grupo fora da lista: mensagem descartada, sem log de payload (grupo não autorizado não é
 // "formato desconhecido pra investigar", é intencionalmente ignorado).
+// ⚠️ Comparação por DÍGITOS, não string exata (27/08/2026). O Z-API entrega o ID do grupo
+// como "120363423529374305-group", mas o MESMO grupo aparece como "120363423529374305@g.us"
+// em export/print/outras ferramentas. Com comparação exata, configurar GRUPOS_HELOIM_IDS no
+// formato "errado" deixava a Heloim muda no grupo inteiro — e sem log nenhum, porque grupo
+// não autorizado é descartado de propósito antes de qualquer registro. Os dígitos são os
+// mesmos nos dois formatos, então comparar por eles acaba com essa categoria de silêncio.
+function idDeGrupo(v: string): string {
+  return apenasDigitos(v);
+}
+
 function grupoAutorizado(grupoId: string): boolean {
-  return GRUPOS_HELOIM_IDS.includes(grupoId);
+  const alvo = idDeGrupo(grupoId);
+  if (!alvo) return false;
+  return GRUPOS_HELOIM_IDS.some((g) => idDeGrupo(g) === alvo);
 }
 
 function extrairMensagem(body: any): MensagemExtraida | null {
@@ -190,28 +222,25 @@ function extrairMensagem(body: any): MensagemExtraida | null {
 
   // 📣 Foi o bot que chamaram? Duas pistas além do nome escrito no texto (esse é
   // conferido em heloimFoiChamada()):
-  //   ① @marcação — o Z-API manda a lista de números marcados. O nome do campo varia
-  //      entre versões deles, então olhamos os candidatos plausíveis; nenhum bater não
-  //      quebra nada, só significa "não foi marcado".
-  //   ② resposta (reply) a uma mensagem do bot — o corpo citado vem com quem escreveu.
-  // Nunca chuta: na dúvida, os dois ficam false e ela só responde se o nome dela vier
-  // escrito. Melhor ficar calada de leve do que falar por cima da conversa dos outros.
+  //   ① @marcação — está no TEXTO, não em campo próprio (ver marcaONumeroNoTexto).
+  //   ② resposta (reply) — o Z-API manda `referenceMessageId`, o ID da mensagem citada.
+  //
+  // 🩹 27/08/2026 — os dois estavam quebrados desde que foram escritos (#103), e é por isso
+  // que o bot "parou de responder no grupo": os campos que a gente lia (mentionedPhones /
+  // referencedMessage / quotedMsg / quotedMessage) NÃO EXISTEM no payload do Z-API. Ou seja,
+  // mencionaBot e respondeuBot davam false em 100% das mensagens, e sobrava um único jeito de
+  // acordar o bot no grupo: escrever o nome dele. Quem marcava com @ ou respondia a mensagem
+  // dele só via silêncio. Corrigido para os campos reais e conferidos na documentação.
   const numeroDoBot = apenasDigitos(ZAPI_NUMERO_BOT);
-  const marcados: unknown = body?.mentionedPhones ?? body?.mentioned ?? body?.mentions ?? null;
-  const mencionaBot = !!numeroDoBot && Array.isArray(marcados) &&
-    marcados.some((m) => apenasDigitos(String(m)).endsWith(ultimosDigitos(numeroDoBot, 8)));
+  const mencionaBot = marcaONumeroNoTexto(String(texto ?? ''), numeroDoBot);
 
-  const citada: any = body?.referencedMessage ?? body?.quotedMsg ?? body?.quotedMessage ?? null;
-  const autorDaCitada: unknown = citada?.fromMe === true ? 'bot'
-    : (citada?.participant ?? citada?.phone ?? citada?.author ?? null);
-  const respondeuBot = autorDaCitada === 'bot' ||
-    (!!numeroDoBot && !!autorDaCitada &&
-      apenasDigitos(String(autorDaCitada)).endsWith(ultimosDigitos(numeroDoBot, 8)));
+  const refId: unknown = body?.referenceMessageId ?? null;
+  const respondidaMessageId = refId ? String(refId) : null;
 
   const base = {
     remetente, remetenteNome, grupoId, grupoNome, messageId: messageIdStr,
-    audioUrl: null, midiaUrl: null, midiaTipo: null, midiaMime: null, midiaNome: null,
-    mencionaBot, respondeuBot,
+    audioUrl: null, audioMime: null, midiaUrl: null, midiaTipo: null, midiaMime: null, midiaNome: null,
+    mencionaBot, respondidaMessageId,
   } as const;
 
   if (texto && String(texto).trim()) {
@@ -222,11 +251,21 @@ function extrairMensagem(body: any): MensagemExtraida | null {
   // transcreverAudio() e processarMensagem()). Tenta os campos mais prováveis do Z-API; se
   // nenhum bater, ainda assim NUNCA fica muda — vira texto sintético mesmo sem URL.
   if (body?.audio) {
+    // Campos conferidos na documentação do Z-API (27/08/2026): `audio.audioUrl` e
+    // `audio.mimeType` (normalmente "audio/ogg; codecs=opus"). Os outros dois nomes ficam
+    // como rede de segurança caso eles mudem — não custa nada.
     const audioUrl: unknown = body.audio?.audioUrl ?? body.audio?.url ?? body.audio?.audioURL ?? null;
+    if (!audioUrl) {
+      console.warn(
+        '[whatsapp-router] chegou áudio mas nenhuma URL reconhecida dentro de body.audio — objeto bruto:',
+        JSON.stringify(body.audio).slice(0, 500)
+      );
+    }
     return {
       ...base,
       texto: '[o cliente mandou uma mensagem de ÁUDIO — sem transcrição disponível ainda]',
       audioUrl: audioUrl ? String(audioUrl) : null,
+      audioMime: body.audio?.mimeType ? String(body.audio.mimeType) : null,
     };
   }
 
@@ -274,18 +313,53 @@ function extrairMensagem(body: any): MensagemExtraida | null {
 // Sem OPENAI_API_KEY configurada, ou qualquer falha no meio do caminho, devolve null — quem
 // chama já sabe lidar com "sem transcrição" (mensagem sintética do extrairMensagem).
 // ============================================================================
-async function transcreverAudio(audioUrl: string): Promise<string | null> {
-  if (!OPENAI_API_KEY) return null;
+// O Whisper decide o decoder pela EXTENSÃO do nome do arquivo e pelo Content-Type da parte —
+// não pelos bytes. Mandar tudo como "audio.ogg" com o tipo que o CDN do Z-API devolver (às
+// vezes "application/octet-stream", às vezes "binary/octet-stream") é receita de HTTP 400
+// "Invalid file format" — e aí o áudio chega, o download funciona, e mesmo assim o Zeca
+// responde "não consegui ouvir". Aqui a extensão e o tipo saem do mimeType que o próprio
+// Z-API declarou em audio.mimeType; sem ele, o padrão do WhatsApp (ogg/opus).
+const EXTENSAO_POR_MIME: Record<string, string> = {
+  'audio/ogg': 'ogg', 'audio/opus': 'ogg', 'audio/x-opus+ogg': 'ogg',
+  'audio/mpeg': 'mp3', 'audio/mp3': 'mp3',
+  'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/m4a': 'm4a', 'audio/aac': 'm4a',
+  'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav',
+  'audio/webm': 'webm', 'audio/flac': 'flac', 'audio/x-flac': 'flac',
+};
+
+function formatoDoAudio(declarado: string | null, doServidor: string | null): { mime: string; ext: string } {
+  for (const candidato of [declarado, doServidor]) {
+    const limpo = String(candidato || '').split(';')[0].trim().toLowerCase();
+    const ext = EXTENSAO_POR_MIME[limpo];
+    if (ext) return { mime: limpo, ext };
+  }
+  return { mime: 'audio/ogg', ext: 'ogg' }; // áudio de WhatsApp é ogg/opus por padrão
+}
+
+async function transcreverAudio(audioUrl: string, mimeDeclarado: string | null = null): Promise<string | null> {
+  if (!OPENAI_API_KEY) {
+    // Antes isso saía calado, e do lado de fora ficava idêntico a "o Whisper não entendeu":
+    // o cliente manda áudio, o Zeca diz que não conseguiu ouvir, e ninguém descobre que o
+    // problema é um secret que nunca foi configurado. Agora o log fala.
+    console.warn(
+      '[whatsapp-router] chegou áudio, mas OPENAI_API_KEY não está configurada — ninguém transcreve. ' +
+      'Configure o secret no Supabase (ver DEPLOY.md) para o Zeca "ouvir" de verdade.'
+    );
+    return null;
+  }
   try {
     const audioResp = await fetch(audioUrl);
     if (!audioResp.ok) {
       console.error('[whatsapp-router] falha ao baixar áudio do Z-API:', audioResp.status);
       return null;
     }
-    const audioBlob = await audioResp.blob();
+    const bytes = new Uint8Array(await audioResp.arrayBuffer());
+    const { mime, ext } = formatoDoAudio(mimeDeclarado, audioResp.headers.get('content-type'));
+    const audioBlob = new Blob([bytes], { type: mime });
+    console.log(`[whatsapp-router] transcrevendo áudio: ${bytes.length} bytes, enviando como audio.${ext} (${mime})`);
 
     const form = new FormData();
-    form.append('file', audioBlob, 'audio.ogg');
+    form.append('file', audioBlob, `audio.${ext}`);
     form.append('model', 'whisper-1');
     form.append('language', 'pt');
 
@@ -446,8 +520,8 @@ async function carregarHistorico(remetente: string, agente: string): Promise<Tur
 //
 // Ela entra na conversa em quatro situações — nesta ordem de custo:
 //   ① o nome dela aparece escrito ("Heloim, quantas vendas hoje?")
-//   ② @marcaram o número do bot
-//   ③ a mensagem é resposta (reply) a uma mensagem dela
+//   ② @marcaram o número do bot (o "@5521984072064" escrito no texto — ver marcaONumeroNoTexto)
+//   ③ a mensagem é resposta (reply) a uma mensagem dela (referenceMessageId + wa_mensagens_bot)
 //   ④ ela e essa MESMA pessoa estão no meio de uma conversa (últimos 5 min) — senão a
 //      pessoa teria que repetir "Heloim" a cada frase, e ela pareceria robô
 //
@@ -456,6 +530,10 @@ async function carregarHistorico(remetente: string, agente: string): Promise<Tur
 //
 // ⚠️ Sem acento de propósito: "Heloim" não tem acento, mas gente escreve de tudo. O
 // normalizar() tira acento dos dois lados antes de comparar.
+//
+// ⚠️ 27/08/2026: ① passou a valer também pro nome "Zeca" (é como o time chama esse número),
+// e ② e ③ passaram a funcionar de verdade — antes liam campo que não existe no Z-API e
+// davam false sempre. Ver NOMES_QUE_CHAMAM_O_BOT e a nota em extrairMensagem().
 // ============================================================================
 const JANELA_CONVERSA_MS = 5 * 60 * 1000;
 
@@ -463,8 +541,61 @@ function normalizar(v: string): string {
   return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-function citaNomeDaHeloim(texto: string): boolean {
-  return /\bheloim\b/.test(normalizar(texto));
+// 🩹 27/08/2026 — "Zeca" também acorda o bot no grupo.
+//
+// O grupo tem UM número de WhatsApp só, e quem responde lá dentro é a Heloim (grupo autorizado
+// = sempre Heloim, ver processarMensagem — o Zeca nunca operou em grupo, nem antes nem depois
+// do #96). Só que o time chama esse número de "Zeca", que é o nome que ele usa no 1:1 com
+// cliente. Resultado: a galera escrevia "Zeca, ..." no grupo, o gate só reconhecia a palavra
+// "heloim", e o bot ficava mudo — sem log, sem erro, sem nada pra investigar. Do lado de fora
+// isso é exatamente "o Zeca parou de responder no grupo".
+//
+// Aceitar os dois nomes não muda QUEM responde (a persona no grupo continua sendo a Heloim,
+// com as tools dela) — muda só o que conta como "me chamaram".
+const NOMES_QUE_CHAMAM_O_BOT = /\b(heloim|zeca)\b/;
+
+function chamouOBotPeloNome(texto: string): boolean {
+  return NOMES_QUE_CHAMAM_O_BOT.test(normalizar(texto));
+}
+
+// A mensagem citada (reply) é uma mensagem NOSSA? O Z-API manda só o ID dela
+// (referenceMessageId), sem dizer quem escreveu — então a resposta está em wa_mensagens_bot,
+// onde enviarWhatsApp() registra o ID de tudo que o bot manda. Falha de rede aqui devolve
+// false, igual conversaAberta(): no pior caso ele só não emenda, nunca fala sem ser chamado.
+async function respondeuOBot(messageId: string | null): Promise<boolean> {
+  if (!messageId) return false;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/wa_mensagens_bot?select=message_id&message_id=eq.${encodeURIComponent(messageId)}&limit=1`,
+      { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
+    );
+    if (!r.ok) return false;
+    const rows = await r.json().catch(() => []);
+    return Array.isArray(rows) && rows.length > 0;
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao checar se o reply era pra mim (trata como não):', e);
+    return false;
+  }
+}
+
+// Registro do que o BOT mandou — é o que faz o reply funcionar (ver respondeuOBot). Best-effort
+// de propósito: se não gravar, o pior que acontece é o reply daquela mensagem não acordar ele.
+// Nunca pode derrubar um envio que já deu certo.
+async function registrarMensagemDoBot(messageId: string) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/wa_mensagens_bot`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ message_id: messageId }),
+    });
+  } catch (e) {
+    console.error('[whatsapp-router] falha ao registrar mensagem do bot (reply pode não acordar ele):', e);
+  }
 }
 
 // Ela respondeu essa pessoa há pouco? Usa a própria memória (ai_conversas) — não precisa de
@@ -489,8 +620,12 @@ async function conversaAberta(remetente: string): Promise<boolean> {
 }
 
 async function heloimFoiChamada(msg: MensagemExtraida): Promise<boolean> {
-  if (citaNomeDaHeloim(msg.texto)) return true;
-  if (msg.mencionaBot || msg.respondeuBot) return true;
+  if (chamouOBotPeloNome(msg.texto)) return true;
+  // A @marcação é conferida duas vezes de propósito: `mencionaBot` olha o texto CRU do
+  // payload, e aqui olhamos o texto FINAL — que pode ser a legenda de uma foto ou a
+  // transcrição de um áudio. Marcar o bot na legenda de um print também vale como chamado.
+  if (msg.mencionaBot || marcaONumeroNoTexto(msg.texto, ZAPI_NUMERO_BOT)) return true;
+  if (await respondeuOBot(msg.respondidaMessageId)) return true;
   return await conversaAberta(msg.remetente);
 }
 
@@ -841,6 +976,9 @@ function montarSystemPromptHeloim(ctx: {
   const contextoCanal = ctx.emGrupo
     ? `\n\nVocê está respondendo DENTRO DO GRUPO "${ctx.grupoNome || '(sem nome)'}" — quem mandou a última mensagem foi ` +
       `${ctx.remetenteNome || 'alguém do grupo'}${ctx.remetenteEhAdmin ? ' (é admin — pode aprovar/rejeitar direto)' : ' (NÃO é admin — só pode pedir, não aprovar/rejeitar nada)'}.` +
+      `\n\nNo grupo, o pessoal chama esse número de "Zeca" — é o mesmo número que atende cliente ` +
+      `como Zeca no 1:1. Se te chamarem assim, é com você mesma: responda normal, sem corrigir ` +
+      `o nome e sem explicar que são personas diferentes.` +
       `\n\nVocê só está vendo esta mensagem porque foi CHAMADA (pelo nome, por marcação, por ` +
       `resposta a uma mensagem sua, ou porque já estava conversando com essa pessoa). O resto ` +
       `da conversa do grupo passa sem você. Então responda o que foi pedido e pare — não ` +
@@ -1158,6 +1296,13 @@ async function enviarWhatsApp(telefone: string, texto: string) {
   if (corpo && (corpo.error || corpo.value === false)) {
     throw new Error(`Z-API recusou o envio (HTTP 200, mas corpo indica falha): ${corpoTexto}`);
   }
+
+  // Guarda o ID do que acabamos de mandar — é o que permite reconhecer, mais tarde, que
+  // alguém RESPONDEU (reply) uma mensagem nossa no grupo (ver respondeuOBot). O send-text do
+  // Z-API devolve `zaapId` + `messageId`; é o `messageId` que volta em `referenceMessageId`
+  // na mensagem de quem respondeu. Os outros dois nomes ficam de rede de segurança.
+  const idEnviado = corpo?.messageId ?? corpo?.id ?? corpo?.zaapId ?? null;
+  if (idEnviado) await registrarMensagemDoBot(String(idEnviado));
 }
 
 // ============================================================================
@@ -1212,8 +1357,18 @@ async function processarMensagem(msg: MensagemExtraida) {
     // mensagem sintética ("sem transcrição disponível") pelo conteúdo real. Falha aqui nunca
     // derruba a conversa: sem sucesso, segue com o texto sintético mesmo (ver transcreverAudio).
     if (msg.audioUrl) {
-      const transcricao = await transcreverAudio(msg.audioUrl);
+      const transcricao = await transcreverAudio(msg.audioUrl, msg.audioMime);
       if (transcricao) msg = { ...msg, texto: `[mensagem por áudio, transcrita] ${transcricao}` };
+      else if (msg.grupoId) {
+        // Em grupo o gate é o texto — sem transcrição, um áudio dizendo "Zeca, ..." vira uma
+        // frase sintética que não cita nome nenhum, e o bot fica calado achando que não foi
+        // chamado. Continua calado de propósito (falar sem ser chamado é pior), mas agora
+        // fica registrado: áudio silencioso em grupo é quase sempre transcrição quebrada.
+        console.warn(
+          '[whatsapp-router] áudio em grupo sem transcrição — o gate de "fui chamada?" não tem ' +
+          'texto pra ler e a mensagem será ignorada. Confira OPENAI_API_KEY e os logs do Whisper.'
+        );
+      }
     }
 
     // Grupo autorizado = SEMPRE Heloim, não importa quem no grupo escreveu (ela é quem recolhe

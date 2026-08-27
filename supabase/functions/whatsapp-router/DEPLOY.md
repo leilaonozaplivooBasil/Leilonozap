@@ -37,15 +37,26 @@ supabase secrets set \
 - `EXECUTIVO_VENDEDOR_PHONE` (opcional): número do executivo que recebe os leads de "quero
   ser vendedor" vindos de anúncio (Zeca encaminha automático). Sem configurar, usa o número
   do João Paim (`21984942730`) como padrão — só precisa desse secret se for trocar.
-- `OPENAI_API_KEY` (opcional): habilita transcrição de áudio de verdade (Whisper — mesmo
-  serviço que já era usado no Base44). Sem essa chave, o Zeca continua funcionando, só que
-  sem entender o CONTEÚDO de mensagens de voz (reconhece que recebeu áudio e pede resumo por
-  texto). Gera em https://platform.openai.com/api-keys — custo é por minuto de áudio, bem
-  barato (~R$0,03/min na tabela pública da OpenAI em 2026).
+- `OPENAI_API_KEY` (**na prática, obrigatória**): habilita transcrição de áudio de verdade
+  (Whisper — mesmo serviço que já era usado no Base44). Sem essa chave, o Zeca continua
+  funcionando, só que sem entender o CONTEÚDO de mensagens de voz (reconhece que recebeu
+  áudio e pede resumo por texto) — e **em grupo ele fica mudo**, porque lá ele só fala quando
+  é chamado e sem transcrição não existe texto pra reconhecer o chamado. Gera em
+  https://platform.openai.com/api-keys — custo é por minuto de áudio, bem barato (~R$0,03/min
+  na tabela pública da OpenAI em 2026).
+  **Como conferir se está valendo:** Logs da function → procure
+  `OPENAI_API_KEY não está configurada`. Se essa linha aparece, é só isso; configure e pronto.
+  Se em vez dela aparecer `transcrevendo áudio: N bytes`, a chave está OK e o problema (se
+  houver) é outro — a linha seguinte diz qual (`Whisper recusou a transcrição`, `falha ao
+  baixar áudio do Z-API`).
 - `GRUPOS_HELOIM_IDS` (opcional): IDs de grupo de WhatsApp onde a Heloim participa, separados
   por vírgula (formato Z-API, tipo `120363019502650977-group`). Sem essa variável, Heloim
   continua funcionando só 1:1 com os admins — não responde em grupo nenhum. **Como descobrir
   o ID certo:** ver seção 6 abaixo (`waGroupDiagZapi`).
+  Desde 27/08/2026 a comparação é por DÍGITOS: `120363019502650977-group`,
+  `120363019502650977@g.us` e `120363019502650977` valem todos como o mesmo grupo. Antes era
+  string exata, e colar o ID no formato "errado" deixava o bot mudo no grupo inteiro sem
+  nenhum log (grupo não autorizado é descartado de propósito antes de qualquer registro).
 - `SLACK_WEBHOOK_URL` (opcional): Incoming Webhook do canal do Slack onde a Heloim registra
   pedido/classificação de risco/decisão (reconstrução do que ela fazia no Base44 antigo, no
   canal `top-tech-leilao-nozap`). Criar em https://api.slack.com/messaging/webhooks — escolhe
@@ -108,9 +119,12 @@ resposta nenhuma:
 3. Me manda esse JSON (ou o campo que tem o texto da mensagem) que eu ajusto
    `extrairMensagem()` no `index.ts` em minutos.
 
-Mesma ressalva vale pros campos `audio`/`image`/`document` (22/08/2026, ainda não testados
-com payload real do Z-API) — se um cliente mandar áudio/imagem/documento e o Zeca não reagir
-nada, é o mesmo processo: olha o log, me manda o JSON.
+Mesma ressalva vale pros campos `image`/`document` — se um cliente mandar imagem/documento
+e o Zeca não reagir nada, é o mesmo processo: olha o log, me manda o JSON.
+
+`audio` foi conferido na documentação oficial do Z-API em 27/08/2026 e está certo:
+`audio.audioUrl` (URL) e `audio.mimeType` (normalmente `audio/ogg; codecs=opus`). Se mesmo
+assim o áudio não for entendido, a causa está no log da function, não no nome do campo.
 
 Mesma ressalva vale pro campo `participantPhone` (quem escreveu DENTRO de um grupo — o campo
 `phone` em mensagem de grupo é o ID do GRUPO, não da pessoa). Se a Heloim não responder nada
@@ -134,10 +148,34 @@ Resposta: lista de grupos que o número do bot já participa, com `id` (o que co
 outro que quiser que a Heloim atenda) antes de rodar — só aparece grupo que ele já é membro.
 
 Se o Zeca RECONHECER que recebeu áudio mas continuar pedindo pra repetir por texto mesmo com
-`OPENAI_API_KEY` configurada, o campo de URL do áudio dentro de `body.audio` (tentamos
-`audioUrl`/`url`/`audioURL`) também pode não bater com o nome real do Z-API — procure a linha
-`falha ao baixar áudio do Z-API` ou `falha ao transcrever áudio` no log, e me manda o JSON de
-`body.audio` de novo.
+`OPENAI_API_KEY` configurada, procure no log, nesta ordem:
+`chegou áudio mas nenhuma URL reconhecida` (o campo mudou de nome — me manda o `body.audio`),
+`falha ao baixar áudio do Z-API` (link expirado: mídia do Z-API vale 30 dias),
+`Whisper recusou a transcrição` (o corpo do erro vem junto na mesma linha).
+
+## 7. "Ele parou de responder no grupo" — o que conferir (27/08/2026)
+
+No grupo o bot só fala quando é CHAMADO. São quatro formas, e até 27/08 só a primeira
+funcionava de verdade:
+
+| Forma | Como está hoje |
+|---|---|
+| Escrever o nome dele | Funciona. Vale **"Heloim" e "Zeca"** — antes só "heloim", e o time chama de Zeca |
+| @marcar o número dele | Corrigido: lê o `@5521984072064` escrito no texto (o Z-API **não tem** campo de menção) |
+| Responder (reply) uma mensagem dele | Corrigido: usa `referenceMessageId` + a tabela `wa_mensagens_bot` |
+| Já estar conversando (últimos 5 min) | Funciona |
+
+Se ainda assim ficar mudo, é uma destas três, nesta ordem:
+
+1. O grupo não está em `GRUPOS_HELOIM_IDS` (rode o `waGroupDiagZapi` da seção 6 e confira).
+2. `OPENAI_API_KEY` não configurada **e** as mensagens do grupo são por áudio — sem
+   transcrição não sobra texto pro bot reconhecer que foi chamado.
+3. `ZAPI_NUMERO_BOT` com o número errado (só afeta a @marcação; o nome escrito continua
+   funcionando).
+
+A tabela `wa_mensagens_bot` vem da migração `20260827_wa_mensagens_bot.sql` — **rode a
+migração antes do deploy**, senão o reply continua não acordando ele (o resto funciona
+normalmente; a consulta falha calada de propósito).
 
 Mesma lógica vale se o envio falhar com 401/403 — provavelmente `ZAPI_CLIENT_TOKEN`
 errado ou ausente (com a segurança de conta ativada, é obrigatório).
