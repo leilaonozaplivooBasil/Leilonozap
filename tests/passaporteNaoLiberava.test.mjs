@@ -13,6 +13,7 @@ const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 const hold = ler('../api/_lib/bidHold.js');
 const cupom = ler('../api/_lib/passaporteCoupon.js');
 const finalize = ler('../api/_lib/finalizeAuctionCore.js');
+const selo = ler('../src/components/wallet/BidStateTag.jsx');
 
 test('a funcao continua exigindo o valor do lance', () => {
   // Se um dia ela passar a calcular o valor sozinha, esta correcao muda de forma.
@@ -89,4 +90,27 @@ test('o efeito: nunca libera alem do credito do cupom', () => {
   assert.equal(consumir({ credito: 10, jaLiberado: 0, jaCancelado: 0, alvo: 25 }), 10, 'cortou no teto');
   assert.equal(consumir({ credito: 10, jaLiberado: 10, jaCancelado: 0, alvo: 5 }), 0, 'ja tinha liberado tudo');
   assert.equal(consumir({ credito: 10, jaLiberado: 4, jaCancelado: 6, alvo: 5 }), 0, 'liberado + cancelado = credito');
+});
+
+// ── A mensagem tem que dizer a mesma coisa que a regra ───────────────────────
+// Ela dizia "Seu credito Passaporte FOI liberado para usar na loja" para quem
+// era superado. Nao foi: ser coberto nao libera nada. O cliente lia isso, ia na
+// loja, nao achava o credito e abria chamado.
+
+test('o selo de superado NAO afirma que o credito ja foi liberado', () => {
+  assert.ok(
+    !/foi liberado para usar na loja/.test(selo),
+    'a tela voltou a prometer liberacao na cobertura'
+  );
+});
+
+test('o selo explica QUANDO o credito e liberado', () => {
+  assert.match(selo, /Se o leilão terminar sem você arrematar/);
+});
+
+test('o selo de superado continua dizendo que o dinheiro voltou', () => {
+  // Essa parte sempre foi verdade e nao pode sumir: o valor reservado volta na
+  // hora em que alguem cobre.
+  assert.match(selo, /você foi superado — valor devolvido/);
+  assert.match(selo, /voltou integralmente para o seu saldo disponível/);
 });

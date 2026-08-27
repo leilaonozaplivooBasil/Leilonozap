@@ -11,7 +11,21 @@ const ESTADOS = {
     texto: 'você foi superado — valor devolvido',
     classe: 'text-emerald-400',
     titulo: 'Alguém cobriu seu lance. O valor reservado voltou integralmente para o seu saldo disponível.',
-    extra: 'Seu crédito Passaporte foi liberado para usar na loja',
+    // 🔴 PONTO 133 (27/08/2026) — ESTA FRASE PROMETIA O QUE A REGRA NÃO FAZ.
+    // Dizia "Seu crédito Passaporte FOI liberado para usar na loja". Não foi:
+    // ser coberto não libera nada. A regra oficial, escrita em
+    // api/_lib/passaporteCoupon.js e em finalizeAuctionCore.js, é:
+    //
+    //   "Roda só no ENCERRAMENTO do leilão, nunca no meio, quando a pessoa é
+    //    só coberta por um lance (ela ainda pode relançar e vencer)."
+    //
+    // O cliente lia "foi liberado", ia na loja, não achava o crédito e abria
+    // chamado. Caso real: Alexandre Walenkamp, 26/08 — crédito R$ 0,00 no banco,
+    // exatamente como a regra manda, com a tela dizendo o contrário.
+    //
+    // Agora a frase diz a verdade e ainda serve de incentivo: quem foi superado
+    // pode relançar, e se não arrematar recebe o crédito no fim.
+    extra: 'Se o leilão terminar sem você arrematar, seu crédito Passaporte é liberado para a loja',
   },
   liderando: {
     icon: Flame,
