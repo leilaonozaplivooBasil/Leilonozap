@@ -159,3 +159,37 @@ financeira alterada.
 **Status final:** CONCLUÍDA. Dono autorizou ("sim pode fazer"). PR #128
 mergeado por squash em `main`, commit `f05532b9`. CI verde. Vercel
 confirmou "Deployment has completed" — em produção.
+
+---
+
+## REL-6 — Execução da DIR-6 (Fase 1)
+
+**Data:** 21/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** `643839dc`.
+**O que foi feito:**
+1. Investigação de fundo do módulo Financeiro inteiro (8 arquivos, ~2150
+   linhas) — confirmado que o botão de editar já existia (`ExpenseTable.jsx`),
+   mas só na aba "Gastos"; a aba "Dashboard" é 100% visualização agregada,
+   sem alvo de edição por linha (a tabela ali é por categoria, não por
+   gasto individual).
+2. Adicionado atalho "Ver e editar gastos" na aba Dashboard, levando direto
+   pra aba onde a edição existe.
+3. Achado e corrigido: a auto-detecção de gasto vencido disparava um PATCH
+   por gasto a cada refetch da lista, inclusive pra gastos já marcados numa
+   carga anterior (faltava `invalidateQueries`). Extraída a decisão pra
+   `src/lib/financeiroVencidos.js` (função pura) com guarda por sessão.
+4. Decisão de arquitetura pra Fase 2 apresentada e aprovada pelo dono:
+   livro-razão de entradas (tabela nova espelhando `financial_expenses`),
+   não cálculo ao vivo — critério: auditabilidade pra uso profissional
+   (contabilidade), não só visualização pra leigo.
+**O que NÃO foi feito / blockers:** Fase 2 (unificar receita real) e Fase 3
+(automação de conciliação) não iniciadas — são diretivas futuras.
+**Testes:** 341/341 (7 novos pra `encontrarVencidosNaoMarcados`).
+**Build:** exit 0.
+**Confirmação de escopo:** só `Financial.jsx` (mais os 2 arquivos novos)
+tocados. Nenhuma tabela nova, nenhum dado de receita real, nenhuma
+produção alterada.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre.
+**Status final:** PARCIAL — implementação e testes concluídos na branch;
+falta o dono autorizar merge/deploy.

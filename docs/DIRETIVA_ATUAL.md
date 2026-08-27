@@ -34,13 +34,45 @@ completo em `docs/RELATORIOS_EXECUCAO.md` → `REL-5`.
 
 ---
 
+## DIR-6 — Modernização do módulo Financeiro (Fase 1)
+
+**Emitida por:** dono (Luiz), diretamente, pedindo análise sênior do
+Financeiro (edição de gastos, trazer receita real da empresa, deixar mais
+automático e profissional — leigo e profissional, ex.: Aline).
+**Data:** 21/08/2026.
+**Objetivo:** Fase 1 de 3 — correções rápidas e de baixo risco antes de
+qualquer mudança de arquitetura de dados. Fases 2 (unificar receita real —
+vendas e depósitos — numa Visão Geral/DRE) e 3 (automação de conciliação)
+ficam pra diretivas futuras, com a decisão de arquitetura já registrada no
+chat: **Opção B — livro-razão de entradas** (uma tabela `financial_income`
+gravada no momento em que a venda/depósito é confirmado, espelhando
+`financial_expenses`), escolhida sobre "calcular na hora" porque um número
+financeiro auditável por um profissional de contabilidade (a Aline) precisa
+de um registro histórico estável — se um relatório de ontem mudasse sozinho
+porque um dado de origem foi alterado hoje, isso não serve pra
+contabilidade real.
+**Escopo autorizado:** correções na tela Financeiro (`Financial.jsx` e
+dependências diretas) que não envolvem banco/esquema novo.
+**Fora do escopo / proibido:** criar a tabela `financial_income` ou
+qualquer sincronização de receita real nesta rodada — isso é Fase 2,
+diretiva própria.
+**Regras fixas:** nenhuma além da DIR-5 (não mexer em produção sem
+autorização, não expandir escopo).
+**Status:** EXECUTADA. Relatório em `docs/RELATORIOS_EXECUCAO.md` →
+`REL-6`. Aguardando confirmação do dono pra merge/deploy.
+
+---
+
 ## Estado agora
 
-**Nenhuma diretiva em aberto.** DIR-1 a DIR-5 estão todas executadas (ver
+**DIR-6 (Fase 1) corrigida e testada na branch, aguardando decisão do dono
+sobre merge/deploy.** DIR-1 a DIR-5 seguem executadas (ver
 `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
-diretiva nenhuma em curso:
+esta diretiva:
 - `REL-2`: 3 variáveis de ambiente na Vercel + confirmação do 401 na Edge
   Function `preview-api`, do lado da OpenAI.
+- Fase 2 do Financeiro (receita real) e Fase 3 (automação) — aguardando o
+  dono decidir quando começar.
 
 **Nenhuma implementação nova começa até uma diretiva nova ser registrada
 aqui,** no formato de `docs/PADRAO_DIRETIVAS.md`.

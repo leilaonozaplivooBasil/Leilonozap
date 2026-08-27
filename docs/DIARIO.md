@@ -688,3 +688,44 @@ CI de `main` verde. Vercel confirmou "Deployment has completed".
 **Vocabulário do protocolo:** **MERGEADO e DEPLOYADO.** Ainda **NÃO
 VALIDADO EM PRODUÇÃO** pelo dono — falta ele testar `/Financial` ao vivo de
 novo, logado como `super_admin`.
+
+---
+
+## 21/08 · DIR-6 — Modernização do Financeiro (Fase 1)
+
+**DONO** — confirmou acesso normal ao `/Financial` (print mostrando os
+gráficos carregados). Pediu: botão de editar nos gastos já lançados, análise
+sênior pra deixar o setor "profissional e foda", e trazer a receita real da
+empresa (vendas + depósitos) sincronizada. Pediu análise antes de mexer.
+
+**CLAUDE** — investigação a fundo do módulo inteiro (8 arquivos). Achado
+principal: **o botão de editar já existe**, só estava na aba errada pra
+quem estava olhando o Dashboard. Achado de fundo: a tabela de gastos hoje
+só entende dinheiro SAINDO — não existe conceito de receita ali, e o
+dinheiro que entra (vendas, depósitos) está espalhado noutro lugar do
+sistema, sem nenhuma tela que junte os dois lados. Propôs 3 fases: (1)
+correções rápidas agora; (2) unificar receita real numa Visão Geral —
+precisa de decisão de arquitetura; (3) automação de conciliação.
+
+**DONO** — autorizou a Fase 1 e delegou a decisão de arquitetura da Fase 2
+pra mim, de forma sênior, dizendo que precisa de clareza tanto pra ele
+(leigo) quanto pra um profissional (Aline, contabilidade).
+
+**CLAUDE — decisão registrada:** entre calcular a receita ao vivo toda vez
+que a tela abrir, ou gravar um livro-razão de entradas (tabela nova,
+espelhando a de despesas, alimentada no momento em que a venda/depósito é
+confirmado) — escolhi o livro-razão. Motivo: um número que muda sozinho
+quando o dado de origem é alterado depois não serve pra contabilidade real;
+a Aline precisa de um registro histórico estável, auditável, com trilha —
+exatamente o que um cálculo ao vivo não oferece.
+
+**Correção da Fase 1 (commit `643839dc`, mesma branch):** atalho "Ver e
+editar gastos" na aba Dashboard; corrigida a auto-detecção de vencido, que
+disparava PATCH redundante a cada recarga da lista (faltava
+`invalidateQueries`) — extraída pra função pura testável
+(`src/lib/financeiroVencidos.js`).
+
+**Prova:** 7 testes novos. `npm test`: **341/341**. `npm run build`: exit 0.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Fase 2 e 3 aguardam
+o dono decidir quando começar — não são desta rodada.
