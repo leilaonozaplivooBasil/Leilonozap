@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { plataforma } from '@/api/plataformaClient';
+import { isAdminRole } from '@/lib/roles';
 
 const AppUser = plataforma.entities.AppUser;
 const Auction = plataforma.entities.Auction;
@@ -1689,7 +1690,7 @@ export default function LicensingPage() {
   const isLicensee = currentUser && currentUser.id;
 
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const isAdmin = isAdminRole(currentUser?.role);
 
   // DETECTAR NÍVEL DO USUÁRIO (normaliza id legado, ex: 'licenciado_catalogo' → 'licenciado')
   const getUserLevel = () => {

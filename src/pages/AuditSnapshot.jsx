@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Download, Database, Loader2 } from "lucide-react";
+import { isAdminRole } from "@/lib/roles";
 
 export default function AuditSnapshot() {
   const [me, setMe] = useState(null);
@@ -55,7 +56,8 @@ export default function AuditSnapshot() {
     }
   };
 
-  if (!me || (me.role !== 'admin' && me.role !== 'super_admin' && me.email !== 'erbrito.sistemas@gmail.com' && me.email !== 'jonhhenrique29@hotmail.com')) {
+  const emailsLiberados = ['erbrito.sistemas@gmail.com', 'jonhhenrique29@hotmail.com'];
+  if (!me || (!isAdminRole(me.role) && !emailsLiberados.includes(me.email))) {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-6 flex items-center justify-center">
         <Card className="bg-gray-800 border-gray-700">
