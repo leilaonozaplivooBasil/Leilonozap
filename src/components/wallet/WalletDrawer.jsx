@@ -448,12 +448,21 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
               {view === 'recharge' && (
                 <div className="p-5 space-y-5">
                   <p className="text-gray-300 text-sm">Escolha o valor da recarga. O saldo cai na hora após o pagamento PIX.</p>
-                  {/* 🎟️ Comunicação do Cupom Passaporte — texto fixo, sem consulta ao servidor */}
+                  {/* 🎟️ Comunicação do Cupom Passaporte — texto fixo, sem consulta ao servidor.
+                      🔴 REESCRITO EM 27/08/2026. O texto anterior dizia "+10% de crédito NA HORA
+                      (R$ 100 viram R$ 110 na carteira)". Isso era verdade no modelo antigo
+                      (01/08 a 19/08). Desde 19/08 o bônus nasce BLOQUEADO e só libera quando um
+                      leilão disputado termina sem vitória — nada cai na carteira no ato.
+                      O motor mudou e esta tela não, então o cliente depositava, lia "R$ 110 na
+                      carteira, só pra Loja Virtual", ia na loja e não achava nada. Foi o que
+                      gerou as reclamações que chegaram em 27/08. */}
                   <div className="rounded-xl border border-green-500/40 bg-green-600/10 p-3.5 flex items-start gap-2.5">
                     <Ticket className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-green-300/90 leading-relaxed">
-                      Depósitos de R$ 100 ou mais recebem <strong className="text-green-300">+10% de crédito na hora</strong> (R$ 100 viram R$ 110 na carteira).
-                      Esse bônus é <strong className="text-green-300">só pra Loja Virtual</strong> — não entra no seu saldo de lance.{' '}
+                      Depósitos de R$ 100 ou mais ganham <strong className="text-green-300">+10% de crédito para a Loja Virtual</strong>.
+                      Ele fica <strong className="text-green-300">guardado</strong> e libera a cada leilão que você disputar e não ganhar —
+                      na proporção do lance daquele leilão. Se você arrematar, o valor pago virou a sua compra.
+                      Não entra no saldo de lance e não cai na carteira no ato do depósito.{' '}
                       <a href="/passaporte" className="underline font-semibold text-green-300 hover:text-green-200">como funciona</a>
                     </p>
                   </div>
