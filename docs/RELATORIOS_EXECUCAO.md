@@ -117,3 +117,43 @@ confirmado por `git diff --stat` antes da publicação. Nenhum código,
 banco, produção ou variável de ambiente alterado.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA.
+
+---
+
+## REL-5 — Execução da DIR-5
+
+**Data:** 21/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** `183ff96c`.
+**O que foi feito:**
+1. Localizadas as 3 telas com o padrão exato "Acesso restrito a
+   administradores": `Financial.jsx`, `AuditSnapshot.jsx`,
+   `CrmClientesTab.jsx` (via `isAdmin` vindo de `Licensing.jsx`).
+2. Causa raiz confirmada em `Financial.jsx`: checagem própria, direto do
+   localStorage, aceitando só a string exata `'admin'` — excluía
+   `super_admin`, o cargo do dono.
+3. Achado adicional, mesmo padrão de bug: `GestaoLotes.jsx` já usava o hook
+   correto (`useSecureRole`) mas com a lista `['admin']` incompleta.
+4. Criada fonte única `src/lib/roles.js` (`ADMIN_ROLES`, `isAdminRole`).
+5. `Financial.jsx` migrado pro hook `useSecureRole` (já usado em outras
+   telas admin, valida contra o banco) com `ADMIN_ROLES` — removida a
+   checagem própria e o fallback morto pra Base44.
+6. `GestaoLotes.jsx` corrigido pra `useSecureRole(ADMIN_ROLES, ...)`.
+7. `AuditSnapshot.jsx` e `Licensing.jsx` (que já estavam corretos)
+   refatorados pra usar a fonte única — comportamento idêntico, só
+   consistência.
+**O que NÃO foi feito / blockers:**
+- ~30 outros arquivos usam `role === 'admin'` sem `super_admin`, mas são
+  conferências de UI cosméticas (mostrar/esconder botão, cor de badge)
+  dentro de telas já acessíveis — não bloqueiam acesso a página nenhuma.
+  Registrado como follow-up, não corrigido agora, pra não expandir o
+  escopo deste incidente.
+- Merge/deploy em produção não executado — aguardando confirmação do dono.
+**Testes:** 224/224 (5 novos pra `src/lib/roles.js`).
+**Build:** exit 0.
+**Confirmação de escopo:** só os arquivos citados acima foram tocados.
+Nenhum banco, produção, variável de ambiente ou regra de negócio
+financeira alterada.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre.
+**Status final:** PARCIAL — implementação e testes concluídos na branch;
+falta o dono autorizar merge/deploy.

@@ -630,3 +630,43 @@ diretiva em aberto" ao final. De novo, nenhum arquivo de código tocado.
 **Vocabulário do protocolo:** **CONCLUÍDA** (DIR-3 e DIR-4, ambas). Nenhuma
 implementação em aberto — aguardando a próxima diretiva, no formato de
 `docs/PADRAO_DIRETIVAS.md`.
+
+---
+
+## 21/08 · DIR-5 — super_admin bloqueado em /Financial
+
+**DONO** — print da tela `/Financial` mostrando "Acesso restrito a
+administradores", mesmo logado como administrador. Pediu análise sênior de
+todas as seções parecidas, correção do que estiver errado, organização
+melhor dessas funções, e pra eu seguir o protocolo (achado → prompt →
+correção).
+
+**CLAUDE** — achou a causa raiz em `Financial.jsx`: a tela conferia role
+sozinha, direto do localStorage, aceitando só a string `'admin'` — o dono
+está logado como `super_admin` (o cargo mais alto), que nunca esteve na
+lista. Ao procurar "todas as seções parecidas", achou o mesmo padrão em
+`AuditSnapshot.jsx` e `CrmClientesTab.jsx`/`Licensing.jsx` (esses dois já
+estavam corretos) e um caso NOVO do mesmo bug em `GestaoLotes.jsx` — ali
+usando o hook certo (`useSecureRole`, valida contra o banco), mas com a
+lista de papéis incompleta (`['admin']`, sem `super_admin`).
+
+**Achado maior, registrado como follow-up e não corrigido agora:** ~30
+outros arquivos no projeto repetem `role === 'admin'` sem `super_admin`,
+cada um reescrevendo a própria condição — mas são conferências de UI
+cosméticas (esconder um botão, cor de um badge) dentro de telas que já são
+acessíveis, não bloqueios de página inteira. Corrigir os ~30 agora
+expandiria o escopo deste incidente sem necessidade.
+
+**Correção (commit `183ff96c`, mesma branch):** criada fonte única
+`src/lib/roles.js` (`ADMIN_ROLES = ['admin', 'super_admin']`,
+`isAdminRole()`). `Financial.jsx` migrado pro hook `useSecureRole` já
+existente (removida a checagem própria e o fallback morto pra Base44).
+`GestaoLotes.jsx`, `AuditSnapshot.jsx` e `Licensing.jsx` ajustados pra usar
+a fonte única.
+
+**Prova:** 5 testes novos pra `src/lib/roles.js`. `npm test`: **224/224**.
+`npm run build`: exit 0.
+
+**Vocabulário do protocolo:** **CORRIGIDO NA BRANCH.** Aguardando o dono
+autorizar merge/deploy — registrado como DIR-5/REL-5 na governança de
+diretivas.

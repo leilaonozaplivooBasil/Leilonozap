@@ -12,34 +12,35 @@
 
 ---
 
-## DIR-4 — Padronização de diretivas e relatórios de execução
+## DIR-5 — Super_admin bloqueado em painéis administrativos
 
-**Emitida por:** dono (Luiz), diretamente.
+**Emitida por:** dono (Luiz), diretamente, reportando bloqueio ao vivo em
+`/Financial`.
 **Data:** 21/08/2026.
-**Objetivo:** refinar a estrutura de governança criada na DIR-3, definindo
-um formato fixo (template) pra diretivas e pra relatórios de execução, pra
-toda rodada futura seguir o mesmo padrão.
-**Escopo autorizado:** criação de `docs/PADRAO_DIRETIVAS.md`; reestruturação
-de `docs/HISTORICO_DIRETIVAS.md` pra separar especificação de execução;
-criação de `docs/RELATORIOS_EXECUCAO.md`.
-**Fora do escopo / proibido:** qualquer alteração de código, banco,
-produção ou regra de negócio.
-**Regras fixas:** nenhuma além da DIR-3 (documentação pura). Depois desta
-rodada, toda implementação futura espera uma diretiva nova e explícita,
-registrada aqui no formato de `docs/PADRAO_DIRETIVAS.md`.
-**Status:** EXECUTADA. Relatório completo em `docs/RELATORIOS_EXECUCAO.md`
-→ `REL-4`.
+**Objetivo:** analisar todas as telas com o mesmo padrão de bloqueio
+("Acesso restrito a administradores"), corrigir o que estiver errado, e
+organizar essa lógica de forma melhor — evitando cada tela reescrever a
+própria checagem de administrador.
+**Escopo autorizado:** correção de código nas telas com esse padrão de
+bloqueio; criação de uma fonte única pro conceito de "administrador".
+**Fora do escopo / proibido:** alterar banco, produção, regra de negócio
+financeira; expandir a correção pra conferências de UI cosméticas fora do
+padrão de bloqueio de página (registradas como follow-up, não corrigidas).
+**Regras fixas:** análise sênior antes da correção; reportar no formato do
+Protocolo-Mestre (`ENTENDI QUE VOCÊ QUER` etc.) antes do merge/deploy.
+**Status:** EXECUTADA NA BRANCH. Relatório em `docs/RELATORIOS_EXECUCAO.md`
+→ `REL-5`. Aguardando confirmação do dono pra merge/deploy em produção.
 
 ---
 
 ## Estado agora
 
-**Nenhuma diretiva em aberto.** As DIR-1 a DIR-4 estão todas executadas
-(ver `docs/RELATORIOS_EXECUCAO.md`). Duas pendências continuam registradas
-como blockers no `REL-2`, do lado da OpenAI (configurar 3 variáveis de
-ambiente na Vercel; confirmar se o 401 da Edge Function `preview-api` foi
-resolvido) — não bloqueiam esta diretiva, bloqueiam a validação final do
-Preview da PR #87.
+**DIR-5 corrigida e testada na branch, aguardando decisão do dono sobre
+merge/deploy.** DIR-1 a DIR-4 seguem executadas (ver
+`docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
+esta diretiva:
+- `REL-2`: 3 variáveis de ambiente na Vercel + confirmação do 401 na Edge
+  Function `preview-api`, do lado da OpenAI.
 
-**Nenhuma implementação começa até uma diretiva nova ser registrada aqui,**
-no formato de `docs/PADRAO_DIRETIVAS.md`.
+**Nenhuma implementação nova começa até uma diretiva nova ser registrada
+aqui,** no formato de `docs/PADRAO_DIRETIVAS.md`.

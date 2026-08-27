@@ -88,3 +88,21 @@ criação de `docs/RELATORIOS_EXECUCAO.md`.
 **Fora do escopo / proibido:** qualquer alteração de código ou produção.
 **Regras fixas:** nenhuma além da DIR-3 (documentação pura).
 **Status:** EXECUTADA. Ver `REL-4`.
+
+---
+
+## DIR-5 — Super_admin bloqueado em painéis administrativos
+
+**Emitida por:** dono (Luiz), diretamente, reportando bloqueio ao vivo em
+`/Financial`.
+**Data:** 21/08/2026.
+**Objetivo:** analisar todas as telas com o mesmo padrão de bloqueio
+("Acesso restrito a administradores"), corrigir o que estiver errado, e
+organizar essa lógica de forma melhor.
+**Escopo autorizado:** correção de código nas telas com esse padrão de
+bloqueio; criação de uma fonte única pro conceito de "administrador".
+**Fora do escopo / proibido:** banco, produção, regra de negócio financeira;
+conferências de UI cosméticas fora do padrão de bloqueio de página.
+**Regras fixas:** análise sênior antes da correção; reportar no formato do
+Protocolo-Mestre antes do merge/deploy.
+**Status:** EXECUTADA. Ver `REL-5`.
