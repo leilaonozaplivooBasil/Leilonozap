@@ -57,11 +57,33 @@ supabase secrets set \
   `120363019502650977@g.us` e `120363019502650977` valem todos como o mesmo grupo. Antes era
   string exata, e colar o ID no formato "errado" deixava o bot mudo no grupo inteiro sem
   nenhum log (grupo não autorizado é descartado de propósito antes de qualquer registro).
-- `SLACK_WEBHOOK_URL` (opcional): Incoming Webhook do canal do Slack onde a Heloim registra
-  pedido/classificação de risco/decisão (reconstrução do que ela fazia no Base44 antigo, no
-  canal `top-tech-leilao-nozap`). Criar em https://api.slack.com/messaging/webhooks — escolhe
-  o canal, copia a URL (começa com `https://hooks.slack.com/services/...`). Sem essa
-  variável, Heloim funciona igual, só não duplica o registro no Slack.
+- `SLACK_WEBHOOK_URL` (opcional, mas hoje é a razão de o Slack estar mudo): Incoming Webhook do
+  canal do Slack onde a Heloim registra pedido/classificação de risco/decisão (reconstrução do
+  que ela fazia no Base44 antigo, no canal privado `#top-tech-leilão-nozap`). Sem essa variável,
+  Heloim funciona igual, só não publica nada no Slack.
+
+  **Estado em 27/08/2026: este secret NUNCA foi criado.** O canal não recebe uma linha desde
+  18/08/2026 — a última postagem foi do agente do Base44 antigo, que deixou de ser usado. O
+  código novo (22/08) já sabia postar, mas lia um secret que não existe. Passo a passo:
+
+  1. Abra https://api.slack.com/apps → **Create New App** → *From scratch* → nome (ex.
+     `Heloim`) → escolha o workspace `leilonozap`.
+  2. Menu **Incoming Webhooks** → ligue o botão **Activate Incoming Webhooks**.
+  3. **Add New Webhook to Workspace** → escolha o canal `#top-tech-leilão-nozap`.
+     ⚠️ O canal é **privado**: se ele não aparecer na lista, entre no canal pelo Slack e rode
+     `/invite @Heloim` antes de repetir este passo.
+  4. Copie a URL gerada (começa com `https://hooks.slack.com/services/...`).
+     🔒 É uma chave — quem tiver ela posta no canal. Não cole em chat nem em print.
+  5. No terminal, na pasta do projeto:
+
+     ```powershell
+     supabase secrets set SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..." --project-ref gezvviyegtxytnwjkrjv
+     supabase functions deploy whatsapp-router --project-ref gezvviyegtxytnwjkrjv --no-verify-jwt
+     ```
+
+  6. Confira sem sair do WhatsApp: mande **"Heloim, testa o Slack"** no 1:1 (precisa ser admin).
+     Ela usa a ferramenta `checar_slack`, publica uma mensagem de teste no canal e devolve o que
+     o Slack respondeu.
 
 ## 3. Deploy — SEM verificação de JWT
 
