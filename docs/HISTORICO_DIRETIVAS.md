@@ -123,4 +123,5 @@ banco/esquema novo.
 **Fora do escopo / proibido:** criar tabela nova ou sincronizar receita
 real nesta rodada — isso é Fase 2, diretiva própria.
 **Regras fixas:** nenhuma além da DIR-5.
-**Status:** EXECUTADA. Ver `REL-6`.
+**Status:** CONCLUÍDA. PR #130 mergeado por squash em `main` (commit
+`5fb996f2`), CI verde. Ver `REL-6`.

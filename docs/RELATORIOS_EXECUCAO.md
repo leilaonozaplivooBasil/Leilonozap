@@ -190,6 +190,26 @@ confirmou "Deployment has completed" — em produção.
 **Confirmação de escopo:** só `Financial.jsx` (mais os 2 arquivos novos)
 tocados. Nenhuma tabela nova, nenhum dado de receita real, nenhuma
 produção alterada.
-**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre.
-**Status final:** PARCIAL — implementação e testes concluídos na branch;
-falta o dono autorizar merge/deploy.
+**Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
+#130; `docs/CLAUDE_HANDOFF.md`.
+**Status final:** CONCLUÍDA. Antes da aprovação, foi preciso destravar o
+Preview de verdade pro dono conferir a mudança logado com a própria conta
+(achado à parte, registrado abaixo). Dono conferiu o botão "Ver e editar
+gastos" ao vivo no Preview e autorizou ("agora pode deoplar"). PR #130
+mergeado por squash em `main`, commit `5fb996f2`. CI verde
+(lint · build · testes) antes do merge.
+
+**Achado à parte, fora do escopo da DIR-6 — Preview do projeto não logava:**
+o Preview da própria PR #130 (e de toda PR deste projeto) retornava "Config
+do servidor ausente" ao tentar logar, porque a variável
+`SUPABASE_SERVICE_ROLE_KEY` na Vercel estava configurada só pro ambiente
+"Production" — faltava marcar também "Preview". `SUPABASE_URL` já estava
+correta nos dois ambientes. O dono corrigiu isso direto no painel da Vercel
+(`Settings → Environment Variables → SUPABASE_SERVICE_ROLE_KEY → Edit →
+marcar Preview`) e redeployou o Preview da branch; depois disso o login real
+passou a funcionar em qualquer Preview deste projeto, não só na PR #130.
+Também identificado, sem relação com o financeiro: o projeto tem SSO
+Protection da própria Vercel ativado em cima de todo link `.vercel.app`
+(`all_except_custom_domains`) — quem não é membro do time da Vercel precisa
+de um link de acesso temporário (`get_access_to_vercel_url`) pra abrir um
+Preview bruto.

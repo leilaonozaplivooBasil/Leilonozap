@@ -58,19 +58,23 @@ qualquer sincronização de receita real nesta rodada — isso é Fase 2,
 diretiva própria.
 **Regras fixas:** nenhuma além da DIR-5 (não mexer em produção sem
 autorização, não expandir escopo).
-**Status:** EXECUTADA. Relatório em `docs/RELATORIOS_EXECUCAO.md` →
-`REL-6`. Aguardando confirmação do dono pra merge/deploy.
+**Status:** CONCLUÍDA. Dono conferiu ao vivo no Preview (logado com a
+própria conta) e autorizou o merge. PR #130 mergeado por squash em `main`,
+commit `5fb996f2`, CI verde. Relatório completo em
+`docs/RELATORIOS_EXECUCAO.md` → `REL-6` (inclui o achado à parte: variável
+`SUPABASE_SERVICE_ROLE_KEY` faltando no ambiente Preview da Vercel — já
+corrigido pelo dono).
 
 ---
 
 ## Estado agora
 
-**DIR-6 (Fase 1) corrigida e testada na branch, aguardando decisão do dono
-sobre merge/deploy.** DIR-1 a DIR-5 seguem executadas (ver
-`docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
-esta diretiva:
-- `REL-2`: 3 variáveis de ambiente na Vercel + confirmação do 401 na Edge
-  Function `preview-api`, do lado da OpenAI.
+**DIR-5 e DIR-6 (Fase 1) concluídas e em produção.** DIR-1 a DIR-4 seguem
+executadas (ver `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas,
+sem relação com esta diretiva:
+- `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
+  OpenAI (as variáveis de ambiente de Preview já foram resolvidas — mesmo
+  problema de fundo do achado da REL-6).
 - Fase 2 do Financeiro (receita real) e Fase 3 (automação) — aguardando o
   dono decidir quando começar.
 
