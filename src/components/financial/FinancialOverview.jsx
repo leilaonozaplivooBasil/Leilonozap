@@ -18,7 +18,10 @@ export default function FinancialOverview({ expenses, income }) {
   const totalDespesa = despesasPagas.reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0), 0);
   const resultado = totalReceita - totalDespesa;
 
-  const centros = [...COST_CENTERS, SEM_CENTRO];
+  // Centro de custo digitado como "+ Novo" no formulário não está na lista fixa
+  // (src/lib/costCenters.js) — sem isto ele some da Visão Geral mesmo já lançado.
+  const centrosUsados = new Set([...expenses, ...income].map(x => x.cost_center).filter(Boolean));
+  const centros = [...new Set([...COST_CENTERS, ...centrosUsados]), SEM_CENTRO];
   const porCentro = centros.map(centro => {
     const receita = income
       .filter(i => (i.cost_center || SEM_CENTRO) === centro)

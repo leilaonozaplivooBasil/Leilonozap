@@ -254,8 +254,9 @@ só roda quando a PR for mergeada em `main` (workflow
 `deploy-migrations.yml`, automático).
 **Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
 #132.
-**Status final:** PARCIAL — implementação, testes e PR abertos; falta o
-dono conferir no Preview e autorizar merge/deploy.
+**Status final:** CONCLUÍDA. Dono conferiu no Preview e autorizou ("pode
+fazer"). PR #132 mergeado por squash em `main`, commit `b38b84df`, CI verde
+antes do merge.
 
 ---
 
@@ -294,5 +295,38 @@ foram tocados. Nenhum dado de produção alterado — a migration e o cron novo
 só entram em vigor depois do merge em `main`.
 **Publicado em:** relatório ao dono, no chat, formato Protocolo-Mestre; PR
 #132 (mesma PR da REL-7).
-**Status final:** PARCIAL — implementação e testes concluídos; falta o
-dono conferir no Preview e autorizar merge/deploy.
+**Status final:** CONCLUÍDA. Mesma PR #132, mergeado por squash em `main`,
+commit `b38b84df`, CI verde antes do merge.
+
+---
+
+## REL-9 — Execução da DIR-9
+
+**Data:** 27/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Botão "+ Novo" ao lado de Centro de Custo em `ExpenseFormModal.jsx`,
+   mesmo padrão já usado em Categoria — alterna pra um campo de texto
+   livre; ao editar um gasto com centro de custo fora da lista fixa, o
+   formulário já abre no modo customizado.
+2. `FinancialOverview.jsx` corrigido pra listar, na tabela por centro de
+   custo, qualquer valor realmente lançado (união da lista fixa
+   `src/lib/costCenters.js` com os valores usados em `expenses`/`income`) —
+   sem isso, um centro de custo digitado como "+ Novo" salvava no gasto mas
+   sumia da Visão Geral.
+**O que NÃO foi feito / blockers:** nenhuma tela de administração de
+centros de custo (renomear/excluir) — fora do escopo pedido; `financial_income`
+não ganhou formulário manual (continua só automático, por decisão da DIR-7).
+**Testes:** 384/384 (sem teste novo — mudança de UI/apresentação, coberta
+pelos testes de build/lint já existentes; a lógica pura de agrupamento por
+centro de custo em `FinancialOverview.jsx` é derivação direta de dados já
+testados via `financeiroVencidos`/`gastosFixosRecorrentes`).
+**Build:** exit 0.
+**Lint:** sem erros nos arquivos alterados.
+**Confirmação de escopo:** só `ExpenseFormModal.jsx` e
+`FinancialOverview.jsx` tocados. Nenhum banco, produção ou regra de negócio
+financeira alterada.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — implementação e testes concluídos na branch;
+falta o dono conferir no Preview e autorizar merge/deploy.
