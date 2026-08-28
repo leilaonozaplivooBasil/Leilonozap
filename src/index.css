@@ -585,3 +585,103 @@ body.pc-tema .livoo-brilho-forte {
     }
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   📄 IMPRESSÃO / EXPORTAR PDF — só da página do Parceiro de Compra (/Partners).
+   Todo o bloco está escopado em `body.pc-tema`, a marca que só existe enquanto
+   aquela página está montada — nenhuma outra tela do site muda ao imprimir.
+   Acionado por src/components/parceiro/ParceiroExportarPDF.jsx.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  body.pc-tema,
+  body.pc-tema .bg-pc-preto,
+  body.pc-tema .bg-pc-preto-2 {
+    /* Sem isto o navegador descarta os fundos ao imprimir (padrão dele, pra
+       economizar tinta) e a apresentação sai texto dourado sobre papel branco —
+       ilegível. A identidade preto/ouro é o documento; ela precisa ir junto. */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Cabeçalho, rodapé e flutuantes do site não são conteúdo da apresentação:
+     nav e footer vêm do Layout, e os flutuantes (voltar ao topo, atendimento,
+     o próprio botão de exportar) só existem na tela. */
+  body.pc-tema nav,
+  body.pc-tema footer,
+  body.pc-tema .pc-exportar-pdf,
+  body.pc-tema [aria-label="Voltar ao topo"],
+  body.pc-tema [aria-label*="Leila" i],
+  body.pc-tema [title*="Leila" i] {
+    display: none !important;
+  }
+
+  /* 🔑 A regra que impede o PDF de sair com seções em branco.
+     O roadmap anima por scroll (framer-motion): o que ainda não entrou na tela
+     está com opacity 0 e transform aplicado por style inline. Na impressão a
+     página inteira é renderizada de uma vez, sem scroll — sem isto, tudo que o
+     visitante não tivesse rolado até ver simplesmente não apareceria no papel. */
+  body.pc-tema [style*="opacity"],
+  body.pc-tema [style*="transform"] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  body.pc-tema * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Botões de ação (abrir tour, ver o cálculo, solicitar acesso) não funcionam no
+     papel — viram retângulos vazios que confundem quem lê. O conteúdo que eles
+     abrem vive em modal e não faz parte da apresentação impressa. */
+  body.pc-tema button:not(.pc-exportar-pdf) {
+    display: none !important;
+  }
+
+  /* Uma seção por página quando couber, e nada de cartão partido no meio. */
+  body.pc-tema section {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+  body.pc-tema section + section {
+    break-before: page;
+    page-break-before: always;
+  }
+  body.pc-tema article,
+  body.pc-tema figure,
+  body.pc-tema table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.pc-tema h1,
+  body.pc-tema h2,
+  body.pc-tema h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* A grade de 3 canais em coluna única: em A4 retrato, três cartões lado a lado
+     espremem o texto do cálculo a ponto de não se ler. */
+  body.pc-tema .grid {
+    display: block !important;
+  }
+  body.pc-tema .grid > * {
+    margin-bottom: 1rem;
+  }
+
+  /* Respiro de leitura no papel — na tela o py-24 existe pro scroll respirar,
+     no PDF vira página quase vazia. */
+  body.pc-tema section > div {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+    max-width: 100% !important;
+  }
+
+  body.pc-tema img {
+    max-height: 6cm;
+    object-fit: cover;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
+  }
+}

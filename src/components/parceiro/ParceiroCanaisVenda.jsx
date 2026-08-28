@@ -24,9 +24,17 @@ const IMG_LEILAO = '/midia/37a6c8764_generated_image.png';
 const IMG_LOJA = '/midia/1570ba555_generated_image.png';
 const IMG_REDE = '/midia/b023a95bd_generated_image.png';
 
-// 📊 Números REAIS de hoje (informados por Gabriel em 06/08/2026):
-// 52 pessoas ativas na plataforma · ~70 licenciados reunidos no grupo,
-// em pré-lançamento (ainda não ativados comercialmente).
+// 📊 Números REAIS de hoje (atualizados pelo dono em 28/08/2026):
+// 52 pessoas ativas na plataforma · mais de 1.000 parceiros licenciados reunidos no
+// grupo, em pré-lançamento (ainda não ativados comercialmente) · mais de 1 milhão de
+// clientes impactados historicamente pela operação de vendas.
+//
+// ⚠️ REUNIDO ≠ ATIVO — a distinção sustenta a página inteira e não pode ser perdida numa
+// edição futura. "Reunido" é quem está no grupo, comprometido, ainda em pré-lançamento.
+// "Ativo" é quem já vende. A meta do memorando (300) é de licenciados ATIVOS; os 1.000+
+// reunidos são o POOL de onde essas ativações saem — por isso o pool ser 3,3× a meta é
+// folga, não meta cumprida. Mesma lógica do outro lado: "cliente impactado" (1 milhão,
+// histórico atendido) ≠ "usuário comprando" (meta de 100.000, recorrente).
 const CANAIS = [
   {
     id: 'leilao',
@@ -40,7 +48,7 @@ const CANAIS = [
       'Canal direto da empresa, com disputa em tempo real. Acelera o giro de lotes e define saída rápida quando a operação precisa de velocidade.',
     atingido: '52 pessoas ativas hoje',
     atingidoNota: 'Pré-lançamento, sem mídia paga ligada e sem abertura oficial.',
-    atingidoExtra: 'Herda a base histórica de +10.000 clientes da Loja Virtual.',
+    atingidoExtra: 'Herda a base histórica de mais de 1 milhão de clientes da Loja Virtual.',
     metaMinima: 'Abertura oficial operando com os 300 licenciados ativos vendendo',
     metaAlcancavel: '100.000 usuários comprando',
     base: 'R$ 297 / mês por usuário',
@@ -48,10 +56,10 @@ const CANAIS = [
       'o canal de leilão já está construído, publicado e operando com usuários reais — falta ligar audiência.',
     calculo: [
       { rotulo: 'Ponto de partida real (hoje)', valor: '52 pessoas ativas na plataforma', nota: 'Sem mídia paga, sem influenciador ativado e antes da abertura oficial.' },
-      { rotulo: 'Base histórica já impactada', valor: '+10.000 clientes desde o início das vendas', nota: 'Base compartilhada entre os canais — é público já atendido, não público a conquistar.' },
+      { rotulo: 'Base histórica já impactada', valor: 'Mais de 1 milhão de clientes desde o início das vendas', nota: 'Base compartilhada entre os canais — é público já atendido, não público a conquistar.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
-      { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores', nota: 'Cada degrau da estrutura alimenta o canal com público próprio.' },
-      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 novos usuários por mês', nota: 'Depende diretamente da verba de aquisição — é exatamente o que a captação destrava.' },
+      { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores', nota: 'Saem de um pool de mais de 1.000 parceiros já reunidos. Cada degrau da estrutura alimenta o canal com público próprio.' },
+      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 usuários por mês', nota: 'Equivale a converter cerca de 10% da base histórica já impactada — reativação de quem já comprou, mais aquisição nova. A verba de aquisição é exatamente o que a captação destrava.' },
       { rotulo: 'Base de cálculo conservadora', valor: 'R$ 297 / mês por usuário' },
     ],
   },
@@ -65,7 +73,7 @@ const CANAIS = [
     essencia: 'Canal próprio, sem depender de marketplace de terceiros.',
     texto:
       'Canal digital próprio da empresa. Recebe o item curado, com ficha, foto tratada e posicionamento definido pela operação — sem depender de marketplace de terceiros.',
-    atingido: '+10.000 clientes impactados',
+    atingido: 'Mais de 1 milhão de clientes impactados',
     atingidoNota:
       'Base histórica desde o início das vendas, em migração para a plataforma.',
     atingidoSecundario: '52 pessoas ativas na plataforma hoje',
@@ -74,13 +82,13 @@ const CANAIS = [
     metaAlcancavel: '100.000 usuários comprando',
     base: 'R$ 297 / mês por usuário',
     estruturaExistente:
-      'a loja já está no ar, com catálogo curado, checkout, frete e pagamento em produção, e mais de 10 mil clientes já atendidos desde o início das vendas.',
+      'a loja já está no ar, com catálogo curado, checkout, frete e pagamento em produção, e mais de 1 milhão de clientes já atendidos desde o início das vendas.',
     calculo: [
       { rotulo: 'Ponto de partida real (hoje)', valor: '52 pessoas ativas na plataforma', nota: 'A loja já opera de ponta a ponta: catálogo, checkout, frete e pagamento.' },
-      { rotulo: 'Base histórica já impactada', valor: '+10.000 clientes desde o início das vendas', nota: 'Base em migração — não é público a conquistar, é público já atendido.' },
+      { rotulo: 'Base histórica já impactada', valor: 'Mais de 1 milhão de clientes desde o início das vendas', nota: 'Base em migração — não é público a conquistar, é público já atendido.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
-      { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores' },
-      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 novos usuários por mês', nota: 'Parte desse caminho vem da reativação da base histórica de mais de 10 mil clientes, não só de aquisição nova.' },
+      { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores', nota: 'Saem de um pool de mais de 1.000 parceiros já reunidos.' },
+      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 usuários por mês', nota: 'A meta de 100.000 equivale a cerca de 10% da base histórica de mais de 1 milhão — o caminho passa mais por reativar quem já comprou do que por aquisição nova.' },
       { rotulo: 'Base de cálculo conservadora', valor: 'R$ 297 / mês por usuário' },
     ],
   },
@@ -94,22 +102,24 @@ const CANAIS = [
     essencia: 'Capilaridade de escoamento sem custo fixo de loja.',
     texto:
       'O licenciado assume a praça e sustenta os próprios vendedores; o vendedor revende o estoque curado e ativa influenciadores. Capilaridade de escoamento sem custo fixo de loja física.',
-    atingido: '70 licenciados reunidos',
+    atingido: 'Mais de 1.000 parceiros licenciados reunidos',
     atingidoNota: 'Já no grupo, em pré-lançamento — aguardando ativação comercial.',
     metaMinima: '300 licenciados ativos (memorando)',
     metaAlcancavel: '10.000 vendedores ativos',
     base: 'R$ 2.500 / mês por vendedor',
-    // barra de progresso: 70 de 300 licenciados = 23%
-    progresso: { atual: 70, minimo: 300 },
+    // Barra: mede a COBERTURA do pool sobre a meta mínima, não ativações feitas. Com 1.000+
+    // reunidos para 300 ativos, o pool cobre 3,3× o necessário — o gargalo deixou de ser
+    // achar gente e passou a ser ativar. Trava em 100% no render (ver Math.min).
+    progresso: { atual: 1000, minimo: 300, rotulo: 'da meta mínima já reunida — pool 3,3× o necessário' },
     estruturaExistente:
-      'as praças já estão fechadas (1 distribuidor em Bangu, 3 lojas físicas em Bangu e 1 distribuidor no Recreio) e os 70 licenciados já estão reunidos.',
+      'as praças já estão fechadas (1 distribuidor em Bangu, 3 lojas físicas em Bangu e 1 distribuidor no Recreio) e mais de 1.000 parceiros licenciados já estão reunidos.',
     calculo: [
-      { rotulo: 'Ponto de partida real (hoje)', valor: '70 licenciados reunidos no grupo', nota: 'Pessoas já comprometidas, ainda em pré-lançamento.' },
-      { rotulo: 'Meta mínima do memorando', valor: '300 licenciados ativos' },
-      { rotulo: 'Falta para a meta mínima', valor: '230 licenciados' },
+      { rotulo: 'Ponto de partida real (hoje)', valor: 'Mais de 1.000 parceiros licenciados reunidos', nota: 'Pessoas já comprometidas e no grupo, ainda em pré-lançamento — nenhuma ativada comercialmente.' },
+      { rotulo: 'Meta mínima do memorando', valor: '300 licenciados ativos', nota: 'A meta é de licenciados ATIVOS (vendendo), não de reunidos.' },
+      { rotulo: 'Falta para a meta mínima', valor: 'Nenhum parceiro a recrutar — falta ativar', nota: 'O pool reunido já cobre 3,3× a meta mínima. O gargalo deixou de ser achar gente e passou a ser ativação comercial.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
-      { rotulo: 'Ritmo necessário', valor: '~46 ativações de licenciado por mês', nota: 'Cada licenciado ativado sustenta os próprios vendedores, que ativam influenciadores.' },
-      { rotulo: 'Progresso atual da meta mínima', valor: '23% (70 de 300)' },
+      { rotulo: 'Ritmo necessário', valor: '~60 ativações de licenciado por mês', nota: 'Equivale a ativar cerca de 30% do pool já reunido. Cada licenciado ativado sustenta os próprios vendedores, que ativam influenciadores.' },
+      { rotulo: 'Cobertura do pool sobre a meta mínima', valor: '3,3× (mais de 1.000 reunidos para 300 ativos)' },
       { rotulo: 'Base de cálculo conservadora', valor: 'R$ 2.500 / mês por vendedor' },
     ],
   },
@@ -172,8 +182,10 @@ export default function ParceiroCanaisVenda() {
         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {CANAIS.map((c) => {
             const Icone = c.icone;
+            // Trava em 100%: o pool reunido hoje é 3,3× a meta mínima, e uma barra passando
+            // de 100% vazaria do trilho. O tamanho real da folga é dito no rótulo e no cálculo.
             const pct = c.progresso
-              ? Math.round((c.progresso.atual / c.progresso.minimo) * 100)
+              ? Math.min(100, Math.round((c.progresso.atual / c.progresso.minimo) * 100))
               : null;
             return (
               <article key={c.id} className="flex flex-col border border-pc-borda bg-pc-preto-2">
@@ -223,7 +235,7 @@ export default function ParceiroCanaisVenda() {
                           <div className="h-1 bg-pc-ouro" style={{ width: `${pct}%` }} />
                         </div>
                         <p className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-pc-ouro">
-                          {`${pct}% da meta mínima`}
+                          {c.progresso.rotulo ? `${pct}% ${c.progresso.rotulo}` : `${pct}% da meta mínima`}
                         </p>
                       </div>
                     )}

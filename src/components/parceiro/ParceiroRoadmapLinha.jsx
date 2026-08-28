@@ -32,14 +32,14 @@ const MARCOS = [
     titulo: 'Aplicativo 100% entregue',
     texto:
       'Plataforma concluída e em fase de pré-lançamento, com vendas estratégicas em curso para consolidar números antes da abertura oficial.',
-    hoje: 'Hoje: 52 pessoas ativas na plataforma e cerca de 70 licenciados reunidos para ativação.',
+    hoje: 'Hoje: mais de 1 milhão de clientes já impactados, mais de 1.000 parceiros licenciados reunidos para ativação e 52 pessoas ativas na plataforma nova.',
   },
   {
     periodo: 'Dez/2026',
     estado: 'previsto',
     titulo: 'Lançamento oficial',
     texto:
-      'Meta mínima do memorando: 300 LICENCIADOS ativos (cada um sustentando os próprios vendedores), 8 lojas físicas e distribuidor no Recreio em operação.',
+      'Meta mínima do memorando: 300 LICENCIADOS ativos (cada um sustentando os próprios vendedores), 8 lojas físicas e distribuidor no Recreio em operação. Os 300 saem do pool de mais de 1.000 já reunidos — o trabalho é de ativação, não de recrutamento.',
   },
 ];
 
