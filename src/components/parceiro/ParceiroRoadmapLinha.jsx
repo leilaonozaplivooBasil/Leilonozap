@@ -32,7 +32,7 @@ const MARCOS = [
     titulo: 'Aplicativo 100% entregue',
     texto:
       'Plataforma concluída e em fase de pré-lançamento, com vendas estratégicas em curso para consolidar números antes da abertura oficial.',
-    hoje: 'Hoje: mais de 1 milhão de clientes já impactados, mais de 1.000 parceiros licenciados reunidos para ativação e 52 pessoas ativas na plataforma nova.',
+    hoje: 'Hoje: mais de 1 milhão de clientes já impactados, mais de 250 mil clientes ativos e mais de 1.000 parceiros licenciados reunidos para ativação.',
   },
   {
     periodo: 'Dez/2026',

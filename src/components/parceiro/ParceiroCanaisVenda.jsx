@@ -25,16 +25,25 @@ const IMG_LOJA = '/midia/1570ba555_generated_image.png';
 const IMG_REDE = '/midia/b023a95bd_generated_image.png';
 
 // 📊 Números REAIS de hoje (atualizados pelo dono em 28/08/2026):
-// 52 pessoas ativas na plataforma · mais de 1.000 parceiros licenciados reunidos no
-// grupo, em pré-lançamento (ainda não ativados comercialmente) · mais de 1 milhão de
-// clientes impactados historicamente pela operação de vendas.
+// mais de 1 milhão de clientes impactados historicamente · mais de 250 mil clientes
+// ativos · mais de 1.000 parceiros licenciados reunidos no grupo, em pré-lançamento
+// (ainda não ativados comercialmente).
 //
-// ⚠️ REUNIDO ≠ ATIVO — a distinção sustenta a página inteira e não pode ser perdida numa
-// edição futura. "Reunido" é quem está no grupo, comprometido, ainda em pré-lançamento.
-// "Ativo" é quem já vende. A meta do memorando (300) é de licenciados ATIVOS; os 1.000+
-// reunidos são o POOL de onde essas ativações saem — por isso o pool ser 3,3× a meta é
-// folga, não meta cumprida. Mesma lógica do outro lado: "cliente impactado" (1 milhão,
-// histórico atendido) ≠ "usuário comprando" (meta de 100.000, recorrente).
+// ⚠️ TRÊS RÉGUAS DIFERENTES — a distinção sustenta a página inteira e não pode ser perdida
+// numa edição futura. Sem ela os números parecem se contradizer:
+//
+//   IMPACTADO (1 milhão)  histórico total já atendido desde o início das vendas.
+//   ATIVO (250 mil)       base viva hoje: tem conta, interage, compra de vez em quando.
+//   COMPRANDO (100.000)   a META — comprando com RECORRÊNCIA, na base de R$ 297/mês.
+//
+// A meta de 100.000 é menor que os 250 mil ativos de propósito: ela não mede quantas
+// pessoas existem, mede quantas geram receita recorrente. É converter ~40% da base ativa
+// em recorrência — não conquistar público novo. Quem editar isto sem entender a diferença
+// vai achar que a meta está defasada e "corrigir" para um número inventado.
+//
+// Mesma lógica do lado da rede: REUNIDO (1.000+, no grupo, em pré-lançamento) ≠ ATIVO
+// (a meta do memorando, 300, é de licenciado VENDENDO). Os 1.000+ reunidos são o POOL de
+// onde essas ativações saem — por isso o pool ser 3,3× a meta é folga, não meta cumprida.
 const CANAIS = [
   {
     id: 'leilao',
@@ -46,20 +55,20 @@ const CANAIS = [
     essencia: 'Disputa em tempo real acelera o giro dos lotes.',
     texto:
       'Canal direto da empresa, com disputa em tempo real. Acelera o giro de lotes e define saída rápida quando a operação precisa de velocidade.',
-    atingido: '52 pessoas ativas hoje',
-    atingidoNota: 'Pré-lançamento, sem mídia paga ligada e sem abertura oficial.',
+    atingido: 'Mais de 250 mil clientes ativos',
+    atingidoNota: 'Base viva da operação, antes da abertura oficial e sem mídia paga ligada.',
     atingidoExtra: 'Herda a base histórica de mais de 1 milhão de clientes da Loja Virtual.',
     metaMinima: 'Abertura oficial operando com os 300 licenciados ativos vendendo',
-    metaAlcancavel: '100.000 usuários comprando',
+    metaAlcancavel: '100.000 usuários comprando com recorrência',
     base: 'R$ 297 / mês por usuário',
     estruturaExistente:
       'o canal de leilão já está construído, publicado e operando com usuários reais — falta ligar audiência.',
     calculo: [
-      { rotulo: 'Ponto de partida real (hoje)', valor: '52 pessoas ativas na plataforma', nota: 'Sem mídia paga, sem influenciador ativado e antes da abertura oficial.' },
+      { rotulo: 'Ponto de partida real (hoje)', valor: 'Mais de 250 mil clientes ativos', nota: 'Base viva — ainda sem mídia paga, sem influenciador ativado e antes da abertura oficial.' },
       { rotulo: 'Base histórica já impactada', valor: 'Mais de 1 milhão de clientes desde o início das vendas', nota: 'Base compartilhada entre os canais — é público já atendido, não público a conquistar.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
       { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores', nota: 'Saem de um pool de mais de 1.000 parceiros já reunidos. Cada degrau da estrutura alimenta o canal com público próprio.' },
-      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 usuários por mês', nota: 'Equivale a converter cerca de 10% da base histórica já impactada — reativação de quem já comprou, mais aquisição nova. A verba de aquisição é exatamente o que a captação destrava.' },
+      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 usuários por mês (≈8% da base ativa)', nota: 'A meta mede RECORRÊNCIA, não tamanho de base: são 100.000 comprando todo mês, saídos dos mais de 250 mil clientes já ativos — ou seja, 40% da base ativa ao fim dos 5 meses, convertidos a ~8% ao mês. É reativação de quem já é cliente, não conquista de público novo.' },
       { rotulo: 'Base de cálculo conservadora', valor: 'R$ 297 / mês por usuário' },
     ],
   },
@@ -76,19 +85,19 @@ const CANAIS = [
     atingido: 'Mais de 1 milhão de clientes impactados',
     atingidoNota:
       'Base histórica desde o início das vendas, em migração para a plataforma.',
-    atingidoSecundario: '52 pessoas ativas na plataforma hoje',
-    atingidoSecundarioNota: 'Pré-lançamento, sem mídia paga ligada.',
+    atingidoSecundario: 'Mais de 250 mil clientes ativos',
+    atingidoSecundarioNota: 'Base viva hoje, antes da abertura oficial e sem mídia paga ligada.',
     metaMinima: 'Abertura oficial operando com os 300 licenciados ativos vendendo',
-    metaAlcancavel: '100.000 usuários comprando',
+    metaAlcancavel: '100.000 usuários comprando com recorrência',
     base: 'R$ 297 / mês por usuário',
     estruturaExistente:
       'a loja já está no ar, com catálogo curado, checkout, frete e pagamento em produção, e mais de 1 milhão de clientes já atendidos desde o início das vendas.',
     calculo: [
-      { rotulo: 'Ponto de partida real (hoje)', valor: '52 pessoas ativas na plataforma', nota: 'A loja já opera de ponta a ponta: catálogo, checkout, frete e pagamento.' },
+      { rotulo: 'Ponto de partida real (hoje)', valor: 'Mais de 250 mil clientes ativos', nota: 'A loja já opera de ponta a ponta: catálogo, checkout, frete e pagamento.' },
       { rotulo: 'Base histórica já impactada', valor: 'Mais de 1 milhão de clientes desde o início das vendas', nota: 'Base em migração — não é público a conquistar, é público já atendido.' },
       { rotulo: 'Prazo restante', valor: '5 meses (ago a dez/2026)' },
       { rotulo: 'Quem traz a audiência', valor: '300 licenciados ativos + vendedores + influenciadores', nota: 'Saem de um pool de mais de 1.000 parceiros já reunidos.' },
-      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 usuários por mês', nota: 'A meta de 100.000 equivale a cerca de 10% da base histórica de mais de 1 milhão — o caminho passa mais por reativar quem já comprou do que por aquisição nova.' },
+      { rotulo: 'Ritmo necessário para a meta alcançável', valor: '~20.000 usuários por mês (≈8% da base ativa)', nota: 'A meta de 100.000 é de compra RECORRENTE e sai de dentro dos mais de 250 mil clientes já ativos: 40% da base ativa ao fim dos 5 meses, convertidos a ~8% ao mês. É reativação de quem já é cliente, não aquisição de público novo.' },
       { rotulo: 'Base de cálculo conservadora', valor: 'R$ 297 / mês por usuário' },
     ],
   },
