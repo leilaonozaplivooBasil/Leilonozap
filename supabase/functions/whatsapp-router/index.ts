@@ -1,5 +1,9 @@
 // whatsapp-router — expurgo Base44, etapa 2 (memória + tool-calling), provedor Z-API.
 //
+// 28/08/2026 — Expansão Slack: Bot Token para leitura/escrita em qualquer canal.
+// Imports
+import { criarClienteSlack, type SlackClient as TSlackClient } from './slackClient.ts';
+
 // Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento, qualquer
 // número, sempre 1:1) e Heloim (assistente de TI — 1:1 com qualquer admin de
 // ADMIN_PHONE_NUMBERS, e também dentro de grupos autorizados em GRUPOS_HELOIM_IDS, onde
@@ -67,10 +71,18 @@ const GRUPOS_HELOIM_IDS = (Deno.env.get('GRUPOS_HELOIM_IDS') || '').split(',').m
 // hoje, no mesmo estilo de EXECUTIVO_VENDEDOR_PHONE — trocou de número, é só setar o secret.
 const ZAPI_NUMERO_BOT = Deno.env.get('ZAPI_NUMERO_BOT') || '5521984072064';
 
-// Slack (22/08/2026) — Incoming Webhook do canal onde a Heloim registra pedido/classificação
-// de risco/decisão, igual fazia no Base44 antigo (canal top-tech-leilao-nozap). Opcional: sem
-// configurar, Heloim funciona igual, só não duplica o registro no Slack.
+// Slack (28/08/2026 — expansão de escrita) — Dois modos:
+// 1. SLACK_BOT_TOKEN (novo, preferido): Bot do Slack com OAuth token, suporta read/write em qualquer canal
+// 2. SLACK_WEBHOOK_URL (legado): Incoming Webhook, só postagem em um canal fixo (mantém compatibilidade)
+//
+// Migration: começar com bot token. Se não tiver, cai para webhook (se existir). Sem nenhum: Slack desabilitado.
+// Com Bot Token, Zeca/Heloim podem postar, editar, deletar e gerenciar em todos canais autorizados.
+const SLACK_BOT_TOKEN = Deno.env.get('SLACK_BOT_TOKEN') || '';
 const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL') || '';
+
+// Canal padrão para logs de Heloim (quando usando webhook antigo)
+// Com bot token, qualquer canal pode ser alvo (passado por parâmetro)
+const SLACK_CANAL_PADRAO = Deno.env.get('SLACK_CANAL_PADRAO') || '#top-tech-digital';
 
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
@@ -860,23 +872,54 @@ const TOOLS_ZECA: ToolDef[] = [
   },
 ];
 
-// Slack — registro paralelo de toda solicitação/decisão da Heloim, igual fazia no Base44
-// antigo. Best-effort: falha aqui NUNCA derruba a resposta pro WhatsApp — o registro em
-// heloim_solicitacoes já é a fonte de verdade auditável, o Slack é conveniência extra.
+// Slack — registro paralelo de toda solicitação/decisão da Heloim (Bot Token novo, com fallback webhook).
+// Best-effort: falha aqui NUNCA derruba a resposta pro WhatsApp — o registro em
+// heloim_solicitacoes já é a fonte de verdade auditável, Slack é conveniência extra.
 type ResultadoSlack = { ok: boolean; status: number | null; corpo: string };
 
-async function postarNoSlack(texto: string): Promise<ResultadoSlack> {
-  if (!SLACK_WEBHOOK_URL) {
-    // Antes daqui saía um `return` seco, sem log nenhum. Visto de fora era idêntico a
-    // "o Slack está ligado e ninguém pediu nada" — e foi exatamente o que aconteceu: o
-    // canal ficou sem uma linha de 18/08/2026 (última postagem do agente do Base44 antigo)
-    // até 27/08/2026, e ninguém descobriu que o secret nunca tinha sido criado. Agora fala.
-    console.warn(
-      '[whatsapp-router] tinha registro pra publicar no Slack, mas SLACK_WEBHOOK_URL não está ' +
-      'configurada — nada foi pro canal. Configure o secret no Supabase (ver DEPLOY.md, seção 2).'
-    );
-    return { ok: false, status: null, corpo: 'SLACK_WEBHOOK_URL não configurada' };
+// Client Slack (lazy-init, criado na primeira chamada)
+let clienteSlack: TSlackClient | null | undefined;
+function obterClienteSlack(): TSlackClient | null {
+  if (clienteSlack === undefined) {
+    clienteSlack = criarClienteSlack(SLACK_BOT_TOKEN) || null;
   }
+  return clienteSlack;
+}
+
+/**
+ * Postar no Slack — modo novo (Bot Token) com fallback para webhook legado
+ * @param texto Conteúdo da mensagem
+ * @param canal Canal para postar (se usando Bot Token); default: #top-tech-digital
+ */
+async function postarNoSlack(texto: string, canal: string = SLACK_CANAL_PADRAO): Promise<ResultadoSlack> {
+  const cliente = obterClienteSlack();
+
+  // Modo 1: Bot Token (novo, preferido)
+  if (cliente) {
+    try {
+      const resultado = await cliente.postMessage(canal, texto);
+      if (resultado.ok) {
+        console.log(`[Slack] mensagem postada no canal ${canal}`);
+        return { ok: true, status: 200, corpo: 'OK (via Bot Token)' };
+      } else {
+        console.error(`[Slack] erro ao postar: ${resultado.error}`);
+        return { ok: false, status: null, corpo: resultado.error || 'Erro desconhecido' };
+      }
+    } catch (e) {
+      console.error('[Slack] exceção ao postar (vai tentar webhook):', e);
+      // Fall through para webhook
+    }
+  }
+
+  // Modo 2: Webhook legado (fallback)
+  if (!SLACK_WEBHOOK_URL) {
+    console.warn(
+      '[Slack] nenhum modo de entrega configurado: sem SLACK_BOT_TOKEN e sem SLACK_WEBHOOK_URL. ' +
+      'Slack desabilitado. Configure um deles no Supabase (ver DEPLOY.md).'
+    );
+    return { ok: false, status: null, corpo: 'Slack desabilitado (sem token ou webhook)' };
+  }
+
   try {
     const r = await fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
@@ -884,12 +927,87 @@ async function postarNoSlack(texto: string): Promise<ResultadoSlack> {
       body: JSON.stringify({ text: texto }),
     });
     const corpo = await r.text().catch(() => '');
-    if (!r.ok) console.error('[whatsapp-router] Slack recusou o post:', r.status, corpo);
-    else console.log('[whatsapp-router] registro publicado no Slack.');
+    if (!r.ok) {
+      console.error('[Slack] webhook recusou o post:', r.status, corpo);
+    } else {
+      console.log('[Slack] mensagem postada via webhook');
+    }
     return { ok: r.ok, status: r.status, corpo };
   } catch (e) {
-    console.error('[whatsapp-router] falha ao postar no Slack (segue sem registrar lá):', e);
+    console.error('[Slack] falha ao postar no webhook:', e);
     return { ok: false, status: null, corpo: String((e as Error)?.message || e) };
+  }
+}
+
+/**
+ * Postar em canal específico com Bot Token
+ * @param canal Nome ou ID do canal (ex: '#pedidos', 'C1234567890')
+ * @param texto Conteúdo
+ * @returns true se sucesso, false se falhou ou Slack desabilitado
+ */
+async function postarEmCanal(canal: string, texto: string): Promise<boolean> {
+  const cliente = obterClienteSlack();
+  if (!cliente) {
+    console.warn('[Slack] Bot Token não configurado — não é possível postar em canais específicos');
+    return false;
+  }
+
+  try {
+    const resultado = await cliente.postMessage(canal, texto);
+    if (!resultado.ok) {
+      console.error(`[Slack] erro ao postar em ${canal}: ${resultado.error}`);
+    }
+    return resultado.ok;
+  } catch (e) {
+    console.error(`[Slack] exceção ao postar em ${canal}:`, e);
+    return false;
+  }
+}
+
+/**
+ * Editar mensagem existente no Slack
+ * @param canal Nome ou ID do canal
+ * @param ts Timestamp da mensagem (obtida via postMessage response)
+ * @param novoTexto Novo conteúdo
+ */
+async function editarMensagemSlack(canal: string, ts: string, novoTexto: string): Promise<boolean> {
+  const cliente = obterClienteSlack();
+  if (!cliente) {
+    console.warn('[Slack] Bot Token não configurado — não é possível editar mensagens');
+    return false;
+  }
+
+  try {
+    const resultado = await cliente.updateMessage(canal, ts, novoTexto);
+    if (!resultado.ok) {
+      console.error(`[Slack] erro ao editar mensagem: ${resultado.error}`);
+    }
+    return resultado.ok;
+  } catch (e) {
+    console.error('[Slack] exceção ao editar mensagem:', e);
+    return false;
+  }
+}
+
+/**
+ * Deletar mensagem do Slack
+ */
+async function deletarMensagemSlack(canal: string, ts: string): Promise<boolean> {
+  const cliente = obterClienteSlack();
+  if (!cliente) {
+    console.warn('[Slack] Bot Token não configurado — não é possível deletar mensagens');
+    return false;
+  }
+
+  try {
+    const resultado = await cliente.deleteMessage(canal, ts);
+    if (!resultado.ok) {
+      console.error(`[Slack] erro ao deletar mensagem: ${resultado.error}`);
+    }
+    return resultado.ok;
+  } catch (e) {
+    console.error('[Slack] exceção ao deletar mensagem:', e);
+    return false;
   }
 }
 
@@ -1103,6 +1221,109 @@ const TOOLS_HELOIM: ToolDef[] = [
       const r = await sbRest(`heloim_solicitacoes?select=id,descricao,risco,pontos_atencao,solicitante_nome,grupo_nome,created_at&status=eq.pendente&order=created_at.desc&limit=10`);
       const rows = await r.json().catch(() => []);
       return { pendentes: Array.isArray(rows) ? rows : [] };
+    },
+  },
+  {
+    name: 'postar_no_slack',
+    description:
+      'Postar ou gerenciar mensagens no Slack — criar, editar, deletar em qualquer canal autorizado. ' +
+      'Requer SLACK_BOT_TOKEN configurado. Use para notificações, alertas, ou comunicação com time. ' +
+      'Apenas admins (Luiz, Ávila) podem chamar essa tool.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        acao: {
+          type: 'string',
+          enum: ['postar', 'editar', 'deletar'],
+          description: 'postar = nova mensagem; editar = atualizar existente; deletar = remover',
+        },
+        canal: {
+          type: 'string',
+          description:
+            'Nome ou ID do canal (ex: "#pedidos", "#top-tech-digital", "C1234567890"). ' +
+            'Com hashtag: "seu-canal". Sem hashtag: ID direto.',
+        },
+        mensagem: {
+          type: 'string',
+          description: 'Texto a postar (obrigatório para "postar" e "editar"). Suporta markdown básico do Slack.',
+        },
+        timestamp: {
+          type: 'string',
+          description:
+            'Timestamp da mensagem (obrigatório para "editar" e "deletar"). ' +
+            'Obtém-se dele a resposta de uma chamada anterior de "postar".',
+        },
+      },
+      required: ['acao', 'canal'],
+    },
+    executar: async (input, ctx) => {
+      // Apenas admins
+      if (!ehAdmin(ctx.remetente)) {
+        return { ok: false, erro: 'Apenas admins podem gerenciar mensagens no Slack' };
+      }
+
+      if (!SLACK_BOT_TOKEN) {
+        return {
+          ok: false,
+          erro: 'SLACK_BOT_TOKEN não configurado. Configure o Bot Token do Slack no Supabase (DEPLOY.md).',
+        };
+      }
+
+      const cliente = obterClienteSlack();
+      if (!cliente) {
+        return { ok: false, erro: 'Não foi possível conectar ao Slack. Verifique o token.' };
+      }
+
+      const canal = String(input.canal).startsWith('#') ? input.canal.substring(1) : input.canal;
+      const mensagem = input.mensagem ? String(input.mensagem).trim() : '';
+      const ts = input.timestamp ? String(input.timestamp).trim() : '';
+
+      try {
+        switch (input.acao) {
+          case 'postar':
+            if (!mensagem) return { ok: false, erro: 'Mensagem é obrigatória para postar' };
+            const postResult = await cliente.postMessage(canal, mensagem);
+            return {
+              ok: postResult.ok,
+              canal,
+              mensagem,
+              timestamp: (postResult.data as any)?.ts || null,
+              erro: postResult.error || null,
+              diagnostico: postResult.ok
+                ? `Mensagem postada em #${canal} (ts: ${(postResult.data as any)?.ts})`
+                : `Erro ao postar: ${postResult.error}`,
+            };
+
+          case 'editar':
+            if (!mensagem) return { ok: false, erro: 'Mensagem é obrigatória para editar' };
+            if (!ts) return { ok: false, erro: 'Timestamp é obrigatório para editar' };
+            const editResult = await cliente.updateMessage(canal, ts, mensagem);
+            return {
+              ok: editResult.ok,
+              canal,
+              timestamp: ts,
+              erro: editResult.error || null,
+              diagnostico: editResult.ok ? 'Mensagem atualizada' : `Erro ao editar: ${editResult.error}`,
+            };
+
+          case 'deletar':
+            if (!ts) return { ok: false, erro: 'Timestamp é obrigatório para deletar' };
+            const delResult = await cliente.deleteMessage(canal, ts);
+            return {
+              ok: delResult.ok,
+              canal,
+              timestamp: ts,
+              erro: delResult.error || null,
+              diagnostico: delResult.ok ? 'Mensagem deletada' : `Erro ao deletar: ${delResult.error}`,
+            };
+
+          default:
+            return { ok: false, erro: `Ação desconhecida: ${input.acao}` };
+        }
+      } catch (e) {
+        console.error('[Slack] exceção ao gerenciar mensagem:', e);
+        return { ok: false, erro: String((e as Error)?.message || e) };
+      }
     },
   },
 ];
