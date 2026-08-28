@@ -57,6 +57,10 @@
       "type": "string",
       "description": "Qual PIX ou cart\u00e3o cadastrado (ex: PIX Santander, Cart\u00e3o Nubank)"
     },
+    "payment_account": {
+      "type": "string",
+      "description": "Conta de onde saiu o pagamento (Mercado Pago, Ita\u00fa, Santander, Bradesco, Esp\u00e9cie, Outros). Escolhida na baixa do pagamento."
+    },
     "payment_status": {
       "type": "string",
       "enum": [
