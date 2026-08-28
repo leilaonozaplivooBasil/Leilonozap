@@ -26,6 +26,10 @@ import { ADMIN_ROLES } from "@/lib/roles";
 const FinancialExpense = plataforma.entities.FinancialExpense;
 const FinancialIncome = plataforma.entities.FinancialIncome;
 
+// Os três status que significam "ainda devo isso" — a régua do filtro A Pagar.
+// pago_integral está fora porque já foi quitado; cancelado, porque deixou de ser dívida.
+const STATUS_A_PAGAR = ["vencido", "pago_parcial", "pendente"];
+
 export default function Financial() {
   // 🔴 PONTO 122 (21/08/2026) — antes esta tela conferia role sozinha, direto
   // do localStorage, e só aceitava a string exata 'admin' — o dono, logado
@@ -37,6 +41,10 @@ export default function Financial() {
   const [editingExpense, setEditingExpense] = useState(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  // 💰 Filtro "A Pagar" (28/08/2026, pedido do dono): responde "o que eu devo hoje?".
+  // 'nenhum' = desligado. 'all' = as três pendências juntas. Ou uma delas, pra refinar.
+  // Deixa SEMPRE de fora pago_integral e cancelado — nenhum dos dois é dívida.
+  const [filterAPagar, setFilterAPagar] = useState("nenhum");
   const [filterType, setFilterType] = useState("all");
   const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [filterDateTo, setFilterDateTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
@@ -111,7 +119,13 @@ export default function Financial() {
     const expDate = startOfDay(toDate(exp.due_date));
     const monthMatch = (!filterDateFrom || !isBefore(expDate, startOfDay(parseISO(filterDateFrom)))) &&
       (!filterDateTo || !isAfter(expDate, startOfDay(parseISO(filterDateTo))));
-    const statusMatch = filterStatus === "all" || exp.payment_status === filterStatus;
+    // "A Pagar" MANDA no status quando está ligado (o Select dele já zera o filtro de
+    // Status ao ser usado — ver onValueChange). Assim nunca dá pra montar uma combinação
+    // que se anula sozinha, tipo Status=Pago + A Pagar=Vencido, e devolve tela vazia sem
+    // explicação nenhuma.
+    const statusMatch = filterAPagar !== "nenhum"
+      ? (filterAPagar === "all" ? STATUS_A_PAGAR.includes(exp.payment_status) : exp.payment_status === filterAPagar)
+      : (filterStatus === "all" || exp.payment_status === filterStatus);
     const typeMatch = filterType === "all" || exp.expense_type === filterType;
     const categoryMatch = filterCategory === "all" || exp.category === filterCategory;
     const searchMatch = !search || (exp.description || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -299,7 +313,12 @@ export default function Financial() {
                     className="bg-gray-900 border-gray-700 text-white w-full md:w-40 [&::-webkit-calendar-picker-indicator]:invert"
                   />
                 </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                {/* Escolher um Status desliga o "A Pagar" — os dois mexem na mesma coluna,
+                    e deixar os dois ligados permitiria combinação que se anula sozinha. */}
+                <Select
+                  value={filterStatus}
+                  onValueChange={(v) => { setFilterStatus(v); if (v !== "all") setFilterAPagar("nenhum"); }}
+                >
                   <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-36">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -310,6 +329,32 @@ export default function Financial() {
                     <SelectItem value="pago_parcial">Parcial</SelectItem>
                     <SelectItem value="vencido">Vencido</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* 💰 A PAGAR — o que ainda está em aberto. Ao ligar, zera o Status (opção A
+                    escolhida pelo dono): um manda de cada vez, nunca dá tela vazia sem motivo.
+                    Fica em âmbar quando ativo, pra não passar despercebido que a lista está
+                    filtrada por pendência. */}
+                <Select
+                  value={filterAPagar}
+                  onValueChange={(v) => { setFilterAPagar(v); if (v !== "nenhum") setFilterStatus("all"); }}
+                >
+                  <SelectTrigger
+                    className={`w-full md:w-44 ${
+                      filterAPagar !== "nenhum"
+                        ? "bg-amber-500/15 border-amber-500/50 text-amber-300"
+                        : "bg-gray-900 border-gray-700 text-white"
+                    }`}
+                  >
+                    <SelectValue placeholder="A Pagar" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    <SelectItem value="nenhum">A Pagar (desligado)</SelectItem>
+                    <SelectItem value="all">Todas as pendências</SelectItem>
+                    <SelectItem value="vencido">Vencido</SelectItem>
+                    <SelectItem value="pago_parcial">Pago Parcial</SelectItem>
+                    <SelectItem value="pendente">Pendente</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filterType} onValueChange={setFilterType}>
