@@ -32,7 +32,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'supabase/migrations/**'
+      # Só .sql: mexer no LEIA-ME.md da pasta não é motivo pra rodar deploy
+      # contra o banco de produção.
+      - 'supabase/migrations/**.sql'
 
 permissions:
   contents: read
@@ -45,9 +47,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ⚠️ VERSÃO FIXA, NÃO `latest` (28/08/2026 — o motivo de este workflow nunca
+      # ter funcionado). Com `latest`, a action consulta a API do GitHub pra
+      # descobrir a última release do CLI. Essa consulta sai SEM autenticação, e o
+      # runner divide o limite de 60 req/hora por IP com todo mundo — resultado:
+      # "Failed to resolve latest Supabase CLI release: rate limit exceeded".
+      # O job morria AQUI, antes de chegar no db push.
+      #
+      # As 8 execuções deste workflow desde 21/08/2026 falharam exatamente assim.
+      # Nenhuma migração foi aplicada automaticamente nesse período: as que estão
+      # em produção foram todas coladas no SQL Editor na mão, e as que ninguém
+      # lembrou de colar não existiam no banco. Foi o que aconteceu com
+      # financial_income, cost_center e recurring_group_id (PRs #132/#134) —
+      # código em produção desde 27/08 gravando em tabela e colunas inexistentes,
+      # receita não registrada e o cron gerarGastosFixos falhando calado às 06:00
+      # todo dia, até a conferência de 28/08 achar.
+      #
+      # Versão fixa também deixa o deploy reproduzível: uma release nova do CLI
+      # não passa a rodar contra produção sozinha, sem ninguém ter revisado.
+      # Pra atualizar: `npm view supabase version` e troque o número aqui.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.116.0
+        env:
+          # Cinto de segurança: se um dia alguém voltar pra `latest`, a consulta vai
+          # autenticada (limite sobe de 60 pra 1.000 req/hora) em vez de morrer no
+          # rate limit. Com a versão fixa acima, nem chega a ser usado.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: link no projeto de produção
         run: supabase link --project-ref gezvviyegtxytnwjkrjv
@@ -59,3 +85,11 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # Rede de baixo. O `db push` acima devolve exit 0 mesmo quando PULA um arquivo
+      # cujo nome não bate com o padrão do CLI ("Skipping migration ..."), então um
+      # workflow verde não prova que a migração entrou. O teste de nomes roda no CI e
+      # barra isso antes do merge; se ainda assim algum escapar, este passo deixa o
+      # deploy VERMELHO em vez de mentir que deu certo.
+      - name: conferir que nenhuma migração foi pulada
+        run: node scripts/checar-nomes-migracoes.mjs
