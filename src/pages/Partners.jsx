@@ -15,6 +15,7 @@ import ParceiroBoard from '@/components/parceiro/ParceiroBoard';
 import ParceiroFormalizacao from '@/components/parceiro/ParceiroFormalizacao';
 import ParceiroCTA from '@/components/parceiro/ParceiroCTA';
 import ParceiroDisclaimer from '@/components/parceiro/ParceiroDisclaimer';
+import ParceiroExportarPDF from '@/components/parceiro/ParceiroExportarPDF';
 import { acessoParceiroLiberado, usuarioLocal } from '@/lib/parceiroAcesso';
 import { useSectionTracking } from '@/lib/tracking';
 
@@ -107,6 +108,10 @@ export default function PartnersPage() {
         <ParceiroCTA onSolicitarAcesso={irParaPainel} onAcessarPainel={irParaPainel} />
         <ParceiroDisclaimer />
       </div>
+
+      {/* Fica FORA da div acima de propósito: é botão de tela, não conteúdo da
+          apresentação — some no PDF (regra .pc-exportar-pdf em @media print). */}
+      <ParceiroExportarPDF />
 
       {showLoginModal && (
         <LoginModal
