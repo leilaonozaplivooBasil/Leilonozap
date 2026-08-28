@@ -341,7 +341,7 @@ export default function Financial() {
                   onValueChange={(v) => { setFilterAPagar(v); if (v !== "nenhum") setFilterStatus("all"); }}
                 >
                   <SelectTrigger
-                    className={`w-full md:w-44 ${
+                    className={`w-full md:w-52 ${
                       filterAPagar !== "nenhum"
                         ? "bg-amber-500/15 border-amber-500/50 text-amber-300"
                         : "bg-gray-900 border-gray-700 text-white"
