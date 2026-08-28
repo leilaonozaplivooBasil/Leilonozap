@@ -32,10 +32,17 @@ const EXPENSE_TYPES = [
   { value: "parcelado", label: "Parcelado" },
 ];
 
+// Contas de onde o dinheiro sai (28/08/2026, lista ditada pelo dono). Mesma lista e mesmo
+// campo (payment_account) do modal de baixa — ver PaymentModal.jsx. Trocou de banco? É só
+// mexer nesta lista e na de lá; não existe CHECK no banco atrás dela.
+const PAYMENT_ACCOUNTS = [
+  "Mercado Pago", "Itaú", "Santander", "Bradesco", "Espécie", "Outros",
+];
+
 export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, editingExpense }) {
   const [form, setForm] = useState({
     description: "", company: "", category: "", expense_type: "unico",
-    amount: "", due_date: "", payment_method: "pix", pix_or_card_info: "",
+    amount: "", due_date: "", payment_method: "pix", payment_account: "", pix_or_card_info: "",
     payment_status: "pendente", amount_paid: "", payment_date: "",
     installment_current: "", installment_total: "", notes: "",
     interest_amount: "", recurring_day: "", cost_center: ""
@@ -55,6 +62,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         amount: editingExpense.amount || "",
         due_date: editingExpense.due_date || "",
         payment_method: editingExpense.payment_method || "pix",
+        payment_account: editingExpense.payment_account || "",
         pix_or_card_info: editingExpense.pix_or_card_info || "",
         payment_status: editingExpense.payment_status || "pendente",
         amount_paid: editingExpense.amount_paid || "",
@@ -77,7 +85,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
     } else {
       setForm({
         description: "", company: "", category: "", expense_type: "unico",
-        amount: "", due_date: "", payment_method: "pix", pix_or_card_info: "",
+        amount: "", due_date: "", payment_method: "pix", payment_account: "", pix_or_card_info: "",
         payment_status: "pendente", amount_paid: "", payment_date: "",
         installment_current: "", installment_total: "", notes: "",
         interest_amount: "", recurring_day: "", cost_center: ""
@@ -264,6 +272,23 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {PAYMENT_METHODS.map(m => (
                   <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Conta Utilizada — de ONDE o dinheiro sai (o campo acima é COMO se paga).
+              Logo abaixo de "Forma de Pagamento", como pedido. Grava em payment_account,
+              o mesmo campo do modal de baixa. */}
+          <div>
+            <Label className="text-gray-300 text-sm">Conta Utilizada</Label>
+            <Select value={form.payment_account} onValueChange={v => updateField("payment_account", v)}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                <SelectValue placeholder="Selecione a conta" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                {PAYMENT_ACCOUNTS.map(conta => (
+                  <SelectItem key={conta} value={conta}>{conta}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
