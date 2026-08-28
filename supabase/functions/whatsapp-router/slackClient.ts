@@ -80,6 +80,56 @@ export class SlackClient {
   }
 
   /**
+   * Requisição em form-urlencoded — alguns endpoints de arquivo do Slack (getUploadURLExternal,
+   * completeUploadExternal) esperam esse content-type, não JSON puro.
+   */
+  private async requestForm<T = any>(
+    method: string,
+    params: Record<string, any> = {}
+  ): Promise<SlackApiResult<T>> {
+    try {
+      const url = `${this.baseUrl}/${method}`;
+      const body = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) continue;
+        body.append(k, typeof v === 'string' ? v : JSON.stringify(v));
+      }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      });
+
+      const result = await response.json() as SlackApiResult<T>;
+      if (!result.ok) {
+        console.error(`[Slack] erro em ${method}:`, result.error);
+        return { ok: false, error: result.error };
+      }
+      return result;
+    } catch (error) {
+      console.error(`[Slack] exceção em ${method}:`, error);
+      return { ok: false, error: String((error as Error)?.message || error) };
+    }
+  }
+
+  /**
+   * Resolve nome de canal ("pedidos", "#pedidos") para o ID (C0123456789) — alguns endpoints
+   * (files.completeUploadExternal) exigem ID, não aceitam nome. Se já parecer um ID, devolve
+   * direto sem gastar a chamada de listagem.
+   */
+  async resolveChannelId(channel: string): Promise<string> {
+    const semHash = channel.replace(/^#/, '');
+    if (/^[CGD][A-Z0-9]{8,}$/.test(semHash)) return semHash; // já é um ID
+    const encontrado = await this.findChannel(semHash);
+    if (encontrado?.id) return encontrado.id;
+    console.warn(`[Slack] não encontrei o canal "${channel}" na listagem — usando o nome como veio.`);
+    return semHash;
+  }
+
+  /**
    * Postar mensagem em um canal
    * @param channel ID ou nome do canal (e.g., '#top-tech-digital' ou 'C1234567890')
    * @param text Conteúdo da mensagem
@@ -333,6 +383,55 @@ export class SlackClient {
     return this.postMessage(channel, text, {
       attachments,
     });
+  }
+
+  /**
+   * Subir um arquivo (ex: imagem de capa) e postar num canal, com legenda opcional.
+   * Usa o fluxo atual do Slack (files.upload foi descontinuado em 2025):
+   *   1. files.getUploadURLExternal — pede uma URL de upload temporária
+   *   2. POST dos bytes nessa URL
+   *   3. files.completeUploadExternal — finaliza e publica no canal, com legenda (initial_comment)
+   *
+   * @param channel Nome ou ID do canal — resolvido pra ID automaticamente
+   * @param fileBytes Conteúdo do arquivo
+   * @param filename Nome do arquivo (define a extensão que o Slack usa pra preview)
+   * @param options.initial_comment Texto que acompanha o arquivo (a "legenda" do post)
+   * @param options.title Título do arquivo dentro do Slack
+   */
+  async uploadFile(
+    channel: string,
+    fileBytes: Uint8Array,
+    filename: string,
+    options: { initial_comment?: string; title?: string } = {}
+  ): Promise<SlackApiResult<any>> {
+    try {
+      const urlResp = await this.requestForm<{ upload_url: string; file_id: string }>(
+        'files.getUploadURLExternal',
+        { filename, length: fileBytes.length }
+      );
+      if (!urlResp.ok || !urlResp.data) {
+        return { ok: false, error: urlResp.error || 'falha ao obter URL de upload do Slack' };
+      }
+      const { upload_url, file_id } = urlResp.data;
+
+      const form = new FormData();
+      form.append('file', new Blob([fileBytes]), filename);
+      const uploadResp = await fetch(upload_url, { method: 'POST', body: form });
+      if (!uploadResp.ok) {
+        return { ok: false, error: `upload do arquivo falhou: HTTP ${uploadResp.status}` };
+      }
+
+      const canalId = await this.resolveChannelId(channel);
+      const completeResp = await this.requestForm('files.completeUploadExternal', {
+        files: [{ id: file_id, title: options.title || filename }],
+        channel_id: canalId,
+        initial_comment: options.initial_comment,
+      });
+      return completeResp;
+    } catch (error) {
+      console.error('[Slack] exceção em uploadFile:', error);
+      return { ok: false, error: String((error as Error)?.message || error) };
+    }
   }
 
   /**

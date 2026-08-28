@@ -677,6 +677,37 @@ async function salvarTurno(
 }
 
 // ============================================================================
+// Marcador de mídia na memória (28/08/2026) — sem isto, a URL da imagem só existe durante o
+// processamento do turno em que ela chegou (usada em blocosDeMidia pra Claude ENXERGAR) e
+// depois some pra sempre: ai_conversas.content só guarda o texto sintético ("[o cliente mandou
+// uma imagem, sem legenda]"), nunca a URL. Isso quebrava "Heloim, documenta esse tópico com a
+// imagem como capa" — não tinha de onde puxar a imagem de uma mensagem anterior.
+//
+// Formato: acrescenta `[[midia:imagem|URL]]` ao final do content salvo. Some da memória que a
+// Claude LÊ (ver processarMensagem, onde `anteriores` é sanitizado antes de virar contexto) —
+// só a tool documentar_no_slack lê o marcador bruto, direto do carregarHistorico().
+// ⚠️ Mesma validade da URL original do Z-API: ~30 dias (documentado no DEPLOY.md).
+function conteudoParaMemoria(msg: MensagemExtraida, textoBase: string): string {
+  if (msg.midiaUrl && msg.midiaTipo === 'imagem') {
+    return `${textoBase}\n[[midia:imagem|${msg.midiaUrl}]]`;
+  }
+  return textoBase;
+}
+
+function limparMarcadorDeMidia(texto: string): string {
+  return texto.replace(/\n?\[\[midia:[^\]]+\]\]/g, '').trim();
+}
+
+/** Varre o histórico de trás pra frente e devolve a URL da imagem mais recente, se houver. */
+function extrairUltimaImagemDoHistorico(turnos: Turno[]): string | null {
+  for (let i = turnos.length - 1; i >= 0; i--) {
+    const m = turnos[i].content.match(/\[\[midia:imagem\|([^\]]+)\]\]/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+// ============================================================================
 // 🧍 O QUE FAZ PARECER GENTE — 27/08/2026
 //
 // O texto do prompt já pedia conversa humanizada. O que denunciava a máquina não era o
@@ -1326,6 +1357,111 @@ const TOOLS_HELOIM: ToolDef[] = [
       }
     },
   },
+  {
+    name: 'documentar_no_slack',
+    description:
+      'Documenta o tópico/conversa ATUAL no Slack de uma vez só: você mesma escreve o resumo a ' +
+      'partir do que já foi dito nesta conversa e publica no canal pedido — sem pedir pra pessoa ' +
+      'reescrever nada. Se uma imagem (print, foto, comprovante) apareceu nas últimas mensagens, ' +
+      'ela sobe automaticamente como capa/anexo do post — não precisa que a pessoa mande a imagem ' +
+      'de novo. Use quando ouvir algo como "documenta isso no Slack", "registra esse tópico no ' +
+      'canal X", "sobe isso pro Slack com a imagem", "posta um resumo dessa conversa lá".',
+    input_schema: {
+      type: 'object',
+      properties: {
+        canal: { type: 'string', description: 'Canal de destino (ex: "#pedidos", "#top-tech-digital", ou ID).' },
+        titulo: { type: 'string', description: 'Título curto do tópico, se ficar claro do pedido (opcional).' },
+        resumo: {
+          type: 'string',
+          description:
+            'Sua síntese do que foi conversado/decidido, em 2-5 linhas — escrita por VOCÊ a partir ' +
+            'do histórico desta conversa, pronta pra quem não acompanhou entender o tópico. Não é ' +
+            'o histórico bruto, é o resumo.',
+        },
+        incluir_imagem: {
+          type: 'boolean',
+          description: 'true (padrão) = sobe a última imagem desta conversa como capa, se houver alguma.',
+        },
+      },
+      required: ['canal', 'resumo'],
+    },
+    executar: async (input, ctx) => {
+      if (!ehAdmin(ctx.remetente)) {
+        return { ok: false, erro: 'Apenas admins podem documentar tópicos no Slack' };
+      }
+      if (!SLACK_BOT_TOKEN) {
+        return {
+          ok: false,
+          erro: 'SLACK_BOT_TOKEN não configurado — sem ele não dá pra escolher canal nem subir imagem. Configure no Supabase (DEPLOY.md).',
+        };
+      }
+      const cliente = obterClienteSlack();
+      if (!cliente) return { ok: false, erro: 'Não foi possível conectar ao Slack. Verifique o token.' };
+
+      const canal = String(input.canal).startsWith('#') ? input.canal.substring(1) : input.canal;
+      const quem = ctx.remetenteNome || ctx.remetente;
+      const titulo = input.titulo ? `*${input.titulo}*\n` : '';
+      const corpo = `${titulo}${input.resumo}\n\n_Documentado por ${quem} via Heloim${ctx.grupoNome ? ` — grupo ${ctx.grupoNome}` : ''}_`;
+
+      const querImagem = input.incluir_imagem !== false;
+      let imagemUrl: string | null = null;
+      if (querImagem) {
+        const historico = await carregarHistorico(ctx.remetente, 'heloim');
+        imagemUrl = extrairUltimaImagemDoHistorico(historico);
+      }
+
+      // Sem imagem pedida, ou nenhuma encontrada nas últimas mensagens: posta só o texto.
+      if (!imagemUrl) {
+        const resultado = await cliente.postMessage(canal, corpo);
+        return {
+          ok: resultado.ok,
+          canal,
+          tinha_imagem: false,
+          erro: resultado.error || null,
+          diagnostico: resultado.ok
+            ? (querImagem ? 'Documentado no Slack (sem imagem — nenhuma foi encontrada nas últimas mensagens).' : 'Documentado no Slack.')
+            : `Erro ao postar: ${resultado.error}`,
+        };
+      }
+
+      // Com imagem: baixa do Z-API e sobe como arquivo real (capa), com o resumo como legenda.
+      try {
+        const r = await fetch(imagemUrl);
+        if (!r.ok) throw new Error(`falha ao baixar imagem: HTTP ${r.status}`);
+        const bytes = new Uint8Array(await r.arrayBuffer());
+        const contentType = r.headers.get('content-type') || 'image/jpeg';
+        const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+        const resultado = await cliente.uploadFile(canal, bytes, `capa.${ext}`, {
+          initial_comment: corpo,
+          title: input.titulo || 'Tópico documentado',
+        });
+        return {
+          ok: resultado.ok,
+          canal,
+          tinha_imagem: true,
+          erro: resultado.error || null,
+          diagnostico: resultado.ok
+            ? 'Documentado no Slack com a imagem como capa.'
+            : `Imagem falhou (${resultado.error}) — confira o scope files:write do Bot Token.`,
+        };
+      } catch (e) {
+        // Imagem falhou (ex: link do Z-API expirado — vale ~30 dias) — não perde o registro,
+        // posta o texto mesmo assim e avisa.
+        console.error('[Slack] falha ao subir imagem como capa (segue só com texto):', e);
+        const resultado = await cliente.postMessage(
+          canal,
+          `${corpo}\n\n_(a imagem não pôde ser anexada — o link pode ter expirado)_`
+        );
+        return {
+          ok: resultado.ok,
+          canal,
+          tinha_imagem: false,
+          erro: String((e as Error)?.message || e),
+          diagnostico: 'Imagem falhou ao subir, documentado só com texto.',
+        };
+      }
+    },
+  },
 ];
 
 async function buscarClienteCompletoPorTelefone(remetente: string): Promise<any | null> {
@@ -1397,6 +1533,18 @@ Suas tools de SOLICITAÇÃO (pedido de mudança de sistema — não confundir co
   a tool confere isso sozinha e recusa se não for, mas não ofereça essa ação pra quem você já
   sabe que não é admin (ver contexto do canal abaixo).
 - listar_solicitacoes_pendentes: quando um admin quiser ver o que está esperando decisão.
+
+Suas tools de SLACK (postagem/gestão real no canal — precisam de SLACK_BOT_TOKEN configurado):
+- documentar_no_slack: quando pedirem pra "documentar", "registrar" ou "postar um resumo" do
+  tópico/conversa ATUAL no Slack (ex: "Heloim, documenta isso no #pedidos", "sobe esse tópico
+  pro Slack com a imagem"). AJA DIRETO — não peça pra pessoa reescrever o que já foi dito nem
+  reenviar a imagem: monte você mesma o resumo a partir do histórico desta conversa e chame a
+  tool. Se uma imagem apareceu nas últimas mensagens, ela sobe sozinha como capa (a tool cuida
+  disso) — só passe incluir_imagem: false se explicitamente pedirem sem imagem.
+- postar_no_slack: postar/editar/deletar uma mensagem avulsa (não é resumo de conversa, é
+  conteúdo específico que a pessoa ditou).
+Ambas exigem canal explícito ou claramente inferível do pedido — se não citarem canal nenhum e
+não der pra inferir, aí sim pergunte qual.
 
 Você NUNCA finge que executou uma ação que não tem tool pra fazer (pausar leilão, reprocessar
 pedido, mexer em saldo direto, etc.) — isso continua fora do seu alcance, sempre foi só
@@ -1791,8 +1939,10 @@ async function processarMensagem(msg: MensagemExtraida) {
 
     // A fala do cliente é gravada AGORA, antes de responder. É isso que permite agrupar:
     // se ele mandar mais um pedaço em seguida, aquela execução vai encontrar esta no
-    // histórico e responder as duas de uma vez.
-    const marca = await salvarTurno(msg.remetente, agente, 'user', textoParaClaude);
+    // histórico e responder as duas de uma vez. Se veio imagem, a URL some do que a Claude vai
+    // LER depois (ver limpeza de `anteriores` abaixo) mas fica marcada no banco — é o que
+    // permite "documenta isso com a imagem como capa" puxar uma foto de mensagem anterior.
+    const marca = await salvarTurno(msg.remetente, agente, 'user', conteudoParaMemoria(msg, textoParaClaude));
 
     // ⏳ Espera ele terminar de escrever. Só no 1:1 — no grupo a Heloim já tem o freio de
     // "só falo quando me chamam", e mexer no que está funcionando lá não vale o risco.
@@ -1818,11 +1968,16 @@ async function processarMensagem(msg: MensagemExtraida) {
     const { anteriores, pendente } = separarPendentes(historico);
     const textoFinal = pendente || textoParaClaude; // banco fora do ar: segue com esta mensagem
 
+    // O marcador [[midia:...]] é só pra tool documentar_no_slack recuperar a imagem depois —
+    // a Claude não deve ver essa sintaxe crua no replay da conversa (ela releria o histórico
+    // salvo em turnos futuros e poderia citar o marcador de volta pro usuário).
+    const anterioresLimpos = anteriores.map((t) => ({ ...t, content: limparMarcadorDeMidia(t.content) }));
+
     const conteudoUsuario = blocos.length
       ? [...blocos, { type: 'text', text: textoFinal }]
       : textoFinal;
 
-    const resposta = await responderComAgente(systemPrompt, tools, anteriores, conteudoUsuario, ctx);
+    const resposta = await responderComAgente(systemPrompt, tools, anterioresLimpos, conteudoUsuario, ctx);
 
     await salvarTurno(msg.remetente, agente, 'assistant', resposta);
 

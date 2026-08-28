@@ -63,7 +63,12 @@ supabase secrets set \
   - **Deletar mensagens**
   - Ler histórico de canais
   - Gerenciar reações (emoji)
-  - Zeca/Heloim acessam tudo via tool `postar_no_slack` (ações: postar/editar/deletar)
+  - **Documentar tópico com imagem como capa** (28/08/2026): "Heloim, documenta isso no
+    #pedidos com a imagem" — ela puxa o resumo e a última imagem da conversa sozinha, sem
+    pedir pra reescrever/reenviar nada, e sobe como arquivo real no Slack (não link) —
+    tool `documentar_no_slack`. Precisa do scope `files:write` (ver lista abaixo).
+  - Zeca/Heloim acessam tudo via tools `postar_no_slack` (postar/editar/deletar mensagem
+    avulsa) e `documentar_no_slack` (resumo + capa automáticos)
 
   **Setup (primeira vez):**
   1. Abra https://api.slack.com/apps → **Create New App** → *From scratch* → nome (ex. `Heloim`)
@@ -76,6 +81,9 @@ supabase secrets set \
      - `conversations:list` — listar canais
      - `users:read` — info de usuário
      - `reactions:write` — adicionar reações (opcional)
+     - `files:write` — **obrigatório pra imagem de capa** (`documentar_no_slack` sem esse
+       scope ainda documenta o texto, mas nunca sobe a imagem — erro vem no `diagnostico`
+       da tool, algo como "confira o scope files:write do Bot Token")
   3. Topo da página: **Install to Workspace** → autorizar.
   4. Copie o **Bot User OAuth Token** (começa com `xoxb-...`).
      🔒 É uma chave — não cole em chat, print, commit, screenshot.
