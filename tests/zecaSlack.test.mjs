@@ -35,13 +35,26 @@ function corpoDaFuncao(nome) {
     else if (fonte[j] === '}') { chaves--; if (comecou && chaves === 0) { fim = j + 1; break; } }
   }
   assert.notEqual(fim, -1, `nao achei o fim de ${nome}`);
-  return fonte.slice(i, fim)
-    .replace(/: Promise<[^>]+>/g, '')
-    .replace(/\(texto: string\)/g, '(texto)')
-    .replace(/\(e as Error\)/g, 'e');
+
+  // 29/08/2026 — antes daqui saiam tres `replace` presos a UMA assinatura exata
+  // (`(texto: string)`). Quando o Bot Token entrou e a funcao virou
+  // `(texto: string, canal: string = SLACK_CANAL_PADRAO)`, o tipo do parametro
+  // sobrou e o `new Function` estourava com "Unexpected token ':'" — sete testes
+  // vermelhos de uma vez. Agora a limpeza e feita SO no cabecalho e nao depende
+  // dos nomes: tira o tipo de retorno e o tipo de cada parametro, quantos forem.
+  const bruto = fonte.slice(i, fim);
+  const abre = bruto.indexOf('{');
+  const cabecalho = bruto.slice(0, abre)
+    .replace(/\)\s*:\s*[^{]*$/, ')')                            // : Promise<X>
+    .replace(/(\w+)\s*:\s*[\w<>\[\]|\s]+(?=\s*[,)=])/g, '$1');  // (a: T, b: T = X)
+  const corpo = bruto.slice(abre).replace(/\(e as Error\)/g, 'e');
+  return cabecalho + corpo;
 }
 
-function montarPostarNoSlack(webhook, fetchFalso) {
+// `cliente` = o que obterClienteSlack() devolve. null (o padrao) faz a funcao cair
+// no webhook, que e o caminho que os testes de 27/08 protegem. Passando um objeto
+// com postMessage, exercita o modo Bot Token que entrou em 28/08.
+function montarPostarNoSlack(webhook, fetchFalso, cliente = null) {
   const avisos = [], erros = [], infos = [];
   const consoleFalso = {
     warn: (...a) => avisos.push(a.join(' ')),
@@ -49,9 +62,9 @@ function montarPostarNoSlack(webhook, fetchFalso) {
     log: (...a) => infos.push(a.join(' ')),
   };
   const fn = new Function(
-    'SLACK_WEBHOOK_URL', 'fetch', 'console',
+    'SLACK_WEBHOOK_URL', 'fetch', 'console', 'SLACK_CANAL_PADRAO', 'obterClienteSlack',
     `${corpoDaFuncao('postarNoSlack')}; return postarNoSlack;`,
-  )(webhook, fetchFalso, consoleFalso);
+  )(webhook, fetchFalso, consoleFalso, '#canal-padrao', () => cliente);
   return { fn, avisos, erros, infos };
 }
 
@@ -76,11 +89,14 @@ test('sem SLACK_WEBHOOK_URL: nem tenta bater no Slack', async () => {
   assert.equal(tentou, false);
 });
 
-test('sem SLACK_WEBHOOK_URL: devolve o motivo, nao undefined', async () => {
+test('sem nenhum modo configurado: devolve o motivo, nao undefined', async () => {
   const { fn } = montarPostarNoSlack('', async () => {});
   const r = await fn('oi');
   assert.equal(r.status, null);
-  assert.match(r.corpo, /SLACK_WEBHOOK_URL/);
+  // O texto mudou em 28/08 (passaram a existir DOIS modos: Bot Token e webhook).
+  // A exigencia nao mudou: quem receber este retorno tem que saber por que falhou.
+  assert.ok(r.corpo && r.corpo.length > 0, 'o motivo nao pode vir vazio');
+  assert.match(r.corpo, /token|webhook/i, 'o motivo precisa dizer O QUE falta');
 });
 
 // ---------------------------------------------------------------------------
@@ -129,6 +145,57 @@ test('Slack quebrado NUNCA derruba a resposta do WhatsApp', async () => {
 });
 
 // ---------------------------------------------------------------------------
+// 2b. O modo Bot Token (28/08/2026) — entrou sem nenhum teste. Estes quatro
+//     trancam o que ele promete: prefere o token, respeita o canal pedido, nao
+//     engole erro do Slack, e cai no webhook quando o token quebra.
+// ---------------------------------------------------------------------------
+test('com Bot Token: posta pelo cliente e NEM TOCA no webhook', async () => {
+  let usouWebhook = false;
+  const clienteFalso = { postMessage: async () => ({ ok: true }) };
+  const { fn, infos } = montarPostarNoSlack(
+    'https://hooks.slack.com/services/x',
+    async () => { usouWebhook = true; },
+    clienteFalso,
+  );
+  const r = await fn('mensagem');
+  assert.equal(r.ok, true);
+  assert.equal(usouWebhook, false, 'com token, o webhook nao entra na jogada');
+  assert.match(r.corpo, /Bot Token/, 'o retorno precisa dizer por onde foi');
+  assert.equal(infos.length, 1, 'sucesso tambem deixa rastro no log');
+});
+
+test('com Bot Token: usa o canal pedido, e o padrao quando nao pedem', async () => {
+  const canais = [];
+  const clienteFalso = { postMessage: async (canal) => { canais.push(canal); return { ok: true }; } };
+  const { fn } = montarPostarNoSlack('', async () => {}, clienteFalso);
+  await fn('a');
+  await fn('b', '#pedidos');
+  assert.deepEqual(canais, ['#canal-padrao', '#pedidos']);
+});
+
+test('Bot Token recusado pelo Slack: devolve o erro, nao finge que deu certo', async () => {
+  const clienteFalso = { postMessage: async () => ({ ok: false, error: 'channel_not_found' }) };
+  const { fn, erros } = montarPostarNoSlack('', async () => {}, clienteFalso);
+  const r = await fn('teste');
+  assert.equal(r.ok, false);
+  assert.equal(r.corpo, 'channel_not_found');
+  assert.equal(erros.length, 1, 'erro do Slack tem que aparecer no log');
+});
+
+test('Bot Token explodindo cai no webhook — o fallback tem que funcionar de verdade', async () => {
+  let tentouWebhook = false;
+  const clienteFalso = { postMessage: async () => { throw new Error('token revogado'); } };
+  const { fn } = montarPostarNoSlack(
+    'https://hooks.slack.com/services/x',
+    async () => { tentouWebhook = true; return { ok: true, status: 200, text: async () => 'ok' }; },
+    clienteFalso,
+  );
+  const r = await fn('teste');
+  assert.equal(tentouWebhook, true, 'sem isto o fallback e so um comentario no codigo');
+  assert.equal(r.ok, true);
+});
+
+// ---------------------------------------------------------------------------
 // 3. A ferramenta de conferir a ligacao (checar_slack)
 // ---------------------------------------------------------------------------
 test('existe a ferramenta checar_slack na Heloim', () => {
@@ -169,11 +236,15 @@ test('os tres registros da Heloim continuam indo pro Slack', () => {
   assert.match(fonte, /rejeitada\* por/);
 });
 
-test('o DEPLOY.md ensina a criar o webhook e diz que o secret nunca existiu', () => {
-  assert.match(deploy, /NUNCA foi criado/);
-  assert.match(deploy, /Incoming Webhooks/);
-  assert.match(deploy, /invite @Heloim/, 'canal e privado — sem convidar o app, o canal nem aparece');
+test('o DEPLOY.md ensina a ligar os DOIS modos do Slack', () => {
+  // 28/08 o Slack passou a ter dois caminhos. O doc precisa ensinar os dois, porque
+  // nenhum dos secrets existe no Supabase — ligar continua sendo passo humano.
+  assert.match(deploy, /SLACK_BOT_TOKEN/, 'modo novo: postar em qualquer canal, editar, imagem');
+  assert.match(deploy, /supabase secrets set SLACK_BOT_TOKEN/);
+  assert.match(deploy, /files:write/, 'sem esse scope a imagem de capa nao sobe — e o pedido do dono');
+  assert.match(deploy, /Incoming Webhooks/, 'modo legado continua valendo como fallback');
   assert.match(deploy, /supabase secrets set SLACK_WEBHOOK_URL/);
+  assert.match(deploy, /invite @Heloim/, 'canal e privado — sem convidar o app, o canal nem aparece');
   assert.match(deploy, /checar_slack/, 'precisa dizer como conferir depois');
 });
 
