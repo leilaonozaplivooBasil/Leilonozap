@@ -7,7 +7,7 @@ const INDICADORES = [
   { rotulo: 'Vigência de cada parceria', valor: '12', sufixo: 'meses' },
 ];
 
-// Bloco 02 — a tese: ineficiência estrutural operada com método.
+// Bloco 01 — a tese: ineficiência estrutural operada com método.
 export default function ParceiroTracao() {
   return (
     <ParceiroSecao numero="01" rotulo="Resumo executivo" referencia="Leilão NoZap">

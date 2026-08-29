@@ -19,7 +19,7 @@ const PAINEL = [
   'Consulta contínua durante toda a vigência',
 ];
 
-// Bloco 04 — curadoria e transparência (Cláusulas 5, 7 e 10).
+// Bloco 03 — curadoria e transparência (Cláusulas 5, 7 e 10).
 export default function ParceiroCuradoria() {
   return (
     <ParceiroSecao numero="03" rotulo="Curadoria e transparência" referencia="Cláusulas 5, 7 e 10">

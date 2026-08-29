@@ -1,6 +1,8 @@
 import React from 'react';
 import ParceiroSecao from './ParceiroSecao';
 
+// Bloco 08 — quem opera: o board executivo.
+
 // 📸 Fotos oficiais fornecidas pela diretoria (não vêm do cadastro do sistema).
 const FOTO_LUIZ = '/midia/49c03d768_image.png';
 const FOTO_LUCIANO = '/midia/9e425bee8_image.png';
