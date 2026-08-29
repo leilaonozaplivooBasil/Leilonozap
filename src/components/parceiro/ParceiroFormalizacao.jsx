@@ -11,7 +11,7 @@ const ITENS = [
 // Bloco 09 — como se formaliza. Sem valores e sem dados bancários.
 export default function ParceiroFormalizacao() {
   return (
-    <ParceiroSecao numero="08" rotulo="Formalização" referencia="Captação privada" fundo="preto-2">
+    <ParceiroSecao numero="09" rotulo="Formalização" referencia="Captação privada" fundo="preto-2">
       <h2 className="max-w-2xl text-2xl font-bold leading-tight text-pc-tinta sm:text-4xl">
         Como a parceria se <span className="text-pc-ouro">formaliza</span>
       </h2>

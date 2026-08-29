@@ -12,7 +12,7 @@ const ORIGENS = [
   { n: '04', titulo: 'Lotes de estoque parado', texto: 'Excedentes que ocupam capital e espaço de quem os detém — e que têm demanda real.' },
 ];
 
-// Bloco 03 — as quatro origens do produto (Cláusulas 1 e 4).
+// Bloco 02 — as quatro origens do produto (Cláusulas 1 e 4).
 export default function ParceiroOrigens() {
   return (
     <ParceiroSecao numero="02" rotulo="A operação estruturada" referencia="Cláusulas 1 e 4" fundo="preto-2">

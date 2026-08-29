@@ -14,7 +14,7 @@ const ETAPAS = [
   { quando: 'Mês 12 + 30 dias', titulo: 'Encerramento', texto: 'Encerramento automático da parceria. Capital disponível para retirada em até trinta dias.' },
 ];
 
-// Bloco 06 — ciclo operacional e financeiro (Cláusula 8). Sem valores.
+// Bloco 05 — ciclo operacional e financeiro (Cláusula 8). Sem valores.
 export default function ParceiroCiclo() {
   return (
     <ParceiroSecao numero="05" rotulo="Ciclo operacional" referencia="Cláusula 8">
