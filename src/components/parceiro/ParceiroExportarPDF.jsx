@@ -31,10 +31,15 @@ import { FileDown, Loader2 } from 'lucide-react';
 //      Aqui elas viram eager e a função espera todas terminarem.
 //   ② O roadmap anima por scroll (framer-motion): o que ainda não entrou na tela está
 //      com opacity 0 / transform aplicado. Isso é neutralizado no CSS de impressão
-//      (ver a regra `body.pc-tema.pc-imprimindo` em src/index.css) — sem ela, seções
-//      inteiras sairiam invisíveis no PDF.
+//      (bloco `@media print` escopado em `body.pc-papel`, em src/index.css) — sem ele,
+//      seções inteiras sairiam invisíveis no PDF.
 //
-// A classe `pc-imprimindo` fica no <body> só durante a preparação e a impressão.
+// A versão para papel inteira mora naquele bloco: fundo branco, tinta preta, imagem
+// decorativa fora, a roda do ciclo trocada pela lista das cinco etapas. Este arquivo
+// só prepara e chama a impressão — não conhece diagramação.
+//
+// A classe `pc-imprimindo` fica no <body> durante a preparação, para quem precisar
+// distinguir "impressão pelo botão" de um Ctrl+P direto.
 export default function ParceiroExportarPDF() {
   const [preparando, setPreparando] = useState(false);
 

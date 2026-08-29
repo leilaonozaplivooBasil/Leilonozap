@@ -62,7 +62,11 @@ export default function ParceiroVitrineOperacao() {
               <article key={p.id} className="border border-pc-borda bg-pc-preto">
                 {/* moldura escura + object-contain: a foto de catálogo (fundo branco,
                     cores fortes) para de gritar sobre o preto institucional */}
-                <div className="flex aspect-square items-center justify-center bg-pc-preto-2 p-5 sm:p-7">
+                {/* pc-foto-papel: a impressão esconde as imagens da página (banners e
+                    faixas decorativas viravam manchas no papel). A foto do item é a
+                    exceção — ela É a prova de operação, então leva a marca que a
+                    devolve no PDF (regra em src/index.css, bloco @media print). */}
+                <div className="pc-foto-papel flex aspect-square items-center justify-center bg-pc-preto-2 p-5 sm:p-7">
                   <img
                     src={p.image_urls[0]}
                     alt={p.description || 'Item da operação'}
