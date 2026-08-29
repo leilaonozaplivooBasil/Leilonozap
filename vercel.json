@@ -30,6 +30,7 @@
     { "path": "/api/functions/expirarReservasEstoque", "schedule": "* * * * *" },
     { "path": "/api/functions/alertaReservasOrfas", "schedule": "30 9 * * *" },
     { "path": "/api/functions/renovarTokenMelhorEnvio", "schedule": "17 5 * * *" },
-    { "path": "/api/functions/liquidarArrematesPendentes", "schedule": "*/10 * * * *" }
+    { "path": "/api/functions/liquidarArrematesPendentes", "schedule": "*/10 * * * *" },
+    { "path": "/api/functions/gerarGastosFixos", "schedule": "0 6 * * *" }
   ]
 }

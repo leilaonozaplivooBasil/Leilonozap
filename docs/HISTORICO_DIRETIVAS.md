@@ -123,4 +123,51 @@ banco/esquema novo.
 **Fora do escopo / proibido:** criar tabela nova ou sincronizar receita
 real nesta rodada — isso é Fase 2, diretiva própria.
 **Regras fixas:** nenhuma além da DIR-5.
-**Status:** EXECUTADA. Ver `REL-6`.
+**Status:** CONCLUÍDA. PR #130 mergeado por squash em `main` (commit
+`5fb996f2`), CI verde. Ver `REL-6`.
+
+---
+
+## DIR-7 — Modernização do módulo Financeiro (Fase 2: receita real + centro de custo)
+
+**Emitida por:** dono (Luiz), diretamente, depois de pedir análise do Nibo
+(Conciliador Open Finance) e do ContaAzul pra trazer o que fizer sentido.
+**Data:** 27/08/2026.
+**Objetivo:** Fase 2 de 3. Livro-razão de receita (`financial_income`,
+gravado no momento da confirmação, espelhando `financial_expenses`) +
+centro de custo (dimensão nova, separada de categoria, presente nos dois
+lados do livro). Visão Geral cruza receita x despesa por categoria e por
+centro de custo.
+**Escopo autorizado:** migration da tabela `financial_income` e da coluna
+`cost_center`; entidade `FinancialIncome` espelhando `FinancialExpense`;
+hook de gravação automática só em transação com origem clara (venda
+confirmada, depósito confirmado); UI de centro de custo, receita e Visão
+Geral.
+**Fora do escopo / proibido:** conciliação bancária via Open Finance/API
+paga de terceiro (Fase 3); "match" automático de recebimento avulso sem
+origem clara; alterar produção sem autorização.
+**Regras fixas:** nenhuma além da DIR-5/DIR-6.
+**Status:** CONCLUÍDA. PR #132 mergeado por squash em `main` (commit
+`b38b84df`), CI verde. Ver `REL-7`.
+
+---
+
+## DIR-8 — Recorrência de gasto fixo não gera lançamento novo
+
+**Emitida por:** dono (Luiz), reportando ao vivo (print da Aline logada no
+Financeiro): gasto "Fixo Mensal" (Consórcio Nacional Volkswagen, vencimento
+21/07/2026) numa única linha "Vencido há 37 dia(s)", em vez de mostrar
+quantos meses estão em aberto.
+**Data:** 27/08/2026.
+**Objetivo:** `expense_type: 'fixo'` e `recurring_day` eram só campos
+salvos — nenhum código gerava o lançamento do mês seguinte. Job diário
+gera um lançamento pendente por mês faltando, com backfill dos meses
+perdidos.
+**Escopo autorizado:** coluna `recurring_group_id` em `financial_expenses`
+com backfill; função pura testável de meses faltando; cron novo via Vercel
+Cron; limite de segurança no backfill.
+**Fora do escopo / proibido:** gasto "parcelado"; geração automática de
+receita (é a DIR-7); alterar produção sem autorização.
+**Regras fixas:** nenhuma além da DIR-5/6/7.
+**Status:** CONCLUÍDA. Mesma PR #132, mergeado por squash em `main`
+(commit `b38b84df`), CI verde. Ver `REL-8`.

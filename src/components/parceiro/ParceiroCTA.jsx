@@ -1,7 +1,8 @@
 import React from 'react';
 import ParceiroShareButton from './ParceiroShareButton';
 
-// Bloco 10 — os dois caminhos: solicitar acesso ou entrar no painel do parceiro.
+// Encerramento — os dois caminhos: solicitar acesso ou entrar no painel do
+// parceiro. Sem número: não é seção numerada da apresentação.
 export default function ParceiroCTA({ onSolicitarAcesso, onAcessarPainel }) {
   return (
     <section className="bg-pc-preto">

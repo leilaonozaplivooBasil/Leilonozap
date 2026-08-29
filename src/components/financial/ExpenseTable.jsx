@@ -66,8 +66,13 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
               <tr key={exp.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer" onClick={() => onRowClick && onRowClick(exp)}>
                 <td className="py-3 px-3">
                   <div className="text-white font-medium">{exp.description}</div>
-                  {exp.pix_or_card_info && (
-                    <div className="text-xs text-gray-500 mt-0.5">{exp.pix_or_card_info}</div>
+                  {/* Conta de onde saiu o dinheiro (28/08/2026) — sem isto o dado gravado na
+                      baixa não aparecia em lugar nenhum depois. Junto do PIX/cartão, na mesma
+                      linha, porque são a mesma informação vista de dois ângulos. */}
+                  {(exp.payment_account || exp.pix_or_card_info) && (
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {[exp.payment_account, exp.pix_or_card_info].filter(Boolean).join(" · ")}
+                    </div>
                   )}
                   {alert && (
                     <div className={`text-xs mt-1 flex items-center gap-1 ${alert.color}`}>
@@ -77,7 +82,12 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
                   )}
                 </td>
                 <td className="py-3 px-3 text-gray-300 hidden md:table-cell">{exp.company || "-"}</td>
-                <td className="py-3 px-3 text-gray-300 hidden lg:table-cell">{exp.category || "-"}</td>
+                <td className="py-3 px-3 text-gray-300 hidden lg:table-cell">
+                  {exp.category || "-"}
+                  {exp.cost_center && (
+                    <div className="text-xs text-gray-500 mt-0.5">{exp.cost_center}</div>
+                  )}
+                </td>
                 <td className="py-3 px-3">
                   <span className="text-gray-300 text-xs">{TYPE_LABELS[exp.expense_type] || exp.expense_type}</span>
                   {exp.expense_type === "parcelado" && exp.installment_current && (

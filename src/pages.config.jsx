@@ -75,6 +75,8 @@ const NetworkOverview = React.lazy(() => import('./pages/NetworkOverview'));
 const OrderTracking = React.lazy(() => import('./pages/OrderTracking'));
 const PartnerPlanActivation = React.lazy(() => import('./pages/PartnerPlanActivation'));
 const Partners = React.lazy(() => import('./pages/Partners'));
+// 🔗 Link estável de uso interno da equipe: a mesma apresentação, sem a porta.
+const ApresentacaoParceiro = React.lazy(() => import('./pages/ApresentacaoParceiro'));
 const Portal = React.lazy(() => import('./pages/Portal'));
 const SuperAdminPanels = React.lazy(() => import('./pages/SuperAdminPanels'));
 const PaymentFailure = React.lazy(() => import('./pages/PaymentFailure'));
@@ -196,6 +198,9 @@ export const PAGES = {
         </RequireRole>
     ),
     "Partners": Partners, // pública de propósito: é a landing "Seja um Parceiro"
+    // Sem RequireRole de propósito: é o link interno sem porta (ver o cabeçalho
+    // de src/pages/ApresentacaoParceiro.jsx). Não aparece em menu nenhum.
+    "ApresentacaoParceiro": ApresentacaoParceiro,
     "Portal": Portal,
     "SuperAdminPanels": SuperAdminPanels,
     "PaymentFailure": PaymentFailure,

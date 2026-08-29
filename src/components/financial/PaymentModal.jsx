@@ -14,6 +14,15 @@ const METHOD_LABELS = {
   boleto: "Boleto", transferencia: "Transferência", dinheiro: "Dinheiro"
 };
 
+// Contas de onde o dinheiro pode sair (28/08/2026, lista ditada pelo dono). Lista fechada
+// de propósito: o campo antigo pix_or_card_info é texto livre, e texto livre não agrupa —
+// "Santander", "santander" e "PIX Santander" viram três linhas diferentes em qualquer
+// relatório. Aqui a escolha é sempre um destes valores, gravada em payment_account.
+// Trocou de banco? É só mexer nesta lista — não tem CHECK no banco atrás dela.
+const PAYMENT_ACCOUNTS = [
+  "Mercado Pago", "Itaú", "Santander", "Bradesco", "Espécie", "Outros",
+];
+
 const STATUS_CONFIG = {
   pendente: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock },
   pago_integral: { label: "Pago Integral", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
@@ -27,6 +36,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
   const [amountPaying, setAmountPaying] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [paymentAccount, setPaymentAccount] = useState("");
   const [pixOrCardInfo, setPixOrCardInfo] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -36,6 +46,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
       const remaining = (expense.amount || 0) + (expense.interest_amount || 0) - (expense.amount_paid || 0);
       setAmountPaying(remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setPaymentMethod(expense.payment_method || "pix");
+      setPaymentAccount(expense.payment_account || "");
       setPixOrCardInfo(expense.pix_or_card_info || "");
       setPaymentDate(format(new Date(), "yyyy-MM-dd"));
       setPaymentType("pago_integral");
@@ -72,6 +83,9 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
       amount_paid: finalAmountPaid,
       payment_date: paymentDate,
       payment_method: paymentMethod,
+      // Só manda se escolheram algo — assim uma baixa parcial sem conta não apaga a conta
+      // que já estava gravada de uma baixa anterior. Mesmo cuidado do pix_or_card_info logo abaixo.
+      ...(paymentAccount ? { payment_account: paymentAccount } : {}),
       pix_or_card_info: pixOrCardInfo || expense.pix_or_card_info,
       notes: [expense.notes, notes].filter(Boolean).join("\n"),
     };
@@ -249,6 +263,23 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
                   <SelectItem value="boleto">Boleto</SelectItem>
                   <SelectItem value="transferencia">Transferência</SelectItem>
                   <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Conta utilizada — DE ONDE o dinheiro saiu (o campo acima é COMO se pagou).
+                Vem antes do PIX/Cartão de propósito: a leitura fica na ordem do que
+                aconteceu — como pagou, de onde saiu, e só então o detalhe livre. */}
+            <div>
+              <label className="text-sm text-gray-400 mb-1 block">Conta Utilizada</label>
+              <Select value={paymentAccount} onValueChange={setPaymentAccount}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  {PAYMENT_ACCOUNTS.map(conta => (
+                    <SelectItem key={conta} value={conta}>{conta}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

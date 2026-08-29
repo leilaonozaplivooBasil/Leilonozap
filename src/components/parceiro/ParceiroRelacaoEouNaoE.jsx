@@ -20,7 +20,7 @@ const NAO_E = [
   'Relação de consumo, de emprego ou de trabalho subordinado',
 ];
 
-// Bloco 05 — natureza jurídica da relação (Cláusulas 3 e 13). Seção obrigatória.
+// Bloco 04 — natureza jurídica da relação (Cláusulas 3 e 13). Seção obrigatória.
 export default function ParceiroRelacaoEouNaoE() {
   return (
     <ParceiroSecao numero="04" rotulo="Estrutura jurídica" referencia="Cláusulas 3 e 13" fundo="preto-2">

@@ -13,7 +13,7 @@ const CONTENT_TABLES = new Set([
   'banner_images', 'catalog_settings', 'featured_products', 'footer_settings', 'frete_settings',
   'payment_settings', 'tax_settings', 'pricing_formulas', 'price_history', 'product_operations',
   'batch_registrations', 'lotes_recebidos', 'cash_registers', 'sale_commissions', 'sales',
-  'customers', 'deposit_packages', 'financial_expenses', 'system_logs', 'comparai_logs',
+  'customers', 'deposit_packages', 'financial_expenses', 'financial_income', 'system_logs', 'comparai_logs',
   'negotiations', 'luxury_auctions', 'luxury_access_codes', 'bids', 'partner_plan_purchases',
   'catalog_sales',
 ]);

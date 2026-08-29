@@ -1,6 +1,7 @@
 import React from 'react';
 
-// Bloco 01 — abertura institucional (capa do convite à parceria comercial).
+// Capa — abertura institucional (convite à parceria comercial). Sem número:
+// a contagem visível começa no Resumo executivo.
 export default function ParceiroAbertura({ onSolicitarAcesso }) {
   return (
     <header className="relative overflow-hidden bg-pc-preto">

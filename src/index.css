@@ -585,3 +585,309 @@ body.pc-tema .livoo-brilho-forte {
     }
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   📄 IMPRESSÃO / EXPORTAR PDF — só da página do Parceiro de Compra (/Partners).
+   Todo o bloco está escopado em `body.pc-papel`, marca posta por src/pages/Partners.jsx
+   enquanto aquela página está montada. NÃO use `pc-tema` aqui: o tema preto também
+   veste o painel do parceiro, o cadastro e a porta de acesso, e estas regras escondem
+   botão, imagem e bloco de carregamento — nessas telas comeriam conteúdo real.
+   Acionado por src/components/parceiro/ParceiroExportarPDF.jsx.
+
+   ⚠️ REESCRITO EM 28/08/2026. A primeira versão tentava levar a TELA pro papel:
+   mantinha o fundo preto com print-color-adjust e forçava uma seção por página.
+   O resultado foi o que o dono relatou — páginas inteiras pretas (a sobra de cada
+   página vinha preenchida de preto) e diagramação quebrada (11 seções viravam 24
+   páginas, várias com um cartão solto no meio do vazio).
+
+   Esta versão faz o contrário: monta uma VERSÃO PARA PAPEL. Fundo branco, tinta
+   preta, o dourado só nos títulos e filetes. Fica legível impresso em preto e
+   branco, não gasta um cartucho por cópia, e as quebras seguem o conteúdo em vez
+   de uma regra fixa.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  /* ── 1. Papel branco, tinta preta ─────────────────────────────────────────
+     Aqui está a correção da "página preta": em vez de FORÇAR o fundo escuro a
+     ser impresso, a paleta é invertida na origem. O navegador não tem fundo pra
+     imprimir, então a sobra de página fica branca — como deve ser. */
+  /* Fundo branco em TUDO, sem exceção — e só depois se devolve o que precisa de
+     cor (a barra de progresso, mais abaixo). Perseguir classe por classe não
+     funciona: a página tem o wrapper do Layout em bg-gray-900, overlays com
+     gradiente escrito em style inline sobre as fotos, e faixas de imagem que
+     saíam como blocos pretos e rosa no meio do papel. Uma regra que cobre tudo
+     é mais curta e não deixa buraco pra próxima classe que alguém criar. */
+  body.pc-papel,
+  body.pc-papel *,
+  body.pc-papel *::before,
+  body.pc-papel *::after {
+    background: #fff !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+  /* Overlays de gradiente sobre as fotos: sem a foto embaixo viram retângulos
+     vazios ocupando meia página. */
+  body.pc-papel [class*="absolute"][class*="inset-0"] {
+    display: none !important;
+  }
+  body.pc-papel,
+  body.pc-papel p,
+  body.pc-papel li,
+  body.pc-papel td,
+  body.pc-papel span,
+  body.pc-papel div,
+  body.pc-papel strong,
+  body.pc-papel [class*="text-pc-tinta"] {
+    color: #16150f !important;
+  }
+  /* Texto secundário some se virar cinza claro no papel — vai pra um cinza que
+     ainda imprime bem em laser preto e branco. */
+  body.pc-papel [class*="text-pc-tinta-fraca"] {
+    color: #52504a !important;
+  }
+  /* O dourado fica: é a identidade, e em título/filete gasta pouca tinta.
+     Escurecido, porque #c9a55c sobre branco quase não aparece impresso. */
+  body.pc-papel [class*="text-pc-ouro"],
+  body.pc-papel h1,
+  body.pc-papel h2,
+  body.pc-papel h3 {
+    color: #7d6220 !important;
+  }
+  body.pc-papel [class*="border-pc-"],
+  body.pc-papel [class*="border-"] {
+    border-color: #d8d4c8 !important;
+  }
+  /* Única exceção à regra de fundo branco acima: a barra de progresso do roadmap.
+     Sem a cor impressa ela vira um filete vazio, sem informar nada. É o único
+     lugar onde o print-color-adjust continua ligado. */
+  body.pc-papel .bg-pc-ouro {
+    background: #7d6220 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ── 2. O que não é conteúdo da apresentação ──────────────────────────────
+     nav e footer vêm do Layout; os flutuantes e o próprio botão de exportar só
+     existem na tela. Os botões de ação (tour, "ver o cálculo", CTA) abrem modal
+     — no papel virariam retângulos vazios. */
+  body.pc-papel nav,
+  body.pc-papel footer,
+  body.pc-papel .pc-exportar-pdf,
+  body.pc-papel [aria-label="Voltar ao topo"],
+  body.pc-papel [aria-label*="Leila" i],
+  body.pc-papel [title*="Leila" i],
+  body.pc-papel button {
+    display: none !important;
+  }
+  /* Todas as imagens saem. Nesta apresentação elas são decorativas — banners
+     preto/dourado atrás dos cartões, faixas de fundo, retratos do board. No papel
+     não informam nada, viravam manchas escuras (ou uma faixa rosa de meia página,
+     no bloco do ciclo) e empurravam texto pra página seguinte. O conteúdo que
+     importa aqui é texto e número. */
+  body.pc-papel img,
+  body.pc-papel svg,
+  body.pc-papel canvas,
+  body.pc-papel video {
+    display: none !important;
+  }
+  /* Blocos de carregamento (animate-pulse) não podem entrar no papel. Na tela eles
+     piscam por um segundo até o dado chegar; no PDF ficam congelados como retângulos
+     vazios — e é exatamente o que acontece se alguém exportar antes da vitrine
+     terminar de carregar, ou com a vitrine vazia. */
+  body.pc-papel .animate-pulse,
+  body.pc-papel [class*="animate-pulse"] {
+    display: none !important;
+  }
+  /* Esconder a imagem não basta: a moldura dela continua ocupando a altura fixa
+     (h-32 na faixa do canal, h-20 no retrato redondo) e sobra um retângulo em
+     branco no meio do cartão. A moldura sai junto com a imagem. */
+  body.pc-papel div[class*="overflow-hidden"]:has(> img) {
+    display: none !important;
+  }
+  /* Mesma coisa para o que só existia para segurar um ícone: com o svg fora, a
+     caixa continuava esticada pela linha da grade (as setas entre os DEGRAUS
+     chegavam a 207px de nada). */
+  body.pc-papel div:has(> svg:only-child) {
+    display: none !important;
+  }
+  /* Filetes, círculos e traços decorativos posicionados por cima do layout. Sem
+     conteúdo dentro, no papel são só ruído. */
+  body.pc-papel [class*="absolute"]:empty {
+    display: none !important;
+  }
+
+  /* ── 3. Nada pode sumir ───────────────────────────────────────────────────
+     O roadmap anima por scroll (framer-motion): o que ainda não entrou na tela
+     está com opacity 0 e transform inline. Na impressão a página é renderizada
+     de uma vez, sem scroll — sem isto, seções inteiras sairiam invisíveis. */
+  body.pc-papel [style*="opacity"],
+  body.pc-papel [style*="transform"] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  body.pc-papel * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* ── 4. Quebras que seguem o conteúdo ─────────────────────────────────────
+     A versão anterior forçava `break-before: page` em TODA seção. Com 11 seções
+     dava no mínimo 11 páginas, a maioria com um punhado de linhas e o resto
+     vazio. Agora só se evita cortar um bloco no meio; o resto flui e o documento
+     encolhe naturalmente. */
+  body.pc-papel section {
+    break-before: auto;
+    page-break-before: auto;
+    break-inside: auto;
+    padding: 0 !important;
+    margin-bottom: 6mm;
+  }
+  body.pc-papel article,
+  body.pc-papel table,
+  body.pc-papel figure,
+  body.pc-papel li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.pc-papel h1,
+  body.pc-papel h2,
+  body.pc-papel h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* Nunca uma linha órfã no fim ou no começo de página. */
+  body.pc-papel p, body.pc-papel li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* ── 5. Densidade de documento, não de tela ───────────────────────────────
+     Na tela o py-24 existe pro scroll respirar; no papel vira página vazia. */
+  body.pc-papel section > div {
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+  }
+  body.pc-papel {
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+  }
+  body.pc-papel h1 { font-size: 20pt !important; margin: 0 0 3mm !important; }
+  body.pc-papel h2 { font-size: 14pt !important; margin: 0 0 2mm !important; }
+  body.pc-papel h3 { font-size: 11.5pt !important; margin: 0 0 1.5mm !important; }
+  body.pc-papel p  { margin: 0 0 2mm !important; }
+
+  /* ── 6. Grades no papel ───────────────────────────────────────────────────
+     Em A4 retrato a largura útil é 695px. Uma coluna faz cada cartão virar uma
+     página; a largura da tela (três, quatro colunas) espreme o texto. O padrão
+     aqui é duas colunas, e cada grade que a tela declarou com mais volta ao seu
+     número quando ainda cabe legível. */
+  body.pc-papel .grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4mm !important;
+  }
+  /* Os três canais de venda são um conjunto: partidos em 2 + 1, o terceiro cartão
+     ficava sozinho na página seguinte com meia folha vazia embaixo. */
+  body.pc-papel [class*="grid-cols-3"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  /* Grades que já eram de coluna única na tela continuam assim. */
+  body.pc-papel .grid-cols-1:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]) {
+    grid-template-columns: 1fr !important;
+  }
+  /* Cabeçalho de seção (título de um lado, selo do outro) não é cartão: as duas
+     colunas iguais empurravam o selo pro meio da linha. */
+  body.pc-papel [class*="grid-cols-[1fr_auto]"] {
+    grid-template-columns: 1fr auto !important;
+  }
+  /* Os três DEGRAUS da estrutura comercial (licenciado → vendedor → influenciador)
+     são uma sequência: em duas colunas o terceiro caía sozinho na página seguinte.
+     As setas entre eles já saíram (eram só ícone), então bastam as três colunas. */
+  body.pc-papel [class*="1fr_auto_1fr"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  /* `grid place-items-center` são molduras de ícone, não layout de conteúdo. */
+  body.pc-papel .grid[class*="place-items-center"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* A linha do tempo do roadmap alterna os marcos à esquerda e à direita de um
+     fio central. No papel o fio não aparece e a alternância vira meia página de
+     vazio a cada marco: cada um passa a ocupar a largura inteira, em sequência. */
+  body.pc-papel li[class*="md:grid"] {
+    display: block !important;
+    padding-left: 0 !important;
+  }
+  /* Junto com a alternância cai o alinhamento à direita que ela pedia: em coluna
+     única, metade dos marcos sairia encostada na margem oposta da outra metade. */
+  body.pc-papel li[class*="md:grid"] [class*="md:text-right"] {
+    text-align: left !important;
+  }
+  body.pc-papel li[class*="md:grid"] [class*="md:justify-end"] {
+    justify-content: flex-start !important;
+  }
+
+  /* ── 7. Escala de tipo do papel ───────────────────────────────────────────
+     Os números de destaque foram dimensionados para serem lidos de longe numa
+     tela grande (48px). Impressos nesse tamanho, uma frase como "Mais de 1 milhão
+     de clientes impactados" ocupava seis linhas e estourava o cartão. */
+  body.pc-papel [class*="text-lg"]  { font-size: 11pt !important; line-height: 1.25 !important; }
+  body.pc-papel [class*="text-xl"]  { font-size: 12pt !important; line-height: 1.25 !important; }
+  body.pc-papel [class*="text-2xl"],
+  body.pc-papel [class*="text-3xl"] { font-size: 13pt !important; line-height: 1.2 !important; }
+  body.pc-papel [class*="text-4xl"],
+  body.pc-papel [class*="text-5xl"],
+  body.pc-papel [class*="text-6xl"],
+  body.pc-papel [class*="text-7xl"] { font-size: 17pt !important; line-height: 1.15 !important; }
+  body.pc-papel article {
+    border: 1px solid #d8d4c8 !important;
+    padding: 3mm !important;
+  }
+
+  /* ── 8. Troca tela↔papel ──────────────────────────────────────────────────
+     Fica por último de propósito: `display` é decidido por quem vem depois entre
+     regras de mesmo peso, e acima há uma regra de `.grid` que sobrescreveria esta.
+     Alguns blocos desta página são interativos por natureza — a roda do ciclo
+     mostra uma etapa de cada vez e depende de arrasto. Impressa, levaria uma das
+     cinco. O componente monta as duas versões; estas linhas escolhem a do papel. */
+  body.pc-papel .pc-so-tela {
+    display: none !important;
+  }
+  body.pc-papel .pc-so-impressao {
+    display: block !important;
+  }
+  body.pc-papel .pc-so-impressao > li {
+    border-top: 1px solid #d8d4c8;
+    padding-top: 2mm;
+    margin-top: 2mm;
+  }
+
+  /* A vitrine é o único lugar onde a foto é conteúdo, não enfeite: são os itens
+     que estão à venda agora — a prova de operação do bloco 06. Ela volta, e volta
+     menor, para caber junto da legenda. */
+  body.pc-papel .pc-foto-papel {
+    /* o quadrado da tela (aspect-square) reservaria 57mm de altura por item */
+    aspect-ratio: auto !important;
+    height: auto !important;
+    padding: 2mm !important;
+  }
+  body.pc-papel .pc-foto-papel img {
+    display: block !important;
+    height: auto !important;
+    max-height: 32mm;
+    object-fit: contain;
+    margin: 0 auto;
+  }
+  /* Enquanto a vitrine carrega, o lugar dos itens fica marcado por retângulos
+     piscando. Congelados no papel são seis molduras vazias — e é o que sai se
+     alguém exportar antes de a vitrine responder. */
+  body.pc-papel div:has(> div > [class*="animate-pulse"]) {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 14mm 13mm;
+  }
+}
