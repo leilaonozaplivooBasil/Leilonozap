@@ -4,10 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale } from "lucide-react";
+import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt } from "lucide-react";
 import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
 import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
+// Os três status que significam "ainda devo isso". Vive no lib porque a aba
+// "A Pagar" usa a MESMA régua — duas cópias divergiriam no primeiro ajuste.
+import { STATUS_A_PAGAR } from "@/lib/contasAPagar";
 
 import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards";
 import ExpenseTable from "@/components/financial/ExpenseTable";
@@ -16,6 +19,7 @@ import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator"
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import IncomeTable from "@/components/financial/IncomeTable";
 import FinancialOverview from "@/components/financial/FinancialOverview";
+import ContasAPagarTab from "@/components/financial/ContasAPagarTab";
 import PaymentModal from "@/components/financial/PaymentModal";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { DollarSign } from "lucide-react";
@@ -26,9 +30,6 @@ import { ADMIN_ROLES } from "@/lib/roles";
 const FinancialExpense = plataforma.entities.FinancialExpense;
 const FinancialIncome = plataforma.entities.FinancialIncome;
 
-// Os três status que significam "ainda devo isso" — a régua do filtro A Pagar.
-// pago_integral está fora porque já foi quitado; cancelado, porque deixou de ser dívida.
-const STATUS_A_PAGAR = ["vencido", "pago_parcial", "pendente"];
 
 export default function Financial() {
   // 🔴 PONTO 122 (21/08/2026) — antes esta tela conferia role sozinha, direto
@@ -235,9 +236,33 @@ export default function Financial() {
           >
             <Scale className="w-4 h-4" /> Visão Geral
           </button>
+          {/* 📋 Aba pedida pela Aline (29/08/2026): "clica e visualiza uma aba
+              exclusiva para o contas a pagar". Sem filtro nenhum de propósito —
+              a tela inteira já é a resposta. Ver ContasAPagarTab.jsx. */}
+          <button
+            onClick={() => setActiveTab("apagar")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "apagar"
+                ? "bg-amber-600/20 text-amber-400 border border-amber-500/30"
+                : "bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:text-white hover:border-gray-600"
+            }`}
+          >
+            <Receipt className="w-4 h-4" /> A Pagar
+          </button>
         </div>
 
-        {activeTab === "dashboard" ? (
+        {activeTab === "apagar" ? (
+          isLoading ? (
+            <div className="text-center py-12">
+              <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />
+              <p className="text-gray-500">Carregando...</p>
+            </div>
+          ) : (
+            /* `expenses`, não `filtered`: a aba mostra TUDO que está em aberto,
+               sem herdar o período nem os filtros da aba Gastos. Foi o pedido. */
+            <ContasAPagarTab expenses={expenses} onRowClick={setPaymentExpense} />
+          )
+        ) : activeTab === "dashboard" ? (
           isLoading ? (
             <div className="text-center py-12">
               <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />
