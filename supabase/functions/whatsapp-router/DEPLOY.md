@@ -57,21 +57,57 @@ supabase secrets set \
   `120363019502650977@g.us` e `120363019502650977` valem todos como o mesmo grupo. Antes era
   string exata, e colar o ID no formato "errado" deixava o bot mudo no grupo inteiro sem
   nenhum log (grupo não autorizado é descartado de propósito antes de qualquer registro).
-- `SLACK_WEBHOOK_URL` (opcional, mas hoje é a razão de o Slack estar mudo): Incoming Webhook do
-  canal do Slack onde a Heloim registra pedido/classificação de risco/decisão (reconstrução do
-  que ela fazia no Base44 antigo, no canal privado `#top-tech-leilão-nozap`). Sem essa variável,
-  Heloim funciona igual, só não publica nada no Slack.
+- `SLACK_BOT_TOKEN` (novo, 28/08/2026, **preferido**): Token OAuth do Slack Bot. Habilita:
+  - Postar em **qualquer canal** autorizado (não só webhook fixo)
+  - **Editar mensagens** já postadas
+  - **Deletar mensagens**
+  - Ler histórico de canais
+  - Gerenciar reações (emoji)
+  - **Documentar tópico com imagem como capa** (28/08/2026): "Heloim, documenta isso no
+    #pedidos com a imagem" — ela puxa o resumo e a última imagem da conversa sozinha, sem
+    pedir pra reescrever/reenviar nada, e sobe como arquivo real no Slack (não link) —
+    tool `documentar_no_slack`. Precisa do scope `files:write` (ver lista abaixo).
+  - Zeca/Heloim acessam tudo via tools `postar_no_slack` (postar/editar/deletar mensagem
+    avulsa) e `documentar_no_slack` (resumo + capa automáticos)
 
-  **Estado em 27/08/2026: este secret NUNCA foi criado.** O canal não recebe uma linha desde
-  18/08/2026 — a última postagem foi do agente do Base44 antigo, que deixou de ser usado. O
-  código novo (22/08) já sabia postar, mas lia um secret que não existe. Passo a passo:
+  **Setup (primeira vez):**
+  1. Abra https://api.slack.com/apps → **Create New App** → *From scratch* → nome (ex. `Heloim`)
+     → escolha o workspace `leilonozap`.
+  2. Menu **OAuth & Permissions** → seção **Scopes** → **Bot Token Scopes** → adicione:
+     - `chat:write` — postar mensagens
+     - `chat:write.public` — postar em canais públicos
+     - `conversations:history` — ler histórico
+     - `conversations:info` — info de canal
+     - `conversations:list` — listar canais
+     - `users:read` — info de usuário
+     - `reactions:write` — adicionar reações (opcional)
+     - `files:write` — **obrigatório pra imagem de capa** (`documentar_no_slack` sem esse
+       scope ainda documenta o texto, mas nunca sobe a imagem — erro vem no `diagnostico`
+       da tool, algo como "confira o scope files:write do Bot Token")
+  3. Topo da página: **Install to Workspace** → autorizar.
+  4. Copie o **Bot User OAuth Token** (começa com `xoxb-...`).
+     🔒 É uma chave — não cole em chat, print, commit, screenshot.
+  5. No terminal:
+     ```bash
+     supabase secrets set SLACK_BOT_TOKEN="xoxb-..." --project-ref gezvviyegtxytnwjkrjv
+     supabase functions deploy whatsapp-router --project-ref gezvviyegtxytnwjkrjv --no-verify-jwt
+     ```
+  6. **Invite o bot** nos canais onde vai postar/gerenciar:
+     - Abra cada canal no Slack → `/invite @Heloim` (ou o nome que deu ao app)
+     - Pronto — agora o bot consegue postar lá.
+  7. Confira: no WhatsApp, mande **"Heloim, postar no slack"** no 1:1 (precisa ser admin).
+     Ela pede qual canal e o que escrever, depois publica usando a ferramenta `postar_no_slack`.
 
+- `SLACK_WEBHOOK_URL` (opcional, **legado**, mantido para compatibilidade): Incoming Webhook.
+  Se `SLACK_BOT_TOKEN` não estiver configurado, o código tenta webhook como fallback.
+  **Você deve preferir Bot Token** — webhook é limitado (só postagem simples, um canal fixo, sem edição).
+
+  **Setup (só se não tiver Bot Token, ou para fallback de emergência):**
   1. Abra https://api.slack.com/apps → **Create New App** → *From scratch* → nome (ex.
-     `Heloim`) → escolha o workspace `leilonozap`.
+     `Heloim-webhook`) → escolha o workspace `leilonozap`.
   2. Menu **Incoming Webhooks** → ligue o botão **Activate Incoming Webhooks**.
-  3. **Add New Webhook to Workspace** → escolha o canal `#top-tech-leilão-nozap`.
-     ⚠️ O canal é **privado**: se ele não aparecer na lista, entre no canal pelo Slack e rode
-     `/invite @Heloim` antes de repetir este passo.
+  3. **Add New Webhook to Workspace** → escolha o canal `#top-tech-digital` (ou outro).
+     ⚠️ Se o canal for **privado**, entre nele primeiro e rode `/invite @Heloim`.
   4. Copie a URL gerada (começa com `https://hooks.slack.com/services/...`).
      🔒 É uma chave — quem tiver ela posta no canal. Não cole em chat nem em print.
   5. No terminal, na pasta do projeto:
@@ -81,9 +117,8 @@ supabase secrets set \
      supabase functions deploy whatsapp-router --project-ref gezvviyegtxytnwjkrjv --no-verify-jwt
      ```
 
-  6. Confira sem sair do WhatsApp: mande **"Heloim, testa o Slack"** no 1:1 (precisa ser admin).
-     Ela usa a ferramenta `checar_slack`, publica uma mensagem de teste no canal e devolve o que
-     o Slack respondeu.
+  6. Confira: no WhatsApp, mande **"Heloim, testa o Slack"** no 1:1 (precisa ser admin).
+     Ela usa a ferramenta `checar_slack`, publica uma mensagem de teste e devolve a resposta.
 
 ## 3. Deploy — SEM verificação de JWT
 

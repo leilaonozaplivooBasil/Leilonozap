@@ -1,5 +1,9 @@
 // whatsapp-router — expurgo Base44, etapa 2 (memória + tool-calling), provedor Z-API.
 //
+// 28/08/2026 — Expansão Slack: Bot Token para leitura/escrita em qualquer canal.
+// Imports
+import { criarClienteSlack, type SlackClient as TSlackClient } from './slackClient.ts';
+
 // Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento, qualquer
 // número, sempre 1:1) e Heloim (assistente de TI — 1:1 com qualquer admin de
 // ADMIN_PHONE_NUMBERS, e também dentro de grupos autorizados em GRUPOS_HELOIM_IDS, onde
@@ -67,10 +71,18 @@ const GRUPOS_HELOIM_IDS = (Deno.env.get('GRUPOS_HELOIM_IDS') || '').split(',').m
 // hoje, no mesmo estilo de EXECUTIVO_VENDEDOR_PHONE — trocou de número, é só setar o secret.
 const ZAPI_NUMERO_BOT = Deno.env.get('ZAPI_NUMERO_BOT') || '5521984072064';
 
-// Slack (22/08/2026) — Incoming Webhook do canal onde a Heloim registra pedido/classificação
-// de risco/decisão, igual fazia no Base44 antigo (canal top-tech-leilao-nozap). Opcional: sem
-// configurar, Heloim funciona igual, só não duplica o registro no Slack.
+// Slack (28/08/2026 — expansão de escrita) — Dois modos:
+// 1. SLACK_BOT_TOKEN (novo, preferido): Bot do Slack com OAuth token, suporta read/write em qualquer canal
+// 2. SLACK_WEBHOOK_URL (legado): Incoming Webhook, só postagem em um canal fixo (mantém compatibilidade)
+//
+// Migration: começar com bot token. Se não tiver, cai para webhook (se existir). Sem nenhum: Slack desabilitado.
+// Com Bot Token, Zeca/Heloim podem postar, editar, deletar e gerenciar em todos canais autorizados.
+const SLACK_BOT_TOKEN = Deno.env.get('SLACK_BOT_TOKEN') || '';
 const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL') || '';
+
+// Canal padrão para logs de Heloim (quando usando webhook antigo)
+// Com bot token, qualquer canal pode ser alvo (passado por parâmetro)
+const SLACK_CANAL_PADRAO = Deno.env.get('SLACK_CANAL_PADRAO') || '#top-tech-digital';
 
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
@@ -665,6 +677,37 @@ async function salvarTurno(
 }
 
 // ============================================================================
+// Marcador de mídia na memória (28/08/2026) — sem isto, a URL da imagem só existe durante o
+// processamento do turno em que ela chegou (usada em blocosDeMidia pra Claude ENXERGAR) e
+// depois some pra sempre: ai_conversas.content só guarda o texto sintético ("[o cliente mandou
+// uma imagem, sem legenda]"), nunca a URL. Isso quebrava "Heloim, documenta esse tópico com a
+// imagem como capa" — não tinha de onde puxar a imagem de uma mensagem anterior.
+//
+// Formato: acrescenta `[[midia:imagem|URL]]` ao final do content salvo. Some da memória que a
+// Claude LÊ (ver processarMensagem, onde `anteriores` é sanitizado antes de virar contexto) —
+// só a tool documentar_no_slack lê o marcador bruto, direto do carregarHistorico().
+// ⚠️ Mesma validade da URL original do Z-API: ~30 dias (documentado no DEPLOY.md).
+function conteudoParaMemoria(msg: MensagemExtraida, textoBase: string): string {
+  if (msg.midiaUrl && msg.midiaTipo === 'imagem') {
+    return `${textoBase}\n[[midia:imagem|${msg.midiaUrl}]]`;
+  }
+  return textoBase;
+}
+
+function limparMarcadorDeMidia(texto: string): string {
+  return texto.replace(/\n?\[\[midia:[^\]]+\]\]/g, '').trim();
+}
+
+/** Varre o histórico de trás pra frente e devolve a URL da imagem mais recente, se houver. */
+function extrairUltimaImagemDoHistorico(turnos: Turno[]): string | null {
+  for (let i = turnos.length - 1; i >= 0; i--) {
+    const m = turnos[i].content.match(/\[\[midia:imagem\|([^\]]+)\]\]/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+// ============================================================================
 // 🧍 O QUE FAZ PARECER GENTE — 27/08/2026
 //
 // O texto do prompt já pedia conversa humanizada. O que denunciava a máquina não era o
@@ -860,23 +903,54 @@ const TOOLS_ZECA: ToolDef[] = [
   },
 ];
 
-// Slack — registro paralelo de toda solicitação/decisão da Heloim, igual fazia no Base44
-// antigo. Best-effort: falha aqui NUNCA derruba a resposta pro WhatsApp — o registro em
-// heloim_solicitacoes já é a fonte de verdade auditável, o Slack é conveniência extra.
+// Slack — registro paralelo de toda solicitação/decisão da Heloim (Bot Token novo, com fallback webhook).
+// Best-effort: falha aqui NUNCA derruba a resposta pro WhatsApp — o registro em
+// heloim_solicitacoes já é a fonte de verdade auditável, Slack é conveniência extra.
 type ResultadoSlack = { ok: boolean; status: number | null; corpo: string };
 
-async function postarNoSlack(texto: string): Promise<ResultadoSlack> {
-  if (!SLACK_WEBHOOK_URL) {
-    // Antes daqui saía um `return` seco, sem log nenhum. Visto de fora era idêntico a
-    // "o Slack está ligado e ninguém pediu nada" — e foi exatamente o que aconteceu: o
-    // canal ficou sem uma linha de 18/08/2026 (última postagem do agente do Base44 antigo)
-    // até 27/08/2026, e ninguém descobriu que o secret nunca tinha sido criado. Agora fala.
-    console.warn(
-      '[whatsapp-router] tinha registro pra publicar no Slack, mas SLACK_WEBHOOK_URL não está ' +
-      'configurada — nada foi pro canal. Configure o secret no Supabase (ver DEPLOY.md, seção 2).'
-    );
-    return { ok: false, status: null, corpo: 'SLACK_WEBHOOK_URL não configurada' };
+// Client Slack (lazy-init, criado na primeira chamada)
+let clienteSlack: TSlackClient | null | undefined;
+function obterClienteSlack(): TSlackClient | null {
+  if (clienteSlack === undefined) {
+    clienteSlack = criarClienteSlack(SLACK_BOT_TOKEN) || null;
   }
+  return clienteSlack;
+}
+
+/**
+ * Postar no Slack — modo novo (Bot Token) com fallback para webhook legado
+ * @param texto Conteúdo da mensagem
+ * @param canal Canal para postar (se usando Bot Token); default: #top-tech-digital
+ */
+async function postarNoSlack(texto: string, canal: string = SLACK_CANAL_PADRAO): Promise<ResultadoSlack> {
+  const cliente = obterClienteSlack();
+
+  // Modo 1: Bot Token (novo, preferido)
+  if (cliente) {
+    try {
+      const resultado = await cliente.postMessage(canal, texto);
+      if (resultado.ok) {
+        console.log(`[Slack] mensagem postada no canal ${canal}`);
+        return { ok: true, status: 200, corpo: 'OK (via Bot Token)' };
+      } else {
+        console.error(`[Slack] erro ao postar: ${resultado.error}`);
+        return { ok: false, status: null, corpo: resultado.error || 'Erro desconhecido' };
+      }
+    } catch (e) {
+      console.error('[Slack] exceção ao postar (vai tentar webhook):', e);
+      // Fall through para webhook
+    }
+  }
+
+  // Modo 2: Webhook legado (fallback)
+  if (!SLACK_WEBHOOK_URL) {
+    console.warn(
+      '[Slack] nenhum modo de entrega configurado: sem SLACK_BOT_TOKEN e sem SLACK_WEBHOOK_URL. ' +
+      'Slack desabilitado. Configure um deles no Supabase (ver DEPLOY.md).'
+    );
+    return { ok: false, status: null, corpo: 'Slack desabilitado (sem token ou webhook)' };
+  }
+
   try {
     const r = await fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
@@ -884,12 +958,87 @@ async function postarNoSlack(texto: string): Promise<ResultadoSlack> {
       body: JSON.stringify({ text: texto }),
     });
     const corpo = await r.text().catch(() => '');
-    if (!r.ok) console.error('[whatsapp-router] Slack recusou o post:', r.status, corpo);
-    else console.log('[whatsapp-router] registro publicado no Slack.');
+    if (!r.ok) {
+      console.error('[Slack] webhook recusou o post:', r.status, corpo);
+    } else {
+      console.log('[Slack] mensagem postada via webhook');
+    }
     return { ok: r.ok, status: r.status, corpo };
   } catch (e) {
-    console.error('[whatsapp-router] falha ao postar no Slack (segue sem registrar lá):', e);
+    console.error('[Slack] falha ao postar no webhook:', e);
     return { ok: false, status: null, corpo: String((e as Error)?.message || e) };
+  }
+}
+
+/**
+ * Postar em canal específico com Bot Token
+ * @param canal Nome ou ID do canal (ex: '#pedidos', 'C1234567890')
+ * @param texto Conteúdo
+ * @returns true se sucesso, false se falhou ou Slack desabilitado
+ */
+async function postarEmCanal(canal: string, texto: string): Promise<boolean> {
+  const cliente = obterClienteSlack();
+  if (!cliente) {
+    console.warn('[Slack] Bot Token não configurado — não é possível postar em canais específicos');
+    return false;
+  }
+
+  try {
+    const resultado = await cliente.postMessage(canal, texto);
+    if (!resultado.ok) {
+      console.error(`[Slack] erro ao postar em ${canal}: ${resultado.error}`);
+    }
+    return resultado.ok;
+  } catch (e) {
+    console.error(`[Slack] exceção ao postar em ${canal}:`, e);
+    return false;
+  }
+}
+
+/**
+ * Editar mensagem existente no Slack
+ * @param canal Nome ou ID do canal
+ * @param ts Timestamp da mensagem (obtida via postMessage response)
+ * @param novoTexto Novo conteúdo
+ */
+async function editarMensagemSlack(canal: string, ts: string, novoTexto: string): Promise<boolean> {
+  const cliente = obterClienteSlack();
+  if (!cliente) {
+    console.warn('[Slack] Bot Token não configurado — não é possível editar mensagens');
+    return false;
+  }
+
+  try {
+    const resultado = await cliente.updateMessage(canal, ts, novoTexto);
+    if (!resultado.ok) {
+      console.error(`[Slack] erro ao editar mensagem: ${resultado.error}`);
+    }
+    return resultado.ok;
+  } catch (e) {
+    console.error('[Slack] exceção ao editar mensagem:', e);
+    return false;
+  }
+}
+
+/**
+ * Deletar mensagem do Slack
+ */
+async function deletarMensagemSlack(canal: string, ts: string): Promise<boolean> {
+  const cliente = obterClienteSlack();
+  if (!cliente) {
+    console.warn('[Slack] Bot Token não configurado — não é possível deletar mensagens');
+    return false;
+  }
+
+  try {
+    const resultado = await cliente.deleteMessage(canal, ts);
+    if (!resultado.ok) {
+      console.error(`[Slack] erro ao deletar mensagem: ${resultado.error}`);
+    }
+    return resultado.ok;
+  } catch (e) {
+    console.error('[Slack] exceção ao deletar mensagem:', e);
+    return false;
   }
 }
 
@@ -1105,6 +1254,214 @@ const TOOLS_HELOIM: ToolDef[] = [
       return { pendentes: Array.isArray(rows) ? rows : [] };
     },
   },
+  {
+    name: 'postar_no_slack',
+    description:
+      'Postar ou gerenciar mensagens no Slack — criar, editar, deletar em qualquer canal autorizado. ' +
+      'Requer SLACK_BOT_TOKEN configurado. Use para notificações, alertas, ou comunicação com time. ' +
+      'Apenas admins (Luiz, Ávila) podem chamar essa tool.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        acao: {
+          type: 'string',
+          enum: ['postar', 'editar', 'deletar'],
+          description: 'postar = nova mensagem; editar = atualizar existente; deletar = remover',
+        },
+        canal: {
+          type: 'string',
+          description:
+            'Nome ou ID do canal (ex: "#pedidos", "#top-tech-digital", "C1234567890"). ' +
+            'Com hashtag: "seu-canal". Sem hashtag: ID direto.',
+        },
+        mensagem: {
+          type: 'string',
+          description: 'Texto a postar (obrigatório para "postar" e "editar"). Suporta markdown básico do Slack.',
+        },
+        timestamp: {
+          type: 'string',
+          description:
+            'Timestamp da mensagem (obrigatório para "editar" e "deletar"). ' +
+            'Obtém-se dele a resposta de uma chamada anterior de "postar".',
+        },
+      },
+      required: ['acao', 'canal'],
+    },
+    executar: async (input, ctx) => {
+      // Apenas admins
+      if (!ehAdmin(ctx.remetente)) {
+        return { ok: false, erro: 'Apenas admins podem gerenciar mensagens no Slack' };
+      }
+
+      if (!SLACK_BOT_TOKEN) {
+        return {
+          ok: false,
+          erro: 'SLACK_BOT_TOKEN não configurado. Configure o Bot Token do Slack no Supabase (DEPLOY.md).',
+        };
+      }
+
+      const cliente = obterClienteSlack();
+      if (!cliente) {
+        return { ok: false, erro: 'Não foi possível conectar ao Slack. Verifique o token.' };
+      }
+
+      const canal = String(input.canal).startsWith('#') ? input.canal.substring(1) : input.canal;
+      const mensagem = input.mensagem ? String(input.mensagem).trim() : '';
+      const ts = input.timestamp ? String(input.timestamp).trim() : '';
+
+      try {
+        switch (input.acao) {
+          case 'postar':
+            if (!mensagem) return { ok: false, erro: 'Mensagem é obrigatória para postar' };
+            const postResult = await cliente.postMessage(canal, mensagem);
+            return {
+              ok: postResult.ok,
+              canal,
+              mensagem,
+              timestamp: (postResult.data as any)?.ts || null,
+              erro: postResult.error || null,
+              diagnostico: postResult.ok
+                ? `Mensagem postada em #${canal} (ts: ${(postResult.data as any)?.ts})`
+                : `Erro ao postar: ${postResult.error}`,
+            };
+
+          case 'editar':
+            if (!mensagem) return { ok: false, erro: 'Mensagem é obrigatória para editar' };
+            if (!ts) return { ok: false, erro: 'Timestamp é obrigatório para editar' };
+            const editResult = await cliente.updateMessage(canal, ts, mensagem);
+            return {
+              ok: editResult.ok,
+              canal,
+              timestamp: ts,
+              erro: editResult.error || null,
+              diagnostico: editResult.ok ? 'Mensagem atualizada' : `Erro ao editar: ${editResult.error}`,
+            };
+
+          case 'deletar':
+            if (!ts) return { ok: false, erro: 'Timestamp é obrigatório para deletar' };
+            const delResult = await cliente.deleteMessage(canal, ts);
+            return {
+              ok: delResult.ok,
+              canal,
+              timestamp: ts,
+              erro: delResult.error || null,
+              diagnostico: delResult.ok ? 'Mensagem deletada' : `Erro ao deletar: ${delResult.error}`,
+            };
+
+          default:
+            return { ok: false, erro: `Ação desconhecida: ${input.acao}` };
+        }
+      } catch (e) {
+        console.error('[Slack] exceção ao gerenciar mensagem:', e);
+        return { ok: false, erro: String((e as Error)?.message || e) };
+      }
+    },
+  },
+  {
+    name: 'documentar_no_slack',
+    description:
+      'Documenta o tópico/conversa ATUAL no Slack de uma vez só: você mesma escreve o resumo a ' +
+      'partir do que já foi dito nesta conversa e publica no canal pedido — sem pedir pra pessoa ' +
+      'reescrever nada. Se uma imagem (print, foto, comprovante) apareceu nas últimas mensagens, ' +
+      'ela sobe automaticamente como capa/anexo do post — não precisa que a pessoa mande a imagem ' +
+      'de novo. Use quando ouvir algo como "documenta isso no Slack", "registra esse tópico no ' +
+      'canal X", "sobe isso pro Slack com a imagem", "posta um resumo dessa conversa lá".',
+    input_schema: {
+      type: 'object',
+      properties: {
+        canal: { type: 'string', description: 'Canal de destino (ex: "#pedidos", "#top-tech-digital", ou ID).' },
+        titulo: { type: 'string', description: 'Título curto do tópico, se ficar claro do pedido (opcional).' },
+        resumo: {
+          type: 'string',
+          description:
+            'Sua síntese do que foi conversado/decidido, em 2-5 linhas — escrita por VOCÊ a partir ' +
+            'do histórico desta conversa, pronta pra quem não acompanhou entender o tópico. Não é ' +
+            'o histórico bruto, é o resumo.',
+        },
+        incluir_imagem: {
+          type: 'boolean',
+          description: 'true (padrão) = sobe a última imagem desta conversa como capa, se houver alguma.',
+        },
+      },
+      required: ['canal', 'resumo'],
+    },
+    executar: async (input, ctx) => {
+      if (!ehAdmin(ctx.remetente)) {
+        return { ok: false, erro: 'Apenas admins podem documentar tópicos no Slack' };
+      }
+      if (!SLACK_BOT_TOKEN) {
+        return {
+          ok: false,
+          erro: 'SLACK_BOT_TOKEN não configurado — sem ele não dá pra escolher canal nem subir imagem. Configure no Supabase (DEPLOY.md).',
+        };
+      }
+      const cliente = obterClienteSlack();
+      if (!cliente) return { ok: false, erro: 'Não foi possível conectar ao Slack. Verifique o token.' };
+
+      const canal = String(input.canal).startsWith('#') ? input.canal.substring(1) : input.canal;
+      const quem = ctx.remetenteNome || ctx.remetente;
+      const titulo = input.titulo ? `*${input.titulo}*\n` : '';
+      const corpo = `${titulo}${input.resumo}\n\n_Documentado por ${quem} via Heloim${ctx.grupoNome ? ` — grupo ${ctx.grupoNome}` : ''}_`;
+
+      const querImagem = input.incluir_imagem !== false;
+      let imagemUrl: string | null = null;
+      if (querImagem) {
+        const historico = await carregarHistorico(ctx.remetente, 'heloim');
+        imagemUrl = extrairUltimaImagemDoHistorico(historico);
+      }
+
+      // Sem imagem pedida, ou nenhuma encontrada nas últimas mensagens: posta só o texto.
+      if (!imagemUrl) {
+        const resultado = await cliente.postMessage(canal, corpo);
+        return {
+          ok: resultado.ok,
+          canal,
+          tinha_imagem: false,
+          erro: resultado.error || null,
+          diagnostico: resultado.ok
+            ? (querImagem ? 'Documentado no Slack (sem imagem — nenhuma foi encontrada nas últimas mensagens).' : 'Documentado no Slack.')
+            : `Erro ao postar: ${resultado.error}`,
+        };
+      }
+
+      // Com imagem: baixa do Z-API e sobe como arquivo real (capa), com o resumo como legenda.
+      try {
+        const r = await fetch(imagemUrl);
+        if (!r.ok) throw new Error(`falha ao baixar imagem: HTTP ${r.status}`);
+        const bytes = new Uint8Array(await r.arrayBuffer());
+        const contentType = r.headers.get('content-type') || 'image/jpeg';
+        const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+        const resultado = await cliente.uploadFile(canal, bytes, `capa.${ext}`, {
+          initial_comment: corpo,
+          title: input.titulo || 'Tópico documentado',
+        });
+        return {
+          ok: resultado.ok,
+          canal,
+          tinha_imagem: true,
+          erro: resultado.error || null,
+          diagnostico: resultado.ok
+            ? 'Documentado no Slack com a imagem como capa.'
+            : `Imagem falhou (${resultado.error}) — confira o scope files:write do Bot Token.`,
+        };
+      } catch (e) {
+        // Imagem falhou (ex: link do Z-API expirado — vale ~30 dias) — não perde o registro,
+        // posta o texto mesmo assim e avisa.
+        console.error('[Slack] falha ao subir imagem como capa (segue só com texto):', e);
+        const resultado = await cliente.postMessage(
+          canal,
+          `${corpo}\n\n_(a imagem não pôde ser anexada — o link pode ter expirado)_`
+        );
+        return {
+          ok: resultado.ok,
+          canal,
+          tinha_imagem: false,
+          erro: String((e as Error)?.message || e),
+          diagnostico: 'Imagem falhou ao subir, documentado só com texto.',
+        };
+      }
+    },
+  },
 ];
 
 async function buscarClienteCompletoPorTelefone(remetente: string): Promise<any | null> {
@@ -1176,6 +1533,18 @@ Suas tools de SOLICITAÇÃO (pedido de mudança de sistema — não confundir co
   a tool confere isso sozinha e recusa se não for, mas não ofereça essa ação pra quem você já
   sabe que não é admin (ver contexto do canal abaixo).
 - listar_solicitacoes_pendentes: quando um admin quiser ver o que está esperando decisão.
+
+Suas tools de SLACK (postagem/gestão real no canal — precisam de SLACK_BOT_TOKEN configurado):
+- documentar_no_slack: quando pedirem pra "documentar", "registrar" ou "postar um resumo" do
+  tópico/conversa ATUAL no Slack (ex: "Heloim, documenta isso no #pedidos", "sobe esse tópico
+  pro Slack com a imagem"). AJA DIRETO — não peça pra pessoa reescrever o que já foi dito nem
+  reenviar a imagem: monte você mesma o resumo a partir do histórico desta conversa e chame a
+  tool. Se uma imagem apareceu nas últimas mensagens, ela sobe sozinha como capa (a tool cuida
+  disso) — só passe incluir_imagem: false se explicitamente pedirem sem imagem.
+- postar_no_slack: postar/editar/deletar uma mensagem avulsa (não é resumo de conversa, é
+  conteúdo específico que a pessoa ditou).
+Ambas exigem canal explícito ou claramente inferível do pedido — se não citarem canal nenhum e
+não der pra inferir, aí sim pergunte qual.
 
 Você NUNCA finge que executou uma ação que não tem tool pra fazer (pausar leilão, reprocessar
 pedido, mexer em saldo direto, etc.) — isso continua fora do seu alcance, sempre foi só
@@ -1570,8 +1939,10 @@ async function processarMensagem(msg: MensagemExtraida) {
 
     // A fala do cliente é gravada AGORA, antes de responder. É isso que permite agrupar:
     // se ele mandar mais um pedaço em seguida, aquela execução vai encontrar esta no
-    // histórico e responder as duas de uma vez.
-    const marca = await salvarTurno(msg.remetente, agente, 'user', textoParaClaude);
+    // histórico e responder as duas de uma vez. Se veio imagem, a URL some do que a Claude vai
+    // LER depois (ver limpeza de `anteriores` abaixo) mas fica marcada no banco — é o que
+    // permite "documenta isso com a imagem como capa" puxar uma foto de mensagem anterior.
+    const marca = await salvarTurno(msg.remetente, agente, 'user', conteudoParaMemoria(msg, textoParaClaude));
 
     // ⏳ Espera ele terminar de escrever. Só no 1:1 — no grupo a Heloim já tem o freio de
     // "só falo quando me chamam", e mexer no que está funcionando lá não vale o risco.
@@ -1597,11 +1968,16 @@ async function processarMensagem(msg: MensagemExtraida) {
     const { anteriores, pendente } = separarPendentes(historico);
     const textoFinal = pendente || textoParaClaude; // banco fora do ar: segue com esta mensagem
 
+    // O marcador [[midia:...]] é só pra tool documentar_no_slack recuperar a imagem depois —
+    // a Claude não deve ver essa sintaxe crua no replay da conversa (ela releria o histórico
+    // salvo em turnos futuros e poderia citar o marcador de volta pro usuário).
+    const anterioresLimpos = anteriores.map((t) => ({ ...t, content: limparMarcadorDeMidia(t.content) }));
+
     const conteudoUsuario = blocos.length
       ? [...blocos, { type: 'text', text: textoFinal }]
       : textoFinal;
 
-    const resposta = await responderComAgente(systemPrompt, tools, anteriores, conteudoUsuario, ctx);
+    const resposta = await responderComAgente(systemPrompt, tools, anterioresLimpos, conteudoUsuario, ctx);
 
     await salvarTurno(msg.remetente, agente, 'assistant', resposta);
 
