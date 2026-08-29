@@ -36,9 +36,15 @@ export default function PartnersPage() {
   // 🖤 Tema preto exclusivo desta página: marca o body enquanto ela está montada
   // e limpa ao sair. Alcança rodapé/flutuante (que vivem no Layout) sem alterar
   // nenhum componente global — as outras telas seguem exatamente como são.
+  //
+  // 📄 `pc-papel` é a marca da VERSÃO IMPRESSA (bloco @media print em src/index.css).
+  // Existe separada de `pc-tema` porque o tema preto é usado por outras quatro telas
+  // (painel do parceiro, cadastro, porta de acesso) e o CSS de impressão é escrito
+  // sob medida para esta apresentação — esconde botão, imagem decorativa e bloco de
+  // carregamento. Aplicado por engano nas outras, comeria conteúdo real delas.
   useEffect(() => {
-    document.body.classList.add('pc-tema');
-    return () => document.body.classList.remove('pc-tema');
+    document.body.classList.add('pc-tema', 'pc-papel');
+    return () => document.body.classList.remove('pc-tema', 'pc-papel');
   }, []);
 
   // 🔐 PORTA OBRIGATÓRIA: só entra quem está LOGADO AGORA e já declarou ciência

@@ -79,7 +79,7 @@ export default function ParceiroCicloRoda({ etapas }) {
 
   return (
     <div className="mt-12">
-      <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="pc-so-tela grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* MOSTRADOR */}
         <div className="flex justify-center">
           <div
@@ -215,6 +215,22 @@ export default function ParceiroCicloRoda({ etapas }) {
           </div>
         </div>
       </div>
+
+      {/* 🖨️ A roda não gira no papel: impressa, ela mostraria UMA das cinco etapas
+          e as outras quatro sumiriam do PDF — foi o que aconteceu na primeira
+          versão da exportação. Esta lista não aparece na tela (hidden) e é o que
+          entra na impressão. Mesmo `etapas`, mesma ordem: nenhum texto novo. */}
+      <ol className="pc-so-impressao hidden">
+        {etapas.map((e, i) => (
+          <li key={`papel-${e.titulo}`}>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-pc-ouro">
+              {`${String(i + 1).padStart(2, '0')} · ${e.quando}`}
+            </p>
+            <h3 className="mt-1 text-base font-bold text-pc-tinta">{e.titulo}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-pc-tinta-fraca">{e.texto}</p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
