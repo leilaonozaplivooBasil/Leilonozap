@@ -1,32 +1,19 @@
 import React from "react";
 import { DollarSign, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
-import { startOfDay, isBefore, differenceInCalendarDays } from "date-fns";
-import { toDate } from "@/lib/dateFmt";
+import { resumirGastos } from "@/lib/financeiroResumo";
 
+// 💳 Os quatro cartões do topo do Financeiro.
+// A conta mora em src/lib/financeiroResumo.js — é regra de dinheiro e tem teste
+// (tests/financeiroResumo.test.mjs). O cabeçalho de lá explica os quatro erros
+// que ela conserta; aqui ficou só a pintura.
 export default function FinancialSummaryCards({ expenses }) {
-  const today = startOfDay(new Date());
-
-  const totalMonth = expenses.reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0), 0);
-  const totalPaid = expenses.filter(e => e.payment_status === "pago_integral").reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0), 0);
-  const totalPending = expenses.filter(e => e.payment_status === "pendente" || e.payment_status === "pago_parcial")
-    .reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0) - (e.amount_paid || 0), 0);
-  const totalOverdue = expenses.filter(e => {
-    if (e.payment_status === "pago_integral" || e.payment_status === "cancelado") return false;
-    return isBefore(startOfDay(toDate(e.due_date)), today);
-  }).reduce((sum, e) => sum + (e.amount || 0) + (e.interest_amount || 0) - (e.amount_paid || 0), 0);
-
-  const dueSoon = expenses.filter(e => {
-    if (e.payment_status === "pago_integral" || e.payment_status === "cancelado") return false;
-    const due = startOfDay(toDate(e.due_date));
-    const diff = differenceInCalendarDays(due, today);
-    return diff >= 0 && diff <= 3;
-  }).length;
+  const { totalPeriodo, pago, pendente, vencido, venceEmBreve } = resumirGastos(expenses);
 
   const cards = [
-    { label: "Total do Período", value: totalMonth, icon: DollarSign, color: "from-blue-500/20 to-blue-600/10", iconColor: "text-blue-400", borderColor: "border-blue-500/20" },
-    { label: "Total Pago", value: totalPaid, icon: CheckCircle2, color: "from-emerald-500/20 to-emerald-600/10", iconColor: "text-emerald-400", borderColor: "border-emerald-500/20" },
-    { label: "Pendente", value: totalPending, icon: Clock, color: "from-yellow-500/20 to-yellow-600/10", iconColor: "text-yellow-400", borderColor: "border-yellow-500/20" },
-    { label: "Vencido", value: totalOverdue, icon: AlertTriangle, color: "from-red-500/20 to-red-600/10", iconColor: "text-red-400", borderColor: "border-red-500/20" },
+    { label: "Total do Período", value: totalPeriodo, icon: DollarSign, color: "from-blue-500/20 to-blue-600/10", iconColor: "text-blue-400", borderColor: "border-blue-500/20" },
+    { label: "Total Pago", value: pago, icon: CheckCircle2, color: "from-emerald-500/20 to-emerald-600/10", iconColor: "text-emerald-400", borderColor: "border-emerald-500/20" },
+    { label: "Pendente", value: pendente, icon: Clock, color: "from-yellow-500/20 to-yellow-600/10", iconColor: "text-yellow-400", borderColor: "border-yellow-500/20" },
+    { label: "Vencido", value: vencido, icon: AlertTriangle, color: "from-red-500/20 to-red-600/10", iconColor: "text-red-400", borderColor: "border-red-500/20" },
   ];
 
   return (
@@ -45,11 +32,11 @@ export default function FinancialSummaryCards({ expenses }) {
           );
         })}
       </div>
-      {dueSoon > 0 && (
+      {venceEmBreve > 0 && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
           <p className="text-amber-300 text-sm font-medium">
-            {dueSoon} conta(s) vence(m) nos próximos 3 dias!
+            {venceEmBreve} conta(s) vence(m) nos próximos 3 dias!
           </p>
         </div>
       )}
