@@ -3,19 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 import LoginModal from '@/components/common/LoginModal';
-import ParceiroAbertura from '@/components/parceiro/ParceiroAbertura';
-import ParceiroTracao from '@/components/parceiro/ParceiroTracao';
-import ParceiroOrigens from '@/components/parceiro/ParceiroOrigens';
-import ParceiroCuradoria from '@/components/parceiro/ParceiroCuradoria';
-import ParceiroRelacaoEouNaoE from '@/components/parceiro/ParceiroRelacaoEouNaoE';
-import ParceiroCiclo from '@/components/parceiro/ParceiroCiclo';
-import ParceiroVitrineOperacao from '@/components/parceiro/ParceiroVitrineOperacao';
-import ParceiroCanaisVenda from '@/components/parceiro/ParceiroCanaisVenda';
-import ParceiroBoard from '@/components/parceiro/ParceiroBoard';
-import ParceiroFormalizacao from '@/components/parceiro/ParceiroFormalizacao';
-import ParceiroCTA from '@/components/parceiro/ParceiroCTA';
-import ParceiroDisclaimer from '@/components/parceiro/ParceiroDisclaimer';
-import ParceiroExportarPDF from '@/components/parceiro/ParceiroExportarPDF';
+import ParceiroApresentacao from '@/components/parceiro/ParceiroApresentacao';
 import { acessoParceiroLiberado, usuarioLocal } from '@/lib/parceiroAcesso';
 import { useSectionTracking } from '@/lib/tracking';
 
@@ -32,20 +20,6 @@ export default function PartnersPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   // 🔐 Só renderiza a apresentação depois de conferir cadastro + ciência
   const [liberado, setLiberado] = useState(false);
-
-  // 🖤 Tema preto exclusivo desta página: marca o body enquanto ela está montada
-  // e limpa ao sair. Alcança rodapé/flutuante (que vivem no Layout) sem alterar
-  // nenhum componente global — as outras telas seguem exatamente como são.
-  //
-  // 📄 `pc-papel` é a marca da VERSÃO IMPRESSA (bloco @media print em src/index.css).
-  // Existe separada de `pc-tema` porque o tema preto é usado por outras quatro telas
-  // (painel do parceiro, cadastro, porta de acesso) e o CSS de impressão é escrito
-  // sob medida para esta apresentação — esconde botão, imagem decorativa e bloco de
-  // carregamento. Aplicado por engano nas outras, comeria conteúdo real delas.
-  useEffect(() => {
-    document.body.classList.add('pc-tema', 'pc-papel');
-    return () => document.body.classList.remove('pc-tema', 'pc-papel');
-  }, []);
 
   // 🔐 PORTA OBRIGATÓRIA: só entra quem está LOGADO AGORA e já declarou ciência
   // de que é captação privada. Sem sessão ativa → volta pra porta de entrada,
@@ -100,24 +74,9 @@ export default function PartnersPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-pc-preto">
-        <ParceiroAbertura onSolicitarAcesso={irParaPainel} />
-        <ParceiroTracao />
-        <ParceiroOrigens />
-        <ParceiroCuradoria />
-        <ParceiroRelacaoEouNaoE />
-        <ParceiroCiclo />
-        <ParceiroVitrineOperacao />
-        <ParceiroCanaisVenda />
-        <ParceiroBoard />
-        <ParceiroFormalizacao />
-        <ParceiroCTA onSolicitarAcesso={irParaPainel} onAcessarPainel={irParaPainel} />
-        <ParceiroDisclaimer />
-      </div>
-
-      {/* Fica FORA da div acima de propósito: é botão de tela, não conteúdo da
-          apresentação — some no PDF (regra .pc-exportar-pdf em @media print). */}
-      <ParceiroExportarPDF />
+      {/* Os doze blocos vivem em ParceiroApresentacao, compartilhados com o link
+          interno /ApresentacaoParceiro. Aqui fica só a porta. */}
+      <ParceiroApresentacao onSolicitarAcesso={irParaPainel} />
 
       {showLoginModal && (
         <LoginModal

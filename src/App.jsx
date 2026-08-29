@@ -122,6 +122,12 @@ const ROUTE_ALIASES = {
   'seja-licenciado': '/Licensing', 'licensing': '/Licensing', 'alavancagem': '/Licensing',
   'parceiro': '/Partners', 'seja-parceiro': '/Partners', 'investidor': '/Partners',
   'partners': '/Partners', 'vendedor': '/SejaVendedor', 'seja-vendedor': '/SejaVendedor',
+  // 🔗 Endereço curto do link interno da apresentação (uso da equipe). Não leva a
+  // /Partners de propósito: lá tem a porta de cadastro + ciência, e o ponto deste
+  // link é justamente abrir direto. Ver src/pages/ApresentacaoParceiro.jsx.
+  'apresentacao': '/ApresentacaoParceiro', 'apresentação': '/ApresentacaoParceiro',
+  'apresentacao-parceiro': '/ApresentacaoParceiro',
+  'apresentacaoparceiro': '/ApresentacaoParceiro',
   'sejavendedor': '/SejaVendedor',
   // Setores
   'direto-de-fabrica': '/DiretoDeFabrica', 'diretodefabrica': '/DiretoDeFabrica',
