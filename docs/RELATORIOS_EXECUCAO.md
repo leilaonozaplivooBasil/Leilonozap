@@ -486,3 +486,63 @@ ensina como). Também acheu-se, sem relação com este trabalho, uma
 migration de outra frente (`20260828_financial_expenses_payment_account.sql`)
 com o mesmo status "não confirmado" — não foi tocada por não ser desta
 diretiva.
+
+---
+
+## REL-12 — Execução da DIR-12
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono reportou "Faturamento Total: R$ 0,00" no CRM tanto no Preview
+   quanto em produção (`leilaonozap.net`), mesmo depois do backfill da
+   DIR-11 já confirmado direto no banco (33 linhas, R$ 1.317,56). Como o
+   código do card já estava correto (confirmado por leitura, sem mudança
+   necessária) e o dado real já existia no banco, a causa só podia estar
+   entre a tabela e o client.
+2. Achado por leitura de código: `20260827b_financial_income_cost_center.sql`
+   liga `enable row level security` em `financial_income` mas nunca cria
+   política de leitura. Comparação com as outras ~45 tabelas do schema
+   inicial (todas com o mesmo `enable row level security` sem política
+   rastreada em migration) confirma o padrão do projeto: a política de
+   leitura de toda tabela antiga foi aplicada manualmente, fora do
+   controle de versão, quando o banco foi montado a partir do Base44 — só
+   3 migrations do repositório inteiro criam política explícita
+   (`system_logs`, `contrato_assinaturas`, `lotes_recebidos`/oportunidades).
+   `financial_income`, por ter nascido só em 27/08 e só ter sido aplicada
+   manualmente (mesmo incidente do nome com sufixo de letra), nunca passou
+   por esse passo. Sem política, PostgREST devolve lista vazia pro client
+   (chave anon/publishable) sem erro nenhum — sintoma idêntico ao já
+   documentado em `20260805_system_logs_politica_insert.sql` pra escrita.
+3. Migration nova (`20260830_financial_income_rls_select.sql`) criando
+   `CREATE POLICY financial_income_select ... FOR SELECT USING (true)`,
+   mesmo padrão já usado em `contrato_assinaturas_select`. Escrita
+   continua exclusiva do `service_role` (`api/_lib/financialIncome.js`) —
+   não foi aberta política de INSERT/UPDATE/DELETE pro client.
+4. `supabase/migrations/LEIA-ME.md` ganhou uma seção nova documentando essa
+   terceira causa de "migração aplicada mas nada aparece" (RLS sem
+   política), com a query de diagnóstico (`select * from pg_policies
+   where tablename = ...`) e a regra pra toda tabela nova a partir de
+   agora: sempre criar a política de leitura na MESMA migration que cria a
+   tabela.
+**O que NÃO foi feito / blockers:** não foi possível confirmar via consulta
+direta ao banco (`select * from pg_policies where tablename =
+'financial_income'`) que a política realmente estava ausente — a conclusão
+é por leitura de código e por precedente do próprio repositório, não por
+acesso direto ao Supabase nesta sessão. Antes de aplicar a migration,
+recomendado rodar essa consulta pra confirmar (deve vir vazia); depois de
+aplicar, deve aparecer 1 linha com `cmd = 'SELECT'`.
+**Testes:** sem teste automatizado novo (migration SQL pura, mesma
+categoria da DIR-11).
+**Build:** não aplicável (nenhum arquivo JS/TS alterado).
+**Confirmação de escopo:** só a migration nova e `LEIA-ME.md` foram
+tocados. Nenhuma outra tabela, nenhuma regra de negócio e nenhum código de
+aplicação foi alterado — o cálculo do "Faturamento Total" (DIR-10) e a
+regra de reconhecimento de receita (DIR-7) continuam exatamente como
+estavam.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — migration escrita e commitada, mas depende do
+dono aplicar manualmente no SQL Editor do Supabase (pipeline automático
+ainda quebrado, mesma pendência da DIR-11) e confirmar. Instruções e SQL
+de verificação passados ao dono no chat.

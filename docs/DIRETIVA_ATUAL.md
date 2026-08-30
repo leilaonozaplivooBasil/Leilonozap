@@ -12,12 +12,47 @@
 
 ---
 
+## DIR-12 — RLS sem política de leitura em `financial_income`
+
+**Emitida por:** Claude, via achado técnico (leitura de código + precedente
+já registrado no próprio repositório — mesma falha documentada em
+`supabase/migrations/20260805_system_logs_politica_insert.sql` e
+`20260806_contrato_assinaturas.sql`), confirmado pelo dono com prints
+mostrando "Faturamento Total: R$ 0,00" tanto no Preview quanto em produção
+(`leilaonozap.net`), mesmo depois do backfill já confirmado direto no banco
+(REL-11: 33 linhas, R$ 1.317,56).
+**Data:** 30/08/2026.
+**Objetivo:** a migration que criou `financial_income` (DIR-7) ligou RLS
+(`enable row level security`) mas nunca criou política de leitura — nem na
+migration, nem manualmente depois, diferente de toda tabela antiga do
+projeto (que ganhou essa política fora do controle de versão quando o
+banco foi montado). PostgREST, com RLS ligada e zero política aplicável,
+devolve lista vazia pro client sem erro — o dado real sempre esteve na
+tabela, só não tinha permissão de leitura pela chave anon/publishable que
+o front usa (`src/api/supabaseClient.js`). Isso explica o zero tanto no
+"Faturamento Total" do CRM quanto em qualquer outra tela que leia
+`financial_income` direto do client (ex.: aba "Receitas" do Financeiro).
+**Escopo autorizado:** uma migration SQL criando
+`CREATE POLICY ... FOR SELECT USING (true)` em `financial_income`, mesmo
+padrão já usado em `contrato_assinaturas_select`.
+**Fora do escopo / proibido:** RLS de qualquer outra tabela; a regra de
+reconhecimento de receita (DIR-7); o cálculo do CRM/Financeiro em si (já
+estava correto — só faltava a permissão de leitura no banco).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-11. Mesma ressalva da DIR-11:
+o deploy automático de migração continua quebrado (pendência abaixo), então
+esta migration também precisa ser conferida/aplicada manualmente no SQL
+Editor até o segredo `SUPABASE_ACCESS_TOKEN` ser corrigido.
+**Status:** EM VIGOR — aguardando o dono aplicar a migration manualmente no
+SQL Editor (mesmo passo da DIR-11) e confirmar.
+
+---
+
 ## Estado agora
 
-**Nenhuma diretiva em vigor.** DIR-1 a DIR-11 concluídas (ver
-`docs/RELATORIOS_EXECUCAO.md` e `docs/HISTORICO_DIRETIVAS.md`). CRM e
-Financeiro (Fase 1 e Fase 2 completas + backfill do histórico real) estão
-em produção com dados reais confirmados.
+CRM e Financeiro (Fase 1 e Fase 2 completas + backfill do histórico real)
+têm a lógica e os dados corretos, mas a leitura de `financial_income` pelo
+client está bloqueada pela falta de política de RLS (ver DIR-12 acima) —
+por isso ainda aparece R$ 0,00 até a migration da DIR-12 ser aplicada.
 
 **Achado crítico de infraestrutura, fora do escopo de código, aguardando o
 dono (ver `REL-11`):** o deploy automático de migração
