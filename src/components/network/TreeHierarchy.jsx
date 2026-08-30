@@ -201,12 +201,17 @@ export default function TreeHierarchy({
 
   // Primeiro impacto: só a raiz principal aberta (um nível), não a rede inteira
   useEffect(() => {
+    // 🔧 DIR-33 — no modo "Diretoria no topo" NÃO reabre a raiz principal
+    // sozinho (o toggle muda roots.length e este efeito disparava de novo,
+    // reabrindo o time do CEO e empurrando a diretoria pra fora da tela).
+    // Desligando o modo, volta a abrir a raiz principal como sempre.
+    if (execTopo) return;
     if (roots.length && expanded.size === 0) {
       const main = roots.find((r) => r.children.length);
       if (main) setExpanded(new Set([main.id]));
     }
      
-  }, [roots.length]);
+  }, [roots.length, execTopo]);
 
   /* ------------------------------------------------------------------ */
   /* Layout                                                              */
@@ -605,7 +610,16 @@ export default function TreeHierarchy({
         {/* ⭐ DIR-33 — Sócios Executivos como raízes no topo (só visual) */}
         <button
           type="button"
-          onClick={() => { setExecTopo((v) => !v); setDidFit(false); }}
+          onClick={() => {
+            // 🔧 DIR-33 — ao alternar, RECOLHE tudo: com o galho do CEO aberto
+            // (604 pessoas), o time dele empurrava o resto da diretoria pra
+            // fora da tela. Recolhido, a diretoria enfileira compacta no topo
+            // e cada um expande quem quiser.
+            setExecTopo((v) => !v);
+            setExpanded(new Set());
+            setQuery('');
+            setDidFit(false);
+          }}
           title="Toda a diretoria do pool dos 10% (CEO, Diretorias, Fundadores, Conselheiros, Embaixador, Livoo Live, Sócios Executivos) como raízes no topo, cada um com a própria árvore de ligações abaixo — nenhum vínculo muda, é só a visualização"
           className={`flex items-center gap-1.5 rounded-lg border px-2.5 h-10 sm:h-auto sm:py-1.5 text-[12.5px] transition-colors ${
             execTopo
