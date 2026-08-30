@@ -12,6 +12,34 @@
 
 ---
 
+## DIR-33 — Árvore Genealógica: busca de verdade + Sócios Executivos no topo
+
+**Emitida por:** dono (30/08/2026, com print da Árvore): "preciso que
+buscar o nome realmente funcione — nome completo, apelido, e-mail,
+telefone, qualquer coisa do cadastro — e uma seleção para os Sócios
+Executivos aparecerem no topo, pra facilitar a busca".
+**Data:** 30/08/2026.
+**Causa conferida:** a busca só varria os NÓS RENDERIZADOS (quem estava
+em galho fechado nunca era encontrado) e só por nome/e-mail.
+**Escopo autorizado:**
+1. `src/lib/buscaPessoa.js` — comparador único de busca por pessoa:
+   nome completo, apelido, nomes de exibição, e-mail, telefone (só
+   dígitos), CPF (só dígitos), código de indicação e nome da loja;
+   sem acento/caixa. Testes.
+2. TreeHierarchy: busca varre TODOS os usuários (não só os visíveis) e
+   auto-expande o caminho até os achados (limite de 40 pra não abrir a
+   árvore inteira); Enter continua centralizando (focusUser).
+3. Alternador "⭐ Executivos no topo": liga → cada Sócio Executivo
+   (cargo executivo_conta, aliases legados valem) vira RAIZ no topo da
+   árvore com a própria subárvore; o resto da floresta fica abaixo.
+   Escolha lembrada (localStorage). Só visual — nenhum vínculo muda.
+**Fora do escopo / proibido:** mover pessoas/motor de indicação; carteira
+executiva (executive_owner — DIR-22 Fase 2).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-32.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-32 — Governança de visão por papel + modal de usuário profissional
 
 **Emitida por:** dono (30/08/2026): aprovou a tabela de governança de

@@ -1452,3 +1452,28 @@ role 'admin' comum (hoje admin ainda vê dinheiro — cortar muda acesso de
 contas existentes; só com ordem expressa).
 **Testes:** 552/552 (12 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".
+
+---
+
+## REL-33 — Execução da DIR-33 (busca de verdade + executivos no topo)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Causa raiz confirmada:** a busca da Árvore só varria os nós JÁ
+RENDERIZADOS (galho fechado = pessoa invisível pra busca) e só por
+nome/e-mail.
+**O que foi feito:**
+1. `src/lib/buscaPessoa.js` (+10 testes) — comparador único: nome
+   completo, apelido, nomes de exibição, e-mail, telefone (dígitos, com
+   ou sem máscara), CPF (dígitos), código de indicação e nome da loja;
+   sem acento/caixa.
+2. TreeHierarchy: a busca varre TODAS as pessoas do cadastro e
+   AUTO-EXPANDE o caminho até os achados (teto de 40 pra busca genérica
+   não abrir a árvore inteira); Enter segue centralizando; placeholder
+   agora diz o que a busca aceita.
+3. Alternador "⭐ Executivos no topo": cada Sócio Executivo
+   (executivo_conta, aliases legados valem) vira raiz no topo com a
+   própria subárvore; resto da floresta abaixo; escolha lembrada no
+   navegador. SÓ VISUAL — nenhum vínculo de indicação muda.
+**Testes:** 559/559 (10 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".

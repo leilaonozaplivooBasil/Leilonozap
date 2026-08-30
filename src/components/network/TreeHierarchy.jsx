@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { levelColor as getCareerColor, getLevel } from '@/lib/careerLevels';
+import { levelColor as getCareerColor, getLevel, normalizeLevels } from '@/lib/careerLevels';
+import { pessoaBateBusca } from '@/lib/buscaPessoa';
 import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStructure';
 import SeloCargo from '@/components/network/SeloCargo';
 import CartaoIdentificacao from '@/components/network/CartaoIdentificacao';
@@ -70,8 +71,7 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const normalize = (s) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// (normalize local removido na DIR-33 — a regra de busca vive em src/lib/buscaPessoa.js)
 
 const firstAndLast = (name) => {
   const parts = (name || '').trim().split(' ').filter(Boolean);
@@ -100,6 +100,13 @@ export default function TreeHierarchy({
       return 'list';
     }
   });
+  // ⭐ DIR-33 — Sócios Executivos no topo (só visual; lembrado no navegador)
+  const [execTopo, setExecTopo] = useState(() => {
+    try { return localStorage.getItem('treeExecTopo') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('treeExecTopo', execTopo ? '1' : '0'); } catch { /* sem storage */ }
+  }, [execTopo]);
   const [menu, setMenu] = useState(null); // menu do botão direito: { id, x, y }
   const [expanded, setExpanded] = useState(() => new Set());
   const [selectedId, setSelectedId] = useState(null);
@@ -165,8 +172,25 @@ export default function TreeHierarchy({
     };
     rs.forEach(sortRec);
     rs.sort((a, b) => b.children.length - a.children.length);
+
+    // ⭐ DIR-33 — "Executivos no topo": cada Sócio Executivo vira RAIZ no topo
+    // com a própria subárvore (só a VISUALIZAÇÃO muda — nenhum vínculo de
+    // indicação é alterado). O resto da floresta continua abaixo.
+    if (execTopo) {
+      const ehExec = (u) => normalizeLevels(u.career_levels).includes('executivo_conta');
+      const executivos = [];
+      for (const node of map.values()) {
+        if (!ehExec(node)) continue;
+        const pai = node.referred_by_id ? map.get(node.referred_by_id) : null;
+        if (pai) pai.children = pai.children.filter((c) => c.id !== node.id);
+        executivos.push(node);
+      }
+      executivos.sort((a, b) => b.children.length - a.children.length);
+      const restantes = rs.filter((r) => !executivos.includes(r));
+      return { roots: [...executivos, ...restantes], byId: map };
+    }
     return { roots: rs, byId: map };
-  }, [users]);
+  }, [users, execTopo]);
 
   // Primeiro impacto: só a raiz principal aberta (um nível), não a rede inteira
   useEffect(() => {
@@ -231,15 +255,37 @@ export default function TreeHierarchy({
 
   useEffect(() => { nodesRef.current = nodes; }, [nodes]);
 
+  // 🔎 DIR-33 — a busca varre TODO o cadastro (nome, apelido, nomes de
+  // exibição, e-mail, telefone, CPF, código de indicação, loja — regra única
+  // em src/lib/buscaPessoa.js) e TODAS as pessoas, não só as renderizadas:
+  // quem está em galho fechado também é achado.
   const matches = useMemo(() => {
-    const q = normalize(query).trim();
-    if (!q) return new Set();
-    return new Set(
-      nodes
-        .filter((n) => normalize(n.data.full_name).includes(q) || normalize(n.data.email).includes(q))
-        .map((n) => n.id)
-    );
-  }, [nodes, query]);
+    const q = query.trim();
+    if (q.length < 2) return new Set();
+    const achados = new Set();
+    for (const u of byId.values()) {
+      if (pessoaBateBusca(u, q)) achados.add(u.id);
+    }
+    return achados;
+  }, [byId, query]);
+
+  // Abre o caminho até os achados (limite de 40 pra não explodir a árvore
+  // inteira com uma busca genérica tipo "a").
+  useEffect(() => {
+    if (!matches.size || matches.size > 40) return;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      let mudou = false;
+      for (const id of matches) {
+        let cur = byId.get(id);
+        while (cur?.referred_by_id) {
+          if (!next.has(cur.referred_by_id)) { next.add(cur.referred_by_id); mudou = true; }
+          cur = byId.get(cur.referred_by_id);
+        }
+      }
+      return mudou ? next : prev;
+    });
+  }, [matches, byId]);
 
   /* ------------------------------------------------------------------ */
   /* Zoom / pan                                                          */
@@ -549,6 +595,20 @@ export default function TreeHierarchy({
           </button>
         </div>
 
+        {/* ⭐ DIR-33 — Sócios Executivos como raízes no topo (só visual) */}
+        <button
+          type="button"
+          onClick={() => { setExecTopo((v) => !v); setDidFit(false); }}
+          title="Mostrar cada Sócio Executivo como raiz no topo, com a estrutura dele abaixo — nenhum vínculo muda, é só a visualização"
+          className={`flex items-center gap-1.5 rounded-lg border px-2.5 h-10 sm:h-auto sm:py-1.5 text-[12.5px] transition-colors ${
+            execTopo
+              ? 'border-amber-400/60 bg-amber-500/15 text-amber-300'
+              : 'border-gray-700 bg-gray-800 text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          ⭐ Executivos no topo
+        </button>
+
         {/* 📱 no celular a busca ocupa a linha inteira — encolhida ela cortava o texto */}
         <div className="relative w-full sm:w-auto order-last sm:order-none">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
@@ -558,7 +618,7 @@ export default function TreeHierarchy({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && matches.size) focusUser([...matches][0]);
             }}
-            placeholder="Buscar pessoa na estrutura de negócio…"
+            placeholder="Nome, apelido, e-mail, telefone, CPF…"
             className="w-full sm:w-52 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 h-10 sm:h-auto sm:py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
           />
         </div>
