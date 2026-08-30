@@ -441,6 +441,47 @@ o dinheiro do cliente e era barrado no último clique.
 
 ---
 
+## 6-D. CONSIGNADO — ACERTO POR UNIDADE (regra oficial, dono, 30/08/2026)
+
+Regra em uma frase: **o lojista consignado acerta POR UNIDADE vendida, como no
+mercado — nunca pelo custo do lote inteiro.**
+
+O valor de acerto de cada peça segue esta ordem (implementada em
+`api/_lib/custoProduto.js → acertoConsignadoUnitario`):
+
+1. **Preço de ATACADO por unidade** (`selling_price_wholesale`), quando
+   cadastrado — a casa ganha a margem de repasse e o lojista revende acima
+   disso. É o modelo padrão do mercado de consignação.
+2. Sem atacado cadastrado → **custo UNITÁRIO da casa** (custo do lote ÷
+   unidades do lote) — a casa ao menos recupera o que pagou.
+3. Produto sem atacado E sem custo (furo de cadastro) → **preço de catálogo**
+   — mercadoria nunca sai de graça; o furo fica caro pro lojista até alguém
+   arrumar o cadastro, nunca pra casa.
+
+### Contexto — o bug que esta regra corrige (DIR-19)
+
+`products.cost_price` é o custo **TOTAL do lote** (semântica da planilha de
+importação — DIR-18). O acerto do consignado usava esse valor cru como preço
+de UMA peça: num lote real de 9 politrizes compradas por R$ 2.296, o lojista
+que consignasse 1 peça era debitado **R$ 2.296 em vez de R$ 255**. Em lote
+de item único (1 moto de R$ 4.210) a conta coincidia, por isso o defeito
+passou despercebido.
+
+### Onde vive no código
+
+| Papel | Arquivo |
+|---|---|
+| Valor de acerto por unidade (regra desta seção) | `api/_lib/custoProduto.js` |
+| Pedido de consignação (grava `custo_unitario` por item) | `api/functions/createConsignacao.js` |
+| Aprovação (copia pra `store_inventory` + dívida) | `api/functions/manageConsignacao.js` |
+| Liquidação (a dívida morre na venda) | `api/_lib/consignadoSettle.js` |
+
+O restante do motor não muda: a dívida continua morrendo na venda
+(PIX/cartão retém na plataforma; dinheiro/saldo debita da carteira, sem
+cobertura a venda não fecha).
+
+---
+
 ## 7. OUTRAS COMISSÕES CITADAS NA APRESENTAÇÃO
 
 - **Venda de licença** (Distribuidor sobre licenciados da região): **7%**

@@ -12,6 +12,33 @@
 
 ---
 
+## DIR-19 — Acerto do consignado por unidade, regra de mercado
+
+**Emitida por:** dono, decisão direta depois do achado da DIR-18 ("deixe
+igual é no mercado, de maneira sênior, e atualiza o nosso documento
+oficial").
+**Data:** 30/08/2026.
+**Objetivo:** `createConsignacao.js` usava `cost_price` cru (custo do LOTE
+inteiro) como valor de acerto de UMA peça consignada — lojista debitado
+pelo lote inteiro por cada peça vendida (POLITRIZ: R$ 2.296 em vez de
+R$ 255). Corrigir pela regra padrão do mercado de consignação: acerto POR
+UNIDADE, na ordem atacado (`selling_price_wholesale`) → custo unitário da
+casa → preço de catálogo como último recurso (nunca sai de graça).
+**Escopo autorizado:** `api/_lib/custoProduto.js` (espelho servidor da
+DIR-18 + `acertoConsignadoUnitario`); `createConsignacao.js` usa a regra
+nova; seção **6-D** nova no `DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`
+registrando a regra oficial; teste `tests/acertoConsignado.test.mjs`.
+**Fora do escopo / proibido:** o motor de liquidação (`consignadoSettle.js`)
+e a aprovação (`manageConsignacao.js`) não mudam — eles só repassam o
+`custo_unitario` gravado no pedido, que agora nasce certo. Consignações JÁ
+criadas com valor inflado (se existirem) não foram tocadas — precisa
+conferir no banco antes (consulta entregue ao dono no chat).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-18.
+**Status:** EM VIGOR — código, testes (457/457, 6 novos) e build passam;
+aguarda conferência do dono e autorização pra publicar junto com a DIR-18.
+
+---
+
 ## DIR-18 — cost_price interpretado de duas formas contraditórias + produtos sem custo
 
 **Emitida por:** dono, depois de ver "Custo do produto: R$ 0,00" no painel de

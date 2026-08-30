@@ -981,3 +981,35 @@ fluxo de pagamento, comissão, `financial_income` ou banco.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência do
 dono no Preview e autorização pra publicar.
+
+---
+
+## REL-19 — Execução da DIR-19
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono decidiu a regra do consignado: "igual é no mercado" — acerto POR
+   UNIDADE vendida. Implementado `acertoConsignadoUnitario` em
+   `api/_lib/custoProduto.js` (espelho servidor da regra da DIR-18):
+   atacado por unidade → custo unitário da casa → catálogo como último
+   recurso.
+2. `createConsignacao.js` passa a usar a regra (o select agora traz
+   `quantity_sold` e `selling_price_wholesale`). Aprovação e liquidação
+   não mudam — só repassam o `custo_unitario` do pedido, que agora nasce
+   certo.
+3. Seção **6-D** nova no `DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`: a regra
+   oficial, o bug que ela corrige e a tabela de onde vive no código.
+4. `tests/acertoConsignado.test.mjs` (6 casos, calibrados no caso real da
+   POLITRIZ: acerto R$ 255,11 e nunca R$ 2.296).
+**O que NÃO foi feito / blockers:** consignações já existentes com
+`custo_unitario` inflado gravado (pendentes ou aprovadas) não foram
+corrigidas — precisa conferir se existem antes; consulta entregue ao dono.
+**Testes:** 457/457 (451 + 6 novos). **Build:** exit 0.
+**Confirmação de escopo:** só os arquivos listados. Motor de liquidação,
+saldos e comissões intactos.
+**Publicado em:** relatório ao dono, no chat; regra registrada na seção 6-D
+do documento oficial.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência e
+autorização de publicação (junto com a DIR-18).
