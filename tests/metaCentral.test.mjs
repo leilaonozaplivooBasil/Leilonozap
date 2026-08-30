@@ -72,3 +72,21 @@ describe('calcularMetaCentral', () => {
     assert.equal(r.online, 0);
   });
 });
+
+describe('ritmoDiario (DIR-24 Fase 3)', () => {
+  test('soma mercadoria real por dia do mês e calcula o necessário/dia', async () => {
+    const { ritmoDiario } = await import('../src/lib/metaCentral.js');
+    const r = ritmoDiario([
+      real({ kind: 'loja', total_amount: 100, created_date: '2026-08-05T10:00:00Z' }),
+      real({ kind: 'arremate', total_amount: 50, created_date: '2026-08-05T15:00:00Z' }),
+      real({ kind: 'produto', total_amount: 30, created_date: '2026-08-30T01:00:00Z' }),
+      real({ kind: 'wallet_deposit', total_amount: 999 }), // depósito não é venda
+      real({ kind: 'loja', total_amount: 999, created_date: '2026-07-05' }), // outro mês
+    ], REF);
+    assert.equal(r.dias.length, 31); // agosto
+    assert.equal(r.dias[4].valor, 150); // dia 5
+    assert.equal(r.dias[29].valor, 30); // dia 30
+    assert.equal(r.diasRestantes, 2); // dia 30 e 31
+    assert.equal(r.necessarioPorDia, (5000000 - 180) / 2);
+  });
+});

@@ -36,6 +36,15 @@ const PURCHASE_STATUS_MAP = {
 const STATUS_PAGO = new Set(['paid', 'entregue', 'enviado', 'confirmado', 'pago', 'concluido', 'preparando', 'saiu_entrega', 'shipped', 'delivered']);
 export const isSalePago = (s) => STATUS_PAGO.has(String(s.status || '').toLowerCase());
 
+// 🔴 DIR-24 (30/08/2026) — "Gasto Total" do cliente é MERCADORIA, não
+// movimentação: depósito em carteira, adesão de cargo e aporte de parceiro
+// NÃO são gasto de compra (o depósito vira compra quando é usado — somar os
+// dois conta o mesmo real duas vezes, defeito já morto nos cards grandes na
+// DIR-14 e que sobrevivia aqui na linha do cliente). Linha sem `kind` é dado
+// legado (anterior à coluna) — conta como mercadoria pra não zerar histórico.
+const KINDS_MERCADORIA = new Set(['loja', 'produto', 'arremate']);
+export const isVendaMercadoria = (s) => !s.kind || KINDS_MERCADORIA.has(s.kind);
+
 export const ROLE_LABEL = {
   vendedor: 'Vendedor',
   licenciado: 'Licenciado',
@@ -124,9 +133,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     });
   });
 
-  // 2) Compras da Loja Virtual — soma por conta real (buyer_id); sem conta, entra avulso
+  // 2) Compras da Loja Virtual — soma por conta real (buyer_id); sem conta, entra avulso.
+  // 🔴 DIR-24 — só venda de MERCADORIA (loja/produto/arremate) toca gasto,
+  // contador, status de compra e linha do tempo; depósito/adesão/aporte são
+  // ignorados aqui (têm seus próprios painéis, com o critério oficial).
   const guestBuyers = new Map();
   catalogSales.forEach((s) => {
+    if (!isVendaMercadoria(s)) return;
     const amount = Number(s.total_amount) || 0;
     const pago = isSalePago(s);
     const target = s.buyer_id && byId.get(s.buyer_id);
@@ -145,10 +158,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     const existing = guestBuyers.get(key);
     const address = [s.buyer_address, s.buyer_cep].filter(Boolean).join(' · ');
     if (existing) {
-      if (pago) existing.total_spent += amount;
+      // 🔴 DIR-24 — convidado recorrente somava só o valor: contador e linha
+      // do tempo paravam na 1ª compra. Agora acumula igual à conta real.
+      if (pago) { existing.total_spent += amount; existing.purchase_count += 1; }
       const mapped = PURCHASE_STATUS_MAP[s.status];
       if (mapped) existing.purchase_status = mapped;
       if (!existing.last_contact || new Date(s.created_date) > new Date(existing.last_contact)) existing.last_contact = s.created_date;
+      existing.purchases.push({ id: s.id, product_title: s.product_title, amount, status: s.status, date: s.created_date });
     } else {
       guestBuyers.set(key, {
         id: `cs_${s.id}`,
@@ -175,12 +191,15 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     }
   });
 
-  // 3) Arremates em Leilões — soma por conta real (winner_id)
+  // 3) Leilões vencidos — contagem e linha do tempo por conta real (winner_id).
+  // 🔴 DIR-24 — o VALOR não soma mais daqui: winner_id sozinho não prova
+  // pagamento (mesma inflação que a DIR-15 matou no painel). O dinheiro do
+  // leilão entra pela venda kind='arremate' PAGA (bloco 2, fonte única);
+  // aqui fica só o fato de ter vencido (contagem + histórico).
   auctions.forEach((a) => {
     if (!a.winner_id) return;
     const target = byId.get(a.winner_id);
     if (!target) return;
-    target.total_spent += Number(a.current_price) || 0;
     target.status = 'cliente';
     target.auctions_won += 1;
     // 🔴 DIR-10 — promove a 'arrematante' com dado real de arremate, só se nenhum
@@ -193,11 +212,32 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
   });
 
   const autoList = [...byId.values(), ...guestBuyers.values()];
-  const autoKeys = new Set(autoList.map((c) => normKey(c.email, c.phone)).filter(Boolean));
+  const autoByKey = new Map();
+  autoList.forEach((c) => {
+    const key = normKey(c.email, c.phone);
+    if (key && !autoByKey.has(key)) autoByKey.set(key, c);
+  });
 
-  // 4) Cadastro manual — só entra se a pessoa não existir em nenhuma fonte automática
-  const manualList = manualCustomers
-    .filter((c) => !autoKeys.has(normKey(c.email, c.phone)))
+  // 4) Cadastro manual — quem também existe numa fonte automática é FUNDIDO
+  // na linha automática (🔴 DIR-24: antes era descartado, e as anotações, o
+  // vendedor atribuído e o follow-up sumiam do CRM junto). Só vira linha
+  // própria quem não existe em nenhuma fonte automática.
+  const manualSoltos = [];
+  manualCustomers.forEach((c) => {
+    const alvo = autoByKey.get(normKey(c.email, c.phone));
+    if (alvo) {
+      alvo.manual_id = c.id;
+      if (c.notes) alvo.notes = c.notes;
+      if (c.assigned_seller) alvo.assigned_seller = c.assigned_seller;
+      if (c.follow_up_date) alvo.follow_up_date = c.follow_up_date;
+      if (c.next_steps) alvo.next_steps = c.next_steps;
+      if (c.cpf && !alvo.cpf) alvo.cpf = c.cpf;
+      alvo.raw = c;
+      return;
+    }
+    manualSoltos.push(c);
+  });
+  const manualList = manualSoltos
     .map((c) => ({
       id: c.id,
       origin_type: 'manual',
@@ -221,6 +261,9 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
       purchases: [],
       auctions_list: [],
       notes: c.notes,
+      follow_up_date: c.follow_up_date || null,
+      next_steps: c.next_steps || '',
+      manual_id: c.id,
       raw: c,
     }));
 

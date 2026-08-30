@@ -1169,3 +1169,58 @@ dias (sem rastro de login hoje).
 total). Nenhuma mudança em receita, comissão, captação (DIR-22) ou banco.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+---
+
+## REL-24 — Execução da DIR-24 (CRM de mercado, 5 fases)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. **Fase 1 — números confiáveis** (`crmUnifiedCustomers.js` + 7 testes):
+   Gasto Total do cliente só conta MERCADORIA (loja/produto/arremate; linha
+   legada sem kind continua contando) — depósito/adesão/aporte fora
+   (dinheiro duplicado eliminado da linha do cliente); valor de leilão vem
+   só da venda kind='arremate' PAGA (winner_id sem pagamento vale troféu,
+   não gasto); convidado recorrente acumula contador e linha do tempo;
+   cliente manual duplicado agora FUNDE na linha automática (notas,
+   vendedor, follow-up e CPF preservados) em vez de sumir. Escopo:
+   clientes manuais filtrados por `created_by_id` (carimbado no cadastro),
+   negociações seguem o cliente; `Customer` sem teto de 500 (listarTudo),
+   Negotiation 200→1000, Seller 100→500.
+2. **Fase 2 — CRM aberto e escopado**: gate `if (!isAdmin)` removido —
+   todo usuário vê o CRM DA PRÓPRIA REDE; visão total segue de
+   admin/super_admin; cards de empresa (estoque, catálogo, metas,
+   dashboard, escada), aba Vendedores e botão Novo Vendedor só na visão
+   total. Estrutura EXECUTIVA continua pendente (DIR-22 Fase 2).
+3. **Fase 3 — visual**: CRM reorganizado em 3 seções (📊 Visão Executiva /
+   👥 Clientes / 🚀 Expansão) com navegação própria; faixa de resumo com os
+   4 números que importam sempre visível (faturamento do mês × meta,
+   volume em negociação, clientes ativos, captação); gráfico de RITMO
+   DIÁRIO do mês na Meta Central (`ritmoDiario` + teste) com "precisa
+   entrar R$ X/dia"; tabela de clientes vira CARTÕES no celular.
+4. **Fase 4 — ação** (`quemContatarHoje.js` + 12 testes +
+   `CrmQuemContatar.jsx`): fila diária "Quem contatar hoje" com dado real
+   (follow-up vencido > pedido não pago > arremate sem pagamento >
+   depósito sem compra > sumido 30d), uma pessoa por vez no motivo mais
+   urgente, ordenada pelo dinheiro; botão WhatsApp com mensagem pronta por
+   motivo (DDI 55). Anotações + data de retorno + próximo passo em
+   QUALQUER cliente (upsert em customers, colunas já existentes — sem
+   migração); com data marcada o cliente entra sozinho na fila do dia.
+5. **Fase 5 — luxo de mercado**: funil kanban por status de compra
+   (`CrmFunilKanban.jsx`); ordenação clicável (nome/gasto/último
+   contato/leilões) + paginação de 50 + busca por CPF + exportação CSV
+   (com BOM pro Excel) na lista; aviso de duplicado NO ATO do cadastro
+   (e-mail/telefone); todos os `alert()` do CRM viraram toast (sonner).
+**O que NÃO foi feito / blockers:** arrastar cartão no kanban (mudança de
+status manual continua pelo perfil — drag exigiria lib nova, registrado);
+escopo por estrutura executiva (DIR-22 Fase 2); cadastros manuais LEGADOS
+sem `created_by_id` aparecem só na visão total (decisão de segurança:
+melhor esconder do que vazar — o dono pode atribuir donos depois).
+**Testes:** 531/531 (511 + 20 novos). **Build:** exit 0.
+**Confirmação de escopo:** critério oficial de dinheiro real intocado
+(cards grandes idênticos); DIR-7 (receita) e baldes da captação intocados;
+nenhuma migração de banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (5 fases) — aguarda conferência no Preview.

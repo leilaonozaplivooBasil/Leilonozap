@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
@@ -8,19 +9,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Users, UserPlus, Search, Filter, Mail, Phone,
-  DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX,
-  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Briefcase,
+  Users, UserPlus, Search, Filter, Mail, Phone, Edit, X, Save, Send, UserCheck, UserX, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { calcularCaptacao } from '@/lib/captacaoParceiros';
-import { calcularMetaCentral } from '@/lib/metaCentral';
+import { calcularMetaCentral, ritmoDiario } from '@/lib/metaCentral';
 import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
 import { resumoEscada } from '@/lib/escadaLicencas';
+import { quemContatarHoje } from '@/lib/quemContatarHoje';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
@@ -29,6 +28,9 @@ import CrmParceirosCompra from './CrmParceirosCompra';
 import CrmMetaCentral from './CrmMetaCentral';
 import CrmDashboardDiretoria from './CrmDashboardDiretoria';
 import CrmEscadaLicencas from './CrmEscadaLicencas';
+import CrmResumo from './CrmResumo';
+import CrmQuemContatar from './CrmQuemContatar';
+import CrmFunilKanban from './CrmFunilKanban';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 
@@ -59,6 +61,12 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [allSellers, setAllSellers] = useState([]);
   const [editingSeller, setEditingSeller] = useState(null);
   const [activeTab, setActiveTab] = useState('customers');
+  // 🧭 DIR-24 Fase 3 — o CRM virou 3 seções navegáveis (Visão Executiva /
+  // Clientes / Expansão). null = ainda não escolheu: visão total abre na
+  // Executiva (os números da diretoria), o resto abre direto em Clientes.
+  const [secao, setSecao] = useState(null);
+  // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
+  const [visaoClientes, setVisaoClientes] = useState('lista');
   const [negotiations, setNegotiations] = useState([]);
   const [sellerFormData, setSellerFormData] = useState({
     name: '',
@@ -134,14 +142,22 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
+  // 🔓 DIR-24 Fase 2 (30/08/2026) — o CRM deixou de ser só de admin: TODO
+  // usuário da Central de Vendas entra e vê o CRM DA PRÓPRIA REDE ("de mim
+  // para baixo", árvore de indicação). Admin/super_admin seguem com a visão
+  // total. O que é da EMPRESA (estoque do galpão, metas, dashboard da
+  // diretoria, escada) continua aparecendo só na visão total — o escopo de
+  // rede filtra usuários, vendas, leilões, parceiros, clientes manuais
+  // (created_by_id) e negociações. Estrutura EXECUTIVA (executivo/diretor
+  // enxergando a carteira designada) continua pendente — DIR-22 Fase 2.
   useEffect(() => {
-    if (!isAdmin) { setIsLoading(false); return; }
+    if (!currentUser?.id) { setIsLoading(false); return; }
     loadCustomers();
     loadSellers();
     loadNegotiations();
     loadProducts();
     loadAutoSources();
-  }, [isAdmin]);
+  }, [currentUser?.id]);
 
   // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app... a
   // menos que quem está olhando seja o super_admin. DIR-10 (27/08/2026), pedido
@@ -184,10 +200,34 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     [partnerPurchases, networkIds, currentUser?.id, isSuperAdmin]
   );
 
+  // 🔴 DIR-24 — clientes MANUAIS também têm escopo: quem não é visão total só
+  // vê os que ELE (ou alguém da rede dele) cadastrou, pelo carimbo
+  // created_by_id gravado no cadastro. Cadastro legado sem carimbo fica só na
+  // visão total (não dá pra saber de quem é — melhor esconder do que vazar).
+  const networkManualCustomers = React.useMemo(
+    () => (isSuperAdmin ? customers : customers.filter(
+      (c) => c.created_by_id && (c.created_by_id === currentUser?.id || networkIds.has(c.created_by_id))
+    )),
+    [customers, networkIds, currentUser?.id, isSuperAdmin]
+  );
+  // Negociação manual segue o cliente: só entra se o cliente dela está no
+  // meu escopo (a tabela não tem dono próprio — o vínculo real é o cliente).
+  const networkNegotiations = React.useMemo(() => {
+    if (isSuperAdmin) return negotiations;
+    const meusClientes = new Set(networkManualCustomers.map((c) => c.id));
+    return negotiations.filter((n) => meusClientes.has(n.customer_id));
+  }, [negotiations, networkManualCustomers, isSuperAdmin]);
+
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
   const unifiedCustomers = React.useMemo(
-    () => buildUnifiedCustomers({ appUsers: networkAppUsers, catalogSales: networkCatalogSales, auctions: networkAuctions, manualCustomers: customers }),
-    [networkAppUsers, networkCatalogSales, networkAuctions, customers]
+    () => buildUnifiedCustomers({ appUsers: networkAppUsers, catalogSales: networkCatalogSales, auctions: networkAuctions, manualCustomers: networkManualCustomers }),
+    [networkAppUsers, networkCatalogSales, networkAuctions, networkManualCustomers]
+  );
+
+  // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
+  const filaContato = React.useMemo(
+    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales }),
+    [unifiedCustomers, networkCatalogSales]
   );
 
   const [detailCustomer, setDetailCustomer] = useState(null);
@@ -228,7 +268,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // entidade — mesmo caminho genérico usado por Customer/Seller/etc.
   const loadNegotiations = async () => {
     try {
-      const data = await plataforma.entities.Negotiation.list('-created_date', 200);
+      const data = await plataforma.entities.Negotiation.list('-created_date', 1000);
       setNegotiations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao carregar negociações:', error);
@@ -241,7 +281,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       const activeSellers = await plataforma.entities.Seller.filter({ is_active: true });
       setSellers(activeSellers);
 
-      const all = await plataforma.entities.Seller.list('-created_date', 100);
+      const all = await plataforma.entities.Seller.list('-created_date', 500);
       setAllSellers(all);
     } catch (error) {
       console.error('Erro ao carregar vendedores:', error);
@@ -251,14 +291,16 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadCustomers = async () => {
     try {
       setIsLoading(true);
-      const data = await plataforma.entities.Customer.list('-created_date', 500);
+      // 🔴 DIR-24 — sem teto de 500 linhas: paginação por id (mesma proteção
+      // contra o corte silencioso de 1000 do Supabase usada nos produtos).
+      const data = await listarTudo(plataforma.entities.Customer);
       setCustomers(data || []);
       setFilteredCustomers(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       setCustomers([]);
       setFilteredCustomers([]);
-      alert('Erro ao carregar clientes - tente novamente');
+      toast.error('Erro ao carregar clientes - tente novamente');
     } finally {
       setIsLoading(false);
     }
@@ -268,10 +310,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     let filtered = unifiedCustomers;
 
     if (searchTerm) {
+      // 🔎 DIR-24 Fase 5 — busca também por CPF (comparando só dígitos, com
+      // ou sem pontuação nos dois lados).
+      const termoDigitos = searchTerm.replace(/\D/g, '');
       filtered = filtered.filter(c =>
         c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone?.includes(searchTerm)
+        c.phone?.includes(searchTerm) ||
+        (termoDigitos.length >= 3 && String(c.cpf || '').replace(/\D/g, '').includes(termoDigitos))
       );
     }
 
@@ -318,11 +364,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const addInterestedProduct = (product) => {
     const exists = formData.interested_products.find(p => p.product_id === product.id);
     if (exists) {
-      alert('Produto já adicionado!');
+      toast.warning('Produto já adicionado!');
       return;
     }
     if (formData.interested_products.length >= 10) {
-      alert('Máximo de 10 produtos!');
+      toast.warning('Máximo de 10 produtos!');
       return;
     }
     setFormData({
@@ -352,15 +398,35 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     });
   }, [productSearchTerm, availableProducts]);
 
+  // ⚠️ DIR-24 Fase 5 — anti-duplicado NO ATO: enquanto digita e-mail/telefone
+  // no cadastro, avisa se a pessoa já existe no CRM (antes o duplicado era
+  // escondido depois, silenciosamente — o vendedor nunca ficava sabendo).
+  const duplicadoNoCadastro = React.useMemo(() => {
+    if (editingCustomer) return null;
+    const email = (formData.email || '').trim().toLowerCase();
+    const fone = (formData.phone || '').replace(/\D/g, '');
+    if (!email && fone.length < 8) return null;
+    return unifiedCustomers.find((c) =>
+      (email && (c.email || '').toLowerCase() === email) ||
+      (fone.length >= 8 && (c.phone || '').replace(/\D/g, '') === fone)
+    ) || null;
+  }, [formData.email, formData.phone, unifiedCustomers, editingCustomer]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (editingCustomer) {
         await plataforma.entities.Customer.update(editingCustomer.id, formData);
-        alert('Cliente atualizado!');
+        toast.success('Cliente atualizado!');
       } else {
-        await plataforma.entities.Customer.create(formData);
-        alert('Cliente cadastrado!');
+        // 🔴 DIR-24 — carimbo do dono do cadastro: é o que permite escopo de
+        // rede nos clientes manuais (cada um vê os seus, visão total vê tudo).
+        await plataforma.entities.Customer.create({
+          ...formData,
+          created_by_id: currentUser?.id || null,
+          created_by: currentUser?.email || null,
+        });
+        toast.success('Cliente cadastrado!');
       }
 
       setFormData({
@@ -386,7 +452,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       await loadCustomers();
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar cliente');
+      toast.error('Erro ao salvar cliente');
     }
   };
 
@@ -394,17 +460,70 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
     try {
       await plataforma.entities.Customer.delete(id);
-      alert('Cliente excluído!');
+      toast.success('Cliente excluído!');
       await loadCustomers();
     } catch (error) {
       console.error('Erro ao excluir:', error);
-      alert('Erro ao excluir cliente');
+      toast.error('Erro ao excluir cliente');
     }
   };
 
   const handleForward = (customer) => {
     setSelectedCustomer(customer);
     setShowForwardModal(true);
+  };
+
+  // 📝 DIR-24 Fase 4 — anotações em QUALQUER cliente: se a pessoa já tem
+  // registro manual (fundido ou não), atualiza; se é 100% automática, cria um
+  // registro na tabela customers só pra segurar nota/follow-up/próximo passo —
+  // na recarga ele FUNDE de volta na linha automática (regra da DIR-24 em
+  // crmUnifiedCustomers.js). Sempre com o carimbo created_by_id do escopo.
+  const handleSaveNotes = async (customer, { notes, follow_up_date, next_steps }) => {
+    try {
+      if (customer.manual_id) {
+        await plataforma.entities.Customer.update(customer.manual_id, { notes, follow_up_date, next_steps });
+      } else {
+        await plataforma.entities.Customer.create({
+          full_name: customer.full_name || 'Sem nome',
+          email: customer.email || '',
+          phone: customer.phone || '',
+          status: customer.status || 'lead',
+          source: 'outro',
+          notes,
+          follow_up_date,
+          next_steps,
+          created_by_id: currentUser?.id || null,
+          created_by: currentUser?.email || null,
+        });
+      }
+      toast.success('Anotações salvas!');
+      await loadCustomers();
+    } catch (error) {
+      console.error('Erro ao salvar anotações:', error);
+      toast.error('Erro ao salvar anotações');
+    }
+  };
+
+  // 📤 DIR-24 Fase 5 — exportação CSV da lista filtrada (o que está na tela é
+  // o que sai no arquivo), com BOM pro Excel abrir acentuação certa.
+  const exportarCsv = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const linhas = [
+      ['Nome', 'Email', 'Telefone', 'CPF', 'Tipo', 'Status', 'Status de compra', 'Origem', 'Último contato', 'Gasto total', 'Leilões arrematados', 'Indicado por'].map(esc).join(';'),
+      ...filteredCustomers.map((c) => [
+        c.full_name, c.email, c.phone, c.cpf, ROLE_LABEL[c.role_type] || 'Cliente', c.status,
+        c.purchase_status, c.source, c.last_contact ? new Date(c.last_contact).toLocaleDateString('pt-BR') : '',
+        (c.total_spent || 0).toFixed(2).replace('.', ','), c.auctions_won || 0, c.referred_by_name || '',
+      ].map(esc).join(';')),
+    ];
+    const blob = new Blob([`﻿${linhas.join('\n')}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `crm-clientes-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${filteredCustomers.length} clientes exportados`);
   };
 
   const handleEditSeller = (seller) => {
@@ -426,11 +545,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       await plataforma.entities.Seller.update(seller.id, {
         is_active: !seller.is_active
       });
-      alert(`Vendedor ${!seller.is_active ? 'ativado' : 'desativado'}!`);
+      toast.success(`Vendedor ${!seller.is_active ? 'ativado' : 'desativado'}!`);
       await loadSellers();
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
-      alert('Erro ao atualizar status');
+      toast.error('Erro ao atualizar status');
     }
   };
 
@@ -439,10 +558,10 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     try {
       if (editingSeller) {
         await plataforma.entities.Seller.update(editingSeller.id, sellerFormData);
-        alert('Vendedor atualizado!');
+        toast.success('Vendedor atualizado!');
       } else {
         await plataforma.entities.Seller.create(sellerFormData);
-        alert('Vendedor cadastrado!');
+        toast.success('Vendedor cadastrado!');
       }
       setSellerFormData({
         name: '',
@@ -458,13 +577,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       await loadSellers();
     } catch (error) {
       console.error('Erro ao salvar vendedor:', error);
-      alert('Erro ao salvar vendedor');
+      toast.error('Erro ao salvar vendedor');
     }
   };
 
   const sendToWhatsApp = async () => {
     if (!selectedSeller) {
-      alert('Selecione um vendedor!');
+      toast.warning('Selecione um vendedor!');
       return;
     }
 
@@ -594,6 +713,10 @@ _Enviado via CRM Leilão NoZap_`;
     () => (isSuperAdmin ? resumoEscada(networkCatalogSales) : null),
     [networkCatalogSales, isSuperAdmin]
   );
+  const ritmo = React.useMemo(
+    () => (isSuperAdmin ? ritmoDiario(networkCatalogSales) : null),
+    [networkCatalogSales, isSuperAdmin]
+  );
 
   const parceirosCompra = React.useMemo(() => {
     // aportes pagos reais por pessoa (venda partner_plan real, somada por buyer)
@@ -659,7 +782,7 @@ _Enviado via CRM Leilão NoZap_`;
   const canceladosValor = networkCatalogSales
     .filter((s) => ehPedidoLoja(s) && STATUS_CANCELADO_NEG.includes(String(s.status || '').toLowerCase()) && isPosMarco(s))
     .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-  const negociacoesManuaisValor = negotiations
+  const negociacoesManuaisValor = networkNegotiations
     .filter(n => n.status === 'em_andamento')
     .reduce((sum, n) => sum + (n.total_value || 0), 0);
 
@@ -707,11 +830,56 @@ _Enviado via CRM Leilão NoZap_`;
     espelhoPainelAlavancagem,
   };
 
-  if (!isAdmin) {
+  // 🧭 DIR-24 Fase 3 — seção ativa e a faixa de resumo (os 4 números que
+  // importam, sempre visíveis, pro leitor apressado e pro alto nível).
+  const secaoAtiva = secao || (isSuperAdmin ? 'executiva' : 'clientes');
+  const brl = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const resumoItens = [
+    isSuperAdmin
+      ? {
+          chave: 'faturamento', rotulo: 'Faturamento do mês', destaque: true,
+          valor: brl(metaCentral?.total || 0),
+          sub: metaCentral ? `${metaCentral.pctTotal.toFixed(1).replace('.', ',')}% da meta de R$ 5 milhões` : null,
+          info: 'Venda real de mercadoria (Loja + Leilões) do mês corrente, contra a Meta Central de R$ 5.000.000/mês.',
+        }
+      : {
+          chave: 'volume', rotulo: 'Volume da sua rede', destaque: true,
+          valor: brl(stats.totalSpent),
+          info: 'Soma do valor que sua rede já comprou/arrematou de verdade — volume transacionado, não a sua comissão.',
+        },
+    {
+      chave: 'negociacao', rotulo: 'Volume em Negociação',
+      valor: brl(stats.volumeNegociacao),
+      sub: `${brl(stats.aguardandoPagamentoValor)} aguardando pagamento`,
+      info: `Dinheiro em jogo mas ainda não fechado, desde 01/08: pedidos gerados e não pagos ${brl(stats.aguardandoPagamentoValor)} + cancelados ${brl(stats.canceladosValor)} + negociações manuais ${brl(stats.negociacoesManuaisValor)}.`,
+    },
+    {
+      chave: 'clientes', rotulo: 'Clientes Ativos',
+      valor: stats.clientes,
+      sub: `${stats.total} contatos no total`,
+      info: 'Pessoas do seu escopo que já compraram na Loja ou arremataram pelo menos um leilão de verdade.',
+    },
+    {
+      chave: 'captacao', rotulo: 'Captação (meta R$ 1 mi)',
+      valor: brl(captacao.total),
+      sub: `faltam ${brl(captacao.faltam)}`,
+      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). Detalhe na seção Expansão.',
+    },
+  ];
+
+  const SECOES = [
+    { id: 'executiva', rotulo: '📊 Visão Executiva' },
+    { id: 'clientes', rotulo: '👥 Clientes' },
+    { id: 'expansao', rotulo: '🚀 Expansão' },
+  ];
+
+  // 🔓 DIR-24 Fase 2 — sem gate de admin: quem não é visão total já chega
+  // aqui com TODAS as fontes filtradas pela própria rede (memos network*).
+  if (!currentUser?.id) {
     return (
       <div className="text-center py-16 bg-white border border-nz-borda rounded-2xl">
         <ShieldAlert className="w-12 h-12 mx-auto text-nz-tinta-fraca/50 mb-3" />
-        <p className="text-nz-tinta-fraca">Acesso restrito a administradores.</p>
+        <p className="text-nz-tinta-fraca">Entre na sua conta para ver o seu CRM.</p>
       </div>
     );
   }
@@ -732,14 +900,16 @@ _Enviado via CRM Leilão NoZap_`;
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">CRM - Gestão de Clientes</h1>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            <Button
-              onClick={() => setShowSellerModal(true)}
-              className="bg-nz-marrom hover:bg-nz-marrom-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
-            >
-              <UserPlus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Novo Vendedor</span>
-              <span className="sm:hidden">Vendedor</span>
-            </Button>
+            {isSuperAdmin && (
+              <Button
+                onClick={() => setShowSellerModal(true)}
+                className="bg-nz-marrom hover:bg-nz-marrom-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                <UserPlus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Vendedor</span>
+                <span className="sm:hidden">Vendedor</span>
+              </Button>
+            )}
             <Button
               onClick={() => {
                 setEditingCustomer(null);
@@ -772,41 +942,73 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
 
-        <CrmStatsCards
-          stats={stats}
-          isSuperAdmin={isSuperAdmin}
-          purchaseStatusFilter={purchaseStatusFilter}
-          onPurchaseStatusClick={setPurchaseStatusFilter}
-        />
+        {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
+        <CrmResumo itens={resumoItens} />
 
-        {/* 🚀 DIR-23 — Meta Central R$ 5M/mês + Dashboard da Diretoria (só visão total) */}
-        {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} />}
-        {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={kpisDiretoria} />}
+        {/* Navegação das 3 seções do CRM */}
+        <div className="flex gap-1.5 mb-4 sm:mb-5 rounded-xl border border-nz-borda bg-nz-cinza-fundo p-1">
+          {SECOES.map(({ id, rotulo }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setSecao(id)}
+              className={`flex-1 rounded-lg px-2 py-2 text-xs sm:text-sm font-semibold transition-colors ${
+                secaoAtiva === id ? 'bg-white text-nz-verde shadow-sm border border-nz-verde/30' : 'text-nz-tinta-fraca hover:text-nz-tinta'
+              }`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
 
-        {/* 🎯 DIR-22 — Gestão de Parceiros de Compra + meta de R$ 1 milhão */}
-        <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
+        {/* ══ 📊 VISÃO EXECUTIVA — dinheiro, metas e diretoria ══ */}
+        {secaoAtiva === 'executiva' && (
+          <>
+            {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
+            {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={kpisDiretoria} />}
+            <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} parte="executiva" />
+          </>
+        )}
 
-        {/* 🪜 DIR-23 — Escada oficial de licenças × vendas reais (só visão total) */}
-        {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
+        {/* ══ 🚀 EXPANSÃO — captação, parceiros e escada de licenças ══ */}
+        {secaoAtiva === 'expansao' && (
+          <>
+            <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
+            {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
+          </>
+        )}
 
-        {/* TABS */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
+        {/* ══ 👥 CLIENTES — a operação do dia a dia ══ */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className={`mb-4 sm:mb-6 ${secaoAtiva === 'clientes' ? '' : 'hidden'}`}>
           <TabsList className="bg-white border border-nz-borda w-full sm:w-auto">
             <TabsTrigger value="customers" className="data-[state=active]:bg-nz-verde data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
-            <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
-              Vendedores
-            </TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
+                Vendedores
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="customers">
+            {/* 📞 DIR-24 Fase 4 — a fila de ação vem ANTES de tudo: é o que
+                transforma o CRM de relatório em ferramenta de venda. */}
+            <CrmQuemContatar fila={filaContato} onAbrirCliente={setDetailCustomer} />
+
+            <CrmStatsCards
+              stats={stats}
+              isSuperAdmin={isSuperAdmin}
+              parte="clientes"
+              purchaseStatusFilter={purchaseStatusFilter}
+              onPurchaseStatusClick={setPurchaseStatusFilter}
+            />
             {/* FILTROS DE CLIENTES */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nz-tinta-fraca" />
             <Input
-              placeholder="Buscar por nome, email ou telefone..."
+              placeholder="Buscar por nome, email, telefone ou CPF..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-white text-nz-tinta border-nz-borda"
@@ -867,15 +1069,46 @@ _Enviado via CRM Leilão NoZap_`;
           </Button>
           </div>
 
-          <CrmCustomersTable
-            customers={filteredCustomers}
-            onForward={handleForward}
-            onDelete={handleDelete}
-            onRowClick={setDetailCustomer}
-          />
+          {/* 🌊 DIR-24 Fase 5 — alternador Lista/Funil + exportação CSV */}
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex gap-1 rounded-lg border border-nz-borda bg-nz-cinza-fundo p-0.5">
+              <button
+                type="button"
+                onClick={() => setVisaoClientes('lista')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold ${visaoClientes === 'lista' ? 'bg-white text-nz-verde shadow-sm' : 'text-nz-tinta-fraca'}`}
+              >
+                Lista
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisaoClientes('funil')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold ${visaoClientes === 'funil' ? 'bg-white text-nz-verde shadow-sm' : 'text-nz-tinta-fraca'}`}
+              >
+                Funil
+              </button>
+            </div>
+            <Button onClick={exportarCsv} variant="outline" size="sm" className="border-nz-borda text-nz-tinta hover:bg-nz-cinza-fundo text-xs">
+              Exportar CSV ({filteredCustomers.length})
+            </Button>
+          </div>
+
+          {visaoClientes === 'funil' ? (
+            <CrmFunilKanban customers={filteredCustomers} onAbrirCliente={setDetailCustomer} />
+          ) : (
+            <CrmCustomersTable
+              customers={filteredCustomers}
+              onForward={handleForward}
+              onDelete={handleDelete}
+              onRowClick={setDetailCustomer}
+            />
+          )}
 
           {detailCustomer && (
-            <CrmCustomerDetailModal customer={detailCustomer} onClose={() => setDetailCustomer(null)} />
+            <CrmCustomerDetailModal
+              customer={detailCustomer}
+              onClose={() => setDetailCustomer(null)}
+              onSaveNotes={handleSaveNotes}
+            />
           )}
           </TabsContent>
 
@@ -1230,6 +1463,14 @@ _Enviado via CRM Leilão NoZap_`;
               </CardHeader>
               <CardContent className="overflow-y-auto flex-1 p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {duplicadoNoCadastro && (
+                    <div className="rounded-lg border border-amber-500/60 bg-amber-500/10 p-3 flex items-start gap-2">
+                      <TriangleAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <p className="text-sm text-amber-300">
+                        <span className="font-semibold">{duplicadoNoCadastro.full_name}</span> já existe no seu CRM com este {(formData.email || '').trim() && (duplicadoNoCadastro.email || '').toLowerCase() === formData.email.trim().toLowerCase() ? 'e-mail' : 'telefone'} — salvar de novo cria um cadastro duplicado. Prefira abrir o perfil que já existe e anotar por lá.
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-gray-300">Nome Completo *</Label>

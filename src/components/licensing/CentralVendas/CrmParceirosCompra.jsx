@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Target, TrendingUp, HandCoins } from 'lucide-react';
+import { Target, HandCoins } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 import { BUCKETS_CAPTACAO } from '@/lib/captacaoParceiros';
 

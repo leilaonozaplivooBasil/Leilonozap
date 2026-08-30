@@ -43,7 +43,7 @@ function Trilho({ icone: Icone, titulo, valor, meta, semFonte, detalhe }) {
   );
 }
 
-export default function CrmMetaCentral({ metaCentral }) {
+export default function CrmMetaCentral({ metaCentral, ritmo }) {
   const pct = Math.min(100, metaCentral.pctTotal);
   const agora = new Date();
   const mesLabel = `${MESES[agora.getMonth()]}/${agora.getFullYear()}`;
@@ -65,7 +65,7 @@ export default function CrmMetaCentral({ metaCentral }) {
           <div className="h-full bg-nz-verde rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <Trilho
             icone={Globe}
             titulo="Online (Loja Virtual + Leilões)"
@@ -82,6 +82,32 @@ export default function CrmMetaCentral({ metaCentral }) {
             detalhe="O sistema ainda não registra venda física — o trilho ativa quando existir lançamento."
           />
         </div>
+
+        {/* 📈 DIR-24 Fase 3 — ritmo diário: venda real de mercadoria por dia
+            do mês. A barra mais alta calibra a escala; o rodapé diz quanto
+            precisa entrar POR DIA daqui pra frente pra fechar a meta. */}
+        {ritmo && (
+          <div>
+            <p className="text-xs text-nz-tinta-fraca mb-2 uppercase tracking-wide">Ritmo diário do mês</p>
+            <div className="flex items-end gap-[2px] h-16 rounded-lg border border-nz-borda bg-nz-cinza-fundo p-1.5">
+              {ritmo.dias.map(({ dia, valor }) => {
+                const max = Math.max(...ritmo.dias.map((d) => d.valor), 1);
+                const alturaPct = valor > 0 ? Math.max(8, (valor / max) * 100) : 0;
+                return (
+                  <div key={dia} className="flex-1 flex flex-col justify-end h-full" title={`Dia ${dia}: ${fmtBRL(valor)}`}>
+                    <div
+                      className={`w-full rounded-sm ${valor > 0 ? 'bg-nz-verde' : 'bg-nz-borda'}`}
+                      style={{ height: valor > 0 ? `${alturaPct}%` : '2px' }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-nz-tinta-fraca mt-1.5">
+              Pra fechar a meta neste mês, precisa entrar <span className="font-semibold text-nz-tinta">{fmtBRL(ritmo.necessarioPorDia)}/dia</span> nos {ritmo.diasRestantes} dias restantes.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

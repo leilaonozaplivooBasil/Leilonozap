@@ -29,6 +29,32 @@ export function mesmoMes(dataVenda, ref) {
  * @param sales linhas de catalog_sales (plataforma inteira — painel só de visão total)
  * @param ref Date dentro do mês que se quer medir
  */
+/**
+ * Ritmo diário do mês contra a meta (DIR-24 Fase 3): venda real de
+ * mercadoria por dia do mês de referência + quanto precisa entrar POR DIA
+ * daqui até o fim do mês pra fechar a meta. É o gráfico de barras do painel.
+ * @returns {{dias: Array<{dia:number, valor:number}>, necessarioPorDia:number, diasRestantes:number}}
+ */
+export function ritmoDiario(sales = [], ref = new Date()) {
+  const ano = ref.getUTCFullYear();
+  const mes = ref.getUTCMonth();
+  const totalDias = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
+  const hoje = ref.getUTCDate();
+  const dias = Array.from({ length: totalDias }, (_, i) => ({ dia: i + 1, valor: 0 }));
+  let acumulado = 0;
+  for (const s of sales) {
+    if (!isVendaReal(s) || !mesmoMes(s.created_date, ref)) continue;
+    if (!['loja', 'produto', 'arremate'].includes(s.kind)) continue;
+    const d = new Date(s.created_date).getUTCDate();
+    const valor = Number(s.total_amount) || 0;
+    dias[d - 1].valor += valor;
+    acumulado += valor;
+  }
+  const diasRestantes = Math.max(1, totalDias - hoje + 1); // hoje ainda conta
+  const necessarioPorDia = Math.max(0, META_VENDAS_MES - acumulado) / diasRestantes;
+  return { dias, necessarioPorDia, diasRestantes };
+}
+
 export function calcularMetaCentral(sales = [], ref = new Date()) {
   const doMes = sales.filter((s) => isVendaReal(s) && mesmoMes(s.created_date, ref));
   const soma = (lista) => lista.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);

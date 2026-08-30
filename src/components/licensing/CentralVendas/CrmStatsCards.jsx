@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Users, TrendingUp, Briefcase, DollarSign, ShoppingCart,
+  Users, TrendingUp, DollarSign, ShoppingCart,
   MessageSquare, Clock, CheckCircle, Package, Truck, XCircle,
   Gavel, Store, Award, Landmark, Gavel as GavelIcon, UserCheck, Wallet
 } from 'lucide-react';
@@ -75,38 +75,85 @@ function MiniStat({ label, value, sub, highlight }) {
 // produção: "R$ 50.485,429" em vez de "R$ 50.485,43".
 const fmtBRL = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilter, onPurchaseStatusClick }) {
+// 🧭 DIR-24 Fase 3 — o painelzão único virou DUAS partes, renderizadas em
+// seções diferentes do CRM (prop `parte`): 'executiva' = os números de
+// dinheiro/volume (Volume Financeiro, Espelho do Painel de Alavancagem,
+// movimentação); 'clientes' = os números de gente (contatos, leads, papéis
+// da rede e o funil de status clicável). O antigo top de 5 cards foi
+// absorvido: 3 deles viraram a faixa de resumo (CrmResumo, sempre visível)
+// e 2 (Total de Contatos, Leads) vivem na parte de clientes.
+export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilter, onPurchaseStatusClick, parte = 'executiva' }) {
+  if (parte === 'clientes') {
+    return (
+      <>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <StatCard
+            label="Total de Contatos" value={stats.total} icon={Users}
+            info={isSuperAdmin
+              ? 'Todo mundo cadastrado na plataforma (usuários reais) + clientes cadastrados manualmente que não têm conta.'
+              : 'Todo mundo dentro da sua rede de indicação — quem você indicou, direta ou indiretamente.'}
+          />
+          <StatCard
+            label="Leads" value={stats.leads} icon={TrendingUp}
+            info="Cadastrados que ainda não compraram nada nem arremataram um leilão."
+          />
+          <StatCard
+            label="Clientes Ativos" value={stats.clientes} icon={Users}
+            info="Já compraram na Loja ou arremataram pelo menos um leilão de verdade."
+          />
+          <StatCard
+            label="Leilões Arrematados" value={stats.leiloesArrematados} icon={Gavel}
+            info="Quantidade de leilões vencidos de verdade (Auction.winner_id) por pessoas do seu escopo."
+          />
+        </div>
+
+        {/* Rede por Tipo — Vendedor, Licenciado, Influencer, Investidor, Leiloeiro, Arrematante */}
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          {ROLE_CARDS.map(({ key, label, icon: Icon, info }) => (
+            <Card key={key} className="bg-white border-nz-borda">
+              <CardContent className="p-3">
+                <div className="text-center">
+                  <Icon className="w-5 h-5 mx-auto mb-1.5 text-nz-marrom" />
+                  <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center">
+                    {label}
+                    <StatInfoTooltip text={info} />
+                  </p>
+                  <p className="text-xl font-bold text-nz-tinta">{stats[key]}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          {PURCHASE_CARDS.map(({ key, label, icon: Icon, info }) => {
+            const ativo = purchaseStatusFilter === key;
+            return (
+              <Card
+                key={key}
+                className={`cursor-pointer transition-all ${ativo ? 'bg-nz-verde-fundo border-nz-verde ring-2 ring-nz-verde/40' : 'bg-white border-nz-borda hover:bg-nz-cinza-fundo'}`}
+                onClick={() => onPurchaseStatusClick(ativo ? 'all' : key)}
+              >
+                <CardContent className="p-3">
+                  <div className="text-center">
+                    <Icon className={`w-6 h-6 mx-auto mb-2 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
+                    <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center">
+                      {label}
+                      <StatInfoTooltip text={info} />
+                    </p>
+                    <p className="text-2xl font-bold text-nz-tinta">{key === 'sem_compra' ? stats.semCompra : stats[key]}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <StatCard
-          label="Total de Contatos" value={stats.total} icon={Users}
-          info={isSuperAdmin
-            ? 'Todo mundo cadastrado na plataforma (usuários reais) + clientes cadastrados manualmente que não têm conta.'
-            : 'Todo mundo dentro da sua rede de indicação — quem você indicou, direta ou indiretamente.'}
-        />
-        <StatCard
-          label="Leads" value={stats.leads} icon={TrendingUp}
-          info="Cadastrados que ainda não compraram nada nem arremataram um leilão."
-        />
-        <StatCard
-          label="Clientes Ativos" value={stats.clientes} icon={Users}
-          info="Já compraram na Loja ou arremataram pelo menos um leilão de verdade."
-        />
-        <StatCard
-          label="Volume em Negociação" value={fmtBRL(stats.volumeNegociacao)} icon={Briefcase} highlight
-          info={`Dinheiro em jogo mas ainda não fechado, desde 01/08: pedidos gerados e não pagos (chegou no carrinho, gerou pedido e desistiu ou está aguardando) ${fmtBRL(stats.aguardandoPagamentoValor)} + pedidos cancelados pela instituição/pagamento ${fmtBRL(stats.canceladosValor)} + negociações manuais em andamento ${fmtBRL(stats.negociacoesManuaisValor)}.`}
-        />
-        <StatCard
-          label={isSuperAdmin ? 'Faturamento Bruto (Loja Virtual)' : 'Volume Transacionado'}
-          value={fmtBRL(stats.totalSpent)}
-          icon={DollarSign}
-          info={isSuperAdmin
-            ? 'Valor comprado de verdade na Loja Virtual/PDV desde o lançamento oficial (01/08): pedidos pagos e confirmados, valor cheio. A comissão (receita da empresa, usada no imposto do Simples) continua no módulo Financeiro — este card mostra o bruto, por decisão do dono.'
-            : 'Soma do valor total que sua rede já comprou/arrematou — não é a sua comissão, é o volume transacionado por ela.'}
-        />
-      </div>
-
       {/* 💰 DIR-14/DIR-15 — "quero tudo, tudo, tudo": depósito + venda bruta de
           Loja/PDV + venda bruta de leilão, num card à parte, com cor e nome bem
           diferentes do Faturamento Total (que é só a comissão) pra nunca mais
@@ -168,63 +215,20 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
         </CardContent>
       </Card>
 
-      {/* Movimentação real: leilões arrematados + estoque disponível */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <StatCard
-          label="Leilões Arrematados" value={stats.leiloesArrematados} icon={Gavel}
-          info="Quantidade de leilões vencidos de verdade (Auction.winner_id) por pessoas do seu escopo."
-        />
-        <StatCard
-          label="Produtos no Catálogo" value={stats.produtosDisponiveis} icon={Package}
-          info="Produtos publicados na vitrine online (catalog_active) com estoque disponível. O galpão inteiro tem mais produtos que ainda não foram publicados — o Valor Investido ao lado conta TODOS."
-        />
-        <StatCard
-          label="Valor Investido em Estoque" value={fmtBRL(stats.valorEstoque)} icon={DollarSign} wide
-          info="Custo real parado em estoque AGORA, no galpão inteiro (publicado ou não): fatia não vendida do custo de cada lote, contando também o estoque físico da conferência de entrada (Perfeito/Bom/Oficina/Ruim). Não inclui a parte dos lotes que já foi vendida."
-        />
-      </div>
-
-      {/* Rede por Tipo — Vendedor, Licenciado, Influencer, Investidor, Leiloeiro, Arrematante */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
-        {ROLE_CARDS.map(({ key, label, icon: Icon, info }) => (
-          <Card key={key} className="bg-white border-nz-borda">
-            <CardContent className="p-3">
-              <div className="text-center">
-                <Icon className="w-5 h-5 mx-auto mb-1.5 text-nz-marrom" />
-                <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center">
-                  {label}
-                  <StatInfoTooltip text={info} />
-                </p>
-                <p className="text-xl font-bold text-nz-tinta">{stats[key]}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
-        {PURCHASE_CARDS.map(({ key, label, icon: Icon, info }) => {
-          const ativo = purchaseStatusFilter === key;
-          return (
-            <Card
-              key={key}
-              className={`cursor-pointer transition-all ${ativo ? 'bg-nz-verde-fundo border-nz-verde ring-2 ring-nz-verde/40' : 'bg-white border-nz-borda hover:bg-nz-cinza-fundo'}`}
-              onClick={() => onPurchaseStatusClick(ativo ? 'all' : key)}
-            >
-              <CardContent className="p-3">
-                <div className="text-center">
-                  <Icon className={`w-6 h-6 mx-auto mb-2 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
-                  <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center">
-                    {label}
-                    <StatInfoTooltip text={info} />
-                  </p>
-                  <p className="text-2xl font-bold text-nz-tinta">{key === 'sem_compra' ? stats.semCompra : stats[key]}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* 🔓 DIR-24 — catálogo e estoque são números da EMPRESA (galpão
+          inteiro), não da rede de quem olha: só aparecem na visão total. */}
+      {isSuperAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <StatCard
+            label="Produtos no Catálogo" value={stats.produtosDisponiveis} icon={Package}
+            info="Produtos publicados na vitrine online (catalog_active) com estoque disponível. O galpão inteiro tem mais produtos que ainda não foram publicados — o Valor Investido ao lado conta TODOS."
+          />
+          <StatCard
+            label="Valor Investido em Estoque" value={fmtBRL(stats.valorEstoque)} icon={DollarSign} wide
+            info="Custo real parado em estoque AGORA, no galpão inteiro (publicado ou não): fatia não vendida do custo de cada lote, contando também o estoque físico da conferência de entrada (Perfeito/Bom/Oficina/Ruim). Não inclui a parte dos lotes que já foi vendida."
+          />
+        </div>
+      )}
     </>
   );
 }

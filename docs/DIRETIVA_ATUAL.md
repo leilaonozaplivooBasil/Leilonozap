@@ -12,6 +12,61 @@
 
 ---
 
+## DIR-24 — CRM de mercado: números confiáveis, acesso escopado, visual em seções, ação e funil
+
+**Emitida por:** dono (30/08/2026): pediu análise sênior de TODO o CRM
+(visual, entendimento, cadastro, escopo por pessoa, "que não perca pra
+nenhum CRM do mercado"); a análise foi entregue no chat com 5 fases em
+ordem de prioridade e ele autorizou: "SIGO SUA RECOMENDAÇÃO, PODE FAZER,
+CAPRICHE E MELHORE O VISUAL TAMBÉM".
+**Data:** 30/08/2026.
+**Achados que motivaram (conferidos no código):** o CRM escopado por rede
+existe mas está trancado (`if (!isAdmin)` — licenciado clica CRM e recebe
+"sem acesso"); "Gasto Total" por cliente soma depósito/adesão/aporte
+(dinheiro duplicado) e arremate NÃO PAGO (current_price da tabela
+auctions sem checar pagamento); clientes manuais (`Customer.list(500)`) e
+negociações (`Negotiation.list(200)`) carregam SEM escopo de rede;
+convidado recorrente não incrementa contador nem linha do tempo; cliente
+manual que também é usuário some do CRM levando notas/vendedor junto
+(dedupe descarta em vez de fundir).
+**Escopo autorizado (5 fases, nesta ordem):**
+1. **Números confiáveis** (`crmUnifiedCustomers.js`): gasto do cliente só
+   com mercadoria (loja/produto/arremate; kind legado sem valor conta —
+   dado antigo); depósito/adesão/aporte fora do gasto; arremate só pago;
+   valor de leilão vem da venda kind='arremate' (fonte única), tabela
+   auctions só pra contagem/linha do tempo; convidado recorrente soma
+   certo; manual duplicado FUNDE (notas, vendedor, follow-up) na linha
+   automática em vez de sumir. Escopo de Customer/Negotiation por
+   `created_by_id`/clientes visíveis; carimbo de `created_by_id` no
+   cadastro. Testes.
+2. **Abrir o CRM escopado**: destrancar o gate — todo usuário da Central
+   de Vendas vê o CRM DA PRÓPRIA REDE (árvore de indicação já
+   implementada); admin/super_admin seguem com visão total; cards de
+   empresa (estoque, metas, dashboard, escada) continuam só na visão
+   total. (Escopo por ESTRUTURA EXECUTIVA continua sendo a Fase 2 da
+   DIR-22 — pendência mantida.)
+3. **Visual em seções**: sub-navegação interna (Visão Executiva /
+   Clientes / Expansão) + faixa de resumo com 4 números sempre visível +
+   ritmo diário do mês contra a meta + tabela vira cartões no celular +
+   rótulos de período nos cards.
+4. **Ação**: painel "Quem contatar hoje" (pedido gerado e não pago,
+   depósito sem compra, arremate não pago, sumido 30d, follow-up vencido)
+   com botão WhatsApp e mensagem pronta por motivo; anotações + data de
+   retorno em QUALQUER cliente (upsert na tabela customers via
+   e-mail/telefone — colunas notes/follow_up_date/next_steps já existem,
+   sem migração).
+5. **Luxo de mercado**: funil kanban por status de compra, ordenação e
+   paginação na tabela, busca por CPF, export CSV, aviso de duplicado no
+   cadastro, `alert()` → toast (sonner, já montado no app).
+**Fora do escopo / proibido:** regra de reconhecimento de receita
+(DIR-7); critério oficial de dinheiro real (dinheiroReal.js — os cards
+grandes NÃO mudam); ordem dos baldes da captação; migração de banco.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-23.
+**Status:** EM VIGOR — 5 fases implementadas; testes 531/531, build ok;
+aguarda conferência do dono no Preview.
+
+---
+
 ## DIR-23 — Metas internas oficiais no CRM: Meta Central R$ 5 milhões, Dashboard da Diretoria e Escada de Licenças
 
 **Emitida por:** dono (30/08/2026). Enviou dois materiais oficiais — o
