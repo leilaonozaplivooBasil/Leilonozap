@@ -12,6 +12,32 @@
 
 ---
 
+## DIR-26 — Ticket médio unificado: a meta de R$ 252 é POR COMPRADOR
+
+**Emitida por:** dono (30/08/2026, com prints): "confere as informações de
+ticket médio no CRM — um tá falando uma coisa e outro outra coisa; acho
+que o certo é 272, não é?".
+**Data:** 30/08/2026.
+**Diagnóstico (conferido no código, explicado no chat):** os dois cards
+mediam coisas DIFERENTES — Dashboard da Diretoria: R$ 118,65 = mercadoria
+real do mês ÷ 31 PEDIDOS (por pedido); Espelho: R$ 272,18 = (depósitos
+R$ 3.600 + compras R$ 3.476,80, desde 01/08) ÷ 26 COMPRADORES (cópia
+proposital do Painel de Alavancagem — soma depósito e não é mensal).
+Nenhum dos dois compara certo com a meta de R$ 252 do Resumo Executivo,
+que é gasto POR COMPRADOR/mês (é como o documento constrói os R$ 4M:
+compradores × R$ 252).
+**Escopo autorizado:** KPI ticket_medio do Dashboard da Diretoria passa a
+ser mercadoria real do mês ÷ COMPRADORES ÚNICOS do mês; rótulo vira
+"Ticket médio por comprador (mês)"; tooltip explica a diferença pro
+número do Espelho. O Espelho NÃO muda (regra do dono: cópia célula a
+célula do Painel de Alavancagem). Teste atualizado.
+**Fora do escopo / proibido:** Espelho do Painel de Alavancagem; critério
+de dinheiro real.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-25.
+**Status:** EM VIGOR — corrigido; aguarda conferência no Preview.
+
+---
+
 ## DIR-25 — Cadastro manual do CRM: interesses com produtos, planos de parceiro e licenças (valores editáveis)
 
 **Emitida por:** dono (30/08/2026, com print do modal Novo Cliente):

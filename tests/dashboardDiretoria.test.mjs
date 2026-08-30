@@ -70,15 +70,16 @@ describe('fórmulas dos calculáveis', () => {
     assert.equal(kpi.realizado, 3 / 2);
   });
 
-  test('ticket médio = vendas de mercadoria reais do mês ÷ quantidade', () => {
+  test('ticket médio = mercadoria real do mês ÷ COMPRADORES únicos (DIR-26: a meta R$ 252 é por comprador)', () => {
     const sales = [
-      real({ kind: 'loja', total_amount: 100 }),
-      real({ kind: 'arremate', total_amount: 50 }),
-      real({ kind: 'wallet_deposit', total_amount: 999 }), // depósito não é mercadoria
-      real({ kind: 'loja', total_amount: 999, created_date: '2026-07-01' }), // outro mês
+      real({ kind: 'loja', buyer_id: 'u1', total_amount: 100 }),
+      real({ kind: 'arremate', buyer_id: 'u1', total_amount: 50 }), // mesma pessoa: 2 pedidos, 1 comprador
+      real({ kind: 'loja', buyer_id: 'u2', total_amount: 30 }),
+      real({ kind: 'wallet_deposit', buyer_id: 'u3', total_amount: 999 }), // depósito não é mercadoria
+      real({ kind: 'loja', buyer_id: 'u4', total_amount: 999, created_date: '2026-07-01' }), // outro mês
     ];
     const kpi = calcularDashboardDiretoria({ sales, ref: REF }).find((k) => k.id === 'ticket_medio');
-    assert.equal(kpi.realizado, 75);
+    assert.equal(kpi.realizado, 180 / 2); // R$ 180 ÷ 2 compradores, não ÷ 3 pedidos
   });
 
   test('venda online e faturamento total usam a MESMA função da Meta Central', () => {

@@ -1261,3 +1261,21 @@ follow_up_date, next_steps, purchase_value, interested_products já
 existiam); escada e planos só leitura.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+
+---
+
+## REL-26 — Execução da DIR-26 (ticket médio por comprador)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:** KPI "Ticket médio" do Dashboard da Diretoria
+recalculado: mercadoria real do mês ÷ compradores únicos do mês (antes
+dividia por pedidos — R$ 118,65 vs meta R$ 252, comparação errada de
+unidade). Rótulo e tooltip agora dizem POR COMPRADOR e explicam por que o
+"Ticket médio / comprador" do Espelho é outro número (soma depósitos e é
+desde 01/08 — cópia proposital do Painel de Alavancagem, intocada).
+Resposta ao dono: nem 118 nem 272 eram o certo pra meta — 272 soma
+depósito (mesmo real duas vezes) e não é mensal.
+**Testes:** 531/531 (teste do KPI atualizado). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.

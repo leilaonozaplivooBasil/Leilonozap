@@ -22,7 +22,7 @@ export const KPIS_DIRETORIA = [
   { id: 'cadastros_ranking', label: 'Cadastros Ranking/dia', meta: 340, unidade: 'num' },
   { id: 'k_factor', label: 'K-Factor (indicações)', meta: 2, unidade: 'x' },
   { id: 'conversao_digital', label: 'Conversão digital', meta: 6.4, unidade: 'pct' },
-  { id: 'ticket_medio', label: 'Ticket médio', meta: 252, unidade: 'brl' },
+  { id: 'ticket_medio', label: 'Ticket médio por comprador (mês)', meta: 252, unidade: 'brl' },
   { id: 'venda_online', label: 'Venda online (mês)', meta: META_ONLINE_MES, unidade: 'brl' },
   { id: 'venda_fisica', label: 'Venda física (mês)', meta: META_FISICA_MES, unidade: 'brl' },
   { id: 'faturamento_total', label: 'Faturamento total (mês)', meta: META_VENDAS_MES, unidade: 'brl' },
@@ -66,14 +66,20 @@ export function calcularDashboardDiretoria({ sales = [], users = [], ref = new D
   const compradoresUnicos = new Set(vendasReais.map((s) => s.buyer_id).filter(Boolean)).size;
   const conversao = users.length ? (compradoresUnicos / users.length) * 100 : 0;
 
-  // 7) Ticket médio do mês — vendas de mercadoria reais (Loja + Leilão).
+  // 7) Ticket médio do mês — POR COMPRADOR, não por pedido (DIR-26,
+  // conferência do dono em 30/08): a meta de R$ 252 do Resumo Executivo é
+  // gasto por comprador/mês (é assim que o documento constrói os R$ 4M:
+  // compradores × R$ 252). Dividir pelo nº de pedidos subestimava o KPI.
+  // Só mercadoria real (Loja + Leilão) — depósito NÃO entra (vira compra
+  // quando é gasto; somar os dois contaria o mesmo real duas vezes).
   const vendasMercadoriaMes = vendasReais.filter(
     (s) => ['loja', 'produto', 'arremate'].includes(s.kind)
       && new Date(s.created_date).getUTCFullYear() === ref.getUTCFullYear()
       && new Date(s.created_date).getUTCMonth() === ref.getUTCMonth()
   );
   const somaMes = vendasMercadoriaMes.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
-  const ticketMedio = vendasMercadoriaMes.length ? somaMes / vendasMercadoriaMes.length : 0;
+  const compradoresMes = new Set(vendasMercadoriaMes.map((s) => s.buyer_id).filter(Boolean)).size;
+  const ticketMedio = compradoresMes ? somaMes / compradoresMes : 0;
 
   // 8/9/10) Metas centrais — mesma função do painel R$ 5M (fonte única).
   const metaCentral = calcularMetaCentral(sales, ref);
@@ -85,7 +91,7 @@ export function calcularDashboardDiretoria({ sales = [], users = [], ref = new D
     cadastros_ranking: { realizado: null, tipo: 'sem_fonte', fonte: 'Precisa de marcação de origem "Ranking" no cadastro — o sistema ainda não mede.' },
     k_factor: { realizado: kFactor, tipo: 'aproximacao', fonte: 'Novos usuários indicados (30d) ÷ indicadores distintos que os trouxeram (árvore referred_by_id).' },
     conversao_digital: { realizado: conversao, tipo: 'dado', fonte: 'Compradores reais únicos ÷ base total de usuários — mesma fórmula do Painel de Alavancagem.' },
-    ticket_medio: { realizado: ticketMedio, tipo: 'dado', fonte: 'Vendas reais de mercadoria do mês (Loja + Leilão): valor ÷ nº de vendas.' },
+    ticket_medio: { realizado: ticketMedio, tipo: 'dado', fonte: 'Vendas reais de mercadoria do mês (Loja + Leilão) ÷ compradores únicos do mês — a meta de R$ 252 do Resumo Executivo é por comprador. Não confundir com o "Ticket médio / comprador" do Espelho, que copia o Painel de Alavancagem (soma depósitos e é desde 01/08, não do mês).' },
     venda_online: { realizado: metaCentral.online, tipo: 'dado', fonte: 'Compras brutas da Loja Virtual + arremates de leilão do mês, critério oficial de dinheiro real.' },
     venda_fisica: { realizado: null, tipo: 'sem_fonte', fonte: 'Não existe lançamento de venda física no sistema ainda.' },
     faturamento_total: { realizado: metaCentral.total, tipo: 'dado', fonte: 'Online + física. Hoje só o online é medido — o número é o piso real, não o total.' },
