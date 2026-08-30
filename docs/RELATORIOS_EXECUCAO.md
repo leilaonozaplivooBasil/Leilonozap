@@ -1482,3 +1482,22 @@ nome/e-mail.
    vínculo de indicação muda.
 **Testes:** 559/559 (10 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".
+
+
+---
+
+## REL-33b — Bloco "Cadastros diretos" na Árvore (complemento da DIR-33)
+
+**Data:** 30/08/2026.
+**Aprovação:** dono confirmou o entendimento no chat e escolheu a opção
+(b): a regra vale pra QUALQUER pessoa da árvore, não só a conta da
+empresa.
+**O que foi feito:** pessoa com 15+ filhos SEM cargo e SEM equipe ganha
+dois blocos: os importantes seguem como cartões individuais e os comuns
+entram numa pasta "Cadastros diretos (N)" — no organograma a pasta abre
+em GRADE compacta (colunas × linhas, aresta só na 1ª linha) em vez de
+esticar a árvore pro lado; na lista abre em coluna normal. Pasta não se
+arrasta, não é alvo de vínculo, não tem menu nem lápis (clique abre/
+fecha). A lupa continua achando quem está dentro (o clique no resultado
+abre a pasta e centraliza). Só visualização — nenhum vínculo muda.
+**Testes:** 559/559. **Build:** exit 0.

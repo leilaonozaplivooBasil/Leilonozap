@@ -157,7 +157,7 @@ export default function TreeHierarchy({
   /* ------------------------------------------------------------------ */
   /* Hierarquia                                                          */
   /* ------------------------------------------------------------------ */
-  const { roots, byId } = useMemo(() => {
+  const { roots, byId, grupoDe } = useMemo(() => {
     const map = new Map((users || []).map((u) => [u.id, { ...u, children: [] }]));
     const rs = [];
     for (const u of users || []) {
@@ -172,6 +172,34 @@ export default function TreeHierarchy({
     };
     rs.forEach(sortRec);
     rs.sort((a, b) => b.children.length - a.children.length);
+
+    // 📦 DIR-33 (bloco 2, aprovado pelo dono): qualquer pessoa com MUITOS
+    // cadastros comuns pendurados (15+ filhos sem cargo e sem equipe) ganha
+    // dois blocos: os importantes continuam como cartões individuais e os
+    // comuns entram numa PASTA "Cadastros diretos (N)" — que no organograma
+    // abre em GRADE compacta em vez de esticar a árvore pro lado. Só a
+    // visualização muda: o vínculo de indicação de cada um continua intacto.
+    const grupoDe = new Map(); // pessoaId → id da pasta que a contém
+    const ehComum = (c) => c.children.length === 0 &&
+      normalizeLevels(c.career_levels).every((id) => id === 'usuario');
+    for (const node of map.values()) {
+      if (node.children.length < 15) continue;
+      const comuns = node.children.filter(ehComum);
+      if (comuns.length < 15) continue;
+      const importantes = node.children.filter((c) => !ehComum(c));
+      const grupo = {
+        id: `grupo_${node.id}`,
+        isGroup: true,
+        full_name: `Cadastros diretos`,
+        primary_career_level: 'usuario',
+        career_levels: [],
+        email: `${comuns.length} cadastros sem cargo e sem equipe`,
+        referred_by_id: node.id,
+        children: comuns,
+      };
+      comuns.forEach((c) => grupoDe.set(c.id, grupo.id));
+      node.children = [...importantes, grupo];
+    }
 
     // ⭐ DIR-33 (ajuste do dono, 30/08): "Diretoria no topo" — TODA a
     // diretoria do pool dos 10% (bloco 'diretor' do plano de carreira: CEO,
@@ -194,9 +222,9 @@ export default function TreeHierarchy({
       }
       diretoria.sort((a, b) => (pesoDe(a) - pesoDe(b)) || (b.children.length - a.children.length));
       const restantes = rs.filter((r) => !diretoria.includes(r));
-      return { roots: [...diretoria, ...restantes], byId: map };
+      return { roots: [...diretoria, ...restantes], byId: map, grupoDe };
     }
-    return { roots: rs, byId: map };
+    return { roots: rs, byId: map, grupoDe };
   }, [users, execTopo]);
 
   // Primeiro impacto: só a raiz principal aberta (um nível), não a rede inteira
@@ -232,6 +260,29 @@ export default function TreeHierarchy({
       if (!kids.length) {
         main = cursor;
         cursor += mode === 'chart' ? V.slot : H.row;
+      } else if (node.isGroup && mode === 'chart') {
+        // 📦 DIR-33 — pasta aberta no organograma vira GRADE (colunas ×
+        // linhas) em vez de uma fileira quilométrica; os cadastros comuns
+        // não têm filhos, então as linhas descem sem colidir com nada.
+        const cols = Math.min(8, Math.max(4, Math.ceil(Math.sqrt(kids.length))));
+        const start = cursor;
+        placedKids = kids.map((k, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const placed = {
+            id: k.id, data: k,
+            main: start + col * V.slot,
+            x: start + col * V.slot,
+            y: (depth + 1 + row) * V.level,
+            depth: depth + 1 + row,
+            childCount: 0, isOpen: false,
+          };
+          outNodes.push(placed);
+          return placed;
+        });
+        maxDepth = Math.max(maxDepth, depth + Math.ceil(kids.length / cols));
+        cursor += cols * V.slot;
+        main = start + ((Math.min(kids.length, cols) - 1) * V.slot) / 2;
       } else {
         placedKids = kids.map((k) => walk(k, depth + 1));
         main = (placedKids[0].main + placedKids[placedKids.length - 1].main) / 2;
@@ -242,9 +293,10 @@ export default function TreeHierarchy({
           ? { id: node.id, data: node, main, x: main, y: depth * V.level, depth, childCount: node.children.length, isOpen }
           : { id: node.id, data: node, main, x: depth * H.col, y: main, depth, childCount: node.children.length, isOpen };
 
-      placedKids.forEach((child) =>
-        outEdges.push({ id: `${node.id}->${child.id}`, from: placedNode, to: child })
-      );
+      placedKids.forEach((child) => {
+        if (node.isGroup && mode === 'chart' && child.depth > depth + 1) return; // grade: aresta só na 1ª linha
+        outEdges.push({ id: `${node.id}->${child.id}`, from: placedNode, to: child });
+      });
 
       outNodes.push(placedNode);
       return placedNode;
@@ -302,6 +354,8 @@ export default function TreeHierarchy({
       const next = new Set(prev);
       let mudou = false;
       for (const id of matches) {
+        const g = grupoDe.get(id);
+        if (g && !next.has(g)) { next.add(g); mudou = true; }
         let cur = byId.get(id);
         while (cur?.referred_by_id) {
           if (!next.has(cur.referred_by_id)) { next.add(cur.referred_by_id); mudou = true; }
@@ -310,7 +364,7 @@ export default function TreeHierarchy({
       }
       return mudou ? next : prev;
     });
-  }, [matches, byId]);
+  }, [matches, byId, grupoDe]);
 
   /* ------------------------------------------------------------------ */
   /* Zoom / pan                                                          */
@@ -416,6 +470,7 @@ export default function TreeHierarchy({
     let best = Infinity;
     for (const n of nodesRef.current) {
       if (n.id === dragState.current.id) continue;
+      if (n.data?.isGroup) continue; // 📦 pasta não é alvo de vínculo
       const cx = mode === 'chart' ? n.x + V.node / 2 : n.x + H.card / 2;
       const cy = mode === 'chart' ? n.y + V.node / 2 : n.y + H.cardH / 2;
       const d = Math.hypot(cx - wx, cy - wy);
@@ -517,9 +572,13 @@ export default function TreeHierarchy({
 
   const focusUser = (id) => {
     const path = [];
+    // 📦 DIR-33 — se a pessoa vive dentro de uma pasta "Cadastros diretos",
+    // a pasta também precisa abrir pra ela aparecer.
+    if (grupoDe.has(id)) path.push(grupoDe.get(id));
     let cur = byId.get(id);
     while (cur?.referred_by_id) {
       path.push(cur.referred_by_id);
+      if (grupoDe.has(cur.referred_by_id)) path.push(grupoDe.get(cur.referred_by_id));
       cur = byId.get(cur.referred_by_id);
     }
     setExpanded((prev) => {
@@ -771,6 +830,7 @@ export default function TreeHierarchy({
 
             const pointerProps = {
               onPointerDown: (e) => {
+                if (n.data.isGroup) return; // 📦 pasta não se arrasta
                 if (e.button === 2) return; // botão direito abre o menu, não arrasta
                 // 🔒 Sem permissão de mover (onRelink não veio do pai) — nem inicia o
                 // arraste. Sem isso, o card de confirmação aparecia e mostrava "sucesso"
@@ -790,18 +850,21 @@ export default function TreeHierarchy({
               },
               onClick: (e) => {
                 e.stopPropagation();
+                if (n.data.isGroup) { toggle(n.id); return; } // 📦 pasta: clique abre/fecha
                 setSelectedId(n.id);
               },
               // Um clique OU dois cliques abrem o perfil — expandir/recolher fica no
               // badge com o número de indicados, que não disputa o clique do nó.
               onDoubleClick: (e) => {
                 e.stopPropagation();
+                if (n.data.isGroup) return;
                 setSelectedId(n.id);
               },
               // Botão direito: menu de ações direto no nó
               onContextMenu: (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (n.data.isGroup) return; // 📦 pasta não tem menu de pessoa
                 const rect = viewportRef.current.getBoundingClientRect();
                 setSelectedId(n.id);
                 setMenu({ id: n.id, x: e.clientX - rect.left, y: e.clientY - rect.top });
@@ -882,10 +945,10 @@ export default function TreeHierarchy({
                         {firstAndLast(n.data.full_name)}
                       </p>
                       <p className={`text-[10.5px] ${level.textColor} truncate leading-tight`}>
-                        {level.name}
+                        {n.data.isGroup ? `${n.data.children.length} cadastros` : level.name}
                       </p>
                     </div>
-                    {canEdit && (
+                    {canEdit && !n.data.isGroup && (
                       <button
                         type="button"
                         onPointerDown={(e) => e.stopPropagation()}
@@ -916,7 +979,7 @@ export default function TreeHierarchy({
                   {...pointerProps}
                   role="button"
                   tabIndex={0}
-                  title={`${n.data.full_name} — ${level.name}`}
+                  title={n.data.isGroup ? `${n.data.full_name} — ${n.data.children.length} cadastros sem cargo e sem equipe` : `${n.data.full_name} — ${level.name}`}
                   className={`relative rounded-full ${getCareerColor(
                     n.data.primary_career_level || 'usuario'
                   )} flex items-center justify-center text-white font-bold text-[13px]
@@ -975,7 +1038,7 @@ export default function TreeHierarchy({
                   <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">
                     {firstAndLast(n.data.full_name)}
                   </p>
-                  <p className={`text-[10px] ${level.textColor} truncate leading-tight`}>{level.name}</p>
+                  <p className={`text-[10px] ${level.textColor} truncate leading-tight`}>{n.data.isGroup ? `${n.data.children.length} cadastros` : level.name}</p>
                 </div>
               </div>
             );
