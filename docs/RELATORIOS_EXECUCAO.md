@@ -1415,3 +1415,40 @@ declarada.
 **Testes:** 542/542 (2 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — na branch, pronta pra publicar no próximo
 "pode".
+
+---
+
+## REL-32 — Execução da DIR-32 (governança por papel + modal profissional)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. `src/lib/visibilidadePorPapel.js` (+11 testes) — a MATRIZ ÚNICA da
+   governança aprovada: visão total = super_admin/admin/admin_financeiro
+   + cargos diretoria_executiva (e CEO) e diretoria_operacao (aliases
+   legados funcionam); dinheiro da empresa = só as 3 permissões
+   administrativas; gestão de vendedores = admin/super_admin;
+   Sócio Executivo = rede própria; Fundador/Conselheiro sem visão total
+   (relatório agregado é rodada futura registrada).
+2. Permissão de Trabalho nova: **Admin Financeiro** (`admin_financeiro`)
+   — entrou em ADMIN_ROLES (todos os painéis), como operador de escrita
+   em entityWrite/adminEntityWrite (lança receita/despesa) e no adapter;
+   as travas de venda (catalog_sales) NÃO o incluem — venda continua
+   admin/super_admin, e gestão de usuários continua só super_admin.
+3. CRM lê a matriz: cargo Diretoria Executiva/Operacional abre o CRM com
+   visão total de VENDA (metas, dashboard, espelho, captação, escada) —
+   SEM Valor em Estoque, Produtos no Catálogo, Custo de Aquisição e ROI
+   (os 2 KPIs somem da grade pela matriz); aba Vendedores e botão Novo
+   Vendedor só pra admin/super_admin.
+4. Editar Usuário profissional: modal grande de verdade (sem a trava de
+   proporção 16:9 que o espremia; 92vh × max-w-6xl) + VISÃO GERAL no
+   cabeçalho (foto, nome, contato e os crachás Permissão / Função
+   principal / Executivo vigente / Indicador / nº de cargos — refletindo
+   ao vivo o que está selecionado no formulário) + opção Admin
+   Financeiro com explicação. Nenhuma função existente removida.
+5. Teste antigo de ADMIN_ROLES atualizado pra regra nova (3 papéis).
+**Pendência de decisão do dono (registrada):** tirar o Financeiro do
+role 'admin' comum (hoje admin ainda vê dinheiro — cortar muda acesso de
+contas existentes; só com ordem expressa).
+**Testes:** 552/552 (12 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".

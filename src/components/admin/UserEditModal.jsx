@@ -11,6 +11,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { toast } from "sonner";
 // P17/18/19: usa a lista CANÔNICA de cargos (bate com o card oficial e com o painel do usuário).
 import { CAREER_LEVELS, normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
+import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 import {
     listExecutives,
     readExecutiveOwner,
@@ -27,6 +28,7 @@ const ROLE_INFO = {
     user: 'Usuário Comum: acesso só às áreas comuns do app (loja, leilões, carteira). Não entra em nenhum painel administrativo.',
     licensee: 'Licenciado: acesso ao painel próprio de vendas, indicados e comissões da rede dele. Não acessa o Painel de Controle nem edita outros usuários.',
     admin: 'Administrador: acesso a todos os painéis (pedidos, estoque, financeiro, árvore genealógica). Pode visualizar tudo, mas NÃO pode editar, excluir, promover ou mover usuários — isso é exclusivo do Super Admin.',
+    admin_financeiro: 'Admin Financeiro (CFO): acesso a todos os painéis com os NÚMEROS DO DINHEIRO abertos — Financeiro, custos, margens, estoque em R$, imposto. Lança e edita registros financeiros. NÃO gere usuários (exclusivo do Super Admin) e NÃO mexe em vendas (rotas próprias).',
 };
 
 export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
@@ -236,12 +238,43 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-5xl bg-gray-800 border-gray-700 text-white max-h-[90vh] md:aspect-video md:max-h-[86vh] p-0 gap-0 flex flex-col overflow-hidden">
-                <DialogHeader className="px-6 pt-5 pb-3 border-b border-gray-700 flex-shrink-0">
+            <DialogContent className="sm:max-w-6xl w-[96vw] bg-gray-800 border-gray-700 text-white h-[92vh] max-h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
+                <DialogHeader className="px-6 pt-5 pb-4 border-b border-gray-700 flex-shrink-0">
                     <DialogTitle className="text-white flex items-center gap-2">
                         <Award className="w-5 h-5 text-green-400" />
-                        Editar Usuário: {user.full_name}
+                        Editar Usuário
                     </DialogTitle>
+                    {/* 🪪 DIR-32 — VISÃO GERAL: quem a pessoa é HOJE, sem rolar nada.
+                        Os crachás refletem o que está selecionado no formulário
+                        (mudou embaixo, muda aqui — antes de salvar). */}
+                    {(() => {
+                        const byIdAll = new Map((Array.isArray(allUsers) ? allUsers : []).map(u => [u.id, u]));
+                        const efetivo = resolveEffectiveExecutive({ ...user, executive_owner_id: executiveOwnerId || null }, byIdAll);
+                        const nomeExec = efetivo.executiveId ? (byIdAll.get(efetivo.executiveId)?.full_name || '—') : null;
+                        const nomeIndicador = referrerId ? (byIdAll.get(referrerId)?.full_name || '—') : null;
+                        const nivelP = CAREER_LEVELS.find(l => l.id === primaryLevel);
+                        const visU = visibilidadeDoUsuario({ ...userData, career_levels: selectedLevels });
+                        return (
+                            <div className="flex items-center gap-4 pt-2">
+                                <div className="w-14 h-14 rounded-full border-2 border-green-500/40 overflow-hidden flex-shrink-0 bg-gray-700 flex items-center justify-center">
+                                    {userData.avatar_url
+                                        ? <img src={userData.avatar_url} alt="" className="w-full h-full object-cover" />
+                                        : <span className="text-lg font-bold text-gray-400">{(userData.full_name || '?').charAt(0).toUpperCase()}</span>}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-base font-bold text-white truncate">{userData.full_name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{userData.email}{userData.phone ? ` · ${userData.phone}` : ''}</p>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                        <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">🔐 {visU.papelLabel}</span>
+                                        {nivelP && <Badge className={`${nivelP.color} text-white text-[10.5px]`}>⭐ {nivelP.name}</Badge>}
+                                        <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">💼 Executivo: {nomeExec || 'sem destino'}</span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">🌳 Indicador: {nomeIndicador || 'sem indicação'}</span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-gray-600/40 text-gray-300 border border-gray-600">{selectedLevels.length} cargo{selectedLevels.length === 1 ? '' : 's'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </DialogHeader>
 
                 {/* duas colunas no desktop para caber no 16:9 sem virar um corredor */}
@@ -376,6 +409,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                                 <SelectContent className="bg-gray-800 border-gray-700 text-white">
                                     <SelectItem value="user">Usuário Comum</SelectItem>
                                     <SelectItem value="licensee">Licenciado</SelectItem>
+                                    <SelectItem value="admin_financeiro">Admin Financeiro</SelectItem>
                                     <SelectItem value="admin">Administrador</SelectItem>
                                 </SelectContent>
                             </Select>

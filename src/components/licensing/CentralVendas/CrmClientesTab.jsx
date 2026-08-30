@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { CAREER_LEVELS } from '@/lib/careerLevels';
+import { visibilidadeDoUsuario, filtrarKpisPorVisao } from '@/lib/visibilidadePorPapel';
 import { calcularCaptacao } from '@/lib/captacaoParceiros';
 import { calcularMetaCentral, ritmoDiario } from '@/lib/metaCentral';
 import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
@@ -193,7 +194,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // 🔴 DIR-22 (decisão do dono, 30/08/2026): visão TOTAL é do super_admin E
   // dos administrativos (role 'admin') — "só quem tem a visão geral é o super
   // adm e os administrativos". Executivo/diretor por estrutura vem na Fase 2.
-  const isSuperAdmin = ['admin', 'super_admin'].includes(currentUser?.role);
+  // 🏛️ DIR-32 — a visão vem da MATRIZ ÚNICA (visibilidadePorPapel.js):
+  // visão total = admins + Admin Financeiro + cargos de diretoria
+  // (executiva/operacional); dinheiro da empresa (custo/margem/estoque R$)
+  // = só super_admin/admin/admin_financeiro; diretoria vê VENDA × META.
+  // O nome isSuperAdmin foi mantido nos memos = "bypass do escopo de rede".
+  const vis = React.useMemo(() => visibilidadeDoUsuario(currentUser), [currentUser]);
+  const isSuperAdmin = vis.visaoTotal;
   const networkIds = React.useMemo(
     () => (!isSuperAdmin && currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
     [appUsers, currentUser?.id, isSuperAdmin]
@@ -1009,7 +1016,7 @@ _Enviado via CRM Leilão NoZap_`;
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">CRM - Gestão de Clientes</h1>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            {isSuperAdmin && (
+            {vis.gerirVendedores && (
               <Button
                 onClick={() => setShowSellerModal(true)}
                 className="bg-nz-marrom hover:bg-nz-marrom-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
@@ -1077,8 +1084,8 @@ _Enviado via CRM Leilão NoZap_`;
         {secaoAtiva === 'executiva' && (
           <>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
-            {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={kpisDiretoria} />}
-            <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} parte="executiva" />
+            {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
+            <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
           </>
         )}
 
@@ -1096,7 +1103,7 @@ _Enviado via CRM Leilão NoZap_`;
             <TabsTrigger value="customers" className="data-[state=active]:bg-nz-verde data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
-            {isSuperAdmin && (
+            {vis.gerirVendedores && (
               <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
                 Vendedores
               </TabsTrigger>

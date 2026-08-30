@@ -219,7 +219,10 @@ export default async function handler(req, res) {
       throw new Error(`Falha ao verificar permissão do usuário (resposta inválida do banco): ${e?.message || e}`);
     });
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
-    const ok = actor && (['admin', 'super_admin'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
+    // 💼 DIR-32 — admin_financeiro é operador (função de CFO: lança e edita
+    // registros financeiros). As travas específicas de venda logo abaixo
+    // continuam valendo pra ele como pra qualquer um.
+    const ok = actor && (['admin', 'super_admin', 'admin_financeiro'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
     if (!ok) return res.status(403).json({ success: false, error: 'Sem permissão' });
 
     // ══════════════════════════════════════════════════════════════════════════

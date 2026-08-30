@@ -12,6 +12,47 @@
 
 ---
 
+## DIR-32 — Governança de visão por papel + modal de usuário profissional
+
+**Emitida por:** dono (30/08/2026): aprovou a tabela de governança de
+mercado escrita no chat ("com essas funções da forma que descreveu") e,
+com prints do Editar Usuário, pediu: modal maior (abre pequeno), uma
+visão geral do usuário, organizar e deixar extremamente profissional —
+sem mudar o que já funciona — e APLICAR as funções de acesso nos cargos
+que ele selecionar.
+**Data:** 30/08/2026.
+**Regra de governança aprovada (mercado):** custo, margem, caixa e
+imposto ficam em DUAS chaves (super_admin + Admin Financeiro); diretoria
+vê VENDA × META (faturamento, ticket, conversão, funil) mas nunca a
+mecânica do dinheiro; Sócio Executivo vê só a própria estrutura;
+Fundador/Conselheiro = relatório agregado (rodada futura).
+**Escopo autorizado:**
+1. `src/lib/visibilidadePorPapel.js` — MATRIZ ÚNICA de visão:
+   super_admin/admin/admin_financeiro = visão total + dinheiro da
+   empresa; cargos diretoria_executiva e diretoria_operacao (via
+   career_levels, fonte careerLevels.js) = visão total de venda SEM
+   dinheiro da empresa (sem Valor em Estoque/Produtos no Catálogo, sem
+   KPIs de custo de aquisição e ROI); executivo_conta = rede própria;
+   gestão de vendedores só admin/super_admin. Testes.
+2. Nova Permissão de Trabalho `admin_financeiro` (entra em ADMIN_ROLES —
+   todos os painéis, incluindo Financeiro; não gere usuários, que já é
+   exclusivo do super_admin). Opção no Editar Usuário com explicação.
+3. CRM passa a ler a matriz (substitui o check duro
+   ['admin','super_admin']): diretoria ganha as seções Executiva/
+   Expansão em modo venda; escopo de rede continua para os demais.
+4. Editar Usuário: modal MAIOR (sem trava de proporção 16:9, altura
+   quase cheia) + CABEÇALHO-RESUMO (foto, nome, e-mail, crachás de
+   Permissão/Função principal/Executivo vigente/Indicador) + polimento —
+   sem remover nenhuma função existente.
+**Fora do escopo / proibido:** tirar o Financeiro do role 'admin' hoje
+(mudança de acesso de contas existentes — só com decisão expressa do
+dono); relatório mensal de Fundador/Conselheiro (rodada futura); motor
+de comissão.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-31.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-31 — KPIs do Ranking Premiado ligados (correção de erro meu)
 
 **Emitida por:** dono (30/08/2026): "a página Ranking Premiado JÁ EXISTE,

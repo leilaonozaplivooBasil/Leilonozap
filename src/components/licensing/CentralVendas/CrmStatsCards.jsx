@@ -82,7 +82,12 @@ const fmtBRL = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDi
 // da rede e o funil de status clicável). O antigo top de 5 cards foi
 // absorvido: 3 deles viraram a faixa de resumo (CrmResumo, sempre visível)
 // e 2 (Total de Contatos, Leads) vivem na parte de clientes.
-export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilter, onPurchaseStatusClick, parte = 'executiva' }) {
+export default function CrmStatsCards({ stats, isSuperAdmin, verDinheiro, purchaseStatusFilter, onPurchaseStatusClick, parte = 'executiva' }) {
+  // 🏛️ DIR-32 — estoque/custo é DINHEIRO DA EMPRESA: só quem a matriz
+  // autoriza (super_admin/admin/admin_financeiro). A diretoria tem visão
+  // total de venda (isSuperAdmin) sem ver custo. Sem a prop, mantém o
+  // comportamento antigo (admin = vê).
+  const podeVerDinheiro = verDinheiro ?? isSuperAdmin;
   if (parte === 'clientes') {
     return (
       <>
@@ -215,9 +220,9 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
         </CardContent>
       </Card>
 
-      {/* 🔓 DIR-24 — catálogo e estoque são números da EMPRESA (galpão
-          inteiro), não da rede de quem olha: só aparecem na visão total. */}
-      {isSuperAdmin && (
+      {/* 🔓 DIR-24/DIR-32 — catálogo e estoque em R$ são DINHEIRO da empresa:
+          só super_admin/admin/admin_financeiro (a diretoria não vê custo). */}
+      {podeVerDinheiro && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <StatCard
             label="Produtos no Catálogo" value={stats.produtosDisponiveis} icon={Package}
