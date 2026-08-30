@@ -33,17 +33,33 @@ pago aplicado às 3 gravações de `total_spent`/`purchase_count` vindas de
 `catalogSales` (conta identificada, avulso existente, avulso novo). Teste
 novo (`tests/crmUnifiedCustomersTotalSpent.test.mjs`) cobrindo paga,
 pendente, cancelada, status em português e comprador avulso.
-**Fora do escopo / proibido (flagged, não corrigido nesta rodada):** a
-mesma pergunta pro lado dos LEILÕES (`auctions.forEach`, soma
-`current_price` de qualquer `winner_id` sem checar pagamento) — investiguei
-e achei que `auctions.order_status` NÃO é atualizado pra `'paid'` quando o
-arremate é pago via PIX/cartão (só `mpWebhook.js` grava o status em
-`catalog_sales`, nunca em `auctions`) — usar `order_status` como filtro
-excluiria arremates pagos de verdade por PIX/cartão, um bug NOVO pior que
-o atual. Precisa de uma forma confiável de achar a venda `catalog_sales`
-correspondente ao arremate (hoje sem FK direta, só dentro de
-`raw_base44`) antes de mexer — fica como pendência registrada, não como
-fix arriscado sob pressa.
+**Correção de escopo, mesma diretiva, mesmo dia:** depois de deployado, o
+dono mandou print mostrando "Venda bruta (Loja + Leilão): R$ 228.496,40" —
+impossível, a comissão real de Loja Virtual (R$ 1.317,56) implicaria uns
+R$ 4.400 de venda bruta, não R$ 228 mil. Achei DUAS causas juntas: (1) o
+card usava `unifiedCustomers.total_spent`, que soma TODO `catalog_sales`
+do comprador sem filtrar `kind` — depósito, adesão, plano parceiro e
+passaporte entravam junto, misturados com "venda"; (2) do lado do leilão,
+somava `current_price` de QUALQUER `winner_id`, incluindo os 36 leilões
+"Plano de Investimento" (`is_investment_plan`, R$ 5.000 cada, ~R$ 180 mil)
+— que o próprio motor de comissão do leilão já trata como aporte de
+investimento, não mercadoria vendida (PONTO 109/123,
+`finalizeAuctionCore.js`). Recalculado direto de `networkCatalogSales`/
+`networkAuctions` com os mesmos filtros de `kind` que o Painel de
+Alavancagem usa, excluindo plano de investimento e leilão de teste do
+lado do leilão.
+**Fora do escopo / proibido (flagged, não corrigido nesta rodada):** dentro
+dos leilões que sobram depois de excluir plano de investimento/teste,
+ainda não dá pra confirmar com 100% de certeza que TODOS foram realmente
+pagos (não só arrematados) — `auctions.order_status` NÃO é atualizado pra
+`'paid'` quando o arremate é pago via PIX/cartão (só `mpWebhook.js` grava
+o status em `catalog_sales`, nunca em `auctions`; confirmado por leitura
+completa do arquivo). Usar `order_status` como filtro excluiria arremates
+pagos de verdade por PIX/cartão — um bug novo, pior que o atual. Precisa
+de uma forma confiável de ligar `catalog_sales` (kind='arremate') ao
+`auctions.id` de origem (hoje sem FK direta, só dentro de `raw_base44`,
+JSON não indexado) antes de refinar mais — fica como pendência registrada,
+o erro residual esperado é muito menor que os R$ 180 mil já eliminados.
 **Regras fixas:** nenhuma além da DIR-5 a DIR-14.
 **Status:** EM VIGOR — código e teste prontos, aguardando confirmação
 visual do dono no Preview/produção depois do deploy.
@@ -60,12 +76,14 @@ movimentado sem misturar com receita, e agora só conta venda realmente
 paga (DIR-15) — falta só o dono conferir visualmente no Preview/produção
 depois do próximo deploy.
 
-**Pendência técnica em aberto, registrada mas não corrigida (DIR-15):** o
-volume de LEILÃO no CRM ainda pode incluir arremates nunca pagos, porque
-não existe hoje um jeito confiável e barato de checar se um arremate foi
-pago de verdade sem arriscar excluir arremates pagos por PIX/cartão (ver
-detalhe na DIR-15 em `docs/HISTORICO_DIRETIVAS.md`). Precisa de
-investigação própria antes de mexer.
+**Pendência técnica em aberto, registrada mas não corrigida (DIR-15):**
+depois de excluir depósito/adesão/plano de investimento da soma (já
+feito), o volume de LEILÃO no CRM ainda pode incluir um resíduo pequeno de
+arremates arrematados mas nunca pagos, porque não existe hoje um jeito
+confiável e barato de checar isso sem arriscar excluir arremates pagos
+por PIX/cartão (ver detalhe na DIR-15 em `docs/HISTORICO_DIRETIVAS.md`).
+Precisa de investigação própria (ligar `catalog_sales` ao `auctions.id`
+de origem) antes de mexer mais.
 
 **Achado crítico de infraestrutura, fora do escopo de código, aguardando o
 dono (ver `REL-11`):** o deploy automático de migração

@@ -770,3 +770,41 @@ não foram alterados.
 testada e commitada; a parte de Leilão fica registrada como pendência
 própria, não corrigida por falta de um jeito confiável e seguro de checar
 pagamento de arremate ainda.
+
+**Correção de escopo, mesmo dia, depois do deploy:** dono mandou print
+mostrando "Venda bruta (Loja + Leilão): R$ 228.496,40" — quantia
+impossível (a comissão real de Loja Virtual é R$ 1.317,56; 30% disso não
+passa de ~R$ 4.400 de venda bruta). Achei duas causas juntas:
+1. O card "Venda bruta" usava `unifiedCustomers.total_spent`
+   (`CrmClientesTab.jsx`), que soma TODO `catalog_sales` do comprador sem
+   filtrar por `kind` — depósito, adesão de vendedor, plano parceiro e
+   passaporte entravam misturados com "venda", além de estarem duplicados
+   com o card "Depósitos em carteira" ao lado.
+2. Do lado do leilão, somava `current_price` de QUALQUER `winner_id`,
+   incluindo os 36 leilões "Plano de Investimento" (`is_investment_plan`,
+   R$ 5.000 cada — medido e documentado em `finalizeAuctionCore.js`,
+   PONTO 109/123) — que são aporte de investimento, não mercadoria
+   vendida, e o próprio motor de comissão do leilão já os exclui por
+   regra oficial do dono.
+3. Recalculado direto de `networkCatalogSales` (kind `loja`/`produto`,
+   status pago) + `networkAuctions` (com `winner_id`, excluindo
+   `is_investment_plan` e `is_test_auction`) — mesmos filtros de `kind`
+   que `NetworkOverview.jsx` já usa pro Painel de Alavancagem, em vez de
+   reaproveitar `total_spent` (que serve outro propósito, mais amplo, na
+   lista de clientes).
+4. `isSalePago` (antes local, sem export) virou exportada de
+   `crmUnifiedCustomers.js` pra ser reaproveitada aqui, sem duplicar a
+   lista de status.
+**Testes:** 426/426 (sem teste novo isolável — a lógica nova é composição
+de filtros sobre arrays já testados indiretamente pelos testes de
+build/fluxo existentes). **Build:** exit 0.
+**Confirmação de escopo:** só `CrmClientesTab.jsx`, `CrmStatsCards.jsx` e
+o export novo em `crmUnifiedCustomers.js` foram tocados. Nenhuma mudança
+em `financial_income`, `finalizeAuctionCore.js` ou na regra de
+reconhecimento de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — a mistura de depósito/adesão/plano de
+investimento na soma de "venda bruta" está corrigida; o resíduo de
+possíveis arremates arrematados-mas-não-pagos continua como pendência
+própria (mesma limitação técnica já registrada acima: `order_status` não
+é confiável pra arremate pago por PIX/cartão).

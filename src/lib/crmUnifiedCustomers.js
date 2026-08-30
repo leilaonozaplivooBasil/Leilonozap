@@ -34,7 +34,7 @@ const PURCHASE_STATUS_MAP = {
 // src/pages/CatalogOrdersAdmin.jsx (STATUS_PAGO), inclui os dois idiomas
 // (o banco tem status em inglês e em português misturados — PONTO 116).
 const STATUS_PAGO = new Set(['paid', 'entregue', 'enviado', 'confirmado', 'pago', 'concluido', 'preparando', 'saiu_entrega', 'shipped', 'delivered']);
-const isSalePago = (s) => STATUS_PAGO.has(String(s.status || '').toLowerCase());
+export const isSalePago = (s) => STATUS_PAGO.has(String(s.status || '').toLowerCase());
 
 export const ROLE_LABEL = {
   vendedor: 'Vendedor',

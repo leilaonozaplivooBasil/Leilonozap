@@ -104,7 +104,7 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
         />
         <StatCard
           label="— Venda bruta (Loja + Leilão)" value={fmtBRL(stats.volumeVendasBruto)} icon={ShoppingCart}
-          info="Parte do Volume Financeiro Total que é o valor cheio de compras/arremates — não é comissão, é o preço total pago pelo cliente."
+          info="Parte do Volume Financeiro Total que é o valor cheio de compras/arremates pagos — não é comissão, é o preço total pago pelo cliente. Leilão de Plano de Investimento e leilão de teste não entram aqui (não são mercadoria vendida)."
         />
       </div>
 

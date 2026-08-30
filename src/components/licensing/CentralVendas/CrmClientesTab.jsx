@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL, isSalePago } from '@/lib/crmUnifiedCustomers';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
@@ -512,13 +512,34 @@ _Enviado via CRM Leilão NoZap_`;
   // nomes e cores bem diferentes, pra nunca mais parecerem a mesma coisa.
   const depositosCarteira = networkCatalogSales
     .filter((s) => ['wallet_deposit', 'commission_deposit', 'operacao_deposit'].includes(s.kind))
-    .filter((s) => !['pending_payment', 'canceled', 'cancelado', 'estornado'].includes(s.status))
+    .filter(isSalePago)
     .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-  // Volume bruto de venda (Loja/PDV + Leilão) — mesma soma que a rede já via
-  // como "Volume Transacionado"; pro super_admin é o total da PLATAFORMA
-  // inteira, porque networkAppUsers/networkCatalogSales/networkAuctions (que
-  // alimentam unifiedCustomers) já fazem o bypass de rede pra super_admin.
-  const volumeVendasBruto = unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0);
+  // 🔴 Achado 30/08/2026 — a primeira versão deste card usava
+  // `unifiedCustomers.total_spent`, que soma TODO catalog_sales do
+  // comprador sem filtrar por `kind` — depósito, adesão, plano parceiro,
+  // passaporte, tudo junto. Resultado: "Venda bruta (Loja + Leilão)"
+  // aparecia como R$ 228 mil, quando a Loja Virtual real gira poucos
+  // milhares (a comissão real é R$ 1.317,56 — 30% disso não passa de
+  // R$ 4.400). Duas causas juntas:
+  //   1) misturava depósito/adesão/passaporte na soma "de venda";
+  //   2) do lado do leilão, somava `current_price` de QUALQUER
+  //      `winner_id`, incluindo os leilões "Plano de Investimento"
+  //      (is_investment_plan) — 36 registros de R$ 5.000 cada medidos em
+  //      produção (ver PONTO 109/123 em finalizeAuctionCore.js), que NÃO
+  //      são mercadoria vendida, são aporte de investimento — o próprio
+  //      motor de comissão do leilão já os exclui por regra oficial.
+  // Recalculado direto das fontes brutas, com o mesmo filtro de "kind" que
+  // o Painel de Alavancagem usa (NetworkOverview.jsx: kind loja/produto =
+  // compra, kind arremate = leilão) e excluindo plano de investimento/
+  // leilão de teste do lado do leilão.
+  const comprasBrutas = networkCatalogSales
+    .filter((s) => ['loja', 'produto'].includes(s.kind))
+    .filter(isSalePago)
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const leilaoBruto = networkAuctions
+    .filter((a) => a.winner_id && !a.is_investment_plan && a.is_test_auction !== true)
+    .reduce((sum, a) => sum + (Number(a.current_price) || 0), 0);
+  const volumeVendasBruto = comprasBrutas + leilaoBruto;
 
   const stats = {
     total: unifiedCustomers.length,
