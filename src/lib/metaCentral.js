@@ -58,12 +58,16 @@ export function ritmoDiario(sales = [], ref = new Date()) {
 export function calcularMetaCentral(sales = [], ref = new Date()) {
   const doMes = sales.filter((s) => isVendaReal(s) && mesmoMes(s.created_date, ref));
   const soma = (lista) => lista.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
-  const onlineLoja = soma(doMes.filter((s) => ['loja', 'produto'].includes(s.kind)));
-  const onlineLeilao = soma(doMes.filter((s) => s.kind === 'arremate'));
+  // 🏪 DIR-29 — venda FÍSICA agora tem fonte: o PDV (balcão) carimba
+  // source='pdv' na venda desde o nascimento (createPdvOrder). Física =
+  // mercadoria real do mês vendida no balcão; Online = o resto (site +
+  // leilão). Os dois trilhos passam a ser dado real — nada mais "sem fonte".
+  const ehPdv = (s) => s.source === 'pdv';
+  const onlineLoja = soma(doMes.filter((s) => ['loja', 'produto'].includes(s.kind) && !ehPdv(s)));
+  const onlineLeilao = soma(doMes.filter((s) => s.kind === 'arremate' && !ehPdv(s)));
   const online = onlineLoja + onlineLeilao;
-  // Venda física: sem fonte no sistema (null ≠ 0 — "não medimos", não "vendemos zero").
-  const fisica = null;
-  const total = online + (fisica || 0);
+  const fisica = soma(doMes.filter((s) => ['loja', 'produto', 'arremate'].includes(s.kind) && ehPdv(s)));
+  const total = online + fisica;
   return {
     online,
     onlineLoja,

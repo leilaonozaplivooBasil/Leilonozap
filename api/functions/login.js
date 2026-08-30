@@ -45,6 +45,17 @@ export default async function handler(req, res) {
     }
     if (!valid) return fail();
 
+    // 🕐 DIR-29 — rastro de login pro KPI "Usuários ativos" da diretoria.
+    // Aguardado mas tolerante: se a coluna last_login ainda não existir
+    // (migração pendente), o PATCH falha em silêncio e o login segue normal.
+    try {
+      await sb(`app_users?id=eq.${encodeURIComponent(user.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ last_login: new Date().toISOString() }),
+      });
+    } catch { /* coluna ausente ou indisponível — não bloqueia o login */ }
+
     delete user.password; // jamais devolve hash
     // 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js. É aqui, e só
     // aqui, que ele nasce: depois da senha (ou do Google) ter sido conferida.

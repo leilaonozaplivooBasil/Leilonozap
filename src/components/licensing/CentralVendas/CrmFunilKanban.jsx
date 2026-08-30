@@ -22,12 +22,22 @@ const COLUNAS = [
 
 const MAX_POR_COLUNA = 30;
 
-export default function CrmFunilKanban({ customers = [], onAbrirCliente }) {
+export default function CrmFunilKanban({ customers = [], onAbrirCliente, onMoverManual }) {
   const porColuna = Object.fromEntries(COLUNAS.map((c) => [c.key, []]));
   customers.forEach((c) => {
     const key = c.purchase_status || 'sem_compra';
     (porColuna[key] || porColuna.sem_compra).push(c);
   });
+  // 🖐️ DIR-29 — arrastar e soltar NATIVO (HTML5, sem lib): só cliente MANUAL
+  // se move na mão; o automático tem o status ditado pelo pedido real.
+  const aoSoltar = (e, colunaDestino) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const cliente = customers.find((c) => c.id === id);
+    if (cliente && (cliente.purchase_status || 'sem_compra') !== colunaDestino) {
+      onMoverManual?.(cliente, colunaDestino);
+    }
+  };
   return (
     <div className="overflow-x-auto pb-2">
       <div className="flex gap-3 min-w-[980px]">
@@ -35,7 +45,12 @@ export default function CrmFunilKanban({ customers = [], onAbrirCliente }) {
           const lista = porColuna[key];
           const valorColuna = lista.reduce((s, c) => s + (c.total_spent || 0), 0);
           return (
-            <div key={key} className="flex-1 min-w-[140px] rounded-xl border border-nz-borda bg-nz-cinza-fundo/50">
+            <div
+              key={key}
+              className="flex-1 min-w-[140px] rounded-xl border border-nz-borda bg-nz-cinza-fundo/50"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => aoSoltar(e, key)}
+            >
               <div className="p-2.5 border-b border-nz-borda flex items-center gap-1.5">
                 <Icon className="w-3.5 h-3.5 text-nz-tinta-fraca" />
                 <p className="text-xs font-semibold text-nz-tinta flex-1 truncate">{label}</p>
@@ -45,19 +60,25 @@ export default function CrmFunilKanban({ customers = [], onAbrirCliente }) {
                 <p className="px-2.5 pt-1.5 text-[10px] text-nz-tinta-fraca">{fmtBRL(valorColuna)} em clientes aqui</p>
               )}
               <div className="p-2 space-y-1.5 max-h-[420px] overflow-y-auto">
-                {lista.slice(0, MAX_POR_COLUNA).map((c) => (
+                {lista.slice(0, MAX_POR_COLUNA).map((c) => {
+                  const arrastavel = c.origin_type === 'manual';
+                  return (
                   <button
                     key={c.id}
                     type="button"
+                    draggable={arrastavel}
+                    onDragStart={(e) => e.dataTransfer.setData('text/plain', c.id)}
                     onClick={() => onAbrirCliente?.(c)}
-                    className="w-full text-left rounded-lg border border-nz-borda bg-white p-2 hover:border-nz-verde/50 transition-colors"
+                    title={arrastavel ? 'Arraste para mudar de etapa' : 'Status vem do pedido real — muda sozinho com o pagamento/entrega'}
+                    className={`w-full text-left rounded-lg border border-nz-borda bg-white p-2 hover:border-nz-verde/50 transition-colors ${arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}
                   >
                     <p className="text-xs font-semibold text-nz-tinta truncate">{c.full_name}</p>
                     <p className="text-[10px] text-nz-tinta-fraca truncate">
                       {c.total_spent > 0 ? fmtBRL(c.total_spent) : (c.email || c.phone || '—')}
                     </p>
                   </button>
-                ))}
+                  );
+                })}
                 {lista.length > MAX_POR_COLUNA && (
                   <p className="text-[10px] text-center text-nz-tinta-fraca pt-1">+ {lista.length - MAX_POR_COLUNA} — refine os filtros</p>
                 )}

@@ -12,6 +12,49 @@
 
 ---
 
+## DIR-29 — Melhorias da auditoria: KPIs sem fonte ativados com dado real + edição/kanban/origem
+
+**Emitida por:** dono (30/08/2026): "vamos para as melhorias que você
+faria" (lista registrada na DIR-28).
+**Data:** 30/08/2026.
+**Fatos conferidos antes de codar:** venda de PDV já nasce com
+`source='pdv'` em catalog_sales (balcão = venda FÍSICA identificável
+hoje); a ligação venda→custo existe (`product_id`/`items_json` +
+`custoUnitario`, já usada no Painel de Lucro Diário); `app_users` NÃO tem
+coluna de login (migração necessária — dono cola o SQL); a página do
+Ranking Premiado ainda não existe no sistema (instrumentação automática
+fica dependente dela).
+**Escopo autorizado:**
+1. **Trilho Venda Física ATIVADO**: `metaCentral` separa mercadoria real
+   do mês em Física (source='pdv', balcão) × Online (resto) — os dois
+   trilhos com dado real; `venda_fisica` e `faturamento_total` do
+   Dashboard da Diretoria idem (fonte única). Testes.
+2. **Custo de Aquisição ATIVADO** (aproximação): Σ custo dos lotes ÷ Σ
+   potencial de venda da vitrine (galpão inteiro) — nossa vitrine é ~20%
+   abaixo do mercado, então o % sobre o mercado real é ainda menor que o
+   mostrado; etiqueta e fonte explicam. Meta ≤ 22,8%.
+3. **ROI Operacional ATIVADO** (aproximação): (receita real de mercadoria
+   do mês − custo das unidades vendidas com produto vinculado) ÷ custo —
+   `buildCostMap`/`custoDaVenda` extraídos do Painel de Lucro Diário pra
+   `src/lib/custoProduto.js` (fonte única, o Painel passa a importar).
+4. **Rastro de login**: migração `app_users.last_login TIMESTAMPTZ`
+   (SQL entregue pro dono colar) + carimbo em `login.js`/`googleLogin.js`
+   (service role, fire-and-forget); "Usuários ativos" passa a contar
+   login OU movimento em 30d quando a coluna existir (fallback pra
+   aproximação atual enquanto não existir).
+5. **CRM**: editar cliente MANUAL direto no modal (botão lápis religado —
+   handleEdit voltou, agora LIGADO); kanban com ARRASTAR nativo (HTML5)
+   pra cliente manual (solta na coluna → atualiza purchase_status;
+   automático não arrasta — status vem do pedido real); origem "Ranking
+   Premiado" no cadastro e nos filtros.
+**Fora do escopo / proibido:** migrar vendas pro listarTudo (rodada
+própria — mexe em soma de dinheiro de DUAS telas casadas); página do
+Ranking (não existe); critério de dinheiro real.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-28.
+**Status:** EM VIGOR — autorizada pelo dono.
+
+---
+
 ## DIR-28 — Auditoria pré-publicação do CRM (botões, cadastros e funções)
 
 **Emitida por:** dono (30/08/2026): "confira se todo botão, cadastro,

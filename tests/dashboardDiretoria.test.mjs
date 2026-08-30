@@ -26,11 +26,65 @@ describe('estrutura', () => {
 
   test('o que o sistema não mede é null + sem_fonte — nunca número inventado', () => {
     const kpis = calcularDashboardDiretoria({ ref: REF });
-    for (const id of ['visitantes_ranking', 'cadastros_ranking', 'venda_fisica', 'custo_aquisicao', 'roi_operacional']) {
+    // DIR-29: venda_fisica virou dado (PDV); custo/ROI só ficam sem fonte
+    // enquanto não há produto/venda com custo — que é o caso deste teste vazio.
+    for (const id of ['visitantes_ranking', 'cadastros_ranking', 'custo_aquisicao', 'roi_operacional']) {
       const kpi = kpis.find((k) => k.id === id);
       assert.equal(kpi.realizado, null, id);
       assert.equal(kpi.tipo, 'sem_fonte', id);
     }
+  });
+});
+
+describe('DIR-29 — KPIs ativados com dado real', () => {
+  test('venda física = PDV do mês; online não a duplica; total soma os dois', () => {
+    const sales = [
+      real({ kind: 'produto', source: 'pdv', total_amount: 300 }),
+      real({ kind: 'loja', total_amount: 100 }),
+    ];
+    const kpis = calcularDashboardDiretoria({ sales, ref: REF });
+    assert.equal(kpis.find((k) => k.id === 'venda_fisica').realizado, 300);
+    assert.equal(kpis.find((k) => k.id === 'venda_fisica').tipo, 'dado');
+    assert.equal(kpis.find((k) => k.id === 'venda_online').realizado, 100);
+    assert.equal(kpis.find((k) => k.id === 'faturamento_total').realizado, 400);
+  });
+
+  test('custo de aquisição = custo dos lotes ÷ potencial da vitrine (aproximação)', () => {
+    // lote de R$ 200 com 10 unidades a R$ 100 de varejo → 200/1000 = 20%
+    const products = [{ id: 'p1', cost_price: 200, quantity: 10, quantity_sold: 0, selling_price_retail: 100 }];
+    const kpi = calcularDashboardDiretoria({ products, ref: REF }).find((k) => k.id === 'custo_aquisicao');
+    assert.equal(kpi.realizado, 20);
+    assert.equal(kpi.tipo, 'aproximacao');
+  });
+
+  test('ROI operacional = (receita − custo) ÷ custo das vendas com produto vinculado', () => {
+    // custo unitário 20 (lote 200 ÷ 10); vendeu 1 un. por 50 → ROI = 30/20 = 150%
+    const products = [{ id: 'p1', cost_price: 200, quantity: 9, quantity_sold: 1, selling_price_retail: 100 }];
+    const sales = [
+      real({ kind: 'loja', product_id: 'p1', quantity: 1, total_amount: 50 }),
+      real({ kind: 'loja', total_amount: 999 }), // sem produto vinculado: fora da conta, vai na cobertura
+    ];
+    const kpi = calcularDashboardDiretoria({ sales, products, ref: REF }).find((k) => k.id === 'roi_operacional');
+    assert.equal(kpi.realizado, 150);
+    assert.equal(kpi.tipo, 'aproximacao');
+    assert.ok(kpi.fonte.includes('1 de 2'));
+  });
+
+  test('usuários ativos vira DADO (login OU movimento) quando existe rastro de last_login', () => {
+    const users = [
+      { id: 'a', last_login: '2026-08-25' }, // logou, não comprou
+      { id: 'b', last_login: '2026-05-01' }, // login velho, fora dos 30d
+      { id: 'c' },
+    ];
+    const sales = [real({ kind: 'loja', buyer_id: 'c', total_amount: 10 })]; // comprou sem login
+    const kpi = calcularDashboardDiretoria({ users, sales, ref: REF }).find((k) => k.id === 'usuarios_ativos');
+    assert.equal(kpi.realizado, 2); // a (login) + c (compra); b fica fora
+    assert.equal(kpi.tipo, 'dado');
+  });
+
+  test('sem nenhum last_login na base, usuários ativos segue como aproximação', () => {
+    const kpi = calcularDashboardDiretoria({ users: [{ id: 'a' }], ref: REF }).find((k) => k.id === 'usuarios_ativos');
+    assert.equal(kpi.tipo, 'aproximacao');
   });
 });
 

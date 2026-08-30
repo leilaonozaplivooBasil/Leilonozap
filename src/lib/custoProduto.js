@@ -42,3 +42,29 @@ export const custoUnitario = (p) => {
  *  unidades restantes). É isto que "Valor Investido em Estoque"/"Capital em
  *  Estoque" devem somar — validado direto no banco: R$ 28.133,45. */
 export const custoEstoqueRestante = (p) => custoUnitario(p) * unidadesEmEstoque(p);
+
+/** Mapa productId → custo unitário médio, pra cruzar venda com custo.
+ *  🔗 DIR-29 — extraído do Painel de Lucro Diário (fonte única: o Painel e o
+ *  Dashboard da Diretoria leem daqui). */
+export const buildCostMap = (products = []) => {
+  const map = {};
+  for (const p of products) map[p.id] = custoUnitario(p);
+  return map;
+};
+
+/** Custo total (COGS) de UMA venda — item único (product_id) ou múltiplos
+ *  (items_json). Venda sem produto vinculado devolve 0 (custo desconhecido —
+ *  quem usa decide como tratar a cobertura). */
+export const custoDaVenda = (sale, costMap) => {
+  if (Array.isArray(sale.items_json) && sale.items_json.length > 0) {
+    return sale.items_json.reduce((sum, item) => {
+      const unit = costMap[item.product_id] ?? 0;
+      return sum + unit * (n(item.qty) || 1);
+    }, 0);
+  }
+  if (sale.product_id) {
+    const unit = costMap[sale.product_id] ?? 0;
+    return unit * (n(sale.quantity) || 1);
+  }
+  return 0;
+};

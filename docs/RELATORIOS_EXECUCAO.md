@@ -1317,3 +1317,40 @@ removido. Melhorias futuras registradas na diretiva.
 **Testes:** 534/534. **Build:** exit 0.
 **Status final:** CONCLUÍDA — pacote DIR-18→28 pronto pra publicar,
 aguardando autorização do dono.
+
+---
+
+## REL-29 — Execução da DIR-29 (melhorias da auditoria)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Trilho VENDA FÍSICA ativado com dado real: PDV carimba source='pdv'
+   desde o nascimento da venda — Meta Central e Dashboard separam Física
+   (balcão) × Online (site + leilão), sem duplicar nem perder nada.
+2. CUSTO DE AQUISIÇÃO ativado (aproximação): Σ custo dos lotes ÷ Σ
+   potencial de venda da vitrine (galpão inteiro), com a ressalva de que
+   a referência 22,8% do documento é sobre o valor de MERCADO (vitrine é
+   ~20% abaixo — o % real sobre mercado é ainda menor).
+3. ROI OPERACIONAL ativado (aproximação): (receita − custo) ÷ custo das
+   vendas reais do mês com produto vinculado — buildCostMap/custoDaVenda
+   extraídos do Painel de Lucro Diário pra src/lib/custoProduto.js (fonte
+   única; o Painel importa de lá agora); a cobertura (X de Y vendas com
+   custo conhecido) aparece na fonte do KPI.
+4. RASTRO DE LOGIN: migração 20260830170000 (app_users.last_login +
+   índice — DONO PRECISA COLAR O SQL) + carimbo tolerante em login.js e
+   googleLogin.js; "Usuários ativos" vira DADO (login OU movimento em
+   30d) assim que a coluna existir — até lá segue a aproximação, sem
+   quebrar nada.
+5. CRM: editar cliente MANUAL direto no modal (botão lápis, religado de
+   verdade); kanban com ARRASTAR nativo pra manual (solta na coluna →
+   atualiza status; automático não arrasta, com explicação no hover);
+   origem "Ranking Premiado" no cadastro e no filtro.
+**O que NÃO foi feito / blockers:** instrumentação automática do Ranking
+(a página não existe no sistema — quando nascer, cadastra com
+source='ranking' e o KPI Cadastros Ranking/dia liga sozinho); listarTudo
+nas vendas (rodada própria — duas telas casadas somando dinheiro).
+**Ação do dono:** colar no SQL Editor a migração
+supabase/migrations/20260830170000_app_users_last_login.sql.
+**Testes:** 540/540 (6 novos). **Build:** exit 0. Nomes de migração: ✅.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview e o SQL.

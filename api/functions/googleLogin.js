@@ -169,6 +169,16 @@ export default async function handler(req, res) {
 
     if (!user) return res.status(500).json({ success: false, error: 'Não foi possível criar/recuperar o usuário.' });
 
+    // 🕐 DIR-29 — rastro de login (mesmo carimbo do login.js): tolerante à
+    // coluna last_login ainda não migrada — nunca bloqueia o login.
+    try {
+      await sb(`app_users?id=eq.${encodeURIComponent(user.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ last_login: new Date().toISOString() }),
+      });
+    } catch { /* segue o login */ }
+
     delete user.password; // jamais devolve senha/hash
     // ⏱️ duracao_ms: o front registra no log do sistema quando passa do limite,
     // pra a lentidão do Google deixar de ser invisível.

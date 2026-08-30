@@ -345,9 +345,48 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     setFilteredCustomers(filtered);
   }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, roleTypeFilter, unifiedCustomers]);
 
-  // 🔧 DIR-28 — handleEdit removido: era código morto (nenhum botão chamava)
-  // — a edição de cliente manual acontece na página CustomerDetails, aberta
-  // pelo clique na linha da tabela.
+  // ✏️ DIR-29 — editar cliente MANUAL direto no modal do CRM (o handleEdit
+  // morto da DIR-28 voltou, desta vez LIGADO no botão lápis da tabela).
+  // Recebe a linha crua da tabela customers (customer.raw).
+  const handleEdit = (raw) => {
+    setEditingCustomer(raw);
+    setFormData({
+      full_name: raw.full_name || '',
+      email: raw.email || '',
+      phone: raw.phone || '',
+      cpf: raw.cpf || '',
+      status: raw.status || 'lead',
+      source: raw.source || 'site',
+      notes: raw.notes || '',
+      address_street: raw.address_street || '',
+      address_number: raw.address_number || '',
+      address_city: raw.address_city || '',
+      address_state: raw.address_state || '',
+      address_zip_code: raw.address_zip_code || '',
+      last_contact: raw.last_contact || new Date().toISOString().split('T')[0],
+      assigned_seller: raw.assigned_seller || '',
+      follow_up_date: raw.follow_up_date ? String(raw.follow_up_date).slice(0, 10) : '',
+      next_steps: raw.next_steps || '',
+      interested_products: raw.interested_products || []
+    });
+    setShowAddForm(true);
+  };
+
+  // 🌊 DIR-29 — mover cliente MANUAL de coluna no funil (arrastar e soltar).
+  const handleMoverNoFunil = async (customer, novoStatus) => {
+    if (!customer.manual_id) {
+      toast.warning('Cliente automático não se move na mão — o status vem do pedido real.');
+      return;
+    }
+    try {
+      await plataforma.entities.Customer.update(customer.manual_id, { purchase_status: novoStatus });
+      toast.success(`${customer.full_name} movido no funil!`);
+      await loadCustomers();
+    } catch (error) {
+      console.error('Erro ao mover no funil:', error);
+      toast.error('Erro ao mover no funil');
+    }
+  };
 
   // 💼 DIR-25 — INTERESSES tipados: produto do catálogo, plano de parceiro de
   // compra ou licença (escada oficial), cada um com VALOR editável (pré-
@@ -735,8 +774,8 @@ _Enviado via CRM Leilão NoZap_`;
     [networkCatalogSales, isSuperAdmin]
   );
   const kpisDiretoria = React.useMemo(
-    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers }) : null),
-    [networkCatalogSales, networkAppUsers, isSuperAdmin]
+    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts }) : null),
+    [networkCatalogSales, networkAppUsers, allProducts, isSuperAdmin]
   );
   const escadaLicencas = React.useMemo(
     () => (isSuperAdmin ? resumoEscada(networkCatalogSales) : null),
@@ -1074,6 +1113,7 @@ _Enviado via CRM Leilão NoZap_`;
             <option value="site">Site</option>
             <option value="whatsapp">WhatsApp</option>
             <option value="redes_sociais">Redes Sociais</option>
+            <option value="ranking">Ranking Premiado</option>
             <option value="outro">Outro</option>
           </select>
 
@@ -1128,12 +1168,13 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
 
           {visaoClientes === 'funil' ? (
-            <CrmFunilKanban customers={filteredCustomers} onAbrirCliente={setDetailCustomer} />
+            <CrmFunilKanban customers={filteredCustomers} onAbrirCliente={setDetailCustomer} onMoverManual={handleMoverNoFunil} />
           ) : (
             <CrmCustomersTable
               customers={filteredCustomers}
               onForward={handleForward}
               onDelete={handleDelete}
+              onEdit={handleEdit}
               onRowClick={setDetailCustomer}
             />
           )}
@@ -1583,6 +1624,7 @@ _Enviado via CRM Leilão NoZap_`;
                             <option value="indicacao">Indicação</option>
                             <option value="whatsapp">WhatsApp</option>
                             <option value="redes_sociais">Redes Sociais</option>
+                            <option value="ranking">Ranking Premiado</option>
                             <option value="outro">Outro</option>
                           </select>
                         </div>

@@ -40,9 +40,19 @@ describe('calcularMetaCentral', () => {
     assert.equal(r.faltamTotal, META_VENDAS_MES - 180);
   });
 
-  test('venda física é SEM FONTE (null), não zero medido', () => {
+  test('DIR-29: venda de balcão (source=pdv) vai pro trilho FÍSICO, não pro online', () => {
+    const r = calcularMetaCentral([
+      real({ kind: 'produto', source: 'pdv', total_amount: 200 }),
+      real({ kind: 'loja', total_amount: 100 }),
+    ], REF);
+    assert.equal(r.fisica, 200);
+    assert.equal(r.online, 100);
+    assert.equal(r.total, 300); // nada some, nada duplica
+  });
+
+  test('sem venda de PDV no mês, física é ZERO MEDIDO (fonte existe: o PDV)', () => {
     const r = calcularMetaCentral([], REF);
-    assert.equal(r.fisica, null);
+    assert.equal(r.fisica, 0);
   });
 
   test('venda de outro mês não entra — a meta é mensal', () => {

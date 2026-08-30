@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Mail, Phone, Send, Trash2, Gavel, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Mail, Phone, Send, Trash2, Gavel, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
@@ -20,7 +20,7 @@ const PURCHASE_LABEL = {
   sem_compra: 'Sem Compra', em_negociacao: 'Em Negociação', aguardando_pagamento: 'Aguardando Pagamento',
   pago: 'Pago', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado',
 };
-const SOURCE_PART_LABEL = { cadastro: 'Cadastro', loja_virtual: 'Loja Virtual', leilao: 'Leilão', indicacao: 'Indicação', site: 'Site', whatsapp: 'WhatsApp', redes_sociais: 'Redes Sociais', outro: 'Outro' };
+const SOURCE_PART_LABEL = { cadastro: 'Cadastro', loja_virtual: 'Loja Virtual', leilao: 'Leilão', indicacao: 'Indicação', site: 'Site', whatsapp: 'WhatsApp', redes_sociais: 'Redes Sociais', ranking: 'Ranking Premiado', outro: 'Outro' };
 const formatSource = (source) => (source || '').split('+').map((p) => SOURCE_PART_LABEL[p] || p).join(' + ');
 
 const POR_PAGINA = 50;
@@ -45,7 +45,7 @@ function ThOrdenavel({ campo, rotulo, sortBy, sortDir, onSort, className = 'text
   );
 }
 
-export default function CrmCustomersTable({ customers, onForward, onDelete, onRowClick }) {
+export default function CrmCustomersTable({ customers, onForward, onDelete, onEdit, onRowClick }) {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState('contato');
   const [sortDir, setSortDir] = useState('desc');
@@ -189,6 +189,11 @@ export default function CrmCustomersTable({ customers, onForward, onDelete, onRo
                     <td className="p-3">
                       {isManual ? (
                         <div className="flex items-center justify-center gap-2">
+                          {onEdit && (
+                            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onEdit(customer.raw); }} className="text-nz-tinta-fraca hover:bg-nz-cinza-fundo" title="Editar cliente">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onForward(customer.raw); }} className="text-nz-verde hover:bg-nz-verde-fundo" title="Encaminhar para Vendedor">
                             <Send className="w-4 h-4" />
                           </Button>

@@ -75,11 +75,11 @@ export default function CrmMetaCentral({ metaCentral, ritmo }) {
           />
           <Trilho
             icone={Store}
-            titulo="Física (loja/distribuidora)"
+            titulo="Física (balcão/PDV)"
             valor={metaCentral.fisica}
             meta={metaCentral.metaFisica}
             semFonte={metaCentral.fisica === null}
-            detalhe="O sistema ainda não registra venda física — o trilho ativa quando existir lançamento."
+            detalhe="Vendas de balcão registradas no PDV (source='pdv') — dado real do mês."
           />
         </div>
 
