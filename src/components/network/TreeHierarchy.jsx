@@ -281,6 +281,19 @@ export default function TreeHierarchy({
     return achados;
   }, [byId, query]);
 
+  // 🔎 DIR-33 (acabamento) — lista de resultados CLICÁVEL embaixo da lupa:
+  // o destaque na árvore pode cair fora da tela e parecer que a busca não
+  // funcionou. Clicar num resultado abre o caminho e centraliza (focusUser).
+  const resultadosBusca = useMemo(() => {
+    if (query.trim().length < 2 || !matches.size) return [];
+    const lista = [];
+    for (const u of byId.values()) {
+      if (matches.has(u.id)) lista.push(u);
+      if (lista.length >= 8) break;
+    }
+    return lista;
+  }, [byId, matches, query]);
+
   // Abre o caminho até os achados (limite de 40 pra não explodir a árvore
   // inteira com uma busca genérica tipo "a").
   useEffect(() => {
@@ -640,8 +653,32 @@ export default function TreeHierarchy({
               if (e.key === 'Enter' && matches.size) focusUser([...matches][0]);
             }}
             placeholder="Nome, apelido, e-mail, telefone, CPF…"
-            className="w-full sm:w-52 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 h-10 sm:h-auto sm:py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
+            className="w-full sm:w-64 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 h-10 sm:h-auto sm:py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
           />
+          {resultadosBusca.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-gray-700 bg-gray-900 shadow-2xl overflow-hidden">
+              {resultadosBusca.map((r) => {
+                const nivel = getLevel(r.primary_career_level || 'usuario');
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); focusUser(r.id); }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-800 border-b border-gray-800 last:border-b-0"
+                  >
+                    <p className="text-[12.5px] font-semibold text-white truncate">
+                      {r.full_name || r.nickname || 'Sem nome'}
+                      <span className={`ml-1.5 text-[10.5px] font-normal ${nivel.textColor}`}>{nivel.name}</span>
+                    </p>
+                    <p className="text-[11px] text-gray-500 truncate">{r.email || r.phone || r.referral_code || ''}</p>
+                  </button>
+                );
+              })}
+              {matches.size > resultadosBusca.length && (
+                <p className="px-3 py-1.5 text-[10.5px] text-gray-500 bg-gray-900">+ {matches.size - resultadosBusca.length} resultados — refine a busca</p>
+              )}
+            </div>
+          )}
         </div>
         {query && (
           <span className="text-[11px] text-gray-500">
