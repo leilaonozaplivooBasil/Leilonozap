@@ -12,17 +12,60 @@
 
 ---
 
-## Estado agora
+## DIR-15 — total_spent do CRM contava venda não paga como dinheiro real
 
-**Nenhuma diretiva em vigor.** DIR-1 a DIR-14 concluídas (ver
-`docs/RELATORIOS_EXECUCAO.md` e `docs/HISTORICO_DIRETIVAS.md`).
+**Emitida por:** Claude, via achado técnico — o dono comparou os números do
+CRM com os do Painel de Alavancagem (`NetworkOverview.jsx`, que já tem um
+filtro rigoroso de "dinheiro real") e perguntou "qual está certo, qual
+está errado, não é possível???". Investigando a fonte do "Volume
+Financeiro Total"/"Volume Transacionado" (`crmUnifiedCustomers.js`,
+`total_spent`), achei que ele soma QUALQUER `catalog_sales` — inclusive
+`pending_payment` e `canceled` — como se fosse dinheiro que já entrou.
+**Data:** 30/08/2026.
+**Objetivo:** mesmo defeito de conceito já corrigido em `financial_income`
+(DIR-7) e no filtro `isPaga` do `NetworkOverview.jsx`: venda não paga não é
+dinheiro. Corrigir pra `total_spent`/`purchase_count` (Loja Virtual/PDV)
+só somarem venda com status realmente pago (mesmo conjunto `JA_PAGO` já
+usado em `updateOrderStatus.js`/`CatalogOrdersAdmin.jsx`, cobrindo os dois
+idiomas de status que o banco mistura — PONTO 116).
+**Escopo autorizado:** `src/lib/crmUnifiedCustomers.js` — filtro de status
+pago aplicado às 3 gravações de `total_spent`/`purchase_count` vindas de
+`catalogSales` (conta identificada, avulso existente, avulso novo). Teste
+novo (`tests/crmUnifiedCustomersTotalSpent.test.mjs`) cobrindo paga,
+pendente, cancelada, status em português e comprador avulso.
+**Fora do escopo / proibido (flagged, não corrigido nesta rodada):** a
+mesma pergunta pro lado dos LEILÕES (`auctions.forEach`, soma
+`current_price` de qualquer `winner_id` sem checar pagamento) — investiguei
+e achei que `auctions.order_status` NÃO é atualizado pra `'paid'` quando o
+arremate é pago via PIX/cartão (só `mpWebhook.js` grava o status em
+`catalog_sales`, nunca em `auctions`) — usar `order_status` como filtro
+excluiria arremates pagos de verdade por PIX/cartão, um bug NOVO pior que
+o atual. Precisa de uma forma confiável de achar a venda `catalog_sales`
+correspondente ao arremate (hoje sem FK direta, só dentro de
+`raw_base44`) antes de mexer — fica como pendência registrada, não como
+fix arriscado sob pressa.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-14.
+**Status:** EM VIGOR — código e teste prontos, aguardando confirmação
+visual do dono no Preview/produção depois do deploy.
+
+---
+
+## Estado agora
 
 CRM e Financeiro têm a lógica, os dados e a leitura (RLS) corretos.
 "Faturamento Total" = R$ 1.367,17 (comissão de Loja Virtual + Leilão),
 confirmado direto no banco. "Volume Financeiro Total" (depósito + venda
 bruta de Loja/PDV/Leilão) é um card novo e separado, pra visão de volume
-movimentado sem misturar com receita — falta só o dono conferir
-visualmente no Preview/produção depois do próximo deploy.
+movimentado sem misturar com receita, e agora só conta venda realmente
+paga (DIR-15) — falta só o dono conferir visualmente no Preview/produção
+depois do próximo deploy.
+
+**Pendência técnica em aberto, registrada mas não corrigida (DIR-15):** o
+volume de LEILÃO no CRM ainda pode incluir arremates nunca pagos, porque
+não existe hoje um jeito confiável e barato de checar se um arremate foi
+pago de verdade sem arriscar excluir arremates pagos por PIX/cartão (ver
+detalhe na DIR-15 em `docs/HISTORICO_DIRETIVAS.md`). Precisa de
+investigação própria antes de mexer.
 
 **Achado crítico de infraestrutura, fora do escopo de código, aguardando o
 dono (ver `REL-11`):** o deploy automático de migração

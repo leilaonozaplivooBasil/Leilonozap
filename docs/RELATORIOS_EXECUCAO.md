@@ -717,3 +717,56 @@ nenhuma mudança na regra de reconhecimento de receita, nenhuma mudança em
 (R$ 1.367,17). Cards de Volume Financeiro Total commitados e empurrados —
 falta o dono conferir visualmente no Preview/produção depois do próximo
 deploy.
+
+---
+
+## REL-15 — Execução da DIR-15
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono mandou print do `NetworkOverview.jsx` (Painel de Alavancagem) e
+   perguntou por que os números não batiam com o CRM, "qual está certo,
+   qual está errado". Investigando a fonte de `total_spent`
+   (`src/lib/crmUnifiedCustomers.js`, usada tanto em "Volume Transacionado"
+   quanto no "Volume Financeiro Total" da DIR-14), achei que ele soma
+   QUALQUER `catalog_sales` do comprador — inclusive `pending_payment` e
+   `canceled` — sem checar status nenhum. `NetworkOverview.jsx` já tinha
+   isso certo desde a DIR-6 (`isPaga`), então os dois números nunca
+   poderiam bater.
+2. Corrigido: `total_spent`/`purchase_count` (Loja Virtual/PDV) só somam
+   quando o status da venda está no conjunto "já pago" (mesmo `JA_PAGO` já
+   usado em `updateOrderStatus.js`/`STATUS_PAGO` de
+   `CatalogOrdersAdmin.jsx`, cobrindo os dois idiomas de status que o
+   banco mistura). Aplicado nos 3 pontos onde `catalogSales.forEach`
+   grava total_spent (conta identificada, avulso já existente, avulso
+   novo).
+3. Teste novo `tests/crmUnifiedCustomersTotalSpent.test.mjs` (6 casos):
+   venda paga soma, pendente não soma, cancelada não soma, status em
+   português também soma, mistura paga+pendente só soma a paga, comprador
+   avulso com venda pendente fica em zero.
+**O que NÃO foi feito / blockers:** o mesmo problema do lado do LEILÃO
+(`auctions.forEach` soma `current_price` de QUALQUER `winner_id`, sem
+checar pagamento) foi investigado mas NÃO corrigido nesta rodada — achei
+que `auctions.order_status` não é atualizado pra `'paid'` quando o
+arremate é pago via PIX/cartão (confirmado por leitura: `mpWebhook.js`
+nunca faz PATCH em `auctions`, só em `catalog_sales`; só
+`settleAuctionWithBalance.js` e o cron `liquidarArrematesPendentes.js`
+atualizam `order_status`, e só cobrem o caminho de saldo). Usar
+`order_status` como filtro excluiria arremates pagos de verdade por PIX/
+cartão — um bug novo, pior que o atual. A venda `catalog_sales`
+correspondente ao arremate existe, mas sem FK direta pro `auctions.id`
+(só dentro de `raw_base44`, JSON não indexado) — corrigir isso direito
+precisa de investigação própria, registrada como pendência na DIR-15/
+`docs/DIRETIVA_ATUAL.md`, não forçada sob pressa.
+**Testes:** 426/426 (420 + 6 novos). **Build:** exit 0.
+**Confirmação de escopo:** só `crmUnifiedCustomers.js` e o teste novo
+foram tocados. `auctions.forEach`, `financial_income`,
+`finalizeAuctionCore.js` e a regra de reconhecimento de receita (DIR-7)
+não foram alterados.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — a parte de Loja Virtual/PDV está corrigida,
+testada e commitada; a parte de Leilão fica registrada como pendência
+própria, não corrigida por falta de um jeito confiável e seguro de checar
+pagamento de arremate ainda.
