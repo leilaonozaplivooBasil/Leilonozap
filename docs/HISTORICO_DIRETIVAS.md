@@ -326,3 +326,55 @@ regra de reconhecimento de receita da DIR-7; qualquer mudança em
 sessão — commit direto na branch de trabalho. Comissão de leilão e
 backfill histórico de adesão ficam pendência à parte, sem diretiva
 própria. Ver `REL-13`.
+
+---
+
+## DIR-14 — Comissão de leilão em financial_income + volume de depósito no CRM
+
+**Emitida por:** dono (Luiz), via pergunta direta (`AskUserQuestion`) depois
+de ver "Faturamento Total: R$ 1.317,56" continuar sem a receita de leilão:
+"Sim, incluir agora (a partir de hoje + histórico)" — reabrindo a decisão
+da DIR-13, que tinha adiado isso. No mesmo momento, pediu também (mensagem
+direta): "quero saber tudo que entra no CRM, também depósito em carteira
+digital, pra saber volume financeiro".
+**Data:** 30/08/2026.
+**Objetivo:**
+1. A comissão retida do leilão (25% do valor do arremate a cada martelo,
+   ou os 30% inteiros quando não tem indicador) é receita real da empresa
+   — decisão expressa do dono já documentada em `finalizeAuctionCore.js`
+   (PONTO 100, 21/08/2026): "é saldo real e sacável... a conta é dele".
+   Já era calculada e creditada corretamente em `commission_records`
+   (`role='leilao_retido'`), só nunca tinha sido ligada a
+   `financial_income` — por isso nunca aparecia no Financeiro/CRM.
+2. O dono quer visibilidade do volume TOTAL que entra na plataforma
+   (depósito em carteira digital), separado da receita — não misturado no
+   "Faturamento Total" (regra da DIR-7 continua valendo: depósito não é
+   receita, só vira receita quando gasto numa compra).
+**Escopo autorizado:**
+1. `api/_lib/finalizeAuctionCore.js` (`reterFatiaDaRede`) — chama
+   `registrarReceita` logo após confirmar o crédito na conta oficial
+   (categoria `comissao_leilao`, cost center `Leilões`).
+2. Migration de backfill (`commission_records` onde
+   `sale_type='leilao' and role='leilao_retido'` → `financial_income`,
+   idempotente por `sale_id`).
+3. **Correção de escopo, mesma diretiva, mesmo dia:** o dono viu o card de
+   depósito isolado e disse explicitamente "eu quero tudo, tudo, tudo" —
+   um número somando depósito + venda bruta de Loja/PDV + venda bruta de
+   leilão, comparável ao que via no Painel de Alavancagem (rede própria).
+   Trocado o card único "Depósitos em Carteira Digital" por um grupo de 3
+   cards: **"Volume Financeiro Total"** (depósito + venda bruta, em
+   destaque), e dois cards de detalhe ao lado ("— Depósitos em carteira" e
+   "— Venda bruta (Loja + Leilão)"). Tooltip de cada um deixa claro que
+   isto é VOLUME, não receita — "Faturamento Total" continua intacto,
+   sem depósito nem valor bruto, porque alimenta o cálculo de imposto do
+   Simples Nacional (`src/lib/simplesNacional.js`) e não pode misturar.
+**Fora do escopo / proibido:** mudar a regra de reconhecimento de receita
+da DIR-7 (depósito e venda bruta continuam fora do "Faturamento Total");
+backfill histórico de adesão/seller_adhesion legado (mesma pendência da
+DIR-13, ainda sem decisão).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-13.
+**Status:** CONCLUÍDA. Migration aplicada manualmente pelo dono no SQL
+Editor e confirmada por consulta direta: `comissao_loja` 33 linhas/
+R$ 1.317,56 + `comissao_leilao` 11 linhas/R$ 49,61 = **R$ 1.367,17** de
+Faturamento Total. Cards de Volume Financeiro Total commitados no código.
+Ver `REL-14`.

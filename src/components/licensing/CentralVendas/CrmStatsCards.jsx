@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Users, TrendingUp, Briefcase, DollarSign, ShoppingCart,
   MessageSquare, Clock, CheckCircle, Package, Truck, XCircle,
-  Gavel, Store, Award, Landmark, Gavel as GavelIcon, UserCheck
+  Gavel, Store, Award, Landmark, Gavel as GavelIcon, UserCheck, Wallet
 } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 
@@ -85,8 +85,26 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
           value={fmtBRL(stats.totalSpent)}
           icon={DollarSign}
           info={isSuperAdmin
-            ? 'Receita REAL da empresa — a mesma comissão de vendas + taxas do módulo Financeiro. Não é o valor total que os clientes pagaram (a maior parte disso vai pro vendedor terceiro).'
+            ? 'Receita REAL da empresa — a mesma comissão de vendas + taxas do módulo Financeiro. Não é o valor total que os clientes pagaram (a maior parte disso vai pro vendedor terceiro). É este número (não o "Volume Financeiro Total" ao lado) que entra no cálculo de imposto do Simples Nacional.'
             : 'Soma do valor total que sua rede já comprou/arrematou — não é a sua comissão, é o volume transacionado por ela.'}
+        />
+      </div>
+
+      {/* 💰 DIR-14 — "quero tudo, tudo, tudo": depósito + venda bruta de Loja/PDV
+          + venda bruta de leilão, num card à parte, com cor e nome bem diferentes
+          do Faturamento Total (que é só a comissão) pra nunca mais confundir. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <StatCard
+          label="Volume Financeiro Total" value={fmtBRL(stats.volumeFinanceiroTotal)} icon={Landmark} highlight wide
+          info="TUDO que já circulou de verdade na plataforma: depósito em carteira digital + venda bruta de Loja/PDV + venda bruta de leilão, somados. NÃO é lucro nem receita da empresa (a maior parte vai pro vendedor/rede) — é volume movimentado. Para receita real, veja 'Faturamento Total'."
+        />
+        <StatCard
+          label="— Depósitos em carteira" value={fmtBRL(stats.depositosCarteira)} icon={Wallet}
+          info="Parte do Volume Financeiro Total que é depósito em carteira digital (saldo de comissão ou de operação)."
+        />
+        <StatCard
+          label="— Venda bruta (Loja + Leilão)" value={fmtBRL(stats.volumeVendasBruto)} icon={ShoppingCart}
+          info="Parte do Volume Financeiro Total que é o valor cheio de compras/arremates — não é comissão, é o preço total pago pelo cliente."
         />
       </div>
 
@@ -103,10 +121,6 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
         <StatCard
           label="Valor Investido em Estoque" value={fmtBRL(stats.valorEstoque)} icon={DollarSign} wide
           info="Custo real de cada produto em estoque (o que foi pago, não o preço de venda) × quantidade disponível."
-        />
-        <StatCard
-          label="Depósitos em Carteira Digital" value={fmtBRL(stats.depositosCarteira)} icon={Landmark} wide
-          info="Soma de todo depósito real em carteira digital (saldo de comissão ou de operação) feito por pessoas do seu escopo — é volume financeiro que ENTROU na plataforma. NÃO é receita da empresa: só vira receita quando esse saldo for gasto numa compra (aí sim aparece em 'Faturamento Total')."
         />
       </div>
 

@@ -680,3 +680,40 @@ continua exatamente igual).
 **Status final:** PARCIAL — código e migration commitados e empurrados,
 mas depende do dono aplicar a migration manualmente no SQL Editor
 (pipeline automático ainda quebrado) e confirmar, igual DIR-11/DIR-12.
+
+**Confirmação em produção, mesmo dia:** dono aplicou a migration no SQL
+Editor. Diagnóstico direto no banco confirmou 11 linhas em
+`commission_records` (`sale_type='leilao', role='leilao_retido'`,
+R$ 49,61) e, depois do backfill, `financial_income` passou a ter
+`comissao_loja` 33 linhas/R$ 1.317,56 + `comissao_leilao` 11 linhas/
+R$ 49,61 = **R$ 1.367,17**. (Nota: a mensagem "Success. No rows returned"
+do SQL Editor do Supabase é padrão pra qualquer INSERT/CREATE sem
+`RETURNING` — não significa zero linhas afetadas. Interpretação errada
+minha na hora, corrigida depois de conferir com `select count(*)`.)
+
+**Correção de escopo, mesmo dia, depois da confirmação acima:** o dono
+comparou o "Faturamento Total" (R$ 1.367,17, comissão real) com o "Valor
+Total" do Painel de Alavancagem (depósito + compra da própria rede,
+R$ 6.173,80) e pediu explicitamente "eu quero tudo, tudo, tudo" — um
+número somando depósito + venda bruta de Loja/PDV + venda bruta de leilão,
+não só a comissão. Implementado:
+1. `CrmClientesTab.jsx` — `volumeVendasBruto` (mesma soma que a rede já via
+   como "Volume Transacionado", agora calculada também pra super_admin,
+   plataforma inteira) + `depositosCarteira` (já existia) somados em
+   `volumeFinanceiroTotal`.
+2. `CrmStatsCards.jsx` — troca do card único "Depósitos em Carteira
+   Digital" por um grupo de 3: "Volume Financeiro Total" (em destaque) +
+   "— Depósitos em carteira" + "— Venda bruta (Loja + Leilão)" como
+   detalhe. Tooltip de cada um reforça que é volume, não receita — o
+   "Faturamento Total" ganhou uma frase extra no tooltip avisando que é
+   ele (não o Volume Financeiro Total) que alimenta o cálculo de imposto
+   do Simples Nacional, pra deixar claro por que os dois NUNCA devem ser
+   somados.
+**Testes:** 420/420 (sem teste novo). **Build:** exit 0.
+**Confirmação de escopo:** só os 2 arquivos do CRM tocados nesta correção;
+nenhuma mudança na regra de reconhecimento de receita, nenhuma mudança em
+`financial_income`/`finalizeAuctionCore.js`.
+**Status final:** CONCLUÍDA. Migration confirmada em produção
+(R$ 1.367,17). Cards de Volume Financeiro Total commitados e empurrados —
+falta o dono conferir visualmente no Preview/produção depois do próximo
+deploy.

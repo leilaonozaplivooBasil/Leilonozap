@@ -502,6 +502,24 @@ _Enviado via CRM Leilão NoZap_`;
     await loadCustomers();
   };
 
+  // 💰 DIR-14 (correção, 30/08/2026) — o dono foi claro: quer um número que
+  // some TUDO que já circulou de verdade na plataforma (depósito em
+  // carteira + venda bruta de Loja/PDV + venda bruta de leilão), separado
+  // do "Faturamento Total" (que continua sendo só a comissão real — é o
+  // número que alimenta o cálculo de imposto do Simples Nacional em
+  // src/lib/simplesNacional.js; trocar por volume bruto colocaria a
+  // empresa numa faixa de imposto errada). Os dois ficam lado a lado, com
+  // nomes e cores bem diferentes, pra nunca mais parecerem a mesma coisa.
+  const depositosCarteira = networkCatalogSales
+    .filter((s) => ['wallet_deposit', 'commission_deposit', 'operacao_deposit'].includes(s.kind))
+    .filter((s) => !['pending_payment', 'canceled', 'cancelado', 'estornado'].includes(s.status))
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  // Volume bruto de venda (Loja/PDV + Leilão) — mesma soma que a rede já via
+  // como "Volume Transacionado"; pro super_admin é o total da PLATAFORMA
+  // inteira, porque networkAppUsers/networkCatalogSales/networkAuctions (que
+  // alimentam unifiedCustomers) já fazem o bypass de rede pra super_admin.
+  const volumeVendasBruto = unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0);
+
   const stats = {
     total: unifiedCustomers.length,
     leads: unifiedCustomers.filter(c => c.status === 'lead').length,
@@ -535,16 +553,11 @@ _Enviado via CRM Leilão NoZap_`;
     // isso que representa dinheiro parado em estoque, não o quanto renderia se
     // vendesse tudo pelo preço de tabela.
     valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.quantity || 0)), 0),
-    // 💰 DIR-14 — pedido do dono: ver o volume financeiro TOTAL que entra na
-    // plataforma, não só a receita da empresa. Depósito em carteira digital
-    // (saldo de comissão/operação) é dinheiro real de quem depositou — NUNCA
-    // é receita da empresa (só vira receita quando for gasto numa compra,
-    // regra da DIR-7) — por isso fica como card separado, nunca somado ao
-    // "Faturamento Total".
-    depositosCarteira: networkCatalogSales
-      .filter((s) => ['wallet_deposit', 'commission_deposit', 'operacao_deposit'].includes(s.kind))
-      .filter((s) => !['pending_payment', 'canceled', 'cancelado', 'estornado'].includes(s.status))
-      .reduce((sum, s) => sum + (s.total_amount || 0), 0),
+    depositosCarteira,
+    volumeVendasBruto,
+    // "tudo, tudo, tudo": depósito + venda bruta de Loja/PDV + venda bruta
+    // de leilão, somados num só número — volume, não receita.
+    volumeFinanceiroTotal: depositosCarteira + volumeVendasBruto,
   };
 
   if (!isAdmin) {
