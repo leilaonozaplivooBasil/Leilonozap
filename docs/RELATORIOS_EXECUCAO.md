@@ -1358,3 +1358,29 @@ deploy novo).
 **Testes:** 540/540 (6 novos). **Build:** exit 0. Nomes de migração: ✅.
 **Status final:** CONCLUÍDA — migração aplicada; aguarda conferência no
 Preview.
+
+---
+
+## REL-30 — Execução da DIR-30 (cargos do Plano de Carreira no cadastro de vendedor)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Select "Cargo / Tipo de Licença" do Novo Vendedor agora lista os cargos
+   OFICIAIS da fonte única do Painel de Controle (careerLevels.js), em 3
+   grupos: Plano de Carreira — Rede (Influenciador 5% → Distribuidor 20%,
+   com % e valor de adesão no rótulo), Diretoria (Trainee, Sócio
+   Executivo, Diretor Operacional, Diretoria Executiva, CEO, Livoo Live,
+   Embaixador, Conselheiro, Fundador — os nomes pedidos pelo dono) e
+   Licenças de Loja legado (vendedor antigo continua legível).
+2. Escolher um cargo do plano PRÉ-PREENCHE a comissão com o % oficial
+   (editável) e mostra a REGRA do cargo embaixo do select — o mesmo texto
+   que a equipe vê no Painel de Controle.
+3. Badge da tabela de vendedores via helper único nomeLicenca() (plano +
+   legado; id desconhecido aparece cru, nunca vira "Usuário" por engano).
+4. Telefone do vendedor salvo só com dígitos (obrigatório) — o wa.me do
+   encaminhamento e o PDV dependem de número limpo.
+**Fora do escopo confirmado:** motor de comissão do PDV intocado (usa
+career_levels do usuário, não o license_type do vendedor — conferido).
+**Testes:** 540/540. **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.

@@ -15,6 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { CAREER_LEVELS } from '@/lib/careerLevels';
 import { calcularCaptacao } from '@/lib/captacaoParceiros';
 import { calcularMetaCentral, ritmoDiario } from '@/lib/metaCentral';
 import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
@@ -345,6 +346,19 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     setFilteredCustomers(filtered);
   }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, roleTypeFilter, unifiedCustomers]);
 
+  // 🎖️ DIR-30 — nome amigável de QUALQUER cargo/licença do vendedor: primeiro
+  // o plano de carreira oficial (careerLevels.js), depois as licenças de loja
+  // legadas; id desconhecido aparece cru (nunca vira "Usuário" por engano).
+  const LOJAS_LEGADO = {
+    loja_inicial: 'Loja Inicial', loja_start: 'Loja Start', loja_profissional: 'Loja Profissional',
+    loja_lider: 'Loja Líder', loja_distribuidor: 'Loja Distribuidor',
+  };
+  const nomeLicenca = (id) => {
+    if (!id) return '-';
+    const nivel = CAREER_LEVELS.find((l) => l.id === id);
+    return nivel?.name || LOJAS_LEGADO[id] || id;
+  };
+
   // ✏️ DIR-29 — editar cliente MANUAL direto no modal do CRM (o handleEdit
   // morto da DIR-28 voltou, desta vez LIGADO no botão lápis da tabela).
   // Recebe a linha crua da tabela customers (customer.raw).
@@ -616,11 +630,18 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const handleSaveSeller = async (e) => {
     e.preventDefault();
     try {
+      // 📞 DIR-30 — telefone salvo SÓ com dígitos: o link de WhatsApp do
+      // encaminhamento (wa.me) e o PDV dependem de número limpo.
+      const payloadSeller = { ...sellerFormData, phone: String(sellerFormData.phone || '').replace(/\D/g, '') };
+      if (!payloadSeller.phone) {
+        toast.warning('Telefone é obrigatório (com DDD).');
+        return;
+      }
       if (editingSeller) {
-        await plataforma.entities.Seller.update(editingSeller.id, sellerFormData);
+        await plataforma.entities.Seller.update(editingSeller.id, payloadSeller);
         toast.success('Vendedor atualizado!');
       } else {
-        await plataforma.entities.Seller.create(sellerFormData);
+        await plataforma.entities.Seller.create(payloadSeller);
         toast.success('Vendedor cadastrado!');
       }
       setSellerFormData({
@@ -1231,20 +1252,10 @@ _Enviado via CRM Leilão NoZap_`;
                             </div>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge className={
-                              seller.license_type === 'loja_distribuidor' ? 'bg-purple-100 text-purple-800' :
-                              seller.license_type === 'loja_lider' ? 'bg-orange-100 text-orange-800' :
-                              seller.license_type === 'loja_profissional' ? 'bg-blue-100 text-blue-800' :
-                              seller.license_type === 'loja_start' ? 'bg-green-100 text-green-800' :
-                              seller.license_type === 'loja_inicial' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }>
-                              {seller.license_type === 'loja_distribuidor' ? 'Loja Distribuidor' :
-                               seller.license_type === 'loja_lider' ? 'Loja Líder' :
-                               seller.license_type === 'loja_profissional' ? 'Loja Profissional' :
-                               seller.license_type === 'loja_start' ? 'Loja Start' :
-                               seller.license_type === 'loja_inicial' ? 'Loja Inicial' :
-                               '-'}
+                            {/* 🎖️ DIR-30 — nome do cargo pelo helper único
+                                (plano de carreira + licenças legado). */}
+                            <Badge className="bg-nz-verde-fundo text-nz-verde border border-nz-verde/30">
+                              {nomeLicenca(seller.license_type)}
                             </Badge>
                           </td>
                           <td className="p-3 text-center">
@@ -1358,20 +1369,54 @@ _Enviado via CRM Leilão NoZap_`;
                   </div>
 
                   <div>
-                    <Label className="text-gray-300">Tipo de Licença *</Label>
+                    <Label className="text-gray-300">Cargo / Tipo de Licença *</Label>
+                    {/* 🎖️ DIR-30 — cargos OFICIAIS do Plano de Carreira (fonte
+                        única src/lib/careerLevels.js, a mesma do Painel de
+                        Controle): rede com % e adesão, diretoria com os nomes
+                        pedidos pelo dono, e as licenças de loja antigas no fim
+                        (vendedor legado continua legível). Escolher um cargo do
+                        plano pré-preenche a comissão com o % oficial. */}
                     <select
                       value={sellerFormData.license_type}
-                      onChange={(e) => setSellerFormData({ ...sellerFormData, license_type: e.target.value })}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        const nivel = CAREER_LEVELS.find((l) => l.id === id);
+                        setSellerFormData({
+                          ...sellerFormData,
+                          license_type: id,
+                          ...(nivel && nivel.venda_direta_pct > 0 ? { default_commission_percentage: nivel.venda_direta_pct } : {}),
+                        });
+                      }}
                       className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600"
                       required
                     >
                       <option value="">-- Selecione --</option>
-                      <option value="loja_inicial">Loja Inicial</option>
-                      <option value="loja_start">Loja Start</option>
-                      <option value="loja_profissional">Loja Profissional</option>
-                      <option value="loja_lider">Loja Líder</option>
-                      <option value="loja_distribuidor">Loja Distribuidor</option>
+                      <optgroup label="Plano de Carreira — Rede">
+                        {CAREER_LEVELS.filter((l) => l.bloco === 'rede' && l.id !== 'usuario').map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name} · {l.venda_direta_pct}%{l.adesao_valor > 0 ? ` · adesão R$ ${l.adesao_valor.toLocaleString('pt-BR')}` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Diretoria">
+                        {CAREER_LEVELS.filter((l) => l.bloco === 'diretor').map((l) => (
+                          <option key={l.id} value={l.id}>{l.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Licenças de Loja (legado)">
+                        <option value="loja_inicial">Loja Inicial · 13%</option>
+                        <option value="loja_start">Loja Start · 15%</option>
+                        <option value="loja_profissional">Loja Profissional · 16%</option>
+                        <option value="loja_lider">Loja Líder · 19%</option>
+                        <option value="loja_distribuidor">Loja Distribuidor · 20%</option>
+                      </optgroup>
                     </select>
+                    {(() => {
+                      const nivel = CAREER_LEVELS.find((l) => l.id === sellerFormData.license_type);
+                      return nivel ? (
+                        <p className="text-xs text-green-400/90 mt-1.5 leading-snug">📖 {nivel.regra}</p>
+                      ) : null;
+                    })()}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

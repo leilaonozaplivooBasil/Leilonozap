@@ -12,6 +12,40 @@
 
 ---
 
+## DIR-30 — Cadastro de vendedor com os cargos oficiais do Plano de Carreira
+
+**Emitida por:** dono (30/08/2026, com prints do modal Novo Vendedor):
+"vamos melhorar o cadastro de novo usuário e a partir daí os cargos
+baseado no nosso plano de carreira; inclua os nomes Sócio Executivo,
+Diretor Operacional, Diretoria Executiva etc — busque os cargos no
+painel de controle e insira de forma que faça sentido e seja conexo".
+**Data:** 30/08/2026.
+**Fatos conferidos antes de codar:** a fonte única dos cargos já existe
+(`src/lib/careerLevels.js`, espelho da tabela career_levels usada no
+Painel de Controle) — bloco REDE (Influenciador 5% → Distribuidor 20%,
+com adesão e regra de cada degrau) e bloco DIRETORIA (Trainee, Sócio
+Executivo, Diretor Operacional, Diretoria Executiva, CEO, Livoo Live,
+Embaixador, Conselheiro, Fundador). O `license_type` do vendedor é SÓ
+visual (a comissão do PDV usa career_levels do usuário — motor intocado).
+**Escopo autorizado:**
+1. Select "Tipo de Licença" do Novo Vendedor passa a listar os cargos
+   OFICIAIS em grupos: Plano de Carreira — Rede (com % e adesão no
+   rótulo), Diretoria (os nomes pedidos pelo dono) e Licenças de Loja
+   (legado — vendedores antigos continuam legíveis).
+2. Escolher um cargo PRÉ-PREENCHE a comissão com o % oficial do plano
+   (venda_direta_pct — continua editável) e mostra a REGRA do cargo
+   embaixo (mesmo texto do Painel de Controle).
+3. Badge da tabela de vendedores exibe o nome de qualquer cargo (oficial
+   ou legado) via helper único, sem cadeia de ifs.
+4. Telefone do vendedor salvo só com dígitos (o link de WhatsApp do
+   encaminhamento depende disso).
+**Fora do escopo / proibido:** motor de comissão do PDV (comissaoDaLicenca
+/career_levels do usuário); tabela career_levels do banco.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-29.
+**Status:** EM VIGOR — autorizada pelo dono.
+
+---
+
 ## DIR-29 — Melhorias da auditoria: KPIs sem fonte ativados com dado real + edição/kanban/origem
 
 **Emitida por:** dono (30/08/2026): "vamos para as melhorias que você
