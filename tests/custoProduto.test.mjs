@@ -4,7 +4,7 @@
 // Casos calibrados com dados REAIS de produção vistos na investigação.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { custoUnitario, custoEstoqueRestante } from '../src/lib/custoProduto.js';
+import { custoUnitario, custoEstoqueRestante, unidadesEmEstoque } from '../src/lib/custoProduto.js';
 
 describe('custoUnitario', () => {
   test('lote real: POLITRIZ — R$2.296 por 9 unidades (0 em estoque, 9 vendidas) = R$255,11/un', () => {
@@ -51,5 +51,25 @@ describe('custoEstoqueRestante', () => {
     const p = { cost_price: 2200, quantity: 7, quantity_sold: 3 };
     assert.ok(custoEstoqueRestante(p) < (p.cost_price * p.quantity));
     assert.equal(custoEstoqueRestante(p), 1540);
+  });
+});
+
+describe('unidadesEmEstoque — estoque físico das colunas de grade (DIR-20)', () => {
+  test('caso real bicicleta VIX: quantity 0/vendidas 0, mas 1 na grade → 1 em estoque, custo conta', () => {
+    const p = { cost_price: 4210, quantity: 0, quantity_sold: 0, qty_perfeito: 1 };
+    assert.equal(unidadesEmEstoque(p), 1);
+    assert.equal(custoEstoqueRestante(p), 4210);
+  });
+
+  test('grade NÃO é baixada na venda: lote esgotado (grade cheia, tudo vendido) → estoque 0', () => {
+    // POLITRIZ: grade registrou 9 na entrada, 9 vendidas, quantity 0 → nada em estoque
+    const p = { cost_price: 2296, quantity: 0, quantity_sold: 9, qty_perfeito: 9 };
+    assert.equal(unidadesEmEstoque(p), 0);
+    assert.equal(custoEstoqueRestante(p), 0);
+  });
+
+  test('quantity preenchido manda quando é maior que a grade descontada', () => {
+    const p = { cost_price: 100, quantity: 5, quantity_sold: 0, qty_perfeito: 2 };
+    assert.equal(unidadesEmEstoque(p), 5);
   });
 });

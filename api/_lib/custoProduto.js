@@ -7,9 +7,17 @@
 // + já vendidas).
 const n = (v) => Number(v) || 0;
 
-/** Custo por unidade: custo total do lote ÷ (estoque + vendidas). */
+/** Unidades de grade (Perfeito/Bom/Oficina/Ruim) — não baixadas na venda. */
+export const unidadesFisicas = (p) =>
+  n(p.qty_perfeito) + n(p.qty_bom) + n(p.qty_oficina) + n(p.qty_ruim);
+
+/** Estoque real agora — mesmo cálculo do espelho cliente (ver lá o porquê). */
+export const unidadesEmEstoque = (p) =>
+  Math.max(n(p.quantity), unidadesFisicas(p) - n(p.quantity_sold));
+
+/** Custo por unidade: custo total do lote ÷ (estoque real + vendidas). */
 export const custoUnitario = (p) => {
-  const totalUnidades = n(p.quantity) + n(p.quantity_sold);
+  const totalUnidades = unidadesEmEstoque(p) + n(p.quantity_sold);
   return totalUnidades > 0 ? n(p.cost_price) / totalUnidades : n(p.cost_price);
 };
 

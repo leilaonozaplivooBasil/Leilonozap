@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
+import { unidadesEmEstoque, custoEstoqueRestante } from '@/lib/custoProduto';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -268,8 +269,13 @@ export default function ProductManagement() {
   const navigate = useNavigate();
 
   const stats = React.useMemo(() => {
-    const inStock = filteredProducts.reduce((sum, p) => sum + (p.quantity || 0), 0);
-    const totalInvested = filteredProducts.reduce((sum, p) => sum + (p.cost_price || 0), 0);
+    // 🔴 DIR-20 — regra única de estoque/custo (src/lib/custoProduto.js):
+    // unidadesEmEstoque cobre os 184 produtos com quantity=0 mas estoque
+    // físico real nas colunas de grade; "Capital em Estoque" vira o custo
+    // PARADO AGORA (fatia não vendida dos lotes), não a soma histórica dos
+    // lotes — mesmo número do CRM, validado no banco (R$ 28.133,45).
+    const inStock = filteredProducts.reduce((sum, p) => sum + unidadesEmEstoque(p), 0);
+    const totalInvested = filteredProducts.reduce((sum, p) => sum + custoEstoqueRestante(p), 0);
     const potentialRevenue = filteredProducts.reduce((sum, p) => {
       const qtyPerfeitoBom = (p.qty_perfeito || 0) + (p.qty_bom || 0);
       return sum + ((p.selling_price_retail || 0) * qtyPerfeitoBom);
@@ -933,7 +939,7 @@ export default function ProductManagement() {
         <TooltipProvider>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total de Unidades', value: filteredProducts.reduce((s, p) => s + (p.quantity || 0) + (p.quantity_sold || 0), 0).toLocaleString(), icon: Package, color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/20', tooltip: 'Soma de todas as unidades (em estoque + vendidas).' },
+              { label: 'Total de Unidades', value: filteredProducts.reduce((s, p) => s + unidadesEmEstoque(p) + (p.quantity_sold || 0), 0).toLocaleString(), icon: Package, color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/20', tooltip: 'Soma de todas as unidades (em estoque + vendidas), contando também o estoque físico da conferência de entrada.' },
               { label: 'Testados & Aprovados', value: filteredProducts.reduce((s, p) => s + (p.qty_perfeito || 0) + (p.qty_bom || 0), 0).toLocaleString(), icon: TrendingUp, color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/20', tooltip: 'Perfeito + Bom — prontos para venda.' },
               { label: 'Qtd Vendidos', value: stats.totalSold.toLocaleString(), icon: ShoppingCart, color: 'text-amber-400', bg: 'from-amber-500/10 to-transparent', border: 'border-amber-500/20', tooltip: 'Total de unidades que já saíram do estoque via vendas.' },
               { label: 'Saldo em Estoque', value: stats.inStock.toLocaleString(), icon: Package, color: 'text-amber-400', bg: 'from-amber-500/10 to-transparent', border: 'border-amber-500/20', tooltip: 'Unidades disponíveis no estoque atual.' },
@@ -959,7 +965,7 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {[
               { label: 'Ticket Médio', value: `R$ ${stats.averageTicketFunctional.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-orange-300', border: 'border-orange-500/25', accent: 'bg-orange-500', tooltip: 'Valor médio por unidade dos produtos Perfeito ou Bom.' },
-              { label: 'Capital em Estoque', value: `R$ ${stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-amber-300', border: 'border-amber-500/25', accent: 'bg-amber-500', tooltip: 'Soma do custo de todos os produtos em estoque.' },
+              { label: 'Capital em Estoque', value: `R$ ${stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-amber-300', border: 'border-amber-500/25', accent: 'bg-amber-500', tooltip: 'Custo parado em estoque AGORA: fatia não vendida do custo de cada lote (mesma conta do CRM). Não inclui a parte já vendida dos lotes.' },
               { label: 'Receita Potencial', value: `R$ ${stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-amber-300', border: 'border-amber-500/25', accent: 'bg-amber-500', tooltip: 'Receita máxima vendendo todos os Perfeito + Bom.' },
               { label: 'Faturado', value: `R$ ${stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-emerald-300', border: 'border-emerald-500/25', accent: 'bg-emerald-500', tooltip: 'Total arrecadado com vendas realizadas.' },
               { label: 'Lucro Líquido', value: `R$ ${stats.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-green-300', border: 'border-green-500/25', accent: 'bg-green-500', tooltip: 'Diferença entre valor faturado e custo dos produtos.' },

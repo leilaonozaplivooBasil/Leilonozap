@@ -175,12 +175,12 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
           info="Quantidade de leilões vencidos de verdade (Auction.winner_id) por pessoas do seu escopo."
         />
         <StatCard
-          label="Produtos em Estoque" value={stats.produtosDisponiveis} icon={Package}
-          info="Produtos ativos no catálogo (catalog_active) com quantidade disponível maior que zero."
+          label="Produtos no Catálogo" value={stats.produtosDisponiveis} icon={Package}
+          info="Produtos publicados na vitrine online (catalog_active) com estoque disponível. O galpão inteiro tem mais produtos que ainda não foram publicados — o Valor Investido ao lado conta TODOS."
         />
         <StatCard
           label="Valor Investido em Estoque" value={fmtBRL(stats.valorEstoque)} icon={DollarSign} wide
-          info="Custo real de cada produto em estoque (o que foi pago, não o preço de venda) × quantidade disponível."
+          info="Custo real parado em estoque AGORA, no galpão inteiro (publicado ou não): fatia não vendida do custo de cada lote, contando também o estoque físico da conferência de entrada (Perfeito/Bom/Oficina/Ruim). Não inclui a parte dos lotes que já foi vendida."
         />
       </div>
 

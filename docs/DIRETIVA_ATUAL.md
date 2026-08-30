@@ -12,6 +12,47 @@
 
 ---
 
+## DIR-20 — Estoque cristalino: número único validado no banco
+
+**Emitida por:** dono ("vamos fazer uma análise extremamente diligente na
+Gestão de Produtos, os números não estão batendo, preciso deixar isso
+cristalino"), com diagnóstico fechado por 4 consultas diretas dele ao banco.
+**Data:** 30/08/2026.
+**Objetivo:** três telas mostravam três "valores de estoque" diferentes
+(CRM R$ 9.309 / Gestão R$ 29.951 / real R$ 28.133) porque cada uma usava
+população e fórmula próprias. Números validados direto no banco:
+- Investido histórico em todos os lotes: R$ 108.232,54.
+- Parado em estoque AGORA (fatia não vendida, contando estoque físico da
+  grade): **R$ 28.133,45** — este é o número oficial.
+- 184 produtos com `quantity = 0` mas estoque físico real nas colunas de
+  grade (Perfeito/Bom/Oficina/Ruim, que não são baixadas na venda) —
+  invisíveis pra qualquer conta baseada só em `quantity`.
+- "Receita Potencial R$ 5,08 milhões" da Gestão: 95% vem de UM produto com
+  preço podre (Mini Localizador GPS a R$ 12.226,61/un × 394 — o valor
+  gravado é o preço do LOTE; o unitário real é R$ 31,03).
+**Escopo autorizado:**
+1. `custoProduto.js` (cliente + espelho servidor) ganha `unidadesFisicas`/
+   `unidadesEmEstoque` (= max(quantity, grade − vendidas)) e `custoUnitario`
+   passa a usar o estoque real — fórmula idêntica à validada no banco.
+2. CRM: "Valor Investido em Estoque" soma o GALPÃO INTEIRO (todos os
+   produtos, não só os 302 do catálogo); card "Produtos em Estoque"
+   renomeado "Produtos no Catálogo"; tooltips explicando as definições.
+3. Gestão de Estoque: "Capital em Estoque" vira o custo parado AGORA
+   (mesma conta do CRM — antes era soma histórica dos lotes exibidos);
+   "Saldo em Estoque"/"Total de Unidades" contam o estoque físico da grade.
+4. Consignado (`createConsignacao`) herda o estoque físico no cálculo do
+   custo unitário (select ganhou as colunas de grade).
+5. Testes novos (caso real da bicicleta VIX e da POLITRIZ esgotada).
+**Fora do escopo / proibido (dados, só o dono corrige):** o preço podre do
+Mini Localizador (SQL de correção entregue no chat) e os 15 produtos sem
+custo (lista já entregue) — dados de negócio, nunca inventados pelo código.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-19.
+**Status:** EM VIGOR — código, testes (460/460, 3 novos) e build passam;
+aguarda conferência do dono no Preview e autorização pra publicar o pacote
+DIR-18+19+20.
+
+---
+
 ## DIR-19 — Acerto do consignado por unidade, regra de mercado
 
 **Emitida por:** dono, decisão direta depois do achado da DIR-18 ("deixe

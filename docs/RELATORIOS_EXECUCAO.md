@@ -1013,3 +1013,34 @@ saldos e comissões intactos.
 do documento oficial.
 **Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência e
 autorização de publicação (junto com a DIR-18).
+
+---
+
+## REL-20 — Execução da DIR-20
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:** análise linha a linha dos 9 cards da Gestão de
+Estoque + 4 consultas do dono direto no banco fecharam o diagnóstico
+(números no texto da DIR-20). Implementado: `unidadesEmEstoque` na regra
+única de custo (cliente + servidor), CRM somando o galpão inteiro
+(esperado ~R$ 28.133,45), Gestão de Estoque com "Capital em Estoque" =
+custo parado agora (mesma conta do CRM), contadores de unidades cobrindo
+os 184 produtos com estoque só na grade, consignado herdando o estoque
+físico, e 3 testes novos com os casos reais (VIX, POLITRIZ).
+**O que NÃO foi feito / blockers (dados, dependem do dono):**
+1. Preço podre do Mini Localizador GPS — SQL de correção entregue no chat
+   (R$ 12.226,61 → R$ 31,03/un); depois disso a "Receita Potencial" cai de
+   R$ 5,08 milhões pra ~R$ 274 mil (valor plausível).
+2. Os 15 produtos sem custo — lista entregue, valores só o dono tem.
+3. "Faturado"/"Lucro Líquido" da Gestão de Estoque continuam somando os
+   campos gravados `sold_amount`/`profit`, que misturam vendas de teste
+   pré-marco — flagged, não alterados (redefinir exige decisão do dono
+   sobre o que essa tela deve contar).
+**Testes:** 460/460 (457 + 3 novos). **Build:** exit 0.
+**Confirmação de escopo:** arquivos das telas citadas + regra única +
+testes. Nenhum dado de banco alterado pelo código.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência no
+Preview e autorização pra publicar DIR-18+19+20 juntas.

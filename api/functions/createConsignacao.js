@@ -84,7 +84,7 @@ export default async function handler(req, res) {
     const ids = [...new Set(items.map((i) => String(i.product_id || '')).filter(Boolean))];
     if (!ids.length) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const inList = ids.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-    const prods = await (await sb(`products?select=id,description,price_catalog,cost_price,quantity,quantity_sold,selling_price_wholesale&id=in.(${inList})`)).json();
+    const prods = await (await sb(`products?select=id,description,price_catalog,cost_price,quantity,quantity_sold,selling_price_wholesale,qty_perfeito,qty_bom,qty_oficina,qty_ruim&id=in.(${inList})`)).json();
     const pmap = {}; (Array.isArray(prods) ? prods : []).forEach((p) => { pmap[p.id] = p; });
 
     const linhas = []; let valorTotal = 0;

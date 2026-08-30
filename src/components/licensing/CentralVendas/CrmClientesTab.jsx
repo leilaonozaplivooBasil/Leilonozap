@@ -96,10 +96,15 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // real (só comissão + taxa sem repasse) já usado no módulo Financeiro —
   // mesma fonte, mesmo número, em vez de recalcular errado aqui de novo.
   const [financialIncome, setFinancialIncome] = useState([]);
+  // 🔴 DIR-20 — TODOS os produtos (galpão inteiro, 2.932 linhas medidas em
+  // produção), não só os 302 publicados no catálogo: o "Valor Investido em
+  // Estoque" mostrava R$ 9.309 quando o real (validado direto no banco) é
+  // R$ 28.133 — a maior parte do estoque físico não está publicada na vitrine.
+  const [allProducts, setAllProducts] = useState([]);
 
   const loadAutoSources = async () => {
     try {
-      const [users, sales, auctionsList, income] = await Promise.all([
+      const [users, sales, auctionsList, income, prods] = await Promise.all([
         plataforma.entities.AppUser.list('-created_date', 5000),
         // 🔒 DIR-17 — mesma busca do Painel de Alavancagem (NetworkOverview.jsx),
         // parâmetro por parâmetro: telas que somam o mesmo dinheiro precisam ler
@@ -107,11 +112,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         plataforma.entities.CatalogSale.list('-created_date', 5000),
         plataforma.entities.Auction.list('-end_time', 2000),
         plataforma.entities.FinancialIncome.list('-received_date', 5000),
+        plataforma.entities.Product.list('-created_date', 5000),
       ]);
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
       setAuctions(Array.isArray(auctionsList) ? auctionsList.filter((a) => !!a.winner_id) : []);
       setFinancialIncome(Array.isArray(income) ? income : []);
+      setAllProducts(Array.isArray(prods) ? prods : []);
     } catch (error) {
       console.error('Erro ao carregar fontes automáticas do CRM:', error);
     }
@@ -604,12 +611,11 @@ _Enviado via CRM Leilão NoZap_`;
     leiloeiros: unifiedCustomers.filter(c => c.role_type === 'leiloeiro').length,
     arrematantes: unifiedCustomers.filter(c => c.role_type === 'arrematante').length,
     produtosDisponiveis: availableProducts.length,
-    // 🔴 DIR-18 — cost_price é o custo TOTAL do lote (é assim que a planilha
-    // importa), não o unitário. A versão anterior (DIR-10) multiplicava por
-    // quantity como se fosse unitário — daí os R$ 50 milhões impossíveis.
-    // custoEstoqueRestante = (custo do lote ÷ unidades do lote) × unidades
-    // ainda em estoque. Ver src/lib/custoProduto.js.
-    valorEstoque: availableProducts.reduce((sum, p) => sum + custoEstoqueRestante(p), 0),
+    // 🔴 DIR-18/DIR-20 — cost_price é o custo TOTAL do lote (é assim que a
+    // planilha importa), não o unitário; e a soma cobre o GALPÃO INTEIRO
+    // (allProducts), não só a vitrine — número validado direto no banco:
+    // R$ 28.133,45 parado em estoque. Ver src/lib/custoProduto.js.
+    valorEstoque: allProducts.reduce((sum, p) => sum + custoEstoqueRestante(p), 0),
     depositosCarteira,
     volumeVendasBruto,
     // "tudo, tudo, tudo": depósito + venda bruta de Loja/PDV + venda bruta
