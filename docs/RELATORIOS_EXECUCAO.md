@@ -386,3 +386,54 @@ financeira alterada.
 **Status final:** PARCIAL — implementação concluída na branch; falta o
 dono conferir no Preview (login real, como super_admin e, se possível,
 como um usuário de rede) e autorizar merge/deploy.
+
+**Correções feitas durante a conferência do dono no Preview, mesma PR
+(#145):**
+1. "Valor de Mercado em Estoque" (R$ 4,89 milhões) usava
+   `selling_price_retail` (preço de venda ao consumidor, com a margem
+   inteira embutida) — trocado por `cost_price` real; card renomeado pra
+   "Valor Investido em Estoque".
+2. "Faturamento Total" (R$ 3,33 milhões) tinha o MESMO erro de conceito já
+   corrigido no Financeiro (DIR-7): somava o valor cheio de cada
+   venda/arremate (`total_spent`), não a comissão real da empresa. Pro
+   `super_admin`, passou a somar `financial_income` (mesma fonte do
+   Financeiro); pra visão de rede, o card virou "Volume Transacionado"
+   (rótulo honesto — ainda não existe rateio de comissão por rede).
+3. Pedido do dono ("painel precisa ser intuitivo"): todo card (~20) ganhou
+   um ⓘ (`StatInfoTooltip`, funciona em hover e em toque) explicando o que
+   o número significa e de onde vem.
+
+---
+
+## REL-11 — Execução da DIR-11
+
+**Data:** 28/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad` (mesma PR #145).
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:** migration única e idempotente
+(`20260828_backfill_financial_income.sql`) que popula `financial_income`
+com o histórico real de `catalog_sales` — MESMA regra já em vigor no
+código ao vivo (DIR-7), sem inventar critério novo:
+1. Comissão de venda liquidada (`commission_total`, nunca o valor cheio) —
+   qualquer `kind` que não seja depósito/passaporte/frete/reposição/taxa,
+   agrupado em "Leilões" (kind='arremate') ou "Loja Virtual" (todo o
+   resto — inclui `produto`, PDV, sync externo).
+2. Taxa sem repasse a terceiro (`adesao`/`seller_adhesion`/`partner_plan`)
+   — valor cheio, centro de custo Operacional.
+`NOT EXISTS` por `sale_id` garante que rodar mais de uma vez (ou coexistir
+com o hook ao vivo) nunca duplica uma linha.
+**O que NÃO foi feito / blockers:** depósito de saldo/carteira/operação,
+passaporte, frete de vendedor e reposição de estoque continuam FORA do
+backfill — mesma regra da DIR-7, não foi reaberta; venda paga sem
+`commission_total` preenchido (dado histórico incompleto, se existir) não
+entra — não é seguro inventar o valor da comissão retroativamente.
+**Testes:** 420/420 (migration SQL pura, sem lógica JS nova — validação é
+de leitura/revisão, não de teste automatizado).
+**Build:** exit 0.
+**Confirmação de escopo:** só a migration nova foi criada. Nenhum dado de
+produção alterado nesta rodada — só roda quando a PR for mergeada em
+`main` (workflow `deploy-migrations.yml`, automático).
+**Publicado em:** relatório ao dono, no chat; PR #145 (mesma da DIR-10).
+**Status final:** PARCIAL — implementação concluída na branch; falta o
+dono conferir no Preview (números devem deixar de ser R$ 0,00) e
+autorizar merge/deploy.

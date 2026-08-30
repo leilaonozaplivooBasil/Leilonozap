@@ -66,11 +66,43 @@ antes de pedir aprovação).
 
 ---
 
+## DIR-11 — Backfill de financial_income com o histórico real
+
+**Emitida por:** dono (Luiz), diretamente, depois de ver "Faturamento Total:
+R$ 0,00" no Preview da DIR-10 e pedir pra "puxar tudo dado real: pagamento
+das lojas, depósitos, venda e etc".
+**Data:** 28/08/2026.
+**Objetivo:** `financial_income` (DIR-7) nasceu vazia de propósito — grava
+só a partir de agora. O negócio já tem meses de venda paga de verdade, com
+`commission_total` já calculado em `catalog_sales`; sem backfill, Financeiro
+e CRM mostram R$ 0,00 mesmo com receita real acontecendo há tempo. Migration
+única, idempotente, popula o livro-razão com o histórico, usando A MESMA
+regra já em vigor no código ao vivo (DIR-7) — nunca uma regra nova: comissão
+de venda liquidada (não o valor cheio) e taxa sem repasse (adesão/plano,
+valor cheio). Depósito de saldo/carteira/operação, passaporte, frete de
+vendedor e reposição de estoque continuam FORA — mesmo motivo já explicado
+ao dono (é crédito interno que já vira receita quando gasto de verdade;
+contar os dois seria contar o mesmo dinheiro duas vezes). Isto é uma
+correção do pedido do dono, não uma mudança de regra: se ele quiser mesmo
+assim contar depósito como receita, isso exige reabrir a decisão da DIR-7,
+não foi presumido aqui.
+**Escopo autorizado:** uma migration SQL (`INSERT ... SELECT` a partir de
+`catalog_sales`, com `NOT EXISTS` por `sale_id` pra nunca duplicar) que
+popula `financial_income` com o histórico de vendas liquidadas e taxas.
+**Fora do escopo / proibido:** incluir depósito de saldo/carteira/operação,
+passaporte, frete de vendedor ou reposição de estoque no backfill; qualquer
+mudança na regra de reconhecimento de receita da DIR-7 sem decisão explícita
+nova do dono; alterar produção sem autorização antes do merge.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-10.
+**Status:** EM VIGOR.
+
+---
+
 ## Estado agora
 
-**DIR-10 (Fase 1) em execução.** DIR-1 a DIR-9 concluídas (ver
-`docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas, sem relação com
-esta diretiva:
+**DIR-10 (Fase 1) e DIR-11 (backfill) em execução, mesma PR.** DIR-1 a DIR-9
+concluídas (ver `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas,
+sem relação com esta diretiva:
 - `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
   OpenAI.
 - Fase 3 do Financeiro (conciliação automática, decisão sobre Open
