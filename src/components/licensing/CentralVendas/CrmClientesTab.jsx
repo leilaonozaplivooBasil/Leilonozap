@@ -123,6 +123,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [allProducts, setAllProducts] = useState([]);
   // 🎯 DIR-22 — Parceiros de Compra: planos ativados (manual + Lucre Conosco).
   const [partnerPurchases, setPartnerPurchases] = useState([]);
+  // 🏆 DIR-31 — contadores do Rank Premiado (/rankpremiado) pros KPIs da
+  // diretoria: cadastros e visitas por link dos últimos 7 dias.
+  const [concursoStats, setConcursoStats] = useState(null);
 
   const loadAutoSources = async () => {
     try {
@@ -164,6 +167,20 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     loadProducts();
     loadAutoSources();
   }, [currentUser?.id]);
+
+  // 🏆 DIR-31 — contadores do Rank Premiado (só visão total: a API exige
+  // admin). Falhou/negou → fica null e os KPIs mostram "sem fonte".
+  useEffect(() => {
+    if (!currentUser?.id || !['admin', 'super_admin'].includes(currentUser?.role)) return;
+    fetch('/api/concurso?action=stats_crm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUser.id }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j && typeof j.cadastros_7d === 'number') setConcursoStats(j); })
+      .catch(() => {});
+  }, [currentUser?.id, currentUser?.role]);
 
   // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app... a
   // menos que quem está olhando seja o super_admin. DIR-10 (27/08/2026), pedido
@@ -795,8 +812,8 @@ _Enviado via CRM Leilão NoZap_`;
     [networkCatalogSales, isSuperAdmin]
   );
   const kpisDiretoria = React.useMemo(
-    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts }) : null),
-    [networkCatalogSales, networkAppUsers, allProducts, isSuperAdmin]
+    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts, concurso: concursoStats }) : null),
+    [networkCatalogSales, networkAppUsers, allProducts, concursoStats, isSuperAdmin]
   );
   const escadaLicencas = React.useMemo(
     () => (isSuperAdmin ? resumoEscada(networkCatalogSales) : null),

@@ -12,6 +12,37 @@
 
 ---
 
+## DIR-31 — KPIs do Ranking Premiado ligados (correção de erro meu)
+
+**Emitida por:** dono (30/08/2026): "a página Ranking Premiado JÁ EXISTE,
+você não sabe disso???" — e ele está certo. ERRO REGISTRADO: na DIR-29 eu
+busquei por "Ranking" literal e concluí que a página não existia; ela se
+chama CONCURSO (`src/pages/ConcursoLeilaoNozap.jsx`, rota /rankpremiado,
+componentes em src/components/concurso/ — inclusive HeroRankPremiado).
+Lição: variar os nomes na busca antes de afirmar que algo não existe.
+**Data:** 30/08/2026.
+**Fatos conferidos:** o Rank Premiado tem rastro REAL em produção —
+`concurso_participantes` (cadastros, com created_at) e
+`concurso_referrals` (visitas por link ?ref=, com created_at), ambas já
+lidas pela API `/api/concurso` (service role, ações de admin com
+isAdmin(body.user_id)).
+**Escopo autorizado:**
+1. `api/concurso.js` ganha `action=stats_crm` (POST, admin): devolve
+   cadastros e visitas dos últimos 7 dias (contagem por created_at).
+2. CRM (visão total) busca essas contagens e passa pro
+   `calcularDashboardDiretoria`: "Cadastros Ranking/dia" vira DADO
+   (média 7d de concurso_participantes) e "Visitantes Ranking/dia" vira
+   APROXIMAÇÃO (concurso_referrals só rastreia visita por link de
+   indicação — tráfego direto não conta; a fonte explica). Sem resposta
+   da API, os dois seguem "Sem fonte" (nunca número inventado).
+3. Testes da lib.
+**Fora do escopo / proibido:** mudar a mecânica do concurso; critério de
+dinheiro real.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-30.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-30 — Cadastro de vendedor com os cargos oficiais do Plano de Carreira
 
 **Emitida por:** dono (30/08/2026, com prints do modal Novo Vendedor):

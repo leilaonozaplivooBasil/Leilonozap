@@ -150,3 +150,21 @@ describe('fórmulas dos calculáveis', () => {
     assert.equal(kpi.realizado, 25);
   });
 });
+
+describe('DIR-31 — KPIs do Rank Premiado', () => {
+  test('com contadores do concurso: cadastros vira DADO e visitantes APROXIMAÇÃO (média 7d)', () => {
+    const kpis = calcularDashboardDiretoria({ concurso: { cadastros_7d: 70, visitantes_7d: 140 }, ref: REF });
+    const cad = kpis.find((k) => k.id === 'cadastros_ranking');
+    const vis = kpis.find((k) => k.id === 'visitantes_ranking');
+    assert.equal(cad.realizado, 10);
+    assert.equal(cad.tipo, 'dado');
+    assert.equal(vis.realizado, 20);
+    assert.equal(vis.tipo, 'aproximacao'); // só visita por link ?ref= é rastreada
+  });
+
+  test('sem resposta da API do concurso, seguem sem fonte — nunca número inventado', () => {
+    const kpis = calcularDashboardDiretoria({ ref: REF });
+    assert.equal(kpis.find((k) => k.id === 'cadastros_ranking').tipo, 'sem_fonte');
+    assert.equal(kpis.find((k) => k.id === 'visitantes_ranking').tipo, 'sem_fonte');
+  });
+});

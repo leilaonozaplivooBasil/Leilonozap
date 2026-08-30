@@ -1384,3 +1384,34 @@ Preview.
 career_levels do usuário, não o license_type do vendedor — conferido).
 **Testes:** 540/540. **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+---
+
+## REL-31 — Execução da DIR-31 (KPIs do Rank Premiado ligados)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Correção registrada:** eu havia afirmado na DIR-29 que a página do
+Ranking Premiado não existia — ERRADO. Ela existe e está no ar
+(leilaonozap.net/rankpremiado, `ConcursoLeilaoNozap.jsx` + pasta
+src/components/concurso/), com rastro real em concurso_participantes
+(cadastros) e concurso_referrals (visitas por link ?ref=). O dono
+corrigiu; a busca falhou porque procurei "Ranking" literal e a página se
+chama Concurso. Lição registrada na DIR-31.
+**O que foi feito:**
+1. `api/concurso.js` ganhou `action=stats_crm` (POST, só admin — mesmo
+   isAdmin das outras ações): cadastros_7d e visitantes_7d por
+   created_at, janela de 7 dias.
+2. CRM (visão total) busca os contadores e o Dashboard da Diretoria
+   liga: "Cadastros Ranking/dia" = DADO (média 7d de participantes);
+   "Visitantes Ranking/dia" = APROXIMAÇÃO (só visita por link de
+   indicação é rastreada — tráfego direto não deixa rastro, o número
+   real é maior; a fonte do card explica). Sem resposta da API → seguem
+   "sem fonte", nunca número inventado.
+**Placar da Seção 37:** 10 dos 12 KPIs com número (era 8) — os 2
+restantes (custo de aquisição/ROI) já ligados desde a DIR-29, então na
+prática TODOS os 12 têm régua; só visitantes segue como aproximação
+declarada.
+**Testes:** 542/542 (2 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — na branch, pronta pra publicar no próximo
+"pode".
