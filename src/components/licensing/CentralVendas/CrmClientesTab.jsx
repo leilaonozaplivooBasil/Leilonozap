@@ -535,6 +535,16 @@ _Enviado via CRM Leilão NoZap_`;
     // isso que representa dinheiro parado em estoque, não o quanto renderia se
     // vendesse tudo pelo preço de tabela.
     valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.quantity || 0)), 0),
+    // 💰 DIR-14 — pedido do dono: ver o volume financeiro TOTAL que entra na
+    // plataforma, não só a receita da empresa. Depósito em carteira digital
+    // (saldo de comissão/operação) é dinheiro real de quem depositou — NUNCA
+    // é receita da empresa (só vira receita quando for gasto numa compra,
+    // regra da DIR-7) — por isso fica como card separado, nunca somado ao
+    // "Faturamento Total".
+    depositosCarteira: networkCatalogSales
+      .filter((s) => ['wallet_deposit', 'commission_deposit', 'operacao_deposit'].includes(s.kind))
+      .filter((s) => !['pending_payment', 'canceled', 'cancelado', 'estornado'].includes(s.status))
+      .reduce((sum, s) => sum + (s.total_amount || 0), 0),
   };
 
   if (!isAdmin) {

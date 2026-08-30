@@ -13,6 +13,7 @@ import { oid } from './oid.js';
 // 📒 Livro-caixa da reserva. Import de MESMO diretório (./) — a forma segura já
 // usada nas linhas acima. Nunca de api/functions/ pra fora (ver submitAtomicBid.js).
 import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
+import { registrarReceita } from './financialIncome.js';
 
 // tolerância pra deriva de relógio entre cliente e servidor (nunca encerra
 // um leilão com mais de 2s restantes)
@@ -172,6 +173,16 @@ export async function reterFatiaDaRede({ auction, finalPrice, pctRetido, arremat
       console.error(`[FINALIZE] RETENÇÃO NÃO CREDITADA — leilão ${auction.id}, R$ ${valor} na conta oficial ${oficial.id}. A linha do extrato foi gravada; o saldo NÃO. Resolver na mão.`);
       return 0;
     }
+    // 💰 DIR-14 — a fatia retida É receita real da empresa (decisão do dono,
+    // PONTO 100 no cabeçalho deste arquivo: "conta é dele, saldo real e
+    // sacável"). Até aqui só entrava no extrato de comissão
+    // (commission_records), nunca em financial_income — por isso o
+    // Financeiro/CRM nunca mostrava a receita real do leilão.
+    await registrarReceita({
+      description: `Comissão retida — leilão #${auction.id}`,
+      category: 'comissao_leilao', costCenter: 'Leilões',
+      amount: valor, source: 'venda', saleId: auction.id,
+    });
     return valor;
   } catch (e) {
     console.warn('[FINALIZE] retenção da fatia da rede:', e?.message);

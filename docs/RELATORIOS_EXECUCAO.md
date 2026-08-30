@@ -634,3 +634,49 @@ de receita (DIR-7), nenhuma mudança em `finalizeAuctionCore.js`/
 **Status final:** CONCLUÍDA (escopo autorizado). Comissão de leilão e
 backfill histórico de adesão ficam como pendência separada, sem diretiva
 própria, aguardando decisão futura do dono.
+
+---
+
+## REL-14 — Execução da DIR-14
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Depois de ver "Faturamento Total: R$ 1.317,56" e perguntar por que não
+   incluía o leilão nem os depósitos, o dono confirmou via pergunta direta
+   que queria a comissão de leilão incluída agora (reabrindo a decisão da
+   DIR-13) e, em mensagem separada, pediu visibilidade do volume de
+   depósito em carteira digital no CRM.
+2. `api/_lib/finalizeAuctionCore.js` (`reterFatiaDaRede`) — chamada a
+   `registrarReceita` adicionada logo após o crédito confirmado na conta
+   oficial (`rpc/credit_commission`), categoria `comissao_leilao`, cost
+   center `Leilões`, `saleId: auction.id`. Daqui pra frente, todo martelo
+   que retém fatia da rede grava em `financial_income` automaticamente.
+3. Migration de backfill
+   (`20260830140000_backfill_leilao_retido.sql`) puxando
+   `commission_records` (`sale_type='leilao' and role='leilao_retido'`)
+   pra `financial_income`, idempotente por `sale_id` — recupera os ~55
+   leilões já arrematados antes da correção.
+4. Novo card "Depósitos em Carteira Digital" no CRM
+   (`CrmClientesTab.jsx`/`CrmStatsCards.jsx`): soma `wallet_deposit` +
+   `commission_deposit` + `operacao_deposit` do escopo (rede ou
+   plataforma inteira, conforme super_admin), excluindo status
+   pendente/cancelado/estornado. Tooltip explícito: "NÃO é receita da
+   empresa — só vira receita quando esse saldo for gasto numa compra".
+   Fica como card separado, nunca somado ao "Faturamento Total" — a regra
+   de reconhecimento de receita da DIR-7 não mudou.
+**O que NÃO foi feito / blockers:** backfill histórico de
+adesão/seller_adhesion do sistema legado continua fora de escopo (mesma
+pendência da DIR-13, sem decisão do dono ainda).
+**Testes:** 420/420.
+**Build:** exit 0.
+**Confirmação de escopo:** `finalizeAuctionCore.js`, a migration nova, e os
+dois arquivos do CRM foram tocados. Nenhuma mudança na regra de
+reconhecimento de receita (depósito continua fora do Faturamento Total),
+nenhuma mudança na comissão paga ao indicador (`leilao_indicador`, 5%,
+continua exatamente igual).
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — código e migration commitados e empurrados,
+mas depende do dono aplicar a migration manualmente no SQL Editor
+(pipeline automático ainda quebrado) e confirmar, igual DIR-11/DIR-12.

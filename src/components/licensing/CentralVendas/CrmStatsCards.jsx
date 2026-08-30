@@ -104,6 +104,10 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
           label="Valor Investido em Estoque" value={fmtBRL(stats.valorEstoque)} icon={DollarSign} wide
           info="Custo real de cada produto em estoque (o que foi pago, não o preço de venda) × quantidade disponível."
         />
+        <StatCard
+          label="Depósitos em Carteira Digital" value={fmtBRL(stats.depositosCarteira)} icon={Landmark} wide
+          info="Soma de todo depósito real em carteira digital (saldo de comissão ou de operação) feito por pessoas do seu escopo — é volume financeiro que ENTROU na plataforma. NÃO é receita da empresa: só vira receita quando esse saldo for gasto numa compra (aí sim aparece em 'Faturamento Total')."
+        />
       </div>
 
       {/* Rede por Tipo — Vendedor, Licenciado, Influencer, Investidor, Leiloeiro, Arrematante */}
