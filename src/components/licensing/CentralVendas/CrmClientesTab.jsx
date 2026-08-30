@@ -540,6 +540,39 @@ _Enviado via CRM Leilão NoZap_`;
     .reduce((sum, s) => sum + (s.total_amount || 0), 0);
   const volumeVendasBruto = comprasBrutas + leilaoBruto;
 
+  // 📋 Espelho do Painel de Alavancagem (30/08/2026) — pedido do dono: "insira
+  // exatamente as informações que tem lá, não invente". Mesmas fórmulas,
+  // literalmente copiadas de NetworkOverview.jsx (fetchFinanceStats +
+  // conversion), só trocando `allUsers`/`financeStats` (a rede DELE) por
+  // `networkAppUsers`/`networkCatalogSales` (a rede/plataforma de quem está
+  // vendo o CRM) — pra super_admin isso já é a plataforma inteira. "Valor
+  // total gerado" aqui é SÓ depósito + compra de Loja, igual ao Painel de
+  // Alavancagem — não inclui leilão, de propósito, pra ser comparável
+  // número a número, célula a célula.
+  const depositsForConversao = networkCatalogSales.filter((s) => s.kind === 'wallet_deposit').filter(isVendaReal);
+  const operacaoForConversao = networkCatalogSales.filter((s) => s.kind === 'operacao_deposit').filter(isVendaReal);
+  const comprasForConversao = networkCatalogSales.filter((s) => ['loja', 'produto'].includes(s.kind)).filter(isVendaReal);
+  const realSalesParaConversao = [...depositsForConversao, ...operacaoForConversao, ...comprasForConversao];
+  const CONVERSAO_JANELA_DIAS = 30;
+  const cutoff30d = new Date(Date.now() - CONVERSAO_JANELA_DIAS * 24 * 60 * 60 * 1000);
+  const totalNaBase = networkAppUsers.length;
+  const buyerIdsUnicos = new Set(realSalesParaConversao.map((s) => s.buyer_id).filter(Boolean));
+  const novosUltimos30Dias = networkAppUsers.filter((u) => new Date(u.created_date) >= cutoff30d).length;
+  const compradoresRecentesUnicos = new Set(
+    realSalesParaConversao.filter((s) => new Date(s.created_date) >= cutoff30d).map((s) => s.buyer_id).filter(Boolean)
+  );
+  const espelhoPainelAlavancagem = {
+    totalNaBase,
+    novosUltimos30Dias,
+    compradoresUnicos: buyerIdsUnicos.size,
+    conversaoGeral: totalNaBase ? (buyerIdsUnicos.size / totalNaBase) * 100 : 0,
+    compraramUltimos30Dias: compradoresRecentesUnicos.size,
+    taxaRecente: novosUltimos30Dias ? (compradoresRecentesUnicos.size / novosUltimos30Dias) * 100 : 0,
+    depositosCount: depositsForConversao.length,
+    valorTotalGerado: depositosCarteira + comprasBrutas,
+    ticketMedio: buyerIdsUnicos.size ? (depositosCarteira + comprasBrutas) / buyerIdsUnicos.size : 0,
+  };
+
   const stats = {
     total: unifiedCustomers.length,
     leads: unifiedCustomers.filter(c => c.status === 'lead').length,
@@ -578,6 +611,7 @@ _Enviado via CRM Leilão NoZap_`;
     // "tudo, tudo, tudo": depósito + venda bruta de Loja/PDV + venda bruta
     // de leilão, somados num só número — volume, não receita.
     volumeFinanceiroTotal: depositosCarteira + volumeVendasBruto,
+    espelhoPainelAlavancagem,
   };
 
   if (!isAdmin) {

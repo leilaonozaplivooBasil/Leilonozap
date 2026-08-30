@@ -12,18 +12,57 @@
 
 ---
 
-## Estado agora
+## DIR-16 — Espelho do Painel de Alavancagem dentro do CRM
 
-**Nenhuma diretiva em vigor.** DIR-1 a DIR-15 concluídas (ver
-`docs/RELATORIOS_EXECUCAO.md` e `docs/HISTORICO_DIRETIVAS.md`).
+**Emitida por:** dono, pedido direto: "insira exatamente as informações que
+tem lá [Painel de Alavancagem], aqui [no CRM], não invente, vamos
+organizar de forma sênior".
+**Data:** 30/08/2026.
+**Objetivo:** depois de confirmar com dado real que os dois painéis batiam
+(mesmo critério, `src/lib/dinheiroReal.js`, DIR-15), o dono quis ver os
+MESMOS rótulos e a MESMA fórmula do Painel de Alavancagem dentro do CRM,
+lado a lado com os cards já existentes — não outra métrica inventada, uma
+cópia fiel.
+**Escopo autorizado:**
+1. Novo bloco "Espelho do Painel de Alavancagem" em `CrmClientesTab.jsx`/
+   `CrmStatsCards.jsx`, com os MESMOS 8 números de `NetworkOverview.jsx`
+   (Total na base, Novos 30 dias, Compradores únicos, Conversão geral,
+   Compraram nos últimos 30 dias, Depósitos, Valor total gerado, Ticket
+   médio/comprador) — fórmula copiada literalmente de
+   `fetchFinanceStats`/`conversion`, só trocando a base de dados (rede do
+   dono → rede/plataforma de quem olha o CRM). "Valor total gerado" aqui é
+   só depósito + compra de Loja, sem leilão, pra ser comparável célula a
+   célula com o Painel de Alavancagem (diferente do "Volume Financeiro
+   Total" da DIR-14, que inclui leilão de propósito).
+2. **Achado à parte, corrigido junto:** o dono reportou "Valor Investido em
+   Estoque: R$ 50.485,429" (3 casas decimais, formato errado). Causa:
+   `fmtBRL` usava `toLocaleString` só com `minimumFractionDigits: 2`, sem
+   `maximumFractionDigits` — o padrão do JS nesse caso é até 3 casas, e
+   imprecisão de ponto flutuante (soma de `cost_price × quantity` linha a
+   linha) empurrava pra 3ª casa. Corrigido com `maximumFractionDigits: 2`
+   explícito.
+**Fora do escopo / proibido:** mudar a regra de reconhecimento de receita;
+mudar `financial_income`/`finalizeAuctionCore.js`; mudar o "Volume
+Financeiro Total" já existente (fica como está, ao lado do espelho novo).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-15.
+**Status:** EM VIGOR — código, testes (443/443) e build passam. Falta o
+dono conferir visualmente no Preview/produção depois do deploy — os 8
+números do espelho devem bater exatamente com o que aparece no Painel de
+Alavancagem (ajustado pela diferença de escopo, se o dono não for
+super_admin).
+
+---
+
+## Estado agora
 
 CRM e Financeiro têm a lógica, os dados e a leitura (RLS) corretos.
 "Faturamento Total" = R$ 1.367,17 (comissão de Loja Virtual + Leilão),
 confirmado direto no banco. "Volume Financeiro Total" (depósito + venda
-bruta de Loja/PDV/Leilão) agora usa o MESMO critério de "dinheiro real"
-que o Painel de Alavancagem (`src/lib/dinheiroReal.js`, DIR-15) — as duas
-telas não podem mais divergir, porque é literalmente a mesma função. Falta
-o dono conferir visualmente no Preview/produção depois do deploy.
+bruta de Loja/PDV/Leilão) e o novo "Espelho do Painel de Alavancagem"
+(DIR-16) usam o MESMO critério de "dinheiro real" que o Painel de
+Alavancagem (`src/lib/dinheiroReal.js`, DIR-15) — as telas não podem mais
+divergir, porque é literalmente a mesma função. Falta o dono conferir
+visualmente no Preview/produção depois do deploy.
 
 **Achado crítico de infraestrutura, fora do escopo de código, aguardando o
 dono (ver `REL-11`):** o deploy automático de migração

@@ -877,3 +877,41 @@ novo. Nenhuma mudança em `financial_income`, `finalizeAuctionCore.js`,
 **Status final:** CONCLUÍDA. Critério de "dinheiro real" agora é
 literalmente a mesma função nas duas telas — não há mais como divergir.
 Falta o dono conferir visualmente no Preview/produção depois do deploy.
+
+---
+
+## REL-16 — Execução da DIR-16
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Depois de confirmar (DIR-15) que os dois painéis batiam com dado real,
+   dono pediu um bloco no CRM com os MESMOS números do Painel de
+   Alavancagem, mesmos rótulos, sem inventar métrica nova. Adicionado
+   "Espelho do Painel de Alavancagem" em `CrmClientesTab.jsx`/
+   `CrmStatsCards.jsx`: Total na base, Novos (30 dias), Compradores
+   únicos, Conversão geral, Compraram nos últimos 30 dias, Depósitos,
+   Valor total gerado, Ticket médio/comprador — fórmula copiada
+   literalmente de `NetworkOverview.jsx` (`fetchFinanceStats` +
+   `conversion`), só trocando a base (rede do dono → rede/plataforma de
+   quem vê o CRM).
+2. Achado à parte durante a conferência: "Valor Investido em Estoque: R$
+   50.485,429" (3 casas decimais). Causa: `fmtBRL` em `CrmStatsCards.jsx`
+   usava `toLocaleString` só com `minimumFractionDigits: 2` — sem
+   `maximumFractionDigits`, o padrão do JS permite até 3 casas, e
+   imprecisão de ponto flutuante (soma de `cost_price × quantity` linha a
+   linha) empurrou pra 3ª casa. Corrigido com `maximumFractionDigits: 2`
+   explícito — afeta TODOS os valores em R$ do CRM, não só o estoque.
+**O que NÃO foi feito / blockers:** nenhum.
+**Testes:** 443/443 (sem teste novo isolável — composição de fórmulas já
+cobertas indiretamente por `dinheiroReal.test.mjs` e pelos testes de
+build/fluxo existentes). **Build:** exit 0.
+**Confirmação de escopo:** só `CrmClientesTab.jsx` e `CrmStatsCards.jsx`
+tocados. Nenhuma mudança em `financial_income`,
+`finalizeAuctionCore.js`, `NetworkOverview.jsx` ou na regra de
+reconhecimento de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado). Falta o dono conferir
+visualmente no Preview/produção depois do deploy — os 8 números do
+espelho devem bater com o Painel de Alavancagem.
