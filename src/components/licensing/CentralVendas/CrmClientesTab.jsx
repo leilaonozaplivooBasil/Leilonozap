@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
-import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -87,17 +86,27 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [appUsers, setAppUsers] = useState([]);
   const [catalogSales, setCatalogSales] = useState([]);
   const [auctions, setAuctions] = useState([]);
+  // 🔴 DIR-10 — "Faturamento Total" somava o valor CHEIO de cada venda/arremate
+  // (total_spent), o mesmo erro de conceito já corrigido no Financeiro (DIR-7):
+  // isso é volume transacionado pelos clientes, não dinheiro que a empresa
+  // ficou — a maior parte vai pro vendedor terceiro. O dono reportou "não
+  // faturamos 3 milhões", e tinha razão. financial_income é o livro-razão
+  // real (só comissão + taxa sem repasse) já usado no módulo Financeiro —
+  // mesma fonte, mesmo número, em vez de recalcular errado aqui de novo.
+  const [financialIncome, setFinancialIncome] = useState([]);
 
   const loadAutoSources = async () => {
     try {
-      const [users, sales, auctionsList] = await Promise.all([
+      const [users, sales, auctionsList, income] = await Promise.all([
         plataforma.entities.AppUser.list('-created_date', 2000),
         plataforma.entities.CatalogSale.list('-created_date', 2000),
         plataforma.entities.Auction.list('-end_time', 2000),
+        plataforma.entities.FinancialIncome.list('-received_date', 5000),
       ]);
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
       setAuctions(Array.isArray(auctionsList) ? auctionsList.filter((a) => !!a.winner_id) : []);
+      setFinancialIncome(Array.isArray(income) ? income : []);
     } catch (error) {
       console.error('Erro ao carregar fontes automáticas do CRM:', error);
     }
@@ -112,24 +121,36 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     loadAutoSources();
   }, [isAdmin]);
 
-  // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app.
+  // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app... a
+  // menos que quem está olhando seja o super_admin. DIR-10 (27/08/2026), pedido
+  // explícito do dono: um licenciado/vendedor precisa ver só a própria rede de
+  // indicados (senão o CRM vira uma lista de clientes de todo mundo, inútil pra
+  // ele); o super_admin precisa ver o negócio inteiro circulando entre todas as
+  // estruturas, sem filtro nenhum — visão clara de tudo.
   // A árvore é construída com TODOS os usuários (precisa do grafo completo pra
   // achar sub-indicados), mas só entram na lista os IDs dentro da minha rede.
+  const isSuperAdmin = currentUser?.role === 'super_admin';
   const networkIds = React.useMemo(
-    () => (currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
-    [appUsers, currentUser?.id]
+    () => (!isSuperAdmin && currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
+    [appUsers, currentUser?.id, isSuperAdmin]
   );
   const networkAppUsers = React.useMemo(
-    () => appUsers.filter((u) => networkIds.has(u.id)),
-    [appUsers, networkIds]
+    () => (isSuperAdmin ? appUsers : appUsers.filter((u) => networkIds.has(u.id))),
+    [appUsers, networkIds, isSuperAdmin]
   );
+  // 🔴 DIR-10 — o "dono" de uma venda não vive só em licensee_id: dependendo do
+  // canal (loja própria de licenciado, carrinho do site, PDV), fica gravado em
+  // seller_id/anchor_id/owner_id (mesma constatação já feita em LicenseeOrders.jsx).
+  // Olhar só licensee_id fazia a rede inteira ficar sem nenhuma venda, mesmo real.
   const networkCatalogSales = React.useMemo(
-    () => catalogSales.filter((s) => s.licensee_id === currentUser?.id || networkIds.has(s.licensee_id)),
-    [catalogSales, networkIds, currentUser?.id]
+    () => (isSuperAdmin ? catalogSales : catalogSales.filter((s) =>
+      [s.licensee_id, s.anchor_id, s.seller_id, s.owner_id].some((id) => id === currentUser?.id || networkIds.has(id))
+    )),
+    [catalogSales, networkIds, currentUser?.id, isSuperAdmin]
   );
   const networkAuctions = React.useMemo(
-    () => auctions.filter((a) => networkIds.has(a.winner_id)),
-    [auctions, networkIds]
+    () => (isSuperAdmin ? auctions : auctions.filter((a) => networkIds.has(a.winner_id))),
+    [auctions, networkIds, isSuperAdmin]
   );
 
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
@@ -150,9 +171,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
-      const data = await plataforma.entities.Product.list('-created_date', 500);
+      // 🔴 DIR-10 — pegava só os 500 produtos mais recentes por data de criação,
+      // sem o mesmo filtro catalog_active usado na vitrine (Catalog.jsx). Com
+      // milhares de linhas históricas (produto vendido, amostra, lote zerado), o
+      // estoque real podia nunca estar entre os 500 mais novos e o card fechava
+      // em zero mesmo havendo produto de verdade. Mesmo filtro do catálogo público.
+      const data = await plataforma.entities.Product.filter({ catalog_active: true }, '-created_date', 5000);
       // Filtra produtos com estoque disponível (quantidade > 0)
-      const inStock = data.filter(p => {
+      const inStock = (data || []).filter(p => {
         const qty = p.quantity || 0;
         return qty > 0;
       });
@@ -165,17 +191,17 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
-  const getCallerEmail = () => {
-    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
-  };
-
+  // 🔴 DIR-10 — chamava /api/functions/adminDataProxy, uma função que nunca
+  // existiu no servidor (404 sempre, "Volume em Negociação" sempre zero).
+  // Negotiation já está mapeada no adapter (TABLE_MAP) como qualquer outra
+  // entidade — mesmo caminho genérico usado por Customer/Seller/etc.
   const loadNegotiations = async () => {
     try {
-      const response = await adminDataProxy({ entity_name: 'Negotiation', method: 'list', params: { sort_by: '-created_date', limit: 200 }, caller_email: getCallerEmail() });
-      const data = response?.data?.data || response?.data || [];
-      setNegotiations(data);
+      const data = await plataforma.entities.Negotiation.list('-created_date', 200);
+      setNegotiations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao carregar negociações:', error);
+      setNegotiations([]);
     }
   };
 
@@ -480,7 +506,13 @@ _Enviado via CRM Leilão NoZap_`;
     total: unifiedCustomers.length,
     leads: unifiedCustomers.filter(c => c.status === 'lead').length,
     clientes: unifiedCustomers.filter(c => c.status === 'cliente').length,
-    totalSpent: unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    // super_admin vê a receita REAL da empresa (mesma fonte do módulo
+    // Financeiro — comissão de venda + taxa, nunca o valor cheio da venda);
+    // visão de rede continua em volume transacionado (a rede não tem como
+    // saber quanto da comissão é dela sem esse rateio existir ainda).
+    totalSpent: isSuperAdmin
+      ? financialIncome.reduce((sum, i) => sum + (i.amount || 0), 0)
+      : unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
     semCompra: unifiedCustomers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
     em_negociacao: unifiedCustomers.filter(c => c.purchase_status === 'em_negociacao').length,
     aguardando_pagamento: unifiedCustomers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
@@ -497,7 +529,12 @@ _Enviado via CRM Leilão NoZap_`;
     leiloeiros: unifiedCustomers.filter(c => c.role_type === 'leiloeiro').length,
     arrematantes: unifiedCustomers.filter(c => c.role_type === 'arrematante').length,
     produtosDisponiveis: availableProducts.length,
-    valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.selling_price_retail || p.market_value || 0) * (p.quantity || 0)), 0),
+    // 🔴 DIR-10 — usava preço de VENDA ao consumidor (selling_price_retail), que
+    // embute a margem de lucro inteira e nunca bate com o que a empresa realmente
+    // tem investido em estoque. cost_price é o valor real pago pelo produto — é
+    // isso que representa dinheiro parado em estoque, não o quanto renderia se
+    // vendesse tudo pelo preço de tabela.
+    valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.quantity || 0)), 0),
   };
 
   if (!isAdmin) {
@@ -567,6 +604,7 @@ _Enviado via CRM Leilão NoZap_`;
 
         <CrmStatsCards
           stats={stats}
+          isSuperAdmin={isSuperAdmin}
           purchaseStatusFilter={purchaseStatusFilter}
           onPurchaseStatusClick={setPurchaseStatusFilter}
         />

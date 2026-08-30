@@ -171,3 +171,23 @@ receita (é a DIR-7); alterar produção sem autorização.
 **Regras fixas:** nenhuma além da DIR-5/6/7.
 **Status:** CONCLUÍDA. Mesma PR #132, mergeado por squash em `main`
 (commit `b38b84df`), CI verde. Ver `REL-8`.
+
+---
+
+## DIR-9 — Centro de custo customizável ("+ Novo")
+
+**Emitida por:** dono (Luiz), diretamente, ao lado do print do formulário de
+gasto: "ao lado do centro de custo, acrescentar botão + Nova pra quando
+faltar eu mesmo poder adicionar e crescer a ferramenta".
+**Data:** 27/08/2026.
+**Objetivo:** lista de centro de custo era fixa — dar ao dono o mesmo poder
+que já existe em Categoria, digitar um centro de custo novo direto no
+formulário.
+**Escopo autorizado:** botão "+ Novo" em `ExpenseFormModal.jsx` (mesmo
+padrão de Categoria); `FinancialOverview.jsx` passa a incluir na Visão
+Geral qualquer centro de custo já lançado, não só os 3 da lista fixa.
+**Fora do escopo / proibido:** tela de administração de centros de custo;
+mexer em `financial_income` (DIR-7).
+**Regras fixas:** nenhuma além da DIR-5/6/7/8.
+**Status:** CONCLUÍDA. PR #134 mergeado por squash em `main` (commit
+`4ebecf54`), CI verde. Ver `REL-9`.
