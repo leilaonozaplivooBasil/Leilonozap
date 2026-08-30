@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-25 — Cadastro manual do CRM: interesses com produtos, planos de parceiro e licenças (valores editáveis)
+
+**Emitida por:** dono (30/08/2026, com print do modal Novo Cliente):
+"organize a parte de cadastro manual: todos os produtos precisam estar
+aparecendo, os planos de parceiro de compra e valores editáveis de
+investimentos e as licenças, e algumas coisas que você acredite que
+precisa colocar — faça a análise e edite".
+**Data:** 30/08/2026.
+**Análise (entregue no chat):** produtos de interesse só apareciam
+digitando (lista vazia por padrão) e o filtro escondia produto sem
+estoque; não existia interesse em plano de parceiro nem em licença; sem
+vendedor responsável nem follow-up no ato do cadastro; campos soltos sem
+agrupamento; os planos de parceiro viviam hardcoded só em
+PartnerPlanActivation.jsx.
+**Escopo autorizado:**
+1. `src/lib/planosParceiro.js` — fonte ÚNICA dos planos de parceiro de
+   compra (Visionário R$ 5.000 / Sócios de Ouro R$ 15.000 / Elite
+   R$ 30.000 / Personalizado, 3%/60 meses), importada por
+   PartnerPlanActivation e pelo CRM. Teste próprio.
+2. Modal Novo Cliente reorganizado em seções (Dados / Endereço /
+   Acompanhamento / Interesses / Observações) com: vendedor responsável
+   (assigned_seller), "voltar a falar em" (follow_up_date) e próximo
+   passo (next_steps) — colunas já existentes, sem migração.
+3. Seção Interesses com 3 grupos: PRODUTOS (catálogo inteiro visível por
+   padrão, busca só refina, badge de estoque — produto sem estoque
+   aparece marcado, não some); PLANOS DE PARCEIRO e LICENÇAS (escada
+   oficial) selecionáveis com VALOR DE INVESTIMENTO EDITÁVEL pré-
+   preenchido com o preço de tabela. Tudo gravado em interested_products
+   (JSONB, itens tipados — formato antigo continua lendo) e o TOTAL
+   ESTIMADO somado em purchase_value.
+**Fora do escopo / proibido:** regra de ativação de plano (o cadastro
+registra INTERESSE, não ativa nada); critério de dinheiro real; escada e
+baldes oficiais (só leitura).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-24.
+**Status:** EM VIGOR — autorizada pelo dono ("faça a análise e edite").
+
+---
+
 ## DIR-24 — CRM de mercado: números confiáveis, acesso escopado, visual em seções, ação e funil
 
 **Emitida por:** dono (30/08/2026): pediu análise sênior de TODO o CRM

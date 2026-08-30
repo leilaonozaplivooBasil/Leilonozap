@@ -1224,3 +1224,40 @@ melhor esconder do que vazar — o dono pode atribuir donos depois).
 nenhuma migração de banco.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (5 fases) — aguarda conferência no Preview.
+
+---
+
+## REL-25 — Execução da DIR-25 (cadastro manual com interesses completos)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. `src/lib/planosParceiro.js` — fonte única dos planos de parceiro de
+   compra (Visionário R$ 5.000 / Sócios de Ouro R$ 15.000 / Elite
+   R$ 30.000 / Personalizado, 3%/60 meses); PartnerPlanActivation.jsx
+   passou a importar dela (antes a lista vivia hardcoded lá).
+2. Modal Novo Cliente reorganizado em 5 seções: 👤 Dados / 📍 Endereço /
+   🎯 Acompanhamento / 💼 Interesses / 📝 Observações. Acompanhamento
+   ganhou Vendedor responsável (select dos vendedores ativos), "Voltar a
+   falar em" (entra sozinho na fila Quem Contatar Hoje) e Próximo passo.
+3. Interesses: PRODUTOS com o catálogo INTEIRO visível por padrão (busca
+   só refina; até 60 por vez com aviso; produto sem estoque aparece
+   marcado "sem estoque" em vez de sumir — interesse em esgotado é sinal
+   de demanda; com estoque vem primeiro; preço de vitrine mostrado);
+   PLANOS DE PARCEIRO e LICENÇAS (escada oficial, Influenciador grátis a
+   Distribuidor R$ 4 mi) em cards selecionáveis. Todo item marcado ganha
+   VALOR EDITÁVEL pré-preenchido com o preço de tabela, com etiqueta de
+   tipo (Produto/Plano/Licença) e total "Potencial estimado do cliente".
+4. Gravação: itens tipados em interested_products (JSONB; formato legado
+   sem tipo continua lendo como produto) e o total em purchase_value.
+   handleEdit também carrega os campos novos.
+**O que NÃO foi feito / blockers:** nada de ativação de plano — o cadastro
+registra INTERESSE (a ativação continua em PartnerPlanActivation, agora
+lendo da mesma fonte).
+**Testes:** 531/531. **Build:** exit 0.
+**Confirmação de escopo:** sem migração (colunas assigned_seller,
+follow_up_date, next_steps, purchase_value, interested_products já
+existiam); escada e planos só leitura.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.

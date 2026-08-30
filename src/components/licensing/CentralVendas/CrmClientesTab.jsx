@@ -18,7 +18,8 @@ import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/li
 import { calcularCaptacao } from '@/lib/captacaoParceiros';
 import { calcularMetaCentral, ritmoDiario } from '@/lib/metaCentral';
 import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
-import { resumoEscada } from '@/lib/escadaLicencas';
+import { resumoEscada, ESCADA_LICENCAS } from '@/lib/escadaLicencas';
+import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
@@ -93,6 +94,10 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     address_state: '',
     address_zip_code: '',
     last_contact: new Date().toISOString().split('T')[0],
+    // 🎯 DIR-25 — acompanhamento no ato do cadastro (colunas já existentes)
+    assigned_seller: '',
+    follow_up_date: '',
+    next_steps: '',
     interested_products: []
   });
   const [showProductSearch, setShowProductSearch] = useState(false);
@@ -248,12 +253,12 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       // estoque real podia nunca estar entre os 500 mais novos e o card fechava
       // em zero mesmo havendo produto de verdade. Mesmo filtro do catálogo público.
       const data = await plataforma.entities.Product.filter({ catalog_active: true }, '-created_date', 5000);
-      // Filtra produtos com estoque disponível (quantidade > 0)
-      const inStock = (data || []).filter(p => {
-        const qty = p.quantity || 0;
-        return qty > 0;
-      });
-      setAvailableProducts(inStock);
+      // 🔎 DIR-25 — pedido do dono: "todos os produtos precisam estar
+      // aparecendo". Produto sem estoque NÃO some mais (interesse em produto
+      // esgotado é sinal de demanda — vale registrar); ele aparece marcado
+      // "sem estoque". Quem tem estoque vem primeiro.
+      const ordenados = (data || []).sort((a, b) => (Number(b.quantity) || 0 ? 1 : 0) - (Number(a.quantity) || 0 ? 1 : 0));
+      setAvailableProducts(ordenados);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
       setAvailableProducts([]);
@@ -356,41 +361,59 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       address_state: customer.address_state || '',
       address_zip_code: customer.address_zip_code || '',
       last_contact: customer.last_contact || new Date().toISOString().split('T')[0],
+      assigned_seller: customer.assigned_seller || '',
+      follow_up_date: customer.follow_up_date ? String(customer.follow_up_date).slice(0, 10) : '',
+      next_steps: customer.next_steps || '',
       interested_products: customer.interested_products || []
     });
     setShowAddForm(true);
   };
 
-  const addInterestedProduct = (product) => {
-    const exists = formData.interested_products.find(p => p.product_id === product.id);
-    if (exists) {
-      toast.warning('Produto já adicionado!');
+  // 💼 DIR-25 — INTERESSES tipados: produto do catálogo, plano de parceiro de
+  // compra ou licença (escada oficial), cada um com VALOR editável (pré-
+  // preenchido com o preço de tabela). Item antigo sem `tipo` é produto
+  // (formato legado continua lendo). Chave única evita duplicar.
+  const chaveInteresse = (i) => i.chave || `produto_${i.product_id}`;
+  const addInteresse = (item) => {
+    if (formData.interested_products.some((p) => chaveInteresse(p) === item.chave)) {
+      toast.warning('Já está na lista de interesses!');
       return;
     }
-    if (formData.interested_products.length >= 10) {
+    const produtos = formData.interested_products.filter((p) => (p.tipo || 'produto') === 'produto');
+    if (item.tipo === 'produto' && produtos.length >= 10) {
       toast.warning('Máximo de 10 produtos!');
       return;
     }
+    setFormData({ ...formData, interested_products: [...formData.interested_products, item] });
+  };
+  const addInterestedProduct = (product) => addInteresse({
+    chave: `produto_${product.id}`,
+    tipo: 'produto',
+    product_id: product.id,
+    product_name: product.description,
+    valor: Number(product.selling_price_retail) || Number(product.price_catalog) || 0,
+  });
+  const atualizarValorInteresse = (chave, valor) => {
     setFormData({
       ...formData,
-      interested_products: [
-        ...formData.interested_products,
-        { product_id: product.id, product_name: product.description }
-      ]
+      interested_products: formData.interested_products.map((p) =>
+        chaveInteresse(p) === chave ? { ...p, valor: valor === '' ? '' : Number(valor) } : p
+      ),
     });
-    setProductSearchTerm('');
   };
-
-  const removeInterestedProduct = (productId) => {
+  const removerInteresse = (chave) => {
     setFormData({
       ...formData,
-      interested_products: formData.interested_products.filter(p => p.product_id !== productId)
+      interested_products: formData.interested_products.filter((p) => chaveInteresse(p) !== chave),
     });
   };
+  const totalInteresses = formData.interested_products.reduce((s, p) => s + (Number(p.valor) || 0), 0);
 
+  // 🔎 DIR-25 — "todos os produtos precisam estar aparecendo": sem busca, a
+  // lista mostra o catálogo INTEIRO (rolagem própria); a busca só refina.
   const filteredProductsForModal = React.useMemo(() => {
-    if (!productSearchTerm) return [];
     const search = productSearchTerm.toLowerCase().trim();
+    if (!search) return availableProducts;
     return availableProducts.filter(p => {
       const desc = (p.description || '').toLowerCase();
       const lot = (p.lot || '').toLowerCase();
@@ -415,14 +438,22 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // 💼 DIR-25 — o total estimado dos interesses (produtos + planos +
+      // licenças, valores editáveis) vai junto em purchase_value: é o
+      // potencial de negócio da pessoa, que o CRM soma e mostra.
+      const payload = {
+        ...formData,
+        follow_up_date: formData.follow_up_date || null,
+        purchase_value: totalInteresses || null,
+      };
       if (editingCustomer) {
-        await plataforma.entities.Customer.update(editingCustomer.id, formData);
+        await plataforma.entities.Customer.update(editingCustomer.id, payload);
         toast.success('Cliente atualizado!');
       } else {
         // 🔴 DIR-24 — carimbo do dono do cadastro: é o que permite escopo de
         // rede nos clientes manuais (cada um vê os seus, visão total vê tudo).
         await plataforma.entities.Customer.create({
-          ...formData,
+          ...payload,
           created_by_id: currentUser?.id || null,
           created_by: currentUser?.email || null,
         });
@@ -443,6 +474,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         address_state: '',
         address_zip_code: '',
         last_contact: new Date().toISOString().split('T')[0],
+        assigned_seller: '',
+        follow_up_date: '',
+        next_steps: '',
         interested_products: []
       });
       setShowAddForm(false);
@@ -927,6 +961,9 @@ _Enviado via CRM Leilão NoZap_`;
                   address_state: '',
                   address_zip_code: '',
                   last_contact: new Date().toISOString().split('T')[0],
+                  assigned_seller: '',
+                  follow_up_date: '',
+                  next_steps: '',
                   interested_products: []
                 });
                 setShowProductSearch(false);
@@ -1471,246 +1508,273 @@ _Enviado via CRM Leilão NoZap_`;
                       </p>
                     </div>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 🧭 DIR-25 — cadastro organizado em SEÇÕES: dados, endereço,
+                      acompanhamento (com vendedor responsável e follow-up) e
+                      interesses (produtos + planos de parceiro + licenças,
+                      valores editáveis). */}
+                  <div className="space-y-6">
+
+                    {/* 👤 DADOS DO CLIENTE */}
                     <div>
-                      <Label className="text-gray-300">Nome Completo *</Label>
-                      <Input
-                        value={formData.full_name}
-                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                        className="bg-gray-700 text-white"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Email</Label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Telefone</Label>
-                      <Input
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">CPF</Label>
-                      <Input
-                        value={formData.cpf}
-                        onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Status</Label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                        className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600"
-                      >
-                        <option value="lead">Lead</option>
-                        <option value="cliente">Cliente</option>
-                        <option value="inativo">Inativo</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Origem</Label>
-                      <select
-                        value={formData.source}
-                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                        className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600"
-                      >
-                        <option value="site">Site</option>
-                        <option value="indicacao">Indicação</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="redes_sociais">Redes Sociais</option>
-                        <option value="outro">Outro</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Último Contato</Label>
-                      <Input
-                        type="date"
-                        value={formData.last_contact}
-                        onChange={(e) => setFormData({ ...formData, last_contact: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">CEP</Label>
-                      <Input
-                        value={formData.address_zip_code}
-                        onChange={(e) => setFormData({ ...formData, address_zip_code: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Endereço</Label>
-                      <Input
-                        value={formData.address_street}
-                        onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Número</Label>
-                      <Input
-                        value={formData.address_number}
-                        onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Cidade</Label>
-                      <Input
-                        value={formData.address_city}
-                        onChange={(e) => setFormData({ ...formData, address_city: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-300">Estado</Label>
-                      <Input
-                        value={formData.address_state}
-                        onChange={(e) => setFormData({ ...formData, address_state: e.target.value })}
-                        className="bg-gray-700 text-white"
-                      />
-                    </div>
-
-                    <div className="col-span-full">
-                      <Label className="text-gray-300">Observações</Label>
-                      <Textarea
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="bg-gray-700 text-white"
-                        rows={3}
-                      />
-                    </div>
-
-                    {/* PRODUTOS DE INTERESSE */}
-                    <div className="col-span-full border-t border-gray-700 pt-4 mt-4">
-                      <Label className="text-gray-300 text-base font-semibold mb-3 block">
-                        <span className="inline-flex items-center gap-2"><Package className="w-4 h-4" />Produtos de Interesse (opcional)</span>
-                      </Label>
-
-                      <div className="space-y-3">
-                        {/* Input de Busca - Sempre Visível */}
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <Input
-                            placeholder="Digite para buscar produtos por nome ou lote..."
-                            value={productSearchTerm}
-                            onChange={(e) => setProductSearchTerm(e.target.value)}
-                            className="pl-10 bg-gray-700 text-white border-gray-600 focus:border-green-500"
-                          />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">👤 Dados do cliente</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-300">Nome Completo *</Label>
+                          <Input value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} className="bg-gray-700 text-white" required />
                         </div>
+                        <div>
+                          <Label className="text-gray-300">Email</Label>
+                          <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="bg-gray-700 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Telefone (WhatsApp)</Label>
+                          <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(21) 99999-9999" className="bg-gray-700 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">CPF</Label>
+                          <Input value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} className="bg-gray-700 text-white" />
+                        </div>
+                      </div>
+                    </div>
 
-                        {/* Resultados da Busca */}
-                        {productSearchTerm && (
-                          <div className="max-h-52 overflow-y-auto bg-gray-900 rounded-lg border border-gray-600 shadow-lg">
-                            {loadingProducts ? (
-                              <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-3"></div>
-                                <p>Carregando produtos...</p>
-                              </div>
-                            ) : availableProducts.length === 0 ? (
-                              <div className="px-4 py-8 text-center text-yellow-400 text-sm">
-                                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                <p className="font-semibold">Nenhum produto disponível</p>
-                                <p className="text-xs mt-1 text-gray-500">Produtos com estoque não carregados</p>
-                                <button
-                                  type="button"
-                                  onClick={loadProducts}
-                                  className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
-                                >
-                                  <span className="inline-flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Recarregar Produtos</span>
-                                </button>
-                              </div>
-                            ) : filteredProductsForModal.length > 0 ? (
-                              filteredProductsForModal.slice(0, 10).map(product => (
+                    {/* 📍 ENDEREÇO */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">📍 Endereço</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-300">CEP</Label>
+                          <Input value={formData.address_zip_code} onChange={(e) => setFormData({ ...formData, address_zip_code: e.target.value })} className="bg-gray-700 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Endereço</Label>
+                          <Input value={formData.address_street} onChange={(e) => setFormData({ ...formData, address_street: e.target.value })} className="bg-gray-700 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Número</Label>
+                          <Input value={formData.address_number} onChange={(e) => setFormData({ ...formData, address_number: e.target.value })} className="bg-gray-700 text-white" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300">Cidade</Label>
+                            <Input value={formData.address_city} onChange={(e) => setFormData({ ...formData, address_city: e.target.value })} className="bg-gray-700 text-white" />
+                          </div>
+                          <div>
+                            <Label className="text-gray-300">Estado</Label>
+                            <Input value={formData.address_state} onChange={(e) => setFormData({ ...formData, address_state: e.target.value })} className="bg-gray-700 text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 🎯 ACOMPANHAMENTO */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">🎯 Acompanhamento</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-300">Status</Label>
+                          <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600">
+                            <option value="lead">Lead</option>
+                            <option value="cliente">Cliente</option>
+                            <option value="inativo">Inativo</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Origem</Label>
+                          <select value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600">
+                            <option value="site">Site</option>
+                            <option value="indicacao">Indicação</option>
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="redes_sociais">Redes Sociais</option>
+                            <option value="outro">Outro</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Vendedor responsável</Label>
+                          <select value={formData.assigned_seller} onChange={(e) => setFormData({ ...formData, assigned_seller: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600">
+                            <option value="">— Sem vendedor —</option>
+                            {sellers.map((sel) => (
+                              <option key={sel.id} value={sel.name}>{sel.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Último Contato</Label>
+                          <Input type="date" value={formData.last_contact} onChange={(e) => setFormData({ ...formData, last_contact: e.target.value })} className="bg-gray-700 text-white" />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Voltar a falar em</Label>
+                          <Input type="date" value={formData.follow_up_date} onChange={(e) => setFormData({ ...formData, follow_up_date: e.target.value })} className="bg-gray-700 text-white" />
+                          <p className="text-[11px] text-gray-500 mt-1">Com data marcada, o cliente entra sozinho na fila "Quem contatar hoje".</p>
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Próximo passo</Label>
+                          <Input value={formData.next_steps} onChange={(e) => setFormData({ ...formData, next_steps: e.target.value })} placeholder="ex.: mandar proposta do Plano Elite" className="bg-gray-700 text-white" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 💼 INTERESSES — produtos, planos de parceiro e licenças */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">💼 Interesses (produtos, planos e licenças)</p>
+
+                      {/* Produtos do catálogo — TODOS visíveis, busca só refina */}
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center gap-2"><Package className="w-4 h-4" />Produtos do catálogo ({availableProducts.length})</span>
+                      </Label>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          placeholder="Filtrar por nome ou lote (a lista completa já está abaixo)..."
+                          value={productSearchTerm}
+                          onChange={(e) => setProductSearchTerm(e.target.value)}
+                          className="pl-10 bg-gray-700 text-white border-gray-600 focus:border-green-500"
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto bg-gray-900 rounded-lg border border-gray-600 mb-4">
+                        {loadingProducts ? (
+                          <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-3"></div>
+                            <p>Carregando produtos...</p>
+                          </div>
+                        ) : filteredProductsForModal.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                            <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>{productSearchTerm ? `Nenhum produto com "${productSearchTerm}"` : 'Nenhum produto no catálogo'}</p>
+                            {!productSearchTerm && (
+                              <button type="button" onClick={loadProducts} className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                                <span className="inline-flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Recarregar Produtos</span>
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            {filteredProductsForModal.slice(0, 60).map(product => {
+                              const qty = Number(product.quantity) || 0;
+                              return (
                                 <button
                                   key={product.id}
                                   type="button"
                                   onClick={() => addInterestedProduct(product)}
-                                  className="w-full text-left px-4 py-3 hover:bg-gray-700 border-b border-gray-700 last:border-b-0 text-white transition-colors group"
+                                  className="w-full text-left px-4 py-2.5 hover:bg-gray-700 border-b border-gray-700 last:border-b-0 text-white transition-colors group"
                                 >
-                                  <p className="font-semibold text-sm group-hover:text-green-400 transition-colors">
-                                    {product.description}
-                                  </p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    Lote: {product.lot || 'N/A'} • Estoque: <span className="text-green-400 font-semibold">{product.quantity} un.</span>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="font-semibold text-sm group-hover:text-green-400 transition-colors truncate">{product.description}</p>
+                                    <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${qty > 0 ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}`}>
+                                      {qty > 0 ? `${qty} un.` : 'sem estoque'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    Lote: {product.lot || 'N/A'}{Number(product.selling_price_retail) > 0 ? ` • R$ ${Number(product.selling_price_retail).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}
                                   </p>
                                 </button>
-                              ))
-                            ) : (
-                              <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                <p>Nenhum produto encontrado com "{productSearchTerm}"</p>
-                                <p className="text-xs mt-1">Tente outro termo de busca</p>
-                                <p className="text-xs text-green-400 mt-2">
-                                  {availableProducts.length} produtos disponíveis no total
-                                </p>
-                              </div>
+                              );
+                            })}
+                            {filteredProductsForModal.length > 60 && (
+                              <p className="px-4 py-2 text-center text-[11px] text-gray-500">Mostrando 60 de {filteredProductsForModal.length} — use o filtro pra achar mais rápido.</p>
                             )}
-                          </div>
-                        )}
-
-                        {/* Lista de Produtos Selecionados */}
-                        {formData.interested_products.length > 0 && (
-                          <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-                            <Label className="text-gray-400 text-xs mb-2 block">
-                              <span className="inline-flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" />Produtos Marcados ({formData.interested_products.length}/10)</span>
-                            </Label>
-                            <div className="flex flex-wrap gap-2">
-                              {formData.interested_products.map(p => (
-                                <Badge
-                                  key={p.product_id}
-                                  className="bg-green-600 hover:bg-green-700 text-white pl-3 pr-2 py-1.5 flex items-center gap-2 transition-all"
-                                >
-                                  <span className="truncate max-w-[200px] text-sm">{p.product_name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeInterestedProduct(p.product_id)}
-                                    className="hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </Badge>
-                              ))}
-                            </div>
-                            {formData.interested_products.length >= 10 && (
-                              <p className="text-xs text-yellow-400 mt-2">
-                                <span className="inline-flex items-center gap-1.5"><TriangleAlert className="w-3.5 h-3.5" />Limite máximo atingido (10 produtos)</span>
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Mensagem quando nenhum produto está marcado */}
-                        {formData.interested_products.length === 0 && !productSearchTerm && (
-                          <div className="bg-gray-900/30 p-3 rounded-lg border border-dashed border-gray-700 text-center">
-                            <p className="text-xs text-gray-500">
-                              Nenhum produto marcado ainda. Use a busca acima para adicionar.
-                            </p>
-                          </div>
+                          </>
                         )}
                       </div>
+
+                      {/* Planos de Parceiro de Compra — valor de investimento editável */}
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center gap-2"><DollarSign className="w-4 h-4" />Planos de Parceiro de Compra</span>
+                      </Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                        {PLANOS_PARCEIRO.map((plano) => {
+                          const chave = `plano_${plano.id}`;
+                          const marcado = formData.interested_products.some((p) => chaveInteresse(p) === chave);
+                          return (
+                            <button
+                              key={plano.id}
+                              type="button"
+                              onClick={() => marcado ? removerInteresse(chave) : addInteresse({ chave, tipo: 'plano_parceiro', product_name: plano.name, valor: plano.minInvestment })}
+                              className={`rounded-lg border p-2.5 text-left transition-colors ${marcado ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-900 hover:border-green-500/50'}`}
+                            >
+                              <p className="text-xs font-semibold text-white leading-tight">{plano.name.replace('Plano ', '')}</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">
+                                {plano.isCustom ? 'valor livre' : `a partir de R$ ${plano.minInvestment.toLocaleString('pt-BR')}`}
+                              </p>
+                              <p className="text-[10px] text-gray-500">{plano.expectedReturn}%/mês · {plano.duration} meses</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Licenças — escada oficial, investimento editável */}
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center gap-2"><Briefcase className="w-4 h-4" />Licenças (plano oficial)</span>
+                      </Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                        {ESCADA_LICENCAS.map((nivel) => {
+                          const chave = `licenca_${nivel.id}`;
+                          const marcado = formData.interested_products.some((p) => chaveInteresse(p) === chave);
+                          return (
+                            <button
+                              key={nivel.id}
+                              type="button"
+                              onClick={() => marcado ? removerInteresse(chave) : addInteresse({ chave, tipo: 'licenca', product_name: `Licença ${nivel.label}`, valor: nivel.investimento })}
+                              className={`rounded-lg border p-2.5 text-left transition-colors ${marcado ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-900 hover:border-green-500/50'}`}
+                            >
+                              <p className="text-xs font-semibold text-white leading-tight">{nivel.label}</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">{nivel.investimento === 0 ? 'Grátis' : `R$ ${nivel.investimento.toLocaleString('pt-BR')}`}</p>
+                              <p className="text-[10px] text-gray-500">{nivel.comissao}% de comissão</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Selecionados — com valor editável e total */}
+                      {formData.interested_products.length > 0 && (
+                        <div className="bg-gray-900/60 p-3 rounded-lg border border-gray-700">
+                          <Label className="text-gray-400 text-xs mb-2 block">
+                            <span className="inline-flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" />Interesses marcados ({formData.interested_products.length}) — ajuste os valores se precisar</span>
+                          </Label>
+                          <div className="space-y-1.5">
+                            {formData.interested_products.map((p) => {
+                              const chave = chaveInteresse(p);
+                              const tipo = p.tipo || 'produto';
+                              const tipoLabel = tipo === 'plano_parceiro' ? 'Plano' : tipo === 'licenca' ? 'Licença' : 'Produto';
+                              return (
+                                <div key={chave} className="flex items-center gap-2">
+                                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${tipo === 'produto' ? 'bg-gray-700 text-gray-300' : tipo === 'licenca' ? 'bg-purple-500/20 text-purple-300' : 'bg-green-500/20 text-green-400'}`}>{tipoLabel}</span>
+                                  <p className="flex-1 min-w-0 text-sm text-white truncate">{p.product_name}</p>
+                                  <div className="relative shrink-0 w-32">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">R$</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={p.valor ?? ''}
+                                      onChange={(e) => atualizarValorInteresse(chave, e.target.value)}
+                                      className="bg-gray-700 text-white text-right text-sm h-8 pl-7"
+                                    />
+                                  </div>
+                                  <button type="button" onClick={() => removerInteresse(chave)} className="shrink-0 hover:bg-red-500/20 rounded-full p-1 transition-colors">
+                                    <X className="w-3.5 h-3.5 text-gray-400" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center justify-between border-t border-gray-700 mt-3 pt-2">
+                            <p className="text-xs text-gray-400">Potencial estimado deste cliente</p>
+                            <p className="text-base font-bold text-green-400">R$ {totalInteresses.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 📝 OBSERVAÇÕES */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">📝 Observações</p>
+                      <Textarea
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        placeholder="O que foi conversado, objeções, contexto..."
+                        className="bg-gray-700 text-white"
+                        rows={3}
+                      />
                     </div>
                   </div>
 
