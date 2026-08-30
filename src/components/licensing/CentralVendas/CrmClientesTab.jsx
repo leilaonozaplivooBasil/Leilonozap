@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
-import { adminDataProxy } from '@/functions/adminDataProxy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -112,24 +111,36 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     loadAutoSources();
   }, [isAdmin]);
 
-  // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app.
+  // 🌳 ESCOPO DE REDE — "de mim para baixo": nunca a base inteira do app... a
+  // menos que quem está olhando seja o super_admin. DIR-10 (27/08/2026), pedido
+  // explícito do dono: um licenciado/vendedor precisa ver só a própria rede de
+  // indicados (senão o CRM vira uma lista de clientes de todo mundo, inútil pra
+  // ele); o super_admin precisa ver o negócio inteiro circulando entre todas as
+  // estruturas, sem filtro nenhum — visão clara de tudo.
   // A árvore é construída com TODOS os usuários (precisa do grafo completo pra
   // achar sub-indicados), mas só entram na lista os IDs dentro da minha rede.
+  const isSuperAdmin = currentUser?.role === 'super_admin';
   const networkIds = React.useMemo(
-    () => (currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
-    [appUsers, currentUser?.id]
+    () => (!isSuperAdmin && currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
+    [appUsers, currentUser?.id, isSuperAdmin]
   );
   const networkAppUsers = React.useMemo(
-    () => appUsers.filter((u) => networkIds.has(u.id)),
-    [appUsers, networkIds]
+    () => (isSuperAdmin ? appUsers : appUsers.filter((u) => networkIds.has(u.id))),
+    [appUsers, networkIds, isSuperAdmin]
   );
+  // 🔴 DIR-10 — o "dono" de uma venda não vive só em licensee_id: dependendo do
+  // canal (loja própria de licenciado, carrinho do site, PDV), fica gravado em
+  // seller_id/anchor_id/owner_id (mesma constatação já feita em LicenseeOrders.jsx).
+  // Olhar só licensee_id fazia a rede inteira ficar sem nenhuma venda, mesmo real.
   const networkCatalogSales = React.useMemo(
-    () => catalogSales.filter((s) => s.licensee_id === currentUser?.id || networkIds.has(s.licensee_id)),
-    [catalogSales, networkIds, currentUser?.id]
+    () => (isSuperAdmin ? catalogSales : catalogSales.filter((s) =>
+      [s.licensee_id, s.anchor_id, s.seller_id, s.owner_id].some((id) => id === currentUser?.id || networkIds.has(id))
+    )),
+    [catalogSales, networkIds, currentUser?.id, isSuperAdmin]
   );
   const networkAuctions = React.useMemo(
-    () => auctions.filter((a) => networkIds.has(a.winner_id)),
-    [auctions, networkIds]
+    () => (isSuperAdmin ? auctions : auctions.filter((a) => networkIds.has(a.winner_id))),
+    [auctions, networkIds, isSuperAdmin]
   );
 
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
@@ -150,9 +161,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
-      const data = await plataforma.entities.Product.list('-created_date', 500);
+      // 🔴 DIR-10 — pegava só os 500 produtos mais recentes por data de criação,
+      // sem o mesmo filtro catalog_active usado na vitrine (Catalog.jsx). Com
+      // milhares de linhas históricas (produto vendido, amostra, lote zerado), o
+      // estoque real podia nunca estar entre os 500 mais novos e o card fechava
+      // em zero mesmo havendo produto de verdade. Mesmo filtro do catálogo público.
+      const data = await plataforma.entities.Product.filter({ catalog_active: true }, '-created_date', 5000);
       // Filtra produtos com estoque disponível (quantidade > 0)
-      const inStock = data.filter(p => {
+      const inStock = (data || []).filter(p => {
         const qty = p.quantity || 0;
         return qty > 0;
       });
@@ -165,17 +181,17 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
-  const getCallerEmail = () => {
-    try { const s = localStorage.getItem('currentUser'); return s ? JSON.parse(s).email : null; } catch { return null; }
-  };
-
+  // 🔴 DIR-10 — chamava /api/functions/adminDataProxy, uma função que nunca
+  // existiu no servidor (404 sempre, "Volume em Negociação" sempre zero).
+  // Negotiation já está mapeada no adapter (TABLE_MAP) como qualquer outra
+  // entidade — mesmo caminho genérico usado por Customer/Seller/etc.
   const loadNegotiations = async () => {
     try {
-      const response = await adminDataProxy({ entity_name: 'Negotiation', method: 'list', params: { sort_by: '-created_date', limit: 200 }, caller_email: getCallerEmail() });
-      const data = response?.data?.data || response?.data || [];
-      setNegotiations(data);
+      const data = await plataforma.entities.Negotiation.list('-created_date', 200);
+      setNegotiations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao carregar negociações:', error);
+      setNegotiations([]);
     }
   };
 

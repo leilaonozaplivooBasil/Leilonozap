@@ -62,15 +62,20 @@ export function getNetworkDescendantIds(appUsers, rootId) {
   return result;
 }
 
-// Deriva o "Tipo" de rede a partir do cadastro real (role, cargos e contextos)
+// Deriva o "Tipo" de rede a partir do cadastro real (role, cargos e contextos).
+// 🔴 DIR-10 (27/08/2026) — "arrematante" checava `u.arrematante_context?.enabled`,
+// mas essa coluna nasce TEXT no banco (não JSONB) — chega como string crua no JS,
+// nunca como objeto, então `.enabled` é sempre undefined. Ninguém nunca escreve esse
+// campo, então a checagem morreu antes de nascer. Quem realmente arrematou um leilão
+// (Auction.winner_id) é promovido a 'arrematante' depois, em buildUnifiedCustomers —
+// dado real, não um campo de contexto que nada preenche.
 export function deriveRoleType(u) {
   const levels = Array.isArray(u.career_levels) ? u.career_levels : [];
   if (u.role === 'leiloeiro') return 'leiloeiro';
   if (u.role === 'investidor') return 'investidor';
   if (levels.includes('influenciador') || levels.includes('influencer')) return 'influencer';
   if (u.is_seller || levels.includes('vendedor')) return 'vendedor';
-  if (u.licenciado_context?.enabled || levels.includes('licenciado_catalogo') || levels.includes('licenciado_aplicativo')) return 'licenciado';
-  if (u.arrematante_context?.enabled) return 'arrematante';
+  if (levels.includes('licenciado_catalogo') || levels.includes('licenciado_aplicativo')) return 'licenciado';
   return 'cliente';
 }
 
@@ -168,6 +173,10 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     target.total_spent += Number(a.current_price) || 0;
     target.status = 'cliente';
     target.auctions_won += 1;
+    // 🔴 DIR-10 — promove a 'arrematante' com dado real de arremate, só se nenhum
+    // papel de cargo (leiloeiro/investidor/influencer/vendedor/licenciado) já se
+    // aplicar — arrematante nunca deveria "roubar" um papel mais específico.
+    if (target.role_type === 'cliente') target.role_type = 'arrematante';
     if (!target.source.includes('leilao')) target.source = `${target.source}+leilao`;
     if (a.end_time && (!target.last_contact || new Date(a.end_time) > new Date(target.last_contact))) target.last_contact = a.end_time;
     target.auctions_list.push({ id: a.id, title: a.title, amount: Number(a.current_price) || 0, date: a.end_time });
