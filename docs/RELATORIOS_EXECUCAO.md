@@ -944,3 +944,443 @@ mudança de fórmula, critério ou regra de receita.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência
 visual do dono com os dois painéis lado a lado após o deploy.
+
+---
+
+## REL-18 — Execução da DIR-18
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono reportou "Custo do produto: R$ 0,00" no painel de lucro e cravou a
+   semântica: cost_price = custo TOTAL do lote (planilha). Diagnóstico com
+   consultas diretas dele: 15/302 produtos ativos sem custo; lotes reais
+   (POLITRIZ R$ 2.296/9un, Harley 117 R$ 2.200/10un, família MOP/PANELA
+   com valores fracionários idênticos de rateio de lote) confirmando a
+   semântica de lote — e explicando os R$ 50 milhões do CRM (custo de lote
+   × quantidade = lote contado N vezes).
+2. `src/lib/custoProduto.js` criado (custoUnitario, custoEstoqueRestante) +
+   `tests/custoProduto.test.mjs` (8 casos com dados reais).
+3. Corrigidas as 6 leituras erradas (CrmClientesTab, BalancoGeralTab,
+   RentabilidadeOperacao, DailyReportView, DailyReportPDF,
+   PainelLucroDiario agora reusa a lib) e 1 escrita errada
+   (gerarProdutosDoLote gravava unitário em registro com qtd > 1).
+4. Trava "jamais custo zerado" nos dois formulários de cadastro manual
+   (CreateCatalogProduct, AddCatalogProduct) — os 15 produtos zerados
+   entraram por aí.
+**O que NÃO foi feito / blockers:**
+- `createConsignacao.js:97` — bug real de cobrança (debita o custo do LOTE
+  como se fosse unitário na consignação de lote multi-unidade). Mexe em
+  dinheiro; flagged pra diretiva própria com decisão do dono.
+- Preencher o custo dos 15 produtos zerados — só o dono tem os valores
+  reais (planilha de origem); lista entregue no chat.
+**Testes:** 451/451 (443 + 8 novos). **Build:** exit 0.
+**Confirmação de escopo:** só os arquivos listados; nenhuma mudança em
+fluxo de pagamento, comissão, `financial_income` ou banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência do
+dono no Preview e autorização pra publicar.
+
+---
+
+## REL-19 — Execução da DIR-19
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono decidiu a regra do consignado: "igual é no mercado" — acerto POR
+   UNIDADE vendida. Implementado `acertoConsignadoUnitario` em
+   `api/_lib/custoProduto.js` (espelho servidor da regra da DIR-18):
+   atacado por unidade → custo unitário da casa → catálogo como último
+   recurso.
+2. `createConsignacao.js` passa a usar a regra (o select agora traz
+   `quantity_sold` e `selling_price_wholesale`). Aprovação e liquidação
+   não mudam — só repassam o `custo_unitario` do pedido, que agora nasce
+   certo.
+3. Seção **6-D** nova no `DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`: a regra
+   oficial, o bug que ela corrige e a tabela de onde vive no código.
+4. `tests/acertoConsignado.test.mjs` (6 casos, calibrados no caso real da
+   POLITRIZ: acerto R$ 255,11 e nunca R$ 2.296).
+**O que NÃO foi feito / blockers:** consignações já existentes com
+`custo_unitario` inflado gravado (pendentes ou aprovadas) não foram
+corrigidas — precisa conferir se existem antes; consulta entregue ao dono.
+**Testes:** 457/457 (451 + 6 novos). **Build:** exit 0.
+**Confirmação de escopo:** só os arquivos listados. Motor de liquidação,
+saldos e comissões intactos.
+**Publicado em:** relatório ao dono, no chat; regra registrada na seção 6-D
+do documento oficial.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência e
+autorização de publicação (junto com a DIR-18).
+
+---
+
+## REL-20 — Execução da DIR-20
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:** análise linha a linha dos 9 cards da Gestão de
+Estoque + 4 consultas do dono direto no banco fecharam o diagnóstico
+(números no texto da DIR-20). Implementado: `unidadesEmEstoque` na regra
+única de custo (cliente + servidor), CRM somando o galpão inteiro
+(esperado ~R$ 28.133,45), Gestão de Estoque com "Capital em Estoque" =
+custo parado agora (mesma conta do CRM), contadores de unidades cobrindo
+os 184 produtos com estoque só na grade, consignado herdando o estoque
+físico, e 3 testes novos com os casos reais (VIX, POLITRIZ).
+**O que NÃO foi feito / blockers (dados, dependem do dono):**
+1. Preço podre do Mini Localizador GPS — SQL de correção entregue no chat
+   (R$ 12.226,61 → R$ 31,03/un); depois disso a "Receita Potencial" cai de
+   R$ 5,08 milhões pra ~R$ 274 mil (valor plausível).
+2. Os 15 produtos sem custo — lista entregue, valores só o dono tem.
+3. "Faturado"/"Lucro Líquido" da Gestão de Estoque continuam somando os
+   campos gravados `sold_amount`/`profit`, que misturam vendas de teste
+   pré-marco — flagged, não alterados (redefinir exige decisão do dono
+   sobre o que essa tela deve contar).
+**Testes:** 460/460 (457 + 3 novos). **Build:** exit 0.
+**Confirmação de escopo:** arquivos das telas citadas + regra única +
+testes. Nenhum dado de banco alterado pelo código.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência no
+Preview e autorização pra publicar DIR-18+19+20 juntas.
+
+**Correção, mesma diretiva, mesmo dia — o corte silencioso de 1000 linhas:**
+dono conferiu o Preview e o CRM mostrava R$ 9.595,12 (não os R$ 28.133,45
+validados no banco). Causa: a busca nova (`Product.list('-created_date',
+5000)`) pede 5000 mas o Supabase corta a resposta em 1000 linhas SEM
+avisar — o CRM somava só os 1000 produtos mais novos. A Gestão de Estoque
+já tinha descoberto e documentado exatamente esse corte em 20/08 (comentário
+no próprio `ProductManagement.jsx`) e paginava inline por cursor. Essa
+paginação virou função única `src/lib/listarTudo.js` (keyset por `id`,
+blocos de 1000, com 6 testes usando uma entidade falsa que simula o corte
+do PostgREST), usada agora por: CRM (`allProducts`), Painel de Lucro
+Diário (mapa de custo — produto antigo saía com "Custo R$ 0,00" no painel
+por ficar fora dos 1000) e Gestão de Estoque (código inline substituído
+pela função). 466/466 testes, build ok.
+**Pendência registrada, não corrigida nesta rodada:** as buscas de VENDAS
+(`CatalogSale.list('-created_date', 5000)` no NetworkOverview e no CRM)
+sofrem o mesmo corte de 1000 — hoje validado inofensivo (toda venda
+pós-marco cabe nas 1000 mais recentes; números bateram com o banco), mas
+quando a tabela crescer, vendas antigas vão sumir das somas de histórico
+por cliente. Migrar pra `listarTudo` numa rodada própria, com validação
+dos números antes/depois (mexe em soma de dinheiro).
+
+---
+
+## REL-21 — Execução da DIR-21
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. "Volume em Negociação" redefinido (decisão do dono): pedidos de Loja
+   gerados e não pagos + pedidos cancelados/estornados + negociações
+   manuais, tudo pós-marco. Tooltip mostra a composição das 3 parcelas com
+   os valores de cada uma.
+2. Card do super_admin renomeado "Faturamento Bruto (Loja Virtual)" =
+   `comprasBrutas` (valor cheio das compras reais). Regra da DIR-7
+   intocada — a comissão segue como receita oficial no Financeiro/imposto;
+   `financial_income` deixou de ser carregado no CRM por não ter mais uso
+   nele.
+**Testes:** 466/466. **Build:** exit 0.
+**Confirmação de escopo:** só `CrmClientesTab.jsx` e `CrmStatsCards.jsx`.
+Nenhuma mudança em `financial_income`, Financeiro ou visão de rede.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência no
+Preview e autorização pra publicar o pacote DIR-18 a 21.
+
+---
+
+## REL-22 — Execução da DIR-22 (Fase 1)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Análise sênior do CRM entregue no chat (clicabilidade, informações
+   faltantes, modelo de dados do Parceiro de Compra já existente, e o
+   achado-chave: estrutura executiva ≠ árvore de indicação — a fonte única
+   é `resolveExecutivo`/`executive_owner`).
+2. `src/lib/captacaoParceiros.js` + 9 testes: regra da meta de R$ 1 milhão
+   na ordem oficial do dono, com anti-dupla-contagem entre venda
+   `partner_plan` e ativação automática, e balde residual visível.
+3. `CrmParceirosCompra.jsx`: painel com barra da meta, baldes em ordem e
+   lista de parceiros (plano, valor, aportes pagos reais por pessoa, data,
+   origem da ativação), no mesmo escopo do resto do CRM.
+4. Visão total estendida a `admin` (antes só `super_admin`), frase literal
+   do dono.
+**O que NÃO foi feito / blockers:** Fases 2 (acesso por estrutura
+executiva), 3 (clicabilidade) e 4 (perfil enriquecido) — registradas na
+DIR-22, aguardam as próximas rodadas. Histórico legado de adesão
+(pré-21/08) continua fora (pendência DIR-13) — a meta só enxerga o que é
+rastreável.
+**Testes:** 475/475 (466 + 9 novos). **Build:** exit 0.
+**Confirmação de escopo:** lib nova + componente novo + 3 pontos em
+`CrmClientesTab.jsx` (carga de `partner_plan_purchases`, escopo, render).
+Nenhuma mudança em receita, comissão ou banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (Fase 1) — aguarda conferência no Preview.
+
+---
+
+## REL-23 — Execução da DIR-23 (metas internas oficiais no CRM)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Análise sênior dos dois materiais do dono entregue no chat (Resumo
+   Executivo Integrado + Apresentação Oficial do plano de licenças), com o
+   mapa do que o CRM já tinha, o que faltava e o que NÃO deve entrar
+   (projeções de território são material de venda, não métrica de operação).
+2. `src/lib/metaCentral.js` + 8 testes: Meta Central de VENDAS
+   R$ 5.000.000/mês (alvo março/2027) = trilho Online R$ 4M (Loja + Leilão,
+   dado real do mês, critério oficial `dinheiroReal`) + trilho Física R$ 1M
+   SEM FONTE no sistema (null explícito, nunca zero inventado).
+3. `src/lib/dashboardDiretoria.js` + 8 testes: os 12 números da Seção 37
+   com Realizado × Meta e etiqueta de governança do próprio documento —
+   Dado (novos usuários/dia, conversão digital na fórmula do Painel de
+   Alavancagem, ticket médio do mês, venda online, faturamento total),
+   Aproximação com fórmula declarada (usuários ativos por atividade
+   financeira 30d — não há rastro de login; K-Factor pela árvore
+   `referred_by_id`) e Sem fonte como pendência explícita (visitantes/
+   cadastros do Ranking, venda física, custo de aquisição, ROI).
+4. `src/lib/escadaLicencas.js` + 20 testes: a escada oficial (Influenciador
+   grátis/5% → Vendedor R$ 1.497/10% → Licenciado R$ 5.000/13% → Parceiro
+   R$ 20.000/15% → Ponto de Retirada R$ 50.000/16% → Loja Física
+   R$ 350.000/19% → Distribuidor R$ 4.000.000/20%), com `nivelDaVenda` na
+   MESMA precedência de palavras do balde da captação (teste de
+   concordância venda a venda) e o cruzamento N vendidos × preço de tabela
+   vs captado real (desconto/inconsistência aparece, não some).
+5. Três painéis novos no CRM, SÓ visão total (admin/super_admin — metas da
+   empresa não vazam pra escopo de rede): `CrmMetaCentral.jsx` (barra dos
+   R$ 5M com os dois trilhos), `CrmDashboardDiretoria.jsx` (grade dos 12
+   KPIs com etiquetas) e `CrmEscadaLicencas.jsx` (tabela da escada com
+   hierarquia de cadastro e divergência de tabela destacada).
+**O que NÃO foi feito / blockers:** venda física, analytics do Ranking,
+custo de aquisição e ROI seguem sem fonte de dado — aparecem como
+pendência no próprio painel; ativam quando o sistema medir. Premissas
+aguardando martelo do dono: "usuário ativo" ≈ atividade financeira em 30
+dias (sem rastro de login hoje).
+**Testes:** 511/511 (475 + 36 novos). **Build:** exit 0.
+**Confirmação de escopo:** 3 libs novas + 3 componentes novos + fiação em
+`CrmClientesTab.jsx` (imports, 3 memos, render condicionado a visão
+total). Nenhuma mudança em receita, comissão, captação (DIR-22) ou banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+---
+
+## REL-24 — Execução da DIR-24 (CRM de mercado, 5 fases)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. **Fase 1 — números confiáveis** (`crmUnifiedCustomers.js` + 7 testes):
+   Gasto Total do cliente só conta MERCADORIA (loja/produto/arremate; linha
+   legada sem kind continua contando) — depósito/adesão/aporte fora
+   (dinheiro duplicado eliminado da linha do cliente); valor de leilão vem
+   só da venda kind='arremate' PAGA (winner_id sem pagamento vale troféu,
+   não gasto); convidado recorrente acumula contador e linha do tempo;
+   cliente manual duplicado agora FUNDE na linha automática (notas,
+   vendedor, follow-up e CPF preservados) em vez de sumir. Escopo:
+   clientes manuais filtrados por `created_by_id` (carimbado no cadastro),
+   negociações seguem o cliente; `Customer` sem teto de 500 (listarTudo),
+   Negotiation 200→1000, Seller 100→500.
+2. **Fase 2 — CRM aberto e escopado**: gate `if (!isAdmin)` removido —
+   todo usuário vê o CRM DA PRÓPRIA REDE; visão total segue de
+   admin/super_admin; cards de empresa (estoque, catálogo, metas,
+   dashboard, escada), aba Vendedores e botão Novo Vendedor só na visão
+   total. Estrutura EXECUTIVA continua pendente (DIR-22 Fase 2).
+3. **Fase 3 — visual**: CRM reorganizado em 3 seções (📊 Visão Executiva /
+   👥 Clientes / 🚀 Expansão) com navegação própria; faixa de resumo com os
+   4 números que importam sempre visível (faturamento do mês × meta,
+   volume em negociação, clientes ativos, captação); gráfico de RITMO
+   DIÁRIO do mês na Meta Central (`ritmoDiario` + teste) com "precisa
+   entrar R$ X/dia"; tabela de clientes vira CARTÕES no celular.
+4. **Fase 4 — ação** (`quemContatarHoje.js` + 12 testes +
+   `CrmQuemContatar.jsx`): fila diária "Quem contatar hoje" com dado real
+   (follow-up vencido > pedido não pago > arremate sem pagamento >
+   depósito sem compra > sumido 30d), uma pessoa por vez no motivo mais
+   urgente, ordenada pelo dinheiro; botão WhatsApp com mensagem pronta por
+   motivo (DDI 55). Anotações + data de retorno + próximo passo em
+   QUALQUER cliente (upsert em customers, colunas já existentes — sem
+   migração); com data marcada o cliente entra sozinho na fila do dia.
+5. **Fase 5 — luxo de mercado**: funil kanban por status de compra
+   (`CrmFunilKanban.jsx`); ordenação clicável (nome/gasto/último
+   contato/leilões) + paginação de 50 + busca por CPF + exportação CSV
+   (com BOM pro Excel) na lista; aviso de duplicado NO ATO do cadastro
+   (e-mail/telefone); todos os `alert()` do CRM viraram toast (sonner).
+**O que NÃO foi feito / blockers:** arrastar cartão no kanban (mudança de
+status manual continua pelo perfil — drag exigiria lib nova, registrado);
+escopo por estrutura executiva (DIR-22 Fase 2); cadastros manuais LEGADOS
+sem `created_by_id` aparecem só na visão total (decisão de segurança:
+melhor esconder do que vazar — o dono pode atribuir donos depois).
+**Testes:** 531/531 (511 + 20 novos). **Build:** exit 0.
+**Confirmação de escopo:** critério oficial de dinheiro real intocado
+(cards grandes idênticos); DIR-7 (receita) e baldes da captação intocados;
+nenhuma migração de banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (5 fases) — aguarda conferência no Preview.
+
+---
+
+## REL-25 — Execução da DIR-25 (cadastro manual com interesses completos)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. `src/lib/planosParceiro.js` — fonte única dos planos de parceiro de
+   compra (Visionário R$ 5.000 / Sócios de Ouro R$ 15.000 / Elite
+   R$ 30.000 / Personalizado, 3%/60 meses); PartnerPlanActivation.jsx
+   passou a importar dela (antes a lista vivia hardcoded lá).
+2. Modal Novo Cliente reorganizado em 5 seções: 👤 Dados / 📍 Endereço /
+   🎯 Acompanhamento / 💼 Interesses / 📝 Observações. Acompanhamento
+   ganhou Vendedor responsável (select dos vendedores ativos), "Voltar a
+   falar em" (entra sozinho na fila Quem Contatar Hoje) e Próximo passo.
+3. Interesses: PRODUTOS com o catálogo INTEIRO visível por padrão (busca
+   só refina; até 60 por vez com aviso; produto sem estoque aparece
+   marcado "sem estoque" em vez de sumir — interesse em esgotado é sinal
+   de demanda; com estoque vem primeiro; preço de vitrine mostrado);
+   PLANOS DE PARCEIRO e LICENÇAS (escada oficial, Influenciador grátis a
+   Distribuidor R$ 4 mi) em cards selecionáveis. Todo item marcado ganha
+   VALOR EDITÁVEL pré-preenchido com o preço de tabela, com etiqueta de
+   tipo (Produto/Plano/Licença) e total "Potencial estimado do cliente".
+4. Gravação: itens tipados em interested_products (JSONB; formato legado
+   sem tipo continua lendo como produto) e o total em purchase_value.
+   handleEdit também carrega os campos novos.
+**O que NÃO foi feito / blockers:** nada de ativação de plano — o cadastro
+registra INTERESSE (a ativação continua em PartnerPlanActivation, agora
+lendo da mesma fonte).
+**Testes:** 531/531. **Build:** exit 0.
+**Confirmação de escopo:** sem migração (colunas assigned_seller,
+follow_up_date, next_steps, purchase_value, interested_products já
+existiam); escada e planos só leitura.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+
+---
+
+## REL-26 — Execução da DIR-26 (ticket médio por comprador)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:** KPI "Ticket médio" do Dashboard da Diretoria
+recalculado: mercadoria real do mês ÷ compradores únicos do mês (antes
+dividia por pedidos — R$ 118,65 vs meta R$ 252, comparação errada de
+unidade). Rótulo e tooltip agora dizem POR COMPRADOR e explicam por que o
+"Ticket médio / comprador" do Espelho é outro número (soma depósitos e é
+desde 01/08 — cópia proposital do Painel de Alavancagem, intocada).
+Resposta ao dono: nem 118 nem 272 eram o certo pra meta — 272 soma
+depósito (mesmo real duas vezes) e não é mensal.
+**Testes:** 531/531 (teste do KPI atualizado). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+
+---
+
+## REL-27 — Execução da DIR-27 (leilão pós-marco no CRM)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:** análise de consistência da seção Clientes entregue
+no chat (status fecham exatos em 611; Leilões Arrematados 55 estava
+contaminado por vitórias de teste pré-lançamento — 37 delas do próprio
+dono — puxando junto Arrematantes e Clientes Ativos). Regra do dono
+aplicada na fonte única (`buildUnifiedCustomers`): vitória de leilão só
+conta com end_time >= 01/08/2026 (MARCO_OFICIAL importado de
+dinheiroReal.js); pré-marco/sem data não conta troféu, não promove, não
+vira cliente, não entra na linha do tempo. Efeito esperado na tela:
+Leilões Arrematados cai de 55 pro nº real pós-marco, Arrematantes e
+Clientes Ativos caem junto (teste vira lead de novo).
+**Testes:** 534/534 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+
+---
+
+## REL-28 — Execução da DIR-28 (auditoria pré-publicação)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:** auditoria completa dos caminhos interativos do CRM
+(handlers, modais, entidades, identificadores) — detalhes na DIR-28.
+Quatro correções aplicadas: link do WhatsApp do encaminhamento
+normalizado (dígitos + DDI 55, com erro claro sem telefone); "Produtos
+no Catálogo" volta a contar só com estoque; anotação bloqueada em
+cliente sem nenhum contato (evita registro fantasma); handleEdit morto
+removido. Melhorias futuras registradas na diretiva.
+**Testes:** 534/534. **Build:** exit 0.
+**Status final:** CONCLUÍDA — pacote DIR-18→28 pronto pra publicar,
+aguardando autorização do dono.
+
+---
+
+## REL-29 — Execução da DIR-29 (melhorias da auditoria)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Trilho VENDA FÍSICA ativado com dado real: PDV carimba source='pdv'
+   desde o nascimento da venda — Meta Central e Dashboard separam Física
+   (balcão) × Online (site + leilão), sem duplicar nem perder nada.
+2. CUSTO DE AQUISIÇÃO ativado (aproximação): Σ custo dos lotes ÷ Σ
+   potencial de venda da vitrine (galpão inteiro), com a ressalva de que
+   a referência 22,8% do documento é sobre o valor de MERCADO (vitrine é
+   ~20% abaixo — o % real sobre mercado é ainda menor).
+3. ROI OPERACIONAL ativado (aproximação): (receita − custo) ÷ custo das
+   vendas reais do mês com produto vinculado — buildCostMap/custoDaVenda
+   extraídos do Painel de Lucro Diário pra src/lib/custoProduto.js (fonte
+   única; o Painel importa de lá agora); a cobertura (X de Y vendas com
+   custo conhecido) aparece na fonte do KPI.
+4. RASTRO DE LOGIN: migração 20260830170000 (app_users.last_login +
+   índice — DONO PRECISA COLAR O SQL) + carimbo tolerante em login.js e
+   googleLogin.js; "Usuários ativos" vira DADO (login OU movimento em
+   30d) assim que a coluna existir — até lá segue a aproximação, sem
+   quebrar nada.
+5. CRM: editar cliente MANUAL direto no modal (botão lápis, religado de
+   verdade); kanban com ARRASTAR nativo pra manual (solta na coluna →
+   atualiza status; automático não arrasta, com explicação no hover);
+   origem "Ranking Premiado" no cadastro e no filtro.
+**O que NÃO foi feito / blockers:** instrumentação automática do Ranking
+(a página não existe no sistema — quando nascer, cadastra com
+source='ranking' e o KPI Cadastros Ranking/dia liga sozinho); listarTudo
+nas vendas (rodada própria — duas telas casadas somando dinheiro).
+**Ação do dono:** ✅ FEITA — migração colada e aplicada no SQL Editor em
+30/08/2026 ("Success. No rows returned", padrão de ALTER/CREATE). A
+coluna last_login e o índice existem em produção; o carimbo no login
+começa a valer quando o pacote da branch for publicado (login.js roda no
+deploy novo).
+**Testes:** 540/540 (6 novos). **Build:** exit 0. Nomes de migração: ✅.
+**Status final:** CONCLUÍDA — migração aplicada; aguarda conferência no
+Preview.
+
+---
+
+## REL-30 — Execução da DIR-30 (cargos do Plano de Carreira no cadastro de vendedor)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Select "Cargo / Tipo de Licença" do Novo Vendedor agora lista os cargos
+   OFICIAIS da fonte única do Painel de Controle (careerLevels.js), em 3
+   grupos: Plano de Carreira — Rede (Influenciador 5% → Distribuidor 20%,
+   com % e valor de adesão no rótulo), Diretoria (Trainee, Sócio
+   Executivo, Diretor Operacional, Diretoria Executiva, CEO, Livoo Live,
+   Embaixador, Conselheiro, Fundador — os nomes pedidos pelo dono) e
+   Licenças de Loja legado (vendedor antigo continua legível).
+2. Escolher um cargo do plano PRÉ-PREENCHE a comissão com o % oficial
+   (editável) e mostra a REGRA do cargo embaixo do select — o mesmo texto
+   que a equipe vê no Painel de Controle.
+3. Badge da tabela de vendedores via helper único nomeLicenca() (plano +
+   legado; id desconhecido aparece cru, nunca vira "Usuário" por engano).
+4. Telefone do vendedor salvo só com dígitos (obrigatório) — o wa.me do
+   encaminhamento e o PDV dependem de número limpo.
+**Fora do escopo confirmado:** motor de comissão do PDV intocado (usa
+career_levels do usuário, não o license_type do vendedor — conferido).
+**Testes:** 540/540. **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.

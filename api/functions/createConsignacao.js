@@ -7,6 +7,7 @@
 // sempre podem; Vendedor, Licenciado e Parceiro só se forem EXECUTIVOS.
 import { oid } from '../_lib/oid.js';
 import { podeReceberConsignado, podeEnviarConsignado, PRAZO_CONSIGNADO_DIAS } from '../_lib/consignadoElegibilidade.js';
+import { acertoConsignadoUnitario } from '../_lib/custoProduto.js';
 import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -83,7 +84,7 @@ export default async function handler(req, res) {
     const ids = [...new Set(items.map((i) => String(i.product_id || '')).filter(Boolean))];
     if (!ids.length) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const inList = ids.map((i) => `"${encodeURIComponent(i)}"`).join(',');
-    const prods = await (await sb(`products?select=id,description,price_catalog,cost_price,quantity&id=in.(${inList})`)).json();
+    const prods = await (await sb(`products?select=id,description,price_catalog,cost_price,quantity,quantity_sold,selling_price_wholesale,qty_perfeito,qty_bom,qty_oficina,qty_ruim&id=in.(${inList})`)).json();
     const pmap = {}; (Array.isArray(prods) ? prods : []).forEach((p) => { pmap[p.id] = p; });
 
     const linhas = []; let valorTotal = 0;
@@ -94,7 +95,12 @@ export default async function handler(req, res) {
       if ((Number(p.quantity) || 0) < qty) {
         return res.status(200).json({ success: false, error: `Estoque insuficiente de "${String(p.description || '').slice(0, 40)}" (tem ${Number(p.quantity) || 0}).` });
       }
-      const custo = round2(p.cost_price || p.price_catalog || 0);
+      // 🔴 DIR-19 — regra de mercado: acerto POR UNIDADE (atacado, ou custo
+      // unitário da casa, ou catálogo como último recurso). Antes usava
+      // cost_price cru, que é o custo do LOTE inteiro — num lote de 9 peças a
+      // R$ 2.296, o lojista era debitado R$ 2.296 POR PEÇA em vez de R$ 255.
+      // Ver api/_lib/custoProduto.js.
+      const custo = round2(acertoConsignadoUnitario(p));
       valorTotal = round2(valorTotal + custo * qty);
       linhas.push({ product_id: p.id, title: String(p.description || '').slice(0, 200), qty, custo_unitario: custo, preco_venda: round2(p.price_catalog || 0) });
     }

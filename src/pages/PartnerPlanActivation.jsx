@@ -5,42 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, CheckCircle, AlertCircle, FileText, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
+import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 
-const PLANS = [
-  {
-    id: 1,
-    name: "Plano Visionário",
-    minInvestment: 5000,
-    expectedReturn: 3,
-    duration: 60,
-    description: "Ideal para quem está começando. Produtos de alta liquidez e demanda garantida."
-  },
-  {
-    id: 2,
-    name: "Plano Sócios de Ouro",
-    minInvestment: 15000,
-    expectedReturn: 3,
-    duration: 60,
-    description: "Para parceiros que buscam maior retorno com segurança."
-  },
-  {
-    id: 3,
-    name: "Plano Elite",
-    minInvestment: 30000,
-    expectedReturn: 3,
-    duration: 60,
-    description: "Máximo retorno com acesso a todas as oportunidades."
-  },
-  {
-    id: 4,
-    name: "Plano Personalizado",
-    minInvestment: 0,
-    expectedReturn: 3,
-    duration: 60,
-    description: "Defina valores personalizados para este parceiro.",
-    isCustom: true
-  }
-];
+// 🔗 DIR-25 — a lista oficial dos planos saiu daqui pra src/lib/planosParceiro.js
+// (fonte única, compartilhada com o cadastro de interesses do CRM).
+const PLANS = PLANOS_PARCEIRO;
 
 export default function PartnerPlanActivation() {
   const [searchTerm, setSearchTerm] = useState('');

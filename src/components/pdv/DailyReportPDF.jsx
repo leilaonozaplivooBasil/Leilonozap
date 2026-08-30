@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
+import { custoUnitario } from '@/lib/custoProduto';
 import { jsPDF } from 'jspdf';
 
 const NoZapLogo = "/brand/icon-3d-256.png";
@@ -33,10 +34,11 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         if (sale.product_cost && sale.product_cost > 0) {
           return sale.product_cost * (sale.quantity_sold || 1);
         }
-        // Fallback: busca cost_price do produto
+        // Fallback: busca custo do produto — cost_price é o custo do LOTE
+        // inteiro (DIR-18); o custo desta venda é o unitário × qtd vendida.
         const prod = productsMap[sale.product_id];
         if (prod && prod.cost_price) {
-          return prod.cost_price * (sale.quantity_sold || 1);
+          return custoUnitario(prod) * (sale.quantity_sold || 1);
         }
         return 0;
       };

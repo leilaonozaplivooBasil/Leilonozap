@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import { analiseFiscal } from '@/lib/simplesNacional';
+import { buildCostMap, custoDaVenda } from '@/lib/custoProduto';
+import { listarTudo } from '@/lib/listarTudo';
 import { TrendingUp, TrendingDown, Package, Percent, Receipt, AlertTriangle, ShoppingBag, Gavel, Wallet, Landmark } from 'lucide-react';
 
 // 📊 REGRA OFICIAL DE COMISSÃO (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md) —
@@ -13,30 +15,9 @@ const PCT_COMISSAO_LEILAO = 5;
 
 const money = (n) => Number(n) || 0;
 
-/** Mapa productId -> custo unitário médio (cost_price / (quantity + quantity_sold)). */
-function buildCostMap(products) {
-  const map = {};
-  for (const p of products) {
-    const totalUnidades = money(p.quantity) + money(p.quantity_sold);
-    map[p.id] = totalUnidades > 0 ? money(p.cost_price) / totalUnidades : money(p.cost_price);
-  }
-  return map;
-}
-
-/** Custo total (COGS) de UMA venda — item único (product_id) ou múltiplos (items_json). */
-function custoDaVenda(sale, costMap) {
-  if (Array.isArray(sale.items_json) && sale.items_json.length > 0) {
-    return sale.items_json.reduce((sum, item) => {
-      const unit = costMap[item.product_id] ?? 0;
-      return sum + unit * (money(item.qty) || 1);
-    }, 0);
-  }
-  if (sale.product_id) {
-    const unit = costMap[sale.product_id] ?? 0;
-    return unit * (money(sale.quantity) || 1);
-  }
-  return 0;
-}
+// 🔗 DIR-29 — buildCostMap/custoDaVenda moraram aqui até 30/08/2026; hoje são
+// fonte única em src/lib/custoProduto.js (o Dashboard da Diretoria usa a
+// mesma conta pro ROI operacional — duas telas, uma fórmula).
 
 export default function PainelLucroDiario({
   purchasesToday = [],
@@ -52,7 +33,10 @@ export default function PainelLucroDiario({
     let vivo = true;
     (async () => {
       try {
-        const products = await plataforma.entities.Product.list('-created_date', 3000);
+        // 🔴 DIR-20 — era .list('-created_date', 3000): o Supabase corta em 1000
+        // linhas sem avisar, então produto antigo ficava fora do mapa de custo e
+        // a venda dele saía com "Custo do produto: R$ 0,00" neste painel.
+        const products = await listarTudo(plataforma.entities.Product);
         if (vivo) setCostMap(buildCostMap(Array.isArray(products) ? products : []));
       } catch (e) {
         console.debug('Erro ao carregar custo de produtos:', e?.message);

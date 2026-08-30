@@ -165,7 +165,11 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
       qty_ruim: 0,
       qty_oficina: 0,
       quantity_sold: 0,
-      cost_price: Number(custoUnitarioMedio.toFixed(2)),
+      // 🔴 DIR-18 — cost_price é o custo TOTAL do lote deste registro
+      // (semântica oficial da planilha, ver src/lib/custoProduto.js), então
+      // registro com qtd > 1 grava unitário × qtd. Antes gravava só o
+      // unitário, e toda tela que divide por unidades subestimava o custo.
+      cost_price: Number((custoUnitarioMedio * qtd).toFixed(2)),
       market_value: Number((item.valor_mercado || 0).toFixed(2)),
       status: 'ESTOQUE',
       catalog_active: false,

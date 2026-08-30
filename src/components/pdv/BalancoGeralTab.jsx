@@ -30,10 +30,10 @@ export default function BalancoGeralTab({ sales, products, customInvestido }) {
     }, 0);
 
     // VALOR DO ESTOQUE ATUAL - usa mesma lógica da aba Rentabilidade (valor investido customizado ou calculado)
-    const valorInvestidoCalculado = products.reduce((sum, p) => {
-      const totalQty = (p.quantity || 0) + (p.quantity_sold || 0);
-      return sum + (p.cost_price || 0) * totalQty;
-    }, 0);
+    // 🔴 DIR-18 — cost_price já É o custo total do lote (semântica da planilha,
+    // ver src/lib/custoProduto.js); multiplicar pela quantidade contava o lote
+    // inteiro N vezes. "Valor investido" = soma dos custos de lote, direto.
+    const valorInvestidoCalculado = products.reduce((sum, p) => sum + (p.cost_price || 0), 0);
     const valorEstoqueAtual = customInvestido !== null && customInvestido !== undefined ? customInvestido : valorInvestidoCalculado;
 
     // DESPESAS FIXAS E VARIÁVEIS
