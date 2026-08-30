@@ -191,3 +191,60 @@ mexer em `financial_income` (DIR-7).
 **Regras fixas:** nenhuma além da DIR-5/6/7/8.
 **Status:** CONCLUÍDA. PR #134 mergeado por squash em `main` (commit
 `4ebecf54`), CI verde. Ver `REL-9`.
+
+---
+
+## DIR-10 — CRM: dono vê o negócio inteiro, rede vê só a própria rede (Fase 1)
+
+**Emitida por:** dono (Luiz), diretamente, depois de pedir análise sênior do
+CRM (print com quase todos os cards zerados apesar de vendas, usuários e
+estoque reais).
+**Data:** 27/08/2026.
+**Objetivo:** 5 causas raiz independentes pros zeros, confirmadas por
+leitura de código: escopo de rede aplicado até pro dono; campo de venda
+errado (`licensee_id` sozinho); "Volume em Negociação" chamando função de
+servidor inexistente; "Produtos em Estoque" sem filtro `catalog_active`;
+"Arrematantes" checando coluna TEXT como se fosse objeto. Regra confirmada
+com o dono: rede continua vendo só a própria rede; só `super_admin` vê o
+negócio inteiro. Achados adicionais no Preview corrigidos na mesma PR:
+"Valor de Mercado em Estoque" usava preço de venda, não custo real;
+"Faturamento Total" somava valor cheio da venda, não a comissão real
+(mesmo erro da DIR-7) — trocado por somar `financial_income`; tooltip ⓘ em
+todo card, pedido do dono ("painel precisa ser intuitivo").
+**Escopo autorizado:** bypass do filtro de rede pra `super_admin`; correção
+do campo de venda pra visão de rede; troca da função de negociação
+inexistente; filtro de estoque correto; cálculo de arrematante por dado
+real; correção de estoque/faturamento pro valor real; tooltips explicativos.
+**Fora do escopo / proibido:** persistência automática em `customers`;
+unificação da tabela `sellers` com o papel calculado; RLS do Supabase.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-9.
+**Status:** CONCLUÍDA. PR #145 mergeado por squash em `main` (commit
+`67039789`), CI verde. Ver `REL-10`.
+
+---
+
+## DIR-11 — Backfill de financial_income com o histórico real
+
+**Emitida por:** dono (Luiz), diretamente, depois de ver "Faturamento
+Total: R$ 0,00" no Preview da DIR-10 e pedir pra "puxar tudo dado real:
+pagamento das lojas, depósitos, venda e etc".
+**Data:** 28/08/2026.
+**Objetivo:** `financial_income` (DIR-7) nasceu vazia de propósito — grava
+só a partir de agora. Migration única e idempotente que popula o
+livro-razão com o histórico real de `catalog_sales`, usando A MESMA regra
+já em vigor no código ao vivo (DIR-7): comissão de venda liquidada (não o
+valor cheio) e taxa sem repasse (valor cheio). Depósito de saldo/carteira/
+operação, passaporte, frete de vendedor e reposição de estoque continuam
+FORA — mesmo motivo da DIR-7, não foi reaberto.
+**Escopo autorizado:** uma migration SQL (`INSERT ... SELECT` a partir de
+`catalog_sales`, com `NOT EXISTS` por `sale_id`).
+**Fora do escopo / proibido:** incluir depósito/passaporte/frete/reposição
+no backfill; mudar a regra de reconhecimento de receita da DIR-7.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-10.
+**Status:** CONCLUÍDA — com um detalhe importante. A migration foi
+mergeada (PR #145, commit `67039789`), mas o deploy automático
+(`.github/workflows/deploy-migrations.yml`) estava quebrado nesse momento
+(`SUPABASE_ACCESS_TOKEN` com formato inválido — achado à parte, ver
+`REL-11`). O dono aplicou o SQL manualmente no SQL Editor do Supabase em
+30/08/2026, confirmado: 33 linhas inseridas, R$ 1.317,56 de receita real.
+Ver `REL-11`.

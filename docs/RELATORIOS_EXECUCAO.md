@@ -382,10 +382,10 @@ step de lint, ver `.github/workflows/ci.yml`).
 **Confirmação de escopo:** só `crmUnifiedCustomers.js` e
 `CrmClientesTab.jsx` tocados. Nenhum banco, produção ou regra de negócio
 financeira alterada.
-**Publicado em:** relatório ao dono, no chat.
-**Status final:** PARCIAL — implementação concluída na branch; falta o
-dono conferir no Preview (login real, como super_admin e, se possível,
-como um usuário de rede) e autorizar merge/deploy.
+**Publicado em:** relatório ao dono, no chat; PR #145.
+**Status final:** CONCLUÍDA. Dono conferiu no Preview, logado como
+super_admin, e autorizou o merge ("pode"). PR #145 mergeado por squash em
+`main`, commit `67039789`, CI verde antes do merge.
 
 **Correções feitas durante a conferência do dono no Preview, mesma PR
 (#145):**
@@ -434,6 +434,55 @@ de leitura/revisão, não de teste automatizado).
 produção alterado nesta rodada — só roda quando a PR for mergeada em
 `main` (workflow `deploy-migrations.yml`, automático).
 **Publicado em:** relatório ao dono, no chat; PR #145 (mesma da DIR-10).
-**Status final:** PARCIAL — implementação concluída na branch; falta o
-dono conferir no Preview (números devem deixar de ser R$ 0,00) e
-autorizar merge/deploy.
+**Status final:** CONCLUÍDA. Dono conferiu no Preview e autorizou o merge
+da PR #145 ("pode"). PR #145 mergeado por squash em `main`, commit
+`67039789`, CI verde antes do merge.
+
+**Achado crítico durante a conferência pós-merge — o deploy automático de
+migração nunca funcionou:** o dono reportou "Faturamento Total: R$ 0,00"
+mesmo depois do merge. Investigação de fundo (3 ângulos independentes —
+logs de runtime, comentários do bot oficial do Supabase nas PRs, histórico
+do próprio workflow) confirmou por evidência direta:
+
+1. `.github/workflows/deploy-migrations.yml` falhou nas 9 execuções da sua
+   história inteira — `supabase db push` nunca rodou uma vez. As 8
+   primeiras (21–28/08) morriam por rate limit no `supabase/setup-cli`
+   (`version: latest`); um fix de 29/08 (commit `8f93430a`) resolveu isso,
+   mas a execução seguinte (run #9, disparada pelo merge da PR #145,
+   30/08) passou dessa etapa e morreu na seguinte, `supabase link`, com
+   "Invalid access token format" — o segredo `SUPABASE_ACCESS_TOKEN` no
+   GitHub não está no formato válido (`sbp_...`).
+2. Achado um arquivo `supabase/migrations/LEIA-ME.md` (do próprio time,
+   não desta sessão) documentando um INCIDENTE REAL anterior: as
+   migrations da DIR-7/DIR-8 (`financial_income`, `cost_center`,
+   `recurring_group_id`) usavam nomes com sufixo de letra
+   (`20260827b_...`, `20260827c_...`) — o Supabase CLI **ignora
+   silenciosamente** qualquer migration cujo nome não seja só dígitos.
+   Resultado: código em produção desde 27/08 gravando em tabela/coluna
+   inexistentes, sem erro visível (o helper de receita é best-effort de
+   propósito), até uma conferência manual em 28/08 achar e colar o SQL na
+   mão. Já corrigido antes desta rodada — registrado aqui só porque a
+   investigação o revelou.
+3. A integração nativa do GitHub App do Supabase (comentários de
+   "supabase[bot]" nas PRs) atua EXCLUSIVAMENTE como "Preview Branches" —
+   nunca aplica nada em produção/main. Não existe nenhum mecanismo
+   automático alternativo — a única coisa que já funcionou, quando
+   funcionou, foi colar SQL manualmente no SQL Editor.
+4. A migration do backfill desta rodada (`20260828_backfill_financial_income.sql`,
+   nome corretamente formatado, sem sufixo de letra) NÃO estava na lista
+   de "já aplicadas manualmente" do LEIA-ME.md — ou seja, nunca tinha
+   rodado de fato, apesar do merge ter acontecido horas antes.
+**Resolução:** dono aplicou o SQL da migration manualmente no SQL Editor
+do Supabase (30/08/2026), confirmado por consulta direta:
+`select count(*), sum(amount) from financial_income` → **33 linhas,
+R$ 1.317,56**. Financeiro/CRM já refletem o número real.
+**Pendência aberta, fora do escopo desta diretiva:** corrigir o segredo
+`SUPABASE_ACCESS_TOKEN` no GitHub (gerar token novo em
+`supabase.com/dashboard/account/tokens`, atualizar em `Settings → Secrets
+and variables → Actions`) — depende só do dono, registrado em
+`docs/DIRETIVA_ATUAL.md`. Enquanto isso não for feito, qualquer migration
+nova precisa ser conferida manualmente (`supabase/migrations/LEIA-ME.md`
+ensina como). Também acheu-se, sem relação com este trabalho, uma
+migration de outra frente (`20260828_financial_expenses_payment_account.sql`)
+com o mesmo status "não confirmado" — não foi tocada por não ser desta
+diretiva.
