@@ -12,6 +12,8 @@
 // Chave primária das fontes automáticas 1+3: AppUser.id (join direto).
 // Fallback de dedupe (fonte 2 sem conta, e fonte 4): e-mail/telefone.
 
+import { MARCO_OFICIAL } from './dinheiroReal.js';
+
 const normKey = (email, phone) => {
   const e = (email || '').trim().toLowerCase();
   const p = (phone || '').replace(/\D/g, '');
@@ -196,8 +198,15 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
   // pagamento (mesma inflação que a DIR-15 matou no painel). O dinheiro do
   // leilão entra pela venda kind='arremate' PAGA (bloco 2, fonte única);
   // aqui fica só o fato de ter vencido (contagem + histórico).
+  // 🔴 DIR-27 (regra do dono, 30/08/2026): "começamos a contar de fato os
+  // leilões a partir de AGOSTO/2026 — esquece antes disso". Leilão vencido
+  // antes do marco oficial (01/08) era TESTE: não conta troféu, não promove
+  // a arrematante, não vira cliente e não entra na linha do tempo. Mesmo
+  // marco do dinheiro real (docs/MARCO-OFICIAL-AGOSTO-2026.md). Leilão sem
+  // end_time não tem como provar que é pós-marco — fica fora também.
   auctions.forEach((a) => {
     if (!a.winner_id) return;
+    if (!a.end_time || new Date(a.end_time) < MARCO_OFICIAL) return;
     const target = byId.get(a.winner_id);
     if (!target) return;
     target.status = 'cliente';

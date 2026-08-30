@@ -159,3 +159,42 @@ describe('DIR-24 — gasto só de mercadoria', () => {
     assert.equal(manual.follow_up_date, '2026-09-02');
   });
 });
+
+// 🔴 DIR-27 (30/08/2026) — regra do dono: "leilão conta a partir de
+// agosto/2026, esquece antes disso". Vitória pré-marco era teste.
+describe('DIR-27 — leilão só conta do marco (01/08/2026) em diante', () => {
+  test('leilão vencido ANTES do marco não conta troféu, não promove, não vira cliente', () => {
+    const [c] = buildUnifiedCustomers({
+      appUsers: [baseUser],
+      auctions: [
+        { id: 'teste1', winner_id: 'u1', current_price: 500, title: 'Teste pré-lançamento', end_time: '2026-07-15' },
+        { id: 'teste2', winner_id: 'u1', current_price: 300, title: 'Sem data', end_time: null },
+      ],
+    });
+    assert.equal(c.auctions_won, 0);
+    assert.equal(c.status, 'lead'); // não vira cliente por leilão de teste
+    assert.equal(c.role_type, 'cliente'); // não é promovido a arrematante
+    assert.equal(c.auctions_list.length, 0); // nem na linha do tempo
+  });
+
+  test('leilão vencido DEPOIS do marco conta normal', () => {
+    const [c] = buildUnifiedCustomers({
+      appUsers: [baseUser],
+      auctions: [{ id: 'real1', winner_id: 'u1', current_price: 30, title: 'Fone', end_time: '2026-08-10' }],
+    });
+    assert.equal(c.auctions_won, 1);
+    assert.equal(c.status, 'cliente');
+    assert.equal(c.role_type, 'arrematante');
+  });
+
+  test('mistura teste + real: só o real conta', () => {
+    const [c] = buildUnifiedCustomers({
+      appUsers: [baseUser],
+      auctions: [
+        { id: 't', winner_id: 'u1', current_price: 999, end_time: '2026-06-01' },
+        { id: 'r', winner_id: 'u1', current_price: 20, end_time: '2026-08-20' },
+      ],
+    });
+    assert.equal(c.auctions_won, 1);
+  });
+});

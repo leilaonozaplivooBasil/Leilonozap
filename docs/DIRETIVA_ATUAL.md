@@ -12,6 +12,34 @@
 
 ---
 
+## DIR-27 — Leilão no CRM conta a partir do marco (01/08/2026)
+
+**Emitida por:** dono (30/08/2026, com print da seção Clientes): "detalhe
+extremamente importante: começamos a contar de fato os leilões a partir
+de agosto — o que é pra contar aqui é a partir de agosto de 2026 pra
+frente, esquece antes disso".
+**Data:** 30/08/2026.
+**Análise (entregue no chat):** os cards de status fecham exatos (586+6+
+10+2+7 = 611 = Total de Contatos; 572 leads + 37 clientes + 2 inativos =
+611), mas "Leilões Arrematados: 55" contava vitória de QUALQUER época —
+o próprio dono aparecia com 37 leilões (testes pré-lançamento), e isso
+contaminava "Arrematantes: 11" (promoção por vitória de teste) e
+"Clientes Ativos: 37" (vitória marca a pessoa como cliente — por isso 37
+> 25, a soma de quem tem compra).
+**Escopo autorizado:** `buildUnifiedCustomers` (fonte única do CRM):
+leilão vencido só conta com `end_time >= MARCO_OFICIAL` (01/08/2026,
+mesmo marco do dinheiro real) — antes disso não conta troféu, não
+promove a arrematante, não vira cliente e não entra na linha do tempo;
+leilão sem end_time fica fora (não dá pra provar que é pós-marco).
+3 testes novos.
+**Fora do escopo / proibido:** valor de leilão (já vem só da venda
+kind='arremate' paga, DIR-24); tabela auctions em outras telas.
+**Regras fixas (permanente):** LEILÃO NO CRM = 01/08/2026 EM DIANTE.
+**Status:** EM VIGOR — corrigido; testes 534/534, build ok; aguarda
+conferência no Preview.
+
+---
+
 ## DIR-26 — Ticket médio unificado: a meta de R$ 252 é POR COMPRADOR
 
 **Emitida por:** dono (30/08/2026, com prints): "confere as informações de

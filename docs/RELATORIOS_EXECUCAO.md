@@ -1279,3 +1279,23 @@ Resposta ao dono: nem 118 nem 272 eram o certo pra meta — 272 soma
 depósito (mesmo real duas vezes) e não é mensal.
 **Testes:** 531/531 (teste do KPI atualizado). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+
+---
+
+## REL-27 — Execução da DIR-27 (leilão pós-marco no CRM)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:** análise de consistência da seção Clientes entregue
+no chat (status fecham exatos em 611; Leilões Arrematados 55 estava
+contaminado por vitórias de teste pré-lançamento — 37 delas do próprio
+dono — puxando junto Arrematantes e Clientes Ativos). Regra do dono
+aplicada na fonte única (`buildUnifiedCustomers`): vitória de leilão só
+conta com end_time >= 01/08/2026 (MARCO_OFICIAL importado de
+dinheiroReal.js); pré-marco/sem data não conta troféu, não promove, não
+vira cliente, não entra na linha do tempo. Efeito esperado na tela:
+Leilões Arrematados cai de 55 pro nº real pós-marco, Arrematantes e
+Clientes Ativos caem junto (teste vira lead de novo).
+**Testes:** 534/534 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.
