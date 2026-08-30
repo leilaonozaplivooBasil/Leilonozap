@@ -1065,3 +1065,27 @@ pós-marco cabe nas 1000 mais recentes; números bateram com o banco), mas
 quando a tabela crescer, vendas antigas vão sumir das somas de histórico
 por cliente. Migrar pra `listarTudo` numa rodada própria, com validação
 dos números antes/depois (mexe em soma de dinheiro).
+
+---
+
+## REL-21 — Execução da DIR-21
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. "Volume em Negociação" redefinido (decisão do dono): pedidos de Loja
+   gerados e não pagos + pedidos cancelados/estornados + negociações
+   manuais, tudo pós-marco. Tooltip mostra a composição das 3 parcelas com
+   os valores de cada uma.
+2. Card do super_admin renomeado "Faturamento Bruto (Loja Virtual)" =
+   `comprasBrutas` (valor cheio das compras reais). Regra da DIR-7
+   intocada — a comissão segue como receita oficial no Financeiro/imposto;
+   `financial_income` deixou de ser carregado no CRM por não ter mais uso
+   nele.
+**Testes:** 466/466. **Build:** exit 0.
+**Confirmação de escopo:** só `CrmClientesTab.jsx` e `CrmStatsCards.jsx`.
+Nenhuma mudança em `financial_income`, Financeiro ou visão de rede.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência no
+Preview e autorização pra publicar o pacote DIR-18 a 21.

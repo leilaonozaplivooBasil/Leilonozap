@@ -12,6 +12,38 @@
 
 ---
 
+## DIR-21 — Volume em Negociação real + Faturamento Bruto no CRM
+
+**Emitida por:** dono, decisão direta de negócio (30/08/2026): (1) "Volume
+em Negociação: mude para pessoas que chegam no carrinho e não compram
+ainda, ou fizeram pedidos e desistiram, e também insira pedidos cancelados
+pela instituição e pagamento — precisa inserir esses dois"; (2) "o
+Faturamento de 1.638,08 está errado — esse valor é o valor comprado na
+Loja Virtual, que é de fato o faturamento bruto".
+**Data:** 30/08/2026.
+**Escopo autorizado:**
+1. "Volume em Negociação" = pedidos de Loja gerados e não pagos
+   (`pending_payment` — não existe carrinho persistido no servidor; o
+   pedido pendente é o rastro real de "chegou no carrinho e desistiu") +
+   pedidos cancelados/estornados + negociações manuais em andamento, tudo
+   pós-marco (01/08). Tooltip mostra a composição das três parcelas.
+2. Card do super_admin renomeado "Faturamento Bruto (Loja Virtual)" =
+   `comprasBrutas` (valor cheio das compras pagas e confirmadas, critério
+   oficial de dinheiro real). **A regra da DIR-7 NÃO muda:** a comissão
+   continua sendo a receita da empresa em `financial_income`, base do
+   Financeiro e do imposto — só o card do CRM passa a mostrar o bruto, por
+   decisão expressa do dono. `financial_income` deixou de ser carregado no
+   CRM (não é mais usado nele).
+**Fora do escopo / proibido:** regra de reconhecimento de receita (DIR-7),
+`financial_income`, módulo Financeiro, visão de rede (Volume Transacionado
+continua igual).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-20.
+**Status:** EM VIGOR — código, testes (466/466) e build passam; aguarda
+conferência do dono no Preview e autorização pra publicar o pacote
+DIR-18 a 21.
+
+---
+
 ## DIR-20 — Estoque cristalino: número único validado no banco
 
 **Emitida por:** dono ("vamos fazer uma análise extremamente diligente na

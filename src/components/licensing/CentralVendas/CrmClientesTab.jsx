@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
-import { isVendaReal } from '@/lib/dinheiroReal';
+import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
 import CrmStatsCards from './CrmStatsCards';
@@ -89,14 +89,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [appUsers, setAppUsers] = useState([]);
   const [catalogSales, setCatalogSales] = useState([]);
   const [auctions, setAuctions] = useState([]);
-  // 🔴 DIR-10 — "Faturamento Total" somava o valor CHEIO de cada venda/arremate
-  // (total_spent), o mesmo erro de conceito já corrigido no Financeiro (DIR-7):
-  // isso é volume transacionado pelos clientes, não dinheiro que a empresa
-  // ficou — a maior parte vai pro vendedor terceiro. O dono reportou "não
-  // faturamos 3 milhões", e tinha razão. financial_income é o livro-razão
-  // real (só comissão + taxa sem repasse) já usado no módulo Financeiro —
-  // mesma fonte, mesmo número, em vez de recalcular errado aqui de novo.
-  const [financialIncome, setFinancialIncome] = useState([]);
+  // Histórico: na DIR-10 este card virou a comissão real (financial_income);
+  // na DIR-21 o dono decidiu que o card do CRM mostra o FATURAMENTO BRUTO da
+  // Loja (comprasBrutas) — a comissão continua no módulo Financeiro, que é a
+  // fonte oficial de receita/imposto. Por isso financial_income não é mais
+  // carregado aqui.
   // 🔴 DIR-20 — TODOS os produtos (galpão inteiro, 2.932 linhas medidas em
   // produção), não só os 302 publicados no catálogo: o "Valor Investido em
   // Estoque" mostrava R$ 9.309 quando o real (validado direto no banco) é
@@ -105,14 +102,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   const loadAutoSources = async () => {
     try {
-      const [users, sales, auctionsList, income, prods] = await Promise.all([
+      const [users, sales, auctionsList, prods] = await Promise.all([
         plataforma.entities.AppUser.list('-created_date', 5000),
         // 🔒 DIR-17 — mesma busca do Painel de Alavancagem (NetworkOverview.jsx),
         // parâmetro por parâmetro: telas que somam o mesmo dinheiro precisam ler
         // as MESMAS linhas, senão divergem por truncamento e não por lógica.
         plataforma.entities.CatalogSale.list('-created_date', 5000),
         plataforma.entities.Auction.list('-end_time', 2000),
-        plataforma.entities.FinancialIncome.list('-received_date', 5000),
         // 🔴 DIR-20 — TODOS os produtos exigem paginação: o Supabase corta em
         // 1000 linhas sem avisar, e a tabela tem ~3000 (ver src/lib/listarTudo.js).
         listarTudo(plataforma.entities.Product),
@@ -120,7 +116,6 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
       setAuctions(Array.isArray(auctionsList) ? auctionsList.filter((a) => !!a.winner_id) : []);
-      setFinancialIncome(Array.isArray(income) ? income : []);
       setAllProducts(Array.isArray(prods) ? prods : []);
     } catch (error) {
       console.error('Erro ao carregar fontes automáticas do CRM:', error);
@@ -587,17 +582,40 @@ _Enviado via CRM Leilão NoZap_`;
     ticketMedio: buyerIdsUnicos.size ? (depositosCarteira + comprasBrutas) / buyerIdsUnicos.size : 0,
   };
 
+  // 🔴 DIR-21 (30/08/2026, decisão do dono) — "Volume em Negociação" deixa de
+  // ser só negociação manual (vivia em R$ 0,00) e passa a somar o dinheiro
+  // real em jogo mas ainda não fechado, pós-marco (01/08):
+  //   • pedido gerado e AINDA NÃO PAGO (chegou no carrinho, gerou pedido,
+  //     desistiu ou está aguardando — não existe carrinho persistido no
+  //     servidor, o pedido pending_payment é o rastro real disso);
+  //   • pedido CANCELADO pela instituição/pagamento.
+  const STATUS_CANCELADO_NEG = ['canceled', 'cancelado', 'cancelled', 'estornado'];
+  const ehPedidoLoja = (s) => ['loja', 'produto'].includes(s.kind);
+  const aguardandoPagamentoValor = networkCatalogSales
+    .filter((s) => ehPedidoLoja(s) && s.status === 'pending_payment' && isPosMarco(s))
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const canceladosValor = networkCatalogSales
+    .filter((s) => ehPedidoLoja(s) && STATUS_CANCELADO_NEG.includes(String(s.status || '').toLowerCase()) && isPosMarco(s))
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const negociacoesManuaisValor = negotiations
+    .filter(n => n.status === 'em_andamento')
+    .reduce((sum, n) => sum + (n.total_value || 0), 0);
+
   const stats = {
     total: unifiedCustomers.length,
     leads: unifiedCustomers.filter(c => c.status === 'lead').length,
     clientes: unifiedCustomers.filter(c => c.status === 'cliente').length,
-    // super_admin vê a receita REAL da empresa (mesma fonte do módulo
-    // Financeiro — comissão de venda + taxa, nunca o valor cheio da venda);
-    // visão de rede continua em volume transacionado (a rede não tem como
-    // saber quanto da comissão é dela sem esse rateio existir ainda).
+    // 🔴 DIR-21 (decisão do dono, 30/08/2026): pro super_admin o card vira
+    // FATURAMENTO BRUTO — o valor comprado de verdade na Loja Virtual
+    // (comprasBrutas, critério oficial de dinheiro real), não a comissão.
+    // A comissão continua sendo a receita da empresa no módulo Financeiro
+    // (financial_income, DIR-7) e a base do imposto — nada muda lá.
     totalSpent: isSuperAdmin
-      ? financialIncome.reduce((sum, i) => sum + (i.amount || 0), 0)
+      ? comprasBrutas
       : unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    aguardandoPagamentoValor,
+    canceladosValor,
+    negociacoesManuaisValor,
     semCompra: unifiedCustomers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
     em_negociacao: unifiedCustomers.filter(c => c.purchase_status === 'em_negociacao').length,
     aguardando_pagamento: unifiedCustomers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
@@ -605,7 +623,7 @@ _Enviado via CRM Leilão NoZap_`;
     enviado: unifiedCustomers.filter(c => c.purchase_status === 'enviado').length,
     entregue: unifiedCustomers.filter(c => c.purchase_status === 'entregue').length,
     cancelado: unifiedCustomers.filter(c => c.purchase_status === 'cancelado').length,
-    volumeNegociacao: negotiations.filter(n => n.status === 'em_andamento').reduce((sum, n) => sum + (n.total_value || 0), 0),
+    volumeNegociacao: negociacoesManuaisValor + aguardandoPagamentoValor + canceladosValor,
     leiloesArrematados: unifiedCustomers.reduce((sum, c) => sum + (c.auctions_won || 0), 0),
     vendedores: unifiedCustomers.filter(c => c.role_type === 'vendedor').length,
     licenciados: unifiedCustomers.filter(c => c.role_type === 'licenciado').length,

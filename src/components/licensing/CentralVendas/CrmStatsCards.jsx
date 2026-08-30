@@ -95,14 +95,14 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
         />
         <StatCard
           label="Volume em Negociação" value={fmtBRL(stats.volumeNegociacao)} icon={Briefcase} highlight
-          info="Soma das negociações manuais em andamento (cadastradas por um vendedor) — não inclui vendas automáticas da Loja/Leilão."
+          info={`Dinheiro em jogo mas ainda não fechado, desde 01/08: pedidos gerados e não pagos (chegou no carrinho, gerou pedido e desistiu ou está aguardando) ${fmtBRL(stats.aguardandoPagamentoValor)} + pedidos cancelados pela instituição/pagamento ${fmtBRL(stats.canceladosValor)} + negociações manuais em andamento ${fmtBRL(stats.negociacoesManuaisValor)}.`}
         />
         <StatCard
-          label={isSuperAdmin ? 'Faturamento Total' : 'Volume Transacionado'}
+          label={isSuperAdmin ? 'Faturamento Bruto (Loja Virtual)' : 'Volume Transacionado'}
           value={fmtBRL(stats.totalSpent)}
           icon={DollarSign}
           info={isSuperAdmin
-            ? 'Receita REAL da empresa — a mesma comissão de vendas + taxas do módulo Financeiro. Não é o valor total que os clientes pagaram (a maior parte disso vai pro vendedor terceiro). É este número (não o "Volume Financeiro Total" ao lado) que entra no cálculo de imposto do Simples Nacional.'
+            ? 'Valor comprado de verdade na Loja Virtual/PDV desde o lançamento oficial (01/08): pedidos pagos e confirmados, valor cheio. A comissão (receita da empresa, usada no imposto do Simples) continua no módulo Financeiro — este card mostra o bruto, por decisão do dono.'
             : 'Soma do valor total que sua rede já comprou/arrematou — não é a sua comissão, é o volume transacionado por ela.'}
         />
       </div>
