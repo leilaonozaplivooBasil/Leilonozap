@@ -808,3 +808,72 @@ investimento na soma de "venda bruta" está corrigida; o resíduo de
 possíveis arremates arrematados-mas-não-pagos continua como pendência
 própria (mesma limitação técnica já registrada acima: `order_status` não
 é confiável pra arremate pago por PIX/cartão).
+
+---
+
+## Correção FINAL, mesmo dia — critério oficial de "dinheiro real"
+
+Dono recusou a explicação de "escopo diferente" e exigiu, com todas as
+letras, análise por escrito ANTES de qualquer novo código: "sem achismo e
+sem fazer à toa, tenha certeza, confirme, e depois faça". Print mostrava
+"Venda bruta (Loja + Leilão): R$ 154.619,08" — ainda muito acima do que o
+Painel de Alavancagem mostrava pra praticamente a mesma população (604
+pessoas na rede dele vs. 612 Total de Contatos no CRM — populações quase
+idênticas, então a diferença NÃO era escopo).
+
+**Análise escrita, feita antes de tocar em código:** encontrei
+`docs/MARCO-OFICIAL-AGOSTO-2026.md` — documento já existente no
+repositório, hierarquia só abaixo de `VERDADE.md`, seção 1: "Critério
+técnico de dinheiro real: venda em catalog_sales com status pago (paid/
+shipped/delivered) E com rastro de gateway (mp_payment_id/
+stripe_payment_intent/stripe_session_id). Antes de 01/08/2026 é TESTE, sem
+valor financeiro." O Painel de Alavancagem (`NetworkOverview.jsx`,
+`fetchFinanceStats`) já implementa esse critério inteiro há semanas
+(`isPaga` + `isDinheiroReal` + `isPosMarco`). O CRM, nas duas rodadas
+anteriores desta mesma diretiva, só tinha checado status pago — nunca
+rastro de gateway, nunca o corte de 01/08/2026 — então ainda somava venda
+de teste pré-lançamento (provavelmente uma quantidade grande, dado que a
+ZERAGEM-HISTORICO de 04/08 já tinha achado milhares de registros de teste
+pré-agosto só do lado de comissão).
+
+**O que foi feito:**
+1. Critério extraído de `NetworkOverview.jsx` pra `src/lib/dinheiroReal.js`
+   (`isPaga`, `temRastroGateway`, `isDinheiroReal`, `isPosMarco`,
+   `isVendaReal`) — fonte ÚNICA agora, com o comentário de topo citando
+   `docs/MARCO-OFICIAL-AGOSTO-2026.md` e o histórico de 3 tentativas
+   erradas que motivou a extração.
+2. `NetworkOverview.jsx` refatorado pra importar dali — mesma função,
+   zero mudança de comportamento, só parou de estar duplicada dentro do
+   `useCallback`.
+3. `CrmClientesTab.jsx` — `depositosCarteira` e `comprasBrutas` passaram a
+   usar `isVendaReal` (não mais o `isSalePago` mais frouxo da rodada
+   anterior). `depositosCarteira` também parou de somar
+   `commission_deposit`/`operacao_deposit` — mesma decisão do Painel de
+   Alavancagem: esse saldo já é contado quando vira compra, somar os dois
+   contaria o mesmo real duas vezes.
+4. **Leilão mudou de fonte:** em vez de ler `current_price`/`winner_id` da
+   tabela `auctions`, passou a ler `catalog_sales` com `kind='arremate'`
+   filtrado por `isVendaReal` — a MESMA fonte que `NetworkOverview.jsx` já
+   usa pro leilão. Isso resolve de vez a pendência da rodada anterior
+   (não dava pra confiar em `auctions.order_status` pra saber se um
+   arremate pago por PIX/cartão realmente foi pago): `isVendaReal` exige
+   status pago + rastro real na própria venda, então nunca depende daquele
+   campo que só é atualizado no caminho de saldo.
+5. Teste novo `tests/dinheiroReal.test.mjs` (17 casos) cobrindo os 4
+   critérios isolados e a combinação `isVendaReal` — paga+rastro+pós-marco
+   real; qualquer um dos três faltando, não conta; pagamento por saldo
+   interno dispensa rastro de gateway.
+**O que NÃO foi feito / blockers:** nenhum blocker novo — a pendência
+técnica da rodada anterior (arremate pago por PIX/cartão sem
+`order_status` atualizado) foi RESOLVIDA por esta mudança, não só
+adiada.
+**Testes:** 443/443 (426 + 17 novos). **Build:** exit 0.
+**Confirmação de escopo:** `src/lib/dinheiroReal.js` (novo),
+`NetworkOverview.jsx` (só refatoração, mesmo comportamento),
+`CrmClientesTab.jsx`, `CrmStatsCards.jsx` (tooltips atualizados) e o teste
+novo. Nenhuma mudança em `financial_income`, `finalizeAuctionCore.js`,
+`commission_records` ou na regra de reconhecimento de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA. Critério de "dinheiro real" agora é
+literalmente a mesma função nas duas telas — não há mais como divergir.
+Falta o dono conferir visualmente no Preview/produção depois do deploy.

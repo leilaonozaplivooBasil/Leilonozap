@@ -16,7 +16,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL, isSalePago } from '@/lib/crmUnifiedCustomers';
+import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { isVendaReal } from '@/lib/dinheiroReal';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
@@ -502,43 +503,41 @@ _Enviado via CRM Leilão NoZap_`;
     await loadCustomers();
   };
 
-  // 💰 DIR-14 (correção, 30/08/2026) — o dono foi claro: quer um número que
-  // some TUDO que já circulou de verdade na plataforma (depósito em
-  // carteira + venda bruta de Loja/PDV + venda bruta de leilão), separado
-  // do "Faturamento Total" (que continua sendo só a comissão real — é o
-  // número que alimenta o cálculo de imposto do Simples Nacional em
-  // src/lib/simplesNacional.js; trocar por volume bruto colocaria a
-  // empresa numa faixa de imposto errada). Os dois ficam lado a lado, com
-  // nomes e cores bem diferentes, pra nunca mais parecerem a mesma coisa.
+  // 💰 DIR-14/DIR-15 (30/08/2026) — histórico de 3 tentativas erradas antes
+  // desta, cada uma com filtro caseiro diferente, nenhuma batendo com o
+  // Painel de Alavancagem (NetworkOverview.jsx): primeiro contava depósito
+  // pendente/cancelado; depois misturava depósito+adesão+passaporte na
+  // "venda bruta" e somava leilão de Plano de Investimento (36 registros de
+  // R$ 5.000, ~R$ 180 mil, que não são mercadoria); mesmo depois de tirar
+  // isso, ainda sobrava venda de TESTE (pré-lançamento) e sem rastro de
+  // gateway, porque nenhuma das versões usava o critério oficial.
+  // Critério oficial (docs/MARCO-OFICIAL-AGOSTO-2026.md, seção 1): só é
+  // dinheiro real quem está PAGO + tem RASTRO de gateway (ou pagamento por
+  // saldo interno) + é a partir de 01/08/2026. Extraído pra
+  // src/lib/dinheiroReal.js e agora é o MESMO filtro nas duas telas — não
+  // dá mais pra divergir, porque é a mesma função.
+  // wallet_deposit só (não soma operacao_deposit/commission_deposit aqui,
+  // mesma decisão do Painel de Alavancagem — esse saldo já vira "compra"
+  // quando é gasto, contado em comprasBrutas; somar os dois contaria o
+  // mesmo real duas vezes).
   const depositosCarteira = networkCatalogSales
-    .filter((s) => ['wallet_deposit', 'commission_deposit', 'operacao_deposit'].includes(s.kind))
-    .filter(isSalePago)
+    .filter((s) => s.kind === 'wallet_deposit')
+    .filter(isVendaReal)
     .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-  // 🔴 Achado 30/08/2026 — a primeira versão deste card usava
-  // `unifiedCustomers.total_spent`, que soma TODO catalog_sales do
-  // comprador sem filtrar por `kind` — depósito, adesão, plano parceiro,
-  // passaporte, tudo junto. Resultado: "Venda bruta (Loja + Leilão)"
-  // aparecia como R$ 228 mil, quando a Loja Virtual real gira poucos
-  // milhares (a comissão real é R$ 1.317,56 — 30% disso não passa de
-  // R$ 4.400). Duas causas juntas:
-  //   1) misturava depósito/adesão/passaporte na soma "de venda";
-  //   2) do lado do leilão, somava `current_price` de QUALQUER
-  //      `winner_id`, incluindo os leilões "Plano de Investimento"
-  //      (is_investment_plan) — 36 registros de R$ 5.000 cada medidos em
-  //      produção (ver PONTO 109/123 em finalizeAuctionCore.js), que NÃO
-  //      são mercadoria vendida, são aporte de investimento — o próprio
-  //      motor de comissão do leilão já os exclui por regra oficial.
-  // Recalculado direto das fontes brutas, com o mesmo filtro de "kind" que
-  // o Painel de Alavancagem usa (NetworkOverview.jsx: kind loja/produto =
-  // compra, kind arremate = leilão) e excluindo plano de investimento/
-  // leilão de teste do lado do leilão.
   const comprasBrutas = networkCatalogSales
     .filter((s) => ['loja', 'produto'].includes(s.kind))
-    .filter(isSalePago)
+    .filter(isVendaReal)
     .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-  const leilaoBruto = networkAuctions
-    .filter((a) => a.winner_id && !a.is_investment_plan && a.is_test_auction !== true)
-    .reduce((sum, a) => sum + (Number(a.current_price) || 0), 0);
+  // Leilão vem de catalog_sales (kind='arremate'), não da tabela auctions —
+  // mesma fonte do Painel de Alavancagem. Isso evita de vez o problema do
+  // Plano de Investimento (não gera venda kind='arremate' com rastro real)
+  // e o problema de "arrematado mas não pago" (isVendaReal já exige status
+  // pago + rastro/saldo — um winner_id sozinho na tabela auctions nunca
+  // seria suficiente, é exatamente o que causava a inflação anterior).
+  const leilaoBruto = networkCatalogSales
+    .filter((s) => s.kind === 'arremate')
+    .filter(isVendaReal)
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
   const volumeVendasBruto = comprasBrutas + leilaoBruto;
 
   const stats = {

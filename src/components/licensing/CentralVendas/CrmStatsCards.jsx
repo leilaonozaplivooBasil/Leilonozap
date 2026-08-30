@@ -90,21 +90,24 @@ export default function CrmStatsCards({ stats, isSuperAdmin, purchaseStatusFilte
         />
       </div>
 
-      {/* 💰 DIR-14 — "quero tudo, tudo, tudo": depósito + venda bruta de Loja/PDV
-          + venda bruta de leilão, num card à parte, com cor e nome bem diferentes
-          do Faturamento Total (que é só a comissão) pra nunca mais confundir. */}
+      {/* 💰 DIR-14/DIR-15 — "quero tudo, tudo, tudo": depósito + venda bruta de
+          Loja/PDV + venda bruta de leilão, num card à parte, com cor e nome bem
+          diferentes do Faturamento Total (que é só a comissão) pra nunca mais
+          confundir. Mesmo critério de "dinheiro real" do Painel de Alavancagem
+          (src/lib/dinheiroReal.js) — pago + rastro de gateway/saldo interno +
+          a partir de 01/08/2026 (docs/MARCO-OFICIAL-AGOSTO-2026.md). */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <StatCard
           label="Volume Financeiro Total" value={fmtBRL(stats.volumeFinanceiroTotal)} icon={Landmark} highlight wide
-          info="TUDO que já circulou de verdade na plataforma: depósito em carteira digital + venda bruta de Loja/PDV + venda bruta de leilão, somados. NÃO é lucro nem receita da empresa (a maior parte vai pro vendedor/rede) — é volume movimentado. Para receita real, veja 'Faturamento Total'."
+          info="TUDO que já circulou de verdade na plataforma desde o lançamento oficial (01/08/2026): depósito em carteira digital + venda bruta de Loja/PDV + venda bruta de leilão, somados. NÃO é lucro nem receita da empresa (a maior parte vai pro vendedor/rede) — é volume movimentado. Para receita real, veja 'Faturamento Total'."
         />
         <StatCard
           label="— Depósitos em carteira" value={fmtBRL(stats.depositosCarteira)} icon={Wallet}
-          info="Parte do Volume Financeiro Total que é depósito em carteira digital (saldo de comissão ou de operação)."
+          info="Parte do Volume Financeiro Total que é depósito em carteira digital pago e confirmado (mesmo critério do Painel de Alavancagem). Depósito de saldo de operação/comissão não entra aqui — já é contado quando vira compra, pra não somar o mesmo real duas vezes."
         />
         <StatCard
           label="— Venda bruta (Loja + Leilão)" value={fmtBRL(stats.volumeVendasBruto)} icon={ShoppingCart}
-          info="Parte do Volume Financeiro Total que é o valor cheio de compras/arremates pagos — não é comissão, é o preço total pago pelo cliente. Leilão de Plano de Investimento e leilão de teste não entram aqui (não são mercadoria vendida)."
+          info="Parte do Volume Financeiro Total que é o valor cheio de compras/arremates pagos e confirmados — não é comissão, é o preço total pago pelo cliente. Leilão de Plano de Investimento, leilão de teste e venda sem confirmação real não entram aqui."
         />
       </div>
 

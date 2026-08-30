@@ -378,3 +378,71 @@ Editor e confirmada por consulta direta: `comissao_loja` 33 linhas/
 R$ 1.317,56 + `comissao_leilao` 11 linhas/R$ 49,61 = **R$ 1.367,17** de
 Faturamento Total. Cards de Volume Financeiro Total commitados no código.
 Ver `REL-14`.
+
+---
+
+## DIR-15 — total_spent do CRM contava venda não paga como dinheiro real
+
+**Emitida por:** Claude, via achado técnico — o dono comparou os números do
+CRM com os do Painel de Alavancagem (`NetworkOverview.jsx`, que já tem um
+filtro rigoroso de "dinheiro real") e perguntou "qual está certo, qual
+está errado, não é possível???". Investigando a fonte do "Volume
+Financeiro Total"/"Volume Transacionado" (`crmUnifiedCustomers.js`,
+`total_spent`), achei que ele soma QUALQUER `catalog_sales` — inclusive
+`pending_payment` e `canceled` — como se fosse dinheiro que já entrou.
+**Data:** 30/08/2026.
+**Objetivo:** mesmo defeito de conceito já corrigido em `financial_income`
+(DIR-7) e no filtro `isPaga` do `NetworkOverview.jsx`: venda não paga não é
+dinheiro. Corrigir pra `total_spent`/`purchase_count` (Loja Virtual/PDV)
+só somarem venda com status realmente pago (mesmo conjunto `JA_PAGO` já
+usado em `updateOrderStatus.js`/`CatalogOrdersAdmin.jsx`, cobrindo os dois
+idiomas de status que o banco mistura — PONTO 116).
+**Escopo autorizado:** `src/lib/crmUnifiedCustomers.js` — filtro de status
+pago aplicado às 3 gravações de `total_spent`/`purchase_count` vindas de
+`catalogSales` (conta identificada, avulso existente, avulso novo). Teste
+novo (`tests/crmUnifiedCustomersTotalSpent.test.mjs`) cobrindo paga,
+pendente, cancelada, status em português e comprador avulso.
+**Correção de escopo, mesma diretiva, mesmo dia:** depois de deployado, o
+dono mandou print mostrando "Venda bruta (Loja + Leilão): R$ 228.496,40" —
+impossível, a comissão real de Loja Virtual (R$ 1.317,56) implicaria uns
+R$ 4.400 de venda bruta, não R$ 228 mil. Achei DUAS causas juntas: (1) o
+card usava `unifiedCustomers.total_spent`, que soma TODO `catalog_sales`
+do comprador sem filtrar `kind` — depósito, adesão, plano parceiro e
+passaporte entravam junto, misturados com "venda"; (2) do lado do leilão,
+somava `current_price` de QUALQUER `winner_id`, incluindo os 36 leilões
+"Plano de Investimento" (`is_investment_plan`, R$ 5.000 cada, ~R$ 180 mil)
+— que o próprio motor de comissão do leilão já trata como aporte de
+investimento, não mercadoria vendida (PONTO 109/123,
+`finalizeAuctionCore.js`). Recalculado direto de `networkCatalogSales`/
+`networkAuctions` com os mesmos filtros de `kind` que o Painel de
+Alavancagem usa, excluindo plano de investimento e leilão de teste do
+lado do leilão.
+**Correção FINAL, mesma diretiva, mesmo dia:** dono recusou a explicação de
+"escopo diferente" e exigiu análise escrita ANTES de qualquer novo código
+— "sem achismo, tenha certeza, confirme". Achei o motivo real, por escrito,
+em `docs/MARCO-OFICIAL-AGOSTO-2026.md` (documento oficial já existente,
+hierarquia só abaixo de `VERDADE.md`): "dinheiro real" só conta com status
+pago **E** rastro de gateway (`mp_payment_id`/`stripe_*`) **E**
+`created_date >= 01/08/2026` — antes disso é teste, "sem valor financeiro".
+O Painel de Alavancagem (`NetworkOverview.jsx`) já usa esse critério
+inteiro (`isPaga`+`isDinheiroReal`+`isPosMarco`); o CRM só checava status,
+sem rastro de gateway nem corte de data — por isso ainda sobravam venda de
+teste pré-lançamento. Correção definitiva:
+1. Critério extraído pra `src/lib/dinheiroReal.js` (`isVendaReal`), com
+   teste próprio (`tests/dinheiroReal.test.mjs`, 17 casos) — fonte ÚNICA
+   agora, citando o Marco Oficial no comentário de topo.
+2. `NetworkOverview.jsx` refatorado pra importar dali (dedup, zero mudança
+   de comportamento — mesma função, só não duplicada mais).
+3. `CrmClientesTab.jsx` — `depositosCarteira`/`comprasBrutas` usam
+   `isVendaReal` direto de `networkCatalogSales`; leilão passou a vir de
+   `catalog_sales` (kind='arremate'), não mais da tabela `auctions` —
+   isso elimina de vez a pendência anterior (não dava pra confiar em
+   `auctions.order_status` pra saber se um arremate por PIX/cartão foi
+   pago) porque `isVendaReal` já exige status pago + rastro real na PRÓPRIA
+   venda, sem depender de um campo que não é atualizado em todos os
+   caminhos de pagamento.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-14.
+**Status:** CONCLUÍDA. Código, testes (17 novos) e build passam
+(443/443). Critério agora idêntico, byte a byte, ao do Painel de
+Alavancagem — as duas telas não podem mais divergir, porque é literalmente
+a mesma função (`src/lib/dinheiroReal.js`). Ver `REL-15`.
