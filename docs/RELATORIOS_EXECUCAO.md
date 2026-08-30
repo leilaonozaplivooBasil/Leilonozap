@@ -1350,7 +1350,11 @@ aguardando autorização do dono.
 (a página não existe no sistema — quando nascer, cadastra com
 source='ranking' e o KPI Cadastros Ranking/dia liga sozinho); listarTudo
 nas vendas (rodada própria — duas telas casadas somando dinheiro).
-**Ação do dono:** colar no SQL Editor a migração
-supabase/migrations/20260830170000_app_users_last_login.sql.
+**Ação do dono:** ✅ FEITA — migração colada e aplicada no SQL Editor em
+30/08/2026 ("Success. No rows returned", padrão de ALTER/CREATE). A
+coluna last_login e o índice existem em produção; o carimbo no login
+começa a valer quando o pacote da branch for publicado (login.js roda no
+deploy novo).
 **Testes:** 540/540 (6 novos). **Build:** exit 0. Nomes de migração: ✅.
-**Status final:** CONCLUÍDA — aguarda conferência no Preview e o SQL.
+**Status final:** CONCLUÍDA — migração aplicada; aguarda conferência no
+Preview.
