@@ -38,9 +38,10 @@ const diasAtras = (ref, dias) => new Date(ref.getTime() - dias * 24 * 60 * 60 * 
  * @param sales catalog_sales da plataforma (painel só de visão total)
  * @param users AppUser da plataforma
  * @param products produtos do galpão inteiro (custo de aquisição e ROI)
+ * @param concurso contadores do Rank Premiado ({cadastros_7d, visitantes_7d}) — /api/concurso?action=stats_crm
  * @param ref   Date de referência ("hoje" — parâmetro pra ser testável)
  */
-export function calcularDashboardDiretoria({ sales = [], users = [], products = [], ref = new Date() } = {}) {
+export function calcularDashboardDiretoria({ sales = [], users = [], products = [], concurso = null, ref = new Date() } = {}) {
   const vendasReais = sales.filter(isVendaReal);
   const corte30d = diasAtras(ref, JANELA_ATIVIDADE_DIAS);
   const corte7d = diasAtras(ref, 7);
@@ -121,8 +122,16 @@ export function calcularDashboardDiretoria({ sales = [], users = [], products = 
       ? { realizado: ativos30d, tipo: 'dado', fonte: `Pessoas que logaram OU movimentaram dinheiro real nos últimos ${JANELA_ATIVIDADE_DIAS} dias (rastro de login ativo desde a DIR-29).` }
       : { realizado: ativos30d, tipo: 'aproximacao', fonte: `Compradores/depositantes únicos com movimento real nos últimos ${JANELA_ATIVIDADE_DIAS} dias. Quando a migração de last_login for aplicada, a conta oficial passa a ser login OU movimento em 30 dias.` },
     novos_usuarios_dia: { realizado: novosPorDia, tipo: 'dado', fonte: 'Média diária de cadastros dos últimos 7 dias (AppUser.created_date).' },
-    visitantes_ranking: { realizado: null, tipo: 'sem_fonte', fonte: 'Precisa de analytics de visita na página do Ranking Premiado — o sistema ainda não mede.' },
-    cadastros_ranking: { realizado: null, tipo: 'sem_fonte', fonte: 'Precisa de marcação de origem "Ranking" no cadastro — o sistema ainda não mede.' },
+    // 🏆 DIR-31 — o Rank Premiado (/rankpremiado) tem rastro real:
+    // concurso_referrals (visitas por link de indicação) e
+    // concurso_participantes (cadastros no ranking). Sem resposta da API,
+    // seguem "sem fonte" — nunca número inventado.
+    visitantes_ranking: concurso
+      ? { realizado: (Number(concurso.visitantes_7d) || 0) / 7, tipo: 'aproximacao', fonte: 'Visitas ao Rank Premiado que chegaram por link de indicação (?ref=), média dos últimos 7 dias. Tráfego direto (sem link) não deixa rastro — o número real é MAIOR que este.' }
+      : { realizado: null, tipo: 'sem_fonte', fonte: 'Contadores do Rank Premiado não carregados nesta sessão.' },
+    cadastros_ranking: concurso
+      ? { realizado: (Number(concurso.cadastros_7d) || 0) / 7, tipo: 'dado', fonte: 'Cadastros no Rank Premiado (concurso_participantes), média dos últimos 7 dias.' }
+      : { realizado: null, tipo: 'sem_fonte', fonte: 'Contadores do Rank Premiado não carregados nesta sessão.' },
     k_factor: { realizado: kFactor, tipo: 'aproximacao', fonte: 'Novos usuários indicados (30d) ÷ indicadores distintos que os trouxeram (árvore referred_by_id).' },
     conversao_digital: { realizado: conversao, tipo: 'dado', fonte: 'Compradores reais únicos ÷ base total de usuários — mesma fórmula do Painel de Alavancagem.' },
     ticket_medio: { realizado: ticketMedio, tipo: 'dado', fonte: 'Vendas reais de mercadoria do mês (Loja + Leilão) ÷ compradores únicos do mês — a meta de R$ 252 do Resumo Executivo é por comprador. Não confundir com o "Ticket médio / comprador" do Espelho, que copia o Painel de Alavancagem (soma depósitos e é desde 01/08, não do mês).' },

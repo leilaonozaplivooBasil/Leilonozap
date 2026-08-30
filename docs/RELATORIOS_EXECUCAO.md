@@ -1384,3 +1384,120 @@ Preview.
 career_levels do usuário, não o license_type do vendedor — conferido).
 **Testes:** 540/540. **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+---
+
+## REL-31 — Execução da DIR-31 (KPIs do Rank Premiado ligados)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Correção registrada:** eu havia afirmado na DIR-29 que a página do
+Ranking Premiado não existia — ERRADO. Ela existe e está no ar
+(leilaonozap.net/rankpremiado, `ConcursoLeilaoNozap.jsx` + pasta
+src/components/concurso/), com rastro real em concurso_participantes
+(cadastros) e concurso_referrals (visitas por link ?ref=). O dono
+corrigiu; a busca falhou porque procurei "Ranking" literal e a página se
+chama Concurso. Lição registrada na DIR-31.
+**O que foi feito:**
+1. `api/concurso.js` ganhou `action=stats_crm` (POST, só admin — mesmo
+   isAdmin das outras ações): cadastros_7d e visitantes_7d por
+   created_at, janela de 7 dias.
+2. CRM (visão total) busca os contadores e o Dashboard da Diretoria
+   liga: "Cadastros Ranking/dia" = DADO (média 7d de participantes);
+   "Visitantes Ranking/dia" = APROXIMAÇÃO (só visita por link de
+   indicação é rastreada — tráfego direto não deixa rastro, o número
+   real é maior; a fonte do card explica). Sem resposta da API → seguem
+   "sem fonte", nunca número inventado.
+**Placar da Seção 37:** 10 dos 12 KPIs com número (era 8) — os 2
+restantes (custo de aquisição/ROI) já ligados desde a DIR-29, então na
+prática TODOS os 12 têm régua; só visitantes segue como aproximação
+declarada.
+**Testes:** 542/542 (2 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — na branch, pronta pra publicar no próximo
+"pode".
+
+---
+
+## REL-32 — Execução da DIR-32 (governança por papel + modal profissional)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. `src/lib/visibilidadePorPapel.js` (+11 testes) — a MATRIZ ÚNICA da
+   governança aprovada: visão total = super_admin/admin/admin_financeiro
+   + cargos diretoria_executiva (e CEO) e diretoria_operacao (aliases
+   legados funcionam); dinheiro da empresa = só as 3 permissões
+   administrativas; gestão de vendedores = admin/super_admin;
+   Sócio Executivo = rede própria; Fundador/Conselheiro sem visão total
+   (relatório agregado é rodada futura registrada).
+2. Permissão de Trabalho nova: **Admin Financeiro** (`admin_financeiro`)
+   — entrou em ADMIN_ROLES (todos os painéis), como operador de escrita
+   em entityWrite/adminEntityWrite (lança receita/despesa) e no adapter;
+   as travas de venda (catalog_sales) NÃO o incluem — venda continua
+   admin/super_admin, e gestão de usuários continua só super_admin.
+3. CRM lê a matriz: cargo Diretoria Executiva/Operacional abre o CRM com
+   visão total de VENDA (metas, dashboard, espelho, captação, escada) —
+   SEM Valor em Estoque, Produtos no Catálogo, Custo de Aquisição e ROI
+   (os 2 KPIs somem da grade pela matriz); aba Vendedores e botão Novo
+   Vendedor só pra admin/super_admin.
+4. Editar Usuário profissional: modal grande de verdade (sem a trava de
+   proporção 16:9 que o espremia; 92vh × max-w-6xl) + VISÃO GERAL no
+   cabeçalho (foto, nome, contato e os crachás Permissão / Função
+   principal / Executivo vigente / Indicador / nº de cargos — refletindo
+   ao vivo o que está selecionado no formulário) + opção Admin
+   Financeiro com explicação. Nenhuma função existente removida.
+5. Teste antigo de ADMIN_ROLES atualizado pra regra nova (3 papéis).
+**Pendência de decisão do dono (registrada):** tirar o Financeiro do
+role 'admin' comum (hoje admin ainda vê dinheiro — cortar muda acesso de
+contas existentes; só com ordem expressa).
+**Testes:** 552/552 (12 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".
+
+---
+
+## REL-33 — Execução da DIR-33 (busca de verdade + executivos no topo)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Causa raiz confirmada:** a busca da Árvore só varria os nós JÁ
+RENDERIZADOS (galho fechado = pessoa invisível pra busca) e só por
+nome/e-mail.
+**O que foi feito:**
+1. `src/lib/buscaPessoa.js` (+10 testes) — comparador único: nome
+   completo, apelido, nomes de exibição, e-mail, telefone (dígitos, com
+   ou sem máscara), CPF (dígitos), código de indicação e nome da loja;
+   sem acento/caixa.
+2. TreeHierarchy: a busca varre TODAS as pessoas do cadastro e
+   AUTO-EXPANDE o caminho até os achados (teto de 40 pra busca genérica
+   não abrir a árvore inteira); Enter segue centralizando; placeholder
+   agora diz o que a busca aceita.
+3. Alternador "⭐ Diretoria no topo" (ajustado na hora pelo dono:
+   "quando falo executivos digo TODA a diretoria que recebe os 10%, até
+   o Embaixador"): TODO o bloco 'diretor' do plano de carreira (CEO,
+   Diretoria Executiva, Diretor Operacional, Fundador, Conselheiro,
+   Embaixador, Livoo Live, Sócio Executivo, Trainee) vira raiz no topo,
+   ordenado por peso institucional (CEO primeiro) e tamanho do time,
+   cada um MANTENDO a própria árvore de ligações pendurada; resto da
+   floresta abaixo; escolha lembrada no navegador. SÓ VISUAL — nenhum
+   vínculo de indicação muda.
+**Testes:** 559/559 (10 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".
+
+
+---
+
+## REL-33b — Bloco "Cadastros diretos" na Árvore (complemento da DIR-33)
+
+**Data:** 30/08/2026.
+**Aprovação:** dono confirmou o entendimento no chat e escolheu a opção
+(b): a regra vale pra QUALQUER pessoa da árvore, não só a conta da
+empresa.
+**O que foi feito:** pessoa com 15+ filhos SEM cargo e SEM equipe ganha
+dois blocos: os importantes seguem como cartões individuais e os comuns
+entram numa pasta "Cadastros diretos (N)" — no organograma a pasta abre
+em GRADE compacta (colunas × linhas, aresta só na 1ª linha) em vez de
+esticar a árvore pro lado; na lista abre em coluna normal. Pasta não se
+arrasta, não é alvo de vínculo, não tem menu nem lápis (clique abre/
+fecha). A lupa continua achando quem está dentro (o clique no resultado
+abre a pasta e centraliza). Só visualização — nenhum vínculo muda.
+**Testes:** 559/559. **Build:** exit 0.

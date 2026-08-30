@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { levelColor as getCareerColor, getLevel } from '@/lib/careerLevels';
+import { levelColor as getCareerColor, getLevel, normalizeLevels, CAREER_LEVELS } from '@/lib/careerLevels';
+import { pessoaBateBusca } from '@/lib/buscaPessoa';
 import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStructure';
 import SeloCargo from '@/components/network/SeloCargo';
 import CartaoIdentificacao from '@/components/network/CartaoIdentificacao';
@@ -70,8 +71,7 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const normalize = (s) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// (normalize local removido na DIR-33 — a regra de busca vive em src/lib/buscaPessoa.js)
 
 const firstAndLast = (name) => {
   const parts = (name || '').trim().split(' ').filter(Boolean);
@@ -100,6 +100,13 @@ export default function TreeHierarchy({
       return 'list';
     }
   });
+  // ⭐ DIR-33 — Sócios Executivos no topo (só visual; lembrado no navegador)
+  const [execTopo, setExecTopo] = useState(() => {
+    try { return localStorage.getItem('treeExecTopo') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('treeExecTopo', execTopo ? '1' : '0'); } catch { /* sem storage */ }
+  }, [execTopo]);
   const [menu, setMenu] = useState(null); // menu do botão direito: { id, x, y }
   const [expanded, setExpanded] = useState(() => new Set());
   const [selectedId, setSelectedId] = useState(null);
@@ -150,7 +157,7 @@ export default function TreeHierarchy({
   /* ------------------------------------------------------------------ */
   /* Hierarquia                                                          */
   /* ------------------------------------------------------------------ */
-  const { roots, byId } = useMemo(() => {
+  const { roots, byId, grupoDe } = useMemo(() => {
     const map = new Map((users || []).map((u) => [u.id, { ...u, children: [] }]));
     const rs = [];
     for (const u of users || []) {
@@ -165,17 +172,74 @@ export default function TreeHierarchy({
     };
     rs.forEach(sortRec);
     rs.sort((a, b) => b.children.length - a.children.length);
-    return { roots: rs, byId: map };
-  }, [users]);
+
+    // 📦 DIR-33 (bloco 2, aprovado pelo dono): qualquer pessoa com MUITOS
+    // cadastros comuns pendurados (15+ filhos sem cargo e sem equipe) ganha
+    // dois blocos: os importantes continuam como cartões individuais e os
+    // comuns entram numa PASTA "Cadastros diretos (N)" — que no organograma
+    // abre em GRADE compacta em vez de esticar a árvore pro lado. Só a
+    // visualização muda: o vínculo de indicação de cada um continua intacto.
+    const grupoDe = new Map(); // pessoaId → id da pasta que a contém
+    const ehComum = (c) => c.children.length === 0 &&
+      normalizeLevels(c.career_levels).every((id) => id === 'usuario');
+    for (const node of map.values()) {
+      if (node.children.length < 15) continue;
+      const comuns = node.children.filter(ehComum);
+      if (comuns.length < 15) continue;
+      const importantes = node.children.filter((c) => !ehComum(c));
+      const grupo = {
+        id: `grupo_${node.id}`,
+        isGroup: true,
+        full_name: `Cadastros diretos`,
+        primary_career_level: 'usuario',
+        career_levels: [],
+        email: `${comuns.length} cadastros sem cargo e sem equipe`,
+        referred_by_id: node.id,
+        children: comuns,
+      };
+      comuns.forEach((c) => grupoDe.set(c.id, grupo.id));
+      node.children = [...importantes, grupo];
+    }
+
+    // ⭐ DIR-33 (ajuste do dono, 30/08): "Diretoria no topo" — TODA a
+    // diretoria do pool dos 10% (bloco 'diretor' do plano de carreira: CEO,
+    // Diretoria Executiva, Diretor Operacional, Fundador, Conselheiro,
+    // Embaixador, Livoo Live, Sócio Executivo, Trainee) vira RAIZ no topo,
+    // cada um MANTENDO a própria árvore de ligações pendurada abaixo. Só a
+    // visualização muda — nenhum vínculo de indicação é alterado. Ordem:
+    // peso institucional (CEO primeiro), depois tamanho do time.
+    if (execTopo) {
+      const DIRETORIA_IDS = new Set(CAREER_LEVELS.filter((l) => l.bloco === 'diretor').map((l) => l.id));
+      const PESO = { ceo: 1, diretoria_executiva: 2, diretoria_operacao: 3, fundador: 4, conselheiro: 5, embaixador: 6, livoo_live: 7, executivo_conta: 8, trainee_diretor: 9 };
+      const cargosDiretoria = (u) => normalizeLevels(u.career_levels).filter((id) => DIRETORIA_IDS.has(id));
+      const pesoDe = (u) => Math.min(...cargosDiretoria(u).map((id) => PESO[id] ?? 99));
+      const diretoria = [];
+      for (const node of map.values()) {
+        if (!cargosDiretoria(node).length) continue;
+        const pai = node.referred_by_id ? map.get(node.referred_by_id) : null;
+        if (pai) pai.children = pai.children.filter((c) => c.id !== node.id);
+        diretoria.push(node);
+      }
+      diretoria.sort((a, b) => (pesoDe(a) - pesoDe(b)) || (b.children.length - a.children.length));
+      const restantes = rs.filter((r) => !diretoria.includes(r));
+      return { roots: [...diretoria, ...restantes], byId: map, grupoDe };
+    }
+    return { roots: rs, byId: map, grupoDe };
+  }, [users, execTopo]);
 
   // Primeiro impacto: só a raiz principal aberta (um nível), não a rede inteira
   useEffect(() => {
+    // 🔧 DIR-33 — no modo "Diretoria no topo" NÃO reabre a raiz principal
+    // sozinho (o toggle muda roots.length e este efeito disparava de novo,
+    // reabrindo o time do CEO e empurrando a diretoria pra fora da tela).
+    // Desligando o modo, volta a abrir a raiz principal como sempre.
+    if (execTopo) return;
     if (roots.length && expanded.size === 0) {
       const main = roots.find((r) => r.children.length);
       if (main) setExpanded(new Set([main.id]));
     }
      
-  }, [roots.length]);
+  }, [roots.length, execTopo]);
 
   /* ------------------------------------------------------------------ */
   /* Layout                                                              */
@@ -196,6 +260,29 @@ export default function TreeHierarchy({
       if (!kids.length) {
         main = cursor;
         cursor += mode === 'chart' ? V.slot : H.row;
+      } else if (node.isGroup && mode === 'chart') {
+        // 📦 DIR-33 — pasta aberta no organograma vira GRADE (colunas ×
+        // linhas) em vez de uma fileira quilométrica; os cadastros comuns
+        // não têm filhos, então as linhas descem sem colidir com nada.
+        const cols = Math.min(8, Math.max(4, Math.ceil(Math.sqrt(kids.length))));
+        const start = cursor;
+        placedKids = kids.map((k, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const placed = {
+            id: k.id, data: k,
+            main: start + col * V.slot,
+            x: start + col * V.slot,
+            y: (depth + 1 + row) * V.level,
+            depth: depth + 1 + row,
+            childCount: 0, isOpen: false,
+          };
+          outNodes.push(placed);
+          return placed;
+        });
+        maxDepth = Math.max(maxDepth, depth + Math.ceil(kids.length / cols));
+        cursor += cols * V.slot;
+        main = start + ((Math.min(kids.length, cols) - 1) * V.slot) / 2;
       } else {
         placedKids = kids.map((k) => walk(k, depth + 1));
         main = (placedKids[0].main + placedKids[placedKids.length - 1].main) / 2;
@@ -206,9 +293,10 @@ export default function TreeHierarchy({
           ? { id: node.id, data: node, main, x: main, y: depth * V.level, depth, childCount: node.children.length, isOpen }
           : { id: node.id, data: node, main, x: depth * H.col, y: main, depth, childCount: node.children.length, isOpen };
 
-      placedKids.forEach((child) =>
-        outEdges.push({ id: `${node.id}->${child.id}`, from: placedNode, to: child })
-      );
+      placedKids.forEach((child) => {
+        if (node.isGroup && mode === 'chart' && child.depth > depth + 1) return; // grade: aresta só na 1ª linha
+        outEdges.push({ id: `${node.id}->${child.id}`, from: placedNode, to: child });
+      });
 
       outNodes.push(placedNode);
       return placedNode;
@@ -231,15 +319,52 @@ export default function TreeHierarchy({
 
   useEffect(() => { nodesRef.current = nodes; }, [nodes]);
 
+  // 🔎 DIR-33 — a busca varre TODO o cadastro (nome, apelido, nomes de
+  // exibição, e-mail, telefone, CPF, código de indicação, loja — regra única
+  // em src/lib/buscaPessoa.js) e TODAS as pessoas, não só as renderizadas:
+  // quem está em galho fechado também é achado.
   const matches = useMemo(() => {
-    const q = normalize(query).trim();
-    if (!q) return new Set();
-    return new Set(
-      nodes
-        .filter((n) => normalize(n.data.full_name).includes(q) || normalize(n.data.email).includes(q))
-        .map((n) => n.id)
-    );
-  }, [nodes, query]);
+    const q = query.trim();
+    if (q.length < 2) return new Set();
+    const achados = new Set();
+    for (const u of byId.values()) {
+      if (pessoaBateBusca(u, q)) achados.add(u.id);
+    }
+    return achados;
+  }, [byId, query]);
+
+  // 🔎 DIR-33 (acabamento) — lista de resultados CLICÁVEL embaixo da lupa:
+  // o destaque na árvore pode cair fora da tela e parecer que a busca não
+  // funcionou. Clicar num resultado abre o caminho e centraliza (focusUser).
+  const resultadosBusca = useMemo(() => {
+    if (query.trim().length < 2 || !matches.size) return [];
+    const lista = [];
+    for (const u of byId.values()) {
+      if (matches.has(u.id)) lista.push(u);
+      if (lista.length >= 8) break;
+    }
+    return lista;
+  }, [byId, matches, query]);
+
+  // Abre o caminho até os achados (limite de 40 pra não explodir a árvore
+  // inteira com uma busca genérica tipo "a").
+  useEffect(() => {
+    if (!matches.size || matches.size > 40) return;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      let mudou = false;
+      for (const id of matches) {
+        const g = grupoDe.get(id);
+        if (g && !next.has(g)) { next.add(g); mudou = true; }
+        let cur = byId.get(id);
+        while (cur?.referred_by_id) {
+          if (!next.has(cur.referred_by_id)) { next.add(cur.referred_by_id); mudou = true; }
+          cur = byId.get(cur.referred_by_id);
+        }
+      }
+      return mudou ? next : prev;
+    });
+  }, [matches, byId, grupoDe]);
 
   /* ------------------------------------------------------------------ */
   /* Zoom / pan                                                          */
@@ -345,6 +470,7 @@ export default function TreeHierarchy({
     let best = Infinity;
     for (const n of nodesRef.current) {
       if (n.id === dragState.current.id) continue;
+      if (n.data?.isGroup) continue; // 📦 pasta não é alvo de vínculo
       const cx = mode === 'chart' ? n.x + V.node / 2 : n.x + H.card / 2;
       const cy = mode === 'chart' ? n.y + V.node / 2 : n.y + H.cardH / 2;
       const d = Math.hypot(cx - wx, cy - wy);
@@ -446,9 +572,13 @@ export default function TreeHierarchy({
 
   const focusUser = (id) => {
     const path = [];
+    // 📦 DIR-33 — se a pessoa vive dentro de uma pasta "Cadastros diretos",
+    // a pasta também precisa abrir pra ela aparecer.
+    if (grupoDe.has(id)) path.push(grupoDe.get(id));
     let cur = byId.get(id);
     while (cur?.referred_by_id) {
       path.push(cur.referred_by_id);
+      if (grupoDe.has(cur.referred_by_id)) path.push(grupoDe.get(cur.referred_by_id));
       cur = byId.get(cur.referred_by_id);
     }
     setExpanded((prev) => {
@@ -549,6 +679,29 @@ export default function TreeHierarchy({
           </button>
         </div>
 
+        {/* ⭐ DIR-33 — Sócios Executivos como raízes no topo (só visual) */}
+        <button
+          type="button"
+          onClick={() => {
+            // 🔧 DIR-33 — ao alternar, RECOLHE tudo: com o galho do CEO aberto
+            // (604 pessoas), o time dele empurrava o resto da diretoria pra
+            // fora da tela. Recolhido, a diretoria enfileira compacta no topo
+            // e cada um expande quem quiser.
+            setExecTopo((v) => !v);
+            setExpanded(new Set());
+            setQuery('');
+            setDidFit(false);
+          }}
+          title="Toda a diretoria do pool dos 10% (CEO, Diretorias, Fundadores, Conselheiros, Embaixador, Livoo Live, Sócios Executivos) como raízes no topo, cada um com a própria árvore de ligações abaixo — nenhum vínculo muda, é só a visualização"
+          className={`flex items-center gap-1.5 rounded-lg border px-2.5 h-10 sm:h-auto sm:py-1.5 text-[12.5px] transition-colors ${
+            execTopo
+              ? 'border-amber-400/60 bg-amber-500/15 text-amber-300'
+              : 'border-gray-700 bg-gray-800 text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          ⭐ Diretoria no topo
+        </button>
+
         {/* 📱 no celular a busca ocupa a linha inteira — encolhida ela cortava o texto */}
         <div className="relative w-full sm:w-auto order-last sm:order-none">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
@@ -558,9 +711,33 @@ export default function TreeHierarchy({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && matches.size) focusUser([...matches][0]);
             }}
-            placeholder="Buscar pessoa na estrutura de negócio…"
-            className="w-full sm:w-52 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 h-10 sm:h-auto sm:py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
+            placeholder="Nome, apelido, e-mail, telefone, CPF…"
+            className="w-full sm:w-64 bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-3 h-10 sm:h-auto sm:py-1.5 text-[12.5px] text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50"
           />
+          {resultadosBusca.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-gray-700 bg-gray-900 shadow-2xl overflow-hidden">
+              {resultadosBusca.map((r) => {
+                const nivel = getLevel(r.primary_career_level || 'usuario');
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); focusUser(r.id); }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-800 border-b border-gray-800 last:border-b-0"
+                  >
+                    <p className="text-[12.5px] font-semibold text-white truncate">
+                      {r.full_name || r.nickname || 'Sem nome'}
+                      <span className={`ml-1.5 text-[10.5px] font-normal ${nivel.textColor}`}>{nivel.name}</span>
+                    </p>
+                    <p className="text-[11px] text-gray-500 truncate">{r.email || r.phone || r.referral_code || ''}</p>
+                  </button>
+                );
+              })}
+              {matches.size > resultadosBusca.length && (
+                <p className="px-3 py-1.5 text-[10.5px] text-gray-500 bg-gray-900">+ {matches.size - resultadosBusca.length} resultados — refine a busca</p>
+              )}
+            </div>
+          )}
         </div>
         {query && (
           <span className="text-[11px] text-gray-500">
@@ -653,6 +830,7 @@ export default function TreeHierarchy({
 
             const pointerProps = {
               onPointerDown: (e) => {
+                if (n.data.isGroup) return; // 📦 pasta não se arrasta
                 if (e.button === 2) return; // botão direito abre o menu, não arrasta
                 // 🔒 Sem permissão de mover (onRelink não veio do pai) — nem inicia o
                 // arraste. Sem isso, o card de confirmação aparecia e mostrava "sucesso"
@@ -672,18 +850,21 @@ export default function TreeHierarchy({
               },
               onClick: (e) => {
                 e.stopPropagation();
+                if (n.data.isGroup) { toggle(n.id); return; } // 📦 pasta: clique abre/fecha
                 setSelectedId(n.id);
               },
               // Um clique OU dois cliques abrem o perfil — expandir/recolher fica no
               // badge com o número de indicados, que não disputa o clique do nó.
               onDoubleClick: (e) => {
                 e.stopPropagation();
+                if (n.data.isGroup) return;
                 setSelectedId(n.id);
               },
               // Botão direito: menu de ações direto no nó
               onContextMenu: (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (n.data.isGroup) return; // 📦 pasta não tem menu de pessoa
                 const rect = viewportRef.current.getBoundingClientRect();
                 setSelectedId(n.id);
                 setMenu({ id: n.id, x: e.clientX - rect.left, y: e.clientY - rect.top });
@@ -764,10 +945,10 @@ export default function TreeHierarchy({
                         {firstAndLast(n.data.full_name)}
                       </p>
                       <p className={`text-[10.5px] ${level.textColor} truncate leading-tight`}>
-                        {level.name}
+                        {n.data.isGroup ? `${n.data.children.length} cadastros` : level.name}
                       </p>
                     </div>
-                    {canEdit && (
+                    {canEdit && !n.data.isGroup && (
                       <button
                         type="button"
                         onPointerDown={(e) => e.stopPropagation()}
@@ -798,7 +979,7 @@ export default function TreeHierarchy({
                   {...pointerProps}
                   role="button"
                   tabIndex={0}
-                  title={`${n.data.full_name} — ${level.name}`}
+                  title={n.data.isGroup ? `${n.data.full_name} — ${n.data.children.length} cadastros sem cargo e sem equipe` : `${n.data.full_name} — ${level.name}`}
                   className={`relative rounded-full ${getCareerColor(
                     n.data.primary_career_level || 'usuario'
                   )} flex items-center justify-center text-white font-bold text-[13px]
@@ -857,7 +1038,7 @@ export default function TreeHierarchy({
                   <p className="text-[11.5px] font-medium text-gray-200 truncate leading-tight">
                     {firstAndLast(n.data.full_name)}
                   </p>
-                  <p className={`text-[10px] ${level.textColor} truncate leading-tight`}>{level.name}</p>
+                  <p className={`text-[10px] ${level.textColor} truncate leading-tight`}>{n.data.isGroup ? `${n.data.children.length} cadastros` : level.name}</p>
                 </div>
               </div>
             );

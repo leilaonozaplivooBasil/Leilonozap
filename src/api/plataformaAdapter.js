@@ -203,7 +203,8 @@ function _operatorActor() {
     if (typeof localStorage === 'undefined') return null;
     const u = JSON.parse(localStorage.getItem('currentUser') || 'null');
     if (!u?.id) return null;
-    const isOp = ['admin', 'super_admin'].includes(u.role) ||
+    // 💼 DIR-32 — admin_financeiro é operador (lança receita/despesa etc.)
+    const isOp = ['admin', 'super_admin', 'admin_financeiro'].includes(u.role) ||
       (Array.isArray(u.career_levels) && u.career_levels.some((c) => _OP_STOCK.includes(c)));
     return isOp ? u : null;
   } catch { return null; }

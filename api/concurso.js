@@ -254,6 +254,25 @@ export default async function handler(req, res) {
       return jset(res, 200, { ok: true, group_link: GROUP_LINK, inviter: pr[0].nome, pontos });
     }
 
+    // ---------- ADMIN: contadores do Rank Premiado pro CRM (DIR-31) ----------
+    // Alimenta o Dashboard da Diretoria: "Cadastros Ranking/dia" (dado real,
+    // concurso_participantes) e "Visitantes Ranking/dia" (aproximação — o
+    // concurso_referrals só registra visita que chegou por link ?ref= de
+    // indicação; tráfego direto não deixa rastro aqui).
+    if (action === 'stats_crm') {
+      if (!(await isAdmin(body.user_id))) return jset(res, 403, { error: 'Sem permissão.' });
+      const corte = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const [cadRows, visRows] = await Promise.all([
+        (await sb(`concurso_participantes?select=id&created_at=gte.${encodeURIComponent(corte)}&limit=10000`)).json().catch(() => []),
+        (await sb(`concurso_referrals?select=visitor_id&created_at=gte.${encodeURIComponent(corte)}&limit=10000`)).json().catch(() => []),
+      ]);
+      return jset(res, 200, {
+        janela_dias: 7,
+        cadastros_7d: Array.isArray(cadRows) ? cadRows.length : 0,
+        visitantes_7d: Array.isArray(visRows) ? visRows.length : 0,
+      });
+    }
+
     // ---------- ADMIN: inteligência das indicações (funil por participante) ----------
     // v1 com o que o schema atual permite: impactados = cliques no link (concurso_referrals).
     // Entradas/saídas do grupo, conversões e gasto por indicado dependem da migração

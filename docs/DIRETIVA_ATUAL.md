@@ -12,6 +12,106 @@
 
 ---
 
+## DIR-33 — Árvore Genealógica: busca de verdade + Sócios Executivos no topo
+
+**Emitida por:** dono (30/08/2026, com print da Árvore): "preciso que
+buscar o nome realmente funcione — nome completo, apelido, e-mail,
+telefone, qualquer coisa do cadastro — e uma seleção para os Sócios
+Executivos aparecerem no topo, pra facilitar a busca".
+**Data:** 30/08/2026.
+**Causa conferida:** a busca só varria os NÓS RENDERIZADOS (quem estava
+em galho fechado nunca era encontrado) e só por nome/e-mail.
+**Escopo autorizado:**
+1. `src/lib/buscaPessoa.js` — comparador único de busca por pessoa:
+   nome completo, apelido, nomes de exibição, e-mail, telefone (só
+   dígitos), CPF (só dígitos), código de indicação e nome da loja;
+   sem acento/caixa. Testes.
+2. TreeHierarchy: busca varre TODOS os usuários (não só os visíveis) e
+   auto-expande o caminho até os achados (limite de 40 pra não abrir a
+   árvore inteira); Enter continua centralizando (focusUser).
+3. Alternador "⭐ Executivos no topo": liga → cada Sócio Executivo
+   (cargo executivo_conta, aliases legados valem) vira RAIZ no topo da
+   árvore com a própria subárvore; o resto da floresta fica abaixo.
+   Escolha lembrada (localStorage). Só visual — nenhum vínculo muda.
+**Fora do escopo / proibido:** mover pessoas/motor de indicação; carteira
+executiva (executive_owner — DIR-22 Fase 2).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-32.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-32 — Governança de visão por papel + modal de usuário profissional
+
+**Emitida por:** dono (30/08/2026): aprovou a tabela de governança de
+mercado escrita no chat ("com essas funções da forma que descreveu") e,
+com prints do Editar Usuário, pediu: modal maior (abre pequeno), uma
+visão geral do usuário, organizar e deixar extremamente profissional —
+sem mudar o que já funciona — e APLICAR as funções de acesso nos cargos
+que ele selecionar.
+**Data:** 30/08/2026.
+**Regra de governança aprovada (mercado):** custo, margem, caixa e
+imposto ficam em DUAS chaves (super_admin + Admin Financeiro); diretoria
+vê VENDA × META (faturamento, ticket, conversão, funil) mas nunca a
+mecânica do dinheiro; Sócio Executivo vê só a própria estrutura;
+Fundador/Conselheiro = relatório agregado (rodada futura).
+**Escopo autorizado:**
+1. `src/lib/visibilidadePorPapel.js` — MATRIZ ÚNICA de visão:
+   super_admin/admin/admin_financeiro = visão total + dinheiro da
+   empresa; cargos diretoria_executiva e diretoria_operacao (via
+   career_levels, fonte careerLevels.js) = visão total de venda SEM
+   dinheiro da empresa (sem Valor em Estoque/Produtos no Catálogo, sem
+   KPIs de custo de aquisição e ROI); executivo_conta = rede própria;
+   gestão de vendedores só admin/super_admin. Testes.
+2. Nova Permissão de Trabalho `admin_financeiro` (entra em ADMIN_ROLES —
+   todos os painéis, incluindo Financeiro; não gere usuários, que já é
+   exclusivo do super_admin). Opção no Editar Usuário com explicação.
+3. CRM passa a ler a matriz (substitui o check duro
+   ['admin','super_admin']): diretoria ganha as seções Executiva/
+   Expansão em modo venda; escopo de rede continua para os demais.
+4. Editar Usuário: modal MAIOR (sem trava de proporção 16:9, altura
+   quase cheia) + CABEÇALHO-RESUMO (foto, nome, e-mail, crachás de
+   Permissão/Função principal/Executivo vigente/Indicador) + polimento —
+   sem remover nenhuma função existente.
+**Fora do escopo / proibido:** tirar o Financeiro do role 'admin' hoje
+(mudança de acesso de contas existentes — só com decisão expressa do
+dono); relatório mensal de Fundador/Conselheiro (rodada futura); motor
+de comissão.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-31.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-31 — KPIs do Ranking Premiado ligados (correção de erro meu)
+
+**Emitida por:** dono (30/08/2026): "a página Ranking Premiado JÁ EXISTE,
+você não sabe disso???" — e ele está certo. ERRO REGISTRADO: na DIR-29 eu
+busquei por "Ranking" literal e concluí que a página não existia; ela se
+chama CONCURSO (`src/pages/ConcursoLeilaoNozap.jsx`, rota /rankpremiado,
+componentes em src/components/concurso/ — inclusive HeroRankPremiado).
+Lição: variar os nomes na busca antes de afirmar que algo não existe.
+**Data:** 30/08/2026.
+**Fatos conferidos:** o Rank Premiado tem rastro REAL em produção —
+`concurso_participantes` (cadastros, com created_at) e
+`concurso_referrals` (visitas por link ?ref=, com created_at), ambas já
+lidas pela API `/api/concurso` (service role, ações de admin com
+isAdmin(body.user_id)).
+**Escopo autorizado:**
+1. `api/concurso.js` ganha `action=stats_crm` (POST, admin): devolve
+   cadastros e visitas dos últimos 7 dias (contagem por created_at).
+2. CRM (visão total) busca essas contagens e passa pro
+   `calcularDashboardDiretoria`: "Cadastros Ranking/dia" vira DADO
+   (média 7d de concurso_participantes) e "Visitantes Ranking/dia" vira
+   APROXIMAÇÃO (concurso_referrals só rastreia visita por link de
+   indicação — tráfego direto não conta; a fonte explica). Sem resposta
+   da API, os dois seguem "Sem fonte" (nunca número inventado).
+3. Testes da lib.
+**Fora do escopo / proibido:** mudar a mecânica do concurso; critério de
+dinheiro real.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-30.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-30 — Cadastro de vendedor com os cargos oficiais do Plano de Carreira
 
 **Emitida por:** dono (30/08/2026, com prints do modal Novo Vendedor):

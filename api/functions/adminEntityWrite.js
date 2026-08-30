@@ -50,7 +50,11 @@ export default async function handler(req, res) {
     // guard
     const actorArr = await (await sb(`app_users?select=id,role,career_levels&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
-    const ok = actor && (['admin', 'super_admin'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
+    // 💼 DIR-32 — 'admin_financeiro' opera os registros dos painéis (é a
+    // função dele lançar receita/despesa). A gestão de USUÁRIOS continua
+    // exclusiva do super_admin — esse fluxo passa por updateUserAsAdmin,
+    // não por aqui.
+    const ok = actor && (['admin', 'super_admin', 'admin_financeiro'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
     if (!ok) return res.status(403).json({ success: false, error: 'Sem permissão' });
 
     const now = new Date().toISOString();

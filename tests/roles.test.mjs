@@ -24,7 +24,11 @@ describe('isAdminRole', () => {
     assert.equal(isAdminRole(null), false);
   });
 
-  test('ADMIN_ROLES contém exatamente os dois papéis administrativos', () => {
-    assert.deepEqual([...ADMIN_ROLES].sort(), ['admin', 'super_admin']);
+  test('ADMIN_ROLES contém exatamente os três papéis administrativos (DIR-32: +admin_financeiro)', () => {
+    assert.deepEqual([...ADMIN_ROLES].sort(), ['admin', 'admin_financeiro', 'super_admin']);
+  });
+
+  test('admin_financeiro é papel administrativo (acessa os painéis)', () => {
+    assert.equal(isAdminRole('admin_financeiro'), true);
   });
 });
