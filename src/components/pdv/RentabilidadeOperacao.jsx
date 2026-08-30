@@ -36,10 +36,10 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
     const totalProductsSold = sales.reduce((sum, s) => sum + (s.quantity_sold || 0), 0);
 
     // Valor investido = customizado ou calculado
-    const valorInvestidoCalculado = products.reduce((sum, p) => {
-      const totalQty = (p.quantity || 0) + (p.quantity_sold || 0);
-      return sum + (p.cost_price || 0) * totalQty;
-    }, 0);
+    // 🔴 DIR-18 — cost_price já É o custo total do lote (semântica da planilha,
+    // ver src/lib/custoProduto.js); multiplicar pela quantidade contava o lote
+    // inteiro N vezes. "Valor investido" = soma dos custos de lote, direto.
+    const valorInvestidoCalculado = products.reduce((sum, p) => sum + (p.cost_price || 0), 0);
     const valorInvestido = customInvestido !== null ? customInvestido : valorInvestidoCalculado;
 
     // Faturamento = soma dos total_amount das vendas

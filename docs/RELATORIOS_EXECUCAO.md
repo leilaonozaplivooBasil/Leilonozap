@@ -944,3 +944,40 @@ mudança de fórmula, critério ou regra de receita.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência
 visual do dono com os dois painéis lado a lado após o deploy.
+
+---
+
+## REL-18 — Execução da DIR-18
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono reportou "Custo do produto: R$ 0,00" no painel de lucro e cravou a
+   semântica: cost_price = custo TOTAL do lote (planilha). Diagnóstico com
+   consultas diretas dele: 15/302 produtos ativos sem custo; lotes reais
+   (POLITRIZ R$ 2.296/9un, Harley 117 R$ 2.200/10un, família MOP/PANELA
+   com valores fracionários idênticos de rateio de lote) confirmando a
+   semântica de lote — e explicando os R$ 50 milhões do CRM (custo de lote
+   × quantidade = lote contado N vezes).
+2. `src/lib/custoProduto.js` criado (custoUnitario, custoEstoqueRestante) +
+   `tests/custoProduto.test.mjs` (8 casos com dados reais).
+3. Corrigidas as 6 leituras erradas (CrmClientesTab, BalancoGeralTab,
+   RentabilidadeOperacao, DailyReportView, DailyReportPDF,
+   PainelLucroDiario agora reusa a lib) e 1 escrita errada
+   (gerarProdutosDoLote gravava unitário em registro com qtd > 1).
+4. Trava "jamais custo zerado" nos dois formulários de cadastro manual
+   (CreateCatalogProduct, AddCatalogProduct) — os 15 produtos zerados
+   entraram por aí.
+**O que NÃO foi feito / blockers:**
+- `createConsignacao.js:97` — bug real de cobrança (debita o custo do LOTE
+  como se fosse unitário na consignação de lote multi-unidade). Mexe em
+  dinheiro; flagged pra diretiva própria com decisão do dono.
+- Preencher o custo dos 15 produtos zerados — só o dono tem os valores
+  reais (planilha de origem); lista entregue no chat.
+**Testes:** 451/451 (443 + 8 novos). **Build:** exit 0.
+**Confirmação de escopo:** só os arquivos listados; nenhuma mudança em
+fluxo de pagamento, comissão, `financial_income` ou banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência do
+dono no Preview e autorização pra publicar.

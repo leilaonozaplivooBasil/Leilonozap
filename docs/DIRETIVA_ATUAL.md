@@ -12,6 +12,53 @@
 
 ---
 
+## DIR-18 — cost_price interpretado de duas formas contraditórias + produtos sem custo
+
+**Emitida por:** dono, depois de ver "Custo do produto: R$ 0,00" no painel de
+lucro diário e afirmar a regra de negócio: "eu JAMAIS posso ter o custo do
+produto zerado — a importação da planilha já traz o CUSTO TOTAL". Diagnóstico
+confirmado com consultas diretas dele ao banco: 15 dos 302 produtos ativos
+sem custo nenhum, e produtos com custo de lote sendo tratado como unitário.
+**Data:** 30/08/2026.
+**Objetivo:** o campo `products.cost_price` é, por semântica oficial (planilha
+de importação, `bulkImportProducts.js`, `RegisterBatches.jsx`), o custo TOTAL
+do lote. A maior parte do sistema sempre tratou certo (divide pelas unidades
+pra achar o unitário), mas 6 telas multiplicavam pela quantidade como se
+fosse unitário — origem do "Valor Investido em Estoque: R$ 50 milhões"
+(impossível: o valor de VENDA do mesmo estoque era R$ 4,9 milhões). Além
+disso, 15 produtos entraram sem custo pelos formulários manuais (a planilha
+sempre traz), zerando o "Custo do produto" no painel de lucro e inflando a
+margem.
+**Escopo autorizado:**
+1. Regra única em `src/lib/custoProduto.js` (`custoUnitario`,
+   `custoEstoqueRestante`), com teste próprio calibrado com dados reais de
+   produção.
+2. Correção das 6 leituras erradas: `CrmClientesTab.jsx` (valorEstoque),
+   `BalancoGeralTab.jsx` e `RentabilidadeOperacao.jsx` (valor investido =
+   soma dos custos de lote, sem multiplicar), `DailyReportView.jsx` e
+   `DailyReportPDF.jsx` (custo da venda = unitário × qtd vendida),
+   `PainelLucroDiario.jsx` (passa a reusar a lib, mesma conta).
+3. Correção de escrita: `gerarProdutosDoLote.js` gravava o custo UNITÁRIO
+   em registro com qtd > 1 — passa a gravar unitário × qtd (custo do lote),
+   consistente com a planilha.
+4. Trava "jamais custo zerado" nos formulários de cadastro manual
+   (`CreateCatalogProduct.jsx`, `AddCatalogProduct.jsx`): salvar sem custo
+   > 0 é recusado com mensagem clara.
+**Fora do escopo / proibido (flagged, NÃO corrigido — mexe em dinheiro,
+precisa de diretiva própria):** `api/functions/createConsignacao.js:97` usa
+`cost_price` (custo do LOTE) como `custo_unitario` da peça consignada — num
+lote multi-unidade, o lojista consignado é debitado pelo lote inteiro por
+CADA peça. Bug real de cobrança; não foi tocado nesta rodada porque altera
+fluxo de dinheiro e o valor certo a cobrar é decisão do dono.
+Os 15 produtos sem custo também NÃO foram preenchidos — os valores reais só
+o dono tem (planilha de origem); a lista exata já foi entregue no chat.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-17.
+**Status:** EM VIGOR — código, testes (451/451, 8 novos) e build passam;
+falta o dono conferir no Preview (Valor Investido em Estoque deve cair dos
+R$ 50 milhões pra um valor realista) e autorizar a publicação.
+
+---
+
 ## DIR-17 — Painel de Alavancagem somava um subconjunto arbitrário de 1000 vendas
 
 **Emitida por:** Claude, via achado técnico — dono comparou os dois painéis

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import { analiseFiscal } from '@/lib/simplesNacional';
+import { custoUnitario } from '@/lib/custoProduto';
 import { TrendingUp, TrendingDown, Package, Percent, Receipt, AlertTriangle, ShoppingBag, Gavel, Wallet, Landmark } from 'lucide-react';
 
 // 📊 REGRA OFICIAL DE COMISSÃO (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md) —
@@ -13,13 +14,11 @@ const PCT_COMISSAO_LEILAO = 5;
 
 const money = (n) => Number(n) || 0;
 
-/** Mapa productId -> custo unitário médio (cost_price / (quantity + quantity_sold)). */
+/** Mapa productId -> custo unitário médio — regra única de src/lib/custoProduto.js
+ *  (cost_price é o custo TOTAL do lote; unitário = lote ÷ unidades, DIR-18). */
 function buildCostMap(products) {
   const map = {};
-  for (const p of products) {
-    const totalUnidades = money(p.quantity) + money(p.quantity_sold);
-    map[p.id] = totalUnidades > 0 ? money(p.cost_price) / totalUnidades : money(p.cost_price);
-  }
+  for (const p of products) map[p.id] = custoUnitario(p);
   return map;
 }
 

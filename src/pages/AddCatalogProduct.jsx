@@ -665,6 +665,14 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
       return;
     }
 
+    // 🔴 DIR-18 — regra do dono: "jamais posso ter o custo do produto zerado".
+    // Produto sem custo zera o "Custo do produto" no painel de lucro e infla a
+    // margem — os 15 produtos zerados achados em produção entraram por aqui.
+    if (!formData.cost_price || parseFloat(formData.cost_price) <= 0) {
+      alert('Preencha o preço de custo — produto não pode entrar no estoque com custo zerado');
+      return;
+    }
+
     if (formData.catalog_active && formData.image_urls.length === 0) {
       alert('Por favor, adicione pelo menos uma imagem ao produto');
       return;

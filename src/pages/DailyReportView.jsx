@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { plataforma } from '@/api/plataformaClient';
+import { custoUnitario } from '@/lib/custoProduto';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
@@ -95,7 +96,9 @@ export default function DailyReportView() {
   const getSaleCost = (sale) => {
     if (sale.product_cost && sale.product_cost > 0) return sale.product_cost * (sale.quantity_sold || 1);
     const prod = products[sale.product_id];
-    if (prod && prod.cost_price) return prod.cost_price * (sale.quantity_sold || 1);
+    // 🔴 DIR-18 — cost_price é o custo do LOTE inteiro; o custo desta venda é
+    // o unitário (lote ÷ unidades) × quantidade vendida. Ver src/lib/custoProduto.js.
+    if (prod && prod.cost_price) return custoUnitario(prod) * (sale.quantity_sold || 1);
     return 0;
   };
 

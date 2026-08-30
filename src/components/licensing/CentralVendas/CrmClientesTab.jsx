@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
+import { custoEstoqueRestante } from '@/lib/custoProduto';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
@@ -603,12 +604,12 @@ _Enviado via CRM Leilão NoZap_`;
     leiloeiros: unifiedCustomers.filter(c => c.role_type === 'leiloeiro').length,
     arrematantes: unifiedCustomers.filter(c => c.role_type === 'arrematante').length,
     produtosDisponiveis: availableProducts.length,
-    // 🔴 DIR-10 — usava preço de VENDA ao consumidor (selling_price_retail), que
-    // embute a margem de lucro inteira e nunca bate com o que a empresa realmente
-    // tem investido em estoque. cost_price é o valor real pago pelo produto — é
-    // isso que representa dinheiro parado em estoque, não o quanto renderia se
-    // vendesse tudo pelo preço de tabela.
-    valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.quantity || 0)), 0),
+    // 🔴 DIR-18 — cost_price é o custo TOTAL do lote (é assim que a planilha
+    // importa), não o unitário. A versão anterior (DIR-10) multiplicava por
+    // quantity como se fosse unitário — daí os R$ 50 milhões impossíveis.
+    // custoEstoqueRestante = (custo do lote ÷ unidades do lote) × unidades
+    // ainda em estoque. Ver src/lib/custoProduto.js.
+    valorEstoque: availableProducts.reduce((sum, p) => sum + custoEstoqueRestante(p), 0),
     depositosCarteira,
     volumeVendasBruto,
     // "tudo, tudo, tudo": depósito + venda bruta de Loja/PDV + venda bruta
