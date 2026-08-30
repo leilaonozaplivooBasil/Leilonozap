@@ -546,3 +546,91 @@ estavam.
 dono aplicar manualmente no SQL Editor do Supabase (pipeline automático
 ainda quebrado, mesma pendência da DIR-11) e confirmar. Instruções e SQL
 de verificação passados ao dono no chat.
+
+**Confirmação em produção, mesmo dia:** dono aplicou a política no SQL
+Editor e confirmou (`select * from pg_policies where tablename =
+'financial_income'` → 1 linha, `cmd = SELECT`, `qual = true`). CRM voltou a
+mostrar "Faturamento Total: R$ 1.317,56" (Preview e produção). DIR-12
+efetivamente CONCLUÍDA.
+
+---
+
+## REL-13 — Execução da DIR-13
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono pediu a origem exata dos R$ 1.317,56 depois da DIR-12. A consulta
+   (`select description, category, cost_center, amount, source,
+   received_date from financial_income order by received_date desc,
+   amount desc`) mostrou as 33 linhas — TODAS categoria `comissao_loja`
+   (Loja Virtual), nenhuma `comissao_leilao` nem `taxa_adesao`/
+   `plano_parceiro`, mesmo com ~55 leilões arrematados e taxas de adesão
+   reais cobradas. Isso levantou a suspeita de receita real fora do
+   relatório, não só coincidência.
+2. Workflow de investigação com 3 agentes independentes (leilão, taxas,
+   hook ao vivo) + síntese, todos com leitura de código real (sem
+   suposição). Achados:
+   - **Leilão:** a comissão real (5% indicador + 25% retida) é calculada e
+     paga de verdade a cada martelo, mas em `commission_records`
+     (`finalizeAuctionCore.js`) — nunca ligada a `financial_income`.
+     `catalog_sales.commission_total` é zerado DE PROPÓSITO pra arremate
+     (`storeFulfill.js:54`), pra não aplicar por engano a comissão de 30%
+     da Loja. Não é bug — é uma decisão de escopo nunca tomada.
+   - **Taxas de adesão/plano parceiro:** até ~21–28/08/2026 não existia
+     nem o caminho técnico pra essas cobranças chegarem em `catalog_sales`
+     (o PIX do Plano Parceiro dava 404 em produção — `createPartnerPlanPix.js`).
+     A receita real dessas categorias historicamente mora em tabelas
+     isoladas de qualquer relatório financeiro (`partner_plan_purchases`
+     por ativação manual, `contrato_assinaturas.valor_aporte`, saldo de
+     vendedor no sistema legado Base44). O caminho novo (`mpWebhook.js`,
+     linhas 580/585/590) já chama `registrarReceita` corretamente — só não
+     tem histórico anterior pra recuperar por backfill simples.
+   - **Hook ao vivo — achado mais urgente, lacuna ATIVA:** 4 caminhos de
+     pagamento reais, já em produção, nunca chamavam `registrarReceita`:
+     PDV pago em dinheiro/saldo de comissão/saldo de operação
+     (`createPdvOrder.js`), compra na Loja paga com saldo de comissão do
+     próprio cliente (`payWithBalance.js`), venda do canal Livoo
+     (`livooWebhook.js`), e aprovação manual de pedido
+     (`updateOrderStatus.js` — pior caso, não calcula comissão nem baixa
+     estoque). Isso explica por que nada novo entrou em `financial_income`
+     desde 25/08 mesmo com venda real acontecendo.
+3. Dono decidiu, via pergunta direta: (a) comissão de leilão em
+   `financial_income` — **não mexer agora**; (b) `updateOrderStatus.js` —
+   **bloquear e redirecionar pro fluxo real**.
+4. Implementado:
+   - `createPdvOrder.js`, `payWithBalance.js`, `livooWebhook.js` — chamada
+     a `registrarReceita` adicionada no mesmo ponto em que a comissão já é
+     calculada e gravada em `commission_total`, mesmo padrão de
+     `pdvSettle.js`/`settleAuctionWithBalance.js`.
+   - `updateOrderStatus.js` — bloqueia (`403`) a transição pra
+     `status: 'paid'` quando a venda ainda não estava paga, mesmo
+     princípio do PONTO 115 (`entityWrite.js`). Mensagem de erro explica o
+     porquê e aponta o caminho real.
+**O que NÃO foi feito / blockers:**
+- Comissão de leilão em `financial_income` — adiado por decisão do dono,
+  sem diretiva própria ainda.
+- Backfill histórico de adesão/seller_adhesion do sistema legado (Base44)
+  — teria que "traduzir" schema de tabelas com semântica diferente
+  (`partner_plan_purchases`, `contrato_assinaturas`, saldo de vendedor);
+  não autorizado nesta diretiva.
+- **Efeito colateral a observar:** `CatalogOrdersAdmin.jsx` tem um dropdown
+  manual que deixa o admin escolher "Pago" pra um pedido "Aguardando
+  Pagamento" (linha ~982, `handleSaveOrder`) — com o bloqueio novo, essa
+  ação específica passa a ser recusada com a mensagem de erro acima. Se
+  esse botão for usado de verdade pra confirmar pagamento fora do sistema
+  (ex.: transferência bancária manual), avisar — precisa de uma rota nova
+  que calcule comissão e registre receita corretamente, não só destravar
+  o PATCH de novo.
+**Testes:** 420/420 (sem teste novo — mudança é integração com serviço
+externo/gateway, não função pura isolável).
+**Build:** exit 0.
+**Confirmação de escopo:** só os 4 arquivos citados e a documentação foram
+tocados. Nenhuma migration nova, nenhuma mudança na regra de reconhecimento
+de receita (DIR-7), nenhuma mudança em `finalizeAuctionCore.js`/
+`commission_records`.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado). Comissão de leilão e
+backfill histórico de adesão ficam como pendência separada, sem diretiva
+própria, aguardando decisão futura do dono.

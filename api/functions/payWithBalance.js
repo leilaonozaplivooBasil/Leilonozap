@@ -3,6 +3,7 @@
 // Toda a validação (preço, estoque, saldo) e a baixa acontecem ATÔMICAS na função SQL comprar_com_saldo.
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
+import { registrarReceita } from '../_lib/financialIncome.js';
 
 import { exigirSessao } from '../_lib/sessao.js';
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -135,6 +136,11 @@ export default async function handler(req, res) {
         commission = r?.commission || 0;
       }
     } catch (e) { console.error('fulfillStoreOrder (saldo) falhou:', e?.message || e); }
+    // 💰 DIR-13 — compra com saldo de comissão nunca passa pelo webhook do
+    // Mercado Pago: sem isto, essa comissão real nunca chegava a financial_income.
+    if (commission > 0) {
+      await registrarReceita({ description: `Comissão — venda #${data.sale_id}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: commission, source: 'venda', saleId: data.sale_id });
+    }
 
     // novo_saldo já vem descontado do frete (a reserva aconteceu ANTES do RPC)
     return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, shipping: frete.valor, total_cobrado: round2(Number(data.total || 0) + frete.valor), novo_saldo: data.novo_saldo, tracking: data.tracking, commission });

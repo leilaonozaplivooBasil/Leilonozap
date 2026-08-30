@@ -5,6 +5,7 @@
 import { verifyLivooSignature } from '../_lib/livoo/webhook.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 import { oid } from '../_lib/oid.js';
+import { registrarReceita } from '../_lib/financialIncome.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -47,7 +48,15 @@ async function processEvent(event) {
         sale_price: net, total_amount: net, quantity: Number(d.quantity || 1), status: 'paid', payment_method: d.payment_method || 'livoo_live',
         livoo_order_id: d.order_id || null, created_date: new Date().toISOString(),
       }) });
-      if (sellerId && net > 0) { const c = await payDirectCommissions({ saleId, sellerId, total: net }); if (c > 0) await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: c }) }); }
+      if (sellerId && net > 0) {
+        const c = await payDirectCommissions({ saleId, sellerId, total: net });
+        if (c > 0) {
+          await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: c }) });
+          // 💰 DIR-13 — venda do canal Livoo nunca passa pelo webhook do Mercado
+          // Pago: sem isto, a comissão real nunca chegava a financial_income.
+          await registrarReceita({ description: `Comissão — venda live #${saleId}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: c, source: 'venda', saleId });
+        }
+      }
       break;
     }
     case 'order.refunded':

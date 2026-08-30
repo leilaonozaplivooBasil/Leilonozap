@@ -12,47 +12,24 @@
 
 ---
 
-## DIR-12 — RLS sem política de leitura em `financial_income`
-
-**Emitida por:** Claude, via achado técnico (leitura de código + precedente
-já registrado no próprio repositório — mesma falha documentada em
-`supabase/migrations/20260805_system_logs_politica_insert.sql` e
-`20260806_contrato_assinaturas.sql`), confirmado pelo dono com prints
-mostrando "Faturamento Total: R$ 0,00" tanto no Preview quanto em produção
-(`leilaonozap.net`), mesmo depois do backfill já confirmado direto no banco
-(REL-11: 33 linhas, R$ 1.317,56).
-**Data:** 30/08/2026.
-**Objetivo:** a migration que criou `financial_income` (DIR-7) ligou RLS
-(`enable row level security`) mas nunca criou política de leitura — nem na
-migration, nem manualmente depois, diferente de toda tabela antiga do
-projeto (que ganhou essa política fora do controle de versão quando o
-banco foi montado). PostgREST, com RLS ligada e zero política aplicável,
-devolve lista vazia pro client sem erro — o dado real sempre esteve na
-tabela, só não tinha permissão de leitura pela chave anon/publishable que
-o front usa (`src/api/supabaseClient.js`). Isso explica o zero tanto no
-"Faturamento Total" do CRM quanto em qualquer outra tela que leia
-`financial_income` direto do client (ex.: aba "Receitas" do Financeiro).
-**Escopo autorizado:** uma migration SQL criando
-`CREATE POLICY ... FOR SELECT USING (true)` em `financial_income`, mesmo
-padrão já usado em `contrato_assinaturas_select`.
-**Fora do escopo / proibido:** RLS de qualquer outra tabela; a regra de
-reconhecimento de receita (DIR-7); o cálculo do CRM/Financeiro em si (já
-estava correto — só faltava a permissão de leitura no banco).
-**Regras fixas:** nenhuma além da DIR-5 a DIR-11. Mesma ressalva da DIR-11:
-o deploy automático de migração continua quebrado (pendência abaixo), então
-esta migration também precisa ser conferida/aplicada manualmente no SQL
-Editor até o segredo `SUPABASE_ACCESS_TOKEN` ser corrigido.
-**Status:** EM VIGOR — aguardando o dono aplicar a migration manualmente no
-SQL Editor (mesmo passo da DIR-11) e confirmar.
-
----
-
 ## Estado agora
 
-CRM e Financeiro (Fase 1 e Fase 2 completas + backfill do histórico real)
-têm a lógica e os dados corretos, mas a leitura de `financial_income` pelo
-client está bloqueada pela falta de política de RLS (ver DIR-12 acima) —
-por isso ainda aparece R$ 0,00 até a migration da DIR-12 ser aplicada.
+**Nenhuma diretiva em vigor.** DIR-1 a DIR-13 concluídas (ver
+`docs/RELATORIOS_EXECUCAO.md` e `docs/HISTORICO_DIRETIVAS.md`). CRM e
+Financeiro têm a lógica, os dados e a leitura (RLS) corretos — "Faturamento
+Total" confirmado em R$ 1.317,56 (Preview e produção) depois da DIR-12. Os
+3 hooks de comissão que faltavam (PDV dinheiro/saldo, saldo de comissão na
+Loja, Livoo) foram ligados a `financial_income` na DIR-13, e a aprovação
+manual de pedido (`updateOrderStatus.js`) não deixa mais uma venda virar
+"paga" sem calcular comissão nem avisar o financeiro.
+
+**Efeito colateral da DIR-13 a observar:** o dropdown manual de
+`CatalogOrdersAdmin.jsx` que deixava o admin marcar um pedido "Aguardando
+Pagamento" como "Pago" na mão agora é recusado (mensagem explicando o
+porquê). Se esse botão for realmente necessário pra confirmar pagamento
+fora do sistema (ex.: transferência bancária manual), isso precisa de uma
+diretiva própria pra construir uma rota nova que calcule comissão e
+registre receita — não só destravar o PATCH de novo.
 
 **Achado crítico de infraestrutura, fora do escopo de código, aguardando o
 dono (ver `REL-11`):** o deploy automático de migração
@@ -76,6 +53,17 @@ Pendências ainda abertas, sem diretiva própria no momento:
 - Migration `20260828_financial_expenses_payment_account.sql` (de outra
   frente, não desta sessão) — status em produção não confirmado; mesmo
   risco do pipeline quebrado pode se aplicar a ela também.
+- **Comissão de leilão em `financial_income`** (achado na DIR-13,
+  explicitamente adiado pelo dono): a comissão retida do leilão (25% a
+  cada martelo) já é calculada e paga de verdade em `commission_records`,
+  mas nunca aparece no Financeiro/CRM. Decidir se e quando isso deve
+  passar a contar como receita.
+- **Backfill histórico de adesão/seller_adhesion legado** (achado na
+  DIR-13): receita real de adesão de vendedor e plano parceiro anterior a
+  ~21-28/08/2026 mora em tabelas com semântica diferente
+  (`partner_plan_purchases`, `contrato_assinaturas`, saldo de vendedor do
+  Base44) — recuperar isso não é um backfill simples, é decisão de
+  negócio se vale o esforço de "traduzir" esse histórico.
 
 **Nenhuma implementação nova começa até uma diretiva nova ser registrada
 aqui,** no formato de `docs/PADRAO_DIRETIVAS.md`.

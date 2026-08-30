@@ -248,3 +248,81 @@ mergeada (PR #145, commit `67039789`), mas o deploy automático
 `REL-11`). O dono aplicou o SQL manualmente no SQL Editor do Supabase em
 30/08/2026, confirmado: 33 linhas inseridas, R$ 1.317,56 de receita real.
 Ver `REL-11`.
+
+---
+
+## DIR-12 — RLS sem política de leitura em `financial_income`
+
+**Emitida por:** Claude, via achado técnico (leitura de código + precedente
+já registrado no próprio repositório — mesma falha documentada em
+`supabase/migrations/20260805_system_logs_politica_insert.sql` e
+`20260806_contrato_assinaturas.sql`), confirmado pelo dono com prints
+mostrando "Faturamento Total: R$ 0,00" tanto no Preview quanto em produção
+(`leilaonozap.net`), mesmo depois do backfill já confirmado direto no banco
+(REL-11: 33 linhas, R$ 1.317,56).
+**Data:** 30/08/2026.
+**Objetivo:** a migration que criou `financial_income` (DIR-7) ligou RLS
+(`enable row level security`) mas nunca criou política de leitura — nem na
+migration, nem manualmente depois, diferente de toda tabela antiga do
+projeto (que ganhou essa política fora do controle de versão quando o
+banco foi montado). PostgREST, com RLS ligada e zero política aplicável,
+devolve lista vazia pro client sem erro — o dado real sempre esteve na
+tabela, só não tinha permissão de leitura pela chave anon/publishable que
+o front usa (`src/api/supabaseClient.js`). Isso explica o zero tanto no
+"Faturamento Total" do CRM quanto em qualquer outra tela que leia
+`financial_income` direto do client (ex.: aba "Receitas" do Financeiro).
+**Escopo autorizado:** uma migration SQL criando
+`CREATE POLICY ... FOR SELECT USING (true)` em `financial_income`, mesmo
+padrão já usado em `contrato_assinaturas_select`.
+**Fora do escopo / proibido:** RLS de qualquer outra tabela; a regra de
+reconhecimento de receita (DIR-7); o cálculo do CRM/Financeiro em si (já
+estava correto — só faltava a permissão de leitura no banco).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-11.
+**Status:** CONCLUÍDA. Migration `20260830_financial_income_rls_select.sql`
+commitada e aplicada manualmente pelo dono no SQL Editor do Supabase no
+mesmo dia — confirmado por consulta direta (`pg_policies` passou de 0 pra
+1 linha, `cmd = SELECT`). CRM voltou a mostrar "Faturamento Total: R$
+1.317,56" em Preview e produção. Ver `REL-12`.
+
+---
+
+## DIR-13 — Hooks ao vivo faltando + fechar buraco de "paid" sem regra
+
+**Emitida por:** Claude, via achado técnico (workflow de investigação com 3
+agentes independentes, pedido do dono depois de ver que nenhuma linha nova
+entrou em `financial_income` desde 25/08 mesmo com venda acontecendo) +
+decisão do dono, via pergunta direta: (1) comissão de leilão em
+`financial_income` — **não mexer agora**; (2) `updateOrderStatus.js`
+marcando venda como paga sem regra nenhuma — **bloquear e redirecionar
+pro fluxo real**.
+**Data:** 30/08/2026.
+**Objetivo:** achados 4 caminhos de pagamento reais, já em produção, que
+nunca chamam `registrarReceita` (`api/_lib/financialIncome.js`): PDV pago
+em dinheiro/saldo de comissão/saldo de operação (`createPdvOrder.js`),
+compra na Loja Virtual paga com saldo de comissão do próprio cliente
+(`payWithBalance.js`), venda do canal Livoo (`livooWebhook.js`), e
+aprovação manual de pedido (`updateOrderStatus.js` — pior caso: nem
+calcula comissão nem baixa estoque, só troca o `status`). Isso explica por
+que nada novo entrou em `financial_income` desde 25/08/2026 mesmo com
+venda real acontecendo — o hook ao vivo cobre só 3 dos ~7 caminhos que
+existem (Mercado Pago webhook, arremate por saldo, PDV via PIX/cartão).
+**Escopo autorizado:**
+1. `createPdvOrder.js`, `payWithBalance.js`, `livooWebhook.js` — adicionar
+   chamada a `registrarReceita` no mesmo ponto em que a comissão já é
+   calculada e gravada em `commission_total`, mesmo padrão já usado em
+   `pdvSettle.js`/`settleAuctionWithBalance.js`.
+2. `updateOrderStatus.js` — bloquear a transição pra `status: 'paid'`
+   quando a venda ainda não estava paga (mesmo princípio do PONTO 115 em
+   `entityWrite.js`: "virar paga" tem rota própria, que já calcula
+   comissão e regista receita — esta rota administra fulfillment depois
+   que a venda já está paga, não decide que dinheiro entrou).
+**Fora do escopo / proibido:** comissão de leilão/arremate em
+`financial_income` (adiado, decisão do dono); backfill histórico de
+adesão/seller_adhesion do sistema legado (Base44); qualquer mudança na
+regra de reconhecimento de receita da DIR-7; qualquer mudança em
+`finalizeAuctionCore.js`/`commission_records`.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-12.
+**Status:** CONCLUÍDA (escopo autorizado). PR ainda não mergeada nesta
+sessão — commit direto na branch de trabalho. Comissão de leilão e
+backfill histórico de adesão ficam pendência à parte, sem diretiva
+própria. Ver `REL-13`.
