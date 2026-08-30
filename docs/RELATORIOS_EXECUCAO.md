@@ -1471,9 +1471,14 @@ nome/e-mail.
    AUTO-EXPANDE o caminho até os achados (teto de 40 pra busca genérica
    não abrir a árvore inteira); Enter segue centralizando; placeholder
    agora diz o que a busca aceita.
-3. Alternador "⭐ Executivos no topo": cada Sócio Executivo
-   (executivo_conta, aliases legados valem) vira raiz no topo com a
-   própria subárvore; resto da floresta abaixo; escolha lembrada no
-   navegador. SÓ VISUAL — nenhum vínculo de indicação muda.
+3. Alternador "⭐ Diretoria no topo" (ajustado na hora pelo dono:
+   "quando falo executivos digo TODA a diretoria que recebe os 10%, até
+   o Embaixador"): TODO o bloco 'diretor' do plano de carreira (CEO,
+   Diretoria Executiva, Diretor Operacional, Fundador, Conselheiro,
+   Embaixador, Livoo Live, Sócio Executivo, Trainee) vira raiz no topo,
+   ordenado por peso institucional (CEO primeiro) e tamanho do time,
+   cada um MANTENDO a própria árvore de ligações pendurada; resto da
+   floresta abaixo; escolha lembrada no navegador. SÓ VISUAL — nenhum
+   vínculo de indicação muda.
 **Testes:** 559/559 (10 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview e "pode".

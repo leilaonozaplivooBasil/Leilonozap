@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { levelColor as getCareerColor, getLevel, normalizeLevels } from '@/lib/careerLevels';
+import { levelColor as getCareerColor, getLevel, normalizeLevels, CAREER_LEVELS } from '@/lib/careerLevels';
 import { pessoaBateBusca } from '@/lib/buscaPessoa';
 import { resolveEffectiveExecutive, requiresExecutive } from '@/lib/executiveStructure';
 import SeloCargo from '@/components/network/SeloCargo';
@@ -173,21 +173,28 @@ export default function TreeHierarchy({
     rs.forEach(sortRec);
     rs.sort((a, b) => b.children.length - a.children.length);
 
-    // ⭐ DIR-33 — "Executivos no topo": cada Sócio Executivo vira RAIZ no topo
-    // com a própria subárvore (só a VISUALIZAÇÃO muda — nenhum vínculo de
-    // indicação é alterado). O resto da floresta continua abaixo.
+    // ⭐ DIR-33 (ajuste do dono, 30/08): "Diretoria no topo" — TODA a
+    // diretoria do pool dos 10% (bloco 'diretor' do plano de carreira: CEO,
+    // Diretoria Executiva, Diretor Operacional, Fundador, Conselheiro,
+    // Embaixador, Livoo Live, Sócio Executivo, Trainee) vira RAIZ no topo,
+    // cada um MANTENDO a própria árvore de ligações pendurada abaixo. Só a
+    // visualização muda — nenhum vínculo de indicação é alterado. Ordem:
+    // peso institucional (CEO primeiro), depois tamanho do time.
     if (execTopo) {
-      const ehExec = (u) => normalizeLevels(u.career_levels).includes('executivo_conta');
-      const executivos = [];
+      const DIRETORIA_IDS = new Set(CAREER_LEVELS.filter((l) => l.bloco === 'diretor').map((l) => l.id));
+      const PESO = { ceo: 1, diretoria_executiva: 2, diretoria_operacao: 3, fundador: 4, conselheiro: 5, embaixador: 6, livoo_live: 7, executivo_conta: 8, trainee_diretor: 9 };
+      const cargosDiretoria = (u) => normalizeLevels(u.career_levels).filter((id) => DIRETORIA_IDS.has(id));
+      const pesoDe = (u) => Math.min(...cargosDiretoria(u).map((id) => PESO[id] ?? 99));
+      const diretoria = [];
       for (const node of map.values()) {
-        if (!ehExec(node)) continue;
+        if (!cargosDiretoria(node).length) continue;
         const pai = node.referred_by_id ? map.get(node.referred_by_id) : null;
         if (pai) pai.children = pai.children.filter((c) => c.id !== node.id);
-        executivos.push(node);
+        diretoria.push(node);
       }
-      executivos.sort((a, b) => b.children.length - a.children.length);
-      const restantes = rs.filter((r) => !executivos.includes(r));
-      return { roots: [...executivos, ...restantes], byId: map };
+      diretoria.sort((a, b) => (pesoDe(a) - pesoDe(b)) || (b.children.length - a.children.length));
+      const restantes = rs.filter((r) => !diretoria.includes(r));
+      return { roots: [...diretoria, ...restantes], byId: map };
     }
     return { roots: rs, byId: map };
   }, [users, execTopo]);
@@ -599,14 +606,14 @@ export default function TreeHierarchy({
         <button
           type="button"
           onClick={() => { setExecTopo((v) => !v); setDidFit(false); }}
-          title="Mostrar cada Sócio Executivo como raiz no topo, com a estrutura dele abaixo — nenhum vínculo muda, é só a visualização"
+          title="Toda a diretoria do pool dos 10% (CEO, Diretorias, Fundadores, Conselheiros, Embaixador, Livoo Live, Sócios Executivos) como raízes no topo, cada um com a própria árvore de ligações abaixo — nenhum vínculo muda, é só a visualização"
           className={`flex items-center gap-1.5 rounded-lg border px-2.5 h-10 sm:h-auto sm:py-1.5 text-[12.5px] transition-colors ${
             execTopo
               ? 'border-amber-400/60 bg-amber-500/15 text-amber-300'
               : 'border-gray-700 bg-gray-800 text-gray-400 hover:text-gray-200'
           }`}
         >
-          ⭐ Executivos no topo
+          ⭐ Diretoria no topo
         </button>
 
         {/* 📱 no celular a busca ocupa a linha inteira — encolhida ela cortava o texto */}
