@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Users, UserPlus, Search, Filter, Mail, Phone, Edit, X, Save, Send, UserCheck, UserX, CheckCircle, Package,
-  Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert
+  Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
