@@ -191,3 +191,258 @@ mexer em `financial_income` (DIR-7).
 **Regras fixas:** nenhuma além da DIR-5/6/7/8.
 **Status:** CONCLUÍDA. PR #134 mergeado por squash em `main` (commit
 `4ebecf54`), CI verde. Ver `REL-9`.
+
+---
+
+## DIR-10 — CRM: dono vê o negócio inteiro, rede vê só a própria rede (Fase 1)
+
+**Emitida por:** dono (Luiz), diretamente, depois de pedir análise sênior do
+CRM (print com quase todos os cards zerados apesar de vendas, usuários e
+estoque reais).
+**Data:** 27/08/2026.
+**Objetivo:** 5 causas raiz independentes pros zeros, confirmadas por
+leitura de código: escopo de rede aplicado até pro dono; campo de venda
+errado (`licensee_id` sozinho); "Volume em Negociação" chamando função de
+servidor inexistente; "Produtos em Estoque" sem filtro `catalog_active`;
+"Arrematantes" checando coluna TEXT como se fosse objeto. Regra confirmada
+com o dono: rede continua vendo só a própria rede; só `super_admin` vê o
+negócio inteiro. Achados adicionais no Preview corrigidos na mesma PR:
+"Valor de Mercado em Estoque" usava preço de venda, não custo real;
+"Faturamento Total" somava valor cheio da venda, não a comissão real
+(mesmo erro da DIR-7) — trocado por somar `financial_income`; tooltip ⓘ em
+todo card, pedido do dono ("painel precisa ser intuitivo").
+**Escopo autorizado:** bypass do filtro de rede pra `super_admin`; correção
+do campo de venda pra visão de rede; troca da função de negociação
+inexistente; filtro de estoque correto; cálculo de arrematante por dado
+real; correção de estoque/faturamento pro valor real; tooltips explicativos.
+**Fora do escopo / proibido:** persistência automática em `customers`;
+unificação da tabela `sellers` com o papel calculado; RLS do Supabase.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-9.
+**Status:** CONCLUÍDA. PR #145 mergeado por squash em `main` (commit
+`67039789`), CI verde. Ver `REL-10`.
+
+---
+
+## DIR-11 — Backfill de financial_income com o histórico real
+
+**Emitida por:** dono (Luiz), diretamente, depois de ver "Faturamento
+Total: R$ 0,00" no Preview da DIR-10 e pedir pra "puxar tudo dado real:
+pagamento das lojas, depósitos, venda e etc".
+**Data:** 28/08/2026.
+**Objetivo:** `financial_income` (DIR-7) nasceu vazia de propósito — grava
+só a partir de agora. Migration única e idempotente que popula o
+livro-razão com o histórico real de `catalog_sales`, usando A MESMA regra
+já em vigor no código ao vivo (DIR-7): comissão de venda liquidada (não o
+valor cheio) e taxa sem repasse (valor cheio). Depósito de saldo/carteira/
+operação, passaporte, frete de vendedor e reposição de estoque continuam
+FORA — mesmo motivo da DIR-7, não foi reaberto.
+**Escopo autorizado:** uma migration SQL (`INSERT ... SELECT` a partir de
+`catalog_sales`, com `NOT EXISTS` por `sale_id`).
+**Fora do escopo / proibido:** incluir depósito/passaporte/frete/reposição
+no backfill; mudar a regra de reconhecimento de receita da DIR-7.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-10.
+**Status:** CONCLUÍDA — com um detalhe importante. A migration foi
+mergeada (PR #145, commit `67039789`), mas o deploy automático
+(`.github/workflows/deploy-migrations.yml`) estava quebrado nesse momento
+(`SUPABASE_ACCESS_TOKEN` com formato inválido — achado à parte, ver
+`REL-11`). O dono aplicou o SQL manualmente no SQL Editor do Supabase em
+30/08/2026, confirmado: 33 linhas inseridas, R$ 1.317,56 de receita real.
+Ver `REL-11`.
+
+---
+
+## DIR-12 — RLS sem política de leitura em `financial_income`
+
+**Emitida por:** Claude, via achado técnico (leitura de código + precedente
+já registrado no próprio repositório — mesma falha documentada em
+`supabase/migrations/20260805_system_logs_politica_insert.sql` e
+`20260806_contrato_assinaturas.sql`), confirmado pelo dono com prints
+mostrando "Faturamento Total: R$ 0,00" tanto no Preview quanto em produção
+(`leilaonozap.net`), mesmo depois do backfill já confirmado direto no banco
+(REL-11: 33 linhas, R$ 1.317,56).
+**Data:** 30/08/2026.
+**Objetivo:** a migration que criou `financial_income` (DIR-7) ligou RLS
+(`enable row level security`) mas nunca criou política de leitura — nem na
+migration, nem manualmente depois, diferente de toda tabela antiga do
+projeto (que ganhou essa política fora do controle de versão quando o
+banco foi montado). PostgREST, com RLS ligada e zero política aplicável,
+devolve lista vazia pro client sem erro — o dado real sempre esteve na
+tabela, só não tinha permissão de leitura pela chave anon/publishable que
+o front usa (`src/api/supabaseClient.js`). Isso explica o zero tanto no
+"Faturamento Total" do CRM quanto em qualquer outra tela que leia
+`financial_income` direto do client (ex.: aba "Receitas" do Financeiro).
+**Escopo autorizado:** uma migration SQL criando
+`CREATE POLICY ... FOR SELECT USING (true)` em `financial_income`, mesmo
+padrão já usado em `contrato_assinaturas_select`.
+**Fora do escopo / proibido:** RLS de qualquer outra tabela; a regra de
+reconhecimento de receita (DIR-7); o cálculo do CRM/Financeiro em si (já
+estava correto — só faltava a permissão de leitura no banco).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-11.
+**Status:** CONCLUÍDA. Migration `20260830_financial_income_rls_select.sql`
+commitada e aplicada manualmente pelo dono no SQL Editor do Supabase no
+mesmo dia — confirmado por consulta direta (`pg_policies` passou de 0 pra
+1 linha, `cmd = SELECT`). CRM voltou a mostrar "Faturamento Total: R$
+1.317,56" em Preview e produção. Ver `REL-12`.
+
+---
+
+## DIR-13 — Hooks ao vivo faltando + fechar buraco de "paid" sem regra
+
+**Emitida por:** Claude, via achado técnico (workflow de investigação com 3
+agentes independentes, pedido do dono depois de ver que nenhuma linha nova
+entrou em `financial_income` desde 25/08 mesmo com venda acontecendo) +
+decisão do dono, via pergunta direta: (1) comissão de leilão em
+`financial_income` — **não mexer agora**; (2) `updateOrderStatus.js`
+marcando venda como paga sem regra nenhuma — **bloquear e redirecionar
+pro fluxo real**.
+**Data:** 30/08/2026.
+**Objetivo:** achados 4 caminhos de pagamento reais, já em produção, que
+nunca chamam `registrarReceita` (`api/_lib/financialIncome.js`): PDV pago
+em dinheiro/saldo de comissão/saldo de operação (`createPdvOrder.js`),
+compra na Loja Virtual paga com saldo de comissão do próprio cliente
+(`payWithBalance.js`), venda do canal Livoo (`livooWebhook.js`), e
+aprovação manual de pedido (`updateOrderStatus.js` — pior caso: nem
+calcula comissão nem baixa estoque, só troca o `status`). Isso explica por
+que nada novo entrou em `financial_income` desde 25/08/2026 mesmo com
+venda real acontecendo — o hook ao vivo cobre só 3 dos ~7 caminhos que
+existem (Mercado Pago webhook, arremate por saldo, PDV via PIX/cartão).
+**Escopo autorizado:**
+1. `createPdvOrder.js`, `payWithBalance.js`, `livooWebhook.js` — adicionar
+   chamada a `registrarReceita` no mesmo ponto em que a comissão já é
+   calculada e gravada em `commission_total`, mesmo padrão já usado em
+   `pdvSettle.js`/`settleAuctionWithBalance.js`.
+2. `updateOrderStatus.js` — bloquear a transição pra `status: 'paid'`
+   quando a venda ainda não estava paga (mesmo princípio do PONTO 115 em
+   `entityWrite.js`: "virar paga" tem rota própria, que já calcula
+   comissão e regista receita — esta rota administra fulfillment depois
+   que a venda já está paga, não decide que dinheiro entrou).
+**Fora do escopo / proibido:** comissão de leilão/arremate em
+`financial_income` (adiado, decisão do dono); backfill histórico de
+adesão/seller_adhesion do sistema legado (Base44); qualquer mudança na
+regra de reconhecimento de receita da DIR-7; qualquer mudança em
+`finalizeAuctionCore.js`/`commission_records`.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-12.
+**Status:** CONCLUÍDA (escopo autorizado). PR ainda não mergeada nesta
+sessão — commit direto na branch de trabalho. Comissão de leilão e
+backfill histórico de adesão ficam pendência à parte, sem diretiva
+própria. Ver `REL-13`.
+
+---
+
+## DIR-14 — Comissão de leilão em financial_income + volume de depósito no CRM
+
+**Emitida por:** dono (Luiz), via pergunta direta (`AskUserQuestion`) depois
+de ver "Faturamento Total: R$ 1.317,56" continuar sem a receita de leilão:
+"Sim, incluir agora (a partir de hoje + histórico)" — reabrindo a decisão
+da DIR-13, que tinha adiado isso. No mesmo momento, pediu também (mensagem
+direta): "quero saber tudo que entra no CRM, também depósito em carteira
+digital, pra saber volume financeiro".
+**Data:** 30/08/2026.
+**Objetivo:**
+1. A comissão retida do leilão (25% do valor do arremate a cada martelo,
+   ou os 30% inteiros quando não tem indicador) é receita real da empresa
+   — decisão expressa do dono já documentada em `finalizeAuctionCore.js`
+   (PONTO 100, 21/08/2026): "é saldo real e sacável... a conta é dele".
+   Já era calculada e creditada corretamente em `commission_records`
+   (`role='leilao_retido'`), só nunca tinha sido ligada a
+   `financial_income` — por isso nunca aparecia no Financeiro/CRM.
+2. O dono quer visibilidade do volume TOTAL que entra na plataforma
+   (depósito em carteira digital), separado da receita — não misturado no
+   "Faturamento Total" (regra da DIR-7 continua valendo: depósito não é
+   receita, só vira receita quando gasto numa compra).
+**Escopo autorizado:**
+1. `api/_lib/finalizeAuctionCore.js` (`reterFatiaDaRede`) — chama
+   `registrarReceita` logo após confirmar o crédito na conta oficial
+   (categoria `comissao_leilao`, cost center `Leilões`).
+2. Migration de backfill (`commission_records` onde
+   `sale_type='leilao' and role='leilao_retido'` → `financial_income`,
+   idempotente por `sale_id`).
+3. **Correção de escopo, mesma diretiva, mesmo dia:** o dono viu o card de
+   depósito isolado e disse explicitamente "eu quero tudo, tudo, tudo" —
+   um número somando depósito + venda bruta de Loja/PDV + venda bruta de
+   leilão, comparável ao que via no Painel de Alavancagem (rede própria).
+   Trocado o card único "Depósitos em Carteira Digital" por um grupo de 3
+   cards: **"Volume Financeiro Total"** (depósito + venda bruta, em
+   destaque), e dois cards de detalhe ao lado ("— Depósitos em carteira" e
+   "— Venda bruta (Loja + Leilão)"). Tooltip de cada um deixa claro que
+   isto é VOLUME, não receita — "Faturamento Total" continua intacto,
+   sem depósito nem valor bruto, porque alimenta o cálculo de imposto do
+   Simples Nacional (`src/lib/simplesNacional.js`) e não pode misturar.
+**Fora do escopo / proibido:** mudar a regra de reconhecimento de receita
+da DIR-7 (depósito e venda bruta continuam fora do "Faturamento Total");
+backfill histórico de adesão/seller_adhesion legado (mesma pendência da
+DIR-13, ainda sem decisão).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-13.
+**Status:** CONCLUÍDA. Migration aplicada manualmente pelo dono no SQL
+Editor e confirmada por consulta direta: `comissao_loja` 33 linhas/
+R$ 1.317,56 + `comissao_leilao` 11 linhas/R$ 49,61 = **R$ 1.367,17** de
+Faturamento Total. Cards de Volume Financeiro Total commitados no código.
+Ver `REL-14`.
+
+---
+
+## DIR-15 — total_spent do CRM contava venda não paga como dinheiro real
+
+**Emitida por:** Claude, via achado técnico — o dono comparou os números do
+CRM com os do Painel de Alavancagem (`NetworkOverview.jsx`, que já tem um
+filtro rigoroso de "dinheiro real") e perguntou "qual está certo, qual
+está errado, não é possível???". Investigando a fonte do "Volume
+Financeiro Total"/"Volume Transacionado" (`crmUnifiedCustomers.js`,
+`total_spent`), achei que ele soma QUALQUER `catalog_sales` — inclusive
+`pending_payment` e `canceled` — como se fosse dinheiro que já entrou.
+**Data:** 30/08/2026.
+**Objetivo:** mesmo defeito de conceito já corrigido em `financial_income`
+(DIR-7) e no filtro `isPaga` do `NetworkOverview.jsx`: venda não paga não é
+dinheiro. Corrigir pra `total_spent`/`purchase_count` (Loja Virtual/PDV)
+só somarem venda com status realmente pago (mesmo conjunto `JA_PAGO` já
+usado em `updateOrderStatus.js`/`CatalogOrdersAdmin.jsx`, cobrindo os dois
+idiomas de status que o banco mistura — PONTO 116).
+**Escopo autorizado:** `src/lib/crmUnifiedCustomers.js` — filtro de status
+pago aplicado às 3 gravações de `total_spent`/`purchase_count` vindas de
+`catalogSales` (conta identificada, avulso existente, avulso novo). Teste
+novo (`tests/crmUnifiedCustomersTotalSpent.test.mjs`) cobrindo paga,
+pendente, cancelada, status em português e comprador avulso.
+**Correção de escopo, mesma diretiva, mesmo dia:** depois de deployado, o
+dono mandou print mostrando "Venda bruta (Loja + Leilão): R$ 228.496,40" —
+impossível, a comissão real de Loja Virtual (R$ 1.317,56) implicaria uns
+R$ 4.400 de venda bruta, não R$ 228 mil. Achei DUAS causas juntas: (1) o
+card usava `unifiedCustomers.total_spent`, que soma TODO `catalog_sales`
+do comprador sem filtrar `kind` — depósito, adesão, plano parceiro e
+passaporte entravam junto, misturados com "venda"; (2) do lado do leilão,
+somava `current_price` de QUALQUER `winner_id`, incluindo os 36 leilões
+"Plano de Investimento" (`is_investment_plan`, R$ 5.000 cada, ~R$ 180 mil)
+— que o próprio motor de comissão do leilão já trata como aporte de
+investimento, não mercadoria vendida (PONTO 109/123,
+`finalizeAuctionCore.js`). Recalculado direto de `networkCatalogSales`/
+`networkAuctions` com os mesmos filtros de `kind` que o Painel de
+Alavancagem usa, excluindo plano de investimento e leilão de teste do
+lado do leilão.
+**Correção FINAL, mesma diretiva, mesmo dia:** dono recusou a explicação de
+"escopo diferente" e exigiu análise escrita ANTES de qualquer novo código
+— "sem achismo, tenha certeza, confirme". Achei o motivo real, por escrito,
+em `docs/MARCO-OFICIAL-AGOSTO-2026.md` (documento oficial já existente,
+hierarquia só abaixo de `VERDADE.md`): "dinheiro real" só conta com status
+pago **E** rastro de gateway (`mp_payment_id`/`stripe_*`) **E**
+`created_date >= 01/08/2026` — antes disso é teste, "sem valor financeiro".
+O Painel de Alavancagem (`NetworkOverview.jsx`) já usa esse critério
+inteiro (`isPaga`+`isDinheiroReal`+`isPosMarco`); o CRM só checava status,
+sem rastro de gateway nem corte de data — por isso ainda sobravam venda de
+teste pré-lançamento. Correção definitiva:
+1. Critério extraído pra `src/lib/dinheiroReal.js` (`isVendaReal`), com
+   teste próprio (`tests/dinheiroReal.test.mjs`, 17 casos) — fonte ÚNICA
+   agora, citando o Marco Oficial no comentário de topo.
+2. `NetworkOverview.jsx` refatorado pra importar dali (dedup, zero mudança
+   de comportamento — mesma função, só não duplicada mais).
+3. `CrmClientesTab.jsx` — `depositosCarteira`/`comprasBrutas` usam
+   `isVendaReal` direto de `networkCatalogSales`; leilão passou a vir de
+   `catalog_sales` (kind='arremate'), não mais da tabela `auctions` —
+   isso elimina de vez a pendência anterior (não dava pra confiar em
+   `auctions.order_status` pra saber se um arremate por PIX/cartão foi
+   pago) porque `isVendaReal` já exige status pago + rastro real na PRÓPRIA
+   venda, sem depender de um campo que não é atualizado em todos os
+   caminhos de pagamento.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-14.
+**Status:** CONCLUÍDA. Código, testes (17 novos) e build passam
+(443/443). Critério agora idêntico, byte a byte, ao do Painel de
+Alavancagem — as duas telas não podem mais divergir, porque é literalmente
+a mesma função (`src/lib/dinheiroReal.js`). Ver `REL-15`.

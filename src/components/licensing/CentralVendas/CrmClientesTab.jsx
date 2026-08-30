@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { isVendaReal } from '@/lib/dinheiroReal';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
@@ -98,8 +99,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadAutoSources = async () => {
     try {
       const [users, sales, auctionsList, income] = await Promise.all([
-        plataforma.entities.AppUser.list('-created_date', 2000),
-        plataforma.entities.CatalogSale.list('-created_date', 2000),
+        plataforma.entities.AppUser.list('-created_date', 5000),
+        // 🔒 DIR-17 — mesma busca do Painel de Alavancagem (NetworkOverview.jsx),
+        // parâmetro por parâmetro: telas que somam o mesmo dinheiro precisam ler
+        // as MESMAS linhas, senão divergem por truncamento e não por lógica.
+        plataforma.entities.CatalogSale.list('-created_date', 5000),
         plataforma.entities.Auction.list('-end_time', 2000),
         plataforma.entities.FinancialIncome.list('-received_date', 5000),
       ]);
@@ -502,6 +506,76 @@ _Enviado via CRM Leilão NoZap_`;
     await loadCustomers();
   };
 
+  // 💰 DIR-14/DIR-15 (30/08/2026) — histórico de 3 tentativas erradas antes
+  // desta, cada uma com filtro caseiro diferente, nenhuma batendo com o
+  // Painel de Alavancagem (NetworkOverview.jsx): primeiro contava depósito
+  // pendente/cancelado; depois misturava depósito+adesão+passaporte na
+  // "venda bruta" e somava leilão de Plano de Investimento (36 registros de
+  // R$ 5.000, ~R$ 180 mil, que não são mercadoria); mesmo depois de tirar
+  // isso, ainda sobrava venda de TESTE (pré-lançamento) e sem rastro de
+  // gateway, porque nenhuma das versões usava o critério oficial.
+  // Critério oficial (docs/MARCO-OFICIAL-AGOSTO-2026.md, seção 1): só é
+  // dinheiro real quem está PAGO + tem RASTRO de gateway (ou pagamento por
+  // saldo interno) + é a partir de 01/08/2026. Extraído pra
+  // src/lib/dinheiroReal.js e agora é o MESMO filtro nas duas telas — não
+  // dá mais pra divergir, porque é a mesma função.
+  // wallet_deposit só (não soma operacao_deposit/commission_deposit aqui,
+  // mesma decisão do Painel de Alavancagem — esse saldo já vira "compra"
+  // quando é gasto, contado em comprasBrutas; somar os dois contaria o
+  // mesmo real duas vezes).
+  const depositosCarteira = networkCatalogSales
+    .filter((s) => s.kind === 'wallet_deposit')
+    .filter(isVendaReal)
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const comprasBrutas = networkCatalogSales
+    .filter((s) => ['loja', 'produto'].includes(s.kind))
+    .filter(isVendaReal)
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  // Leilão vem de catalog_sales (kind='arremate'), não da tabela auctions —
+  // mesma fonte do Painel de Alavancagem. Isso evita de vez o problema do
+  // Plano de Investimento (não gera venda kind='arremate' com rastro real)
+  // e o problema de "arrematado mas não pago" (isVendaReal já exige status
+  // pago + rastro/saldo — um winner_id sozinho na tabela auctions nunca
+  // seria suficiente, é exatamente o que causava a inflação anterior).
+  const leilaoBruto = networkCatalogSales
+    .filter((s) => s.kind === 'arremate')
+    .filter(isVendaReal)
+    .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const volumeVendasBruto = comprasBrutas + leilaoBruto;
+
+  // 📋 Espelho do Painel de Alavancagem (30/08/2026) — pedido do dono: "insira
+  // exatamente as informações que tem lá, não invente". Mesmas fórmulas,
+  // literalmente copiadas de NetworkOverview.jsx (fetchFinanceStats +
+  // conversion), só trocando `allUsers`/`financeStats` (a rede DELE) por
+  // `networkAppUsers`/`networkCatalogSales` (a rede/plataforma de quem está
+  // vendo o CRM) — pra super_admin isso já é a plataforma inteira. "Valor
+  // total gerado" aqui é SÓ depósito + compra de Loja, igual ao Painel de
+  // Alavancagem — não inclui leilão, de propósito, pra ser comparável
+  // número a número, célula a célula.
+  const depositsForConversao = networkCatalogSales.filter((s) => s.kind === 'wallet_deposit').filter(isVendaReal);
+  const operacaoForConversao = networkCatalogSales.filter((s) => s.kind === 'operacao_deposit').filter(isVendaReal);
+  const comprasForConversao = networkCatalogSales.filter((s) => ['loja', 'produto'].includes(s.kind)).filter(isVendaReal);
+  const realSalesParaConversao = [...depositsForConversao, ...operacaoForConversao, ...comprasForConversao];
+  const CONVERSAO_JANELA_DIAS = 30;
+  const cutoff30d = new Date(Date.now() - CONVERSAO_JANELA_DIAS * 24 * 60 * 60 * 1000);
+  const totalNaBase = networkAppUsers.length;
+  const buyerIdsUnicos = new Set(realSalesParaConversao.map((s) => s.buyer_id).filter(Boolean));
+  const novosUltimos30Dias = networkAppUsers.filter((u) => new Date(u.created_date) >= cutoff30d).length;
+  const compradoresRecentesUnicos = new Set(
+    realSalesParaConversao.filter((s) => new Date(s.created_date) >= cutoff30d).map((s) => s.buyer_id).filter(Boolean)
+  );
+  const espelhoPainelAlavancagem = {
+    totalNaBase,
+    novosUltimos30Dias,
+    compradoresUnicos: buyerIdsUnicos.size,
+    conversaoGeral: totalNaBase ? (buyerIdsUnicos.size / totalNaBase) * 100 : 0,
+    compraramUltimos30Dias: compradoresRecentesUnicos.size,
+    taxaRecente: novosUltimos30Dias ? (compradoresRecentesUnicos.size / novosUltimos30Dias) * 100 : 0,
+    depositosCount: depositsForConversao.length,
+    valorTotalGerado: depositosCarteira + comprasBrutas,
+    ticketMedio: buyerIdsUnicos.size ? (depositosCarteira + comprasBrutas) / buyerIdsUnicos.size : 0,
+  };
+
   const stats = {
     total: unifiedCustomers.length,
     leads: unifiedCustomers.filter(c => c.status === 'lead').length,
@@ -535,6 +609,12 @@ _Enviado via CRM Leilão NoZap_`;
     // isso que representa dinheiro parado em estoque, não o quanto renderia se
     // vendesse tudo pelo preço de tabela.
     valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.quantity || 0)), 0),
+    depositosCarteira,
+    volumeVendasBruto,
+    // "tudo, tudo, tudo": depósito + venda bruta de Loja/PDV + venda bruta
+    // de leilão, somados num só número — volume, não receita.
+    volumeFinanceiroTotal: depositosCarteira + volumeVendasBruto,
+    espelhoPainelAlavancagem,
   };
 
   if (!isAdmin) {

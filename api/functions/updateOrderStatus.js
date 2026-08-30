@@ -157,6 +157,25 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, status: 'cancelado', estorno });
     }
 
+    // ══════════════════════════════════════════════════════════════════════════════
+    // 🔴 PONTO 134 (30/08/2026, DIR-13) — "paid" POR AQUI NÃO CALCULA NADA
+    // ══════════════════════════════════════════════════════════════════════════════
+    // Investigação achou 4 caminhos reais de pagamento que nunca avisavam o
+    // financeiro (financial_income) — este era o pior: um PATCH genérico que
+    // marca a venda como paga sem calcular comissão, sem baixar estoque e sem
+    // registrar receita nenhuma. Mesmo princípio do PONTO 115 (entityWrite.js):
+    // "virar paga" tem rota própria — mpWebhook, settleAuctionWithBalance,
+    // payWithBalance, createPdvOrder, pdvSettle, livooWebhook — todas já
+    // calculam comissão e chamam registrarReceita. Esta rota administra
+    // fulfillment DEPOIS que a venda já está paga; não é ela quem decide que
+    // dinheiro entrou.
+    if (status === 'paid' && !JA_PAGO.includes(String(sale.status || '').toLowerCase())) {
+      return res.status(403).json({
+        success: false,
+        error: 'Não é possível marcar como paga por aqui — isso pula o cálculo de comissão e o registro no financeiro. Confirme o pagamento pelo Mercado Pago, PDV, saldo ou Livoo (o fluxo real credita comissão e receita automaticamente).',
+      });
+    }
+
     // PONTO 117: se quem chamou não mandou a etapa explícita (Jornada da
     // Entrega manda), deriva uma coerente a partir do status — "Acompanhar
     // Pedido" (o que o comprador vê) nunca fica desatualizado em relação ao

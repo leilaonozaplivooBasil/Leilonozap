@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
+import { isPaga, isDinheiroReal, isPosMarco } from '@/lib/dinheiroReal';
 
 const AppUser = plataforma.entities.AppUser;
 const Auction = plataforma.entities.Auction;
@@ -565,31 +566,23 @@ export default function NetworkOverview() {
       // em auditarFase1Marco): "dinheiro real" só conta se a venda está PAGA,
       // tem RASTRO de gateway (mp_payment_id/stripe) e é a partir de 01/08/2026
       // (pré-lançamento oficial). Sem os 3 critérios juntos, é teste — não entra.
-      const sales = await plataforma.entities.CatalogSale.list();
+      // Extraído pra src/lib/dinheiroReal.js (30/08/2026) — mesmo critério
+      // agora reaproveitado pelo CRM, pra nunca mais divergir entre telas.
+      // 🔴 DIR-17 (30/08/2026) — era `.list()` sem ordenação nem limite. O
+      // adapter então ordena só por `id` (uuid aleatório, não cronológico) e o
+      // Supabase corta a resposta em 1000 linhas por padrão. Com a tabela
+      // acima de 1000 registros, este painel somava um SUBCONJUNTO ARBITRÁRIO
+      // de 1000 vendas — compras reais ficavam de fora sem aviso (medido:
+      // R$ 903,00 e 1 comprador a menos que o CRM lendo o MESMO banco).
+      // Mesma busca do CRM agora: mais recentes primeiro, limite folgado —
+      // toda venda pós-marco (01/08/2026) cabe com sobra.
+      const sales = await plataforma.entities.CatalogSale.list('-created_date', 5000);
       const list = Array.isArray(sales) ? sales : [];
-      const MARCO_OFICIAL = new Date('2026-08-01T00:00:00Z');
       const hoje = new Date();
       const ehHoje = (dataStr) => {
         const d = new Date(dataStr);
         return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth() && d.getDate() === hoje.getDate();
       };
-      // 🔧 vendas do PDV gravam status em português ("entregue") em vez de
-      // "delivered" — sem isso, pagamentos reais feitos no balcão (ex: a venda
-      // de R$250 da Lenice) ficavam fora da soma por não bater com o enum em inglês.
-      const isPaga = (s) => ['paid', 'shipped', 'delivered', 'entregue'].includes(s.status);
-      // stripe_session_id vem redigido como "[REDACTED]" mesmo quando não é
-      // rastro real — só conta se for um valor de verdade.
-      const temRastroGateway = (s) => Boolean(s.mp_payment_id || s.stripe_payment_intent || (s.stripe_session_id && s.stripe_session_id !== '[REDACTED]'));
-      // 🩹 CAUSA-RAIZ da venda da Elenice (R$450) sumida do painel (19/08/2026):
-      // uma venda de PDV paga com "Saldo de Operação" ou "Saldo de Comissão" é
-      // dinheiro que JÁ entrou de verdade — só que numa etapa ANTERIOR (o
-      // depósito que abasteceu esse saldo). A venda em si é um débito interno,
-      // sem gateway próprio, então o filtro de rastro a jogava fora inteira.
-      // Passa a confiar no payment_method para essas duas formas de pagamento
-      // internas, sem exigir rastro de gateway NESTA linha.
-      const PAGAMENTOS_SALDO_INTERNO = ['operacao', 'saldo'];
-      const isDinheiroReal = (s) => temRastroGateway(s) || PAGAMENTOS_SALDO_INTERNO.includes(s.payment_method);
-      const isPosMarco = (s) => new Date(s.created_date) >= MARCO_OFICIAL;
       const isReal = (s) => isPaga(s) && isDinheiroReal(s) && isPosMarco(s);
       const deposits = list.filter(s => s.kind === 'wallet_deposit' && isReal(s));
       const purchases = list.filter(s => (s.kind === 'loja' || s.kind === 'produto') && isReal(s));

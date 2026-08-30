@@ -153,3 +153,41 @@ select count(*) from information_schema.columns
 ```
 
 `1` = entrou. `0` = não entrou, independentemente do que o CI disse.
+
+---
+
+## Terceira causa: tabela nova sem política de RLS não é lida pelo client
+
+Descoberto em 30/08/2026 (DIR-12): `financial_income` (criada em 27/08, DIR-7)
+tinha `enable row level security` mas **nenhuma política de leitura**. Toda
+tabela antiga do projeto ganhou essa política manualmente, fora do controle de
+versão, quando o banco foi montado a partir do Base44 — só 3 migrations do
+repositório inteiro criam política explícita:
+
+```
+20260805_system_logs_politica_insert.sql
+20260806_contrato_assinaturas.sql
+20260806_oportunidades_do_dia.sql
+```
+
+Sem política, `select` pela chave anon/publishable (é o que o front usa,
+`src/api/supabaseClient.js`) **não dá erro** — PostgREST só devolve lista
+vazia. Parece "sem dado", mas o dado está lá (confirme com
+`select count(*) from public.<tabela>;` direto no SQL Editor, que roda com
+privilégio de serviço e ignora RLS).
+
+**Regra pra qualquer tabela nova a partir de agora:** depois de criar a
+tabela e ligar RLS, sempre criar pelo menos uma política de leitura na MESMA
+migration (`create policy ... for select using (true)` quando o controle de
+acesso já é feito na camada de aplicação, como é o padrão deste projeto — ver
+`contrato_assinaturas_select` como referência). Escrita continua exclusiva do
+`service_role` sempre que possível (as rotas de `api/` já fazem isso).
+
+Verificar se uma tabela tem política de leitura:
+
+```sql
+select policyname, cmd, qual from pg_policies where tablename = 'minha_tabela';
+```
+
+Zero linhas com `cmd = 'SELECT'` (ou `ALL`) = client não lê nada dessa
+tabela, mesmo com dado real dentro.

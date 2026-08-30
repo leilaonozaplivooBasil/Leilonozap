@@ -12,103 +12,126 @@
 
 ---
 
-## DIR-10 — CRM: dono vê o negócio inteiro, rede vê só a própria rede (Fase 1)
+## DIR-17 — Painel de Alavancagem somava um subconjunto arbitrário de 1000 vendas
 
-**Emitida por:** dono (Luiz), diretamente, depois de pedir análise sênior do
-CRM (print da tela "CRM - Gestão de Clientes" com quase todos os cards
-zerados apesar de vendas, usuários e estoque reais).
-**Data:** 27/08/2026.
-**Objetivo:** investigação de código encontrou 5 causas raiz independentes
-pros zeros, confirmadas por leitura direta (arquivo/linha), sem suposição.
-Regra confirmada com o dono antes de corrigir: o CRM PRECISA continuar
-puxando de verdade "de mim pra baixo" pra quem tem rede de indicação
-(licenciado/vendedor só vê a própria rede — senão o CRM vira uma lista de
-clientes de todo mundo, inútil pra ele); só o **super_admin** enxerga o
-negócio inteiro, circulando entre todas as estruturas, sem filtro nenhum.
-**Escopo autorizado:**
-1. `src/lib/crmUnifiedCustomers.js` e
-   `src/components/licensing/CentralVendas/CrmClientesTab.jsx` ganham um
-   bypass do filtro de rede quando `currentUser.role === 'super_admin'` —
-   nesse caso, todos os `AppUser`/`CatalogSale`/`Auction` entram, sem passar
-   por `getNetworkDescendantIds`.
-2. Pra quem NÃO é super_admin (visão de rede normal), corrigir o campo usado
-   pra achar "de quem é a venda" — hoje só olha `licensee_id`, mas a venda
-   real pode estar em `seller_id`/`anchor_id`/`owner_id` dependendo do canal
-   (mesma constatação já usada em `LicenseeOrders.jsx`).
-3. "Volume em Negociação" chamava uma função de servidor
-   (`/api/functions/adminDataProxy`) que nunca existiu no projeto — sempre
-   404, sempre zero. Trocar pelo mesmo caminho genérico de entidade já usado
-   por Customer/Seller/etc (`Negotiation` já está mapeada no adapter).
-4. "Produtos em Estoque" buscava só os 500 produtos mais recentes por data
-   de criação, sem o filtro `catalog_active` usado na vitrine pública — podia
-   nunca alcançar o estoque real. Usar o mesmo filtro do catálogo.
-5. "Arrematantes" checava uma coluna (`arrematante_context`) que é TEXT no
-   banco, tratada como se fosse objeto (`.enabled`) — nunca funciona, e
-   ninguém escreve esse campo. Trocar por dado real: quem tem
-   `Auction.winner_id` de verdade vira "arrematante" (só se nenhum papel
-   mais específico — leiloeiro/investidor/influencer/vendedor/licenciado —
-   já se aplicar).
-**Fora do escopo / proibido (fica pra Fase 2, registrada mas não iniciada):**
-- Persistir automaticamente em `customers` quando uma venda/arremate
-  acontece (hoje é só calculado na tela, nada é gravado) — mudança de
-  arquitetura de dados, diretiva própria.
-- Unificar a tabela `sellers` (cadastro manual "Novo Vendedor") com o papel
-  "Vendedor" calculado a partir de `app_users.is_seller` — hoje são dois
-  "vendedor" desconectados; decisão de qual vira fonte única fica pra depois.
-- Checar/corrigir RLS (Row Level Security) do Supabase — não confirmável só
-  por código; peço ao dono conferir no painel do Supabase se `customers`,
-  `sellers` e `negotiations` têm policy de leitura pra `anon`/`authenticated`
-  (achado à parte, sem acesso direto ao Supabase nesta sessão).
-**Regras fixas:** nenhuma além da DIR-5 a DIR-9 (não mexer em produção sem
-autorização, reportar no formato Protocolo-Mestre, preview real testado
-antes de pedir aprovação).
-**Status:** EM VIGOR.
+**Emitida por:** Claude, via achado técnico — dono comparou os dois painéis
+de novo ("Valor total gerado" R$ 6.173,80 no Painel vs R$ 7.076,80 no
+espelho do CRM, 25 vs 26 compradores) e exigiu análise sênior por escrito:
+"encontre o certo e corrija onde está errado, eu preciso saber em qual
+acreditar".
+**Data:** 30/08/2026.
+**Objetivo:** `NetworkOverview.jsx:571` buscava as vendas com
+`CatalogSale.list()` — sem ordenação e sem limite. O adapter então ordena
+só por `id` (uuid aleatório, não cronológico) e o Supabase corta a
+resposta em 1000 linhas por padrão. Com `catalog_sales` acima de 1000
+registros, o Painel somava um SUBCONJUNTO ARBITRÁRIO de 1000 vendas —
+compras reais ficavam de fora sem aviso (medido: R$ 903,00 e 1 comprador
+a menos que o CRM lendo o MESMO banco). O certo é o CRM (busca
+`'-created_date'` com limite explícito: a janela sempre contém as vendas
+mais recentes, então toda venda pós-marco entra).
+**Escopo autorizado:** `NetworkOverview.jsx` passa a buscar
+`CatalogSale.list('-created_date', 5000)`; `CrmClientesTab.jsx` alinhado
+aos mesmos parâmetros (2000 → 5000) — telas que somam o mesmo dinheiro
+leem as mesmas linhas.
+**Fora do escopo / proibido:** qualquer mudança de fórmula/critério (o
+`dinheiroReal.js` da DIR-15 fica intacto); a diferença R$ 201,24 entre
+"Volume Financeiro Total" e o espelho é INTENCIONAL (leilão, documentada
+no tooltip) e não foi tocada.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-16.
+**Status:** EM VIGOR — código, testes (443/443) e build passam; falta o
+dono confirmar no Preview que os dois painéis agora mostram o mesmo
+número.
 
 ---
 
-## DIR-11 — Backfill de financial_income com o histórico real
+## DIR-16 — Espelho do Painel de Alavancagem dentro do CRM
 
-**Emitida por:** dono (Luiz), diretamente, depois de ver "Faturamento Total:
-R$ 0,00" no Preview da DIR-10 e pedir pra "puxar tudo dado real: pagamento
-das lojas, depósitos, venda e etc".
-**Data:** 28/08/2026.
-**Objetivo:** `financial_income` (DIR-7) nasceu vazia de propósito — grava
-só a partir de agora. O negócio já tem meses de venda paga de verdade, com
-`commission_total` já calculado em `catalog_sales`; sem backfill, Financeiro
-e CRM mostram R$ 0,00 mesmo com receita real acontecendo há tempo. Migration
-única, idempotente, popula o livro-razão com o histórico, usando A MESMA
-regra já em vigor no código ao vivo (DIR-7) — nunca uma regra nova: comissão
-de venda liquidada (não o valor cheio) e taxa sem repasse (adesão/plano,
-valor cheio). Depósito de saldo/carteira/operação, passaporte, frete de
-vendedor e reposição de estoque continuam FORA — mesmo motivo já explicado
-ao dono (é crédito interno que já vira receita quando gasto de verdade;
-contar os dois seria contar o mesmo dinheiro duas vezes). Isto é uma
-correção do pedido do dono, não uma mudança de regra: se ele quiser mesmo
-assim contar depósito como receita, isso exige reabrir a decisão da DIR-7,
-não foi presumido aqui.
-**Escopo autorizado:** uma migration SQL (`INSERT ... SELECT` a partir de
-`catalog_sales`, com `NOT EXISTS` por `sale_id` pra nunca duplicar) que
-popula `financial_income` com o histórico de vendas liquidadas e taxas.
-**Fora do escopo / proibido:** incluir depósito de saldo/carteira/operação,
-passaporte, frete de vendedor ou reposição de estoque no backfill; qualquer
-mudança na regra de reconhecimento de receita da DIR-7 sem decisão explícita
-nova do dono; alterar produção sem autorização antes do merge.
-**Regras fixas:** nenhuma além da DIR-5 a DIR-10.
-**Status:** EM VIGOR.
+**Emitida por:** dono, pedido direto: "insira exatamente as informações que
+tem lá [Painel de Alavancagem], aqui [no CRM], não invente, vamos
+organizar de forma sênior".
+**Data:** 30/08/2026.
+**Objetivo:** depois de confirmar com dado real que os dois painéis batiam
+(mesmo critério, `src/lib/dinheiroReal.js`, DIR-15), o dono quis ver os
+MESMOS rótulos e a MESMA fórmula do Painel de Alavancagem dentro do CRM,
+lado a lado com os cards já existentes — não outra métrica inventada, uma
+cópia fiel.
+**Escopo autorizado:**
+1. Novo bloco "Espelho do Painel de Alavancagem" em `CrmClientesTab.jsx`/
+   `CrmStatsCards.jsx`, com os MESMOS 8 números de `NetworkOverview.jsx`
+   (Total na base, Novos 30 dias, Compradores únicos, Conversão geral,
+   Compraram nos últimos 30 dias, Depósitos, Valor total gerado, Ticket
+   médio/comprador) — fórmula copiada literalmente de
+   `fetchFinanceStats`/`conversion`, só trocando a base de dados (rede do
+   dono → rede/plataforma de quem olha o CRM). "Valor total gerado" aqui é
+   só depósito + compra de Loja, sem leilão, pra ser comparável célula a
+   célula com o Painel de Alavancagem (diferente do "Volume Financeiro
+   Total" da DIR-14, que inclui leilão de propósito).
+2. **Achado à parte, corrigido junto:** o dono reportou "Valor Investido em
+   Estoque: R$ 50.485,429" (3 casas decimais, formato errado). Causa:
+   `fmtBRL` usava `toLocaleString` só com `minimumFractionDigits: 2`, sem
+   `maximumFractionDigits` — o padrão do JS nesse caso é até 3 casas, e
+   imprecisão de ponto flutuante (soma de `cost_price × quantity` linha a
+   linha) empurrava pra 3ª casa. Corrigido com `maximumFractionDigits: 2`
+   explícito.
+**Fora do escopo / proibido:** mudar a regra de reconhecimento de receita;
+mudar `financial_income`/`finalizeAuctionCore.js`; mudar o "Volume
+Financeiro Total" já existente (fica como está, ao lado do espelho novo).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-15.
+**Status:** EM VIGOR — código, testes (443/443) e build passam. Falta o
+dono conferir visualmente no Preview/produção depois do deploy — os 8
+números do espelho devem bater exatamente com o que aparece no Painel de
+Alavancagem (ajustado pela diferença de escopo, se o dono não for
+super_admin).
 
 ---
 
 ## Estado agora
 
-**DIR-10 (Fase 1) e DIR-11 (backfill) em execução, mesma PR.** DIR-1 a DIR-9
-concluídas (ver `docs/RELATORIOS_EXECUCAO.md`). Pendências ainda abertas,
-sem relação com esta diretiva:
+CRM e Financeiro têm a lógica, os dados e a leitura (RLS) corretos.
+"Faturamento Total" = R$ 1.367,17 (comissão de Loja Virtual + Leilão),
+confirmado direto no banco. "Volume Financeiro Total" (depósito + venda
+bruta de Loja/PDV/Leilão) e o novo "Espelho do Painel de Alavancagem"
+(DIR-16) usam o MESMO critério de "dinheiro real" que o Painel de
+Alavancagem (`src/lib/dinheiroReal.js`, DIR-15) — as telas não podem mais
+divergir, porque é literalmente a mesma função. Falta o dono conferir
+visualmente no Preview/produção depois do deploy.
+
+**Achado crítico de infraestrutura, fora do escopo de código, aguardando o
+dono (ver `REL-11`):** o deploy automático de migração
+(`.github/workflows/deploy-migrations.yml`) nunca funcionou — 9
+execuções, 9 falhas, `supabase db push` nunca rodou uma vez na história do
+repositório. Causa atual: o segredo `SUPABASE_ACCESS_TOKEN` no GitHub está
+com formato inválido. Enquanto isso não for corrigido, toda migration
+nova precisa ser conferida e, se faltar, colada manualmente no SQL Editor
+do Supabase (ver `supabase/migrations/LEIA-ME.md` pra saber como conferir).
+Passo pro dono corrigir de vez: gerar um token novo em
+`supabase.com/dashboard/account/tokens` (formato `sbp_...`) e atualizar o
+segredo em `Settings → Secrets and variables → Actions` do repositório.
+
+**Efeito colateral da DIR-13 a observar:** o dropdown manual de
+`CatalogOrdersAdmin.jsx` que deixava o admin marcar um pedido "Aguardando
+Pagamento" como "Pago" na mão agora é recusado (mensagem explicando o
+porquê). Se esse botão for realmente necessário pra confirmar pagamento
+fora do sistema (ex.: transferência bancária manual), isso precisa de uma
+diretiva própria pra construir uma rota nova que calcule comissão e
+registre receita — não só destravar o PATCH de novo.
+
+Pendências ainda abertas, sem diretiva própria no momento:
 - `REL-2`: confirmação do 401 na Edge Function `preview-api`, do lado da
   OpenAI.
 - Fase 3 do Financeiro (conciliação automática, decisão sobre Open
   Finance).
 - Fase 2 do CRM (persistência automática em `customers`, unificação de
-  "Vendedor") — depois da Fase 1 no ar.
+  "Vendedor").
+- Migration `20260828_financial_expenses_payment_account.sql` (de outra
+  frente, não desta sessão) — status em produção não confirmado; mesmo
+  risco do pipeline quebrado pode se aplicar a ela também.
+- **Backfill histórico de adesão/seller_adhesion legado** (achado na
+  DIR-13): receita real de adesão de vendedor e plano parceiro anterior a
+  ~21-28/08/2026 mora em tabelas com semântica diferente
+  (`partner_plan_purchases`, `contrato_assinaturas`, saldo de vendedor do
+  Base44) — recuperar isso não é um backfill simples, é decisão de
+  negócio se vale o esforço de "traduzir" esse histórico.
 
 **Nenhuma implementação nova começa até uma diretiva nova ser registrada
 aqui,** no formato de `docs/PADRAO_DIRETIVAS.md`.

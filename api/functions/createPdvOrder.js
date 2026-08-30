@@ -13,6 +13,7 @@ import { liberarRepasseEstoqueProprio } from '../_lib/repasseEstoqueProprio.js';
 // dinheiro, o custo sai do saldo dele — e sem saldo a venda não fecha.
 import { preverConsignado, liquidarConsignado } from '../_lib/consignadoSettle.js';
 import { exigirSessao } from '../_lib/sessao.js';
+import { registrarReceita } from '../_lib/financialIncome.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -407,7 +408,13 @@ export default async function handler(req, res) {
         });
         comissao = rr?.commission ?? 0;
       }
-      if (comissao > 0) await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: comissao }) });
+      if (comissao > 0) {
+        await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ commission_total: comissao }) });
+        // 💰 DIR-13 — PDV em dinheiro/saldo é venda liquidada na hora, nunca passa
+        // pelo webhook do Mercado Pago nem por pdvSettle.js: sem isto, a comissão
+        // real nunca chegava a financial_income (mesma regra da DIR-7).
+        await registrarReceita({ description: `Comissão — venda balcão #${saleId}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: comissao, source: 'venda', saleId });
+      }
     } catch (e) {
       // ⚠️ não engolir: a venda vale, mas a comissão precisa ser vista e reprocessada.
       comissaoErro = String(e?.message || e).slice(0, 200);

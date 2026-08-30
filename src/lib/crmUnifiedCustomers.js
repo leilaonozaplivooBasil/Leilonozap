@@ -26,6 +26,16 @@ const PURCHASE_STATUS_MAP = {
   canceled: 'cancelado',
 };
 
+// 🔴 Achado 30/08/2026 — total_spent somava QUALQUER catalog_sales, inclusive
+// pending_payment/canceled. Mesmo defeito de conceito já corrigido em
+// financial_income (DIR-7) e no filtro isPaga do NetworkOverview.jsx — venda
+// não paga não é dinheiro que entrou. Mesmo conjunto de status "já pago" já
+// usado em api/functions/updateOrderStatus.js (JA_PAGO) e
+// src/pages/CatalogOrdersAdmin.jsx (STATUS_PAGO), inclui os dois idiomas
+// (o banco tem status em inglês e em português misturados — PONTO 116).
+const STATUS_PAGO = new Set(['paid', 'entregue', 'enviado', 'confirmado', 'pago', 'concluido', 'preparando', 'saiu_entrega', 'shipped', 'delivered']);
+export const isSalePago = (s) => STATUS_PAGO.has(String(s.status || '').toLowerCase());
+
 export const ROLE_LABEL = {
   vendedor: 'Vendedor',
   licenciado: 'Licenciado',
@@ -118,10 +128,10 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
   const guestBuyers = new Map();
   catalogSales.forEach((s) => {
     const amount = Number(s.total_amount) || 0;
+    const pago = isSalePago(s);
     const target = s.buyer_id && byId.get(s.buyer_id);
     if (target) {
-      target.total_spent += amount;
-      target.purchase_count += 1;
+      if (pago) { target.total_spent += amount; target.purchase_count += 1; }
       target.status = 'cliente';
       const mapped = PURCHASE_STATUS_MAP[s.status];
       if (mapped) target.purchase_status = mapped;
@@ -135,7 +145,7 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     const existing = guestBuyers.get(key);
     const address = [s.buyer_address, s.buyer_cep].filter(Boolean).join(' · ');
     if (existing) {
-      existing.total_spent += amount;
+      if (pago) existing.total_spent += amount;
       const mapped = PURCHASE_STATUS_MAP[s.status];
       if (mapped) existing.purchase_status = mapped;
       if (!existing.last_contact || new Date(s.created_date) > new Date(existing.last_contact)) existing.last_contact = s.created_date;
@@ -156,8 +166,8 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
         last_contact: s.created_date,
         registered_at: null,
         referred_by_name: null,
-        total_spent: amount,
-        purchase_count: 1,
+        total_spent: pago ? amount : 0,
+        purchase_count: pago ? 1 : 0,
         auctions_won: 0,
         purchases: [{ id: s.id, product_title: s.product_title, amount, status: s.status, date: s.created_date }],
         auctions_list: [],

@@ -382,10 +382,10 @@ step de lint, ver `.github/workflows/ci.yml`).
 **Confirmação de escopo:** só `crmUnifiedCustomers.js` e
 `CrmClientesTab.jsx` tocados. Nenhum banco, produção ou regra de negócio
 financeira alterada.
-**Publicado em:** relatório ao dono, no chat.
-**Status final:** PARCIAL — implementação concluída na branch; falta o
-dono conferir no Preview (login real, como super_admin e, se possível,
-como um usuário de rede) e autorizar merge/deploy.
+**Publicado em:** relatório ao dono, no chat; PR #145.
+**Status final:** CONCLUÍDA. Dono conferiu no Preview, logado como
+super_admin, e autorizou o merge ("pode"). PR #145 mergeado por squash em
+`main`, commit `67039789`, CI verde antes do merge.
 
 **Correções feitas durante a conferência do dono no Preview, mesma PR
 (#145):**
@@ -434,6 +434,513 @@ de leitura/revisão, não de teste automatizado).
 produção alterado nesta rodada — só roda quando a PR for mergeada em
 `main` (workflow `deploy-migrations.yml`, automático).
 **Publicado em:** relatório ao dono, no chat; PR #145 (mesma da DIR-10).
-**Status final:** PARCIAL — implementação concluída na branch; falta o
-dono conferir no Preview (números devem deixar de ser R$ 0,00) e
-autorizar merge/deploy.
+**Status final:** CONCLUÍDA. Dono conferiu no Preview e autorizou o merge
+da PR #145 ("pode"). PR #145 mergeado por squash em `main`, commit
+`67039789`, CI verde antes do merge.
+
+**Achado crítico durante a conferência pós-merge — o deploy automático de
+migração nunca funcionou:** o dono reportou "Faturamento Total: R$ 0,00"
+mesmo depois do merge. Investigação de fundo (3 ângulos independentes —
+logs de runtime, comentários do bot oficial do Supabase nas PRs, histórico
+do próprio workflow) confirmou por evidência direta:
+
+1. `.github/workflows/deploy-migrations.yml` falhou nas 9 execuções da sua
+   história inteira — `supabase db push` nunca rodou uma vez. As 8
+   primeiras (21–28/08) morriam por rate limit no `supabase/setup-cli`
+   (`version: latest`); um fix de 29/08 (commit `8f93430a`) resolveu isso,
+   mas a execução seguinte (run #9, disparada pelo merge da PR #145,
+   30/08) passou dessa etapa e morreu na seguinte, `supabase link`, com
+   "Invalid access token format" — o segredo `SUPABASE_ACCESS_TOKEN` no
+   GitHub não está no formato válido (`sbp_...`).
+2. Achado um arquivo `supabase/migrations/LEIA-ME.md` (do próprio time,
+   não desta sessão) documentando um INCIDENTE REAL anterior: as
+   migrations da DIR-7/DIR-8 (`financial_income`, `cost_center`,
+   `recurring_group_id`) usavam nomes com sufixo de letra
+   (`20260827b_...`, `20260827c_...`) — o Supabase CLI **ignora
+   silenciosamente** qualquer migration cujo nome não seja só dígitos.
+   Resultado: código em produção desde 27/08 gravando em tabela/coluna
+   inexistentes, sem erro visível (o helper de receita é best-effort de
+   propósito), até uma conferência manual em 28/08 achar e colar o SQL na
+   mão. Já corrigido antes desta rodada — registrado aqui só porque a
+   investigação o revelou.
+3. A integração nativa do GitHub App do Supabase (comentários de
+   "supabase[bot]" nas PRs) atua EXCLUSIVAMENTE como "Preview Branches" —
+   nunca aplica nada em produção/main. Não existe nenhum mecanismo
+   automático alternativo — a única coisa que já funcionou, quando
+   funcionou, foi colar SQL manualmente no SQL Editor.
+4. A migration do backfill desta rodada (`20260828_backfill_financial_income.sql`,
+   nome corretamente formatado, sem sufixo de letra) NÃO estava na lista
+   de "já aplicadas manualmente" do LEIA-ME.md — ou seja, nunca tinha
+   rodado de fato, apesar do merge ter acontecido horas antes.
+**Resolução:** dono aplicou o SQL da migration manualmente no SQL Editor
+do Supabase (30/08/2026), confirmado por consulta direta:
+`select count(*), sum(amount) from financial_income` → **33 linhas,
+R$ 1.317,56**. Financeiro/CRM já refletem o número real.
+**Pendência aberta, fora do escopo desta diretiva:** corrigir o segredo
+`SUPABASE_ACCESS_TOKEN` no GitHub (gerar token novo em
+`supabase.com/dashboard/account/tokens`, atualizar em `Settings → Secrets
+and variables → Actions`) — depende só do dono, registrado em
+`docs/DIRETIVA_ATUAL.md`. Enquanto isso não for feito, qualquer migration
+nova precisa ser conferida manualmente (`supabase/migrations/LEIA-ME.md`
+ensina como). Também acheu-se, sem relação com este trabalho, uma
+migration de outra frente (`20260828_financial_expenses_payment_account.sql`)
+com o mesmo status "não confirmado" — não foi tocada por não ser desta
+diretiva.
+
+---
+
+## REL-12 — Execução da DIR-12
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono reportou "Faturamento Total: R$ 0,00" no CRM tanto no Preview
+   quanto em produção (`leilaonozap.net`), mesmo depois do backfill da
+   DIR-11 já confirmado direto no banco (33 linhas, R$ 1.317,56). Como o
+   código do card já estava correto (confirmado por leitura, sem mudança
+   necessária) e o dado real já existia no banco, a causa só podia estar
+   entre a tabela e o client.
+2. Achado por leitura de código: `20260827b_financial_income_cost_center.sql`
+   liga `enable row level security` em `financial_income` mas nunca cria
+   política de leitura. Comparação com as outras ~45 tabelas do schema
+   inicial (todas com o mesmo `enable row level security` sem política
+   rastreada em migration) confirma o padrão do projeto: a política de
+   leitura de toda tabela antiga foi aplicada manualmente, fora do
+   controle de versão, quando o banco foi montado a partir do Base44 — só
+   3 migrations do repositório inteiro criam política explícita
+   (`system_logs`, `contrato_assinaturas`, `lotes_recebidos`/oportunidades).
+   `financial_income`, por ter nascido só em 27/08 e só ter sido aplicada
+   manualmente (mesmo incidente do nome com sufixo de letra), nunca passou
+   por esse passo. Sem política, PostgREST devolve lista vazia pro client
+   (chave anon/publishable) sem erro nenhum — sintoma idêntico ao já
+   documentado em `20260805_system_logs_politica_insert.sql` pra escrita.
+3. Migration nova (`20260830_financial_income_rls_select.sql`) criando
+   `CREATE POLICY financial_income_select ... FOR SELECT USING (true)`,
+   mesmo padrão já usado em `contrato_assinaturas_select`. Escrita
+   continua exclusiva do `service_role` (`api/_lib/financialIncome.js`) —
+   não foi aberta política de INSERT/UPDATE/DELETE pro client.
+4. `supabase/migrations/LEIA-ME.md` ganhou uma seção nova documentando essa
+   terceira causa de "migração aplicada mas nada aparece" (RLS sem
+   política), com a query de diagnóstico (`select * from pg_policies
+   where tablename = ...`) e a regra pra toda tabela nova a partir de
+   agora: sempre criar a política de leitura na MESMA migration que cria a
+   tabela.
+**O que NÃO foi feito / blockers:** não foi possível confirmar via consulta
+direta ao banco (`select * from pg_policies where tablename =
+'financial_income'`) que a política realmente estava ausente — a conclusão
+é por leitura de código e por precedente do próprio repositório, não por
+acesso direto ao Supabase nesta sessão. Antes de aplicar a migration,
+recomendado rodar essa consulta pra confirmar (deve vir vazia); depois de
+aplicar, deve aparecer 1 linha com `cmd = 'SELECT'`.
+**Testes:** sem teste automatizado novo (migration SQL pura, mesma
+categoria da DIR-11).
+**Build:** não aplicável (nenhum arquivo JS/TS alterado).
+**Confirmação de escopo:** só a migration nova e `LEIA-ME.md` foram
+tocados. Nenhuma outra tabela, nenhuma regra de negócio e nenhum código de
+aplicação foi alterado — o cálculo do "Faturamento Total" (DIR-10) e a
+regra de reconhecimento de receita (DIR-7) continuam exatamente como
+estavam.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — migration escrita e commitada, mas depende do
+dono aplicar manualmente no SQL Editor do Supabase (pipeline automático
+ainda quebrado, mesma pendência da DIR-11) e confirmar. Instruções e SQL
+de verificação passados ao dono no chat.
+
+**Confirmação em produção, mesmo dia:** dono aplicou a política no SQL
+Editor e confirmou (`select * from pg_policies where tablename =
+'financial_income'` → 1 linha, `cmd = SELECT`, `qual = true`). CRM voltou a
+mostrar "Faturamento Total: R$ 1.317,56" (Preview e produção). DIR-12
+efetivamente CONCLUÍDA.
+
+---
+
+## REL-13 — Execução da DIR-13
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono pediu a origem exata dos R$ 1.317,56 depois da DIR-12. A consulta
+   (`select description, category, cost_center, amount, source,
+   received_date from financial_income order by received_date desc,
+   amount desc`) mostrou as 33 linhas — TODAS categoria `comissao_loja`
+   (Loja Virtual), nenhuma `comissao_leilao` nem `taxa_adesao`/
+   `plano_parceiro`, mesmo com ~55 leilões arrematados e taxas de adesão
+   reais cobradas. Isso levantou a suspeita de receita real fora do
+   relatório, não só coincidência.
+2. Workflow de investigação com 3 agentes independentes (leilão, taxas,
+   hook ao vivo) + síntese, todos com leitura de código real (sem
+   suposição). Achados:
+   - **Leilão:** a comissão real (5% indicador + 25% retida) é calculada e
+     paga de verdade a cada martelo, mas em `commission_records`
+     (`finalizeAuctionCore.js`) — nunca ligada a `financial_income`.
+     `catalog_sales.commission_total` é zerado DE PROPÓSITO pra arremate
+     (`storeFulfill.js:54`), pra não aplicar por engano a comissão de 30%
+     da Loja. Não é bug — é uma decisão de escopo nunca tomada.
+   - **Taxas de adesão/plano parceiro:** até ~21–28/08/2026 não existia
+     nem o caminho técnico pra essas cobranças chegarem em `catalog_sales`
+     (o PIX do Plano Parceiro dava 404 em produção — `createPartnerPlanPix.js`).
+     A receita real dessas categorias historicamente mora em tabelas
+     isoladas de qualquer relatório financeiro (`partner_plan_purchases`
+     por ativação manual, `contrato_assinaturas.valor_aporte`, saldo de
+     vendedor no sistema legado Base44). O caminho novo (`mpWebhook.js`,
+     linhas 580/585/590) já chama `registrarReceita` corretamente — só não
+     tem histórico anterior pra recuperar por backfill simples.
+   - **Hook ao vivo — achado mais urgente, lacuna ATIVA:** 4 caminhos de
+     pagamento reais, já em produção, nunca chamavam `registrarReceita`:
+     PDV pago em dinheiro/saldo de comissão/saldo de operação
+     (`createPdvOrder.js`), compra na Loja paga com saldo de comissão do
+     próprio cliente (`payWithBalance.js`), venda do canal Livoo
+     (`livooWebhook.js`), e aprovação manual de pedido
+     (`updateOrderStatus.js` — pior caso, não calcula comissão nem baixa
+     estoque). Isso explica por que nada novo entrou em `financial_income`
+     desde 25/08 mesmo com venda real acontecendo.
+3. Dono decidiu, via pergunta direta: (a) comissão de leilão em
+   `financial_income` — **não mexer agora**; (b) `updateOrderStatus.js` —
+   **bloquear e redirecionar pro fluxo real**.
+4. Implementado:
+   - `createPdvOrder.js`, `payWithBalance.js`, `livooWebhook.js` — chamada
+     a `registrarReceita` adicionada no mesmo ponto em que a comissão já é
+     calculada e gravada em `commission_total`, mesmo padrão de
+     `pdvSettle.js`/`settleAuctionWithBalance.js`.
+   - `updateOrderStatus.js` — bloqueia (`403`) a transição pra
+     `status: 'paid'` quando a venda ainda não estava paga, mesmo
+     princípio do PONTO 115 (`entityWrite.js`). Mensagem de erro explica o
+     porquê e aponta o caminho real.
+**O que NÃO foi feito / blockers:**
+- Comissão de leilão em `financial_income` — adiado por decisão do dono,
+  sem diretiva própria ainda.
+- Backfill histórico de adesão/seller_adhesion do sistema legado (Base44)
+  — teria que "traduzir" schema de tabelas com semântica diferente
+  (`partner_plan_purchases`, `contrato_assinaturas`, saldo de vendedor);
+  não autorizado nesta diretiva.
+- **Efeito colateral a observar:** `CatalogOrdersAdmin.jsx` tem um dropdown
+  manual que deixa o admin escolher "Pago" pra um pedido "Aguardando
+  Pagamento" (linha ~982, `handleSaveOrder`) — com o bloqueio novo, essa
+  ação específica passa a ser recusada com a mensagem de erro acima. Se
+  esse botão for usado de verdade pra confirmar pagamento fora do sistema
+  (ex.: transferência bancária manual), avisar — precisa de uma rota nova
+  que calcule comissão e registre receita corretamente, não só destravar
+  o PATCH de novo.
+**Testes:** 420/420 (sem teste novo — mudança é integração com serviço
+externo/gateway, não função pura isolável).
+**Build:** exit 0.
+**Confirmação de escopo:** só os 4 arquivos citados e a documentação foram
+tocados. Nenhuma migration nova, nenhuma mudança na regra de reconhecimento
+de receita (DIR-7), nenhuma mudança em `finalizeAuctionCore.js`/
+`commission_records`.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado). Comissão de leilão e
+backfill histórico de adesão ficam como pendência separada, sem diretiva
+própria, aguardando decisão futura do dono.
+
+---
+
+## REL-14 — Execução da DIR-14
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Depois de ver "Faturamento Total: R$ 1.317,56" e perguntar por que não
+   incluía o leilão nem os depósitos, o dono confirmou via pergunta direta
+   que queria a comissão de leilão incluída agora (reabrindo a decisão da
+   DIR-13) e, em mensagem separada, pediu visibilidade do volume de
+   depósito em carteira digital no CRM.
+2. `api/_lib/finalizeAuctionCore.js` (`reterFatiaDaRede`) — chamada a
+   `registrarReceita` adicionada logo após o crédito confirmado na conta
+   oficial (`rpc/credit_commission`), categoria `comissao_leilao`, cost
+   center `Leilões`, `saleId: auction.id`. Daqui pra frente, todo martelo
+   que retém fatia da rede grava em `financial_income` automaticamente.
+3. Migration de backfill
+   (`20260830140000_backfill_leilao_retido.sql`) puxando
+   `commission_records` (`sale_type='leilao' and role='leilao_retido'`)
+   pra `financial_income`, idempotente por `sale_id` — recupera os ~55
+   leilões já arrematados antes da correção.
+4. Novo card "Depósitos em Carteira Digital" no CRM
+   (`CrmClientesTab.jsx`/`CrmStatsCards.jsx`): soma `wallet_deposit` +
+   `commission_deposit` + `operacao_deposit` do escopo (rede ou
+   plataforma inteira, conforme super_admin), excluindo status
+   pendente/cancelado/estornado. Tooltip explícito: "NÃO é receita da
+   empresa — só vira receita quando esse saldo for gasto numa compra".
+   Fica como card separado, nunca somado ao "Faturamento Total" — a regra
+   de reconhecimento de receita da DIR-7 não mudou.
+**O que NÃO foi feito / blockers:** backfill histórico de
+adesão/seller_adhesion do sistema legado continua fora de escopo (mesma
+pendência da DIR-13, sem decisão do dono ainda).
+**Testes:** 420/420.
+**Build:** exit 0.
+**Confirmação de escopo:** `finalizeAuctionCore.js`, a migration nova, e os
+dois arquivos do CRM foram tocados. Nenhuma mudança na regra de
+reconhecimento de receita (depósito continua fora do Faturamento Total),
+nenhuma mudança na comissão paga ao indicador (`leilao_indicador`, 5%,
+continua exatamente igual).
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — código e migration commitados e empurrados,
+mas depende do dono aplicar a migration manualmente no SQL Editor
+(pipeline automático ainda quebrado) e confirmar, igual DIR-11/DIR-12.
+
+**Confirmação em produção, mesmo dia:** dono aplicou a migration no SQL
+Editor. Diagnóstico direto no banco confirmou 11 linhas em
+`commission_records` (`sale_type='leilao', role='leilao_retido'`,
+R$ 49,61) e, depois do backfill, `financial_income` passou a ter
+`comissao_loja` 33 linhas/R$ 1.317,56 + `comissao_leilao` 11 linhas/
+R$ 49,61 = **R$ 1.367,17**. (Nota: a mensagem "Success. No rows returned"
+do SQL Editor do Supabase é padrão pra qualquer INSERT/CREATE sem
+`RETURNING` — não significa zero linhas afetadas. Interpretação errada
+minha na hora, corrigida depois de conferir com `select count(*)`.)
+
+**Correção de escopo, mesmo dia, depois da confirmação acima:** o dono
+comparou o "Faturamento Total" (R$ 1.367,17, comissão real) com o "Valor
+Total" do Painel de Alavancagem (depósito + compra da própria rede,
+R$ 6.173,80) e pediu explicitamente "eu quero tudo, tudo, tudo" — um
+número somando depósito + venda bruta de Loja/PDV + venda bruta de leilão,
+não só a comissão. Implementado:
+1. `CrmClientesTab.jsx` — `volumeVendasBruto` (mesma soma que a rede já via
+   como "Volume Transacionado", agora calculada também pra super_admin,
+   plataforma inteira) + `depositosCarteira` (já existia) somados em
+   `volumeFinanceiroTotal`.
+2. `CrmStatsCards.jsx` — troca do card único "Depósitos em Carteira
+   Digital" por um grupo de 3: "Volume Financeiro Total" (em destaque) +
+   "— Depósitos em carteira" + "— Venda bruta (Loja + Leilão)" como
+   detalhe. Tooltip de cada um reforça que é volume, não receita — o
+   "Faturamento Total" ganhou uma frase extra no tooltip avisando que é
+   ele (não o Volume Financeiro Total) que alimenta o cálculo de imposto
+   do Simples Nacional, pra deixar claro por que os dois NUNCA devem ser
+   somados.
+**Testes:** 420/420 (sem teste novo). **Build:** exit 0.
+**Confirmação de escopo:** só os 2 arquivos do CRM tocados nesta correção;
+nenhuma mudança na regra de reconhecimento de receita, nenhuma mudança em
+`financial_income`/`finalizeAuctionCore.js`.
+**Status final:** CONCLUÍDA. Migration confirmada em produção
+(R$ 1.367,17). Cards de Volume Financeiro Total commitados e empurrados —
+falta o dono conferir visualmente no Preview/produção depois do próximo
+deploy.
+
+---
+
+## REL-15 — Execução da DIR-15
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono mandou print do `NetworkOverview.jsx` (Painel de Alavancagem) e
+   perguntou por que os números não batiam com o CRM, "qual está certo,
+   qual está errado". Investigando a fonte de `total_spent`
+   (`src/lib/crmUnifiedCustomers.js`, usada tanto em "Volume Transacionado"
+   quanto no "Volume Financeiro Total" da DIR-14), achei que ele soma
+   QUALQUER `catalog_sales` do comprador — inclusive `pending_payment` e
+   `canceled` — sem checar status nenhum. `NetworkOverview.jsx` já tinha
+   isso certo desde a DIR-6 (`isPaga`), então os dois números nunca
+   poderiam bater.
+2. Corrigido: `total_spent`/`purchase_count` (Loja Virtual/PDV) só somam
+   quando o status da venda está no conjunto "já pago" (mesmo `JA_PAGO` já
+   usado em `updateOrderStatus.js`/`STATUS_PAGO` de
+   `CatalogOrdersAdmin.jsx`, cobrindo os dois idiomas de status que o
+   banco mistura). Aplicado nos 3 pontos onde `catalogSales.forEach`
+   grava total_spent (conta identificada, avulso já existente, avulso
+   novo).
+3. Teste novo `tests/crmUnifiedCustomersTotalSpent.test.mjs` (6 casos):
+   venda paga soma, pendente não soma, cancelada não soma, status em
+   português também soma, mistura paga+pendente só soma a paga, comprador
+   avulso com venda pendente fica em zero.
+**O que NÃO foi feito / blockers:** o mesmo problema do lado do LEILÃO
+(`auctions.forEach` soma `current_price` de QUALQUER `winner_id`, sem
+checar pagamento) foi investigado mas NÃO corrigido nesta rodada — achei
+que `auctions.order_status` não é atualizado pra `'paid'` quando o
+arremate é pago via PIX/cartão (confirmado por leitura: `mpWebhook.js`
+nunca faz PATCH em `auctions`, só em `catalog_sales`; só
+`settleAuctionWithBalance.js` e o cron `liquidarArrematesPendentes.js`
+atualizam `order_status`, e só cobrem o caminho de saldo). Usar
+`order_status` como filtro excluiria arremates pagos de verdade por PIX/
+cartão — um bug novo, pior que o atual. A venda `catalog_sales`
+correspondente ao arremate existe, mas sem FK direta pro `auctions.id`
+(só dentro de `raw_base44`, JSON não indexado) — corrigir isso direito
+precisa de investigação própria, registrada como pendência na DIR-15/
+`docs/DIRETIVA_ATUAL.md`, não forçada sob pressa.
+**Testes:** 426/426 (420 + 6 novos). **Build:** exit 0.
+**Confirmação de escopo:** só `crmUnifiedCustomers.js` e o teste novo
+foram tocados. `auctions.forEach`, `financial_income`,
+`finalizeAuctionCore.js` e a regra de reconhecimento de receita (DIR-7)
+não foram alterados.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — a parte de Loja Virtual/PDV está corrigida,
+testada e commitada; a parte de Leilão fica registrada como pendência
+própria, não corrigida por falta de um jeito confiável e seguro de checar
+pagamento de arremate ainda.
+
+**Correção de escopo, mesmo dia, depois do deploy:** dono mandou print
+mostrando "Venda bruta (Loja + Leilão): R$ 228.496,40" — quantia
+impossível (a comissão real de Loja Virtual é R$ 1.317,56; 30% disso não
+passa de ~R$ 4.400 de venda bruta). Achei duas causas juntas:
+1. O card "Venda bruta" usava `unifiedCustomers.total_spent`
+   (`CrmClientesTab.jsx`), que soma TODO `catalog_sales` do comprador sem
+   filtrar por `kind` — depósito, adesão de vendedor, plano parceiro e
+   passaporte entravam misturados com "venda", além de estarem duplicados
+   com o card "Depósitos em carteira" ao lado.
+2. Do lado do leilão, somava `current_price` de QUALQUER `winner_id`,
+   incluindo os 36 leilões "Plano de Investimento" (`is_investment_plan`,
+   R$ 5.000 cada — medido e documentado em `finalizeAuctionCore.js`,
+   PONTO 109/123) — que são aporte de investimento, não mercadoria
+   vendida, e o próprio motor de comissão do leilão já os exclui por
+   regra oficial do dono.
+3. Recalculado direto de `networkCatalogSales` (kind `loja`/`produto`,
+   status pago) + `networkAuctions` (com `winner_id`, excluindo
+   `is_investment_plan` e `is_test_auction`) — mesmos filtros de `kind`
+   que `NetworkOverview.jsx` já usa pro Painel de Alavancagem, em vez de
+   reaproveitar `total_spent` (que serve outro propósito, mais amplo, na
+   lista de clientes).
+4. `isSalePago` (antes local, sem export) virou exportada de
+   `crmUnifiedCustomers.js` pra ser reaproveitada aqui, sem duplicar a
+   lista de status.
+**Testes:** 426/426 (sem teste novo isolável — a lógica nova é composição
+de filtros sobre arrays já testados indiretamente pelos testes de
+build/fluxo existentes). **Build:** exit 0.
+**Confirmação de escopo:** só `CrmClientesTab.jsx`, `CrmStatsCards.jsx` e
+o export novo em `crmUnifiedCustomers.js` foram tocados. Nenhuma mudança
+em `financial_income`, `finalizeAuctionCore.js` ou na regra de
+reconhecimento de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** PARCIAL — a mistura de depósito/adesão/plano de
+investimento na soma de "venda bruta" está corrigida; o resíduo de
+possíveis arremates arrematados-mas-não-pagos continua como pendência
+própria (mesma limitação técnica já registrada acima: `order_status` não
+é confiável pra arremate pago por PIX/cartão).
+
+---
+
+## Correção FINAL, mesmo dia — critério oficial de "dinheiro real"
+
+Dono recusou a explicação de "escopo diferente" e exigiu, com todas as
+letras, análise por escrito ANTES de qualquer novo código: "sem achismo e
+sem fazer à toa, tenha certeza, confirme, e depois faça". Print mostrava
+"Venda bruta (Loja + Leilão): R$ 154.619,08" — ainda muito acima do que o
+Painel de Alavancagem mostrava pra praticamente a mesma população (604
+pessoas na rede dele vs. 612 Total de Contatos no CRM — populações quase
+idênticas, então a diferença NÃO era escopo).
+
+**Análise escrita, feita antes de tocar em código:** encontrei
+`docs/MARCO-OFICIAL-AGOSTO-2026.md` — documento já existente no
+repositório, hierarquia só abaixo de `VERDADE.md`, seção 1: "Critério
+técnico de dinheiro real: venda em catalog_sales com status pago (paid/
+shipped/delivered) E com rastro de gateway (mp_payment_id/
+stripe_payment_intent/stripe_session_id). Antes de 01/08/2026 é TESTE, sem
+valor financeiro." O Painel de Alavancagem (`NetworkOverview.jsx`,
+`fetchFinanceStats`) já implementa esse critério inteiro há semanas
+(`isPaga` + `isDinheiroReal` + `isPosMarco`). O CRM, nas duas rodadas
+anteriores desta mesma diretiva, só tinha checado status pago — nunca
+rastro de gateway, nunca o corte de 01/08/2026 — então ainda somava venda
+de teste pré-lançamento (provavelmente uma quantidade grande, dado que a
+ZERAGEM-HISTORICO de 04/08 já tinha achado milhares de registros de teste
+pré-agosto só do lado de comissão).
+
+**O que foi feito:**
+1. Critério extraído de `NetworkOverview.jsx` pra `src/lib/dinheiroReal.js`
+   (`isPaga`, `temRastroGateway`, `isDinheiroReal`, `isPosMarco`,
+   `isVendaReal`) — fonte ÚNICA agora, com o comentário de topo citando
+   `docs/MARCO-OFICIAL-AGOSTO-2026.md` e o histórico de 3 tentativas
+   erradas que motivou a extração.
+2. `NetworkOverview.jsx` refatorado pra importar dali — mesma função,
+   zero mudança de comportamento, só parou de estar duplicada dentro do
+   `useCallback`.
+3. `CrmClientesTab.jsx` — `depositosCarteira` e `comprasBrutas` passaram a
+   usar `isVendaReal` (não mais o `isSalePago` mais frouxo da rodada
+   anterior). `depositosCarteira` também parou de somar
+   `commission_deposit`/`operacao_deposit` — mesma decisão do Painel de
+   Alavancagem: esse saldo já é contado quando vira compra, somar os dois
+   contaria o mesmo real duas vezes.
+4. **Leilão mudou de fonte:** em vez de ler `current_price`/`winner_id` da
+   tabela `auctions`, passou a ler `catalog_sales` com `kind='arremate'`
+   filtrado por `isVendaReal` — a MESMA fonte que `NetworkOverview.jsx` já
+   usa pro leilão. Isso resolve de vez a pendência da rodada anterior
+   (não dava pra confiar em `auctions.order_status` pra saber se um
+   arremate pago por PIX/cartão realmente foi pago): `isVendaReal` exige
+   status pago + rastro real na própria venda, então nunca depende daquele
+   campo que só é atualizado no caminho de saldo.
+5. Teste novo `tests/dinheiroReal.test.mjs` (17 casos) cobrindo os 4
+   critérios isolados e a combinação `isVendaReal` — paga+rastro+pós-marco
+   real; qualquer um dos três faltando, não conta; pagamento por saldo
+   interno dispensa rastro de gateway.
+**O que NÃO foi feito / blockers:** nenhum blocker novo — a pendência
+técnica da rodada anterior (arremate pago por PIX/cartão sem
+`order_status` atualizado) foi RESOLVIDA por esta mudança, não só
+adiada.
+**Testes:** 443/443 (426 + 17 novos). **Build:** exit 0.
+**Confirmação de escopo:** `src/lib/dinheiroReal.js` (novo),
+`NetworkOverview.jsx` (só refatoração, mesmo comportamento),
+`CrmClientesTab.jsx`, `CrmStatsCards.jsx` (tooltips atualizados) e o teste
+novo. Nenhuma mudança em `financial_income`, `finalizeAuctionCore.js`,
+`commission_records` ou na regra de reconhecimento de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA. Critério de "dinheiro real" agora é
+literalmente a mesma função nas duas telas — não há mais como divergir.
+Falta o dono conferir visualmente no Preview/produção depois do deploy.
+
+---
+
+## REL-16 — Execução da DIR-16
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Depois de confirmar (DIR-15) que os dois painéis batiam com dado real,
+   dono pediu um bloco no CRM com os MESMOS números do Painel de
+   Alavancagem, mesmos rótulos, sem inventar métrica nova. Adicionado
+   "Espelho do Painel de Alavancagem" em `CrmClientesTab.jsx`/
+   `CrmStatsCards.jsx`: Total na base, Novos (30 dias), Compradores
+   únicos, Conversão geral, Compraram nos últimos 30 dias, Depósitos,
+   Valor total gerado, Ticket médio/comprador — fórmula copiada
+   literalmente de `NetworkOverview.jsx` (`fetchFinanceStats` +
+   `conversion`), só trocando a base (rede do dono → rede/plataforma de
+   quem vê o CRM).
+2. Achado à parte durante a conferência: "Valor Investido em Estoque: R$
+   50.485,429" (3 casas decimais). Causa: `fmtBRL` em `CrmStatsCards.jsx`
+   usava `toLocaleString` só com `minimumFractionDigits: 2` — sem
+   `maximumFractionDigits`, o padrão do JS permite até 3 casas, e
+   imprecisão de ponto flutuante (soma de `cost_price × quantity` linha a
+   linha) empurrou pra 3ª casa. Corrigido com `maximumFractionDigits: 2`
+   explícito — afeta TODOS os valores em R$ do CRM, não só o estoque.
+**O que NÃO foi feito / blockers:** nenhum.
+**Testes:** 443/443 (sem teste novo isolável — composição de fórmulas já
+cobertas indiretamente por `dinheiroReal.test.mjs` e pelos testes de
+build/fluxo existentes). **Build:** exit 0.
+**Confirmação de escopo:** só `CrmClientesTab.jsx` e `CrmStatsCards.jsx`
+tocados. Nenhuma mudança em `financial_income`,
+`finalizeAuctionCore.js`, `NetworkOverview.jsx` ou na regra de
+reconhecimento de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado). Falta o dono conferir
+visualmente no Preview/produção depois do deploy — os 8 números do
+espelho devem bater com o Painel de Alavancagem.
+
+---
+
+## REL-17 — Execução da DIR-17
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono comparou os painéis já com o espelho da DIR-16 no ar: Painel
+   R$ 6.173,80 / 25 compradores vs espelho R$ 7.076,80 / 26 compradores —
+   diferença de R$ 903,00 em compras. As fórmulas eram idênticas (DIR-15/
+   16), então a divergência só podia vir das LINHAS lidas, não da conta.
+2. Causa raiz confirmada por leitura: `NetworkOverview.jsx:571` usava
+   `CatalogSale.list()` sem ordenação nem limite → adapter ordena só por
+   `id` (uuid aleatório) → Supabase corta em 1000 linhas → o Painel somava
+   um subconjunto arbitrário da tabela, deixando vendas reais de fora sem
+   aviso. O CRM (`'-created_date', 2000`) lia as mais recentes e por isso
+   via mais — o número CERTO era o do CRM.
+3. Fix: `NetworkOverview.jsx` → `list('-created_date', 5000)`;
+   `CrmClientesTab.jsx` alinhado (2000 → 5000). A diferença interna do CRM
+   (R$ 7.278,04 vs R$ 7.076,80 = R$ 201,24) é o leilão, intencional e
+   documentada — não foi tocada.
+**Testes:** 443/443. **Build:** exit 0.
+**Confirmação de escopo:** só as duas chamadas de busca alteradas — zero
+mudança de fórmula, critério ou regra de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência
+visual do dono com os dois painéis lado a lado após o deploy.
