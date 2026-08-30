@@ -127,7 +127,7 @@ export default function CrmStatsCards({ stats, purchaseStatusFilter, onPurchaseS
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-nz-tinta-fraca text-xs sm:text-sm mb-1">Valor de Mercado em Estoque</p>
+                <p className="text-nz-tinta-fraca text-xs sm:text-sm mb-1">Valor Investido em Estoque</p>
                 <p className="text-lg sm:text-2xl font-bold text-nz-tinta">
                   R$ {stats.valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>

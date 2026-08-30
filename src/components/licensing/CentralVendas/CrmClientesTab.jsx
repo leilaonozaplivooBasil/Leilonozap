@@ -513,7 +513,12 @@ _Enviado via CRM Leilão NoZap_`;
     leiloeiros: unifiedCustomers.filter(c => c.role_type === 'leiloeiro').length,
     arrematantes: unifiedCustomers.filter(c => c.role_type === 'arrematante').length,
     produtosDisponiveis: availableProducts.length,
-    valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.selling_price_retail || p.market_value || 0) * (p.quantity || 0)), 0),
+    // 🔴 DIR-10 — usava preço de VENDA ao consumidor (selling_price_retail), que
+    // embute a margem de lucro inteira e nunca bate com o que a empresa realmente
+    // tem investido em estoque. cost_price é o valor real pago pelo produto — é
+    // isso que representa dinheiro parado em estoque, não o quanto renderia se
+    // vendesse tudo pelo preço de tabela.
+    valorEstoque: availableProducts.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.quantity || 0)), 0),
   };
 
   if (!isAdmin) {
