@@ -568,7 +568,15 @@ export default function NetworkOverview() {
       // (pré-lançamento oficial). Sem os 3 critérios juntos, é teste — não entra.
       // Extraído pra src/lib/dinheiroReal.js (30/08/2026) — mesmo critério
       // agora reaproveitado pelo CRM, pra nunca mais divergir entre telas.
-      const sales = await plataforma.entities.CatalogSale.list();
+      // 🔴 DIR-17 (30/08/2026) — era `.list()` sem ordenação nem limite. O
+      // adapter então ordena só por `id` (uuid aleatório, não cronológico) e o
+      // Supabase corta a resposta em 1000 linhas por padrão. Com a tabela
+      // acima de 1000 registros, este painel somava um SUBCONJUNTO ARBITRÁRIO
+      // de 1000 vendas — compras reais ficavam de fora sem aviso (medido:
+      // R$ 903,00 e 1 comprador a menos que o CRM lendo o MESMO banco).
+      // Mesma busca do CRM agora: mais recentes primeiro, limite folgado —
+      // toda venda pós-marco (01/08/2026) cabe com sobra.
+      const sales = await plataforma.entities.CatalogSale.list('-created_date', 5000);
       const list = Array.isArray(sales) ? sales : [];
       const hoje = new Date();
       const ehHoje = (dataStr) => {

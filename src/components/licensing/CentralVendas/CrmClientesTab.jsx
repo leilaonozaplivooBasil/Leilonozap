@@ -99,8 +99,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const loadAutoSources = async () => {
     try {
       const [users, sales, auctionsList, income] = await Promise.all([
-        plataforma.entities.AppUser.list('-created_date', 2000),
-        plataforma.entities.CatalogSale.list('-created_date', 2000),
+        plataforma.entities.AppUser.list('-created_date', 5000),
+        // 🔒 DIR-17 — mesma busca do Painel de Alavancagem (NetworkOverview.jsx),
+        // parâmetro por parâmetro: telas que somam o mesmo dinheiro precisam ler
+        // as MESMAS linhas, senão divergem por truncamento e não por lógica.
+        plataforma.entities.CatalogSale.list('-created_date', 5000),
         plataforma.entities.Auction.list('-end_time', 2000),
         plataforma.entities.FinancialIncome.list('-received_date', 5000),
       ]);

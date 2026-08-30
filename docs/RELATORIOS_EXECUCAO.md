@@ -915,3 +915,32 @@ reconhecimento de receita.
 **Status final:** CONCLUÍDA (escopo autorizado). Falta o dono conferir
 visualmente no Preview/produção depois do deploy — os 8 números do
 espelho devem bater com o Painel de Alavancagem.
+
+---
+
+## REL-17 — Execução da DIR-17
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Dono comparou os painéis já com o espelho da DIR-16 no ar: Painel
+   R$ 6.173,80 / 25 compradores vs espelho R$ 7.076,80 / 26 compradores —
+   diferença de R$ 903,00 em compras. As fórmulas eram idênticas (DIR-15/
+   16), então a divergência só podia vir das LINHAS lidas, não da conta.
+2. Causa raiz confirmada por leitura: `NetworkOverview.jsx:571` usava
+   `CatalogSale.list()` sem ordenação nem limite → adapter ordena só por
+   `id` (uuid aleatório) → Supabase corta em 1000 linhas → o Painel somava
+   um subconjunto arbitrário da tabela, deixando vendas reais de fora sem
+   aviso. O CRM (`'-created_date', 2000`) lia as mais recentes e por isso
+   via mais — o número CERTO era o do CRM.
+3. Fix: `NetworkOverview.jsx` → `list('-created_date', 5000)`;
+   `CrmClientesTab.jsx` alinhado (2000 → 5000). A diferença interna do CRM
+   (R$ 7.278,04 vs R$ 7.076,80 = R$ 201,24) é o leilão, intencional e
+   documentada — não foi tocada.
+**Testes:** 443/443. **Build:** exit 0.
+**Confirmação de escopo:** só as duas chamadas de busca alteradas — zero
+mudança de fórmula, critério ou regra de receita.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência
+visual do dono com os dois painéis lado a lado após o deploy.

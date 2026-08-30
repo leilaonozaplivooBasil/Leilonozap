@@ -12,6 +12,38 @@
 
 ---
 
+## DIR-17 — Painel de Alavancagem somava um subconjunto arbitrário de 1000 vendas
+
+**Emitida por:** Claude, via achado técnico — dono comparou os dois painéis
+de novo ("Valor total gerado" R$ 6.173,80 no Painel vs R$ 7.076,80 no
+espelho do CRM, 25 vs 26 compradores) e exigiu análise sênior por escrito:
+"encontre o certo e corrija onde está errado, eu preciso saber em qual
+acreditar".
+**Data:** 30/08/2026.
+**Objetivo:** `NetworkOverview.jsx:571` buscava as vendas com
+`CatalogSale.list()` — sem ordenação e sem limite. O adapter então ordena
+só por `id` (uuid aleatório, não cronológico) e o Supabase corta a
+resposta em 1000 linhas por padrão. Com `catalog_sales` acima de 1000
+registros, o Painel somava um SUBCONJUNTO ARBITRÁRIO de 1000 vendas —
+compras reais ficavam de fora sem aviso (medido: R$ 903,00 e 1 comprador
+a menos que o CRM lendo o MESMO banco). O certo é o CRM (busca
+`'-created_date'` com limite explícito: a janela sempre contém as vendas
+mais recentes, então toda venda pós-marco entra).
+**Escopo autorizado:** `NetworkOverview.jsx` passa a buscar
+`CatalogSale.list('-created_date', 5000)`; `CrmClientesTab.jsx` alinhado
+aos mesmos parâmetros (2000 → 5000) — telas que somam o mesmo dinheiro
+leem as mesmas linhas.
+**Fora do escopo / proibido:** qualquer mudança de fórmula/critério (o
+`dinheiroReal.js` da DIR-15 fica intacto); a diferença R$ 201,24 entre
+"Volume Financeiro Total" e o espelho é INTENCIONAL (leilão, documentada
+no tooltip) e não foi tocada.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-16.
+**Status:** EM VIGOR — código, testes (443/443) e build passam; falta o
+dono confirmar no Preview que os dois painéis agora mostram o mesmo
+número.
+
+---
+
 ## DIR-16 — Espelho do Painel de Alavancagem dentro do CRM
 
 **Emitida por:** dono, pedido direto: "insira exatamente as informações que
