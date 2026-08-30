@@ -17,10 +17,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { calcularCaptacao } from '@/lib/captacaoParceiros';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
 import CrmStatsCards from './CrmStatsCards';
+import CrmParceirosCompra from './CrmParceirosCompra';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 
@@ -99,10 +101,12 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Estoque" mostrava R$ 9.309 quando o real (validado direto no banco) é
   // R$ 28.133 — a maior parte do estoque físico não está publicada na vitrine.
   const [allProducts, setAllProducts] = useState([]);
+  // 🎯 DIR-22 — Parceiros de Compra: planos ativados (manual + Lucre Conosco).
+  const [partnerPurchases, setPartnerPurchases] = useState([]);
 
   const loadAutoSources = async () => {
     try {
-      const [users, sales, auctionsList, prods] = await Promise.all([
+      const [users, sales, auctionsList, prods, partners] = await Promise.all([
         plataforma.entities.AppUser.list('-created_date', 5000),
         // 🔒 DIR-17 — mesma busca do Painel de Alavancagem (NetworkOverview.jsx),
         // parâmetro por parâmetro: telas que somam o mesmo dinheiro precisam ler
@@ -112,11 +116,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         // 🔴 DIR-20 — TODOS os produtos exigem paginação: o Supabase corta em
         // 1000 linhas sem avisar, e a tabela tem ~3000 (ver src/lib/listarTudo.js).
         listarTudo(plataforma.entities.Product),
+        plataforma.entities.PartnerPlanPurchase.list('-created_at', 1000).catch(() => []),
       ]);
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
       setAuctions(Array.isArray(auctionsList) ? auctionsList.filter((a) => !!a.winner_id) : []);
       setAllProducts(Array.isArray(prods) ? prods : []);
+      setPartnerPurchases(Array.isArray(partners) ? partners : []);
     } catch (error) {
       console.error('Erro ao carregar fontes automáticas do CRM:', error);
     }
@@ -139,7 +145,10 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // estruturas, sem filtro nenhum — visão clara de tudo.
   // A árvore é construída com TODOS os usuários (precisa do grafo completo pra
   // achar sub-indicados), mas só entram na lista os IDs dentro da minha rede.
-  const isSuperAdmin = currentUser?.role === 'super_admin';
+  // 🔴 DIR-22 (decisão do dono, 30/08/2026): visão TOTAL é do super_admin E
+  // dos administrativos (role 'admin') — "só quem tem a visão geral é o super
+  // adm e os administrativos". Executivo/diretor por estrutura vem na Fase 2.
+  const isSuperAdmin = ['admin', 'super_admin'].includes(currentUser?.role);
   const networkIds = React.useMemo(
     () => (!isSuperAdmin && currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
     [appUsers, currentUser?.id, isSuperAdmin]
@@ -161,6 +170,12 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const networkAuctions = React.useMemo(
     () => (isSuperAdmin ? auctions : auctions.filter((a) => networkIds.has(a.winner_id))),
     [auctions, networkIds, isSuperAdmin]
+  );
+  // 🎯 DIR-22 — parceiros de compra no MESMO escopo do resto do CRM: visão
+  // total pra admin/super_admin, rede própria pra todo o resto.
+  const networkPartnerPurchases = React.useMemo(
+    () => (isSuperAdmin ? partnerPurchases : partnerPurchases.filter((p) => networkIds.has(p.user_id) || p.user_id === currentUser?.id)),
+    [partnerPurchases, networkIds, currentUser?.id, isSuperAdmin]
   );
 
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
@@ -549,6 +564,29 @@ _Enviado via CRM Leilão NoZap_`;
     .reduce((sum, s) => sum + (s.total_amount || 0), 0);
   const volumeVendasBruto = comprasBrutas + leilaoBruto;
 
+  // 🎯 DIR-22 — meta de captação de R$ 1 milhão (aportes de parceiro + vendas
+  // de adesões de cargo, na ordem oficial do dono). Regra e anti-dupla-contagem
+  // em src/lib/captacaoParceiros.js.
+  const captacao = React.useMemo(
+    () => calcularCaptacao(networkCatalogSales, networkPartnerPurchases),
+    [networkCatalogSales, networkPartnerPurchases]
+  );
+  const parceirosCompra = React.useMemo(() => {
+    // aportes pagos reais por pessoa (venda partner_plan real, somada por buyer)
+    const aportadoPorUser = {};
+    networkCatalogSales
+      .filter((s) => s.kind === 'partner_plan' && isVendaReal(s))
+      .forEach((s) => {
+        const uid = s.buyer_id || s.buyer_email;
+        if (!uid) return;
+        aportadoPorUser[uid] = (aportadoPorUser[uid] || 0) + (Number(s.total_amount) || 0);
+      });
+    return networkPartnerPurchases
+      .filter((p) => String(p.status || '') !== 'canceled')
+      .map((p) => ({ ...p, aportado: aportadoPorUser[p.user_id] || aportadoPorUser[p.user_email] || 0 }))
+      .sort((a, b) => (b.plan_amount || 0) - (a.plan_amount || 0));
+  }, [networkPartnerPurchases, networkCatalogSales]);
+
   // 📋 Espelho do Painel de Alavancagem (30/08/2026) — pedido do dono: "insira
   // exatamente as informações que tem lá, não invente". Mesmas fórmulas,
   // literalmente copiadas de NetworkOverview.jsx (fetchFinanceStats +
@@ -716,6 +754,9 @@ _Enviado via CRM Leilão NoZap_`;
           purchaseStatusFilter={purchaseStatusFilter}
           onPurchaseStatusClick={setPurchaseStatusFilter}
         />
+
+        {/* 🎯 DIR-22 — Gestão de Parceiros de Compra + meta de R$ 1 milhão */}
+        <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
 
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">

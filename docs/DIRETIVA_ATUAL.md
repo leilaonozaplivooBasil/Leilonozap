@@ -12,6 +12,49 @@
 
 ---
 
+## DIR-22 — Gestão de Parceiros de Compra no CRM + meta de captação R$ 1 milhão
+
+**Emitida por:** dono, em duas mensagens (30/08/2026): pediu análise sênior
+do CRM pra incluir a gestão de Parceiros de Compra ("hoje a nossa principal
+operação, meta de um milhão"), com acesso por estrutura (executivo/diretor
+veem a própria estrutura; visão geral só super_admin e administrativos); e
+definiu a régua da meta: "tudo que entrar de aporte de parceiro de compra
+(que é como se fosse investimento) e vendas de franquias (não estamos no
+sistema de franchise, é analogia)", na ordem: Aportes Parceiro de Compra,
+Vendas de Vendedores, Licenciados, Loja Física, Ponto de Retirada, Parceiro
+e Distribuidor.
+**Data:** 30/08/2026.
+**Escopo autorizado (Fase 1 desta rodada):**
+1. `src/lib/captacaoParceiros.js` — regra pura da meta (R$ 1.000.000):
+   baldes na ordem oficial do dono; conta venda REAL (critério
+   `dinheiroReal`) de `partner_plan`/`seller_adhesion`/`adesao`
+   (classificada pelo cargo em `adesao_level`/`product_title`) + ativação
+   MANUAL de plano de parceiro (`partner_plan_purchases`,
+   `activation_source='manual'`). Anti-dupla-contagem: ativação automática
+   (`lucre_conosco`) NÃO soma — nasce da própria venda, que já contou.
+   Balde residual "Outras adesões" pra cargo não reconhecido (nada some em
+   silêncio). Teste próprio (9 casos).
+2. Painel "Parceiros de Compra — Meta R$ 1.000.000" no CRM
+   (`CrmParceirosCompra.jsx`): barra de progresso, baldes na ordem
+   oficial, e a lista de parceiros (plano, valor, aportes pagos, data,
+   origem da ativação) — tudo no MESMO escopo do resto do CRM.
+3. Visão total estendida aos ADMINISTRATIVOS: o bypass de rede que era só
+   `super_admin` passa a incluir `admin` (frase literal do dono: "só quem
+   tem a visão geral é o super adm e os administrativos").
+**Fases seguintes (registradas, ainda não executadas):** Fase 2 — abrir o
+CRM pra executivo/diretor/diretor operacional com escopo pela ESTRUTURA
+EXECUTIVA (fonte única `resolveExecutivo`/carteira `executive_owner`, que
+vence a árvore de indicação); Fase 3 — clicabilidade (cards→filtros, links
+no modal, WhatsApp); Fase 4 — perfil enriquecido (depósitos, saldo,
+contratos, estrutura, export).
+**Fora do escopo / proibido:** regra de reconhecimento de receita (DIR-7);
+histórico legado de adesão (pendência DIR-13 continua).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-21.
+**Status:** EM VIGOR — Fase 1 implementada; testes 475/475, build ok;
+aguarda conferência do dono no Preview.
+
+---
+
 ## DIR-21 — Volume em Negociação real + Faturamento Bruto no CRM
 
 **Emitida por:** dono, decisão direta de negócio (30/08/2026): (1) "Volume

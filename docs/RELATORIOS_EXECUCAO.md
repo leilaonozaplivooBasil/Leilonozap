@@ -1089,3 +1089,35 @@ Nenhuma mudança em `financial_income`, Financeiro ou visão de rede.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência no
 Preview e autorização pra publicar o pacote DIR-18 a 21.
+
+---
+
+## REL-22 — Execução da DIR-22 (Fase 1)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Análise sênior do CRM entregue no chat (clicabilidade, informações
+   faltantes, modelo de dados do Parceiro de Compra já existente, e o
+   achado-chave: estrutura executiva ≠ árvore de indicação — a fonte única
+   é `resolveExecutivo`/`executive_owner`).
+2. `src/lib/captacaoParceiros.js` + 9 testes: regra da meta de R$ 1 milhão
+   na ordem oficial do dono, com anti-dupla-contagem entre venda
+   `partner_plan` e ativação automática, e balde residual visível.
+3. `CrmParceirosCompra.jsx`: painel com barra da meta, baldes em ordem e
+   lista de parceiros (plano, valor, aportes pagos reais por pessoa, data,
+   origem da ativação), no mesmo escopo do resto do CRM.
+4. Visão total estendida a `admin` (antes só `super_admin`), frase literal
+   do dono.
+**O que NÃO foi feito / blockers:** Fases 2 (acesso por estrutura
+executiva), 3 (clicabilidade) e 4 (perfil enriquecido) — registradas na
+DIR-22, aguardam as próximas rodadas. Histórico legado de adesão
+(pré-21/08) continua fora (pendência DIR-13) — a meta só enxerga o que é
+rastreável.
+**Testes:** 475/475 (466 + 9 novos). **Build:** exit 0.
+**Confirmação de escopo:** lib nova + componente novo + 3 pontos em
+`CrmClientesTab.jsx` (carga de `partner_plan_purchases`, escopo, render).
+Nenhuma mudança em receita, comissão ou banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA (Fase 1) — aguarda conferência no Preview.
