@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-28 — Auditoria pré-publicação do CRM (botões, cadastros e funções)
+
+**Emitida por:** dono (30/08/2026): "confira se todo botão, cadastro,
+inserção em todo o CRM está funcionando, se todas as funções funcionam e
+o que você melhoraria — de forma extremamente sênior, para publicarmos".
+**Data:** 30/08/2026.
+**Auditoria executada (caminho por caminho, no código):** 4 modais
+(Novo/Editar Cliente, Novo Vendedor, Encaminhar, Perfil) existem e estão
+ligados; 24 handlers conferidos um a um; entidades usadas
+(Customer/Seller/Negotiation/PartnerPlanPurchase/AppUser/CatalogSale/
+Auction/Product) todas mapeadas no adapter; varredura no-undef zerada em
+9 componentes + 7 bibliotecas do CRM; tooltips com type="button" e
+stopPropagation (não disparam o card).
+**Defeitos achados e corrigidos nesta rodada:**
+1. Encaminhar pro vendedor: wa.me recebia o telefone COM máscara —
+   "(21) 9..." quebrava o link. Agora só dígitos + DDI 55 (mesma regra da
+   fila de contato) e erro claro se o vendedor não tem telefone.
+2. "Produtos no Catálogo" passou a contar produto sem estoque depois da
+   DIR-25 (a lista de interesses inclui esgotados de propósito) — o card
+   promete "com estoque disponível", então volta a contar só quantity>0.
+3. Anotação em cliente sem e-mail E sem telefone criaria um registro
+   fantasma novo a cada salvamento (a fusão é por e-mail/telefone) —
+   agora bloqueia com aviso pra completar o contato antes.
+4. handleEdit removido (código morto pré-existente — nenhum botão
+   chamava; edição de manual é na página CustomerDetails).
+**Melhorias registradas para as próximas rodadas (não bloqueiam):**
+editar cliente manual direto no modal do CRM; origem "Ranking Premiado"
+no cadastro (ativa o KPI Cadastros Ranking/dia, hoje sem fonte); rastro
+de login (ativa Usuários Ativos oficial); lançamento de venda física
+(ativa o trilho R$ 1M); despesas de aquisição no Financeiro (ativa custo
+de aquisição e ROI); arrastar cartão no kanban; migrar as buscas de
+vendas pro listarTudo (pendência do corte de 1000 — rodada própria).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-27.
+**Status:** EM VIGOR — auditoria concluída; testes 534/534, build ok;
+pacote DIR-18→28 PRONTO PARA PUBLICAR, aguardando o "pode" do dono.
+
+---
+
 ## DIR-27 — Leilão no CRM conta a partir do marco (01/08/2026)
 
 **Emitida por:** dono (30/08/2026, com print da seção Clientes): "detalhe

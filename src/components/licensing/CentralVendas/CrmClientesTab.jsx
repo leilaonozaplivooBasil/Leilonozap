@@ -345,29 +345,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     setFilteredCustomers(filtered);
   }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, roleTypeFilter, unifiedCustomers]);
 
-  const handleEdit = (customer) => {
-    setEditingCustomer(customer);
-    setFormData({
-      full_name: customer.full_name || '',
-      email: customer.email || '',
-      phone: customer.phone || '',
-      cpf: customer.cpf || '',
-      status: customer.status || 'lead',
-      source: customer.source || 'site',
-      notes: customer.notes || '',
-      address_street: customer.address_street || '',
-      address_number: customer.address_number || '',
-      address_city: customer.address_city || '',
-      address_state: customer.address_state || '',
-      address_zip_code: customer.address_zip_code || '',
-      last_contact: customer.last_contact || new Date().toISOString().split('T')[0],
-      assigned_seller: customer.assigned_seller || '',
-      follow_up_date: customer.follow_up_date ? String(customer.follow_up_date).slice(0, 10) : '',
-      next_steps: customer.next_steps || '',
-      interested_products: customer.interested_products || []
-    });
-    setShowAddForm(true);
-  };
+  // 🔧 DIR-28 — handleEdit removido: era código morto (nenhum botão chamava)
+  // — a edição de cliente manual acontece na página CustomerDetails, aberta
+  // pelo clique na linha da tabela.
 
   // 💼 DIR-25 — INTERESSES tipados: produto do catálogo, plano de parceiro de
   // compra ou licença (escada oficial), cada um com VALOR editável (pré-
@@ -514,6 +494,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // crmUnifiedCustomers.js). Sempre com o carimbo created_by_id do escopo.
   const handleSaveNotes = async (customer, { notes, follow_up_date, next_steps }) => {
     try {
+      // 🔧 DIR-28 — sem e-mail E sem telefone não há como fundir a anotação de
+      // volta na linha automática (a fusão é por e-mail/telefone): salvar
+      // criaria um registro fantasma novo a cada salvamento.
+      if (!customer.manual_id && !customer.email && !customer.phone) {
+        toast.error('Este cliente não tem e-mail nem telefone — complete o contato antes de anotar.');
+        return;
+      }
       if (customer.manual_id) {
         await plataforma.entities.Customer.update(customer.manual_id, { notes, follow_up_date, next_steps });
       } else {
@@ -677,7 +664,15 @@ _Entre em contato o mais rápido possível!_
 
 _Enviado via CRM Leilão NoZap_`;
 
-    const whatsappUrl = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
+    // 🔧 DIR-28 — telefone com máscara "(21) 9..." quebrava o link wa.me:
+    // só dígitos + DDI 55 (mesma regra do linkWhatsApp da fila de contato).
+    const digitosVendedor = String(seller.phone || '').replace(/\D/g, '');
+    if (!digitosVendedor) {
+      toast.error('Este vendedor está sem telefone cadastrado.');
+      return;
+    }
+    const numeroVendedor = digitosVendedor.length <= 11 ? `55${digitosVendedor}` : digitosVendedor;
+    const whatsappUrl = `https://wa.me/${numeroVendedor}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
 
     setShowForwardModal(false);
@@ -850,7 +845,10 @@ _Enviado via CRM Leilão NoZap_`;
     investidores: unifiedCustomers.filter(c => c.role_type === 'investidor').length,
     leiloeiros: unifiedCustomers.filter(c => c.role_type === 'leiloeiro').length,
     arrematantes: unifiedCustomers.filter(c => c.role_type === 'arrematante').length,
-    produtosDisponiveis: availableProducts.length,
+    // 🔧 DIR-28 — desde a DIR-25 a lista de produtos inclui itens SEM estoque
+    // (pro cadastro de interesse); o card "Produtos no Catálogo" promete
+    // "com estoque disponível", então conta só quem tem estoque de verdade.
+    produtosDisponiveis: availableProducts.filter((p) => (Number(p.quantity) || 0) > 0).length,
     // 🔴 DIR-18/DIR-20 — cost_price é o custo TOTAL do lote (é assim que a
     // planilha importa), não o unitário; e a soma cobre o GALPÃO INTEIRO
     // (allProducts), não só a vitrine — número validado direto no banco:

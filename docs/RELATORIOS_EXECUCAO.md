@@ -1299,3 +1299,21 @@ Leilões Arrematados cai de 55 pro nº real pós-marco, Arrematantes e
 Clientes Ativos caem junto (teste vira lead de novo).
 **Testes:** 534/534 (3 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência no Preview.
+
+
+---
+
+## REL-28 — Execução da DIR-28 (auditoria pré-publicação)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:** auditoria completa dos caminhos interativos do CRM
+(handlers, modais, entidades, identificadores) — detalhes na DIR-28.
+Quatro correções aplicadas: link do WhatsApp do encaminhamento
+normalizado (dígitos + DDI 55, com erro claro sem telefone); "Produtos
+no Catálogo" volta a contar só com estoque; anotação bloqueada em
+cliente sem nenhum contato (evita registro fantasma); handleEdit morto
+removido. Melhorias futuras registradas na diretiva.
+**Testes:** 534/534. **Build:** exit 0.
+**Status final:** CONCLUÍDA — pacote DIR-18→28 pronto pra publicar,
+aguardando autorização do dono.
