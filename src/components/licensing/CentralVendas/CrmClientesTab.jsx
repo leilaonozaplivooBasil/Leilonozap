@@ -86,17 +86,27 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [appUsers, setAppUsers] = useState([]);
   const [catalogSales, setCatalogSales] = useState([]);
   const [auctions, setAuctions] = useState([]);
+  // 🔴 DIR-10 — "Faturamento Total" somava o valor CHEIO de cada venda/arremate
+  // (total_spent), o mesmo erro de conceito já corrigido no Financeiro (DIR-7):
+  // isso é volume transacionado pelos clientes, não dinheiro que a empresa
+  // ficou — a maior parte vai pro vendedor terceiro. O dono reportou "não
+  // faturamos 3 milhões", e tinha razão. financial_income é o livro-razão
+  // real (só comissão + taxa sem repasse) já usado no módulo Financeiro —
+  // mesma fonte, mesmo número, em vez de recalcular errado aqui de novo.
+  const [financialIncome, setFinancialIncome] = useState([]);
 
   const loadAutoSources = async () => {
     try {
-      const [users, sales, auctionsList] = await Promise.all([
+      const [users, sales, auctionsList, income] = await Promise.all([
         plataforma.entities.AppUser.list('-created_date', 2000),
         plataforma.entities.CatalogSale.list('-created_date', 2000),
         plataforma.entities.Auction.list('-end_time', 2000),
+        plataforma.entities.FinancialIncome.list('-received_date', 5000),
       ]);
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);
       setAuctions(Array.isArray(auctionsList) ? auctionsList.filter((a) => !!a.winner_id) : []);
+      setFinancialIncome(Array.isArray(income) ? income : []);
     } catch (error) {
       console.error('Erro ao carregar fontes automáticas do CRM:', error);
     }
@@ -496,7 +506,13 @@ _Enviado via CRM Leilão NoZap_`;
     total: unifiedCustomers.length,
     leads: unifiedCustomers.filter(c => c.status === 'lead').length,
     clientes: unifiedCustomers.filter(c => c.status === 'cliente').length,
-    totalSpent: unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    // super_admin vê a receita REAL da empresa (mesma fonte do módulo
+    // Financeiro — comissão de venda + taxa, nunca o valor cheio da venda);
+    // visão de rede continua em volume transacionado (a rede não tem como
+    // saber quanto da comissão é dela sem esse rateio existir ainda).
+    totalSpent: isSuperAdmin
+      ? financialIncome.reduce((sum, i) => sum + (i.amount || 0), 0)
+      : unifiedCustomers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
     semCompra: unifiedCustomers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
     em_negociacao: unifiedCustomers.filter(c => c.purchase_status === 'em_negociacao').length,
     aguardando_pagamento: unifiedCustomers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
@@ -588,6 +604,7 @@ _Enviado via CRM Leilão NoZap_`;
 
         <CrmStatsCards
           stats={stats}
+          isSuperAdmin={isSuperAdmin}
           purchaseStatusFilter={purchaseStatusFilter}
           onPurchaseStatusClick={setPurchaseStatusFilter}
         />
