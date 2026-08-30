@@ -12,6 +12,59 @@
 
 ---
 
+## DIR-23 — Metas internas oficiais no CRM: Meta Central R$ 5 milhões, Dashboard da Diretoria e Escada de Licenças
+
+**Emitida por:** dono (30/08/2026). Enviou dois materiais oficiais — o
+RESUMO EXECUTIVO INTEGRADO (metas internas: R$ 5M/mês de vendas até
+março/2027 = R$ 4M online + R$ 1M física; Seção 37 = os 12 números que a
+diretoria olha todo dia, com a regra "separar Dado realizado / Premissa /
+Projeção") e a APRESENTAÇÃO OFICIAL (o plano de licenças, de Influenciador
+grátis a Distribuidor R$ 4 milhões, com preço e comissão de cada degrau) —
+e pediu: "analise os dois e veja o que incluir para ficar bem sênior nosso
+CRM, baseado nas vendas das Lojas e Leilões e nossas metas internas". A
+análise foi entregue no chat e ele autorizou: "PODE FAZER, ACRESCENTE,
+DEIXE SÊNIOR, CAPRICHE".
+**Data:** 30/08/2026.
+**Escopo autorizado:**
+1. `src/lib/metaCentral.js` — regra pura da Meta Central de VENDAS
+   (R$ 5.000.000/mês = R$ 4M online + R$ 1M física, alvo março/2027):
+   trilho Online alimentado por dado real do mês (compras brutas da Loja
+   Virtual + arremates de leilão, critério oficial `dinheiroReal`); trilho
+   Física SEM FONTE no sistema hoje — aparece marcado como tal, nunca com
+   número inventado. Teste próprio.
+2. `src/lib/dashboardDiretoria.js` — os 12 números da Seção 37, cada um
+   com Realizado × Meta e etiqueta de governança (Dado / Aproximação /
+   Sem fonte): calculáveis hoje = novos usuários/dia, ticket médio do mês,
+   venda online, faturamento total (só online), conversão digital (mesma
+   fórmula do Painel de Alavancagem), K-Factor aproximado (indicações da
+   árvore `referred_by_id`), usuários ativos aproximado (atividade
+   financeira real em 30d — não existe rastro de login no sistema); sem
+   fonte = visitantes/cadastros do Ranking, venda física, custo de
+   aquisição, ROI operacional. Teste próprio.
+3. `src/lib/escadaLicencas.js` — a escada OFICIAL de licenças da
+   apresentação (Influenciador grátis 5% → Vendedor R$ 1.497/10% →
+   Licenciado R$ 5.000/13% → Parceiro R$ 20.000/15% → Ponto de Retirada
+   R$ 50.000/16% → Loja Física R$ 350.000/19% → Distribuidor
+   R$ 4.000.000/20%), com quem cadastra quem, e o cruzamento com as vendas
+   reais: N vendidos × preço de tabela vs valor realmente captado
+   (divergência aparece — sinal de desconto ou inconsistência). Teste
+   próprio.
+4. Três painéis novos no CRM, visíveis SÓ para visão total
+   (admin/super_admin — metas da empresa não vazam pra escopo de rede):
+   `CrmMetaCentral.jsx`, `CrmDashboardDiretoria.jsx`,
+   `CrmEscadaLicencas.jsx`.
+**Premissas registradas (aguardando martelo do dono):** "usuário ativo" ≈
+atividade financeira real nos últimos 30 dias (não há rastro de login);
+venda física fica sem fonte até existir lançamento no sistema.
+**Fora do escopo / proibido:** projeções de território da apresentação
+(R$ 12M/mês do Recreio etc.) — material de VENDA de licença, não métrica
+de operação; regra de reconhecimento de receita (DIR-7); reordenar os
+baldes da captação (ordem oficial do dono, DIR-22).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-22.
+**Status:** EM VIGOR — autorizada pelo dono ("PODE FAZER... CAPRICHE").
+
+---
+
 ## DIR-22 — Gestão de Parceiros de Compra no CRM + meta de captação R$ 1 milhão
 
 **Emitida por:** dono, em duas mensagens (30/08/2026): pediu análise sênior

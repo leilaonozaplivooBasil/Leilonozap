@@ -18,11 +18,17 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { calcularCaptacao } from '@/lib/captacaoParceiros';
+import { calcularMetaCentral } from '@/lib/metaCentral';
+import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
+import { resumoEscada } from '@/lib/escadaLicencas';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
 import CrmStatsCards from './CrmStatsCards';
 import CrmParceirosCompra from './CrmParceirosCompra';
+import CrmMetaCentral from './CrmMetaCentral';
+import CrmDashboardDiretoria from './CrmDashboardDiretoria';
+import CrmEscadaLicencas from './CrmEscadaLicencas';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 
@@ -571,6 +577,24 @@ _Enviado via CRM Leilão NoZap_`;
     () => calcularCaptacao(networkCatalogSales, networkPartnerPurchases),
     [networkCatalogSales, networkPartnerPurchases]
   );
+  // 🚀 DIR-23 — metas internas oficiais (Resumo Executivo do dono). São metas
+  // da EMPRESA, calculadas sobre a plataforma inteira, e só renderizam pra
+  // visão total (admin/super_admin) — pra quem vê só a própria rede elas não
+  // aparecem (não vazam número global pra escopo de rede). Como só rodam com
+  // isSuperAdmin, networkCatalogSales/networkAppUsers = plataforma inteira.
+  const metaCentral = React.useMemo(
+    () => (isSuperAdmin ? calcularMetaCentral(networkCatalogSales) : null),
+    [networkCatalogSales, isSuperAdmin]
+  );
+  const kpisDiretoria = React.useMemo(
+    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers }) : null),
+    [networkCatalogSales, networkAppUsers, isSuperAdmin]
+  );
+  const escadaLicencas = React.useMemo(
+    () => (isSuperAdmin ? resumoEscada(networkCatalogSales) : null),
+    [networkCatalogSales, isSuperAdmin]
+  );
+
   const parceirosCompra = React.useMemo(() => {
     // aportes pagos reais por pessoa (venda partner_plan real, somada por buyer)
     const aportadoPorUser = {};
@@ -755,8 +779,15 @@ _Enviado via CRM Leilão NoZap_`;
           onPurchaseStatusClick={setPurchaseStatusFilter}
         />
 
+        {/* 🚀 DIR-23 — Meta Central R$ 5M/mês + Dashboard da Diretoria (só visão total) */}
+        {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} />}
+        {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={kpisDiretoria} />}
+
         {/* 🎯 DIR-22 — Gestão de Parceiros de Compra + meta de R$ 1 milhão */}
         <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
+
+        {/* 🪜 DIR-23 — Escada oficial de licenças × vendas reais (só visão total) */}
+        {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
 
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">

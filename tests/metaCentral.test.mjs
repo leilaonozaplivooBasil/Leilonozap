@@ -1,0 +1,74 @@
+// metaCentral — Meta Central de R$ 5M/mês (DIR-23): trilho online com dado
+// real do mês, trilho física sem fonte (null, nunca 0 inventado).
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { calcularMetaCentral, mesmoMes, META_VENDAS_MES, META_ONLINE_MES, META_FISICA_MES } from '../src/lib/metaCentral.js';
+
+const REF = new Date('2026-08-30T12:00:00Z');
+const real = (extra) => ({ status: 'paid', mp_payment_id: 'x', created_date: '2026-08-15', ...extra });
+
+describe('mesmoMes', () => {
+  test('mesmo ano+mês em UTC', () => {
+    assert.equal(mesmoMes('2026-08-01', REF), true);
+    assert.equal(mesmoMes('2026-08-31T23:59:59Z', REF), true);
+  });
+  test('mês anterior/seguinte e datas inválidas ficam fora', () => {
+    assert.equal(mesmoMes('2026-07-31', REF), false);
+    assert.equal(mesmoMes('2026-09-01', REF), false);
+    assert.equal(mesmoMes(null, REF), false);
+    assert.equal(mesmoMes('não é data', REF), false);
+  });
+});
+
+describe('calcularMetaCentral', () => {
+  test('metas oficiais: 5M = 4M online + 1M física', () => {
+    assert.equal(META_VENDAS_MES, 5000000);
+    assert.equal(META_ONLINE_MES, 4000000);
+    assert.equal(META_FISICA_MES, 1000000);
+  });
+
+  test('soma loja+produto+arremate reais do mês, separados por trilho', () => {
+    const r = calcularMetaCentral([
+      real({ kind: 'loja', total_amount: 100 }),
+      real({ kind: 'produto', total_amount: 50 }),
+      real({ kind: 'arremate', total_amount: 30 }),
+    ], REF);
+    assert.equal(r.onlineLoja, 150);
+    assert.equal(r.onlineLeilao, 30);
+    assert.equal(r.online, 180);
+    assert.equal(r.total, 180);
+    assert.equal(r.faltamTotal, META_VENDAS_MES - 180);
+  });
+
+  test('venda física é SEM FONTE (null), não zero medido', () => {
+    const r = calcularMetaCentral([], REF);
+    assert.equal(r.fisica, null);
+  });
+
+  test('venda de outro mês não entra — a meta é mensal', () => {
+    const r = calcularMetaCentral([
+      real({ kind: 'loja', total_amount: 999, created_date: '2026-07-20' }),
+      real({ kind: 'loja', total_amount: 10 }),
+    ], REF);
+    assert.equal(r.online, 10);
+  });
+
+  test('venda sem dinheiro real não entra (pendente, sem rastro, pré-marco)', () => {
+    const r = calcularMetaCentral([
+      { kind: 'loja', total_amount: 100, status: 'pending_payment', mp_payment_id: 'x', created_date: '2026-08-10' },
+      { kind: 'loja', total_amount: 100, status: 'paid', created_date: '2026-08-10' }, // sem rastro de gateway
+      real({ kind: 'loja', total_amount: 100, created_date: '2026-07-10' }), // pré-ref (julho)
+      real({ kind: 'loja', total_amount: 25 }),
+    ], REF);
+    assert.equal(r.online, 25);
+  });
+
+  test('depósito, aporte e adesão NÃO são venda de mercadoria', () => {
+    const r = calcularMetaCentral([
+      real({ kind: 'wallet_deposit', total_amount: 500 }),
+      real({ kind: 'partner_plan', total_amount: 5000 }),
+      real({ kind: 'adesao', total_amount: 1497 }),
+    ], REF);
+    assert.equal(r.online, 0);
+  });
+});

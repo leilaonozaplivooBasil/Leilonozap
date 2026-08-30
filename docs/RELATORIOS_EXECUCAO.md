@@ -1121,3 +1121,51 @@ rastreável.
 Nenhuma mudança em receita, comissão ou banco.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (Fase 1) — aguarda conferência no Preview.
+
+---
+
+## REL-23 — Execução da DIR-23 (metas internas oficiais no CRM)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Commit(s):** ver commit desta rodada em `git log`.
+**O que foi feito:**
+1. Análise sênior dos dois materiais do dono entregue no chat (Resumo
+   Executivo Integrado + Apresentação Oficial do plano de licenças), com o
+   mapa do que o CRM já tinha, o que faltava e o que NÃO deve entrar
+   (projeções de território são material de venda, não métrica de operação).
+2. `src/lib/metaCentral.js` + 8 testes: Meta Central de VENDAS
+   R$ 5.000.000/mês (alvo março/2027) = trilho Online R$ 4M (Loja + Leilão,
+   dado real do mês, critério oficial `dinheiroReal`) + trilho Física R$ 1M
+   SEM FONTE no sistema (null explícito, nunca zero inventado).
+3. `src/lib/dashboardDiretoria.js` + 8 testes: os 12 números da Seção 37
+   com Realizado × Meta e etiqueta de governança do próprio documento —
+   Dado (novos usuários/dia, conversão digital na fórmula do Painel de
+   Alavancagem, ticket médio do mês, venda online, faturamento total),
+   Aproximação com fórmula declarada (usuários ativos por atividade
+   financeira 30d — não há rastro de login; K-Factor pela árvore
+   `referred_by_id`) e Sem fonte como pendência explícita (visitantes/
+   cadastros do Ranking, venda física, custo de aquisição, ROI).
+4. `src/lib/escadaLicencas.js` + 20 testes: a escada oficial (Influenciador
+   grátis/5% → Vendedor R$ 1.497/10% → Licenciado R$ 5.000/13% → Parceiro
+   R$ 20.000/15% → Ponto de Retirada R$ 50.000/16% → Loja Física
+   R$ 350.000/19% → Distribuidor R$ 4.000.000/20%), com `nivelDaVenda` na
+   MESMA precedência de palavras do balde da captação (teste de
+   concordância venda a venda) e o cruzamento N vendidos × preço de tabela
+   vs captado real (desconto/inconsistência aparece, não some).
+5. Três painéis novos no CRM, SÓ visão total (admin/super_admin — metas da
+   empresa não vazam pra escopo de rede): `CrmMetaCentral.jsx` (barra dos
+   R$ 5M com os dois trilhos), `CrmDashboardDiretoria.jsx` (grade dos 12
+   KPIs com etiquetas) e `CrmEscadaLicencas.jsx` (tabela da escada com
+   hierarquia de cadastro e divergência de tabela destacada).
+**O que NÃO foi feito / blockers:** venda física, analytics do Ranking,
+custo de aquisição e ROI seguem sem fonte de dado — aparecem como
+pendência no próprio painel; ativam quando o sistema medir. Premissas
+aguardando martelo do dono: "usuário ativo" ≈ atividade financeira em 30
+dias (sem rastro de login hoje).
+**Testes:** 511/511 (475 + 36 novos). **Build:** exit 0.
+**Confirmação de escopo:** 3 libs novas + 3 componentes novos + fiação em
+`CrmClientesTab.jsx` (imports, 3 memos, render condicionado a visão
+total). Nenhuma mudança em receita, comissão, captação (DIR-22) ou banco.
+**Publicado em:** relatório ao dono, no chat.
+**Status final:** CONCLUÍDA — aguarda conferência no Preview.
