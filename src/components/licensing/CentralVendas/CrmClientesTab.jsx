@@ -19,6 +19,7 @@ import { createPageUrl } from '@/utils';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
+import { listarTudo } from '@/lib/listarTudo';
 import CrmStatsCards from './CrmStatsCards';
 import CrmCustomersTable from './CrmCustomersTable';
 import CrmCustomerDetailModal from './CrmCustomerDetailModal';
@@ -112,7 +113,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         plataforma.entities.CatalogSale.list('-created_date', 5000),
         plataforma.entities.Auction.list('-end_time', 2000),
         plataforma.entities.FinancialIncome.list('-received_date', 5000),
-        plataforma.entities.Product.list('-created_date', 5000),
+        // 🔴 DIR-20 — TODOS os produtos exigem paginação: o Supabase corta em
+        // 1000 linhas sem avisar, e a tabela tem ~3000 (ver src/lib/listarTudo.js).
+        listarTudo(plataforma.entities.Product),
       ]);
       setAppUsers(Array.isArray(users) ? users : []);
       setCatalogSales(Array.isArray(sales) ? sales : []);

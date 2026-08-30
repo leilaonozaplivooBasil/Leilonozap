@@ -1044,3 +1044,24 @@ testes. Nenhum dado de banco alterado pelo código.
 **Publicado em:** relatório ao dono, no chat.
 **Status final:** CONCLUÍDA (escopo autorizado) — aguarda conferência no
 Preview e autorização pra publicar DIR-18+19+20 juntas.
+
+**Correção, mesma diretiva, mesmo dia — o corte silencioso de 1000 linhas:**
+dono conferiu o Preview e o CRM mostrava R$ 9.595,12 (não os R$ 28.133,45
+validados no banco). Causa: a busca nova (`Product.list('-created_date',
+5000)`) pede 5000 mas o Supabase corta a resposta em 1000 linhas SEM
+avisar — o CRM somava só os 1000 produtos mais novos. A Gestão de Estoque
+já tinha descoberto e documentado exatamente esse corte em 20/08 (comentário
+no próprio `ProductManagement.jsx`) e paginava inline por cursor. Essa
+paginação virou função única `src/lib/listarTudo.js` (keyset por `id`,
+blocos de 1000, com 6 testes usando uma entidade falsa que simula o corte
+do PostgREST), usada agora por: CRM (`allProducts`), Painel de Lucro
+Diário (mapa de custo — produto antigo saía com "Custo R$ 0,00" no painel
+por ficar fora dos 1000) e Gestão de Estoque (código inline substituído
+pela função). 466/466 testes, build ok.
+**Pendência registrada, não corrigida nesta rodada:** as buscas de VENDAS
+(`CatalogSale.list('-created_date', 5000)` no NetworkOverview e no CRM)
+sofrem o mesmo corte de 1000 — hoje validado inofensivo (toda venda
+pós-marco cabe nas 1000 mais recentes; números bateram com o banco), mas
+quando a tabela crescer, vendas antigas vão sumir das somas de histórico
+por cliente. Migrar pra `listarTudo` numa rodada própria, com validação
+dos números antes/depois (mexe em soma de dinheiro).

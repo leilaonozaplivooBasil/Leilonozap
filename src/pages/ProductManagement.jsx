@@ -14,6 +14,7 @@ import {
 
 import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
 import { unidadesEmEstoque, custoEstoqueRestante } from '@/lib/custoProduto';
+import { listarTudo } from '@/lib/listarTudo';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -344,39 +345,12 @@ export default function ProductManagement() {
       }
 
       // 📦 CARREGA O CATÁLOGO INTEIRO, EM BLOCOS (20/08/2026).
-      // Antes era uma tacada só: Product.list('-created_date', 5000). Só que o
-      // Supabase corta a resposta em 1.000 linhas por padrão e NÃO avisa — então a
-      // tela recebia os 1.000 produtos mais NOVOS e os outros 2.141 simplesmente
-      // não existiam aqui. Como a busca filtra o que já está na memória, procurar
-      // um produto antigo devolvia "Nenhum produto encontrado" mesmo com ele vivo
-      // no estoque e à venda na loja — e não havia como dar baixa nele.
-      // Mesmo padrão de paginação já usado em api/functions/reconciliarEstoqueLoja.js.
-      // Paginação por CURSOR (keyset), não por posição. Paginar por offset é frágil
-      // aqui: um cadastro ou uma exclusão no meio do carregamento desloca todas as
-      // linhas seguintes, e a página seguinte repete ou PULA um produto — e produto
-      // pulado não tem como ser recuperado depois. Ancorando no último `id` lido,
-      // cada bloco continua exatamente de onde o anterior parou, aconteça o que
-      // acontecer com as outras linhas.
-      // `id` serve de âncora porque é único e o adapter já ordena por ele em toda
-      // consulta (Ponto 93 em src/api/plataformaAdapter.js). Ordenamos por created_date
-      // para exibir aqui, depois de ter o conjunto completo em mãos.
-      const PAGE = 1000;
-      const MAX_BLOCOS = 50; // trava de segurança contra laço infinito
-      const allProducts = [];
-      const vistos = new Set();
-      let ultimoId = '';
-      for (let bloco_n = 0; bloco_n < MAX_BLOCOS; bloco_n++) {
-        const filtro = ultimoId ? { id: { $gt: ultimoId } } : {};
-        const bloco = await plataforma.entities.Product.filter(filtro, 'id', PAGE);
-        if (!Array.isArray(bloco) || bloco.length === 0) break;
-        for (const prod of bloco) {
-          if (!prod?.id || vistos.has(prod.id)) continue;
-          vistos.add(prod.id);
-          allProducts.push(prod);
-        }
-        ultimoId = bloco[bloco.length - 1]?.id || '';
-        if (bloco.length < PAGE || !ultimoId) break;
-      }
+      // O Supabase corta a resposta em 1.000 linhas por padrão e NÃO avisa —
+      // uma tacada só recebia os 1.000 produtos mais novos e o resto sumia da
+      // tela. A paginação por cursor que vivia inline aqui virou a função
+      // única src/lib/listarTudo.js (DIR-20), usada também pelo CRM e pelo
+      // Painel de Lucro — todo mundo lê a MESMA tabela completa agora.
+      const allProducts = await listarTudo(plataforma.entities.Product);
       // mais novo primeiro, com o mesmo desempate por id que o banco usa
       allProducts.sort((a, b) => {
         const da = a?.created_date || '';

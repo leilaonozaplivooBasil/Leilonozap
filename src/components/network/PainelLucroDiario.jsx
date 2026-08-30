@@ -3,6 +3,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import { analiseFiscal } from '@/lib/simplesNacional';
 import { custoUnitario } from '@/lib/custoProduto';
+import { listarTudo } from '@/lib/listarTudo';
 import { TrendingUp, TrendingDown, Package, Percent, Receipt, AlertTriangle, ShoppingBag, Gavel, Wallet, Landmark } from 'lucide-react';
 
 // 📊 REGRA OFICIAL DE COMISSÃO (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md) —
@@ -51,7 +52,10 @@ export default function PainelLucroDiario({
     let vivo = true;
     (async () => {
       try {
-        const products = await plataforma.entities.Product.list('-created_date', 3000);
+        // 🔴 DIR-20 — era .list('-created_date', 3000): o Supabase corta em 1000
+        // linhas sem avisar, então produto antigo ficava fora do mapa de custo e
+        // a venda dele saía com "Custo do produto: R$ 0,00" neste painel.
+        const products = await listarTudo(plataforma.entities.Product);
         if (vivo) setCostMap(buildCostMap(Array.isArray(products) ? products : []));
       } catch (e) {
         console.debug('Erro ao carregar custo de produtos:', e?.message);
