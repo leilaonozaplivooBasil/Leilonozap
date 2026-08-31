@@ -23,6 +23,7 @@ import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import HeroBannerLeiloes from '../components/home/HeroBannerLeiloes';
 import { interleaveBanners } from '@/lib/interleaveBanners';
+import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
 import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
 import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
@@ -213,7 +214,10 @@ export default function Home() {
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
-    filters: {},
+    // 🎪 Só quem está no cartaz. Sem isto o polling de 90s trazia os 80 leilões
+    // mais atualizados — e como encerrar um leilão ATUALIZA a linha, os mortos
+    // subiam ao topo e empurravam 10 leilões ativos para fora da vitrine.
+    filters: { status: STATUS_EM_CARTAZ },
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
         const seen = new Set();
@@ -413,14 +417,11 @@ export default function Home() {
     // NOZAP - FILTRO BASE + ESTOQUE + DATA
     filtered = deduped.filter((a) => {
       if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
-      if (a?.status === 'archived') return false;
 
-      // 🔒 FILTRO DE DATA: Leilões com end_time expirado saem da listagem pública
-      // O status no banco pode não ser atualizado automaticamente pelo backend
-      if (a.end_time && a.status === 'active') {
-        const endDate = new Date(a.end_time);
-        if (!isNaN(endDate.getTime()) && endDate < new Date()) return false;
-      }
+      // 🎪 Encerrado, vendido, arquivado ou com prazo vencido sai da vitrine.
+      // Última barreira: pega também o que veio do cache do navegador, salvo
+      // antes desta regra existir. (src/lib/leilaoEmCartaz.js)
+      if (!estaEmCartaz(a)) return false;
 
       // 🆕 FILTRO DE ESTOQUE: Verifica se produto vinculado tem estoque > 0
       if (a.product_id && productStockMap[a.product_id] !== undefined) {
@@ -656,7 +657,7 @@ export default function Home() {
     // Sem cache válido: busca do servidor (uma única vez)
     try {
       const data = await Promise.race([
-        Auction.list("-created_date", 80),
+        Auction.filter({ status: STATUS_EM_CARTAZ }, "-created_date", 80),
         new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000))
       ]);
       deduplicateAndSet(data);
