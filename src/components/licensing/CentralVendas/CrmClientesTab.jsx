@@ -23,6 +23,7 @@ import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
 import { resumoEscada, ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
+import { alertasEsteira } from '@/lib/esteiraCaptacao';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
@@ -31,6 +32,7 @@ import CrmParceirosCompra from './CrmParceirosCompra';
 import CrmMetaCentral from './CrmMetaCentral';
 import CrmDashboardDiretoria from './CrmDashboardDiretoria';
 import CrmEscadaLicencas from './CrmEscadaLicencas';
+import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -127,6 +129,15 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // 🏆 DIR-31 — contadores do Rank Premiado (/rankpremiado) pros KPIs da
   // diretoria: cadastros e visitas por link dos últimos 7 dias.
   const [concursoStats, setConcursoStats] = useState(null);
+  // 🛤️ DIR-34 — Esteira de Captação (aportes e licenças, do agendamento à
+  // assinatura). Tabela nova captacao_oportunidades.
+  const [oportunidades, setOportunidades] = useState([]);
+  const loadOportunidades = async () => {
+    try {
+      const ops = await listarTudo(plataforma.entities.CaptacaoOportunidade);
+      setOportunidades(Array.isArray(ops) ? ops : []);
+    } catch { setOportunidades([]); } // tabela ainda não migrada → esteira vazia, nada quebra
+  };
 
   const loadAutoSources = async () => {
     try {
@@ -167,6 +178,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     loadNegotiations();
     loadProducts();
     loadAutoSources();
+    loadOportunidades();
   }, [currentUser?.id]);
 
   // 🏆 DIR-31 — contadores do Rank Premiado (só visão total: a API exige
@@ -256,8 +268,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
   const filaContato = React.useMemo(
-    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales }),
-    [unifiedCustomers, networkCatalogSales]
+    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteira(networkOportunidades) }),
+    [unifiedCustomers, networkCatalogSales, networkOportunidades]
   );
 
   const [detailCustomer, setDetailCustomer] = useState(null);
@@ -831,6 +843,69 @@ _Enviado via CRM Leilão NoZap_`;
     [networkCatalogSales, isSuperAdmin]
   );
 
+  // 🛤️ DIR-34 — escopo da esteira (prática de mercado): cada responsável vê
+  // e move só a própria carteira; visão total (dono/admins/diretoria —
+  // esteira é VENDA) vê tudo + ranking do time.
+  const networkOportunidades = React.useMemo(
+    () => (isSuperAdmin ? oportunidades : oportunidades.filter(
+      (o) => o.responsavel_id === currentUser?.id || o.criado_por_id === currentUser?.id
+    )),
+    [oportunidades, currentUser?.id, isSuperAdmin]
+  );
+
+  // 💾 Salvar oportunidade: mudança de estágio carimba estagio_desde, guarda
+  // o histórico e marca fechado_em no 100% (o dinheiro entra pelos fluxos
+  // oficiais — aqui é acompanhamento, nunca ativação).
+  const handleSalvarOportunidade = async (existente, form) => {
+    try {
+      const agora = new Date().toISOString();
+      const payload = {
+        cliente_nome: (form.cliente_nome || '').trim(),
+        cliente_email: form.cliente_email || null,
+        cliente_telefone: String(form.cliente_telefone || '').replace(/\D/g, '') || null,
+        cliente_user_id: form.cliente_user_id || null,
+        tipo: form.tipo,
+        valor_previsto: Number(form.valor_previsto) || null,
+        estagio: form.estagio,
+        motivo_perda: form.estagio === 'sem_interesse' ? (form.motivo_perda || null) : null,
+        reuniao_em: form.reuniao_em ? new Date(form.reuniao_em).toISOString() : null,
+        recontato_em: form.recontato_em || null,
+        anotacoes: form.anotacoes || null,
+        responsavel_id: form.responsavel_id ?? currentUser?.id ?? null,
+        responsavel_nome: form.responsavel_nome || currentUser?.full_name || null,
+      };
+      if (!existente) {
+        await plataforma.entities.CaptacaoOportunidade.create({
+          ...payload,
+          criado_por_id: currentUser?.id || null,
+          estagio_desde: agora,
+          fechado_em: form.estagio === 'fechado_100' ? agora : null,
+          historico: [{ em: agora, por: currentUser?.full_name || '', para: form.estagio }],
+        });
+        toast.success('Oportunidade criada na esteira!');
+      } else {
+        const mudouEstagio = existente.estagio !== form.estagio;
+        await plataforma.entities.CaptacaoOportunidade.update(existente.id, {
+          ...payload,
+          ...(mudouEstagio ? {
+            estagio_desde: agora,
+            fechado_em: form.estagio === 'fechado_100' ? agora : null,
+            historico: [
+              ...(Array.isArray(existente.historico) ? existente.historico : []),
+              { em: agora, por: currentUser?.full_name || '', de: existente.estagio, para: form.estagio },
+            ],
+          } : {}),
+        });
+        toast.success(mudouEstagio ? 'Oportunidade movida na esteira!' : 'Oportunidade atualizada!');
+      }
+      await loadOportunidades();
+    } catch (error) {
+      console.error('Erro ao salvar oportunidade:', error);
+      toast.error('Erro ao salvar oportunidade — a tabela da esteira já foi criada no banco?');
+      throw error;
+    }
+  };
+
   const parceirosCompra = React.useMemo(() => {
     // aportes pagos reais por pessoa (venda partner_plan real, somada por buyer)
     const aportadoPorUser = {};
@@ -1092,6 +1167,15 @@ _Enviado via CRM Leilão NoZap_`;
         {/* ══ 🚀 EXPANSÃO — captação, parceiros e escada de licenças ══ */}
         {secaoAtiva === 'expansao' && (
           <>
+            {/* 🛤️ DIR-34 — Esteira de Captação (kanban + forecast + ranking) */}
+            <CrmEsteiraCaptacao
+              oportunidades={networkOportunidades}
+              sales={networkCatalogSales}
+              sellers={sellers}
+              currentUser={currentUser}
+              visaoTotal={isSuperAdmin}
+              onSalvar={handleSalvarOportunidade}
+            />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
           </>

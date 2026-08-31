@@ -57,6 +57,7 @@ const TABLE_MAP = {
   Category: 'categories',
   CommissionRecord: 'commission_records',
   ComparaiLog: 'comparai_logs',
+  CaptacaoOportunidade: 'captacao_oportunidades',
   Customer: 'customers',
   DepositPackage: 'deposit_packages',
   DigitalWallet: 'digital_wallets',

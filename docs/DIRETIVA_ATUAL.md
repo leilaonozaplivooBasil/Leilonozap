@@ -12,6 +12,51 @@
 
 ---
 
+## DIR-34 — Esteira de Captação: do agendamento ao contrato assinado
+
+**Emitida por:** dono (30/08/2026): "o cadastro de parceiro de compra e
+venda de licenças precisa gerar uma esteira desde a reunião do
+agendamento até o fechamento do contrato, acompanhada no CRM, com os
+estágios pela intenção do cliente" — estágios ditados por ele; pediu
+ideias extras e o % de conversão do time; confirmou no chat: % de
+CONVERSÃO por responsável; escopo pela prática de mercado (cada um vê a
+própria carteira, gestão vê tudo); "faça o que for melhor" no banco.
+**Data:** 30/08/2026.
+**Estágios OFICIAIS (probabilidade fixa):** Reunião agendada 10% · Sem
+interesse 0% (motivo obrigatório) · Interesse pra frente 20% (data de
+recontato) · Interesse — nova reunião 40% · Fechado 50% (valor do aporte
+obrigatório) · Fechado 70% (pendências de documentação/liquidez em
+checklist) · Fechado 99% (valor+data decididos, reunião de assinatura
+marcada) · Fechado 100% (aportou, assinou, dinheiro na conta).
+**Escopo autorizado:**
+1. Tabela nova `captacao_oportunidades` (migração com RLS e políticas
+   explícitas — dono cola o SQL): cliente, tipo (aporte/licença), valor
+   previsto, estágio, motivo de perda, datas (reunião, recontato),
+   pendências (JSONB), histórico (JSONB), responsável, amarração com a
+   venda real (venda_id).
+2. `src/lib/esteiraCaptacao.js` — fonte única: estágios/probabilidades,
+   pipeline ponderado (Σ valor × prob), % de CONVERSÃO por responsável
+   (win rate = fechadas ÷ (fechadas+perdidas) + conversão do funil),
+   alertas (parada 7/15 dias, reunião hoje, recontato vencido),
+   validação do 100% contra dinheiro REAL (venda partner_plan/adesão do
+   cliente). Testes.
+3. `CrmEsteiraCaptacao.jsx` na aba 🚀 Expansão: kanban dos 8 estágios
+   (valor por coluna), nova oportunidade, mover com exigências por
+   estágio (valor no 50%, motivo na perda, datas), forecast ponderado ao
+   lado da meta de R$ 1 mi, RANKING DO TIME com % de conversão, chip
+   âmbar "100% declarado sem dinheiro na conta".
+4. Escopo (prática de mercado): responsável vê e move só as próprias;
+   visão total (dono/admins/diretoria — esteira é VENDA) vê tudo +
+   ranking.
+5. Fila "Quem contatar hoje" ganha os alertas da esteira.
+**Fora do escopo / proibido:** ativação de plano (esteira registra
+negociação; o dinheiro entra pelos fluxos oficiais); critério de
+dinheiro real; comissão.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-33.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-33 — Árvore Genealógica: busca de verdade + Sócios Executivos no topo
 
 **Emitida por:** dono (30/08/2026, com print da Árvore): "preciso que

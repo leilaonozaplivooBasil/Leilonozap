@@ -1501,3 +1501,43 @@ arrasta, não é alvo de vínculo, não tem menu nem lápis (clique abre/
 fecha). A lupa continua achando quem está dentro (o clique no resultado
 abre a pasta e centraliza). Só visualização — nenhum vínculo muda.
 **Testes:** 559/559. **Build:** exit 0.
+
+---
+
+## REL-34 — Execução da DIR-34 (Esteira de Captação)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Migração `20260831010000_captacao_oportunidades.sql` (DONO PRECISA
+   COLAR O SQL): tabela da esteira com RLS e políticas explícitas
+   (SELECT/INSERT/UPDATE; DELETE não — oportunidade não se apaga, se
+   perde com motivo). Entidade `CaptacaoOportunidade` mapeada no adapter.
+2. `src/lib/esteiraCaptacao.js` (+8 testes): os 8 estágios oficiais do
+   dono com probabilidade fixa e EXIGÊNCIA por estágio (50% exige valor;
+   perda exige motivo; 99% exige valor+reunião de assinatura; interesse
+   futuro exige data de recontato); pipeline ponderado; % de CONVERSÃO
+   por responsável (win rate + conversão do funil — quem não encerrou
+   nada fica sem taxa, não inventamos número); alertas (reunião hoje/
+   atrasada, recontato vencido, parada 7/15 dias); `dinheiroNaConta`
+   (100% se prova contra venda real partner_plan/adesão do cliente).
+3. `CrmEsteiraCaptacao.jsx` na aba 🚀 Expansão: forecast (ponderado +
+   fechado + % da meta de R$ 1 mi), kanban dos 8 estágios com valor por
+   coluna e cartões (dias parados em âmbar/vermelho, chip "💰 na conta"
+   ou "⚠️ sem dinheiro na conta" no 100%), modal nova/editar com as
+   exigências travando o salvar, RANKING DO TIME (visão total) com win
+   rate e conversão do funil.
+4. Escopo (prática de mercado, confirmada pelo dono): responsável vê e
+   move só as próprias; visão total (dono/admins/diretoria — esteira é
+   venda) vê tudo + ranking.
+5. Fila "Quem contatar hoje" ganhou os alertas da esteira (reunião,
+   recontato, negociação parada) com mensagens de WhatsApp próprias.
+6. Histórico de movimentos gravado a cada mudança de estágio
+   (quem/quando/de/para) + estagio_desde recarimbado + fechado_em no 100%.
+**Ação do dono:** colar
+supabase/migrations/20260831010000_captacao_oportunidades.sql no SQL
+Editor (sem a tabela, a esteira aparece vazia e salvar avisa com toast —
+nada quebra).
+**Testes:** 567/567 (8 novos). **Build:** exit 0. Nomes de migração ✅.
+**Status final:** CONCLUÍDA — aguarda o SQL do dono + conferência no
+Preview + "pode".
