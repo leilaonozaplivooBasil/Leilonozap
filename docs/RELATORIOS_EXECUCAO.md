@@ -1534,10 +1534,10 @@ abre a pasta e centraliza). Só visualização — nenhum vínculo muda.
    recontato, negociação parada) com mensagens de WhatsApp próprias.
 6. Histórico de movimentos gravado a cada mudança de estágio
    (quem/quando/de/para) + estagio_desde recarimbado + fechado_em no 100%.
-**Ação do dono:** colar
-supabase/migrations/20260831010000_captacao_oportunidades.sql no SQL
-Editor (sem a tabela, a esteira aparece vazia e salvar avisa com toast —
-nada quebra).
+**Ação do dono:** ✅ FEITA — migração da esteira colada e aplicada no SQL
+Editor em 30/08/2026 ("Success. No rows returned", padrão de
+CREATE/ALTER). Tabela, índices, RLS, políticas e trigger vivos em
+produção.
 **Testes:** 567/567 (8 novos). **Build:** exit 0. Nomes de migração ✅.
-**Status final:** CONCLUÍDA — aguarda o SQL do dono + conferência no
+**Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
 Preview + "pode".
