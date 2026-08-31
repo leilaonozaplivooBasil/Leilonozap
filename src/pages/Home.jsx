@@ -32,13 +32,11 @@ import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { useSectionTracking } from '@/lib/tracking';
-import { medirPagina } from '@/lib/metaPixel';
-
 // 📊 Pixel da Meta desta página (31/08/2026, pedido do dono). É o pixel das
-// campanhas de leilão — separado do pixel do Rank Premiado, que tem outro ID e
-// vive em ConcursoLeilaoNozap.jsx. Ver src/lib/metaPixel.js: os dois convivem
-// porque o init é por ID e o disparo é `trackSingle`.
-const PIXEL_LEILOES = '1765569374618252';
+// campanhas de leilão — separado do pixel do Rank Premiado, que tem outro ID.
+// Ver src/lib/metaPixel.js: os dois convivem porque o init é por ID e o disparo
+// é `trackSingle`.
+import { medirPagina, PIXEL_LEILOES } from '@/lib/metaPixel';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 

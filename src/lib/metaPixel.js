@@ -23,6 +23,11 @@
 // Consequência prática: cada página mede a si mesma, e acrescentar um terceiro
 // pixel amanhã não quebra os dois que já existem.
 
+// Os pixels do site, com o que cada um mede. Ficam aqui e não espalhados pelas
+// páginas para que a convivência entre eles seja legível num lugar só.
+export const PIXEL_LEILOES = '1765569374618252';        // campanhas de leilão (/Home e /leiloes)
+export const PIXEL_RANK_PREMIADO = '1434558685189211';  // Rank Premiado (Avilla Business, 11/08/2026)
+
 // IDs que já receberam `init` nesta sessão de navegação. Módulo ES é singleton,
 // então este Set sobrevive à troca de página do SPA — que é justamente o ponto.
 const jaIniciados = new Set();

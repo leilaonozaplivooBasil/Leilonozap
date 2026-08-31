@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { medirPagina } from '@/lib/metaPixel';
+import { medirPagina, PIXEL_RANK_PREMIADO } from '@/lib/metaPixel';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
@@ -71,11 +71,6 @@ function PosBadge({ pos, size = 26 }) {
     </span>
   );
 }
-
-// 📊 Pixel da Meta desta página — Rank Premiado (Avilla Business, 11/08/2026).
-// ID diferente do pixel dos leilões (ver src/pages/Home.jsx): cada campanha mede
-// a sua própria página, e src/lib/metaPixel.js garante que um não engole o outro.
-const PIXEL_RANK_PREMIADO = '1434558685189211';
 
 export default function ConcursoLeilaoNozap() {
   useSectionTracking('rank_premiado', 'Rank Premiado');
