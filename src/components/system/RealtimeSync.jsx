@@ -24,6 +24,11 @@ export function useRealtimeSync({
 
   const syncModeRef = useRef(priority === 'high' ? 'fast' : 'normal');
 
+  // Chave estável do filtro: quem chama monta o objeto no corpo do componente,
+  // então a identidade muda a cada render — usar o objeto direto na lista de
+  // dependências recriaria o polling sem parar.
+  const chaveFiltros = JSON.stringify(filters || {});
+
   // BroadcastChannel DESABILITADO — causava duplicação de dados entre abas
   // Cada aba faz seu próprio polling de forma independente
 
@@ -50,8 +55,12 @@ export function useRealtimeSync({
       
       if (!Entity) return;
       
+      // 🎯 `filters` era recebido e IGNORADO — quem pedia recorte levava a tabela
+      // inteira. A Home dependia disso para não trazer leilão encerrado no
+      // polling. Sem filtro, o caminho segue exatamente como era antes.
+      const temFiltro = filters && typeof filters === 'object' && Object.keys(filters).length > 0;
       const data = await Promise.race([
-        Entity.list('-updated_date', 80),
+        temFiltro ? Entity.filter(filters, '-updated_date', 80) : Entity.list('-updated_date', 80),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 12000))
       ]);
       
@@ -84,7 +93,7 @@ export function useRealtimeSync({
         blockUntilRef.current = Date.now() + blockTime;
       }
     }
-  }, [entityName, enabled, priority]);
+  }, [entityName, enabled, priority, chaveFiltros]);
 
   // POLLING ESTÁVEL - NÃO DEPENDE DE syncMode (evita loop de re-render)
   useEffect(() => {
