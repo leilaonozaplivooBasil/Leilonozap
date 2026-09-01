@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Truck, MapPin, Search, LogIn, Pencil, Check } from "lucide-react";
 import { fmtBR } from "@/lib/money";
 
@@ -133,12 +133,29 @@ function EnderecoBox({ enderecoAtual, cep, salvando, onConfirmar, freteValor }) 
   const [state, setState] = useState(enderecoAtual?.state || '');
   const [buscandoCep, setBuscandoCep] = useState(false);
 
-  // Se nunca teve NENHUM endereço (rua vazia mesmo), busca pelo CEP que a
-  // pessoa acabou de cotar — mesmo ViaCEP + BrasilAPI do Perfil.
+  // 🔴 01/09/2026 — O LOOP DO CEP (vídeo do cliente, 20:33).
+  //
+  // Este efeito começava com `if (street) return;` — só buscava o CEP quando NÃO
+  // havia rua nenhuma. Quem já tinha endereço PARCIAL no cadastro (rua, bairro e
+  // cidade, mas UF vazia) nunca era completado. E como `podeConfirmar` exige
+  // `state`, e NÃO EXISTIA campo de UF nesta tela, o botão "Confirmar endereço e
+  // liberar lance" ficava desabilitado para sempre, sem dizer por quê.
+  //
+  // O cliente do vídeo digitava o número, o botão continuava apagado, ele clicava
+  // em "Dar Lance", escolhia o valor, e voltava para o mesmo aviso. Sem erro, sem
+  // alerta, sem saída. Medido no quadro: botão em RGB(20,92,66) — metade do verde
+  // aceso, que é a assinatura de disabled:opacity-50.
+  //
+  // Agora busca sempre que FALTAR alguma parte, e preenche SÓ o que está vazio —
+  // nunca sobrescreve o que a pessoa digitou.
+  const cepBuscado = useRef('');
   useEffect(() => {
-    if (street) return;
     const limpo = String(cep || '').replace(/\D/g, '');
     if (limpo.length !== 8) return;
+    if (street && neighborhood && city && state) return;
+    // Uma busca por CEP: sem isto, preencher um campo dispara o efeito de novo.
+    if (cepBuscado.current === limpo) return;
+    cepBuscado.current = limpo;
     let cancelado = false;
     setBuscandoCep(true);
     (async () => {
@@ -146,18 +163,27 @@ function EnderecoBox({ enderecoAtual, cep, salvando, onConfirmar, freteValor }) 
         const r = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
         const d = await r.json();
         if (!cancelado && !d.erro) {
-          setStreet(d.logradouro || '');
-          setNeighborhood(d.bairro || '');
-          setCity(d.localidade || '');
-          setState((d.uf || '').toUpperCase());
+          setStreet((v) => v || d.logradouro || '');
+          setNeighborhood((v) => v || d.bairro || '');
+          setCity((v) => v || d.localidade || '');
+          setState((v) => v || (d.uf || '').toUpperCase());
         }
-      } catch { /* segue sem — a pessoa digita a rua na mão */ }
+      } catch { /* segue sem — agora existe campo para digitar tudo na mão */ }
       finally { if (!cancelado) setBuscandoCep(false); }
     })();
     return () => { cancelado = true; };
-  }, [cep, street]);
+  }, [cep, street, neighborhood, city, state]);
 
-  const podeConfirmar = street.trim() && number.trim() && city.trim() && state.trim();
+  // Botão apagado sem explicação foi metade do problema: o cliente do vídeo não
+  // tinha como saber que faltava a UF (campo que nem existia). Agora, quando não
+  // dá para confirmar, a tela DIZ o que falta.
+  const faltando = [
+    !street.trim() && 'a rua',
+    !number.trim() && 'o número',
+    !city.trim() && 'a cidade',
+    !state.trim() && 'o estado (UF)',
+  ].filter(Boolean);
+  const podeConfirmar = faltando.length === 0;
 
   const confirmar = (e) => {
     e.preventDefault();
@@ -198,7 +224,7 @@ function EnderecoBox({ enderecoAtual, cep, salvando, onConfirmar, freteValor }) 
           className="min-h-[38px] w-24 rounded-lg bg-black/20 px-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <input
           value={complement}
           onChange={(e) => setComplement(e.target.value)}
@@ -211,11 +237,25 @@ function EnderecoBox({ enderecoAtual, cep, salvando, onConfirmar, freteValor }) 
           placeholder="Bairro"
           className="min-h-[38px] rounded-lg bg-black/20 px-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
+      </div>
+      {/* 🆕 UF ao lado da cidade. `podeConfirmar` sempre exigiu `state` e o campo
+          NUNCA existiu nesta tela — quem tinha endereço sem UF no cadastro não
+          tinha como liberar o lance, e o botão não dizia por quê. */}
+      <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
         <input
           value={city}
           onChange={(e) => setCity(e.target.value)}
           placeholder="Cidade"
           className="min-h-[38px] rounded-lg bg-black/20 px-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        />
+        <input
+          value={state}
+          onChange={(e) => setState(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2))}
+          placeholder="UF"
+          maxLength={2}
+          autoCapitalize="characters"
+          aria-label="Estado (UF)"
+          className="min-h-[38px] w-16 rounded-lg bg-black/20 px-2.5 text-center text-sm uppercase text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
       </div>
       <button
@@ -226,6 +266,11 @@ function EnderecoBox({ enderecoAtual, cep, salvando, onConfirmar, freteValor }) 
         {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
         Confirmar endereço e liberar lance
       </button>
+      {faltando.length > 0 && (
+        <p className="mt-1.5 text-center text-[11px] text-amber-300">
+          Falta preencher {faltando.length === 1 ? faltando[0] : `${faltando.slice(0, -1).join(', ')} e ${faltando[faltando.length - 1]}`}.
+        </p>
+      )}
     </form>
   );
 }

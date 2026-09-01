@@ -654,6 +654,11 @@ export default function AuctionRoom() {
         const baseUser = cached ? JSON.parse(cached) : currentUser;
         localStorage.setItem('currentUser', JSON.stringify({ ...baseUser, ...dados }));
       } catch (_) { /* segue sem cache — não impede o lance */ }
+      // 🩹 01/09/2026 — o `currentUser` em memória também precisa saber. Antes só o
+      // cache e o estado da tela eram atualizados; qualquer recálculo que olhasse
+      // `currentUser.address_*` veria o cadastro velho e podia reabrir a caixinha
+      // de endereço — o mesmo laço que o cliente relatou em vídeo.
+      setCurrentUser((prev) => (prev ? { ...prev, ...dados } : prev));
       setEnderecoAtual(dados);
       setFreteStatus('ok');
     } catch (e) {
