@@ -23,7 +23,8 @@ import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
 import { resumoEscada, ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
-import { alertasEsteira } from '@/lib/esteiraCaptacao';
+import { alertasEsteira, vendaRealDoCliente, resumoEsteira } from '@/lib/esteiraCaptacao';
+import { linhaDoTempoCliente } from '@/lib/linhaDoTempoCliente';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
@@ -277,6 +278,12 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     )),
     [oportunidades, currentUser?.id, isSuperAdmin]
   );
+  // 🛤️ DIR-36 — forecast da esteira no MESMO escopo (alimenta o card
+  // Captação, a faixa da Visão Executiva e o 13º KPI da diretoria).
+  const resumoEsteiraGeral = React.useMemo(
+    () => resumoEsteira(networkOportunidades),
+    [networkOportunidades]
+  );
 
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
   const filaContato = React.useMemo(
@@ -285,6 +292,33 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   );
 
   const [detailCustomer, setDetailCustomer] = useState(null);
+  // 🛤️ DIR-36 — "Nova oportunidade" pré-preenchida a partir do cliente
+  const [clientePreenchido, setClientePreenchido] = useState(null);
+
+  // 🔗 DIR-36 — o que o modal do cliente mostra da esteira: as oportunidades
+  // DELE e a linha do tempo completa (cadastro → depósitos → compras →
+  // esteira → follow-up), tudo do mesmo escopo de quem vê.
+  const oportunidadesDoCliente = React.useMemo(() => {
+    if (!detailCustomer) return [];
+    const email = String(detailCustomer.email || '').toLowerCase();
+    return networkOportunidades.filter((o) =>
+      (detailCustomer.user_id && o.cliente_user_id === detailCustomer.user_id)
+      || (email && String(o.cliente_email || '').toLowerCase() === email));
+  }, [detailCustomer, networkOportunidades]);
+  const eventosDoCliente = React.useMemo(
+    () => linhaDoTempoCliente({ cliente: detailCustomer, sales: networkCatalogSales, oportunidades: networkOportunidades }),
+    [detailCustomer, networkCatalogSales, networkOportunidades]
+  );
+  const criarOportunidadeDoCliente = (c) => {
+    setDetailCustomer(null);
+    setSecao('expansao');
+    setClientePreenchido({
+      cliente_nome: c.full_name || '',
+      cliente_email: c.email || '',
+      cliente_telefone: c.phone || '',
+      cliente_user_id: c.user_id || null,
+    });
+  };
 
   // Carregar produtos automaticamente ao abrir modal
   useEffect(() => {
@@ -843,8 +877,8 @@ _Enviado via CRM Leilão NoZap_`;
     [networkCatalogSales, isSuperAdmin]
   );
   const kpisDiretoria = React.useMemo(
-    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts, concurso: concursoStats }) : null),
-    [networkCatalogSales, networkAppUsers, allProducts, concursoStats, isSuperAdmin]
+    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts, concurso: concursoStats, oportunidades: networkOportunidades }) : null),
+    [networkCatalogSales, networkAppUsers, allProducts, concursoStats, networkOportunidades, isSuperAdmin]
   );
   const escadaLicencas = React.useMemo(
     () => (isSuperAdmin ? resumoEscada(networkCatalogSales) : null),
@@ -876,6 +910,12 @@ _Enviado via CRM Leilão NoZap_`;
         responsavel_id: form.responsavel_id ?? currentUser?.id ?? null,
         responsavel_nome: form.responsavel_nome || currentUser?.full_name || null,
       };
+      // 🔗 DIR-36 — a amarração de aço do 100%: encontrou a venda REAL do
+      // cliente (mesma regra do chip "💰 na conta")? Grava o venda_id.
+      const vendaProva = form.estagio === 'fechado_100'
+        ? vendaRealDoCliente(payload, networkCatalogSales)
+        : null;
+      payload.venda_id = vendaProva?.id || existente?.venda_id || null;
       if (!existente) {
         await plataforma.entities.CaptacaoOportunidade.create({
           ...payload,
@@ -1055,8 +1095,11 @@ _Enviado via CRM Leilão NoZap_`;
     {
       chave: 'captacao', rotulo: 'Captação (meta R$ 1 mi)',
       valor: brl(captacao.total),
-      sub: `faltam ${brl(captacao.faltam)}`,
-      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). Detalhe na seção Expansão.',
+      // DIR-36: o card mostra também o que está VINDO — forecast da esteira
+      sub: resumoEsteiraGeral.pipelinePonderado > 0
+        ? `faltam ${brl(captacao.faltam)} · ${brl(resumoEsteiraGeral.pipelinePonderado)} em esteira`
+        : `faltam ${brl(captacao.faltam)}`,
+      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). "Em esteira" é o forecast ponderado das negociações ativas da Esteira de Captação — detalhe na seção Expansão.',
     },
   ];
 
@@ -1162,6 +1205,22 @@ _Enviado via CRM Leilão NoZap_`;
           <>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
+            {/* 🛤️ DIR-36 — a esteira aparece na visão geral: fechado, forecast e atalho */}
+            <div className="bg-white border border-nz-borda rounded-2xl p-4 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                <p className="text-sm font-semibold text-nz-tinta">🛤️ Esteira de Captação</p>
+                <p className="text-sm text-nz-tinta"><span className="text-nz-tinta-fraca">Fechado (100%):</span> <span className="font-bold text-nz-verde">{brl(resumoEsteiraGeral.fechado)}</span></p>
+                <p className="text-sm text-nz-tinta"><span className="text-nz-tinta-fraca">Em esteira (ponderado):</span> <span className="font-bold">{brl(resumoEsteiraGeral.pipelinePonderado)}</span></p>
+                <p className="text-sm text-nz-tinta-fraca">{resumoEsteiraGeral.ativas} negociações ativas</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSecao('expansao')}
+                className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro"
+              >
+                Ver esteira →
+              </button>
+            </div>
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
           </>
         )}
@@ -1174,9 +1233,12 @@ _Enviado via CRM Leilão NoZap_`;
               oportunidades={networkOportunidades}
               sales={networkCatalogSales}
               sellers={sellers}
+              clientes={unifiedCustomers}
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
               onSalvar={handleSalvarOportunidade}
+              clientePreenchido={clientePreenchido}
+              onClientePreenchidoConsumido={() => setClientePreenchido(null)}
             />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
@@ -1315,6 +1377,9 @@ _Enviado via CRM Leilão NoZap_`;
               customer={detailCustomer}
               onClose={() => setDetailCustomer(null)}
               onSaveNotes={handleSaveNotes}
+              oportunidades={oportunidadesDoCliente}
+              eventos={eventosDoCliente}
+              onCriarOportunidade={criarOportunidadeDoCliente}
             />
           )}
           </TabsContent>

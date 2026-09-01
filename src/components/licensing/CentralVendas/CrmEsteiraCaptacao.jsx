@@ -1,15 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { GitBranch, Plus, X, Save, Trophy } from 'lucide-react';
+import { GitBranch, Plus, X, Save, Trophy, Search, History } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 import {
   ESTAGIOS_ESTEIRA, MOTIVOS_PERDA, estagioDe, pendenciasParaEstagio,
   resumoEsteira, conversaoPorResponsavel, diasNoEstagio, dinheiroNaConta,
   DIAS_PARADA_ATENCAO, DIAS_PARADA_CRITICO,
 } from '@/lib/esteiraCaptacao';
+import { buscarPessoas } from '@/lib/buscaPessoa';
 import { ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { META_CAPTACAO } from '@/lib/captacaoParceiros';
 
@@ -33,16 +34,24 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sellers = [], currentUser, visaoTotal, onSalvar }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sellers = [], clientes = [], currentUser, visaoTotal, onSalvar, clientePreenchido, onClientePreenchidoConsumido }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  // 🔎 DIR-36 — busca de cliente EXISTENTE na nova oportunidade (nada de
+  // redigitar quem o CRM já conhece; e amarra cliente_user_id de verdade).
+  const [buscaCliente, setBuscaCliente] = useState('');
 
   const resumo = useMemo(() => resumoEsteira(oportunidades), [oportunidades]);
   const ranking = useMemo(() => conversaoPorResponsavel(oportunidades), [oportunidades]);
+  const sugestoesCliente = useMemo(
+    () => (buscaCliente.trim().length >= 2 ? buscarPessoas(clientes, buscaCliente).slice(0, 6) : []),
+    [clientes, buscaCliente]
+  );
 
   const abrirNova = () => {
     setForm({ ...FORM_VAZIO, responsavel_id: currentUser?.id, responsavel_nome: currentUser?.full_name });
+    setBuscaCliente('');
     setEditando('nova');
   };
   const abrirEdicao = (o) => {
@@ -52,8 +61,29 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
       reuniao_em: o.reuniao_em ? String(o.reuniao_em).slice(0, 16) : '',
       recontato_em: o.recontato_em ? String(o.recontato_em).slice(0, 10) : '',
     });
+    setBuscaCliente('');
     setEditando(o);
   };
+  const escolherCliente = (c) => {
+    setForm((f) => ({
+      ...f,
+      cliente_nome: c.full_name || '',
+      cliente_email: c.email || '',
+      cliente_telefone: c.phone || '',
+      cliente_user_id: c.user_id || null,
+    }));
+    setBuscaCliente('');
+  };
+
+  // 🛤️ DIR-36 — "Criar oportunidade" vindo do modal do cliente: chega aqui
+  // com o formulário pronto e amarrado ao cadastro.
+  useEffect(() => {
+    if (!clientePreenchido) return;
+    setForm({ ...FORM_VAZIO, ...clientePreenchido, responsavel_id: currentUser?.id, responsavel_nome: currentUser?.full_name });
+    setBuscaCliente('');
+    setEditando('nova');
+    onClientePreenchidoConsumido?.();
+  }, [clientePreenchido]);
 
   const salvar = async () => {
     setSalvando(true);
@@ -195,9 +225,35 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {editando === 'nova' && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-nz-tinta-fraca mb-1 flex items-center gap-1"><Search className="w-3 h-3" /> Buscar cliente do CRM (preenche e amarra sozinho)</p>
+                      <Input
+                        value={buscaCliente}
+                        onChange={(e) => setBuscaCliente(e.target.value)}
+                        placeholder="nome, e-mail ou telefone de quem já está no CRM..."
+                        className="bg-white border-nz-borda text-nz-tinta"
+                      />
+                      {sugestoesCliente.length > 0 && (
+                        <div className="mt-1 border border-nz-borda rounded-lg overflow-hidden divide-y divide-nz-borda">
+                          {sugestoesCliente.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onMouseDown={() => escolherCliente(c)}
+                              className="w-full text-left px-3 py-2 bg-white hover:bg-nz-verde-fundo"
+                            >
+                              <p className="text-sm text-nz-tinta font-medium truncate">{c.full_name || c.email || 'Sem nome'}</p>
+                              <p className="text-xs text-nz-tinta-fraca truncate">{[c.email, c.phone].filter(Boolean).join(' · ')}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-nz-tinta-fraca mb-1">Nome do cliente *</p>
-                    <Input value={form.cliente_nome} onChange={(e) => setForm({ ...form, cliente_nome: e.target.value })} className="bg-white border-nz-borda text-nz-tinta" />
+                    <p className="text-xs text-nz-tinta-fraca mb-1">Nome do cliente *{form.cliente_user_id ? ' · 🔗 amarrado ao cadastro' : ''}</p>
+                    <Input value={form.cliente_nome || ''} onChange={(e) => setForm({ ...form, cliente_nome: e.target.value })} className="bg-white border-nz-borda text-nz-tinta" />
                   </div>
                   <div>
                     <p className="text-xs text-nz-tinta-fraca mb-1">E-mail</p>
@@ -267,6 +323,26 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
                     Pra ficar em "{estagioDe(form.estagio).label}" falta: {faltamNoEstagio.map((c) => NOMES_CAMPO[c] || c).join(', ')}.
                   </p>
+                )}
+
+                {/* 📜 DIR-36 — a CRONOLOGIA da negociação: cada movimento, quem e quando */}
+                {editando !== 'nova' && Array.isArray(form.historico) && form.historico.length > 0 && (
+                  <div className="rounded-lg border border-nz-borda p-3">
+                    <p className="text-xs font-semibold text-nz-tinta mb-2 flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-nz-verde" /> Linha do tempo
+                      <span className="font-normal text-nz-tinta-fraca">· há {diasNoEstagio(form)} dia(s) no estágio atual</span>
+                    </p>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                      {[...form.historico].reverse().map((h, i) => (
+                        <p key={i} className="text-xs text-nz-tinta-fraca">
+                          <span className="text-nz-tinta font-medium">{h.em ? new Date(h.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</span>
+                          {' · '}
+                          {h.de ? `${estagioDe(h.de).label} → ` : 'Criada em '}{estagioDe(h.para).label}
+                          {h.por ? ` · ${h.por}` : ''}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <Button

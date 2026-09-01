@@ -96,3 +96,14 @@ describe('o 100% se prova sozinho', () => {
     assert.equal(dinheiroNaConta({ cliente_email: 'cli@x.com' }, [{ ...venda, kind: 'loja' }]), false); // mercadoria não é aporte
   });
 });
+
+describe('DIR-36 — vendaRealDoCliente (amarração venda_id)', () => {
+  const venda = { id: 'v1', kind: 'partner_plan', status: 'paid', mp_payment_id: 'x', created_date: '2026-08-20', buyer_email: 'cli@x.com', total_amount: 5000 };
+  test('devolve A VENDA (pra gravar venda_id), não só true/false', async () => {
+    const { vendaRealDoCliente } = await import('../src/lib/esteiraCaptacao.js');
+    assert.equal(vendaRealDoCliente({ cliente_email: 'CLI@x.com' }, [venda])?.id, 'v1');
+    assert.equal(vendaRealDoCliente({ cliente_user_id: 'u9' }, [{ ...venda, buyer_id: 'u9' }])?.id, 'v1');
+    assert.equal(vendaRealDoCliente({ cliente_email: 'outro@x.com' }, [venda]), null);
+    assert.equal(vendaRealDoCliente({ cliente_email: 'cli@x.com' }, [{ ...venda, status: 'pending_payment' }]), null);
+  });
+});

@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-36 — CRM 100%: conectar cliente↔esteira↔venda, cronologia e visão geral
+
+**Emitida por:** dono (01/09/2026): "preciso atualizar os clientes para
+aparecer na esteira e os resultados aparecer na visão geral; analise o
+que está faltando, sem cronologia e sem conexão, para deixarmos 100%" +
+aprovação da análise/plano em chat: "PODE APLICAR CONFIO EM VOCE".
+**Data:** 01/09/2026.
+**Diagnóstico (conferido no código):** esteira ilhada — Nova oportunidade
+redigita cliente que o CRM já conhece (cliente_user_id nunca preenchido;
+venda_id existe no banco e nunca é gravado); modal do cliente sem botão
+de oportunidade e sem as oportunidades dele; histórico de estágios
+gravado e nunca exibido; Dashboard da Diretoria sem KPI de esteira; card
+Captação sem forecast; resumo da esteira invisível fora da aba Expansão.
+**Escopo autorizado (3 fases):**
+1. CONECTAR: busca de cliente existente na Nova oportunidade (preenche
+   nome/e-mail/telefone e amarra cliente_user_id); botão "Criar
+   oportunidade" + bloco de oportunidades no modal do cliente (abre a
+   Expansão com o formulário pré-preenchido); no Fechado 100%, gravar
+   venda_id da venda real encontrada (lib `vendaRealDoCliente`, mesma
+   regra do chip).
+2. CRONOLOGIA: linha do tempo da oportunidade no modal de edição (cada
+   movimento: quem/quando/de→para); linha do tempo do cliente unificada
+   em lib testada (cadastro → depósitos → compras → arremates →
+   oportunidades → follow-up futuro) exibida no modal do cliente.
+3. VISÃO GERAL: card Captação ganha o "em esteira (ponderado)"; KPI 13
+   no Dashboard da Diretoria (Esteira de Captação: fechado + ponderado
+   vs meta R$ 1 mi, tipo 'dado'); faixa-resumo da esteira na Visão
+   Executiva com atalho pra Expansão.
+**Fora do escopo / proibido:** ativação de plano/dinheiro pela esteira;
+mudar critério de dinheiro real; drag-and-drop do kanban (pendência
+própria); mexer no funil de clientes (DIR-24).
+**Regra fixa nova (REL-34.1):** mudança que toca componente React só
+sai da rodada RENDERIZADA em navegador (vite preview + Playwright).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-35.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-35 — Tela "Sem conexão" falsa: só declarar offline com PROVA
 
 **Emitida por:** dono (01/09/2026): print do preview da branch preso na

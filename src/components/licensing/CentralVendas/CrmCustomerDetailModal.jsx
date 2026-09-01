@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { X, Mail, Phone, UserPlus, ShoppingCart, Gavel, Calendar, MessageCircle, StickyNote, Save } from 'lucide-react';
+import { X, Mail, Phone, UserPlus, ShoppingCart, Gavel, Calendar, MessageCircle, StickyNote, Save, GitBranch, Coins, Clock } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
 import { ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { estagioDe } from '@/lib/esteiraCaptacao';
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('pt-BR') : '-');
 
@@ -17,16 +18,24 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('pt-BR') : '-');
 // vem da Loja, ficava muda). Salvar chama onSaveNotes, que faz upsert na
 // tabela customers pelo e-mail/telefone — na recarga a nota FUNDE de volta na
 // linha automática (regra de fusão da DIR-24 em crmUnifiedCustomers.js).
-export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes }) {
+const ICONE_EVENTO = {
+  cadastro: UserPlus, deposito: Coins, compra: ShoppingCart, arremate: Gavel,
+  oportunidade: GitBranch, followup: Calendar, reuniao: Calendar, recontato: Clock,
+};
+
+export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes, oportunidades = [], eventos = null, onCriarOportunidade }) {
   const [notas, setNotas] = useState(customer?.notes || '');
   const [followUp, setFollowUp] = useState(customer?.follow_up_date ? String(customer.follow_up_date).slice(0, 10) : '');
   const [proximoPasso, setProximoPasso] = useState(customer?.next_steps || '');
   const [salvando, setSalvando] = useState(false);
   if (!customer) return null;
-  const timeline = [
-    ...(customer.purchases || []).map((p) => ({ type: 'compra', date: p.date, label: p.product_title || 'Produto', amount: p.amount, status: p.status })),
-    ...(customer.auctions_list || []).map((a) => ({ type: 'leilao', date: a.date, label: a.title || 'Leilão', amount: a.amount })),
-  ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  // 📜 DIR-36 — cronologia unificada (lib linhaDoTempoCliente) quando o pai
+  // manda `eventos`; sem ela, cai no histórico antigo (compras + arremates).
+  const passados = eventos?.passados || [
+    ...(customer.purchases || []).map((p) => ({ em: p.date, tipo: 'compra', titulo: p.product_title || 'Produto', valor: p.amount })),
+    ...(customer.auctions_list || []).map((a) => ({ em: a.date, tipo: 'arremate', titulo: a.title || 'Leilão', valor: a.amount })),
+  ].sort((a, b) => new Date(b.em || 0) - new Date(a.em || 0));
+  const futuros = eventos?.futuros || [];
 
   const digitos = String(customer.phone || '').replace(/\D/g, '');
   const linkZap = digitos ? `https://wa.me/${digitos.length <= 11 ? `55${digitos}` : digitos}` : null;
@@ -95,6 +104,32 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes 
             <p className="text-2xl font-bold text-nz-verde">R$ {fmtBR(customer.total_spent || 0)}</p>
           </div>
 
+          {/* 🛤️ DIR-36 — a esteira DENTRO do cliente: negociações dele + criar nova */}
+          {(onCriarOportunidade || oportunidades.length > 0) && (
+            <div className="rounded-lg border border-nz-borda p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-nz-tinta flex items-center gap-1.5">
+                  <GitBranch className="w-4 h-4 text-nz-verde" /> Esteira de captação
+                </p>
+                {onCriarOportunidade && (
+                  <Button size="sm" onClick={() => onCriarOportunidade(customer)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
+                    + Criar oportunidade
+                  </Button>
+                )}
+              </div>
+              {oportunidades.length === 0 ? (
+                <p className="text-xs text-nz-tinta-fraca">Nenhuma negociação de aporte ou licença com este cliente ainda.</p>
+              ) : (
+                oportunidades.map((o) => (
+                  <div key={o.id} className="flex items-center justify-between bg-nz-cinza-fundo border border-nz-borda rounded-lg px-2.5 py-1.5">
+                    <span className="text-xs text-nz-tinta">{estagioDe(o.estagio).label}</span>
+                    {Number(o.valor_previsto) > 0 && <span className="text-xs font-semibold text-nz-verde">R$ {fmtBR(o.valor_previsto)}</span>}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {/* 📝 Anotações + follow-up — em QUALQUER cliente */}
           {onSaveNotes && (
             <div className="rounded-lg border border-nz-borda p-3 space-y-3">
@@ -124,24 +159,49 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes 
             </div>
           )}
 
-          <div>
-            <p className="text-sm font-semibold text-nz-tinta mb-2">Histórico</p>
-            {timeline.length === 0 ? (
-              <p className="text-sm text-nz-tinta-fraca">Nenhuma compra ou arremate ainda — ainda é só um lead.</p>
-            ) : (
+          {/* 📜 DIR-36 — a HISTÓRIA do cliente numa lista só: o que vem (topo)
+              e tudo o que já aconteceu (cadastro, depósito, compra, esteira) */}
+          {futuros.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-nz-tinta mb-2">Próximos compromissos</p>
               <div className="space-y-2">
-                {timeline.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-white border border-nz-borda rounded-lg p-2.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {item.type === 'compra' ? <ShoppingCart className="w-4 h-4 text-nz-marrom flex-shrink-0" /> : <Gavel className="w-4 h-4 text-nz-verde flex-shrink-0" />}
+                {futuros.map((item, idx) => {
+                  const Icone = ICONE_EVENTO[item.tipo] || Calendar;
+                  return (
+                    <div key={idx} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                      <Icone className="w-4 h-4 text-amber-600 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm text-nz-tinta truncate">{item.label}</p>
-                        <p className="text-xs text-nz-tinta-fraca">{fmtDate(item.date)}</p>
+                        <p className="text-sm text-nz-tinta truncate">{item.titulo}{item.detalhe ? ` — ${item.detalhe}` : ''}</p>
+                        <p className="text-xs text-nz-tinta-fraca">{fmtDate(item.em)}</p>
                       </div>
                     </div>
-                    <p className="text-sm font-semibold text-nz-tinta flex-shrink-0 ml-2">R$ {fmtBR(item.amount || 0)}</p>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <p className="text-sm font-semibold text-nz-tinta mb-2">Linha do tempo</p>
+            {passados.length === 0 ? (
+              <p className="text-sm text-nz-tinta-fraca">Nenhum movimento ainda — ainda é só um lead.</p>
+            ) : (
+              <div className="space-y-2">
+                {passados.map((item, idx) => {
+                  const Icone = ICONE_EVENTO[item.tipo] || ShoppingCart;
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-white border border-nz-borda rounded-lg p-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icone className={`w-4 h-4 flex-shrink-0 ${item.tipo === 'oportunidade' ? 'text-nz-verde' : item.tipo === 'deposito' ? 'text-amber-600' : 'text-nz-marrom'}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm text-nz-tinta truncate">{item.titulo}{item.detalhe ? ` — ${item.detalhe}` : ''}</p>
+                          <p className="text-xs text-nz-tinta-fraca">{fmtDate(item.em)}</p>
+                        </div>
+                      </div>
+                      {Number(item.valor) > 0 && <p className="text-sm font-semibold text-nz-tinta flex-shrink-0 ml-2">R$ {fmtBR(item.valor)}</p>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

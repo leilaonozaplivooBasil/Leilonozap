@@ -1619,3 +1619,49 @@ componente React não sai da rodada sem renderizar no navegador —
 deslogado.
 **Testes:** 570/570. **Build:** exit 0.
 **Status final:** CONCLUÍDA — preview da branch volta a ser confiável.
+
+---
+
+## REL-36 — Execução da DIR-36 (CRM 100%: conexão, cronologia e visão geral)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito (as 3 fases aprovadas pelo dono):**
+1. CONECTAR:
+   - "Nova oportunidade" ganhou busca de cliente EXISTENTE (mesma
+     `buscaPessoa` da Árvore — nome/e-mail/telefone, sem acento): escolhe
+     e preenche nome/e-mail/telefone sozinho, amarrando `cliente_user_id`
+     ("🔗 amarrado ao cadastro").
+   - Modal do cliente ganhou o bloco "Esteira de captação": as
+     oportunidades DELE (estágio + valor) e o botão "+ Criar
+     oportunidade", que leva pra Expansão com o formulário pronto.
+   - Fechado 100% grava `venda_id` da venda real encontrada
+     (`vendaRealDoCliente`, mesma regra do chip "💰 na conta" —
+     `dinheiroNaConta` virou derivada dela; coluna existia e nunca era
+     preenchida).
+2. CRONOLOGIA:
+   - Modal da oportunidade mostra a linha do tempo dos movimentos
+     (quem/quando/de→para + dias no estágio atual) — era gravada e nunca
+     exibida.
+   - `src/lib/linhaDoTempoCliente.js` (nova, +2 testes): a história do
+     cliente numa lista só — cadastro → depósitos reais → compras →
+     arremates → esteira (criação e movimentos) + futuros (follow-up,
+     reunião, recontato) no topo em âmbar. Modal do cliente renderiza.
+3. VISÃO GERAL:
+   - Card "Captação (meta R$ 1 mi)" ganhou o forecast: "· R$ X em
+     esteira" (ponderado, mesmo escopo de quem vê).
+   - 13º KPI no Dashboard da Diretoria: "Esteira de Captação (fechado +
+     ponderado)" vs meta R$ 1 mi, tipo 'dado', mesma `resumoEsteira` do
+     kanban (fonte única). Testes atualizados (12→13).
+   - Faixa da esteira na Visão Executiva (fechado, ponderado, ativas)
+     com atalho "Ver esteira →".
+**Prova em navegador (regra do REL-34.1, Playwright + backend simulado
+com cliente real: compra paga + depósito + oportunidade em Fechado 50%):**
+17/17 verificações ✅ com ZERO erros de página — visão geral (faixa,
+card com "R$ 10.000,00 em esteira" = 20.000×50%, KPI 13), modal do
+cliente (bloco esteira, oportunidade listada, cronologia com depósito/
+compra/entrada na esteira/movimento/cadastro), fluxo "Criar
+oportunidade" → Expansão pré-preenchido e amarrado, busca com sugestão.
+**Testes:** 575/575 (5 novos). **Build:** exit 0. Varredura
+no-use-before-define limpa (só os 5 casos seguros dentro de useEffect).
+**Status final:** CONCLUÍDA — aguarda conferência do dono no preview.

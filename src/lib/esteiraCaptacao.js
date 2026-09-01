@@ -128,16 +128,24 @@ export function alertasEsteira(oportunidades = [], ref = new Date()) {
 }
 
 /**
- * O 100% se prova sozinho: procura a venda REAL (partner_plan/adesão) do
- * cliente da oportunidade. Sem venda real → "declarado sem dinheiro na
- * conta" (chip âmbar no kanban).
+ * A venda REAL (partner_plan/adesão) do cliente da oportunidade — é ELA que
+ * prova o 100% e é ela que vira `venda_id` quando a oportunidade fecha
+ * (DIR-36: a amarração deixa de ser só inferência por e-mail).
  */
-export function dinheiroNaConta(oportunidade, sales = []) {
+export function vendaRealDoCliente(oportunidade, sales = []) {
   const email = String(oportunidade.cliente_email || '').toLowerCase();
   const uid = oportunidade.cliente_user_id;
-  return sales.some((s) =>
+  return sales.find((s) =>
     ['partner_plan', 'adesao', 'seller_adhesion'].includes(s.kind)
     && isVendaReal(s)
     && ((uid && s.buyer_id === uid) || (email && String(s.buyer_email || '').toLowerCase() === email))
-  );
+  ) || null;
+}
+
+/**
+ * O 100% se prova sozinho: existe venda REAL do cliente? Sem venda real →
+ * "declarado sem dinheiro na conta" (chip âmbar no kanban).
+ */
+export function dinheiroNaConta(oportunidade, sales = []) {
+  return vendaRealDoCliente(oportunidade, sales) !== null;
 }

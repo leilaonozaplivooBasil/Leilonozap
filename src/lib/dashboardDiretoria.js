@@ -12,6 +12,8 @@
 import { isVendaReal } from './dinheiroReal.js';
 import { calcularMetaCentral, META_ONLINE_MES, META_FISICA_MES, META_VENDAS_MES } from './metaCentral.js';
 import { buildCostMap, custoDaVenda, unidadesEmEstoque } from './custoProduto.js';
+import { resumoEsteira } from './esteiraCaptacao.js';
+import { META_CAPTACAO } from './captacaoParceiros.js';
 
 export const JANELA_ATIVIDADE_DIAS = 30;
 
@@ -29,6 +31,8 @@ export const KPIS_DIRETORIA = [
   { id: 'faturamento_total', label: 'Faturamento total (mês)', meta: META_VENDAS_MES, unidade: 'brl' },
   { id: 'custo_aquisicao', label: 'Custo de aquisição (listas)', meta: 22.8, unidade: 'pct', metaEhTeto: true },
   { id: 'roi_operacional', label: 'ROI operacional', meta: 113.68, unidade: 'pct' },
+  // 🛤️ DIR-36 — 13º número: a esteira de captação entra no dashboard diário.
+  { id: 'esteira_captacao', label: 'Esteira de Captação (fechado + ponderado)', meta: META_CAPTACAO, unidade: 'brl' },
 ];
 
 const diasAtras = (ref, dias) => new Date(ref.getTime() - dias * 24 * 60 * 60 * 1000);
@@ -39,9 +43,10 @@ const diasAtras = (ref, dias) => new Date(ref.getTime() - dias * 24 * 60 * 60 * 
  * @param users AppUser da plataforma
  * @param products produtos do galpão inteiro (custo de aquisição e ROI)
  * @param concurso contadores do Rank Premiado ({cadastros_7d, visitantes_7d}) — /api/concurso?action=stats_crm
+ * @param oportunidades esteira de captação (DIR-36 — captacao_oportunidades)
  * @param ref   Date de referência ("hoje" — parâmetro pra ser testável)
  */
-export function calcularDashboardDiretoria({ sales = [], users = [], products = [], concurso = null, ref = new Date() } = {}) {
+export function calcularDashboardDiretoria({ sales = [], users = [], products = [], concurso = null, oportunidades = [], ref = new Date() } = {}) {
   const vendasReais = sales.filter(isVendaReal);
   const corte30d = diasAtras(ref, JANELA_ATIVIDADE_DIAS);
   const corte7d = diasAtras(ref, 7);
@@ -144,6 +149,17 @@ export function calcularDashboardDiretoria({ sales = [], users = [], products = 
     roi_operacional: roiOperacional === null
       ? { realizado: null, tipo: 'sem_fonte', fonte: 'Nenhuma venda do mês com produto vinculado (custo conhecido) ainda.' }
       : { realizado: roiOperacional, tipo: 'aproximacao', fonte: `(Receita − custo) ÷ custo das vendas reais do mês COM produto vinculado — mesma ligação venda→custo do Painel de Lucro Diário. Cobertura: ${vendasComCusto.length} de ${vendasMercadoriaMes.length} vendas do mês têm custo conhecido.` },
+    // 13) Esteira de Captação (DIR-36) — forecast oficial da esteira: valor
+    // fechado (100%) + pipeline ponderado (Σ valor × probabilidade dos
+    // ativos), contra a meta de R$ 1 mi. Mesma função do kanban (fonte única).
+    esteira_captacao: (() => {
+      const esteira = resumoEsteira(oportunidades);
+      return {
+        realizado: esteira.fechado + esteira.pipelinePonderado,
+        tipo: 'dado',
+        fonte: `Fechado (100%): R$ ${esteira.fechado.toLocaleString('pt-BR')} + pipeline ponderado (Σ valor × probabilidade de ${esteira.ativas} negociações ativas). Mesma conta do kanban da aba Expansão.`,
+      };
+    })(),
   };
 
   return KPIS_DIRETORIA.map((kpi) => ({ ...kpi, ...valores[kpi.id] }));
