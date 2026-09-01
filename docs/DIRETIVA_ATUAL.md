@@ -12,6 +12,46 @@
 
 ---
 
+## DIR-35 — Tela "Sem conexão" falsa: só declarar offline com PROVA
+
+**Emitida por:** dono (01/09/2026): print do preview da branch preso na
+tela "Sem conexão" — "OLHA TEM ALGO ERRADO VEJA DIREITO NAO ESTA
+APARECENDO PRECISAMOS RESOLVER ISSO".
+**Data:** 01/09/2026.
+**Diagnóstico (sem achismo):** a tela "Sem conexão" é o
+`OfflineScreen.jsx` do PRÓPRIO app — ou seja, o servidor entregou o HTML,
+os bundles baixaram e o React montou; a rede FUNCIONAVA. O app se
+trancou porque `useOnlineStatus` (código da era Base44, commit
+`0e4f5a00`, anterior a todo o nosso trabalho) confia cegamente no
+`navigator.onLine` do navegador — um sinal que mente com VPN/proxy/troca
+de adaptador de rede — e o botão "Tentar novamente" testava
+`https://leilaonozap.net/api/health`, um endpoint que NÃO EXISTE
+(`api/` não tem `health.js`) e ainda em domínio cruzado, então qualquer
+bloqueio de extensão/DNS deixava o usuário preso pra sempre. Os commits
+da DIR-34 não tocaram nesses arquivos.
+**Escopo autorizado:**
+1. `src/lib/conexao.js` — fonte única da prova de conexão: buscar
+   `/version.json` no PRÓPRIO domínio (existe em todo deploy, tem
+   `Cache-Control: no-store` no vercel.json) com cache-buster. Testes.
+2. `useOnlineStatus`: nasce otimista (a página acabou de chegar pela
+   rede); o evento `offline` do navegador vira GATILHO DE VERIFICAÇÃO,
+   não veredito — só declara offline se a prova real falhar; o evento
+   `online` restaura. "Tentar novamente" usa a mesma prova.
+3. `App.jsx`: consertar `hasLoadedOnce` (era `onLoad` numa `<div>`, que
+   nunca dispara) — marcar carregado via efeito na primeira renderização
+   online, pra tela cheia de offline só existir num boot genuinamente sem
+   rede; depois disso, queda de conexão mostra o BANNER, sem esconder o
+   app que já carregou.
+**Fora do escopo / proibido:** mexer no service worker/workbox (a
+configuração atual está correta — html fora do precache, navegação
+sempre na rede); mexer em `useAppVersion` (o `navigator.onLine` lá só
+adia um poll de 60s, sem trancar nada); qualquer mudança visual nos
+componentes de offline.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-34.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-34 — Esteira de Captação: do agendamento ao contrato assinado
 
 **Emitida por:** dono (30/08/2026): "o cadastro de parceiro de compra e

@@ -1541,3 +1541,44 @@ produção.
 **Testes:** 567/567 (8 novos). **Build:** exit 0. Nomes de migração ✅.
 **Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
 Preview + "pode".
+
+---
+
+## REL-35 — Execução da DIR-35 (tela "Sem conexão" falsa)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Diagnóstico provado (sem achismo):** o print do dono mostrava o
+`OfflineScreen.jsx` do PRÓPRIO app — logo o servidor entregou a página,
+os bundles baixaram e o React montou; a rede funcionava. O trancamento
+vinha do `useOnlineStatus` da era Base44 (commit `0e4f5a00`): confiança
+cega no `navigator.onLine` (que mente com VPN/proxy/troca de rede) e
+botão "Tentar novamente" apontando pra `leilaonozap.net/api/health` —
+endpoint que NÃO EXISTE, e em domínio cruzado. Os commits da DIR-34 não
+tocaram em nenhum desses arquivos.
+**O que foi feito:**
+1. `src/lib/conexao.js` (novo, +3 testes): `provarConexao()` — busca
+   `/version.json` no PRÓPRIO domínio (existe em todo deploy, no-store),
+   com cache-buster e teto de 8s (portal cativo não pendura o botão).
+2. `useOnlineStatus` reescrito: nasce otimista (a página acabou de chegar
+   pela rede); evento `offline` vira GATILHO DE VERIFICAÇÃO — só declara
+   offline se a prova real falhar; evento `online` restaura; nº de série
+   da prova descarta resultado atrasado (falha velha não sobrescreve
+   estado novo); "Tentar novamente" usa a mesma prova.
+3. `App.jsx`: `hasLoadedOnce` era `onLoad` numa `<div>` (nunca dispara);
+   agora é efeito na primeira renderização online. Queda de conexão no
+   meio da sessão mostra o BANNER, sem esconder o app carregado.
+**Revisão adversarial (3 revisores independentes):** veredito "sólida"
+nos 3 ângulos (hooks React, PWA/Vercel, cenários do bug); os 2 achados
+menores (corrida de prova atrasada, falta de timeout) foram corrigidos
+antes do commit.
+**Achado pré-existente registrado (FORA do escopo, pendência):** o
+service worker gerado NUNCA INSTALA — o `navigateFallback` padrão do
+vite-plugin-pwa ainda aponta pro `index.html`, que está fora do precache,
+então o SW estoura `non-precached-url` na avaliação e morre. Efeito
+prático hoje: nenhum cache de SW ativo (tudo vai à rede — comportamento
+até desejável pra atualização), mas o PWA está sem casca offline. Correção
+(rodada própria, com ordem do dono): `navigateFallback: null` explícito no
+bloco workbox. NÃO mexido agora — DIR-35 proíbe tocar no workbox.
+**Testes:** 570/570 (3 novos). **Build:** exit 0. **Lint:** limpo.
+**Status final:** CONCLUÍDA — aguarda o dono recarregar o preview.

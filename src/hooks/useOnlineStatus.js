@@ -1,25 +1,45 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { provarConexao } from '@/lib/conexao';
 
 /**
- * Hook para detectar status de conexão com a internet
+ * Hook de status de conexão (reescrito na DIR-35, 01/09/2026).
+ *
+ * Regra: offline NUNCA se declara pelo palpite do navegador. O
+ * `navigator.onLine` mente (VPN, proxy, troca de rede) e chegou a trancar o
+ * app na tela "Sem conexão" com a página recém-carregada da rede. Agora:
+ * - o estado nasce otimista (a página acabou de chegar pela rede);
+ * - o evento `offline` é GATILHO DE VERIFICAÇÃO — só vira offline se a
+ *   prova real (busca no próprio domínio) falhar;
+ * - o evento `online` e qualquer prova bem-sucedida restauram na hora.
  */
 export function useOnlineStatus() {
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [isOnline, setIsOnline] = useState(true);
     const [wasOffline, setWasOffline] = useState(false);
+    // Nº de série da prova: descarta resultado de prova ATRASADA (ex.: a rede
+    // caiu, a prova ficou pendurada, a rede voltou e o evento `online` chegou
+    // antes — a falha velha não pode sobrescrever o estado novo).
+    const provaSeq = useRef(0);
+
+    // Prova de verdade: /version.json do próprio domínio (ver src/lib/conexao.js)
+    const checkConnection = useCallback(async () => {
+        const minha = ++provaSeq.current;
+        const ok = await provarConexao();
+        if (minha === provaSeq.current) {
+            setIsOnline(ok);
+            setWasOffline(!ok);
+        }
+        return ok;
+    }, []);
 
     useEffect(() => {
-        const handleOnline = () => {
-            setIsOnline(true);
-            // Marca que voltou do offline para mostrar mensagem de reconexão
-            if (wasOffline) {
-                setWasOffline(false);
-            }
-        };
+        const handleOnline = () => { provaSeq.current += 1; setIsOnline(true); setWasOffline(false); };
+        // Navegador ACHA que caiu → confere com a rede antes de declarar
+        const handleOffline = () => { checkConnection(); };
 
-        const handleOffline = () => {
-            setIsOnline(false);
-            setWasOffline(true);
-        };
+        // Boot com o navegador dizendo "offline": não tranca — prova primeiro.
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            checkConnection();
+        }
 
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
@@ -28,23 +48,7 @@ export function useOnlineStatus() {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [wasOffline]);
-
-    // Função para verificar conexão real (não apenas status do navegador)
-    const checkConnection = useCallback(async () => {
-        try {
-            const response = await fetch('https://leilaonozap.net/api/health', {
-                method: 'HEAD',
-                mode: 'no-cors',
-                cache: 'no-store'
-            });
-            setIsOnline(true);
-            return true;
-        } catch {
-            setIsOnline(false);
-            return false;
-        }
-    }, []);
+    }, [checkConnection]);
 
     return { isOnline, wasOffline, checkConnection };
 }

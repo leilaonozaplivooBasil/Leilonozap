@@ -95,7 +95,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { OfflineScreen, OfflineBanner, ReconnectedBanner } from '@/components/OfflineScreen';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 // Helper: redirect preservando query params
 const RedirectWithParams = ({ to }) => {
@@ -537,12 +537,12 @@ function App() {
   const [showReconnected, setShowReconnected] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  // Marca que o app já carregou pelo menos uma vez
-  const handleAppLoaded = useCallback(() => {
-    if (!hasLoadedOnce) {
-      setHasLoadedOnce(true);
-    }
-  }, [hasLoadedOnce]);
+  // DIR-35: marca "já carregou" na PRIMEIRA renderização online. O antigo
+  // `onLoad` numa <div> nunca disparava (div não emite evento load), então a
+  // tela cheia de offline podia engolir um app que já tinha carregado.
+  useEffect(() => {
+    if (isOnline && !hasLoadedOnce) setHasLoadedOnce(true);
+  }, [isOnline, hasLoadedOnce]);
 
   // Mostra banner de reconexão quando volta
   const handleRetry = useCallback(async () => {
@@ -574,7 +574,7 @@ function App() {
 
         <Router>
           <NavigationTracker />
-          <div onLoad={handleAppLoaded}>
+          <div>
             <AuthenticatedApp />
           </div>
         </Router>
