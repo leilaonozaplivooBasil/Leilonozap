@@ -271,7 +271,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
 
                 <Button
                   onClick={salvar}
-                  disabled={salvando || !form.cliente_nome.trim() || faltamNoEstagio.length > 0}
+                  disabled={salvando || !String(form.cliente_nome || '').trim() || faltamNoEstagio.length > 0}
                   className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white"
                 >
                   <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar'}

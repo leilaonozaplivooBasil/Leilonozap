@@ -266,6 +266,18 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     [networkAppUsers, networkCatalogSales, networkAuctions, networkManualCustomers]
   );
 
+  // 🛤️ DIR-34 — escopo da esteira (prática de mercado): cada responsável vê
+  // e move só a própria carteira; visão total (dono/admins/diretoria —
+  // esteira é VENDA) vê tudo + ranking do time. PRECISA vir antes da fila
+  // de contato, que lê os alertas da esteira — const depois do uso derruba a
+  // renderização inteira (TDZ), foi o crash "Detectamos um problema".
+  const networkOportunidades = React.useMemo(
+    () => (isSuperAdmin ? oportunidades : oportunidades.filter(
+      (o) => o.responsavel_id === currentUser?.id || o.criado_por_id === currentUser?.id
+    )),
+    [oportunidades, currentUser?.id, isSuperAdmin]
+  );
+
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
   const filaContato = React.useMemo(
     () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteira(networkOportunidades) }),
@@ -841,16 +853,6 @@ _Enviado via CRM Leilão NoZap_`;
   const ritmo = React.useMemo(
     () => (isSuperAdmin ? ritmoDiario(networkCatalogSales) : null),
     [networkCatalogSales, isSuperAdmin]
-  );
-
-  // 🛤️ DIR-34 — escopo da esteira (prática de mercado): cada responsável vê
-  // e move só a própria carteira; visão total (dono/admins/diretoria —
-  // esteira é VENDA) vê tudo + ranking do time.
-  const networkOportunidades = React.useMemo(
-    () => (isSuperAdmin ? oportunidades : oportunidades.filter(
-      (o) => o.responsavel_id === currentUser?.id || o.criado_por_id === currentUser?.id
-    )),
-    [oportunidades, currentUser?.id, isSuperAdmin]
   );
 
   // 💾 Salvar oportunidade: mudança de estágio carimba estagio_desde, guarda

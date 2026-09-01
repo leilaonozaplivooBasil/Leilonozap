@@ -1582,3 +1582,40 @@ até desejável pra atualização), mas o PWA está sem casca offline. Correçã
 bloco workbox. NÃO mexido agora — DIR-35 proíbe tocar no workbox.
 **Testes:** 570/570 (3 novos). **Build:** exit 0. **Lint:** limpo.
 **Status final:** CONCLUÍDA — aguarda o dono recarregar o preview.
+
+---
+
+## REL-34.1 — Correção crítica: crash do CRM introduzido na DIR-34
+
+**Data:** 01/09/2026.
+**Sintoma (print do dono):** tela preta "Detectamos um problema"
+(ErrorBoundary da raiz) ao abrir o CRM no preview da branch — em
+QUALQUER aba. Os previews que "funcionavam" eram outros códigos:
+`nj2my05ky` = branch de outra sessão (61c91dd) e `3gpd0i1wn` = produção
+main (bc87d9c) — nenhum tem a DIR-34. Identificação feita SEM achismo:
+mapeei cada URL congelada ao commit pelos deployments da Vercel
+registrados no GitHub.
+**Causa-raiz:** na DIR-34, o `filaContato` (linha ~270 do
+CrmClientesTab) passou a ler `networkOportunidades`, declarado como
+`const` ~580 linhas ABAIXO no mesmo corpo do componente. Temporal dead
+zone: `ReferenceError: Cannot access 'networkOportunidades' before
+initialization` na primeira renderização. Build e testes não pegam
+(nenhum renderiza o componente) — mesma classe do caso
+Briefcase/DollarSign do REL-25.
+**Correção:** o memo `networkOportunidades` subiu pra antes do
+`filaContato`; blindado também o `.trim()` do modal da esteira contra
+`cliente_nome` nulo.
+**Prova (navegador real, Playwright + Chromium, backend simulado):**
+- SEM a correção: build ok, testes ok… e `Detectamos um problema` na
+  carga — o print do dono, reproduzido.
+- COM a correção: CRM carrega; aba 🚀 Expansão renderiza a Esteira
+  completa (kanban 8 estágios, forecast, badge "7d parada", chip
+  "⚠️ sem dinheiro na conta", ranking Conversão do Time) inclusive com
+  linha SUJA (nulls em nome/tipo/datas); abas Clientes e Visão
+  Executiva ok; ZERO erros de página nas três abas.
+**Regra nova de verificação (aprendida em dobro):** mudança que toca
+componente React não sai da rodada sem renderizar no navegador —
+`vite preview` + Playwright com backend interceptado, cenário logado e
+deslogado.
+**Testes:** 570/570. **Build:** exit 0.
+**Status final:** CONCLUÍDA — preview da branch volta a ser confiável.
