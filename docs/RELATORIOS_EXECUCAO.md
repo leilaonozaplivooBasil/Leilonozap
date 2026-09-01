@@ -1963,4 +1963,8 @@ progresso, estrelas gravando pela rota auditada, script carregando,
 agenda com link correto do Google Calendar, sub-abas do Hábito 6 com o
 CRM inteiro funcionando, Verificação abrindo por padrão pro admin.
 **Testes:** 608/608 (10 novos). **Build:** exit 0.
-**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e conferir.
+**Ação do dono:** ✅ FEITA — migração do Método vivo colada e aplicada no
+SQL Editor em 01/09/2026 ("Success. No rows returned"). metodo_perfil,
+metodo_tarefas e customers.qualificacao vivos em produção.
+**Status final:** CONCLUÍDA — banco pronto; painel dos 8 Hábitos
+operante de ponta a ponta no preview.
