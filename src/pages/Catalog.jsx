@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
+import PilulasOrigem from "@/components/catalog/PilulasOrigem";
+import { produtoNoFiltro } from "@/lib/origemProduto";
 
 const Product = plataforma.entities.Product;
 const User = { me: () => plataforma.auth.me() };
@@ -58,6 +60,8 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  // 🏭 02/09/2026 — origem do produto (as pílulas que a área de leilão já tinha).
+  const [origemFiltro, setOrigemFiltro] = useState("todos");
   const [storeRating, setStoreRating] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   // 🔍 produto aberto EXPANDIDO na própria página (modal) — sem navegar (pedido Gabriel 25/07)
@@ -161,6 +165,10 @@ export default function Catalog() {
     let filtered = products;
 
     // Filtro por categoria
+    if (origemFiltro !== "todos") {
+      filtered = filtered.filter((p) => produtoNoFiltro(p, origemFiltro));
+    }
+
     if (selectedCategory !== "all") {
       filtered = filtered.filter((p) => p.category_id === selectedCategory);
     }
@@ -208,7 +216,7 @@ export default function Catalog() {
     filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
 
     setFilteredProducts(filtered);
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, origemFiltro]);
 
   // 🎴 Monta o cartão da Loja Virtual a partir de UM AppUser (dono resolvido).
   // Extraído pra o cartão poder vir do cadastro (dono real) ou do link, sem duplicar código.
@@ -568,7 +576,7 @@ export default function Catalog() {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, origemFiltro, filterProducts]);
 
   // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página).
   // ⚡ Na primeira montagem, "Todos" já foi buscado por loadProducts() — repetir aqui
@@ -626,8 +634,14 @@ export default function Catalog() {
   const featuredProducts = useMemo(() => {
     return products
       .filter(p => p.catalog_active && p.is_featured && p.quantity > 0)
+      // 🏭 02/09/2026 — a prateleira de destaques também obedece ao filtro de origem.
+      // Sem isto, filtrar "Direto de Fábrica" continuava exibindo uma devolução em
+      // destaque no topo — visto ao abrir a loja com os dois tipos de produto.
+      // (A prateleira ainda ignora o filtro de CATEGORIA; é comportamento anterior a
+      // esta mudança e ficou fora do escopo de propósito.)
+      .filter(p => produtoNoFiltro(p, origemFiltro))
       .slice(0, 4);
-  }, [products]);
+  }, [products, origemFiltro]);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -687,6 +701,14 @@ export default function Catalog() {
           categories={categories}
           onSelectCategory={(id) => setSelectedCategory(id)}
           banners={banners}
+        />
+
+        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
+            os produtos DESTA loja em vez de levar o cliente para o leilão. */}
+        <PilulasOrigem
+          produtos={products}
+          filtro={origemFiltro}
+          onFiltroChange={setOrigemFiltro}
         />
 
         {/* OFERTAS RELÂMPAGO */}
