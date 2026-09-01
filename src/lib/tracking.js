@@ -3,6 +3,7 @@
 // Só empurra eventos para window.dataLayer — não depende de nenhum script
 // externo estar instalado ainda (GTM), então nunca quebra nada em produção.
 import { useEffect, useRef } from 'react';
+import { iniciarPixel, rastrear } from '@/lib/metaPixel';
 
 function push(event) {
   try {
@@ -29,8 +30,31 @@ export function trackCtaClick(cta_name, page_section) {
   push({ event: 'cta_click', cta_name, page_section });
 }
 
-export function trackLead(lead_type, page_section) {
+/**
+ * "Um lead aconteceu." Continua alimentando o dataLayer como sempre e, quando o
+ * chamador informa um pixel, avisa a Meta também.
+ *
+ * 📊 31/08/2026 — o dono definiu: lead é quem EFETUA O CADASTRO. O evento entra
+ * aqui, e não no ponto de chamada, para que exista UM lugar que significa "lead":
+ * quem criar um caminho novo de cadastro amanhã chama esta função e o Meta vai
+ * junto, sem depender de alguém lembrar de duas linhas.
+ *
+ * O pixel é PARÂMETRO, não fixo: o cadastro do Rank Premiado também passa por
+ * aqui e não pode cair no pixel dos leilões — foi exatamente esse tipo de mistura
+ * que o `trackSingle` de metaPixel.js veio corrigir. Sem pixel informado, nada é
+ * enviado à Meta e o comportamento é o de antes.
+ *
+ * @param {string} lead_type     ex.: 'cadastro', 'cadastro_google'
+ * @param {string} page_section  seção de origem, para o GA4
+ * @param {string} [pixelId]     pixel da Meta que deve receber este Lead
+ */
+export function trackLead(lead_type, page_section, pixelId) {
   push({ event: 'lead', lead_type, page_section });
+  if (!pixelId) return;
+  // Garante o init antes de disparar: se a pessoa recarregou a página no meio do
+  // cadastro, o fbq da visita anterior já morreu e o Lead se perderia calado.
+  iniciarPixel(pixelId);
+  rastrear(pixelId, 'Lead');
 }
 
 export function trackBeginCheckout(checkout_type, value, page_section) {

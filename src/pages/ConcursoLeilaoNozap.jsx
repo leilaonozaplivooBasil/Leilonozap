@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { medirPagina, PIXEL_RANK_PREMIADO } from '@/lib/metaPixel';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
@@ -126,23 +127,17 @@ export default function ConcursoLeilaoNozap() {
 
   // 📊 Meta Pixel — SÓ nesta página (Rank Premiado), autorizado por Heloim em 11/08/2026
   // a pedido da Avilla Business. Não entra no index.html (carregaria em todas as páginas).
+  //
+  // 31/08/2026 — o snippet solto que morava aqui foi trocado pelo helper compartilhado.
+  // Não é arrumação: com a entrada do segundo pixel (leilões, na Home) o desenho antigo
+  // quebrava ESTA página. O `if (!window.fbq)` protegia o script, não o init — quem
+  // abrisse a Home primeiro deixaria este pixel sem init, e o `track` genérico ainda
+  // mandaria o PageView daqui para o pixel dos leilões. O helper dá init por ID e
+  // dispara com `trackSingle`. Ver src/lib/metaPixel.js.
   useEffect(() => {
-    // Carrega e inicializa o script só uma vez (evita duplicar o script/init
-    // ao navegar entre páginas), mas o PageView é disparado SEMPRE que esta
-    // página monta — inclusive quando o usuário volta pra ela via navegação
-    // SPA (sem reload), senão a visita não seria contada.
-    if (!window.fbq) {
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      window.fbq('init', '1434558685189211');
-    }
-    window.fbq('track', 'PageView');
+    // PageView a cada montagem, inclusive quando o visitante volta pra cá por
+    // navegação SPA (sem reload) — senão a visita não seria contada.
+    medirPagina(PIXEL_RANK_PREMIADO);
   }, []);
 
   // 📊 GA4 — o gtag.js do index.html carrega global e já registra o 1º acesso

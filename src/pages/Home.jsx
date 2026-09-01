@@ -23,6 +23,7 @@ import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import HeroBannerLeiloes from '../components/home/HeroBannerLeiloes';
 import { interleaveBanners } from '@/lib/interleaveBanners';
+import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
 import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
 import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
@@ -32,6 +33,11 @@ import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { useSectionTracking } from '@/lib/tracking';
+// 📊 Pixel da Meta desta página (31/08/2026, pedido do dono). É o pixel das
+// campanhas de leilão — separado do pixel do Rank Premiado, que tem outro ID.
+// Ver src/lib/metaPixel.js: os dois convivem porque o init é por ID e o disparo
+// é `trackSingle`.
+import { medirPagina, PIXEL_LEILOES } from '@/lib/metaPixel';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -128,6 +134,19 @@ function HeroActionsCarousel({ currentUser }) {
 export default function Home() {
   // 🔥 TODOS OS HOOKS NO TOPO - NUNCA APÓS CONDICIONAIS OU RETURNS
   useSectionTracking('leiloes', 'Leilões Ativos');
+
+  // 📊 PageView do pixel da Meta. Dentro de useEffect (não no corpo) porque é
+  // efeito colateral: no corpo do componente rodaria de novo a cada re-render
+  // — e esta página re-renderiza muito (leilões chegam por realtime), o que
+  // multiplicaria a mesma visita por dezenas.
+  //
+  // Dispara a CADA montagem, de propósito. Esta página atende /Home e /leiloes,
+  // e o visitante volta pra ela navegando dentro do app, sem recarregar — nesse
+  // caminho nenhum PageView nasce sozinho, e a visita não seria contada. Mesmo
+  // raciocínio já aplicado ao GA4 em ConcursoLeilaoNozap.jsx.
+  useEffect(() => {
+    medirPagina(PIXEL_LEILOES);
+  }, []);
   const navigate = useNavigate();
   const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);
@@ -195,7 +214,10 @@ export default function Home() {
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
-    filters: {},
+    // 🎪 Só quem está no cartaz. Sem isto o polling de 90s trazia os 80 leilões
+    // mais atualizados — e como encerrar um leilão ATUALIZA a linha, os mortos
+    // subiam ao topo e empurravam 10 leilões ativos para fora da vitrine.
+    filters: { status: STATUS_EM_CARTAZ },
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
         const seen = new Set();
@@ -395,14 +417,11 @@ export default function Home() {
     // NOZAP - FILTRO BASE + ESTOQUE + DATA
     filtered = deduped.filter((a) => {
       if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
-      if (a?.status === 'archived') return false;
 
-      // 🔒 FILTRO DE DATA: Leilões com end_time expirado saem da listagem pública
-      // O status no banco pode não ser atualizado automaticamente pelo backend
-      if (a.end_time && a.status === 'active') {
-        const endDate = new Date(a.end_time);
-        if (!isNaN(endDate.getTime()) && endDate < new Date()) return false;
-      }
+      // 🎪 Encerrado, vendido, arquivado ou com prazo vencido sai da vitrine.
+      // Última barreira: pega também o que veio do cache do navegador, salvo
+      // antes desta regra existir. (src/lib/leilaoEmCartaz.js)
+      if (!estaEmCartaz(a)) return false;
 
       // 🆕 FILTRO DE ESTOQUE: Verifica se produto vinculado tem estoque > 0
       if (a.product_id && productStockMap[a.product_id] !== undefined) {
@@ -638,7 +657,7 @@ export default function Home() {
     // Sem cache válido: busca do servidor (uma única vez)
     try {
       const data = await Promise.race([
-        Auction.list("-created_date", 80),
+        Auction.filter({ status: STATUS_EM_CARTAZ }, "-created_date", 80),
         new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000))
       ]);
       deduplicateAndSet(data);

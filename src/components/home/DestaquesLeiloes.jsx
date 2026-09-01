@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Sparkles } from 'lucide-react';
 import AuctionCard from '@/components/auction/AuctionCard';
+import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
 
 // 🌟 Seção "Destaques" — até 6 leilões marcados manualmente em Editar Leilão,
 // mostrados na ordem escolhida. Some silenciosamente se nenhum leilão estiver marcado.
@@ -33,8 +34,11 @@ export default function DestaquesLeiloes({ currentUser }) {
         .select('*')
         .in('id', ids);
       if (!alive) return;
+      // 🎪 Destaque é marcação MANUAL e ninguém desmarca quando o leilão acaba —
+      // foi assim que um Air Fryer arrematado em 26/08 seguiu em cartaz. O
+      // destaque encerrado simplesmente não entra; os outros sobem de posição.
       const byId = Object.fromEntries((auctionsData || []).map((a) => [a.id, a]));
-      setDestaques(ids.map((id) => byId[id]).filter(Boolean));
+      setDestaques(ids.map((id) => byId[id]).filter((a) => a && estaEmCartaz(a)));
     })();
     return () => { alive = false; };
   }, []);

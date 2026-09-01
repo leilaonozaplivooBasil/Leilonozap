@@ -10,6 +10,32 @@
 import { gerarEnvioAutomatico } from '../_lib/melhorEnvioShipment.js';
 import { exigirSessao } from '../_lib/sessao.js';
 
+// 🔴 31/08/2026 — pedido PAGO recusava etiqueta com "Venda ainda não está paga
+// (status atual: preparando)".
+//
+// A trava aqui aceitava só 'paid' e 'entregue'. Mas `status` nesta venda carrega
+// DUAS coisas ao mesmo tempo: se foi paga E em que ponto da entrega está. Quando
+// o admin clica em "Embalando" na jornada da tela de pedidos, o status vira
+// 'preparando' (ver FULFILLMENT_TO_STATUS em src/pages/CatalogOrdersAdmin.jsx)
+// — e a etiqueta passava a ser recusada para sempre, sem caminho de volta.
+//
+// Um pedido que já avançou na entrega É, por definição, um pedido pago: nenhum
+// desses estados é alcançável sem pagamento. A trava protegia contra o que não
+// existe, e bloqueava o que existe.
+//
+// ⚠️ Esta lista é a MESMA de STATUS_PAGO em src/pages/CatalogOrdersAdmin.jsx:46.
+// A tela já tratava os seis como pagos — foi só o servidor que discordou. Se um
+// estado novo entrar lá, tem que entrar aqui. (Unificar as duas cópias num lugar
+// só é o conserto de raiz; não cabe nesta correção urgente.)
+export const STATUS_JA_PAGO = [
+  'paid',          // pago, ainda não começou a separação
+  'preparando',    // ← o que quebrava
+  'shipped',
+  'saiu_entrega',
+  'delivered',
+  'entregue',
+];
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -52,7 +78,7 @@ export default async function handler(req, res) {
     const saleRows = await saleResp.json().catch(() => null);
     const sale = Array.isArray(saleRows) ? saleRows[0] : null;
     if (!sale) return res.status(200).json({ ok: false, error: 'Venda não encontrada.' });
-    if (sale.status !== 'paid' && sale.status !== 'entregue') {
+    if (!STATUS_JA_PAGO.includes(sale.status)) {
       return res.status(200).json({ ok: false, error: `Venda ainda não está paga (status atual: ${sale.status}).` });
     }
 
