@@ -12,6 +12,7 @@ import 'react-quill/dist/quill.snow.css';
 // 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
 import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
 import { CONDICOES, normalizarCondicao } from '@/lib/condicaoProduto';
+import { ORIGENS } from '@/lib/origemProduto';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
@@ -67,6 +68,7 @@ export default function AddCatalogProduct() {
     // anunciada como nova.
     condicao: '',
     estado_conservacao: '',
+    product_source: '',
     brand: '',
     model: '',
     
@@ -652,7 +654,9 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         // 🏷️ 02/09/2026 — o estado do produto. O seletor logo acima existia desde
         // sempre e o cliente nunca viu nada: o campo não chegava aqui.
         condicao: formData.condicao || null,
-        estado_conservacao: (formData.estado_conservacao || '').trim() || null
+        estado_conservacao: (formData.estado_conservacao || '').trim() || null,
+        // 🏭 02/09/2026 — origem: é o que coloca o produto nas pílulas da loja.
+        product_source: formData.product_source || null
       };
 
       const sourceProduct = location.state?.sourceProduct;
@@ -1055,6 +1059,25 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                     
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-1.5 block">
+                            Origem do produto
+                          </Label>
+                          <select
+                            value={formData.product_source}
+                            onChange={(e) => handleInputChange('product_source', e.target.value)}
+                            className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                          >
+                            <option value="">— não informado —</option>
+                            {ORIGENS.map((o) => (
+                              <option key={o.valor} value={o.valor}>{o.rotulo}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Coloca o produto nos filtros “Direto de Fábrica” e “Arremate &amp; Devoluções” da loja.
+                          </p>
+                        </div>
+
                         <div>
                           <Label className="text-sm text-gray-700 mb-1.5 block">
                             Condição do produto

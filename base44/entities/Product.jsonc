@@ -121,6 +121,11 @@
       "type": "string",
       "description": "Descri\u00e7\u00e3o livre do estado do produto, exibida ao cliente"
     },
+    "product_source": {
+      "type": "string",
+      "enum": ["factory_new", "return_resale"],
+      "description": "Origem: factory_new (novo de f\u00e1brica) ou return_resale (arremate/devolu\u00e7\u00e3o). Mesmos valores de auctions.product_source. Sem default \u2014 NULL = n\u00e3o informado"
+    },
     "purchase_order": {
       "type": "string",
       "description": "Nota fiscal de compra (0001, 0002, etc)"

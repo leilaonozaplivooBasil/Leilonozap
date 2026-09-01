@@ -16,6 +16,7 @@ import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
 import { unidadesEmEstoque, custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
 import { CONDICOES } from '@/lib/condicaoProduto';
+import { ORIGENS } from '@/lib/origemProduto';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -277,6 +278,7 @@ export default function ProductManagement() {
     category_id: '',
     condicao: '',
     estado_conservacao: '',
+    product_source: '',
     image_urls: []
   });
 
@@ -551,6 +553,15 @@ export default function ProductManagement() {
       filtered = filtered.filter(p => (p.quantity || 0) < 0);
     } else if (alertFilter === 'no_category') {
       filtered = filtered.filter(p => !p.category_id);
+    } else if (alertFilter === 'loja_sem_origem') {
+      // 🏭 02/09/2026 — a varredura que faz as pílulas da Loja Virtual funcionarem.
+      // Só interessa quem ESTÁ na loja: as pílulas filtram a vitrine, não o depósito.
+      // São ~299 produtos, não os 2.931 do estoque — trabalho de uma tarde.
+      filtered = filtered.filter(p => p.catalog_active && !p.product_source);
+    } else if (alertFilter === 'loja_sem_estado') {
+      // 🏷️ Mesma ideia para o estado do produto (etapa anterior): o que está à venda
+      // sem nenhuma informação de conservação é o que gera reclamação.
+      filtered = filtered.filter(p => p.catalog_active && !p.condicao && !(p.estado_conservacao || '').trim());
     } else if (alertFilter === 'hidden_stock') {
       filtered = filtered.filter(p => (p.quantity || 0) > 0 && !p.catalog_active);
     }
@@ -614,6 +625,7 @@ export default function ProductManagement() {
       category_id: product.category_id || '',
       condicao: product.condicao || '',
       estado_conservacao: product.estado_conservacao || '',
+      product_source: product.product_source || '',
       image_urls: Array.isArray(product.image_urls) ? product.image_urls : []
     });
     setShowAddForm(true);
@@ -664,6 +676,7 @@ export default function ProductManagement() {
         category_id: formData.category_id || null,
         condicao: formData.condicao || null,
         estado_conservacao: (formData.estado_conservacao || '').trim() || null,
+        product_source: formData.product_source || null,
         image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : []
       };
 
@@ -696,6 +709,7 @@ export default function ProductManagement() {
         category_id: '',
     condicao: '',
     estado_conservacao: '',
+    product_source: '',
         image_urls: []
       });
       setShowAddForm(false);
@@ -985,6 +999,8 @@ export default function ProductManagement() {
             <option value="stopped">Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
             <option value="error">Erro Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
             <option value="no_category">Sem Categoria ({products.filter(p => !p.category_id).length})</option>
+            <option value="loja_sem_origem">Na loja sem origem ({products.filter(p => p.catalog_active && !p.product_source).length})</option>
+            <option value="loja_sem_estado">Na loja sem estado ({products.filter(p => p.catalog_active && !p.condicao && !(p.estado_conservacao || '').trim()).length})</option>
             <option value="hidden_stock">Estoque fora da loja ({products.filter(p => (p.quantity || 0) > 0 && !p.catalog_active).length})</option>
           </select>
           <button
@@ -1611,7 +1627,24 @@ export default function ProductManagement() {
                         O cliente lê isto antes de comprar. É o que evita reclamação de amassado ou avaria depois da entrega.
                       </p>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                          <Label className="text-gray-300 text-sm">Origem</Label>
+                          <select
+                            value={formData.product_source || ''}
+                            onChange={(e) => setFormData({ ...formData, product_source: e.target.value })}
+                            className="w-full h-10 px-3 rounded-md bg-gray-700 text-white border border-gray-600 text-sm"
+                          >
+                            <option value="">— não informado —</option>
+                            {ORIGENS.map((o) => (
+                              <option key={o.valor} value={o.valor}>{o.rotulo}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-400 mt-1">
+                            É o que coloca o produto nos filtros “Direto de Fábrica” e “Arremate &amp; Devoluções” da Loja Virtual.
+                          </p>
+                        </div>
+
                         <div>
                           <Label className="text-gray-300 text-sm">Condição</Label>
                           <select
