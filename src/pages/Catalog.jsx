@@ -922,13 +922,30 @@ export default function Catalog() {
             </div> :
           filteredProducts.length === 0 && !loadError ?
           <div className="text-center py-12 text-gray-400">
-              <div className="text-6xl mb-4">📦</div>
+              {/* 🏭 02/09/2026 — vazio por FILTRO DE ORIGEM tem causa própria: ninguém
+                  classificou aqueles produtos ainda. Dizer "nenhum produto encontrado /
+                  ajuste a busca" nesse caso manda o cliente procurar defeito na busca
+                  dele, quando o buraco é do nosso lado. */}
+              <div className="text-6xl mb-4">{origemFiltro !== "todos" ? "🏷️" : "📦"}</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
-                Nenhum produto encontrado
+                {origemFiltro !== "todos"
+                  ? "Ainda não temos produtos nesta seção"
+                  : "Nenhum produto encontrado"}
               </h3>
               <p className="text-gray-500 mb-6">
-                Tente ajustar a busca ou volte mais tarde para novos produtos!
+                {origemFiltro !== "todos"
+                  ? "Estamos organizando o acervo por origem. Veja todos os produtos enquanto isso."
+                  : "Tente ajustar a busca ou volte mais tarde para novos produtos!"}
               </p>
+              {origemFiltro !== "todos" && (
+                <button
+                  type="button"
+                  onClick={() => setOrigemFiltro("todos")}
+                  className="rounded-full border border-emerald-400/60 bg-emerald-500/15 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500/25"
+                >
+                  Ver todos os produtos
+                </button>
+              )}
             </div> :
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">

@@ -11,22 +11,27 @@ import { ORIGENS, FILTRO_COLLECTION, contarPorFiltro } from '@/lib/origemProduto
 // cliente que está comprando clicaria e seria jogado para dentro do leilão: o
 // contrário do que a loja quer. Aqui elas filtram os produtos da própria loja.
 //
-// Pílula com contagem 0 NÃO é exibida. A origem dos produtos é preenchida à mão
-// (os lotes misturam fábrica e devolução, então não dá para deduzir), e uma pílula
-// que abre uma vitrine vazia é pior que não oferecer a seção.
+// ⚠️ 02/09/2026 — CORREÇÃO DE UMA DECISÃO ERRADA MINHA.
+// A primeira versão escondia pílula com contagem 0 e sumia com a fileira inteira se
+// sobrasse menos de duas. Como a coluna `product_source` nasceu vazia (ninguém tinha
+// classificado ainda), o resultado em produção foi: nenhuma pílula, em lugar nenhum.
+// A demanda era "esses filtros precisam aparecer na loja" — e eu entreguei uma tela
+// que não mostrava nada até alguém preencher 299 produtos à mão.
+//
+// Agora as três aparecem sempre, com a contagem à vista. Clicar numa vazia leva a um
+// aviso explicando que ninguém classificou ainda — não a uma vitrine vazia e muda.
+// A honestidade continua onde importa: um produto SEM origem não é contado em pílula
+// nenhuma. Nada é chutado; o que falta é dito.
 
 const ICONES = { Sparkles, Flame, Crown };
 
 export default function PilulasOrigem({ produtos, filtro, onFiltroChange }) {
   const contagem = React.useMemo(() => contarPorFiltro(produtos), [produtos]);
 
-  const disponiveis = [
+  const pilulas = [
     ...ORIGENS.map((o) => ({ ...o, total: contagem[o.valor] || 0 })),
     { valor: FILTRO_COLLECTION, rotulo: 'Collection', icone: 'Crown', total: contagem[FILTRO_COLLECTION] || 0 },
-  ].filter((o) => o.total > 0);
-
-  // Uma pílula sozinha não é escolha nenhuma — o cliente já está vendo tudo.
-  if (disponiveis.length < 2) return null;
+  ];
 
   const pilula = (ativa) =>
     `flex items-center gap-2 whitespace-nowrap rounded-full border px-5 py-2.5 text-sm font-medium transition-all duration-300 ${
@@ -47,7 +52,7 @@ export default function PilulasOrigem({ produtos, filtro, onFiltroChange }) {
         <span>Todos</span>
       </button>
 
-      {disponiveis.map((o) => {
+      {pilulas.map((o) => {
         const Icone = ICONES[o.icone] || Sparkles;
         const ativa = filtro === o.valor;
         return (
