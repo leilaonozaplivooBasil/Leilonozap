@@ -1880,4 +1880,8 @@ modal do método com os 8 hábitos, campo de objeção carregando do banco,
 dica 💡 do FORM na fila e bloco F.O.R.M. no modal do cliente com dados
 persistidos.
 **Testes:** 596/596 (3 novos). **Build:** exit 0. **Lint:** zero erros.
-**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e conferir.
+**Ação do dono:** ✅ FEITA — migração do método colada e aplicada no SQL
+Editor em 01/09/2026 ("Success. No rows returned"). form_metodo e
+objecao vivos em produção — FORM e objeções persistem de verdade.
+**Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
+preview e o "pode" do pacote DIR-34→41.
