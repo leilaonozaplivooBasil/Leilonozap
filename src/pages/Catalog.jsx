@@ -703,17 +703,9 @@ export default function Catalog() {
           banners={banners}
         />
 
-        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
-            os produtos DESTA loja em vez de levar o cliente para o leilão. */}
-        <PilulasOrigem
-          produtos={products}
-          filtro={origemFiltro}
-          onFiltroChange={setOrigemFiltro}
-        />
-
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago
-          products={products}
+          products={products.filter((p) => produtoNoFiltro(p, origemFiltro))}
           onOpenDetails={openDetails}
           totalProdutosTexto={textoTotalProdutos(totalProdutos)}
         />
@@ -721,6 +713,19 @@ export default function Catalog() {
         {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
             "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
         <CartaoLojaVirtual parceiro={licenseeData} />
+
+        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
+            os produtos DESTA loja em vez de levar o cliente para o leilão.
+            ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago: aquele bloco tem
+            `relative z-10 -mt-16`, sobe de propósito para sobrepor o banner (efeito de
+            camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
+            preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
+            elas de fato filtram. */}
+        <PilulasOrigem
+          produtos={products}
+          filtro={origemFiltro}
+          onFiltroChange={setOrigemFiltro}
+        />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
