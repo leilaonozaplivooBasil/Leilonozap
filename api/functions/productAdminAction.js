@@ -8,7 +8,13 @@ const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
 const ALLOWED = ['description', 'quantity', 'cost_price', 'selling_price_retail', 'selling_price_wholesale',
   'price_catalog', 'market_value', 'status', 'qty_perfeito', 'qty_bom', 'qty_oficina', 'qty_ruim',
   'sold_amount', 'deposit_name', 'lot', 'notes', 'catalog_active', 'is_featured', 'profit',
-  'linked_auctions', 'image_urls', 'source_url', 'date', 'purchase_order'];
+  'linked_auctions', 'image_urls', 'source_url', 'date', 'purchase_order',
+  // 01/09/2026 — categoria do produto. Sem estar NESTA lista, o campo que a
+  // Gestão de Estoque manda é descartado aqui em silêncio, e o sintoma na tela é
+  // idêntico ao de não existir campo nenhum. A coluna certa é `category_id`:
+  // pedir `category` faz o PostgREST recusar a operação inteira (foi o que
+  // esvaziou a vitrine do balcão em 08/08/2026, com 2.582 produtos em estoque).
+  'category_id'];
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
