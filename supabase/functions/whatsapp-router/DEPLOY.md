@@ -75,15 +75,22 @@ supabase secrets set \
      → escolha o workspace `leilonozap`.
   2. Menu **OAuth & Permissions** → seção **Scopes** → **Bot Token Scopes** → adicione:
      - `chat:write` — postar mensagens
-     - `chat:write.public` — postar em canais públicos
-     - `conversations:history` — ler histórico
-     - `conversations:info` — info de canal
-     - `conversations:list` — listar canais
+     - `chat:write.public` — postar em canal público sem precisar entrar nele
+       (⚠️ não vale para canal PRIVADO — nesse caso o `/invite` do passo 6 é obrigatório)
+     - `channels:read` — enxergar os canais públicos
+     - `groups:read` — **enxergar os canais privados**. `#top-tech-leilão-nozap` é privado:
+       sem este scope o bot não acha o canal pelo nome e a imagem de capa não sobe
+     - `channels:history` + `groups:history` — ler histórico (público e privado)
      - `users:read` — info de usuário
      - `reactions:write` — adicionar reações (opcional)
      - `files:write` — **obrigatório pra imagem de capa** (`documentar_no_slack` sem esse
-       scope ainda documenta o texto, mas nunca sobe a imagem — erro vem no `diagnostico`
-       da tool, algo como "confira o scope files:write do Bot Token")
+       scope ainda documenta o texto, mas nunca sobe a imagem)
+
+     ⚠️ 01/09/2026 — esta lista trazia `conversations:history`, `conversations:info` e
+     `conversations:list`, que **não existem** como scope no Slack. "conversations" é a
+     família de métodos da API; os scopes são por tipo de canal (`channels:*` para público,
+     `groups:*` para privado). Quem seguisse a lista antiga ia procurar na tela do Slack
+     três permissões que não estão lá.
   3. Topo da página: **Install to Workspace** → autorizar.
   4. Copie o **Bot User OAuth Token** (começa com `xoxb-...`).
      🔒 É uma chave — não cole em chat, print, commit, screenshot.
@@ -98,6 +105,15 @@ supabase secrets set \
   7. Confira: no WhatsApp, mande **"Heloim, postar no slack"** no 1:1 (precisa ser admin).
      Ela pede qual canal e o que escrever, depois publica usando a ferramenta `postar_no_slack`.
 
+- `SLACK_CANAL_PADRAO` (opcional): destino dos registros automáticos da Heloim (solicitação
+  criada / aprovada / rejeitada) quando ninguém escolhe canal. Padrão: `C0BHCMYJJGJ`, que é o
+  **#top-tech-leilão-nozap** — o mesmo canal onde o webhook publica hoje.
+  Vai o **ID** e não o nome porque o canal é privado e tem acento, e ID sobrevive a rename.
+  Para descobrir o ID de outro canal: abra o canal no Slack → nome do canal no topo → o ID
+  aparece no rodapé da janela que abre.
+  ⚠️ Só vale no modo Bot Token. Incoming Webhook **ignora o canal** — ele já nasce preso ao
+  canal escolhido na criação.
+
 - `SLACK_WEBHOOK_URL` (opcional, **legado**, mantido para compatibilidade): Incoming Webhook.
   Se `SLACK_BOT_TOKEN` não estiver configurado, o código tenta webhook como fallback.
   **Você deve preferir Bot Token** — webhook é limitado (só postagem simples, um canal fixo, sem edição).
@@ -106,7 +122,7 @@ supabase secrets set \
   1. Abra https://api.slack.com/apps → **Create New App** → *From scratch* → nome (ex.
      `Heloim-webhook`) → escolha o workspace `leilonozap`.
   2. Menu **Incoming Webhooks** → ligue o botão **Activate Incoming Webhooks**.
-  3. **Add New Webhook to Workspace** → escolha o canal `#top-tech-digital` (ou outro).
+  3. **Add New Webhook to Workspace** → escolha o canal `#top-tech-leilão-nozap` (ou outro).
      ⚠️ Se o canal for **privado**, entre nele primeiro e rode `/invite @Heloim`.
   4. Copie a URL gerada (começa com `https://hooks.slack.com/services/...`).
      🔒 É uma chave — quem tiver ela posta no canal. Não cole em chat nem em print.
@@ -119,6 +135,9 @@ supabase secrets set \
 
   6. Confira: no WhatsApp, mande **"Heloim, testa o Slack"** no 1:1 (precisa ser admin).
      Ela usa a ferramenta `checar_slack`, publica uma mensagem de teste e devolve a resposta.
+     Desde 01/09/2026 ela diz **qual modo está ativo** (`bot_token` / `webhook` / `nenhum`) e
+     **em que canal** vai cair — antes olhava só o webhook e declarava o Slack desligado
+     mesmo com Bot Token funcionando.
 
 ## 3. Deploy — SEM verificação de JWT
 

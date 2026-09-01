@@ -208,21 +208,53 @@ test('checar_slack e so pra admin', () => {
   assert.match(trecho, /ehAdmin\(ctx\.remetente\)/);
 });
 
-test('checar_slack diagnostica o secret faltando antes de tentar postar', () => {
+// O trecho da tool inteiro — ela cresceu em 01/09 e 2000 caracteres já cortavam
+// o diagnóstico no meio.
+const trechoChecar = () => {
   const i = fonte.indexOf("name: 'checar_slack'");
-  const trecho = fonte.slice(i, i + 2000);
-  const posFalta = trecho.indexOf('if (!SLACK_WEBHOOK_URL)');
+  const fim = fonte.indexOf("name: 'listar_solicitacoes_pendentes'", i);
+  return fonte.slice(i, fim > i ? fim : i + 4000);
+};
+
+test('checar_slack diagnostica a falta ANTES de tentar postar', () => {
+  const trecho = trechoChecar();
+  const posFalta = trecho.indexOf("modo === 'nenhum'");
   const posPost = trecho.indexOf('await postarNoSlack(');
-  assert.notEqual(posFalta, -1, 'checar_slack tem que olhar o secret');
+  assert.notEqual(posFalta, -1, 'checar_slack tem que decidir se ha algum modo configurado');
   assert.notEqual(posPost, -1, 'checar_slack tem que mandar uma mensagem de teste');
-  assert.ok(posFalta < posPost, 'checar a falta do secret vem antes de tentar postar');
+  assert.ok(posFalta < posPost, 'diagnosticar a falta vem antes de tentar postar');
 });
 
 test('checar_slack devolve o que o Slack respondeu, nao so "deu erro"', () => {
-  const i = fonte.indexOf("name: 'checar_slack'");
-  const trecho = fonte.slice(i, i + 2000);
+  const trecho = trechoChecar();
   assert.match(trecho, /status: r\.status/);
   assert.match(trecho, /resposta_do_slack/);
+});
+
+// 01/09/2026 — o bug que motivou a reescrita: a tool de DIAGNOSTICO olhava so o
+// webhook. Com Bot Token configurado (o caminho recomendado no DEPLOY.md) e sem
+// webhook, ela respondia "nada e publicado no canal" — falso — e mandava o dono
+// caçar um webhook que nao precisa existir.
+test('checar_slack enxerga os DOIS modos, nao so o webhook', () => {
+  const trecho = trechoChecar();
+  assert.match(trecho, /SLACK_BOT_TOKEN/, 'o modo Bot Token tem que contar como configurado');
+  assert.match(trecho, /SLACK_WEBHOOK_URL/, 'o webhook segue valendo como fallback');
+  assert.match(trecho, /modo/, 'a resposta precisa dizer QUAL modo esta ativo');
+  assert.ok(
+    !/if \(!SLACK_WEBHOOK_URL\) \{\s*\n\s*return \{\s*\n\s*ok: false/.test(trecho),
+    'nao pode voltar a declarar Slack desligado so porque falta o webhook'
+  );
+});
+
+test('o canal padrao dos registros existe de verdade no workspace', () => {
+  // Era '#top-tech-digital', que nao existe — parece fusao de #top-tech-leilao-nozap
+  // com #digital-leilao-nozap. No webhook passava batido (webhook ignora o canal);
+  // no Bot Token todo registro automatico daria channel_not_found, em silencio.
+  const linha = fonte.match(/const SLACK_CANAL_PADRAO = [^;]+;/)?.[0] || '';
+  assert.ok(linha, 'nao achei SLACK_CANAL_PADRAO');
+  assert.ok(!/top-tech-digital/.test(linha), 'esse canal nao existe no workspace');
+  assert.match(linha, /C0BHCMYJJGJ/, 'o padrao e o ID do #top-tech-leilao-nozap');
+  assert.match(linha, /Deno\.env\.get\('SLACK_CANAL_PADRAO'\)/, 'tem que dar pra trocar por secret');
 });
 
 // ---------------------------------------------------------------------------
@@ -251,4 +283,17 @@ test('o DEPLOY.md ensina a ligar os DOIS modos do Slack', () => {
 test('o DEPLOY.md nao traz nenhuma URL de webhook de verdade', () => {
   const reais = deploy.match(/hooks\.slack\.com\/services\/T[A-Z0-9]/g) || [];
   assert.equal(reais.length, 0, 'webhook e chave: nao pode estar escrito no repositorio');
+});
+
+// 01/09/2026 — a lista de scopes do DEPLOY.md trazia `conversations:history`,
+// `conversations:info` e `conversations:list`. Nenhum dos tres existe no Slack:
+// "conversations" e a familia de METODOS da API, os scopes sao por tipo de canal.
+// Quem seguisse o doc ia procurar tres permissoes que nao aparecem na tela.
+test('o DEPLOY.md so pede scopes que existem de verdade no Slack', () => {
+  for (const inventado of ['conversations:history', 'conversations:info', 'conversations:list']) {
+    assert.ok(!deploy.includes(`\`${inventado}\` —`), `${inventado} nao e um scope do Slack`);
+  }
+  assert.match(deploy, /`groups:read`/, 'sem esse scope o bot nao enxerga canal privado');
+  assert.match(deploy, /`channels:read`/);
+  assert.match(deploy, /`files:write`/);
 });
