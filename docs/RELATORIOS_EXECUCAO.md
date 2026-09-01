@@ -1806,4 +1806,9 @@ usuário de rede fora da lista, filtro por função funcionando, seletor
 de responsável só com o topo, indicação sugerindo usuário cadastrado,
 chip "via {nome}" no cartão.
 **Testes:** 590/590 (3 novos). **Build:** exit 0.
-**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e conferir.
+**Ação do dono:** ✅ FEITA — migração da indicação colada e aplicada no
+SQL Editor em 01/09/2026 ("Success. No rows returned"). Colunas
+indicacao_user_id/indicacao_nome vivas em produção — a indicação passa a
+ser gravada de verdade.
+**Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
+preview e o "pode" do pacote DIR-34→39.
