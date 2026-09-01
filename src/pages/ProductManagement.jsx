@@ -15,6 +15,7 @@ import {
 import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
 import { unidadesEmEstoque, custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
+import { CONDICOES } from '@/lib/condicaoProduto';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -274,6 +275,8 @@ export default function ProductManagement() {
     purchase_order: '',
     deposit_name: 'Bangu',
     category_id: '',
+    condicao: '',
+    estado_conservacao: '',
     image_urls: []
   });
 
@@ -609,6 +612,8 @@ export default function ProductManagement() {
       // Sem estas duas linhas o formulário abriria com categoria vazia e sem as
       // fotos que o produto já tem — e salvar apagaria as duas.
       category_id: product.category_id || '',
+      condicao: product.condicao || '',
+      estado_conservacao: product.estado_conservacao || '',
       image_urls: Array.isArray(product.image_urls) ? product.image_urls : []
     });
     setShowAddForm(true);
@@ -657,6 +662,8 @@ export default function ProductManagement() {
         // TEXT, e '' não é nulo pro banco. Toda contagem de "sem categoria" e o
         // filtro da vitrine olham NULL.
         category_id: formData.category_id || null,
+        condicao: formData.condicao || null,
+        estado_conservacao: (formData.estado_conservacao || '').trim() || null,
         image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : []
       };
 
@@ -687,6 +694,8 @@ export default function ProductManagement() {
         purchase_order: '',
         deposit_name: 'Bangu',
         category_id: '',
+    condicao: '',
+    estado_conservacao: '',
         image_urls: []
       });
       setShowAddForm(false);
@@ -1587,6 +1596,49 @@ export default function ProductManagement() {
                       </p>
                     </div>
 
+                    {/* 🏷️ 02/09/2026 — ESTADO DO PRODUTO.
+                        Existia um seletor "Condição do produto" no cadastro rápido que
+                        nunca chegava ao banco (a coluna não existia) — mesmo caso do
+                        category_id. E a página de venda mostrava, sob "Descrição", o
+                        texto interno do lote: em 3.170 dos 3.543 produtos do retrato de
+                        estoque. O cliente comprava devolução sem saber, e reclamava
+                        depois. Estes dois campos existem para acabar com isso.
+                        Opcionais de propósito: exigir estado aqui travaria o cadastro
+                        enquanto os produtos antigos não estiverem preenchidos. */}
+                    <div className="col-span-full rounded-md border border-amber-700/40 bg-amber-950/20 p-3">
+                      <Label className="text-amber-300 font-semibold">Estado do produto</Label>
+                      <p className="text-xs text-amber-200/70 mt-0.5 mb-3">
+                        O cliente lê isto antes de comprar. É o que evita reclamação de amassado ou avaria depois da entrega.
+                      </p>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label className="text-gray-300 text-sm">Condição</Label>
+                          <select
+                            value={formData.condicao || ''}
+                            onChange={(e) => setFormData({ ...formData, condicao: e.target.value })}
+                            className="w-full h-10 px-3 rounded-md bg-gray-700 text-white border border-gray-600 text-sm"
+                          >
+                            <option value="">— não informado —</option>
+                            {CONDICOES.map((c) => (
+                              <option key={c.valor} value={c.valor}>{c.rotulo}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <Label className="text-gray-300 text-sm">Detalhes do estado</Label>
+                          <Textarea
+                            value={formData.estado_conservacao}
+                            onChange={(e) => setFormData({ ...formData, estado_conservacao: e.target.value })}
+                            className="bg-gray-700 text-white"
+                            placeholder="Ex: amassado leve na lateral esquerda, funciona normalmente. Caixa aberta, sem manual."
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <Label className="text-gray-300">Quantidade Total</Label>
                       <Input
@@ -1740,14 +1792,21 @@ export default function ProductManagement() {
                     </div>
 
                     <div className="col-span-full">
-                      <Label className="text-gray-300">Observações</Label>
+                      <Label className="text-gray-300">Descrição do produto</Label>
                       <Textarea
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         className="bg-gray-700 text-white"
-                        placeholder="Adicione observações sobre o produto..."
+                        placeholder="Ex: Fritadeira sem óleo, capacidade 8L, timer de 60 min, 1700W. Acompanha cesto removível."
                         rows={3}
                       />
+                      {/* Este campo é `notes`, e é ele que a página de venda exibe sob o
+                          título "Descrição". O rótulo dizia "Observações" e a ajuda pedia
+                          "observações sobre o produto" — quem preenchia não tinha como
+                          saber que o texto ia direto pro cliente. */}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Este texto aparece para o cliente na página de venda, sob o título “Descrição”.
+                      </p>
                     </div>
 
                     <div className="col-span-full flex flex-wrap gap-2">

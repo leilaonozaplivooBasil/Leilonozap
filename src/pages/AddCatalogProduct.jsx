@@ -11,6 +11,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 // 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
 import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
+import { CONDICOES, normalizarCondicao } from '@/lib/condicaoProduto';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
@@ -59,7 +60,13 @@ export default function AddCatalogProduct() {
     seller_name: '',
     
     // Especificações
-    condition: 'Novo',
+    // 🏷️ 02/09/2026 — antes isto se chamava `condition` e NÃO EXISTIA no banco: a
+    // tela mostrava o seletor, a IA preenchia, e o productData lá embaixo não
+    // levava o campo. Mesmo vazamento do category_id, corrigido em 01/09.
+    // Começa vazio de propósito: 'Novo' por padrão fazia toda devolução sair
+    // anunciada como nova.
+    condicao: '',
+    estado_conservacao: '',
     brand: '',
     model: '',
     
@@ -276,7 +283,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
         subcategory: targetSub?.id || prev.subcategory,
         brand: data.marca || prev.brand,
         model: data.modelo || prev.model,
-        condition: data.condicao || prev.condition,
+        condicao: normalizarCondicao(data.condicao) || prev.condicao,
         weight: data.peso_kg > 0 ? String(data.peso_kg) : prev.weight,
         height: data.altura_cm > 0 ? String(data.altura_cm) : prev.height,
         length: data.comprimento_cm > 0 ? String(data.comprimento_cm) : prev.length,
@@ -641,7 +648,11 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         // via a confirmação, salvava, e o produto continuava sem categoria.
         // A coluna é `category_id`; pedir `category` faz o banco recusar a
         // gravação inteira (esvaziou a vitrine do balcão em 08/08/2026).
-        category_id: formData.category || null
+        category_id: formData.category || null,
+        // 🏷️ 02/09/2026 — o estado do produto. O seletor logo acima existia desde
+        // sempre e o cliente nunca viu nada: o campo não chegava aqui.
+        condicao: formData.condicao || null,
+        estado_conservacao: (formData.estado_conservacao || '').trim() || null
       };
 
       const sourceProduct = location.state?.sourceProduct;
@@ -1049,13 +1060,14 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                             Condição do produto
                           </Label>
                           <select
-                            value={formData.condition}
-                            onChange={(e) => handleInputChange('condition', e.target.value)}
+                            value={formData.condicao}
+                            onChange={(e) => handleInputChange('condicao', e.target.value)}
                             className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
                           >
-                            <option value="Novo">Novo</option>
-                            <option value="Usado">Usado</option>
-                            <option value="Recondicionado">Recondicionado</option>
+                            <option value="">— não informado —</option>
+                            {CONDICOES.map((c) => (
+                              <option key={c.valor} value={c.valor}>{c.rotulo}</option>
+                            ))}
                           </select>
                         </div>
                         
@@ -1063,12 +1075,34 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                           <Label className="text-sm text-gray-700 mb-1.5 block">
                             Unidade
                           </Label>
+                          {/* ⚠️ 02/09/2026 — este seletor não tem value nem onChange: é
+                              enfeite. Não existe coluna de unidade em products. Fica
+                              como está (fora do escopo desta entrega), mas registrado:
+                              hoje ele não guarda nada, igual ao "Condição" ao lado
+                              antes desta correção. */}
                           <select className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm">
                             <option>Unidade</option>
                             <option>Kit</option>
                             <option>Par</option>
                           </select>
                         </div>
+                      </div>
+
+                      {/* 🏷️ O texto que evita a reclamação depois da entrega. */}
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Detalhes do estado do produto
+                        </Label>
+                        <textarea
+                          value={formData.estado_conservacao}
+                          onChange={(e) => handleInputChange('estado_conservacao', e.target.value)}
+                          rows={3}
+                          placeholder="Ex: amassado leve na lateral esquerda, funciona normalmente. Caixa aberta, sem manual."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          O cliente lê isto antes de comprar. É o que evita reclamação de amassado ou avaria depois da entrega.
+                        </p>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">

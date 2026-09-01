@@ -1,5 +1,6 @@
 import { plataforma } from '@/api/plataformaClient';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
+import { condicaoDaGrade } from '@/lib/condicaoProduto';
 
 // Escrita direta na rota segura entityWrite (service_role) — MESMO caminho da exclusão
 // de lote que já funciona em produção. Evita o fallback anon do adapter (bloqueado por RLS),
@@ -174,7 +175,16 @@ export async function gerarProdutosDoLote({ lote_id } = {}) {
       status: 'ESTOQUE',
       catalog_active: false,
       deposit_name: depositoDestino,
+      // O `notes` continua carregando o marcador [grade:X]: a anti-duplicação
+      // acima o lê de volta para não recriar produto ao reprocessar o lote.
+      // Ele deixou de vazar para o cliente pelo lado da exibição — a vitrine
+      // ignora este formato (ehTextoInternoDeLote, em @/lib/condicaoProduto).
       notes: `[grade:${String(item.grade || 'A').toUpperCase()}] Gerado automaticamente do lote: ${lote.nome_lote} (${lote.marketplace})`,
+      // 🏷️ 02/09/2026 — a grade da planilha agora também vira estado que o cliente
+      // entende ("Bom — pequenas marcas de uso"), em coluna própria e filtrável.
+      // Antes o estado só existia nos contadores qty_* e no marcador acima, e a
+      // página de venda não mostrava nenhum dos dois.
+      condicao: condicaoDaGrade(item.grade),
     };
     base[campo] = qtd;
     return base;
