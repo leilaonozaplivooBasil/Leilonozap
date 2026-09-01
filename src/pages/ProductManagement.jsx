@@ -108,6 +108,14 @@ export default function ProductManagement() {
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
   const [zoomedImage, setZoomedImage] = useState(null);
+  // 🏷️ Categorias (01/09/2026) — a lista para o campo do formulário. Se falhar em
+  // carregar, `categoriasErro` liga um aviso e o campo fica desabilitado; salvar
+  // continua funcionando. Dropdown com problema não pode travar cadastro.
+  const [categorias, setCategorias] = useState([]);
+  const [categoriasErro, setCategoriasErro] = useState(false);
+  // 🖼️ Upload de imagens do produto — mesmo caminho já usado em EditCatalogProduct.
+  const [enviandoImagens, setEnviandoImagens] = useState(false);
+  const inputImagensRef = React.useRef(null);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -264,10 +272,74 @@ export default function ProductManagement() {
     sold_amount: 0,
     notes: '',
     purchase_order: '',
-    deposit_name: 'Bangu'
+    deposit_name: 'Bangu',
+    category_id: '',
+    image_urls: []
   });
 
   const navigate = useNavigate();
+
+  // 🏷️ Lista de categorias para o campo do formulário. Só as principais e ativas —
+  // é por categoria principal que a Loja Virtual filtra a vitrine. Falha aqui NÃO
+  // pode impedir ninguém de cadastrar produto: liga o aviso e segue.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const todas = await plataforma.entities.Category.list();
+        if (!vivo) return;
+        const principais = (Array.isArray(todas) ? todas : [])
+          .filter((c) => c && !c.parent_category_id && c.is_active !== false)
+          .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+        setCategorias(principais);
+        setCategoriasErro(principais.length === 0);
+      } catch (e) {
+        if (!vivo) return;
+        console.debug('Não consegui carregar as categorias:', e?.message);
+        setCategoriasErro(true);
+      }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  // 🖼️ Sobe as imagens escolhidas e acrescenta às que o produto já tem.
+  // Mesmo caminho de EditCatalogProduct (Supabase Storage via integrations.Core).
+  const adicionarImagens = async (evento) => {
+    const arquivos = Array.from(evento.target.files || []);
+    if (arquivos.length === 0) return;
+    setEnviandoImagens(true);
+    const novas = [];
+    const falharam = [];
+    for (const arquivo of arquivos) {
+      try {
+        const r = await plataforma.integrations.Core.UploadFile({ file: arquivo });
+        if (r?.file_url) novas.push(r.file_url); else falharam.push(arquivo.name);
+      } catch (e) {
+        console.error('Falha no upload:', arquivo.name, e);
+        falharam.push(arquivo.name);
+      }
+    }
+    if (novas.length > 0) setFormData((f) => ({ ...f, image_urls: [...(f.image_urls || []), ...novas] }));
+    if (falharam.length > 0) alert(`Não consegui enviar: ${falharam.join(', ')}`);
+    setEnviandoImagens(false);
+    if (inputImagensRef.current) inputImagensRef.current.value = '';
+  };
+
+  const removerImagem = (i) => {
+    setFormData((f) => ({ ...f, image_urls: (f.image_urls || []).filter((_, idx) => idx !== i) }));
+  };
+
+  // A PRIMEIRA imagem é a capa (é a que a loja e a lista do estoque mostram),
+  // então mover é o que decide qual foto o cliente vê.
+  const moverImagem = (i, direcao) => {
+    setFormData((f) => {
+      const lista = [...(f.image_urls || [])];
+      const destino = i + direcao;
+      if (destino < 0 || destino >= lista.length) return f;
+      [lista[i], lista[destino]] = [lista[destino], lista[i]];
+      return { ...f, image_urls: lista };
+    });
+  };
 
   const stats = React.useMemo(() => {
     // 🔴 DIR-20 — regra única de estoque/custo (src/lib/custoProduto.js):
@@ -533,7 +605,11 @@ export default function ProductManagement() {
       sold_amount: product.sold_amount || 0,
       notes: product.notes || '',
       purchase_order: product.purchase_order || '',
-      deposit_name: product.deposit_name || 'Bangu'
+      deposit_name: product.deposit_name || 'Bangu',
+      // Sem estas duas linhas o formulário abriria com categoria vazia e sem as
+      // fotos que o produto já tem — e salvar apagaria as duas.
+      category_id: product.category_id || '',
+      image_urls: Array.isArray(product.image_urls) ? product.image_urls : []
     });
     setShowAddForm(true);
   };
@@ -576,7 +652,12 @@ export default function ProductManagement() {
         qty_perfeito: parseInt(formData.qty_perfeito) || 0,
         qty_bom: parseInt(formData.qty_bom) || 0,
         qty_ruim: 0, // Sempre zero - ruim não existe mais
-        qty_oficina: parseInt(formData.qty_oficina) || 0
+        qty_oficina: parseInt(formData.qty_oficina) || 0,
+        // 🏷️ "— sem categoria —" tem que virar NULL, não string vazia: a coluna é
+        // TEXT, e '' não é nulo pro banco. Toda contagem de "sem categoria" e o
+        // filtro da vitrine olham NULL.
+        category_id: formData.category_id || null,
+        image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : []
       };
 
       if (editingProduct) {
@@ -604,7 +685,9 @@ export default function ProductManagement() {
         sold_amount: 0,
         notes: '',
         purchase_order: '',
-        deposit_name: 'Bangu'
+        deposit_name: 'Bangu',
+        category_id: '',
+        image_urls: []
       });
       setShowAddForm(false);
       setEditingProduct(null);
@@ -1478,6 +1561,32 @@ export default function ProductManagement() {
                       />
                     </div>
 
+                    {/* 🏷️ CATEGORIA (01/09/2026) — pedido da operação: não existia
+                        onde escolher, nem ao criar nem ao editar.
+                        OPCIONAL de propósito. Tornar obrigatório travaria a edição
+                        dos milhares de produtos já cadastrados sem categoria: quem
+                        só quisesse corrigir uma descrição teria que classificar o
+                        produto antes de conseguir salvar. */}
+                    <div>
+                      <Label className="text-gray-300">Categoria</Label>
+                      <select
+                        value={formData.category_id || ''}
+                        onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                        disabled={categoriasErro}
+                        className="w-full h-10 px-3 rounded-md bg-gray-700 text-white border border-gray-600 text-sm disabled:opacity-60"
+                      >
+                        <option value="">— sem categoria —</option>
+                        {categorias.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {categoriasErro
+                          ? 'Não consegui carregar as categorias agora — você pode salvar o produto normalmente e definir a categoria depois.'
+                          : 'Produto sem categoria não aparece quando o cliente filtra por categoria na Loja Virtual.'}
+                      </p>
+                    </div>
+
                     <div>
                       <Label className="text-gray-300">Quantidade Total</Label>
                       <Input
@@ -1564,6 +1673,70 @@ export default function ProductManagement() {
                         onChange={(e) => setFormData({ ...formData, selling_price_retail: e.target.value })}
                         className="bg-gray-700 text-white"
                       />
+                    </div>
+
+                    {/* 🖼️ IMAGENS (01/09/2026) — antes só existia uma miniatura de
+                        LEITURA no cabeçalho do modal: dava pra ampliar e mais nada.
+                        Produto nascido de lote vem sem foto nenhuma e não havia
+                        onde colocar. Mesmo caminho de upload já usado no catálogo. */}
+                    <div className="col-span-full">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <Label className="text-gray-300">
+                          Imagens do produto
+                          {(formData.image_urls || []).length > 0 && (
+                            <span className="text-gray-400 font-normal"> — {formData.image_urls.length} foto(s), a 1ª é a capa</span>
+                          )}
+                        </Label>
+                        <button
+                          type="button"
+                          onClick={() => inputImagensRef.current?.click()}
+                          disabled={enviandoImagens}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-600/40 transition-all disabled:opacity-50"
+                        >
+                          {enviandoImagens ? 'Enviando...' : '+ Adicionar fotos'}
+                        </button>
+                        <input
+                          ref={inputImagensRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={adicionarImagens}
+                          className="hidden"
+                        />
+                      </div>
+
+                      {(formData.image_urls || []).length === 0 ? (
+                        <p className="text-xs text-gray-400 border border-dashed border-gray-600 rounded-lg p-4 text-center">
+                          Nenhuma foto ainda. Produto sem foto não pode ser publicado na Loja Virtual.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-3">
+                          {formData.image_urls.map((url, i) => (
+                            <div key={`${url}-${i}`} className="relative w-24">
+                              <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-600 bg-gray-900">
+                                <img
+                                  src={url}
+                                  alt={`Foto ${i + 1}`}
+                                  className="w-full h-full object-cover cursor-zoom-in"
+                                  onClick={() => setZoomedImage(url)}
+                                  onError={(e) => { e.target.style.opacity = '0.2'; }}
+                                />
+                              </div>
+                              {i === 0 && (
+                                <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-semibold">capa</span>
+                              )}
+                              <div className="flex items-center justify-between mt-1">
+                                <button type="button" onClick={() => moverImagem(i, -1)} disabled={i === 0}
+                                  className="text-xs px-1.5 text-gray-400 hover:text-white disabled:opacity-30" title="Mover para a esquerda">←</button>
+                                <button type="button" onClick={() => removerImagem(i)}
+                                  className="text-xs px-1.5 text-red-400 hover:text-red-300" title="Remover esta foto">remover</button>
+                                <button type="button" onClick={() => moverImagem(i, 1)} disabled={i === formData.image_urls.length - 1}
+                                  className="text-xs px-1.5 text-gray-400 hover:text-white disabled:opacity-30" title="Mover para a direita">→</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="col-span-full">

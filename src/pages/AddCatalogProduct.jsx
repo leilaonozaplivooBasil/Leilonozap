@@ -633,7 +633,15 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         altura: parseFloat(formData.height) || 0,
         largura: parseFloat(formData.width) || 0,
         lot: formData.sku || formData.lot,
-        purchase_order: formData.purchase_order
+        purchase_order: formData.purchase_order,
+        // 🏷️ 01/09/2026 — ESTA LINHA FALTAVA. A tela tem os seletores de Categoria
+        // e Subcategoria, a IA classifica e ainda escreve na tela "✅ Preenchido
+        // automaticamente! Categoria: X › Y" — e nada disso ia para o banco: o
+        // pacote de gravação simplesmente não trazia o campo. A pessoa escolhia,
+        // via a confirmação, salvava, e o produto continuava sem categoria.
+        // A coluna é `category_id`; pedir `category` faz o banco recusar a
+        // gravação inteira (esvaziou a vitrine do balcão em 08/08/2026).
+        category_id: formData.category || null
       };
 
       const sourceProduct = location.state?.sourceProduct;
