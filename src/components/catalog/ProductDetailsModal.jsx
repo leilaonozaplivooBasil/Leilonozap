@@ -15,6 +15,8 @@ import {
   X, ChevronLeft, ChevronRight, ShoppingCart, MessageCircle, Truck, ShieldCheck,
   RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Lock, Maximize2, ExternalLink
 } from "lucide-react";
+import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
+import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 
 const DEFAULT_STORE_PHONE = '5521984072064';
 
@@ -241,10 +243,11 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
               {storeRating && storeRating.total > 0 && (
                 <div className="mb-3"><RatingBadge media={storeRating.media} total={storeRating.total} size={14} /></div>
               )}
+              <EstadoDoProduto produto={product} className="mt-3" />
               <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wide mt-3 mb-2">Descrição</h4>
-              {product.notes ? (
+              {descricaoPublica(product.notes) ? (
                 <div className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.notes) }} />
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(descricaoPublica(product.notes)) }} />
               ) : (
                 <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{product.description}</p>
               )}
@@ -295,8 +298,8 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
             <div className="space-y-4">
               <div className={`${CARD} p-4 sm:p-5 space-y-4`}>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-emerald-300 font-semibold inline-flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> Novo</span>
-                  {inStock && <><span className="text-gray-600">·</span><span className="text-gray-400">{stock} disponíve{stock > 1 ? 'is' : 'l'}</span></>}
+                  <SeloCondicao condicao={product.condicao} />
+                  {inStock && <>{resumoCondicao(product.condicao) && <span className="text-gray-600">·</span>}<span className="text-gray-400">{stock} disponíve{stock > 1 ? 'is' : 'l'}</span></>}
                 </div>
 
                 <h2 className="text-lg sm:text-xl font-bold leading-snug">{product.description}</h2>

@@ -110,7 +110,16 @@
     },
     "notes": {
       "type": "string",
-      "description": "Observa\u00e7\u00f5es adicionais"
+      "description": "Texto exibido ao cliente como \"Descri\u00e7\u00e3o\" na p\u00e1gina de venda"
+    },
+    "condicao": {
+      "type": "string",
+      "enum": ["novo", "perfeito", "bom", "com_avarias", "para_reparo", "recondicionado"],
+      "description": "Estado de conserva\u00e7\u00e3o (valor fechado). Ver src/lib/condicaoProduto.js"
+    },
+    "estado_conservacao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o livre do estado do produto, exibida ao cliente"
     },
     "purchase_order": {
       "type": "string",
