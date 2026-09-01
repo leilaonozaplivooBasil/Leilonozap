@@ -65,3 +65,16 @@ describe('calcularCaptacao', () => {
     ]);
   });
 });
+
+describe('DIR-40 — aporte externo entra na meta de captação', () => {
+  test('aporte Santander/Itaú registrado soma no balde de aportes; inválido não', async () => {
+    const { calcularCaptacao } = await import('../src/lib/captacaoParceiros.js');
+    const r = calcularCaptacao([], [], [
+      { estagio: 'fechado_100', aporte_externo: { banco: 'itau', valor: 200000 } },
+      { estagio: 'fechado_100', aporte_externo: { banco: 'bradesco', valor: 999 } }, // fora da regra
+      { estagio: 'fechado_100' },
+    ]);
+    assert.equal(r.porBucket.aporte_parceiro, 200000);
+    assert.equal(r.total, 200000);
+  });
+});

@@ -142,12 +142,26 @@ export function vendaRealDoCliente(oportunidade, sales = []) {
   ) || null;
 }
 
+// 💵 DIR-40 — só estas contas podem receber aporte de capital (regra do dono).
+export const BANCOS_APORTE_EXTERNO = [
+  { id: 'santander', label: 'Santander' },
+  { id: 'itau', label: 'Itaú' },
+];
+
+/** O registro de aporte externo é válido? (banco permitido + valor > 0) */
+export function aporteExternoValido(oportunidade) {
+  const a = oportunidade?.aporte_externo;
+  return !!a && BANCOS_APORTE_EXTERNO.some((b) => b.id === a.banco) && Number(a.valor) > 0;
+}
+
 /**
- * O 100% se prova sozinho: existe venda REAL do cliente? Sem venda real →
- * "declarado sem dinheiro na conta" (chip âmbar no kanban).
+ * O 100% se prova sozinho: existe venda REAL do cliente OU aporte externo
+ * REGISTRADO com auditoria (DIR-40: transferência direto no Santander/Itaú,
+ * carimbada por quem registrou)? Sem nenhum dos dois → "declarado sem
+ * dinheiro na conta" (chip âmbar no kanban).
  */
 export function dinheiroNaConta(oportunidade, sales = []) {
-  return vendaRealDoCliente(oportunidade, sales) !== null;
+  return vendaRealDoCliente(oportunidade, sales) !== null || aporteExternoValido(oportunidade);
 }
 
 /**

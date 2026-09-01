@@ -1812,3 +1812,35 @@ indicacao_user_id/indicacao_nome vivas em produção — a indicação passa a
 ser gravada de verdade.
 **Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
 preview e o "pode" do pacote DIR-34→39.
+
+---
+
+## REL-40 — Execução da DIR-40 (aporte recebido por fora, auditado)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Migração `20260901180000_captacao_aporte_externo.sql` (DONO COLA):
+   coluna `aporte_externo JSONB` na esteira.
+2. `esteiraCaptacao.js`: BANCOS_APORTE_EXTERNO = **Santander e Itaú
+   SOMENTE** (regra do dono); `aporteExternoValido`; `dinheiroNaConta`
+   aceita venda real OU aporte externo registrado — o chip verde passa a
+   mostrar o banco ("💰 na conta (Santander)"); `fechadoProvado` conta o
+   externo como "na conta".
+3. Modal (Fechado 100% sem dinheiro rastreado, SÓ para quem vê dinheiro
+   da empresa): aviso âmbar explica os dois caminhos (amarrar o cliente
+   certo se pagou pelo app; registrar por fora se foi transferência) →
+   formulário banco/valor/data com leitura do valor em pt-BR e aviso
+   ANTI-DUPLA-CONTAGEM (não registrar também como ativação manual de
+   plano) → grava com carimbo registrado_por/registrado_por_id/em.
+4. `calcularCaptacao` ganhou o 3º parâmetro: aporte externo válido soma
+   no balde "Aportes Parceiro de Compra" — card Captação, barra da meta
+   R$ 1 mi e bloco executivo leem a MESMA fonte (sem divergência).
+**Prova em navegador (regra REL-34.1):** 11/11 ✅ zero erros — ciclo
+completo: chip âmbar → botão → só Santander/Itaú no seletor → aviso de
+dupla contagem → PATCH auditado capturado (banco, valor 200000, data,
+registrado_por) → chip "💰 na conta (Santander)" → "Na conta:
+R$ 200.000,00" na executiva → hero Captação R$ 200.000,00.
+**Testes:** 593/593 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e registrar o
+aporte do Renan Silva.

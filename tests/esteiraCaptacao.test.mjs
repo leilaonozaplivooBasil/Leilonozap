@@ -107,3 +107,26 @@ describe('DIR-36 — vendaRealDoCliente (amarração venda_id)', () => {
     assert.equal(vendaRealDoCliente({ cliente_email: 'cli@x.com' }, [{ ...venda, status: 'pending_payment' }]), null);
   });
 });
+
+describe('DIR-40 — aporte recebido POR FORA (Santander/Itaú)', () => {
+  test('registro válido acende o dinheiro na conta; banco fora da regra não', async () => {
+    const { aporteExternoValido, dinheiroNaConta } = await import('../src/lib/esteiraCaptacao.js');
+    const base = { estagio: 'fechado_100', valor_previsto: 200000, cliente_email: 'x@x.com' };
+    assert.equal(aporteExternoValido({ ...base, aporte_externo: { banco: 'santander', valor: 200000, data: '2026-09-01' } }), true);
+    assert.equal(aporteExternoValido({ ...base, aporte_externo: { banco: 'itau', valor: 200000 } }), true);
+    assert.equal(aporteExternoValido({ ...base, aporte_externo: { banco: 'bradesco', valor: 200000 } }), false); // só Santander/Itaú
+    assert.equal(aporteExternoValido({ ...base, aporte_externo: { banco: 'itau', valor: 0 } }), false);
+    assert.equal(dinheiroNaConta({ ...base, aporte_externo: { banco: 'itau', valor: 200000 } }, []), true); // sem venda, com aporte externo
+    assert.equal(dinheiroNaConta(base, []), false);
+  });
+
+  test('fechadoProvado conta o aporte externo como "na conta"', async () => {
+    const { fechadoProvado } = await import('../src/lib/esteiraCaptacao.js');
+    const p = fechadoProvado([
+      { estagio: 'fechado_100', valor_previsto: 200000, aporte_externo: { banco: 'santander', valor: 200000 } },
+      { estagio: 'fechado_100', valor_previsto: 50000 },
+    ], []);
+    assert.equal(p.naConta, 200000);
+    assert.equal(p.declarado, 50000);
+  });
+});

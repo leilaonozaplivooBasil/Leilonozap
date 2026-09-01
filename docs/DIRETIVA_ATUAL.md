@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-40 — Aporte recebido POR FORA (Santander/Itaú), com auditoria
+
+**Emitida por:** dono (01/09/2026, áudio): "tem que ter um botão de que o
+dinheiro entrou por transferência de fora — só Santander e Itaú, que são
+as duas contas que podem aportar capital; tem pagamento por fora também".
+Contexto: o Fechado 100% do Renan Silva ficou "⚠️ sem dinheiro na conta"
+porque o aporte não passou pelo app — comportamento correto do chip; o
+que faltava era o registro AUDITADO do dinheiro externo (mesma decisão
+da ativação manual de plano na DIR-22: dinheiro fora do gateway conta
+quando confirmado pelo dono, com carimbo).
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Migração `20260901180000_captacao_aporte_externo.sql` (dono cola):
+   coluna `aporte_externo JSONB` em captacao_oportunidades —
+   {banco, valor, data, registrado_por_id, registrado_por, em}.
+2. `esteiraCaptacao.js`: BANCOS_APORTE_EXTERNO = Santander e Itaú
+   (SOMENTE); `aporteExternoValido`; `dinheiroNaConta` passa a aceitar
+   venda real OU aporte externo válido (chip verde mostra o banco).
+3. Modal da oportunidade (Fechado 100% sem dinheiro rastreado): botão
+   "💵 Dinheiro entrou por fora" — banco (Santander/Itaú), valor, data →
+   grava com carimbo de quem registrou e quando. SÓ para quem vê
+   dinheiro da empresa (super_admin/admin/admin_financeiro).
+4. `calcularCaptacao` ganha os aportes externos válidos no balde
+   "Aportes Parceiro de Compra" — o card Captação e a barra da meta de
+   R$ 1 mi passam a contar o dinheiro externo registrado (fonte única).
+**Anti-dupla-contagem (registrado):** se o plano do parceiro for depois
+ativado MANUALMENTE no painel (partner_plan_purchases manual, que também
+conta na captação), o mesmo aporte contaria duas vezes — aviso explícito
+no formulário; registrar num lugar OU no outro.
+**Fora do escopo / proibido:** mexer no critério isVendaReal (dinheiro
+real global); botão de "remover" aporte registrado (correção só por
+ordem expressa do dono); bancos além de Santander/Itaú.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-39 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-39 — Time Corporativo: contratos do topo, com indicação rastreada
 
 **Emitida por:** dono (01/09/2026, áudio + confirmação em chat): as metas

@@ -19,6 +19,7 @@
 // Venda de produto da Loja/leilão NÃO conta — meta é de captação/expansão,
 // não de mercadoria.
 import { isVendaReal } from './dinheiroReal.js';
+import { aporteExternoValido } from './esteiraCaptacao.js';
 
 export const META_CAPTACAO = 1000000;
 
@@ -55,8 +56,11 @@ export function bucketDaVenda(s) {
  * Soma a captação por balde, na ordem oficial.
  * @param sales linhas de catalog_sales (já no escopo de quem está vendo)
  * @param partnerPurchases linhas de partner_plan_purchases (mesmo escopo)
+ * @param oportunidades esteira (DIR-40): aporte EXTERNO registrado com
+ *        auditoria (transferência Santander/Itaú confirmada) também é
+ *        captação real — mesma decisão da ativação manual acima.
  */
-export function calcularCaptacao(sales = [], partnerPurchases = []) {
+export function calcularCaptacao(sales = [], partnerPurchases = [], oportunidades = []) {
   const porBucket = Object.fromEntries(BUCKETS_CAPTACAO.map((b) => [b.id, 0]));
   for (const s of sales) {
     const bucket = bucketDaVenda(s);
@@ -67,6 +71,10 @@ export function calcularCaptacao(sales = [], partnerPurchases = []) {
     if (p.activation_source !== 'manual') continue; // automática já contou na venda
     if (String(p.status || '') === 'canceled') continue;
     porBucket.aporte_parceiro += Number(p.plan_amount) || 0;
+  }
+  for (const o of oportunidades) {
+    if (!aporteExternoValido(o)) continue;
+    porBucket.aporte_parceiro += Number(o.aporte_externo.valor) || 0;
   }
   const total = Object.values(porBucket).reduce((s, v) => s + v, 0);
   return { porBucket, total, meta: META_CAPTACAO, faltam: Math.max(0, META_CAPTACAO - total) };

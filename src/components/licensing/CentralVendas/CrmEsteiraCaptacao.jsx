@@ -8,6 +8,7 @@ import StatInfoTooltip from './StatInfoTooltip';
 import {
   ESTAGIOS_ESTEIRA, MOTIVOS_PERDA, estagioDe, pendenciasParaEstagio,
   resumoEsteira, conversaoPorResponsavel, diasNoEstagio, dinheiroNaConta,
+  aporteExternoValido, BANCOS_APORTE_EXTERNO,
   DIAS_PARADA_ATENCAO, DIAS_PARADA_CRITICO,
 } from '@/lib/esteiraCaptacao';
 import { buscarPessoas } from '@/lib/buscaPessoa';
@@ -36,10 +37,12 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, clientePreenchido, onClientePreenchidoConsumido }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  // 💵 DIR-40 — registro de aporte que entrou POR FORA (Santander/Itaú)
+  const [aporteForm, setAporteForm] = useState(null); // null | {banco, valor, data}
   // 🔎 DIR-36 — busca de cliente EXISTENTE na nova oportunidade (nada de
   // redigitar quem o CRM já conhece; e amarra cliente_user_id de verdade).
   const [buscaCliente, setBuscaCliente] = useState('');
@@ -69,6 +72,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     });
     setBuscaCliente('');
     setBuscaIndicacao('');
+    setAporteForm(null);
     setEditando('nova');
   };
   const abrirEdicao = (o) => {
@@ -80,6 +84,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     });
     setBuscaCliente('');
     setBuscaIndicacao('');
+    setAporteForm(null);
     setEditando(o);
   };
   const escolherCliente = (c) => {
@@ -105,6 +110,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     });
     setBuscaCliente('');
     setBuscaIndicacao('');
+    setAporteForm(null);
     setEditando('nova');
     onClientePreenchidoConsumido?.();
   }, [clientePreenchido]);
@@ -191,7 +197,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                             {o.responsavel_nome && <span className="px-1 py-0.5 rounded bg-nz-cinza-fundo text-[9px] text-nz-tinta-fraca border border-nz-borda truncate max-w-full">{o.responsavel_nome.split(' ')[0]}</span>}
                             {o.indicacao_nome && <span className="px-1 py-0.5 rounded bg-nz-verde/10 text-[9px] text-nz-verde border border-nz-verde/20 truncate max-w-full">via {String(o.indicacao_nome).split(' ')[0]}</span>}
                             {parada && <span className={`px-1 py-0.5 rounded text-[9px] font-semibold ${dias >= DIAS_PARADA_CRITICO ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{dias}d parada</span>}
-                            {provado === true && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-nz-verde/10 text-nz-verde border border-nz-verde/30">💰 na conta</span>}
+                            {provado === true && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-nz-verde/10 text-nz-verde border border-nz-verde/30">💰 na conta{aporteExternoValido(o) ? ` (${BANCOS_APORTE_EXTERNO.find((b) => b.id === o.aporte_externo.banco)?.label})` : ''}</span>}
                             {provado === false && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">⚠️ sem dinheiro na conta</span>}
                           </div>
                         </button>
@@ -417,6 +423,74 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                         </p>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* 💵 DIR-40 — o dinheiro entrou POR FORA (Santander/Itaú) */}
+                {editando !== 'nova' && form.estagio === 'fechado_100' && aporteExternoValido(form) && (
+                  <div className="rounded-lg border border-nz-verde/40 bg-nz-verde-fundo p-3">
+                    <p className="text-sm font-semibold text-nz-verde">💵 Aporte recebido por fora — {BANCOS_APORTE_EXTERNO.find((b) => b.id === form.aporte_externo.banco)?.label}</p>
+                    <p className="text-xs text-nz-tinta mt-0.5">
+                      {fmtBRL(Number(form.aporte_externo.valor))} · {fmtData(form.aporte_externo.data)} · registrado por {form.aporte_externo.registrado_por || '—'}
+                      {form.aporte_externo.em ? ` em ${new Date(form.aporte_externo.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : ''}
+                    </p>
+                  </div>
+                )}
+                {editando !== 'nova' && form.estagio === 'fechado_100' && !dinheiroNaConta(form, sales) && podeRegistrarAporte && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                    <p className="text-xs text-amber-800">
+                      ⚠️ Sem dinheiro rastreado na conta pra este contrato. Se o aporte entrou pelo app, amarre o cliente certo acima. Se entrou por transferência direto na conta da empresa:
+                    </p>
+                    {!aporteForm ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAporteForm({ banco: 'santander', valor: form.valor_previsto || '', data: new Date().toISOString().slice(0, 10) })}
+                        className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                      >
+                        💵 Dinheiro entrou por fora (Santander/Itaú)
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <p className="text-[11px] text-amber-800 mb-1">Conta que recebeu *</p>
+                            <select value={aporteForm.banco} onChange={(e) => setAporteForm({ ...aporteForm, banco: e.target.value })} className="w-full bg-white text-nz-tinta rounded-md px-2 py-1.5 border border-amber-300 text-sm">
+                              {BANCOS_APORTE_EXTERNO.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-amber-800 mb-1">Valor recebido (R$) *</p>
+                            <Input type="text" inputMode="decimal" value={aporteForm.valor} onChange={(e) => setAporteForm({ ...aporteForm, valor: e.target.value })} className="bg-white border-amber-300 text-nz-tinta text-sm" />
+                            {parseValorBR(aporteForm.valor) > 0 && <p className="text-[10px] text-nz-verde mt-0.5">= {fmtBRL(parseValorBR(aporteForm.valor))}</p>}
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-amber-800 mb-1">Data da entrada *</p>
+                            <Input type="date" value={aporteForm.data} onChange={(e) => setAporteForm({ ...aporteForm, data: e.target.value })} className="bg-white border-amber-300 text-nz-tinta text-sm" />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-amber-800">
+                          Fica registrado com seu nome, data e hora. Atenção: se este aporte também for ativado como plano manual no painel de parceiro, ele contaria DUAS vezes na captação — registre num lugar só.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={salvando || !(parseValorBR(aporteForm.valor) > 0) || !aporteForm.data}
+                            onClick={async () => {
+                              setSalvando(true);
+                              try {
+                                await onRegistrarAporteExterno(editando, { banco: aporteForm.banco, valor: parseValorBR(aporteForm.valor), data: aporteForm.data });
+                                setEditando(null);
+                              } finally { setSalvando(false); }
+                            }}
+                            className="bg-nz-verde hover:bg-nz-verde-claro text-white"
+                          >
+                            {salvando ? 'Registrando...' : 'Confirmar recebimento'}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setAporteForm(null)} className="border-nz-borda text-nz-tinta">Cancelar</Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

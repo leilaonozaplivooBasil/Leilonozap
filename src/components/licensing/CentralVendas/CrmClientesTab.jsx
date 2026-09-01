@@ -917,8 +917,8 @@ _Enviado via CRM Leilão NoZap_`;
   // de adesões de cargo, na ordem oficial do dono). Regra e anti-dupla-contagem
   // em src/lib/captacaoParceiros.js.
   const captacao = React.useMemo(
-    () => calcularCaptacao(networkCatalogSales, networkPartnerPurchases),
-    [networkCatalogSales, networkPartnerPurchases]
+    () => calcularCaptacao(networkCatalogSales, networkPartnerPurchases, networkOportunidades),
+    [networkCatalogSales, networkPartnerPurchases, networkOportunidades]
   );
   // 🚀 DIR-23 — metas internas oficiais (Resumo Executivo do dono). São metas
   // da EMPRESA, calculadas sobre a plataforma inteira, e só renderizam pra
@@ -999,6 +999,33 @@ _Enviado via CRM Leilão NoZap_`;
     } catch (error) {
       console.error('Erro ao salvar oportunidade:', error);
       toast.error('Erro ao salvar oportunidade — a tabela da esteira já foi criada no banco?');
+      throw error;
+    }
+  };
+
+  // 💵 DIR-40 — registrar aporte que entrou POR FORA (Santander/Itaú), com
+  // carimbo de quem registrou e quando. Só quem vê dinheiro da empresa.
+  const handleRegistrarAporteExterno = async (existente, { banco, valor, data }) => {
+    try {
+      if (!vis.verDinheiroEmpresa) {
+        toast.error('Só admin/financeiro pode registrar aporte recebido por fora.');
+        return;
+      }
+      await plataforma.entities.CaptacaoOportunidade.update(existente.id, {
+        aporte_externo: {
+          banco,
+          valor: Number(valor) || 0,
+          data,
+          registrado_por_id: currentUser?.id || null,
+          registrado_por: currentUser?.full_name || null,
+          em: new Date().toISOString(),
+        },
+      });
+      toast.success('Aporte externo registrado — dinheiro na conta!');
+      await loadOportunidades();
+    } catch (error) {
+      console.error('Erro ao registrar aporte externo:', error);
+      toast.error('Erro ao registrar o aporte — a migração do aporte externo já foi colada no banco?');
       throw error;
     }
   };
@@ -1285,6 +1312,8 @@ _Enviado via CRM Leilão NoZap_`;
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
               onSalvar={handleSalvarOportunidade}
+              onRegistrarAporteExterno={handleRegistrarAporteExterno}
+              podeRegistrarAporte={vis.verDinheiroEmpresa}
               clientePreenchido={clientePreenchido}
               onClientePreenchidoConsumido={() => setClientePreenchido(null)}
             />
