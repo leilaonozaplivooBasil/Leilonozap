@@ -11,6 +11,11 @@
 // API do Slack. Se o embrulho voltar a ficar errado, eles quebram.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+// ⚠️ Este é o único teste do repositório que importa um `.ts` direto. Funciona
+// porque o Node 22.18+ remove os tipos sozinho (a CI usa node-version: '22', que
+// resolve para a última 22.x). Se um dia alguém fixar uma versão menor, a falha
+// vem como "Unknown file extension .ts" — não é o Slack quebrado, é o Node.
+// Saída, se precisar: rodar com --experimental-strip-types.
 import { SlackClient, criarClienteSlack } from '../supabase/functions/whatsapp-router/slackClient.ts';
 
 // Um fetch falso que responde por endpoint, e guarda o que foi pedido.
