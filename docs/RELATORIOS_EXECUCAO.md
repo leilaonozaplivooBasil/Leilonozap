@@ -1968,3 +1968,28 @@ SQL Editor em 01/09/2026 ("Success. No rows returned"). metodo_perfil,
 metodo_tarefas e customers.qualificacao vivos em produção.
 **Status final:** CONCLUÍDA — banco pronto; painel dos 8 Hábitos
 operante de ponta a ponta no preview.
+
+---
+
+## REL-PUB-01/09/2026 — Publicação em produção do pacote DIR-34→43
+
+**Autorização:** dono, por escrito: "pode publicar em produção".
+**O que foi publicado:** todo o pacote DIR-34→43 — Esteira de Captação,
+correções de conexão e do crash da raiz, CRM conectado com cronologia,
+edição de cadastro, centro de comando executivo, Time Corporativo com
+indicação rastreada, aporte externo Santander/Itaú auditado, o Método
+(FORM/PPV/objeções), selo do preview e o painel "Os 8 Hábitos do
+Sucesso" com o CRM dentro.
+**Ritual executado:** main (c7757d9f) mergeada na branch SEM conflito →
+644/644 testes → build exit 0 → PR #154 → squash-merge → main =
+`bb8f6d20`. As 5 migrações do pacote já estavam aplicadas pelo dono
+antes do merge ("Success. No rows returned" em todas).
+**Incidente no deploy:** o build de PRODUÇÃO do bb8f6d20 na Vercel
+COMPILOU em 45s e depois falhou com erro interno da plataforma ("An
+unexpected error occurred when running this build. This may be a
+transient issue, please try rebuilding your project") — enquanto o
+preview do MESMO commit ficou READY. Não é erro do código: é falha
+transitória da Vercel, tratada com UM redisparo (este commit → PR →
+merge) conforme a regra da casa de re-execução única para falha de
+plataforma. Produção seguiu servindo o c7757d9f (site no ar, sem
+downtime) até o redisparo completar.
