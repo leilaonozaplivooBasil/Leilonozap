@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { fmtBR } from '@/lib/money';
+import { fmtBR, parseValorBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Users, UserPlus, Search, Filter, Mail, Phone, Edit, X, Save, Send, UserCheck, UserX, CheckCircle, Package,
+  UserPlus, Search, Filter, X, Save, Send, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,6 +22,9 @@ import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
 import { resumoEscada, ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
+import { alertasEsteira, vendaRealDoCliente, resumoEsteira } from '@/lib/esteiraCaptacao';
+import { linhaDoTempoCliente } from '@/lib/linhaDoTempoCliente';
+import { membrosDoTopo } from '@/lib/timeCorporativo';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
@@ -31,6 +33,10 @@ import CrmParceirosCompra from './CrmParceirosCompra';
 import CrmMetaCentral from './CrmMetaCentral';
 import CrmDashboardDiretoria from './CrmDashboardDiretoria';
 import CrmEscadaLicencas from './CrmEscadaLicencas';
+import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
+import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
+import CrmTimeCorporativo from './CrmTimeCorporativo';
+import CrmMetodo from './CrmMetodo';
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -68,6 +74,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Clientes / Expansão). null = ainda não escolheu: visão total abre na
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
   const [secao, setSecao] = useState(null);
+  const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
   // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
   const [visaoClientes, setVisaoClientes] = useState('lista');
   const [negotiations, setNegotiations] = useState([]);
@@ -127,6 +134,15 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // 🏆 DIR-31 — contadores do Rank Premiado (/rankpremiado) pros KPIs da
   // diretoria: cadastros e visitas por link dos últimos 7 dias.
   const [concursoStats, setConcursoStats] = useState(null);
+  // 🛤️ DIR-34 — Esteira de Captação (aportes e licenças, do agendamento à
+  // assinatura). Tabela nova captacao_oportunidades.
+  const [oportunidades, setOportunidades] = useState([]);
+  const loadOportunidades = async () => {
+    try {
+      const ops = await listarTudo(plataforma.entities.CaptacaoOportunidade);
+      setOportunidades(Array.isArray(ops) ? ops : []);
+    } catch { setOportunidades([]); } // tabela ainda não migrada → esteira vazia, nada quebra
+  };
 
   const loadAutoSources = async () => {
     try {
@@ -167,6 +183,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     loadNegotiations();
     loadProducts();
     loadAutoSources();
+    loadOportunidades();
   }, [currentUser?.id]);
 
   // 🏆 DIR-31 — contadores do Rank Premiado (só visão total: a API exige
@@ -254,13 +271,62 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     [networkAppUsers, networkCatalogSales, networkAuctions, networkManualCustomers]
   );
 
+  // 🛤️ DIR-34 — escopo da esteira (prática de mercado): cada responsável vê
+  // e move só a própria carteira; visão total (dono/admins/diretoria —
+  // esteira é VENDA) vê tudo + ranking do time. PRECISA vir antes da fila
+  // de contato, que lê os alertas da esteira — const depois do uso derruba a
+  // renderização inteira (TDZ), foi o crash "Detectamos um problema".
+  const networkOportunidades = React.useMemo(
+    () => (isSuperAdmin ? oportunidades : oportunidades.filter(
+      (o) => o.responsavel_id === currentUser?.id || o.criado_por_id === currentUser?.id
+    )),
+    [oportunidades, currentUser?.id, isSuperAdmin]
+  );
+  // 🛤️ DIR-36 — forecast da esteira no MESMO escopo (alimenta o card
+  // Captação, a faixa da Visão Executiva e o 13º KPI da diretoria).
+  const resumoEsteiraGeral = React.useMemo(
+    () => resumoEsteira(networkOportunidades),
+    [networkOportunidades]
+  );
+  // 🏛️ DIR-39 — o topo (Sócio Executivo → Fundador) direto do cadastro do
+  // app: donos das metas, únicos responsáveis possíveis de contrato.
+  const timeCorporativo = React.useMemo(() => membrosDoTopo(appUsers), [appUsers]);
+
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
   const filaContato = React.useMemo(
-    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales }),
-    [unifiedCustomers, networkCatalogSales]
+    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteira(networkOportunidades) }),
+    [unifiedCustomers, networkCatalogSales, networkOportunidades]
   );
 
   const [detailCustomer, setDetailCustomer] = useState(null);
+  // 🛤️ DIR-36 — "Nova oportunidade" pré-preenchida a partir do cliente
+  const [clientePreenchido, setClientePreenchido] = useState(null);
+
+  // 🔗 DIR-36 — o que o modal do cliente mostra da esteira: as oportunidades
+  // DELE e a linha do tempo completa (cadastro → depósitos → compras →
+  // esteira → follow-up), tudo do mesmo escopo de quem vê.
+  const oportunidadesDoCliente = React.useMemo(() => {
+    if (!detailCustomer) return [];
+    const email = String(detailCustomer.email || '').toLowerCase();
+    return networkOportunidades.filter((o) =>
+      (detailCustomer.user_id && o.cliente_user_id === detailCustomer.user_id)
+      || (email && String(o.cliente_email || '').toLowerCase() === email));
+  }, [detailCustomer, networkOportunidades]);
+  const eventosDoCliente = React.useMemo(
+    () => linhaDoTempoCliente({ cliente: detailCustomer, sales: networkCatalogSales, oportunidades: networkOportunidades }),
+    [detailCustomer, networkCatalogSales, networkOportunidades]
+  );
+  const criarOportunidadeDoCliente = (c) => {
+    setDetailCustomer(null);
+    setSecao('acompanhamento');
+    setSubAcomp('expansao');
+    setClientePreenchido({
+      cliente_nome: c.full_name || '',
+      cliente_email: c.email || '',
+      cliente_telefone: c.phone || '',
+      cliente_user_id: c.user_id || null,
+    });
+  };
 
   // Carregar produtos automaticamente ao abrir modal
   useEffect(() => {
@@ -569,7 +635,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // registro na tabela customers só pra segurar nota/follow-up/próximo passo —
   // na recarga ele FUNDE de volta na linha automática (regra da DIR-24 em
   // crmUnifiedCustomers.js). Sempre com o carimbo created_by_id do escopo.
-  const handleSaveNotes = async (customer, { notes, follow_up_date, next_steps }) => {
+  const handleSaveNotes = async (customer, { notes, follow_up_date, next_steps, form_metodo = null }) => {
     try {
       // 🔧 DIR-28 — sem e-mail E sem telefone não há como fundir a anotação de
       // volta na linha automática (a fusão é por e-mail/telefone): salvar
@@ -579,7 +645,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         return;
       }
       if (customer.manual_id) {
-        await plataforma.entities.Customer.update(customer.manual_id, { notes, follow_up_date, next_steps });
+        await plataforma.entities.Customer.update(customer.manual_id, { notes, follow_up_date, next_steps, form_metodo });
       } else {
         await plataforma.entities.Customer.create({
           full_name: customer.full_name || 'Sem nome',
@@ -590,6 +656,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
           notes,
           follow_up_date,
           next_steps,
+          form_metodo,
           created_by_id: currentUser?.id || null,
           created_by: currentUser?.email || null,
         });
@@ -599,6 +666,66 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     } catch (error) {
       console.error('Erro ao salvar anotações:', error);
       toast.error('Erro ao salvar anotações');
+    }
+  };
+
+  // ✏️ DIR-37 — corrigir cadastro errado (telefone, nome, CPF) direto do
+  // modal, gravando no lugar CERTO por origem do cliente.
+  const handleEditarContato = async (customer, dados) => {
+    try {
+      const payload = {
+        full_name: (dados.full_name || '').trim() || 'Sem nome',
+        phone: String(dados.phone || '').replace(/\D/g, ''),
+        cpf: String(dados.cpf || '').replace(/\D/g, ''),
+      };
+      if (customer.user_id) {
+        // Conta do app: mesmo caminho do painel Admin; e-mail (login) não muda aqui.
+        if (!vis.gerirVendedores) {
+          toast.error('Cadastro de conta do app só pode ser corrigido por um admin.');
+          return;
+        }
+        await plataforma.entities.AppUser.update(customer.user_id, {
+          full_name: payload.full_name,
+          phone: payload.phone,
+          ...(payload.cpf ? { cpf: payload.cpf } : {}),
+        });
+        toast.success('Cadastro da conta corrigido!');
+        await loadAutoSources();
+      } else if (customer.manual_id) {
+        await plataforma.entities.Customer.update(customer.manual_id, { ...payload, email: (dados.email || '').trim() });
+        toast.success('Cadastro corrigido!');
+        await loadCustomers();
+      } else {
+        // veio só de venda antiga: nasce a linha manual corrigida (funde por
+        // e-mail/telefone — DIR-24/DIR-37)
+        await plataforma.entities.Customer.create({
+          ...payload,
+          email: (dados.email || '').trim(),
+          status: customer.status || 'lead',
+          source: 'outro',
+          created_by_id: currentUser?.id || null,
+          created_by: currentUser?.email || null,
+        });
+        toast.success('Cadastro corrigido!');
+        await loadCustomers();
+      }
+      setDetailCustomer(null);
+    } catch (error) {
+      console.error('Erro ao corrigir cadastro:', error);
+      toast.error('Erro ao corrigir o cadastro');
+      throw error;
+    }
+  };
+
+  // 🤝 DIR-43 — qualificação 1-5 da lista de network (Hábito 3)
+  const handleQualificarContato = async (contato, estrelas) => {
+    try {
+      await plataforma.entities.Customer.update(contato.id, { qualificacao: estrelas });
+      toast.success(`${contato.full_name || 'Contato'}: ${estrelas} estrela(s)`);
+      await loadCustomers();
+    } catch (error) {
+      console.error('Erro ao qualificar contato:', error);
+      toast.error('Erro ao salvar a qualificação — a migração do Método já foi colada?');
     }
   };
 
@@ -806,8 +933,8 @@ _Enviado via CRM Leilão NoZap_`;
   // de adesões de cargo, na ordem oficial do dono). Regra e anti-dupla-contagem
   // em src/lib/captacaoParceiros.js.
   const captacao = React.useMemo(
-    () => calcularCaptacao(networkCatalogSales, networkPartnerPurchases),
-    [networkCatalogSales, networkPartnerPurchases]
+    () => calcularCaptacao(networkCatalogSales, networkPartnerPurchases, networkOportunidades),
+    [networkCatalogSales, networkPartnerPurchases, networkOportunidades]
   );
   // 🚀 DIR-23 — metas internas oficiais (Resumo Executivo do dono). São metas
   // da EMPRESA, calculadas sobre a plataforma inteira, e só renderizam pra
@@ -819,8 +946,8 @@ _Enviado via CRM Leilão NoZap_`;
     [networkCatalogSales, isSuperAdmin]
   );
   const kpisDiretoria = React.useMemo(
-    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts, concurso: concursoStats }) : null),
-    [networkCatalogSales, networkAppUsers, allProducts, concursoStats, isSuperAdmin]
+    () => (isSuperAdmin ? calcularDashboardDiretoria({ sales: networkCatalogSales, users: networkAppUsers, products: allProducts, concurso: concursoStats, oportunidades: networkOportunidades }) : null),
+    [networkCatalogSales, networkAppUsers, allProducts, concursoStats, networkOportunidades, isSuperAdmin]
   );
   const escadaLicencas = React.useMemo(
     () => (isSuperAdmin ? resumoEscada(networkCatalogSales) : null),
@@ -830,6 +957,95 @@ _Enviado via CRM Leilão NoZap_`;
     () => (isSuperAdmin ? ritmoDiario(networkCatalogSales) : null),
     [networkCatalogSales, isSuperAdmin]
   );
+
+  // 💾 Salvar oportunidade: mudança de estágio carimba estagio_desde, guarda
+  // o histórico e marca fechado_em no 100% (o dinheiro entra pelos fluxos
+  // oficiais — aqui é acompanhamento, nunca ativação).
+  const handleSalvarOportunidade = async (existente, form) => {
+    try {
+      const agora = new Date().toISOString();
+      const payload = {
+        cliente_nome: (form.cliente_nome || '').trim(),
+        cliente_email: form.cliente_email || null,
+        cliente_telefone: String(form.cliente_telefone || '').replace(/\D/g, '') || null,
+        cliente_user_id: form.cliente_user_id || null,
+        tipo: form.tipo,
+        valor_previsto: parseValorBR(form.valor_previsto) || null, // "200.000" = duzentos MIL (REL-34.2)
+        estagio: form.estagio,
+        motivo_perda: form.estagio === 'sem_interesse' ? (form.motivo_perda || null) : null,
+        reuniao_em: form.reuniao_em ? new Date(form.reuniao_em).toISOString() : null,
+        recontato_em: form.recontato_em || null,
+        anotacoes: form.anotacoes || null,
+        responsavel_id: form.responsavel_id ?? null, // DIR-39: sempre um executivo do topo (o modal exige)
+        responsavel_nome: form.responsavel_nome || null,
+        indicacao_user_id: form.indicacao_user_id || null, // DIR-39: quem indicou — sempre cadastrado no app
+        indicacao_nome: form.indicacao_nome || null,
+        objecao: form.objecao || null, // DIR-41: gestão de objeções do método
+      };
+      // 🔗 DIR-36 — a amarração de aço do 100%: encontrou a venda REAL do
+      // cliente (mesma regra do chip "💰 na conta")? Grava o venda_id.
+      const vendaProva = form.estagio === 'fechado_100'
+        ? vendaRealDoCliente(payload, networkCatalogSales)
+        : null;
+      payload.venda_id = vendaProva?.id || existente?.venda_id || null;
+      if (!existente) {
+        await plataforma.entities.CaptacaoOportunidade.create({
+          ...payload,
+          criado_por_id: currentUser?.id || null,
+          estagio_desde: agora,
+          fechado_em: form.estagio === 'fechado_100' ? agora : null,
+          historico: [{ em: agora, por: currentUser?.full_name || '', para: form.estagio }],
+        });
+        toast.success('Oportunidade criada na esteira!');
+      } else {
+        const mudouEstagio = existente.estagio !== form.estagio;
+        await plataforma.entities.CaptacaoOportunidade.update(existente.id, {
+          ...payload,
+          ...(mudouEstagio ? {
+            estagio_desde: agora,
+            fechado_em: form.estagio === 'fechado_100' ? agora : null,
+            historico: [
+              ...(Array.isArray(existente.historico) ? existente.historico : []),
+              { em: agora, por: currentUser?.full_name || '', de: existente.estagio, para: form.estagio },
+            ],
+          } : {}),
+        });
+        toast.success(mudouEstagio ? 'Oportunidade movida na esteira!' : 'Oportunidade atualizada!');
+      }
+      await loadOportunidades();
+    } catch (error) {
+      console.error('Erro ao salvar oportunidade:', error);
+      toast.error('Erro ao salvar oportunidade — a tabela da esteira já foi criada no banco?');
+      throw error;
+    }
+  };
+
+  // 💵 DIR-40 — registrar aporte que entrou POR FORA (Santander/Itaú), com
+  // carimbo de quem registrou e quando. Só quem vê dinheiro da empresa.
+  const handleRegistrarAporteExterno = async (existente, { banco, valor, data }) => {
+    try {
+      if (!vis.verDinheiroEmpresa) {
+        toast.error('Só admin/financeiro pode registrar aporte recebido por fora.');
+        return;
+      }
+      await plataforma.entities.CaptacaoOportunidade.update(existente.id, {
+        aporte_externo: {
+          banco,
+          valor: Number(valor) || 0,
+          data,
+          registrado_por_id: currentUser?.id || null,
+          registrado_por: currentUser?.full_name || null,
+          em: new Date().toISOString(),
+        },
+      });
+      toast.success('Aporte externo registrado — dinheiro na conta!');
+      await loadOportunidades();
+    } catch (error) {
+      console.error('Erro ao registrar aporte externo:', error);
+      toast.error('Erro ao registrar o aporte — a migração do aporte externo já foi colada no banco?');
+      throw error;
+    }
+  };
 
   const parceirosCompra = React.useMemo(() => {
     // aportes pagos reais por pessoa (venda partner_plan real, somada por buyer)
@@ -948,7 +1164,8 @@ _Enviado via CRM Leilão NoZap_`;
 
   // 🧭 DIR-24 Fase 3 — seção ativa e a faixa de resumo (os 4 números que
   // importam, sempre visíveis, pro leitor apressado e pro alto nível).
-  const secaoAtiva = secao || (isSuperAdmin ? 'executiva' : 'clientes');
+  const secaoAtiva = secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento');
+  // dentro do Hábito 6: alterna entre 👥 Clientes e 🚀 Esteira/Expansão
   const brl = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const resumoItens = [
     isSuperAdmin
@@ -978,15 +1195,25 @@ _Enviado via CRM Leilão NoZap_`;
     {
       chave: 'captacao', rotulo: 'Captação (meta R$ 1 mi)',
       valor: brl(captacao.total),
-      sub: `faltam ${brl(captacao.faltam)}`,
-      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). Detalhe na seção Expansão.',
+      // DIR-36: o card mostra também o que está VINDO — forecast da esteira
+      sub: resumoEsteiraGeral.pipelinePonderado > 0
+        ? `faltam ${brl(captacao.faltam)} · ${brl(resumoEsteiraGeral.pipelinePonderado)} em esteira`
+        : `faltam ${brl(captacao.faltam)}`,
+      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). "Em esteira" é o forecast ponderado das negociações ativas da Esteira de Captação — detalhe na seção Expansão.',
     },
   ];
 
+  // 🏆 DIR-43 (correção do dono): o painel É os 8 Hábitos do Sucesso — o CRM
+  // mora dentro deles (Hábito 6 = Clientes+Esteira; Hábito 7 = Visão Executiva).
   const SECOES = [
-    { id: 'executiva', rotulo: '📊 Visão Executiva' },
-    { id: 'clientes', rotulo: '👥 Clientes' },
-    { id: 'expansao', rotulo: '🚀 Expansão' },
+    { id: 'sonho', rotulo: '🌟 1. Sonho' },
+    { id: 'compromisso', rotulo: '✅ 2. Compromisso' },
+    { id: 'lista', rotulo: '🤝 3. Lista' },
+    { id: 'contato', rotulo: '📜 4. Contato' },
+    { id: 'apresentacao', rotulo: '🎤 5. Apresentação' },
+    { id: 'acompanhamento', rotulo: '🛤️ 6. Acompanhamento' },
+    { id: 'verificacao', rotulo: '📊 7. Verificação' },
+    { id: 'duplicacao', rotulo: '🔁 8. Duplicação' },
   ];
 
   // 🔓 DIR-24 Fase 2 — sem gate de admin: quem não é visão total já chega
@@ -1014,7 +1241,7 @@ _Enviado via CRM Leilão NoZap_`;
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">CRM - Gestão de Clientes</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">🏆 Os 8 Hábitos do Sucesso</h1>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             {vis.gerirVendedores && (
               <Button
@@ -1064,14 +1291,14 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
         <CrmResumo itens={resumoItens} />
 
-        {/* Navegação das 3 seções do CRM */}
-        <div className="flex gap-1.5 mb-4 sm:mb-5 rounded-xl border border-nz-borda bg-nz-cinza-fundo p-1">
+        {/* 🏆 Navegação pelos 8 Hábitos do Sucesso (DIR-43) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-4 sm:mb-5 rounded-xl border border-nz-borda bg-nz-cinza-fundo p-1">
           {SECOES.map(({ id, rotulo }) => (
             <button
               key={id}
               type="button"
               onClick={() => setSecao(id)}
-              className={`flex-1 rounded-lg px-2 py-2 text-xs sm:text-sm font-semibold transition-colors ${
+              className={`rounded-lg px-2 py-2 text-xs sm:text-sm font-semibold transition-colors ${
                 secaoAtiva === id ? 'bg-white text-nz-verde shadow-sm border border-nz-verde/30' : 'text-nz-tinta-fraca hover:text-nz-tinta'
               }`}
             >
@@ -1080,32 +1307,84 @@ _Enviado via CRM Leilão NoZap_`;
           ))}
         </div>
 
-        {/* ══ 📊 VISÃO EXECUTIVA — dinheiro, metas e diretoria ══ */}
-        {secaoAtiva === 'executiva' && (
+        {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══ */}
+        {['sonho', 'compromisso', 'lista', 'contato', 'apresentacao', 'duplicacao'].includes(secaoAtiva) && (
+          <CrmMetodo
+            painel={secaoAtiva}
+            currentUser={currentUser}
+            clientesManuais={networkManualCustomers}
+            oportunidades={networkOportunidades}
+            onQualificar={handleQualificarContato}
+            onNovoCliente={() => setShowAddForm(true)}
+            onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
+          />
+        )}
+
+        {/* ══ 📊 HÁBITO 7 — VERIFICAÇÃO DO PROGRESSO (Visão Executiva) ══ */}
+        {secaoAtiva === 'verificacao' && (
           <>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
+            {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
+                dia por pessoa do time e projeção da meta de captação */}
+            <CrmEsteiraResumoExecutivo
+              oportunidades={networkOportunidades}
+              sales={networkCatalogSales}
+              visaoTotal={isSuperAdmin}
+              onVerEsteira={() => { setSecao('acompanhamento'); setSubAcomp('expansao'); }}
+            />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
           </>
         )}
 
-        {/* ══ 🚀 EXPANSÃO — captação, parceiros e escada de licenças ══ */}
-        {secaoAtiva === 'expansao' && (
+        {/* seletor interno do Hábito 6: Clientes × Esteira */}
+        {secaoAtiva === 'acompanhamento' && (
+          <div className="flex gap-2 mb-4">
+            {[['clientes', '👥 Clientes'], ['expansao', '🚀 Esteira & Expansão']].map(([id, rotulo]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSubAcomp(id)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${subAcomp === id ? 'bg-nz-verde text-white border-nz-verde' : 'bg-white text-nz-tinta-fraca border-nz-borda hover:text-nz-tinta'}`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ══ 🚀 HÁBITO 6b — ESTEIRA/EXPANSÃO — captação, parceiros e escada ══ */}
+        {secaoAtiva === 'acompanhamento' && subAcomp === 'expansao' && (
           <>
+            {/* 🛤️ DIR-34 — Esteira de Captação (kanban + forecast + ranking) */}
+            <CrmEsteiraCaptacao
+              oportunidades={networkOportunidades}
+              sales={networkCatalogSales}
+              executivos={timeCorporativo}
+              usuariosApp={appUsers}
+              clientes={unifiedCustomers}
+              currentUser={currentUser}
+              visaoTotal={isSuperAdmin}
+              onSalvar={handleSalvarOportunidade}
+              onRegistrarAporteExterno={handleRegistrarAporteExterno}
+              podeRegistrarAporte={vis.verDinheiroEmpresa}
+              clientePreenchido={clientePreenchido}
+              onClientePreenchidoConsumido={() => setClientePreenchido(null)}
+            />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
           </>
         )}
 
         {/* ══ 👥 CLIENTES — a operação do dia a dia ══ */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className={`mb-4 sm:mb-6 ${secaoAtiva === 'clientes' ? '' : 'hidden'}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className={`mb-4 sm:mb-6 ${secaoAtiva === 'acompanhamento' && subAcomp === 'clientes' ? '' : 'hidden'}`}>
           <TabsList className="bg-white border border-nz-borda w-full sm:w-auto">
             <TabsTrigger value="customers" className="data-[state=active]:bg-nz-verde data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
             {vis.gerirVendedores && (
               <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
-                Vendedores
+                🏛️ Time Corporativo
               </TabsTrigger>
             )}
           </TabsList>
@@ -1229,100 +1508,20 @@ _Enviado via CRM Leilão NoZap_`;
               customer={detailCustomer}
               onClose={() => setDetailCustomer(null)}
               onSaveNotes={handleSaveNotes}
+              oportunidades={oportunidadesDoCliente}
+              eventos={eventosDoCliente}
+              onCriarOportunidade={criarOportunidadeDoCliente}
+              onEditarContato={handleEditarContato}
+              podeEditarUsuarioApp={vis.gerirVendedores}
             />
           )}
           </TabsContent>
 
           <TabsContent value="sellers">
-            {/* LISTA DE VENDEDORES */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">
-                  Vendedores Cadastrados ({allSellers.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-700 bg-gray-800">
-                        <th className="text-left p-3 font-semibold text-white">Nome</th>
-                        <th className="text-left p-3 font-semibold text-white">Telefone</th>
-                        <th className="text-left p-3 font-semibold text-white">Email</th>
-                        <th className="text-center p-3 font-semibold text-white">Licença</th>
-                        <th className="text-center p-3 font-semibold text-white">Status</th>
-                        <th className="text-center p-3 font-semibold text-white">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allSellers.map((seller, index) => (
-                        <tr
-                          key={seller.id}
-                          className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${
-                            index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
-                          }`}
-                        >
-                          <td className="p-3 text-gray-300 font-medium">{seller.name}</td>
-                          <td className="p-3 text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {seller.phone}
-                            </div>
-                          </td>
-                          <td className="p-3 text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {seller.email || '-'}
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            {/* 🎖️ DIR-30 — nome do cargo pelo helper único
-                                (plano de carreira + licenças legado). */}
-                            <Badge className="bg-nz-verde-fundo text-nz-verde border border-nz-verde/30">
-                              {nomeLicenca(seller.license_type)}
-                            </Badge>
-                          </td>
-                          <td className="p-3 text-center">
-                            <Badge className={seller.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                              {seller.is_active ? 'Ativo' : 'Inativo'}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditSeller(seller)}
-                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-                                title="Editar"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleToggleSellerStatus(seller)}
-                                className={seller.is_active ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30' : 'text-green-400 hover:text-green-300 hover:bg-green-900/30'}
-                                title={seller.is_active ? 'Desativar' : 'Ativar'}
-                              >
-                                {seller.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {allSellers.length === 0 && (
-                    <div className="text-center py-12 text-gray-400">
-                      <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhum vendedor cadastrado</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* 🏛️ DIR-39 — o topo puxado do cadastro do app pela função
+                principal (cadastro manual de vendedor continua no botão
+                "Novo Vendedor"; a tabela manual só saiu desta listagem). */}
+            <CrmTimeCorporativo membros={timeCorporativo} />
           </TabsContent>
         </Tabs>
 

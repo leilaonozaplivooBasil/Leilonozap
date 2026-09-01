@@ -198,3 +198,40 @@ describe('DIR-27 — leilão só conta do marco (01/08/2026) em diante', () => {
     assert.equal(c.auctions_won, 1);
   });
 });
+
+describe('DIR-37 — correção manual de contato na fusão', () => {
+  test('nome/telefone corrigidos no cadastro manual VALEM sobre o inferido de venda', () => {
+    const [c] = buildUnifiedCustomers({
+      catalogSales: [{ id: 's1', buyer_email: 'cli@x.com', buyer_name: 'Nome Errado', buyer_phone: '11111111111', total_amount: 100, status: 'paid', created_date: '2026-08-01' }],
+      manualCustomers: [{ id: 'm1', email: 'cli@x.com', full_name: 'Nome Certo', phone: '21967452217' }],
+    });
+    assert.equal(c.full_name, 'Nome Certo');
+    assert.equal(c.phone, '21967452217');
+    assert.equal(c.manual_id, 'm1');
+  });
+
+  test('conta do APP continua mandando no próprio contato (correção manual não sobrescreve)', () => {
+    const [c] = buildUnifiedCustomers({
+      appUsers: [{ id: 'u1', full_name: 'Dona da Conta', email: 'cli@x.com', phone: '31999998888' }],
+      manualCustomers: [{ id: 'm1', email: 'cli@x.com', full_name: 'Tentativa de Troca', phone: '00000000000', notes: 'nota vale' }],
+    });
+    assert.equal(c.full_name, 'Dona da Conta');
+    assert.equal(c.phone, '31999998888');
+    assert.equal(c.notes, 'nota vale'); // a fusão de anotações segue valendo
+  });
+});
+
+describe('DIR-41 — FORM segue a pessoa na fusão', () => {
+  test('form_metodo do cadastro manual aparece na linha fundida e na linha solta', () => {
+    const form = { familia: 'casado', ocupacao: 'mercado', recreacao: 'pesca', mensagem: 'quer renda extra' };
+    const [fundido] = buildUnifiedCustomers({
+      appUsers: [{ id: 'u1', full_name: 'Com Conta', email: 'c@x.com' }],
+      manualCustomers: [{ id: 'm1', email: 'c@x.com', full_name: 'Com Conta', form_metodo: form }],
+    });
+    assert.deepEqual(fundido.form_metodo, form);
+    const [solto] = buildUnifiedCustomers({
+      manualCustomers: [{ id: 'm2', email: 'solto@x.com', full_name: 'Solto', form_metodo: form }],
+    });
+    assert.deepEqual(solto.form_metodo, form);
+  });
+});

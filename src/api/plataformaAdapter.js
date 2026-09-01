@@ -57,6 +57,9 @@ const TABLE_MAP = {
   Category: 'categories',
   CommissionRecord: 'commission_records',
   ComparaiLog: 'comparai_logs',
+  CaptacaoOportunidade: 'captacao_oportunidades',
+  MetodoPerfil: 'metodo_perfil', // 📖 DIR-43 — sonhos, rotina, script, apresentação
+  MetodoTarefa: 'metodo_tarefas', // 📖 DIR-43 — Master Task diário
   Customer: 'customers',
   DepositPackage: 'deposit_packages',
   DigitalWallet: 'digital_wallets',

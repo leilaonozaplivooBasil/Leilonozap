@@ -23,3 +23,30 @@ export const gtMoney = (a, b) => toCents(a) > toCents(b);
 /** Formata em pt-BR: 1234.5 -> "1.234,50" (sem prefixo R$). */
 export const fmtBR = (n) =>
   money(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * Lê dinheiro DIGITADO em português (REL-34.2): "200.000" é duzentos MIL,
+ * não duzentos — o dono digitou "200.000" num campo numérico do navegador e
+ * o valor ia virar R$ 200,00 em silêncio. Regras:
+ *   • vírgula presente → vírgula é o decimal, pontos são milhar ("200.000,50")
+ *   • só pontos, cada grupo com 3 dígitos → pontos são milhar ("1.234.567")
+ *   • ponto seguido de 1-2 dígitos no fim → decimal ("1500.5", "99.90")
+ * Aceita "R$", espaços e número já pronto. Vazio/inválido → 0.
+ */
+export function parseValorBR(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const s = String(v ?? '').replace(/[R$\s]/g, '');
+  if (!s) return 0;
+  if (s.includes(',')) {
+    const n = Number(s.replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (s.includes('.')) {
+    const partes = s.split('.');
+    const ehMilhar = partes.slice(1).every((p) => p.length === 3);
+    const n = ehMilhar ? Number(partes.join('')) : Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}

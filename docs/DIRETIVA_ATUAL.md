@@ -12,6 +12,397 @@
 
 ---
 
+## DIR-43 — O Método VIVO: seção 📖 Método no CRM (8 hábitos funcionais)
+
+**Emitida por:** dono (01/09/2026, áudio): "não quero resumo, quero o
+método NO CRM — quadro dos sonhos; o compromisso como um master task
+tipo Trello com a minha rotina do dia (5h acordar → corrida + post →
+leitura → 8h30 empresa → 9h treinamento → posts → 10h abrir a loja →
+10h30-11h30 organização e confirmar reuniões → 3 reuniões/dia de
+45-60min a partir das 13h → fechar contratos → fechamento do dia), com
+exemplos; a lista onde adiciono as pessoas da agenda e qualifico de 1 a
+5; o script que cada um escreve o seu; a apresentação como agenda
+puxando o Google Agenda; acompanhamento/fechamento é a esteira;
+verificação é a Visão Executiva; duplicação é o local de treinamento —
+desenhe tudo e aplique".
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Migração `20260901230000_metodo_vivo.sql` (dono cola):
+   `metodo_perfil` (id, user_id único, sonhos JSONB, rotina JSONB,
+   script TEXT, apresentacao_url TEXT), `metodo_tarefas` (id, user_id,
+   data, hora, titulo, detalhe, feito, ordem) com DELETE permitido
+   (tarefa pessoal), e `customers.qualificacao SMALLINT` (1-5). RLS
+   permissivo no padrão da casa; tabelas na whitelist do entityWrite
+   (lição do REL-34.2, com teste de regressão).
+2. `src/lib/metodo.js` (fonte única, testada): HABITOS (conteúdo do
+   deck — o CrmMetodoModal passa a ler daqui), ROTINA_PADRAO com a
+   rotina ditada do dono como exemplo, períodos (manhã/tarde/noite),
+   gerarTarefasDoDia, progressoDia, linkGoogleAgenda (URL de template do
+   Google Calendar — agenda sem OAuth), qualificação 1-5.
+3. **CORREÇÃO DO DONO (mesma data, em áudio): "isso aqui não é um CRM —
+   tem que ser os 8 Hábitos primeiro; o CRM é a parte do acompanhamento
+   e da verificação do progresso, DENTRO dos 8 hábitos".** O painel
+   inteiro vira "🏆 Os 8 Hábitos do Sucesso": navegação principal pelos
+   8 hábitos; Acompanhamento e Fechamento = o CRM atual (Clientes +
+   Expansão/esteira, com alternador interno); Verificação do Progresso
+   = a Visão Executiva atual. `CrmMetodo.jsx` renderiza os painéis
+   novos: 🌟 Sonho (quadro editável) · ✅ Compromisso (Master Task
+   diário: gerar dia da rotina, marcar feito, adicionar/editar/apagar,
+   progresso) · 🤝 Lista (contatos manuais com estrelas 1-5 inline) ·
+   📜 Script (cada um escreve o seu, com modelo de exemplo) · 🎤
+   Apresentação (agenda de reuniões da esteira 7 dias + botão "Google
+   Agenda" por reunião + placar 3 reuniões/dia + link da apresentação
+   oficial) · 🛤️ Fechamento (atalho pra Expansão) · 📊 Verificação
+   (atalho pra Visão Executiva) · 🔁 Duplicação (os 8 hábitos + espaço
+   de treinamento).
+**Fora do escopo / proibido:** OAuth/sincronização bidirecional com o
+Google Calendar (v1 usa o link de template oficial do Google — rodada
+própria se o dono quiser sync automático); upload de vídeo de
+treinamento (v1 marca o espaço).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-42 (inclui prova em
+navegador e handler real do entityWrite em teste).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-42 — Um preview só: selo na página e volta pro link oficial
+
+**Emitida por:** dono (01/09/2026, áudio): "não quero toda hora um novo
+preview; quero ficar sempre no mesmo link, ver a atualização acontecer na
+página (a contagem) e depois publicar no site — estou perdido, nunca sei
+qual é o verdadeiro".
+**Data:** 01/09/2026.
+**Diagnóstico (dado real da Vercel):** cada deploy gera uma URL congelada
+própria (leilonozap-XXXX-...), e o dono vinha abrindo essas; nelas o
+aviso de atualização NUNCA dispara (o /version.json de um deploy
+congelado não muda nunca). O link estável que acompanha a branch é o
+branchAlias, confirmado em TODOS os deploys da branch:
+`leilonozap-git-claude-project-struct-fffd43-leilaapp-s-projects.vercel.app`
+— nele o aviso de atualização já funciona (useAppVersion compara o
+carimbo do build com o /version.json a cada 60s).
+**Escopo autorizado:**
+1. `src/lib/previewInfo.js` (novo, testado): `tipoDeHost(hostname)` →
+   producao (site/custom domain) · preview_oficial (host com "-git-") ·
+   deploy_congelado (vercel.app sem "-git-"); HOST_PREVIEW_OFICIAL.
+2. `SeloPreview.jsx` montado no App: em preview oficial, selo verde
+   discreto "🧪 Preview oficial · build DD/MM HH:mm"; em deploy
+   congelado, faixa âmbar/vermelha "⚠️ Página antiga (congelada)" com
+   LINK de um clique pro mesmo caminho no preview oficial. Em produção,
+   nada aparece.
+**Fora do escopo / proibido:** mexer no useAppVersion (já correto);
+domínio custom pro preview (exige configuração de domínio — rodada
+própria se o dono quiser um nome mais bonito).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-41 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-41 — O Método no CRM: FORM, PPV obrigatório e Verificação
+
+**Emitida por:** dono (01/09/2026): PDF "O Sucesso Não Negocia com a
+Mediocridade — os 8 Hábitos" + "ESCREVA TUDO QUE ENTENDEU E O QUE VAMOS
+FAZER PARA DEIXAR ISSO FODA" + aprovação do plano em chat: "VAMOS FAZER".
+**Data:** 01/09/2026.
+**Princípio:** o CRM vira o guardião do método — "cada etapa precisa
+conduzir ao próximo ponto" deixa de ser slide e vira regra cobrada pelo
+sistema.
+**Escopo autorizado (3 fases):**
+1. FORM no cliente (Hábito 4): coluna `form_metodo JSONB` em customers
+   ({familia, ocupacao, recreacao, mensagem}); bloco F.O.R.M. no modal
+   do cliente (mesmo salvar das anotações); fusão carrega o FORM pra
+   linha automática; a fila "Quem contatar hoje" mostra o que se sabe
+   da pessoa antes do WhatsApp.
+2. PPV + objeções (Hábitos 5-6): coluna `objecao TEXT` na esteira;
+   OBJECOES oficiais do deck (não tenho dinheiro / preciso pensar /
+   tenho medo / não conheço / outra); `semPPV` na lib — oportunidade
+   ATIVA sem reunião futura nem recontato futuro = sem Próximo Ponto de
+   Venda → badge vermelho "⚠️ sem PPV" no kanban; campo "Objeção atual"
+   no modal.
+3. Verificação + duplicação (Hábitos 7-8): centro de comando ganha
+   "sem PPV" (total e por responsável na tabela do time) e o placar de
+   objeções que mais travam a esteira; botão "📖 O Método" no CRM abre
+   o resumo dos 8 hábitos (o time novo aprende dentro da ferramenta).
+**Migração** `20260901210000_metodo_form_ppv.sql` (dono cola): as duas
+colunas acima.
+**Fora do escopo / proibido:** qualquer número inventado (objeção/PPV
+só contam o que foi registrado); mexer em critério de dinheiro real;
+bloquear salvar por falta de PPV (avisa e marca, não tranca — o dono
+manda na régua, o sistema cobra).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-40 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-40 — Aporte recebido POR FORA (Santander/Itaú), com auditoria
+
+**Emitida por:** dono (01/09/2026, áudio): "tem que ter um botão de que o
+dinheiro entrou por transferência de fora — só Santander e Itaú, que são
+as duas contas que podem aportar capital; tem pagamento por fora também".
+Contexto: o Fechado 100% do Renan Silva ficou "⚠️ sem dinheiro na conta"
+porque o aporte não passou pelo app — comportamento correto do chip; o
+que faltava era o registro AUDITADO do dinheiro externo (mesma decisão
+da ativação manual de plano na DIR-22: dinheiro fora do gateway conta
+quando confirmado pelo dono, com carimbo).
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Migração `20260901180000_captacao_aporte_externo.sql` (dono cola):
+   coluna `aporte_externo JSONB` em captacao_oportunidades —
+   {banco, valor, data, registrado_por_id, registrado_por, em}.
+2. `esteiraCaptacao.js`: BANCOS_APORTE_EXTERNO = Santander e Itaú
+   (SOMENTE); `aporteExternoValido`; `dinheiroNaConta` passa a aceitar
+   venda real OU aporte externo válido (chip verde mostra o banco).
+3. Modal da oportunidade (Fechado 100% sem dinheiro rastreado): botão
+   "💵 Dinheiro entrou por fora" — banco (Santander/Itaú), valor, data →
+   grava com carimbo de quem registrou e quando. SÓ para quem vê
+   dinheiro da empresa (super_admin/admin/admin_financeiro).
+4. `calcularCaptacao` ganha os aportes externos válidos no balde
+   "Aportes Parceiro de Compra" — o card Captação e a barra da meta de
+   R$ 1 mi passam a contar o dinheiro externo registrado (fonte única).
+**Anti-dupla-contagem (registrado):** se o plano do parceiro for depois
+ativado MANUALMENTE no painel (partner_plan_purchases manual, que também
+conta na captação), o mesmo aporte contaria duas vezes — aviso explícito
+no formulário; registrar num lugar OU no outro.
+**Fora do escopo / proibido:** mexer no critério isVendaReal (dinheiro
+real global); botão de "remover" aporte registrado (correção só por
+ordem expressa do dono); bancos além de Santander/Itaú.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-39 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-39 — Time Corporativo: contratos do topo, com indicação rastreada
+
+**Emitida por:** dono (01/09/2026, áudio + confirmação em chat): as metas
+de licença/parceiro são do TIME CORPORATIVO (topo). Aba "Vendedores"
+passa a listar quem tem cargo executivo JÁ CADASTRADO no app (Sócio
+Executivo até Fundador — TODOS os cargos do topo, confirmado; Trainee
+fica fora, está em formação), pela FUNÇÃO PRINCIPAL, com filtro por
+função. Cadastro manual continua existindo; registros manuais saem só da
+LISTAGEM (dados preservados — confirmado). Responsável de contrato da
+esteira SEMPRE é um executivo do topo; entra o campo "indicação da
+estrutura": quem indicou precisa estar CADASTRADO no app (qualquer
+nível) — indicação sem cadastro não existe. SQL das colunas novas
+entregue pro dono colar (confirmado: "aguardo o SQL").
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Migração `20260901150000_captacao_indicacao.sql` (dono cola):
+   `indicacao_user_id` + `indicacao_nome` em captacao_oportunidades.
+2. `src/lib/timeCorporativo.js` (novo, testado): CARGOS_TOPO
+   (executivo_conta → fundador), `ehExecutivoTopo`, `membrosDoTopo`
+   (função principal normalizada, ordenado pela hierarquia). Fonte
+   única sobre careerLevels.
+3. Aba "Vendedores" vira "🏛️ Time Corporativo": lista automática dos
+   membros do topo cadastrados no app (nome, contato, função principal
+   com a cor do cargo, filtro por função). Botão e modal de cadastro
+   manual de vendedor continuam; a tabela manual não é apagada, só sai
+   desta listagem.
+4. Esteira: seletor "Executivo responsável" só oferece o topo (id+nome
+   do app_user); campo novo "Indicação da estrutura (opcional)" com a
+   MESMA busca de pessoa do CRM sobre usuários cadastrados — grava
+   indicacao_user_id/nome; cartão do kanban mostra "via {indicação}".
+**Fora do escopo / proibido:** apagar dados da tabela sellers; mexer em
+comissão/percentuais dos cargos; indicação por texto livre.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-38 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-38 — Visão Executiva = centro de comando (esteira, agenda e projeção)
+
+**Emitida por:** dono (01/09/2026, áudio): "na Visão Executiva entre tudo
+de forma organizada, minimalista e clean — as agendas, a esteira com a
+quantidade por estágio (agendamento X pessoas, 99% X, fechado X), o
+volume nas metas; sincronismo das outras abas na visão geral pra bater o
+olho e entender; medir a quantidade de reuniões no DIA e o percentual
+por pessoa do time; máquina de potencialização de contrato e de projeção
+da meta".
+**Data:** 01/09/2026.
+**Decisão de honestidade (regra de dinheiro real):** aporte DECLARADO na
+esteira NÃO entra na meta de vendas de R$ 5 mi (que é venda real de
+Loja+Leilão+PDV) nem se soma como se fosse dinheiro — as DUAS metas
+aparecem lado a lado na mesma vista: Vendas R$ X/5 mi e Captação
+R$ Y/1 mi, com o fechado separado em "na conta (real)" × "declarado
+(sem dinheiro na conta ainda)" × "em esteira (ponderado)".
+**Escopo autorizado:**
+1. `src/lib/agendaEsteira.js` (novo, testado): agenda do dia da esteira
+   (reuniões HOJE, atrasadas, na semana, recontatos vencidos) e reuniões
+   por responsável (hoje/marcadas). `fechadoProvado` em esteiraCaptacao
+   (na conta × declarado). Fonte única.
+2. `CrmEsteiraResumoExecutivo.jsx` (novo, substitui a faixa simples da
+   DIR-36 na Visão Executiva): barra da meta de captação R$ 1 mi
+   (na conta + declarado + ponderado, cada um na sua cor), funil da
+   esteira em CHIPS por estágio (quantidade + valor), agenda do dia e,
+   na visão total, reuniões por responsável com win rate.
+3. Ordem da Visão Executiva: hero → Meta Central R$ 5 mi → BLOCO DA
+   ESTEIRA → Dashboard da Diretoria (13) → cards. Nada de tela nova —
+   é a mesma aba, mais densa e mais limpa.
+**Fora do escopo / proibido:** somar valor declarado em meta de venda;
+criar agenda fora da esteira (reunião nasce da oportunidade); alterar
+critério de dinheiro real.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-37 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-37 — Editar o cadastro do cliente direto no modal do CRM
+
+**Emitida por:** dono (01/09/2026): "preciso de um botão para editar as
+informações, como trocar o telefone etc., para caso de um cadastro
+errado" (print do modal da Thalita Silva, cadastro manual com telefone a
+corrigir).
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Botão "✏️ Editar" no cabeçalho do modal do cliente → modo edição de
+   nome, e-mail, telefone e CPF, com salvar/cancelar.
+2. Gravação no lugar CERTO por origem do cliente:
+   - manual (`manual_id`) → update na tabela `customers`;
+   - conta do app (`user_id`) → update em `app_users` SOMENTE para quem
+     `gerirVendedores` (admin/super_admin), mesmo caminho do painel
+     Admin; e-mail fica travado (é o login — muda no painel Admin);
+     vendedor comum não vê o botão nesses clientes;
+   - automático sem cadastro (veio só de venda) → cria a linha em
+     `customers` corrigida (mesmo trilho das anotações DIR-24).
+3. Fusão (crmUnifiedCustomers): correção manual passa a valer sobre
+   contato INFERIDO de venda (nome/telefone) — nunca sobre dados de
+   conta do app. Teste novo.
+4. Polimento: esconder a etiqueta de status quando repete a de tipo
+   ("Cliente Cliente" no print).
+**Fora do escopo / proibido:** editar e-mail de conta do app; mexer em
+cargo/papel/carteira (isso é o UserEditModal do Admin); apagar cliente.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-36 (inclui prova em
+navegador do REL-34.1).
+**Status:** EM VIGOR.
+
+---
+
+## DIR-36 — CRM 100%: conectar cliente↔esteira↔venda, cronologia e visão geral
+
+**Emitida por:** dono (01/09/2026): "preciso atualizar os clientes para
+aparecer na esteira e os resultados aparecer na visão geral; analise o
+que está faltando, sem cronologia e sem conexão, para deixarmos 100%" +
+aprovação da análise/plano em chat: "PODE APLICAR CONFIO EM VOCE".
+**Data:** 01/09/2026.
+**Diagnóstico (conferido no código):** esteira ilhada — Nova oportunidade
+redigita cliente que o CRM já conhece (cliente_user_id nunca preenchido;
+venda_id existe no banco e nunca é gravado); modal do cliente sem botão
+de oportunidade e sem as oportunidades dele; histórico de estágios
+gravado e nunca exibido; Dashboard da Diretoria sem KPI de esteira; card
+Captação sem forecast; resumo da esteira invisível fora da aba Expansão.
+**Escopo autorizado (3 fases):**
+1. CONECTAR: busca de cliente existente na Nova oportunidade (preenche
+   nome/e-mail/telefone e amarra cliente_user_id); botão "Criar
+   oportunidade" + bloco de oportunidades no modal do cliente (abre a
+   Expansão com o formulário pré-preenchido); no Fechado 100%, gravar
+   venda_id da venda real encontrada (lib `vendaRealDoCliente`, mesma
+   regra do chip).
+2. CRONOLOGIA: linha do tempo da oportunidade no modal de edição (cada
+   movimento: quem/quando/de→para); linha do tempo do cliente unificada
+   em lib testada (cadastro → depósitos → compras → arremates →
+   oportunidades → follow-up futuro) exibida no modal do cliente.
+3. VISÃO GERAL: card Captação ganha o "em esteira (ponderado)"; KPI 13
+   no Dashboard da Diretoria (Esteira de Captação: fechado + ponderado
+   vs meta R$ 1 mi, tipo 'dado'); faixa-resumo da esteira na Visão
+   Executiva com atalho pra Expansão.
+**Fora do escopo / proibido:** ativação de plano/dinheiro pela esteira;
+mudar critério de dinheiro real; drag-and-drop do kanban (pendência
+própria); mexer no funil de clientes (DIR-24).
+**Regra fixa nova (REL-34.1):** mudança que toca componente React só
+sai da rodada RENDERIZADA em navegador (vite preview + Playwright).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-35.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-35 — Tela "Sem conexão" falsa: só declarar offline com PROVA
+
+**Emitida por:** dono (01/09/2026): print do preview da branch preso na
+tela "Sem conexão" — "OLHA TEM ALGO ERRADO VEJA DIREITO NAO ESTA
+APARECENDO PRECISAMOS RESOLVER ISSO".
+**Data:** 01/09/2026.
+**Diagnóstico (sem achismo):** a tela "Sem conexão" é o
+`OfflineScreen.jsx` do PRÓPRIO app — ou seja, o servidor entregou o HTML,
+os bundles baixaram e o React montou; a rede FUNCIONAVA. O app se
+trancou porque `useOnlineStatus` (código da era Base44, commit
+`0e4f5a00`, anterior a todo o nosso trabalho) confia cegamente no
+`navigator.onLine` do navegador — um sinal que mente com VPN/proxy/troca
+de adaptador de rede — e o botão "Tentar novamente" testava
+`https://leilaonozap.net/api/health`, um endpoint que NÃO EXISTE
+(`api/` não tem `health.js`) e ainda em domínio cruzado, então qualquer
+bloqueio de extensão/DNS deixava o usuário preso pra sempre. Os commits
+da DIR-34 não tocaram nesses arquivos.
+**Escopo autorizado:**
+1. `src/lib/conexao.js` — fonte única da prova de conexão: buscar
+   `/version.json` no PRÓPRIO domínio (existe em todo deploy, tem
+   `Cache-Control: no-store` no vercel.json) com cache-buster. Testes.
+2. `useOnlineStatus`: nasce otimista (a página acabou de chegar pela
+   rede); o evento `offline` do navegador vira GATILHO DE VERIFICAÇÃO,
+   não veredito — só declara offline se a prova real falhar; o evento
+   `online` restaura. "Tentar novamente" usa a mesma prova.
+3. `App.jsx`: consertar `hasLoadedOnce` (era `onLoad` numa `<div>`, que
+   nunca dispara) — marcar carregado via efeito na primeira renderização
+   online, pra tela cheia de offline só existir num boot genuinamente sem
+   rede; depois disso, queda de conexão mostra o BANNER, sem esconder o
+   app que já carregou.
+**Fora do escopo / proibido:** mexer no service worker/workbox (a
+configuração atual está correta — html fora do precache, navegação
+sempre na rede); mexer em `useAppVersion` (o `navigator.onLine` lá só
+adia um poll de 60s, sem trancar nada); qualquer mudança visual nos
+componentes de offline.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-34.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-34 — Esteira de Captação: do agendamento ao contrato assinado
+
+**Emitida por:** dono (30/08/2026): "o cadastro de parceiro de compra e
+venda de licenças precisa gerar uma esteira desde a reunião do
+agendamento até o fechamento do contrato, acompanhada no CRM, com os
+estágios pela intenção do cliente" — estágios ditados por ele; pediu
+ideias extras e o % de conversão do time; confirmou no chat: % de
+CONVERSÃO por responsável; escopo pela prática de mercado (cada um vê a
+própria carteira, gestão vê tudo); "faça o que for melhor" no banco.
+**Data:** 30/08/2026.
+**Estágios OFICIAIS (probabilidade fixa):** Reunião agendada 10% · Sem
+interesse 0% (motivo obrigatório) · Interesse pra frente 20% (data de
+recontato) · Interesse — nova reunião 40% · Fechado 50% (valor do aporte
+obrigatório) · Fechado 70% (pendências de documentação/liquidez em
+checklist) · Fechado 99% (valor+data decididos, reunião de assinatura
+marcada) · Fechado 100% (aportou, assinou, dinheiro na conta).
+**Escopo autorizado:**
+1. Tabela nova `captacao_oportunidades` (migração com RLS e políticas
+   explícitas — dono cola o SQL): cliente, tipo (aporte/licença), valor
+   previsto, estágio, motivo de perda, datas (reunião, recontato),
+   pendências (JSONB), histórico (JSONB), responsável, amarração com a
+   venda real (venda_id).
+2. `src/lib/esteiraCaptacao.js` — fonte única: estágios/probabilidades,
+   pipeline ponderado (Σ valor × prob), % de CONVERSÃO por responsável
+   (win rate = fechadas ÷ (fechadas+perdidas) + conversão do funil),
+   alertas (parada 7/15 dias, reunião hoje, recontato vencido),
+   validação do 100% contra dinheiro REAL (venda partner_plan/adesão do
+   cliente). Testes.
+3. `CrmEsteiraCaptacao.jsx` na aba 🚀 Expansão: kanban dos 8 estágios
+   (valor por coluna), nova oportunidade, mover com exigências por
+   estágio (valor no 50%, motivo na perda, datas), forecast ponderado ao
+   lado da meta de R$ 1 mi, RANKING DO TIME com % de conversão, chip
+   âmbar "100% declarado sem dinheiro na conta".
+4. Escopo (prática de mercado): responsável vê e move só as próprias;
+   visão total (dono/admins/diretoria — esteira é VENDA) vê tudo +
+   ranking.
+5. Fila "Quem contatar hoje" ganha os alertas da esteira.
+**Fora do escopo / proibido:** ativação de plano (esteira registra
+negociação; o dinheiro entra pelos fluxos oficiais); critério de
+dinheiro real; comissão.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-33.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-33 — Árvore Genealógica: busca de verdade + Sócios Executivos no topo
 
 **Emitida por:** dono (30/08/2026, com print da Árvore): "preciso que

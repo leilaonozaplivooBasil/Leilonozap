@@ -1501,3 +1501,470 @@ arrasta, não é alvo de vínculo, não tem menu nem lápis (clique abre/
 fecha). A lupa continua achando quem está dentro (o clique no resultado
 abre a pasta e centraliza). Só visualização — nenhum vínculo muda.
 **Testes:** 559/559. **Build:** exit 0.
+
+---
+
+## REL-34 — Execução da DIR-34 (Esteira de Captação)
+
+**Data:** 30/08/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Migração `20260831010000_captacao_oportunidades.sql` (DONO PRECISA
+   COLAR O SQL): tabela da esteira com RLS e políticas explícitas
+   (SELECT/INSERT/UPDATE; DELETE não — oportunidade não se apaga, se
+   perde com motivo). Entidade `CaptacaoOportunidade` mapeada no adapter.
+2. `src/lib/esteiraCaptacao.js` (+8 testes): os 8 estágios oficiais do
+   dono com probabilidade fixa e EXIGÊNCIA por estágio (50% exige valor;
+   perda exige motivo; 99% exige valor+reunião de assinatura; interesse
+   futuro exige data de recontato); pipeline ponderado; % de CONVERSÃO
+   por responsável (win rate + conversão do funil — quem não encerrou
+   nada fica sem taxa, não inventamos número); alertas (reunião hoje/
+   atrasada, recontato vencido, parada 7/15 dias); `dinheiroNaConta`
+   (100% se prova contra venda real partner_plan/adesão do cliente).
+3. `CrmEsteiraCaptacao.jsx` na aba 🚀 Expansão: forecast (ponderado +
+   fechado + % da meta de R$ 1 mi), kanban dos 8 estágios com valor por
+   coluna e cartões (dias parados em âmbar/vermelho, chip "💰 na conta"
+   ou "⚠️ sem dinheiro na conta" no 100%), modal nova/editar com as
+   exigências travando o salvar, RANKING DO TIME (visão total) com win
+   rate e conversão do funil.
+4. Escopo (prática de mercado, confirmada pelo dono): responsável vê e
+   move só as próprias; visão total (dono/admins/diretoria — esteira é
+   venda) vê tudo + ranking.
+5. Fila "Quem contatar hoje" ganhou os alertas da esteira (reunião,
+   recontato, negociação parada) com mensagens de WhatsApp próprias.
+6. Histórico de movimentos gravado a cada mudança de estágio
+   (quem/quando/de/para) + estagio_desde recarimbado + fechado_em no 100%.
+**Ação do dono:** ✅ FEITA — migração da esteira colada e aplicada no SQL
+Editor em 30/08/2026 ("Success. No rows returned", padrão de
+CREATE/ALTER). Tabela, índices, RLS, políticas e trigger vivos em
+produção.
+**Testes:** 567/567 (8 novos). **Build:** exit 0. Nomes de migração ✅.
+**Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
+Preview + "pode".
+
+---
+
+## REL-35 — Execução da DIR-35 (tela "Sem conexão" falsa)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Diagnóstico provado (sem achismo):** o print do dono mostrava o
+`OfflineScreen.jsx` do PRÓPRIO app — logo o servidor entregou a página,
+os bundles baixaram e o React montou; a rede funcionava. O trancamento
+vinha do `useOnlineStatus` da era Base44 (commit `0e4f5a00`): confiança
+cega no `navigator.onLine` (que mente com VPN/proxy/troca de rede) e
+botão "Tentar novamente" apontando pra `leilaonozap.net/api/health` —
+endpoint que NÃO EXISTE, e em domínio cruzado. Os commits da DIR-34 não
+tocaram em nenhum desses arquivos.
+**O que foi feito:**
+1. `src/lib/conexao.js` (novo, +3 testes): `provarConexao()` — busca
+   `/version.json` no PRÓPRIO domínio (existe em todo deploy, no-store),
+   com cache-buster e teto de 8s (portal cativo não pendura o botão).
+2. `useOnlineStatus` reescrito: nasce otimista (a página acabou de chegar
+   pela rede); evento `offline` vira GATILHO DE VERIFICAÇÃO — só declara
+   offline se a prova real falhar; evento `online` restaura; nº de série
+   da prova descarta resultado atrasado (falha velha não sobrescreve
+   estado novo); "Tentar novamente" usa a mesma prova.
+3. `App.jsx`: `hasLoadedOnce` era `onLoad` numa `<div>` (nunca dispara);
+   agora é efeito na primeira renderização online. Queda de conexão no
+   meio da sessão mostra o BANNER, sem esconder o app carregado.
+**Revisão adversarial (3 revisores independentes):** veredito "sólida"
+nos 3 ângulos (hooks React, PWA/Vercel, cenários do bug); os 2 achados
+menores (corrida de prova atrasada, falta de timeout) foram corrigidos
+antes do commit.
+**Achado pré-existente registrado (FORA do escopo, pendência):** o
+service worker gerado NUNCA INSTALA — o `navigateFallback` padrão do
+vite-plugin-pwa ainda aponta pro `index.html`, que está fora do precache,
+então o SW estoura `non-precached-url` na avaliação e morre. Efeito
+prático hoje: nenhum cache de SW ativo (tudo vai à rede — comportamento
+até desejável pra atualização), mas o PWA está sem casca offline. Correção
+(rodada própria, com ordem do dono): `navigateFallback: null` explícito no
+bloco workbox. NÃO mexido agora — DIR-35 proíbe tocar no workbox.
+**Testes:** 570/570 (3 novos). **Build:** exit 0. **Lint:** limpo.
+**Status final:** CONCLUÍDA — aguarda o dono recarregar o preview.
+
+---
+
+## REL-34.1 — Correção crítica: crash do CRM introduzido na DIR-34
+
+**Data:** 01/09/2026.
+**Sintoma (print do dono):** tela preta "Detectamos um problema"
+(ErrorBoundary da raiz) ao abrir o CRM no preview da branch — em
+QUALQUER aba. Os previews que "funcionavam" eram outros códigos:
+`nj2my05ky` = branch de outra sessão (61c91dd) e `3gpd0i1wn` = produção
+main (bc87d9c) — nenhum tem a DIR-34. Identificação feita SEM achismo:
+mapeei cada URL congelada ao commit pelos deployments da Vercel
+registrados no GitHub.
+**Causa-raiz:** na DIR-34, o `filaContato` (linha ~270 do
+CrmClientesTab) passou a ler `networkOportunidades`, declarado como
+`const` ~580 linhas ABAIXO no mesmo corpo do componente. Temporal dead
+zone: `ReferenceError: Cannot access 'networkOportunidades' before
+initialization` na primeira renderização. Build e testes não pegam
+(nenhum renderiza o componente) — mesma classe do caso
+Briefcase/DollarSign do REL-25.
+**Correção:** o memo `networkOportunidades` subiu pra antes do
+`filaContato`; blindado também o `.trim()` do modal da esteira contra
+`cliente_nome` nulo.
+**Prova (navegador real, Playwright + Chromium, backend simulado):**
+- SEM a correção: build ok, testes ok… e `Detectamos um problema` na
+  carga — o print do dono, reproduzido.
+- COM a correção: CRM carrega; aba 🚀 Expansão renderiza a Esteira
+  completa (kanban 8 estágios, forecast, badge "7d parada", chip
+  "⚠️ sem dinheiro na conta", ranking Conversão do Time) inclusive com
+  linha SUJA (nulls em nome/tipo/datas); abas Clientes e Visão
+  Executiva ok; ZERO erros de página nas três abas.
+**Regra nova de verificação (aprendida em dobro):** mudança que toca
+componente React não sai da rodada sem renderizar no navegador —
+`vite preview` + Playwright com backend interceptado, cenário logado e
+deslogado.
+**Testes:** 570/570. **Build:** exit 0.
+**Status final:** CONCLUÍDA — preview da branch volta a ser confiável.
+
+---
+
+## REL-36 — Execução da DIR-36 (CRM 100%: conexão, cronologia e visão geral)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito (as 3 fases aprovadas pelo dono):**
+1. CONECTAR:
+   - "Nova oportunidade" ganhou busca de cliente EXISTENTE (mesma
+     `buscaPessoa` da Árvore — nome/e-mail/telefone, sem acento): escolhe
+     e preenche nome/e-mail/telefone sozinho, amarrando `cliente_user_id`
+     ("🔗 amarrado ao cadastro").
+   - Modal do cliente ganhou o bloco "Esteira de captação": as
+     oportunidades DELE (estágio + valor) e o botão "+ Criar
+     oportunidade", que leva pra Expansão com o formulário pronto.
+   - Fechado 100% grava `venda_id` da venda real encontrada
+     (`vendaRealDoCliente`, mesma regra do chip "💰 na conta" —
+     `dinheiroNaConta` virou derivada dela; coluna existia e nunca era
+     preenchida).
+2. CRONOLOGIA:
+   - Modal da oportunidade mostra a linha do tempo dos movimentos
+     (quem/quando/de→para + dias no estágio atual) — era gravada e nunca
+     exibida.
+   - `src/lib/linhaDoTempoCliente.js` (nova, +2 testes): a história do
+     cliente numa lista só — cadastro → depósitos reais → compras →
+     arremates → esteira (criação e movimentos) + futuros (follow-up,
+     reunião, recontato) no topo em âmbar. Modal do cliente renderiza.
+3. VISÃO GERAL:
+   - Card "Captação (meta R$ 1 mi)" ganhou o forecast: "· R$ X em
+     esteira" (ponderado, mesmo escopo de quem vê).
+   - 13º KPI no Dashboard da Diretoria: "Esteira de Captação (fechado +
+     ponderado)" vs meta R$ 1 mi, tipo 'dado', mesma `resumoEsteira` do
+     kanban (fonte única). Testes atualizados (12→13).
+   - Faixa da esteira na Visão Executiva (fechado, ponderado, ativas)
+     com atalho "Ver esteira →".
+**Prova em navegador (regra do REL-34.1, Playwright + backend simulado
+com cliente real: compra paga + depósito + oportunidade em Fechado 50%):**
+17/17 verificações ✅ com ZERO erros de página — visão geral (faixa,
+card com "R$ 10.000,00 em esteira" = 20.000×50%, KPI 13), modal do
+cliente (bloco esteira, oportunidade listada, cronologia com depósito/
+compra/entrada na esteira/movimento/cadastro), fluxo "Criar
+oportunidade" → Expansão pré-preenchido e amarrado, busca com sugestão.
+**Testes:** 575/575 (5 novos). **Build:** exit 0. Varredura
+no-use-before-define limpa (só os 5 casos seguros dentro de useEffect).
+**Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
+
+---
+
+## REL-37 — Execução da DIR-37 (editar cadastro do cliente no modal)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Botão "✏️ Editar" no cabeçalho do modal do cliente → "Corrigir
+   cadastro": nome, telefone, CPF e e-mail, com salvar/cancelar.
+2. Gravação no lugar certo por origem: manual → `customers` (via
+   entityWrite, ator carimbado); conta do app → `app_users` SÓ para
+   gerirVendedores (mesmo caminho do painel Admin), e-mail travado (é o
+   login); automático sem cadastro → cria a linha manual corrigida
+   (mesmo trilho das anotações DIR-24). Vendedor comum não vê o botão
+   em conta de app.
+3. Fusão (2 testes novos): correção manual passa a valer sobre contato
+   INFERIDO de venda (nome/telefone); dados de conta do app continuam
+   mandando.
+4. Polimento: etiqueta de status some quando repetia a de tipo
+   ("Cliente Cliente").
+**Constatação de rodada:** cliente manual JÁ tinha editor completo
+(clicar na linha da lista abre a página com endereço etc., DIR-25/29) —
+o que faltava era corrigir SEM SAIR do modal aberto pela fila "Quem
+contatar hoje", que era o caso do print do dono.
+**Prova em navegador (regra REL-34.1):** 6/6 ✅ zero erros — modal aberto
+pela fila, botão Editar, formulário, telefone trocado, POST
+`/api/functions/entityWrite {table:'customers', action:'update',
+payload.phone:'21999997777'}` capturado, modal fechando só com sucesso
+(falha de servidor mantém o formulário aberto — comprovado no mock).
+**Testes:** 577/577 (2 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
+
+---
+
+## REL-34.2 — Esteira não salvava em produção/preview: tabela fora da whitelist
+
+**Data:** 01/09/2026.
+**Sintoma (print do dono):** "Erro ao salvar oportunidade — a tabela da
+esteira já foi criada no banco?" ao salvar Renan Silva (aporte, Fechado
+100%) no preview. A tabela EXISTE (migração aplicada em 30/08).
+**Causa-raiz 1:** a rota oficial de escrita (`api/functions/entityWrite`)
+tem whitelist de tabelas (`CONTENT_TABLES`) e `captacao_oportunidades`
+NÃO estava nela — a DIR-34 criou tabela, RLS e adapter, mas esqueceu o
+porteiro do servidor. Para operador (super_admin), TODA gravação da
+esteira era recusada com "tabela não permitida". Meus testes de
+navegador simulavam justamente essa rota — o simulador escondeu a falha.
+**Correção 1:** tabela na whitelist + trava explícita de DELETE
+("oportunidade não se apaga, marque Sem interesse com o motivo") —
+necessária aqui porque a rota escreve com service_role, que passa por
+cima da ausência proposital de política de DELETE no RLS.
+**Causa-raiz 2 (vista no MESMO print):** o dono digitou "200.000" no
+valor — campo numérico do navegador lê ponto como decimal: ia salvar
+R$ 200,00 em vez de R$ 200.000,00, em silêncio. **Correção 2:**
+`parseValorBR` em `src/lib/money.js` ("200.000"=200000;
+"200.000,50"=200000,50; "99.90"=99,90), campo vira texto com
+`inputMode=decimal` e mostra a leitura ao vivo ("= R$ 200.000,00")
+embaixo do campo; o salvar usa o mesmo parser.
+**Prova:** teste de regressão NOVO invoca o HANDLER REAL do entityWrite
+(req/res falsos): `captacao_oportunidades` passa da whitelist, DELETE
+recusado com 403, tabela desconhecida segue 400. Parser com 4 testes.
+**Testes:** 584/584 (7 novos). **Build:** exit 0.
+**Lição registrada:** rota de servidor nova ou tabela nova só fecham
+rodada com um teste que chama o handler REAL — mock de rota própria não
+prova o porteiro dela.
+**Status final:** CONCLUÍDA — dono deve tentar salvar de novo no preview.
+
+---
+
+## REL-38 — Execução da DIR-38 (Visão Executiva = centro de comando)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. `src/lib/agendaEsteira.js` (+3 testes): agenda do dia da esteira
+   (reuniões HOJE, atrasadas, próximos 7 dias, recontatos vencidos — só
+   de oportunidade ATIVA) e reuniões por responsável (hoje × marcadas).
+   `fechadoProvado` em esteiraCaptacao: 100% com venda real casada
+   ("na conta") separado do 100% só declarado.
+2. `CrmEsteiraResumoExecutivo.jsx` — o centro de comando, substituindo a
+   faixa simples da DIR-36 na Visão Executiva:
+   - PROJEÇÃO da meta de captação R$ 1 mi numa barra tricolor honesta:
+     verde = na conta (real) · âmbar = declarado · cinza = ponderado,
+     com o % do caminho;
+   - FUNIL EM CHIPS: os 8 estágios com quantidade e valor curto
+     ("Agendadas 1 · R$ 30 mil … 100% fechado 2 · R$ 250 mil"),
+     estágio vazio esmaecido — bate o olho e entende;
+   - AGENDA DE HOJE: reuniões hoje (com os nomes), atrasadas em
+     vermelho, próximos 7 dias, recontatos vencidos em âmbar;
+   - TIME (visão total): reuniões hoje × marcadas × win rate por
+     responsável (win rate da mesma conversaoPorResponsavel do kanban).
+**Decisão de honestidade mantida:** aporte declarado NÃO se soma na meta
+de vendas de R$ 5 mi (venda real Loja+Leilão+PDV) — as duas metas ficam
+lado a lado na mesma aba (Meta Central acima, captação no bloco novo), e
+o fechado se divide em na-conta × declarado. Quando o aporte REAL cair
+(partner_plan pago), ele entra sozinho em "na conta" e na Captação do
+hero — sem mão humana.
+**Prova em navegador (regra REL-34.1):** 10/10 ✅ zero erros com cenário
+rico (100% provado R$ 50 mil + 100% declarado R$ 200 mil + reuniões
+hoje/atrasada/recontato + 2 responsáveis) — barra, chips, agenda, tabela
+do time e KPI 13 (R$ 336.200 = 250 mil fechado + 86,2 mil ponderado,
+conferido na mão).
+**Testes:** 587/587 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
+
+---
+
+## REL-39 — Execução da DIR-39 (Time Corporativo + indicação rastreada)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. `src/lib/timeCorporativo.js` (+3 testes): CARGOS_TOPO = Sócio
+   Executivo → Fundador (Trainee fora — em formação; TODOS os demais
+   entram, confirmado pelo dono); `ehExecutivoTopo`; `membrosDoTopo`
+   (função principal = primary quando é do topo, senão o maior cargo;
+   ordenado pela hierarquia). Fonte única sobre careerLevels — aliases
+   legados ('executivo' → executivo_conta) resolvem sozinhos.
+2. Aba "Vendedores" → "🏛️ Time Corporativo" (CrmTimeCorporativo.jsx):
+   lista automática dos membros do topo cadastrados no app (nome,
+   contato, função principal com a cor oficial do cargo, outros cargos)
+   + filtro por função. A tabela manual de vendedores saiu SÓ da
+   listagem (dados preservados, confirmado); botão/modal "Novo
+   Vendedor" continuam.
+3. Esteira: "Executivo responsável *" — seletor APENAS com o topo
+   (id+nome do app_user; registro legado com responsável fora do topo
+   segue visível sem sumir); salvar bloqueado sem executivo, com aviso.
+   Campo novo "Indicação da estrutura (opcional)": mesma busca de
+   pessoa do CRM sobre TODOS os usuários cadastrados — indicação sem
+   cadastro não existe; grava indicacao_user_id/nome; cartão do kanban
+   ganha o chip "via {indicação}".
+4. Migração `20260901150000_captacao_indicacao.sql` (DONO COLA):
+   colunas indicacao_user_id/indicacao_nome. ANTES de colar, o salvar
+   continua funcionando (a rota remove coluna inexistente e regrava) —
+   só a indicação deixa de ser persistida até o SQL rodar.
+**Prova em navegador (regra REL-34.1):** 10/10 ✅ zero erros — aba
+renomeada com 3 membros do topo (CEO/Sócio Executivo/Embaixador),
+usuário de rede fora da lista, filtro por função funcionando, seletor
+de responsável só com o topo, indicação sugerindo usuário cadastrado,
+chip "via {nome}" no cartão.
+**Testes:** 590/590 (3 novos). **Build:** exit 0.
+**Ação do dono:** ✅ FEITA — migração da indicação colada e aplicada no
+SQL Editor em 01/09/2026 ("Success. No rows returned"). Colunas
+indicacao_user_id/indicacao_nome vivas em produção — a indicação passa a
+ser gravada de verdade.
+**Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
+preview e o "pode" do pacote DIR-34→39.
+
+---
+
+## REL-40 — Execução da DIR-40 (aporte recebido por fora, auditado)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Migração `20260901180000_captacao_aporte_externo.sql` (DONO COLA):
+   coluna `aporte_externo JSONB` na esteira.
+2. `esteiraCaptacao.js`: BANCOS_APORTE_EXTERNO = **Santander e Itaú
+   SOMENTE** (regra do dono); `aporteExternoValido`; `dinheiroNaConta`
+   aceita venda real OU aporte externo registrado — o chip verde passa a
+   mostrar o banco ("💰 na conta (Santander)"); `fechadoProvado` conta o
+   externo como "na conta".
+3. Modal (Fechado 100% sem dinheiro rastreado, SÓ para quem vê dinheiro
+   da empresa): aviso âmbar explica os dois caminhos (amarrar o cliente
+   certo se pagou pelo app; registrar por fora se foi transferência) →
+   formulário banco/valor/data com leitura do valor em pt-BR e aviso
+   ANTI-DUPLA-CONTAGEM (não registrar também como ativação manual de
+   plano) → grava com carimbo registrado_por/registrado_por_id/em.
+4. `calcularCaptacao` ganhou o 3º parâmetro: aporte externo válido soma
+   no balde "Aportes Parceiro de Compra" — card Captação, barra da meta
+   R$ 1 mi e bloco executivo leem a MESMA fonte (sem divergência).
+**Prova em navegador (regra REL-34.1):** 11/11 ✅ zero erros — ciclo
+completo: chip âmbar → botão → só Santander/Itaú no seletor → aviso de
+dupla contagem → PATCH auditado capturado (banco, valor 200000, data,
+registrado_por) → chip "💰 na conta (Santander)" → "Na conta:
+R$ 200.000,00" na executiva → hero Captação R$ 200.000,00.
+**Testes:** 593/593 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e registrar o
+aporte do Renan Silva.
+
+---
+
+## REL-41 — Execução da DIR-41 (O Método no CRM: FORM, PPV e Verificação)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito (as 3 fases do plano aprovado — "VAMOS FAZER"):**
+1. FORM (Hábito 4): bloco F.O.R.M. no modal do cliente (Família,
+   Ocupação, Recreação, Mensagem certa — mesmo salvar das anotações,
+   trilho DIR-24); fusão carrega o FORM pra linha automática (+1 teste);
+   a fila "Quem contatar hoje" mostra a dica 💡 (a Mensagem, ou
+   Ocupação · Recreação) ANTES do botão do WhatsApp — ninguém aborda no
+   escuro.
+2. PPV + objeções (Hábitos 5-6): `semPPV` na lib (ativa sem reunião
+   futura nem recontato futuro = negociação morrendo) → badge vermelho
+   "⚠️ sem PPV" no cartão do kanban; OBJECOES_METODO oficiais do deck
+   (não tenho dinheiro / preciso pensar / tenho medo / não conheço /
+   outra) + campo "Objeção atual" no modal + `placarObjecoes` (só
+   ativas, ordenado pela dor). Salvar NÃO tranca por falta de PPV —
+   avisa e marca (regra da diretiva).
+3. Verificação + duplicação (Hábitos 7-8): centro de comando ganhou
+   "🚫 N sem PPV" na agenda, o placar "Objeções travando a esteira" e a
+   coluna "Sem PPV" por responsável na tabela do time; botão
+   "📖 O Método" abre o resumo dos 8 hábitos dentro do CRM
+   (CrmMetodoModal — o time novo aprende onde trabalha).
+**Migração** `20260901210000_metodo_form_ppv.sql` (DONO COLA):
+customers.form_metodo JSONB + captacao_oportunidades.objecao TEXT.
+Antes de colar, tudo continua funcionando (writeResilient descarta
+coluna inexistente) — FORM e objeção só persistem após o SQL.
+**Prova em navegador (regra REL-34.1):** 11/11 ✅ zero erros — sem PPV
+no kanban e na executiva (total + por responsável), placar de objeções,
+modal do método com os 8 hábitos, campo de objeção carregando do banco,
+dica 💡 do FORM na fila e bloco F.O.R.M. no modal do cliente com dados
+persistidos.
+**Testes:** 596/596 (3 novos). **Build:** exit 0. **Lint:** zero erros.
+**Ação do dono:** ✅ FEITA — migração do método colada e aplicada no SQL
+Editor em 01/09/2026 ("Success. No rows returned"). form_metodo e
+objecao vivos em produção — FORM e objeções persistem de verdade.
+**Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
+preview e o "pode" do pacote DIR-34→41.
+
+---
+
+## REL-42 — Execução da DIR-42 (um preview só, com selo na página)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Diagnóstico (dado real da Vercel):** o dono vivia abrindo URLs de
+deploy CONGELADAS (leilonozap-XXXX-...) — cada push cria uma nova, e
+nelas o aviso de atualização nunca dispara (o /version.json congelado
+não muda). O link VIVO da branch (branchAlias, com "-git-") está
+carimbado em todos os deploys e já tem o aviso de atualização
+funcionando (useAppVersion, 60s).
+**O que foi feito:**
+1. `src/lib/previewInfo.js` (+5 testes): `tipoDeHost` — preview_oficial
+   (vercel.app com -git-) · deploy_congelado (vercel.app sem -git-) ·
+   producao (site/custom/localhost); `dataDoBuild` (carimbo → DD/MM
+   HH:mm).
+2. `SeloPreview.jsx` no App: no link oficial, selo verde discreto
+   "🧪 Preview oficial · build DD/MM HH:mm"; em página congelada, faixa
+   âmbar "⚠️ Esta é uma página ANTIGA — nunca recebe atualização" com
+   link de UM clique pro MESMO caminho no preview oficial; em produção,
+   nada.
+**Prova em navegador (regra REL-34.1):** 5/5 ✅ — hosts simulados: faixa
+âmbar no congelado com link preservando caminho e query; selo verde no
+oficial; nada em produção/dev.
+**Testes:** 600/600 (4 novos). **Build:** exit 0.
+**Fluxo oficial registrado pro dono:** 1 link só (o branchAlias), o
+aviso de "nova versão" aparece sozinho nele a cada deploy; publicação no
+site é o passo seguinte, só com o "pode".
+**Status final:** CONCLUÍDA.
+
+---
+
+## REL-43 — Execução da DIR-43 (O Método VIVO: painel dos 8 Hábitos)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Arquitetura (correção do dono acatada em pleno voo):** o painel deixa
+de se chamar CRM — vira "🏆 Os 8 Hábitos do Sucesso", com navegação
+pelos 8 hábitos; o CRM mora DENTRO: Hábito 6 (Acompanhamento e
+Fechamento) = Clientes + Esteira/Expansão com alternador interno;
+Hábito 7 (Verificação do Progresso) = a Visão Executiva. Nenhuma
+funcionalidade existente foi perdida — só reorganizada sob o método.
+**O que foi construído:**
+1. 🌟 Sonho — quadro dos sonhos editável (adicionar/remover, salvo por
+   usuário em metodo_perfil.sonhos).
+2. ✅ Compromisso — MASTER TASK diário ("Trello" do dia): navegação por
+   dia, "⚡ Gerar meu dia" cria as 16 tarefas da ROTINA DITADA PELO DONO
+   (05:00 acordar → post → corrida → leitura → 08:30 empresa → 09:00
+   treinamento → posts → 10:00 abrir a loja → 10:30-11:30 organização +
+   confirmar reuniões → 3 reuniões de 45-60min → fechar contratos →
+   fechamento do dia → leitura e dormir cedo), agrupadas por
+   Manhã/Tarde/Noite, marcar feito com barra de progresso,
+   adicionar/apagar tarefa.
+3. 🤝 Lista de Network — contatos manuais qualificados de 1 A 5
+   ESTRELAS inline (customers.qualificacao), ordenados pela estrela,
+   botão que abre o Novo Cliente.
+4. 📜 Contato e Convite — o SCRIPT PESSOAL de cada um (com modelo de
+   exemplo no placeholder) + lembrete do F.O.R.M.
+5. 🎤 Apresentação — placar "X de 3 reuniões hoje (meta do método)",
+   agenda das reuniões da esteira (7 dias) com botão GOOGLE AGENDA por
+   reunião (URL de template oficial — sem OAuth), campo do link da
+   apresentação oficial, atalho pra agendar na esteira.
+6. 🔁 Duplicação — os 8 hábitos completos + estrutura do local de
+   treinamento (materiais entram conforme o time gravar).
+**Infra:** migração `20260901230000_metodo_vivo.sql` (DONO COLA):
+metodo_perfil + metodo_tarefas (com DELETE — tarefa pessoal se apaga) +
+customers.qualificacao; TABLE_MAP + whitelist do entityWrite (com
+regressão no handler REAL — lição do REL-34.2); `src/lib/metodo.js`
+como fonte única (+8 testes, incluindo um bug real pego: hora vazia
+caía em "manhã").
+**Prova em navegador (regra REL-34.1):** 21/21 ✅ zero erros — título e
+8 abas, quadro do sonho, Master Task gerando o dia da rotina e marcando
+progresso, estrelas gravando pela rota auditada, script carregando,
+agenda com link correto do Google Calendar, sub-abas do Hábito 6 com o
+CRM inteiro funcionando, Verificação abrindo por padrão pro admin.
+**Testes:** 608/608 (10 novos). **Build:** exit 0.
+**Ação do dono:** ✅ FEITA — migração do Método vivo colada e aplicada no
+SQL Editor em 01/09/2026 ("Success. No rows returned"). metodo_perfil,
+metodo_tarefas e customers.qualificacao vivos em produção.
+**Status final:** CONCLUÍDA — banco pronto; painel dos 8 Hábitos
+operante de ponta a ponta no preview.

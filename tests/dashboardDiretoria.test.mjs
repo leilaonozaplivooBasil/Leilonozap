@@ -8,12 +8,13 @@ const REF = new Date('2026-08-30T12:00:00Z');
 const real = (extra) => ({ status: 'paid', mp_payment_id: 'x', created_date: '2026-08-15', ...extra });
 
 describe('estrutura', () => {
-  test('são exatamente os 12 números da Seção 37, na ordem do documento', () => {
-    assert.equal(KPIS_DIRETORIA.length, 12);
+  test('os 12 números da Seção 37 na ordem do documento + o 13º da esteira (DIR-36)', () => {
+    assert.equal(KPIS_DIRETORIA.length, 13);
     assert.deepEqual(KPIS_DIRETORIA.map((k) => k.id), [
       'usuarios_ativos', 'novos_usuarios_dia', 'visitantes_ranking', 'cadastros_ranking',
       'k_factor', 'conversao_digital', 'ticket_medio', 'venda_online',
       'venda_fisica', 'faturamento_total', 'custo_aquisicao', 'roi_operacional',
+      'esteira_captacao',
     ]);
   });
 
@@ -166,5 +167,28 @@ describe('DIR-31 — KPIs do Rank Premiado', () => {
     const kpis = calcularDashboardDiretoria({ ref: REF });
     assert.equal(kpis.find((k) => k.id === 'cadastros_ranking').tipo, 'sem_fonte');
     assert.equal(kpis.find((k) => k.id === 'visitantes_ranking').tipo, 'sem_fonte');
+  });
+});
+
+describe('DIR-36 — 13º número: esteira de captação', () => {
+  test('fechado + ponderado contra a meta de R$ 1 mi, mesma conta do kanban', () => {
+    const kpis = calcularDashboardDiretoria({
+      ref: REF,
+      oportunidades: [
+        { estagio: 'fechado_100', valor_previsto: 15000 },
+        { estagio: 'fechado_50', valor_previsto: 10000 },   // 5.000 ponderado
+        { estagio: 'sem_interesse', valor_previsto: 99999 }, // perdida: fora
+      ],
+    });
+    const kpi = kpis.find((k) => k.id === 'esteira_captacao');
+    assert.equal(kpi.realizado, 15000 + 5000);
+    assert.equal(kpi.tipo, 'dado');
+    assert.equal(kpi.meta, 1000000);
+  });
+
+  test('sem oportunidade nenhuma → R$ 0, dado (esteira vazia é fato, não falta de fonte)', () => {
+    const kpi = calcularDashboardDiretoria({ ref: REF }).find((k) => k.id === 'esteira_captacao');
+    assert.equal(kpi.realizado, 0);
+    assert.equal(kpi.tipo, 'dado');
   });
 });

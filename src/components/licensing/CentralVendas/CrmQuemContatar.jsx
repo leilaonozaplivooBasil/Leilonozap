@@ -46,6 +46,13 @@ export default function CrmQuemContatar({ fila = [], onAbrirCliente }) {
                 >
                   <p className="text-sm font-semibold text-nz-tinta truncate">{item.cliente.full_name}</p>
                   <p className="text-[11px] text-nz-tinta-fraca truncate">{item.detalhe}</p>
+                  {/* 📖 DIR-41 — FORM (Hábito 4): o que se sabe da pessoa, ANTES de abordar */}
+                  {item.cliente.form_metodo && (item.cliente.form_metodo.mensagem || item.cliente.form_metodo.ocupacao || item.cliente.form_metodo.recreacao) && (
+                    <p className="text-[11px] text-nz-verde truncate">
+                      💡 {item.cliente.form_metodo.mensagem
+                        || [item.cliente.form_metodo.ocupacao, item.cliente.form_metodo.recreacao].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
                 </button>
                 <span className={`hidden sm:inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold border shrink-0 ${COR_MOTIVO[item.motivo]}`}>
                   {item.label}

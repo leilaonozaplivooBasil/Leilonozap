@@ -8,7 +8,10 @@ import { isPosMarco, isVendaReal } from './dinheiroReal.js';
 import { isVendaMercadoria } from './crmUnifiedCustomers.js';
 
 export const MOTIVOS = {
+  esteira_reuniao: { label: 'Reunião da esteira', prioridade: 0 },
+  esteira_recontato: { label: 'Recontato da esteira', prioridade: 0 },
   follow_up: { label: 'Follow-up marcado', prioridade: 0 },
+  esteira_parada: { label: 'Negociação parada', prioridade: 2 },
   pedido_nao_pago: { label: 'Pedido gerado e não pago', prioridade: 1 },
   arremate_nao_pago: { label: 'Arremate aguardando pagamento', prioridade: 2 },
   deposito_sem_compra: { label: 'Depositou e não comprou', prioridade: 3 },
@@ -24,7 +27,7 @@ const DIA_MS = 24 * 60 * 60 * 1000;
  * @param ref Date de "hoje" (parâmetro pra ser testável)
  * @returns itens {key, motivo, label, cliente, valor, desde, detalhe} ordenados
  */
-export function quemContatarHoje({ unifiedCustomers = [], sales = [], ref = new Date() } = {}) {
+export function quemContatarHoje({ unifiedCustomers = [], sales = [], alertasEsteiraLista = [], ref = new Date() } = {}) {
   const itens = [];
   const hojeStr = ref.toISOString().slice(0, 10);
   const corte30d = new Date(ref.getTime() - 30 * DIA_MS);
@@ -37,6 +40,20 @@ export function quemContatarHoje({ unifiedCustomers = [], sales = [], ref = new 
   const acharCliente = (s) => (s.buyer_id && porBuyerId.get(s.buyer_id))
     || (s.buyer_email && porEmail.get(String(s.buyer_email).toLowerCase()))
     || null;
+
+  // 0) Alertas da ESTEIRA DE CAPTAÇÃO (DIR-34): reunião hoje/atrasada,
+  // recontato vencido e negociação parada — o dinheiro grande mora aqui.
+  for (const a of alertasEsteiraLista) {
+    const o = a.oportunidade;
+    itens.push({
+      key: `est_${a.tipo}_${o.id}`,
+      motivo: a.tipo === 'reuniao' ? 'esteira_reuniao' : a.tipo === 'recontato' ? 'esteira_recontato' : 'esteira_parada',
+      cliente: { id: `op_${o.id}`, full_name: o.cliente_nome, phone: o.cliente_telefone, email: o.cliente_email },
+      valor: Number(o.valor_previsto) || 0,
+      desde: o.estagio_desde || null,
+      detalhe: a.detalhe,
+    });
+  }
 
   // 1) Follow-up vencido ou de hoje (anotado no CRM — palavra dada ao cliente)
   unifiedCustomers.forEach((c) => {
@@ -136,6 +153,12 @@ export function mensagemWhatsApp(item) {
       return `Olá ${nome}! Seu saldo já está disponível na carteira 💰 Quer uma ajuda pra escolher? Temos produtos com desconto de verdade te esperando.`;
     case 'sumido_30d':
       return `Olá ${nome}, sentimos sua falta por aqui! 👋 Chegaram produtos novos com preço de fábrica — quer dar uma olhada?`;
+    case 'esteira_reuniao':
+      return `Olá ${nome}! Passando pra confirmar a nossa reunião. ${item.detalhe.includes('HOJE') ? 'Nos falamos hoje!' : 'Podemos remarcar se precisar — qual o melhor horário pra você?'} 🤝`;
+    case 'esteira_recontato':
+      return `Olá ${nome}! Conforme combinamos, estou retomando a nossa conversa sobre a parceria. Esse é um bom momento pra falarmos?`;
+    case 'esteira_parada':
+      return `Olá ${nome}, tudo bem? Ficou algum ponto pendente da nossa conversa? Estou à disposição pra esclarecer e avançarmos. 🤝`;
     case 'follow_up':
       return `Olá ${nome}! Conforme combinado, estou retornando. ${item.detalhe && item.detalhe !== 'Retorno combinado para hoje ou antes.' ? item.detalhe : 'Podemos falar?'}`;
     default:
