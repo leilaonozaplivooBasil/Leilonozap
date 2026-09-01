@@ -236,6 +236,13 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
     const alvo = autoByKey.get(normKey(c.email, c.phone));
     if (alvo) {
       alvo.manual_id = c.id;
+      // ✏️ DIR-37 — correção manual vale sobre contato INFERIDO de venda
+      // (nome/telefone digitados errados no pedido); dados de CONTA do app
+      // continuam mandando (a pessoa é dona do próprio cadastro).
+      if (!alvo.user_id) {
+        if (c.full_name) alvo.full_name = c.full_name;
+        if (c.phone) alvo.phone = c.phone;
+      }
       if (c.notes) alvo.notes = c.notes;
       if (c.assigned_seller) alvo.assigned_seller = c.assigned_seller;
       if (c.follow_up_date) alvo.follow_up_date = c.follow_up_date;

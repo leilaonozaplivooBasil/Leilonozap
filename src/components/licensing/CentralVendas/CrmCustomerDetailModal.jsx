@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { X, Mail, Phone, UserPlus, ShoppingCart, Gavel, Calendar, MessageCircle, StickyNote, Save, GitBranch, Coins, Clock } from 'lucide-react';
+import { X, Mail, Phone, UserPlus, ShoppingCart, Gavel, Calendar, MessageCircle, StickyNote, Save, GitBranch, Coins, Clock, Pencil } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
 import { ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { estagioDe } from '@/lib/esteiraCaptacao';
@@ -23,12 +23,30 @@ const ICONE_EVENTO = {
   oportunidade: GitBranch, followup: Calendar, reuniao: Calendar, recontato: Clock,
 };
 
-export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes, oportunidades = [], eventos = null, onCriarOportunidade }) {
+export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes, oportunidades = [], eventos = null, onCriarOportunidade, onEditarContato, podeEditarUsuarioApp = false }) {
   const [notas, setNotas] = useState(customer?.notes || '');
   const [followUp, setFollowUp] = useState(customer?.follow_up_date ? String(customer.follow_up_date).slice(0, 10) : '');
   const [proximoPasso, setProximoPasso] = useState(customer?.next_steps || '');
   const [salvando, setSalvando] = useState(false);
+  // ✏️ DIR-37 — corrigir cadastro errado (telefone, nome...) sem sair do CRM
+  const [editandoContato, setEditandoContato] = useState(false);
+  const [contato, setContato] = useState({
+    full_name: customer?.full_name || '', email: customer?.email || '',
+    phone: customer?.phone || '', cpf: customer?.cpf || '',
+  });
+  const [salvandoContato, setSalvandoContato] = useState(false);
   if (!customer) return null;
+  // Conta do app: só admin corrige (a pessoa é dona do próprio cadastro)
+  const podeEditar = !!onEditarContato && (customer.user_id ? podeEditarUsuarioApp : true);
+  const salvarContato = async () => {
+    setSalvandoContato(true);
+    try {
+      await onEditarContato(customer, contato);
+      setEditandoContato(false);
+    } finally {
+      setSalvandoContato(false);
+    }
+  };
   // 📜 DIR-36 — cronologia unificada (lib linhaDoTempoCliente) quando o pai
   // manda `eventos`; sem ela, cai no histórico antigo (compras + arremates).
   const passados = eventos?.passados || [
@@ -58,6 +76,19 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
           <div className="flex items-center justify-between">
             <CardTitle className="text-nz-tinta text-lg">{customer.full_name}</CardTitle>
             <div className="flex items-center gap-2">
+              {podeEditar && !editandoContato && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setContato({ full_name: customer.full_name || '', email: customer.email || '', phone: customer.phone || '', cpf: customer.cpf || '' });
+                    setEditandoContato(true);
+                  }}
+                  className="h-8 border-nz-borda text-nz-tinta"
+                >
+                  <Pencil className="w-4 h-4 mr-1" /> Editar
+                </Button>
+              )}
               {linkZap && (
                 <a href={linkZap} target="_blank" rel="noopener noreferrer">
                   <Button size="sm" className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
@@ -76,17 +107,53 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-marrom-fundo text-nz-marrom-escuro">
               {ROLE_LABEL[customer.role_type] || 'Cliente'}
             </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-verde-fundo text-nz-verde">
-              {customer.status === 'cliente' ? 'Cliente' : customer.status === 'lead' ? 'Lead' : 'Inativo'}
-            </span>
+            {/* DIR-37: não repetir "Cliente Cliente" quando tipo e status coincidem */}
+            {(customer.status === 'cliente' ? 'Cliente' : customer.status === 'lead' ? 'Lead' : 'Inativo') !== (ROLE_LABEL[customer.role_type] || 'Cliente') && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nz-verde-fundo text-nz-verde">
+                {customer.status === 'cliente' ? 'Cliente' : customer.status === 'lead' ? 'Lead' : 'Inativo'}
+              </span>
+            )}
           </div>
 
-          <div className="space-y-1.5 text-sm text-nz-tinta">
-            {customer.email && <p className="flex items-center gap-2 text-nz-tinta-fraca"><Mail className="w-4 h-4" />{customer.email}</p>}
-            {customer.phone && <p className="flex items-center gap-2 text-nz-tinta-fraca"><Phone className="w-4 h-4" />{customer.phone}</p>}
-            {customer.registered_at && <p className="flex items-center gap-2 text-nz-tinta-fraca"><Calendar className="w-4 h-4" />Cadastrado em {fmtDate(customer.registered_at)}</p>}
-            {customer.referred_by_name && <p className="flex items-center gap-2 text-nz-tinta-fraca"><UserPlus className="w-4 h-4" />Indicado por {customer.referred_by_name}</p>}
-          </div>
+          {editandoContato ? (
+            /* ✏️ DIR-37 — corrigir o cadastro sem sair do CRM */
+            <div className="rounded-lg border border-nz-verde/40 bg-nz-verde-fundo/40 p-3 space-y-3">
+              <p className="text-sm font-semibold text-nz-tinta flex items-center gap-1.5">
+                <Pencil className="w-4 h-4 text-nz-verde" /> Corrigir cadastro
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-nz-tinta-fraca mb-1">Nome completo</p>
+                  <Input value={contato.full_name} onChange={(e) => setContato({ ...contato, full_name: e.target.value })} className="bg-white border-nz-borda text-nz-tinta text-sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-nz-tinta-fraca mb-1">Telefone (WhatsApp)</p>
+                  <Input value={contato.phone} onChange={(e) => setContato({ ...contato, phone: e.target.value })} className="bg-white border-nz-borda text-nz-tinta text-sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-nz-tinta-fraca mb-1">CPF</p>
+                  <Input value={contato.cpf} onChange={(e) => setContato({ ...contato, cpf: e.target.value })} className="bg-white border-nz-borda text-nz-tinta text-sm" />
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-nz-tinta-fraca mb-1">E-mail{customer.user_id ? ' (é o login da conta — muda no painel Admin)' : ''}</p>
+                  <Input value={contato.email} disabled={!!customer.user_id} onChange={(e) => setContato({ ...contato, email: e.target.value })} className="bg-white border-nz-borda text-nz-tinta text-sm disabled:opacity-60" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={salvarContato} disabled={salvandoContato || !contato.full_name.trim()} className="flex-1 bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  <Save className="w-4 h-4 mr-2" /> {salvandoContato ? 'Salvando...' : 'Salvar correção'}
+                </Button>
+                <Button variant="outline" onClick={() => setEditandoContato(false)} className="border-nz-borda text-nz-tinta">Cancelar</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5 text-sm text-nz-tinta">
+              {customer.email && <p className="flex items-center gap-2 text-nz-tinta-fraca"><Mail className="w-4 h-4" />{customer.email}</p>}
+              {customer.phone && <p className="flex items-center gap-2 text-nz-tinta-fraca"><Phone className="w-4 h-4" />{customer.phone}</p>}
+              {customer.registered_at && <p className="flex items-center gap-2 text-nz-tinta-fraca"><Calendar className="w-4 h-4" />Cadastrado em {fmtDate(customer.registered_at)}</p>}
+              {customer.referred_by_name && <p className="flex items-center gap-2 text-nz-tinta-fraca"><UserPlus className="w-4 h-4" />Indicado por {customer.referred_by_name}</p>}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-nz-cinza-fundo rounded-lg p-3 text-center">

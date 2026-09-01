@@ -1665,3 +1665,35 @@ oportunidade" → Expansão pré-preenchido e amarrado, busca com sugestão.
 **Testes:** 575/575 (5 novos). **Build:** exit 0. Varredura
 no-use-before-define limpa (só os 5 casos seguros dentro de useEffect).
 **Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
+
+---
+
+## REL-37 — Execução da DIR-37 (editar cadastro do cliente no modal)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. Botão "✏️ Editar" no cabeçalho do modal do cliente → "Corrigir
+   cadastro": nome, telefone, CPF e e-mail, com salvar/cancelar.
+2. Gravação no lugar certo por origem: manual → `customers` (via
+   entityWrite, ator carimbado); conta do app → `app_users` SÓ para
+   gerirVendedores (mesmo caminho do painel Admin), e-mail travado (é o
+   login); automático sem cadastro → cria a linha manual corrigida
+   (mesmo trilho das anotações DIR-24). Vendedor comum não vê o botão
+   em conta de app.
+3. Fusão (2 testes novos): correção manual passa a valer sobre contato
+   INFERIDO de venda (nome/telefone); dados de conta do app continuam
+   mandando.
+4. Polimento: etiqueta de status some quando repetia a de tipo
+   ("Cliente Cliente").
+**Constatação de rodada:** cliente manual JÁ tinha editor completo
+(clicar na linha da lista abre a página com endereço etc., DIR-25/29) —
+o que faltava era corrigir SEM SAIR do modal aberto pela fila "Quem
+contatar hoje", que era o caso do print do dono.
+**Prova em navegador (regra REL-34.1):** 6/6 ✅ zero erros — modal aberto
+pela fila, botão Editar, formulário, telefone trocado, POST
+`/api/functions/entityWrite {table:'customers', action:'update',
+payload.phone:'21999997777'}` capturado, modal fechando só com sucesso
+(falha de servidor mantém o formulário aberto — comprovado no mock).
+**Testes:** 577/577 (2 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência do dono no preview.

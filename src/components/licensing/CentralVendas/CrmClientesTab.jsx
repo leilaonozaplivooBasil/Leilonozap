@@ -660,6 +660,54 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
+  // ✏️ DIR-37 — corrigir cadastro errado (telefone, nome, CPF) direto do
+  // modal, gravando no lugar CERTO por origem do cliente.
+  const handleEditarContato = async (customer, dados) => {
+    try {
+      const payload = {
+        full_name: (dados.full_name || '').trim() || 'Sem nome',
+        phone: String(dados.phone || '').replace(/\D/g, ''),
+        cpf: String(dados.cpf || '').replace(/\D/g, ''),
+      };
+      if (customer.user_id) {
+        // Conta do app: mesmo caminho do painel Admin; e-mail (login) não muda aqui.
+        if (!vis.gerirVendedores) {
+          toast.error('Cadastro de conta do app só pode ser corrigido por um admin.');
+          return;
+        }
+        await plataforma.entities.AppUser.update(customer.user_id, {
+          full_name: payload.full_name,
+          phone: payload.phone,
+          ...(payload.cpf ? { cpf: payload.cpf } : {}),
+        });
+        toast.success('Cadastro da conta corrigido!');
+        await loadAutoSources();
+      } else if (customer.manual_id) {
+        await plataforma.entities.Customer.update(customer.manual_id, { ...payload, email: (dados.email || '').trim() });
+        toast.success('Cadastro corrigido!');
+        await loadCustomers();
+      } else {
+        // veio só de venda antiga: nasce a linha manual corrigida (funde por
+        // e-mail/telefone — DIR-24/DIR-37)
+        await plataforma.entities.Customer.create({
+          ...payload,
+          email: (dados.email || '').trim(),
+          status: customer.status || 'lead',
+          source: 'outro',
+          created_by_id: currentUser?.id || null,
+          created_by: currentUser?.email || null,
+        });
+        toast.success('Cadastro corrigido!');
+        await loadCustomers();
+      }
+      setDetailCustomer(null);
+    } catch (error) {
+      console.error('Erro ao corrigir cadastro:', error);
+      toast.error('Erro ao corrigir o cadastro');
+      throw error;
+    }
+  };
+
   // 📤 DIR-24 Fase 5 — exportação CSV da lista filtrada (o que está na tela é
   // o que sai no arquivo), com BOM pro Excel abrir acentuação certa.
   const exportarCsv = () => {
@@ -1380,6 +1428,8 @@ _Enviado via CRM Leilão NoZap_`;
               oportunidades={oportunidadesDoCliente}
               eventos={eventosDoCliente}
               onCriarOportunidade={criarOportunidadeDoCliente}
+              onEditarContato={handleEditarContato}
+              podeEditarUsuarioApp={vis.gerirVendedores}
             />
           )}
           </TabsContent>

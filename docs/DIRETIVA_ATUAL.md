@@ -12,6 +12,37 @@
 
 ---
 
+## DIR-37 — Editar o cadastro do cliente direto no modal do CRM
+
+**Emitida por:** dono (01/09/2026): "preciso de um botão para editar as
+informações, como trocar o telefone etc., para caso de um cadastro
+errado" (print do modal da Thalita Silva, cadastro manual com telefone a
+corrigir).
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Botão "✏️ Editar" no cabeçalho do modal do cliente → modo edição de
+   nome, e-mail, telefone e CPF, com salvar/cancelar.
+2. Gravação no lugar CERTO por origem do cliente:
+   - manual (`manual_id`) → update na tabela `customers`;
+   - conta do app (`user_id`) → update em `app_users` SOMENTE para quem
+     `gerirVendedores` (admin/super_admin), mesmo caminho do painel
+     Admin; e-mail fica travado (é o login — muda no painel Admin);
+     vendedor comum não vê o botão nesses clientes;
+   - automático sem cadastro (veio só de venda) → cria a linha em
+     `customers` corrigida (mesmo trilho das anotações DIR-24).
+3. Fusão (crmUnifiedCustomers): correção manual passa a valer sobre
+   contato INFERIDO de venda (nome/telefone) — nunca sobre dados de
+   conta do app. Teste novo.
+4. Polimento: esconder a etiqueta de status quando repete a de tipo
+   ("Cliente Cliente" no print).
+**Fora do escopo / proibido:** editar e-mail de conta do app; mexer em
+cargo/papel/carteira (isso é o UserEditModal do Admin); apagar cliente.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-36 (inclui prova em
+navegador do REL-34.1).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-36 — CRM 100%: conectar cliente↔esteira↔venda, cronologia e visão geral
 
 **Emitida por:** dono (01/09/2026): "preciso atualizar os clientes para
