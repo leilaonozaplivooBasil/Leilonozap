@@ -12,6 +12,7 @@ import {
 } from '@/lib/esteiraCaptacao';
 import { buscarPessoas } from '@/lib/buscaPessoa';
 import { parseValorBR } from '@/lib/money';
+import { getLevel } from '@/lib/careerLevels';
 import { ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { META_CAPTACAO } from '@/lib/captacaoParceiros';
 
@@ -35,13 +36,16 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sellers = [], clientes = [], currentUser, visaoTotal, onSalvar, clientePreenchido, onClientePreenchidoConsumido }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, clientePreenchido, onClientePreenchidoConsumido }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   // 🔎 DIR-36 — busca de cliente EXISTENTE na nova oportunidade (nada de
   // redigitar quem o CRM já conhece; e amarra cliente_user_id de verdade).
   const [buscaCliente, setBuscaCliente] = useState('');
+  // 🧬 DIR-39 — busca de quem INDICOU (só gente cadastrada no app: indicação
+  // sem cadastro não existe).
+  const [buscaIndicacao, setBuscaIndicacao] = useState('');
 
   const resumo = useMemo(() => resumoEsteira(oportunidades), [oportunidades]);
   const ranking = useMemo(() => conversaoPorResponsavel(oportunidades), [oportunidades]);
@@ -49,10 +53,22 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
     () => (buscaCliente.trim().length >= 2 ? buscarPessoas(clientes, buscaCliente).slice(0, 6) : []),
     [clientes, buscaCliente]
   );
+  const sugestoesIndicacao = useMemo(
+    () => (buscaIndicacao.trim().length >= 2 ? buscarPessoas(usuariosApp, buscaIndicacao).slice(0, 6) : []),
+    [usuariosApp, buscaIndicacao]
+  );
+  // DIR-39: o responsável SEMPRE é um executivo do topo — quem cria só entra
+  // como padrão se for do topo.
+  const souExecutivo = executivos.some((e) => e.user.id === currentUser?.id);
 
   const abrirNova = () => {
-    setForm({ ...FORM_VAZIO, responsavel_id: currentUser?.id, responsavel_nome: currentUser?.full_name });
+    setForm({
+      ...FORM_VAZIO,
+      responsavel_id: souExecutivo ? currentUser?.id : null,
+      responsavel_nome: souExecutivo ? currentUser?.full_name : '',
+    });
     setBuscaCliente('');
+    setBuscaIndicacao('');
     setEditando('nova');
   };
   const abrirEdicao = (o) => {
@@ -63,6 +79,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
       recontato_em: o.recontato_em ? String(o.recontato_em).slice(0, 10) : '',
     });
     setBuscaCliente('');
+    setBuscaIndicacao('');
     setEditando(o);
   };
   const escolherCliente = (c) => {
@@ -80,8 +97,14 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
   // com o formulário pronto e amarrado ao cadastro.
   useEffect(() => {
     if (!clientePreenchido) return;
-    setForm({ ...FORM_VAZIO, ...clientePreenchido, responsavel_id: currentUser?.id, responsavel_nome: currentUser?.full_name });
+    setForm({
+      ...FORM_VAZIO,
+      ...clientePreenchido,
+      responsavel_id: souExecutivo ? currentUser?.id : null,
+      responsavel_nome: souExecutivo ? currentUser?.full_name : '',
+    });
     setBuscaCliente('');
+    setBuscaIndicacao('');
     setEditando('nova');
     onClientePreenchidoConsumido?.();
   }, [clientePreenchido]);
@@ -166,6 +189,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
                           {o.reuniao_em && <p className="text-[10px] text-nz-tinta-fraca">📅 {fmtData(o.reuniao_em)}</p>}
                           <div className="flex flex-wrap gap-1 mt-1">
                             {o.responsavel_nome && <span className="px-1 py-0.5 rounded bg-nz-cinza-fundo text-[9px] text-nz-tinta-fraca border border-nz-borda truncate max-w-full">{o.responsavel_nome.split(' ')[0]}</span>}
+                            {o.indicacao_nome && <span className="px-1 py-0.5 rounded bg-nz-verde/10 text-[9px] text-nz-verde border border-nz-verde/20 truncate max-w-full">via {String(o.indicacao_nome).split(' ')[0]}</span>}
                             {parada && <span className={`px-1 py-0.5 rounded text-[9px] font-semibold ${dias >= DIAS_PARADA_CRITICO ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{dias}d parada</span>}
                             {provado === true && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-nz-verde/10 text-nz-verde border border-nz-verde/30">💰 na conta</span>}
                             {provado === false && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">⚠️ sem dinheiro na conta</span>}
@@ -280,19 +304,63 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
                       <p className="text-[11px] text-nz-verde mt-0.5">= R$ {valorDigitado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     )}
                   </div>
-                  {visaoTotal && (
-                    <div>
-                      <p className="text-xs text-nz-tinta-fraca mb-1">Responsável</p>
-                      <select
-                        value={form.responsavel_nome || currentUser?.full_name || ''}
-                        onChange={(e) => setForm({ ...form, responsavel_nome: e.target.value, responsavel_id: e.target.value === currentUser?.full_name ? currentUser?.id : null })}
-                        className="w-full bg-white text-nz-tinta rounded-md px-3 py-2 border border-nz-borda"
-                      >
-                        <option value={currentUser?.full_name || ''}>{currentUser?.full_name || 'Eu'}</option>
-                        {sellers.map((sel) => <option key={sel.id} value={sel.name}>{sel.name}</option>)}
-                      </select>
-                    </div>
-                  )}
+                  {/* 🏛️ DIR-39 — responsável de contrato SEMPRE é executivo do topo */}
+                  <div>
+                    <p className="text-xs text-nz-tinta-fraca mb-1">Executivo responsável *</p>
+                    <select
+                      value={form.responsavel_id || ''}
+                      onChange={(e) => {
+                        const ex = executivos.find((x) => x.user.id === e.target.value);
+                        setForm({ ...form, responsavel_id: e.target.value || null, responsavel_nome: ex?.user.full_name || form.responsavel_nome || '' });
+                      }}
+                      className="w-full bg-white text-nz-tinta rounded-md px-3 py-2 border border-nz-borda"
+                    >
+                      <option value="">— Selecione o executivo —</option>
+                      {executivos.map((ex) => (
+                        <option key={ex.user.id} value={ex.user.id}>
+                          {ex.user.full_name || ex.user.email} ({getLevel(ex.funcaoPrincipal).name})
+                        </option>
+                      ))}
+                      {/* registro antigo com responsável fora do topo: aparece pra não sumir, mas o novo padrão é o topo */}
+                      {form.responsavel_id && !executivos.some((x) => x.user.id === form.responsavel_id) && (
+                        <option value={form.responsavel_id}>{form.responsavel_nome || 'Responsável atual'}</option>
+                      )}
+                    </select>
+                  </div>
+                  {/* 🧬 DIR-39 — indicação rastreada: só gente cadastrada no app */}
+                  <div>
+                    <p className="text-xs text-nz-tinta-fraca mb-1">Indicação da estrutura (opcional)</p>
+                    {form.indicacao_user_id ? (
+                      <div className="flex items-center justify-between gap-2 bg-nz-verde-fundo border border-nz-verde/30 rounded-md px-3 py-2">
+                        <p className="text-sm text-nz-tinta truncate">🔗 {form.indicacao_nome}</p>
+                        <button type="button" onClick={() => setForm({ ...form, indicacao_user_id: null, indicacao_nome: null })} className="text-nz-tinta-fraca hover:text-nz-tinta text-xs">remover</button>
+                      </div>
+                    ) : (
+                      <>
+                        <Input
+                          value={buscaIndicacao}
+                          onChange={(e) => setBuscaIndicacao(e.target.value)}
+                          placeholder="quem indicou? (precisa estar cadastrado)"
+                          className="bg-white border-nz-borda text-nz-tinta"
+                        />
+                        {sugestoesIndicacao.length > 0 && (
+                          <div className="mt-1 border border-nz-borda rounded-lg overflow-hidden divide-y divide-nz-borda">
+                            {sugestoesIndicacao.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onMouseDown={() => { setForm({ ...form, indicacao_user_id: u.id, indicacao_nome: u.full_name || u.email }); setBuscaIndicacao(''); }}
+                                className="w-full text-left px-3 py-2 bg-white hover:bg-nz-verde-fundo"
+                              >
+                                <p className="text-sm text-nz-tinta font-medium truncate">{u.full_name || u.email}</p>
+                                <p className="text-xs text-nz-tinta-fraca truncate">{[u.email, u.phone].filter(Boolean).join(' · ')}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                   <div>
                     <p className="text-xs text-nz-tinta-fraca mb-1">Estágio</p>
                     <select value={form.estagio} onChange={(e) => setForm({ ...form, estagio: e.target.value })} className="w-full bg-white text-nz-tinta rounded-md px-3 py-2 border border-nz-borda">
@@ -352,9 +420,14 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
                   </div>
                 )}
 
+                {!form.responsavel_id && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Todo contrato precisa de um <strong>executivo responsável</strong> do topo (Sócio Executivo → Fundador).
+                  </p>
+                )}
                 <Button
                   onClick={salvar}
-                  disabled={salvando || !String(form.cliente_nome || '').trim() || faltamNoEstagio.length > 0}
+                  disabled={salvando || !String(form.cliente_nome || '').trim() || !form.responsavel_id || faltamNoEstagio.length > 0}
                   className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white"
                 >
                   <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar'}

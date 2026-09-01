@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-39 — Time Corporativo: contratos do topo, com indicação rastreada
+
+**Emitida por:** dono (01/09/2026, áudio + confirmação em chat): as metas
+de licença/parceiro são do TIME CORPORATIVO (topo). Aba "Vendedores"
+passa a listar quem tem cargo executivo JÁ CADASTRADO no app (Sócio
+Executivo até Fundador — TODOS os cargos do topo, confirmado; Trainee
+fica fora, está em formação), pela FUNÇÃO PRINCIPAL, com filtro por
+função. Cadastro manual continua existindo; registros manuais saem só da
+LISTAGEM (dados preservados — confirmado). Responsável de contrato da
+esteira SEMPRE é um executivo do topo; entra o campo "indicação da
+estrutura": quem indicou precisa estar CADASTRADO no app (qualquer
+nível) — indicação sem cadastro não existe. SQL das colunas novas
+entregue pro dono colar (confirmado: "aguardo o SQL").
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Migração `20260901150000_captacao_indicacao.sql` (dono cola):
+   `indicacao_user_id` + `indicacao_nome` em captacao_oportunidades.
+2. `src/lib/timeCorporativo.js` (novo, testado): CARGOS_TOPO
+   (executivo_conta → fundador), `ehExecutivoTopo`, `membrosDoTopo`
+   (função principal normalizada, ordenado pela hierarquia). Fonte
+   única sobre careerLevels.
+3. Aba "Vendedores" vira "🏛️ Time Corporativo": lista automática dos
+   membros do topo cadastrados no app (nome, contato, função principal
+   com a cor do cargo, filtro por função). Botão e modal de cadastro
+   manual de vendedor continuam; a tabela manual não é apagada, só sai
+   desta listagem.
+4. Esteira: seletor "Executivo responsável" só oferece o topo (id+nome
+   do app_user); campo novo "Indicação da estrutura (opcional)" com a
+   MESMA busca de pessoa do CRM sobre usuários cadastrados — grava
+   indicacao_user_id/nome; cartão do kanban mostra "via {indicação}".
+**Fora do escopo / proibido:** apagar dados da tabela sellers; mexer em
+comissão/percentuais dos cargos; indicação por texto livre.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-38 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-38 — Visão Executiva = centro de comando (esteira, agenda e projeção)
 
 **Emitida por:** dono (01/09/2026, áudio): "na Visão Executiva entre tudo

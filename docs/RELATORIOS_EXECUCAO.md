@@ -1769,3 +1769,41 @@ do time e KPI 13 (R$ 336.200 = 250 mil fechado + 86,2 mil ponderado,
 conferido na mão).
 **Testes:** 587/587 (3 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
+
+---
+
+## REL-39 — Execução da DIR-39 (Time Corporativo + indicação rastreada)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. `src/lib/timeCorporativo.js` (+3 testes): CARGOS_TOPO = Sócio
+   Executivo → Fundador (Trainee fora — em formação; TODOS os demais
+   entram, confirmado pelo dono); `ehExecutivoTopo`; `membrosDoTopo`
+   (função principal = primary quando é do topo, senão o maior cargo;
+   ordenado pela hierarquia). Fonte única sobre careerLevels — aliases
+   legados ('executivo' → executivo_conta) resolvem sozinhos.
+2. Aba "Vendedores" → "🏛️ Time Corporativo" (CrmTimeCorporativo.jsx):
+   lista automática dos membros do topo cadastrados no app (nome,
+   contato, função principal com a cor oficial do cargo, outros cargos)
+   + filtro por função. A tabela manual de vendedores saiu SÓ da
+   listagem (dados preservados, confirmado); botão/modal "Novo
+   Vendedor" continuam.
+3. Esteira: "Executivo responsável *" — seletor APENAS com o topo
+   (id+nome do app_user; registro legado com responsável fora do topo
+   segue visível sem sumir); salvar bloqueado sem executivo, com aviso.
+   Campo novo "Indicação da estrutura (opcional)": mesma busca de
+   pessoa do CRM sobre TODOS os usuários cadastrados — indicação sem
+   cadastro não existe; grava indicacao_user_id/nome; cartão do kanban
+   ganha o chip "via {indicação}".
+4. Migração `20260901150000_captacao_indicacao.sql` (DONO COLA):
+   colunas indicacao_user_id/indicacao_nome. ANTES de colar, o salvar
+   continua funcionando (a rota remove coluna inexistente e regrava) —
+   só a indicação deixa de ser persistida até o SQL rodar.
+**Prova em navegador (regra REL-34.1):** 10/10 ✅ zero erros — aba
+renomeada com 3 membros do topo (CEO/Sócio Executivo/Embaixador),
+usuário de rede fora da lista, filtro por função funcionando, seletor
+de responsável só com o topo, indicação sugerindo usuário cadastrado,
+chip "via {nome}" no cartão.
+**Testes:** 590/590 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e conferir.

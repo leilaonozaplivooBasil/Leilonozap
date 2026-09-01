@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Users, UserPlus, Search, Filter, Mail, Phone, Edit, X, Save, Send, UserCheck, UserX, CheckCircle, Package,
+  UserPlus, Search, Filter, X, Save, Send, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +24,7 @@ import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
 import { alertasEsteira, vendaRealDoCliente, resumoEsteira } from '@/lib/esteiraCaptacao';
 import { linhaDoTempoCliente } from '@/lib/linhaDoTempoCliente';
+import { membrosDoTopo } from '@/lib/timeCorporativo';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
@@ -35,6 +35,7 @@ import CrmDashboardDiretoria from './CrmDashboardDiretoria';
 import CrmEscadaLicencas from './CrmEscadaLicencas';
 import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
+import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -285,6 +286,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     () => resumoEsteira(networkOportunidades),
     [networkOportunidades]
   );
+  // 🏛️ DIR-39 — o topo (Sócio Executivo → Fundador) direto do cadastro do
+  // app: donos das metas, únicos responsáveis possíveis de contrato.
+  const timeCorporativo = React.useMemo(() => membrosDoTopo(appUsers), [appUsers]);
 
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
   const filaContato = React.useMemo(
@@ -956,8 +960,10 @@ _Enviado via CRM Leilão NoZap_`;
         reuniao_em: form.reuniao_em ? new Date(form.reuniao_em).toISOString() : null,
         recontato_em: form.recontato_em || null,
         anotacoes: form.anotacoes || null,
-        responsavel_id: form.responsavel_id ?? currentUser?.id ?? null,
-        responsavel_nome: form.responsavel_nome || currentUser?.full_name || null,
+        responsavel_id: form.responsavel_id ?? null, // DIR-39: sempre um executivo do topo (o modal exige)
+        responsavel_nome: form.responsavel_nome || null,
+        indicacao_user_id: form.indicacao_user_id || null, // DIR-39: quem indicou — sempre cadastrado no app
+        indicacao_nome: form.indicacao_nome || null,
       };
       // 🔗 DIR-36 — a amarração de aço do 100%: encontrou a venda REAL do
       // cliente (mesma regra do chip "💰 na conta")? Grava o venda_id.
@@ -1273,7 +1279,8 @@ _Enviado via CRM Leilão NoZap_`;
             <CrmEsteiraCaptacao
               oportunidades={networkOportunidades}
               sales={networkCatalogSales}
-              sellers={sellers}
+              executivos={timeCorporativo}
+              usuariosApp={appUsers}
               clientes={unifiedCustomers}
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
@@ -1294,7 +1301,7 @@ _Enviado via CRM Leilão NoZap_`;
             </TabsTrigger>
             {vis.gerirVendedores && (
               <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
-                Vendedores
+                🏛️ Time Corporativo
               </TabsTrigger>
             )}
           </TabsList>
@@ -1428,95 +1435,10 @@ _Enviado via CRM Leilão NoZap_`;
           </TabsContent>
 
           <TabsContent value="sellers">
-            {/* LISTA DE VENDEDORES */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">
-                  Vendedores Cadastrados ({allSellers.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-700 bg-gray-800">
-                        <th className="text-left p-3 font-semibold text-white">Nome</th>
-                        <th className="text-left p-3 font-semibold text-white">Telefone</th>
-                        <th className="text-left p-3 font-semibold text-white">Email</th>
-                        <th className="text-center p-3 font-semibold text-white">Licença</th>
-                        <th className="text-center p-3 font-semibold text-white">Status</th>
-                        <th className="text-center p-3 font-semibold text-white">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allSellers.map((seller, index) => (
-                        <tr
-                          key={seller.id}
-                          className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${
-                            index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
-                          }`}
-                        >
-                          <td className="p-3 text-gray-300 font-medium">{seller.name}</td>
-                          <td className="p-3 text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {seller.phone}
-                            </div>
-                          </td>
-                          <td className="p-3 text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {seller.email || '-'}
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            {/* 🎖️ DIR-30 — nome do cargo pelo helper único
-                                (plano de carreira + licenças legado). */}
-                            <Badge className="bg-nz-verde-fundo text-nz-verde border border-nz-verde/30">
-                              {nomeLicenca(seller.license_type)}
-                            </Badge>
-                          </td>
-                          <td className="p-3 text-center">
-                            <Badge className={seller.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                              {seller.is_active ? 'Ativo' : 'Inativo'}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditSeller(seller)}
-                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-                                title="Editar"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleToggleSellerStatus(seller)}
-                                className={seller.is_active ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30' : 'text-green-400 hover:text-green-300 hover:bg-green-900/30'}
-                                title={seller.is_active ? 'Desativar' : 'Ativar'}
-                              >
-                                {seller.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {allSellers.length === 0 && (
-                    <div className="text-center py-12 text-gray-400">
-                      <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhum vendedor cadastrado</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* 🏛️ DIR-39 — o topo puxado do cadastro do app pela função
+                principal (cadastro manual de vendedor continua no botão
+                "Novo Vendedor"; a tabela manual só saiu desta listagem). */}
+            <CrmTimeCorporativo membros={timeCorporativo} />
           </TabsContent>
         </Tabs>
 
