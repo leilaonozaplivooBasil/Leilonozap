@@ -13,6 +13,20 @@
  * Autenticação: Bearer token do Slack Bot (não webhook)
  */
 
+/**
+ * Resultado de uma chamada à API do Slack.
+ *
+ * ⚠️ `data` é a RESPOSTA INTEIRA do Slack, não um sub-objeto. O Slack devolve os
+ * campos no topo do JSON — `chat.postMessage` → `{ok, channel, ts, message}`,
+ * `conversations.list` → `{ok, channels}`, `files.getUploadURLExternal` →
+ * `{ok, upload_url, file_id}`. Ele NUNCA devolve uma chave `data`.
+ *
+ * Até 01/09/2026 `request()` devolvia o JSON cru já tipado como este objeto, e
+ * todo mundo que lia `.data` lia `undefined` — em silêncio, porque `ok` vinha
+ * `true`. Isso derrubava, sempre e mesmo com token perfeito: o upload de imagem
+ * (`documentar_no_slack`), o `ts` de retorno de quem posta (sem ele não dá pra
+ * editar nem deletar depois), a busca de canal por nome e o envio de DM.
+ */
 export type SlackApiResult<T = any> = {
   ok: boolean;
   error?: string;
@@ -65,14 +79,16 @@ export class SlackClient {
         body: JSON.stringify(params),
       });
 
-      const result = await response.json() as SlackApiResult<T>;
+      const bruto = await response.json() as { ok?: boolean; error?: string };
 
-      if (!result.ok) {
-        console.error(`[Slack] erro em ${method}:`, result.error);
-        return { ok: false, error: result.error };
+      if (!bruto?.ok) {
+        const erro = bruto?.error || `http_${response.status}`;
+        console.error(`[Slack] erro em ${method}:`, erro);
+        return { ok: false, error: erro };
       }
 
-      return result;
+      // A resposta INTEIRA vira `data` — é onde o Slack põe ts, channels, etc.
+      return { ok: true, data: bruto as T };
     } catch (error) {
       console.error(`[Slack] exceção em ${method}:`, error);
       return { ok: false, error: String((error as Error)?.message || error) };
@@ -103,12 +119,13 @@ export class SlackClient {
         body: body.toString(),
       });
 
-      const result = await response.json() as SlackApiResult<T>;
-      if (!result.ok) {
-        console.error(`[Slack] erro em ${method}:`, result.error);
-        return { ok: false, error: result.error };
+      const bruto = await response.json() as { ok?: boolean; error?: string };
+      if (!bruto?.ok) {
+        const erro = bruto?.error || `http_${response.status}`;
+        console.error(`[Slack] erro em ${method}:`, erro);
+        return { ok: false, error: erro };
       }
-      return result;
+      return { ok: true, data: bruto as T };
     } catch (error) {
       console.error(`[Slack] exceção em ${method}:`, error);
       return { ok: false, error: String((error as Error)?.message || error) };
@@ -235,12 +252,17 @@ export class SlackClient {
 
   /**
    * Listar canais do workspace
-   * @param limit Máximo de canais a retornar (default: 100)
+   * @param limit Máximo de canais a retornar (default: 200)
    */
-  async listChannels(limit = 100): Promise<SlackApiResult<SlackChannel[]>> {
+  async listChannels(limit = 200): Promise<SlackApiResult<{ channels: SlackChannel[] }>> {
+    // `types` é obrigatório para enxergar canal PRIVADO — sem ele o Slack devolve
+    // só os públicos. O canal de registro do time (#top-tech-leilão-nozap) é
+    // privado: sem esta linha ele não existe para o bot, e resolveChannelId cai
+    // no nome, que files.completeUploadExternal recusa.
     return this.request('conversations.list', {
       limit,
       exclude_archived: true,
+      types: 'public_channel,private_channel',
     });
   }
 
@@ -248,13 +270,12 @@ export class SlackClient {
    * Buscar canal por nome
    */
   async findChannel(name: string): Promise<SlackChannel | null> {
-    const result = await this.listChannels(100);
-    if (!result.ok || !Array.isArray(result.data)) return null;
+    const result = await this.listChannels();
+    const canais = result.data?.channels;
+    if (!result.ok || !Array.isArray(canais)) return null;
 
     const normalizado = name.toLowerCase().replace(/^#/, '');
-    return (result.data as any[]).find(
-      (ch) => ch.name?.toLowerCase() === normalizado
-    ) || null;
+    return canais.find((ch) => ch.name?.toLowerCase() === normalizado) || null;
   }
 
   /**
@@ -346,15 +367,18 @@ export class SlackClient {
     options: Record<string, any> = {}
   ): Promise<SlackApiResult<SlackMessage>> {
     // Primeiro, abrir/obter a conversação direta
-    const dmResult = await this.request('conversations.open', {
+    const dmResult = await this.request<{ channel?: { id?: string } }>('conversations.open', {
       users: user,
     });
 
-    if (!dmResult.ok || !dmResult.data?.channel) {
-      return { ok: false, error: `Não foi possível abrir DM com ${user}` };
+    // conversations.open devolve `channel` como OBJETO ({id: 'D123', ...}), não
+    // como string — passar o objeto direto pro postMessage não abre DM nenhuma.
+    const canalDm = dmResult.data?.channel?.id;
+    if (!dmResult.ok || !canalDm) {
+      return { ok: false, error: dmResult.error || `Não foi possível abrir DM com ${user}` };
     }
 
-    return this.postMessage(dmResult.data.channel, text, options);
+    return this.postMessage(canalDm, text, options);
   }
 
   /**

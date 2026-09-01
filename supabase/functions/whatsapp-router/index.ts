@@ -80,9 +80,19 @@ const ZAPI_NUMERO_BOT = Deno.env.get('ZAPI_NUMERO_BOT') || '5521984072064';
 const SLACK_BOT_TOKEN = Deno.env.get('SLACK_BOT_TOKEN') || '';
 const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL') || '';
 
-// Canal padrão para logs de Heloim (quando usando webhook antigo)
-// Com bot token, qualquer canal pode ser alvo (passado por parâmetro)
-const SLACK_CANAL_PADRAO = Deno.env.get('SLACK_CANAL_PADRAO') || '#top-tech-digital';
+// Canal padrão dos registros da Heloim. Com Bot Token qualquer canal pode ser
+// alvo (vai por parâmetro); este é só o destino de quem não escolhe.
+//
+// 01/09/2026 — era '#top-tech-digital', que NÃO EXISTE no workspace: parece uma
+// fusão de #top-tech-leilão-nozap com #digital-leilão-nozap. No caminho webhook
+// isso passou despercebido porque Incoming Webhook ignora o canal (ele já nasce
+// preso a um). No Bot Token, todo registro automático daria channel_not_found —
+// e, como o Slack aqui é best-effort, sumiria sem ninguém ver.
+//
+// Vai o ID, não o nome: o canal é PRIVADO e tem acento, e ID sobrevive a rename.
+// C0BHCMYJJGJ = #top-tech-leilão-nozap (privado) — o mesmo canal onde o webhook
+// atual publica. Trocar sem mexer em código: secret SLACK_CANAL_PADRAO.
+const SLACK_CANAL_PADRAO = Deno.env.get('SLACK_CANAL_PADRAO') || 'C0BHCMYJJGJ';
 
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
@@ -970,77 +980,10 @@ async function postarNoSlack(texto: string, canal: string = SLACK_CANAL_PADRAO):
   }
 }
 
-/**
- * Postar em canal específico com Bot Token
- * @param canal Nome ou ID do canal (ex: '#pedidos', 'C1234567890')
- * @param texto Conteúdo
- * @returns true se sucesso, false se falhou ou Slack desabilitado
- */
-async function postarEmCanal(canal: string, texto: string): Promise<boolean> {
-  const cliente = obterClienteSlack();
-  if (!cliente) {
-    console.warn('[Slack] Bot Token não configurado — não é possível postar em canais específicos');
-    return false;
-  }
-
-  try {
-    const resultado = await cliente.postMessage(canal, texto);
-    if (!resultado.ok) {
-      console.error(`[Slack] erro ao postar em ${canal}: ${resultado.error}`);
-    }
-    return resultado.ok;
-  } catch (e) {
-    console.error(`[Slack] exceção ao postar em ${canal}:`, e);
-    return false;
-  }
-}
-
-/**
- * Editar mensagem existente no Slack
- * @param canal Nome ou ID do canal
- * @param ts Timestamp da mensagem (obtida via postMessage response)
- * @param novoTexto Novo conteúdo
- */
-async function editarMensagemSlack(canal: string, ts: string, novoTexto: string): Promise<boolean> {
-  const cliente = obterClienteSlack();
-  if (!cliente) {
-    console.warn('[Slack] Bot Token não configurado — não é possível editar mensagens');
-    return false;
-  }
-
-  try {
-    const resultado = await cliente.updateMessage(canal, ts, novoTexto);
-    if (!resultado.ok) {
-      console.error(`[Slack] erro ao editar mensagem: ${resultado.error}`);
-    }
-    return resultado.ok;
-  } catch (e) {
-    console.error('[Slack] exceção ao editar mensagem:', e);
-    return false;
-  }
-}
-
-/**
- * Deletar mensagem do Slack
- */
-async function deletarMensagemSlack(canal: string, ts: string): Promise<boolean> {
-  const cliente = obterClienteSlack();
-  if (!cliente) {
-    console.warn('[Slack] Bot Token não configurado — não é possível deletar mensagens');
-    return false;
-  }
-
-  try {
-    const resultado = await cliente.deleteMessage(canal, ts);
-    if (!resultado.ok) {
-      console.error(`[Slack] erro ao deletar mensagem: ${resultado.error}`);
-    }
-    return resultado.ok;
-  } catch (e) {
-    console.error('[Slack] exceção ao deletar mensagem:', e);
-    return false;
-  }
-}
+// Nota (01/09/2026): aqui viviam postarEmCanal(), editarMensagemSlack() e
+// deletarMensagemSlack() — 60 linhas definidas e nunca chamadas por ninguém. A
+// tool postar_no_slack sempre falou direto com o cliente. Removidas: código que
+// aparenta existir e não roda atrapalha quem for depurar o Slack depois.
 
 const EMOJI_RISCO: Record<string, string> = { baixo: '🟢', medio: '🟡', alto: '🔴' };
 
@@ -1212,35 +1155,53 @@ const TOOLS_HELOIM: ToolDef[] = [
   {
     name: 'checar_slack',
     description:
-      'Diagnóstico da ligação com o Slack. Diz se o webhook do canal está configurado e, se estiver, ' +
-      'publica uma mensagem de teste e devolve o que o Slack respondeu. Use quando alguém disser que ' +
-      'o Slack parou de receber os registros, ou perguntar se o Slack está funcionando. Só admin.',
+      'Diagnóstico da ligação com o Slack. Diz QUAL modo está ativo (Bot Token ou webhook), em que ' +
+      'canal vai cair, e publica uma mensagem de teste devolvendo o que o Slack respondeu. Use quando ' +
+      'alguém disser que o Slack parou de receber os registros, ou perguntar se está funcionando. Só admin.',
     input_schema: { type: 'object', properties: {} },
     executar: async (_input, ctx) => {
       if (!ehAdmin(ctx.remetente)) return { ok: false, erro: 'só um admin pode testar o Slack' };
-      if (!SLACK_WEBHOOK_URL) {
+
+      // 01/09/2026 — esta tool olhava SÓ o SLACK_WEBHOOK_URL. Com Bot Token
+      // configurado e sem webhook (que é o caminho recomendado no DEPLOY.md) ela
+      // respondia "nada é publicado no canal" — falso, e mandava caçar um webhook
+      // que não precisa existir. A ferramenta de diagnóstico era a que mentia.
+      const modo = SLACK_BOT_TOKEN ? 'bot_token' : SLACK_WEBHOOK_URL ? 'webhook' : 'nenhum';
+
+      if (modo === 'nenhum') {
         return {
           ok: false,
           configurado: false,
+          modo,
           diagnostico:
-            'O secret SLACK_WEBHOOK_URL não existe no Supabase. Sem ele nada é publicado no canal e ' +
-            'nenhum erro aparece — fica silencioso. Precisa criar um Incoming Webhook apontando pro ' +
-            'canal e rodar "supabase secrets set SLACK_WEBHOOK_URL=..." (passo a passo no DEPLOY.md).',
+            'Nenhum dos dois secrets existe no Supabase: nem SLACK_BOT_TOKEN nem SLACK_WEBHOOK_URL. ' +
+            'Sem um deles nada é publicado e nenhum erro aparece — fica silencioso. O caminho ' +
+            'recomendado é o Bot Token (permite escolher canal, editar, deletar e subir imagem): ' +
+            'criar o App em api.slack.com/apps, instalar no workspace e rodar ' +
+            '"supabase secrets set SLACK_BOT_TOKEN=xoxb-...". Passo a passo no DEPLOY.md.',
         };
       }
+
       const r = await postarNoSlack(
         `🔎 Teste de ligação com o Slack pedido por ${ctx.remetenteNome || ctx.remetente}. ` +
-        'Se você está lendo isto no canal, o webhook está funcionando.'
+        `Se você está lendo isto no canal, o modo "${modo}" está funcionando.`
       );
       return {
         ok: r.ok,
         configurado: true,
+        modo,
+        canal_padrao: modo === 'bot_token' ? SLACK_CANAL_PADRAO : '(o canal fixo do webhook)',
         status: r.status,
         resposta_do_slack: r.corpo,
         diagnostico: r.ok
-          ? 'Mensagem de teste publicada — confira o canal.'
-          : 'O webhook está configurado, mas o Slack recusou. Normalmente é webhook revogado, ' +
-            'app removido do canal, ou URL colada pela metade.',
+          ? `Mensagem de teste publicada pelo modo ${modo} — confira o canal.`
+          : modo === 'bot_token'
+            ? `O Bot Token está configurado, mas o Slack recusou: "${r.corpo}". ` +
+              'channel_not_found = o bot não foi convidado no canal (/invite) ou o ID está errado; ' +
+              'invalid_auth / account_inactive = token revogado; ' +
+              'missing_scope = falta chat:write nos Bot Token Scopes.'
+            : 'O webhook está configurado, mas o Slack recusou. Normalmente é webhook revogado, ' +
+              'app removido do canal, ou URL colada pela metade.',
       };
     },
   },
