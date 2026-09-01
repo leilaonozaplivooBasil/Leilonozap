@@ -12,6 +12,39 @@
 
 ---
 
+## DIR-42 — Um preview só: selo na página e volta pro link oficial
+
+**Emitida por:** dono (01/09/2026, áudio): "não quero toda hora um novo
+preview; quero ficar sempre no mesmo link, ver a atualização acontecer na
+página (a contagem) e depois publicar no site — estou perdido, nunca sei
+qual é o verdadeiro".
+**Data:** 01/09/2026.
+**Diagnóstico (dado real da Vercel):** cada deploy gera uma URL congelada
+própria (leilonozap-XXXX-...), e o dono vinha abrindo essas; nelas o
+aviso de atualização NUNCA dispara (o /version.json de um deploy
+congelado não muda nunca). O link estável que acompanha a branch é o
+branchAlias, confirmado em TODOS os deploys da branch:
+`leilonozap-git-claude-project-struct-fffd43-leilaapp-s-projects.vercel.app`
+— nele o aviso de atualização já funciona (useAppVersion compara o
+carimbo do build com o /version.json a cada 60s).
+**Escopo autorizado:**
+1. `src/lib/previewInfo.js` (novo, testado): `tipoDeHost(hostname)` →
+   producao (site/custom domain) · preview_oficial (host com "-git-") ·
+   deploy_congelado (vercel.app sem "-git-"); HOST_PREVIEW_OFICIAL.
+2. `SeloPreview.jsx` montado no App: em preview oficial, selo verde
+   discreto "🧪 Preview oficial · build DD/MM HH:mm"; em deploy
+   congelado, faixa âmbar/vermelha "⚠️ Página antiga (congelada)" com
+   LINK de um clique pro mesmo caminho no preview oficial. Em produção,
+   nada aparece.
+**Fora do escopo / proibido:** mexer no useAppVersion (já correto);
+domínio custom pro preview (exige configuração de domínio — rodada
+própria se o dono quiser um nome mais bonito).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-41 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-41 — O Método no CRM: FORM, PPV obrigatório e Verificação
 
 **Emitida por:** dono (01/09/2026): PDF "O Sucesso Não Negocia com a

@@ -1885,3 +1885,34 @@ Editor em 01/09/2026 ("Success. No rows returned"). form_metodo e
 objecao vivos em produção — FORM e objeções persistem de verdade.
 **Status final:** CONCLUÍDA — banco pronto; aguarda conferência no
 preview e o "pode" do pacote DIR-34→41.
+
+---
+
+## REL-42 — Execução da DIR-42 (um preview só, com selo na página)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Diagnóstico (dado real da Vercel):** o dono vivia abrindo URLs de
+deploy CONGELADAS (leilonozap-XXXX-...) — cada push cria uma nova, e
+nelas o aviso de atualização nunca dispara (o /version.json congelado
+não muda). O link VIVO da branch (branchAlias, com "-git-") está
+carimbado em todos os deploys e já tem o aviso de atualização
+funcionando (useAppVersion, 60s).
+**O que foi feito:**
+1. `src/lib/previewInfo.js` (+5 testes): `tipoDeHost` — preview_oficial
+   (vercel.app com -git-) · deploy_congelado (vercel.app sem -git-) ·
+   producao (site/custom/localhost); `dataDoBuild` (carimbo → DD/MM
+   HH:mm).
+2. `SeloPreview.jsx` no App: no link oficial, selo verde discreto
+   "🧪 Preview oficial · build DD/MM HH:mm"; em página congelada, faixa
+   âmbar "⚠️ Esta é uma página ANTIGA — nunca recebe atualização" com
+   link de UM clique pro MESMO caminho no preview oficial; em produção,
+   nada.
+**Prova em navegador (regra REL-34.1):** 5/5 ✅ — hosts simulados: faixa
+âmbar no congelado com link preservando caminho e query; selo verde no
+oficial; nada em produção/dev.
+**Testes:** 600/600 (4 novos). **Build:** exit 0.
+**Fluxo oficial registrado pro dono:** 1 link só (o branchAlias), o
+aviso de "nova versão" aparece sozinho nele a cada deploy; publicação no
+site é o passo seguinte, só com o "pode".
+**Status final:** CONCLUÍDA.

@@ -95,6 +95,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { OfflineScreen, OfflineBanner, ReconnectedBanner } from '@/components/OfflineScreen';
+import SeloPreview from '@/components/system/SeloPreview';
 import { useState, useCallback, useEffect } from 'react';
 
 // Helper: redirect preservando query params
@@ -580,6 +581,8 @@ function App() {
         </Router>
         <Toaster />
         <SonnerToaster position="top-center" richColors closeButton theme="dark" />
+        {/* 🧪 DIR-42 — a página diz se é o preview oficial ou uma foto congelada */}
+        <SeloPreview />
       </QueryClientProvider>
     </AuthProvider>
   )
