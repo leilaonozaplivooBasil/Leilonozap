@@ -12,6 +12,59 @@
 
 ---
 
+## DIR-43 — O Método VIVO: seção 📖 Método no CRM (8 hábitos funcionais)
+
+**Emitida por:** dono (01/09/2026, áudio): "não quero resumo, quero o
+método NO CRM — quadro dos sonhos; o compromisso como um master task
+tipo Trello com a minha rotina do dia (5h acordar → corrida + post →
+leitura → 8h30 empresa → 9h treinamento → posts → 10h abrir a loja →
+10h30-11h30 organização e confirmar reuniões → 3 reuniões/dia de
+45-60min a partir das 13h → fechar contratos → fechamento do dia), com
+exemplos; a lista onde adiciono as pessoas da agenda e qualifico de 1 a
+5; o script que cada um escreve o seu; a apresentação como agenda
+puxando o Google Agenda; acompanhamento/fechamento é a esteira;
+verificação é a Visão Executiva; duplicação é o local de treinamento —
+desenhe tudo e aplique".
+**Data:** 01/09/2026.
+**Escopo autorizado:**
+1. Migração `20260901230000_metodo_vivo.sql` (dono cola):
+   `metodo_perfil` (id, user_id único, sonhos JSONB, rotina JSONB,
+   script TEXT, apresentacao_url TEXT), `metodo_tarefas` (id, user_id,
+   data, hora, titulo, detalhe, feito, ordem) com DELETE permitido
+   (tarefa pessoal), e `customers.qualificacao SMALLINT` (1-5). RLS
+   permissivo no padrão da casa; tabelas na whitelist do entityWrite
+   (lição do REL-34.2, com teste de regressão).
+2. `src/lib/metodo.js` (fonte única, testada): HABITOS (conteúdo do
+   deck — o CrmMetodoModal passa a ler daqui), ROTINA_PADRAO com a
+   rotina ditada do dono como exemplo, períodos (manhã/tarde/noite),
+   gerarTarefasDoDia, progressoDia, linkGoogleAgenda (URL de template do
+   Google Calendar — agenda sem OAuth), qualificação 1-5.
+3. **CORREÇÃO DO DONO (mesma data, em áudio): "isso aqui não é um CRM —
+   tem que ser os 8 Hábitos primeiro; o CRM é a parte do acompanhamento
+   e da verificação do progresso, DENTRO dos 8 hábitos".** O painel
+   inteiro vira "🏆 Os 8 Hábitos do Sucesso": navegação principal pelos
+   8 hábitos; Acompanhamento e Fechamento = o CRM atual (Clientes +
+   Expansão/esteira, com alternador interno); Verificação do Progresso
+   = a Visão Executiva atual. `CrmMetodo.jsx` renderiza os painéis
+   novos: 🌟 Sonho (quadro editável) · ✅ Compromisso (Master Task
+   diário: gerar dia da rotina, marcar feito, adicionar/editar/apagar,
+   progresso) · 🤝 Lista (contatos manuais com estrelas 1-5 inline) ·
+   📜 Script (cada um escreve o seu, com modelo de exemplo) · 🎤
+   Apresentação (agenda de reuniões da esteira 7 dias + botão "Google
+   Agenda" por reunião + placar 3 reuniões/dia + link da apresentação
+   oficial) · 🛤️ Fechamento (atalho pra Expansão) · 📊 Verificação
+   (atalho pra Visão Executiva) · 🔁 Duplicação (os 8 hábitos + espaço
+   de treinamento).
+**Fora do escopo / proibido:** OAuth/sincronização bidirecional com o
+Google Calendar (v1 usa o link de template oficial do Google — rodada
+própria se o dono quiser sync automático); upload de vídeo de
+treinamento (v1 marca o espaço).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-42 (inclui prova em
+navegador e handler real do entityWrite em teste).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-42 — Um preview só: selo na página e volta pro link oficial
 
 **Emitida por:** dono (01/09/2026, áudio): "não quero toda hora um novo

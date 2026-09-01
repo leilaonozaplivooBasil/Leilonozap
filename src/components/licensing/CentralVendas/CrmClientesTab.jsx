@@ -36,6 +36,7 @@ import CrmEscadaLicencas from './CrmEscadaLicencas';
 import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
+import CrmMetodo from './CrmMetodo';
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -73,6 +74,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Clientes / Expansão). null = ainda não escolheu: visão total abre na
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
   const [secao, setSecao] = useState(null);
+  const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
   // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
   const [visaoClientes, setVisaoClientes] = useState('lista');
   const [negotiations, setNegotiations] = useState([]);
@@ -316,7 +318,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   );
   const criarOportunidadeDoCliente = (c) => {
     setDetailCustomer(null);
-    setSecao('expansao');
+    setSecao('acompanhamento');
+    setSubAcomp('expansao');
     setClientePreenchido({
       cliente_nome: c.full_name || '',
       cliente_email: c.email || '',
@@ -711,6 +714,18 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       console.error('Erro ao corrigir cadastro:', error);
       toast.error('Erro ao corrigir o cadastro');
       throw error;
+    }
+  };
+
+  // 🤝 DIR-43 — qualificação 1-5 da lista de network (Hábito 3)
+  const handleQualificarContato = async (contato, estrelas) => {
+    try {
+      await plataforma.entities.Customer.update(contato.id, { qualificacao: estrelas });
+      toast.success(`${contato.full_name || 'Contato'}: ${estrelas} estrela(s)`);
+      await loadCustomers();
+    } catch (error) {
+      console.error('Erro ao qualificar contato:', error);
+      toast.error('Erro ao salvar a qualificação — a migração do Método já foi colada?');
     }
   };
 
@@ -1149,7 +1164,8 @@ _Enviado via CRM Leilão NoZap_`;
 
   // 🧭 DIR-24 Fase 3 — seção ativa e a faixa de resumo (os 4 números que
   // importam, sempre visíveis, pro leitor apressado e pro alto nível).
-  const secaoAtiva = secao || (isSuperAdmin ? 'executiva' : 'clientes');
+  const secaoAtiva = secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento');
+  // dentro do Hábito 6: alterna entre 👥 Clientes e 🚀 Esteira/Expansão
   const brl = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const resumoItens = [
     isSuperAdmin
@@ -1187,10 +1203,17 @@ _Enviado via CRM Leilão NoZap_`;
     },
   ];
 
+  // 🏆 DIR-43 (correção do dono): o painel É os 8 Hábitos do Sucesso — o CRM
+  // mora dentro deles (Hábito 6 = Clientes+Esteira; Hábito 7 = Visão Executiva).
   const SECOES = [
-    { id: 'executiva', rotulo: '📊 Visão Executiva' },
-    { id: 'clientes', rotulo: '👥 Clientes' },
-    { id: 'expansao', rotulo: '🚀 Expansão' },
+    { id: 'sonho', rotulo: '🌟 1. Sonho' },
+    { id: 'compromisso', rotulo: '✅ 2. Compromisso' },
+    { id: 'lista', rotulo: '🤝 3. Lista' },
+    { id: 'contato', rotulo: '📜 4. Contato' },
+    { id: 'apresentacao', rotulo: '🎤 5. Apresentação' },
+    { id: 'acompanhamento', rotulo: '🛤️ 6. Acompanhamento' },
+    { id: 'verificacao', rotulo: '📊 7. Verificação' },
+    { id: 'duplicacao', rotulo: '🔁 8. Duplicação' },
   ];
 
   // 🔓 DIR-24 Fase 2 — sem gate de admin: quem não é visão total já chega
@@ -1218,7 +1241,7 @@ _Enviado via CRM Leilão NoZap_`;
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">CRM - Gestão de Clientes</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">🏆 Os 8 Hábitos do Sucesso</h1>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             {vis.gerirVendedores && (
               <Button
@@ -1268,14 +1291,14 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
         <CrmResumo itens={resumoItens} />
 
-        {/* Navegação das 3 seções do CRM */}
-        <div className="flex gap-1.5 mb-4 sm:mb-5 rounded-xl border border-nz-borda bg-nz-cinza-fundo p-1">
+        {/* 🏆 Navegação pelos 8 Hábitos do Sucesso (DIR-43) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-4 sm:mb-5 rounded-xl border border-nz-borda bg-nz-cinza-fundo p-1">
           {SECOES.map(({ id, rotulo }) => (
             <button
               key={id}
               type="button"
               onClick={() => setSecao(id)}
-              className={`flex-1 rounded-lg px-2 py-2 text-xs sm:text-sm font-semibold transition-colors ${
+              className={`rounded-lg px-2 py-2 text-xs sm:text-sm font-semibold transition-colors ${
                 secaoAtiva === id ? 'bg-white text-nz-verde shadow-sm border border-nz-verde/30' : 'text-nz-tinta-fraca hover:text-nz-tinta'
               }`}
             >
@@ -1284,8 +1307,21 @@ _Enviado via CRM Leilão NoZap_`;
           ))}
         </div>
 
-        {/* ══ 📊 VISÃO EXECUTIVA — dinheiro, metas e diretoria ══ */}
-        {secaoAtiva === 'executiva' && (
+        {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══ */}
+        {['sonho', 'compromisso', 'lista', 'contato', 'apresentacao', 'duplicacao'].includes(secaoAtiva) && (
+          <CrmMetodo
+            painel={secaoAtiva}
+            currentUser={currentUser}
+            clientesManuais={networkManualCustomers}
+            oportunidades={networkOportunidades}
+            onQualificar={handleQualificarContato}
+            onNovoCliente={() => setShowAddForm(true)}
+            onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
+          />
+        )}
+
+        {/* ══ 📊 HÁBITO 7 — VERIFICAÇÃO DO PROGRESSO (Visão Executiva) ══ */}
+        {secaoAtiva === 'verificacao' && (
           <>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
@@ -1295,14 +1331,30 @@ _Enviado via CRM Leilão NoZap_`;
               oportunidades={networkOportunidades}
               sales={networkCatalogSales}
               visaoTotal={isSuperAdmin}
-              onVerEsteira={() => setSecao('expansao')}
+              onVerEsteira={() => { setSecao('acompanhamento'); setSubAcomp('expansao'); }}
             />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
           </>
         )}
 
-        {/* ══ 🚀 EXPANSÃO — captação, parceiros e escada de licenças ══ */}
-        {secaoAtiva === 'expansao' && (
+        {/* seletor interno do Hábito 6: Clientes × Esteira */}
+        {secaoAtiva === 'acompanhamento' && (
+          <div className="flex gap-2 mb-4">
+            {[['clientes', '👥 Clientes'], ['expansao', '🚀 Esteira & Expansão']].map(([id, rotulo]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSubAcomp(id)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${subAcomp === id ? 'bg-nz-verde text-white border-nz-verde' : 'bg-white text-nz-tinta-fraca border-nz-borda hover:text-nz-tinta'}`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ══ 🚀 HÁBITO 6b — ESTEIRA/EXPANSÃO — captação, parceiros e escada ══ */}
+        {secaoAtiva === 'acompanhamento' && subAcomp === 'expansao' && (
           <>
             {/* 🛤️ DIR-34 — Esteira de Captação (kanban + forecast + ranking) */}
             <CrmEsteiraCaptacao
@@ -1325,7 +1377,7 @@ _Enviado via CRM Leilão NoZap_`;
         )}
 
         {/* ══ 👥 CLIENTES — a operação do dia a dia ══ */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className={`mb-4 sm:mb-6 ${secaoAtiva === 'clientes' ? '' : 'hidden'}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className={`mb-4 sm:mb-6 ${secaoAtiva === 'acompanhamento' && subAcomp === 'clientes' ? '' : 'hidden'}`}>
           <TabsList className="bg-white border border-nz-borda w-full sm:w-auto">
             <TabsTrigger value="customers" className="data-[state=active]:bg-nz-verde data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
               Clientes

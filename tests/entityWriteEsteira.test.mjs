@@ -36,3 +36,12 @@ describe('entityWrite × esteira de captação', () => {
     assert.equal(r.status, 400);
   });
 });
+
+describe('entityWrite × método vivo (DIR-43)', () => {
+  test('metodo_perfil e metodo_tarefas passam da whitelist', async () => {
+    for (const table of ['metodo_perfil', 'metodo_tarefas']) {
+      const r = await chamar({ actorId: 'u1', table, action: 'create', payload: { user_id: 'u1' } });
+      assert.notEqual(r.error, 'Parâmetros inválidos ou tabela não permitida', table);
+    }
+  });
+});

@@ -21,6 +21,8 @@ const CONTENT_TABLES = new Set([
   // permitida" (achado com print do dono em 01/09/2026). DELETE segue proibido
   // logo abaixo — oportunidade não se apaga, se perde com motivo.
   'captacao_oportunidades',
+  // 📖 DIR-43 — o Método vivo: espaço pessoal e Master Task diário.
+  'metodo_perfil', 'metodo_tarefas',
 ]);
 
 function sb(path, opts = {}) {

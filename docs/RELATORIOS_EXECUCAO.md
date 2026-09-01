@@ -1916,3 +1916,51 @@ oficial; nada em produção/dev.
 aviso de "nova versão" aparece sozinho nele a cada deploy; publicação no
 site é o passo seguinte, só com o "pode".
 **Status final:** CONCLUÍDA.
+
+---
+
+## REL-43 — Execução da DIR-43 (O Método VIVO: painel dos 8 Hábitos)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**Arquitetura (correção do dono acatada em pleno voo):** o painel deixa
+de se chamar CRM — vira "🏆 Os 8 Hábitos do Sucesso", com navegação
+pelos 8 hábitos; o CRM mora DENTRO: Hábito 6 (Acompanhamento e
+Fechamento) = Clientes + Esteira/Expansão com alternador interno;
+Hábito 7 (Verificação do Progresso) = a Visão Executiva. Nenhuma
+funcionalidade existente foi perdida — só reorganizada sob o método.
+**O que foi construído:**
+1. 🌟 Sonho — quadro dos sonhos editável (adicionar/remover, salvo por
+   usuário em metodo_perfil.sonhos).
+2. ✅ Compromisso — MASTER TASK diário ("Trello" do dia): navegação por
+   dia, "⚡ Gerar meu dia" cria as 16 tarefas da ROTINA DITADA PELO DONO
+   (05:00 acordar → post → corrida → leitura → 08:30 empresa → 09:00
+   treinamento → posts → 10:00 abrir a loja → 10:30-11:30 organização +
+   confirmar reuniões → 3 reuniões de 45-60min → fechar contratos →
+   fechamento do dia → leitura e dormir cedo), agrupadas por
+   Manhã/Tarde/Noite, marcar feito com barra de progresso,
+   adicionar/apagar tarefa.
+3. 🤝 Lista de Network — contatos manuais qualificados de 1 A 5
+   ESTRELAS inline (customers.qualificacao), ordenados pela estrela,
+   botão que abre o Novo Cliente.
+4. 📜 Contato e Convite — o SCRIPT PESSOAL de cada um (com modelo de
+   exemplo no placeholder) + lembrete do F.O.R.M.
+5. 🎤 Apresentação — placar "X de 3 reuniões hoje (meta do método)",
+   agenda das reuniões da esteira (7 dias) com botão GOOGLE AGENDA por
+   reunião (URL de template oficial — sem OAuth), campo do link da
+   apresentação oficial, atalho pra agendar na esteira.
+6. 🔁 Duplicação — os 8 hábitos completos + estrutura do local de
+   treinamento (materiais entram conforme o time gravar).
+**Infra:** migração `20260901230000_metodo_vivo.sql` (DONO COLA):
+metodo_perfil + metodo_tarefas (com DELETE — tarefa pessoal se apaga) +
+customers.qualificacao; TABLE_MAP + whitelist do entityWrite (com
+regressão no handler REAL — lição do REL-34.2); `src/lib/metodo.js`
+como fonte única (+8 testes, incluindo um bug real pego: hora vazia
+caía em "manhã").
+**Prova em navegador (regra REL-34.1):** 21/21 ✅ zero erros — título e
+8 abas, quadro do sonho, Master Task gerando o dia da rotina e marcando
+progresso, estrelas gravando pela rota auditada, script carregando,
+agenda com link correto do Google Calendar, sub-abas do Hábito 6 com o
+CRM inteiro funcionando, Verificação abrindo por padrão pro admin.
+**Testes:** 608/608 (10 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e conferir.
