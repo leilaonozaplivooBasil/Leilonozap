@@ -1697,3 +1697,37 @@ payload.phone:'21999997777'}` capturado, modal fechando só com sucesso
 (falha de servidor mantém o formulário aberto — comprovado no mock).
 **Testes:** 577/577 (2 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
+
+---
+
+## REL-34.2 — Esteira não salvava em produção/preview: tabela fora da whitelist
+
+**Data:** 01/09/2026.
+**Sintoma (print do dono):** "Erro ao salvar oportunidade — a tabela da
+esteira já foi criada no banco?" ao salvar Renan Silva (aporte, Fechado
+100%) no preview. A tabela EXISTE (migração aplicada em 30/08).
+**Causa-raiz 1:** a rota oficial de escrita (`api/functions/entityWrite`)
+tem whitelist de tabelas (`CONTENT_TABLES`) e `captacao_oportunidades`
+NÃO estava nela — a DIR-34 criou tabela, RLS e adapter, mas esqueceu o
+porteiro do servidor. Para operador (super_admin), TODA gravação da
+esteira era recusada com "tabela não permitida". Meus testes de
+navegador simulavam justamente essa rota — o simulador escondeu a falha.
+**Correção 1:** tabela na whitelist + trava explícita de DELETE
+("oportunidade não se apaga, marque Sem interesse com o motivo") —
+necessária aqui porque a rota escreve com service_role, que passa por
+cima da ausência proposital de política de DELETE no RLS.
+**Causa-raiz 2 (vista no MESMO print):** o dono digitou "200.000" no
+valor — campo numérico do navegador lê ponto como decimal: ia salvar
+R$ 200,00 em vez de R$ 200.000,00, em silêncio. **Correção 2:**
+`parseValorBR` em `src/lib/money.js` ("200.000"=200000;
+"200.000,50"=200000,50; "99.90"=99,90), campo vira texto com
+`inputMode=decimal` e mostra a leitura ao vivo ("= R$ 200.000,00")
+embaixo do campo; o salvar usa o mesmo parser.
+**Prova:** teste de regressão NOVO invoca o HANDLER REAL do entityWrite
+(req/res falsos): `captacao_oportunidades` passa da whitelist, DELETE
+recusado com 403, tabela desconhecida segue 400. Parser com 4 testes.
+**Testes:** 584/584 (7 novos). **Build:** exit 0.
+**Lição registrada:** rota de servidor nova ou tabela nova só fecham
+rodada com um teste que chama o handler REAL — mock de rota própria não
+prova o porteiro dela.
+**Status final:** CONCLUÍDA — dono deve tentar salvar de novo no preview.

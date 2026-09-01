@@ -16,6 +16,11 @@ const CONTENT_TABLES = new Set([
   'customers', 'deposit_packages', 'financial_expenses', 'financial_income', 'system_logs', 'comparai_logs',
   'negotiations', 'luxury_auctions', 'luxury_access_codes', 'bids', 'partner_plan_purchases',
   'catalog_sales',
+  // 🛤️ DIR-34/REL-34.2 — esteira de captação: a tabela existia no banco mas
+  // FALTAVA AQUI, então TODA gravação da esteira era recusada com "tabela não
+  // permitida" (achado com print do dono em 01/09/2026). DELETE segue proibido
+  // logo abaixo — oportunidade não se apaga, se perde com motivo.
+  'captacao_oportunidades',
 ]);
 
 function sb(path, opts = {}) {
@@ -207,6 +212,13 @@ export default async function handler(req, res) {
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!actorId || !CONTENT_TABLES.has(table) || !['create', 'update', 'delete', 'bulkCreate'].includes(action)) {
       return res.status(400).json({ success: false, error: 'Parâmetros inválidos ou tabela não permitida' });
+    }
+    // 🛤️ DIR-34 — oportunidade da esteira NÃO se apaga (nem admin): quem não
+    // fechou marca "Sem interesse" com o motivo. Mesma regra da ausência
+    // proposital de política de DELETE no RLS — aqui repetida porque esta rota
+    // escreve com service_role (que passa por cima do RLS).
+    if (table === 'captacao_oportunidades' && action === 'delete') {
+      return res.status(403).json({ success: false, error: 'Oportunidade não se apaga — marque "Sem interesse" com o motivo da perda.' });
     }
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config ausente' });
 

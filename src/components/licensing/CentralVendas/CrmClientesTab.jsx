@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { fmtBR } from '@/lib/money';
+import { fmtBR, parseValorBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -949,7 +949,7 @@ _Enviado via CRM Leilão NoZap_`;
         cliente_telefone: String(form.cliente_telefone || '').replace(/\D/g, '') || null,
         cliente_user_id: form.cliente_user_id || null,
         tipo: form.tipo,
-        valor_previsto: Number(form.valor_previsto) || null,
+        valor_previsto: parseValorBR(form.valor_previsto) || null, // "200.000" = duzentos MIL (REL-34.2)
         estagio: form.estagio,
         motivo_perda: form.estagio === 'sem_interesse' ? (form.motivo_perda || null) : null,
         reuniao_em: form.reuniao_em ? new Date(form.reuniao_em).toISOString() : null,

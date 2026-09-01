@@ -11,6 +11,7 @@ import {
   DIAS_PARADA_ATENCAO, DIAS_PARADA_CRITICO,
 } from '@/lib/esteiraCaptacao';
 import { buscarPessoas } from '@/lib/buscaPessoa';
+import { parseValorBR } from '@/lib/money';
 import { ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { META_CAPTACAO } from '@/lib/captacaoParceiros';
 
@@ -95,8 +96,10 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
     }
   };
 
+  // REL-34.2: valor digitado em português — "200.000" é duzentos mil
+  const valorDigitado = parseValorBR(form.valor_previsto);
   const faltamNoEstagio = pendenciasParaEstagio(
-    { ...form, valor_previsto: Number(form.valor_previsto) || 0 },
+    { ...form, valor_previsto: valorDigitado },
     form.estagio
   );
   const NOMES_CAMPO = { valor_previsto: 'valor do aporte', motivo_perda: 'motivo da perda', reuniao_em: 'data da reunião', recontato_em: 'data de recontato' };
@@ -271,7 +274,11 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], sel
                   </div>
                   <div>
                     <p className="text-xs text-nz-tinta-fraca mb-1">Valor do aporte (R$)</p>
-                    <Input type="number" min="0" step="0.01" value={form.valor_previsto} onChange={(e) => setForm({ ...form, valor_previsto: e.target.value })} className="bg-white border-nz-borda text-nz-tinta" />
+                    {/* texto + inputMode: aceita "200.000" e "200.000,50" do jeito brasileiro */}
+                    <Input type="text" inputMode="decimal" placeholder="ex.: 200.000" value={form.valor_previsto} onChange={(e) => setForm({ ...form, valor_previsto: e.target.value })} className="bg-white border-nz-borda text-nz-tinta" />
+                    {valorDigitado > 0 && (
+                      <p className="text-[11px] text-nz-verde mt-0.5">= R$ {valorDigitado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    )}
                   </div>
                   {visaoTotal && (
                     <div>
