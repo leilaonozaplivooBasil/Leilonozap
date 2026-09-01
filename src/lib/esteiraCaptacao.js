@@ -149,3 +149,20 @@ export function vendaRealDoCliente(oportunidade, sales = []) {
 export function dinheiroNaConta(oportunidade, sales = []) {
   return vendaRealDoCliente(oportunidade, sales) !== null;
 }
+
+/**
+ * DIR-38 — o fechado (100%) separado com honestidade: quanto tem venda REAL
+ * casada (na conta) e quanto ainda é só declaração. É esta divisão que a
+ * Visão Executiva mostra — declarado NUNCA se soma como dinheiro.
+ */
+export function fechadoProvado(oportunidades = [], sales = []) {
+  let naConta = 0;
+  let declarado = 0;
+  for (const o of oportunidades) {
+    if (!ehFechada(o)) continue;
+    const valor = Number(o.valor_previsto) || 0;
+    if (dinheiroNaConta(o, sales)) naConta += valor;
+    else declarado += valor;
+  }
+  return { naConta, declarado };
+}

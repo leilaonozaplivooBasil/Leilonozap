@@ -34,6 +34,7 @@ import CrmMetaCentral from './CrmMetaCentral';
 import CrmDashboardDiretoria from './CrmDashboardDiretoria';
 import CrmEscadaLicencas from './CrmEscadaLicencas';
 import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
+import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -1253,22 +1254,14 @@ _Enviado via CRM Leilão NoZap_`;
           <>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
-            {/* 🛤️ DIR-36 — a esteira aparece na visão geral: fechado, forecast e atalho */}
-            <div className="bg-white border border-nz-borda rounded-2xl p-4 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                <p className="text-sm font-semibold text-nz-tinta">🛤️ Esteira de Captação</p>
-                <p className="text-sm text-nz-tinta"><span className="text-nz-tinta-fraca">Fechado (100%):</span> <span className="font-bold text-nz-verde">{brl(resumoEsteiraGeral.fechado)}</span></p>
-                <p className="text-sm text-nz-tinta"><span className="text-nz-tinta-fraca">Em esteira (ponderado):</span> <span className="font-bold">{brl(resumoEsteiraGeral.pipelinePonderado)}</span></p>
-                <p className="text-sm text-nz-tinta-fraca">{resumoEsteiraGeral.ativas} negociações ativas</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSecao('expansao')}
-                className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro"
-              >
-                Ver esteira →
-              </button>
-            </div>
+            {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
+                dia por pessoa do time e projeção da meta de captação */}
+            <CrmEsteiraResumoExecutivo
+              oportunidades={networkOportunidades}
+              sales={networkCatalogSales}
+              visaoTotal={isSuperAdmin}
+              onVerEsteira={() => setSecao('expansao')}
+            />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
           </>
         )}

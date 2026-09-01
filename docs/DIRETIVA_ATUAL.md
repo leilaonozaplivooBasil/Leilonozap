@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-38 — Visão Executiva = centro de comando (esteira, agenda e projeção)
+
+**Emitida por:** dono (01/09/2026, áudio): "na Visão Executiva entre tudo
+de forma organizada, minimalista e clean — as agendas, a esteira com a
+quantidade por estágio (agendamento X pessoas, 99% X, fechado X), o
+volume nas metas; sincronismo das outras abas na visão geral pra bater o
+olho e entender; medir a quantidade de reuniões no DIA e o percentual
+por pessoa do time; máquina de potencialização de contrato e de projeção
+da meta".
+**Data:** 01/09/2026.
+**Decisão de honestidade (regra de dinheiro real):** aporte DECLARADO na
+esteira NÃO entra na meta de vendas de R$ 5 mi (que é venda real de
+Loja+Leilão+PDV) nem se soma como se fosse dinheiro — as DUAS metas
+aparecem lado a lado na mesma vista: Vendas R$ X/5 mi e Captação
+R$ Y/1 mi, com o fechado separado em "na conta (real)" × "declarado
+(sem dinheiro na conta ainda)" × "em esteira (ponderado)".
+**Escopo autorizado:**
+1. `src/lib/agendaEsteira.js` (novo, testado): agenda do dia da esteira
+   (reuniões HOJE, atrasadas, na semana, recontatos vencidos) e reuniões
+   por responsável (hoje/marcadas). `fechadoProvado` em esteiraCaptacao
+   (na conta × declarado). Fonte única.
+2. `CrmEsteiraResumoExecutivo.jsx` (novo, substitui a faixa simples da
+   DIR-36 na Visão Executiva): barra da meta de captação R$ 1 mi
+   (na conta + declarado + ponderado, cada um na sua cor), funil da
+   esteira em CHIPS por estágio (quantidade + valor), agenda do dia e,
+   na visão total, reuniões por responsável com win rate.
+3. Ordem da Visão Executiva: hero → Meta Central R$ 5 mi → BLOCO DA
+   ESTEIRA → Dashboard da Diretoria (13) → cards. Nada de tela nova —
+   é a mesma aba, mais densa e mais limpa.
+**Fora do escopo / proibido:** somar valor declarado em meta de venda;
+criar agenda fora da esteira (reunião nasce da oportunidade); alterar
+critério de dinheiro real.
+**Regras fixas:** nenhuma além da DIR-5 a DIR-37 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-37 — Editar o cadastro do cliente direto no modal do CRM
 
 **Emitida por:** dono (01/09/2026): "preciso de um botão para editar as

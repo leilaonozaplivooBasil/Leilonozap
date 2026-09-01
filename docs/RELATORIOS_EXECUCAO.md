@@ -1731,3 +1731,41 @@ recusado com 403, tabela desconhecida segue 400. Parser com 4 testes.
 rodada com um teste que chama o handler REAL — mock de rota própria não
 prova o porteiro dela.
 **Status final:** CONCLUÍDA — dono deve tentar salvar de novo no preview.
+
+---
+
+## REL-38 — Execução da DIR-38 (Visão Executiva = centro de comando)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito:**
+1. `src/lib/agendaEsteira.js` (+3 testes): agenda do dia da esteira
+   (reuniões HOJE, atrasadas, próximos 7 dias, recontatos vencidos — só
+   de oportunidade ATIVA) e reuniões por responsável (hoje × marcadas).
+   `fechadoProvado` em esteiraCaptacao: 100% com venda real casada
+   ("na conta") separado do 100% só declarado.
+2. `CrmEsteiraResumoExecutivo.jsx` — o centro de comando, substituindo a
+   faixa simples da DIR-36 na Visão Executiva:
+   - PROJEÇÃO da meta de captação R$ 1 mi numa barra tricolor honesta:
+     verde = na conta (real) · âmbar = declarado · cinza = ponderado,
+     com o % do caminho;
+   - FUNIL EM CHIPS: os 8 estágios com quantidade e valor curto
+     ("Agendadas 1 · R$ 30 mil … 100% fechado 2 · R$ 250 mil"),
+     estágio vazio esmaecido — bate o olho e entende;
+   - AGENDA DE HOJE: reuniões hoje (com os nomes), atrasadas em
+     vermelho, próximos 7 dias, recontatos vencidos em âmbar;
+   - TIME (visão total): reuniões hoje × marcadas × win rate por
+     responsável (win rate da mesma conversaoPorResponsavel do kanban).
+**Decisão de honestidade mantida:** aporte declarado NÃO se soma na meta
+de vendas de R$ 5 mi (venda real Loja+Leilão+PDV) — as duas metas ficam
+lado a lado na mesma aba (Meta Central acima, captação no bloco novo), e
+o fechado se divide em na-conta × declarado. Quando o aporte REAL cair
+(partner_plan pago), ele entra sozinho em "na conta" e na Captação do
+hero — sem mão humana.
+**Prova em navegador (regra REL-34.1):** 10/10 ✅ zero erros com cenário
+rico (100% provado R$ 50 mil + 100% declarado R$ 200 mil + reuniões
+hoje/atrasada/recontato + 2 responsáveis) — barra, chips, agenda, tabela
+do time e KPI 13 (R$ 336.200 = 250 mil fechado + 86,2 mil ponderado,
+conferido na mão).
+**Testes:** 587/587 (3 novos). **Build:** exit 0.
+**Status final:** CONCLUÍDA — aguarda conferência do dono no preview.
