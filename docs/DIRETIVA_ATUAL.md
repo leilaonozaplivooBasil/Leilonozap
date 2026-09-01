@@ -12,6 +12,43 @@
 
 ---
 
+## DIR-41 — O Método no CRM: FORM, PPV obrigatório e Verificação
+
+**Emitida por:** dono (01/09/2026): PDF "O Sucesso Não Negocia com a
+Mediocridade — os 8 Hábitos" + "ESCREVA TUDO QUE ENTENDEU E O QUE VAMOS
+FAZER PARA DEIXAR ISSO FODA" + aprovação do plano em chat: "VAMOS FAZER".
+**Data:** 01/09/2026.
+**Princípio:** o CRM vira o guardião do método — "cada etapa precisa
+conduzir ao próximo ponto" deixa de ser slide e vira regra cobrada pelo
+sistema.
+**Escopo autorizado (3 fases):**
+1. FORM no cliente (Hábito 4): coluna `form_metodo JSONB` em customers
+   ({familia, ocupacao, recreacao, mensagem}); bloco F.O.R.M. no modal
+   do cliente (mesmo salvar das anotações); fusão carrega o FORM pra
+   linha automática; a fila "Quem contatar hoje" mostra o que se sabe
+   da pessoa antes do WhatsApp.
+2. PPV + objeções (Hábitos 5-6): coluna `objecao TEXT` na esteira;
+   OBJECOES oficiais do deck (não tenho dinheiro / preciso pensar /
+   tenho medo / não conheço / outra); `semPPV` na lib — oportunidade
+   ATIVA sem reunião futura nem recontato futuro = sem Próximo Ponto de
+   Venda → badge vermelho "⚠️ sem PPV" no kanban; campo "Objeção atual"
+   no modal.
+3. Verificação + duplicação (Hábitos 7-8): centro de comando ganha
+   "sem PPV" (total e por responsável na tabela do time) e o placar de
+   objeções que mais travam a esteira; botão "📖 O Método" no CRM abre
+   o resumo dos 8 hábitos (o time novo aprende dentro da ferramenta).
+**Migração** `20260901210000_metodo_form_ppv.sql` (dono cola): as duas
+colunas acima.
+**Fora do escopo / proibido:** qualquer número inventado (objeção/PPV
+só contam o que foi registrado); mexer em critério de dinheiro real;
+bloquear salvar por falta de PPV (avisa e marca, não tranca — o dono
+manda na régua, o sistema cobra).
+**Regras fixas:** nenhuma além da DIR-5 a DIR-40 (inclui prova em
+navegador).
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-40 — Aporte recebido POR FORA (Santander/Itaú), com auditoria
 
 **Emitida por:** dono (01/09/2026, áudio): "tem que ter um botão de que o

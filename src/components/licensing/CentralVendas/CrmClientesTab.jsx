@@ -632,7 +632,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // registro na tabela customers só pra segurar nota/follow-up/próximo passo —
   // na recarga ele FUNDE de volta na linha automática (regra da DIR-24 em
   // crmUnifiedCustomers.js). Sempre com o carimbo created_by_id do escopo.
-  const handleSaveNotes = async (customer, { notes, follow_up_date, next_steps }) => {
+  const handleSaveNotes = async (customer, { notes, follow_up_date, next_steps, form_metodo = null }) => {
     try {
       // 🔧 DIR-28 — sem e-mail E sem telefone não há como fundir a anotação de
       // volta na linha automática (a fusão é por e-mail/telefone): salvar
@@ -642,7 +642,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         return;
       }
       if (customer.manual_id) {
-        await plataforma.entities.Customer.update(customer.manual_id, { notes, follow_up_date, next_steps });
+        await plataforma.entities.Customer.update(customer.manual_id, { notes, follow_up_date, next_steps, form_metodo });
       } else {
         await plataforma.entities.Customer.create({
           full_name: customer.full_name || 'Sem nome',
@@ -653,6 +653,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
           notes,
           follow_up_date,
           next_steps,
+          form_metodo,
           created_by_id: currentUser?.id || null,
           created_by: currentUser?.email || null,
         });
@@ -964,6 +965,7 @@ _Enviado via CRM Leilão NoZap_`;
         responsavel_nome: form.responsavel_nome || null,
         indicacao_user_id: form.indicacao_user_id || null, // DIR-39: quem indicou — sempre cadastrado no app
         indicacao_nome: form.indicacao_nome || null,
+        objecao: form.objecao || null, // DIR-41: gestão de objeções do método
       };
       // 🔗 DIR-36 — a amarração de aço do 100%: encontrou a venda REAL do
       // cliente (mesma regra do chip "💰 na conta")? Grava o venda_id.

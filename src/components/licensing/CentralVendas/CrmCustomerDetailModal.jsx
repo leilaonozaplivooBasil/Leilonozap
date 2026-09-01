@@ -27,6 +27,13 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
   const [notas, setNotas] = useState(customer?.notes || '');
   const [followUp, setFollowUp] = useState(customer?.follow_up_date ? String(customer.follow_up_date).slice(0, 10) : '');
   const [proximoPasso, setProximoPasso] = useState(customer?.next_steps || '');
+  // 📖 DIR-41 — Método FORM (Hábito 4): conhecer a pessoa antes de abordar
+  const [formMetodo, setFormMetodo] = useState({
+    familia: customer?.form_metodo?.familia || '',
+    ocupacao: customer?.form_metodo?.ocupacao || '',
+    recreacao: customer?.form_metodo?.recreacao || '',
+    mensagem: customer?.form_metodo?.mensagem || '',
+  });
   const [salvando, setSalvando] = useState(false);
   // ✏️ DIR-37 — corrigir cadastro errado (telefone, nome...) sem sair do CRM
   const [editandoContato, setEditandoContato] = useState(false);
@@ -62,7 +69,13 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
     if (!onSaveNotes) return;
     setSalvando(true);
     try {
-      await onSaveNotes(customer, { notes: notas, follow_up_date: followUp || null, next_steps: proximoPasso });
+      const temForm = Object.values(formMetodo).some((v) => String(v || '').trim());
+      await onSaveNotes(customer, {
+        notes: notas,
+        follow_up_date: followUp || null,
+        next_steps: proximoPasso,
+        form_metodo: temForm ? formMetodo : null, // 📖 DIR-41
+      });
       onClose();
     } finally {
       setSalvando(false);
@@ -220,6 +233,31 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
                 </div>
               </div>
               <p className="text-[11px] text-nz-tinta-fraca">Com data marcada, o cliente entra sozinho na fila "Quem contatar hoje" no dia.</p>
+
+              {/* 📖 DIR-41 — Método FORM (Hábito 4): entender a pessoa ANTES de apresentar */}
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-2.5 space-y-2">
+                <p className="text-xs font-semibold text-nz-tinta">📖 F.O.R.M. — conheça a pessoa antes de abordar</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[11px] text-nz-tinta-fraca mb-0.5">F — Família</p>
+                    <Input value={formMetodo.familia} onChange={(e) => setFormMetodo({ ...formMetodo, familia: e.target.value })} placeholder="casado, 2 filhos..." className="bg-white border-nz-borda text-nz-tinta text-sm h-8" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-nz-tinta-fraca mb-0.5">O — Ocupação</p>
+                    <Input value={formMetodo.ocupacao} onChange={(e) => setFormMetodo({ ...formMetodo, ocupacao: e.target.value })} placeholder="dono de mercado..." className="bg-white border-nz-borda text-nz-tinta text-sm h-8" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-nz-tinta-fraca mb-0.5">R — Recreação</p>
+                    <Input value={formMetodo.recreacao} onChange={(e) => setFormMetodo({ ...formMetodo, recreacao: e.target.value })} placeholder="futebol, pesca..." className="bg-white border-nz-borda text-nz-tinta text-sm h-8" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-nz-tinta-fraca mb-0.5">M — Mensagem certa</p>
+                    <Input value={formMetodo.mensagem} onChange={(e) => setFormMetodo({ ...formMetodo, mensagem: e.target.value })} placeholder="o que toca essa pessoa" className="bg-white border-nz-borda text-nz-tinta text-sm h-8" />
+                  </div>
+                </div>
+                <p className="text-[10px] text-nz-tinta-fraca">Aparece na fila "Quem contatar hoje" — ninguém aborda no escuro.</p>
+              </div>
+
               <Button onClick={salvar} disabled={salvando} className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white">
                 <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar anotações'}
               </Button>

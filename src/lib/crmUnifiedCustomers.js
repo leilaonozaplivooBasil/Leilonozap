@@ -244,6 +244,7 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
         if (c.phone) alvo.phone = c.phone;
       }
       if (c.notes) alvo.notes = c.notes;
+      if (c.form_metodo) alvo.form_metodo = c.form_metodo; // 📖 DIR-41 — FORM segue a pessoa
       if (c.assigned_seller) alvo.assigned_seller = c.assigned_seller;
       if (c.follow_up_date) alvo.follow_up_date = c.follow_up_date;
       if (c.next_steps) alvo.next_steps = c.next_steps;
@@ -277,6 +278,7 @@ export function buildUnifiedCustomers({ appUsers = [], catalogSales = [], auctio
       purchases: [],
       auctions_list: [],
       notes: c.notes,
+      form_metodo: c.form_metodo || null,
       follow_up_date: c.follow_up_date || null,
       next_steps: c.next_steps || '',
       manual_id: c.id,

@@ -9,6 +9,7 @@ import {
   ESTAGIOS_ESTEIRA, MOTIVOS_PERDA, estagioDe, pendenciasParaEstagio,
   resumoEsteira, conversaoPorResponsavel, diasNoEstagio, dinheiroNaConta,
   aporteExternoValido, BANCOS_APORTE_EXTERNO,
+  semPPV, OBJECOES_METODO,
   DIAS_PARADA_ATENCAO, DIAS_PARADA_CRITICO,
 } from '@/lib/esteiraCaptacao';
 import { buscarPessoas } from '@/lib/buscaPessoa';
@@ -197,6 +198,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                             {o.responsavel_nome && <span className="px-1 py-0.5 rounded bg-nz-cinza-fundo text-[9px] text-nz-tinta-fraca border border-nz-borda truncate max-w-full">{o.responsavel_nome.split(' ')[0]}</span>}
                             {o.indicacao_nome && <span className="px-1 py-0.5 rounded bg-nz-verde/10 text-[9px] text-nz-verde border border-nz-verde/20 truncate max-w-full">via {String(o.indicacao_nome).split(' ')[0]}</span>}
                             {parada && <span className={`px-1 py-0.5 rounded text-[9px] font-semibold ${dias >= DIAS_PARADA_CRITICO ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{dias}d parada</span>}
+                            {semPPV(o) && <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-600 border border-red-200">⚠️ sem PPV</span>}
                             {provado === true && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-nz-verde/10 text-nz-verde border border-nz-verde/30">💰 na conta{aporteExternoValido(o) ? ` (${BANCOS_APORTE_EXTERNO.find((b) => b.id === o.aporte_externo.banco)?.label})` : ''}</span>}
                             {provado === false && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">⚠️ sem dinheiro na conta</span>}
                           </div>
@@ -366,6 +368,13 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                         )}
                       </>
                     )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-nz-tinta-fraca mb-1">Objeção atual (método — Hábito 6)</p>
+                    <select value={form.objecao || ''} onChange={(e) => setForm({ ...form, objecao: e.target.value || null })} className="w-full bg-white text-nz-tinta rounded-md px-3 py-2 border border-nz-borda">
+                      <option value="">— Sem objeção no momento —</option>
+                      {OBJECOES_METODO.map((ob) => <option key={ob.id} value={ob.id}>{ob.label}</option>)}
+                    </select>
                   </div>
                   <div>
                     <p className="text-xs text-nz-tinta-fraca mb-1">Estágio</p>

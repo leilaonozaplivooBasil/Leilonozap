@@ -142,6 +142,42 @@ export function vendaRealDoCliente(oportunidade, sales = []) {
   ) || null;
 }
 
+// 📖 DIR-41 — as objeções OFICIAIS do método (deck "O Sucesso Não Negocia
+// com a Mediocridade", Hábito 6): o que trava a negociação, medido de verdade.
+export const OBJECOES_METODO = [
+  { id: 'nao_tenho_dinheiro', label: 'Não tenho dinheiro' },
+  { id: 'preciso_pensar', label: 'Preciso pensar' },
+  { id: 'tenho_medo', label: 'Tenho medo' },
+  { id: 'nao_conheco', label: 'Não conheço isso' },
+  { id: 'outra', label: 'Outra' },
+];
+export const objecaoLabel = (id) => OBJECOES_METODO.find((o) => o.id === id)?.label || id;
+
+/**
+ * DIR-41 — PPV (Próximo Ponto de Venda): "cada etapa precisa conduzir ao
+ * próximo ponto". Oportunidade ATIVA sem reunião futura e sem recontato
+ * futuro está SEM PPV — negociação morrendo, o kanban avisa em vermelho.
+ */
+export function semPPV(oportunidade, ref = new Date()) {
+  if (!ehAtiva(oportunidade)) return false; // fechada/perdida não precisa de PPV
+  const hojeStr = ref.toISOString().slice(0, 10);
+  const temReuniaoFutura = oportunidade.reuniao_em && String(oportunidade.reuniao_em).slice(0, 10) >= hojeStr;
+  const temRecontatoFuturo = oportunidade.recontato_em && String(oportunidade.recontato_em).slice(0, 10) >= hojeStr;
+  return !temReuniaoFutura && !temRecontatoFuturo;
+}
+
+/** Placar de objeções em negociações ATIVAS — a dor real do funil, contada. */
+export function placarObjecoes(oportunidades = []) {
+  const contagem = new Map();
+  for (const o of oportunidades) {
+    if (!ehAtiva(o) || !o.objecao) continue;
+    contagem.set(o.objecao, (contagem.get(o.objecao) || 0) + 1);
+  }
+  return [...contagem.entries()]
+    .map(([id, qtd]) => ({ id, label: objecaoLabel(id), qtd }))
+    .sort((a, b) => b.qtd - a.qtd);
+}
+
 // 💵 DIR-40 — só estas contas podem receber aporte de capital (regra do dono).
 export const BANCOS_APORTE_EXTERNO = [
   { id: 'santander', label: 'Santander' },

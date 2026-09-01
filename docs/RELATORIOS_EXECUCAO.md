@@ -1844,3 +1844,40 @@ R$ 200.000,00" na executiva → hero Captação R$ 200.000,00.
 **Testes:** 593/593 (3 novos). **Build:** exit 0.
 **Status final:** CONCLUÍDA — aguarda o dono colar o SQL e registrar o
 aporte do Renan Silva.
+
+---
+
+## REL-41 — Execução da DIR-41 (O Método no CRM: FORM, PPV e Verificação)
+
+**Data:** 01/09/2026.
+**Branch:** `claude/project-structure-analysis-r1prad`.
+**O que foi feito (as 3 fases do plano aprovado — "VAMOS FAZER"):**
+1. FORM (Hábito 4): bloco F.O.R.M. no modal do cliente (Família,
+   Ocupação, Recreação, Mensagem certa — mesmo salvar das anotações,
+   trilho DIR-24); fusão carrega o FORM pra linha automática (+1 teste);
+   a fila "Quem contatar hoje" mostra a dica 💡 (a Mensagem, ou
+   Ocupação · Recreação) ANTES do botão do WhatsApp — ninguém aborda no
+   escuro.
+2. PPV + objeções (Hábitos 5-6): `semPPV` na lib (ativa sem reunião
+   futura nem recontato futuro = negociação morrendo) → badge vermelho
+   "⚠️ sem PPV" no cartão do kanban; OBJECOES_METODO oficiais do deck
+   (não tenho dinheiro / preciso pensar / tenho medo / não conheço /
+   outra) + campo "Objeção atual" no modal + `placarObjecoes` (só
+   ativas, ordenado pela dor). Salvar NÃO tranca por falta de PPV —
+   avisa e marca (regra da diretiva).
+3. Verificação + duplicação (Hábitos 7-8): centro de comando ganhou
+   "🚫 N sem PPV" na agenda, o placar "Objeções travando a esteira" e a
+   coluna "Sem PPV" por responsável na tabela do time; botão
+   "📖 O Método" abre o resumo dos 8 hábitos dentro do CRM
+   (CrmMetodoModal — o time novo aprende onde trabalha).
+**Migração** `20260901210000_metodo_form_ppv.sql` (DONO COLA):
+customers.form_metodo JSONB + captacao_oportunidades.objecao TEXT.
+Antes de colar, tudo continua funcionando (writeResilient descarta
+coluna inexistente) — FORM e objeção só persistem após o SQL.
+**Prova em navegador (regra REL-34.1):** 11/11 ✅ zero erros — sem PPV
+no kanban e na executiva (total + por responsável), placar de objeções,
+modal do método com os 8 hábitos, campo de objeção carregando do banco,
+dica 💡 do FORM na fila e bloco F.O.R.M. no modal do cliente com dados
+persistidos.
+**Testes:** 596/596 (3 novos). **Build:** exit 0. **Lint:** zero erros.
+**Status final:** CONCLUÍDA — aguarda o dono colar o SQL e conferir.

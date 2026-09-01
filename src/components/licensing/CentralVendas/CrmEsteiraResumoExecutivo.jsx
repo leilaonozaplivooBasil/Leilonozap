@@ -4,9 +4,11 @@ import { GitBranch, CalendarClock } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 import {
   ESTAGIOS_ESTEIRA, resumoEsteira, conversaoPorResponsavel, fechadoProvado,
+  semPPV, placarObjecoes,
 } from '@/lib/esteiraCaptacao';
 import { agendaEsteira, reunioesPorResponsavel } from '@/lib/agendaEsteira';
 import { META_CAPTACAO } from '@/lib/captacaoParceiros';
+import CrmMetodoModal from './CrmMetodoModal';
 
 // 🎯 DIR-38 — O CENTRO DE COMANDO da Visão Executiva: a esteira em números
 // (quantidade por estágio), a agenda de reuniões do dia por pessoa do time e
@@ -31,6 +33,7 @@ const EMOJI = {
 };
 
 export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = [], visaoTotal, onVerEsteira }) {
+  const [metodoAberto, setMetodoAberto] = React.useState(false);
   const resumo = useMemo(() => resumoEsteira(oportunidades), [oportunidades]);
   const provado = useMemo(() => fechadoProvado(oportunidades, sales), [oportunidades, sales]);
   const agenda = useMemo(() => agendaEsteira(oportunidades), [oportunidades]);
@@ -40,6 +43,17 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
     conversaoPorResponsavel(oportunidades).forEach((r) => m.set(r.nome, r));
     return m;
   }, [oportunidades]);
+  // 📖 DIR-41 — Verificação (Hábito 7): PPV e objeções, medidos de verdade
+  const semPpvLista = useMemo(() => oportunidades.filter((o) => semPPV(o)), [oportunidades]);
+  const semPpvPorNome = useMemo(() => {
+    const m = new Map();
+    semPpvLista.forEach((o) => {
+      const nome = o.responsavel_nome || 'Sem responsável';
+      m.set(nome, (m.get(nome) || 0) + 1);
+    });
+    return m;
+  }, [semPpvLista]);
+  const objecoes = useMemo(() => placarObjecoes(oportunidades), [oportunidades]);
 
   const caminhado = provado.naConta + provado.declarado + resumo.pipelinePonderado;
   const pct = Math.min(100, (caminhado / META_CAPTACAO) * 100);
@@ -56,9 +70,14 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
             Esteira de Captação — projeção da meta de {brlCurto(META_CAPTACAO)}
             <StatInfoTooltip text='Verde = fechado COM dinheiro na conta (venda real casada). Âmbar = fechado declarado, ainda sem o dinheiro provado. Cinza = pipeline ponderado (Σ valor × probabilidade das negociações ativas). Declarado e previsão nunca se somam como dinheiro — cada um na sua cor.' />
           </p>
-          <button type="button" onClick={onVerEsteira} className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro">
-            Ver esteira →
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setMetodoAberto(true)} className="text-sm font-semibold text-nz-tinta-fraca hover:text-nz-tinta">
+              📖 O Método
+            </button>
+            <button type="button" onClick={onVerEsteira} className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro">
+              Ver esteira →
+            </button>
+          </div>
         </div>
 
         <div>
@@ -113,7 +132,15 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
             <p className={agenda.recontatosHoje > 0 ? 'text-amber-700 font-semibold' : 'text-nz-tinta-fraca'}>
               🔁 {agenda.recontatosHoje} recontato(s) vencido(s)
             </p>
+            <p className={semPpvLista.length > 0 ? 'text-red-600 font-bold' : 'text-nz-tinta-fraca'} title='PPV = Próximo Ponto de Venda (Hábito 6): negociação ativa sem reunião nem recontato futuros está morrendo.'>
+              🚫 {semPpvLista.length} sem PPV
+            </p>
           </div>
+          {objecoes.length > 0 && (
+            <p className="text-xs text-nz-tinta-fraca mt-1.5">
+              Objeções travando a esteira: {objecoes.map((ob) => `${ob.label} ${ob.qtd}`).join(' · ')}
+            </p>
+          )}
           {agenda.reunioesHoje.length > 0 && (
             <p className="text-xs text-nz-tinta-fraca mt-1 truncate">
               Hoje: {agenda.reunioesHoje.map((o) => o.cliente_nome).filter(Boolean).join(' · ')}
@@ -130,6 +157,7 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
                   <th className="text-left py-1.5 font-semibold">Time</th>
                   <th className="text-center py-1.5 font-semibold">Reuniões hoje</th>
                   <th className="text-center py-1.5 font-semibold">Marcadas</th>
+                  <th className="text-center py-1.5 font-semibold">Sem PPV</th>
                   <th className="text-center py-1.5 font-semibold">Win rate</th>
                 </tr>
               </thead>
@@ -141,6 +169,7 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
                       <td className="py-1.5 text-nz-tinta font-medium">{r.nome}</td>
                       <td className="py-1.5 text-center font-bold text-nz-tinta">{r.hoje}</td>
                       <td className="py-1.5 text-center text-nz-tinta-fraca">{r.marcadas}</td>
+                      <td className={`py-1.5 text-center font-semibold ${(semPpvPorNome.get(r.nome) || 0) > 0 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>{semPpvPorNome.get(r.nome) || 0}</td>
                       <td className="py-1.5 text-center text-nz-tinta">{win == null ? '—' : `${win.toFixed(0)}%`}</td>
                     </tr>
                   );
@@ -149,6 +178,7 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
             </table>
           </div>
         )}
+        <CrmMetodoModal aberto={metodoAberto} onFechar={() => setMetodoAberto(false)} />
       </CardContent>
     </Card>
   );

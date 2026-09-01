@@ -130,3 +130,29 @@ describe('DIR-40 — aporte recebido POR FORA (Santander/Itaú)', () => {
     assert.equal(p.declarado, 50000);
   });
 });
+
+describe('DIR-41 — PPV e objeções do método', () => {
+  const REF41 = new Date('2026-09-01T12:00:00Z');
+  test('semPPV: ativa sem reunião futura nem recontato futuro = negociação morrendo', async () => {
+    const { semPPV } = await import('../src/lib/esteiraCaptacao.js');
+    assert.equal(semPPV({ estagio: 'fechado_50' }, REF41), true); // nada marcado
+    assert.equal(semPPV({ estagio: 'fechado_50', reuniao_em: '2026-08-20T10:00:00Z' }, REF41), true); // reunião no passado
+    assert.equal(semPPV({ estagio: 'reuniao_agendada', reuniao_em: '2026-09-03T10:00:00Z' }, REF41), false); // reunião futura
+    assert.equal(semPPV({ estagio: 'interesse_futuro', recontato_em: '2026-09-10' }, REF41), false); // recontato futuro
+    assert.equal(semPPV({ estagio: 'fechado_100' }, REF41), false); // fechada não precisa
+    assert.equal(semPPV({ estagio: 'sem_interesse' }, REF41), false); // perdida não precisa
+  });
+
+  test('placarObjecoes: conta só ATIVAS, ordenado pela dor maior', async () => {
+    const { placarObjecoes } = await import('../src/lib/esteiraCaptacao.js');
+    const placar = placarObjecoes([
+      { estagio: 'fechado_50', objecao: 'preciso_pensar' },
+      { estagio: 'reuniao_agendada', objecao: 'preciso_pensar' },
+      { estagio: 'fechado_70', objecao: 'tenho_medo' },
+      { estagio: 'fechado_100', objecao: 'preciso_pensar' }, // fechada: fora
+      { estagio: 'fechado_50' }, // sem objeção: fora
+    ]);
+    assert.deepEqual(placar.map((p) => [p.id, p.qtd]), [['preciso_pensar', 2], ['tenho_medo', 1]]);
+    assert.equal(placar[0].label, 'Preciso pensar');
+  });
+});

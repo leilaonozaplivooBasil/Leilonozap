@@ -220,3 +220,18 @@ describe('DIR-37 — correção manual de contato na fusão', () => {
     assert.equal(c.notes, 'nota vale'); // a fusão de anotações segue valendo
   });
 });
+
+describe('DIR-41 — FORM segue a pessoa na fusão', () => {
+  test('form_metodo do cadastro manual aparece na linha fundida e na linha solta', () => {
+    const form = { familia: 'casado', ocupacao: 'mercado', recreacao: 'pesca', mensagem: 'quer renda extra' };
+    const [fundido] = buildUnifiedCustomers({
+      appUsers: [{ id: 'u1', full_name: 'Com Conta', email: 'c@x.com' }],
+      manualCustomers: [{ id: 'm1', email: 'c@x.com', full_name: 'Com Conta', form_metodo: form }],
+    });
+    assert.deepEqual(fundido.form_metodo, form);
+    const [solto] = buildUnifiedCustomers({
+      manualCustomers: [{ id: 'm2', email: 'solto@x.com', full_name: 'Solto', form_metodo: form }],
+    });
+    assert.deepEqual(solto.form_metodo, form);
+  });
+});
