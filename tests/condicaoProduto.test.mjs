@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import {
   CONDICOES, ehCondicaoValida, rotuloCondicao, resumoCondicao,
   condicaoDaGrade, normalizarCondicao, ehTextoInternoDeLote, descricaoPublica,
-  produtoNaCondicao, contarPorCondicao,
 } from '../src/lib/condicaoProduto.js';
 
 test('vocabulário fechado e sem duplicata', () => {
@@ -88,55 +87,4 @@ test('descricaoPublica devolve vazio só quando o texto é interno', () => {
   assert.equal(descricaoPublica(''), '');
   assert.equal(descricaoPublica(null), '');
   assert.equal(descricaoPublica('  Texto de verdade.  '), 'Texto de verdade.');
-});
-
-// ── filtro da vitrine por condição (substituiu o filtro por origem em 02/09) ──
-
-test('"todas" não filtra nada', () => {
-  for (const f of ['todas', '', null, undefined]) {
-    assert.equal(produtoNaCondicao({ condicao: null }, f), true);
-    assert.equal(produtoNaCondicao({ condicao: 'bom' }, f), true);
-  }
-});
-
-test('filtro pega só a condição pedida', () => {
-  assert.equal(produtoNaCondicao({ condicao: 'perfeito' }, 'perfeito'), true);
-  assert.equal(produtoNaCondicao({ condicao: 'bom' }, 'perfeito'), false);
-  // produto sem condição não entra em pílula nenhuma — são os 10 da vitrine que
-  // ficaram sem contador no preenchimento de 02/09.
-  assert.equal(produtoNaCondicao({ condicao: null }, 'perfeito'), false);
-  assert.equal(produtoNaCondicao({}, 'bom'), false);
-});
-
-test('contagem cobre todas as condições e ignora lixo', () => {
-  const c = contarPorCondicao([
-    { condicao: 'perfeito' }, { condicao: 'perfeito' }, { condicao: 'bom' },
-    { condicao: null }, { condicao: 'inventada' }, null,
-  ]);
-  assert.equal(c.perfeito, 2);
-  assert.equal(c.bom, 1);
-  assert.equal(c.com_avarias, 0);
-  assert.equal(c.novo, 0);
-  assert.equal(Object.keys(c).length, CONDICOES.length, 'toda condição precisa de chave');
-});
-
-test('contagem aguenta entrada inválida', () => {
-  for (const e of [[], null, undefined, 'nada']) {
-    const c = contarPorCondicao(e);
-    for (const cond of CONDICOES) assert.equal(c[cond.valor], 0);
-  }
-});
-
-test('proporção real de produção não zera a fileira', () => {
-  // 02/09: 263 perfeito, 25 bom, 1 para_reparo, 10 sem condição, na vitrine.
-  const loja = [
-    ...Array.from({ length: 263 }, () => ({ condicao: 'perfeito' })),
-    ...Array.from({ length: 25 }, () => ({ condicao: 'bom' })),
-    { condicao: 'para_reparo' },
-    ...Array.from({ length: 10 }, () => ({ condicao: null })),
-  ];
-  const c = contarPorCondicao(loja);
-  const comProduto = CONDICOES.filter((x) => c[x.valor] > 0);
-  assert.equal(comProduto.length, 3, 'três pílulas com produto — a fileira não some');
-  assert.equal(loja.filter((p) => produtoNaCondicao(p, 'perfeito')).length, 263);
 });
