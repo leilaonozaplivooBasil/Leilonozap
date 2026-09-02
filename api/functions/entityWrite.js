@@ -228,7 +228,9 @@ export default async function handler(req, res) {
     // corpo vazio) derrubava o `.json()` com uma mensagem críptica de parse — o
     // operador via só "Erro" e não dava pra saber que a checagem de permissão
     // foi quem falhou.
-    const actorResp = await sb(`app_users?select=id,role,career_levels&id=eq.${encodeURIComponent(actorId)}&limit=1`);
+    // primary_career_level entra junto: é onde mora o cargo de quem tem só um
+    // (a checagem de cargo comercial do CRM, logo abaixo, lê os dois campos).
+    const actorResp = await sb(`app_users?select=id,role,career_levels,primary_career_level&id=eq.${encodeURIComponent(actorId)}&limit=1`);
     const actorArr = await actorResp.json().catch((e) => {
       throw new Error(`Falha ao verificar permissão do usuário (resposta inválida do banco): ${e?.message || e}`);
     });
@@ -237,7 +239,66 @@ export default async function handler(req, res) {
     // registros financeiros). As travas específicas de venda logo abaixo
     // continuam valendo pra ele como pra qualquer um.
     const ok = actor && (['admin', 'super_admin', 'admin_financeiro'].includes(actor.role) || (Array.isArray(actor.career_levels) && actor.career_levels.some((c) => STOCK.includes(c))));
-    if (!ok) return res.status(403).json({ success: false, error: 'Sem permissão' });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 02/09/2026 — O CRM ABRIU PARA A REDE E O BOTÃO SALVAR FICOU QUEBRADO
+    // ══════════════════════════════════════════════════════════════════════════
+    // Em 30/08 o CRM deixou de ser só de admin (DIR-24 Fase 2): toda a Central
+    // de Vendas passou a ver o CRM da própria rede. Só que a ESCRITA nunca foi
+    // aberta junto — e a lista de operadores aqui foi desenhada pra ESTOQUE
+    // (distribuidor, loja física, ponto de retirada). O resultado é absurdo:
+    // `ponto_retirada` podia gravar cliente e `diretoria_operacao` não podia.
+    //
+    // Medido em 02/09: a tabela `customers` inteira tinha 4 linhas — 3 de
+    // fevereiro (era Base44) e UMA criada desde então, por um admin.
+    //
+    // Cargo comercial passa a gravar cliente e negociação, e SÓ isso:
+    //   • só as tabelas do CRM (nem produto, nem venda, nem leilão);
+    //   • nunca apagar;
+    //   • editar só a linha que a própria pessoa criou — operador segue editando
+    //     qualquer uma. Sem isso, um vendedor mexeria na carteira do outro.
+    // ⚠️ SÓ `customers`. `negotiations` ficou de fora de propósito: ela não tem
+    // a coluna `created_by_id`, então não há como dizer de quem é a linha — e
+    // sem isso "edita só o que você criou" não existe. Criar a coluna é
+    // migração, e migração hoje não sobe sozinha (deploy-migrations travado).
+    const CRM_TABLES = new Set(['customers']);
+    const COMERCIAL = [
+      'vendedor', 'licenciado', 'licenciado_aplicativo', 'distribuidor',
+      'loja_fisica', 'ponto_retirada', 'parceiro', 'executivo_conta',
+      'diretoria_operacao', 'diretoria_executiva', 'embaixador', 'conselheiro',
+      'fundador', 'ceo', 'livoo_live',
+    ];
+    const ehComercial = actor && [
+      ...(Array.isArray(actor.career_levels) ? actor.career_levels : []),
+      actor.primary_career_level,
+    ].filter(Boolean).some((c) => COMERCIAL.includes(String(c)));
+    const podeCrm = !ok && ehComercial && CRM_TABLES.has(table) && action !== 'delete';
+
+    if (!ok && !podeCrm) return res.status(403).json({ success: false, error: 'Sem permissão' });
+
+    if (podeCrm) {
+      // Identidade do CRACHÁ quando existe: ela é assinada, o actorId do corpo não.
+      // (Enquanto SESSAO_MODO não bloquear, sem crachá cai no actorId — mesmo
+      //  nível de confiança que toda esta rota já tem hoje, nem melhor nem pior.)
+      const eu = _ses.userId || actorId;
+      if (action === 'update') {
+        const dono = await (await sb(`${table}?select=created_by_id&id=eq.${encodeURIComponent(id || '')}&limit=1`)).json().catch(() => null);
+        const criador = Array.isArray(dono) ? dono[0]?.created_by_id : null;
+        if (String(criador || '') !== String(eu)) {
+          return res.status(403).json({ success: false, error: 'Este cadastro é de outra pessoa da rede. Você só edita os que você criou.' });
+        }
+        // O dono não se transfere numa edição: é ele que decide quem pode
+        // editar depois. Sem isto, bastava mandar created_by_id no corpo para
+        // empurrar o próprio cliente para a carteira de outra pessoa — ou tirar
+        // a si mesmo do próprio cadastro e nunca mais conseguir abri-lo.
+        if (body?.payload && !Array.isArray(body.payload)) delete body.payload.created_by_id;
+      }
+      // Carimba o dono na criação, ignorando o que vier do navegador: é este
+      // campo que decide quem pode editar depois.
+      if (action === 'create' && body?.payload && !Array.isArray(body.payload)) {
+        body.payload.created_by_id = eu;
+      }
+    }
 
     // ══════════════════════════════════════════════════════════════════════════
     // 🔴 PONTO 115 (21/08/2026) — VENDA NÃO É "CONTEÚDO" (riscos #19 e #20)
