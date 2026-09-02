@@ -482,12 +482,40 @@ export default function Catalog() {
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
-      // Carrega categorias
+      // 🧹 02/09/2026 — CATEGORIA SEM PRODUTO NÃO É OFERECIDA.
+      // "COSTURA" e "Escritório" apareciam na fileira com ZERO produtos: o cliente
+      // clicava e a vitrine ficava vazia. Mesmo beco das pílulas que já foi tapado.
+      //
+      // A contagem vem da view vw_categorias_vitrine, ou seja, do SERVIDOR — e isso
+      // é o ponto. A loja carrega 240 produtos por vez; contar pelo que está
+      // carregado esconderia categoria cujos itens estão fora dessa janela, e o
+      // sintoma seria "sumiu uma categoria que tem produto". A view conta a base
+      // inteira.
+      //
+      // Ordem alfabética: antes não havia ORDER BY nenhum e a fileira mudava de
+      // ordem a cada carregamento (nove categorias empatadas em sort_order = 0 e
+      // duas com NULL). Alfabético é previsível e não inventa hierarquia
+      // comercial — ordenar por volume é uma decisão do dono, não minha.
       try {
-        const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
-        setCategories((allCategories || []).filter(c => c.is_active !== false));
+        const { data: comProduto, error: erroView } = await supabase
+          .from('vw_categorias_vitrine')
+          .select('id,name,parent_category_id,is_active,sort_order,produtos_na_loja')
+          .is('parent_category_id', null)
+          .eq('is_active', true)
+          .gt('produtos_na_loja', 0)
+          .order('name');
+        if (erroView) throw erroView;
+        setCategories(comProduto || []);
       } catch (error) {
-        console.debug('Erro ao carregar categorias:', error);
+        // 🛟 Se a view não existir (ambiente antigo) ou falhar, volta ao caminho
+        // anterior: melhor mostrar categoria a mais do que ficar sem fileira.
+        console.debug('Erro ao carregar categorias pela view, usando fallback:', error?.message);
+        try {
+          const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
+          setCategories((allCategories || []).filter(c => c.is_active !== false));
+        } catch (e2) {
+          console.debug('Erro ao carregar categorias:', e2);
+        }
       }
 
       try {
