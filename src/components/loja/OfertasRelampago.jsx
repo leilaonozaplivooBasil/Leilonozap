@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Zap, ChevronRight, Package } from 'lucide-react';
 import foguinho from '@/assets/foguinho.webp';
+import { descontoExibivel, ofertasDoCarrossel } from '@/lib/ofertaRelampago';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// desconto real a partir do valor de mercado
-function desconto(p) {
-  const de = Number(p.market_value || 0);
-  const por = Number(p.price_catalog || 0);
-  if (de > por && por > 0) return Math.round((1 - por / de) * 100);
-  return 0;
-}
+// 🔴 02/09/2026 — "os produtos das Ofertas Relâmpago estão completamente fora de
+// nexo". A home mostrava Smart Tag de R$ 21,90 "de R$ 15.283,26" (-100%).
+// O dado estava 97% certo: eram 8 linhas ruins em 270. O que quebrava a home era
+// a ORDENAÇÃO — "maior desconto primeiro" é, na prática, "maior erro primeiro",
+// e as 8 podres ganhavam a disputa toda vez. A regra agora vive em
+// src/lib/ofertaRelampago.js, testada, com teto de 90% (o banner do site promete
+// "até 85%") e sem nunca arredondar para 100%.
+const desconto = descontoExibivel;
 
 function Box({ v }) {
   return <span className="bg-gray-900 text-white text-[10px] sm:text-[13px] font-black rounded px-1 sm:px-1.5 py-0.5 tabular-nums">{String(v).padStart(2, '0')}</span>;
@@ -69,13 +71,9 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
     return () => clearInterval(t);
   }, []);
 
-  // melhores ofertas: maior desconto primeiro, com imagem e estoque
-  const ofertas = products
-    .filter((p) => p.image_urls?.length && p.quantity > 0)
-    .map((p) => ({ p, d: desconto(p) }))
-    .sort((a, b) => b.d - a.d)
-    .slice(0, 12)
-    .map((x) => x.p);
+  // Foto, estoque e desconto em que se pode confiar. Produto com desconto
+  // implausível continua à venda na loja — só não é anunciado como relâmpago.
+  const ofertas = ofertasDoCarrossel(products, 12);
 
   if (ofertas.length < 4) return null;
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
