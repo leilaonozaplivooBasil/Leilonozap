@@ -18,6 +18,7 @@ import { exigirAceiteTermo } from '@/lib/termoGate';
 import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
+import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
 
 const Product = plataforma.entities.Product;
 
@@ -371,9 +372,13 @@ export default function CatalogProductDetails() {
   // ---- valores derivados (dados reais) ----
   const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const price = Number(product.price_catalog) || 0;
-  const market = Number(product.market_value) || 0;
-  const hasDiscount = market > price && price > 0;
-  const discountPct = hasDiscount ? Math.round((1 - price / market) * 100) : 0;
+  // 🔴 02/09/2026 — mesma régua da vitrine, num lugar só: o riscado e o selo de
+  // % só aparecem quando o preço de referência se sustenta. Aqui era
+  // `Math.round`, que é exatamente como nascia o "-100% de desconto" (que quer
+  // dizer DE GRAÇA). Ver src/lib/ofertaRelampago.js.
+  const market = precoDeReferencia(product);
+  const discountPct = descontoExibivel(product);
+  const hasDiscount = discountPct > 0;
   // 💳 parcelamento REAL do Mercado Pago (cliente absorve juros + taxa) — nunca preço ÷ 12
   const parc = textoParcelamento(price);
   const stock = Number(product.quantity) || 0;

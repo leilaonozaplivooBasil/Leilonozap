@@ -1,18 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Zap, ChevronRight, Package } from 'lucide-react';
+import { Zap, ChevronRight, ChevronLeft, Package } from 'lucide-react';
 import foguinho from '@/assets/foguinho.webp';
+import { descontoExibivel, precoDeReferencia, ofertasDoCarrossel } from '@/lib/ofertaRelampago';
+import { avancoAutomatico, posicaoAntesDaSeta } from '@/lib/carrosselInfinito';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// desconto real a partir do valor de mercado
-function desconto(p) {
-  const de = Number(p.market_value || 0);
-  const por = Number(p.price_catalog || 0);
-  if (de > por && por > 0) return Math.round((1 - por / de) * 100);
-  return 0;
-}
+// 🔴 02/09/2026 — "os produtos das Ofertas Relâmpago estão completamente fora de
+// nexo", e depois "ainda há valores 'REAIS' errados". Duas coisas quebravam a
+// home: (1) a ORDENAÇÃO por maior desconto, que é ordenar por maior ERRO DE
+// DADO — por isso 8 linhas ruins em 270 pareciam a loja inteira quebrada; e (2)
+// o campo `market_value`, que era média de busca automática, não preço que
+// alguém cobrou (44 dos 262 tinham três casas decimais: "de R$ 68,645").
+// A régua toda vive em src/lib/ofertaRelampago.js, testada. Aqui não se calcula
+// desconto nem se ordena por ele.
+const desconto = descontoExibivel;
 
 function Box({ v }) {
   return <span className="bg-gray-900 text-white text-[10px] sm:text-[13px] font-black rounded px-1 sm:px-1.5 py-0.5 tabular-nums">{String(v).padStart(2, '0')}</span>;
@@ -21,6 +25,7 @@ function Box({ v }) {
 function FlashCard({ p, onOpenDetails }) {
   const navigate = useNavigate();
   const d = desconto(p);
+  const ref = precoDeReferencia(p);
   const img = (p.image_urls && p.image_urls[0]) || null;
   const vendidos = Number(p.quantity_sold || 0);
   return (
@@ -29,7 +34,10 @@ function FlashCard({ p, onOpenDetails }) {
       className="w-[24vw] max-w-[98px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
     >
       <div className="relative aspect-square bg-white">
-        {img ? <img src={img} alt={p.description} loading="lazy" className="w-full h-full object-contain" />
+        {/* draggable={false}: sem isto, arrastar a faixa pegando na FOTO começa o
+            "arrastar imagem" nativo do navegador, que manda pointercancel e a
+            faixa para de acompanhar o mouse no meio do gesto */}
+        {img ? <img src={img} alt={p.description} loading="lazy" draggable={false} className="w-full h-full object-contain" />
           : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📦</div>}
         {d > 0 && (
           <span className="absolute top-0 right-0 text-[11px] font-black text-white px-1.5 py-0.5 rounded-bl-lg flex items-center gap-0.5"
@@ -40,7 +48,9 @@ function FlashCard({ p, onOpenDetails }) {
       </div>
       <div className="p-1.5 sm:p-2">
         <p className="text-green-400 font-black text-[13px] sm:text-base leading-none">{money(p.price_catalog)}</p>
-        {desconto(p) > 0 && <p className="text-gray-500 text-[9px] sm:text-[11px] line-through">{money(p.market_value)}</p>}
+        {/* o riscado e o selo de % andam juntos: preço de referência sem desconto
+            que o sustente é preço inventado (CDC art. 37, publicidade enganosa) */}
+        {ref > 0 && <p className="text-gray-500 text-[9px] sm:text-[11px] line-through">{money(ref)}</p>}
         <div className="mt-1 sm:mt-1.5 relative h-3 sm:h-4 rounded-full bg-green-900/40 overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-green-100 z-10">
             {vendidos > 0 ? `${vendidos} vendidos` : 'POPULAR'}
@@ -52,11 +62,34 @@ function FlashCard({ p, onOpenDetails }) {
   );
 }
 
+// 🎠 02/09/2026 — "é necessária a função de arrastar para o lado ou setas para
+// conseguir ver as demais ofertas".
+//
+// Antes o rolo era `@keyframes` + `translateX(-50%)` dentro de `overflow-hidden`:
+// bonito, mas o cliente NÃO conseguia mexer. Transform não é rolagem — não há o
+// que arrastar, e seta nenhuma tem onde agir.
+//
+// Agora é rolagem de verdade (`overflow-x-auto`), e cada gesto ganha de graça o
+// que o navegador já faz melhor: no celular, deslizar com o dedo (com a inércia
+// nativa); no computador, roda do mouse e trackpad. Por cima disso vão só as
+// duas coisas que o navegador não dá: ARRASTAR COM O MOUSE e as SETAS.
+//
+// O rolo sozinho continua, mas agora feito por `scrollLeft` — e QUALQUER toque,
+// arrasto, roda ou seta o pausa na hora. Ele volta a andar ~2,5s depois que a
+// pessoa para de mexer, para não brigar com quem está olhando um produto.
+const VELOCIDADE_PX_S = 34;   // ritmo do rolo sozinho (o marquee antigo dava ~43)
+const RETOMAR_APOS_MS = 2500; // silêncio necessário para o rolo voltar a andar
+
 // Faixa "Ofertas Relâmpago" estilo Shopee, identidade Leila (verde+dourado).
 // onOpenDetails: abre o produto expandido na própria página (modal) em vez de navegar.
 export default function OfertasRelampago({ products = [], onOpenDetails, totalProdutosTexto = null }) {
   const navigate = useNavigate();
   const [left, setLeft] = React.useState(0);
+  const trilho = React.useRef(null);
+  const arrasto = React.useRef(null);   // arrasto com o mouse em andamento
+  const arrastou = React.useRef(false); // arrastou? então o clique não abre o produto
+  const pausadoAte = React.useRef(0);
+  const sobre = React.useRef(false);
 
   React.useEffect(() => {
     const tick = () => {
@@ -69,13 +102,117 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
     return () => clearInterval(t);
   }, []);
 
-  // melhores ofertas: maior desconto primeiro, com imagem e estoque
-  const ofertas = products
-    .filter((p) => p.image_urls?.length && p.quantity > 0)
-    .map((p) => ({ p, d: desconto(p) }))
-    .sort((a, b) => b.d - a.d)
-    .slice(0, 12)
-    .map((x) => x.p);
+  // Foto e estoque. Quem tem oferta que se sustenta vem primeiro; o resto
+  // completa, na ordem em que o Catalog carregou (mais recente primeiro).
+  // Produto sem preço de referência confiável continua à venda — só aparece
+  // sem o riscado e sem o selo de %.
+  const ofertas = ofertasDoCarrossel(products, 12);
+
+  const adiar = React.useCallback(() => {
+    pausadoAte.current = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + RETOMAR_APOS_MS;
+  }, []);
+
+  React.useEffect(() => {
+    const el = trilho.current;
+    if (!el) return undefined;
+    const semAnimacao = typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (semAnimacao) return undefined;
+
+    let raf;
+    let anterior = performance.now();
+    let resto = 0; // acumula a fração: navegador que arredonda scrollLeft travaria em 0,5px/quadro
+    const passo = (agora) => {
+      const dt = Math.min(agora - anterior, 100); // aba em segundo plano não pode dar salto
+      anterior = agora;
+      const livre = !sobre.current && !arrasto.current && agora >= pausadoAte.current;
+      if (livre) {
+        // a conta da volta invisível vive em src/lib/carrosselInfinito.js, testada
+        const proximo = avancoAutomatico({
+          scrollLeft: el.scrollLeft, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth,
+          resto, dt, velocidade: VELOCIDADE_PX_S,
+        });
+        resto = proximo.resto;
+        if (proximo.scrollLeft !== el.scrollLeft) el.scrollLeft = proximo.scrollLeft;
+      }
+      raf = requestAnimationFrame(passo);
+    };
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [ofertas.length]);
+
+  // ---- arrastar com o mouse ----
+  // Só no mouse: no toque quem rola é o próprio navegador, com a inércia dele.
+  // Mexer nisso no celular é trocar algo que funciona por algo que trava.
+  //
+  // 🔴 02/09/2026 — "no preview não consigo clicar nos produtos em oferta".
+  // A primeira versão chamava `setPointerCapture` no pointerdown, para não perder
+  // o arrasto se o mouse saísse da faixa. Só que COM CAPTURA ATIVA O NAVEGADOR
+  // ENTREGA O `click` A QUEM CAPTUROU, e não ao card: nenhum produto abria.
+  // Conferido em Chromium — com captura o card recebe 0 cliques, sem captura
+  // recebe 1. Por isso o arrasto agora ouve a JANELA em vez de capturar: pega o
+  // mouse mesmo fora da faixa e não rouba o clique de ninguém.
+  const aoMoverJanela = React.useCallback((e) => {
+    const a = arrasto.current;
+    const el = trilho.current;
+    if (!a || !el) return;
+    const dx = e.clientX - a.x;
+    // até 4px ainda é clique: não rola nada, e o card continua clicável
+    if (!arrastou.current && Math.abs(dx) <= 4) return;
+    arrastou.current = true;
+    el.scrollLeft = a.inicio - dx;
+    adiar();
+  }, [adiar]);
+
+  const aoSoltarJanela = React.useCallback(() => {
+    arrasto.current = null;
+    window.removeEventListener('pointermove', aoMoverJanela);
+    window.removeEventListener('pointerup', aoSoltarJanela);
+    window.removeEventListener('pointercancel', aoSoltarJanela);
+    adiar();
+  }, [adiar, aoMoverJanela]);
+
+  // Solta o que ficou pendurado se a faixa sair da tela no meio de um arrasto.
+  React.useEffect(() => () => {
+    window.removeEventListener('pointermove', aoMoverJanela);
+    window.removeEventListener('pointerup', aoSoltarJanela);
+    window.removeEventListener('pointercancel', aoSoltarJanela);
+  }, [aoMoverJanela, aoSoltarJanela]);
+
+  const aoApertar = (e) => {
+    arrastou.current = false;           // todo clique começa por aqui: zera antes
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const el = trilho.current;
+    if (!el) return;
+    arrasto.current = { x: e.clientX, inicio: el.scrollLeft };
+    window.addEventListener('pointermove', aoMoverJanela);
+    window.addEventListener('pointerup', aoSoltarJanela);
+    window.addEventListener('pointercancel', aoSoltarJanela);
+    adiar();
+  };
+
+  // Arrastar por cima de um card não pode abrir o produto. Fase de captura, para
+  // chegar antes do onClick do próprio card.
+  const aoClicarCapturando = (e) => {
+    if (!arrastou.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // ---- setas ----
+  // Chegou na ponta? Volta um período INTEIRO antes de rolar. Como o conteúdo se
+  // repete, o salto não aparece — e a seta nunca fica "morta" no fim da faixa.
+  const rolar = (dir) => {
+    const el = trilho.current;
+    if (!el) return;
+    adiar();
+    // na ponta, pula um período inteiro antes de rolar — senão a seta morre ali
+    const antes = posicaoAntesDaSeta({
+      scrollLeft: el.scrollLeft, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, dir,
+    });
+    if (antes !== el.scrollLeft) el.scrollLeft = antes;
+    el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.8), behavior: 'smooth' });
+  };
 
   if (ofertas.length < 4) return null;
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
@@ -104,18 +241,46 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      {/* faixa deslizante — marquee 100% CSS (transform na GPU, sem reflow). Cards duplicados
-          (cada um com pr-3) fazem translateX(-50%) fechar o loop sem emenda. Pausa no hover. */}
       <style>{`
-        @keyframes ofrMarquee { to { transform: translateX(-50%); } }
-        .ofr-marquee { animation: ofrMarquee 45s linear infinite; will-change: transform; }
-        .ofr-marquee:hover { animation-play-state: paused; }
-        @media (prefers-reduced-motion: reduce) { .ofr-marquee { animation: none; } }
+        /* a barra de rolagem some, o gesto continua: é rolagem de verdade por baixo */
+        .ofr-trilho { scrollbar-width: none; -ms-overflow-style: none; }
+        .ofr-trilho::-webkit-scrollbar { display: none; }
       `}</style>
-      <div className="relative overflow-hidden">
-        <div className="ofr-marquee flex w-max px-2">
-          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} onOpenDetails={onOpenDetails} /></div>)}
+      <div className="relative group">
+        <div
+          ref={trilho}
+          className="ofr-trilho flex w-full overflow-x-auto overscroll-x-contain cursor-grab active:cursor-grabbing select-none"
+          onPointerDown={aoApertar}
+          onDragStart={(e) => e.preventDefault()}
+          onClickCapture={aoClicarCapturando}
+          onMouseEnter={() => { sobre.current = true; }}
+          onMouseLeave={() => { sobre.current = false; }}
+          onTouchStart={adiar}
+          onWheel={adiar}
+        >
+          {/* a lista vai DUAS vezes: é o que deixa o rolo dar a volta sem emenda */}
+          {[...ofertas, ...ofertas].map((p, i) => (
+            <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} onOpenDetails={onOpenDetails} /></div>
+          ))}
         </div>
+        {/* setas — sempre à mostra no computador. Escondê-las até o hover foi a
+            primeira ideia e estava errada: seta que só aparece quando o mouse
+            passa por cima é seta que metade das pessoas nunca acha, e o pedido
+            era justamente "setas para conseguir ver as demais ofertas".
+            No celular não existem: lá o gesto certo é deslizar, e seta sobre o
+            card taparia produto numa tela estreita. */}
+        <button
+          type="button" aria-label="Ver ofertas anteriores" onClick={() => rolar(-1)}
+          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-gray-800 focus-visible:ring-2 focus-visible:ring-green-400"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button
+          type="button" aria-label="Ver mais ofertas" onClick={() => rolar(1)}
+          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-gray-800 focus-visible:ring-2 focus-visible:ring-green-400"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
         {/* fades nas bordas */}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-gray-900/70 to-transparent" aria-hidden />
         <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-gray-900/50 to-transparent" aria-hidden />
