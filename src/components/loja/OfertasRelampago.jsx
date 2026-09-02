@@ -34,7 +34,10 @@ function FlashCard({ p, onOpenDetails }) {
       className="w-[24vw] max-w-[98px] sm:w-[150px] sm:max-w-none shrink-0 bg-gray-800/60 border border-gray-700 rounded-xl overflow-hidden text-left hover:border-green-500/50 transition-colors"
     >
       <div className="relative aspect-square bg-white">
-        {img ? <img src={img} alt={p.description} loading="lazy" className="w-full h-full object-contain" />
+        {/* draggable={false}: sem isto, arrastar a faixa pegando na FOTO começa o
+            "arrastar imagem" nativo do navegador, que manda pointercancel e a
+            faixa para de acompanhar o mouse no meio do gesto */}
+        {img ? <img src={img} alt={p.description} loading="lazy" draggable={false} className="w-full h-full object-contain" />
           : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📦</div>}
         {d > 0 && (
           <span className="absolute top-0 right-0 text-[11px] font-black text-white px-1.5 py-0.5 rounded-bl-lg flex items-center gap-0.5"
@@ -141,30 +144,53 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
   // ---- arrastar com o mouse ----
   // Só no mouse: no toque quem rola é o próprio navegador, com a inércia dele.
   // Mexer nisso no celular é trocar algo que funciona por algo que trava.
+  //
+  // 🔴 02/09/2026 — "no preview não consigo clicar nos produtos em oferta".
+  // A primeira versão chamava `setPointerCapture` no pointerdown, para não perder
+  // o arrasto se o mouse saísse da faixa. Só que COM CAPTURA ATIVA O NAVEGADOR
+  // ENTREGA O `click` A QUEM CAPTUROU, e não ao card: nenhum produto abria.
+  // Conferido em Chromium — com captura o card recebe 0 cliques, sem captura
+  // recebe 1. Por isso o arrasto agora ouve a JANELA em vez de capturar: pega o
+  // mouse mesmo fora da faixa e não rouba o clique de ninguém.
+  const aoMoverJanela = React.useCallback((e) => {
+    const a = arrasto.current;
+    const el = trilho.current;
+    if (!a || !el) return;
+    const dx = e.clientX - a.x;
+    // até 4px ainda é clique: não rola nada, e o card continua clicável
+    if (!arrastou.current && Math.abs(dx) <= 4) return;
+    arrastou.current = true;
+    el.scrollLeft = a.inicio - dx;
+    adiar();
+  }, [adiar]);
+
+  const aoSoltarJanela = React.useCallback(() => {
+    arrasto.current = null;
+    window.removeEventListener('pointermove', aoMoverJanela);
+    window.removeEventListener('pointerup', aoSoltarJanela);
+    window.removeEventListener('pointercancel', aoSoltarJanela);
+    adiar();
+  }, [adiar, aoMoverJanela]);
+
+  // Solta o que ficou pendurado se a faixa sair da tela no meio de um arrasto.
+  React.useEffect(() => () => {
+    window.removeEventListener('pointermove', aoMoverJanela);
+    window.removeEventListener('pointerup', aoSoltarJanela);
+    window.removeEventListener('pointercancel', aoSoltarJanela);
+  }, [aoMoverJanela, aoSoltarJanela]);
+
   const aoApertar = (e) => {
     arrastou.current = false;           // todo clique começa por aqui: zera antes
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const el = trilho.current;
     if (!el) return;
     arrasto.current = { x: e.clientX, inicio: el.scrollLeft };
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* navegador antigo */ }
+    window.addEventListener('pointermove', aoMoverJanela);
+    window.addEventListener('pointerup', aoSoltarJanela);
+    window.addEventListener('pointercancel', aoSoltarJanela);
     adiar();
   };
-  const aoMover = (e) => {
-    const a = arrasto.current;
-    const el = trilho.current;
-    if (!a || !el) return;
-    const dx = e.clientX - a.x;
-    if (Math.abs(dx) > 4) arrastou.current = true;  // passou de 4px: foi arrasto, não clique
-    el.scrollLeft = a.inicio - dx;
-    adiar();
-  };
-  const aoSoltar = (e) => {
-    if (!arrasto.current) return;
-    arrasto.current = null;
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* idem */ }
-    adiar();
-  };
+
   // Arrastar por cima de um card não pode abrir o produto. Fase de captura, para
   // chegar antes do onClick do próprio card.
   const aoClicarCapturando = (e) => {
@@ -225,9 +251,7 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
           ref={trilho}
           className="ofr-trilho flex w-full overflow-x-auto overscroll-x-contain cursor-grab active:cursor-grabbing select-none"
           onPointerDown={aoApertar}
-          onPointerMove={aoMover}
-          onPointerUp={aoSoltar}
-          onPointerCancel={aoSoltar}
+          onDragStart={(e) => e.preventDefault()}
           onClickCapture={aoClicarCapturando}
           onMouseEnter={() => { sobre.current = true; }}
           onMouseLeave={() => { sobre.current = false; }}
@@ -239,17 +263,21 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
             <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} onOpenDetails={onOpenDetails} /></div>
           ))}
         </div>
-        {/* setas — só no computador: no celular o gesto certo é deslizar, e seta em
-            cima do card ia tapar produto numa tela estreita */}
+        {/* setas — sempre à mostra no computador. Escondê-las até o hover foi a
+            primeira ideia e estava errada: seta que só aparece quando o mouse
+            passa por cima é seta que metade das pessoas nunca acha, e o pedido
+            era justamente "setas para conseguir ver as demais ofertas".
+            No celular não existem: lá o gesto certo é deslizar, e seta sobre o
+            card taparia produto numa tela estreita. */}
         <button
           type="button" aria-label="Ver ofertas anteriores" onClick={() => rolar(-1)}
-          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-gray-800"
+          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-gray-800 focus-visible:ring-2 focus-visible:ring-green-400"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <button
           type="button" aria-label="Ver mais ofertas" onClick={() => rolar(1)}
-          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-gray-800"
+          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-gray-800 focus-visible:ring-2 focus-visible:ring-green-400"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
