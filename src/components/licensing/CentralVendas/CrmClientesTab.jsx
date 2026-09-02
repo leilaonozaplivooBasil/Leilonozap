@@ -28,6 +28,7 @@ import { membrosDoTopo } from '@/lib/timeCorporativo';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
+import { montarVendedores } from '@/lib/vendedoresDoCrm';
 import CrmStatsCards from './CrmStatsCards';
 import CrmParceirosCompra from './CrmParceirosCompra';
 import CrmMetaCentral from './CrmMetaCentral';
@@ -372,10 +373,17 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
+  // 🔴 02/09/2026 — "meu nome não está na aba de vendedor do CRM".
+  // Não era permissão: o seletor lia SÓ a tabela `sellers`, lista herdada da
+  // Base44 cuja linha mais nova é de 03/04/2026. Eram 29 nomes lá contra 60
+  // pessoas com cargo comercial no cadastro — e só 2 em comum. Agora é a união
+  // das duas fontes (ver src/lib/vendedoresDoCrm.js), sem tirar nome nenhum:
+  // `assigned_seller` guarda TEXTO, então remover um nome órfãozaria o cliente
+  // que aponta pra ele. `appUsers` já é carregado em loadAutoSources.
   const loadSellers = async () => {
     try {
       const activeSellers = await plataforma.entities.Seller.filter({ is_active: true });
-      setSellers(activeSellers);
+      setSellers(Array.isArray(activeSellers) ? activeSellers : []);
 
       const all = await plataforma.entities.Seller.list('-created_date', 500);
       setAllSellers(all);
@@ -1900,7 +1908,7 @@ _Enviado via CRM Leilão NoZap_`;
                           <Label className="text-gray-300">Vendedor responsável</Label>
                           <select value={formData.assigned_seller} onChange={(e) => setFormData({ ...formData, assigned_seller: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600">
                             <option value="">— Sem vendedor —</option>
-                            {sellers.map((sel) => (
+                            {montarVendedores(sellers, appUsers).map((sel) => (
                               <option key={sel.id} value={sel.name}>{sel.name}</option>
                             ))}
                           </select>
