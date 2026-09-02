@@ -3,17 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Zap, ChevronRight, Package } from 'lucide-react';
 import foguinho from '@/assets/foguinho.webp';
-import { descontoExibivel, ofertasDoCarrossel } from '@/lib/ofertaRelampago';
+import { descontoExibivel, precoDeReferencia, ofertasDoCarrossel } from '@/lib/ofertaRelampago';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // 🔴 02/09/2026 — "os produtos das Ofertas Relâmpago estão completamente fora de
-// nexo". A home mostrava Smart Tag de R$ 21,90 "de R$ 15.283,26" (-100%).
-// O dado estava 97% certo: eram 8 linhas ruins em 270. O que quebrava a home era
-// a ORDENAÇÃO — "maior desconto primeiro" é, na prática, "maior erro primeiro",
-// e as 8 podres ganhavam a disputa toda vez. A regra agora vive em
-// src/lib/ofertaRelampago.js, testada, com teto de 90% (o banner do site promete
-// "até 85%") e sem nunca arredondar para 100%.
+// nexo", e depois "ainda há valores 'REAIS' errados". Duas coisas quebravam a
+// home: (1) a ORDENAÇÃO por maior desconto, que é ordenar por maior ERRO DE
+// DADO — por isso 8 linhas ruins em 270 pareciam a loja inteira quebrada; e (2)
+// o campo `market_value`, que era média de busca automática, não preço que
+// alguém cobrou (44 dos 262 tinham três casas decimais: "de R$ 68,645").
+// A régua toda vive em src/lib/ofertaRelampago.js, testada. Aqui não se calcula
+// desconto nem se ordena por ele.
 const desconto = descontoExibivel;
 
 function Box({ v }) {
@@ -23,6 +24,7 @@ function Box({ v }) {
 function FlashCard({ p, onOpenDetails }) {
   const navigate = useNavigate();
   const d = desconto(p);
+  const ref = precoDeReferencia(p);
   const img = (p.image_urls && p.image_urls[0]) || null;
   const vendidos = Number(p.quantity_sold || 0);
   return (
@@ -42,7 +44,9 @@ function FlashCard({ p, onOpenDetails }) {
       </div>
       <div className="p-1.5 sm:p-2">
         <p className="text-green-400 font-black text-[13px] sm:text-base leading-none">{money(p.price_catalog)}</p>
-        {desconto(p) > 0 && <p className="text-gray-500 text-[9px] sm:text-[11px] line-through">{money(p.market_value)}</p>}
+        {/* o riscado e o selo de % andam juntos: preço de referência sem desconto
+            que o sustente é preço inventado (CDC art. 37, publicidade enganosa) */}
+        {ref > 0 && <p className="text-gray-500 text-[9px] sm:text-[11px] line-through">{money(ref)}</p>}
         <div className="mt-1 sm:mt-1.5 relative h-3 sm:h-4 rounded-full bg-green-900/40 overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-green-100 z-10">
             {vendidos > 0 ? `${vendidos} vendidos` : 'POPULAR'}
@@ -71,8 +75,10 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
     return () => clearInterval(t);
   }, []);
 
-  // Foto, estoque e desconto em que se pode confiar. Produto com desconto
-  // implausível continua à venda na loja — só não é anunciado como relâmpago.
+  // Foto e estoque. Quem tem oferta que se sustenta vem primeiro; o resto
+  // completa, na ordem em que o Catalog carregou (mais recente primeiro).
+  // Produto sem preço de referência confiável continua à venda — só aparece
+  // sem o riscado e sem o selo de %.
   const ofertas = ofertasDoCarrossel(products, 12);
 
   if (ofertas.length < 4) return null;
