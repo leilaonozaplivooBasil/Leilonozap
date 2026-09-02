@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Zap, ChevronRight, Package } from 'lucide-react';
+import { Zap, ChevronRight, ChevronLeft, Package } from 'lucide-react';
 import foguinho from '@/assets/foguinho.webp';
 import { descontoExibivel, precoDeReferencia, ofertasDoCarrossel } from '@/lib/ofertaRelampago';
+import { avancoAutomatico, posicaoAntesDaSeta } from '@/lib/carrosselInfinito';
 
 const money = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -58,11 +59,34 @@ function FlashCard({ p, onOpenDetails }) {
   );
 }
 
+// 🎠 02/09/2026 — "é necessária a função de arrastar para o lado ou setas para
+// conseguir ver as demais ofertas".
+//
+// Antes o rolo era `@keyframes` + `translateX(-50%)` dentro de `overflow-hidden`:
+// bonito, mas o cliente NÃO conseguia mexer. Transform não é rolagem — não há o
+// que arrastar, e seta nenhuma tem onde agir.
+//
+// Agora é rolagem de verdade (`overflow-x-auto`), e cada gesto ganha de graça o
+// que o navegador já faz melhor: no celular, deslizar com o dedo (com a inércia
+// nativa); no computador, roda do mouse e trackpad. Por cima disso vão só as
+// duas coisas que o navegador não dá: ARRASTAR COM O MOUSE e as SETAS.
+//
+// O rolo sozinho continua, mas agora feito por `scrollLeft` — e QUALQUER toque,
+// arrasto, roda ou seta o pausa na hora. Ele volta a andar ~2,5s depois que a
+// pessoa para de mexer, para não brigar com quem está olhando um produto.
+const VELOCIDADE_PX_S = 34;   // ritmo do rolo sozinho (o marquee antigo dava ~43)
+const RETOMAR_APOS_MS = 2500; // silêncio necessário para o rolo voltar a andar
+
 // Faixa "Ofertas Relâmpago" estilo Shopee, identidade Leila (verde+dourado).
 // onOpenDetails: abre o produto expandido na própria página (modal) em vez de navegar.
 export default function OfertasRelampago({ products = [], onOpenDetails, totalProdutosTexto = null }) {
   const navigate = useNavigate();
   const [left, setLeft] = React.useState(0);
+  const trilho = React.useRef(null);
+  const arrasto = React.useRef(null);   // arrasto com o mouse em andamento
+  const arrastou = React.useRef(false); // arrastou? então o clique não abre o produto
+  const pausadoAte = React.useRef(0);
+  const sobre = React.useRef(false);
 
   React.useEffect(() => {
     const tick = () => {
@@ -80,6 +104,89 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
   // Produto sem preço de referência confiável continua à venda — só aparece
   // sem o riscado e sem o selo de %.
   const ofertas = ofertasDoCarrossel(products, 12);
+
+  const adiar = React.useCallback(() => {
+    pausadoAte.current = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + RETOMAR_APOS_MS;
+  }, []);
+
+  React.useEffect(() => {
+    const el = trilho.current;
+    if (!el) return undefined;
+    const semAnimacao = typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (semAnimacao) return undefined;
+
+    let raf;
+    let anterior = performance.now();
+    let resto = 0; // acumula a fração: navegador que arredonda scrollLeft travaria em 0,5px/quadro
+    const passo = (agora) => {
+      const dt = Math.min(agora - anterior, 100); // aba em segundo plano não pode dar salto
+      anterior = agora;
+      const livre = !sobre.current && !arrasto.current && agora >= pausadoAte.current;
+      if (livre) {
+        // a conta da volta invisível vive em src/lib/carrosselInfinito.js, testada
+        const proximo = avancoAutomatico({
+          scrollLeft: el.scrollLeft, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth,
+          resto, dt, velocidade: VELOCIDADE_PX_S,
+        });
+        resto = proximo.resto;
+        if (proximo.scrollLeft !== el.scrollLeft) el.scrollLeft = proximo.scrollLeft;
+      }
+      raf = requestAnimationFrame(passo);
+    };
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [ofertas.length]);
+
+  // ---- arrastar com o mouse ----
+  // Só no mouse: no toque quem rola é o próprio navegador, com a inércia dele.
+  // Mexer nisso no celular é trocar algo que funciona por algo que trava.
+  const aoApertar = (e) => {
+    arrastou.current = false;           // todo clique começa por aqui: zera antes
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const el = trilho.current;
+    if (!el) return;
+    arrasto.current = { x: e.clientX, inicio: el.scrollLeft };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* navegador antigo */ }
+    adiar();
+  };
+  const aoMover = (e) => {
+    const a = arrasto.current;
+    const el = trilho.current;
+    if (!a || !el) return;
+    const dx = e.clientX - a.x;
+    if (Math.abs(dx) > 4) arrastou.current = true;  // passou de 4px: foi arrasto, não clique
+    el.scrollLeft = a.inicio - dx;
+    adiar();
+  };
+  const aoSoltar = (e) => {
+    if (!arrasto.current) return;
+    arrasto.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* idem */ }
+    adiar();
+  };
+  // Arrastar por cima de um card não pode abrir o produto. Fase de captura, para
+  // chegar antes do onClick do próprio card.
+  const aoClicarCapturando = (e) => {
+    if (!arrastou.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // ---- setas ----
+  // Chegou na ponta? Volta um período INTEIRO antes de rolar. Como o conteúdo se
+  // repete, o salto não aparece — e a seta nunca fica "morta" no fim da faixa.
+  const rolar = (dir) => {
+    const el = trilho.current;
+    if (!el) return;
+    adiar();
+    // na ponta, pula um período inteiro antes de rolar — senão a seta morre ali
+    const antes = posicaoAntesDaSeta({
+      scrollLeft: el.scrollLeft, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, dir,
+    });
+    if (antes !== el.scrollLeft) el.scrollLeft = antes;
+    el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.8), behavior: 'smooth' });
+  };
 
   if (ofertas.length < 4) return null;
   const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
@@ -108,18 +215,44 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
           Ver Tudo <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      {/* faixa deslizante — marquee 100% CSS (transform na GPU, sem reflow). Cards duplicados
-          (cada um com pr-3) fazem translateX(-50%) fechar o loop sem emenda. Pausa no hover. */}
       <style>{`
-        @keyframes ofrMarquee { to { transform: translateX(-50%); } }
-        .ofr-marquee { animation: ofrMarquee 45s linear infinite; will-change: transform; }
-        .ofr-marquee:hover { animation-play-state: paused; }
-        @media (prefers-reduced-motion: reduce) { .ofr-marquee { animation: none; } }
+        /* a barra de rolagem some, o gesto continua: é rolagem de verdade por baixo */
+        .ofr-trilho { scrollbar-width: none; -ms-overflow-style: none; }
+        .ofr-trilho::-webkit-scrollbar { display: none; }
       `}</style>
-      <div className="relative overflow-hidden">
-        <div className="ofr-marquee flex w-max px-2">
-          {[...ofertas, ...ofertas].map((p, i) => <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} onOpenDetails={onOpenDetails} /></div>)}
+      <div className="relative group">
+        <div
+          ref={trilho}
+          className="ofr-trilho flex w-full overflow-x-auto overscroll-x-contain cursor-grab active:cursor-grabbing select-none"
+          onPointerDown={aoApertar}
+          onPointerMove={aoMover}
+          onPointerUp={aoSoltar}
+          onPointerCancel={aoSoltar}
+          onClickCapture={aoClicarCapturando}
+          onMouseEnter={() => { sobre.current = true; }}
+          onMouseLeave={() => { sobre.current = false; }}
+          onTouchStart={adiar}
+          onWheel={adiar}
+        >
+          {/* a lista vai DUAS vezes: é o que deixa o rolo dar a volta sem emenda */}
+          {[...ofertas, ...ofertas].map((p, i) => (
+            <div key={`${p.id}-${i}`} className="shrink-0 pr-3"><FlashCard p={p} onOpenDetails={onOpenDetails} /></div>
+          ))}
         </div>
+        {/* setas — só no computador: no celular o gesto certo é deslizar, e seta em
+            cima do card ia tapar produto numa tela estreita */}
+        <button
+          type="button" aria-label="Ver ofertas anteriores" onClick={() => rolar(-1)}
+          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-gray-800"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button
+          type="button" aria-label="Ver mais ofertas" onClick={() => rolar(1)}
+          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-gray-900/80 border border-white/20 text-white shadow-lg backdrop-blur-sm transition-opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-gray-800"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
         {/* fades nas bordas */}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-gray-900/70 to-transparent" aria-hidden />
         <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-gray-900/50 to-transparent" aria-hidden />
