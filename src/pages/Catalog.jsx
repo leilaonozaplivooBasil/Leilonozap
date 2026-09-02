@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useNavigate, useLocation } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
 import PilulasOrigem from "@/components/catalog/PilulasOrigem";
+import RolagemHorizontal from "@/components/loja/RolagemHorizontal";
 import { produtoNoFiltro } from "@/lib/origemProduto";
 
 const Product = plataforma.entities.Product;
@@ -30,7 +31,6 @@ const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 export default function Catalog() {
   useSectionTracking('loja_virtual', 'Loja Virtual');
   const navigate = useNavigate();
-  const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const location = useLocation();
 
@@ -108,52 +108,6 @@ export default function Catalog() {
       setLoadingMore(false);
     }
   }, [loadingMore, reachedEnd, selectedCategory, products.length]);
-
-  useEffect(() => {
-    const slider = scrollerRef.current;
-    if (!slider) return;
-
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-
-    const mouseDownHandler = (e) => {
-      isDown = true;
-      slider.classList.add('grabbing');
-      startX = e.pageX - slider.offsetLeft;
-      scrollLeft = slider.scrollLeft;
-    };
-
-    const mouseLeaveHandler = () => {
-      isDown = false;
-      slider.classList.remove('grabbing');
-    };
-
-    const mouseUpHandler = () => {
-      isDown = false;
-      slider.classList.remove('grabbing');
-    };
-
-    const mouseMoveHandler = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - slider.offsetLeft;
-      const walk = (x - startX) * 2;
-      slider.scrollLeft = scrollLeft - walk;
-    };
-
-    slider.addEventListener('mousedown', mouseDownHandler);
-    slider.addEventListener('mouseleave', mouseLeaveHandler);
-    slider.addEventListener('mouseup', mouseUpHandler);
-    slider.addEventListener('mousemove', mouseMoveHandler);
-
-    return () => {
-      slider.removeEventListener('mousedown', mouseDownHandler);
-      slider.removeEventListener('mouseleave', mouseLeaveHandler);
-      slider.removeEventListener('mouseup', mouseUpHandler);
-      slider.removeEventListener('mousemove', mouseMoveHandler);
-    };
-  }, []);
 
   const filterProducts = React.useCallback(() => {
     if (!Array.isArray(products)) {
@@ -664,19 +618,23 @@ export default function Catalog() {
     <div className="bg-gray-900 text-white min-h-screen overflow-x-hidden">
       <PagePerformanceTracker pageName="Catalog" />
       <style>{`
-        .category-scroller {
-          overflow-x: scroll;
-          cursor: grab;
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        /* ↔️ 02/09/2026 — o degradê nas bordas (mask-image) foi removido: ele apagava
+           justamente o primeiro e o último item, e "Todos" aparecia meio sumido no
+           print do usuário. Com as setas do RolagemHorizontal, a indicação de que
+           a fileira continua já existe — o degradê só atrapalhava a leitura.
+           A classe .grabbing sumiu junto com o código morto que a usava. */
+        /* ⚠️ SEM scroll-behavior: smooth aqui. Com ele, TODA atribuição de scrollLeft
+           vira animação — inclusive as do arrasto, que passa a brigar com a animação
+           em vez de seguir o ponteiro (arrastar simplesmente não saía do lugar).
+           As setas pedem a rolagem suave na própria chamada (scrollBy behavior),
+           que é onde ela faz sentido. */
+        .nz-rolagem-h {
           scrollbar-width: none;
+          cursor: grab;
+          overscroll-behavior-x: contain;
         }
-        .category-scroller::-webkit-scrollbar {
-          display: none;
-        }
-        .category-scroller.grabbing {
-            cursor: grabbing;
-        }
+        .nz-rolagem-h::-webkit-scrollbar { display: none; }
+        .nz-rolagem-h:active { cursor: grabbing; }
         @keyframes fire {
           0% { transform: scale(1) rotate(0deg); opacity: 1; }
           25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
@@ -703,17 +661,9 @@ export default function Catalog() {
           banners={banners}
         />
 
-        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
-            os produtos DESTA loja em vez de levar o cliente para o leilão. */}
-        <PilulasOrigem
-          produtos={products}
-          filtro={origemFiltro}
-          onFiltroChange={setOrigemFiltro}
-        />
-
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago
-          products={products}
+          products={products.filter((p) => produtoNoFiltro(p, origemFiltro))}
           onOpenDetails={openDetails}
           totalProdutosTexto={textoTotalProdutos(totalProdutos)}
         />
@@ -721,6 +671,19 @@ export default function Catalog() {
         {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
             "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
         <CartaoLojaVirtual parceiro={licenseeData} />
+
+        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
+            os produtos DESTA loja em vez de levar o cliente para o leilão.
+            ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago: aquele bloco tem
+            `relative z-10 -mt-16`, sobe de propósito para sobrepor o banner (efeito de
+            camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
+            preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
+            elas de fato filtram. */}
+        <PilulasOrigem
+          produtos={products}
+          filtro={origemFiltro}
+          onFiltroChange={setOrigemFiltro}
+        />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
@@ -857,7 +820,7 @@ export default function Catalog() {
               direita SÓ no mobile (no desktop o Filtros segue na faixa standalone acima) */}
           {categories.length > 0 && (
             <div className="mb-6 flex items-center border-b border-gray-800">
-              <div className="flex-1 flex items-center gap-4 sm:gap-6 overflow-x-auto category-scroller">
+              <RolagemHorizontal className="flex items-center gap-4 sm:gap-6 px-1" rotulo="Rolar categorias">
                 {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
                   const active = selectedCategory === c.id;
                   return (
@@ -871,7 +834,7 @@ export default function Catalog() {
                     </button>
                   );
                 })}
-              </div>
+              </RolagemHorizontal>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 aria-label="Filtros"
@@ -922,13 +885,30 @@ export default function Catalog() {
             </div> :
           filteredProducts.length === 0 && !loadError ?
           <div className="text-center py-12 text-gray-400">
-              <div className="text-6xl mb-4">📦</div>
+              {/* 🏭 02/09/2026 — vazio por FILTRO DE ORIGEM tem causa própria: ninguém
+                  classificou aqueles produtos ainda. Dizer "nenhum produto encontrado /
+                  ajuste a busca" nesse caso manda o cliente procurar defeito na busca
+                  dele, quando o buraco é do nosso lado. */}
+              <div className="text-6xl mb-4">{origemFiltro !== "todos" ? "🏷️" : "📦"}</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
-                Nenhum produto encontrado
+                {origemFiltro !== "todos"
+                  ? "Ainda não temos produtos nesta seção"
+                  : "Nenhum produto encontrado"}
               </h3>
               <p className="text-gray-500 mb-6">
-                Tente ajustar a busca ou volte mais tarde para novos produtos!
+                {origemFiltro !== "todos"
+                  ? "Estamos organizando o acervo por origem. Veja todos os produtos enquanto isso."
+                  : "Tente ajustar a busca ou volte mais tarde para novos produtos!"}
               </p>
+              {origemFiltro !== "todos" && (
+                <button
+                  type="button"
+                  onClick={() => setOrigemFiltro("todos")}
+                  className="rounded-full border border-emerald-400/60 bg-emerald-500/15 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500/25"
+                >
+                  Ver todos os produtos
+                </button>
+              )}
             </div> :
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">

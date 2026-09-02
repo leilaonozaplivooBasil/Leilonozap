@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
-  Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert
+  Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert, Sparkles
 } from 'lucide-react';
 
 import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
@@ -136,6 +136,53 @@ export default function ProductManagement() {
   };
 
   const clearSelection = () => setSelectedIds(new Set());
+
+  // 🏭 02/09/2026 — MARCAR ORIGEM EM LOTE.
+  // Sem isto, classificar os ~299 produtos da vitrine significaria abrir 299 modais.
+  // A coluna `product_source` nasceu vazia de propósito (os lotes misturam fábrica e
+  // devolução, então não dá para deduzir sem mentir) — mas entregar o campo sem uma
+  // forma prática de preenchê-lo é entregar trabalho, não solução.
+  const [marcandoOrigem, setMarcandoOrigem] = useState(false);
+
+  const handleMarcarOrigem = async (origemBruta) => {
+    // String vazia numa coluna que todo mundo testa por ausência é armadilha:
+    // `!p.product_source` continua verdadeiro, mas o filtro por igualdade não acha.
+    const origem = origemBruta || null;
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) { alert('Selecione produtos para marcar a origem'); return; }
+    const nome = ORIGENS.find((o) => o.valor === origem)?.rotulo || 'sem origem';
+    const gravado = origem;
+    if (!confirm(`Marcar ${ids.length} produto(s) como "${nome}"?\n\nIsso define em quais filtros eles aparecem na Loja Virtual.`)) return;
+
+    setMarcandoOrigem(true);
+    let ok = 0;
+    const falhas = [];
+    try {
+      // Um a um pela rota segura (mesma que a edição individual usa, com a mesma
+      // checagem de permissão). Em lotes de 8 para não estourar o limite da função.
+      const LOTE = 8;
+      for (let i = 0; i < ids.length; i += LOTE) {
+        const parte = ids.slice(i, i + LOTE);
+        const respostas = await Promise.all(parte.map((id) =>
+          plataforma.functions
+            .invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: id, fields: { product_source: gravado } })
+            .then((r) => (r?.success ? { id, ok: true } : { id, ok: false, erro: r?.error || 'falha' }))
+            .catch((e) => ({ id, ok: false, erro: e?.message || String(e) }))
+        ));
+        for (const r of respostas) { if (r.ok) ok += 1; else falhas.push(r); }
+      }
+
+      // Reflete na tela sem recarregar tudo — só o que realmente gravou.
+      const gravados = new Set(ids.filter((id) => !falhas.some((f) => f.id === id)));
+      setProducts((prev) => prev.map((p) => (gravados.has(p.id) ? { ...p, product_source: gravado } : p)));
+      clearSelection();
+
+      if (falhas.length) alert(`${ok} marcado(s) como "${nome}".\n${falhas.length} falhou(aram): ${falhas[0].erro}`);
+      else alert(`${ok} produto(s) marcado(s) como "${nome}".`);
+    } finally {
+      setMarcandoOrigem(false);
+    }
+  };
 
   // Precificar em lote — divide em lotes de 5 para evitar timeout 504
   const handleBatchPrice = async (idsOverride) => {
@@ -1112,6 +1159,38 @@ export default function ProductManagement() {
                 <BookOpen className="w-3.5 h-3.5 mr-1.5" />
                 Loja Virtual
               </Button>
+
+              {/* 🏭 Origem em lote — é o que faz as pílulas da Loja Virtual aparecerem. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={marcandoOrigem}
+                    className="bg-sky-700 hover:bg-sky-600 text-white border-0 h-7 text-xs px-3"
+                  >
+                    {marcandoOrigem
+                      ? <><span className="w-3.5 h-3.5 mr-1.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Marcando...</>
+                      : <><Sparkles className="w-3.5 h-3.5 mr-1.5" />Marcar origem</>}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl">
+                  {ORIGENS.map((o) => (
+                    <DropdownMenuItem
+                      key={o.valor}
+                      onClick={() => handleMarcarOrigem(o.valor)}
+                      className="cursor-pointer focus:bg-gray-800"
+                    >
+                      {o.rotulo} ({selectedIds.size})
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuItem
+                    onClick={() => handleMarcarOrigem('')}
+                    className="cursor-pointer focus:bg-gray-800 text-gray-400"
+                  >
+                    Limpar origem ({selectedIds.size})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
