@@ -287,6 +287,11 @@ export default async function handler(req, res) {
         if (String(criador || '') !== String(eu)) {
           return res.status(403).json({ success: false, error: 'Este cadastro é de outra pessoa da rede. Você só edita os que você criou.' });
         }
+        // O dono não se transfere numa edição: é ele que decide quem pode
+        // editar depois. Sem isto, bastava mandar created_by_id no corpo para
+        // empurrar o próprio cliente para a carteira de outra pessoa — ou tirar
+        // a si mesmo do próprio cadastro e nunca mais conseguir abri-lo.
+        if (body?.payload && !Array.isArray(body.payload)) delete body.payload.created_by_id;
       }
       // Carimba o dono na criação, ignorando o que vier do navegador: é este
       // campo que decide quem pode editar depois.

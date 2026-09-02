@@ -227,6 +227,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     () => (isSuperAdmin ? appUsers : appUsers.filter((u) => networkIds.has(u.id))),
     [appUsers, networkIds, isSuperAdmin]
   );
+  // Seletor "Vendedor responsável" — união de `sellers` com quem tem cargo
+  // comercial no cadastro (ver src/lib/vendedoresDoCrm.js). Memoizado porque
+  // `appUsers` traz até 5.000 linhas: calcular isto dentro do JSX refazia a
+  // varredura inteira a cada tecla digitada no formulário de novo cliente.
+  const vendedoresDoSeletor = React.useMemo(
+    () => montarVendedores(sellers, appUsers),
+    [sellers, appUsers]
+  );
   // 🔴 DIR-10 — o "dono" de uma venda não vive só em licensee_id: dependendo do
   // canal (loja própria de licenciado, carrinho do site, PDV), fica gravado em
   // seller_id/anchor_id/owner_id (mesma constatação já feita em LicenseeOrders.jsx).
@@ -1908,7 +1916,7 @@ _Enviado via CRM Leilão NoZap_`;
                           <Label className="text-gray-300">Vendedor responsável</Label>
                           <select value={formData.assigned_seller} onChange={(e) => setFormData({ ...formData, assigned_seller: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600">
                             <option value="">— Sem vendedor —</option>
-                            {montarVendedores(sellers, appUsers).map((sel) => (
+                            {vendedoresDoSeletor.map((sel) => (
                               <option key={sel.id} value={sel.name}>{sel.name}</option>
                             ))}
                           </select>

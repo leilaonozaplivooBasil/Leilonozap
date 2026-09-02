@@ -159,3 +159,21 @@ test('operador continua podendo tudo que podia', () => {
   assert.match(rota, /const podeCrm = !ok &&/);
   assert.match(rota, /if \(!ok && !podeCrm\) return res\.status\(403\)/);
 });
+
+// ───────────── achados da revisão do próprio diff (02/09) ─────────────
+
+test('o seletor é memoizado — appUsers tem até 5.000 linhas', () => {
+  // Calcular a união dentro do JSX refazia a varredura inteira a cada tecla
+  // digitada no formulário de novo cliente.
+  const tela = ler('../src/components/licensing/CentralVendas/CrmClientesTab.jsx');
+  assert.match(tela, /const vendedoresDoSeletor = React\.useMemo\(\s*\(\) => montarVendedores\(sellers, appUsers\),\s*\[sellers, appUsers\]\s*\)/);
+  assert.match(tela, /\{vendedoresDoSeletor\.map\(/);
+  assert.ok(!/\{montarVendedores\(sellers, appUsers\)\.map\(/.test(tela),
+    'voltou a recalcular a lista dentro do JSX');
+});
+
+test('o dono do cliente não se transfere numa edição', () => {
+  // Sem isto bastava mandar created_by_id no corpo para empurrar o cliente para
+  // a carteira de outra pessoa — ou se tirar do próprio cadastro e perdê-lo.
+  assert.match(rota, /delete body\.payload\.created_by_id/);
+});
