@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
-import PilulasOrigem from "@/components/catalog/PilulasOrigem";
+import PilulasVitrine from "@/components/catalog/PilulasVitrine";
+import { produtoNaSecao } from "@/lib/secoesVitrine";
 import RolagemHorizontal from "@/components/loja/RolagemHorizontal";
-import { produtoNoFiltro } from "@/lib/origemProduto";
+
 
 const Product = plataforma.entities.Product;
 const User = { me: () => plataforma.auth.me() };
@@ -60,8 +61,10 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
-  // 🏭 02/09/2026 — origem do produto (as pílulas que a área de leilão já tinha).
-  const [origemFiltro, setOrigemFiltro] = useState("todos");
+  // 🏷️ 02/09/2026 — seção da vitrine (Direto de Fábrica / Arremate & Devoluções /
+  // Collection). O que cada rótulo realmente filtra, e por que, está escrito em
+  // @/components/catalog/PilulasVitrine — leia antes de mexer.
+  const [secaoFiltro, setSecaoFiltro] = useState("todas");
   const [storeRating, setStoreRating] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   // 🔍 produto aberto EXPANDIDO na própria página (modal) — sem navegar (pedido Gabriel 25/07)
@@ -119,8 +122,8 @@ export default function Catalog() {
     let filtered = products;
 
     // Filtro por categoria
-    if (origemFiltro !== "todos") {
-      filtered = filtered.filter((p) => produtoNoFiltro(p, origemFiltro));
+    if (secaoFiltro !== "todas") {
+      filtered = filtered.filter((p) => produtoNaSecao(p, secaoFiltro));
     }
 
     if (selectedCategory !== "all") {
@@ -170,7 +173,7 @@ export default function Catalog() {
     filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
 
     setFilteredProducts(filtered);
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, origemFiltro]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, secaoFiltro]);
 
   // 🎴 Monta o cartão da Loja Virtual a partir de UM AppUser (dono resolvido).
   // Extraído pra o cartão poder vir do cadastro (dono real) ou do link, sem duplicar código.
@@ -480,12 +483,40 @@ export default function Catalog() {
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
-      // Carrega categorias
+      // 🧹 02/09/2026 — CATEGORIA SEM PRODUTO NÃO É OFERECIDA.
+      // "COSTURA" e "Escritório" apareciam na fileira com ZERO produtos: o cliente
+      // clicava e a vitrine ficava vazia. Mesmo beco das pílulas que já foi tapado.
+      //
+      // A contagem vem da view vw_categorias_vitrine, ou seja, do SERVIDOR — e isso
+      // é o ponto. A loja carrega 240 produtos por vez; contar pelo que está
+      // carregado esconderia categoria cujos itens estão fora dessa janela, e o
+      // sintoma seria "sumiu uma categoria que tem produto". A view conta a base
+      // inteira.
+      //
+      // Ordem alfabética: antes não havia ORDER BY nenhum e a fileira mudava de
+      // ordem a cada carregamento (nove categorias empatadas em sort_order = 0 e
+      // duas com NULL). Alfabético é previsível e não inventa hierarquia
+      // comercial — ordenar por volume é uma decisão do dono, não minha.
       try {
-        const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
-        setCategories((allCategories || []).filter(c => c.is_active !== false));
+        const { data: comProduto, error: erroView } = await supabase
+          .from('vw_categorias_vitrine')
+          .select('id,name,parent_category_id,is_active,sort_order,produtos_na_loja')
+          .is('parent_category_id', null)
+          .eq('is_active', true)
+          .gt('produtos_na_loja', 0)
+          .order('name');
+        if (erroView) throw erroView;
+        setCategories(comProduto || []);
       } catch (error) {
-        console.debug('Erro ao carregar categorias:', error);
+        // 🛟 Se a view não existir (ambiente antigo) ou falhar, volta ao caminho
+        // anterior: melhor mostrar categoria a mais do que ficar sem fileira.
+        console.debug('Erro ao carregar categorias pela view, usando fallback:', error?.message);
+        try {
+          const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
+          setCategories((allCategories || []).filter(c => c.is_active !== false));
+        } catch (e2) {
+          console.debug('Erro ao carregar categorias:', e2);
+        }
       }
 
       try {
@@ -530,7 +561,7 @@ export default function Catalog() {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, origemFiltro, filterProducts]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, secaoFiltro, filterProducts]);
 
   // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página).
   // ⚡ Na primeira montagem, "Todos" já foi buscado por loadProducts() — repetir aqui
@@ -593,9 +624,9 @@ export default function Catalog() {
       // destaque no topo — visto ao abrir a loja com os dois tipos de produto.
       // (A prateleira ainda ignora o filtro de CATEGORIA; é comportamento anterior a
       // esta mudança e ficou fora do escopo de propósito.)
-      .filter(p => produtoNoFiltro(p, origemFiltro))
+      .filter(p => produtoNaSecao(p, secaoFiltro))
       .slice(0, 4);
-  }, [products, origemFiltro]);
+  }, [products, secaoFiltro]);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -663,7 +694,7 @@ export default function Catalog() {
 
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago
-          products={products.filter((p) => produtoNoFiltro(p, origemFiltro))}
+          products={products.filter((p) => produtoNaSecao(p, secaoFiltro))}
           onOpenDetails={openDetails}
           totalProdutosTexto={textoTotalProdutos(totalProdutos)}
         />
@@ -679,10 +710,10 @@ export default function Catalog() {
             camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
             preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
             elas de fato filtram. */}
-        <PilulasOrigem
+        <PilulasVitrine
           produtos={products}
-          filtro={origemFiltro}
-          onFiltroChange={setOrigemFiltro}
+          filtro={secaoFiltro}
+          onFiltroChange={setSecaoFiltro}
         />
 
         {/* CONTEÚDO PRINCIPAL */}
@@ -889,21 +920,21 @@ export default function Catalog() {
                   classificou aqueles produtos ainda. Dizer "nenhum produto encontrado /
                   ajuste a busca" nesse caso manda o cliente procurar defeito na busca
                   dele, quando o buraco é do nosso lado. */}
-              <div className="text-6xl mb-4">{origemFiltro !== "todos" ? "🏷️" : "📦"}</div>
+              <div className="text-6xl mb-4">{secaoFiltro !== "todas" ? "🏷️" : "📦"}</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
-                {origemFiltro !== "todos"
+                {secaoFiltro !== "todas"
                   ? "Ainda não temos produtos nesta seção"
                   : "Nenhum produto encontrado"}
               </h3>
               <p className="text-gray-500 mb-6">
-                {origemFiltro !== "todos"
+                {secaoFiltro !== "todas"
                   ? "Estamos organizando o acervo por origem. Veja todos os produtos enquanto isso."
                   : "Tente ajustar a busca ou volte mais tarde para novos produtos!"}
               </p>
-              {origemFiltro !== "todos" && (
+              {secaoFiltro !== "todas" && (
                 <button
                   type="button"
-                  onClick={() => setOrigemFiltro("todos")}
+                  onClick={() => setSecaoFiltro("todas")}
                   className="rounded-full border border-emerald-400/60 bg-emerald-500/15 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500/25"
                 >
                   Ver todos os produtos
