@@ -13,6 +13,7 @@ import 'react-quill/dist/quill.snow.css';
 import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
 import { CONDICOES, normalizarCondicao } from '@/lib/condicaoProduto';
 import { ORIGENS } from '@/lib/origemProduto';
+import { separarFotos } from '@/lib/imagemExterna';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
@@ -304,6 +305,37 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     }
   };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 02/09/2026 — O LAVAJATO NA TORNEIRA
+  // ══════════════════════════════════════════════════════════════════════════
+  // A loja mostrava foto de LAVAJATO na "Torneira Gourmet" — e o mesmo lavajato
+  // no "TDS medidor pureza água" logo ao lado. Dois produtos, a mesma imagem
+  // errada: sinal de que quem servia a foto era um terceiro que trocou o
+  // conteúdo. As duas fotos estavam em `i.zst.com.br`, um comparador de preços.
+  //
+  // As buscas automáticas daqui gravavam o endereço de fora direto no produto.
+  // Agora toda foto que vem de fora é COPIADA para o nosso servidor antes de
+  // entrar no formulário. Foto que não vier a gente NÃO guarda pelo endereço:
+  // guardar o link de fora "porque a cópia falhou" é justamente o bug.
+  const trazerParaNosso = async (urls, descricao) => {
+    const { nossas, externas } = separarFotos(urls);
+    if (!externas.length) return { fotos: nossas, falharam: 0 };
+    try {
+      let eu = null;
+      try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem cache */ }
+      const r = await plataforma.functions.invoke('copiarImagensParaNosso', {
+        actorId: eu?.id || '', urls: externas, descricao,
+      });
+      const d = r?.data || r;
+      const copiadas = (d?.fotos || []).filter((f) => f.ok).map((f) => f.url);
+      return { fotos: [...nossas, ...copiadas], falharam: (d?.fotos || []).length - copiadas.length };
+    } catch {
+      // Rota fora do ar: melhor o produto ficar sem foto de fora do que com uma
+      // foto que pode virar outra coisa amanhã.
+      return { fotos: nossas, falharam: externas.length };
+    }
+  };
+
   const autoFetchImages = async (product) => {
     setIsAutoImporting(true);
     setAutoImportStatus('🔍 Buscando imagens automaticamente...');
@@ -313,8 +345,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     // — não re-busca por nome (que traz fotos erradas via Bing)
     const existingImages = Array.isArray(product.image_urls) ? product.image_urls : [];
     if (existingImages.length > 0) {
-      setFormData(prev => ({ ...prev, image_urls: existingImages }));
-      setAutoImportStatus(`✅ ${existingImages.length} imagens já importadas do Google Shopping!`);
+      const { fotos, falharam } = await trazerParaNosso(existingImages, product.description);
+      setFormData(prev => ({ ...prev, image_urls: fotos }));
+      setAutoImportStatus(falharam
+        ? `✅ ${fotos.length} imagens salvas no nosso servidor · ⚠️ ${falharam} não vieram — suba manualmente`
+        : `✅ ${fotos.length} imagens salvas no nosso servidor!`);
       setTimeout(() => setAutoImportStatus(''), 3000);
       setIsAutoImporting(false);
       return;
@@ -330,8 +365,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
         const mlResponse = await plataforma.functions.invoke('extractMLImages', { productUrl: sourceUrl });
         const mlImgs = mlResponse?.images || mlResponse?.data?.images || [];
         if (mlImgs.length > 0) {
-          setFormData(prev => ({ ...prev, image_urls: mlImgs.slice(0, 5) }));
-          setAutoImportStatus(`✅ ${mlImgs.length} imagens importadas do ML!`);
+          setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
+          const { fotos, falharam } = await trazerParaNosso(mlImgs.slice(0, 5), product.description);
+          setFormData(prev => ({ ...prev, image_urls: fotos }));
+          setAutoImportStatus(falharam
+            ? `✅ ${fotos.length} imagens do ML no nosso servidor · ⚠️ ${falharam} não vieram`
+            : `✅ ${fotos.length} imagens importadas do ML!`);
           setTimeout(() => setAutoImportStatus(''), 3000);
           return;
         }
@@ -345,8 +384,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
       // adapter retorna JSON cru → { images: [...] }
       const imgs = (gsResponse?.images || gsResponse?.data?.images || []).filter(Boolean).slice(0, 6);
       if (imgs.length > 0) {
-        setFormData(prev => ({ ...prev, image_urls: imgs }));
-        setAutoImportStatus(`✅ ${imgs.length} fotos encontradas!`);
+        setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
+        const { fotos, falharam } = await trazerParaNosso(imgs, product.description);
+        setFormData(prev => ({ ...prev, image_urls: fotos }));
+        setAutoImportStatus(falharam
+          ? `✅ ${fotos.length} fotos no nosso servidor · ⚠️ ${falharam} não vieram — suba manualmente`
+          : `✅ ${fotos.length} fotos encontradas!`);
         setTimeout(() => setAutoImportStatus(''), 3000);
         return;
       }
