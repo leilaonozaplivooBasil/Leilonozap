@@ -102,3 +102,37 @@ export function normalizarCondicao(texto) {
   if (PORVALOR.has(t)) return t;
   return APELIDOS[t] || '';
 }
+
+// 🏷️ 02/09/2026 — A VITRINE FILTRA POR CONDIÇÃO, NÃO POR ORIGEM.
+//
+// As pílulas da loja nasceram copiando as do leilão (Direto de Fábrica / Arremate
+// & Devoluções / Collection). Duas coisas mudaram a decisão:
+//
+//   · ORIGEM não tinha dado e é cara de obter: os 4 lotes que concentram 90% da
+//     base misturam fábrica e devolução, então só dá para classificar à mão.
+//     As três pílulas ficavam em 0.
+//   · CONDIÇÃO já estava no banco desde a importação, escondida nos contadores
+//     qty_perfeito/qty_bom/qty_ruim/qty_oficina. Recuperada, deu 289 dos 299
+//     produtos da vitrine.
+//
+// E é o que o cliente pergunta antes de comprar. O próprio pedido original dizia
+// "direto de fábrica, USADOS e etc." — "usados" sempre foi condição.
+//
+// A coluna product_source continua existindo e sendo preenchível na Gestão de
+// Estoque; ela só não comanda mais a fileira da vitrine.
+
+export function produtoNaCondicao(produto, filtro) {
+  if (!filtro || filtro === 'todas') return true;
+  return produto?.condicao === filtro;
+}
+
+/** Quantos produtos em cada condição. Pílula sem produto não é oferecida. */
+export function contarPorCondicao(produtos) {
+  const lista = Array.isArray(produtos) ? produtos : [];
+  const contagem = {};
+  for (const c of CONDICOES) contagem[c.valor] = 0;
+  for (const p of lista) {
+    if (p && contagem[p.condicao] !== undefined) contagem[p.condicao] += 1;
+  }
+  return contagem;
+}

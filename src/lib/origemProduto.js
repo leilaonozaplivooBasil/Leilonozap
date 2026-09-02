@@ -34,29 +34,16 @@ export function rotuloOrigem(valor) {
   return PORVALOR.get(String(valor || ''))?.rotulo || '';
 }
 
-// 🎖️ "Collection" é a terceira pílula do print. No leilão ela é uma página própria
-// (LuxuryCollection); na loja, por decisão da operação em 02/09, ela seleciona os
-// produtos em destaque — o campo `is_featured`, que já existe e já é usado pela
-// seção "⭐ Produtos em Destaque". Não é a mesma ideia que "luxo", e isso está
-// registrado aqui para o dia em que quiserem um critério próprio de curadoria.
-export const FILTRO_COLLECTION = 'collection';
-
-export function produtoNoFiltro(produto, filtro) {
-  if (!filtro || filtro === 'todos') return true;
-  if (filtro === FILTRO_COLLECTION) return Boolean(produto?.is_featured);
-  return produto?.product_source === filtro;
-}
-
-/** Conta quantos produtos caem em cada pílula. Pílula com 0 não é exibida — abrir
- *  uma seção vazia é pior que não oferecer a seção. */
-export function contarPorFiltro(produtos) {
-  const lista = Array.isArray(produtos) ? produtos : [];
-  const contagem = { [FILTRO_COLLECTION]: 0 };
-  for (const o of ORIGENS) contagem[o.valor] = 0;
-  for (const p of lista) {
-    if (!p) continue;
-    if (PORVALOR.has(p.product_source)) contagem[p.product_source] += 1;
-    if (p.is_featured) contagem[FILTRO_COLLECTION] += 1;
-  }
-  return contagem;
-}
+// 🏷️ 02/09/2026 — A VITRINE DEIXOU DE FILTRAR POR ORIGEM.
+//
+// As pílulas da loja passaram a ser por CONDIÇÃO (ver PilulasCondicao e
+// @/lib/condicaoProduto). Motivo: origem só se preenche à mão — os 4 lotes que
+// concentram 90% da base misturam fábrica e devolução — e as três pílulas ficavam
+// em 0. A condição já estava no banco desde a importação, nos contadores qty_*,
+// e cobre 289 dos 299 produtos da vitrine.
+//
+// Este arquivo continua vivo de propósito: `product_source` segue como campo do
+// cadastro (Gestão de Estoque e cadastro rápido) e como marcação em lote. Quando
+// houver base classificada, voltar a oferecer o filtro é só religar.
+// As funções de filtro/contagem que existiam aqui foram removidas por não terem
+// mais nenhum uso — código morto foi o que gerou o bug da rolagem das categorias.
