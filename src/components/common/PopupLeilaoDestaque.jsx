@@ -131,14 +131,24 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
           <X className="h-4 w-4" />
         </button>
 
+        {/* 🔴 02/09/2026 — "a imagem não é vista direito".
+            Era `object-cover` numa moldura de 176px: foto de produto é ALTA
+            (a caixa de som em pé), e o recorte mostrava só uma faixa do meio,
+            sem topo nem base. Agora é `object-contain` centralizado sobre fundo
+            branco — o mesmo tratamento do AuctionCard, que é justamente o card
+            que o dono mandou como referência. Produto inteiro, sempre, seja a
+            foto alta, larga ou quadrada. */}
         {dados.imagem && (
-          <img
-            src={dados.imagem}
-            alt=""
-            className="h-44 w-full object-cover"
-            // Imagem quebrada não deixa moldura vazia na tela.
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
+          <div className="flex h-52 w-full items-center justify-center bg-white p-3">
+            <img
+              src={dados.imagem}
+              alt=""
+              className="max-h-full max-w-full object-contain"
+              // Imagem quebrada esconde a moldura inteira, não só a foto —
+              // senão sobra um retângulo branco vazio no topo do pop-up.
+              onError={(e) => { const m = e.currentTarget.parentElement; if (m) m.style.display = 'none'; }}
+            />
+          </div>
         )}
 
         <div className="p-5">
