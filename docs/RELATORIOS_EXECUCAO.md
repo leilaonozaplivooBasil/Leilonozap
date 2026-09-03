@@ -2249,3 +2249,24 @@ com escopo).
 **Migração (DONO COLA ANTES DE USAR):**
 `20260903190000_contatos_metodo.sql` — customers.contatos_metodo JSONB.
 **Status:** CONCLUÍDA no preview — aguardando migração + "pode".
+
+---
+
+## REL-PUB-03/09/2026-2 — Publicação em produção das DIR-45→47
+
+**Autorização:** dono, por escrito: "pode publicar, manda sql que falta".
+**O que foi publicado:** Rotina Perfeita v2 com guia por horário e regerar
+dia (DIR-45), Lista de Network qualificada com probabilidade (DIR-46) e
+Contato e Convite vivo — fila, registro de desfecho, agenda do dia e
+Google Agenda pessoal (DIR-47).
+**Ritual:** main já sincronizada (sem novidades de outra frente) →
+809/809 testes → build exit 0 → PR #169 → squash-merge → main =
+`815c8f78` → branch realinhada. Deploy de PRODUÇÃO: **success** de
+primeira; version.json do alias da main com o carimbo do build novo
+(14:57 UTC). leilaonozap.net no ar.
+**Pendências de configuração do dono (fora do código):** colar a
+migração da DIR-47 (contatos_metodo — SQL entregue no chat); ativar a
+Google Calendar API no console Google; opcional: registrar a origem do
+preview no cliente OAuth (produção já registrada — origin_mismatch era
+só no preview).
+**Status:** CONCLUÍDA E PUBLICADA.
