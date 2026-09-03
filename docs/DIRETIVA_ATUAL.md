@@ -12,6 +12,71 @@
 
 ---
 
+## DIR-44 — Quadro dos Sonhos de verdade: curto/médio/longo com imagem
+
+**Emitida por:** dono (03/09/2026, áudio, sobre o preview dos 8 Hábitos):
+"o sonho é de curto, médio e longo prazo — curto 1 a 2 anos, médio 2 a 4,
+longo 5 pra frente; em cada área ele coloca quantas imagens quiser; tem que
+ter uma aba da internet pra procurar a imagem SEM SAIR DO MODAL, colocando o
+nome, ou fazer upload; desenha um quadro grande com as imagens retangulares
+bem espaçadas; precisa ter uma explicação do que é o sonho; abaixo de cada
+imagem ele escreve os detalhes do sonho, com orientação (se for um carro:
+ano, cor, banco de couro, roda); se o sistema identificar a imagem e colocar
+os detalhes automático, maravilhoso — se não pegar, ele escreve embaixo.
+Então eu quero que você coloque isso."
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. `src/lib/metodo.js` (fonte única, testada): HORIZONTES_SONHO (curto 1-2
+   anos · médio 2-4 · longo 5+), normalizarSonho (legado `{titulo}`/string
+   continua valendo, horizonte padrão curto), agruparSonhosPorHorizonte
+   (preserva o índice real pra edição/remoção segura),
+   PLACEHOLDER_DETALHES_SONHO (a orientação ditada do carro). Dado continua
+   em `metodo_perfil.sonhos` (JSONB livre — SEM migração): item vira
+   `{ id, horizonte, titulo, imagem_url?, detalhes? }`.
+2. `src/lib/buscaFotos.js`: lerRespostaFotos — a MESMA leitura honesta de
+   resposta do BuscadorFotos do admin (camadas resp/.data/.data.data,
+   images + products[].imageUrl, dedupe, distinção sem_resultado ×
+   falha_busca), extraída e testada; o BuscadorFotos não é alterado nesta
+   rodada.
+3. `CrmSonhoModal.jsx` (padrão de overlay da casa): escolha do horizonte,
+   nome do sonho, aba 🔍 **Buscar na internet** (REUSA a rota
+   `extractGoogleShoppingImages` já em produção — grade multi-seleção) e
+   aba 📤 **Enviar imagem** (REUSA `Core.UploadFile` → Supabase
+   `public-assets`, com `convertToWebP` antes). Imagem escolhida da busca
+   passa pela rota `proxyImage` existente (re-hospeda no nosso bucket —
+   thumbnail de terceiro morre; lendo `file_url || data.file_url`, com
+   fallback pra URL original se o proxy falhar). Caminho só-texto (sonho sem
+   imagem) continua existindo.
+4. Painel do Sonho em `CrmMetodo.jsx` vira o QUADRO: explicação do hábito +
+   3 quadros (curto/médio/longo) com grade de cartões retangulares
+   (imagem em cima, título e DETALHES editáveis embaixo, placeholder
+   guiado), botão Adicionar por quadro, remover por item (por id — conserta
+   a remoção por índice), sonhos legados aparecem como cartão de texto no
+   curto prazo.
+5. Rota nova `api/functions/descreverImagemSonho.js` (os "detalhes
+   automáticos"): POST `{imageUrl, titulo}`, porteiro `conferirUrl`
+   (anti-SSRF), crachá via `exigirSessao` (etapa 1/2 da casa), visão pelo
+   Vercel AI Gateway (mesma AI_GATEWAY_API_KEY e molde do atendimentoIA;
+   modelo default com visão) devolvendo 2-4 linhas de detalhes concretos.
+   **Degrada com elegância**: sem chave/erro → `needs_key`/`success:false`
+   e o usuário escreve na mão (o dono autorizou exatamente esse fallback).
+   Teste invoca o HANDLER REAL (regra REL-34.2), incluindo
+   SESSAO_MODO=bloquear com crachá forjado.
+**ADENDO do dono (03/09/2026, após ver o preview: "ficou ótimo, falta
+isso"):** além da busca e do upload, um campo no modal pra COLAR o
+endereço de uma imagem da internet e adicionar por ele — a URL colada
+entra na galeria, é selecionável como as demais e passa pelo MESMO
+proxyImage na confirmação (link colado também morre).
+**Fora do escopo / proibido:** mudar o BuscadorFotos/fluxos do admin;
+migração de banco (não precisa); publicar em produção sem o "pode" do dono;
+consertar os callers antigos de proxyImage que leem `.data.file_url`
+(registrado como pendência).
+**Regras fixas:** prova em navegador real (REL-34.1) antes da entrega;
+nenhuma além da DIR-5 a DIR-43.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-43 — O Método VIVO: seção 📖 Método no CRM (8 hábitos funcionais)
 
 **Emitida por:** dono (01/09/2026, áudio): "não quero resumo, quero o

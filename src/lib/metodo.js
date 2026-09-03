@@ -96,3 +96,50 @@ export function linkGoogleAgenda({ titulo, inicio, duracaoMin = 60, detalhes = '
 /** Qualificação 1-5 da lista de network (Hábito 3). */
 export const QUALIFICACOES = [1, 2, 3, 4, 5];
 export const qualificacaoValida = (n) => Number.isInteger(n) && n >= 1 && n <= 5;
+
+// ══ 🌟 Hábito 1 — QUADRO DOS SONHOS (DIR-44, 03/09/2026) ══
+// O quadro do dono tem três horizontes; cada um recebe quantas imagens a
+// pessoa quiser, com os detalhes escritos embaixo de cada uma.
+export const HORIZONTES_SONHO = [
+  { id: 'curto', emoji: '⚡', label: 'Curto prazo', faixa: '1 a 2 anos' },
+  { id: 'medio', emoji: '🎯', label: 'Médio prazo', faixa: '2 a 4 anos' },
+  { id: 'longo', emoji: '🏆', label: 'Longo prazo', faixa: '5 anos pra frente' },
+];
+const HORIZONTES_VALIDOS = new Set(HORIZONTES_SONHO.map((h) => h.id));
+
+/** A orientação ditada pelo dono pro campo de detalhes de cada imagem. */
+export const PLACEHOLDER_DETALHES_SONHO =
+  'Descreva os detalhes EXATOS do seu sonho. Se for um carro: ano, cor, '
+  + 'banco de couro, qual roda... Se for uma casa: bairro, metragem, varanda. '
+  + 'Quanto mais concreto, mais real.';
+
+/**
+ * Normaliza um item de metodo_perfil.sonhos sem perder o legado:
+ * string → {titulo}; horizonte inválido/ausente → 'curto'. Não inventa id —
+ * quem grava (a tela) atribui, e a leitura preserva o que existir.
+ */
+export function normalizarSonho(item) {
+  const base = typeof item === 'string' ? { titulo: item } : (item && typeof item === 'object' ? item : {});
+  const titulo = String(base.titulo || '').trim();
+  return {
+    ...base,
+    titulo: titulo || 'Sonho',
+    horizonte: HORIZONTES_VALIDOS.has(base.horizonte) ? base.horizonte : 'curto',
+    imagem_url: typeof base.imagem_url === 'string' && base.imagem_url ? base.imagem_url : null,
+    detalhes: typeof base.detalhes === 'string' ? base.detalhes : '',
+  };
+}
+
+/**
+ * Agrupa os sonhos por horizonte PRESERVANDO o índice real do array gravado —
+ * é pelo índice que a tela edita/remove com segurança (itens legados não têm id).
+ * @returns {{curto: Array, medio: Array, longo: Array}} de {sonho, indice}
+ */
+export function agruparSonhosPorHorizonte(sonhos = []) {
+  const grupos = { curto: [], medio: [], longo: [] };
+  (Array.isArray(sonhos) ? sonhos : []).forEach((item, indice) => {
+    const sonho = normalizarSonho(item);
+    grupos[sonho.horizonte].push({ sonho, indice });
+  });
+  return grupos;
+}

@@ -31,3 +31,7 @@ dist-ssr
 .vercel
 .gstack/
 base44/.app.jsonc
+
+# artefatos do harness de prova em navegador (ficam fora do repo)
+prova*.mjs
+prova-*.png

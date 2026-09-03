@@ -1993,3 +1993,92 @@ transitória da Vercel, tratada com UM redisparo (este commit → PR →
 merge) conforme a regra da casa de re-execução única para falha de
 plataforma. Produção seguiu servindo o c7757d9f (site no ar, sem
 downtime) até o redisparo completar.
+
+---
+
+## REL-44 — Quadro dos Sonhos de verdade: curto/médio/longo com imagem (DIR-44)
+
+**Ordem do dono (03/09/2026, áudio):** sonho em três prazos (curto 1-2
+anos, médio 2-4, longo 5+), quantas imagens quiser por área, busca de
+imagem na internet SEM SAIR DO MODAL (pelo nome) ou upload, quadro grande
+com imagens retangulares bem espaçadas, explicação do que é o sonho,
+detalhes escritos embaixo de cada imagem com orientação (carro → ano, cor,
+banco de couro, roda), e detalhes automáticos se o sistema conseguir ler a
+imagem — senão a pessoa escreve.
+**O que foi construído (tudo REUSANDO a infra da casa):**
+1. Painel do Sonho virou o QUADRO: explicação + 3 molduras por horizonte,
+   grade de cartões retangulares (imagem 4:3, título e detalhes embaixo),
+   remover por cartão, sonho legado `{titulo}` segue aparecendo (curto).
+2. `CrmSonhoModal`: prazo → nome → 🔍 busca na internet (rota
+   `extractGoogleShoppingImages` do catálogo, grade multi-seleção) ou 📤
+   upload (`Core.UploadFile` + `convertToWebP`). Imagem da busca é
+   re-hospedada pela rota `proxyImage` no nosso bucket (thumbnail de
+   terceiro morre; fallback pra URL original se o proxy falhar). Caminho
+   só-texto preservado.
+3. Detalhes guiados: placeholder com a orientação ditada; botão
+   "✨ Preencher com IA" chama a rota NOVA `descreverImagemSonho`
+   (visão pelo Vercel AI Gateway, molde do atendimentoIA, porteiro
+   anti-SSRF `conferirUrl`, crachá `exigirSessao`) — a IA preenche o
+   textarea, o HUMANO revisa e salva. Sem chave/erro → aviso honesto e
+   escrita manual (fallback autorizado pelo dono).
+4. Fonte única em `metodo.js` (HORIZONTES_SONHO, normalizarSonho,
+   agruparSonhosPorHorizonte com índice real, placeholder) e
+   `buscaFotos.js` (lerRespostaFotos — leitura extraída do BuscadorFotos,
+   distinção sem_resultado × falha_busca). SEM migração: sonhos é JSONB.
+**Prova em navegador (regra REL-34.1): 37/37 ✅ zero erros** — render
+logado, 3 horizontes, modal com busca mockada na rota real, multi-seleção,
+proxy das 2 imagens, escrita auditada via entityWrite (create com os 2
+sonhos no curto), placeholder guiado, IA preenchendo o textarea, detalhes
+salvos e exibidos, upload pro Storage sem passar no proxy, item no médio,
+remoção tirando SÓ o cartão certo, caminho só-texto no longo, raiz
+deslogada de pé.
+**Bug real pego PELO navegador:** o botão de confirmação dizia "Adicionar
+2 imagems" (plural errado por concatenação) — teste de unidade nunca
+pegaria; a prova renderizada pegou.
+**Testes:** 644 → 664 (20 novos: horizontes/agrupamento/placeholder,
+lerRespostaFotos, handler REAL do descreverImagemSonho com gateway
+mockado, incluindo SESSAO_MODO=bloquear com crachá forjado). **Build:**
+exit 0.
+**Pendências registradas (sem ordem, não mexi):** callers antigos de
+proxyImage lendo `.data.file_url` (5 telas fora do CRM); GoogleShoppingImporter
+e CreateAuction lendo shape antigo do Deno; chaves SERPAPI/SEARCHAPI com
+cota/visibilidade incerta na Vercel (a busca degrada com mensagem honesta);
+AI_GATEWAY_API_KEY pode não estar publicada (needs_key gracioso).
+**Status:** CONCLUÍDA no preview — aguardando o dono ver e autorizar
+produção.
+
+### REL-44.1 — Adendo: colar o endereço da imagem (03/09/2026)
+
+Dono aprovou o quadro ("ficou ótimo") e pediu o que faltava: um campo pra
+COLAR o endereço de uma imagem e adicionar por ele. Feito no mesmo modal:
+campo "cole aqui o endereço da imagem (https://...)" + botão Usar — valida
+http(s), entra na galeria já marcada, conta na multi-seleção e passa pelo
+MESMO proxyImage na confirmação (link colado também morre). Prova em
+navegador re-rodada COMPLETA: 42/42 ✅ zero erros (5 passos novos: usar o
+endereço, marcada na galeria, confirmação, cartão no quadro, proxy da URL
+colada). Suíte 664/664, build ok. Segue no preview aguardando o "pode".
+
+### REL-44.2 — Por que a IA de visão não acende + o caminho pra ligar (03/09/2026)
+
+Dono viu o aviso "A IA de visão ainda não está conectada". Investigado SEM
+achismo: a rota ganhou fallback pro VERCEL_OIDC_TOKEN (molde do InvokeLLM)
+e um GET ?diag=1 que responde só booleanos; medido no preview:
+`tem_chave:false, tem_oidc:false` — o projeto NÃO tem nenhuma credencial
+de IA publicada na Vercel (nem AI_GATEWAY_API_KEY, nem OIDC ativo). Por
+isso a visão do sonho, a IA de atendimento (atendimentoIA), o InvokeLLM e
+o GenerateImage estão todos dormindo — é UMA configuração de painel, não
+código. Ação do dono (2 min no painel da Vercel): criar a chave no AI
+Gateway e publicar como AI_GATEWAY_API_KEY no projeto leilonozap (todas as
+envs) + redeploy. 666/666 testes (fallback OIDC e diag testados no handler
+real). Upgrades prometidos pra quando a chave existir: preencher sozinho ao
+adicionar a imagem, ler a URL colada e sugerir título — rodada própria.
+
+### REL-44.3 — Ordem do dono: "melhor, tire a IA" (03/09/2026)
+
+Removida a IA do Quadro dos Sonhos: sai o botão ✨ Preencher com IA, sai a
+rota descreverImagemSonho e sai o teste dela (tudo recuperável no git se um
+dia voltar). Fica o que sempre funcionou sem depender de chave: o campo de
+detalhes escrito na mão com a orientação guiada (carro → ano, cor, banco de
+couro, roda). Prova em navegador re-rodada inteira: 40/40 ✅ zero erros,
+incluindo o passo novo "NENHUM botão de IA na tela". Suíte volta a 657
+(saíram os 9 do handler removido), build ok.
