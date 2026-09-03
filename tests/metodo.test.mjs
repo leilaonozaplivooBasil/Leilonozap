@@ -59,3 +59,70 @@ describe('qualificação da lista (Hábito 3)', () => {
     assert.equal(qualificacaoValida('3'), false);
   });
 });
+
+// ══ DIR-44 — Quadro dos Sonhos por horizonte ══
+const { HORIZONTES_SONHO, normalizarSonho, agruparSonhosPorHorizonte, PLACEHOLDER_DETALHES_SONHO } =
+  await import('../src/lib/metodo.js');
+
+describe('quadro dos sonhos (DIR-44)', () => {
+  test('3 horizontes na ordem ditada: curto 1-2, médio 2-4, longo 5+', () => {
+    assert.deepEqual(HORIZONTES_SONHO.map((h) => h.id), ['curto', 'medio', 'longo']);
+    assert.equal(HORIZONTES_SONHO[0].faixa, '1 a 2 anos');
+    assert.equal(HORIZONTES_SONHO[1].faixa, '2 a 4 anos');
+    assert.equal(HORIZONTES_SONHO[2].faixa, '5 anos pra frente');
+  });
+
+  test('normalizarSonho: legado {titulo} vira curto prazo sem imagem', () => {
+    const s = normalizarSonho({ titulo: 'Bater R$ 1 mi' });
+    assert.equal(s.horizonte, 'curto');
+    assert.equal(s.titulo, 'Bater R$ 1 mi');
+    assert.equal(s.imagem_url, null);
+    assert.equal(s.detalhes, '');
+  });
+
+  test('normalizarSonho: string pura (legado mais antigo) também vale', () => {
+    const s = normalizarSonho('Casa na praia');
+    assert.equal(s.titulo, 'Casa na praia');
+    assert.equal(s.horizonte, 'curto');
+  });
+
+  test('normalizarSonho: horizonte inválido cai em curto; campos novos preservados', () => {
+    const s = normalizarSonho({ id: 'a1', titulo: ' BMW X6 ', horizonte: 'eterno', imagem_url: 'https://x/i.png', detalhes: 'preta, 2024' });
+    assert.equal(s.horizonte, 'curto');
+    assert.equal(s.titulo, 'BMW X6');
+    assert.equal(s.imagem_url, 'https://x/i.png');
+    assert.equal(s.detalhes, 'preta, 2024');
+    assert.equal(s.id, 'a1');
+  });
+
+  test('normalizarSonho: lixo não derruba (null, número, sem título)', () => {
+    assert.equal(normalizarSonho(null).titulo, 'Sonho');
+    assert.equal(normalizarSonho(42).titulo, 'Sonho');
+    assert.equal(normalizarSonho({}).horizonte, 'curto');
+  });
+
+  test('agruparSonhosPorHorizonte preserva o ÍNDICE REAL do array gravado', () => {
+    const sonhos = [
+      { titulo: 'legado' },
+      { titulo: 'apto', horizonte: 'longo' },
+      { titulo: 'carro', horizonte: 'medio' },
+      { titulo: 'viagem', horizonte: 'medio' },
+    ];
+    const g = agruparSonhosPorHorizonte(sonhos);
+    assert.deepEqual(g.curto.map((x) => x.indice), [0]);
+    assert.deepEqual(g.medio.map((x) => x.indice), [2, 3]);
+    assert.deepEqual(g.longo.map((x) => x.indice), [1]);
+    assert.equal(g.medio[0].sonho.titulo, 'carro');
+  });
+
+  test('agruparSonhosPorHorizonte: vazio e não-array não explodem', () => {
+    assert.deepEqual(agruparSonhosPorHorizonte([]), { curto: [], medio: [], longo: [] });
+    assert.deepEqual(agruparSonhosPorHorizonte(null), { curto: [], medio: [], longo: [] });
+  });
+
+  test('a orientação do dono está no placeholder (carro → ano, cor, banco, roda)', () => {
+    for (const palavra of ['ano', 'cor', 'banco de couro', 'roda']) {
+      assert.ok(PLACEHOLDER_DETALHES_SONHO.includes(palavra), `faltou: ${palavra}`);
+    }
+  });
+});

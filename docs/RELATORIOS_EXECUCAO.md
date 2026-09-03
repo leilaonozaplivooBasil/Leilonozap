@@ -1993,3 +1993,56 @@ transitória da Vercel, tratada com UM redisparo (este commit → PR →
 merge) conforme a regra da casa de re-execução única para falha de
 plataforma. Produção seguiu servindo o c7757d9f (site no ar, sem
 downtime) até o redisparo completar.
+
+---
+
+## REL-44 — Quadro dos Sonhos de verdade: curto/médio/longo com imagem (DIR-44)
+
+**Ordem do dono (03/09/2026, áudio):** sonho em três prazos (curto 1-2
+anos, médio 2-4, longo 5+), quantas imagens quiser por área, busca de
+imagem na internet SEM SAIR DO MODAL (pelo nome) ou upload, quadro grande
+com imagens retangulares bem espaçadas, explicação do que é o sonho,
+detalhes escritos embaixo de cada imagem com orientação (carro → ano, cor,
+banco de couro, roda), e detalhes automáticos se o sistema conseguir ler a
+imagem — senão a pessoa escreve.
+**O que foi construído (tudo REUSANDO a infra da casa):**
+1. Painel do Sonho virou o QUADRO: explicação + 3 molduras por horizonte,
+   grade de cartões retangulares (imagem 4:3, título e detalhes embaixo),
+   remover por cartão, sonho legado `{titulo}` segue aparecendo (curto).
+2. `CrmSonhoModal`: prazo → nome → 🔍 busca na internet (rota
+   `extractGoogleShoppingImages` do catálogo, grade multi-seleção) ou 📤
+   upload (`Core.UploadFile` + `convertToWebP`). Imagem da busca é
+   re-hospedada pela rota `proxyImage` no nosso bucket (thumbnail de
+   terceiro morre; fallback pra URL original se o proxy falhar). Caminho
+   só-texto preservado.
+3. Detalhes guiados: placeholder com a orientação ditada; botão
+   "✨ Preencher com IA" chama a rota NOVA `descreverImagemSonho`
+   (visão pelo Vercel AI Gateway, molde do atendimentoIA, porteiro
+   anti-SSRF `conferirUrl`, crachá `exigirSessao`) — a IA preenche o
+   textarea, o HUMANO revisa e salva. Sem chave/erro → aviso honesto e
+   escrita manual (fallback autorizado pelo dono).
+4. Fonte única em `metodo.js` (HORIZONTES_SONHO, normalizarSonho,
+   agruparSonhosPorHorizonte com índice real, placeholder) e
+   `buscaFotos.js` (lerRespostaFotos — leitura extraída do BuscadorFotos,
+   distinção sem_resultado × falha_busca). SEM migração: sonhos é JSONB.
+**Prova em navegador (regra REL-34.1): 37/37 ✅ zero erros** — render
+logado, 3 horizontes, modal com busca mockada na rota real, multi-seleção,
+proxy das 2 imagens, escrita auditada via entityWrite (create com os 2
+sonhos no curto), placeholder guiado, IA preenchendo o textarea, detalhes
+salvos e exibidos, upload pro Storage sem passar no proxy, item no médio,
+remoção tirando SÓ o cartão certo, caminho só-texto no longo, raiz
+deslogada de pé.
+**Bug real pego PELO navegador:** o botão de confirmação dizia "Adicionar
+2 imagems" (plural errado por concatenação) — teste de unidade nunca
+pegaria; a prova renderizada pegou.
+**Testes:** 664 → 684 (20 novos: horizontes/agrupamento/placeholder,
+lerRespostaFotos, handler REAL do descreverImagemSonho com gateway
+mockado, incluindo SESSAO_MODO=bloquear com crachá forjado). **Build:**
+exit 0.
+**Pendências registradas (sem ordem, não mexi):** callers antigos de
+proxyImage lendo `.data.file_url` (5 telas fora do CRM); GoogleShoppingImporter
+e CreateAuction lendo shape antigo do Deno; chaves SERPAPI/SEARCHAPI com
+cota/visibilidade incerta na Vercel (a busca degrada com mensagem honesta);
+AI_GATEWAY_API_KEY pode não estar publicada (needs_key gracioso).
+**Status:** CONCLUÍDA no preview — aguardando o dono ver e autorizar
+produção.

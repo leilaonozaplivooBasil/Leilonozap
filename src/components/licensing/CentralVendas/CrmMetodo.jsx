@@ -3,14 +3,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
   HABITOS, ROTINA_PADRAO, periodoDe, PERIODOS, gerarTarefasDaRotina,
   progressoDia, linkGoogleAgenda, QUALIFICACOES,
+  HORIZONTES_SONHO, agruparSonhosPorHorizonte, normalizarSonho, PLACEHOLDER_DETALHES_SONHO,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
+import CrmSonhoModal from './CrmSonhoModal';
 
 // 🏆 DIR-43 — O MÉTODO VIVO: os painéis dos hábitos 1-5 e 8 (os hábitos 6 e
 // 7 são o próprio CRM: Acompanhamento = Clientes+Esteira, Verificação =
@@ -30,7 +32,9 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [tarefas, setTarefas] = useState([]);
   const [salvando, setSalvando] = useState(false);
   // edições locais
-  const [novoSonho, setNovoSonho] = useState('');
+  const [modalSonho, setModalSonho] = useState(null); // horizonte pré-escolhido, ou null (fechado)
+  const [editandoSonho, setEditandoSonho] = useState(null); // { indice, texto }
+  const [iaOcupada, setIaOcupada] = useState(null); // índice do sonho que a IA está olhando
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '' });
@@ -66,10 +70,38 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
         setPerfil(criado?.id ? criado : { user_id: uid, ...patch });
       }
       toast.success('Salvo!');
+      return true;
     } catch (e) {
       console.error('Erro ao salvar método:', e);
       toast.error('Erro ao salvar — a migração do Método já foi colada no banco?');
+      return false;
     } finally { setSalvando(false); }
+  };
+
+  // 🌟 DIR-44 — o quadro dos sonhos por horizonte
+  const adicionarSonhos = async (itens) => {
+    const ok = await salvarPerfil({ sonhos: [...sonhos, ...itens] });
+    if (ok) setModalSonho(null); // falhou? modal fica aberto, nada se perde
+  };
+  const salvarDetalhesSonho = async (indice, texto) => {
+    const ok = await salvarPerfil({
+      sonhos: sonhos.map((item, j) => (j === indice ? { ...normalizarSonho(item), detalhes: String(texto || '').trim() } : item)),
+    });
+    if (ok) setEditandoSonho(null);
+  };
+  const preencherDetalhesComIA = async (indice, s) => {
+    setIaOcupada(indice);
+    try {
+      const r = await plataforma.functions.invoke('descreverImagemSonho', { imageUrl: s.imagem_url, titulo: s.titulo });
+      if (r?.success && r.detalhes) {
+        setEditandoSonho({ indice, texto: r.detalhes });
+        toast.success('A IA olhou a imagem — revise os detalhes e salve');
+      } else {
+        toast.info(r?.message || 'IA indisponível agora — escreva os detalhes na mão.');
+      }
+    } catch {
+      toast.info('IA indisponível agora — escreva os detalhes na mão.');
+    } finally { setIaOcupada(null); }
   };
 
   const sonhos = Array.isArray(perfil?.sonhos) ? perfil.sonhos : [];
@@ -143,35 +175,110 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
           </div>
         )}
 
-        {/* ══ 🌟 HÁBITO 1 — QUADRO DOS SONHOS ══ */}
-        {painel === 'sonho' && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {sonhos.map((s, i) => (
-                <div key={i} className="rounded-xl border border-nz-verde/30 bg-nz-verde-fundo p-4 flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-bold text-nz-tinta">🌟 {s.titulo}</p>
-                    {s.prazo && <p className="text-xs text-nz-tinta-fraca mt-0.5">alvo: {s.prazo}</p>}
+        {/* ══ 🌟 HÁBITO 1 — QUADRO DOS SONHOS (DIR-44: curto/médio/longo, com imagem) ══ */}
+        {painel === 'sonho' && (() => {
+          const grupos = agruparSonhosPorHorizonte(sonhos);
+          return (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
+                🖼️ <strong>Monte o seu quadro.</strong> O sonho tem três prazos — ⚡ curto (1 a 2 anos), 🎯 médio (2 a 4) e 🏆 longo (5 pra frente).
+                Coloque quantas imagens quiser em cada um (busque pelo nome sem sair daqui, ou envie do aparelho) e escreva os
+                <strong> detalhes exatos</strong> embaixo de cada imagem — se for um carro: ano, cor, banco de couro, roda. Sonho detalhado vira meta.
+              </div>
+
+              {HORIZONTES_SONHO.map((hz) => {
+                const doHorizonte = grupos[hz.id];
+                return (
+                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-sm font-bold text-nz-tinta">
+                        {hz.emoji} {hz.label}
+                        <span className="text-nz-tinta-fraca font-normal"> · {hz.faixa}{doHorizonte.length > 0 ? ` · ${doHorizonte.length} sonho${doHorizonte.length === 1 ? '' : 's'}` : ''}</span>
+                      </p>
+                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
+                        <Plus className="w-4 h-4 mr-1" /> Adicionar
+                      </Button>
+                    </div>
+
+                    {doHorizonte.length === 0 ? (
+                      <p className="text-xs text-nz-tinta-fraca text-center py-5 border border-dashed border-nz-verde/30 rounded-xl">
+                        Nenhum sonho aqui ainda — adicione a imagem do que você quer.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {doHorizonte.map(({ sonho: s, indice }) => (
+                          <div key={s.id || `i${indice}`} className="rounded-xl border border-nz-borda bg-white overflow-hidden flex flex-col shadow-sm">
+                            {s.imagem_url && (
+                              <img
+                                src={s.imagem_url}
+                                alt={s.titulo}
+                                loading="lazy"
+                                className="w-full aspect-[4/3] object-cover bg-nz-cinza-fundo"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            )}
+                            <div className="p-3 flex-1 flex flex-col gap-1.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm font-bold text-nz-tinta">🌟 {s.titulo}</p>
+                                <button
+                                  type="button"
+                                  title="Remover do quadro"
+                                  onClick={() => salvarPerfil({ sonhos: sonhos.filter((_, j) => j !== indice) })}
+                                  className="text-nz-tinta-fraca hover:text-red-600 shrink-0"
+                                ><Trash2 className="w-4 h-4" /></button>
+                              </div>
+
+                              {editandoSonho?.indice === indice ? (
+                                <div className="space-y-1.5">
+                                  <Textarea
+                                    value={editandoSonho.texto}
+                                    onChange={(e) => setEditandoSonho({ indice, texto: e.target.value })}
+                                    rows={3}
+                                    placeholder={PLACEHOLDER_DETALHES_SONHO}
+                                    className="bg-white border-nz-borda text-nz-tinta text-xs"
+                                  />
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <Button size="sm" disabled={salvando} onClick={() => salvarDetalhesSonho(indice, editandoSonho.texto)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-xs">
+                                      <Save className="w-3.5 h-3.5 mr-1" /> Salvar
+                                    </Button>
+                                    {s.imagem_url && (
+                                      <Button size="sm" variant="outline" disabled={iaOcupada !== null} onClick={() => preencherDetalhesComIA(indice, s)} className="border-nz-borda text-nz-tinta h-7 text-xs">
+                                        <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-500" /> {iaOcupada === indice ? 'Olhando a imagem...' : 'Preencher com IA'}
+                                      </Button>
+                                    )}
+                                    <button type="button" onClick={() => setEditandoSonho(null)} className="text-xs text-nz-tinta-fraca hover:text-nz-tinta">cancelar</button>
+                                  </div>
+                                </div>
+                              ) : s.detalhes ? (
+                                <p
+                                  className="text-xs text-nz-tinta-fraca whitespace-pre-line cursor-pointer"
+                                  title="Toque pra editar os detalhes"
+                                  onClick={() => setEditandoSonho({ indice, texto: s.detalhes })}
+                                >{s.detalhes}</p>
+                              ) : (
+                                <button type="button" onClick={() => setEditandoSonho({ indice, texto: '' })} className="text-xs text-nz-verde hover:text-nz-verde-claro text-left font-medium">
+                                  ＋ escreva os detalhes do seu sonho
+                                </button>
+                              )}
+                              {!editandoSonho && s.prazo && !s.detalhes && <p className="text-[11px] text-nz-tinta-fraca">alvo: {s.prazo}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <button type="button" onClick={() => salvarPerfil({ sonhos: sonhos.filter((_, j) => j !== i) })} className="text-nz-tinta-fraca hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              ))}
-              {sonhos.length === 0 && (
-                <p className="text-sm text-nz-tinta-fraca sm:col-span-2">Seu quadro está vazio. "Se você não sabe para onde vai, qualquer caminho serve." — escreva o primeiro sonho abaixo.</p>
-              )}
+                );
+              })}
+
+              <CrmSonhoModal
+                aberto={modalSonho !== null}
+                horizonteInicial={modalSonho || 'curto'}
+                onFechar={() => setModalSonho(null)}
+                onAdicionar={adicionarSonhos}
+              />
             </div>
-            <div className="flex gap-2">
-              <Input value={novoSonho} onChange={(e) => setNovoSonho(e.target.value)} placeholder='ex.: "Bater R$ 1 mi de captação até março/2027"' className="bg-white border-nz-borda text-nz-tinta" />
-              <Button
-                disabled={salvando || !novoSonho.trim()}
-                onClick={() => { salvarPerfil({ sonhos: [...sonhos, { titulo: novoSonho.trim() }] }); setNovoSonho(''); }}
-                className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Adicionar
-              </Button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ══ ✅ HÁBITO 2 — MASTER TASK (o Trello do dia) ══ */}
         {painel === 'compromisso' && (
