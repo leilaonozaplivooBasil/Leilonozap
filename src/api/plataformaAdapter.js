@@ -331,7 +331,33 @@ async function _routeWrite(table, action, id, payload) {
     } catch (e) { return { success: false, error: String(e?.message || e) }; }
   }
 
-  if (!op) return { _skip: true };
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 02/09/2026 — "ERRO AO SALVAR CLIENTE" NO CRM, PRA QUEM NÃO É ADMIN
+  // ══════════════════════════════════════════════════════════════════════════
+  // Mesma armadilha do PONTO 130 acima, um andar adiante. Em 30/08 o CRM foi
+  // aberto pra toda a Central de Vendas (DIR-24 Fase 2, CrmClientesTab.jsx) —
+  // mas só a LEITURA passou. Salvar continuava caindo no `_skip` daqui, indo do
+  // navegador direto ao PostgREST como `anon`. E a RLS de `customers` é:
+  //     SELECT → anon + authenticated   ← por isso a lista APARECE
+  //     INSERT → só authenticated       ← e o site não usa Supabase Auth,
+  //                                       o navegador é SEMPRE anon
+  // Medido em 02/09: a tabela `customers` inteira tem 4 linhas — três de
+  // fevereiro, da era Base44, e UMA criada desde então, por um admin. Ninguém
+  // sem cargo de operador jamais salvou um cliente neste sistema.
+  //
+  // As tabelas do CRM passam a usar a mesma rota de servidor dos operadores.
+  // Aqui é só ROTEAMENTO: quem decide a permissão é o servidor (entityWrite),
+  // que lê o cargo do banco e limita a edição às linhas da própria pessoa.
+  // `delete` fica de fora de propósito — apagar cliente segue sendo de operador.
+  // Só `customers` — o servidor recusa o resto. `negotiations` ficaria de fora
+  // de qualquer jeito: sem coluna de dono, não dá pra limitar a edição.
+  const TABELAS_CRM = ['customers'];
+  let ator = op;
+  if (!ator && TABELAS_CRM.includes(table) && action !== 'delete') {
+    try { ator = JSON.parse(localStorage.getItem('currentUser') || 'null') || null; } catch { ator = null; }
+    if (!ator?.id) ator = null;
+  }
+  if (!ator) return { _skip: true };
   // 🩹 app_users tem rota dedicada (adminUpdateUser) — entityWrite recusa essa tabela
   // de propósito (dados sensíveis de usuário/cargo). create continua no fallback
   // anon/Supabase direto, pois adminUpdateUser não cobre criação.
@@ -353,7 +379,7 @@ async function _routeWrite(table, action, id, payload) {
   // 🚨 Freio de rajada: corta antes de sair do navegador (ver bloco acima).
   const quantas = _registraEContaRajada(`${table}/${action}`);
   if (quantas > RAJADA_TETO) {
-    _avisaRajada(op.id);
+    _avisaRajada(ator.id);
     return { success: false, error: 'rajada_local', details: `Muitas escritas seguidas (${quantas} em 60s). Bloqueado para proteger o servidor.` };
   }
 
@@ -365,7 +391,7 @@ async function _routeWrite(table, action, id, payload) {
   try {
     const resp = await fetch('/api/functions/entityWrite', {
       method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ actorId: op.id, table, action, id, payload }),
+      body: JSON.stringify({ actorId: ator.id, table, action, id, payload }),
     });
     if (resp.status === 429) {
       _entityWriteBlockedUntil = Date.now() + _entityWriteCooldownMs;

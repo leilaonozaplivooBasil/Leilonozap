@@ -11,6 +11,9 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 // 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
 import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
+import { CONDICOES, normalizarCondicao } from '@/lib/condicaoProduto';
+import { ORIGENS } from '@/lib/origemProduto';
+import { separarFotos } from '@/lib/imagemExterna';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
@@ -59,7 +62,14 @@ export default function AddCatalogProduct() {
     seller_name: '',
     
     // Especificações
-    condition: 'Novo',
+    // 🏷️ 02/09/2026 — antes isto se chamava `condition` e NÃO EXISTIA no banco: a
+    // tela mostrava o seletor, a IA preenchia, e o productData lá embaixo não
+    // levava o campo. Mesmo vazamento do category_id, corrigido em 01/09.
+    // Começa vazio de propósito: 'Novo' por padrão fazia toda devolução sair
+    // anunciada como nova.
+    condicao: '',
+    estado_conservacao: '',
+    product_source: '',
     brand: '',
     model: '',
     
@@ -276,7 +286,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
         subcategory: targetSub?.id || prev.subcategory,
         brand: data.marca || prev.brand,
         model: data.modelo || prev.model,
-        condition: data.condicao || prev.condition,
+        condicao: normalizarCondicao(data.condicao) || prev.condicao,
         weight: data.peso_kg > 0 ? String(data.peso_kg) : prev.weight,
         height: data.altura_cm > 0 ? String(data.altura_cm) : prev.height,
         length: data.comprimento_cm > 0 ? String(data.comprimento_cm) : prev.length,
@@ -295,6 +305,37 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     }
   };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 02/09/2026 — O LAVAJATO NA TORNEIRA
+  // ══════════════════════════════════════════════════════════════════════════
+  // A loja mostrava foto de LAVAJATO na "Torneira Gourmet" — e o mesmo lavajato
+  // no "TDS medidor pureza água" logo ao lado. Dois produtos, a mesma imagem
+  // errada: sinal de que quem servia a foto era um terceiro que trocou o
+  // conteúdo. As duas fotos estavam em `i.zst.com.br`, um comparador de preços.
+  //
+  // As buscas automáticas daqui gravavam o endereço de fora direto no produto.
+  // Agora toda foto que vem de fora é COPIADA para o nosso servidor antes de
+  // entrar no formulário. Foto que não vier a gente NÃO guarda pelo endereço:
+  // guardar o link de fora "porque a cópia falhou" é justamente o bug.
+  const trazerParaNosso = async (urls, descricao) => {
+    const { nossas, externas } = separarFotos(urls);
+    if (!externas.length) return { fotos: nossas, falharam: 0 };
+    try {
+      let eu = null;
+      try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem cache */ }
+      const r = await plataforma.functions.invoke('copiarImagensParaNosso', {
+        actorId: eu?.id || '', urls: externas, descricao,
+      });
+      const d = r?.data || r;
+      const copiadas = (d?.fotos || []).filter((f) => f.ok).map((f) => f.url);
+      return { fotos: [...nossas, ...copiadas], falharam: (d?.fotos || []).length - copiadas.length };
+    } catch {
+      // Rota fora do ar: melhor o produto ficar sem foto de fora do que com uma
+      // foto que pode virar outra coisa amanhã.
+      return { fotos: nossas, falharam: externas.length };
+    }
+  };
+
   const autoFetchImages = async (product) => {
     setIsAutoImporting(true);
     setAutoImportStatus('🔍 Buscando imagens automaticamente...');
@@ -304,8 +345,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     // — não re-busca por nome (que traz fotos erradas via Bing)
     const existingImages = Array.isArray(product.image_urls) ? product.image_urls : [];
     if (existingImages.length > 0) {
-      setFormData(prev => ({ ...prev, image_urls: existingImages }));
-      setAutoImportStatus(`✅ ${existingImages.length} imagens já importadas do Google Shopping!`);
+      const { fotos, falharam } = await trazerParaNosso(existingImages, product.description);
+      setFormData(prev => ({ ...prev, image_urls: fotos }));
+      setAutoImportStatus(falharam
+        ? `✅ ${fotos.length} imagens salvas no nosso servidor · ⚠️ ${falharam} não vieram — suba manualmente`
+        : `✅ ${fotos.length} imagens salvas no nosso servidor!`);
       setTimeout(() => setAutoImportStatus(''), 3000);
       setIsAutoImporting(false);
       return;
@@ -321,8 +365,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
         const mlResponse = await plataforma.functions.invoke('extractMLImages', { productUrl: sourceUrl });
         const mlImgs = mlResponse?.images || mlResponse?.data?.images || [];
         if (mlImgs.length > 0) {
-          setFormData(prev => ({ ...prev, image_urls: mlImgs.slice(0, 5) }));
-          setAutoImportStatus(`✅ ${mlImgs.length} imagens importadas do ML!`);
+          setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
+          const { fotos, falharam } = await trazerParaNosso(mlImgs.slice(0, 5), product.description);
+          setFormData(prev => ({ ...prev, image_urls: fotos }));
+          setAutoImportStatus(falharam
+            ? `✅ ${fotos.length} imagens do ML no nosso servidor · ⚠️ ${falharam} não vieram`
+            : `✅ ${fotos.length} imagens importadas do ML!`);
           setTimeout(() => setAutoImportStatus(''), 3000);
           return;
         }
@@ -336,8 +384,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
       // adapter retorna JSON cru → { images: [...] }
       const imgs = (gsResponse?.images || gsResponse?.data?.images || []).filter(Boolean).slice(0, 6);
       if (imgs.length > 0) {
-        setFormData(prev => ({ ...prev, image_urls: imgs }));
-        setAutoImportStatus(`✅ ${imgs.length} fotos encontradas!`);
+        setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
+        const { fotos, falharam } = await trazerParaNosso(imgs, product.description);
+        setFormData(prev => ({ ...prev, image_urls: fotos }));
+        setAutoImportStatus(falharam
+          ? `✅ ${fotos.length} fotos no nosso servidor · ⚠️ ${falharam} não vieram — suba manualmente`
+          : `✅ ${fotos.length} fotos encontradas!`);
         setTimeout(() => setAutoImportStatus(''), 3000);
         return;
       }
@@ -641,7 +693,13 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         // via a confirmação, salvava, e o produto continuava sem categoria.
         // A coluna é `category_id`; pedir `category` faz o banco recusar a
         // gravação inteira (esvaziou a vitrine do balcão em 08/08/2026).
-        category_id: formData.category || null
+        category_id: formData.category || null,
+        // 🏷️ 02/09/2026 — o estado do produto. O seletor logo acima existia desde
+        // sempre e o cliente nunca viu nada: o campo não chegava aqui.
+        condicao: formData.condicao || null,
+        estado_conservacao: (formData.estado_conservacao || '').trim() || null,
+        // 🏭 02/09/2026 — origem: é o que coloca o produto nas pílulas da loja.
+        product_source: formData.product_source || null
       };
 
       const sourceProduct = location.state?.sourceProduct;
@@ -1046,16 +1104,36 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label className="text-sm text-gray-700 mb-1.5 block">
+                            Origem do produto
+                          </Label>
+                          <select
+                            value={formData.product_source}
+                            onChange={(e) => handleInputChange('product_source', e.target.value)}
+                            className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                          >
+                            <option value="">— não informado —</option>
+                            {ORIGENS.map((o) => (
+                              <option key={o.valor} value={o.valor}>{o.rotulo}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Coloca o produto nos filtros “Direto de Fábrica” e “Arremate &amp; Devoluções” da loja.
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-1.5 block">
                             Condição do produto
                           </Label>
                           <select
-                            value={formData.condition}
-                            onChange={(e) => handleInputChange('condition', e.target.value)}
+                            value={formData.condicao}
+                            onChange={(e) => handleInputChange('condicao', e.target.value)}
                             className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
                           >
-                            <option value="Novo">Novo</option>
-                            <option value="Usado">Usado</option>
-                            <option value="Recondicionado">Recondicionado</option>
+                            <option value="">— não informado —</option>
+                            {CONDICOES.map((c) => (
+                              <option key={c.valor} value={c.valor}>{c.rotulo}</option>
+                            ))}
                           </select>
                         </div>
                         
@@ -1063,12 +1141,34 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                           <Label className="text-sm text-gray-700 mb-1.5 block">
                             Unidade
                           </Label>
+                          {/* ⚠️ 02/09/2026 — este seletor não tem value nem onChange: é
+                              enfeite. Não existe coluna de unidade em products. Fica
+                              como está (fora do escopo desta entrega), mas registrado:
+                              hoje ele não guarda nada, igual ao "Condição" ao lado
+                              antes desta correção. */}
                           <select className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm">
                             <option>Unidade</option>
                             <option>Kit</option>
                             <option>Par</option>
                           </select>
                         </div>
+                      </div>
+
+                      {/* 🏷️ O texto que evita a reclamação depois da entrega. */}
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Detalhes do estado do produto
+                        </Label>
+                        <textarea
+                          value={formData.estado_conservacao}
+                          onChange={(e) => handleInputChange('estado_conservacao', e.target.value)}
+                          rows={3}
+                          placeholder="Ex: amassado leve na lateral esquerda, funciona normalmente. Caixa aberta, sem manual."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          O cliente lê isto antes de comprar. É o que evita reclamação de amassado ou avaria depois da entrega.
+                        </p>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">

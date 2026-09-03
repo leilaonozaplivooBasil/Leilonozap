@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageCropEditor from '../components/admin/ImageCropEditor';
+import PopupLeilaoConfig from '../components/admin/PopupLeilaoConfig';
 import { convertToWebP } from '@/lib/convertToWebP';
 import { invalidateSiteMediaCache, LOGO_FALLBACK, FAVICON_FALLBACK } from '@/hooks/useSiteMedia';
 
@@ -399,6 +400,11 @@ export default function PainelMidia() {
             Enviando imagem…
           </div>
         )}
+
+        {/* ===== Pop-up do leilão em destaque (02/09/2026) ===== */}
+        <section className="mt-6">
+          <PopupLeilaoConfig banners={banners} onSaved={loadAll} />
+        </section>
 
         {/* ===== Identidade visual ===== */}
         <section className="mt-6">

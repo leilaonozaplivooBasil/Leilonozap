@@ -14,7 +14,15 @@ const ALLOWED = ['description', 'quantity', 'cost_price', 'selling_price_retail'
   // idêntico ao de não existir campo nenhum. A coluna certa é `category_id`:
   // pedir `category` faz o PostgREST recusar a operação inteira (foi o que
   // esvaziou a vitrine do balcão em 08/08/2026, com 2.582 produtos em estoque).
-  'category_id'];
+  'category_id',
+  // 02/09/2026 — estado do produto. `condicao` é o valor fechado (novo, perfeito,
+  // bom, com_avarias, para_reparo, recondicionado) e `estado_conservacao` é o texto
+  // livre que o cliente lê na página de venda. Sem estarem NESTA lista, os dois
+  // campos são descartados aqui em silêncio — mesmo sintoma do category_id.
+  'condicao', 'estado_conservacao',
+  // 02/09/2026 — origem do produto (factory_new | return_resale), o que permite à
+  // Loja Virtual ter as mesmas pílulas de filtro da área de leilão.
+  'product_source'];
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });

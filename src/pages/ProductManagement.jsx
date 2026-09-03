@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
-  Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert
+  Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert, Sparkles
 } from 'lucide-react';
 
 import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';
 import { unidadesEmEstoque, custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
+import { CONDICOES } from '@/lib/condicaoProduto';
+import { ORIGENS } from '@/lib/origemProduto';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -134,6 +136,53 @@ export default function ProductManagement() {
   };
 
   const clearSelection = () => setSelectedIds(new Set());
+
+  // 🏭 02/09/2026 — MARCAR ORIGEM EM LOTE.
+  // Sem isto, classificar os ~299 produtos da vitrine significaria abrir 299 modais.
+  // A coluna `product_source` nasceu vazia de propósito (os lotes misturam fábrica e
+  // devolução, então não dá para deduzir sem mentir) — mas entregar o campo sem uma
+  // forma prática de preenchê-lo é entregar trabalho, não solução.
+  const [marcandoOrigem, setMarcandoOrigem] = useState(false);
+
+  const handleMarcarOrigem = async (origemBruta) => {
+    // String vazia numa coluna que todo mundo testa por ausência é armadilha:
+    // `!p.product_source` continua verdadeiro, mas o filtro por igualdade não acha.
+    const origem = origemBruta || null;
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) { alert('Selecione produtos para marcar a origem'); return; }
+    const nome = ORIGENS.find((o) => o.valor === origem)?.rotulo || 'sem origem';
+    const gravado = origem;
+    if (!confirm(`Marcar ${ids.length} produto(s) como "${nome}"?\n\nIsso define em quais filtros eles aparecem na Loja Virtual.`)) return;
+
+    setMarcandoOrigem(true);
+    let ok = 0;
+    const falhas = [];
+    try {
+      // Um a um pela rota segura (mesma que a edição individual usa, com a mesma
+      // checagem de permissão). Em lotes de 8 para não estourar o limite da função.
+      const LOTE = 8;
+      for (let i = 0; i < ids.length; i += LOTE) {
+        const parte = ids.slice(i, i + LOTE);
+        const respostas = await Promise.all(parte.map((id) =>
+          plataforma.functions
+            .invoke('productAdminAction', { action: 'setField', actorId: currentUser?.id, productId: id, fields: { product_source: gravado } })
+            .then((r) => (r?.success ? { id, ok: true } : { id, ok: false, erro: r?.error || 'falha' }))
+            .catch((e) => ({ id, ok: false, erro: e?.message || String(e) }))
+        ));
+        for (const r of respostas) { if (r.ok) ok += 1; else falhas.push(r); }
+      }
+
+      // Reflete na tela sem recarregar tudo — só o que realmente gravou.
+      const gravados = new Set(ids.filter((id) => !falhas.some((f) => f.id === id)));
+      setProducts((prev) => prev.map((p) => (gravados.has(p.id) ? { ...p, product_source: gravado } : p)));
+      clearSelection();
+
+      if (falhas.length) alert(`${ok} marcado(s) como "${nome}".\n${falhas.length} falhou(aram): ${falhas[0].erro}`);
+      else alert(`${ok} produto(s) marcado(s) como "${nome}".`);
+    } finally {
+      setMarcandoOrigem(false);
+    }
+  };
 
   // Precificar em lote — divide em lotes de 5 para evitar timeout 504
   const handleBatchPrice = async (idsOverride) => {
@@ -274,6 +323,9 @@ export default function ProductManagement() {
     purchase_order: '',
     deposit_name: 'Bangu',
     category_id: '',
+    condicao: '',
+    estado_conservacao: '',
+    product_source: '',
     image_urls: []
   });
 
@@ -548,6 +600,15 @@ export default function ProductManagement() {
       filtered = filtered.filter(p => (p.quantity || 0) < 0);
     } else if (alertFilter === 'no_category') {
       filtered = filtered.filter(p => !p.category_id);
+    } else if (alertFilter === 'loja_sem_origem') {
+      // 🏭 02/09/2026 — a varredura que faz as pílulas da Loja Virtual funcionarem.
+      // Só interessa quem ESTÁ na loja: as pílulas filtram a vitrine, não o depósito.
+      // São ~299 produtos, não os 2.931 do estoque — trabalho de uma tarde.
+      filtered = filtered.filter(p => p.catalog_active && !p.product_source);
+    } else if (alertFilter === 'loja_sem_estado') {
+      // 🏷️ Mesma ideia para o estado do produto (etapa anterior): o que está à venda
+      // sem nenhuma informação de conservação é o que gera reclamação.
+      filtered = filtered.filter(p => p.catalog_active && !p.condicao && !(p.estado_conservacao || '').trim());
     } else if (alertFilter === 'hidden_stock') {
       filtered = filtered.filter(p => (p.quantity || 0) > 0 && !p.catalog_active);
     }
@@ -609,6 +670,9 @@ export default function ProductManagement() {
       // Sem estas duas linhas o formulário abriria com categoria vazia e sem as
       // fotos que o produto já tem — e salvar apagaria as duas.
       category_id: product.category_id || '',
+      condicao: product.condicao || '',
+      estado_conservacao: product.estado_conservacao || '',
+      product_source: product.product_source || '',
       image_urls: Array.isArray(product.image_urls) ? product.image_urls : []
     });
     setShowAddForm(true);
@@ -657,6 +721,9 @@ export default function ProductManagement() {
         // TEXT, e '' não é nulo pro banco. Toda contagem de "sem categoria" e o
         // filtro da vitrine olham NULL.
         category_id: formData.category_id || null,
+        condicao: formData.condicao || null,
+        estado_conservacao: (formData.estado_conservacao || '').trim() || null,
+        product_source: formData.product_source || null,
         image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : []
       };
 
@@ -687,6 +754,9 @@ export default function ProductManagement() {
         purchase_order: '',
         deposit_name: 'Bangu',
         category_id: '',
+    condicao: '',
+    estado_conservacao: '',
+    product_source: '',
         image_urls: []
       });
       setShowAddForm(false);
@@ -976,6 +1046,8 @@ export default function ProductManagement() {
             <option value="stopped">Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
             <option value="error">Erro Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
             <option value="no_category">Sem Categoria ({products.filter(p => !p.category_id).length})</option>
+            <option value="loja_sem_origem">Na loja sem origem ({products.filter(p => p.catalog_active && !p.product_source).length})</option>
+            <option value="loja_sem_estado">Na loja sem estado ({products.filter(p => p.catalog_active && !p.condicao && !(p.estado_conservacao || '').trim()).length})</option>
             <option value="hidden_stock">Estoque fora da loja ({products.filter(p => (p.quantity || 0) > 0 && !p.catalog_active).length})</option>
           </select>
           <button
@@ -1087,6 +1159,38 @@ export default function ProductManagement() {
                 <BookOpen className="w-3.5 h-3.5 mr-1.5" />
                 Loja Virtual
               </Button>
+
+              {/* 🏭 Origem em lote — é o que faz as pílulas da Loja Virtual aparecerem. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={marcandoOrigem}
+                    className="bg-sky-700 hover:bg-sky-600 text-white border-0 h-7 text-xs px-3"
+                  >
+                    {marcandoOrigem
+                      ? <><span className="w-3.5 h-3.5 mr-1.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Marcando...</>
+                      : <><Sparkles className="w-3.5 h-3.5 mr-1.5" />Marcar origem</>}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl">
+                  {ORIGENS.map((o) => (
+                    <DropdownMenuItem
+                      key={o.valor}
+                      onClick={() => handleMarcarOrigem(o.valor)}
+                      className="cursor-pointer focus:bg-gray-800"
+                    >
+                      {o.rotulo} ({selectedIds.size})
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuItem
+                    onClick={() => handleMarcarOrigem('')}
+                    className="cursor-pointer focus:bg-gray-800 text-gray-400"
+                  >
+                    Limpar origem ({selectedIds.size})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1587,6 +1691,66 @@ export default function ProductManagement() {
                       </p>
                     </div>
 
+                    {/* 🏷️ 02/09/2026 — ESTADO DO PRODUTO.
+                        Existia um seletor "Condição do produto" no cadastro rápido que
+                        nunca chegava ao banco (a coluna não existia) — mesmo caso do
+                        category_id. E a página de venda mostrava, sob "Descrição", o
+                        texto interno do lote: em 3.170 dos 3.543 produtos do retrato de
+                        estoque. O cliente comprava devolução sem saber, e reclamava
+                        depois. Estes dois campos existem para acabar com isso.
+                        Opcionais de propósito: exigir estado aqui travaria o cadastro
+                        enquanto os produtos antigos não estiverem preenchidos. */}
+                    <div className="col-span-full rounded-md border border-amber-700/40 bg-amber-950/20 p-3">
+                      <Label className="text-amber-300 font-semibold">Estado do produto</Label>
+                      <p className="text-xs text-amber-200/70 mt-0.5 mb-3">
+                        O cliente lê isto antes de comprar. É o que evita reclamação de amassado ou avaria depois da entrega.
+                      </p>
+
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                          <Label className="text-gray-300 text-sm">Origem</Label>
+                          <select
+                            value={formData.product_source || ''}
+                            onChange={(e) => setFormData({ ...formData, product_source: e.target.value })}
+                            className="w-full h-10 px-3 rounded-md bg-gray-700 text-white border border-gray-600 text-sm"
+                          >
+                            <option value="">— não informado —</option>
+                            {ORIGENS.map((o) => (
+                              <option key={o.valor} value={o.valor}>{o.rotulo}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-400 mt-1">
+                            É o que coloca o produto nos filtros “Direto de Fábrica” e “Arremate &amp; Devoluções” da Loja Virtual.
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="text-gray-300 text-sm">Condição</Label>
+                          <select
+                            value={formData.condicao || ''}
+                            onChange={(e) => setFormData({ ...formData, condicao: e.target.value })}
+                            className="w-full h-10 px-3 rounded-md bg-gray-700 text-white border border-gray-600 text-sm"
+                          >
+                            <option value="">— não informado —</option>
+                            {CONDICOES.map((c) => (
+                              <option key={c.valor} value={c.valor}>{c.rotulo}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <Label className="text-gray-300 text-sm">Detalhes do estado</Label>
+                          <Textarea
+                            value={formData.estado_conservacao}
+                            onChange={(e) => setFormData({ ...formData, estado_conservacao: e.target.value })}
+                            className="bg-gray-700 text-white"
+                            placeholder="Ex: amassado leve na lateral esquerda, funciona normalmente. Caixa aberta, sem manual."
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <Label className="text-gray-300">Quantidade Total</Label>
                       <Input
@@ -1740,14 +1904,21 @@ export default function ProductManagement() {
                     </div>
 
                     <div className="col-span-full">
-                      <Label className="text-gray-300">Observações</Label>
+                      <Label className="text-gray-300">Descrição do produto</Label>
                       <Textarea
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         className="bg-gray-700 text-white"
-                        placeholder="Adicione observações sobre o produto..."
+                        placeholder="Ex: Fritadeira sem óleo, capacidade 8L, timer de 60 min, 1700W. Acompanha cesto removível."
                         rows={3}
                       />
+                      {/* Este campo é `notes`, e é ele que a página de venda exibe sob o
+                          título "Descrição". O rótulo dizia "Observações" e a ajuda pedia
+                          "observações sobre o produto" — quem preenchia não tinha como
+                          saber que o texto ia direto pro cliente. */}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Este texto aparece para o cliente na página de venda, sob o título “Descrição”.
+                      </p>
                     </div>
 
                     <div className="col-span-full flex flex-wrap gap-2">

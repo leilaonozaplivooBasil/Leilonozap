@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
+import PilulasVitrine from "@/components/catalog/PilulasVitrine";
+import { produtoNaSecao } from "@/lib/secoesVitrine";
+import RolagemHorizontal from "@/components/loja/RolagemHorizontal";
+
 
 const Product = plataforma.entities.Product;
 const User = { me: () => plataforma.auth.me() };
@@ -28,7 +32,6 @@ const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 export default function Catalog() {
   useSectionTracking('loja_virtual', 'Loja Virtual');
   const navigate = useNavigate();
-  const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const location = useLocation();
 
@@ -58,6 +61,10 @@ export default function Catalog() {
   const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  // 🏷️ 02/09/2026 — seção da vitrine (Direto de Fábrica / Arremate & Devoluções /
+  // Collection). O que cada rótulo realmente filtra, e por que, está escrito em
+  // @/components/catalog/PilulasVitrine — leia antes de mexer.
+  const [secaoFiltro, setSecaoFiltro] = useState("todas");
   const [storeRating, setStoreRating] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   // 🔍 produto aberto EXPANDIDO na própria página (modal) — sem navegar (pedido Gabriel 25/07)
@@ -105,52 +112,6 @@ export default function Catalog() {
     }
   }, [loadingMore, reachedEnd, selectedCategory, products.length]);
 
-  useEffect(() => {
-    const slider = scrollerRef.current;
-    if (!slider) return;
-
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-
-    const mouseDownHandler = (e) => {
-      isDown = true;
-      slider.classList.add('grabbing');
-      startX = e.pageX - slider.offsetLeft;
-      scrollLeft = slider.scrollLeft;
-    };
-
-    const mouseLeaveHandler = () => {
-      isDown = false;
-      slider.classList.remove('grabbing');
-    };
-
-    const mouseUpHandler = () => {
-      isDown = false;
-      slider.classList.remove('grabbing');
-    };
-
-    const mouseMoveHandler = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - slider.offsetLeft;
-      const walk = (x - startX) * 2;
-      slider.scrollLeft = scrollLeft - walk;
-    };
-
-    slider.addEventListener('mousedown', mouseDownHandler);
-    slider.addEventListener('mouseleave', mouseLeaveHandler);
-    slider.addEventListener('mouseup', mouseUpHandler);
-    slider.addEventListener('mousemove', mouseMoveHandler);
-
-    return () => {
-      slider.removeEventListener('mousedown', mouseDownHandler);
-      slider.removeEventListener('mouseleave', mouseLeaveHandler);
-      slider.removeEventListener('mouseup', mouseUpHandler);
-      slider.removeEventListener('mousemove', mouseMoveHandler);
-    };
-  }, []);
-
   const filterProducts = React.useCallback(() => {
     if (!Array.isArray(products)) {
       console.warn("⚠️ products não é array");
@@ -161,6 +122,10 @@ export default function Catalog() {
     let filtered = products;
 
     // Filtro por categoria
+    if (secaoFiltro !== "todas") {
+      filtered = filtered.filter((p) => produtoNaSecao(p, secaoFiltro));
+    }
+
     if (selectedCategory !== "all") {
       filtered = filtered.filter((p) => p.category_id === selectedCategory);
     }
@@ -208,7 +173,7 @@ export default function Catalog() {
     filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
 
     setFilteredProducts(filtered);
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, secaoFiltro]);
 
   // 🎴 Monta o cartão da Loja Virtual a partir de UM AppUser (dono resolvido).
   // Extraído pra o cartão poder vir do cadastro (dono real) ou do link, sem duplicar código.
@@ -518,12 +483,40 @@ export default function Catalog() {
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
-      // Carrega categorias
+      // 🧹 02/09/2026 — CATEGORIA SEM PRODUTO NÃO É OFERECIDA.
+      // "COSTURA" e "Escritório" apareciam na fileira com ZERO produtos: o cliente
+      // clicava e a vitrine ficava vazia. Mesmo beco das pílulas que já foi tapado.
+      //
+      // A contagem vem da view vw_categorias_vitrine, ou seja, do SERVIDOR — e isso
+      // é o ponto. A loja carrega 240 produtos por vez; contar pelo que está
+      // carregado esconderia categoria cujos itens estão fora dessa janela, e o
+      // sintoma seria "sumiu uma categoria que tem produto". A view conta a base
+      // inteira.
+      //
+      // Ordem alfabética: antes não havia ORDER BY nenhum e a fileira mudava de
+      // ordem a cada carregamento (nove categorias empatadas em sort_order = 0 e
+      // duas com NULL). Alfabético é previsível e não inventa hierarquia
+      // comercial — ordenar por volume é uma decisão do dono, não minha.
       try {
-        const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
-        setCategories((allCategories || []).filter(c => c.is_active !== false));
+        const { data: comProduto, error: erroView } = await supabase
+          .from('vw_categorias_vitrine')
+          .select('id,name,parent_category_id,is_active,sort_order,produtos_na_loja')
+          .is('parent_category_id', null)
+          .eq('is_active', true)
+          .gt('produtos_na_loja', 0)
+          .order('name');
+        if (erroView) throw erroView;
+        setCategories(comProduto || []);
       } catch (error) {
-        console.debug('Erro ao carregar categorias:', error);
+        // 🛟 Se a view não existir (ambiente antigo) ou falhar, volta ao caminho
+        // anterior: melhor mostrar categoria a mais do que ficar sem fileira.
+        console.debug('Erro ao carregar categorias pela view, usando fallback:', error?.message);
+        try {
+          const allCategories = await plataforma.entities.Category.filter({ parent_category_id: null, is_active: true });
+          setCategories((allCategories || []).filter(c => c.is_active !== false));
+        } catch (e2) {
+          console.debug('Erro ao carregar categorias:', e2);
+        }
       }
 
       try {
@@ -568,7 +561,7 @@ export default function Catalog() {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, secaoFiltro, filterProducts]);
 
   // 🗂️ Categoria: busca no servidor (não fica preso aos 240 da 1ª página).
   // ⚡ Na primeira montagem, "Todos" já foi buscado por loadProducts() — repetir aqui
@@ -626,8 +619,14 @@ export default function Catalog() {
   const featuredProducts = useMemo(() => {
     return products
       .filter(p => p.catalog_active && p.is_featured && p.quantity > 0)
+      // 🏭 02/09/2026 — a prateleira de destaques também obedece ao filtro de origem.
+      // Sem isto, filtrar "Direto de Fábrica" continuava exibindo uma devolução em
+      // destaque no topo — visto ao abrir a loja com os dois tipos de produto.
+      // (A prateleira ainda ignora o filtro de CATEGORIA; é comportamento anterior a
+      // esta mudança e ficou fora do escopo de propósito.)
+      .filter(p => produtoNaSecao(p, secaoFiltro))
       .slice(0, 4);
-  }, [products]);
+  }, [products, secaoFiltro]);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -650,19 +649,23 @@ export default function Catalog() {
     <div className="bg-gray-900 text-white min-h-screen overflow-x-hidden">
       <PagePerformanceTracker pageName="Catalog" />
       <style>{`
-        .category-scroller {
-          overflow-x: scroll;
-          cursor: grab;
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        /* ↔️ 02/09/2026 — o degradê nas bordas (mask-image) foi removido: ele apagava
+           justamente o primeiro e o último item, e "Todos" aparecia meio sumido no
+           print do usuário. Com as setas do RolagemHorizontal, a indicação de que
+           a fileira continua já existe — o degradê só atrapalhava a leitura.
+           A classe .grabbing sumiu junto com o código morto que a usava. */
+        /* ⚠️ SEM scroll-behavior: smooth aqui. Com ele, TODA atribuição de scrollLeft
+           vira animação — inclusive as do arrasto, que passa a brigar com a animação
+           em vez de seguir o ponteiro (arrastar simplesmente não saía do lugar).
+           As setas pedem a rolagem suave na própria chamada (scrollBy behavior),
+           que é onde ela faz sentido. */
+        .nz-rolagem-h {
           scrollbar-width: none;
+          cursor: grab;
+          overscroll-behavior-x: contain;
         }
-        .category-scroller::-webkit-scrollbar {
-          display: none;
-        }
-        .category-scroller.grabbing {
-            cursor: grabbing;
-        }
+        .nz-rolagem-h::-webkit-scrollbar { display: none; }
+        .nz-rolagem-h:active { cursor: grabbing; }
         @keyframes fire {
           0% { transform: scale(1) rotate(0deg); opacity: 1; }
           25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
@@ -691,7 +694,7 @@ export default function Catalog() {
 
         {/* OFERTAS RELÂMPAGO */}
         <OfertasRelampago
-          products={products}
+          products={products.filter((p) => produtoNaSecao(p, secaoFiltro))}
           onOpenDetails={openDetails}
           totalProdutosTexto={textoTotalProdutos(totalProdutos)}
         />
@@ -699,6 +702,19 @@ export default function Catalog() {
         {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
             "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
         <CartaoLojaVirtual parceiro={licenseeData} />
+
+        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
+            os produtos DESTA loja em vez de levar o cliente para o leilão.
+            ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago: aquele bloco tem
+            `relative z-10 -mt-16`, sobe de propósito para sobrepor o banner (efeito de
+            camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
+            preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
+            elas de fato filtram. */}
+        <PilulasVitrine
+          produtos={products}
+          filtro={secaoFiltro}
+          onFiltroChange={setSecaoFiltro}
+        />
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
@@ -835,7 +851,7 @@ export default function Catalog() {
               direita SÓ no mobile (no desktop o Filtros segue na faixa standalone acima) */}
           {categories.length > 0 && (
             <div className="mb-6 flex items-center border-b border-gray-800">
-              <div className="flex-1 flex items-center gap-4 sm:gap-6 overflow-x-auto category-scroller">
+              <RolagemHorizontal className="flex items-center gap-4 sm:gap-6 px-1" rotulo="Rolar categorias">
                 {[{ id: 'all', name: 'Todos' }, ...categories].map((c) => {
                   const active = selectedCategory === c.id;
                   return (
@@ -849,7 +865,7 @@ export default function Catalog() {
                     </button>
                   );
                 })}
-              </div>
+              </RolagemHorizontal>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 aria-label="Filtros"
@@ -900,13 +916,30 @@ export default function Catalog() {
             </div> :
           filteredProducts.length === 0 && !loadError ?
           <div className="text-center py-12 text-gray-400">
-              <div className="text-6xl mb-4">📦</div>
+              {/* 🏭 02/09/2026 — vazio por FILTRO DE ORIGEM tem causa própria: ninguém
+                  classificou aqueles produtos ainda. Dizer "nenhum produto encontrado /
+                  ajuste a busca" nesse caso manda o cliente procurar defeito na busca
+                  dele, quando o buraco é do nosso lado. */}
+              <div className="text-6xl mb-4">{secaoFiltro !== "todas" ? "🏷️" : "📦"}</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
-                Nenhum produto encontrado
+                {secaoFiltro !== "todas"
+                  ? "Ainda não temos produtos nesta seção"
+                  : "Nenhum produto encontrado"}
               </h3>
               <p className="text-gray-500 mb-6">
-                Tente ajustar a busca ou volte mais tarde para novos produtos!
+                {secaoFiltro !== "todas"
+                  ? "Estamos organizando o acervo por origem. Veja todos os produtos enquanto isso."
+                  : "Tente ajustar a busca ou volte mais tarde para novos produtos!"}
               </p>
+              {secaoFiltro !== "todas" && (
+                <button
+                  type="button"
+                  onClick={() => setSecaoFiltro("todas")}
+                  className="rounded-full border border-emerald-400/60 bg-emerald-500/15 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500/25"
+                >
+                  Ver todos os produtos
+                </button>
+              )}
             </div> :
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">

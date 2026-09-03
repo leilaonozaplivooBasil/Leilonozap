@@ -17,6 +17,7 @@ import NavDesktop from "@/components/nav/NavDesktop";
 import NavMobile from "@/components/nav/NavMobile";
 import CartPopup from "@/components/cart/CartPopup";
 import TransactionToasts from "@/components/notifications/TransactionToasts";
+import PopupLeilaoDestaque from "@/components/common/PopupLeilaoDestaque";
 import ReferralSignupToast from "@/components/notifications/ReferralSignupToast";
 import GlobalWalletDrawer from "@/components/wallet/GlobalWalletDrawer";
 import TermoGateGlobal from "@/components/legal/TermoGateGlobal";
@@ -1126,6 +1127,13 @@ export default function Layout({ children, currentPageName }) {
         </React.Suspense>
         <TransactionToasts />
         <ReferralSignupToast />
+        {/* 📣 02/09/2026 — pop-up do leilão em destaque, em toda página de cliente.
+            Ponto de montagem ÚNICO: nenhuma página precisou ser tocada. Quem
+            decide se aparece é src/lib/popupLeilaoDestaque.js (regra pura,
+            testada no Node) — fora da sala do leilão, fora do checkout, uma vez
+            por sessão, e some sozinho quando o leilão anunciado encerra.
+            Sem configuração ou com qualquer falha, renderiza null. */}
+        <PopupLeilaoDestaque currentPageName={currentPageName} />
         <GlobalWalletDrawer />
         {/* 💰 PONTO 84 — a carteira sumiu do desktop (o botão da navbar é md:hidden e o
             topo já está cheio): volta como pill flutuante no canto inferior esquerdo
