@@ -1,12 +1,18 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
+import { textoDeTermino } from '@/lib/relogioLeilao';
 
 /**
  * PONTO 84 — cabeçalho da sala: PREÇO à esquerda, RELÓGIO à direita.
  * Só apresentação — nenhuma regra de leilão vive aqui.
  */
-export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName }) {
+export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName, endTime }) {
+  // 🔴 03/09/2026 — a data por extenso embaixo do cronômetro.
+  // O cronômetro tem resolução de semana: fica parado em "1 semana" por sete
+  // dias e um cliente abriu chamado achando o leilão travado. `endTime` é prop
+  // NOVA e opcional — quem não passar não desenha nada, e a sala fica igual.
+  const fimEmTexto = textoDeTermino(endTime);
   return (
     <div className="flex w-full items-center justify-between gap-2">
       {/* PREÇO — esquerda */}
@@ -36,8 +42,9 @@ export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionA
 
       {/* PONTO 90 — CRONÔMETRO DIGITAL: sem "voltinha" de relógio, dígitos
           grandes estilo display, na cor do fogo da logo (laranja/âmbar). */}
+      <div className="flex shrink-0 flex-col items-end">
       <div
-        className="crono flex shrink-0 items-center rounded-xl px-2 py-0.5 sm:px-2.5 sm:py-1"
+        className="crono flex items-center rounded-xl px-2 py-0.5 sm:px-2.5 sm:py-1"
         style={{
           background: 'linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35))',
           border: `1px solid ${isWarMode ? 'rgba(248,113,113,0.6)' : 'rgba(249,115,22,0.45)'}`,
@@ -59,6 +66,14 @@ export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionA
         >
           {displayTime}
         </span>
+      </div>
+        {/* a data não cabe DENTRO da pílula; vai embaixo, em corpo menor. Sem a
+            guarda, leilão sem end_time desenharia uma linha vazia. */}
+        {fimEmTexto && (
+          <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold tabular-nums text-orange-200/70">
+            {fimEmTexto}
+          </span>
+        )}
       </div>
 
       <style>{`
