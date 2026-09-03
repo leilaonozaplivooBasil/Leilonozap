@@ -1169,6 +1169,7 @@ export default function AuctionRoom() {
           <HeaderPrecoTempo
             currentPrice={currentPrice}
             displayTime={displayTime}
+            endTime={auction?.end_time}
             isAuctionActive={isAuctionActive}
             isWarMode={isWarMode}
             onInfo={() => setShowMobilePanel(true)}

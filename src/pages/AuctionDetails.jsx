@@ -9,6 +9,7 @@ import { ArrowLeft, CheckCircle, Package, Clock, TrendingUp, Shield, Info, Flame
 import { createPageUrl } from "@/utils";
 
 import CountdownTimer from "../components/common/CountdownTimer";
+import { textoDeTermino } from '@/lib/relogioLeilao';
 import FixedAuctionPanel from "../components/auction/FixedAuctionPanel";
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
@@ -113,6 +114,8 @@ export default function AuctionDetails() {
 
   const images = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls : [];
   const currentPrice = auction.current_price || auction.starting_price;
+  // data de término por extenso; vazia quando o end_time não é confiável
+  const fimEmTexto = textoDeTermino(auction?.end_time);
   const isActive = auction.status === "active" && new Date(auction.end_time) > new Date();
 
   const categoryEmojis = {
@@ -369,6 +372,17 @@ export default function AuctionDetails() {
                         <Clock className="w-4 h-4" />
                         <CountdownTimer endTime={auction.end_time} />
                       </div>
+                      {/* 🔴 03/09/2026 — a DATA por extenso, embaixo do contador.
+                          Um cliente abriu chamado achando que o leilão estava
+                          "travado em 1 semana": o rótulo tem resolução de semana
+                          e fica parado 7 dias. Com a data escrita, não há o que
+                          interpretar. Sai vazio quando não há data confiável —
+                          ver src/lib/relogioLeilao.js. */}
+                      {fimEmTexto && (
+                        <p className="text-[11px] text-emerald-200/60 mt-0.5 whitespace-nowrap">
+                          Termina {fimEmTexto}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {/* 🏆 quem está ganhando agora — visível também com o leilão ativo */}
