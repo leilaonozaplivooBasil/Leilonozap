@@ -734,14 +734,42 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   };
 
   // 🤝 DIR-43 — qualificação 1-5 da lista de network (Hábito 3)
-  const handleQualificarContato = async (contato, estrelas) => {
+  // DIR-46 — qualificação completa da lista de network: produto apresentado +
+  // 3 notas 1-5. A coluna legada `qualificacao` (estrela única) fica intocada.
+  const handleQualificarContato = async (contato, quali) => {
     try {
-      await plataforma.entities.Customer.update(contato.id, { qualificacao: estrelas });
-      toast.success(`${contato.full_name || 'Contato'}: ${estrelas} estrela(s)`);
+      await plataforma.entities.Customer.update(contato.id, { qualificacao_network: quali });
+      const total = (quali?.confianca || 0) + (quali?.financeiro || 0) + (quali?.apetite || 0);
+      toast.success(`${contato.full_name || 'Contato'} qualificado: ${total}/15`);
       await loadCustomers();
+      return true;
     } catch (error) {
       console.error('Erro ao qualificar contato:', error);
-      toast.error('Erro ao salvar a qualificação — a migração do Método já foi colada?');
+      toast.error('Erro ao salvar a qualificação — a migração da DIR-46 já foi colada no banco?');
+      return false;
+    }
+  };
+
+  // 📜 DIR-47 — registrar o desfecho de um contato do método (histórico
+  // append-only em customers.contatos_metodo, com carimbo de quem registrou).
+  const handleRegistrarContatoMetodo = async (contato, registro) => {
+    try {
+      const historico = Array.isArray(contato.contatos_metodo) ? contato.contatos_metodo : [];
+      const completo = {
+        ...registro,
+        id: (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `ct_${Date.now()}`),
+        em: new Date().toISOString(),
+        registrado_por_id: currentUser?.id || null,
+        registrado_por_nome: currentUser?.full_name || '',
+      };
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: [...historico, completo] });
+      toast.success(`Contato registrado: ${contato.full_name || ''}`);
+      await loadCustomers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao registrar contato:', error);
+      toast.error('Erro ao registrar o contato — a migração da DIR-47 já foi colada no banco?');
+      return false;
     }
   };
 
@@ -1331,6 +1359,7 @@ _Enviado via CRM Leilão NoZap_`;
             clientesManuais={networkManualCustomers}
             oportunidades={networkOportunidades}
             onQualificar={handleQualificarContato}
+            onRegistrarContato={handleRegistrarContatoMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />

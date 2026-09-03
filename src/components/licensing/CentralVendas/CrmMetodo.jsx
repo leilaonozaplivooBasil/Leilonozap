@@ -8,11 +8,19 @@ import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
   HABITOS, ROTINA_PADRAO, periodoDe, PERIODOS, gerarTarefasDaRotina,
-  progressoDia, linkGoogleAgenda, QUALIFICACOES,
+  progressoDia, linkGoogleAgenda,
   HORIZONTES_SONHO, agruparSonhosPorHorizonte, normalizarSonho, PLACEHOLDER_DETALHES_SONHO,
+  PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina,
+  probabilidadeFechamento, produtoApresentacao,
+  agendaDoDiaContatos,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
+import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
+import CrmContatoRegistroModal from './CrmContatoRegistroModal';
+
+// DIR-46 — cor da faixa de probabilidade na lista
+const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
 
 // 🏆 DIR-43 — O MÉTODO VIVO: os painéis dos hábitos 1-5 e 8 (os hábitos 6 e
 // 7 são o próprio CRM: Acompanhamento = Clientes+Esteira, Verificação =
@@ -25,7 +33,7 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
-export default function CrmMetodo({ painel, currentUser, clientesManuais = [], oportunidades = [], onQualificar, onNovoCliente, onIr }) {
+export default function CrmMetodo({ painel, currentUser, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onNovoCliente, onIr }) {
   const uid = currentUser?.id;
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
@@ -37,6 +45,14 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '' });
+  const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
+  const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
+  const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
+  const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
+  const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
+  const [registrandoContato, setRegistrandoContato] = useState(null); // contato aberto no registro (DIR-47)
+  const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
+  const [googleConectando, setGoogleConectando] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -112,6 +128,23 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
     } finally { setSalvando(false); }
   };
 
+  // DIR-45.2 — dia gerado com a rotina antiga continua salvo no banco; este
+  // botão apaga as tarefas do DIA ESCOLHIDO e recria com a Rotina Perfeita.
+  const regerarDia = async () => {
+    setSalvando(true);
+    try {
+      for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
+      const linhas = gerarTarefasDaRotina(rotina, uid, dia);
+      for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
+      setConfirmaRegerar(false);
+      carregarTarefas();
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao regenerar o dia — tente de novo');
+    } finally { setSalvando(false); }
+  };
+
   const alternarFeito = async (t) => {
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !t.feito } : x)));
     try { await plataforma.entities.MetodoTarefa.update(t.id, { feito: !t.feito }); }
@@ -143,10 +176,76 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   }, [oportunidades]);
   const reunioesHoje = reunioes.filter((o) => String(o.reuniao_em).slice(0, 10) === hojeStr()).length;
 
-  const listaOrdenada = useMemo(
-    () => [...clientesManuais].sort((a, b) => (b.qualificacao || 0) - (a.qualificacao || 0) || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR')),
-    [clientesManuais]
-  );
+  // DIR-46 — agenda qualificada: busca + ordenação por probabilidade de
+  // fechamento (não qualificados por último, em ordem alfabética).
+  const listaOrdenada = useMemo(() => {
+    const termo = buscaLista.trim().toLowerCase();
+    const filtrados = clientesManuais.filter((c) => !termo
+      || String(c.full_name || '').toLowerCase().includes(termo)
+      || String(c.phone || '').toLowerCase().includes(termo)
+      || String(c.email || '').toLowerCase().includes(termo));
+    return [...filtrados].sort((a, b) => {
+      const pa = probabilidadeFechamento(a.qualificacao_network)?.pct ?? -1;
+      const pb = probabilidadeFechamento(b.qualificacao_network)?.pct ?? -1;
+      return pb - pa || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR');
+    });
+  }, [clientesManuais, buscaLista]);
+
+  const salvarQualificacao = async (contato, quali) => {
+    setSalvando(true);
+    const ok = await onQualificar?.(contato, quali);
+    setSalvando(false);
+    if (ok) setQualificando(null); // falhou? modal fica aberto, notas não se perdem
+  };
+
+  // 📜 DIR-47 — registrar o desfecho de um contato
+  const salvarRegistroContato = async (contato, registro) => {
+    setSalvando(true);
+    const ok = await onRegistrarContato?.(contato, registro);
+    setSalvando(false);
+    if (ok) setRegistrandoContato(null);
+  };
+
+  // 🗓️ DIR-47 — a Google Agenda da PRÓPRIA pessoa (leitura, no navegador
+  // dela; mesmo GOOGLE_CLIENT_ID do login — token não passa pelo servidor).
+  const conectarGoogleAgenda = async () => {
+    setGoogleConectando(true);
+    try {
+      const r = await plataforma.functions.invoke('getGoogleClientId', {});
+      const clientId = r?.clientId;
+      if (!clientId) throw new Error('login Google não configurado');
+      if (!window.google?.accounts?.oauth2) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://accounts.google.com/gsi/client';
+          s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
+          document.head.appendChild(s);
+        });
+      }
+      if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
+      const token = await new Promise((res, rej) => {
+        const tc = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/calendar.readonly',
+          callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
+          error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
+        });
+        tc.requestAccessToken();
+      });
+      const ini = new Date(); ini.setHours(0, 0, 0, 0);
+      const fim = new Date(ini.getTime() + 86400000);
+      const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(ini.toISOString())}&timeMax=${encodeURIComponent(fim.toISOString())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      const j = await resp.json();
+      setGoogleEventos((j.items || []).map((e) => ({ id: e.id, titulo: e.summary || '(sem título)', inicio: e.start?.dateTime || e.start?.date || '' })));
+      toast.success('Google Agenda conectada — eventos de hoje na tela');
+    } catch (e) {
+      console.warn('Google Agenda:', e);
+      toast.error(`Não deu pra conectar a Google Agenda: ${e.message}`);
+    } finally { setGoogleConectando(false); }
+  };
 
   const habito = HABITOS.find((h) => h.id === painel);
 
@@ -260,9 +359,28 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
           );
         })()}
 
-        {/* ══ ✅ HÁBITO 2 — MASTER TASK (o Trello do dia) ══ */}
+        {/* ══ ✅ HÁBITO 2 — MASTER TASK + ROTINA PERFEITA (DIR-45) ══ */}
         {painel === 'compromisso' && (
           <div className="space-y-3">
+            <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca space-y-1.5">
+              <p>
+                📣 <strong>A Rotina Perfeita não é agenda de posts</strong> — é a sua rotina real virando narrativa nas redes:{' '}
+                <strong className="text-nz-tinta">{PRINCIPIO_ROTINA.percepcoes.join(' → ')}</strong>.
+              </p>
+              <p className="italic">"{PRINCIPIO_ROTINA.regra}" — {PRINCIPIO_ROTINA.texto}</p>
+              <button type="button" onClick={() => setLogicaAberta(!logicaAberta)} className="font-semibold text-nz-verde hover:text-nz-verde-claro">
+                {logicaAberta ? '▾ esconder a lógica do dia' : '▸ ver a lógica do dia (a história que a rotina conta)'}
+              </button>
+              {logicaAberta && (
+                <div className="pt-1 space-y-0.5">
+                  <p className="text-[11px]">Você não termina o dia tendo feito dez propagandas — termina tendo contado UMA história:</p>
+                  {NARRATIVA_DO_DIA.map((n) => (
+                    <p key={n.hora} className="text-[11px]"><span className="font-bold text-nz-tinta">{n.hora}</span> — {n.frase}</p>
+                  ))}
+                  <p className="text-[11px] italic pt-1">Quando chegar a hora de apresentar a Leilão NoZap, a audiência já viu o mais importante: <strong>a pessoa vivendo aquilo que fala.</strong></p>
+                </div>
+              )}
+            </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(-1)}><ChevronLeft className="w-5 h-5 text-nz-tinta" /></Button>
@@ -279,9 +397,9 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
               <div className="text-center py-6 space-y-2">
                 <p className="text-sm text-nz-tinta-fraca">Dia sem Master Task ainda. "O compromisso é uma decisão diária."</p>
                 <Button onClick={gerarDia} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                  ⚡ {salvando ? 'Gerando...' : 'Gerar meu dia (rotina do método)'}
+                  ⚡ {salvando ? 'Gerando...' : 'Gerar Minha Rotina Perfeita (Rotina do Método)'}
                 </Button>
-                <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da rotina — das 5h ao fechamento do dia.</p>
+                <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da Rotina Perfeita — das 5h ao descanso, com o guia de cada horário.</p>
               </div>
             ) : (
               PERIODOS.map((p) => {
@@ -291,18 +409,33 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
                   <div key={p.id}>
                     <p className="text-xs font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1.5">{p.label}</p>
                     <div className="space-y-1.5">
-                      {doPeriodo.map((t) => (
-                        <div key={t.id} className={`flex items-center gap-2.5 rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
-                          <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
-                              {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
-                            </p>
-                            {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
+                      {doPeriodo.map((t) => {
+                        const guia = guiaDaRotina(t.titulo);
+                        return (
+                          <div key={t.id} className={`rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
+                            <div className="flex items-center gap-2.5">
+                              <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
+                                  {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
+                                </p>
+                                {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
+                              </div>
+                              {guia && !t.feito && (
+                                <button
+                                  type="button"
+                                  onClick={() => setGuiaAberto(guiaAberto === t.id ? null : t.id)}
+                                  className={`shrink-0 text-[11px] font-semibold ${guiaAberto === t.id ? 'text-nz-verde' : 'text-nz-tinta-fraca hover:text-nz-verde'}`}
+                                >📖 guia</button>
+                              )}
+                              <button type="button" onClick={() => removerTarefa(t)} className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                            {guia && guiaAberto === t.id && !t.feito && (
+                              <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
+                            )}
                           </div>
-                          <button type="button" onClick={() => removerTarefa(t)} className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -314,55 +447,213 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
               <Input value={novaTarefa.titulo} onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })} placeholder="nova tarefa do dia..." className="bg-white border-nz-borda text-nz-tinta" />
               <Button onClick={addTarefa} disabled={!novaTarefa.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0"><Plus className="w-4 h-4" /></Button>
             </div>
-          </div>
-        )}
-
-        {/* ══ 🤝 HÁBITO 3 — LISTA DE NETWORK (qualificada 1-5) ══ */}
-        {painel === 'lista' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-sm text-nz-tinta-fraca">{listaOrdenada.length} pessoas na sua lista · qualifique de 1 a 5 estrelas</p>
-              <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
-              </Button>
-            </div>
-            {listaOrdenada.length === 0 ? (
-              <p className="text-sm text-nz-tinta-fraca py-4 text-center">Sua lista começa aqui — adicione as pessoas da sua agenda.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {listaOrdenada.map((c) => (
-                  <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
-                      <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
-                    </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {QUALIFICACOES.map((n) => (
-                        <button key={n} type="button" onClick={() => onQualificar?.(c, n)} title={`${n} estrela(s)`}>
-                          <Star className={`w-4 h-4 ${((c.qualificacao || 0) >= n) ? 'text-amber-500 fill-amber-500' : 'text-nz-borda'}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {tarefas.length > 0 && (
+              confirmaRegerar ? (
+                <div className="flex items-center gap-2 flex-wrap rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs">
+                  <p className="text-nz-tinta">Apagar as <strong>{tarefas.length} tarefas deste dia</strong> (feitas e não feitas) e criar as <strong>{rotina.length} da Rotina Perfeita</strong>?</p>
+                  <Button size="sm" onClick={regerarDia} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-xs">
+                    {salvando ? 'Regenerando...' : 'Sim, gerar de novo'}
+                  </Button>
+                  <button type="button" onClick={() => setConfirmaRegerar(false)} className="text-nz-tinta-fraca hover:text-nz-tinta">cancelar</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setConfirmaRegerar(true)} className="text-xs font-semibold text-nz-verde hover:text-nz-verde-claro text-left">
+                  ⚡ Este dia foi gerado com a rotina antiga? Gerar de novo com a Rotina Perfeita ({rotina.length} tarefas)
+                </button>
+              )
             )}
           </div>
         )}
 
-        {/* ══ 📜 HÁBITO 4 — CONTATO E CONVITE (o SEU script) ══ */}
-        {painel === 'contato' && (
-          <div className="space-y-3">
-            <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
-              📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
+        {/* ══ 🤝 HÁBITO 3 — LISTA DE NETWORK QUALIFICADA (DIR-46) ══ */}
+        {painel === 'lista' && (() => {
+          const qualificadas = clientesManuais.filter((c) => probabilidadeFechamento(c.qualificacao_network)).length;
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-sm text-nz-tinta-fraca">
+                  {clientesManuais.length} pessoas na sua lista · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
+                </p>
+                <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
+                </Button>
+              </div>
+              <Input
+                value={buscaLista}
+                onChange={(e) => setBuscaLista(e.target.value)}
+                placeholder="🔎 buscar na agenda por nome, telefone ou e-mail..."
+                className="bg-white border-nz-borda text-nz-tinta"
+              />
+              {listaOrdenada.length === 0 ? (
+                <p className="text-sm text-nz-tinta-fraca py-4 text-center">
+                  {clientesManuais.length === 0 ? 'Sua lista começa aqui — adicione as pessoas da sua agenda.' : 'Ninguém na agenda com essa busca.'}
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {listaOrdenada.map((c) => {
+                    const q = c.qualificacao_network || null;
+                    const prob = probabilidadeFechamento(q);
+                    const prod = produtoApresentacao(q?.produto);
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
+                          <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
+                        </div>
+                        {prob ? (
+                          <button type="button" onClick={() => setQualificando(c)} className="shrink-0 text-right" title="Editar qualificação">
+                            <p className="text-[11px] text-nz-tinta-fraca">
+                              🫱{q.confianca} 💰{q.financeiro} 🔥{q.apetite}{prod ? ` · ${prod.emoji} ${prod.label}` : ''}
+                            </p>
+                            <p className={`text-xs font-bold ${COR_FAIXA[prob.faixa.id]}`}>
+                              {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
+                            </p>
+                          </button>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0">
+                            <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <CrmNetworkQualificacaoModal
+                contato={qualificando}
+                onFechar={() => setQualificando(null)}
+                onSalvar={salvarQualificacao}
+                salvando={salvando}
+              />
             </div>
-            <p className="text-xs text-nz-tinta-fraca">Escreva o SEU script de convite — o método ensina, mas a voz é sua. Aperfeiçoe a cada conversa.</p>
-            <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder={EXEMPLO_SCRIPT} className="bg-white border-nz-borda text-nz-tinta text-sm" />
-            <Button onClick={() => salvarPerfil({ script })} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-              <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
-            </Button>
-          </div>
-        )}
+          );
+        })()}
+
+        {/* ══ 📜 HÁBITO 4 — CONTATO E CONVITE VIVO (DIR-47) ══ */}
+        {painel === 'contato' && (() => {
+          const fila = clientesManuais
+            .map((c) => ({ c, prob: probabilidadeFechamento(c.qualificacao_network) }))
+            .filter((x) => x.prob)
+            .sort((a, b) => b.prob.pct - a.prob.pct);
+          const hoje = hojeStr();
+          const agenda = agendaDoDiaContatos(clientesManuais, hoje);
+          const reunioesEsteiraHoje = reunioes.filter((o) => String(o.reuniao_em).slice(0, 10) === hoje);
+          const fmtHora = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+          return (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
+                📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
+              </div>
+
+              {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
+              <div>
+                <p className="text-sm font-bold text-nz-tinta mb-1.5">🎯 Quem contatar — os qualificados da sua lista{fila.length > 0 ? ` (${fila.length})` : ''}</p>
+                {fila.length === 0 ? (
+                  <p className="text-xs text-nz-tinta-fraca py-3 text-center border border-dashed border-nz-borda rounded-xl">
+                    Ninguém qualificado ainda —{' '}
+                    <button type="button" onClick={() => onIr?.('lista')} className="font-semibold text-nz-verde hover:text-nz-verde-claro">qualifique sua lista no Hábito 3 →</button>
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {fila.map(({ c, prob }) => (
+                      <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
+                          <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
+                        </div>
+                        <p className={`text-xs font-bold shrink-0 ${COR_FAIXA[prob.faixa.id]}`}>{prob.faixa.emoji} {prob.pct}%</p>
+                        <Button size="sm" onClick={() => setRegistrandoContato(c)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
+                          Registrar contato
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 📅 agenda do dia — o escopo do super admin é o time inteiro */}
+              <div className="rounded-xl border border-nz-verde/25 bg-nz-verde-fundo/30 p-3">
+                <p className="text-sm font-bold text-nz-tinta mb-1.5">📅 Agenda do dia · {agenda.agendados.length + reunioesEsteiraHoje.length} reunião(ões) · {agenda.retornos.length} retorno(s)</p>
+                {agenda.agendados.length === 0 && agenda.retornos.length === 0 && reunioesEsteiraHoje.length === 0 ? (
+                  <p className="text-xs text-nz-tinta-fraca text-center py-2">Nada agendado pra hoje ainda — o agendado nasce do registro de contato.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {agenda.agendados.map(({ cliente, registro }) => {
+                      const g = linkGoogleAgenda({ titulo: `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: 60, detalhes: 'Apresentação de sucesso — Contato e Convite' });
+                      return (
+                        <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-nz-tinta truncate">📅 {fmtHora(registro.quando)} · {cliente.full_name || 'Sem nome'}</p>
+                            <p className="text-[11px] text-nz-tinta-fraca truncate">contato agendado{registro.registrado_por_nome ? ` · por ${registro.registrado_por_nome}` : ''}{registro.obs ? ` · ${registro.obs}` : ''}</p>
+                          </div>
+                          {g && (
+                            <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                              <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> Google Agenda</Button>
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {reunioesEsteiraHoje.map((o) => (
+                      <div key={o.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-nz-tinta truncate">🛤️ {fmtHora(o.reuniao_em)} · {o.cliente_nome || 'Sem nome'}</p>
+                          <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da esteira{o.responsavel_nome ? ` · ${o.responsavel_nome}` : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {agenda.retornos.map(({ cliente, registro }) => (
+                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-nz-tinta truncate">🔁 Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
+                          <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}{registro.registrado_por_nome ? ` · por ${registro.registrado_por_nome}` : ''}</p>
+                        </div>
+                        <Button size="sm" onClick={() => setRegistrandoContato(cliente)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">Registrar contato</Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 🗓️ a Google Agenda da própria pessoa (leitura, no navegador dela) */}
+              <div className="rounded-xl border border-nz-borda p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-nz-tinta">🗓️ Minha Google Agenda de hoje</p>
+                  <Button size="sm" variant="outline" onClick={conectarGoogleAgenda} disabled={googleConectando} className="border-nz-borda text-nz-tinta h-8">
+                    {googleConectando ? 'Conectando...' : googleEventos ? 'Atualizar' : 'Conectar minha Google Agenda'}
+                  </Button>
+                </div>
+                {googleEventos === null ? (
+                  <p className="text-[11px] text-nz-tinta-fraca">Conecte pra ver aqui os SEUS eventos de hoje do Google (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
+                ) : googleEventos.length === 0 ? (
+                  <p className="text-xs text-nz-tinta-fraca">Sua Google Agenda está livre hoje.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {googleEventos.map((e) => (
+                      <p key={e.id} className="text-xs text-nz-tinta">🗓️ <span className="font-bold">{fmtHora(e.inicio) || 'dia todo'}</span> · {e.titulo}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* o SEU script (mantém) */}
+              <div className="rounded-lg border border-nz-borda p-3 space-y-2">
+                <p className="text-xs text-nz-tinta-fraca">Escreva o SEU script de convite — o método ensina, mas a voz é sua. Aperfeiçoe a cada conversa.</p>
+                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder={EXEMPLO_SCRIPT} className="bg-white border-nz-borda text-nz-tinta text-sm" />
+                <Button onClick={() => salvarPerfil({ script })} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
+                </Button>
+              </div>
+
+              <CrmContatoRegistroModal
+                contato={registrandoContato}
+                onFechar={() => setRegistrandoContato(null)}
+                onSalvar={salvarRegistroContato}
+                salvando={salvando}
+              />
+            </div>
+          );
+        })()}
 
         {/* ══ 🎤 HÁBITO 5 — APRESENTAÇÃO DE SUCESSO (agenda) ══ */}
         {painel === 'apresentacao' && (

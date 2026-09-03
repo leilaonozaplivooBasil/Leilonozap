@@ -15,10 +15,34 @@ describe('conteúdo do método', () => {
       'acompanhamento', 'verificacao', 'duplicacao',
     ]);
   });
-  test('rotina padrão: começa 5h, tem as 3 reuniões e o fechamento do dia', () => {
+  test('Rotina Perfeita: começa 5h, 3 reuniões, fechamento e os momentos novos ditados', () => {
     assert.equal(ROTINA_PADRAO[0].hora, '05:00');
     assert.equal(ROTINA_PADRAO.filter((r) => r.titulo.startsWith('Reunião')).length, 3);
     assert.ok(ROTINA_PADRAO.some((r) => r.titulo.includes('Fechamento do dia')));
+    // DIR-45: a narrativa completa da manhã
+    for (const trecho of ['Story ANTES', 'registro DURANTE', 'Término do treino', 'Caminho pra empresa', 'mostrar o ambiente', 'Organização do AMBIENTE', 'TODOS na sala de treinamento', 'ABRIR A LOJA']) {
+      assert.ok(ROTINA_PADRAO.some((r) => r.titulo.includes(trecho)), `faltou na rotina: ${trecho}`);
+    }
+    assert.equal(ROTINA_PADRAO.length, 20);
+  });
+
+  test('DIR-45: todo item da Rotina Perfeita tem guia; princípio e narrativa fiéis ao ditado', async () => {
+    const { PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina } = await import('../src/lib/metodo.js');
+    for (const r of ROTINA_PADRAO) assert.ok(r.guia && r.guia.length > 30, `item sem guia: ${r.titulo}`);
+    assert.deepEqual(PRINCIPIO_ROTINA.percepcoes, ['VIDA INTERESSANTE', 'PROVA SOCIAL', 'AUTORIDADE', 'CONFIANÇA', 'NEGÓCIO', 'VENDA']);
+    assert.equal(PRINCIPIO_ROTINA.regra, 'Primeiro seja interessante. Depois desperte interesse.');
+    assert.equal(NARRATIVA_DO_DIA[0].frase, 'Tenho propósito.');
+    assert.equal(NARRATIVA_DO_DIA.at(-1).frase, 'Preparo o próximo dia.');
+    // as três correções do dono (v2)
+    const às0645 = ROTINA_PADRAO.find((r) => r.hora === '06:45');
+    assert.ok(às0645.titulo.includes('Término do treino'), '06:45 é término do treino, não leitura');
+    assert.ok(ROTINA_PADRAO.find((r) => r.hora === '08:40').titulo.includes('AMBIENTE'), 'chegada organiza o ambiente, não o dia');
+    assert.equal(ROTINA_PADRAO.find((r) => r.hora === '08:55').detalhe, '09:00 não é horário de chegar. 09:00 é horário de começar.');
+    // o guia se acha pelo título; tarefa customizada não tem guia
+    assert.match(guiaDaRotina('ABRIR A LOJA'), /horário simbólico/i);
+    assert.match(guiaDaRotina('Reunião 2 (45-60 min)'), /depois a gente conversa/i);
+    assert.equal(guiaDaRotina('minha tarefa custom'), null);
+    assert.equal(guiaDaRotina(''), null);
   });
 });
 
@@ -124,5 +148,83 @@ describe('quadro dos sonhos (DIR-44)', () => {
     for (const palavra of ['ano', 'cor', 'banco de couro', 'roda']) {
       assert.ok(PLACEHOLDER_DETALHES_SONHO.includes(palavra), `faltou: ${palavra}`);
     }
+  });
+});
+
+// ══ DIR-46 — Lista de Network qualificada ══
+const { PRODUTOS_APRESENTACAO, DIMENSOES_QUALIFICACAO, totalQualificacao, probabilidadeFechamento, qualificacaoNetworkCompleta, produtoApresentacao } =
+  await import('../src/lib/metodo.js');
+
+describe('lista de network qualificada (DIR-46)', () => {
+  test('os dois produtos ditados: Parceiro de Compra e Licenças', () => {
+    assert.deepEqual(PRODUTOS_APRESENTACAO.map((p) => p.id), ['parceiro_compra', 'licencas']);
+    assert.equal(produtoApresentacao('licencas').label, 'Licenças');
+    assert.equal(produtoApresentacao('outro'), null);
+  });
+
+  test('as 3 dimensões na ordem ditada: confiança, financeira, apetite', () => {
+    assert.deepEqual(DIMENSOES_QUALIFICACAO.map((d) => d.id), ['confianca', 'financeiro', 'apetite']);
+  });
+
+  test('o exemplo do dono: 3 + 4 + 5 = 12 de 15 → 75%, quente', () => {
+    const q = { produto: 'licencas', confianca: 3, financeiro: 4, apetite: 5 };
+    assert.equal(totalQualificacao(q), 12);
+    const p = probabilidadeFechamento(q);
+    assert.equal(p.pct, 75);
+    assert.equal(p.faixa.id, 'quente');
+  });
+
+  test('régua transparente nas pontas: 1/1/1 = 0% frio · 5/5/5 = 100% quente', () => {
+    assert.deepEqual(
+      [probabilidadeFechamento({ confianca: 1, financeiro: 1, apetite: 1 }), probabilidadeFechamento({ confianca: 5, financeiro: 5, apetite: 5 })]
+        .map((p) => [p.pct, p.faixa.id]),
+      [[0, 'frio'], [100, 'quente']]
+    );
+  });
+
+  test('meio da régua: 3/3/3 = 50% morno', () => {
+    const p = probabilidadeFechamento({ confianca: 3, financeiro: 3, apetite: 3 });
+    assert.equal(p.pct, 50);
+    assert.equal(p.faixa.id, 'morno');
+  });
+
+  test('incompleta ou inválida → null (número não se inventa)', () => {
+    assert.equal(totalQualificacao(null), null);
+    assert.equal(totalQualificacao({ confianca: 3, financeiro: 4 }), null);
+    assert.equal(totalQualificacao({ confianca: 6, financeiro: 4, apetite: 5 }), null);
+    assert.equal(probabilidadeFechamento({ confianca: 0, financeiro: 1, apetite: 1 }), null);
+    assert.equal(qualificacaoNetworkCompleta({ confianca: 3, financeiro: 4, apetite: 5 }), true);
+  });
+});
+
+// ══ DIR-47 — Contato e Convite vivo ══
+const { RESULTADOS_CONTATO, registroContatoValido, agendaDoDiaContatos } = await import('../src/lib/metodo.js');
+
+describe('contato e convite (DIR-47)', () => {
+  test('os desfechos ditados: feito, agendado, pediu pra retornar + os possíveis', () => {
+    assert.deepEqual(RESULTADOS_CONTATO.map((r) => r.id), ['feito', 'agendado', 'retornar', 'nao_atendeu', 'sem_interesse']);
+  });
+
+  test('registro válido: agendado exige data/hora, retornar exige data', () => {
+    assert.equal(registroContatoValido({ resultado: 'feito' }), true);
+    assert.equal(registroContatoValido({ resultado: 'agendado' }), false);
+    assert.equal(registroContatoValido({ resultado: 'agendado', quando: '2026-09-04T14:00' }), true);
+    assert.equal(registroContatoValido({ resultado: 'retornar' }), false);
+    assert.equal(registroContatoValido({ resultado: 'retornar', retornar_em: '2026-09-10' }), true);
+    assert.equal(registroContatoValido({ resultado: 'inventado' }), false);
+    assert.equal(registroContatoValido(null), false);
+  });
+
+  test('agenda do dia: agendados por hora + retornos do dia, escopo é quem chama', () => {
+    const clientes = [
+      { full_name: 'Bia', contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-03T16:00' }, { resultado: 'agendado', quando: '2026-09-04T09:00' }] },
+      { full_name: 'Ana', contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-03T09:30' }, { resultado: 'retornar', retornar_em: '2026-09-03' }] },
+      { full_name: 'Caio', contatos_metodo: [{ resultado: 'sem_interesse', em: '2026-09-03T10:00' }] },
+      { full_name: 'Sem histórico' },
+    ];
+    const { agendados, retornos } = agendaDoDiaContatos(clientes, '2026-09-03');
+    assert.deepEqual(agendados.map((a) => a.cliente.full_name), ['Ana', 'Bia']);
+    assert.deepEqual(retornos.map((r) => r.cliente.full_name), ['Ana']);
+    assert.deepEqual(agendaDoDiaContatos([], '2026-09-03'), { agendados: [], retornos: [] });
   });
 });

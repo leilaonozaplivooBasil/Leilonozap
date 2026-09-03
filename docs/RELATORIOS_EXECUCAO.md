@@ -2082,3 +2082,170 @@ detalhes escrito na mão com a orientação guiada (carro → ano, cor, banco de
 couro, roda). Prova em navegador re-rodada inteira: 40/40 ✅ zero erros,
 incluindo o passo novo "NENHUM botão de IA na tela". Suíte volta a 657
 (saíram os 9 do handler removido), build ok.
+
+---
+
+## REL-PUB-03/09/2026 — Publicação em produção da DIR-44 (Quadro dos Sonhos)
+
+**Autorização:** dono, por escrito: "PODE COLOCAR EM PRODUÇÃO ESSA FASE
+TERMINADA".
+**O que foi publicado:** o Quadro dos Sonhos completo — 3 molduras por
+prazo (curto 1-2 · médio 2-4 · longo 5+), imagens ilimitadas por área via
+busca no modal / upload / endereço colado (com re-hospedagem pelo
+proxyImage), detalhes guiados embaixo de cada imagem, IA removida por
+ordem (REL-44.3). Sem migração de banco.
+**Ritual:** main (41bcc0f9, que trouxe a frente da vitrine/ofertas)
+mergeada na branch sem conflito → 799/799 testes → build exit 0 → PR #167
+→ squash-merge → main = `f0472ce1` → branch realinhada. Deploy de
+PRODUÇÃO: **success** de primeira; version.json do alias da main
+respondendo com o carimbo do build novo (13:05 UTC). leilaonozap.net no ar
+com o quadro.
+**Status:** CONCLUÍDA E PUBLICADA.
+
+---
+
+## REL-45 — A Rotina Perfeita: Hábito 2 vira narrativa de autoridade (DIR-45)
+
+**Ordem do dono (03/09/2026, documento completo por escrito):** renomear o
+gerador pra "Gerar Minha Rotina Perfeita (Rotina do Método)" e transformar
+a rotina em narrativa diária nas redes — "primeiro seja interessante,
+depois desperte interesse"; DISCIPLINA → HUMANIDADE → EVOLUÇÃO →
+CREDIBILIDADE → NEGÓCIO.
+**O que foi construído:**
+1. ROTINA_PADRAO reescrita com o conteúdo DITADO: 19 itens, das 05:00 às
+   21:30, com os momentos novos (Story ANTES do treino, Story DURANTE,
+   Final do treino com começou→fez→terminou, caminho pra empresa sem
+   forçar conteúdo, chegada mostrando o ambiente como prova de realidade,
+   organização com as "3 coisas do dia", post do aprendizado em 1-3 min,
+   ABRIR A LOJA às 10h como horário simbólico com a sequência
+   inspiração→aplicação→negócio→comparação→Leilão NoZap, reuniões sempre
+   com PRÓXIMO PASSO DEFINIDO, 17:30 nenhuma oportunidade solta, 18:30
+   prometi/fiz/pendente/amanhã, 21:30 dormir cedo é preparação).
+2. Cada item tem `guia` — a orientação estratégica do dono, condensada com
+   fidelidade — aberto pelo botão 📖 no cartão do Master Task (guia mora
+   na lib; tarefa customizada não tem; SEM migração).
+3. Painel do Compromisso ganhou o bloco do princípio (percepções + regra)
+   e a escada "ver a lógica do dia" (Tenho propósito → ... → Presto contas
+   do meu próprio dia).
+4. Botão renomeado; subtítulo atualizado.
+**Prova em navegador (REL-34.1): 52/52 ✅ zero erros** — princípio e regra
+na tela, escada aberta, botão novo, gerar criou as 19 tarefas via
+entityWrite, períodos e itens novos renderizados, guia do ABRIR A LOJA
+expandindo com o conteúdo certo (mais toda a regressão do Quadro dos
+Sonhos re-rodada).
+**Testes:** 799 → 800 (o teste da rotina virou dois: os 19 itens ditados,
+guia em todos, princípio e narrativa fiéis — e pegou minha contagem errada
+de 18 antes de qualquer entrega).
+**Build:** exit 0. **Status:** CONCLUÍDA no preview — aguardando o "pode"
+pra produção.
+
+### REL-45.1 — Correção do dono na Rotina Perfeita (v2, 03/09/2026)
+
+Dono corrigiu o fluxo por escrito e mantive fidelidade total: (1) 06:45 é
+o TÉRMINO do treino + post (preparação → execução → conclusão), com a
+leitura vindo APÓS o treino; (2) na chegada à empresa NÃO existe
+"organização do dia" — é organização física do AMBIENTE (sala, mesas,
+materiais, equipamentos; "organização externa influencia organização
+interna"; todos ajudam, não importa o cargo); (3) item novo 08:55 — TODOS
+posicionados na sala de treinamento, com a regra cultural em destaque:
+"09:00 não é horário de chegar. 09:00 é horário de começar." A cadeia do
+princípio virou VIDA INTERESSANTE → PROVA SOCIAL → AUTORIDADE → CONFIANÇA
+→ NEGÓCIO → VENDA, a escada da narrativa cresceu pra 16 degraus (até
+"Preparo o próximo dia") e o Master Task do dia agora nasce com 20
+tarefas. Prova em navegador re-rodada inteira: 52/52 ✅ zero erros
+(incluindo as três correções visíveis na tela). Suíte 800/800, build ok.
+
+### REL-45.2 — "Não está aparecendo no preview": diagnóstico + regerar o dia (03/09/2026)
+
+Dono estranhou a lista antiga no preview. Diagnóstico com o print dele
+mesmo: a v2 ESTAVA publicada (o bloco do princípio novo aparece na tela);
+o que estava antigo eram os DADOS — o Master Task de hoje foi gerado dias
+antes com a rotina velha e ficou salvo em metodo_tarefas ("0/16 feitas"
+com os títulos antigos). A rotina nova só entra quando um dia é GERADO.
+Faltava a ferramenta permitir regerar: agora um dia já gerado mostra
+"⚡ Este dia foi gerado com a rotina antiga? Gerar de novo com a Rotina
+Perfeita (20 tarefas)" — com confirmação explícita (avisa que apaga as
+tarefas do dia, feitas e não feitas) antes de apagar e recriar. Prova em
+navegador: 57/57 ✅ zero erros (5 passos novos: link no dia cheio,
+confirmação, 20 apagadas + 20 criadas, dia regenerado com 0/20 e ABRIR A
+LOJA na tela). Suíte 800/800, build ok.
+
+---
+
+## REL-46 — Lista de Network QUALIFICADA: 3 notas, produto e probabilidade (DIR-46)
+
+**Ordem do dono (03/09/2026):** agenda de contatos com qualificação de 1 a
+5 em três dimensões — confiança em mim, condição financeira e apetite ao
+produto APRESENTADO — com modal onde o executivo escolhe o produto
+(Parceiro de Compra ou Licenças) e a probabilidade de fechamento visível
+na lista. Fidelidade de conta: o exemplo ditado (3+4+5) soma 12/15 — o
+"14" falado era lapso; a regra implementada é a SOMA.
+**O que foi construído:**
+1. Fonte única em `metodo.js`: produtos, dimensões, totalQualificacao
+   (3-15) e probabilidadeFechamento com régua TRANSPARENTE —
+   pct = (total−3)/12 → 1/1/1 = 0% ❄️, 3/3/3 = 50% 🌤️, 3/4/5 = 75% 🔥,
+   5/5/5 = 100%. Faixas: quente ≥70 · morno ≥40 · frio.
+2. `CrmNetworkQualificacaoModal`: produto em 2 botões, 3 linhas de fichas
+   1-5, total e probabilidade AO VIVO, salvar travado até completar.
+3. Hábito 3 virou a agenda qualificada: busca por nome/telefone/e-mail,
+   ordenada por probabilidade (não qualificados por último), linha com as
+   3 notas + produto + total X/15 + probabilidade colorida por faixa;
+   contador "N pessoas · M qualificadas". Estrela única legada intocada.
+4. Migração `20260903150000_network_qualificacao.sql` (DONO COLA ANTES DE
+   QUALIFICAR — sem ela o writeResilient descarta a coluna e a nota não
+   persiste): `customers.qualificacao_network JSONB`.
+**Prova em navegador (REL-34.1): 69/69 ✅ zero erros** — agenda com
+contadores, modal com os 2 produtos, notas 3/4/5 mostrando 12/15 e 75%
+Quente ao vivo, escrita auditada via entityWrite com o JSONB exato,
+probabilidade na linha após salvar, busca filtrando (+ toda a regressão
+Sonho/Rotina re-rodada).
+**Testes:** 800 → 806 (6 novos: produtos/dimensões, exemplo do dono,
+pontas e meio da régua, incompleta → null).
+**Ação do dono:** ✅ FEITA — migração da DIR-46 colada e aplicada no SQL
+Editor em 03/09/2026 ("Success. No rows returned").
+customers.qualificacao_network vivo em produção.
+**Status:** CONCLUÍDA — banco pronto; agenda qualificada operante de ponta
+a ponta no preview, aguardando o "pode" pra publicar.
+
+---
+
+## REL-47 — Contato e Convite vivo: fila, registro, agenda e Google (DIR-47)
+
+**Ordem do dono (03/09/2026):** os qualificados da lista aparecendo no
+Contato e Convite; registro do contato (feito, agendado, pediu pra
+retornar e os demais desfechos); Google Agenda no agendado; a pessoa
+conectando a Google Agenda DELA; e o super admin vendo todas as agendas
+do dia.
+**O que foi construído:**
+1. 🎯 FILA DOS QUALIFICADOS: os contatos qualificados na DIR-46 aparecem
+   no Hábito 4 ordenados por probabilidade, cada um com "Registrar
+   contato". Sem qualificados → atalho honesto pro Hábito 3.
+2. 📜 REGISTRO DO CONTATO (modal): 5 desfechos — ✅ feito · 📅 reunião
+   agendada (data/hora + botão GOOGLE AGENDA na hora, com o evento
+   pronto) · 🔁 pediu pra retornar (data) · 📵 não atendeu · 🚫 sem
+   interesse — com observação e carimbo de quem registrou/quando.
+   Histórico append-only em customers.contatos_metodo.
+3. 📅 AGENDA DO DIA: agendados de hoje (com Google Agenda por item) +
+   reuniões da esteira de hoje + retornos vencendo hoje (com atalho pra
+   registrar). O SUPER ADMIN vê o time inteiro porque o escopo dele é a
+   lista toda; cada executivo vê a própria carteira (mesma régua de
+   escopo da DIR-24).
+4. 🗓️ MINHA GOOGLE AGENDA: botão conecta a conta Google DA PRÓPRIA
+   pessoa (GIS token client, calendar.readonly, MESMO GOOGLE_CLIENT_ID
+   do login) e lista os eventos de hoje — só leitura, token vive no
+   navegador dela, nada passa pelo servidor. Honestidade: o admin NÃO vê
+   a Google pessoal dos outros (impossível sem cada um conectar); ele vê
+   todas as agendas DO MÉTODO. Se o Google mostrar aviso de "app não
+   verificado" no primeiro uso do escopo de agenda, a verificação no
+   console Google é ação futura do dono.
+5. O script pessoal continua no painel.
+**Prova em navegador (REL-34.1): 85/85 ✅ zero erros** — fila com o
+qualificado e a probabilidade, modal com os 5 desfechos, agendamento às
+18:00 gravado com carimbo, reunião na agenda do dia com botão Google,
+retorno de hoje aparecendo, e a conexão Google stubada de ponta a ponta
+(script GIS + Calendar API) rendendo os eventos na tela.
+**Testes:** 806 → 809 (desfechos, validação do registro, agenda do dia
+com escopo).
+**Migração (DONO COLA ANTES DE USAR):**
+`20260903190000_contatos_metodo.sql` — customers.contatos_metodo JSONB.
+**Status:** CONCLUÍDA no preview — aguardando migração + "pode".

@@ -12,6 +12,131 @@
 
 ---
 
+## DIR-47 — Contato e Convite vivo: fila, registro, agenda do dia e Google
+
+**Emitida por:** dono (03/09/2026, por escrito): "no Contato e Convite
+quero: aparecer JÁ os contatos qualificados da lista de network; criar o
+registro do contato — feito, agendado, pediu pra retornar e as possíveis
+coisas que acontecem após o contato; no agendado abrir o Google Agenda;
+a possibilidade da pessoa CONECTAR a agenda do Google dela e aparecer ali
+as agendas; e pro super admin aparecerem TODAS as agendas do dia".
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. `src/lib/metodo.js` (fonte única, testada): RESULTADOS_CONTATO
+   (✅ feito · 📅 agendado · 🔁 pediu pra retornar · 📵 não atendeu ·
+   🚫 sem interesse), validação do registro (agendado exige data/hora;
+   retornar exige data) e agendaDoDiaContatos (agendados + retornos do
+   dia, varrendo o histórico dos clientes do ESCOPO — super admin vê o
+   time inteiro porque o escopo dele já é tudo).
+2. Migração `20260903190000_contatos_metodo.sql` (DONO COLA):
+   `customers.contatos_metodo JSONB` — HISTÓRICO (array) de registros
+   {resultado, em, quando?, retornar_em?, obs, registrado_por_id/nome}.
+3. `CrmContatoRegistroModal.jsx`: escolhe o desfecho, campos condicionais
+   (data/hora do agendado com botão GOOGLE AGENDA na hora — link de
+   template oficial já usado no Hábito 5; data do retorno), observação.
+4. Painel Contato (Hábito 4) em `CrmMetodo.jsx`: (a) FILA DOS
+   QUALIFICADOS da lista (DIR-46) por probabilidade, com Registrar
+   contato; (b) 📅 AGENDA DO DIA: agendados + retornos de hoje do escopo
+   (super admin = todas) + reuniões da esteira de hoje, cada agendado com
+   botão Google Agenda; (c) 🗓️ CONECTAR MINHA GOOGLE AGENDA: leitura dos
+   eventos de HOJE da conta Google da própria pessoa, no navegador dela
+   (GIS token client + calendar.readonly, MESMO GOOGLE_CLIENT_ID do
+   login; sem guardar token no servidor); (d) o script pessoal continua.
+**Honestidade de escopo:** a Google Agenda conectada é PESSOAL (vive no
+navegador de cada um — o admin não vê a agenda Google dos outros; ele vê
+todas as agendas DO MÉTODO). O escopo calendar.readonly pode exigir
+verificação do app no console Google pra sumir o aviso de "app não
+verificado" — registrado como ação futura do dono se o aviso aparecer.
+**Fora do escopo:** sync bidirecional/gravação no Google; guardar token
+Google no servidor.
+**Regras fixas:** prova em navegador (REL-34.1); escrita via entityWrite.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-46 — Lista de Network QUALIFICADA: 3 notas, produto e probabilidade
+
+**Emitida por:** dono (03/09/2026, por escrito): "é tipo uma agenda de
+telefone; dentro dela, de 1 a 5: CONFIANÇA EM MIM (ex. 3), CONDIÇÃO
+FINANCEIRA (ex. 4) e APETITE AO PRODUTO APRESENTADO (ex. 5) — soma o
+total; precisa ter um modal onde o executivo escolhe QUAL PRODUTO está
+apresentando (Parceiro de Compra ou as Licenças); e na lista precisa
+aparecer a PROBABILIDADE DE FECHAMENTO de acordo com essa qualificação".
+Nota de fidelidade: no exemplo ditado a soma 3+4+5 = 12 de 15 (o "14"
+falado foi lapso de conta — a regra é a SOMA).
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. `src/lib/metodo.js` (fonte única, testada): PRODUTOS_APRESENTACAO
+   (parceiro_compra | licencas), DIMENSOES_QUALIFICACAO (confiança ·
+   financeira · apetite), totalQualificacao (soma 3-15),
+   probabilidadeFechamento — régua transparente: pct = (total−3)/12
+   (1/1/1 = 0%, 3/4/5 = 75%, 5/5/5 = 100%), faixas 🔥 quente ≥70% ·
+   🌤 morno ≥40% · ❄️ frio abaixo.
+2. Migração `20260903150000_network_qualificacao.sql` (DONO COLA ANTES DE
+   USAR): `customers.qualificacao_network JSONB`
+   ({produto, confianca, financeiro, apetite}).
+3. `CrmNetworkQualificacaoModal.jsx` (padrão de overlay da casa): escolhe
+   o produto apresentado, dá as 3 notas em fichas 1-5, vê o total e a
+   probabilidade AO VIVO, salva.
+4. Painel Lista (Hábito 3) em `CrmMetodo.jsx` vira a agenda qualificada:
+   busca por nome/telefone, ordenada por probabilidade (não qualificados
+   por último), cada linha com as 3 notas, produto, total X/15 e a
+   probabilidade com cor da faixa; botão Qualificar/Editar abre o modal.
+   A estrela única antiga (customers.qualificacao) fica intocada no banco.
+**Fora do escopo:** importação da agenda do celular (rodada própria);
+mexer na coluna legada `qualificacao`.
+**Regras fixas:** prova em navegador (REL-34.1); escrita via entityWrite.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-45 — A Rotina Perfeita: Hábito 2 vira narrativa diária de autoridade
+
+**Emitida por:** dono (03/09/2026, por escrito, documento completo): o
+gerador muda de nome pra "Gerar Minha Rotina Perfeita (Rotina do Método)"
+e a rotina deixa de ser agenda de tarefas pra virar a NARRATIVA DIÁRIA nas
+redes: "não estamos criando agenda de posts — estamos transformando a
+rotina real da pessoa em narrativa: disciplina, saúde, aprendizado,
+trabalho e negócio. A pessoa não deve parecer interessada em vender; ela
+precisa se tornar interessante, e a venda vira consequência da
+credibilidade". Cinco percepções: DISCIPLINA → HUMANIDADE → EVOLUÇÃO →
+CREDIBILIDADE → NEGÓCIO. Regra: "Primeiro seja interessante. Depois
+desperte interesse."
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+**ADENDO DIR-45.1 (mesma data):** dono corrigiu o fluxo — 06:45 é o
+TÉRMINO do treino (leitura vem após); na chegada organiza-se o AMBIENTE,
+não o dia; item novo 08:55 TODOS na sala ("09:00 não é horário de chegar,
+é horário de começar"); cadeia do princípio vira VIDA INTERESSANTE →
+PROVA SOCIAL → AUTORIDADE → CONFIANÇA → NEGÓCIO → VENDA; 20 itens.
+
+1. `src/lib/metodo.js` (fonte única): ROTINA_PADRAO reescrita com o
+   conteúdo DITADO — 20 itens na v2 (novos: story ANTES do treino às 05:15,
+   story DURANTE às 05:30, FINAL do treino 06:45 com
+   começou→fez→terminou, leitura 07:00, caminho pra empresa 08:00 com
+   story espontâneo sem forçar conteúdo, chegada/ambiente 08:30 como
+   prova de realidade, organização 08:45 com as "3 coisas do dia", post
+   do aprendizado 09:40 em 1-3 minutos, "Abrir a loja" 10:00 como
+   horário SIMBÓLICO com a sequência inspiração→aplicação→negócio→
+   comparação→LeilãoNoZap, reuniões sempre com PRÓXIMO PASSO DEFINIDO,
+   17:30 nenhuma oportunidade solta, 18:30 prometi/fiz/pendente/amanhã,
+   21:30 dormir cedo é preparação). Cada item ganha `guia` (a orientação
+   estratégica rica); + PRINCIPIO_ROTINA (percepções + regra) +
+   NARRATIVA_DO_DIA (a escada "Tenho propósito → ... → Presto contas") +
+   guiaDaRotina(titulo).
+2. Painel Compromisso em `CrmMetodo.jsx`: botão vira "⚡ Gerar Minha
+   Rotina Perfeita (Rotina do Método)"; bloco do princípio no topo;
+   cartão de tarefa da rotina ganha "ver o guia" expansível (o guia mora
+   na lib, tarefa customizada não tem — sem migração); escada da
+   narrativa num "ver a lógica do dia".
+**Fora do escopo:** editor visual da rotina (segue pendência); coluna nova
+no banco (guia NÃO vai pra metodo_tarefas).
+**Regras fixas:** prova em navegador (REL-34.1); conteúdo ditado é DADO —
+fidelidade ao texto do dono, condensado sem perder a instrução.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-44 — Quadro dos Sonhos de verdade: curto/médio/longo com imagem
 
 **Emitida por:** dono (03/09/2026, áudio, sobre o preview dos 8 Hábitos):
