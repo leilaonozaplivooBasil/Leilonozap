@@ -2300,6 +2300,6 @@ todos os campos e título pré-preenchido, POST real (stubado) na Calendar
 API com summary e 60 min exatos, histórico com link do evento criado,
 "Abrir no Google" na agenda, agendamento livre pelo cabeçalho com seletor
 escolhendo outro contato e checkbox desligada NÃO criando no Google.
-**Testes:** 822 → 826 na suíte completa (4 novos do eventoGoogleDaReuniao).
+**Testes:** 838/838 na suíte completa (4 novos do eventoGoogleDaReuniao; o restante do crescimento veio de outras frentes pela main).
 **Sem migração** (campos novos no JSONB existente).
 **Status:** CONCLUÍDA no preview — aguardando o "pode".
