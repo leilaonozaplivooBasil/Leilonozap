@@ -2082,3 +2082,22 @@ detalhes escrito na mão com a orientação guiada (carro → ano, cor, banco de
 couro, roda). Prova em navegador re-rodada inteira: 40/40 ✅ zero erros,
 incluindo o passo novo "NENHUM botão de IA na tela". Suíte volta a 657
 (saíram os 9 do handler removido), build ok.
+
+---
+
+## REL-PUB-03/09/2026 — Publicação em produção da DIR-44 (Quadro dos Sonhos)
+
+**Autorização:** dono, por escrito: "PODE COLOCAR EM PRODUÇÃO ESSA FASE
+TERMINADA".
+**O que foi publicado:** o Quadro dos Sonhos completo — 3 molduras por
+prazo (curto 1-2 · médio 2-4 · longo 5+), imagens ilimitadas por área via
+busca no modal / upload / endereço colado (com re-hospedagem pelo
+proxyImage), detalhes guiados embaixo de cada imagem, IA removida por
+ordem (REL-44.3). Sem migração de banco.
+**Ritual:** main (41bcc0f9, que trouxe a frente da vitrine/ofertas)
+mergeada na branch sem conflito → 799/799 testes → build exit 0 → PR #167
+→ squash-merge → main = `f0472ce1` → branch realinhada. Deploy de
+PRODUÇÃO: **success** de primeira; version.json do alias da main
+respondendo com o carimbo do build novo (13:05 UTC). leilaonozap.net no ar
+com o quadro.
+**Status:** CONCLUÍDA E PUBLICADA.
