@@ -2138,3 +2138,19 @@ guia em todos, princípio e narrativa fiéis — e pegou minha contagem errada
 de 18 antes de qualquer entrega).
 **Build:** exit 0. **Status:** CONCLUÍDA no preview — aguardando o "pode"
 pra produção.
+
+### REL-45.1 — Correção do dono na Rotina Perfeita (v2, 03/09/2026)
+
+Dono corrigiu o fluxo por escrito e mantive fidelidade total: (1) 06:45 é
+o TÉRMINO do treino + post (preparação → execução → conclusão), com a
+leitura vindo APÓS o treino; (2) na chegada à empresa NÃO existe
+"organização do dia" — é organização física do AMBIENTE (sala, mesas,
+materiais, equipamentos; "organização externa influencia organização
+interna"; todos ajudam, não importa o cargo); (3) item novo 08:55 — TODOS
+posicionados na sala de treinamento, com a regra cultural em destaque:
+"09:00 não é horário de chegar. 09:00 é horário de começar." A cadeia do
+princípio virou VIDA INTERESSANTE → PROVA SOCIAL → AUTORIDADE → CONFIANÇA
+→ NEGÓCIO → VENDA, a escada da narrativa cresceu pra 16 degraus (até
+"Preparo o próximo dia") e o Master Task do dia agora nasce com 20
+tarefas. Prova em navegador re-rodada inteira: 52/52 ✅ zero erros
+(incluindo as três correções visíveis na tela). Suíte 800/800, build ok.
