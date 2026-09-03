@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 process.env.SESSAO_SECRET = 'segredo-de-teste';
 delete process.env.SESSAO_MODO;
 delete process.env.AI_GATEWAY_API_KEY;
+delete process.env.VERCEL_OIDC_TOKEN;
 
 const { default: handler } = await import('../api/functions/descreverImagemSonho.js');
 
@@ -19,7 +20,7 @@ function crachaDe(uid) {
   return `v1.${corpo}.${ass}`;
 }
 
-function chamar({ method = 'POST', body = {}, headers = {} } = {}) {
+function chamar({ method = 'POST', body = {}, headers = {}, url = '' } = {}) {
   return new Promise((resolve) => {
     const res = {
       _status: 200,
@@ -27,7 +28,7 @@ function chamar({ method = 'POST', body = {}, headers = {} } = {}) {
       status(c) { this._status = c; return this; },
       json(payload) { resolve({ status: this._status, ...payload }); },
     };
-    handler({ method, body, headers }, res);
+    handler({ method, body, headers, url }, res);
   });
 }
 
@@ -47,6 +48,7 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = fetchReal;
   delete process.env.AI_GATEWAY_API_KEY;
+  delete process.env.VERCEL_OIDC_TOKEN;
   delete process.env.SESSAO_MODO;
 });
 
@@ -87,6 +89,23 @@ describe('descreverImagemSonho (handler real)', () => {
     assert.equal(imagem.image_url.url, 'https://fotos.exemplo/carro.jpg');
     const texto = msg.content.find((c) => c.type === 'text');
     assert.match(texto.text, /BMW X6/);
+  });
+
+  test('sem chave mas COM token OIDC da Vercel → a IA acende do mesmo jeito (molde do InvokeLLM)', async () => {
+    process.env.VERCEL_OIDC_TOKEN = 'token-oidc-teste';
+    const r = await chamar({ body: { imageUrl: 'https://fotos.exemplo/carro.jpg', titulo: 'BMW X6' } });
+    assert.equal(r.success, true);
+    assert.match(r.detalhes, /BMW X6 2024/);
+  });
+
+  test('diagnóstico GET ?diag=1 diz quais credenciais existem, sem vazar segredo', async () => {
+    const semNada = await chamar({ method: 'GET', headers: {}, body: {}, url: '/api/functions/descreverImagemSonho?diag=1' });
+    assert.equal(semNada.diag.tem_chave, false);
+    assert.equal(semNada.diag.tem_oidc, false);
+    process.env.VERCEL_OIDC_TOKEN = 'token-oidc-teste';
+    const comOidc = await chamar({ method: 'GET', headers: {}, body: {}, url: '/api/functions/descreverImagemSonho?diag=1' });
+    assert.equal(comOidc.diag.tem_oidc, true);
+    assert.ok(!JSON.stringify(comOidc).includes('token-oidc-teste'));
   });
 
   test('gateway fora do ar → success:false "IA indisponível", nunca 500', async () => {

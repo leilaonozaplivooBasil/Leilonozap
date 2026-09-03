@@ -9,10 +9,19 @@ import { conferirUrl } from '../_lib/urlSegura.js';
 
 export default async function handler(req, res) {
   // Env lida AQUI (não no topo do módulo) de propósito: o teste do handler
-  // real prova needs_key E sucesso no mesmo import.
+  // real prova needs_key E sucesso no mesmo import. Auth igual ao InvokeLLM:
+  // AI_GATEWAY_API_KEY OU o token OIDC que a Vercel injeta sozinha na função.
   const AI_KEY = process.env.AI_GATEWAY_API_KEY || '';
+  const OIDC = process.env.VERCEL_OIDC_TOKEN || '';
+  const AUTH = AI_KEY || OIDC;
   const MODEL = process.env.AI_MODEL || 'anthropic/claude-haiku-4-5';
   res.setHeader('Content-Type', 'application/json');
+  // Diagnóstico honesto (sem segredo nenhum): diz QUAIS credenciais existem,
+  // pra ninguém mais precisar adivinhar por que a IA não acendeu.
+  const pediuDiag = String(req.query?.diag || '') === '1' || String(req.url || '').includes('diag=1');
+  if (req.method === 'GET' && pediuDiag) {
+    return res.status(200).json({ success: true, diag: { tem_chave: !!AI_KEY, tem_oidc: !!OIDC, modelo: MODEL } });
+  }
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
@@ -27,7 +36,7 @@ export default async function handler(req, res) {
     const porteiro = conferirUrl(imageUrl);
     if (!porteiro.ok) return res.status(400).json({ success: false, error: `imagem recusada: ${porteiro.motivo}` });
 
-    if (!AI_KEY) {
+    if (!AUTH) {
       return res.status(200).json({ success: false, needs_key: true, message: 'A IA de visão ainda não está conectada (AI_GATEWAY_API_KEY) — escreva os detalhes embaixo da imagem.' });
     }
 
@@ -41,7 +50,7 @@ export default async function handler(req, res) {
 
     const r = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${AI_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${AUTH}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
         messages: [
