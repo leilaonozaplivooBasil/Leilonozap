@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "test": "node --test --test-timeout=20000 \"tests/**/*.test.mjs\"",
     "migracoes:checar": "node scripts/checar-nomes-migracoes.mjs",
-    "test:navegador": "node --test --test-timeout=60000 tests/navegador/carrossel.spec.mjs"
+    "test:navegador": "node --test --test-timeout=90000 \"tests/navegador/*.spec.mjs\""
   },
   "dependencies": {
     "@base44/sdk": "^0.8.43",
