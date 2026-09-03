@@ -2035,7 +2035,7 @@ deslogada de pé.
 **Bug real pego PELO navegador:** o botão de confirmação dizia "Adicionar
 2 imagems" (plural errado por concatenação) — teste de unidade nunca
 pegaria; a prova renderizada pegou.
-**Testes:** 664 → 684 (20 novos: horizontes/agrupamento/placeholder,
+**Testes:** 644 → 664 (20 novos: horizontes/agrupamento/placeholder,
 lerRespostaFotos, handler REAL do descreverImagemSonho com gateway
 mockado, incluindo SESSAO_MODO=bloquear com crachá forjado). **Build:**
 exit 0.
