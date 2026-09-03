@@ -7,15 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import BoletoUploader from "./BoletoUploader";
-import { COST_CENTERS } from "@/lib/costCenters";
-
-const PRESET_CATEGORIES = [
-  "Aluguel", "Energia", "Internet", "Telefone", "Água", "Gás",
-  "Software/Assinatura", "Servidor/Hospedagem", "Marketing/Ads",
-  "Funcionários/Salários", "Contabilidade", "Impostos",
-  "Material de Escritório", "Transporte/Frete", "Seguros",
-  "Manutenção", "Equipamentos", "Outros"
-];
+import { resolverGrafia, CATEGORIAS_DE_FABRICA } from "@/lib/listasDoFinanceiro";
 
 const PAYMENT_METHODS = [
   { value: "pix", label: "PIX" },
@@ -39,7 +31,17 @@ const PAYMENT_ACCOUNTS = [
   "Mercado Pago", "Itaú", "Santander", "Bradesco", "Espécie", "Outros",
 ];
 
-export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, editingExpense }) {
+// 05/09/2026 — as duas listas agora CHEGAM PRONTAS da tela (Financial.jsx), que junta as
+// de fábrica com tudo que já foi usado em algum lançamento. Antes eram dois arrays fixos
+// aqui dentro, e o "+ Novo" gravava texto solto que sumia do dropdown no lançamento
+// seguinte — o que a Aline relatou como "não estão ficando salvos". Os PRESET_ e
+// listas de fábrica (CATEGORIAS_DE_FABRICA e COST_CENTERS) continuam existindo —
+// agora aplicadas lá, no lugar onde os lançamentos já estão carregados.
+export default function ExpenseFormModal({
+  open, onClose, onSave, onBulkSave, editingExpense,
+  categorias = CATEGORIAS_DE_FABRICA,
+  centrosDeCusto = [],
+}) {
   const [form, setForm] = useState({
     description: "", company: "", category: "", expense_type: "unico",
     amount: "", due_date: "", payment_method: "pix", payment_account: "", pix_or_card_info: "",
@@ -74,11 +76,14 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         recurring_day: editingExpense.recurring_day || "",
         cost_center: editingExpense.cost_center || ""
       });
-      if (editingExpense.category && !PRESET_CATEGORIES.includes(editingExpense.category)) {
+      // Abre no campo de texto só se o valor gravado REALMENTE não estiver na lista.
+      // Como a lista agora inclui o que já foi usado, editar um gasto antigo cai no
+      // dropdown normal em vez de reabrir como "valor novo" toda vez.
+      if (editingExpense.category && !categorias.includes(editingExpense.category)) {
         setUseCustomCategory(true);
         setCustomCategory(editingExpense.category);
       }
-      if (editingExpense.cost_center && !COST_CENTERS.includes(editingExpense.cost_center)) {
+      if (editingExpense.cost_center && !centrosDeCusto.includes(editingExpense.cost_center)) {
         setUseCustomCostCenter(true);
         setCustomCostCenter(editingExpense.cost_center);
       }
@@ -98,8 +103,11 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
   }, [editingExpense, open]);
 
   const handleSave = () => {
-    const cat = useCustomCategory ? customCategory : form.category;
-    const costCenter = useCustomCostCenter ? customCostCenter : form.cost_center;
+    // resolverGrafia apara as pontas e, se o que ela digitou já existe com outra grafia,
+    // grava a que JÁ está no banco. É o que impede "custo fixo" e "Custo Fixo" de virarem
+    // duas linhas no relatório "Por Centro de Custo" — que é o que já estava acontecendo.
+    const cat = resolverGrafia(useCustomCategory ? customCategory : form.category, categorias);
+    const costCenter = resolverGrafia(useCustomCostCenter ? customCostCenter : form.cost_center, centrosDeCusto);
     const amount = parseFloat(form.amount) || 0;
     const interest = parseFloat(form.interest_amount) || 0;
     const data = {
@@ -174,7 +182,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                    {PRESET_CATEGORIES.map(c => (
+                    {categorias.map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>
@@ -206,7 +214,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
                     <SelectValue placeholder="Selecione (opcional)" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                    {COST_CENTERS.map(cc => (
+                    {centrosDeCusto.map(cc => (
                       <SelectItem key={cc} value={cc}>{cc}</SelectItem>
                     ))}
                   </SelectContent>

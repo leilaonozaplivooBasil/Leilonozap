@@ -11,6 +11,10 @@ import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
 // Os três status que significam "ainda devo isso". Vive no lib porque a aba
 // "A Pagar" usa a MESMA régua — duas cópias divergiriam no primeiro ajuste.
 import { STATUS_A_PAGAR } from "@/lib/contasAPagar";
+// 05/09/2026 — as listas de Categoria e Centro de Custo do formulário são montadas AQUI,
+// onde os lançamentos já estão carregados: as de fábrica mais tudo que já foi usado.
+import { montarOpcoes, CATEGORIAS_DE_FABRICA } from "@/lib/listasDoFinanceiro";
+import { COST_CENTERS } from "@/lib/costCenters";
 
 import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards";
 import ExpenseTable from "@/components/financial/ExpenseTable";
@@ -51,6 +55,10 @@ export default function Financial() {
   const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [filterDateTo, setFilterDateTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [filterCategory, setFilterCategory] = useState("all");
+  // 🔵 Filtro de centro de custo (05/09/2026, pedido da Aline: "preciso que os criados
+  // apareçam no filtro"). A tela tinha filtro de categoria e nenhum de centro de custo —
+  // não dava pra responder "quanto saiu de Distribuição de Lucro" nem na planilha.
+  const [filterCostCenter, setFilterCostCenter] = useState("all");
   const [activeTab, setActiveTab] = useState("expenses");
   const [paymentExpense, setPaymentExpense] = useState(null);
   const queryClient = useQueryClient();
@@ -114,8 +122,16 @@ export default function Financial() {
     );
   }
 
-  // Categorias dinâmicas: apenas as que existem nos gastos lançados
-  const usedCategories = [...new Set(expenses.map(e => e.category).filter(Boolean))].sort();
+  // As duas listas do formulário e dos filtros: de fábrica + tudo que já foi usado, com
+  // uma entrada por grafia — antes o filtro de categoria listava "Salario" E "salario"
+  // como se fossem duas coisas. Receitas entram no centro de custo porque o relatório
+  // "Por Centro de Custo" (FinancialOverview) soma as duas tabelas juntas.
+  const usedCategories = montarOpcoes(CATEGORIAS_DE_FABRICA, expenses.map(e => e.category));
+  const centrosDeCusto = montarOpcoes(
+    COST_CENTERS,
+    expenses.map(e => e.cost_center),
+    income.map(i => i.cost_center),
+  );
 
   const filtered = expenses.filter(exp => {
     const expDate = startOfDay(toDate(exp.due_date));
@@ -130,10 +146,11 @@ export default function Financial() {
       : (filterStatus === "all" || exp.payment_status === filterStatus);
     const typeMatch = filterType === "all" || exp.expense_type === filterType;
     const categoryMatch = filterCategory === "all" || exp.category === filterCategory;
+    const costCenterMatch = filterCostCenter === "all" || (exp.cost_center || "") === filterCostCenter;
     const searchMatch = !search || (exp.description || "").toLowerCase().includes(search.toLowerCase()) ||
       (exp.company || "").toLowerCase().includes(search.toLowerCase()) ||
       (exp.category || "").toLowerCase().includes(search.toLowerCase());
-    return monthMatch && statusMatch && typeMatch && categoryMatch && searchMatch;
+    return monthMatch && statusMatch && typeMatch && categoryMatch && costCenterMatch && searchMatch;
   });
 
   // 🔴 03/09/2026 — "a opção de exportar em planilha ainda não está disponível".
@@ -440,6 +457,19 @@ export default function Financial() {
                     </SelectContent>
                   </Select>
                 )}
+                {centrosDeCusto.length > 0 && (
+                  <Select value={filterCostCenter} onValueChange={setFilterCostCenter}>
+                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-44">
+                      <SelectValue placeholder="Centro de Custo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                      <SelectItem value="all">Todos Centros de Custo</SelectItem>
+                      {centrosDeCusto.map(cc => (
+                        <SelectItem key={cc} value={cc}>{cc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -459,7 +489,8 @@ export default function Financial() {
       </div>
 
       <ExpenseFormModal open={showForm} onClose={() => { setShowForm(false); setEditingExpense(null); }}
-        onSave={handleSave} onBulkSave={handleBulkSave} editingExpense={editingExpense} />
+        onSave={handleSave} onBulkSave={handleBulkSave} editingExpense={editingExpense}
+        categorias={usedCategories} centrosDeCusto={centrosDeCusto} />
       <FinancialPDFGenerator open={showPDF} onClose={() => setShowPDF(false)} expenses={expenses} />
       <PaymentModal open={!!paymentExpense} onClose={() => setPaymentExpense(null)} expense={paymentExpense} onConfirm={handlePaymentConfirm} />
     </div>

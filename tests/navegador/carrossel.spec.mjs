@@ -23,7 +23,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const AQUI = path.dirname(new URL(import.meta.url).pathname);
-const SAIDA = path.join(tmpdir(), 'banca-carrossel');
+// 🔴 05/09/2026 — UMA PASTA POR BANCA. Antes as cinco construíam na MESMA pasta, e o
+// vite.config tem emptyOutDir: uma banca apagava o que a outra estava servindo, e o teste
+// caía com 404 no meio da corrida. Passou despercebido enquanto eram três; com a quarta,
+// quebrou. O nome sai do próprio arquivo, então banca nova já nasce isolada.
+const SAIDA = process.env.SAIDA_BANCA
+  || path.join(tmpdir(), `banca-${path.basename(new URL(import.meta.url).pathname, '.spec.mjs')}`);
 const CROMO = process.env.CAMINHO_CHROMIUM
   || ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find((c) => existsSync(c));
 

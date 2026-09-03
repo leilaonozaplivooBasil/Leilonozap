@@ -21,7 +21,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const AQUI = path.dirname(new URL(import.meta.url).pathname);
-const SAIDA = process.env.SAIDA_BANCA || path.join(tmpdir(), 'banca-carrossel');
+// uma pasta por banca — ver a nota em carrossel.spec.mjs
+const SAIDA = process.env.SAIDA_BANCA
+  || path.join(tmpdir(), `banca-${path.basename(new URL(import.meta.url).pathname, '.spec.mjs')}`);
 const CROMO = process.env.CAMINHO_CHROMIUM
   || ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find((c) => existsSync(c));
 
