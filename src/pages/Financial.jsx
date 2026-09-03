@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt } from "lucide-react";
+import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt, Sheet } from "lucide-react";
 import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
 import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
@@ -16,6 +16,7 @@ import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards"
 import ExpenseTable from "@/components/financial/ExpenseTable";
 import ExpenseFormModal from "@/components/financial/ExpenseFormModal";
 import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator";
+import { conteudoDoArquivo, nomeDoArquivo } from "@/lib/planilhaFinanceiro";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import IncomeTable from "@/components/financial/IncomeTable";
 import FinancialOverview from "@/components/financial/FinancialOverview";
@@ -135,6 +136,28 @@ export default function Financial() {
     return monthMatch && statusMatch && typeMatch && categoryMatch && searchMatch;
   });
 
+  // 🔴 03/09/2026 — "a opção de exportar em planilha ainda não está disponível".
+  // Exporta `filtered`: EXATAMENTE as linhas que estão na tela, com os seis
+  // filtros já aplicados. Quem clica em "exportar" olhando uma lista filtrada
+  // espera baixar aquela lista — não a base inteira.
+  //
+  // O "Gerar PDF" ao lado NÃO foi tocado (decisão do dono): ele continua com
+  // período próprio e ignorando os filtros. São duas saídas com regras
+  // diferentes, e isso está registrado de propósito.
+  const baixarPlanilha = () => {
+    const url = URL.createObjectURL(
+      new Blob([conteudoDoArquivo(filtered)], { type: 'text/csv;charset=utf-8' })
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeDoArquivo();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // sem o revoke o navegador segura o arquivo inteiro em memória até recarregar
+    URL.revokeObjectURL(url);
+  };
+
   const handleSave = (data) => {
     if (editingExpense) {
       updateMutation.mutate({ id: editingExpense.id, data });
@@ -184,6 +207,17 @@ export default function Financial() {
           accentColor="emerald"
           actions={
             <>
+              <Button
+                onClick={baixarPlanilha}
+                disabled={filtered.length === 0}
+                title={filtered.length === 0
+                  ? 'Nenhuma conta na tela para exportar'
+                  : `Baixar ${filtered.length} conta(s) — as mesmas que estão na tela`}
+                variant="outline"
+                className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2 disabled:opacity-50"
+              >
+                <Sheet className="w-4 h-4" /> Exportar Planilha
+              </Button>
               <Button onClick={() => setShowPDF(true)} variant="outline" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2">
                 <FileText className="w-4 h-4" /> Gerar PDF
               </Button>
