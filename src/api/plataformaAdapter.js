@@ -157,7 +157,13 @@ function applyOrderBy(query, orderBy, entity) {
   const o = parseOrderBy(orderBy);
   if (o) {
     const fmap = FIELD_MAP[entity] || {};
-    query = query.order(fmap[o.column] || o.column, { ascending: o.ascending });
+    // 🔴 NULO NUNCA NA FRENTE (03/09/2026) — no Postgres, `ORDER BY x DESC` põe
+    // NULL PRIMEIRO. Um lance com `created_date` nulo aparecia como o MAIS
+    // RECENTE em "Últimos lances", na frente de lances de verdade. O dono viu:
+    // R$ 1,60 (o mais antigo) no topo, e ainda marcado "há 57 anos" — a Época
+    // do Unix. `nullsFirst: false` vale para toda consulta do app: linha sem
+    // data vai para o FIM, tanto em asc quanto em desc.
+    query = query.order(fmap[o.column] || o.column, { ascending: o.ascending, nullsFirst: false });
   }
   // 🔒 DESEMPATE ESTÁVEL (Ponto 93, 19/08/2026) — sem uma 2ª coluna, empate na coluna
   // principal (ex.: created_date IDÊNTICO em centenas de produtos de um mesmo lote

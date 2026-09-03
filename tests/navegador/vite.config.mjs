@@ -13,5 +13,13 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(aqui, '../../src') } },
   define: { __BUILD_VERSION__: JSON.stringify('banca') },
-  build: { outDir: process.env.SAIDA_BANCA || '/tmp/banca-carrossel', emptyOutDir: true },
+  build: {
+    outDir: process.env.SAIDA_BANCA || '/tmp/banca-carrossel',
+    emptyOutDir: true,
+    // uma página por banca
+    rollupOptions: { input: {
+      index: path.resolve(aqui, 'index.html'),
+      lance: path.resolve(aqui, 'lance.html'),
+    } },
+  },
 });
