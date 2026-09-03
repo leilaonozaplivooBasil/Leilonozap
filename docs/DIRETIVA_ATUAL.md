@@ -26,8 +26,14 @@ CREDIBILIDADE → NEGÓCIO. Regra: "Primeiro seja interessante. Depois
 desperte interesse."
 **Data:** 03/09/2026.
 **Escopo autorizado:**
+**ADENDO DIR-45.1 (mesma data):** dono corrigiu o fluxo — 06:45 é o
+TÉRMINO do treino (leitura vem após); na chegada organiza-se o AMBIENTE,
+não o dia; item novo 08:55 TODOS na sala ("09:00 não é horário de chegar,
+é horário de começar"); cadeia do princípio vira VIDA INTERESSANTE →
+PROVA SOCIAL → AUTORIDADE → CONFIANÇA → NEGÓCIO → VENDA; 20 itens.
+
 1. `src/lib/metodo.js` (fonte única): ROTINA_PADRAO reescrita com o
-   conteúdo DITADO — 19 itens (novos: story ANTES do treino às 05:15,
+   conteúdo DITADO — 20 itens na v2 (novos: story ANTES do treino às 05:15,
    story DURANTE às 05:30, FINAL do treino 06:45 com
    começou→fez→terminou, leitura 07:00, caminho pra empresa 08:00 com
    story espontâneo sem forçar conteúdo, chegada/ambiente 08:30 como
