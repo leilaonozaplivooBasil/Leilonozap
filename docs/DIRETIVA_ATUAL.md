@@ -62,6 +62,11 @@ Então eu quero que você coloque isso."
    e o usuário escreve na mão (o dono autorizou exatamente esse fallback).
    Teste invoca o HANDLER REAL (regra REL-34.2), incluindo
    SESSAO_MODO=bloquear com crachá forjado.
+**ADENDO do dono (03/09/2026, após ver o preview: "ficou ótimo, falta
+isso"):** além da busca e do upload, um campo no modal pra COLAR o
+endereço de uma imagem da internet e adicionar por ele — a URL colada
+entra na galeria, é selecionável como as demais e passa pelo MESMO
+proxyImage na confirmação (link colado também morre).
 **Fora do escopo / proibido:** mudar o BuscadorFotos/fluxos do admin;
 migração de banco (não precisa); publicar em produção sem o "pode" do dono;
 consertar os callers antigos de proxyImage que leem `.data.file_url`

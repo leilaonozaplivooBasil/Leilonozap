@@ -2046,3 +2046,14 @@ cota/visibilidade incerta na Vercel (a busca degrada com mensagem honesta);
 AI_GATEWAY_API_KEY pode não estar publicada (needs_key gracioso).
 **Status:** CONCLUÍDA no preview — aguardando o dono ver e autorizar
 produção.
+
+### REL-44.1 — Adendo: colar o endereço da imagem (03/09/2026)
+
+Dono aprovou o quadro ("ficou ótimo") e pediu o que faltava: um campo pra
+COLAR o endereço de uma imagem e adicionar por ele. Feito no mesmo modal:
+campo "cole aqui o endereço da imagem (https://...)" + botão Usar — valida
+http(s), entra na galeria já marcada, conta na multi-seleção e passa pelo
+MESMO proxyImage na confirmação (link colado também morre). Prova em
+navegador re-rodada COMPLETA: 42/42 ✅ zero erros (5 passos novos: usar o
+endereço, marcada na galeria, confirmação, cartão no quadro, proxy da URL
+colada). Suíte 664/664, build ok. Segue no preview aguardando o "pode".

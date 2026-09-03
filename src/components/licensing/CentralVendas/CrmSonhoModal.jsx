@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Search, Check, Loader2, Upload, ImagePlus } from 'lucide-react';
+import { X, Search, Check, Loader2, Upload, ImagePlus, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import { convertToWebP } from '@/lib/convertToWebP';
@@ -24,7 +24,9 @@ export default function CrmSonhoModal({ aberto, horizonteInicial = 'curto', onFe
   const [buscando, setBuscando] = useState(false);
   const [fotos, setFotos] = useState([]);           // urls vindas da busca
   const [enviadas, setEnviadas] = useState([]);     // urls já no nosso bucket (upload)
-  const [escolhidas, setEscolhidas] = useState([]); // seleção (de ambas as fontes)
+  const [coladas, setColadas] = useState([]);       // urls coladas pelo usuário (adendo DIR-44)
+  const [urlColada, setUrlColada] = useState('');
+  const [escolhidas, setEscolhidas] = useState([]); // seleção (de todas as fontes)
   const [enviando, setEnviando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const inputArquivoRef = useRef(null);
@@ -33,7 +35,7 @@ export default function CrmSonhoModal({ aberto, horizonteInicial = 'curto', onFe
     if (aberto) {
       setHorizonte(horizonteInicial);
       setTitulo('');
-      setFotos([]); setEnviadas([]); setEscolhidas([]);
+      setFotos([]); setEnviadas([]); setColadas([]); setUrlColada(''); setEscolhidas([]);
       setBuscando(false); setEnviando(false); setConfirmando(false);
     }
   }, [aberto, horizonteInicial]);
@@ -86,6 +88,16 @@ export default function CrmSonhoModal({ aberto, horizonteInicial = 'curto', onFe
   const alternar = (url) =>
     setEscolhidas((prev) => (prev.includes(url) ? prev.filter((u) => u !== url) : [...prev, url]));
 
+  // 🔗 Adendo do dono: colar o endereço da imagem e adicionar por ele.
+  const usarUrlColada = () => {
+    const url = urlColada.trim();
+    if (!/^https?:\/\//i.test(url)) { toast.error('Cole um endereço de imagem válido (começa com http:// ou https://)'); return; }
+    if (!coladas.includes(url) && !fotos.includes(url) && !enviadas.includes(url)) setColadas((prev) => [...prev, url]);
+    setEscolhidas((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    setUrlColada('');
+    toast.success('Imagem adicionada à galeria — já está marcada');
+  };
+
   const confirmar = async () => {
     const nome = titulo.trim();
     if (!nome && escolhidas.length === 0) { toast.error('Dê um nome ao sonho ou escolha uma imagem'); return; }
@@ -112,7 +124,7 @@ export default function CrmSonhoModal({ aberto, horizonteInicial = 'curto', onFe
     } finally { setConfirmando(false); }
   };
 
-  const galeria = [...enviadas, ...fotos.filter((u) => !enviadas.includes(u))];
+  const galeria = [...enviadas, ...coladas.filter((u) => !enviadas.includes(u)), ...fotos.filter((u) => !enviadas.includes(u) && !coladas.includes(u))];
   const h = HORIZONTES_SONHO.find((x) => x.id === horizonte) || HORIZONTES_SONHO[0];
 
   return (
@@ -174,6 +186,26 @@ export default function CrmSonhoModal({ aberto, horizonteInicial = 'curto', onFe
                 {enviando ? 'Enviando...' : 'Enviar imagem do aparelho'}
               </Button>
               <input ref={inputArquivoRef} type="file" accept="image/*" multiple className="hidden" onChange={enviarArquivos} data-testid="sonho-arquivo" />
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-[11px] text-nz-tinta-fraca shrink-0">ou</p>
+              <Input
+                value={urlColada}
+                onChange={(e) => setUrlColada(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !ocupado) { e.preventDefault(); usarUrlColada(); } }}
+                placeholder="cole aqui o endereço da imagem (https://...)"
+                className="bg-white border-nz-borda text-nz-tinta text-sm h-8"
+                disabled={ocupado}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={usarUrlColada}
+                disabled={ocupado || !urlColada.trim()}
+                className="border-nz-borda text-nz-tinta h-8 shrink-0"
+              >
+                <LinkIcon className="w-4 h-4 mr-1.5" /> Usar
+              </Button>
             </div>
           </div>
 
