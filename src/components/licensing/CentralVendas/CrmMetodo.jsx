@@ -12,7 +12,7 @@ import {
   HORIZONTES_SONHO, agruparSonhosPorHorizonte, normalizarSonho, PLACEHOLDER_DETALHES_SONHO,
   PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina,
   probabilidadeFechamento, produtoApresentacao,
-  agendaDoDiaContatos,
+  agendaDoDiaContatos, eventoGoogleDaReuniao,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -50,9 +50,10 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
   const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
   const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
-  const [registrandoContato, setRegistrandoContato] = useState(null); // contato aberto no registro (DIR-47)
+  const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato:null} = agendar livre (DIR-48)
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
+  const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
 
   useEffect(() => {
     if (!uid) return;
@@ -203,35 +204,43 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
     setSalvando(true);
     const ok = await onRegistrarContato?.(contato, registro);
     setSalvando(false);
-    if (ok) setRegistrandoContato(null);
+    if (ok) setRegistroAberto(null);
   };
 
-  // 🗓️ DIR-47 — a Google Agenda da PRÓPRIA pessoa (leitura, no navegador
-  // dela; mesmo GOOGLE_CLIENT_ID do login — token não passa pelo servidor).
+  // 🗓️ DIR-47/48 — token da Google Agenda da PRÓPRIA pessoa (leitura +
+  // criação de evento; mesmo GOOGLE_CLIENT_ID do login; o token vive só
+  // nesta sessão do navegador — nunca vai pro servidor).
+  const obterTokenGoogle = async () => {
+    if (googleToken) return googleToken;
+    const r = await plataforma.functions.invoke('getGoogleClientId', {});
+    const clientId = r?.clientId;
+    if (!clientId) throw new Error('login Google não configurado');
+    if (!window.google?.accounts?.oauth2) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
+        document.head.appendChild(s);
+      });
+    }
+    if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
+    const token = await new Promise((res, rej) => {
+      const tc = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+        callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
+        error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
+      });
+      tc.requestAccessToken();
+    });
+    setGoogleToken(token);
+    return token;
+  };
+
   const conectarGoogleAgenda = async () => {
     setGoogleConectando(true);
     try {
-      const r = await plataforma.functions.invoke('getGoogleClientId', {});
-      const clientId = r?.clientId;
-      if (!clientId) throw new Error('login Google não configurado');
-      if (!window.google?.accounts?.oauth2) {
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = 'https://accounts.google.com/gsi/client';
-          s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
-          document.head.appendChild(s);
-        });
-      }
-      if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
-      const token = await new Promise((res, rej) => {
-        const tc = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: 'https://www.googleapis.com/auth/calendar.readonly',
-          callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
-          error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
-        });
-        tc.requestAccessToken();
-      });
+      const token = await obterTokenGoogle();
       const ini = new Date(); ini.setHours(0, 0, 0, 0);
       const fim = new Date(ini.getTime() + 86400000);
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(ini.toISOString())}&timeMax=${encodeURIComponent(fim.toISOString())}`, {
@@ -243,8 +252,40 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
       toast.success('Google Agenda conectada — eventos de hoje na tela');
     } catch (e) {
       console.warn('Google Agenda:', e);
+      setGoogleToken(null);
       toast.error(`Não deu pra conectar a Google Agenda: ${e.message}`);
     } finally { setGoogleConectando(false); }
+  };
+
+  // DIR-48 — cria o evento DE VERDADE na agenda da própria pessoa. Falhou?
+  // Devolve null e o agendamento segue com o link de template (nunca trava).
+  const criarEventoNoGoogle = async (registro, cliente) => {
+    try {
+      const corpo = eventoGoogleDaReuniao({
+        titulo: registro.titulo_reuniao || `Reunião — ${cliente?.full_name || 'contato'} (Leilão NoZap)`,
+        inicio: registro.quando,
+        duracaoMin: registro.duracao_min || 60,
+        detalhes: registro.obs || 'Apresentação de sucesso — Leilão NoZap',
+        local: registro.local || '',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
+      });
+      if (!corpo) return null;
+      const token = await obterTokenGoogle();
+      const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+      });
+      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      const j = await resp.json();
+      toast.success('Evento criado na sua Google Agenda!');
+      return j?.htmlLink || null;
+    } catch (e) {
+      console.warn('Criar evento Google:', e);
+      setGoogleToken(null);
+      toast.info(`Não deu pra criar no Google agora (${e.message}) — o agendamento foi salvo e o botão Google Agenda continua na agenda do dia.`);
+      return null;
+    }
   };
 
   const habito = HABITOS.find((h) => h.id === painel);
@@ -562,7 +603,7 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
                         </div>
                         <p className={`text-xs font-bold shrink-0 ${COR_FAIXA[prob.faixa.id]}`}>{prob.faixa.emoji} {prob.pct}%</p>
-                        <Button size="sm" onClick={() => setRegistrandoContato(c)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
+                        <Button size="sm" onClick={() => setRegistroAberto({ contato: c })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
                           Registrar contato
                         </Button>
                       </div>
@@ -573,22 +614,28 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
 
               {/* 📅 agenda do dia — o escopo do super admin é o time inteiro */}
               <div className="rounded-xl border border-nz-verde/25 bg-nz-verde-fundo/30 p-3">
-                <p className="text-sm font-bold text-nz-tinta mb-1.5">📅 Agenda do dia · {agenda.agendados.length + reunioesEsteiraHoje.length} reunião(ões) · {agenda.retornos.length} retorno(s)</p>
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+                  <p className="text-sm font-bold text-nz-tinta">📅 Agenda do dia · {agenda.agendados.length + reunioesEsteiraHoje.length} reunião(ões) · {agenda.retornos.length} retorno(s)</p>
+                  <Button size="sm" onClick={() => setRegistroAberto({ contato: null })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
+                    <CalendarPlus className="w-4 h-4 mr-1" /> Agendar reunião
+                  </Button>
+                </div>
                 {agenda.agendados.length === 0 && agenda.retornos.length === 0 && reunioesEsteiraHoje.length === 0 ? (
                   <p className="text-xs text-nz-tinta-fraca text-center py-2">Nada agendado pra hoje ainda — o agendado nasce do registro de contato.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {agenda.agendados.map(({ cliente, registro }) => {
-                      const g = linkGoogleAgenda({ titulo: `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: 60, detalhes: 'Apresentação de sucesso — Contato e Convite' });
+                      const g = registro.google_event_link
+                        || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
                       return (
                         <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-nz-tinta truncate">📅 {fmtHora(registro.quando)} · {cliente.full_name || 'Sem nome'}</p>
+                            <p className="text-sm font-medium text-nz-tinta truncate">📅 {fmtHora(registro.quando)} · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                             <p className="text-[11px] text-nz-tinta-fraca truncate">contato agendado{registro.registrado_por_nome ? ` · por ${registro.registrado_por_nome}` : ''}{registro.obs ? ` · ${registro.obs}` : ''}</p>
                           </div>
                           {g && (
                             <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                              <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> Google Agenda</Button>
+                              <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> {registro.google_event_link ? 'Abrir no Google' : 'Google Agenda'}</Button>
                             </a>
                           )}
                         </div>
@@ -608,7 +655,7 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
                           <p className="text-sm font-medium text-nz-tinta truncate">🔁 Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}{registro.registrado_por_nome ? ` · por ${registro.registrado_por_nome}` : ''}</p>
                         </div>
-                        <Button size="sm" onClick={() => setRegistrandoContato(cliente)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">Registrar contato</Button>
+                        <Button size="sm" onClick={() => setRegistroAberto({ contato: cliente })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">Registrar contato</Button>
                       </div>
                     ))}
                   </div>
@@ -646,10 +693,13 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
               </div>
 
               <CrmContatoRegistroModal
-                contato={registrandoContato}
-                onFechar={() => setRegistrandoContato(null)}
+                aberto={registroAberto !== null}
+                contatoInicial={registroAberto?.contato || null}
+                contatos={clientesManuais}
+                onFechar={() => setRegistroAberto(null)}
                 onSalvar={salvarRegistroContato}
                 salvando={salvando}
+                criarNoGoogleFn={criarEventoNoGoogle}
               />
             </div>
           );
