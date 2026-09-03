@@ -39,6 +39,7 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '' });
   const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
+  const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
 
   useEffect(() => {
@@ -112,6 +113,23 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar o dia — a migração do Método já foi colada no banco?');
+    } finally { setSalvando(false); }
+  };
+
+  // DIR-45.2 — dia gerado com a rotina antiga continua salvo no banco; este
+  // botão apaga as tarefas do DIA ESCOLHIDO e recria com a Rotina Perfeita.
+  const regerarDia = async () => {
+    setSalvando(true);
+    try {
+      for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
+      const linhas = gerarTarefasDaRotina(rotina, uid, dia);
+      for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
+      setConfirmaRegerar(false);
+      carregarTarefas();
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao regenerar o dia — tente de novo');
     } finally { setSalvando(false); }
   };
 
@@ -351,6 +369,21 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
               <Input value={novaTarefa.titulo} onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })} placeholder="nova tarefa do dia..." className="bg-white border-nz-borda text-nz-tinta" />
               <Button onClick={addTarefa} disabled={!novaTarefa.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0"><Plus className="w-4 h-4" /></Button>
             </div>
+            {tarefas.length > 0 && (
+              confirmaRegerar ? (
+                <div className="flex items-center gap-2 flex-wrap rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs">
+                  <p className="text-nz-tinta">Apagar as <strong>{tarefas.length} tarefas deste dia</strong> (feitas e não feitas) e criar as <strong>{rotina.length} da Rotina Perfeita</strong>?</p>
+                  <Button size="sm" onClick={regerarDia} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-xs">
+                    {salvando ? 'Regenerando...' : 'Sim, gerar de novo'}
+                  </Button>
+                  <button type="button" onClick={() => setConfirmaRegerar(false)} className="text-nz-tinta-fraca hover:text-nz-tinta">cancelar</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setConfirmaRegerar(true)} className="text-xs font-semibold text-nz-verde hover:text-nz-verde-claro text-left">
+                  ⚡ Este dia foi gerado com a rotina antiga? Gerar de novo com a Rotina Perfeita ({rotina.length} tarefas)
+                </button>
+              )
+            )}
           </div>
         )}
 

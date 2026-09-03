@@ -2154,3 +2154,18 @@ princípio virou VIDA INTERESSANTE → PROVA SOCIAL → AUTORIDADE → CONFIANÇ
 "Preparo o próximo dia") e o Master Task do dia agora nasce com 20
 tarefas. Prova em navegador re-rodada inteira: 52/52 ✅ zero erros
 (incluindo as três correções visíveis na tela). Suíte 800/800, build ok.
+
+### REL-45.2 — "Não está aparecendo no preview": diagnóstico + regerar o dia (03/09/2026)
+
+Dono estranhou a lista antiga no preview. Diagnóstico com o print dele
+mesmo: a v2 ESTAVA publicada (o bloco do princípio novo aparece na tela);
+o que estava antigo eram os DADOS — o Master Task de hoje foi gerado dias
+antes com a rotina velha e ficou salvo em metodo_tarefas ("0/16 feitas"
+com os títulos antigos). A rotina nova só entra quando um dia é GERADO.
+Faltava a ferramenta permitir regerar: agora um dia já gerado mostra
+"⚡ Este dia foi gerado com a rotina antiga? Gerar de novo com a Rotina
+Perfeita (20 tarefas)" — com confirmação explícita (avisa que apaga as
+tarefas do dia, feitas e não feitas) antes de apagar e recriar. Prova em
+navegador: 57/57 ✅ zero erros (5 passos novos: link no dia cheio,
+confirmação, 20 apagadas + 20 criadas, dia regenerado com 0/20 e ABRIR A
+LOJA na tela). Suíte 800/800, build ok.
