@@ -12,8 +12,18 @@
 // Pra cada grupo de recorrência (recurring_group_id — ver migration
 // 20260827c_recurring_group_id.sql), acha o lançamento mais recente do grupo e usa
 // src/../api/_lib/gastosFixosRecorrentes.js pra decidir quais meses ainda faltam, do mês
-// seguinte até o mês atual (inclusive). Cria um lançamento novo "pendente" por mês que
-// faltar — cada mês esquecido vira sua própria linha, não um contador numa linha só.
+// seguinte ao último vencimento até MESES_A_FRENTE meses além do mês corrente. Cria um
+// lançamento novo "pendente" por mês que faltar — cada mês esquecido vira sua própria
+// linha, não um contador numa linha só.
+//
+// 03/09/2026 — o horizonte pra frente (pedido da Aline: "tudo que cadastro como
+// recorrente não aparece para mim com referência as datas para frente"). O motivo de
+// serem 6 meses, e não 12, está escrito em gastosFixosRecorrentes.js: é o que cabe no
+// teto de 500 linhas da tela do Financeiro sem empurrar o passado pra fora dela.
+//
+// IDEMPOTÊNCIA: o job roda todo dia. Na segunda rodada o vencimento mais recente do
+// grupo já é a última linha projetada, então não sobra mês nenhum e ele não cria nada.
+// A cada mês que vira, o horizonte anda um mês e ele cria exatamente uma linha nova.
 //
 // SEGURANÇA
 // Best-effort por grupo: se um grupo falhar (erro de rede, dado incompleto), os outros
@@ -79,6 +89,11 @@ export default async function handler(req, res) {
           recurring_day: maisRecente.recurring_day || null,
           recurring_group_id: grupoId,
           notes: maisRecente.notes || null,
+          // Sem isto a linha nasce com created_date NULL — e a coluna "Lançado em" da
+          // planilha do Financeiro (DIR-45, PR #172) sai em branco. Eram 63 linhas assim
+          // em 03/09; com o horizonte de 6 meses seriam centenas. O que ela lança à mão
+          // grava esse campo, e o que o cron gera tem que ficar IGUAL.
+          created_date: new Date().toISOString(),
         }));
 
         const r = await sb('financial_expenses', {
