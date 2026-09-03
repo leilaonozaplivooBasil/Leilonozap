@@ -2201,5 +2201,8 @@ probabilidade na linha após salvar, busca filtrando (+ toda a regressão
 Sonho/Rotina re-rodada).
 **Testes:** 800 → 806 (6 novos: produtos/dimensões, exemplo do dono,
 pontas e meio da régua, incompleta → null).
-**Ação do dono:** ⏳ colar a migração DIR-46 no SQL Editor ANTES de usar.
-**Status:** CONCLUÍDA no preview — aguardando migração + "pode".
+**Ação do dono:** ✅ FEITA — migração da DIR-46 colada e aplicada no SQL
+Editor em 03/09/2026 ("Success. No rows returned").
+customers.qualificacao_network vivo em produção.
+**Status:** CONCLUÍDA — banco pronto; agenda qualificada operante de ponta
+a ponta no preview, aguardando o "pode" pra publicar.
