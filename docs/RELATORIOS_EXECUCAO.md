@@ -2057,3 +2057,18 @@ MESMO proxyImage na confirmação (link colado também morre). Prova em
 navegador re-rodada COMPLETA: 42/42 ✅ zero erros (5 passos novos: usar o
 endereço, marcada na galeria, confirmação, cartão no quadro, proxy da URL
 colada). Suíte 664/664, build ok. Segue no preview aguardando o "pode".
+
+### REL-44.2 — Por que a IA de visão não acende + o caminho pra ligar (03/09/2026)
+
+Dono viu o aviso "A IA de visão ainda não está conectada". Investigado SEM
+achismo: a rota ganhou fallback pro VERCEL_OIDC_TOKEN (molde do InvokeLLM)
+e um GET ?diag=1 que responde só booleanos; medido no preview:
+`tem_chave:false, tem_oidc:false` — o projeto NÃO tem nenhuma credencial
+de IA publicada na Vercel (nem AI_GATEWAY_API_KEY, nem OIDC ativo). Por
+isso a visão do sonho, a IA de atendimento (atendimentoIA), o InvokeLLM e
+o GenerateImage estão todos dormindo — é UMA configuração de painel, não
+código. Ação do dono (2 min no painel da Vercel): criar a chave no AI
+Gateway e publicar como AI_GATEWAY_API_KEY no projeto leilonozap (todas as
+envs) + redeploy. 666/666 testes (fallback OIDC e diag testados no handler
+real). Upgrades prometidos pra quando a chave existir: preencher sozinho ao
+adicionar a imagem, ler a URL colada e sugerir título — rodada própria.
