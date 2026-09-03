@@ -160,6 +160,48 @@ export function linkGoogleAgenda({ titulo, inicio, duracaoMin = 60, detalhes = '
 export const QUALIFICACOES = [1, 2, 3, 4, 5];
 export const qualificacaoValida = (n) => Number.isInteger(n) && n >= 1 && n <= 5;
 
+// ══ 🤝 Hábito 3 — LISTA DE NETWORK QUALIFICADA (DIR-46, 03/09/2026) ══
+// "É tipo uma agenda de telefone": cada contato ganha 3 notas de 1 a 5
+// (confiança em mim, condição financeira, apetite ao produto APRESENTADO —
+// por isso o executivo escolhe o produto no modal) e a lista mostra a
+// probabilidade de fechamento derivada da soma. Régua transparente:
+// pct = (total − 3) / 12 → 1/1/1 = 0%, 3/4/5 = 75%, 5/5/5 = 100%.
+export const PRODUTOS_APRESENTACAO = [
+  { id: 'parceiro_compra', label: 'Parceiro de Compra', emoji: '🤝' },
+  { id: 'licencas', label: 'Licenças', emoji: '📜' },
+];
+export const DIMENSOES_QUALIFICACAO = [
+  { id: 'confianca', label: 'Confiança em mim', emoji: '🫱' },
+  { id: 'financeiro', label: 'Condição financeira', emoji: '💰' },
+  { id: 'apetite', label: 'Apetite ao produto', emoji: '🔥' },
+];
+export const produtoApresentacao = (id) => PRODUTOS_APRESENTACAO.find((p) => p.id === id) || null;
+
+export function qualificacaoNetworkCompleta(q) {
+  return !!q && DIMENSOES_QUALIFICACAO.every((d) => qualificacaoValida(q[d.id]));
+}
+
+/** Soma das 3 notas (3 a 15), ou null se a qualificação está incompleta. */
+export function totalQualificacao(q) {
+  if (!qualificacaoNetworkCompleta(q)) return null;
+  return DIMENSOES_QUALIFICACAO.reduce((soma, d) => soma + q[d.id], 0);
+}
+
+export const FAIXAS_PROBABILIDADE = [
+  { id: 'quente', emoji: '🔥', label: 'Quente', minPct: 70 },
+  { id: 'morno', emoji: '🌤️', label: 'Morno', minPct: 40 },
+  { id: 'frio', emoji: '❄️', label: 'Frio', minPct: 0 },
+];
+
+/** Probabilidade de fechamento pela qualificação: {total, pct, faixa} ou null. */
+export function probabilidadeFechamento(q) {
+  const total = totalQualificacao(q);
+  if (total === null) return null;
+  const pct = Math.round(((total - 3) / 12) * 100);
+  const faixa = FAIXAS_PROBABILIDADE.find((f) => pct >= f.minPct) || FAIXAS_PROBABILIDADE.at(-1);
+  return { total, pct, faixa };
+}
+
 // ══ 🌟 Hábito 1 — QUADRO DOS SONHOS (DIR-44, 03/09/2026) ══
 // O quadro do dono tem três horizontes; cada um recebe quantas imagens a
 // pessoa quiser, com os detalhes escritos embaixo de cada uma.

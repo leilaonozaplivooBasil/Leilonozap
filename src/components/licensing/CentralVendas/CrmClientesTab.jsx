@@ -734,14 +734,19 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   };
 
   // 🤝 DIR-43 — qualificação 1-5 da lista de network (Hábito 3)
-  const handleQualificarContato = async (contato, estrelas) => {
+  // DIR-46 — qualificação completa da lista de network: produto apresentado +
+  // 3 notas 1-5. A coluna legada `qualificacao` (estrela única) fica intocada.
+  const handleQualificarContato = async (contato, quali) => {
     try {
-      await plataforma.entities.Customer.update(contato.id, { qualificacao: estrelas });
-      toast.success(`${contato.full_name || 'Contato'}: ${estrelas} estrela(s)`);
+      await plataforma.entities.Customer.update(contato.id, { qualificacao_network: quali });
+      const total = (quali?.confianca || 0) + (quali?.financeiro || 0) + (quali?.apetite || 0);
+      toast.success(`${contato.full_name || 'Contato'} qualificado: ${total}/15`);
       await loadCustomers();
+      return true;
     } catch (error) {
       console.error('Erro ao qualificar contato:', error);
-      toast.error('Erro ao salvar a qualificação — a migração do Método já foi colada?');
+      toast.error('Erro ao salvar a qualificação — a migração da DIR-46 já foi colada no banco?');
+      return false;
     }
   };
 

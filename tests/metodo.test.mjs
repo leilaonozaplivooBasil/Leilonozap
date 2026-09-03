@@ -150,3 +150,49 @@ describe('quadro dos sonhos (DIR-44)', () => {
     }
   });
 });
+
+// ══ DIR-46 — Lista de Network qualificada ══
+const { PRODUTOS_APRESENTACAO, DIMENSOES_QUALIFICACAO, totalQualificacao, probabilidadeFechamento, qualificacaoNetworkCompleta, produtoApresentacao } =
+  await import('../src/lib/metodo.js');
+
+describe('lista de network qualificada (DIR-46)', () => {
+  test('os dois produtos ditados: Parceiro de Compra e Licenças', () => {
+    assert.deepEqual(PRODUTOS_APRESENTACAO.map((p) => p.id), ['parceiro_compra', 'licencas']);
+    assert.equal(produtoApresentacao('licencas').label, 'Licenças');
+    assert.equal(produtoApresentacao('outro'), null);
+  });
+
+  test('as 3 dimensões na ordem ditada: confiança, financeira, apetite', () => {
+    assert.deepEqual(DIMENSOES_QUALIFICACAO.map((d) => d.id), ['confianca', 'financeiro', 'apetite']);
+  });
+
+  test('o exemplo do dono: 3 + 4 + 5 = 12 de 15 → 75%, quente', () => {
+    const q = { produto: 'licencas', confianca: 3, financeiro: 4, apetite: 5 };
+    assert.equal(totalQualificacao(q), 12);
+    const p = probabilidadeFechamento(q);
+    assert.equal(p.pct, 75);
+    assert.equal(p.faixa.id, 'quente');
+  });
+
+  test('régua transparente nas pontas: 1/1/1 = 0% frio · 5/5/5 = 100% quente', () => {
+    assert.deepEqual(
+      [probabilidadeFechamento({ confianca: 1, financeiro: 1, apetite: 1 }), probabilidadeFechamento({ confianca: 5, financeiro: 5, apetite: 5 })]
+        .map((p) => [p.pct, p.faixa.id]),
+      [[0, 'frio'], [100, 'quente']]
+    );
+  });
+
+  test('meio da régua: 3/3/3 = 50% morno', () => {
+    const p = probabilidadeFechamento({ confianca: 3, financeiro: 3, apetite: 3 });
+    assert.equal(p.pct, 50);
+    assert.equal(p.faixa.id, 'morno');
+  });
+
+  test('incompleta ou inválida → null (número não se inventa)', () => {
+    assert.equal(totalQualificacao(null), null);
+    assert.equal(totalQualificacao({ confianca: 3, financeiro: 4 }), null);
+    assert.equal(totalQualificacao({ confianca: 6, financeiro: 4, apetite: 5 }), null);
+    assert.equal(probabilidadeFechamento({ confianca: 0, financeiro: 1, apetite: 1 }), null);
+    assert.equal(qualificacaoNetworkCompleta({ confianca: 3, financeiro: 4, apetite: 5 }), true);
+  });
+});

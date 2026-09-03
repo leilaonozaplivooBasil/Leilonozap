@@ -2169,3 +2169,37 @@ tarefas do dia, feitas e não feitas) antes de apagar e recriar. Prova em
 navegador: 57/57 ✅ zero erros (5 passos novos: link no dia cheio,
 confirmação, 20 apagadas + 20 criadas, dia regenerado com 0/20 e ABRIR A
 LOJA na tela). Suíte 800/800, build ok.
+
+---
+
+## REL-46 — Lista de Network QUALIFICADA: 3 notas, produto e probabilidade (DIR-46)
+
+**Ordem do dono (03/09/2026):** agenda de contatos com qualificação de 1 a
+5 em três dimensões — confiança em mim, condição financeira e apetite ao
+produto APRESENTADO — com modal onde o executivo escolhe o produto
+(Parceiro de Compra ou Licenças) e a probabilidade de fechamento visível
+na lista. Fidelidade de conta: o exemplo ditado (3+4+5) soma 12/15 — o
+"14" falado era lapso; a regra implementada é a SOMA.
+**O que foi construído:**
+1. Fonte única em `metodo.js`: produtos, dimensões, totalQualificacao
+   (3-15) e probabilidadeFechamento com régua TRANSPARENTE —
+   pct = (total−3)/12 → 1/1/1 = 0% ❄️, 3/3/3 = 50% 🌤️, 3/4/5 = 75% 🔥,
+   5/5/5 = 100%. Faixas: quente ≥70 · morno ≥40 · frio.
+2. `CrmNetworkQualificacaoModal`: produto em 2 botões, 3 linhas de fichas
+   1-5, total e probabilidade AO VIVO, salvar travado até completar.
+3. Hábito 3 virou a agenda qualificada: busca por nome/telefone/e-mail,
+   ordenada por probabilidade (não qualificados por último), linha com as
+   3 notas + produto + total X/15 + probabilidade colorida por faixa;
+   contador "N pessoas · M qualificadas". Estrela única legada intocada.
+4. Migração `20260903150000_network_qualificacao.sql` (DONO COLA ANTES DE
+   QUALIFICAR — sem ela o writeResilient descarta a coluna e a nota não
+   persiste): `customers.qualificacao_network JSONB`.
+**Prova em navegador (REL-34.1): 69/69 ✅ zero erros** — agenda com
+contadores, modal com os 2 produtos, notas 3/4/5 mostrando 12/15 e 75%
+Quente ao vivo, escrita auditada via entityWrite com o JSONB exato,
+probabilidade na linha após salvar, busca filtrando (+ toda a regressão
+Sonho/Rotina re-rodada).
+**Testes:** 800 → 806 (6 novos: produtos/dimensões, exemplo do dono,
+pontas e meio da régua, incompleta → null).
+**Ação do dono:** ⏳ colar a migração DIR-46 no SQL Editor ANTES de usar.
+**Status:** CONCLUÍDA no preview — aguardando migração + "pode".

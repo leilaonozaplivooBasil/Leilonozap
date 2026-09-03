@@ -12,6 +12,42 @@
 
 ---
 
+## DIR-46 — Lista de Network QUALIFICADA: 3 notas, produto e probabilidade
+
+**Emitida por:** dono (03/09/2026, por escrito): "é tipo uma agenda de
+telefone; dentro dela, de 1 a 5: CONFIANÇA EM MIM (ex. 3), CONDIÇÃO
+FINANCEIRA (ex. 4) e APETITE AO PRODUTO APRESENTADO (ex. 5) — soma o
+total; precisa ter um modal onde o executivo escolhe QUAL PRODUTO está
+apresentando (Parceiro de Compra ou as Licenças); e na lista precisa
+aparecer a PROBABILIDADE DE FECHAMENTO de acordo com essa qualificação".
+Nota de fidelidade: no exemplo ditado a soma 3+4+5 = 12 de 15 (o "14"
+falado foi lapso de conta — a regra é a SOMA).
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. `src/lib/metodo.js` (fonte única, testada): PRODUTOS_APRESENTACAO
+   (parceiro_compra | licencas), DIMENSOES_QUALIFICACAO (confiança ·
+   financeira · apetite), totalQualificacao (soma 3-15),
+   probabilidadeFechamento — régua transparente: pct = (total−3)/12
+   (1/1/1 = 0%, 3/4/5 = 75%, 5/5/5 = 100%), faixas 🔥 quente ≥70% ·
+   🌤 morno ≥40% · ❄️ frio abaixo.
+2. Migração `20260903150000_network_qualificacao.sql` (DONO COLA ANTES DE
+   USAR): `customers.qualificacao_network JSONB`
+   ({produto, confianca, financeiro, apetite}).
+3. `CrmNetworkQualificacaoModal.jsx` (padrão de overlay da casa): escolhe
+   o produto apresentado, dá as 3 notas em fichas 1-5, vê o total e a
+   probabilidade AO VIVO, salva.
+4. Painel Lista (Hábito 3) em `CrmMetodo.jsx` vira a agenda qualificada:
+   busca por nome/telefone, ordenada por probabilidade (não qualificados
+   por último), cada linha com as 3 notas, produto, total X/15 e a
+   probabilidade com cor da faixa; botão Qualificar/Editar abre o modal.
+   A estrela única antiga (customers.qualificacao) fica intocada no banco.
+**Fora do escopo:** importação da agenda do celular (rodada própria);
+mexer na coluna legada `qualificacao`.
+**Regras fixas:** prova em navegador (REL-34.1); escrita via entityWrite.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-45 — A Rotina Perfeita: Hábito 2 vira narrativa diária de autoridade
 
 **Emitida por:** dono (03/09/2026, por escrito, documento completo): o

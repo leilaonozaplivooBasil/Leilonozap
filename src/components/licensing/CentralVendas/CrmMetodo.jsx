@@ -8,12 +8,17 @@ import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
   HABITOS, ROTINA_PADRAO, periodoDe, PERIODOS, gerarTarefasDaRotina,
-  progressoDia, linkGoogleAgenda, QUALIFICACOES,
+  progressoDia, linkGoogleAgenda,
   HORIZONTES_SONHO, agruparSonhosPorHorizonte, normalizarSonho, PLACEHOLDER_DETALHES_SONHO,
   PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina,
+  probabilidadeFechamento, produtoApresentacao,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
+import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
+
+// DIR-46 — cor da faixa de probabilidade na lista
+const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
 
 // 🏆 DIR-43 — O MÉTODO VIVO: os painéis dos hábitos 1-5 e 8 (os hábitos 6 e
 // 7 são o próprio CRM: Acompanhamento = Clientes+Esteira, Verificação =
@@ -41,6 +46,8 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
+  const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
+  const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
 
   useEffect(() => {
     if (!uid) return;
@@ -164,10 +171,27 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   }, [oportunidades]);
   const reunioesHoje = reunioes.filter((o) => String(o.reuniao_em).slice(0, 10) === hojeStr()).length;
 
-  const listaOrdenada = useMemo(
-    () => [...clientesManuais].sort((a, b) => (b.qualificacao || 0) - (a.qualificacao || 0) || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR')),
-    [clientesManuais]
-  );
+  // DIR-46 — agenda qualificada: busca + ordenação por probabilidade de
+  // fechamento (não qualificados por último, em ordem alfabética).
+  const listaOrdenada = useMemo(() => {
+    const termo = buscaLista.trim().toLowerCase();
+    const filtrados = clientesManuais.filter((c) => !termo
+      || String(c.full_name || '').toLowerCase().includes(termo)
+      || String(c.phone || '').toLowerCase().includes(termo)
+      || String(c.email || '').toLowerCase().includes(termo));
+    return [...filtrados].sort((a, b) => {
+      const pa = probabilidadeFechamento(a.qualificacao_network)?.pct ?? -1;
+      const pb = probabilidadeFechamento(b.qualificacao_network)?.pct ?? -1;
+      return pb - pa || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR');
+    });
+  }, [clientesManuais, buscaLista]);
+
+  const salvarQualificacao = async (contato, quali) => {
+    setSalvando(true);
+    const ok = await onQualificar?.(contato, quali);
+    setSalvando(false);
+    if (ok) setQualificando(null); // falhou? modal fica aberto, notas não se perdem
+  };
 
   const habito = HABITOS.find((h) => h.id === painel);
 
@@ -387,38 +411,69 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
           </div>
         )}
 
-        {/* ══ 🤝 HÁBITO 3 — LISTA DE NETWORK (qualificada 1-5) ══ */}
-        {painel === 'lista' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-sm text-nz-tinta-fraca">{listaOrdenada.length} pessoas na sua lista · qualifique de 1 a 5 estrelas</p>
-              <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
-              </Button>
-            </div>
-            {listaOrdenada.length === 0 ? (
-              <p className="text-sm text-nz-tinta-fraca py-4 text-center">Sua lista começa aqui — adicione as pessoas da sua agenda.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {listaOrdenada.map((c) => (
-                  <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
-                      <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
-                    </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {QUALIFICACOES.map((n) => (
-                        <button key={n} type="button" onClick={() => onQualificar?.(c, n)} title={`${n} estrela(s)`}>
-                          <Star className={`w-4 h-4 ${((c.qualificacao || 0) >= n) ? 'text-amber-500 fill-amber-500' : 'text-nz-borda'}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+        {/* ══ 🤝 HÁBITO 3 — LISTA DE NETWORK QUALIFICADA (DIR-46) ══ */}
+        {painel === 'lista' && (() => {
+          const qualificadas = clientesManuais.filter((c) => probabilidadeFechamento(c.qualificacao_network)).length;
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-sm text-nz-tinta-fraca">
+                  {clientesManuais.length} pessoas na sua lista · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
+                </p>
+                <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
+                </Button>
               </div>
-            )}
-          </div>
-        )}
+              <Input
+                value={buscaLista}
+                onChange={(e) => setBuscaLista(e.target.value)}
+                placeholder="🔎 buscar na agenda por nome, telefone ou e-mail..."
+                className="bg-white border-nz-borda text-nz-tinta"
+              />
+              {listaOrdenada.length === 0 ? (
+                <p className="text-sm text-nz-tinta-fraca py-4 text-center">
+                  {clientesManuais.length === 0 ? 'Sua lista começa aqui — adicione as pessoas da sua agenda.' : 'Ninguém na agenda com essa busca.'}
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {listaOrdenada.map((c) => {
+                    const q = c.qualificacao_network || null;
+                    const prob = probabilidadeFechamento(q);
+                    const prod = produtoApresentacao(q?.produto);
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
+                          <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
+                        </div>
+                        {prob ? (
+                          <button type="button" onClick={() => setQualificando(c)} className="shrink-0 text-right" title="Editar qualificação">
+                            <p className="text-[11px] text-nz-tinta-fraca">
+                              🫱{q.confianca} 💰{q.financeiro} 🔥{q.apetite}{prod ? ` · ${prod.emoji} ${prod.label}` : ''}
+                            </p>
+                            <p className={`text-xs font-bold ${COR_FAIXA[prob.faixa.id]}`}>
+                              {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
+                            </p>
+                          </button>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0">
+                            <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <CrmNetworkQualificacaoModal
+                contato={qualificando}
+                onFechar={() => setQualificando(null)}
+                onSalvar={salvarQualificacao}
+                salvando={salvando}
+              />
+            </div>
+          );
+        })()}
 
         {/* ══ 📜 HÁBITO 4 — CONTATO E CONVITE (o SEU script) ══ */}
         {painel === 'contato' && (
