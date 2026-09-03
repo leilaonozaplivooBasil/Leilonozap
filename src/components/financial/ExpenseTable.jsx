@@ -4,20 +4,23 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, AlertTriangle, Clock, CheckCircle2, XCircle, CircleDashed } from "lucide-react";
 import { format, startOfDay, differenceInCalendarDays } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
+import { STATUS_ROTULO, TIPO_ROTULO, PAGAMENTO_ROTULO } from "@/lib/rotulosFinanceiro";
 
+// 🔴 03/09/2026 — a PALAVRA vem de @/lib/rotulosFinanceiro, que a planilha do
+// Financeiro também usa. Antes esses mapas viviam só aqui; copiá-los para a
+// exportação criaria duas verdades, e no dia em que alguém renomeasse um status
+// na tela a planilha continuaria dizendo o nome velho — sem ninguém perceber,
+// porque planilha ninguém relê. Cor e ícone continuam aqui, que é onde pintam.
 const STATUS_CONFIG = {
-  pendente: { label: "Pendente", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock },
-  pago_integral: { label: "Pago", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
-  pago_parcial: { label: "Parcial", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: CircleDashed },
-  vencido: { label: "Vencido", color: "bg-red-500/20 text-red-400 border-red-500/30", icon: AlertTriangle },
-  cancelado: { label: "Cancelado", color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: XCircle },
+  pendente: { label: STATUS_ROTULO.pendente, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock },
+  pago_integral: { label: STATUS_ROTULO.pago_integral, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
+  pago_parcial: { label: STATUS_ROTULO.pago_parcial, color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: CircleDashed },
+  vencido: { label: STATUS_ROTULO.vencido, color: "bg-red-500/20 text-red-400 border-red-500/30", icon: AlertTriangle },
+  cancelado: { label: STATUS_ROTULO.cancelado, color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: XCircle },
 };
 
-const TYPE_LABELS = { fixo: "Fixo", unico: "Único", parcelado: "Parcelado" };
-const METHOD_LABELS = {
-  pix: "PIX", cartao_credito: "Cartão Crédito", cartao_debito: "Cartão Débito",
-  boleto: "Boleto", transferencia: "Transferência", dinheiro: "Dinheiro"
-};
+const TYPE_LABELS = TIPO_ROTULO;
+const METHOD_LABELS = PAGAMENTO_ROTULO;
 
 function getDueAlert(dueDate, status) {
   if (status === "pago_integral" || status === "cancelado") return null;
