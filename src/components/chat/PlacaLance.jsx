@@ -1,6 +1,7 @@
 import React from "react";
 import { fmtBR } from "@/lib/money";
 import useEntradaShow from "./useEntradaShow";
+import { horaDoLance } from "@/lib/dataDoLance";
 
 // PONTO 88 — cada lance vira uma PLACA de leilão erguida por uma mão.
 // Só visual: recebe a mensagem já pronta do chat, não calcula nada.
@@ -8,10 +9,10 @@ export default function PlacaLance({ message, isOwn }) {
   // PONTO 89 — só lances recém-chegados fazem a entrada "de fora da tela"
   const isNova = useEntradaShow(message);
   const valor = Number(message.bid_amount) > 0 ? Number(message.bid_amount) : null;
-  const hora = new Date(message.created_date).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  // 🔴 03/09/2026 — era aqui que a bolha marcava "21:00" em lance sem data:
+  // a Época do Unix em Brasília é 31/12/1969 21:00. Agora sai '' e a bolha não
+  // mostra hora nenhuma, em vez de mostrar uma hora falsa.
+  const hora = horaDoLance(message);
 
   return (
     <div className={`placa-linha ${isOwn ? 'placa-linha--own' : ''}`}>
@@ -21,7 +22,7 @@ export default function PlacaLance({ message, isOwn }) {
           <span className="placa-valor">
             {valor !== null ? `R$ ${fmtBR(valor)}` : message.content}
           </span>
-          <span className="placa-hora">{hora}</span>
+          {hora && <span className="placa-hora">{hora}</span>}
         </div>
 
         {/* Haste + mão segurando a placa (SVG próprio) */}

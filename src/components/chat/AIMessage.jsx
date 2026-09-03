@@ -3,6 +3,7 @@ import { Crown, Timer } from "lucide-react";
 import VictoryCard from "./VictoryCard";
 import LeiloeiroAvatar from "@/assets/leiloeiro-avatar.webp";
 import useEntradaShow from "./useEntradaShow";
+import { horaDoLance } from '@/lib/dataDoLance';
 
 // PONTO 85 — realce visual dos valores em R$ que JÁ vêm no texto do backend.
 // Não altera, não reescreve e não reordena nada: só destaca o que existe.
@@ -20,12 +21,10 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
   // PONTO 89 — leiloeiro entra por cima e bate o martelo só quando a narração
   // acabou de chegar; histórico segue estático.
   const isNova = useEntradaShow(message);
-  const formatTime = (timestamp) => {
-    return new Date(timestamp || message.created_date).toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // 🔴 03/09/2026 — mesma régua da placa de lance. Aqui o `||` já salvava do
+  // pior caso por acidente de ordem, mas com as duas colunas nulas cairia na
+  // Época do Unix ("21:00") do mesmo jeito. Agora ou sai hora de verdade, ou ''.
+  const formatTime = (timestamp) => horaDoLance({ ...message, created_date: timestamp || message.created_date });
 
   // 🏆 SE FOR MENSAGEM DE VITÓRIA, SEMPRE RENDERIZA O CARTÃO
   // 🆕 MESMO SE winner OU auction forem null! (usa fallback)
@@ -100,9 +99,11 @@ export default function AIMessage({ message, winner, auction, currentUser }) {
               {isCountdown && <Timer className="h-3 w-3 text-amber-300" />}
               {message.message_type === 'winner_announcement' && <Crown className="h-3 w-3 text-yellow-300" />}
             </span>
-            <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
-              {formatTime(message.timestamp)}
-            </span>
+            {formatTime(message.timestamp) && (
+              <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/35">
+                {formatTime(message.timestamp)}
+              </span>
+            )}
           </div>
 
           <p className="text-[13px] leading-[1.55] text-slate-200/90 sm:text-sm">
