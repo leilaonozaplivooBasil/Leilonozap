@@ -12,6 +12,48 @@
 
 ---
 
+## DIR-47 — Contato e Convite vivo: fila, registro, agenda do dia e Google
+
+**Emitida por:** dono (03/09/2026, por escrito): "no Contato e Convite
+quero: aparecer JÁ os contatos qualificados da lista de network; criar o
+registro do contato — feito, agendado, pediu pra retornar e as possíveis
+coisas que acontecem após o contato; no agendado abrir o Google Agenda;
+a possibilidade da pessoa CONECTAR a agenda do Google dela e aparecer ali
+as agendas; e pro super admin aparecerem TODAS as agendas do dia".
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. `src/lib/metodo.js` (fonte única, testada): RESULTADOS_CONTATO
+   (✅ feito · 📅 agendado · 🔁 pediu pra retornar · 📵 não atendeu ·
+   🚫 sem interesse), validação do registro (agendado exige data/hora;
+   retornar exige data) e agendaDoDiaContatos (agendados + retornos do
+   dia, varrendo o histórico dos clientes do ESCOPO — super admin vê o
+   time inteiro porque o escopo dele já é tudo).
+2. Migração `20260903190000_contatos_metodo.sql` (DONO COLA):
+   `customers.contatos_metodo JSONB` — HISTÓRICO (array) de registros
+   {resultado, em, quando?, retornar_em?, obs, registrado_por_id/nome}.
+3. `CrmContatoRegistroModal.jsx`: escolhe o desfecho, campos condicionais
+   (data/hora do agendado com botão GOOGLE AGENDA na hora — link de
+   template oficial já usado no Hábito 5; data do retorno), observação.
+4. Painel Contato (Hábito 4) em `CrmMetodo.jsx`: (a) FILA DOS
+   QUALIFICADOS da lista (DIR-46) por probabilidade, com Registrar
+   contato; (b) 📅 AGENDA DO DIA: agendados + retornos de hoje do escopo
+   (super admin = todas) + reuniões da esteira de hoje, cada agendado com
+   botão Google Agenda; (c) 🗓️ CONECTAR MINHA GOOGLE AGENDA: leitura dos
+   eventos de HOJE da conta Google da própria pessoa, no navegador dela
+   (GIS token client + calendar.readonly, MESMO GOOGLE_CLIENT_ID do
+   login; sem guardar token no servidor); (d) o script pessoal continua.
+**Honestidade de escopo:** a Google Agenda conectada é PESSOAL (vive no
+navegador de cada um — o admin não vê a agenda Google dos outros; ele vê
+todas as agendas DO MÉTODO). O escopo calendar.readonly pode exigir
+verificação do app no console Google pra sumir o aviso de "app não
+verificado" — registrado como ação futura do dono se o aviso aparecer.
+**Fora do escopo:** sync bidirecional/gravação no Google; guardar token
+Google no servidor.
+**Regras fixas:** prova em navegador (REL-34.1); escrita via entityWrite.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-46 — Lista de Network QUALIFICADA: 3 notas, produto e probabilidade
 
 **Emitida por:** dono (03/09/2026, por escrito): "é tipo uma agenda de

@@ -750,6 +750,29 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
+  // 📜 DIR-47 — registrar o desfecho de um contato do método (histórico
+  // append-only em customers.contatos_metodo, com carimbo de quem registrou).
+  const handleRegistrarContatoMetodo = async (contato, registro) => {
+    try {
+      const historico = Array.isArray(contato.contatos_metodo) ? contato.contatos_metodo : [];
+      const completo = {
+        ...registro,
+        id: (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `ct_${Date.now()}`),
+        em: new Date().toISOString(),
+        registrado_por_id: currentUser?.id || null,
+        registrado_por_nome: currentUser?.full_name || '',
+      };
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: [...historico, completo] });
+      toast.success(`Contato registrado: ${contato.full_name || ''}`);
+      await loadCustomers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao registrar contato:', error);
+      toast.error('Erro ao registrar o contato — a migração da DIR-47 já foi colada no banco?');
+      return false;
+    }
+  };
+
   // 📤 DIR-24 Fase 5 — exportação CSV da lista filtrada (o que está na tela é
   // o que sai no arquivo), com BOM pro Excel abrir acentuação certa.
   const exportarCsv = () => {
@@ -1336,6 +1359,7 @@ _Enviado via CRM Leilão NoZap_`;
             clientesManuais={networkManualCustomers}
             oportunidades={networkOportunidades}
             onQualificar={handleQualificarContato}
+            onRegistrarContato={handleRegistrarContatoMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />

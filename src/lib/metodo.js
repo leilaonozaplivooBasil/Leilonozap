@@ -92,6 +92,52 @@ export const NARRATIVA_DO_DIA = [
   { hora: '21:30', frase: 'Preparo o próximo dia.' },
 ];
 
+// ══ 📜 Hábito 4 — CONTATO E CONVITE VIVO (DIR-47, 03/09/2026) ══
+// Depois de cada contato, registra-se o desfecho; agendados e retornos do
+// dia formam a AGENDA DO DIA (o super admin enxerga o time inteiro porque
+// o escopo dele já é a lista toda).
+export const RESULTADOS_CONTATO = [
+  { id: 'feito', emoji: '✅', label: 'Contato feito' },
+  { id: 'agendado', emoji: '📅', label: 'Reunião agendada' },
+  { id: 'retornar', emoji: '🔁', label: 'Pediu pra retornar' },
+  { id: 'nao_atendeu', emoji: '📵', label: 'Não atendeu' },
+  { id: 'sem_interesse', emoji: '🚫', label: 'Sem interesse' },
+];
+export const resultadoContato = (id) => RESULTADOS_CONTATO.find((r) => r.id === id) || null;
+
+/** Registro válido? Agendado exige data/hora; pedir retorno exige data. */
+export function registroContatoValido(r) {
+  if (!r || !resultadoContato(r.resultado)) return false;
+  if (r.resultado === 'agendado' && !r.quando) return false;
+  if (r.resultado === 'retornar' && !r.retornar_em) return false;
+  return true;
+}
+
+/**
+ * A AGENDA DO DIA do Contato e Convite: varre o histórico contatos_metodo
+ * dos clientes do escopo e devolve os agendados e os retornos marcados pro
+ * dia pedido, ordenados por hora. Quem chama decide o escopo (o super admin
+ * passa a lista completa — "todas as agendas do dia").
+ */
+export function agendaDoDiaContatos(clientes = [], diaISO) {
+  const dia = String(diaISO || '').slice(0, 10);
+  const agendados = [];
+  const retornos = [];
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      if (registro?.resultado === 'agendado' && String(registro.quando || '').slice(0, 10) === dia) {
+        agendados.push({ cliente, registro });
+      }
+      if (registro?.resultado === 'retornar' && String(registro.retornar_em || '').slice(0, 10) === dia) {
+        retornos.push({ cliente, registro });
+      }
+    }
+  }
+  agendados.sort((a, b) => String(a.registro.quando).localeCompare(String(b.registro.quando)));
+  retornos.sort((a, b) => String(a.cliente.full_name || '').localeCompare(String(b.cliente.full_name || ''), 'pt-BR'));
+  return { agendados, retornos };
+}
+
 /** Guia estratégico de um item da rotina, pelo título (tarefa customizada não tem). */
 export function guiaDaRotina(titulo) {
   const t = String(titulo || '').trim();

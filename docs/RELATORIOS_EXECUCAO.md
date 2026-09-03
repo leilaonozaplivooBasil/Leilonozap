@@ -2206,3 +2206,46 @@ Editor em 03/09/2026 ("Success. No rows returned").
 customers.qualificacao_network vivo em produção.
 **Status:** CONCLUÍDA — banco pronto; agenda qualificada operante de ponta
 a ponta no preview, aguardando o "pode" pra publicar.
+
+---
+
+## REL-47 — Contato e Convite vivo: fila, registro, agenda e Google (DIR-47)
+
+**Ordem do dono (03/09/2026):** os qualificados da lista aparecendo no
+Contato e Convite; registro do contato (feito, agendado, pediu pra
+retornar e os demais desfechos); Google Agenda no agendado; a pessoa
+conectando a Google Agenda DELA; e o super admin vendo todas as agendas
+do dia.
+**O que foi construído:**
+1. 🎯 FILA DOS QUALIFICADOS: os contatos qualificados na DIR-46 aparecem
+   no Hábito 4 ordenados por probabilidade, cada um com "Registrar
+   contato". Sem qualificados → atalho honesto pro Hábito 3.
+2. 📜 REGISTRO DO CONTATO (modal): 5 desfechos — ✅ feito · 📅 reunião
+   agendada (data/hora + botão GOOGLE AGENDA na hora, com o evento
+   pronto) · 🔁 pediu pra retornar (data) · 📵 não atendeu · 🚫 sem
+   interesse — com observação e carimbo de quem registrou/quando.
+   Histórico append-only em customers.contatos_metodo.
+3. 📅 AGENDA DO DIA: agendados de hoje (com Google Agenda por item) +
+   reuniões da esteira de hoje + retornos vencendo hoje (com atalho pra
+   registrar). O SUPER ADMIN vê o time inteiro porque o escopo dele é a
+   lista toda; cada executivo vê a própria carteira (mesma régua de
+   escopo da DIR-24).
+4. 🗓️ MINHA GOOGLE AGENDA: botão conecta a conta Google DA PRÓPRIA
+   pessoa (GIS token client, calendar.readonly, MESMO GOOGLE_CLIENT_ID
+   do login) e lista os eventos de hoje — só leitura, token vive no
+   navegador dela, nada passa pelo servidor. Honestidade: o admin NÃO vê
+   a Google pessoal dos outros (impossível sem cada um conectar); ele vê
+   todas as agendas DO MÉTODO. Se o Google mostrar aviso de "app não
+   verificado" no primeiro uso do escopo de agenda, a verificação no
+   console Google é ação futura do dono.
+5. O script pessoal continua no painel.
+**Prova em navegador (REL-34.1): 85/85 ✅ zero erros** — fila com o
+qualificado e a probabilidade, modal com os 5 desfechos, agendamento às
+18:00 gravado com carimbo, reunião na agenda do dia com botão Google,
+retorno de hoje aparecendo, e a conexão Google stubada de ponta a ponta
+(script GIS + Calendar API) rendendo os eventos na tela.
+**Testes:** 806 → 809 (desfechos, validação do registro, agenda do dia
+com escopo).
+**Migração (DONO COLA ANTES DE USAR):**
+`20260903190000_contatos_metodo.sql` — customers.contatos_metodo JSONB.
+**Status:** CONCLUÍDA no preview — aguardando migração + "pode".

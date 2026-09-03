@@ -196,3 +196,35 @@ describe('lista de network qualificada (DIR-46)', () => {
     assert.equal(qualificacaoNetworkCompleta({ confianca: 3, financeiro: 4, apetite: 5 }), true);
   });
 });
+
+// ══ DIR-47 — Contato e Convite vivo ══
+const { RESULTADOS_CONTATO, registroContatoValido, agendaDoDiaContatos } = await import('../src/lib/metodo.js');
+
+describe('contato e convite (DIR-47)', () => {
+  test('os desfechos ditados: feito, agendado, pediu pra retornar + os possíveis', () => {
+    assert.deepEqual(RESULTADOS_CONTATO.map((r) => r.id), ['feito', 'agendado', 'retornar', 'nao_atendeu', 'sem_interesse']);
+  });
+
+  test('registro válido: agendado exige data/hora, retornar exige data', () => {
+    assert.equal(registroContatoValido({ resultado: 'feito' }), true);
+    assert.equal(registroContatoValido({ resultado: 'agendado' }), false);
+    assert.equal(registroContatoValido({ resultado: 'agendado', quando: '2026-09-04T14:00' }), true);
+    assert.equal(registroContatoValido({ resultado: 'retornar' }), false);
+    assert.equal(registroContatoValido({ resultado: 'retornar', retornar_em: '2026-09-10' }), true);
+    assert.equal(registroContatoValido({ resultado: 'inventado' }), false);
+    assert.equal(registroContatoValido(null), false);
+  });
+
+  test('agenda do dia: agendados por hora + retornos do dia, escopo é quem chama', () => {
+    const clientes = [
+      { full_name: 'Bia', contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-03T16:00' }, { resultado: 'agendado', quando: '2026-09-04T09:00' }] },
+      { full_name: 'Ana', contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-03T09:30' }, { resultado: 'retornar', retornar_em: '2026-09-03' }] },
+      { full_name: 'Caio', contatos_metodo: [{ resultado: 'sem_interesse', em: '2026-09-03T10:00' }] },
+      { full_name: 'Sem histórico' },
+    ];
+    const { agendados, retornos } = agendaDoDiaContatos(clientes, '2026-09-03');
+    assert.deepEqual(agendados.map((a) => a.cliente.full_name), ['Ana', 'Bia']);
+    assert.deepEqual(retornos.map((r) => r.cliente.full_name), ['Ana']);
+    assert.deepEqual(agendaDoDiaContatos([], '2026-09-03'), { agendados: [], retornos: [] });
+  });
+});
