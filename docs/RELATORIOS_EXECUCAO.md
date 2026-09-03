@@ -2072,3 +2072,13 @@ Gateway e publicar como AI_GATEWAY_API_KEY no projeto leilonozap (todas as
 envs) + redeploy. 666/666 testes (fallback OIDC e diag testados no handler
 real). Upgrades prometidos pra quando a chave existir: preencher sozinho ao
 adicionar a imagem, ler a URL colada e sugerir título — rodada própria.
+
+### REL-44.3 — Ordem do dono: "melhor, tire a IA" (03/09/2026)
+
+Removida a IA do Quadro dos Sonhos: sai o botão ✨ Preencher com IA, sai a
+rota descreverImagemSonho e sai o teste dela (tudo recuperável no git se um
+dia voltar). Fica o que sempre funcionou sem depender de chave: o campo de
+detalhes escrito na mão com a orientação guiada (carro → ano, cor, banco de
+couro, roda). Prova em navegador re-rodada inteira: 40/40 ✅ zero erros,
+incluindo o passo novo "NENHUM botão de IA na tela". Suíte volta a 657
+(saíram os 9 do handler removido), build ok.

@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -34,7 +34,6 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   // edições locais
   const [modalSonho, setModalSonho] = useState(null); // horizonte pré-escolhido, ou null (fechado)
   const [editandoSonho, setEditandoSonho] = useState(null); // { indice, texto }
-  const [iaOcupada, setIaOcupada] = useState(null); // índice do sonho que a IA está olhando
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '' });
@@ -88,20 +87,6 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
       sonhos: sonhos.map((item, j) => (j === indice ? { ...normalizarSonho(item), detalhes: String(texto || '').trim() } : item)),
     });
     if (ok) setEditandoSonho(null);
-  };
-  const preencherDetalhesComIA = async (indice, s) => {
-    setIaOcupada(indice);
-    try {
-      const r = await plataforma.functions.invoke('descreverImagemSonho', { imageUrl: s.imagem_url, titulo: s.titulo });
-      if (r?.success && r.detalhes) {
-        setEditandoSonho({ indice, texto: r.detalhes });
-        toast.success('A IA olhou a imagem — revise os detalhes e salve');
-      } else {
-        toast.info(r?.message || 'IA indisponível agora — escreva os detalhes na mão.');
-      }
-    } catch {
-      toast.info('IA indisponível agora — escreva os detalhes na mão.');
-    } finally { setIaOcupada(null); }
   };
 
   const sonhos = Array.isArray(perfil?.sonhos) ? perfil.sonhos : [];
@@ -241,11 +226,6 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
                                     <Button size="sm" disabled={salvando} onClick={() => salvarDetalhesSonho(indice, editandoSonho.texto)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-xs">
                                       <Save className="w-3.5 h-3.5 mr-1" /> Salvar
                                     </Button>
-                                    {s.imagem_url && (
-                                      <Button size="sm" variant="outline" disabled={iaOcupada !== null} onClick={() => preencherDetalhesComIA(indice, s)} className="border-nz-borda text-nz-tinta h-7 text-xs">
-                                        <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-500" /> {iaOcupada === indice ? 'Olhando a imagem...' : 'Preencher com IA'}
-                                      </Button>
-                                    )}
                                     <button type="button" onClick={() => setEditandoSonho(null)} className="text-xs text-nz-tinta-fraca hover:text-nz-tinta">cancelar</button>
                                   </div>
                                 </div>
