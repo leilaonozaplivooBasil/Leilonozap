@@ -2264,9 +2264,10 @@ Google Agenda pessoal (DIR-47).
 `815c8f78` → branch realinhada. Deploy de PRODUÇÃO: **success** de
 primeira; version.json do alias da main com o carimbo do build novo
 (14:57 UTC). leilaonozap.net no ar.
-**Pendências de configuração do dono (fora do código):** colar a
-migração da DIR-47 (contatos_metodo — SQL entregue no chat); ativar a
-Google Calendar API no console Google; opcional: registrar a origem do
-preview no cliente OAuth (produção já registrada — origin_mismatch era
-só no preview).
+**Pendências de configuração do dono (fora do código):** ✅ migração da
+DIR-47 (contatos_metodo) colada e aplicada em 03/09/2026 ("Success. No
+rows returned") — registro de contato gravando em produção. Restam:
+ativar a Google Calendar API no console Google (pra conexão da agenda);
+opcional: registrar a origem do preview no cliente OAuth (produção já
+registrada — origin_mismatch era só no preview).
 **Status:** CONCLUÍDA E PUBLICADA.
