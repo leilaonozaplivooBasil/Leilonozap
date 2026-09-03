@@ -10,6 +10,7 @@ import {
   HABITOS, ROTINA_PADRAO, periodoDe, PERIODOS, gerarTarefasDaRotina,
   progressoDia, linkGoogleAgenda, QUALIFICACOES,
   HORIZONTES_SONHO, agruparSonhosPorHorizonte, normalizarSonho, PLACEHOLDER_DETALHES_SONHO,
+  PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -37,6 +38,8 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '' });
+  const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
+  const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
 
   useEffect(() => {
     if (!uid) return;
@@ -260,9 +263,28 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
           );
         })()}
 
-        {/* ══ ✅ HÁBITO 2 — MASTER TASK (o Trello do dia) ══ */}
+        {/* ══ ✅ HÁBITO 2 — MASTER TASK + ROTINA PERFEITA (DIR-45) ══ */}
         {painel === 'compromisso' && (
           <div className="space-y-3">
+            <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca space-y-1.5">
+              <p>
+                📣 <strong>A Rotina Perfeita não é agenda de posts</strong> — é a sua rotina real virando narrativa nas redes:{' '}
+                <strong className="text-nz-tinta">{PRINCIPIO_ROTINA.percepcoes.join(' → ')}</strong>.
+              </p>
+              <p className="italic">"{PRINCIPIO_ROTINA.regra}" — {PRINCIPIO_ROTINA.texto}</p>
+              <button type="button" onClick={() => setLogicaAberta(!logicaAberta)} className="font-semibold text-nz-verde hover:text-nz-verde-claro">
+                {logicaAberta ? '▾ esconder a lógica do dia' : '▸ ver a lógica do dia (a história que a rotina conta)'}
+              </button>
+              {logicaAberta && (
+                <div className="pt-1 space-y-0.5">
+                  <p className="text-[11px]">Você não termina o dia tendo feito dez propagandas — termina tendo contado UMA história:</p>
+                  {NARRATIVA_DO_DIA.map((n) => (
+                    <p key={n.hora} className="text-[11px]"><span className="font-bold text-nz-tinta">{n.hora}</span> — {n.frase}</p>
+                  ))}
+                  <p className="text-[11px] italic pt-1">Quando chegar a hora de apresentar a Leilão NoZap, a audiência já viu o mais importante: <strong>a pessoa vivendo aquilo que fala.</strong></p>
+                </div>
+              )}
+            </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(-1)}><ChevronLeft className="w-5 h-5 text-nz-tinta" /></Button>
@@ -279,9 +301,9 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
               <div className="text-center py-6 space-y-2">
                 <p className="text-sm text-nz-tinta-fraca">Dia sem Master Task ainda. "O compromisso é uma decisão diária."</p>
                 <Button onClick={gerarDia} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                  ⚡ {salvando ? 'Gerando...' : 'Gerar meu dia (rotina do método)'}
+                  ⚡ {salvando ? 'Gerando...' : 'Gerar Minha Rotina Perfeita (Rotina do Método)'}
                 </Button>
-                <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da rotina — das 5h ao fechamento do dia.</p>
+                <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da Rotina Perfeita — das 5h ao descanso, com o guia de cada horário.</p>
               </div>
             ) : (
               PERIODOS.map((p) => {
@@ -291,18 +313,33 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
                   <div key={p.id}>
                     <p className="text-xs font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1.5">{p.label}</p>
                     <div className="space-y-1.5">
-                      {doPeriodo.map((t) => (
-                        <div key={t.id} className={`flex items-center gap-2.5 rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
-                          <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
-                              {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
-                            </p>
-                            {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
+                      {doPeriodo.map((t) => {
+                        const guia = guiaDaRotina(t.titulo);
+                        return (
+                          <div key={t.id} className={`rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
+                            <div className="flex items-center gap-2.5">
+                              <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
+                                  {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
+                                </p>
+                                {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
+                              </div>
+                              {guia && !t.feito && (
+                                <button
+                                  type="button"
+                                  onClick={() => setGuiaAberto(guiaAberto === t.id ? null : t.id)}
+                                  className={`shrink-0 text-[11px] font-semibold ${guiaAberto === t.id ? 'text-nz-verde' : 'text-nz-tinta-fraca hover:text-nz-verde'}`}
+                                >📖 guia</button>
+                              )}
+                              <button type="button" onClick={() => removerTarefa(t)} className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                            {guia && guiaAberto === t.id && !t.feito && (
+                              <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
+                            )}
                           </div>
-                          <button type="button" onClick={() => removerTarefa(t)} className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );

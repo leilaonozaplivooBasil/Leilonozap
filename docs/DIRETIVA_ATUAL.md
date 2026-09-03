@@ -12,6 +12,47 @@
 
 ---
 
+## DIR-45 — A Rotina Perfeita: Hábito 2 vira narrativa diária de autoridade
+
+**Emitida por:** dono (03/09/2026, por escrito, documento completo): o
+gerador muda de nome pra "Gerar Minha Rotina Perfeita (Rotina do Método)"
+e a rotina deixa de ser agenda de tarefas pra virar a NARRATIVA DIÁRIA nas
+redes: "não estamos criando agenda de posts — estamos transformando a
+rotina real da pessoa em narrativa: disciplina, saúde, aprendizado,
+trabalho e negócio. A pessoa não deve parecer interessada em vender; ela
+precisa se tornar interessante, e a venda vira consequência da
+credibilidade". Cinco percepções: DISCIPLINA → HUMANIDADE → EVOLUÇÃO →
+CREDIBILIDADE → NEGÓCIO. Regra: "Primeiro seja interessante. Depois
+desperte interesse."
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. `src/lib/metodo.js` (fonte única): ROTINA_PADRAO reescrita com o
+   conteúdo DITADO — 19 itens (novos: story ANTES do treino às 05:15,
+   story DURANTE às 05:30, FINAL do treino 06:45 com
+   começou→fez→terminou, leitura 07:00, caminho pra empresa 08:00 com
+   story espontâneo sem forçar conteúdo, chegada/ambiente 08:30 como
+   prova de realidade, organização 08:45 com as "3 coisas do dia", post
+   do aprendizado 09:40 em 1-3 minutos, "Abrir a loja" 10:00 como
+   horário SIMBÓLICO com a sequência inspiração→aplicação→negócio→
+   comparação→LeilãoNoZap, reuniões sempre com PRÓXIMO PASSO DEFINIDO,
+   17:30 nenhuma oportunidade solta, 18:30 prometi/fiz/pendente/amanhã,
+   21:30 dormir cedo é preparação). Cada item ganha `guia` (a orientação
+   estratégica rica); + PRINCIPIO_ROTINA (percepções + regra) +
+   NARRATIVA_DO_DIA (a escada "Tenho propósito → ... → Presto contas") +
+   guiaDaRotina(titulo).
+2. Painel Compromisso em `CrmMetodo.jsx`: botão vira "⚡ Gerar Minha
+   Rotina Perfeita (Rotina do Método)"; bloco do princípio no topo;
+   cartão de tarefa da rotina ganha "ver o guia" expansível (o guia mora
+   na lib, tarefa customizada não tem — sem migração); escada da
+   narrativa num "ver a lógica do dia".
+**Fora do escopo:** editor visual da rotina (segue pendência); coluna nova
+no banco (guia NÃO vai pra metodo_tarefas).
+**Regras fixas:** prova em navegador (REL-34.1); conteúdo ditado é DADO —
+fidelidade ao texto do dono, condensado sem perder a instrução.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-44 — Quadro dos Sonhos de verdade: curto/médio/longo com imagem
 
 **Emitida por:** dono (03/09/2026, áudio, sobre o preview dos 8 Hábitos):

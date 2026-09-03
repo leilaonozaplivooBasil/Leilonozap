@@ -15,10 +15,29 @@ describe('conteúdo do método', () => {
       'acompanhamento', 'verificacao', 'duplicacao',
     ]);
   });
-  test('rotina padrão: começa 5h, tem as 3 reuniões e o fechamento do dia', () => {
+  test('Rotina Perfeita: começa 5h, 3 reuniões, fechamento e os momentos novos ditados', () => {
     assert.equal(ROTINA_PADRAO[0].hora, '05:00');
     assert.equal(ROTINA_PADRAO.filter((r) => r.titulo.startsWith('Reunião')).length, 3);
     assert.ok(ROTINA_PADRAO.some((r) => r.titulo.includes('Fechamento do dia')));
+    // DIR-45: a narrativa completa da manhã
+    for (const trecho of ['Story ANTES', 'Story DURANTE', 'Final do treino', 'Caminho pra empresa', 'mostrar o ambiente', 'ABRIR A LOJA']) {
+      assert.ok(ROTINA_PADRAO.some((r) => r.titulo.includes(trecho)), `faltou na rotina: ${trecho}`);
+    }
+    assert.equal(ROTINA_PADRAO.length, 19);
+  });
+
+  test('DIR-45: todo item da Rotina Perfeita tem guia; princípio e narrativa fiéis ao ditado', async () => {
+    const { PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina } = await import('../src/lib/metodo.js');
+    for (const r of ROTINA_PADRAO) assert.ok(r.guia && r.guia.length > 30, `item sem guia: ${r.titulo}`);
+    assert.deepEqual(PRINCIPIO_ROTINA.percepcoes, ['DISCIPLINA', 'HUMANIDADE', 'EVOLUÇÃO', 'CREDIBILIDADE', 'NEGÓCIO']);
+    assert.equal(PRINCIPIO_ROTINA.regra, 'Primeiro seja interessante. Depois desperte interesse.');
+    assert.equal(NARRATIVA_DO_DIA[0].frase, 'Tenho propósito.');
+    assert.equal(NARRATIVA_DO_DIA.at(-1).frase, 'Presto contas do meu próprio dia.');
+    // o guia se acha pelo título; tarefa customizada não tem guia
+    assert.match(guiaDaRotina('ABRIR A LOJA'), /horário simbólico/i);
+    assert.match(guiaDaRotina('Reunião 2 (45-60 min)'), /Depois a gente conversa/);
+    assert.equal(guiaDaRotina('minha tarefa custom'), null);
+    assert.equal(guiaDaRotina(''), null);
   });
 });
 

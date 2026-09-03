@@ -2101,3 +2101,39 @@ PRODUÇÃO: **success** de primeira; version.json do alias da main
 respondendo com o carimbo do build novo (13:05 UTC). leilaonozap.net no ar
 com o quadro.
 **Status:** CONCLUÍDA E PUBLICADA.
+
+---
+
+## REL-45 — A Rotina Perfeita: Hábito 2 vira narrativa de autoridade (DIR-45)
+
+**Ordem do dono (03/09/2026, documento completo por escrito):** renomear o
+gerador pra "Gerar Minha Rotina Perfeita (Rotina do Método)" e transformar
+a rotina em narrativa diária nas redes — "primeiro seja interessante,
+depois desperte interesse"; DISCIPLINA → HUMANIDADE → EVOLUÇÃO →
+CREDIBILIDADE → NEGÓCIO.
+**O que foi construído:**
+1. ROTINA_PADRAO reescrita com o conteúdo DITADO: 19 itens, das 05:00 às
+   21:30, com os momentos novos (Story ANTES do treino, Story DURANTE,
+   Final do treino com começou→fez→terminou, caminho pra empresa sem
+   forçar conteúdo, chegada mostrando o ambiente como prova de realidade,
+   organização com as "3 coisas do dia", post do aprendizado em 1-3 min,
+   ABRIR A LOJA às 10h como horário simbólico com a sequência
+   inspiração→aplicação→negócio→comparação→Leilão NoZap, reuniões sempre
+   com PRÓXIMO PASSO DEFINIDO, 17:30 nenhuma oportunidade solta, 18:30
+   prometi/fiz/pendente/amanhã, 21:30 dormir cedo é preparação).
+2. Cada item tem `guia` — a orientação estratégica do dono, condensada com
+   fidelidade — aberto pelo botão 📖 no cartão do Master Task (guia mora
+   na lib; tarefa customizada não tem; SEM migração).
+3. Painel do Compromisso ganhou o bloco do princípio (percepções + regra)
+   e a escada "ver a lógica do dia" (Tenho propósito → ... → Presto contas
+   do meu próprio dia).
+4. Botão renomeado; subtítulo atualizado.
+**Prova em navegador (REL-34.1): 52/52 ✅ zero erros** — princípio e regra
+na tela, escada aberta, botão novo, gerar criou as 19 tarefas via
+entityWrite, períodos e itens novos renderizados, guia do ABRIR A LOJA
+expandindo com o conteúdo certo (mais toda a regressão do Quadro dos
+Sonhos re-rodada).
+**Testes:** 657 → 660 (o teste da rotina agora cobre os 19 itens, guia em
+todos, princípio e narrativa fiéis; pegou minha contagem errada de 18).
+**Build:** exit 0. **Status:** CONCLUÍDA no preview — aguardando o "pode"
+pra produção.
