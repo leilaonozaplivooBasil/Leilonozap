@@ -2133,7 +2133,8 @@ na tela, escada aberta, botão novo, gerar criou as 19 tarefas via
 entityWrite, períodos e itens novos renderizados, guia do ABRIR A LOJA
 expandindo com o conteúdo certo (mais toda a regressão do Quadro dos
 Sonhos re-rodada).
-**Testes:** 657 → 660 (o teste da rotina agora cobre os 19 itens, guia em
-todos, princípio e narrativa fiéis; pegou minha contagem errada de 18).
+**Testes:** 799 → 800 (o teste da rotina virou dois: os 19 itens ditados,
+guia em todos, princípio e narrativa fiéis — e pegou minha contagem errada
+de 18 antes de qualquer entrega).
 **Build:** exit 0. **Status:** CONCLUÍDA no preview — aguardando o "pode"
 pra produção.
