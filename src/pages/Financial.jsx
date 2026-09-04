@@ -4,18 +4,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt } from "lucide-react";
+import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt, Sheet } from "lucide-react";
 import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
 import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
 // Os três status que significam "ainda devo isso". Vive no lib porque a aba
 // "A Pagar" usa a MESMA régua — duas cópias divergiriam no primeiro ajuste.
 import { STATUS_A_PAGAR } from "@/lib/contasAPagar";
+// 05/09/2026 — as listas de Categoria e Centro de Custo do formulário são montadas AQUI,
+// onde os lançamentos já estão carregados: as de fábrica mais tudo que já foi usado.
+import { montarOpcoes, CATEGORIAS_DE_FABRICA } from "@/lib/listasDoFinanceiro";
+import { COST_CENTERS } from "@/lib/costCenters";
 
 import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards";
 import ExpenseTable from "@/components/financial/ExpenseTable";
 import ExpenseFormModal from "@/components/financial/ExpenseFormModal";
 import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator";
+import { conteudoDoArquivo, nomeDoArquivo } from "@/lib/planilhaFinanceiro";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import IncomeTable from "@/components/financial/IncomeTable";
 import FinancialOverview from "@/components/financial/FinancialOverview";
@@ -50,6 +55,10 @@ export default function Financial() {
   const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [filterDateTo, setFilterDateTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [filterCategory, setFilterCategory] = useState("all");
+  // 🔵 Filtro de centro de custo (05/09/2026, pedido da Aline: "preciso que os criados
+  // apareçam no filtro"). A tela tinha filtro de categoria e nenhum de centro de custo —
+  // não dava pra responder "quanto saiu de Distribuição de Lucro" nem na planilha.
+  const [filterCostCenter, setFilterCostCenter] = useState("all");
   const [activeTab, setActiveTab] = useState("expenses");
   const [paymentExpense, setPaymentExpense] = useState(null);
   const queryClient = useQueryClient();
@@ -113,8 +122,16 @@ export default function Financial() {
     );
   }
 
-  // Categorias dinâmicas: apenas as que existem nos gastos lançados
-  const usedCategories = [...new Set(expenses.map(e => e.category).filter(Boolean))].sort();
+  // As duas listas do formulário e dos filtros: de fábrica + tudo que já foi usado, com
+  // uma entrada por grafia — antes o filtro de categoria listava "Salario" E "salario"
+  // como se fossem duas coisas. Receitas entram no centro de custo porque o relatório
+  // "Por Centro de Custo" (FinancialOverview) soma as duas tabelas juntas.
+  const usedCategories = montarOpcoes(CATEGORIAS_DE_FABRICA, expenses.map(e => e.category));
+  const centrosDeCusto = montarOpcoes(
+    COST_CENTERS,
+    expenses.map(e => e.cost_center),
+    income.map(i => i.cost_center),
+  );
 
   const filtered = expenses.filter(exp => {
     const expDate = startOfDay(toDate(exp.due_date));
@@ -129,11 +146,34 @@ export default function Financial() {
       : (filterStatus === "all" || exp.payment_status === filterStatus);
     const typeMatch = filterType === "all" || exp.expense_type === filterType;
     const categoryMatch = filterCategory === "all" || exp.category === filterCategory;
+    const costCenterMatch = filterCostCenter === "all" || (exp.cost_center || "") === filterCostCenter;
     const searchMatch = !search || (exp.description || "").toLowerCase().includes(search.toLowerCase()) ||
       (exp.company || "").toLowerCase().includes(search.toLowerCase()) ||
       (exp.category || "").toLowerCase().includes(search.toLowerCase());
-    return monthMatch && statusMatch && typeMatch && categoryMatch && searchMatch;
+    return monthMatch && statusMatch && typeMatch && categoryMatch && costCenterMatch && searchMatch;
   });
+
+  // 🔴 03/09/2026 — "a opção de exportar em planilha ainda não está disponível".
+  // Exporta `filtered`: EXATAMENTE as linhas que estão na tela, com os seis
+  // filtros já aplicados. Quem clica em "exportar" olhando uma lista filtrada
+  // espera baixar aquela lista — não a base inteira.
+  //
+  // O "Gerar PDF" ao lado NÃO foi tocado (decisão do dono): ele continua com
+  // período próprio e ignorando os filtros. São duas saídas com regras
+  // diferentes, e isso está registrado de propósito.
+  const baixarPlanilha = () => {
+    const url = URL.createObjectURL(
+      new Blob([conteudoDoArquivo(filtered)], { type: 'text/csv;charset=utf-8' })
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeDoArquivo();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // sem o revoke o navegador segura o arquivo inteiro em memória até recarregar
+    URL.revokeObjectURL(url);
+  };
 
   const handleSave = (data) => {
     if (editingExpense) {
@@ -184,6 +224,17 @@ export default function Financial() {
           accentColor="emerald"
           actions={
             <>
+              <Button
+                onClick={baixarPlanilha}
+                disabled={filtered.length === 0}
+                title={filtered.length === 0
+                  ? 'Nenhuma conta na tela para exportar'
+                  : `Baixar ${filtered.length} conta(s) — as mesmas que estão na tela`}
+                variant="outline"
+                className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2 disabled:opacity-50"
+              >
+                <Sheet className="w-4 h-4" /> Exportar Planilha
+              </Button>
               <Button onClick={() => setShowPDF(true)} variant="outline" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2">
                 <FileText className="w-4 h-4" /> Gerar PDF
               </Button>
@@ -406,6 +457,19 @@ export default function Financial() {
                     </SelectContent>
                   </Select>
                 )}
+                {centrosDeCusto.length > 0 && (
+                  <Select value={filterCostCenter} onValueChange={setFilterCostCenter}>
+                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-44">
+                      <SelectValue placeholder="Centro de Custo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                      <SelectItem value="all">Todos Centros de Custo</SelectItem>
+                      {centrosDeCusto.map(cc => (
+                        <SelectItem key={cc} value={cc}>{cc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -425,7 +489,8 @@ export default function Financial() {
       </div>
 
       <ExpenseFormModal open={showForm} onClose={() => { setShowForm(false); setEditingExpense(null); }}
-        onSave={handleSave} onBulkSave={handleBulkSave} editingExpense={editingExpense} />
+        onSave={handleSave} onBulkSave={handleBulkSave} editingExpense={editingExpense}
+        categorias={usedCategories} centrosDeCusto={centrosDeCusto} />
       <FinancialPDFGenerator open={showPDF} onClose={() => setShowPDF(false)} expenses={expenses} />
       <PaymentModal open={!!paymentExpense} onClose={() => setPaymentExpense(null)} expense={paymentExpense} onConfirm={handlePaymentConfirm} />
     </div>
