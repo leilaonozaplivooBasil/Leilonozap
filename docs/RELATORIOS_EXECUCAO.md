@@ -2271,3 +2271,35 @@ ativar a Google Calendar API no console Google (pra conexão da agenda);
 opcional: registrar a origem do preview no cliente OAuth (produção já
 registrada — origin_mismatch era só no preview).
 **Status:** CONCLUÍDA E PUBLICADA.
+
+---
+
+## REL-48 — Agendador de reuniões de verdade, criando o evento no Google (DIR-48)
+
+**Ordem do dono (03/09/2026, logo após conectar a agenda com sucesso):**
+"precisa abrir um modal pra eu agendar a reunião, detalhes e etc, como um
+agendador normal, como o mercado funciona — junto disso o Google Agenda".
+**O que foi construído:**
+1. O desfecho "📅 Reunião agendada" virou o AGENDADOR COMPLETO: data e
+   hora, duração (30/45/60/90), título pré-preenchido com o nome do
+   contato (editável), local ou link da chamada, detalhes.
+2. Botão "📅 Agendar reunião" no cabeçalho da Agenda do dia — abre o
+   mesmo agendador com seletor de contato ("Com quem é a reunião?").
+3. CRIAÇÃO REAL NO GOOGLE: checkbox "Criar na minha Google Agenda"
+   (ligada por padrão) — o evento é CRIADO via Calendar API na agenda da
+   própria pessoa (scope calendar.events + readonly num só consentimento;
+   token da sessão, nada no servidor; anti-duplo-clique no salvar). O
+   registro guarda o google_event_link e o item da Agenda do dia vira
+   "Abrir no Google". FALLBACK honesto: sem conexão/erro, salva do mesmo
+   jeito e fica o botão de link de template — agendar nunca trava.
+4. `eventoGoogleDaReuniao` em metodo.js: fonte única testada do corpo do
+   evento (summary/description/location/start/end com timezone, virada de
+   dia correta, início inválido → null).
+**Prova em navegador (REL-34.1): 87/87 ✅ zero erros** — agendador com
+todos os campos e título pré-preenchido, POST real (stubado) na Calendar
+API com summary e 60 min exatos, histórico com link do evento criado,
+"Abrir no Google" na agenda, agendamento livre pelo cabeçalho com seletor
+escolhendo outro contato e checkbox desligada NÃO criando no Google.
+**Testes:** 838/838 na suíte completa (4 novos do eventoGoogleDaReuniao; o restante do crescimento veio de outras frentes pela main).
+**Sem migração** (campos novos no JSONB existente).
+**Status:** CONCLUÍDA no preview — aguardando o "pode".

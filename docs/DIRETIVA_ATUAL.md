@@ -12,6 +12,39 @@
 
 ---
 
+## DIR-48 — Agendador de reuniões de verdade, criando o evento no Google
+
+**Emitida por:** dono (03/09/2026, por escrito, após conectar a agenda
+com sucesso): "não aparece o portal do Google ou local pra eu agendar —
+precisa abrir um MODAL pra eu agendar a reunião, detalhes e etc, como um
+agendador de reunião normal, como o mercado funciona — junto disso o
+Google Agenda".
+**Data:** 03/09/2026.
+**Escopo autorizado:**
+1. O desfecho "📅 Reunião agendada" do registro de contato vira o
+   AGENDADOR COMPLETO: data + hora, duração (30/45/60/90 — método sugere
+   45-60), título (pré-preenchido), local ou link da chamada, detalhes.
+   Botão "📅 Agendar reunião" também no cabeçalho da Agenda do dia,
+   abrindo o mesmo modal com seletor de contato.
+2. CRIAÇÃO REAL NO GOOGLE: opção "criar na minha Google Agenda" (ligada
+   por padrão quando a conta está conectada) — o evento é CRIADO via
+   Calendar API na agenda da própria pessoa (scope calendar.events junto
+   do readonly, mesmo fluxo de token no navegador; nada no servidor).
+   O registro guarda o link do evento criado (google_event_link) e a
+   Agenda do dia passa a oferecer "abrir no Google" nesses itens.
+   FALLBACK HONESTO: sem conexão/permissão/erro, cai no link de template
+   oficial (o de hoje) — agendar nunca é bloqueado pelo Google.
+3. `src/lib/metodo.js`: eventoGoogleDaReuniao (monta o corpo do evento —
+   summary/description/location/start/end com timezone — fonte única
+   testada); registro ganha duracao_min, titulo_reuniao, local,
+   google_event_link (JSONB livre — SEM migração).
+**Fora do escopo:** editar/cancelar evento já criado no Google (rodada
+própria); agendar na agenda de OUTRA pessoa.
+**Regras fixas:** prova em navegador (REL-34.1); escrita via entityWrite.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-47 — Contato e Convite vivo: fila, registro, agenda do dia e Google
 
 **Emitida por:** dono (03/09/2026, por escrito): "no Contato e Convite

@@ -138,6 +138,28 @@ export function agendaDoDiaContatos(clientes = [], diaISO) {
   return { agendados, retornos };
 }
 
+/** Durações de reunião oferecidas pelo agendador (o método sugere 45-60). */
+export const DURACOES_REUNIAO = [30, 45, 60, 90];
+
+/**
+ * DIR-48 — monta o corpo do evento pra Calendar API (criação REAL na agenda
+ * da própria pessoa). Fonte única: o mesmo objeto serve pro insert e pro
+ * fallback de link. Devolve null se o início for inválido.
+ */
+export function eventoGoogleDaReuniao({ titulo, inicio, duracaoMin = 60, detalhes = '', local = '', timeZone = 'America/Sao_Paulo' }) {
+  const ini = new Date(inicio);
+  if (Number.isNaN(ini.getTime())) return null;
+  const fim = new Date(ini.getTime() + (Number(duracaoMin) > 0 ? Number(duracaoMin) : 60) * 60000);
+  const semMs = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:00`;
+  return {
+    summary: titulo || 'Reunião — Leilão NoZap',
+    description: detalhes || 'Apresentação de sucesso — Leilão NoZap',
+    ...(local ? { location: local } : {}),
+    start: { dateTime: semMs(ini), timeZone },
+    end: { dateTime: semMs(fim), timeZone },
+  };
+}
+
 /** Guia estratégico de um item da rotina, pelo título (tarefa customizada não tem). */
 export function guiaDaRotina(titulo) {
   const t = String(titulo || '').trim();

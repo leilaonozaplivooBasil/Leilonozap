@@ -228,3 +228,34 @@ describe('contato e convite (DIR-47)', () => {
     assert.deepEqual(agendaDoDiaContatos([], '2026-09-03'), { agendados: [], retornos: [] });
   });
 });
+
+// ══ DIR-48 — agendador com criação real no Google ══
+const { eventoGoogleDaReuniao, DURACOES_REUNIAO } = await import('../src/lib/metodo.js');
+
+describe('agendador de reuniões (DIR-48)', () => {
+  test('durações oferecidas incluem as 45-60 do método', () => {
+    assert.deepEqual(DURACOES_REUNIAO, [30, 45, 60, 90]);
+  });
+
+  test('evento montado com início, fim pela duração, local e timezone', () => {
+    const e = eventoGoogleDaReuniao({ titulo: 'Reunião — Diogo (Leilão NoZap)', inicio: '2026-09-04T14:00', duracaoMin: 45, detalhes: 'levar números', local: 'Escritório' });
+    assert.equal(e.summary, 'Reunião — Diogo (Leilão NoZap)');
+    assert.equal(e.start.dateTime, '2026-09-04T14:00:00');
+    assert.equal(e.end.dateTime, '2026-09-04T14:45:00');
+    assert.equal(e.start.timeZone, 'America/Sao_Paulo');
+    assert.equal(e.location, 'Escritório');
+    assert.equal(e.description, 'levar números');
+  });
+
+  test('duração some vira 60; sem local o campo não vai; virada de dia correta', () => {
+    const e = eventoGoogleDaReuniao({ inicio: '2026-09-04T23:30' });
+    assert.equal(e.end.dateTime, '2026-09-05T00:30:00');
+    assert.ok(!('location' in e));
+    assert.equal(e.summary, 'Reunião — Leilão NoZap');
+  });
+
+  test('início inválido → null (evento não se inventa)', () => {
+    assert.equal(eventoGoogleDaReuniao({ inicio: 'não é data' }), null);
+    assert.equal(eventoGoogleDaReuniao({ inicio: '' }), null);
+  });
+});
