@@ -2303,3 +2303,24 @@ escolhendo outro contato e checkbox desligada NÃO criando no Google.
 **Testes:** 838/838 na suíte completa (4 novos do eventoGoogleDaReuniao; o restante do crescimento veio de outras frentes pela main).
 **Sem migração** (campos novos no JSONB existente).
 **Status:** CONCLUÍDA no preview — aguardando o "pode".
+
+---
+
+## REL-PUB-04/09/2026 — Publicação em produção da DIR-48
+
+**Autorização:** dono, por escrito: "pode colocar em produção para
+funcionar".
+**O que foi publicado:** o agendador de reuniões completo (DIR-48) —
+modal padrão de mercado com criação real do evento na Google Agenda,
+botão Agendar reunião na Agenda do dia, "Abrir no Google" e fallback
+honesto.
+**Ritual:** main mergeada (trouxe a frente do Financeiro de outra
+sessão) → 885/885 testes → build exit 0 → PR #175 → squash-merge →
+main = `e1f4c780` → branch realinhada. Deploy de PRODUÇÃO: **success**
+de primeira; version.json do alias da main com carimbo do build novo
+(13:00 UTC). leilaonozap.net no ar com o agendador.
+**Config Google (dono):** origens produção + preview cadastradas ✅;
+Calendar API ativa ✅; resta o clique "PUBLICAR APP" na tela
+Público-alvo (sem ele, só testadores cadastrados conectam a agenda —
+o erro 403 access_denied visto no teste é exatamente esse estado).
+**Status:** CONCLUÍDA E PUBLICADA.
