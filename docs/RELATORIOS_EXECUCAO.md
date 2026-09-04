@@ -2324,3 +2324,17 @@ Calendar API ativa ✅; resta o clique "PUBLICAR APP" na tela
 Público-alvo (sem ele, só testadores cadastrados conectam a agenda —
 o erro 403 access_denied visto no teste é exatamente esse estado).
 **Status:** CONCLUÍDA E PUBLICADA.
+
+### REL-48.1 — Configuração Google concluída pelo dono (04/09/2026)
+
+Guiado passo a passo, o dono deixou o OAuth do Google pronto de ponta a
+ponta: origens autorizadas (produção www e sem www + preview), Calendar
+API ativa, usuários de teste (2), Branding completo (nome, suporte, e as
+páginas /privacy e /terms que o site já tinha — sem logo, de propósito,
+pra não travar em revisão de marca) e o app PUBLICADO ("Em produção").
+Rede inteira liberada pra conectar a agenda. Honestidade registrada: com
+escopo sensível (calendar) e app ainda NÃO VERIFICADO, o Google impõe
+teto vitalício de 100 usuários concedendo a permissão — suficiente pro
+arranque; pra rede passar disso, a VERIFICAÇÃO do app na Central de
+verificação vira ação necessária (processo do Google, sem código —
+guiaremos quando o dono quiser).
