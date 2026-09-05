@@ -430,3 +430,20 @@ describe('duração entre horas (DIR-54)', () => {
     assert.equal(duracaoEntreHoras('09:00', ''), null);
   });
 });
+
+// ══ DIR-54.1 — horário de término pra exibição (o inverso de duracaoEntreHoras) ══
+const { horaFinal } = await import('../src/lib/metodo.js');
+
+describe('horário de término pra exibição (DIR-54.1)', () => {
+  test('soma os minutos e formata HH:mm', () => {
+    assert.equal(horaFinal('09:00', 240), '13:00');
+    assert.equal(horaFinal('09:00', 45), '09:45');
+  });
+  test('vira o dia (23:30 + 90min)', () => {
+    assert.equal(horaFinal('23:30', 90), '01:00');
+  });
+  test('hora inválida → null', () => {
+    assert.equal(horaFinal('9h', 60), null);
+    assert.equal(horaFinal('', 60), null);
+  });
+});

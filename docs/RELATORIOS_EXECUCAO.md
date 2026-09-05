@@ -2489,3 +2489,18 @@ erros** — cobrindo MINHA escondendo o contato de outro dono, TIME
 mostrando os dois com nome real, volta pra MINHA escondendo de novo, e
 o cadastro "até às" 10:00-11:30 gravando `duracao_min=90`.
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+## REL-54.1 — Horário de término na listagem, sem minutos crus (05/09/2026)
+
+**Diretiva:** ajuste do dono no preview: "quando salva aparecer ali,
+duzentos e quarenta minutos fica feio... melhor botar de nove às treze".
+**O que mudou:** a linha de cada reunião já cadastrada em "🏛️ Reuniões
+da empresa" trocou "09:00 · 240 min" por **"09:00 às 13:00"** — o
+horário de término calculado, não os minutos crus. Fonte única testada:
+`horaFinal(horaInicio, duracaoMin)` em `src/lib/metodo.js` (o inverso de
+`duracaoEntreHoras`; vira o dia sozinho).
+**Prova (medida):** suíte **906/906** (903 + 3 testes novos de
+`horaFinal`); build exit 0; prova em navegador **141/141 ZERO erros** —
+as duas reuniões cadastradas na prova (uma por duração, outra por "até
+às") aparecem na listagem como "09:30 às 10:30" e "10:00 às 11:30".
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

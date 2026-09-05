@@ -15,7 +15,7 @@ import {
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
   ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
-  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras,
+  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras, horaFinal,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -973,7 +973,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     <div className="space-y-1">
                       {reunioesEmpresa.map((r) => (
                         <div key={r.id || r.titulo} className="flex items-center gap-2 rounded-lg border border-nz-borda bg-white p-2 flex-wrap">
-                          <p className="flex-1 min-w-0 text-xs text-nz-tinta truncate"><span className="font-bold">{r.titulo}</span> · {r.dia_semana !== null && r.dia_semana !== undefined ? `toda ${DIAS_SEMANA[r.dia_semana]}` : (r.data || 'sem data')} às {r.hora} · {r.duracao_min || 60} min</p>
+                          <p className="flex-1 min-w-0 text-xs text-nz-tinta truncate"><span className="font-bold">{r.titulo}</span> · {r.dia_semana !== null && r.dia_semana !== undefined ? `toda ${DIAS_SEMANA[r.dia_semana]}` : (r.data || 'sem data')} · {r.hora} às {horaFinal(r.hora, r.duracao_min || 60) || '?'}</p>
                           <Button size="sm" variant="outline" onClick={() => excluirReuniaoEmpresa(r)} className={`h-7 px-2 text-xs ${confirmaExcluir === `emp-${r.id}` ? 'border-red-500 text-red-600 bg-red-50 font-bold' : 'border-nz-borda text-nz-tinta-fraca'}`}>
                             {confirmaExcluir === `emp-${r.id}` ? 'Confirma excluir?' : '🗑️'}
                           </Button>

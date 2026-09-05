@@ -247,6 +247,18 @@ export function reuniaoIminente(clientes = [], uid, agoraISO, janelaMin = 15) {
 export const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
 /**
+ * DIR-54.1 — o horário de TÉRMINO a partir de "HH:mm" de início + minutos de
+ * duração (o inverso de duracaoEntreHoras — pra exibir "09:00 às 13:00" em
+ * vez do minutos crus, que fica feio pra reunião longa). Vira o dia sozinho.
+ */
+export function horaFinal(horaInicio, duracaoMin) {
+  const m = String(horaInicio || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const totalMin = (Number(m[1]) * 60 + Number(m[2]) + (Number(duracaoMin) || 0)) % (24 * 60);
+  return `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
+}
+
+/**
  * DIR-54 — duração em minutos a partir de "HH:mm" de início e término (pro
  * cadastro que prefere dizer "até às" em vez de contar minutos). Vira o dia
  * (término menor que início) soma 24h — reunião nunca "termina no passado".
