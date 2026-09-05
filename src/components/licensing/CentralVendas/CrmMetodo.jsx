@@ -24,7 +24,7 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
   VIRTUDES, janelaVotacaoAberta, mvmManual,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
-  ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana,
+  ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -1056,16 +1056,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-[11px] text-nz-tinta-fraca">Ninguém pontuou neste ciclo ainda — o placar nasce quando o time joga o dia.</p>
                 ) : (
                   <div className="space-y-1">
-                    {rankingOrdenado.map((l, i) => (
-                      <div key={l.user_id} className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
-                        <span className="text-[11px] font-medium text-nz-tinta truncate">
-                          <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
-                        </span>
-                        <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
-                          {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
-                        </span>
-                      </div>
-                    ))}
+                    {rankingOrdenado.map((l, i) => {
+                      // 🏆 F9 — ordenando por Moeda, o ranking vira a tabela das LIGAS
+                      const liga = ligaDoToken(l.token);
+                      const ligaAnterior = i > 0 ? ligaDoToken(rankingOrdenado[i - 1].token) : null;
+                      const cabecalho = ordemRanking === 'token' && liga.id !== ligaAnterior?.id;
+                      return (
+                        <React.Fragment key={l.user_id}>
+                          {cabecalho && (
+                            <p className="pt-1 text-[10px] font-bold text-nz-tinta-fraca uppercase tracking-wide">
+                              {liga.emoji} {liga.label} <span className="font-normal normal-case">· token {fmtToken(liga.min)}+</span>
+                            </p>
+                          )}
+                          <div className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
+                            <span className="text-[11px] font-medium text-nz-tinta truncate">
+                              <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
+                            </span>
+                            <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
+                              {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
+                            </span>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                    {ciclo && (() => {
+                      const promo = proximaLiga(ciclo.total);
+                      return promo && promo.falta > 0 ? (
+                        <p className="text-[11px] font-semibold text-nz-tinta pt-1">
+                          ↑ Faltam <span className="text-nz-verde tabular-nums">{fmtToken(promo.falta)}</span> de token pra você subir pra {promo.liga.emoji} {promo.liga.label} — feche os dias, faça no horário e busque nota alta na votação!
+                        </p>
+                      ) : ciclo.total >= 20 ? (
+                        <p className="text-[11px] font-semibold text-nz-verde pt-1">💠 Você está na elite — LIGA DIAMANTE, o território do Executivo Ideal. Segura o trono!</p>
+                      ) : null;
+                    })()}
                   </div>
                 ))}
               </div>

@@ -610,3 +610,26 @@ export function inicioDaSemana(d = new Date()) {
   x.setDate(x.getDate() - (dow === 0 ? 6 : dow - 1));
   return x;
 }
+
+// ── 🏆 LIGAS (F9 — promoção e rebaixamento por ciclo) ───────────────
+// As faixas da moeda viram LIGAS: o Human Token médio do ciclo decide onde
+// você joga. Diamante é a elite acima do ouro — o território do Executivo
+// Ideal. Subir de liga = fechar o ciclo acima da linha da liga de cima.
+
+export const LIGAS = [
+  { id: 'diamante', label: 'LIGA DIAMANTE', emoji: '💠', min: 20 },
+  { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 17.78 },
+  { id: 'prata', label: 'LIGA PRATA', emoji: '🥈', min: 6.66 },
+  { id: 'bronze', label: 'LIGA BRONZE', emoji: '🥉', min: 0 },
+];
+
+export const ligaDoToken = (t) => LIGAS.find((l) => (Number(t) || 0) >= l.min) || LIGAS.at(-1);
+
+/** A próxima liga acima e quanto falta pra promoção (null quando já é a elite). */
+export function proximaLiga(token) {
+  const atual = ligaDoToken(token);
+  const i = LIGAS.findIndex((l) => l.id === atual.id);
+  if (i <= 0) return null;
+  const alvo = LIGAS[i - 1];
+  return { liga: alvo, falta: Math.round((alvo.min - (Number(token) || 0)) * 100) / 100 };
+}
