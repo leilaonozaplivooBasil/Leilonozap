@@ -74,6 +74,10 @@ export default function XGameAdmin() {
   const [usuarios, setUsuarios] = useState([]);
   const [novo, setNovo] = useState('');
   const [busca, setBusca] = useState('');
+  // menus suspensos: um grupo da busca aberto por vez, um participante aberto
+  // por vez (abrir um fecha o outro) — pra página não ficar quilométrica
+  const [grupoAberto, setGrupoAberto] = useState(null);
+  const [participanteAberto, setParticipanteAberto] = useState(null);
   const [cicloInicio, setCicloInicio] = useState('');
   const [salvando, setSalvando] = useState(false);
   // tarefas da gamificação da pessoa (categoria/peso/conferência)
@@ -233,24 +237,34 @@ export default function XGameAdmin() {
           <p className="text-[11px] text-gray-500">{busca ? `Ninguém com "${busca}" fora do jogo.` : 'Todo mundo já está no jogo.'}</p>
         ) : (
           <div className="max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white">
-            {GRUPOS_BUSCA.map(([g, rotulo]) => (gruposDeCandidatos[g].length === 0 ? null : (
-              <div key={g}>
-                <p className="sticky top-0 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 uppercase tracking-wide">
-                  {rotulo} ({gruposDeCandidatos[g].length})
-                </p>
-                {gruposDeCandidatos[g].map((u) => (
+            {GRUPOS_BUSCA.map(([g, rotulo]) => {
+              if (gruposDeCandidatos[g].length === 0) return null;
+              // buscando, o grupo com resultado abre sozinho; sem busca, é menu suspenso
+              const aberto = busca.trim() ? true : grupoAberto === g;
+              return (
+                <div key={g}>
                   <button
-                    key={u.id}
                     type="button"
-                    onClick={() => setNovo(novo === u.id ? '' : u.id)}
-                    className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${novo === u.id ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
+                    onClick={() => setGrupoAberto(grupoAberto === g ? null : g)}
+                    className="sticky top-0 w-full flex items-center justify-between bg-gray-100 border-b border-gray-200 px-3 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-wide hover:bg-gray-200"
                   >
-                    <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{u.nickname || u.full_name || u.id.slice(0, 6)}</span>
-                    {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
+                    <span>{aberto ? '▾' : '▸'} {rotulo} ({gruposDeCandidatos[g].length})</span>
+                    {!aberto && <span className="normal-case font-normal text-gray-400">toque pra abrir</span>}
                   </button>
-                ))}
-              </div>
-            )))}
+                  {aberto && gruposDeCandidatos[g].map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => setNovo(novo === u.id ? '' : u.id)}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${novo === u.id ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
+                    >
+                      <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{u.nickname || u.full_name || u.id.slice(0, 6)}</span>
+                      {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -261,22 +275,35 @@ export default function XGameAdmin() {
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das 20h às 22h:</p>
-          {participantes.map((p) => (
+          {participantes.map((p) => {
+            const cardAberto = participanteAberto === p.id;
+            return (
             <div key={p.id} className={`rounded-lg border px-3 py-2 bg-white space-y-1.5 ${p.ativo ? 'border-gray-200' : 'border-gray-200 opacity-60'}`}>
+              {/* cabeçalho: sempre visível — clica e abre; abrir um fecha o outro */}
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-gray-900">{nomeDe(p.user_id)}</span>
+                <button
+                  type="button"
+                  onClick={() => { setParticipanteAberto(cardAberto ? null : p.id); setTarefaUser(''); }}
+                  className="flex-1 min-w-[140px] text-left text-sm font-semibold text-gray-900 hover:text-emerald-700"
+                >
+                  {cardAberto ? '▾' : '▸'} {nomeDe(p.user_id)}
+                  <span className="ml-2 text-[10px] font-normal text-gray-400">{p.cargo} · {p.perfil}</span>
+                </button>
                 <span className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setTarefaUser(tarefaUser === p.user_id ? '' : p.user_id)}
-                    title={DICAS.conferencia}
-                    className={`text-[11px] font-bold ${tarefaUser === p.user_id ? 'text-emerald-700' : 'text-gray-500 hover:text-emerald-700'}`}
-                  >{tarefaUser === p.user_id ? '▾ 📋 Tarefas' : '▸ 📋 Tarefas'}</button>
+                  {cardAberto && (
+                    <button
+                      type="button"
+                      onClick={() => setTarefaUser(tarefaUser === p.user_id ? '' : p.user_id)}
+                      title={DICAS.conferencia}
+                      className={`text-[11px] font-bold ${tarefaUser === p.user_id ? 'text-emerald-700' : 'text-gray-500 hover:text-emerald-700'}`}
+                    >{tarefaUser === p.user_id ? '▾ 📋 Tarefas' : '▸ 📋 Tarefas'}</button>
+                  )}
                   <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {p.ativo ? '● ATIVO' : '○ inativo'}
                   </button>
                 </span>
               </div>
+              {cardAberto && (
               <div className="flex items-center gap-3 flex-wrap text-[11px] text-gray-600">
                 <label title={DICAS.cargo}>cargo ⓘ{' '}
                   <select value={p.cargo} onChange={(e) => salvarParticipante(p, { cargo: e.target.value, multa_atraso: MULTA_POR_CARGO[e.target.value] ?? p.multa_atraso })} className="border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-900">
@@ -296,9 +323,10 @@ export default function XGameAdmin() {
                 </label>
                 <span title={DICAS.cargo}>multa {fmtReais(p.multa_atraso)}</span>
               </div>
+              )}
 
-              {/* ══ 📋 AS TAREFAS DA PESSOA — dentro do card dela ══ */}
-              {tarefaUser === p.user_id && (
+              {/* ══ 📋 AS TAREFAS DA PESSOA — menu suspenso dentro do card ══ */}
+              {cardAberto && tarefaUser === p.user_id && (
                 <div className="space-y-1.5 rounded-md border border-emerald-200 bg-emerald-50/30 px-2 py-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-[11px] font-semibold text-gray-900 flex-1 min-w-[160px]" title={DICAS.conferencia}>
@@ -363,7 +391,8 @@ export default function XGameAdmin() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
