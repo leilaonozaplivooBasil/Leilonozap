@@ -495,3 +495,36 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
 export function dataISO(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+// ── 🔥 OFENSIVA (F7 — o streak do Duolingo) ─────────────────────────
+// Dias seguidos FECHANDO o dia (≥80% do Master Task). Fim de semana sem
+// registro não quebra; dia útil perdido quebra — com direito a 1 CONGELADOR
+// automático por ofensiva (a falha é perdoada uma vez, sem zerar o fogo).
+
+export const OFENSIVA_META = 0.8; // fechou o dia = fez 80%+
+
+/**
+ * @param historico linhas de xgame_diario até ONTEM (qualquer ciclo), com
+ *                  {data, tarefas_total, tarefas_feitas}
+ * @param hoje      Date de hoje
+ * @param hojeFechou true quando o dia de hoje já bateu os 80%
+ * @returns {dias, congelou} — o tamanho do fogo e se o congelador foi usado
+ */
+export function ofensiva(historico = [], hoje = new Date(), hojeFechou = false) {
+  const por = new Map(historico.map((d) => [String(d.data).slice(0, 10), d]));
+  const fechou = (d) => d && Number(d.tarefas_total) > 0
+    && Number(d.tarefas_feitas) / Number(d.tarefas_total) >= OFENSIVA_META;
+  let dias = hojeFechou ? 1 : 0;
+  let congelou = false;
+  const cursor = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  cursor.setDate(cursor.getDate() - 1);
+  for (let i = 0; i < 366; i++) {
+    if (ehDiaUtil(cursor)) {
+      if (fechou(por.get(dataISO(cursor)))) dias += 1;
+      else if (!congelou && dias > 0) congelou = true; // 1 perdão por ofensiva
+      else break;
+    }
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return { dias, congelou };
+}

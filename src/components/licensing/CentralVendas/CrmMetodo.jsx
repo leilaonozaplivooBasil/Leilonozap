@@ -24,6 +24,7 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
   VIRTUDES, janelaVotacaoAberta, mvmManual,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
+  ofensiva, OFENSIVA_META,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -158,6 +159,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       .eq('user_id', uid).eq('ciclo_inicio', dataISO(inicioCicloOficial(cicloConfig, new Date()))).lt('data', hojeStr()).order('data')
       .then(({ data, error }) => setDiasCiclo(error ? [] : (data || [])));
   }, [painel, uid, cicloConfig]);
+  // 🔥 F7 — OFENSIVA: dias seguidos fechando ≥80% do dia (histórico atravessa
+  // ciclos; fim de semana não quebra; 1 congelador automático por ofensiva)
+  const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setHistoricoOfensiva([]); return; }
+    supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas')
+      .eq('user_id', uid).lt('data', hojeStr()).order('data', { ascending: false }).limit(90)
+      .then(({ data, error }) => setHistoricoOfensiva(error ? [] : (data || [])));
+  }, [painel, uid]);
+  // ⚡ F7 — XP na hora: o "+X pts" que voa quando a tarefa é marcada
+  const [xpFlash, setXpFlash] = useState(null); // { id, pts, valor }
   // 💳 Vendas AUTOMÁTICAS: as vendas REAIS da loja da pessoa no ciclo pontuam
   // o componente de vendas do Human Token (a remuneração delas continua sendo
   // só a comissão da plataforma — aqui é ponto, não dinheiro). O dono da venda
@@ -212,6 +224,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
     return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
+  const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
+    && xgame.tarefas_feitas / xgame.tarefas_total >= OFENSIVA_META);
+  const fogo = useMemo(() => ofensiva(historicoOfensiva, new Date(), hojeFechou), [historicoOfensiva, hojeFechou]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
     supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
@@ -340,6 +355,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   };
 
   const alternarFeito = async (t) => {
+    // ⚡ marcou FEITO hoje? mostra o XP na hora (10 pts, +5 no horário, × cotação)
+    if (!t.feito && ehHoje && xgame) {
+      const est = estadoDaTarefa(t);
+      const noHorario = !est || est.id === 'AGORA' || est.id === 'FUTURO';
+      const pts = Math.round((10 + (noHorario ? 5 : 0)) * (xgame.cotacao || 1));
+      setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
+      setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
+    }
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !t.feito } : x)));
     try { await plataforma.entities.MetodoTarefa.update(t.id, { feito: !t.feito }); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
@@ -750,6 +773,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <div className="bg-nz-verde h-full transition-all" style={{ width: `${progresso.pct}%` }} />
             </div>
 
+            {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
+            {xgame && ehHoje && (
+              <div className={`flex items-center justify-between gap-2 flex-wrap rounded-lg border px-3 py-2 ${hojeFechou ? 'border-orange-300 bg-orange-50' : 'border-nz-borda bg-nz-cinza-fundo/60'}`}>
+                <p className="text-sm font-bold text-nz-tinta">
+                  🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
+                  {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-600">🧊 congelador usado</span>}
+                </p>
+                <p className="text-[11px] text-nz-tinta-fraca">
+                  {hojeFechou
+                    ? 'hoje FECHADO ✔ — o fogo continua'
+                    : `feche ${Math.round(OFENSIVA_META * 100)}% do dia pra ${fogo.dias > 0 ? 'manter o fogo' : 'acender o fogo'}`}
+                  {!fogo.congelou && ' · 1 congelador automático por ofensiva'}
+                </p>
+              </div>
+            )}
+            {xgame && ehHoje && progresso.pct >= 100 && (
+              <div className="rounded-lg border border-nz-verde bg-nz-verde-fundo/60 px-3 py-2 text-center animate-pulse">
+                <p className="text-sm font-bold text-nz-verde">🎊 💎 DIA PERFEITO — BRILHANTE! PARABÉNS! 🎊</p>
+              </div>
+            )}
+
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -969,6 +1013,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                           <div key={t.id} className={`rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
                             <div className="flex items-center gap-2.5">
                               <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
+                              {/* ⚡ o XP voando no clique — feedback imediato do jogo */}
+                              {xpFlash?.id === t.id && (
+                                <span className="shrink-0 text-[11px] font-bold text-nz-verde animate-bounce">
+                                  +{xpFlash.pts} pts{xpFlash.valor > 0 ? ` · +${fmtReais(xpFlash.valor)}` : ''}
+                                </span>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
                                   {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
