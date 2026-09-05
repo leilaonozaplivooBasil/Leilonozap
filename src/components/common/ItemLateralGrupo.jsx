@@ -74,29 +74,44 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
           {aberto && posicao && createPortal(
             <div
               data-menu-lateral-grupo
-              className="fixed z-[9999] w-52 rounded-xl border border-white/10 bg-nz-preto-barra shadow-2xl py-2"
-              style={{ top: posicao.top, left: posicao.left }}
+              className="fixed z-[9999] w-60 rounded-xl border border-white/10 bg-nz-preto-barra shadow-2xl py-2 overflow-hidden"
+              /* 🎓 DIR-61 — o menu inteiro na Sora, a tipografia oficial da
+                 X-EOS: os nomes passam a ser da MESMA família da logo, e o
+                 bloco lê como uma coisa só em vez de logo + interface. */
+              style={{ ...({ top: posicao.top, left: posicao.left }), fontFamily: 'Sora, sans-serif' }}
             >
               {item.subItens.map((sub) => {
-                // 🎓 DIR-59 — item com `marcaCompleta` mostra a LOGO no lugar do
-                // texto (ordem do dono pro "O Método"). O rótulo vira o texto
-                // alternativo: quem usa leitor de tela continua sabendo o que é.
+                // 🎓 DIR-61 — FAIXA DE MARCA: item com `marcaCompleta` vira o
+                // cabeçalho do menu — a arte da logo (X inteiro + "-eos", em
+                // prata) e a frase da marca logo abaixo.
+                //
+                // Por que a frase é TEXTO e não parte da imagem: no lockup
+                // original ela tem 1/40 da altura da arte — pra ela ser LIDA a
+                // logo precisaria de ~300px, que não existe em menu nenhum.
+                // Como texto de verdade, na fonte da marca, fica nítida em
+                // qualquer tamanho. A arte continua inteira: o subtítulo foi
+                // APAGADO do arquivo, não recortado — o rabo do X segue lá.
                 const conteudo = sub.marcaCompleta ? (
-                  <img src={sub.marcaCompleta} alt={sub.label} className="h-[46px] w-auto object-contain" draggable="false" />
+                  <span className="flex flex-col gap-1.5">
+                    <img src={sub.marcaCompleta} alt={sub.label} className="h-[38px] w-auto object-contain self-start shrink-0" draggable="false" />
+                    {sub.legenda && (
+                      <span className="text-[9.5px] leading-snug text-white/45" style={{ fontFamily: 'Sora, sans-serif' }}>
+                        {sub.legenda}
+                      </span>
+                    )}
+                  </span>
                 ) : (
                   <>
                     <MarcaOuIcone marca={sub.marca} icone={sub.icon} className="w-4 h-4 shrink-0" />
                     {sub.label}
                   </>
                 );
+                const classe = sub.marcaCompleta
+                  ? 'flex w-full items-center gap-2.5 px-4 pt-2 pb-3.5 -mt-2 mb-1.5 text-left border-b border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-colors'
+                  : 'flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors';
                 if (sub.to) {
                   return (
-                    <Link
-                      key={sub.to}
-                      to={sub.to}
-                      onClick={() => setAberto(false)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors"
-                    >
+                    <Link key={sub.to} to={sub.to} onClick={() => setAberto(false)} className={classe}>
                       {conteudo}
                     </Link>
                   );
@@ -106,7 +121,7 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
                     key={sub.label}
                     type="button"
                     onClick={() => { sub.onClick?.(); setAberto(false); }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors"
+                    className={classe}
                   >
                     {conteudo}
                   </button>

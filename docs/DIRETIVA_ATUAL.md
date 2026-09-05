@@ -12,6 +12,36 @@
 
 ---
 
+## DIR-61 — Tudo com cara de uma coisa só: tipografia, X e "qual é o seu poder"
+
+**Emitida por:** dono (05/09/2026), aprovando a rodada anterior ("está
+top") e pedindo três coisas: *"como puxar os nomes de baixo da logo no
+mesmo formato de letra da logo, pra ficar bem bonito, parecer que tudo é
+a mesma coisa. E ali onde está escrito Método, vamos botar só o x — mas
+fazer um x aqui só pra isso. E botar a imagem do professor Xavier, bem
+pequena, perguntando qual é o seu poder."* Aprovação: **"foda,
+vambora"** / *"se for ficar excelente, pode fazer"*.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O menu inteiro da Top College passa a usar **Sora**, a tipografia
+   oficial da X-EOS — os nomes ficam da mesma família da logo e o bloco
+   lê como uma peça só, não como logo + interface.
+2. A **frase da marca** vira TEXTO de verdade abaixo da arte (não pixel
+   dentro da imagem): no lockup ela tem 1/40 da altura do X e só seria
+   legível com a logo em ~300px. Como texto, fica nítida em qualquer
+   tamanho, e a arte segue inteira — o subtítulo foi APAGADO do arquivo,
+   não recortado.
+3. Onde estava escrito "O Método", entra **só o X**, num arquivo feito
+   só pra esse lugar (X centralizado em quadrado, com folga).
+4. Entra o **retrato pequeno** do deck do dono com a pergunta **"Qual é
+   o seu poder?"**, no lugar do rótulo.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
 ## DIR-60 — A logo em PRATA, inteira, sem cortar nada
 
 **Emitida por:** dono (05/09/2026), com a foto da logo metálica em
