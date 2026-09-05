@@ -153,6 +153,17 @@ export default function XGameAdmin() {
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...patch } : x)));
   };
 
+  // excluir em 2 cliques (padrão DIR-50 do CRM): o 1º arma, o 2º confirma
+  const [excluindo, setExcluindo] = useState(null);
+  const excluirTarefa = async (t) => {
+    if (excluindo !== t.id) { setExcluindo(t.id); return; }
+    setExcluindo(null);
+    const { error } = await supabase.from('metodo_tarefas').delete().eq('id', t.id);
+    if (error) { toast.error('Erro ao excluir a tarefa.'); return; }
+    toast.success('Tarefa excluída.');
+    setTarefas((prev) => prev.filter((x) => x.id !== t.id));
+  };
+
   // ⚡ A Rotina Perfeita AUTOMÁTICA — a mesma do Compromisso: puxa a rotina
   // da pessoa (metodo_perfil) ou a Rotina do Método padrão e gera o dia dela.
   const gerarRotinaPerfeita = async () => {
@@ -244,7 +255,9 @@ export default function XGameAdmin() {
         )}
       </div>
 
-      {/* participantes: cargo, perfil, verbas, multa, ativo */}
+      {/* participantes: cargo, perfil, verbas + AS TAREFAS DA PESSOA no card.
+          O que o admin gera/cria aqui grava em metodo_tarefas — é a MESMA
+          tabela do Compromisso, então aparece na hora no perfil dela. */}
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das 20h às 22h:</p>
@@ -252,9 +265,17 @@ export default function XGameAdmin() {
             <div key={p.id} className={`rounded-lg border px-3 py-2 bg-white space-y-1.5 ${p.ativo ? 'border-gray-200' : 'border-gray-200 opacity-60'}`}>
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-gray-900">{nomeDe(p.user_id)}</span>
-                <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
-                  {p.ativo ? '● ATIVO' : '○ inativo'}
-                </button>
+                <span className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTarefaUser(tarefaUser === p.user_id ? '' : p.user_id)}
+                    title={DICAS.conferencia}
+                    className={`text-[11px] font-bold ${tarefaUser === p.user_id ? 'text-emerald-700' : 'text-gray-500 hover:text-emerald-700'}`}
+                  >{tarefaUser === p.user_id ? '▾ 📋 Tarefas' : '▸ 📋 Tarefas'}</button>
+                  <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    {p.ativo ? '● ATIVO' : '○ inativo'}
+                  </button>
+                </span>
               </div>
               <div className="flex items-center gap-3 flex-wrap text-[11px] text-gray-600">
                 <label title={DICAS.cargo}>cargo ⓘ{' '}
@@ -275,75 +296,76 @@ export default function XGameAdmin() {
                 </label>
                 <span title={DICAS.cargo}>multa {fmtReais(p.multa_atraso)}</span>
               </div>
+
+              {/* ══ 📋 AS TAREFAS DA PESSOA — dentro do card dela ══ */}
+              {tarefaUser === p.user_id && (
+                <div className="space-y-1.5 rounded-md border border-emerald-200 bg-emerald-50/30 px-2 py-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[11px] font-semibold text-gray-900 flex-1 min-w-[160px]" title={DICAS.conferencia}>
+                      Tarefas de {nomeDe(p.user_id)} — o que você gerencia aqui aparece na hora no Compromisso dela ⓘ
+                    </p>
+                    <Input type="date" value={tarefaDia} onChange={(e) => setTarefaDia(e.target.value)} className="h-8 bg-white border-gray-300 w-auto" />
+                  </div>
+
+                  {tarefas.length === 0 ? (
+                    <div className="flex items-center gap-2 flex-wrap rounded border border-dashed border-emerald-300 bg-white px-3 py-2">
+                      <p className="text-[11px] text-gray-600 flex-1 min-w-[160px]">Dia sem Master Task ainda. Gera automático com a Rotina Perfeita (o planejamento diário perfeito), ou cria manual abaixo.</p>
+                      <Button size="sm" onClick={gerarRotinaPerfeita} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
+                        ⚡ {salvando ? 'Gerando...' : 'Gerar Rotina Perfeita'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {tarefas.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 flex-wrap">
+                          <span className={`text-[11px] min-w-0 truncate ${t.feito ? 'text-gray-900' : 'text-gray-400'}`}>
+                            {t.hora} — {t.titulo} {t.feito ? '✔ feita' : '(não marcada)'}
+                          </span>
+                          <span className="flex items-center gap-2 shrink-0">
+                            <select value={t.categoria || 'producao'} onChange={(e) => salvarTarefa(t, { categoria: e.target.value })} title={DICAS.categoria} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
+                              {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+                            </select>
+                            <select value={t.peso ?? 3} onChange={(e) => salvarTarefa(t, { peso: Number(e.target.value) })} title={DICAS.peso} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
+                              {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>peso {n}</option>)}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => salvarTarefa(t, { conferido: t.conferido === true ? null : true })}
+                              title={DICAS.conferencia}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${t.conferido === true ? 'border-emerald-600 text-white bg-emerald-600' : 'border-gray-300 text-gray-500 hover:border-emerald-600'}`}
+                            >{t.conferido === true ? 'SIM ✔' : 'confirmar SIM'}</button>
+                            <button
+                              type="button"
+                              onClick={() => excluirTarefa(t)}
+                              title="Excluir a tarefa do dia dela (2 cliques pra confirmar)"
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${excluindo === t.id ? 'border-red-600 text-white bg-red-600' : 'border-gray-300 text-gray-400 hover:border-red-400 hover:text-red-500'}`}
+                            >{excluindo === t.id ? 'confirma?' : '✕'}</button>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* criar manual — as coisas que você precisa que ela faça */}
+                  <div className="flex items-end gap-2 flex-wrap rounded border border-dashed border-gray-300 bg-white px-2 py-2">
+                    <Input type="time" value={novaTarefa.hora} onChange={(e) => setNovaTarefa({ ...novaTarefa, hora: e.target.value })} className="h-8 bg-white border-gray-300 w-auto" />
+                    <Input placeholder="tarefa manual — o que ela precisa fazer" value={novaTarefa.titulo} onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })} className="h-8 bg-white border-gray-300 flex-1 min-w-[160px]" />
+                    <select value={novaTarefa.categoria} onChange={(e) => setNovaTarefa({ ...novaTarefa, categoria: e.target.value })} title={DICAS.categoria} className="text-[11px] border border-gray-300 rounded px-1.5 py-1.5 bg-white text-gray-900">
+                      {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+                    </select>
+                    <select value={novaTarefa.peso} onChange={(e) => setNovaTarefa({ ...novaTarefa, peso: Number(e.target.value) })} title={DICAS.peso} className="text-[11px] border border-gray-300 rounded px-1.5 py-1.5 bg-white text-gray-900">
+                      {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>peso {n}</option>)}
+                    </select>
+                    <Button size="sm" onClick={criarTarefa} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
+                      <Plus className="w-4 h-4 mr-1" /> Criar tarefa
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
-
-      {/* tarefas da gamificação da pessoa + conferência dupla */}
-      <div className="space-y-2 border-t border-gray-200 pt-3">
-        <p className="text-xs font-semibold text-gray-900" title={DICAS.conferencia}>
-          Tarefas da gamificação da pessoa — categoria, peso e o SIM do gestor (conferência dupla) ⓘ
-        </p>
-        <div className="flex items-end gap-2 flex-wrap">
-          <select value={tarefaUser} onChange={(e) => setTarefaUser(e.target.value)} className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 min-w-[220px]">
-            <option value="">— escolha o participante —</option>
-            {participantes.filter((p) => p.ativo).map((p) => (
-              <option key={p.user_id} value={p.user_id}>{nomeDe(p.user_id)}</option>
-            ))}
-          </select>
-          <Input type="date" value={tarefaDia} onChange={(e) => setTarefaDia(e.target.value)} className="h-9 bg-white border-gray-300 w-auto" />
-        </div>
-
-        {tarefaUser && (tarefas.length === 0 ? (
-          <div className="flex items-center gap-2 flex-wrap rounded border border-dashed border-emerald-300 bg-emerald-50/50 px-3 py-2">
-            <p className="text-[11px] text-gray-600 flex-1 min-w-[180px]">Sem Master Task nesse dia pra essa pessoa. Gera automático com a Rotina Perfeita do Compromisso, ou cria manual abaixo.</p>
-            <Button size="sm" onClick={gerarRotinaPerfeita} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
-              ⚡ {salvando ? 'Gerando...' : 'Gerar Rotina Perfeita pra ela'}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {tarefas.map((t) => (
-              <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 flex-wrap">
-                <span className={`text-[11px] min-w-0 truncate ${t.feito ? 'text-gray-900' : 'text-gray-400'}`}>
-                  {t.hora} — {t.titulo} {t.feito ? '✔ feita' : '(não marcada)'}
-                </span>
-                <span className="flex items-center gap-2 shrink-0">
-                  <select value={t.categoria || 'producao'} onChange={(e) => salvarTarefa(t, { categoria: e.target.value })} title={DICAS.categoria} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
-                    {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
-                  </select>
-                  <select value={t.peso ?? 3} onChange={(e) => salvarTarefa(t, { peso: Number(e.target.value) })} title={DICAS.peso} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
-                    {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>peso {n}</option>)}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => salvarTarefa(t, { conferido: t.conferido === true ? null : true })}
-                    title={DICAS.conferencia}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded border ${t.conferido === true ? 'border-emerald-600 text-white bg-emerald-600' : 'border-gray-300 text-gray-500 hover:border-emerald-600'}`}
-                  >{t.conferido === true ? 'SIM ✔' : 'confirmar SIM'}</button>
-                </span>
-              </div>
-            ))}
-          </div>
-        ))}
-
-        {tarefaUser && (
-          <div className="flex items-end gap-2 flex-wrap rounded border border-dashed border-gray-300 bg-gray-50 px-2 py-2">
-            <Input type="time" value={novaTarefa.hora} onChange={(e) => setNovaTarefa({ ...novaTarefa, hora: e.target.value })} className="h-8 bg-white border-gray-300 w-auto" />
-            <Input placeholder="título da tarefa da gamificação" value={novaTarefa.titulo} onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })} className="h-8 bg-white border-gray-300 flex-1 min-w-[160px]" />
-            <select value={novaTarefa.categoria} onChange={(e) => setNovaTarefa({ ...novaTarefa, categoria: e.target.value })} title={DICAS.categoria} className="text-[11px] border border-gray-300 rounded px-1.5 py-1.5 bg-white text-gray-900">
-              {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
-            </select>
-            <select value={novaTarefa.peso} onChange={(e) => setNovaTarefa({ ...novaTarefa, peso: Number(e.target.value) })} title={DICAS.peso} className="text-[11px] border border-gray-300 rounded px-1.5 py-1.5 bg-white text-gray-900">
-              {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>peso {n}</option>)}
-            </select>
-            <Button size="sm" onClick={criarTarefa} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
-              <Plus className="w-4 h-4 mr-1" /> Criar tarefa
-            </Button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
