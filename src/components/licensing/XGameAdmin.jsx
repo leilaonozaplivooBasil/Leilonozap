@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
 import { fmtReais } from '@/lib/xgame';
+import { normalizeLevels, getLevel } from '@/lib/careerLevels';
+import { isAdminRole } from '@/lib/roles';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
 // feito pelo painel Admin do Licensing). É AQUI que o dono do jogo decide:
@@ -24,6 +26,35 @@ const CATEGORIAS = [
 ];
 const hojeStr = () => new Date().toISOString().slice(0, 10);
 
+// ── Busca de pessoas por categoria do plano de carreira ─────────────
+// Time Corporativo = o bloco diretor inteiro (do trainee/executivo até
+// embaixador, conselheiro e fundador) + admins. Quem é corporativo NÃO
+// repete nos licenciados. Depois: Licenciados, Vendedores/Influenciadores
+// e por fim os Usuários comuns.
+const BLOCO_DIRETOR = new Set(['trainee_diretor', 'executivo_conta', 'diretoria_operacao', 'diretoria_executiva', 'ceo', 'livoo_live', 'embaixador', 'conselheiro', 'fundador']);
+const NIVEIS_LICENCIADO = new Set(['licenciado', 'parceiro', 'ponto_retirada', 'loja_fisica', 'distribuidor']);
+const NIVEIS_VENDEDOR = new Set(['vendedor', 'influenciador']);
+const GRUPOS_BUSCA = [
+  ['corporativo', '👔 Time Corporativo'],
+  ['licenciados', '🎖️ Licenciados'],
+  ['vendedores', '🛒 Vendedores & Influenciadores'],
+  ['usuarios', '👤 Usuários'],
+];
+function grupoDoUsuario(u) {
+  const cargos = normalizeLevels(u?.career_levels);
+  if (isAdminRole(u?.role) || cargos.some((c) => BLOCO_DIRETOR.has(c))) return 'corporativo';
+  if (u?.role === 'licensee' || cargos.some((c) => NIVEIS_LICENCIADO.has(c))) return 'licenciados';
+  if (cargos.some((c) => NIVEIS_VENDEDOR.has(c))) return 'vendedores';
+  return 'usuarios';
+}
+function cargoLabel(u) {
+  const cargos = normalizeLevels(u?.career_levels);
+  if (!cargos.length) return u?.role === 'licensee' ? 'Licenciado' : '';
+  return cargos.map(getLevel).sort((a, b) => b.ordem - a.ordem)[0]?.name || '';
+}
+// "lu" acha Luciano, Lúcia, LUIZ... — sem sofrer com acento nem maiúscula.
+const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 const DICAS = {
   ciclo: 'O jogo roda em ciclos de 22 dias úteis. A cotação do dia começa em 1,00 e cai 0,01 por dia útil até 0,80 no dia 22 — "ANTECIPAÇÃO É PODER". Sem data aberta aqui, o app usa o 1º dia útil do mês.',
   verba_producao: 'Verba fixa mensal de PRODUÇÃO da pessoa. O X-Pay divide: verba ÷ 22 dias ÷ nº de tarefas de produção do dia × peso da tarefa ÷ 3.',
@@ -40,6 +71,7 @@ export default function XGameAdmin() {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [novo, setNovo] = useState('');
+  const [busca, setBusca] = useState('');
   const [cicloInicio, setCicloInicio] = useState('');
   const [salvando, setSalvando] = useState(false);
   // tarefas da gamificação da pessoa (categoria/peso/conferência)
@@ -51,7 +83,7 @@ export default function XGameAdmin() {
   const carregar = useCallback(() => {
     supabase.from('xgame_participantes').select('*').order('created_date')
       .then(({ data }) => setParticipantes(data || []));
-    supabase.from('app_users').select('id,full_name,nickname').order('full_name')
+    supabase.from('app_users').select('id,full_name,nickname,role,career_levels').order('full_name')
       .then(({ data }) => setUsuarios(data || []));
     supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle()
       .then(({ data }) => setCicloInicio(data?.ciclo_inicio ? String(data.ciclo_inicio).slice(0, 10) : ''));
@@ -62,6 +94,18 @@ export default function XGameAdmin() {
     const u = usuarios.find((x) => x.id === id);
     return u?.nickname || u?.full_name || (id ? id.slice(0, 6) : '—');
   };
+
+  // candidatos agrupados pelo plano de carreira + filtro do nome ao digitar
+  const gruposDeCandidatos = useMemo(() => {
+    const q = semAcento(busca.trim());
+    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
+    const filtrados = q
+      ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q))
+      : livres;
+    const por = { corporativo: [], licenciados: [], vendedores: [], usuarios: [] };
+    filtrados.forEach((u) => por[grupoDoUsuario(u)].push(u));
+    return por;
+  }, [usuarios, participantes, busca]);
 
   const abrirCiclo = async () => {
     if (!cicloInicio) { toast.error('Escolha a data de início do ciclo.'); return; }
@@ -138,20 +182,44 @@ export default function XGameAdmin() {
         <span className="text-[11px] text-gray-500">sem data vigente, vale o 1º dia útil do mês</span>
       </div>
 
-      {/* cadastrar participante */}
-      <div className="flex items-end gap-2 flex-wrap border-t border-gray-200 pt-3">
-        <label className="text-xs text-gray-700">
-          Colocar no jogo (os integrantes da egrégora):
-          <select value={novo} onChange={(e) => setNovo(e.target.value)} className="block mt-1 text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 min-w-[220px]">
-            <option value="">— escolha a pessoa —</option>
-            {usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id)).map((u) => (
-              <option key={u.id} value={u.id}>{u.nickname || u.full_name || u.id.slice(0, 6)}</option>
-            ))}
-          </select>
-        </label>
-        <Button size="sm" onClick={adicionar} disabled={salvando || !novo} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-          <UserPlus className="w-4 h-4 mr-1" /> Cadastrar
-        </Button>
+      {/* cadastrar participante — busca por nome + categorias do plano de carreira */}
+      <div className="space-y-2 border-t border-gray-200 pt-3">
+        <p className="text-xs font-semibold text-gray-900">Colocar no jogo (os integrantes da egrégora):</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input
+            placeholder="🔎 digite o nome — ex.: “lu” acha todos os Lucianos"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="h-9 bg-white border-gray-300 flex-1 min-w-[220px]"
+          />
+          <Button size="sm" onClick={adicionar} disabled={salvando || !novo} className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+            <UserPlus className="w-4 h-4 mr-1" /> Cadastrar{novo ? ` ${nomeDe(novo)}` : ''}
+          </Button>
+        </div>
+        {GRUPOS_BUSCA.every(([g]) => gruposDeCandidatos[g].length === 0) ? (
+          <p className="text-[11px] text-gray-500">{busca ? `Ninguém com "${busca}" fora do jogo.` : 'Todo mundo já está no jogo.'}</p>
+        ) : (
+          <div className="max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white">
+            {GRUPOS_BUSCA.map(([g, rotulo]) => (gruposDeCandidatos[g].length === 0 ? null : (
+              <div key={g}>
+                <p className="sticky top-0 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 uppercase tracking-wide">
+                  {rotulo} ({gruposDeCandidatos[g].length})
+                </p>
+                {gruposDeCandidatos[g].map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => setNovo(novo === u.id ? '' : u.id)}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${novo === u.id ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
+                  >
+                    <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{u.nickname || u.full_name || u.id.slice(0, 6)}</span>
+                    {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
+                  </button>
+                ))}
+              </div>
+            )))}
+          </div>
+        )}
       </div>
 
       {/* participantes: cargo, perfil, verbas, multa, ativo */}
