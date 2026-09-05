@@ -146,16 +146,30 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const bloquearCola = (e) => { e.preventDefault(); setAviso(AVISO_COLAR); setTimeout(() => setAviso(''), 6000); };
 
   // o QUADRO DOS SONHOS: as imagens do Hábito 1 (o campo oficial é imagem_url)
-  const imagensDosSonhos = sonhos
-    .map((s) => s?.imagem_url || s?.imagem || s?.foto || (Array.isArray(s?.imagens) ? s.imagens[0] : null))
-    .filter(Boolean)
-    .slice(0, 12);
-  // um sonho de cada vez: a troca acontece a cada 42s (o anterior ainda está
-  // saindo quando o próximo entra — travessia de 52s, sobreposição suave)
+  // — em ordem ALEATÓRIA que muda a cada dia (semente = a data de hoje): a
+  // pessoa nunca sabe qual sonho vem preencher a tela, mas a ordem não muda
+  // no meio da meditação
+  const imagensDosSonhos = React.useMemo(() => {
+    const todas = sonhos
+      .map((s) => s?.imagem_url || s?.imagem || s?.foto || (Array.isArray(s?.imagens) ? s.imagens[0] : null))
+      .filter(Boolean);
+    const hoje = new Date().toISOString().slice(0, 10);
+    let seed = 0;
+    for (let i = 0; i < hoje.length; i += 1) seed = ((seed * 31) + hoje.charCodeAt(i)) >>> 0;
+    const rnd = () => { seed = ((seed * 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    for (let i = todas.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rnd() * (i + 1));
+      [todas[i], todas[j]] = [todas[j], todas[i]];
+    }
+    return todas.slice(0, 12);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sonhos.length]);
+  // um sonho de cada vez: a troca acontece a cada 40s (o anterior ainda está
+  // saindo quando o próximo entra — travessia de 50s, sobreposição suave)
   const [sonhoIdx, setSonhoIdx] = useState(0);
   useEffect(() => {
     if (passo !== 2 || imagensDosSonhos.length === 0) return undefined;
-    const t = setInterval(() => setSonhoIdx((i) => i + 1), 42000);
+    const t = setInterval(() => setSonhoIdx((i) => i + 1), 40000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passo, imagensDosSonhos.length]);
@@ -174,9 +188,11 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-b from-[#141432] via-[#5b2a5e] to-[#f59e5b] overflow-hidden">
-      {/* o QUADRO DOS SONHOS na visualização: UM sonho de cada vez, GRANDE,
-          subindo devagar como numa meditação — um saindo, o próximo entrando */}
-      <style>{`@keyframes xgSubir { 0% { transform: translateY(35vh) scale(.92); opacity: 0 } 10% { opacity: .95 } 86% { opacity: .95 } 100% { transform: translateY(-125vh) scale(1.04); opacity: 0 } }`}</style>
+      {/* o QUADRO DOS SONHOS na visualização: UM sonho de cada vez, ENORME
+          (quase preenchendo a tela, no celular e no desktop), subindo devagar
+          como numa meditação — um saindo, o próximo entrando, em ordem que
+          muda todo dia */}
+      <style>{`@keyframes xgSubir { 0% { transform: translateY(40vh) scale(.94); opacity: 0 } 10% { opacity: .96 } 86% { opacity: .96 } 100% { transform: translateY(-135vh) scale(1.03); opacity: 0 } }`}</style>
       {passo === 2 && imagensDosSonhos.length > 0 && (
         <div className="pointer-events-none absolute inset-0">
           {[sonhoIdx - 1, sonhoIdx].filter((n) => n >= 0).map((n) => (
@@ -184,10 +200,10 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
               key={n}
               src={imagensDosSonhos[n % imagensDosSonhos.length]}
               alt=""
-              className="absolute bottom-0 w-44 sm:w-60 aspect-[3/4] object-cover rounded-3xl shadow-2xl ring-2 ring-white/30"
+              className="absolute bottom-0 w-[min(86vw,64vh)] aspect-[3/4] object-cover rounded-[2rem] shadow-2xl ring-2 ring-white/30"
               style={{
-                left: n % 2 === 0 ? '10%' : '58%',
-                animation: 'xgSubir 52s linear forwards',
+                ...(n % 2 === 0 ? { left: '4%' } : { right: '4%' }),
+                animation: 'xgSubir 50s linear forwards',
                 willChange: 'transform, opacity',
               }}
             />
