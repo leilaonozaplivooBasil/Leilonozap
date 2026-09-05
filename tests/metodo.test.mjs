@@ -297,3 +297,32 @@ describe('plurais honestos dos contadores (DIR-49)', () => {
     assert.equal(plural(0, 'retorno', 'retornos'), '0 retornos');
   });
 });
+
+// ══ DIR-49.1 — histórico visível + próximas reuniões ══
+const { ultimoContato, proximasReunioes } = await import('../src/lib/metodo.js');
+
+describe('último contato e próximas reuniões (DIR-49.1)', () => {
+  test('último desfecho é o de carimbo mais novo, mesmo fora de ordem', () => {
+    const c = { contatos_metodo: [
+      { resultado: 'agendado', em: '2026-09-05T10:20:00Z' },
+      { resultado: 'feito', em: '2026-09-05T10:19:00Z' },
+    ] };
+    assert.equal(ultimoContato(c).resultado, 'agendado');
+    assert.equal(ultimoContato({}), null);
+    assert.equal(ultimoContato(null), null);
+  });
+
+  test('próximas reuniões = agendados de dias FUTUROS, ordenados; hoje fica de fora', () => {
+    const clientes = [
+      { full_name: 'Luiz', contatos_metodo: [
+        { resultado: 'agendado', quando: '2026-09-14T07:19', em: '1' },
+        { resultado: 'agendado', quando: '2026-09-05T18:00', em: '2' }, // hoje → agenda do dia, não aqui
+        { resultado: 'feito', em: '3' },
+      ] },
+      { full_name: 'Ana', contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-07T10:00', em: '4' }] },
+    ];
+    const p = proximasReunioes(clientes, '2026-09-05');
+    assert.deepEqual(p.map((x) => x.cliente.full_name), ['Ana', 'Luiz']);
+    assert.deepEqual(proximasReunioes([], '2026-09-05'), []);
+  });
+});

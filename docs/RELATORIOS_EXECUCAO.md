@@ -2377,3 +2377,38 @@ no singular, a linha do tempo com o Google 09:00 ANTES do método 18:00,
 o TIME INTEIRO com chip 👤 e o Google sumindo (pessoal), e a volta pra
 MINHA AGENDA.
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode" do dono.
+
+## REL-49.1 — Salvar não apaga mais a tela (05/09/2026)
+
+**Diretiva:** DIR-49.1, emitida pelo dono após teste real no preview
+("registrei e não aparece salvo; conectei a agenda, agendei e volta para
+conectar — resolva definitivamente e identifique de fato o erro").
+**Diagnóstico com dado real (sem achismo):** consulta direta ao banco de
+produção mostrou que os 3 registros dele SALVARAM (feito 10:19 + DOIS
+agendados de 14/09 às 07:19/07:20, ambos com link REAL de evento criado
+na Google Agenda dele — a duplicata nasceu da falta de feedback). O
+defeito era de TELA, em três partes: (a) `loadCustomers` ligava
+`isLoading` e o CrmClientesTab trocava tudo por "Carregando..." — o
+CrmMetodo era DESMONTADO a cada salvamento e o estado da conexão Google
+(token + eventos) morria, por isso o botão voltava pra "Conectar";
+(b) o desfecho "feito" não aparecia em lugar nenhum; (c) reunião de dia
+futuro era invisível (a agenda só mostra hoje).
+**O que mudou:**
+1. Recarga silenciosa: spinner de página inteira só na PRIMEIRA carga —
+   salvar não desmonta mais a tela; a conexão do Google sobrevive.
+2. Fila com "último: ✅ Contato feito · 05/09 07:19" em cada contato —
+   o registro salvo aparece na hora (`ultimoContato`, testada).
+3. Seção "📆 Próximas reuniões" na agenda (agendados de dias futuros,
+   respeitando MINHA × TIME, com Abrir no Google) — `proximasReunioes`,
+   testada. A reunião de 14/09 dele agora tem casa.
+4. Toast que diz pra onde foi: "Reunião agendada — 14/09 07:19 · veja na
+   agenda do Hábito 4".
+**Prova (medida):** suíte **891/891** (889 + 2 testes novos); build exit
+0; prova em navegador **107/107 ZERO erros** — incluindo o cenário exato
+do dono: conectar o Google, salvar um desfecho e o Google CONTINUAR
+conectado, com o "último" trocando na fila na hora.
+**Pendência anotada:** os dois eventos de 14/09 são DUPLICADOS na Google
+Agenda do dono (efeito da rodada sem feedback) — apagar um deles é ação
+manual dele no Google (nós ainda não editamos/cancelamos evento criado —
+fora do escopo desde a DIR-48).
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

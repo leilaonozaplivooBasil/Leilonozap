@@ -12,6 +12,40 @@
 
 ---
 
+## DIR-49.1 — Salvar não pode apagar a tela: recarga silenciosa, histórico e próximas reuniões
+
+**Emitida por:** dono (05/09/2026, por escrito, testando a DIR-49 no
+preview): "eu registrei o contato e não aparece salvo o que eu fiz;
+conectei a agenda, aparece conectado, agendei o evento logo após e não
+aparece nada e volta para conectar a agenda — preciso que você resolva
+isso definitivamente de forma diligente e identifique de fato onde está
+o erro".
+**Diagnóstico MEDIDO (banco de produção consultado):** os 3 registros
+dele SALVARAM (feito 10:19 + dois agendados 14/09, ambos com link REAL
+de evento criado na Google Agenda — ele agendou duas vezes por falta de
+feedback). O erro real é de tela: (a) `loadCustomers` liga `isLoading`
+e o CrmClientesTab troca TUDO por "Carregando..." — o CrmMetodo é
+DESMONTADO e o estado do Google (token + eventos) morre, por isso o
+botão volta pra "Conectar"; (b) desfecho "feito" não aparece em lugar
+nenhum; (c) reunião de dia FUTURO é invisível (a agenda só mostra hoje).
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+1. **Recarga silenciosa:** o spinner de página inteira só na PRIMEIRA
+   carga; recarregar clientes depois de salvar não desmonta mais a tela
+   (a conexão do Google sobrevive ao salvamento).
+2. **Histórico visível na fila:** cada contato mostra o último desfecho
+   registrado ("último: ✅ Contato feito · 05/09 07:19").
+3. **📆 Próximas reuniões:** seção na agenda com os agendados de dias
+   futuros (respeitando MINHA × TIME), com data+hora e Abrir no Google.
+   Fonte única `proximasReunioes`/`ultimoContato` em `src/lib/metodo.js`.
+4. **Toast que diz pra onde foi:** agendou → "Reunião agendada — 14/09
+   07:19" (não um genérico "registrado").
+**Regras fixas:** prova em navegador incluindo o cenário
+"Google conectado sobrevive ao salvar"; sem SQL.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-49 — Clareza total do Hábito 4: agendar em 1 clique, minha agenda × time, linha do tempo unificada
 
 **Emitida por:** dono (04/09/2026, por escrito, após ver o Hábito 4

@@ -402,7 +402,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   const loadCustomers = async () => {
     try {
-      setIsLoading(true);
+      // 🔴 DIR-49.1 — o spinner de página inteira SÓ na primeira carga. Nas
+      // recargas (depois de salvar um registro, qualificar, etc.) a tela fica
+      // montada e os dados trocam no lugar — desmontar aqui matava o estado do
+      // CrmMetodo (a conexão da Google Agenda "sumia" a cada salvamento).
+      if (!customers.length) setIsLoading(true);
       // 🔴 DIR-24 — sem teto de 500 linhas: paginação por id (mesma proteção
       // contra o corte silencioso de 1000 do Supabase usada nos produtos).
       const data = await listarTudo(plataforma.entities.Customer);
@@ -763,7 +767,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         registrado_por_nome: currentUser?.full_name || '',
       };
       await plataforma.entities.Customer.update(contato.id, { contatos_metodo: [...historico, completo] });
-      toast.success(`Contato registrado: ${contato.full_name || ''}`);
+      // DIR-49.1 — o toast diz PRA ONDE foi: reunião de dia futuro mora na
+      // seção "Próximas reuniões", não na agenda de hoje.
+      if (registro.resultado === 'agendado' && registro.quando) {
+        const d = new Date(registro.quando);
+        toast.success(`Reunião agendada — ${Number.isNaN(d.getTime()) ? registro.quando : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · veja na agenda do Hábito 4`);
+      } else {
+        toast.success(`Contato registrado: ${contato.full_name || ''} — o "último contato" da fila mostra o desfecho`);
+      }
       await loadCustomers();
       return true;
     } catch (error) {

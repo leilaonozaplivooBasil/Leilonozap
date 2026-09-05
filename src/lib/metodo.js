@@ -177,6 +177,32 @@ export function linhaDoTempoUnificada(itens = []) {
   return [...(Array.isArray(itens) ? itens : [])].sort((a, b) => hora(a).localeCompare(hora(b)));
 }
 
+/**
+ * DIR-49.1 — o ÚLTIMO desfecho registrado de um cliente (pelo carimbo `em`),
+ * ou null. É o que a fila mostra pra provar que o registro salvou.
+ */
+export function ultimoContato(cliente) {
+  const lista = Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [];
+  if (!lista.length) return null;
+  return [...lista].sort((a, b) => String(a?.em || '').localeCompare(String(b?.em || ''))).at(-1) || null;
+}
+
+/**
+ * DIR-49.1 — as PRÓXIMAS reuniões: agendados de dias DEPOIS do dia dado,
+ * ordenados por data/hora. Reunião futura não pode ser invisível.
+ */
+export function proximasReunioes(clientes = [], depoisDeISO) {
+  const dia = String(depoisDeISO || '').slice(0, 10);
+  const proximas = [];
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      if (registro?.resultado === 'agendado' && String(registro.quando || '').slice(0, 10) > dia) proximas.push({ cliente, registro });
+    }
+  }
+  proximas.sort((a, b) => String(a.registro.quando).localeCompare(String(b.registro.quando)));
+  return proximas;
+}
+
 /** Plural honesto dos contadores: plural(1,'reunião','reuniões') → "1 reunião". */
 export function plural(n, umItem, varios) {
   return `${n} ${Number(n) === 1 ? umItem : varios}`;

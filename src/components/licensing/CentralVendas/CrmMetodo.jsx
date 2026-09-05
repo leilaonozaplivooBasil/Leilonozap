@@ -13,6 +13,7 @@ import {
   PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina,
   probabilidadeFechamento, produtoApresentacao,
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
+  ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -582,12 +583,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
           const agenda = agendaDoDiaContatos(clientesManuais, hoje);
           const reunioesEsteiraHoje = reunioes.filter((o) => String(o.reuniao_em).slice(0, 10) === hoje);
           const fmtHora = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+          const fmtQuando = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
           // 🙋/👥 DIR-49 — o escopo da agenda: MINHA é o padrão; TIME só existe
           // pra visão total. "Minha" = o que EU registrei/sou responsável.
           const minha = !visaoTotal || escopoAgenda === 'minha';
           const agendados = minha ? agenda.agendados.filter(({ registro }) => registro.registrado_por_id === uid) : agenda.agendados;
           const retornos = minha ? agenda.retornos.filter(({ registro }) => registro.registrado_por_id === uid) : agenda.retornos;
           const esteiraDoDia = minha ? reunioesEsteiraHoje.filter((o) => o.responsavel_id === uid || o.criado_por_id === uid) : reunioesEsteiraHoje;
+          // DIR-49.1 — reunião de dia futuro não pode ser invisível
+          const proximasTodas = proximasReunioes(clientesManuais, hoje);
+          const proximas = minha ? proximasTodas.filter(({ registro }) => registro.registrado_por_id === uid) : proximasTodas;
           // a LINHA DO TEMPO UNIFICADA: método + esteira + (na MINHA) o Google —
           // o Google é pessoal, nunca entra na visão do time.
           const linha = linhaDoTempoUnificada([
@@ -617,6 +622,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
+                          {(() => { // DIR-49.1 — o registro salvo aparece AQUI, na hora
+                            const u = ultimoContato(c);
+                            const r = u && RESULTADOS_CONTATO.find((x) => x.id === u.resultado);
+                            return r ? <p className="text-[11px] font-medium text-nz-verde truncate">último: {r.emoji} {r.label} · {fmtQuando(u.em)}</p> : null;
+                          })()}
                         </div>
                         <p className={`text-xs font-bold shrink-0 ${COR_FAIXA[prob.faixa.id]}`}>{prob.faixa.emoji} {prob.pct}%</p>
                         {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho */}
@@ -752,6 +762,35 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* 📆 DIR-49.1 — reunião de dia futuro tem casa: as próximas */}
+                {proximas.length > 0 && (
+                  <div className="pt-1.5 border-t border-nz-verde/20">
+                    <p className="text-xs font-bold text-nz-tinta mb-1.5">📆 {plural(proximas.length, 'próxima reunião', 'próximas reuniões')}</p>
+                    <div className="space-y-1.5">
+                      {proximas.map(({ cliente, registro }) => {
+                        const g = registro.google_event_link
+                          || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
+                        return (
+                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-nz-tinta truncate">📅 <span className="font-bold">{fmtQuando(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
+                              <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.local ? ` · ${registro.local}` : ''}</p>
+                            </div>
+                            {!minha && registro.registrado_por_nome && (
+                              <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {registro.registrado_por_nome}</span>
+                            )}
+                            {g && (
+                              <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> {registro.google_event_link ? 'Abrir no Google' : 'Google Agenda'}</Button>
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
