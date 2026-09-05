@@ -342,6 +342,7 @@ export default function XGameAdmin() {
                         {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
                         {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
                         {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
+                        {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
                         {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
                         {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
                       </p>

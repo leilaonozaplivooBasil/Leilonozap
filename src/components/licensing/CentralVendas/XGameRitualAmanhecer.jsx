@@ -43,6 +43,46 @@ export default function XGameRitualAmanhecer({ nome, sonho, onFechar, onConcluir
   const [aviso, setAviso] = useState('');
   const [tocando, setTocando] = useState(false);
   const somRef = useRef(null);
+  // 🎥 a VISUALIZAÇÃO GRAVADA: o vídeo da meditação é a comprovação do ritual,
+  // e o tempo de tela é carimbado do início ao fim.
+  const inicioRef = useRef(Date.now());
+  const [gravando, setGravando] = useState(false);
+  const [gravSeg, setGravSeg] = useState(0);
+  const [videoBlob, setVideoBlob] = useState(null);
+  const recRef = useRef(null);
+  const camRef = useRef(null);
+  const videoAoVivoRef = useRef(null);
+  const timerRef = useRef(null);
+
+  const pararGravacao = () => {
+    try { recRef.current?.state !== 'inactive' && recRef.current?.stop(); } catch { /* já parou */ }
+    camRef.current?.getTracks?.().forEach((t) => t.stop());
+    camRef.current = null;
+    clearInterval(timerRef.current);
+    setGravando(false);
+  };
+  const iniciarGravacao = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480 }, audio: false });
+      camRef.current = stream;
+      const pedacos = [];
+      const rec = new MediaRecorder(stream, MediaRecorder.isTypeSupported('video/webm') ? { mimeType: 'video/webm' } : undefined);
+      rec.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
+      rec.onstop = () => setVideoBlob(new Blob(pedacos, { type: rec.mimeType || 'video/webm' }));
+      recRef.current = rec;
+      rec.start(1000);
+      setVideoBlob(null); setGravSeg(0); setGravando(true);
+      setTimeout(() => { if (videoAoVivoRef.current) { videoAoVivoRef.current.srcObject = stream; videoAoVivoRef.current.play().catch(() => {}); } }, 50);
+      timerRef.current = setInterval(() => setGravSeg((s) => {
+        if (s + 1 >= 120) pararGravacao(); // teto de 2 min — visualização, não filme
+        return s + 1;
+      }), 1000);
+    } catch {
+      setAviso('Não consegui abrir a câmera — sem o vídeo, o ritual vai pra análise do gestor.');
+      setTimeout(() => setAviso(''), 6000);
+    }
+  };
+  useEffect(() => () => { pararGravacao(); }, []);
 
   const alternarSom = () => {
     if (somRef.current) { somRef.current.parar(); somRef.current = null; setTocando(false); return; }
@@ -120,6 +160,23 @@ export default function XGameRitualAmanhecer({ nome, sonho, onFechar, onConcluir
             ) : (
               <p className="text-white/60 text-sm">Seu Quadro dos Sonhos ainda está vazio — depois do ritual, coloca o primeiro lá no Hábito 1.</p>
             )}
+            {/* 🎥 a visualização gravada — a comprovação nasce do momento */}
+            {gravando ? (
+              <div className="space-y-2">
+                <video ref={videoAoVivoRef} playsInline muted className="mx-auto w-40 h-40 rounded-full object-cover ring-4 ring-amber-300/60" />
+                <p className="text-amber-200 text-xs font-bold animate-pulse">● gravando sua visualização · {gravSeg}s</p>
+                <p className="text-white/60 text-[11px]">Olha pro teu sonho. Respira. Visualiza você chegando lá.</p>
+                <button type="button" onClick={pararGravacao} className="rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2 hover:bg-white/25">
+                  ⏹ concluir a visualização
+                </button>
+              </div>
+            ) : videoBlob ? (
+              <p className="text-emerald-300 text-xs font-bold">🎥 visualização gravada ({gravSeg}s) ✔ <button type="button" onClick={iniciarGravacao} className="ml-2 text-white/60 underline">regravar</button></p>
+            ) : (
+              <button type="button" onClick={iniciarGravacao} className="rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2.5 hover:bg-white/25">
+                🎥 Gravar minha visualização <span className="block text-[10px] font-normal text-white/60">o vídeo é a sua comprovação — só você e o gestor veem</span>
+              </button>
+            )}
             <p className="text-white/70 text-xs">É por ISSO que você levantou. Qual a UMA coisa que você faz hoje por ele?</p>
             <input
               autoFocus
@@ -129,10 +186,11 @@ export default function XGameRitualAmanhecer({ nome, sonho, onFechar, onConcluir
               placeholder="a ação de hoje..."
               className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
             />
+            {aviso && <p className="text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
             <button
               type="button"
               disabled={acao.trim().length < ACAO_MIN}
-              onClick={() => setPasso(3)}
+              onClick={() => { pararGravacao(); setPasso(3); }}
               className="rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
             >Continuar</button>
           </>
@@ -152,7 +210,7 @@ export default function XGameRitualAmanhecer({ nome, sonho, onFechar, onConcluir
             <div>
               <button
                 type="button"
-                onClick={() => onConcluir({ gratidao: gratidao.trim(), acao: acao.trim() })}
+                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, gravSeg, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
                 className="mt-2 rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50"
               >Concluir o ritual ✔</button>
             </div>

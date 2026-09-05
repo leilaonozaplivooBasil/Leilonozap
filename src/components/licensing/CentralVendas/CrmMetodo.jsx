@@ -413,18 +413,34 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const mostrarPainel = visao === 'lista' || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao }) => {
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
     setRitualId(null);
     const agoraM = new Date().getHours() * 60 + new Date().getMinutes();
     const naJanela = agoraM >= RITUAL_INICIO_MIN && agoraM <= RITUAL_FIM_MIN;
+    // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
+    let videoUrl = '';
+    if (videoBlob) {
+      try {
+        const up = await plataforma.integrations.Core.UploadFile({
+          file: new File([videoBlob], `ritual_${hojeStr()}.webm`, { type: videoBlob.type || 'video/webm' }),
+          path: `xgame/rituais/${uid}/${hojeStr()}_${t.id}.webm`,
+        });
+        videoUrl = up?.file_url || up?.url || '';
+      } catch { videoUrl = ''; }
+    }
+    // ritual na janela E com o vídeo gravado = aprovado direto; sem vídeo ou
+    // fora de hora = segunda análise do gestor
+    const aprovadoDireto = naJanela && !!videoUrl;
     const comprovacao = {
       tipo: 'ritual', gratidao, acao, entrega: gratidao,
+      ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
-      status: naJanela ? 'aprovada_ritual' : 'em_analise',
+      status: aprovadoDireto ? 'aprovada_ritual' : 'em_analise',
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
-        o_que_viu: 'Ritual do Amanhecer completo dentro do sistema (gratidão + sonho + ação do dia)',
-        motivo: naJanela ? '' : 'ritual feito fora da janela do amanhecer (04:40–07:15) — segunda análise',
+        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
+        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização — segunda análise' : 'ritual fora da janela do amanhecer (04:40–07:15) — segunda análise'),
       },
     };
     try {
@@ -435,7 +451,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
         setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
       }
-      toast.success(naJanela ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo — fora da janela do amanhecer, vai pra análise do gestor.');
+      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo — vai pra análise do gestor (grave o vídeo dentro da janela do amanhecer pra aprovar direto).');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
@@ -930,7 +946,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               if (!t) return null;
               return (
                 <XGameRitualAmanhecer
-                  nome={(currentUser?.nickname || currentUser?.full_name || '').split(' ')[0]}
+                  nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
                   sonho={sonhos[0]}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
@@ -1294,7 +1310,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               /* 🗺️ F11 — a JORNADA DO DIA: o caminho, não a lista */
               <XGameJornada
                 tarefas={xgame ? xgame.tarefas : tarefas}
-                nome={(currentUser?.nickname || currentUser?.full_name || '').split(' ')[0]}
+                nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
                 pct={progresso.pct}
                 fogo={ehHoje ? fogo : null}
                 onTarefa={(t) => { if (!t.feito) alternarFeito(t); }}
