@@ -401,3 +401,28 @@ test('a ferramenta parou de pedir resumo', () => {
   assert.ok(!/resumido em 1-2 frases/.test(fonte),
     'registrar_solicitacao voltou a pedir resumo, contra "exatamente como foi dito"');
 });
+
+// ---------------------------------------------------------------------------
+// 7. A capa vem da foto de QUEM PEDIU, nao de quem confirmou (05/09/2026)
+// ---------------------------------------------------------------------------
+// Regra do dono: "um membro do grupo pede para o Zeca documentar algo, o Zeca posta como
+// capa a imagem que o membro do grupo tiver enviado na mensagem". Estava errado: a busca
+// olhava o historico de ctx.remetente — quem CONFIRMOU. Joao manda o print, Luiz libera,
+// e a busca ia no historico do Luiz: nao achava nada e caia na logo.
+test('a capa e procurada no historico do GRUPO, nao no de quem confirmou', () => {
+  assert.match(fonte,
+    /extrairUltimaImagemDoHistorico\(await carregarHistorico\(chaveDeMemoriaDoGrupo\(ctx\.grupoId\), 'heloim'\)\)/,
+    'a capa voltou a sair do historico da pessoa: quem manda o print nao e quem libera o post');
+});
+
+test('a memoria do grupo guarda a IMAGEM, nao so o texto', () => {
+  // sem o marcador [[midia:imagem|URL]] a foto fica invisivel pra quem publica depois
+  assert.match(fonte, /conteudoParaMemoria\(msg, `\$\{msg\.remetenteNome \|\| msg\.remetente\}/,
+    'a memoria do grupo voltou a gravar so o texto — a capa some');
+});
+
+test('no 1:1 a busca da imagem continua sendo a da pessoa', () => {
+  // grupo nulo (conversa direta): as duas pessoas sao a mesma, entao o fallback tem que existir
+  assert.match(fonte, /const daPessoa = doGrupo \? null/);
+  assert.match(fonte, /extrairUltimaImagemDoHistorico\(await carregarHistorico\(ctx\.remetente, 'heloim'\)\)/);
+});

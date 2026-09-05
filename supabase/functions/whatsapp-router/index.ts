@@ -1233,10 +1233,24 @@ const TOOLS_HELOIM: ToolDef[] = [
       const rota = canalDoGrupo(d.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO);
       const canal = input.canal ? String(input.canal).replace(/^#/, '') : rota.canal;
 
-      // Capa: a imagem que o usuário mandou; sem ela, a logo da Top Tech (regra do dono).
-      const historico = await carregarHistorico(ctx.remetente, 'heloim');
+      // 🔴 CAPA — 05/09/2026, correção depois do dono explicitar a regra: "um membro do grupo
+      // pede para o Zeca documentar algo, o Zeca posta como capa a imagem que o membro do
+      // grupo tiver enviado na mensagem".
+      //
+      // Estava errado: procurava a imagem no histórico de ctx.remetente — QUEM CONFIRMOU a
+      // postagem. Só que quem manda o print quase nunca é quem diz "pode postar". João manda
+      // a foto, Luiz libera, e a busca ia no histórico do Luiz: não achava nada e caía na
+      // logo. Exatamente o contrário do pedido.
+      //
+      // Agora procura primeiro no histórico do GRUPO (onde a foto realmente está) e só depois
+      // no de quem confirmou — que é o caso do 1:1, onde as duas pessoas são a mesma.
+      const doGrupo = ctx.grupoId
+        ? extrairUltimaImagemDoHistorico(await carregarHistorico(chaveDeMemoriaDoGrupo(ctx.grupoId), 'heloim'))
+        : null;
+      const daPessoa = doGrupo ? null
+        : extrairUltimaImagemDoHistorico(await carregarHistorico(ctx.remetente, 'heloim'));
       const { capa, origem, motivo } = escolherCapa({
-        imagemDoUsuario: extrairUltimaImagemDoHistorico(historico),
+        imagemDoUsuario: doGrupo || daPessoa,
         logoUrl: LOGO_TOPTECH_URL,
       });
 
@@ -2138,9 +2152,12 @@ async function processarMensagem(msg: MensagemExtraida) {
     // quem falou, senão vira um monte de frase sem dono. Grava e só DEPOIS decide se
     // responde: o custo que o gate abaixo protege é o da Claude, não o de um INSERT.
     if (emGrupo && msg.grupoId) {
+      // conteudoParaMemoria carrega o marcador [[midia:imagem|URL]] junto — é ele que permite
+      // a CAPA do post sair da foto que o membro do grupo mandou. Guardar só o texto aqui
+      // deixaria a imagem invisível pra quem publica depois.
       await salvarTurno(
         chaveDeMemoriaDoGrupo(msg.grupoId), 'heloim', 'user',
-        `${msg.remetenteNome || msg.remetente}: ${msg.texto || '(mídia sem texto)'}`,
+        conteudoParaMemoria(msg, `${msg.remetenteNome || msg.remetente}: ${msg.texto || '(mídia sem texto)'}`),
       ).catch((e) => console.warn('[grupo] memória do grupo falhou (segue sem):', e?.message));
     }
 
