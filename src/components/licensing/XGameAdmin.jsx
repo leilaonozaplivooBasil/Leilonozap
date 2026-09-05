@@ -329,7 +329,7 @@ export default function XGameAdmin() {
                         <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
                       </a>
                     ) : (
-                      <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>📚</span>
+                      <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>{c.tipo === 'ritual' ? '🌅' : '📚'}</span>
                     )}
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <p className="text-[11px] font-semibold text-gray-900 truncate">
@@ -337,6 +337,7 @@ export default function XGameAdmin() {
                       </p>
                       <p className="text-[10px] text-gray-500">
                         {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
+                        {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
                         {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
                         {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
                         {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}

@@ -688,6 +688,12 @@ export function validarComprovacao(tipo, entrega) {
 // Mínimo de um resumo de verdade (~2 frases) e SEM copiar e colar — colar é
 // bloqueado na tela, porque digitar é treino: fixa o aprendizado.
 export const RESUMO_MIN = 120;
+
+/** 🌅 A tarefa de gratidão/acordar abre o RITUAL DO AMANHECER (não formulário). */
+export const ehTarefaDeGratidao = (titulo) => /acordar|gratidao|bom dia/.test(_semAcento(titulo));
+// janela do ritual: de 04:40 até 07:15 vale direto; fora disso vai pra análise
+export const RITUAL_INICIO_MIN = 4 * 60 + 40;
+export const RITUAL_FIM_MIN = 7 * 60 + 15;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────
