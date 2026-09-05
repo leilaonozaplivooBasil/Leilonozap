@@ -27,7 +27,7 @@ import {
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
-  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN,
+  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -152,6 +152,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     const m = /^(\d{1,2}):(\d{2})$/.exec(horaTeste);
     return m ? Number(m[1]) * 60 + Number(m[2]) : agoraMin;
   }, [horaTeste, agoraMin]);
+  // 🧪 MODO DESENVOLVEDOR (só super admin): SIMULAÇÃO PURA — o dia ZERA,
+  // roda no horário escolhido e NADA é salvo no banco. As marcações da
+  // sessão de teste vivem só na memória (devMarcas); sair = tudo volta.
+  const modoDev = visaoTotal && !!horaTeste;
+  const [devMarcas, setDevMarcas] = useState({}); // { tarefaId: { feito, comprovacao } }
+  const tarefasJogo = useMemo(
+    () => (modoDev
+      ? tarefas.map((t) => ({ ...t, feito: !!devMarcas[t.id]?.feito, comprovacao: devMarcas[t.id]?.comprovacao || null, conferido: null }))
+      : tarefas),
+    [modoDev, tarefas, devMarcas]
+  );
+  const progressoJogo = useMemo(() => progressoDia(tarefasJogo), [tarefasJogo]);
   const [diasCiclo, setDiasCiclo] = useState([]);
   const [participante, setParticipante] = useState(null); // verbas/cargo (F1); sem cadastro = padrão da planilha
   const [cicloConfig, setCicloConfig] = useState(null); // xgame_config.ciclo_inicio (o INÍCIO X-GAME oficial)
@@ -201,16 +213,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       });
   }, [painel, uid, cicloConfig]);
   const xgame = useMemo(() => {
-    if (painel !== 'compromisso' || tarefas.length === 0) return null;
+    if (painel !== 'compromisso' || tarefasJogo.length === 0) return null;
     return resumoDoDia({
-      tarefas,
+      tarefas: tarefasJogo,
       agoraMin: ehHoje ? agoraMinJogo : 24 * 60,
       diasCiclo,
       hoje: ehHoje ? new Date() : new Date(`${dia}T12:00:00`),
       participante,
       cicloConfigISO: cicloConfig,
     });
-  }, [painel, tarefas, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig]);
+  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig]);
   const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
 
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
@@ -249,7 +261,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         setColegas(outros);
         if (outros.length) {
           const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', outros);
-          const m = {}; (us || []).forEach((u) => { m[u.id] = u.nickname || u.full_name || 'Colega'; });
+          const m = {}; (us || []).forEach((u) => { m[u.id] = nomeExibicao(u); });
           setNomesColegas(m);
         }
       });
@@ -350,7 +362,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         const ids = linhas.map((l) => l.user_id);
         if (ids.length) {
           const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
-          const m = {}; (us || []).forEach((u) => { m[u.id] = u.nickname || u.full_name || '—'; });
+          const m = {}; (us || []).forEach((u) => { m[u.id] = nomeExibicao(u); });
           linhas.forEach((l) => { l.nome = m[l.user_id] || l.user_id.slice(0, 6); });
         }
         setRankingLinhas(linhas);
@@ -367,7 +379,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // (componente XGameAdmin). Aqui fica só o jogo do jogador.
   // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
   useEffect(() => {
-    if (!xgame || !uid || !ehHoje) return;
+    if (!xgame || !uid || !ehHoje || modoDev) return; // 🧪 modo dev nunca grava placar
     supabase.from('xgame_diario').upsert({
       user_id: uid, data: hojeStr(), ciclo_inicio: dataISO(xgame.ciclo_inicio),
       tarefas_total: xgame.tarefas_total, tarefas_feitas: xgame.tarefas_feitas,
@@ -465,6 +477,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [ritualId, setRitualId] = useState(null);
   const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
     setRitualId(null);
+    // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
+    if (modoDev) {
+      setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: true, comprovacao: { tipo: 'ritual', valido: true, status: 'aprovada_ritual', dev: true, gratidao, acao, entrega: gratidao, quando: new Date().toISOString() } } }));
+      toast.success('🧪 modo dev: ritual simulado — nada foi salvo');
+      return;
+    }
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
     const naJanela = agoraM >= RITUAL_INICIO_MIN && agoraM <= RITUAL_FIM_MIN;
     // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
@@ -517,6 +535,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // dados = { file, texto } vindos do modal (texto = aprendizado OU link opcional)
   const concluirComComprovacao = async (t, dados) => {
     const tipo = comprovando.tipo;
+    // 🧪 MODO DEV: valida o fluxo na tela, mas nada sobe nem grava
+    if (modoDev) {
+      if (tipo === 'aprendizado') {
+        const v = validarComprovacao(tipo, dados.texto);
+        if (!v.valido) { setComprovando({ ...comprovando, erro: v.motivo }); return; }
+      } else if (!dados.file) {
+        setComprovando({ ...comprovando, erro: 'anexe uma imagem pra simular a comprovação' });
+        return;
+      }
+      setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: true, comprovacao: { tipo, valido: true, status: 'aprovada_ia', dev: true, entrega: '(simulada no modo dev)', quando: new Date().toISOString() } } }));
+      setComprovando(null);
+      toast.success('🧪 modo dev: comprovação simulada — nada foi salvo');
+      return;
+    }
     let comprovacao;
     // 📚 estudo exige o RESUMO DIGITADO primeiro (mínimo de verdade, sem colar)
     if (tipo === 'aprendizado') {
@@ -590,6 +622,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   };
 
   const alternarFeito = async (t) => {
+    // 🧪 MODO DEV: os fluxos abrem normal, mas a marcação fica só na memória
+    if (modoDev) {
+      if (!t.feito) {
+        if (ehTarefaDeGratidao(t.titulo)) { setRitualId(t.id); return; }
+        const tipoDev = tipoDeValidacao(t);
+        if (tipoDev) { setComprovando({ id: t.id, tipo: tipoDev, erro: '', enviando: false }); return; }
+      }
+      setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: !t.feito, comprovacao: null } }));
+      return;
+    }
     // 🌅 F11 — gratidão abre o RITUAL DO AMANHECER, não formulário
     if (!t.feito && ehTarefaDeGratidao(t.titulo) && !t.comprovacao?.valido) {
       setRitualId(t.id);
@@ -1044,10 +1086,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 <p className="text-sm font-bold text-nz-tinta capitalize min-w-[180px] text-center">{fmtDia(dia)}{dia === hojeStr() ? ' · HOJE' : ''}</p>
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(1)}><ChevronRight className="w-5 h-5 text-nz-tinta" /></Button>
               </div>
-              <p className="text-sm font-semibold text-nz-tinta">{progresso.feitas}/{progresso.total} feitas · {progresso.pct.toFixed(0)}%</p>
+              <p className="text-sm font-semibold text-nz-tinta">{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}%</p>
             </div>
             <div className="h-2 rounded-full bg-nz-cinza-fundo overflow-hidden">
-              <div className="bg-nz-verde h-full transition-all" style={{ width: `${progresso.pct}%` }} />
+              <div className="bg-nz-verde h-full transition-all" style={{ width: `${progressoJogo.pct}%` }} />
             </div>
 
             {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══ */}
@@ -1069,8 +1111,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   {visaoTotal && (
                     horaTeste ? (
                       <span className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white text-[10px] font-bold px-3 py-1.5 shadow animate-pulse">
-                        MODO TESTE · o jogo está às {horaTeste}
-                        <button type="button" onClick={() => { setHoraTeste(''); setHoraRascunho(''); }} className="rounded-full bg-white/25 hover:bg-white/40 px-2 py-0.5">sair</button>
+                        🧪 MODO DEV · dia zerado às {horaTeste} · nada é salvo
+                        <button type="button" onClick={() => { setHoraTeste(''); setHoraRascunho(''); setDevMarcas({}); }} className="rounded-full bg-white/25 hover:bg-white/40 px-2 py-0.5">sair</button>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
@@ -1084,9 +1126,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                         <button
                           type="button"
                           disabled={!horaRascunho}
-                          onClick={() => setHoraTeste(horaRascunho)}
+                          onClick={() => { setDevMarcas({}); setHoraTeste(horaRascunho); }}
                           className="rounded-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-[10px] font-bold px-3 py-1.5"
-                        >Aplicar horário de teste</button>
+                        >🧪 Entrar no modo dev</button>
                       </span>
                     )
                   )}
@@ -1116,7 +1158,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 </p>
               </div>
             )}
-            {xgame && ehHoje && progresso.pct >= 100 && (
+            {xgame && ehHoje && progressoJogo.pct >= 100 && (
               <div className="rounded-lg border border-nz-verde bg-nz-verde-fundo/60 px-3 py-2 text-center animate-pulse">
                 <p className="text-sm font-bold text-nz-verde">🎊 💎 DIA PERFEITO — BRILHANTE! PARABÉNS! 🎊</p>
               </div>
@@ -1387,9 +1429,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             ) : visao === 'jornada' ? (
               /* 🗺️ F11 — a JORNADA DO DIA: o caminho, não a lista */
               <XGameJornada
-                tarefas={xgame ? xgame.tarefas : tarefas}
+                tarefas={xgame ? xgame.tarefas : tarefasJogo}
                 nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
-                pct={progresso.pct}
+                pct={progressoJogo.pct}
                 fogo={ehHoje ? fogo : null}
                 onTarefa={(t) => { if (!t.feito) alternarFeito(t); }}
                 acaoExtra={linkAgendaDe}
@@ -1397,7 +1439,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               />
             ) : (
               PERIODOS.map((p) => {
-                const doPeriodo = tarefas.filter((t) => periodoDe(t.hora) === p.id);
+                const doPeriodo = tarefasJogo.filter((t) => periodoDe(t.hora) === p.id);
                 if (doPeriodo.length === 0) return null;
                 return (
                   <div key={p.id}>

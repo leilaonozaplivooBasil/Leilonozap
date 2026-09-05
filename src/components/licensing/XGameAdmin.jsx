@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -99,7 +99,7 @@ export default function XGameAdmin() {
 
   const nomeDe = (id) => {
     const u = usuarios.find((x) => x.id === id);
-    return u?.nickname || u?.full_name || (id ? id.slice(0, 6) : '—');
+    return u ? nomeExibicao(u) : (id ? id.slice(0, 6) : '—');
   };
 
   // candidatos agrupados pelo plano de carreira + filtro do nome ao digitar
@@ -422,7 +422,7 @@ export default function XGameAdmin() {
                       onClick={() => setNovo(novo === u.id ? '' : u.id)}
                       className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${novo === u.id ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
                     >
-                      <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{u.nickname || u.full_name || u.id.slice(0, 6)}</span>
+                      <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{nomeExibicao(u)}</span>
                       {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
                     </button>
                   ))}

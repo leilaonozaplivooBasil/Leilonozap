@@ -692,6 +692,21 @@ export function validarComprovacao(tipo, entrega) {
 // travaria a jornada — o desafio sobe depois, se o time engolir fácil).
 export const RESUMO_MIN = 400;
 
+// ── 👤 O PADRÃO DE NOME DO JOGO (ordem do dono, 05/09) ──────────────
+// Sempre o nome do CADASTRO, sempre "Nome Sobrenome" (primeiro + último),
+// sempre com inicial maiúscula — nunca apelido, nunca CAIXA ALTA, nunca o
+// nome completo gigante. Um padrão só, no app inteiro.
+export function nomeExibicao(p) {
+  const bruto = String(p?.full_name || p?.nickname || '').trim();
+  if (!bruto) return 'Sem nome';
+  const tc = (w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w);
+  const partes = bruto.split(/\s+/).filter((w) => !/^(da|de|do|das|dos|e)$/i.test(w));
+  if (!partes.length) return tc(bruto);
+  const primeiro = tc(partes[0]);
+  const ultimo = partes.length > 1 ? tc(partes[partes.length - 1]) : '';
+  return ultimo ? `${primeiro} ${ultimo}` : primeiro;
+}
+
 /** 🌅 A tarefa de gratidão/acordar abre o RITUAL DO AMANHECER (não formulário). */
 export const ehTarefaDeGratidao = (titulo) => /acordar|gratidao|bom dia/.test(_semAcento(titulo));
 // janela do ritual: de 04:40 até 07:15 vale direto; fora disso vai pra análise
