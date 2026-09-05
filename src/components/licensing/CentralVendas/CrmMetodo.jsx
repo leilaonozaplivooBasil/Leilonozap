@@ -233,6 +233,106 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     setNotas({});
   };
   const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🏆 F5 — RANKING H-TOKEN da equipe no ciclo (filtros da planilha:
+  // Moeda / MvM / Remuneração / Nome). Lê o placar de todo mundo e agrega.
+  const [rankingAberto, setRankingAberto] = useState(false);
+  const [rankingLinhas, setRankingLinhas] = useState([]);
+  const [ordemRanking, setOrdemRanking] = useState('token');
+  useEffect(() => {
+    if (!rankingAberto || painel !== 'compromisso') return;
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('xgame_diario').select('user_id,mvm_dia,token_dia,pontos,detalhes').eq('ciclo_inicio', ini)
+      .then(async ({ data }) => {
+        const por = {};
+        (data || []).forEach((d) => {
+          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, token: 0, mvm: 0, pontos: 0, xpay: 0 });
+          r.dias += 1;
+          r.token += Number(d.token_dia) || 0;
+          r.mvm += Number(d.mvm_dia) || 0;
+          r.pontos += Number(d.pontos) || 0;
+          r.xpay += Number(d.detalhes?.xpay_ganho) || 0;
+        });
+        const linhas = Object.values(por).map((r) => ({ ...r, token: r.token / r.dias, mvm: r.mvm / r.dias }));
+        const ids = linhas.map((l) => l.user_id);
+        if (ids.length) {
+          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
+          const m = {}; (us || []).forEach((u) => { m[u.id] = u.nickname || u.full_name || '—'; });
+          linhas.forEach((l) => { l.nome = m[l.user_id] || l.user_id.slice(0, 6); });
+        }
+        setRankingLinhas(linhas);
+      });
+  }, [rankingAberto, painel, cicloConfig]);
+  const rankingOrdenado = useMemo(() => {
+    const l = [...rankingLinhas];
+    if (ordemRanking === 'nome') l.sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+    else l.sort((a, b) => (b[ordemRanking] || 0) - (a[ordemRanking] || 0));
+    return l;
+  }, [rankingLinhas, ordemRanking]);
+  // 🛠️ F5 — PAINEL ADMIN DA X-GAME (só visão total): cadastra participantes,
+  // abre o ciclo oficial e faz a CONFERÊNCIA DUPLA (o "SIM" do gestor).
+  const MULTA_POR_CARGO = { trainee: 50, executivo: 200, diretor: 500, ceo: 500 };
+  const [adminAberto, setAdminAberto] = useState(false);
+  const [adminParticipantes, setAdminParticipantes] = useState([]);
+  const [adminUsuarios, setAdminUsuarios] = useState([]);
+  const [adminNovo, setAdminNovo] = useState('');
+  const [adminCicloInicio, setAdminCicloInicio] = useState('');
+  const [confUser, setConfUser] = useState(''); // participante em conferência
+  const [confTarefas, setConfTarefas] = useState([]);
+  const carregarAdmin = useCallback(() => {
+    supabase.from('xgame_participantes').select('*').order('created_date')
+      .then(({ data }) => setAdminParticipantes(data || []));
+    supabase.from('app_users').select('id,full_name,nickname').order('full_name')
+      .then(({ data }) => setAdminUsuarios(data || []));
+  }, []);
+  useEffect(() => {
+    if (!adminAberto || !visaoTotal) return;
+    carregarAdmin();
+    setAdminCicloInicio(cicloConfig ? String(cicloConfig).slice(0, 10) : '');
+  }, [adminAberto, visaoTotal, carregarAdmin, cicloConfig]);
+  const nomeUsuario = (id) => {
+    const u = adminUsuarios.find((x) => x.id === id);
+    return u?.nickname || u?.full_name || nomesColegas[id] || (id ? id.slice(0, 6) : '—');
+  };
+  const adicionarParticipante = async () => {
+    if (!adminNovo) return;
+    setSalvando(true);
+    const { error } = await supabase.from('xgame_participantes')
+      .upsert({ user_id: adminNovo, ativo: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    setSalvando(false);
+    if (error) { toast.error('Erro ao cadastrar participante.'); return; }
+    toast.success('Participante no jogo!');
+    setAdminNovo('');
+    carregarAdmin();
+  };
+  const salvarParticipante = async (p, patch) => {
+    const { error } = await supabase.from('xgame_participantes')
+      .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', p.id);
+    if (error) { toast.error('Erro ao salvar.'); return; }
+    setAdminParticipantes((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
+  };
+  const salvarCicloOficial = async () => {
+    if (!adminCicloInicio) { toast.error('Escolha a data de início do ciclo.'); return; }
+    setSalvando(true);
+    const { error } = await supabase.from('xgame_config')
+      .upsert({ id: 'atual', ciclo_inicio: adminCicloInicio, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    setSalvando(false);
+    if (error) { toast.error('Erro ao abrir o ciclo.'); return; }
+    toast.success('Ciclo X-GAME aberto!');
+    setCicloConfig(adminCicloInicio);
+  };
+  const abrirConferencia = async (userId) => {
+    setConfUser(userId);
+    setConfTarefas([]);
+    if (!userId) return;
+    const { data } = await supabase.from('metodo_tarefas')
+      .select('id,hora,titulo,feito,conferido').eq('user_id', userId).eq('data', dia).order('hora');
+    setConfTarefas(data || []);
+  };
+  const conferirTarefa = async (t, valor) => {
+    const { error } = await supabase.from('metodo_tarefas').update({ conferido: valor }).eq('id', t.id);
+    if (error) { toast.error('Erro na conferência.'); return; }
+    setConfTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, conferido: valor } : x)));
+  };
   // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
   useEffect(() => {
     if (!xgame || !uid || !ehHoje) return;
@@ -840,6 +940,153 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               </div>
             )}
 
+            {/* ══ 🏆 F5 — RANKING H-TOKEN DA EQUIPE (filtros da planilha) ══ */}
+            {xgame && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <button type="button" onClick={() => setRankingAberto(!rankingAberto)} className="font-semibold text-nz-tinta hover:text-nz-verde">
+                    {rankingAberto ? '▾' : '▸'} 🏆 Ranking H-TOKEN da equipe
+                  </button>
+                  {rankingAberto && (
+                    <div className="flex gap-1 flex-wrap">
+                      {[['token', 'Moeda'], ['mvm', 'MvM'], ['xpay', 'Remuneração'], ['nome', 'Nome']].map(([k, rotulo]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setOrdemRanking(k)}
+                          className={`px-2 py-0.5 rounded border text-[10px] font-medium ${ordemRanking === k ? 'border-nz-verde text-nz-verde bg-nz-verde-fundo/50' : 'border-nz-borda text-nz-tinta-fraca hover:border-nz-verde'}`}
+                        >{rotulo}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {rankingAberto && (rankingOrdenado.length === 0 ? (
+                  <p className="text-[11px] text-nz-tinta-fraca">Ninguém pontuou neste ciclo ainda — o placar nasce quando o time joga o dia.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {rankingOrdenado.map((l, i) => (
+                      <div key={l.user_id} className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
+                        <span className="text-[11px] font-medium text-nz-tinta truncate">
+                          <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
+                        </span>
+                        <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
+                          {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ══ 🛠️ F5 — PAINEL ADMIN DA X-GAME (só visão total, padrão DIR-52) ══ */}
+            {visaoTotal && (
+              <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2 text-xs">
+                <button type="button" onClick={() => setAdminAberto(!adminAberto)} className="font-bold text-nz-tinta hover:text-nz-verde text-sm">
+                  {adminAberto ? '▾' : '▸'} 🛠️ Admin da X-GAME <span className="font-normal text-xs text-nz-tinta-fraca">— participantes, ciclo e conferência dupla</span>
+                </button>
+                {adminAberto && (
+                  <>
+                    {/* ciclo oficial */}
+                    <div className="flex items-end gap-2 flex-wrap pt-1">
+                      <label className="text-[11px] text-nz-tinta">
+                        Início oficial do ciclo (22 dias úteis):
+                        <Input type="date" value={adminCicloInicio} onChange={(e) => setAdminCicloInicio(e.target.value)} className="h-8 mt-0.5 bg-white" />
+                      </label>
+                      <Button size="sm" onClick={salvarCicloOficial} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
+                        Abrir ciclo
+                      </Button>
+                      <span className="text-[10px] text-nz-tinta-fraca">sem data vigente, vale o 1º dia útil do mês</span>
+                    </div>
+
+                    {/* cadastrar participante */}
+                    <div className="flex items-end gap-2 flex-wrap pt-1 border-t border-amber-400/30">
+                      <label className="text-[11px] text-nz-tinta">
+                        Colocar no jogo:
+                        <select value={adminNovo} onChange={(e) => setAdminNovo(e.target.value)} className="block mt-0.5 text-[11px] border border-nz-borda rounded px-2 py-1.5 bg-white text-nz-tinta min-w-[180px]">
+                          <option value="">— escolha a pessoa —</option>
+                          {adminUsuarios.filter((u) => !adminParticipantes.some((p) => p.user_id === u.id)).map((u) => (
+                            <option key={u.id} value={u.id}>{u.nickname || u.full_name || u.id.slice(0, 6)}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <Button size="sm" onClick={adicionarParticipante} disabled={salvando || !adminNovo} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
+                        <UserPlus className="w-3.5 h-3.5 mr-1" /> Cadastrar
+                      </Button>
+                    </div>
+
+                    {/* participantes: cargo, perfil, verbas, multa, ativo */}
+                    {adminParticipantes.length > 0 && (
+                      <div className="space-y-1.5 pt-1 border-t border-amber-400/30">
+                        <p className="text-[11px] font-semibold text-nz-tinta">Participantes ({adminParticipantes.filter((p) => p.ativo).length} ativos):</p>
+                        {adminParticipantes.map((p) => (
+                          <div key={p.id} className={`rounded border px-2 py-1.5 bg-white space-y-1 ${p.ativo ? 'border-nz-borda' : 'border-nz-borda opacity-60'}`}>
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className="text-[11px] font-semibold text-nz-tinta">{nomeUsuario(p.user_id)}</span>
+                              <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[10px] font-bold ${p.ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                                {p.ativo ? '● ATIVO' : '○ inativo'}
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap text-[10px] text-nz-tinta-fraca">
+                              <label>cargo{' '}
+                                <select value={p.cargo} onChange={(e) => salvarParticipante(p, { cargo: e.target.value, multa_atraso: MULTA_POR_CARGO[e.target.value] ?? p.multa_atraso })} className="border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta">
+                                  {['trainee', 'executivo', 'diretor', 'ceo'].map((c) => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </label>
+                              <label>perfil{' '}
+                                <select value={p.perfil} onChange={(e) => salvarParticipante(p, { perfil: e.target.value })} className="border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta">
+                                  {['estrategico', 'comercial', 'operacional'].map((c) => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </label>
+                              <label>produção R${' '}
+                                <input type="number" defaultValue={p.verba_producao} onBlur={(e) => salvarParticipante(p, { verba_producao: Number(e.target.value) || 0 })} className="w-16 border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta tabular-nums" />
+                              </label>
+                              <label>bônus R${' '}
+                                <input type="number" defaultValue={p.verba_bonus} onBlur={(e) => salvarParticipante(p, { verba_bonus: Number(e.target.value) || 0 })} className="w-14 border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta tabular-nums" />
+                              </label>
+                              <label>venda R${' '}
+                                <input type="number" defaultValue={p.valor_venda} onBlur={(e) => salvarParticipante(p, { valor_venda: Number(e.target.value) || 0 })} className="w-14 border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta tabular-nums" />
+                              </label>
+                              <span>multa {fmtReais(p.multa_atraso)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* conferência dupla — o SIM do gestor no dia exibido */}
+                    <div className="space-y-1.5 pt-1 border-t border-amber-400/30">
+                      <p className="text-[11px] font-semibold text-nz-tinta">Conferência dupla do dia {fmtDia(dia)} — o SIM do gestor:</p>
+                      <select value={confUser} onChange={(e) => abrirConferencia(e.target.value)} className="text-[11px] border border-nz-borda rounded px-2 py-1.5 bg-white text-nz-tinta min-w-[180px]">
+                        <option value="">— escolha o participante —</option>
+                        {adminParticipantes.filter((p) => p.ativo).map((p) => (
+                          <option key={p.user_id} value={p.user_id}>{nomeUsuario(p.user_id)}</option>
+                        ))}
+                      </select>
+                      {confUser && (confTarefas.length === 0 ? (
+                        <p className="text-[11px] text-nz-tinta-fraca">Sem Master Task nesse dia pra essa pessoa.</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {confTarefas.map((t) => (
+                            <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-nz-borda bg-white px-2 py-1">
+                              <span className={`text-[11px] truncate ${t.feito ? 'text-nz-tinta' : 'text-nz-tinta-fraca line-through'}`}>
+                                {t.hora} — {t.titulo} {t.feito ? '✔' : '(não marcada)'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => conferirTarefa(t, t.conferido === true ? null : true)}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded border ${t.conferido === true ? 'border-nz-verde text-white bg-nz-verde' : 'border-nz-borda text-nz-tinta-fraca hover:border-nz-verde'}`}
+                              >{t.conferido === true ? 'SIM ✔' : 'confirmar SIM'}</button>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <p className="text-sm text-nz-tinta-fraca">Dia sem Master Task ainda. "O compromisso é uma decisão diária."</p>
@@ -873,6 +1120,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
                                   {t.feito ? '+' : ''}{fmtReais(xgame.valores[t.id])}
                                 </span>
+                              )}
+                              {/* 🛠️ F5 — conferência dupla: o SIM do gestor confirmado */}
+                              {t.feito && t.conferido === true && (
+                                <span className="shrink-0 text-[10px] font-bold text-nz-verde" title="Conferência dupla: o gestor confirmou o SIM">✔✔ conferida</span>
                               )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
