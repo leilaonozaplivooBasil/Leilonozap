@@ -14,6 +14,8 @@ import {
   probabilidadeFechamento, produtoApresentacao,
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
   ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
+  idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
+  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -34,7 +36,7 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onNovoCliente, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onIr }) {
   const uid = currentUser?.id;
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
@@ -51,8 +53,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
   const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
   const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
-  const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato:null} = agendar livre (DIR-48/49)
+  const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato, editar:registro} = editar (DIR-50); {contato:null} = agendar livre
   const [escopoAgenda, setEscopoAgenda] = useState('minha'); // DIR-49: 'minha' é o padrão; 'time' só pra visão total
+  const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
+  const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
+  const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', duracao_min: 60 });
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
   const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
@@ -201,10 +206,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
     if (ok) setQualificando(null); // falhou? modal fica aberto, notas não se perdem
   };
 
-  // 📜 DIR-47 — registrar o desfecho de um contato
+  // 📜 DIR-47/50 — registrar o desfecho (novo) ou salvar a edição (existente)
   const salvarRegistroContato = async (contato, registro) => {
     setSalvando(true);
-    const ok = await onRegistrarContato?.(contato, registro);
+    const ok = registroAberto?.editar
+      ? await onEditarRegistro?.(contato, { ...registroAberto.editar, ...registro })
+      : await onRegistrarContato?.(contato, registro);
     setSalvando(false);
     if (ok) setRegistroAberto(null);
   };
@@ -280,6 +287,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
       });
       if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
       const j = await resp.json();
+      if (j?.id) registro.google_event_id = j.id; // DIR-50: o id permite editar/apagar depois
       toast.success('Evento criado na sua Google Agenda!');
       return j?.htmlLink || null;
     } catch (e) {
@@ -288,6 +296,113 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
       toast.info(`Não deu pra criar no Google agora (${e.message}) — o agendamento foi salvo e o botão Google Agenda continua na agenda do dia.`);
       return null;
     }
+  };
+
+  // ✏️ DIR-50 — edita o evento JÁ CRIADO na agenda da pessoa (PATCH). Sem id
+  // (registro antigo sem link)? Cria um novo. Falhou? Devolve o link antigo e
+  // avisa honesto — a edição no método nunca trava por causa do Google.
+  const atualizarEventoNoGoogle = (registroOriginal) => async (registro, cliente) => {
+    const eventId = idDoEventoGoogle(registroOriginal);
+    if (!eventId) return criarEventoNoGoogle(registro, cliente);
+    try {
+      const corpo = eventoGoogleDaReuniao({
+        titulo: registro.titulo_reuniao || `Reunião — ${cliente?.full_name || 'contato'} (Leilão NoZap)`,
+        inicio: registro.quando,
+        duracaoMin: registro.duracao_min || 60,
+        detalhes: registro.obs || 'Apresentação de sucesso — Leilão NoZap',
+        local: registro.local || '',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
+      });
+      if (!corpo) return registroOriginal.google_event_link || null;
+      const token = await obterTokenGoogle();
+      const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+      });
+      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      const j = await resp.json();
+      registro.google_event_id = j?.id || eventId;
+      toast.success('Evento atualizado na sua Google Agenda!');
+      return j?.htmlLink || registroOriginal.google_event_link || null;
+    } catch (e) {
+      console.warn('Atualizar evento Google:', e);
+      setGoogleToken(null);
+      toast.info(`A reunião foi atualizada no método, mas o Google não deixou mexer no evento agora (${e.message}) — ajuste por lá pelo link.`);
+      return registroOriginal.google_event_link || null;
+    }
+  };
+
+  // 🗑️ DIR-50 — apaga o evento na Google Agenda (DELETE). Falhou? A exclusão
+  // no método segue, com aviso honesto pra apagar por lá.
+  const apagarEventoNoGoogle = async (registro) => {
+    const eventId = idDoEventoGoogle(registro);
+    if (!eventId) return true;
+    try {
+      const token = await obterTokenGoogle();
+      const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw new Error(`Google respondeu ${resp.status}`);
+      toast.success('Evento apagado da sua Google Agenda.');
+      return true;
+    } catch (e) {
+      console.warn('Apagar evento Google:', e);
+      setGoogleToken(null);
+      toast.info(`Excluída do método — mas o Google não deixou apagar o evento agora (${e.message}). Apague por lá pelo link, se ainda existir.`);
+      return false;
+    }
+  };
+
+  // 🗑️ DIR-50 — excluir com 2 cliques (o segundo confirma), Google junto
+  const excluirRegistro = async (cliente, registro) => {
+    if (confirmaExcluir !== registro.id) { setConfirmaExcluir(registro.id); return; }
+    setConfirmaExcluir(null);
+    setSalvando(true);
+    await apagarEventoNoGoogle(registro);
+    await onExcluirRegistro?.(cliente, registro.id);
+    setSalvando(false);
+  };
+
+  // 🏛️ DIR-52 — reuniões fixas do negócio (tabela própria; leitura pra todos)
+  useEffect(() => {
+    if (painel !== 'contato') return;
+    plataforma.entities.ReuniaoEmpresa.filter({})
+      .then((rows) => setReunioesEmpresa(Array.isArray(rows) ? rows : []))
+      .catch(() => setReunioesEmpresa([])); // tabela ainda sem migração → lista vazia, sem quebrar
+  }, [painel]);
+
+  const criarReuniaoEmpresa = async () => {
+    if (!novaEmpresa.titulo.trim() || !novaEmpresa.hora) return;
+    setSalvando(true);
+    try {
+      const linha = {
+        titulo: novaEmpresa.titulo.trim(),
+        dia_semana: novaEmpresa.recorrencia === 'semana' ? Number(novaEmpresa.dia_semana) : null,
+        data: novaEmpresa.recorrencia === 'data' ? novaEmpresa.data || null : null,
+        hora: novaEmpresa.hora,
+        duracao_min: Number(novaEmpresa.duracao_min) || 60,
+        ativo: true,
+        criado_por_id: uid || null,
+        criado_por_nome: currentUser?.full_name || '',
+      };
+      const criada = await plataforma.entities.ReuniaoEmpresa.create(linha);
+      setReunioesEmpresa((prev) => [...prev, criada?.id ? criada : linha]);
+      setNovaEmpresa({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', duracao_min: 60 });
+      toast.success('Reunião da empresa salva — entra na agenda de todo mundo!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao salvar — a migração da DIR-52 (reunioes_empresa) já foi colada no banco?');
+    } finally { setSalvando(false); }
+  };
+
+  const excluirReuniaoEmpresa = async (r) => {
+    if (confirmaExcluir !== `emp-${r.id}`) { setConfirmaExcluir(`emp-${r.id}`); return; }
+    setConfirmaExcluir(null);
+    setReunioesEmpresa((prev) => prev.filter((x) => x.id !== r.id));
+    try { await plataforma.entities.ReuniaoEmpresa.delete(r.id); toast.success('Reunião da empresa excluída.'); }
+    catch { toast.error('Erro ao excluir — tente de novo'); }
   };
 
   const habito = HABITOS.find((h) => h.id === painel);
@@ -593,14 +708,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
           // DIR-49.1 — reunião de dia futuro não pode ser invisível
           const proximasTodas = proximasReunioes(clientesManuais, hoje);
           const proximas = minha ? proximasTodas.filter(({ registro }) => registro.registrado_por_id === uid) : proximasTodas;
-          // a LINHA DO TEMPO UNIFICADA: método + esteira + (na MINHA) o Google —
-          // o Google é pessoal, nunca entra na visão do time.
+          // a LINHA DO TEMPO UNIFICADA: método + esteira + empresa + (na MINHA)
+          // o Google — o Google é pessoal, nunca entra na visão do time; a
+          // reunião da EMPRESA é de todos, entra nas duas.
+          const empresaHoje = reunioesEmpresaDoDia(reunioesEmpresa, hoje);
           const linha = linhaDoTempoUnificada([
             ...agendados.map(({ cliente, registro }) => ({ origem: 'metodo', quando: registro.quando, cliente, registro })),
             ...esteiraDoDia.map((o) => ({ origem: 'esteira', quando: o.reuniao_em, o })),
+            ...empresaHoje.map((r) => ({ origem: 'empresa', quando: r.quando, r })),
             ...(minha && Array.isArray(googleEventos) ? googleEventos.map((e) => ({ origem: 'google', quando: e.inicio, e })) : []),
           ]);
-          const nReunioes = agendados.length + esteiraDoDia.length;
+          const nReunioes = agendados.length + esteiraDoDia.length + empresaHoje.length;
+          const resumoSemana = resumoSemanaReunioes(clientesManuais, hoje); // DIR-51
+          const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
+          const quem = (nome) => (minha ? 'você' : (nome || 'sem dono')); // DIR-50: dono na frente
           return (
             <div className="space-y-4">
               <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
@@ -693,6 +814,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                 {!minha && (
                   <p className="text-[11px] text-nz-tinta-fraca">👥 Você está vendo as reuniões DO MÉTODO do time inteiro — a Google Agenda é pessoal e só aparece na sua.</p>
                 )}
+                {/* 📊 DIR-51 — a visão MACRO da semana, só no TIME INTEIRO */}
+                {!minha && (
+                  <div className="rounded-lg bg-white border border-nz-verde/25 p-2.5">
+                    <p className="text-xs font-bold text-nz-tinta">📊 Semana: {plural(resumoSemana.total, 'reunião agendada', 'reuniões agendadas')} <span className="font-normal text-nz-tinta-fraca">(meta do método: {META_REUNIOES_SEMANA}/pessoa)</span></p>
+                    {resumoSemana.porPessoa.length > 0 && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                        {resumoSemana.porPessoa.map((p) => (
+                          <span key={p.id} className="text-[11px] text-nz-tinta"><span className="font-bold text-nz-verde">👤 {p.nome}</span> {plural(p.total, 'reunião', 'reuniões')} · <span className={p.pct >= 100 ? 'text-nz-verde font-bold' : ''}>{p.pct}% da meta</span></span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {linha.length === 0 && retornos.length === 0 ? (
                   <p className="text-xs text-nz-tinta-fraca text-center py-2">
                     {minha && Array.isArray(googleEventos) && googleEventos.length === 0
@@ -709,16 +843,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                         return (
                           <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-nz-tinta truncate">📅 <span className="font-bold">{fmtHora(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
+                              <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 📅 <span className="font-bold">{fmtHora(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.obs ? ` · ${registro.obs}` : ''}</p>
                             </div>
-                            {!minha && registro.registrado_por_nome && (
-                              <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {registro.registrado_por_nome}</span>
-                            )}
                             {g && (
                               <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
                                 <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> {registro.google_event_link ? 'Abrir no Google' : 'Google Agenda'}</Button>
                               </a>
+                            )}
+                            {podeMexer(registro) && (
+                              <div className="flex gap-1 shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: cliente, editar: registro })} className="h-8 px-2 border-nz-borda text-nz-tinta" title="Editar reunião">✏️</Button>
+                                <Button size="sm" variant="outline" onClick={() => excluirRegistro(cliente, registro)} className={`h-8 px-2 ${confirmaExcluir === registro.id ? 'border-red-500 text-red-600 bg-red-50 font-bold' : 'border-nz-borda text-nz-tinta-fraca'}`} title="Excluir (apaga do Google junto)">
+                                  {confirmaExcluir === registro.id ? 'Confirma excluir?' : '🗑️'}
+                                </Button>
+                              </div>
                             )}
                           </div>
                         );
@@ -728,12 +867,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                         return (
                           <div key={o.id} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-nz-tinta truncate">🛤️ <span className="font-bold">{fmtHora(o.reuniao_em)}</span> · {o.cliente_nome || 'Sem nome'}</p>
+                              <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(o.responsavel_nome)}</span> · 🛤️ <span className="font-bold">{fmtHora(o.reuniao_em)}</span> · {o.cliente_nome || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da esteira</p>
                             </div>
-                            {!minha && o.responsavel_nome && (
-                              <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {o.responsavel_nome}</span>
-                            )}
+                          </div>
+                        );
+                      }
+                      if (item.origem === 'empresa') {
+                        const { r } = item; // 🏛️ DIR-52 — de todos, sinalizada
+                        return (
+                          <div key={`emp-${r.id || r.titulo}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border-2 border-amber-400/50 bg-amber-50/70 p-2.5">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-nz-tinta truncate">🏛️ <span className="font-bold">{r.hora}</span> · {r.titulo}</p>
+                              <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da empresa — todo mundo participa{r.dia_semana !== null && r.dia_semana !== undefined ? ` · toda ${DIAS_SEMANA[r.dia_semana]}` : ''}</p>
+                            </div>
                           </div>
                         );
                       }
@@ -750,12 +897,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                     {retornos.map(({ cliente, registro }) => (
                       <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate">🔁 Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
+                          <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 🔁 Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}</p>
                         </div>
-                        {!minha && registro.registrado_por_nome && (
-                          <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {registro.registrado_por_nome}</span>
-                        )}
                         <div className="flex gap-1.5 shrink-0">
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: cliente, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">📅 Agendar</Button>
                           <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: cliente })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">✍️ Registrar</Button>
@@ -776,16 +920,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                         return (
                           <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-nz-tinta truncate">📅 <span className="font-bold">{fmtQuando(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
+                              <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 📅 <span className="font-bold">{fmtQuando(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.local ? ` · ${registro.local}` : ''}</p>
                             </div>
-                            {!minha && registro.registrado_por_nome && (
-                              <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {registro.registrado_por_nome}</span>
-                            )}
                             {g && (
                               <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
                                 <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> {registro.google_event_link ? 'Abrir no Google' : 'Google Agenda'}</Button>
                               </a>
+                            )}
+                            {podeMexer(registro) && (
+                              <div className="flex gap-1 shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: cliente, editar: registro })} className="h-8 px-2 border-nz-borda text-nz-tinta" title="Editar reunião">✏️</Button>
+                                <Button size="sm" variant="outline" onClick={() => excluirRegistro(cliente, registro)} className={`h-8 px-2 ${confirmaExcluir === registro.id ? 'border-red-500 text-red-600 bg-red-50 font-bold' : 'border-nz-borda text-nz-tinta-fraca'}`} title="Excluir (apaga do Google junto)">
+                                  {confirmaExcluir === registro.id ? 'Confirma excluir?' : '🗑️'}
+                                </Button>
+                              </div>
                             )}
                           </div>
                         );
@@ -794,6 +943,54 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                   </div>
                 )}
               </div>
+
+              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só visão total) */}
+              {visaoTotal && (
+                <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2">
+                  <p className="text-sm font-bold text-nz-tinta">🏛️ Reuniões da empresa <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span></p>
+                  {reunioesEmpresa.length > 0 && (
+                    <div className="space-y-1">
+                      {reunioesEmpresa.map((r) => (
+                        <div key={r.id || r.titulo} className="flex items-center gap-2 rounded-lg border border-nz-borda bg-white p-2 flex-wrap">
+                          <p className="flex-1 min-w-0 text-xs text-nz-tinta truncate"><span className="font-bold">{r.titulo}</span> · {r.dia_semana !== null && r.dia_semana !== undefined ? `toda ${DIAS_SEMANA[r.dia_semana]}` : (r.data || 'sem data')} às {r.hora} · {r.duracao_min || 60} min</p>
+                          <Button size="sm" variant="outline" onClick={() => excluirReuniaoEmpresa(r)} className={`h-7 px-2 text-xs ${confirmaExcluir === `emp-${r.id}` ? 'border-red-500 text-red-600 bg-red-50 font-bold' : 'border-nz-borda text-nz-tinta-fraca'}`}>
+                            {confirmaExcluir === `emp-${r.id}` ? 'Confirma excluir?' : '🗑️'}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex-1 min-w-[180px]">
+                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Título</p>
+                      <Input value={novaEmpresa.titulo} onChange={(e) => setNovaEmpresa((p) => ({ ...p, titulo: e.target.value }))} placeholder="ex.: Mentalidade do Diretor" className="bg-white border-nz-borda text-nz-tinta text-sm h-9" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Quando</p>
+                      <div className="flex gap-1.5">
+                        <select value={novaEmpresa.recorrencia} onChange={(e) => setNovaEmpresa((p) => ({ ...p, recorrencia: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
+                          <option value="semana">toda semana</option>
+                          <option value="data">data única</option>
+                        </select>
+                        {novaEmpresa.recorrencia === 'semana' ? (
+                          <select value={novaEmpresa.dia_semana} onChange={(e) => setNovaEmpresa((p) => ({ ...p, dia_semana: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
+                            {DIAS_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
+                          </select>
+                        ) : (
+                          <Input type="date" value={novaEmpresa.data} onChange={(e) => setNovaEmpresa((p) => ({ ...p, data: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
+                        )}
+                        <Input type="time" value={novaEmpresa.hora} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
+                        <select value={novaEmpresa.duracao_min} onChange={(e) => setNovaEmpresa((p) => ({ ...p, duracao_min: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
+                          {DURACOES_REUNIAO.map((d) => <option key={d} value={d}>{d} min</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={criarReuniaoEmpresa} disabled={salvando || !novaEmpresa.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-9">
+                      <Plus className="w-4 h-4 mr-1" /> Salvar pra todo mundo
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* o SEU script (mantém) */}
               <div className="rounded-lg border border-nz-borda p-3 space-y-2">
@@ -808,11 +1005,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                 aberto={registroAberto !== null}
                 contatoInicial={registroAberto?.contato || null}
                 agendarDireto={!!registroAberto?.agendar}
+                registroInicial={registroAberto?.editar || null}
                 contatos={clientesManuais}
                 onFechar={() => setRegistroAberto(null)}
                 onSalvar={salvarRegistroContato}
                 salvando={salvando}
-                criarNoGoogleFn={criarEventoNoGoogle}
+                criarNoGoogleFn={registroAberto?.editar ? atualizarEventoNoGoogle(registroAberto.editar) : criarEventoNoGoogle}
               />
             </div>
           );

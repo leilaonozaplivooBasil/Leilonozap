@@ -326,3 +326,88 @@ describe('último contato e próximas reuniões (DIR-49.1)', () => {
     assert.deepEqual(proximasReunioes([], '2026-09-05'), []);
   });
 });
+
+// ══ DIR-50/51/52/53 — agenda viva ══
+const { idDoEventoGoogle, semanaDe, resumoSemanaReunioes, META_REUNIOES_SEMANA,
+  reuniaoIminente, reunioesEmpresaDoDia, DIAS_SEMANA } = await import('../src/lib/metodo.js');
+
+describe('id do evento Google (DIR-50)', () => {
+  test('google_event_id novo vence; link antigo tem o id extraído do eid', () => {
+    assert.equal(idDoEventoGoogle({ google_event_id: 'abc123' }), 'abc123');
+    // eid real do banco do dono: base64url de "uo5vbt7omhdvn788hh1583o018 luizsantanna@tttcorporate.com"
+    const link = 'https://www.google.com/calendar/event?eid=dW81dmJ0N29taGR2bjc4OGhoMTU4M28wMTggbHVpenNhbnRhbm5hQHR0dGNvcnBvcmF0ZS5jb20';
+    assert.equal(idDoEventoGoogle({ google_event_link: link }), 'uo5vbt7omhdvn788hh1583o018');
+    assert.equal(idDoEventoGoogle({ google_event_link: 'https://calendar.google.com/calendar/r' }), null);
+    assert.equal(idDoEventoGoogle({}), null);
+    assert.equal(idDoEventoGoogle(null), null);
+  });
+});
+
+describe('alarme do evento (DIR-53)', () => {
+  test('evento criado sai com popup 30 e 10 min antes', () => {
+    const e = eventoGoogleDaReuniao({ inicio: '2026-09-14T07:19' });
+    assert.deepEqual(e.reminders, { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }, { method: 'popup', minutes: 10 }] });
+  });
+});
+
+describe('resumo da semana (DIR-51)', () => {
+  test('semana vai de segunda a domingo do dia dado', () => {
+    assert.deepEqual(semanaDe('2026-09-05'), { inicio: '2026-08-31', fim: '2026-09-06' }); // sábado
+    assert.deepEqual(semanaDe('2026-08-31'), { inicio: '2026-08-31', fim: '2026-09-06' }); // segunda
+    assert.equal(semanaDe('nada'), null);
+  });
+
+  test('total e quebra por pessoa com % da meta (15/semana)', () => {
+    const clientes = [
+      { contatos_metodo: [
+        { resultado: 'agendado', quando: '2026-09-05T18:00', registrado_por_id: 'u1', registrado_por_nome: 'Santanna' },
+        { resultado: 'agendado', quando: '2026-09-06T10:00', registrado_por_id: 'u1', registrado_por_nome: 'Santanna' },
+        { resultado: 'agendado', quando: '2026-09-14T07:19', registrado_por_id: 'u1', registrado_por_nome: 'Santanna' }, // semana QUE VEM: fora
+        { resultado: 'feito', em: 'x' },
+      ] },
+      { contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-04T09:00', registrado_por_id: 'u2', registrado_por_nome: 'Ana' }] },
+    ];
+    const r = resumoSemanaReunioes(clientes, '2026-09-05');
+    assert.equal(r.total, 3);
+    assert.deepEqual(r.porPessoa.map((p) => [p.nome, p.total, p.pct]), [['Santanna', 2, 13], ['Ana', 1, 7]]);
+    assert.equal(META_REUNIOES_SEMANA, 15);
+  });
+});
+
+describe('reunião iminente (DIR-53)', () => {
+  const clientes = [{ full_name: 'Diogo', contatos_metodo: [
+    { resultado: 'agendado', quando: '2026-09-05T18:00', registrado_por_id: 'u1' },
+    { resultado: 'agendado', quando: '2026-09-05T18:05', registrado_por_id: 'u2' }, // de outro: não é minha
+  ] }];
+  test('avisa dentro da janela, só a MINHA, e diz os minutos', () => {
+    const r = reuniaoIminente(clientes, 'u1', '2026-09-05T17:50:00', 15);
+    assert.equal(r.minutos, 10);
+    assert.equal(r.cliente.full_name, 'Diogo');
+    assert.equal(reuniaoIminente(clientes, 'u2', '2026-09-05T17:50:00', 15).minutos, 15);
+  });
+  test('fora da janela ou já passou → silêncio', () => {
+    assert.equal(reuniaoIminente(clientes, 'u1', '2026-09-05T17:00:00', 15), null);
+    assert.equal(reuniaoIminente(clientes, 'u1', '2026-09-05T18:01:00', 15), null);
+    assert.equal(reuniaoIminente([], 'u1', '2026-09-05T17:50:00'), null);
+  });
+});
+
+describe('reuniões da empresa (DIR-52)', () => {
+  const lista = [
+    { titulo: 'Mentalidade do Diretor', dia_semana: 1, hora: '09:00', ativo: true },
+    { titulo: 'Mentalidade do CEO', dia_semana: 1, hora: '10:00', ativo: true },
+    { titulo: 'Fechamento do mês', data: '2026-09-30', hora: '17:00', ativo: true },
+    { titulo: 'Desativada', dia_semana: 1, hora: '08:00', ativo: false },
+  ];
+  test('recorrente cai no dia da semana certo, ordenada por hora, sem as desativadas', () => {
+    const seg = reunioesEmpresaDoDia(lista, '2026-09-07'); // segunda
+    assert.deepEqual(seg.map((r) => r.titulo), ['Mentalidade do Diretor', 'Mentalidade do CEO']);
+    assert.equal(seg[0].quando, '2026-09-07T09:00');
+    assert.deepEqual(reunioesEmpresaDoDia(lista, '2026-09-08'), []); // terça
+  });
+  test('data única cai só no dia; rótulos dos dias existem', () => {
+    assert.deepEqual(reunioesEmpresaDoDia(lista, '2026-09-30').map((r) => r.titulo), ['Fechamento do mês']);
+    assert.equal(DIAS_SEMANA[1], 'segunda');
+    assert.equal(DIAS_SEMANA.length, 7);
+  });
+});

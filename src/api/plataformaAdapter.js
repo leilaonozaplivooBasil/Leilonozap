@@ -60,6 +60,7 @@ const TABLE_MAP = {
   CaptacaoOportunidade: 'captacao_oportunidades',
   MetodoPerfil: 'metodo_perfil', // 📖 DIR-43 — sonhos, rotina, script, apresentação
   MetodoTarefa: 'metodo_tarefas', // 📖 DIR-43 — Master Task diário
+  ReuniaoEmpresa: 'reunioes_empresa', // 🏛️ DIR-52 — reuniões fixas do negócio
   Customer: 'customers',
   DepositPackage: 'deposit_packages',
   DigitalWallet: 'digital_wallets',

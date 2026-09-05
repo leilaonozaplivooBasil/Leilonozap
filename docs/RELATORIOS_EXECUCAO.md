@@ -2412,3 +2412,44 @@ Agenda do dono (efeito da rodada sem feedback) — apagar um deles é ação
 manual dele no Google (nós ainda não editamos/cancelamos evento criado —
 fora do escopo desde a DIR-48).
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+## REL-50/51/52/53 — Agenda viva (05/09/2026)
+
+**Diretivas:** DIR-50 a DIR-53, aprovadas com "pode" após o documento de
+análise em chat.
+**Entregue:**
+- **DIR-50:** ✏️ Editar (agendador reaberto preenchido; o evento no
+  Google muda junto via PATCH) e 🗑️ Excluir com 2 cliques (o evento no
+  Google é apagado via DELETE) em toda reunião do método — só pra quem
+  registrou ou visão total. Registros novos guardam `google_event_id`;
+  nos antigos o id sai de dentro do link (`idDoEventoGoogle`, testada
+  com o eid REAL do banco do dono). Falha do Google nunca trava e avisa
+  honesto. Dono na frente de todo item: "👤 você" na MINHA, nome forte
+  no TIME (o chip do fim virou prefixo no início, como pedido).
+- **DIR-51:** 📊 faixa da SEMANA no TIME INTEIRO — total de reuniões,
+  quebra por pessoa e % da meta (15/semana = 3/dia útil;
+  `resumoSemanaReunioes` + `META_REUNIOES_SEMANA`, testadas).
+- **DIR-52:** tabela nova `reunioes_empresa` (migração
+  `20260905150000_reunioes_empresa.sql` no padrão da casa — DONO PRECISA
+  COLAR O SQL), entidade ReuniaoEmpresa, entityWrite liberado SÓ pra
+  admin (fora de CRM_TABLES de propósito; teste do handler REAL).
+  Gestão 🏛️ no painel (visão total): título, toda semana (dia) ou data
+  única, hora, duração; aparece na agenda de TODOS com selo 🏛️ e
+  "todo mundo participa" (`reunioesEmpresaDoDia`, testada). Sem a
+  migração colada, a tela não quebra (lista vazia + erro honesto ao
+  salvar).
+- **DIR-53:** todo evento criado no Google sai com ALARME popup 30 e 10
+  min antes (reminders na criação — o Google avisa no celular com o app
+  fechado). No app: popup fixo "🔔 Reunião em X min" quando uma reunião
+  MINHA está a até 15 min (checagem local a cada 30s; `reuniaoIminente`
+  testada), com Ver agenda e Dispensar. Web push com app fechado segue
+  REGISTRADO como diretiva futura (service worker).
+**Prova (medida):** suíte **900/900** (891 + 9 novos: lib DIR-50/51/52/53
++ entityWrite reunioes_empresa no handler real); build exit 0; prova em
+navegador **131/131 ZERO erros** — editar com PATCH no evento certo,
+excluir com DELETE, alarme no corpo do evento, 👤 você, 📊 semana,
+🏛️ criada pelo painel e visível nas duas visões, popup 🔔 aparecendo e
+sendo dispensado.
+**Pendência pro dono:** colar o SQL da `reunioes_empresa` no Supabase
+(sem ele, só a parte 🏛️ fica esperando — o resto funciona já).
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

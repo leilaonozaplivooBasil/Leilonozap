@@ -38,6 +38,7 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import { reuniaoIminente } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -61,6 +62,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all');
   const [roleTypeFilter, setRoleTypeFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [alertaReuniao, setAlertaReuniao] = useState(null); // 🔔 DIR-53
+  const [alertasVistos, setAlertasVistos] = useState(() => new Set());
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
@@ -422,6 +425,24 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     }
   };
 
+  // 🔔 DIR-53 — vigia local: reunião MINHA começando em até 15 min → popup no
+  // app (checa nos dados novos e a cada 30s; o alarme com o app FECHADO é o
+  // do Google, configurado na criação do evento).
+  useEffect(() => {
+    const checar = () => {
+      const r = reuniaoIminente(customers, currentUser?.id, new Date().toISOString(), 15);
+      setAlertaReuniao(r && !alertasVistos.has(r.registro.id) ? r : null);
+    };
+    checar();
+    const timer = setInterval(checar, 30000);
+    return () => clearInterval(timer);
+  }, [customers, currentUser?.id, alertasVistos]);
+
+  const dispensarAlerta = () => {
+    if (alertaReuniao) setAlertasVistos((prev) => new Set(prev).add(alertaReuniao.registro.id));
+    setAlertaReuniao(null);
+  };
+
   useEffect(() => {
     let filtered = unifiedCustomers;
 
@@ -780,6 +801,38 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     } catch (error) {
       console.error('Erro ao registrar contato:', error);
       toast.error('Erro ao registrar o contato — a migração da DIR-47 já foi colada no banco?');
+      return false;
+    }
+  };
+
+  // ✏️ DIR-50 — edita um registro existente (mesmo id, campos novos)
+  const handleEditarRegistroMetodo = async (contato, registroAtualizado) => {
+    try {
+      const historico = Array.isArray(contato.contatos_metodo) ? contato.contatos_metodo : [];
+      const novo = historico.map((r) => (r.id === registroAtualizado.id ? { ...registroAtualizado, editado_em: new Date().toISOString() } : r));
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: novo });
+      const d = new Date(registroAtualizado.quando || '');
+      toast.success(`Reunião atualizada${Number.isNaN(d.getTime()) ? '' : ` — ${d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}`);
+      await loadCustomers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao editar registro:', error);
+      toast.error('Erro ao salvar a alteração — tente de novo');
+      return false;
+    }
+  };
+
+  // 🗑️ DIR-50 — exclui um registro (o evento do Google é apagado pelo painel)
+  const handleExcluirRegistroMetodo = async (contato, registroId) => {
+    try {
+      const historico = Array.isArray(contato.contatos_metodo) ? contato.contatos_metodo : [];
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: historico.filter((r) => r.id !== registroId) });
+      toast.success('Reunião excluída da agenda.');
+      await loadCustomers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir registro:', error);
+      toast.error('Erro ao excluir — tente de novo');
       return false;
     }
   };
@@ -1292,6 +1345,20 @@ _Enviado via CRM Leilão NoZap_`;
 
   return (
     <div className="p-3 sm:p-6 bg-white border border-nz-borda rounded-2xl">
+      {/* 🔔 DIR-53 — o popup do Leilão NoZap: reunião MINHA prestes a começar
+          (com o app aberto; o alarme com app fechado é o do Google, já
+          configurado na criação do evento). */}
+      {alertaReuniao && (
+        <div className="fixed bottom-4 right-4 z-40 max-w-sm rounded-2xl border-2 border-nz-verde bg-white shadow-xl p-4">
+          <p className="text-sm font-bold text-nz-tinta">🔔 Reunião em {alertaReuniao.minutos <= 0 ? 'instantes' : `${alertaReuniao.minutos} min`}!</p>
+          <p className="text-sm text-nz-tinta mt-0.5 truncate">{alertaReuniao.registro.titulo_reuniao || `Reunião — ${alertaReuniao.cliente.full_name || 'contato'}`}</p>
+          <p className="text-[11px] text-nz-tinta-fraca">{new Date(alertaReuniao.registro.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}{alertaReuniao.registro.local ? ` · ${alertaReuniao.registro.local}` : ''}</p>
+          <div className="flex gap-2 mt-2">
+            <Button size="sm" onClick={() => { setSecao('contato'); dispensarAlerta(); }} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">Ver agenda</Button>
+            <Button size="sm" variant="outline" onClick={dispensarAlerta} className="border-nz-borda text-nz-tinta-fraca h-8">Dispensar</Button>
+          </div>
+        </div>
+      )}
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
@@ -1372,6 +1439,8 @@ _Enviado via CRM Leilão NoZap_`;
             oportunidades={networkOportunidades}
             onQualificar={handleQualificarContato}
             onRegistrarContato={handleRegistrarContatoMetodo}
+            onEditarRegistro={handleEditarRegistroMetodo}
+            onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />

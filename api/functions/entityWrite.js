@@ -23,6 +23,9 @@ const CONTENT_TABLES = new Set([
   'captacao_oportunidades',
   // 📖 DIR-43 — o Método vivo: espaço pessoal e Master Task diário.
   'metodo_perfil', 'metodo_tarefas',
+  // 🏛️ DIR-52 — reuniões fixas do negócio. Fica FORA de CRM_TABLES de
+  // propósito: cargo comercial não grava reunião da empresa — só admin.
+  'reunioes_empresa',
 ]);
 
 function sb(path, opts = {}) {

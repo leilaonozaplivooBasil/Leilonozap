@@ -28,7 +28,7 @@ function Passo({ n, titulo, children }) {
   );
 }
 
-export default function CrmContatoRegistroModal({ aberto, contatoInicial = null, agendarDireto = false, contatos = [], onFechar, onSalvar, salvando, criarNoGoogleFn }) {
+export default function CrmContatoRegistroModal({ aberto, contatoInicial = null, agendarDireto = false, registroInicial = null, contatos = [], onFechar, onSalvar, salvando, criarNoGoogleFn }) {
   const [contatoSel, setContatoSel] = useState(null);
   const [resultado, setResultado] = useState(null);
   const [quando, setQuando] = useState('');
@@ -40,21 +40,25 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
   const [criarNoGoogle, setCriarNoGoogle] = useState(true);
   const [criando, setCriando] = useState(false);
 
-  const modoAgendar = agendarDireto || !contatoInicial; // agendador na cara; senão, registro de desfecho
+  const editando = !!registroInicial; // DIR-50 — reabrir o agendador preenchido
+  const modoAgendar = editando || agendarDireto || !contatoInicial; // agendador na cara; senão, registro de desfecho
 
   useEffect(() => {
     if (aberto) {
       setContatoSel(contatoInicial || null);
       setResultado(modoAgendar ? 'agendado' : null);
-      setQuando(''); setDuracao(60); setTituloReuniao(''); setLocal('');
-      setRetornarEm(''); setObs(''); setCriarNoGoogle(true);
+      setQuando(String(registroInicial?.quando || '').slice(0, 16));
+      setDuracao(registroInicial?.duracao_min || 60);
+      setTituloReuniao(registroInicial?.titulo_reuniao || '');
+      setLocal(registroInicial?.local || '');
+      setRetornarEm(''); setObs(registroInicial?.obs || ''); setCriarNoGoogle(true);
     }
-  }, [aberto, contatoInicial, modoAgendar]);
+  }, [aberto, contatoInicial, modoAgendar, registroInicial]);
 
   // título sugerido acompanha a pessoa escolhida (mas é editável)
   useEffect(() => {
-    if (aberto && contatoSel) setTituloReuniao(`Reunião — ${contatoSel.full_name || 'contato'} (Leilão NoZap)`);
-  }, [aberto, contatoSel]);
+    if (aberto && contatoSel && !registroInicial) setTituloReuniao(`Reunião — ${contatoSel.full_name || 'contato'} (Leilão NoZap)`);
+  }, [aberto, contatoSel, registroInicial]);
 
   if (!aberto) return null;
   const registro = {
@@ -93,7 +97,7 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
             <div className="min-w-0">
               <p className="text-lg font-bold text-nz-tinta flex items-center gap-2">
                 {modoAgendar
-                  ? <><CalendarPlus className="w-5 h-5 text-nz-verde" /> Agendar reunião</>
+                  ? <><CalendarPlus className="w-5 h-5 text-nz-verde" /> {editando ? 'Editar reunião' : 'Agendar reunião'}</>
                   : <><PhoneCall className="w-5 h-5 text-nz-verde" /> Registrar contato</>}
               </p>
               {contatoInicial && <p className="text-sm text-nz-tinta-fraca truncate">{contatoInicial.full_name || 'Sem nome'}</p>}
@@ -159,7 +163,7 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
               <Passo n={p(4)} titulo="Google Agenda">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={criarNoGoogle} onChange={(e) => setCriarNoGoogle(e.target.checked)} className="w-4 h-4 accent-green-600" />
-                  <span className="text-xs text-nz-tinta font-medium">🗓️ Criar na minha Google Agenda (o evento entra sozinho na sua agenda)</span>
+                  <span className="text-xs text-nz-tinta font-medium">🗓️ {editando ? 'Atualizar na minha Google Agenda (o evento muda junto)' : 'Criar na minha Google Agenda (o evento entra sozinho na sua agenda)'}</span>
                 </label>
               </Passo>
             </div>
@@ -178,7 +182,7 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
 
           <Button onClick={salvar} disabled={!pronto || salvando || criando} className="w-full h-12 text-base bg-nz-verde hover:bg-nz-verde-claro text-white font-bold">
             {(salvando || criando) ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Check className="w-5 h-5 mr-2" />}
-            {(salvando || criando) ? 'Salvando...' : resultado === 'agendado' ? '📅 Agendar reunião' : 'Salvar registro'}
+            {(salvando || criando) ? 'Salvando...' : editando ? '💾 Salvar alterações' : resultado === 'agendado' ? '📅 Agendar reunião' : 'Salvar registro'}
           </Button>
         </CardContent>
       </Card>

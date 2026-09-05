@@ -157,7 +157,112 @@ export function eventoGoogleDaReuniao({ titulo, inicio, duracaoMin = 60, detalhe
     ...(local ? { location: local } : {}),
     start: { dateTime: semMs(ini), timeZone },
     end: { dateTime: semMs(fim), timeZone },
+    // 🔔 DIR-53 — o alarme oficial: o Google avisa 30 e 10 min antes, no
+    // celular, mesmo com o app fechado. Configurado NA CRIAÇÃO do evento.
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }, { method: 'popup', minutes: 10 }] },
   };
+}
+
+/**
+ * DIR-50 — o ID do evento na Google Agenda, pra editar/apagar de verdade.
+ * Registros novos guardam `google_event_id`; nos antigos só existe o link —
+ * o `eid` do link é base64url de "<idDoEvento> <emailDaAgenda>", então dá
+ * pra extrair. Devolve null quando não há evento Google.
+ */
+export function idDoEventoGoogle(registro) {
+  if (registro?.google_event_id) return registro.google_event_id;
+  const link = String(registro?.google_event_link || '');
+  const m = link.match(/[?&]eid=([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    const decodificado = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+    const id = decodificado.split(' ')[0];
+    return id || null;
+  } catch { return null; }
+}
+
+/** Segunda a domingo da semana que contém o dia dado (datas ISO yyyy-mm-dd). */
+export function semanaDe(diaISO) {
+  const d = new Date(`${String(diaISO).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const desloc = (d.getDay() + 6) % 7; // segunda = 0
+  const ini = new Date(d); ini.setDate(d.getDate() - desloc);
+  const fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+  const iso = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  return { inicio: iso(ini), fim: iso(fim) };
+}
+
+/** Meta do método: 3 apresentações por dia útil → 15 por semana, por pessoa. */
+export const META_REUNIOES_SEMANA = 15;
+
+/**
+ * DIR-51 — a visão MACRO da semana (TIME INTEIRO): total de reuniões
+ * agendadas na semana do dia dado e a quebra por pessoa, com % da meta.
+ */
+export function resumoSemanaReunioes(clientes = [], diaISO) {
+  const sem = semanaDe(diaISO);
+  if (!sem) return { total: 0, porPessoa: [], semana: null };
+  const porPessoa = new Map();
+  let total = 0;
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      const dia = String(registro?.quando || '').slice(0, 10);
+      if (registro?.resultado !== 'agendado' || dia < sem.inicio || dia > sem.fim) continue;
+      total++;
+      const chave = registro.registrado_por_id || registro.registrado_por_nome || 'sem_dono';
+      const atual = porPessoa.get(chave) || { id: chave, nome: registro.registrado_por_nome || 'Sem nome', total: 0 };
+      atual.total++;
+      porPessoa.set(chave, atual);
+    }
+  }
+  const lista = [...porPessoa.values()]
+    .map((p) => ({ ...p, pct: Math.round((p.total / META_REUNIOES_SEMANA) * 100) }))
+    .sort((a, b) => b.total - a.total || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  return { total, porPessoa: lista, semana: sem };
+}
+
+/**
+ * DIR-53 — a reunião MINHA mais próxima de começar (entre agora e a janela,
+ * em minutos): é o gatilho do popup "🔔 reunião em X min" no app.
+ */
+export function reuniaoIminente(clientes = [], uid, agoraISO, janelaMin = 15) {
+  const agora = new Date(agoraISO);
+  if (Number.isNaN(agora.getTime()) || !uid) return null;
+  let melhor = null;
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      if (registro?.resultado !== 'agendado' || registro.registrado_por_id !== uid) continue;
+      const ini = new Date(registro.quando || '');
+      if (Number.isNaN(ini.getTime())) continue;
+      const min = Math.round((ini.getTime() - agora.getTime()) / 60000);
+      if (min < 0 || min > janelaMin) continue;
+      if (!melhor || min < melhor.minutos) melhor = { cliente, registro, minutos: min };
+    }
+  }
+  return melhor;
+}
+
+/** Rótulos dos dias pro cadastro da reunião recorrente (índice = getDay()). */
+export const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+/**
+ * DIR-52 — as reuniões DA EMPRESA que caem no dia dado: recorrentes (pelo
+ * dia da semana) e de data única, ativas, cada uma com `quando` montado
+ * (dia + hora) pra entrar na linha do tempo com selo 🏛️.
+ */
+export function reunioesEmpresaDoDia(lista = [], diaISO) {
+  const dia = String(diaISO || '').slice(0, 10);
+  const d = new Date(`${dia}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return [];
+  const semana = d.getDay();
+  return (Array.isArray(lista) ? lista : [])
+    .filter((r) => r && r.ativo !== false && (
+      (r.dia_semana !== null && r.dia_semana !== undefined && Number(r.dia_semana) === semana)
+      || String(r.data || '').slice(0, 10) === dia
+    ))
+    .map((r) => ({ ...r, quando: `${dia}T${r.hora || '00:00'}` }))
+    .sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
 }
 
 /**

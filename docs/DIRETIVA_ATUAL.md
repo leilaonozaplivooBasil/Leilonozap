@@ -12,6 +12,54 @@
 
 ---
 
+## DIR-50 a DIR-53 — Agenda viva: editar/excluir com Google, identificação, visão macro, alarmes e reuniões da empresa
+
+**Emitidas por:** dono (05/09/2026, por áudio transcrito, após aprovar a
+DIR-49.1: "muito bom, funcionou"): editar e excluir a agenda "e
+automaticamente excluir do Google Agenda"; alarme avisando a reunião,
+de preferência "um popup no aplicativo do Leilão NoZap" (perguntou qual
+é melhor — análise entregue recomendando Google como alarme oficial +
+popup no app agora, web push depois); identificar de quem é a reunião
+("botar o nome, tipo Santanna") logo no início do item; verificar se o
+filtro minha × time está certo (verificado com o banco: os itens eram
+DELE mesmo — o problema era a tela não dizer o dono); no TIME INTEIRO o
+total de reuniões da semana com percentual ("a visão macro"); e o espaço
+das reuniões do negócio ("toda segunda: Mentalidade do Diretor e do
+CEO"), salvo pra todo mundo que participa. Documento em 5 pontos
+aprovado com **"pode"**.
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+- **DIR-50 (editar/excluir + dono visível):** cada reunião do método
+  (hoje e próximas) ganha ✏️ Editar (agendador pré-preenchido; salvar
+  atualiza o registro E o evento no Google via PATCH) e 🗑️ Excluir
+  (confirmação; apaga o registro E o evento no Google via DELETE) — só
+  pra quem registrou ou visão total. Passamos a guardar
+  `google_event_id`; nos eventos antigos o id é extraído do próprio
+  link (fonte única testada). Falha no Google nunca trava: conclui no
+  método e avisa com o link. Identificação: todo item abre com o dono —
+  "👤 você" na MINHA, nome forte no início no TIME.
+- **DIR-51 (visão macro):** faixa no topo do TIME INTEIRO com o total
+  de reuniões da SEMANA, quebra por pessoa e % da meta do método
+  (3 apresentações/dia por executivo). Fonte única testada.
+- **DIR-52 (reuniões da empresa):** tabela nova `reunioes_empresa`
+  (migração no padrão da casa — o dono cola o SQL): título, recorrente
+  semanal (dia_semana) ou data única, hora, duração, público, ativo.
+  Admin cria/desativa na própria agenda; aparece pra TODOS com selo 🏛️
+  na linha do tempo do dia. entityWrite ganha a tabela (escrita só
+  admin — cargo comercial não grava reunião da empresa).
+- **DIR-53 (alarmes):** todo evento criado no Google sai com alarme
+  popup 30 e 10 min antes (reminders na API). No app: aviso fixo
+  "🔔 reunião em X min" quando uma reunião MINHA está pra começar
+  (checagem local, app aberto), dispensável. Web push com app fechado
+  fica REGISTRADO como diretiva futura (depende do service worker).
+**Fora do escopo:** web push; agenda de outra pessoa no Google; editar
+reunião da esteira por aqui.
+**Regras fixas:** prova em navegador; escrita via entityWrite; produção
+só com novo "pode".
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-49.1 — Salvar não pode apagar a tela: recarga silenciosa, histórico e próximas reuniões
 
 **Emitida por:** dono (05/09/2026, por escrito, testando a DIR-49 no
