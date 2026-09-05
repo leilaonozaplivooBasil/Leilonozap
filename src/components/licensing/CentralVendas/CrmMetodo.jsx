@@ -147,6 +147,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // 🕐 RELÓGIO DE TESTE (só super admin): o jogo inteiro obedece o horário
   // simulado — estados AGORA/ATRASADO/PERDIDO, janela do ritual e da votação.
   const [horaTeste, setHoraTeste] = useState('');
+  const [horaRascunho, setHoraRascunho] = useState('');
   const agoraMinJogo = useMemo(() => {
     const m = /^(\d{1,2}):(\d{2})$/.exec(horaTeste);
     return m ? Number(m[1]) * 60 + Number(m[2]) : agoraMin;
@@ -1063,21 +1064,31 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   ))}
                 </div>
                 <span className="flex items-center gap-3">
-                  {/* 🕐 o relógio de TESTE do super admin: simula qualquer horário do dia */}
+                  {/* 🕐 o relógio de TESTE do super admin: aplica um horário e o
+                      jogo INTEIRO obedece (estados, ritual, votação, saudação) */}
                   {visaoTotal && (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700"
-                      title="Relógio de TESTE (só super admin): o jogo obedece este horário — estados AGORA/ATRASADO/PERDIDO, janela do ritual (04:40–07:15) e da votação (20h–22h). Limpe pra voltar ao relógio real."
-                    >
-                      🕐 teste
-                      <input
-                        type="time"
-                        value={horaTeste}
-                        onChange={(e) => setHoraTeste(e.target.value)}
-                        className="bg-transparent text-amber-800 text-[10px] font-bold outline-none w-[62px]"
-                      />
-                      {horaTeste && <button type="button" onClick={() => setHoraTeste('')} className="text-amber-500 hover:text-amber-800 font-black">✕</button>}
-                    </span>
+                    horaTeste ? (
+                      <span className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white text-[10px] font-bold px-3 py-1.5 shadow animate-pulse">
+                        MODO TESTE · o jogo está às {horaTeste}
+                        <button type="button" onClick={() => { setHoraTeste(''); setHoraRascunho(''); }} className="rounded-full bg-white/25 hover:bg-white/40 px-2 py-0.5">sair</button>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <input
+                          type="time"
+                          value={horaRascunho}
+                          onChange={(e) => setHoraRascunho(e.target.value)}
+                          title="Relógio de TESTE (só super admin): escolha um horário e aplique — o jogo inteiro obedece."
+                          className="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800 outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={!horaRascunho}
+                          onClick={() => setHoraTeste(horaRascunho)}
+                          className="rounded-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-[10px] font-bold px-3 py-1.5"
+                        >Aplicar horário de teste</button>
+                      </span>
+                    )
                   )}
                   {visao === 'jornada' && (
                     <button
@@ -1382,6 +1393,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 fogo={ehHoje ? fogo : null}
                 onTarefa={(t) => { if (!t.feito) alternarFeito(t); }}
                 acaoExtra={linkAgendaDe}
+                agoraMin={ehHoje ? agoraMinJogo : null}
               />
             ) : (
               PERIODOS.map((p) => {
