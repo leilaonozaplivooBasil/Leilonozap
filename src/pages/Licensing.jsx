@@ -1048,6 +1048,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       <NavegacaoLateralGlobal
         user={user}
         activeTab={activeTab}
+        activeCatalogTab={catalogSubTab}
         onTabChange={handleTabChange}
       />
 

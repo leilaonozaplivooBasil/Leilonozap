@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Search, Check, Store } from 'lucide-react';
-import { getLicensingGroups } from '@/lib/licensingTabs';
+import { getLicensingGroups, chaveDoItem, entradaFlutuante } from '@/lib/licensingTabs';
 
 // 📱 NAVEGAÇÃO DO PAINEL DE ALAVANCAGEM NO CELULAR (13/08/2026 · reorganizado 18/08/2026
 // · visual "tech" 18/08/2026)
@@ -18,7 +18,7 @@ import { getLicensingGroups } from '@/lib/licensingTabs';
 // 🖤 VISUAL: mesma identidade escura da barra do topo (--nz-preto-barra) com
 // acento verde neon — não mais um dropdown branco "genérico".
 const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings'];
-const chaveDe = (item) => (item.type === 'tab' ? `tab:${item.value}` : item.to);
+const chaveDe = chaveDoItem;
 
 export default function MobileNavSheet({ user, activeTab, onTabChange }) {
   const navigate = useNavigate();
@@ -31,25 +31,24 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
   const grupos = useMemo(() => {
     return getLicensingGroups(user)
       .map((grupo) => {
-        if (grupo.title === 'Operação') {
-          const subItens = grupo.items.filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)));
-          if (!subItens.length) return { ...grupo, items: [] };
-          return {
-            ...grupo,
-            items: [{ type: 'group', chave: 'group:operacao', label: 'Operação', icon: Store, subItens }],
-          };
+        // 🎓 DIR-57 — mesma regra do desktop, agora vinda do dado (`colapsar`)
+        // em vez de um `if` no nome do grupo: um item só não vira acordeão.
+        if (grupo.colapsar) {
+          const visiveis = grupo.items.filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)));
+          if (visiveis.length > 1) {
+            const subItens = visiveis.map((item) => entradaFlutuante(item, onTabChange));
+            return { ...grupo, items: [{ type: 'group', ...grupo.colapsar, subItens }] };
+          }
         }
         const items = grupo.items
           .filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)))
           .map((item) => {
             if (item.type === 'tab' && Array.isArray(item.subItens) && item.subItens.length) {
-              // 🐛 CORREÇÃO: os subItens (ex: Central de Vendas) só traziam `value`
+              // 🐛 CORREÇÃO: os subItens (ex: Loja & Vendas) só traziam `value`
               // — sem `to` nem `onClick` os botões não navegavam pra lugar nenhum.
-              // Mesma transformação já feita na lateral do desktop (NavegacaoLateralGlobal).
+              // Hoje a montagem é a MESMA função do desktop (entradaFlutuante).
               const subItens = item.subItens.map((sub) => (
-                onTabChange
-                  ? { label: sub.label, icon: sub.icon, onClick: () => onTabChange(item.value, sub.value) }
-                  : { label: sub.label, icon: sub.icon, to: `/Licensing?tab=${item.value}&catalogTab=${sub.value}` }
+                entradaFlutuante({ ...sub, type: 'tab', value: item.value, catalogTab: sub.value }, onTabChange)
               ));
               return { type: 'group', chave: `tab:${item.value}`, label: item.label, icon: item.icon, subItens, tabValue: item.value };
             }

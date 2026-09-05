@@ -2631,3 +2631,72 @@ seja, tema escuro E legível; e que a faixa do brandbook troque junto com
 o Hábito aberto.
 
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-57 — A Top College vira um DEPARTAMENTO no menu (05/09/2026)
+
+**Diretiva:** DIR-57 — *"pensa que a Leilão NoZap contratou a Top
+College... ela não tem que ficar lá embaixo, tem que ficar lá em cima...
+ver o que a gente pode diminuir, mantendo a fluidez"*. Aprovado:
+**"pode fazer"**.
+
+**A melhor notícia da rodada, achada lendo o código ANTES de mexer:** os
+grupos que o dono queria JÁ EXISTIAM em `licensingTabs.js` (Conta,
+Operação, Vender, Leilões, Carreira, Admin). A lateral é que achatava
+tudo numa fileira de ícones soltos. Não foi preciso inventar
+arquitetura — foi preciso mostrar a que já estava lá e mover duas peças.
+
+**Entregue:**
+1. **Menu de 10 ícones soltos para 6** (7 pra quem tem loja, com
+   Operação): Visão Geral · Minha Conta · Loja & Vendas · **Top
+   College** · Arrematante · Admin. Nenhum link sumiu — os que saíram da
+   fileira estão dentro do menu flutuante do seu grupo, padrão que a
+   casa JÁ usava em "Operação" e "Central de Vendas" e que agora vale
+   pros demais. Zero interação nova: a fluidez fica igual.
+2. **Top College reúne o que FORMA a pessoa:** O Método, Time
+   (Vendedores), Carreira, Evoluir Nível e Metas — esta última saiu de
+   "Operação", onde estava solta (meta é acompanhamento, não chão de
+   loja). Carreira e Evoluir Nível deixaram de ocupar dois ícones
+   próprios: a faculdade não ACRESCENTOU ícone, ela ABSORVEU dois.
+3. **"Central de Vendas" virou "Loja & Vendas"**, só com o caixa: Loja
+   Virtual, Relatório, Pedidos, Venda Direta, Comissões.
+4. **"CRM" morreu como nome** e virou **O Método**. O VALOR da aba
+   (`catalogo-crm`) não mudou — link antigo continua abrindo no lugar
+   certo, e há teste cobrando exatamente isso.
+5. **O agrupamento virou DADO** (flag `colapsar` na fonte única) em vez
+   de um `if (grupo.title === 'Operação')` escrito duas vezes — na
+   lateral do desktop e no menu do celular. As duas telas agora montam
+   os menus com a MESMA função (`entradaFlutuante`).
+6. Grupo que sobra com um item só não vira menu flutuante: abrir um
+   flutuante pra uma opção sozinha é clique a mais sem ganho (caso do
+   Admin de quem não é admin, que não tem o Consignado).
+7. O seletor interno continua com as duas famílias, cada uma sob o seu
+   rótulo ("Loja & Vendas" / "Top College"), e o rótulo de cima diz de
+   QUEM é a seção aberta — quem está na loja alcança O Método sem voltar
+   pro menu, e ninguém fica num beco sem saída.
+
+**Bug encontrado NA PRÓPRIA PROVA, olhando o print — não foi teste que
+pegou:** com a pessoa em "O Método", quem acendia na lateral era **Loja
+& Vendas**. Causa: as duas moram na MESMA aba (`catalogo`), então olhar
+só a aba ativa não distingue uma da outra — é preciso olhar também a
+SEÇÃO aberta. Corrigido passando `activeCatalogTab` pra lateral, e o
+caso virou asserção permanente na prova.
+
+**TRAVA DO DONO RESPEITADA:** *"não pode mudar a função de arrastar e
+organizar os ícones"*. `aoSoltar` e a ordem salva por usuário não foram
+tocadas. As chaves novas (`group:conta`, `group:topcollege`) entram no
+fim da fila de quem já tem ordem salva — comportamento que já existia
+pra item novo, avisado ao dono e aceito por ele. A aba do catálogo
+manteve a chave antiga (`tab:catalogo`), então quem já arrastou "Central
+de Vendas" de lugar mantém a posição.
+
+**Prova (medida):** suíte **922/922** (906 + **16 testes novos** em
+`tests/menuPainel.test.mjs`); build exit 0; prova em navegador
+**158/158 ZERO erros de página/console** (152 + 6 asserções novas).
+Pra o menu virar regra testável, o import de `careerLevels` em
+`licensingTabs.js` passou do atalho `@/` pro caminho relativo — o node
+da suíte não resolve o alias do Vite. Mudança de caminho, não de
+comportamento.
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

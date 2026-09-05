@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Store, BarChart3, Package, Users, Handshake, Wallet, ChevronDown, Check, Briefcase } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
+import { SECOES_LOJA, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 
 // 🛍️ NAVEGAÇÃO DA CENTRAL DE VENDAS (13/08/2026)
 // Antes eram abas soltas e depois uma fileira que rolava de lado — rolar
@@ -10,18 +11,24 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
   const [aberto, setAberto] = useState(false);
   const caixaRef = useRef(null);
 
-  const ITENS = [
-    { value: 'catalogo-produtos', label: 'Sua Loja Virtual', icon: Store },
-    { value: 'catalogo-home', label: 'Relatório da Minha Loja', icon: BarChart3 },
-    { value: 'catalogo-pedidos', label: 'Pedidos Online (Loja Virtual)', icon: Package },
-    { value: 'catalogo-clientes', label: `Venda Direta (${clientesCount})`, icon: Users },
-    { value: 'catalogo-vendedores', label: 'Vendedores', icon: Handshake },
-    { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
-    { value: 'catalogo-crm', label: 'CRM', icon: Briefcase },
+  // 🎓 DIR-57 — as seções vêm da FONTE ÚNICA (@/lib/licensingTabs), separadas em
+  // duas famílias: o caixa (Loja & Vendas) e a formação (Top College). A lateral
+  // já separa as duas em ícones diferentes; aqui elas continuam juntas de
+  // propósito, cada uma sob o seu rótulo — quem está na loja alcança O Método
+  // sem voltar pro menu, e ninguém fica num beco sem saída.
+  const FAMILIAS = [
+    { titulo: 'Loja & Vendas', itens: SECOES_LOJA },
+    { titulo: 'Top College', itens: SECOES_TOP_COLLEGE },
   ];
+  const ITENS = FAMILIAS.flatMap((f) => f.itens);
+  const rotuloDe = (item) => (
+    item.value === 'catalogo-clientes' ? `${item.label} (${clientesCount})` : item.label
+  );
 
   const atual = ITENS.find((i) => i.value === value) || ITENS[0];
   const IconeAtual = atual.icon;
+  // o rótulo de cima diz de QUEM é a seção aberta: da loja ou da faculdade
+  const familiaAtual = FAMILIAS.find((f) => f.itens.some((i) => i.value === atual.value))?.titulo || FAMILIAS[0].titulo;
 
   // fecha ao tocar fora ou apertar Esc (padrão de menu do painel)
   useEffect(() => {
@@ -53,32 +60,40 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-nz-tinta-fraca">
-            Central de Vendas
+            {familiaAtual}
           </span>
-          <span className="block truncate text-[15px] font-bold text-nz-tinta">{atual.label}</span>
+          <span className="block truncate text-[15px] font-bold text-nz-tinta">{rotuloDe(atual)}</span>
         </span>
         <ChevronDown className={`h-5 w-5 shrink-0 text-nz-tinta-fraca transition-transform ${aberto ? 'rotate-180' : ''}`} />
       </button>
 
       {aberto && (
         <div className="absolute left-0 right-0 z-40 mt-2 overflow-hidden rounded-xl border border-nz-borda bg-white shadow-xl">
-          {ITENS.map(({ value: v, label, icon: Icon }) => {
-            const ativo = v === value;
-            return (
-              <button
-                key={v}
-                type="button"
-                onClick={() => { onChange(v); setAberto(false); }}
-                className={`flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-[14px] transition-colors ${
-                  ativo ? 'bg-nz-verde-fundo font-bold text-nz-verde' : 'font-medium text-nz-tinta hover:bg-nz-cinza-fundo'
-                }`}
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
-                <span className="flex-1 truncate">{label}</span>
-                {ativo && <Check className="h-4 w-4 shrink-0 text-nz-verde" />}
-              </button>
-            );
-          })}
+          {FAMILIAS.map((familia) => (
+            <div key={familia.titulo}>
+              <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-nz-tinta-fraca">
+                {familia.titulo}
+              </p>
+              {familia.itens.map((item) => {
+                const Icon = item.icon;
+                const ativo = item.value === value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => { onChange(item.value); setAberto(false); }}
+                    className={`flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-[14px] transition-colors ${
+                      ativo ? 'bg-nz-verde-fundo font-bold text-nz-verde' : 'font-medium text-nz-tinta hover:bg-nz-cinza-fundo'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
+                    <span className="flex-1 truncate">{rotuloDe(item)}</span>
+                    {ativo && <Check className="h-4 w-4 shrink-0 text-nz-verde" />}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
     </div>

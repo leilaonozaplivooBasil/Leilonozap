@@ -12,6 +12,61 @@
 
 ---
 
+## DIR-57 — A Top College vira um DEPARTAMENTO no menu do painel
+
+**Emitida por:** dono (05/09/2026), depois de uma análise pedida em chat:
+*"pensa que a Leilão NoZap contratou a Top College, que a gente cuida de
+toda a estrutura de expansão, treinamento, desenvolvimento, vendas...
+a Top College não tem que ficar lá embaixo, tem que ficar lá em cima...
+ver o que a gente pode diminuir, mantendo a fluidez"*. Aprovação:
+**"pode fazer"**.
+
+**A ideia que destravou:** a Leilão NoZap CONTRATOU a Top College. Não é
+a faculdade tomando o app — é uma fornecedora ocupando um departamento
+dentro do cliente. Por isso ela não pinta as telas de caixa (Pedidos,
+Comissões, Carteira): ela é dona do que forma a pessoa.
+
+**Regra de fronteira (vale pra qualquer tela futura):** nesta tela a
+pessoa está sendo FORMADA ou está OPERANDO? Formada → Top College.
+Operando → Leilão NoZap.
+
+**Decisões que o dono tomou na análise:**
+1. Vendedores vai pra Top College (gestão de gente é formação);
+   Comissões fica na Loja & Vendas (pagamento é caixa).
+2. Visão Geral fica FORA, como home neutra — *"vamos testar como você
+   falou, caso eu navegando veja que preciso mudar, eu te falo"*.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. Menu lateral reorganizado de ~10 ícones soltos para ~7, aplicando o
+   padrão que JÁ existe na casa (grupo vira 1 ícone com menu flutuante,
+   como "Operação" e "Central de Vendas" já fazem): Visão Geral ·
+   Minha Conta · Operação · Loja & Vendas · **Top College** ·
+   Arrematante · Admin.
+2. Top College reúne: O Método (8 Hábitos), Time (Vendedores), Carreira,
+   Evoluir Nível e Metas — esta última sai de "Operação", onde estava
+   solta.
+3. "Central de Vendas" vira **Loja & Vendas** e fica só com o caixa:
+   Loja Virtual, Relatório, Pedidos, Venda Direta, Comissões.
+4. **"CRM" morre como nome** e vira **O Método** — palavra genérica de
+   software não combina com uma faculdade própria.
+5. O agrupamento passa a ser DADO em `licensingTabs.js` (flag
+   `colapsar`), não mais um `if (grupo.title === 'Operação')` repetido
+   na lateral do desktop e no menu do celular.
+
+**TRAVA EXPLÍCITA DO DONO:** *"não mudar a questão de como o usuário
+organiza... ele pode arrastar e organizar os ícones de acordo com a sua
+usabilidade. Não pode mudar essa função, tem que manter"*. A função de
+arrastar e a ordem salva por usuário ficam INTACTAS. Os ícones novos
+entram no fim da fila de quem já tem ordem salva (o dono foi avisado
+disso e aceitou) — nenhum item some, que é a regra que já existia.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado);
+gamificação; qualquer mudança de permissão por cargo.
+
+---
+
 ## DIR-56 — O painel dos 8 Hábitos VIRA o ambiente da marca
 
 **Emitida por:** dono (05/09/2026), reprovando o resultado da DIR-55 ao
