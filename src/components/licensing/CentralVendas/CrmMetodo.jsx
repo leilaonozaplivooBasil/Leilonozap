@@ -20,7 +20,10 @@ import {
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
-import { resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais } from '@/lib/xgame';
+import {
+  resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
+  VIRTUDES, janelaVotacaoAberta, mvmManual,
+} from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import CrmSonhoModal from './CrmSonhoModal';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
@@ -165,6 +168,56 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     });
   }, [painel, tarefas, agoraMin, diasCiclo, dia, ehHoje, participante, cicloConfig]);
   const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
+
+  // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
+  const [colegas, setColegas] = useState([]); // participantes ativos (sem eu)
+  const [nomesColegas, setNomesColegas] = useState({});
+  const [votando, setVotando] = useState(''); // user_id do colega escolhido
+  const [notas, setNotas] = useState({});     // { VIRTUDE: nota }
+  const [votosDadosHoje, setVotosDadosHoje] = useState([]); // meus votos de hoje
+  const [votosRecebidos, setVotosRecebidos] = useState([]); // recebidos no ciclo
+  const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
+  const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
+  const janelaAberta = janelaVotacaoAberta(agoraMin);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) return;
+    supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
+      .then(async ({ data }) => {
+        const outros = (data || []).map((p) => p.user_id).filter((id) => id !== uid);
+        setColegas(outros);
+        if (outros.length) {
+          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', outros);
+          const m = {}; (us || []).forEach((u) => { m[u.id] = u.nickname || u.full_name || 'Colega'; });
+          setNomesColegas(m);
+        }
+      });
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('xgame_votos_mvm').select('virtude,nota').eq('votado_id', uid).gte('data', ini)
+      .then(({ data }) => setVotosRecebidos(data || []));
+    supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', uid).eq('data', hojeStr())
+      .then(({ data }) => setVotosDadosHoje(data || []));
+  }, [painel, uid, cicloConfig]);
+  const escolherColega = (id) => {
+    setVotando(id);
+    const prev = {};
+    votosDadosHoje.filter((v) => v.votado_id === id).forEach((v) => { prev[String(v.virtude).toUpperCase()] = v.nota; });
+    setNotas(prev);
+  };
+  const salvarVotos = async () => {
+    const linhas = VIRTUDES.filter((v) => notas[v] >= 1).map((v) => ({
+      votante_id: uid, votado_id: votando, data: hojeStr(), virtude: v, nota: notas[v], updated_at: new Date().toISOString(),
+    }));
+    if (!votando || linhas.length !== VIRTUDES.length) { toast.error('Dê a nota de 1 a 10 nas 10 virtudes.'); return; }
+    setSalvando(true);
+    const { error } = await supabase.from('xgame_votos_mvm').upsert(linhas, { onConflict: 'votante_id,votado_id,data,virtude' });
+    setSalvando(false);
+    if (error) { toast.error('Erro ao salvar a votação — tente de novo.'); return; }
+    toast.success(`Votação registrada pra ${nomesColegas[votando] || 'colega'}!`);
+    setVotosDadosHoje((prev) => [...prev.filter((v) => v.votado_id !== votando), ...linhas]);
+    setVotando('');
+    setNotas({});
+  };
+  const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
   // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
   useEffect(() => {
     if (!xgame || !uid || !ehHoje) return;
@@ -637,7 +690,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
-                  <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>{xgame.frase_mvm}</p>
+                  <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
+                    {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
+                  </p>
                 </div>
                 <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia</p>
@@ -651,6 +706,82 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* ══ 🗳️ F3 — VOTAÇÃO MvM (20h–22h) + RANKING DAS VIRTUDES ══ */}
+            {xgame && ehHoje && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde">
+                    {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das 20h às 22h · Ranking das Virtudes
+                  </button>
+                  <span className={`text-[10px] font-bold ${janelaAberta ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                    {janelaAberta ? '● JANELA ABERTA' : 'janela fechada — abre às 20h'}
+                  </span>
+                </div>
+
+                {votacaoAberta && (
+                  <>
+                    {/* meu Ranking das Virtudes (o que recebi no ciclo) */}
+                    {recebido.ranking.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] font-semibold text-nz-tinta">Seu Ranking das Virtudes neste ciclo (média {fmtToken(recebido.media)} · {recebido.totalVotos} votos):</p>
+                        {recebido.ranking.map((r, i) => (
+                          <p key={r.virtude} className="text-[11px] text-nz-tinta-fraca tabular-nums">
+                            <span className="font-bold text-nz-tinta">{i + 1}ª</span> {r.virtude} — <span className={`font-semibold ${r.media >= 7 ? 'text-nz-verde' : r.media < 4 ? 'text-red-600' : 'text-amber-600'}`}>{fmtToken(r.media)}</span>
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-nz-tinta-fraca">Você ainda não recebeu votos neste ciclo — o Ranking das Virtudes nasce da votação diária do grupo.</p>
+                    )}
+
+                    {/* votar nos colegas */}
+                    {colegas.length === 0 ? (
+                      <p className="text-[11px] text-nz-tinta-fraca">Nenhum outro participante ativo na X-GAME ainda — o painel do admin cadastra o time.</p>
+                    ) : (
+                      <div className="space-y-2 pt-1 border-t border-nz-borda">
+                        <p className="text-[11px] font-semibold text-nz-tinta">Vote nos colegas de hoje (1 a 10 em cada virtude):</p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {colegas.map((id) => (
+                            <button
+                              key={id}
+                              type="button"
+                              disabled={!janelaAberta}
+                              onClick={() => escolherColega(id)}
+                              className={`px-2 py-1 rounded border text-[11px] font-medium ${votando === id ? 'border-nz-verde text-nz-verde bg-nz-verde-fundo/50' : jaVoteiEm(id) ? 'border-nz-verde/40 text-nz-tinta-fraca' : 'border-nz-borda text-nz-tinta'} ${!janelaAberta ? 'opacity-50 cursor-not-allowed' : 'hover:border-nz-verde'}`}
+                            >
+                              {jaVoteiEm(id) ? '✅ ' : ''}{nomesColegas[id] || id.slice(0, 6)}
+                            </button>
+                          ))}
+                        </div>
+                        {votando && janelaAberta && (
+                          <div className="space-y-1.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {VIRTUDES.map((v) => (
+                                <label key={v} className="flex items-center justify-between gap-2 rounded border border-nz-borda bg-white px-2 py-1.5">
+                                  <span className="text-[11px] text-nz-tinta">{v}</span>
+                                  <select
+                                    value={notas[v] || ''}
+                                    onChange={(e) => setNotas({ ...notas, [v]: Number(e.target.value) })}
+                                    className="text-[11px] border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta"
+                                  >
+                                    <option value="">nota</option>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+                                  </select>
+                                </label>
+                              ))}
+                            </div>
+                            <Button size="sm" onClick={salvarVotos} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
+                              {salvando ? 'Salvando...' : `Salvar votação de ${nomesColegas[votando] || 'colega'}`}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
