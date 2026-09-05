@@ -49,6 +49,26 @@ supabase secrets set \
   Se em vez dela aparecer `transcrevendo áudio: N bytes`, a chave está OK e o problema (se
   houver) é outro — a linha seguinte diz qual (`Whisper recusou a transcrição`, `falha ao
   baixar áudio do Z-API`).
+- `MAPA_GRUPO_CANAL` (opcional): de qual grupo do WhatsApp vai pra qual canal do Slack.
+  Formato `<id do grupo>=<canal>`, separados por vírgula. O canal pode ser o ID (`C0…`) ou
+  o nome com ou sem `#`. O id do grupo aceita os dois formatos (`-group` do Z-API e `@g.us`
+  do export) — a comparação é por dígitos.
+
+  ```
+  supabase secrets set MAPA_GRUPO_CANAL="120363402599586067-group=C0BHCMYJJGJ,120363111111111111-group=#logistica-tech"
+  ```
+
+  **Grupo fora do mapa cai no canal padrão** — nunca some, e a ferramenta avisa que caiu
+  no padrão. Sem o secret, tudo continua indo pro `SLACK_CANAL_PADRAO`, como era antes.
+  A decisão (aprovada/rejeitada) vai pro MESMO canal onde a demanda foi publicada.
+
+- `LOGO_TOPTECH_URL` (opcional, mas recomendado): URL pública da logo da Top Tech Digital.
+  É a **capa do tópico quando o usuário não mandou imagem** — regra do dono (05/09/2026):
+  imagem que a pessoa enviou tem prioridade; sem ela, entra a logo. **Sem este secret o post
+  sai sem capa** (não falha, só fica sem imagem) e a ferramenta avisa isso na resposta.
+  Precisa ser URL que o Slack consiga baixar do servidor — o jeito mais simples é subir o
+  arquivo em `public/brand/` do site e apontar para `https://leilaonozap.net/brand/...`.
+
 - `GRUPOS_HELOIM_IDS` (opcional): IDs de grupo de WhatsApp onde a Heloim participa, separados
   por vírgula (formato Z-API, tipo `120363019502650977-group`). Sem essa variável, Heloim
   continua funcionando só 1:1 com os admins — não responde em grupo nenhum. **Como descobrir

@@ -3,6 +3,10 @@
 // 28/08/2026 — Expansão Slack: Bot Token para leitura/escrita em qualquer canal.
 // Imports
 import { criarClienteSlack, type SlackClient as TSlackClient } from './slackClient.ts';
+// O FORMATO do post de demanda mora fora daqui, em .js puro, pra o `node --test` poder
+// EXECUTAR a regra em vez de só procurar a frase neste arquivo. Ver postagemDemanda.js.
+import { montarPostagem, montarRascunho, escolherCapa } from './postagemDemanda.js';
+import { lerMapaGrupoCanal, canalDoGrupo } from './roteamentoSlack.js';
 
 // Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento, qualquer
 // número, sempre 1:1) e Heloim (assistente de TI — 1:1 com qualquer admin de
@@ -93,6 +97,18 @@ const SLACK_WEBHOOK_URL = Deno.env.get('SLACK_WEBHOOK_URL') || '';
 // C0BHCMYJJGJ = #top-tech-leilão-nozap (privado) — o mesmo canal onde o webhook
 // atual publica. Trocar sem mexer em código: secret SLACK_CANAL_PADRAO.
 const SLACK_CANAL_PADRAO = Deno.env.get('SLACK_CANAL_PADRAO') || 'C0BHCMYJJGJ';
+
+// Capa do tópico quando o usuário NÃO mandou imagem (regra do dono, 05/09/2026).
+// Fica em secret, e não em bytes no código, por dois motivos: trocar a arte não exige
+// deploy, e sem a logo configurada o post sai SEM capa em vez de falhar — post feio é
+// problema menor que post que não sai.
+const LOGO_TOPTECH_URL = Deno.env.get('LOGO_TOPTECH_URL') || '';
+
+// Mapa GRUPO do WhatsApp → CANAL do Slack (solicitação #3 do dono, 05/09/2026: "organização
+// das notificações/registros por grupo"). Formato: `<id do grupo>=<canal>` separados por
+// vírgula. Grupo fora do mapa cai no canal padrão — nunca some.
+//   MAPA_GRUPO_CANAL="120363402599586067-group=C0BHCMYJJGJ,1203631111...=#logistica-tech"
+const MAPA_GRUPO_CANAL = lerMapaGrupoCanal(Deno.env.get('MAPA_GRUPO_CANAL') || '');
 
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
@@ -1044,9 +1060,11 @@ const TOOLS_HELOIM: ToolDef[] = [
   {
     name: 'registrar_solicitacao',
     description:
-      'Registra um pedido de alteração de sistema (feito por qualquer participante do grupo) com sua classificação ' +
-      'de risco. Use SEMPRE que alguém pedir uma mudança estrutural/técnica em grupo — nunca execute nada sozinha, ' +
-      'só classifica, registra e aguarda autorização de um admin (Luiz ou Ávila).',
+      'PASSO 1 e 2 do fluxo de demanda: registra o pedido de alteração de sistema com a classificação de risco e ' +
+      'devolve o RASCUNHO já formatado. NÃO publica nada no Slack. Use SEMPRE que alguém pedir uma mudança ' +
+      'estrutural/técnica em grupo. Depois de chamar, MOSTRE o campo "rascunho" no grupo, palavra por palavra, e ' +
+      'espere responderem se está certo — nunca resuma nem reescreva o rascunho. Confirmado o conteúdo, chame ' +
+      'confirmar_demanda; só depois de liberarem a postagem, chame publicar_demanda.',
     input_schema: {
       type: 'object',
       properties: {
@@ -1057,7 +1075,9 @@ const TOOLS_HELOIM: ToolDef[] = [
           description: 'baixo = cosmético/texto/config sem risco; medio = afeta fluxo mas não mexe em dinheiro; ' +
             'alto = toca pagamento/comissão/saldo/estoque/autenticação (mesma régua 🔴 zona vermelha do projeto).',
         },
-        pontos_atencao: { type: 'string', description: 'Riscos específicos identificados (colisão de código, link quebrando, etc), se houver.' },
+        pontos_atencao: { type: 'string', description: 'Riscos específicos identificados (colisão de código, link quebrando, etc), se houver. Um por linha.' },
+        titulo: { type: 'string', description: 'Título curto do tópico, no padrão "Assunto — Empresa" (ex.: "Alteração de link de referência — Top Tech Digital"). Sem ele, usa a descrição.' },
+        motivo: { type: 'string', description: 'Por que este risco, em uma frase técnica (ex.: "O parâmetro ref alimenta referred_by_id, base de toda a hierarquia de indicação").' },
       },
       required: ['descricao', 'risco'],
     },
@@ -1073,6 +1093,9 @@ const TOOLS_HELOIM: ToolDef[] = [
           descricao: input.descricao,
           risco: input.risco,
           pontos_atencao: input.pontos_atencao ?? null,
+          titulo: input.titulo ?? null,
+          motivo: input.motivo ?? null,
+          etapa: 'conteudo',   // 05/09: nasce como RASCUNHO — não vai pro Slack ainda
         }),
       });
       const rows = await r.json().catch(() => []);
@@ -1081,13 +1104,20 @@ const TOOLS_HELOIM: ToolDef[] = [
 
       const emoji = EMOJI_RISCO[input.risco] || '⚪';
       const quem = ctx.remetenteNome || ctx.remetente;
-      await postarNoSlack(
-        `${emoji} *Nova solicitação #${solicitacao.id}* — risco ${input.risco}\n` +
-        `*Pedido:* ${input.descricao}\n` +
-        (input.pontos_atencao ? `*Pontos de atenção:* ${input.pontos_atencao}\n` : '') +
-        `*De:* ${quem}${ctx.grupoNome ? ` (grupo ${ctx.grupoNome})` : ''}\n` +
-        `*Status:* aguardando autorização`
-      );
+
+      // 🔴 05/09/2026 — AQUI ELA NÃO POSTA MAIS NO SLACK.
+      // Antes, registrar e publicar eram a MESMA ação: ela interpretava o pedido e mandava
+      // pro canal sem passar por ninguém. O dono pediu quatro passos — recebe, organiza,
+      // confirma se a demanda está certa, confirma se pode postar — e os dois últimos não
+      // existiam. O rascunho volta pro GRUPO; o Slack só recebe em publicar_demanda.
+      const rascunho = montarRascunho({
+        titulo: input.titulo || input.descricao,
+        pedido: quem,
+        solicitacao: input.descricao,
+        risco: input.risco,
+        motivo: input.motivo,
+        pontos: input.pontos_atencao,
+      }, 'conteudo');
 
       // Se quem pediu NÃO é admin, avisa os admins direto — não dá pra contar só com alguém
       // estar olhando o grupo naquele instante.
@@ -1102,7 +1132,140 @@ const TOOLS_HELOIM: ToolDef[] = [
         }
       }
 
-      return { registrado: true, id: solicitacao.id };
+      // O texto vai de volta pra Claude MOSTRAR no grupo, exatamente como será postado.
+      return { registrado: true, id: solicitacao.id, etapa: 'conteudo', rascunho };
+    },
+  },
+  {
+    name: 'confirmar_demanda',
+    description:
+      'PASSO 3: alguém do grupo confirmou que a demanda está CERTA. Marca o rascunho como conferido e devolve o ' +
+      'texto de novo, agora perguntando se pode postar. Ainda NÃO publica nada. Use quando ouvir "está certo", ' +
+      '"isso mesmo", "pode seguir", "confirmado". Se pedirem correção, NÃO use esta ferramenta: registre a ' +
+      'demanda de novo com o texto corrigido.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'number', description: 'O id devolvido por registrar_solicitacao.' } },
+      required: ['id'],
+    },
+    // 🔓 QUALQUER participante confirma (decisão do dono, 05/09). Conferir o texto de uma
+    // demanda não é autorizar mudança nenhuma — quem autoriza a EXECUÇÃO continua sendo
+    // admin, dentro de aprovar_solicitacao.
+    executar: async (input, ctx) => {
+      const r = await sbRest(`heloim_solicitacoes?id=eq.${Number(input.id)}&etapa=eq.conteudo`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ etapa: 'postar' }),
+      });
+      const rows = await r.json().catch(() => []);
+      const d = Array.isArray(rows) ? rows[0] : null;
+      if (!d) return { ok: false, erro: 'Não achei rascunho aguardando conferência com esse id (talvez já tenha sido confirmado).' };
+      return {
+        ok: true,
+        etapa: 'postar',
+        rascunho: montarRascunho({
+          titulo: d.titulo || d.descricao,
+          pedido: d.solicitante_nome || d.solicitante_telefone,
+          data: d.created_at,
+          solicitacao: d.descricao,
+          risco: d.risco,
+          motivo: d.motivo,
+          pontos: d.pontos_atencao,
+          anexos: d.anexos,
+        }, 'postar'),
+      };
+    },
+  },
+  {
+    name: 'publicar_demanda',
+    description:
+      'PASSO 4: liberaram a postagem — publica a demanda no Slack no formato oficial, com a imagem de capa. ' +
+      'Use SÓ depois de confirmar_demanda e de alguém dizer "pode postar". Nunca chame por iniciativa própria.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'O id da demanda já confirmada.' },
+        canal: { type: 'string', description: 'Canal de destino; vazio = o canal padrão do time.' },
+        legendas_das_imagens: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Uma legenda por imagem da conversa, na ordem, descrevendo o que cada print mostra ' +
+            '(ex.: "Loja Virtual navegando, mas outros produtos não aparecem"). Você enxerga as imagens — descreva.',
+        },
+      },
+      required: ['id'],
+    },
+    executar: async (input, ctx) => {
+      const r = await sbRest(`heloim_solicitacoes?id=eq.${Number(input.id)}&etapa=eq.postar`, { method: 'GET' });
+      const rows = await r.json().catch(() => []);
+      const d = Array.isArray(rows) ? rows[0] : null;
+      if (!d) return { ok: false, erro: 'Essa demanda não está liberada para postagem. Confirme o conteúdo primeiro (confirmar_demanda).' };
+
+      const cliente = obterClienteSlack();
+      if (!cliente) return { ok: false, erro: 'Slack não configurado (SLACK_BOT_TOKEN). Ver DEPLOY.md.' };
+      // Precedência: canal pedido na hora > canal do grupo (MAPA_GRUPO_CANAL) > canal padrão.
+      // O grupo vem da LINHA da demanda, não de quem clicou — quem confirma pode estar em
+      // outro lugar, e o registro pertence ao grupo que abriu o pedido.
+      const rota = canalDoGrupo(d.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO);
+      const canal = input.canal ? String(input.canal).replace(/^#/, '') : rota.canal;
+
+      // Capa: a imagem que o usuário mandou; sem ela, a logo da Top Tech (regra do dono).
+      const historico = await carregarHistorico(ctx.remetente, 'heloim');
+      const { capa, origem, motivo } = escolherCapa({
+        imagemDoUsuario: extrairUltimaImagemDoHistorico(historico),
+        logoUrl: LOGO_TOPTECH_URL,
+      });
+
+      const legendas = Array.isArray(input.legendas_das_imagens) ? input.legendas_das_imagens : [];
+      const corpo = montarPostagem({
+        titulo: d.titulo || d.descricao,
+        pedido: d.solicitante_nome || d.solicitante_telefone,
+        data: d.created_at,
+        solicitacao: d.descricao,
+        risco: d.risco,
+        motivo: d.motivo,
+        pontos: d.pontos_atencao,
+        anexos: legendas.map((legenda: string) => ({ legenda })),
+      });
+
+      // Mesmo caminho de download/upload que documentar_no_slack já usa (baixa do Z-API,
+      // sobe como arquivo real). Capa que não baixa NÃO cancela o post: sai só o texto —
+      // perder o registro da demanda por causa de uma imagem seria o pior dos dois mundos.
+      let resultado: any = null;
+      if (capa) {
+        try {
+          const img = await fetch(capa);
+          if (!img.ok) throw new Error(`HTTP ${img.status}`);
+          const bytes = new Uint8Array(await img.arrayBuffer());
+          const ct = img.headers.get('content-type') || 'image/jpeg';
+          const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg';
+          resultado = await cliente.uploadFile(canal, bytes, `capa.${ext}`, { initial_comment: corpo });
+        } catch (e) {
+          console.warn('[demanda] capa falhou, publicando só o texto:', (e as Error)?.message);
+          resultado = null;
+        }
+      }
+      if (!resultado) resultado = await cliente.postMessage(canal, corpo);
+      if (!resultado?.ok) return { ok: false, erro: resultado?.error || 'o Slack recusou a postagem' };
+
+      await sbRest(`heloim_solicitacoes?id=eq.${Number(input.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          etapa: 'postado',
+          slack_canal: canal,
+          slack_ts: resultado?.data?.ts ?? resultado?.ts ?? null,
+          anexos: legendas.length ? legendas.map((legenda: string) => ({ legenda })) : null,
+        }),
+      });
+      return {
+        ok: true, canal, capa: origem,
+        canal_veio_de: input.canal ? 'pedido' : rota.origem,
+        aviso: motivo === 'sem_logo'
+          ? 'Postado SEM capa: nenhuma imagem na conversa e LOGO_TOPTECH_URL não está configurada.'
+          : rota.origem === 'padrao' && d.grupo_id
+            ? 'Este grupo não está em MAPA_GRUPO_CANAL — publiquei no canal padrão.'
+            : undefined,
+      };
     },
   },
   {
@@ -1123,7 +1286,10 @@ const TOOLS_HELOIM: ToolDef[] = [
       const rows = await r.json().catch(() => []);
       const solicitacao = Array.isArray(rows) ? rows[0] : null;
       if (!solicitacao) return { aprovado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
-      await postarNoSlack(`✅ *Solicitação #${solicitacao.id} aprovada* por ${ctx.remetenteNome || ctx.remetente}\n*Pedido:* ${solicitacao.descricao}`);
+      // A decisão vai pro MESMO canal onde a demanda foi publicada — separar as duas quebraria
+      // a leitura do tópico. slack_canal quando já publicada; senão, o canal do grupo.
+      await postarNoSlack(`✅ *Solicitação #${solicitacao.id} aprovada* por ${ctx.remetenteNome || ctx.remetente}\n*Pedido:* ${solicitacao.descricao}`,
+        solicitacao.slack_canal || canalDoGrupo(solicitacao.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO).canal);
       return { aprovado: true, id: solicitacao.id };
     },
   },
@@ -1148,7 +1314,9 @@ const TOOLS_HELOIM: ToolDef[] = [
       const rows = await r.json().catch(() => []);
       const solicitacao = Array.isArray(rows) ? rows[0] : null;
       if (!solicitacao) return { rejeitado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
-      await postarNoSlack(`⛔ *Solicitação #${solicitacao.id} rejeitada* por ${ctx.remetenteNome || ctx.remetente}${input.motivo ? `\n*Motivo:* ${input.motivo}` : ''}\n*Pedido:* ${solicitacao.descricao}`);
+      // mesmo canal da aprovação: a decisão fica junto do post da demanda
+      await postarNoSlack(`⛔ *Solicitação #${solicitacao.id} rejeitada* por ${ctx.remetenteNome || ctx.remetente}${input.motivo ? `\n*Motivo:* ${input.motivo}` : ''}\n*Pedido:* ${solicitacao.descricao}`,
+        solicitacao.slack_canal || canalDoGrupo(solicitacao.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO).canal);
       return { rejeitado: true, id: solicitacao.id };
     },
   },
@@ -1463,7 +1631,26 @@ function montarSystemPromptHeloim(ctx: {
       `\n\nVocê só está vendo esta mensagem porque foi CHAMADA (pelo nome, por marcação, por ` +
       `resposta a uma mensagem sua, ou porque já estava conversando com essa pessoa). O resto ` +
       `da conversa do grupo passa sem você. Então responda o que foi pedido e pare — não ` +
-      `comente conversa alheia, não puxe assunto, não peça pra te chamarem de novo.`
+      `comente conversa alheia, não puxe assunto, não peça pra te chamarem de novo.` +
+
+      // 🔴 05/09/2026 — O PROTOCOLO DE DEMANDA, ditado pelo dono. As ferramentas sozinhas não
+      // bastam: sem esta instrução ela chama publicar_demanda na primeira mensagem e o
+      // atropelo continua. Os quatro passos são a ordem que ele escreveu, palavra por palavra.
+      `\n\n=== COMO TRATAR UMA DEMANDA (ordem obrigatória, sem pular passo) ===\n` +
+      `1. RECEBE — alguém pede uma mudança técnica no sistema.\n` +
+      `2. ORGANIZA — chame registrar_solicitacao com título no padrão "Assunto — Empresa", ` +
+      `a solicitação com os valores exatos (de → para), o risco, o motivo técnico e os pontos ` +
+      `de atenção. Depois MOSTRE no grupo o campo "rascunho" que ela devolveu, do jeito que ` +
+      `veio, palavra por palavra. Não resuma, não reescreva, não comente por cima.\n` +
+      `3. CONFIRMA SE ESTÁ CERTA — espere alguém responder. Se disserem que está certo, chame ` +
+      `confirmar_demanda e mostre o rascunho de novo. Se pedirem correção, registre a demanda ` +
+      `outra vez já corrigida — nunca "conserte" no ar sem passar pelo rascunho.\n` +
+      `4. CONFIRMA SE PODE POSTAR — só depois de alguém liberar a postagem, chame ` +
+      `publicar_demanda, descrevendo em legendas_das_imagens o que cada print mostra.\n\n` +
+      `NUNCA publique no Slack sem os passos 3 e 4. Qualquer pessoa do grupo pode confirmar ` +
+      `o texto e liberar a postagem — mas AUTORIZAR A EXECUÇÃO da mudança continua sendo só ` +
+      `de admin, e isso é outra coisa: o post sai como "aguardando autorização". Se ninguém ` +
+      `responder, o rascunho fica esperando; não cobre, não insista, não poste por conta.`
     : `\n\nVocê está numa conversa 1:1 com ${ctx.remetenteNome || 'um admin'} (admin confirmado).`;
 
   return `Você é a Heloim, assistente técnica de TI do Leilão NoZap. Responde direto por ${admins}
@@ -1879,9 +2066,17 @@ async function processarMensagem(msg: MensagemExtraida) {
       }
     }
 
-    // Grupo autorizado = SEMPRE Heloim, não importa quem no grupo escreveu (ela é quem recolhe
-    // pedido de qualquer participante; só quem é admin consegue aprovar/rejeitar — a tool que
-    // faz isso confere ehAdmin() de novo por conta própria, não confia só nesta checagem).
+    // 05/09/2026 — EM GRUPO, ZECA E HELOIM SÃO UM SÓ (pedido do dono: "independente do nome,
+    // ambos nos grupos respondem e obedecem como um"). Antes o grupo era território exclusivo
+    // da Heloim e o Zeca ficava mudo lá; quem chamasse "Zeca" no grupo não recebia resposta
+    // nenhuma, sem log, e parecia bot quebrado.
+    //
+    // Na prática: no grupo continua UM agente (não dois respondendo em cima do outro), com o
+    // prompt da Heloim e as ferramentas das DUAS somadas — então consultar saldo/pedido, que
+    // era só do Zeca, passa a funcionar dentro do grupo também.
+    //
+    // O que NÃO muda: aprovar/rejeitar solicitação segue conferindo ehAdmin() dentro da própria
+    // tool. Somar ferramenta não é somar permissão.
     const admin = ehAdmin(msg.remetente);
     const emGrupo = !!msg.grupoId;
     const agente = emGrupo || admin ? 'heloim' : 'zeca';
@@ -1919,7 +2114,9 @@ async function processarMensagem(msg: MensagemExtraida) {
     const systemPrompt = agente === 'heloim'
       ? montarSystemPromptHeloim({ emGrupo, grupoNome: msg.grupoNome, remetenteEhAdmin: admin, remetenteNome: msg.remetenteNome })
       : montarSystemPromptZeca(cliente);
-    const tools = agente === 'heloim' ? TOOLS_HELOIM : TOOLS_ZECA;
+    // Em grupo, as ferramentas das duas juntas — é o "um só" do pedido do dono.
+    const tools = emGrupo ? [...TOOLS_HELOIM, ...TOOLS_ZECA]
+      : agente === 'heloim' ? TOOLS_HELOIM : TOOLS_ZECA;
 
     const ctx: ToolCtx = { remetente: msg.remetente, remetenteNome: msg.remetenteNome, grupoId: msg.grupoId, grupoNome: msg.grupoNome };
 
