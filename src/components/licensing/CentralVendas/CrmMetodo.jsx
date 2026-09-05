@@ -20,7 +20,7 @@ import {
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
-import { resumoDoDia, dataISO, inicioCiclo, CICLO_DIAS_UTEIS } from '@/lib/xgame';
+import { resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import CrmSonhoModal from './CrmSonhoModal';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
@@ -133,17 +133,26 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const ehHoje = dia === hojeStr();
   const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
   const [diasCiclo, setDiasCiclo] = useState([]);
+  const [participante, setParticipante] = useState(null); // verbas/cargo (F1); sem cadastro = padrão da planilha
+  const [cicloConfig, setCicloConfig] = useState(null); // xgame_config.ciclo_inicio (o INÍCIO X-GAME oficial)
   useEffect(() => {
     if (painel !== 'compromisso') return;
     const t = setInterval(() => { const d = new Date(); setAgoraMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
     return () => clearInterval(t);
   }, [painel]);
   useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setParticipante(null); setCicloConfig(null); return; }
+    supabase.from('xgame_participantes').select('*').eq('user_id', uid).maybeSingle()
+      .then(({ data }) => setParticipante(data || null));
+    supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle()
+      .then(({ data }) => setCicloConfig(data?.ciclo_inicio || null));
+  }, [painel, uid]);
+  useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setDiasCiclo([]); return; }
     supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas,detalhes')
-      .eq('user_id', uid).eq('ciclo_inicio', dataISO(inicioCiclo(new Date()))).lt('data', hojeStr()).order('data')
+      .eq('user_id', uid).eq('ciclo_inicio', dataISO(inicioCicloOficial(cicloConfig, new Date()))).lt('data', hojeStr()).order('data')
       .then(({ data, error }) => setDiasCiclo(error ? [] : (data || [])));
-  }, [painel, uid]);
+  }, [painel, uid, cicloConfig]);
   const xgame = useMemo(() => {
     if (painel !== 'compromisso' || tarefas.length === 0) return null;
     return resumoDoDia({
@@ -151,8 +160,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       agoraMin: ehHoje ? agoraMin : 24 * 60,
       diasCiclo,
       hoje: ehHoje ? new Date() : new Date(`${dia}T12:00:00`),
+      participante,
+      cicloConfigISO: cicloConfig,
     });
-  }, [painel, tarefas, agoraMin, diasCiclo, dia, ehHoje]);
+  }, [painel, tarefas, agoraMin, diasCiclo, dia, ehHoje, participante, cicloConfig]);
   const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
   // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
   useEffect(() => {
@@ -634,9 +645,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
                 <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Pontos {ehHoje ? 'de hoje' : 'do dia'}</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{xgame.pontos}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.tarefas_feitas}/{xgame.tarefas_total} tarefas × cotação</p>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'}</p>
+                  <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">
+                    {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
+                  </p>
                 </div>
               </div>
             )}
@@ -669,12 +682,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 </p>
                                 {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
                               </div>
+                              {/* 💰 X-PAY — o valor da tarefa (verba ÷ 22 ÷ nº de tarefas × peso, como na planilha) */}
+                              {xgame && xgame.valores[t.id] > 0 && (t.feito || estadoDaTarefa(t)?.id !== 'PERDIDO') && (
+                                <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                                  {t.feito ? '+' : ''}{fmtReais(xgame.valores[t.id])}
+                                </span>
+                              )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
                                 const est = estadoDaTarefa(t);
-                                return est && SELO_ESTADO[est.id]
-                                  ? <span className={`shrink-0 text-[10px] font-bold ${COR_ESTADO[est.id]}`} title={est.id === 'PERDIDO' ? 'Passou da janela — isso impacta no seu resultado' : undefined}>{SELO_ESTADO[est.id]}</span>
-                                  : null;
+                                if (!est || !SELO_ESTADO[est.id]) return null;
+                                const perda = est.id === 'PERDIDO' && xgame?.valores[t.id] > 0 ? ` − ${fmtReais(xgame.valores[t.id])}` : '';
+                                return (
+                                  <span className={`shrink-0 text-[10px] font-bold ${COR_ESTADO[est.id]}`} title={est.id === 'PERDIDO' ? 'ISSO IMPACTA NO SEU RESULTADO FINANCEIRO' : undefined}>
+                                    {SELO_ESTADO[est.id]}{perda}
+                                  </span>
+                                );
                               })()}
                               {guia && !t.feito && (
                                 <button
