@@ -55,6 +55,15 @@ export default function HeroTopCollege({ saudacao, nome }) {
           <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-8 w-auto" draggable="false" />
         </div>
 
+        {/* 🎓 DIR-63 — as frases das duas marcas moram AQUI agora. Elas eram o
+            único conteúdo que o bloco de baixo tinha e a faixa não: com ele
+            removido, a mensagem não se perde e o par de logos deixa de
+            aparecer duas vezes na mesma tela. */}
+        <p className="text-[11px] sm:text-xs leading-relaxed text-white/45 mb-5 max-w-md" style={{ fontFamily: 'Sora, sans-serif' }}>
+          A primeira faculdade de empreendedorismo do planeta · Estrutura de operação
+          e expansão de qualquer negócio
+        </p>
+
         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.08]">
           Painel de Alavancagem
         </h1>

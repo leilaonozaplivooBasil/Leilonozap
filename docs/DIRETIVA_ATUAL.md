@@ -12,6 +12,30 @@
 
 ---
 
+## DIR-63 — Parar de repetir as logos
+
+**Emitida por:** dono (05/09/2026), olhando o preview: *"tamo quase lá,
+só estou achando que está repetindo muito as logos. Acho que a de cima
+precisa só deixar da X-eos, o que acha?"*
+
+**Data:** 05/09/2026.
+
+**Minha leitura, dita a ele antes de mexer:** o incômodo não é uma logo a
+mais — é o PAR INTEIRO aparecendo duas vezes na mesma tela, com 300px de
+distância (na faixa da academia e de novo no palco dentro do painel).
+Tirar a Top College da faixa resolveria metade e deixaria a faixa da
+ACADEMIA sem a academia.
+
+**Escopo autorizado:**
+1. O palco de marcas de dentro do painel SAI (era a cópia).
+2. As frases das duas marcas — único conteúdo que só existia lá — sobem
+   pra faixa, numa linha só.
+3. A faixa segue com as duas marcas juntas, agora uma vez só na tela.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
 ## DIR-62 — A faixa da academia: o topo branco vira preto, com o professor
 
 **Emitida por:** dono (05/09/2026): *"ficou muito pequeno o professor,

@@ -2907,3 +2907,39 @@ marcas e a pergunta).
 
 **Status:** ENTREGUE NO PREVIEW. Produção NÃO — reforçado pelo dono
 nesta rodada: "só não coloca nada em produção agora, é tudo no preview".
+
+---
+
+## REL-63 — Parar de repetir as logos (05/09/2026)
+
+**Diretiva:** DIR-63.
+
+**Entregue:** o palco de marcas de dentro do painel foi REMOVIDO — ele
+repetia, 300px abaixo, exatamente o mesmo par de logos da faixa da
+academia. As frases das duas marcas (único conteúdo que só existia nele)
+subiram pra faixa, numa linha só. Medido no DOM: cada marca aparece
+agora **uma vez** na tela, e virou asserção — se o par voltar a se
+repetir, a prova falha.
+
+**Divergi do que o dono propôs, e disse isso a ele:** ele sugeriu tirar
+a Top College da faixa de cima. Isso resolveria metade da repetição e
+deixaria a faixa da ACADEMIA sem a academia. O que incomodava era o par
+aparecendo duas vezes — então saiu a cópia, não metade do original.
+
+**BUG DE TESTE ENCONTRADO E CORRIGIDO (não era do produto):** a prova
+começou a falhar em "linha do tempo ordenada — Google 09:00 ANTES do
+método 18:00". Isolei rodando a prova com as minhas mudanças guardadas
+(`git stash`): **falhava sem elas também**. Instrumentei a asserção pra
+imprimir o trecho da página e a causa apareceu: eram **17:54** no
+relógio da máquina, a reunião de teste é às 18:00, então o popup de
+alerta da DIR-53 abriu e repetiu o título da reunião no topo do
+documento — e a comparação, que varria o texto da PÁGINA INTEIRA,
+passou a olhar o popup em vez da agenda. Era um teste frágil ao horário
+do dia, escrito por mim na DIR-49; o produto estava correto. A
+comparação agora é feita DENTRO do card da agenda.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**169/169 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
