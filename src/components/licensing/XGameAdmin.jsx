@@ -7,6 +7,7 @@ import { supabase } from '@/api/supabaseClient';
 import { fmtReais } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
+import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
 // feito pelo painel Admin do Licensing). É AQUI que o dono do jogo decide:
@@ -20,8 +21,10 @@ import { isAdminRole } from '@/lib/roles';
 
 // Multas de atraso do FAQ da planilha: Trainee R$50 · Executivo R$200 · Diretor R$500.
 const MULTA_POR_CARGO = { trainee: 50, executivo: 200, diretor: 500, ceo: 500 };
+// SEM [VENDA] aqui de propósito: a venda da loja da pessoa já remunera pelo
+// sistema de comissões da plataforma — a gamificação não paga venda de novo.
 const CATEGORIAS = [
-  ['producao', '[PRODUÇÃO]'], ['bonus', '[BÔNUS]'], ['venda', '[VENDA]'],
+  ['producao', '[PRODUÇÃO]'], ['bonus', '[BÔNUS]'],
   ['mentoria', '[MENTORIA]'], ['visao', '[VISÃO ESTRATÉGICA]'],
 ];
 const hojeStr = () => new Date().toISOString().slice(0, 10);
@@ -59,11 +62,10 @@ const DICAS = {
   ciclo: 'O jogo roda em ciclos de 22 dias úteis. A cotação do dia começa em 1,00 e cai 0,01 por dia útil até 0,80 no dia 22 — "ANTECIPAÇÃO É PODER". Sem data aberta aqui, o app usa o 1º dia útil do mês.',
   verba_producao: 'Verba fixa mensal de PRODUÇÃO da pessoa. O X-Pay divide: verba ÷ 22 dias ÷ nº de tarefas de produção do dia × peso da tarefa ÷ 3.',
   verba_bonus: 'Verba mensal de BÔNUS/ESTUDO (leitura, cursos). Divide igual à produção, só entre as tarefas de bônus.',
-  valor_venda: 'Cada [VENDA] concluída paga esse valor cheio por unidade — não sai do bolo da produção.',
   perfil: 'O perfil muda os pesos do Human Token: estratégico/operacional têm 12,22 de aplicabilidade (50% produção, 30% real time, 20% bônus); comercial tem 2,22 + PT VENDA 2,5 (vendas valem muito mais).',
   cargo: 'O cargo define a multa de atraso do FAQ: Trainee R$50, Executivo R$200, Diretor R$500.',
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',
-  categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus; [VENDA] paga o valor por unidade.',
+  categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus. Venda NÃO entra aqui — a venda da loja já remunera pelas comissões da plataforma.',
   conferencia: 'Conferência dupla da planilha: a pessoa marca a tarefa (o checkbox dela) e o gestor confirma o SIM aqui. Sem o SIM, a tarefa fica pendente de conferência.',
 };
 
@@ -149,6 +151,26 @@ export default function XGameAdmin() {
     const { error } = await supabase.from('metodo_tarefas').update(patch).eq('id', t.id);
     if (error) { toast.error('Erro ao salvar a tarefa.'); return; }
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...patch } : x)));
+  };
+
+  // ⚡ A Rotina Perfeita AUTOMÁTICA — a mesma do Compromisso: puxa a rotina
+  // da pessoa (metodo_perfil) ou a Rotina do Método padrão e gera o dia dela.
+  const gerarRotinaPerfeita = async () => {
+    if (!tarefaUser) return;
+    setSalvando(true);
+    try {
+      const { data: perfil } = await supabase.from('metodo_perfil')
+        .select('rotina').eq('user_id', tarefaUser).maybeSingle();
+      const rotina = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
+      const linhas = gerarTarefasDaRotina(rotina, tarefaUser, tarefaDia);
+      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      if (error) throw error;
+      toast.success(`Dia gerado com ${linhas.length} tarefas da Rotina Perfeita!`);
+      carregarTarefas(tarefaUser, tarefaDia);
+    } catch (e) {
+      console.error('[X-GAME] gerar rotina:', e);
+      toast.error('Erro ao gerar a Rotina Perfeita — tente de novo.');
+    } finally { setSalvando(false); }
   };
 
   const criarTarefa = async () => {
@@ -251,9 +273,6 @@ export default function XGameAdmin() {
                 <label title={DICAS.verba_bonus}>bônus R$ ⓘ{' '}
                   <input type="number" defaultValue={p.verba_bonus} onBlur={(e) => salvarParticipante(p, { verba_bonus: Number(e.target.value) || 0 })} className="w-16 border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-900 tabular-nums" />
                 </label>
-                <label title={DICAS.valor_venda}>venda R$ ⓘ{' '}
-                  <input type="number" defaultValue={p.valor_venda} onBlur={(e) => salvarParticipante(p, { valor_venda: Number(e.target.value) || 0 })} className="w-16 border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-900 tabular-nums" />
-                </label>
                 <span title={DICAS.cargo}>multa {fmtReais(p.multa_atraso)}</span>
               </div>
             </div>
@@ -277,7 +296,12 @@ export default function XGameAdmin() {
         </div>
 
         {tarefaUser && (tarefas.length === 0 ? (
-          <p className="text-[11px] text-gray-500">Sem Master Task nesse dia pra essa pessoa — dá pra criar a primeira tarefa abaixo.</p>
+          <div className="flex items-center gap-2 flex-wrap rounded border border-dashed border-emerald-300 bg-emerald-50/50 px-3 py-2">
+            <p className="text-[11px] text-gray-600 flex-1 min-w-[180px]">Sem Master Task nesse dia pra essa pessoa. Gera automático com a Rotina Perfeita do Compromisso, ou cria manual abaixo.</p>
+            <Button size="sm" onClick={gerarRotinaPerfeita} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
+              ⚡ {salvando ? 'Gerando...' : 'Gerar Rotina Perfeita pra ela'}
+            </Button>
+          </div>
         ) : (
           <div className="space-y-1">
             {tarefas.map((t) => (

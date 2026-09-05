@@ -752,7 +752,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. [VENDA] paga o valor cheio por unidade. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
                   <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
