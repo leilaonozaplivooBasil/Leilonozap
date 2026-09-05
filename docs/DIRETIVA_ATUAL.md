@@ -12,6 +12,60 @@
 
 ---
 
+## DIR-56 — O painel dos 8 Hábitos VIRA o ambiente da marca
+
+**Emitida por:** dono (05/09/2026), reprovando o resultado da DIR-55 ao
+ver no preview: *"CARA QUE LOUCURA É ESSA. EU QUERO O FUNDO FODA COM AS
+CORES DAS LOGOS, EU QUERO AS LOGOS ORIGINAIS, EU QUERO TUDO ISSO
+TEMÁTICO IGUAL ÀS APRESENTAÇÕES QUE EU TE MANDEI. QUERO TODO O FUNDO
+DESSA ÁREA DE TOP COLLEGE E X-EOS. VOCÊ NÃO ENTENDEU ISSO. TODO O
+PAINEL NESSA PARTE PRECISA TER A IDENTIDADE VISUAL DESSAS EMPRESAS.
+EU NÃO QUERO FUNDO BRANCO NA ÁREA DE VENDAS."* Complementada em
+seguida: *"COLOQUE UMAS IMAGENS DO BRANDBOOK NO PAINEL PARA CRIAR MAIS
+CONEXÕES, IMAGENS DO BRANDBOOK EM TODO PAINEL. VAMOS DEIXAR MAIS
+TEMÁTICO E MENOS COM EMOJIS, E DEIXAR O PAINEL COM VONTADE DE SER
+GRANDE. QUERO ISSO FODA."*
+
+**O que a DIR-55 errou:** entregou uma placa de logo no topo de uma
+página branca. Identidade visual não é adesivo — é o ambiente inteiro.
+
+**Material de origem (arte ORIGINAL, não recriada):** as logos e as
+imagens foram extraídas dos PDFs que o próprio dono anexou — a
+apresentação do evento (lockup Top College + X-eos, com canal alfa, em
+alta) e o brandbook oficial da X-EOS (padrão tonal de X, sub-marca
+X-office, imagens temáticas). Os SVGs desenhados à mão na DIR-55 são
+apagados.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. **Fundo:** todo o painel da Central de Vendas em base escura X-EOS
+   (#00020C → #0A1020), com o padrão tonal de X do brandbook por trás e
+   brilhos suaves no gradiente Top College. Zero área branca.
+2. **Superfícies:** todo card (métricas, hábitos, agenda, fila, modais)
+   vira vidro escuro — fundo translúcido, borda de luz, texto claro.
+3. **Logos originais** no cabeçalho, sobre o fundo escuro, com as
+   frases oficiais das duas marcas.
+4. **Papel de cada marca:** gradiente Top College (azul→roxo→magenta) no
+   que brilha — hábito ativo, título, progresso, botão principal;
+   prata/branco X-EOS no que sustenta — bordas, divisores, ícones,
+   botões secundários.
+5. **Imagens do brandbook em todo o painel:** uma faixa temática por
+   Hábito (sonho→carro, compromisso→"grandes batalhas", lista→pessoas,
+   contato→ambiente, apresentação→papelaria, acompanhamento→mochila,
+   verificação→X-office, duplicação→avião) + a frase "o sucesso é a
+   soma de pequenos esforços repetidos dia após dia".
+6. **Menos emoji:** os emojis decorativos da navegação e dos títulos dão
+   lugar a ícones de traço (lucide), já usados na casa.
+7. **Escala:** tipografia e respiro maiores — "vontade de ser grande".
+
+**Fora do escopo:** gamificação / Human Token (o dono segurou até
+mandar a planilha); qualquer tela fora da Central de Vendas (cabeçalho
+do site, menu lateral, rodapé e demais módulos ficam como estão);
+publicação em produção (só com "pode" separado).
+
+---
+
 ## DIR-55 — Identidade Top College + X-EOS no painel dos 8 Hábitos
 
 **Emitida por:** dono (05/09/2026, por áudio transcrito): "todo esse

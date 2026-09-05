@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -418,18 +418,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       <CardContent className="p-4 sm:p-6 space-y-4">
         {habito && (
           <div>
-            {/* 🏛️ DIR-55 — a coluna vertebral (X-EOS, preto/cinza) sustenta;
-                o destaque (gradiente Top College) marca o título de cada Hábito. */}
-            <div className="h-1 w-14 rounded-full mb-2" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }} />
-            <p className="text-lg font-bold text-nz-tinta">
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }}
-              >
-                Hábito {habito.n} — {habito.titulo}
-              </span>
+            {/* 🏛️ DIR-56 — o nome do Hábito já vem grande na faixa do brandbook,
+                logo acima; aqui fica só o ensinamento, com escala de leitura e
+                o traço da Top College sustentando à esquerda. */}
+            <p
+              className="text-base sm:text-lg leading-relaxed text-nz-tinta pl-4 border-l-2"
+              style={{ borderImage: 'linear-gradient(180deg, var(--topcollege-azul), var(--topcollege-magenta)) 1' }}
+            >
+              {habito.texto}
             </p>
-            <p className="text-sm text-nz-tinta-fraca">{habito.texto}</p>
           </div>
         )}
 
@@ -754,10 +751,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
               <div>
                 <p className="text-sm font-bold text-nz-tinta mb-1.5">
-                  🎯 Quem contatar — {visaoTotal && !minha ? 'os qualificados do TIME' : 'os qualificados da sua lista'}{fila.length > 0 ? ` (${fila.length})` : ''}
+                  Quem contatar — {visaoTotal && !minha ? 'os qualificados do TIME' : 'os qualificados da sua lista'}{fila.length > 0 ? ` (${fila.length})` : ''}
                 </p>
                 {visaoTotal && (
-                  <p className="text-[11px] text-nz-tinta-fraca mb-1.5">{minha ? '🙋 mostrando só os SEUS cadastros — troque pra 👥 TIME INTEIRO na agenda abaixo pra ver de todo mundo' : '👥 mostrando os cadastros de TODO MUNDO, cada um com o dono identificado'}</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mb-1.5">{minha ? '🙋 mostrando só os SEUS cadastros — troque pra TIME INTEIRO na agenda abaixo pra ver de todo mundo' : '👥 mostrando os cadastros de TODO MUNDO, cada um com o dono identificado'}</p>
                 )}
                 {fila.length === 0 ? (
                   <p className="text-xs text-nz-tinta-fraca py-3 text-center border border-dashed border-nz-borda rounded-xl">
@@ -784,10 +781,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                         {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho */}
                         <div className="flex gap-1.5 shrink-0">
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: c, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
-                            📅 Agendar
+                            <CalendarPlus className="w-3.5 h-3.5 mr-1.5" />Agendar
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: c })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">
-                            ✍️ Registrar
+                            <PenLine className="w-3.5 h-3.5 mr-1.5" />Registrar
                           </Button>
                         </div>
                       </div>
@@ -813,20 +810,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                       onClick={() => setEscopoAgenda('minha')}
                       className={`py-2 text-xs font-bold transition-colors ${minha ? 'bg-nz-verde text-white' : 'bg-white text-nz-tinta-fraca hover:text-nz-tinta'}`}
                     >
-                      🙋 MINHA AGENDA
+                      MINHA AGENDA
                     </button>
                     <button
                       type="button"
                       onClick={() => setEscopoAgenda('time')}
                       className={`py-2 text-xs font-bold transition-colors ${!minha ? 'bg-nz-verde text-white' : 'bg-white text-nz-tinta-fraca hover:text-nz-tinta'}`}
                     >
-                      👥 TIME INTEIRO
+                      TIME INTEIRO
                     </button>
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <p className="text-sm font-bold text-nz-tinta">
-                    {minha ? '🙋 Minha agenda de hoje' : '👥 Agenda do TIME hoje'} · {plural(nReunioes, 'reunião', 'reuniões')} · {plural(retornos.length, 'retorno', 'retornos')}
+                    {minha ? 'Minha agenda de hoje' : 'Agenda do TIME hoje'} · {plural(nReunioes, 'reunião', 'reuniões')} · {plural(retornos.length, 'retorno', 'retornos')}
                   </p>
                   <div className="flex gap-1.5 shrink-0 flex-wrap">
                     {minha && (
@@ -848,7 +845,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 {/* 📊 DIR-51 — a visão MACRO da semana, só no TIME INTEIRO */}
                 {!minha && (
                   <div className="rounded-lg bg-white border border-nz-verde/25 p-2.5">
-                    <p className="text-xs font-bold text-nz-tinta">📊 Semana: {plural(resumoSemana.total, 'reunião agendada', 'reuniões agendadas')} <span className="font-normal text-nz-tinta-fraca">(meta do método: {META_REUNIOES_SEMANA}/pessoa)</span></p>
+                    <p className="text-xs font-bold text-nz-tinta">Semana: {plural(resumoSemana.total, 'reunião agendada', 'reuniões agendadas')} <span className="font-normal text-nz-tinta-fraca">(meta do método: {META_REUNIOES_SEMANA}/pessoa)</span></p>
                     {resumoSemana.porPessoa.length > 0 && (
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                         {resumoSemana.porPessoa.map((p) => (
@@ -928,7 +925,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     {retornos.map(({ cliente, registro }) => (
                       <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 🔁 Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
+                          <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}</p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
@@ -978,7 +975,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só visão total) */}
               {visaoTotal && (
                 <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2">
-                  <p className="text-sm font-bold text-nz-tinta">🏛️ Reuniões da empresa <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span></p>
+                  <p className="text-sm font-bold text-nz-tinta">Reuniões da empresa <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span></p>
                   {reunioesEmpresa.length > 0 && (
                     <div className="space-y-1">
                       {reunioesEmpresa.map((r) => (
@@ -1018,8 +1015,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                       <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Até quando</p>
                       <div className="flex gap-1.5">
                         <select value={novaEmpresa.modoFim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, modoFim: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                          <option value="duracao">⏱️ duração</option>
-                          <option value="fim">🏁 até às</option>
+                          <option value="duracao">duração</option>
+                          <option value="fim">até às</option>
                         </select>
                         {novaEmpresa.modoFim === 'duracao' ? (
                           <select value={novaEmpresa.duracao_min} onChange={(e) => setNovaEmpresa((p) => ({ ...p, duracao_min: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
@@ -1068,7 +1065,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         {painel === 'apresentacao' && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-              <p className={`text-sm font-bold ${reunioesHoje >= 3 ? 'text-nz-verde' : 'text-nz-tinta'}`}>📅 Hoje: {reunioesHoje} de 3 reuniões (meta do método)</p>
+              <p className={`text-sm font-bold ${reunioesHoje >= 3 ? 'text-nz-verde' : 'text-nz-tinta'}`}>Hoje: {reunioesHoje} de 3 reuniões (meta do método)</p>
               <button type="button" onClick={() => onIr?.('acompanhamento', 'expansao')} className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro">+ Agendar reunião (na esteira) →</button>
             </div>
             {reunioes.length === 0 ? (
@@ -1094,7 +1091,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               </div>
             )}
             <div className="rounded-lg border border-nz-borda p-3 space-y-2">
-              <p className="text-xs font-semibold text-nz-tinta">🎤 Apresentação oficial do negócio</p>
+              <p className="text-xs font-semibold text-nz-tinta">Apresentação oficial do negócio</p>
               <div className="flex gap-2">
                 <Input value={apresentacaoUrl} onChange={(e) => setApresentacaoUrl(e.target.value)} placeholder="cole aqui o link da apresentação (deck, página, vídeo)..." className="bg-white border-nz-borda text-nz-tinta text-sm" />
                 <Button size="sm" onClick={() => salvarPerfil({ apresentacao_url: apresentacaoUrl })} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0 h-9"><Save className="w-4 h-4" /></Button>
@@ -1121,7 +1118,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               ))}
             </div>
             <div className="rounded-lg border border-dashed border-nz-verde/40 bg-nz-verde-fundo/40 p-4 text-center">
-              <p className="text-sm font-semibold text-nz-tinta">🎓 Local de treinamento do time</p>
+              <p className="text-sm font-semibold text-nz-tinta">Local de treinamento do time</p>
               <p className="text-xs text-nz-tinta-fraca mt-1">Aqui entram os materiais oficiais (vídeos, decks, trilha do novo executivo). Estrutura pronta — os conteúdos entram conforme o time for gravando.</p>
             </div>
             <p className="text-xs text-nz-tinta-fraca text-center italic">"A disciplina é a ponte entre objetivos e realização." — Jim Rohn</p>

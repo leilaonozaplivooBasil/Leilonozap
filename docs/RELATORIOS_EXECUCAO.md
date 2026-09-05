@@ -2560,3 +2560,74 @@ logos presentes (por `aria-label`) e o texto oficial de cada marca no
 cabeçalho, o cabeçalho se repetindo em todos os 8 hábitos, e o selo
 X-office com a frase oficial no Hábito 7.
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-56 — O painel dos 8 Hábitos VIRA o ambiente da marca (05/09/2026)
+
+**Diretiva:** DIR-56 — o dono REPROVOU a DIR-55 no preview: *"que loucura
+é essa... eu quero as logos originais, tudo isso temático igual às
+apresentações... eu não quero fundo branco na área de vendas"*, e
+completou: *"imagens do brandbook em todo painel... menos emojis...
+o painel com vontade de ser grande"*.
+
+**O que a DIR-55 tinha errado:** uma placa de logo no topo de uma página
+branca. Identidade visual não é adesivo — é o ambiente inteiro.
+
+**Entregue:**
+1. **Arte ORIGINAL, não recriada.** As logos foram extraídas dos PDFs que
+   o próprio dono anexou: a apresentação do evento traz o lockup Top
+   College + X-eos como imagem com canal alfa em alta (1091×753 e
+   1845×942), e o brandbook traz o padrão tonal de X, o X-office e as
+   imagens temáticas. Os dois SVGs desenhados à mão na DIR-55 foram
+   APAGADOS. Descoberta no caminho: o X real da X-eos é vazado (traço
+   aberto), não o X sólido metálico que eu tinha desenhado — mais um
+   motivo pra arte original ganhar da recriação.
+2. **Fundo escuro em todo o painel** (#00020C), com o padrão tonal do
+   brandbook por trás e os brilhos do gradiente Top College nos cantos.
+   Nenhuma área branca sobrou na Central de Vendas.
+3. **Imagens do brandbook em todo o painel:** uma faixa por Hábito,
+   escolhida pelo tema (sonho→carro, compromisso→"grandes batalhas",
+   lista→pessoas, contato→ambiente, apresentação→papelaria,
+   acompanhamento→mochila, verificação→X-office, duplicação→avião), com
+   o nome do Hábito em escala grande por cima; e a frase oficial
+   ("o sucesso é a soma de pequenos esforços repetidos dia após dia")
+   fechando o painel. Tudo em webp: **334 KB somando os 13 arquivos**.
+4. **Menos emoji:** 20 emojis decorativos saíram de títulos, abas e
+   botões visíveis; os dois botões principais da fila (Agendar /
+   Registrar) ganharam ícone de traço, e o sino do alerta de reunião
+   virou ícone. **O que NÃO saiu, de propósito:** os emojis que são
+   MARCADOR DE DADO (o 👤 do dono de cada item, os desfechos tipo
+   "Reunião agendada", as faixas de probabilidade) — ali o emoji funciona
+   como legenda e mexer neles é mudar exibição de registro salvo, com
+   teste em cima. Fica pra uma rodada própria, se o dono quiser.
+5. **Escala:** título do painel de `text-xl` para `text-5xl`, mais
+   respiro entre blocos, nome do Hábito em 4xl sobre a faixa.
+
+**A parte de engenharia que evitou uma reescrita gigante:** o tema claro
+do painel (index.css) não pinta com cor literal — resolve em
+`var(--nz-tinta)`, `var(--nz-borda)`, `var(--nz-cinza-fundo)`.
+Redefinindo essas variáveis dentro de `.xeos-palco`, aquelas mesmas
+regras `!important` passaram a pintar ESCURO sozinhas, sem tocar em
+classe nenhuma do JSX.
+
+**Achado medido no navegador (não suposto):** mesmo assim o título
+"Os 8 Hábitos" saiu preto sobre preto. Medindo o computed style no DOM,
+a causa apareceu: as cores `nz.*` do `tailwind.config.js` são hex
+LITERAL (`nz.tinta: '#0D1310'`), diferente das `pc.*` que são `var()` —
+então `text-nz-tinta` já sai compilado com o claro cravado e não
+obedece à variável. Por isso existe o segundo bloco de CSS, mapeando
+cada utilitária da paleta clara ao seu par escuro. Sem medir, eu teria
+chutado errado.
+
+**Prova (medida):** suíte **906/906** (sem mudança — rodada visual, sem
+lib nova); build exit 0; prova em navegador **152/152 ZERO erros de
+página/console** (147 + 5 asserções novas). As asserções novas cobram o
+que a diretiva pediu, não o que é fácil: que as imagens das logos
+ORIGINAIS realmente carreguem (`naturalWidth > 0`, que pega o caso do
+arquivo faltando no build), que a luminância do fundo da área de vendas
+seja de fato escura (< 40) e que a do título seja clara (> 180) — ou
+seja, tema escuro E legível; e que a faixa do brandbook troque junto com
+o Hábito aberto.
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
