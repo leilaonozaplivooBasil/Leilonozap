@@ -217,6 +217,38 @@ export function categoriaDaTarefa(t) {
 }
 const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
 
+// ── 🪄 GERADOR DE PESO AUTOMÁTICO (F6) ──────────────────────────────
+// Regra do dono: GRATIDÃO muito importante (5), VENDA/negócio é o peso
+// principal (6), e o compromisso com o dia inteiro é premiado pela ofensiva
+// (não por uma tarefa só). A ordem das regras importa — a primeira que
+// bater no título vence (ex.: "Leitura leve + descanso" é leitura, peso 4).
+const _semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const REGRAS_PESO = [
+  { re: /gratidao|foco no sonho/, peso: 5, porque: 'gratidão abre o dia e a mente' },
+  { re: /treinament|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
+  { re: /loja|venda|cliente|reuni|apresenta|contrato|follow|prospec/, peso: 6, porque: 'ação de negócio — o peso principal' },
+  { re: /leitura|estudo|curso|licao|aula/, peso: 4, porque: 'mentalidade: estudo em dia' },
+  { re: /story|post|instagram|conteudo|gravar/, peso: 4, porque: 'marketing pessoal' },
+  { re: /corrida|treino|atividade fisica|academia|exercicio|caminhada/, peso: 3, porque: 'disciplina de base' },
+  { re: /organizacao do negocio|planejament|fechamento do dia/, peso: 3, porque: 'gestão do próprio negócio' },
+  { re: /organizacao|ambiente|caminho|chegar|deslocament/, peso: 2, porque: 'suporte da rotina' },
+  { re: /almoco|descanso|pausa|cafe/, peso: 1, porque: 'necessário, mas não pontua alto' },
+];
+
+/** Peso 1-6 sugerido pelo título (regra do dono). Sem regra batendo = 3. */
+export function pesoAutomatico(titulo) {
+  const t = _semAcento(titulo);
+  for (const r of REGRAS_PESO) if (r.re.test(t)) return r.peso;
+  return 3;
+}
+
+/** Explica por que o peso automático deu o que deu (pro tooltip do admin). */
+export function porqueDoPeso(titulo) {
+  const t = _semAcento(titulo);
+  for (const r of REGRAS_PESO) if (r.re.test(t)) return `peso ${r.peso} — ${r.porque}`;
+  return 'peso 3 — padrão da planilha';
+}
+
 /**
  * Valor em R$ de cada tarefa do dia (mapa id → valor). Mentoria e Visão
  * Estratégica pagam pela verba de produção (na planilha só [BÔNUS] e [VENDA]
@@ -462,4 +494,142 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
 /** Data em ISO local (YYYY-MM-DD), sem sofrer com fuso do toISOString. */
 export function dataISO(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ── 🔥 OFENSIVA (F7 — o streak do Duolingo) ─────────────────────────
+// Dias seguidos FECHANDO o dia (≥80% do Master Task). Fim de semana sem
+// registro não quebra; dia útil perdido quebra — com direito a 1 CONGELADOR
+// automático por ofensiva (a falha é perdoada uma vez, sem zerar o fogo).
+
+export const OFENSIVA_META = 0.8; // fechou o dia = fez 80%+
+
+/**
+ * @param historico linhas de xgame_diario até ONTEM (qualquer ciclo), com
+ *                  {data, tarefas_total, tarefas_feitas}
+ * @param hoje      Date de hoje
+ * @param hojeFechou true quando o dia de hoje já bateu os 80%
+ * @returns {dias, congelou} — o tamanho do fogo e se o congelador foi usado
+ */
+export function ofensiva(historico = [], hoje = new Date(), hojeFechou = false) {
+  const por = new Map(historico.map((d) => [String(d.data).slice(0, 10), d]));
+  const fechou = (d) => d && Number(d.tarefas_total) > 0
+    && Number(d.tarefas_feitas) / Number(d.tarefas_total) >= OFENSIVA_META;
+  let dias = hojeFechou ? 1 : 0;
+  let congelou = false;
+  const cursor = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  cursor.setDate(cursor.getDate() - 1);
+  for (let i = 0; i < 366; i++) {
+    if (ehDiaUtil(cursor)) {
+      if (fechou(por.get(dataISO(cursor)))) dias += 1;
+      else if (!congelou && dias > 0) congelou = true; // 1 perdão por ofensiva
+      else break;
+    }
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return { dias, congelou };
+}
+
+// ── 🏅 CONQUISTAS (F8 — as medalhas colecionáveis) ──────────────────
+// Tudo derivado do que o placar já grava — nada de tabela nova: a conquista
+// "existe" quando os dados provam que ela aconteceu.
+
+/**
+ * @param historico  linhas de xgame_diario (qualquer ciclo) com
+ *                   {data, tarefas_total, tarefas_feitas, mvm_dia}
+ * @param fogo       resultado de ofensiva()
+ * @param vendasCiclo vendas reais da loja no ciclo
+ * @param tokenCiclo  Human Token oficial do ciclo
+ * @param formacaoPct % da formação do Executivo Ideal
+ * @param votosDias   nº de dias em que a pessoa votou nas virtudes no ciclo
+ * @param estudoOk    leitura em dia no ciclo
+ * @param diaPerfeitoHoje hoje está 100%?
+ */
+export function conquistas({ historico = [], fogo = { dias: 0 }, vendasCiclo = 0, tokenCiclo = 0, formacaoPct = 0, votosDias = 0, estudoOk = false, diaPerfeitoHoje = false }) {
+  const dias100 = historico.filter((d) => Number(d.tarefas_total) > 0
+    && Number(d.tarefas_feitas) >= Number(d.tarefas_total)).length + (diaPerfeitoHoje ? 1 : 0);
+  const mvm10 = historico.some((d) => Number(d.mvm_dia) >= 10);
+  return [
+    { id: 'fogo3', emoji: '🔥', nome: 'Primeira ofensiva', regra: '3 dias seguidos fechando o dia (80%+)', ok: fogo.dias >= 3 },
+    { id: 'fogo5', emoji: '🚀', nome: 'Semana em chamas', regra: '5 dias seguidos de ofensiva', ok: fogo.dias >= 5 },
+    { id: 'fogo22', emoji: '🌋', nome: 'Imparável', regra: 'um ciclo inteiro de ofensiva (22 dias úteis)', ok: fogo.dias >= 22 },
+    { id: 'perfeito', emoji: '💎', nome: 'Dia perfeito', regra: '100% do Master Task em um dia', ok: dias100 >= 1 },
+    { id: 'perfeito5', emoji: '👑', nome: 'Colecionador de diamantes', regra: '5 dias perfeitos', ok: dias100 >= 5 },
+    { id: 'leitor', emoji: '📚', nome: 'Leitor constante', regra: 'leitura em dia no ciclo (60%+)', ok: estudoOk },
+    { id: 'mvm10', emoji: '⭐', nome: 'MvM 10', regra: 'fechou um dia com MvM 10 cravado', ok: mvm10 },
+    { id: 'votante', emoji: '🗳️', nome: 'Voz do grupo', regra: 'votou nas 10 Virtudes em 5 dias do ciclo', ok: votosDias >= 5 },
+    { id: 'venda1', emoji: '💰', nome: 'Primeira venda', regra: '1 venda da loja no ciclo', ok: vendasCiclo >= 1 },
+    { id: 'vendameta', emoji: '🏆', nome: 'Meta de vendas', regra: `${META_VENDAS_CICLO} vendas da loja no ciclo`, ok: vendasCiclo >= META_VENDAS_CICLO },
+    { id: 'ouro', emoji: '🥇', nome: 'Padrão OURO', regra: 'Human Token do ciclo ≥ 17,78', ok: tokenCiclo >= 17.78 },
+    { id: 'exec', emoji: '🎓', nome: 'Rumo ao Executivo Ideal', regra: 'formação ≥ 66%', ok: formacaoPct >= 66 },
+  ];
+}
+
+// ── 🎯 MISSÕES DA SEMANA (F8 — a variedade que mata a monotonia) ────
+// Um pool de missões computáveis; 3 entram por semana, girando pelo nº da
+// semana do ano (todo mundo joga as mesmas — vira assunto no grupo).
+
+const POOL_MISSOES = [
+  { id: 'm100x3', emoji: '💎', nome: 'Feche 3 dias com 100%', alvo: 3, conta: (dias) => dias.filter((d) => d.pct >= 1).length },
+  { id: 'm80x5', emoji: '🔥', nome: 'Feche 5 dias com 80%+', alvo: 5, conta: (dias) => dias.filter((d) => d.pct >= OFENSIVA_META).length },
+  { id: 'mleit4', emoji: '📚', nome: 'Leitura em 4 dias', alvo: 4, conta: (dias) => dias.filter((d) => d.leitura).length },
+  { id: 'mmvm3', emoji: '⭐', nome: 'MvM 8+ em 3 dias', alvo: 3, conta: (dias) => dias.filter((d) => d.mvm >= 8).length },
+  { id: 'mvoto3', emoji: '🗳️', nome: 'Vote nas virtudes em 3 dias', alvo: 3, conta: (dias) => dias.filter((d) => d.votou).length },
+  { id: 'mcedo2', emoji: '🌅', nome: '2 dias perfeitos seguidos', alvo: 2, conta: (dias) => {
+    let melhor = 0; let seq = 0;
+    for (const d of dias) { seq = d.pct >= 1 ? seq + 1 : 0; melhor = Math.max(melhor, seq); }
+    return melhor;
+  } },
+];
+
+const numeroDaSemana = (d) => {
+  const inicioAno = new Date(d.getFullYear(), 0, 1);
+  return Math.floor((d - inicioAno) / (7 * 24 * 60 * 60 * 1000));
+};
+
+/**
+ * As 3 missões da semana corrente com o progresso calculado.
+ * @param diasSemana resumo dos dias da semana (segunda até hoje):
+ *                   [{pct: 0-1, leitura: bool, mvm: 0-10, votou: bool}]
+ */
+export function missoesDaSemana(diasSemana = [], hoje = new Date()) {
+  const n = numeroDaSemana(hoje);
+  const escolhidas = [0, 1, 2].map((i) => POOL_MISSOES[(n + i * 2) % POOL_MISSOES.length]);
+  // sem repetir missão na mesma semana
+  const unicas = [...new Map(escolhidas.map((m) => [m.id, m])).values()];
+  while (unicas.length < 3) unicas.push(POOL_MISSOES[(n + unicas.length * 3 + 1) % POOL_MISSOES.length]);
+  return [...new Map(unicas.map((m) => [m.id, m])).values()].slice(0, 3).map((m) => {
+    const atual = Math.min(m.alvo, m.conta(diasSemana));
+    return { ...m, atual, ok: atual >= m.alvo };
+  });
+}
+
+/** Segunda-feira da semana de `d` (a semana do jogo começa na segunda). */
+export function inicioDaSemana(d = new Date()) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = x.getDay();
+  x.setDate(x.getDate() - (dow === 0 ? 6 : dow - 1));
+  return x;
+}
+
+// ── 🏆 LIGAS (F9 — promoção e rebaixamento por ciclo) ───────────────
+// As faixas da moeda viram LIGAS: o Human Token médio do ciclo decide onde
+// você joga. Diamante é a elite acima do ouro — o território do Executivo
+// Ideal. Subir de liga = fechar o ciclo acima da linha da liga de cima.
+
+export const LIGAS = [
+  { id: 'diamante', label: 'LIGA DIAMANTE', emoji: '💠', min: 20 },
+  { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 17.78 },
+  { id: 'prata', label: 'LIGA PRATA', emoji: '🥈', min: 6.66 },
+  { id: 'bronze', label: 'LIGA BRONZE', emoji: '🥉', min: 0 },
+];
+
+export const ligaDoToken = (t) => LIGAS.find((l) => (Number(t) || 0) >= l.min) || LIGAS.at(-1);
+
+/** A próxima liga acima e quanto falta pra promoção (null quando já é a elite). */
+export function proximaLiga(token) {
+  const atual = ligaDoToken(token);
+  const i = LIGAS.findIndex((l) => l.id === atual.id);
+  if (i <= 0) return null;
+  const alvo = LIGAS[i - 1];
+  return { liga: alvo, falta: Math.round((alvo.min - (Number(token) || 0)) * 100) / 100 };
 }

@@ -24,6 +24,7 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
   VIRTUDES, janelaVotacaoAberta, mvmManual,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
+  ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -158,6 +159,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       .eq('user_id', uid).eq('ciclo_inicio', dataISO(inicioCicloOficial(cicloConfig, new Date()))).lt('data', hojeStr()).order('data')
       .then(({ data, error }) => setDiasCiclo(error ? [] : (data || [])));
   }, [painel, uid, cicloConfig]);
+  // 🔥 F7 — OFENSIVA: dias seguidos fechando ≥80% do dia (histórico atravessa
+  // ciclos; fim de semana não quebra; 1 congelador automático por ofensiva)
+  const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setHistoricoOfensiva([]); return; }
+    supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas,mvm_dia,detalhes')
+      .eq('user_id', uid).lt('data', hojeStr()).order('data', { ascending: false }).limit(90)
+      .then(({ data, error }) => setHistoricoOfensiva(error ? [] : (data || [])));
+  }, [painel, uid]);
+  // ⚡ F7 — XP na hora: o "+X pts" que voa quando a tarefa é marcada
+  const [xpFlash, setXpFlash] = useState(null); // { id, pts, valor }
   // 💳 Vendas AUTOMÁTICAS: as vendas REAIS da loja da pessoa no ciclo pontuam
   // o componente de vendas do Human Token (a remuneração delas continua sendo
   // só a comissão da plataforma — aqui é ponto, não dinheiro). O dono da venda
@@ -212,6 +224,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
     return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
+  const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
+    && xgame.tarefas_feitas / xgame.tarefas_total >= OFENSIVA_META);
+  const fogo = useMemo(() => ofensiva(historicoOfensiva, new Date(), hojeFechou), [historicoOfensiva, hojeFechou]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
     supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
@@ -251,6 +266,53 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     setNotas({});
   };
   const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🗳️ em quantos dias do ciclo eu votei (pra conquista e missão da votação)
+  const [votosDias, setVotosDias] = useState([]);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setVotosDias([]); return; }
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('xgame_votos_mvm').select('data').eq('votante_id', uid).gte('data', ini)
+      .then(({ data }) => setVotosDias([...new Set((data || []).map((v) => String(v.data).slice(0, 10)))]));
+  }, [painel, uid, cicloConfig, votosDadosHoje.length]);
+  // 🏅 F8 — conquistas e missões da semana, tudo derivado do que já gravamos
+  const diaPerfeitoHoje = !!(ehHoje && xgame && xgame.tarefas_total > 0 && xgame.tarefas_feitas >= xgame.tarefas_total);
+  const medalhas = useMemo(() => {
+    if (!xgame) return [];
+    return conquistas({
+      historico: historicoOfensiva,
+      fogo,
+      vendasCiclo: vendasCiclo || 0,
+      tokenCiclo: ciclo?.total || 0,
+      formacaoPct: ciclo?.formacao?.pct || 0,
+      votosDias: votosDias.length,
+      estudoOk: xgame.estudo_em_dia,
+      diaPerfeitoHoje,
+    });
+  }, [xgame, historicoOfensiva, fogo, vendasCiclo, ciclo, votosDias, diaPerfeitoHoje]);
+  const missoes = useMemo(() => {
+    if (!xgame) return [];
+    const iniSemana = dataISO(inicioDaSemana(new Date()));
+    const votou = new Set(votosDias);
+    const dias = historicoOfensiva
+      .filter((d) => String(d.data).slice(0, 10) >= iniSemana)
+      .map((d) => ({
+        pct: Number(d.tarefas_total) > 0 ? Number(d.tarefas_feitas) / Number(d.tarefas_total) : 0,
+        leitura: !!d.detalhes?.leitura_feita,
+        mvm: Number(d.mvm_dia) || 0,
+        votou: votou.has(String(d.data).slice(0, 10)),
+      }))
+      .reverse();
+    if (ehHoje && xgame.tarefas_total > 0) {
+      dias.push({
+        pct: xgame.tarefas_feitas / xgame.tarefas_total,
+        leitura: xgame.leitura_feita,
+        mvm: xgame.mvm_dia,
+        votou: votou.has(hojeStr()),
+      });
+    }
+    return missoesDaSemana(dias, new Date());
+  }, [xgame, historicoOfensiva, votosDias, ehHoje]);
+  const [medalhasAbertas, setMedalhasAbertas] = useState(false);
   // 🏆 F5 — RANKING H-TOKEN da equipe no ciclo (filtros da planilha:
   // Moeda / MvM / Remuneração / Nome). Lê o placar de todo mundo e agrega.
   const [rankingAberto, setRankingAberto] = useState(false);
@@ -340,6 +402,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   };
 
   const alternarFeito = async (t) => {
+    // ⚡ marcou FEITO hoje? mostra o XP na hora (10 pts, +5 no horário, × cotação)
+    if (!t.feito && ehHoje && xgame) {
+      const est = estadoDaTarefa(t);
+      const noHorario = !est || est.id === 'AGORA' || est.id === 'FUTURO';
+      const pts = Math.round((10 + (noHorario ? 5 : 0)) * (xgame.cotacao || 1));
+      setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
+      setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
+    }
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !t.feito } : x)));
     try { await plataforma.entities.MetodoTarefa.update(t.id, { feito: !t.feito }); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
@@ -750,6 +820,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <div className="bg-nz-verde h-full transition-all" style={{ width: `${progresso.pct}%` }} />
             </div>
 
+            {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
+            {xgame && ehHoje && (
+              <div className={`flex items-center justify-between gap-2 flex-wrap rounded-lg border px-3 py-2 ${hojeFechou ? 'border-orange-300 bg-orange-50' : 'border-nz-borda bg-nz-cinza-fundo/60'}`}>
+                <p className="text-sm font-bold text-nz-tinta">
+                  🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
+                  {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-600">🧊 congelador usado</span>}
+                </p>
+                <p className="text-[11px] text-nz-tinta-fraca">
+                  {hojeFechou
+                    ? 'hoje FECHADO ✔ — o fogo continua'
+                    : `feche ${Math.round(OFENSIVA_META * 100)}% do dia pra ${fogo.dias > 0 ? 'manter o fogo' : 'acender o fogo'}`}
+                  {!fogo.congelou && ' · 1 congelador automático por ofensiva'}
+                </p>
+              </div>
+            )}
+            {xgame && ehHoje && progresso.pct >= 100 && (
+              <div className="rounded-lg border border-nz-verde bg-nz-verde-fundo/60 px-3 py-2 text-center animate-pulse">
+                <p className="text-sm font-bold text-nz-verde">🎊 💎 DIA PERFEITO — BRILHANTE! PARABÉNS! 🎊</p>
+              </div>
+            )}
+
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -828,6 +919,40 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
                 </details>
+              </div>
+            )}
+
+            {/* ══ 🏅 F8 — MISSÕES DA SEMANA + CONQUISTAS ══ */}
+            {xgame && missoes.length > 0 && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="font-semibold text-nz-tinta">🎯 Missões da semana</p>
+                  <button type="button" onClick={() => setMedalhasAbertas(!medalhasAbertas)} className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde">
+                    {medalhasAbertas ? '▾' : '▸'} 🏅 minhas medalhas ({medalhas.filter((m) => m.ok).length}/{medalhas.length})
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {missoes.map((m) => (
+                    <div key={m.id} className={`rounded border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
+                      <p className="text-[11px] font-semibold text-nz-tinta">{m.emoji} {m.nome} {m.ok ? '✅' : ''}</p>
+                      <div className="mt-1 h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
+                        <div className={`h-full rounded-full ${m.ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.atual / m.alvo) * 100)}%` }} />
+                      </div>
+                      <p className="text-[10px] text-nz-tinta-fraca tabular-nums mt-0.5">{m.atual} de {m.alvo}</p>
+                    </div>
+                  ))}
+                </div>
+                {medalhasAbertas && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-nz-borda">
+                    {medalhas.map((m) => (
+                      <div key={m.id} title={m.regra} className={`rounded border px-2 py-1.5 text-center ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white opacity-50 grayscale'}`}>
+                        <p className="text-base leading-none">{m.emoji}</p>
+                        <p className="text-[10px] font-semibold text-nz-tinta mt-0.5">{m.nome}</p>
+                        <p className="text-[9px] text-nz-tinta-fraca">{m.ok ? 'conquistada!' : m.regra}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -931,16 +1056,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-[11px] text-nz-tinta-fraca">Ninguém pontuou neste ciclo ainda — o placar nasce quando o time joga o dia.</p>
                 ) : (
                   <div className="space-y-1">
-                    {rankingOrdenado.map((l, i) => (
-                      <div key={l.user_id} className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
-                        <span className="text-[11px] font-medium text-nz-tinta truncate">
-                          <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
-                        </span>
-                        <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
-                          {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
-                        </span>
-                      </div>
-                    ))}
+                    {rankingOrdenado.map((l, i) => {
+                      // 🏆 F9 — ordenando por Moeda, o ranking vira a tabela das LIGAS
+                      const liga = ligaDoToken(l.token);
+                      const ligaAnterior = i > 0 ? ligaDoToken(rankingOrdenado[i - 1].token) : null;
+                      const cabecalho = ordemRanking === 'token' && liga.id !== ligaAnterior?.id;
+                      return (
+                        <React.Fragment key={l.user_id}>
+                          {cabecalho && (
+                            <p className="pt-1 text-[10px] font-bold text-nz-tinta-fraca uppercase tracking-wide">
+                              {liga.emoji} {liga.label} <span className="font-normal normal-case">· token {fmtToken(liga.min)}+</span>
+                            </p>
+                          )}
+                          <div className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
+                            <span className="text-[11px] font-medium text-nz-tinta truncate">
+                              <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
+                            </span>
+                            <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
+                              {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
+                            </span>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                    {ciclo && (() => {
+                      const promo = proximaLiga(ciclo.total);
+                      return promo && promo.falta > 0 ? (
+                        <p className="text-[11px] font-semibold text-nz-tinta pt-1">
+                          ↑ Faltam <span className="text-nz-verde tabular-nums">{fmtToken(promo.falta)}</span> de token pra você subir pra {promo.liga.emoji} {promo.liga.label} — feche os dias, faça no horário e busque nota alta na votação!
+                        </p>
+                      ) : ciclo.total >= 20 ? (
+                        <p className="text-[11px] font-semibold text-nz-verde pt-1">💠 Você está na elite — LIGA DIAMANTE, o território do Executivo Ideal. Segura o trono!</p>
+                      ) : null;
+                    })()}
                   </div>
                 ))}
               </div>
@@ -969,6 +1117,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                           <div key={t.id} className={`rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
                             <div className="flex items-center gap-2.5">
                               <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
+                              {/* ⚡ o XP voando no clique — feedback imediato do jogo */}
+                              {xpFlash?.id === t.id && (
+                                <span className="shrink-0 text-[11px] font-bold text-nz-verde animate-bounce">
+                                  +{xpFlash.pts} pts{xpFlash.valor > 0 ? ` · +${fmtReais(xpFlash.valor)}` : ''}
+                                </span>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
                                   {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
