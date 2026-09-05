@@ -12,6 +12,29 @@ const GATEWAY = 'https://ai-gateway.vercel.sh/v1/chat/completions';
 // gemini flash lê imagem e está no free tier do gateway; troque via env se quiser
 const MODEL = process.env.AI_MODEL_VISION || 'google/gemini-2.0-flash-001';
 
+// 🔐 Sem env? A chave pode morar no COFRE do banco (app_segredos, RLS sem
+// policy — só o service role lê). Cache de 5 min pra não bater no banco toda hora.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let _cacheChave = { valor: null, ate: 0 };
+async function chaveDaIA() {
+  if (AI_KEY || OIDC) return AI_KEY || OIDC;
+  if (_cacheChave.ate > Date.now()) return _cacheChave.valor;
+  let valor = null;
+  try {
+    if (SUPABASE_URL && SR) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_segredos?id=eq.ai_gateway_key&select=valor&limit=1`, {
+        headers: { apikey: SR, Authorization: `Bearer ${SR}` },
+        signal: AbortSignal.timeout(5000),
+      });
+      const j = await r.json().catch(() => []);
+      valor = Array.isArray(j) && j[0]?.valor ? String(j[0].valor) : null;
+    }
+  } catch { valor = null; }
+  _cacheChave = { valor, ate: Date.now() + 5 * 60 * 1000 };
+  return valor;
+}
+
 const REGRAS_POR_TIPO = {
   instagram: `A tarefa exige comprovação VISUAL de que foi cumprida AGORA (não vale coisa antiga). ACEITE apenas um destes três:
 1. PRINT de um post/story do Instagram coerente com a tarefa (ex.: "bom dia" pra tarefa de acordar), de preferência com horário visível na barra do celular ou no story;
@@ -25,7 +48,8 @@ Se a imagem é plausível mas não dá pra cravar (sem data visível, qualidade 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method === 'GET') {
-    return res.status(200).json({ ok: true, ia: Boolean(AI_KEY || OIDC), model: MODEL });
+    const chave = await chaveDaIA();
+    return res.status(200).json({ ok: true, ia: Boolean(chave), model: MODEL });
   }
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
@@ -36,7 +60,7 @@ export default async function handler(req, res) {
     const data = String(body?.data || '').slice(0, 10);
     if (!imageUrl) return res.status(400).json({ ok: false, error: 'image_url obrigatório' });
 
-    const auth = AI_KEY || OIDC;
+    const auth = await chaveDaIA();
     if (!auth) {
       return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'IA não conectada — comprovação enviada pra análise manual do gestor.' });
     }
