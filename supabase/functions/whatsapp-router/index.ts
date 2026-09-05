@@ -6,6 +6,7 @@ import { criarClienteSlack, type SlackClient as TSlackClient } from './slackClie
 // O FORMATO do post de demanda mora fora daqui, em .js puro, pra o `node --test` poder
 // EXECUTAR a regra em vez de só procurar a frase neste arquivo. Ver postagemDemanda.js.
 import { montarPostagem, montarRascunho, escolherCapa } from './postagemDemanda.js';
+import { lerMapaGrupoCanal, canalDoGrupo } from './roteamentoSlack.js';
 
 // Cérebro/roteador único dos dois agentes de IA do WhatsApp: Zeca (SDR/atendimento, qualquer
 // número, sempre 1:1) e Heloim (assistente de TI — 1:1 com qualquer admin de
@@ -102,6 +103,12 @@ const SLACK_CANAL_PADRAO = Deno.env.get('SLACK_CANAL_PADRAO') || 'C0BHCMYJJGJ';
 // deploy, e sem a logo configurada o post sai SEM capa em vez de falhar — post feio é
 // problema menor que post que não sai.
 const LOGO_TOPTECH_URL = Deno.env.get('LOGO_TOPTECH_URL') || '';
+
+// Mapa GRUPO do WhatsApp → CANAL do Slack (solicitação #3 do dono, 05/09/2026: "organização
+// das notificações/registros por grupo"). Formato: `<id do grupo>=<canal>` separados por
+// vírgula. Grupo fora do mapa cai no canal padrão — nunca some.
+//   MAPA_GRUPO_CANAL="120363402599586067-group=C0BHCMYJJGJ,1203631111...=#logistica-tech"
+const MAPA_GRUPO_CANAL = lerMapaGrupoCanal(Deno.env.get('MAPA_GRUPO_CANAL') || '');
 
 // Enriquecimento do Zeca é best-effort (ver buscarClientePorTelefone) — se estas duas
 // faltarem, a function não quebra, só deixa de tentar consultar o cliente.
@@ -1196,7 +1203,11 @@ const TOOLS_HELOIM: ToolDef[] = [
 
       const cliente = obterClienteSlack();
       if (!cliente) return { ok: false, erro: 'Slack não configurado (SLACK_BOT_TOKEN). Ver DEPLOY.md.' };
-      const canal = String(input.canal || SLACK_CANAL_PADRAO).replace(/^#/, '');
+      // Precedência: canal pedido na hora > canal do grupo (MAPA_GRUPO_CANAL) > canal padrão.
+      // O grupo vem da LINHA da demanda, não de quem clicou — quem confirma pode estar em
+      // outro lugar, e o registro pertence ao grupo que abriu o pedido.
+      const rota = canalDoGrupo(d.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO);
+      const canal = input.canal ? String(input.canal).replace(/^#/, '') : rota.canal;
 
       // Capa: a imagem que o usuário mandou; sem ela, a logo da Top Tech (regra do dono).
       const historico = await carregarHistorico(ctx.remetente, 'heloim');
@@ -1246,8 +1257,15 @@ const TOOLS_HELOIM: ToolDef[] = [
           anexos: legendas.length ? legendas.map((legenda: string) => ({ legenda })) : null,
         }),
       });
-      return { ok: true, canal, capa: origem, aviso: motivo === 'sem_logo'
-        ? 'Postado SEM capa: nenhuma imagem na conversa e LOGO_TOPTECH_URL não está configurada.' : undefined };
+      return {
+        ok: true, canal, capa: origem,
+        canal_veio_de: input.canal ? 'pedido' : rota.origem,
+        aviso: motivo === 'sem_logo'
+          ? 'Postado SEM capa: nenhuma imagem na conversa e LOGO_TOPTECH_URL não está configurada.'
+          : rota.origem === 'padrao' && d.grupo_id
+            ? 'Este grupo não está em MAPA_GRUPO_CANAL — publiquei no canal padrão.'
+            : undefined,
+      };
     },
   },
   {
@@ -1268,7 +1286,10 @@ const TOOLS_HELOIM: ToolDef[] = [
       const rows = await r.json().catch(() => []);
       const solicitacao = Array.isArray(rows) ? rows[0] : null;
       if (!solicitacao) return { aprovado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
-      await postarNoSlack(`✅ *Solicitação #${solicitacao.id} aprovada* por ${ctx.remetenteNome || ctx.remetente}\n*Pedido:* ${solicitacao.descricao}`);
+      // A decisão vai pro MESMO canal onde a demanda foi publicada — separar as duas quebraria
+      // a leitura do tópico. slack_canal quando já publicada; senão, o canal do grupo.
+      await postarNoSlack(`✅ *Solicitação #${solicitacao.id} aprovada* por ${ctx.remetenteNome || ctx.remetente}\n*Pedido:* ${solicitacao.descricao}`,
+        solicitacao.slack_canal || canalDoGrupo(solicitacao.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO).canal);
       return { aprovado: true, id: solicitacao.id };
     },
   },
@@ -1293,7 +1314,9 @@ const TOOLS_HELOIM: ToolDef[] = [
       const rows = await r.json().catch(() => []);
       const solicitacao = Array.isArray(rows) ? rows[0] : null;
       if (!solicitacao) return { rejeitado: false, erro: 'não encontrada, ou já tinha sido decidida antes' };
-      await postarNoSlack(`⛔ *Solicitação #${solicitacao.id} rejeitada* por ${ctx.remetenteNome || ctx.remetente}${input.motivo ? `\n*Motivo:* ${input.motivo}` : ''}\n*Pedido:* ${solicitacao.descricao}`);
+      // mesmo canal da aprovação: a decisão fica junto do post da demanda
+      await postarNoSlack(`⛔ *Solicitação #${solicitacao.id} rejeitada* por ${ctx.remetenteNome || ctx.remetente}${input.motivo ? `\n*Motivo:* ${input.motivo}` : ''}\n*Pedido:* ${solicitacao.descricao}`,
+        solicitacao.slack_canal || canalDoGrupo(solicitacao.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO).canal);
       return { rejeitado: true, id: solicitacao.id };
     },
   },

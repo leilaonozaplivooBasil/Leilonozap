@@ -345,3 +345,14 @@ test('em grupo, Zeca e Heloim viram um agente so', () => {
   assert.match(fonte, /const tools = emGrupo \? \[\.\.\.TOOLS_HELOIM, \.\.\.TOOLS_ZECA\]/,
     'as ferramentas das duas precisam se somar no grupo');
 });
+
+test('o canal de destino sai do grupo, nao e mais fixo', () => {
+  // Solicitacao #3 do dono (05/09): "organizacao das notificacoes/registros por grupo".
+  assert.match(fonte, /MAPA_GRUPO_CANAL/, 'o mapa grupo->canal sumiu do codigo');
+  assert.match(fonte, /canalDoGrupo\(d\.grupo_id, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO\)/,
+    'publicar_demanda precisa rotear pelo grupo da demanda');
+  // aprovada e rejeitada tem que cair no MESMO canal do post, senao o topico se parte
+  const decisoes = fonte.match(/solicitacao\.slack_canal \|\| canalDoGrupo\(solicitacao\.grupo_id/g) || [];
+  assert.equal(decisoes.length, 2, `esperava aprovada + rejeitada roteadas, achei ${decisoes.length}`);
+  assert.match(deploy, /MAPA_GRUPO_CANAL/, 'o DEPLOY.md precisa ensinar a configurar o mapa');
+});
