@@ -646,7 +646,9 @@ export function proximaLiga(token) {
 /** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar). */
 export function validacaoAutomatica(titulo) {
   const t = _semAcento(titulo);
-  if (/story|post|instagram|conteudo/.test(t)) return 'instagram';
+  // acordar/gratidão comprova com o post do BOM DIA (o exemplo do dono:
+  // "como eu provo que acordei 5h? posto o bom dia no Instagram")
+  if (/story|post|instagram|conteudo|acordar|gratidao|bom dia/.test(t)) return 'instagram';
   if (/leitura|estudo|curso|licao/.test(t)) return 'aprendizado';
   return null;
 }
