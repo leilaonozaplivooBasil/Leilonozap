@@ -1039,7 +1039,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               return (
                 <XGameRitualAmanhecer
                   nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
-                  sonhos={sonhos}
+                  sonhos={sonhos.map(normalizarSonho)}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
                 />

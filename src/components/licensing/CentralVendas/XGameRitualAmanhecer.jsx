@@ -13,44 +13,27 @@ import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM } from '@/lib/xgame';
 //     deixa seguir sem vídeo só caindo na análise do gestor).
 //   • No fim, um convite só: o post do bom dia no Instagram.
 
-// 🌊 som de água: ruído marrom filtrado — ondas do mar (grave, volume
-// respirando a cada ~11s) + água batendo/chuvinha (camada aguda discreta).
-function criarSomAgua() {
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return null;
-  const ctx = new Ctx();
-  ctx.resume?.().catch(() => {});
-  const master = ctx.createGain();
-  master.gain.value = 0;
-  master.connect(ctx.destination);
-  // ruído base em loop (2s de ruído marrom — grave, som de natureza)
-  const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  let ultimo = 0;
-  for (let i = 0; i < d.length; i++) {
-    const branco = Math.random() * 2 - 1;
-    ultimo = (ultimo + 0.02 * branco) / 1.02;
-    d[i] = ultimo * 3.5;
-  }
-  // as ONDAS: ruído grave com o volume subindo e descendo devagar
-  const mar = ctx.createBufferSource(); mar.buffer = buf; mar.loop = true;
-  const fMar = ctx.createBiquadFilter(); fMar.type = 'lowpass'; fMar.frequency.value = 320;
-  const gMar = ctx.createGain(); gMar.gain.value = 0.55;
-  const onda = ctx.createOscillator(); onda.frequency.value = 0.09;
-  const ondaG = ctx.createGain(); ondaG.gain.value = 0.35;
-  onda.connect(ondaG); ondaG.connect(gMar.gain);
-  mar.connect(fMar); fMar.connect(gMar); gMar.connect(master);
-  // a ÁGUA BATENDO (riacho/chuvinha): camada aguda, constante e discreta
-  const agua = ctx.createBufferSource(); agua.buffer = buf; agua.loop = true; agua.playbackRate.value = 1.7;
-  const fAgua = ctx.createBiquadFilter(); fAgua.type = 'bandpass'; fAgua.frequency.value = 2300; fAgua.Q.value = 0.7;
-  const gAgua = ctx.createGain(); gAgua.gain.value = 0.14;
-  agua.connect(fAgua); fAgua.connect(gAgua); gAgua.connect(master);
-  mar.start(); agua.start(); onda.start();
-  master.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 2.5);
-  return {
-    parar: () => { try { master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8); setTimeout(() => ctx.close(), 1000); } catch { /* já fechou */ } },
-  };
-}
+// 🎵 A MÚSICA DO AMANHECER agora é YOUTUBE (ordem do dono): prévias prontas
+// tocando automático + o espaço pra pessoa colar a MÚSICA DO DIA dela — a
+// escolha fica guardada no aparelho e volta sozinha no dia seguinte.
+const PREVIAS_MUSICA = [
+  { id: 'UfcAVejslrU', nome: '🌊 Weightless (relaxamento)' },
+  { id: 'jfKfPfyJRdk', nome: '☕ Lofi pra focar' },
+];
+const extrairIdYoutube = (texto) => {
+  const m = /(?:youtu\.be\/|v=|embed\/|shorts\/|live\/)([\w-]{11})/.exec(String(texto || ''));
+  return m ? m[1] : (/^[\w-]{11}$/.test(String(texto || '').trim()) ? String(texto).trim() : null);
+};
+const CHAVE_MUSICA = 'xgame_musica_do_dia';
+const musicaSalva = () => {
+  try {
+    const j = JSON.parse(localStorage.getItem(CHAVE_MUSICA) || 'null');
+    return j?.id && j?.data === new Date().toISOString().slice(0, 10) ? j.id : null;
+  } catch { return null; }
+};
+const salvarMusica = (id) => {
+  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, data: new Date().toISOString().slice(0, 10) })); } catch { /* sem storage */ }
+};
 
 const GRATIDAO_MIN = 20;
 const ACAO_MIN = 10;
@@ -60,9 +43,11 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const [gratidao, setGratidao] = useState('');
   const [acao, setAcao] = useState('');
   const [aviso, setAviso] = useState('');
-  const [tocando, setTocando] = useState(false);
   const [semVideoLiberado, setSemVideoLiberado] = useState(false);
-  const somRef = useRef(null);
+  // 🎵 a música do amanhecer (YouTube): a salva do dia, ou a 1ª prévia
+  const [musicaId, setMusicaId] = useState(() => musicaSalva() || PREVIAS_MUSICA[0].id);
+  const [musicaAberta, setMusicaAberta] = useState(false);
+  const [linkMusica, setLinkMusica] = useState('');
   // 🎥 a VISUALIZAÇÃO GRAVADA: o vídeo da meditação é a comprovação do ritual
   const inicioRef = useRef(Date.now());
   const [gravando, setGravando] = useState(false);
@@ -73,16 +58,13 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const videoAoVivoRef = useRef(null);
   const timerRef = useRef(null);
 
-  // 🌊 a música da água LIGA SOZINHA quando o ritual abre (um toque desliga)
-  useEffect(() => {
-    somRef.current = criarSomAgua();
-    setTocando(!!somRef.current);
-    return () => somRef.current?.parar();
-  }, []);
-  const alternarSom = () => {
-    if (somRef.current) { somRef.current.parar(); somRef.current = null; setTocando(false); return; }
-    somRef.current = criarSomAgua();
-    setTocando(!!somRef.current);
+  const usarLinkMusica = () => {
+    const id = extrairIdYoutube(linkMusica);
+    if (!id) { setAviso('Cole um link do YouTube válido (youtube.com/... ou youtu.be/...).'); setTimeout(() => setAviso(''), 5000); return; }
+    setMusicaId(id);
+    salvarMusica(id);
+    setLinkMusica('');
+    setMusicaAberta(false);
   };
 
   const pararGravacao = () => {
@@ -118,9 +100,9 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
 
   const bloquearCola = (e) => { e.preventDefault(); setAviso(AVISO_COLAR); setTimeout(() => setAviso(''), 6000); };
 
-  // o QUADRO DOS SONHOS: todas as imagens que a pessoa colocou no Hábito 1
+  // o QUADRO DOS SONHOS: as imagens do Hábito 1 (o campo oficial é imagem_url)
   const imagensDosSonhos = sonhos
-    .flatMap((s) => (Array.isArray(s?.imagens) ? s.imagens : [s?.imagem || s?.foto]))
+    .map((s) => s?.imagem_url || s?.imagem || s?.foto || (Array.isArray(s?.imagens) ? s.imagens[0] : null))
     .filter(Boolean)
     .slice(0, 8);
   const sonhoTitulo = sonhos[0]?.titulo || sonhos[0]?.nome || sonhos[0]?.texto || '';
@@ -162,11 +144,45 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
       <button type="button" onClick={onFechar} className="absolute top-4 right-4 rounded-full p-2 text-white/60 hover:text-white hover:bg-white/10 z-20">
         <X className="w-5 h-5" />
       </button>
-      <button
-        type="button"
-        onClick={alternarSom}
-        className={`absolute top-4 left-4 z-20 rounded-full px-3 py-1.5 text-xs font-semibold ${tocando ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60 hover:text-white'}`}
-      >{tocando ? '🌊 som do mar ligado · desligar' : '🌊 ligar o som do mar'}</button>
+      {/* 🎵 A MÚSICA DO AMANHECER — YouTube tocando automático; a pessoa
+          escolhe a prévia ou cola a música do dia dela (fica salva) */}
+      <div className="absolute top-4 left-4 z-20 space-y-1.5">
+        <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-black/40">
+          <iframe
+            key={musicaId}
+            title="música do amanhecer"
+            src={`https://www.youtube-nocookie.com/embed/${musicaId}?autoplay=1&loop=1&playlist=${musicaId}&rel=0&controls=1`}
+            allow="autoplay; encrypted-media"
+            className="w-56 h-32 block"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setMusicaAberta(!musicaAberta)}
+          className="rounded-full px-3 py-1 text-[11px] font-semibold bg-white/10 text-white/70 hover:text-white"
+        >{musicaAberta ? '▾ 🎵 música do dia' : '▸ 🎵 escolher a música do dia'}</button>
+        {musicaAberta && (
+          <div className="w-56 rounded-2xl bg-black/50 backdrop-blur p-2.5 space-y-1.5">
+            {PREVIAS_MUSICA.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => { setMusicaId(m.id); salvarMusica(m.id); setMusicaAberta(false); }}
+                className={`w-full text-left rounded-lg px-2 py-1.5 text-[11px] font-semibold ${musicaId === m.id ? 'bg-white/25 text-white' : 'text-white/70 hover:bg-white/10'}`}
+              >{m.nome}</button>
+            ))}
+            <div className="flex gap-1.5 pt-1 border-t border-white/10">
+              <input
+                value={linkMusica}
+                onChange={(e) => setLinkMusica(e.target.value)}
+                placeholder="cole o link do YouTube da SUA música"
+                className="flex-1 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-[10px] px-2 py-1.5 focus:outline-none"
+              />
+              <button type="button" onClick={usarLinkMusica} className="rounded-lg bg-white text-[#5b2a5e] text-[10px] font-bold px-2">tocar</button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="relative z-10 w-full max-w-md text-center text-white space-y-6">
         {passo === 0 && (
