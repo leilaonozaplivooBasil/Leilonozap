@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -67,6 +67,7 @@ const DICAS = {
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',
   categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus. Venda NÃO entra aqui — a venda da loja já remunera pelas comissões da plataforma.',
   conferencia: 'Conferência dupla da planilha: a pessoa marca a tarefa (o checkbox dela) e o gestor confirma o SIM aqui. Sem o SIM, a tarefa fica pendente de conferência.',
+  validacao: 'Validação automática (F10): a tarefa só conclui com a comprovação — 📸 link do post/story do Instagram DO DIA, ou 📚 escrever o principal aprendizado da leitura. "Automática" deixa o sistema deduzir pelo título; "nenhuma" conclui direto. Vendas e reuniões validam sozinhas pelos dados do sistema.',
 };
 
 export default function XGameAdmin() {
@@ -145,7 +146,7 @@ export default function XGameAdmin() {
   const carregarTarefas = useCallback(async (userId, dia) => {
     if (!userId || !dia) { setTarefas([]); return; }
     const { data } = await supabase.from('metodo_tarefas')
-      .select('id,hora,titulo,feito,conferido,categoria,peso,ordem')
+      .select('id,hora,titulo,feito,conferido,categoria,peso,ordem,validacao,comprovacao')
       .eq('user_id', userId).eq('data', dia).order('hora');
     setTarefas(data || []);
   }, []);
@@ -374,8 +375,22 @@ export default function XGameAdmin() {
                         <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 flex-wrap">
                           <span className={`text-[11px] min-w-0 truncate ${t.feito ? 'text-gray-900' : 'text-gray-400'}`}>
                             {t.hora} — {t.titulo} {t.feito ? '✔ feita' : '(não marcada)'}
+                            {t.comprovacao?.valido && (t.comprovacao.tipo === 'instagram'
+                              ? <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="ml-1.5 font-bold text-emerald-600 hover:underline" title="Comprovação: post do Instagram">📸</a>
+                              : <span className="ml-1.5 font-bold text-emerald-600" title={`Comprovação: ${t.comprovacao.entrega}`}>📚</span>)}
                           </span>
                           <span className="flex items-center gap-2 shrink-0">
+                            <select
+                              value={t.validacao || ''}
+                              onChange={(e) => salvarTarefa(t, { validacao: e.target.value || null })}
+                              title={DICAS.validacao}
+                              className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900"
+                            >
+                              <option value="">✅ auto{validacaoAutomatica(t.titulo) ? ` (${validacaoAutomatica(t.titulo) === 'instagram' ? '📸 insta' : '📚 aprendizado'})` : ' (sem prova)'}</option>
+                              <option value="nenhuma">sem prova</option>
+                              <option value="instagram">📸 Instagram</option>
+                              <option value="aprendizado">📚 aprendizado</option>
+                            </select>
                             <select value={t.categoria || 'producao'} onChange={(e) => salvarTarefa(t, { categoria: e.target.value })} title={DICAS.categoria} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
                               {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
                             </select>

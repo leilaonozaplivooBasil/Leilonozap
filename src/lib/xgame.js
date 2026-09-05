@@ -633,3 +633,79 @@ export function proximaLiga(token) {
   const alvo = LIGAS[i - 1];
   return { liga: alvo, falta: Math.round((alvo.min - (Number(token) || 0)) * 100) / 100 };
 }
+
+// ── ✅ VALIDAÇÃO AUTOMÁTICA (F10 — comprovar sem depender de ninguém) ─
+// Toda tarefa pode exigir comprovação, e o SISTEMA valida na hora:
+//   'instagram'   → o link do post/story DO DIA (marketing pessoal provado);
+//   'aprendizado' → escrever o principal aprendizado da leitura (a
+//                   validação mais Duolingo que existe: registrou, fixou);
+//   'nenhuma'     → concluir direto (almoço, deslocamento...).
+// Vendas e reuniões nem precisam disso — validam sozinhas pelos dados do
+// sistema (catalog_sales e os registros do CRM).
+
+/** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar). */
+export function validacaoAutomatica(titulo) {
+  const t = _semAcento(titulo);
+  // acordar/gratidão comprova com o post do BOM DIA (o exemplo do dono:
+  // "como eu provo que acordei 5h? posto o bom dia no Instagram")
+  if (/story|post|instagram|conteudo|acordar|gratidao|bom dia/.test(t)) return 'instagram';
+  if (/leitura|estudo|curso|licao/.test(t)) return 'aprendizado';
+  return null;
+}
+
+/** Tipo efetivo da tarefa: o gravado, ou o automático do título. */
+export function tipoDeValidacao(t) {
+  const v = String(t?.validacao || '').toLowerCase();
+  if (v === 'nenhuma') return null;
+  if (['instagram', 'aprendizado'].includes(v)) return v;
+  return validacaoAutomatica(t?.titulo);
+}
+
+export const ROTULO_VALIDACAO = {
+  instagram: '📸 link do Instagram do dia',
+  aprendizado: '📚 o que você aprendeu',
+};
+
+/** Valida a entrega na hora. Devolve {valido, motivo}. */
+export function validarComprovacao(tipo, entrega) {
+  const texto = String(entrega || '').trim();
+  if (tipo === 'instagram') {
+    const ok = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|reels|stories|tv)\/.+/i.test(texto);
+    return { valido: ok, motivo: ok ? 'link do Instagram registrado ✔' : 'cole o link do post/story de HOJE (instagram.com/p/… ou /reel/…)' };
+  }
+  if (tipo === 'aprendizado') {
+    const ok = texto.length >= 40;
+    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : 'escreva de verdade: pelo menos uma frase (40+ letras) do que você aprendeu' };
+  }
+  return { valido: true, motivo: '' };
+}
+
+// ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────
+// O fluxo do dono: a tarefa abre o Instagram pra fazer o post NA HORA,
+// a pessoa tira o print e sobe aqui. O sistema valida sozinho:
+//   1. é imagem de verdade (tipo e tamanho fazem sentido);
+//   2. IMPRESSÃO DIGITAL (SHA-256): o MESMO print não comprova duas vezes —
+//      reutilizou o de ontem, o sistema barra na hora;
+//   3. o horário do envio é carimbado pelo servidor (ninguém escolhe a hora).
+// Leitura do horário DENTRO da foto e detecção de montagem = próximo nível
+// (precisa de visão computacional — fica pro validador com IA).
+
+/** SHA-256 do arquivo — a impressão digital que barra print reutilizado. */
+export async function hashDoArquivo(file) {
+  const buf = await file.arrayBuffer();
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Validação automática do print (antes do upload). */
+export function validarPrint(file, hashesUsados = new Set(), hash = '') {
+  if (!file) return { valido: false, motivo: 'anexe o print do post' };
+  if (!/^image\//.test(file.type || '')) return { valido: false, motivo: 'o arquivo precisa ser uma IMAGEM — o print da tela do post' };
+  if ((file.size || 0) < 15 * 1024) return { valido: false, motivo: 'esse arquivo parece vazio — envie o print real do post' };
+  if ((file.size || 0) > 8 * 1024 * 1024) return { valido: false, motivo: 'imagem grande demais (máximo 8MB)' };
+  if (hash && hashesUsados.has(hash)) return { valido: false, motivo: '🚫 esse print JÁ FOI USADO em outra comprovação — o post de hoje precisa de um print novo' };
+  return { valido: true, motivo: 'print validado ✔' };
+}
+
+/** Link que abre o Instagram pra fazer o post na hora (app no celular, site no desktop). */
+export const LINK_ABRIR_INSTAGRAM = 'https://www.instagram.com/';
