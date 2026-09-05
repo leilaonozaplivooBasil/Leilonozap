@@ -293,6 +293,83 @@ export function mvmManual(votos = []) {
   return { media, ranking, totalVotos: votos.length };
 }
 
+// ── 🏆 HUMAN TOKEN COMPLETO — os 5 componentes da planilha ──────────
+// F2 = MvM (peso 10) + Produção + Real Time + Bônus + Vendas, teto 22,22.
+// Pesos por perfil (planilha A19:A21): base 12,22 (estratégico/operacional)
+// ou 2,22 (comercial) repartida em 50% produção · 30% real time · 20% bônus.
+// Vendas: meta 4/mês; perfil comercial multiplica por PT VENDA 2,5.
+
+export const META_VENDAS_CICLO = 4;
+
+export function pesosDoPerfil(perfil) {
+  const base = String(perfil || '').toLowerCase() === 'comercial' ? 2.22 : 12.22;
+  return {
+    mvm: MVM_MAX,
+    producao: base * 0.5,
+    realtime: base * 0.3,
+    bonus: base * 0.2,
+    ptVenda: String(perfil || '').toLowerCase() === 'comercial' ? 2.5 : 1,
+  };
+}
+
+/** Alvos do EXECUTIVO IDEAL (planilha F18:F21 + vendas 100%). */
+export const EXECUTIVO_IDEAL = { mvm: 0.8, producao: 0.9, realtime: 0.9, bonus: 0.8, vendas: 1 };
+
+/**
+ * Consolida o ciclo (snapshots + hoje) e monta o Human Token oficial com os
+ * 5 componentes. As taxas vêm das contagens por categoria gravadas nos
+ * detalhes de cada dia (prod/bonus/vendas + X-Pay ganho × possível).
+ */
+export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = null, perfil = 'estrategico' }) {
+  const pesos = pesosDoPerfil(perfil);
+  const dias = [...diasCiclo.map((d) => d?.detalhes || {}), ...(hojeResumo ? [hojeResumo] : [])];
+  const soma = (k) => dias.reduce((s, d) => s + (Number(d?.[k]) || 0), 0);
+  const prodTotal = soma('prod_total'); const prodFeitas = soma('prod_feitas');
+  const bonusTotal = soma('bonus_total'); const bonusFeitas = soma('bonus_feitas');
+  const vendasFeitas = soma('vendas_feitas');
+  const xpayGanho = soma('xpay_ganho'); const xpayPossivel = soma('xpay_possivel');
+  const taxa = (a, b) => (b > 0 ? Math.min(1, a / b) : 0);
+  const taxas = {
+    mvm: (mvmVotacao !== null && mvmVotacao !== undefined ? mvmVotacao : (hojeResumo?.mvm_dia ?? 0)) / MVM_MAX,
+    producao: taxa(prodFeitas, prodTotal),
+    realtime: taxa(xpayGanho, xpayPossivel),
+    bonus: taxa(bonusFeitas, bonusTotal),
+    vendas: taxa(vendasFeitas, META_VENDAS_CICLO),
+  };
+  const comp = {
+    mvm: pesos.mvm * taxas.mvm,
+    producao: pesos.producao * taxas.producao,
+    realtime: pesos.realtime * taxas.realtime,
+    bonus: pesos.bonus * taxas.bonus,
+    vendas: taxas.vendas * pesos.ptVenda,
+  };
+  const bruto = comp.mvm + comp.producao + comp.realtime + comp.bonus + comp.vendas;
+  const r2 = (n) => Math.round(n * 100) / 100;
+  return {
+    pesos,
+    taxas,
+    componentes: Object.fromEntries(Object.entries(comp).map(([k, v]) => [k, r2(v)])),
+    total: r2(Math.min(TOKEN_MAX, bruto)),
+    vendasFeitas,
+  };
+}
+
+/**
+ * A formação do EXECUTIVO IDEAL (90 dias): o índice geral (média das taxas
+ * contra os alvos) destrava a "votação extraordinária" — 33% = 2 meses,
+ * 66% = 1 mês, 88% = em breve (planilha I14 nova geração).
+ */
+export function formacaoExecutivoIdeal(taxas = {}) {
+  const eixos = Object.keys(EXECUTIVO_IDEAL);
+  const indice = eixos.reduce((s, k) => s + Math.min(1, (taxas[k] || 0) / EXECUTIVO_IDEAL[k]), 0) / eixos.length;
+  const pct = Math.round(indice * 100);
+  let mensagem = null;
+  if (pct >= 88) mensagem = 'Parabéns! Continue assim e EM BREVE você abrirá votação extraordinária.';
+  else if (pct >= 66) mensagem = 'Parabéns! Continue assim e em 1 MÊS você abrirá votação extraordinária.';
+  else if (pct >= 33) mensagem = 'Parabéns! Continue assim e em 2 MESES você abrirá votação extraordinária.';
+  return { pct, mensagem };
+}
+
 /**
  * Início oficial do ciclo (xgame_config.ciclo_inicio), caindo pro 1º dia
  * útil do mês quando não há configuração vigente (ou o ciclo já acabou).
@@ -343,6 +420,19 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const token = humanToken(mvm, aplic, estudoOk);
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
   const xpay = xpayDoDia(comEstado, valores);
+  // Contagens por categoria do dia — é isso que o snapshot grava nos
+  // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
+  const cats = comEstado.map((t) => categoriaDaTarefa(t));
+  const ehProd = (c) => c !== 'bonus' && c !== 'venda';
+  const contagens = {
+    prod_total: cats.filter(ehProd).length,
+    prod_feitas: comEstado.filter((t, i) => ehProd(cats[i]) && t.feito).length,
+    bonus_total: cats.filter((c) => c === 'bonus').length,
+    bonus_feitas: comEstado.filter((t, i) => cats[i] === 'bonus' && t.feito).length,
+    vendas_feitas: comEstado.filter((t, i) => cats[i] === 'venda' && t.feito).length,
+    xpay_ganho: xpay.ganho,
+    xpay_possivel: Math.round((xpay.ganho + xpay.perdido + xpay.emJogo) * 100) / 100,
+  };
   return {
     ciclo_inicio: inicio,
     dia_util: diaUtil,
@@ -360,6 +450,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     frase_mvm: fraseDoMvm(mvm),
     valores,
     xpay,
+    contagens,
   };
 }
 

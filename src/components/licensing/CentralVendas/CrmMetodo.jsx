@@ -23,6 +23,7 @@ import { ehAtiva } from '@/lib/esteiraCaptacao';
 import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
   VIRTUDES, janelaVotacaoAberta, mvmManual,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -179,6 +180,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
   const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
   const janelaAberta = janelaVotacaoAberta(agoraMin);
+  // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
+  // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
+  // com a trava 17,77 quando a leitura do ciclo está em atraso.
+  const ciclo = useMemo(() => {
+    if (!xgame) return null;
+    const r = tokenDoCiclo({
+      diasCiclo,
+      hojeResumo: { ...xgame.contagens, mvm_dia: xgame.mvm_dia },
+      mvmVotacao: recebido.media,
+      perfil: participante?.perfil || 'estrategico',
+    });
+    const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+  }, [xgame, diasCiclo, recebido.media, participante]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
     supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
@@ -218,6 +233,44 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     setNotas({});
   };
   const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🏆 F5 — RANKING H-TOKEN da equipe no ciclo (filtros da planilha:
+  // Moeda / MvM / Remuneração / Nome). Lê o placar de todo mundo e agrega.
+  const [rankingAberto, setRankingAberto] = useState(false);
+  const [rankingLinhas, setRankingLinhas] = useState([]);
+  const [ordemRanking, setOrdemRanking] = useState('token');
+  useEffect(() => {
+    if (!rankingAberto || painel !== 'compromisso') return;
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('xgame_diario').select('user_id,mvm_dia,token_dia,pontos,detalhes').eq('ciclo_inicio', ini)
+      .then(async ({ data }) => {
+        const por = {};
+        (data || []).forEach((d) => {
+          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, token: 0, mvm: 0, pontos: 0, xpay: 0 });
+          r.dias += 1;
+          r.token += Number(d.token_dia) || 0;
+          r.mvm += Number(d.mvm_dia) || 0;
+          r.pontos += Number(d.pontos) || 0;
+          r.xpay += Number(d.detalhes?.xpay_ganho) || 0;
+        });
+        const linhas = Object.values(por).map((r) => ({ ...r, token: r.token / r.dias, mvm: r.mvm / r.dias }));
+        const ids = linhas.map((l) => l.user_id);
+        if (ids.length) {
+          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
+          const m = {}; (us || []).forEach((u) => { m[u.id] = u.nickname || u.full_name || '—'; });
+          linhas.forEach((l) => { l.nome = m[l.user_id] || l.user_id.slice(0, 6); });
+        }
+        setRankingLinhas(linhas);
+      });
+  }, [rankingAberto, painel, cicloConfig]);
+  const rankingOrdenado = useMemo(() => {
+    const l = [...rankingLinhas];
+    if (ordemRanking === 'nome') l.sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+    else l.sort((a, b) => (b[ordemRanking] || 0) - (a[ordemRanking] || 0));
+    return l;
+  }, [rankingLinhas, ordemRanking]);
+  // 🛠️ O admin da gamificação (participantes, verbas, tarefas, ciclo e
+  // conferência dupla) mora no painel Admin do Licensing — só super admin
+  // (componente XGameAdmin). Aqui fica só o jogo do jogador.
   // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
   useEffect(() => {
     if (!xgame || !uid || !ehHoje) return;
@@ -226,7 +279,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       tarefas_total: xgame.tarefas_total, tarefas_feitas: xgame.tarefas_feitas,
       mvm_dia: xgame.mvm_dia, aplicabilidade: xgame.aplicabilidade, token_dia: xgame.token_dia,
       cotacao: xgame.cotacao, pontos: xgame.pontos,
-      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util },
+      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util, ...xgame.contagens },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,data' }).then(({ error }) => { if (error) console.warn('[X-GAME] placar:', error.message); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -682,30 +735,81 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{xgame.faixa.medalha} {fmtToken(xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${xgame.faixa.label} · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas (meta 4 no ciclo). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
+                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das 20h às 22h), que é a que entra no Human Token oficial.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
                   <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
                     {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
                   </p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'}</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. [VENDA] paga o valor cheio por unidade. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
                   <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══ */}
+            {xgame && ciclo && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="font-semibold text-nz-tinta">🎯 Onde estou × EXECUTIVO IDEAL</p>
+                  <span className="text-[10px] font-bold text-nz-tinta-fraca tabular-nums">formação: {ciclo.formacao.pct}% dos 100%</span>
+                </div>
+                <div className="space-y-1.5">
+                  {[
+                    { k: 'mvm', rotulo: 'MvM (votação do grupo)' },
+                    { k: 'producao', rotulo: 'Produção' },
+                    { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)' },
+                    { k: 'bonus', rotulo: 'Bônus / Estudo' },
+                    { k: 'vendas', rotulo: `Vendas (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)` },
+                  ].map(({ k, rotulo }) => {
+                    const atual = Math.round((ciclo.taxas[k] || 0) * 100);
+                    const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
+                    const ok = atual >= alvo;
+                    return (
+                      <div key={k}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] text-nz-tinta">{rotulo}</span>
+                          <span className={`text-[11px] font-semibold tabular-nums ${ok ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                            {atual}% <span className="text-nz-tinta-fraca font-normal">/ alvo {alvo}%</span>{ok ? ' ✅' : ''}
+                          </span>
+                        </div>
+                        <div className="relative h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
+                          <div className={`h-full rounded-full ${ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, atual)}%` }} />
+                          <div className="absolute top-0 h-full w-px bg-nz-tinta/50" style={{ left: `${alvo}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {ciclo.formacao.mensagem && (
+                  <p className="text-[11px] font-semibold text-nz-verde">{ciclo.formacao.mensagem}</p>
+                )}
+                {/* o guia — como funciona o jogo e a formação em 3 meses */}
+                <details className="text-[11px] text-nz-tinta-fraca">
+                  <summary className="cursor-pointer font-semibold text-nz-tinta hover:text-nz-verde">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
+                  <div className="pt-1.5 space-y-1">
+                    <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo).</p>
+                    <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
+                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
+                    <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é tarefa diária: das 20h às 22h, de casa, dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora — quem participa é escolhido pelo admin.</p>
+                    <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
+                  </div>
+                </details>
               </div>
             )}
 
@@ -785,6 +889,46 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               </div>
             )}
 
+            {/* ══ 🏆 F5 — RANKING H-TOKEN DA EQUIPE (filtros da planilha) ══ */}
+            {xgame && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <button type="button" onClick={() => setRankingAberto(!rankingAberto)} className="font-semibold text-nz-tinta hover:text-nz-verde">
+                    {rankingAberto ? '▾' : '▸'} 🏆 Ranking H-TOKEN da equipe
+                  </button>
+                  {rankingAberto && (
+                    <div className="flex gap-1 flex-wrap">
+                      {[['token', 'Moeda'], ['mvm', 'MvM'], ['xpay', 'Remuneração'], ['nome', 'Nome']].map(([k, rotulo]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setOrdemRanking(k)}
+                          className={`px-2 py-0.5 rounded border text-[10px] font-medium ${ordemRanking === k ? 'border-nz-verde text-nz-verde bg-nz-verde-fundo/50' : 'border-nz-borda text-nz-tinta-fraca hover:border-nz-verde'}`}
+                        >{rotulo}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {rankingAberto && (rankingOrdenado.length === 0 ? (
+                  <p className="text-[11px] text-nz-tinta-fraca">Ninguém pontuou neste ciclo ainda — o placar nasce quando o time joga o dia.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {rankingOrdenado.map((l, i) => (
+                      <div key={l.user_id} className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
+                        <span className="text-[11px] font-medium text-nz-tinta truncate">
+                          <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
+                        </span>
+                        <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
+                          {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+
             {tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <p className="text-sm text-nz-tinta-fraca">Dia sem Master Task ainda. "O compromisso é uma decisão diária."</p>
@@ -818,6 +962,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
                                   {t.feito ? '+' : ''}{fmtReais(xgame.valores[t.id])}
                                 </span>
+                              )}
+                              {/* 🛠️ F5 — conferência dupla: o SIM do gestor confirmado */}
+                              {t.feito && t.conferido === true && (
+                                <span className="shrink-0 text-[10px] font-bold text-nz-verde" title="Conferência dupla: o gestor confirmou o SIM">✔✔ conferida</span>
                               )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {

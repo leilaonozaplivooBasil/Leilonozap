@@ -22,7 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
+import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake, Gamepad2 } from 'lucide-react';
+import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -36,6 +37,7 @@ import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
+import XGameAdmin from '../components/licensing/XGameAdmin';
 import CommissionsTab from '../components/licensing/CommissionsTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
@@ -1498,6 +1500,22 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </Button>
                 </AccordionContent>
               </AccordionItem>
+
+              {/* 🎮 X-GAME — o admin da gamificação: SÓ o super admin gerencia
+                  (quem joga, verbas, tarefas, ciclo e conferência dupla). */}
+              {visibilidadeDoUsuario(user).superAdmin &&
+                <AccordionItem value="xgame" className="bg-white border-gray-200 rounded-lg overflow-hidden">
+                  <AccordionTrigger className="px-6 hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <Gamepad2 className="w-5 h-5 text-emerald-600" />
+                      <span className="text-gray-900 font-semibold">X-GAME — Admin da Gamificação</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-6">
+                    <XGameAdmin />
+                  </AccordionContent>
+                </AccordionItem>
+              }
             </Accordion>
           </TabsContent>
         }
