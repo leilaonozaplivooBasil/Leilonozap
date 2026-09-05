@@ -432,11 +432,35 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar o print — tente de novo.' });
         return;
       }
+      // ⏰ REGRA DURA — janela de validade: a prova vale enviada até 2h depois
+      // do horário da tarefa (print velho nem discute: cai pra análise)
+      const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
+      const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
+      const agoraM = new Date().getHours() * 60 + new Date().getMinutes();
+      const foraDaJanela = ehHoje && iniMin !== null && agoraM > iniMin + 120;
+      // 🤖 A IA DE VISÃO olha a imagem sabendo qual tarefa está comprovando
+      let ia = { veredito: 'duvida', motivo: 'análise manual' };
+      try {
+        const r = await plataforma.functions.xgameValidarPrint({
+          image_url: printUrl, tipo: 'instagram', titulo: t.titulo, hora: t.hora, data: hojeStr(),
+        });
+        if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) ia = r;
+      } catch { /* IA fora do ar → dúvida → fila manual */ }
+      if (ia.veredito === 'reprovada') {
+        setComprovando({ ...comprovando, enviando: false, erro: `🤖 A IA reprovou: ${ia.motivo || 'a imagem não comprova essa tarefa'}` });
+        return;
+      }
+      const status = ia.veredito === 'aprovada' && !foraDaJanela ? 'aprovada_ia' : 'em_analise';
       comprovacao = {
         tipo: 'instagram', print_url: printUrl, hash,
         link: comprovando.texto.trim() || null,
         entrega: printUrl, quando: new Date().toISOString(), valido: true,
+        status,
+        veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
+        ...(foraDaJanela ? { fora_da_janela: true } : {}),
       };
+      if (status === 'aprovada_ia') toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
+      else toast.info('⏳ Comprovação em análise do gestor — conta provisoriamente.');
     } else {
       const { valido, motivo } = validarComprovacao(comprovando.tipo, comprovando.texto);
       if (!valido) { setComprovando({ ...comprovando, erro: motivo }); return; }
@@ -1203,10 +1227,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                               {t.feito && t.conferido === true && (
                                 <span className="shrink-0 text-[10px] font-bold text-nz-verde" title="Conferência dupla: o gestor confirmou o SIM">✔✔ conferida</span>
                               )}
-                              {/* ✅ F10 — a comprovação registrada (com o link, quando é Instagram) */}
+                              {/* ✅ F10 — a comprovação registrada: aprovada pela IA, em análise ou manual */}
                               {t.feito && t.comprovacao?.valido && (
                                 t.comprovacao.tipo === 'instagram' ? (
-                                  <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline" title="Comprovação: post do Instagram registrado">📸 comprovada</a>
+                                  t.comprovacao.status === 'em_analise' ? (
+                                    <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-amber-600 hover:underline" title={`Em análise do gestor — conta provisoriamente. IA: ${t.comprovacao.veredito_ia?.motivo || ''}`}>⏳ em análise</a>
+                                  ) : (
+                                    <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline" title={`${t.comprovacao.status === 'aprovada_manual' ? 'Aprovada pelo gestor' : 'Aprovada pela IA'}${t.comprovacao.veredito_ia?.o_que_viu ? ` — viu: ${t.comprovacao.veredito_ia.o_que_viu}` : ''}`}>📸 comprovada</a>
+                                  )
                                 ) : (
                                   <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>📚 comprovada</span>
                                 )
@@ -1249,16 +1277,28 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                       rel="noreferrer"
                                       className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-xs font-bold px-3 py-1.5 hover:opacity-90"
                                     >📱 1. Abrir o Instagram e fazer o post</a>
-                                    {/* 2º: sobe o PRINT do post — a prova */}
-                                    <label className="block text-[11px] text-nz-tinta">
-                                      🖼️ 2. Suba o PRINT do post publicado:
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => setComprovando({ ...comprovando, file: e.target.files?.[0] || null, erro: '' })}
-                                        className="block mt-1 text-[11px] text-nz-tinta-fraca file:mr-2 file:rounded file:border-0 file:bg-nz-verde file:text-white file:px-2 file:py-1 file:text-[11px] file:font-semibold file:cursor-pointer"
-                                      />
-                                    </label>
+                                    {/* 2º: a prova — o PRINT do post OU foto tirada AGORA na câmera */}
+                                    <div className="flex items-start gap-4 flex-wrap">
+                                      <label className="block text-[11px] text-nz-tinta">
+                                        🖼️ 2. Suba o PRINT do post:
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => setComprovando({ ...comprovando, file: e.target.files?.[0] || null, erro: '' })}
+                                          className="block mt-1 text-[11px] text-nz-tinta-fraca file:mr-2 file:rounded file:border-0 file:bg-nz-verde file:text-white file:px-2 file:py-1 file:text-[11px] file:font-semibold file:cursor-pointer"
+                                        />
+                                      </label>
+                                      <label className="block text-[11px] text-nz-tinta" title="Abre a câmera na hora — não deixa escolher foto velha da galeria">
+                                        📷 ou tire uma foto AGORA:
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          capture="user"
+                                          onChange={(e) => setComprovando({ ...comprovando, file: e.target.files?.[0] || null, erro: '' })}
+                                          className="block mt-1 text-[11px] text-nz-tinta-fraca file:mr-2 file:rounded file:border-0 file:bg-amber-500 file:text-white file:px-2 file:py-1 file:text-[11px] file:font-semibold file:cursor-pointer"
+                                        />
+                                      </label>
+                                    </div>
                                     {comprovando.file && <p className="text-[10px] text-nz-verde font-semibold">🖼️ {comprovando.file.name}</p>}
                                     <Input
                                       placeholder="3. (opcional) cola o link do post também"
@@ -1267,7 +1307,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                       className="bg-white border-nz-borda text-nz-tinta h-8 text-xs"
                                     />
                                     <p className="text-[10px] text-nz-tinta-fraca">
-                                      Validador automático: imagem real · print repetido é barrado (impressão digital) · horário carimbado pelo sistema.
+                                      Validador automático: 🤖 a IA confere se a imagem comprova a tarefa · print repetido é barrado (impressão digital) · prova enviada 2h+ depois do horário cai pra análise do gestor · horário carimbado pelo sistema.
                                     </p>
                                   </div>
                                 ) : (

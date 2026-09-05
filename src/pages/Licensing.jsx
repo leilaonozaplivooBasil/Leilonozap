@@ -1509,22 +1509,29 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* 🎮 X-GAME — o admin da gamificação: SÓ o super admin gerencia
-                  (quem joga, verbas, tarefas, ciclo e conferência dupla). */}
-              {visibilidadeDoUsuario(user).superAdmin &&
-                <AccordionItem value="xgame" className="bg-white border-gray-200 rounded-lg overflow-hidden">
-                  <AccordionTrigger className="px-6 hover:bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <Gamepad2 className="w-5 h-5 text-emerald-600" />
-                      <span className="text-gray-900 font-semibold">X-GAME — Admin da Gamificação</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-6 pb-6">
-                    <XGameAdmin />
-                  </AccordionContent>
-                </AccordionItem>
-              }
             </Accordion>
+          </TabsContent>
+        }
+
+        {/* 🎮 X-GAME — o admin da gamificação mora na X-eos (menu Top College),
+            aba própria e SÓ pro super admin: participantes, verbas, tarefas,
+            ciclo, conferência dupla e a fila de comprovações. */}
+        {visibilidadeDoUsuario(user).superAdmin &&
+          <TabsContent value="xgame-admin" className="space-y-6">
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-gray-900">
+                  <Gamepad2 className="w-5 h-5 text-emerald-600" />
+                  X-GAME — Admin da Gamificação
+                </CardTitle>
+                <CardDescription className="text-gray-500">
+                  Estrutura de operações e expansão · quem joga, quanto recebe, as tarefas e as comprovações
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <XGameAdmin />
+              </CardContent>
+            </Card>
           </TabsContent>
         }
       </Tabs>
