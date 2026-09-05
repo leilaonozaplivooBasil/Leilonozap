@@ -51,6 +51,19 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --pc-ouro-claro: #E4C88A;
     --pc-tinta: #F5F5F4;
     --pc-tinta-fraca: #9A9A96;
+    /* 🏛️ DIR-55 — Top College (faculdade, gradiente) × X-EOS (sistema,
+       monocromática) — SÓ no painel "Os 8 Hábitos do Sucesso".
+       X-EOS: hex exatos do brandbook oficial. Top College: sem brandbook
+       próprio localizado — extraído visualmente das imagens reais. */
+    --xeos-preto: #00020C;
+    --xeos-branco: #F4F4F4;
+    --xeos-cinza-1: #2B2B2B;
+    --xeos-cinza-2: #817E8C;
+    --xeos-cinza-3: #C1BECA;
+    --xeos-fundo: #0A1020;
+    --topcollege-azul: #3B6FF6;
+    --topcollege-roxo: #8B3FE0;
+    --topcollege-magenta: #E62E8B;
   }
   .dark {
     --pc-preto: #0A0A0B;

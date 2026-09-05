@@ -38,6 +38,8 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import TopCollegeLogo from './TopCollegeLogo';
+import XEosLogo from './XEosLogo';
 import { reuniaoIminente } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
@@ -1417,6 +1419,21 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
 
+        {/* 🏛️ DIR-55 — o palco das duas marcas: Top College (a faculdade,
+            mais espaço) e X-eos (o sistema, inteiro) lado a lado — nenhuma
+            diminui a outra, subtítulo oficial de cada uma no mesmo tamanho
+            de fonte. Vale pros 8 Hábitos, não só os que passam pelo CrmMetodo. */}
+        <div className="rounded-2xl overflow-hidden mb-4 sm:mb-5 flex flex-col sm:flex-row items-center" style={{ background: 'var(--xeos-fundo)' }}>
+          <div className="w-full sm:w-[58%] flex items-center justify-center px-5 py-5 sm:py-7">
+            <TopCollegeLogo className="h-24 sm:h-28 w-auto" />
+          </div>
+          <div className="hidden sm:block self-stretch w-px my-6 bg-white/15" />
+          <div className="sm:hidden w-4/5 h-px bg-white/15" />
+          <div className="w-full sm:w-[42%] flex items-center justify-center px-5 py-5 sm:py-7">
+            <XEosLogo className="h-16 sm:h-20 w-auto" />
+          </div>
+        </div>
+
         {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
         <CrmResumo itens={resumoItens} />
 
@@ -1457,6 +1474,12 @@ _Enviado via CRM Leilão NoZap_`;
         {/* ══ 📊 HÁBITO 7 — VERIFICAÇÃO DO PROGRESSO (Visão Executiva) ══ */}
         {secaoAtiva === 'verificacao' && (
           <>
+            {/* 🏛️ DIR-55 — o Hábito 7 É o X-office: "verificando o progresso e
+                mapeando processos", sub-marca oficial do sistema X-EOS. */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-nz-borda bg-nz-cinza-fundo px-3 py-1.5 mb-3">
+              <span className="text-xs font-bold" style={{ color: 'var(--xeos-cinza-1)' }}>X-office</span>
+              <span className="text-[11px] text-nz-tinta-fraca">· verificando o progresso e mapeando processos</span>
+            </div>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
             {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do

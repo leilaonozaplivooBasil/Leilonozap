@@ -418,7 +418,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       <CardContent className="p-4 sm:p-6 space-y-4">
         {habito && (
           <div>
-            <p className="text-lg font-bold text-nz-tinta"><span className="text-nz-verde">Hábito {habito.n} — {habito.titulo}</span></p>
+            {/* 🏛️ DIR-55 — a coluna vertebral (X-EOS, preto/cinza) sustenta;
+                o destaque (gradiente Top College) marca o título de cada Hábito. */}
+            <div className="h-1 w-14 rounded-full mb-2" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }} />
+            <p className="text-lg font-bold text-nz-tinta">
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }}
+              >
+                Hábito {habito.n} — {habito.titulo}
+              </span>
+            </p>
             <p className="text-sm text-nz-tinta-fraca">{habito.texto}</p>
           </div>
         )}

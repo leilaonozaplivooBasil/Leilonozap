@@ -2504,3 +2504,59 @@ horário de término calculado, não os minutos crus. Fonte única testada:
 as duas reuniões cadastradas na prova (uma por duração, outra por "até
 às") aparecem na listagem como "09:30 às 10:30" e "10:00 às 11:30".
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-55 — Identidade Top College + X-EOS no painel dos 8 Hábitos (05/09/2026)
+
+**Diretiva:** DIR-55 — o dono pediu as duas marcas JUNTAS (Top College,
+"a faculdade", com um pouco mais de grandeza; X-eos, "o sistema", sem
+diminuir), aplicadas em locais estratégicos de todo o painel "Os 8
+Hábitos do Sucesso" (não só nos 6 hábitos que passam pelo `CrmMetodo`).
+Especificação escrita no chat e aprovada ("CAPRICHA QUERO ISSO FODA")
+antes de qualquer código, conforme exigido pelo próprio dono.
+**Entregue:**
+1. Placa de marca no topo do painel — fundo azul-marinho escuro
+   (`--xeos-fundo`), Top College à esquerda (~58% da largura, ícone e
+   nome maiores — a "grandeza" pedida) e X-eos à direita (~42%, logo
+   INTEIRO, não reduzido a um ícone), separados por um traço fino.
+   Aparece uma única vez no topo, ANTES do resumo de números, então
+   está presente nos 8 hábitos — não só nos 6 que o `CrmMetodo` cobre.
+2. Os dois logos foram recriados em SVG (não havia arquivo vetor
+   disponível — três tentativas de receber a imagem colada no chat não
+   geraram um arquivo anexado de verdade) fiéis à referência visual
+   enviada pelo dono e ao brandbook oficial em PDF: `TopCollegeLogo.jsx`
+   (pilar em "II", gradiente azul→roxo→magenta) e `XEosLogo.jsx` (o X
+   metálico com ponta em seta).
+3. Tipografia do brandbook: Sora (corpo, real, Google Fonts) e Baloo 2
+   (título, substituta de licença livre pra Bauhaus — indisponível como
+   arquivo — por escolha do próprio dono: "Não tenho o arquivo — use
+   uma parecida").
+4. Paleta X-EOS (`--xeos-*`) e Top College (`--topcollege-*`) como
+   tokens novos em `src/index.css`, usados no acento/título de cada
+   card de Hábito em `CrmMetodo.jsx` (barra + texto em gradiente) sem
+   reescrever a paleta interna inteira do componente — risco de
+   regressão desnecessário pro pedido desta rodada.
+5. Hábito 7 (Verificação) ganhou o selo da sub-marca **X-office**, com
+   a frase oficial ("verificando o progresso e mapeando processos").
+6. Gamificação/Human Token FICOU DE FORA por pedido explícito do dono
+   ("segura a gamificação... vou te enviar uma planilha") — não
+   implementado nesta rodada.
+**Achado durante a prova (não é bug):** o primeiro print (fontSize 48
+na Top College) realmente estourava o viewBox do SVG — corrigido pra
+36. Depois da correção, um segundo print pareceu MOSTRAR o "T" cortado,
+mas era artefato de ampliar um recorte minúsculo (~90px) com
+interpolação — a medição real via `getBBox()` no DOM (não estimativa)
+mostrou o texto inteiro dentro do viewBox com margem de sobra dos dois
+lados, e um screenshot direto do elemento SVG (sem redimensionar)
+confirmou "TOP COLLEGE" e "FACULTY OF ENTREPRENEURS" completos e
+nítidos — igual pro "-eos" e seu subtítulo. Lição: para conferir
+clipping em SVG pequeno, medir com `getBBox()`/screenshot do elemento
+em vez de ampliar um recorte de imagem.
+**Prova (medida):** suíte **906/906** (sem mudança — rodada é só
+visual/apresentação, nenhuma lib nova); build exit 0; prova em
+navegador **147/147 ZERO erros de página/console** — cobrindo os dois
+logos presentes (por `aria-label`) e o texto oficial de cada marca no
+cabeçalho, o cabeçalho se repetindo em todos os 8 hábitos, e o selo
+X-office com a frase oficial no Hábito 7.
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

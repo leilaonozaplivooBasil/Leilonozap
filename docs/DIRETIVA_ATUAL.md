@@ -12,6 +12,52 @@
 
 ---
 
+## DIR-55 — Identidade Top College + X-EOS no painel dos 8 Hábitos
+
+**Emitida por:** dono (05/09/2026, por áudio transcrito): "todo esse
+sistema dos oito hábitos de sucesso precisa ter essas cores, a
+identidade visual das duas marcas, em locais estratégicos... explicando
+que nós somos a primeira faculdade de empreendedorismo do planeta, e a
+X-EOS significa estrutura de operação e expansão de qualquer negócio, o
+briefing prático do sucesso." Corrigido depois: "eu quero a Top College
+e X-EOS JUNTO, seguindo o princípio: Top College a faculdade de
+empreendedorismo e X-EOS o sistema, aplicação de cultura e
+desenvolvimento — a coluna vertebral da mentalidade." E: "quero que
+você deixe melhor, precisa da ênfase nas duas marcas sem diminuir
+nenhuma, dando um pouco de grandeza na faculdade sem diminuir a X-EOS."
+Desenho do cabeçalho aprovado em chat (faixa azul-marinho, Top College
+~60% maior + X-eos ~40% inteiro, subtítulos no mesmo tamanho de fonte).
+Aprovação final: **"CAPRICHA QUERO ISSO FODA"**.
+**Material de origem:** brandbook oficial da X-EOS (PDF anexado pelo
+dono) — cores exatas #00020C (preto/inovação e força) e #F4F4F4
+(branco gelo/confiança e modernidade), escala #03000D→#F6F6F9,
+tipografia Bauhaus (título)/Sora (corpo); sub-marca "X-office —
+verificando o progresso e mapeando processos". Top College sem
+brandbook próprio localizado — cores extraídas visualmente das imagens
+reais enviadas (gradiente azul→roxo→magenta). Logos das duas marcas
+recriados em SVG fiel ao que foi visto (arquivo de origem/vetor não
+disponível — dono confirmou seguir assim).
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+1. Cabeçalho do painel "🏆 Os 8 Hábitos do Sucesso": faixa #0A1020 com
+   os dois logos lado a lado (responsivo: empilha no celular), Top
+   College maior (~60%), X-eos inteiro (~40%), linha fina separando,
+   subtítulo oficial de cada marca no mesmo tamanho de fonte.
+2. Dentro dos cards de cada Hábito: estrutura (bordas/divisores/barra
+   de progresso) na paleta X-EOS (preto/branco/cinza); destaques
+   (botão principal, conquista) no gradiente Top College.
+3. Hábito 7 (Verificação) ganha o selo "X-office".
+4. Tipografia Sora (Google Fonts) pro corpo; substituto geométrico
+   arredondado de licença livre pro título (sem o arquivo da Bauhaus
+   original).
+**Fora do escopo:** gamificação/Human Token/pontos (dono disse
+"segura" — vai mandar material próprio); rebranding do resto do site
+(só o painel dos Hábitos).
+**Regras fixas:** prova em navegador; produção só com novo "pode".
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-54 — Fila identificada por dono (MINHA × TIME) e reunião da empresa com horário de término
 
 **Emitida por:** dono (05/09/2026, por áudio transcrito, testando as
