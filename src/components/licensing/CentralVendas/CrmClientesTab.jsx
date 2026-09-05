@@ -41,7 +41,6 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
-import MarcaPalco from './MarcaPalco';
 import { reuniaoIminente } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
@@ -1450,9 +1449,10 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
 
-        {/* 🏛️ DIR-56 — o palco das duas marcas, com a ARTE ORIGINAL */}
-        <MarcaPalco />
-
+        {/* 🎓 DIR-63 — o palco das duas marcas saiu daqui. Ele repetia, 300px
+            abaixo, exatamente o mesmo par de logos da faixa da academia — e o
+            dono viu isso na tela: "está repetindo muito as logos". As frases
+            das marcas subiram pra faixa; a identidade continua, uma vez só. */}
         {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
         <CrmResumo itens={resumoItens} />
 
