@@ -253,6 +253,46 @@ export function xpayDoDia(tarefasComEstado = [], valores = {}) {
 /** Formata R$ no padrão do app. */
 export const fmtReais = (n) => `R$ ${Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// ── 🗳️ MvM MANUAL — a votação dos pares nas 10 Virtudes ─────────────
+// Planilha: cada pessoa vota 1-10 em cada colega, todo dia, das 20h às 22h,
+// de casa. A média das virtudes recebidas é o "RANKING DAS VIRTUDES" e o
+// componente MvM oficial do Human Token (0-10).
+
+export const VIRTUDES = [
+  'GRATIDÃO', 'RELACIONAMENTO', 'ORGANIZAÇÃO', 'PONTUALIDADE', 'PROATIVIDADE',
+  'COMPROMISSO', 'AUTORRESPONSABILIDADE', 'ORATÓRIA', 'LIDERANÇA', 'ESPÍRITO DE EQUIPE',
+];
+
+export const VOTACAO_INICIO_MIN = 20 * 60; // 20:00
+export const VOTACAO_FIM_MIN = 22 * 60;    // 22:00
+
+/** A janela de votação está aberta agora? (20h–22h, regra da planilha) */
+export const janelaVotacaoAberta = (agoraMin) =>
+  agoraMin >= VOTACAO_INICIO_MIN && agoraMin < VOTACAO_FIM_MIN;
+
+/**
+ * Consolida os votos RECEBIDOS por uma pessoa no ciclo:
+ * média geral (o MvM manual, 0-10) e o Ranking das Virtudes (média por
+ * virtude, da mais forte pra mais fraca).
+ * @param votos linhas de xgame_votos_mvm com {virtude, nota}
+ */
+export function mvmManual(votos = []) {
+  const porVirtude = {};
+  for (const v of votos) {
+    const nome = String(v.virtude || '').toUpperCase();
+    if (!porVirtude[nome]) porVirtude[nome] = { soma: 0, n: 0 };
+    porVirtude[nome].soma += Number(v.nota) || 0;
+    porVirtude[nome].n += 1;
+  }
+  const ranking = Object.entries(porVirtude)
+    .map(([virtude, { soma, n }]) => ({ virtude, media: Math.round((soma / n) * 100) / 100, votos: n }))
+    .sort((a, b) => b.media - a.media);
+  const media = ranking.length
+    ? Math.round((ranking.reduce((s, r) => s + r.media, 0) / ranking.length) * 100) / 100
+    : null;
+  return { media, ranking, totalVotos: votos.length };
+}
+
 /**
  * Início oficial do ciclo (xgame_config.ciclo_inicio), caindo pro 1º dia
  * útil do mês quando não há configuração vigente (ou o ciclo já acabou).
