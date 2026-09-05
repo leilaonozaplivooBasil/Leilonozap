@@ -2866,3 +2866,44 @@ de uso da figura antes — uso interno e uso publicitário têm regras
 diferentes.
 
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-62 — A faixa da academia no topo do painel (05/09/2026)
+
+**Diretiva:** DIR-62.
+
+**Entregue:**
+1. O cabeçalho branco virou **faixa preta** com o padrão tonal da X-EOS,
+   as **duas marcas juntas**, o título, a saudação e **"Qual é o seu
+   poder?"** em degradê da Top College.
+2. **O professor em destaque:** imagem grande entrando pela direita, com
+   esfumaçado pro preto nas bordas (feito na própria arte, no canal
+   alfa, pra ele derreter na faixa em vez de virar um retângulo colado).
+3. O bloco do seletor acompanha o preto, e o seletor **volta a dizer
+   onde a pessoa está** ("Top College / O Método") — a pergunta agora
+   vive grande na faixa, e repetir logo abaixo era ruído e ainda tirava
+   a orientação de quem navega.
+
+**Limite de escopo que eu impus e registrei:** a faixa só aparece nas
+seções da TOP COLLEGE. O cabeçalho é o mesmo em todas as abas — se ela
+ficasse sempre, a faculdade voltaria a assinar a Carteira e os Pedidos,
+que é a fronteira fechada na DIR-57. Tem asserção cobrando que a faixa
+NÃO apareça numa seção da loja.
+
+**Dois defeitos encontrados no render e corrigidos:**
+1. O seletor continuou branco dentro do bloco escuro. Medindo no
+   navegador, o fundo dele JÁ era o vidro do palco (`rgba(255,255,255,
+   .043)`) — o problema é que vidro translúcido sobre página branca dá
+   branco. Faltava o bloco ter fundo preto de verdade, não só o tema.
+2. O degradê da frase morria no azul: com as paradas padrão, a largura
+   do texto acabava antes do magenta. As paradas foram comprimidas
+   (0% / 34% / 72%) pra as três cores caberem na frase.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**169/169 ZERO erros** (167 + 2 asserções: o professor entra com altura
+de destaque — ≥150px, não miniatura —, e a faixa é preta, com as duas
+marcas e a pergunta).
+
+**Status:** ENTREGUE NO PREVIEW. Produção NÃO — reforçado pelo dono
+nesta rodada: "só não coloca nada em produção agora, é tudo no preview".

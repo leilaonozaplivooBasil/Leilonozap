@@ -72,16 +72,9 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
           {/* 🎓 DIR-61 — ordem do dono: aqui não se escreve "O Método", entra
               só o X. Ao lado, pequeno, o retrato com a pergunta que abre o
               método. O nome continua no title/alt, pra tela nenhuma ficar muda. */}
-          {atual.marca ? (
-            <span className="flex items-center gap-2 min-w-0">
-              <img src="/marca/poder.webp" alt="" aria-hidden="true" className="h-[26px] w-[26px] shrink-0 rounded-full object-cover ring-1 ring-nz-borda" draggable="false" />
-              <span className="truncate text-[13px] font-bold text-nz-tinta" style={{ fontFamily: 'Sora, sans-serif' }}>
-                Qual é o seu poder?
-              </span>
-            </span>
-          ) : (
-            <span className="block truncate text-[15px] font-bold text-nz-tinta">{rotuloDe(atual)}</span>
-          )}
+          <span className="block truncate text-[15px] font-bold text-nz-tinta" style={{ fontFamily: 'Sora, sans-serif' }}>
+            {rotuloDe(atual)}
+          </span>
         </span>
         <ChevronDown className={`h-5 w-5 shrink-0 text-nz-tinta-fraca transition-transform ${aberto ? 'rotate-180' : ''}`} />
       </button>
