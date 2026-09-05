@@ -12,6 +12,39 @@
 
 ---
 
+## DIR-62 — A faixa da academia: o topo branco vira preto, com o professor
+
+**Emitida por:** dono (05/09/2026): *"ficou muito pequeno o professor,
+queria dar ênfase nele. E ali em cima onde está branco, usar aquele
+espaço pra botar o professor bem temático, deixando tudo preto ali
+maneirão, pra ficar mais foda a academia — puxando a X-EOS juntamente
+com a Top College, e o professor bem em destaque. E melhorar aquele que
+está escrito ali o método."* Autorização: **"pode fazer o que eu falei,
+só não coloca nada em produção agora, é tudo no preview"**.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O cabeçalho branco do painel vira uma **faixa preta** com o padrão da
+   X-EOS, as **duas marcas juntas** (Top College + X-eos), o título, a
+   saudação e a pergunta **"Qual é o seu poder?"** em degradê.
+2. O **professor em destaque** — imagem grande, entrando pela direita,
+   com esfumaçado pro preto. Deixa de ser miniatura.
+3. O bloco do seletor logo abaixo acompanha o preto, e o seletor volta a
+   dizer ONDE a pessoa está ("Top College / O Método"): a pergunta agora
+   vive grande na faixa, e repetir embaixo era ruído.
+
+**LIMITE DE ESCOPO (decisão de arquitetura, registrada):** a faixa só
+aparece quando a pessoa está numa seção da TOP COLLEGE. O cabeçalho é o
+mesmo em todas as abas do painel — se a faixa ficasse sempre, a
+faculdade voltaria a assinar a Carteira e os Pedidos, exatamente a
+fronteira que a DIR-57 fechou (Top College forma, Leilão NoZap opera).
+
+**Fora do escopo — reforçado pelo dono nesta rodada:** NADA vai pra
+produção. Tudo fica no preview.
+
+---
+
 ## DIR-61 — Tudo com cara de uma coisa só: tipografia, X e "qual é o seu poder"
 
 **Emitida por:** dono (05/09/2026), aprovando a rodada anterior ("está

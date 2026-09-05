@@ -46,6 +46,7 @@ import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import MobileNavSheet from '../components/licensing/MobileNavSheet';
 import CentralVendasTabs from '../components/licensing/CentralVendasTabs';
+import HeroTopCollege from '../components/licensing/HeroTopCollege';
 // 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
 // outras telas. A antiga LicensingSidebar (com títulos de seção e itens
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
@@ -55,7 +56,7 @@ import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
-import { VALID_LICENSING_TABS, podeVerOperacao } from '@/lib/licensingTabs';
+import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
@@ -1043,6 +1044,14 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
+  // 🎓 DIR-62 — a pessoa está numa seção da Top College? É isso que liga a
+  // faixa da academia (e o tema escuro do seletor logo abaixo dela).
+  const naTopCollege = activeTab === 'catalogo' && SECOES_TOP_COLLEGE.some((s) => s.value === catalogSubTab);
+  const saudacaoDaHora = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  })();
+
   return (
     <div className="flex bg-white min-h-screen">
       <NavegacaoLateralGlobal
@@ -1059,18 +1068,21 @@ const DashboardContent = ({ user, isAdmin }) => {
           <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 
-        <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Painel de Alavancagem</h1>
-            <p className="text-base sm:text-lg font-slab text-gray-800">
-              {(() => {
-                const h = new Date().getHours();
-                const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-                return `${greeting}, ${shortName}`;
-              })()}
-            </p>
+        {/* 🎓 DIR-62 — na Top College o topo branco vira a FAIXA DA ACADEMIA
+            (preta, com as duas marcas e o professor). Fora dela, o cabeçalho
+            de sempre: a faculdade não assina a Carteira nem os Pedidos. */}
+        {naTopCollege ? (
+          <HeroTopCollege saudacao={saudacaoDaHora} nome={shortName} />
+        ) : (
+          <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Painel de Alavancagem</h1>
+              <p className="text-base sm:text-lg font-slab text-gray-800">
+                {`${saudacaoDaHora}, ${shortName}`}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 🖥️ Estilo Mercado Pago: o resumo (saldo, banner, gráficos) só aparece
             na Visão Geral. Nas outras abas a página troca por completo, sem
@@ -1117,7 +1129,12 @@ const DashboardContent = ({ user, isAdmin }) => {
         {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <CentralVendasTabs value={catalogSubTab} onChange={setCatalogSubTab} clientesCount={myClients.length} />
+              <div
+                className={naTopCollege ? 'xeos-palco inline-block rounded-2xl border border-white/10 p-3' : undefined}
+                style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
+              >
+                <CentralVendasTabs value={catalogSubTab} onChange={setCatalogSubTab} clientesCount={myClients.length} />
+              </div>
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
