@@ -687,7 +687,10 @@ export function validarComprovacao(tipo, entrega) {
 // 📚 REGRA DO DONO (05/09): estudo comprova com FOTO + RESUMO DIGITADO.
 // Mínimo de um resumo de verdade (~2 frases) e SEM copiar e colar — colar é
 // bloqueado na tela, porque digitar é treino: fixa o aprendizado.
-export const RESUMO_MIN = 120;
+// 400 caracteres ≈ um parágrafo sólido de 5-6 linhas: desafia a elaborar e
+// digitar de verdade sem virar gargalo na rotina (uma folha inteira todo dia
+// travaria a jornada — o desafio sobe depois, se o time engolir fácil).
+export const RESUMO_MIN = 400;
 
 /** 🌅 A tarefa de gratidão/acordar abre o RITUAL DO AMANHECER (não formulário). */
 export const ehTarefaDeGratidao = (titulo) => /acordar|gratidao|bom dia/.test(_semAcento(titulo));
