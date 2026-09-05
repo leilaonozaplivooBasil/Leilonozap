@@ -225,12 +225,20 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                                     onClick={() => escolherSub(sub)}
                                     className="mb-0.5 flex w-full min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 text-left active:bg-white/5"
                                   >
-                                    {IconSub && (
-                                      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-white/5">
-                                        <IconSub className="h-3.5 w-3.5 text-white/50" />
-                                      </span>
+                                    {/* 🎓 DIR-59 — mesma regra do desktop: item com
+                                        `marcaCompleta` mostra a LOGO no lugar do texto. */}
+                                    {sub.marcaCompleta ? (
+                                      <img src={sub.marcaCompleta} alt={sub.label} className="h-6 w-auto object-contain" draggable="false" />
+                                    ) : (
+                                      <>
+                                        {(sub.marca || IconSub) && (
+                                          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-white/5">
+                                            <MarcaOuIcone marca={sub.marca} icone={IconSub} className="h-3.5 w-3.5 text-white/50" />
+                                          </span>
+                                        )}
+                                        <span className="min-w-0 flex-1 truncate text-sm font-semibold uppercase tracking-wide text-white/75">{sub.label}</span>
+                                      </>
                                     )}
-                                    <span className="min-w-0 flex-1 truncate text-sm font-semibold uppercase tracking-wide text-white/75">{sub.label}</span>
                                   </button>
                                 );
                               })}

@@ -2745,3 +2745,36 @@ carrega na lateral, a da X-eos carrega no menu, e o selo escuro protege
 a marca branca no seletor claro).
 
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-59 — A logo inteira da X-eos no lugar do texto (05/09/2026)
+
+**Diretiva:** DIR-59 — *"onde está escrito O Método eu quero que entre a
+logo inteira da X-eos, sem o nome O Método"*.
+
+**Entregue:** no menu da Top College (lateral do desktop e acordeão do
+celular), o item deixou de escrever "O Método" e passou a mostrar a
+**logo inteira da X-eos**. Campo novo na fonte única, `marcaCompleta`,
+que quer dizer exatamente "a marca SUBSTITUI o rótulo" — diferente de
+`marca` (DIR-58), que só troca o ícone e mantém o texto.
+
+**Decisões de acabamento (medidas, não estimadas):**
+1. A logo entra **sem a linha "Estrutura de operações e expansão"**: na
+   altura de uma linha de menu (22px) aquele subtítulo vira borrão. O
+   ponto de corte saiu de uma varredura das linhas do arquivo — o
+   subtítulo começa em y=612 —, e o resultado foi conferido renderizando
+   nos 22px reais antes de aplicar.
+2. O rótulo "O Método" **sobrevive como texto alternativo** da imagem.
+   Sem isso o item ficaria mudo pra leitor de tela e perderia o nome na
+   busca do menu do celular. Virou asserção própria na prova.
+3. O seletor interno da Loja & Vendas ficou como estava: lá o texto
+   "O Método" é o "você está aqui" — trocar por logo tiraria a
+   orientação de quem navega.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**163/163 ZERO erros** (161 + 2 asserções: o menu NÃO escreve mais
+"O Método" e mostra a logo com altura real > 0; e a logo mantém o nome
+acessível).
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

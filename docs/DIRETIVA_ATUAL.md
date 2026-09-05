@@ -12,6 +12,31 @@
 
 ---
 
+## DIR-59 — No menu, a logo INTEIRA da X-eos no lugar do texto
+
+**Emitida por:** dono (05/09/2026): *"onde está escrito O Método eu quero
+que entre a logo inteira da X-eos, sem o nome O Método"*.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. No menu da Top College (lateral do desktop e acordeão do celular), o
+   item "O Método" deixa de escrever o nome: entra a **logo inteira da
+   X-eos** no lugar do texto.
+2. A logo entra SEM a linha "Estrutura de operações e expansão" — na
+   altura de uma linha de menu (22px) aquele subtítulo vira borrão. O
+   corte foi medido varrendo as linhas do arquivo (o subtítulo começa em
+   y=612), não estimado.
+3. O rótulo "O Método" continua existindo como **texto alternativo** da
+   imagem: sem isso o item ficaria mudo pra leitor de tela e sem nome na
+   busca do menu do celular.
+4. O seletor interno da Loja & Vendas NÃO muda: lá o texto "O Método" é
+   o "você está aqui", e trocá-lo por logo tiraria a orientação.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
 ## DIR-58 — A marca no lugar do ícone genérico
 
 **Emitida por:** dono (05/09/2026), vendo o menu novo: *"conseguimos

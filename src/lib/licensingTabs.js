@@ -128,7 +128,12 @@ export function getLicensingGroups(user) {
       title: 'Top College',
       colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp' },
       items: [
-        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
+        // 🎓 DIR-59 — no menu, este item NÃO escreve "O Método": entra a logo
+        // inteira da X-eos no lugar do texto (ordem do dono). `marcaCompleta`
+        // quer dizer exatamente isso — a marca SUBSTITUI o rótulo. O `label`
+        // continua existindo porque vira o texto alternativo da imagem e o
+        // nome pra busca no menu do celular.
+        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp', marcaCompleta: '/marca/marca-xeos-completa.webp' },
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-vendedores', label: 'Time', icon: Handshake },
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
@@ -171,7 +176,7 @@ export function chaveDoItem(item) {
 // vira link pra rota que já existe. Um lugar só, usado pelo desktop e pelo
 // celular — era essa duplicação que deixava sub-item sem navegação nenhuma.
 export function entradaFlutuante(item, onTabChange) {
-  const base = { label: item.label, icon: item.icon, marca: item.marca };
+  const base = { label: item.label, icon: item.icon, marca: item.marca, marcaCompleta: item.marcaCompleta };
   if (item.type === 'tab') {
     if (onTabChange) return { ...base, onClick: () => onTabChange(item.value, item.catalogTab) };
     const sufixo = item.catalogTab ? `&catalogTab=${item.catalogTab}` : '';
