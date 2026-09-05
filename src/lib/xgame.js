@@ -633,3 +633,47 @@ export function proximaLiga(token) {
   const alvo = LIGAS[i - 1];
   return { liga: alvo, falta: Math.round((alvo.min - (Number(token) || 0)) * 100) / 100 };
 }
+
+// ── ✅ VALIDAÇÃO AUTOMÁTICA (F10 — comprovar sem depender de ninguém) ─
+// Toda tarefa pode exigir comprovação, e o SISTEMA valida na hora:
+//   'instagram'   → o link do post/story DO DIA (marketing pessoal provado);
+//   'aprendizado' → escrever o principal aprendizado da leitura (a
+//                   validação mais Duolingo que existe: registrou, fixou);
+//   'nenhuma'     → concluir direto (almoço, deslocamento...).
+// Vendas e reuniões nem precisam disso — validam sozinhas pelos dados do
+// sistema (catalog_sales e os registros do CRM).
+
+/** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar). */
+export function validacaoAutomatica(titulo) {
+  const t = _semAcento(titulo);
+  if (/story|post|instagram|conteudo/.test(t)) return 'instagram';
+  if (/leitura|estudo|curso|licao/.test(t)) return 'aprendizado';
+  return null;
+}
+
+/** Tipo efetivo da tarefa: o gravado, ou o automático do título. */
+export function tipoDeValidacao(t) {
+  const v = String(t?.validacao || '').toLowerCase();
+  if (v === 'nenhuma') return null;
+  if (['instagram', 'aprendizado'].includes(v)) return v;
+  return validacaoAutomatica(t?.titulo);
+}
+
+export const ROTULO_VALIDACAO = {
+  instagram: '📸 link do Instagram do dia',
+  aprendizado: '📚 o que você aprendeu',
+};
+
+/** Valida a entrega na hora. Devolve {valido, motivo}. */
+export function validarComprovacao(tipo, entrega) {
+  const texto = String(entrega || '').trim();
+  if (tipo === 'instagram') {
+    const ok = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|reels|stories|tv)\/.+/i.test(texto);
+    return { valido: ok, motivo: ok ? 'link do Instagram registrado ✔' : 'cole o link do post/story de HOJE (instagram.com/p/… ou /reel/…)' };
+  }
+  if (tipo === 'aprendizado') {
+    const ok = texto.length >= 40;
+    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : 'escreva de verdade: pelo menos uma frase (40+ letras) do que você aprendeu' };
+  }
+  return { valido: true, motivo: '' };
+}

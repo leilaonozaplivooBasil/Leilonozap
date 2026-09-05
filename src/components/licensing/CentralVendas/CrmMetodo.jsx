@@ -25,6 +25,7 @@ import {
   VIRTUDES, janelaVotacaoAberta, mvmManual,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
+  tipoDeValidacao, validarComprovacao, ROTULO_VALIDACAO,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -401,7 +402,36 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     } finally { setSalvando(false); }
   };
 
+  // ✅ F10 — comprovação inline: tarefa com validação não conclui sem provar
+  const [comprovando, setComprovando] = useState(null); // { id, tipo, texto, erro }
+  const concluirComComprovacao = async (t) => {
+    const { valido, motivo } = validarComprovacao(comprovando.tipo, comprovando.texto);
+    if (!valido) { setComprovando({ ...comprovando, erro: motivo }); return; }
+    const comprovacao = { tipo: comprovando.tipo, entrega: comprovando.texto.trim(), quando: new Date().toISOString(), valido: true };
+    setComprovando(null);
+    try {
+      await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
+      if (ehHoje && xgame) {
+        const est = estadoDaTarefa(t);
+        const noHorario = !est || est.id === 'AGORA' || est.id === 'FUTURO';
+        const pts = Math.round((10 + (noHorario ? 5 : 0)) * (xgame.cotacao || 1));
+        setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
+        setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
+      }
+      toast.success('Comprovada e concluída! ✔');
+    } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
+  };
+
   const alternarFeito = async (t) => {
+    // ✅ F10 — tem validação e está marcando como feita? primeiro comprova
+    if (!t.feito) {
+      const tipo = tipoDeValidacao(t);
+      if (tipo && !t.comprovacao?.valido) {
+        setComprovando({ id: t.id, tipo, texto: '', erro: '' });
+        return;
+      }
+    }
     // ⚡ marcou FEITO hoje? mostra o XP na hora (10 pts, +5 no horário, × cotação)
     if (!t.feito && ehHoje && xgame) {
       const est = estadoDaTarefa(t);
@@ -1139,6 +1169,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                               {t.feito && t.conferido === true && (
                                 <span className="shrink-0 text-[10px] font-bold text-nz-verde" title="Conferência dupla: o gestor confirmou o SIM">✔✔ conferida</span>
                               )}
+                              {/* ✅ F10 — a comprovação registrada (com o link, quando é Instagram) */}
+                              {t.feito && t.comprovacao?.valido && (
+                                t.comprovacao.tipo === 'instagram' ? (
+                                  <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline" title="Comprovação: post do Instagram registrado">📸 comprovada</a>
+                                ) : (
+                                  <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>📚 comprovada</span>
+                                )
+                              )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
                                 const est = estadoDaTarefa(t);
@@ -1161,6 +1199,38 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                             </div>
                             {guia && guiaAberto === t.id && !t.feito && (
                               <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
+                            )}
+                            {/* ✅ F10 — o validador: sem comprovar, não conclui */}
+                            {comprovando?.id === t.id && !t.feito && (
+                              <div className="mt-2 ml-6 space-y-1.5 rounded-md border border-nz-verde/40 bg-nz-verde-fundo/40 p-2.5">
+                                <p className="text-[11px] font-semibold text-nz-tinta">
+                                  ✅ Pra concluir, comprove: {ROTULO_VALIDACAO[comprovando.tipo]}
+                                </p>
+                                {comprovando.tipo === 'instagram' ? (
+                                  <Input
+                                    autoFocus
+                                    placeholder="https://www.instagram.com/p/… (o post/story de HOJE)"
+                                    value={comprovando.texto}
+                                    onChange={(e) => setComprovando({ ...comprovando, texto: e.target.value, erro: '' })}
+                                    className="bg-white border-nz-borda text-nz-tinta h-8 text-xs"
+                                  />
+                                ) : (
+                                  <Textarea
+                                    autoFocus
+                                    placeholder="Escreve o principal aprendizado da leitura de hoje — uma frase de verdade."
+                                    value={comprovando.texto}
+                                    onChange={(e) => setComprovando({ ...comprovando, texto: e.target.value, erro: '' })}
+                                    className="bg-white border-nz-borda text-nz-tinta text-xs min-h-[56px]"
+                                  />
+                                )}
+                                {comprovando.erro && <p className="text-[11px] font-semibold text-red-600">{comprovando.erro}</p>}
+                                <div className="flex items-center gap-2">
+                                  <Button size="sm" onClick={() => concluirComComprovacao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-xs">
+                                    Comprovar e concluir ✔
+                                  </Button>
+                                  <button type="button" onClick={() => setComprovando(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta">agora não</button>
+                                </div>
+                              </div>
                             )}
                           </div>
                         );
