@@ -25,12 +25,13 @@ import {
   VIRTUDES, janelaVotacaoAberta, mvmManual,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
-  tipoDeValidacao, validarComprovacao, ROTULO_VALIDACAO,
-  hashDoArquivo, validarPrint, LINK_ABRIR_INSTAGRAM,
+  tipoDeValidacao, validarComprovacao,
+  hashDoArquivo, validarPrint,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
+import XGameComprovarModal from './XGameComprovarModal';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
 
@@ -364,7 +365,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util, ...xgame.contagens },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,data' }).then(({ error }) => { if (error) console.warn('[X-GAME] placar:', error.message); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [uid, ehHoje, xgame?.pontos, xgame?.tarefas_feitas, xgame?.token_dia]);
 
   const mudarDia = (delta) => {
@@ -403,33 +404,40 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     } finally { setSalvando(false); }
   };
 
-  // ✅ F10 — comprovação inline: tarefa com validação não conclui sem provar
-  const [comprovando, setComprovando] = useState(null); // { id, tipo, texto, file, erro, enviando }
+  // ✅ F10 — comprovação em MODAL (leve): tarefa com validação não conclui sem provar
+  const [comprovando, setComprovando] = useState(null); // { id, tipo, erro, enviando }
   const [hashesUsados, setHashesUsados] = useState(new Set()); // prints já usados (anti-reuso)
   useEffect(() => {
-    if (!comprovando || comprovando.tipo !== 'instagram' || !uid) return;
+    if (!comprovando || comprovando.tipo === 'aprendizado' || !uid) return;
     supabase.from('metodo_tarefas').select('comprovacao').eq('user_id', uid).not('comprovacao', 'is', null).limit(300)
       .then(({ data }) => setHashesUsados(new Set((data || []).map((r) => r.comprovacao?.hash).filter(Boolean))));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [comprovando?.id, uid]);
-  const concluirComComprovacao = async (t) => {
+  // dados = { file, texto } vindos do modal (texto = aprendizado OU link opcional)
+  const concluirComComprovacao = async (t, dados) => {
+    const tipo = comprovando.tipo;
     let comprovacao;
-    if (comprovando.tipo === 'instagram') {
-      // 📸 o PRINT é a prova: valida imagem + impressão digital antes de subir
-      const hash = comprovando.file ? await hashDoArquivo(comprovando.file) : '';
-      const vp = validarPrint(comprovando.file, hashesUsados, hash);
+    // 📚 estudo exige o RESUMO DIGITADO primeiro (mínimo de verdade, sem colar)
+    if (tipo === 'aprendizado') {
+      const v = validarComprovacao(tipo, dados.texto);
+      if (!v.valido) { setComprovando({ ...comprovando, erro: v.motivo }); return; }
+    }
+    {
+      // 📸 a IMAGEM é a prova em TODOS os tipos: valida + impressão digital antes de subir
+      const hash = dados.file ? await hashDoArquivo(dados.file) : '';
+      const vp = validarPrint(dados.file, hashesUsados, hash);
       if (!vp.valido) { setComprovando({ ...comprovando, erro: vp.motivo }); return; }
       setComprovando({ ...comprovando, enviando: true, erro: '' });
       let printUrl = '';
       try {
-        const ext = (comprovando.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
+        const ext = (dados.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
         const up = await plataforma.integrations.Core.UploadFile({
-          file: comprovando.file,
+          file: dados.file,
           path: `xgame/prints/${uid}/${hojeStr()}_${t.id}.${ext}`,
         });
         printUrl = up?.file_url || up?.url || '';
       } catch {
-        setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar o print — tente de novo.' });
+        setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar a imagem — tente de novo.' });
         return;
       }
       // ⏰ REGRA DURA — janela de validade: a prova vale enviada até 2h depois
@@ -442,7 +450,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       let ia = { veredito: 'duvida', motivo: 'análise manual' };
       try {
         const r = await plataforma.functions.xgameValidarPrint({
-          image_url: printUrl, tipo: 'instagram', titulo: t.titulo, hora: t.hora, data: hojeStr(),
+          image_url: printUrl, tipo, titulo: t.titulo, hora: t.hora, data: hojeStr(),
+          ...(tipo === 'aprendizado' ? { resumo: (dados.texto || '').trim() } : {}),
         });
         if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) ia = r;
       } catch { /* IA fora do ar → dúvida → fila manual */ }
@@ -452,19 +461,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       }
       const status = ia.veredito === 'aprovada' && !foraDaJanela ? 'aprovada_ia' : 'em_analise';
       comprovacao = {
-        tipo: 'instagram', print_url: printUrl, hash,
-        link: comprovando.texto.trim() || null,
-        entrega: printUrl, quando: new Date().toISOString(), valido: true,
+        tipo, print_url: printUrl, hash,
+        ...(tipo === 'instagram' ? { link: (dados.texto || '').trim() || null } : {}),
+        ...(tipo === 'aprendizado' ? { resumo: (dados.texto || '').trim() } : {}),
+        entrega: tipo === 'aprendizado' ? (dados.texto || '').trim() : printUrl,
+        quando: new Date().toISOString(), valido: true,
         status,
         veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
         ...(foraDaJanela ? { fora_da_janela: true } : {}),
       };
       if (status === 'aprovada_ia') toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
       else toast.info('⏳ Comprovação em análise do gestor — conta provisoriamente.');
-    } else {
-      const { valido, motivo } = validarComprovacao(comprovando.tipo, comprovando.texto);
-      if (!valido) { setComprovando({ ...comprovando, erro: motivo }); return; }
-      comprovacao = { tipo: comprovando.tipo, entrega: comprovando.texto.trim(), quando: new Date().toISOString(), valido: true };
     }
     setComprovando(null);
     try {
@@ -486,7 +493,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     if (!t.feito) {
       const tipo = tipoDeValidacao(t);
       if (tipo && !t.comprovacao?.valido) {
-        setComprovando({ id: t.id, tipo, texto: '', erro: '' });
+        setComprovando({ id: t.id, tipo, erro: '', enviando: false });
         return;
       }
     }
@@ -877,6 +884,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         {/* ══ ✅ HÁBITO 2 — MASTER TASK + ROTINA PERFEITA (DIR-45) ══ */}
         {painel === 'compromisso' && (
           <div className="space-y-3">
+            {/* ✅ F10.3 — o MODAL de comprovação (leve): câmera de verdade + preview */}
+            {comprovando && (() => {
+              const t = tarefas.find((x) => x.id === comprovando.id);
+              if (!t) return null;
+              return (
+                <XGameComprovarModal
+                  tarefa={t}
+                  tipo={comprovando.tipo}
+                  enviando={!!comprovando.enviando}
+                  erro={comprovando.erro}
+                  onFechar={() => setComprovando(null)}
+                  onComprovar={(dados) => concluirComComprovacao(t, dados)}
+                />
+              );
+            })()}
             <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca space-y-1.5">
               <p>
                 📣 <strong>A Rotina Perfeita não é agenda de posts</strong> — é a sua rotina real virando narrativa nas redes:{' '}
@@ -1229,11 +1251,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                               )}
                               {/* ✅ F10 — a comprovação registrada: aprovada pela IA, em análise ou manual */}
                               {t.feito && t.comprovacao?.valido && (
-                                t.comprovacao.tipo === 'instagram' ? (
+                                t.comprovacao.print_url ? (
                                   t.comprovacao.status === 'em_analise' ? (
-                                    <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-amber-600 hover:underline" title={`Em análise do gestor — conta provisoriamente. IA: ${t.comprovacao.veredito_ia?.motivo || ''}`}>⏳ em análise</a>
+                                    <a href={t.comprovacao.print_url} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-amber-600 hover:underline" title={`Em análise do gestor — conta provisoriamente. IA: ${t.comprovacao.veredito_ia?.motivo || ''}`}>⏳ em análise</a>
                                   ) : (
-                                    <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline" title={`${t.comprovacao.status === 'aprovada_manual' ? 'Aprovada pelo gestor' : 'Aprovada pela IA'}${t.comprovacao.veredito_ia?.o_que_viu ? ` — viu: ${t.comprovacao.veredito_ia.o_que_viu}` : ''}`}>📸 comprovada</a>
+                                    <a href={t.comprovacao.print_url} target="_blank" rel="noreferrer" className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline" title={`${t.comprovacao.status === 'aprovada_manual' ? 'Aprovada pelo gestor' : 'Aprovada pela IA'}${t.comprovacao.veredito_ia?.o_que_viu ? ` — viu: ${t.comprovacao.veredito_ia.o_que_viu}` : ''}`}>{{ foto: '📷', aprendizado: '📚' }[t.comprovacao.tipo] || '📸'} comprovada</a>
                                   )
                                 ) : (
                                   <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>📚 comprovada</span>
@@ -1261,72 +1283,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                             </div>
                             {guia && guiaAberto === t.id && !t.feito && (
                               <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
-                            )}
-                            {/* ✅ F10 — o validador: sem comprovar, não conclui */}
-                            {comprovando?.id === t.id && !t.feito && (
-                              <div className="mt-2 ml-6 space-y-1.5 rounded-md border border-nz-verde/40 bg-nz-verde-fundo/40 p-2.5">
-                                <p className="text-[11px] font-semibold text-nz-tinta">
-                                  ✅ Pra concluir, comprove: {ROTULO_VALIDACAO[comprovando.tipo]}
-                                </p>
-                                {comprovando.tipo === 'instagram' ? (
-                                  <div className="space-y-1.5">
-                                    {/* 1º: abre o Instagram pra fazer o post NA HORA */}
-                                    <a
-                                      href={LINK_ABRIR_INSTAGRAM}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-xs font-bold px-3 py-1.5 hover:opacity-90"
-                                    >📱 1. Abrir o Instagram e fazer o post</a>
-                                    {/* 2º: a prova — o PRINT do post OU foto tirada AGORA na câmera */}
-                                    <div className="flex items-start gap-4 flex-wrap">
-                                      <label className="block text-[11px] text-nz-tinta">
-                                        🖼️ 2. Suba o PRINT do post:
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          onChange={(e) => setComprovando({ ...comprovando, file: e.target.files?.[0] || null, erro: '' })}
-                                          className="block mt-1 text-[11px] text-nz-tinta-fraca file:mr-2 file:rounded file:border-0 file:bg-nz-verde file:text-white file:px-2 file:py-1 file:text-[11px] file:font-semibold file:cursor-pointer"
-                                        />
-                                      </label>
-                                      <label className="block text-[11px] text-nz-tinta" title="Abre a câmera na hora — não deixa escolher foto velha da galeria">
-                                        📷 ou tire uma foto AGORA:
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          capture="user"
-                                          onChange={(e) => setComprovando({ ...comprovando, file: e.target.files?.[0] || null, erro: '' })}
-                                          className="block mt-1 text-[11px] text-nz-tinta-fraca file:mr-2 file:rounded file:border-0 file:bg-amber-500 file:text-white file:px-2 file:py-1 file:text-[11px] file:font-semibold file:cursor-pointer"
-                                        />
-                                      </label>
-                                    </div>
-                                    {comprovando.file && <p className="text-[10px] text-nz-verde font-semibold">🖼️ {comprovando.file.name}</p>}
-                                    <Input
-                                      placeholder="3. (opcional) cola o link do post também"
-                                      value={comprovando.texto}
-                                      onChange={(e) => setComprovando({ ...comprovando, texto: e.target.value, erro: '' })}
-                                      className="bg-white border-nz-borda text-nz-tinta h-8 text-xs"
-                                    />
-                                    <p className="text-[10px] text-nz-tinta-fraca">
-                                      Validador automático: 🤖 a IA confere se a imagem comprova a tarefa · print repetido é barrado (impressão digital) · prova enviada 2h+ depois do horário cai pra análise do gestor · horário carimbado pelo sistema.
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <Textarea
-                                    autoFocus
-                                    placeholder="Escreve o principal aprendizado da leitura de hoje — uma frase de verdade."
-                                    value={comprovando.texto}
-                                    onChange={(e) => setComprovando({ ...comprovando, texto: e.target.value, erro: '' })}
-                                    className="bg-white border-nz-borda text-nz-tinta text-xs min-h-[56px]"
-                                  />
-                                )}
-                                {comprovando.erro && <p className="text-[11px] font-semibold text-red-600">{comprovando.erro}</p>}
-                                <div className="flex items-center gap-2">
-                                  <Button size="sm" onClick={() => concluirComComprovacao(t)} disabled={comprovando.enviando} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-xs">
-                                    {comprovando.enviando ? 'Enviando o print...' : 'Comprovar e concluir ✔'}
-                                  </Button>
-                                  <button type="button" onClick={() => setComprovando(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta">agora não</button>
-                                </div>
-                              </div>
                             )}
                           </div>
                         );

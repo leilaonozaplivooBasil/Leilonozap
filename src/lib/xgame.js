@@ -643,27 +643,31 @@ export function proximaLiga(token) {
 // Vendas e reuniões nem precisam disso — validam sozinhas pelos dados do
 // sistema (catalog_sales e os registros do CRM).
 
-/** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar). */
+/** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar).
+ *  REGRA DO DONO (05/09): TODA tarefa tem comprovação por padrão — quem não
+ *  cai em Instagram nem aprendizado comprova com FOTO/print fazendo a tarefa.
+ *  O admin tira a prova de uma tarefa marcando "sem prova". */
 export function validacaoAutomatica(titulo) {
   const t = _semAcento(titulo);
   // acordar/gratidão comprova com o post do BOM DIA (o exemplo do dono:
   // "como eu provo que acordei 5h? posto o bom dia no Instagram")
   if (/story|post|instagram|conteudo|acordar|gratidao|bom dia/.test(t)) return 'instagram';
   if (/leitura|estudo|curso|licao/.test(t)) return 'aprendizado';
-  return null;
+  return 'foto';
 }
 
 /** Tipo efetivo da tarefa: o gravado, ou o automático do título. */
 export function tipoDeValidacao(t) {
   const v = String(t?.validacao || '').toLowerCase();
   if (v === 'nenhuma') return null;
-  if (['instagram', 'aprendizado'].includes(v)) return v;
+  if (['instagram', 'aprendizado', 'foto'].includes(v)) return v;
   return validacaoAutomatica(t?.titulo);
 }
 
 export const ROTULO_VALIDACAO = {
-  instagram: '📸 link do Instagram do dia',
-  aprendizado: '📚 o que você aprendeu',
+  instagram: '📸 o post do Instagram de hoje',
+  aprendizado: '📚 foto do estudo + resumo digitado (sem colar!)',
+  foto: '📷 foto ou print fazendo a tarefa',
 };
 
 /** Valida a entrega na hora. Devolve {valido, motivo}. */
@@ -674,11 +678,17 @@ export function validarComprovacao(tipo, entrega) {
     return { valido: ok, motivo: ok ? 'link do Instagram registrado ✔' : 'cole o link do post/story de HOJE (instagram.com/p/… ou /reel/…)' };
   }
   if (tipo === 'aprendizado') {
-    const ok = texto.length >= 40;
-    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : 'escreva de verdade: pelo menos uma frase (40+ letras) do que você aprendeu' };
+    const ok = texto.length >= RESUMO_MIN;
+    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : `resumo curto demais: escreva pelo menos ${RESUMO_MIN} caracteres COM AS SUAS PALAVRAS (faltam ${Math.max(0, RESUMO_MIN - texto.length)})` };
   }
   return { valido: true, motivo: '' };
 }
+
+// 📚 REGRA DO DONO (05/09): estudo comprova com FOTO + RESUMO DIGITADO.
+// Mínimo de um resumo de verdade (~2 frases) e SEM copiar e colar — colar é
+// bloqueado na tela, porque digitar é treino: fixa o aprendizado.
+export const RESUMO_MIN = 120;
+export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────
 // O fluxo do dono: a tarefa abre o Instagram pra fazer o post NA HORA,

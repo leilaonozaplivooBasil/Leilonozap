@@ -530,10 +530,11 @@ export default function XGameAdmin() {
                               title={DICAS.validacao}
                               className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900"
                             >
-                              <option value="">✅ auto{validacaoAutomatica(t.titulo) ? ` (${validacaoAutomatica(t.titulo) === 'instagram' ? '📸 insta' : '📚 aprendizado'})` : ' (sem prova)'}</option>
+                              <option value="">✅ auto ({{ instagram: '📸 insta', aprendizado: '📚 aprendizado', foto: '📷 foto' }[validacaoAutomatica(t.titulo)] || '📷 foto'})</option>
                               <option value="nenhuma">sem prova</option>
                               <option value="instagram">📸 Instagram</option>
                               <option value="aprendizado">📚 aprendizado</option>
+                              <option value="foto">📷 foto/print</option>
                             </select>
                             <select value={t.categoria || 'producao'} onChange={(e) => salvarTarefa(t, { categoria: e.target.value })} title={DICAS.categoria} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
                               {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}

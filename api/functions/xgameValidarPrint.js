@@ -42,7 +42,10 @@ const REGRAS_POR_TIPO = {
 3. FOTO REAL da pessoa executando a tarefa (ex.: acordada, fora da cama, treinando, no ambiente de trabalho) — foto nítida, ambiente real.
 REPROVE: imagem aleatória, meme, foto de banco de imagens, tela apagada/preta, print ilegível, print claramente de outro dia (data antiga visível), foto de pessoa dormindo/na cama pra tarefa de acordar.
 Se a imagem é plausível mas não dá pra cravar (sem data visível, qualidade baixa), responda "duvida".`,
-  aprendizado: 'A comprovação esperada é um print/foto relacionado a leitura ou estudo (página do livro, anotação, resumo). Reprove imagens sem nenhuma relação com estudo. Na dúvida, "duvida".',
+  aprendizado: `A comprovação esperada tem DUAS partes: (1) foto/print relacionado a leitura ou estudo (página do livro, anotação, tela do curso) e (2) o RESUMO que a pessoa digitou. Reprove imagem sem nenhuma relação com estudo. Se o resumo digitado for claramente incoerente com a imagem, genérico demais (ex.: "aprendi muito hoje") ou parecer texto copiado de sinopse/internet em vez das palavras da própria pessoa, responda "duvida" e explique. Na incerteza, "duvida".`,
+  foto: `A comprovação esperada é uma FOTO REAL da pessoa/do ambiente executando a tarefa AGORA (ex.: treinando, organizando a sala, na reunião, na sala de treinamento, no caminho) OU um print claramente coerente com a tarefa.
+REPROVE: imagem aleatória, meme, foto de banco de imagens, tela preta/apagada, imagem sem NENHUMA relação com a tarefa descrita.
+Se a imagem é plausível mas não dá pra cravar a relação com a tarefa, responda "duvida".`,
 };
 
 export default async function handler(req, res) {
@@ -58,6 +61,7 @@ export default async function handler(req, res) {
     const titulo = String(body?.titulo || '').slice(0, 200);
     const hora = String(body?.hora || '').slice(0, 5);
     const data = String(body?.data || '').slice(0, 10);
+    const resumo = String(body?.resumo || '').slice(0, 1500);
     if (!imageUrl) return res.status(400).json({ ok: false, error: 'image_url obrigatório' });
 
     const auth = await chaveDaIA();
@@ -68,7 +72,7 @@ export default async function handler(req, res) {
     const sys = `Você é o VALIDADOR DE COMPROVAÇÕES da gamificação X-GAME (Leilão no Zap). Seja rigoroso e justo. Responda SOMENTE com JSON válido, sem markdown:
 {"veredito":"aprovada"|"reprovada"|"duvida","confianca":0-100,"o_que_viu":"descrição curta do que a imagem mostra","motivo":"explicação curta e PEDAGÓGICA em pt-BR (se reprovar, diga exatamente o que faltou e como corrigir)"}`;
     const contexto = `TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.
-${REGRAS_POR_TIPO[tipo] || REGRAS_POR_TIPO.instagram}`;
+${REGRAS_POR_TIPO[tipo] || REGRAS_POR_TIPO.foto}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}`;
 
     const r = await fetch(GATEWAY, {
       method: 'POST',
