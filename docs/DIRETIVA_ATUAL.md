@@ -12,6 +12,30 @@
 
 ---
 
+## DIR-64 — O botão no preto, a abertura limpa e as imagens maiores
+
+**Emitida por:** dono (05/09/2026), navegando o preview: *"esse botão não
+sei se é bom ali, e quando está abrindo está feio. Está muito grande
+esse branco, ele tem que cair em outro lugar. Gostei da transparência,
+mas ela tem que abrir num lugar preto, o botão tem que entrar no lugar
+preto pra ficar bonito e clean. E quando eu clico no Sonho, no
+Compromisso, as imagens estão muito bonitas — elas têm que aparecer.
+Deixar mais visualização, mais organizado."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O seletor sai do branco e passa a viver **dentro da faixa preta**.
+2. O menu dele abre **preto**, com a tipografia da marca — e num
+   **portal**, pra não ser cortado pela borda arredondada da faixa.
+3. A faixa branca entre a faixa da academia e o painel encolhe.
+4. As imagens de cada Hábito **crescem** (de ~160px pra ~240px), com o
+   véu escuro mais curto — só o necessário pra segurar o texto.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
 ## DIR-63 — Parar de repetir as logos
 
 **Emitida por:** dono (05/09/2026), olhando o preview: *"tamo quase lá,

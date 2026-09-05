@@ -1049,6 +1049,17 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🎓 DIR-62 — a pessoa está numa seção da Top College? É isso que liga a
   // faixa da academia (e o tema escuro do seletor logo abaixo dela).
   const naTopCollege = activeTab === 'catalogo' && SECOES_TOP_COLLEGE.some((s) => s.value === catalogSubTab);
+  // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
+  // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
+  // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.
+  const seletorDaCentral = (
+    <CentralVendasTabs
+      value={catalogSubTab}
+      onChange={setCatalogSubTab}
+      clientesCount={myClients.length}
+      escuro={naTopCollege}
+    />
+  );
   const saudacaoDaHora = (() => {
     const h = new Date().getHours();
     return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
@@ -1074,7 +1085,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             (preta, com as duas marcas e o professor). Fora dela, o cabeçalho
             de sempre: a faculdade não assina a Carteira nem os Pedidos. */}
         {naTopCollege ? (
-          <HeroTopCollege saudacao={saudacaoDaHora} nome={shortName} />
+          <HeroTopCollege saudacao={saudacaoDaHora} nome={shortName} seletor={seletorDaCentral} />
         ) : (
           <div className="flex flex-col gap-4 mb-6 sm:mb-8">
             <div>
@@ -1131,12 +1142,9 @@ const DashboardContent = ({ user, isAdmin }) => {
         {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <div
-                className={naTopCollege ? 'xeos-palco inline-block rounded-2xl border border-white/10 p-3' : undefined}
-                style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
-              >
-                <CentralVendasTabs value={catalogSubTab} onChange={setCatalogSubTab} clientesCount={myClients.length} />
-              </div>
+              {/* na Top College o seletor já foi desenhado dentro da faixa —
+                  aqui ele não se repete, senão viriam dois menus na tela */}
+              {!naTopCollege && seletorDaCentral}
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}

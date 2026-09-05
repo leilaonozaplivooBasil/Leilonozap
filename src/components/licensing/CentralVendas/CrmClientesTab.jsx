@@ -1494,28 +1494,32 @@ _Enviado via CRM Leilão NoZap_`;
             sua imagem oficial, com o nome por cima. É o que amarra o painel ao
             universo da marca em vez de deixar a tela solta. */}
         <div className="relative overflow-hidden rounded-2xl mb-5 sm:mb-7 border border-white/10">
+          {/* 🎓 DIR-64 — a imagem do Hábito ganhou altura: o dono disse que as
+              imagens do brandbook estão bonitas e precisam APARECER. O véu
+              escuro ficou mais curto do lado esquerdo (só o necessário pra
+              segurar o texto) e some antes da metade, liberando a foto. */}
           <img
             src={secaoAtual.faixa}
             alt=""
             aria-hidden="true"
-            className="w-full h-28 sm:h-40 object-cover"
+            className="w-full h-40 sm:h-60 object-cover"
           />
           <div
             aria-hidden="true"
             className="absolute inset-0"
-            style={{ background: 'linear-gradient(90deg, rgba(0,2,12,0.92) 8%, rgba(0,2,12,0.55) 46%, rgba(0,2,12,0.18) 100%)' }}
+            style={{ background: 'linear-gradient(90deg, rgba(0,2,12,0.94) 0%, rgba(0,2,12,0.78) 22%, rgba(0,2,12,0.28) 46%, rgba(0,2,12,0) 68%)' }}
           />
           <div className="absolute inset-0 flex flex-col justify-center px-5 sm:px-8">
             <p className="text-[10px] sm:text-[11px] font-bold tracking-[0.28em] text-white/55 uppercase">
               Hábito {String(secaoAtual.n).padStart(2, '0')}
             </p>
-            <p className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-none mt-1">
+            <p className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-none mt-1.5">
               {secaoAtual.nome}
             </p>
           </div>
           <div
             aria-hidden="true"
-            className="absolute bottom-0 left-0 h-1 w-24 sm:w-40"
+            className="absolute bottom-0 left-0 h-1.5 w-28 sm:w-48"
             style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }}
           />
         </div>
