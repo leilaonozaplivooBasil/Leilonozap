@@ -11,9 +11,9 @@ import React from 'react';
 // sempre, a faculdade voltaria a assinar a Carteira e os Pedidos, que é
 // exatamente a fronteira que a DIR-57 fechou: Top College forma, Leilão NoZap
 // opera. Aqui é a academia, então aqui ela manda.
-export default function HeroTopCollege({ saudacao, nome }) {
+export default function HeroTopCollege({ saudacao, nome, seletor }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl mb-6 sm:mb-8 border border-white/10" style={{ background: 'var(--xeos-preto)' }}>
+    <div className="relative overflow-hidden rounded-3xl mb-4 sm:mb-5 border border-white/10" style={{ background: 'var(--xeos-preto)' }}>
       {/* o padrão tonal de X do brandbook, por trás de tudo */}
       <div
         aria-hidden="true"
@@ -84,6 +84,11 @@ export default function HeroTopCollege({ saudacao, nome }) {
         >
           Qual é o seu poder?
         </p>
+
+        {/* 🎓 DIR-64 — o seletor mora DENTRO da faixa: assim ele abre sobre o
+            preto (era o pedido — abria branco por cima do painel e ficava
+            feio) e some a faixa branca que sobrava entre a faixa e o painel. */}
+        {seletor && <div className="mt-6 sm:mt-7 max-w-xs">{seletor}</div>}
       </div>
     </div>
   );

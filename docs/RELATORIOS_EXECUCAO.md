@@ -2943,3 +2943,37 @@ comparação agora é feita DENTRO do card da agenda.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-64 — O botão no preto, a abertura limpa e as imagens maiores (05/09/2026)
+
+**Diretiva:** DIR-64.
+
+**Entregue:**
+1. **O seletor mudou de lugar:** saiu do branco e passou a viver DENTRO
+   da faixa preta, abaixo da pergunta. Há UMA instância só dele — na Top
+   College ele é entregue pra faixa; fora dela fica onde sempre esteve.
+   Duas instâncias dariam dois menus na tela.
+2. **O menu abre preto e limpo**, com a tipografia da marca.
+3. **O menu foi pra um PORTAL.** Ao mover o botão pra dentro da faixa, o
+   menu passou a ser CORTADO na borda — a faixa tem `overflow-hidden`
+   por causa dos cantos arredondados e do padrão ao fundo. Apareceu no
+   primeiro print: o menu abria e morria na beirada. É exatamente o
+   mesmo problema que a lateral já tinha resolvido com portal, então a
+   solução da casa foi reaproveitada. O clique-fora passou a considerar
+   o menu, que agora vive fora da caixa.
+4. **Menos branco:** o respiro entre a faixa e o painel encolheu.
+5. **As imagens dos Hábitos cresceram** de ~160px pra **240px**, e o véu
+   escuro ficou mais curto — começa forte à esquerda, pra segurar o
+   texto, e some antes da metade, liberando a foto.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**172/172 ZERO erros** (169 + 3 asserções novas). Uma delas vale citar:
+a que garante que o menu não está cortado compara a ALTURA VISÍVEL do
+menu com a altura do conteúdo dele (`scrollHeight`) — se alguém puser o
+menu de volta dentro de um contêiner que corta, as duas divergem e a
+prova falha.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
