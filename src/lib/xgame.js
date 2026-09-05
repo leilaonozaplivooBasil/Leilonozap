@@ -199,6 +199,74 @@ export function estudoEmDia(diasCiclo = [], leituraHoje = false) {
 export const ehTarefaDeEstudo = (titulo) =>
   /leitura|estudo/i.test(String(titulo || ''));
 
+// ── 💰 X-PAY (a remuneração da planilha) ────────────────────────────
+// Verba fixa ÷ 22 dias ÷ nº de tarefas da categoria × peso ÷ 3 — exatamente
+// a fórmula F33 da planilha. Venda vale o valor cheio por unidade.
+
+/** Verbas padrão (planilha: H7 produção R$1.300 · H8 bônus R$200 · H9 venda R$50). */
+export const PARTICIPANTE_PADRAO = {
+  cargo: 'executivo', perfil: 'estrategico',
+  verba_producao: 1300, verba_bonus: 200, valor_venda: 50, multa_atraso: 200,
+};
+
+/** Categoria efetiva: a gravada, ou deduzida do título (leitura/estudo = bônus). */
+export function categoriaDaTarefa(t) {
+  const c = String(t?.categoria || '').toLowerCase();
+  if (['producao', 'bonus', 'venda', 'mentoria', 'visao'].includes(c)) return c;
+  return ehTarefaDeEstudo(t?.titulo) ? 'bonus' : 'producao';
+}
+const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
+
+/**
+ * Valor em R$ de cada tarefa do dia (mapa id → valor). Mentoria e Visão
+ * Estratégica pagam pela verba de produção (na planilha só [BÔNUS] e [VENDA]
+ * saem do bolo de produção).
+ */
+export function valoresDasTarefas(tarefas = [], participante = PARTICIPANTE_PADRAO) {
+  const p = { ...PARTICIPANTE_PADRAO, ...(participante || {}) };
+  const cats = tarefas.map((t) => categoriaDaTarefa(t));
+  const nProd = cats.filter((c) => c !== 'bonus' && c !== 'venda').length;
+  const nBonus = cats.filter((c) => c === 'bonus').length;
+  const valores = {};
+  tarefas.forEach((t, i) => {
+    const cat = cats[i];
+    if (cat === 'venda') valores[t.id] = Number(p.valor_venda) || 0;
+    else if (cat === 'bonus') valores[t.id] = nBonus ? ((Number(p.verba_bonus) / 22) / nBonus) * (pesoDaTarefa(t) / 3) : 0;
+    else valores[t.id] = nProd ? ((Number(p.verba_producao) / 22) / nProd) * (pesoDaTarefa(t) / 3) : 0;
+  });
+  return valores;
+}
+
+/** X-Pay do dia: ganho (feitas), em jogo (ainda dá tempo) e perdido (janela passou). */
+export function xpayDoDia(tarefasComEstado = [], valores = {}) {
+  let ganho = 0; let perdido = 0; let emJogo = 0;
+  for (const t of tarefasComEstado) {
+    const v = Number(valores[t.id]) || 0;
+    if (t.feito) ganho += v;
+    else if (t.estado?.id === 'PERDIDO') perdido += v;
+    else emJogo += v;
+  }
+  const r2 = (n) => Math.round(n * 100) / 100;
+  return { ganho: r2(ganho), perdido: r2(perdido), emJogo: r2(emJogo) };
+}
+
+/** Formata R$ no padrão do app. */
+export const fmtReais = (n) => `R$ ${Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * Início oficial do ciclo (xgame_config.ciclo_inicio), caindo pro 1º dia
+ * útil do mês quando não há configuração vigente (ou o ciclo já acabou).
+ */
+export function inicioCicloOficial(configISO, hoje = new Date()) {
+  if (configISO) {
+    const ini = new Date(`${String(configISO).slice(0, 10)}T12:00:00`);
+    if (!Number.isNaN(ini.getTime()) && hoje >= ini && hoje <= fimCiclo(ini)) {
+      return new Date(ini.getFullYear(), ini.getMonth(), ini.getDate());
+    }
+  }
+  return inicioCiclo(hoje);
+}
+
 // ── Pontos do dia ───────────────────────────────────────────────────
 
 const PONTOS_TAREFA = 10;
@@ -221,8 +289,8 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 }
 
 /** Resumo completo do dia — o que a tela grava em xgame_diario. */
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date() }) {
-  const inicio = inicioCiclo(hoje);
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null }) {
+  const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);
   const comEstado = estadoDasTarefas(tarefas, agoraMin);
@@ -233,6 +301,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
   const token = humanToken(mvm, aplic, estudoOk);
+  const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
+  const xpay = xpayDoDia(comEstado, valores);
   return {
     ciclo_inicio: inicio,
     dia_util: diaUtil,
@@ -248,6 +318,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     leitura_feita: leituraHoje,
     pontos: pontosDoDia(comEstado, cotacao),
     frase_mvm: fraseDoMvm(mvm),
+    valores,
+    xpay,
   };
 }
 
