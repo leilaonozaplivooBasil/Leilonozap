@@ -12,7 +12,7 @@ import {
   HORIZONTES_SONHO, agruparSonhosPorHorizonte, normalizarSonho, PLACEHOLDER_DETALHES_SONHO,
   PRINCIPIO_ROTINA, NARRATIVA_DO_DIA, guiaDaRotina,
   probabilidadeFechamento, produtoApresentacao,
-  agendaDoDiaContatos, eventoGoogleDaReuniao,
+  agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -33,7 +33,7 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
-export default function CrmMetodo({ painel, currentUser, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onNovoCliente, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onNovoCliente, onIr }) {
   const uid = currentUser?.id;
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
@@ -50,7 +50,8 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
   const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
   const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
-  const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato:null} = agendar livre (DIR-48)
+  const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato:null} = agendar livre (DIR-48/49)
+  const [escopoAgenda, setEscopoAgenda] = useState('minha'); // DIR-49: 'minha' é o padrão; 'time' só pra visão total
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
   const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
@@ -576,10 +577,25 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
             .map((c) => ({ c, prob: probabilidadeFechamento(c.qualificacao_network) }))
             .filter((x) => x.prob)
             .sort((a, b) => b.prob.pct - a.prob.pct);
+          const semQualificar = clientesManuais.length - fila.length; // DIR-49: fila honesta
           const hoje = hojeStr();
           const agenda = agendaDoDiaContatos(clientesManuais, hoje);
           const reunioesEsteiraHoje = reunioes.filter((o) => String(o.reuniao_em).slice(0, 10) === hoje);
           const fmtHora = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+          // 🙋/👥 DIR-49 — o escopo da agenda: MINHA é o padrão; TIME só existe
+          // pra visão total. "Minha" = o que EU registrei/sou responsável.
+          const minha = !visaoTotal || escopoAgenda === 'minha';
+          const agendados = minha ? agenda.agendados.filter(({ registro }) => registro.registrado_por_id === uid) : agenda.agendados;
+          const retornos = minha ? agenda.retornos.filter(({ registro }) => registro.registrado_por_id === uid) : agenda.retornos;
+          const esteiraDoDia = minha ? reunioesEsteiraHoje.filter((o) => o.responsavel_id === uid || o.criado_por_id === uid) : reunioesEsteiraHoje;
+          // a LINHA DO TEMPO UNIFICADA: método + esteira + (na MINHA) o Google —
+          // o Google é pessoal, nunca entra na visão do time.
+          const linha = linhaDoTempoUnificada([
+            ...agendados.map(({ cliente, registro }) => ({ origem: 'metodo', quando: registro.quando, cliente, registro })),
+            ...esteiraDoDia.map((o) => ({ origem: 'esteira', quando: o.reuniao_em, o })),
+            ...(minha && Array.isArray(googleEventos) ? googleEventos.map((e) => ({ origem: 'google', quando: e.inicio, e })) : []),
+          ]);
+          const nReunioes = agendados.length + esteiraDoDia.length;
           return (
             <div className="space-y-4">
               <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
@@ -597,87 +613,144 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
                 ) : (
                   <div className="space-y-1.5">
                     {fila.map(({ c, prob }) => (
-                      <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                      <div key={c.id} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
                         </div>
                         <p className={`text-xs font-bold shrink-0 ${COR_FAIXA[prob.faixa.id]}`}>{prob.faixa.emoji} {prob.pct}%</p>
-                        <Button size="sm" onClick={() => setRegistroAberto({ contato: c })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
-                          Registrar contato
-                        </Button>
+                        {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho */}
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button size="sm" onClick={() => setRegistroAberto({ contato: c, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
+                            📅 Agendar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: c })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">
+                            ✍️ Registrar
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
+                {/* DIR-49 — fila honesta: quem ficou de fora e por quê */}
+                {semQualificar > 0 && (
+                  <p className="text-[11px] text-nz-tinta-fraca mt-1.5">
+                    ⭐ {semQualificar === 1 ? '+1 pessoa da sua lista ainda sem qualificação' : `+${semQualificar} pessoas da sua lista ainda sem qualificação`} —{' '}
+                    <button type="button" onClick={() => onIr?.('lista')} className="font-semibold text-nz-verde hover:text-nz-verde-claro">qualificar no Hábito 3 →</button>
+                  </p>
+                )}
               </div>
 
-              {/* 📅 agenda do dia — o escopo do super admin é o time inteiro */}
-              <div className="rounded-xl border border-nz-verde/25 bg-nz-verde-fundo/30 p-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
-                  <p className="text-sm font-bold text-nz-tinta">📅 Agenda do dia · {agenda.agendados.length + reunioesEsteiraHoje.length} reunião(ões) · {agenda.retornos.length} retorno(s)</p>
-                  <Button size="sm" onClick={() => setRegistroAberto({ contato: null })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
-                    <CalendarPlus className="w-4 h-4 mr-1" /> Agendar reunião
-                  </Button>
+              {/* 📅 DIR-49 — A AGENDA UNIFICADA: minha (padrão) × time inteiro,
+                  método + esteira + Google numa linha do tempo só */}
+              <div className="rounded-xl border border-nz-verde/25 bg-nz-verde-fundo/30 p-3 space-y-2">
+                {visaoTotal && (
+                  <div className="grid grid-cols-2 rounded-lg border border-nz-verde/30 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setEscopoAgenda('minha')}
+                      className={`py-2 text-xs font-bold transition-colors ${minha ? 'bg-nz-verde text-white' : 'bg-white text-nz-tinta-fraca hover:text-nz-tinta'}`}
+                    >
+                      🙋 MINHA AGENDA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEscopoAgenda('time')}
+                      className={`py-2 text-xs font-bold transition-colors ${!minha ? 'bg-nz-verde text-white' : 'bg-white text-nz-tinta-fraca hover:text-nz-tinta'}`}
+                    >
+                      👥 TIME INTEIRO
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-nz-tinta">
+                    {minha ? '🙋 Minha agenda de hoje' : '👥 Agenda do TIME hoje'} · {plural(nReunioes, 'reunião', 'reuniões')} · {plural(retornos.length, 'retorno', 'retornos')}
+                  </p>
+                  <div className="flex gap-1.5 shrink-0 flex-wrap">
+                    {minha && (
+                      <Button size="sm" variant="outline" onClick={conectarGoogleAgenda} disabled={googleConectando} className="border-nz-borda text-nz-tinta h-8 bg-white">
+                        🗓️ {googleConectando ? 'Conectando...' : googleEventos ? 'Atualizar Google' : 'Conectar Google'}
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={() => setRegistroAberto({ contato: null })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
+                      <CalendarPlus className="w-4 h-4 mr-1" /> Agendar reunião
+                    </Button>
+                  </div>
                 </div>
-                {agenda.agendados.length === 0 && agenda.retornos.length === 0 && reunioesEsteiraHoje.length === 0 ? (
-                  <p className="text-xs text-nz-tinta-fraca text-center py-2">Nada agendado pra hoje ainda — o agendado nasce do registro de contato.</p>
+                {minha && googleEventos === null && (
+                  <p className="text-[11px] text-nz-tinta-fraca">🗓️ Conecte o Google pra ver os SEUS eventos de hoje aqui no meio (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
+                )}
+                {!minha && (
+                  <p className="text-[11px] text-nz-tinta-fraca">👥 Você está vendo as reuniões DO MÉTODO do time inteiro — a Google Agenda é pessoal e só aparece na sua.</p>
+                )}
+                {linha.length === 0 && retornos.length === 0 ? (
+                  <p className="text-xs text-nz-tinta-fraca text-center py-2">
+                    {minha && Array.isArray(googleEventos) && googleEventos.length === 0
+                      ? 'Nada na sua agenda de hoje — nem no método, nem no Google. Dia livre pra contatar a fila. 🎯'
+                      : minha ? 'Nada na sua agenda de hoje ainda — use o 📅 Agendar da fila acima.' : 'Nenhuma reunião do time hoje.'}
+                  </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {agenda.agendados.map(({ cliente, registro }) => {
-                      const g = registro.google_event_link
-                        || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
-                      return (
-                        <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-nz-tinta truncate">📅 {fmtHora(registro.quando)} · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
-                            <p className="text-[11px] text-nz-tinta-fraca truncate">contato agendado{registro.registrado_por_nome ? ` · por ${registro.registrado_por_nome}` : ''}{registro.obs ? ` · ${registro.obs}` : ''}</p>
+                    {linha.map((item) => {
+                      if (item.origem === 'metodo') {
+                        const { cliente, registro } = item;
+                        const g = registro.google_event_link
+                          || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
+                        return (
+                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-nz-tinta truncate">📅 <span className="font-bold">{fmtHora(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
+                              <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.obs ? ` · ${registro.obs}` : ''}</p>
+                            </div>
+                            {!minha && registro.registrado_por_nome && (
+                              <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {registro.registrado_por_nome}</span>
+                            )}
+                            {g && (
+                              <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> {registro.google_event_link ? 'Abrir no Google' : 'Google Agenda'}</Button>
+                              </a>
+                            )}
                           </div>
-                          {g && (
-                            <a href={g} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                              <Button size="sm" variant="outline" className="border-nz-borda text-nz-tinta h-8"><CalendarPlus className="w-4 h-4 mr-1" /> {registro.google_event_link ? 'Abrir no Google' : 'Google Agenda'}</Button>
-                            </a>
-                          )}
+                        );
+                      }
+                      if (item.origem === 'esteira') {
+                        const { o } = item;
+                        return (
+                          <div key={o.id} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-nz-tinta truncate">🛤️ <span className="font-bold">{fmtHora(o.reuniao_em)}</span> · {o.cliente_nome || 'Sem nome'}</p>
+                              <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da esteira</p>
+                            </div>
+                            {!minha && o.responsavel_nome && (
+                              <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {o.responsavel_nome}</span>
+                            )}
+                          </div>
+                        );
+                      }
+                      const { e } = item; // origem google — só na MINHA agenda
+                      return (
+                        <div key={e.id} className="flex items-center gap-3 rounded-lg border border-dashed border-nz-borda bg-white/70 p-2.5">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-nz-tinta truncate">🗓️ <span className="font-bold">{fmtHora(e.inicio) || 'dia todo'}</span> · {e.titulo}</p>
+                            <p className="text-[11px] text-nz-tinta-fraca">da sua Google Agenda</p>
+                          </div>
                         </div>
                       );
                     })}
-                    {reunioesEsteiraHoje.map((o) => (
-                      <div key={o.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate">🛤️ {fmtHora(o.reuniao_em)} · {o.cliente_nome || 'Sem nome'}</p>
-                          <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da esteira{o.responsavel_nome ? ` · ${o.responsavel_nome}` : ''}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {agenda.retornos.map(({ cliente, registro }) => (
-                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5">
+                    {retornos.map(({ cliente, registro }) => (
+                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-nz-tinta truncate">🔁 Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
-                          <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}{registro.registrado_por_nome ? ` · por ${registro.registrado_por_nome}` : ''}</p>
+                          <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}</p>
                         </div>
-                        <Button size="sm" onClick={() => setRegistroAberto({ contato: cliente })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">Registrar contato</Button>
+                        {!minha && registro.registrado_por_nome && (
+                          <span className="shrink-0 rounded-full bg-nz-verde-fundo border border-nz-verde/40 px-2.5 py-1 text-[11px] font-bold text-nz-verde">👤 {registro.registrado_por_nome}</span>
+                        )}
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button size="sm" onClick={() => setRegistroAberto({ contato: cliente, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">📅 Agendar</Button>
+                          <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: cliente })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">✍️ Registrar</Button>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 🗓️ a Google Agenda da própria pessoa (leitura, no navegador dela) */}
-              <div className="rounded-xl border border-nz-borda p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="text-sm font-bold text-nz-tinta">🗓️ Minha Google Agenda de hoje</p>
-                  <Button size="sm" variant="outline" onClick={conectarGoogleAgenda} disabled={googleConectando} className="border-nz-borda text-nz-tinta h-8">
-                    {googleConectando ? 'Conectando...' : googleEventos ? 'Atualizar' : 'Conectar minha Google Agenda'}
-                  </Button>
-                </div>
-                {googleEventos === null ? (
-                  <p className="text-[11px] text-nz-tinta-fraca">Conecte pra ver aqui os SEUS eventos de hoje do Google (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
-                ) : googleEventos.length === 0 ? (
-                  <p className="text-xs text-nz-tinta-fraca">Sua Google Agenda está livre hoje.</p>
-                ) : (
-                  <div className="space-y-1">
-                    {googleEventos.map((e) => (
-                      <p key={e.id} className="text-xs text-nz-tinta">🗓️ <span className="font-bold">{fmtHora(e.inicio) || 'dia todo'}</span> · {e.titulo}</p>
                     ))}
                   </div>
                 )}
@@ -695,6 +768,7 @@ export default function CrmMetodo({ painel, currentUser, clientesManuais = [], o
               <CrmContatoRegistroModal
                 aberto={registroAberto !== null}
                 contatoInicial={registroAberto?.contato || null}
+                agendarDireto={!!registroAberto?.agendar}
                 contatos={clientesManuais}
                 onFechar={() => setRegistroAberto(null)}
                 onSalvar={salvarRegistroContato}

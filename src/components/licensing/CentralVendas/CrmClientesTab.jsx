@@ -1356,6 +1356,7 @@ _Enviado via CRM Leilão NoZap_`;
           <CrmMetodo
             painel={secaoAtiva}
             currentUser={currentUser}
+            visaoTotal={isSuperAdmin}
             clientesManuais={networkManualCustomers}
             oportunidades={networkOportunidades}
             onQualificar={handleQualificarContato}

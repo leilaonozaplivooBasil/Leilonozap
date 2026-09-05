@@ -259,3 +259,41 @@ describe('agendador de reuniões (DIR-48)', () => {
     assert.equal(eventoGoogleDaReuniao({ inicio: '' }), null);
   });
 });
+
+// ══ DIR-49 — clareza do Hábito 4: linha do tempo unificada + plurais ══
+const { linhaDoTempoUnificada, plural } = await import('../src/lib/metodo.js');
+
+describe('linha do tempo unificada do dia (DIR-49)', () => {
+  test('método + esteira + google se misturam ordenados pela hora', () => {
+    const itens = linhaDoTempoUnificada([
+      { origem: 'google', quando: '2026-09-04T15:30:00-03:00', titulo: 'Dentista' },
+      { origem: 'metodo', quando: '2026-09-04T09:00', titulo: 'Reunião — Diogo' },
+      { origem: 'esteira', quando: '2026-09-04T11:15', titulo: 'Reunião — Renan' },
+    ]);
+    assert.deepEqual(itens.map((i) => i.origem), ['metodo', 'esteira', 'google']);
+  });
+
+  test('evento de dia inteiro (só data) abre o dia; lista vazia/ruim não quebra', () => {
+    const itens = linhaDoTempoUnificada([
+      { origem: 'metodo', quando: '2026-09-04T08:00', titulo: 'cedo' },
+      { origem: 'google', quando: '2026-09-04', titulo: 'Aniversário' },
+    ]);
+    assert.equal(itens[0].titulo, 'Aniversário');
+    assert.deepEqual(linhaDoTempoUnificada([]), []);
+    assert.deepEqual(linhaDoTempoUnificada(null), []);
+  });
+
+  test('não muda a lista original (ordena uma cópia)', () => {
+    const orig = [{ quando: '2026-09-04T18:00' }, { quando: '2026-09-04T07:00' }];
+    linhaDoTempoUnificada(orig);
+    assert.equal(orig[0].quando, '2026-09-04T18:00');
+  });
+});
+
+describe('plurais honestos dos contadores (DIR-49)', () => {
+  test('1 fica no singular; 0 e 2+ no plural', () => {
+    assert.equal(plural(1, 'reunião', 'reuniões'), '1 reunião');
+    assert.equal(plural(2, 'reunião', 'reuniões'), '2 reuniões');
+    assert.equal(plural(0, 'retorno', 'retornos'), '0 retornos');
+  });
+});

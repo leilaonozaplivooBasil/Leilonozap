@@ -2338,3 +2338,42 @@ teto vitalício de 100 usuários concedendo a permissão — suficiente pro
 arranque; pra rede passar disso, a VERIFICAÇÃO do app na Central de
 verificação vira ação necessária (processo do Google, sem código —
 guiaremos quando o dono quiser).
+
+## REL-49 — Clareza total do Hábito 4 (05/09/2026)
+
+**Diretiva:** DIR-49, aprovada com "PODE" após análise sênior em chat.
+**O que mudou (os 5 pontos, todos entregues):**
+1. **Fila com dois caminhos óbvios:** cada qualificado agora tem 📅
+   **Agendar** (abre o agendador direto, pessoa já escolhida — 1 clique)
+   e ✍️ **Registrar** (os 5 desfechos). O agendar saiu de dentro do
+   "Registrar contato".
+2. **🙋 MINHA AGENDA · 👥 TIME INTEIRO:** alternador no topo da agenda,
+   só pra quem tem visão total (super admin); o padrão é MINHA (o que EU
+   registrei / sou responsável). Na visão do time, cada item carrega o
+   chip forte do responsável (👤 Nome).
+3. **Linha do tempo UNIFICADA:** reuniões do método + reuniões da
+   esteira + eventos do Google numa lista só, ordenada por hora, cada um
+   marcado pela origem (📅 método · 🛤️ esteira · 🗓️ Google). O botão
+   Conectar/Atualizar Google mora no mesmo card. O Google é pessoal —
+   nunca aparece na visão do time (aviso na tela). Fonte única:
+   `linhaDoTempoUnificada` em `src/lib/metodo.js`, testada.
+4. **Fila honesta:** rodapé "⭐ +N da sua lista ainda sem qualificação —
+   qualificar no Hábito 3 →" (o 7-na-lista/4-na-fila deixou de ser
+   mistério).
+5. **Polimento:** agendador com passos numerados (1. Com quem · 2.
+   Quando · 3. Onde e sobre o quê · 4. Google Agenda), botão principal
+   maior (h-12), plurais corretos via `plural()` (1 reunião · 2
+   reuniões · 1 retorno).
+**Arquivos:** `src/lib/metodo.js` (+2 funções testadas),
+`CrmMetodo.jsx` (painel contato reescrito), `CrmContatoRegistroModal.jsx`
+(modo agendar-direto + passos), `CrmClientesTab.jsx` (passa visaoTotal).
+SEM SQL novo, como autorizado.
+**Prova (medida, sem achismo):** suíte **889/889** (885 + 4 testes novos
+da lib); build exit 0; prova em navegador real **100/100** com ZERO
+erros de página/console — cobrindo os dois botões da fila, o rodapé
+honesto, o agendador direto com pessoa preset e sem desfechos, os passos
+numerados, a criação REAL do evento no Google (API stubada), os plurais
+no singular, a linha do tempo com o Google 09:00 ANTES do método 18:00,
+o TIME INTEIRO com chip 👤 e o Google sumindo (pessoal), e a volta pra
+MINHA AGENDA.
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode" do dono.

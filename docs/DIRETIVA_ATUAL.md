@@ -12,6 +12,46 @@
 
 ---
 
+## DIR-49 — Clareza total do Hábito 4: agendar em 1 clique, minha agenda × time, linha do tempo unificada
+
+**Emitida por:** dono (04/09/2026, por escrito, após ver o Hábito 4
+funcionando em produção): "não está aparecendo de forma clara ainda como
+posso agendar; mais uma coisa — está aparecendo a agenda de todos pois sou
+super admin, isso precisa ter uma comunicação melhor, eu visualizar quem é
+e ter minha própria agenda; quero que faça uma análise sênior e veja os
+pontos para ficar mais foda e tudo mais claro e precisa funcionar".
+Análise sênior entregue em chat ANTES do código (regra da casa); desenho
+em 5 pontos aprovado com **"PODE"**.
+**Data:** 04/09/2026.
+**Escopo autorizado:**
+1. **Fila com dois botões claros por contato:** 📅 **Agendar** (abre o
+   agendador DIRETO com a pessoa já escolhida — um clique) e ✍️
+   **Registrar** (os 5 desfechos de sempre). O caminho de agendar deixa
+   de morar escondido dentro do "Registrar contato".
+2. **Alternador no topo da Agenda do dia:** 🙋 **MINHA AGENDA** · 👥
+   **TIME INTEIRO** — a opção "time" só existe pra quem tem visão total
+   (super admin); o PADRÃO é "minha". No modo time, cada item carrega o
+   chip forte do responsável (👤 Nome) — dono de cada reunião óbvio à
+   primeira vista.
+3. **"Minha agenda de hoje" UNIFICADA:** as reuniões do método DA PESSOA
+   + os eventos do Google DELA numa linha do tempo só, ordenada por hora,
+   cada item marcado pela origem (📅 método · 🗓️ Google). O botão
+   Conectar/Atualizar Google mora no MESMO card. Fonte única em
+   `src/lib/metodo.js` (linha do tempo testada).
+4. **Fila honesta:** rodapé "⭐ +N da sua lista ainda sem qualificação —
+   qualificar no Hábito 3 →" quando existir gente fora da fila (a lista
+   com 7 e a fila "(4)" sem explicação confunde).
+5. **Polimento de clareza:** agendador com passos numerados (1. Com quem
+   · 2. Quando · 3. Onde · 4. Google), botão principal maior, plurais
+   corretos nos contadores (reunião/reuniões, retorno/retornos).
+**Fora do escopo:** SQL novo (nada de migração); editar/cancelar evento
+do Google; agenda de outra pessoa no Google.
+**Regras fixas:** prova em navegador (REL-34.1) antes da entrega;
+escrita via entityWrite; produção só com novo "pode" do dono.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-48 — Agendador de reuniões de verdade, criando o evento no Google
 
 **Emitida por:** dono (03/09/2026, por escrito, após conectar a agenda

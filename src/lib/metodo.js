@@ -160,6 +160,28 @@ export function eventoGoogleDaReuniao({ titulo, inicio, duracaoMin = 60, detalhe
   };
 }
 
+/**
+ * DIR-49 — a LINHA DO TEMPO UNIFICADA do dia: reuniões do método, reuniões
+ * da esteira e eventos do Google numa lista só, ordenada pela hora. Cada
+ * item entra com `quando` (ISO com hora, ou só a data pra evento de dia
+ * inteiro) e a sua `origem` ('metodo' | 'esteira' | 'retorno' | 'google');
+ * dia inteiro vem primeiro. Fonte única — a tela não ordena nada sozinha.
+ */
+export function linhaDoTempoUnificada(itens = []) {
+  const hora = (i) => {
+    const s = String(i?.quando || '');
+    const d = new Date(s);
+    if (s.length <= 10 || Number.isNaN(d.getTime())) return '00:00'; // sem hora = dia inteiro, abre o dia
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  return [...(Array.isArray(itens) ? itens : [])].sort((a, b) => hora(a).localeCompare(hora(b)));
+}
+
+/** Plural honesto dos contadores: plural(1,'reunião','reuniões') → "1 reunião". */
+export function plural(n, umItem, varios) {
+  return `${n} ${Number(n) === 1 ? umItem : varios}`;
+}
+
 /** Guia estratégico de um item da rotina, pelo título (tarefa customizada não tem). */
 export function guiaDaRotina(titulo) {
   const t = String(titulo || '').trim();
