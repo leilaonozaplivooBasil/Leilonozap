@@ -24,7 +24,7 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
   VIRTUDES, janelaVotacaoAberta, mvmManual,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
-  ofensiva, OFENSIVA_META,
+  ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -164,7 +164,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setHistoricoOfensiva([]); return; }
-    supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas')
+    supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas,mvm_dia,detalhes')
       .eq('user_id', uid).lt('data', hojeStr()).order('data', { ascending: false }).limit(90)
       .then(({ data, error }) => setHistoricoOfensiva(error ? [] : (data || [])));
   }, [painel, uid]);
@@ -266,6 +266,53 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     setNotas({});
   };
   const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🗳️ em quantos dias do ciclo eu votei (pra conquista e missão da votação)
+  const [votosDias, setVotosDias] = useState([]);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setVotosDias([]); return; }
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('xgame_votos_mvm').select('data').eq('votante_id', uid).gte('data', ini)
+      .then(({ data }) => setVotosDias([...new Set((data || []).map((v) => String(v.data).slice(0, 10)))]));
+  }, [painel, uid, cicloConfig, votosDadosHoje.length]);
+  // 🏅 F8 — conquistas e missões da semana, tudo derivado do que já gravamos
+  const diaPerfeitoHoje = !!(ehHoje && xgame && xgame.tarefas_total > 0 && xgame.tarefas_feitas >= xgame.tarefas_total);
+  const medalhas = useMemo(() => {
+    if (!xgame) return [];
+    return conquistas({
+      historico: historicoOfensiva,
+      fogo,
+      vendasCiclo: vendasCiclo || 0,
+      tokenCiclo: ciclo?.total || 0,
+      formacaoPct: ciclo?.formacao?.pct || 0,
+      votosDias: votosDias.length,
+      estudoOk: xgame.estudo_em_dia,
+      diaPerfeitoHoje,
+    });
+  }, [xgame, historicoOfensiva, fogo, vendasCiclo, ciclo, votosDias, diaPerfeitoHoje]);
+  const missoes = useMemo(() => {
+    if (!xgame) return [];
+    const iniSemana = dataISO(inicioDaSemana(new Date()));
+    const votou = new Set(votosDias);
+    const dias = historicoOfensiva
+      .filter((d) => String(d.data).slice(0, 10) >= iniSemana)
+      .map((d) => ({
+        pct: Number(d.tarefas_total) > 0 ? Number(d.tarefas_feitas) / Number(d.tarefas_total) : 0,
+        leitura: !!d.detalhes?.leitura_feita,
+        mvm: Number(d.mvm_dia) || 0,
+        votou: votou.has(String(d.data).slice(0, 10)),
+      }))
+      .reverse();
+    if (ehHoje && xgame.tarefas_total > 0) {
+      dias.push({
+        pct: xgame.tarefas_feitas / xgame.tarefas_total,
+        leitura: xgame.leitura_feita,
+        mvm: xgame.mvm_dia,
+        votou: votou.has(hojeStr()),
+      });
+    }
+    return missoesDaSemana(dias, new Date());
+  }, [xgame, historicoOfensiva, votosDias, ehHoje]);
+  const [medalhasAbertas, setMedalhasAbertas] = useState(false);
   // 🏆 F5 — RANKING H-TOKEN da equipe no ciclo (filtros da planilha:
   // Moeda / MvM / Remuneração / Nome). Lê o placar de todo mundo e agrega.
   const [rankingAberto, setRankingAberto] = useState(false);
@@ -872,6 +919,40 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
                 </details>
+              </div>
+            )}
+
+            {/* ══ 🏅 F8 — MISSÕES DA SEMANA + CONQUISTAS ══ */}
+            {xgame && missoes.length > 0 && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="font-semibold text-nz-tinta">🎯 Missões da semana</p>
+                  <button type="button" onClick={() => setMedalhasAbertas(!medalhasAbertas)} className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde">
+                    {medalhasAbertas ? '▾' : '▸'} 🏅 minhas medalhas ({medalhas.filter((m) => m.ok).length}/{medalhas.length})
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {missoes.map((m) => (
+                    <div key={m.id} className={`rounded border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
+                      <p className="text-[11px] font-semibold text-nz-tinta">{m.emoji} {m.nome} {m.ok ? '✅' : ''}</p>
+                      <div className="mt-1 h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
+                        <div className={`h-full rounded-full ${m.ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.atual / m.alvo) * 100)}%` }} />
+                      </div>
+                      <p className="text-[10px] text-nz-tinta-fraca tabular-nums mt-0.5">{m.atual} de {m.alvo}</p>
+                    </div>
+                  ))}
+                </div>
+                {medalhasAbertas && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-nz-borda">
+                    {medalhas.map((m) => (
+                      <div key={m.id} title={m.regra} className={`rounded border px-2 py-1.5 text-center ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white opacity-50 grayscale'}`}>
+                        <p className="text-base leading-none">{m.emoji}</p>
+                        <p className="text-[10px] font-semibold text-nz-tinta mt-0.5">{m.nome}</p>
+                        <p className="text-[9px] text-nz-tinta-fraca">{m.ok ? 'conquistada!' : m.regra}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

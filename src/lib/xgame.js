@@ -528,3 +528,85 @@ export function ofensiva(historico = [], hoje = new Date(), hojeFechou = false) 
   }
   return { dias, congelou };
 }
+
+// ── 🏅 CONQUISTAS (F8 — as medalhas colecionáveis) ──────────────────
+// Tudo derivado do que o placar já grava — nada de tabela nova: a conquista
+// "existe" quando os dados provam que ela aconteceu.
+
+/**
+ * @param historico  linhas de xgame_diario (qualquer ciclo) com
+ *                   {data, tarefas_total, tarefas_feitas, mvm_dia}
+ * @param fogo       resultado de ofensiva()
+ * @param vendasCiclo vendas reais da loja no ciclo
+ * @param tokenCiclo  Human Token oficial do ciclo
+ * @param formacaoPct % da formação do Executivo Ideal
+ * @param votosDias   nº de dias em que a pessoa votou nas virtudes no ciclo
+ * @param estudoOk    leitura em dia no ciclo
+ * @param diaPerfeitoHoje hoje está 100%?
+ */
+export function conquistas({ historico = [], fogo = { dias: 0 }, vendasCiclo = 0, tokenCiclo = 0, formacaoPct = 0, votosDias = 0, estudoOk = false, diaPerfeitoHoje = false }) {
+  const dias100 = historico.filter((d) => Number(d.tarefas_total) > 0
+    && Number(d.tarefas_feitas) >= Number(d.tarefas_total)).length + (diaPerfeitoHoje ? 1 : 0);
+  const mvm10 = historico.some((d) => Number(d.mvm_dia) >= 10);
+  return [
+    { id: 'fogo3', emoji: '🔥', nome: 'Primeira ofensiva', regra: '3 dias seguidos fechando o dia (80%+)', ok: fogo.dias >= 3 },
+    { id: 'fogo5', emoji: '🚀', nome: 'Semana em chamas', regra: '5 dias seguidos de ofensiva', ok: fogo.dias >= 5 },
+    { id: 'fogo22', emoji: '🌋', nome: 'Imparável', regra: 'um ciclo inteiro de ofensiva (22 dias úteis)', ok: fogo.dias >= 22 },
+    { id: 'perfeito', emoji: '💎', nome: 'Dia perfeito', regra: '100% do Master Task em um dia', ok: dias100 >= 1 },
+    { id: 'perfeito5', emoji: '👑', nome: 'Colecionador de diamantes', regra: '5 dias perfeitos', ok: dias100 >= 5 },
+    { id: 'leitor', emoji: '📚', nome: 'Leitor constante', regra: 'leitura em dia no ciclo (60%+)', ok: estudoOk },
+    { id: 'mvm10', emoji: '⭐', nome: 'MvM 10', regra: 'fechou um dia com MvM 10 cravado', ok: mvm10 },
+    { id: 'votante', emoji: '🗳️', nome: 'Voz do grupo', regra: 'votou nas 10 Virtudes em 5 dias do ciclo', ok: votosDias >= 5 },
+    { id: 'venda1', emoji: '💰', nome: 'Primeira venda', regra: '1 venda da loja no ciclo', ok: vendasCiclo >= 1 },
+    { id: 'vendameta', emoji: '🏆', nome: 'Meta de vendas', regra: `${META_VENDAS_CICLO} vendas da loja no ciclo`, ok: vendasCiclo >= META_VENDAS_CICLO },
+    { id: 'ouro', emoji: '🥇', nome: 'Padrão OURO', regra: 'Human Token do ciclo ≥ 17,78', ok: tokenCiclo >= 17.78 },
+    { id: 'exec', emoji: '🎓', nome: 'Rumo ao Executivo Ideal', regra: 'formação ≥ 66%', ok: formacaoPct >= 66 },
+  ];
+}
+
+// ── 🎯 MISSÕES DA SEMANA (F8 — a variedade que mata a monotonia) ────
+// Um pool de missões computáveis; 3 entram por semana, girando pelo nº da
+// semana do ano (todo mundo joga as mesmas — vira assunto no grupo).
+
+const POOL_MISSOES = [
+  { id: 'm100x3', emoji: '💎', nome: 'Feche 3 dias com 100%', alvo: 3, conta: (dias) => dias.filter((d) => d.pct >= 1).length },
+  { id: 'm80x5', emoji: '🔥', nome: 'Feche 5 dias com 80%+', alvo: 5, conta: (dias) => dias.filter((d) => d.pct >= OFENSIVA_META).length },
+  { id: 'mleit4', emoji: '📚', nome: 'Leitura em 4 dias', alvo: 4, conta: (dias) => dias.filter((d) => d.leitura).length },
+  { id: 'mmvm3', emoji: '⭐', nome: 'MvM 8+ em 3 dias', alvo: 3, conta: (dias) => dias.filter((d) => d.mvm >= 8).length },
+  { id: 'mvoto3', emoji: '🗳️', nome: 'Vote nas virtudes em 3 dias', alvo: 3, conta: (dias) => dias.filter((d) => d.votou).length },
+  { id: 'mcedo2', emoji: '🌅', nome: '2 dias perfeitos seguidos', alvo: 2, conta: (dias) => {
+    let melhor = 0; let seq = 0;
+    for (const d of dias) { seq = d.pct >= 1 ? seq + 1 : 0; melhor = Math.max(melhor, seq); }
+    return melhor;
+  } },
+];
+
+const numeroDaSemana = (d) => {
+  const inicioAno = new Date(d.getFullYear(), 0, 1);
+  return Math.floor((d - inicioAno) / (7 * 24 * 60 * 60 * 1000));
+};
+
+/**
+ * As 3 missões da semana corrente com o progresso calculado.
+ * @param diasSemana resumo dos dias da semana (segunda até hoje):
+ *                   [{pct: 0-1, leitura: bool, mvm: 0-10, votou: bool}]
+ */
+export function missoesDaSemana(diasSemana = [], hoje = new Date()) {
+  const n = numeroDaSemana(hoje);
+  const escolhidas = [0, 1, 2].map((i) => POOL_MISSOES[(n + i * 2) % POOL_MISSOES.length]);
+  // sem repetir missão na mesma semana
+  const unicas = [...new Map(escolhidas.map((m) => [m.id, m])).values()];
+  while (unicas.length < 3) unicas.push(POOL_MISSOES[(n + unicas.length * 3 + 1) % POOL_MISSOES.length]);
+  return [...new Map(unicas.map((m) => [m.id, m])).values()].slice(0, 3).map((m) => {
+    const atual = Math.min(m.alvo, m.conta(diasSemana));
+    return { ...m, atual, ok: atual >= m.alvo };
+  });
+}
+
+/** Segunda-feira da semana de `d` (a semana do jogo começa na segunda). */
+export function inicioDaSemana(d = new Date()) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = x.getDay();
+  x.setDate(x.getDate() - (dow === 0 ? 6 : dow - 1));
+  return x;
+}
