@@ -23,6 +23,7 @@ import { ehAtiva } from '@/lib/esteiraCaptacao';
 import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
   VIRTUDES, janelaVotacaoAberta, mvmManual,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -179,6 +180,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
   const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
   const janelaAberta = janelaVotacaoAberta(agoraMin);
+  // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
+  // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
+  // com a trava 17,77 quando a leitura do ciclo está em atraso.
+  const ciclo = useMemo(() => {
+    if (!xgame) return null;
+    const r = tokenDoCiclo({
+      diasCiclo,
+      hojeResumo: { ...xgame.contagens, mvm_dia: xgame.mvm_dia },
+      mvmVotacao: recebido.media,
+      perfil: participante?.perfil || 'estrategico',
+    });
+    const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+  }, [xgame, diasCiclo, recebido.media, participante]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
     supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
@@ -226,7 +241,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       tarefas_total: xgame.tarefas_total, tarefas_feitas: xgame.tarefas_feitas,
       mvm_dia: xgame.mvm_dia, aplicabilidade: xgame.aplicabilidade, token_dia: xgame.token_dia,
       cotacao: xgame.cotacao, pontos: xgame.pontos,
-      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util },
+      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util, ...xgame.contagens },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,data' }).then(({ error }) => { if (error) console.warn('[X-GAME] placar:', error.message); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -684,8 +699,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{xgame.faixa.medalha} {fmtToken(xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${xgame.faixa.label} · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
+                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
                 <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia</p>
@@ -706,6 +721,46 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══ */}
+            {xgame && ciclo && (
+              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="font-semibold text-nz-tinta">🎯 Onde estou × EXECUTIVO IDEAL</p>
+                  <span className="text-[10px] font-bold text-nz-tinta-fraca tabular-nums">formação: {ciclo.formacao.pct}% dos 100%</span>
+                </div>
+                <div className="space-y-1.5">
+                  {[
+                    { k: 'mvm', rotulo: 'MvM (votação do grupo)' },
+                    { k: 'producao', rotulo: 'Produção' },
+                    { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)' },
+                    { k: 'bonus', rotulo: 'Bônus / Estudo' },
+                    { k: 'vendas', rotulo: `Vendas (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)` },
+                  ].map(({ k, rotulo }) => {
+                    const atual = Math.round((ciclo.taxas[k] || 0) * 100);
+                    const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
+                    const ok = atual >= alvo;
+                    return (
+                      <div key={k}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] text-nz-tinta">{rotulo}</span>
+                          <span className={`text-[11px] font-semibold tabular-nums ${ok ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                            {atual}% <span className="text-nz-tinta-fraca font-normal">/ alvo {alvo}%</span>{ok ? ' ✅' : ''}
+                          </span>
+                        </div>
+                        <div className="relative h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
+                          <div className={`h-full rounded-full ${ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, atual)}%` }} />
+                          <div className="absolute top-0 h-full w-px bg-nz-tinta/50" style={{ left: `${alvo}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {ciclo.formacao.mensagem && (
+                  <p className="text-[11px] font-semibold text-nz-verde">{ciclo.formacao.mensagem}</p>
+                )}
               </div>
             )}
 
