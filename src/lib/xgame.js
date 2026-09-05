@@ -677,3 +677,33 @@ export function validarComprovacao(tipo, entrega) {
   }
   return { valido: true, motivo: '' };
 }
+
+// ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────
+// O fluxo do dono: a tarefa abre o Instagram pra fazer o post NA HORA,
+// a pessoa tira o print e sobe aqui. O sistema valida sozinho:
+//   1. é imagem de verdade (tipo e tamanho fazem sentido);
+//   2. IMPRESSÃO DIGITAL (SHA-256): o MESMO print não comprova duas vezes —
+//      reutilizou o de ontem, o sistema barra na hora;
+//   3. o horário do envio é carimbado pelo servidor (ninguém escolhe a hora).
+// Leitura do horário DENTRO da foto e detecção de montagem = próximo nível
+// (precisa de visão computacional — fica pro validador com IA).
+
+/** SHA-256 do arquivo — a impressão digital que barra print reutilizado. */
+export async function hashDoArquivo(file) {
+  const buf = await file.arrayBuffer();
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Validação automática do print (antes do upload). */
+export function validarPrint(file, hashesUsados = new Set(), hash = '') {
+  if (!file) return { valido: false, motivo: 'anexe o print do post' };
+  if (!/^image\//.test(file.type || '')) return { valido: false, motivo: 'o arquivo precisa ser uma IMAGEM — o print da tela do post' };
+  if ((file.size || 0) < 15 * 1024) return { valido: false, motivo: 'esse arquivo parece vazio — envie o print real do post' };
+  if ((file.size || 0) > 8 * 1024 * 1024) return { valido: false, motivo: 'imagem grande demais (máximo 8MB)' };
+  if (hash && hashesUsados.has(hash)) return { valido: false, motivo: '🚫 esse print JÁ FOI USADO em outra comprovação — o post de hoje precisa de um print novo' };
+  return { valido: true, motivo: 'print validado ✔' };
+}
+
+/** Link que abre o Instagram pra fazer o post na hora (app no celular, site no desktop). */
+export const LINK_ABRIR_INSTAGRAM = 'https://www.instagram.com/';
