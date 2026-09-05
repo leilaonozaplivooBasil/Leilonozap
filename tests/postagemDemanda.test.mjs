@@ -197,3 +197,33 @@ describe('montarRascunho — as duas travas antes de publicar', () => {
     assert.ok(r.startsWith(montarPostagem(CASO_DA_FOTO)), 'o rascunho não é o post de verdade');
   });
 });
+
+describe('citação — "exatamente como foi dito no grupo" (dono, 05/09/2026)', () => {
+  const COM_FALA = { ...CASO_DA_FOTO, citacao: 'preciso que melhore seu retorno aqui' };
+
+  test('a fala crua sai em bloco de citação do Slack', () => {
+    assert.match(montarPostagem(COM_FALA), /^> preciso que melhore seu retorno aqui$/m);
+  });
+
+  test('a citação vem DEPOIS da leitura técnica, não no lugar dela', () => {
+    const p = montarPostagem(COM_FALA);
+    assert.ok(p.indexOf('*Solicitação:*') < p.indexOf('> preciso'), 'a citação engoliu a solicitação');
+    assert.match(p, /Alterar o link de referência/, 'a leitura técnica sumiu');
+  });
+
+  test('fala de várias linhas vira várias linhas citadas', () => {
+    const p = montarPostagem({ ...CASO_DA_FOTO, citacao: 'primeira\nsegunda' });
+    assert.match(p, /^> primeira$/m);
+    assert.match(p, /^> segunda$/m);
+  });
+
+  test('sem citação, o post continua idêntico ao da foto', () => {
+    assert.equal(montarPostagem({ ...CASO_DA_FOTO, citacao: undefined }), montarPostagem(CASO_DA_FOTO));
+  });
+
+  test('citação vazia ou lixo não deixa "> " solto no post', () => {
+    for (const ruim of ['', '   ', null, {}, 42]) {
+      assert.ok(!/^>\s*$/m.test(montarPostagem({ ...CASO_DA_FOTO, citacao: ruim })), `citacao ${String(ruim)}`);
+    }
+  });
+});

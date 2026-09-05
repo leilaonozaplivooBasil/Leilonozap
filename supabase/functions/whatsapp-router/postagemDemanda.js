@@ -94,7 +94,8 @@ export function legendasDeAnexos(anexos) {
  * @param {string} d.titulo            Título do tópico (vai em CAIXA ALTA e negrito)
  * @param {string} d.pedido            Quem pediu
  * @param {string|Date} [d.data]       Data do pedido; vazio = hoje
- * @param {string} d.solicitacao       O que muda
+ * @param {string} d.solicitacao       O que muda, já organizado tecnicamente
+ * @param {string} [d.citacao]         A fala crua de quem pediu, palavra por palavra
  * @param {'alto'|'medio'|'baixo'} d.risco
  * @param {string} [d.motivo]          Por que esse risco
  * @param {string[]|string} [d.pontos] Pontos de atenção
@@ -129,6 +130,17 @@ export function montarPostagem(d = {}) {
 
   const solicitacao = texto(d.solicitacao);
   if (solicitacao) linhas.push('*Solicitação:*', solicitacao, '');
+
+  // 05/09/2026 — "documentar no slack exatamente como foi dito no grupo" (dono).
+  // A linha *Solicitação:* é a leitura TÉCNICA do pedido; esta citação é a fala CRUA de
+  // quem pediu, palavra por palavra. As duas juntas porque uma sozinha não serve: só a
+  // técnica perde o que a pessoa realmente disse, e só a crua não organiza nada. Vai em
+  // bloco de citação do Slack (">"), então salta aos olhos que ali ninguém reescreveu.
+  const citacao = texto(d.citacao);
+  if (citacao) {
+    for (const l of citacao.split('\n')) linhas.push(`> ${l}`.trimEnd());
+    linhas.push('');
+  }
 
   linhas.push(`*Classificação de Risco:* ${risco.emoji} ${risco.rotulo}`);
   const motivo = texto(d.motivo);
