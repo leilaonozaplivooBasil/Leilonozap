@@ -260,12 +260,21 @@ test('o canal padrao dos registros existe de verdade no workspace', () => {
 // ---------------------------------------------------------------------------
 // 4. Nada disso pode ter mudado de lugar sem querer
 // ---------------------------------------------------------------------------
-test('os tres registros da Heloim continuam indo pro Slack', () => {
+test('os registros de decisao da Heloim continuam indo pro Slack', () => {
+  // 05/09/2026 — o REGISTRO da solicitacao saiu daqui de proposito. Antes, registrar e
+  // publicar eram a mesma acao: ela interpretava o pedido e mandava pro canal sem passar
+  // por ninguem. O dono pediu quatro passos, e a publicacao passou pra ferramenta
+  // publicar_demanda, atras de duas confirmacoes do grupo. Aprovacao e rejeicao continuam
+  // indo direto — sao DECISAO tomada, nao rascunho.
   const chamadas = fonte.match(/await postarNoSlack\(/g) || [];
-  assert.ok(chamadas.length >= 4, `esperava as 3 da solicitacao + o teste, achei ${chamadas.length}`);
-  assert.match(fonte, /Nova solicitação #/);
+  assert.ok(chamadas.length >= 3, `esperava aprovada + rejeitada + o teste, achei ${chamadas.length}`);
   assert.match(fonte, /aprovada\* por/);
   assert.match(fonte, /rejeitada\* por/);
+  // e a garantia de que a publicacao nao voltou pro registro sem ninguem ver
+  assert.ok(!/Nova solicitação #/.test(fonte),
+    'registrar_solicitacao voltou a publicar direto no Slack, sem as duas confirmacoes');
+  assert.match(fonte, /name: 'publicar_demanda'/, 'a publicacao precisa ter dono proprio');
+  assert.match(fonte, /name: 'confirmar_demanda'/, 'falta a trava de "a demanda esta certa?"');
 });
 
 test('o DEPLOY.md ensina a ligar os DOIS modos do Slack', () => {
@@ -296,4 +305,43 @@ test('o DEPLOY.md so pede scopes que existem de verdade no Slack', () => {
   assert.match(deploy, /`groups:read`/, 'sem esse scope o bot nao enxerga canal privado');
   assert.match(deploy, /`channels:read`/);
   assert.match(deploy, /`files:write`/);
+});
+
+// ---------------------------------------------------------------------------
+// 5. O protocolo de demanda de 05/09/2026 (pedido do dono, com foto do formato)
+// ---------------------------------------------------------------------------
+// Ferramenta sem instrucao nao muda comportamento nenhum: sem estas linhas NO PROMPT ela
+// chama publicar_demanda na primeira mensagem e o atropelo continua. As asseveracoes abaixo
+// batem em frases que so existem dentro do template do prompt — nao em comentario meu.
+test('o prompt do grupo manda seguir os quatro passos, na ordem', () => {
+  assert.match(fonte, /COMO TRATAR UMA DEMANDA \(ordem obrigatória, sem pular passo\)/);
+  for (const passo of ['1. RECEBE', '2. ORGANIZA', '3. CONFIRMA SE ESTÁ CERTA', '4. CONFIRMA SE PODE POSTAR']) {
+    assert.ok(fonte.includes(passo), `faltou o passo "${passo}" no prompt`);
+  }
+  assert.match(fonte, /NUNCA publique no Slack sem os passos 3 e 4/);
+});
+
+test('o prompt separa confirmar a postagem de autorizar a execucao', () => {
+  // O dono disse "todos confirmam". Isso vale pro POST — nao pra liberar a mudanca no
+  // sistema, que continua sendo de admin. A propria foto do formato separa: o post sai
+  // como "aguardando autorizacao".
+  assert.match(fonte, /Qualquer pessoa do grupo pode confirmar/);
+  assert.match(fonte, /AUTORIZAR A EXECUÇÃO da mudança continua sendo só/);
+});
+
+test('o prompt manda mostrar o rascunho inteiro, sem reescrever', () => {
+  assert.match(fonte, /palavra por palavra/);
+  assert.match(fonte, /Não resuma, não reescreva/);
+});
+
+test('a logo de capa e configuravel e esta documentada', () => {
+  assert.match(fonte, /LOGO_TOPTECH_URL/, 'o secret da capa sumiu do codigo');
+  assert.match(deploy, /LOGO_TOPTECH_URL/, 'o DEPLOY.md precisa ensinar a ligar a capa');
+  assert.match(deploy, /sai sem capa/, 'o doc precisa dizer que sem o secret o post NAO falha');
+});
+
+test('em grupo, Zeca e Heloim viram um agente so', () => {
+  // Pedido do dono: "independente do nome, ambos nos grupos respondem e obedecem como um".
+  assert.match(fonte, /const tools = emGrupo \? \[\.\.\.TOOLS_HELOIM, \.\.\.TOOLS_ZECA\]/,
+    'as ferramentas das duas precisam se somar no grupo');
 });
