@@ -12,6 +12,38 @@
 
 ---
 
+## DIR-60 — A logo em PRATA, inteira, sem cortar nada
+
+**Emitida por:** dono (05/09/2026), com a foto da logo metálica em
+mockup: *"tá cortado. Pega essa logo, tire o fundo e cole exatamente
+essa só que menor, bem estilo a cor prata, a cor das lâminas. Quero a
+logo com essa cor, sem fundo e sem cortar nada."*
+
+**Data:** 05/09/2026.
+
+**O que estava cortado (erro meu na DIR-59):** pra tirar o subtítulo eu
+recortei a imagem POR BAIXO — e o X da X-eos desce até o pé da arte, com
+um rabo longo na diagonal. O corte amputou esse rabo. A lição: em lockup
+com elementos sobrepostos em altura, não se remove texto cortando o
+retângulo.
+
+**Escopo autorizado:**
+1. Entra o lockup **INTEIRO** (X + "-eos" + a linha "Estrutura de
+   operações e expansão"), sem recorte nenhum.
+2. Acabamento **prata metálico**, no lugar do branco chapado — o mesmo
+   desenho de luz do mockup: claro no topo, banda de brilho no meio, aço
+   mais fundo embaixo.
+3. Fundo transparente. A arte NÃO vem da foto colada no chat (que chegou
+   como imagem no chat, não como arquivo, então não dá pra recortar
+   fundo): vem da logo ORIGINAL com transparência já extraída do PDF do
+   dono, agora metalizada — resultado melhor que remover fundo de foto,
+   sem halo e sem resíduo de textura.
+4. A linha do menu cresce pro logo caber inteiro.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
 ## DIR-59 — No menu, a logo INTEIRA da X-eos no lugar do texto
 
 **Emitida por:** dono (05/09/2026): *"onde está escrito O Método eu quero

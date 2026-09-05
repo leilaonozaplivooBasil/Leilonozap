@@ -228,7 +228,7 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                                     {/* 🎓 DIR-59 — mesma regra do desktop: item com
                                         `marcaCompleta` mostra a LOGO no lugar do texto. */}
                                     {sub.marcaCompleta ? (
-                                      <img src={sub.marcaCompleta} alt={sub.label} className="h-6 w-auto object-contain" draggable="false" />
+                                      <img src={sub.marcaCompleta} alt={sub.label} className="h-11 w-auto object-contain" draggable="false" />
                                     ) : (
                                       <>
                                         {(sub.marca || IconSub) && (

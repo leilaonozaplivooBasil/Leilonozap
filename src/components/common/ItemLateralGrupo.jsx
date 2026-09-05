@@ -82,7 +82,7 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
                 // texto (ordem do dono pro "O Método"). O rótulo vira o texto
                 // alternativo: quem usa leitor de tela continua sabendo o que é.
                 const conteudo = sub.marcaCompleta ? (
-                  <img src={sub.marcaCompleta} alt={sub.label} className="h-[22px] w-auto object-contain" draggable="false" />
+                  <img src={sub.marcaCompleta} alt={sub.label} className="h-[46px] w-auto object-contain" draggable="false" />
                 ) : (
                   <>
                     <MarcaOuIcone marca={sub.marca} icone={sub.icon} className="w-4 h-4 shrink-0" />

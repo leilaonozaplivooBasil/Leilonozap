@@ -2778,3 +2778,47 @@ que quer dizer exatamente "a marca SUBSTITUI o rótulo" — diferente de
 acessível).
 
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-60 — A logo em prata, inteira, sem cortar nada (05/09/2026)
+
+**Diretiva:** DIR-60 — *"tá cortado... quero a logo com essa cor prata,
+sem fundo e sem cortar nada"*.
+
+**O erro que eu tinha cometido, e a causa:** na DIR-59, pra remover o
+subtítulo, recortei a imagem por baixo (`crop` até y=592). Só que o X da
+X-eos **desce até o pé da arte** — tem um rabo longo na diagonal. O
+corte amputou esse rabo, e era isso que ele estava vendo. Lição
+registrada: em lockup com elementos que se sobrepõem em altura, não se
+remove um texto cortando o retângulo.
+
+**Entregue:**
+1. Entra o lockup **INTEIRO** — X completo, "-eos" e a linha "Estrutura
+   de operações e expansão". Zero recorte.
+2. Acabamento **prata metálico** no lugar do branco chapado, com o mesmo
+   desenho de luz do mockup que ele mandou: claro no topo, banda de
+   brilho no meio, aço mais fundo embaixo. O subtítulo ficou em prata
+   clara sólida — no gradiente ele cairia na parte escura e sumiria.
+3. Mesmo tratamento no símbolo pequeno (o X sozinho), pra não ficar uma
+   marca prateada e outra branca na mesma tela.
+4. A linha do menu cresceu de 22px pra 46px pro lockup caber inteiro.
+
+**Sobre "tirar o fundo da foto":** a imagem do mockup chegou colada no
+chat, não como arquivo — não dá pra abrir e recortar. Não foi preciso: a
+logo ORIGINAL com transparência já tinha sido extraída do PDF dele na
+DIR-56, e metalizar essa arte dá resultado melhor que remover fundo de
+uma foto — sem halo, sem resíduo da textura da parede, borda limpa.
+
+**A asserção nova pegou um defeito meu na hora:** o teste compara a
+proporção RENDERIZADA da logo com a proporção NATURAL do arquivo. Falhou
+de primeira — não porque a imagem estivesse cortada, mas porque eu tinha
+posto `py-0.5` na própria imagem, e o padding distorce a medida. Padding
+removido. Agora essa asserção protege os dois casos: se alguém cortar a
+arte OU espremer pelo CSS, a conta não fecha e a prova falha.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**165/165 ZERO erros** (163 + 2 asserções: proporção do arquivo
+preservada, e a logo cabe dentro do menu sem ser cortada pela borda).
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
