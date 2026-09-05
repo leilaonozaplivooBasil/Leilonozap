@@ -149,7 +149,16 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const imagensDosSonhos = sonhos
     .map((s) => s?.imagem_url || s?.imagem || s?.foto || (Array.isArray(s?.imagens) ? s.imagens[0] : null))
     .filter(Boolean)
-    .slice(0, 8);
+    .slice(0, 12);
+  // um sonho de cada vez: a troca acontece a cada 42s (o anterior ainda está
+  // saindo quando o próximo entra — travessia de 52s, sobreposição suave)
+  const [sonhoIdx, setSonhoIdx] = useState(0);
+  useEffect(() => {
+    if (passo !== 2 || imagensDosSonhos.length === 0) return undefined;
+    const t = setInterval(() => setSonhoIdx((i) => i + 1), 42000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passo, imagensDosSonhos.length]);
   const sonhoTitulo = sonhos[0]?.titulo || sonhos[0]?.nome || sonhos[0]?.texto || '';
 
   // sair do passo 2: precisa do vídeo — e se não tiver, o sistema EXPLICA
@@ -165,20 +174,20 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-b from-[#141432] via-[#5b2a5e] to-[#f59e5b] overflow-hidden">
-      {/* as imagens do QUADRO DOS SONHOS flutuando pra cima na visualização */}
-      <style>{`@keyframes xgFlutuar { 0% { transform: translateY(20vh) scale(.9); opacity: 0 } 12% { opacity: .9 } 85% { opacity: .85 } 100% { transform: translateY(-115vh) scale(1.05); opacity: 0 } }`}</style>
+      {/* o QUADRO DOS SONHOS na visualização: UM sonho de cada vez, GRANDE,
+          subindo devagar como numa meditação — um saindo, o próximo entrando */}
+      <style>{`@keyframes xgSubir { 0% { transform: translateY(35vh) scale(.92); opacity: 0 } 10% { opacity: .95 } 86% { opacity: .95 } 100% { transform: translateY(-125vh) scale(1.04); opacity: 0 } }`}</style>
       {passo === 2 && imagensDosSonhos.length > 0 && (
         <div className="pointer-events-none absolute inset-0">
-          {imagensDosSonhos.map((url, i) => (
+          {[sonhoIdx - 1, sonhoIdx].filter((n) => n >= 0).map((n) => (
             <img
-              key={`${url}-${i}`}
-              src={url}
+              key={n}
+              src={imagensDosSonhos[n % imagensDosSonhos.length]}
               alt=""
-              className="absolute bottom-0 w-24 h-24 object-cover rounded-2xl shadow-2xl ring-2 ring-white/30"
+              className="absolute bottom-0 w-44 sm:w-60 aspect-[3/4] object-cover rounded-3xl shadow-2xl ring-2 ring-white/30"
               style={{
-                left: `${(i * 31 + 7) % 78}%`,
-                animation: `xgFlutuar ${38 + (i % 4) * 9}s linear infinite`,
-                animationDelay: `${i * 5}s`,
+                left: n % 2 === 0 ? '10%' : '58%',
+                animation: 'xgSubir 52s linear forwards',
                 willChange: 'transform, opacity',
               }}
             />
@@ -312,23 +321,34 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
               </button>
             )}
 
-            <p className="text-white/70 text-xs">É por ISSO que você levantou. Qual a UMA coisa que você faz hoje por ele?</p>
-            <input
-              value={acao}
-              onChange={(e) => setAcao(e.target.value)}
-              onPaste={bloquearCola}
-              placeholder="a ação de hoje..."
-              className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
-            />
+            {/* o card da AÇÃO só aparece DEPOIS da gravação concluída — uma
+                coisa de cada vez, sem chuva de mensagem na meditação */}
+            {(videoBlob || semVideoLiberado) && !gravando && (
+              <>
+                <p className="text-white/70 text-xs">É por ISSO que você levantou. Qual a UMA coisa que você faz hoje por ele?</p>
+                <input
+                  autoFocus
+                  value={acao}
+                  onChange={(e) => setAcao(e.target.value)}
+                  onPaste={bloquearCola}
+                  placeholder="a ação de hoje..."
+                  className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
+                />
+              </>
+            )}
             {aviso && <p className="text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso}</p>}
-            <button
-              type="button"
-              disabled={acao.trim().length < ACAO_MIN}
-              onClick={continuarDoSonho}
-              className="rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
-            >Continuar</button>
-            {!videoBlob && semVideoLiberado && (
-              <p className="text-white/40 text-[10px]">continuar sem o vídeo manda a comprovação pra análise manual</p>
+            {(videoBlob || semVideoLiberado) && !gravando && (
+              <>
+                <button
+                  type="button"
+                  disabled={acao.trim().length < ACAO_MIN}
+                  onClick={continuarDoSonho}
+                  className="rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
+                >Continuar</button>
+                {!videoBlob && (
+                  <p className="text-white/40 text-[10px]">continuar sem o vídeo manda a comprovação pra análise manual</p>
+                )}
+              </>
             )}
           </>
         )}
