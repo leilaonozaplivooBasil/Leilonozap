@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -144,6 +144,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // leitura em dia); cotação cai do dia 1 ao 22 ("antecipação é poder").
   const ehHoje = dia === hojeStr();
   const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
+  // 🕐 RELÓGIO DE TESTE (só super admin): o jogo inteiro obedece o horário
+  // simulado — estados AGORA/ATRASADO/PERDIDO, janela do ritual e da votação.
+  const [horaTeste, setHoraTeste] = useState('');
+  const agoraMinJogo = useMemo(() => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(horaTeste);
+    return m ? Number(m[1]) * 60 + Number(m[2]) : agoraMin;
+  }, [horaTeste, agoraMin]);
   const [diasCiclo, setDiasCiclo] = useState([]);
   const [participante, setParticipante] = useState(null); // verbas/cargo (F1); sem cadastro = padrão da planilha
   const [cicloConfig, setCicloConfig] = useState(null); // xgame_config.ciclo_inicio (o INÍCIO X-GAME oficial)
@@ -196,13 +203,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     if (painel !== 'compromisso' || tarefas.length === 0) return null;
     return resumoDoDia({
       tarefas,
-      agoraMin: ehHoje ? agoraMin : 24 * 60,
+      agoraMin: ehHoje ? agoraMinJogo : 24 * 60,
       diasCiclo,
       hoje: ehHoje ? new Date() : new Date(`${dia}T12:00:00`),
       participante,
       cicloConfigISO: cicloConfig,
     });
-  }, [painel, tarefas, agoraMin, diasCiclo, dia, ehHoje, participante, cicloConfig]);
+  }, [painel, tarefas, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig]);
   const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
 
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
@@ -214,7 +221,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [votosRecebidos, setVotosRecebidos] = useState([]); // recebidos no ciclo
   const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
   const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
-  const janelaAberta = janelaVotacaoAberta(agoraMin);
+  const janelaAberta = janelaVotacaoAberta(agoraMinJogo);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
   // com a trava 17,77 quando a leitura do ciclo está em atraso.
@@ -407,6 +414,48 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     } finally { setSalvando(false); }
   };
 
+  // 🤝 F12 — TUDO CONECTADO: as reuniões agendadas no Contato & Convite entram
+  // SOZINHAS na jornada do dia (peso 6, prova por foto/print) — antecipação.
+  const reunioesDoDia = useMemo(
+    () => (painel === 'compromisso' ? agendaDoDiaContatos(clientesManuais, dia).agendados : []),
+    [painel, clientesManuais, dia]
+  );
+  const sincronizouReunioes = useRef('');
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid || tarefas.length === 0 || reunioesDoDia.length === 0) return;
+    const chave = `${dia}:${reunioesDoDia.length}`;
+    if (sincronizouReunioes.current === chave) return;
+    sincronizouReunioes.current = chave;
+    const novas = reunioesDoDia.filter(({ registro }) => {
+      const hora = String(registro.quando || '').slice(11, 16);
+      return hora && !tarefas.some((t) => t.hora === hora && /^reuni/i.test(t.titulo || ''));
+    });
+    if (!novas.length) return;
+    Promise.all(novas.map(({ cliente, registro }, i) => plataforma.entities.MetodoTarefa.create({
+      user_id: uid, data: dia, hora: String(registro.quando).slice(11, 16),
+      titulo: `Reunião — ${cliente.full_name || 'contato'}`,
+      detalhe: 'agendada no Contato & Convite — antecipação é poder',
+      feito: false, ordem: 900 + i, categoria: 'producao', peso: 6, validacao: 'foto',
+    }))).then(() => {
+      toast.success(`🤝 ${novas.length === 1 ? 'Reunião do Contato & Convite entrou' : `${novas.length} reuniões do Contato & Convite entraram`} na sua jornada!`);
+      carregarTarefas();
+    }).catch(() => {});
+  }, [painel, uid, dia, tarefas, reunioesDoDia, carregarTarefas]);
+  // o link do Google Agenda da reunião sincronizada (abre direto do momento)
+  const linkAgendaDe = (t) => {
+    if (!/^Reunião — /.test(t?.titulo || '')) return null;
+    const ag = reunioesDoDia.find(({ registro }) => String(registro.quando || '').slice(11, 16) === t.hora);
+    if (!ag) return null;
+    return {
+      href: linkGoogleAgenda({
+        titulo: ag.registro.titulo_reuniao || `Reunião — ${ag.cliente.full_name || 'contato'} (Leilão NoZap)`,
+        inicio: ag.registro.quando, duracaoMin: ag.registro.duracao_min || 60,
+        detalhes: ag.registro.obs || 'Apresentação de sucesso — Leilão NoZap',
+      }),
+      rotulo: 'abrir no Google Agenda',
+    };
+  };
+
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
   const [painelAberto, setPainelAberto] = useState(false);
@@ -415,7 +464,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [ritualId, setRitualId] = useState(null);
   const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
     setRitualId(null);
-    const agoraM = new Date().getHours() * 60 + new Date().getMinutes();
+    const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
     const naJanela = agoraM >= RITUAL_INICIO_MIN && agoraM <= RITUAL_FIM_MIN;
     // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
     let videoUrl = '';
@@ -495,7 +544,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       // do horário da tarefa (print velho nem discute: cai pra análise)
       const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
       const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
-      const agoraM = new Date().getHours() * 60 + new Date().getMinutes();
+      const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
       const foraDaJanela = ehHoje && iniMin !== null && agoraM > iniMin + 120;
       // 🤖 A IA DE VISÃO olha a imagem sabendo qual tarefa está comprovando
       let ia = { veredito: 'duvida', motivo: 'análise manual' };
@@ -1013,13 +1062,31 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     >{rotulo}</button>
                   ))}
                 </div>
-                {visao === 'jornada' && (
-                  <button
-                    type="button"
-                    onClick={() => setPainelAberto(!painelAberto)}
-                    className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde"
-                  >{painelAberto ? '▾ esconder o placar' : '▸ 📊 meu placar completo'}</button>
-                )}
+                <span className="flex items-center gap-3">
+                  {/* 🕐 o relógio de TESTE do super admin: simula qualquer horário do dia */}
+                  {visaoTotal && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700"
+                      title="Relógio de TESTE (só super admin): o jogo obedece este horário — estados AGORA/ATRASADO/PERDIDO, janela do ritual (04:40–07:15) e da votação (20h–22h). Limpe pra voltar ao relógio real."
+                    >
+                      🕐 teste
+                      <input
+                        type="time"
+                        value={horaTeste}
+                        onChange={(e) => setHoraTeste(e.target.value)}
+                        className="bg-transparent text-amber-800 text-[10px] font-bold outline-none w-[62px]"
+                      />
+                      {horaTeste && <button type="button" onClick={() => setHoraTeste('')} className="text-amber-500 hover:text-amber-800 font-black">✕</button>}
+                    </span>
+                  )}
+                  {visao === 'jornada' && (
+                    <button
+                      type="button"
+                      onClick={() => setPainelAberto(!painelAberto)}
+                      className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde"
+                    >{painelAberto ? '▾ esconder o placar' : '▸ 📊 meu placar completo'}</button>
+                  )}
+                </span>
               </div>
             )}
 
@@ -1314,6 +1381,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 pct={progresso.pct}
                 fogo={ehHoje ? fogo : null}
                 onTarefa={(t) => { if (!t.feito) alternarFeito(t); }}
+                acaoExtra={linkAgendaDe}
               />
             ) : (
               PERIODOS.map((p) => {
