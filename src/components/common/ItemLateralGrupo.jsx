@@ -80,6 +80,25 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
                  bloco lê como uma coisa só em vez de logo + interface. */
               style={{ ...({ top: posicao.top, left: posicao.left }), fontFamily: 'Sora, sans-serif' }}
             >
+              {/* 🎓 DIR-70 — a liga metálica da marca, disponível pro traço dos
+                  ícones. Tem que viver DENTRO do menu: `stroke: url(#id)` só
+                  resolve se o <defs> estiver no mesmo documento, e o menu mora
+                  num portal no body. Os tons saíram da média de pixel do
+                  arquivo da logo — é o mesmo metal, não um prata parecido. */}
+              <svg width="0" height="0" aria-hidden="true" focusable="false" className="absolute">
+                <defs>
+                  <linearGradient id="xeosMetal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#EBEDF0" />
+                    <stop offset="45%" stopColor="#C6CBD3" />
+                    <stop offset="100%" stopColor="#8C929B" />
+                  </linearGradient>
+                  <linearGradient id="xeosMetalVivo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#FFFFFF" />
+                    <stop offset="45%" stopColor="#E4E7EB" />
+                    <stop offset="100%" stopColor="#B4BAC3" />
+                  </linearGradient>
+                </defs>
+              </svg>
               {item.subItens.map((sub) => {
                 // 🎓 DIR-61 — FAIXA DE MARCA: item com `marcaCompleta` vira o
                 // cabeçalho do menu — a arte da logo (X inteiro + "-eos", em
@@ -103,12 +122,18 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
                 ) : (
                   <>
                     <MarcaOuIcone marca={sub.marca} icone={sub.icon} className="w-4 h-4 shrink-0" />
-                    {sub.label}
+                    <span className="xeos-metal-texto">{sub.label}</span>
                   </>
                 );
+                // 🎓 DIR-70 — os dois blocos passam a dividir o MESMO eixo
+                // (px-4) e o mesmo material. A faixa da marca perdeu o fundo
+                // próprio e a linha cheia: no lugar entrou um fio que nasce no
+                // eixo do texto e some antes da borda, que emenda em vez de
+                // cortar. E o aceso virou prata: o verde ali era a cor do
+                // Leilão NoZap dentro do menu da faculdade.
                 const classe = sub.marcaCompleta
-                  ? 'flex w-full items-center gap-2.5 px-4 pt-2 pb-3.5 -mt-2 mb-1.5 text-left border-b border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-colors'
-                  : 'flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 hover:text-nz-verde-claro transition-colors';
+                  ? 'flex w-full items-center gap-2.5 px-4 pt-2 pb-3.5 -mt-2 mb-1 text-left xeos-emenda hover:bg-white/[0.05] transition-colors'
+                  : 'xeos-item flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] tracking-[0.015em] hover:bg-white/[0.06] transition-colors';
                 if (sub.to) {
                   return (
                     <Link key={sub.to} to={sub.to} onClick={() => setAberto(false)} className={classe}>

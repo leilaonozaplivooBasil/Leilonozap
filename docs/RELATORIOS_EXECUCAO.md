@@ -3161,3 +3161,37 @@ navegador **184/184 ZERO erros**.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-70 — O menu da Top College lê como uma coisa só (DIR-70)
+
+**Ordem:** *"lá em cima está top, a logo; só o restante ali tem que ficar
+mais conexo, com aquele metálico da X-eos. Estou sentindo elas meio
+divididas."*
+
+**O que eu fui olhar antes de mexer:** ele disse "a tipografia igual",
+mas a Sora já estava no menu inteiro desde a DIR-61 — então a divisão
+vinha de outro lugar. Eram três, e nenhuma era a fonte: a **cor** (os
+itens acendiam no verde do Leilão NoZap, dentro do menu da faculdade), o
+**eixo** (faixa em 16px, itens em 12px) e o **corte** (a faixa tinha fundo
+próprio e uma linha cheia embaixo, virando um cartão sobre outro).
+
+**O prata é medido, não escolhido:** os três tons do degradê saíram da
+média de pixel do próprio `marca-xeos-lockup.webp` — topo (235,237,240),
+meio (198,203,211), base (140,146,155). O item embaixo é feito do mesmo
+metal da logo de cima, literalmente.
+
+**Detalhe de implementação que valeu comentário no código:** o traço do
+ícone usa `stroke: url(#xeosMetal)`, e isso só resolve se o `<defs>`
+estiver no MESMO documento. O menu vive num portal no `body`, então a liga
+foi declarada dentro do próprio menu — fora dele o ícone cairia pra preto.
+
+**Prova (medida):** a prova verifica que o rótulo é degradê (e não cor
+chapada), que o traço do ícone puxa a mesma liga, que a liga existe dentro
+do menu, que o desalinho entre o ícone e a logo é **0px** e que não sobrou
+nenhum `nz-verde` no menu. Suíte **927/927**; build exit 0; prova em
+navegador **188/188 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.

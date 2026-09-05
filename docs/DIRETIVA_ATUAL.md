@@ -12,6 +12,41 @@
 
 ---
 
+## DIR-70 — O menu da Top College lê como uma coisa só
+
+**Emitida por:** dono (05/09/2026), com print do menu flutuante: *"lá em
+cima está top, a logo. Só o restante ali que tem que ficar mais conexo.
+Quero que os de baixo pareçam com a identidade visual da X-eos, aquele
+metálico, a tipografia igual. Estou sentindo elas meio divididas — não
+parecendo uma coisa só, mesmo que estejam separados."*
+
+**Data:** 05/09/2026.
+
+**Diagnóstico (o que dividia, e não era a tipografia — a Sora já entrou
+na DIR-61):**
+1. **A cor.** A marca em cima é prata; os itens acendiam em **verde**, a
+   cor do Leilão NoZap. Verde dentro do menu da faculdade lê como outro
+   sistema colado ali.
+2. **O eixo.** A faixa da marca começava em 16px e os itens em 12px —
+   4px de desalinho que o olho não nomeia mas sente.
+3. **O corte.** A faixa tinha fundo próprio e uma linha cheia embaixo:
+   parecia um cartão separado em cima de um menu.
+
+**Escopo autorizado:**
+1. Rótulo e traço do ícone passam a ser feitos do **degradê metálico da
+   própria logo** — os tons saíram da média de pixel do arquivo
+   `marca-xeos-lockup.webp` (topo 235,237,240 · meio 198,203,211 · base
+   140,146,155). Mesma liga, não um prata parecido.
+2. Faixa e itens dividem o **mesmo eixo** (16px).
+3. A linha cheia vira um **fio que nasce no eixo do texto e apaga antes
+   da borda** — emenda em vez de corte.
+4. O aceso deixa de ser verde e passa a ser o metal virando pra luz.
+
+**Fora do escopo:** produção (travada por ordem do dono); a logo da faixa,
+que o dono aprovou como está; a ordem arrastável dos ícones.
+
+---
+
 ## DIR-69 — O nome completo do Hábito quando se entra nele
 
 **Emitida por:** dono (05/09/2026), com print do Hábito 03 mostrando só

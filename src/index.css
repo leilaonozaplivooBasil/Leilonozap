@@ -1082,3 +1082,59 @@ body.pc-tema .livoo-brilho-forte {
    baixa a força */
 .xeos-palco.xeos-palco button:disabled,
 .xeos-palco.xeos-palco [aria-disabled="true"] { opacity: 0.55; }
+
+/* ═══════════════════════════════════════════════════════════════
+   🎓 DIR-70 — O MENU DA TOP COLLEGE LÊ COMO UMA COISA SÓ
+
+   Ordem do dono: "lá em cima está top, a logo. Só o restante ali que
+   tem que ficar mais conexo — quero que os de baixo pareçam com a
+   identidade da X-eos, aquele metálico, a tipografia igual. Estou
+   sentindo elas meio divididas."
+
+   O QUE ESTAVA DIVIDINDO (três coisas, nenhuma delas a tipografia —
+   a Sora já entrou na DIR-61):
+   1. a COR: a marca em cima é prata; os itens acendiam em VERDE, que é
+      a cor do Leilão NoZap. Verde dentro do menu da faculdade lê como
+      outro sistema colado ali;
+   2. o EIXO: a faixa da marca começava em 16px e os itens em 12px —
+      4px de desalinho que o olho não nomeia mas sente;
+   3. o CORTE: a faixa tinha fundo próprio e uma linha cheia embaixo,
+      então parecia um cartão separado em cima de um menu.
+
+   O PRATA AQUI É MEDIDO, NÃO ESCOLHIDO: os três tons abaixo saíram da
+   média de pixel do próprio arquivo marca-xeos-lockup.webp — topo
+   (235,237,240), meio (198,203,211) e base (140,146,155). É a mesma
+   liga da logo, então o item embaixo é feito do mesmo metal que ela.
+   ═══════════════════════════════════════════════════════════════ */
+.xeos-metal-texto {
+  background-image: linear-gradient(180deg, #EBEDF0 0%, #C6CBD3 45%, #8C929B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+/* no hover o metal "vira pra luz" — mesma liga, mais brilho */
+.xeos-item:hover .xeos-metal-texto,
+.xeos-item:focus-visible .xeos-metal-texto {
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #E4E7EB 45%, #B4BAC3 100%);
+}
+/* o traço do ícone recebe o MESMO degradê (via <defs> no próprio menu):
+   ícone e letra passam a ser do mesmo material */
+.xeos-item svg { stroke: url(#xeosMetal); }
+.xeos-item:hover svg,
+.xeos-item:focus-visible svg { stroke: url(#xeosMetalVivo); }
+/* a emenda: fio metálico que nasce no eixo do texto e apaga antes da
+   borda. Uma linha cheia de ponta a ponta separava dois cartões; esta
+   diz "continua embaixo". */
+.xeos-emenda {
+  position: relative;
+}
+.xeos-emenda::after {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(198, 203, 211, 0.55) 0%, rgba(198, 203, 211, 0.14) 55%, rgba(198, 203, 211, 0) 100%);
+}
