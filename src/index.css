@@ -1033,3 +1033,52 @@ body.pc-tema .livoo-brilho-forte {
    contraste já bom no escuro, não mexer */
 .xeos-palco.xeos-palco [class*="bg-nz-verde"]:not([class*="fundo"]),
 .xeos-palco.xeos-palco [class*="bg-nz-marrom"]:not([class*="fundo"]) { color: #FFFFFF; }
+
+/* ═══════════════════════════════════════════════════════════════
+   🎓 DIR-68 — VIDRO QUE DÁ PRA LER
+
+   Ordem do dono: "eu adoro esses menus assim transparentes, de verdade.
+   Mas algumas ficam muito transparentes, igual essa parte branca. A gente
+   pode deixar transparente, mas escurecer onde tem letra, pra ter um
+   fundinho ali atrás do card. O card todo transparente é legal — só a
+   parte que está transparente botar um fundo pra ler."
+
+   POR QUE SÓ O QUE FLUTUA QUEBRA: o card no meio do painel tem o preto do
+   palco atrás dele, então o filme branco de 4,5% já se lê. O modal não —
+   ele cobre a TELA INTEIRA, inclusive os cards claros do painel de baixo,
+   e aí o texto de trás atravessa a letra da frente (era exatamente o
+   "R$ 3.279,24" aparecendo dentro do formulário do Quadro dos Sonhos).
+
+   SOLUÇÃO: o que flutua ganha base escura translúcida + desfoque do que
+   está atrás. Continua transparente — você vê as formas passando — mas a
+   letra passa a ter chão. Nada aqui vira opaco.
+   ═══════════════════════════════════════════════════════════════ */
+.xeos-palco.xeos-palco .fixed.inset-0.z-50 {
+  background-color: rgba(0, 2, 12, 0.72) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+/* só o cartão do modal (filho direto da cortina). Os cards de dentro dele
+   continuam sendo filme branco por cima desta base — é o que dá o
+   escalonamento de profundidade. */
+.xeos-palco.xeos-palco .fixed.inset-0.z-50 > [class*="bg-white"]:not(.xeos-cru) {
+  background-color: rgba(9, 11, 24, 0.82) !important;
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+/* o botão "outline" do shadcn usa bg-background — que no tema claro é
+   BRANCO SÓLIDO. Dentro do palco isso vira uma pastilha branca com letra
+   clara em cima: some. É a mesma "parte branca" da ordem do dono, só que
+   por outro nome de classe. */
+.xeos-palco.xeos-palco [class*="bg-background"],
+.xeos-palco.xeos-palco [class*="bg-card"],
+.xeos-palco.xeos-palco [class*="bg-popover"] {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+  border-color: var(--nz-borda) !important;
+}
+/* desabilitado no escuro não pode virar borrão: mantém a letra clara e só
+   baixa a força */
+.xeos-palco.xeos-palco button:disabled,
+.xeos-palco.xeos-palco [aria-disabled="true"] { opacity: 0.55; }

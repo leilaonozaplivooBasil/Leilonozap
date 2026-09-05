@@ -12,6 +12,72 @@
 
 ---
 
+## DIR-68 — Vidro que dá pra ler
+
+**Emitida por:** dono (05/09/2026), com print do modal do Quadro dos
+Sonhos: *"eu adoro esses menus assim transparentes, de verdade. Mas a
+gente só tem que tomar cuidado, porque algumas ficam muito transparentes,
+igual essa parte branca. A gente pode deixar transparente, mas escurecer
+aonde tem letra, pra deixar o fundinho ali atrás do card. O card todo
+transparente é legal. Só a parte que está transparente botar um fundo pra
+ler, sem deixar de deixar o fundo transparente."*
+
+**Data:** 05/09/2026.
+
+**Diagnóstico (medido, não achismo):** o card no meio do painel tem o
+preto do palco atrás, então o filme branco de 4,5% já se lê. O que quebra
+é o que **flutua**: o modal cobre a tela inteira — inclusive os cards
+claros do painel de baixo — e o texto de trás atravessava a letra da
+frente (no print dele dava pra ler "R$ 3.279,24" dentro do formulário).
+
+**Escopo autorizado:**
+1. O que flutua (cortina + cartão do modal) ganha **base escura
+   translúcida + desfoque** do que está atrás. Continua transparente —
+   alfa 0,82 no cartão, 0,72 na cortina —, mas a letra passa a ter chão.
+2. A pastilha `bg-background` do botão "outline" (BRANCO SÓLIDO no tema
+   claro, com letra clara em cima = invisível) vira vidro no palco. É a
+   mesma "parte branca" da ordem, com outro nome de classe.
+3. Botão desabilitado no escuro mantém letra clara e só baixa a força.
+
+**Fora do escopo:** produção (segue travada por ordem do dono); o dropdown
+do seletor, que o dono já aprovou preto na DIR-64.
+
+---
+
+## DIR-67 — A fala do professor sai do canto
+
+**Emitida por:** dono (05/09/2026): *"vamos deixar aqui mais organizado.
+Exemplo, qual é o seu poder? vamos deixar bem do lado do professor Xavier,
+tipo o que ele está falando. Acho que está tudo muito aqui no canto. E o
+método vai pra um lugar melhor ou deixa ali mesmo? Dá uma espaçada sem
+poluir a imagem — esse meio vazio está legal —, mas eu quero tirar um pouco
+dessas coisas aqui. Qual é o seu poder, boa tarde Luiz Santanna, pode
+colocar pra lá. Dá uma organizada pra ficar mais visual."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. A faixa da academia vira **duas colunas**: identidade (marcas ·
+   X-office · seletor) à esquerda, **fala do professor** encostada nele à
+   direita, e o **meio vazio** preservado como respiro.
+2. **"Qual é o seu poder?"** passa a morar do lado da figura, na altura da
+   cabeça dele — lida como frase que ele está dizendo.
+3. A **saudação** ("Boa tarde, Luiz Santanna") sai da pilha da esquerda e
+   vira a primeira linha da fala: ele cumprimenta e então pergunta.
+4. O véu preto que cobria a faixa inteira dá lugar a uma **máscara só na
+   borda esquerda da figura** — o texto não mora mais por cima dela, então
+   o rosto volta em cheio (o "professor em destaque" da DIR-62).
+
+**Decisão minha, dita ao dono:** o **seletor fica onde está**, na coluna da
+esquerda. Ele é a única coisa clicável da faixa, e comando de navegação
+mora do lado de quem assina a tela — do lado do professor ele viraria
+poluição em cima da imagem, exatamente o que a ordem manda evitar.
+
+**Fora do escopo:** produção (segue travada por ordem do dono); a ordem
+dos ícones arrastáveis do menu (intocada desde a DIR-57).
+
+---
+
 ## DIR-66 — X-office no título e o acabamento fino
 
 **Emitida por:** dono (05/09/2026): *"só mais uns pequenos ajustes pra

@@ -3045,3 +3045,82 @@ está e o dono foi avisado.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-67 — A fala do professor sai do canto (DIR-67)
+
+**Ordem:** *"qual é o seu poder vamos deixar bem do lado do professor,
+tipo o que ele está falando... está tudo muito aqui no canto... esse meio
+vazio está legal, mas quero tirar um pouco dessas coisas aqui... boa
+tarde Luiz Santanna pode colocar pra lá."*
+
+**O que mudou:** a faixa da academia virou duas colunas —
+
+    ┌──────────────┬──── vazio ────┬─────────┬───────────┐
+    │ IDENTIDADE   │ (respiro)     │ A FALA  │ PROFESSOR │
+    │ marcas       │               │ saudação│           │
+    │ X-office     │               │ +       │           │
+    │ seletor      │               │ pergunta│           │
+    └──────────────┴───────────────┴─────────┴───────────┘
+
+A coluna da esquerda perdeu 2 dos 7 blocos que tinha (a saudação e a
+pergunta foram pra fala), que é o "tirar um pouco dessas coisas aqui".
+
+**Decisão de engenharia:** a fala e o professor viraram **irmãos numa flex
+row**. Antes o professor era `absolute` e a distância dele até o texto
+mudava com a altura da faixa — dava pra "quase" acertar em uma largura de
+tela, nunca pra garantir em todas. Como irmãos, a pergunta encosta nele
+por construção.
+
+**Consequência boa:** com o texto FORA de cima da figura, o véu preto que
+cobria a faixa inteira (e existia só pra dar contraste ao texto) pôde
+sair. No lugar entrou uma **máscara só na borda esquerda da figura**: ele
+derrete no preto e o rosto volta em cheio — o "professor em destaque" que
+a DIR-62 pedia e o véu vinha lavando.
+
+**Decisão minha, dita ao dono:** o **seletor "O Método" ficou onde
+estava**. É a única coisa clicável da faixa; comando de navegação mora do
+lado de quem assina a tela. Do lado do professor ele viraria poluição em
+cima da imagem — o oposto da ordem.
+
+**Prova (medida, não olhada):** a prova em navegador mede a distância em
+pixels entre o fim do texto e o começo da figura (`0 ≤ vão ≤ 72px`, e
+`sobrepõe === false`), a altura da fala dentro da figura (entre 5% e 40%
+do topo — a faixa da cabeça dele), a posição horizontal da pergunta
+(depois de 45% da faixa: saiu do canto) e o respiro do meio (≥ 80px
+livres entre a identidade e a fala).
+
+---
+
+## REL-68 — Vidro que dá pra ler (DIR-68)
+
+**Ordem:** *"adoro esses menus transparentes, mas algumas ficam muito
+transparentes, igual essa parte branca. Pode deixar transparente, mas
+escurecer aonde tem letra."*
+
+**Diagnóstico:** o card no meio do painel tem o preto do palco atrás e já
+se lê. Quem quebra é o que **flutua**: o modal cobre a tela inteira,
+inclusive os cards claros do painel de baixo — no print do dono dava pra
+ler "R$ 3.279,24" atravessando o formulário do Quadro dos Sonhos.
+
+**O que mudou:**
+1. Cortina e cartão do modal ganharam **base escura translúcida +
+   desfoque** (`0,72` e `0,82` de alfa). Continua vidro — nada virou
+   opaco —, mas a letra ganhou chão.
+2. A pastilha do botão "outline" do shadcn usava `bg-background`, que no
+   tema claro é **branco sólido**: com a letra clara do palco em cima,
+   virava um retângulo invisível ("Enviar imagem do aparelho" e "Usar").
+   Era a mesma "parte branca" da ordem, com outro nome de classe.
+3. Botão desabilitado mantém letra clara e só baixa a força.
+
+**Prova (medida):** o alfa do cartão é `< 1` **e** `> 0,5` (as duas metades
+da ordem: continua transparente E tem fundo), a luminância dele é `< 30`,
+o `backdrop-filter` tem blur, e a pastilha de dentro tem alfa de fundo
+`< 0,2` com letra de luminância `> 150`.
+
+**Prova geral das duas:** suíte **922/922**; build exit 0; prova em
+navegador **185/185 ZERO erros de página/console**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
