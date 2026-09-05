@@ -18,12 +18,21 @@ import {
   reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras, horaFinal,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
+// 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
+// "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
+import { resumoDoDia, dataISO, inicioCiclo, CICLO_DIAS_UTEIS } from '@/lib/xgame';
+import { supabase } from '@/api/supabaseClient';
 import CrmSonhoModal from './CrmSonhoModal';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
 
 // DIR-46 — cor da faixa de probabilidade na lista
 const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
+
+// 🎮 X-GAME — estado da tarefa em tempo real (só no dia de HOJE) e formato do token
+const COR_ESTADO = { AGORA: 'text-amber-600', ATRASADO: 'text-orange-600', PERDIDO: 'text-red-600' };
+const SELO_ESTADO = { AGORA: '⏳ AGORA', ATRASADO: '⚠ ATRASADO', PERDIDO: '✖ PERDIDO' };
+const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 
 // 🏆 DIR-43 — O MÉTODO VIVO: os painéis dos hábitos 1-5 e 8 (os hábitos 6 e
 // 7 são o próprio CRM: Acompanhamento = Clientes+Esteira, Verificação =
@@ -116,6 +125,48 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const sonhos = Array.isArray(perfil?.sonhos) ? perfil.sonhos : [];
   const rotina = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
   const progresso = progressoDia(tarefas);
+
+  // ══ 🎮 X-GAME por cima do Master Task (mesma tela, zero mudança de fluxo) ══
+  // MvM do Dia começa em 10 e DECAI quando a tarefa passa da hora sem marcar;
+  // Human Token = MvM + constância do ciclo (teto 22,22; trava 17,77 sem a
+  // leitura em dia); cotação cai do dia 1 ao 22 ("antecipação é poder").
+  const ehHoje = dia === hojeStr();
+  const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
+  const [diasCiclo, setDiasCiclo] = useState([]);
+  useEffect(() => {
+    if (painel !== 'compromisso') return;
+    const t = setInterval(() => { const d = new Date(); setAgoraMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
+    return () => clearInterval(t);
+  }, [painel]);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setDiasCiclo([]); return; }
+    supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas,detalhes')
+      .eq('user_id', uid).eq('ciclo_inicio', dataISO(inicioCiclo(new Date()))).lt('data', hojeStr()).order('data')
+      .then(({ data, error }) => setDiasCiclo(error ? [] : (data || [])));
+  }, [painel, uid]);
+  const xgame = useMemo(() => {
+    if (painel !== 'compromisso' || tarefas.length === 0) return null;
+    return resumoDoDia({
+      tarefas,
+      agoraMin: ehHoje ? agoraMin : 24 * 60,
+      diasCiclo,
+      hoje: ehHoje ? new Date() : new Date(`${dia}T12:00:00`),
+    });
+  }, [painel, tarefas, agoraMin, diasCiclo, dia, ehHoje]);
+  const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
+  // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
+  useEffect(() => {
+    if (!xgame || !uid || !ehHoje) return;
+    supabase.from('xgame_diario').upsert({
+      user_id: uid, data: hojeStr(), ciclo_inicio: dataISO(xgame.ciclo_inicio),
+      tarefas_total: xgame.tarefas_total, tarefas_feitas: xgame.tarefas_feitas,
+      mvm_dia: xgame.mvm_dia, aplicabilidade: xgame.aplicabilidade, token_dia: xgame.token_dia,
+      cotacao: xgame.cotacao, pontos: xgame.pontos,
+      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,data' }).then(({ error }) => { if (error) console.warn('[X-GAME] placar:', error.message); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, ehHoje, xgame?.pontos, xgame?.tarefas_feitas, xgame?.token_dia]);
 
   const mudarDia = (delta) => {
     const d = new Date(`${dia}T12:00:00`);
@@ -564,6 +615,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <div className="bg-nz-verde h-full transition-all" style={{ width: `${progresso.pct}%` }} />
             </div>
 
+            {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
+            {xgame && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token</p>
+                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{xgame.faixa.medalha} {fmtToken(xgame.token_dia)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${xgame.faixa.label} · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
+                </div>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia</p>
+                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
+                  <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>{xgame.frase_mvm}</p>
+                </div>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia</p>
+                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
+                </div>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Pontos {ehHoje ? 'de hoje' : 'do dia'}</p>
+                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{xgame.pontos}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.tarefas_feitas}/{xgame.tarefas_total} tarefas × cotação</p>
+                </div>
+              </div>
+            )}
+
             {tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <p className="text-sm text-nz-tinta-fraca">Dia sem Master Task ainda. "O compromisso é uma decisão diária."</p>
@@ -592,6 +669,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 </p>
                                 {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
                               </div>
+                              {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
+                              {!t.feito && (() => {
+                                const est = estadoDaTarefa(t);
+                                return est && SELO_ESTADO[est.id]
+                                  ? <span className={`shrink-0 text-[10px] font-bold ${COR_ESTADO[est.id]}`} title={est.id === 'PERDIDO' ? 'Passou da janela — isso impacta no seu resultado' : undefined}>{SELO_ESTADO[est.id]}</span>
+                                  : null;
+                              })()}
                               {guia && !t.feito && (
                                 <button
                                   type="button"
