@@ -63,13 +63,25 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${atual.marca ? '' : 'bg-nz-verde-fundo'}`}
           style={atual.marca ? { background: 'var(--xeos-preto)' } : undefined}
         >
-          <MarcaOuIcone marca={atual.marca} icone={IconeAtual} className="h-4.5 w-4.5 text-nz-verde" />
+          <MarcaOuIcone marca={atual.marca ? '/marca/marca-x-selo.webp' : null} icone={IconeAtual} className="h-5 w-5 text-nz-verde" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-nz-tinta-fraca">
             {familiaAtual}
           </span>
-          <span className="block truncate text-[15px] font-bold text-nz-tinta">{rotuloDe(atual)}</span>
+          {/* 🎓 DIR-61 — ordem do dono: aqui não se escreve "O Método", entra
+              só o X. Ao lado, pequeno, o retrato com a pergunta que abre o
+              método. O nome continua no title/alt, pra tela nenhuma ficar muda. */}
+          {atual.marca ? (
+            <span className="flex items-center gap-2 min-w-0">
+              <img src="/marca/poder.webp" alt="" aria-hidden="true" className="h-[26px] w-[26px] shrink-0 rounded-full object-cover ring-1 ring-nz-borda" draggable="false" />
+              <span className="truncate text-[13px] font-bold text-nz-tinta" style={{ fontFamily: 'Sora, sans-serif' }}>
+                Qual é o seu poder?
+              </span>
+            </span>
+          ) : (
+            <span className="block truncate text-[15px] font-bold text-nz-tinta">{rotuloDe(atual)}</span>
+          )}
         </span>
         <ChevronDown className={`h-5 w-5 shrink-0 text-nz-tinta-fraca transition-transform ${aberto ? 'rotate-180' : ''}`} />
       </button>

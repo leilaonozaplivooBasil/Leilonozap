@@ -2822,3 +2822,47 @@ arte OU espremer pelo CSS, a conta não fecha e a prova falha.
 preservada, e a logo cabe dentro do menu sem ser cortada pela borda).
 
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-61 — Uma coisa só: tipografia da marca, o X e "qual é o seu poder" (05/09/2026)
+
+**Diretiva:** DIR-61.
+
+**Entregue:**
+1. **Tipografia:** o menu da Top College inteiro em **Sora**, a fonte
+   oficial da X-EOS. Os nomes passam a ser da mesma família da logo — é
+   o que faz o bloco ler como uma peça só.
+2. **A frase da marca virou TEXTO**, abaixo da arte, com uma divisória
+   separando a faixa de marca do resto do menu. Motivo medido: no
+   lockup original a frase tem 1/40 da altura do X — pra ser LIDA, a
+   logo precisaria de ~300px de altura, o que não existe em menu nenhum.
+   Como texto na fonte da marca, fica nítida em 9,5px. A arte continua
+   inteira: o subtítulo foi **apagado do arquivo** (retângulo), não
+   recortado — foi exatamente o recorte que amputou o rabo do X na
+   DIR-59.
+3. **Só o X** onde estava escrito "O Método", num arquivo feito só pra
+   esse lugar: o X centralizado num quadrado com folga, pra assentar
+   bem no selo.
+4. **"Qual é o seu poder?"** com o retrato do deck do próprio dono
+   (extraído da apresentação do evento que ele anexou), pequeno e
+   redondo, no lugar do rótulo.
+
+**Ajuste de composição feito na hora, olhando o render:** a primeira
+versão colocava o X DUAS vezes na mesma linha — um no selo e outro ao
+lado do retrato —, e o de dentro ainda sumia no fundo claro. Ficou um X
+só, no selo preto, e a linha ficou com o retrato + a pergunta.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**167/167 ZERO erros**. As asserções novas cobram que a frase seja texto
+de verdade (tamanho ≥ 9px, não bitmap) e que o menu use mesmo a
+tipografia da marca — se alguém voltar a "queimar" a frase na imagem ou
+trocar a fonte, a prova falha.
+
+**Nota prática (não é bloqueio):** o retrato veio do deck do próprio
+dono e está sendo usado numa tela interna do time. Se um dia essa
+imagem for pra material público ou de venda, vale ele checar o direito
+de uso da figura antes — uso interno e uso publicitário têm regras
+diferentes.
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
