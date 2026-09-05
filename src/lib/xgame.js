@@ -320,13 +320,18 @@ export const EXECUTIVO_IDEAL = { mvm: 0.8, producao: 0.9, realtime: 0.9, bonus: 
  * 5 componentes. As taxas vêm das contagens por categoria gravadas nos
  * detalhes de cada dia (prod/bonus/vendas + X-Pay ganho × possível).
  */
-export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = null, perfil = 'estrategico' }) {
+export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = null, perfil = 'estrategico', vendasReais = null }) {
   const pesos = pesosDoPerfil(perfil);
   const dias = [...diasCiclo.map((d) => d?.detalhes || {}), ...(hojeResumo ? [hojeResumo] : [])];
   const soma = (k) => dias.reduce((s, d) => s + (Number(d?.[k]) || 0), 0);
   const prodTotal = soma('prod_total'); const prodFeitas = soma('prod_feitas');
   const bonusTotal = soma('bonus_total'); const bonusFeitas = soma('bonus_feitas');
-  const vendasFeitas = soma('vendas_feitas');
+  // Vendas AUTOMÁTICAS: quando a tela informa as vendas reais da loja da
+  // pessoa no ciclo (vendasReais), são elas que pontuam — antes era manual
+  // na planilha, via tarefa [VENDA]. Sem o dado, cai nas tarefas gravadas.
+  const vendasFeitas = vendasReais !== null && vendasReais !== undefined
+    ? Number(vendasReais) || 0
+    : soma('vendas_feitas');
   const xpayGanho = soma('xpay_ganho'); const xpayPossivel = soma('xpay_possivel');
   const taxa = (a, b) => (b > 0 ? Math.min(1, a / b) : 0);
   const taxas = {

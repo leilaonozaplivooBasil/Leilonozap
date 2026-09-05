@@ -26,6 +26,7 @@ import {
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
+import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -157,6 +158,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       .eq('user_id', uid).eq('ciclo_inicio', dataISO(inicioCicloOficial(cicloConfig, new Date()))).lt('data', hojeStr()).order('data')
       .then(({ data, error }) => setDiasCiclo(error ? [] : (data || [])));
   }, [painel, uid, cicloConfig]);
+  // 💳 Vendas AUTOMÁTICAS: as vendas REAIS da loja da pessoa no ciclo pontuam
+  // o componente de vendas do Human Token (a remuneração delas continua sendo
+  // só a comissão da plataforma — aqui é ponto, não dinheiro). O dono da venda
+  // pode estar em 4 colunas (legado — mesmo OR do CrmClientesTab).
+  const [vendasCiclo, setVendasCiclo] = useState(null);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid) { setVendasCiclo(null); return; }
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('catalog_sales').select('id,status,kind,created_date')
+      .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
+      .gte('created_date', `${ini}T00:00:00`)
+      .then(({ data, error }) => {
+        if (error) { setVendasCiclo(null); return; }
+        setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
+      });
+  }, [painel, uid, cicloConfig]);
   const xgame = useMemo(() => {
     if (painel !== 'compromisso' || tarefas.length === 0) return null;
     return resumoDoDia({
@@ -190,10 +207,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       hojeResumo: { ...xgame.contagens, mvm_dia: xgame.mvm_dia },
       mvmVotacao: recebido.media,
       perfil: participante?.perfil || 'estrategico',
+      vendasReais: vendasCiclo,
     });
     const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
     return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
-  }, [xgame, diasCiclo, recebido.media, participante]);
+  }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
     supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
@@ -735,7 +753,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas (meta 4 no ciclo). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
@@ -775,7 +793,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                     { k: 'producao', rotulo: 'Produção' },
                     { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)' },
                     { k: 'bonus', rotulo: 'Bônus / Estudo' },
-                    { k: 'vendas', rotulo: `Vendas (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)` },
+                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)` },
                   ].map(({ k, rotulo }) => {
                     const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                     const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
@@ -803,7 +821,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 <details className="text-[11px] text-nz-tinta-fraca">
                   <summary className="cursor-pointer font-semibold text-nz-tinta hover:text-nz-verde">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
                   <div className="pt-1.5 space-y-1">
-                    <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo).</p>
+                    <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
                     <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
                     <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é tarefa diária: das 20h às 22h, de casa, dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora — quem participa é escolhido pelo admin.</p>
