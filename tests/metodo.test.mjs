@@ -4,7 +4,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   HABITOS, ROTINA_PADRAO, periodoDe, gerarTarefasDaRotina, progressoDia,
-  linkGoogleAgenda, qualificacaoValida,
+  linkGoogleAgenda, qualificacaoValida, partesDoHabito,
 } from '../src/lib/metodo.js';
 
 describe('conteúdo do método', () => {
@@ -14,6 +14,39 @@ describe('conteúdo do método', () => {
       'sonho', 'compromisso', 'lista', 'contato', 'apresentacao',
       'acompanhamento', 'verificacao', 'duplicacao',
     ]);
+  });
+  // 🎓 DIR-69 — o dono ditou os nomes completos: "é Lista de Networking,
+  // Contato e Convite, Apresentação de Sucesso, Acompanhamento e Fechamento,
+  // Verificação do Progresso, Duplicação dos oito hábitos do sucesso".
+  test('DIR-69: cada hábito tem o nome OFICIAL completo, como o dono ditou', () => {
+    assert.deepEqual(HABITOS.map((h) => h.completo), [
+      'Sonho', 'Compromisso', 'Lista de Networking', 'Contato e Convite',
+      'Apresentação de Sucesso', 'Acompanhamento e Fechamento',
+      'Verificação do Progresso', 'Duplicação dos 8 Hábitos do Sucesso',
+    ]);
+  });
+  test('DIR-69: partesDoHabito separa o apelido do complemento', () => {
+    assert.deepEqual(partesDoHabito('lista'),
+      { curto: 'Lista', completo: 'Lista de Networking', complemento: 'de Networking' });
+    assert.deepEqual(partesDoHabito('verificacao'),
+      { curto: 'Verificação', completo: 'Verificação do Progresso', complemento: 'do Progresso' });
+  });
+  test('DIR-69: hábito sem complemento não inventa texto nenhum', () => {
+    assert.equal(partesDoHabito('sonho').complemento, '');
+    assert.equal(partesDoHabito('compromisso').complemento, '');
+  });
+  test('DIR-69: id desconhecido volta null (a tela cai no padrão, não quebra)', () => {
+    assert.equal(partesDoHabito('nao-existe'), null);
+  });
+  // o apelido curto TEM que ser prefixo do completo — é o contrato que faz a
+  // faixa escrever "Lista" + "de Networking" e ler como uma frase só. Se
+  // alguém batizar um hábito de "Lista" com completo "Networking Qualificado",
+  // a tela escreveria "Lista Networking Qualificado" e ninguém veria.
+  test('DIR-69: o apelido é sempre o começo do nome completo', () => {
+    for (const h of HABITOS) {
+      assert.ok(h.completo.toLowerCase().startsWith(h.curto.toLowerCase()),
+        `${h.id}: "${h.curto}" não começa "${h.completo}"`);
+    }
   });
   test('Rotina Perfeita: começa 5h, 3 reuniões, fechamento e os momentos novos ditados', () => {
     assert.equal(ROTINA_PADRAO[0].hora, '05:00');

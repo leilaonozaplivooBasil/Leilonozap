@@ -5,15 +5,42 @@
 // agenda do Google (URL de template oficial — sem OAuth).
 
 export const HABITOS = [
-  { n: 1, id: 'sonho', titulo: 'SONHO', sub: 'Clareza de destino', texto: 'Sem clareza de destino, toda energia se dispersa. O sonho dá direção, foco e propósito — é o combustível do compromisso nos momentos difíceis.' },
-  { n: 2, id: 'compromisso', titulo: 'COMPROMISSO', sub: 'Decisão diária', texto: 'Talento faz você começar na frente; disciplina faz você continuar. Todos os dias. Sem exceção. Sem negociação.' },
-  { n: 3, id: 'lista', titulo: 'LISTA DE NETWORK', sub: 'O ambiente vence', texto: 'O ambiente ou te eleva ou te limita. Sua lista de network é um ativo estratégico — qualifique cada pessoa de 1 a 5 e trate a lista como patrimônio.' },
-  { n: 4, id: 'contato', titulo: 'CONTATO E CONVITE', sub: 'Método F.O.R.M. + seu script', texto: 'Antes de apresentar, entenda a pessoa: Família, Ocupação, Recreação — e então a Mensagem certa. Cada um escreve o PRÓPRIO script e o aperfeiçoa a cada conversa.' },
-  { n: 5, id: 'apresentacao', titulo: 'APRESENTAÇÃO DE SUCESSO', sub: 'Clareza e valor', texto: 'Conexão → FORM → Mensagem → Convite → Apresentação → Próximo Passo. Você não apresenta uma oportunidade — apresenta uma possibilidade. Meta do método: 3 reuniões por dia, de 45 a 60 minutos.' },
-  { n: 6, id: 'acompanhamento', titulo: 'ACOMPANHAMENTO E FECHAMENTO', sub: 'PPV — Próximo Ponto de Venda', texto: 'Cada etapa precisa conduzir ao próximo ponto. Os dois pilares: DOR + CONFIANÇA. É o CRM: a fila do dia, os clientes e a esteira de captação.' },
-  { n: 7, id: 'verificacao', titulo: 'VERIFICAÇÃO DO PROGRESSO', sub: 'Medir e corrigir', texto: 'O que não se mede, não se corrige: metas, reuniões do dia, win rate, objeções e PPV — a Visão Executiva.' },
-  { n: 8, id: 'duplicacao', titulo: 'DUPLICAÇÃO DOS 8 HÁBITOS', sub: 'Ensinar e multiplicar', texto: 'Conhecimento é o que adquirimos; sabedoria é o que colocamos em prática. Ensine o método — o local de treinamento do time.' },
+  { n: 1, id: 'sonho', curto: 'Sonho', completo: 'Sonho', titulo: 'SONHO', sub: 'Clareza de destino', texto: 'Sem clareza de destino, toda energia se dispersa. O sonho dá direção, foco e propósito — é o combustível do compromisso nos momentos difíceis.' },
+  { n: 2, id: 'compromisso', curto: 'Compromisso', completo: 'Compromisso', titulo: 'COMPROMISSO', sub: 'Decisão diária', texto: 'Talento faz você começar na frente; disciplina faz você continuar. Todos os dias. Sem exceção. Sem negociação.' },
+  { n: 3, id: 'lista', curto: 'Lista', completo: 'Lista de Networking', titulo: 'LISTA DE NETWORKING', sub: 'O ambiente vence', texto: 'O ambiente ou te eleva ou te limita. Sua lista de network é um ativo estratégico — qualifique cada pessoa de 1 a 5 e trate a lista como patrimônio.' },
+  { n: 4, id: 'contato', curto: 'Contato', completo: 'Contato e Convite', titulo: 'CONTATO E CONVITE', sub: 'Método F.O.R.M. + seu script', texto: 'Antes de apresentar, entenda a pessoa: Família, Ocupação, Recreação — e então a Mensagem certa. Cada um escreve o PRÓPRIO script e o aperfeiçoa a cada conversa.' },
+  { n: 5, id: 'apresentacao', curto: 'Apresentação', completo: 'Apresentação de Sucesso', titulo: 'APRESENTAÇÃO DE SUCESSO', sub: 'Clareza e valor', texto: 'Conexão → FORM → Mensagem → Convite → Apresentação → Próximo Passo. Você não apresenta uma oportunidade — apresenta uma possibilidade. Meta do método: 3 reuniões por dia, de 45 a 60 minutos.' },
+  { n: 6, id: 'acompanhamento', curto: 'Acompanhamento', completo: 'Acompanhamento e Fechamento', titulo: 'ACOMPANHAMENTO E FECHAMENTO', sub: 'PPV — Próximo Ponto de Venda', texto: 'Cada etapa precisa conduzir ao próximo ponto. Os dois pilares: DOR + CONFIANÇA. É o CRM: a fila do dia, os clientes e a esteira de captação.' },
+  { n: 7, id: 'verificacao', curto: 'Verificação', completo: 'Verificação do Progresso', titulo: 'VERIFICAÇÃO DO PROGRESSO', sub: 'Medir e corrigir', texto: 'O que não se mede, não se corrige: metas, reuniões do dia, win rate, objeções e PPV — a Visão Executiva.' },
+  { n: 8, id: 'duplicacao', curto: 'Duplicação', completo: 'Duplicação dos 8 Hábitos do Sucesso', titulo: 'DUPLICAÇÃO DOS 8 HÁBITOS DO SUCESSO', sub: 'Ensinar e multiplicar', texto: 'Conhecimento é o que adquirimos; sabedoria é o que colocamos em prática. Ensine o método — o local de treinamento do time.' },
 ];
+
+/**
+ * 🎓 DIR-69 — o nome do Hábito em DUAS PEÇAS.
+ *
+ * Ordem do dono: "quando eu clico adentro, precisa aparecer o nome completo.
+ * Exemplo: é Lista de Networking, Contato e Convite, Apresentação de Sucesso...
+ * Pode até ficar o primeiro nome ali na frente, mas quando clica tem que
+ * aparecer o complemento do que são os oito hábitos do sucesso."
+ *
+ * Então: `curto` é o apelido que continua no seletor (a lista de 8 botões não
+ * cabe com o nome inteiro), e `completo` é o nome oficial, que a faixa mostra
+ * quando você ENTRA no hábito. O `complemento` é o que sobra do completo
+ * depois do curto — é ele que a tela escreve num peso mais leve, pra frase
+ * ler como uma coisa só ("Lista" + "de Networking") em vez de repetir a
+ * palavra duas vezes.
+ *
+ * Hábitos 1 e 2 não têm complemento (o nome oficial já é uma palavra só):
+ * nesse caso `complemento` volta vazio e a tela simplesmente não escreve nada.
+ */
+export function partesDoHabito(id) {
+  const h = HABITOS.find((x) => x.id === id);
+  if (!h) return null;
+  const completo = h.completo || h.curto || h.titulo;
+  const curto = h.curto || completo;
+  const combina = completo.toLowerCase().startsWith(curto.toLowerCase());
+  return { curto, completo, complemento: combina ? completo.slice(curto.length).trim() : '' };
+}
 
 // ✅ Hábito 2 — A ROTINA PERFEITA v2 (corrigida pelo dono em 03/09/2026, DIR-45.1):
 // 06:45 é TÉRMINO do treino; na chegada organiza-se o AMBIENTE (não o dia);
