@@ -64,11 +64,20 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
           e expansão de qualquer negócio
         </p>
 
+        {/* 🎓 DIR-66 — ordem do dono: DENTRO da Top College este título não é
+            "Painel de Alavancagem" — é o X-office, a sub-marca que cuida de
+            verificar o progresso e mapear processos. Fora da faculdade o nome
+            de sempre continua (a troca vive só aqui, nesta faixa).
+            É TEXTO e não o logo: a faixa já carrega duas marcas, e uma
+            terceira ali seria a repetição que o dono acabou de mandar tirar. */}
         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.08]">
-          Painel de Alavancagem
+          X-office
         </h1>
+        <p className="mt-1 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-white/35" style={{ fontFamily: 'Sora, sans-serif' }}>
+          Verificando o progresso e mapeando processos
+        </p>
         {saudacao && (
-          <p className="mt-1.5 text-sm sm:text-base text-white/60" style={{ fontFamily: 'Sora, sans-serif' }}>
+          <p className="mt-3.5 text-sm sm:text-base text-white/60" style={{ fontFamily: 'Sora, sans-serif' }}>
             {saudacao}{nome ? `, ${nome}` : ''}
           </p>
         )}

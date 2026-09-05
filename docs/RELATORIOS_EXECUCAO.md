@@ -3010,3 +3010,38 @@ bate com a imagem, as duas divergem e a prova falha.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-66 — X-office no título e o acabamento fino (05/09/2026)
+
+**Diretiva:** DIR-66.
+
+**Entregue:**
+1. **X-office no título da faixa.** Dentro da Top College o `h1` deixou
+   de ser "Painel de Alavancagem" e virou **X-office**, com a frase
+   oficial da sub-marca abaixo. Fora da faculdade o nome de sempre
+   continua — verificado nos dois contextos e virou asserção.
+2. **Acabamento das imagens:** esfumaçado no pé de cada faixa, porque a
+   foto terminava num corte seco contra o painel (mais visível nas cenas
+   claras, como a da Lista); e o título ancorado embaixo, que com a
+   faixa alta ficava flutuando no meio da imagem.
+3. Respiro entre o subtítulo do X-office e a saudação.
+
+**Decisão de composição, dita ao dono:** o título entrou como TEXTO e
+não como o logo do X-office. A faixa já carrega duas marcas; uma
+terceira ali seria exatamente a repetição que ele mandou tirar na
+DIR-63.
+
+**Achado que NÃO virou mudança:** a busca no DOM mostrou que "Painel de
+Alavancagem" ainda aparecia na tela mesmo dentro da faculdade. Fui ver
+onde: é o card **"Espelho do Painel de Alavancagem"**, do Hábito 7 —
+um ponteiro que diz "estes são os mesmos números da OUTRA tela de mesmo
+nome". Renomear ali quebraria o sentido da comparação, então ficou como
+está e o dono foi avisado.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**174/174 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.

@@ -1515,7 +1515,16 @@ _Enviado via CRM Leilão NoZap_`;
             className="absolute inset-0"
             style={{ background: 'linear-gradient(90deg, rgba(0,2,12,0.94) 0%, rgba(0,2,12,0.78) 22%, rgba(0,2,12,0.28) 46%, rgba(0,2,12,0) 68%)' }}
           />
-          <div className="absolute inset-0 flex flex-col justify-center px-5 sm:px-8">
+          {/* ✨ DIR-66 — acabamento: a imagem terminava num corte seco contra o
+              painel. Este esfumaçado no pé faz ela DERRETER no fundo, e some a
+              costura entre a foto e o conteúdo. Mais visível nas cenas claras
+              (a Lista tem o lado direito quase branco). */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-1/4"
+            style={{ background: 'linear-gradient(180deg, rgba(0,2,12,0) 0%, rgba(0,2,12,0.55) 62%, var(--xeos-preto) 100%)' }}
+          />
+          <div className="absolute inset-0 flex flex-col justify-end pb-6 sm:pb-8 px-5 sm:px-8">
             <p className="text-[10px] sm:text-[11px] font-bold tracking-[0.28em] text-white/55 uppercase">
               Hábito {String(secaoAtual.n).padStart(2, '0')}
             </p>

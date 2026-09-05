@@ -12,6 +12,35 @@
 
 ---
 
+## DIR-66 — X-office no título e o acabamento fino
+
+**Emitida por:** dono (05/09/2026): *"só mais uns pequenos ajustes pra
+ficar extremamente perfeito"* e, em seguida: *"aqui não entra Painel de
+Alavancagem — substitui pelo nome X-office, somente aqui; nos restantes,
+fora da Top College, mantém Painel de Alavancagem."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. Dentro da faixa da Top College o título vira **X-office**, com a
+   frase oficial da sub-marca. Fora dela, "Painel de Alavancagem"
+   continua igual.
+2. Acabamento das imagens dos Hábitos: **esfumaçado no pé** (a imagem
+   terminava num corte seco contra o painel) e o **título ancorado
+   embaixo**, que com a faixa alta ficava flutuando no meio.
+
+**Decisão minha, dita ao dono:** o título entra como TEXTO, não como o
+logo do X-office — a faixa já carrega duas marcas, e uma terceira seria
+a repetição que ele mandou tirar na DIR-63.
+
+**Não mexido de propósito:** o card "Espelho do Painel de Alavancagem"
+(Hábito 7) mantém o nome — ele é um ponteiro pra OUTRA tela de mesmo
+nome, e renomear quebraria o sentido da comparação.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
 ## DIR-65 — A imagem do Hábito inteira, sem corte
 
 **Emitida por:** dono (05/09/2026): *"quero que você aumente aqui de uma
