@@ -12,6 +12,30 @@
 
 ---
 
+## DIR-65 — A imagem do Hábito inteira, sem corte
+
+**Emitida por:** dono (05/09/2026): *"quero que você aumente aqui de uma
+forma que a imagem apareça toda, porque está cortando as imagens. Ver a
+parte de baixo, um pouquinho pra cima, pra baixo, pra aparecer essa
+imagem toda — essas imagens são muito bonitas."*
+
+**Data:** 05/09/2026.
+
+**A causa (eram DOIS cortes, não um):** o arquivo já era gerado como uma
+fresta de 33% da página do brandbook, e o `object-cover` cortava de novo
+o que sobrava pra preencher uma altura fixa.
+
+**Escopo autorizado:**
+1. Regerar as 8 imagens guardando **63% da cena** (proporção 2.8 no lugar
+   de 5.38 — quase o dobro de altura).
+2. O bloco passa a ter a **proporção EXATA do arquivo**, sem altura
+   fixa: sem sobra, o CSS não tem o que aparar.
+3. Reenquadrar caso a caso pelo assunto (o carro, as pessoas, a frase).
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
 ## DIR-64 — O botão no preto, a abertura limpa e as imagens maiores
 
 **Emitida por:** dono (05/09/2026), navegando o preview: *"esse botão não

@@ -2977,3 +2977,36 @@ prova falha.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-65 — A imagem do Hábito inteira, sem corte (05/09/2026)
+
+**Diretiva:** DIR-65.
+
+**A causa, que eram DOIS cortes e não um:** o arquivo já nascia como uma
+fresta — 33% da altura da página do brandbook — e o `object-cover`
+cortava mais um tanto pra preencher a altura fixa do bloco. Mexer só no
+CSS não resolveria: a cena já não estava no arquivo.
+
+**Entregue:**
+1. As 8 imagens foram **regeradas guardando 63% da cena** (proporção 2.8
+   no lugar de 5.38 — quase o dobro de altura útil).
+2. O bloco passou a ter a **proporção exata do arquivo**
+   (`aspect-ratio: 1600/571`), sem altura fixa. Sem sobra, o
+   `object-cover` não tem o que aparar: medido no navegador, a proporção
+   na tela é 2.802 e a do arquivo é 2.802.
+3. Reenquadramento caso a caso pelo assunto. O Hábito 3 (Lista) foi
+   ajustado duas vezes: no primeiro corte a cabeça do homem à esquerda
+   ficava de fora; subindo o enquadramento, as duas pessoas entram
+   inteiras.
+
+Peso: **365 KB** somando as 8 imagens (eram 258 KB com metade da cena).
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**173/173 ZERO erros**. A asserção nova compara a proporção do ARQUIVO
+com a proporção NA TELA — se alguém voltar a fixar uma altura que não
+bate com a imagem, as duas divergem e a prova falha.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.

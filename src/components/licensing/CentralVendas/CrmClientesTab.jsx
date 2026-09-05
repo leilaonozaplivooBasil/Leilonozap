@@ -1498,11 +1498,17 @@ _Enviado via CRM Leilão NoZap_`;
               imagens do brandbook estão bonitas e precisam APARECER. O véu
               escuro ficou mais curto do lado esquerdo (só o necessário pra
               segurar o texto) e some antes da metade, liberando a foto. */}
+          {/* 🎓 DIR-65 — a imagem aparece INTEIRA. Antes ela era cortada duas
+              vezes: no arquivo (uma fresta de 33% da página) e de novo no
+              `object-cover`, que apara o que sobra pra preencher a altura fixa.
+              Agora o arquivo guarda 63% da cena e o bloco tem EXATAMENTE a
+              proporção dele (2.8) — sem altura fixa, não há o que aparar. */}
           <img
             src={secaoAtual.faixa}
             alt=""
             aria-hidden="true"
-            className="w-full h-40 sm:h-60 object-cover"
+            className="w-full h-auto block"
+            style={{ aspectRatio: '1600 / 571' }}
           />
           <div
             aria-hidden="true"
