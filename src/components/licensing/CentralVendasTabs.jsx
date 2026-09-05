@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { SECOES_LOJA, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
+import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 
 // 🛍️ NAVEGAÇÃO DA CENTRAL DE VENDAS (13/08/2026)
 // Antes eram abas soltas e depois uma fileira que rolava de lado — rolar
@@ -55,8 +56,14 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
         aria-expanded={aberto}
         className="flex min-h-[52px] w-full items-center gap-3 rounded-xl border border-nz-borda bg-white px-4 text-left shadow-sm transition-colors hover:border-nz-verde/50"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-nz-verde-fundo">
-          <IconeAtual className="h-4.5 w-4.5 text-nz-verde" />
+        {/* 🎓 DIR-58 — a marca da X-eos é traço BRANCO: no selo verde-claro ela
+            sumia (branco no branco). Quando o item traz marca, o selo vai pro
+            preto do brandbook, que é onde ela foi desenhada pra viver. */}
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${atual.marca ? '' : 'bg-nz-verde-fundo'}`}
+          style={atual.marca ? { background: 'var(--xeos-preto)' } : undefined}
+        >
+          <MarcaOuIcone marca={atual.marca} icone={IconeAtual} className="h-4.5 w-4.5 text-nz-verde" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-semibold uppercase tracking-wide text-nz-tinta-fraca">
@@ -86,7 +93,13 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0 }
                       ativo ? 'bg-nz-verde-fundo font-bold text-nz-verde' : 'font-medium text-nz-tinta hover:bg-nz-cinza-fundo'
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
+                    {item.marca ? (
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ background: 'var(--xeos-preto)' }}>
+                        <MarcaOuIcone marca={item.marca} className="h-3.5 w-3.5" />
+                      </span>
+                    ) : (
+                      <Icon className={`h-4 w-4 shrink-0 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
+                    )}
                     <span className="flex-1 truncate">{rotuloDe(item)}</span>
                     {ativo && <Check className="h-4 w-4 shrink-0 text-nz-verde" />}
                   </button>

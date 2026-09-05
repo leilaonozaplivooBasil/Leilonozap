@@ -2700,3 +2700,48 @@ da suíte não resolve o alias do Vite. Mudança de caminho, não de
 comportamento.
 
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-58 — A marca no lugar do ícone genérico (05/09/2026)
+
+**Diretiva:** DIR-58 — *"conseguimos inserir a logo da Top College onde é
+o ícone... e onde está escrito O Método, inserir a logo da X-EOS da
+mesma forma?"*
+
+**Entregue:**
+1. O ícone do grupo **Top College** na lateral é agora o SÍMBOLO oficial
+   da marca (o pilar, em gradiente), extraído do mesmo lockup original.
+2. **O Método** leva o SÍMBOLO da X-eos (o X) — na lateral, no menu do
+   celular e no seletor interno da Loja & Vendas.
+3. `MarcaOuIcone`: um componente só decide entre marca e ícone, e a
+   escolha vem do DADO (campo `marca` na fonte única). As três telas
+   mostram a mesma coisa sem cada uma decidir por conta.
+
+**Decisão de acabamento (medida, não achada):** entra só o SÍMBOLO,
+nunca o logo inteiro. Antes de aplicar, os dois foram renderizados nos
+**20px e 16px reais** em que aparecem: o nome escrito vira borrão nesse
+tamanho, o símbolo sozinho continua legível. Também foi preciso achar o
+limite exato entre o X e o texto "-eos" varrendo as colunas do PNG
+(coluna 1073) — o corte "por porcentagem" que eu tinha chutado antes
+cortava o braço direito do X no meio.
+
+**Defeito encontrado no print, corrigido:** a marca da X-eos é traço
+BRANCO. No seletor interno (fundo claro) ela simplesmente sumia —
+branco no branco. Agora, onde o fundo é claro, a marca ganha um selo
+preto (`--xeos-preto`), que é o fundo pra que ela foi desenhada no
+brandbook. Virou asserção: a prova mede a luminância do selo e falha se
+alguém clarear.
+
+**Bug de teste que a própria prova pegou:** a asserção da DIR-56
+procurava a logo do cabeçalho por `includes('topcollege')` — e passou a
+achar primeiro o ARQUIVO NOVO do ícone (`marca-topcollege.webp`). A
+asserção agora cobra o caminho exato (`/marca/topcollege`). Sem a prova
+rodando, essa troca teria passado despercebida.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**161/161 ZERO erros** (158 + 3 asserções novas: a marca da Top College
+carrega na lateral, a da X-eos carrega no menu, e o selo escuro protege
+a marca branca no seletor claro).
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

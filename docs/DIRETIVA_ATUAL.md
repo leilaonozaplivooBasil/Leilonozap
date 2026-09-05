@@ -12,6 +12,30 @@
 
 ---
 
+## DIR-58 — A marca no lugar do ícone genérico
+
+**Emitida por:** dono (05/09/2026), vendo o menu novo: *"conseguimos
+inserir a logo da Top College onde é o ícone, pra já entrar a logo e
+ficar mais bonito seguindo o padrão da empresa? E onde está escrito
+O Método, inserir a logo da X-EOS da mesma forma?"*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O ícone do grupo **Top College** na lateral passa a ser o SÍMBOLO da
+   Top College (o pilar), não um desenho genérico do lucide.
+2. O item **O Método** passa a levar o SÍMBOLO da X-eos (o X) — na
+   lateral, no menu do celular e no seletor interno.
+3. Entra só o SÍMBOLO, nunca o logo inteiro: num quadrado de 20px o nome
+   escrito vira borrão. Medido renderizando nos 20px reais antes de
+   aplicar.
+4. A escolha vem do DADO (campo `marca` na fonte única), então as três
+   telas mostram a mesma coisa sem cada uma decidir por conta.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
 ## DIR-57 — A Top College vira um DEPARTAMENTO no menu do painel
 
 **Emitida por:** dono (05/09/2026), depois de uma análise pedida em chat:

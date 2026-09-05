@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { Draggable } from '@hello-pangea/dnd';
 import { Store } from 'lucide-react';
+import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 
 // 🧭 Ícone único da lateral que agrupa vários destinos num menu flutuante —
 // usado tanto para "Operação" (Meu Painel, PDV, Estoque, Metas: links de rota)
@@ -66,7 +67,7 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
                 : 'text-white/70 hover:bg-white/10 hover:text-nz-verde-claro'
             }`}
           >
-            <Icone className="w-5 h-5" />
+            <MarcaOuIcone marca={item.marca} icone={Icone} className="w-5 h-5" />
             <span className="text-[9px] font-medium leading-tight">{item.label}</span>
           </button>
 
@@ -77,10 +78,9 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
               style={{ top: posicao.top, left: posicao.left }}
             >
               {item.subItens.map((sub) => {
-                const IconeSub = sub.icon;
                 const conteudo = (
                   <>
-                    {IconeSub && <IconeSub className="w-4 h-4 shrink-0" />}
+                    <MarcaOuIcone marca={sub.marca} icone={sub.icon} className="w-4 h-4 shrink-0" />
                     {sub.label}
                   </>
                 );

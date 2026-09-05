@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Search, Check, Store } from 'lucide-react';
 import { getLicensingGroups, chaveDoItem, entradaFlutuante } from '@/lib/licensingTabs';
+import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 
 // 📱 NAVEGAÇÃO DO PAINEL DE ALAVANCAGEM NO CELULAR (13/08/2026 · reorganizado 18/08/2026
 // · visual "tech" 18/08/2026)
@@ -128,7 +129,7 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
             style={{ background: 'linear-gradient(135deg, rgba(46,157,99,0.28), rgba(27,122,72,0.14))', boxShadow: '0 0 0 1px rgba(46,157,99,0.35)' }}
           >
-            <AtualIcon className="h-[18px] w-[18px] text-nz-verde-claro" />
+            <MarcaOuIcone marca={atual?.marca} icone={AtualIcon} className="h-[18px] w-[18px] text-nz-verde-claro" />
           </span>
         )}
         <span className="min-w-0 flex-1">
@@ -206,7 +207,7 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                               className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
                               style={{ background: destacado ? 'linear-gradient(135deg, rgba(46,157,99,0.35), rgba(27,122,72,0.18))' : 'rgba(255,255,255,0.06)' }}
                             >
-                              <Icon className={`h-[17px] w-[17px] ${destacado ? 'text-nz-verde-claro' : 'text-white/50'}`} />
+                              <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${destacado ? 'text-nz-verde-claro' : 'text-white/50'}`} />
                             </span>
                             <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${destacado ? 'text-nz-verde-claro' : 'text-white/85'}`}>
                               {item.label}
@@ -254,7 +255,7 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
                           style={{ background: ativo ? 'linear-gradient(135deg, rgba(46,157,99,0.35), rgba(27,122,72,0.18))' : 'rgba(255,255,255,0.06)' }}
                         >
-                          <Icon className={`h-[17px] w-[17px] ${ativo ? 'text-nz-verde-claro' : 'text-white/50'}`} />
+                          <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${ativo ? 'text-nz-verde-claro' : 'text-white/50'}`} />
                         </span>
                         <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${ativo ? 'text-nz-verde-claro' : 'text-white/85'}`}>
                           {item.label}

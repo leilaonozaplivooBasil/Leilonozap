@@ -68,7 +68,7 @@ export const SECOES_TOP_COLLEGE = [
   // "CRM" morreu como nome (DIR-57): palavra genérica de software não combina
   // com uma faculdade própria. O valor da aba continua o mesmo — link antigo
   // (?catalogTab=catalogo-crm) segue abrindo no lugar certo.
-  { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap },
+  { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
   { value: 'catalogo-vendedores', label: 'Time', icon: Handshake },
 ];
 
@@ -126,9 +126,9 @@ export function getLicensingGroups(user) {
       // FORMA a pessoa. Metas veio de "Operação", onde estava solta — meta é
       // acompanhamento, não chão de loja.
       title: 'Top College',
-      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap },
+      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp' },
       items: [
-        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap },
+        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-vendedores', label: 'Time', icon: Handshake },
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
@@ -171,7 +171,7 @@ export function chaveDoItem(item) {
 // vira link pra rota que já existe. Um lugar só, usado pelo desktop e pelo
 // celular — era essa duplicação que deixava sub-item sem navegação nenhuma.
 export function entradaFlutuante(item, onTabChange) {
-  const base = { label: item.label, icon: item.icon };
+  const base = { label: item.label, icon: item.icon, marca: item.marca };
   if (item.type === 'tab') {
     if (onTabChange) return { ...base, onClick: () => onTabChange(item.value, item.catalogTab) };
     const sufixo = item.catalogTab ? `&catalogTab=${item.catalogTab}` : '';
