@@ -411,3 +411,22 @@ describe('reuniões da empresa (DIR-52)', () => {
     assert.equal(DIAS_SEMANA.length, 7);
   });
 });
+
+// ══ DIR-54 — horário de término vira duração ══
+const { duracaoEntreHoras } = await import('../src/lib/metodo.js');
+
+describe('duração entre horas (DIR-54)', () => {
+  test('término depois do início: diferença simples', () => {
+    assert.equal(duracaoEntreHoras('09:00', '10:30'), 90);
+    assert.equal(duracaoEntreHoras('09:00', '09:45'), 45);
+  });
+  test('vira o dia (término menor que início): soma 24h', () => {
+    assert.equal(duracaoEntreHoras('23:30', '00:30'), 60);
+  });
+  test('inválido ou igual ao início → null', () => {
+    assert.equal(duracaoEntreHoras('09:00', '09:00'), null);
+    assert.equal(duracaoEntreHoras('9h', '10:00'), null);
+    assert.equal(duracaoEntreHoras('', '10:00'), null);
+    assert.equal(duracaoEntreHoras('09:00', ''), null);
+  });
+});

@@ -2453,3 +2453,39 @@ sendo dispensado.
 **Pendência pro dono:** colar o SQL da `reunioes_empresa` no Supabase
 (sem ele, só a parte 🏛️ fica esperando — o resto funciona já).
 **Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+## REL-54 — Dono identificado na fila + horário de término (05/09/2026)
+
+**Diretiva:** DIR-54, ordem do dono testando as DIR-50→53 no preview:
+"eu preciso saber de quem agenda, e só aparecer as minhas agendas...
+identifique se são meus ou de outras pessoas" (na fila do Hábito 4) e
+"ao invés de botar só duração, melhor botar o horário que termina" (no
+cadastro da reunião da empresa).
+**Entregue:**
+1. A fila "Quem contatar" passa a respeitar o MESMO alternador MINHA ×
+   TIME da agenda (só existe pra visão total): **MINHA** mostra só os
+   contatos que EU cadastrei (`created_by_id`); **TIME** mostra a lista
+   inteira, cada linha com o dono identificado pelo NOME REAL (mesmo
+   pro cadastro que é seu — igual já funcionava na agenda desde a
+   DIR-50, agora com o mesmo padrão na fila). O rodapé "sem
+   qualificação" e o cabeçalho ("da sua lista" / "do TIME") acompanham
+   o mesmo escopo. Texto de ajuda explica o alternador pra quem está em
+   MINHA sem saber que existe TIME.
+2. No cadastro de "Reuniões da empresa": alternador **⏱️ Duração** /
+   **🏁 Até às** — no segundo modo, escolhe a hora de TÉRMINO e o
+   sistema mostra e calcula os minutos sozinho ("= 90 min"), via
+   `duracaoEntreHoras` (fonte única testada, trata virada de dia). Os
+   dois caminhos gravam sempre `duracao_min` — sem duplicar campo no
+   banco.
+**Achado durante a prova (registrado, não é bug em produção):** o
+`syncUserData()` do app relê o próprio usuário pelo `AppUser`/`app_users`
+depois do login — um mock incompleto na prova (sem `role`) chegou a
+derrubar o super_admin simulado após um reload; corrigido NA PROVA
+(mock com os campos completos). Não afeta produção, onde o usuário real
+sempre tem o registro completo.
+**Prova (medida):** suíte **903/903** (900 + 3 testes novos de
+`duracaoEntreHoras`); build exit 0; prova em navegador **139/139 ZERO
+erros** — cobrindo MINHA escondendo o contato de outro dono, TIME
+mostrando os dois com nome real, volta pra MINHA escondendo de novo, e
+o cadastro "até às" 10:00-11:30 gravando `duracao_min=90`.
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".

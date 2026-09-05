@@ -277,6 +277,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     return negotiations.filter((n) => meusClientes.has(n.customer_id));
   }, [negotiations, networkManualCustomers, isSuperAdmin]);
 
+  // 👤 DIR-54 — id → nome, pra identificar o DONO de cada cadastro na fila
+  // do Hábito 4 (a visão total via de todo mundo sem dizer de quem era).
+  const nomePorUsuarioId = React.useMemo(
+    () => Object.fromEntries(appUsers.map((u) => [u.id, u.full_name || u.email || 'sem nome'])),
+    [appUsers]
+  );
+
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
   const unifiedCustomers = React.useMemo(
     () => buildUnifiedCustomers({ appUsers: networkAppUsers, catalogSales: networkCatalogSales, auctions: networkAuctions, manualCustomers: networkManualCustomers }),
@@ -1435,6 +1442,7 @@ _Enviado via CRM Leilão NoZap_`;
             painel={secaoAtiva}
             currentUser={currentUser}
             visaoTotal={isSuperAdmin}
+            nomePorUsuarioId={nomePorUsuarioId}
             clientesManuais={networkManualCustomers}
             oportunidades={networkOportunidades}
             onQualificar={handleQualificarContato}

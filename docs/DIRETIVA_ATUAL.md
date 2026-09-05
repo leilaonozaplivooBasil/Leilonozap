@@ -12,6 +12,32 @@
 
 ---
 
+## DIR-54 — Fila identificada por dono (MINHA × TIME) e reunião da empresa com horário de término
+
+**Emitida por:** dono (05/09/2026, por áudio transcrito, testando as
+DIR-50→53 no preview): "nessa parte de cima [a fila do Hábito 4] eu
+preciso saber de quem agenda, e só aparecer as minhas agendas... se são
+de outras pessoas precisa aparecer" — e no cadastro da reunião da
+empresa: "ao invés de botar só duração, melhor botar o horário que
+termina — pode manter os minutos, mas eu poder escolher a hora que
+termina também".
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+1. A fila "Quem contatar" passa a respeitar o MESMO alternador MINHA ×
+   TIME da agenda (só existe pra visão total): MINHA mostra só os
+   contatos que EU cadastrei (`created_by_id`); TIME mostra a lista
+   inteira, cada um com o chip 👤 do dono do cadastro (nome resolvido
+   pelo id — "sem dono definido" pros cadastros legados sem carimbo).
+   O rodapé "sem qualificação" acompanha o mesmo escopo.
+2. No cadastro de "Reuniões da empresa": ao lado da duração em minutos,
+   um alternador "⏱️ Duração" / "🏁 Até às" — no segundo modo, escolhe a
+   HORA DE TÉRMINO e o sistema calcula os minutos sozinho (fonte única
+   testada). Os dois caminhos continuam salvando só `duracao_min`.
+**Regras fixas:** prova em navegador; sem SQL novo.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-50 a DIR-53 — Agenda viva: editar/excluir com Google, identificação, visão macro, alarmes e reuniões da empresa
 
 **Emitidas por:** dono (05/09/2026, por áudio transcrito, após aprovar a

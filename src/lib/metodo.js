@@ -247,6 +247,25 @@ export function reuniaoIminente(clientes = [], uid, agoraISO, janelaMin = 15) {
 export const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
 /**
+ * DIR-54 — duração em minutos a partir de "HH:mm" de início e término (pro
+ * cadastro que prefere dizer "até às" em vez de contar minutos). Vira o dia
+ * (término menor que início) soma 24h — reunião nunca "termina no passado".
+ * Devolve null se as horas forem inválidas ou o término for igual ao início.
+ */
+export function duracaoEntreHoras(horaInicio, horaFim) {
+  const paraMin = (h) => {
+    const m = String(h || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]); const mm = Number(m[2]);
+    if (hh > 23 || mm > 59) return null;
+    return hh * 60 + mm;
+  };
+  const ini = paraMin(horaInicio); const fim = paraMin(horaFim);
+  if (ini === null || fim === null || ini === fim) return null;
+  return fim > ini ? fim - ini : (fim + 24 * 60) - ini;
+}
+
+/**
  * DIR-52 — as reuniões DA EMPRESA que caem no dia dado: recorrentes (pelo
  * dia da semana) e de data única, ativas, cada uma com `quando` montado
  * (dia + hora) pra entrar na linha do tempo com selo 🏛️.

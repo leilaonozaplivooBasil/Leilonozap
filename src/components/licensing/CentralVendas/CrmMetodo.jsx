@@ -15,7 +15,7 @@ import {
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
   ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
-  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO,
+  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -36,7 +36,7 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onIr }) {
   const uid = currentUser?.id;
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
@@ -57,7 +57,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
   const [escopoAgenda, setEscopoAgenda] = useState('minha'); // DIR-49: 'minha' é o padrão; 'time' só pra visão total
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
-  const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', duracao_min: 60 });
+  const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
   const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
@@ -373,8 +373,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
       .catch(() => setReunioesEmpresa([])); // tabela ainda sem migração → lista vazia, sem quebrar
   }, [painel]);
 
+  // DIR-54 — "até às" é só uma outra forma de dizer a duração: convertida
+  // ANTES de gravar, o banco guarda sempre `duracao_min` (fonte única).
+  const duracaoEmpresaMin = novaEmpresa.modoFim === 'fim'
+    ? duracaoEntreHoras(novaEmpresa.hora, novaEmpresa.hora_fim)
+    : Number(novaEmpresa.duracao_min) || 60;
+
   const criarReuniaoEmpresa = async () => {
-    if (!novaEmpresa.titulo.trim() || !novaEmpresa.hora) return;
+    if (!novaEmpresa.titulo.trim() || !novaEmpresa.hora || !duracaoEmpresaMin) return;
     setSalvando(true);
     try {
       const linha = {
@@ -382,14 +388,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
         dia_semana: novaEmpresa.recorrencia === 'semana' ? Number(novaEmpresa.dia_semana) : null,
         data: novaEmpresa.recorrencia === 'data' ? novaEmpresa.data || null : null,
         hora: novaEmpresa.hora,
-        duracao_min: Number(novaEmpresa.duracao_min) || 60,
+        duracao_min: duracaoEmpresaMin,
         ativo: true,
         criado_por_id: uid || null,
         criado_por_nome: currentUser?.full_name || '',
       };
       const criada = await plataforma.entities.ReuniaoEmpresa.create(linha);
       setReunioesEmpresa((prev) => [...prev, criada?.id ? criada : linha]);
-      setNovaEmpresa({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', duracao_min: 60 });
+      setNovaEmpresa({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
       toast.success('Reunião da empresa salva — entra na agenda de todo mundo!');
     } catch (e) {
       console.error(e);
@@ -689,19 +695,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
 
         {/* ══ 📜 HÁBITO 4 — CONTATO E CONVITE VIVO (DIR-47) ══ */}
         {painel === 'contato' && (() => {
-          const fila = clientesManuais
+          const hoje = hojeStr();
+          const fmtHora = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+          const fmtQuando = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+          // 🙋/👥 DIR-49 — o escopo (fila + agenda): MINHA é o padrão; TIME só
+          // existe pra visão total. "Minha" = o que EU cadastrei/registrei.
+          const minha = !visaoTotal || escopoAgenda === 'minha';
+          const quem = (nome) => (minha ? 'você' : (nome || 'sem dono definido')); // DIR-50/54: dono na frente
+          const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
+
+          // 🎯 DIR-54 — a fila respeita o MESMO escopo: MINHA só os que EU
+          // cadastrei; TIME mostra todos, com o dono identificado em cada um.
+          const filaTodos = clientesManuais
             .map((c) => ({ c, prob: probabilidadeFechamento(c.qualificacao_network) }))
             .filter((x) => x.prob)
             .sort((a, b) => b.prob.pct - a.prob.pct);
-          const semQualificar = clientesManuais.length - fila.length; // DIR-49: fila honesta
-          const hoje = hojeStr();
+          const fila = visaoTotal && minha ? filaTodos.filter(({ c }) => c.created_by_id === uid) : filaTodos;
+          const totalEscopado = visaoTotal && minha ? clientesManuais.filter((c) => c.created_by_id === uid).length : clientesManuais.length;
+          const semQualificar = totalEscopado - fila.length; // DIR-49/54: fila honesta, no MESMO escopo
+
           const agenda = agendaDoDiaContatos(clientesManuais, hoje);
           const reunioesEsteiraHoje = reunioes.filter((o) => String(o.reuniao_em).slice(0, 10) === hoje);
-          const fmtHora = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
-          const fmtQuando = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
-          // 🙋/👥 DIR-49 — o escopo da agenda: MINHA é o padrão; TIME só existe
-          // pra visão total. "Minha" = o que EU registrei/sou responsável.
-          const minha = !visaoTotal || escopoAgenda === 'minha';
           const agendados = minha ? agenda.agendados.filter(({ registro }) => registro.registrado_por_id === uid) : agenda.agendados;
           const retornos = minha ? agenda.retornos.filter(({ registro }) => registro.registrado_por_id === uid) : agenda.retornos;
           const esteiraDoDia = minha ? reunioesEsteiraHoje.filter((o) => o.responsavel_id === uid || o.criado_por_id === uid) : reunioesEsteiraHoje;
@@ -721,7 +735,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
           const nReunioes = agendados.length + esteiraDoDia.length + empresaHoje.length;
           const resumoSemana = resumoSemanaReunioes(clientesManuais, hoje); // DIR-51
           const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
-          const quem = (nome) => (minha ? 'você' : (nome || 'sem dono')); // DIR-50: dono na frente
           return (
             <div className="space-y-4">
               <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
@@ -730,7 +743,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
 
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
               <div>
-                <p className="text-sm font-bold text-nz-tinta mb-1.5">🎯 Quem contatar — os qualificados da sua lista{fila.length > 0 ? ` (${fila.length})` : ''}</p>
+                <p className="text-sm font-bold text-nz-tinta mb-1.5">
+                  🎯 Quem contatar — {visaoTotal && !minha ? 'os qualificados do TIME' : 'os qualificados da sua lista'}{fila.length > 0 ? ` (${fila.length})` : ''}
+                </p>
+                {visaoTotal && (
+                  <p className="text-[11px] text-nz-tinta-fraca mb-1.5">{minha ? '🙋 mostrando só os SEUS cadastros — troque pra 👥 TIME INTEIRO na agenda abaixo pra ver de todo mundo' : '👥 mostrando os cadastros de TODO MUNDO, cada um com o dono identificado'}</p>
+                )}
                 {fila.length === 0 ? (
                   <p className="text-xs text-nz-tinta-fraca py-3 text-center border border-dashed border-nz-borda rounded-xl">
                     Ninguém qualificado ainda —{' '}
@@ -741,7 +759,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                     {fila.map(({ c, prob }) => (
                       <div key={c.id} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
+                          <p className="text-sm font-medium text-nz-tinta truncate">
+                            {visaoTotal && <span className="font-bold text-nz-verde">👤 {quem(nomeDoDono(c))} · </span>}
+                            {c.full_name || 'Sem nome'}
+                          </p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
                           {(() => { // DIR-49.1 — o registro salvo aparece AQUI, na hora
                             const u = ultimoContato(c);
@@ -763,10 +784,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                     ))}
                   </div>
                 )}
-                {/* DIR-49 — fila honesta: quem ficou de fora e por quê */}
+                {/* DIR-49/54 — fila honesta: quem ficou de fora e por quê, no MESMO escopo */}
                 {semQualificar > 0 && (
                   <p className="text-[11px] text-nz-tinta-fraca mt-1.5">
-                    ⭐ {semQualificar === 1 ? '+1 pessoa da sua lista ainda sem qualificação' : `+${semQualificar} pessoas da sua lista ainda sem qualificação`} —{' '}
+                    ⭐ {semQualificar === 1 ? `+1 pessoa d${visaoTotal && !minha ? 'o time' : 'a sua lista'} ainda sem qualificação` : `+${semQualificar} pessoas d${visaoTotal && !minha ? 'o time' : 'a sua lista'} ainda sem qualificação`} —{' '}
                     <button type="button" onClick={() => onIr?.('lista')} className="font-semibold text-nz-verde hover:text-nz-verde-claro">qualificar no Hábito 3 →</button>
                   </p>
                 )}
@@ -980,12 +1001,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, cli
                           <Input type="date" value={novaEmpresa.data} onChange={(e) => setNovaEmpresa((p) => ({ ...p, data: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
                         )}
                         <Input type="time" value={novaEmpresa.hora} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                        <select value={novaEmpresa.duracao_min} onChange={(e) => setNovaEmpresa((p) => ({ ...p, duracao_min: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                          {DURACOES_REUNIAO.map((d) => <option key={d} value={d}>{d} min</option>)}
-                        </select>
                       </div>
                     </div>
-                    <Button size="sm" onClick={criarReuniaoEmpresa} disabled={salvando || !novaEmpresa.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-9">
+                    <div>
+                      {/* DIR-54 — duas formas de dizer quando termina: minutos OU o horário final */}
+                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Até quando</p>
+                      <div className="flex gap-1.5">
+                        <select value={novaEmpresa.modoFim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, modoFim: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
+                          <option value="duracao">⏱️ duração</option>
+                          <option value="fim">🏁 até às</option>
+                        </select>
+                        {novaEmpresa.modoFim === 'duracao' ? (
+                          <select value={novaEmpresa.duracao_min} onChange={(e) => setNovaEmpresa((p) => ({ ...p, duracao_min: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
+                            {DURACOES_REUNIAO.map((d) => <option key={d} value={d}>{d} min</option>)}
+                          </select>
+                        ) : (
+                          <Input type="time" value={novaEmpresa.hora_fim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora_fim: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
+                        )}
+                      </div>
+                      {novaEmpresa.modoFim === 'fim' && (
+                        <p className="text-[11px] text-nz-tinta-fraca mt-1">{duracaoEmpresaMin ? `= ${duracaoEmpresaMin} min` : 'o término precisa ser depois do início'}</p>
+                      )}
+                    </div>
+                    <Button size="sm" onClick={criarReuniaoEmpresa} disabled={salvando || !novaEmpresa.titulo.trim() || !duracaoEmpresaMin} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-9">
                       <Plus className="w-4 h-4 mr-1" /> Salvar pra todo mundo
                     </Button>
                   </div>
