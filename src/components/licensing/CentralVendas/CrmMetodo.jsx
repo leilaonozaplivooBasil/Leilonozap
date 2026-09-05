@@ -268,71 +268,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     else l.sort((a, b) => (b[ordemRanking] || 0) - (a[ordemRanking] || 0));
     return l;
   }, [rankingLinhas, ordemRanking]);
-  // 🛠️ F5 — PAINEL ADMIN DA X-GAME (só visão total): cadastra participantes,
-  // abre o ciclo oficial e faz a CONFERÊNCIA DUPLA (o "SIM" do gestor).
-  const MULTA_POR_CARGO = { trainee: 50, executivo: 200, diretor: 500, ceo: 500 };
-  const [adminAberto, setAdminAberto] = useState(false);
-  const [adminParticipantes, setAdminParticipantes] = useState([]);
-  const [adminUsuarios, setAdminUsuarios] = useState([]);
-  const [adminNovo, setAdminNovo] = useState('');
-  const [adminCicloInicio, setAdminCicloInicio] = useState('');
-  const [confUser, setConfUser] = useState(''); // participante em conferência
-  const [confTarefas, setConfTarefas] = useState([]);
-  const carregarAdmin = useCallback(() => {
-    supabase.from('xgame_participantes').select('*').order('created_date')
-      .then(({ data }) => setAdminParticipantes(data || []));
-    supabase.from('app_users').select('id,full_name,nickname').order('full_name')
-      .then(({ data }) => setAdminUsuarios(data || []));
-  }, []);
-  useEffect(() => {
-    if (!adminAberto || !visaoTotal) return;
-    carregarAdmin();
-    setAdminCicloInicio(cicloConfig ? String(cicloConfig).slice(0, 10) : '');
-  }, [adminAberto, visaoTotal, carregarAdmin, cicloConfig]);
-  const nomeUsuario = (id) => {
-    const u = adminUsuarios.find((x) => x.id === id);
-    return u?.nickname || u?.full_name || nomesColegas[id] || (id ? id.slice(0, 6) : '—');
-  };
-  const adicionarParticipante = async () => {
-    if (!adminNovo) return;
-    setSalvando(true);
-    const { error } = await supabase.from('xgame_participantes')
-      .upsert({ user_id: adminNovo, ativo: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-    setSalvando(false);
-    if (error) { toast.error('Erro ao cadastrar participante.'); return; }
-    toast.success('Participante no jogo!');
-    setAdminNovo('');
-    carregarAdmin();
-  };
-  const salvarParticipante = async (p, patch) => {
-    const { error } = await supabase.from('xgame_participantes')
-      .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', p.id);
-    if (error) { toast.error('Erro ao salvar.'); return; }
-    setAdminParticipantes((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
-  };
-  const salvarCicloOficial = async () => {
-    if (!adminCicloInicio) { toast.error('Escolha a data de início do ciclo.'); return; }
-    setSalvando(true);
-    const { error } = await supabase.from('xgame_config')
-      .upsert({ id: 'atual', ciclo_inicio: adminCicloInicio, updated_at: new Date().toISOString() }, { onConflict: 'id' });
-    setSalvando(false);
-    if (error) { toast.error('Erro ao abrir o ciclo.'); return; }
-    toast.success('Ciclo X-GAME aberto!');
-    setCicloConfig(adminCicloInicio);
-  };
-  const abrirConferencia = async (userId) => {
-    setConfUser(userId);
-    setConfTarefas([]);
-    if (!userId) return;
-    const { data } = await supabase.from('metodo_tarefas')
-      .select('id,hora,titulo,feito,conferido').eq('user_id', userId).eq('data', dia).order('hora');
-    setConfTarefas(data || []);
-  };
-  const conferirTarefa = async (t, valor) => {
-    const { error } = await supabase.from('metodo_tarefas').update({ conferido: valor }).eq('id', t.id);
-    if (error) { toast.error('Erro na conferência.'); return; }
-    setConfTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, conferido: valor } : x)));
-  };
+  // 🛠️ O admin da gamificação (participantes, verbas, tarefas, ciclo e
+  // conferência dupla) mora no painel Admin do Licensing — só super admin
+  // (componente XGameAdmin). Aqui fica só o jogo do jogador.
   // a fotografia do dia no placar (xgame_diario) — recalculável, nunca trava a tela
   useEffect(() => {
     if (!xgame || !uid || !ehHoje) return;
@@ -797,25 +735,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas (meta 4 no ciclo). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das 20h às 22h), que é a que entra no Human Token oficial.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
                   <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
                     {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
                   </p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'}</p>
+                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. [VENDA] paga o valor cheio por unidade. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
                   <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
@@ -861,6 +799,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 {ciclo.formacao.mensagem && (
                   <p className="text-[11px] font-semibold text-nz-verde">{ciclo.formacao.mensagem}</p>
                 )}
+                {/* o guia — como funciona o jogo e a formação em 3 meses */}
+                <details className="text-[11px] text-nz-tinta-fraca">
+                  <summary className="cursor-pointer font-semibold text-nz-tinta hover:text-nz-verde">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
+                  <div className="pt-1.5 space-y-1">
+                    <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo).</p>
+                    <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
+                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
+                    <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é tarefa diária: das 20h às 22h, de casa, dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora — quem participa é escolhido pelo admin.</p>
+                    <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
+                  </div>
+                </details>
               </div>
             )}
 
@@ -979,113 +928,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               </div>
             )}
 
-            {/* ══ 🛠️ F5 — PAINEL ADMIN DA X-GAME (só visão total, padrão DIR-52) ══ */}
-            {visaoTotal && (
-              <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2 text-xs">
-                <button type="button" onClick={() => setAdminAberto(!adminAberto)} className="font-bold text-nz-tinta hover:text-nz-verde text-sm">
-                  {adminAberto ? '▾' : '▸'} 🛠️ Admin da X-GAME <span className="font-normal text-xs text-nz-tinta-fraca">— participantes, ciclo e conferência dupla</span>
-                </button>
-                {adminAberto && (
-                  <>
-                    {/* ciclo oficial */}
-                    <div className="flex items-end gap-2 flex-wrap pt-1">
-                      <label className="text-[11px] text-nz-tinta">
-                        Início oficial do ciclo (22 dias úteis):
-                        <Input type="date" value={adminCicloInicio} onChange={(e) => setAdminCicloInicio(e.target.value)} className="h-8 mt-0.5 bg-white" />
-                      </label>
-                      <Button size="sm" onClick={salvarCicloOficial} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
-                        Abrir ciclo
-                      </Button>
-                      <span className="text-[10px] text-nz-tinta-fraca">sem data vigente, vale o 1º dia útil do mês</span>
-                    </div>
-
-                    {/* cadastrar participante */}
-                    <div className="flex items-end gap-2 flex-wrap pt-1 border-t border-amber-400/30">
-                      <label className="text-[11px] text-nz-tinta">
-                        Colocar no jogo:
-                        <select value={adminNovo} onChange={(e) => setAdminNovo(e.target.value)} className="block mt-0.5 text-[11px] border border-nz-borda rounded px-2 py-1.5 bg-white text-nz-tinta min-w-[180px]">
-                          <option value="">— escolha a pessoa —</option>
-                          {adminUsuarios.filter((u) => !adminParticipantes.some((p) => p.user_id === u.id)).map((u) => (
-                            <option key={u.id} value={u.id}>{u.nickname || u.full_name || u.id.slice(0, 6)}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <Button size="sm" onClick={adicionarParticipante} disabled={salvando || !adminNovo} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
-                        <UserPlus className="w-3.5 h-3.5 mr-1" /> Cadastrar
-                      </Button>
-                    </div>
-
-                    {/* participantes: cargo, perfil, verbas, multa, ativo */}
-                    {adminParticipantes.length > 0 && (
-                      <div className="space-y-1.5 pt-1 border-t border-amber-400/30">
-                        <p className="text-[11px] font-semibold text-nz-tinta">Participantes ({adminParticipantes.filter((p) => p.ativo).length} ativos):</p>
-                        {adminParticipantes.map((p) => (
-                          <div key={p.id} className={`rounded border px-2 py-1.5 bg-white space-y-1 ${p.ativo ? 'border-nz-borda' : 'border-nz-borda opacity-60'}`}>
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <span className="text-[11px] font-semibold text-nz-tinta">{nomeUsuario(p.user_id)}</span>
-                              <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[10px] font-bold ${p.ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
-                                {p.ativo ? '● ATIVO' : '○ inativo'}
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap text-[10px] text-nz-tinta-fraca">
-                              <label>cargo{' '}
-                                <select value={p.cargo} onChange={(e) => salvarParticipante(p, { cargo: e.target.value, multa_atraso: MULTA_POR_CARGO[e.target.value] ?? p.multa_atraso })} className="border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta">
-                                  {['trainee', 'executivo', 'diretor', 'ceo'].map((c) => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                              </label>
-                              <label>perfil{' '}
-                                <select value={p.perfil} onChange={(e) => salvarParticipante(p, { perfil: e.target.value })} className="border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta">
-                                  {['estrategico', 'comercial', 'operacional'].map((c) => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                              </label>
-                              <label>produção R${' '}
-                                <input type="number" defaultValue={p.verba_producao} onBlur={(e) => salvarParticipante(p, { verba_producao: Number(e.target.value) || 0 })} className="w-16 border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta tabular-nums" />
-                              </label>
-                              <label>bônus R${' '}
-                                <input type="number" defaultValue={p.verba_bonus} onBlur={(e) => salvarParticipante(p, { verba_bonus: Number(e.target.value) || 0 })} className="w-14 border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta tabular-nums" />
-                              </label>
-                              <label>venda R${' '}
-                                <input type="number" defaultValue={p.valor_venda} onBlur={(e) => salvarParticipante(p, { valor_venda: Number(e.target.value) || 0 })} className="w-14 border border-nz-borda rounded px-1 py-0.5 bg-white text-nz-tinta tabular-nums" />
-                              </label>
-                              <span>multa {fmtReais(p.multa_atraso)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* conferência dupla — o SIM do gestor no dia exibido */}
-                    <div className="space-y-1.5 pt-1 border-t border-amber-400/30">
-                      <p className="text-[11px] font-semibold text-nz-tinta">Conferência dupla do dia {fmtDia(dia)} — o SIM do gestor:</p>
-                      <select value={confUser} onChange={(e) => abrirConferencia(e.target.value)} className="text-[11px] border border-nz-borda rounded px-2 py-1.5 bg-white text-nz-tinta min-w-[180px]">
-                        <option value="">— escolha o participante —</option>
-                        {adminParticipantes.filter((p) => p.ativo).map((p) => (
-                          <option key={p.user_id} value={p.user_id}>{nomeUsuario(p.user_id)}</option>
-                        ))}
-                      </select>
-                      {confUser && (confTarefas.length === 0 ? (
-                        <p className="text-[11px] text-nz-tinta-fraca">Sem Master Task nesse dia pra essa pessoa.</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {confTarefas.map((t) => (
-                            <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-nz-borda bg-white px-2 py-1">
-                              <span className={`text-[11px] truncate ${t.feito ? 'text-nz-tinta' : 'text-nz-tinta-fraca line-through'}`}>
-                                {t.hora} — {t.titulo} {t.feito ? '✔' : '(não marcada)'}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => conferirTarefa(t, t.conferido === true ? null : true)}
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded border ${t.conferido === true ? 'border-nz-verde text-white bg-nz-verde' : 'border-nz-borda text-nz-tinta-fraca hover:border-nz-verde'}`}
-                              >{t.conferido === true ? 'SIM ✔' : 'confirmar SIM'}</button>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
 
             {tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
