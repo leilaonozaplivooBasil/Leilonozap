@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, GraduationCap, UserRound } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, GraduationCap, UserRound, Gamepad2 } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -24,7 +24,7 @@ export const LICENSING_TABS = [
 
 // Abas válidas para o parâmetro ?tab= da URL. Inclui 'minha-loja' por
 // compatibilidade: links antigos continuam abrindo a administração da loja.
-export const VALID_LICENSING_TABS = [...LICENSING_TABS.map((t) => t.value), 'minha-loja'];
+export const VALID_LICENSING_TABS = [...LICENSING_TABS.map((t) => t.value), 'minha-loja', 'xgame-admin'];
 
 // 🧭 FASE 2 DA UNIFICAÇÃO — a lateral do Painel de Alavancagem passa a ser o
 // ÍNDICE ÚNICO de tudo o que o usuário tem. Nesta fase NENHUM painel foi
@@ -138,6 +138,12 @@ export function getLicensingGroups(user) {
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
         { type: 'link', to: '/Metas', label: 'Metas', icon: Target },
+        // 🎮 O admin da gamificação mora DENTRO da X-eos (ordem do dono) —
+        // só o super admin enxerga: participantes, verbas, tarefas e a fila
+        // de comprovações (a segunda análise das imagens).
+        ...(user?.role === 'super_admin'
+          ? [{ type: 'tab', value: 'xgame-admin', label: 'Admin X-GAME', icon: Gamepad2 }]
+          : []),
       ],
     },
     {

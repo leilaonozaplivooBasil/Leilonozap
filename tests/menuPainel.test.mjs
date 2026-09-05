@@ -24,11 +24,20 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
   test('a Top College fica com o que FORMA a pessoa', () => {
     const tc = grupoDe(dono, 'Top College');
     assert.ok(tc, 'o grupo Top College precisa existir');
+    // o dono (super_admin) vê também o Admin X-GAME — o admin da gamificação
+    // mora DENTRO da X-eos, não no Admin geral (ordem do dono, 05/09/2026)
     assert.deepEqual(valores(tc.items), [
-      'catalogo', 'catalogo', 'plano-carreira', '/Evoluir', '/Metas',
+      'catalogo', 'catalogo', 'plano-carreira', '/Evoluir', '/Metas', 'xgame-admin',
     ]);
     const rotulos = tc.items.map((i) => i.label);
-    assert.deepEqual(rotulos, ['O Método', 'Time', 'Carreira', 'Evoluir Nível', 'Metas']);
+    assert.deepEqual(rotulos, ['O Método', 'Time', 'Carreira', 'Evoluir Nível', 'Metas', 'Admin X-GAME']);
+  });
+
+  test('o Admin X-GAME é só do super admin — os demais nem sabem que existe', () => {
+    for (const role of ['user', 'licensee', 'admin', 'admin_financeiro']) {
+      const tc = grupoDe({ role, career_levels: ['vendedor'] }, 'Top College');
+      assert.ok(!valores(tc.items).includes('xgame-admin'), `${role} não pode ver o Admin X-GAME`);
+    }
   });
 
   test('a Loja & Vendas fica só com o caixa — nada de método nem de time', () => {
