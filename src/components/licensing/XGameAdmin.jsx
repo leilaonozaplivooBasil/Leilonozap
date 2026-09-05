@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -157,6 +157,20 @@ export default function XGameAdmin() {
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...patch } : x)));
   };
 
+  // 🪄 F6 — aplica o peso automático (regra do dono) em todas as tarefas do dia
+  const aplicarPesosAutomaticos = async () => {
+    const mudar = tarefas.filter((t) => (t.peso ?? 3) !== pesoAutomatico(t.titulo));
+    if (!mudar.length) { toast.success('Os pesos já estão no automático!'); return; }
+    setSalvando(true);
+    const resultados = await Promise.all(mudar.map((t) =>
+      supabase.from('metodo_tarefas').update({ peso: pesoAutomatico(t.titulo) }).eq('id', t.id)
+    ));
+    setSalvando(false);
+    if (resultados.some((r) => r.error)) { toast.error('Erro ao aplicar os pesos — tente de novo.'); return; }
+    toast.success(`🪄 Pesos automáticos aplicados em ${mudar.length} tarefa${mudar.length > 1 ? 's' : ''}!`);
+    setTarefas((prev) => prev.map((t) => ({ ...t, peso: pesoAutomatico(t.titulo) })));
+  };
+
   // excluir em 2 cliques (padrão DIR-50 do CRM): o 1º arma, o 2º confirma
   const [excluindo, setExcluindo] = useState(null);
   const excluirTarefa = async (t) => {
@@ -177,7 +191,10 @@ export default function XGameAdmin() {
       const { data: perfil } = await supabase.from('metodo_perfil')
         .select('rotina').eq('user_id', tarefaUser).maybeSingle();
       const rotina = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
-      const linhas = gerarTarefasDaRotina(rotina, tarefaUser, tarefaDia);
+      // já nasce com peso automático (regra do dono) e categoria deduzida
+      const linhas = gerarTarefasDaRotina(rotina, tarefaUser, tarefaDia).map((l) => ({
+        ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
+      }));
       const { error } = await supabase.from('metodo_tarefas').insert(linhas);
       if (error) throw error;
       toast.success(`Dia gerado com ${linhas.length} tarefas da Rotina Perfeita!`);
@@ -332,6 +349,15 @@ export default function XGameAdmin() {
                     <p className="text-[11px] font-semibold text-gray-900 flex-1 min-w-[160px]" title={DICAS.conferencia}>
                       Tarefas de {nomeDe(p.user_id)} — o que você gerencia aqui aparece na hora no Compromisso dela ⓘ
                     </p>
+                    {tarefas.length > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={aplicarPesosAutomaticos}
+                        disabled={salvando}
+                        title={'Aplica a regra do dono em todas as tarefas do dia: negócio/venda peso 6 · gratidão e treinamento 5 · leitura e postagem 4 · atividade física e gestão 3 · suporte 2 · almoço/descanso 1.'}
+                        className="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 h-8"
+                      >🪄 Pesos automáticos</Button>
+                    )}
                     <Input type="date" value={tarefaDia} onChange={(e) => setTarefaDia(e.target.value)} className="h-8 bg-white border-gray-300 w-auto" />
                   </div>
 
@@ -353,7 +379,7 @@ export default function XGameAdmin() {
                             <select value={t.categoria || 'producao'} onChange={(e) => salvarTarefa(t, { categoria: e.target.value })} title={DICAS.categoria} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
                               {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
                             </select>
-                            <select value={t.peso ?? 3} onChange={(e) => salvarTarefa(t, { peso: Number(e.target.value) })} title={DICAS.peso} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
+                            <select value={t.peso ?? 3} onChange={(e) => salvarTarefa(t, { peso: Number(e.target.value) })} title={`${DICAS.peso} Automático sugere: ${porqueDoPeso(t.titulo)}.`} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">
                               {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>peso {n}</option>)}
                             </select>
                             <button

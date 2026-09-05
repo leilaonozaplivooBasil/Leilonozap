@@ -217,6 +217,38 @@ export function categoriaDaTarefa(t) {
 }
 const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
 
+// ── 🪄 GERADOR DE PESO AUTOMÁTICO (F6) ──────────────────────────────
+// Regra do dono: GRATIDÃO muito importante (5), VENDA/negócio é o peso
+// principal (6), e o compromisso com o dia inteiro é premiado pela ofensiva
+// (não por uma tarefa só). A ordem das regras importa — a primeira que
+// bater no título vence (ex.: "Leitura leve + descanso" é leitura, peso 4).
+const _semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const REGRAS_PESO = [
+  { re: /gratidao|foco no sonho/, peso: 5, porque: 'gratidão abre o dia e a mente' },
+  { re: /treinament|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
+  { re: /loja|venda|cliente|reuni|apresenta|contrato|follow|prospec/, peso: 6, porque: 'ação de negócio — o peso principal' },
+  { re: /leitura|estudo|curso|licao|aula/, peso: 4, porque: 'mentalidade: estudo em dia' },
+  { re: /story|post|instagram|conteudo|gravar/, peso: 4, porque: 'marketing pessoal' },
+  { re: /corrida|treino|atividade fisica|academia|exercicio|caminhada/, peso: 3, porque: 'disciplina de base' },
+  { re: /organizacao do negocio|planejament|fechamento do dia/, peso: 3, porque: 'gestão do próprio negócio' },
+  { re: /organizacao|ambiente|caminho|chegar|deslocament/, peso: 2, porque: 'suporte da rotina' },
+  { re: /almoco|descanso|pausa|cafe/, peso: 1, porque: 'necessário, mas não pontua alto' },
+];
+
+/** Peso 1-6 sugerido pelo título (regra do dono). Sem regra batendo = 3. */
+export function pesoAutomatico(titulo) {
+  const t = _semAcento(titulo);
+  for (const r of REGRAS_PESO) if (r.re.test(t)) return r.peso;
+  return 3;
+}
+
+/** Explica por que o peso automático deu o que deu (pro tooltip do admin). */
+export function porqueDoPeso(titulo) {
+  const t = _semAcento(titulo);
+  for (const r of REGRAS_PESO) if (r.re.test(t)) return `peso ${r.peso} — ${r.porque}`;
+  return 'peso 3 — padrão da planilha';
+}
+
 /**
  * Valor em R$ de cada tarefa do dia (mapa id → valor). Mentoria e Visão
  * Estratégica pagam pela verba de produção (na planilha só [BÔNUS] e [VENDA]
