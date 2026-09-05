@@ -12,6 +12,35 @@
 
 ---
 
+## DIR-69 — O nome completo do Hábito quando se entra nele
+
+**Emitida por:** dono (05/09/2026), com print do Hábito 03 mostrando só
+"Lista": *"quando eu clico adentro, precisa aparecer o nome completo.
+Exemplo, é Lista de Networking. Contato e Convite. Apresentação de
+Sucesso. Acompanhamento e Fechamento. Verificação do Progresso.
+Duplicação dos oito hábitos do sucesso. Pode até ficar o primeiro nome ali
+na frente, mas quando clica tem que aparecer o complemento do que é, do
+que são os oito hábitos do sucesso."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. Cada Hábito ganha **nome oficial completo** na fonte única
+   (`src/lib/metodo.js`): Sonho · Compromisso · Lista de Networking ·
+   Contato e Convite · Apresentação de Sucesso · Acompanhamento e
+   Fechamento · Verificação do Progresso · Duplicação dos 8 Hábitos do
+   Sucesso.
+2. O **apelido curto continua na frente** (o seletor de 8 botões não cabe
+   com o nome inteiro) e o **complemento aparece na faixa quando se
+   entra**, num peso mais leve — lê como uma frase só.
+3. A lista dos 8 hábitos que estava **duplicada** no modal do Método passa
+   a ler da fonte única. Duas cópias eram dois nomes: um lado mudaria com
+   esta ordem e o outro não.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
 ## DIR-68 — Vidro que dá pra ler
 
 **Emitida por:** dono (05/09/2026), com print do modal do Quadro dos

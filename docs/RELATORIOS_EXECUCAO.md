@@ -3124,3 +3124,40 @@ navegador **185/185 ZERO erros de página/console**.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-69 — O nome completo do Hábito quando se entra nele (DIR-69)
+
+**Ordem:** *"quando eu clico adentro, precisa aparecer o nome completo —
+Lista de Networking, Contato e Convite, Apresentação de Sucesso... pode
+até ficar o primeiro nome ali na frente, mas quando clica tem que
+aparecer o complemento."*
+
+**O que mudou:** a faixa do Hábito agora escreve **"Verificação do
+Progresso"** no lugar de "Verificação" — o apelido segue grande (é ele que
+o seletor mostra, e é por ele que a pessoa se localiza) e o complemento
+entra logo depois num peso mais leve. Os oito nomes oficiais viraram
+campo da fonte única `src/lib/metodo.js`, com o helper `partesDoHabito`.
+
+**Achado que virou correção:** a lista dos 8 hábitos estava **duplicada**
+dentro de `CrmMetodoModal.jsx`. Duas cópias significam dois nomes: esta
+ordem mudaria um lado e deixaria o outro pra trás. O modal passou a ler da
+fonte única e ficou só com a linha que é DELE — onde cada hábito mora
+dentro do CRM.
+
+**Defeito que a prova pegou (e que o olho não pegaria):** o complemento
+entrou num `<span>` com margem lateral. Na tela o respiro aparecia certo,
+mas o TEXTO saía grudado — "Verificaçãodo Progresso" — pra quem copia e
+pro leitor de tela. A prova compara o texto real do DOM, não a foto, então
+acusou. Entrou um espaço explícito.
+
+**Prova (medida):** 5 testes novos na suíte (os 8 nomes oficiais na ordem
+do dono, a separação apelido/complemento, hábito sem complemento não
+inventa texto, id desconhecido volta `null`, e o contrato de que o apelido
+é sempre o começo do nome completo — sem ele a faixa escreveria duas
+palavras que não formam frase). Suíte **927/927**; build exit 0; prova em
+navegador **184/184 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.

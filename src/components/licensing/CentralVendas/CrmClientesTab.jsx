@@ -41,7 +41,7 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
-import { reuniaoIminente } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião
+import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -1327,15 +1327,19 @@ _Enviado via CRM Leilão NoZap_`;
   // faixa do BRANDBOOK oficial, escolhida pelo tema do hábito: o carro pro
   // sonho, "grandes batalhas" pro compromisso, o avião pra duplicação.
   const SECOES = [
-    { id: 'sonho', n: 1, nome: 'Sonho', Icone: Sparkles, faixa: '/marca/habito-1-sonho.webp' },
-    { id: 'compromisso', n: 2, nome: 'Compromisso', Icone: ShieldCheck, faixa: '/marca/habito-2-compromisso.webp' },
-    { id: 'lista', n: 3, nome: 'Lista', Icone: Users, faixa: '/marca/habito-3-lista.webp' },
-    { id: 'contato', n: 4, nome: 'Contato', Icone: PhoneCall, faixa: '/marca/habito-4-contato.webp' },
-    { id: 'apresentacao', n: 5, nome: 'Apresentação', Icone: Presentation, faixa: '/marca/habito-5-apresentacao.webp' },
-    { id: 'acompanhamento', n: 6, nome: 'Acompanhamento', Icone: Route, faixa: '/marca/habito-6-acompanhamento.webp' },
-    { id: 'verificacao', n: 7, nome: 'Verificação', Icone: Gauge, faixa: '/marca/habito-7-verificacao.webp' },
-    { id: 'duplicacao', n: 8, nome: 'Duplicação', Icone: GitBranch, faixa: '/marca/habito-8-duplicacao.webp' },
-  ];
+    { id: 'sonho', n: 1, Icone: Sparkles, faixa: '/marca/habito-1-sonho.webp' },
+    { id: 'compromisso', n: 2, Icone: ShieldCheck, faixa: '/marca/habito-2-compromisso.webp' },
+    { id: 'lista', n: 3, Icone: Users, faixa: '/marca/habito-3-lista.webp' },
+    { id: 'contato', n: 4, Icone: PhoneCall, faixa: '/marca/habito-4-contato.webp' },
+    { id: 'apresentacao', n: 5, Icone: Presentation, faixa: '/marca/habito-5-apresentacao.webp' },
+    { id: 'acompanhamento', n: 6, Icone: Route, faixa: '/marca/habito-6-acompanhamento.webp' },
+    { id: 'verificacao', n: 7, Icone: Gauge, faixa: '/marca/habito-7-verificacao.webp' },
+    { id: 'duplicacao', n: 8, Icone: GitBranch, faixa: '/marca/habito-8-duplicacao.webp' },
+  // 🎓 DIR-69 — o NOME de cada Hábito vem da fonte única (lib/metodo). Aqui
+  // ficam só o ícone e a arte do brandbook, que são desta tela. `nome` é o
+  // apelido curto (o seletor de 8 botões não cabe com o nome inteiro) e
+  // `completo`/`complemento` são o nome oficial, que aparece quando se ENTRA.
+  ].map((s) => ({ ...s, ...partesDoHabito(s.id), nome: partesDoHabito(s.id).curto }));
   const secaoAtual = SECOES.find((s) => s.id === secaoAtiva) || SECOES[0];
 
   // 🔓 DIR-24 Fase 2 — sem gate de admin: quem não é visão total já chega
@@ -1528,8 +1532,25 @@ _Enviado via CRM Leilão NoZap_`;
             <p className="text-[10px] sm:text-[11px] font-bold tracking-[0.28em] text-white/55 uppercase">
               Hábito {String(secaoAtual.n).padStart(2, '0')}
             </p>
+            {/* 🎓 DIR-69 — ordem do dono: "quando eu clico adentro precisa
+                aparecer o nome completo — é Lista de Networking, Contato e
+                Convite, Apresentação de Sucesso... pode até ficar o primeiro
+                nome ali na frente, mas quando clica tem que aparecer o
+                complemento". Então o apelido continua grande (é ele que o
+                seletor mostra, e a memória da pessoa acompanha) e o
+                complemento entra logo depois, num peso mais leve: lê como
+                UMA frase — "Lista de Networking" —, não como repetição. */}
             <p className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-none mt-1.5">
               {secaoAtual.nome}
+              {/* o espaço é EXPLÍCITO: sem ele o `ml-3` dá o respiro na tela,
+                  mas quem copia o texto (ou o leitor de tela) recebe
+                  "Verificaçãodo Progresso", tudo grudado. */}
+              {secaoAtual.complemento && ' '}
+              {secaoAtual.complemento && (
+                <span className="block sm:inline sm:ml-3 text-xl sm:text-3xl font-semibold text-white/70">
+                  {secaoAtual.complemento}
+                </span>
+              )}
             </p>
           </div>
           <div
