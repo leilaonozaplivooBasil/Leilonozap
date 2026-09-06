@@ -15,6 +15,7 @@ import {
   semLista, tarefaDoCartao, cartaoDaTarefa, cartaoDaTarefaFeita, resumoDoQuadro, feitosDaLista,
   reordenarListas, ICONES_LISTA, EMOJIS_LISTA, marcaValida, ehEmoji,
   emMinutos, emHora, fimDe, conflitosDeHorario, horaSugerida, faixaDeHorario,
+  saidaDoConflito, reordenarCartoes,
 } from '../src/lib/quadroCompromisso.js';
 
 const HOJE = '2026-09-07';
@@ -337,5 +338,83 @@ describe('o feito fica na coluna dele (DIR-77.1)', () => {
   test('o aberto NÃO aparece entre os feitos, e vice-versa', () => {
     assert.ok(!feitosDaLista(cs, 'l1', '2026-09-07').some((c) => c.id === 'a'));
     assert.ok(!cartoesDaLista(cs, 'l1').some((c) => estaFeito(c)));
+  });
+});
+
+// ── 🔧 DIR-77.2 — avisar é meio serviço; a saída em um clique é o serviço ──
+describe('a saída do conflito', () => {
+  const dia = [
+    { id: 'r1', titulo: 'Reunião 1', hora: '13:00', hora_fim: '14:00' },
+    { id: 'r2', titulo: 'Reunião 2', hora: '14:00', hora_fim: '15:00' },
+  ];
+
+  test('não sai de um conflito pra cair em outro', () => {
+    // 13:15 encavala na r1; o fim dela é 14:00, que é o começo da r2 —
+    // a saída tem que ir até depois das DUAS
+    assert.equal(saidaDoConflito(dia, { hora: '13:15' }), '15:00');
+  });
+
+  test('sem conflito não sugere nada — não há o que resolver', () => {
+    assert.equal(saidaDoConflito(dia, { hora: '16:00' }), null);
+    assert.equal(saidaDoConflito([], { hora: '13:00' }), null);
+    assert.equal(saidaDoConflito(dia, { hora: 'banana' }), null);
+  });
+
+  test('a saída respeita a DURAÇÃO de quem está sendo movido', () => {
+    const cheio = [
+      { id: 'a', hora: '13:00', hora_fim: '14:00' },
+      { id: 'b', hora: '14:30', hora_fim: '15:00' },
+    ];
+    // uma peça de 2h não cabe no vão de 14:00–14:30: tem que ir pra depois das 15:00
+    assert.equal(saidaDoConflito(cheio, { hora: '13:30', hora_fim: '15:30' }), '15:00');
+  });
+
+  test('não conta a si mesmo como conflito ao se mover', () => {
+    const comEle = [...dia, { id: 'eu', hora: '13:15', hora_fim: '13:45' }];
+    assert.equal(saidaDoConflito(comEle, { hora: '13:15', hora_fim: '13:45', ignorarId: 'eu' }), '15:00');
+  });
+});
+
+describe('reordenar cards dentro da lista (DIR-77.2)', () => {
+  const cs = [
+    { id: 'a', lista_id: 'l1', ordem: 0 },
+    { id: 'b', lista_id: 'l1', ordem: 1 },
+    { id: 'c', lista_id: 'l1', ordem: 2 },
+    { id: 'z', lista_id: 'l2', ordem: 0 },
+  ];
+
+  test('arrastar um sobre o outro renumera a lista inteira', () => {
+    const r = reordenarCartoes(cs, 'c', 'a');
+    const daL1 = r.filter((x) => x.lista_id === 'l1').sort((x, y) => x.ordem - y.ordem).map((x) => x.id);
+    assert.deepEqual(daL1, ['c', 'a', 'b']);
+  });
+
+  test('não mistura listas — arrastar sobre card de OUTRA lista não faz nada', () => {
+    assert.equal(reordenarCartoes(cs, 'a', 'z'), cs);
+  });
+
+  test('sobre si mesmo, ou card que não existe: MESMA lista', () => {
+    assert.equal(reordenarCartoes(cs, 'a', 'a'), cs);
+    assert.equal(reordenarCartoes(cs, 'nao-existe', 'a'), cs);
+    assert.equal(reordenarCartoes(cs, 'a', 'nao-existe'), cs);
+  });
+
+  test('a lista de outra coluna não é renumerada de tabela', () => {
+    assert.equal(reordenarCartoes(cs, 'c', 'a').find((x) => x.id === 'z').ordem, 0);
+  });
+
+  test('não muta a original', () => {
+    const antes = JSON.stringify(cs);
+    reordenarCartoes(cs, 'c', 'a');
+    assert.equal(JSON.stringify(cs), antes);
+  });
+
+  // 🔒 quem tem HORA continua mandado pelo relógio, e isso é de propósito
+  test('arrastar NÃO desmancha a ordem do relógio: hora vence ordem', () => {
+    const comHora = [
+      { id: 'tarde', lista_id: 'l', coluna: 'aberto', hora: '16:00', ordem: 0 },
+      { id: 'cedo', lista_id: 'l', coluna: 'aberto', hora: '08:00', ordem: 9 },
+    ];
+    assert.deepEqual(cartoesDaLista(comHora, 'l').map((c) => c.id), ['cedo', 'tarde']);
   });
 });

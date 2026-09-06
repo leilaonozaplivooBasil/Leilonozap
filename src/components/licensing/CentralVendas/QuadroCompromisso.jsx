@@ -4,7 +4,7 @@ import {
   Loader2, Plus, Trash2, CalendarPlus, CalendarDays, ListChecks, CheckCircle2,
   ChevronLeft, ChevronRight, X, ArrowRight, User, LayoutGrid,
   Briefcase, Dumbbell, Home, Target, Clock, Megaphone, Wallet, GraduationCap,
-  Lightbulb, AlertTriangle, Rocket, Sparkles, Camera, Clock3,
+  Lightbulb, AlertTriangle, Rocket, Sparkles, Camera, Clock3, GripVertical,
 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaAdapter';
@@ -14,7 +14,7 @@ import {
   ESTADO_ABERTO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA, ICONES_LISTA, EMOJIS_LISTA, ehEmoji,
   estaFeito, progressoChecklist, atrasado, marcarFeito, reabrir,
   alternarItem, adicionarItem, removerItem, cartoesDaLista, feitosNaMesa, semLista,
-  tarefaDoCartao, resumoDoQuadro, reordenarListas, feitosDaLista,
+  tarefaDoCartao, resumoDoQuadro, reordenarListas, feitosDaLista, reordenarCartoes, saidaDoConflito,
   faixaDeHorario, horaSugerida, conflitosDeHorario,
 } from '@/lib/quadroCompromisso';
 import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } from '@/lib/assistenteDeLista';
@@ -330,7 +330,7 @@ function Entrevista({ assistente, onGerar, onFechar }) {
 function Coluna({
   lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia,
   onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente,
-  onMudarCard, onExcluirCard, onVirarTarefa, onIr, valorNovo, onNovo, onCriar,
+  onMudarCard, onExcluirCard, onVirarTarefa, onIr, onReordenarCard, valorNovo, onNovo, onCriar,
 }) {
   const p = paleta(lista.cor);
   const assistente = assistenteDaLista(lista.nome);
@@ -351,9 +351,11 @@ function Coluna({
       style={{ width: T.coluna, background: 'rgba(255,255,255,0.05)', opacity: arrastando ? 0.7 : 1 }}>
 
       {/* ── CABEÇALHO COLORIDO DE PONTA A PONTA, e é ele a alça do arrasto ── */}
+      {/* ⚠️ `...alcas.style` PRIMEIRO: o `touchAction: 'none'` vem de lá, e um
+          `style` que não o inclua o apaga — foi o que matava o arrasto no dedo. */}
       <div {...alcas} onClickCapture={engolirCliqueDoArrasto}
         className="flex items-center gap-2.5 px-3.5 rounded-t-xl"
-        style={{ background: p.barra, height: T.cabecalho, cursor: arrastando ? 'grabbing' : 'grab' }}>
+        style={{ ...alcas.style, background: p.barra, height: T.cabecalho, cursor: arrastando ? 'grabbing' : 'grab' }}>
         <button type="button" onClick={() => onPainel(painelAberto ? null : lista.id)}
           title="ícone e cor da lista" data-teste="abrir-marca"
           className="shrink-0 rounded-lg p-1 -m-1 text-white/90 hover:bg-white/20 transition-colors">
@@ -395,7 +397,7 @@ function Coluna({
 
         {cartoes.map((cartao) => (
           <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
-            onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} />
+            onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} />
         ))}
 
         {/* ✅ DIR-77.1 — o CONCLUÍDO fica AQUI, na coluna dele, com a faixa
@@ -410,7 +412,7 @@ function Coluna({
             </div>
             {feitos.map((cartao) => (
               <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
-                onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} />
+                onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} />
             ))}
           </>
         )}
@@ -434,18 +436,38 @@ function Coluna({
   );
 }
 
-function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr }) {
+function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr, onReordenar }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
   const [abrindoHora, setAbrindoHora] = useState(false);
+  // 🖐️ DIR-77.2 — QUEM ARRASTA É O PUNHO, não o card inteiro. Duas coisas
+  // estavam quebradas por causa disso:
+  //   1. com `{...alcas}` no card e um `style={{...}}` LOGO DEPOIS, o
+  //      `touchAction: 'none'` que vem das alças era SOBRESCRITO — no dedo o
+  //      navegador lia o gesto como rolagem e roubava o arrasto no meio;
+  //   2. o card inteiro sendo alça fazia todo botão de dentro disputar com o
+  //      arrasto — foi o que engoliu o clique do "sugerir".
+  // Punho separado resolve os dois, e é o gesto que a pessoa já conhece.
   const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
     aoSoltar: ({ x, y }) => {
-      const alvo = document.elementFromPoint(x, y)?.closest('[data-lista]');
       setSobre(null);
-      const destino = alvo?.getAttribute('data-lista');
-      if (destino && destino !== cartao.lista_id) onMudar({ ...cartao, lista_id: destino });
+      const sob = document.elementFromPoint(x, y);
+      const destino = sob?.closest('[data-lista]')?.getAttribute('data-lista');
+      const outro = sob?.closest('[data-cartao]')?.getAttribute('data-cartao');
+      // A ORDEM IMPORTA, e a primeira versão estava trocada: eu olhava o card
+      // embaixo do dedo ANTES da coluna, então soltar em cima de um card de
+      // OUTRA lista caía no reordenar — que recusa listas diferentes — e o
+      // arrasto não fazia nada. Como uma coluna cheia é quase toda feita de
+      // cards, isso quebrava o caso mais comum. Coluna diferente vence.
+      if (destino && destino !== cartao.lista_id) { onMudar({ ...cartao, lista_id: destino }); return; }
+      if (outro && outro !== cartao.id) onReordenar?.(cartao.id, outro);
     },
-    aoMover: ({ x, y }) => setSobre(document.elementFromPoint(x, y)?.closest('[data-lista]')?.getAttribute('data-lista-nome') || null),
+    aoMover: ({ x, y }) => {
+      const sob = document.elementFromPoint(x, y);
+      const outro = sob?.closest('[data-cartao]');
+      if (outro && outro.getAttribute('data-cartao') !== cartao.id) { setSobre(outro.innerText.split('\n')[0].slice(0, 28)); return; }
+      setSobre(sob?.closest('[data-lista]')?.getAttribute('data-lista-nome') || null);
+    },
   });
   const feito = estaFeito(cartao);
   const prog = progressoChecklist(cartao);
@@ -456,27 +478,39 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
 
   return (
     <div
-      {...alcas}
       onClickCapture={engolirCliqueDoArrasto}
       data-teste="cartao-quadro"
-      className="group rounded-lg overflow-hidden transition-shadow"
+      data-cartao={cartao.id}
+      className="group rounded-lg overflow-hidden transition-shadow relative"
       style={{
         background: '#FFFFFF',
         boxShadow: arrastando ? '0 12px 28px rgba(0,0,0,0.35)' : '0 1px 2px rgba(9,30,66,0.25)',
         transform: arrastando ? 'scale(1.02)' : undefined,
-        cursor: arrastando ? 'grabbing' : 'grab',
       }}
     >
+      {/* ⠿ o punho de SEIS PONTINHOS — ordem do dono: "desapareceu aquele
+          negocinho do lado, uns seis pontinhos pra poder arrastar; igual fica
+          no celular". No dedo ele fica sempre visível; no mouse aparece ao
+          passar por cima, pra não poluir o card. */}
+      <span
+        {...alcas}
+        style={{ ...alcas.style, cursor: arrastando ? 'grabbing' : 'grab' }}
+        data-teste="punho-card"
+        title="arraste pra mover ou reordenar"
+        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center text-[#B3BAC5] hover:text-[#5E6C84] opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+      >
+        <GripVertical className="w-4 h-4" />
+      </span>
       {/* ── A FAIXA DE STATUS, largura inteira, no topo — o traço do MeisterTask ── */}
       {(feito || venceu) && (
-        <div className="flex items-center gap-2 px-4 py-2 text-[12px] font-bold"
+        <div data-teste="faixa-status" className="flex items-center gap-2 pl-9 pr-4 py-2 text-[12px] font-bold"
           style={feito ? { background: '#E3F5E9', color: '#177245' } : { background: '#FFE8DF', color: '#C4470F' }}>
           {feito ? <CheckCircle2 className="w-4 h-4" /> : <CalendarDays className="w-4 h-4" />}
           {feito ? 'Concluída' : 'Atrasado'}
         </div>
       )}
 
-      <div style={{ padding: T.respiroCard }}>
+      <div style={{ padding: T.respiroCard, paddingLeft: T.respiroCard + 12 }}>
         <div className="flex items-start gap-2.5">
           <button
             type="button"
@@ -575,11 +609,21 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
               </div>
               {/* 🔒 duas coisas no mesmo horário é o defeito mais caro de uma
                   agenda, e até aqui NADA avisava */}
-              {choque.length > 0 && (
-                <p className="mt-2 text-[12px] font-bold" style={{ color: '#C4470F' }} data-teste="aviso-conflito">
-                  bate com {choque.length === 1 ? `“${choque[0].titulo}”` : `${choque.length} tarefas do dia`}
-                </p>
-              )}
+              {choque.length > 0 && (() => {
+                // 🔧 avisar é meio serviço: a saída em um clique é o serviço
+                const livre = saidaDoConflito(doDia, { hora: cartao.hora, hora_fim: cartao.hora_fim, ignorarId: cartao.virou_tarefa_id });
+                return (
+                  <p className="mt-2 text-[12px] font-bold flex items-center gap-2 flex-wrap" style={{ color: '#C4470F' }} data-teste="aviso-conflito">
+                    <span>bate com {choque.length === 1 ? `“${choque[0].titulo}”` : `${choque.length} tarefas do dia`}</span>
+                    {livre && (
+                      <button type="button" data-teste="mover-pro-livre"
+                        onClick={() => onMudar({ ...cartao, hora: livre, hora_fim: null })}
+                        className="rounded-md px-2 h-7 font-bold text-white"
+                        style={{ background: '#C4470F' }}>mover pra {livre}</button>
+                    )}
+                  </p>
+                );
+              })()}
             </div>
           );
         })()}
@@ -719,6 +763,15 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
     const { error } = await supabase.from('metodo_quadro').update({ ...resto, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) { toast.error('Não salvou — recarregando'); carregar(); }
   };
+  // 🖐️ arrastar um card sobre o outro, dentro da mesma lista
+  const reordenarCard = async (id, alvoId) => {
+    const nova = reordenarCartoes(cartoes, id, alvoId);
+    if (nova === cartoes) return;
+    setCartoes(nova);
+    const mexidos = nova.filter((c, i) => c.ordem !== cartoes[i]?.ordem || c.id !== cartoes[i]?.id);
+    await Promise.all(mexidos.map((c) => supabase.from('metodo_quadro').update({ ordem: c.ordem }).eq('id', c.id)));
+  };
+
   const excluir = async (cartao) => {
     setCartoes((cs) => cs.filter((c) => c.id !== cartao.id));
     const { error } = await supabase.from('metodo_quadro').delete().eq('id', cartao.id);
@@ -821,6 +874,7 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 onReordenar={reordenar}
                 onAssistente={(l, a) => setEntrevistando({ lista: l, assistente: a })}
                 onMudarCard={mudar}
+                onReordenarCard={reordenarCard}
                 onExcluirCard={excluir}
                 onVirarTarefa={virarTarefa}
                 onIr={onIr}
