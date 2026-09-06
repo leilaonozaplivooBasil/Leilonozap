@@ -922,6 +922,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     } finally { setSalvando(false); }
   };
 
+  // 🏛️ DIR-73 — a agenda escolhida no agendador cai NO MESMO LUGAR que o
+  // bloco 🏛️ da gestão já gravava. Uma verdade só: se amanhã a reunião da
+  // empresa mudar de tabela, muda num lugar e as duas portas acompanham.
+  const salvarAgendaEmpresa = async (linha) => {
+    if (!linha) return;
+    setSalvando(true);
+    try {
+      const criada = await plataforma.entities.ReuniaoEmpresa.create(linha);
+      setReunioesEmpresa((prev) => [...prev, criada?.id ? criada : linha]);
+      setRegistroAberto(null);
+      toast.success(`${linha.titulo} marcada — entra na agenda de quem pode ver!`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao salvar — a migração da DIR-52 (reunioes_empresa) já foi colada no banco?');
+    } finally { setSalvando(false); }
+  };
+
   const excluirReuniaoEmpresa = async (r) => {
     if (confirmaExcluir !== `emp-${r.id}`) { setConfirmaExcluir(`emp-${r.id}`); return; }
     setConfirmaExcluir(null);
@@ -1640,7 +1657,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           // a LINHA DO TEMPO UNIFICADA: método + esteira + empresa + (na MINHA)
           // o Google — o Google é pessoal, nunca entra na visão do time; a
           // reunião da EMPRESA é de todos, entra nas duas.
-          const empresaHoje = reunioesEmpresaDoDia(reunioesEmpresa, hoje);
+          // DIR-73 — agenda marcada 'diretoria' some pra quem não é diretoria
+          const empresaHoje = reunioesEmpresaDoDia(reunioesEmpresa, hoje, { visaoTotal });
           const linha = linhaDoTempoUnificada([
             ...agendados.map(({ cliente, registro }) => ({ origem: 'metodo', quando: registro.quando, cliente, registro })),
             ...esteiraDoDia.map((o) => ({ origem: 'esteira', quando: o.reuniao_em, o })),
@@ -1954,6 +1972,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 </Button>
               </div>
 
+              {/* 🏛️ DIR-73 — a porta da agenda da empresa só é ENTREGUE a quem tem
+                  visão total: passando null, o modal nem desenha a opção. A
+                  permissão mora aqui, e não numa condição perdida lá dentro. */}
               <CrmContatoRegistroModal
                 aberto={registroAberto !== null}
                 contatoInicial={registroAberto?.contato || null}
@@ -1964,6 +1985,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 onSalvar={salvarRegistroContato}
                 salvando={salvando}
                 criarNoGoogleFn={registroAberto?.editar ? atualizarEventoNoGoogle(registroAberto.editar) : criarEventoNoGoogle}
+                onSalvarAgendaEmpresa={visaoTotal ? salvarAgendaEmpresa : null}
+                visaoTotal={visaoTotal}
+                autor={currentUser}
               />
             </div>
           );

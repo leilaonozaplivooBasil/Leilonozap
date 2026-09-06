@@ -3467,3 +3467,75 @@ aberto de qualquer jeito (bloco do DIR-64).
 **Continua aberto com o dono:** a régua da sociedade (entrou 100 provisório) e
 se a reunião de segunda é uma para todos ou uma por trilha (entrou uma por
 semana, com a trilha marcada). Nenhum dos dois trava o uso.
+
+---
+
+## REL-73 — As agendas da casa entraram no agendador (preview)
+
+**Diretiva:** DIR-73. **Data:** 06/09/2026. **Escopo:** preview.
+
+**O que mudou pra quem usa:** no agendador livre, o passo 1 deixou de ser só
+*"com quem é a reunião?"* e virou **"o que você vai marcar?"**, com duas portas
+na cara: 👤 um contato da lista, ou 🏛️ uma agenda da empresa. Escolhendo a
+segunda, sai um catálogo agrupado — Mentorias, Treinamentos, Eventos e Reuniões
+de gestão — e escolher uma **já traz a cadência da casa preenchida**: segunda,
+19:30, 90 minutos. A pessoa confirma em vez de decidir do zero. Tudo editável.
+
+**A decisão que sustenta isso:** escolher a porta 🏛️ **muda onde a reunião é
+gravada**. Contato vai pro histórico daquela pessoa (`contatos_metodo`, como
+sempre foi); agenda da empresa vai pra `reunioes_empresa` — a tabela da DIR-52.
+Enfiar a agenda da casa no histórico de um contato encheria a ficha de um
+coitado com a grade inteira da empresa. Por isso as portas são **botões**, e
+não opções escondidas num `<select>`: decisão de destino tem que estar na cara.
+
+**Nenhuma tabela nova.** O catálogo é `src/lib/agendaEmpresa.js` — a grade da
+casa muda por decisão de gente, não por cadastro de usuário, e mudá-la é uma
+linha de diff revisável em vez de uma migração mais uma tela de cadastro mais
+a chance de alguém digitar "Mentalidad". A migração desta rodada acrescenta
+**uma coluna**: `agenda_id`, pra "Mentalidade do Diretor" no banco não ser só
+um TEXTO — sem ela, perguntar depois "quantas Mentalidades do Diretor
+aconteceram?" viraria casar string, que quebra no primeiro acento torto.
+
+**O catálogo, com autoria marcada.** As oito que o dono ditou estão inteiras e
+com o nome que ele usou. Sob o *"entre outros que você pode inserir"*,
+acrescentei quatro e marquei cada uma como `origem: 'proposta'` no código —
+**Reunião de Oportunidade** (a PPV: é pra cá que o Hábito 4 convida),
+**Treinamento de Produto**, **Fechamento do Mês** e **Reunião de Liderança**
+(a segunda-feira da diretoria, cuja pauta é o documento do X-Performance da
+DIR-72). Ficam marcadas pra ele cortar as minhas sem ter que lembrar quais eram.
+
+**Um defeito antigo consertado de passagem:** a coluna `publico` existia desde a
+DIR-52 e **ninguém a lia**. Reunião marcada como "diretoria" aparecia pra todo
+mundo. Agora ela vale: some do catálogo de quem não é diretoria **e** da agenda
+do dia. O padrão da função é permissivo de propósito, pra nenhuma chamada
+antiga mudar de comportamento — e como toda linha já cadastrada é `'todos'`
+(o default), nenhuma reunião existente muda.
+
+**Quem pode marcar pra empresa continua sendo quem já podia:** a porta 🏛️ só
+é entregue ao modal quando o pai tem visão total. A permissão mora no ponto de
+chamada, não numa condição perdida dentro do componente.
+
+**Provado, não presumido.** 16 testes novos, verificados por **mutação**:
+
+- `podeVerAgenda` sempre liberando → **2 testes quebram**;
+- a linha guardando `dia_semana` **e** `data` juntos → **2 quebram**;
+- `reunioesEmpresaDoDia` ignorando `publico` → **1 quebra**.
+
+**Prova em navegador (REL-34.1): 213/213, zero erro de página/console.** E a
+asserção que carrega a diretiva também foi mutada: tirei o desvio que manda a
+agenda pra `reunioes_empresa` e a prova **reprovou** (212/213), acusando que o
+último registro gravado não tinha `agenda_id` nenhum. Registro honesto: das
+duas asserções de destino, a que discrimina é essa; a companheira ("nenhum
+contato foi sujo") passa nos dois casos e vale como guarda, não como prova.
+
+**Dois defeitos de prova achados nesta rodada, e nenhum era do produto:**
+
+1. A faixa Jornada × Lista virou controle segmentado na sessão paralela e o
+   emoji 📋 saiu. Minha prova caçava o emoji. Agora ela clica na aba pelo
+   **papel** (`button[role="tab"]` dentro da faixa) — nome muda, papel não.
+   É a terceira vez que prova presa em aparência me custa uma rodada.
+2. Erro meu, e engraçado: procurei o seletor de duração por `/min/` — e
+   "do**min**go" casa. O seletor de dia se passava pelo de duração. Agora a
+   régua é a **forma** da opção (`/^\d+ min$/`), não uma letra solta.
+
+**Suíte:** 1067/1067. **Build:** limpo.

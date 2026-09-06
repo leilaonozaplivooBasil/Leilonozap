@@ -12,6 +12,52 @@
 
 ---
 
+## DIR-73 — As agendas da empresa dentro do agendador
+
+**Emitida por:** dono (06/09/2026), com print do modal "Agendar reunião":
+*"AQUI INSERIR AS AGENDAS E MENTORIAS DA EMPRESA: Mentalidade do Executivo,
+Onboarding, Mentalidade do Diretor, Mentalidade do CEO, Eventos Top College,
+Treinamento X-eos, entre outros que você pode inserir de marcado, Reunião com
+o Marketing, Reunião com Financeiro — tudo como funciona o mercado."*
+
+**Data:** 06/09/2026.
+
+**O problema exato:** o passo 1 do agendador só sabe perguntar *"com quem é a
+reunião?"* e só oferece contato da lista. Mas metade da agenda de quem trabalha
+aqui **não tem um contato do outro lado**: mentoria, treinamento, evento e
+reunião de área são compromissos da CASA. Hoje, pra marcar uma dessas, a pessoa
+tem que sair do agendador e ir no bloco 🏛️ da gestão — e por isso elas não são
+marcadas.
+
+**O que entra:** o passo 1 passa a ter duas portas — *um contato da minha
+lista* ou **🏛️ uma agenda da empresa** — e um catálogo das agendas que a casa
+já tem, cada uma com a **cadência do mercado** já sugerida (dia, hora e
+duração), pra pessoa só confirmar.
+
+Do ditado do dono: Mentalidade do Executivo, Onboarding, Mentalidade do
+Diretor, Mentalidade do CEO, Eventos Top College, Treinamento X-eos, Reunião
+com Marketing, Reunião com Financeiro. Da autorização *"entre outros que você
+pode inserir"*, e marcadas no código como **proposta minha**, não como ordem
+dele: Reunião de Oportunidade (a PPV), Treinamento de Produto, Fechamento do
+Mês e Reunião de Liderança.
+
+**Regras de fronteira desta diretiva:**
+
+- **O agendador de contato não muda.** O caminho de hoje — escolher pessoa,
+  gravar em `contatos_metodo`, criar no Google — continua idêntico, byte por
+  byte. A porta nova é uma segunda saída, não um desvio da primeira.
+- **Não nasce tabela nova.** Agenda da empresa **é** `reunioes_empresa`
+  (DIR-52). O catálogo é uma lista em `src/lib/agendaEmpresa.js` — mudar a
+  grade da casa vira uma linha de código, não uma migração.
+- **Quem pode marcar pra todo mundo continua sendo quem já podia.** A porta
+  🏛️ só aparece pra visão total; sem isso, qualquer executivo enfiaria uma
+  reunião na agenda de toda a empresa.
+- **`publico` deixa de ser enfeite.** A coluna já existia sem ninguém ler:
+  agora agenda marcada `diretoria` some da agenda de quem não é diretoria, em
+  vez de ficar guardada mentindo.
+
+---
+
 ## DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria
 
 **Emitida por:** dono (06/09/2026): *"Preciso organizar as questões de
