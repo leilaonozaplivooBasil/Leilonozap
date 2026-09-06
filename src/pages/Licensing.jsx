@@ -1066,7 +1066,17 @@ const DashboardContent = ({ user, isAdmin }) => {
   })();
 
   return (
-    <div className="flex bg-white min-h-screen">
+    /* 🌊 A PÁGINA VIRA UMA SUPERFÍCIE SÓ na Top College (ordem do dono:
+       "some com essa moldura branca, tudo fluido, como se fosse uma coisa
+       só"). A raiz era bg-white: era ELA que desenhava a moldura clara em
+       volta de tudo e virava aquelas listras brancas nas laterais do
+       celular. Na Top College o fundo passa a ser o mesmo preto dos
+       painéis — aí os cartões param de flutuar sobre o claro e derretem
+       na página. Fora da faculdade, nada muda: segue branco. */
+    <div
+      className={`flex min-h-screen ${naTopCollege ? '' : 'bg-white'}`}
+      style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
+    >
       <NavegacaoLateralGlobal
         user={user}
         activeTab={activeTab}
@@ -1074,10 +1084,13 @@ const DashboardContent = ({ user, isAdmin }) => {
         onTabChange={handleTabChange}
       />
 
-      <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+      /* na Top College o conteúdo não tem respiro lateral em NENHUM tamanho:
+         é a tela inteira, do celular ao desktop. Fora dela, o padding de
+         sempre. */
+      <div className={naTopCollege ? 'flex-1 min-w-0 py-4 sm:py-6 lg:py-8 px-0' : 'flex-1 min-w-0 p-4 sm:p-6 lg:p-8'}>
         {/* 📱 Mobile: a barra que rolava pro lado virou um seletor + painel com
             TUDO organizado por grupos (mesma fonte única da lateral do desktop). */}
-        <div className="md:hidden mb-4">
+        <div className={naTopCollege ? 'md:hidden mb-4 px-4' : 'md:hidden mb-4'}>
           <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 

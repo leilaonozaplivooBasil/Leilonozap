@@ -6,6 +6,7 @@ import {
   Mic, Rocket, Flame,
 } from 'lucide-react';
 import XGameCapa from './XGameCapas';
+import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
 //   • O dia começa LIMPO: só a saudação e A TAREFA DO MOMENTO.
@@ -151,7 +152,7 @@ function ParadaNaMesa({ Icone }) {
       {/* a sombra do chão: só acende quando a peça levanta no hover */}
       <span className="absolute left-1/2 -translate-x-1/2 -bottom-2.5 w-[58px] h-[11px] rounded-[50%] bg-slate-900/0 blur-[3px] transition-colors duration-200 ease-out group-hover:bg-slate-900/25" />
       <span
-        className="relative block w-[74px] h-[70px] rounded-[50%] bg-gradient-to-b from-slate-200 to-slate-300"
+        className="relative block w-[86px] h-[82px] sm:w-[74px] sm:h-[70px] rounded-[50%] bg-gradient-to-b from-slate-200 to-slate-300"
         style={{
           boxShadow: [
             '0 7px 0 0 #94A3B8',
@@ -161,7 +162,7 @@ function ParadaNaMesa({ Icone }) {
         }}
       >
         <Icone
-          className="absolute left-1/2 top-1/2 w-[34px] h-[34px] text-slate-400"
+          className="absolute left-1/2 top-1/2 w-[40px] h-[40px] sm:w-[34px] sm:h-[34px] text-slate-400"
           style={{
             transform: 'translate(-50%, -50%)',
             filter: 'drop-shadow(0 1.5px 0 rgba(255,255,255,0.9))',
@@ -190,7 +191,7 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
           <span className="xeos-cru absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 bg-white" />
         </span>
       )}
-      <button type="button" onClick={onClick} title={`${hora} — ${titulo}`} className="relative group outline-none">
+      <button type="button" onClick={() => { vibrar(VIBRA_TOQUE); onClick(); }} title={`${hora} — ${titulo}`} className="relative group outline-none">
         {/* ⬆️ A LEVANTADA: passou o mouse, a peça inteira sobe (banquinho +
             desenho juntos); tirou, desce de volta; clicou, afunda. */}
         <span className="relative block transition-transform duration-200 ease-out group-hover:-translate-y-2 group-active:translate-y-[3px]">
@@ -202,7 +203,7 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
              check gigante, como a moeda jogada do Duolingo */
           <span
             className={[
-              'relative w-[74px] h-[70px] rounded-[50%] flex items-center justify-center transition-transform',
+              'relative w-[86px] h-[82px] sm:w-[74px] sm:h-[70px] rounded-[50%] flex items-center justify-center transition-transform',
               'group-hover:brightness-105',
               `bg-gradient-to-b ${grad}`,
               feito ? '-rotate-6' : '',
@@ -216,10 +217,10 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
             }}
           >
             {feito ? (
-              <Check className="w-9 h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
+              <Check className="w-11 h-11 sm:w-9 sm:h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
             ) : (
               /* desenho CHEIO (preenchido), gordinho como o glifo do Duolingo */
-              <Icone className="w-8 h-8 text-white drop-shadow-sm" fill="currentColor" strokeWidth={1.6} />
+              <Icone className="w-10 h-10 sm:w-8 sm:h-8 text-white drop-shadow-sm" fill="currentColor" strokeWidth={1.6} />
             )}
           </span>
         ) : (
@@ -331,7 +332,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                 className="xeos-cru rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2"
               >IR PRO AGORA</button>
             )}
-            <button type="button" onClick={() => setExpandida(false)} className="xeos-cru rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2">
+            <button type="button" onClick={() => { vibrar(VIBRA_TOQUE); setExpandida(false); }} className="xeos-cru rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2">
               RECOLHER
             </button>
           </div>
@@ -492,7 +493,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
 
             <button
               type="button"
-              onClick={() => onTarefa(foco)}
+              onClick={() => { vibrar(VIBRA_TOQUE); onTarefa(foco); }}
               className="mt-10 w-full max-w-sm inline-flex items-center justify-center gap-2.5 rounded-2xl bg-nz-verde hover:bg-nz-verde-claro active:translate-y-[3px] text-white text-base font-extrabold tracking-wide py-4 transition-transform"
               style={{ boxShadow: '0 6px 0 0 #14532d' }}
             ><Play className="w-5 h-5" fill="currentColor" strokeWidth={0} /> Viver esse momento</button>
@@ -527,7 +528,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
 
         <button
           type="button"
-          onClick={() => setExpandida(true)}
+          onClick={() => { vibrar(VIBRA_ABRIR); setExpandida(true); }}
           className="mt-14 text-[11px] font-extrabold uppercase tracking-[0.16em] text-nz-tinta-fraca hover:text-nz-tinta transition-colors"
         >
           expandir a jornada · {pendentes.length} {pendentes.length === 1 ? 'passo' : 'passos'} pela frente

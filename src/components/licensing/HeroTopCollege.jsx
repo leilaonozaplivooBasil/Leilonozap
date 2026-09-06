@@ -30,7 +30,9 @@ import React from 'react';
 // faixa — dava pra "quase" acertar, nunca pra garantir.
 export default function HeroTopCollege({ saudacao, nome, seletor }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl mb-4 sm:mb-5 border border-white/10" style={{ background: 'var(--xeos-preto)' }}>
+    /* a faixa não é mais um cartão: sem borda, sem canto no celular e no
+       mesmo preto da página — ela DERRETE no resto em vez de ser recortada */
+    <div className="relative overflow-hidden w-full rounded-none mb-0" style={{ background: 'var(--xeos-preto)' }}>
       {/* o padrão tonal de X do brandbook, por trás de tudo */}
       <div
         aria-hidden="true"
@@ -132,8 +134,13 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
             draggable="false"
             className="pointer-events-none shrink-0 h-[170px] sm:h-[290px] lg:h-[320px] w-auto object-contain select-none"
             style={{
-              WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 14%, #000 44%)',
-              maskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 14%, #000 44%)',
+              // derrete nos QUATRO lados: entra pela esquerda, sai pela direita
+              // e pelo pé, então o professor se funde na página em vez de
+              // terminar numa aresta reta (ordem do dono: "sumindo na lateral")
+              WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 14%, #000 44%, #000 84%, transparent 100%), linear-gradient(0deg, transparent 0%, #000 16%)',
+              maskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 14%, #000 44%, #000 84%, transparent 100%), linear-gradient(0deg, transparent 0%, #000 16%)',
+              WebkitMaskComposite: 'source-in',
+              maskComposite: 'intersect',
             }}
           />
         </div>
