@@ -214,3 +214,24 @@ export const carregarApiYoutube = () => {
   });
   return promessaApi;
 };
+
+/** 🔎 A BUSCA. Fala com a nossa rota (api/functions/xmusicBuscar), que é
+ *  quem guarda a chave e conversa com o YouTube. O crachá de sessão vai
+ *  junto porque cada busca gasta cota paga do dono — rota aberta seria
+ *  torneira pra qualquer um esvaziar.
+ *
+ *  O resultado já vem FILTRADO pelo YouTube em videoEmbeddable: tudo que
+ *  aparece aqui toca embutido. É o fim do "Vídeo indisponível". */
+export const buscarNoYoutube = async (termo, cabecalhos = {}) => {
+  const q = String(termo || '').trim();
+  if (!q) return { ok: true, itens: [] };
+  try {
+    const r = await fetch(`/api/functions/xmusicBuscar?q=${encodeURIComponent(q)}`, {
+      headers: cabecalhos,
+      signal: AbortSignal.timeout(12000),
+    });
+    const j = await r.json().catch(() => null);
+    if (!j?.ok) return { ok: false, erro: j?.error || 'falhou', itens: [] };
+    return { ok: true, itens: Array.isArray(j.itens) ? j.itens : [] };
+  } catch { return { ok: false, erro: 'rede', itens: [] }; }
+};
