@@ -55,6 +55,25 @@ const seloDa = (titulo) => {
   return { Icone: Star, grad: 'from-amber-300 to-yellow-500', borda: '#a16207' };
 };
 
+// 🖼️ A CAPA DO MOMENTO — cada tarefa pode ter uma IMAGEM que representa
+// aquele momento (gratidão amanhecendo, o chão da corrida, a loja...).
+// Ordem de busca:
+//   1. tarefa.capa_url  → a capa daquela tarefa específica (vem do banco)
+//   2. CAPAS            → a capa padrão da família da tarefa
+//   3. nada             → um brilho na cor do próprio selo (nunca fica feio)
+// A imagem NÃO entra como retângulo: ela é mascarada num radial e some nas
+// bordas, então continua sem moldura nenhuma — o pedido do dono.
+const CAPAS = [
+  // [/regex do titulo/i, 'https://...'] — as imagens oficiais entram aqui
+];
+const capaDe = (t) => {
+  if (t?.capa_url) return t.capa_url;
+  const titulo = semAcento(t?.titulo);
+  for (const [re, url] of CAPAS) if (re.test(titulo)) return url;
+  return null;
+};
+const MASCARA_CAPA = 'radial-gradient(78% 62% at 50% 34%, #000 26%, rgba(0,0,0,0.55) 55%, transparent 80%)';
+
 // a saudação segue o RELÓGIO DO JOGO (o teste do super admin muda o dia inteiro)
 const saudacao = (min) => {
   const h = min != null ? Math.floor(min / 60) : new Date().getHours();
@@ -438,9 +457,30 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
   //   palco escuro (.xeos-palco) só repinta esses — slate cru ficava
   //   preto no preto (era o "Boa noite" quase invisível).
   const estado = foco?.estado?.id;
+  const capa = foco ? capaDe(foco) : null;
+  const brilho = foco ? seloDa(foco.titulo).borda : '#a16207';
   return (
-    <div className="w-full">
-      <div className="mx-auto max-w-2xl px-5 py-16 sm:py-24 text-center">
+    <div className="relative w-full overflow-hidden">
+      {/* A CAPA: sem moldura — a imagem é mascarada e se dissolve no fundo */}
+      {capa ? (
+        <>
+          <img
+            src={capa}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 w-full h-full object-cover opacity-40"
+            style={{ WebkitMaskImage: MASCARA_CAPA, maskImage: MASCARA_CAPA }}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/35" />
+        </>
+      ) : (
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.22]"
+          style={{ background: `radial-gradient(62% 48% at 50% 30%, ${brilho}, transparent 72%)` }}
+        />
+      )}
+
+      <div className="relative mx-auto max-w-2xl px-5 py-16 sm:py-24 text-center">
         <p className="text-3xl sm:text-4xl font-bold tracking-tight text-nz-tinta">
           {saudacao(agoraMin)}, {nome || 'campeão'}.
         </p>
