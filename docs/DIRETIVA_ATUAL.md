@@ -12,6 +12,58 @@
 
 ---
 
+## DIR-77 — O horário é a ponte, e o concluído mora na coluna
+
+**Emitida por:** dono (07/09/2026): *"botar os horários da tarefa, que
+sincroniza no planejamento diário, aparece lá no planejamento diário e também
+na jornada — tanto na lista como na jornada. Tarefa concluída, pra ficar verde.
+O horário de cada tarefa, quando termina. E eu poder arrastar de um lado pro
+outro."* E, no meio da rodada: *"esse concluído está aparecendo embaixo, mas
+tem que aparecer no card — vai organizando ali dentro mesmo, igual no
+MeisterTask. E quando eu minimizo, ele bota a cor até o final, fica bonitão."*
+
+**Data:** 07/09/2026.
+
+**O que eu conferi antes de prometer:** Lista e Jornada **já são a mesma
+coisa** — as duas leem `tarefas` do dia. "Adicionei na lista, entra na jornada"
+já funcionava. O que não existia era o horário no card do quadro, e por isso a
+tarefa nascida de um card caía no balde "sem hora": fora da linha do tempo da
+Jornada e fora do período certo da Lista.
+
+**A decisão que sustenta tudo: O HORÁRIO É QUE DECIDE.**
+
+O dono pediu "adicionou num lugar, entra em todos". Feito ao pé da letra, isso
+quebra o dia: o quadro é BACKLOG (o que existe pra fazer), o dia é COMPROMISSO
+(o que eu assumo hoje). Jogar todo card no dia incharia a Master Task — e como
+o X-Pay rateia o fixo pelas tarefas do dia, cada tarefa passaria a valer uma
+fração. **O horário resolve isso sozinho**, porque é assim que a cabeça já
+separa as duas coisas:
+
+> "isso eu faço às 14h" é compromisso · "isso eu preciso fazer algum dia" é backlog
+
+Card **com** hora entra no dia, na Lista e na Jornada, no lugar certo. Card
+**sem** hora fica no quadro. Nenhum botão a mais pra aprender.
+
+**O que entra:**
+- `hora` e `hora_fim` no card e no dia — "quando termina", que ele pediu;
+- **sugerir horário**: o primeiro buraco livre do dia, pra não procurar na mão;
+- **aviso de conflito**: duas coisas no mesmo horário é o defeito mais caro de
+  uma agenda, e até aqui nada avisava;
+- **concluída fica VERDE** na Lista e na Jornada — uma cor só, a mesma nas duas,
+  pra dar pra varrer o dia de relance (antes a moeda da feita saía na cor do
+  TIPO da tarefa, e o "está feito" mudava de cor a cada parada);
+- **o concluído fica na coluna dele** (DIR-77.1), com a faixa verde, embaixo
+  dos abertos — e não numa gaveta no pé do quadro, que foi onde eu errei;
+- **coluna minimizada desce até o fim** e todas as colunas ficam da mesma
+  altura, que é o que dá a cara de board.
+
+**Regras de fronteira:** migração aditiva. A tarefa do dia continua nascendo
+pela entidade. O quadro recebe as tarefas do dia **por parâmetro** de quem já
+as carrega — buscar de novo daria duas listas com a mesma verdade, e uma delas
+ficaria velha.
+
+---
+
 ## DIR-76.1 / 76.2 — A cara do MeisterTask, o seletor de ícone e o assistente
 
 **Emitidas por:** dono (06/09/2026), em três recados seguidos:

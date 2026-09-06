@@ -3927,3 +3927,62 @@ onde a guarda ficou:
   `tests/xperformance.test.mjs`, com as 4 mutações do REL-74.
 
 Tirar dali é reconhecer de quem é a tela; não é abrir mão de guarda. **260/260.**
+
+---
+
+## REL-77 — O horário é a ponte; o concluído mora na coluna (preview)
+
+**Diretiva:** DIR-77 / 77.1. **Data:** 07/09/2026. **Escopo:** preview.
+
+**Primeiro, o que eu conferi antes de prometer:** Lista e Jornada **já eram a
+mesma coisa** — as duas leem `tarefas` do dia. "Adicionei na lista, entra na
+jornada" já funcionava. O que faltava era o horário no card: a tarefa nascida
+de um card ia com `hora: null` e caía no balde "sem hora" — fora da linha do
+tempo da Jornada e fora do período certo da Lista. Era esse o buraco.
+
+**A decisão: o HORÁRIO é que decide onde a coisa aparece.**
+
+O pedido foi "adicionou num lugar, entra em todos". Ao pé da letra isso quebra
+o dia: o quadro é backlog, o dia é compromisso. Jogar todo card no dia incharia
+a Master Task — e como o X-Pay rateia o fixo pelas tarefas do dia, **cada
+tarefa passaria a valer uma fração**. O horário separa as duas coisas do jeito
+que a cabeça já separa: *"isso eu faço às 14h"* é compromisso; *"isso eu
+preciso fazer algum dia"* é backlog. Card com hora entra no dia; sem hora, fica
+no quadro. Zero botão novo pra aprender.
+
+**O que entrou:** `hora` e `hora_fim` no card e na tarefa ("quando termina");
+**sugerir horário** (o primeiro buraco livre); **aviso de conflito**;
+**concluída verde** na Lista e na Jornada; o **concluído na coluna dele**
+(77.1) e a **coluna minimizada indo até o fim**.
+
+**Sobre o verde da Jornada:** a moeda da tarefa feita saía na cor do TIPO da
+tarefa — o "está feito" mudava de cor a cada parada e não dava pra varrer o dia
+de longe. Agora é um verde só, o mesmo da Lista.
+
+**Sobre o concluído — eu tinha errado.** Pus numa gaveta no pé do quadro; o
+dono corrigiu no meio da rodada (*"vai organizando ali dentro mesmo, igual no
+MeisterTask"*). Agora fica na coluna, embaixo dos abertos, com o separador
+"Concluídas N" e a faixa verde. A gaveta saiu.
+
+**Provado por mutação — as 4 regras do horário quebram quando afrouxadas:**
+encostar virando conflito (`<=` no lugar de `<`) → **2 testes**; o card não
+levando a hora → **1**; `emMinutos` devolvendo 0 em vez de `null` (0 é
+meia-noite, não ausência) → **5**; o dia lotado inventando horário → **1**.
+
+**Prova em navegador: 265/265**, zero erro de página/console:
+
+```
+editor com início e fim + sugerir · 13:15 em cima da "Reunião 1" das 13:00
+  → "bate com “Reunião 1 (45-60 min)”"
+a tarefa nasceu com hora 13:15 (antes vinha null)
+concluído na coluna, faixa verde medida (G > R e G > B), gaveta antiga ausente
+```
+
+**Suíte:** 1214/1214. **Build:** limpo. **Migração** aditiva (`hora`,
+`hora_fim` no card; `hora_fim` na tarefa).
+
+**Duas coisas que eu proponho e NÃO fiz** — ficam pra ele decidir:
+1. **arrastar na Jornada pra mudar o horário** (a Jornada é uma linha do tempo;
+   arrastar uma parada mudaria a hora);
+2. **reordenar cards dentro da mesma lista** — hoje arrasta entre listas, e
+   dentro dela a ordem é por hora → prazo → ordem.

@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Loader2, Plus, Trash2, CalendarPlus, CalendarDays, ListChecks, CheckCircle2,
-  ChevronLeft, ChevronRight, ChevronDown, X, ArrowRight, User, LayoutGrid,
+  ChevronLeft, ChevronRight, X, ArrowRight, User, LayoutGrid,
   Briefcase, Dumbbell, Home, Target, Clock, Megaphone, Wallet, GraduationCap,
-  Lightbulb, AlertTriangle, Rocket, Sparkles, Camera,
+  Lightbulb, AlertTriangle, Rocket, Sparkles, Camera, Clock3,
 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaAdapter';
@@ -14,7 +14,8 @@ import {
   ESTADO_ABERTO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA, ICONES_LISTA, EMOJIS_LISTA, ehEmoji,
   estaFeito, progressoChecklist, atrasado, marcarFeito, reabrir,
   alternarItem, adicionarItem, removerItem, cartoesDaLista, feitosNaMesa, semLista,
-  tarefaDoCartao, resumoDoQuadro, reordenarListas,
+  tarefaDoCartao, resumoDoQuadro, reordenarListas, feitosDaLista,
+  faixaDeHorario, horaSugerida, conflitosDeHorario,
 } from '@/lib/quadroCompromisso';
 import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } from '@/lib/assistenteDeLista';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
@@ -62,6 +63,7 @@ const T = {
   entreCards: 12,   // MT ~10
   avatar: 32,       // MT ~26
   corpoMin: 180,    // coluna vazia com corpo de board, não de caixinha
+  alturaQuadro: 520, // o board inteiro — é isto que faz o minimizado ir até o fim
 };
 
 // As cores das listas — sólidas e saturadas, como as seções do MeisterTask.
@@ -326,7 +328,7 @@ function Entrevista({ assistente, onGerar, onFechar }) {
  * dono). O cabeçalho é a alça — o corpo continua livre pra rolar.
  */
 function Coluna({
-  lista, cartoes, dono, hoje, indice, painelAberto,
+  lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia,
   onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente,
   onMudarCard, onExcluirCard, onVirarTarefa, onIr, valorNovo, onNovo, onCriar,
 }) {
@@ -345,7 +347,7 @@ function Coluna({
 
   return (
     <div data-lista={lista.id} data-lista-nome={lista.nome} data-indice={indice} data-teste="lista"
-      className="shrink-0 rounded-xl overflow-visible relative"
+      className="shrink-0 rounded-xl overflow-visible relative flex flex-col self-stretch"
       style={{ width: T.coluna, background: 'rgba(255,255,255,0.05)', opacity: arrastando ? 0.7 : 1 }}>
 
       {/* ── CABEÇALHO COLORIDO DE PONTA A PONTA, e é ele a alça do arrasto ── */}
@@ -375,7 +377,7 @@ function Coluna({
           onEscolher={(m) => { onMudarLista(lista, m); }} />
       )}
 
-      <div className="p-3 flex flex-col" style={{ minHeight: T.corpoMin, gap: T.entreCards }}>
+      <div className="p-3 flex flex-col flex-1" style={{ minHeight: T.corpoMin, gap: T.entreCards }}>
         {/* 🤖 O CONVITE do assistente — convite, nunca modal que abre sozinho */}
         {assistente && !jaTemFicha && (
           <button type="button" onClick={() => onAssistente(lista, assistente)} data-teste="convite-assistente"
@@ -392,9 +394,26 @@ function Coluna({
         )}
 
         {cartoes.map((cartao) => (
-          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje}
+          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
             onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} />
         ))}
+
+        {/* ✅ DIR-77.1 — o CONCLUÍDO fica AQUI, na coluna dele, com a faixa
+            verde — igual ao MeisterTask. Antes eu tinha posto numa gaveta no pé
+            do quadro, e o dono corrigiu: "vai organizando ali dentro mesmo". */}
+        {feitos.length > 0 && (
+          <>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.14)' }} />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-nz-tinta-fraca">Concluídas {feitos.length}</span>
+              <span className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.14)' }} />
+            </div>
+            {feitos.map((cartao) => (
+              <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
+                onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} />
+            ))}
+          </>
+        )}
 
         <div className="flex items-center gap-2 mt-auto">
           <input
@@ -415,9 +434,10 @@ function Coluna({
   );
 }
 
-function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr }) {
+function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
+  const [abrindoHora, setAbrindoHora] = useState(false);
   const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
     aoSoltar: ({ x, y }) => {
       const alvo = document.elementFromPoint(x, y)?.closest('[data-lista]');
@@ -515,6 +535,15 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
           {prog.total > 0 && (
             <span className="inline-flex items-center gap-1 tabular-nums font-semibold"><ListChecks className="w-3.5 h-3.5" /> {prog.feitos}/{prog.total}</span>
           )}
+          {/* ⏰ DIR-77 — o HORÁRIO. É ele que faz o card virar compromisso do dia
+              e aparecer na Lista e na Jornada no lugar certo. Sem hora, o card
+              fica no quadro — que é a diferença entre backlog e compromisso. */}
+          <button type="button" onClick={() => setAbrindoHora((v) => !v)} data-teste="chip-hora"
+            className="inline-flex items-center gap-1 font-semibold tabular-nums hover:underline"
+            style={cartao.hora ? { color: '#0B5FFF' } : undefined}
+            title={cartao.hora ? 'mudar o horário' : 'dar um horário faz entrar no seu dia'}>
+            <Clock3 className="w-3.5 h-3.5" /> {faixaDeHorario(cartao) || 'horário'}
+          </button>
           {habito && (
             <span className="rounded px-1.5 py-0.5 text-[11px] font-bold" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>
           )}
@@ -522,6 +551,38 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
             <span className="rounded px-1.5 py-0.5 text-[11px] font-bold" style={{ background: '#E3F5E9', color: '#177245' }}>no dia</span>
           )}
         </div>
+
+        {abrindoHora && (() => {
+          const choque = conflitosDeHorario(doDia, { hora: cartao.hora, hora_fim: cartao.hora_fim, ignorarId: cartao.virou_tarefa_id });
+          return (
+            <div className="mt-3 rounded-lg p-2.5" style={{ background: '#F4F5F7' }} data-teste="editor-hora">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="time" value={cartao.hora || ''} data-teste="hora-inicio"
+                  onChange={(e) => onMudar({ ...cartao, hora: e.target.value || null })}
+                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none" style={{ borderColor: '#DFE1E6', color: '#172B4D' }} />
+                <span className="text-[13px]" style={{ color: '#5E6C84' }}>às</span>
+                <input type="time" value={cartao.hora_fim || ''}
+                  onChange={(e) => onMudar({ ...cartao, hora_fim: e.target.value || null })}
+                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none" style={{ borderColor: '#DFE1E6', color: '#172B4D' }} />
+                {!cartao.hora && (
+                  <button type="button" data-teste="sugerir-hora"
+                    onClick={() => {
+                      const h = horaSugerida(doDia, { duracaoMin: 30 });
+                      if (h) onMudar({ ...cartao, hora: h });
+                    }}
+                    className="text-[13px] font-bold hover:underline" style={{ color: '#0B5FFF' }}>sugerir</button>
+                )}
+              </div>
+              {/* 🔒 duas coisas no mesmo horário é o defeito mais caro de uma
+                  agenda, e até aqui NADA avisava */}
+              {choque.length > 0 && (
+                <p className="mt-2 text-[12px] font-bold" style={{ color: '#C4470F' }} data-teste="aviso-conflito">
+                  bate com {choque.length === 1 ? `“${choque[0].titulo}”` : `${choque.length} tarefas do dia`}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {sobre && <p className="mt-2 text-[12px] font-bold" style={{ color: '#0B5FFF' }}>soltar em “{sobre}”</p>}
 
@@ -550,7 +611,13 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
   );
 }
 
-export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada }) {
+/**
+ * @param {Array} tarefasDoDia as tarefas do Compromisso de hoje — o quadro
+ *   precisa delas pra avisar quando um horário BATE com o que já está marcado.
+ *   Vem do CrmMetodo, que é quem já as carrega: buscar de novo aqui daria duas
+ *   listas com a mesma verdade, e uma delas ficaria velha.
+ */
+export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, tarefasDoDia = [] }) {
   const uid = currentUser?.id || null;
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const [listas, setListas] = useState([]);
@@ -708,7 +775,11 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
           </Button>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+        // 🧱 DIR-77.1 — as colunas têm a MESMA altura e o minimizado desce até o
+        // fim ("ele bota a cor até o final, fica bonitão"). É `items-stretch`
+        // com uma altura de board: com `items-start`, cada coluna parava na
+        // altura do próprio conteúdo e a barra minimizada virava um tocinho.
+        <div className="flex gap-4 overflow-x-auto pb-4 items-stretch" style={{ minHeight: T.alturaQuadro }}>
           {listas.map((lista, indice) => {
             const daLista = cartoesDaLista(cartoes, lista.id);
             const p = paleta(lista.cor);
@@ -721,8 +792,8 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                   onClick={() => mudarLista(lista, { recolhida: false })}
                   data-lista={lista.id} data-lista-nome={lista.nome} data-indice={indice} data-teste="lista-recolhida"
                   title={`abrir ${lista.nome}`}
-                  className="shrink-0 rounded-xl flex flex-col items-center py-3.5 gap-3 hover:brightness-110 transition-[filter]"
-                  style={{ background: p.barra, width: 52, minHeight: T.corpoMin + T.cabecalho }}
+                  className="shrink-0 rounded-xl flex flex-col items-center py-3.5 gap-3 hover:brightness-110 transition-[filter] self-stretch"
+                  style={{ background: p.barra, width: 52 }}
                 >
                   <ChevronRight className="w-[18px] h-[18px] text-white/80" />
                   <Marca lista={lista} px={18} className="text-white/80" />
@@ -738,8 +809,10 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 key={lista.id}
                 lista={lista}
                 cartoes={daLista}
+                feitos={feitosDaLista(cartoes, lista.id, hoje)}
                 dono={currentUser}
                 hoje={hoje}
+                doDia={tarefasDoDia}
                 indice={indice}
                 painelAberto={painelDe === lista.id}
                 onPainel={setPainelDe}
@@ -762,7 +835,7 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
               "quando eu adicionar, precisa ficar igual as outras"). O cabeçalho
               já vem colorido, com o ícone que o nome sugere, ANTES de existir —
               a pessoa vê o resultado enquanto digita. ── */}
-          <div className="shrink-0 rounded-xl overflow-hidden" style={{ width: T.coluna, background: 'rgba(255,255,255,0.04)' }} data-teste="nova-lista">
+          <div className="shrink-0 rounded-xl overflow-hidden self-stretch" style={{ width: T.coluna, background: 'rgba(255,255,255,0.04)' }} data-teste="nova-lista">
             {(() => {
               const previa = { nome: novaLista, cor: CORES_LISTA[listas.length % CORES_LISTA.length] };
               const IconePrevia = iconeDaLista(previa);
@@ -798,25 +871,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
         />
       )}
 
-      {feitos.length > 0 && (
-        <div className="rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }} data-teste="quadro-feito">
-          <button type="button" onClick={() => setFeitoAberto((v) => !v)}
-            className="w-full flex items-center gap-2 px-3 h-[42px] text-[13px] font-extrabold uppercase tracking-[0.08em] text-white"
-            style={{ background: '#2FA36B' }}>
-            <CheckCircle2 className="w-[18px] h-[18px] text-white/90" />
-            <span className="flex-1 text-left">Feito <span className="tabular-nums">{feitos.length}</span></span>
-            <span className="text-[11px] font-semibold normal-case tracking-normal text-white/80">sai da mesa depois de 7 dias</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${feitoAberto ? 'rotate-180' : ''}`} />
-          </button>
-          {feitoAberto && (
-            <div className="p-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {feitos.map((cartao) => (
-                <Cartao key={cartao.id} cartao={cartao} dono={currentUser} hoje={hoje} onMudar={mudar} onExcluir={excluir} onVirarTarefa={virarTarefa} onIr={onIr} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
