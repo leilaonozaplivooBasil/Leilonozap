@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2 } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2, Brain } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { distribuirDia, simularNovaTarefa, resumoDoCiclo, DIAS_FIXO, PESO_MIN, P
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
-import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar } from '@/lib/catalogoAcoes';
+import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
@@ -73,6 +73,15 @@ import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/
 // seis reais num dia"): o dia completo é a Rotina Perfeita (peso 75) — a
 // conta mora em distribuicaoFixo/xgame; aqui só se mostra.
 //
+// 🧠 SEXTA RODADA (dono, mesmo dia): "quando eu botei uma palavra ele ficou
+// nela até o final; tem que ir atualizando conforme eu escrevo — um
+// raciocínio vivo junto comigo. E a mentoria tem roteiro: 15 min de leitura,
+// 45 de treinamento e 2h de reunião." A LEITURA VIVA (lib catalogoAcoes.
+// lerTexto): todas as palavras contam, o nome dito pesa mais, o último
+// escrito desempata — e a tela mostra cada sinal reconhecido. A categoria e
+// os temas também saem do texto. E "mentoria" vira TRÊS blocos encadeados
+// no horário (montarMentoria), com o ensinamento de cada um.
+//
 // ⏰ QUINTA RODADA (dono, mesmo dia): "tem sistema que a gente chama de
 // pronto: começar tal hora e entregar até tal hora; aparece pra ele dar o
 // pronto até, pra gente sempre cobrar o pronto". A tarefa ganha o "pronto
@@ -80,9 +89,6 @@ import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/
 // atrasado, o que está pronto esperando o ✔✔, e o DEVOLVER com recado —
 // que a pessoa lê embaixo da tarefa (src/lib/pronto).
 
-const CATEGORIAS = [
-  ['mentoria', 'Mentoria'], ['producao', 'Produção'], ['visao', 'Visão estratégica'], ['bonus', 'Bônus / estudo'],
-];
 
 /** Próximo dia útil a partir de amanhã (o dono distribui "pra amanhã"). */
 export function proximoDiaUtil(hojeISO) {
@@ -124,7 +130,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
   const [dia, setDia] = useState(() => proximoDiaUtil(hoje));
-  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', mentalidade: '', habito: '', prazoDia: '', prazoHora: '18:00' });
+  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora: '18:00' });
+  const [mentoriaCompleta, setMentoriaCompleta] = useState(false);
   const [devolvendo, setDevolvendo] = useState(null); // { id, motivo }
   const [gerando, setGerando] = useState(false);
   // 📚 o catálogo: o que veio do banco + o padrão do código
@@ -194,6 +201,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const mentalidadeAtual = nova.mentalidade || (nova.titulo.trim() ? lida.mentalidade : mentalidadePadrao(participante?.cargo));
   const mentalidadeObj = mentalidadeDe(mentalidadeAtual);
   const habitoAtual = nova.habito || (nova.titulo.trim() && !nova.mentalidade ? String(lida.habito || '') : '');
+  // a categoria também sai do texto (até você escolher uma)
+  const categoriaAtual = nova.categoriaManual || !nova.titulo.trim() ? nova.categoria : lida.categoria;
+  const ehMentoria = categoriaAtual === 'mentoria';
+  const blocosMentoria = ehMentoria && mentoriaCompleta ? montarMentoria({ titulo: nova.titulo, mentalidade: mentalidadeAtual, horaInicio: nova.hora || '09:00' }) : null;
+  const sugestoes = nova.titulo.trim() && !acaoEscolhida ? parecidas(catalogo, nova.titulo) : [];
   const noCatalogo = nova.titulo.trim() ? jaNoCatalogo(catalogo, nova.titulo) : true;
 
   // 📚 escolher uma ação do catálogo preenche tudo
@@ -201,14 +213,14 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     setAcaoEscolhida(id);
     const a = catalogo.find((x) => x.id === id);
     if (!a) return;
-    setNova((n) => ({ ...n, titulo: a.titulo, mentalidade: a.mentalidade, habito: a.habito ? String(a.habito) : '', peso: a.peso, pesoManual: true, categoria: a.categoria || n.categoria }));
+    setNova((n) => ({ ...n, titulo: a.titulo, mentalidade: a.mentalidade, habito: a.habito ? String(a.habito) : '', peso: a.peso, pesoManual: true, categoria: a.categoria || n.categoria, categoriaManual: true }));
   };
 
   // 📚 salvar a ação digitada no catálogo (no banco), com a classificação da tela
   const salvarNoCatalogo = async () => {
     if (!nova.titulo.trim() || noCatalogo) return;
     setSalvandoAcao(true);
-    const linha = acaoParaGravar({ titulo: nova.titulo, mentalidade: mentalidadeAtual, habito: habitoAtual, peso: pesoEfetivo, categoria: nova.categoria, criadoPorId: currentUser?.id });
+    const linha = acaoParaGravar({ titulo: nova.titulo, mentalidade: mentalidadeAtual, habito: habitoAtual, peso: pesoEfetivo, categoria: categoriaAtual, criadoPorId: currentUser?.id });
     const { data, error } = await supabase.from('xperf_acoes').insert(linha).select();
     setSalvandoAcao(false);
     if (error) { toast.error('Não salvou no catálogo — tenta de novo'); return; }
@@ -233,28 +245,49 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const mudarTitulo = (titulo) => {
     setAcaoEscolhida('');
     // texto novo à mão: a régua volta a mandar na mentalidade, no Hábito e no peso
-    setNova((n) => ({ ...n, titulo, mentalidade: '', habito: '', pesoManual: false }));
+    setNova((n) => ({ ...n, titulo, mentalidade: '', habito: '', pesoManual: false, categoriaManual: false }));
   };
-  const ensinamento = ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: habitoAtual });
+  const temasTexto = lida.temas.length ? `Temas: ${lida.temas.map((id) => TEMAS.find((t) => t.id === id)?.rotulo || id).join(', ')}.` : '';
+  const ensinamento = ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: habitoAtual, detalhe: temasTexto });
   const previa = useMemo(() => {
     if (!participante) return null;
     const base = participante;
     const producao = tarefasDoDia.filter(ehProducao);
     const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: producao });
-    const cat = nova.categoria;
+    const cat = categoriaAtual;
     const entraNoFixo = cat !== 'bonus' && cat !== 'venda';
     const sim = entraNoFixo
       ? simularNovaTarefa({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: producao, novaPeso: pesoEfetivo })
       : null;
     return { dist, sim, entraNoFixo, fixo: fixoDoParticipante(base) };
-  }, [participante, tarefasDoDia, nova.categoria, pesoEfetivo]);
+  }, [participante, tarefasDoDia, categoriaAtual, pesoEfetivo]);
 
   const distribuir = async () => {
     if (!pessoa || !nova.titulo.trim()) { toast.error('Escolha a pessoa e diga qual é a tarefa.'); return; }
     setSalvando(true);
+    // 🎓 mentoria completa: três blocos encadeados, cada um com o seu ensinamento
+    if (blocosMentoria) {
+      const linhas = blocosMentoria.map((b, i) => ({
+        user_id: pessoa, data: dia, hora: b.hora, titulo: b.titulo, feito: false, ordem: tarefasDoDia.length + i,
+        categoria: b.categoria, peso: pesoComMentalidade(b.titulo, mentalidadeAtual).peso,
+        origem: 'xperf', criado_por_id: currentUser?.id || null,
+        mentalidade: mentalidadeAtual, habito: b.habito,
+        detalhe: ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: b.habito, detalhe: `Bloco da mentoria (${b.minutos} min): ${b.tema}.` }),
+        prazo_em: prazoDe(nova.prazoDia || dia, nova.prazoHora || '18:00'),
+      }));
+      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      setSalvando(false);
+      if (error) { toast.error('Não distribuiu a mentoria — tenta de novo'); return; }
+      toast.success(`Mentoria distribuída pra ${nomeDe(pessoa)}: ${linhas.length} blocos, das ${linhas[0].hora} às ${linhas[2].hora} (+2h)`);
+      setMentoriaCompleta(false);
+      setAcaoEscolhida('');
+      setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora: nova.prazoHora || '18:00' });
+      carregarTarefas();
+      return;
+    }
     const linha = {
       user_id: pessoa, data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
-      feito: false, ordem: tarefasDoDia.length, categoria: nova.categoria, peso: pesoEfetivo,
+      feito: false, ordem: tarefasDoDia.length, categoria: categoriaAtual, peso: pesoEfetivo,
       origem: 'xperf', criado_por_id: currentUser?.id || null,
       // 🎓 a mentalidade, o Hábito e o ensinamento que a pessoa vai ler
       mentalidade: mentalidadeAtual, habito: habitoAtual ? Number(habitoAtual) : null,
@@ -275,7 +308,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — as outras do dia foram recalculadas`
         : `Tarefa distribuída pra ${nomeDe(pessoa)}`,
     );
-    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, mentalidade: '', habito: '', prazoDia: '', prazoHora: nova.prazoHora || '18:00' });
+    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora: nova.prazoHora || '18:00' });
     carregarTarefas();
   };
 
@@ -440,10 +473,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   {Array.from({ length: PESO_MAX - PESO_MIN + 1 }, (_, i) => PESO_MIN + i).map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </label>
-              <label className="text-[10px] text-white/45 uppercase tracking-wider">
-                categoria
-                <select value={nova.categoria} onChange={(e) => setNova((n) => ({ ...n, categoria: e.target.value }))} className={`mt-1 block ${campo}`}>
-                  {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+              <label className="text-[10px] text-white/45 uppercase tracking-wider" title={nova.categoriaManual ? 'escolhida por você' : 'lida do texto'}>
+                categoria {!nova.categoriaManual && nova.titulo.trim() && <span className="normal-case text-white/30">(auto)</span>}
+                <select value={categoriaAtual} onChange={(e) => setNova((n) => ({ ...n, categoria: e.target.value, categoriaManual: true }))} className={`mt-1 block ${campo}`} data-teste="categoria">
+                  {CATEGORIAS_ACAO.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
                 </select>
               </label>
             </div>
@@ -468,6 +501,43 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 {'\n'}{ensinamento}
               </div>
             </div>
+
+            {/* 🧠 a leitura viva: o que a régua reconheceu, palavra por palavra */}
+            {nova.titulo.trim() && !acaoEscolhida && (
+              <div className="mt-2 rounded-lg border border-white/10 px-2.5 py-2 text-[11px]" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="leitura-viva">
+                <p className="inline-flex items-center gap-1 text-white/40 text-[10px] uppercase tracking-wider"><Brain className="w-3 h-3" /> leitura viva — muda a cada palavra</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <span className="rounded-full border border-white/20 px-2 py-0.5 text-white/80" data-teste="leitura-mentalidade">{mentalidadeObj?.nome} <span className="text-white/40">· {lida.porqueMentalidade}</span></span>
+                  {habitoAtual && <span className="rounded-full border border-white/20 px-2 py-0.5 text-white/80" data-teste="leitura-habito">Hábito {habitoAtual} · {habitoDe(habitoAtual)?.completo} <span className="text-white/40">· {nova.habito ? 'escolhido por você' : lida.porqueHabito}</span></span>}
+                  <span className="rounded-full border border-white/20 px-2 py-0.5 text-white/80" data-teste="leitura-categoria">{CATEGORIAS_ACAO.find(([v]) => v === categoriaAtual)?.[1]} <span className="text-white/40">· {nova.categoriaManual ? 'escolhida por você' : 'lida do texto'}</span></span>
+                  <span className="rounded-full border border-white/20 px-2 py-0.5 text-white/80">peso {pesoEfetivo} <span className="text-white/40">· {nova.pesoManual ? 'escolhido por você' : pesoSugerido.porque}</span></span>
+                  {lida.temas.map((id) => <span key={id} className="rounded-full bg-white/10 px-2 py-0.5 text-white/60" data-teste="leitura-tema">#{TEMAS.find((t) => t.id === id)?.rotulo || id}</span>)}
+                </div>
+                {sugestoes.length > 0 && (
+                  <p className="mt-1.5 text-white/45" data-teste="parece-com">
+                    parece com:{' '}
+                    {sugestoes.map((a) => (
+                      <button key={a.id} type="button" onClick={() => escolherAcao(a.id)} className="mr-2 underline decoration-white/30 hover:text-white">{a.titulo}</button>
+                    ))}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 🎓 a mentoria com roteiro: 15 + 45 + 120 minutos */}
+            {ehMentoria && nova.titulo.trim() && (
+              <label className="mt-2 flex items-start gap-2 rounded-lg border border-white/10 px-2.5 py-2 text-[11px] text-white/70 cursor-pointer" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="mentoria-completa">
+                <input type="checkbox" checked={mentoriaCompleta} onChange={(e) => setMentoriaCompleta(e.target.checked)} className="mt-0.5 accent-green-600" data-teste="mentoria-caixa" />
+                <span>
+                  <span className="font-bold text-white">Distribuir como mentoria completa</span> — {ROTEIRO_MENTORIA.map((b) => `${b.minutos} min de ${b.bloco === 'reuniao' ? 'reunião' : b.bloco}`).join(' · ')}, encadeados a partir de "começar às"{nova.hora ? ` (${nova.hora})` : ' (09:00)'}.
+                  {blocosMentoria && (
+                    <span className="mt-1 block space-y-0.5" data-teste="mentoria-blocos">
+                      {blocosMentoria.map((b) => <span key={b.bloco} className="block text-white/55">{b.hora} · {b.titulo} <span className="text-white/35">· H{b.habito} · peso {pesoComMentalidade(b.titulo, mentalidadeAtual).peso}</span></span>)}
+                    </span>
+                  )}
+                </span>
+              </label>
+            )}
 
             {/* 🔮 a prévia */}
             {previa && (

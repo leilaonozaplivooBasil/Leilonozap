@@ -403,18 +403,32 @@ export const PERIODOS = [
 ];
 
 /** Gera as tarefas de um dia a partir da rotina (modelo → linhas do dia). */
-export function gerarTarefasDaRotina(rotina = [], userId, dataStr) {
+export function gerarTarefasDaRotina(rotina = [], userId, dataStr, pesoDe = null) {
+  // 💰 DIR-75 — o PESO entra aqui, e ele estava faltando. O motor de peso
+  // automático (`pesoAutomatico`, em xgame.js) existe desde o X-GAME e nunca
+  // era chamado na geração do dia: toda tarefa nascia sem peso e caía no
+  // padrão 3. Por isso, no app publicado, TODA linha do dia mostra o mesmo
+  // valor — R$ 2,95 com a verba de R$ 1.300.
+  //
+  // O peso entra por PARÂMETRO, e não por import: metodo.js é a base e não
+  // conhece o X-Game. Quem chama sabe dos dois e passa a régua. Sem o
+  // parâmetro, o comportamento é exatamente o de antes.
   return (Array.isArray(rotina) ? rotina : [])
     .filter((r) => r && r.titulo)
-    .map((r, i) => ({
-      user_id: userId,
-      data: dataStr,
-      hora: r.hora || '',
-      titulo: r.titulo,
-      detalhe: r.detalhe || '',
-      feito: false,
-      ordem: i,
-    }));
+    .map((r, i) => {
+      const linha = {
+        user_id: userId,
+        data: dataStr,
+        hora: r.hora || '',
+        titulo: r.titulo,
+        detalhe: r.detalhe || '',
+        feito: false,
+        ordem: i,
+      };
+      const peso = typeof pesoDe === 'function' ? Number(pesoDe(r.titulo)) : null;
+      if (peso > 0) linha.peso = peso;
+      return linha;
+    });
 }
 
 /** Progresso do dia: feitas ÷ total (0-100), sem inventar número em dia vazio. */

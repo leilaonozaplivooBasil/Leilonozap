@@ -3,7 +3,7 @@
 // posso adicionar no menu".
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classificarAcao, ACOES_PADRAO, catalogoJunto, jaNoCatalogo, acaoParaGravar } from '../src/lib/catalogoAcoes.js';
+import { classificarAcao, lerTexto, ACOES_PADRAO, catalogoJunto, jaNoCatalogo, acaoParaGravar, montarMentoria, ROTEIRO_MENTORIA, parecidas, TEMAS } from '../src/lib/catalogoAcoes.js';
 
 test('classificarAcao: lê o texto e diz a mentalidade — time/números é diretor, diretoria/sistema é CEO, o resto é a própria mão', () => {
   assert.equal(classificarAcao('Fazer 3 apresentações de sucesso').mentalidade, 'executivo');
@@ -21,10 +21,10 @@ test('classificarAcao: o Hábito lido cai dentro da trilha da mentalidade; o pes
   const b = classificarAcao('Treinar o time no Hábito da semana');
   assert.deepEqual([b.mentalidade, b.habito], ['diretor', 8]);
   assert.equal(b.peso, 6, 'treinamento 5 + 1 do diretor');
-  // "cobrar" é acompanhamento (6) — e o diretor vai de 5 a 8
-  assert.equal(classificarAcao('Cobrar o time pelos contatos do dia').habito, 6);
-  // "contato" é Hábito 4, mas o diretor vai de 5 a 8: cai no 5 (o mais perto)
-  assert.equal(classificarAcao('Puxar o time nos contatos do dia').habito, 5);
+  // "cobrar" e "proposta" são acompanhamento (6)
+  assert.equal(classificarAcao('Cobrar o time pelas propostas do dia').habito, 6);
+  // "cobrar" (6) empata com "contatos" (4), e o ÚLTIMO escrito vence: 4 — mas o diretor vai de 5 a 8: cai no 5
+  assert.equal(classificarAcao('Cobrar o time pelos contatos do dia').habito, 5);
   // sem palavra de hábito: o Hábito TÍPICO da mentalidade — nunca fica vazio
   const almoco = classificarAcao('Almoço com o fornecedor');
   assert.deepEqual([almoco.habito, almoco.peso], [2, 1]);
@@ -66,4 +66,44 @@ test('acaoParaGravar: a linha limpa pra tabela', () => {
     { titulo: 'Visitar a loja', mentalidade: 'diretor', habito: 6, peso: 6, categoria: 'mentoria', criado_por_id: 'dono' });
   assert.equal(acaoParaGravar({ titulo: 'x', mentalidade: 'nada' }).mentalidade, 'executivo');
   assert.equal(acaoParaGravar({ titulo: 'x' }).habito, null);
+});
+
+// ── 🧠 a leitura viva ─────────────────────────────────────────────────────
+test('leitura viva: a leitura muda a cada palavra — dizer o nome pesa mais, e no empate vence o que foi escrito por último', () => {
+  assert.equal(classificarAcao('Pegar as pautas').mentalidade, 'diretor');
+  assert.equal(classificarAcao('Pegar as pautas da reunião de amanhã mentalidade do CEO').mentalidade, 'ceo', 'dizer "mentalidade do CEO" vence as palavras de time');
+  assert.equal(classificarAcao('Pegar as pautas da reunião de amanhã mentalidade do CEO, e do executivo').mentalidade, 'executivo', 'empate entre nomes: o último escrito vence');
+  const r = classificarAcao('Pegar as pautas da reunião de amanhã mentoria mentalidade do diretor / ceo visão estratégica, metas e organização constante');
+  assert.equal(r.mentalidade, 'diretor');
+  assert.equal(r.habito, 7);
+  assert.equal(r.categoria, 'mentoria', 'disse "mentoria" com todas as letras');
+  assert.deepEqual(r.temas, ['visao', 'metas', 'organizacao', 'reuniao', 'constancia']);
+  assert.match(r.porqueMentalidade, /"mentalidade do diretor"/);
+  assert.ok(r.sinais.length >= 6, 'os sinais reconhecidos ficam à vista');
+});
+
+test('leitura viva: "hábito 4" escrito vence a régua; categoria e temas saem do texto', () => {
+  const r = classificarAcao('Treinar o time no hábito 4');
+  assert.equal(r.habito, 5, 'H4 escrito, mas o diretor vai de 5 a 8: puxado pra 5');
+  assert.match(r.porqueHabito, /você escreveu o Hábito 4/);
+  assert.equal(classificarAcao('Leitura do capítulo 3').categoria, 'bonus');
+  assert.equal(classificarAcao('Visitar a loja do Centro').categoria, 'producao');
+  assert.equal(classificarAcao('Revisar a estratégia do trimestre').categoria, 'visao');
+  assert.equal(lerTexto('').mentalidade, null);
+  assert.ok(TEMAS.length >= 8);
+});
+
+test('o roteiro da mentoria: 15 min de leitura, 45 de treinamento e 2h de reunião, encadeados a partir da hora de início', () => {
+  assert.deepEqual(ROTEIRO_MENTORIA.map((b) => [b.bloco, b.minutos]), [['leitura', 15], ['treinamento', 45], ['reuniao', 120]]);
+  const blocos = montarMentoria({ titulo: 'Mentoria de segunda', mentalidade: 'diretor', horaInicio: '14:00' });
+  assert.deepEqual(blocos.map((b) => [b.hora, b.habito, b.categoria]), [['14:00', 8, 'bonus'], ['14:15', 8, 'mentoria'], ['15:00', 7, 'mentoria']]);
+  assert.equal(blocos[2].titulo, 'Mentoria de segunda — Reunião (2h): visão estratégica, metas e aplicabilidade');
+  assert.deepEqual(montarMentoria({ mentalidade: 'executivo', horaInicio: '23:30' }).map((b) => [b.hora, b.habito]), [['23:30', 2], ['23:45', 5], ['00:30', 5]]);
+  assert.equal(montarMentoria({}).length, 3);
+});
+
+test('parecidas: o catálogo sugere o que se parece com o que está sendo escrito', () => {
+  assert.deepEqual(parecidas(ACOES_PADRAO, 'pegar pautas reunião').map((a) => a.titulo), ['Pegar as pautas da reunião de segunda']);
+  assert.ok(!parecidas(ACOES_PADRAO, 'Pegar as pautas da reunião de segunda').some((a) => a.titulo === 'Pegar as pautas da reunião de segunda'), 'igualzinha não é "parecida"');
+  assert.deepEqual(parecidas(ACOES_PADRAO, 'xyz'), []);
 });

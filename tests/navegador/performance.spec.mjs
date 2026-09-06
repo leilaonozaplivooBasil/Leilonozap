@@ -131,7 +131,7 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
   assert.equal(l.data, '2026-09-08');
   assert.equal(l.titulo, 'Pegar as pautas da reunião de amanhã');
   assert.equal(l.peso, 4);
-  assert.equal(l.categoria, 'mentoria');
+  assert.equal(l.categoria, 'producao', 'a categoria é lida do texto: "reunião" é ação de produção');
   assert.equal(l.origem, 'xperf');
   assert.equal(l.criado_por_id, 'dono');
   assert.equal(l.feito, false);
@@ -369,6 +369,52 @@ test('FILA DO PRONTO: o pronto da Carla espera o ✔✔; devolver com recado des
   assert.deepEqual(e.patch, { conferido: true });
   await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="pronto-item"]').length === 0);
   assert.match(await texto(pagina, '[data-teste="fila-pronto"]'), /1 conferida no ciclo/);
+  await ctx.close();
+});
+
+test('LEITURA VIVA: a leitura muda a cada palavra — o último nome escrito vence, e os temas viram etiquetas', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const titulo = pagina.locator('[data-teste="titulo"]');
+  await titulo.fill('Pegar as pautas');
+  assert.match(await texto(pagina, '[data-teste="leitura-mentalidade"]'), /Mentalidade do Diretor · pelo texto: "pautas"/);
+  assert.match(await texto(pagina, '[data-teste="leitura-habito"]'), /Hábito 7 · Verificação do Progresso/);
+  await titulo.fill('Pegar as pautas da reunião de amanhã mentalidade do CEO');
+  assert.match(await texto(pagina, '[data-teste="leitura-mentalidade"]'), /Mentalidade do CEO · pelo texto: "mentalidade do ceo"/, 'não ficou presa na primeira palavra');
+  assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'ceo');
+  await titulo.fill('Pegar as pautas da reunião de amanhã mentalidade do CEO, e do executivo');
+  assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'executivo', 'o último escrito vence o empate');
+  await titulo.fill('Pegar as pautas da reunião de amanhã mentoria mentalidade do diretor / ceo visão estratégica, metas e organização constante');
+  assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'diretor');
+  assert.equal(await pagina.locator('[data-teste="habito"]').inputValue(), '7');
+  assert.equal(await pagina.locator('[data-teste="categoria"]').inputValue(), 'mentoria', 'a categoria também é lida do texto');
+  assert.deepEqual(await pagina.locator('[data-teste="leitura-tema"]').allTextContents(), ['#visão estratégica', '#metas', '#organização', '#reunião', '#constância']);
+  assert.match(await texto(pagina, '[data-teste="ensinamento"]'), /Temas: visão estratégica, metas, organização, reunião, constância\./, 'os temas vão no ensinamento');
+  // "parece com": o catálogo sugere a ação parecida, e clicar preenche
+  await titulo.fill('pegar pautas reunião');
+  await pagina.locator('[data-teste="parece-com"]').waitFor();
+  await pagina.locator('[data-teste="parece-com"] button', { hasText: /Pegar as pautas da reunião de segunda/ }).click();
+  assert.equal(await titulo.inputValue(), 'Pegar as pautas da reunião de segunda');
+  await ctx.close();
+});
+
+test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião viram três tarefas encadeadas no horário', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="titulo"]').fill('Mentoria de segunda com o time');
+  await pagina.locator('[data-teste="hora-inicio"]').fill('14:00');
+  assert.equal(await pagina.locator('[data-teste="categoria"]').inputValue(), 'mentoria');
+  await pagina.locator('[data-teste="mentoria-caixa"]').check();
+  const blocos = await pagina.locator('[data-teste="mentoria-blocos"] > span').allTextContents();
+  assert.equal(blocos.length, 3);
+  assert.match(blocos[0], /^14:00 · Mentoria de segunda com o time — Leitura \(15 min\)/);
+  assert.match(blocos[1], /^14:15 · .*Treinamento \(45 min\)/);
+  assert.match(blocos[2], /^15:00 · .*Reunião \(2h\): visão estratégica, metas e aplicabilidade/);
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Mentoria distribuída pra Emanuel Silva: 3 blocos, das 14:00 às 15:00/).waitFor();
+  const e = (await escritas(pagina)).at(-1);
+  assert.equal(e.linhas.length, 3);
+  assert.deepEqual(e.linhas.map((l) => [l.hora, l.habito, l.categoria, l.mentalidade]), [['14:00', 8, 'bonus', 'diretor'], ['14:15', 8, 'mentoria', 'diretor'], ['15:00', 7, 'mentoria', 'diretor']]);
+  assert.ok(e.linhas.every((l) => l.origem === 'xperf' && l.prazo_em && /Bloco da mentoria/.test(l.detalhe)));
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="tarefas-dia"] li').length === 6);
   await ctx.close();
 });
 

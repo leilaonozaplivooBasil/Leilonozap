@@ -12,6 +12,95 @@
 
 ---
 
+## DIR-75 — Ferramentas no Compromisso: o dia deixa de ser lista e vira painel
+
+**Emitida por:** dono (06/09/2026): *"eu não quero que crie ali, eu quero que
+você crie já no Compromisso... a gente já tem o Compromisso, eu só preciso
+adicionar ferramentas ali. Esquece aquela parte da Mentalidade do Executivo, do
+CEO, do Diretor — ele está cuidando. Foca no Compromisso, em trazer ferramenta.
+É tudo conectado com os oito hábitos do sucesso, e a gente fazer o nosso
+Trello, o nosso, ali."*
+
+E, do ditado anterior: *"de dez e meia às onze e meia eu vou abrir ali, reunião
+de não sei o quê, que eu vou organizar a reunião, já vai entrar na minha
+reunião do dia; fazer contato com fulano, aí eu vou buscar esse contato no
+terceiro hábito."*
+
+**Data:** 06/09/2026.
+
+**O diagnóstico que originou isto:** o dia do Compromisso hoje é uma LISTA. Cada
+linha diz o que fazer e quanto vale, e ali morre — a pessoa lê "Reunião 1
+(45–60 min)", fecha a tela e vai procurar a reunião em outro lugar do sistema.
+As ferramentas dos 8 Hábitos existem, funcionam, e ficam a três cliques de
+distância de quem já está com a tarefa na frente.
+
+**O achado que torna isto barato:** o encanamento da navegação entre Hábitos
+**já existe e não está sendo usado** — `onIr(secao, sub)`, ligado em
+`CrmClientesTab`, já leva do Hábito 4 pro 3 e do 5 pra esteira. O que falta é
+que as 20 tarefas da Rotina Perfeita **não sabem a qual Hábito elas servem**.
+
+**O que entra, e só isto:**
+
+1. **Cada tarefa do dia leva pra ferramenta dela.** "Reunião 1/2/3" abre a
+   agenda do Hábito 4; "Contratos + follow-ups" abre a esteira do Hábito 6;
+   "Treinamento diário com o time" abre o Hábito 8; "Acordar — gratidão e foco
+   no sonho" abre o Quadro dos Sonhos. Tarefa que **não tem** ferramenta não
+   ganha botão — link errado é pior que link nenhum.
+2. **O NOSSO QUADRO, dentro do Compromisso.** Não é o quadro do X-Performance
+   (aquele é da diretoria e é da outra sessão): este é o da organização do
+   negócio das 10:30, com as colunas do jeito que a cabeça funciona —
+   **Hoje · Esta semana · Depois · Feito** — arrastando. Cada cartão carrega um
+   Hábito e leva pra ferramenta dele, e **vira tarefa do dia em um clique**,
+   que é a frase do dono ("já vai entrar na minha reunião do dia").
+3. **Colar imagem na comprovação.** O modal só tem galeria e câmera; a
+   biblioteca de colar já existe na casa (`lib/colarImagem.js`, feita pro
+   Quadro dos Sonhos). É reuso.
+4. **O DINHEIRO FLUIDO, no Compromisso.** Ordem do dono no meio desta rodada:
+   *"sobre dinheiro — de novo, no quadro do Compromisso: quero deixar isso mais
+   fluido, baseado no que já está escrito ali."*
+
+   "Baseado no que já está escrito" é literal: a fórmula da casa continua sendo
+   **verba ÷ dias úteis ÷ tarefas × peso**. O que muda é que ela passa a
+   **fechar a conta**, e a aparecer.
+
+   **O defeito medido (não suposto).** Com verba de R$ 7.000 e 20 tarefas:
+
+   | dia | por tarefa | total do dia |
+   |---|---|---|
+   | tudo peso 1 | R$ 5,30 | **R$ 106,06** |
+   | tudo peso 3 | R$ 15,91 | R$ 318,18 ✓ |
+   | tudo peso 5 | R$ 26,52 | **R$ 530,30** |
+
+   O alvo é R$ 318,18 (7.000 ÷ 22). A fórmula divide pelo NÚMERO de tarefas e
+   depois multiplica por `peso ÷ 3` — então ela só fecha quando a média dos
+   pesos é exatamente 3. Um dia de tarefas leves paga um terço do combinado; um
+   dia de tarefas pesadas paga 67% a mais (R$ 11.667 no mês, não R$ 7.000).
+
+   **A correção é de uma linha:** o peso REDISTRIBUI um bolo fixo em vez de
+   esticá-lo — divide-se pela **soma dos pesos**, não pela contagem. Assim
+   qualquer mistura de pesos fecha exatamente no combinado, que é a frase do
+   dono ("sete mil distribuído").
+
+   **E o "fluido":** a tela do dia passa a mostrar o bolo do dia inteiro
+   (ganho · em jogo · perdido), e mexer no peso de uma tarefa mostra na hora o
+   que ela passou a valer **e o que saiu das outras** — que é exatamente o
+   aviso que ele pediu.
+
+**Regras de fronteira desta diretiva:**
+
+- **Nada do X-Performance / Mentalidades é tocado.** Terreno da outra sessão.
+- **O quadro do Compromisso é PESSOAL** (`user_id`), ao contrário do quadro da
+  diretoria, que é compartilhado. São coisas diferentes com nomes parecidos, e
+  misturá-las seria pôr a pendência de contrato de um na tela do outro.
+- **A ligação tarefa→Hábito é uma TABELA DE CÓDIGO**, não coluna de banco: o
+  mapa muda quando a Rotina Perfeita muda, e isso é uma linha de diff, não uma
+  migração.
+- **Nada do que funciona muda de comportamento.** Botão a mais na linha, quadro
+  novo numa aba nova. A lista, o X-Pay, os estados AGORA/ATRASADO/PERDIDO e a
+  comprovação seguem idênticos.
+
+---
+
 ## DIR-74 — A sociedade deixa de ser uma barra e vira três portões
 
 **Emitida por:** dono (06/09/2026), depois de eu reportar as três pendências:
