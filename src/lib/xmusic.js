@@ -20,33 +20,64 @@ export const CHAVE_PLAYLIST = 'xgame_playlist_amanhecer';
 export const CHAVE_ESTACAO = 'xradio_estacao';   // o que estava tocando
 export const CHAVE_LIGADO = 'xradio_ligado';     // ligado/desligado
 
-export const CHAVE_ESTACOES = 'xmusic_estacoes'; // as trocas que a pessoa fez
+export const CHAVE_ESTACOES = 'xmusic_estacoes';   // as trocas que a pessoa fez
+export const CHAVE_ACERTOU = 'xmusic_acertou';     // o candidato que TOCOU em cada vaga
 
-// 🎚️ AS ESTAÇÕES SÃO VAGAS, NÃO ENFEITE (ordem do dono: "as opções que a
-// gente oferece precisam funcionar de verdade, não pode ser um botão só por
-// ser — precisam confiar na plataforma de verdade").
+// 🎚️ AS ESTAÇÕES SÃO VAGAS COM VÁRIOS CANDIDATOS (ordem do dono: "prefiro
+// que o sistema já tenha umas seleções de música instantânea, ele sente o
+// gostinho e depois vai colando as dele; puxar do YouTube, deixar tocando e
+// oferecendo pra ele salvar na dele — deixar a parada mais automática").
 //
-// O QUE ESTAVA ERRADO: eu tinha chumbado quatro IDs de vídeo do YouTube de
-// memória, sem conseguir abrir nenhum deles daqui de dentro (o ambiente onde
-// eu rodo não alcança o YouTube). Vídeo do YouTube sai do ar, vira privado
-// ou bloqueia embed — botão que promete "Estudo" e abre uma tela preta é
-// pior do que não ter botão, porque quebra a confiança na plataforma inteira.
+// O QUE EU APRENDI NA MARRA, E QUE MANDA NESTE ARQUIVO: conferir se o vídeo
+// EXISTE não é conferir se ele TOCA. A conferência por título passou em dois
+// vídeos que, no player, abriram "Vídeo indisponível — a gravação dessa
+// transmissão ao vivo não está disponível". Quem sabe se toca é o PLAYER, e
+// só ele: por isso o X-Music usa a API oficial do YouTube (não um <iframe>
+// solto), que dispara onError com o motivo (100 = sumiu, 101/150 = o dono
+// proibiu embed, 5 = falhou no HTML5).
 //
-// COMO FICOU: cada vaga tem um PROPÓSITO fixo (Foco, Calma, Estudo, Energia)
-// e um conteúdo que pode ser trocado pela pessoa. Antes de aparecer clicável,
-// a vaga é CONFERIDA no navegador de quem está usando — que alcança o YouTube
-// de verdade — e só é oferecida se responder. Não respondeu, ela se declara
-// vazia e pede o link em vez de fingir que toca.
+// POR ISSO CADA VAGA TEM FILA, NÃO UM LINK SÓ: deu erro no primeiro, o
+// player pula sozinho pro próximo, sem a pessoa perceber. O que tocou fica
+// anotado (CHAVE_ACERTOU) e na próxima vez entra direto nele. É isso que
+// deixa "automático" de verdade: nenhum link individual precisa ser eterno,
+// porque a fila absorve a morte de qualquer um deles.
 //
-// Só ficaram com sugestão as duas de que eu tenho notícia sólida: a rádio
-// lofi que está no ar há anos e o Weightless. As outras duas nascem vazias
-// de propósito: preencher com link que eu não consigo provar é exatamente o
-// "botão só por ser" que o dono não quer.
+// Uma playlist de canal (UU…) é a aposta mais durável da fila: ela vive
+// enquanto o canal viver, e vai renovando o conteúdo sozinha — a pessoa não
+// escuta a mesma faixa todo dia.
 export const ESTACOES_PADRAO = [
-  { slot: 'foco', nome: 'Foco', nota: 'pra trabalhar', id: 'jfKfPfyJRdk', lista: false },
-  { slot: 'calma', nome: 'Calma', nota: 'relaxar e respirar', id: 'UfcAVejslrU', lista: false },
-  { slot: 'estudo', nome: 'Estudo', nota: 'concentração longa', id: null, lista: false },
-  { slot: 'energia', nome: 'Energia', nota: 'correr e treinar', id: null, lista: false },
+  {
+    slot: 'foco', nome: 'Foco', nota: 'pra trabalhar',
+    candidatos: [
+      { id: 'UUSJ4gkVC6NrvII8umztf0Ow', lista: true },  // canal Lofi Girl
+      { id: 'jfKfPfyJRdk' },                            // lofi hip hop radio
+      { id: '4xDzrJKXOOY' },
+    ],
+  },
+  {
+    slot: 'calma', nome: 'Calma', nota: 'relaxar e respirar',
+    candidatos: [
+      { id: 'UfcAVejslrU' },                            // Weightless
+      { id: 'UUUjBEwlyDo1cbVCiJDzYcQg', lista: true },
+      { id: '1ZYbU82GVz4' },
+    ],
+  },
+  {
+    slot: 'estudo', nome: 'Estudo', nota: 'concentração longa',
+    candidatos: [
+      { id: 'UUQINXHZqCU5i06HzxRkujfg', lista: true },
+      { id: '_4kHxtiuML0' },
+      { id: 'lTRiuFIWV54' },
+    ],
+  },
+  {
+    slot: 'energia', nome: 'Energia', nota: 'correr e treinar',
+    candidatos: [
+      { id: 'UU0C-w0YjGpqDXGB8IHb662A', lista: true },
+      { id: 'gJLIiF15wjQ' },
+      { id: 'mgmVOuLgFB0' },
+    ],
+  },
 ];
 
 /** Aceita link normal, curto, embed, shorts, live ou o ID puro. */
@@ -125,29 +156,61 @@ export const fonteDoPlayer = (estacao) => {
 };
 
 
-/** As estações como estão HOJE: o propósito é da casa, o conteúdo pode ser
- *  da pessoa. O que ela trocou vence a sugestão; o rótulo nunca muda, senão
- *  a vaga perde o sentido de existir. */
-export const lerEstacoes = () => {
+/** A FILA DE UMA VAGA: o que a pessoa pôs vence tudo; senão, os candidatos
+ *  da casa — começando pelo que JÁ TOCOU aqui neste aparelho. */
+export const filaDaVaga = (vaga) => {
   const salvas = ler(CHAVE_ESTACOES, {}) || {};
-  return ESTACOES_PADRAO.map((e) => {
-    const dela = salvas[e.slot];
-    return dela?.id
-      ? { ...e, id: dela.id, lista: !!dela.lista, video: dela.video || null, titulo: dela.titulo || null }
-      : e;
-  });
+  const dela = salvas[vaga.slot];
+  if (dela?.id) return [{ ...dela, dela: true }];
+  const fila = (vaga.candidatos || []).slice();
+  const acertou = (ler(CHAVE_ACERTOU, {}) || {})[vaga.slot];
+  if (acertou) {
+    const i = fila.findIndex((c) => c.id === acertou);
+    if (i > 0) fila.unshift(fila.splice(i, 1)[0]);
+  }
+  return fila;
 };
+
+/** As estações como estão HOJE, já com a fila resolvida e o primeiro
+ *  candidato na mão. O rótulo é sempre da casa — é o propósito da vaga. */
+export const lerEstacoes = () => ESTACOES_PADRAO.map((vaga) => {
+  const fila = filaDaVaga(vaga);
+  return { ...vaga, fila, ...(fila[0] || {}) };
+});
 
 export const gravarEstacaoDoSlot = (slot, dados) => {
   const salvas = ler(CHAVE_ESTACOES, {}) || {};
   gravar(CHAVE_ESTACOES, { ...salvas, [slot]: dados });
 };
 
-/** A CONFERÊNCIA. Roda no navegador da pessoa, que alcança o YouTube de
- *  verdade. Devolve o título real quando o vídeo existe e pode ser embutido,
- *  e null quando ele saiu do ar, virou privado ou bloqueou embed — é esse
- *  null que impede a estação de virar um botão que não toca. */
-export const conferirEstacao = async (estacao) => {
-  if (!estacao?.id) return null;
-  return buscarTitulo(estacao.id, !!estacao.lista, estacao.video);
+/** Anota que ESTE candidato tocou de verdade nesta vaga — na próxima vez o
+ *  X-Music entra direto nele, sem repetir a fila que já falhou. */
+export const anotarAcerto = (slot, id) => {
+  if (!slot || !id) return;
+  const j = ler(CHAVE_ACERTOU, {}) || {};
+  gravar(CHAVE_ACERTOU, { ...j, [slot]: id });
+};
+
+/** 🎬 A API OFICIAL DO PLAYER DO YOUTUBE, carregada uma única vez.
+ *  É ela que dá o que o <iframe> solto NÃO dá: o evento de ERRO (100 = o
+ *  vídeo sumiu, 101/150 = o dono proibiu embutir, 5 = falhou no HTML5) e o
+ *  título REAL do que está tocando. Sem isso não dá pra prometer que um
+ *  botão toca — dá só pra torcer. */
+let promessaApi = null;
+export const carregarApiYoutube = () => {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (promessaApi) return promessaApi;
+  promessaApi = new Promise((resolve) => {
+    const anterior = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      try { anterior?.(); } catch { /* outro trecho da página */ }
+      resolve(window.YT);
+    };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.async = true;
+    document.head.appendChild(tag);
+  });
+  return promessaApi;
 };

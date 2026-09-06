@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic } from 'lucide-react';
 import {
-  lerEstacoes, gravarEstacaoDoSlot, conferirEstacao,
-  extrairIdYoutube, extrairListaYoutube, fonteDoPlayer,
+  lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube,
+  extrairIdYoutube, extrairListaYoutube,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
@@ -36,25 +36,85 @@ import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
 // a MediaSession abaixo já está no lugar pra quando essas faixas existirem:
 // ela é o que põe título e controles na tela de bloqueio.
 
-const Iframe = React.memo(function Iframe({ src }) {
-  if (!src) return null;
-  return (
-    <iframe
-      title="X-Music"
-      src={src}
-      allow="autoplay; encrypted-media"
-      className="w-full h-[168px] block rounded-xl"
-    />
-  );
+// 🎬 O PLAYER. Deixou de ser um <iframe> solto e passou a ser a API oficial
+// do YouTube pelo motivo que apareceu na tela do dono: o <iframe> engole o
+// erro. Dois vídeos passaram na conferência por título e abriram "Vídeo
+// indisponível" mesmo assim — porque existir e poder ser embutido são coisas
+// diferentes, e só o player sabe a segunda.
+//
+// Com a API a gente ganha três coisas que o X-Music precisa:
+//   • onError com motivo → a fila da vaga anda sozinha até algo TOCAR;
+//   • o TÍTULO REAL do que está no ar → some o rótulo inventado, e é esse
+//     nome que vai pra playlist da pessoa quando ela salva;
+//   • trocar de estação sem REMONTAR nada (loadVideoById/loadPlaylist), o
+//     que é ainda mais seguro pro som contínuo do que o iframe memoizado.
+const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo }) {
+  const hostRef = useRef(null);
+  const playerRef = useRef(null);
+  const alvoRef = useRef(alvo);
+  const ligadoRef = useRef(ligado);
+  const onErroRef = useRef(onErro);
+  const onTituloRef = useRef(onTitulo);
+  alvoRef.current = alvo;
+  ligadoRef.current = ligado;
+  onErroRef.current = onErro;
+  onTituloRef.current = onTitulo;
+
+  const carregarAlvo = useCallback(() => {
+    const p = playerRef.current;
+    const a = alvoRef.current;
+    if (!p || !a?.id) return;
+    try {
+      if (a.lista) p.loadPlaylist({ list: a.id, listType: 'playlist' });
+      else p.loadVideoById(a.id);
+      if (!ligadoRef.current) p.pauseVideo?.();
+    } catch { /* player ainda subindo */ }
+  }, []);
+
+  // nasce UMA vez e não morre mais — é o que segura o som atravessando a
+  // navegação inteira dos Hábitos
+  useEffect(() => {
+    let morto = false;
+    carregarApiYoutube().then((YT) => {
+      if (morto || !YT?.Player || !hostRef.current || playerRef.current) return;
+      playerRef.current = new YT.Player(hostRef.current, {
+        height: '168',
+        width: '100%',
+        playerVars: { autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1, controls: 1 },
+        events: {
+          onReady: () => carregarAlvo(),
+          onError: (e) => onErroRef.current?.(e?.data, alvoRef.current),
+          onStateChange: (e) => {
+            if (e?.data === YT.PlayerState?.PLAYING) {
+              const t = playerRef.current?.getVideoData?.()?.title;
+              if (t) onTituloRef.current?.(String(t).slice(0, 70), alvoRef.current);
+            }
+          },
+        },
+      });
+    });
+    return () => { morto = true; };
+  }, [carregarAlvo]);
+
+  // trocar de estação: NÃO remonta nada, só manda o player carregar outra
+  useEffect(() => { carregarAlvo(); }, [alvo?.id, alvo?.lista, carregarAlvo]);
+
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p) return;
+    try { if (ligado) p.playVideo?.(); else p.pauseVideo?.(); } catch { /* ainda subindo */ }
+  }, [ligado]);
+
+  return <div className="w-full h-[168px] overflow-hidden rounded-xl bg-black/40"><div ref={hostRef} /></div>;
 });
 
 export default function XMusic() {
   const [aberto, setAberto] = useState(false);
   const [ligado, setLigado] = useState(lerLigado);
   const [estacoes, setEstacoes] = useState(lerEstacoes);
-  const [conferencia, setConferencia] = useState({}); // slot → titulo real | false (não toca)
+  const [falhou, setFalhou] = useState({});           // vagas que esgotaram a fila
   const [vagaAlvo, setVagaAlvo] = useState(null);     // vaga esperando um link
-  const [estacao, setEstacao] = useState(() => lerEstacao() || lerEstacoes().find((e) => e.id) || null);
+  const [estacao, setEstacao] = useState(() => lerEstacao() || lerEstacoes()[0] || null);
   const [playlist, setPlaylist] = useState(lerPlaylist);
   const [link, setLink] = useState('');
   const [aviso, setAviso] = useState('');
@@ -72,9 +132,7 @@ export default function XMusic() {
   // rolagem de dedo, que é justamente o erro que a gente acabou de matar.
   const rolando = useOcultarAoRolar(aberto);
 
-  const src = useMemo(() => (ligado ? fonteDoPlayer(estacao) : null), [ligado, estacao]);
   const naPlaylist = playlist.some((m) => m.id === estacao?.id);
-  const ehDaCasa = estacoes.some((m) => m.id && m.id === estacao?.id);
 
   useEffect(() => { gravarLigado(ligado); }, [ligado]);
   useEffect(() => { if (estacao) gravarEstacao(estacao); }, [estacao]);
@@ -83,7 +141,7 @@ export default function XMusic() {
   useEffect(() => {
     if (!('mediaSession' in navigator) || typeof window.MediaMetadata !== 'function') return;
     navigator.mediaSession.metadata = new window.MediaMetadata({
-      title: estacao?.nome || 'X-Music',
+      title: estacao?.tocando || estacao?.nome || 'X-Music',
       artist: 'X-MUSIC · Top College',
       album: 'X-EOS',
     });
@@ -100,25 +158,42 @@ export default function XMusic() {
 
   const trocar = useCallback((nova) => { vibrar(VIBRA_TOQUE); setEstacao(nova); setLigado(true); }, []);
 
-  // 🔎 A CONFERÊNCIA DAS VAGAS. Roda quando o painel abre, no navegador da
-  // pessoa — que alcança o YouTube de verdade, coisa que o ambiente onde eu
-  // escrevo isto não alcança. Vaga que responde vira botão e mostra o título
-  // REAL do que vai tocar; vaga que não responde (vídeo fora do ar, privado
-  // ou com embed bloqueado) se declara e pede o link, em vez de abrir uma
-  // tela preta. É o que separa "opção de verdade" de "botão só por ser".
-  useEffect(() => {
-    if (!aberto) return undefined;
-    let vivo = true;
-    (async () => {
-      for (const e of estacoes) {
-        if (!e.id || conferencia[e.slot] !== undefined) continue;
-        const titulo = await conferirEstacao(e);
-        if (!vivo) return;
-        setConferencia((c) => ({ ...c, [e.slot]: titulo || false }));
-      }
-    })();
-    return () => { vivo = false; };
-  }, [aberto, estacoes, conferencia]);
+  // ⏭️ A FILA ANDA SOZINHA. Deu erro no que está tocando, o X-Music pula pro
+  // próximo candidato daquela vaga sem a pessoa fazer nada — só quando a fila
+  // inteira acaba é que a vaga se declara e pede um link. É isto que substitui
+  // a conferência por título, que passava em vídeo que não tocava.
+  const aoErrar = useCallback((codigo, alvo) => {
+    if (!alvo?.slot) {
+      // sem vaga: ou é link colado pela pessoa, ou é uma estação velha que
+      // ficou salva no aparelho de uma versão anterior. Nos dois casos cair
+      // numa tela preta é inaceitável — volta pra primeira vaga da casa, que
+      // tem fila, e avisa uma vez.
+      const primeira = estacoes[0];
+      if (primeira?.id) setEstacao(primeira);
+      setAviso('Esse link não toca aqui (fora do ar ou embed bloqueado).');
+      setTimeout(() => setAviso(''), 6000);
+      return;
+    }
+    const vaga = estacoes.find((e) => e.slot === alvo.slot);
+    const fila = vaga?.fila || [];
+    const i = fila.findIndex((c) => c.id === alvo.id);
+    const proximo = i >= 0 ? fila[i + 1] : fila[0];
+    if (proximo) { setEstacao({ ...vaga, ...proximo, tocando: null }); return; }
+    setFalhou((f) => ({ ...f, [alvo.slot]: true }));
+    setAviso(`"${vaga?.nome || 'Essa estação'}" está sem link que toque — cole um seu.`);
+    setVagaAlvo(alvo.slot);
+    setTimeout(() => setAviso(''), 8000);
+  }, [estacoes]);
+
+  // 🏷️ TOCOU DE VERDADE: guarda o título real (some o rótulo inventado) e
+  // anota o candidato que funcionou, pra da próxima vez entrar direto nele.
+  const aoTocar = useCallback((titulo, alvo) => {
+    setEstacao((e) => (e && e.id === alvo?.id ? { ...e, tocando: titulo } : e));
+    if (alvo?.slot && alvo?.id) {
+      anotarAcerto(alvo.slot, alvo.id);
+      setFalhou((f) => (f[alvo.slot] ? { ...f, [alvo.slot]: false } : f));
+    }
+  }, []);
 
   const tocarLink = useCallback(async () => {
     const lista = extrairListaYoutube(link);
@@ -137,9 +212,13 @@ export default function XMusic() {
     if (vagaAlvo) {
       const dados = { id, lista: !!lista, video: idVideo, titulo: nome };
       gravarEstacaoDoSlot(vagaAlvo, dados);
-      const novas = estacoes.map((e) => (e.slot === vagaAlvo ? { ...e, ...dados } : e));
+      // a escolha da pessoa VIRA a fila daquela vaga — não tem por que
+      // continuar tentando os candidatos da casa depois que ela decidiu.
+      const novas = estacoes.map((e) => (
+        e.slot === vagaAlvo ? { ...e, ...dados, fila: [dados] } : e
+      ));
       setEstacoes(novas);
-      setConferencia((c) => ({ ...c, [vagaAlvo]: nome }));
+      setFalhou((f) => ({ ...f, [vagaAlvo]: false }));
       const vaga = novas.find((e) => e.slot === vagaAlvo);
       setVagaAlvo(null);
       setLink('');
@@ -152,7 +231,10 @@ export default function XMusic() {
 
   const favoritar = useCallback(async () => {
     if (!estacao?.id) return;
-    const nome = estacao.nome || (await buscarTitulo(estacao.id, !!estacao.lista, estacao.video)) || 'Minha estação';
+    // o nome salvo é o TÍTULO REAL que o player informou — é o que a pessoa
+    // acabou de ouvir, não um rótulo da casa nem um genérico.
+    const nome = estacao.tocando || estacao.nome
+      || (await buscarTitulo(estacao.id, !!estacao.lista, estacao.video)) || 'Minha estação';
     const nova = [...playlist.filter((m) => m.id !== estacao.id), { ...estacao, nome }];
     setPlaylist(nova);
     gravarPlaylist(nova);
@@ -202,23 +284,22 @@ export default function XMusic() {
             </button>
           </div>
 
-          {ligado && <Iframe src={src} />}
+          <PlayerYT alvo={estacao} ligado={ligado} onErro={aoErrar} onTitulo={aoTocar} />
 
-          {/* as vagas da casa — cada uma se confere antes de virar botão */}
+          {/* as vagas da casa — cada uma com sua fila; o player pula sozinho
+              o que não toca e só pede link quando a fila acaba */}
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-1.5">estações da casa</p>
             <div className="grid grid-cols-2 gap-1.5">
               {estacoes.map((m) => {
-                const conf = m.id ? conferencia[m.slot] : false;
-                const conferindo = Boolean(m.id) && conf === undefined;
-                const toca = Boolean(m.id) && conf !== false && conf !== undefined;
+                const vazia = falhou[m.slot] || !m.id;
+                const toca = !vazia;
                 const pedindo = vagaAlvo === m.slot;
-                // segunda linha, na ordem da verdade: o que está tocando de
-                // fato > conferindo > não respondeu > vazia.
-                const legenda = toca ? (conf || m.nota)
-                  : conferindo ? 'conferindo…'
-                  : m.id ? 'fora do ar · ponha a sua'
-                  : 'vazia · ponha a sua';
+                const noAr = estacao?.slot === m.slot && estacao?.tocando;
+                // a segunda linha diz a VERDADE, nesta ordem: o que está no ar
+                // agora (título real vindo do player) > o propósito da vaga >
+                // o pedido de link quando a fila inteira falhou.
+                const legenda = noAr || (toca ? m.nota : 'sem link que toque · ponha a sua');
                 return (
                   <button
                     key={m.slot}
@@ -296,12 +377,18 @@ export default function XMusic() {
           )}
 
           {/* salvar o que está tocando */}
-          {ligado && !naPlaylist && !ehDaCasa && (
+          {/* 💾 tocando e ainda não é dele? oferece salvar. Vale também pras
+              estações da casa: é assim que ele "sente o gostinho" e vai
+              formando a coleção dele sem procurar nada. */}
+          {ligado && !naPlaylist && estacao?.id && (
             <button
               type="button"
               onClick={favoritar}
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-400/15 text-amber-200 text-[11px] font-bold py-2 hover:bg-amber-400/25"
-            ><Star className="w-3.5 h-3.5" fill="currentColor" /> salvar na minha playlist</button>
+            >
+              <Star className="w-3.5 h-3.5" fill="currentColor" />
+              <span className="truncate">salvar {estacao?.tocando ? `"${estacao.tocando}"` : 'na minha playlist'}</span>
+            </button>
           )}
 
           {/* colar link novo */}
@@ -358,7 +445,7 @@ export default function XMusic() {
           <span className="min-w-0">
             <span className="block text-[10px] font-extrabold tracking-[0.16em] text-white/50 leading-none">X-MUSIC</span>
             <span className="block max-w-[9rem] truncate text-[11px] font-bold text-white leading-tight">
-              {ligado ? (estacao?.nome || 'tocando') : 'desligado'}
+              {ligado ? (estacao?.tocando || estacao?.nome || 'tocando') : 'desligado'}
             </span>
           </span>
         </button>
