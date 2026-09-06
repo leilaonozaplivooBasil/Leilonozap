@@ -6,6 +6,8 @@ import {
   Mic, Rocket, Flame,
 } from 'lucide-react';
 import XGameCapa from './XGameCapas';
+import ElencoBoneco from './ElencoBoneco';
+import { elencoDaParada } from '@/lib/elencoJornada';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 import { faixaDeHorario } from '@/lib/quadroCompromisso';
 
@@ -390,11 +392,37 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                 {g.itens.map((t, i) => {
                   const ehAtual = atual && t.id === atual.id;
                   const offset = OFFSETS[zig % OFFSETS.length];
+                  const indiceParada = zig; // zig anda exatamente uma vez por parada
                   zig += 1;
                   const offsetBau = OFFSETS[zig % OFFSETS.length];
+                  // 👔 DIR-78 — quem mora nesta parada. A regra é da lib (testada);
+                  // aqui só se desenha. O boneco fica ao LADO, no lado contrário
+                  // ao da serpentina, pra nunca sair da coluna nem tapar o nó.
+                  const morador = elencoDaParada({
+                    indice: indiceParada,
+                    titulo: t.titulo,
+                    feito: !!t.feito,
+                    atual: ehAtual,
+                    perdido: t.estado?.id === 'PERDIDO',
+                  });
                   return (
                     <React.Fragment key={t.id}>
                       <div className="relative" style={{ transform: `translateX(${offset}px)` }}>
+                        {morador && (
+                          <span
+                            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 hidden sm:block ${offset > 0 ? 'right-full mr-1' : 'left-full ml-1'}`}
+                            aria-hidden="true"
+                          >
+                            <ElencoBoneco
+                              chave={morador.chave}
+                              pose={morador.pose}
+                              apagado={morador.apagado}
+                              defasagem={indiceParada}
+                              tam={ehAtual ? 92 : 76}
+                              titulo={t.titulo}
+                            />
+                          </span>
+                        )}
                         <Parada3D
                           titulo={t.titulo}
                           hora={faixaDeHorario(t)}

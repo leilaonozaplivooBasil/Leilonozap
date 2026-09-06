@@ -4114,3 +4114,62 @@ exatamente o defeito que ele sentiu — e a prova **reprovou com "andou −3px"*
 
 **Suíte:** 1237/1237. **Prova em navegador:** 272/272. **Build:** limpo.
 **Sem migração.**
+
+---
+
+## REL-78 — O elenco entra na trilha (DIR-78)
+
+**Aprovação:** dono, 07/09/2026 — *"BOOORA SEM QUEBRAR E MUDAR O QUE ESTA BOM.
+ESTAMOS EXTREMAMENTE PRÓXIMO DO DUOLINGO"*.
+
+**O que foi feito**
+
+1. `src/lib/elencoJornada.js` — a REGRA, pura e testável: quem aparece em qual
+   parada, em que pose. Cinco papéis do método (Executivo, Mentor, Diretora,
+   Cliente, Duplicado) e o cinza da parada travada.
+2. `ElencoBoneco.jsx` + `elenco.css` — o desenho e os nove movimentos. Quatro
+   camadas aninhadas (tronco > corpo > cabeça > olhos) porque duas animações no
+   `transform` do mesmo elemento **não somam** — a segunda apaga a primeira.
+3. `XGameJornada.jsx` — o elenco entra **ao lado** da parada, num `<span>`
+   absoluto com `pointer-events:none`, no lado contrário ao da serpentina.
+   `Parada3D`, `Bau`, troféu, `SELOS`, `OFFSETS` e o amanhecer: **intocados**.
+4. A sombra do chão **inverte no palco escuro** — sombra preta em fundo preto
+   não existe, e o boneco voltava a boiar.
+
+**Decisão técnica registrada:** o boneco é desenho no código, não imagem
+gerada. Com IA o rosto muda a cada pose, e o dono pediu justamente pose
+(girar, olhar, rir, acenar, pular). Custo: poucos KB, nenhum arquivo novo,
+nenhuma requisição nova; só `transform` e `opacity` animados.
+
+**Verificado**
+
+- 16 testes novos em `tests/elencoJornada.test.mjs`; suíte inteira **1253/1253**.
+- **Mutação nos testes** — 4 defeitos reintroduzidos de propósito (a travada
+  deixa de cochilar; o momento deixa de acenar; aparece em toda parada; o
+  apagado engole barba/óculos): **cada um quebrou exatamente um teste**.
+- **Prova em navegador (REL-34.1): 282/282, zero erro de página/console.**
+  O boneco foi medido **renderizado**: sem `<img>`, com as camadas do
+  movimento, o corpo girando (matriz diferente em dois instantes), a cabeça em
+  ângulo diferente do corpo (o atraso), a parada do momento acenando, a travada
+  cochilando e sem girar, e o mapa recolhido no fim (a prova sai como entrou).
+- **Mutação na prova** — removido o giro do corpo (`.viva .tronco`): a prova
+  caiu pra 281/282 com `{"a":"none","b":"none"}`. Ela discrimina.
+
+**Defeitos achados e corrigidos nesta rodada**
+
+- **Os braços da comemoração cruzavam o peito e sumiam atrás do paletó** — os
+  sinais de rotação estavam invertidos (esquerdo negativo, direito positivo).
+  Conferido depois: as duas mãos ficam acima do tronco e abertas pra fora.
+- A prova cobrava um botão "fechar/voltar" que no produto se chama
+  **RECOLHER**. Passou a medir o efeito (o mapa fechou) em vez do texto.
+
+**Registrado, fora do escopo desta rodada**
+
+- `/marca/poder-hero.webp`, o "professor Xavier" do Hero da Top College, é o
+  **Patrick Stewart como Charles Xavier** — personagem da Marvel e rosto de ator
+  real, numa tela pública de plataforma licenciada. **O Mentor** nasceu pra
+  ocupar esse lugar; a troca fica pra rodada própria, com autorização.
+- O **Magnific** conecta mas recusa toda chamada (`requires a premium account`,
+  até no `account_profile`). Nada nesta entrega depende dele.
+
+**Não entrou:** nada em produção; o arrastar dos cards (DIR-77.3) não foi tocado.
