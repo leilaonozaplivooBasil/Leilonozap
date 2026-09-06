@@ -1603,14 +1603,36 @@ const TOOLS_HELOIM: ToolDef[] = [
           initial_comment: corpo,
           title: input.titulo || 'Tópico documentado',
         });
-        return {
-          ok: resultado.ok,
+        if (resultado.ok) {
+          return {
+            ok: true,
+            canal,
+            tinha_imagem: true,
+            erro: null,
+            diagnostico: 'Documentado no Slack com a imagem como capa.',
+          };
+        }
+
+        // 06/09/2026 — a capa falhou, e até aqui isso devolvia ok:false e PRONTO: o resumo
+        // ia junto para o lixo. Na noite de 05/09 a demanda inteira sumiu por causa de uma
+        // imagem que não subiu. postar_demanda já fazia o certo (capa falha, texto vai);
+        // este caminho não fazia. Registro perdido é pior que registro sem foto.
+        //
+        // E a mensagem antiga culpava o scope files:write em QUALQUER falha — mandava
+        // conferir permissão quando a causa real era o canal que não virou ID. Agora vai o
+        // motivo que o Slack devolveu, sem palpite.
+        const soTexto = await cliente.postMessage(
           canal,
-          tinha_imagem: true,
+          `${corpo}\n\n_(a imagem não pôde ser anexada: ${resultado.error})_`,
+        );
+        return {
+          ok: soTexto.ok,
+          canal,
+          tinha_imagem: false,
           erro: resultado.error || null,
-          diagnostico: resultado.ok
-            ? 'Documentado no Slack com a imagem como capa.'
-            : `Imagem falhou (${resultado.error}) — confira o scope files:write do Bot Token.`,
+          diagnostico: soTexto.ok
+            ? `Documentado no Slack SEM a capa — o upload da imagem falhou (${resultado.error}). O texto foi publicado.`
+            : `Falhou nos dois: imagem (${resultado.error}) e texto (${soTexto.error}).`,
         };
       } catch (e) {
         // Imagem falhou (ex: link do Z-API expirado — vale ~30 dias) — não perde o registro,

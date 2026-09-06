@@ -96,8 +96,22 @@ export class SlackClient {
   }
 
   /**
-   * Requisição em form-urlencoded — alguns endpoints de arquivo do Slack (getUploadURLExternal,
-   * completeUploadExternal) esperam esse content-type, não JSON puro.
+   * Requisição em form-urlencoded.
+   *
+   * 06/09/2026 — não é só para os endpoints de arquivo. A API do Slack só lê corpo JSON nos
+   * métodos de ESCRITA (chat.postMessage, chat.update, reactions.*). Os métodos de LEITURA
+   * (conversations.list/info/members/history/replies, users.info/list/lookupByEmail) e os de
+   * arquivo (files.getUploadURLExternal, files.completeUploadExternal) só leem
+   * form-urlencoded — mandar JSON para eles NÃO dá erro: o Slack ignora o corpo inteiro e
+   * responde com os parâmetros PADRÃO, `ok: true`.
+   *
+   * Foi exatamente assim que o `types: 'public_channel,private_channel'` do listChannels
+   * nunca chegou ao Slack. A listagem voltava só com canal público, findChannel não achava o
+   * #top-tech-leilão-nozap (privado), resolveChannelId caía no nome, e o upload da capa
+   * morria em `files.completeUploadExternal: invalid_arguments` — erro que aponta para o
+   * arquivo, três chamadas depois da causa real.
+   *
+   * Regra: método de leitura ou de arquivo → `requestForm`. Método de escrita → `request`.
    */
   private async requestForm<T = any>(
     method: string,
@@ -144,6 +158,11 @@ export class SlackClient {
     if (encontrado?.id) return encontrado.id;
     console.warn(`[Slack] não encontrei o canal "${channel}" na listagem — usando o nome como veio.`);
     return semHash;
+  }
+
+  /** Um ID de canal do Slack (C…, G…, D…) — o que os endpoints de arquivo exigem. */
+  static ehIdDeCanal(v: unknown): boolean {
+    return typeof v === 'string' && /^[CGD][A-Z0-9]{8,}$/.test(v);
   }
 
   /**
@@ -259,7 +278,11 @@ export class SlackClient {
     // só os públicos. O canal de registro do time (#top-tech-leilão-nozap) é
     // privado: sem esta linha ele não existe para o bot, e resolveChannelId cai
     // no nome, que files.completeUploadExternal recusa.
-    return this.request('conversations.list', {
+    //
+    // ⚠️ Vai em `requestForm` e não em `request`: com corpo JSON o Slack descarta este
+    // `types` sem reclamar e devolve só os públicos. Escrever o parâmetro certo não basta
+    // se ele não chega — foi o que aconteceu entre 28/08 e 06/09/2026.
+    return this.requestForm('conversations.list', {
       limit,
       exclude_archived: true,
       types: 'public_channel,private_channel',
@@ -274,15 +297,19 @@ export class SlackClient {
     const canais = result.data?.channels;
     if (!result.ok || !Array.isArray(canais)) return null;
 
-    const normalizado = name.toLowerCase().replace(/^#/, '');
-    return canais.find((ch) => ch.name?.toLowerCase() === normalizado) || null;
+    // NFC dos dois lados: "leilão" pode chegar com o "ã" em um caractere só (U+00E3) ou
+    // como "a" + til combinante (U+0303). São bytes diferentes e a comparação crua falha,
+    // mesmo com o nome visualmente idêntico. Três dos seis canais deste workspace têm acento.
+    const chave = (v: string) => v.normalize('NFC').toLowerCase().replace(/^#/, '').trim();
+    const normalizado = chave(name);
+    return canais.find((ch) => ch.name && chave(ch.name) === normalizado) || null;
   }
 
   /**
    * Obter informações de um canal
    */
   async getChannelInfo(channel: string): Promise<SlackApiResult<SlackChannel>> {
-    return this.request('conversations.info', {
+    return this.requestForm('conversations.info', {
       channel,
     });
   }
@@ -291,7 +318,7 @@ export class SlackClient {
    * Listar membros de um canal
    */
   async listChannelMembers(channel: string, limit = 100): Promise<SlackApiResult<string[]>> {
-    return this.request('conversations.members', {
+    return this.requestForm('conversations.members', {
       channel,
       limit,
     });
@@ -306,7 +333,7 @@ export class SlackClient {
     channel: string,
     limit = 10
   ): Promise<SlackApiResult<SlackMessage[]>> {
-    return this.request('conversations.history', {
+    return this.requestForm('conversations.history', {
       channel,
       limit,
     });
@@ -322,7 +349,7 @@ export class SlackClient {
     thread_ts: string,
     limit = 10
   ): Promise<SlackApiResult<SlackMessage[]>> {
-    return this.request('conversations.replies', {
+    return this.requestForm('conversations.replies', {
       channel,
       ts: thread_ts,
       limit,
@@ -333,7 +360,7 @@ export class SlackClient {
    * Obter informações de um usuário
    */
   async getUserInfo(user: string): Promise<SlackApiResult<any>> {
-    return this.request('users.info', {
+    return this.requestForm('users.info', {
       user,
     });
   }
@@ -342,7 +369,7 @@ export class SlackClient {
    * Buscar usuário por email
    */
   async lookupUserByEmail(email: string): Promise<SlackApiResult<any>> {
-    return this.request('users.lookupByEmail', {
+    return this.requestForm('users.lookupByEmail', {
       email,
     });
   }
@@ -351,7 +378,7 @@ export class SlackClient {
    * Listar usuários do workspace
    */
   async listUsers(limit = 100): Promise<SlackApiResult<any[]>> {
-    return this.request('users.list', {
+    return this.requestForm('users.list', {
       limit,
     });
   }
@@ -445,7 +472,19 @@ export class SlackClient {
         return { ok: false, error: `upload do arquivo falhou: HTTP ${uploadResp.status}` };
       }
 
+      // files.completeUploadExternal SÓ aceita ID. Se a resolução caiu no nome, parar aqui
+      // com o motivo real vale mais que mandar assim mesmo e receber `invalid_arguments` —
+      // erro que fala de argumento de arquivo e faz todo mundo conferir o scope files:write,
+      // que não tem nada a ver. Foi o que custou a noite de 05/09/2026.
       const canalId = await this.resolveChannelId(channel);
+      if (!SlackClient.ehIdDeCanal(canalId)) {
+        return {
+          ok: false,
+          error: `não consegui resolver o canal "${channel}" para um ID. ` +
+            'Se ele é privado, o bot precisa ter sido convidado nele (/invite) e o token ' +
+            'precisa do scope groups:read.',
+        };
+      }
       const completeResp = await this.requestForm('files.completeUploadExternal', {
         files: [{ id: file_id, title: options.title || filename }],
         channel_id: canalId,
