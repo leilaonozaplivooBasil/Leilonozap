@@ -129,13 +129,35 @@ function Bau({ aberto = false, className = '' }) {
   );
 }
 
-/** A parada que ainda não chegou: o DESENHO 3D em cima da MESINHA. */
+/** A parada que ainda não chegou: o DESENHO 3D DEITADO na MESINHA.
+ *  GEOMETRIA (ordem do dono — o banquinho é largo e o desenho POUSA nele):
+ *    • banquinho de 88px de largura → o SVG (viewBox 0 0 100 48) fica com
+ *      88 × 0,48 ≈ 42px de altura, e o CENTRO DO TAMPO cai na metade: ~21px
+ *      do chão.
+ *    • o desenho apoia a base em 17px — 4px à frente do centro do tampo —
+ *      então ele encosta na superfície em vez de pairar.
+ *    • scaleY 0,88 com origem na base: o mesmo esmagamento de perspectiva
+ *      da mesa, pra ler como visto de cima.
+ *    • sombra de CONTATO no tampo (não sombra no ar): é ela que prova o apoio.
+ *    • sombra de CHÃO que só acende no hover, quando a peça levanta. */
 function ParadaNaMesa({ Icone }) {
   return (
-    <span className="relative block w-[76px] h-[62px]">
-      <Mesinha className="absolute bottom-0 left-0 w-[76px]" />
+    <span className="relative block w-[88px] h-[64px]">
+      {/* a sombra do chão: aparece quando a peça levanta no hover */}
+      <span className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-[58px] h-[10px] rounded-[50%] bg-slate-900/0 blur-[3px] transition-colors duration-200 ease-out group-hover:bg-slate-900/25" />
+      <Mesinha className="absolute bottom-0 left-0 w-[88px]" />
+      {/* a sombra de contato, no tampo, embaixo do desenho */}
+      <span className="absolute left-1/2 bottom-[15px] w-[42px] h-[11px] rounded-[50%] bg-slate-900/20 blur-[2px]" style={{ transform: 'translateX(-50%)' }} />
       <Icone
-        className="absolute left-1/2 -translate-x-1/2 bottom-[22px] w-9 h-9 text-slate-500 drop-shadow-[0_2px_2px_rgba(15,23,42,0.18)]"
+        className="absolute text-slate-500"
+        style={{
+          left: '50%',
+          bottom: '17px',
+          width: '42px',
+          height: '42px',
+          transform: 'translateX(-50%) scaleY(0.88)',
+          transformOrigin: 'bottom center',
+        }}
         fill="currentColor"
         strokeWidth={1.3}
       />
@@ -160,6 +182,9 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
         </span>
       )}
       <button type="button" onClick={onClick} title={`${hora} — ${titulo}`} className="relative group outline-none">
+        {/* ⬆️ A LEVANTADA: passou o mouse, a peça inteira sobe (banquinho +
+            desenho juntos); tirou, desce de volta; clicou, afunda. */}
+        <span className="relative block transition-transform duration-200 ease-out group-hover:-translate-y-2 group-active:translate-y-[3px]">
         {atual && (
           <span className="absolute -inset-2.5 rounded-full border-4 border-amber-300" style={{ animation: 'xgHalo 1.8s ease-out infinite' }} />
         )}
@@ -169,7 +194,7 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
           <span
             className={[
               'relative w-[74px] h-[70px] rounded-[50%] flex items-center justify-center transition-transform',
-              'group-hover:brightness-105 group-active:translate-y-[5px]',
+              'group-hover:brightness-105',
               `bg-gradient-to-b ${grad}`,
               feito ? '-rotate-6' : '',
             ].join(' ')}
@@ -184,7 +209,7 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
           </span>
         ) : (
           /* futura/perdida: o DESENHO 3D em cima da MESINHA REDONDA */
-          <span className="relative flex flex-col items-center transition-opacity group-hover:opacity-75">
+          <span className="relative flex flex-col items-center">
             <ParadaNaMesa Icone={Icone} />
             {perdido && (
               <span className="absolute top-1 -right-0.5 z-10 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
@@ -193,6 +218,7 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
             )}
           </span>
         )}
+        </span>
       </button>
     </div>
   );
