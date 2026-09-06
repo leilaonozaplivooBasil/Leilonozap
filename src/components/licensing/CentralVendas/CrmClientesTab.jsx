@@ -2390,8 +2390,27 @@ _Enviado via CRM Leilão NoZap_`;
 
         {/* 🖼️ DIR-56 — a frase oficial do brandbook fecha o painel. É imagem da
             marca, não texto solto: o mesmo material das apresentações. */}
-        <div className="relative overflow-hidden rounded-2xl mt-8 border border-white/10">
-          <img src="/marca/frase.webp" alt="O sucesso é a soma de pequenos esforços repetidos dia após dia." className="w-full h-24 sm:h-36 object-cover" />
+        <div
+          className="relative overflow-hidden -mx-3 sm:-mx-8 mt-10"
+          style={{
+            // fecha o painel morrendo no fundo, igual à capa do hábito
+            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 22%, #000 100%)',
+            maskImage: 'linear-gradient(180deg, transparent 0%, #000 22%, #000 100%)',
+          }}
+        >
+          {/* 🐛 A FRASE VINHA CORTADA: o arquivo é 1400×340 (proporção 4,1) e
+              estava numa caixa de altura fixa (96/144px) com object-cover —
+              que apara o que não cabe. Numa tela larga a segunda linha ficava
+              literalmente de fora. Sem altura fixa e com a proporção do
+              próprio arquivo, não há o que aparar: a frase aparece inteira em
+              qualquer largura. */}
+          <img
+            src="/marca/frase.webp"
+            alt="O sucesso é a soma de pequenos esforços repetidos dia após dia."
+            className="w-full h-auto block"
+            style={{ aspectRatio: '1400 / 340' }}
+            draggable="false"
+          />
         </div>
 
       </div>
