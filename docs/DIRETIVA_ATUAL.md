@@ -12,6 +12,78 @@
 
 ---
 
+## DIR-78 — O elenco entra na trilha, e a trilha passa a respirar
+
+**Emitida por:** dono (07/09/2026), olhando a Jornada ao lado do Duolingo:
+*"faltou os bonequinhos do Duolingo que aparecem na jornada — a gente não vai
+colocar igual, vai colocar no nosso modelo de negócio, o executivozinho, fazer
+uns nossos desenhos."* Depois de ver o elenco desenhado: *"ficou foda, gostei
+pra caralho... só que eu queria mais rápido, que ele girasse, que ele olhasse
+pra um lado pro outro, rir, ele mais ativo."* E, fechando: *"não só a cabeça, o
+corpo todo... pra girar corpo todo, acenar, tá foda."* Aprovação:
+**"BOOORA SEM QUEBRAR E MUDAR O QUE ESTA BOM"**.
+
+**Data:** 07/09/2026.
+
+**O que eu conferi antes de prometer:**
+1. A Jornada **já tem** a receita do Duolingo — serpentina (`OFFSETS`),
+   unidades por período, baú no meio da unidade, troféu fechando, nó 3D com a
+   borda escura embaixo. Não falta estrutura: falta **quem mora ali**.
+2. O "professor Xavier" que está no ar em `/marca/poder-hero.webp` é o
+   **Patrick Stewart como Charles Xavier** — personagem da Marvel e rosto de
+   um ator real, numa tela pública de uma plataforma licenciada a terceiros. O
+   elenco próprio resolve isso de graça: **O Mentor** nasce pra ocupar esse
+   lugar. (A troca no Hero **não** entra nesta rodada — fica registrada.)
+3. O **Magnific** conectou, mas a conta recusa toda chamada
+   (`requires a premium account`, até no `account_profile`). Nada foi gerado
+   por lá, e nada nesta diretiva depende dele.
+
+**A decisão de engenharia: o boneco é DESENHO NO CÓDIGO, não imagem gerada.**
+
+Não é economia — é o único jeito de ter o que o dono pediu:
+
+| o que ele pediu | por que só vetor entrega |
+|---|---|
+| girar o corpo, olhar pros lados, rir | cada pose é um parâmetro, não uma geração nova; com IA o rosto muda a cada pose |
+| mais rápido, mais ativo | vetor anima; PNG não |
+| igual no Duolingo | o boneco vive de 64px a 300px sem borrar |
+| sem quebrar o que está bom | não entra arquivo, nem requisição, nem peso no build |
+
+O elenco inteiro cabe em menos KB que **uma** foto de hábito da pasta
+`/marca`. Só se anima `transform` e `opacity` — o que a GPU resolve sozinha.
+
+**O que entra:**
+1. **`src/lib/elencoJornada.js`** — quem aparece em que parada, função pura e
+   testada. Cinco papéis reais do método: **Executivo** (o dono do dia),
+   **Mentor**, **Diretora** (gestão/reunião), **Cliente** (contato e
+   apresentação), **Duplicado** (Hábito 8).
+2. **`ElencoBoneco.jsx` + `elenco.css`** — o desenho e os nove movimentos:
+   giro do corpo inteiro a partir dos pés, cabeça chegando **depois** do corpo
+   (é o atraso que faz parecer gente), olhar acompanhando o giro, piscada
+   desencontrada, risada, respiro, aceno, aponta, pulo com esmagada na
+   aterrissagem, comemoração e cochilo.
+3. **O elenco entra ao lado da trilha** na `XGameJornada` — a parada do momento
+   ganha quem acena; as feitas e as travadas ganham figura **espaçada**, nunca
+   uma por parada (mapa lotado deixa de ser mapa).
+4. **O desenho conta o estado**: quem está na parada travada **cochila** — não
+   gira, não ri. Se o boneco da tarefa trancada ficar animado igual aos outros,
+   o desenho para de informar e vira enfeite.
+5. **`prefers-reduced-motion`**: quem liga "reduzir movimento" no aparelho vê
+   tudo parado, sem perder informação nenhuma.
+
+**O que NÃO entra (trava explícita do dono — "sem quebrar e mudar o que está bom"):**
+- O `Parada3D`, o `Bau`, o troféu, os `SELOS`, os `OFFSETS` e o amanhecer da
+  base **não são alterados**. O elenco entra como vizinho, nunca por dentro.
+- O **arrastar dos cards do Quadro** (DIR-77.3) não é tocado.
+- A troca do Xavier no Hero da Top College fica pra rodada própria.
+- Nada vai a produção nesta rodada.
+
+**Prova exigida (REL-34.1):** o boneco tem que estar **na tela renderizada**,
+com o corpo em ângulo diferente da cabeça (o atraso), a parada do momento com
+quem acena, a travada cochilando, e **zero erro de página/console**.
+
+---
+
 ## DIR-77 — O horário é a ponte, e o concluído mora na coluna
 
 **Emitida por:** dono (07/09/2026): *"botar os horários da tarefa, que
