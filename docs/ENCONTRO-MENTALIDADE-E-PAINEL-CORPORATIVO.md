@@ -15,23 +15,43 @@
 - **Mentalidade** — item novo da Top College, entre O Método e Time (`catalogo-encontro`), com duas abas
   e **nada administrativo** (dono: "não quero na parte administrativa, quero junto do fluxo"):
   - **Mentalidade de segunda** — a reunião (abre nela às segundas);
-  - **X-Performance** — os **8 Hábitos do time** em visão executiva (hoje · semana · mês): um cartão por
-    Hábito com o número do time, quem fez (com o detalhe) e quem não fez (com o motivo), lendo o dado real
-    (`src/lib/habitosDoTime.js`: quadro dos sonhos, story das 05:15, lista qualificada, contatos do método,
-    apresentações e reuniões de investimento, vendas pagas e captações fechadas, planejamento e números,
-    treinamentos e entregáveis de duplicação); a tabela por pessoa; e, embaixo, o **Painel Corporativo** de
-    quem foi clicado (abre nela nos outros dias).
-    - **Limpeza (06/09, "com 16 pessoas o 'não fez' explode")**: nome bonito em todo lugar (o painel guarda
-      "JOSÉ AMÂNCIO" e "DISTRIBUIDOR"); quem FEZ continua em etiqueta (até 8, depois "+N"); quem NÃO FEZ vira
-      **uma linha por motivo** — "sem quadro dos sonhos · Jean, Karen, Beatriz +6" — com "ver todos"; cada
-      nome é clicável e abre o painel da pessoa.
-    - **PDF do executivo** (06/09, "geração de PDF de cada executivo pra ser compartilhado"): botão **PDF** no
-      cabeçalho do Painel Corporativo. Sai o relatório de quem está aberto — faixa X-EOS, régua da Top College,
-      semáforo, 4 números, os 8 Hábitos dela no período (fez/não fez com o detalhe), metas do mês com barra,
-      demandas com estado e a produção da semana — em texto vetorial (jsPDF, ~30 KB, selecionável). No celular
-      que compartilha arquivo abre a folha de compartilhar (WhatsApp); senão baixa
-      `x-performance-nome-da-pessoa-AAAA-MM-DD.pdf`. O botão do balão ao lado copia o mesmo relatório em texto
-      formatado pro WhatsApp.
+  - **X-Performance** — em duas partes (dono, 06/09: "em cima os números da equipe toda, sem nome, bem
+    executivo; embaixo o detalhamento de cada um, com uma prévia na linha"):
+    1. **Os números do time** (hoje · semana · mês): seis números (média de hábitos, com os 8 inteiros, sem
+       nenhum, acordaram às 5, contatos, venderam ou fecharam), os **8 Hábitos** em oito cartões só com
+       número, % e barra, e os quatro números da semana (planejaram, produziram, demandas, semáforo).
+       Nenhum nome aparece aqui. A leitura vem do dado real (`src/lib/habitosDoTime.js`: quadro dos sonhos,
+       story das 05:15, lista qualificada, contatos do método, apresentações e reuniões de investimento,
+       vendas pagas e captações fechadas, planejamento e números, treinamentos e entregáveis).
+    2. **Detalhamento por pessoa**: uma linha por pessoa (a prévia: semáforo, hábitos em bolinhas, hoje,
+       semana, demandas, produção). Clicar abre embaixo da linha os **8 Hábitos dela** com o detalhe (fez e
+       quanto / não fez e por quê), o botão **PDF** e o **Painel Corporativo** dela (metas, demandas, a semana
+       de todo mundo). Um aberto por vez; quem está logado abre por padrão.
+    - **PDF do executivo** (dono: "geração de PDF de cada executivo pra ser compartilhado"): sai do cabeçalho
+      do detalhe e do Painel Corporativo. Faixa X-EOS, régua da Top College, semáforo, 4 números, os 8 Hábitos
+      da pessoa no período, metas com barra, demandas com estado, produção da semana — texto vetorial (jsPDF,
+      ~30 KB). No celular que compartilha arquivo abre a folha de compartilhar (WhatsApp); senão baixa
+      `x-performance-nome-da-pessoa-AAAA-MM-DD.pdf`. O balão ao lado copia o relatório em texto pro WhatsApp.
+    - Nome bonito em todo lugar (o painel guarda "JOSÉ AMÂNCIO" e "DISTRIBUIDOR").
+    - **A cara (dono, 06/09: "está muito colorido, quero bem clean, bem executivo")**: número em branco, apoio em
+      cinza, e cor só onde é sinal — o semáforo da pessoa, "atrasada", "sem agendar", "não fez". Nenhum Hábito
+      tem cor própria; nenhum degradê de fundo. Os seis números numa régua; os 8 Hábitos numa grade; a semana em
+      uma linha no cabeçalho do detalhamento.
+
+## O que estava duplicado e virou uma coisa só (06/09)
+
+O dono pediu uma análise do painel inteiro ("o que der pra juntar, une — exemplo: enviar demanda"). O que se
+repetia entre o Encontro, a X-Performance e o Painel Corporativo:
+
+| Repetia | Onde | Ficou |
+| --- | --- | --- |
+| Mandar uma demanda (linha com título, pessoa, prazo, botão) | Encontro ("demanda que surgiu na hora") e Painel Corporativo ("mandar uma demanda") | Um componente só, `MandarDemanda.jsx`, nos dois lugares. Continuam dois momentos (na reunião, ligada ao encontro; qualquer dia, do CEO/diretor), mas um código e uma cara. O "direcionar" por tópico do Encontro fica, é o coração da reunião. |
+| A semana de todo mundo (quem concluiu quantas demandas) | Encontro ("Visão executiva da semana"), Painel ("A semana de todo mundo") e X-Performance (coluna demandas do detalhamento) | Dentro da X-Performance o painel embutido **não repete** — a tabela de cima já é isso. O Encontro mantém a Visão executiva (é a leitura ao vivo da reunião). O painel sozinho (fora da X-Performance) mantém a sua. |
+| Quem é a pessoa (nome, posição, função, semáforo, seletor, PDF) | Cabeçalho do detalhe da X-Performance e cabeçalho do Painel Corporativo | O painel embutido (`embutido`) esconde o dele: só metas e demandas. O detalhe tem o cabeçalho e o PDF (em cima e no rodapé). |
+| Os números da semana (planejaram, produziram, demandas, semáforo) | Um bloco de quatro cartões no topo da X-Performance e a mesma coisa lida linha a linha na tabela | Uma linha compacta no cabeçalho do detalhamento; o topo fica só com os Hábitos. |
+
+O que ficou de propósito: "Produção da semana" dentro das metas da pessoa (é o número dela, não do time) e a
+Visão executiva do Encontro (é a reunião olhando a semana).
 - A seção administrativa da faixa virou **ADM X-Game** (dono: "tudo que for administração do X-Game,
   tarefas, organização de cima pra baixo"): fixo, distribuir, quadro geral, ciclo, fila do pronto,
   comprovações. Só a gestão.
@@ -78,10 +98,11 @@ Quem manda demanda daqui: a gestão (origem `ceo`) e quem tem posição de diret
   `normalizarRoteiro`, `funcaoDaPauta`, `sugerirResponsavel`, `demandaDoTopico`, `tarefaDaDemanda`,
   `cardDaDemanda`, `estadoDaDemanda`, `producaoDaSemana`, `slidesDoEncontro`.
 - `src/lib/habitosDoTime.js` — os 8 Hábitos do time lidos do dado real.
-- `src/lib/relatorioExecutivo.js` — `nomeBonito`, `agruparPorMotivo`, `habitosDaPessoa`, `relatorioDoExecutivo`
+- `src/lib/relatorioExecutivo.js` — `nomeBonito`, `habitosDaPessoa`, `agruparPorMotivo`, `relatorioDoExecutivo`
   (o conteúdo do PDF, puro), `textoDoRelatorio` (WhatsApp), `paraPdf` (só o que a Helvetica desenha).
-- `EncontroMentalidade.jsx`, `PainelCorporativo.jsx`, `PerformanceEquipe.jsx` (os 8 cartões) e
-  `PdfExecutivo.jsx` (o desenho em jsPDF) em `src/components/licensing/CentralVendas/`.
+- `EncontroMentalidade.jsx`, `PainelCorporativo.jsx` (`embutido`), `PerformanceEquipe.jsx` (os números e o
+  detalhamento), `MandarDemanda.jsx` (a linha única de mandar demanda) e `PdfExecutivo.jsx` (o desenho em jsPDF)
+  em `src/components/licensing/CentralVendas/`.
 - Provas: `tests/encontro.test.mjs`, `tests/habitosDoTime.test.mjs`, `tests/relatorioExecutivo.test.mjs` e
   `tests/navegador/encontro.spec.mjs` (12 casos, com a IA de mentira `window.__iaFalsa`; o do PDF baixa o
   arquivo de verdade e lê o texto copiado).

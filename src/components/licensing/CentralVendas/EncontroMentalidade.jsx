@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Brain, Play, Pause, SkipForward, Sparkles, Presentation, X, ChevronLeft, ChevronRight, Send, Loader2, Users, CheckCheck, RotateCcw } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
@@ -6,11 +6,13 @@ import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { segundaDaSemana, proximaSegunda } from '@/lib/xperformance';
+import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
 import {
   BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo,
   pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
+  ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
+  normalizarTreinamento, temTreinamento, materialEhLink, treinamentoDoTexto, TREINAMENTO_VAZIO,
 } from '@/lib/encontro';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
@@ -65,7 +67,19 @@ function Anel({ pct, cor, children }) {
 
 export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir = false }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
-  const dataEncontro = useMemo(() => segundaDaSemana(hoje), [hoje]);
+  // 📅 DIR-79 — a tela abre na segunda QUE VEM (hoje, se hoje for segunda), e
+  // não na que já passou. `passoSemana` deixa andar pra trás sem perder o
+  // registro da semana anterior — que é o que a troca de âncora, sozinha,
+  // tornaria inalcançável de terça a sexta.
+  const [passoSemana, setPassoSemana] = useState(0);
+  // o que a IA inventou e foi descartado — a tela AVISA em vez de exibir
+  const [descartes, setDescartes] = useState(null);
+  const dataEncontro = useMemo(() => {
+    let d = ancoraDoEncontro(hoje);
+    for (let i = 0; i < Math.abs(passoSemana); i += 1) d = semanaVizinha(d, Math.sign(passoSemana));
+    return d;
+  }, [hoje, passoSemana]);
+  const selo = seloDaData(dataEncontro, hoje);
   const mes = mesDe(dataEncontro);
   const fase = faseDoMes(mes);
 
@@ -132,6 +146,9 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   const estado = estadoDoCronometro(cron, agora);
   const conduzidoPor = encontro?.conduzido_por_nome ?? (currentUser?.full_name || currentUser?.nickname || '');
   const treinamentoPor = encontro?.treinamento_por_nome || '';
+  // 🎓 DIR-79 — o treinamento como conteúdo do encontro (não só o nome de quem treina)
+  const treinamento = useMemo(() => normalizarTreinamento(encontro?.treinamento, { por: treinamentoPor }), [encontro?.treinamento, treinamentoPor]);
+  const [importando, setImportando] = useState('');
 
   // 💾 gravar o encontro (uma linha por segunda; a primeira gravação cria)
   const salvarEncontro = async (patch) => {
@@ -158,9 +175,18 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     const contexto = { pautas: lista, mes, tema: temaDoMes, habitosDoMes: mesDoPrograma?.habitos || [], time, conduzidoPor, treinamentoPor };
     let novo = null; let origem = 'local';
     try {
-      const r = await plataforma.integrations.Core.InvokeLLM({ prompt: promptDoRoteiro(contexto), response_json_schema: SCHEMA_ROTEIRO, max_tokens: 3000 });
-      if (r && r.ok !== false && (r.reuniao || r.tema)) { novo = normalizarRoteiro(r, contexto); origem = 'ia'; }
-      else if (r?.needs_key) toast.message('IA não conectada — o tópico saiu pela régua da casa.');
+      // 🧯 DIR-79 — o teto subiu porque com pautas longas o JSON estourava, caía
+      // no catch e a tela dizia "não respondeu": ela respondeu e foi CORTADA, e
+      // ninguém via a causa. Agora as duas coisas são ditas com nomes distintos.
+      const r = await plataforma.integrations.Core.InvokeLLM({ prompt: promptDoRoteiro(contexto), response_json_schema: SCHEMA_ROTEIRO, max_tokens: 6000 });
+      if (r && r.ok !== false && (r.reuniao || r.tema)) {
+        // o que a conferência jogou fora ANTES de normalizar — depois de
+        // normalizar já virou nulo e não dá mais pra avisar o dono
+        const fora = descartesDoRoteiro(r, contexto);
+        novo = normalizarRoteiro(r, contexto); origem = 'ia';
+        setDescartes(fora);
+      } else if (r?.needs_key) toast.message('IA não conectada — o tópico saiu pela régua da casa.');
+      else if (r?.truncated || r?.stop_reason === 'max_tokens') toast.message('A resposta da IA foi cortada no meio (pautas longas) — o tópico saiu pela régua da casa.');
       else toast.message('A IA não respondeu — o tópico saiu pela régua da casa.');
     } catch { toast.message('A IA não respondeu — o tópico saiu pela régua da casa.'); }
     if (!novo) novo = { ...roteiroLocal(contexto), origem: 'local' };
@@ -196,7 +222,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   useEffect(() => { setEscolhas((e) => ({ ...e, livre: { pessoa: livre.pessoa, prazo: livre.prazo, hora: livre.hora, titulo: livre.titulo } })); }, [livre]);
 
   const producao = useMemo(() => producaoDaSemana({ demandas, tarefas, cards, hojeISO: hoje }), [demandas, tarefas, cards, hoje]);
-  const slides = useMemo(() => slidesDoEncontro({ data: fmtDia(dataEncontro), roteiro, mes, conduzidoPor, treinamentoPor, demandas }), [dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas]);
+  const slides = useMemo(() => slidesDoEncontro({ data: fmtDia(dataEncontro), roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento }), [dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento]);
 
   // 🎞️ a apresentação: setas e ESC
   useEffect(() => {
@@ -223,7 +249,21 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
         <div className="flex items-start gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <p className={titulo}><Brain className="w-3 h-3 inline mr-1" />Encontro da Mentalidade · Executivo · Diretor · CEO</p>
-            <p className="mt-1 text-[18px] sm:text-[22px] font-extrabold leading-tight" data-teste="encontro-titulo">{fmtDia(dataEncontro)}{' '}{ehHoje ? <span className="text-nz-verde text-[12px] font-bold ml-2">é hoje</span> : <span className="text-white/35 text-[12px] font-medium ml-2">próxima segunda {fmtDia(proximaSegunda(hoje)).split(',')[1]}</span>}</p>
+            <p className="mt-1 text-[18px] sm:text-[22px] font-extrabold leading-tight" data-teste="encontro-titulo">{fmtDia(dataEncontro)}{' '}{selo && (
+              <span className={`text-[12px] font-bold ml-2 ${selo.tom === 'agora' ? 'text-nz-verde' : selo.tom === 'perto' ? 'text-amber-300' : 'text-white/35'}`} data-teste="encontro-selo">{selo.texto}</span>
+            )}</p>
+            {/* ← → entre as semanas: a âncora é a próxima segunda, mas o
+                registro da que passou continua alcançável */}
+            <div className="flex items-center gap-1 mt-1.5" data-teste="encontro-semanas">
+              <button type="button" onClick={() => setPassoSemana((n) => n - 1)} aria-label="semana anterior" data-teste="semana-anterior"
+                className="rounded-lg border border-white/15 hover:bg-white/10 p-1"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={() => setPassoSemana((n) => n + 1)} aria-label="próxima semana" data-teste="semana-proxima"
+                className="rounded-lg border border-white/15 hover:bg-white/10 p-1"><ChevronRight className="w-3.5 h-3.5" /></button>
+              {passoSemana !== 0 && (
+                <button type="button" onClick={() => setPassoSemana(0)} data-teste="semana-voltar"
+                  className="ml-1 rounded-lg border border-white/15 hover:bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white/70">voltar pra próxima</button>
+              )}
+            </div>
             <p className="text-[12px] text-white/60 mt-0.5">{fase ? <><span className="text-white/85 font-bold">{fase.fase}</span> · {fase.foco}</> : 'fora do ciclo oficial'}{mesDoPrograma ? <span className="text-white/40"> · {rotuloDoMes(mes)}: {mesDoPrograma.tema} (H{mesDoPrograma.habitos.join(', H')})</span> : null}</p>
           </div>
           <Button onClick={abrirApresentacao} className="bg-white text-black hover:bg-white/90 h-9 font-extrabold" data-teste="apresentar"><Presentation className="w-4 h-4 mr-1.5" /> Apresentar</Button>
@@ -238,6 +278,43 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
           <label className="text-[10px] text-white/45 uppercase tracking-wider">quem dá o treinamento (45 min)
             <Input defaultValue={treinamentoPor} key={`trein-${encontro?.id || 'novo'}`} placeholder="nome de quem treina" disabled={!podeConduzir} onBlur={(ev) => salvarEncontro({ treinamento_por_nome: ev.target.value })} className="mt-0.5 h-8 border-white/15 bg-white/[0.06] text-white text-[12px] normal-case" data-teste="treina" />
           </label>
+          {/* 🎓 DIR-79 — o TREINAMENTO em si. Antes daqui só existia o nome de
+              quem treina: o bloco de 45 min ia pra tela vazio, sem nada pra
+              importar e nada pra abrir na hora de apresentar. */}
+          <div className="mt-2 rounded-lg border border-white/10 p-2.5" data-teste="treinamento-caixa">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento (45 min)</p>
+              {temTreinamento(treinamento)
+                ? <span className="text-[10px] font-bold text-nz-verde" data-teste="treinamento-pronto">pronto · {treinamento.passos.length} passo{treinamento.passos.length === 1 ? '' : 's'}</span>
+                : <span className="text-[10px] text-amber-300/80" data-teste="treinamento-vazio">ainda sem material</span>}
+            </div>
+            {temTreinamento(treinamento) ? (
+              <div className="mt-1.5">
+                <p className="text-[12px] font-bold text-white">{treinamento.titulo || 'Treinamento'}</p>
+                {treinamento.material && (materialEhLink(treinamento.material)
+                  ? <a href={treinamento.material} target="_blank" rel="noreferrer" className="text-[11px] text-sky-300 underline break-all" data-teste="treinamento-link">{treinamento.material}</a>
+                  : <p className="text-[11px] text-white/60 whitespace-pre-line">{treinamento.material}</p>)}
+                {treinamento.passos.length > 0 && (
+                  <ol className="mt-1 space-y-0.5">
+                    {treinamento.passos.map((passo, i) => (
+                      <li key={`${passo}-${i}`} className="text-[11px] text-white/70">{i + 1}. {passo}</li>
+                    ))}
+                  </ol>
+                )}
+                {podeConduzir && (
+                  <button type="button" onClick={() => salvarEncontro({ treinamento: TREINAMENTO_VAZIO })} className="mt-1.5 text-[10px] text-white/35 hover:text-white" data-teste="treinamento-limpar">trocar o treinamento</button>
+                )}
+              </div>
+            ) : podeConduzir ? (
+              <div className="mt-1.5">
+                <Textarea value={importando} onChange={(ev) => setImportando(ev.target.value)} rows={4}
+                  placeholder={'cole o treinamento ou escreva aqui — a primeira linha é o título, as de baixo viram os passos. Um link no meio vira o material.\nex.:\nScript de abordagem no WhatsApp\nhttps://drive.google.com/...\nAbrir com pergunta\nEscutar 2 minutos'}
+                  className="border-white/15 bg-white/[0.06] text-white text-[11px] leading-relaxed" data-teste="treinamento-texto" />
+                <Button size="sm" disabled={!importando.trim()} onClick={() => { salvarEncontro({ treinamento: treinamentoDoTexto(importando, { por: treinamentoPor }) }); setImportando(''); }}
+                  className="mt-1.5 h-7 bg-white/10 hover:bg-white/20 text-white text-[11px]" data-teste="treinamento-salvar">usar este treinamento</Button>
+              </div>
+            ) : <p className="mt-1 text-[11px] text-white/40">quem conduz ainda não subiu o material.</p>}
+          </div>
         </div>
       </div>
 
@@ -281,6 +358,17 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
             {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
             <span className="text-[10px] text-white/35">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'}{encontro?.roteiro_origem ? ` · tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
           </div>
+          {/* 🧯 DIR-79 — o que a IA inventou e foi descartado. Silêncio aqui é o
+              que fazia a alucinação passar por verdade. */}
+          {descartes && (descartes.nomes.length > 0 || descartes.funcoes.length > 0) && (
+            <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200" data-teste="aviso-invencao">
+              A IA inventou e eu descartei:
+              {descartes.nomes.length > 0 && <> gente que não está na sala (<b>{descartes.nomes.join(', ')}</b>)</>}
+              {descartes.nomes.length > 0 && descartes.funcoes.length > 0 && ' e'}
+              {descartes.funcoes.length > 0 && <> função que não existe (<b>{descartes.funcoes.join(', ')}</b>)</>}
+              . O resto do tópico está de pé.
+            </p>
+          )}
         </div>
         <div className="lg:col-span-3 rounded-xl border border-white/10 p-3" style={caixa} data-teste="topico">
           <div className="flex items-baseline gap-2 flex-wrap">
@@ -353,16 +441,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
           })}
         </ul>
         {podeConduzir && (
-          <div className="mt-2 rounded-lg border border-dashed border-white/15 px-2.5 py-2 flex items-center gap-2 flex-wrap" data-teste="demanda-livre">
-            <span className="text-[10px] text-white/35">+ demanda que surgiu na hora</span>
-            <Input value={livre.titulo} onChange={(ev) => setLivre((l) => ({ ...l, titulo: ev.target.value }))} onKeyDown={(ev) => { if (ev.key === 'Enter') direcionarLivre(); }} placeholder="ex.: Mandar a proposta pro fornecedor da lista nova" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white text-[12px]" data-teste="livre-titulo" />
-            <select value={livre.pessoa} onChange={(ev) => setLivre((l) => ({ ...l, pessoa: ev.target.value }))} className={campo} data-teste="livre-pessoa">
-              <option value="">quem leva…</option>
-              {time.map((p) => <option key={p.id} value={p.id}>{p.nome}{p.funcaoCurta ? ` · ${p.funcaoCurta}` : ''}</option>)}
-            </select>
-            <input type="date" value={livre.prazo || sextaDaSemana(dataEncontro)} onChange={(ev) => setLivre((l) => ({ ...l, prazo: ev.target.value }))} className={campo} />
-            <Button size="sm" onClick={direcionarLivre} disabled={salvando || !livre.titulo.trim() || !livre.pessoa} className="bg-white/10 hover:bg-white/20 text-white h-8" data-teste="livre-direcionar"><Send className="w-3.5 h-3.5 mr-1" /> direcionar</Button>
-          </div>
+          <MandarDemanda valor={livre} onChange={setLivre} onMandar={direcionarLivre} time={time} prazoPadrao={sextaDaSemana(dataEncontro)} legenda="+ demanda que surgiu na hora" placeholder="ex.: Mandar a proposta pro fornecedor da lista nova" opcaoVazia="quem leva…" rotuloBotao="direcionar" desabilitado={salvando} prefixoTeste="livre" testeCaixa="demanda-livre" testeBotao="livre-direcionar" />
         )}
       </div>
 

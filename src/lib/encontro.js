@@ -26,6 +26,7 @@ import { HABITOS } from './metodo.js';
 import { faseDoMes } from './documentoOficial.js';
 import { CARGOS_OFICIAIS } from './documentoOficial.js';
 import { prazoDe } from './pronto.js';
+import { proximaSegunda } from './xperformance.js';
 
 // ── ⏱️ os três blocos (Documento Oficial p. 33: Bloco 1 formação, Bloco 2 organização; dono: 15 + 45 + 120) ──
 export const BLOCOS = [
@@ -253,6 +254,11 @@ export function promptDoRoteiro({ pautas = [], mes, tema, time = [], conduzidoPo
     conduzidoPor ? `Conduz: ${conduzidoPor}.` : '',
     sala ? `Na sala: ${sala}.` : '',
     `Funções oficiais (use o id em responsavel_funcao): ${funcoes}.`,
+    // 🧯 DIR-79 — a trava contra invenção. A regra antiga mandava produzir
+    // "números, gargalo, decisões" sem entregar número nenhum: modelo obrigado
+    // a preencher campo sem dado preenche com o que soa plausível. Agora ele é
+    // proibido de inventar, e tem onde escrever que o dado não veio.
+    'PROIBIDO INVENTAR. Você só pode usar o que está escrito acima: as pautas, os nomes da sala e as funções oficiais. NÃO invente números, metas, valores, percentuais, datas nem nomes de pessoas — nenhum número do negócio foi te dado. Quando um tópico precisar de um número que não está nas pautas, escreva no objetivo o que precisa ser levantado (ex.: "trazer o número de X da semana") em vez de escrever um número. Em `apresentador`, use SOMENTE um nome que está na lista da sala; se a pauta não disser quem apresenta, deixe nulo. Em `responsavel_funcao`, use SOMENTE um dos ids oficiais listados; na dúvida, deixe nulo.',
     'PAUTAS ditadas pelo dono (uma por linha):',
     ...pautas.map((p, i) => `${i + 1}. ${p}`),
     'Gere o TÓPICO do encontro. Regras: português do Brasil correto e profissional — as pautas foram DITADAS (podem vir em letras garrafais, com erros de digitação e várias pautas numa linha só separadas por vírgula): corrija a ortografia, escreva em caixa normal (só nomes próprios e siglas em maiúscula), separe cada pauta num tópico próprio e dê a cada tópico um TÍTULO limpo (frase nominal curta, sem "fulano vai falar sobre"). Quando a pauta diz QUEM fala ("Aline fala sobre o financeiro"), ponha o nome em `apresentador`. Quando a pauta pede tempo ("pelo menos 1 hora pra ele", "30 min"), respeite em `minutos`; o resto se reparte no que sobrar. A LEITURA liga o tema do mês a um Hábito; o TREINAMENTO é prático (3 a 5 passos e uma prática de 10 minutos); a REUNIÃO tem um tópico por pauta (mantenha a ordem), cada um com objetivo, decisão esperada, minutos (a soma dos minutos = 120), a mentalidade que ele mais exige, o Hábito (1–8), a função responsável (id), o apresentador (nome, quando a pauta diz) e a DEMANDA que sai dele (uma frase no imperativo, começando com verbo, que vira tarefa da pessoa até sexta). Tudo vai pra tela da apresentação: escreva como quem apresenta pra uma diretoria. O fechamento é uma frase que o time repete.',
@@ -332,6 +338,54 @@ export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [], time =
 }
 
 /** O que a IA devolveu, garantido no formato — o que faltar vem da régua local. */
+/**
+ * O nome só vale se a pessoa estiver DE FATO na sala.
+ *
+ * Casa por primeiro nome sem acento, porque a IA escreve "Aline" quando a
+ * lista diz "Aline Ferreira" — e devolve o nome COMO ESTÁ NA LISTA, não como a
+ * IA escreveu: quem manda no nome de uma pessoa é o cadastro dela.
+ * Fora da sala → null. É esse null que mata a alucinação.
+ */
+export function salaConhecida(time) {
+  return Array.isArray(time) && time.length > 0;
+}
+
+export function nomeNaSala(nome, time = []) {
+  const cru = String(nome || '').trim();
+  if (!cru) return null;
+  const chave = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const alvo = chave(cru);
+  if (!alvo) return null;
+  const lista = Array.isArray(time) ? time : [];
+  const exato = lista.find((p) => chave(p?.nome) === alvo);
+  if (exato) return exato.nome;
+  const primeiro = alvo.split(/\s+/)[0];
+  const porPrimeiro = lista.find((p) => chave(p?.nome).split(/\s+/)[0] === primeiro);
+  return porPrimeiro ? porPrimeiro.nome : null;
+}
+
+/** A função só vale se for cargo oficial da casa. Inventou sigla, vira nulo. */
+export function funcaoConferida(id) {
+  const chave = String(id || '').trim().toLowerCase();
+  if (!chave) return null;
+  return CARGOS_OFICIAIS.some((c) => c.id === chave) ? chave : null;
+}
+
+/**
+ * O que a conferência DESCARTOU — pra tela avisar em vez de exibir invenção
+ * com cara de verdade. Silêncio aqui é o que faz a alucinação passar batido.
+ */
+export function descartesDoRoteiro(bruto, contexto = {}) {
+  const topicos = Array.isArray(bruto?.reuniao?.topicos) ? bruto.reuniao.topicos : [];
+  const nomes = []; const funcoes = [];
+  const confere = salaConhecida(contexto.time);
+  for (const t of topicos) {
+    if (confere && t?.apresentador && !nomeNaSala(t.apresentador, contexto.time)) nomes.push(String(t.apresentador));
+    if (t?.responsavel_funcao && !funcaoConferida(t.responsavel_funcao)) funcoes.push(String(t.responsavel_funcao));
+  }
+  return { nomes: [...new Set(nomes)], funcoes: [...new Set(funcoes)] };
+}
+
 export function normalizarRoteiro(obj, contexto = {}) {
   const local = roteiroLocal(contexto);
   if (!obj || typeof obj !== 'object') return { ...local, origem: 'local' };
@@ -347,8 +401,19 @@ export function normalizarRoteiro(obj, contexto = {}) {
       minutos: Math.max(5, Math.round(Number(t.minutos) || base.minutos || 10)),
       mentalidade: mentalidadeDe(t.mentalidade)?.id || lida.mentalidade,
       habito: Number(t.habito) >= 1 && Number(t.habito) <= 8 ? Number(t.habito) : (lida.habito || base.habito || null),
-      responsavel_funcao: t.responsavel_funcao || base.responsavel_funcao || funcaoDaPauta(titulo),
-      apresentador: t.apresentador || base.apresentador || null,
+      // 🧯 DIR-79 — CONFERIDO CONTRA OS FATOS, não repassado cru.
+      // Era daqui que saía gente que não existe: a IA escrevia qualquer nome em
+      // `apresentador` e a tela exibia como se fosse alguém da sala. Agora o
+      // nome só sobrevive se estiver no `time` que veio no contexto; a função,
+      // só se for cargo oficial. O que não bate vira nulo — e o que virou nulo
+      // é contado em `descartados`, pra tela poder AVISAR em vez de mentir.
+      responsavel_funcao: funcaoConferida(t.responsavel_funcao) || base.responsavel_funcao || funcaoDaPauta(titulo),
+      // ⚠️ só se confere quando HÁ lista. Sala vazia não é "não tem ninguém":
+      // é "não sei quem está" — e apagar nome legítimo por falta de referência
+      // é pior que o defeito que se queria consertar.
+      apresentador: (salaConhecida(contexto.time)
+        ? nomeNaSala(t.apresentador, contexto.time)
+        : (t.apresentador || null)) || base.apresentador || null,
       demanda: String(t.demanda || base.demanda || titulo),
     };
   });
@@ -466,14 +531,24 @@ export function producaoDaSemana({ demandas = [], tarefas = [], cards = [], hoje
 }
 
 // ── 🎞️ os slides da apresentação ──
-export function slidesDoEncontro({ data, roteiro, mes, conduzidoPor, treinamentoPor, demandas = [] } = {}) {
+export function slidesDoEncontro({ data, roteiro, mes, conduzidoPor, treinamentoPor, demandas = [], treinamento = null } = {}) {
   const r = roteiro || roteiroLocal({ mes });
   const fase = faseDoMes(mes);
+  // 🎓 DIR-79 — o treinamento GRAVADO no encontro manda no slide. O que a IA
+  // escreveu é o rascunho; o que a pessoa importou ou escreveu é o material de
+  // verdade, e sobrevive à próxima geração do roteiro.
+  const tre = normalizarTreinamento(treinamento, { por: treinamentoPor });
+  const slideTreino = temTreinamento(tre)
+    ? { id: 'treinamento', bloco: 'treinamento', titulo: tre.titulo || 'Treinamento',
+        sub: `45 minutos${tre.por ? ` · quem treina: ${tre.por}` : ''}`,
+        corpo: [tre.material || null, ...tre.passos.map((p, i) => `${i + 1}. ${p}`)].filter(Boolean),
+        rodape: materialEhLink(tre.material) ? 'material: abra o link antes de começar' : null }
+    : { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: `45 minutos${treinamentoPor ? ` · quem treina: ${treinamentoPor}` : ''}`, corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null };
   const slides = [
     { id: 'capa', bloco: null, titulo: 'Encontro da Mentalidade', sub: `${data || ''}${fase ? ` · ${fase.fase}` : ''}`, corpo: [r.tema, conduzidoPor ? `conduz: ${conduzidoPor}` : null].filter(Boolean), rodape: 'Executivo · Diretor · CEO — um espaço só' },
     { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '15 leitura · 45 treinamento · 120 reunião', corpo: [r.abertura], rodape: null },
     { id: 'leitura', bloco: 'leitura', titulo: r.leitura?.titulo || 'Leitura', sub: '15 minutos', corpo: [r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação' },
-    { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: `45 minutos${treinamentoPor ? ` · quem treina: ${treinamentoPor}` : ''}`, corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null },
+    slideTreino,
     ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min${t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),
     { id: 'fechamento', bloco: null, titulo: 'Fechamento', sub: `${demandas.length} demanda${demandas.length === 1 ? '' : 's'} direcionada${demandas.length === 1 ? '' : 's'}`, corpo: [r.fechamento, ...demandas.slice(0, 8).map((d) => `• ${d.pessoa_nome || d.pessoa_id}: ${d.titulo}`)].filter(Boolean), rodape: 'até sexta' },
   ];
@@ -522,4 +597,103 @@ export function visaoExecutiva({ time = [], tarefas = [], demandas = [], tarefas
     demandas: { total: totalDem, concluidas, pct: totalDem ? Math.round((concluidas / totalDem) * 100) : 0, semAgendar: linhas.reduce((s, l) => s + l.demandas.semAgendar, 0), atrasadas: linhas.reduce((s, l) => s + l.demandas.atrasadas, 0) },
     verdes: linhas.filter((l) => l.cor === 'verde').length, amarelos: linhas.filter((l) => l.cor === 'amarelo').length, vermelhos: linhas.filter((l) => l.cor === 'vermelho').length,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📅 DIR-79 — A ÂNCORA DA SEMANA, O TREINAMENTO E A IA PRESA NOS FATOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * A segunda que a tela deve abrir.
+ *
+ * Era `segundaDaSemana(hoje)` — a segunda que JÁ PASSOU. Num domingo isso
+ * mostra a reunião de seis dias atrás em vez da de amanhã, e ainda arrasta um
+ * efeito colateral: a fase do ciclo é lida do mês daquela data, então uma
+ * âncora em 31/08 pergunta a fase de agosto (que não existe no ciclo, que
+ * começa em 2026-09) e a tela escreve "fora do ciclo oficial".
+ *
+ * A âncora certa é a PRÓXIMA segunda — que é a reunião que se prepara. E
+ * `proximaSegunda` já devolve HOJE quando hoje é segunda, então o dia do
+ * encontro continua sendo o dia do encontro.
+ */
+export function ancoraDoEncontro(hojeISO) {
+  return proximaSegunda(hojeISO);
+}
+
+/**
+ * Andar entre semanas. Existe porque a troca de âncora, sozinha, quebraria
+ * outra coisa: de terça a sexta o time ainda escreve as demandas da segunda que
+ * passou, e sem isso aquele registro ficaria inalcançável.
+ * @param {number} passo -1 = semana anterior, +1 = próxima
+ */
+export function semanaVizinha(dataISO, passo = 1) {
+  const d = new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + (Math.sign(passo) * 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Quantos dias separam duas datas (positivo = no futuro). */
+export function distanciaEmDias(dataISO, hojeISO) {
+  const a = new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
+  const b = new Date(`${String(hojeISO).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
+  return Math.round((a - b) / 86400000);
+}
+
+/** O selo ao lado da data: "é hoje", "é amanhã", "em N dias", "há N dias". */
+export function seloDaData(dataISO, hojeISO) {
+  const d = distanciaEmDias(dataISO, hojeISO);
+  if (d === null) return null;
+  if (d === 0) return { texto: 'é hoje', tom: 'agora' };
+  if (d === 1) return { texto: 'é amanhã', tom: 'perto' };
+  if (d > 1) return { texto: `em ${d} dias`, tom: 'perto' };
+  return { texto: d === -1 ? 'foi ontem' : `há ${Math.abs(d)} dias`, tom: 'passado' };
+}
+
+// ── 🎓 O TREINAMENTO DE 45 MINUTOS ──────────────────────────────────────────
+// Até aqui só existia `treinamento_por_nome`: o NOME de quem treina. Não havia
+// o que importar nem o que abrir. O bloco passa a carregar conteúdo próprio.
+
+export const TREINAMENTO_VAZIO = { titulo: '', material: '', passos: [], por: '' };
+
+/** Aceita o que veio do banco (ou da mão) e devolve sempre a mesma forma. */
+export function normalizarTreinamento(bruto, { por = '' } = {}) {
+  const o = bruto && typeof bruto === 'object' ? bruto : {};
+  const passos = Array.isArray(o.passos)
+    ? o.passos.map((p) => String(p || '').trim()).filter(Boolean).slice(0, 12)
+    : [];
+  return {
+    titulo: String(o.titulo || '').trim(),
+    material: String(o.material || '').trim(),
+    passos,
+    por: String(o.por || por || '').trim(),
+  };
+}
+
+/** Tem treinamento de verdade? Nome de quem treina, sozinho, NÃO é treinamento. */
+export function temTreinamento(t) {
+  const n = normalizarTreinamento(t);
+  return !!(n.titulo || n.material || n.passos.length);
+}
+
+/** O material é um link clicável ou um texto colado? A tela precisa saber. */
+export function materialEhLink(material) {
+  return /^https?:\/\/\S+$/i.test(String(material || '').trim());
+}
+
+/**
+ * Importar um treinamento de texto colado: a primeira linha vira o título,
+ * as demais viram passos. É o "ou fazer um treinamento ali" sem formulário.
+ */
+export function treinamentoDoTexto(texto, { por = '' } = {}) {
+  const linhas = String(texto || '').split('\n').map((l) => l.replace(/^\s*[-•*\d.)]+\s*/, '').trim()).filter(Boolean);
+  if (!linhas.length) return { ...TREINAMENTO_VAZIO, por };
+  const [titulo, ...resto] = linhas;
+  const link = resto.find((l) => materialEhLink(l)) || (materialEhLink(titulo) ? titulo : '');
+  return normalizarTreinamento({
+    titulo: materialEhLink(titulo) ? 'Treinamento' : titulo,
+    material: link,
+    passos: resto.filter((l) => l !== link),
+  }, { por });
 }
