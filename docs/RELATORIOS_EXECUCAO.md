@@ -3195,3 +3195,48 @@ navegador **188/188 ZERO erros**.
 
 **Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
 dono.
+
+---
+
+## REL-PUB-06/09 — Publicação em produção (DIR-49 → DIR-70)
+
+**Autorização do dono (06/09/2026):** *"pode publicar tudo o que a gente
+fez até agora... pode publicar em produção... pra eu ver como é que está
+no celular."* É a autorização separada que faltava — até aqui tudo vivia
+só no preview por ordem dele.
+
+**O que sobe:** DIR-49→54 (agenda viva), DIR-55→66 (a Top College como
+ambiente de marca), DIR-57→59 (menu de 10 ícones para 6, com a ordem
+arrastável intocada), DIR-67→70 (a fala do professor, o vidro legível, o
+nome completo do Hábito, o menu metálico) e o X-GAME da sessão paralela,
+que vivia no mesmo branch.
+
+**Conferência do banco antes de abrir a PR:** as 5 migrações que o
+workflow aplica sozinho em produção foram lidas uma a uma. Todas
+aditivas — `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`,
+índices e RLS. Nenhum `DROP`, `TRUNCATE`, `DELETE` ou troca de tipo.
+`app_segredos` nasce com RLS ligado e SEM policy: nem anon nem
+authenticated leem, só o service role.
+
+**Conflito resolvido com conferência, não no olho:** `src/lib/xgame.js`
+deu add/add (os dois lados criaram o arquivo). Ficou a versão do branch
+depois de provar que ela é superconjunto estrito da do main — export a
+export (nenhum símbolo se perde) e linha a linha (as duas únicas linhas
+exclusivas do main são a assinatura e a primeira de `resumoDoDia`, que no
+branch ganharam parâmetros).
+
+**Susto que a prova pegou, e o que ele era de verdade:** depois de trazer
+o último trabalho do X-GAME, a prova caiu de 188/188 para **179/188** — e
+os 9 que caíram eram todos do Master Task (períodos MANHÃ/TARDE/NOITE, o
+guia de cada horário, o regerar com confirmação). Fui ver antes de
+publicar: a sessão paralela trocou a **visão padrão** do Master Task para
+a Jornada (X-GAME F11); a lista por período continua inteira atrás do
+seletor 📋 Lista. Ou seja, a prova cobrava uma tela que o produto deixou
+de abrir por padrão — não um defeito. Com a prova abrindo a Lista antes de
+cobrar o que é dela: **189/189**.
+
+**Prova final na árvore exata que foi publicada:** suíte **990/990**;
+build exit 0; prova em navegador **189/189 ZERO erros**; lint 62 (a dívida
+de imports não usados que já existia no main e não bloqueia CI).
+
+**Status:** PUBLICADO EM PRODUÇÃO por autorização expressa do dono.
