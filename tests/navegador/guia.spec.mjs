@@ -166,3 +166,55 @@ test('CELULAR: o modal abre assinado pelas duas marcas, no preto da faculdade', 
   assert.deepEqual(erros, []);
   await ctx.close();
 });
+
+// ─────────────── a faixa Jornada × Lista, o placar e o relógio de teste ───────────────
+
+const estadoFaixa = async (pagina) => JSON.parse(await pagina.locator('[data-teste="estado-faixa"]').textContent());
+
+test('FAIXA: Jornada × Lista é um controle só, e trocar de lado funciona', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir({ celular: true });
+  assert.equal(await pagina.getByRole('tab', { name: 'Jornada' }).getAttribute('aria-selected'), 'true');
+  await pagina.getByRole('tab', { name: 'Lista' }).tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'lista');
+  assert.equal(await pagina.getByRole('tab', { name: 'Lista' }).getAttribute('aria-selected'), 'true');
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+test('FAIXA: "meu placar" é botão de verdade e abre/fecha', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir({ celular: true });
+  const botao = pagina.locator('[data-teste="placar-botao"]');
+  await botao.tap();
+  assert.equal((await estadoFaixa(pagina)).placar, true);
+  assert.equal(await botao.getAttribute('aria-expanded'), 'true');
+  await botao.tap();
+  assert.equal((await estadoFaixa(pagina)).placar, false);
+  await ctx.close();
+});
+
+test('FAIXA: o relógio de teste fica discreto — só abre o campo quando alguém toca, e sair volta ao normal', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir({ celular: true });
+  assert.equal(await pagina.locator('input[type="time"]').count(), 0, 'o campo de hora nasceu aberto, gritando');
+  await pagina.locator('[data-teste="modo-teste-pastilha"]').tap();
+  await pagina.locator('[data-teste="modo-teste-aberto"]').waitFor();
+  await pagina.locator('input[type="time"]').fill('09:30');
+  await pagina.getByRole('button', { name: 'aplicar' }).tap();
+  await pagina.locator('[data-teste="modo-teste-ligado"]').waitFor();
+  assert.equal((await estadoFaixa(pagina)).hora, '09:30');
+  await pagina.locator('[data-teste="faixa-visao"]').screenshot({ path: path.join(FOTOS, 'faixa-teste-ligado.png') });
+  await pagina.getByRole('button', { name: /sair/ }).tap();
+  await pagina.locator('[data-teste="modo-teste-pastilha"]').waitFor();
+  assert.equal((await estadoFaixa(pagina)).hora, '');
+  await ctx.close();
+});
+
+test('FAIXA: no celular cabe numa linha só; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
+  for (const celular of [true, false]) {
+    const { pagina, ctx } = await abrir({ celular });
+    const faixa = pagina.locator('[data-teste="faixa-visao"]');
+    const caixa = await faixa.boundingBox();
+    if (celular) assert.ok(caixa.height < 48, `a faixa quebrou em duas fileiras no celular: altura=${caixa.height}`);
+    await faixa.screenshot({ path: path.join(FOTOS, `faixa-${celular ? 'celular' : 'desktop'}.png`) });
+    await ctx.close();
+  }
+});

@@ -18,6 +18,27 @@ import '@/index.css';
 import MobileNavSheet from '@/components/licensing/MobileNavSheet';
 import HeroTopCollege from '@/components/licensing/HeroTopCollege';
 import GuiaMovel from '@/components/licensing/CentralVendas/GuiaMovel';
+import FaixaVisao from '@/components/licensing/CentralVendas/FaixaVisao';
+
+// a faixa Jornada × Lista com o placar e o relógio de teste, com estado de verdade
+function FaixaViva() {
+  const [visao, setVisao] = React.useState('jornada');
+  const [placar, setPlacar] = React.useState(false);
+  const [hora, setHora] = React.useState('');
+  const [rascunho, setRascunho] = React.useState('');
+  return (
+    <div className="mb-5">
+      <FaixaVisao
+        visao={visao}
+        onVisao={setVisao}
+        placarAberto={placar}
+        onPlacar={() => setPlacar((v) => !v)}
+        teste={{ hora, rascunho, onRascunho: setRascunho, entrar: () => setHora(rascunho), sair: () => { setHora(''); setRascunho(''); } }}
+      />
+      <span data-teste="estado-faixa">{JSON.stringify({ visao, placar, hora })}</span>
+    </div>
+  );
+}
 
 const USUARIO = { id: 'u1', full_name: 'Luiz Santanna', email: 'luiz@x.com', role: 'admin', career_levels: ['usuario'] };
 
@@ -30,6 +51,7 @@ function Banca() {
         </div>
         <HeroTopCollege saudacao="Bom dia" nome="LUIZ" seletor={null} />
         <div className="xeos-palco px-3 py-6 sm:px-8" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="palco">
+          <FaixaViva />
           <p className="text-sm font-bold text-nz-tinta mb-2">Hábito 1 — Sonho</p>
           <GuiaMovel titulo="Como montar o seu quadro" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
             <span data-teste="texto-guia">

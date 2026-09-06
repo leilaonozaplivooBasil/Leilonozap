@@ -35,6 +35,7 @@ import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
+import FaixaVisao from './FaixaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -1115,55 +1116,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <div className="bg-nz-verde h-full transition-all" style={{ width: `${progressoJogo.pct}%` }} />
             </div>
 
-            {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══ */}
+            {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
+                A faixa inteira (seletor, placar e o relógio de teste temporário)
+                mora em FaixaVisao — bonita, funcional e com prova em navegador. */}
             {tarefas.length > 0 && (
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex gap-1.5">
-                  {[['jornada', '🗺️ Jornada'], ['lista', '📋 Lista']].map(([v, rotulo]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setVisao(v)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold ${visao === v ? 'bg-nz-verde text-white' : 'bg-nz-cinza-fundo text-nz-tinta-fraca hover:text-nz-tinta'}`}
-                    >{rotulo}</button>
-                  ))}
-                </div>
-                <span className="flex items-center gap-3">
-                  {/* 🕐 o relógio de TESTE do super admin: aplica um horário e o
-                      jogo INTEIRO obedece (estados, ritual, votação, saudação) */}
-                  {visaoTotal && (
-                    horaTeste ? (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white text-[10px] font-bold px-3 py-1.5 shadow animate-pulse">
-                        🧪 MODO DEV · dia zerado às {horaTeste} · nada é salvo
-                        <button type="button" onClick={() => { setHoraTeste(''); setHoraRascunho(''); setDevMarcas({}); }} className="rounded-full bg-white/25 hover:bg-white/40 px-2 py-0.5">sair</button>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5">
-                        <input
-                          type="time"
-                          value={horaRascunho}
-                          onChange={(e) => setHoraRascunho(e.target.value)}
-                          title="Relógio de TESTE (só super admin): escolha um horário e aplique — o jogo inteiro obedece."
-                          className="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800 outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={!horaRascunho}
-                          onClick={() => { setDevMarcas({}); setHoraTeste(horaRascunho); }}
-                          className="rounded-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-[10px] font-bold px-3 py-1.5"
-                        >🧪 Entrar no modo dev</button>
-                      </span>
-                    )
-                  )}
-                  {(visao === 'jornada' || celular) && (
-                    <button
-                      type="button"
-                      onClick={() => setPainelAberto(!painelAberto)}
-                      className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde"
-                    >{painelAberto ? '▾ esconder o placar' : '▸ 📊 meu placar completo'}</button>
-                  )}
-                </span>
-              </div>
+              <FaixaVisao
+                visao={visao}
+                onVisao={setVisao}
+                placarAberto={painelAberto}
+                onPlacar={() => setPainelAberto(!painelAberto)}
+                mostrarPlacar={visao === 'jornada' || celular}
+                teste={visaoTotal ? {
+                  hora: horaTeste,
+                  rascunho: horaRascunho,
+                  onRascunho: setHoraRascunho,
+                  entrar: () => { setDevMarcas({}); setHoraTeste(horaRascunho); },
+                  sair: () => { setHoraTeste(''); setHoraRascunho(''); setDevMarcas({}); },
+                } : null}
+              />
             )}
 
             {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
