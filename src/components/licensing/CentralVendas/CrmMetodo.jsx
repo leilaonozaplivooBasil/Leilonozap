@@ -38,6 +38,7 @@ import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import QuadroCompromisso from './QuadroCompromisso';
+import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import FaixaVisao from './FaixaVisao';
@@ -682,6 +683,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     // ⏰ o carimbo do pronto: quando deu, e limpa a devolução (se a tarefa tinha voltado)
     try { await plataforma.entities.MetodoTarefa.update(t.id, carimboDoPronto(!t.feito)); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
+    // 🔗 DIR-76 — A VOLTA. Se esta tarefa nasceu de um card do quadro, o card
+    // acompanha: feita → Feito (com carimbo); desmarcada → volta pra mesa. Sem
+    // isto a pessoa faz o trabalho no dia e ainda tem que ir marcar no quadro —
+    // e é aí que o dado morre. Falha aqui não pode derrubar o marcar da tarefa:
+    // é só o espelho, então engole o erro em silêncio.
+    try {
+      await supabase.from('metodo_quadro')
+        .update(!t.feito ? { coluna: ESTADO_FEITO, feito_em: new Date().toISOString() } : { coluna: ESTADO_ABERTO, feito_em: null })
+        .eq('virou_tarefa_id', t.id);
+    } catch { /* espelho — a tarefa já está salva */ }
+  };
+
+  // 🗂️ DIR-76 — dia → quadro. A tarefa que não vai sair hoje é GUARDADA numa
+  // lista em vez de virar PERDIDO pra sempre; some do dia (e o X-Pay dos que
+  // ficaram se reparte entre eles, que é o correto: ela foi adiada, não perdida).
+  const guardarNoQuadro = async (t) => {
+    if (!uid || t.feito) return;
+    let lista = null;
+    const { data: listas } = await supabase.from('metodo_quadro_listas').select('*').eq('user_id', uid).order('ordem', { ascending: true }).limit(1);
+    if (Array.isArray(listas) && listas[0]) lista = listas[0];
+    else {
+      // sem lista ainda: nasce a primeira do modelo, pra ter onde guardar
+      const { data } = await supabase.from('metodo_quadro_listas').insert({ user_id: uid, nome: LISTAS_MODELO[0].nome, cor: LISTAS_MODELO[0].cor, ordem: 0 }).select().single();
+      lista = data || null;
+    }
+    const linha = cartaoDaTarefa(t, { userId: uid, listaId: lista?.id });
+    if (!linha) { toast.error('Não deu pra guardar — sem lista no quadro'); return; }
+    const { error } = await supabase.from('metodo_quadro').insert(linha);
+    if (error) { toast.error('Não deu pra guardar no quadro'); return; }
+    setTarefas((prev) => prev.filter((x) => x.id !== t.id));
+    try { await plataforma.entities.MetodoTarefa.delete(t.id); }
+    catch { carregarTarefas(); }
+    toast.success(`"${t.titulo}" guardada em ${lista?.nome || 'no quadro'} — volta pro dia quando você quiser.`);
   };
 
   const addTarefa = async () => {
@@ -1562,6 +1596,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                   >{f.chave === 'quadro' ? '🗂️' : '🔗'} {f.rotulo} →</button>
                                 );
                               })()}
+                              {/* 🗂️ DIR-76 — dia → quadro: guardar em vez de perder */}
+                              {!t.feito && (
+                                <button
+                                  type="button"
+                                  onClick={() => guardarNoQuadro(t)}
+                                  title="não vai sair hoje? guarda no quadro e volta pro dia quando quiser"
+                                  data-teste="guardar-no-quadro"
+                                  className="shrink-0 text-[11px] font-semibold text-nz-tinta-fraca hover:text-nz-verde"
+                                >guardar</button>
+                              )}
                               {guia && !t.feito && (
                                 <button
                                   type="button"

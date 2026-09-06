@@ -1,55 +1,175 @@
 // 🗂️ O NOSSO QUADRO — a mesa de trabalho dentro do Compromisso (Hábito 2).
 //
-// DE ONDE VEIO (dono, 06/09/2026): "a gente precisa de um ambiente dentro da
-// organização que lembre um Trello, só que mais fluido... e a gente fazer o
-// nosso Trello, o nosso, ALI" — no Compromisso, junto do dia. É o ambiente da
-// tarefa das 10:30: "prioridades, Master Task, pipeline, contratos, reuniões".
+// DE ONDE VEIO (dono, 06/09/2026, com prints do quadro dele no MeisterTask):
+// "recolher, botar foto pra pessoa dar sentido de pertencimento, editar os
+// cards ali, e tudo sincronizado com a agenda diária — botando dali e levando
+// pro Compromisso, do Compromisso pra ali, fazendo lista de tarefas. Quero
+// melhor que o MeisterTask, mas mais simplificado, mais eficiente." E: "o que
+// você decidir está decidido."
 //
-// ── AS TRÊS DECISÕES DESTE ARQUIVO ──────────────────────────────────────────
+// ── O QUE O QUADRO DELE ENSINOU, E AS DECISÕES QUE SAÍRAM DISSO ─────────────
 //
-// 1. AS COLUNAS SÃO HORIZONTES, NÃO ETAPAS. Um quadro de etapas (a fazer →
-//    fazendo → feito) obriga a mover a mesma coisa três vezes e não responde a
-//    pergunta que a pessoa faz de manhã, que é "o que é pra HOJE?". Horizonte
-//    responde. É também o vocabulário que a casa já usa no Quadro dos Sonhos
-//    (curto/médio/longo) — duas gramáticas diferentes no mesmo app cansa.
+// 1. O TEMPO NÃO É COLUNA — É O COMPROMISSO. Ele tinha SEGUNDA/TERÇA/QUARTA
+//    com vagas numeradas à mão ("1 -", "2 -"… "11 -"). O dia já existe: é o
+//    Hábito 2. Card vai pro dia pelo "pro meu dia". Isso apaga metade do quadro
+//    dele sem perder nada — e apaga os horizontes da DIR-75 pelo mesmo motivo.
 //
-// 2. MOVER É LIVRE, E ISSO É O "MAIS FLUIDO". No quadro da diretoria existe
-//    trava (nada chega em Entregue sem revisão) porque lá o card vira PONTO e
-//    dinheiro. Aqui não vira nada: é a mesa de uma pessoa só. Trava numa mesa
-//    pessoal é burocracia sem beneficiário.
+// 2. COLUNAS SÃO LISTAS QUE A PESSOA NOMEIA. Academia · Trabalho · Pessoal —
+//    contextos, que é como ele já usa. E RECOLHEM (o print 5 dele).
 //
-// 3. O CARTÃO VIRA TAREFA DO DIA — UMA VEZ. É a frase do dono ("já vai entrar
-//    na minha reunião do dia"). Uma vez, e não a cada clique: o cartão guarda
-//    que já virou. Sem isso, dois toques enchem o dia de tarefa repetida — e
-//    tarefa repetida no X-Pay divide o dinheiro do dia por um número inflado.
+// 3. FEITO É AUTOMÁTICO. Ele criou colunas "CONCLUÍDAS" na mão ao lado de cada
+//    contexto porque a ferramenta deixa o feito acumular. Aqui: marcou o card ou
+//    fechou o último item do checklist → Feito sozinho, com carimbo. Depois de
+//    7 dias sai da mesa. Ninguém move feito pra lugar nenhum.
+//
+// 4. O CARD QUE TRABALHA É O DE CHECKLIST. "TAREFA DO DIA — 1ª… 5ª — 2/5" é o
+//    card que ele mais usa. Checklist é de primeira classe, na cara do card.
+//
+// 5. ATRASADO COM SAÍDA. Card vencido SOBE pro topo da lista dele — e a tela
+//    oferece "pro meu dia". Pintar de laranja e parar não ajuda ninguém.
+//
+// 6. VIRA TAREFA UMA VEZ, E VOLTA. O cartão guarda que já virou tarefa (dois
+//    toques não enchem o dia de repetido — tarefa repetida dilui o X-Pay de
+//    todas). E a tarefa feita no Compromisso DEVOLVE: o card vai pro Feito.
 
-export const COLUNAS_QUADRO = [
-  { id: 'hoje', nome: 'Hoje', ajuda: 'o que não passa de hoje' },
-  { id: 'semana', nome: 'Esta semana', ajuda: 'tem data, mas não é agora' },
-  { id: 'depois', nome: 'Depois', ajuda: 'importante, e não urgente — fica visível pra não virar esquecimento' },
-  { id: 'feito', nome: 'Feito', ajuda: 'saiu da mesa' },
+export const ESTADO_ABERTO = 'aberto';
+export const ESTADO_FEITO = 'feito';
+/** Os horizontes da DIR-75 e o 'aberto' novo: tudo isso é "ainda na mesa". */
+const ABERTOS = new Set(['aberto', 'hoje', 'semana', 'depois']);
+
+/** Depois disto o feito sai da mesa (fica no histórico). Régua do dono. */
+export const DIAS_NA_MESA_DEPOIS_DE_FEITO = 7;
+
+/** Os tons das listas — da casa, não de uma paleta genérica. */
+export const CORES_LISTA = ['verde', 'azul', 'magenta', 'ambar', 'cinza'];
+
+/**
+ * O MODELO PRONTO do primeiro uso. Três contextos que o quadro do dono já
+ * tinha, mais um card de exemplo com checklist — porque quadro vazio não
+ * ensina ninguém a usar quadro.
+ */
+export const LISTAS_MODELO = [
+  { nome: 'Trabalho', cor: 'verde' },
+  { nome: 'Academia', cor: 'azul' },
+  { nome: 'Pessoal', cor: 'magenta' },
 ];
+export const CARD_EXEMPLO = {
+  titulo: 'Organizar a semana',
+  checklist: [
+    { texto: 'Pegar as pautas da reunião de amanhã', feito: false },
+    { texto: 'Conferir os contratos pendentes', feito: false },
+    { texto: 'Marcar as 3 reuniões do dia', feito: false },
+  ],
+};
 
-export const ORDEM_QUADRO = COLUNAS_QUADRO.map((c) => c.id);
-
-/** Coluna existe? Mover é livre entre as que existem — ver decisão 2. */
-export function podeMoverCartao(para) {
-  return ORDEM_QUADRO.includes(para);
+export function estaFeito(cartao) {
+  return String(cartao?.coluna || '') === ESTADO_FEITO;
+}
+export function estaAberto(cartao) {
+  return ABERTOS.has(String(cartao?.coluna || ESTADO_ABERTO));
 }
 
-/** Move sem mutar. Devolve a MESMA lista quando o destino não existe. */
-export function moverCartao(lista, id, para) {
-  const arr = Array.isArray(lista) ? lista : [];
-  if (!podeMoverCartao(para)) return arr;
-  const alvo = arr.find((c) => c.id === id);
-  if (!alvo || alvo.coluna === para) return arr;
-  return arr.map((c) => (c.id === id ? { ...c, coluna: para } : c));
+/** {feitos, total, pct} do checklist — o "2/5" na cara do card. */
+export function progressoChecklist(cartao) {
+  const itens = Array.isArray(cartao?.checklist) ? cartao.checklist : [];
+  const feitos = itens.filter((i) => i && i.feito).length;
+  return { feitos, total: itens.length, pct: itens.length ? Math.round((feitos / itens.length) * 100) : 0 };
+}
+
+/** Prazo vencido e ainda aberto. `hojeISO` entra por parâmetro — nunca do relógio. */
+export function atrasado(cartao, hojeISO) {
+  const hoje = String(hojeISO || '').slice(0, 10);
+  if (!hoje || !cartao?.prazo || !estaAberto(cartao)) return false;
+  return String(cartao.prazo).slice(0, 10) < hoje;
+}
+
+/** Marca feito com carimbo. Não muta. */
+export function marcarFeito(cartao, quandoISO) {
+  if (!cartao) return cartao;
+  return { ...cartao, coluna: ESTADO_FEITO, feito_em: quandoISO || cartao.feito_em || null };
+}
+
+/** Reabre: volta pra mesa, apaga o carimbo — carimbo de estado que a peça não ocupa é mentira guardada. */
+export function reabrir(cartao) {
+  if (!cartao) return cartao;
+  return { ...cartao, coluna: ESTADO_ABERTO, feito_em: null };
 }
 
 /**
- * 🔗 O cartão vira tarefa do dia. Devolve a LINHA de metodo_tarefas pronta —
- * a gravação é da tela; aqui mora só a regra de o que vira o quê.
- * Devolve `null` quando o cartão já virou tarefa (ver decisão 3) ou não existe.
+ * 🔒 Alterna um item do checklist. Fechar o ÚLTIMO item leva o card pro Feito
+ * sozinho; reabrir um item de card feito traz ele de volta pra mesa. É a
+ * regra 3 — o feito automático — e ela mora aqui, não na tela.
+ */
+export function alternarItem(cartao, indice, quandoISO) {
+  const itens = Array.isArray(cartao?.checklist) ? cartao.checklist : [];
+  if (!cartao || indice < 0 || indice >= itens.length) return cartao;
+  const checklist = itens.map((i, k) => (k === indice ? { ...i, feito: !i.feito } : i));
+  const todosFeitos = checklist.length > 0 && checklist.every((i) => i.feito);
+  const base = { ...cartao, checklist };
+  if (todosFeitos) return marcarFeito(base, quandoISO);
+  if (estaFeito(cartao)) return reabrir(base);
+  return base;
+}
+
+/** Acrescenta um item. Texto vazio não vira item. */
+export function adicionarItem(cartao, texto) {
+  const t = String(texto || '').trim();
+  if (!cartao || !t) return cartao;
+  const itens = Array.isArray(cartao.checklist) ? cartao.checklist : [];
+  // card feito que ganha item novo volta pra mesa: tem trabalho de novo
+  const base = { ...cartao, checklist: [...itens, { texto: t, feito: false }] };
+  return estaFeito(cartao) ? reabrir(base) : base;
+}
+
+export function removerItem(cartao, indice) {
+  const itens = Array.isArray(cartao?.checklist) ? cartao.checklist : [];
+  if (!cartao || indice < 0 || indice >= itens.length) return cartao;
+  return { ...cartao, checklist: itens.filter((_, k) => k !== indice) };
+}
+
+/** Já saiu da mesa? Feito há mais de N dias. */
+export function arquivavel(cartao, hojeISO, dias = DIAS_NA_MESA_DEPOIS_DE_FEITO) {
+  if (!estaFeito(cartao) || !cartao?.feito_em) return false;
+  const feito = new Date(String(cartao.feito_em));
+  const hoje = new Date(`${String(hojeISO || '').slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(feito.getTime()) || Number.isNaN(hoje.getTime())) return false;
+  return (hoje - feito) / 86400000 > dias;
+}
+
+/**
+ * Os cards de uma lista, na ordem em que a mesa mostra: por prazo, depois pela
+ * ordem da pessoa. O ATRASADO sobe pro topo (regra 5) POR SER o prazo mais
+ * antigo — a primeira versão tinha uma regra explícita "atrasado primeiro" e a
+ * mutação mostrou que tirá-la não mudava nada: vencido é prazo < hoje, e prazo
+ * < hoje já vem antes de qualquer prazo >= hoje. Regra que não faz nada saiu.
+ * Feitos ficam fora — eles vivem na seção Feito.
+ */
+export function cartoesDaLista(cartoes = [], listaId) {
+  const lista = (Array.isArray(cartoes) ? cartoes : [])
+    .filter((c) => estaAberto(c) && String(c.lista_id || '') === String(listaId || ''));
+  return [...lista].sort((a, b) => {
+    const pa = a.prazo ? String(a.prazo) : '9999';
+    const pb = b.prazo ? String(b.prazo) : '9999';
+    if (pa !== pb) return pa < pb ? -1 : 1;
+    return (Number(a.ordem) || 0) - (Number(b.ordem) || 0);
+  });
+}
+
+/** Os feitos ainda na mesa (menos de N dias), do mais recente pro mais antigo. */
+export function feitosNaMesa(cartoes = [], hojeISO) {
+  return (Array.isArray(cartoes) ? cartoes : [])
+    .filter((c) => estaFeito(c) && !arquivavel(c, hojeISO))
+    .sort((a, b) => String(b.feito_em || '').localeCompare(String(a.feito_em || '')));
+}
+
+/** Cards abertos SEM lista (sobraram da DIR-75 ou perderam a lista). Vão pra primeira lista na tela. */
+export function semLista(cartoes = []) {
+  return (Array.isArray(cartoes) ? cartoes : []).filter((c) => estaAberto(c) && !c.lista_id);
+}
+
+/**
+ * 🔗 quadro → dia. Devolve a LINHA de metodo_tarefas — a gravação é da tela,
+ * pela ENTIDADE. `null` quando o cartão já virou tarefa (regra 6) ou não existe.
  */
 export function tarefaDoCartao(cartao, { userId, dataISO, hora = null } = {}) {
   if (!cartao || !userId || !dataISO) return null;
@@ -65,22 +185,41 @@ export function tarefaDoCartao(cartao, { userId, dataISO, hora = null } = {}) {
 }
 
 /**
- * O resumo da mesa, pro cabeçalho e pro relatório do Hábito 7.
- * `atrasados` olha o prazo contra a data que ENTRA POR PARÂMETRO — função que
- * lê o relógio sozinha vira teste que passa de manhã e falha de madrugada.
+ * 🔗 dia → quadro. A tarefa que não saiu hoje vira card numa lista, em vez de
+ * virar PERDIDO pra sempre. Leva o título e o detalhe; não leva o feito (se
+ * estivesse feita não precisaria ser guardada).
  */
+export function cartaoDaTarefa(tarefa, { userId, listaId } = {}) {
+  if (!tarefa || !userId || !listaId) return null;
+  const titulo = String(tarefa.titulo || '').trim();
+  if (!titulo) return null;
+  return {
+    user_id: userId,
+    lista_id: listaId,
+    titulo,
+    detalhe: tarefa.detalhe || null,
+    coluna: ESTADO_ABERTO,
+    habito: tarefa.habito || null,
+    checklist: [],
+  };
+}
+
+/** A volta: a tarefa que veio de um card foi marcada — o card acompanha. */
+export function cartaoDaTarefaFeita(cartoes = [], tarefaId, feito, quandoISO) {
+  const alvo = (Array.isArray(cartoes) ? cartoes : []).find((c) => c.virou_tarefa_id && String(c.virou_tarefa_id) === String(tarefaId));
+  if (!alvo) return null;
+  return feito ? marcarFeito(alvo, quandoISO) : reabrir(alvo);
+}
+
+/** O resumo da mesa, pro cabeçalho e pro relatório do Hábito 7. */
 export function resumoDoQuadro(cartoes = [], hojeISO) {
   const lista = Array.isArray(cartoes) ? cartoes : [];
-  const hoje = String(hojeISO || '').slice(0, 10);
-  const porColuna = ORDEM_QUADRO.reduce(
-    (acc, c) => ({ ...acc, [c]: lista.filter((x) => x.coluna === c).length }), {},
-  );
-  const abertos = lista.filter((c) => c.coluna !== 'feito');
+  const abertos = lista.filter(estaAberto);
   return {
-    porColuna,
     total: lista.length,
     abertos: abertos.length,
-    atrasados: hoje ? abertos.filter((c) => c.prazo && String(c.prazo).slice(0, 10) < hoje).length : 0,
+    feitos: lista.filter(estaFeito).length,
+    atrasados: abertos.filter((c) => atrasado(c, hojeISO)).length,
     viraramTarefa: lista.filter((c) => !!c.virou_tarefa_id).length,
   };
 }
