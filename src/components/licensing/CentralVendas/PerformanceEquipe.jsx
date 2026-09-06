@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Users, Sun, CalendarRange, Inbox, Trophy } from 'lucide-react';
+import { Loader2, Users, Sun, CalendarRange, Inbox, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
@@ -8,6 +8,7 @@ import { visaoExecutiva } from '@/lib/encontro';
 import { habitosDoTime, periodoDe } from '@/lib/habitosDoTime';
 import { segundaDaSemana } from '@/lib/xperformance';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { nomeBonito, primeiroNome, agruparPorMotivo, habitosDaPessoa } from '@/lib/relatorioExecutivo';
 import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
 
 // 🏆 X-PERFORMANCE — a versão SEM administração (dono, 06/09/2026):
@@ -21,21 +22,97 @@ import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorpor
 // cartões, um por Hábito — número do time, quem fez (com o detalhe) e quem
 // não fez (com o motivo); a tabela por pessoa; e o Painel Corporativo de quem
 // foi clicado.
+//
+// 🧼 LIMPEZA (dono, 06/09, com 16 pessoas na tela): "quero mais organizado,
+// mais limpo, mais bonito". Então: nome bonito (o painel guarda "JOSÉ AMÂNCIO"
+// e "DISTRIBUIDOR"); quem FEZ continua em etiqueta (é o que se quer ver); quem
+// NÃO FEZ vira uma linha por MOTIVO — "sem quadro dos sonhos · Jean, Karen,
+// Beatriz +6" — com "ver todos" pra abrir. Cada nome é clicável e abre o
+// painel da pessoa. E o PDF do executivo sai do Painel Corporativo, embaixo.
 
 const caixa = { background: 'rgba(255,255,255,0.03)' };
 const titulo = 'text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase';
 const COR = { verde: 'bg-nz-verde', amarelo: 'bg-amber-400', vermelho: 'bg-red-500' };
 const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const somaDias = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const primeiro = (n) => String(n || '').split(' ')[0];
 const CORES_HABITO = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#34d399', '#22d3ee', '#e879f9'];
 
-function Chip({ nome, detalhe, fez, fraco, onClick }) {
+const LIMITE_NOMES = 5;
+const LIMITE_CHIPS = 8;
+
+function Chip({ nome, detalhe, fraco, onClick }) {
   return (
-    <button type="button" onClick={onClick} title={detalhe || nome} className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-tight transition-colors ${fez ? (fraco ? 'border-amber-400/40 text-amber-100 hover:bg-amber-400/10' : 'border-nz-verde/40 text-white hover:bg-nz-verde/15') : 'border-red-400/30 text-red-200/90 hover:bg-red-400/10'}`} data-teste="chip">
-      <span className="font-bold truncate">{primeiro(nome)}</span>
-      {detalhe && <span className={`truncate ${fez ? 'text-white/50' : 'text-red-200/60'}`}>· {detalhe}</span>}
+    <button type="button" onClick={onClick} title={detalhe ? `${nomeBonito(nome)} · ${detalhe}` : nomeBonito(nome)} className={`inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight transition-colors ${fraco ? 'border-amber-400/30 bg-amber-400/[0.06] text-amber-100 hover:bg-amber-400/15' : 'border-white/10 bg-white/[0.04] text-white hover:border-white/30 hover:bg-white/[0.08]'}`} data-teste="chip">
+      <span className="font-bold truncate">{primeiroNome(nome)}</span>
+      {detalhe && <span className={`truncate ${fraco ? 'text-amber-100/60' : 'text-white/45'}`}>· {detalhe}</span>}
     </button>
+  );
+}
+
+/** Um Hábito do time: o número grande, a barra, quem fez em etiqueta e quem não fez agrupado pelo motivo. */
+function CartaoHabito({ h, cor, onPessoa }) {
+  const [aberto, setAberto] = useState(false);
+  const grupos = useMemo(() => agruparPorMotivo(h.naoFizeram), [h.naoFizeram]);
+  const chipsEscondidos = Math.max(0, h.fizeram.length - LIMITE_CHIPS);
+  const nomesEscondidos = grupos.reduce((s, g) => s + Math.max(0, g.pessoas.length - LIMITE_NOMES), 0);
+  const temMais = chipsEscondidos > 0 || nomesEscondidos > 0;
+  const fizeram = aberto ? h.fizeram : h.fizeram.slice(0, LIMITE_CHIPS);
+  return (
+    <div className="rounded-xl border border-white/10 overflow-hidden" style={caixa} data-teste="habito" data-n={h.n} data-quantos={h.quantos} data-aberto={aberto ? 'sim' : 'nao'}>
+      <div className="p-3 pb-2.5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[15px] font-black tabular-nums" style={{ background: `${cor}22`, color: cor }}>{h.n}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-extrabold leading-tight text-white sm:truncate">{h.nome}</p>
+            <p className="text-[10px] text-white/40 line-clamp-2 sm:line-clamp-1">{h.sub} · {h.pergunta}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[19px] font-black tabular-nums leading-none" style={{ color: cor }} data-teste="habito-quantos">{h.quantos}<span className="text-[11px] font-bold text-white/35"> de {h.deQuantos}</span></p>
+            <p className="mt-0.5 text-[10px] text-white/45 tabular-nums">{h.totalRotulo} no time</p>
+          </div>
+        </div>
+        <div className="mt-2.5 h-1.5 rounded-full bg-white/[0.07] overflow-hidden"><div className="h-full rounded-full transition-[width]" style={{ width: `${h.pct}%`, background: cor }} /></div>
+      </div>
+      <div className="border-t border-white/[0.06] px-3 py-2">
+        <div className="flex flex-wrap items-center gap-1" data-teste="fizeram">
+          <span className="mr-1 text-[9px] font-bold uppercase tracking-wider text-nz-verde-claro/90">fizeram{h.quantos ? ` (${h.quantos})` : ''}</span>
+          {h.fizeram.length === 0 && <span className="text-[10px] text-white/30">ninguém ainda</span>}
+          {fizeram.map((f) => <Chip key={f.pessoaId} nome={f.nome} detalhe={f.detalhe} fraco={f.fraco} onClick={() => onPessoa(f.pessoaId)} />)}
+          {!aberto && chipsEscondidos > 0 && <button type="button" onClick={() => setAberto(true)} className="text-[10px] font-bold text-white/45 hover:text-white">+{chipsEscondidos}</button>}
+        </div>
+      </div>
+      {h.naoFizeram.length > 0 && (
+        <div className="border-t border-white/[0.06] px-3 py-2" data-teste="nao-fizeram">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-red-300/80">não fez ({h.naoFizeram.length})</span>
+            {temMais && (
+              <button type="button" onClick={() => setAberto((v) => !v)} className="ml-auto inline-flex items-center gap-0.5 text-[10px] text-white/40 hover:text-white" data-teste="ver-todos">
+                {aberto ? <><ChevronUp className="w-3 h-3" /> menos</> : <><ChevronDown className="w-3 h-3" /> ver todos</>}
+              </button>
+            )}
+          </div>
+          <div className="mt-1 space-y-0.5">
+            {grupos.map((g) => {
+              const pessoas = aberto ? g.pessoas : g.pessoas.slice(0, LIMITE_NOMES);
+              const resto = g.pessoas.length - pessoas.length;
+              return (
+                <p key={g.motivo} className="text-[11px] leading-snug" data-teste="motivo" data-motivo={g.motivo} data-quantos={g.quantos}>
+                  <span className="text-red-200/70">{g.motivo}</span>
+                  <span className="text-white/25"> · </span>
+                  {pessoas.map((p, i) => (
+                    <React.Fragment key={p.pessoaId}>
+                      <button type="button" onClick={() => onPessoa(p.pessoaId)} className="font-semibold text-white/80 hover:text-white hover:underline" data-teste="nome" data-pessoa={p.pessoaId}>{primeiroNome(p.nome)}</button>
+                      {i < pessoas.length - 1 ? ', ' : ''}
+                    </React.Fragment>
+                  ))}
+                  {resto > 0 && <button type="button" onClick={() => setAberto(true)} className="text-white/40 hover:text-white"> +{resto}</button>}
+                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -125,43 +202,23 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
                 ['venderam ou fecharam', `${oito.resumo.venderam} de ${oito.resumo.pessoas}`, oito.resumo.venderam ? 'text-nz-verde' : 'text-red-300', Inbox],
                 ['média de hábitos por pessoa', `${oito.resumo.mediaHabitos.toLocaleString('pt-BR')} de 8`, oito.resumo.mediaHabitos >= 6 ? 'text-nz-verde' : oito.resumo.mediaHabitos >= 3 ? 'text-amber-300' : 'text-red-300', CalendarRange],
               ].map(([rotulo, valor, cor, Icone]) => (
-                <div key={rotulo} className="rounded-lg border border-white/10 px-2.5 py-2" style={caixa}>
+                <div key={rotulo} className="rounded-lg border border-white/10 px-3 py-2.5" style={caixa}>
                   <p className="text-[9px] text-white/35 uppercase tracking-wider"><Icone className="w-3 h-3 inline mr-1" />{rotulo}</p>
-                  <p className={`text-[14px] font-extrabold tabular-nums ${cor}`}>{valor}</p>
+                  <p className={`mt-0.5 text-[18px] font-black tabular-nums leading-none ${cor}`}>{valor}</p>
                 </div>
               ))}
             </div>
             {(oito.resumo.inteiros.length > 0 || oito.resumo.zerados.length > 0) && (
               <p className="mt-1.5 text-[11px] text-white/55">
-                {oito.resumo.inteiros.length > 0 && <span className="text-nz-verde">🏆 os 8 Hábitos inteiros: {oito.resumo.inteiros.map(primeiro).join(', ')}</span>}
+                {oito.resumo.inteiros.length > 0 && <span className="text-nz-verde">🏆 os 8 Hábitos inteiros: {oito.resumo.inteiros.map(primeiroNome).join(', ')}</span>}
                 {oito.resumo.inteiros.length > 0 && oito.resumo.zerados.length > 0 && ' · '}
-                {oito.resumo.zerados.length > 0 && <span className="text-red-300">nenhum hábito: {oito.resumo.zerados.map(primeiro).join(', ')}</span>}
+                {oito.resumo.zerados.length > 0 && <span className="text-red-300">nenhum hábito: {oito.resumo.zerados.map(primeiroNome).join(', ')}</span>}
               </p>
             )}
 
             {/* os oito cartões */}
-            <div className="mt-3 grid md:grid-cols-2 gap-2" data-teste="oito-cartoes">
-              {oito.habitos.map((h) => (
-                <div key={h.n} className="rounded-lg border border-white/10 p-2.5" style={{ ...caixa, borderLeft: `3px solid ${CORES_HABITO[h.n - 1]}` }} data-teste="habito" data-n={h.n} data-quantos={h.quantos}>
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <p className="text-[12px] font-extrabold text-white"><span className="text-white/40 tabular-nums">{h.n}.</span> {h.nome}</p>
-                    <span className="text-[10px] text-white/40">{h.sub}</span>
-                    <span className="ml-auto text-[11px] font-bold tabular-nums" style={{ color: CORES_HABITO[h.n - 1] }} data-teste="habito-quantos">{h.quantos} de {h.deQuantos}</span>
-                  </div>
-                  <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden"><div className="h-full" style={{ width: `${h.pct}%`, background: CORES_HABITO[h.n - 1] }} /></div>
-                  <p className="mt-1 text-[10px] text-white/45">{h.pergunta} <span className="text-white/70 font-bold tabular-nums">{h.totalRotulo}</span> no time</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1" data-teste="fizeram">
-                    {h.fizeram.length === 0 && <span className="text-[10px] text-white/30">ninguém ainda</span>}
-                    {h.fizeram.map((f) => <Chip key={f.pessoaId} nome={f.nome} detalhe={f.detalhe} fez fraco={f.fraco} onClick={() => setPessoaId(f.pessoaId)} />)}
-                  </div>
-                  {h.naoFizeram.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1" data-teste="nao-fizeram">
-                      <span className="text-[9px] uppercase tracking-wider text-red-300/70 mr-0.5">não fez</span>
-                      {h.naoFizeram.map((f) => <Chip key={f.pessoaId} nome={f.nome} detalhe={f.motivo} fez={false} onClick={() => setPessoaId(f.pessoaId)} />)}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="mt-3 grid md:grid-cols-2 gap-2.5" data-teste="oito-cartoes">
+              {oito.habitos.map((h) => <CartaoHabito key={h.n} h={h} cor={CORES_HABITO[h.n - 1]} onPessoa={setPessoaId} />)}
             </div>
           </>
         )}
@@ -207,7 +264,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
                       return (
                         <tr key={l.pessoaId} onClick={() => setPessoaId(l.pessoaId)} className={`cursor-pointer border-t border-white/10 hover:bg-white/[0.04] ${l.pessoaId === pessoaId ? 'bg-white/[0.06]' : ''}`} data-teste="visao-linha" data-pessoa={l.pessoaId} data-cor={l.cor} data-produziu={l.produziu ? 'sim' : 'nao'}>
                           <td className="py-1.5 pr-2">
-                            <div className="flex items-center gap-2"><span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${COR[l.cor]}`} /><span className="font-bold text-white truncate">{l.nome}</span></div>
+                            <div className="flex items-center gap-2"><span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${COR[l.cor]}`} /><span className="font-bold text-white truncate">{nomeBonito(l.nome)}</span></div>
                             <p className="text-[10px] text-white/40 pl-[18px]">{l.nivel ? getLevel(l.nivel).name : ''}{l.funcaoCurta ? ` · ${l.funcaoCurta}` : ''}</p>
                           </td>
                           <td className="py-1.5 pr-2 tabular-nums">
@@ -236,7 +293,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
       </div>
 
       {/* 🏢 o painel corporativo de quem foi clicado */}
-      <PainelCorporativo key={pessoaId || 'ninguem'} currentUser={currentUser} hojeISO={hoje} gestao={gestao} pessoaInicial={pessoaId} onMudou={() => setVersao((v) => v + 1)} onPessoa={setPessoaId} />
+      <PainelCorporativo key={pessoaId || 'ninguem'} currentUser={currentUser} hojeISO={hoje} gestao={gestao} pessoaInicial={pessoaId} onMudou={() => setVersao((v) => v + 1)} onPessoa={setPessoaId} habitos={habitosDaPessoa(oito, pessoaId)} periodo={periodo} />
     </div>
   );
 }

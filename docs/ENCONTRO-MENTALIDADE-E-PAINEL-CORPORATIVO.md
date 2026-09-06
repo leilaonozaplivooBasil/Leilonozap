@@ -21,6 +21,17 @@
     apresentações e reuniões de investimento, vendas pagas e captações fechadas, planejamento e números,
     treinamentos e entregáveis de duplicação); a tabela por pessoa; e, embaixo, o **Painel Corporativo** de
     quem foi clicado (abre nela nos outros dias).
+    - **Limpeza (06/09, "com 16 pessoas o 'não fez' explode")**: nome bonito em todo lugar (o painel guarda
+      "JOSÉ AMÂNCIO" e "DISTRIBUIDOR"); quem FEZ continua em etiqueta (até 8, depois "+N"); quem NÃO FEZ vira
+      **uma linha por motivo** — "sem quadro dos sonhos · Jean, Karen, Beatriz +6" — com "ver todos"; cada
+      nome é clicável e abre o painel da pessoa.
+    - **PDF do executivo** (06/09, "geração de PDF de cada executivo pra ser compartilhado"): botão **PDF** no
+      cabeçalho do Painel Corporativo. Sai o relatório de quem está aberto — faixa X-EOS, régua da Top College,
+      semáforo, 4 números, os 8 Hábitos dela no período (fez/não fez com o detalhe), metas do mês com barra,
+      demandas com estado e a produção da semana — em texto vetorial (jsPDF, ~30 KB, selecionável). No celular
+      que compartilha arquivo abre a folha de compartilhar (WhatsApp); senão baixa
+      `x-performance-nome-da-pessoa-AAAA-MM-DD.pdf`. O botão do balão ao lado copia o mesmo relatório em texto
+      formatado pro WhatsApp.
 - A seção administrativa da faixa virou **ADM X-Game** (dono: "tudo que for administração do X-Game,
   tarefas, organização de cima pra baixo"): fixo, distribuir, quadro geral, ciclo, fila do pronto,
   comprovações. Só a gestão.
@@ -66,9 +77,14 @@ Quem manda demanda daqui: a gestão (origem `ceo`) e quem tem posição de diret
   `estadoDoCronometro`), `pautasDoTexto`, `promptDoRoteiro` + `SCHEMA_ROTEIRO`, `roteiroLocal`,
   `normalizarRoteiro`, `funcaoDaPauta`, `sugerirResponsavel`, `demandaDoTopico`, `tarefaDaDemanda`,
   `cardDaDemanda`, `estadoDaDemanda`, `producaoDaSemana`, `slidesDoEncontro`.
-- `EncontroMentalidade.jsx` e `PainelCorporativo.jsx` em `src/components/licensing/CentralVendas/`.
-- Provas: `tests/encontro.test.mjs` (8) e `tests/navegador/encontro.spec.mjs` (9, com a IA de mentira
-  `window.__iaFalsa`).
+- `src/lib/habitosDoTime.js` — os 8 Hábitos do time lidos do dado real.
+- `src/lib/relatorioExecutivo.js` — `nomeBonito`, `agruparPorMotivo`, `habitosDaPessoa`, `relatorioDoExecutivo`
+  (o conteúdo do PDF, puro), `textoDoRelatorio` (WhatsApp), `paraPdf` (só o que a Helvetica desenha).
+- `EncontroMentalidade.jsx`, `PainelCorporativo.jsx`, `PerformanceEquipe.jsx` (os 8 cartões) e
+  `PdfExecutivo.jsx` (o desenho em jsPDF) em `src/components/licensing/CentralVendas/`.
+- Provas: `tests/encontro.test.mjs`, `tests/habitosDoTime.test.mjs`, `tests/relatorioExecutivo.test.mjs` e
+  `tests/navegador/encontro.spec.mjs` (12 casos, com a IA de mentira `window.__iaFalsa`; o do PDF baixa o
+  arquivo de verdade e lê o texto copiado).
 
 ## Ideias que ficaram na mesa (pra você decidir)
 

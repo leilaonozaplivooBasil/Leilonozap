@@ -14,6 +14,8 @@ import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
 import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import { fmtReais } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { relatorioDoExecutivo, nomeBonito } from '@/lib/relatorioExecutivo';
+import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 
 // 🏢 O PAINEL CORPORATIVO — a visão geral de cada um (dono, 06/09/2026).
 //
@@ -34,6 +36,10 @@ import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 //   • a produção da semana dela — e a de todo mundo, porque todo mundo vê.
 // Quem pode agendar: a própria pessoa e a gestão. Quem pode mandar demanda
 // daqui: a gestão (CEO) e quem tem posição de diretoria.
+//
+// 📄 E o PDF do executivo (06/09): o botão no cabeçalho gera o relatório de
+// quem está aberto — 8 Hábitos (quando a X-Performance passa `habitos`),
+// metas, demandas e produção — pra compartilhar no WhatsApp.
 
 const caixa = { background: 'rgba(255,255,255,0.03)' };
 const titulo = 'text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase';
@@ -42,7 +48,7 @@ const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.i
 const amanha = (iso) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão' };
 
-export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null }) {
+export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null, habitos = null, periodo = null }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const mes = mesDe(hoje);
   const segunda = segundaDaSemana(hoje);
@@ -129,6 +135,13 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const devolvidas = demandas.filter((d) => d.status === 'devolvida');
   const minhaProducao = useMemo(() => producaoDaSemana({ demandas: demandas.filter((d) => String(d.created_at) >= `${segunda}`), tarefas, cards, hojeISO: hoje }), [demandas, tarefas, cards, hoje, segunda]);
   const producaoGeral = useMemo(() => producaoDaSemana({ demandas: todas, tarefas: tarefasTodas, cards: cardsTodas, hojeISO: hoje }), [todas, tarefasTodas, cardsTodas, hoje]);
+  // 📄 o relatório desta pessoa, pronto pro PDF
+  const relatorio = useMemo(() => (!pessoa || carregando ? null : relatorioDoExecutivo({
+    pessoa: { id: pessoa.id, nome: pessoa.nome, posicao: pessoa.nivel ? getLevel(pessoa.nivel).name : null, funcaoCurta: pessoa.funcaoCurta, fixo: pessoa.fixo },
+    periodo, habitos: habitos || [], metas: progresso,
+    demandas: demandas.map((d) => ({ ...d, estado: estadoDaDemanda(d, { tarefas, cards, hojeISO: hoje }) })),
+    producao: minhaProducao, semaforo: sem, hojeISO: hoje, mes, geradoPor: currentUser?.full_name || null,
+  })), [pessoa, carregando, periodo, habitos, progresso, demandas, tarefas, cards, hoje, minhaProducao, sem, mes, currentUser?.full_name]);
 
   // 📅 agendar: vira tarefa do dia (e/ou card), e a demanda guarda os vínculos
   const agendar = async (d) => {
@@ -179,10 +192,11 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
         <span className="text-[10px] text-white/35">· metas, demandas recebidas e a produção da semana — todo mundo vê todo mundo</span>
         <label className="ml-auto text-[10px] text-white/45 uppercase tracking-wider inline-flex items-center gap-1"><Eye className="w-3 h-3" /> painel de
           <select value={pessoaId || ''} onChange={(ev) => escolher(ev.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="painel-pessoa">
-            {!time.some((p) => p.id === currentUser?.id) && currentUser?.id && <option value={currentUser.id}>{currentUser.full_name || 'você'} (você)</option>}
-            {time.map((p) => <option key={p.id} value={p.id}>{p.nome}{p.id === currentUser?.id ? ' (você)' : ''}{p.funcaoCurta ? ` · ${p.funcaoCurta}` : ''}</option>)}
+            {!time.some((p) => p.id === currentUser?.id) && currentUser?.id && <option value={currentUser.id}>{nomeBonito(currentUser.full_name) || 'você'} (você)</option>}
+            {time.map((p) => <option key={p.id} value={p.id}>{nomeBonito(p.nome)}{p.id === currentUser?.id ? ' (você)' : ''}{p.funcaoCurta ? ` · ${p.funcaoCurta}` : ''}</option>)}
           </select>
         </label>
+        <PdfExecutivo relatorio={relatorio} />
       </div>
 
       {carregando || !pessoa ? <p className="mt-3 text-[11px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> abrindo o painel…</p> : (
@@ -190,7 +204,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
           {/* quem é */}
           <div className="mt-2 flex items-center gap-2 flex-wrap">
             <span className={`inline-block h-3 w-3 rounded-full ${COR[sem.cor]}`} title={sem.motivos.join(' · ') || 'tudo em dia'} data-teste="painel-semaforo" data-cor={sem.cor} />
-            <p className="text-[16px] font-extrabold">{pessoa.nome}</p>
+            <p className="text-[16px] font-extrabold">{nomeBonito(pessoa.nome)}</p>
             <p className="text-[11px] text-white/50">{pessoa.nivel ? getLevel(pessoa.nivel).name : '—'}{pessoa.funcaoCurta ? ` · ${pessoa.funcaoCurta}` : ''}{pessoa.fixo ? ` · fixo ${fmtReais(pessoa.fixo)}` : ''}</p>
             <p className="text-[11px] text-white/40 flex-1 min-w-[140px] truncate">{sem.motivos.length ? sem.motivos.join(' · ') : 'tudo em dia'}</p>
           </div>
@@ -298,7 +312,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
               <div className="mt-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-1">
                 {producaoGeral.pessoas.map((p) => (
                   <button type="button" key={p.pessoaId} onClick={() => escolher(p.pessoaId)} className={`text-left rounded-md border px-2 py-1 hover:border-white/30 ${p.pessoaId === pessoaId ? 'border-white/30' : 'border-white/10'}`} data-teste="todos-pessoa" data-pessoa={p.pessoaId}>
-                    <div className="flex items-center gap-2 text-[11px]"><span className="font-bold text-white truncate">{p.nome}</span><span className="ml-auto tabular-nums text-white/60">{p.concluidas}/{p.total}</span></div>
+                    <div className="flex items-center gap-2 text-[11px]"><span className="font-bold text-white truncate">{nomeBonito(p.nome)}</span><span className="ml-auto tabular-nums text-white/60">{p.concluidas}/{p.total}</span></div>
                     <div className="mt-0.5 h-1 rounded-full bg-white/10 overflow-hidden"><div className="h-full" style={{ width: `${p.pct}%`, background: p.atrasadas ? '#ef4444' : 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} /></div>
                     <p className="text-[10px] text-white/35">{p.recebidas ? `${p.recebidas} sem agendar` : ''}{p.recebidas && p.atrasadas ? ' · ' : ''}{p.atrasadas ? `${p.atrasadas} atrasada${p.atrasadas > 1 ? 's' : ''}` : ''}{!p.recebidas && !p.atrasadas ? 'em dia' : ''}</p>
                   </button>

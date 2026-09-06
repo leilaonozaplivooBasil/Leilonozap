@@ -320,14 +320,20 @@ test('X-PERFORMANCE: os 8 Hábitos do time, hoje — quem fez com o detalhe, que
   const cartao = (n) => oito.locator(`[data-teste="habito"][data-n="${n}"]`);
   const txt = async (n) => (await cartao(n).textContent()).replace(/\s+/g, ' ');
   // 1 Sonho: o Emanuel tem 2 sonhos; os outros não têm quadro
-  assert.match(await txt(1), /1\. Sonho.*1 de 4.*2 sonhos no time.*Emanuel\s*· 2 sonhos no quadro · gratidão 1×.*não fez/);
-  assert.match(await txt(1), /Carla\s*· sem quadro/);
+  assert.match(await txt(1), /1\s*Sonho.*1 de 4.*2 sonhos no time.*fizeram \(1\).*Emanuel\s*· 2 sonhos no quadro · gratidão 1×.*não fez \(3\)/);
+  // 🧼 quem não fez vem AGRUPADO pelo motivo, nome por nome — nada de uma etiqueta por pessoa
+  assert.match(await txt(1), /sem quadro e sem rotina · Carla, Jean, Luiz/);
+  assert.equal(await cartao(1).locator('[data-teste="nao-fizeram"] [data-teste="chip"]').count(), 0);
+  assert.equal(await cartao(1).locator('[data-teste="motivo"]').count(), 1);
   // 2 Compromisso: só o Emanuel acordou (story das 05:15)
-  assert.match(await txt(2), /2\. Compromisso.*1 de 4.*Emanuel\s*· acordou · rotina/);
+  assert.match(await txt(2), /2\s*Compromisso.*1 de 4.*Emanuel\s*· acordou · rotina/);
   // 4 Contato: 2 contatos do Emanuel (1 agendado)
-  assert.match(await txt(4), /4\. Contato e Convite.*2 contatos no time.*Emanuel\s*· 2 contatos · 1 agendado/);
+  assert.match(await txt(4), /4\s*Contato e Convite.*2 contatos no time.*Emanuel\s*· 2 contatos · 1 agendado/);
   // 6 Fechamento: Emanuel fechou R$ 50 mil de captação; Carla vendeu R$ 1.200; Jean e Luiz não venderam
-  assert.match(await txt(6), /6\. Acompanhamento e Fechamento.*R\$ 51\.200,00 no time.*Emanuel\s*· 1 captação · R\$ 50\.000,00.*Carla\s*· 1 venda · R\$ 1\.200,00.*não fez.*Jean\s*· não vendeu/);
+  assert.match(await txt(6), /6\s*Acompanhamento e Fechamento.*R\$ 51\.200,00 no time.*Emanuel\s*· 1 captação · R\$ 50\.000,00.*Carla\s*· 1 venda · R\$ 1\.200,00.*não fez \(2\).*não vendeu · Jean, Luiz/);
+  // o nome dentro do grupo abre o painel da pessoa
+  await cartao(6).locator('[data-teste="nome"][data-pessoa="jean"]').click();
+  await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="jean"]').waitFor();
   // o resumo
   assert.match((await pagina.locator('[data-teste="oito-resumo"]').textContent()).replace(/\s+/g, ' '), /acordaram\s*1 de 4.*contatos feitos\s*2.*venderam ou fecharam\s*2 de 4/);
   // a tabela por pessoa mostra os hábitos de cada um
@@ -343,6 +349,34 @@ test('X-PERFORMANCE: os 8 Hábitos do time, hoje — quem fez com o detalhe, que
   await cartao(6).locator('[data-teste="chip"]', { hasText: 'Carla' }).first().click();
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   await pagina.screenshot({ path: path.join(FOTOS, 'xperformance-oito-habitos.png'), fullPage: true });
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+test('PDF DO EXECUTIVO: o botão do Painel Corporativo baixa o PDF da pessoa aberta (nome dela no arquivo) e copia o texto pro WhatsApp', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  await pagina.locator('[data-teste="painel-pessoa"]').selectOption('emanuel');
+  await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();
+  const [download] = await Promise.all([
+    pagina.waitForEvent('download'),
+    pagina.locator('[data-teste="pdf-executivo"]').click(),
+  ]);
+  assert.equal(download.suggestedFilename(), 'x-performance-emanuel-silva-2026-09-07.pdf');
+  const bytes = readFileSync(await download.path());
+  assert.equal(bytes.subarray(0, 5).toString(), '%PDF-', 'é um PDF de verdade');
+  assert.ok(bytes.length > 3000, `PDF com conteúdo (${bytes.length} bytes)`);
+  assert.ok(bytes.length < 400000, 'texto vetorial, não uma foto da tela');
+  await pagina.getByText(/PDF de Emanuel pronto/).waitFor();
+  // o texto pro WhatsApp
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await pagina.locator('[data-teste="pdf-texto"]').click();
+  await pagina.getByText(/Texto copiado/).waitFor();
+  const copiado = await pagina.evaluate(() => navigator.clipboard.readText());
+  assert.match(copiado, /^\*X-Performance · Relatório do Executivo\*\n\*Emanuel Silva\* · Sócio Executivo · COO/);
+  assert.match(copiado, /\*Os 8 Hábitos do Sucesso · hoje, segunda-feira, 07 de setembro de 2026\* — [5-8] de 8/);
+  assert.match(copiado, /🟢 1\. Sonho — 2 sonhos no quadro · gratidão 1×/);
+  assert.match(copiado, /\*Metas de 09\/2026\*.*\n.*Reuniões de investimento — \d+ de 44 no mês/);
+  assert.match(copiado, /🟡 Mandar a proposta pro ponto de retirada de Jacarepaguá — CEO · Luiz Santanna · até 11\/09 · H6 \(sem agendar\)/);
   assert.deepEqual(erros, []);
   await ctx.close();
 });
