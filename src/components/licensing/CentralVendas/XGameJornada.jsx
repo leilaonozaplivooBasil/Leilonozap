@@ -59,24 +59,6 @@ const periodoDe = (t) => {
   return PERIODOS.find(([lim]) => min < lim) || PERIODOS[PERIODOS.length - 1];
 };
 
-/** 🪑 A MESINHA REDONDA 3D — a plataforma das paradas que ainda não chegaram.
- *  É uma MESA COMPLETA vista em leve perspectiva: um disco sólido (elipse
- *  cheia) com a espessura aparecendo embaixo, tipo moeda deitada. NÃO é
- *  arco, NÃO é meia-lua. */
-function Mesinha({ className = '', topo = '#E2E8F0', lado = '#94A3B8', brilho = '#F8FAFC' }) {
-  return (
-    <svg viewBox="0 0 100 48" className={className} aria-hidden="true">
-      {/* a espessura da mesa (a parede lateral) */}
-      <ellipse cx="50" cy="32" rx="46" ry="13" fill={lado} />
-      <rect x="4" y="24" width="92" height="8" fill={lado} />
-      {/* a face de cima, inteira */}
-      <ellipse cx="50" cy="24" rx="46" ry="13" fill={topo} />
-      {/* o brilho que dá o volume */}
-      <ellipse cx="50" cy="21.5" rx="37" ry="8.5" fill={brilho} opacity="0.7" />
-    </svg>
-  );
-}
-
 /** 🎁 O BAÚ DO TESOURO 3D — desenhado de verdade (tampa abaulada, ferragens,
  *  fechadura, rodapé). Trancado = chumbo; conquistado = ouro com a tampa
  *  aberta e o brilho saindo de dentro. */
@@ -129,42 +111,43 @@ function Bau({ aberto = false, className = '' }) {
   );
 }
 
-/** A parada que ainda não chegou: o DESENHO CHAPADO NA MESINHA.
- *  A ordem do dono é literal: "é um desenho NA mesa, não algo EM CIMA da
- *  mesa". Então o glifo é estampado na superfície, como pintura no tampo.
- *
- *  GEOMETRIA (banquinho de 88px, SVG viewBox 0 0 100 48):
- *    • altura do SVG = 88 × 0,48 ≈ 42px; o TAMPO tem centro em cy=24, ou
- *      seja na metade: 21px do chão. A elipse do tampo (ry=13) vai de
- *      ~9,6px a ~32,4px do chão — essa faixa é a superfície pintável.
- *    • o glifo é CENTRADO nesse centro (não apoiado pela base). Esse era o
- *      erro anterior: os ícones do lucide têm respiro interno no viewBox,
- *      então ancorar a CAIXA pelo pé deixava o DESENHO boiando ~7px acima
- *      da mesa — a origem do "está meio alto".
- *    • scaleY 0,70 a partir do centro: o desenho deita no mesmo plano de
- *      perspectiva do tampo e cabe dentro da elipse.
- *    • SEM sombra de contato: pintura na mesa não projeta sombra. O que
- *      sobra é só a sombra de CHÃO, que acende quando a peça levanta. */
+/** A parada que ainda não chegou: a MESMA MOEDA das outras, só que apagada.
+ *  A ordem do dono: "no seu parece que estou vendo lateral" — e estava
+ *  mesmo. A elipse antiga era 3,5:1 (rx 46 / ry 13), que é o disco visto
+ *  DE LADO. Visto DE CIMA, um disco aparece quase circular: é por isso que
+ *  no Duolingo (e na moeda que ele aprovou) a peça é redonda, com só um
+ *  lábio 3D embaixo. Agora a parada trancada é essa mesma moeda:
+ *    • 74 × 70 — a mesma da parada de agora e da feita, trilha consistente;
+ *    • lábio de 7px embaixo = a espessura, o único traço de perspectiva;
+ *    • BOLEADO POR DENTRO: luz interna em cima e sombra interna embaixo
+ *      dão o abaulado de quem olha de cima;
+ *    • o desenho fica DENTRO, em relevo (a luz branca por baixo do traço),
+ *      sem achatamento — o achatamento era o que fazia parecer de lado. */
 function ParadaNaMesa({ Icone }) {
   return (
-    <span className="relative block w-[88px] h-[54px]">
-      {/* a sombra do chão: só aparece quando a peça levanta no hover */}
-      <span className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-[58px] h-[10px] rounded-[50%] bg-slate-900/0 blur-[3px] transition-colors duration-200 ease-out group-hover:bg-slate-900/25" />
-      <Mesinha className="absolute bottom-0 left-0 w-[88px]" />
-      {/* o desenho ESTAMPADO no tampo */}
-      <Icone
-        className="absolute text-slate-500"
+    <span className="relative block">
+      {/* a sombra do chão: só acende quando a peça levanta no hover */}
+      <span className="absolute left-1/2 -translate-x-1/2 -bottom-2.5 w-[58px] h-[11px] rounded-[50%] bg-slate-900/0 blur-[3px] transition-colors duration-200 ease-out group-hover:bg-slate-900/25" />
+      <span
+        className="relative block w-[74px] h-[70px] rounded-[50%] bg-gradient-to-b from-slate-200 to-slate-300"
         style={{
-          left: '50%',
-          top: '10px',
-          width: '46px',
-          height: '46px',
-          transform: 'translateX(-50%) scaleY(0.7)',
-          transformOrigin: 'center center',
+          boxShadow: [
+            '0 7px 0 0 #94A3B8',
+            'inset 0 4px 9px rgba(255,255,255,0.85)',
+            'inset 0 -5px 12px rgba(15,23,42,0.12)',
+          ].join(', '),
         }}
-        fill="currentColor"
-        strokeWidth={1.3}
-      />
+      >
+        <Icone
+          className="absolute left-1/2 top-1/2 w-[34px] h-[34px] text-slate-400"
+          style={{
+            transform: 'translate(-50%, -50%)',
+            filter: 'drop-shadow(0 1.5px 0 rgba(255,255,255,0.9))',
+          }}
+          fill="currentColor"
+          strokeWidth={1.3}
+        />
+      </span>
     </span>
   );
 }
@@ -202,7 +185,13 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
               `bg-gradient-to-b ${grad}`,
               feito ? '-rotate-6' : '',
             ].join(' ')}
-            style={{ boxShadow: `0 7px 0 0 ${borda}` }}
+            style={{
+              boxShadow: [
+                `0 7px 0 0 ${borda}`,
+                'inset 0 4px 9px rgba(255,255,255,0.38)',
+                'inset 0 -6px 13px rgba(2,6,23,0.16)',
+              ].join(', '),
+            }}
           >
             {feito ? (
               <Check className="w-9 h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
@@ -337,7 +326,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
             {completou ? (
               <span
                 className="w-[74px] h-[70px] rounded-[50%] flex items-center justify-center bg-gradient-to-b from-amber-400 to-yellow-500 animate-bounce"
-                style={{ boxShadow: '0 7px 0 0 #b45309' }}
+                style={{ boxShadow: '0 7px 0 0 #b45309, inset 0 4px 9px rgba(255,255,255,0.42), inset 0 -6px 13px rgba(2,6,23,0.16)' }}
               >
                 <Trophy className="w-9 h-9 text-white drop-shadow-sm" />
               </span>
@@ -362,7 +351,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                   {g.completo ? (
                     <span
                       className="w-[74px] h-[70px] rounded-[50%] flex items-center justify-center bg-gradient-to-b from-amber-400 to-yellow-500 -rotate-6"
-                      style={{ boxShadow: '0 7px 0 0 #b45309' }}
+                      style={{ boxShadow: '0 7px 0 0 #b45309, inset 0 4px 9px rgba(255,255,255,0.42), inset 0 -6px 13px rgba(2,6,23,0.16)' }}
                     >
                       <Trophy className="w-9 h-9 text-white drop-shadow-sm" fill="currentColor" strokeWidth={1.4} />
                     </span>
@@ -417,7 +406,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           {/* o amanhecer na BASE: é daqui que o dia sobe */}
           <span
             className="w-[66px] h-[62px] rounded-[50%] bg-gradient-to-b from-amber-400 to-orange-500 flex items-center justify-center"
-            style={{ boxShadow: '0 7px 0 0 #c2410c' }}
+            style={{ boxShadow: '0 7px 0 0 #c2410c, inset 0 4px 9px rgba(255,255,255,0.40), inset 0 -6px 13px rgba(2,6,23,0.16)' }}
           >
             <Sunrise className="w-8 h-8 text-white drop-shadow-sm" />
           </span>
