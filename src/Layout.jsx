@@ -53,6 +53,11 @@ const LAYOUT_USER_SYNC_MIN_INTERVAL_MS = 20000;
 // Flutuantes globais: CompareAQUI (esquerda) + Fale com a Leila (direita) em todas as páginas.
 // ComparaiFloatingButton entra com hideButton só pra servir o modal via evento 'openComparai'.
 const LojaFloatActions = React.lazy(() => import("@/components/loja/LojaFloatActions"));
+// 🎧 X-MUSIC — o som de trabalho. Mora AQUI, no Layout, e não mais dentro do
+// painel da Top College: ordem do dono, "quero a rádio em todo o aplicativo,
+// em todas as páginas". Montado uma vez só na casca do app, ele atravessa
+// TODA navegação sem desmontar — trocar de página não corta a música.
+const XMusic = React.lazy(() => import("@/components/licensing/XMusic"));
 // 🎉 canvas-confetti só é usado aqui (confete ao confirmar pagamento) —
 // tirando do bundle principal e carregando sob demanda.
 const PaymentConfirmationPopup = React.lazy(() => import("@/components/payment/PaymentConfirmationPopup"));
@@ -1152,6 +1157,9 @@ export default function Layout({ children, currentPageName }) {
             {!['AuctionRoom', 'AuctionDetails', 'CatalogProductDetails'].includes(currentPageName) && <CompareAquiFloatingButton />}
             {/* PONTO 87 — na sala de leilão a Leila NÃO flutua: virou ícone no cabeçalho (AcoesSalaHeader) */}
             {currentPageName !== 'AuctionRoom' && <LojaFloatActions posicao="rodape" />}
+            {/* 🎧 só pra quem está logado: é ferramenta de trabalho de quem
+                usa o sistema, não enfeite de visitante na vitrine. */}
+            {isLoggedIn && <XMusic />}
           </React.Suspense>
         )}
 

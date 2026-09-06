@@ -49,7 +49,6 @@ import SellersListPanel from '../components/sellers/SellersListPanel';
 import MobileNavSheet from '../components/licensing/MobileNavSheet';
 import CentralVendasTabs from '../components/licensing/CentralVendasTabs';
 import HeroTopCollege from '../components/licensing/HeroTopCollege';
-import XMusic from '../components/licensing/XMusic';
 // 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
 // outras telas. A antiga LicensingSidebar (com títulos de seção e itens
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
@@ -1616,15 +1615,6 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       </div>
 
-      {/* 🎧 X-MUSIC — mora AQUI de propósito: fora das <Tabs>, colado na raiz
-          da página. É o que faz a música atravessar a navegação inteira —
-          trocar de Hábito, abrir um momento, voltar pro mapa: o player não
-          desmonta, então o som não corta. Se ele morasse dentro de uma aba,
-          a música morreria a cada clique (foi o que acontecia no Ritual).
-          E não é só na Top College: o pedido foi "em toda a área ONDE O
-          SISTEMA FUNCIONA" — então ele toca no painel inteiro. Sair da
-          faculdade pra ver a Carteira não pode desligar a música. */}
-      <XMusic />
     </div>);
 
 };
