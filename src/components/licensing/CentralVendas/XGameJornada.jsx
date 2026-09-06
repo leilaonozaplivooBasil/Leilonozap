@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Sunrise, BookOpen, Dumbbell, Camera, Store, Utensils, Handshake,
-  GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Flag, Play, Check, X as XIcon, CalendarDays, Gift,
+  GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays, Gift,
 } from 'lucide-react';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
@@ -79,25 +79,39 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
         {atual && (
           <span className="absolute -inset-2.5 rounded-full border-4 border-amber-300" style={{ animation: 'xgHalo 1.8s ease-out infinite' }} />
         )}
-        <span
-          className={[
-            'relative w-[74px] h-[70px] rounded-[50%] flex items-center justify-center transition-transform',
-            'group-hover:brightness-105 group-active:translate-y-[5px]',
-            aceso ? `bg-gradient-to-b ${grad}` : 'bg-slate-200',
-          ].join(' ')}
-          style={{ boxShadow: aceso ? `0 7px 0 0 ${borda}` : '0 7px 0 0 #cbd5e1' }}
-        >
-          {feito ? (
-            <Check className="w-9 h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
-          ) : (
-            <Icone className={`w-8 h-8 ${aceso ? 'text-white drop-shadow-sm' : 'text-slate-400'}`} strokeWidth={2.4} />
-          )}
-          {!feito && perdido && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
-              <XIcon className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />
+        {aceso ? (
+          /* feita/atual: a MOEDA 3D colorida — feita fica tortinha com o
+             check gigante, como a moeda jogada do Duolingo */
+          <span
+            className={[
+              'relative w-[74px] h-[70px] rounded-[50%] flex items-center justify-center transition-transform',
+              'group-hover:brightness-105 group-active:translate-y-[5px]',
+              `bg-gradient-to-b ${grad}`,
+              feito ? '-rotate-6' : '',
+            ].join(' ')}
+            style={{ boxShadow: `0 7px 0 0 ${borda}` }}
+          >
+            {feito ? (
+              <Check className="w-9 h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
+            ) : (
+              <Icone className="w-8 h-8 text-white drop-shadow-sm" strokeWidth={2.4} />
+            )}
+          </span>
+        ) : (
+          /* futura/perdida: o SOQUETE VAZIO do Duolingo — o ícone solto
+             flutuando sobre um pratinho em meia-lua, leve, sem círculo cheio */
+          <span className="relative flex flex-col items-center transition-opacity group-hover:opacity-75">
+            <Icone className="relative z-10 w-9 h-9 text-slate-500 -mb-2.5" strokeWidth={2.3} />
+            <span className="relative w-[64px] h-[30px] overflow-hidden">
+              <span className="absolute left-0 -top-[34px] w-[64px] h-[64px] rounded-full border-[9px] border-slate-300/80" />
             </span>
-          )}
-        </span>
+            {perdido && (
+              <span className="absolute top-0 -right-1 z-10 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
+                <XIcon className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />
+              </span>
+            )}
+          </span>
+        )}
       </button>
     </div>
   );
@@ -209,12 +223,22 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
         <div className="relative flex flex-col items-center gap-4 px-4 pb-10 pt-8">
           {/* o troféu no TOPO do dia */}
           <div className="relative flex flex-col items-center mb-2">
-            <span
-              className={`w-[74px] h-[70px] rounded-[50%] flex items-center justify-center ${completou ? 'bg-gradient-to-b from-amber-400 to-yellow-500 animate-bounce' : 'bg-slate-200'}`}
-              style={{ boxShadow: completou ? '0 7px 0 0 #b45309' : '0 7px 0 0 #cbd5e1' }}
-            >
-              {completou ? <Trophy className="w-9 h-9 text-white drop-shadow-sm" /> : <Flag className="w-8 h-8 text-slate-400" />}
-            </span>
+            {completou ? (
+              <span
+                className="w-[74px] h-[70px] rounded-[50%] flex items-center justify-center bg-gradient-to-b from-amber-400 to-yellow-500 animate-bounce"
+                style={{ boxShadow: '0 7px 0 0 #b45309' }}
+              >
+                <Trophy className="w-9 h-9 text-white drop-shadow-sm" />
+              </span>
+            ) : (
+              /* troféu ainda trancado: o glifo sobre a meia-lua, como no Duolingo */
+              <span className="relative flex flex-col items-center">
+                <Trophy className="relative z-10 w-9 h-9 text-slate-500 -mb-2.5" strokeWidth={2.2} />
+                <span className="relative w-[64px] h-[30px] overflow-hidden">
+                  <span className="absolute left-0 -top-[34px] w-[64px] h-[64px] rounded-full border-[9px] border-slate-300/80" />
+                </span>
+              </span>
+            )}
             <p className={`mt-2 text-[10px] font-extrabold tracking-wide ${completou ? 'text-amber-600' : 'text-slate-400'}`}>{completou ? 'DIA PERFEITO!' : 'O TOPO DO DIA'}</p>
           </div>
 
