@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  UserPlus, Search, Filter, X, Save, Send, CheckCircle, Package,
+import { Search, Filter, X, Save, Send, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign,
   // 🏛️ DIR-56 — ícones de traço no lugar dos emojis decorativos
   Sparkles, ShieldCheck, Users, PhoneCall, Presentation, Route, Gauge,
@@ -1440,50 +1439,14 @@ _Enviado via CRM Leilão NoZap_`;
               Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
             </h1>
           </div>
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            {vis.gerirVendedores && (
-              <Button
-                onClick={() => setShowSellerModal(true)}
-                className="bg-nz-marrom hover:bg-nz-marrom-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
-              >
-                <UserPlus className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Novo Vendedor</span>
-                <span className="sm:hidden">Vendedor</span>
-              </Button>
-            )}
-            <Button
-              onClick={() => {
-                setEditingCustomer(null);
-                setFormData({
-                  full_name: '',
-                  email: '',
-                  phone: '',
-                  cpf: '',
-                  status: 'lead',
-                  source: 'site',
-                  notes: '',
-                  address_street: '',
-                  address_number: '',
-                  address_city: '',
-                  address_state: '',
-                  address_zip_code: '',
-                  last_contact: new Date().toISOString().split('T')[0],
-                  assigned_seller: '',
-                  follow_up_date: '',
-                  next_steps: '',
-                  interested_products: []
-                });
-                setShowProductSearch(false);
-                setProductSearchTerm('');
-                setShowAddForm(true);
-              }}
-              className="bg-nz-verde hover:bg-nz-verde-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
-            >
-              <UserPlus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Novo Cliente</span>
-              <span className="sm:hidden">Cliente</span>
-            </Button>
-          </div>
+          {/* 🧹 "Novo Vendedor" e "Novo Cliente" SAÍRAM DAQUI (ordem do dono:
+              "está fora de contexto, tem que entrar lá na lista de contato").
+              Conferido antes de mexer: o Hábito 03 — Lista de Networking já
+              tinha "Adicionar pessoa" chamando exatamente esta mesma ação, ou
+              seja, o botão de cliente aqui era duplicata. O de vendedor não
+              tinha par: em vez de sumir com ele, foi junto pro Hábito 03, ao
+              lado do outro — é lá que se constrói a rede. O topo fica só com
+              o que a página promete: os 8 Hábitos. */}
         </div>
 
         {/* 🎓 DIR-63 — o palco das duas marcas saiu daqui. Ele repetia, 300px
@@ -1618,6 +1581,7 @@ _Enviado via CRM Leilão NoZap_`;
             onEditarRegistro={handleEditarRegistroMetodo}
             onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
+            onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />
         )}

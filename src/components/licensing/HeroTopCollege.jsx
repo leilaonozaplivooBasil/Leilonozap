@@ -73,26 +73,29 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
         }}
       />
 
+      {/* ────────── a ASSINATURA, em UMA LINHA e largura total ──────────
+          Ordem do dono: "quero a letra na lateral da logo, não abaixo,
+          estendendo, numa linha só". Antes esta linha morava DENTRO da
+          coluna da esquerda, que tem teto de 24rem — por isso a frase
+          quebrava em três. Tirando ela da coluna, a frase ganha a largura
+          inteira da faixa e cabe em uma linha (duas no notebook). No
+          celular o flex-wrap joga a frase pra linha de baixo sozinha. */}
+      <div className="relative flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-3 px-6 sm:px-9 pt-6 sm:pt-8">
+        <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-11 w-auto shrink-0" draggable="false" />
+        <span aria-hidden="true" className="h-9 sm:h-11 w-px bg-white/20 shrink-0" />
+        <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-7 w-auto shrink-0" draggable="false" />
+        <span aria-hidden="true" className="hidden sm:block h-7 w-px bg-white/15 shrink-0" />
+        <p
+          className="basis-full sm:basis-auto sm:flex-1 sm:max-w-[42rem] text-[10px] sm:text-[11px] leading-snug text-white/40"
+          style={{ fontFamily: 'Sora, sans-serif' }}
+        >
+          A primeira faculdade de empreendedorismo do planeta · Estrutura de operação e expansão de qualquer negócio
+        </p>
+      </div>
+
       <div className="relative flex flex-col sm:flex-row sm:items-end">
         {/* ────────── coluna 1: quem assina isto aqui ────────── */}
-        <div className="px-6 sm:px-9 pt-7 sm:pt-9 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[24rem] shrink-0">
-          {/* as duas marcas juntas — e a FRASE AO LADO DELAS (ordem do dono:
-              "essa frase junto do X-office está bagunçado, ela tem que entrar
-              na lateral, do lado da logo"). Antes ela ficava empilhada entre
-              o par de logos e o título, disputando atenção com o X-office;
-              agora é legenda da assinatura, que é o papel dela. */}
-          <div className="flex items-start gap-4 sm:gap-5 mb-6">
-            <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-12 w-auto shrink-0" draggable="false" />
-            <span aria-hidden="true" className="h-9 sm:h-12 w-px bg-white/20 shrink-0" />
-            <div className="min-w-0">
-              <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-8 w-auto mb-1.5" draggable="false" />
-              <p className="text-[10px] sm:text-[11px] leading-snug text-white/40" style={{ fontFamily: 'Sora, sans-serif' }}>
-                A primeira faculdade de empreendedorismo do planeta · Estrutura
-                de operação e expansão de qualquer negócio
-              </p>
-            </div>
-          </div>
-
+        <div className="px-6 sm:px-9 pt-5 sm:pt-6 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[24rem] shrink-0">
           {/* 🎓 DIR-66 — ordem do dono: DENTRO da Top College este título não é
               "Painel de Alavancagem" — é o X-office, a sub-marca que cuida de
               verificar o progresso e mapear processos. Fora da faculdade o nome
