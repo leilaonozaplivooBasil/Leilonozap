@@ -58,13 +58,14 @@ Máquina de reuniões (p. 16): 2/dia × 22 dias = 44/mês por pessoa; 220 no tim
    (no painel: soma das oportunidades `fechado_100` dos últimos 12 meses × 1%).
 3. **Diretoria Operacional** — pool de 0,5% das vendas Brasil (R$ 5 mi → R$ 25 mil ÷ 7 ≈ R$ 3.571).
 4. **Equity** — 0,5% da companhia mediante cumprimento do ciclo (R$ 125 mil a R$ 25 mi de valuation).
-5. **Governança** — por convite: Diretoria Executiva, Fundadores, Conselho, cada um com pool de 1% Brasil + Mundial.
+5. **Governança** — por convite: Diretoria Executiva, Fundadores, Conselho, cada um com a sua fatia dos 10% do topo.
 
-**Atenção (divergência a decidir pelo dono):** `careerLevels.js` e `docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`
-dizem Diretoria Executiva = **0,5%** pool e CEO = 3% individual; o Documento Oficial de
-Operação diz Diretoria Executiva = **1%** Brasil + Mundial e o CEO "participa das estruturas
-das posições que ocupa". A comissão não foi tocada (DIR-39); o painel mostra o que o Documento
-Oficial diz, com a página.
+**Os 10% do topo (a divisão oficial do negócio — dono, 06/09/2026, e `docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md` §6):**
+CEO 3% · Livoo Live 2% · Embaixador 1% · Conselheiros 1% (pool) · Fundadores 1% (pool) ·
+Diretoria Executiva 0,5% (pool) · Diretoria Operacional 0,5% (pool) · Sócio Executivo 1% sobre a
+própria estrutura = **10%**. É o que o motor paga (`api/_lib/arvoreOficial.js`); o painel só lê
+(`PARTICIPACAO_TOPO` em `documentoOficial.js`). O PDF do ciclo escreve "1% Brasil + Mundial" pros
+pools de governança; a tabela oficial acima é a que vale.
 
 ## 5. Score Executivo (p. 42) e Escada de Ascensão (p. 43)
 
@@ -106,9 +107,8 @@ metas de "contatos"/"alunos" · 1:1 e relatórios formais. Onde o painel preciso
 
 ## 9. Ambiguidades pro dono decidir
 
-1. Pool da Diretoria Executiva: 0,5% (plano de carreira/código) ou 1% (Documento Oficial)?
-2. Quem são os 7 integrantes do pool de 0,5%? O CEO entra? O CXO fica fora?
-3. Equity: abaixo de 80% é parcial ou nada?
-4. As adesões de vendedor/licenciado do CRO (R$ 54.940/mês) contam na captação de R$ 150 mil?
-5. Dias do fixo: 24 (dono, `DIAS_FIXO`) × 22 dias produtivos (documento p. 16) — o painel usa 24 pro fixo e 22 só na conta de reuniões.
-6. CFO e CTO: fixo, metas e titular.
+1. Quem são os 7 integrantes do pool de 0,5% da Diretoria Operacional? O CEO entra? O CXO fica fora?
+2. Equity: abaixo de 80% é parcial ou nada?
+3. As adesões de vendedor/licenciado do CRO (R$ 54.940/mês) contam na captação de R$ 150 mil?
+4. Dias do fixo: 24 (dono, `DIAS_FIXO`) × 22 dias produtivos (documento p. 16) — o painel usa 24 pro fixo e 22 só na conta de reuniões.
+5. CFO e CTO: fixo, metas e titular.

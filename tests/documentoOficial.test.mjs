@@ -6,6 +6,7 @@ import {
   CICLO, faseDoMes, CARGOS_OFICIAIS, cargoOficialDe, cargoOficialDoNome, CAPTACAO, METAS_CENTRAIS,
   CAMADAS, rendaDaCarteira, poolDiretoriaOperacional, valorDoEquity, VALUATION_ATUAL,
   SCORE_EXECUTIVO, LINHA_SCORE, scoreExecutivo, ESCADA_ASCENSAO, degrauDaEscada, posicoesDaPessoa, RITUAIS, rituaisDoDia, DASHBOARD_DIRETORIA,
+  PARTICIPACAO_TOPO, TOTAL_TOPO_PCT, regraDaParticipacao,
 } from '../src/lib/documentoOficial.js';
 
 test('o ciclo: seis meses de set/2026 a fev/2027, cada um com a fase do roadmap (p. 3 e 39)', () => {
@@ -72,7 +73,19 @@ test('a escada de ascensão (p. 43): seis degraus; a posição do painel e o sco
   const c = degrauDaEscada({ niveis: ['ceo', 'fundador'] });
   assert.equal(c.n, 6, 'quem já foi convidado está no topo');
   assert.equal(c.proximo, null);
-  assert.deepEqual(posicoesDaPessoa(['ceo', 'fundador', 'diretoria_operacao']).map((p) => p.id), ['diretoria_operacao', 'fundador']);
+  assert.deepEqual(posicoesDaPessoa(['ceo', 'fundador', 'diretoria_operacao']).map((p) => p.id), ['ceo', 'fundador', 'diretoria_operacao']);
+  assert.equal(degrauDaEscada({ niveis: ['executivo_conta'] }).n, 2, 'Sócio Executivo não é convite');
+});
+
+test('os 10% do topo: a divisão oficial do negócio (dono, 06/09/2026) — a mesma que o motor paga', () => {
+  assert.equal(TOTAL_TOPO_PCT, 10);
+  assert.deepEqual(PARTICIPACAO_TOPO.map((p) => [p.id, p.pct]), [
+    ['ceo', 3], ['livoo_live', 2], ['embaixador', 1], ['conselheiro', 1], ['fundador', 1], ['diretoria_executiva', 0.5], ['diretoria_operacao', 0.5], ['executivo_conta', 1],
+  ]);
+  assert.equal(regraDaParticipacao(PARTICIPACAO_TOPO[0]), '3% individual sobre todas as vendas do ecossistema');
+  assert.equal(regraDaParticipacao(PARTICIPACAO_TOPO[4]), '1% em pool, dividido entre quem tem a posição, sobre todas as vendas');
+  assert.equal(regraDaParticipacao(PARTICIPACAO_TOPO[7]), '1% sobre a própria estrutura de negócio (não é pool)');
+  assert.deepEqual(posicoesDaPessoa(['executivo_conta']).map((p) => p.pool), ['1% sobre a própria estrutura de negócio (não é pool)']);
 });
 
 test('os rituais (p. 16, 23, 33–35) e os 12 números do dashboard (Resumo p. 38)', () => {

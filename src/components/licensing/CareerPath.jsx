@@ -66,6 +66,10 @@ const careerSteps = [
   { id: 'conselheiro', title: 'Conselheiro', icon: Star,
     achievedDescription: 'Conselheiro da Leilão NoZap.',
     lockedDescription: 'Convite exclusivo para se tornar Conselheiro.' },
+  // 🎖️ dono (06/09/2026): "faltou só o Embaixador aí" — nível 107 do painel, 1% individual sobre todas as vendas
+  { id: 'embaixador', title: 'Embaixador', icon: Award,
+    achievedDescription: 'Embaixador da Leilão NoZap: 1% sobre todas as vendas do ecossistema.',
+    lockedDescription: 'Convite para representar a marca como Embaixador: desenvolve a própria rede, cadastra influenciadores e ganha 1% sobre todas as vendas do ecossistema.' },
   { id: 'ceo', title: 'CEO', icon: Crown,
     achievedDescription: 'CEO liderando a expansão da Leilão NoZap.',
     lockedDescription: 'Convidado para se tornar CEO e liderar a expansão da Leilão NoZap em novos estados.' },

@@ -502,7 +502,10 @@ test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis;
   assert.equal(await texto(pagina, '[data-teste="camada-pool"]'), '—');
   assert.equal(await texto(pagina, '[data-teste="camada-equity"]'), 'R$ 125.000,00');
   assert.match((await camadas.textContent()).replace(/\s+/g, ' '), /R\$ 100 mi → R\$ 500\.000,00/);
-  assert.equal(await texto(pagina, '[data-teste="camada-governanca"]'), 'por convite');
+  // camada 5: o Emanuel é Sócio Executivo no painel → 1% sobre a própria estrutura; e a tabela dos 10% está escrita
+  assert.equal(await texto(pagina, '[data-teste="camada-governanca"]'), 'Sócio Executivo 1%');
+  assert.match((await camadas.textContent()).replace(/\s+/g, ' '), /1% sobre a própria estrutura de negócio \(não é pool\)/);
+  assert.match((await camadas.textContent()).replace(/\s+/g, ' '), /os 10% do topo: CEO 3 · Livoo Live 2 · Embaixador 1 · Conselheiros 1 \(pool\) · Fundadores 1 \(pool\) · Diretoria Executiva 0,5 \(pool\) · Diretoria Operacional 0,5 \(pool\) · Sócio Executivo 1 sobre a própria estrutura/);
   // o Score: sem meta ainda → resultado sem dado; sem card no quadro → entregáveis sem dado; a Gratidão feita e a Estudo (bônus) não são H8 nem mentoria
   const score = modal.locator('[data-teste="score-executivo"]');
   await score.waitFor();

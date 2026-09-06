@@ -3,7 +3,7 @@ import { ScrollText, Landmark, Gauge, CalendarClock } from 'lucide-react';
 import { fmtReais } from '@/lib/xgame';
 import { getLevel } from '@/lib/careerLevels';
 import {
-  CAMADAS, CICLO, METAS_CENTRAIS, RITUAIS, LINHA_SCORE, VALUATION_ATUAL, VALUATIONS_REFERENCIA, INTEGRANTES_POOL_REFERENCIA,
+  CAMADAS, CICLO, METAS_CENTRAIS, RITUAIS, LINHA_SCORE, VALUATION_ATUAL, VALUATIONS_REFERENCIA, INTEGRANTES_POOL_REFERENCIA, TOTAL_TOPO_PCT,
   rendaDaCarteira, poolDiretoriaOperacional, valorDoEquity, posicoesDaPessoa, scoreExecutivo, degrauDaEscada,
 } from '@/lib/documentoOficial';
 import { cargoOficialDaFuncao } from '@/lib/funcoes';
@@ -85,13 +85,14 @@ export function ModeloEconomico({ fixoMes, carteira = 0, niveis = [], vendasMesR
   const posicoes = posicoesDaPessoa(niveis);
   const pool = poolDiretoriaOperacional(vendasMesReferencia);
   const naDirOp = posicoes.some((p) => p.id === 'diretoria_operacao');
-  const governanca = posicoes.filter((p) => p.convite);
+  // camada 5: tudo que a pessoa tem no topo além da Diretoria Operacional (que é a camada 3)
+  const governanca = posicoes.filter((p) => p.id !== 'diretoria_operacao');
   const linhas = [
     { c: CAMADAS[0], valor: fixoMes ? fmtReais(fixoMes) : '—', nota: fixoMes ? 'o fixo do mês, distribuído por peso nas tarefas' : 'sem fixo definido' },
     { c: CAMADAS[1], valor: `${fmtReais(rendaDaCarteira(carteira))}/mês`, nota: `carteira construída ${fmtReais(carteira)} × 1% a.m. (contratos de 12 meses)` },
-    { c: CAMADAS[2], valor: naDirOp ? `~${fmtReais(pool.porIntegrante)}/mês` : '—', nota: naDirOp ? `pool de 0,5% sobre ${fmtK(vendasMesReferencia)} = ${fmtReais(pool.pool)} ÷ ${INTEGRANTES_POOL_REFERENCIA} integrantes (referência)` : 'entra quando estiver na Diretoria Operacional' },
+    { c: CAMADAS[2], valor: naDirOp ? `~${fmtReais(pool.porIntegrante)}/mês` : '—', nota: naDirOp ? `pool de 0,5% sobre ${fmtK(vendasMesReferencia)} = ${fmtReais(pool.pool)} ÷ ${INTEGRANTES_POOL_REFERENCIA} integrantes (referência)` : 'entra quando estiver na Diretoria Operacional (0,5% em pool sobre todas as vendas)' },
     { c: CAMADAS[3], valor: fmtReais(valorDoEquity(VALUATION_ATUAL)), nota: `0,5% a ${fmtK(VALUATION_ATUAL)} · ${VALUATIONS_REFERENCIA.slice(1).map((v) => `${fmtK(v)} → ${fmtReais(valorDoEquity(v))}`).join(' · ')} · mediante Score ≥ ${LINHA_SCORE}%` },
-    { c: CAMADAS[4], valor: governanca.length ? governanca.map((p) => p.nome).join(' · ') : 'por convite', nota: governanca.length ? governanca.map((p) => `${p.nome}: ${p.pool}`).join(' · ') : 'Diretoria Executiva, Fundadores e Conselho — cada um com pool de 1% Brasil + Mundial' },
+    { c: CAMADAS[4], valor: governanca.length ? governanca.map((p) => `${p.nome} ${p.pct.toLocaleString('pt-BR')}%`).join(' · ') : 'por convite', nota: governanca.length ? governanca.map((p) => `${p.nome}: ${p.pool}`).join(' · ') : `Diretoria Executiva (0,5% pool), Fundadores (1% pool) e Conselho (1% pool) — a divisão oficial dos ${TOTAL_TOPO_PCT}% do topo` },
   ];
   return (
     <div className="mt-3 rounded-lg border border-white/10 p-2.5" style={caixa} data-teste="modelo-economico">
@@ -110,7 +111,7 @@ export function ModeloEconomico({ fixoMes, carteira = 0, niveis = [], vendasMesR
           </li>
         ))}
       </ol>
-      {posicoes.length > 0 && <p className="mt-1.5 text-[10px] text-white/45">posições no painel de controle: {posicoes.map((p) => p.nome).join(' · ')}</p>}
+      <p className="mt-1.5 text-[10px] text-white/35">os {TOTAL_TOPO_PCT}% do topo: CEO 3 · Livoo Live 2 · Embaixador 1 · Conselheiros 1 (pool) · Fundadores 1 (pool) · Diretoria Executiva 0,5 (pool) · Diretoria Operacional 0,5 (pool) · Sócio Executivo 1 sobre a própria estrutura{posicoes.length ? ` — posições dela: ${posicoes.map((p) => p.nome).join(' · ')}` : ''}</p>
     </div>
   );
 }

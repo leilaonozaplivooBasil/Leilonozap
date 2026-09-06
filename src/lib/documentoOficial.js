@@ -240,11 +240,36 @@ export const CAMADAS = [
   { id: 'carteira', n: 2, nome: 'Carteira de capital', regra: 'O captador recebe 1% ao mês sobre a carteira elegível de capital por ele construída, dentro dos contratos de 12 meses.', resumo: 'RECORRÊNCIA' },
   { id: 'pool', n: 3, nome: 'Diretoria Operacional', regra: 'Participação no pool de 0,5% das vendas da Leilão NoZap Brasil, creditado no Escritório Virtual.', resumo: 'PARTICIPAÇÃO' },
   { id: 'equity', n: 4, nome: 'Equity', regra: 'Executivos elegíveis poderão consolidar 0,5% da companhia mediante cumprimento do ciclo.', resumo: 'PATRIMÔNIO' },
-  { id: 'governanca', n: 5, nome: 'Governança', regra: 'Possibilidade de convite para Diretoria Executiva, Fundadores e Conselho — cada camada com pool de 1% das vendas Brasil + Mundial.', resumo: 'PODER DE CONSTRUÇÃO' },
+  { id: 'governanca', n: 5, nome: 'Governança', regra: 'Possibilidade de convite para Diretoria Executiva, Fundadores e Conselho — cada posição com a sua fatia dos 10% do topo.', resumo: 'PODER DE CONSTRUÇÃO' },
 ];
 export const RENDA_CARTEIRA_MES = 0.01;      // 1% ao mês sobre a carteira (p. 11, 15)
-export const POOL_DIRETORIA_OPERACIONAL = 0.005; // 0,5% das vendas Brasil (p. 7)
-export const POOL_GOVERNANCA = 0.01;         // 1% Brasil + Mundial, cada camada (p. 8–10)
+export const POOL_DIRETORIA_OPERACIONAL = 0.005; // 0,5% das vendas (p. 7)
+
+// ── 🏛️ OS 10% DO TOPO — a divisão oficial do negócio (docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md §6) ──
+// Dono, 06/09/2026: "0,5% de pool pra Diretoria Operacional, pool pra Diretoria
+// Executiva, 1% pro Sócio Executivo sobre a sua estrutura de negócio, 3% pro
+// CEO, 1% dividido entre fundadores, 1% pra Embaixador, 2% pra Livoo Live e 1%
+// dividido pros conselheiros, totalizando 10%. Toda a divisão do nosso negócio
+// está baseada nisso." É a mesma tabela que o motor paga (api/_lib/arvoreOficial.js
+// POOLS + PCT_EXECUTIVO) — aqui só se LÊ; comissão não se mexe (DIR-39).
+export const PARTICIPACAO_TOPO = [
+  { id: 'ceo', nome: 'CEO', pct: 3.0, tipo: 'individual', convite: false },
+  { id: 'livoo_live', nome: 'Livoo Live', pct: 2.0, tipo: 'individual', convite: false },
+  { id: 'embaixador', nome: 'Embaixador', pct: 1.0, tipo: 'individual', convite: false },
+  { id: 'conselheiro', nome: 'Conselheiro', pct: 1.0, tipo: 'pool', convite: true },
+  { id: 'fundador', nome: 'Fundador', pct: 1.0, tipo: 'pool', convite: true },
+  { id: 'diretoria_executiva', nome: 'Diretoria Executiva', pct: 0.5, tipo: 'pool', convite: true },
+  { id: 'diretoria_operacao', nome: 'Diretoria Operacional', pct: 0.5, tipo: 'pool', convite: false },
+  { id: 'executivo_conta', nome: 'Sócio Executivo', pct: 1.0, tipo: 'estrutura', convite: false },
+];
+export const TOTAL_TOPO_PCT = PARTICIPACAO_TOPO.reduce((s, p) => s + p.pct, 0); // 10
+/** "3% individual sobre todas as vendas" / "1% em pool dividido entre os fundadores" / "1% sobre a própria estrutura de negócio" */
+export function regraDaParticipacao(p) {
+  const pct = `${p.pct.toLocaleString('pt-BR')}%`;
+  if (p.tipo === 'pool') return `${pct} em pool, dividido entre quem tem a posição, sobre todas as vendas`;
+  if (p.tipo === 'estrutura') return `${pct} sobre a própria estrutura de negócio (não é pool)`;
+  return `${pct} individual sobre todas as vendas do ecossistema`;
+}
 export const INTEGRANTES_POOL_REFERENCIA = 7; // "considerando sete integrantes elegíveis" (p. 7)
 export const EQUITY_CICLO = 0.005;           // 0,5% da companhia (p. 11, 12)
 export const VALUATION_ATUAL = 25000000;     // R$ 25 milhões (p. 12)
@@ -297,14 +322,9 @@ export const ESCADA_ASCENSAO = [
   { id: 'convite', n: 6, nome: 'Convite: Diretoria Executiva · Fundadores · Conselho', descricao: 'somente por convite' },
 ];
 
-/** As posições institucionais do documento e o nível do painel que as representa. */
-export const POSICOES = [
-  { id: 'diretoria_operacao', nome: 'Diretoria Operacional', pool: 'pool de 0,5% das vendas Brasil', convite: false },
-  { id: 'diretoria_executiva', nome: 'Diretoria Executiva', pool: 'pool de 1% Brasil + Mundial', convite: true },
-  { id: 'fundador', nome: 'Fundador', pool: 'pool de 1% Brasil + Mundial', convite: true },
-  { id: 'conselheiro', nome: 'Conselheiro', pool: 'pool de 1% Brasil + Mundial', convite: true },
-];
-/** As posições que a pessoa ocupa, lidas dos níveis do painel de controle. */
+/** As posições do topo (com a fatia de cada uma) — o nível do painel de controle é a posição. */
+export const POSICOES = PARTICIPACAO_TOPO.map((p) => ({ ...p, pool: regraDaParticipacao(p) }));
+/** As posições do topo que a pessoa ocupa, lidas dos níveis do painel de controle. */
 export function posicoesDaPessoa(niveis = []) {
   const set = new Set((Array.isArray(niveis) ? niveis : [niveis]).filter(Boolean));
   return POSICOES.filter((p) => set.has(p.id));
@@ -316,7 +336,8 @@ export function posicoesDaPessoa(niveis = []) {
  */
 export function degrauDaEscada({ niveis = [], score = null, portoesAbertos = 0, emFormacao = true } = {}) {
   const pos = posicoesDaPessoa(niveis).map((p) => p.id);
-  const temConvite = pos.some((p) => p !== 'diretoria_operacao');
+  // o degrau 6 é o convite: Diretoria Executiva, Fundadores, Conselho (p. 43)
+  const temConvite = posicoesDaPessoa(niveis).some((p) => p.convite);
   let n = 1;
   if (emFormacao) n = 2;
   if (pos.includes('diretoria_operacao') || temConvite) n = 3;
