@@ -35,6 +35,8 @@ window.__bancoFalso = {
       { id: 't3', user_id: 'emanuel', data: '2026-09-08', hora: '10:00', titulo: 'Reunião com cliente', peso: 2, categoria: 'producao', feito: false },
       { id: 't4', user_id: 'emanuel', data: '2026-09-04', hora: '08:00', titulo: 'Gratidão', peso: 1, categoria: 'producao', feito: true, conferido: true },
       { id: 't5', user_id: 'emanuel', data: '2026-09-04', hora: '09:00', titulo: 'Estudo', peso: 4, categoria: 'bonus', feito: true },
+      // ⏰ a Carla deu o pronto numa tarefa distribuída hoje (07/09), antes do prazo — está na fila esperando o ✔✔
+      { id: 't6', user_id: 'carla', data: '2026-09-07', hora: '09:00', titulo: 'Enviar o relatório da loja', peso: 4, categoria: 'mentoria', feito: true, origem: 'xperf', mentalidade: 'diretor', habito: 7, prazo_em: new Date('2026-09-07T18:00:00').toISOString() /* 18:00 no fuso do navegador */, pronto_em: new Date('2026-09-07T10:00:00').toISOString() },
     ],
     xperf_encontros: [],
     xperf_entregaveis: [],

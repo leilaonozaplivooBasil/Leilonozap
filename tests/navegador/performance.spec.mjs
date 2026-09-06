@@ -319,6 +319,56 @@ test('CATÁLOGO: ação escrita à mão é lida pela régua e pode ser salva no 
   await ctx.close();
 });
 
+test('PRONTO: a tarefa sai com "começar às" e "pronto até", e a pessoa vê o prazo na linha', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  assert.equal(await pagina.locator('[data-teste="prazo-dia"]').inputValue(), '2026-09-08', 'o pronto nasce no dia da tarefa');
+  assert.equal(await pagina.locator('[data-teste="prazo-hora"]').inputValue(), '18:00');
+  await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
+  await pagina.locator('[data-teste="hora-inicio"]').fill('14:00');
+  await pagina.locator('[data-teste="prazo-hora"]').fill('17:30');
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Tarefa distribuída pra Emanuel/).waitFor();
+  const l = (await escritas(pagina)).at(-1).linhas[0];
+  assert.equal(l.hora, '14:00');
+  const prazo = await pagina.evaluate((iso) => { const d = new Date(iso); return [d.getDate(), d.getHours(), d.getMinutes()]; }, l.prazo_em);
+  assert.deepEqual(prazo, [8, 17, 30], 'pronto até 08/09 17:30, no fuso da pessoa');
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="tarefas-dia"] li').length === 4);
+  assert.match((await pagina.locator('[data-teste="prazo-linha"]').allTextContents()).join(' | '), /pronto até 17:30/);
+  await ctx.close();
+});
+
+test('FILA DO PRONTO: o pronto da Carla espera o ✔✔; devolver com recado desfaz o pronto e grava o porquê; conferir dá o SIM', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const item = pagina.locator('[data-teste="pronto-item"]');
+  assert.equal(await item.count(), 1);
+  assert.equal(await item.getAttribute('data-estado'), 'pronto');
+  assert.match(await texto(pagina, '[data-teste="pronto-item"]'), /Carla Souza.*Enviar o relatório da loja.*pronto até 18:00/);
+
+  // devolver com recado
+  await pagina.locator('[data-teste="devolver"]').click();
+  await pagina.locator('[data-teste="recado"]').fill('faltou o print da tela');
+  await pagina.locator('[data-teste="devolver-confirmar"]').click();
+  await pagina.getByText(/devolvida pra Carla Souza: "faltou o print da tela"/).waitFor();
+  let e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tipo, 'update');
+  assert.equal(e.tabela, 'metodo_tarefas');
+  assert.deepEqual([e.patch.feito, e.patch.pronto_em, e.patch.conferido, e.patch.devolvida_motivo], [false, null, null, 'faltou o print da tela']);
+  await pagina.locator('[data-teste="pronto-item"][data-estado="devolvida"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="pronto-item"]'), /↩ "faltou o print da tela"/);
+
+  // a Carla refez e deu o pronto de novo (no banco); a fila mostra "pronto" e o ✔✔ confere
+  await pagina.evaluate(() => { const t = window.__bancoFalso.tabelas.metodo_tarefas.find((x) => x.id === 't6'); Object.assign(t, { feito: true, pronto_em: new Date().toISOString(), devolvida_motivo: null, devolvida_em: null }); });
+  await pagina.locator('[data-teste="dia"]').fill('2026-09-09'); // qualquer mudança recarrega as tarefas do ciclo
+  await pagina.locator('[data-teste="pronto-item"][data-estado="pronto"]').waitFor();
+  await pagina.locator('[data-teste="conferir"]').click();
+  await pagina.getByText(/✔✔ conferida: Enviar o relatório da loja/).waitFor();
+  e = (await escritas(pagina)).at(-1);
+  assert.deepEqual(e.patch, { conferido: true });
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="pronto-item"]').length === 0);
+  assert.match(await texto(pagina, '[data-teste="fila-pronto"]'), /1 conferida no ciclo/);
+  await ctx.close();
+});
+
 test('CELULAR: a gestão cabe na tela — foto pra julgar', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');

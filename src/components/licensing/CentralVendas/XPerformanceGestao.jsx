@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { timeCorporativo } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar } from '@/lib/catalogoAcoes';
+import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -71,6 +72,13 @@ import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGra
 // 📏 E A COERÊNCIA DO VALOR (dono: "uma tarefa dessa não pode valer cento e
 // seis reais num dia"): o dia completo é a Rotina Perfeita (peso 75) — a
 // conta mora em distribuicaoFixo/xgame; aqui só se mostra.
+//
+// ⏰ QUINTA RODADA (dono, mesmo dia): "tem sistema que a gente chama de
+// pronto: começar tal hora e entregar até tal hora; aparece pra ele dar o
+// pronto até, pra gente sempre cobrar o pronto". A tarefa ganha o "pronto
+// até" (prazo_em) e a FILA DO PRONTO fecha o enviar-e-voltar: o que está
+// atrasado, o que está pronto esperando o ✔✔, e o DEVOLVER com recado —
+// que a pessoa lê embaixo da tarefa (src/lib/pronto).
 
 const CATEGORIAS = [
   ['mentoria', 'Mentoria'], ['producao', 'Produção'], ['visao', 'Visão estratégica'], ['bonus', 'Bônus / estudo'],
@@ -116,7 +124,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
   const [dia, setDia] = useState(() => proximoDiaUtil(hoje));
-  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', mentalidade: '', habito: '' });
+  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', mentalidade: '', habito: '', prazoDia: '', prazoHora: '18:00' });
+  const [devolvendo, setDevolvendo] = useState(null); // { id, motivo }
   const [gerando, setGerando] = useState(false);
   // 📚 o catálogo: o que veio do banco + o padrão do código
   const [acoesDoBanco, setAcoesDoBanco] = useState([]);
@@ -168,7 +177,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     const ate = diasCiclo[diasCiclo.length - 1] > dia ? diasCiclo[diasCiclo.length - 1] : dia;
     const de = diasCiclo[0] < dia ? diasCiclo[0] : dia;
     const { data } = await supabase.from('metodo_tarefas')
-      .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem,mentalidade,habito')
+      .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem,mentalidade,habito,prazo_em,pronto_em,devolvida_motivo,devolvida_em')
       .in('user_id', equipe.map((p) => p.id))
       .gte('data', de).lte('data', ate)
       .order('data').order('hora');
@@ -250,6 +259,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       // 🎓 a mentalidade, o Hábito e o ensinamento que a pessoa vai ler
       mentalidade: mentalidadeAtual, habito: habitoAtual ? Number(habitoAtual) : null,
       detalhe: ensinamento || null,
+      // ⏰ o "pronto até": no dia da tarefa (ou no dia escolhido), na hora escolhida
+      prazo_em: prazoDe(nova.prazoDia || dia, nova.prazoHora || '18:00'),
     };
     const { error } = await supabase.from('metodo_tarefas').insert(linha);
     setSalvando(false);
@@ -264,7 +275,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — as outras do dia foram recalculadas`
         : `Tarefa distribuída pra ${nomeDe(pessoa)}`,
     );
-    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, mentalidade: '', habito: '' });
+    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, mentalidade: '', habito: '', prazoDia: '', prazoHora: nova.prazoHora || '18:00' });
     carregarTarefas();
   };
 
@@ -286,6 +297,22 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     } catch {
       toast.error('Não gerou o planejamento — tenta de novo');
     } finally { setGerando(false); }
+  };
+
+  // ✔✔ o SIM da gestão (conferência dupla) e ↩ a devolução com recado
+  const conferir = async (t) => {
+    setTarefasCiclo((l) => l.map((x) => (x.id === t.id ? { ...x, conferido: true } : x)));
+    const { error } = await supabase.from('metodo_tarefas').update({ conferido: true }).eq('id', t.id);
+    if (error) { toast.error('Não conferiu — recarregando'); carregarTarefas(); return; }
+    toast.success(`✔✔ conferida: ${t.titulo}`);
+  };
+  const devolver = async (t, motivo) => {
+    const patch = carimboDaDevolucao(motivo);
+    setTarefasCiclo((l) => l.map((x) => (x.id === t.id ? { ...x, ...patch } : x)));
+    setDevolvendo(null);
+    const { error } = await supabase.from('metodo_tarefas').update(patch).eq('id', t.id);
+    if (error) { toast.error('Não devolveu — recarregando'); carregarTarefas(); return; }
+    toast.success(`↩ devolvida pra ${nomeDe(t.user_id)}: "${patch.devolvida_motivo}"`);
   };
 
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
@@ -361,9 +388,20 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 <input type="date" value={dia} onChange={(e) => setDia(e.target.value)} className={`mt-1 block ${campo}`} data-teste="dia" />
               </label>
               <label className="text-[10px] text-white/45 uppercase tracking-wider">
-                hora
-                <input type="time" value={nova.hora} onChange={(e) => setNova((n) => ({ ...n, hora: e.target.value }))} className={`mt-1 block ${campo}`} />
+                começar às
+                <input type="time" value={nova.hora} onChange={(e) => setNova((n) => ({ ...n, hora: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="hora-inicio" />
               </label>
+            </div>
+            {/* ⏰ o pronto: entregar até tal hora (no mesmo dia, ou noutro) */}
+            <div className="mt-2 flex items-end gap-2 flex-wrap">
+              <label className="text-[10px] text-white/45 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1"><AlarmClock className="w-3 h-3" /> pronto até</span>
+                <span className="mt-1 flex items-center gap-1.5">
+                  <input type="date" value={nova.prazoDia || dia} onChange={(e) => setNova((n) => ({ ...n, prazoDia: e.target.value }))} className={campo} data-teste="prazo-dia" />
+                  <input type="time" value={nova.prazoHora} onChange={(e) => setNova((n) => ({ ...n, prazoHora: e.target.value }))} className={campo} data-teste="prazo-hora" />
+                </span>
+              </label>
+              <span className="text-[10px] text-white/35 pb-2">a pessoa vê "{rotuloDoPrazo(prazoDe(nova.prazoDia || dia, nova.prazoHora || '18:00'), dia) || 'pronto até'}" na tarefa e dá o pronto; você confere ou devolve na fila abaixo</span>
             </div>
             {/* 📚 o catálogo: o que tem pra fazer, já com mentalidade, Hábito e peso */}
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
@@ -500,6 +538,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                     <span className="text-white/40 tabular-nums w-10 shrink-0">{t.hora ? String(t.hora).slice(0, 5) : '—'}</span>
                     <span className={`truncate ${t.feito ? 'line-through text-white/40' : 'text-white/85'}`}>{t.titulo}</span>
                     {t.mentalidade && <span className="shrink-0 rounded-full border border-white/15 px-1.5 text-[9px] uppercase tracking-wider text-white/50" title={mentalidadeDe(t.mentalidade)?.nome}>{t.mentalidade}{t.habito ? ` · H${t.habito}` : ''}</span>}
+                    {t.prazo_em && <span className="shrink-0 text-[10px] text-white/45" data-teste="prazo-linha">⏰ {rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10))}</span>}
                     <span className="text-white/30 shrink-0">peso {t.peso ?? 3}</span>
                     <span className="ml-auto shrink-0 font-bold tabular-nums text-white/80">{ehProducao(t) ? fmtReais(valoresDoDia[t.id] || 0) : 'bônus'}</span>
                     {t.origem === 'xperf' && (
@@ -514,6 +553,52 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           </>
         )}
       </div>
+
+      {/* ── ⏰ A FILA DO PRONTO — o enviar-e-voltar ─────────────────────── */}
+      {(() => {
+        const fila = filaDoPronto(tarefasCiclo).filter((f) => f.estado.id !== 'conferida');
+        const conferidas = filaDoPronto(tarefasCiclo).filter((f) => f.estado.id === 'conferida').length;
+        const COR = { atrasada: 'border-red-400/40 text-red-200', pronto: 'border-nz-verde/50 text-nz-verde', devolvida: 'border-amber-400/40 text-amber-200', aguardando: 'border-white/15 text-white/50' };
+        return (
+          <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="fila-pronto">
+            <div className="flex items-center gap-2 flex-wrap">
+              <AlarmClock className="w-4 h-4 text-nz-verde" />
+              <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">A fila do pronto</p>
+              <span className="text-[10px] text-white/35">· {fila.length} pra olhar · {conferidas} conferida{conferidas === 1 ? '' : 's'} no ciclo</span>
+            </div>
+            {fila.length === 0 ? (
+              <p className="mt-2 text-[11px] text-white/35">Nada esperando: toda tarefa distribuída está conferida — ou ainda não distribuiu nenhuma.</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {fila.map(({ tarefa: t, estado }) => (
+                  <li key={t.id} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.02)' }} data-teste="pronto-item" data-estado={estado.id}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[estado.id] || ''}`}>{estado.rotulo}</span>
+                      <span className="font-bold text-white/85 truncate">{nomeDe(t.user_id)}</span>
+                      <span className="text-white/70 truncate">{t.titulo}</span>
+                      <span className="text-white/40 shrink-0">{fmtDia(String(t.data).slice(0, 10))}{t.prazo_em ? ` · ${rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10))}` : ''}</span>
+                      {estado.id === 'pronto' && (
+                        <span className="ml-auto flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => conferir(t)} className="inline-flex items-center gap-1 rounded-full bg-nz-verde/20 hover:bg-nz-verde/35 px-2 py-0.5 text-nz-verde font-bold" data-teste="conferir"><CheckCheck className="w-3 h-3" /> conferir</button>
+                          <button type="button" onClick={() => setDevolvendo({ id: t.id, motivo: '' })} className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 hover:bg-amber-400/30 px-2 py-0.5 text-amber-200 font-bold" data-teste="devolver"><Undo2 className="w-3 h-3" /> devolver</button>
+                        </span>
+                      )}
+                      {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
+                    </div>
+                    {devolvendo?.id === t.id && (
+                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap" data-teste="devolver-recado">
+                        <Input autoFocus value={devolvendo.motivo} onChange={(e) => setDevolvendo((d) => ({ ...d, motivo: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') devolver(t, devolvendo.motivo); }} placeholder="o recado: o que faltou pra valer o pronto" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white placeholder:text-white/30 text-[11px]" data-teste="recado" />
+                        <Button size="sm" onClick={() => devolver(t, devolvendo.motivo)} className="bg-amber-400 hover:bg-amber-300 text-amber-950 h-8 text-[11px] font-extrabold" data-teste="devolver-confirmar">devolver com o recado</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDevolvendo(null)} className="h-8 text-[11px] text-white/50">cancelar</Button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
       {equipe.length > 0 && (

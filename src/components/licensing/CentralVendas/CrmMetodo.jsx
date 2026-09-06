@@ -30,6 +30,7 @@ import {
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
+import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
@@ -674,7 +675,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     // 📳 o telefone responde na hora — antes mesmo do banco confirmar
     vibrar(t.feito ? VIBRA_ERRO : VIBRA_CONCLUIU);
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !t.feito } : x)));
-    try { await plataforma.entities.MetodoTarefa.update(t.id, { feito: !t.feito }); }
+    // ⏰ o carimbo do pronto: quando deu, e limpa a devolução (se a tarefa tinha voltado)
+    try { await plataforma.entities.MetodoTarefa.update(t.id, carimboDoPronto(!t.feito)); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
@@ -1477,6 +1479,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
                                   {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
                                 </p>
+                                {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou */}
+                                {t.prazo_em && (() => { const est = estadoDoPronto(t); return (
+                                  <p className={`text-[10px] font-bold ${est.id === 'atrasada' ? 'text-red-600' : est.atrasou ? 'text-amber-600' : est.id === 'conferida' ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} data-teste="pronto-ate">
+                                    ⏰ {rotuloDoPrazo(t.prazo_em, dia)}{est.id === 'atrasada' ? ' · atrasada — dá o pronto' : est.id === 'pronto' ? (est.atrasou ? ' · pronto dado (atrasado)' : ' · pronto dado, aguardando conferência') : est.id === 'conferida' ? ' · conferida ✔✔' : ''}
+                                  </p>
+                                ); })()}
+                                {t.devolvida_motivo && !t.feito && (
+                                  <p className="text-[11px] font-semibold text-amber-700" data-teste="devolvida">↩ devolvida: {t.devolvida_motivo} — refaz e dá o pronto de novo</p>
+                                )}
                                 {/* 🎓 tarefa com mentalidade (distribuída na gestão): o ensinamento aparece inteiro, não cortado */}
                                 {t.mentalidade && !t.feito ? (
                                   <p className="text-[11px] text-nz-tinta-fraca whitespace-pre-line" data-teste="ensinamento-tarefa">{t.detalhe}</p>
