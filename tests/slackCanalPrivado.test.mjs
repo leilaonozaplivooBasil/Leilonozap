@@ -226,9 +226,13 @@ function executarDocumentar() {
 
 function montarFerramenta({ cliente, imagem, fetchFalso }) {
   const corpo = executarDocumentar();
+  // 06/09/2026 — a ferramenta passou a resolver o canal sozinha (MAPA_GRUPO_CANAL) e a
+  // procurar a imagem no histórico do grupo. Estes falsos acompanham; o que estes testes
+  // guardam continua sendo o que a capa faz quando falha, não a rota.
   const fn = new Function(
     'ehAdmin', 'SLACK_BOT_TOKEN', 'obterClienteSlack', 'carregarHistorico',
-    'extrairUltimaImagemDoHistorico', 'fetch', 'console',
+    'extrairUltimaImagemDoHistorico', 'chaveDeMemoriaDoGrupo', 'canalDoGrupo',
+    'MAPA_GRUPO_CANAL', 'SLACK_CANAL_PADRAO', 'fetch', 'console',
     `return async (input, ctx) => ${corpo};`,
   )(
     () => true,
@@ -236,6 +240,10 @@ function montarFerramenta({ cliente, imagem, fetchFalso }) {
     () => cliente,
     async () => [],
     () => imagem,
+    (grupoId) => `grupo:${String(grupoId).replace(/\D+/g, '')}`,
+    (_grupoId, _mapa, padrao) => ({ canal: padrao, origem: 'padrao' }),
+    new Map(),
+    'C0BHCMYJJGJ',
     fetchFalso,
     { error: () => {}, warn: () => {}, log: () => {} },
   );

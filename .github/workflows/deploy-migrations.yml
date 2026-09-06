@@ -80,8 +80,23 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # ⚠️ `--include-all` (06/09/2026): sem ele o CLI RECUSA aplicar migração
+      # com data anterior à última já registrada no banco ("Found local migration
+      # files to be inserted before the last migration on remote database") e sai
+      # com exit 1 — foi o último obstáculo do conserto da DIR-71.
+      #
+      # A fila não é ordenada porque 15 dias de migração entraram na mão, fora de
+      # ordem: as que faltavam de verdade são de 30/07 a 01/09, e o banco já tinha
+      # registro de 05/09. Exigir ordem aqui seria exigir uma história que não
+      # existe.
+      #
+      # E por que isso é seguro AGORA, e não seria ontem: a auditoria de 06/09
+      # conferiu as 56 migrações objeto a objeto contra o banco e registrou no
+      # histórico tudo que já estava aplicado. A fila pendente ficou sendo só o
+      # que falta de verdade — e nenhuma delas altera dados. Sem esse acerto,
+      # `--include-all` teria rodado backfill e limpeza de dados de novo.
       - name: aplicar migrações pendentes
-        run: supabase db push
+        run: supabase db push --include-all
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}

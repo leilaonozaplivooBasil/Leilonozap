@@ -3315,3 +3315,48 @@ distintas.
 
 **Status:** o resultado real se mede na próxima execução do robô — é ela
 que aplica as 4 que faltam e o RLS.
+
+### REL-71.1 — a segunda rodada: o robô respondeu, e ensinou duas coisas
+
+**Mergeei, e ele falhou de novo — mas o erro MUDOU**, e é isso que interessa:
+saiu o "Remote migration versions not found" (o bloqueio de 15 dias) e entrou
+"Found local migration files to be inserted before the last migration on
+remote database". Ou seja: o histórico foi aceito. O que ele agora reclama é
+outra coisa, e a lista que ele imprimiu me mostrou que **eu tinha errado uma
+premissa**.
+
+**A premissa errada:** eu supus que uma linha no histórico cobria todos os
+arquivos que dividissem aquela versão. Não cobre. O CLI trata cada **ARQUIVO**;
+numa colisão, só um casa com a linha e os outros continuam na fila. Foi o
+próprio log que me corrigiu, listando `20260801_modo_chamada.sql`,
+`20260805_system_logs_politica_insert.sql` e mais 11 que eu dava por
+resolvidos.
+
+**Conserto:** as 8 colisões foram desfeitas — 14 arquivos ganharam versão
+única (`20260801010000`, `20260801020000`, …) e cada um a sua linha. A pasta
+ficou com **61 arquivos, 61 versões distintas, zero colisão**, e o histórico
+com 55 linhas: **nenhuma versão só no banco**, que era o que travava tudo.
+A trava do CI perdeu a lista de herança e virou estrita.
+
+**A segunda coisa que ele ensinou:** o CLI recusa aplicar migração com data
+anterior à última registrada. A fila que sobrou é de 30/07 a 01/09 e o banco
+já tinha 05/09 — exigir ordem seria exigir uma história que não existe, já que
+15 dias entraram na mão. Entrou `--include-all`, e ele é seguro **agora** por
+um motivo só: depois da auditoria, a fila pendente é exatamente o que falta, e
+**nenhuma delas altera dados**. Ontem, o mesmo flag teria rodado backfill e
+limpeza de novo.
+
+**ACHADO NOVO, e é dinheiro:** `20260716_saldo_a_liberar_cron.sql` estava
+escondido atrás da colisão `20260716` e nunca tinha sido auditado. Fui
+conferir: o cron `liberar-saldos`, que deveria rodar
+`liberar_saldos_maturados()` a cada 15 minutos, **não existe em produção** —
+só há um job agendado, `expire-auctions`. E `grep` no código mostra que
+ninguém chama a função pelo app: o único lugar que a menciona é um comentário
+em `walletCheck.js` dizendo "quem credita é o cron". Somado ao achado da
+função desatualizada, são dois problemas no mesmo caminho. **Não agendei
+nada** — marquei como aplicada pra o robô não agendar sozinho um job de
+dinheiro às 3 da manhã, e levo ao dono.
+
+**Fila final que o robô vai aplicar** (só DDL aditivo, tudo `IF NOT EXISTS`):
+concurso_checkin · melhor_envio_tokens · recuperacao_pix · pix_key_app_users ·
+captacao_aporte_externo · o RLS do backup de rótulos.

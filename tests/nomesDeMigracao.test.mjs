@@ -82,11 +82,18 @@ describe('nomes das migrações do Supabase', () => {
     }
   });
 
-  test('as colisões de herança continuam passando (renomeá-las reaplicaria backfill)', () => {
-    // Elas já estão registradas no histórico do banco. Se a trava passasse a
-    // reprová-las, a saída natural seria renomear — e aí o CLI as veria como
-    // novas e tentaria rodar de novo backfill e limpeza de dados.
-    assert.equal(rodar().ok, true, 'a lista de herança de colisão furou');
+  test('a pasta de hoje não tem NENHUMA versão repetida', () => {
+    // Sem lista de herança: as 8 colisões antigas foram desfeitas em 06/09, cada
+    // arquivo com versão única e a sua linha no histórico do banco. Se uma
+    // voltar, é porque alguém reintroduziu — e aí a trava tem que pegar.
+    const porVersao = new Map();
+    for (const f of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
+      const m = /^(\d+)_/.exec(f);
+      if (!m) continue;
+      porVersao.set(m[1], [...(porVersao.get(m[1]) || []), f]);
+    }
+    const repetidas = [...porVersao].filter(([, fs]) => fs.length > 1);
+    assert.deepEqual(repetidas, [], 'duas migrações dividindo a mesma versão');
   });
 
   test('a lista de herança só cobre arquivos que ainda existem', () => {
