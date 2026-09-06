@@ -39,6 +39,9 @@ export const MENTALIDADES = TRILHAS.map((t) => ({
 
 export const mentalidadeDe = (id) => MENTALIDADES.find((m) => m.id === String(id || '').toLowerCase()) || null;
 
+/** Os Hábitos da trilha da mentalidade (executivo 1-5; diretor e CEO 5-8). */
+export const habitosDaMentalidade = (id) => (mentalidadeDe(id) || MENTALIDADES[0]).foco;
+
 /** A mentalidade padrão pelo cargo do jogo (trainee entra na do executivo). */
 export function mentalidadePadrao(cargo) {
   const c = String(cargo || '').toLowerCase();

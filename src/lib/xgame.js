@@ -24,6 +24,7 @@
 // 💰 06/09/2026 — a conta do fixo distribuído pelo peso (caminho relativo:
 // este arquivo também roda na suíte do node, que não resolve o '@/').
 import { distribuirDia, MINIMO_DIA_PADRAO } from './distribuicaoFixo.js';
+import { ROTINA_PADRAO } from './metodo.js';
 
 export const TOKEN_MAX = 22.22;
 export const APLICABILIDADE_MAX = 12.22;
@@ -218,8 +219,9 @@ export const ehTarefaDeEstudo = (titulo) =>
 export const PARTICIPANTE_PADRAO = {
   cargo: 'executivo', perfil: 'estrategico',
   verba_producao: 1300, verba_bonus: 200, valor_venda: 50, multa_atraso: 200,
-  fixo_mes: null, minimo_dia: MINIMO_DIA_PADRAO,
+  fixo_mes: null, minimo_dia: MINIMO_DIA_PADRAO, peso_referencia: null,
 };
+
 
 /** O fixo que a conta usa: fixo_mes quando o admin definiu; senão a verba de produção de sempre. */
 export const fixoDoParticipante = (p) => {
@@ -243,7 +245,7 @@ const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
 const _semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const REGRAS_PESO = [
   { re: /gratidao|foco no sonho/, peso: 5, porque: 'gratidão abre o dia e a mente' },
-  { re: /treinament|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
+  { re: /treinament|treinar|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
   { re: /loja|venda|cliente|reuni|apresenta|contrato|follow|prospec/, peso: 6, porque: 'ação de negócio — o peso principal' },
   { re: /leitura|estudo|curso|licao|aula/, peso: 4, porque: 'mentalidade: estudo em dia' },
   { re: /story|post|instagram|conteudo|gravar/, peso: 4, porque: 'marketing pessoal' },
@@ -267,6 +269,19 @@ export function porqueDoPeso(titulo) {
   return 'peso 3 — padrão da planilha';
 }
 
+// 📏 O DIA COMPLETO É A ROTINA PERFEITA (correção do dono, 06/09/2026): o
+// peso somado das tarefas de PRODUÇÃO da Rotina do Método (hoje 18 tarefas,
+// peso 75). É a régua que o fixo do dia paga inteiro; uma tarefa avulsa num
+// dia vazio vale a fatia dela nesse total, nunca um terço do dia.
+export function pesoDaRotina(rotina = ROTINA_PADRAO) {
+  return (Array.isArray(rotina) ? rotina : [])
+    .filter((r) => r?.titulo && categoriaDaTarefa({ titulo: r.titulo }) !== 'bonus')
+    .reduce((s, r) => s + pesoAutomatico(r.titulo), 0);
+}
+export const PESO_DIA_COMPLETO = pesoDaRotina(ROTINA_PADRAO);
+/** A referência de peso da pessoa: a dela, se o admin definiu; senão a Rotina do Método. */
+export const pesoReferenciaDe = (p) => (Number(p?.peso_referencia) > 0 ? Number(p.peso_referencia) : PESO_DIA_COMPLETO);
+
 /**
  * Valor em R$ de cada tarefa do dia (mapa id → valor). Produção, Mentoria e
  * Visão Estratégica repartem o FIXO do dia pelo peso (com o mínimo diário);
@@ -277,7 +292,7 @@ export function valoresDasTarefas(tarefas = [], participante = PARTICIPANTE_PADR
   const cats = tarefas.map((t) => categoriaDaTarefa(t));
   const producao = tarefas.filter((t, i) => cats[i] !== 'bonus' && cats[i] !== 'venda');
   const bonus = tarefas.filter((t, i) => cats[i] === 'bonus');
-  const fixo = distribuirDia({ fixoMes: fixoDoParticipante(p), minimoDia: p.minimo_dia, tarefas: producao });
+  const fixo = distribuirDia({ fixoMes: fixoDoParticipante(p), pesoReferencia: pesoReferenciaDe(p), tarefas: producao });
   const extra = distribuirDia({ fixoMes: Number(p.verba_bonus) || 0, minimoDia: 1, tarefas: bonus });
   const valores = {};
   tarefas.forEach((t, i) => {
@@ -292,8 +307,8 @@ export function valoresDasTarefas(tarefas = [], participante = PARTICIPANTE_PADR
 export function reguaDoDia(tarefas = [], participante = PARTICIPANTE_PADRAO) {
   const p = { ...PARTICIPANTE_PADRAO, ...(participante || {}) };
   const producao = tarefas.filter((t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; });
-  const d = distribuirDia({ fixoMes: fixoDoParticipante(p), minimoDia: p.minimo_dia, tarefas: producao });
-  return { valorDia: d.valorDia, faltam: d.faltam, emAberto: d.emAberto, minimoDia: d.minimoDia, fixo: fixoDoParticipante(p) };
+  const d = distribuirDia({ fixoMes: fixoDoParticipante(p), pesoReferencia: pesoReferenciaDe(p), tarefas: producao });
+  return { valorDia: d.valorDia, faltam: d.faltam, pesoFalta: d.pesoFalta, pesoReferencia: d.pesoReferencia, somaPesos: d.somaPesos, emAberto: d.emAberto, minimoDia: d.minimoDia, fixo: fixoDoParticipante(p) };
 }
 
 /** X-Pay do dia: ganho (feitas), em jogo (ainda dá tempo) e perdido (janela passou). */
