@@ -12,6 +12,56 @@
 
 ---
 
+## DIR-74 — A sociedade deixa de ser uma barra e vira três portões
+
+**Emitida por:** dono (06/09/2026), depois de eu reportar as três pendências:
+*"O que você acha? Tá. E aí depois me traz uma visão já aplicada, que aí o que
+tiver que melhorar a gente vai melhorando."* — liberdade de ação pra aplicar a
+minha recomendação e ele corrigir em cima do que estiver na tela.
+
+**Data:** 06/09/2026.
+
+**O que eu acho, e por isso mudo:** a régua de 100 pontos que entrou na DIR-72
+era chute meu, e o problema dela não é o número — é a **forma**. Uma barra que
+só sobe tem dois defeitos que estragam o instrumento:
+
+1. **É catraca de mão única.** Quem entregou muito num semestre e nada no
+   seguinte continua parecendo perto de sócio. Barra premia histórico; sociedade
+   se decide por ritmo atual.
+2. **Deixa a pessoa se promover sozinha.** O card vira ponto quando alguém o
+   arrasta pra "Entregue" — e nada impedia que esse alguém fosse o dono do card.
+   A trava da DIR-72 ("passa pela revisão") só obriga a parar na coluna do meio;
+   não obriga ninguém a **olhar**.
+
+**O que entra:**
+
+- **Ninguém valida o próprio entregável.** Mover pra "Entregue" um card seu é
+  recusado, na regra e na tela. Só conta ponto entregável com carimbo de quem
+  validou, e esse alguém tem que ser outra pessoa. É isto que dá sentido à
+  coluna de revisão — sem isto ela é um pedágio sem guarda.
+- **Três portões, e a conversa de sociedade só abre com os três acesos:**
+  - **Peso** — 100 pontos acumulados (a régua que já existia, agora um portão
+    entre três em vez do placar inteiro);
+  - **Consistência** — entregou em pelo menos **8 das últimas 12 semanas**. É o
+    portão que a barra sozinha não tinha: mede ritmo, não acervo;
+  - **Duplicação** — pelo menos um entregável validado do **Hábito 8**. Sócio
+    que não formou ninguém não é sócio, é funcionário caro.
+
+**A reunião de segunda continua UMA só, e isso é resposta, não omissão.** O
+dono disse com todas as letras que as trilhas estão sendo aplicadas juntas. Duas
+atas na mesma semana seriam dois "gargalos da semana", e ninguém saberia qual é
+o verdadeiro. A trilha marca o **entregável**, não o encontro.
+
+**Regras de fronteira:**
+
+- **Migração nenhuma.** As colunas `validado_por_id`, `validado_em` e `habito`
+  já existem desde a DIR-72. Isto aqui é regra, não esquema.
+- **Os números são régua do dono, não lei da natureza** — 100 pontos, 8 de 12
+  semanas, Hábito 8. Estão numa constante nomeada cada um, pra ele trocar sem
+  procurar.
+
+---
+
 ## DIR-73 — As agendas da empresa dentro do agendador
 
 **Emitida por:** dono (06/09/2026), com print do modal "Agendar reunião":

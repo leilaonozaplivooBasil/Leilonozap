@@ -3539,3 +3539,65 @@ contato foi sujo") passa nos dois casos e vale como guarda, não como prova.
    régua é a **forma** da opção (`/^\d+ min$/`), não uma letra solta.
 
 **Suíte:** 1067/1067. **Build:** limpo.
+
+---
+
+## REL-74 — A sociedade virou três portões (preview)
+
+**Diretiva:** DIR-74. **Data:** 06/09/2026. **Escopo:** preview.
+
+**A pergunta era "o que você acha".** Acho que a régua de 100 pontos que eu
+mesmo pus na DIR-72 estava errada — e não no valor, na **forma**. Uma barra que
+só sobe tem dois furos:
+
+1. **Catraca de mão única.** Quem entregou muito num semestre e nada no
+   seguinte continuava parecendo perto de sócio. Barra premia **acervo**;
+   sociedade se decide por **ritmo**.
+2. **Deixava a pessoa se promover sozinha.** A trava da DIR-72 obriga o card a
+   *parar* na revisão — não obriga ninguém a *olhar*. Nada impedia o dono do
+   card de arrastar ele mesmo até "Entregue". Coluna de revisão sem guarda é
+   pedágio sem cancela.
+
+**O que foi aplicado:**
+
+- **Ninguém valida o próprio entregável.** Na regra e na tela. O botão pra
+  "Entregue" no seu card vem travado, com o motivo escrito ao lado ("seu card —
+  outro valida"), porque travado sem motivo faz a pessoa achar que é defeito.
+  O carimbo (`validado_por_id` + `validado_em`) é montado **uma vez, na lib**,
+  e vale pro estado da tela e pro banco — dois carimbos escritos separados é
+  como o placar da tela e o do banco divergem. Voltar de "Entregue" **apaga** o
+  carimbo: validação de um estado que a peça não ocupa mais é mentira guardada.
+- **Três portões no lugar da barra**, e a conversa só abre com os três acesos:
+  **Peso** (100 pontos), **Consistência** (8 das últimas 12 semanas) e
+  **Duplicação** (uma entrega validada do Hábito 8). A consistência conta
+  **semanas distintas**, não entregáveis — dez cards numa semana e nada nas
+  outras onze é pico, não é ritmo, e a diferença entre os dois é exatamente o
+  que esse portão existe pra ver.
+
+**A reunião de segunda continua uma só, e isso é resposta.** O dono disse que
+as trilhas estão sendo aplicadas juntas. Duas atas na mesma semana seriam dois
+"gargalos da semana" e ninguém saberia qual é o verdadeiro. A trilha marca o
+**entregável**, não o encontro.
+
+**Provado por mutação — e uma delas me pegou.** Das quatro mutações que rodei:
+
+- validar o próprio card liberado → **3 testes quebram**;
+- consistência contando entregáveis em vez de semanas → **3 quebram**;
+- janela de 12 semanas ignorada → **1 quebra**;
+- **`liberado` trocado de "os três" por "dois de três" → NENHUM teste
+  quebrou.** Minha bateria só tinha caso de 3 abertos e de 1 aberto; faltava
+  exatamente o caso do meio, que é onde a regra da média se esconde. Escrevi o
+  teste que faltava e refiz a mutação: agora quebra. Sem esse achado eu estaria
+  entregando uma trava que nenhum teste guardava.
+
+**Prova em navegador (REL-34.1): 216/216, zero erro de página/console** — e
+mutada também. O mock tem dois entregáveis em "Entregue" do mesmo dono: um
+validado por outra pessoa (peso 5) e um carimbado por ele mesmo (peso 4).
+Afrouxei a regra e a prova reprovou acusando **9 pontos** onde devia haver 5.
+
+**Suíte:** 1101/1101. **Build:** limpo. **Migração nenhuma** — as três colunas
+já existiam desde a DIR-72; isto é regra, não esquema.
+
+**Os números são régua do dono, não lei da natureza:** 100 pontos, 8 de 12
+semanas, Hábito 8. Cada um numa constante nomeada no topo do arquivo, pra ele
+trocar sem procurar.
