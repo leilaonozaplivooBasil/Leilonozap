@@ -22,6 +22,7 @@ export const CHAVE_LIGADO = 'xradio_ligado';     // ligado/desligado
 
 export const CHAVE_ESTACOES = 'xmusic_estacoes';   // as trocas que a pessoa fez
 export const CHAVE_ACERTOU = 'xmusic_acertou';     // o candidato que TOCOU em cada vaga
+export const CHAVE_POSICAO = 'xmusic_posicao';     // onde a pessoa largou a pílula
 
 // 🎚️ AS ESTAÇÕES SÃO VAGAS COM VÁRIOS CANDIDATOS (ordem do dono: "prefiro
 // que o sistema já tenha umas seleções de música instantânea, ele sente o
@@ -99,6 +100,9 @@ export const gravarPlaylist = (lista) => gravar(CHAVE_PLAYLIST, lista.slice(0, 3
 
 export const lerEstacao = () => ler(CHAVE_ESTACAO, null);
 export const gravarEstacao = (e) => gravar(CHAVE_ESTACAO, e);
+export const lerPosicao = () => ler(CHAVE_POSICAO, null);
+export const gravarPosicao = (p) => gravar(CHAVE_POSICAO, p);
+export const apagarPosicao = () => gravar(CHAVE_POSICAO, null);
 export const lerLigado = () => ler(CHAVE_LIGADO, false);
 export const gravarLigado = (v) => gravar(CHAVE_LIGADO, !!v);
 

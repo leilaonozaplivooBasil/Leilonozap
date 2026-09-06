@@ -4,9 +4,11 @@ import {
   lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube, buscarNoYoutube, resolverEstacao,
   extrairIdYoutube, extrairListaYoutube,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
+  lerPosicao, gravarPosicao, apagarPosicao,
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
+import useArrastavel, { dentroDaTela } from '@/hooks/useArrastavel';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
 // 🎧 X-MUSIC — o som de trabalho da Top College / X-EOS.
@@ -125,6 +127,42 @@ export default function XMusic() {
   const [editando, setEditando] = useState(null);   // id da linha em edição
   const [nomeEdit, setNomeEdit] = useState('');
   const painelRef = useRef(null);
+  const [posicao, setPosicao] = useState(lerPosicao);   // null = canto padrão
+
+  // 🤏 A PESSOA LEVA A PÍLULA PRA ONDE QUISER (ordem do dono: "preciso deixar
+  // o usuário mover e levar ela pra onde quiser na sua tela, tanto no desktop
+  // quanto no celular"). Funciona no dedo porque o motor é Pointer Events —
+  // a API de arrastar do HTML5, usada em outras telas do app, é só de mouse.
+  // O limiar de 6px do hook é o que preserva o clique: encostar segue ligando
+  // e desligando a música; só vira arrasto quem realmente anda com o dedo.
+  const arrastarPara = useCallback(({ x, y }) => {
+    const el = painelRef.current;
+    const larg = el?.offsetWidth || 220;
+    const alt = el?.offsetHeight || 56;
+    setPosicao(dentroDaTela(x - larg / 2, y - alt / 2, larg, alt));
+  }, []);
+  const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
+    aoMover: arrastarPara,
+    aoSoltar: () => setPosicao((p) => (p ? (gravarPosicao(p), p) : p)),
+  });
+
+  // girou a tela / redimensionou a janela: traz de volta pra dentro, senão a
+  // pílula "some" fora da área visível e não tem como pegar de volta
+  useEffect(() => {
+    if (!posicao) return undefined;
+    const ajustar = () => setPosicao((p) => {
+      if (!p) return p;
+      const el = painelRef.current;
+      const novo = dentroDaTela(p.x, p.y, el?.offsetWidth || 220, el?.offsetHeight || 56);
+      return novo.x === p.x && novo.y === p.y ? p : (gravarPosicao(novo), novo);
+    });
+    window.addEventListener('resize', ajustar);
+    window.addEventListener('orientationchange', ajustar);
+    return () => {
+      window.removeEventListener('resize', ajustar);
+      window.removeEventListener('orientationchange', ajustar);
+    };
+  }, [posicao]);
 
   // 👋 SOME ENQUANTO ROLA, igual à Leila (ordem do dono: "quando eu mexo a
   // página ela desaparece deixando tudo limpo, isso precisa funcionar na
@@ -309,6 +347,22 @@ export default function XMusic() {
     gravarPlaylist(nova);
   }, [playlist]);
 
+  // 🧭 PRA QUE LADO O PAINEL ABRE, E ATÉ ONDE ELE CRESCE. Com a pílula solta
+  // pela tela, abrir sempre pra cima faria o painel sair pelo topo quando ela
+  // estivesse lá em cima. Ele abre pro lado que TEM espaço, e o teto de altura
+  // é o espaço que sobra DAQUELE lado — o que não couber rola por dentro. Sem
+  // esta conta, uma busca com muitos resultados esticava o painel pra fora da
+  // tela e o topo dele ficava cortado, inalcançável.
+  const alturaJanela = typeof window === 'undefined' ? 800 : window.innerHeight;
+  const yDaPilula = posicao ? posicao.y : alturaJanela - 96;
+  const abrePraBaixo = posicao ? yDaPilula < alturaJanela / 2 : false;
+  // 4.5rem de folga em cima: é onde mora a barra fixa do site (z-50). O painel
+  // agora passa POR CIMA dela (z-[60]), mas encostar embaixo dela fica feio.
+  const espacoLivre = abrePraBaixo
+    ? alturaJanela - yDaPilula - 72
+    : yDaPilula - 80;
+  const tetoDoPainel = `${Math.max(220, Math.round(espacoLivre))}px`;
+
   return (
     // 📏 A ALTURA NÃO É UM NÚMERO SOLTO: sai da mesma régua dos outros
     // flutuantes (--nz-dock-b, do FloatingDock), mais uma folga que tira a
@@ -319,12 +373,20 @@ export default function XMusic() {
     <div
       ref={painelRef}
       aria-hidden={rolando}
-      style={{ bottom: 'calc(var(--nz-dock-b, 1.75rem) + 2.25rem)' }}
-      className={`fixed left-4 z-40 print:hidden transition-all duration-300 ${rolando ? 'opacity-0 translate-y-3 pointer-events-none' : 'opacity-100 translate-y-0'}`}
+      onClickCapture={engolirCliqueDoArrasto}
+      style={posicao
+        // largou em algum lugar: manda a posição dela, e nada de transição de
+        // posição durante o arrasto (senão a pílula fica "borrachuda" atrás
+        // do dedo em vez de colada nele)
+        ? { left: posicao.x, top: posicao.y, bottom: 'auto' }
+        : { bottom: 'calc(var(--nz-dock-b, 1.75rem) + 2.25rem)', left: '1rem' }}
+      className={`fixed z-[60] print:hidden ${arrastando ? '' : 'transition-opacity duration-300'} ${rolando && !arrastando ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
     >
       <div
         aria-hidden={!aberto}
-        className={aberto ? 'mb-2' : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'}
+        className={aberto
+          ? `absolute left-0 ${abrePraBaixo ? 'top-full mt-2' : 'bottom-full mb-2'}`
+          : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'}
       >
         {/* 📏 O painel cresce PRA CIMA e nunca vaza pra fora da tela: o teto é
             a altura da janela menos o espaço da pílula, e o que não couber
@@ -334,7 +396,7 @@ export default function XMusic() {
           style={{
             background: 'rgba(10,16,32,0.97)',
             backdropFilter: 'blur(12px)',
-            maxHeight: 'calc(100vh - 8.5rem)',
+            maxHeight: tetoDoPainel,
           }}
         >
           <div className="flex items-center justify-between">
@@ -555,8 +617,18 @@ export default function XMusic() {
       </div>
 
       {/* a pílula: liga/desliga e abre o painel */}
-      <div className="xeos-cru inline-flex items-center gap-1 rounded-full border border-white/12 shadow-2xl pl-1 pr-1"
-        style={{ background: 'rgba(10,16,32,0.95)', backdropFilter: 'blur(12px)' }}
+      {/* a pílula inteira é a alça: segurou e andou, ela vai junto */}
+      <div
+        {...alcas}
+        onDoubleClick={() => { apagarPosicao(); setPosicao(null); vibrar(VIBRA_TOQUE); }}
+        title="arraste pra levar; toque duplo devolve pro canto"
+        className={`xeos-cru inline-flex items-center gap-1 rounded-full border shadow-2xl pl-1 pr-1 ${arrastando ? 'border-white/40 scale-105' : 'border-white/12'}`}
+        style={{
+          ...alcas.style,
+          background: 'rgba(10,16,32,0.95)',
+          backdropFilter: 'blur(12px)',
+          cursor: arrastando ? 'grabbing' : 'grab',
+        }}
       >
         <button
           type="button"
