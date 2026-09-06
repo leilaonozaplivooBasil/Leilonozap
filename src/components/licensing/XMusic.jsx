@@ -5,6 +5,7 @@ import {
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
+import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
 
 // 🎧 X-MUSIC — o som de trabalho da Top College / X-EOS.
 //
@@ -54,6 +55,16 @@ export default function XMusic() {
   const [link, setLink] = useState('');
   const [aviso, setAviso] = useState('');
   const painelRef = useRef(null);
+
+  // 👋 SOME ENQUANTO ROLA, igual à Leila (ordem do dono: "quando eu mexo a
+  // página ela desaparece deixando tudo limpo, isso precisa funcionar na
+  // X-Music"). É o MESMO hook que a Leila usa — não uma imitação parecida:
+  // se um dia esse comportamento mudar, muda para as duas juntas.
+  // Com o painel aberto o sumiço é pausado: a pessoa está mexendo nele.
+  // E some só a APARÊNCIA — opacidade e clique. O player continua montado e
+  // tocando; se isto desmontasse qualquer coisa, a música cortaria a cada
+  // rolagem de dedo, que é justamente o erro que a gente acabou de matar.
+  const rolando = useOcultarAoRolar(aberto);
 
   const src = useMemo(() => (ligado ? fonteDoPlayer(estacao) : null), [ligado, estacao]);
   const naPlaylist = playlist.some((m) => m.id === estacao?.id);
@@ -114,7 +125,11 @@ export default function XMusic() {
     // 📏 bottom-14, não bottom-4: o selo "Preview oficial" mora em
     // `fixed bottom-2 left-2` e estava por cima da pílula — o dono não
     // conseguia ler o que tocava. Agora a pílula senta acima dele.
-    <div ref={painelRef} className="fixed bottom-14 left-4 z-40 print:hidden">
+    <div
+      ref={painelRef}
+      aria-hidden={rolando}
+      className={`fixed bottom-14 left-4 z-40 print:hidden transition-all duration-300 ${rolando ? 'opacity-0 translate-y-3 pointer-events-none' : 'opacity-100 translate-y-0'}`}
+    >
       <div
         aria-hidden={!aberto}
         className={aberto ? 'mb-2' : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'}
