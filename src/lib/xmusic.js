@@ -20,12 +20,33 @@ export const CHAVE_PLAYLIST = 'xgame_playlist_amanhecer';
 export const CHAVE_ESTACAO = 'xradio_estacao';   // o que estava tocando
 export const CHAVE_LIGADO = 'xradio_ligado';     // ligado/desligado
 
-// as estações da casa — pontos de partida por MOMENTO, não por gênero
-export const ESTACOES = [
-  { id: 'jfKfPfyJRdk', nome: 'Foco', nota: 'lofi pra trabalhar' },
-  { id: 'UfcAVejslrU', nome: 'Calma', nota: 'relaxar e respirar' },
-  { id: '5qap5aO4i9A', nome: 'Estudo', nota: 'concentração longa' },
-  { id: 'MVPTGNGiI-4', nome: 'Energia', nota: 'pra correr e treinar' },
+export const CHAVE_ESTACOES = 'xmusic_estacoes'; // as trocas que a pessoa fez
+
+// 🎚️ AS ESTAÇÕES SÃO VAGAS, NÃO ENFEITE (ordem do dono: "as opções que a
+// gente oferece precisam funcionar de verdade, não pode ser um botão só por
+// ser — precisam confiar na plataforma de verdade").
+//
+// O QUE ESTAVA ERRADO: eu tinha chumbado quatro IDs de vídeo do YouTube de
+// memória, sem conseguir abrir nenhum deles daqui de dentro (o ambiente onde
+// eu rodo não alcança o YouTube). Vídeo do YouTube sai do ar, vira privado
+// ou bloqueia embed — botão que promete "Estudo" e abre uma tela preta é
+// pior do que não ter botão, porque quebra a confiança na plataforma inteira.
+//
+// COMO FICOU: cada vaga tem um PROPÓSITO fixo (Foco, Calma, Estudo, Energia)
+// e um conteúdo que pode ser trocado pela pessoa. Antes de aparecer clicável,
+// a vaga é CONFERIDA no navegador de quem está usando — que alcança o YouTube
+// de verdade — e só é oferecida se responder. Não respondeu, ela se declara
+// vazia e pede o link em vez de fingir que toca.
+//
+// Só ficaram com sugestão as duas de que eu tenho notícia sólida: a rádio
+// lofi que está no ar há anos e o Weightless. As outras duas nascem vazias
+// de propósito: preencher com link que eu não consigo provar é exatamente o
+// "botão só por ser" que o dono não quer.
+export const ESTACOES_PADRAO = [
+  { slot: 'foco', nome: 'Foco', nota: 'pra trabalhar', id: 'jfKfPfyJRdk', lista: false },
+  { slot: 'calma', nome: 'Calma', nota: 'relaxar e respirar', id: 'UfcAVejslrU', lista: false },
+  { slot: 'estudo', nome: 'Estudo', nota: 'concentração longa', id: null, lista: false },
+  { slot: 'energia', nome: 'Energia', nota: 'correr e treinar', id: null, lista: false },
 ];
 
 /** Aceita link normal, curto, embed, shorts, live ou o ID puro. */
@@ -101,4 +122,32 @@ export const fonteDoPlayer = (estacao) => {
   return estacao.lista
     ? `${base}/videoseries?list=${estacao.id}&${comum}`
     : `${base}/${estacao.id}?${comum}&loop=1&playlist=${estacao.id}`;
+};
+
+
+/** As estações como estão HOJE: o propósito é da casa, o conteúdo pode ser
+ *  da pessoa. O que ela trocou vence a sugestão; o rótulo nunca muda, senão
+ *  a vaga perde o sentido de existir. */
+export const lerEstacoes = () => {
+  const salvas = ler(CHAVE_ESTACOES, {}) || {};
+  return ESTACOES_PADRAO.map((e) => {
+    const dela = salvas[e.slot];
+    return dela?.id
+      ? { ...e, id: dela.id, lista: !!dela.lista, video: dela.video || null, titulo: dela.titulo || null }
+      : e;
+  });
+};
+
+export const gravarEstacaoDoSlot = (slot, dados) => {
+  const salvas = ler(CHAVE_ESTACOES, {}) || {};
+  gravar(CHAVE_ESTACOES, { ...salvas, [slot]: dados });
+};
+
+/** A CONFERÊNCIA. Roda no navegador da pessoa, que alcança o YouTube de
+ *  verdade. Devolve o título real quando o vídeo existe e pode ser embutido,
+ *  e null quando ele saiu do ar, virou privado ou bloqueou embed — é esse
+ *  null que impede a estação de virar um botão que não toca. */
+export const conferirEstacao = async (estacao) => {
+  if (!estacao?.id) return null;
+  return buscarTitulo(estacao.id, !!estacao.lista, estacao.video);
 };

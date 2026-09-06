@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic } from 'lucide-react';
 import {
-  ESTACOES, extrairIdYoutube, extrairListaYoutube, fonteDoPlayer,
+  lerEstacoes, gravarEstacaoDoSlot, conferirEstacao,
+  extrairIdYoutube, extrairListaYoutube, fonteDoPlayer,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
@@ -50,7 +51,10 @@ const Iframe = React.memo(function Iframe({ src }) {
 export default function XMusic() {
   const [aberto, setAberto] = useState(false);
   const [ligado, setLigado] = useState(lerLigado);
-  const [estacao, setEstacao] = useState(() => lerEstacao() || ESTACOES[0]);
+  const [estacoes, setEstacoes] = useState(lerEstacoes);
+  const [conferencia, setConferencia] = useState({}); // slot → titulo real | false (não toca)
+  const [vagaAlvo, setVagaAlvo] = useState(null);     // vaga esperando um link
+  const [estacao, setEstacao] = useState(() => lerEstacao() || lerEstacoes().find((e) => e.id) || null);
   const [playlist, setPlaylist] = useState(lerPlaylist);
   const [link, setLink] = useState('');
   const [aviso, setAviso] = useState('');
@@ -70,7 +74,7 @@ export default function XMusic() {
 
   const src = useMemo(() => (ligado ? fonteDoPlayer(estacao) : null), [ligado, estacao]);
   const naPlaylist = playlist.some((m) => m.id === estacao?.id);
-  const ehDaCasa = ESTACOES.some((m) => m.id === estacao?.id);
+  const ehDaCasa = estacoes.some((m) => m.id && m.id === estacao?.id);
 
   useEffect(() => { gravarLigado(ligado); }, [ligado]);
   useEffect(() => { if (estacao) gravarEstacao(estacao); }, [estacao]);
@@ -96,6 +100,26 @@ export default function XMusic() {
 
   const trocar = useCallback((nova) => { vibrar(VIBRA_TOQUE); setEstacao(nova); setLigado(true); }, []);
 
+  // 🔎 A CONFERÊNCIA DAS VAGAS. Roda quando o painel abre, no navegador da
+  // pessoa — que alcança o YouTube de verdade, coisa que o ambiente onde eu
+  // escrevo isto não alcança. Vaga que responde vira botão e mostra o título
+  // REAL do que vai tocar; vaga que não responde (vídeo fora do ar, privado
+  // ou com embed bloqueado) se declara e pede o link, em vez de abrir uma
+  // tela preta. É o que separa "opção de verdade" de "botão só por ser".
+  useEffect(() => {
+    if (!aberto) return undefined;
+    let vivo = true;
+    (async () => {
+      for (const e of estacoes) {
+        if (!e.id || conferencia[e.slot] !== undefined) continue;
+        const titulo = await conferirEstacao(e);
+        if (!vivo) return;
+        setConferencia((c) => ({ ...c, [e.slot]: titulo || false }));
+      }
+    })();
+    return () => { vivo = false; };
+  }, [aberto, estacoes, conferencia]);
+
   const tocarLink = useCallback(async () => {
     const lista = extrairListaYoutube(link);
     const idVideo = extrairIdYoutube(link);
@@ -108,9 +132,23 @@ export default function XMusic() {
     // o vídeo do link fica GUARDADO na estação: é com ele que se descobre o
     // nome de uma playlist (o noembed não lê URL de playlist).
     const nome = (await buscarTitulo(id, !!lista, idVideo)) || (lista ? 'Minha playlist' : 'Minha música');
+    // se uma VAGA estava pedindo link, ele vai pra ela e fica salvo ali —
+    // a vaga deixa de estar vazia pra sempre, naquele aparelho.
+    if (vagaAlvo) {
+      const dados = { id, lista: !!lista, video: idVideo, titulo: nome };
+      gravarEstacaoDoSlot(vagaAlvo, dados);
+      const novas = estacoes.map((e) => (e.slot === vagaAlvo ? { ...e, ...dados } : e));
+      setEstacoes(novas);
+      setConferencia((c) => ({ ...c, [vagaAlvo]: nome }));
+      const vaga = novas.find((e) => e.slot === vagaAlvo);
+      setVagaAlvo(null);
+      setLink('');
+      trocar(vaga);
+      return;
+    }
     trocar({ id, nome, lista: !!lista, video: idVideo, nota: lista ? 'sua playlist' : 'sua música' });
     setLink('');
-  }, [link, trocar]);
+  }, [link, trocar, vagaAlvo, estacoes]);
 
   const favoritar = useCallback(async () => {
     if (!estacao?.id) return;
@@ -166,21 +204,45 @@ export default function XMusic() {
 
           {ligado && <Iframe src={src} />}
 
-          {/* as estações da casa */}
+          {/* as vagas da casa — cada uma se confere antes de virar botão */}
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-1.5">estações da casa</p>
             <div className="grid grid-cols-2 gap-1.5">
-              {ESTACOES.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => trocar(m)}
-                  className={`text-left rounded-lg px-2.5 py-1.5 transition-colors ${estacao?.id === m.id ? 'bg-white/15' : 'bg-white/[0.06] hover:bg-white/10'}`}
-                >
-                  <span className="block text-[11px] font-bold text-white">{m.nome}</span>
-                  <span className="block text-[9px] text-white/45">{m.nota}</span>
-                </button>
-              ))}
+              {estacoes.map((m) => {
+                const conf = m.id ? conferencia[m.slot] : false;
+                const conferindo = Boolean(m.id) && conf === undefined;
+                const toca = Boolean(m.id) && conf !== false && conf !== undefined;
+                const pedindo = vagaAlvo === m.slot;
+                // segunda linha, na ordem da verdade: o que está tocando de
+                // fato > conferindo > não respondeu > vazia.
+                const legenda = toca ? (conf || m.nota)
+                  : conferindo ? 'conferindo…'
+                  : m.id ? 'fora do ar · ponha a sua'
+                  : 'vazia · ponha a sua';
+                return (
+                  <button
+                    key={m.slot}
+                    type="button"
+                    onClick={() => {
+                      if (toca) { trocar(m); return; }
+                      // não toca? não finge que toca: abre a vaga pro link
+                      vibrar(VIBRA_TOQUE);
+                      setVagaAlvo(pedindo ? null : m.slot);
+                    }}
+                    title={legenda}
+                    className={`text-left rounded-lg px-2.5 py-1.5 transition-colors ${
+                      estacao?.id === m.id && toca ? 'bg-white/15'
+                        : pedindo ? 'bg-amber-400/20 ring-1 ring-amber-300/40'
+                        : toca ? 'bg-white/[0.06] hover:bg-white/10'
+                        : 'bg-white/[0.03] hover:bg-white/[0.08]'}`}
+                  >
+                    <span className={`block text-[11px] font-bold ${toca ? 'text-white' : 'text-white/55'}`}>{m.nome}</span>
+                    <span className={`block text-[9px] truncate ${toca ? 'text-white/45' : 'text-amber-200/70'}`}>
+                      {pedindo ? 'cole o link aqui embaixo' : legenda}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -248,7 +310,7 @@ export default function XMusic() {
               value={link}
               onChange={(e) => setLink(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') tocarLink(); }}
-              placeholder="cole um link ou playlist do YouTube"
+              placeholder={vagaAlvo ? `link do YouTube pra ${estacoes.find((e) => e.slot === vagaAlvo)?.nome}` : 'cole um link ou playlist do YouTube'}
               className="xeos-cru flex-1 min-w-0 rounded-lg bg-white/10 border border-white/15 text-white placeholder-white/35 text-[11px] px-2.5 py-2 focus:outline-none focus:border-white/40"
             />
             <button type="button" onClick={tocarLink} className="xeos-cru shrink-0 rounded-lg bg-white text-[#0A1020] text-[11px] font-bold px-3">
