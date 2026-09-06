@@ -9,7 +9,7 @@ test('o modelo por função vira metas prontas pra gravar, com rótulo e unidade
   assert.deepEqual([m[0].chave, m[0].rotulo, m[0].alvo, m[0].unidade, m[0].user_id, m[0].mes], ['contatos', 'Contatos feitos', 480, 'no mês', 'u1', '2026-09']);
   assert.equal(m.find((x) => x.chave === 'faturamento').unidade, 'R$');
   assert.deepEqual(metasDoModelo('inventada', { userId: 'u1', mes: '2026-09' }), []);
-  assert.equal(Object.keys(METAS_MODELO).length, 13, '10 funções oficiais + 3 do painel');
+  assert.equal(Object.keys(METAS_MODELO).length, 23, '11 funções oficiais + 9 de mercado + 3 do painel');
   assert.ok(CHAVES.every((c) => c.rotulo && c.unidade));
 });
 

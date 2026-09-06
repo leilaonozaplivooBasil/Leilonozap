@@ -15,7 +15,7 @@ import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
-import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES_OFICIAIS, FUNCOES_DO_PAINEL, funcaoDaPessoaComOrigem, montarDiaDaFuncao } from '@/lib/funcoes';
+import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES_OFICIAIS, FUNCOES_DE_MERCADO, FUNCOES_DO_PAINEL, funcaoDaPessoaComOrigem, montarDiaDaFuncao } from '@/lib/funcoes';
 import { CartaoFuncaoOficial, ModeloEconomico, ScoreEscada } from '@/components/licensing/CentralVendas/PainelOficial';
 import { getLevel, normalizeLevels } from '@/lib/careerLevels';
 import { semaforo, mesDe, fracoesDoScore } from '@/lib/metasPessoa';
@@ -844,6 +844,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                           <option value="">{f && origem !== 'escolhida' ? `(sugerida: ${f.curto || f.nome})` : 'escolha…'}</option>
                           <optgroup label="Documento Oficial">
                             {FUNCOES_OFICIAIS.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                          </optgroup>
+                          <optgroup label="Funções de mercado">
+                            {FUNCOES_DE_MERCADO.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
                           </optgroup>
                           <optgroup label="Funções do painel de controle">
                             {FUNCOES_DO_PAINEL.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}

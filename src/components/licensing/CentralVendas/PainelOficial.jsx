@@ -75,7 +75,7 @@ export function CartaoFuncaoOficial({ funcao, origem, nivel, fixoMes }) {
           {cargo.areas?.length > 0 && <p className="mt-1.5 text-[10px] text-white/35">áreas: {cargo.areas.join(' · ')}</p>}
         </>
       ) : (
-        <p className="mt-1 text-[11px] text-white/60"><span className="text-white font-bold">{funcao.nome}</span> é uma função do painel de controle, não do Documento Oficial — entrega {funcao.entrega}.</p>
+        <p className="mt-1 text-[11px] text-white/60"><span className="text-white font-bold">{funcao.nome}</span> {funcao.mercado ? 'é uma função que o mercado pede e o Documento Oficial ainda não tem' : 'é uma função do painel de controle, não do Documento Oficial'} — entrega {funcao.entrega}.{funcao.mercado ? <span className="text-white/35"> As metas dela são sugestão: ajuste na aba Metas.</span> : null}</p>
       )}
     </div>
   );

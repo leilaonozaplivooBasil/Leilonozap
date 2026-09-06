@@ -2,7 +2,7 @@
 // dá as tarefas do dia dele; e preciso identificar a empresa".
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EMPRESAS, rotuloDaEmpresa, FUNCOES, FUNCOES_OFICIAIS, FUNCOES_DO_PAINEL, funcaoDe, funcaoDoNivel, funcaoDaPessoa, funcaoDaPessoaComOrigem, cargoOficialDaFuncao, montarDiaDaFuncao } from '../src/lib/funcoes.js';
+import { EMPRESAS, rotuloDaEmpresa, FUNCOES, FUNCOES_OFICIAIS, FUNCOES_DE_MERCADO, FUNCOES_DO_PAINEL, funcaoDe, funcaoDoNivel, funcaoDaPessoa, funcaoDaPessoaComOrigem, cargoOficialDaFuncao, montarDiaDaFuncao } from '../src/lib/funcoes.js';
 
 test('o grupo: a holding e os quatro pilares-empresa, e o rótulo "através da"', () => {
   assert.deepEqual(EMPRESAS.map((e) => e.nome), ['To The Top Corporate', 'X-EOS', 'Top Tech Digital', 'Leilão no Zap', 'Human Bank']);
@@ -15,7 +15,7 @@ test('o grupo: a holding e os quatro pilares-empresa, e o rótulo "através da"'
 });
 
 test('cada função tem mentalidade, o que entrega e um dia com Hábitos válidos, em ordem de hora', () => {
-  assert.equal(FUNCOES.length, 13);
+  assert.equal(FUNCOES.length, 23, '11 oficiais + 9 de mercado + 3 do painel');
   for (const f of FUNCOES) {
     assert.ok(f.dia.length >= 4, f.nome);
     assert.ok(['executivo', 'diretor', 'ceo'].includes(f.mentalidade), f.nome);
@@ -50,8 +50,18 @@ test('a função NÃO é o nível: o Documento Oficial sugere pelo nome, a escol
 });
 
 test('as funções oficiais vêm do documento (COO, CRO, CCO, CMO, CBDO, CAO, CXO, CEO, CFO, CTO), cada uma ligada ao cargo oficial', () => {
-  assert.deepEqual(FUNCOES_OFICIAIS.map((f) => f.id), ['coo', 'cro', 'cco', 'cmo', 'cbdo', 'cao', 'cxo', 'ceo', 'cfo', 'cto']);
+  assert.deepEqual(FUNCOES_OFICIAIS.map((f) => f.id), ['coo', 'cro', 'cco', 'cmo', 'cbdo', 'cao', 'cxo', 'ceo', 'cfo', 'cto', 'logistica']);
+  assert.deepEqual(FUNCOES_DE_MERCADO.map((f) => f.id), ['rh', 'produto', 'compras', 'atendimento', 'expansao', 'juridico', 'dados', 'gerente_loja', 'conteudo']);
   assert.deepEqual(FUNCOES_DO_PAINEL.map((f) => f.id), ['socio_executivo', 'livoo_live', 'embaixador']);
+  // a Diretora de Logística: a Beatriz, do Resumo Executivo (p. 9) — e o nome por extenso acha
+  assert.equal(funcaoDaPessoaComOrigem({ nome: 'Beatriz Sant\'anna' }).funcao.id, 'logistica');
+  assert.equal(funcaoDe('Diretora de Logística').id, 'logistica');
+  assert.equal(cargoOficialDaFuncao(funcaoDe('logistica')).fixoBudget, 3000);
+  // as de mercado têm dia, entrega e apelido por extenso
+  for (const f of FUNCOES_DE_MERCADO) assert.ok(f.dia.length >= 4 && f.entrega && f.mercado, f.id);
+  assert.equal(funcaoDe('Diretor de Pessoas').id, 'rh');
+  assert.equal(funcaoDe('gerente da loja').id, 'gerente_loja');
+  assert.equal(cargoOficialDaFuncao(funcaoDe('rh')), null, 'de mercado: sem cargo no documento');
   for (const f of FUNCOES_OFICIAIS) assert.ok(cargoOficialDaFuncao(f)?.missao, `${f.id} sem cargo oficial`);
   assert.equal(cargoOficialDaFuncao(funcaoDe('coo')).captacaoMes, 150000);
   assert.equal(cargoOficialDaFuncao(funcaoDe('socio_executivo')), null);

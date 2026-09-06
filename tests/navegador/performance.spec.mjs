@@ -449,7 +449,8 @@ test('FUNÇÃO E EMPRESA: a posição vem do painel de controle e a função do 
   assert.equal(await modal.locator('[data-teste="funcao"]').inputValue(), '', 'sugerida, não escolhida: o menu fica na sugestão');
   assert.match(await modal.locator('[data-teste="funcao"] option').first().textContent(), /sugerida: COO/);
   // o menu separa o Documento Oficial das funções do painel
-  assert.deepEqual(await modal.locator('[data-teste="funcao"] optgroup').evaluateAll((els) => els.map((e) => e.label)), ['Documento Oficial', 'Funções do painel de controle']);
+  assert.deepEqual(await modal.locator('[data-teste="funcao"] optgroup').evaluateAll((els) => els.map((e) => e.label)), ['Documento Oficial', 'Funções de mercado', 'Funções do painel de controle']);
+  assert.ok((await modal.locator('[data-teste="funcao"] option').allTextContents()).some((t) => /Diretora de Logística/.test(t)), 'a Logística entrou');
   assert.equal(await modal.locator('[data-teste="dia-funcao"] li').count(), 7, 'o dia do COO: 7 tarefas, com as 2 reuniões de investimento');
   assert.equal(await modal.locator('[data-teste="dia-funcao"] li', { hasText: 'Reunião de investimento' }).count(), 2);
 

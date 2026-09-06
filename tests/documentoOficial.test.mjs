@@ -16,7 +16,8 @@ test('o ciclo: seis meses de set/2026 a fev/2027, cada um com a fase do roadmap 
 });
 
 test('os cargos C-level do documento (p. 5), com titular, missão, meta de captação e entregáveis', () => {
-  assert.deepEqual(CARGOS_OFICIAIS.map((c) => c.sigla), ['CEO', 'CCO', 'COO', 'CRO', 'CMO', 'CBDO', 'CAO', 'CXO', 'CFO', 'CTO']);
+  assert.deepEqual(CARGOS_OFICIAIS.map((c) => c.sigla), ['CEO', 'CCO', 'COO', 'CRO', 'CMO', 'CBDO', 'CAO', 'CXO', 'CLO', 'CFO', 'CTO']);
+  assert.deepEqual([cargoOficialDe('logistica').titular, cargoOficialDe('logistica').fixoBudget], ['Beatriz Sant\'anna', 3000], 'Diretora de Logística / Responsável Distribuidora Recreio (Resumo p. 9)');
   const coo = cargoOficialDe('coo');
   assert.deepEqual([coo.titular, coo.missao, coo.captacaoMes, coo.fixoBudget, coo.dono], ['Emanuel Alves', 'Transformar estratégia em execução.', 150000, 7000, 'dono da execução']);
   assert.deepEqual(coo.metas.map((m) => [m.chave, m.alvo]), [['captacao', 150000], ['reunioes_investimento', 44], ['pontos_retirada', 1], ['lojas', 1]]);
