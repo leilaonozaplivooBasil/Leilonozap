@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2, Brain, Building2, BriefcaseBusiness } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2, Brain, Building2, BriefcaseBusiness, MessageCircle } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ens
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
 import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES, funcaoDaPessoa, montarDiaDaFuncao } from '@/lib/funcoes';
+import { semaforo, mesDe } from '@/lib/metasPessoa';
+import { useMetasDaPessoa, AbaMetas, AbaPrograma, AbaSemana, AbaQuadro, AbaHistorico, ABAS } from '@/components/licensing/CentralVendas/QuadroGeralAbas';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -74,6 +76,16 @@ import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES, funcaoDaPessoa, montarDi
 // seis reais num dia"): o dia completo é a Rotina Perfeita (peso 75) — a
 // conta mora em distribuicaoFixo/xgame; aqui só se mostra.
 //
+// 🗂️ OITAVA RODADA (dono, mesmo dia): "mantém o Distribuir como está e entra
+// um menu do QUADRO GERAL da pessoa: tudo — função, cargo, valores, o que
+// fazer, meta mensal, entregáveis da mentoria (set/2026 a mar/2027), os
+// produtos que precisa vender, o planejamento diário, o quadro dele por
+// prioridade; e quando eu enviar a demanda, se cai na lista, no quadro ou
+// nos dois". O modal virou ABAS (QuadroGeralAbas): Pessoa, Metas, Programa,
+// Semana, Quadro dele, Histórico — com o SEMÁFORO e o "cobrar no WhatsApp"
+// no topo. E o Distribuir ganhou DESTINO (lista / quadro / os dois),
+// PRIORIDADE (vira o prazo do card) e "repetir nos dias úteis da semana".
+//
 // 🏢 SÉTIMA RODADA (dono, mesmo dia): "o que a gente tem que ter é a FUNÇÃO
 // de cada um. O Emanuel: Diretor de Operações — a partir daí o sistema já me
 // dá as tarefas do dia dele. E identificar a EMPRESA: e-Digital (marketing e
@@ -124,7 +136,62 @@ const fmtDia = (iso) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 };
 
+/** Do dia escolhido até a sexta da mesma semana (dias úteis), incluindo o dia. */
+export function diasUteisAteSexta(diaISO) {
+  const d = new Date(`${diaISO}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return [diaISO];
+  const dias = [];
+  const x = new Date(d);
+  while (x.getDay() !== 6 && x.getDay() !== 0 && dias.length < 6) { dias.push(dataISO(x)); x.setDate(x.getDate() + 1); if (x.getDay() === 6) break; }
+  return dias.length ? dias : [diaISO];
+}
+/** A prioridade vira o prazo do card: alta = no dia, média = +3 dias, baixa = +7. */
+export function prazoDaPrioridade(diaISO, prioridade) {
+  const d = new Date(`${diaISO}T12:00:00`);
+  d.setDate(d.getDate() + (prioridade === 'baixa' ? 7 : prioridade === 'media' ? 3 : 0));
+  return dataISO(d);
+}
+
 const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[12px] text-white outline-none focus:border-white/40';
+
+// 🚦 o topo do Quadro Geral: semáforo, cobrar no WhatsApp e as abas
+function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, onAba, onFechar, metasInfo }) {
+  const doHoje = tarefasCiclo.filter((t) => t.user_id === pessoaId && String(t.data).slice(0, 10) === hoje);
+  const fila = filaDoPronto(tarefasCiclo.filter((t) => t.user_id === pessoaId));
+  const atrasadas = fila.filter((f) => f.estado.id === 'atrasada');
+  const devolvidas = fila.filter((f) => f.estado.id === 'devolvida').length;
+  const foraDoRitmo = (metasInfo?.progresso || []).filter((m) => !m.noRitmo).length;
+  const sem = semaforo({ planejou: planejamentoDoDia(doHoje).gerado, atrasadas: atrasadas.length, metasForaDoRitmo: foraDoRitmo, devolvidas });
+  const COR = { verde: 'bg-nz-verde', amarelo: 'bg-amber-400', vermelho: 'bg-red-500' };
+  const numero = String(telefone || '').replace(/\D/g, '');
+  const cobrar = atrasadas[0]?.tarefa;
+  const msg = cobrar
+    ? `Oi ${nome.split(' ')[0]}, tudo bem? A tarefa "${cobrar.titulo}" tinha pronto até ${rotuloDoPrazo(cobrar.prazo_em, String(cobrar.data).slice(0, 10))?.replace('pronto até ', '')}. Consegue dar o pronto? 🙏`
+    : `Oi ${nome.split(' ')[0]}, tudo bem? Passando pra ver como está o seu dia. 💪`;
+  const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(msg)}` : null;
+  return (
+    <div className="sticky -top-4 -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-white/10 z-10" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="quadro-geral-topo">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`inline-block h-3 w-3 rounded-full ${COR[sem.cor]}`} title={sem.motivos.join(' · ') || 'tudo em dia'} data-teste="semaforo" data-cor={sem.cor} />
+        <p className="text-[11px] text-white/60 truncate flex-1 min-w-[120px]">{sem.motivos.length ? sem.motivos.join(' · ') : 'tudo em dia: planejou, sem atraso, metas no ritmo'}</p>
+        {wa && (
+          <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-nz-verde/20 hover:bg-nz-verde/35 px-2.5 py-1 text-[11px] font-bold text-nz-verde" data-teste="whatsapp">
+            <MessageCircle className="w-3.5 h-3.5" /> {cobrar ? 'cobrar o pronto' : 'chamar'} no WhatsApp
+          </a>
+        )}
+        <button type="button" onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
+      </div>
+      <div className="mt-2 flex gap-1 overflow-x-auto" role="tablist" data-teste="abas-quadro-geral">
+        {ABAS.map(([id, rotulo, Icone]) => (
+          <button key={id} type="button" role="tab" aria-selected={aba === id} onClick={() => onAba(id)}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap ${aba === id ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white'}`} data-aba={id}>
+            {Icone && <Icone className="w-3 h-3" />}{rotulo}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const hoje = hojeISO || dataISO();
@@ -141,6 +208,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const [dia, setDia] = useState(() => proximoDiaUtil(hoje));
   const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora: '18:00' });
   const [mentoriaCompleta, setMentoriaCompleta] = useState(false);
+  const [destino, setDestino] = useState('lista');        // lista | quadro | ambos
+  const [prioridade, setPrioridade] = useState('alta');   // alta | media | baixa
+  const [repetirSemana, setRepetirSemana] = useState(false);
+  const [abaModal, setAbaModal] = useState('pessoa');
   const [devolvendo, setDevolvendo] = useState(null); // { id, motivo }
   const [gerando, setGerando] = useState(false);
   // 📚 o catálogo: o que veio do banco + o padrão do código
@@ -175,7 +246,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const carregar = useCallback(async () => {
     const [p, u, c, a] = await Promise.all([
       supabase.from('xgame_participantes').select('*').eq('ativo', true).order('created_date'),
-      supabase.from('app_users').select('id,full_name,nickname,role,career_levels').order('full_name'),
+      supabase.from('app_users').select('id,full_name,nickname,role,career_levels,phone').order('full_name'),
       supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
       supabase.from('xperf_acoes').select('*').order('titulo'),
     ]);
@@ -205,6 +276,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
 
   const participante = pessoa ? participanteDe(pessoa) : null;
+  // 🎯 as metas do mês da pessoa aberta no modal (o semáforo do topo também lê)
+  const tarefasDoMesDaPessoa = useMemo(() => tarefasCiclo.filter((t) => t.user_id === pessoaFixo && mesDe(String(t.data)) === mesDe(hoje)), [tarefasCiclo, pessoaFixo, hoje]);
+  const metasInfo = useMetasDaPessoa({ pessoaId: modalAberto ? pessoaFixo : null, mes: mesDe(hoje), hoje, tarefasDoMes: tarefasDoMesDaPessoa });
   // a função de trabalho (com o dia dela): a escolhida no painel da pessoa, ou a do nível do painel de controle
   const funcaoTrabalho = (id) => funcaoDaPessoa({ funcaoTitulo: participanteDe(id)?.funcao_titulo, nivel: equipe.find((p) => p.id === id)?.nivel });
   // a mentalidade: a escolhida; senão a que a régua lê no texto da ação;
@@ -274,6 +348,20 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     return { dist, sim, entraNoFixo, fixo: fixoDoParticipante(base) };
   }, [participante, tarefasDoDia, categoriaAtual, pesoEfetivo]);
 
+  // 🗂️ o card do quadro pessoal (DIR-75/76) que a demanda vira, ligado ou não à tarefa
+  const cardDaDemanda = (tarefaId) => ({
+    user_id: pessoa, titulo: nova.titulo.trim(), detalhe: ensinamento || null, coluna: 'aberto',
+    habito: habitoAtual ? Number(habitoAtual) : null, prazo: prazoDaPrioridade(nova.prazoDia || dia, prioridade),
+    responsavel_nome: nomeDe(currentUser?.id), virou_tarefa_id: tarefaId, virou_tarefa_em: tarefaId ? new Date().toISOString() : null,
+    ordem: 0, checklist: [],
+  });
+  const limparFormulario = () => {
+    setAcaoEscolhida('');
+    setRepetirSemana(false);
+    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora: nova.prazoHora || '18:00' });
+    carregarTarefas();
+  };
+
   const distribuir = async () => {
     if (!pessoa || !nova.titulo.trim()) { toast.error('Escolha a pessoa e diga qual é a tarefa.'); return; }
     setSalvando(true);
@@ -297,6 +385,15 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       carregarTarefas();
       return;
     }
+    // 🗂️ destino: só o quadro (card, sem tarefa do dia)
+    if (destino === 'quadro') {
+      const { error } = await supabase.from('metodo_quadro').insert(cardDaDemanda(null));
+      setSalvando(false);
+      if (error) { toast.error('Não pôs no quadro — tenta de novo'); return; }
+      toast.success(`Card no quadro de ${nomeDe(pessoa)}: "${nova.titulo.trim()}" (prioridade ${prioridade})`);
+      limparFormulario();
+      return;
+    }
     const linha = {
       user_id: pessoa, data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
       feito: false, ordem: tarefasDoDia.length, categoria: categoriaAtual, peso: pesoEfetivo,
@@ -307,9 +404,18 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       // ⏰ o "pronto até": no dia da tarefa (ou no dia escolhido), na hora escolhida
       prazo_em: prazoDe(nova.prazoDia || dia, nova.prazoHora || '18:00'),
     };
-    const { error } = await supabase.from('metodo_tarefas').insert(linha);
+    // 📅 repetir nos dias úteis até a sexta desta semana
+    const diasAlvo = repetirSemana ? diasUteisAteSexta(dia) : [dia];
+    const linhas = diasAlvo.map((d) => ({ ...linha, data: d, prazo_em: prazoDe(d === dia ? (nova.prazoDia || d) : d, nova.prazoHora || '18:00') }));
+    const { data: gravadas, error } = await supabase.from('metodo_tarefas').insert(linhas).select();
     setSalvando(false);
     if (error) { toast.error('Não distribuiu a tarefa — tenta de novo'); return; }
+    // 🗂️ os dois: o card do quadro nasce ligado à tarefa do dia
+    if (destino === 'ambos') {
+      const primeira = Array.isArray(gravadas) ? gravadas[0] : gravadas;
+      await supabase.from('metodo_quadro').insert(cardDaDemanda(primeira?.id || null));
+    }
+    if (diasAlvo.length > 1) toast.success(`${diasAlvo.length} dias: "${linha.titulo}" de ${fmtDia(diasAlvo[0])} a ${fmtDia(diasAlvo.at(-1))}`);
     // a ação do catálogo (do banco) conta um uso — é o que sobe na lista
     const usada = catalogo.find((a) => a.id === acaoEscolhida);
     if (usada && !usada.padrao) supabase.from('xperf_acoes').update({ usos: (Number(usada.usos) || 0) + 1 }).eq('id', usada.id).then(() => {});
@@ -612,6 +718,25 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               </div>
             )}
 
+            {/* 🗂️ onde a demanda cai, com que prioridade, e se repete na semana */}
+            <div className="mt-3 flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider" data-teste="destino-bloco">
+              <label>destino
+                <select value={destino} onChange={(e) => setDestino(e.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="destino">
+                  <option value="lista">lista do dia</option><option value="quadro">quadro dele</option><option value="ambos">os dois (ligados)</option>
+                </select>
+              </label>
+              <label>prioridade
+                <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="prioridade">
+                  <option value="alta">alta · card pra hoje</option><option value="media">média · card em 3 dias</option><option value="baixa">baixa · card em 7 dias</option>
+                </select>
+              </label>
+              {destino !== 'quadro' && (
+                <label className="inline-flex items-center gap-1 normal-case">
+                  <input type="checkbox" checked={repetirSemana} onChange={(e) => setRepetirSemana(e.target.checked)} className="accent-green-600" data-teste="repetir-semana" />
+                  repetir nos dias úteis até sexta ({diasUteisAteSexta(dia).length} dia{diasUteisAteSexta(dia).length === 1 ? '' : 's'})
+                </label>
+              )}
+            </div>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <Button size="sm" onClick={distribuir} disabled={salvando || !nova.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]" data-teste="distribuir">
                 {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
@@ -707,7 +832,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           <div className="mt-2 flex items-center gap-2 flex-wrap">
             <select
               value={pessoaFixo}
-              onChange={(e) => { setPessoaFixo(e.target.value); if (e.target.value) setModalAberto(true); }}
+              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
               className={`${campo} min-w-[240px]`}
               data-teste="pessoa-fixo"
             >
@@ -735,14 +860,15 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center p-0 sm:p-4" data-teste="modal-pessoa" data-pessoa={pessoaFixo}>
             <div className="absolute inset-0 bg-black/70" onClick={() => setModalAberto(false)} />
             <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-white/15 p-4 text-white" style={{ background: 'var(--xeos-preto, #00020C)' }}>
-              <div className="flex items-start justify-between gap-2">
+              <QuadroGeralTopo pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} telefone={usuarios.find((u) => u.id === pessoaFixo)?.phone} tarefasCiclo={tarefasCiclo} hoje={hoje} aba={abaModal} onAba={setAbaModal} onFechar={() => setModalAberto(false)} metasInfo={metasInfo} />
+              <div className="flex items-start justify-between gap-2" hidden={abaModal !== 'pessoa'}>
                 <div className="min-w-0">
                   <p className="text-[15px] font-extrabold truncate">{nomeDe(pessoaFixo)}</p>
                   <p className="text-[11px] text-white/45">{funcaoTrabalho(pessoaFixo)?.nome || funcaoDe(pessoaFixo)}{base.empresa ? ` · ${rotuloDaEmpresa(base.empresa, base.empresa_via)}` : ''} <span className="text-white/25">· {participanteDe(pessoaFixo)?.funcao_titulo ? 'função escolhida aqui' : 'função do painel de controle'}</span></p>
                 </div>
-                <button type="button" onClick={() => setModalAberto(false)} aria-label="Fechar" className="rounded-lg p-1.5 text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
               </div>
 
+              <div hidden={abaModal !== 'pessoa'} data-teste="aba-pessoa">
               {/* 🏢 função e empresa — de onde sai o dia da pessoa */}
               {(() => {
                 const f = funcaoTrabalho(pessoaFixo);
@@ -898,6 +1024,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 </div>
               )}
 
+              </div>
+              {abaModal === 'metas' && <AbaMetas pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} funcaoId={funcaoTrabalho(pessoaFixo)?.id} mes={mesDe(hoje)} criadoPorId={currentUser?.id} metasInfo={metasInfo} />}
+              {abaModal === 'programa' && <AbaPrograma pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} mentalidade={funcaoTrabalho(pessoaFixo)?.mentalidade || mentalidadePadrao(base.cargo)} hoje={hoje} criadoPorId={currentUser?.id} />}
+              {abaModal === 'semana' && <AbaSemana pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} hoje={hoje} participante={base} />}
+              {abaModal === 'quadro' && <AbaQuadro pessoaId={pessoaFixo} hoje={hoje} responsavelNome={nomeDe(currentUser?.id)} />}
+              {abaModal === 'historico' && <AbaHistorico pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} />}
               <div className="mt-3 flex justify-end">
                 <Button size="sm" onClick={() => { setPessoa(pessoaFixo); setModalAberto(false); }} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]">
                   <Send className="w-3.5 h-3.5 mr-1" /> distribuir tarefa pra {nomeDe(pessoaFixo).split(' ')[0]}

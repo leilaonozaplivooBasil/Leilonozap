@@ -20,7 +20,7 @@ window.__bancoFalso = {
   tabelas: {
     app_users: [
       { id: 'dono', full_name: 'Luiz Santanna', nickname: 'Luiz', role: 'super_admin', career_levels: ['ceo'] },
-      { id: 'emanuel', full_name: 'Emanuel Silva', nickname: 'Emanuel', role: 'user', career_levels: ['executivo_conta'] },
+      { id: 'emanuel', full_name: 'Emanuel Silva', nickname: 'Emanuel', role: 'user', career_levels: ['executivo_conta'], phone: '(21) 99999-1234' },
       { id: 'carla', full_name: 'Carla Souza', nickname: 'Carla', role: 'user', career_levels: ['embaixador'] },
       { id: 'tiago', full_name: 'Tiago Trainee', nickname: 'Tiago', role: 'user', career_levels: ['trainee_diretor'] },
     ],
@@ -39,6 +39,15 @@ window.__bancoFalso = {
       { id: 't6', user_id: 'carla', data: '2026-09-07', hora: '09:00', titulo: 'Enviar o relatório da loja', peso: 4, categoria: 'mentoria', feito: true, origem: 'xperf', mentalidade: 'diretor', habito: 7, prazo_em: new Date('2026-09-07T18:00:00').toISOString() /* 18:00 no fuso do navegador */, pronto_em: new Date('2026-09-07T10:00:00').toISOString() },
     ],
     xperf_encontros: [],
+    // vendas pagas do Emanuel em setembro (pra meta de faturamento/produto)
+    catalog_sales: [
+      { id: 's1', seller_id: 'emanuel', status: 'paid', kind: 'produto', created_date: '2026-09-03T10:00:00Z', total_amount: 1200, product_title: 'Kit Solar 500W', product_id: 'p1', quantity: 2 },
+      { id: 's2', seller_id: 'emanuel', status: 'paid', kind: 'produto', created_date: '2026-09-05T10:00:00Z', total_amount: 800, product_title: 'Caixa de Som PCX', product_id: 'p2', quantity: 1 },
+    ],
+    metodo_quadro_listas: [{ id: 'l1', user_id: 'emanuel', nome: 'Trabalho', ordem: 0, recolhida: false }],
+    metodo_quadro: [{ id: 'q1', user_id: 'emanuel', titulo: 'Fechar o contrato da loja Norte', coluna: 'aberto', prazo: '2026-09-10', lista_id: 'l1', checklist: [{ texto: 'proposta', feito: true }, { texto: 'assinatura', feito: false }], ordem: 0 }],
+    xperf_metas: [],
+    xperf_programa: [],
     xperf_entregaveis: [],
   },
 };
