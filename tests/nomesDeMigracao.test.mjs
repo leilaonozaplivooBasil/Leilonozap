@@ -60,6 +60,35 @@ describe('nomes das migrações do Supabase', () => {
     }
   });
 
+  // 🔒 DIR-71 — a SEGUNDA trava: versão repetida.
+  // A auditoria de 06/09/2026 contra o banco de produção achou
+  // 20260730_concurso_checkin.sql NUNCA aplicada, escondida atrás de
+  // 20260730_wallet_held_balance.sql: as duas dividiam a versão "20260730", e no
+  // histórico do banco `version` é chave primária — uma linha marcava as duas
+  // como aplicadas. Cinco semanas assim, sem erro nenhum, com a API engolindo o
+  // PATCH da coluna que não existia.
+  test('duas migrações novas com a MESMA versão são REPROVADAS', () => {
+    const a = join(DIR, '29990101000000_teste_colisao_a.sql');
+    const b = join(DIR, '29990101000000_teste_colisao_b.sql');
+    writeFileSync(a, '-- arquivo temporário do teste; removido no finally\n');
+    writeFileSync(b, '-- arquivo temporário do teste; removido no finally\n');
+    try {
+      const r = rodar();
+      assert.equal(r.ok, false, 'o checador deixou passar duas migrações na mesma versão');
+      assert.match(r.saida, /29990101000000/);
+    } finally {
+      unlinkSync(a);
+      unlinkSync(b);
+    }
+  });
+
+  test('as colisões de herança continuam passando (renomeá-las reaplicaria backfill)', () => {
+    // Elas já estão registradas no histórico do banco. Se a trava passasse a
+    // reprová-las, a saída natural seria renomear — e aí o CLI as veria como
+    // novas e tentaria rodar de novo backfill e limpeza de dados.
+    assert.equal(rodar().ok, true, 'a lista de herança de colisão furou');
+  });
+
   test('a lista de herança só cobre arquivos que ainda existem', () => {
     // Se alguém apagar ou renomear um dos 10 antigos, a entrada correspondente vira
     // lixo e passa a ser uma exceção aberta pra um nome inválido futuro.

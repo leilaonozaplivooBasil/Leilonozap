@@ -12,6 +12,53 @@
 
 ---
 
+## DIR-71 — O robô de migração nunca funcionou: acertar o histórico
+
+**Emitida por:** dono (06/09/2026): *"faça o que precisa ser feito, só não
+quebre nada."* Autorização dada depois de eu reportar duas coisas na
+publicação: o RLS aberto num backup do Financeiro e a falha do robô que
+aplica migração no banco.
+
+**Data:** 06/09/2026.
+
+**O que a investigação achou (e é pior do que o reportado):** as **23
+execuções** do workflow `deploy-migrations` falharam — **todas, desde
+21/08**. A promessa escrita no cabeçalho dele ("aplica a migração em
+produção automaticamente") nunca valeu um dia. Toda migração dos últimos
+15 dias foi aplicada na mão ou pelo MCP.
+
+**Causa:** o histórico do banco tinha **11 linhas** para **~57 arquivos**
+de migração. O `supabase db push` recusa quando o banco tem versão que a
+pasta não tem — e tinha 9. Só que destravar isso sem mais nada seria PIOR:
+ele passaria a enxergar **56 migrações como pendentes**, incluindo
+`backfill_financial_income`, `backfill_leilao_retido` e
+`market_value_limpeza`, que **alteram dados de negócio**. Ou seja: o robô
+quebrado estava, sem querer, segurando uma bomba.
+
+**Escopo autorizado:**
+1. **Auditar antes de tocar.** 56 migrações conferidas objeto a objeto
+   contra o banco de produção (só leitura), cada uma com contraprova
+   adversarial independente.
+2. **Acertar o histórico** marcando como aplicadas só as que a auditoria
+   PROVOU aplicadas, com backup da tabela antes.
+3. **Deixar pendentes** as 5 que faltam de verdade e são DDL aditivo puro
+   — o robô aplica na primeira execução que funcionar.
+4. **RLS** no backup `financeiro_rotulos_backup_20260905`, via migração
+   no fluxo normal (é a prova de que o robô voltou).
+5. **Trava nova no CI:** duas migrações não podem mais dividir a mesma
+   versão.
+
+**Decisão minha, dita ao dono:** duas migrações que a auditoria achou
+incompletas ficam marcadas como aplicadas e **não** entram na fila do
+robô — `contrato_assinaturas` (a policy que falta foi removida de
+propósito por LGPD) e `cancelamento_estorna` (troca uma função do caminho
+do dinheiro). A segunda é achado sério e vai em separado, para o dono
+decidir.
+
+**Fora do escopo:** rodar qualquer migração que altere DADOS.
+
+---
+
 ## DIR-70 — O menu da Top College lê como uma coisa só
 
 **Emitida por:** dono (05/09/2026), com print do menu flutuante: *"lá em

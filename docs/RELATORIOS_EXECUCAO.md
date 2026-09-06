@@ -3240,3 +3240,78 @@ build exit 0; prova em navegador **189/189 ZERO erros**; lint 62 (a dívida
 de imports não usados que já existia no main e não bloqueia CI).
 
 **Status:** PUBLICADO EM PRODUÇÃO por autorização expressa do dono.
+
+---
+
+## REL-71 — O robô de migração nunca funcionou (DIR-71)
+
+**Ordem:** *"faça o que precisa ser feito, só não quebre nada."*
+
+**O QUE EU FUI CONFERIR PRIMEIRO.** Na publicação eu reportei que o deploy
+de migração tinha falhado. Fui ver o histórico do workflow: **23 execuções,
+23 falhas, desde a primeira, em 21/08**. O arquivo dele promete "aplica a
+migração de produção automaticamente, com `supabase db push`" — e nunca
+aplicou nada. Todas as migrações destes 15 dias entraram na mão ou pelo
+MCP. O próprio cabeçalho do workflow conta o incidente que ele deveria
+impedir; ele mesmo repetiu o incidente, calado.
+
+**A CAUSA, E POR QUE DESTRAVAR SEM PENSAR SERIA PIOR.** O histórico do
+banco tinha **11 linhas** para **~57 arquivos**. O `db push` recusa
+quando o banco tem versão que a pasta não tem (9 casos, aplicadas pelo MCP
+com carimbo próprio). Só que, destravado, ele passaria a ver **56
+migrações como pendentes** — e três delas mexem em DADOS:
+`backfill_financial_income`, `backfill_leilao_retido` e
+`market_value_limpeza`. O robô quebrado estava segurando uma bomba sem
+saber.
+
+**A AUDITORIA (75 agentes, só leitura).** Cada uma das 56 foi lida, teve
+seus objetos extraídos (tabela, coluna, índice, policy, view, função,
+trigger, comentário) e conferidos um a um em `information_schema` /
+`pg_catalog` no banco de produção. Toda conclusão diferente de "aplicada"
+passou por uma segunda agente com a tarefa oposta: **provar que a colega
+errou**. Resultado: 37 aplicadas, 19 duvidosas.
+
+**O QUE ESTAVA ESCONDIDO — 4 migrações que nunca chegaram no banco:**
+
+| migração | o que falta | efeito hoje |
+|---|---|---|
+| `concurso_checkin` | coluna `last_checkin` + índice | o check-in do concurso vive só no localStorage: `api/concurso.js` faz o PATCH, ele falha e a função devolve `ok: true` |
+| `pix_key_app_users` | `app_users.pix_key` e `pix_key_type` | não há onde guardar a chave PIX de comissão |
+| `recuperacao_pix` | `recuperacao_toque1_em`, `toque2_em` + índice | os dois avisos de pagamento pendente não têm onde marcar que já saíram |
+| `captacao_aporte_externo` | `captacao_oportunidades.aporte_externo` | aporte fora do app não tem coluna |
+
+A do concurso ficou **5 semanas** invisível por um motivo que virou trava:
+`20260730_concurso_checkin.sql` e `20260730_wallet_held_balance.sql`
+dividiam a versão `20260730`, e no histórico do banco `version` é chave
+primária. Uma linha marcaria as duas como aplicadas.
+
+**ACHADO GRAVE, QUE NÃO É MEU PRA RESOLVER SOZINHO:**
+`20260821_cancelamento_estorna.sql` está só pela metade. A função
+`liberar_saldos_maturados()` em produção é **byte a byte** a versão antiga
+de 20260716: não tem o `exists()` contra `catalog_sales` nem a chamada de
+venda cancelada. Ou seja, a trava que impede liberar saldo de venda
+cancelada **não está no banco**. É caminho de dinheiro: marquei como
+aplicada para o robô NÃO trocar a função sozinho, e trago em separado para
+o dono decidir.
+
+**O QUE EU FIZ, NESTA ORDEM:**
+1. **Backup** do histórico em `supabase_migrations.historico_bkp_20260906`
+   (11 linhas) — o desfazer completo.
+2. **38 linhas** inseridas no histórico: só migrações provadas aplicadas.
+   Nenhum DDL, nenhum dado tocado — é livro-caixa.
+3. **8 linhas órfãs** removidas (as do MCP, cujo arquivo local passou a
+   constar). A nona, `lance_sem_data_criacao`, **não tinha arquivo**: o SQL
+   foi recuperado do próprio banco e commitado.
+4. **3 arquivos renomeados** para versões únicas, para as que faltam de
+   verdade ficarem visíveis ao robô.
+5. **RLS** do backup do Financeiro entra como migração nova, pelo fluxo
+   normal — é ela que prova que o robô voltou.
+6. **Trava no CI**: colisão de versão nova reprova o PR, com lista de
+   herança para as 8 antigas (renomeá-las reaplicaria backfill).
+
+**Prova:** suíte **1006/1006** (2 testes novos, um deles reprovando uma
+colisão de propósito); build exit 0; checador 71 migrações / 47 versões
+distintas.
+
+**Status:** o resultado real se mede na próxima execução do robô — é ela
+que aplica as 4 que faltam e o RLS.
