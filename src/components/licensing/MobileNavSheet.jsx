@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, X, Search, Check, Store } from 'lucide-react';
-import { getLicensingGroups, chaveDoItem, entradaFlutuante } from '@/lib/licensingTabs';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { ChevronDown, X, Search, Check, GripVertical } from 'lucide-react';
+import { chaveOrdemDe, lerOrdem, gravarOrdem, achatarItens, aplicarOrdem, moverItem } from '@/lib/navegacaoOrdem';
 import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 
 // 📱 NAVEGAÇÃO DO PAINEL DE ALAVANCAGEM NO CELULAR (13/08/2026 · reorganizado 18/08/2026
@@ -18,8 +19,16 @@ import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 //
 // 🖤 VISUAL: mesma identidade escura da barra do topo (--nz-preto-barra) com
 // acento verde neon — não mais um dropdown branco "genérico".
-const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings'];
-const chaveDe = chaveDoItem;
+//
+// ✋ ARRASTAR NO CELULAR (06/09/2026). Ordem do dono: "no celular não estou
+// conseguindo arrastar de forma simples os ícones, como no computador".
+// A lista agora é a MESMA lista achatada do desktop (@/lib/navegacaoOrdem),
+// com a MESMA ordem guardada (chave `navLateralOrdem_<id>`): cada item tem
+// uma alça ⠿ na ponta — segura e arrasta, e a ordem fica salva no aparelho.
+// O título do bloco (CONTA, OPERAÇÃO…) aparece na primeira vez que o bloco
+// surge na lista; com a ordem de fábrica, é exatamente o desenho de antes.
+// Com busca digitada a lista é um recorte, então o arrastar fica desligado
+// (mover o 2º de 3 filtrados não diz nada sobre a lista inteira).
 
 // 🎓 DOIS VESTUÁRIOS, UM COMPONENTE (06/09/2026). Ordem do dono, olhando o
 // cartão "LOJA & VENDAS · toque para navegar" e o modal que ele abre dentro
@@ -78,51 +87,19 @@ export default function MobileNavSheet({ user, activeTab, onTabChange, topColleg
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [grupoExpandido, setGrupoExpandido] = useState(null);
+  const chaveOrdem = chaveOrdemDe(user);
+  const [ordem, setOrdem] = useState(() => lerOrdem(chaveOrdem));
+  useEffect(() => { setOrdem(lerOrdem(chaveOrdem)); }, [chaveOrdem]);
 
-  // Mesma transformação da lateral do desktop: grupo "Operação" e qualquer aba
-  // com subItens viram UM item de grupo (expande pra mostrar os destinos).
-  const grupos = useMemo(() => {
-    return getLicensingGroups(user)
-      .map((grupo) => {
-        // 🎓 DIR-57 — mesma regra do desktop, agora vinda do dado (`colapsar`)
-        // em vez de um `if` no nome do grupo: um item só não vira acordeão.
-        if (grupo.colapsar) {
-          const visiveis = grupo.items.filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)));
-          if (visiveis.length > 1) {
-            const subItens = visiveis.map((item) => entradaFlutuante(item, onTabChange));
-            return { ...grupo, items: [{ type: 'group', ...grupo.colapsar, subItens }] };
-          }
-        }
-        const items = grupo.items
-          .filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)))
-          .map((item) => {
-            if (item.type === 'tab' && Array.isArray(item.subItens) && item.subItens.length) {
-              // 🐛 CORREÇÃO: os subItens (ex: Loja & Vendas) só traziam `value`
-              // — sem `to` nem `onClick` os botões não navegavam pra lugar nenhum.
-              // Hoje a montagem é a MESMA função do desktop (entradaFlutuante).
-              const subItens = item.subItens.map((sub) => (
-                entradaFlutuante({ ...sub, type: 'tab', value: item.value, catalogTab: sub.value }, onTabChange)
-              ));
-              return { type: 'group', chave: `tab:${item.value}`, label: item.label, icon: item.icon, subItens, tabValue: item.value };
-            }
-            return item;
-          });
-        return { ...grupo, items };
-      })
-      .filter((g) => g.items.length > 0);
-  }, [user]);
+  // Mesma lista única do desktop, na mesma ordem.
+  const itens = useMemo(() => aplicarOrdem(achatarItens(user, onTabChange), ordem), [user, onTabChange, ordem]);
 
-  // Seção atual (para o rótulo do botão): a aba ativa dentro dos grupos, olhando
-  // também dentro dos itens de grupo (ex: Central de Vendas está "dentro" dele).
-  const atual = useMemo(() => {
-    for (const g of grupos) {
-      for (const item of g.items) {
-        if (item.type === 'tab' && item.value === activeTab) return item;
-        if (item.type === 'group' && item.tabValue === activeTab) return item;
-      }
-    }
-    return grupos[0]?.items[0];
-  }, [grupos, activeTab]);
+  // Seção atual (para o rótulo do botão): a aba ativa, olhando também dentro
+  // dos itens de grupo (ex: Central de Vendas está "dentro" dele).
+  const atual = useMemo(() => (
+    itens.find((item) => (item.type === 'tab' && item.value === activeTab) || (item.type === 'group' && item.tabValue === activeTab))
+    || itens[0]
+  ), [itens, activeTab]);
 
   // Esc fecha o painel
   useEffect(() => {
@@ -132,19 +109,22 @@ export default function MobileNavSheet({ user, activeTab, onTabChange, topColleg
     return () => window.removeEventListener('keydown', onKey);
   }, [aberto]);
 
-  const gruposFiltrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return grupos;
-    return grupos
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((i) =>
-          i.label.toLowerCase().includes(termo) ||
-          (i.subItens || []).some((s) => s.label.toLowerCase().includes(termo))
-        ),
-      }))
-      .filter((g) => g.items.length > 0);
-  }, [grupos, busca]);
+  const termoBusca = busca.trim().toLowerCase();
+  const itensFiltrados = useMemo(() => {
+    if (!termoBusca) return itens;
+    return itens.filter((i) =>
+      i.label.toLowerCase().includes(termoBusca) ||
+      (i.subItens || []).some((s) => s.label.toLowerCase().includes(termoBusca)));
+  }, [itens, termoBusca]);
+  const arrastavel = !termoBusca && !!chaveOrdem;
+
+  const aoSoltar = (resultado) => {
+    if (!resultado.destination || !arrastavel) return;
+    if (resultado.destination.index === resultado.source.index) return;
+    const chaves = moverItem(itens, resultado.source.index, resultado.destination.index).map((i) => i.chave);
+    setOrdem(chaves);
+    gravarOrdem(chaveOrdem, chaves);
+  };
 
   const escolher = (item) => {
     setAberto(false);
@@ -169,6 +149,115 @@ export default function MobileNavSheet({ user, activeTab, onTabChange, topColleg
 
   const AtualIcon = atual?.icon;
   const est = topCollege ? ESTILO_TOP_COLLEGE : ESTILO_PADRAO;
+
+  // ✋ a alça: é SÓ ela que arrasta — o resto da linha continua sendo o botão
+  // que navega, então um toque normal nunca vira arrasto por engano.
+  const alca = (provided, snapshot) => (
+    <span
+      {...provided.dragHandleProps}
+      aria-label="segure e arraste pra mudar a ordem"
+      data-teste="alca"
+      className={`flex h-[52px] w-9 flex-shrink-0 items-center justify-center rounded-lg ${
+        arrastavel ? (snapshot.isDragging ? 'text-white' : 'text-white/30 active:text-white/70') : 'text-white/10'}`}
+      style={{ touchAction: 'none' }}
+    >
+      <GripVertical className="h-4 w-4" />
+    </span>
+  );
+
+  const fundoLinha = (destacado, snapshot) => ({
+    className: `flex items-center rounded-xl transition-colors ${
+      snapshot.isDragging ? 'bg-white/15 shadow-2xl' : destacado ? est.ativoFundo : ''}`,
+    style: destacado && !snapshot.isDragging ? est.ativoSombra : undefined,
+  });
+
+  // Item de grupo (Operação / Central de Vendas): expande inline pra mostrar
+  // os destinos — mesma organização do menu flutuante do desktop.
+  const linhaGrupo = (item, provided, snapshot) => {
+    const Icon = item.icon;
+    const expandido = grupoExpandido === item.chave;
+    const ativo = !!item.tabValue && item.tabValue === activeTab;
+    const destacado = ativo || expandido;
+    return (
+      <div className="mb-1">
+        <div {...fundoLinha(destacado, snapshot)}>
+          <button
+            type="button"
+            onClick={() => setGrupoExpandido(expandido ? null : item.chave)}
+            className="flex min-w-0 flex-1 min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left active:bg-white/5"
+          >
+            <span
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+              style={{ background: destacado ? est.caixaAtiva : 'rgba(255,255,255,0.06)' }}
+            >
+              <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${destacado ? est.iconeAtivo : 'text-white/50'}`} />
+            </span>
+            <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${destacado ? est.textoAtivo : 'text-white/85'}`}>
+              {item.label}
+            </span>
+            <ChevronDown className={`h-4 w-4 flex-shrink-0 text-white/40 transition-transform ${expandido ? 'rotate-180' : ''}`} />
+          </button>
+          {alca(provided, snapshot)}
+        </div>
+        {expandido && !snapshot.isDragging && (
+          <div className={est.trilho}>
+            {item.subItens.map((sub) => {
+              const IconSub = sub.icon;
+              return (
+                <button
+                  key={sub.label}
+                  type="button"
+                  onClick={() => escolherSub(sub)}
+                  className="mb-0.5 flex w-full min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 text-left active:bg-white/5"
+                >
+                  {/* 🎓 DIR-59 — mesma regra do desktop: item com
+                      `marcaCompleta` mostra a LOGO no lugar do texto. */}
+                  {sub.marcaCompleta ? (
+                    <img src={sub.marcaCompleta} alt={sub.label} className="h-11 w-auto object-contain" draggable="false" />
+                  ) : (
+                    <>
+                      {(sub.marca || IconSub) && (
+                        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-white/5">
+                          <MarcaOuIcone marca={sub.marca} icone={IconSub} className="h-3.5 w-3.5 text-white/50" />
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold uppercase tracking-wide text-white/75">{sub.label}</span>
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const linhaItem = (item, provided, snapshot) => {
+    const Icon = item.icon;
+    const ativo = item.type === 'tab' && item.value === activeTab;
+    return (
+      <div className="mb-1" {...fundoLinha(ativo, snapshot)}>
+        <button
+          type="button"
+          onClick={() => escolher(item)}
+          className="flex min-w-0 flex-1 min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left active:bg-white/5"
+        >
+          <span
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+            style={{ background: ativo ? est.caixaAtiva : 'rgba(255,255,255,0.06)' }}
+          >
+            <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${ativo ? est.iconeAtivo : 'text-white/50'}`} />
+          </span>
+          <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${ativo ? est.textoAtivo : 'text-white/85'}`}>
+            {item.label}
+          </span>
+          {ativo && <Check className={est.check} />}
+        </button>
+        {alca(provided, snapshot)}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -240,106 +329,51 @@ export default function MobileNavSheet({ user, activeTab, onTabChange, topColleg
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain px-2 py-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
-              {gruposFiltrados.length === 0 && (
+              {itensFiltrados.length === 0 && (
                 <p className="px-3 py-6 text-center text-sm font-medium text-white/40">Nada encontrado.</p>
               )}
 
-              {gruposFiltrados.map((grupo) => (
-                <div key={grupo.title} className="mb-3">
-                  <p className={est.tituloGrupo}>
-                    <span className={est.bolinha} style={est.bolinhaEstilo} />
-                    {grupo.title}
-                  </p>
-                  {grupo.items.map((item) => {
-                    const Icon = item.icon;
+              <DragDropContext onDragEnd={aoSoltar}>
+                <Droppable droppableId="navCelular">
+                  {(solto) => (
+                    <div ref={solto.innerRef} {...solto.droppableProps} data-teste="lista-navegacao">
+                      {itensFiltrados.map((item, i) => {
+                        // o título do bloco na PRIMEIRA vez que o bloco aparece
+                        const primeiraDoBloco = itensFiltrados.findIndex((x) => x.grupo === item.grupo) === i;
+                        return (
+                          <Draggable key={item.chave} draggableId={item.chave} index={i} isDragDisabled={!arrastavel}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                style={provided.draggableProps.style}
+                                data-item-navegacao={item.chave}
+                              >
+                                {primeiraDoBloco && !snapshot.isDragging && (
+                                  <p className={est.tituloGrupo}>
+                                    <span className={est.bolinha} style={est.bolinhaEstilo} />
+                                    {item.titulo}
+                                  </p>
+                                )}
+                                {item.type === 'group'
+                                  ? linhaGrupo(item, provided, snapshot)
+                                  : linhaItem(item, provided, snapshot)}
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                      {solto.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
 
-                    // Item de grupo (Operação / Central de Vendas): expande inline
-                    // pra mostrar os destinos — mesma organização do menu flutuante do desktop.
-                    if (item.type === 'group') {
-                      const expandido = grupoExpandido === item.chave;
-                      const ativo = !!item.tabValue && item.tabValue === activeTab;
-                      const destacado = ativo || expandido;
-                      return (
-                        <div key={item.chave} className="mb-1">
-                          <button
-                            type="button"
-                            onClick={() => setGrupoExpandido(expandido ? null : item.chave)}
-                            className={`flex w-full min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                              destacado ? est.ativoFundo : 'active:bg-white/5'
-                            }`}
-                            style={destacado ? est.ativoSombra : undefined}
-                          >
-                            <span
-                              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
-                              style={{ background: destacado ? est.caixaAtiva : 'rgba(255,255,255,0.06)' }}
-                            >
-                              <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${destacado ? est.iconeAtivo : 'text-white/50'}`} />
-                            </span>
-                            <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${destacado ? est.textoAtivo : 'text-white/85'}`}>
-                              {item.label}
-                            </span>
-                            <ChevronDown className={`h-4 w-4 flex-shrink-0 text-white/40 transition-transform ${expandido ? 'rotate-180' : ''}`} />
-                          </button>
-                          {expandido && (
-                            <div className={est.trilho}>
-                              {item.subItens.map((sub) => {
-                                const IconSub = sub.icon;
-                                return (
-                                  <button
-                                    key={sub.label}
-                                    type="button"
-                                    onClick={() => escolherSub(sub)}
-                                    className="mb-0.5 flex w-full min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 text-left active:bg-white/5"
-                                  >
-                                    {/* 🎓 DIR-59 — mesma regra do desktop: item com
-                                        `marcaCompleta` mostra a LOGO no lugar do texto. */}
-                                    {sub.marcaCompleta ? (
-                                      <img src={sub.marcaCompleta} alt={sub.label} className="h-11 w-auto object-contain" draggable="false" />
-                                    ) : (
-                                      <>
-                                        {(sub.marca || IconSub) && (
-                                          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-white/5">
-                                            <MarcaOuIcone marca={sub.marca} icone={IconSub} className="h-3.5 w-3.5 text-white/50" />
-                                          </span>
-                                        )}
-                                        <span className="min-w-0 flex-1 truncate text-sm font-semibold uppercase tracking-wide text-white/75">{sub.label}</span>
-                                      </>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    const ativo = item.type === 'tab' && item.value === activeTab;
-                    return (
-                      <button
-                        key={item.type === 'tab' ? item.value : item.to}
-                        type="button"
-                        onClick={() => escolher(item)}
-                        className={`mb-1 flex w-full min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                          ativo ? est.ativoFundo : 'active:bg-white/5'
-                        }`}
-                        style={ativo ? est.ativoSombra : undefined}
-                      >
-                        <span
-                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
-                          style={{ background: ativo ? est.caixaAtiva : 'rgba(255,255,255,0.06)' }}
-                        >
-                          <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${ativo ? est.iconeAtivo : 'text-white/50'}`} />
-                        </span>
-                        <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${ativo ? est.textoAtivo : 'text-white/85'}`}>
-                          {item.label}
-                        </span>
-                        {ativo && <Check className={est.check} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
+              {arrastavel && itensFiltrados.length > 1 && (
+                <p className="px-3 pt-2 pb-1 text-center text-[10.5px] font-medium text-white/35">
+                  segure <GripVertical className="inline h-3 w-3 -mt-0.5" aria-hidden="true" /> e arraste pra mudar a ordem — vale no computador também
+                </p>
+              )}
             </div>
           </div>
         </div>
