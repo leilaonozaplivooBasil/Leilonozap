@@ -12,6 +12,73 @@
 
 ---
 
+## DIR-80 — O celular em dois andares, e a rotina passa a ser DELA
+
+**Emitida por:** dono (06/09/2026), com o Compromisso aberto no celular:
+*"precisa a parte de lista, precisa organizar... a rotina perfeita, foi gerada
+uma vez, ela tem que ficar todo dia, só se a pessoa pedir pra parar. A pessoa
+tem que ter o botão de editar, de excluir — ela pode gerar a perfeita e excluir
+e incluir, na rotina dela. Existem pessoas que não vão pra empresa, então ela
+tem outra rotina. Então ela pode editar de acordo com ela e seguir a rotina
+dela no dia."* Aprovação: **"PODE"**.
+
+**Data:** 06/09/2026.
+
+**O que eu conferi antes de prometer:**
+
+1. **O dinheiro não está errado.** Rodei `distribuirDia` de verdade: ela
+   **reparte** (soma das fatias = valor do dia) e pesos diferentes dão fatias
+   diferentes (6/1/3 → 62,51 / 10,41 / 31,25). O "R$ 83,33" repetido em toda
+   linha do print significa **peso uniforme** — a marca de um dia gerado
+   ANTES do conserto da DIR-75. É dado velho, não defeito vivo.
+2. **A coluna `metodo_perfil.rotina` (JSONB) já existe** desde a migração do
+   Método — e a tela **só lê** dela
+   (`perfil?.rotina?.length ? perfil.rotina : ROTINA_PADRAO`). **Nunca ninguém
+   escreveu.** Por isso todo mundo recebe a rotina da casa e ninguém consegue
+   ter a sua. O lugar já estava lá, vazio.
+3. **O celular quebra por uma causa só:** título e ações dividem a MESMA
+   linha. Sobra uma coluna estreita pro título, que se estica em seis linhas —
+   e a faixa de ações passa por cima do texto, com a lixeira cortada pela borda.
+
+**O que entra:**
+
+1. **A linha da tarefa vira DOIS ANDARES no celular** — hora + título em cima,
+   com a largura toda; ações embaixo. No desktop nada muda. A caixinha de
+   marcar alinha no topo do texto, não no meio.
+2. **Botão de EDITAR** na tarefa (só existia a lixeira).
+3. **A rotina passa a ser da pessoa**: editar, excluir e incluir item,
+   gravando em `metodo_perfil.rotina`.
+4. **Geração automática todo dia**, a partir do momento em que ela gera a
+   primeira vez — com **chave de desligar** ("só se ela pedir pra parar").
+
+**As duas travas que impedem isso de virar um inferno** (é aqui que features
+assim quebram, e por isso entram como regra, não como cuidado):
+
+- **Idempotência.** A geração automática só age em **dia vazio**. Abrir a tela
+  duas vezes não pode duplicar o dia.
+- **Apagar do DIA ≠ apagar da ROTINA.** Apagar uma tarefa de hoje vale só pra
+  hoje; apagar da rotina é que muda todo dia. Se o automático ressuscitar o que
+  a pessoa apagou, ela conclui que o sistema não obedece — e para de confiar.
+  São dois botões com significados diferentes, e a tela diz qual é qual.
+
+**Decisão minha, delegada pelo dono ("o que você decidir eu vou contigo"):**
+editar a rotina vale **a partir de amanhã**. Mexer no dia que ela já está
+tocando apagaria o que ela já fez. Quem quiser aplicar hoje tem um botão
+explícito — nunca automático.
+
+**O que NÃO entra:**
+- A `ROTINA_PADRAO` da casa continua sendo o ponto de partida de quem nunca
+  editou; ela não é alterada.
+- O X-Pay, o peso e o rateio não mudam de regra.
+- Nada vai a produção nesta rodada.
+
+**Prova exigida (REL-34.1):** no viewport de celular, a faixa de ações **não
+pode sobrepor o título** nem sair da tela; a tarefa tem botão de editar; a
+rotina editada **grava** em `metodo_perfil.rotina`; o dia seguinte nasce
+gerado; e gerar duas vezes **não duplica**.
+
+---
+
 ## DIR-79 — A segunda que vem, o treinamento que existe, e a IA presa nos fatos
 
 **Emitida por:** dono (06/09/2026), com o Encontro da Mentalidade aberto na
