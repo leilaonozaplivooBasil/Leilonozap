@@ -34,6 +34,7 @@ import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import XGameJornada from './XGameJornada';
+import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -479,7 +480,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
   const [painelAberto, setPainelAberto] = useState(false);
-  const mostrarPainel = visao === 'lista' || painelAberto;
+  // 📱 no celular o placar completo NÃO abre sozinho na visão "lista" — só pelo
+  // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
+  // "muito texto explicando"). No desktop segue como sempre foi.
+  const celular = useEhCelular();
+  const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
   const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
@@ -952,11 +957,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const grupos = agruparSonhosPorHorizonte(sonhos);
           return (
             <div className="space-y-4">
-              <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
+              <GuiaMovel titulo="Como montar o seu quadro" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
                 🖼️ <strong>Monte o seu quadro.</strong> O sonho tem três prazos — ⚡ curto (1 a 2 anos), 🎯 médio (2 a 4) e 🏆 longo (5 pra frente).
                 Coloque quantas imagens quiser em cada um (busque pelo nome sem sair daqui, ou envie do aparelho) e escreva os
                 <strong> detalhes exatos</strong> embaixo de cada imagem — se for um carro: ano, cor, banco de couro, roda. Sonho detalhado vira meta.
-              </div>
+              </GuiaMovel>
 
               {HORIZONTES_SONHO.map((hz) => {
                 const doHorizonte = grupos[hz.id];
@@ -1079,7 +1084,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 />
               );
             })()}
-            <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1.5">
+            <GuiaMovel titulo="Como funciona a Rotina Perfeita" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1.5">
               <p>
                 📣 <strong>A Rotina Perfeita não é agenda de posts</strong> — é a sua rotina real virando narrativa nas redes:{' '}
                 <strong className="text-nz-tinta">{PRINCIPIO_ROTINA.percepcoes.join(' → ')}</strong>.
@@ -1097,7 +1102,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-[11px] italic pt-1">Quando chegar a hora de apresentar a Leilão NoZap, a audiência já viu o mais importante: <strong>a pessoa vivendo aquilo que fala.</strong></p>
                 </div>
               )}
-            </div>
+            </GuiaMovel>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(-1)}><ChevronLeft className="w-5 h-5 text-nz-tinta" /></Button>
@@ -1150,7 +1155,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                       </span>
                     )
                   )}
-                  {visao === 'jornada' && (
+                  {(visao === 'jornada' || celular) && (
                     <button
                       type="button"
                       onClick={() => setPainelAberto(!painelAberto)}
@@ -1677,9 +1682,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
           return (
             <div className="space-y-4">
-              <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
+              <GuiaMovel titulo="Como fazer o contato" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
                 📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
-              </div>
+              </GuiaMovel>
 
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
               <div>

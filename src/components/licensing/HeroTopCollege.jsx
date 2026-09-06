@@ -80,16 +80,25 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
           quebrava em três. Tirando ela da coluna, a frase ganha a largura
           inteira da faixa e cabe em uma linha (duas no notebook). No
           celular o flex-wrap joga a frase pra linha de baixo sozinha. */}
-      <div className="relative flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-3 px-6 sm:px-9 pt-6 sm:pt-8">
-        <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-11 w-auto shrink-0" draggable="false" />
-        <span aria-hidden="true" className="h-9 sm:h-11 w-px bg-white/20 shrink-0" />
-        <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-7 w-auto shrink-0" draggable="false" />
-        <span aria-hidden="true" className="hidden sm:block h-7 w-px bg-white/15 shrink-0" />
+      {/* 📱 06/09 — NO CELULAR a frase vai pra LATERAL das marcas (ordem do
+          dono: "pode entrar na lateral, do lado da logo, em duas linhas").
+          As duas marcas empilham numa coluna estreita à esquerda; a frase
+          ocupa o resto, em duas sentenças, uma embaixo da outra. No desktop
+          (`sm:contents` desfaz a coluna) a faixa é exatamente a de antes. */}
+      <div className="relative flex flex-nowrap sm:flex-wrap items-center gap-x-3 sm:gap-x-5 gap-y-3 px-6 sm:px-9 pt-6 sm:pt-8">
+        <div className="flex flex-col items-start gap-1.5 shrink-0 sm:contents">
+          <img src="/marca/topcollege.webp" alt="Top College" className="h-8 sm:h-11 w-auto shrink-0" draggable="false" />
+          <span aria-hidden="true" className="hidden sm:block h-11 w-px bg-white/20 shrink-0" />
+          <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-5 sm:h-7 w-auto shrink-0" draggable="false" />
+        </div>
+        <span aria-hidden="true" className="h-10 sm:h-7 w-px bg-white/15 shrink-0" />
         <p
-          className="basis-full sm:basis-auto sm:flex-1 sm:max-w-[42rem] text-[10px] sm:text-[11px] leading-snug text-white/40"
+          className="flex-1 min-w-0 sm:flex-1 sm:max-w-[42rem] text-[10px] sm:text-[11px] leading-snug text-white/40"
           style={{ fontFamily: 'Sora, sans-serif' }}
         >
-          A primeira faculdade de empreendedorismo do planeta · Estrutura de operação e expansão de qualquer negócio
+          <span className="block sm:inline">A primeira faculdade de empreendedorismo do planeta</span>
+          <span className="hidden sm:inline"> · </span>
+          <span className="block sm:inline">Estrutura de operação e expansão de qualquer negócio</span>
         </p>
       </div>
 

@@ -1091,7 +1091,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* 📱 Mobile: a barra que rolava pro lado virou um seletor + painel com
             TUDO organizado por grupos (mesma fonte única da lateral do desktop). */}
         <div className={naTopCollege ? 'md:hidden mb-4 px-4' : 'md:hidden mb-4'}>
-          <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
+          <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} topCollege={naTopCollege} />
         </div>
 
         {/* 🎓 DIR-62 — na Top College o topo branco vira a FAIXA DA ACADEMIA

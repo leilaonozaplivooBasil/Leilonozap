@@ -21,7 +21,59 @@ import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings'];
 const chaveDe = chaveDoItem;
 
-export default function MobileNavSheet({ user, activeTab, onTabChange }) {
+// 🎓 DOIS VESTUÁRIOS, UM COMPONENTE (06/09/2026). Ordem do dono, olhando o
+// cartão "LOJA & VENDAS · toque para navegar" e o modal que ele abre dentro
+// da Top College: "ela precisa ter a identidade visual da Top College".
+// Fora da faculdade NADA muda — ESTILO_PADRAO é, string por string, o que o
+// componente sempre teve (verde neon da barra). Dentro dela entra o
+// ESTILO_TOP_COLLEGE: sem caixa em volta (a "borda infinita" que vale pra
+// faculdade inteira), gradiente azul→magenta no lugar do verde, Sora nas
+// letras e as duas marcas assinando o topo do modal.
+const ESTILO_PADRAO = {
+  gatilho: 'w-full min-h-[56px] flex items-center gap-3 rounded-xl border border-nz-verde/25 bg-nz-preto-barra px-3.5 py-2.5 shadow-[0_4px_18px_rgba(0,0,0,0.25)] text-left active:opacity-90',
+  caixaGatilho: { background: 'linear-gradient(135deg, rgba(46,157,99,0.28), rgba(27,122,72,0.14))', boxShadow: '0 0 0 1px rgba(46,157,99,0.35)' },
+  iconeGatilho: 'h-[18px] w-[18px] text-nz-verde-claro',
+  chevronGatilho: 'h-4 w-4 flex-shrink-0 text-nz-verde-claro',
+  fonte: undefined,
+  folha: 'relative flex max-h-[85vh] flex-col rounded-t-2xl bg-nz-preto-barra shadow-2xl',
+  folhaEstilo: { borderTop: '1px solid rgba(46,157,99,0.35)', boxShadow: '0 -12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(46,157,99,0.12)' },
+  buscaIcone: 'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-nz-verde-claro',
+  buscaFoco: 'focus:border-nz-verde-claro/60',
+  tituloGrupo: 'flex items-center gap-2 px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.15em] text-nz-verde-claro/70',
+  bolinha: 'h-1 w-1 rounded-full bg-nz-verde-claro/70',
+  bolinhaEstilo: undefined,
+  ativoFundo: 'bg-nz-verde/15',
+  ativoSombra: { boxShadow: '0 0 0 1px rgba(46,157,99,0.35)' },
+  caixaAtiva: 'linear-gradient(135deg, rgba(46,157,99,0.35), rgba(27,122,72,0.18))',
+  iconeAtivo: 'text-nz-verde-claro',
+  textoAtivo: 'text-nz-verde-claro',
+  trilho: 'ml-4 mb-1 mt-1 border-l border-nz-verde/25 pl-3',
+  check: 'h-4 w-4 flex-shrink-0 text-nz-verde-claro',
+};
+const GRADIENTE_TC = 'linear-gradient(135deg, var(--topcollege-azul, #3B6FF6), var(--topcollege-magenta, #E62E8B))';
+const ESTILO_TOP_COLLEGE = {
+  gatilho: 'w-full min-h-[56px] flex items-center gap-3 border-b border-white/10 px-1 py-2.5 text-left active:opacity-90',
+  caixaGatilho: { background: GRADIENTE_TC, boxShadow: '0 6px 18px rgba(59,111,246,0.28)' },
+  iconeGatilho: 'h-[18px] w-[18px] text-white',
+  chevronGatilho: 'h-4 w-4 flex-shrink-0 text-white/60',
+  fonte: { fontFamily: 'Sora, sans-serif' },
+  folha: 'relative flex max-h-[85vh] flex-col rounded-t-2xl shadow-2xl',
+  folhaEstilo: { background: 'var(--xeos-preto, #00020C)', boxShadow: '0 -12px 40px rgba(0,0,0,0.65)' },
+  buscaIcone: 'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50',
+  buscaFoco: 'focus:border-white/40',
+  tituloGrupo: 'flex items-center gap-2 px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.15em] text-white/40',
+  bolinha: 'h-1 w-1 rounded-full',
+  bolinhaEstilo: { background: GRADIENTE_TC },
+  ativoFundo: 'bg-white/10',
+  ativoSombra: { boxShadow: 'inset 3px 0 0 var(--topcollege-magenta, #E62E8B)' },
+  caixaAtiva: GRADIENTE_TC,
+  iconeAtivo: 'text-white',
+  textoAtivo: 'text-white',
+  trilho: 'ml-4 mb-1 mt-1 border-l border-white/15 pl-3',
+  check: 'h-4 w-4 flex-shrink-0 text-white',
+};
+
+export default function MobileNavSheet({ user, activeTab, onTabChange, topCollege = false }) {
   const navigate = useNavigate();
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState('');
@@ -116,27 +168,30 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
   };
 
   const AtualIcon = atual?.icon;
+  const est = topCollege ? ESTILO_TOP_COLLEGE : ESTILO_PADRAO;
 
   return (
     <>
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="w-full min-h-[56px] flex items-center gap-3 rounded-xl border border-nz-verde/25 bg-nz-preto-barra px-3.5 py-2.5 shadow-[0_4px_18px_rgba(0,0,0,0.25)] text-left active:opacity-90"
+        className={est.gatilho}
+        style={est.fonte}
+        data-vestuario={topCollege ? 'top-college' : 'padrao'}
       >
         {AtualIcon && (
           <span
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
-            style={{ background: 'linear-gradient(135deg, rgba(46,157,99,0.28), rgba(27,122,72,0.14))', boxShadow: '0 0 0 1px rgba(46,157,99,0.35)' }}
+            style={est.caixaGatilho}
           >
-            <MarcaOuIcone marca={atual?.marca} icone={AtualIcon} className="h-[18px] w-[18px] text-nz-verde-claro" />
+            <MarcaOuIcone marca={atual?.marca} icone={AtualIcon} className={est.iconeGatilho} />
           </span>
         )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold uppercase tracking-wide text-white">{atual?.label}</span>
           <span className="block text-[10.5px] font-medium uppercase tracking-wider text-white/40">Toque para navegar</span>
         </span>
-        <ChevronDown className="h-4 w-4 flex-shrink-0 text-nz-verde-claro" />
+        <ChevronDown className={est.chevronGatilho} />
       </button>
 
       {aberto && (
@@ -144,13 +199,24 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
           <div className="absolute inset-0 bg-black/70" onClick={() => setAberto(false)} />
 
           <div
-            className="relative flex max-h-[85vh] flex-col rounded-t-2xl bg-nz-preto-barra shadow-2xl"
-            style={{ borderTop: '1px solid rgba(46,157,99,0.35)', boxShadow: '0 -12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(46,157,99,0.12)' }}
+            className={est.folha}
+            style={{ ...est.folhaEstilo, ...(est.fonte || {}) }}
           >
+            {/* 🎓 na Top College o fio do topo é o gradiente da faculdade */}
+            {topCollege && <div aria-hidden="true" className="h-[2px] w-full rounded-t-2xl" style={{ background: GRADIENTE_TC }} />}
             <div className="mx-auto mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-white/15" />
 
             <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
-              <span className="flex-1 text-sm font-bold uppercase tracking-wide text-white">Navegar no Painel</span>
+              {topCollege ? (
+                /* as duas marcas assinam o modal, como assinam a faixa da faculdade */
+                <span className="flex flex-1 items-center gap-2.5">
+                  <img src="/marca/topcollege.webp" alt="Top College" className="h-5 w-auto" draggable="false" />
+                  <span aria-hidden="true" className="h-5 w-px bg-white/20" />
+                  <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-3.5 w-auto" draggable="false" />
+                </span>
+              ) : (
+                <span className="flex-1 text-sm font-bold uppercase tracking-wide text-white">Navegar no Painel</span>
+              )}
               <button
                 type="button"
                 onClick={() => setAberto(false)}
@@ -163,12 +229,12 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
 
             <div className="border-b border-white/10 px-4 py-2.5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-nz-verde-claro" />
+                <Search className={est.buscaIcone} />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="BUSCAR SEÇÃO..."
-                  className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-sm font-medium uppercase tracking-wide text-white placeholder:text-white/30 outline-none focus:border-nz-verde-claro/60"
+                  className={`h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-3 text-sm font-medium uppercase tracking-wide text-white placeholder:text-white/30 outline-none ${est.buscaFoco}`}
                 />
               </div>
             </div>
@@ -180,8 +246,8 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
 
               {gruposFiltrados.map((grupo) => (
                 <div key={grupo.title} className="mb-3">
-                  <p className="flex items-center gap-2 px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.15em] text-nz-verde-claro/70">
-                    <span className="h-1 w-1 rounded-full bg-nz-verde-claro/70" />
+                  <p className={est.tituloGrupo}>
+                    <span className={est.bolinha} style={est.bolinhaEstilo} />
                     {grupo.title}
                   </p>
                   {grupo.items.map((item) => {
@@ -199,23 +265,23 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                             type="button"
                             onClick={() => setGrupoExpandido(expandido ? null : item.chave)}
                             className={`flex w-full min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                              destacado ? 'bg-nz-verde/15' : 'active:bg-white/5'
+                              destacado ? est.ativoFundo : 'active:bg-white/5'
                             }`}
-                            style={destacado ? { boxShadow: '0 0 0 1px rgba(46,157,99,0.35)' } : undefined}
+                            style={destacado ? est.ativoSombra : undefined}
                           >
                             <span
                               className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
-                              style={{ background: destacado ? 'linear-gradient(135deg, rgba(46,157,99,0.35), rgba(27,122,72,0.18))' : 'rgba(255,255,255,0.06)' }}
+                              style={{ background: destacado ? est.caixaAtiva : 'rgba(255,255,255,0.06)' }}
                             >
-                              <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${destacado ? 'text-nz-verde-claro' : 'text-white/50'}`} />
+                              <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${destacado ? est.iconeAtivo : 'text-white/50'}`} />
                             </span>
-                            <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${destacado ? 'text-nz-verde-claro' : 'text-white/85'}`}>
+                            <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${destacado ? est.textoAtivo : 'text-white/85'}`}>
                               {item.label}
                             </span>
                             <ChevronDown className={`h-4 w-4 flex-shrink-0 text-white/40 transition-transform ${expandido ? 'rotate-180' : ''}`} />
                           </button>
                           {expandido && (
-                            <div className="ml-4 mb-1 mt-1 border-l border-nz-verde/25 pl-3">
+                            <div className={est.trilho}>
                               {item.subItens.map((sub) => {
                                 const IconSub = sub.icon;
                                 return (
@@ -255,20 +321,20 @@ export default function MobileNavSheet({ user, activeTab, onTabChange }) {
                         type="button"
                         onClick={() => escolher(item)}
                         className={`mb-1 flex w-full min-h-[52px] items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                          ativo ? 'bg-nz-verde/15' : 'active:bg-white/5'
+                          ativo ? est.ativoFundo : 'active:bg-white/5'
                         }`}
-                        style={ativo ? { boxShadow: '0 0 0 1px rgba(46,157,99,0.35)' } : undefined}
+                        style={ativo ? est.ativoSombra : undefined}
                       >
                         <span
                           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
-                          style={{ background: ativo ? 'linear-gradient(135deg, rgba(46,157,99,0.35), rgba(27,122,72,0.18))' : 'rgba(255,255,255,0.06)' }}
+                          style={{ background: ativo ? est.caixaAtiva : 'rgba(255,255,255,0.06)' }}
                         >
-                          <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${ativo ? 'text-nz-verde-claro' : 'text-white/50'}`} />
+                          <MarcaOuIcone marca={item.marca} icone={Icon} className={`h-[17px] w-[17px] ${ativo ? est.iconeAtivo : 'text-white/50'}`} />
                         </span>
-                        <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${ativo ? 'text-nz-verde-claro' : 'text-white/85'}`}>
+                        <span className={`min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide ${ativo ? est.textoAtivo : 'text-white/85'}`}>
                           {item.label}
                         </span>
-                        {ativo && <Check className="h-4 w-4 flex-shrink-0 text-nz-verde-claro" />}
+                        {ativo && <Check className={est.check} />}
                       </button>
                     );
                   })}
