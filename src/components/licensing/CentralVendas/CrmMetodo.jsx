@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -1592,8 +1592,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                     type="button"
                                     onClick={abrir}
                                     title={`Abrir ${f.rotulo} (Hábito ${f.habito})`}
-                                    className="shrink-0 text-[11px] font-semibold text-nz-verde hover:text-nz-verde-claro"
-                                  >{f.chave === 'quadro' ? '🗂️' : '🔗'} {f.rotulo} →</button>
+                                    className="shrink-0 text-[11px] font-semibold text-nz-verde hover:text-nz-verde-claro inline-flex items-center gap-1"
+                                  >{f.chave === 'quadro' ? <LayoutGrid className="w-3 h-3" /> : <Link2 className="w-3 h-3" />} {f.rotulo}</button>
                                 );
                               })()}
                               {/* 🗂️ DIR-76 — dia → quadro: guardar em vez de perder */}

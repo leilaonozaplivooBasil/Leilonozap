@@ -9,10 +9,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ESTADO_ABERTO, ESTADO_FEITO, LISTAS_MODELO, CARD_EXEMPLO,
+  ESTADO_ABERTO, ESTADO_FEITO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA,
   estaFeito, estaAberto, progressoChecklist, atrasado, marcarFeito, reabrir,
   alternarItem, adicionarItem, removerItem, arquivavel, cartoesDaLista, feitosNaMesa,
   semLista, tarefaDoCartao, cartaoDaTarefa, cartaoDaTarefaFeita, resumoDoQuadro,
+  reordenarListas, ICONES_LISTA,
 } from '../src/lib/quadroCompromisso.js';
 
 const HOJE = '2026-09-07';
@@ -161,10 +162,55 @@ describe('🔗 ida e volta com o dia', () => {
 });
 
 describe('o modelo pronto', () => {
+  // 🎨 sem isto, uma cor de modelo que não existe na paleta cai no tom neutro
+  // SEM ERRO NENHUM — e o quadro do primeiro uso, que é o cartão de visita da
+  // ferramenta, nasceria cinza sem ninguém entender por quê.
+  test('toda cor do modelo existe na paleta', () => {
+    const fora = LISTAS_MODELO.filter((l) => !CORES_LISTA.includes(l.cor));
+    assert.deepEqual(fora.map((l) => `${l.nome}=${l.cor}`), []);
+  });
+
   test('três listas com nome e cor, e um card de exemplo com checklist aberto', () => {
     assert.equal(LISTAS_MODELO.length, 3);
     assert.ok(LISTAS_MODELO.every((l) => l.nome && l.cor));
     assert.ok(CARD_EXEMPLO.checklist.length >= 3);
     assert.ok(CARD_EXEMPLO.checklist.every((i) => i.feito === false));
+  });
+});
+
+describe('arrastar a lista de um lado pro outro (DIR-76.2)', () => {
+  const ls = [{ id: 'a', ordem: 0 }, { id: 'b', ordem: 1 }, { id: 'c', ordem: 2 }];
+
+  test('move e RENUMERA todas — ordem com buraco volta embaralhada na próxima leitura', () => {
+    const r = reordenarListas(ls, 'c', 0);
+    assert.deepEqual(r.map((l) => l.id), ['c', 'a', 'b']);
+    assert.deepEqual(r.map((l) => l.ordem), [0, 1, 2]);
+  });
+
+  test('move pra direita também', () => {
+    assert.deepEqual(reordenarListas(ls, 'a', 2).map((l) => l.id), ['b', 'c', 'a']);
+  });
+
+  test('índice fora da faixa gruda na ponta, e não quebra', () => {
+    assert.deepEqual(reordenarListas(ls, 'a', 99).map((l) => l.id), ['b', 'c', 'a']);
+    assert.deepEqual(reordenarListas(ls, 'c', -5).map((l) => l.id), ['c', 'a', 'b']);
+  });
+
+  test('mesma posição, lista inexistente ou destino inválido: MESMA lista', () => {
+    assert.equal(reordenarListas(ls, 'a', 0), ls);
+    assert.equal(reordenarListas(ls, 'nao-existe', 1), ls);
+    assert.equal(reordenarListas(ls, 'a', 'banana'), ls);
+  });
+
+  test('não muta a original', () => {
+    const antes = JSON.stringify(ls);
+    reordenarListas(ls, 'c', 0);
+    assert.equal(JSON.stringify(ls), antes);
+  });
+
+  test('os ícones oferecidos são nomes, e sem repetido', () => {
+    assert.ok(ICONES_LISTA.length >= 8);
+    assert.equal(new Set(ICONES_LISTA).size, ICONES_LISTA.length);
+    assert.ok(ICONES_LISTA.every((i) => typeof i === 'string' && i.trim()));
   });
 });

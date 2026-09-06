@@ -3755,3 +3755,103 @@ X-Performance foi tocado. A tarefa do dia continua nascendo pela entidade.
 
 **O que NÃO trouxe do MeisterTask, de propósito:** automações, impressão,
 limite por seção, ícone e cor de seção, comentários, anexos.
+
+---
+
+## REL-76.1/76.2 — A cara do MeisterTask, o seletor de ícone e o assistente (preview)
+
+**Diretivas:** DIR-76.1 e DIR-76.2. **Data:** 06/09/2026. **Escopo:** preview.
+
+**A cara (76.1), medida e não olhada.** A prova em navegador não confere
+"ficou bonito" — ela mede:
+
+```
+cabeçalho: altura 46px, largura idêntica à coluna, fundo escuro, com ícone
+card:      branco (luminância > 240), 280px de largura
+faixa:     "Atrasado", no topo, largura inteira do card, em tom quente
+emoji:     0 no quadro inteiro
+```
+
+Cada uma dessas asserções falha se alguém "arrumar" o visual sem querer. Foi
+assim que o dono pediu — *"pega os detalhes todinho"* — e é assim que eles
+ficam pegos.
+
+**Zero emoji.** Ordem literal dele. Emoji muda de desenho em cada sistema e dá
+cara de rascunho; ícone é desenhado, alinha na linha de base e aceita a cor do
+tema. Saíram do quadro e da linha da tarefa do dia.
+
+**O seletor de ícone e cor (76.2)** é o painel "Ícone de seção" do print dele:
+12 ícones em grade, 6 cores em fileira. Guarda-se o **nome** do ícone, nunca o
+desenho — trocar de pacote de ícones um dia não mexe em dado gravado. Enquanto
+a pessoa não escolhe, o ícone é **deduzido do nome** da lista: ela nasce com
+cara certa sem ninguém abrir menu. E a **lista nova já se veste enquanto se
+digita** — cabeçalho colorido com o ícone que o nome sugere, antes de existir.
+
+**Arrastar a lista** renumera a ordem **inteira** a cada movimento. Ordem que só
+muda em quem se mexeu deixa buraco e empate, e a mesa "se mexe sozinha" na
+leitura seguinte. Coberto por 5 testes de lib + mutação; **não** por prova em
+navegador — registro que aqui a cobertura é de um lado só.
+
+**O assistente (76.2) — é ele que fideliza.** Escreveu "Academia", aparece o
+convite. Três perguntas, e **cada uma muda o resultado**:
+
+| resposta | o que muda |
+|---|---|
+| 3 · 4 · 5 · 6 dias | a divisão do treino, e quantos cards nascem |
+| perder · ganhar · condicionar | o fecho do treino (cardio ou não) |
+| começando · já treino | a série (3x12 → 4x8) |
+
+Peso e foto são **opcionais** de propósito: são acompanhamento, não plano —
+pedir dado que não muda nada é o jeito mais rápido de a pessoa largar no meio.
+
+O que sai são **cards normais** (título + checklist), não um formato especial:
+arrastam, editam e vão pro dia como qualquer outro. Se o assistente gerasse um
+objeto próprio, metade das funções do quadro não valeria pra ele.
+
+**E é convite, nunca modal que abre sozinho.** Ferramenta que interrompe é
+ferramenta que a pessoa aprende a fechar rápido.
+
+**Provado.** 30 testes novos (12 do assistente, 6 do reordenar/ícones, 12 de
+antes), verificados por mutação — **as 4 mutações do assistente quebram**:
+objetivo sem efeito → 1; dias sem efeito → 1; gerar com pergunta em branco →
+1; nível sem efeito → 1. E a trava da paleta: cor de modelo fora da paleta →
+quebra (sem ela o quadro do primeiro uso nasceria cinza sem ninguém entender).
+
+**Prova em navegador: 257/257**, zero erro de página/console. Cobre o painel
+abrindo, a cor trocando de verdade, a lista nova se vestindo, o convite, a
+entrevista travada até responder, a semana nascendo com 5 treinos de segunda a
+sexta, os exercícios com série, o cardio de quem quer perder peso, e a ficha
+gravada na lista.
+
+**Dois erros meus, os dois na prova:**
+- o seletor do botão de ferramenta procurava a seta "→", que a 76.1 trocou por
+  ícone. Prova presa a caractere decorativo quebra na primeira troca de visual
+  — agora ela procura pelo **papel** (o nome da ferramenta);
+- cliquei "a última cor da fileira" pra testar a troca, e ela era justamente a
+  cor que a lista já tinha: a prova acusou "não trocou" sem nada errado. Agora
+  escolhe a primeira cor **diferente da atual** — a régua é a diferença, não a
+  posição.
+
+**Suíte:** 1200/1200. **Build:** limpo. **Migração** aditiva (`icone`, `ficha`).
+
+**Um susto no rebase, e o que ele era.** Depois de trazer o trabalho da sessão
+paralela, 10 asserções do X-Performance (DIR-72/74) reprovaram de uma vez.
+Fui ver antes de concluir qualquer coisa: **não era regressão** — o dono pediu
+a eles *"tirar os quadradões, deixar o painel mais limpo"*, e cada bloco virou
+uma **dobra fechada** (`<details>`). Minha prova media o conteúdo que agora
+nasce recolhido. Ela passou a **abrir as dobras antes de medir**, porque o que
+ela cobra é a regra de dentro do bloco — não se ele nasce aberto. Se um dia a
+dobra sumir, as mesmas asserções continuam valendo. **258/258.**
+
+**O portão da DIR-71 pagou o aluguel dele, duas vezes na mesma tarde.** Primeiro
+a migração das listas bateu de versão com a deles (contornaram do lado de lá).
+Depois, no segundo rebase, a minha `lista_icone_ficha` caiu **exatamente na
+mesma versão** da `xperf_metas_programa` que eles acabavam de subir —
+`20260906230000` nas duas. O portão barrou antes do push:
+
+> Duas com o mesmo prefixo viram uma versão só: registrar essa versão marca as
+> duas como aplicadas, e a que não rodou some sem erro nenhum.
+
+É o defeito que deixou uma migração 5 semanas fora do banco. Renomeada pra
+`20260906234500`. Sem esse portão, uma das duas teria sumido calada — e a que
+some não avisa: só um dia a coluna não existe.

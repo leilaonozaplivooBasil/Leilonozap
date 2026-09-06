@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History, GraduationCap } from 'lucide-react';
+import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History, GraduationCap, Camera } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -396,5 +396,5 @@ export function AbaHistorico({ pessoaId, tarefasCiclo }) {
 }
 
 export const ABAS = [
-  ['pessoa', 'Pessoa', null], ['metas', 'Metas', Target], ['programa', 'Programa', GraduationCap], ['semana', 'Semana', CalendarDays], ['quadro', 'Quadro dele', LayoutGrid], ['historico', 'Histórico', History],
+  ['pessoa', 'Pessoa', null], ['metas', 'Metas', Target], ['programa', 'Programa', GraduationCap], ['semana', 'Semana', CalendarDays], ['quadro', 'Quadro dele', LayoutGrid], ['comprovacoes', 'Comprovações', Camera], ['historico', 'Histórico', History],
 ];

@@ -492,15 +492,19 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
   );
 
   if (gestao) {
+    // 🧹 dono (06/09/2026): "tirar isso dali de baixo e botar no quadro geral;
+    // as comprovações têm que subir". O que é de cada pessoa (fixo, caminho
+    // pra sociedade, comprovações) foi pro Quadro Geral dela. Aqui embaixo só
+    // fica o que é da diretoria (encontro e quadro) e o "sobre".
     return (
       <div className="space-y-4">
-        {/* 🎯 a pessoa primeiro: função, empresa, o dia dela, o fixo, o pronto */}
         <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />
-        <Dobra id="mentalidades" titulo="As três mentalidades" resumo="executivo · diretor · CEO — o que cada uma significa">{blocoMentalidade}</Dobra>
-        <Dobra id="contas" titulo="Meu fixo e o caminho pra sociedade" resumo={`${meuResumo.portoes.abertos} de ${meuResumo.portoes.total} portões`}>{blocoContas}</Dobra>
-        <Dobra id="encontro" titulo="Encontro de segunda" resumo={`${fmtDia(encontro.data)} · ${blocosEscritos} de ${PAUTA_PADRAO.length} blocos escritos`}>{blocoEncontro}</Dobra>
-        <Dobra id="quadro" titulo="O quadro da diretoria" resumo={`${doQuadro.length} entregáve${doQuadro.length === 1 ? 'l' : 'is'}`}>{blocoQuadro}</Dobra>
-        <Dobra id="grupo" titulo="O grupo To The Top" resumo="a holding, os cinco pilares, visão, missão e os valores inegociáveis">{blocoGrupo}</Dobra>
+        <Dobra id="diretoria" titulo="Diretoria: encontro de segunda e o quadro" resumo={`${fmtDia(encontro.data)} · ${blocosEscritos} de ${PAUTA_PADRAO.length} blocos · ${doQuadro.length} entregáve${doQuadro.length === 1 ? 'l' : 'is'}`}>
+          <div className="space-y-5">{blocoEncontro}{blocoQuadro}</div>
+        </Dobra>
+        <Dobra id="sobre" titulo="Sobre: as três mentalidades e o grupo To The Top" resumo="o que cada mentalidade significa · a holding, os pilares, visão, missão e valores">
+          <div className="space-y-5">{blocoMentalidade}{blocoGrupo}</div>
+        </Dobra>
       </div>
     );
   }

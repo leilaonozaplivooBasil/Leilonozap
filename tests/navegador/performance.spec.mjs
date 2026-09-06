@@ -166,7 +166,7 @@ test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor 
   await modal.waitFor();
   assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(291.67));
   // o ciclo do Emanuel: 04/09 teve Gratidão (peso 1) feita e conferida → 1/75 do dia
-  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 3,89\s*ganho/);
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 19,44\s*ganho/);
   assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas · falta peso 71.*R\$ 15,56/, 'o que está distribuído de hoje em diante');
 
   await pagina.screenshot({ path: path.join(FOTOS, 'performance-modal.png') });
@@ -267,8 +267,8 @@ test('PLANEJAMENTO: o modal avisa quem não gerou o dia, e gera a Rotina Perfeit
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.locator('[data-teste="planejamento-dia"][data-gerado="nao"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="planejamento-dia"]'), /Não gerou o planejamento de hoje/);
-  // o ciclo por mentalidade: as 5 tarefas semeadas são da rotina (sem mentalidade)
-  assert.match(await texto(pagina, '[data-teste="por-mentalidade"] [data-mentalidade="rotina"]'), /5 tarefas/);
+  // o ciclo por mentalidade: as 6 tarefas semeadas são da rotina (sem mentalidade)
+  assert.match(await texto(pagina, '[data-teste="por-mentalidade"] [data-mentalidade="rotina"]'), /6 tarefas/);
 
   await modal.locator('[data-teste="gerar-planejamento"]').click();
   await pagina.getByText(/gerado pra Emanuel Silva: 20 tarefas da Rotina Perfeita/).waitFor();
@@ -421,16 +421,15 @@ test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião v
 test('FAXINA: pra gestão, a pessoa vem primeiro; mentalidades, contas, encontro e quadro ficam dobrados', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
   const ordem = await pagina.evaluate(() => [...document.querySelectorAll('[data-teste="gestao"], details[data-teste^="dobra-"]')].map((e) => e.getAttribute('data-teste')));
-  assert.deepEqual(ordem, ['gestao', 'dobra-mentalidades', 'dobra-contas', 'dobra-encontro', 'dobra-quadro', 'dobra-grupo']);
-  for (const id of ['mentalidades', 'contas', 'encontro', 'quadro', 'grupo']) {
+  assert.deepEqual(ordem, ['gestao', 'dobra-diretoria', 'dobra-sobre'], 'embaixo só o que é da diretoria e o "sobre"; o resto foi pro Quadro Geral');
+  for (const id of ['diretoria', 'sobre']) {
     assert.equal(await pagina.locator(`details[data-teste="dobra-${id}"]`).evaluate((e) => e.open), false, `${id} devia nascer dobrada`);
   }
   // os quadradões só aparecem pra quem abre
   assert.equal(await pagina.getByText('Mentalidade do CEO', { exact: true }).isVisible(), false);
-  await pagina.locator('details[data-teste="dobra-mentalidades"] summary').click();
+  await pagina.locator('details[data-teste="dobra-sobre"] summary').click();
   await pagina.getByText('Construir o sistema').waitFor();
   // 🏛️ o grupo: a holding, os quatro pilares-empresa, visão, missão e os 18 valores
-  await pagina.locator('details[data-teste="dobra-grupo"] summary').click();
   await pagina.getByText('Estamos lendo o jornal de 2044.').waitFor();
   assert.equal(await pagina.locator('[data-teste="pilar"]').count(), 4);
   assert.equal(await pagina.locator('[data-teste="valores"] span').count(), 18);
@@ -524,7 +523,9 @@ test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e What
   await pagina.locator('[data-teste="abrir-quadro-geral"]').click();
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.locator('[data-teste="quadro-geral-topo"]').waitFor();
-  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Histórico']);
+  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Comprovações', 'Histórico']);
+  // 🚪 o caminho pra sociedade veio de baixo pra dentro da pessoa
+  assert.match(await texto(pagina, '[data-teste="portoes-pessoa"]'), /Caminho pra sociedade.*0 de 3 portões/s);
   // Emanuel não gerou hoje → amarelo, com o motivo
   await modal.locator('[data-teste="semaforo"][data-cor="amarelo"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="quadro-geral-topo"]'), /não gerou o planejamento de hoje/);
@@ -624,6 +625,34 @@ test('SEMANA, QUADRO DELE e HISTÓRICO', { skip: semNavegador }, async () => {
   await aba(carla, 'historico');
   await carla.locator('[data-teste="historico-item"][data-estado="pronto"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="aba-historico"]'), /Enviar o relatório da loja.*pronto até 18:00 · pronto às/s);
+  await ctx.close();
+});
+
+test('COMPROVAÇÕES: subiram — a fila geral em cima (aprovar / reprovar com motivo) e a aba da pessoa com o radar', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const geral = pagina.locator('[data-teste="comprovacoes-geral"]');
+  await geral.waitFor();
+  assert.match(await texto(pagina, '[data-teste="comprovacoes-geral"] [data-teste="comprovacoes-pendentes"]'), /1 em análise/);
+  const item = geral.locator('[data-teste="comprovacao"][data-status="em_analise"]');
+  assert.match((await item.textContent()).replace(/\s+/g, ' '), /Carla Souza.*Story ANTES.*ver o print.*IA: não ficou claro/);
+  // reprovar com motivo: a tarefa volta pra pessoa (feito false) com o motivo do gestor
+  await item.locator('[data-teste="comp-reprovar"]').click();
+  await item.locator('[data-teste="comp-motivo"]').fill('o print é de outro dia');
+  await item.locator('[data-teste="comp-reprovar-confirmar"]').click();
+  await pagina.getByText(/Reprovada — a tarefa voltou/).waitFor();
+  const e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tabela, 'metodo_tarefas');
+  assert.equal(e.patch.feito, false);
+  assert.deepEqual([e.patch.comprovacao.status, e.patch.comprovacao.motivo_gestor], ['reprovada', 'o print é de outro dia']);
+  assert.match(await texto(pagina, '[data-teste="comprovacoes-geral"] [data-teste="comprovacoes-pendentes"]'), /nada em análise/);
+
+  // a aba da pessoa: o radar do Emanuel (1 aprovada pela IA)
+  await pagina.locator('[data-teste="abrir-quadro-geral"]').click();
+  const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
+  await modal.locator('[data-teste="quadro-geral-topo"]').waitFor();
+  await modal.locator('[data-teste="abas-quadro-geral"] [data-aba="comprovacoes"]').click();
+  await modal.locator('[data-teste="comprovacoes-pessoa"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="comprovacoes-radar"]'), /1 aprovada · 0 em análise · 0 reprovadas/);
   await ctx.close();
 });
 
