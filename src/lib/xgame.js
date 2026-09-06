@@ -245,7 +245,7 @@ const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
 const _semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const REGRAS_PESO = [
   { re: /gratidao|foco no sonho/, peso: 5, porque: 'gratidão abre o dia e a mente' },
-  { re: /treinament|treinar|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
+  { re: /treinament|treinar|mentoria|mentor|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
   { re: /loja|venda|cliente|reuni|apresenta|contrato|follow|prospec/, peso: 6, porque: 'ação de negócio — o peso principal' },
   { re: /leitura|estudo|curso|licao|aula/, peso: 4, porque: 'mentalidade: estudo em dia' },
   { re: /story|post|instagram|conteudo|gravar/, peso: 4, porque: 'marketing pessoal' },

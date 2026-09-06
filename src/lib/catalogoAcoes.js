@@ -41,10 +41,10 @@ const SINAIS_MENTALIDADE = [
 ];
 
 const SINAIS_HABITO = [
-  { n: 8, re: /treinar|treinamento|ensinar|duplica\w*|formar|multiplicar|capacitar|onboarding|mentorar/g },
+  { n: 8, re: /treinar|treinamento|ensinar|duplica\w*|formar|multiplicar|capacitar|onboarding|mentorar|mentoria/g },
   // "pauta" é planejamento de reunião: pesa dois, senão "reunião" (5) escrita depois roubava a leitura
   { n: 7, peso: 2, re: /pauta\w*|planejamento executivo/g },
-  { n: 7, re: /numeros|verific\w*|indicador|win rate|metas?\b|medir|conferir|resultado|placar|relatorio|planejar|planejamento|preparar|agenda|revisar|analis\w*|auditar|decidir|organizacao semanal/g },
+  { n: 7, re: /numeros|verific\w*|indicador|win rate|metas?\b|medir|conferir|resultado|placar|relatorio|planejar|planejamento|preparar|agenda|revisar|analis\w*|auditar|decidir|organizacao semanal|visao estrateg\w*|estrategi\w*/g },
   { n: 6, re: /follow|fechamento|fechar|ppv|acompanh\w*|proposta|negocia\w*|cobrar|contrato|entrega|pos[- ]?venda/g },
   { n: 5, re: /apresenta\w*|reuniao|reunioes|demonstra\w*|pitch|visita/g },
   { n: 4, re: /contato|convite|convidar|f\.?o\.?r\.?m|script|mensagem|ligar|whatsapp|conversa/g },
