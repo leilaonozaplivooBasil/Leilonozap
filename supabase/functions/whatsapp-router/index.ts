@@ -966,7 +966,7 @@ function obterClienteSlack(): TSlackClient | null {
 /**
  * Postar no Slack — modo novo (Bot Token) com fallback para webhook legado
  * @param texto Conteúdo da mensagem
- * @param canal Canal para postar (se usando Bot Token); default: #top-tech-digital
+ * @param canal Canal para postar (se usando Bot Token); default: SLACK_CANAL_PADRAO
  */
 async function postarNoSlack(texto: string, canal: string = SLACK_CANAL_PADRAO): Promise<ResultadoSlack> {
   const cliente = obterClienteSlack();
@@ -1439,8 +1439,13 @@ const TOOLS_HELOIM: ToolDef[] = [
         canal: {
           type: 'string',
           description:
-            'Nome ou ID do canal (ex: "#pedidos", "#top-tech-digital", "C1234567890"). ' +
-            'Com hashtag: "seu-canal". Sem hashtag: ID direto.',
+            // 06/09/2026 — aqui dizia "#pedidos" e "#top-tech-digital". Nenhum dos dois existe
+            // neste workspace: o segundo é uma fusão de #top-tech-leilão-nozap com
+            // #digital-leilão-nozap, e a linha 90 deste arquivo já avisava disso desde 01/09.
+            // O modelo copiou o exemplo e o post morreu em channel_not_found. Exemplo inventado
+            // em descrição de tool é instrução para errar — agora só vão canais reais.
+            'Nome ou ID do canal (ex: "#top-tech-leilão-nozap", "#logistica-leilão-no-zap-", ' +
+            '"#digital-leilão-nozap", ou o ID "C0BHCMYJJGJ"). Com hashtag: nome. Sem hashtag: ID.',
         },
         mensagem: {
           type: 'string',
@@ -1537,7 +1542,14 @@ const TOOLS_HELOIM: ToolDef[] = [
     input_schema: {
       type: 'object',
       properties: {
-        canal: { type: 'string', description: 'Canal de destino (ex: "#pedidos", "#top-tech-digital", ou ID).' },
+        canal: {
+          type: 'string',
+          description:
+            'OPCIONAL. Só preencha se a pessoa DISSER o canal. Sem isso, vai para o canal do ' +
+            'grupo de onde veio o pedido (MAPA_GRUPO_CANAL) — que é o destino certo na maioria ' +
+            'das vezes. Se for preencher, use um canal real: "#top-tech-leilão-nozap", ' +
+            '"#logistica-leilão-no-zap-", "#digital-leilão-nozap", ou o ID.',
+        },
         titulo: { type: 'string', description: 'Título curto do tópico, se ficar claro do pedido (opcional).' },
         resumo: {
           type: 'string',
@@ -1551,7 +1563,7 @@ const TOOLS_HELOIM: ToolDef[] = [
           description: 'true (padrão) = sobe a última imagem desta conversa como capa, se houver alguma.',
         },
       },
-      required: ['canal', 'resumo'],
+      required: ['resumo'],
     },
     executar: async (input, ctx) => {
       if (!ehAdmin(ctx.remetente)) {
@@ -1566,16 +1578,32 @@ const TOOLS_HELOIM: ToolDef[] = [
       const cliente = obterClienteSlack();
       if (!cliente) return { ok: false, erro: 'Não foi possível conectar ao Slack. Verifique o token.' };
 
-      const canal = String(input.canal).startsWith('#') ? input.canal.substring(1) : input.canal;
+      // 06/09/2026 — o canal deixou de ser obrigatório. Antes o modelo tinha que acertar um
+      // nome de canal, e na noite de 05/09 ele copiou o exemplo fantasma "#top-tech-digital"
+      // da própria descrição da tool: channel_not_found, post perdido. Agora o padrão é a
+      // rota do grupo (MAPA_GRUPO_CANAL) — mesma que postar_demanda já usava — e o nome só
+      // entra quando a pessoa DIZ o canal.
+      const rota = canalDoGrupo(ctx.grupoId, MAPA_GRUPO_CANAL, SLACK_CANAL_PADRAO);
+      const canalPedido = typeof input.canal === 'string' ? input.canal.trim() : '';
+      const canal = canalPedido
+        ? canalPedido.replace(/^#/, '')
+        : rota.canal;
       const quem = ctx.remetenteNome || ctx.remetente;
       const titulo = input.titulo ? `*${input.titulo}*\n` : '';
       const corpo = `${titulo}${input.resumo}\n\n_Documentado por ${quem} via Heloim${ctx.grupoNome ? ` — grupo ${ctx.grupoNome}` : ''}_`;
 
+      // A foto está na memória do GRUPO, não na de quem pediu. João manda o print, Luiz diz
+      // "documenta isso": procurar no histórico do Luiz não acha nada. É o mesmo erro que a
+      // PR #178 corrigiu no postar_demanda em 05/09 e que não foi aplicado aqui — resultado:
+      // em 06/09 esta tool nem tentou subir imagem, foi direto para o texto.
       const querImagem = input.incluir_imagem !== false;
       let imagemUrl: string | null = null;
       if (querImagem) {
-        const historico = await carregarHistorico(ctx.remetente, 'heloim');
-        imagemUrl = extrairUltimaImagemDoHistorico(historico);
+        const doGrupo = ctx.grupoId
+          ? extrairUltimaImagemDoHistorico(await carregarHistorico(chaveDeMemoriaDoGrupo(ctx.grupoId), 'heloim'))
+          : null;
+        imagemUrl = doGrupo
+          || extrairUltimaImagemDoHistorico(await carregarHistorico(ctx.remetente, 'heloim'));
       }
 
       // Sem imagem pedida, ou nenhuma encontrada nas últimas mensagens: posta só o texto.
@@ -1584,6 +1612,7 @@ const TOOLS_HELOIM: ToolDef[] = [
         return {
           ok: resultado.ok,
           canal,
+          canal_veio_de: canalPedido ? 'pedido' : rota.origem,
           tinha_imagem: false,
           erro: resultado.error || null,
           diagnostico: resultado.ok
@@ -1607,6 +1636,7 @@ const TOOLS_HELOIM: ToolDef[] = [
           return {
             ok: true,
             canal,
+            canal_veio_de: canalPedido ? 'pedido' : rota.origem,
             tinha_imagem: true,
             erro: null,
             diagnostico: 'Documentado no Slack com a imagem como capa.',
@@ -1772,15 +1802,19 @@ Suas tools de SOLICITAÇÃO (pedido de mudança de sistema — não confundir co
 
 Suas tools de SLACK (postagem/gestão real no canal — precisam de SLACK_BOT_TOKEN configurado):
 - documentar_no_slack: quando pedirem pra "documentar", "registrar" ou "postar um resumo" do
-  tópico/conversa ATUAL no Slack (ex: "Heloim, documenta isso no #pedidos", "sobe esse tópico
+  tópico/conversa ATUAL no Slack (ex: "Zeca, documenta isso no Slack", "sobe esse tópico
   pro Slack com a imagem"). AJA DIRETO — não peça pra pessoa reescrever o que já foi dito nem
   reenviar a imagem: monte você mesma o resumo a partir do histórico desta conversa e chame a
   tool. Se uma imagem apareceu nas últimas mensagens, ela sobe sozinha como capa (a tool cuida
   disso) — só passe incluir_imagem: false se explicitamente pedirem sem imagem.
 - postar_no_slack: postar/editar/deletar uma mensagem avulsa (não é resumo de conversa, é
   conteúdo específico que a pessoa ditou).
-Ambas exigem canal explícito ou claramente inferível do pedido — se não citarem canal nenhum e
-não der pra inferir, aí sim pergunte qual.
+No documentar_no_slack, NÃO pergunte o canal e NÃO invente nome de canal: sem canal, a tool
+manda sozinha para o canal certo do grupo. Só passe o campo "canal" se a pessoa DISSER onde quer.
+O postar_no_slack, esse sim, precisa de canal — e tem que ser um canal que existe de verdade:
+#top-tech-leilão-nozap, #logistica-leilão-no-zap-, #digital-leilão-nozap,
+#gestão-diária-leilão-nozap, #planejamento-diario, #social. Não existe "#top-tech-digital" nem
+"#pedidos" neste workspace.
 
 Você NUNCA finge que executou uma ação que não tem tool pra fazer (pausar leilão, reprocessar
 pedido, mexer em saldo direto, etc.) — isso continua fora do seu alcance, sempre foi só
