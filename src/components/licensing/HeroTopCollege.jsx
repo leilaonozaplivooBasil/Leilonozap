@@ -28,6 +28,17 @@ import React from 'react';
 // pergunta encoste nele em qualquer largura de tela. Na versão anterior o
 // professor era absolute e a distância até o texto mudava com a altura da
 // faixa — dava pra "quase" acertar, nunca pra garantir.
+// 🌫️ A MÁSCARA DA COSTURA (ordem do dono: "as ligações todas em degradês
+// imperceptíveis, um banner entrando no outro"). Um banner só encosta no
+// outro sem emenda se ELE TERMINAR na cor de base — por isso o enfeite
+// (padrão de X, brilhos coloridos) se dissolve antes das bordas de baixo e
+// dos lados. As duas seções então se encontram no mesmo preto, e a junção
+// some. As máscaras se cruzam (intersect): vale a área comum das duas.
+const MASCARA_COSTURA = [
+  'linear-gradient(180deg, #000 0%, #000 68%, transparent 100%)',
+  'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
+].join(', ');
+
 export default function HeroTopCollege({ saudacao, nome, seletor }) {
   return (
     /* a faixa não é mais um cartão: sem borda, sem canto no celular e no
@@ -37,7 +48,17 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-[0.20]"
-        style={{ backgroundImage: 'url(/marca/padrao-xeos.webp)', backgroundSize: '620px auto', backgroundPosition: 'left top' }}
+        style={{
+          backgroundImage: 'url(/marca/padrao-xeos.webp)',
+          backgroundSize: '620px auto',
+          backgroundPosition: 'left top',
+          // 🌫️ COSTURA INVISÍVEL: o enfeite morre antes da borda, então a
+          // faixa termina no preto puro — o mesmo preto de quem vem embaixo.
+          WebkitMaskImage: MASCARA_COSTURA,
+          maskImage: MASCARA_COSTURA,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
+        }}
       />
       <div
         aria-hidden="true"
@@ -45,28 +66,36 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
         style={{
           background:
             'radial-gradient(70% 90% at 4% 0%, rgba(59,111,246,0.22), transparent 60%), radial-gradient(60% 80% at 34% 100%, rgba(230,46,139,0.16), transparent 62%)',
+          WebkitMaskImage: MASCARA_COSTURA,
+          maskImage: MASCARA_COSTURA,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
         }}
       />
 
+      {/* ────────── a ASSINATURA, em UMA LINHA e largura total ──────────
+          Ordem do dono: "quero a letra na lateral da logo, não abaixo,
+          estendendo, numa linha só". Antes esta linha morava DENTRO da
+          coluna da esquerda, que tem teto de 24rem — por isso a frase
+          quebrava em três. Tirando ela da coluna, a frase ganha a largura
+          inteira da faixa e cabe em uma linha (duas no notebook). No
+          celular o flex-wrap joga a frase pra linha de baixo sozinha. */}
+      <div className="relative flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-3 px-6 sm:px-9 pt-6 sm:pt-8">
+        <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-11 w-auto shrink-0" draggable="false" />
+        <span aria-hidden="true" className="h-9 sm:h-11 w-px bg-white/20 shrink-0" />
+        <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-7 w-auto shrink-0" draggable="false" />
+        <span aria-hidden="true" className="hidden sm:block h-7 w-px bg-white/15 shrink-0" />
+        <p
+          className="basis-full sm:basis-auto sm:flex-1 sm:max-w-[42rem] text-[10px] sm:text-[11px] leading-snug text-white/40"
+          style={{ fontFamily: 'Sora, sans-serif' }}
+        >
+          A primeira faculdade de empreendedorismo do planeta · Estrutura de operação e expansão de qualquer negócio
+        </p>
+      </div>
+
       <div className="relative flex flex-col sm:flex-row sm:items-end">
         {/* ────────── coluna 1: quem assina isto aqui ────────── */}
-        <div className="px-6 sm:px-9 pt-7 sm:pt-9 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[24rem] shrink-0">
-          {/* as duas marcas juntas: a faculdade e o sistema, lado a lado */}
-          <div className="flex items-center gap-4 sm:gap-5 mb-5">
-            <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-12 w-auto" draggable="false" />
-            <span aria-hidden="true" className="h-8 sm:h-10 w-px bg-white/20" />
-            <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-8 w-auto" draggable="false" />
-          </div>
-
-          {/* 🎓 DIR-63 — as frases das duas marcas moram AQUI agora. Elas eram o
-              único conteúdo que o bloco de baixo tinha e a faixa não: com ele
-              removido, a mensagem não se perde e o par de logos deixa de
-              aparecer duas vezes na mesma tela. */}
-          <p className="text-[11px] sm:text-xs leading-relaxed text-white/45 mb-5" style={{ fontFamily: 'Sora, sans-serif' }}>
-            A primeira faculdade de empreendedorismo do planeta · Estrutura de operação
-            e expansão de qualquer negócio
-          </p>
-
+        <div className="px-6 sm:px-9 pt-5 sm:pt-6 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[24rem] shrink-0">
           {/* 🎓 DIR-66 — ordem do dono: DENTRO da Top College este título não é
               "Painel de Alavancagem" — é o X-office, a sub-marca que cuida de
               verificar o progresso e mapear processos. Fora da faculdade o nome

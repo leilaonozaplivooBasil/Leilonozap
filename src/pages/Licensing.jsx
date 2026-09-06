@@ -49,6 +49,7 @@ import SellersListPanel from '../components/sellers/SellersListPanel';
 import MobileNavSheet from '../components/licensing/MobileNavSheet';
 import CentralVendasTabs from '../components/licensing/CentralVendasTabs';
 import HeroTopCollege from '../components/licensing/HeroTopCollege';
+import XRadio from '../components/licensing/XRadio';
 // 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
 // outras telas. A antiga LicensingSidebar (com títulos de seção e itens
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
@@ -1084,9 +1085,9 @@ const DashboardContent = ({ user, isAdmin }) => {
         onTabChange={handleTabChange}
       />
 
-      /* na Top College o conteúdo não tem respiro lateral em NENHUM tamanho:
-         é a tela inteira, do celular ao desktop. Fora dela, o padding de
-         sempre. */
+      {/* na Top College o conteúdo não tem respiro lateral em NENHUM tamanho:
+          é a tela inteira, do celular ao desktop. Fora dela, o padding de
+          sempre. */}
       <div className={naTopCollege ? 'flex-1 min-w-0 py-4 sm:py-6 lg:py-8 px-0' : 'flex-1 min-w-0 p-4 sm:p-6 lg:p-8'}>
         {/* 📱 Mobile: a barra que rolava pro lado virou um seletor + painel com
             TUDO organizado por grupos (mesma fonte única da lateral do desktop). */}
@@ -1153,7 +1154,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores
             PONTO 85 — liberada para TODOS: toda loja tem central de vendas. */}
         {
-          <TabsContent value="catalogo" className="space-y-6">
+          <TabsContent value="catalogo" className={naTopCollege ? '' : 'space-y-6'}>
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               {/* na Top College o seletor já foi desenhado dentro da faixa —
                   aqui ele não se repete, senão viriam dois menus na tela */}
@@ -1210,7 +1211,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="catalogo-crm" className="mt-6">
+              <TabsContent value="catalogo-crm" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 <CrmClientesTab isAdmin={isAdmin} currentUser={user} />
               </TabsContent>
 
@@ -1614,6 +1615,16 @@ const DashboardContent = ({ user, isAdmin }) => {
       />
 
       </div>
+
+      {/* 📻 X-RÁDIO — mora AQUI de propósito: fora das <Tabs>, colado na raiz
+          da página. É o que faz a música atravessar a navegação inteira —
+          trocar de Hábito, abrir um momento, voltar pro mapa: o player não
+          desmonta, então o som não corta. Se ele morasse dentro de uma aba,
+          a música morreria a cada clique (foi o que acontecia no Ritual).
+          E não é só na Top College: o pedido foi "em toda a área ONDE O
+          SISTEMA FUNCIONA" — então ele toca no painel inteiro. Sair da
+          faculdade pra ver a Carteira não pode desligar o rádio. */}
+      <XRadio />
     </div>);
 
 };

@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  UserPlus, Search, Filter, X, Save, Send, CheckCircle, Package,
+import { Search, Filter, X, Save, Send, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign,
   // 🏛️ DIR-56 — ícones de traço no lugar dos emojis decorativos
   Sparkles, ShieldCheck, Users, PhoneCall, Presentation, Route, Gauge,
@@ -41,6 +40,7 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import XGameVisaoExecutiva from './XGameVisaoExecutiva';
 import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
@@ -56,6 +56,15 @@ import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 // 🔄 Fontes automáticas (18/08/2026): a lista de clientes agora soma indicados
 // (AppUser.referred_by_id) e compradores da Loja Virtual (CatalogSale.licensee_id)
 // junto com o cadastro manual — ver src/lib/crmUnifiedCustomers.js.
+// 🌫️ A MÁSCARA DA COSTURA DO PALCO — o par da que existe na faixa do
+// professor. Lá o enfeite MORRE no pé; aqui ele NASCE no topo. Assim as
+// duas seções se encontram no mesmo preto de base e a emenda entre um
+// banner e outro desaparece (ordem do dono: "degradês imperceptíveis").
+const MASCARA_COSTURA_PALCO = [
+  'linear-gradient(180deg, transparent 0%, #000 18%)',
+  'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
+].join(', ');
+
 export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
@@ -1380,7 +1389,17 @@ _Enviado via CRM Leilão NoZap_`;
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-[0.22]"
-        style={{ backgroundImage: 'url(/marca/padrao-xeos.webp)', backgroundSize: '760px auto', backgroundPosition: 'top center' }}
+        style={{
+          backgroundImage: 'url(/marca/padrao-xeos.webp)',
+          backgroundSize: '760px auto',
+          backgroundPosition: 'top center',
+          // 🌫️ o enfeite NASCE em degradê: o topo do palco começa no mesmo
+          // preto em que a faixa de cima termina, e a emenda desaparece
+          WebkitMaskImage: MASCARA_COSTURA_PALCO,
+          maskImage: MASCARA_COSTURA_PALCO,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
+        }}
       />
       <div
         aria-hidden="true"
@@ -1388,6 +1407,10 @@ _Enviado via CRM Leilão NoZap_`;
         style={{
           background:
             'radial-gradient(90% 55% at 8% 0%, rgba(59,111,246,0.20), transparent 58%), radial-gradient(85% 55% at 95% 12%, rgba(230,46,139,0.16), transparent 60%), linear-gradient(180deg, rgba(10,16,32,0.55), rgba(0,2,12,0.92))',
+          WebkitMaskImage: MASCARA_COSTURA_PALCO,
+          maskImage: MASCARA_COSTURA_PALCO,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
         }}
       />
       {/* 🔔 DIR-53 — o popup do Leilão NoZap: reunião MINHA prestes a começar
@@ -1416,58 +1439,25 @@ _Enviado via CRM Leilão NoZap_`;
               Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
             </h1>
           </div>
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            {vis.gerirVendedores && (
-              <Button
-                onClick={() => setShowSellerModal(true)}
-                className="bg-nz-marrom hover:bg-nz-marrom-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
-              >
-                <UserPlus className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Novo Vendedor</span>
-                <span className="sm:hidden">Vendedor</span>
-              </Button>
-            )}
-            <Button
-              onClick={() => {
-                setEditingCustomer(null);
-                setFormData({
-                  full_name: '',
-                  email: '',
-                  phone: '',
-                  cpf: '',
-                  status: 'lead',
-                  source: 'site',
-                  notes: '',
-                  address_street: '',
-                  address_number: '',
-                  address_city: '',
-                  address_state: '',
-                  address_zip_code: '',
-                  last_contact: new Date().toISOString().split('T')[0],
-                  assigned_seller: '',
-                  follow_up_date: '',
-                  next_steps: '',
-                  interested_products: []
-                });
-                setShowProductSearch(false);
-                setProductSearchTerm('');
-                setShowAddForm(true);
-              }}
-              className="bg-nz-verde hover:bg-nz-verde-claro text-white flex-1 sm:flex-none text-xs sm:text-sm"
-            >
-              <UserPlus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Novo Cliente</span>
-              <span className="sm:hidden">Cliente</span>
-            </Button>
-          </div>
+          {/* 🧹 "Novo Vendedor" e "Novo Cliente" SAÍRAM DAQUI (ordem do dono:
+              "está fora de contexto, tem que entrar lá na lista de contato").
+              Conferido antes de mexer: o Hábito 03 — Lista de Networking já
+              tinha "Adicionar pessoa" chamando exatamente esta mesma ação, ou
+              seja, o botão de cliente aqui era duplicata. O de vendedor não
+              tinha par: em vez de sumir com ele, foi junto pro Hábito 03, ao
+              lado do outro — é lá que se constrói a rede. O topo fica só com
+              o que a página promete: os 8 Hábitos. */}
         </div>
 
         {/* 🎓 DIR-63 — o palco das duas marcas saiu daqui. Ele repetia, 300px
             abaixo, exatamente o mesmo par de logos da faixa da academia — e o
             dono viu isso na tela: "está repetindo muito as logos". As frases
             das marcas subiram pra faixa; a identidade continua, uma vez só. */}
-        {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
-        <CrmResumo itens={resumoItens} />
+        {/* 🧭 Os 4 números MUDARAM DE CASA (ordem do dono: "tira dali de cima
+            do Sonho/Compromisso/Lista e põe na visão executiva, pra essa
+            página ficar mais limpa"). Eles agora abrem o Hábito 07 —
+            Verificação, que é o X-office, o lugar de olhar número. Aqui em
+            cima fica só o que a página promete: os 8 Hábitos. */}
 
         {/* 🏆 Navegação pelos 8 Hábitos (DIR-43) — trilho escuro, ícone de
             traço no lugar do emoji e o hábito ativo carregando o gradiente
@@ -1591,6 +1581,7 @@ _Enviado via CRM Leilão NoZap_`;
             onEditarRegistro={handleEditarRegistroMetodo}
             onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
+            onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />
         )}
@@ -1605,6 +1596,8 @@ _Enviado via CRM Leilão NoZap_`;
               <img src="/marca/xoffice.webp" alt="X-office" className="h-6 w-auto" />
               <span className="text-[11px] sm:text-xs text-nz-tinta-fraca">verificando o progresso e mapeando processos</span>
             </div>
+            {/* os 4 números que vieram do topo: é aqui que eles pertencem */}
+            <CrmResumo itens={resumoItens} />
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
             {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
@@ -1616,6 +1609,8 @@ _Enviado via CRM Leilão NoZap_`;
               onVerEsteira={() => { setSecao('acompanhamento'); setSubAcomp('expansao'); }}
             />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
+            {/* 🎖️ o placar humano do time: pulso, pódio, radar e a tabela */}
+            <XGameVisaoExecutiva />
           </>
         )}
 
@@ -2395,8 +2390,27 @@ _Enviado via CRM Leilão NoZap_`;
 
         {/* 🖼️ DIR-56 — a frase oficial do brandbook fecha o painel. É imagem da
             marca, não texto solto: o mesmo material das apresentações. */}
-        <div className="relative overflow-hidden rounded-2xl mt-8 border border-white/10">
-          <img src="/marca/frase.webp" alt="O sucesso é a soma de pequenos esforços repetidos dia após dia." className="w-full h-24 sm:h-36 object-cover" />
+        <div
+          className="relative overflow-hidden -mx-3 sm:-mx-8 mt-10"
+          style={{
+            // fecha o painel morrendo no fundo, igual à capa do hábito
+            WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 22%, #000 100%)',
+            maskImage: 'linear-gradient(180deg, transparent 0%, #000 22%, #000 100%)',
+          }}
+        >
+          {/* 🐛 A FRASE VINHA CORTADA: o arquivo é 1400×340 (proporção 4,1) e
+              estava numa caixa de altura fixa (96/144px) com object-cover —
+              que apara o que não cabe. Numa tela larga a segunda linha ficava
+              literalmente de fora. Sem altura fixa e com a proporção do
+              próprio arquivo, não há o que aparar: a frase aparece inteira em
+              qualquer largura. */}
+          <img
+            src="/marca/frase.webp"
+            alt="O sucesso é a soma de pequenos esforços repetidos dia após dia."
+            className="w-full h-auto block"
+            style={{ aspectRatio: '1400 / 340' }}
+            draggable="false"
+          />
         </div>
 
       </div>

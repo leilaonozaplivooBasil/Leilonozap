@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,7 +57,7 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr }) {
   const uid = currentUser?.id;
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
@@ -386,7 +385,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       tarefas_total: xgame.tarefas_total, tarefas_feitas: xgame.tarefas_feitas,
       mvm_dia: xgame.mvm_dia, aplicabilidade: xgame.aplicabilidade, token_dia: xgame.token_dia,
       cotacao: xgame.cotacao, pontos: xgame.pontos,
-      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util, ...xgame.contagens },
+      // 🐛 xpay_ganho/xpay_perdido eram LIDOS no ranking da equipe e nunca
+      // gravados aqui: a coluna X-Pay do ranking vinha zerada pra todo
+      // mundo desde sempre. Agora entram no retrato do dia.
+      detalhes: {
+        leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util,
+        xpay_ganho: xgame.xpay?.ganho || 0, xpay_perdido: xgame.xpay?.perdido || 0,
+        ...xgame.contagens,
+      },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,data' }).then(({ error }) => { if (error) console.warn('[X-GAME] placar:', error.message); });
      
@@ -921,8 +927,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const habito = HABITOS.find((h) => h.id === painel);
 
   return (
-    <Card className="bg-white border-nz-borda mb-4 sm:mb-6">
-      <CardContent className="p-4 sm:p-6 space-y-4">
+    /* 🌊 SEM CARTÃO (ordem do dono: "não quero essas linhas, quero tudo
+       borda infinita"). Isto aqui era um <Card>, e o Card traz borda,
+       canto arredondado, fundo e sombra por padrão — era ELE o retângulo
+       que sobrava em volta do painel, mesmo depois de eu limpar os blocos
+       de dentro. Agora é uma seção lisa: só o ar do padding. */
+    <div className="pt-4 sm:pt-6 pb-2 space-y-4">
         {habito && (
           <div>
             {/* 🏛️ DIR-56 — o nome do Hábito já vem grande na faixa do brandbook,
@@ -1559,9 +1569,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 <p className="text-sm text-nz-tinta-fraca">
                   {clientesManuais.length} pessoas na sua lista · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
-                <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                  <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                    <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
+                  </Button>
+                  {/* o cadastro de vendedor mora aqui agora: é na Lista de
+                      Networking que a rede é construída, não no topo da página */}
+                  {onNovoVendedor && (
+                    <Button size="sm" onClick={onNovoVendedor} className="bg-nz-marrom hover:bg-nz-marrom-claro text-white">
+                      <UserPlus className="w-4 h-4 mr-1" /> Novo vendedor
+                    </Button>
+                  )}
+                </div>
               </div>
               <Input
                 value={buscaLista}
@@ -2038,7 +2057,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             <p className="text-xs text-nz-tinta-fraca text-center italic">"A disciplina é a ponte entre objetivos e realização." — Jim Rohn</p>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
