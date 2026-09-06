@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import useArrastavel from '@/hooks/useArrastavel';
 import {
-  TRILHAS, trilhaDoCargo, COLUNAS, ORDEM_COLUNAS, moverEntregavel, podeMover,
-  PAUTA_PADRAO, encontroDaSemana, proximaSegunda, resumoDaPessoa, META_SOCIEDADE, PESO_MAX,
+  TRILHAS, trilhaDoCargo, COLUNAS, ORDEM_COLUNAS, moverEntregavel, podeMover, podeValidar,
+  encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX,
 } from '@/lib/xperformance';
 import { HABITOS } from '@/lib/metodo';
+import { fixoDoParticipante } from '@/lib/xgame';
+import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
 //
@@ -35,7 +37,7 @@ const fmtDia = (iso) => {
 };
 
 /** Um card do quadro. A alça é o card inteiro; o clique continua vivo. */
-function Card({ item, onMover, onExcluir, podeValidar }) {
+function Card({ item, onMover, onExcluir, ehValidador, meuId }) {
   const [sobre, setSobre] = useState(null);
   const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
     aoSoltar: ({ x, y }) => {
@@ -53,7 +55,14 @@ function Card({ item, onMover, onExcluir, podeValidar }) {
 
   const habito = HABITOS.find((h) => h.n === item.habito);
   const proxima = ORDEM_COLUNAS[ORDEM_COLUNAS.indexOf(item.coluna) + 1];
-  const bloqueado = proxima === 'entregue' && !podeValidar;
+  // 🔒 DIR-74 — dois motivos diferentes pra travar o passo pra "Entregue", e a
+  // tela diz QUAL: não ser validador, ou o card ser seu. Um "travado" sem
+  // motivo faz a pessoa achar que é bug e chamar o suporte.
+  const meuCard = !podeValidar(item, meuId);
+  const bloqueado = proxima === 'entregue' && (!ehValidador || meuCard);
+  const motivo = proxima !== 'entregue' ? '' : meuCard
+    ? 'é o seu entregável — quem valida tem que ser outra pessoa'
+    : !ehValidador ? 'só quem valida move pra Entregue' : '';
 
   return (
     <div
@@ -93,10 +102,11 @@ function Card({ item, onMover, onExcluir, podeValidar }) {
             className={`text-[11px] font-bold inline-flex items-center gap-1 ${
               bloqueado ? 'text-white/25 cursor-not-allowed' : 'text-white/60 hover:text-white'
             }`}
-            title={bloqueado ? 'só quem valida move pra Entregue' : ''}
+            title={bloqueado ? motivo : ''}
           >
             {COLUNAS.find((c) => c.id === proxima)?.nome} <ChevronRight className="w-3 h-3" />
           </button>
+          {bloqueado && meuCard && <span className="text-[9px] leading-tight text-amber-300/70">seu card — outro valida</span>}
           <button type="button" onClick={() => onExcluir(item)} className="ml-auto text-white/25 hover:text-red-400">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -106,7 +116,7 @@ function Card({ item, onMover, onExcluir, podeValidar }) {
   );
 }
 
-export default function XPerformance({ currentUser, visaoTotal = false, hojeISO }) {
+export default function XPerformance({ currentUser, visaoTotal = false, gestao = false, hojeISO }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const uid = currentUser?.id;
   // o cargo e o fixo moram no X-Game; esta tela busca, não guarda cópia — uma
@@ -123,7 +133,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
 
   const carregar = useCallback(async () => {
     if (uid) {
-      supabase.from('xgame_participantes').select('cargo,verba_producao,verba_bonus').eq('user_id', uid).maybeSingle()
+      supabase.from('xgame_participantes').select('cargo,verba_producao,verba_bonus,fixo_mes,minimo_dia').eq('user_id', uid).maybeSingle()
         .then(({ data }) => setParticipante(data || null));
     }
     const [enc, ent] = await Promise.all([
@@ -144,7 +154,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
   }, [encontros, encontro.data]);
 
   const meuResumo = useMemo(
-    () => resumoDaPessoa({ entregaveis, pessoaId: uid, fixoMes: participante?.verba_producao ?? null, hojeISO: hoje }),
+    () => resumoDaPessoa({ entregaveis, pessoaId: uid, fixoMes: participante ? fixoDoParticipante(participante) : null, hojeISO: hoje }),
     [entregaveis, uid, participante, hoje],
   );
 
@@ -172,9 +182,19 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
       toast.error('Não dá pra pular etapa: entregue sem revisão não conta ponto');
       return;
     }
-    setEntregaveis((l) => moverEntregavel(l, item.id, destino)); // resposta na hora
+    // 🔒 DIR-74 — validar o próprio entregável é recusado aqui e some da tela
+    // logo abaixo. Duas defesas de propósito: a de baixo evita o clique, esta
+    // evita o caminho de teclado e o arrasto.
+    if (destino === 'entregue' && !podeValidar(item, uid)) {
+      toast.error('Quem valida não pode ser o dono — peça pra outra pessoa conferir');
+      return;
+    }
+    const validadoEm = new Date().toISOString();
+    // o carimbo é montado UMA vez, na lib, e vale pro estado local e pro banco:
+    // dois carimbos escritos separados é como a tela e o banco divergem
+    setEntregaveis((l) => moverEntregavel(l, item.id, destino, { validadoPorId: uid, validadoEm }));
     const extra = destino === 'entregue'
-      ? { validado_por_id: uid, validado_em: new Date().toISOString() }
+      ? { validado_por_id: uid, validado_em: validadoEm }
       : { validado_por_id: null, validado_em: null };
     const { error } = await supabase.from('xperf_entregaveis')
       .update({ coluna: destino, ...extra, updated_at: new Date().toISOString() }).eq('id', item.id);
@@ -241,18 +261,53 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
           </p>
           <p className="text-[10px] text-white/35">paga o combinado. Fecha e zera todo mês.</p>
         </div>
+        {/* 🚪 DIR-74 — a sociedade deixou de ser UMA barra. Uma barra que só sobe
+            premia acervo: quem entregou muito num semestre e nada no seguinte
+            seguia parecendo perto. São três portões, e valem juntos. */}
         <div className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
-          <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">Caminho pra sociedade</p>
-          <p className="mt-1 text-xl font-extrabold text-white">
-            {meuResumo.sociedade.pontos}<span className="text-sm text-white/35"> / {META_SOCIEDADE}</span>
-          </p>
-          <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-            <div className="h-full rounded-full transition-all"
-              style={{ width: `${meuResumo.sociedade.pct}%`, background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} />
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">Caminho pra sociedade</p>
+            <p className={`text-[10px] font-bold ${meuResumo.portoes.liberado ? 'text-nz-verde' : 'text-white/35'}`}>
+              {meuResumo.portoes.abertos} de {meuResumo.portoes.total} portões
+            </p>
           </div>
-          <p className="mt-1 text-[10px] text-white/35">acumula pra sempre. Só entregável validado conta.</p>
+          <div className="mt-2 space-y-2">
+            {meuResumo.portoes.portoes.map((g) => {
+              const pct = Math.min(100, Math.round((g.valor / Math.max(1, g.alvo)) * 100));
+              return (
+                <div key={g.id}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className={`text-[11px] font-bold ${g.aberto ? 'text-white' : 'text-white/55'}`}>
+                      {g.aberto ? '✓' : '○'} {g.titulo}
+                    </p>
+                    <p className="text-[10px] text-white/35 tabular-nums">
+                      {g.valor} / {g.alvo} <span className="text-white/25">{g.unidade}</span>
+                    </p>
+                  </div>
+                  <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{
+                      width: `${pct}%`,
+                      background: g.aberto
+                        ? 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))'
+                        : 'rgba(255,255,255,0.28)',
+                    }} />
+                  </div>
+                  <p className="mt-0.5 text-[9px] leading-snug text-white/30">{g.ajuda}</p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-white/35">
+            {meuResumo.portoes.liberado
+              ? 'os três acesos — a conversa de sociedade está aberta.'
+              : 'a conversa abre com os TRÊS acesos. Não é média: falta um, não abre.'}
+          </p>
         </div>
       </div>
+
+      {/* ── 🎯 A GESTÃO (só super admin): o antigo Admin X-GAME + o fixo
+          distribuído pelo peso — "junta o admin do X-Game com o X-Performance" */}
+      {gestao && <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />}
 
       {/* ── 3. O ENCONTRO DE SEGUNDA ─────────────────────────────────────── */}
       <div>
@@ -356,7 +411,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
                 <p className="text-[9px] text-white/30 mb-2 leading-snug">{c.ajuda}</p>
                 <div className="space-y-2">
                   {doColuna.map((item) => (
-                    <Card key={item.id} item={item} onMover={mover} onExcluir={excluir} podeValidar={visaoTotal} />
+                    <Card key={item.id} item={item} onMover={mover} onExcluir={excluir} ehValidador={visaoTotal} meuId={uid} />
                   ))}
                   {!doColuna.length && <p className="text-[10px] text-white/20 py-2 text-center">vazio</p>}
                 </div>

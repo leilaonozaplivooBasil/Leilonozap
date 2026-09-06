@@ -24,20 +24,17 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
   test('a Top College fica com o que FORMA a pessoa', () => {
     const tc = grupoDe(dono, 'Top College');
     assert.ok(tc, 'o grupo Top College precisa existir');
-    // o dono (super_admin) vê também o Admin X-GAME — o admin da gamificação
-    // mora DENTRO da X-eos, não no Admin geral (ordem do dono, 05/09/2026)
-    // 🏛️ DIR-72 — o X-Performance entra AQUI, e a lista fixa deste teste é o
-    // que garante que ele não caia solto no menu depois: o planejamento da
-    // diretoria é a faculdade cobrando o que ensinou, não uma ferramenta à
-    // parte. Se alguém mover, este teste reprova e a conversa acontece.
+    // 06/09/2026 — o Admin X-GAME saiu do menu: virou a gestão DENTRO do
+    // X-Performance (ordem do dono). O super admin vê a mesma lista que os
+    // outros; o que muda pra ele é o que abre na aba X-Performance.
     assert.deepEqual(valores(tc.items), [
-      'catalogo', 'catalogo', 'catalogo', 'plano-carreira', '/Evoluir', '/Metas', 'xgame-admin',
+      'catalogo', 'catalogo', 'catalogo', 'plano-carreira', '/Evoluir', '/Metas',
     ]);
     const rotulos = tc.items.map((i) => i.label);
-    assert.deepEqual(rotulos, ['O Método', 'Time', 'X-Performance', 'Carreira', 'Evoluir Nível', 'Metas', 'Admin X-GAME']);
+    assert.deepEqual(rotulos, ['O Método', 'Time', 'X-Performance', 'Carreira', 'Evoluir Nível', 'Metas']);
   });
 
-  test('o Admin X-GAME é só do super admin — os demais nem sabem que existe', () => {
+  test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {
     for (const role of ['user', 'licensee', 'admin', 'admin_financeiro']) {
       const tc = grupoDe({ role, career_levels: ['vendedor'] }, 'Top College');
       assert.ok(!valores(tc.items).includes('xgame-admin'), `${role} não pode ver o Admin X-GAME`);

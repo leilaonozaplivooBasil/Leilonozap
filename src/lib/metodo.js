@@ -308,14 +308,21 @@ export function duracaoEntreHoras(horaInicio, horaFim) {
  * DIR-52 — as reuniões DA EMPRESA que caem no dia dado: recorrentes (pelo
  * dia da semana) e de data única, ativas, cada uma com `quando` montado
  * (dia + hora) pra entrar na linha do tempo com selo 🏛️.
+ *
+ * DIR-73 — `publico` deixou de ser enfeite. A coluna existe desde a DIR-52 e
+ * ninguém a lia: agenda marcada 'diretoria' aparecia pra todo mundo. Agora
+ * `visaoTotal` decide, e o padrão é `true` de propósito — assim toda chamada
+ * antiga continua vendo o que via, e só quem passa a régua é filtrado.
  */
-export function reunioesEmpresaDoDia(lista = [], diaISO) {
+export function reunioesEmpresaDoDia(lista = [], diaISO, { visaoTotal = true } = {}) {
   const dia = String(diaISO || '').slice(0, 10);
   const d = new Date(`${dia}T12:00:00`);
   if (Number.isNaN(d.getTime())) return [];
   const semana = d.getDay();
   return (Array.isArray(lista) ? lista : [])
-    .filter((r) => r && r.ativo !== false && (
+    .filter((r) => r && r.ativo !== false
+      && (visaoTotal || String(r.publico || 'todos') !== 'diretoria')
+      && (
       (r.dia_semana !== null && r.dia_semana !== undefined && Number(r.dia_semana) === semana)
       || String(r.data || '').slice(0, 10) === dia
     ))

@@ -90,12 +90,36 @@ export function podeMover(de, para) {
   return j === i + 1;                 // avançar: só de um em um
 }
 
-/** Move sem mutar a lista. Devolve a MESMA lista quando o movimento é proibido. */
-export function moverEntregavel(lista, id, para) {
+/**
+ * 🔒 DIR-74 — NINGUÉM VALIDA O PRÓPRIO ENTREGÁVEL.
+ *
+ * A trava da DIR-72 obriga o card a PARAR na revisão; ela não obriga ninguém a
+ * OLHAR. Sem esta segunda regra, a coluna do meio é um pedágio sem guarda: o
+ * dono do card passa por ela sozinho e se promove a sócio arrastando duas
+ * vezes em vez de uma.
+ */
+export function podeValidar(item, quemId) {
+  return !!item && !!quemId && String(item.dono_id) !== String(quemId);
+}
+
+/**
+ * Move sem mutar a lista. Devolve a MESMA lista quando o movimento é proibido.
+ *
+ * DIR-74 — o carimbo da validação é posto AQUI, e não na tela, porque a tela
+ * grava no banco e atualiza o estado local por caminhos diferentes: deixar cada
+ * um carimbar do seu jeito é como o placar da tela e o do banco divergem.
+ * Voltar de "Entregue" APAGA o carimbo — validação de um estado que a peça não
+ * ocupa mais é mentira guardada.
+ */
+export function moverEntregavel(lista, id, para, { validadoPorId = null, validadoEm = null } = {}) {
   const arr = Array.isArray(lista) ? lista : [];
   const alvo = arr.find((e) => e.id === id);
   if (!alvo || !podeMover(alvo.coluna, para)) return arr;
-  return arr.map((e) => (e.id === id ? { ...e, coluna: para } : e));
+  if (para === 'entregue' && !podeValidar(alvo, validadoPorId)) return arr;
+  const carimbo = para === 'entregue'
+    ? { validado_por_id: validadoPorId, validado_em: validadoEm }
+    : { validado_por_id: null, validado_em: null };
+  return arr.map((e) => (e.id === id ? { ...e, coluna: para, ...carimbo } : e));
 }
 
 // ── PONTOS E O CAMINHO PRA SOCIEDADE ────────────────────────────────────────
@@ -104,11 +128,84 @@ export const PESO_MAX = 5;
 /** Quantos pontos acumulados abrem a conversa de sociedade. Régua do dono. */
 export const META_SOCIEDADE = 100;
 
-/** Só entregável VALIDADO conta. Card em revisão vale zero — de propósito. */
+/**
+ * Entregável que conta ponto: está em "Entregue" E tem carimbo de quem validou,
+ * e esse alguém não é o dono. DIR-74 — sem a segunda metade, o carimbo seria
+ * decorativo e a revisão, um pedágio sem guarda.
+ */
+export function contaPonto(e) {
+  return !!e && e.coluna === 'entregue' && !!e.validado_por_id && podeValidar(e, e.validado_por_id);
+}
+
+/** Só entregável VALIDADO POR OUTRA PESSOA conta. Em revisão vale zero. */
 export function pontosDaPessoa(entregaveis, pessoaId) {
   return (Array.isArray(entregaveis) ? entregaveis : [])
-    .filter((e) => e.coluna === 'entregue' && e.dono_id === pessoaId)
+    .filter((e) => contaPonto(e) && e.dono_id === pessoaId)
     .reduce((s, e) => s + Math.min(PESO_MAX, Math.max(0, Number(e.peso) || 0)), 0);
+}
+
+// ── 🚪 OS TRÊS PORTÕES DA SOCIEDADE (DIR-74) ────────────────────────────────
+// A régua de 100 pontos sozinha era catraca de mão única: quem entregou muito
+// num semestre e nada no seguinte seguia parecendo perto de sócio. Barra premia
+// ACERVO; sociedade se decide por RITMO. Por isso três portões que valem juntos,
+// e não uma nota só — o número que faltava não era maior, era outro.
+//
+// Os três valores são RÉGUA DO DONO, não lei da natureza: estão aqui em cima,
+// nomeados, pra ele trocar sem procurar no meio do código.
+export const SEMANAS_JANELA = 12;   // o passado que a consistência olha
+export const SEMANAS_MINIMAS = 8;   // quantas delas precisam ter entrega
+export const HABITO_DUPLICACAO = 8; // "Duplicação dos 8 Hábitos"
+
+/**
+ * Em quantas das últimas `SEMANAS_JANELA` semanas a pessoa teve pelo menos um
+ * entregável validado. Conta SEMANAS, não entregáveis: dez cards numa semana e
+ * nada nas outras onze é um pico, não é ritmo — e a diferença entre os dois é
+ * exatamente o que este portão existe pra ver.
+ */
+export function semanasComEntrega({ entregaveis = [], pessoaId, hojeISO, janela = SEMANAS_JANELA } = {}) {
+  const fim = segundaDaSemana(hojeISO);
+  if (!fim) return { semanas: 0, janela };
+  const limite = new Date(`${fim}T12:00:00`);
+  limite.setDate(limite.getDate() - 7 * (janela - 1));
+  const primeira = segundaDaSemana(limite.toISOString().slice(0, 10));
+  const distintas = new Set(
+    (Array.isArray(entregaveis) ? entregaveis : [])
+      .filter((e) => contaPonto(e) && e.dono_id === pessoaId && e.validado_em)
+      .map((e) => segundaDaSemana(String(e.validado_em).slice(0, 10)))
+      .filter((seg) => seg && seg >= primeira && seg <= fim),
+  );
+  return { semanas: distintas.size, janela };
+}
+
+/**
+ * Os três portões, com o número de cada um na mão pra tela mostrar. A conversa
+ * de sociedade abre quando os TRÊS estão acesos — não quando a média fecha.
+ * Média deixaria a duplicação ser compensada por volume, e é justamente ela que
+ * separa sócio de funcionário caro.
+ */
+export function portoesDaSociedade({ entregaveis = [], pessoaId, hojeISO, meta = META_SOCIEDADE, minimo = SEMANAS_MINIMAS } = {}) {
+  const meus = (Array.isArray(entregaveis) ? entregaveis : []).filter((e) => e.dono_id === pessoaId);
+  const pontos = pontosDaPessoa(entregaveis, pessoaId);
+  const { semanas, janela } = semanasComEntrega({ entregaveis, pessoaId, hojeISO });
+  const duplicou = meus.filter((e) => contaPonto(e) && Number(e.habito) === HABITO_DUPLICACAO).length;
+  const portoes = [
+    {
+      id: 'peso', titulo: 'Peso entregue', valor: pontos, alvo: meta,
+      aberto: pontos >= meta, unidade: 'pontos',
+      ajuda: 'o tamanho do que ficou construído — só entregável validado por outra pessoa',
+    },
+    {
+      id: 'consistencia', titulo: 'Consistência', valor: semanas, alvo: minimo,
+      aberto: semanas >= minimo, unidade: `das últimas ${janela} semanas`,
+      ajuda: 'ritmo, não pico: dez cards numa semana e nada nas outras onze não abre este',
+    },
+    {
+      id: 'duplicacao', titulo: 'Duplicação', valor: duplicou, alvo: 1,
+      aberto: duplicou >= 1, unidade: `entrega do Hábito ${HABITO_DUPLICACAO}`,
+      ajuda: 'formou gente. Sócio que não duplicou não é sócio, é funcionário caro',
+    },
+  ];
+  return { portoes, abertos: portoes.filter((p) => p.aberto).length, total: portoes.length, liberado: portoes.every((p) => p.aberto) };
 }
 
 export function progressoSociedade(pontos, meta = META_SOCIEDADE) {
@@ -187,6 +284,7 @@ export function resumoDaPessoa({ entregaveis = [], pessoaId, fixoMes = null, met
   return {
     fixo: fixoMes,
     sociedade: progressoSociedade(pontosDaPessoa(entregaveis, pessoaId), meta),
+    portoes: portoesDaSociedade({ entregaveis, pessoaId, hojeISO, meta }),
     porColuna: ORDEM_COLUNAS.reduce((acc, c) => ({ ...acc, [c]: meus.filter((e) => e.coluna === c).length }), {}),
     atrasados: hoje
       ? meus.filter((e) => e.coluna !== 'entregue' && e.prazo && String(e.prazo).slice(0, 10) < hoje).length

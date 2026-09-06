@@ -12,6 +12,102 @@
 
 ---
 
+## DIR-74 — A sociedade deixa de ser uma barra e vira três portões
+
+**Emitida por:** dono (06/09/2026), depois de eu reportar as três pendências:
+*"O que você acha? Tá. E aí depois me traz uma visão já aplicada, que aí o que
+tiver que melhorar a gente vai melhorando."* — liberdade de ação pra aplicar a
+minha recomendação e ele corrigir em cima do que estiver na tela.
+
+**Data:** 06/09/2026.
+
+**O que eu acho, e por isso mudo:** a régua de 100 pontos que entrou na DIR-72
+era chute meu, e o problema dela não é o número — é a **forma**. Uma barra que
+só sobe tem dois defeitos que estragam o instrumento:
+
+1. **É catraca de mão única.** Quem entregou muito num semestre e nada no
+   seguinte continua parecendo perto de sócio. Barra premia histórico; sociedade
+   se decide por ritmo atual.
+2. **Deixa a pessoa se promover sozinha.** O card vira ponto quando alguém o
+   arrasta pra "Entregue" — e nada impedia que esse alguém fosse o dono do card.
+   A trava da DIR-72 ("passa pela revisão") só obriga a parar na coluna do meio;
+   não obriga ninguém a **olhar**.
+
+**O que entra:**
+
+- **Ninguém valida o próprio entregável.** Mover pra "Entregue" um card seu é
+  recusado, na regra e na tela. Só conta ponto entregável com carimbo de quem
+  validou, e esse alguém tem que ser outra pessoa. É isto que dá sentido à
+  coluna de revisão — sem isto ela é um pedágio sem guarda.
+- **Três portões, e a conversa de sociedade só abre com os três acesos:**
+  - **Peso** — 100 pontos acumulados (a régua que já existia, agora um portão
+    entre três em vez do placar inteiro);
+  - **Consistência** — entregou em pelo menos **8 das últimas 12 semanas**. É o
+    portão que a barra sozinha não tinha: mede ritmo, não acervo;
+  - **Duplicação** — pelo menos um entregável validado do **Hábito 8**. Sócio
+    que não formou ninguém não é sócio, é funcionário caro.
+
+**A reunião de segunda continua UMA só, e isso é resposta, não omissão.** O
+dono disse com todas as letras que as trilhas estão sendo aplicadas juntas. Duas
+atas na mesma semana seriam dois "gargalos da semana", e ninguém saberia qual é
+o verdadeiro. A trilha marca o **entregável**, não o encontro.
+
+**Regras de fronteira:**
+
+- **Migração nenhuma.** As colunas `validado_por_id`, `validado_em` e `habito`
+  já existem desde a DIR-72. Isto aqui é regra, não esquema.
+- **Os números são régua do dono, não lei da natureza** — 100 pontos, 8 de 12
+  semanas, Hábito 8. Estão numa constante nomeada cada um, pra ele trocar sem
+  procurar.
+
+---
+
+## DIR-73 — As agendas da empresa dentro do agendador
+
+**Emitida por:** dono (06/09/2026), com print do modal "Agendar reunião":
+*"AQUI INSERIR AS AGENDAS E MENTORIAS DA EMPRESA: Mentalidade do Executivo,
+Onboarding, Mentalidade do Diretor, Mentalidade do CEO, Eventos Top College,
+Treinamento X-eos, entre outros que você pode inserir de marcado, Reunião com
+o Marketing, Reunião com Financeiro — tudo como funciona o mercado."*
+
+**Data:** 06/09/2026.
+
+**O problema exato:** o passo 1 do agendador só sabe perguntar *"com quem é a
+reunião?"* e só oferece contato da lista. Mas metade da agenda de quem trabalha
+aqui **não tem um contato do outro lado**: mentoria, treinamento, evento e
+reunião de área são compromissos da CASA. Hoje, pra marcar uma dessas, a pessoa
+tem que sair do agendador e ir no bloco 🏛️ da gestão — e por isso elas não são
+marcadas.
+
+**O que entra:** o passo 1 passa a ter duas portas — *um contato da minha
+lista* ou **🏛️ uma agenda da empresa** — e um catálogo das agendas que a casa
+já tem, cada uma com a **cadência do mercado** já sugerida (dia, hora e
+duração), pra pessoa só confirmar.
+
+Do ditado do dono: Mentalidade do Executivo, Onboarding, Mentalidade do
+Diretor, Mentalidade do CEO, Eventos Top College, Treinamento X-eos, Reunião
+com Marketing, Reunião com Financeiro. Da autorização *"entre outros que você
+pode inserir"*, e marcadas no código como **proposta minha**, não como ordem
+dele: Reunião de Oportunidade (a PPV), Treinamento de Produto, Fechamento do
+Mês e Reunião de Liderança.
+
+**Regras de fronteira desta diretiva:**
+
+- **O agendador de contato não muda.** O caminho de hoje — escolher pessoa,
+  gravar em `contatos_metodo`, criar no Google — continua idêntico, byte por
+  byte. A porta nova é uma segunda saída, não um desvio da primeira.
+- **Não nasce tabela nova.** Agenda da empresa **é** `reunioes_empresa`
+  (DIR-52). O catálogo é uma lista em `src/lib/agendaEmpresa.js` — mudar a
+  grade da casa vira uma linha de código, não uma migração.
+- **Quem pode marcar pra todo mundo continua sendo quem já podia.** A porta
+  🏛️ só aparece pra visão total; sem isso, qualquer executivo enfiaria uma
+  reunião na agenda de toda a empresa.
+- **`publico` deixa de ser enfeite.** A coluna já existia sem ninguém ler:
+  agora agenda marcada `diretoria` some da agenda de quem não é diretoria, em
+  vez de ficar guardada mentindo.
+
+---
+
 ## DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria
 
 **Emitida por:** dono (06/09/2026): *"Preciso organizar as questões de
