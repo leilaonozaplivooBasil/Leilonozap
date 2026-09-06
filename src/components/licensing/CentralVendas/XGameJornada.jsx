@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Sunrise, BookOpen, Dumbbell, Camera, Store, Utensils, Handshake,
-  GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays, Gift,
+  GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays,
 } from 'lucide-react';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
@@ -59,16 +59,86 @@ const periodoDe = (t) => {
   return PERIODOS.find(([lim]) => min < lim) || PERIODOS[PERIODOS.length - 1];
 };
 
-/** O soquete do Duolingo: glifo SÓLIDO flutuando sobre o pratinho em
- *  meia-lua com lábio 3D (dois arcos, o de baixo mais claro — lâmina 6). */
-function PratinhoGlifo({ Icone }) {
+/** 🪑 A MESINHA REDONDA 3D — a plataforma das paradas que ainda não chegaram.
+ *  É uma MESA COMPLETA vista em leve perspectiva: um disco sólido (elipse
+ *  cheia) com a espessura aparecendo embaixo, tipo moeda deitada. NÃO é
+ *  arco, NÃO é meia-lua. */
+function Mesinha({ className = '', topo = '#E2E8F0', lado = '#94A3B8', brilho = '#F8FAFC' }) {
   return (
-    <span className="relative flex flex-col items-center">
-      <Icone className="relative z-10 w-9 h-9 text-slate-500 -mb-2.5" fill="currentColor" strokeWidth={1.4} />
-      <span className="relative w-[68px] h-[32px] overflow-hidden">
-        <span className="absolute left-0 -top-[32px] w-[68px] h-[68px] rounded-full border-[10px] border-slate-200 translate-y-[5px]" />
-        <span className="absolute left-0 -top-[32px] w-[68px] h-[68px] rounded-full border-[10px] border-slate-300" />
-      </span>
+    <svg viewBox="0 0 100 48" className={className} aria-hidden="true">
+      {/* a espessura da mesa (a parede lateral) */}
+      <ellipse cx="50" cy="32" rx="46" ry="13" fill={lado} />
+      <rect x="4" y="24" width="92" height="8" fill={lado} />
+      {/* a face de cima, inteira */}
+      <ellipse cx="50" cy="24" rx="46" ry="13" fill={topo} />
+      {/* o brilho que dá o volume */}
+      <ellipse cx="50" cy="21.5" rx="37" ry="8.5" fill={brilho} opacity="0.7" />
+    </svg>
+  );
+}
+
+/** 🎁 O BAÚ DO TESOURO 3D — desenhado de verdade (tampa abaulada, ferragens,
+ *  fechadura, rodapé). Trancado = chumbo; conquistado = ouro com a tampa
+ *  aberta e o brilho saindo de dentro. */
+function Bau({ aberto = false, className = '' }) {
+  const c = aberto
+    ? { corpo: '#F59E0B', claro: '#FCD34D', escuro: '#B45309', metal: '#FDE68A', luz: '#FEF3C7' }
+    : { corpo: '#475569', claro: '#64748B', escuro: '#334155', metal: '#94A3B8', luz: '#CBD5E1' };
+  return (
+    <svg viewBox="0 0 100 92" className={className} aria-hidden="true">
+      {/* o corpo */}
+      <path d="M14 48 h72 v26 a6 6 0 0 1 -6 6 h-60 a6 6 0 0 1 -6 -6 z" fill={c.corpo} />
+      {/* a lateral escura, que dá o volume */}
+      <path d="M76 48 h10 v26 a6 6 0 0 1 -6 6 h-4 z" fill={c.escuro} opacity="0.45" />
+
+      {aberto ? (
+        <g>
+          {/* o brilho saindo de dentro */}
+          <path d="M20 48 h60 l-6 -12 h-48 z" fill={c.luz} />
+          <path d="M42 30 l3 -9 3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 z" fill={c.luz} />
+          <circle cx="30" cy="27" r="2.6" fill={c.luz} />
+          <circle cx="70" cy="24" r="2" fill={c.luz} />
+          {/* a tampa inclinada pra trás */}
+          <g transform="rotate(-24 16 40)">
+            <path d="M14 40 v-4 a36 22 0 0 1 72 0 v4 z" fill={c.claro} />
+            <path d="M24 34 a26 15 0 0 1 52 0 z" fill={c.metal} opacity="0.5" />
+            <rect x="12" y="34" width="76" height="8" rx="3" fill={c.metal} />
+          </g>
+        </g>
+      ) : (
+        <g>
+          {/* a tampa abaulada, fechada */}
+          <path d="M14 48 v-6 a36 24 0 0 1 72 0 v6 z" fill={c.claro} />
+          <path d="M24 42 a26 16 0 0 1 52 0 z" fill={c.metal} opacity="0.45" />
+        </g>
+      )}
+
+      {/* a faixa metálica entre a tampa e o corpo */}
+      <rect x="11" y="44" width="78" height="9" rx="3.5" fill={c.metal} />
+      {/* a ferragem vertical do meio */}
+      <rect x="44" y={aberto ? 44 : 20} width="12" height={aberto ? 36 : 60} fill={c.metal} />
+      {/* a fechadura */}
+      <rect x="40.5" y="46" width="19" height="17" rx="4.5" fill={c.escuro} />
+      <circle cx="50" cy="52" r="3.2" fill={c.metal} />
+      <rect x="48.4" y="52" width="3.2" height="7" rx="1.6" fill={c.metal} />
+      {/* o rodapé */}
+      <rect x="9" y="74" width="82" height="10" rx="4.5" fill={c.escuro} />
+      {/* o pezinho de sombra */}
+      <ellipse cx="50" cy="87" rx="34" ry="4" fill="#0F172A" opacity="0.13" />
+    </svg>
+  );
+}
+
+/** A parada que ainda não chegou: o DESENHO 3D em cima da MESINHA. */
+function ParadaNaMesa({ Icone }) {
+  return (
+    <span className="relative block w-[76px] h-[62px]">
+      <Mesinha className="absolute bottom-0 left-0 w-[76px]" />
+      <Icone
+        className="absolute left-1/2 -translate-x-1/2 bottom-[22px] w-9 h-9 text-slate-500 drop-shadow-[0_2px_2px_rgba(15,23,42,0.18)]"
+        fill="currentColor"
+        strokeWidth={1.3}
+      />
     </span>
   );
 }
@@ -113,12 +183,11 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
             )}
           </span>
         ) : (
-          /* futura/perdida: o SOQUETE VAZIO do Duolingo — o desenho sólido
-             flutuando sobre o pratinho em meia-lua com lábio 3D */
+          /* futura/perdida: o DESENHO 3D em cima da MESINHA REDONDA */
           <span className="relative flex flex-col items-center transition-opacity group-hover:opacity-75">
-            <PratinhoGlifo Icone={Icone} />
+            <ParadaNaMesa Icone={Icone} />
             {perdido && (
-              <span className="absolute top-0 -right-1 z-10 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
+              <span className="absolute top-1 -right-0.5 z-10 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
                 <XIcon className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />
               </span>
             )}
@@ -268,7 +337,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                       <Trophy className="w-9 h-9 text-white drop-shadow-sm" fill="currentColor" strokeWidth={1.4} />
                     </span>
                   ) : (
-                    <PratinhoGlifo Icone={Trophy} />
+                    <ParadaNaMesa Icone={Trophy} />
                   )}
                 </div>
 
@@ -298,12 +367,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                           style={{ transform: `translateX(${offsetBau}px)` }}
                           title={g.completo ? 'Baú aberto — recompensa do período!' : 'O baú abre quando o período fechar inteiro'}
                         >
-                          <span
-                            className={`w-[64px] h-[56px] rounded-xl flex items-center justify-center ${g.completo ? 'bg-gradient-to-b from-amber-300 to-amber-500' : 'bg-gradient-to-b from-slate-500 to-slate-700'}`}
-                            style={{ boxShadow: g.completo ? '0 6px 0 0 #92400e' : '0 6px 0 0 #1e293b' }}
-                          >
-                            <Gift className={`w-8 h-8 ${g.completo ? 'text-white' : 'text-slate-300'} drop-shadow-sm`} fill="currentColor" strokeWidth={1.4} />
-                          </span>
+                          <Bau aberto={g.completo} className={`w-[74px] ${g.completo ? 'animate-pulse' : ''}`} />
                         </div>
                       )}
                     </React.Fragment>
