@@ -36,6 +36,10 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
+import {
+  rotinaEmVigor, estadoDaRotina, deveGerarSozinha, valeAPartirDe,
+  incluirNaRotina, editarNaRotina, excluirDaRotina, itemDaRotina,
+} from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
@@ -103,12 +107,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       .catch(() => setPerfil(null));
   }, [uid]);
 
+  // 🔁 DIR-80 — `diaLido` guarda QUAL dia já terminou de carregar. Sem isso, a
+  // geração automática dispararia contra a lista vazia do primeiro render (antes
+  // da resposta do banco chegar) e duplicaria o dia inteiro. É a trava de
+  // idempotência começando aqui, no ponto onde ela é de verdade barata.
+  const [diaLido, setDiaLido] = useState(null);
   const carregarTarefas = useCallback(() => {
     if (!uid) return;
     plataforma.entities.MetodoTarefa.filter({ user_id: uid, data: dia })
-      .then((rows) => setTarefas((Array.isArray(rows) ? rows : []).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.hora).localeCompare(String(b.hora)))))
-      .catch(() => setTarefas([]));
+      .then((rows) => { setTarefas((Array.isArray(rows) ? rows : []).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.hora).localeCompare(String(b.hora)))); setDiaLido(dia); })
+      .catch(() => { setTarefas([]); setDiaLido(dia); });
   }, [uid, dia]);
+  useEffect(() => { setDiaLido(null); }, [dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
 
   const salvarPerfil = async (patch) => {
@@ -143,7 +153,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   };
 
   const sonhos = Array.isArray(perfil?.sonhos) ? perfil.sonhos : [];
-  const rotina = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
+  // 📅 DIR-80 — a rotina DELA quando ela editou; a da casa enquanto não editou.
+  // (a coluna metodo_perfil.rotina existia e ninguém nunca escrevia nela)
+  const rotina = useMemo(() => rotinaEmVigor(perfil, ROTINA_PADRAO), [perfil]);
+  const estadoRotina = useMemo(() => estadoDaRotina(perfil), [perfil]);
   const progresso = progressoDia(tarefas);
 
   // ══ 🎮 X-GAME por cima do Master Task (mesma tela, zero mudança de fluxo) ══
@@ -412,18 +425,57 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     setDia(d.toISOString().slice(0, 10));
   };
 
+  // 🔒 DIR-80 — os dias que ESTA sessão já gerou (na mão ou sozinha).
+  // A trava "só em dia vazio" não basta sozinha: entre o fim da criação e a
+  // releitura do banco existe uma janela em que `tarefas` ainda está vazia. Se
+  // o efeito rodar nessa janela, ele gera o dia DE NOVO — foi exatamente isso
+  // que a prova pegou (40 tarefas no lugar de 20). Marcar o dia é o que fecha
+  // a janela, e vale mesmo que a releitura demore ou falhe.
+  const diasGerados = useRef(new Set());
+
   const gerarDia = async () => {
     setSalvando(true);
     try {
+      diasGerados.current.add(dia); // o automático não repete o que a mão acabou de fazer
       const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
       for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
-      toast.success(`Dia gerado com ${linhas.length} tarefas da sua rotina!`);
+      // 🔁 DIR-80 — gerar uma vez LIGA a repetição. "Só se a pessoa pedir pra
+      // parar" — então o liga é aqui, e o desliga é um botão dela.
+      if (!estadoRotina.automatica) {
+        await salvarPerfil({ rotina_automatica: true, rotina_automatica_desde: dia });
+      }
+      toast.success(`Dia gerado com ${linhas.length} tarefas da sua rotina — a partir de agora ela se repete todo dia.`);
       carregarTarefas();
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar o dia — a migração do Método já foi colada no banco?');
     } finally { setSalvando(false); }
   };
+
+  // 🔁 DIR-80 — A ROTINA SE REPETE SOZINHA.
+  // "Foi gerada uma vez, ela tem que ficar todo dia; só se a pessoa pedir pra
+  // parar." A regra de QUANDO gerar mora em rotinaPessoal.deveGerarSozinha —
+  // aqui só se obedece. As travas que ela impõe:
+  //   • só em dia VAZIO (abrir a tela duas vezes não duplica);
+  //   • nunca pra trás, e nunca antes do dia em que ela ligou;
+  //   • e o `gerandoAuto` impede duas execuções no mesmo instante.
+  const gerandoAuto = useRef(false);
+  useEffect(() => {
+    if (!uid || diaLido !== dia || gerandoAuto.current) return;
+    if (diasGerados.current.has(dia)) return;
+    if (!deveGerarSozinha({ perfil, dia, hojeISO: hojeStr(), tarefasDoDia: tarefas })) return;
+    gerandoAuto.current = true;
+    diasGerados.current.add(dia);
+    (async () => {
+      try {
+        const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
+        for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+        toast.success(`Seu dia já nasceu com as ${linhas.length} tarefas da sua rotina.`);
+        carregarTarefas();
+      } catch (e) { console.error(e); }
+      finally { gerandoAuto.current = false; }
+    })();
+  }, [uid, dia, diaLido, tarefas, perfil, rotina, pesoAutomatico, carregarTarefas]);
 
   // DIR-45.2 — dia gerado com a rotina antiga continua salvo no banco; este
   // botão apaga as tarefas do DIA ESCOLHIDO e recria com a Rotina Perfeita.
@@ -725,6 +777,31 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       setNovaTarefa({ hora: '', titulo: '' });
       carregarTarefas();
     } catch { toast.error('Erro ao adicionar'); }
+  };
+
+  // ✏️ DIR-80 — editar a tarefa DE HOJE (não a rotina: são coisas diferentes,
+  // e a tela diz qual é qual no título de cada botão)
+  // 📅 DIR-80 — o painel da ROTINA DELA (diferente de editar a tarefa de hoje)
+  const [rotinaAberta, setRotinaAberta] = useState(false);
+  const [editandoRotina, setEditandoRotina] = useState(null);
+  const [rascunho, setRascunho] = useState({ hora: '', titulo: '' });
+  const [novoDaRotina, setNovoDaRotina] = useState({ hora: '', titulo: '' });
+  const gravarRotina = async (nova) => {
+    const ok = await salvarPerfil({ rotina: nova });
+    if (ok) toast.success(`Rotina salva — vale a partir de ${valeAPartirDe(hojeStr())?.split('-').reverse().slice(0, 2).join('/') || 'amanhã'}.`);
+    else toast.error('Erro ao salvar a rotina');
+    return ok;
+  };
+
+  const [editandoId, setEditandoId] = useState(null);
+  const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
+  const salvarEdicao = async (t) => {
+    const titulo = String(edicao.titulo || '').trim();
+    if (!titulo) { toast.error('O título não pode ficar vazio — pra tirar, use a lixeira.'); return; }
+    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, titulo, hora: edicao.hora || '' } : x)));
+    setEditandoId(null);
+    try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora: edicao.hora || '' }); }
+    catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
   };
 
   const removerTarefa = async (t) => {
@@ -1491,7 +1568,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 <Button onClick={gerarDia} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
                   ⚡ {salvando ? 'Gerando...' : 'Gerar Minha Rotina Perfeita (Rotina do Método)'}
                 </Button>
-                <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da Rotina Perfeita — das 5h ao descanso, com o guia de cada horário.</p>
+                <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da {estadoRotina.propria ? 'SUA rotina' : 'Rotina Perfeita'} — e a partir daí ela se repete todo dia, sozinha.</p>
                 <button type="button" onClick={() => setVisao('quadro')} className="text-[11px] font-semibold text-nz-verde hover:text-nz-verde-claro">🗂️ ou abrir o nosso quadro →</button>
               </div>
             ) : visao === 'jornada' ? (
@@ -1517,8 +1594,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                         const guia = guiaDaRotina(t.titulo);
                         return (
                           <div key={t.id} className={`border-b border-nz-borda/35 py-3 ${t.feito ? 'opacity-70' : ''}`}>
-                            <div className="flex items-center gap-2.5">
-                              <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
+                            {/* 📱 DIR-80 — DOIS ANDARES NO CELULAR.
+                                Antes título e ações dividiam a MESMA linha: no
+                                celular sobrava uma coluna estreita pro título,
+                                que se esticava em seis linhas, a faixa de ações
+                                passava POR CIMA do texto e a lixeira saía da
+                                tela. Agora o título ocupa a largura toda e as
+                                ações descem pro andar de baixo.
+                                O `sm:contents` é o pulo do gato: no desktop o
+                                contêiner das ações some (display:contents) e os
+                                filhos voltam a ser itens diretos da linha —
+                                exatamente como era. Zero mudança no desktop. */}
+                            <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1.5 sm:flex-nowrap sm:items-center">
+                              <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer mt-1 sm:mt-0" />
                               {/* ⚡ o XP voando no clique — feedback imediato do jogo */}
                               {xpFlash?.id === t.id && (
                                 <span className="shrink-0 text-[11px] font-bold text-nz-verde animate-bounce">
@@ -1528,7 +1616,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                               <div className="flex-1 min-w-0">
                                 {/* ✅ DIR-77 — concluída fica VERDE (ordem do dono), e o
                                     horário mostra quando TERMINA quando isso existe. */}
-                                <p className={`text-sm ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`}>
+                                <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste="titulo-tarefa">
                                   {t.hora && <span className="font-bold">{t.hora_fim ? `${t.hora}–${t.hora_fim}` : t.hora} · </span>}{t.titulo}
                                 </p>
                                 {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou */}
@@ -1547,6 +1635,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                   t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>
                                 )}
                               </div>
+                              {/* o ANDAR DE BAIXO no celular; no desktop `sm:contents`
+                                  dissolve este contêiner e nada muda de lugar */}
+                              <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 pl-6 sm:pl-0 sm:w-auto sm:contents" data-teste="acoes-tarefa">
                               {/* 💰 X-PAY — a fatia da tarefa no valor do dia (fixo ÷ 22, repartido pelo peso) */}
                               {xgame && xgame.valores[t.id] > 0 && (t.feito || estadoDaTarefa(t)?.id !== 'PERDIDO') && (
                                 <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
@@ -1616,8 +1707,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                   className={`shrink-0 text-[11px] font-semibold ${guiaAberto === t.id ? 'text-nz-verde' : 'text-nz-tinta-fraca hover:text-nz-verde'}`}
                                 >📖 guia</button>
                               )}
-                              <button type="button" onClick={() => removerTarefa(t)} className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                              {/* ✏️ DIR-80 — EDITAR, que não existia: só havia a
+                                  lixeira. O dono pediu "botão de editar de
+                                  excluir" — e sem editar, corrigir um horário
+                                  significava apagar e recriar. */}
+                              {!t.feito && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); }}
+                                  title="editar esta tarefa de hoje"
+                                  data-teste="editar-tarefa"
+                                  className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
+                                ><PenLine className="w-3.5 h-3.5" /></button>
+                              )}
+                              <button type="button" onClick={() => removerTarefa(t)} title="apagar só de hoje — a rotina continua igual" className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                              </div>
                             </div>
+                            {/* ✏️ o editor da tarefa de HOJE, inline */}
+                            {editandoId === t.id && (
+                              <div className="mt-2 flex flex-wrap items-center gap-2" data-teste="editor-tarefa">
+                                <Input type="time" value={edicao.hora} onChange={(e) => setEdicao({ ...edicao, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="editar-hora" />
+                                <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
+                                <Button size="sm" onClick={() => salvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
+                                <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
+                                <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina.</p>
+                              </div>
+                            )}
                             {guia && guiaAberto === t.id && !t.feito && (
                               <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
                             )}
@@ -1637,6 +1752,84 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <Button onClick={addTarefa} disabled={!novaTarefa.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0"><Plus className="w-4 h-4" /></Button>
             </div>
             )}
+            {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
+                O dono: "ela pode gerar a perfeita e excluir e incluir, na rotina
+                dela — existem pessoas que não vão pra empresa". Editar aqui vale
+                a partir de AMANHÃ: mexer no dia que ela já está tocando apagaria
+                o que ela já fez. */}
+            {visao === 'lista' && (
+              <div className="mt-4 rounded-xl border border-nz-borda bg-white" data-teste="minha-rotina">
+                <button
+                  type="button"
+                  onClick={() => setRotinaAberta((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left"
+                  data-teste="abrir-minha-rotina"
+                >
+                  <span className="text-[13px] font-bold text-nz-tinta">
+                    📅 A minha rotina <span className="font-medium text-nz-tinta-fraca">· {rotina.length} itens · {estadoRotina.propria ? 'sua' : 'a padrão da casa'}</span>
+                  </span>
+                  <span className="text-[11px] font-semibold text-nz-verde shrink-0">{rotinaAberta ? '▾ fechar' : '▸ editar'}</span>
+                </button>
+                {rotinaAberta && (
+                  <div className="px-3 pb-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-nz-verde-fundo px-2.5 py-2">
+                      <span className="text-[11px] text-nz-tinta">
+                        {estadoRotina.automatica
+                          ? 'Está ligada: todo dia nasce com a sua rotina.'
+                          : 'Ainda não se repete. Gere um dia e ela passa a nascer sozinha.'}
+                      </span>
+                      {estadoRotina.automatica && (
+                        <button
+                          type="button"
+                          onClick={() => salvarPerfil({ rotina_automatica: false }).then((ok) => ok && toast.success('Parei de gerar sozinha. Você continua podendo gerar na mão.'))}
+                          className="ml-auto text-[11px] font-bold text-red-600 hover:underline shrink-0"
+                          data-teste="parar-rotina"
+                        >parar de gerar todo dia</button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      {rotina.map((item, i) => (
+                        <div key={`${item.hora}-${item.titulo}-${i}`} className="flex flex-wrap items-center gap-2 border-b border-nz-borda/40 py-1.5" data-teste="item-rotina">
+                          {editandoRotina === i ? (
+                            <>
+                              <Input type="time" value={rascunho.hora} onChange={(e) => setRascunho({ ...rascunho, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="rotina-hora" />
+                              <Input value={rascunho.titulo} onChange={(e) => setRascunho({ ...rascunho, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[150px]" data-teste="rotina-titulo" />
+                              <Button size="sm" className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-salvar"
+                                onClick={async () => { const ok = await gravarRotina(editarNaRotina(rotina, i, rascunho)); if (ok) setEditandoRotina(null); }}
+                              >salvar</Button>
+                              <button type="button" onClick={() => setEditandoRotina(null)} className="text-[11px] text-nz-tinta-fraca shrink-0">cancelar</button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[12px] font-bold tabular-nums text-nz-tinta w-12 shrink-0">{item.hora || '—'}</span>
+                              <span className="text-[12px] text-nz-tinta flex-1 min-w-0 break-words">{item.titulo}</span>
+                              <button type="button" title="editar na rotina — vale todo dia" data-teste="rotina-editar"
+                                onClick={() => { setEditandoRotina(i); setRascunho({ hora: item.hora || '', titulo: item.titulo }); }}
+                                className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"><PenLine className="w-3.5 h-3.5" /></button>
+                              <button type="button" title="tirar da rotina — some de todo dia, não só de hoje" data-teste="rotina-excluir"
+                                onClick={() => gravarRotina(excluirDaRotina(rotina, i))}
+                                className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Input type="time" value={novoDaRotina.hora} onChange={(e) => setNovoDaRotina({ ...novoDaRotina, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="rotina-nova-hora" />
+                      <Input value={novoDaRotina.titulo} onChange={(e) => setNovoDaRotina({ ...novoDaRotina, titulo: e.target.value })} placeholder="incluir na minha rotina..." className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[150px]" data-teste="rotina-nova-titulo" />
+                      <Button disabled={!novoDaRotina.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-incluir"
+                        onClick={async () => { const ok = await gravarRotina(incluirNaRotina(rotina, novoDaRotina)); if (ok) setNovoDaRotina({ hora: '', titulo: '' }); }}
+                      ><Plus className="w-4 h-4" /></Button>
+                    </div>
+                    <p className="text-[10px] text-nz-tinta-fraca">
+                      O que você muda aqui vale <strong>a partir de amanhã</strong> — o dia de hoje continua como está, com o que você já fez.
+                      Pra valer hoje também, use o <em>regerar o dia</em> ali embaixo.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {visao === 'lista' && tarefas.length > 0 && (
               confirmaRegerar ? (
                 <div className="flex items-center gap-2 flex-wrap rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs">

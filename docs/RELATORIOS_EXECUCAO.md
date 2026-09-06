@@ -4240,3 +4240,54 @@ cronômetro, os blocos e as demandas seguem iguais.
 
 **Registrado (das 4 falhas da DIR-70):** continuam sendo do menu que o outro
 chat redesenhou — comprovado no HEAD dele, sem a minha mudança.
+
+---
+
+## REL-80 — O celular em dois andares, e a rotina passa a ser dela (DIR-80)
+
+**Aprovação:** dono, 06/09/2026 — **"PODE"**.
+
+**O que foi feito**
+
+1. **Celular:** a linha da tarefa virou **dois andares** — título com a largura
+   toda em cima, ações embaixo. O truque é `sm:contents`: no desktop o
+   contêiner das ações desaparece e os filhos voltam a ser itens diretos da
+   linha, **zero mudança no desktop**.
+2. **Botão de EDITAR** na tarefa do dia (só existia a lixeira), com editor
+   inline e o recado de que aquilo muda **só hoje**.
+3. **`src/lib/rotinaPessoal.js`** — a regra pura: incluir, editar, excluir,
+   ordenar pelo relógio, e a régua da geração automática.
+4. **O painel "A minha rotina"** grava em `metodo_perfil.rotina` — a coluna que
+   existia desde a migração do Método e **nunca ninguém escreveu**.
+5. **Repetição automática**: gerar uma vez liga; só desliga no botão dela.
+   Migração `20260907050000` com `rotina_automatica` e `..._desde`.
+
+**Verificado**
+
+- 20 testes novos; suíte **1321/1321**; migrações 87/87; build.
+- **5 mutações na lib**, todas quebraram (gerar em dia cheio; gerar pra trás;
+  "parar" não parar; misturar a rotina dela com a da casa; salvar título vazio
+  apagando o item).
+- **Prova em navegador: 295/300, zero erro de console**, medindo no viewport de
+  **390px**: 21 títulos, **zero sobreposição**, **zero ação fora da tela**,
+  **zero título espremido**.
+
+**O defeito que a prova achou — meu, e sério**
+
+A geração automática **duplicou o dia: 40 tarefas no lugar de 20.** A lib
+estava certa (a trava "só em dia vazio" passou em todos os testes); o furo era
+o fluxo da tela: entre terminar de criar as tarefas e reler o banco existe uma
+janela em que a lista ainda está vazia — e o efeito rodava nela. Fechado com um
+registro dos dias que a sessão já gerou, na mão ou sozinha. **Mutação
+confirmou:** tirando a trava, a prova volta a acusar `criadas=40`.
+
+Também achado por teste: `horaValida` aceitava **"25:99"** (só conferia o
+formato, não o relógio) — corrigido.
+
+**Decisão registrada:** editar a rotina vale **a partir de amanhã**; o dia de
+hoje só muda por botão.
+
+**Não entrou:** produção; a `ROTINA_PADRAO` da casa; as regras de peso e X-Pay.
+
+**Das 5 falhas restantes:** 4 da DIR-70 e 1 da DIR-72 — todas do menu que o
+outro chat redesenhou (o item virou "ADM X-Game" no commit db9dd64f).
