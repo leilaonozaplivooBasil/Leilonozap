@@ -76,21 +76,22 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
       <div className="relative flex flex-col sm:flex-row sm:items-end">
         {/* ────────── coluna 1: quem assina isto aqui ────────── */}
         <div className="px-6 sm:px-9 pt-7 sm:pt-9 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[24rem] shrink-0">
-          {/* as duas marcas juntas: a faculdade e o sistema, lado a lado */}
-          <div className="flex items-center gap-4 sm:gap-5 mb-5">
-            <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-12 w-auto" draggable="false" />
-            <span aria-hidden="true" className="h-8 sm:h-10 w-px bg-white/20" />
-            <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-8 w-auto" draggable="false" />
+          {/* as duas marcas juntas — e a FRASE AO LADO DELAS (ordem do dono:
+              "essa frase junto do X-office está bagunçado, ela tem que entrar
+              na lateral, do lado da logo"). Antes ela ficava empilhada entre
+              o par de logos e o título, disputando atenção com o X-office;
+              agora é legenda da assinatura, que é o papel dela. */}
+          <div className="flex items-start gap-4 sm:gap-5 mb-6">
+            <img src="/marca/topcollege.webp" alt="Top College" className="h-9 sm:h-12 w-auto shrink-0" draggable="false" />
+            <span aria-hidden="true" className="h-9 sm:h-12 w-px bg-white/20 shrink-0" />
+            <div className="min-w-0">
+              <img src="/marca/marca-xeos-lockup.webp" alt="X-eos" className="h-6 sm:h-8 w-auto mb-1.5" draggable="false" />
+              <p className="text-[10px] sm:text-[11px] leading-snug text-white/40" style={{ fontFamily: 'Sora, sans-serif' }}>
+                A primeira faculdade de empreendedorismo do planeta · Estrutura
+                de operação e expansão de qualquer negócio
+              </p>
+            </div>
           </div>
-
-          {/* 🎓 DIR-63 — as frases das duas marcas moram AQUI agora. Elas eram o
-              único conteúdo que o bloco de baixo tinha e a faixa não: com ele
-              removido, a mensagem não se perde e o par de logos deixa de
-              aparecer duas vezes na mesma tela. */}
-          <p className="text-[11px] sm:text-xs leading-relaxed text-white/45 mb-5" style={{ fontFamily: 'Sora, sans-serif' }}>
-            A primeira faculdade de empreendedorismo do planeta · Estrutura de operação
-            e expansão de qualquer negócio
-          </p>
 
           {/* 🎓 DIR-66 — ordem do dono: DENTRO da Top College este título não é
               "Painel de Alavancagem" — é o X-office, a sub-marca que cuida de

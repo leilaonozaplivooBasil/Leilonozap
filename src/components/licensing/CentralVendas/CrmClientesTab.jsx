@@ -1489,8 +1489,11 @@ _Enviado via CRM Leilão NoZap_`;
             abaixo, exatamente o mesmo par de logos da faixa da academia — e o
             dono viu isso na tela: "está repetindo muito as logos". As frases
             das marcas subiram pra faixa; a identidade continua, uma vez só. */}
-        {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
-        <CrmResumo itens={resumoItens} />
+        {/* 🧭 Os 4 números MUDARAM DE CASA (ordem do dono: "tira dali de cima
+            do Sonho/Compromisso/Lista e põe na visão executiva, pra essa
+            página ficar mais limpa"). Eles agora abrem o Hábito 07 —
+            Verificação, que é o X-office, o lugar de olhar número. Aqui em
+            cima fica só o que a página promete: os 8 Hábitos. */}
 
         {/* 🏆 Navegação pelos 8 Hábitos (DIR-43) — trilho escuro, ícone de
             traço no lugar do emoji e o hábito ativo carregando o gradiente
@@ -1628,6 +1631,8 @@ _Enviado via CRM Leilão NoZap_`;
               <img src="/marca/xoffice.webp" alt="X-office" className="h-6 w-auto" />
               <span className="text-[11px] sm:text-xs text-nz-tinta-fraca">verificando o progresso e mapeando processos</span>
             </div>
+            {/* os 4 números que vieram do topo: é aqui que eles pertencem */}
+            <CrmResumo itens={resumoItens} />
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
             {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
