@@ -21,6 +21,10 @@
 // Tudo aqui é função pura: recebe tarefas/hora e devolve número. Nada de
 // rede, nada de estado — quem grava o placar é a tela (xgame_diario).
 
+// 💰 06/09/2026 — a conta do fixo distribuído pelo peso (caminho relativo:
+// este arquivo também roda na suíte do node, que não resolve o '@/').
+import { distribuirDia, MINIMO_DIA_PADRAO } from './distribuicaoFixo.js';
+
 export const TOKEN_MAX = 22.22;
 export const APLICABILIDADE_MAX = 12.22;
 export const MVM_MAX = 10;
@@ -199,14 +203,28 @@ export function estudoEmDia(diasCiclo = [], leituraHoje = false) {
 export const ehTarefaDeEstudo = (titulo) =>
   /leitura|estudo/i.test(String(titulo || ''));
 
-// ── 💰 X-PAY (a remuneração da planilha) ────────────────────────────
-// Verba fixa ÷ 22 dias ÷ nº de tarefas da categoria × peso ÷ 3 — exatamente
-// a fórmula F33 da planilha. Venda vale o valor cheio por unidade.
+// ── 💰 X-PAY (a remuneração) ─────────────────────────────────────────
+// 06/09/2026 — A FÓRMULA MUDOU, por ordem do dono (X-Performance): o fixo do
+// mês ÷ 22 dias úteis vira o valor do dia, e dentro do dia o PESO reparte o
+// valor — a soma das tarefas É o valor do dia, sempre; tarefa nova tira das
+// outras automaticamente; dia com menos tarefas que o mínimo paga
+// proporcional. A conta mora em src/lib/distribuicaoFixo.js.
+// (A F33 da planilha — verba ÷ 22 ÷ nº de tarefas × peso ÷ 3 — não somava o
+// fixo: três tarefas de peso 5 pagavam 5/3 do dia. Saiu.)
+// Venda continua valendo o valor cheio por unidade; bônus reparte a verba de
+// bônus pela mesma régua.
 
 /** Verbas padrão (planilha: H7 produção R$1.300 · H8 bônus R$200 · H9 venda R$50). */
 export const PARTICIPANTE_PADRAO = {
   cargo: 'executivo', perfil: 'estrategico',
   verba_producao: 1300, verba_bonus: 200, valor_venda: 50, multa_atraso: 200,
+  fixo_mes: null, minimo_dia: MINIMO_DIA_PADRAO,
+};
+
+/** O fixo que a conta usa: fixo_mes quando o admin definiu; senão a verba de produção de sempre. */
+export const fixoDoParticipante = (p) => {
+  const fixo = Number(p?.fixo_mes);
+  return Number.isFinite(fixo) && p?.fixo_mes !== null && p?.fixo_mes !== undefined && p?.fixo_mes !== '' ? fixo : (Number(p?.verba_producao) || 0);
 };
 
 /** Categoria efetiva: a gravada, ou deduzida do título (leitura/estudo = bônus). */
@@ -250,23 +268,32 @@ export function porqueDoPeso(titulo) {
 }
 
 /**
- * Valor em R$ de cada tarefa do dia (mapa id → valor). Mentoria e Visão
- * Estratégica pagam pela verba de produção (na planilha só [BÔNUS] e [VENDA]
- * saem do bolo de produção).
+ * Valor em R$ de cada tarefa do dia (mapa id → valor). Produção, Mentoria e
+ * Visão Estratégica repartem o FIXO do dia pelo peso (com o mínimo diário);
+ * Bônus reparte a verba de bônus do dia pelo peso; Venda vale o valor cheio.
  */
 export function valoresDasTarefas(tarefas = [], participante = PARTICIPANTE_PADRAO) {
   const p = { ...PARTICIPANTE_PADRAO, ...(participante || {}) };
   const cats = tarefas.map((t) => categoriaDaTarefa(t));
-  const nProd = cats.filter((c) => c !== 'bonus' && c !== 'venda').length;
-  const nBonus = cats.filter((c) => c === 'bonus').length;
+  const producao = tarefas.filter((t, i) => cats[i] !== 'bonus' && cats[i] !== 'venda');
+  const bonus = tarefas.filter((t, i) => cats[i] === 'bonus');
+  const fixo = distribuirDia({ fixoMes: fixoDoParticipante(p), minimoDia: p.minimo_dia, tarefas: producao });
+  const extra = distribuirDia({ fixoMes: Number(p.verba_bonus) || 0, minimoDia: 1, tarefas: bonus });
   const valores = {};
   tarefas.forEach((t, i) => {
-    const cat = cats[i];
-    if (cat === 'venda') valores[t.id] = Number(p.valor_venda) || 0;
-    else if (cat === 'bonus') valores[t.id] = nBonus ? ((Number(p.verba_bonus) / 22) / nBonus) * (pesoDaTarefa(t) / 3) : 0;
-    else valores[t.id] = nProd ? ((Number(p.verba_producao) / 22) / nProd) * (pesoDaTarefa(t) / 3) : 0;
+    if (cats[i] === 'venda') valores[t.id] = Number(p.valor_venda) || 0;
+    else if (cats[i] === 'bonus') valores[t.id] = extra.valores[t.id] || 0;
+    else valores[t.id] = fixo.valores[t.id] || 0;
   });
   return valores;
+}
+
+/** A régua do dia inteiro (valor do dia, quantas tarefas faltam pro mínimo, o que ficou em aberto). */
+export function reguaDoDia(tarefas = [], participante = PARTICIPANTE_PADRAO) {
+  const p = { ...PARTICIPANTE_PADRAO, ...(participante || {}) };
+  const producao = tarefas.filter((t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; });
+  const d = distribuirDia({ fixoMes: fixoDoParticipante(p), minimoDia: p.minimo_dia, tarefas: producao });
+  return { valorDia: d.valorDia, faltam: d.faltam, emAberto: d.emAberto, minimoDia: d.minimoDia, fixo: fixoDoParticipante(p) };
 }
 
 /** X-Pay do dia: ganho (feitas), em jogo (ainda dá tempo) e perdido (janela passou). */
@@ -456,7 +483,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
   const token = humanToken(mvm, aplic, estudoOk);
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
-  const xpay = xpayDoDia(comEstado, valores);
+  const xpay = { ...xpayDoDia(comEstado, valores), ...reguaDoDia(tarefas, participante || PARTICIPANTE_PADRAO) };
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));

@@ -29,6 +29,7 @@ export default defineConfig({
       // a plataforma (rotas/upload) é de mentira na banca — vem antes do '@'
       // porque o Vite casa os atalhos na ordem em que estão aqui
       '@/api/plataformaClient': path.resolve(aqui, 'falso/plataformaClient.js'),
+      '@/api/supabaseClient': path.resolve(aqui, 'falso/supabaseClient.js'),
       '@': path.resolve(aqui, '../../src'),
     },
   },

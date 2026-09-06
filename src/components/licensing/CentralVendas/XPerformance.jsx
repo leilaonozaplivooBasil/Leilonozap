@@ -11,6 +11,8 @@ import {
   encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX,
 } from '@/lib/xperformance';
 import { HABITOS } from '@/lib/metodo';
+import { fixoDoParticipante } from '@/lib/xgame';
+import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
 //
@@ -114,7 +116,7 @@ function Card({ item, onMover, onExcluir, ehValidador, meuId }) {
   );
 }
 
-export default function XPerformance({ currentUser, visaoTotal = false, hojeISO }) {
+export default function XPerformance({ currentUser, visaoTotal = false, gestao = false, hojeISO }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const uid = currentUser?.id;
   // o cargo e o fixo moram no X-Game; esta tela busca, não guarda cópia — uma
@@ -131,7 +133,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
 
   const carregar = useCallback(async () => {
     if (uid) {
-      supabase.from('xgame_participantes').select('cargo,verba_producao,verba_bonus').eq('user_id', uid).maybeSingle()
+      supabase.from('xgame_participantes').select('cargo,verba_producao,verba_bonus,fixo_mes,minimo_dia').eq('user_id', uid).maybeSingle()
         .then(({ data }) => setParticipante(data || null));
     }
     const [enc, ent] = await Promise.all([
@@ -152,7 +154,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
   }, [encontros, encontro.data]);
 
   const meuResumo = useMemo(
-    () => resumoDaPessoa({ entregaveis, pessoaId: uid, fixoMes: participante?.verba_producao ?? null, hojeISO: hoje }),
+    () => resumoDaPessoa({ entregaveis, pessoaId: uid, fixoMes: participante ? fixoDoParticipante(participante) : null, hojeISO: hoje }),
     [entregaveis, uid, participante, hoje],
   );
 
@@ -302,6 +304,10 @@ export default function XPerformance({ currentUser, visaoTotal = false, hojeISO 
           </p>
         </div>
       </div>
+
+      {/* ── 🎯 A GESTÃO (só super admin): o antigo Admin X-GAME + o fixo
+          distribuído pelo peso — "junta o admin do X-Game com o X-Performance" */}
+      {gestao && <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />}
 
       {/* ── 3. O ENCONTRO DE SEGUNDA ─────────────────────────────────────── */}
       <div>

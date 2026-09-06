@@ -60,8 +60,8 @@ const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036
 
 const DICAS = {
   ciclo: 'O jogo roda em ciclos de 22 dias úteis. A cotação do dia começa em 1,00 e cai 0,01 por dia útil até 0,80 no dia 22 — "ANTECIPAÇÃO É PODER". Sem data aberta aqui, o app usa o 1º dia útil do mês.',
-  verba_producao: 'Verba fixa mensal de PRODUÇÃO da pessoa. O X-Pay divide: verba ÷ 22 dias ÷ nº de tarefas de produção do dia × peso da tarefa ÷ 3.',
-  verba_bonus: 'Verba mensal de BÔNUS/ESTUDO (leitura, cursos). Divide igual à produção, só entre as tarefas de bônus.',
+  verba_producao: 'Verba mensal de PRODUÇÃO — usada como fixo quando a pessoa não tem "fixo mensal" definido na gestão do X-Performance. A conta: fixo ÷ 22 dias úteis = valor do dia; dentro do dia o PESO reparte o valor (a soma das tarefas é sempre o dia inteiro); dia com menos tarefas que o mínimo paga proporcional.',
+  verba_bonus: 'Verba mensal de BÔNUS/ESTUDO (leitura, cursos). Mesma régua, só entre as tarefas de bônus do dia.',
   perfil: 'O perfil muda os pesos do Human Token: estratégico/operacional têm 12,22 de aplicabilidade (50% produção, 30% real time, 20% bônus); comercial tem 2,22 + PT VENDA 2,5 (vendas valem muito mais).',
   cargo: 'O cargo define a multa de atraso do FAQ: Trainee R$50, Executivo R$200, Diretor R$500.',
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',

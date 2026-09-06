@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake, Gamepad2 } from 'lucide-react';
+import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
 import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
@@ -153,6 +153,12 @@ const DashboardContent = ({ user, isAdmin }) => {
     } catch {}
   };
   const [catalogSubTab, setCatalogSubTab] = useState(getInitialCatalogSubTab);
+  // 🎮 link antigo do Admin X-GAME → a gestão dentro do X-Performance
+  useEffect(() => {
+    if (activeTab !== 'xgame-admin') return;
+    setCatalogSubTab('catalogo-xperformance');
+    setActiveTab('catalogo');
+  }, [activeTab]);
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -1196,7 +1202,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                   College a página é uma superfície só, e cartão aqui traria de
                   volta o retângulo que o dono mandou tirar. */}
               <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
-                <XPerformance currentUser={user} visaoTotal={isAdmin} />
+                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin */}
+                <XPerformance currentUser={user} visaoTotal={isAdmin} gestao={visibilidadeDoUsuario(user).superAdmin} />
               </TabsContent>
 
               <TabsContent value="catalogo-vendedores" className="mt-6">
@@ -1535,27 +1542,9 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
-        {/* 🎮 X-GAME — o admin da gamificação mora na X-eos (menu Top College),
-            aba própria e SÓ pro super admin: participantes, verbas, tarefas,
-            ciclo, conferência dupla e a fila de comprovações. */}
-        {visibilidadeDoUsuario(user).superAdmin &&
-          <TabsContent value="xgame-admin" className="space-y-6">
-            <Card className="bg-white border-gray-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-gray-900">
-                  <Gamepad2 className="w-5 h-5 text-emerald-600" />
-                  X-GAME — Admin da Gamificação
-                </CardTitle>
-                <CardDescription className="text-gray-500">
-                  Estrutura de operações e expansão · quem joga, quanto recebe, as tarefas e as comprovações
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <XGameAdmin />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        }
+        {/* 🎮 06/09/2026 — o Admin X-GAME virou a gestão DENTRO do X-Performance.
+            A aba antiga fica só como atalho: quem abrir um link velho cai no
+            lugar novo (o efeito lá em cima redireciona). */}
       </Tabs>
 
       {viewingIndicationsFor &&

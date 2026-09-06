@@ -1194,12 +1194,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="py-1" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
+                <div className="py-1" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ 22 dias úteis = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). Dia com menos de ${xgame.xpay.minimoDia} tarefas paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
                   <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
+                  {/* 💰 06/09/2026 — o dia vale o fixo ÷ 22; com menos tarefas que o mínimo, paga proporcional */}
+                  {xgame.xpay.faltam > 0 && (
+                    <p className="text-[10px] text-amber-600 font-semibold" data-teste="xpay-faltam">
+                      dia vale {fmtReais(xgame.xpay.valorDia)} · faltam {xgame.xpay.faltam} tarefa{xgame.xpay.faltam > 1 ? 's' : ''} pra pagar inteiro
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -1473,7 +1479,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 </p>
                                 {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
                               </div>
-                              {/* 💰 X-PAY — o valor da tarefa (verba ÷ 22 ÷ nº de tarefas × peso, como na planilha) */}
+                              {/* 💰 X-PAY — a fatia da tarefa no valor do dia (fixo ÷ 22, repartido pelo peso) */}
                               {xgame && xgame.valores[t.id] > 0 && (t.feito || estadoDaTarefa(t)?.id !== 'PERDIDO') && (
                                 <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
                                   {t.feito ? '+' : ''}{fmtReais(xgame.valores[t.id])}

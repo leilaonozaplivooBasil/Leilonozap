@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, GraduationCap, UserRound, Gamepad2 } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, GraduationCap, UserRound } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -143,12 +143,11 @@ export function getLicensingGroups(user) {
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
         { type: 'link', to: '/Metas', label: 'Metas', icon: Target },
-        // 🎮 O admin da gamificação mora DENTRO da X-eos (ordem do dono) —
-        // só o super admin enxerga: participantes, verbas, tarefas e a fila
-        // de comprovações (a segunda análise das imagens).
-        ...(user?.role === 'super_admin'
-          ? [{ type: 'tab', value: 'xgame-admin', label: 'Admin X-GAME', icon: Gamepad2 }]
-          : []),
+        // 🎮 06/09/2026 — o Admin X-GAME deixou de ser item do menu: virou a
+        // GESTÃO dentro do X-Performance ("junta o admin do X-Game com o
+        // X-Performance, que lá eu já administro a gamificação e as demandas").
+        // O valor de aba `xgame-admin` continua válido só pra link antigo
+        // abrir no lugar certo (Licensing redireciona).
       ],
     },
     {
