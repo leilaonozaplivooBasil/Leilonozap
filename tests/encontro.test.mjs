@@ -134,3 +134,26 @@ test('os slides: capa, abertura, leitura, treinamento, um por tópico, fechament
   assert.match(s[3].sub, /quem treina: Karen/);
   assert.match(s.at(-1).corpo.join(' '), /Emanuel: Fazer A/);
 });
+
+test('a visão executiva de todo mundo: quem planejou, quem produziu, a semana e as demandas de cada um — vermelho primeiro', async () => {
+  const { visaoExecutiva } = await import('../src/lib/encontro.js');
+  const time = [{ id: 'e', nome: 'Emanuel', funcaoCurta: 'COO' }, { id: 'c', nome: 'Carla', funcaoCurta: 'Embaixador' }, { id: 'j', nome: 'Jean' }];
+  const tarefas = [
+    { user_id: 'e', data: '2026-09-07', feito: true }, { user_id: 'e', data: '2026-09-07', feito: false },
+    { user_id: 'e', data: '2026-09-08', feito: false },
+    { user_id: 'c', data: '2026-09-07', feito: false, origem: 'xperf' },
+    { user_id: 'c', data: '2026-09-04', feito: false, prazo_em: '2026-09-04T21:00:00Z' },
+  ];
+  const demandas = [
+    { id: 'd1', pessoa_id: 'e', status: 'agendada', tarefa_id: 't1' }, { id: 'd2', pessoa_id: 'c', status: 'recebida' },
+  ];
+  const v = visaoExecutiva({ time, tarefas, demandas, tarefasDasDemandas: [{ id: 't1', feito: true, conferido: true }], hojeISO: '2026-09-07', segunda: '2026-09-07' });
+  const e = v.linhas.find((l) => l.pessoaId === 'e');
+  assert.deepEqual([e.cor, e.hoje.planejou, e.hoje.feitas, e.hoje.total, e.semana.feitas, e.semana.total, e.demandas.concluidas, e.produziu], ['verde', true, 1, 2, 1, 2, 1, true]);
+  const c = v.linhas.find((l) => l.pessoaId === 'c');
+  assert.deepEqual([c.cor, c.hoje.planejou, c.demandas.semAgendar, c.produziu], ['vermelho', false, 1, false], 'só distribuída hoje (não planejou) + demanda sem agendar');
+  const j = v.linhas.find((l) => l.pessoaId === 'j');
+  assert.deepEqual([j.cor, j.hoje.vazio, j.produziu], ['verde', true, false], 'dia vazio não é furo — mas não produziu');
+  assert.deepEqual(v.linhas.map((l) => l.pessoaId), ['c', 'e', 'j'], 'vermelho primeiro; entre verdes, quem tem mais demanda');
+  assert.deepEqual([v.planejaramHoje, v.semPlanejarHoje, v.produziram, v.naoProduziram, v.demandas.pct, v.vermelhos], [1, 2, 1, 2, 50, 1]);
+});

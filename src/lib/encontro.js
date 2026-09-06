@@ -358,3 +358,47 @@ export function slidesDoEncontro({ data, roteiro, mes, conduzidoPor, treinamento
   ];
   return slides;
 }
+
+// ── 👀 a visão executiva de todo mundo (dono: "quem fez a produção, quem não fez") ──
+/**
+ * Uma linha por pessoa do time: hoje (planejou? feitas/total), a semana
+ * (tarefas feitas/total, demandas concluídas/total, sem agendar, atrasadas)
+ * e o semáforo. `tarefas` = as tarefas da semana de todo mundo;
+ * `demandas` = as demandas desde segunda; `tarefasDasDemandas`/`cards` = o
+ * que as demandas viraram (pra ler o estado).
+ */
+export function visaoExecutiva({ time = [], tarefas = [], demandas = [], tarefasDasDemandas = [], cards = [], hojeISO, segunda } = {}) {
+  const dia = (t) => String(t.data).slice(0, 10);
+  const linhas = time.map((p) => {
+    const minhas = tarefas.filter((t) => t.user_id === p.id && (!segunda || dia(t) >= segunda));
+    const hoje = minhas.filter((t) => dia(t) === hojeISO);
+    const planejou = hoje.some((t) => (t.origem || '') !== 'xperf');
+    const feitasHoje = hoje.filter((t) => t.feito).length;
+    const atePassado = minhas.filter((t) => dia(t) <= String(hojeISO));
+    const feitasSemana = atePassado.filter((t) => t.feito).length;
+    const atrasadas = minhas.filter((t) => !t.feito && t.prazo_em && new Date(t.prazo_em).getTime() < new Date(`${hojeISO}T23:59:59`).getTime() && dia(t) < String(hojeISO)).length;
+    const prod = producaoDaSemana({ demandas: demandas.filter((d) => d.pessoa_id === p.id), tarefas: tarefasDasDemandas, cards, hojeISO });
+    const furos = (planejou || hoje.length === 0 ? 0 : 1) + (atrasadas > 0 ? 1 : 0) + (prod.atrasadas > 0 ? 1 : 0) + (prod.semAgendar > 0 ? 1 : 0);
+    return {
+      pessoaId: p.id, nome: p.nome, nivel: p.nivel || null, funcaoCurta: p.funcaoCurta || null,
+      hoje: { total: hoje.length, feitas: feitasHoje, planejou, vazio: hoje.length === 0 },
+      semana: { total: atePassado.length, feitas: feitasSemana, pct: atePassado.length ? Math.round((feitasSemana / atePassado.length) * 100) : 0, atrasadas },
+      demandas: { total: prod.total, concluidas: prod.concluidas, pct: prod.pct, semAgendar: prod.semAgendar, atrasadas: prod.atrasadas },
+      cor: furos === 0 ? 'verde' : furos === 1 ? 'amarelo' : 'vermelho',
+      produziu: feitasHoje > 0 || feitasSemana > 0 || prod.concluidas > 0,
+    };
+  });
+  const ordem = { vermelho: 0, amarelo: 1, verde: 2 };
+  linhas.sort((a, b) => ordem[a.cor] - ordem[b.cor] || b.demandas.total - a.demandas.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+  const totalDem = linhas.reduce((s, l) => s + l.demandas.total, 0);
+  const concluidas = linhas.reduce((s, l) => s + l.demandas.concluidas, 0);
+  return {
+    linhas,
+    planejaramHoje: linhas.filter((l) => l.hoje.planejou).length,
+    semPlanejarHoje: linhas.filter((l) => !l.hoje.planejou).length,
+    produziram: linhas.filter((l) => l.produziu).length,
+    naoProduziram: linhas.filter((l) => !l.produziu).length,
+    demandas: { total: totalDem, concluidas, pct: totalDem ? Math.round((concluidas / totalDem) * 100) : 0, semAgendar: linhas.reduce((s, l) => s + l.demandas.semAgendar, 0), atrasadas: linhas.reduce((s, l) => s + l.demandas.atrasadas, 0) },
+    verdes: linhas.filter((l) => l.cor === 'verde').length, amarelos: linhas.filter((l) => l.cor === 'amarelo').length, vermelhos: linhas.filter((l) => l.cor === 'vermelho').length,
+  };
+}

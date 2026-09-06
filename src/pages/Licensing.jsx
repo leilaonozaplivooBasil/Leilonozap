@@ -57,7 +57,7 @@ import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
-import EncontroMentalidade from '../components/licensing/CentralVendas/EncontroMentalidade';
+import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
 import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
@@ -1211,7 +1211,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                   espaço só. Quem conduz (pautas, IA, cronômetro, direcionar) é a
                   gestão e a diretoria; o resto vê e acompanha a apresentação. */}
               <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
-                <EncontroMentalidade currentUser={user} podeConduzir={visibilidadeDoUsuario(user).superAdmin || visibilidadeDoUsuario(user).visaoTotal} />
+                {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
+                <MentalidadePagina currentUser={user} podeConduzir={visibilidadeDoUsuario(user).superAdmin || visibilidadeDoUsuario(user).visaoTotal} gestao={visibilidadeDoUsuario(user).superAdmin} />
               </TabsContent>
 
               <TabsContent value="catalogo-vendedores" className="mt-6">

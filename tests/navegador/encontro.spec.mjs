@@ -290,3 +290,23 @@ test('CELULAR: o encontro e o painel cabem na tela — foto pra julgar', { skip:
   await pagina.screenshot({ path: path.join(FOTOS, 'encontro-celular.png'), fullPage: true });
   await ctx.close();
 });
+
+test('PERFORMANCE (sem administração): a visão executiva de todo mundo — quem planejou, quem produziu, o semáforo — e clicar na pessoa abre o painel dela', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  await pagina.locator('[data-teste="visao-linha"]').first().waitFor();
+  assert.match(await texto(pagina, '[data-teste="visao-resumo"]'), /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
+  const linhas = pagina.locator('[data-teste="visao-linha"]');
+  assert.deepEqual(await linhas.evaluateAll((els) => els.map((e) => [e.dataset.pessoa, e.dataset.cor, e.dataset.produziu])), [
+    ['emanuel', 'amarelo', 'sim'], // planejou e fez 1/2, mas tem demanda sem agendar
+    ['carla', 'verde', 'sim'],     // dia vazio hoje; a demanda dela já foi conferida
+    ['jean', 'verde', 'nao'],      // dia vazio, nada feito: não fez
+    ['dono', 'verde', 'nao'],      // o CEO também está no time — e também não fez
+  ]);
+  assert.match(await linhas.nth(0).textContent(), /Emanuel Silva.*planejou · 1\/2 feitas.*1 sem agendar.*fez/);
+  assert.match(await linhas.nth(2).textContent(), /Jean Aranha.*dia vazio.*não fez/);
+  await linhas.nth(1).click();
+  await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="painel-corporativo"]'), /Carla Souza/);
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});

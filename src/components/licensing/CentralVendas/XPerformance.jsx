@@ -13,7 +13,6 @@ import {
 import { HABITOS } from '@/lib/metodo';
 import { fixoDoParticipante } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
-import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
 import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
@@ -499,8 +498,6 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
     // fica o que é da diretoria (encontro e quadro) e o "sobre".
     return (
       <div className="space-y-4">
-        {/* 🏢 o Painel Corporativo (o de cada um, e o de todo mundo) — em cima, porque é a visão geral */}
-        <PainelCorporativo currentUser={currentUser} hojeISO={hoje} gestao />
         <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />
         <Dobra id="diretoria" titulo="Diretoria: encontro de segunda e o quadro" resumo={`${fmtDia(encontro.data)} · ${blocosEscritos} de ${PAUTA_PADRAO.length} blocos · ${doQuadro.length} entregáve${doQuadro.length === 1 ? 'l' : 'is'}`}>
           <div className="space-y-5">{blocoEncontro}{blocoQuadro}</div>
@@ -514,8 +511,6 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
 
   return (
     <div className="space-y-5">
-      {/* 🏢 o Painel Corporativo: metas, as demandas que chegaram e a produção da semana — a visão geral dela */}
-      <PainelCorporativo currentUser={currentUser} hojeISO={hoje} gestao={false} />
       {/* a trilha da pessoa numa linha; as três mentalidades explicadas ficam dobradas */}
       <Dobra id="mentalidades" titulo="Mentalidade" resumo={`a sua trilha hoje: ${trilha.nome} — ${trilha.lema.toLowerCase()} · ver as três`}>{blocoMentalidade}</Dobra>
       <Dobra id="grupo" titulo="O grupo To The Top" resumo="a holding, os cinco pilares, visão, missão e os valores inegociáveis">{blocoGrupo}</Dobra>

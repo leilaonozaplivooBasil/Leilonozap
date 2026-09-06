@@ -17,7 +17,7 @@ import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import '@/index.css';
 import EncontroMentalidade from '@/components/licensing/CentralVendas/EncontroMentalidade';
-import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
+import PerformanceEquipe from '@/components/licensing/CentralVendas/PerformanceEquipe';
 
 const HOJE = '2026-09-07'; // segunda: o encontro é hoje; sexta é 11/09
 window.__bancoFalso = {
@@ -60,6 +60,6 @@ createRoot(document.getElementById('raiz')).render(
   <div className="xeos-palco min-h-screen p-3 sm:p-6 space-y-6" style={{ background: 'var(--xeos-preto, #00020C)' }}>
     <Toaster position="top-center" />
     {!comoEmanuel && <EncontroMentalidade currentUser={quem} hojeISO={HOJE} podeConduzir />}
-    <PainelCorporativo currentUser={quem} hojeISO={HOJE} gestao={!comoEmanuel} />
+    <PerformanceEquipe currentUser={quem} hojeISO={HOJE} gestao={!comoEmanuel} />
   </div>,
 );

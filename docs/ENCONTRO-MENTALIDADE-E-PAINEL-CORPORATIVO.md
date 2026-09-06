@@ -12,9 +12,12 @@
 
 ## Onde fica
 
-- **Mentalidade** — item novo da Top College, entre O Método e Time (`catalogo-encontro`). É o encontro.
-- **Painel Corporativo** — o primeiro bloco do X-Performance de cada pessoa (e da gestão), com o seletor
-  "painel de" pra ver qualquer um do time corporativo.
+- **Mentalidade** — item novo da Top College, entre O Método e Time (`catalogo-encontro`), com duas abas
+  e **nada administrativo** (dono: "não quero na parte administrativa, quero junto do fluxo"):
+  - **Encontro de segunda** — a reunião (abre nela às segundas);
+  - **Performance do time** — a visão executiva de todo mundo (quem planejou, quem produziu, semana,
+    demandas, semáforo) e, embaixo, o **Painel Corporativo** de quem foi clicado (abre nela nos outros dias).
+- O X-Performance continua sendo a gestão (fixo, distribuir, quadro geral): o painel saiu de lá.
 
 ## O fluxo (uma demanda, do começo ao fim)
 

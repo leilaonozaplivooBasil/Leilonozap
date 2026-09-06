@@ -42,7 +42,7 @@ const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.i
 const amanha = (iso) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão' };
 
-export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null }) {
+export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const mes = mesDe(hoje);
   const segunda = segundaDaSemana(hoje);
@@ -96,6 +96,10 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   }, [pessoaId, mes, segunda]);
   useEffect(() => { carregarTime(); }, [carregarTime]);
   useEffect(() => { carregarPessoa(); }, [carregarPessoa]);
+  // quem está por fora (a Performance) acompanha a pessoa escolhida aqui
+  useEffect(() => { if (pessoaInicial && pessoaInicial !== pessoaId) setPessoaId(pessoaInicial); }, [pessoaInicial]); // eslint-disable-line react-hooks/exhaustive-deps
+  const escolher = (id) => { setPessoaId(id); if (onPessoa) onPessoa(id); };
+  const recarregar = () => { carregarPessoa(); if (onMudou) onMudou(); };
 
   const time = useMemo(() => timeCorporativo(usuarios).map((p) => {
     const part = participantes.find((x) => x.user_id === p.id);
@@ -146,13 +150,13 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     await supabase.from('xperf_demandas').update(patch).eq('id', d.id);
     setSalvando(false); setAgendando(null);
     toast.success(a.destino === 'quadro' ? `"${d.titulo}" no quadro de ${pessoa?.nome?.split(' ')[0]}` : `"${d.titulo}" agendada pra ${fmtDia(a.dia)}${a.hora ? ` às ${a.hora}` : ''}${a.destino === 'ambos' ? ' e no quadro' : ''}`);
-    carregarPessoa();
+    recarregar();
   };
   const devolver = async (d) => {
     const motivo = (devolvendo?.id === d.id ? devolvendo.motivo : '').trim();
     if (!motivo) { toast.error('Diga o motivo da devolução.'); return; }
     await supabase.from('xperf_demandas').update({ status: 'devolvida', devolvida_motivo: motivo, updated_at: new Date().toISOString() }).eq('id', d.id);
-    setDevolvendo(null); toast.message(`Devolvida: "${d.titulo}"`); carregarPessoa();
+    setDevolvendo(null); toast.message(`Devolvida: "${d.titulo}"`); recarregar();
   };
   // 📤 mandar uma demanda daqui (o CEO ou um diretor)
   const mandar = async () => {
@@ -165,7 +169,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     if (error) { toast.error('Não mandou — tenta de novo'); return; }
     toast.success(`Demanda no painel de ${alvo.nome.split(' ')[0]}: "${linha.titulo}"`);
     setNova({ titulo: '', pessoa: nova.pessoa, prazo: '' });
-    carregarPessoa();
+    recarregar();
   };
 
   return (
@@ -174,7 +178,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
         <p className={titulo}><Users className="w-3 h-3 inline mr-1" />Painel Corporativo</p>
         <span className="text-[10px] text-white/35">· metas, demandas recebidas e a produção da semana — todo mundo vê todo mundo</span>
         <label className="ml-auto text-[10px] text-white/45 uppercase tracking-wider inline-flex items-center gap-1"><Eye className="w-3 h-3" /> painel de
-          <select value={pessoaId || ''} onChange={(ev) => setPessoaId(ev.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="painel-pessoa">
+          <select value={pessoaId || ''} onChange={(ev) => escolher(ev.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="painel-pessoa">
             {!time.some((p) => p.id === currentUser?.id) && currentUser?.id && <option value={currentUser.id}>{currentUser.full_name || 'você'} (você)</option>}
             {time.map((p) => <option key={p.id} value={p.id}>{p.nome}{p.id === currentUser?.id ? ' (você)' : ''}{p.funcaoCurta ? ` · ${p.funcaoCurta}` : ''}</option>)}
           </select>
@@ -293,7 +297,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
               </div>
               <div className="mt-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-1">
                 {producaoGeral.pessoas.map((p) => (
-                  <button type="button" key={p.pessoaId} onClick={() => setPessoaId(p.pessoaId)} className={`text-left rounded-md border px-2 py-1 hover:border-white/30 ${p.pessoaId === pessoaId ? 'border-white/30' : 'border-white/10'}`} data-teste="todos-pessoa" data-pessoa={p.pessoaId}>
+                  <button type="button" key={p.pessoaId} onClick={() => escolher(p.pessoaId)} className={`text-left rounded-md border px-2 py-1 hover:border-white/30 ${p.pessoaId === pessoaId ? 'border-white/30' : 'border-white/10'}`} data-teste="todos-pessoa" data-pessoa={p.pessoaId}>
                     <div className="flex items-center gap-2 text-[11px]"><span className="font-bold text-white truncate">{p.nome}</span><span className="ml-auto tabular-nums text-white/60">{p.concluidas}/{p.total}</span></div>
                     <div className="mt-0.5 h-1 rounded-full bg-white/10 overflow-hidden"><div className="h-full" style={{ width: `${p.pct}%`, background: p.atrasadas ? '#ef4444' : 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} /></div>
                     <p className="text-[10px] text-white/35">{p.recebidas ? `${p.recebidas} sem agendar` : ''}{p.recebidas && p.atrasadas ? ' · ' : ''}{p.atrasadas ? `${p.atrasadas} atrasada${p.atrasadas > 1 ? 's' : ''}` : ''}{!p.recebidas && !p.atrasadas ? 'em dia' : ''}</p>
