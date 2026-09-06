@@ -328,8 +328,8 @@ function Entrevista({ assistente, onGerar, onFechar }) {
  * dono). O cabeçalho é a alça — o corpo continua livre pra rolar.
  */
 function Coluna({
-  lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia,
-  onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente,
+  lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia, alvo,
+  onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente, onArrastandoSobre,
   onMudarCard, onExcluirCard, onVirarTarefa, onIr, onReordenarCard, valorNovo, onNovo, onCriar,
 }) {
   const p = paleta(lista.cor);
@@ -337,8 +337,13 @@ function Coluna({
   const jaTemFicha = !!lista.ficha?.assistente;
   const resumoFicha = resumoDaFicha(lista.ficha);
 
+  // a COLUNA também precisa acompanhar a mão — antes ela só tinha `aoSoltar`,
+  // então arrastar o painel não dava sinal nenhum e parecia morto
+  const [deslocCol, setDeslocCol] = useState(null);
   const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
+    aoMover: ({ dx, dy }) => setDeslocCol({ dx, dy }),
     aoSoltar: ({ x, y }) => {
+      setDeslocCol(null);
       const alvo = document.elementFromPoint(x, y)?.closest('[data-lista]');
       const destino = alvo?.getAttribute('data-indice');
       if (destino != null && Number(destino) !== indice) onReordenar(lista.id, Number(destino));
@@ -348,7 +353,19 @@ function Coluna({
   return (
     <div data-lista={lista.id} data-lista-nome={lista.nome} data-indice={indice} data-teste="lista"
       className="shrink-0 rounded-xl overflow-visible relative flex flex-col self-stretch"
-      style={{ width: T.coluna, background: 'rgba(255,255,255,0.05)', opacity: arrastando ? 0.7 : 1 }}>
+      style={{
+        width: T.coluna,
+        // 🎯 o REALCE do alvo, como no Trello: a coluna que vai receber o card
+        // acende. Sem isso a pessoa solta no escuro e torce.
+        background: alvo ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.05)',
+        outline: alvo ? `2px dashed ${p.barra}` : 'none',
+        outlineOffset: -2,
+        transform: deslocCol ? `translate(${deslocCol.dx}px, ${deslocCol.dy}px)` : undefined,
+        pointerEvents: deslocCol ? 'none' : undefined,
+        zIndex: deslocCol ? 50 : undefined,
+        boxShadow: deslocCol ? '0 18px 40px rgba(0,0,0,0.45)' : undefined,
+        transition: deslocCol ? 'none' : 'background .15s ease',
+      }}>
 
       {/* ── CABEÇALHO COLORIDO DE PONTA A PONTA, e é ele a alça do arrasto ── */}
       {/* ⚠️ `...alcas.style` PRIMEIRO: o `touchAction: 'none'` vem de lá, e um
@@ -397,7 +414,7 @@ function Coluna({
 
         {cartoes.map((cartao) => (
           <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
-            onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} />
+            onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} onArrastandoSobre={onArrastandoSobre} />
         ))}
 
         {/* ✅ DIR-77.1 — o CONCLUÍDO fica AQUI, na coluna dele, com a faixa
@@ -412,7 +429,7 @@ function Coluna({
             </div>
             {feitos.map((cartao) => (
               <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
-                onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} />
+                onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} onArrastandoSobre={onArrastandoSobre} />
             ))}
           </>
         )}
@@ -436,10 +453,15 @@ function Coluna({
   );
 }
 
-function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr, onReordenar }) {
+function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr, onReordenar, onArrastandoSobre }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
   const [abrindoHora, setAbrindoHora] = useState(false);
+  // 🖐️ o DESLOCAMENTO da peça enquanto ela é arrastada. `useArrastavel` só
+  // REPORTA a coordenada — quem move é quem usa. Sem este estado o card
+  // levantava (sombra + escala) e ficava parado: a pessoa arrastava a mão e
+  // nada acompanhava, então parecia quebrado. Era o defeito de verdade.
+  const [desloc, setDesloc] = useState(null);
   // 🖐️ DIR-77.2 — QUEM ARRASTA É O PUNHO, não o card inteiro. Duas coisas
   // estavam quebradas por causa disso:
   //   1. com `{...alcas}` no card e um `style={{...}}` LOGO DEPOIS, o
@@ -451,6 +473,8 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
   const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
     aoSoltar: ({ x, y }) => {
       setSobre(null);
+      setDesloc(null);
+      onArrastandoSobre?.(null);
       const sob = document.elementFromPoint(x, y);
       const destino = sob?.closest('[data-lista]')?.getAttribute('data-lista');
       const outro = sob?.closest('[data-cartao]')?.getAttribute('data-cartao');
@@ -462,11 +486,14 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
       if (destino && destino !== cartao.lista_id) { onMudar({ ...cartao, lista_id: destino }); return; }
       if (outro && outro !== cartao.id) onReordenar?.(cartao.id, outro);
     },
-    aoMover: ({ x, y }) => {
+    aoMover: ({ x, y, dx, dy }) => {
+      setDesloc({ dx, dy });
       const sob = document.elementFromPoint(x, y);
+      const lista = sob?.closest('[data-lista]');
+      onArrastandoSobre?.(lista?.getAttribute('data-lista') || null);
       const outro = sob?.closest('[data-cartao]');
       if (outro && outro.getAttribute('data-cartao') !== cartao.id) { setSobre(outro.innerText.split('\n')[0].slice(0, 28)); return; }
-      setSobre(sob?.closest('[data-lista]')?.getAttribute('data-lista-nome') || null);
+      setSobre(lista?.getAttribute('data-lista-nome') || null);
     },
   });
   const feito = estaFeito(cartao);
@@ -481,11 +508,19 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
       onClickCapture={engolirCliqueDoArrasto}
       data-teste="cartao-quadro"
       data-cartao={cartao.id}
-      className="group rounded-lg overflow-hidden transition-shadow relative"
+      className="group rounded-lg overflow-hidden relative"
       style={{
         background: '#FFFFFF',
-        boxShadow: arrastando ? '0 12px 28px rgba(0,0,0,0.35)' : '0 1px 2px rgba(9,30,66,0.25)',
-        transform: arrastando ? 'scale(1.02)' : undefined,
+        boxShadow: desloc ? '0 16px 32px rgba(0,0,0,0.4)' : '0 1px 2px rgba(9,30,66,0.25)',
+        // A PEÇA SEGUE A MÃO. E `pointerEvents: none` enquanto anda, senão
+        // `elementFromPoint` devolve O PRÓPRIO CARD que está sendo arrastado e
+        // o alvo embaixo nunca é encontrado — o arrasto "funcionaria" sem
+        // nunca soltar em lugar nenhum.
+        transform: desloc ? `translate(${desloc.dx}px, ${desloc.dy}px) rotate(2deg)` : undefined,
+        pointerEvents: desloc ? 'none' : undefined,
+        zIndex: desloc ? 60 : undefined,
+        position: 'relative',
+        transition: desloc ? 'none' : 'box-shadow .15s ease',
       }}
     >
       {/* ⠿ o punho de SEIS PONTINHOS — ordem do dono: "desapareceu aquele
@@ -497,7 +532,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
         style={{ ...alcas.style, cursor: arrastando ? 'grabbing' : 'grab' }}
         data-teste="punho-card"
         title="arraste pra mover ou reordenar"
-        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center text-[#B3BAC5] hover:text-[#5E6C84] opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center text-[#B3BAC5] hover:text-[#42526E] hover:bg-black/[0.04] transition-colors"
       >
         <GripVertical className="w-4 h-4" />
       </span>
@@ -672,6 +707,7 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
   const [feitoAberto, setFeitoAberto] = useState(false);
   const [painelDe, setPainelDe] = useState(null);      // id da lista com o painel aberto
   const [entrevistando, setEntrevistando] = useState(null); // { lista, assistente }
+  const [listaAlvo, setListaAlvo] = useState(null);         // a coluna sob o card arrastado
 
   const carregar = useCallback(async () => {
     if (!uid) { setCarregando(false); return; }
@@ -868,6 +904,8 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 doDia={tarefasDoDia}
                 indice={indice}
                 painelAberto={painelDe === lista.id}
+                alvo={listaAlvo === lista.id}
+                onArrastandoSobre={setListaAlvo}
                 onPainel={setPainelDe}
                 onMudarLista={mudarLista}
                 onExcluirLista={excluirLista}
