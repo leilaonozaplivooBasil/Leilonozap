@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic } from 'lucide-react';
+import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic, Search, Loader2 } from 'lucide-react';
 import {
-  lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube,
+  lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube, buscarNoYoutube,
   extrairIdYoutube, extrairListaYoutube,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
 // 🎧 X-MUSIC — o som de trabalho da Top College / X-EOS.
 //
@@ -118,6 +119,9 @@ export default function XMusic() {
   const [playlist, setPlaylist] = useState(lerPlaylist);
   const [link, setLink] = useState('');
   const [aviso, setAviso] = useState('');
+  const [busca, setBusca] = useState('');
+  const [achados, setAchados] = useState(null);      // null = nem buscou ainda
+  const [buscando, setBuscando] = useState(false);
   const [editando, setEditando] = useState(null);   // id da linha em edição
   const [nomeEdit, setNomeEdit] = useState('');
   const painelRef = useRef(null);
@@ -255,6 +259,25 @@ export default function XMusic() {
     setEstacao((e) => (e?.id === id ? { ...e, nome: limpo } : e));
   }, [playlist]);
 
+  // 🔎 BUSCAR NO YOUTUBE. Tudo que volta daqui TOCA — o filtro
+  // videoEmbeddable é aplicado pelo próprio YouTube na rota do servidor. É a
+  // resposta definitiva pro "botão que não toca": em vez de eu adivinhar
+  // links, a pessoa procura e escolhe.
+  const procurar = useCallback(async () => {
+    const q = busca.trim();
+    if (!q) return;
+    setBuscando(true);
+    const r = await buscarNoYoutube(q, cabecalhosSessao());
+    setBuscando(false);
+    setAchados(r.itens);
+    if (!r.ok) {
+      setAviso(r.erro === 'sem_chave'
+        ? 'O buscador ainda não tem a chave do YouTube configurada.'
+        : 'A busca não respondeu agora. Tente de novo.');
+      setTimeout(() => setAviso(''), 6000);
+    }
+  }, [busca]);
+
   const remover = useCallback((id) => {
     const nova = playlist.filter((m) => m.id !== id);
     setPlaylist(nova);
@@ -285,6 +308,83 @@ export default function XMusic() {
           </div>
 
           <PlayerYT alvo={estacao} ligado={ligado} onErro={aoErrar} onTitulo={aoTocar} />
+
+          {/* 🔎 O BUSCADOR — a resposta definitiva pro link que não toca: em
+              vez de alguém adivinhar, a pessoa procura. Tudo que aparece
+              aqui toca embutido (o YouTube filtra por videoEmbeddable na
+              nossa rota), então não existe resultado que abra tela preta. */}
+          <div>
+            <div className="flex gap-1.5">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/35" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') procurar(); }}
+                  placeholder="buscar música no YouTube"
+                  className="xeos-cru w-full rounded-lg bg-white/10 border border-white/15 text-white placeholder-white/35 text-[11px] pl-7 pr-2.5 py-2 focus:outline-none focus:border-white/40"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={procurar}
+                disabled={buscando}
+                className="xeos-cru shrink-0 rounded-lg bg-white text-[#0A1020] text-[11px] font-bold px-3 disabled:opacity-50"
+              >
+                {buscando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {achados && (
+              <div className="mt-1.5 space-y-1 max-h-40 overflow-y-auto">
+                {achados.length === 0 && (
+                  <p className="text-[10px] text-white/35 py-1">Nada encontrado com esse termo.</p>
+                )}
+                {achados.map((it) => (
+                  <div key={it.id} className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // toca na hora; a vaga aberta, se houver, fica com ele
+                        const achado = { id: it.id, nome: it.titulo, lista: false, video: it.id, nota: it.canal };
+                        if (vagaAlvo) {
+                          const dados = { id: it.id, lista: false, video: it.id, titulo: it.titulo };
+                          gravarEstacaoDoSlot(vagaAlvo, dados);
+                          const novas = estacoes.map((e) => (
+                            e.slot === vagaAlvo ? { ...e, ...dados, fila: [dados] } : e
+                          ));
+                          setEstacoes(novas);
+                          setFalhou((f) => ({ ...f, [vagaAlvo]: false }));
+                          const vaga = novas.find((e) => e.slot === vagaAlvo);
+                          setVagaAlvo(null);
+                          trocar(vaga);
+                          return;
+                        }
+                        trocar(achado);
+                      }}
+                      className="flex-1 min-w-0 text-left rounded-lg bg-white/[0.05] hover:bg-white/10 px-2.5 py-1.5"
+                    >
+                      <span className="block text-[11px] text-white/85 truncate">{it.titulo}</span>
+                      <span className="block text-[9px] text-white/40 truncate">{it.canal}</span>
+                    </button>
+                    <button
+                      type="button"
+                      title="salvar direto na minha playlist"
+                      onClick={() => {
+                        const nova = [...playlist.filter((m) => m.id !== it.id), { id: it.id, nome: it.titulo, lista: false, video: it.id }];
+                        setPlaylist(nova);
+                        gravarPlaylist(nova);
+                        vibrar(VIBRA_TOQUE);
+                      }}
+                      className="shrink-0 text-white/30 hover:text-amber-200"
+                    >
+                      <Star className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* as vagas da casa — cada uma com sua fila; o player pula sozinho
               o que não toca e só pede link quando a fila acaba */}
