@@ -82,6 +82,7 @@ async function abrir({ celular = false } = {}) {
   pagina.on('pageerror', (e) => erros.push(e.message));
   await pagina.goto(BASE);
   await pagina.locator('[data-teste="gestao"]').waitFor();
+  await pagina.locator('[data-teste="pessoa"]').selectOption('emanuel');
   await pagina.locator('[data-teste="tarefas-dia"] li').first().waitFor(); // as tarefas do 08/09 do Emanuel
   return { pagina, ctx, erros };
 }
@@ -97,7 +98,11 @@ test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do d
   assert.equal(await pagina.locator('[data-teste="tarefas-dia"] li').count(), 3);
 
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
+  // 🪄 o peso nasce sozinho pelo título ("reunião" = ação de negócio, peso 6), com o motivo ao lado
+  assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '6');
+  assert.match(await texto(pagina, '[data-teste="peso-motivo"]'), /peso 6 — ação de negócio/);
   await pagina.locator('[data-teste="peso"]').selectOption('4');
+  await pagina.locator('[data-teste="peso-auto"]').waitFor(); // mexeu: agora é o seu, com o caminho de volta
   assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(159.10));
   const quedas = await pagina.locator('[data-teste="quedas"] li').allTextContents();
   assert.equal(quedas.length, 3, 'as três do dia perdem');
@@ -145,30 +150,62 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
   await ctx.close();
 });
 
-test('FIXO: mudar o fixo mensal muda o valor do dia em todo lugar', { skip: semNavegador }, async () => {
+test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor do dia em todo lugar', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  const card = pagina.locator('[data-teste="fixo-pessoa"][data-pessoa="emanuel"]');
-  assert.equal((await card.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(318.18));
-  // o ciclo do Emanuel: 04/09 teve Gratidão feita e conferida (1 de 3 tarefas → 1/3 do dia)
-  assert.match((await card.textContent()).replace(/\s+/g, ' '), /R\$ 106,06\s*ganho/);
+  // quem aparece vem do painel de controle: do executivo ao embaixador — o trainee não entra
+  const nomes = await pagina.locator('[data-teste="pessoa-fixo"] option').allTextContents();
+  assert.ok(nomes.some((n) => /Carla Souza · Embaixador/.test(n)), nomes.join(' | '));
+  assert.ok(nomes.some((n) => /Emanuel Silva · Sócio Executivo/.test(n)), 'a função vem do painel, não do jogo');
+  assert.ok(nomes.some((n) => /Luiz Santanna · CEO · sem fixo/.test(n)), 'o CEO sem cadastro no jogo aparece, marcado');
+  assert.ok(!nomes.some((n) => /Tiago/.test(n)), 'trainee fica de fora');
+  assert.equal(await pagina.locator('[data-teste="fixo-pessoa"]').count(), 0, 'sem a parede de cartões');
 
-  await card.locator('[data-teste="fixo-mes"]').fill('4400');
-  await card.locator('[data-teste="fixo-mes"]').blur();
+  await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
+  const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
+  await modal.waitFor();
+  assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(318.18));
+  // o ciclo do Emanuel: 04/09 teve Gratidão feita e conferida (1 de 3 tarefas → 1/3 do dia)
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 106,06\s*ganho/);
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas.*R\$ 318,18/, 'o que está distribuído de hoje em diante');
+
+  await pagina.screenshot({ path: path.join(FOTOS, 'performance-modal.png') });
+  await modal.locator('[data-teste="fixo-mes"]').fill('4400');
+  await modal.locator('[data-teste="fixo-mes"]').blur();
   await pagina.getByText(/fixo atualizado/).waitFor();
   const e = (await escritas(pagina)).at(-1);
-  assert.equal(e.tipo, 'update');
+  assert.equal(e.tipo, 'upsert');
   assert.equal(e.tabela, 'xgame_participantes');
-  assert.equal(e.patch.fixo_mes, 4400);
-  await pagina.waitForFunction(() => document.querySelector('[data-teste="fixo-pessoa"][data-pessoa="emanuel"] [data-teste="valor-dia-pessoa"]').textContent.includes('200,00'));
+  assert.equal(e.linhas[0].fixo_mes, 4400);
+  await pagina.waitForFunction(() => document.querySelector('[data-teste="modal-pessoa"] [data-teste="valor-dia-pessoa"]').textContent.includes('200,00'));
+  await pagina.getByRole('button', { name: 'Fechar' }).click();
   assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(200), 'a prévia lê o mesmo fixo');
+  await ctx.close();
+});
+
+test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela primeira vez', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('dono');
+  const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="dono"]');
+  await modal.locator('[data-teste="sem-fixo-modal"]').waitFor();
+  assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(59.09), 'até definir, a verba padrão');
+  await modal.locator('[data-teste="fixo-mes"]').fill('11000');
+  await modal.locator('[data-teste="fixo-mes"]').blur();
+  await pagina.getByText(/fixo atualizado/).waitFor();
+  const e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tipo, 'upsert');
+  assert.equal(e.linhas[0].user_id, 'dono');
+  assert.equal(e.linhas[0].cargo, 'ceo', 'o cargo do jogo vem do nível do painel');
+  assert.equal(e.linhas[0].ativo, true);
+  await pagina.waitForFunction(() => document.querySelector('[data-teste="modal-pessoa"] [data-teste="valor-dia-pessoa"]').textContent.includes('500,00'));
+  assert.equal(await modal.locator('[data-teste="sem-fixo-modal"]').count(), 0);
   await ctx.close();
 });
 
 test('MÍNIMO: quem não tem fixo usa a verba de produção; dia abaixo do mínimo avisa o que fica em aberto', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  const carla = pagina.locator('[data-teste="fixo-pessoa"][data-pessoa="carla"]');
-  assert.equal((await carla.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(59.09), 'R$ 1.300 ÷ 22');
   await pagina.locator('[data-teste="pessoa"]').selectOption('carla');
+  await pagina.locator('[data-teste="sem-fixo"]').waitFor();
+  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(59.09), 'R$ 1.300 ÷ 22');
   await pagina.locator('[data-teste="titulo"]').fill('Separar os documentos da reunião');
   await pagina.locator('[data-teste="faltam"]').waitFor();
   const aviso = await texto(pagina, '[data-teste="faltam"]');
