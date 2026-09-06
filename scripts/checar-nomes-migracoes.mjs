@@ -65,7 +65,53 @@ if (invalidos.length) {
   process.exit(1);
 }
 
+// ── SEGUNDA TRAVA: VERSÃO REPETIDA (06/09/2026) ───────────────────────────────
+// O CLI identifica a migração pela VERSÃO — os dígitos antes do primeiro "_" —
+// e no histórico do banco `version` é chave primária. Dois arquivos com o mesmo
+// prefixo viram UMA versão só: registrar essa versão marca os dois como
+// aplicados, mesmo que só um tenha rodado.
+//
+// Não é hipótese. Em 06/09/2026 a auditoria contra o banco de produção achou
+// `20260730_concurso_checkin.sql` NUNCA aplicada — a coluna last_checkin não
+// existia —, escondida atrás de `20260730_wallet_held_balance.sql`, que dividia
+// a mesma versão. O check-in do concurso vinha vivendo só no localStorage,
+// porque a API engole o erro do PATCH.
+//
+// Como a trava de cima, esta tem lista de herança: as colisões que já existiam
+// e já estão registradas no histórico do banco. Renomeá-las faria o CLI vê-las
+// como novas e tentar reaplicar — e ali dentro tem backfill e limpeza de dados.
+// Colisão NOVA é erro.
+const HERANCA_COLISAO = new Set([
+  '20260716', '20260801', '20260803', '20260805', '20260806', '20260808',
+  '20260828', '20260905210000',
+]);
+
+const porVersao = new Map();
+for (const f of arquivos) {
+  const m = /^(\d+)_/.exec(f);
+  if (!m) continue; // nome fora do padrão: já tratado na checagem de cima
+  if (!porVersao.has(m[1])) porVersao.set(m[1], []);
+  porVersao.get(m[1]).push(f);
+}
+const colisoes = [...porVersao].filter(([v, fs]) => fs.length > 1 && !HERANCA_COLISAO.has(v));
+
+if (colisoes.length) {
+  console.error('\n❌ Duas migrações dividindo a MESMA versão:\n');
+  for (const [v, fs] of colisoes) console.error(`   ${v} → ${fs.join('  ')}`);
+  console.error(
+    '\nO CLI e o histórico do banco identificam a migração pelos dígitos antes do\n' +
+    'primeiro "_". Duas com o mesmo prefixo viram uma versão só: registrar essa\n' +
+    'versão marca as duas como aplicadas, e a que não rodou some sem erro nenhum.\n' +
+    'Foi assim que 20260730_concurso_checkin ficou 5 semanas fora do banco.\n\n' +
+    'Desempate pela HORA, com 14 dígitos:\n' +
+    '   20260730010000_primeira.sql\n' +
+    '   20260730020000_segunda.sql\n'
+  );
+  process.exit(1);
+}
+
 console.log(`✅ ${arquivos.length} migrações conferidas — nenhuma será pulada pelo CLI.`);
+console.log(`   ${porVersao.size} versões distintas, nenhuma colisão nova.`);
 if (HERANCA.size) {
   console.log(`   (${HERANCA.size} de herança, já aplicadas à mão, fora da checagem)`);
 }
