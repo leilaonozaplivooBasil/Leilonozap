@@ -3855,3 +3855,134 @@ mesma versão** da `xperf_metas_programa` que eles acabavam de subir —
 É o defeito que deixou uma migração 5 semanas fora do banco. Renomeada pra
 `20260906234500`. Sem esse portão, uma das duas teria sumido calada — e a que
 some não avisa: só um dia a coluna não existe.
+
+---
+
+## REL-76.3 — Medi o MeisterTask, subi a escala e dei o emoji (preview)
+
+**Diretiva:** DIR-76.3. **Data:** 06/09/2026. **Escopo:** preview.
+
+**"Está muito pequeno" — medi antes de mexer.** Nos prints dele (janela de
+1920, 1x), o MeisterTask usa:
+
+| | MeisterTask | eu tinha | agora |
+|---|---|---|---|
+| coluna | ~265px | 300px | **340px** |
+| cabeçalho | ~50px | 46px ✗ | **58px** |
+| título do card | ~15px | 15px | **17px** |
+| respiro do card | ~15px | 12px ✗ | **16px** |
+| campo de digitar | botão grande | 40px ✗ | **48px** |
+| avatar | ~26px | 26px | **32px** |
+
+O diagnóstico: **a coluna já era maior que a dele; o apertado era o miolo.**
+Cabeçalho mais baixo, respiro menor e o campo de escrever o tópico — que foi
+exatamente o que ele apontou — pequeno. A escala agora vive numa constante só
+(`T`), e a prova cobra cada número contra o do MeisterTask. "Pequeno" virou
+número: se encolher, reprova.
+
+**O emoji, e por que isso NÃO contradiz a DIR-76.1.** Ele pediu duas coisas
+opostas na aparência: *"está muito ainda aparecendo emoji"* e, agora,
+*"tem que dar a opção de ele selecionar o emoji que ele quer colocar"*. Não é
+contradição — são coisas diferentes:
+
+> emoji que **o programa espalha** pela interface é ruído: some num sistema,
+> muda de desenho no outro, e dá cara de rascunho.
+> emoji que **a pessoa escolhe** pra marcar a lista dela é identidade.
+
+Então o painel ganhou **duas abas** — Ícones (12 da casa) e Emoji (24) — e a
+fileira de cores ficou maior e explícita, porque ele disse *"sei que as cores
+estão automáticas, mas tem que dar a opção de selecionar"*. O automático
+continua: a lista nasce com a marca que o nome sugere; escolher é opção.
+
+O campo `icone` guarda **ou** um nome da casa **ou** um emoji, e `marcaValida`
+recusa qualquer outra coisa — lixo no campo não vira desenho na tela.
+
+**Prova em navegador: 264/264.** As medidas são lidas do DOM renderizado
+(`getBoundingClientRect`, `getComputedStyle`), não do código:
+
+```
+cabeçalho 58px (MT 50) · coluna 340px (MT 265) · card 316px
+título 17px (MT ~15) · campo 48px de altura, fonte 15px
+aba Emoji: 24 opções, nenhuma com svg, amostra 🔥 💪 🏋️ 🏃
+escolheu 🔥 → o cabeçalho passou a mostrar 🔥, sem ícone
+```
+
+**Erro meu na prova:** cliquei na aba e medi **no mesmo `evaluate`** — li o DOM
+de antes do React redesenhar e a prova acusou "não é emoji" quando era. A
+asserção seguinte (o 🔥 no cabeçalho) passava, e foi ela que denunciou a
+contradição. Agora clica, espera o quadro, e só então mede.
+
+**Suíte:** 1203/1203. **Build:** limpo. **Sem migração** — `icone` já existia.
+
+**Uma entrega de território, no rebase.** A sessão paralela levou os três
+portões e o fixo pra **dentro do cartão da pessoa**, na Gestão. O comentário
+lá credita a DIR-74 — **a regra continua minha, a tela virou deles**. Em vez de
+perseguir a tela alheia, tirei essas 4 asserções da minha prova e registrei
+onde a guarda ficou:
+
+- a **tela nova** está coberta pela prova **deles**
+  (`tests/navegador/performance.spec.mjs`, `[data-teste="portoes-pessoa"]`);
+- a **regra** — ninguém valida o próprio card, os três portões valem juntos,
+  consistência conta semanas — segue nos 36 testes de
+  `tests/xperformance.test.mjs`, com as 4 mutações do REL-74.
+
+Tirar dali é reconhecer de quem é a tela; não é abrir mão de guarda. **260/260.**
+
+---
+
+## REL-77 — O horário é a ponte; o concluído mora na coluna (preview)
+
+**Diretiva:** DIR-77 / 77.1. **Data:** 07/09/2026. **Escopo:** preview.
+
+**Primeiro, o que eu conferi antes de prometer:** Lista e Jornada **já eram a
+mesma coisa** — as duas leem `tarefas` do dia. "Adicionei na lista, entra na
+jornada" já funcionava. O que faltava era o horário no card: a tarefa nascida
+de um card ia com `hora: null` e caía no balde "sem hora" — fora da linha do
+tempo da Jornada e fora do período certo da Lista. Era esse o buraco.
+
+**A decisão: o HORÁRIO é que decide onde a coisa aparece.**
+
+O pedido foi "adicionou num lugar, entra em todos". Ao pé da letra isso quebra
+o dia: o quadro é backlog, o dia é compromisso. Jogar todo card no dia incharia
+a Master Task — e como o X-Pay rateia o fixo pelas tarefas do dia, **cada
+tarefa passaria a valer uma fração**. O horário separa as duas coisas do jeito
+que a cabeça já separa: *"isso eu faço às 14h"* é compromisso; *"isso eu
+preciso fazer algum dia"* é backlog. Card com hora entra no dia; sem hora, fica
+no quadro. Zero botão novo pra aprender.
+
+**O que entrou:** `hora` e `hora_fim` no card e na tarefa ("quando termina");
+**sugerir horário** (o primeiro buraco livre); **aviso de conflito**;
+**concluída verde** na Lista e na Jornada; o **concluído na coluna dele**
+(77.1) e a **coluna minimizada indo até o fim**.
+
+**Sobre o verde da Jornada:** a moeda da tarefa feita saía na cor do TIPO da
+tarefa — o "está feito" mudava de cor a cada parada e não dava pra varrer o dia
+de longe. Agora é um verde só, o mesmo da Lista.
+
+**Sobre o concluído — eu tinha errado.** Pus numa gaveta no pé do quadro; o
+dono corrigiu no meio da rodada (*"vai organizando ali dentro mesmo, igual no
+MeisterTask"*). Agora fica na coluna, embaixo dos abertos, com o separador
+"Concluídas N" e a faixa verde. A gaveta saiu.
+
+**Provado por mutação — as 4 regras do horário quebram quando afrouxadas:**
+encostar virando conflito (`<=` no lugar de `<`) → **2 testes**; o card não
+levando a hora → **1**; `emMinutos` devolvendo 0 em vez de `null` (0 é
+meia-noite, não ausência) → **5**; o dia lotado inventando horário → **1**.
+
+**Prova em navegador: 265/265**, zero erro de página/console:
+
+```
+editor com início e fim + sugerir · 13:15 em cima da "Reunião 1" das 13:00
+  → "bate com “Reunião 1 (45-60 min)”"
+a tarefa nasceu com hora 13:15 (antes vinha null)
+concluído na coluna, faixa verde medida (G > R e G > B), gaveta antiga ausente
+```
+
+**Suíte:** 1214/1214. **Build:** limpo. **Migração** aditiva (`hora`,
+`hora_fim` no card; `hora_fim` na tarefa).
+
+**Duas coisas que eu proponho e NÃO fiz** — ficam pra ele decidir:
+1. **arrastar na Jornada pra mudar o horário** (a Jornada é uma linha do tempo;
+   arrastar uma parada mudaria a hora);
+2. **reordenar cards dentro da mesma lista** — hoje arrasta entre listas, e
+   dentro dela a ordem é por hora → prazo → ordem.

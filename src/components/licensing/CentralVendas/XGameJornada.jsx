@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import XGameCapa from './XGameCapas';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
+import { faixaDeHorario } from '@/lib/quadroCompromisso';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
 //   • O dia começa LIMPO: só a saudação e A TAREFA DO MOMENTO.
@@ -181,7 +182,15 @@ function ParadaNaMesa({ Icone }) {
  *  apagado e quieto (zero muro de X vermelho). Sem legenda embaixo — o
  *  contexto vem do banner e do clique. */
 function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
-  const { Icone, grad, borda } = seloDa(titulo);
+  const selo = seloDa(titulo);
+  // ✅ DIR-77 — CONCLUÍDA É VERDE, ordem do dono ("tarefa concluída, pra ficar
+  // verde"). Antes a moeda da feita saía na cor do TIPO da tarefa, então o
+  // "está feito" tinha uma cor diferente a cada parada e não dava pra varrer a
+  // jornada de longe. Uma cor só pra feito é o que faz o progresso ser lido de
+  // relance — e é o mesmo verde da Lista, pra ser a mesma linguagem.
+  const { Icone } = selo;
+  const grad = feito ? 'from-emerald-400 to-emerald-600' : selo.grad;
+  const borda = feito ? '#047857' : selo.borda;
   const aceso = feito || atual;
   return (
     <div ref={refEl} className="relative flex flex-col items-center">
@@ -388,7 +397,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                       <div className="relative" style={{ transform: `translateX(${offset}px)` }}>
                         <Parada3D
                           titulo={t.titulo}
-                          hora={t.hora}
+                          hora={faixaDeHorario(t)}
                           feito={!!t.feito}
                           perdido={t.estado?.id === 'PERDIDO'}
                           atual={ehAtual}
@@ -477,7 +486,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
             <h2 className="mt-3 text-2xl sm:text-3xl font-bold leading-tight text-nz-tinta max-w-lg">
               {foco.titulo}
             </h2>
-            <p className="mt-2 text-sm font-bold tracking-wide text-nz-tinta-fraca">{foco.hora}</p>
+            <p className="mt-2 text-sm font-bold tracking-wide text-nz-tinta-fraca">{faixaDeHorario(foco)}</p>
             {foco.detalhe && (
               <p className="mt-5 max-w-md text-sm leading-relaxed text-nz-tinta-fraca">{foco.detalhe}</p>
             )}
@@ -505,20 +514,20 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
             <p className="text-[9px] font-extrabold uppercase tracking-[0.24em] text-nz-tinta-fraca/70">o seu rastro de hoje</p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {[...feitas].reverse().map((t) => {
-                const { Icone, grad, borda } = seloDa(t.titulo);
+                const { Icone } = seloDa(t.titulo);
                 return (
                   <span
                     key={t.id}
-                    title={`${t.hora} — ${t.titulo}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-nz-borda text-nz-tinta-fraca text-[11px] font-bold pl-1.5 pr-3 py-1.5"
+                    title={`${faixaDeHorario(t)} — ${t.titulo}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 text-emerald-500 text-[11px] font-bold pl-1.5 pr-3 py-1.5"
                   >
                     <span
-                      className={`w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-b ${grad}`}
-                      style={{ boxShadow: `0 2px 0 0 ${borda}` }}
+                      className="w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-b from-emerald-400 to-emerald-600"
+                      style={{ boxShadow: '0 2px 0 0 #047857' }}
                     >
                       <Icone className="w-3 h-3 text-white" fill="currentColor" strokeWidth={1.4} />
                     </span>
-                    {t.hora}
+                    {faixaDeHorario(t)}
                   </span>
                 );
               })}

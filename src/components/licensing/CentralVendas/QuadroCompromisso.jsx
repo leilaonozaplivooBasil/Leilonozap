@@ -2,19 +2,20 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Loader2, Plus, Trash2, CalendarPlus, CalendarDays, ListChecks, CheckCircle2,
-  ChevronLeft, ChevronRight, ChevronDown, X, ArrowRight, User, LayoutGrid,
+  ChevronLeft, ChevronRight, X, ArrowRight, User, LayoutGrid,
   Briefcase, Dumbbell, Home, Target, Clock, Megaphone, Wallet, GraduationCap,
-  Lightbulb, AlertTriangle, Rocket, Sparkles, Camera,
+  Lightbulb, AlertTriangle, Rocket, Sparkles, Camera, Clock3,
 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaAdapter';
 import { Button } from '@/components/ui/button';
 import useArrastavel from '@/hooks/useArrastavel';
 import {
-  ESTADO_ABERTO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA, ICONES_LISTA,
+  ESTADO_ABERTO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA, ICONES_LISTA, EMOJIS_LISTA, ehEmoji,
   estaFeito, progressoChecklist, atrasado, marcarFeito, reabrir,
   alternarItem, adicionarItem, removerItem, cartoesDaLista, feitosNaMesa, semLista,
-  tarefaDoCartao, resumoDoQuadro, reordenarListas,
+  tarefaDoCartao, resumoDoQuadro, reordenarListas, feitosDaLista,
+  faixaDeHorario, horaSugerida, conflitosDeHorario,
 } from '@/lib/quadroCompromisso';
 import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } from '@/lib/assistenteDeLista';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
@@ -42,6 +43,28 @@ import { HABITOS } from '@/lib/metodo';
 // ⛔ SEM EMOJI. Ordem do dono: "está muito ainda aparecendo emoji". Emoji
 // muda de desenho em cada sistema e dá cara de rascunho; ícone é desenhado,
 // alinha na linha de base e aceita a cor do tema.
+
+// ── 📏 A ESCALA, MEDIDA CONTRA O MEISTERTASK (DIR-76.3) ─────────────────────
+// O dono: "ainda estou achando muito pequeno... medir o master task, o
+// tamanho". Medi os prints dele (janela de 1920, 1x):
+//
+//   coluna ~265px · cabeçalho ~50px · título do card ~15px · respiro ~15px
+//
+// A minha coluna já era MAIOR (300px) — o que estava apertado era o miolo:
+// cabeçalho de 46px, respiro de 12px, campo de digitar de 40px. Então a régua
+// aqui não é "igualar", é passar por cima em tudo que o olho mede:
+const T = {
+  coluna: 340,      // MT 265
+  cabecalho: 58,    // MT 50
+  tituloCard: 17,   // MT ~15
+  respiroCard: 16,  // MT ~15
+  item: 15,         // MT ~13
+  campo: 48,        // o "onde eu coloco tópico" que ele reclamou
+  entreCards: 12,   // MT ~10
+  avatar: 32,       // MT ~26
+  corpoMin: 180,    // coluna vazia com corpo de board, não de caixinha
+  alturaQuadro: 520, // o board inteiro — é isto que faz o minimizado ir até o fim
+};
 
 // As cores das listas — sólidas e saturadas, como as seções do MeisterTask.
 const PALETA = {
@@ -80,6 +103,14 @@ const nomeDoIcone = (lista) => lista?.icone
   || 'lista';
 const iconeDaLista = (lista) => DESENHO[nomeDoIcone(lista)] || ListChecks;
 
+/** A marca da lista na tela: emoji vira TEXTO, nome vira ÍCONE. */
+function Marca({ lista, px = 20, className = '' }) {
+  const m = nomeDoIcone(lista);
+  if (ehEmoji(m)) return <span className={`leading-none shrink-0 ${className}`} style={{ fontSize: px }}>{m}</span>;
+  const I = DESENHO[m] || ListChecks;
+  return <I className={`shrink-0 ${className}`} style={{ width: px, height: px }} />;
+}
+
 const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const dataCurta = (iso) => {
   const s = String(iso || '');
@@ -104,7 +135,7 @@ function Foto({ user, nome, tamanho = 26 }) {
 }
 
 /** Texto que vira campo ao clicar. Enter salva, Esc desiste, vazio não salva. */
-function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo }) {
+function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, tamanhoTexto }) {
   const [editando, setEditando] = useState(false);
   const [txt, setTxt] = useState(valor || '');
   useEffect(() => { if (!editando) setTxt(valor || ''); }, [valor, editando]);
@@ -115,7 +146,7 @@ function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo })
   };
   if (!editando) {
     return (
-      <span role="button" tabIndex={0} style={estilo}
+      <span role="button" tabIndex={0} style={{ ...estilo, ...(tamanhoTexto ? { fontSize: tamanhoTexto } : null) }}
         onClick={() => setEditando(true)}
         onKeyDown={(e) => { if (e.key === 'Enter') setEditando(true); }}
         className={`cursor-text rounded px-1 -mx-1 hover:bg-black/[0.06] ${className}`}
@@ -124,7 +155,7 @@ function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo })
     );
   }
   return (
-    <input autoFocus value={txt} style={estilo}
+    <input autoFocus value={txt} style={{ ...estilo, ...(tamanhoTexto ? { fontSize: tamanhoTexto } : null) }}
       onChange={(e) => setTxt(e.target.value)}
       onBlur={salvar}
       onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') { setTxt(valor || ''); setEditando(false); } }}
@@ -139,35 +170,55 @@ function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo })
  * Grade de ícones em cima, fileira de cores embaixo, exatamente como no print.
  */
 function PainelDaLista({ lista, onEscolher, onFechar }) {
+  // começa na aba da família que a lista já usa — quem escolheu emoji uma vez
+  // volta pro emoji, e não tem que procurar de novo
+  const [aba, setAba] = useState(ehEmoji(nomeDoIcone(lista)) ? 'emoji' : 'icone');
+  const marcas = aba === 'emoji' ? EMOJIS_LISTA : ICONES_LISTA;
   return (
-    <div className="absolute z-30 top-[46px] left-0 w-[230px] rounded-lg p-3 shadow-2xl"
-      style={{ background: '#FFFFFF' }} data-teste="painel-da-lista"
+    <div className="absolute z-30 left-0 w-[268px] rounded-xl p-3.5 shadow-2xl"
+      style={{ background: '#FFFFFF', top: T.cabecalho + 4 }} data-teste="painel-da-lista"
       onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[12px] font-bold" style={{ color: '#172B4D' }}>Ícone da lista</p>
-        <button type="button" onClick={onFechar} className="text-[#7A869A] hover:text-[#172B4D]"><X className="w-3.5 h-3.5" /></button>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-[13px] font-extrabold" style={{ color: '#172B4D' }}>Marca da lista</p>
+        <button type="button" onClick={onFechar} className="text-[#7A869A] hover:text-[#172B4D]"><X className="w-4 h-4" /></button>
       </div>
-      <div className="grid grid-cols-6 gap-1.5">
-        {ICONES_LISTA.map((nome) => {
-          const I = DESENHO[nome] || ListChecks;
-          const ativo = nomeDoIcone(lista) === nome;
+
+      {/* as duas famílias: ícone da casa ou emoji dele */}
+      <div className="inline-flex rounded-lg p-0.5 mb-2.5" style={{ background: '#F4F5F7' }}>
+        {[['icone', 'Ícones'], ['emoji', 'Emoji']].map(([id, rotulo]) => (
+          <button key={id} type="button" onClick={() => setAba(id)}
+            data-teste={`aba-${id}`}
+            className="rounded-md px-3 h-8 text-[12px] font-bold transition-colors"
+            style={aba === id ? { background: '#FFFFFF', color: '#172B4D', boxShadow: '0 1px 2px rgba(9,30,66,0.2)' } : { color: '#5E6C84' }}>
+            {rotulo}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-6 gap-1.5 max-h-[168px] overflow-y-auto">
+        {marcas.map((m) => {
+          const ativo = nomeDoIcone(lista) === m;
+          const I = DESENHO[m];
           return (
-            <button key={nome} type="button" title={nome}
-              onClick={() => onEscolher({ icone: nome })}
-              className="h-8 rounded inline-flex items-center justify-center border transition-colors"
+            <button key={m} type="button" title={m}
+              onClick={() => onEscolher({ icone: m })}
+              data-teste="marca-opcao"
+              className="h-9 rounded-lg inline-flex items-center justify-center border-2 transition-colors"
               style={ativo ? { borderColor: '#0B5FFF', background: '#E9F2FF' } : { borderColor: '#DFE1E6', background: '#FFFFFF' }}>
-              <I className="w-4 h-4" style={{ color: ativo ? '#0B5FFF' : '#42526E' }} />
+              {I ? <I className="w-[18px] h-[18px]" style={{ color: ativo ? '#0B5FFF' : '#42526E' }} /> : <span className="text-[19px] leading-none">{m}</span>}
             </button>
           );
         })}
       </div>
-      <p className="text-[12px] font-bold mt-3 mb-2" style={{ color: '#172B4D' }}>Cor</p>
-      <div className="flex flex-wrap gap-2">
+
+      <p className="text-[13px] font-extrabold mt-3.5 mb-2" style={{ color: '#172B4D' }}>Cor</p>
+      <div className="flex flex-wrap gap-2.5">
         {CORES_LISTA.map((cor) => (
           <button key={cor} type="button" title={cor}
             onClick={() => onEscolher({ cor })}
-            className="w-7 h-7 rounded-full"
-            style={{ background: paleta(cor).barra, outline: lista.cor === cor ? '2px solid #172B4D' : 'none', outlineOffset: 2 }} />
+            data-teste="cor-opcao"
+            className="w-8 h-8 rounded-full transition-transform hover:scale-110"
+            style={{ background: paleta(cor).barra, outline: lista.cor === cor ? '3px solid #172B4D' : 'none', outlineOffset: 2 }} />
         ))}
       </div>
     </div>
@@ -277,12 +328,11 @@ function Entrevista({ assistente, onGerar, onFechar }) {
  * dono). O cabeçalho é a alça — o corpo continua livre pra rolar.
  */
 function Coluna({
-  lista, cartoes, dono, hoje, indice, painelAberto,
+  lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia,
   onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente,
   onMudarCard, onExcluirCard, onVirarTarefa, onIr, valorNovo, onNovo, onCriar,
 }) {
   const p = paleta(lista.cor);
-  const Icone = iconeDaLista(lista);
   const assistente = assistenteDaLista(lista.nome);
   const jaTemFicha = !!lista.ficha?.assistente;
   const resumoFicha = resumoDaFicha(lista.ficha);
@@ -297,28 +347,29 @@ function Coluna({
 
   return (
     <div data-lista={lista.id} data-lista-nome={lista.nome} data-indice={indice} data-teste="lista"
-      className="shrink-0 w-[300px] rounded-lg overflow-visible relative"
-      style={{ background: 'rgba(255,255,255,0.05)', opacity: arrastando ? 0.7 : 1 }}>
+      className="shrink-0 rounded-xl overflow-visible relative flex flex-col self-stretch"
+      style={{ width: T.coluna, background: 'rgba(255,255,255,0.05)', opacity: arrastando ? 0.7 : 1 }}>
 
       {/* ── CABEÇALHO COLORIDO DE PONTA A PONTA, e é ele a alça do arrasto ── */}
       <div {...alcas} onClickCapture={engolirCliqueDoArrasto}
-        className="flex items-center gap-2 px-3 h-[46px] rounded-t-lg"
-        style={{ background: p.barra, cursor: arrastando ? 'grabbing' : 'grab' }}>
+        className="flex items-center gap-2.5 px-3.5 rounded-t-xl"
+        style={{ background: p.barra, height: T.cabecalho, cursor: arrastando ? 'grabbing' : 'grab' }}>
         <button type="button" onClick={() => onPainel(painelAberto ? null : lista.id)}
-          title="ícone e cor da lista" className="shrink-0 hover:opacity-80">
-          <Icone className="w-[18px] h-[18px] text-white/90" />
+          title="ícone e cor da lista" data-teste="abrir-marca"
+          className="shrink-0 rounded-lg p-1 -m-1 text-white/90 hover:bg-white/20 transition-colors">
+          <Marca lista={lista} px={20} />
         </button>
         <Editavel
           valor={lista.nome}
           onSalvar={(n) => onMudarLista(lista, { nome: n })}
           estilo={{ color: '#FFFFFF' }}
-          className="text-[13px] font-extrabold uppercase tracking-[0.08em] flex-1 min-w-0 truncate"
+          className="text-[15px] font-extrabold uppercase tracking-[0.06em] flex-1 min-w-0 truncate"
         />
-        <span className="text-[12px] font-extrabold text-white/90 tabular-nums px-1.5">{cartoes.length}</span>
+        <span className="text-[13px] font-extrabold text-white/90 tabular-nums px-1.5">{cartoes.length}</span>
         <button type="button" onClick={() => onMudarLista(lista, { recolhida: true })} title="recolher"
-          className="text-white/70 hover:text-white shrink-0"><ChevronLeft className="w-4 h-4" /></button>
+          className="text-white/70 hover:text-white shrink-0"><ChevronLeft className="w-[18px] h-[18px]" /></button>
         <button type="button" onClick={() => onExcluirLista(lista)} title="apagar lista"
-          className="text-white/50 hover:text-white shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+          className="text-white/50 hover:text-white shrink-0"><Trash2 className="w-4 h-4" /></button>
       </div>
 
       {painelAberto && (
@@ -326,47 +377,67 @@ function Coluna({
           onEscolher={(m) => { onMudarLista(lista, m); }} />
       )}
 
-      <div className="p-2.5 space-y-2.5 min-h-[80px]">
+      <div className="p-3 flex flex-col flex-1" style={{ minHeight: T.corpoMin, gap: T.entreCards }}>
         {/* 🤖 O CONVITE do assistente — convite, nunca modal que abre sozinho */}
         {assistente && !jaTemFicha && (
           <button type="button" onClick={() => onAssistente(lista, assistente)} data-teste="convite-assistente"
-            className="w-full rounded-lg p-3 text-left border-2 border-dashed hover:brightness-110 transition-[filter]"
+            className="w-full rounded-xl p-3.5 text-left border-2 border-dashed hover:brightness-110 transition-[filter]"
             style={{ borderColor: p.barra, background: p.claro }}>
-            <p className="text-[13px] font-extrabold inline-flex items-center gap-1.5 text-nz-tinta">
-              <Sparkles className="w-4 h-4" style={{ color: p.barra }} /> {assistente.titulo}
+            <p className="text-[14px] font-extrabold inline-flex items-center gap-2 text-nz-tinta">
+              <Sparkles className="w-[18px] h-[18px]" style={{ color: p.barra }} /> {assistente.titulo}
             </p>
-            <p className="text-[11px] mt-0.5 text-nz-tinta-fraca">{assistente.convite}</p>
+            <p className="text-[12px] mt-1 text-nz-tinta-fraca">{assistente.convite}</p>
           </button>
         )}
         {resumoFicha && (
-          <p className="text-[11px] font-semibold px-1 text-nz-tinta-fraca" data-teste="ficha-da-lista">{resumoFicha}</p>
+          <p className="text-[12px] font-semibold px-1 text-nz-tinta-fraca" data-teste="ficha-da-lista">{resumoFicha}</p>
         )}
 
         {cartoes.map((cartao) => (
-          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje}
+          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
             onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} />
         ))}
 
-        <div className="flex items-center gap-1.5">
+        {/* ✅ DIR-77.1 — o CONCLUÍDO fica AQUI, na coluna dele, com a faixa
+            verde — igual ao MeisterTask. Antes eu tinha posto numa gaveta no pé
+            do quadro, e o dono corrigiu: "vai organizando ali dentro mesmo". */}
+        {feitos.length > 0 && (
+          <>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.14)' }} />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-nz-tinta-fraca">Concluídas {feitos.length}</span>
+              <span className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.14)' }} />
+            </div>
+            {feitos.map((cartao) => (
+              <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
+                onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} />
+            ))}
+          </>
+        )}
+
+        <div className="flex items-center gap-2 mt-auto">
           <input
             value={valorNovo}
             onChange={(e) => onNovo(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') onCriar(); }}
-            placeholder="novo card"
-            className="flex-1 rounded-lg px-3 h-10 text-[14px] outline-none placeholder:text-[#B3BAC5]"
-            style={{ background: '#FFFFFF', color: '#172B4D', boxShadow: '0 1px 2px rgba(9,30,66,0.25)' }}
+            placeholder="escreva o tópico"
+            data-teste="campo-novo-card"
+            className="flex-1 min-w-0 rounded-xl px-3.5 text-[15px] outline-none placeholder:text-[#B3BAC5]"
+            style={{ background: '#FFFFFF', color: '#172B4D', height: T.campo, boxShadow: '0 1px 3px rgba(9,30,66,0.28)' }}
           />
           <Button size="sm" onClick={onCriar} disabled={!String(valorNovo || '').trim()}
-            className="h-10 w-10 p-0 shrink-0 text-white" style={{ background: p.barra }}><Plus className="w-4 h-4" /></Button>
+            className="p-0 shrink-0 text-white rounded-xl"
+            style={{ background: p.barra, height: T.campo, width: T.campo }}><Plus className="w-5 h-5" /></Button>
         </div>
       </div>
     </div>
   );
 }
 
-function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr }) {
+function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
+  const [abrindoHora, setAbrindoHora] = useState(false);
   const { arrastando, alcas, engolirCliqueDoArrasto } = useArrastavel({
     aoSoltar: ({ x, y }) => {
       const alvo = document.elementFromPoint(x, y)?.closest('[data-lista]');
@@ -398,44 +469,45 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
     >
       {/* ── A FAIXA DE STATUS, largura inteira, no topo — o traço do MeisterTask ── */}
       {(feito || venceu) && (
-        <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold"
+        <div className="flex items-center gap-2 px-4 py-2 text-[12px] font-bold"
           style={feito ? { background: '#E3F5E9', color: '#177245' } : { background: '#FFE8DF', color: '#C4470F' }}>
-          {feito ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CalendarDays className="w-3.5 h-3.5" />}
+          {feito ? <CheckCircle2 className="w-4 h-4" /> : <CalendarDays className="w-4 h-4" />}
           {feito ? 'Concluída' : 'Atrasado'}
         </div>
       )}
 
-      <div className="p-3">
-        <div className="flex items-start gap-2">
+      <div style={{ padding: T.respiroCard }}>
+        <div className="flex items-start gap-2.5">
           <button
             type="button"
             onClick={() => onMudar(feito ? reabrir(cartao) : marcarFeito(cartao, agoraISO()))}
             title={feito ? 'reabrir' : 'marcar concluída'}
-            className="mt-0.5 w-[18px] h-[18px] rounded-full border-2 shrink-0 inline-flex items-center justify-center transition-colors"
+            className="mt-0.5 w-5 h-5 rounded-full border-2 shrink-0 inline-flex items-center justify-center transition-colors"
             style={feito ? { background: '#2FA36B', borderColor: '#2FA36B' } : { borderColor: '#C1C7D0' }}
-          >{feito && <CheckCircle2 className="w-3 h-3 text-white" />}</button>
+          >{feito && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}</button>
 
           <div className="flex-1 min-w-0">
             <Editavel
               valor={cartao.titulo}
               onSalvar={(t) => onMudar({ ...cartao, titulo: t })}
               estilo={{ color: feito ? '#7A869A' : '#172B4D', textDecoration: feito ? 'line-through' : 'none' }}
-              className="text-[15px] font-bold leading-snug block"
+              className="font-bold leading-snug block"
+              tamanhoTexto={T.tituloCard}
             />
           </div>
-          <Foto user={dono} nome={cartao.responsavel_nome || dono?.full_name} />
+          <Foto user={dono} nome={cartao.responsavel_nome || dono?.full_name} tamanho={T.avatar} />
         </div>
 
         {/* o checklist — o card que ele mais usa no quadro dele */}
         {prog.total > 0 && (
-          <div className="mt-2.5 space-y-1.5">
+          <div className="mt-3 space-y-2">
             {cartao.checklist.map((item, i) => (
-              <label key={i} className="flex items-start gap-2 text-[13px] leading-snug group/item cursor-pointer">
+              <label key={i} className="flex items-start gap-2.5 leading-snug group/item cursor-pointer" style={{ fontSize: T.item }}>
                 <input type="checkbox" checked={!!item.feito} onChange={() => onMudar(alternarItem(cartao, i, agoraISO()))}
-                  className="mt-0.5 w-[14px] h-[14px] accent-[#2FA36B] shrink-0" />
+                  className="mt-0.5 w-4 h-4 accent-[#2FA36B] shrink-0" />
                 <span className="flex-1" style={{ color: item.feito ? '#7A869A' : '#42526E', textDecoration: item.feito ? 'line-through' : 'none' }}>{item.texto}</span>
                 <button type="button" onClick={(e) => { e.preventDefault(); onMudar(removerItem(cartao, i)); }}
-                  className="opacity-0 group-hover/item:opacity-100 text-[#7A869A] hover:text-[#C4470F]"><X className="w-3.5 h-3.5" /></button>
+                  className="opacity-0 group-hover/item:opacity-100 text-[#7A869A] hover:text-[#C4470F]"><X className="w-4 h-4" /></button>
               </label>
             ))}
           </div>
@@ -446,13 +518,13 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
             onChange={(e) => setNovoItem(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && novoItem.trim()) { onMudar(adicionarItem(cartao, novoItem)); setNovoItem(''); } }}
             placeholder={prog.total ? 'novo item' : 'lista de tarefas'}
-            className="mt-2 w-full bg-transparent text-[13px] outline-none border-b border-transparent focus:border-[#0B5FFF]/40 placeholder:text-[#B3BAC5]"
-            style={{ color: '#42526E' }}
+            className="mt-2.5 w-full bg-transparent outline-none border-b border-transparent focus:border-[#0B5FFF]/40 placeholder:text-[#B3BAC5] pb-1"
+            style={{ color: '#42526E', fontSize: T.item }}
           />
         )}
 
         {/* ── RODAPÉ DE METADADOS, tudo em chip com ícone ── */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px]" style={{ color: '#5E6C84' }}>
+        <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px]" style={{ color: '#5E6C84' }}>
           <label className="inline-flex items-center gap-1 cursor-pointer relative font-semibold"
             style={venceu ? { color: '#C4470F' } : undefined} title="prazo">
             <CalendarDays className="w-3.5 h-3.5" />
@@ -463,6 +535,15 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
           {prog.total > 0 && (
             <span className="inline-flex items-center gap-1 tabular-nums font-semibold"><ListChecks className="w-3.5 h-3.5" /> {prog.feitos}/{prog.total}</span>
           )}
+          {/* ⏰ DIR-77 — o HORÁRIO. É ele que faz o card virar compromisso do dia
+              e aparecer na Lista e na Jornada no lugar certo. Sem hora, o card
+              fica no quadro — que é a diferença entre backlog e compromisso. */}
+          <button type="button" onClick={() => setAbrindoHora((v) => !v)} data-teste="chip-hora"
+            className="inline-flex items-center gap-1 font-semibold tabular-nums hover:underline"
+            style={cartao.hora ? { color: '#0B5FFF' } : undefined}
+            title={cartao.hora ? 'mudar o horário' : 'dar um horário faz entrar no seu dia'}>
+            <Clock3 className="w-3.5 h-3.5" /> {faixaDeHorario(cartao) || 'horário'}
+          </button>
           {habito && (
             <span className="rounded px-1.5 py-0.5 text-[11px] font-bold" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>
           )}
@@ -471,9 +552,41 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
           )}
         </div>
 
+        {abrindoHora && (() => {
+          const choque = conflitosDeHorario(doDia, { hora: cartao.hora, hora_fim: cartao.hora_fim, ignorarId: cartao.virou_tarefa_id });
+          return (
+            <div className="mt-3 rounded-lg p-2.5" style={{ background: '#F4F5F7' }} data-teste="editor-hora">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="time" value={cartao.hora || ''} data-teste="hora-inicio"
+                  onChange={(e) => onMudar({ ...cartao, hora: e.target.value || null })}
+                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none" style={{ borderColor: '#DFE1E6', color: '#172B4D' }} />
+                <span className="text-[13px]" style={{ color: '#5E6C84' }}>às</span>
+                <input type="time" value={cartao.hora_fim || ''}
+                  onChange={(e) => onMudar({ ...cartao, hora_fim: e.target.value || null })}
+                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none" style={{ borderColor: '#DFE1E6', color: '#172B4D' }} />
+                {!cartao.hora && (
+                  <button type="button" data-teste="sugerir-hora"
+                    onClick={() => {
+                      const h = horaSugerida(doDia, { duracaoMin: 30 });
+                      if (h) onMudar({ ...cartao, hora: h });
+                    }}
+                    className="text-[13px] font-bold hover:underline" style={{ color: '#0B5FFF' }}>sugerir</button>
+                )}
+              </div>
+              {/* 🔒 duas coisas no mesmo horário é o defeito mais caro de uma
+                  agenda, e até aqui NADA avisava */}
+              {choque.length > 0 && (
+                <p className="mt-2 text-[12px] font-bold" style={{ color: '#C4470F' }} data-teste="aviso-conflito">
+                  bate com {choque.length === 1 ? `“${choque[0].titulo}”` : `${choque.length} tarefas do dia`}
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         {sobre && <p className="mt-2 text-[12px] font-bold" style={{ color: '#0B5FFF' }}>soltar em “{sobre}”</p>}
 
-        <div className="mt-2.5 flex items-center gap-3 text-[12px] font-bold">
+        <div className="mt-3 flex items-center gap-3.5 text-[13px] font-bold">
           {ferramenta && !feito && (
             <button type="button" onClick={() => onIr?.(ferramenta.secao, ferramenta.sub)} title={`Abrir ${ferramenta.rotulo}`}
               className="inline-flex items-center gap-1 hover:underline" style={{ color: '#0B5FFF' }}>
@@ -498,7 +611,13 @@ function Cartao({ cartao, dono, hoje, onMudar, onExcluir, onVirarTarefa, onIr })
   );
 }
 
-export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada }) {
+/**
+ * @param {Array} tarefasDoDia as tarefas do Compromisso de hoje — o quadro
+ *   precisa delas pra avisar quando um horário BATE com o que já está marcado.
+ *   Vem do CrmMetodo, que é quem já as carrega: buscar de novo aqui daria duas
+ *   listas com a mesma verdade, e uma delas ficaria velha.
+ */
+export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, tarefasDoDia = [] }) {
   const uid = currentUser?.id || null;
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const [listas, setListas] = useState([]);
@@ -656,11 +775,14 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
           </Button>
         </div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-3 items-start">
+        // 🧱 DIR-77.1 — as colunas têm a MESMA altura e o minimizado desce até o
+        // fim ("ele bota a cor até o final, fica bonitão"). É `items-stretch`
+        // com uma altura de board: com `items-start`, cada coluna parava na
+        // altura do próprio conteúdo e a barra minimizada virava um tocinho.
+        <div className="flex gap-4 overflow-x-auto pb-4 items-stretch" style={{ minHeight: T.alturaQuadro }}>
           {listas.map((lista, indice) => {
             const daLista = cartoesDaLista(cartoes, lista.id);
             const p = paleta(lista.cor);
-            const Icone = iconeDaLista(lista);
 
             // ── COLUNA RECOLHIDA: barra vertical DA COR DELA ──
             if (lista.recolhida) {
@@ -670,14 +792,14 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                   onClick={() => mudarLista(lista, { recolhida: false })}
                   data-lista={lista.id} data-lista-nome={lista.nome} data-indice={indice} data-teste="lista-recolhida"
                   title={`abrir ${lista.nome}`}
-                  className="shrink-0 w-11 min-h-[260px] rounded-lg flex flex-col items-center py-3 gap-3 hover:brightness-110 transition-[filter]"
-                  style={{ background: p.barra }}
+                  className="shrink-0 rounded-xl flex flex-col items-center py-3.5 gap-3 hover:brightness-110 transition-[filter] self-stretch"
+                  style={{ background: p.barra, width: 52 }}
                 >
-                  <ChevronRight className="w-4 h-4 text-white/80" />
-                  <Icone className="w-4 h-4 text-white/80" />
-                  <span className="text-[12px] font-extrabold text-white uppercase tracking-[0.14em]"
+                  <ChevronRight className="w-[18px] h-[18px] text-white/80" />
+                  <Marca lista={lista} px={18} className="text-white/80" />
+                  <span className="text-[13px] font-extrabold text-white uppercase tracking-[0.14em]"
                     style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{lista.nome}</span>
-                  <span className="mt-auto text-[12px] font-extrabold text-white/90 tabular-nums">{daLista.length}</span>
+                  <span className="mt-auto text-[13px] font-extrabold text-white/90 tabular-nums">{daLista.length}</span>
                 </button>
               );
             }
@@ -687,8 +809,10 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 key={lista.id}
                 lista={lista}
                 cartoes={daLista}
+                feitos={feitosDaLista(cartoes, lista.id, hoje)}
                 dono={currentUser}
                 hoje={hoje}
+                doDia={tarefasDoDia}
                 indice={indice}
                 painelAberto={painelDe === lista.id}
                 onPainel={setPainelDe}
@@ -711,20 +835,20 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
               "quando eu adicionar, precisa ficar igual as outras"). O cabeçalho
               já vem colorido, com o ícone que o nome sugere, ANTES de existir —
               a pessoa vê o resultado enquanto digita. ── */}
-          <div className="shrink-0 w-[300px] rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="nova-lista">
+          <div className="shrink-0 rounded-xl overflow-hidden self-stretch" style={{ width: T.coluna, background: 'rgba(255,255,255,0.04)' }} data-teste="nova-lista">
             {(() => {
               const previa = { nome: novaLista, cor: CORES_LISTA[listas.length % CORES_LISTA.length] };
               const IconePrevia = iconeDaLista(previa);
               return (
-                <div className="flex items-center gap-2 px-3 h-[46px]"
-                  style={{ background: novaLista.trim() ? paleta(previa.cor).barra : 'rgba(255,255,255,0.10)' }}>
-                  <IconePrevia className="w-[18px] h-[18px] text-white/90 shrink-0" />
+                <div className="flex items-center gap-2.5 px-3.5"
+                  style={{ height: T.cabecalho, background: novaLista.trim() ? paleta(previa.cor).barra : 'rgba(255,255,255,0.10)' }}>
+                  <IconePrevia className="w-5 h-5 text-white/90 shrink-0" />
                   <input
                     value={novaLista}
                     onChange={(e) => setNovaLista(e.target.value)}
                     onKeyDown={async (e) => { if (e.key === 'Enter' && novaLista.trim()) { await criarLista(novaLista); setNovaLista(''); } }}
                     placeholder="NOVA LISTA"
-                    className="flex-1 min-w-0 bg-transparent text-[13px] font-extrabold uppercase tracking-[0.08em] text-white outline-none placeholder:text-white/50"
+                    className="flex-1 min-w-0 bg-transparent text-[15px] font-extrabold uppercase tracking-[0.06em] text-white outline-none placeholder:text-white/50"
                   />
                   <button type="button" disabled={!novaLista.trim()}
                     onClick={async () => { await criarLista(novaLista); setNovaLista(''); }}
@@ -732,7 +856,7 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 </div>
               );
             })()}
-            <p className="px-3 py-3 text-[11px] text-nz-tinta-fraca">
+            <p className="px-3.5 py-4 text-[12px] text-nz-tinta-fraca">
               escreva o nome e aperte Enter — se for um contexto conhecido, o assistente monta a lista pra você
             </p>
           </div>
@@ -747,25 +871,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
         />
       )}
 
-      {feitos.length > 0 && (
-        <div className="rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }} data-teste="quadro-feito">
-          <button type="button" onClick={() => setFeitoAberto((v) => !v)}
-            className="w-full flex items-center gap-2 px-3 h-[42px] text-[13px] font-extrabold uppercase tracking-[0.08em] text-white"
-            style={{ background: '#2FA36B' }}>
-            <CheckCircle2 className="w-[18px] h-[18px] text-white/90" />
-            <span className="flex-1 text-left">Feito <span className="tabular-nums">{feitos.length}</span></span>
-            <span className="text-[11px] font-semibold normal-case tracking-normal text-white/80">sai da mesa depois de 7 dias</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${feitoAberto ? 'rotate-180' : ''}`} />
-          </button>
-          {feitoAberto && (
-            <div className="p-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {feitos.map((cartao) => (
-                <Cartao key={cartao.id} cartao={cartao} dono={currentUser} hoje={hoje} onMudar={mudar} onExcluir={excluir} onVirarTarefa={virarTarefa} onIr={onIr} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
