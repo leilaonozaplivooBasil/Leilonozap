@@ -542,11 +542,19 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <label className="text-[10px] text-white/45 uppercase tracking-wider">
                 responsável
-                <select value={pessoa} onChange={(e) => setPessoa(e.target.value)} className={`mt-1 block w-full ${campo}`} data-teste="pessoa">
-                  {equipe.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome} · {p.funcao}</option>
-                  ))}
-                </select>
+                <span className="mt-1 flex items-stretch gap-1.5">
+                  <select value={pessoa} onChange={(e) => setPessoa(e.target.value)} className={`block w-full ${campo}`} data-teste="pessoa">
+                    {equipe.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nome} · {p.funcao}</option>
+                    ))}
+                  </select>
+                  {/* 🗂️ o Quadro Geral fica AQUI, junto do responsável (dono: "não estou
+                      achando o quadro geral, que deveria estar junto com esse cartão") */}
+                  <Button size="sm" onClick={() => { setPessoaFixo(pessoa); setAbaModal('pessoa'); setModalAberto(true); }} disabled={!pessoa}
+                    className="h-auto shrink-0 bg-white/10 hover:bg-white/20 text-white text-[11px] normal-case tracking-normal" data-teste="abrir-quadro-geral">
+                    <UserRound className="w-3.5 h-3.5 mr-1" /> Quadro Geral
+                  </Button>
+                </span>
               </label>
               <label className="text-[10px] text-white/45 uppercase tracking-wider">
                 dia
@@ -826,7 +834,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-nz-verde" />
-            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">O fixo de cada um</p>
+            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
             <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
           </div>
           <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -844,7 +852,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
             <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
               <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
             </Button>
-            <span className="text-[10px] text-white/35">{equipe.length} no time corporativo (do painel de controle) · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
+            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
           </div>
         </div>
       )}
