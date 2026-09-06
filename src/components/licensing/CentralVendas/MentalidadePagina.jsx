@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Brain, BarChart3 } from 'lucide-react';
+import { Brain, Trophy } from 'lucide-react';
 import EncontroMentalidade from '@/components/licensing/CentralVendas/EncontroMentalidade';
 import PerformanceEquipe from '@/components/licensing/CentralVendas/PerformanceEquipe';
 
 // 🧠📊 MENTALIDADE — o espaço da segunda e do fluxo, junto d'O Método (dono, 06/09/2026).
 // Duas abas, sem nada administrativo:
-//   • Encontro — a segunda-feira (apresentação, tópico pela IA, cronômetro, demandas);
-//   • Performance — a visão executiva de todo mundo e o painel corporativo de cada um.
+//   • Mentalidade de segunda — a reunião (apresentação, tópico pela IA, cronômetro, demandas);
+//   • X-Performance — os 8 Hábitos de todo o time em visão executiva e o painel corporativo de cada um.
 // Na segunda abre no Encontro; nos outros dias, na Performance.
 
+// dono (06/09/2026): "Mentalidade de segunda" (o cérebro fica) e, ao lado,
+// "X-Performance" — a visão executiva de todo o time. O administrativo (o
+// X-Game, distribuir tarefa, de cima pra baixo) virou "ADM X-Game" na faixa.
 const ABAS = [
-  { id: 'encontro', rotulo: 'Encontro de segunda', Icone: Brain },
-  { id: 'performance', rotulo: 'Performance do time', Icone: BarChart3 },
+  { id: 'encontro', rotulo: 'Mentalidade de segunda', Icone: Brain },
+  { id: 'performance', rotulo: 'X-Performance', Icone: Trophy },
 ];
 
 export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null }) {

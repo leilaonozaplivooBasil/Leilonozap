@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -78,7 +78,10 @@ export const SECOES_TOP_COLLEGE = [
   // 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria. Fica
   // AQUI, e não solto no menu, porque é a Top College que forma — o quadro de
   // entregáveis é a mesma faculdade cobrando o que ensinou.
-  { value: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
+  // 🎮 06/09/2026 — dono: "onde era X-Performance, tudo que for administração
+  // do X-Game, tarefas, organização de cima pra baixo, vira ADM X-Game. A
+  // X-Performance (dado, visão executiva do time) mora em Mentalidade."
+  { value: 'catalogo-xperformance', label: 'ADM X-Game', icon: Wrench },
   // 🎖️ 06/09/2026 — Carreira + Evoluir Nível viraram UMA seção aqui dentro
   // (dono: "no menu fica só a X-EOS; o resto vai pra dentro, unindo o que
   // precisa unir"). A aba `plano-carreira` e a rota /Evoluir continuam

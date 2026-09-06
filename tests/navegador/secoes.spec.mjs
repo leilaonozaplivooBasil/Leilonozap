@@ -66,7 +66,7 @@ test('DESKTOP: abre pra baixo com as duas famílias lado a lado, selo e legenda,
   const m = await caixa(menu);
   assert.ok(m.y + m.height <= 800 && m.x + m.width <= 1280, `o menu saiu da tela: ${JSON.stringify(m)}`);
   assert.ok(m.height < 340, `o menu ficou alto demais (${m.height}px): as famílias deviam estar lado a lado`);
-  assert.deepEqual(await menu.locator('[data-familia="top"] [role="menuitem"]').allTextContents(), ['O Método', 'Mentalidade', 'Time', 'X-Performance', 'Carreira']);
+  assert.deepEqual(await menu.locator('[data-familia="top"] [role="menuitem"]').allTextContents(), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira']);
   await pagina.screenshot({ path: path.join(FOTOS, 'secoes-desktop.png') });
   await menu.locator('[role="menuitem"]', { hasText: 'Mentalidade' }).click();
   await menu.waitFor({ state: 'detached' });

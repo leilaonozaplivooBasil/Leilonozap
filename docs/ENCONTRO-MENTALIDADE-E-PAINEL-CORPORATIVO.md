@@ -14,10 +14,16 @@
 
 - **Mentalidade** — item novo da Top College, entre O Método e Time (`catalogo-encontro`), com duas abas
   e **nada administrativo** (dono: "não quero na parte administrativa, quero junto do fluxo"):
-  - **Encontro de segunda** — a reunião (abre nela às segundas);
-  - **Performance do time** — a visão executiva de todo mundo (quem planejou, quem produziu, semana,
-    demandas, semáforo) e, embaixo, o **Painel Corporativo** de quem foi clicado (abre nela nos outros dias).
-- O X-Performance continua sendo a gestão (fixo, distribuir, quadro geral): o painel saiu de lá.
+  - **Mentalidade de segunda** — a reunião (abre nela às segundas);
+  - **X-Performance** — os **8 Hábitos do time** em visão executiva (hoje · semana · mês): um cartão por
+    Hábito com o número do time, quem fez (com o detalhe) e quem não fez (com o motivo), lendo o dado real
+    (`src/lib/habitosDoTime.js`: quadro dos sonhos, story das 05:15, lista qualificada, contatos do método,
+    apresentações e reuniões de investimento, vendas pagas e captações fechadas, planejamento e números,
+    treinamentos e entregáveis de duplicação); a tabela por pessoa; e, embaixo, o **Painel Corporativo** de
+    quem foi clicado (abre nela nos outros dias).
+- A seção administrativa da faixa virou **ADM X-Game** (dono: "tudo que for administração do X-Game,
+  tarefas, organização de cima pra baixo"): fixo, distribuir, quadro geral, ciclo, fila do pronto,
+  comprovações. Só a gestão.
 
 ## O fluxo (uma demanda, do começo ao fim)
 

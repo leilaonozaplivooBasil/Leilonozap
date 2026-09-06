@@ -36,12 +36,21 @@ window.__bancoFalso = {
     xperf_encontros: [],
     xperf_programa: [],
     xperf_metas: [{ id: 'm1', user_id: 'emanuel', mes: '2026-09', tipo: 'numero', chave: 'reunioes_investimento', rotulo: 'Reuniões de investimento', alvo: 44, unidade: 'no mês' }],
-    catalog_sales: [],
+    catalog_sales: [{ id: 's1', seller_id: 'carla', status: 'paid', kind: 'produto', created_date: '2026-09-07T15:00:00Z', total_amount: 1200 }],
     metodo_tarefas: [
+      { id: 't0', user_id: 'emanuel', data: '2026-09-07', hora: '05:15', titulo: 'Story ANTES da atividade física', peso: 4, categoria: 'producao', feito: true },
       { id: 't1', user_id: 'emanuel', data: '2026-09-07', hora: '08:00', titulo: 'Gratidão', peso: 1, categoria: 'producao', feito: true },
       { id: 't2', user_id: 'emanuel', data: '2026-09-07', hora: '09:00', titulo: 'Organização do dia', peso: 1, categoria: 'producao', feito: false },
     ],
     metodo_quadro: [],
+    // 📊 os 8 Hábitos: o quadro dos sonhos do Emanuel, a lista/contatos, uma venda da Carla, a captação do Emanuel
+    metodo_perfil: [{ id: 'pf1', user_id: 'emanuel', sonhos: [{ titulo: 'Casa' }, { titulo: 'Carro' }] }],
+    customers: [
+      { id: 'cli1', created_by_id: 'emanuel', qualificacao_network: { confianca: 5, financeiro: 4, apetite: 3 }, contatos_metodo: [{ resultado: 'agendado', em: '2026-09-07T10:00:00Z', registrado_por_id: 'emanuel' }, { resultado: 'feito', em: '2026-09-07T11:00:00Z', registrado_por_id: 'emanuel' }] },
+      { id: 'cli2', created_by_id: 'jean', qualificacao_network: null, contatos_metodo: [] },
+    ],
+    captacao_oportunidades: [{ id: 'o1', responsavel_id: 'emanuel', estagio: 'fechado_100', valor_previsto: 50000, fechado_em: '2026-09-07T16:00:00Z', reuniao_em: '2026-09-07T14:00:00Z' }],
+    xperf_entregaveis: [],
     // 📥 uma demanda já recebida pelo Emanuel, do CEO, na sexta passada; e uma da Carla agendada e conferida
     xperf_demandas: [
       { id: 'd1', titulo: 'Mandar a proposta pro ponto de retirada de Jacarepaguá', detalhe: 'Mentalidade do Diretor — multiplicar e medir.', pessoa_id: 'emanuel', pessoa_nome: 'Emanuel Silva', origem: 'ceo', criado_por_id: 'dono', criado_por_nome: 'Luiz Santanna', prazo_em: '2026-09-11T21:00:00.000Z', mentalidade: 'diretor', habito: 6, peso: 4, categoria: 'mentoria', status: 'recebida', created_at: '2026-09-07T08:30:00.000Z' },

@@ -302,11 +302,47 @@ test('PERFORMANCE (sem administração): a visão executiva de todo mundo — qu
     ['jean', 'verde', 'nao'],      // dia vazio, nada feito: não fez
     ['dono', 'verde', 'nao'],      // o CEO também está no time — e também não fez
   ]);
-  assert.match(await linhas.nth(0).textContent(), /Emanuel Silva.*planejou · 1\/2 feitas.*1 sem agendar.*fez/);
+  assert.match(await linhas.nth(0).textContent(), /Emanuel Silva.*planejou · 2\/3 feitas.*1 sem agendar.*fez/);
   assert.match(await linhas.nth(2).textContent(), /Jean Aranha.*dia vazio.*não fez/);
   await linhas.nth(1).click();
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="painel-corporativo"]'), /Carla Souza/);
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+test('X-PERFORMANCE: os 8 Hábitos do time, hoje — quem fez com o detalhe, quem não fez com o motivo; semana e mês; clicar no chip abre o painel', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  const oito = pagina.locator('[data-teste="oito-habitos"]');
+  await oito.locator('[data-teste="habito"]').first().waitFor();
+  assert.equal(await oito.locator('[data-teste="habito"]').count(), 8);
+  assert.equal(await pagina.locator('[data-teste="performance-equipe"]').getAttribute('data-periodo'), 'hoje');
+  const cartao = (n) => oito.locator(`[data-teste="habito"][data-n="${n}"]`);
+  const txt = async (n) => (await cartao(n).textContent()).replace(/\s+/g, ' ');
+  // 1 Sonho: o Emanuel tem 2 sonhos; os outros não têm quadro
+  assert.match(await txt(1), /1\. Sonho.*1 de 4.*2 sonhos no time.*Emanuel\s*· 2 sonhos no quadro · gratidão 1×.*não fez/);
+  assert.match(await txt(1), /Carla\s*· sem quadro/);
+  // 2 Compromisso: só o Emanuel acordou (story das 05:15)
+  assert.match(await txt(2), /2\. Compromisso.*1 de 4.*Emanuel\s*· acordou · rotina/);
+  // 4 Contato: 2 contatos do Emanuel (1 agendado)
+  assert.match(await txt(4), /4\. Contato e Convite.*2 contatos no time.*Emanuel\s*· 2 contatos · 1 agendado/);
+  // 6 Fechamento: Emanuel fechou R$ 50 mil de captação; Carla vendeu R$ 1.200; Jean e Luiz não venderam
+  assert.match(await txt(6), /6\. Acompanhamento e Fechamento.*R\$ 51\.200,00 no time.*Emanuel\s*· 1 captação · R\$ 50\.000,00.*Carla\s*· 1 venda · R\$ 1\.200,00.*não fez.*Jean\s*· não vendeu/);
+  // o resumo
+  assert.match((await pagina.locator('[data-teste="oito-resumo"]').textContent()).replace(/\s+/g, ' '), /acordaram\s*1 de 4.*contatos feitos\s*2.*venderam ou fecharam\s*2 de 4/);
+  // a tabela por pessoa mostra os hábitos de cada um
+  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*[5-8]\/8/);
+  // semana: o rótulo muda e o Compromisso vira "acordou X de Y dias"
+  await pagina.locator('[data-teste="periodo"] [data-periodo="semana"]').click();
+  await pagina.locator('[data-teste="performance-equipe"][data-periodo="semana"]').waitFor();
+  await pagina.waitForFunction(() => /acordou 1 de 1 dia/.test(document.querySelector('[data-teste="habito"][data-n="2"]')?.textContent || ''));
+  await pagina.locator('[data-teste="periodo"] [data-periodo="mes"]').click();
+  await pagina.locator('[data-teste="performance-equipe"][data-periodo="mes"]').waitFor();
+  assert.match((await oito.textContent()).replace(/\s+/g, ' '), /este mês/);
+  // clicar no chip da Carla abre o painel dela
+  await cartao(6).locator('[data-teste="chip"]', { hasText: 'Carla' }).first().click();
+  await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
+  await pagina.screenshot({ path: path.join(FOTOS, 'xperformance-oito-habitos.png'), fullPage: true });
   assert.deepEqual(erros, []);
   await ctx.close();
 });
