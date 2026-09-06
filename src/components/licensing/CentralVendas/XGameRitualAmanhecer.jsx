@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight } from 'lucide-react';
 import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM } from '@/lib/xgame';
+// 📻 o Ritual e o X-Rádio compartilham o MESMO motor de música: mesma
+// leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
+// O que a pessoa salva às 5h toca no expediente, e o que ela salva
+// trabalhando volta no amanhecer.
+import { extrairIdYoutube, extrairListaYoutube, fonteDoPlayer } from '@/lib/xradio';
 
 // 🌅 X-GAME — O RITUAL DO AMANHECER (ordem do dono, 05/09):
 //   • Abre como app de espiritualidade: céu de madrugada e SOM DE ÁGUA/MAR
@@ -20,19 +25,15 @@ const PREVIAS_MUSICA = [
   { id: 'UfcAVejslrU', nome: 'Weightless · relaxamento' },
   { id: 'jfKfPfyJRdk', nome: 'Lofi pra focar' },
 ];
-const extrairIdYoutube = (texto) => {
-  const m = /(?:youtu\.be\/|v=|embed\/|shorts\/|live\/)([\w-]{11})/.exec(String(texto || ''));
-  return m ? m[1] : (/^[\w-]{11}$/.test(String(texto || '').trim()) ? String(texto).trim() : null);
-};
 const CHAVE_MUSICA = 'xgame_musica_do_dia';
 const musicaSalva = () => {
   try {
     const j = JSON.parse(localStorage.getItem(CHAVE_MUSICA) || 'null');
-    return j?.id && j?.data === new Date().toISOString().slice(0, 10) ? j.id : null;
+    return j?.id && j?.data === new Date().toISOString().slice(0, 10) ? j : null;
   } catch { return null; }
 };
-const salvarMusica = (id) => {
-  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, data: new Date().toISOString().slice(0, 10) })); } catch { /* sem storage */ }
+const salvarMusica = (id, lista = false) => {
+  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, lista, data: new Date().toISOString().slice(0, 10) })); } catch { /* sem storage */ }
 };
 
 // ⭐ A PLAYLIST DO AMANHECER da pessoa (fica no aparelho): cada link que ela
@@ -45,9 +46,12 @@ const gravarPlaylist = (lista) => {
   try { localStorage.setItem(CHAVE_PLAYLIST, JSON.stringify(lista.slice(0, 20))); } catch { /* sem storage */ }
 };
 // título da música via noembed (tem CORS liberado); falhou = nome genérico
-const buscarTitulo = async (id) => {
+const buscarTitulo = async (id, ehLista = false) => {
   try {
-    const r = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${id}`, { signal: AbortSignal.timeout(4000) });
+    const alvo = ehLista
+      ? `https://www.youtube.com/playlist?list=${id}`
+      : `https://www.youtube.com/watch?v=${id}`;
+    const r = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(alvo)}`, { signal: AbortSignal.timeout(4000) });
     const j = await r.json();
     return String(j?.title || '').slice(0, 60) || null;
   } catch { return null; }
@@ -55,11 +59,11 @@ const buscarTitulo = async (id) => {
 
 // o player isolado e memoizado: o cronômetro da gravação re-renderiza o
 // ritual a cada segundo, e o iframe NÃO PODE nem piscar — música fluida.
-const PlayerYoutube = React.memo(function PlayerYoutube({ id }) {
+const PlayerYoutube = React.memo(function PlayerYoutube({ id, lista }) {
   return (
     <iframe
       title="música do amanhecer"
-      src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&loop=1&playlist=${id}&rel=0&controls=1`}
+      src={fonteDoPlayer({ id, lista })}
       allow="autoplay; encrypted-media"
       className="w-56 h-32 block"
     />
@@ -100,14 +104,24 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const [semVideoLiberado, setSemVideoLiberado] = useState(false);
   // 🎵 a música do amanhecer: a do dia salva → 1ª da playlist dela → prévia
   const [playlist, setPlaylist] = useState(lerPlaylist);
-  const [musicaId, setMusicaId] = useState(() => musicaSalva() || lerPlaylist()[0]?.id || PREVIAS_MUSICA[0].id);
+  // 📻 a coleção é a MESMA do X-Rádio (mesma chave no aparelho), e lá dá pra
+  // salvar PLAYLIST inteira — por isso aqui carrega o item completo, não só
+  // o id: uma playlist tocada como se fosse faixa única não abre.
+  const escolhaInicial = () => musicaSalva() || lerPlaylist()[0] || PREVIAS_MUSICA[0];
+  const [musicaId, setMusicaId] = useState(() => escolhaInicial().id);
+  const [musicaLista, setMusicaLista] = useState(() => !!escolhaInicial().lista);
   const [musicaAberta, setMusicaAberta] = useState(false);
   const [linkMusica, setLinkMusica] = useState('');
+  const trocarMusica = (m) => {
+    setMusicaId(m.id);
+    setMusicaLista(!!m.lista);
+    salvarMusica(m.id, !!m.lista);
+  };
   const naPlaylist = playlist.some((m) => m.id === musicaId);
   const ehPrevia = PREVIAS_MUSICA.some((m) => m.id === musicaId);
   const favoritarAtual = async () => {
-    const nome = (await buscarTitulo(musicaId)) || `Minha música ${playlist.length + 1}`;
-    const nova = [...playlist.filter((m) => m.id !== musicaId), { id: musicaId, nome }];
+    const nome = (await buscarTitulo(musicaId, musicaLista)) || `Minha música ${playlist.length + 1}`;
+    const nova = [...playlist.filter((m) => m.id !== musicaId), { id: musicaId, nome, lista: musicaLista }];
     setPlaylist(nova);
     gravarPlaylist(nova);
   };
@@ -127,10 +141,10 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const timerRef = useRef(null);
 
   const usarLinkMusica = () => {
-    const id = extrairIdYoutube(linkMusica);
-    if (!id) { setAviso('Cole um link do YouTube válido (youtube.com/... ou youtu.be/...).'); setTimeout(() => setAviso(''), 5000); return; }
-    setMusicaId(id);
-    salvarMusica(id);
+    const lista = extrairListaYoutube(linkMusica);
+    const id = lista || extrairIdYoutube(linkMusica);
+    if (!id) { setAviso('Cole um link do YouTube válido (música ou playlist).'); setTimeout(() => setAviso(''), 5000); return; }
+    trocarMusica({ id, lista: !!lista });
     setLinkMusica('');
     setMusicaAberta(false);
   };
@@ -242,7 +256,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
           escolhe a prévia ou cola a música do dia dela (fica salva) */}
       <div className="absolute top-4 left-4 z-20 space-y-1.5">
         <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-black/40">
-          <PlayerYoutube id={musicaId} />
+          <PlayerYoutube id={musicaId} lista={musicaLista} />
         </div>
         {/* ⭐ tocou um link novo? um toque salva na playlist — pra amanhã */}
         {!naPlaylist && !ehPrevia && (
@@ -264,7 +278,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
                   <div key={m.id} className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => { setMusicaId(m.id); salvarMusica(m.id); }}
+                      onClick={() => trocarMusica(m)}
                       className={`flex-1 min-w-0 text-left rounded-lg px-2 py-1.5 text-[11px] font-semibold truncate ${musicaId === m.id ? 'bg-white/25 text-white' : 'text-white/70 hover:bg-white/10'}`}
                     >{m.nome}</button>
                     <button type="button" onClick={() => removerDaPlaylist(m.id)} title="tirar da playlist" className="shrink-0 text-white/30 hover:text-white text-xs px-1">✕</button>
@@ -277,7 +291,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMusicaId(m.id); salvarMusica(m.id); }}
+                onClick={() => trocarMusica(m)}
                 className={`w-full text-left rounded-lg px-2 py-1.5 text-[11px] font-semibold ${musicaId === m.id ? 'bg-white/25 text-white' : 'text-white/70 hover:bg-white/10'}`}
               >{m.nome}</button>
             ))}
