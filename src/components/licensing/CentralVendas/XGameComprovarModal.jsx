@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Camera, ImagePlus, Loader2 } from 'lucide-react';
 import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR } from '@/lib/xgame';
+import { arquivosDoColar } from '@/lib/colarImagem';
 
 // ✅ X-GAME F10.3 — O MODAL DE COMPROVAÇÃO (leve e direto, ordem do dono:
 // "não quadradão"). Um cartão só: vê a tarefa, abre o Instagram se for o
@@ -75,11 +76,28 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, onFe
     setTimeout(() => setAvisoCola(''), 6000);
   };
 
+  // 📋 DIR-75 — COLAR O PRINT (Ctrl+V no computador, "Colar" do dedo no
+  // celular). Reusa a mesma lib do Quadro dos Sonhos.
+  //
+  // ⚠️ CUIDADO QUE ESTA FUNÇÃO TOMA: colar IMAGEM entra; colar TEXTO não é
+  // problema dela. O bloqueio de cola no resumo do aprendizado (`bloquearCola`,
+  // logo acima) existe pra impedir que a pessoa copie o texto de outro lugar —
+  // se este `onPaste` do cartão engolisse o evento, aquele bloqueio morreria
+  // junto. Por isso aqui só se age quando VEIO IMAGEM, e nada mais é tocado.
+  const colarPrint = (evento) => {
+    const imagens = arquivosDoColar(evento.clipboardData);
+    if (!imagens.length) return;
+    evento.preventDefault();
+    setFile(imagens[0]);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        onPaste={colarPrint}
+        data-teste="comprovar-modal"
       >
         {/* cabeçalho enxuto */}
         <div className="flex items-start justify-between gap-3 px-5 pt-4">
@@ -168,6 +186,12 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, onFe
                 <span className="text-xs font-bold text-nz-tinta">Subir o print</span>
                 <span className="text-[10px] text-nz-tinta-fraca">da galeria</span>
               </button>
+              {/* 📋 DIR-75 — a terceira porta. Fica como AVISO e não como
+                  terceiro botão porque colar não tem o que clicar: quem copiou
+                  o print só precisa saber que pode largar ele aqui. */}
+              <p className="col-span-2 text-center text-[10px] text-nz-tinta-fraca">
+                📋 ou <span className="font-bold text-nz-tinta">cole o print aqui</span> — Ctrl+V, ou “Colar” segurando no celular
+              </p>
             </div>
           )}
           <input ref={galeriaRef} type="file" accept="image/*" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
