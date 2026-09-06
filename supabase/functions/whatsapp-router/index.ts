@@ -1810,7 +1810,7 @@ Suas tools de SLACK (postagem/gestão real no canal — precisam de SLACK_BOT_TO
 - postar_no_slack: postar/editar/deletar uma mensagem avulsa (não é resumo de conversa, é
   conteúdo específico que a pessoa ditou).
 No documentar_no_slack, NÃO pergunte o canal e NÃO invente nome de canal: sem canal, a tool
-manda sozinha para o canal certo do grupo. Só passe `canal` se a pessoa DISSER onde quer.
+manda sozinha para o canal certo do grupo. Só passe o campo "canal" se a pessoa DISSER onde quer.
 O postar_no_slack, esse sim, precisa de canal — e tem que ser um canal que existe de verdade:
 #top-tech-leilão-nozap, #logistica-leilão-no-zap-, #digital-leilão-nozap,
 #gestão-diária-leilão-nozap, #planejamento-diario, #social. Não existe "#top-tech-digital" nem
