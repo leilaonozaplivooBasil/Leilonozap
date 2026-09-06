@@ -40,8 +40,12 @@ const ABERTOS = new Set(['aberto', 'hoje', 'semana', 'depois']);
 /** Depois disto o feito sai da mesa (fica no histórico). Régua do dono. */
 export const DIAS_NA_MESA_DEPOIS_DE_FEITO = 7;
 
-/** Os tons das listas — da casa, não de uma paleta genérica. */
-export const CORES_LISTA = ['verde', 'azul', 'magenta', 'ambar', 'cinza'];
+/**
+ * Os tons das listas. Os nomes são a chave da paleta da tela (DIR-76.1) — que
+ * saiu das seções do quadro do dono no MeisterTask: barra sólida e saturada,
+ * uma cor por contexto. Nome de cor mora aqui, valor de cor mora na tela.
+ */
+export const CORES_LISTA = ['grafite', 'ambar', 'roxo', 'rosa', 'teal', 'verde'];
 
 /**
  * O MODELO PRONTO do primeiro uso. Três contextos que o quadro do dono já
@@ -49,9 +53,9 @@ export const CORES_LISTA = ['verde', 'azul', 'magenta', 'ambar', 'cinza'];
  * ensina ninguém a usar quadro.
  */
 export const LISTAS_MODELO = [
-  { nome: 'Trabalho', cor: 'verde' },
-  { nome: 'Academia', cor: 'azul' },
-  { nome: 'Pessoal', cor: 'magenta' },
+  { nome: 'Trabalho', cor: 'grafite' },
+  { nome: 'Academia', cor: 'teal' },
+  { nome: 'Pessoal', cor: 'roxo' },
 ];
 export const CARD_EXEMPLO = {
   titulo: 'Organizar a semana',
@@ -61,6 +65,34 @@ export const CARD_EXEMPLO = {
     { texto: 'Marcar as 3 reuniões do dia', feito: false },
   ],
 };
+
+/**
+ * Os ícones que a pessoa pode escolher pra lista — é o painel "Ícone de seção"
+ * do MeisterTask (ordem do dono: "precisa selecionar emoji, tem que dar tudo
+ * isso pra ele"). Guarda-se o NOME, nunca o desenho: o desenho vem do pacote de
+ * ícones e muda de versão; o nome é nosso e sobrevive.
+ */
+export const ICONES_LISTA = [
+  'lista', 'trabalho', 'academia', 'casa', 'alvo', 'relogio',
+  'marketing', 'dinheiro', 'estudo', 'ideia', 'alerta', 'foguete',
+];
+
+/**
+ * Arrastar a lista de um lado pro outro. Devolve a lista TODA com `ordem`
+ * recalculada — e não só as duas que trocaram: ordem que só muda em quem se
+ * mexeu deixa buracos e empates, e aí a próxima leitura vem embaralhada.
+ * Devolve a MESMA lista quando o movimento não existe.
+ */
+export function reordenarListas(listas, id, paraIndice) {
+  const arr = Array.isArray(listas) ? listas : [];
+  const de = arr.findIndex((l) => l.id === id);
+  const para = Math.max(0, Math.min(arr.length - 1, Number(paraIndice)));
+  if (de < 0 || Number.isNaN(para) || de === para) return arr;
+  const copia = [...arr];
+  const [movida] = copia.splice(de, 1);
+  copia.splice(para, 0, movida);
+  return copia.map((l, i) => ({ ...l, ordem: i }));
+}
 
 export function estaFeito(cartao) {
   return String(cartao?.coluna || '') === ESTADO_FEITO;
