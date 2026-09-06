@@ -33,11 +33,13 @@ export default function useArrastavel({ aoMover, aoSoltar, limiar = 6 } = {}) {
   // dispara em seguida — senão soltar a pílula em cima do play acionaria o play
   const arrastouAgora = React.useRef(false);
 
+  // guarda o ponteiro capturado, pra soltar depois só se houve captura
+  const capturado = React.useRef(null);
+
   const aoApontar = React.useCallback((e) => {
     if (e.button != null && e.button !== 0) return; // só botão esquerdo/toque
     inicio.current = { px: e.clientX, py: e.clientY };
     passouLimiar.current = false;
-    try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* navegador antigo */ }
   }, []);
 
   const aoArrastar = React.useCallback((e) => {
@@ -49,6 +51,20 @@ export default function useArrastavel({ aoMover, aoSoltar, limiar = 6 } = {}) {
       if (Math.hypot(dx, dy) < limiar) return;
       passouLimiar.current = true;
       setArrastando(true);
+      // 🐛 A CAPTURA SÓ ACONTECE AQUI — e este atraso é o conserto de um
+      // defeito real (06/09/2026): capturar já no `pointerdown` matava o
+      // clique dos botões DE DENTRO da alça. Captura de ponteiro redireciona
+      // os eventos seguintes pro elemento que capturou, inclusive o `click`:
+      // com a pílula inteira sendo a alça, o `click` ia pra ela e o botão que
+      // abre o painel nunca era avisado. O dono viu exatamente isso — "está
+      // movendo pra todo lado, porém não está abrindo".
+      // Capturando só depois do limiar, um TOQUE segue toque (o botão recebe
+      // o clique) e um ARRASTO segue arrasto (o ponteiro não escapa da alça
+      // quando o dedo anda mais rápido que o render).
+      try {
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        capturado.current = { alvo: e.currentTarget, id: e.pointerId };
+      } catch { /* navegador antigo: arrasta sem captura mesmo */ }
     }
     e.preventDefault?.();
     aoMover?.({ x: e.clientX, y: e.clientY, dx, dy });
@@ -59,7 +75,10 @@ export default function useArrastavel({ aoMover, aoSoltar, limiar = 6 } = {}) {
     inicio.current = null;
     passouLimiar.current = false;
     setArrastando(false);
-    try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch { /* ok */ }
+    if (capturado.current) {
+      try { capturado.current.alvo.releasePointerCapture?.(capturado.current.id); } catch { /* ok */ }
+      capturado.current = null;
+    }
     if (houve) {
       arrastouAgora.current = true;
       setTimeout(() => { arrastouAgora.current = false; }, 60);
