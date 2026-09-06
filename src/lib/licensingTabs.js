@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -69,6 +69,11 @@ export const SECOES_TOP_COLLEGE = [
   // com uma faculdade própria. O valor da aba continua o mesmo — link antigo
   // (?catalogTab=catalogo-crm) segue abrindo no lugar certo.
   { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
+  // 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: "um lugar estratégico, não na
+  // parte administrativa, junto com os 8 Hábitos" — a segunda-feira num espaço
+  // só (Executivo · Diretor · CEO): apresentação, tópico pela IA, cronômetro
+  // 15+45+120 e as demandas direcionadas ao vivo.
+  { value: 'catalogo-encontro', label: 'Mentalidade', icon: Brain },
   { value: 'catalogo-vendedores', label: 'Time', icon: Handshake },
   // 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria. Fica
   // AQUI, e não solto no menu, porque é a Top College que forma — o quadro de
@@ -138,6 +143,7 @@ export function getLicensingGroups(user) {
         // continua existindo porque vira o texto alternativo da imagem e o
         // nome pra busca no menu do celular.
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp', marcaCompleta: '/marca/marca-xeos-lockup.webp', legenda: 'Estrutura de operações e expansão' },
+        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-encontro', label: 'Mentalidade', icon: Brain },
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-vendedores', label: 'Time', icon: Handshake },
       { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },

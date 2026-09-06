@@ -16,6 +16,13 @@ export const plataforma = {
   },
   integrations: {
     Core: {
+      // 🧠 a IA do encontro: a banca decide a resposta por window.__iaFalsa(body);
+      // sem ela, "IA não conectada" — e a tela tem que cair na régua local
+      InvokeLLM: async (body) => {
+        estado.chamadas.push({ tipo: 'llm', prompt: body?.prompt, schema: !!body?.response_json_schema });
+        const r = window.__iaFalsa;
+        return typeof r === 'function' ? r(body) : { ok: false, needs_key: true, error: 'IA não conectada (configure AI_GATEWAY_API_KEY).' };
+      },
       UploadFile: async ({ file }) => {
         estado.chamadas.push({ tipo: 'upload', nome: file?.name, tipoArquivo: file?.type, tamanho: file?.size });
         return { file_url: `https://nosso-bucket/${estado.chamadas.length}-${(file?.name || 'imagem').replace(/[^a-z0-9.]/gi, '_')}` };

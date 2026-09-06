@@ -57,6 +57,7 @@ import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
+import EncontroMentalidade from '../components/licensing/CentralVendas/EncontroMentalidade';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
 import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
@@ -128,7 +129,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1204,6 +1205,13 @@ const DashboardContent = ({ user, isAdmin }) => {
               <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin */}
                 <XPerformance currentUser={user} visaoTotal={isAdmin} gestao={visibilidadeDoUsuario(user).superAdmin} />
+              </TabsContent>
+
+              {/* 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: a segunda-feira num
+                  espaço só. Quem conduz (pautas, IA, cronômetro, direcionar) é a
+                  gestão e a diretoria; o resto vê e acompanha a apresentação. */}
+              <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                <EncontroMentalidade currentUser={user} podeConduzir={visibilidadeDoUsuario(user).superAdmin || visibilidadeDoUsuario(user).visaoTotal} />
               </TabsContent>
 
               <TabsContent value="catalogo-vendedores" className="mt-6">
