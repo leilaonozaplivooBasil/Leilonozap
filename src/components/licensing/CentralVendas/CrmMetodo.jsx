@@ -38,7 +38,7 @@ import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import {
   rotinaEmVigor, estadoDaRotina, deveGerarSozinha, valeAPartirDe,
-  incluirNaRotina, editarNaRotina, excluirDaRotina, itemDaRotina,
+  incluirNaRotina, editarNaRotina, excluirDaRotina,
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import QuadroCompromisso from './QuadroCompromisso';
