@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight } from 'lucide-react';
 import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM } from '@/lib/xgame';
 
 // 🌅 X-GAME — O RITUAL DO AMANHECER (ordem do dono, 05/09):
@@ -17,8 +17,8 @@ import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM } from '@/lib/xgame';
 // tocando automático + o espaço pra pessoa colar a MÚSICA DO DIA dela — a
 // escolha fica guardada no aparelho e volta sozinha no dia seguinte.
 const PREVIAS_MUSICA = [
-  { id: 'UfcAVejslrU', nome: '🌊 Weightless (relaxamento)' },
-  { id: 'jfKfPfyJRdk', nome: '☕ Lofi pra focar' },
+  { id: 'UfcAVejslrU', nome: 'Weightless · relaxamento' },
+  { id: 'jfKfPfyJRdk', nome: 'Lofi pra focar' },
 ];
 const extrairIdYoutube = (texto) => {
   const m = /(?:youtu\.be\/|v=|embed\/|shorts\/|live\/)([\w-]{11})/.exec(String(texto || ''));
@@ -65,6 +65,29 @@ const PlayerYoutube = React.memo(function PlayerYoutube({ id }) {
     />
   );
 });
+
+/** O HALO: o ícone do passo num círculo de vidro com brilho — no lugar do
+ *  emoji gigante, que virava um quadradinho feio na tela cheia. */
+function Halo({ children }) {
+  return (
+    <span className="mx-auto flex w-24 h-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/25 backdrop-blur-sm"
+      style={{ boxShadow: '0 0 60px rgba(255,214,170,0.35), inset 0 2px 14px rgba(255,255,255,0.22)' }}
+    >{children}</span>
+  );
+}
+
+/** O botão principal do ritual: sólido, com lábio 3D, afundando ao clicar. */
+function BotaoRitual({ onClick, children, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] text-[15px] font-extrabold tracking-wide px-10 py-4 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
+      style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
+    >{children}</button>
+  );
+}
 
 const GRATIDAO_MIN = 20;
 const ACAO_MIN = 10;
@@ -178,7 +201,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   // sair do passo 2: precisa do vídeo — e se não tiver, o sistema EXPLICA
   const continuarDoSonho = () => {
     if (!videoBlob && !semVideoLiberado) {
-      setAviso('🎥 Você precisa GRAVAR a sua visualização pra comprovar o ritual — é rapidinho: aperta "Gravar minha visualização", olha pro seu sonho e respira. Sem o vídeo, a comprovação cai na análise manual do gestor.');
+      setAviso('Você precisa GRAVAR a sua visualização pra comprovar o ritual — é rapidinho: aperta "Gravar minha visualização", olha pro seu sonho e respira. Sem o vídeo, a comprovação cai na análise manual do gestor.');
       setSemVideoLiberado(true); // o próximo clique deixa seguir mesmo assim
       return;
     }
@@ -212,7 +235,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
       )}
 
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-72 h-36 rounded-t-full bg-gradient-to-t from-amber-300/70 to-transparent blur-2xl" />
-      <button type="button" onClick={onFechar} className="absolute top-4 right-4 rounded-full p-2 text-white/60 hover:text-white hover:bg-white/10 z-20">
+      <button type="button" onClick={onFechar} className="xeos-cru absolute top-4 right-4 rounded-full p-2 text-white/60 hover:text-white hover:bg-white/10 z-20">
         <X className="w-5 h-5" />
       </button>
       {/* 🎵 A MÚSICA DO AMANHECER — YouTube tocando automático; a pessoa
@@ -224,19 +247,19 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
         {/* ⭐ tocou um link novo? um toque salva na playlist — pra amanhã */}
         {!naPlaylist && !ehPrevia && (
           <button type="button" onClick={favoritarAtual} className="block w-56 rounded-full px-3 py-1 text-[11px] font-bold bg-amber-400/90 text-[#3b1d3e] hover:bg-amber-300">
-            ⭐ salvar na minha playlist pra amanhã
+            <Star className="w-3 h-3" fill="currentColor" /> salvar na minha playlist pra amanhã
           </button>
         )}
         <button
           type="button"
           onClick={() => setMusicaAberta(!musicaAberta)}
-          className="rounded-full px-3 py-1 text-[11px] font-semibold bg-white/10 text-white/70 hover:text-white"
-        >{musicaAberta ? '▾ 🎵 sua playlist do amanhecer' : '▸ 🎵 sua playlist do amanhecer'}</button>
+          className="xeos-cru rounded-full px-3 py-1 text-[11px] font-semibold bg-white/10 text-white/70 hover:text-white"
+        >{musicaAberta ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} sua playlist do amanhecer</button>
         {musicaAberta && (
           <div className="w-56 rounded-2xl bg-black/50 backdrop-blur p-2.5 space-y-1.5 max-h-64 overflow-y-auto">
             {playlist.length > 0 && (
               <>
-                <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">⭐ a sua playlist</p>
+                <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest"> a sua playlist</p>
                 {playlist.map((m) => (
                   <div key={m.id} className="flex items-center gap-1">
                     <button
@@ -263,9 +286,9 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
                 value={linkMusica}
                 onChange={(e) => setLinkMusica(e.target.value)}
                 placeholder="cole um link do YouTube e toque"
-                className="flex-1 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-[10px] px-2 py-1.5 focus:outline-none"
+                className="xeos-cru flex-1 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-[10px] px-2 py-1.5 focus:outline-none"
               />
-              <button type="button" onClick={usarLinkMusica} className="rounded-lg bg-white text-[#5b2a5e] text-[10px] font-bold px-2">tocar</button>
+              <button type="button" onClick={usarLinkMusica} className="xeos-cru rounded-lg bg-white text-[#5b2a5e] text-[10px] font-bold px-2">tocar</button>
             </div>
           </div>
         )}
@@ -274,23 +297,21 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
       <div className="relative z-10 w-full max-w-md text-center text-white space-y-6">
         {passo === 0 && (
           <>
-            <p className="text-5xl">🌅</p>
-            <h2 className="text-2xl font-bold">Bom dia, {nome || 'campeão'}.</h2>
-            <p className="text-white/80 text-sm leading-relaxed">
-              O dia ainda nem clareou — e você já está aqui.<br />
-              <strong>ANTECIPAÇÃO É PODER.</strong>
+            <Halo><Sunrise className="w-14 h-14 text-white" strokeWidth={1.5} /></Halo>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Bom dia, {nome || 'campeão'}.</h2>
+            <p className="text-white/80 text-[15px] leading-relaxed max-w-sm mx-auto">
+              O dia ainda nem clareou — e você já está aqui.
             </p>
-            <p className="text-white/60 text-xs">Respira fundo. São só alguns minutos, com você mesmo.</p>
-            <button type="button" onClick={() => setPasso(1)} className="rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50">
-              Começar o ritual
-            </button>
+            <p className="text-[11px] font-extrabold tracking-[0.28em] text-amber-200">ANTECIPAÇÃO É PODER</p>
+            <p className="text-white/55 text-[13px]">Respira fundo. São só alguns minutos, com você mesmo.</p>
+            <BotaoRitual onClick={() => setPasso(1)}>Começar o ritual</BotaoRitual>
           </>
         )}
 
         {passo === 1 && (
           <>
-            <p className="text-4xl">🙏</p>
-            <h2 className="text-xl font-bold">Pelo que você é grato hoje?</h2>
+            <Halo><HeartHandshake className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pelo que você é grato hoje?</h2>
             <textarea
               autoFocus
               value={gratidao}
@@ -298,21 +319,22 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
               onPaste={bloquearCola}
               onDrop={bloquearCola}
               placeholder="Escreve com o coração — uma linha já muda o dia."
-              className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm p-4 min-h-[90px] focus:outline-none focus:border-white/50"
+              className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm p-4 min-h-[90px] focus:outline-none focus:border-white/50"
             />
-            {aviso && <p className="text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
+            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
             <button
               type="button"
               disabled={gratidao.trim().length < GRATIDAO_MIN}
               onClick={() => setPasso(2)}
-              className="rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
+              className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
+              style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
             >Continuar</button>
           </>
         )}
 
         {passo === 2 && (
           <>
-            <h2 className="text-xl font-bold">Visualiza o seu sonho.</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Visualiza o seu sonho.</h2>
             {sonhoTitulo ? (
               <p className="text-white/90 text-sm font-semibold">"{sonhoTitulo}"</p>
             ) : imagensDosSonhos.length === 0 ? (
@@ -323,17 +345,24 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             {gravando ? (
               <div className="space-y-2">
                 <video ref={videoAoVivoRef} playsInline muted className="mx-auto w-40 h-40 rounded-full object-cover ring-4 ring-amber-300/60" />
-                <p className="text-amber-200 text-xs font-bold animate-pulse">● gravando sua visualização · {gravSeg}s</p>
+                <p className="flex items-center justify-center gap-2 text-amber-200 text-xs font-extrabold tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  gravando sua visualização · {gravSeg}s
+                </p>
                 <p className="text-white/60 text-[11px]">Olha os sonhos subindo. Respira. Visualiza você chegando lá.</p>
-                <button type="button" onClick={pararGravacao} className="rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2 hover:bg-white/25">
-                  ⏹ concluir a visualização
+                <button type="button" onClick={pararGravacao} className="xeos-cru inline-flex items-center gap-2 rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2.5 hover:bg-white/25">
+                  <Square className="w-3.5 h-3.5" fill="currentColor" strokeWidth={0} /> concluir a visualização
                 </button>
               </div>
             ) : videoBlob ? (
-              <p className="text-emerald-300 text-xs font-bold">🎥 visualização gravada ({gravSeg}s) ✔ <button type="button" onClick={iniciarGravacao} className="ml-2 text-white/60 underline">regravar</button></p>
+              <p className="inline-flex items-center gap-2 text-emerald-300 text-xs font-bold">
+                <Check className="w-4 h-4" strokeWidth={3} /> visualização gravada ({gravSeg}s)
+                <button type="button" onClick={iniciarGravacao} className="ml-1 text-white/55 underline font-normal">regravar</button>
+              </p>
             ) : (
-              <button type="button" onClick={iniciarGravacao} className="rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2.5 hover:bg-white/25">
-                🎥 Gravar minha visualização <span className="block text-[10px] font-normal text-white/60">o vídeo é a sua comprovação — só você e o gestor veem</span>
+              <button type="button" onClick={iniciarGravacao} className="xeos-cru rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2.5 hover:bg-white/25">
+                <span className="inline-flex items-center gap-2"><Video className="w-4 h-4" strokeWidth={2} /> Gravar minha visualização</span>
+                <span className="block mt-1 text-[10px] font-normal text-white/55">o vídeo é a sua comprovação — só você e o gestor veem</span>
               </button>
             )}
 
@@ -348,18 +377,18 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
                   onChange={(e) => setAcao(e.target.value)}
                   onPaste={bloquearCola}
                   placeholder="a ação de hoje..."
-                  className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
+                  className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
                 />
               </>
             )}
-            {aviso && <p className="text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso}</p>}
+            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso}</p>}
             {(videoBlob || semVideoLiberado) && !gravando && (
               <>
                 <button
                   type="button"
                   disabled={acao.trim().length < ACAO_MIN}
                   onClick={continuarDoSonho}
-                  className="rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
+                  className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
                 >Continuar</button>
                 {!videoBlob && (
                   <p className="text-white/40 text-[10px]">continuar sem o vídeo manda a comprovação pra análise manual</p>
@@ -371,21 +400,22 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
 
         {passo === 3 && (
           <>
-            <p className="text-4xl">📱</p>
-            <h2 className="text-xl font-bold">Compartilha teu bom dia?</h2>
+            <Halo><Instagram className="w-12 h-12 text-white" strokeWidth={1.6} /></Halo>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Compartilha teu bom dia?</h2>
             <p className="text-white/70 text-sm">Convite, não obrigação: um story de bom dia inspira o time inteiro — e vale pontos extras no jogo.</p>
             <a
               href={LINK_ABRIR_INSTAGRAM}
               target="_blank"
               rel="noreferrer"
               className="inline-block rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 text-white font-bold px-6 py-3 hover:opacity-90"
-            >📱 Postar o bom dia</a>
+            ><span className="inline-flex items-center gap-2"><Instagram className="w-4 h-4" strokeWidth={2.2} /> Postar o bom dia</span></a>
             <div>
               <button
                 type="button"
                 onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, gravSeg, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
-                className="mt-2 rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50"
-              >Concluir o ritual ✔</button>
+                className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 transition-transform active:translate-y-[3px]"
+                style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
+              ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
             </div>
             <p className="text-white/50 text-[11px]">o ritual é a sua comprovação — horário, palavras e vídeo, carimbados</p>
           </>
