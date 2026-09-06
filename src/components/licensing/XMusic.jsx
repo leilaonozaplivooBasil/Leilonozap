@@ -3,10 +3,10 @@ import { Radio, Play, Pause, Star, X, ChevronDown, Plus } from 'lucide-react';
 import {
   ESTACOES, extrairIdYoutube, extrairListaYoutube, fonteDoPlayer,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
-} from '@/lib/xradio';
+} from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 
-// 📻 X-RÁDIO — o rádio de trabalho da Top College / X-EOS.
+// 🎧 X-MUSIC — o som de trabalho da Top College / X-EOS.
 //
 // Nasceu de um pedido do dono: "gostei tanto da música das 5h que quero a
 // mesma estrutura em toda a área da Top College — um rádio de trabalho que
@@ -19,6 +19,14 @@ import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 // O <iframe> é memoizado à parte porque QUALQUER re-render que o toque
 // interrompe a música — foi a lição do cronômetro do ritual.
 //
+// 🔴 E O ERRO QUE MATAVA O SOM (corrigido): o iframe estava DENTRO do
+// bloco do painel. Fechar o painel desmontava o iframe — ou seja, a música
+// só existia com o painel aberto na tela. Agora o painel NUNCA sai do DOM:
+// fechado ele vira altura zero, sem opacidade e sem clique. Note que não é
+// `display:none` nem `hidden` de propósito — esses o navegador trata como
+// "sumiu" e pausa a mídia. Fechado, o painel mantém o TAMANHO REAL e só
+// sai do campo de visão — pro navegador ele segue montado e tocando.
+//
 // TELA APAGADA: o player embutido do YouTube é bloqueado de tocar em
 // segundo plano nos navegadores de celular (política do próprio YouTube —
 // só o app com Premium faz isso). No computador, trocar de aba mantém
@@ -30,7 +38,7 @@ const Iframe = React.memo(function Iframe({ src }) {
   if (!src) return null;
   return (
     <iframe
-      title="X-Rádio"
+      title="X-Music"
       src={src}
       allow="autoplay; encrypted-media"
       className="w-full h-[168px] block rounded-xl"
@@ -38,7 +46,7 @@ const Iframe = React.memo(function Iframe({ src }) {
   );
 });
 
-export default function XRadio() {
+export default function XMusic() {
   const [aberto, setAberto] = useState(false);
   const [ligado, setLigado] = useState(lerLigado);
   const [estacao, setEstacao] = useState(() => lerEstacao() || ESTACOES[0]);
@@ -58,8 +66,8 @@ export default function XRadio() {
   useEffect(() => {
     if (!('mediaSession' in navigator) || typeof window.MediaMetadata !== 'function') return;
     navigator.mediaSession.metadata = new window.MediaMetadata({
-      title: estacao?.nome || 'X-Rádio',
-      artist: 'X-RÁDIO · Top College',
+      title: estacao?.nome || 'X-Music',
+      artist: 'X-MUSIC · Top College',
       album: 'X-EOS',
     });
     navigator.mediaSession.playbackState = ligado ? 'playing' : 'paused';
@@ -103,13 +111,19 @@ export default function XRadio() {
   }, [playlist]);
 
   return (
-    <div ref={painelRef} className="fixed bottom-4 left-4 z-40 print:hidden">
-      {aberto && (
-        <div className="xeos-cru mb-2 w-[min(88vw,20rem)] rounded-2xl border border-white/12 shadow-2xl p-3 space-y-3"
+    // 📏 bottom-14, não bottom-4: o selo "Preview oficial" mora em
+    // `fixed bottom-2 left-2` e estava por cima da pílula — o dono não
+    // conseguia ler o que tocava. Agora a pílula senta acima dele.
+    <div ref={painelRef} className="fixed bottom-14 left-4 z-40 print:hidden">
+      <div
+        aria-hidden={!aberto}
+        className={aberto ? 'mb-2' : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'}
+      >
+        <div className="xeos-cru w-[min(88vw,20rem)] rounded-2xl border border-white/12 shadow-2xl p-3 space-y-3"
           style={{ background: 'rgba(10,16,32,0.97)', backdropFilter: 'blur(12px)' }}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-extrabold tracking-[0.2em] text-white/70">X-RÁDIO</p>
+            <p className="text-[11px] font-extrabold tracking-[0.2em] text-white/70">X-MUSIC</p>
             <button type="button" onClick={() => setAberto(false)} className="text-white/40 hover:text-white">
               <ChevronDown className="w-4 h-4" />
             </button>
@@ -185,7 +199,7 @@ export default function XRadio() {
             apagada, o YouTube pausa — é regra do próprio YouTube pra player embutido.
           </p>
         </div>
-      )}
+      </div>
 
       {/* a pílula: liga/desliga e abre o painel */}
       <div className="xeos-cru inline-flex items-center gap-1 rounded-full border border-white/12 shadow-2xl pl-1 pr-1"
@@ -194,19 +208,30 @@ export default function XRadio() {
         <button
           type="button"
           onClick={() => { vibrar(VIBRA_TOQUE); setLigado((v) => !v); }}
-          title={ligado ? 'pausar o X-Rádio' : 'ligar o X-Rádio'}
+          title={ligado ? 'pausar o X-Music' : 'ligar o X-Music'}
           className={`m-1 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${ligado ? 'bg-nz-verde text-white' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
         >
           {ligado ? <Pause className="w-4 h-4" fill="currentColor" /> : <Play className="w-4 h-4" fill="currentColor" />}
         </button>
         <button
           type="button"
-          onClick={() => { vibrar(VIBRA_ABRIR); setAberto((v) => !v); }}
+          onClick={() => {
+            vibrar(VIBRA_ABRIR);
+            // 🎧 mesmo princípio do Ritual das 5h: lá a música já entra
+            // quando a tela abre, ninguém precisa procurar o play. Aqui,
+            // abrir o painel com tudo parado já liga na última estação. E
+            // tem que ser DENTRO do clique: sem esse toque da pessoa o
+            // navegador bloqueia som que começa sozinho.
+            setAberto((v) => {
+              if (!v && !ligado) setLigado(true);
+              return !v;
+            });
+          }}
           className="flex items-center gap-2 pr-3 py-1.5 text-left"
         >
           <Radio className={`w-4 h-4 shrink-0 ${ligado ? 'text-nz-verde' : 'text-white/50'}`} />
           <span className="min-w-0">
-            <span className="block text-[10px] font-extrabold tracking-[0.16em] text-white/50 leading-none">X-RÁDIO</span>
+            <span className="block text-[10px] font-extrabold tracking-[0.16em] text-white/50 leading-none">X-MUSIC</span>
             <span className="block max-w-[9rem] truncate text-[11px] font-bold text-white leading-tight">
               {ligado ? (estacao?.nome || 'tocando') : 'desligado'}
             </span>

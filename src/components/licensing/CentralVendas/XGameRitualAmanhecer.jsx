@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight } from 'lucide-react';
 import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM } from '@/lib/xgame';
-// 📻 o Ritual e o X-Rádio compartilham o MESMO motor de música: mesma
+// 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
 // O que a pessoa salva às 5h toca no expediente, e o que ela salva
 // trabalhando volta no amanhecer.
-import { extrairIdYoutube, extrairListaYoutube, fonteDoPlayer } from '@/lib/xradio';
+import { extrairIdYoutube, extrairListaYoutube, fonteDoPlayer } from '@/lib/xmusic';
 
 // 🌅 X-GAME — O RITUAL DO AMANHECER (ordem do dono, 05/09):
 //   • Abre como app de espiritualidade: céu de madrugada e SOM DE ÁGUA/MAR
@@ -104,7 +104,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const [semVideoLiberado, setSemVideoLiberado] = useState(false);
   // 🎵 a música do amanhecer: a do dia salva → 1ª da playlist dela → prévia
   const [playlist, setPlaylist] = useState(lerPlaylist);
-  // 📻 a coleção é a MESMA do X-Rádio (mesma chave no aparelho), e lá dá pra
+  // 🎧 a coleção é a MESMA do X-Music (mesma chave no aparelho), e lá dá pra
   // salvar PLAYLIST inteira — por isso aqui carrega o item completo, não só
   // o id: uma playlist tocada como se fosse faixa única não abre.
   const escolhaInicial = () => musicaSalva() || lerPlaylist()[0] || PREVIAS_MUSICA[0];

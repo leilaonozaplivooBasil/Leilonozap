@@ -1,11 +1,11 @@
-// 📻 X-RÁDIO — a memória do rádio de trabalho da Top College / X-EOS.
+// 🎧 X-MUSIC — a memória do som de trabalho da Top College / X-EOS.
 //
-// O NOME: o dono ofereceu "Top Music" ou "X-Play list". Fiquei com X-RÁDIO
-// por dois motivos: (1) "X-Play" fala igual a "X-Pay", que já é o dinheiro
-// do jogo — duas coisas centrais com o mesmo som viram confusão em
-// reunião; (2) "rádio" é exatamente o que ele descreveu: liga e fica
-// tocando enquanto se trabalha, corre ou estuda. E entra na família que já
-// existe: X-office, X-Pay, X-GAME, X-RÁDIO.
+// O NOME (fechado pelo dono na segunda rodada): entre "X-Rádio", "X-Music"
+// e "X-Playlist" ficou X-MUSIC. "X-Playlist" é comprido e não cabe na
+// pílula sem cortar; "X-Play" fala igual a "X-Pay", que já é o dinheiro do
+// jogo — duas coisas centrais com o mesmo som viram confusão em reunião.
+// X-MUSIC é curto, não colide com nada e entra na família que já existe:
+// X-office, X-Pay, X-GAME, X-MUSIC.
 //
 // A COLEÇÃO É UMA SÓ: a playlist que a pessoa monta no Ritual do Amanhecer
 // e a que ela monta trabalhando são a MESMA — por isso este arquivo usa a
@@ -13,6 +13,10 @@
 // às 5h toca no expediente, e vice-versa.
 
 export const CHAVE_PLAYLIST = 'xgame_playlist_amanhecer';
+// as duas chaves abaixo continuam com o nome antigo de propósito: são o
+// que já está salvo no aparelho de quem usou. Renomear só pra combinar com
+// o nome novo faria a pessoa perder a estação escolhida — o nome interno
+// não aparece pra ninguém.
 export const CHAVE_ESTACAO = 'xradio_estacao';   // o que estava tocando
 export const CHAVE_LIGADO = 'xradio_ligado';     // ligado/desligado
 
