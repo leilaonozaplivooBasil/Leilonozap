@@ -3360,3 +3360,46 @@ dinheiro às 3 da manhã, e levo ao dono.
 **Fila final que o robô vai aplicar** (só DDL aditivo, tudo `IF NOT EXISTS`):
 concurso_checkin · melhor_envio_tokens · recuperacao_pix · pix_key_app_users ·
 captacao_aporte_externo · o RLS do backup de rótulos.
+
+### REL-71.2 — o robô aplicou. Primeira vez em 25 execuções.
+
+Execução #25, 06/09/2026 03:23 UTC: **`aplicar migrações pendentes: success`**.
+As 24 anteriores, desde 21/08, tinham falhado todas.
+
+**Conferido no banco depois, não só no verde do workflow:**
+
+| o que faltava | agora |
+|---|---|
+| `concurso_participantes.last_checkin` | existe ✅ |
+| `app_users.pix_key` + `pix_key_type` | existem ✅ |
+| `catalog_sales.recuperacao_toque1_em` + `toque2_em` | existem ✅ |
+| `captacao_oportunidades.aporte_externo` | existe ✅ |
+| RLS do backup de rótulos do Financeiro | **ligado** ✅ |
+| índices (`last_checkin`, `recuperacao`, `melhor_envio`) | os 3 criados ✅ |
+| histórico × pasta | **61 linhas para 61 arquivos** — paridade exata ✅ |
+
+**E o que NÃO mudou, que é o mais importante:** contagem de linhas antes e
+depois, tabela por tabela — concurso 101, gastos 396, vendas 626, usuários
+648, comissões 481, mensagens 1782, estoque 13.470, produtos 2.853.
+**Idênticas.** Nenhuma linha de dado foi criada, alterada ou apagada em
+nenhum momento deste conserto: tudo que rodou foi `ADD COLUMN`,
+`CREATE INDEX` e `ENABLE ROW LEVEL SECURITY`.
+
+**Defeito da própria prova, achado no caminho:** a prova em navegador caiu
+para 187/189 depois de um merge. Não era o produto — a sessão paralela tirou
+`rounded-lg` dos cartões ("fim do quadrado dentro do quadrado") e a minha
+prova procurava a linha da tarefa POR ESSA CLASSE. Prova amarrada em classe
+de estilo quebra quando o estilo muda, e mente sobre o produto. Agora ela
+acha a linha pelo TEXTO, pegando o menor ancestral que fala de "ABRIR A
+LOJA" — o bloco do período inteiro também contém esse texto, e era por isso
+que a primeira correção ainda clicava no guia errado. 189/189.
+
+**Fica em aberto, para o dono decidir — os dois são caminho do dinheiro:**
+1. `liberar_saldos_maturados()` em produção é a versão antiga, sem a trava de
+   venda cancelada (`20260821_cancelamento_estorna` nunca completou).
+2. O cron `liberar-saldos`, que deveria chamá-la a cada 15 minutos, **não
+   existe** — e ninguém a chama pelo app. Ou seja: saldo maturado não está
+   sendo liberado automaticamente por nada.
+
+Não mexi em nenhum dos dois. Os dois estão marcados como aplicados no
+histórico justamente para o robô não resolver isso sozinho.
