@@ -34,6 +34,8 @@ import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import XGameJornada from './XGameJornada';
+import GuiaMovel, { useEhCelular } from './GuiaMovel';
+import FaixaVisao from './FaixaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -479,7 +481,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
   const [painelAberto, setPainelAberto] = useState(false);
-  const mostrarPainel = visao === 'lista' || painelAberto;
+  // 📱 no celular o placar completo NÃO abre sozinho na visão "lista" — só pelo
+  // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
+  // "muito texto explicando"). No desktop segue como sempre foi.
+  const celular = useEhCelular();
+  const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
   const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
@@ -952,11 +958,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const grupos = agruparSonhosPorHorizonte(sonhos);
           return (
             <div className="space-y-4">
-              <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
+              <GuiaMovel titulo="Como montar o seu quadro" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
                 🖼️ <strong>Monte o seu quadro.</strong> O sonho tem três prazos — ⚡ curto (1 a 2 anos), 🎯 médio (2 a 4) e 🏆 longo (5 pra frente).
                 Coloque quantas imagens quiser em cada um (busque pelo nome sem sair daqui, ou envie do aparelho) e escreva os
                 <strong> detalhes exatos</strong> embaixo de cada imagem — se for um carro: ano, cor, banco de couro, roda. Sonho detalhado vira meta.
-              </div>
+              </GuiaMovel>
 
               {HORIZONTES_SONHO.map((hz) => {
                 const doHorizonte = grupos[hz.id];
@@ -1079,7 +1085,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 />
               );
             })()}
-            <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1.5">
+            <GuiaMovel titulo="Como funciona a Rotina Perfeita" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1.5">
               <p>
                 📣 <strong>A Rotina Perfeita não é agenda de posts</strong> — é a sua rotina real virando narrativa nas redes:{' '}
                 <strong className="text-nz-tinta">{PRINCIPIO_ROTINA.percepcoes.join(' → ')}</strong>.
@@ -1097,7 +1103,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-[11px] italic pt-1">Quando chegar a hora de apresentar a Leilão NoZap, a audiência já viu o mais importante: <strong>a pessoa vivendo aquilo que fala.</strong></p>
                 </div>
               )}
-            </div>
+            </GuiaMovel>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(-1)}><ChevronLeft className="w-5 h-5 text-nz-tinta" /></Button>
@@ -1110,55 +1116,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               <div className="bg-nz-verde h-full transition-all" style={{ width: `${progressoJogo.pct}%` }} />
             </div>
 
-            {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══ */}
+            {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
+                A faixa inteira (seletor, placar e o relógio de teste temporário)
+                mora em FaixaVisao — bonita, funcional e com prova em navegador. */}
             {tarefas.length > 0 && (
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex gap-1.5">
-                  {[['jornada', '🗺️ Jornada'], ['lista', '📋 Lista']].map(([v, rotulo]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setVisao(v)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold ${visao === v ? 'bg-nz-verde text-white' : 'bg-nz-cinza-fundo text-nz-tinta-fraca hover:text-nz-tinta'}`}
-                    >{rotulo}</button>
-                  ))}
-                </div>
-                <span className="flex items-center gap-3">
-                  {/* 🕐 o relógio de TESTE do super admin: aplica um horário e o
-                      jogo INTEIRO obedece (estados, ritual, votação, saudação) */}
-                  {visaoTotal && (
-                    horaTeste ? (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-amber-500 text-white text-[10px] font-bold px-3 py-1.5 shadow animate-pulse">
-                        🧪 MODO DEV · dia zerado às {horaTeste} · nada é salvo
-                        <button type="button" onClick={() => { setHoraTeste(''); setHoraRascunho(''); setDevMarcas({}); }} className="rounded-full bg-white/25 hover:bg-white/40 px-2 py-0.5">sair</button>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5">
-                        <input
-                          type="time"
-                          value={horaRascunho}
-                          onChange={(e) => setHoraRascunho(e.target.value)}
-                          title="Relógio de TESTE (só super admin): escolha um horário e aplique — o jogo inteiro obedece."
-                          className="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800 outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={!horaRascunho}
-                          onClick={() => { setDevMarcas({}); setHoraTeste(horaRascunho); }}
-                          className="rounded-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-[10px] font-bold px-3 py-1.5"
-                        >🧪 Entrar no modo dev</button>
-                      </span>
-                    )
-                  )}
-                  {visao === 'jornada' && (
-                    <button
-                      type="button"
-                      onClick={() => setPainelAberto(!painelAberto)}
-                      className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde"
-                    >{painelAberto ? '▾ esconder o placar' : '▸ 📊 meu placar completo'}</button>
-                  )}
-                </span>
-              </div>
+              <FaixaVisao
+                visao={visao}
+                onVisao={setVisao}
+                placarAberto={painelAberto}
+                onPlacar={() => setPainelAberto(!painelAberto)}
+                mostrarPlacar={visao === 'jornada' || celular}
+                teste={visaoTotal ? {
+                  hora: horaTeste,
+                  rascunho: horaRascunho,
+                  onRascunho: setHoraRascunho,
+                  entrar: () => { setDevMarcas({}); setHoraTeste(horaRascunho); },
+                  sair: () => { setHoraTeste(''); setHoraRascunho(''); setDevMarcas({}); },
+                } : null}
+              />
             )}
 
             {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
@@ -1677,9 +1652,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
           return (
             <div className="space-y-4">
-              <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
+              <GuiaMovel titulo="Como fazer o contato" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
                 📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
-              </div>
+              </GuiaMovel>
 
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
               <div>

@@ -12,6 +12,60 @@
 
 ---
 
+## DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria
+
+**Emitida por:** dono (06/09/2026): *"Preciso organizar as questões de
+organização da reunião, mentalidade do diretor... a gente tem que ter a aba aí
+dentro da mentalidade do executivo, mentalidade do diretor e do CEO... toda
+segunda-feira a gente tem uma reunião, eu quero visualizar isso dentro do
+sistema, onde tem tópicos que a gente precisa sempre de documentos... com muito
+planejamento, um sistema igual Trello... isso vira produção dentro do
+planejamento de acordo com cada membro da diretoria... cada diretor e executivo
+tem um fixo e eles têm os entregáveis para serem sócios."* E, sobre o nome e o
+lugar: *"não vamos colocar nome de Trello, vamos colocar algo chamado
+X-Performance, e isso precisa enquadrar dentro do planejamento diário, com uma
+visão executiva estilo MASTER TASK. CAPRICHA, LIBERDADE DE AÇÃO, ME SURPREENDA."*
+
+**Data:** 06/09/2026.
+
+**O que entra:** uma seção nova da Top College, `catalogo-xperformance`, com
+quatro peças:
+
+1. **As três trilhas da Mentalidade** — Executivo (Hábitos 1 a 5, fazer
+   acontecer), Diretor e CEO (Hábitos 5 a 8, multiplicar e construir). A do
+   cargo da pessoa vem marcada. Não é conteúdo novo: é uma **lente** sobre os
+   8 Hábitos que a academia já ensina.
+2. **As duas contas, separadas e nunca somadas** — o *fixo do mês* (que já vive
+   no X-Game) e o *caminho pra sociedade* (pontos acumulados). Somar as duas
+   faria a pessoa achar que bateu a meta do mês **e** ficou mais perto de
+   sócia — e não ficou.
+3. **A reunião de segunda como documento**, com pauta **fixa**: Os números da
+   semana / O gargalo / Decisões / Compromissos. A pauta ser fixa é o que
+   transforma anotação em série histórica — cada bloco abre o mesmo bloco da
+   semana passada ao lado.
+4. **O quadro de entregáveis** — Combinado → Fazendo → Em revisão → Entregue,
+   com arrasto. **Só "Entregue" vira ponto**, e nada chega em Entregue sem
+   passar por "Em revisão": deixar pular seria deixar a pessoa se autopromover
+   a sócia arrastando um card.
+
+**Regras de fronteira desta diretiva:**
+
+- **Não se cria moeda nova.** O X-Game já tem Human Token, ligas e X-Pay. O
+  fixo é lido de `xgame_participantes`; este módulo **não guarda dinheiro**.
+- **Não se cria reunião nova.** A reunião como *compromisso* já é
+  `reunioes_empresa` (DIR-52). O que entra aqui é a **pauta** — o documento que
+  a reunião produz.
+- **Migração aditiva:** duas tabelas novas (`xperf_encontros`,
+  `xperf_entregaveis`), nenhuma linha existente tocada.
+- **Preview apenas.** Produção depende de autorização à parte, como sempre.
+
+**Pendente com o dono (não bloqueia a entrega, muda a régua):** quantos pontos
+abrem a conversa de sociedade (entrou 100 como régua provisória) e se a reunião
+de segunda é **uma para todos** ou **uma por trilha** (entrou uma por semana,
+com a trilha marcada).
+
+---
+
 ## DIR-71 — O robô de migração nunca funcionou: acertar o histórico
 
 **Emitida por:** dono (06/09/2026): *"faça o que precisa ser feito, só não

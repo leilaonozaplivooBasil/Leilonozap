@@ -56,6 +56,7 @@ import NavegacaoLateralGlobal from '@/components/common/NavegacaoLateralGlobal';
 import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
+import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
 import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
@@ -127,7 +128,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1091,7 +1092,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* 📱 Mobile: a barra que rolava pro lado virou um seletor + painel com
             TUDO organizado por grupos (mesma fonte única da lateral do desktop). */}
         <div className={naTopCollege ? 'md:hidden mb-4 px-4' : 'md:hidden mb-4'}>
-          <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
+          <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} topCollege={naTopCollege} />
         </div>
 
         {/* 🎓 DIR-62 — na Top College o topo branco vira a FAIXA DA ACADEMIA
@@ -1188,6 +1189,14 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <TabsContent value="catalogo-produtos" className="mt-6">
                 <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} user={user} />
+              </TabsContent>
+
+              {/* 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da
+                  diretoria. Sem <Card> em volta de propósito — dentro da Top
+                  College a página é uma superfície só, e cartão aqui traria de
+                  volta o retângulo que o dono mandou tirar. */}
+              <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                <XPerformance currentUser={user} visaoTotal={isAdmin} />
               </TabsContent>
 
               <TabsContent value="catalogo-vendedores" className="mt-6">
