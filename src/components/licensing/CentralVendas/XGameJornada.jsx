@@ -11,25 +11,27 @@ import {
 //   • Visual VALE DO SILÍCIO: branco sólido, sombra nítida, hairlines —
 //     nada lavado, nada transparente, zero emoji (selos vetoriais).
 
+// cada selo carrega a cor da BORDA 3D (a mesma cor do bot\u00e3o, s\u00f3 mais escura \u2014
+// \u00e9 o truque de profundidade do Duolingo, nada de sombra preta gen\u00e9rica)
 const SELOS = [
-  [/acordar|gratidao|bom dia/i, Sunrise, 'from-amber-400 to-orange-500'],
-  [/leitura|estudo|curso/i, BookOpen, 'from-sky-400 to-blue-600'],
-  [/corrida|treino|atividade fisica|academia/i, Dumbbell, 'from-rose-400 to-red-500'],
-  [/story|post|instagram|conteudo/i, Camera, 'from-fuchsia-500 to-purple-600'],
-  [/loja/i, Store, 'from-emerald-400 to-teal-600'],
-  [/almoco/i, Utensils, 'from-orange-300 to-amber-500'],
-  [/reuniao|apresenta/i, Handshake, 'from-indigo-400 to-violet-600'],
-  [/treinament|sala/i, GraduationCap, 'from-violet-500 to-purple-700'],
-  [/contrato|follow|fechamento/i, FileText, 'from-slate-400 to-slate-600'],
-  [/descanso|leve/i, Moon, 'from-indigo-500 to-slate-700'],
-  [/organizacao|ambiente/i, Sparkles, 'from-cyan-400 to-sky-600'],
-  [/caminho|chegar/i, Car, 'from-lime-400 to-green-600'],
+  [/acordar|gratidao|bom dia/i, Sunrise, 'from-amber-400 to-orange-500', '#c2410c'],
+  [/leitura|estudo|curso/i, BookOpen, 'from-sky-400 to-blue-600', '#1e40af'],
+  [/corrida|treino|atividade fisica|academia/i, Dumbbell, 'from-rose-400 to-red-500', '#b91c1c'],
+  [/story|post|instagram|conteudo/i, Camera, 'from-fuchsia-500 to-purple-600', '#7e22ce'],
+  [/loja/i, Store, 'from-emerald-400 to-teal-600', '#0f766e'],
+  [/almoco/i, Utensils, 'from-orange-300 to-amber-500', '#b45309'],
+  [/reuniao|apresenta/i, Handshake, 'from-indigo-400 to-violet-600', '#5b21b6'],
+  [/treinament|sala/i, GraduationCap, 'from-violet-500 to-purple-700', '#6b21a8'],
+  [/contrato|follow|fechamento/i, FileText, 'from-slate-400 to-slate-600', '#334155'],
+  [/descanso|leve/i, Moon, 'from-indigo-500 to-slate-700', '#312e81'],
+  [/organizacao|ambiente/i, Sparkles, 'from-cyan-400 to-sky-600', '#0369a1'],
+  [/caminho|chegar/i, Car, 'from-lime-400 to-green-600', '#15803d'],
 ];
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const seloDa = (titulo) => {
   const t = semAcento(titulo);
-  for (const [re, Icone, grad] of SELOS) if (re.test(t)) return { Icone, grad };
-  return { Icone: Star, grad: 'from-amber-300 to-yellow-500' };
+  for (const [re, Icone, grad, borda] of SELOS) if (re.test(t)) return { Icone, grad, borda };
+  return { Icone: Star, grad: 'from-amber-300 to-yellow-500', borda: '#a16207' };
 };
 
 // a saudação segue o RELÓGIO DO JOGO (o teste do super admin muda o dia inteiro)
@@ -40,7 +42,8 @@ const saudacao = (min) => {
   return 'Boa noite';
 };
 
-const OFFSETS = [0, -72, 0, 72];
+// a SERPENTINA do Duolingo: um S suave, não zigue-zague duro
+const OFFSETS = [0, -60, -92, -60, 0, 60, 92, 60];
 
 // 🦉→🏆 os PERÍODOS do dia (as "unidades" da jornada, estilo Duolingo):
 // cada período tem cor própria; o baú abre quando o período fecha inteiro
@@ -56,48 +59,46 @@ const periodoDe = (t) => {
   return PERIODOS.find(([lim]) => min < lim) || PERIODOS[PERIODOS.length - 1];
 };
 
-/** A parada 3D da jornada (o "botão de lição" do Duolingo): a atual acende
- *  com halo + balão COMEÇAR; a futura fica apagada; a feita ganha o check. */
+/** O botão de lição do Duolingo, versão executiva:
+ *  GRANDE, borda 3D da mesma cor (mais escura), feito = CHECK gigante no
+ *  lugar do ícone, atual = aceso com halo + balão COMEÇAR, futuro/perdido =
+ *  apagado e quieto (zero muro de X vermelho). Sem legenda embaixo — o
+ *  contexto vem do banner e do clique. */
 function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
-  const { Icone, grad } = seloDa(titulo);
-  const futuro = !feito && !atual && !perdido;
+  const { Icone, grad, borda } = seloDa(titulo);
+  const aceso = feito || atual;
   return (
     <div ref={refEl} className="relative flex flex-col items-center">
       {atual && (
-        <span className="absolute -top-9 z-10 animate-bounce whitespace-nowrap rounded-xl bg-white text-emerald-600 text-[10px] font-extrabold tracking-[0.14em] px-3 py-1.5 shadow-lg border border-slate-100">
+        <span className="absolute -top-10 z-10 animate-bounce whitespace-nowrap rounded-xl bg-white text-emerald-600 text-[11px] font-extrabold tracking-[0.14em] px-3.5 py-1.5 shadow-lg border border-slate-100">
           COMEÇAR
           <span className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 bg-white border-b border-r border-slate-100" />
         </span>
       )}
       <button type="button" onClick={onClick} title={`${hora} — ${titulo}`} className="relative group outline-none">
         {atual && (
-          <span className="absolute -inset-2 rounded-full border-4 border-amber-300" style={{ animation: 'xgHalo 1.8s ease-out infinite' }} />
+          <span className="absolute -inset-2.5 rounded-full border-4 border-amber-300" style={{ animation: 'xgHalo 1.8s ease-out infinite' }} />
         )}
         <span
           className={[
-            'relative w-16 h-16 rounded-full flex items-center justify-center transition-transform',
-            'group-hover:scale-105 group-active:translate-y-[3px]',
-            futuro
-              ? 'bg-slate-200 shadow-[0_5px_0_0_#cbd5e1]'
-              : perdido && !feito
-                ? 'bg-gradient-to-b from-slate-300 to-slate-400 shadow-[0_5px_0_0_rgba(2,6,23,0.2)]'
-                : `bg-gradient-to-b ${grad} shadow-[0_5px_0_0_rgba(2,6,23,0.22),0_14px_24px_-10px_rgba(2,6,23,0.35)]`,
+            'relative w-[74px] h-[70px] rounded-[50%] flex items-center justify-center transition-transform',
+            'group-hover:brightness-105 group-active:translate-y-[5px]',
+            aceso ? `bg-gradient-to-b ${grad}` : 'bg-slate-200',
           ].join(' ')}
+          style={{ boxShadow: aceso ? `0 7px 0 0 ${borda}` : '0 7px 0 0 #cbd5e1' }}
         >
-          <Icone className={`w-7 h-7 ${futuro ? 'text-slate-400' : 'text-white drop-shadow-sm'}`} strokeWidth={2.3} />
-          {feito && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center shadow">
-              <Check className="w-3 h-3 text-white" strokeWidth={3.5} />
-            </span>
+          {feito ? (
+            <Check className="w-9 h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
+          ) : (
+            <Icone className={`w-8 h-8 ${aceso ? 'text-white drop-shadow-sm' : 'text-slate-400'}`} strokeWidth={2.4} />
           )}
           {!feito && perdido && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center shadow">
-              <XIcon className="w-3 h-3 text-white" strokeWidth={3.5} />
+            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
+              <XIcon className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />
             </span>
           )}
         </span>
       </button>
-      <p className={`mt-1.5 text-[10px] font-bold ${futuro ? 'text-slate-300' : 'text-slate-500'}`}>{hora}</p>
     </div>
   );
 }
@@ -187,7 +188,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
         <div className={`bg-gradient-to-r ${gradBanner} px-6 py-4 flex items-center justify-between gap-3`}>
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/80">
-              A jornada de hoje · {completou ? 'COMPLETA' : periodoAtual[1]}
+              A jornada de hoje · {completou ? 'COMPLETA' : periodoAtual[1]} · {feitas.length}/{tarefas.length}
             </p>
             <p className="text-sm font-bold text-white truncate">{mensagem}</p>
           </div>
@@ -205,13 +206,16 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           </div>
         </div>
 
-        <div className="relative flex flex-col items-center gap-7 px-4 pb-10 pt-8">
+        <div className="relative flex flex-col items-center gap-4 px-4 pb-10 pt-8">
           {/* o troféu no TOPO do dia */}
-          <div className="relative flex flex-col items-center">
-            <span className={`w-16 h-16 rounded-full flex items-center justify-center ${completou ? 'bg-gradient-to-b from-amber-400 to-yellow-500 shadow-[0_5px_0_0_rgba(146,64,14,0.45)] animate-bounce' : 'bg-slate-200 shadow-[0_5px_0_0_#cbd5e1]'}`}>
-              {completou ? <Trophy className="w-8 h-8 text-white drop-shadow-sm" /> : <Flag className="w-7 h-7 text-slate-400" />}
+          <div className="relative flex flex-col items-center mb-2">
+            <span
+              className={`w-[74px] h-[70px] rounded-[50%] flex items-center justify-center ${completou ? 'bg-gradient-to-b from-amber-400 to-yellow-500 animate-bounce' : 'bg-slate-200'}`}
+              style={{ boxShadow: completou ? '0 7px 0 0 #b45309' : '0 7px 0 0 #cbd5e1' }}
+            >
+              {completou ? <Trophy className="w-9 h-9 text-white drop-shadow-sm" /> : <Flag className="w-8 h-8 text-slate-400" />}
             </span>
-            <p className={`mt-1.5 text-[10px] font-bold ${completou ? 'text-amber-600' : 'text-slate-400'}`}>{completou ? 'DIA PERFEITO!' : 'o topo do dia'}</p>
+            <p className={`mt-2 text-[10px] font-extrabold tracking-wide ${completou ? 'text-amber-600' : 'text-slate-400'}`}>{completou ? 'DIA PERFEITO!' : 'O TOPO DO DIA'}</p>
           </div>
 
           {gruposSubida.map((g) => (
@@ -221,8 +225,11 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                 className="relative flex flex-col items-center"
                 title={g.completo ? `${g.rotulo} completo — recompensa garantida!` : `Complete ${g.rotulo === 'AMANHECER' ? 'o' : 'a'} ${g.rotulo} pra abrir o baú`}
               >
-                <span className={`w-14 h-14 rounded-2xl flex items-center justify-center ${g.completo ? 'bg-gradient-to-b from-amber-300 to-amber-500 shadow-[0_5px_0_0_rgba(146,64,14,0.45)]' : 'bg-slate-200 shadow-[0_5px_0_0_#cbd5e1]'}`}>
-                  <Gift className={`w-7 h-7 ${g.completo ? 'text-white drop-shadow-sm' : 'text-slate-400'}`} strokeWidth={2.2} />
+                <span
+                  className={`w-[66px] h-[60px] rounded-2xl flex items-center justify-center ${g.completo ? 'bg-gradient-to-b from-amber-300 to-amber-500' : 'bg-slate-200'}`}
+                  style={{ boxShadow: g.completo ? '0 7px 0 0 #92400e' : '0 7px 0 0 #cbd5e1' }}
+                >
+                  <Gift className={`w-8 h-8 ${g.completo ? 'text-white drop-shadow-sm' : 'text-slate-400'}`} strokeWidth={2.2} />
                 </span>
               </div>
 
@@ -246,7 +253,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
               })}
 
               {/* o divisor do período (o "— Diga de onde você é —" do Duolingo) */}
-              <div className="w-full max-w-sm flex items-center gap-3">
+              <div className="w-full max-w-sm flex items-center gap-3 py-2">
                 <span className="flex-1 border-t border-slate-200" />
                 <span className="text-[10px] font-extrabold tracking-[0.22em] text-slate-400">{g.rotulo}</span>
                 <span className="flex-1 border-t border-slate-200" />
@@ -255,8 +262,11 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           ))}
 
           {/* o amanhecer na BASE: é daqui que o dia sobe */}
-          <span className="w-12 h-12 rounded-full bg-gradient-to-b from-amber-400 to-orange-500 flex items-center justify-center shadow-[0_5px_0_0_rgba(146,64,14,0.4)]">
-            <Sunrise className="w-6 h-6 text-white" />
+          <span
+            className="w-[66px] h-[62px] rounded-[50%] bg-gradient-to-b from-amber-400 to-orange-500 flex items-center justify-center"
+            style={{ boxShadow: '0 7px 0 0 #c2410c' }}
+          >
+            <Sunrise className="w-8 h-8 text-white drop-shadow-sm" />
           </span>
         </div>
       </div>
