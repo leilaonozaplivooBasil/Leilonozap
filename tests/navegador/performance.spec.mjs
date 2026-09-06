@@ -518,9 +518,12 @@ async function abrirQuadroGeral(pagina, pessoa = 'emanuel') {
 }
 const aba = (modal, id) => modal.locator(`[data-teste="abas-quadro-geral"] [data-aba="${id}"]`).click();
 
-test('QUADRO GERAL: semáforo e WhatsApp no topo, e as seis abas', { skip: semNavegador }, async () => {
+test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e WhatsApp no topo, e as seis abas', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  const modal = await abrirQuadroGeral(pagina);
+  // o botão fica no cartão do Distribuir, junto do responsável (já selecionado: Emanuel)
+  await pagina.locator('[data-teste="abrir-quadro-geral"]').click();
+  const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
+  await modal.locator('[data-teste="quadro-geral-topo"]').waitFor();
   assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Histórico']);
   // Emanuel não gerou hoje → amarelo, com o motivo
   await modal.locator('[data-teste="semaforo"][data-cor="amarelo"]').waitFor();
