@@ -40,6 +40,7 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
 import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
@@ -280,6 +281,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       (c) => c.created_by_id && (c.created_by_id === currentUser?.id || networkIds.has(c.created_by_id))
     )),
     [customers, networkIds, currentUser?.id, isSuperAdmin]
+  );
+  // 🔒 06/09 — o MÉTODO (lista, contato, agendamento) é mais fechado que o
+  // resto do CRM: cada um só vê a própria lista; só o super_admin vê todas.
+  // Lê os clientes CRUS (não o networkManualCustomers), porque a rede abaixo
+  // também não entra aqui.
+  const metodoEscopo = React.useMemo(
+    () => escopoDoMetodo({ clientes: customers, oportunidades, uid: currentUser?.id, superAdmin: vis.superAdmin }),
+    [customers, oportunidades, currentUser?.id, vis.superAdmin]
   );
   // Negociação manual segue o cliente: só entra se o cliente dela está no
   // meu escopo (a tabela não tem dono próprio — o vínculo real é o cliente).
@@ -1567,15 +1576,18 @@ _Enviado via CRM Leilão NoZap_`;
           />
         </div>
 
-        {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══ */}
+        {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══
+            🔒 06/09 — a lista, o contato e o agendamento são INDIVIDUAIS: só o
+            super_admin vê a de todo mundo (escopoDoMetodo.js). Aqui NÃO vale a
+            visão total da diretoria/admins do resto do CRM. */}
         {['sonho', 'compromisso', 'lista', 'contato', 'apresentacao', 'duplicacao'].includes(secaoAtiva) && (
           <CrmMetodo
             painel={secaoAtiva}
             currentUser={currentUser}
-            visaoTotal={isSuperAdmin}
+            visaoTotal={vis.superAdmin}
             nomePorUsuarioId={nomePorUsuarioId}
-            clientesManuais={networkManualCustomers}
-            oportunidades={networkOportunidades}
+            clientesManuais={metodoEscopo.clientes}
+            oportunidades={metodoEscopo.oportunidades}
             onQualificar={handleQualificarContato}
             onRegistrarContato={handleRegistrarContatoMetodo}
             onEditarRegistro={handleEditarRegistroMetodo}

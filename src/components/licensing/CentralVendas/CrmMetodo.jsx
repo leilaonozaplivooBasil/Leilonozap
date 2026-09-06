@@ -1745,8 +1745,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             .map((c) => ({ c, prob: probabilidadeFechamento(c.qualificacao_network) }))
             .filter((x) => x.prob)
             .sort((a, b) => b.prob.pct - a.prob.pct);
-          const fila = visaoTotal && minha ? filaTodos.filter(({ c }) => c.created_by_id === uid) : filaTodos;
-          const totalEscopado = visaoTotal && minha ? clientesManuais.filter((c) => c.created_by_id === uid).length : clientesManuais.length;
+          // 🔒 06/09 — "minha" é minha de verdade: filtra pelo dono sempre (a lista
+          // já chega individual pra quem não é super admin; aqui é o cinto).
+          const fila = minha ? filaTodos.filter(({ c }) => c.created_by_id === uid) : filaTodos;
+          const totalEscopado = minha ? clientesManuais.filter((c) => c.created_by_id === uid).length : clientesManuais.length;
           const semQualificar = totalEscopado - fila.length; // DIR-49/54: fila honesta, no MESMO escopo
 
           const agenda = agendaDoDiaContatos(clientesManuais, hoje);
