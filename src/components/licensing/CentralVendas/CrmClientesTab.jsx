@@ -56,6 +56,15 @@ import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 // 🔄 Fontes automáticas (18/08/2026): a lista de clientes agora soma indicados
 // (AppUser.referred_by_id) e compradores da Loja Virtual (CatalogSale.licensee_id)
 // junto com o cadastro manual — ver src/lib/crmUnifiedCustomers.js.
+// 🌫️ A MÁSCARA DA COSTURA DO PALCO — o par da que existe na faixa do
+// professor. Lá o enfeite MORRE no pé; aqui ele NASCE no topo. Assim as
+// duas seções se encontram no mesmo preto de base e a emenda entre um
+// banner e outro desaparece (ordem do dono: "degradês imperceptíveis").
+const MASCARA_COSTURA_PALCO = [
+  'linear-gradient(180deg, transparent 0%, #000 18%)',
+  'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
+].join(', ');
+
 export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
@@ -1380,7 +1389,17 @@ _Enviado via CRM Leilão NoZap_`;
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-[0.22]"
-        style={{ backgroundImage: 'url(/marca/padrao-xeos.webp)', backgroundSize: '760px auto', backgroundPosition: 'top center' }}
+        style={{
+          backgroundImage: 'url(/marca/padrao-xeos.webp)',
+          backgroundSize: '760px auto',
+          backgroundPosition: 'top center',
+          // 🌫️ o enfeite NASCE em degradê: o topo do palco começa no mesmo
+          // preto em que a faixa de cima termina, e a emenda desaparece
+          WebkitMaskImage: MASCARA_COSTURA_PALCO,
+          maskImage: MASCARA_COSTURA_PALCO,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
+        }}
       />
       <div
         aria-hidden="true"
@@ -1388,6 +1407,10 @@ _Enviado via CRM Leilão NoZap_`;
         style={{
           background:
             'radial-gradient(90% 55% at 8% 0%, rgba(59,111,246,0.20), transparent 58%), radial-gradient(85% 55% at 95% 12%, rgba(230,46,139,0.16), transparent 60%), linear-gradient(180deg, rgba(10,16,32,0.55), rgba(0,2,12,0.92))',
+          WebkitMaskImage: MASCARA_COSTURA_PALCO,
+          maskImage: MASCARA_COSTURA_PALCO,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
         }}
       />
       {/* 🔔 DIR-53 — o popup do Leilão NoZap: reunião MINHA prestes a começar

@@ -1153,7 +1153,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores
             PONTO 85 — liberada para TODOS: toda loja tem central de vendas. */}
         {
-          <TabsContent value="catalogo" className="space-y-6">
+          <TabsContent value="catalogo" className={naTopCollege ? '' : 'space-y-6'}>
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               {/* na Top College o seletor já foi desenhado dentro da faixa —
                   aqui ele não se repete, senão viriam dois menus na tela */}
@@ -1210,7 +1210,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="catalogo-crm" className="mt-6">
+              <TabsContent value="catalogo-crm" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 <CrmClientesTab isAdmin={isAdmin} currentUser={user} />
               </TabsContent>
 

@@ -28,6 +28,17 @@ import React from 'react';
 // pergunta encoste nele em qualquer largura de tela. Na versão anterior o
 // professor era absolute e a distância até o texto mudava com a altura da
 // faixa — dava pra "quase" acertar, nunca pra garantir.
+// 🌫️ A MÁSCARA DA COSTURA (ordem do dono: "as ligações todas em degradês
+// imperceptíveis, um banner entrando no outro"). Um banner só encosta no
+// outro sem emenda se ELE TERMINAR na cor de base — por isso o enfeite
+// (padrão de X, brilhos coloridos) se dissolve antes das bordas de baixo e
+// dos lados. As duas seções então se encontram no mesmo preto, e a junção
+// some. As máscaras se cruzam (intersect): vale a área comum das duas.
+const MASCARA_COSTURA = [
+  'linear-gradient(180deg, #000 0%, #000 68%, transparent 100%)',
+  'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
+].join(', ');
+
 export default function HeroTopCollege({ saudacao, nome, seletor }) {
   return (
     /* a faixa não é mais um cartão: sem borda, sem canto no celular e no
@@ -37,7 +48,17 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-[0.20]"
-        style={{ backgroundImage: 'url(/marca/padrao-xeos.webp)', backgroundSize: '620px auto', backgroundPosition: 'left top' }}
+        style={{
+          backgroundImage: 'url(/marca/padrao-xeos.webp)',
+          backgroundSize: '620px auto',
+          backgroundPosition: 'left top',
+          // 🌫️ COSTURA INVISÍVEL: o enfeite morre antes da borda, então a
+          // faixa termina no preto puro — o mesmo preto de quem vem embaixo.
+          WebkitMaskImage: MASCARA_COSTURA,
+          maskImage: MASCARA_COSTURA,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
+        }}
       />
       <div
         aria-hidden="true"
@@ -45,6 +66,10 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
         style={{
           background:
             'radial-gradient(70% 90% at 4% 0%, rgba(59,111,246,0.22), transparent 60%), radial-gradient(60% 80% at 34% 100%, rgba(230,46,139,0.16), transparent 62%)',
+          WebkitMaskImage: MASCARA_COSTURA,
+          maskImage: MASCARA_COSTURA,
+          WebkitMaskComposite: 'source-in',
+          maskComposite: 'intersect',
         }}
       />
 
