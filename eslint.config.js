@@ -43,6 +43,11 @@ export default [
       // `react/jsx-no-undef` para componentes JSX (o core não vê JSX).
       "no-undef": "error",
       "react/jsx-no-undef": "error",
+      // ⛑️ pega o comentário /* */ solto DENTRO do JSX, que não é comentário:
+      // vira um nó de TEXTO renderizado na tela e ainda ocupa espaço no
+      // layout (foi assim que a Top College entortou). Dentro do JSX o
+      // certo é {/* ... */}.
+      "react/jsx-no-comment-textnodes": "error",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
       "unused-imports/no-unused-imports": "error",
