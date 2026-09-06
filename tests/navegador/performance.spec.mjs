@@ -94,7 +94,7 @@ const ATE = (n) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, m
 test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do dia perde', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir();
   assert.equal(await pagina.locator('[data-teste="dia"]').inputValue(), '2026-09-08', 'o dia nasce em "amanhã" (dia útil)');
-  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(318.18), 'R$ 7.000 ÷ 22 dias úteis');
+  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(291.67), 'R$ 7.000 ÷ 24 dias de operação');
   assert.equal(await pagina.locator('[data-teste="tarefas-dia"] li').count(), 3);
 
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
@@ -103,10 +103,10 @@ test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do d
   assert.match(await texto(pagina, '[data-teste="peso-motivo"]'), /peso 6 — ação de negócio/);
   await pagina.locator('[data-teste="peso"]').selectOption('4');
   await pagina.locator('[data-teste="peso-auto"]').waitFor(); // mexeu: agora é o seu, com o caminho de volta
-  // 📏 o dia completo é a Rotina Perfeita (peso 75): peso 4 vale 4/75 de R$ 318,18 — nada de um terço do dia
-  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(16.98));
+  // 📏 o dia completo é a Rotina Perfeita (peso 75): peso 4 vale 4/75 de R$ 291,67 — nada de um terço do dia
+  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(15.58));
   const aviso = await texto(pagina, '[data-teste="faltam"]');
-  assert.match(aviso, /o dia paga R\$ 33,94 de R\$ 318,18/);
+  assert.match(aviso, /o dia paga R\$ 31,11 de R\$ 291,67/);
   assert.match(aviso, /Rotina Perfeita \(peso 75\) e ainda falta peso 67/);
   assert.equal(await pagina.locator('[data-teste="quedas"]').count(), 0, 'abaixo do dia completo, a tarefa nova não tira das outras');
   assert.deepEqual(await escritas(pagina), [], 'prévia não grava NADA');
@@ -120,7 +120,7 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
   await pagina.locator('[data-teste="peso"]').selectOption('4');
   await pagina.locator('[data-teste="distribuir"]').click();
-  await pagina.getByText(/vale R\$ 16,98 — as outras do dia foram recalculadas/).waitFor();
+  await pagina.getByText(/vale R\$ 15,58 — as outras do dia foram recalculadas/).waitFor();
 
   const e = await escritas(pagina);
   assert.equal(e.length, 1);
@@ -138,8 +138,8 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
 
   await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="tarefas-dia"] li').length === 4);
   const linhas = (await pagina.locator('[data-teste="tarefas-dia"] li').allTextContents()).map((s) => s.replace(/\s+/g, ' '));
-  assert.match(linhas.find((s) => s.includes('Gratidão')), /R\$ 4,24/, 'a Gratidão (peso 1) vale 1/75 do dia');
-  assert.match(linhas.find((s) => s.includes('pautas')), /peso 4.*R\$ 16,98/);
+  assert.match(linhas.find((s) => s.includes('Gratidão')), /R\$ 3,8[89]/, 'a Gratidão (peso 1) vale 1/75 do dia (o centavo da sobra vai pra de maior peso)');
+  assert.match(linhas.find((s) => s.includes('pautas')), /peso 4.*R\$ 15,58/);
   assert.equal(await pagina.locator('[data-teste="titulo"]').inputValue(), '', 'o campo limpa pra próxima');
 
   // só a tarefa distribuída aqui tem o "desfazer"
@@ -164,10 +164,10 @@ test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor 
   await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.waitFor();
-  assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(318.18));
+  assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(291.67));
   // o ciclo do Emanuel: 04/09 teve Gratidão (peso 1) feita e conferida → 1/75 do dia
-  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 4,24\s*ganho/);
-  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas · falta peso 71.*R\$ 16,97/, 'o que está distribuído de hoje em diante');
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 3,89\s*ganho/);
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas · falta peso 71.*R\$ 15,56/, 'o que está distribuído de hoje em diante');
 
   await pagina.screenshot({ path: path.join(FOTOS, 'performance-modal.png') });
   await modal.locator('[data-teste="fixo-mes"]').fill('4400');
@@ -177,9 +177,9 @@ test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor 
   assert.equal(e.tipo, 'upsert');
   assert.equal(e.tabela, 'xgame_participantes');
   assert.equal(e.linhas[0].fixo_mes, 4400);
-  await pagina.waitForFunction(() => document.querySelector('[data-teste="modal-pessoa"] [data-teste="valor-dia-pessoa"]').textContent.includes('200,00'));
+  await pagina.waitForFunction(() => document.querySelector('[data-teste="modal-pessoa"] [data-teste="valor-dia-pessoa"]').textContent.includes('183,33'));
   await pagina.getByRole('button', { name: 'Fechar' }).click();
-  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(200), 'a prévia lê o mesmo fixo');
+  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(183.33), 'a prévia lê o mesmo fixo');
   await ctx.close();
 });
 
@@ -188,7 +188,7 @@ test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela prime
   await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('dono');
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="dono"]');
   await modal.locator('[data-teste="sem-fixo-modal"]').waitFor();
-  assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(59.09), 'até definir, a verba padrão');
+  assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(54.17), 'até definir, a verba padrão');
   await modal.locator('[data-teste="fixo-mes"]').fill('11000');
   await modal.locator('[data-teste="fixo-mes"]').blur();
   await pagina.getByText(/fixo atualizado/).waitFor();
@@ -197,7 +197,7 @@ test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela prime
   assert.equal(e.linhas[0].user_id, 'dono');
   assert.equal(e.linhas[0].cargo, 'ceo', 'o cargo do jogo vem do nível do painel');
   assert.equal(e.linhas[0].ativo, true);
-  await pagina.waitForFunction(() => document.querySelector('[data-teste="modal-pessoa"] [data-teste="valor-dia-pessoa"]').textContent.includes('500,00'));
+  await pagina.waitForFunction(() => document.querySelector('[data-teste="modal-pessoa"] [data-teste="valor-dia-pessoa"]').textContent.includes('458,33'));
   assert.equal(await modal.locator('[data-teste="sem-fixo-modal"]').count(), 0);
   await ctx.close();
 });
@@ -206,12 +206,12 @@ test('DIA INCOMPLETO: quem não tem fixo usa a verba de produção; e o aviso di
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="pessoa"]').selectOption('carla');
   await pagina.locator('[data-teste="sem-fixo"]').waitFor();
-  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(59.09), 'R$ 1.300 ÷ 22');
+  assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(54.17), 'R$ 1.300 ÷ 24');
   await pagina.locator('[data-teste="titulo"]').fill('Separar os documentos da reunião');
   await pagina.locator('[data-teste="faltam"]').waitFor();
   const aviso = await texto(pagina, '[data-teste="faltam"]');
-  // "reunião" = peso 6; Carla é diretora no jogo (+1, teto 6): 6/75 de 59,09 = 4,73
-  assert.match(aviso, /o dia paga R\$ 4,73 de R\$ 59,09/);
+  // "reunião" = peso 6; Carla é diretora no jogo (+1, teto 6): 6/75 de 54,17 = 4,33
+  assert.match(aviso, /o dia paga R\$ 4,33 de R\$ 54,17/);
   assert.match(aviso, /falta peso 69/);
   await ctx.close();
 });
@@ -231,6 +231,9 @@ test('MENTALIDADE: a tarefa nasce com a trilha da pessoa, o peso ganha o acrésc
   assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'executivo');
   await pagina.locator('[data-teste="titulo"]').fill('Leitura do capítulo 3');
   assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '4', 'leitura = peso 4 pelo título');
+  // 🎯 o Hábito nunca fica em "—": sem palavra que aponte um, vem o típico da mentalidade
+  assert.equal(await pagina.locator('[data-teste="habito"]').inputValue(), '2');
+  assert.match(await texto(pagina, '[data-teste="habito-motivo"]'), /Hábito típico da Mentalidade do Executivo/);
   await pagina.locator('[data-teste="mentalidade"]').selectOption('diretor');
   assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '5', 'diretor soma 1');
   assert.match(await texto(pagina, '[data-teste="peso-motivo"]'), /\+ 1 pela Mentalidade do Diretor/);
@@ -290,8 +293,8 @@ test('CATÁLOGO: a lista do que tem pra fazer, por mentalidade; escolher uma aç
   assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'diretor');
   assert.equal(await pagina.locator('[data-teste="habito"]').inputValue(), '7');
   assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '6');
-  // 📏 e o valor coerente: peso 6 de 75 → R$ 25,45 num dia de R$ 318,18 (+ o centavo da sobra, que vai pra de maior peso)
-  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(25.46));
+  // 📏 e o valor coerente: peso 6 de 75 → R$ 23,33 num dia de R$ 291,67 (+ os centavos da sobra, que vão pra de maior peso)
+  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(23.36));
   assert.match(await texto(pagina, '[data-teste="ensinamento"]'), /Mentalidade do Diretor.*Hábito 7 \(Verificação do Progresso\)/s);
   await ctx.close();
 });
@@ -305,7 +308,7 @@ test('CATÁLOGO: ação escrita à mão é lida pela régua e pode ser salva no 
   await pagina.getByText(/entrou no catálogo \(Mentalidade do Executivo, peso 6\)/).waitFor();
   const e = (await escritas(pagina)).at(-1);
   assert.equal(e.tabela, 'xperf_acoes');
-  assert.deepEqual([e.linhas[0].titulo, e.linhas[0].mentalidade, e.linhas[0].peso, e.linhas[0].criado_por_id], ['Visitar a loja do Centro', 'executivo', 6, 'dono']);
+  assert.deepEqual([e.linhas[0].titulo, e.linhas[0].mentalidade, e.linhas[0].habito, e.linhas[0].peso, e.linhas[0].criado_por_id], ['Visitar a loja do Centro', 'executivo', 5, 6, 'dono'], 'visita = Hábito 5, automático');
   // entrou no menu, marcada como sua, e o botão de salvar some (já está lá)
   const opcao = pagina.locator('[data-teste="catalogo"] option', { hasText: /Visitar a loja do Centro/ });
   assert.match(await opcao.textContent(), /· sua$/);
