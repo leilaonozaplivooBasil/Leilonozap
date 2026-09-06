@@ -11,16 +11,17 @@ import { valorDoDia, distribuirDia, simularNovaTarefa, resumoDoCiclo, DIAS_FIXO,
 const t = (id, peso) => ({ id, peso });
 const soma = (m) => Math.round(Object.values(m).reduce((s, v) => s + v, 0) * 100) / 100;
 
-test('o dia vale fixo ÷ 22 dias úteis: R$ 7.000 → R$ 318,18', () => {
-  assert.equal(DIAS_FIXO, 22);
-  assert.equal(valorDoDia(7000), 318.18);
+test('o dia vale fixo ÷ 24 dias de operação (régua do dono): R$ 7.000 → R$ 291,67', () => {
+  assert.equal(DIAS_FIXO, 24);
+  assert.equal(valorDoDia(7000), 291.67);
+  assert.equal(valorDoDia(7000, 22), 318.18);
   assert.equal(valorDoDia(7000, 30), 233.33);
   assert.equal(valorDoDia(0), 0);
   assert.equal(valorDoDia(null), 0);
 });
 
 test('dentro do dia o peso reparte o valor, e a soma É o valor do dia (no centavo)', () => {
-  const d = distribuirDia({ fixoMes: 7000, tarefas: [t('a', 1), t('b', 1), t('c', 2)] });
+  const d = distribuirDia({ fixoMes: 7000, dias: 22, tarefas: [t('a', 1), t('b', 1), t('c', 2)] });
   assert.equal(d.valorDia, 318.18);
   assert.equal(d.valores.a, 79.54);
   assert.equal(d.valores.b, 79.54);
@@ -32,8 +33,8 @@ test('dentro do dia o peso reparte o valor, e a soma É o valor do dia (no centa
 });
 
 test('tarefa nova TIRA das outras automaticamente — o bolo não cresce', () => {
-  const antes = distribuirDia({ fixoMes: 7000, tarefas: [t('a', 1), t('b', 1), t('c', 2)] });
-  const depois = distribuirDia({ fixoMes: 7000, tarefas: [t('a', 1), t('b', 1), t('c', 2), t('d', 4)] });
+  const antes = distribuirDia({ fixoMes: 7000, dias: 22, tarefas: [t('a', 1), t('b', 1), t('c', 2)] });
+  const depois = distribuirDia({ fixoMes: 7000, dias: 22, tarefas: [t('a', 1), t('b', 1), t('c', 2), t('d', 4)] });
   assert.equal(soma(depois.valores), 318.18, 'a soma tem que continuar o valor do dia');
   assert.equal(depois.valores.d, 159.1); // 159,09 + o centavo da sobra (vai pra de maior peso)
   assert.ok(depois.valores.a < antes.valores.a);
@@ -43,24 +44,24 @@ test('tarefa nova TIRA das outras automaticamente — o bolo não cresce', () =>
 
 test('o mínimo diário segura o valor: 2 de 3 tarefas pagam 2/3 do dia, o resto fica em aberto', () => {
   assert.equal(MINIMO_DIA_PADRAO, 3);
-  const d = distribuirDia({ fixoMes: 7000, minimoDia: 3, tarefas: [t('a', 5), t('b', 1)] });
+  const d = distribuirDia({ fixoMes: 7000, dias: 22, minimoDia: 3, tarefas: [t('a', 5), t('b', 1)] });
   assert.equal(d.faltam, 1);
   assert.equal(d.pago, 212.12);
   assert.equal(d.emAberto, 106.06);
   assert.equal(Math.round(d.pago + d.emAberto), Math.round(d.valorDia));
   // uma tarefa sozinha, por mais pesada, NÃO vale o dia inteiro
-  const so = distribuirDia({ fixoMes: 7000, minimoDia: 3, tarefas: [t('a', 6)] });
+  const so = distribuirDia({ fixoMes: 7000, dias: 22, minimoDia: 3, tarefas: [t('a', 6)] });
   assert.equal(so.valores.a, 106.06);
   assert.equal(so.faltam, 2);
   // dia vazio: tudo em aberto
-  const vazio = distribuirDia({ fixoMes: 7000, tarefas: [] });
+  const vazio = distribuirDia({ fixoMes: 7000, dias: 22, tarefas: [] });
   assert.equal(vazio.pago, 0);
   assert.equal(vazio.emAberto, 318.18);
   assert.equal(vazio.faltam, 3);
 });
 
 test('peso fora da régua é puxado pra dentro (1 a 6); sem peso vale 3', () => {
-  const d = distribuirDia({ fixoMes: 2200, tarefas: [t('a', 0), t('b', 99), t('c', undefined)] });
+  const d = distribuirDia({ fixoMes: 2200, dias: 22, tarefas: [t('a', 0), t('b', 99), t('c', undefined)] });
   // pesos efetivos 1, 6 e 3 → 10; dia = 100
   assert.equal(d.valores.a, 10);
   assert.equal(d.valores.b, 60);
@@ -70,7 +71,7 @@ test('peso fora da régua é puxado pra dentro (1 a 6); sem peso vale 3', () => 
 
 test('simular: "essa tarefa tem peso 4, vale R$ 159,10; as outras caem pra tanto" — sem gravar nada', () => {
   const tarefas = [t('a', 1), t('b', 1), t('c', 2)];
-  const s = simularNovaTarefa({ fixoMes: 7000, tarefas, novaPeso: 4 });
+  const s = simularNovaTarefa({ fixoMes: 7000, dias: 22, tarefas, novaPeso: 4 });
   assert.equal(s.valorNova, 159.1);
   assert.equal(s.valorDia, 318.18);
   assert.deepEqual(s.quedas.map((q) => q.id), ['a', 'b', 'c']);
@@ -79,7 +80,7 @@ test('simular: "essa tarefa tem peso 4, vale R$ 159,10; as outras caem pra tanto
   assert.deepEqual(tarefas, [t('a', 1), t('b', 1), t('c', 2)], 'não pode mexer na lista');
   assert.ok(!('__nova__' in s.depois));
   // dia abaixo do mínimo: a nova tarefa também SOBE o que as outras valem (o dia passa a pagar mais)
-  const sobe = simularNovaTarefa({ fixoMes: 7000, minimoDia: 3, tarefas: [t('a', 1)], novaPeso: 1 });
+  const sobe = simularNovaTarefa({ fixoMes: 7000, dias: 22, minimoDia: 3, tarefas: [t('a', 1)], novaPeso: 1 });
   assert.equal(sobe.faltavam, 2);
   assert.equal(sobe.faltam, 1);
   assert.equal(sobe.quedas.length, 0, 'sem queda: o valor de a ficou igual (1/3 do dia)');
@@ -88,7 +89,7 @@ test('simular: "essa tarefa tem peso 4, vale R$ 159,10; as outras caem pra tanto
 
 test('resumo do ciclo: feito é ganho (e a conferir até o SIM do gestor); dia passado sem tarefa é perdido; futuro fica em jogo', () => {
   const r = resumoDoCiclo({
-    fixoMes: 2200, // dia = 100
+    fixoMes: 2200, dias: 22, // dia = 100
     minimoDia: 2,
     hojeISO: '2026-09-08',
     diasDoCiclo: ['2026-09-07', '2026-09-08', '2026-09-09'],
@@ -106,22 +107,22 @@ test('resumo do ciclo: feito é ganho (e a conferir até o SIM do gestor); dia p
   assert.equal(r.emJogo, 0);
 });
 
-// ── 📏 a correção do dono: o dia completo é a Rotina Perfeita ──────────────
+// ── 📏 a correção do dono: o dia completo é a Rotina Perfeita (números com 22 dias, a régua da época) ──
 test('com pesoReferencia, o dia só paga inteiro quando o PESO chega à Rotina Perfeita: "pegar as pautas" sozinha vale 6/75 do dia, não um terço', () => {
-  const so = distribuirDia({ fixoMes: 7000, pesoReferencia: 75, tarefas: [t('pautas', 6)] });
+  const so = distribuirDia({ fixoMes: 7000, dias: 22, pesoReferencia: 75, tarefas: [t('pautas', 6)] });
   assert.equal(so.valores.pautas, 25.45);
   assert.equal(so.pesoFalta, 69);
   assert.equal(so.emAberto, 292.73);
   assert.equal(so.faltam, 0, 'com referência de peso, a contagem não manda mais');
   // abaixo da referência cada tarefa vale a fatia FIXA dela: tarefa nova não tira das outras
-  const s = simularNovaTarefa({ fixoMes: 7000, pesoReferencia: 75, tarefas: [t('a', 1), t('b', 1), t('c', 2)], novaPeso: 4 });
+  const s = simularNovaTarefa({ fixoMes: 7000, dias: 22, pesoReferencia: 75, tarefas: [t('a', 1), t('b', 1), t('c', 2)], novaPeso: 4 });
   assert.equal(s.valorNova, 16.98);
   assert.equal(s.pagoDepois, 33.94);
   assert.equal(s.pesoFalta, 67);
   assert.ok(s.quedas.every((q) => Math.abs(q.de - q.para) <= 0.01), 'só arredondamento de centavo');
   // dia gerado (peso 75) + a tarefa: agora sim, ela tira das outras e o dia continua valendo 318,18
   const rotina = Array.from({ length: 18 }, (_, i) => t(`r${i}`, [5, 4, 3, 4, 4, 2, 2, 5, 5, 4, 6, 3, 1, 6, 6, 6, 6, 3][i]));
-  const cheio = distribuirDia({ fixoMes: 7000, pesoReferencia: 75, tarefas: [...rotina, t('pautas', 6)] });
+  const cheio = distribuirDia({ fixoMes: 7000, dias: 22, pesoReferencia: 75, tarefas: [...rotina, t('pautas', 6)] });
   assert.equal(cheio.pago, 318.18);
   assert.ok(cheio.valores.pautas > 23 && cheio.valores.pautas < 24, `pautas num dia completo: ${cheio.valores.pautas}`);
   assert.equal(cheio.pesoFalta, 0);

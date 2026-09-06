@@ -206,7 +206,7 @@ export const ehTarefaDeEstudo = (titulo) =>
 
 // ── 💰 X-PAY (a remuneração) ─────────────────────────────────────────
 // 06/09/2026 — A FÓRMULA MUDOU, por ordem do dono (X-Performance): o fixo do
-// mês ÷ 22 dias úteis vira o valor do dia, e dentro do dia o PESO reparte o
+// mês ÷ 24 dias de operação vira o valor do dia, e dentro do dia o PESO reparte o
 // valor — a soma das tarefas É o valor do dia, sempre; tarefa nova tira das
 // outras automaticamente; dia com menos tarefas que o mínimo paga
 // proporcional. A conta mora em src/lib/distribuicaoFixo.js.

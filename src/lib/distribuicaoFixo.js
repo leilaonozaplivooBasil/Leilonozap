@@ -10,9 +10,11 @@
 //
 // AS TRÊS REGRAS, e por que cada uma:
 //
-// 1. O DIA VALE SEMPRE A MESMA COISA: fixo ÷ dias úteis do ciclo (22, o
-//    ciclo que o X-GAME já roda — dois calendários é o mesmo que nenhum).
-//    Sete mil viram R$ 318,18 por dia útil.
+// 1. O DIA VALE SEMPRE A MESMA COISA: fixo ÷ os DIAS DE OPERAÇÃO do mês.
+//    Régua do dono (06/09/2026): "o dia tem que ser distribuído por vinte e
+//    quatro; vinte e dois é pouco". Sete mil viram R$ 291,67 por dia.
+//    (O calendário do ciclo do X-GAME continua em 22 dias úteis; a divisão
+//    do fixo é a régua de pagamento, e é dele.)
 //
 // 2. DENTRO DO DIA, O PESO REPARTE O VALOR: cada tarefa recebe
 //    valorDoDia × peso ÷ soma dos pesos do dia. É isso que faz uma tarefa
@@ -36,7 +38,7 @@
 // Centavos: a distribuição é feita em centavos inteiros e a sobra do
 // arredondamento vai pra tarefa de maior peso, pra soma bater no centavo.
 
-export const DIAS_FIXO = 22;
+export const DIAS_FIXO = 24;
 export const MINIMO_DIA_PADRAO = 3;
 export const PESO_MIN = 1;
 export const PESO_MAX = 6;

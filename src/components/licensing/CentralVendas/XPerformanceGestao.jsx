@@ -456,8 +456,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   {MENTALIDADES.map((m) => <option key={m.id} value={m.id}>{m.nome}{m.acrescimo ? ` (+${m.acrescimo} no peso)` : ''}</option>)}
                 </select>
               </label>
-              <label className="text-[10px] text-white/45 uppercase tracking-wider">
-                hábito
+              <label className="text-[10px] text-white/45 uppercase tracking-wider" title={nova.habito ? 'Hábito escolhido por você' : `automático: ${lida.porqueHabito}`}>
+                hábito {!nova.habito && nova.titulo.trim() && <span className="normal-case text-white/30" data-teste="habito-motivo">· {lida.porqueHabito}</span>}
                 <select value={habitoAtual} onChange={(e) => setNova((n) => ({ ...n, habito: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="habito">
                   <option value="">—</option>
                   {(mentalidadeObj?.foco || []).map((n) => { const h = habitoDe(n); return <option key={n} value={n}>{n} · {h?.completo || ''}</option>; })}
@@ -475,7 +475,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 <p className="text-white/60">
                   {fmtDia(dia)} de <span className="text-white font-bold">{nomeDe(pessoa)}</span> vale{' '}
                   <span className="text-white font-bold tabular-nums" data-teste="valor-dia">{fmtReais(previa.dist.valorDia)}</span>
-                  <span className="text-white/35"> (fixo {fmtReais(previa.fixo)} ÷ {DIAS_FIXO} dias úteis)</span>
+                  <span className="text-white/35"> (fixo {fmtReais(previa.fixo)} ÷ {DIAS_FIXO} dias de operação)</span>
                   {!participante?.temFixo && <span className="text-amber-300/80" data-teste="sem-fixo"> · sem fixo definido: usando a verba padrão — defina no modal da pessoa</span>}
                   {' · '}{tarefasDoDia.length} tarefa{tarefasDoDia.length === 1 ? '' : 's'} no dia
                 </p>
@@ -648,7 +648,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               </div>
 
               <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-                <p className="text-[11px] text-white/50 tabular-nums"><span className="text-white font-bold text-[14px]" data-teste="valor-dia-pessoa">{fmtReais(r.valorDia)}</span> / dia útil</p>
+                <p className="text-[11px] text-white/50 tabular-nums"><span className="text-white font-bold text-[14px]" data-teste="valor-dia-pessoa">{fmtReais(r.valorDia)}</span> / dia de operação</p>
                 {!base.temFixo && <span className="text-[10px] text-amber-300/80" data-teste="sem-fixo-modal">sem fixo definido · usando {fmtReais(fixoDoParticipante(base))}</span>}
               </div>
               <div className="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider">

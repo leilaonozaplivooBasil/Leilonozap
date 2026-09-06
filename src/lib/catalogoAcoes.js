@@ -29,16 +29,20 @@ const REGRAS_MENTALIDADE = [
   { id: 'diretor', re: /\btime\b|equipe|1:1|1 a 1|conferir|conferencia|numeros|indicador|win rate|validar|treinar|treinamento|acompanh|pauta|reuniao de segunda|corrigir|duplica|ensinar|mentoria|liderar|delegar|cobrar/ },
 ];
 
+// ordem importa: a primeira que bater no texto vence
 const REGRAS_HABITO = [
-  { n: 8, re: /treinar|treinamento|ensinar|duplica|formar|multiplicar/ },
-  { n: 7, re: /numeros|verific|indicador|win rate|metas?\b|medir|conferir|resultado|placar|relatorio/ },
-  { n: 6, re: /follow|fechamento|fechar|ppv|acompanh|proposta|negocia/ },
-  { n: 5, re: /apresenta|reuniao com cliente|demonstra/ },
-  { n: 4, re: /contato|convite|convidar|f\.?o\.?r\.?m|script|mensagem|ligar|whatsapp/ },
-  { n: 3, re: /lista|networking|prospec|indicac|contatos novos/ },
-  { n: 2, re: /rotina|compromisso|treino|gratidao|disciplina|planejamento do dia/ },
+  { n: 8, re: /treinar|treinamento|ensinar|duplica|formar|multiplicar|capacitar|onboarding|mentorar/ },
+  { n: 7, re: /numeros|verific|indicador|win rate|metas?\b|medir|conferir|resultado|placar|relatorio|pauta|planejar|planejamento|preparar|agenda|revisar|analis|auditar|decidir/ },
+  { n: 6, re: /follow|fechamento|fechar|ppv|acompanh|proposta|negocia|cobrar|contrato|entrega|pos[- ]?venda/ },
+  { n: 5, re: /apresenta|reuniao|demonstra|pitch|visita/ },
+  { n: 4, re: /contato|convite|convidar|f\.?o\.?r\.?m|script|mensagem|ligar|whatsapp|conversa/ },
+  { n: 3, re: /lista|networking|prospec|indicac|contatos novos|mapear/ },
+  { n: 2, re: /rotina|compromisso|treino|gratidao|disciplina|planejamento do dia|organizar|organizacao|ambiente|story|post/ },
   { n: 1, re: /sonho|quadro|visao de futuro|proposito/ },
 ];
+// sem palavra que aponte um Hábito, o Hábito TÍPICO da mentalidade: o
+// executivo vive no Compromisso (2), o diretor mede (7), o CEO duplica (8)
+const HABITO_PADRAO = { executivo: 2, diretor: 7, ceo: 8 };
 
 /** Lê o título e diz mentalidade, Hábito e peso — com o porquê. */
 export function classificarAcao(titulo, mentalidadeFixa = null) {
@@ -46,12 +50,14 @@ export function classificarAcao(titulo, mentalidadeFixa = null) {
   const achada = REGRAS_MENTALIDADE.find((r) => r.re.test(t));
   const mentalidade = mentalidadeDe(mentalidadeFixa)?.id || achada?.id || 'executivo';
   const foco = habitosDaMentalidade(mentalidade);
-  const lido = REGRAS_HABITO.find((r) => r.re.test(t))?.n || null;
+  const regra = t.trim() ? REGRAS_HABITO.find((r) => r.re.test(t)) : null;
+  const lido = regra?.n ?? (t.trim() ? HABITO_PADRAO[mentalidade] : null);
   // o Hábito lido tem que estar na trilha da mentalidade; se não estiver, o mais perto dela
   const habito = lido == null ? null : (foco.includes(lido) ? lido : foco.reduce((m, n) => (Math.abs(n - lido) < Math.abs(m - lido) ? n : m), foco[0]));
   const { peso, porque } = pesoComMentalidade(titulo, mentalidade);
   return {
     mentalidade, habito, peso, porque,
+    porqueHabito: !t.trim() ? '' : regra ? `pelo texto (Hábito ${regra.n}${habito !== regra.n ? `, puxado pra trilha: ${habito}` : ''})` : `o Hábito típico da ${mentalidadeDe(mentalidade)?.nome}`,
     porqueMentalidade: mentalidadeFixa ? 'escolhida por você' : (achada ? `pelo texto: fala de ${achada.id === 'ceo' ? 'sistema/diretoria' : 'time/números'}` : 'pelo texto: ação da própria mão'),
   };
 }

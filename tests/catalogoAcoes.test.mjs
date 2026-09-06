@@ -21,11 +21,17 @@ test('classificarAcao: o Hábito lido cai dentro da trilha da mentalidade; o pes
   const b = classificarAcao('Treinar o time no Hábito da semana');
   assert.deepEqual([b.mentalidade, b.habito], ['diretor', 8]);
   assert.equal(b.peso, 6, 'treinamento 5 + 1 do diretor');
+  // "cobrar" é acompanhamento (6) — e o diretor vai de 5 a 8
+  assert.equal(classificarAcao('Cobrar o time pelos contatos do dia').habito, 6);
   // "contato" é Hábito 4, mas o diretor vai de 5 a 8: cai no 5 (o mais perto)
-  assert.equal(classificarAcao('Cobrar o time pelos contatos do dia').habito, 5);
-  // sem palavra de hábito: null (o dono escolhe)
-  assert.equal(classificarAcao('Almoço com o fornecedor').habito, null);
-  assert.equal(classificarAcao('Almoço com o fornecedor').peso, 1);
+  assert.equal(classificarAcao('Puxar o time nos contatos do dia').habito, 5);
+  // sem palavra de hábito: o Hábito TÍPICO da mentalidade — nunca fica vazio
+  const almoco = classificarAcao('Almoço com o fornecedor');
+  assert.deepEqual([almoco.habito, almoco.peso], [2, 1]);
+  assert.match(almoco.porqueHabito, /Hábito típico da Mentalidade do Executivo/);
+  assert.equal(classificarAcao('Decidir o orçamento da diretoria').habito, 7, 'decidir = verificação');
+  assert.equal(classificarAcao('Organizar as pautas com os diretores para a reunião de amanhã').habito, 7);
+  assert.equal(classificarAcao('').habito, null, 'campo vazio: nada a ler');
 });
 
 test('o catálogo inicial tem as três mentalidades, cada ação já classificada e dentro da trilha', () => {
