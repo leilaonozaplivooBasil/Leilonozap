@@ -1194,16 +1194,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="py-1" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ 22 dias úteis = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). Dia com menos de ${xgame.xpay.minimoDia} tarefas paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
+                <div className="py-1" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ 22 dias úteis = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
                   <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
                   {/* 💰 06/09/2026 — o dia vale o fixo ÷ 22; com menos tarefas que o mínimo, paga proporcional */}
-                  {xgame.xpay.faltam > 0 && (
+                  {xgame.xpay.pesoFalta > 0 && (
                     <p className="text-[10px] text-amber-600 font-semibold" data-teste="xpay-faltam">
-                      dia vale {fmtReais(xgame.xpay.valorDia)} · faltam {xgame.xpay.faltam} tarefa{xgame.xpay.faltam > 1 ? 's' : ''} pra pagar inteiro
+                      dia vale {fmtReais(xgame.xpay.valorDia)} · peso {xgame.xpay.somaPesos} de {xgame.xpay.pesoReferencia}: falta {xgame.xpay.pesoFalta} pro dia completo
                     </p>
                   )}
                 </div>

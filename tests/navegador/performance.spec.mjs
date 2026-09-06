@@ -103,11 +103,12 @@ test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do d
   assert.match(await texto(pagina, '[data-teste="peso-motivo"]'), /peso 6 — ação de negócio/);
   await pagina.locator('[data-teste="peso"]').selectOption('4');
   await pagina.locator('[data-teste="peso-auto"]').waitFor(); // mexeu: agora é o seu, com o caminho de volta
-  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(159.10));
-  const quedas = await pagina.locator('[data-teste="quedas"] li').allTextContents();
-  assert.equal(quedas.length, 3, 'as três do dia perdem');
-  assert.match(quedas[0].replace(/\s+/g, ' '), /Gratidão.*R\$ 79,54.*R\$ 39,77/);
-  assert.match(quedas[2].replace(/\s+/g, ' '), /Reunião com cliente.*R\$ 159,10.*R\$ 79,54/);
+  // 📏 o dia completo é a Rotina Perfeita (peso 75): peso 4 vale 4/75 de R$ 318,18 — nada de um terço do dia
+  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(16.98));
+  const aviso = await texto(pagina, '[data-teste="faltam"]');
+  assert.match(aviso, /o dia paga R\$ 33,94 de R\$ 318,18/);
+  assert.match(aviso, /Rotina Perfeita \(peso 75\) e ainda falta peso 67/);
+  assert.equal(await pagina.locator('[data-teste="quedas"]').count(), 0, 'abaixo do dia completo, a tarefa nova não tira das outras');
   assert.deepEqual(await escritas(pagina), [], 'prévia não grava NADA');
   await pagina.screenshot({ path: path.join(FOTOS, 'performance-previa.png'), fullPage: false });
   assert.deepEqual(erros, []);
@@ -119,7 +120,7 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
   await pagina.locator('[data-teste="peso"]').selectOption('4');
   await pagina.locator('[data-teste="distribuir"]').click();
-  await pagina.getByText(/vale R\$ 159,10 — as outras do dia foram recalculadas/).waitFor();
+  await pagina.getByText(/vale R\$ 16,98 — as outras do dia foram recalculadas/).waitFor();
 
   const e = await escritas(pagina);
   assert.equal(e.length, 1);
@@ -137,8 +138,8 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
 
   await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="tarefas-dia"] li').length === 4);
   const linhas = (await pagina.locator('[data-teste="tarefas-dia"] li').allTextContents()).map((s) => s.replace(/\s+/g, ' '));
-  assert.match(linhas.find((s) => s.includes('Gratidão')), /R\$ 39,77/, 'a Gratidão caiu de 79,54 pra 39,77');
-  assert.match(linhas.find((s) => s.includes('pautas')), /peso 4.*R\$ 159,10/);
+  assert.match(linhas.find((s) => s.includes('Gratidão')), /R\$ 4,24/, 'a Gratidão (peso 1) vale 1/75 do dia');
+  assert.match(linhas.find((s) => s.includes('pautas')), /peso 4.*R\$ 16,98/);
   assert.equal(await pagina.locator('[data-teste="titulo"]').inputValue(), '', 'o campo limpa pra próxima');
 
   // só a tarefa distribuída aqui tem o "desfazer"
@@ -164,9 +165,9 @@ test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor 
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.waitFor();
   assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(318.18));
-  // o ciclo do Emanuel: 04/09 teve Gratidão feita e conferida (1 de 3 tarefas → 1/3 do dia)
-  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 106,06\s*ganho/);
-  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas.*R\$ 318,18/, 'o que está distribuído de hoje em diante');
+  // o ciclo do Emanuel: 04/09 teve Gratidão (peso 1) feita e conferida → 1/75 do dia
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 4,24\s*ganho/);
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas · falta peso 71.*R\$ 16,97/, 'o que está distribuído de hoje em diante');
 
   await pagina.screenshot({ path: path.join(FOTOS, 'performance-modal.png') });
   await modal.locator('[data-teste="fixo-mes"]').fill('4400');
@@ -201,7 +202,7 @@ test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela prime
   await ctx.close();
 });
 
-test('MÍNIMO: quem não tem fixo usa a verba de produção; dia abaixo do mínimo avisa o que fica em aberto', { skip: semNavegador }, async () => {
+test('DIA INCOMPLETO: quem não tem fixo usa a verba de produção; e o aviso diz o que falta pro dia completo', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="pessoa"]').selectOption('carla');
   await pagina.locator('[data-teste="sem-fixo"]').waitFor();
@@ -209,8 +210,9 @@ test('MÍNIMO: quem não tem fixo usa a verba de produção; dia abaixo do míni
   await pagina.locator('[data-teste="titulo"]').fill('Separar os documentos da reunião');
   await pagina.locator('[data-teste="faltam"]').waitFor();
   const aviso = await texto(pagina, '[data-teste="faltam"]');
-  assert.match(aviso, /ainda faltam 2 tarefas pro mínimo de 3/);
-  assert.match(aviso, /o dia paga R\$ 19,70/, '1 de 3 tarefas = 1/3 de 59,09');
+  // "reunião" = peso 6; Carla é diretora no jogo (+1, teto 6): 6/75 de 59,09 = 4,73
+  assert.match(aviso, /o dia paga R\$ 4,73 de R\$ 59,09/);
+  assert.match(aviso, /falta peso 69/);
   await ctx.close();
 });
 
@@ -274,6 +276,46 @@ test('PLANEJAMENTO: o modal avisa quem não gerou o dia, e gera a Rotina Perfeit
   await modal.locator('[data-teste="planejamento-dia"][data-gerado="sim"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="planejamento-dia"]'), /Planejamento de hoje gerado · 20 da rotina/);
   await pagina.screenshot({ path: path.join(FOTOS, 'performance-planejamento.png') });
+  await ctx.close();
+});
+
+test('CATÁLOGO: a lista do que tem pra fazer, por mentalidade; escolher uma ação preenche título, mentalidade, Hábito e peso', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const grupos = await pagina.locator('[data-teste="catalogo"] optgroup').evaluateAll((els) => els.map((e) => e.label));
+  assert.deepEqual(grupos.map((g) => g.split(' — ')[0]), ['Mentalidade do Executivo', 'Mentalidade do Diretor', 'Mentalidade do CEO']);
+  assert.ok((await pagina.locator('[data-teste="catalogo"] option').count()) >= 19, 'o catálogo inicial mais a linha vazia');
+  const pautas = await pagina.locator('[data-teste="catalogo"] option', { hasText: /Pegar as pautas da reunião de segunda/ }).getAttribute('value');
+  await pagina.locator('[data-teste="catalogo"]').selectOption(pautas);
+  assert.equal(await pagina.locator('[data-teste="titulo"]').inputValue(), 'Pegar as pautas da reunião de segunda');
+  assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'diretor');
+  assert.equal(await pagina.locator('[data-teste="habito"]').inputValue(), '7');
+  assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '6');
+  // 📏 e o valor coerente: peso 6 de 75 → R$ 25,45 num dia de R$ 318,18 (+ o centavo da sobra, que vai pra de maior peso)
+  assert.equal(await texto(pagina, '[data-teste="valor-nova"]'), ATE(25.46));
+  assert.match(await texto(pagina, '[data-teste="ensinamento"]'), /Mentalidade do Diretor.*Hábito 7 \(Verificação do Progresso\)/s);
+  await ctx.close();
+});
+
+test('CATÁLOGO: ação escrita à mão é lida pela régua e pode ser salva no menu; ao distribuir, conta um uso', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="titulo"]').fill('Visitar a loja do Centro');
+  assert.match(await texto(pagina, '[data-teste="mentalidade-lida"]'), /Mentalidade do Executivo \(pelo texto: ação da própria mão\)/);
+  assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '6', 'loja = ação de negócio');
+  await pagina.locator('[data-teste="salvar-catalogo"]').click();
+  await pagina.getByText(/entrou no catálogo \(Mentalidade do Executivo, peso 6\)/).waitFor();
+  const e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tabela, 'xperf_acoes');
+  assert.deepEqual([e.linhas[0].titulo, e.linhas[0].mentalidade, e.linhas[0].peso, e.linhas[0].criado_por_id], ['Visitar a loja do Centro', 'executivo', 6, 'dono']);
+  // entrou no menu, marcada como sua, e o botão de salvar some (já está lá)
+  const opcao = pagina.locator('[data-teste="catalogo"] option', { hasText: /Visitar a loja do Centro/ });
+  assert.match(await opcao.textContent(), /· sua$/);
+  assert.equal(await pagina.locator('[data-teste="salvar-catalogo"]').count(), 0);
+  // distribuir com ela escolhida conta um uso
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Tarefa distribuída pra Emanuel/).waitFor();
+  await pagina.waitForFunction(() => window.__bancoFalso.escritas.some((x) => x.tipo === 'update' && x.tabela === 'xperf_acoes'));
+  const uso = (await escritas(pagina)).find((x) => x.tipo === 'update' && x.tabela === 'xperf_acoes');
+  assert.equal(uso.patch.usos, 1);
   await ctx.close();
 });
 

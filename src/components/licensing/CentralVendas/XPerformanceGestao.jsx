@@ -1,18 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
-  fixoDoParticipante, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
+  fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
 } from '@/lib/xgame';
 import { distribuirDia, simularNovaTarefa, resumoDoCiclo, DIAS_FIXO, PESO_MIN, PESO_MAX } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
+import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar } from '@/lib/catalogoAcoes';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -59,6 +60,17 @@ import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ens
 //   • O modal da pessoa abre a gamificação inteira: se o planejamento do dia
 //     foi gerado (a Rotina Perfeita) ou não — e um botão pra gerar daqui —,
 //     e o resumo do ciclo por mentalidade.
+//
+// 📚 QUARTA RODADA (dono, mesmo dia): "uma lista de opções do que tem pra
+// fazer; ao selecionar, já me diz o peso e a mentalidade; e cada ação que eu
+// colocar eu posso adicionar nesse menu". O CATÁLOGO (src/lib/catalogoAcoes):
+// o inicial no código + o que o dono salva em xperf_acoes. Escolher uma ação
+// preenche título, mentalidade, Hábito e peso; título digitado à mão é lido
+// pela régua (a mentalidade vem do texto) e pode ser salvo no catálogo.
+//
+// 📏 E A COERÊNCIA DO VALOR (dono: "uma tarefa dessa não pode valer cento e
+// seis reais num dia"): o dia completo é a Rotina Perfeita (peso 75) — a
+// conta mora em distribuicaoFixo/xgame; aqui só se mostra.
 
 const CATEGORIAS = [
   ['mentoria', 'Mentoria'], ['producao', 'Produção'], ['visao', 'Visão estratégica'], ['bonus', 'Bônus / estudo'],
@@ -106,6 +118,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const [dia, setDia] = useState(() => proximoDiaUtil(hoje));
   const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', mentalidade: '', habito: '' });
   const [gerando, setGerando] = useState(false);
+  // 📚 o catálogo: o que veio do banco + o padrão do código
+  const [acoesDoBanco, setAcoesDoBanco] = useState([]);
+  const [acaoEscolhida, setAcaoEscolhida] = useState('');
+  const [salvandoAcao, setSalvandoAcao] = useState(false);
+  const catalogo = useMemo(() => catalogoJunto(ACOES_PADRAO, acoesDoBanco), [acoesDoBanco]);
   // o menu suspenso do fixo: a pessoa escolhida abre o modal dela
   const [pessoaFixo, setPessoaFixo] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
@@ -130,13 +147,15 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const diasCiclo = useMemo(() => diasDoCicloISO(inicio), [inicio]);
 
   const carregar = useCallback(async () => {
-    const [p, u, c] = await Promise.all([
+    const [p, u, c, a] = await Promise.all([
       supabase.from('xgame_participantes').select('*').eq('ativo', true).order('created_date'),
       supabase.from('app_users').select('id,full_name,nickname,role,career_levels').order('full_name'),
       supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
+      supabase.from('xperf_acoes').select('*').order('titulo'),
     ]);
     setParticipantes(p.data || []);
     setUsuarios(u.data || []);
+    setAcoesDoBanco(a.data || []);
     setCicloConfig(c.data?.ciclo_inicio ? String(c.data.ciclo_inicio).slice(0, 10) : null);
     setCarregando(false);
   }, []);
@@ -160,9 +179,35 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
 
   const participante = pessoa ? participanteDe(pessoa) : null;
-  // a mentalidade nasce da trilha da pessoa (pelo cargo) e pode ser trocada
-  const mentalidadeAtual = nova.mentalidade || mentalidadePadrao(participante?.cargo);
+  // a mentalidade: a escolhida; senão a que a régua lê no texto da ação;
+  // com o campo vazio, a trilha da pessoa (pelo cargo)
+  const lida = classificarAcao(nova.titulo);
+  const mentalidadeAtual = nova.mentalidade || (nova.titulo.trim() ? lida.mentalidade : mentalidadePadrao(participante?.cargo));
   const mentalidadeObj = mentalidadeDe(mentalidadeAtual);
+  const habitoAtual = nova.habito || (nova.titulo.trim() && !nova.mentalidade ? String(lida.habito || '') : '');
+  const noCatalogo = nova.titulo.trim() ? jaNoCatalogo(catalogo, nova.titulo) : true;
+
+  // 📚 escolher uma ação do catálogo preenche tudo
+  const escolherAcao = (id) => {
+    setAcaoEscolhida(id);
+    const a = catalogo.find((x) => x.id === id);
+    if (!a) return;
+    setNova((n) => ({ ...n, titulo: a.titulo, mentalidade: a.mentalidade, habito: a.habito ? String(a.habito) : '', peso: a.peso, pesoManual: true, categoria: a.categoria || n.categoria }));
+  };
+
+  // 📚 salvar a ação digitada no catálogo (no banco), com a classificação da tela
+  const salvarNoCatalogo = async () => {
+    if (!nova.titulo.trim() || noCatalogo) return;
+    setSalvandoAcao(true);
+    const linha = acaoParaGravar({ titulo: nova.titulo, mentalidade: mentalidadeAtual, habito: habitoAtual, peso: pesoEfetivo, categoria: nova.categoria, criadoPorId: currentUser?.id });
+    const { data, error } = await supabase.from('xperf_acoes').insert(linha).select();
+    setSalvandoAcao(false);
+    if (error) { toast.error('Não salvou no catálogo — tenta de novo'); return; }
+    const gravada = (Array.isArray(data) ? data[0] : data) || { id: `novo:${Date.now()}`, ...linha };
+    setAcoesDoBanco((l) => [...l, gravada]);
+    setAcaoEscolhida(gravada.id);
+    toast.success(`"${linha.titulo}" entrou no catálogo (${mentalidadeObj?.nome}, peso ${linha.peso})`);
+  };
   const ehProducao = (t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; };
   const tarefasDoDia = useMemo(
     () => tarefasCiclo.filter((t) => t.user_id === pessoa && String(t.data).slice(0, 10) === dia),
@@ -176,17 +221,21 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // seu até limpar o campo
   const pesoSugerido = pesoComMentalidade(nova.titulo, mentalidadeAtual);
   const pesoEfetivo = nova.pesoManual ? (Number(nova.peso) || 3) : pesoSugerido.peso;
-  const mudarTitulo = (titulo) => setNova((n) => ({ ...n, titulo, pesoManual: titulo.trim() ? n.pesoManual : false }));
-  const ensinamento = ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: nova.habito });
+  const mudarTitulo = (titulo) => {
+    setAcaoEscolhida('');
+    // texto novo à mão: a régua volta a mandar na mentalidade, no Hábito e no peso
+    setNova((n) => ({ ...n, titulo, mentalidade: '', habito: '', pesoManual: false }));
+  };
+  const ensinamento = ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: habitoAtual });
   const previa = useMemo(() => {
     if (!participante) return null;
     const base = participante;
     const producao = tarefasDoDia.filter(ehProducao);
-    const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: producao });
+    const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: producao });
     const cat = nova.categoria;
     const entraNoFixo = cat !== 'bonus' && cat !== 'venda';
     const sim = entraNoFixo
-      ? simularNovaTarefa({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: producao, novaPeso: pesoEfetivo })
+      ? simularNovaTarefa({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: producao, novaPeso: pesoEfetivo })
       : null;
     return { dist, sim, entraNoFixo, fixo: fixoDoParticipante(base) };
   }, [participante, tarefasDoDia, nova.categoria, pesoEfetivo]);
@@ -199,19 +248,23 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       feito: false, ordem: tarefasDoDia.length, categoria: nova.categoria, peso: pesoEfetivo,
       origem: 'xperf', criado_por_id: currentUser?.id || null,
       // 🎓 a mentalidade, o Hábito e o ensinamento que a pessoa vai ler
-      mentalidade: mentalidadeAtual, habito: nova.habito ? Number(nova.habito) : null,
+      mentalidade: mentalidadeAtual, habito: habitoAtual ? Number(habitoAtual) : null,
       detalhe: ensinamento || null,
     };
     const { error } = await supabase.from('metodo_tarefas').insert(linha);
     setSalvando(false);
     if (error) { toast.error('Não distribuiu a tarefa — tenta de novo'); return; }
+    // a ação do catálogo (do banco) conta um uso — é o que sobe na lista
+    const usada = catalogo.find((a) => a.id === acaoEscolhida);
+    if (usada && !usada.padrao) supabase.from('xperf_acoes').update({ usos: (Number(usada.usos) || 0) + 1 }).eq('id', usada.id).then(() => {});
+    setAcaoEscolhida('');
     const valor = previa?.sim?.valorNova;
     toast.success(
       valor != null
         ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — as outras do dia foram recalculadas`
         : `Tarefa distribuída pra ${nomeDe(pessoa)}`,
     );
-    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, mentalidade: nova.mentalidade, habito: '' });
+    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, mentalidade: '', habito: '' });
     carregarTarefas();
   };
 
@@ -269,7 +322,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       const d = String(t.data).slice(0, 10);
       (porDia[d] ||= []).push(t);
     }
-    return resumoDoCiclo({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefasPorDia: porDia, diasDoCiclo: diasCiclo, hojeISO: hoje });
+    return resumoDoCiclo({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefasPorDia: porDia, diasDoCiclo: diasCiclo, hojeISO: hoje });
   };
 
   if (carregando) {
@@ -312,9 +365,26 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 <input type="time" value={nova.hora} onChange={(e) => setNova((n) => ({ ...n, hora: e.target.value }))} className={`mt-1 block ${campo}`} />
               </label>
             </div>
+            {/* 📚 o catálogo: o que tem pra fazer, já com mentalidade, Hábito e peso */}
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+              <label className="text-[10px] text-white/45 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1"><ListChecks className="w-3 h-3" /> o que tem pra fazer (catálogo)</span>
+                <select value={acaoEscolhida} onChange={(e) => escolherAcao(e.target.value)} className={`mt-1 block w-full ${campo}`} data-teste="catalogo">
+                  <option value="">escolha uma ação… ou escreva a sua abaixo</option>
+                  {MENTALIDADES.map((m) => (
+                    <optgroup key={m.id} label={`${m.nome} — ${m.lema}`}>
+                      {catalogo.filter((a) => a.mentalidade === m.id).map((a) => (
+                        <option key={a.id} value={a.id}>{a.titulo} · peso {a.peso}{a.habito ? ` · H${a.habito}` : ''}{a.padrao ? '' : ' · sua'}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <span className="text-[10px] text-white/35 pb-2">{catalogo.length} ações · {acoesDoBanco.length} sua{acoesDoBanco.length === 1 ? '' : 's'}</span>
+            </div>
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <label className="text-[10px] text-white/45 uppercase tracking-wider">
-                qual é a tarefa
+                qual é a tarefa{nova.titulo.trim() && !nova.mentalidade && !acaoEscolhida && <span className="normal-case text-white/30" data-teste="mentalidade-lida"> · a régua leu: {mentalidadeObj?.nome} ({lida.porqueMentalidade})</span>}
                 <Input
                   value={nova.titulo}
                   onChange={(e) => mudarTitulo(e.target.value)}
@@ -350,7 +420,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               </label>
               <label className="text-[10px] text-white/45 uppercase tracking-wider">
                 hábito
-                <select value={nova.habito} onChange={(e) => setNova((n) => ({ ...n, habito: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="habito">
+                <select value={habitoAtual} onChange={(e) => setNova((n) => ({ ...n, habito: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="habito">
                   <option value="">—</option>
                   {(mentalidadeObj?.foco || []).map((n) => { const h = habitoDe(n); return <option key={n} value={n}>{n} · {h?.completo || ''}</option>; })}
                 </select>
@@ -394,10 +464,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                         {previa.sim.quedas.length > 6 && <li className="text-white/35">+ {previa.sim.quedas.length - 6} outras recalculadas</li>}
                       </ul>
                     )}
-                    {previa.sim.faltam > 0 && (
+                    {previa.sim.pesoFalta > 0 ? (
                       <p className="mt-1 text-[11px] text-amber-300/90" data-teste="faltam">
-                        Com ela o dia paga {fmtReais(previa.sim.pagoDepois)}: ainda falta{previa.sim.faltam > 1 ? 'm' : ''} {previa.sim.faltam} tarefa{previa.sim.faltam > 1 ? 's' : ''} pro mínimo de {previa.dist.minimoDia} — o resto fica em aberto.
+                        Com ela o dia paga {fmtReais(previa.sim.pagoDepois)} de {fmtReais(previa.sim.valorDia)}: o dia completo é a Rotina Perfeita (peso {previa.dist.pesoReferencia}) e ainda falta peso {previa.sim.pesoFalta} — o resto fica em aberto.
                       </p>
+                    ) : (
+                      <p className="mt-1 text-[11px] text-white/45" data-teste="dia-completo">Dia completo: o fixo do dia inteiro está repartido — esta tarefa tira a fatia dela das outras.</p>
                     )}
                   </>
                 ) : (
@@ -412,6 +484,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 Distribuir tarefa
               </Button>
               <span className="text-[10px] text-white/35">entra na hora no Compromisso da pessoa, no dia escolhido</span>
+              {nova.titulo.trim() && !noCatalogo && (
+                <Button size="sm" variant="ghost" onClick={salvarNoCatalogo} disabled={salvandoAcao} className="ml-auto h-8 text-[11px] text-white/70 hover:text-white hover:bg-white/10" title="guarda esta ação no menu, com a mentalidade, o Hábito e o peso de agora" data-teste="salvar-catalogo">
+                  {salvandoAcao ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}
+                  salvar no catálogo
+                </Button>
+              )}
             </div>
 
             {/* as tarefas do dia escolhido, já com o valor de cada uma */}
@@ -469,7 +547,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         const base = participanteDe(pessoaFixo);
         const r = resumoDe(pessoaFixo);
         const hojeDele = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && ehProducao(t) && String(t.data).slice(0, 10) === hoje);
-        const reguaHoje = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: hojeDele });
+        const reguaHoje = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: hojeDele });
         // os dias do ciclo com tarefa, de hoje em diante — o que está distribuído
         const proximos = [...new Set(tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) >= hoje).map((t) => String(t.data).slice(0, 10)))].sort().slice(0, 8);
         return (
@@ -500,16 +578,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                     data-teste="fixo-mes"
                   />
                 </label>
-                <label>mínimo / dia
-                  <input
-                    key={`min-${pessoaFixo}`}
-                    type="number" min="1" max="30"
-                    defaultValue={base.minimo_dia ?? 3}
-                    onBlur={(e) => { const v = Math.max(1, Math.round(Number(e.target.value) || 0)); if (v !== Number(base.minimo_dia ?? 3)) salvarFixo(base, { minimo_dia: v }); }}
-                    className={`ml-1 w-14 ${campo} normal-case tabular-nums`}
-                    data-teste="minimo-dia"
-                  />
-                </label>
+                <span className="normal-case text-white/40" title="o peso somado das tarefas de produção da Rotina do Método — é o que o fixo do dia paga inteiro">dia completo = peso {pesoReferenciaDe(base)} <span className="text-white/25">(Rotina Perfeita{pesoReferenciaDe(base) === PESO_DIA_COMPLETO ? '' : ' desta pessoa'})</span></span>
               </div>
 
               <div className="mt-3 grid grid-cols-4 gap-1 text-center">
@@ -525,9 +594,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               </div>
               <p className="mt-1.5 text-[10px] text-white/40">
                 hoje: {hojeDele.length} tarefa{hojeDele.length === 1 ? '' : 's'}
-                {reguaHoje.faltam > 0
-                  ? <span className="text-amber-300/80"> · faltam {reguaHoje.faltam} pro mínimo de {reguaHoje.minimoDia} ({fmtReais(reguaHoje.emAberto)} em aberto)</span>
-                  : ' · mínimo batido'}
+                {reguaHoje.pesoFalta > 0
+                  ? <span className="text-amber-300/80"> · peso {reguaHoje.somaPesos} de {reguaHoje.pesoReferencia}, falta {reguaHoje.pesoFalta} pro dia completo ({fmtReais(reguaHoje.emAberto)} em aberto)</span>
+                  : ' · dia completo'}
               </p>
 
               {/* 🗓️ o planejamento do dia: gerou ou não gerou? */}
@@ -581,11 +650,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   <ul className="mt-1 space-y-0.5 text-[11px]" data-teste="proximos">
                     {proximos.map((d) => {
                       const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) === d);
-                      const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: doDia.filter(ehProducao) });
+                      const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: doDia.filter(ehProducao) });
                       return (
                         <li key={d} className="flex items-center gap-2 text-white/60">
                           <span className="w-24 shrink-0">{fmtDia(d)}</span>
-                          <span className="truncate">{doDia.length} tarefa{doDia.length === 1 ? '' : 's'}{dist.faltam ? ` · faltam ${dist.faltam}` : ''}</span>
+                          <span className="truncate">{doDia.length} tarefa{doDia.length === 1 ? '' : 's'}{dist.pesoFalta ? ` · falta peso ${dist.pesoFalta}` : ''}</span>
                           <span className="ml-auto tabular-nums text-white/80">{fmtReais(dist.pago)}</span>
                         </li>
                       );

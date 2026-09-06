@@ -105,3 +105,24 @@ test('resumo do ciclo: feito é ganho (e a conferir até o SIM do gestor); dia p
   assert.equal(r.emAberto, 150);   // hoje: a outra metade; amanhã: 100
   assert.equal(r.emJogo, 0);
 });
+
+// ── 📏 a correção do dono: o dia completo é a Rotina Perfeita ──────────────
+test('com pesoReferencia, o dia só paga inteiro quando o PESO chega à Rotina Perfeita: "pegar as pautas" sozinha vale 6/75 do dia, não um terço', () => {
+  const so = distribuirDia({ fixoMes: 7000, pesoReferencia: 75, tarefas: [t('pautas', 6)] });
+  assert.equal(so.valores.pautas, 25.45);
+  assert.equal(so.pesoFalta, 69);
+  assert.equal(so.emAberto, 292.73);
+  assert.equal(so.faltam, 0, 'com referência de peso, a contagem não manda mais');
+  // abaixo da referência cada tarefa vale a fatia FIXA dela: tarefa nova não tira das outras
+  const s = simularNovaTarefa({ fixoMes: 7000, pesoReferencia: 75, tarefas: [t('a', 1), t('b', 1), t('c', 2)], novaPeso: 4 });
+  assert.equal(s.valorNova, 16.98);
+  assert.equal(s.pagoDepois, 33.94);
+  assert.equal(s.pesoFalta, 67);
+  assert.ok(s.quedas.every((q) => Math.abs(q.de - q.para) <= 0.01), 'só arredondamento de centavo');
+  // dia gerado (peso 75) + a tarefa: agora sim, ela tira das outras e o dia continua valendo 318,18
+  const rotina = Array.from({ length: 18 }, (_, i) => t(`r${i}`, [5, 4, 3, 4, 4, 2, 2, 5, 5, 4, 6, 3, 1, 6, 6, 6, 6, 3][i]));
+  const cheio = distribuirDia({ fixoMes: 7000, pesoReferencia: 75, tarefas: [...rotina, t('pautas', 6)] });
+  assert.equal(cheio.pago, 318.18);
+  assert.ok(cheio.valores.pautas > 23 && cheio.valores.pautas < 24, `pautas num dia completo: ${cheio.valores.pautas}`);
+  assert.equal(cheio.pesoFalta, 0);
+});
