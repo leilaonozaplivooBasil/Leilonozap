@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -99,7 +99,7 @@ export default function XGameAdmin() {
 
   const nomeDe = (id) => {
     const u = usuarios.find((x) => x.id === id);
-    return u?.nickname || u?.full_name || (id ? id.slice(0, 6) : '—');
+    return u ? nomeExibicao(u) : (id ? id.slice(0, 6) : '—');
   };
 
   // candidatos agrupados pelo plano de carreira + filtro do nome ao digitar
@@ -329,7 +329,7 @@ export default function XGameAdmin() {
                         <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
                       </a>
                     ) : (
-                      <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>📚</span>
+                      <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>{c.tipo === 'ritual' ? '🌅' : '📚'}</span>
                     )}
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <p className="text-[11px] font-semibold text-gray-900 truncate">
@@ -337,10 +337,12 @@ export default function XGameAdmin() {
                       </p>
                       <p className="text-[10px] text-gray-500">
                         {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
+                        {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
                         {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
                         {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
                         {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
                         {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
+                        {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
                         {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
                         {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
                       </p>
@@ -420,7 +422,7 @@ export default function XGameAdmin() {
                       onClick={() => setNovo(novo === u.id ? '' : u.id)}
                       className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${novo === u.id ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
                     >
-                      <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{u.nickname || u.full_name || u.id.slice(0, 6)}</span>
+                      <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{nomeExibicao(u)}</span>
                       {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
                     </button>
                   ))}

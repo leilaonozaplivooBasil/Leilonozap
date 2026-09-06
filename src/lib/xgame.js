@@ -687,7 +687,31 @@ export function validarComprovacao(tipo, entrega) {
 // 📚 REGRA DO DONO (05/09): estudo comprova com FOTO + RESUMO DIGITADO.
 // Mínimo de um resumo de verdade (~2 frases) e SEM copiar e colar — colar é
 // bloqueado na tela, porque digitar é treino: fixa o aprendizado.
-export const RESUMO_MIN = 120;
+// 400 caracteres ≈ um parágrafo sólido de 5-6 linhas: desafia a elaborar e
+// digitar de verdade sem virar gargalo na rotina (uma folha inteira todo dia
+// travaria a jornada — o desafio sobe depois, se o time engolir fácil).
+export const RESUMO_MIN = 400;
+
+// ── 👤 O PADRÃO DE NOME DO JOGO (ordem do dono, 05/09) ──────────────
+// Sempre o nome do CADASTRO, sempre "Nome Sobrenome" (primeiro + último),
+// sempre com inicial maiúscula — nunca apelido, nunca CAIXA ALTA, nunca o
+// nome completo gigante. Um padrão só, no app inteiro.
+export function nomeExibicao(p) {
+  const bruto = String(p?.full_name || p?.nickname || '').trim();
+  if (!bruto) return 'Sem nome';
+  const tc = (w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w);
+  const partes = bruto.split(/\s+/).filter((w) => !/^(da|de|do|das|dos|e)$/i.test(w));
+  if (!partes.length) return tc(bruto);
+  const primeiro = tc(partes[0]);
+  const ultimo = partes.length > 1 ? tc(partes[partes.length - 1]) : '';
+  return ultimo ? `${primeiro} ${ultimo}` : primeiro;
+}
+
+/** 🌅 A tarefa de gratidão/acordar abre o RITUAL DO AMANHECER (não formulário). */
+export const ehTarefaDeGratidao = (titulo) => /acordar|gratidao|bom dia/.test(_semAcento(titulo));
+// janela do ritual: de 04:40 até 07:15 vale direto; fora disso vai pra análise
+export const RITUAL_INICIO_MIN = 4 * 60 + 40;
+export const RITUAL_FIM_MIN = 7 * 60 + 15;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────

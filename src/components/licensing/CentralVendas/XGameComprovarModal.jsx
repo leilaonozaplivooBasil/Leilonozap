@@ -94,15 +94,14 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, onFe
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          {/* passo do Instagram, quando é o caso */}
-          {tipo === 'instagram' && (
-            <a
-              href={LINK_ABRIR_INSTAGRAM}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-sm font-bold py-2.5 hover:opacity-90"
-            >📱 Fazer o post no Instagram</a>
-          )}
+          {/* 📱 POSTAR NO INSTAGRAM EM TUDO (ordem do dono): toda comprovação
+              é também conteúdo — o botão abre o app pra postar o momento */}
+          <a
+            href={LINK_ABRIR_INSTAGRAM}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-sm font-bold py-2.5 hover:opacity-90"
+          >📱 Postar no Instagram</a>
 
           {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino) */}
           {tipo === 'aprendizado' && (
