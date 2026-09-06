@@ -312,8 +312,8 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                 <Trophy className="w-9 h-9 text-white drop-shadow-sm" />
               </span>
             ) : (
-              /* troféu ainda trancado: o glifo sobre a meia-lua, como no Duolingo */
-              <PratinhoGlifo Icone={Trophy} />
+              /* troféu ainda trancado: o desenho em cima da mesinha redonda */
+              <ParadaNaMesa Icone={Trophy} />
             )}
             <p className={`mt-2 text-[10px] font-extrabold tracking-wide ${completou ? 'text-amber-600' : 'text-slate-400'}`}>{completou ? 'DIA PERFEITO!' : 'O TOPO DO DIA'}</p>
           </div>
