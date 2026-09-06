@@ -4173,3 +4173,70 @@ nenhuma requisição nova; só `transform` e `opacity` animados.
   até no `account_profile`). Nada nesta entrega depende dele.
 
 **Não entrou:** nada em produção; o arrastar dos cards (DIR-77.3) não foi tocado.
+
+---
+
+## REL-79 — A segunda que vem, o treinamento e a IA presa nos fatos (DIR-79)
+
+**Aprovação:** dono, 06/09/2026 — coordenação explícita entre os dois chats:
+*"ele está editando outras coisas ali dentro, não está editando isso. Pode
+pegar essa parte."*
+
+**A data: não era erro de conta.** Rodei as funções reais antes de mexer:
+`segundaDaSemana('2026-09-06')` = 31/08 e `proximaSegunda('2026-09-06')` =
+07/09 — **as duas certas**. O defeito era a tela ancorar na segunda que **já
+passou**. E o "fora do ciclo oficial" era **filho do mesmo defeito**: 31/08 é
+agosto, e o Ciclo Executivo começa em 2026-09. Trocada a âncora, o rótulo se
+consertou sozinho. Um conserto, dois sintomas.
+
+**O que foi feito**
+
+1. **Âncora = `proximaSegunda`** (devolve *hoje* quando hoje é segunda) + selo
+   honesto: "é hoje" / "é amanhã" / "em N dias" / "há N dias".
+2. **Setas ← → entre semanas** — sem elas o conserto quebraria outra coisa: de
+   terça a sexta o time ainda escreve as demandas da segunda que passou.
+3. **O treinamento passa a existir**: coluna `treinamento` JSONB no encontro
+   (título, material, passos, quem treina), importável colando texto — 1ª linha
+   é o título, link vira material, resto vira passo — e o slide do **Apresentar**
+   passa a preferir o gravado ao rascunho da IA.
+4. **A IA presa nos fatos**: `apresentador` e `responsavel_funcao` deixaram de
+   ser repassados crus. Nome que não está na sala e função que não é cargo
+   oficial viram nulos, **e a tela avisa o que foi descartado**. O prompt ganhou
+   a trava "PROIBIDO INVENTAR" (a régua antiga exigia números sem entregar
+   número nenhum). `max_tokens` 3000 → 6000, e "cortada no meio" deixou de ser
+   confundida com "não respondeu".
+
+**Verificado**
+
+- 28 testes novos; suíte inteira **1291/1291**; migrações 86/86 sem colisão.
+- **Mutação nos testes** — 5 defeitos reintroduzidos (âncora de volta pra
+  segunda passada; apresentador cru; nome aceito sem sala; slide ignorando o
+  treinamento gravado; trava do prompt removida): **todos quebraram**.
+- **Prova em navegador: 288/292**, zero erro de página/console. As 10 asserções
+  da DIR-79 verdes, com a IA **interceptada devolvendo um apresentador que não
+  existe** — só assim dá pra provar que a conferência derruba a invenção.
+
+**Três defeitos achados PELA prova, não pelo código**
+
+1. **Sala vazia apagava nome legítimo.** Com o time corporativo vazio, a
+   conferência descartava até o próprio dono. Lista vazia é *"não sei quem
+   está"*, não *"não tem ninguém"* — apagar nome por falta de referência é pior
+   que o defeito original. Agora a conferência **só roda quando há lista**.
+2. **Duas asserções minhas passavam com a tela AUSENTE.** Aprovação vazia é
+   pior que falha: passaram a exigir a tela presente.
+3. **A prova procurava o nome inventado na tela inteira** — e o próprio aviso
+   cita esse nome (é o papel dele). Passou a medir dentro do tópico.
+
+E o fixture da prova precisou de cuidado: dar níveis de carreira ao usuário de
+teste destrancava um item a mais na lateral e quebrava a contagem da DIR-57.
+Só a segunda pessoa entrou na sala — **fixture não pode mudar o que a prova
+mede em outro lugar.**
+
+**Pendente do dono:** um caso concreto de alucinação, pra confirmar qual das
+causas mordeu. As duas corrigidas eram defeitos visíveis no código.
+
+**Não entrou:** nada em produção; a régua local (plano B) não foi tocada; o
+cronômetro, os blocos e as demandas seguem iguais.
+
+**Registrado (das 4 falhas da DIR-70):** continuam sendo do menu que o outro
+chat redesenhou — comprovado no HEAD dele, sem a minha mudança.
