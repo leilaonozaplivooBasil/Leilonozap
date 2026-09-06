@@ -354,8 +354,13 @@ export default function XMusic() {
   // esta conta, uma busca com muitos resultados esticava o painel pra fora da
   // tela e o topo dele ficava cortado, inalcançável.
   const alturaJanela = typeof window === 'undefined' ? 800 : window.innerHeight;
+  const larguraJanela = typeof window === 'undefined' ? 1280 : window.innerWidth;
   const yDaPilula = posicao ? posicao.y : alturaJanela - 96;
   const abrePraBaixo = posicao ? yDaPilula < alturaJanela / 2 : false;
+  // e no HORIZONTAL o mesmo raciocínio: pílula na metade direita da tela, o
+  // painel se alinha pela direita dela — senão os 320px dele vazavam pra fora
+  // da tela sempre que a pessoa levava a pílula pro canto direito.
+  const abrePraEsquerda = posicao ? posicao.x > larguraJanela / 2 : false;
   // 4.5rem de folga em cima: é onde mora a barra fixa do site (z-50). O painel
   // agora passa POR CIMA dela (z-[60]), mas encostar embaixo dela fica feio.
   const espacoLivre = abrePraBaixo
@@ -385,7 +390,7 @@ export default function XMusic() {
       <div
         aria-hidden={!aberto}
         className={aberto
-          ? `absolute left-0 ${abrePraBaixo ? 'top-full mt-2' : 'bottom-full mb-2'}`
+          ? `absolute ${abrePraEsquerda ? 'right-0' : 'left-0'} ${abrePraBaixo ? 'top-full mt-2' : 'bottom-full mb-2'}`
           : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'}
       >
         {/* 📏 O painel cresce PRA CIMA e nunca vaza pra fora da tela: o teto é

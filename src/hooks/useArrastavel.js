@@ -32,40 +32,70 @@ export default function useArrastavel({ aoMover, aoSoltar, limiar = 6 } = {}) {
   // fica true logo depois de um arrasto, pra engolir o clique que o navegador
   // dispara em seguida — senão soltar a pílula em cima do play acionaria o play
   const arrastouAgora = React.useRef(false);
+  // as callbacks vivem em refs: os ouvintes da janela são registrados uma vez
+  // por gesto e não podem ficar presos a uma versão velha delas
+  const aoMoverRef = React.useRef(aoMover);
+  const aoSoltarRef = React.useRef(aoSoltar);
+  aoMoverRef.current = aoMover;
+  aoSoltarRef.current = aoSoltar;
+  const desligar = React.useRef(() => {});
 
+  // ⚠️ SEM captura de ponteiro, e isso é decisão, não esquecimento. Duas
+  // coisas aconteceram com ela:
+  //   1. capturar no pointerdown MATOU O CLIQUE: com captura ativa o navegador
+  //      entrega o `click` ao elemento que capturou (a pílula inteira), e não
+  //      ao botão embaixo do dedo — o painel do X-Music parou de abrir;
+  //   2. capturar só depois do limiar deixou o MOUSE frágil: se o primeiro
+  //      movimento já sai da caixa do elemento (um puxão rápido), o pointermove
+  //      nunca chega nele, ninguém captura, e o arrasto não começa. O dedo não
+  //      sofria disso porque toque tem captura IMPLÍCITA no navegador — por
+  //      isso a prova passava no dedo e reprovava no mouse.
+  // A saída clássica: depois do pointerdown, os movimentos são ouvidos na
+  // JANELA, que recebe o ponteiro onde ele estiver. O clique fica intacto e o
+  // arrasto começa mesmo com o puxão mais brusco.
   const aoApontar = React.useCallback((e) => {
     if (e.button != null && e.button !== 0) return; // só botão esquerdo/toque
     inicio.current = { px: e.clientX, py: e.clientY };
     passouLimiar.current = false;
-    try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* navegador antigo */ }
-  }, []);
 
-  const aoArrastar = React.useCallback((e) => {
-    const i = inicio.current;
-    if (!i) return;
-    const dx = e.clientX - i.px;
-    const dy = e.clientY - i.py;
-    if (!passouLimiar.current) {
-      if (Math.hypot(dx, dy) < limiar) return;
-      passouLimiar.current = true;
-      setArrastando(true);
-    }
-    e.preventDefault?.();
-    aoMover?.({ x: e.clientX, y: e.clientY, dx, dy });
-  }, [aoMover, limiar]);
+    const mover = (ev) => {
+      const i = inicio.current;
+      if (!i) return;
+      const dx = ev.clientX - i.px;
+      const dy = ev.clientY - i.py;
+      if (!passouLimiar.current) {
+        if (Math.hypot(dx, dy) < limiar) return;
+        passouLimiar.current = true;
+        setArrastando(true);
+      }
+      ev.preventDefault?.();
+      aoMoverRef.current?.({ x: ev.clientX, y: ev.clientY, dx, dy });
+    };
+    const largar = (ev) => {
+      desligar.current();
+      const houve = passouLimiar.current;
+      inicio.current = null;
+      passouLimiar.current = false;
+      setArrastando(false);
+      if (houve) {
+        arrastouAgora.current = true;
+        setTimeout(() => { arrastouAgora.current = false; }, 60);
+        aoSoltarRef.current?.({ x: ev.clientX, y: ev.clientY });
+      }
+    };
+    window.addEventListener('pointermove', mover, { passive: false });
+    window.addEventListener('pointerup', largar);
+    window.addEventListener('pointercancel', largar);
+    desligar.current = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', largar);
+      window.removeEventListener('pointercancel', largar);
+      desligar.current = () => {};
+    };
+  }, [limiar]);
 
-  const aoLargar = React.useCallback((e) => {
-    const houve = passouLimiar.current;
-    inicio.current = null;
-    passouLimiar.current = false;
-    setArrastando(false);
-    try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch { /* ok */ }
-    if (houve) {
-      arrastouAgora.current = true;
-      setTimeout(() => { arrastouAgora.current = false; }, 60);
-      aoSoltar?.({ x: e.clientX, y: e.clientY });
-    }
-  }, [aoSoltar]);
+  // desmontou no meio de um gesto: solta os ouvintes da janela
+  React.useEffect(() => () => desligar.current(), []);
 
   // pendura no onClickCapture do container: mata o clique fantasma do arrasto
   const engolirCliqueDoArrasto = React.useCallback((e) => {
@@ -79,9 +109,8 @@ export default function useArrastavel({ aoMover, aoSoltar, limiar = 6 } = {}) {
     /** espalhe no elemento que a pessoa segura */
     alcas: {
       onPointerDown: aoApontar,
-      onPointerMove: aoArrastar,
-      onPointerUp: aoLargar,
-      onPointerCancel: aoLargar,
+      // touch-action: none é o que impede o navegador de ler o dedo como
+      // rolagem da página e roubar o gesto no meio
       style: { touchAction: 'none' },
     },
     engolirCliqueDoArrasto,
