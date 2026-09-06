@@ -32,7 +32,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
   return (
     /* a faixa não é mais um cartão: sem borda, sem canto no celular e no
        mesmo preto da página — ela DERRETE no resto em vez de ser recortada */
-    <div className="relative overflow-hidden -mx-4 sm:mx-0 rounded-none sm:rounded-3xl mb-4 sm:mb-5" style={{ background: 'var(--xeos-preto)' }}>
+    <div className="relative overflow-hidden w-full rounded-none mb-0" style={{ background: 'var(--xeos-preto)' }}>
       {/* o padrão tonal de X do brandbook, por trás de tudo */}
       <div
         aria-hidden="true"

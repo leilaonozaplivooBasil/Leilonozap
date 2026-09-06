@@ -1376,7 +1376,7 @@ _Enviado via CRM Leilão NoZap_`;
          • celular: -mx-4 anula o respiro da página e o palco vai de ponta a
            ponta, sem canto arredondado, com só 12px de folga interna;
          • do sm pra cima: volta pra dentro, arredondado e espaçoso. */
-    <div className="xeos-palco relative overflow-hidden -mx-4 sm:mx-0 px-3 py-5 sm:p-8 rounded-none sm:rounded-3xl" style={{ background: 'var(--xeos-preto)' }}>
+    <div className="xeos-palco relative overflow-hidden w-full px-3 py-6 sm:px-8 sm:py-9" style={{ background: 'var(--xeos-preto)' }}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-[0.22]"
@@ -1404,7 +1404,7 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
       )}
-      <div className="relative max-w-[1800px] mx-auto">
+      <div className="relative w-full">
 
         {/* HEADER — escala de instituição, sem emoji */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 sm:mb-8">
@@ -1506,7 +1506,15 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🖼️ DIR-56 — a faixa do brandbook do Hábito aberto: cada hábito tem a
             sua imagem oficial, com o nome por cima. É o que amarra o painel ao
             universo da marca em vez de deixar a tela solta. */}
-        <div className="relative overflow-hidden rounded-2xl mb-5 sm:mb-7">
+        <div
+          className="relative overflow-hidden -mx-3 sm:-mx-8 mb-5 sm:mb-7"
+          style={{
+            // o pé da imagem se dissolve no fundo da página: sem aresta,
+            // sem cartão — a faixa 'morre' no preto (ordem do dono)
+            WebkitMaskImage: 'linear-gradient(180deg, #000 0%, #000 62%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, #000 0%, #000 62%, transparent 100%)',
+          }}
+        >
           {/* 🎓 DIR-64 — a imagem do Hábito ganhou altura: o dono disse que as
               imagens do brandbook estão bonitas e precisam APARECER. O véu
               escuro ficou mais curto do lado esquerdo (só o necessário pra

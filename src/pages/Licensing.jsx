@@ -1084,10 +1084,13 @@ const DashboardContent = ({ user, isAdmin }) => {
         onTabChange={handleTabChange}
       />
 
-      <div className={`flex-1 min-w-0 py-4 sm:p-6 lg:p-8 ${naTopCollege ? 'px-0 sm:px-6' : 'px-4 sm:px-6'}`}>
+      /* na Top College o conteúdo não tem respiro lateral em NENHUM tamanho:
+         é a tela inteira, do celular ao desktop. Fora dela, o padding de
+         sempre. */
+      <div className={naTopCollege ? 'flex-1 min-w-0 py-4 sm:py-6 lg:py-8 px-0' : 'flex-1 min-w-0 p-4 sm:p-6 lg:p-8'}>
         {/* 📱 Mobile: a barra que rolava pro lado virou um seletor + painel com
             TUDO organizado por grupos (mesma fonte única da lateral do desktop). */}
-        <div className="md:hidden mb-4">
+        <div className={naTopCollege ? 'md:hidden mb-4 px-4' : 'md:hidden mb-4'}>
           <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 
