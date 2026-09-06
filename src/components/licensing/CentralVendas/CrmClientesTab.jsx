@@ -40,6 +40,9 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
+import { resolverEscopo } from '@/lib/escopoDeVisao';
+import SeletorEscopo, { useEscopoDeVisao } from './SeletorEscopo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
 import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
@@ -233,7 +236,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // = só super_admin/admin/admin_financeiro; diretoria vê VENDA × META.
   // O nome isSuperAdmin foi mantido nos memos = "bypass do escopo de rede".
   const vis = React.useMemo(() => visibilidadeDoUsuario(currentUser), [currentUser]);
-  const isSuperAdmin = vis.visaoTotal;
+  // 👤/🛡️ 06/09 — quem tem visão total ESCOLHE, num seletor só no topo, se
+  // está vendo "só o meu" (como usuário) ou "tudo" (como Super Admin /
+  // diretoria). Antes o dono via os dois misturados sem a tela dizer qual.
+  // isSuperAdmin (= bypass do escopo de rede) agora só liga quando ele pediu.
+  const [escopo, setEscopo] = useEscopoDeVisao();
+  const visao = React.useMemo(() => resolverEscopo({ vis, escopo }), [vis, escopo]);
+  const isSuperAdmin = visao.crmTudo;
   const networkIds = React.useMemo(
     () => (!isSuperAdmin && currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
     [appUsers, currentUser?.id, isSuperAdmin]
@@ -280,6 +289,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       (c) => c.created_by_id && (c.created_by_id === currentUser?.id || networkIds.has(c.created_by_id))
     )),
     [customers, networkIds, currentUser?.id, isSuperAdmin]
+  );
+  // 🔒 06/09 — o MÉTODO (lista, contato, agendamento) é mais fechado que o
+  // resto do CRM: cada um só vê a própria lista; só o super_admin vê todas.
+  // Lê os clientes CRUS (não o networkManualCustomers), porque a rede abaixo
+  // também não entra aqui.
+  const metodoEscopo = React.useMemo(
+    () => escopoDoMetodo({ clientes: customers, oportunidades, uid: currentUser?.id, superAdmin: visao.metodoTudo }),
+    [customers, oportunidades, currentUser?.id, visao.metodoTudo]
   );
   // Negociação manual segue o cliente: só entra se o cliente dela está no
   // meu escopo (a tabela não tem dono próprio — o vínculo real é o cliente).
@@ -1439,6 +1456,8 @@ _Enviado via CRM Leilão NoZap_`;
               Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
             </h1>
           </div>
+          {/* 👤/🛡️ o seletor "só o meu / tudo" — só pra quem tem visão total */}
+          <SeletorEscopo vis={vis} escopo={escopo} onEscopo={setEscopo} />
           {/* 🧹 "Novo Vendedor" e "Novo Cliente" SAÍRAM DAQUI (ordem do dono:
               "está fora de contexto, tem que entrar lá na lista de contato").
               Conferido antes de mexer: o Hábito 03 — Lista de Networking já
@@ -1567,15 +1586,19 @@ _Enviado via CRM Leilão NoZap_`;
           />
         </div>
 
-        {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══ */}
+        {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══
+            🔒 06/09 — a lista, o contato e o agendamento são INDIVIDUAIS: só o
+            super_admin vê a de todo mundo (escopoDoMetodo.js). Aqui NÃO vale a
+            visão total da diretoria/admins do resto do CRM. */}
         {['sonho', 'compromisso', 'lista', 'contato', 'apresentacao', 'duplicacao'].includes(secaoAtiva) && (
           <CrmMetodo
             painel={secaoAtiva}
             currentUser={currentUser}
-            visaoTotal={isSuperAdmin}
+            visaoTotal={visao.metodoTudo}
+            gestao={vis.superAdmin}
             nomePorUsuarioId={nomePorUsuarioId}
-            clientesManuais={networkManualCustomers}
-            oportunidades={networkOportunidades}
+            clientesManuais={metodoEscopo.clientes}
+            oportunidades={metodoEscopo.oportunidades}
             onQualificar={handleQualificarContato}
             onRegistrarContato={handleRegistrarContatoMetodo}
             onEditarRegistro={handleEditarRegistroMetodo}
