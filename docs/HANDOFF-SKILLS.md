@@ -31,9 +31,9 @@
 
 ## 2. 💰 Carteira Digital (Wallet)
 
-**O que é:** saldo em dinheiro de cada usuário dentro do app, usado para dar lances e comprar.
+**O que é:** saldo em dinheiro de cada usuário dentro do app. **Serve para dar lance** — comprar na Loja Virtual é com PIX ou cartão. Ver `docs/DOCUMENTO-OFICIAL-PASSAPORTE.md`.
 
-- Saldo **livre** (disponível) e saldo **reservado** (em disputa num lance ativo)
+- **Três** estados, não dois (regra de 08/08/2026): **livre**, **comprometido** (foi coberto, mas aquele leilão ainda está rolando — dá lance, não compra na loja) e **reservado** (está no lance em que lidera agora)
 - Depósito via PIX/cartão (Mercado Pago), reserva de saldo ao dar lance, liberação se for superado, débito na hora do arremate
 - Transferência de saldo entre usuários
 - Saldo de teste (só admin usa, pra simular fluxos sem mexer em dinheiro real)
@@ -49,7 +49,7 @@
 
 - Vitrine pública por loja (cada licenciado tem a sua, em `/loja/:slug`)
 - Carrinho, checkout (PIX/cartão), cálculo de frete via Melhor Envio e Correios
-- Cupons de desconto, Passaporte de Lances (produto com bônus automático de 10% na carteira)
+- Cupons de desconto. **Passaporte de Lances:** o depósito serve só para dar lance; o valor de cada lance perdido volta acrescido de 10% e só então pode ser gasto aqui. Regra completa em `docs/DOCUMENTO-OFICIAL-PASSAPORTE.md` — corrigido em 27/08/2026, a descrição anterior ("bônus automático de 10% na carteira") descrevia o modelo que acabou em 19/08
 - **Gestão de Pedidos (admin)** — `src/pages/CatalogOrdersAdmin.jsx`: checklist de itens para separar/embalar, jornada de entrega (Recebemos → Embalando → Enviado → Saiu para entrega → Entregue), código de rastreio, endereço completo do comprador, etiqueta automática gerada na Melhor Envio
 
 **Onde:** entidade `CatalogSale`, `Product`; `src/pages/Catalog.jsx`, `Cart.jsx`, `CatalogOrdersAdmin.jsx`; funções `createMPCatalogCardCheckout`, `mpWebhook`, `cotarFrete`, `melhorEnvioOAuth`.
