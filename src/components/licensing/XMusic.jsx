@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Radio, Play, Pause, Star, X, ChevronDown, Plus } from 'lucide-react';
+import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic } from 'lucide-react';
 import {
   ESTACOES, extrairIdYoutube, extrairListaYoutube, fonteDoPlayer,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
@@ -54,6 +54,8 @@ export default function XMusic() {
   const [playlist, setPlaylist] = useState(lerPlaylist);
   const [link, setLink] = useState('');
   const [aviso, setAviso] = useState('');
+  const [editando, setEditando] = useState(null);   // id da linha em edição
+  const [nomeEdit, setNomeEdit] = useState('');
   const painelRef = useRef(null);
 
   // 👋 SOME ENQUANTO ROLA, igual à Leila (ordem do dono: "quando eu mexo a
@@ -96,24 +98,42 @@ export default function XMusic() {
 
   const tocarLink = useCallback(async () => {
     const lista = extrairListaYoutube(link);
-    const id = lista || extrairIdYoutube(link);
+    const idVideo = extrairIdYoutube(link);
+    const id = lista || idVideo;
     if (!id) {
       setAviso('Cole um link do YouTube — música ou playlist.');
       setTimeout(() => setAviso(''), 5000);
       return;
     }
-    const nome = (await buscarTitulo(id, !!lista)) || (lista ? 'Minha playlist' : 'Minha música');
-    trocar({ id, nome, lista: !!lista, nota: lista ? 'sua playlist' : 'sua música' });
+    // o vídeo do link fica GUARDADO na estação: é com ele que se descobre o
+    // nome de uma playlist (o noembed não lê URL de playlist).
+    const nome = (await buscarTitulo(id, !!lista, idVideo)) || (lista ? 'Minha playlist' : 'Minha música');
+    trocar({ id, nome, lista: !!lista, video: idVideo, nota: lista ? 'sua playlist' : 'sua música' });
     setLink('');
   }, [link, trocar]);
 
   const favoritar = useCallback(async () => {
     if (!estacao?.id) return;
-    const nome = estacao.nome || (await buscarTitulo(estacao.id, !!estacao.lista)) || 'Minha estação';
+    const nome = estacao.nome || (await buscarTitulo(estacao.id, !!estacao.lista, estacao.video)) || 'Minha estação';
     const nova = [...playlist.filter((m) => m.id !== estacao.id), { ...estacao, nome }];
     setPlaylist(nova);
     gravarPlaylist(nova);
   }, [estacao, playlist]);
+
+  // ✏️ RENOMEAR — a rede de segurança do nome. Por melhor que o título
+  // automático fique, quem sabe como chamar a música é o dono dela: "salvar
+  // o nome da playlist embaixo de onde está escrito A SUA PLAYLIST,
+  // exatamente como os dois primeiros, senão eu não sei qual é". Clicou no
+  // lápis, o nome vira campo; Enter ou sair do campo salva, Esc desiste.
+  const renomear = useCallback((id, nome) => {
+    const limpo = String(nome || '').trim().slice(0, 70);
+    if (!limpo) return;
+    const nova = playlist.map((m) => (m.id === id ? { ...m, nome: limpo } : m));
+    setPlaylist(nova);
+    gravarPlaylist(nova);
+    // se é justamente o que está tocando, a pílula muda de nome junto
+    setEstacao((e) => (e?.id === id ? { ...e, nome: limpo } : e));
+  }, [playlist]);
 
   const remover = useCallback((id) => {
     const nova = playlist.filter((m) => m.id !== id);
@@ -171,11 +191,39 @@ export default function XMusic() {
               <div className="space-y-1 max-h-36 overflow-y-auto">
                 {playlist.map((m) => (
                   <div key={m.id} className="flex items-center gap-1.5">
+                    {editando === m.id ? (
+                      <input
+                        autoFocus
+                        value={nomeEdit}
+                        onChange={(e) => setNomeEdit(e.target.value)}
+                        onBlur={() => { renomear(m.id, nomeEdit); setEditando(null); }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { renomear(m.id, nomeEdit); setEditando(null); }
+                          if (e.key === 'Escape') setEditando(null);
+                        }}
+                        className="xeos-cru flex-1 min-w-0 rounded-lg bg-white/12 border border-white/35 text-white text-[11px] font-semibold px-2.5 py-1.5 focus:outline-none"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => trocar(m)}
+                        title={m.nome}
+                        className={`flex-1 min-w-0 flex items-center gap-1.5 text-left rounded-lg px-2.5 py-1.5 text-[11px] ${estacao?.id === m.id ? 'bg-white/15 text-white font-semibold' : 'bg-white/[0.05] text-white/75 hover:bg-white/10'}`}
+                      >
+                        {/* o ícone de lista diz na hora se aquilo é uma playlist
+                            inteira ou uma música só — sem precisar abrir */}
+                        {m.lista && <ListMusic className="w-3 h-3 shrink-0 text-white/45" />}
+                        <span className="truncate">{m.nome}</span>
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => trocar(m)}
-                      className={`flex-1 text-left truncate rounded-lg px-2.5 py-1.5 text-[11px] ${estacao?.id === m.id ? 'bg-white/15 text-white font-semibold' : 'bg-white/[0.05] text-white/75 hover:bg-white/10'}`}
-                    >{m.nome}</button>
+                      onClick={() => { setEditando(m.id); setNomeEdit(m.nome || ''); }}
+                      title="dar um nome que você reconheça"
+                      className="shrink-0 text-white/30 hover:text-white/70"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
                     <button type="button" onClick={() => remover(m.id)} title="tirar da playlist" className="shrink-0 text-white/30 hover:text-white/70">
                       <X className="w-3.5 h-3.5" />
                     </button>

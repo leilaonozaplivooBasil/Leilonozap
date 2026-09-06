@@ -63,16 +63,34 @@ export const gravarEstacao = (e) => gravar(CHAVE_ESTACAO, e);
 export const lerLigado = () => ler(CHAVE_LIGADO, false);
 export const gravarLigado = (v) => gravar(CHAVE_LIGADO, !!v);
 
-/** O título real da música/lista, via noembed (tem CORS liberado). */
-export const buscarTitulo = async (id, ehLista = false) => {
-  try {
-    const url = ehLista
-      ? `https://www.youtube.com/playlist?list=${id}`
-      : `https://www.youtube.com/watch?v=${id}`;
-    const r = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(4000) });
-    const j = await r.json();
-    return String(j?.title || '').slice(0, 70) || null;
-  } catch { return null; }
+/** O título real da música/lista, via noembed (tem CORS liberado).
+ *
+ *  ⚠️ O QUE QUEBRAVA: o noembed lê URL de VÍDEO do YouTube, mas NÃO lê URL
+ *  de PLAYLIST — devolve erro. Resultado: toda playlist salva caía no nome
+ *  genérico, e duas playlists diferentes ficavam com o MESMO nome na lista
+ *  (o dono: "senão eu não sei qual é a música").
+ *
+ *  A SAÍDA: quando o link colado é o normal do YouTube
+ *  (watch?v=VIDEO&list=LISTA), o vídeo vem junto — e o título DELE nomeia a
+ *  playlist. É o nome que a pessoa reconhece, porque é a faixa que estava
+ *  tocando quando ela copiou o link.
+ */
+export const buscarTitulo = async (id, ehLista = false, idVideo = null) => {
+  const tentar = async (url) => {
+    try {
+      const r = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(4000) });
+      const j = await r.json();
+      if (j?.error) return null;
+      const t = String(j?.title || '').trim();
+      return t || null;
+    } catch { return null; }
+  };
+  if (!ehLista) {
+    const t = await tentar(`https://www.youtube.com/watch?v=${id}`);
+    return t ? t.slice(0, 70) : null;
+  }
+  const doVideo = idVideo ? await tentar(`https://www.youtube.com/watch?v=${idVideo}`) : null;
+  return doVideo ? `${doVideo.slice(0, 52)} · playlist` : null;
 };
 
 /** A fonte do iframe, seja faixa única (em loop) ou playlist inteira. */
