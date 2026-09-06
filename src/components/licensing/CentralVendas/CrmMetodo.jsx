@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -921,8 +920,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const habito = HABITOS.find((h) => h.id === painel);
 
   return (
-    <Card className="bg-white border-nz-borda mb-4 sm:mb-6">
-      <CardContent className="p-4 sm:p-6 space-y-4">
+    /* 🌊 SEM CARTÃO (ordem do dono: "não quero essas linhas, quero tudo
+       borda infinita"). Isto aqui era um <Card>, e o Card traz borda,
+       canto arredondado, fundo e sombra por padrão — era ELE o retângulo
+       que sobrava em volta do painel, mesmo depois de eu limpar os blocos
+       de dentro. Agora é uma seção lisa: só o ar do padding. */
+    <div className="pt-4 sm:pt-6 pb-2 space-y-4">
         {habito && (
           <div>
             {/* 🏛️ DIR-56 — o nome do Hábito já vem grande na faixa do brandbook,
@@ -2038,7 +2041,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             <p className="text-xs text-nz-tinta-fraca text-center italic">"A disciplina é a ponte entre objetivos e realização." — Jim Rohn</p>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
