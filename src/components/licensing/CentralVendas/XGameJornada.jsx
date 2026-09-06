@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Sunrise, BookOpen, Dumbbell, Camera, Store, Utensils, Handshake,
   GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays,
+  Target, Users, Phone, MessageCircle, Wallet, ClipboardList, Heart, Droplet, Bed, ShoppingBag,
+  Mic, Rocket, Flame,
 } from 'lucide-react';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
@@ -14,18 +16,37 @@ import {
 // cada selo carrega a cor da BORDA 3D (a mesma cor do bot\u00e3o, s\u00f3 mais escura \u2014
 // \u00e9 o truque de profundidade do Duolingo, nada de sombra preta gen\u00e9rica)
 const SELOS = [
-  [/acordar|gratidao|bom dia/i, Sunrise, 'from-amber-400 to-orange-500', '#c2410c'],
-  [/leitura|estudo|curso/i, BookOpen, 'from-sky-400 to-blue-600', '#1e40af'],
-  [/corrida|treino|atividade fisica|academia/i, Dumbbell, 'from-rose-400 to-red-500', '#b91c1c'],
-  [/story|post|instagram|conteudo/i, Camera, 'from-fuchsia-500 to-purple-600', '#7e22ce'],
-  [/loja/i, Store, 'from-emerald-400 to-teal-600', '#0f766e'],
-  [/almoco/i, Utensils, 'from-orange-300 to-amber-500', '#b45309'],
-  [/reuniao|apresenta/i, Handshake, 'from-indigo-400 to-violet-600', '#5b21b6'],
-  [/treinament|sala/i, GraduationCap, 'from-violet-500 to-purple-700', '#6b21a8'],
-  [/contrato|follow|fechamento/i, FileText, 'from-slate-400 to-slate-600', '#334155'],
-  [/descanso|leve/i, Moon, 'from-indigo-500 to-slate-700', '#312e81'],
-  [/organizacao|ambiente/i, Sparkles, 'from-cyan-400 to-sky-600', '#0369a1'],
-  [/caminho|chegar/i, Car, 'from-lime-400 to-green-600', '#15803d'],
+  // o AMANHECER e o encerramento
+  [/gratidao|foco no sonho|visualiza/i, Heart, 'from-rose-400 to-pink-600', '#9d174d'],
+  [/acordar|bom dia|amanhecer|despertar/i, Sunrise, 'from-amber-400 to-orange-500', '#c2410c'],
+  [/agua|hidrata/i, Droplet, 'from-cyan-400 to-sky-600', '#0369a1'],
+  // corpo
+  [/corrida|treino|atividade fisica|academia|alongamento/i, Dumbbell, 'from-rose-400 to-red-500', '#b91c1c'],
+  // mente
+  [/leitura|estudo|curso|licao|aprendiz/i, BookOpen, 'from-sky-400 to-blue-600', '#1e40af'],
+  [/treinament|sala|mentoria|aula/i, GraduationCap, 'from-violet-500 to-purple-700', '#6b21a8'],
+  [/audio|podcast|escuta/i, Mic, 'from-teal-400 to-cyan-600', '#155e75'],
+  // conteúdo
+  [/story|post|instagram|conteudo|reels|video/i, Camera, 'from-fuchsia-500 to-purple-600', '#7e22ce'],
+  // negócio
+  [/prospec|meta|objetivo|resultado/i, Target, 'from-red-400 to-rose-600', '#9f1239'],
+  [/ligar|ligacao|telefone|call/i, Phone, 'from-green-400 to-emerald-600', '#065f46'],
+  [/whatsapp|mensagem|zap|convite/i, MessageCircle, 'from-emerald-400 to-green-600', '#166534'],
+  [/cliente|equipe|time|lideranca/i, Users, 'from-indigo-400 to-blue-600', '#1e3a8a'],
+  [/reuniao|apresenta|encontro/i, Handshake, 'from-indigo-400 to-violet-600', '#5b21b6'],
+  [/venda|loja|catalogo|produto/i, Store, 'from-emerald-400 to-teal-600', '#0f766e'],
+  [/compra|pedido|estoque/i, ShoppingBag, 'from-lime-400 to-green-600', '#15803d'],
+  [/financeiro|caixa|dinheiro|pagamento/i, Wallet, 'from-amber-400 to-yellow-600', '#a16207'],
+  [/contrato|follow|fechamento|documento/i, FileText, 'from-slate-400 to-slate-600', '#334155'],
+  [/planejament|organizacao do negocio|agenda|checklist/i, ClipboardList, 'from-blue-400 to-indigo-600', '#3730a3'],
+  [/lancamento|expansao|crescer/i, Rocket, 'from-orange-400 to-red-600', '#9a3412'],
+  [/ofensiva|sequencia|streak/i, Flame, 'from-orange-400 to-red-500', '#c2410c'],
+  // rotina
+  [/almoco|jantar|refeicao|cafe/i, Utensils, 'from-orange-300 to-amber-500', '#b45309'],
+  [/descanso|leve|pausa/i, Moon, 'from-indigo-500 to-slate-700', '#312e81'],
+  [/dormir|sono|noite/i, Bed, 'from-slate-500 to-indigo-800', '#1e1b4b'],
+  [/organizacao|ambiente|limpeza/i, Sparkles, 'from-cyan-400 to-sky-600', '#0369a1'],
+  [/caminho|chegar|desloca|transporte/i, Car, 'from-lime-400 to-green-600', '#15803d'],
 ];
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const seloDa = (titulo) => {
@@ -43,7 +64,7 @@ const saudacao = (min) => {
 };
 
 // a SERPENTINA do Duolingo: um S suave, não zigue-zague duro
-const OFFSETS = [0, -60, -92, -60, 0, 60, 92, 60];
+const OFFSETS = [0, -68, -104, -68, 0, 68, 104, 68];
 
 // 🦉→🏆 os PERÍODOS do dia (as "unidades" da jornada, estilo Duolingo):
 // cada período tem cor própria; o baú abre quando o período fecha inteiro
@@ -163,9 +184,9 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
   return (
     <div ref={refEl} className="relative flex flex-col items-center">
       {atual && (
-        <span className="absolute -top-10 z-10 animate-bounce whitespace-nowrap rounded-xl bg-white text-emerald-600 text-[11px] font-extrabold tracking-[0.14em] px-3.5 py-1.5 shadow-lg border border-slate-100">
+        <span className="xeos-cru absolute -top-11 z-10 animate-bounce whitespace-nowrap rounded-xl bg-white text-emerald-600 text-[11px] font-extrabold tracking-[0.14em] px-3.5 py-1.5 shadow-lg border border-black/5">
           COMEÇAR
-          <span className="absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 bg-white border-b border-r border-slate-100" />
+          <span className="xeos-cru absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 bg-white" />
         </span>
       )}
       <button type="button" onClick={onClick} title={`${hora} — ${titulo}`} className="relative group outline-none">
@@ -218,29 +239,23 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
 }
 
 /** O selo redondo de uma parada: ícone vetorial sobre gradiente. */
-function Selo({ titulo, tamanho = 'w-14 h-14', icone = 'w-6 h-6', feito, perdido, atual }) {
-  const { Icone, grad } = seloDa(titulo);
+function MoedaGrande({ titulo, perdido }) {
+  const { Icone, grad, borda } = seloDa(titulo);
   return (
     <span
       className={[
-        `relative ${tamanho} rounded-full flex items-center justify-center shadow-md bg-gradient-to-br`,
-        perdido && !feito ? 'from-slate-300 to-slate-400' : grad,
-        feito ? 'ring-4 ring-emerald-200' : '',
-        atual && !feito ? 'ring-4 ring-amber-300' : '',
-        !feito && !atual && !perdido ? 'ring-2 ring-slate-100' : '',
+        'relative w-32 h-[120px] rounded-[50%] flex items-center justify-center',
+        perdido ? 'bg-gradient-to-b from-slate-300 to-slate-400' : `bg-gradient-to-b ${grad}`,
       ].join(' ')}
+      style={{
+        boxShadow: [
+          `0 11px 0 0 ${perdido ? '#64748b' : borda}`,
+          'inset 0 6px 14px rgba(255,255,255,0.42)',
+          'inset 0 -9px 20px rgba(2,6,23,0.18)',
+        ].join(', '),
+      }}
     >
-      <Icone className={`${icone} text-white drop-shadow-sm`} strokeWidth={2.2} />
-      {feito && (
-        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center shadow">
-          <Check className="w-3 h-3 text-white" strokeWidth={3.5} />
-        </span>
-      )}
-      {!feito && perdido && (
-        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-red-500 ring-2 ring-white flex items-center justify-center shadow">
-          <XIcon className="w-3 h-3 text-white" strokeWidth={3.5} />
-        </span>
-      )}
+      <Icone className="w-14 h-14 text-white drop-shadow" fill="currentColor" strokeWidth={1.2} />
     </span>
   );
 }
@@ -295,11 +310,12 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
     let zig = 0; // o zigue-zague contínuo da trilha
 
     return (
-      <div className="rounded-3xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="w-full">
         <style>{'@keyframes xgHalo { 0% { transform: scale(1); opacity: .8 } 70% { transform: scale(1.3); opacity: 0 } 100% { transform: scale(1.3); opacity: 0 } }'}</style>
 
-        {/* o banner da "unidade" (como o cartão verde do Duolingo) */}
-        <div className={`bg-gradient-to-r ${gradBanner} px-6 py-4 flex items-center justify-between gap-3`}>
+        {/* o banner da "unidade" (como o cartão verde do Duolingo) — agora
+            flutua no meio da tela, sem moldura em volta da jornada */}
+        <div className={`sticky top-3 z-20 mx-auto max-w-md rounded-2xl bg-gradient-to-r ${gradBanner} px-5 py-3.5 flex items-center justify-between gap-3 shadow-xl`}>
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/80">
               A jornada de hoje · {completou ? 'COMPLETA' : periodoAtual[1]} · {feitas.length}/{tarefas.length}
@@ -311,16 +327,16 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
               <button
                 type="button"
                 onClick={() => refAtual.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                className="rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2"
+                className="xeos-cru rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2"
               >IR PRO AGORA</button>
             )}
-            <button type="button" onClick={() => setExpandida(false)} className="rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2">
+            <button type="button" onClick={() => setExpandida(false)} className="xeos-cru rounded-xl bg-white/20 hover:bg-white/30 text-white text-[10px] font-extrabold tracking-wide px-3 py-2">
               RECOLHER
             </button>
           </div>
         </div>
 
-        <div className="relative flex flex-col items-center gap-4 px-4 pb-10 pt-8">
+        <div className="relative flex flex-col items-center gap-9 px-4 pb-16 pt-12">
           {/* o troféu no TOPO do dia */}
           <div className="relative flex flex-col items-center mb-2">
             {completou ? (
@@ -334,7 +350,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
               /* troféu ainda trancado: o desenho em cima da mesinha redonda */
               <ParadaNaMesa Icone={Trophy} />
             )}
-            <p className={`mt-2 text-[10px] font-extrabold tracking-wide ${completou ? 'text-amber-600' : 'text-slate-400'}`}>{completou ? 'DIA PERFEITO!' : 'O TOPO DO DIA'}</p>
+            <p className={`mt-2 text-[10px] font-extrabold tracking-[0.16em] ${completou ? 'text-amber-500' : 'text-nz-tinta-fraca'}`}>{completou ? 'DIA PERFEITO!' : 'O TOPO DO DIA'}</p>
           </div>
 
           {gruposSubida.map((g) => {
@@ -394,10 +410,10 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                 })}
 
                 {/* o divisor do período (o "— Diga de onde você é —" do Duolingo) */}
-                <div className="w-full max-w-sm flex items-center gap-3 py-2">
-                  <span className="flex-1 border-t border-slate-200" />
-                  <span className="text-[10px] font-extrabold tracking-[0.22em] text-slate-400">{g.rotulo}</span>
-                  <span className="flex-1 border-t border-slate-200" />
+                <div className="w-full max-w-sm flex items-center gap-4 py-5">
+                  <span className="flex-1 border-t border-nz-borda" />
+                  <span className="text-[10px] font-extrabold tracking-[0.24em] text-nz-tinta-fraca">{g.rotulo}</span>
+                  <span className="flex-1 border-t border-nz-borda" />
                 </div>
               </React.Fragment>
             );
@@ -415,65 +431,86 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
     );
   }
 
-  // ══ O MOMENTO — branco sólido, um passo por vez ══
+  // ══ O MOMENTO — SEM MOLDURA: a tela inteira é o momento ══
+  //   Ordem do dono: "sem esses dois quadrados, limpo, pegando a tela
+  //   toda". Saiu o cartão de fora E o cartão de dentro; o que segura a
+  //   composição agora é só o ar. As cores usam os tokens nz-* porque o
+  //   palco escuro (.xeos-palco) só repinta esses — slate cru ficava
+  //   preto no preto (era o "Boa noite" quase invisível).
+  const estado = foco?.estado?.id;
   return (
-    <div className="rounded-3xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
-      <div className="px-6 py-8 text-center space-y-6">
-        <div className="space-y-1">
-          <p className="text-2xl font-bold tracking-tight text-slate-900">{saudacao(agoraMin)}, {nome || 'campeão'}.</p>
-          <p className="text-xs text-slate-400">
-            {fogo?.dias > 0 ? `${fogo.dias} ${fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva · ` : ''}
-            {feitas.length} de {tarefas.length} passos hoje
-          </p>
-        </div>
+    <div className="w-full">
+      <div className="mx-auto max-w-2xl px-5 py-16 sm:py-24 text-center">
+        <p className="text-3xl sm:text-4xl font-bold tracking-tight text-nz-tinta">
+          {saudacao(agoraMin)}, {nome || 'campeão'}.
+        </p>
+        <p className="mt-2 text-xs font-medium tracking-wide text-nz-tinta-fraca">
+          {fogo?.dias > 0 ? `${fogo.dias} ${fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva · ` : ''}
+          {feitas.length} de {tarefas.length} passos hoje
+        </p>
 
         {completou || !foco ? (
-          <div className="py-6 space-y-4">
-            <span className="mx-auto w-24 h-24 rounded-full flex items-center justify-center shadow-lg bg-gradient-to-br from-amber-400 to-yellow-500 ring-8 ring-amber-50 animate-bounce">
-              <Trophy className="w-12 h-12 text-white drop-shadow-sm" />
+          <div className="mt-16 flex flex-col items-center gap-5">
+            <span
+              className="w-32 h-32 rounded-full flex items-center justify-center bg-gradient-to-b from-amber-400 to-yellow-500 animate-bounce"
+              style={{ boxShadow: '0 10px 0 0 #b45309, inset 0 6px 12px rgba(255,255,255,0.45), inset 0 -8px 18px rgba(2,6,23,0.18)' }}
+            >
+              <Trophy className="w-16 h-16 text-white drop-shadow" fill="currentColor" strokeWidth={1.2} />
             </span>
-            <p className="text-lg font-bold text-slate-900">DIA PERFEITO — BRILHANTE!</p>
-            <p className="text-xs text-slate-400">Você subiu a jornada inteira. Amanhã o sol nasce de novo.</p>
+            <p className="text-2xl font-bold text-nz-tinta">DIA PERFEITO — BRILHANTE!</p>
+            <p className="text-sm text-nz-tinta-fraca">Você subiu a jornada inteira. Amanhã o sol nasce de novo.</p>
           </div>
         ) : (
-          <div className="mx-auto max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_40px_-12px_rgba(15,23,42,0.25)] px-8 py-8 space-y-5">
-            <div className="mx-auto w-fit">
-              <Selo titulo={foco.titulo} tamanho="w-24 h-24" icone="w-11 h-11" perdido={foco.estado?.id === 'PERDIDO'} atual={foco.estado?.id !== 'PERDIDO'} />
-            </div>
-            <div className="space-y-1.5">
-              <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${foco.estado?.id === 'PERDIDO' ? 'text-slate-400' : foco.estado?.id === 'ATRASADO' ? 'text-orange-500' : 'text-emerald-600'}`}>
-                {foco.estado?.id === 'PERDIDO' ? 'ainda dá pra comprovar' : foco.estado?.id === 'ATRASADO' ? 'tá na hora — corre' : 'o seu momento agora'}
-              </p>
-              <p className="text-lg font-bold text-slate-900 leading-snug">{foco.titulo}</p>
-              <p className="text-xs font-semibold text-slate-400">{foco.hora}</p>
-              {foco.detalhe && <p className="text-xs text-slate-400 leading-relaxed">{foco.detalhe}</p>}
-            </div>
+          <div className="mt-14 flex flex-col items-center">
+            {/* o selo do momento: a mesma moeda da trilha, em tamanho de herói */}
+            <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} />
+
+            <p className={`mt-8 text-[11px] font-extrabold uppercase tracking-[0.22em] ${estado === 'PERDIDO' ? 'text-nz-tinta-fraca' : estado === 'ATRASADO' ? 'text-nz-fogo' : 'text-nz-verde'}`}>
+              {estado === 'PERDIDO' ? 'ainda dá pra comprovar' : estado === 'ATRASADO' ? 'tá na hora — corre' : 'o seu momento agora'}
+            </p>
+            <h2 className="mt-3 text-2xl sm:text-3xl font-bold leading-tight text-nz-tinta max-w-lg">
+              {foco.titulo}
+            </h2>
+            <p className="mt-2 text-sm font-bold tracking-wide text-nz-tinta-fraca">{foco.hora}</p>
+            {foco.detalhe && (
+              <p className="mt-5 max-w-md text-sm leading-relaxed text-nz-tinta-fraca">{foco.detalhe}</p>
+            )}
+
             {acaoExtra && acaoExtra(foco) && (
               <a
                 href={acaoExtra(foco).href}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-sky-600 hover:underline"
+                className="mt-5 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-sky-500 hover:underline"
               ><CalendarDays className="w-3.5 h-3.5" /> {acaoExtra(foco).rotulo}</a>
             )}
+
             <button
               type="button"
               onClick={() => onTarefa(foco)}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-nz-verde hover:bg-nz-verde-claro text-white text-sm font-bold py-3.5 shadow-sm"
-            ><Play className="w-4 h-4" strokeWidth={2.5} /> Viver esse momento</button>
+              className="mt-10 w-full max-w-sm inline-flex items-center justify-center gap-2.5 rounded-2xl bg-nz-verde hover:bg-nz-verde-claro active:translate-y-[3px] text-white text-base font-extrabold tracking-wide py-4 transition-transform"
+              style={{ boxShadow: '0 6px 0 0 #14532d' }}
+            ><Play className="w-5 h-5" fill="currentColor" strokeWidth={0} /> Viver esse momento</button>
           </div>
         )}
 
         {feitas.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em]">o seu rastro de hoje</p>
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <div className="mt-16">
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.24em] text-nz-tinta-fraca/70">o seu rastro de hoje</p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {[...feitas].reverse().map((t) => {
-                const { Icone, grad } = seloDa(t.titulo);
+                const { Icone, grad, borda } = seloDa(t.titulo);
                 return (
-                  <span key={t.id} title={`${t.hora} — ${t.titulo}`} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-slate-200 text-slate-600 text-[10px] font-semibold pl-1 pr-2.5 py-1">
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${grad}`}>
-                      <Icone className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
+                  <span
+                    key={t.id}
+                    title={`${t.hora} — ${t.titulo}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-nz-borda text-nz-tinta-fraca text-[11px] font-bold pl-1.5 pr-3 py-1.5"
+                  >
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center bg-gradient-to-b ${grad}`}
+                      style={{ boxShadow: `0 2px 0 0 ${borda}` }}
+                    >
+                      <Icone className="w-3 h-3 text-white" fill="currentColor" strokeWidth={1.4} />
                     </span>
                     {t.hora}
                   </span>
@@ -483,7 +520,11 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           </div>
         )}
 
-        <button type="button" onClick={() => setExpandida(true)} className="text-[11px] font-bold text-slate-400 hover:text-slate-900">
+        <button
+          type="button"
+          onClick={() => setExpandida(true)}
+          className="mt-14 text-[11px] font-extrabold uppercase tracking-[0.16em] text-nz-tinta-fraca hover:text-nz-tinta transition-colors"
+        >
           expandir a jornada · {pendentes.length} {pendentes.length === 1 ? 'passo' : 'passos'} pela frente
         </button>
       </div>
