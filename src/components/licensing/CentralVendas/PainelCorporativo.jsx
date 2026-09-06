@@ -48,7 +48,7 @@ const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.i
 const amanha = (iso) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão' };
 
-export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null, habitos = null, periodo = null }) {
+export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null, onRelatorio = null, habitos = null, periodo = null }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const mes = mesDe(hoje);
   const segunda = segundaDaSemana(hoje);
@@ -142,6 +142,8 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     demandas: demandas.map((d) => ({ ...d, estado: estadoDaDemanda(d, { tarefas, cards, hojeISO: hoje }) })),
     producao: minhaProducao, semaforo: sem, hojeISO: hoje, mes, geradoPor: currentUser?.full_name || null,
   })), [pessoa, carregando, periodo, habitos, progresso, demandas, tarefas, cards, hoje, minhaProducao, sem, mes, currentUser?.full_name]);
+  // quem está por fora (o detalhamento da X-Performance) também gera o PDF — recebe o relatório pronto
+  useEffect(() => { if (onRelatorio) onRelatorio(relatorio); }, [relatorio, onRelatorio]);
 
   // 📅 agendar: vira tarefa do dia (e/ou card), e a demanda guarda os vínculos
   const agendar = async (d) => {

@@ -311,7 +311,7 @@ test('PERFORMANCE (sem administração): a visão executiva de todo mundo — qu
   await ctx.close();
 });
 
-test('X-PERFORMANCE: os 8 Hábitos do time, hoje — quem fez com o detalhe, quem não fez com o motivo; semana e mês; clicar no chip abre o painel', { skip: semNavegador }, async () => {
+test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o detalhamento por pessoa — a prévia na linha e, ao clicar, os 8 Hábitos dela, o PDF e o painel', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir();
   const oito = pagina.locator('[data-teste="oito-habitos"]');
   await oito.locator('[data-teste="habito"]').first().waitFor();
@@ -319,35 +319,53 @@ test('X-PERFORMANCE: os 8 Hábitos do time, hoje — quem fez com o detalhe, que
   assert.equal(await pagina.locator('[data-teste="performance-equipe"]').getAttribute('data-periodo'), 'hoje');
   const cartao = (n) => oito.locator(`[data-teste="habito"][data-n="${n}"]`);
   const txt = async (n) => (await cartao(n).textContent()).replace(/\s+/g, ' ');
-  // 1 Sonho: o Emanuel tem 2 sonhos; os outros não têm quadro
-  assert.match(await txt(1), /1\s*Sonho.*1 de 4.*2 sonhos no time.*fizeram \(1\).*Emanuel\s*· 2 sonhos no quadro · gratidão 1×.*não fez \(3\)/);
-  // 🧼 quem não fez vem AGRUPADO pelo motivo, nome por nome — nada de uma etiqueta por pessoa
-  assert.match(await txt(1), /sem quadro e sem rotina · Carla, Jean, Luiz/);
-  assert.equal(await cartao(1).locator('[data-teste="nao-fizeram"] [data-teste="chip"]').count(), 0);
-  assert.equal(await cartao(1).locator('[data-teste="motivo"]').count(), 1);
-  // 2 Compromisso: só o Emanuel acordou (story das 05:15)
-  assert.match(await txt(2), /2\s*Compromisso.*1 de 4.*Emanuel\s*· acordou · rotina/);
-  // 4 Contato: 2 contatos do Emanuel (1 agendado)
-  assert.match(await txt(4), /4\s*Contato e Convite.*2 contatos no time.*Emanuel\s*· 2 contatos · 1 agendado/);
-  // 6 Fechamento: Emanuel fechou R$ 50 mil de captação; Carla vendeu R$ 1.200; Jean e Luiz não venderam
-  assert.match(await txt(6), /6\s*Acompanhamento e Fechamento.*R\$ 51\.200,00 no time.*Emanuel\s*· 1 captação · R\$ 50\.000,00.*Carla\s*· 1 venda · R\$ 1\.200,00.*não fez \(2\).*não vendeu · Jean, Luiz/);
-  // o nome dentro do grupo abre o painel da pessoa
-  await cartao(6).locator('[data-teste="nome"][data-pessoa="jean"]').click();
-  await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="jean"]').waitFor();
-  // o resumo
-  assert.match((await pagina.locator('[data-teste="oito-resumo"]').textContent()).replace(/\s+/g, ' '), /acordaram\s*1 de 4.*contatos feitos\s*2.*venderam ou fecharam\s*2 de 4/);
-  // a tabela por pessoa mostra os hábitos de cada um
-  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*[5-8]\/8/);
-  // semana: o rótulo muda e o Compromisso vira "acordou X de Y dias"
+  // 🔢 os números do time, sem nome nenhum
+  const topo = (await oito.textContent()).replace(/\s+/g, ' ');
+  assert.doesNotMatch(topo, /Emanuel|Carla|Jean|Luiz/, 'em cima não aparece nome de ninguém');
+  assert.match(topo, /4 pessoas · hoje/);
+  assert.match(topo, /média de hábitos\s*[\d,]+ de 8.*com os 8 inteiros\s*0.*sem nenhum hábito\s*[12].*acordaram às 5\s*1 de 4.*contatos feitos\s*2.*venderam ou fecharam\s*2 de 4/);
+  assert.match(await txt(1), /1\s*Sonho.*1 de 4.*25%.*2 sonhos no time/);
+  assert.match(await txt(2), /2\s*Compromisso.*1 de 4/);
+  assert.match(await txt(4), /4\s*Contato e Convite.*1 de 4.*2 contatos no time/);
+  assert.match(await txt(6), /6\s*Acompanhamento e Fechamento.*2 de 4.*50%.*R\$ 51\.200,00 no time/);
+  assert.match(topo, /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
+  // 👤 o detalhamento: o dono (quem está logado) abre por padrão; a linha do Emanuel é a prévia
+  const linha = (id) => pagina.locator(`[data-teste="visao-linha"][data-pessoa="${id}"]`);
+  assert.equal(await linha('dono').getAttribute('data-aberto'), 'sim');
+  assert.match((await linha('emanuel').textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*[5-8]\/8.*planejou · 2\/3 feitas/);
+  await linha('emanuel').click();
+  const detalhe = pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="emanuel"]');
+  await detalhe.waitFor();
+  assert.equal(await pagina.locator('[data-teste="detalhe-pessoa"]').count(), 1, 'abre um por vez');
+  assert.equal(await detalhe.locator('[data-teste="habito-pessoa"]').count(), 8);
+  const hp = (n) => detalhe.locator(`[data-teste="habito-pessoa"][data-n="${n}"]`);
+  assert.match((await hp(1).textContent()).replace(/\s+/g, ' '), /1\s*Sonho.*2 sonhos no quadro · gratidão 1×/);
+  assert.equal(await hp(1).getAttribute('data-fez'), 'sim');
+  assert.match((await hp(6).textContent()).replace(/\s+/g, ' '), /1 captação · R\$ 50\.000,00/);
+  assert.equal(await hp(8).getAttribute('data-fez'), 'nao');
+  assert.match((await hp(8).textContent()).replace(/\s+/g, ' '), /não treinou ninguém/);
+  // o painel dela está dentro do detalhe, e o PDF sai de dois lugares (cabeçalho do detalhe e painel)
+  await detalhe.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();
+  assert.equal(await detalhe.locator('[data-teste="pdf-executivo"]').count(), 2);
+  // o Jean: não vendeu, sem quadro
+  await linha('jean').click();
+  const dj = pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="jean"]');
+  await dj.waitFor();
+  assert.match((await dj.locator('[data-teste="habito-pessoa"][data-n="6"]').textContent()).replace(/\s+/g, ' '), /não vendeu/);
+  assert.match((await dj.locator('[data-teste="habito-pessoa"][data-n="1"]').textContent()).replace(/\s+/g, ' '), /sem quadro e sem rotina/);
+  // semana: o Compromisso do Emanuel vira "acordou X de Y dias"
   await pagina.locator('[data-teste="periodo"] [data-periodo="semana"]').click();
   await pagina.locator('[data-teste="performance-equipe"][data-periodo="semana"]').waitFor();
-  await pagina.waitForFunction(() => /acordou 1 de 1 dia/.test(document.querySelector('[data-teste="habito"][data-n="2"]')?.textContent || ''));
+  await linha('emanuel').click();
+  await pagina.waitForFunction(() => /acordou 1 de 1 dia/.test(document.querySelector('[data-teste="detalhe-pessoa"] [data-teste="habito-pessoa"][data-n="2"]')?.textContent || ''));
   await pagina.locator('[data-teste="periodo"] [data-periodo="mes"]').click();
   await pagina.locator('[data-teste="performance-equipe"][data-periodo="mes"]').waitFor();
   assert.match((await oito.textContent()).replace(/\s+/g, ' '), /este mês/);
-  // clicar no chip da Carla abre o painel dela
-  await cartao(6).locator('[data-teste="chip"]', { hasText: 'Carla' }).first().click();
-  await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
+  // clicar de novo na linha aberta fecha
+  await linha('emanuel').click();
+  assert.equal(await pagina.locator('[data-teste="detalhe-pessoa"]').count(), 0);
+  await linha('carla').click();
+  await pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="carla"] [data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   await pagina.screenshot({ path: path.join(FOTOS, 'xperformance-oito-habitos.png'), fullPage: true });
   assert.deepEqual(erros, []);
   await ctx.close();
@@ -359,7 +377,7 @@ test('PDF DO EXECUTIVO: o botão do Painel Corporativo baixa o PDF da pessoa abe
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();
   const [download] = await Promise.all([
     pagina.waitForEvent('download'),
-    pagina.locator('[data-teste="pdf-executivo"]').click(),
+    pagina.locator('[data-teste="pdf-executivo"]').first().click(),
   ]);
   assert.equal(download.suggestedFilename(), 'x-performance-emanuel-silva-2026-09-07.pdf');
   const bytes = readFileSync(await download.path());
@@ -369,7 +387,7 @@ test('PDF DO EXECUTIVO: o botão do Painel Corporativo baixa o PDF da pessoa abe
   await pagina.getByText(/PDF de Emanuel pronto/).waitFor();
   // o texto pro WhatsApp
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await pagina.locator('[data-teste="pdf-texto"]').click();
+  await pagina.locator('[data-teste="pdf-texto"]').first().click();
   await pagina.getByText(/Texto copiado/).waitFor();
   const copiado = await pagina.evaluate(() => navigator.clipboard.readText());
   assert.match(copiado, /^\*X-Performance · Relatório do Executivo\*\n\*Emanuel Silva\* · Sócio Executivo · COO/);
