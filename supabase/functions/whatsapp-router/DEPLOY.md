@@ -122,8 +122,25 @@ supabase secrets set \
   6. **Invite o bot** nos canais onde vai postar/gerenciar:
      - Abra cada canal no Slack → `/invite @Heloim` (ou o nome que deu ao app)
      - Pronto — agora o bot consegue postar lá.
+     - ⚠️ Em canal **privado** o `/invite` é obrigatório mesmo com `chat:write.public`, e o
+       token precisa de `groups:read`. Sem os dois, o canal não aparece em
+       `conversations.list`, o nome não vira ID, e o upload da capa falha.
   7. Confira: no WhatsApp, mande **"Heloim, postar no slack"** no 1:1 (precisa ser admin).
      Ela pede qual canal e o que escrever, depois publica usando a ferramenta `postar_no_slack`.
+
+  **Quando der erro — o que cada mensagem quer dizer:**
+
+  | O que aparece | Causa real |
+  |---|---|
+  | `missing_scope` | falta o scope no Bot Token — adicione e **reinstale** o app |
+  | `channel_not_found` | o bot não foi convidado no canal, ou o ID está errado |
+  | `não consegui resolver o canal "X" para um ID` | o canal não apareceu em `conversations.list`: privado sem `/invite`, ou token sem `groups:read` |
+  | `invalid_arguments` em `files.completeUploadExternal` | mandou **nome** de canal onde só cabe **ID** — a partir de 06/09/2026 o código para antes, com a mensagem da linha acima |
+
+  ⚠️ 06/09/2026 — `invalid_arguments` no upload **não** é falta de `files:write`. A mensagem
+  antiga dizia isso e mandava conferir a permissão errada; a causa ficava três chamadas
+  antes, no canal que não virou ID. Confira o log da função: a linha
+  `[Slack] não encontrei o canal "..." na listagem` é a que importa.
 
 - `SLACK_CANAL_PADRAO` (opcional): destino dos registros automáticos da Heloim (solicitação
   criada / aprovada / rejeitada) quando ninguém escolhe canal. Padrão: `C0BHCMYJJGJ`, que é o
