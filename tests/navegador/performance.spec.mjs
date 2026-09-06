@@ -437,36 +437,94 @@ test('FAXINA: pra gestão, a pessoa vem primeiro; mentalidades, contas, encontro
   await ctx.close();
 });
 
-test('FUNÇÃO E EMPRESA: a função vem do painel de controle, pode ser trocada (CMO), a empresa e o "através da" gravam, e o dia da função é distribuído de uma vez', { skip: semNavegador }, async () => {
+test('FUNÇÃO E EMPRESA: a posição vem do painel de controle e a função do Documento Oficial (Emanuel → COO); pode ser trocada (CFO); a empresa e o "através da" gravam; o dia da função é distribuído de uma vez', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.locator('[data-teste="funcao-empresa"]').waitFor();
-  // Sócio Executivo no painel → a função com o dia dela
-  assert.match(await texto(pagina, '[data-teste="funcao-resumo"]'), /Sócio Executivo · Mentalidade do Executivo — entrega o resultado da própria mão/);
-  assert.equal(await modal.locator('[data-teste="dia-funcao"] li').count(), 6);
+  // a POSIÇÃO é a do painel (Sócio Executivo); a FUNÇÃO o documento sugere pelo nome: Emanuel Alves é o COO (p. 5, 21)
+  assert.equal(await texto(pagina, '[data-teste="posicao-painel"]'), 'Sócio Executivo');
+  assert.match(await texto(pagina, '[data-teste="funcao-resumo"]'), /COO · Diretor de Operações · Mentalidade do Diretor — entrega estratégia virando execução.*sugerida pelo Documento Oficial/);
+  assert.match(await texto(pagina, '[data-teste="cabecalho-pessoa"]'), /Sócio Executivo no painel de controle · função COO/);
+  assert.equal(await modal.locator('[data-teste="funcao"]').inputValue(), '', 'sugerida, não escolhida: o menu fica na sugestão');
+  assert.match(await modal.locator('[data-teste="funcao"] option').first().textContent(), /sugerida: COO/);
+  // o menu separa o Documento Oficial das funções do painel
+  assert.deepEqual(await modal.locator('[data-teste="funcao"] optgroup').evaluateAll((els) => els.map((e) => e.label)), ['Documento Oficial', 'Funções do painel de controle']);
+  assert.equal(await modal.locator('[data-teste="dia-funcao"] li').count(), 7, 'o dia do COO: 7 tarefas, com as 2 reuniões de investimento');
+  assert.equal(await modal.locator('[data-teste="dia-funcao"] li', { hasText: 'Reunião de investimento' }).count(), 2);
 
-  await modal.locator('[data-teste="funcao"]').selectOption('cmo');
+  // o dono decide: ela é a diretora financeira → CFO (o documento não tem CFO; fica dito)
+  await modal.locator('[data-teste="funcao"]').selectOption('cfo');
   await pagina.getByText(/painel atualizado/).waitFor();
-  assert.equal((await escritas(pagina)).at(-1).linhas[0].funcao_titulo, 'cmo');
-  await pagina.waitForFunction(() => /CMO \(marketing\)/.test(document.querySelector('[data-teste="funcao-resumo"]')?.textContent || ''));
+  assert.equal((await escritas(pagina)).at(-1).linhas[0].funcao_titulo, 'cfo');
+  await pagina.waitForFunction(() => /CFO · Diretor Financeiro/.test(document.querySelector('[data-teste="funcao-resumo"]')?.textContent || ''));
+  assert.equal(await modal.locator('[data-teste="funcao-oficial"]').getAttribute('data-origem'), 'escolhida');
+  assert.match(await texto(pagina, '[data-teste="funcao-oficial"]'), /Não consta no Documento Oficial/);
   await modal.locator('[data-teste="empresa"]').selectOption('leilao_no_zap');
-  await modal.locator('[data-teste="empresa-via"]').selectOption('top_tech_digital');
-  await pagina.waitForFunction(() => /Leilão no Zap, através da Top Tech Digital/.test(document.querySelector('[data-teste="funcao-resumo"]')?.textContent || ''));
+  await modal.locator('[data-teste="empresa-via"]').selectOption('to_the_top');
+  await pagina.waitForFunction(() => /Leilão no Zap, através da To The Top Corporate/.test(document.querySelector('[data-teste="funcao-resumo"]')?.textContent || ''));
   const gravadas = (await escritas(pagina)).filter((e) => e.tipo === 'upsert' && e.tabela === 'xgame_participantes').map((e) => e.linhas[0]);
   assert.ok(gravadas.some((l) => l.empresa === 'leilao_no_zap'));
-  assert.ok(gravadas.some((l) => l.empresa_via === 'top_tech_digital'));
+  assert.ok(gravadas.some((l) => l.empresa_via === 'to_the_top'));
   // as cinco do grupo estão no menu, a holding primeiro
   assert.deepEqual((await modal.locator('[data-teste="empresa"] option').allTextContents()).slice(1), ['To The Top Corporate', 'X-EOS', 'Top Tech Digital', 'Leilão no Zap', 'Human Bank']);
 
-  // o dia do CMO, distribuído de uma vez pra hoje
+  // o dia do CFO, distribuído de uma vez pra hoje
   await modal.locator('[data-teste="gerar-dia-funcao"]').click();
-  await pagina.getByText(/CMO \(marketing\): 6 tarefas do dia distribuídas pra Emanuel Silva/).waitFor();
+  await pagina.getByText(/CFO · Diretor Financeiro: 4 tarefas do dia distribuídas pra Emanuel Silva/).waitFor();
   const e = (await escritas(pagina)).at(-1);
   assert.equal(e.tabela, 'metodo_tarefas');
-  assert.equal(e.linhas.length, 6);
-  assert.deepEqual([e.linhas[0].hora, e.linhas[0].mentalidade, e.linhas[0].origem, e.linhas[0].data], ['08:30', 'diretor', 'xperf', '2026-09-07']);
-  assert.ok(e.linhas.every((l) => l.prazo_em && /Tarefa da função CMO/.test(l.detalhe)));
+  assert.equal(e.linhas.length, 4);
+  assert.deepEqual([e.linhas[0].hora, e.linhas[0].mentalidade, e.linhas[0].origem, e.linhas[0].data], ['08:30', 'ceo', 'xperf', '2026-09-07']);
+  assert.ok(e.linhas.every((l) => l.prazo_em && /Tarefa da função CFO/.test(l.detalhe)));
+  await ctx.close();
+});
+
+test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis; as cinco camadas com os números dela; o Score Executivo com a linha dos 80% e a escada', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  const oficial = modal.locator('[data-teste="funcao-oficial"]');
+  await oficial.waitFor();
+  assert.equal(await oficial.getAttribute('data-funcao'), 'coo');
+  assert.equal(await oficial.getAttribute('data-origem'), 'documento');
+  const t = (await oficial.textContent()).replace(/\s+/g, ' ');
+  assert.match(t, /COO · Chief Operating Officer · Diretor de Operações/);
+  assert.match(t, /missão: Transformar estratégia em execução\. · dono da execução/);
+  assert.match(t, /titular no documento: Emanuel Alves · budget R\$ 7\.000,00\/mês/);
+  assert.match(t, /Captação R\$ 150\.000,00 por mês · R\$ 900\.000,00 no ciclo/);
+  assert.match(t, /1 ponto de retirada por mês \(6 em 6 meses\)/);
+  assert.match(t, /Documento p\. 5, 21/);
+  // as cinco camadas: fixo 7.000; carteira = o aporte de set (50 mil) + nada velho demais → R$ 500/mês; pool só quando estiver na Diretoria Operacional; equity 0,5% = R$ 125 mil
+  const camadas = modal.locator('[data-teste="modelo-economico"]');
+  assert.equal(await texto(pagina, '[data-teste="camada-funcao"]'), 'R$ 7.000,00');
+  assert.equal(await texto(pagina, '[data-teste="camada-carteira"]'), 'R$ 500,00/mês');
+  assert.match((await camadas.textContent()).replace(/\s+/g, ' '), /carteira construída R\$ 50\.000,00 × 1% a\.m\./);
+  assert.equal(await texto(pagina, '[data-teste="camada-pool"]'), '—');
+  assert.equal(await texto(pagina, '[data-teste="camada-equity"]'), 'R$ 125.000,00');
+  assert.match((await camadas.textContent()).replace(/\s+/g, ' '), /R\$ 100 mi → R\$ 500\.000,00/);
+  assert.equal(await texto(pagina, '[data-teste="camada-governanca"]'), 'por convite');
+  // o Score: sem meta ainda → resultado sem dado; sem card no quadro → entregáveis sem dado; a Gratidão feita e a Estudo (bônus) não são H8 nem mentoria
+  const score = modal.locator('[data-teste="score-executivo"]');
+  await score.waitFor();
+  const partes = await score.locator('[data-parte]').allTextContents();
+  assert.match(partes[0], /sem dado/);
+  assert.match(partes[1], /sem dado/);
+  assert.match(partes[4], /100%/, 'organização: o dia 04/09 foi planejado (tarefas da rotina), o único dia passado com tarefa');
+  assert.equal(await score.getAttribute('data-score'), '10');
+  assert.match((await score.textContent()).replace(/\s+/g, ' '), /faltam 70 pontos pra linha dos 80%/);
+  // a escada: sem tarefa de formação no ciclo e sem posição do painel → degrau 1 (Top College + X-EOS); o próximo é a trilha
+  assert.equal(await score.getAttribute('data-degrau'), '1');
+  assert.match(await modal.locator('[data-teste="escada"] [data-atual="sim"]').textContent(), /1\. Top College \+ X-EOS/);
+  assert.match((await score.textContent()).replace(/\s+/g, ' '), /próximo degrau: Mentalidade do Diretor \+ CEO/);
+  await pagina.screenshot({ path: path.join(FOTOS, 'performance-pessoa-oficial.png'), fullPage: true });
+  // a semana oficial na aba Semana: segunda 9h–12h, as lives, a Conexão Sexta
+  await aba(modal, 'semana');
+  const rituais = (await texto(pagina, '[data-teste="rituais-semana"]')).replace(/\s+/g, ' ');
+  assert.match(rituais, /09\/2026: Estruturação/);
+  assert.match(rituais, /▸ Bloco 1 — Formação 09:00–10:00/, 'hoje é segunda: os blocos da manhã estão acesos');
+  assert.match(rituais, /▸ Live comercial/);
+  assert.match(rituais, /• Conexão Sexta \(opcional\)/);
+  await pagina.screenshot({ path: path.join(FOTOS, 'performance-documento-oficial.png'), fullPage: true });
   await ctx.close();
 });
 
@@ -539,15 +597,17 @@ test('METAS: o modelo da função entra com um toque; progresso sai das tarefas 
   const { pagina, ctx } = await abrir();
   const modal = await abrirQuadroGeral(pagina);
   await aba(modal, 'metas');
+  assert.match(await modal.locator('[data-teste="metas-modelo"]').textContent(), /usar o modelo da função \(Documento Oficial\)/);
   await modal.locator('[data-teste="metas-modelo"]').click();
   await pagina.getByText(/4 metas do modelo entraram/).waitFor();
   await modal.locator('[data-teste="meta"]').first().waitFor();
   const linhas = (await modal.locator('[data-teste="meta"]').allTextContents()).map((t) => t.replace(/\s+/g, ' '));
-  assert.equal(linhas.length, 4);
-  // faturamento: as duas vendas pagas de setembro = R$ 2.000 de 30.000
-  assert.match(linhas.find((l) => /Faturamento/.test(l)), /R\$ 2\.000,00 de/);
-  // contatos: a Gratidão feita em 04/09 é Hábito 1, não conta; 0 contatos → atrás do ritmo
-  assert.match(linhas.find((l) => /Contatos feitos/.test(l)), /0 de .*atrás do ritmo/);
+  assert.equal(linhas.length, 4, 'o COO: captação, reuniões de investimento, pontos de retirada, lojas');
+  assert.equal(await modal.locator('[data-teste="meta-oficial"]').count(), 4, 'as quatro são do Documento Oficial');
+  // captação: o aporte fechado em 05/09 (R$ 50 mil) de 150 mil — dia 07 é 23% do mês, 33% feito → no ritmo
+  assert.match(linhas.find((l) => /Captação de capital/.test(l)), /R\$ 50\.000,00 de .*33% · no ritmo/);
+  // reuniões de investimento: nenhuma tarefa de Hábito 5 feita → 0 de 44, atrás do ritmo
+  assert.match(linhas.find((l) => /Reuniões de investimento/.test(l)), /0 de .*atrás do ritmo/);
   // meta de produto
   await modal.locator('[data-teste="meta-tipo"]').selectOption('produto');
   await modal.locator('[data-teste="meta-produto"]').fill('Kit Solar');
@@ -572,8 +632,9 @@ test('PROGRAMA: sete meses de set/2026 a mar/2027, na mentalidade da pessoa; acr
   await aba(modal, 'programa');
   await modal.locator('[data-teste="programa-meses"]').waitFor();
   assert.deepEqual(await modal.locator('[data-teste="programa-meses"] button').allTextContents(), ['set/2026', 'out/2026', 'nov/2026', 'dez/2026', 'jan/2027', 'fev/2027', 'mar/2027']);
-  // setembro (o mês de hoje) abre: Sonho e Compromisso, executivo (Emanuel é Sócio Executivo)
-  assert.match(await texto(pagina, '[data-teste="aba-programa"]'), /set\/2026 · Sonho e Compromisso/);
+  // setembro (o mês de hoje) abre: Sonho e Compromisso + a fase oficial do ciclo; diretor (Emanuel é o COO)
+  assert.match(await texto(pagina, '[data-teste="aba-programa"]'), /set\/2026 · Sonho e Compromisso · Estruturação/);
+  assert.match(await texto(pagina, '[data-teste="aba-programa"]'), /ciclo oficial: formação, estruturação, preparação da Distribuidora/);
   assert.equal(await modal.locator('[data-teste="programa-entregaveis"] li').count(), 2);
   // acrescentar um
   await modal.locator('[data-teste="programa-titulo"]').fill('Abrir a loja do Centro');
@@ -584,13 +645,13 @@ test('PROGRAMA: sete meses de set/2026 a mar/2027, na mentalidade da pessoa; acr
   assert.equal(g.tipo, 'upsert');
   assert.equal(g.linhas[0].mes, '2026-09');
   assert.equal(g.linhas[0].entregaveis.length, 7, '2 executivo + 2 diretor + 2 ceo do padrão + o novo');
-  assert.ok(g.linhas[0].entregaveis.some((e) => e.titulo === 'Abrir a loja do Centro' && e.mentalidade === 'executivo' && e.habito === 5));
+  assert.ok(g.linhas[0].entregaveis.some((e) => e.titulo === 'Abrir a loja do Centro' && e.mentalidade === 'diretor' && e.habito === 5));
   assert.match(await texto(pagina, '[data-teste="aba-programa"]'), /editado por você/);
   // pôr no quadro dela: 3 cards em xperf_entregaveis, prazo 30/09
   await modal.locator('[data-teste="programa-gerar"]').click();
   await pagina.getByText(/3 entregáveis de set\/2026 no quadro de Emanuel Silva/).waitFor();
   const cards = (await escritas(pagina)).filter((x) => x.tabela === 'xperf_entregaveis').at(-1).linhas;
-  assert.deepEqual([cards[0].dono_id, cards[0].coluna, cards[0].prazo, cards[0].trilha], ['emanuel', 'combinado', '2026-09-30', 'executivo']);
+  assert.deepEqual([cards[0].dono_id, cards[0].coluna, cards[0].prazo, cards[0].trilha], ['emanuel', 'combinado', '2026-09-30', 'diretor']);
   await pagina.waitForFunction(() => [...document.querySelectorAll('[data-teste="programa-entregaveis"] li')].every((li) => /combinado/.test(li.textContent)));
   // tirar um: grava de novo sem ele
   await modal.getByRole('button', { name: /remover Abrir a loja do Centro/ }).click();

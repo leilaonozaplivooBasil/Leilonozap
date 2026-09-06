@@ -15,8 +15,10 @@ import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
-import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES, funcaoDaPessoa, montarDiaDaFuncao } from '@/lib/funcoes';
-import { semaforo, mesDe } from '@/lib/metasPessoa';
+import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES_OFICIAIS, FUNCOES_DO_PAINEL, funcaoDaPessoaComOrigem, montarDiaDaFuncao } from '@/lib/funcoes';
+import { CartaoFuncaoOficial, ModeloEconomico, ScoreEscada } from '@/components/licensing/CentralVendas/PainelOficial';
+import { getLevel, normalizeLevels } from '@/lib/careerLevels';
+import { semaforo, mesDe, fracoesDoScore } from '@/lib/metasPessoa';
 import { useMetasDaPessoa, AbaMetas, AbaPrograma, AbaSemana, AbaQuadro, AbaHistorico, ABAS } from '@/components/licensing/CentralVendas/QuadroGeralAbas';
 import ComprovacoesPainel from '@/components/licensing/CentralVendas/Comprovacoes';
 import { portoesDaSociedade } from '@/lib/xperformance';
@@ -250,7 +252,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const carregar = useCallback(async () => {
     const [p, u, c, a] = await Promise.all([
       supabase.from('xgame_participantes').select('*').eq('ativo', true).order('created_date'),
-      supabase.from('app_users').select('id,full_name,nickname,role,career_levels,phone').order('full_name'),
+      supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level,phone').order('full_name'),
       supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
       supabase.from('xperf_acoes').select('*').order('titulo'),
     ]);
@@ -290,7 +292,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     supabase.from('xperf_entregaveis').select('*').eq('dono_id', pessoaFixo).then(({ data }) => setEntregaveisDaPessoa(data || []));
   }, [modalAberto, pessoaFixo]);
   // a função de trabalho (com o dia dela): a escolhida no painel da pessoa, ou a do nível do painel de controle
-  const funcaoTrabalho = (id) => funcaoDaPessoa({ funcaoTitulo: participanteDe(id)?.funcao_titulo, nivel: equipe.find((p) => p.id === id)?.nivel });
+  // (a função NÃO é o nível: Diretor Operacional é posição; COO é trabalho — o
+  // documento sugere pelo nome, o dono decide no painel da pessoa)
+  const funcaoComOrigem = (id) => funcaoDaPessoaComOrigem({ funcaoTitulo: participanteDe(id)?.funcao_titulo, nivel: equipe.find((p) => p.id === id)?.nivel, nome: usuarios.find((u) => u.id === id)?.full_name || nomeDe(id) });
+  const funcaoTrabalho = (id) => funcaoComOrigem(id).funcao;
+  const niveisDe = (id) => { const u = usuarios.find((x) => x.id === id); return normalizeLevels([...(Array.isArray(u?.career_levels) ? u.career_levels : []), u?.primary_career_level].filter(Boolean)); };
   // a mentalidade: a escolhida; senão a que a régua lê no texto da ação;
   // com o campo vazio, a trilha da pessoa (pelo cargo)
   const lida = classificarAcao(nova.titulo);
@@ -811,27 +817,37 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               <div className="flex items-start justify-between gap-2" hidden={abaModal !== 'pessoa'}>
                 <div className="min-w-0">
                   <p className="text-[15px] font-extrabold truncate">{nomeDe(pessoaFixo)}</p>
-                  <p className="text-[11px] text-white/45">{funcaoTrabalho(pessoaFixo)?.nome || funcaoDe(pessoaFixo)}{base.empresa ? ` · ${rotuloDaEmpresa(base.empresa, base.empresa_via)}` : ''} <span className="text-white/25">· {participanteDe(pessoaFixo)?.funcao_titulo ? 'função escolhida aqui' : 'função do painel de controle'}</span></p>
+                  <p className="text-[11px] text-white/45" data-teste="cabecalho-pessoa">
+                    <span className="text-white/70">{funcaoDe(pessoaFixo)}</span> <span className="text-white/25">no painel de controle</span>
+                    {funcaoTrabalho(pessoaFixo) ? <> · função <span className="text-white/70">{funcaoTrabalho(pessoaFixo).curto || funcaoTrabalho(pessoaFixo).nome}</span></> : <span className="text-amber-300/80"> · sem função</span>}
+                    {base.empresa ? ` · ${rotuloDaEmpresa(base.empresa, base.empresa_via)}` : ''}
+                  </p>
                 </div>
               </div>
 
               <div hidden={abaModal !== 'pessoa'} data-teste="aba-pessoa">
               {/* 🏢 função e empresa — de onde sai o dia da pessoa */}
               {(() => {
-                const f = funcaoTrabalho(pessoaFixo);
+                const { funcao: f, origem } = funcaoComOrigem(pessoaFixo);
                 const nivel = equipe.find((p) => p.id === pessoaFixo)?.nivel;
                 return (
                   <div className="mt-3 rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="funcao-empresa">
                     <div className="flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1" title="a posição no painel de controle — não é a função"><UserRound className="w-3 h-3" /> posição <span className="normal-case text-white/70" data-teste="posicao-painel">{nivel ? getLevel(nivel).name : '—'}</span></span>
                       <label className="inline-flex items-center gap-1"><BriefcaseBusiness className="w-3 h-3" /> função
                         <select
-                          value={f?.id || ''}
+                          value={participanteDe(pessoaFixo)?.funcao_titulo ? (f?.id || '') : ''}
                           onChange={(e) => salvarFixo(base, { funcao_titulo: e.target.value || null })}
                           className={`ml-1 ${campo} normal-case`}
                           data-teste="funcao"
                         >
-                          <option value="">{nivel ? `(a do painel: ${funcaoDe(pessoaFixo)})` : 'escolha…'}</option>
-                          {FUNCOES.map((x) => <option key={x.id} value={x.id}>{x.nome}{x.nivel ? '' : ' · fora do painel'}</option>)}
+                          <option value="">{f && origem !== 'escolhida' ? `(sugerida: ${f.curto || f.nome})` : 'escolha…'}</option>
+                          <optgroup label="Documento Oficial">
+                            {FUNCOES_OFICIAIS.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                          </optgroup>
+                          <optgroup label="Funções do painel de controle">
+                            {FUNCOES_DO_PAINEL.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                          </optgroup>
                         </select>
                       </label>
                       <label className="inline-flex items-center gap-1"><Building2 className="w-3 h-3" /> empresa
@@ -848,7 +864,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                       </label>
                     </div>
                     <p className="mt-1.5 text-[11px] text-white/60" data-teste="funcao-resumo">
-                      {f ? <><span className="text-white font-bold">{f.nome}</span> · {mentalidadeDe(f.mentalidade)?.nome} — entrega {f.entrega}</> : 'sem função com dia definido — escolha acima'}
+                      {f ? <><span className="text-white font-bold">{f.nome}</span> · {mentalidadeDe(f.mentalidade)?.nome} — entrega {f.entrega}{origem === 'documento' ? <span className="text-white/35"> · sugerida pelo Documento Oficial</span> : null}</> : 'sem função com dia definido — escolha acima'}
                       {base.empresa && <span className="text-white/40"> · trabalha pro <span className="text-white/70">{rotuloDaEmpresa(base.empresa, base.empresa_via)}</span>{empresaDe(base.empresa)?.pilar ? <span className="text-white/30"> ({empresaDe(base.empresa).pilar})</span> : null}</span>}
                     </p>
                     {f && (
@@ -867,6 +883,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   </div>
                 );
               })()}
+
+              {/* 📜 a função no Documento Oficial: missão, metas, entregáveis, cadência */}
+              <CartaoFuncaoOficial funcao={funcaoTrabalho(pessoaFixo)} origem={funcaoComOrigem(pessoaFixo).origem} nivel={equipe.find((p) => p.id === pessoaFixo)?.nivel} fixoMes={base.temFixo ? Number(base.fixo_mes) : null} />
 
               <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-[11px] text-white/50 tabular-nums"><span className="text-white font-bold text-[14px]" data-teste="valor-dia-pessoa">{fmtReais(r.valorDia)}</span> / dia de operação</p>
@@ -905,10 +924,13 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   : ' · dia completo'}
               </p>
 
+              {/* 💰 as cinco camadas do modelo econômico, com os números dela */}
+              <ModeloEconomico fixoMes={base.temFixo ? Number(base.fixo_mes) : null} carteira={metasInfo.carteira} niveis={niveisDe(pessoaFixo)} />
+
               {/* 🚪 os três portões da sociedade desta pessoa */}
               {(() => {
                 const p = portoesDaSociedade({ entregaveis: entregaveisDaPessoa, pessoaId: pessoaFixo, hojeISO: hoje });
-                return (
+                return (<>
                   <div className="mt-3 rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="portoes-pessoa">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">Caminho pra sociedade</p>
@@ -923,7 +945,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                       ))}
                     </div>
                   </div>
-                );
+                  {/* 📊 o Score Executivo e a escada de ascensão */}
+                  <ScoreEscada
+                    fracoes={fracoesDoScore({ progresso: metasInfo.progresso, entregaveis: entregaveisDaPessoa, tarefasCiclo, pessoaId: pessoaFixo, hojeISO: hoje, cicloInicio: diasCiclo[0] || null })}
+                    niveis={niveisDe(pessoaFixo)} portoesAbertos={p.abertos} emFormacao={tarefasCiclo.some((t) => t.user_id === pessoaFixo && (t.categoria || '') === 'mentoria')}
+                  />
+                </>);
               })()}
 
               {/* 🗓️ o planejamento do dia: gerou ou não gerou? */}
@@ -1079,7 +1106,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
             >
               <option value="">escolha a pessoa…</option>
               {equipe.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome} · {funcaoTrabalho(p.id)?.nome || p.funcao}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
+                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{funcaoTrabalho(p.id) && (funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome) !== p.funcao ? ` · ${funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome}` : ''}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
               ))}
             </select>
             <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">

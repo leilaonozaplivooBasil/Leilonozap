@@ -52,6 +52,12 @@ window.__bancoFalso = {
     xperf_metas: [],
     xperf_programa: [],
     xperf_entregaveis: [],
+    // 💰 captação do Emanuel (COO no Documento Oficial): um aporte fechado em setembro, um velho e um a caminho
+    captacao_oportunidades: [
+      { id: 'o1', cliente_nome: 'Investidor A', responsavel_id: 'emanuel', estagio: 'fechado_100', valor_previsto: 50000, fechado_em: '2026-09-05T15:00:00Z' },
+      { id: 'o2', cliente_nome: 'Investidor B', responsavel_id: 'emanuel', estagio: 'fechado_100', valor_previsto: 40000, fechado_em: '2025-03-10T15:00:00Z' },
+      { id: 'o3', cliente_nome: 'Investidor C', responsavel_id: 'emanuel', estagio: 'fechado_99', valor_previsto: 100000 },
+    ],
   },
 };
 

@@ -9,29 +9,54 @@
 // é Hábito 5; fechamento e contrato são Hábito 6. Faturamento e produto
 // vêm de catalog_sales. Assim a meta e o dia da pessoa falam a mesma língua.
 import { DIAS_FIXO } from './distribuicaoFixo.js';
+import { CARGOS_OFICIAIS } from './documentoOficial.js';
 
+// O PROGRESSO de cada chave sai de uma FONTE — nunca é digitado:
+//   habito   → tarefas feitas da pessoa no mês com aquele Hábito;
+//   vendas   → catalog_sales pagas (faturamento, produto);
+//   captacao → captacao_oportunidades fechadas (fechado_100) do responsável no mês;
+//   cadastros→ app_users novos no mês (por nível, recrutados pela pessoa; ou a plataforma inteira);
 export const CHAVES = [
-  { chave: 'contatos', rotulo: 'Contatos feitos', habito: 4, unidade: 'no mês' },
-  { chave: 'reunioes', rotulo: 'Reuniões / apresentações', habito: 5, unidade: 'no mês' },
-  { chave: 'fechamentos', rotulo: 'Fechamentos', habito: 6, unidade: 'no mês' },
-  { chave: 'contratos', rotulo: 'Contratos', habito: 6, unidade: 'no mês' },
-  { chave: 'treinamentos', rotulo: 'Treinamentos dados', habito: 8, unidade: 'no mês' },
-  { chave: 'faturamento', rotulo: 'Faturamento', habito: null, unidade: 'R$' },
+  { chave: 'contatos', rotulo: 'Contatos feitos', habito: 4, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'reunioes', rotulo: 'Reuniões / apresentações', habito: 5, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'reunioes_investimento', rotulo: 'Reuniões de investimento', habito: 5, unidade: 'no mês', fonte: 'habito', nota: '2 por dia × 22 dias produtivos (Documento p. 16)' },
+  { chave: 'fechamentos', rotulo: 'Fechamentos', habito: 6, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'contratos', rotulo: 'Contratos', habito: 6, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'parcerias', rotulo: 'Parcerias estratégicas', habito: 6, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'pontos_retirada', rotulo: 'Pontos de retirada abertos', habito: 6, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'lojas', rotulo: 'Lojas físicas abertas', habito: 6, unidade: 'a cada 2 meses', fonte: 'habito' },
+  { chave: 'treinamentos', rotulo: 'Treinamentos dados', habito: 8, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'encontros_formacao', rotulo: 'Encontros de formação conduzidos', habito: 8, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'lives', rotulo: 'Lives comerciais', habito: 5, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'fechamentos_caixa', rotulo: 'Fechamentos de caixa', habito: 7, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'entregas_tecnicas', rotulo: 'Entregas técnicas publicadas', habito: 6, unidade: 'no mês', fonte: 'habito' },
+  { chave: 'captacao', rotulo: 'Captação de capital', habito: null, unidade: 'R$', fonte: 'captacao' },
+  { chave: 'vendedores', rotulo: 'Vendedores novos', habito: null, unidade: 'no mês', fonte: 'cadastros', nivel: 'vendedor' },
+  { chave: 'licenciados', rotulo: 'Licenciados novos', habito: null, unidade: 'no mês', fonte: 'cadastros', nivel: 'licenciado' },
+  { chave: 'influenciadores', rotulo: 'Influenciadores novos', habito: null, unidade: 'no mês', fonte: 'cadastros', nivel: 'influenciador' },
+  { chave: 'entradas', rotulo: 'Novas pessoas no ecossistema', habito: null, unidade: 'no mês', fonte: 'cadastros', nivel: null, plataforma: true },
+  { chave: 'cadastros', rotulo: 'Cadastros no Ranking', habito: null, unidade: 'no mês', fonte: 'cadastros', nivel: null, plataforma: true },
+  { chave: 'faturamento', rotulo: 'Faturamento', habito: null, unidade: 'R$', fonte: 'vendas' },
 ];
 export const chaveDe = (id) => CHAVES.find((c) => c.chave === id) || null;
 
-/** O modelo de metas do mês por função — o ponto de partida, editável. */
-export const METAS_MODELO = {
+// ── o modelo por função ──
+// As funções OFICIAIS puxam as metas do Documento Oficial (documentoOficial.js):
+// captação por executivo (p. 14), 44 reuniões de investimento (p. 16), 20
+// vendedores / 5 licenciados / 30 influenciadores (p. 22), 2 parcerias (p. 25),
+// 1 ponto de retirada por mês e 1 loja a cada 2 meses (p. 21), 1.000
+// pessoas/dia (p. 24)… Onde o documento não dá número, a linha vem marcada
+// `oficial: false` (sugestão) e o dono ajusta. As funções do painel (Sócio
+// Executivo, Livoo Live, Embaixador) seguem a sugestão de sempre.
+const SUGESTOES_DO_PAINEL = {
   socio_executivo: [['contatos', 20 * DIAS_FIXO], ['reunioes', 3 * DIAS_FIXO], ['fechamentos', 12], ['faturamento', 30000]],
-  diretor_operacoes: [['reunioes', 20], ['treinamentos', DIAS_FIXO], ['fechamentos', 40], ['faturamento', 150000]],
-  diretoria_executiva: [['reunioes', 12], ['treinamentos', 8], ['contratos', 10], ['faturamento', 400000]],
-  ceo: [['treinamentos', 8], ['contratos', 6], ['faturamento', 1000000]],
-  livoo_live: [['reunioes', DIAS_FIXO], ['treinamentos', 8], ['faturamento', 80000]],
-  embaixador: [['contatos', 10 * DIAS_FIXO], ['reunioes', 20], ['contratos', 6], ['faturamento', 60000]],
-  cmo: [['treinamentos', 8], ['reunioes', 12], ['contatos', 200]],
-  cto: [['treinamentos', 4], ['reunioes', 12]],
-  cfo: [['reunioes', 12], ['contratos', 10]],
+  livoo_live: [['lives', 20], ['treinamentos', 8], ['faturamento', 80000]],
+  embaixador: [['contatos', 10 * DIAS_FIXO], ['reunioes', 20], ['influenciadores', 10], ['contratos', 6], ['faturamento', 60000]],
 };
+export const METAS_MODELO = Object.fromEntries([
+  ...CARGOS_OFICIAIS.map((c) => [c.id, c.metas.map((m) => [m.chave, m.alvo, m.oficial, m.nota])]),
+  ...Object.entries(SUGESTOES_DO_PAINEL).map(([id, lista]) => [id, lista.map(([chave, alvo]) => [chave, alvo, false, null])]),
+]);
 
 /** As metas do modelo de uma função, prontas pra gravar. */
 export function metasDoModelo(funcaoId, { userId, mes, criadoPorId = null } = {}) {
@@ -39,6 +64,11 @@ export function metasDoModelo(funcaoId, { userId, mes, criadoPorId = null } = {}
     const c = chaveDe(chave);
     return { user_id: userId, mes, tipo: 'numero', chave, rotulo: c?.rotulo || chave, alvo, unidade: c?.unidade || 'no mês', criado_por_id: criadoPorId };
   });
+}
+
+/** O modelo com a marca de onde veio cada linha (documento oficial ou sugestão). */
+export function modeloDaFuncao(funcaoId) {
+  return (METAS_MODELO[funcaoId] || []).map(([chave, alvo, oficial, nota]) => ({ chave, alvo, oficial: !!oficial, nota: nota || null, rotulo: chaveDe(chave)?.rotulo || chave, unidade: chaveDe(chave)?.unidade || 'no mês' }));
 }
 
 /** Quanto do mês já passou (0..1), pelos dias corridos. */
@@ -59,15 +89,22 @@ const valorDaVenda = (s) => Number(s?.total_amount ?? s?.total ?? s?.amount ?? s
  * `tarefasDoMes` = as tarefas FEITAS da pessoa no mês (com habito);
  * `vendasDoMes` = as vendas pagas da pessoa no mês.
  */
-export function progressoDasMetas({ metas = [], tarefasDoMes = [], vendasDoMes = [], mes, hojeISO } = {}) {
+export function progressoDasMetas({ metas = [], tarefasDoMes = [], vendasDoMes = [], oportunidadesDoMes = [], cadastrosDoMes = [], pessoaId = null, mes, hojeISO } = {}) {
   const ritmo = ritmoDoMes(mes, hojeISO);
   const feitasPorHabito = {};
   for (const t of tarefasDoMes) { if (t?.feito && t.habito) feitasPorHabito[t.habito] = (feitasPorHabito[t.habito] || 0) + 1; }
+  // captação fechada no mês (fechado_100) — o valor previsto da oportunidade
+  const captado = (Array.isArray(oportunidadesDoMes) ? oportunidadesDoMes : []).filter((o) => o?.estagio === 'fechado_100').reduce((s, o) => s + (Number(o.valor_previsto) || 0), 0);
+  const nivelDe = (u) => (u?.primary_career_level || (Array.isArray(u?.career_levels) ? u.career_levels[0] : null) || '').toString();
+  const recrutadoPor = (u) => u?.recruited_by_id || u?.referred_by_id || null;
   return (Array.isArray(metas) ? metas : []).map((m) => {
     let feito = 0;
+    const c = chaveDe(m.chave);
     if (m.tipo === 'produto') feito = vendasDoMes.filter((v) => v.product_id === m.produto_id || v.produto_id === m.produto_id).reduce((s, v) => s + (Number(v.quantity ?? v.quantidade ?? 1) || 1), 0);
     else if (m.chave === 'faturamento') feito = vendasDoMes.reduce((s, v) => s + valorDaVenda(v), 0);
-    else { const c = chaveDe(m.chave); feito = c?.habito ? (feitasPorHabito[c.habito] || 0) : 0; }
+    else if (c?.fonte === 'captacao') feito = captado;
+    else if (c?.fonte === 'cadastros') feito = (Array.isArray(cadastrosDoMes) ? cadastrosDoMes : []).filter((u) => (c.plataforma || !pessoaId || recrutadoPor(u) === pessoaId) && (!c.nivel || nivelDe(u) === c.nivel)).length;
+    else feito = c?.habito ? (feitasPorHabito[c.habito] || 0) : 0;
     const alvo = Number(m.alvo) || 0;
     const pct = alvo > 0 ? Math.min(999, Math.round((feito / alvo) * 100)) : 0;
     const esperado = alvo * ritmo;
@@ -89,3 +126,43 @@ export function semaforo({ planejou = true, atrasadas = 0, metasForaDoRitmo = 0,
 
 /** O mês em 'YYYY-MM' de um dia ISO. */
 export const mesDe = (iso) => String(iso || '').slice(0, 7);
+
+// ── 📊 as cinco frações do Score Executivo (Documento p. 42), lidas do que a pessoa fez ──
+//   resultado    → a média do % das metas do mês (teto 100% cada);
+//   entregaveis  → cards entregues ÷ cards do quadro da diretoria (xperf_entregaveis);
+//   equipe       → tarefas de Hábito 8 (duplicação/treinamento) feitas ÷ planejadas no ciclo;
+//   cultura      → tarefas de formação (categoria mentoria) feitas ÷ planejadas no ciclo;
+//   organizacao  → dias com planejamento gerado ÷ dias de operação já passados no ciclo.
+// `null` = sem dado ainda (o score mostra "sem dado" em vez de zero escondido).
+export function fracoesDoScore({ progresso = [], entregaveis = [], tarefasCiclo = [], pessoaId, hojeISO, cicloInicio } = {}) {
+  const metas = progresso.filter((m) => Number(m.alvo) > 0);
+  const resultado = metas.length ? metas.reduce((s, m) => s + Math.min(1, (Number(m.feito) || 0) / Number(m.alvo)), 0) / metas.length : null;
+  const cards = entregaveis.filter((e) => !pessoaId || e.dono_id === pessoaId);
+  const entregues = cards.filter((e) => e.coluna === 'entregue').length;
+  const minhas = tarefasCiclo.filter((t) => !pessoaId || t.user_id === pessoaId);
+  const h8 = minhas.filter((t) => Number(t.habito) === 8);
+  const formacao = minhas.filter((t) => (t.categoria || '') === 'mentoria');
+  const razao = (lista) => (lista.length ? lista.filter((t) => t.feito).length / lista.length : null);
+  const dias = [...new Set(minhas.map((t) => String(t.data).slice(0, 10)))];
+  const passados = dias.filter((d) => d <= String(hojeISO || '') && (!cicloInicio || d >= cicloInicio));
+  const planejados = passados.filter((d) => {
+    const doDia = minhas.filter((t) => String(t.data).slice(0, 10) === d);
+    return doDia.some((t) => (t.origem || '') !== 'xperf');
+  });
+  return {
+    resultado,
+    entregaveis: cards.length ? entregues / cards.length : null,
+    equipe: razao(h8),
+    cultura: razao(formacao),
+    organizacao: passados.length ? planejados.length / passados.length : null,
+  };
+}
+
+/** A carteira de capital construída pela pessoa: o que fechou (fechado_100) nos últimos 12 meses — contratos de 12 meses (Documento p. 11). */
+export function carteiraDeCapital(oportunidades = [], hojeISO) {
+  const limite = hojeISO ? new Date(`${hojeISO}T12:00:00`) : new Date();
+  limite.setFullYear(limite.getFullYear() - 1);
+  return (Array.isArray(oportunidades) ? oportunidades : [])
+    .filter((o) => o?.estagio === 'fechado_100' && (!o.fechado_em || new Date(o.fechado_em) >= limite))
+    .reduce((s, o) => s + (Number(o.valor_previsto) || 0), 0);
+}
