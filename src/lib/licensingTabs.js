@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, GraduationCap, UserRound } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -142,7 +142,9 @@ export function getLicensingGroups(user) {
       { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
-        { type: 'link', to: '/Metas', label: 'Metas', icon: Target },
+        // 🎯 06/09/2026 — "Metas" saiu do menu: "acaba com ela e joga pra
+        // dentro". As metas de cada pessoa moram no Quadro Geral dela, no
+        // X-Performance. A rota /Metas continua existindo pra link antigo.
         // 🎮 06/09/2026 — o Admin X-GAME deixou de ser item do menu: virou a
         // GESTÃO dentro do X-Performance ("junta o admin do X-Game com o
         // X-Performance, que lá eu já administro a gamificação e as demandas").

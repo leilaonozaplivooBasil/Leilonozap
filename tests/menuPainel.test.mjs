@@ -28,10 +28,10 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     // X-Performance (ordem do dono). O super admin vê a mesma lista que os
     // outros; o que muda pra ele é o que abre na aba X-Performance.
     assert.deepEqual(valores(tc.items), [
-      'catalogo', 'catalogo', 'catalogo', 'plano-carreira', '/Evoluir', '/Metas',
+      'catalogo', 'catalogo', 'catalogo', 'plano-carreira', '/Evoluir',
     ]);
     const rotulos = tc.items.map((i) => i.label);
-    assert.deepEqual(rotulos, ['O Método', 'Time', 'X-Performance', 'Carreira', 'Evoluir Nível', 'Metas']);
+    assert.deepEqual(rotulos, ['O Método', 'Time', 'X-Performance', 'Carreira', 'Evoluir Nível']);
   });
 
   test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {
@@ -62,11 +62,11 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     assert.equal(metodo.label, 'O Método');
   });
 
-  test('Metas saiu da Operação — meta é acompanhamento, não chão de loja', () => {
+  test('Metas saiu do menu de vez (06/09/2026): mora no Quadro Geral da pessoa, no X-Performance', () => {
     const op = grupoDe(dono, 'Operação');
     assert.ok(op, 'quem tem loja continua vendo Operação');
     assert.ok(!valores(op.items).includes('/Metas'));
-    assert.ok(valores(grupoDe(dono, 'Top College').items).includes('/Metas'));
+    assert.ok(!valores(grupoDe(dono, 'Top College').items).includes('/Metas'));
   });
 
   test('Visão Geral fica FORA da faculdade, sozinha, como home neutra', () => {

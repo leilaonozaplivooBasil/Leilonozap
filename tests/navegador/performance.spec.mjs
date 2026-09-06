@@ -471,6 +471,159 @@ test('FUNÇÃO E EMPRESA: a função vem do painel de controle, pode ser trocada
   await ctx.close();
 });
 
+test('DESTINO: a demanda pode cair na lista, no quadro dele ou nos dois (ligados); a prioridade vira o prazo do card; repetir até sexta', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  // só o quadro, prioridade média → card com prazo em 3 dias, sem tarefa do dia
+  await pagina.locator('[data-teste="titulo"]').fill('Fechar a proposta da loja Norte');
+  await pagina.locator('[data-teste="destino"]').selectOption('quadro');
+  await pagina.locator('[data-teste="prioridade"]').selectOption('media');
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Card no quadro de Emanuel Silva/).waitFor();
+  let e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tabela, 'metodo_quadro');
+  assert.deepEqual([e.linhas[0].user_id, e.linhas[0].coluna, e.linhas[0].prazo, e.linhas[0].virou_tarefa_id, e.linhas[0].responsavel_nome], ['emanuel', 'aberto', '2026-09-11', null, 'Luiz Santanna']);
+  assert.ok(!(await escritas(pagina)).some((x) => x.tabela === 'metodo_tarefas'), 'no quadro só, não entra tarefa do dia');
+
+  // os dois: a tarefa do dia E o card, ligado pelo id da tarefa
+  await pagina.locator('[data-teste="titulo"]').fill('Visitar a loja do Centro');
+  await pagina.locator('[data-teste="destino"]').selectOption('ambos');
+  await pagina.locator('[data-teste="prioridade"]').selectOption('alta');
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Tarefa distribuída pra Emanuel/).waitFor();
+  await pagina.waitForFunction(() => window.__bancoFalso.escritas.filter((x) => x.tabela === 'metodo_quadro').length === 2);
+  const tudo = await escritas(pagina);
+  const tarefa = tudo.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
+  const card = tudo.filter((x) => x.tabela === 'metodo_quadro').at(-1);
+  assert.equal(card.linhas[0].prazo, '2026-09-08', 'alta = card pro dia');
+  assert.ok(card.linhas[0].virou_tarefa_id, 'o card nasce ligado à tarefa');
+  assert.equal(tarefa.linhas.length, 1);
+
+  // repetir até sexta: 08/09 (ter) → ter, qua, qui, sex = 4 dias
+  await pagina.locator('[data-teste="titulo"]').fill('Ligar pros 20 contatos do dia');
+  await pagina.locator('[data-teste="destino"]').selectOption('lista');
+  await pagina.locator('[data-teste="repetir-semana"]').check();
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/4 dias: "Ligar pros 20 contatos do dia" de ter\., 08\/09 a sex\., 11\/09/).waitFor();
+  e = (await escritas(pagina)).filter((x) => x.tabela === 'metodo_tarefas').at(-1);
+  assert.deepEqual(e.linhas.map((l) => l.data), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
+  assert.ok(e.linhas.every((l) => l.prazo_em));
+  await ctx.close();
+});
+
+async function abrirQuadroGeral(pagina, pessoa = 'emanuel') {
+  await pagina.locator('[data-teste="pessoa-fixo"]').selectOption(pessoa);
+  const modal = pagina.locator(`[data-teste="modal-pessoa"][data-pessoa="${pessoa}"]`);
+  await modal.locator('[data-teste="quadro-geral-topo"]').waitFor();
+  return modal;
+}
+const aba = (modal, id) => modal.locator(`[data-teste="abas-quadro-geral"] [data-aba="${id}"]`).click();
+
+test('QUADRO GERAL: semáforo e WhatsApp no topo, e as seis abas', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Histórico']);
+  // Emanuel não gerou hoje → amarelo, com o motivo
+  await modal.locator('[data-teste="semaforo"][data-cor="amarelo"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="quadro-geral-topo"]'), /não gerou o planejamento de hoje/);
+  const wa = await modal.locator('[data-teste="whatsapp"]').getAttribute('href');
+  assert.match(wa, /^https:\/\/wa\.me\/5521999991234\?text=/, 'o telefone do painel de controle, com o 55');
+  assert.match(decodeURIComponent(wa), /Oi Emanuel/);
+  await ctx.close();
+});
+
+test('METAS: o modelo da função entra com um toque; progresso sai das tarefas feitas e das vendas pagas; meta de produto', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  await aba(modal, 'metas');
+  await modal.locator('[data-teste="metas-modelo"]').click();
+  await pagina.getByText(/4 metas do modelo entraram/).waitFor();
+  await modal.locator('[data-teste="meta"]').first().waitFor();
+  const linhas = (await modal.locator('[data-teste="meta"]').allTextContents()).map((t) => t.replace(/\s+/g, ' '));
+  assert.equal(linhas.length, 4);
+  // faturamento: as duas vendas pagas de setembro = R$ 2.000 de 30.000
+  assert.match(linhas.find((l) => /Faturamento/.test(l)), /R\$ 2\.000,00 de/);
+  // contatos: a Gratidão feita em 04/09 é Hábito 1, não conta; 0 contatos → atrás do ritmo
+  assert.match(linhas.find((l) => /Contatos feitos/.test(l)), /0 de .*atrás do ritmo/);
+  // meta de produto
+  await modal.locator('[data-teste="meta-tipo"]').selectOption('produto');
+  await modal.locator('[data-teste="meta-produto"]').fill('Kit Solar');
+  await modal.locator('[data-teste="meta-alvo-nova"]').fill('10');
+  await modal.locator('[data-teste="meta-adicionar"]').click();
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="meta"]').length === 5);
+  const gravada = (await escritas(pagina)).filter((x) => x.tabela === 'xperf_metas').at(-1).linhas[0];
+  assert.deepEqual([gravada.tipo, gravada.chave, gravada.rotulo, gravada.alvo, gravada.user_id, gravada.mes], ['produto', 'produto:kit solar', 'Vender Kit Solar', 10, 'emanuel', '2026-09']);
+  // o semáforo agora sabe das metas atrás do ritmo
+  await modal.locator('[data-teste="semaforo"][data-cor="vermelho"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="quadro-geral-topo"]'), /meta.* atrás do ritmo/);
+  // remover uma
+  await modal.getByRole('button', { name: /remover Vender Kit Solar/ }).click();
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="meta"]').length === 4);
+  assert.equal((await escritas(pagina)).at(-1).tipo, 'delete');
+  await ctx.close();
+});
+
+test('PROGRAMA: sete meses de set/2026 a mar/2027, na mentalidade da pessoa; acrescentar e tirar grava por cima do padrão; pôr no quadro dela vira cards', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  await aba(modal, 'programa');
+  await modal.locator('[data-teste="programa-meses"]').waitFor();
+  assert.deepEqual(await modal.locator('[data-teste="programa-meses"] button').allTextContents(), ['set/2026', 'out/2026', 'nov/2026', 'dez/2026', 'jan/2027', 'fev/2027', 'mar/2027']);
+  // setembro (o mês de hoje) abre: Sonho e Compromisso, executivo (Emanuel é Sócio Executivo)
+  assert.match(await texto(pagina, '[data-teste="aba-programa"]'), /set\/2026 · Sonho e Compromisso/);
+  assert.equal(await modal.locator('[data-teste="programa-entregaveis"] li').count(), 2);
+  // acrescentar um
+  await modal.locator('[data-teste="programa-titulo"]').fill('Abrir a loja do Centro');
+  await modal.locator('[data-teste="programa-habito"]').selectOption('5');
+  await modal.locator('[data-teste="programa-adicionar"]').click();
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="programa-entregaveis"] li').length === 3);
+  const g = (await escritas(pagina)).filter((x) => x.tabela === 'xperf_programa').at(-1);
+  assert.equal(g.tipo, 'upsert');
+  assert.equal(g.linhas[0].mes, '2026-09');
+  assert.equal(g.linhas[0].entregaveis.length, 7, '2 executivo + 2 diretor + 2 ceo do padrão + o novo');
+  assert.ok(g.linhas[0].entregaveis.some((e) => e.titulo === 'Abrir a loja do Centro' && e.mentalidade === 'executivo' && e.habito === 5));
+  assert.match(await texto(pagina, '[data-teste="aba-programa"]'), /editado por você/);
+  // pôr no quadro dela: 3 cards em xperf_entregaveis, prazo 30/09
+  await modal.locator('[data-teste="programa-gerar"]').click();
+  await pagina.getByText(/3 entregáveis de set\/2026 no quadro de Emanuel Silva/).waitFor();
+  const cards = (await escritas(pagina)).filter((x) => x.tabela === 'xperf_entregaveis').at(-1).linhas;
+  assert.deepEqual([cards[0].dono_id, cards[0].coluna, cards[0].prazo, cards[0].trilha], ['emanuel', 'combinado', '2026-09-30', 'executivo']);
+  await pagina.waitForFunction(() => [...document.querySelectorAll('[data-teste="programa-entregaveis"] li')].every((li) => /combinado/.test(li.textContent)));
+  // tirar um: grava de novo sem ele
+  await modal.getByRole('button', { name: /remover Abrir a loja do Centro/ }).click();
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="programa-entregaveis"] li').length === 2);
+  await ctx.close();
+});
+
+test('SEMANA, QUADRO DELE e HISTÓRICO', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  await aba(modal, 'semana');
+  const dias = await modal.locator('[data-teste="dia-semana"]').evaluateAll((els) => els.map((e) => [e.dataset.dia, e.dataset.gerado]));
+  assert.equal(dias.length, 7);
+  assert.equal(dias[0][0], '2026-09-07', 'começa na segunda');
+  assert.deepEqual(dias[1], ['2026-09-08', 'sim'], 'terça tem as três da rotina');
+  // o quadro dele: a lista Trabalho com o card e o checklist 1/2; card novo entra na mesa dela
+  await aba(modal, 'quadro');
+  await modal.locator('[data-teste="quadro-card"]').first().waitFor();
+  assert.match(await texto(pagina, '[data-teste="aba-quadro"]'), /Trabalho.*Fechar o contrato da loja Norte.*1\/2/s);
+  await modal.locator('[data-teste="quadro-titulo"]').fill('Mapear 5 parcerias');
+  await modal.locator('[data-teste="quadro-prazo"]').fill('2026-09-12');
+  await modal.locator('[data-teste="quadro-criar"]').click();
+  await pagina.getByText(/Card no quadro dela/).waitFor();
+  const c = (await escritas(pagina)).filter((x) => x.tabela === 'metodo_quadro').at(-1).linhas[0];
+  assert.deepEqual([c.user_id, c.coluna, c.prazo, c.responsavel_nome], ['emanuel', 'aberto', '2026-09-12', 'Luiz Santanna']);
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="quadro-card"]').length === 2);
+  // histórico: nada distribuído pro Emanuel ainda; a Carla tem o pronto
+  await aba(modal, 'historico');
+  await pagina.getByText(/nada distribuído pra esta pessoa/).waitFor();
+  await pagina.getByRole('button', { name: 'Fechar' }).click();
+  const carla = await abrirQuadroGeral(pagina, 'carla');
+  await aba(carla, 'historico');
+  await carla.locator('[data-teste="historico-item"][data-estado="pronto"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="aba-historico"]'), /Enviar o relatório da loja.*pronto até 18:00 · pronto às/s);
+  await ctx.close();
+});
+
 test('CELULAR: a gestão cabe na tela — foto pra julgar', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
