@@ -385,7 +385,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       tarefas_total: xgame.tarefas_total, tarefas_feitas: xgame.tarefas_feitas,
       mvm_dia: xgame.mvm_dia, aplicabilidade: xgame.aplicabilidade, token_dia: xgame.token_dia,
       cotacao: xgame.cotacao, pontos: xgame.pontos,
-      detalhes: { leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util, ...xgame.contagens },
+      // 🐛 xpay_ganho/xpay_perdido eram LIDOS no ranking da equipe e nunca
+      // gravados aqui: a coluna X-Pay do ranking vinha zerada pra todo
+      // mundo desde sempre. Agora entram no retrato do dia.
+      detalhes: {
+        leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util,
+        xpay_ganho: xgame.xpay?.ganho || 0, xpay_perdido: xgame.xpay?.perdido || 0,
+        ...xgame.contagens,
+      },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,data' }).then(({ error }) => { if (error) console.warn('[X-GAME] placar:', error.message); });
      

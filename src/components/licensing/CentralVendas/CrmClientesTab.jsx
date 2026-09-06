@@ -41,6 +41,7 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import XGameVisaoExecutiva from './XGameVisaoExecutiva';
 import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
@@ -1644,6 +1645,8 @@ _Enviado via CRM Leilão NoZap_`;
               onVerEsteira={() => { setSecao('acompanhamento'); setSubAcomp('expansao'); }}
             />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
+            {/* 🎖️ o placar humano do time: pulso, pódio, radar e a tabela */}
+            <XGameVisaoExecutiva />
           </>
         )}
 
