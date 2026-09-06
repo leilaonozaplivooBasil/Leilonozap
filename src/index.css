@@ -51,6 +51,19 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
     --pc-ouro-claro: #E4C88A;
     --pc-tinta: #F5F5F4;
     --pc-tinta-fraca: #9A9A96;
+    /* 🏛️ DIR-55 — Top College (faculdade, gradiente) × X-EOS (sistema,
+       monocromática) — SÓ no painel "Os 8 Hábitos do Sucesso".
+       X-EOS: hex exatos do brandbook oficial. Top College: sem brandbook
+       próprio localizado — extraído visualmente das imagens reais. */
+    --xeos-preto: #00020C;
+    --xeos-branco: #F4F4F4;
+    --xeos-cinza-1: #2B2B2B;
+    --xeos-cinza-2: #817E8C;
+    --xeos-cinza-3: #C1BECA;
+    --xeos-fundo: #0A1020;
+    --topcollege-azul: #3B6FF6;
+    --topcollege-roxo: #8B3FE0;
+    --topcollege-magenta: #E62E8B;
   }
   .dark {
     --pc-preto: #0A0A0B;
@@ -890,4 +903,238 @@ body.pc-tema .livoo-brilho-forte {
     size: A4 portrait;
     margin: 14mm 13mm;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   🏛️ DIR-56 — O PALCO DA MARCA: Top College × X-EOS
+   A Central de Vendas deixa de ser uma tela branca com um logo em
+   cima e passa a SER o ambiente das duas marcas — igual às
+   apresentações oficiais. Ordem do dono: "não quero fundo branco na
+   área de vendas".
+
+   COMO FUNCIONA (e por que é pouca regra pra tanta tela):
+   o tema claro do painel, logo acima, não pinta com cor literal —
+   ele resolve em var(--nz-tinta), var(--nz-borda), var(--nz-cinza-
+   fundo). Redefinindo essas variáveis DENTRO do palco, aquelas
+   mesmas regras !important passam a pintar escuro sozinhas. Só
+   sobra corrigir os poucos lugares onde o tema claro cravou #FFFFFF
+   na unha — que é o que vem depois do bloco de variáveis.
+
+   ESCOPO: só .xeos-palco. Cabeçalho do site, menu lateral, rodapé e
+   todo o resto do sistema seguem intocados.
+   ═══════════════════════════════════════════════════════════════ */
+.xeos-palco {
+  --nz-tinta: #F4F4F4;
+  --nz-tinta-fraca: #A7A4B4;
+  --nz-borda: rgba(255, 255, 255, 0.13);
+  --nz-cinza-fundo: rgba(255, 255, 255, 0.05);
+  --nz-verde-fundo: rgba(53, 208, 127, 0.12);
+  --nz-marrom-fundo: rgba(255, 255, 255, 0.06);
+  --nz-marrom-escuro: #E4C88A;
+  /* superfícies do palco */
+  --xeos-superficie: rgba(255, 255, 255, 0.045);
+  --xeos-superficie-2: rgba(255, 255, 255, 0.075);
+  color: var(--xeos-branco);
+}
+
+/* o cartão branco vira vidro escuro — é a troca que mais aparece,
+   porque cada card do painel é um bg-white */
+.xeos-palco.xeos-palco [class*="bg-white"]:not(.xeos-cru) {
+  background-color: var(--xeos-superficie) !important;
+}
+/* o tema claro força #FFFFFF na unha nestes dois pontos */
+.xeos-palco.xeos-palco [class*="bg-gray-9"],
+.xeos-palco.xeos-palco [class*="bg-slate-9"],
+.xeos-palco.xeos-palco [class*="bg-gray-5"],
+.xeos-palco.xeos-palco [class*="bg-gray-1"],
+.xeos-palco.xeos-palco [class*="bg-slate-5"] {
+  background-color: var(--xeos-superficie) !important;
+}
+.xeos-palco.xeos-palco input,
+.xeos-palco.xeos-palco textarea,
+.xeos-palco.xeos-palco select {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--nz-borda) !important;
+  color: var(--xeos-branco) !important;
+}
+.xeos-palco.xeos-palco input::placeholder,
+.xeos-palco.xeos-palco textarea::placeholder {
+  color: rgba(244, 244, 244, 0.42) !important;
+}
+.xeos-palco.xeos-palco [class*="from-gray-9"],
+.xeos-palco.xeos-palco [class*="from-gray-8"] {
+  background-image: linear-gradient(to right, var(--xeos-superficie-2), var(--xeos-superficie)) !important;
+}
+
+/* verde e âmbar: no escuro os tons institucionais escuros somem.
+   O FUNDO do botão continua o verde da casa (letra branca em cima);
+   só o TEXTO verde e o âmbar clareiam pra voltar a ser legíveis. */
+.xeos-palco.xeos-palco [class*="text-green-"]:not([class*="bg-"]),
+.xeos-palco.xeos-palco [class*="text-emerald-"]:not([class*="bg-"]),
+.xeos-palco.xeos-palco .text-nz-verde {
+  color: #4ADE80 !important;
+}
+.xeos-palco.xeos-palco [class*="text-yellow-"]:not([class*="bg-"]),
+.xeos-palco.xeos-palco [class*="text-amber-"]:not([class*="bg-"]) {
+  color: #FBBF24 !important;
+}
+.xeos-palco.xeos-palco [class*="text-red-"]:not([class*="bg-"]),
+.xeos-palco.xeos-palco [class*="text-rose-"]:not([class*="bg-"]) {
+  color: #FB7185 !important;
+}
+.xeos-palco.xeos-palco [class*="text-blue-"]:not([class*="bg-"]) {
+  color: #7DA8FF !important;
+}
+
+/* letra vazada em degradê: o tema claro apaga o degradê pra não sumir
+   no branco (regra do "Meus Arremates"). Aqui o fundo é escuro de novo,
+   então o degradê da Top College volta a ser o certo. */
+.xeos-palco.xeos-palco .xeos-gradiente {
+  background-image: linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* linhas zebradas: no escuro a alternância precisa ser mais sutil */
+.xeos-palco.xeos-palco tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ⚠️ DIR-56 — POR QUE ESTE BLOCO EXISTE (medido no navegador, não suposto):
+   as cores nz.* do tailwind.config.js são hex LITERAL (nz.tinta: '#0D1310'),
+   diferente das pc.* que são var(). Então redefinir --nz-tinta acima conserta
+   as regras do tema claro (que usam var()), mas NÃO conserta as classes
+   utilitárias text-nz-tinta / border-nz-borda, que já saem compiladas com o
+   hex claro cravado. Sem este bloco o título "Os 8 Hábitos" fica preto sobre
+   preto. Aqui cada utilitária da paleta clara ganha o seu par no escuro.
+   A ordem importa: as variações mais específicas ("-fraca", "-fundo") vêm
+   DEPOIS, porque o seletor por substring também casa com a versão curta. */
+.xeos-palco.xeos-palco [class*="text-nz-tinta"] { color: #F4F4F4; }
+.xeos-palco.xeos-palco [class*="text-nz-tinta-fraca"] { color: #A7A4B4; }
+.xeos-palco.xeos-palco [class*="border-nz-borda"] { border-color: rgba(255, 255, 255, 0.13); }
+.xeos-palco.xeos-palco [class*="bg-nz-cinza-fundo"] { background-color: rgba(255, 255, 255, 0.05); }
+
+/* tintas pálidas (fundo claro + letra escura) viram vidro + letra clara,
+   mantendo o mesmo significado de cada cor da casa */
+.xeos-palco.xeos-palco [class*="bg-nz-verde-fundo"] { background-color: rgba(53, 208, 127, 0.13); }
+.xeos-palco.xeos-palco [class*="bg-nz-fogo-fundo"] { background-color: rgba(243, 91, 18, 0.14); }
+.xeos-palco.xeos-palco [class*="bg-nz-marrom-fundo"] { background-color: rgba(184, 135, 95, 0.14); }
+.xeos-palco.xeos-palco [class*="bg-nz-ouro-fundo"] { background-color: rgba(245, 196, 81, 0.13); }
+.xeos-palco.xeos-palco [class*="text-nz-verde-escuro"],
+.xeos-palco.xeos-palco [class*="text-nz-verde"] { color: #4ADE80; }
+.xeos-palco.xeos-palco [class*="text-nz-fogo-escuro"],
+.xeos-palco.xeos-palco [class*="text-nz-fogo"] { color: #FF9A5C; }
+.xeos-palco.xeos-palco [class*="text-nz-marrom-escuro"],
+.xeos-palco.xeos-palco [class*="text-nz-marrom"] { color: #E0B48A; }
+.xeos-palco.xeos-palco [class*="text-nz-ouro"] { color: #F5C451; }
+/* botão de ação continua com o fundo cheio da casa e letra branca —
+   contraste já bom no escuro, não mexer */
+.xeos-palco.xeos-palco [class*="bg-nz-verde"]:not([class*="fundo"]),
+.xeos-palco.xeos-palco [class*="bg-nz-marrom"]:not([class*="fundo"]) { color: #FFFFFF; }
+
+/* ═══════════════════════════════════════════════════════════════
+   🎓 DIR-68 — VIDRO QUE DÁ PRA LER
+
+   Ordem do dono: "eu adoro esses menus assim transparentes, de verdade.
+   Mas algumas ficam muito transparentes, igual essa parte branca. A gente
+   pode deixar transparente, mas escurecer onde tem letra, pra ter um
+   fundinho ali atrás do card. O card todo transparente é legal — só a
+   parte que está transparente botar um fundo pra ler."
+
+   POR QUE SÓ O QUE FLUTUA QUEBRA: o card no meio do painel tem o preto do
+   palco atrás dele, então o filme branco de 4,5% já se lê. O modal não —
+   ele cobre a TELA INTEIRA, inclusive os cards claros do painel de baixo,
+   e aí o texto de trás atravessa a letra da frente (era exatamente o
+   "R$ 3.279,24" aparecendo dentro do formulário do Quadro dos Sonhos).
+
+   SOLUÇÃO: o que flutua ganha base escura translúcida + desfoque do que
+   está atrás. Continua transparente — você vê as formas passando — mas a
+   letra passa a ter chão. Nada aqui vira opaco.
+   ═══════════════════════════════════════════════════════════════ */
+.xeos-palco.xeos-palco .fixed.inset-0.z-50 {
+  background-color: rgba(0, 2, 12, 0.72) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+/* só o cartão do modal (filho direto da cortina). Os cards de dentro dele
+   continuam sendo filme branco por cima desta base — é o que dá o
+   escalonamento de profundidade. */
+.xeos-palco.xeos-palco .fixed.inset-0.z-50 > [class*="bg-white"]:not(.xeos-cru) {
+  background-color: rgba(9, 11, 24, 0.82) !important;
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+/* o botão "outline" do shadcn usa bg-background — que no tema claro é
+   BRANCO SÓLIDO. Dentro do palco isso vira uma pastilha branca com letra
+   clara em cima: some. É a mesma "parte branca" da ordem do dono, só que
+   por outro nome de classe. */
+.xeos-palco.xeos-palco [class*="bg-background"],
+.xeos-palco.xeos-palco [class*="bg-card"],
+.xeos-palco.xeos-palco [class*="bg-popover"] {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+  border-color: var(--nz-borda) !important;
+}
+/* desabilitado no escuro não pode virar borrão: mantém a letra clara e só
+   baixa a força */
+.xeos-palco.xeos-palco button:disabled,
+.xeos-palco.xeos-palco [aria-disabled="true"] { opacity: 0.55; }
+
+/* ═══════════════════════════════════════════════════════════════
+   🎓 DIR-70 — O MENU DA TOP COLLEGE LÊ COMO UMA COISA SÓ
+
+   Ordem do dono: "lá em cima está top, a logo. Só o restante ali que
+   tem que ficar mais conexo — quero que os de baixo pareçam com a
+   identidade da X-eos, aquele metálico, a tipografia igual. Estou
+   sentindo elas meio divididas."
+
+   O QUE ESTAVA DIVIDINDO (três coisas, nenhuma delas a tipografia —
+   a Sora já entrou na DIR-61):
+   1. a COR: a marca em cima é prata; os itens acendiam em VERDE, que é
+      a cor do Leilão NoZap. Verde dentro do menu da faculdade lê como
+      outro sistema colado ali;
+   2. o EIXO: a faixa da marca começava em 16px e os itens em 12px —
+      4px de desalinho que o olho não nomeia mas sente;
+   3. o CORTE: a faixa tinha fundo próprio e uma linha cheia embaixo,
+      então parecia um cartão separado em cima de um menu.
+
+   O PRATA AQUI É MEDIDO, NÃO ESCOLHIDO: os três tons abaixo saíram da
+   média de pixel do próprio arquivo marca-xeos-lockup.webp — topo
+   (235,237,240), meio (198,203,211) e base (140,146,155). É a mesma
+   liga da logo, então o item embaixo é feito do mesmo metal que ela.
+   ═══════════════════════════════════════════════════════════════ */
+.xeos-metal-texto {
+  background-image: linear-gradient(180deg, #EBEDF0 0%, #C6CBD3 45%, #8C929B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+/* no hover o metal "vira pra luz" — mesma liga, mais brilho */
+.xeos-item:hover .xeos-metal-texto,
+.xeos-item:focus-visible .xeos-metal-texto {
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #E4E7EB 45%, #B4BAC3 100%);
+}
+/* o traço do ícone recebe o MESMO degradê (via <defs> no próprio menu):
+   ícone e letra passam a ser do mesmo material */
+.xeos-item svg { stroke: url(#xeosMetal); }
+.xeos-item:hover svg,
+.xeos-item:focus-visible svg { stroke: url(#xeosMetalVivo); }
+/* a emenda: fio metálico que nasce no eixo do texto e apaga antes da
+   borda. Uma linha cheia de ponta a ponta separava dois cartões; esta
+   diz "continua embaixo". */
+.xeos-emenda {
+  position: relative;
+}
+.xeos-emenda::after {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(198, 203, 211, 0.55) 0%, rgba(198, 203, 211, 0.14) 55%, rgba(198, 203, 211, 0) 100%);
 }

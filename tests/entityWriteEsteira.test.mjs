@@ -45,3 +45,10 @@ describe('entityWrite × método vivo (DIR-43)', () => {
     }
   });
 });
+
+describe('entityWrite × reuniões da empresa (DIR-52)', () => {
+  test('reunioes_empresa passa da whitelist (para só na config, não na tabela)', async () => {
+    const r = await chamar({ actorId: 'u1', table: 'reunioes_empresa', action: 'create', payload: { titulo: 'Mentalidade do Diretor' } });
+    assert.notEqual(r.error, 'Parâmetros inválidos ou tabela não permitida');
+  });
+});

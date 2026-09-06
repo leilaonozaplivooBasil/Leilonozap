@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
-import { getLicensingGroups } from '@/lib/licensingTabs';
+import { getLicensingGroups, chaveDoItem, entradaFlutuante, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 import ItemLateralArrastavel from '@/components/common/ItemLateralArrastavel';
 import ItemLateralGrupo from '@/components/common/ItemLateralGrupo';
 
@@ -32,12 +32,12 @@ const ITENS_OCULTOS = ['/painel/comprar-estoque', '/MyWinnings'];
 // ✅ Item novo (ex.: Consignado) precisa aparecer mesmo para quem já tem uma
 // ordem antiga salva no aparelho — a ordem guardada não pode escondê-lo.
 
-const chaveDe = (item) => (item.type === 'tab' ? `tab:${item.value}` : item.to);
+const chaveDe = chaveDoItem;
 const destinoDe = (item) => (item.type === 'tab' ? `/Licensing?tab=${item.value}` : item.to);
 
 // activeTab/onTabChange só chegam quando a lateral é usada DENTRO do Painel de
 // Alavancagem: ali os itens de aba trocam a aba na hora, sem recarregar a tela.
-export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange }) {
+export default function NavegacaoLateralGlobal({ user, activeTab, activeCatalogTab, onTabChange }) {
   const location = useLocation();
   const chaveOrdem = user?.id ? `navLateralOrdem_${user.id}` : null;
   const [ordem, setOrdem] = useState([]);
@@ -56,17 +56,27 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
   const itens = useMemo(() => {
     const lista = [];
     getLicensingGroups(user).forEach((grupo, gi) => {
-      // 🧭 O grupo "Operação" (Meu Painel, PDV, Estoque, Metas) some da lista
-      // e vira UM ícone só, com um menu flutuante pros 4 destinos — a lateral
-      // encolhe sem tirar nenhum link do lugar.
-      if (grupo.title === 'Operação') {
-        const subItens = grupo.items
-          .filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)))
-          .map((item) => ({ ...item, to: destinoDe(item) }));
-        if (subItens.length) {
-          lista.push({ type: 'group', chave: 'group:operacao', label: 'Operação', subItens, grupo: gi });
+      // 🎓 DIR-57 — grupo marcado com `colapsar` (Minha Conta, Operação, Top
+      // College, Admin) some da lista e vira UM ícone só, com menu flutuante
+      // pros destinos — a lateral encolhe sem tirar nenhum link do lugar.
+      // Antes isso era um `if` fixo no nome "Operação"; agora é dado da fonte
+      // única, então incluir um grupo novo não exige mexer aqui.
+      // Grupo que sobrou com UM item só não vira menu: um flutuante pra abrir
+      // uma opção sozinha é clique a mais sem ganho nenhum (caso do Admin de
+      // quem não é admin, que não tem o Consignado).
+      if (grupo.colapsar) {
+        const visiveis = grupo.items.filter((item) => !ITENS_OCULTOS.includes(chaveDe(item)));
+        if (visiveis.length > 1) {
+          const subItens = visiveis.map((item) => entradaFlutuante(item, onTabChange));
+          // 🎓 DIR-57 — quais abas/seções pertencem a este grupo, pra acender o
+          // ícone certo. Sem isso, "Loja & Vendas" acendia enquanto a pessoa
+          // estava em "O Método": as duas moram na MESMA aba (catalogo), então
+          // olhar só a aba não distingue — tem que olhar a seção também.
+          const abas = visiveis.filter((i) => i.type === 'tab' && !i.catalogTab).map((i) => i.value);
+          const secoes = visiveis.filter((i) => i.catalogTab).map((i) => i.catalogTab);
+          lista.push({ type: 'group', ...grupo.colapsar, subItens, grupo: gi, abas, secoes });
+          return;
         }
-        return;
       }
       grupo.items.forEach((item) => {
         const chave = chaveDe(item);
@@ -76,9 +86,7 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
         // aba e escolher de novo no seletor interno dela.
         if (item.type === 'tab' && Array.isArray(item.subItens) && item.subItens.length) {
           const subItens = item.subItens.map((sub) => (
-            onTabChange
-              ? { label: sub.label, icon: sub.icon, onClick: () => onTabChange(item.value, sub.value) }
-              : { label: sub.label, icon: sub.icon, to: `/Licensing?tab=${item.value}&catalogTab=${sub.value}` }
+            entradaFlutuante({ ...sub, type: 'tab', value: item.value, catalogTab: sub.value }, onTabChange)
           ));
           lista.push({ type: 'group', chave, label: item.label, icon: item.icon, subItens, grupo: gi, tabValue: item.value });
           return;
@@ -89,9 +97,27 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
     if (!ordem.length) return lista;
     const pos = (i) => { const p = ordem.indexOf(i.chave); return p === -1 ? 999 : p; };
     return [...lista].sort((a, b) => pos(a) - pos(b));
-  }, [user, ordem]);
+  }, [user, ordem, onTabChange]);
 
   if (!user?.email) return null;
+
+  // 🎓 DIR-57 — qual ícone de grupo acende. Fora do Painel de Alavancagem não
+  // acende nenhum (não existe aba ativa). Dentro dele:
+  //  • grupo com sub-seções da aba aberta (Top College) → acende pela SEÇÃO
+  //  • aba com sub-seções (Loja & Vendas) → acende só se a seção aberta for
+  //    dela; senão "Loja & Vendas" ficava aceso com a pessoa em "O Método"
+  //  • grupo de abas inteiras (ex.: Admin) → acende pela aba
+  const grupoAceso = (item) => {
+    if (!onTabChange) return undefined;
+    if (item.secoes?.length && activeTab === 'catalogo') return item.secoes.includes(activeCatalogTab);
+    if (item.abas?.length) return item.abas.includes(activeTab);
+    if (item.tabValue) {
+      const daFaculdade = SECOES_TOP_COLLEGE.some((s) => s.value === activeCatalogTab);
+      if (item.tabValue === 'catalogo' && daFaculdade) return false;
+      return activeTab === item.tabValue;
+    }
+    return undefined;
+  };
 
   const aoSoltar = (resultado) => {
     if (!resultado.destination || !chaveOrdem) return;
@@ -121,7 +147,7 @@ export default function NavegacaoLateralGlobal({ user, activeTab, onTabChange })
                       item={item}
                       indice={i}
                       separador={i > 0 && itens[i - 1].grupo !== item.grupo}
-                      ativo={item.tabValue ? (!!onTabChange && activeTab === item.tabValue) : undefined}
+                      ativo={grupoAceso(item)}
                     />
                   ) : (
                     <ItemLateralArrastavel

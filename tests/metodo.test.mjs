@@ -4,7 +4,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   HABITOS, ROTINA_PADRAO, periodoDe, gerarTarefasDaRotina, progressoDia,
-  linkGoogleAgenda, qualificacaoValida,
+  linkGoogleAgenda, qualificacaoValida, partesDoHabito,
 } from '../src/lib/metodo.js';
 
 describe('conteúdo do método', () => {
@@ -14,6 +14,39 @@ describe('conteúdo do método', () => {
       'sonho', 'compromisso', 'lista', 'contato', 'apresentacao',
       'acompanhamento', 'verificacao', 'duplicacao',
     ]);
+  });
+  // 🎓 DIR-69 — o dono ditou os nomes completos: "é Lista de Networking,
+  // Contato e Convite, Apresentação de Sucesso, Acompanhamento e Fechamento,
+  // Verificação do Progresso, Duplicação dos oito hábitos do sucesso".
+  test('DIR-69: cada hábito tem o nome OFICIAL completo, como o dono ditou', () => {
+    assert.deepEqual(HABITOS.map((h) => h.completo), [
+      'Sonho', 'Compromisso', 'Lista de Networking', 'Contato e Convite',
+      'Apresentação de Sucesso', 'Acompanhamento e Fechamento',
+      'Verificação do Progresso', 'Duplicação dos 8 Hábitos do Sucesso',
+    ]);
+  });
+  test('DIR-69: partesDoHabito separa o apelido do complemento', () => {
+    assert.deepEqual(partesDoHabito('lista'),
+      { curto: 'Lista', completo: 'Lista de Networking', complemento: 'de Networking' });
+    assert.deepEqual(partesDoHabito('verificacao'),
+      { curto: 'Verificação', completo: 'Verificação do Progresso', complemento: 'do Progresso' });
+  });
+  test('DIR-69: hábito sem complemento não inventa texto nenhum', () => {
+    assert.equal(partesDoHabito('sonho').complemento, '');
+    assert.equal(partesDoHabito('compromisso').complemento, '');
+  });
+  test('DIR-69: id desconhecido volta null (a tela cai no padrão, não quebra)', () => {
+    assert.equal(partesDoHabito('nao-existe'), null);
+  });
+  // o apelido curto TEM que ser prefixo do completo — é o contrato que faz a
+  // faixa escrever "Lista" + "de Networking" e ler como uma frase só. Se
+  // alguém batizar um hábito de "Lista" com completo "Networking Qualificado",
+  // a tela escreveria "Lista Networking Qualificado" e ninguém veria.
+  test('DIR-69: o apelido é sempre o começo do nome completo', () => {
+    for (const h of HABITOS) {
+      assert.ok(h.completo.toLowerCase().startsWith(h.curto.toLowerCase()),
+        `${h.id}: "${h.curto}" não começa "${h.completo}"`);
+    }
   });
   test('Rotina Perfeita: começa 5h, 3 reuniões, fechamento e os momentos novos ditados', () => {
     assert.equal(ROTINA_PADRAO[0].hora, '05:00');
@@ -257,5 +290,193 @@ describe('agendador de reuniões (DIR-48)', () => {
   test('início inválido → null (evento não se inventa)', () => {
     assert.equal(eventoGoogleDaReuniao({ inicio: 'não é data' }), null);
     assert.equal(eventoGoogleDaReuniao({ inicio: '' }), null);
+  });
+});
+
+// ══ DIR-49 — clareza do Hábito 4: linha do tempo unificada + plurais ══
+const { linhaDoTempoUnificada, plural } = await import('../src/lib/metodo.js');
+
+describe('linha do tempo unificada do dia (DIR-49)', () => {
+  test('método + esteira + google se misturam ordenados pela hora', () => {
+    const itens = linhaDoTempoUnificada([
+      { origem: 'google', quando: '2026-09-04T15:30:00-03:00', titulo: 'Dentista' },
+      { origem: 'metodo', quando: '2026-09-04T09:00', titulo: 'Reunião — Diogo' },
+      { origem: 'esteira', quando: '2026-09-04T11:15', titulo: 'Reunião — Renan' },
+    ]);
+    assert.deepEqual(itens.map((i) => i.origem), ['metodo', 'esteira', 'google']);
+  });
+
+  test('evento de dia inteiro (só data) abre o dia; lista vazia/ruim não quebra', () => {
+    const itens = linhaDoTempoUnificada([
+      { origem: 'metodo', quando: '2026-09-04T08:00', titulo: 'cedo' },
+      { origem: 'google', quando: '2026-09-04', titulo: 'Aniversário' },
+    ]);
+    assert.equal(itens[0].titulo, 'Aniversário');
+    assert.deepEqual(linhaDoTempoUnificada([]), []);
+    assert.deepEqual(linhaDoTempoUnificada(null), []);
+  });
+
+  test('não muda a lista original (ordena uma cópia)', () => {
+    const orig = [{ quando: '2026-09-04T18:00' }, { quando: '2026-09-04T07:00' }];
+    linhaDoTempoUnificada(orig);
+    assert.equal(orig[0].quando, '2026-09-04T18:00');
+  });
+});
+
+describe('plurais honestos dos contadores (DIR-49)', () => {
+  test('1 fica no singular; 0 e 2+ no plural', () => {
+    assert.equal(plural(1, 'reunião', 'reuniões'), '1 reunião');
+    assert.equal(plural(2, 'reunião', 'reuniões'), '2 reuniões');
+    assert.equal(plural(0, 'retorno', 'retornos'), '0 retornos');
+  });
+});
+
+// ══ DIR-49.1 — histórico visível + próximas reuniões ══
+const { ultimoContato, proximasReunioes } = await import('../src/lib/metodo.js');
+
+describe('último contato e próximas reuniões (DIR-49.1)', () => {
+  test('último desfecho é o de carimbo mais novo, mesmo fora de ordem', () => {
+    const c = { contatos_metodo: [
+      { resultado: 'agendado', em: '2026-09-05T10:20:00Z' },
+      { resultado: 'feito', em: '2026-09-05T10:19:00Z' },
+    ] };
+    assert.equal(ultimoContato(c).resultado, 'agendado');
+    assert.equal(ultimoContato({}), null);
+    assert.equal(ultimoContato(null), null);
+  });
+
+  test('próximas reuniões = agendados de dias FUTUROS, ordenados; hoje fica de fora', () => {
+    const clientes = [
+      { full_name: 'Luiz', contatos_metodo: [
+        { resultado: 'agendado', quando: '2026-09-14T07:19', em: '1' },
+        { resultado: 'agendado', quando: '2026-09-05T18:00', em: '2' }, // hoje → agenda do dia, não aqui
+        { resultado: 'feito', em: '3' },
+      ] },
+      { full_name: 'Ana', contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-07T10:00', em: '4' }] },
+    ];
+    const p = proximasReunioes(clientes, '2026-09-05');
+    assert.deepEqual(p.map((x) => x.cliente.full_name), ['Ana', 'Luiz']);
+    assert.deepEqual(proximasReunioes([], '2026-09-05'), []);
+  });
+});
+
+// ══ DIR-50/51/52/53 — agenda viva ══
+const { idDoEventoGoogle, semanaDe, resumoSemanaReunioes, META_REUNIOES_SEMANA,
+  reuniaoIminente, reunioesEmpresaDoDia, DIAS_SEMANA } = await import('../src/lib/metodo.js');
+
+describe('id do evento Google (DIR-50)', () => {
+  test('google_event_id novo vence; link antigo tem o id extraído do eid', () => {
+    assert.equal(idDoEventoGoogle({ google_event_id: 'abc123' }), 'abc123');
+    // eid real do banco do dono: base64url de "uo5vbt7omhdvn788hh1583o018 luizsantanna@tttcorporate.com"
+    const link = 'https://www.google.com/calendar/event?eid=dW81dmJ0N29taGR2bjc4OGhoMTU4M28wMTggbHVpenNhbnRhbm5hQHR0dGNvcnBvcmF0ZS5jb20';
+    assert.equal(idDoEventoGoogle({ google_event_link: link }), 'uo5vbt7omhdvn788hh1583o018');
+    assert.equal(idDoEventoGoogle({ google_event_link: 'https://calendar.google.com/calendar/r' }), null);
+    assert.equal(idDoEventoGoogle({}), null);
+    assert.equal(idDoEventoGoogle(null), null);
+  });
+});
+
+describe('alarme do evento (DIR-53)', () => {
+  test('evento criado sai com popup 30 e 10 min antes', () => {
+    const e = eventoGoogleDaReuniao({ inicio: '2026-09-14T07:19' });
+    assert.deepEqual(e.reminders, { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }, { method: 'popup', minutes: 10 }] });
+  });
+});
+
+describe('resumo da semana (DIR-51)', () => {
+  test('semana vai de segunda a domingo do dia dado', () => {
+    assert.deepEqual(semanaDe('2026-09-05'), { inicio: '2026-08-31', fim: '2026-09-06' }); // sábado
+    assert.deepEqual(semanaDe('2026-08-31'), { inicio: '2026-08-31', fim: '2026-09-06' }); // segunda
+    assert.equal(semanaDe('nada'), null);
+  });
+
+  test('total e quebra por pessoa com % da meta (15/semana)', () => {
+    const clientes = [
+      { contatos_metodo: [
+        { resultado: 'agendado', quando: '2026-09-05T18:00', registrado_por_id: 'u1', registrado_por_nome: 'Santanna' },
+        { resultado: 'agendado', quando: '2026-09-06T10:00', registrado_por_id: 'u1', registrado_por_nome: 'Santanna' },
+        { resultado: 'agendado', quando: '2026-09-14T07:19', registrado_por_id: 'u1', registrado_por_nome: 'Santanna' }, // semana QUE VEM: fora
+        { resultado: 'feito', em: 'x' },
+      ] },
+      { contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-04T09:00', registrado_por_id: 'u2', registrado_por_nome: 'Ana' }] },
+    ];
+    const r = resumoSemanaReunioes(clientes, '2026-09-05');
+    assert.equal(r.total, 3);
+    assert.deepEqual(r.porPessoa.map((p) => [p.nome, p.total, p.pct]), [['Santanna', 2, 13], ['Ana', 1, 7]]);
+    assert.equal(META_REUNIOES_SEMANA, 15);
+  });
+});
+
+describe('reunião iminente (DIR-53)', () => {
+  const clientes = [{ full_name: 'Diogo', contatos_metodo: [
+    { resultado: 'agendado', quando: '2026-09-05T18:00', registrado_por_id: 'u1' },
+    { resultado: 'agendado', quando: '2026-09-05T18:05', registrado_por_id: 'u2' }, // de outro: não é minha
+  ] }];
+  test('avisa dentro da janela, só a MINHA, e diz os minutos', () => {
+    const r = reuniaoIminente(clientes, 'u1', '2026-09-05T17:50:00', 15);
+    assert.equal(r.minutos, 10);
+    assert.equal(r.cliente.full_name, 'Diogo');
+    assert.equal(reuniaoIminente(clientes, 'u2', '2026-09-05T17:50:00', 15).minutos, 15);
+  });
+  test('fora da janela ou já passou → silêncio', () => {
+    assert.equal(reuniaoIminente(clientes, 'u1', '2026-09-05T17:00:00', 15), null);
+    assert.equal(reuniaoIminente(clientes, 'u1', '2026-09-05T18:01:00', 15), null);
+    assert.equal(reuniaoIminente([], 'u1', '2026-09-05T17:50:00'), null);
+  });
+});
+
+describe('reuniões da empresa (DIR-52)', () => {
+  const lista = [
+    { titulo: 'Mentalidade do Diretor', dia_semana: 1, hora: '09:00', ativo: true },
+    { titulo: 'Mentalidade do CEO', dia_semana: 1, hora: '10:00', ativo: true },
+    { titulo: 'Fechamento do mês', data: '2026-09-30', hora: '17:00', ativo: true },
+    { titulo: 'Desativada', dia_semana: 1, hora: '08:00', ativo: false },
+  ];
+  test('recorrente cai no dia da semana certo, ordenada por hora, sem as desativadas', () => {
+    const seg = reunioesEmpresaDoDia(lista, '2026-09-07'); // segunda
+    assert.deepEqual(seg.map((r) => r.titulo), ['Mentalidade do Diretor', 'Mentalidade do CEO']);
+    assert.equal(seg[0].quando, '2026-09-07T09:00');
+    assert.deepEqual(reunioesEmpresaDoDia(lista, '2026-09-08'), []); // terça
+  });
+  test('data única cai só no dia; rótulos dos dias existem', () => {
+    assert.deepEqual(reunioesEmpresaDoDia(lista, '2026-09-30').map((r) => r.titulo), ['Fechamento do mês']);
+    assert.equal(DIAS_SEMANA[1], 'segunda');
+    assert.equal(DIAS_SEMANA.length, 7);
+  });
+});
+
+// ══ DIR-54 — horário de término vira duração ══
+const { duracaoEntreHoras } = await import('../src/lib/metodo.js');
+
+describe('duração entre horas (DIR-54)', () => {
+  test('término depois do início: diferença simples', () => {
+    assert.equal(duracaoEntreHoras('09:00', '10:30'), 90);
+    assert.equal(duracaoEntreHoras('09:00', '09:45'), 45);
+  });
+  test('vira o dia (término menor que início): soma 24h', () => {
+    assert.equal(duracaoEntreHoras('23:30', '00:30'), 60);
+  });
+  test('inválido ou igual ao início → null', () => {
+    assert.equal(duracaoEntreHoras('09:00', '09:00'), null);
+    assert.equal(duracaoEntreHoras('9h', '10:00'), null);
+    assert.equal(duracaoEntreHoras('', '10:00'), null);
+    assert.equal(duracaoEntreHoras('09:00', ''), null);
+  });
+});
+
+// ══ DIR-54.1 — horário de término pra exibição (o inverso de duracaoEntreHoras) ══
+const { horaFinal } = await import('../src/lib/metodo.js');
+
+describe('horário de término pra exibição (DIR-54.1)', () => {
+  test('soma os minutos e formata HH:mm', () => {
+    assert.equal(horaFinal('09:00', 240), '13:00');
+    assert.equal(horaFinal('09:00', 45), '09:45');
+  });
+  test('vira o dia (23:30 + 90min)', () => {
+    assert.equal(horaFinal('23:30', 90), '01:00');
+  });
+  test('hora inválida → null', () => {
+    assert.equal(horaFinal('9h', 60), null);
+    assert.equal(horaFinal('', 60), null);
   });
 });

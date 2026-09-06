@@ -5,15 +5,42 @@
 // agenda do Google (URL de template oficial — sem OAuth).
 
 export const HABITOS = [
-  { n: 1, id: 'sonho', titulo: 'SONHO', sub: 'Clareza de destino', texto: 'Sem clareza de destino, toda energia se dispersa. O sonho dá direção, foco e propósito — é o combustível do compromisso nos momentos difíceis.' },
-  { n: 2, id: 'compromisso', titulo: 'COMPROMISSO', sub: 'Decisão diária', texto: 'Talento faz você começar na frente; disciplina faz você continuar. Todos os dias. Sem exceção. Sem negociação.' },
-  { n: 3, id: 'lista', titulo: 'LISTA DE NETWORK', sub: 'O ambiente vence', texto: 'O ambiente ou te eleva ou te limita. Sua lista de network é um ativo estratégico — qualifique cada pessoa de 1 a 5 e trate a lista como patrimônio.' },
-  { n: 4, id: 'contato', titulo: 'CONTATO E CONVITE', sub: 'Método F.O.R.M. + seu script', texto: 'Antes de apresentar, entenda a pessoa: Família, Ocupação, Recreação — e então a Mensagem certa. Cada um escreve o PRÓPRIO script e o aperfeiçoa a cada conversa.' },
-  { n: 5, id: 'apresentacao', titulo: 'APRESENTAÇÃO DE SUCESSO', sub: 'Clareza e valor', texto: 'Conexão → FORM → Mensagem → Convite → Apresentação → Próximo Passo. Você não apresenta uma oportunidade — apresenta uma possibilidade. Meta do método: 3 reuniões por dia, de 45 a 60 minutos.' },
-  { n: 6, id: 'acompanhamento', titulo: 'ACOMPANHAMENTO E FECHAMENTO', sub: 'PPV — Próximo Ponto de Venda', texto: 'Cada etapa precisa conduzir ao próximo ponto. Os dois pilares: DOR + CONFIANÇA. É o CRM: a fila do dia, os clientes e a esteira de captação.' },
-  { n: 7, id: 'verificacao', titulo: 'VERIFICAÇÃO DO PROGRESSO', sub: 'Medir e corrigir', texto: 'O que não se mede, não se corrige: metas, reuniões do dia, win rate, objeções e PPV — a Visão Executiva.' },
-  { n: 8, id: 'duplicacao', titulo: 'DUPLICAÇÃO DOS 8 HÁBITOS', sub: 'Ensinar e multiplicar', texto: 'Conhecimento é o que adquirimos; sabedoria é o que colocamos em prática. Ensine o método — o local de treinamento do time.' },
+  { n: 1, id: 'sonho', curto: 'Sonho', completo: 'Sonho', titulo: 'SONHO', sub: 'Clareza de destino', texto: 'Sem clareza de destino, toda energia se dispersa. O sonho dá direção, foco e propósito — é o combustível do compromisso nos momentos difíceis.' },
+  { n: 2, id: 'compromisso', curto: 'Compromisso', completo: 'Compromisso', titulo: 'COMPROMISSO', sub: 'Decisão diária', texto: 'Talento faz você começar na frente; disciplina faz você continuar. Todos os dias. Sem exceção. Sem negociação.' },
+  { n: 3, id: 'lista', curto: 'Lista', completo: 'Lista de Networking', titulo: 'LISTA DE NETWORKING', sub: 'O ambiente vence', texto: 'O ambiente ou te eleva ou te limita. Sua lista de network é um ativo estratégico — qualifique cada pessoa de 1 a 5 e trate a lista como patrimônio.' },
+  { n: 4, id: 'contato', curto: 'Contato', completo: 'Contato e Convite', titulo: 'CONTATO E CONVITE', sub: 'Método F.O.R.M. + seu script', texto: 'Antes de apresentar, entenda a pessoa: Família, Ocupação, Recreação — e então a Mensagem certa. Cada um escreve o PRÓPRIO script e o aperfeiçoa a cada conversa.' },
+  { n: 5, id: 'apresentacao', curto: 'Apresentação', completo: 'Apresentação de Sucesso', titulo: 'APRESENTAÇÃO DE SUCESSO', sub: 'Clareza e valor', texto: 'Conexão → FORM → Mensagem → Convite → Apresentação → Próximo Passo. Você não apresenta uma oportunidade — apresenta uma possibilidade. Meta do método: 3 reuniões por dia, de 45 a 60 minutos.' },
+  { n: 6, id: 'acompanhamento', curto: 'Acompanhamento', completo: 'Acompanhamento e Fechamento', titulo: 'ACOMPANHAMENTO E FECHAMENTO', sub: 'PPV — Próximo Ponto de Venda', texto: 'Cada etapa precisa conduzir ao próximo ponto. Os dois pilares: DOR + CONFIANÇA. É o CRM: a fila do dia, os clientes e a esteira de captação.' },
+  { n: 7, id: 'verificacao', curto: 'Verificação', completo: 'Verificação do Progresso', titulo: 'VERIFICAÇÃO DO PROGRESSO', sub: 'Medir e corrigir', texto: 'O que não se mede, não se corrige: metas, reuniões do dia, win rate, objeções e PPV — a Visão Executiva.' },
+  { n: 8, id: 'duplicacao', curto: 'Duplicação', completo: 'Duplicação dos 8 Hábitos do Sucesso', titulo: 'DUPLICAÇÃO DOS 8 HÁBITOS DO SUCESSO', sub: 'Ensinar e multiplicar', texto: 'Conhecimento é o que adquirimos; sabedoria é o que colocamos em prática. Ensine o método — o local de treinamento do time.' },
 ];
+
+/**
+ * 🎓 DIR-69 — o nome do Hábito em DUAS PEÇAS.
+ *
+ * Ordem do dono: "quando eu clico adentro, precisa aparecer o nome completo.
+ * Exemplo: é Lista de Networking, Contato e Convite, Apresentação de Sucesso...
+ * Pode até ficar o primeiro nome ali na frente, mas quando clica tem que
+ * aparecer o complemento do que são os oito hábitos do sucesso."
+ *
+ * Então: `curto` é o apelido que continua no seletor (a lista de 8 botões não
+ * cabe com o nome inteiro), e `completo` é o nome oficial, que a faixa mostra
+ * quando você ENTRA no hábito. O `complemento` é o que sobra do completo
+ * depois do curto — é ele que a tela escreve num peso mais leve, pra frase
+ * ler como uma coisa só ("Lista" + "de Networking") em vez de repetir a
+ * palavra duas vezes.
+ *
+ * Hábitos 1 e 2 não têm complemento (o nome oficial já é uma palavra só):
+ * nesse caso `complemento` volta vazio e a tela simplesmente não escreve nada.
+ */
+export function partesDoHabito(id) {
+  const h = HABITOS.find((x) => x.id === id);
+  if (!h) return null;
+  const completo = h.completo || h.curto || h.titulo;
+  const curto = h.curto || completo;
+  const combina = completo.toLowerCase().startsWith(curto.toLowerCase());
+  return { curto, completo, complemento: combina ? completo.slice(curto.length).trim() : '' };
+}
 
 // ✅ Hábito 2 — A ROTINA PERFEITA v2 (corrigida pelo dono em 03/09/2026, DIR-45.1):
 // 06:45 é TÉRMINO do treino; na chegada organiza-se o AMBIENTE (não o dia);
@@ -32,10 +59,10 @@ export const PRINCIPIO_ROTINA = {
 export const ROTINA_PADRAO = [
   { hora: '05:00', titulo: 'Acordar — gratidão e foco no sonho', detalhe: 'Primeiro pensamento do dia: POR QUE estou construindo isso?',
     guia: 'Momento rápido de gratidão, propósito, objetivo e foco no que precisa ser construído. Story extremamente natural: o horário, a janela, o café, o começo do dia, uma frase ou reflexão. Percepção gerada: propósito e disciplina.' },
-  { hora: '05:15', titulo: 'Story ANTES da atividade física', detalhe: 'O primeiro capítulo do dia: "Estou começando." Sem vender, sem dar aula.',
-    guia: 'O Story acontece ANTES do treino: colocando o tênis, saindo de casa, chegando à rua, a preparação, o horário. Não vender nada, não tentar dar aula. Objetivo: criar o primeiro capítulo da história daquele dia — "estou começando".' },
-  { hora: '05:30', titulo: 'Início da corrida / atividade física + registro DURANTE', detalhe: 'Registro rápido no meio do treino: distância, relógio, esforço, paisagem.',
-    guia: 'Começa efetivamente o treino. Durante, um registro rápido: corrida, caminhada, academia, distância, esforço. Por quê? Porque existe uma diferença enorme entre FALAR sobre disciplina e MOSTRAR disciplina acontecendo. É prova social — e ainda incentiva positivamente quem acompanha.' },
+  { hora: '05:15', titulo: 'Story ANTES da atividade física', detalhe: 'O PRÉ-TREINO é suspense: amarrando o tênis, saindo de casa, o chão da corrida. Incentiva a galera antes de começar.',
+    guia: 'O PRÉ-TREINO — o suspense que incentiva a galera. As fotos/stories que funcionam AQUI: 📸 amarrando o tênis · 📸 saindo de casa (a porta, a rua ainda escura) · 📸 o chão da corrida ou a fachada/equipamento da academia · o relógio marcando o horário. É o "vai começar" — cria expectativa em quem assiste. Não vender nada, não dar aula. Objetivo: o primeiro capítulo da história do dia — "estou começando".' },
+  { hora: '05:30', titulo: 'Início da corrida / atividade física + registro DURANTE', detalhe: 'DURANTE o treino: uma foto E uma gravação correndo/treinando — distância, relógio, esforço, paisagem.',
+    guia: 'Começa efetivamente o treino. DURANTE, dois registros: 📸 uma FOTO (o relógio, a distância, a paisagem, o suor) e 🎥 uma GRAVAÇÃO curta correndo/treinando — o movimento é o que prova. Por quê? Porque existe uma diferença enorme entre FALAR sobre disciplina e MOSTRAR disciplina acontecendo. É prova social — e ainda incentiva positivamente quem acompanha.' },
   { hora: '06:45', titulo: 'Término do treino + post', detalhe: 'Fecha a narrativa: PREPARAÇÃO → EXECUÇÃO → CONCLUSÃO. Curto e genuíno.',
     guia: 'Aqui TERMINA o treino — e fecha a história iniciada às 05:15. Registrar rápido: treino concluído, distância, tempo, resultado, sensação, aprendizado. Direções: "Não precisava estar com vontade. Precisava começar." · "Treino encerrado. Agora começa a segunda parte do dia." · "A disciplina de hoje facilita o resultado de amanhã." A pessoa não DIZ que é disciplinada — as pessoas ASSISTEM à disciplina acontecendo.' },
   { hora: '07:00', titulo: 'Leitura do dia — após o treino', detalhe: 'Mínimo 20 minutos. Procure UMA ideia que dê pra aplicar HOJE.',
@@ -157,7 +184,191 @@ export function eventoGoogleDaReuniao({ titulo, inicio, duracaoMin = 60, detalhe
     ...(local ? { location: local } : {}),
     start: { dateTime: semMs(ini), timeZone },
     end: { dateTime: semMs(fim), timeZone },
+    // 🔔 DIR-53 — o alarme oficial: o Google avisa 30 e 10 min antes, no
+    // celular, mesmo com o app fechado. Configurado NA CRIAÇÃO do evento.
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }, { method: 'popup', minutes: 10 }] },
   };
+}
+
+/**
+ * DIR-50 — o ID do evento na Google Agenda, pra editar/apagar de verdade.
+ * Registros novos guardam `google_event_id`; nos antigos só existe o link —
+ * o `eid` do link é base64url de "<idDoEvento> <emailDaAgenda>", então dá
+ * pra extrair. Devolve null quando não há evento Google.
+ */
+export function idDoEventoGoogle(registro) {
+  if (registro?.google_event_id) return registro.google_event_id;
+  const link = String(registro?.google_event_link || '');
+  const m = link.match(/[?&]eid=([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    const decodificado = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+    const id = decodificado.split(' ')[0];
+    return id || null;
+  } catch { return null; }
+}
+
+/** Segunda a domingo da semana que contém o dia dado (datas ISO yyyy-mm-dd). */
+export function semanaDe(diaISO) {
+  const d = new Date(`${String(diaISO).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const desloc = (d.getDay() + 6) % 7; // segunda = 0
+  const ini = new Date(d); ini.setDate(d.getDate() - desloc);
+  const fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+  const iso = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  return { inicio: iso(ini), fim: iso(fim) };
+}
+
+/** Meta do método: 3 apresentações por dia útil → 15 por semana, por pessoa. */
+export const META_REUNIOES_SEMANA = 15;
+
+/**
+ * DIR-51 — a visão MACRO da semana (TIME INTEIRO): total de reuniões
+ * agendadas na semana do dia dado e a quebra por pessoa, com % da meta.
+ */
+export function resumoSemanaReunioes(clientes = [], diaISO) {
+  const sem = semanaDe(diaISO);
+  if (!sem) return { total: 0, porPessoa: [], semana: null };
+  const porPessoa = new Map();
+  let total = 0;
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      const dia = String(registro?.quando || '').slice(0, 10);
+      if (registro?.resultado !== 'agendado' || dia < sem.inicio || dia > sem.fim) continue;
+      total++;
+      const chave = registro.registrado_por_id || registro.registrado_por_nome || 'sem_dono';
+      const atual = porPessoa.get(chave) || { id: chave, nome: registro.registrado_por_nome || 'Sem nome', total: 0 };
+      atual.total++;
+      porPessoa.set(chave, atual);
+    }
+  }
+  const lista = [...porPessoa.values()]
+    .map((p) => ({ ...p, pct: Math.round((p.total / META_REUNIOES_SEMANA) * 100) }))
+    .sort((a, b) => b.total - a.total || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  return { total, porPessoa: lista, semana: sem };
+}
+
+/**
+ * DIR-53 — a reunião MINHA mais próxima de começar (entre agora e a janela,
+ * em minutos): é o gatilho do popup "🔔 reunião em X min" no app.
+ */
+export function reuniaoIminente(clientes = [], uid, agoraISO, janelaMin = 15) {
+  const agora = new Date(agoraISO);
+  if (Number.isNaN(agora.getTime()) || !uid) return null;
+  let melhor = null;
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      if (registro?.resultado !== 'agendado' || registro.registrado_por_id !== uid) continue;
+      const ini = new Date(registro.quando || '');
+      if (Number.isNaN(ini.getTime())) continue;
+      const min = Math.round((ini.getTime() - agora.getTime()) / 60000);
+      if (min < 0 || min > janelaMin) continue;
+      if (!melhor || min < melhor.minutos) melhor = { cliente, registro, minutos: min };
+    }
+  }
+  return melhor;
+}
+
+/** Rótulos dos dias pro cadastro da reunião recorrente (índice = getDay()). */
+export const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+/**
+ * DIR-54.1 — o horário de TÉRMINO a partir de "HH:mm" de início + minutos de
+ * duração (o inverso de duracaoEntreHoras — pra exibir "09:00 às 13:00" em
+ * vez do minutos crus, que fica feio pra reunião longa). Vira o dia sozinho.
+ */
+export function horaFinal(horaInicio, duracaoMin) {
+  const m = String(horaInicio || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const totalMin = (Number(m[1]) * 60 + Number(m[2]) + (Number(duracaoMin) || 0)) % (24 * 60);
+  return `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
+}
+
+/**
+ * DIR-54 — duração em minutos a partir de "HH:mm" de início e término (pro
+ * cadastro que prefere dizer "até às" em vez de contar minutos). Vira o dia
+ * (término menor que início) soma 24h — reunião nunca "termina no passado".
+ * Devolve null se as horas forem inválidas ou o término for igual ao início.
+ */
+export function duracaoEntreHoras(horaInicio, horaFim) {
+  const paraMin = (h) => {
+    const m = String(h || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]); const mm = Number(m[2]);
+    if (hh > 23 || mm > 59) return null;
+    return hh * 60 + mm;
+  };
+  const ini = paraMin(horaInicio); const fim = paraMin(horaFim);
+  if (ini === null || fim === null || ini === fim) return null;
+  return fim > ini ? fim - ini : (fim + 24 * 60) - ini;
+}
+
+/**
+ * DIR-52 — as reuniões DA EMPRESA que caem no dia dado: recorrentes (pelo
+ * dia da semana) e de data única, ativas, cada uma com `quando` montado
+ * (dia + hora) pra entrar na linha do tempo com selo 🏛️.
+ */
+export function reunioesEmpresaDoDia(lista = [], diaISO) {
+  const dia = String(diaISO || '').slice(0, 10);
+  const d = new Date(`${dia}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return [];
+  const semana = d.getDay();
+  return (Array.isArray(lista) ? lista : [])
+    .filter((r) => r && r.ativo !== false && (
+      (r.dia_semana !== null && r.dia_semana !== undefined && Number(r.dia_semana) === semana)
+      || String(r.data || '').slice(0, 10) === dia
+    ))
+    .map((r) => ({ ...r, quando: `${dia}T${r.hora || '00:00'}` }))
+    .sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
+}
+
+/**
+ * DIR-49 — a LINHA DO TEMPO UNIFICADA do dia: reuniões do método, reuniões
+ * da esteira e eventos do Google numa lista só, ordenada pela hora. Cada
+ * item entra com `quando` (ISO com hora, ou só a data pra evento de dia
+ * inteiro) e a sua `origem` ('metodo' | 'esteira' | 'retorno' | 'google');
+ * dia inteiro vem primeiro. Fonte única — a tela não ordena nada sozinha.
+ */
+export function linhaDoTempoUnificada(itens = []) {
+  const hora = (i) => {
+    const s = String(i?.quando || '');
+    const d = new Date(s);
+    if (s.length <= 10 || Number.isNaN(d.getTime())) return '00:00'; // sem hora = dia inteiro, abre o dia
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  return [...(Array.isArray(itens) ? itens : [])].sort((a, b) => hora(a).localeCompare(hora(b)));
+}
+
+/**
+ * DIR-49.1 — o ÚLTIMO desfecho registrado de um cliente (pelo carimbo `em`),
+ * ou null. É o que a fila mostra pra provar que o registro salvou.
+ */
+export function ultimoContato(cliente) {
+  const lista = Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [];
+  if (!lista.length) return null;
+  return [...lista].sort((a, b) => String(a?.em || '').localeCompare(String(b?.em || ''))).at(-1) || null;
+}
+
+/**
+ * DIR-49.1 — as PRÓXIMAS reuniões: agendados de dias DEPOIS do dia dado,
+ * ordenados por data/hora. Reunião futura não pode ser invisível.
+ */
+export function proximasReunioes(clientes = [], depoisDeISO) {
+  const dia = String(depoisDeISO || '').slice(0, 10);
+  const proximas = [];
+  for (const cliente of (Array.isArray(clientes) ? clientes : [])) {
+    for (const registro of (Array.isArray(cliente?.contatos_metodo) ? cliente.contatos_metodo : [])) {
+      if (registro?.resultado === 'agendado' && String(registro.quando || '').slice(0, 10) > dia) proximas.push({ cliente, registro });
+    }
+  }
+  proximas.sort((a, b) => String(a.registro.quando).localeCompare(String(b.registro.quando)));
+  return proximas;
+}
+
+/** Plural honesto dos contadores: plural(1,'reunião','reuniões') → "1 reunião". */
+export function plural(n, umItem, varios) {
+  return `${n} ${Number(n) === 1 ? umItem : varios}`;
 }
 
 /** Guia estratégico de um item da rotina, pelo título (tarefa customizada não tem). */

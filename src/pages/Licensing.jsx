@@ -22,7 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
+import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake, Gamepad2 } from 'lucide-react';
+import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -36,6 +37,7 @@ import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
+import XGameAdmin from '../components/licensing/XGameAdmin';
 import CommissionsTab from '../components/licensing/CommissionsTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
@@ -46,6 +48,7 @@ import SellerFormModal from '../components/sellers/SellerFormModal';
 import SellersListPanel from '../components/sellers/SellersListPanel';
 import MobileNavSheet from '../components/licensing/MobileNavSheet';
 import CentralVendasTabs from '../components/licensing/CentralVendasTabs';
+import HeroTopCollege from '../components/licensing/HeroTopCollege';
 // 🧭 LATERAL ÚNICA (08/08/2026): o painel passou a usar a MESMA lateral das
 // outras telas. A antiga LicensingSidebar (com títulos de seção e itens
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
@@ -55,7 +58,7 @@ import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
-import { VALID_LICENSING_TABS, podeVerOperacao } from '@/lib/licensingTabs';
+import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
@@ -1043,11 +1046,31 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
+  // 🎓 DIR-62 — a pessoa está numa seção da Top College? É isso que liga a
+  // faixa da academia (e o tema escuro do seletor logo abaixo dela).
+  const naTopCollege = activeTab === 'catalogo' && SECOES_TOP_COLLEGE.some((s) => s.value === catalogSubTab);
+  // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
+  // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
+  // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.
+  const seletorDaCentral = (
+    <CentralVendasTabs
+      value={catalogSubTab}
+      onChange={setCatalogSubTab}
+      clientesCount={myClients.length}
+      escuro={naTopCollege}
+    />
+  );
+  const saudacaoDaHora = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+  })();
+
   return (
     <div className="flex bg-white min-h-screen">
       <NavegacaoLateralGlobal
         user={user}
         activeTab={activeTab}
+        activeCatalogTab={catalogSubTab}
         onTabChange={handleTabChange}
       />
 
@@ -1058,18 +1081,21 @@ const DashboardContent = ({ user, isAdmin }) => {
           <MobileNavSheet user={user} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 
-        <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Painel de Alavancagem</h1>
-            <p className="text-base sm:text-lg font-slab text-gray-800">
-              {(() => {
-                const h = new Date().getHours();
-                const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-                return `${greeting}, ${shortName}`;
-              })()}
-            </p>
+        {/* 🎓 DIR-62 — na Top College o topo branco vira a FAIXA DA ACADEMIA
+            (preta, com as duas marcas e o professor). Fora dela, o cabeçalho
+            de sempre: a faculdade não assina a Carteira nem os Pedidos. */}
+        {naTopCollege ? (
+          <HeroTopCollege saudacao={saudacaoDaHora} nome={shortName} seletor={seletorDaCentral} />
+        ) : (
+          <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Painel de Alavancagem</h1>
+              <p className="text-base sm:text-lg font-slab text-gray-800">
+                {`${saudacaoDaHora}, ${shortName}`}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 🖥️ Estilo Mercado Pago: o resumo (saldo, banner, gráficos) só aparece
             na Visão Geral. Nas outras abas a página troca por completo, sem
@@ -1116,7 +1142,9 @@ const DashboardContent = ({ user, isAdmin }) => {
         {
           <TabsContent value="catalogo" className="space-y-6">
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
-              <CentralVendasTabs value={catalogSubTab} onChange={setCatalogSubTab} clientesCount={myClients.length} />
+              {/* na Top College o seletor já foi desenhado dentro da faixa —
+                  aqui ele não se repete, senão viriam dois menus na tela */}
+              {!naTopCollege && seletorDaCentral}
 
               <TabsContent value="catalogo-home" className="mt-6">
                 {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
@@ -1480,7 +1508,30 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </Button>
                 </AccordionContent>
               </AccordionItem>
+
             </Accordion>
+          </TabsContent>
+        }
+
+        {/* 🎮 X-GAME — o admin da gamificação mora na X-eos (menu Top College),
+            aba própria e SÓ pro super admin: participantes, verbas, tarefas,
+            ciclo, conferência dupla e a fila de comprovações. */}
+        {visibilidadeDoUsuario(user).superAdmin &&
+          <TabsContent value="xgame-admin" className="space-y-6">
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-gray-900">
+                  <Gamepad2 className="w-5 h-5 text-emerald-600" />
+                  X-GAME — Admin da Gamificação
+                </CardTitle>
+                <CardDescription className="text-gray-500">
+                  Estrutura de operações e expansão · quem joga, quanto recebe, as tarefas e as comprovações
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <XGameAdmin />
+              </CardContent>
+            </Card>
           </TabsContent>
         }
       </Tabs>

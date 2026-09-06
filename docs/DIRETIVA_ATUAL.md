@@ -12,6 +12,684 @@
 
 ---
 
+## DIR-70 — O menu da Top College lê como uma coisa só
+
+**Emitida por:** dono (05/09/2026), com print do menu flutuante: *"lá em
+cima está top, a logo. Só o restante ali que tem que ficar mais conexo.
+Quero que os de baixo pareçam com a identidade visual da X-eos, aquele
+metálico, a tipografia igual. Estou sentindo elas meio divididas — não
+parecendo uma coisa só, mesmo que estejam separados."*
+
+**Data:** 05/09/2026.
+
+**Diagnóstico (o que dividia, e não era a tipografia — a Sora já entrou
+na DIR-61):**
+1. **A cor.** A marca em cima é prata; os itens acendiam em **verde**, a
+   cor do Leilão NoZap. Verde dentro do menu da faculdade lê como outro
+   sistema colado ali.
+2. **O eixo.** A faixa da marca começava em 16px e os itens em 12px —
+   4px de desalinho que o olho não nomeia mas sente.
+3. **O corte.** A faixa tinha fundo próprio e uma linha cheia embaixo:
+   parecia um cartão separado em cima de um menu.
+
+**Escopo autorizado:**
+1. Rótulo e traço do ícone passam a ser feitos do **degradê metálico da
+   própria logo** — os tons saíram da média de pixel do arquivo
+   `marca-xeos-lockup.webp` (topo 235,237,240 · meio 198,203,211 · base
+   140,146,155). Mesma liga, não um prata parecido.
+2. Faixa e itens dividem o **mesmo eixo** (16px).
+3. A linha cheia vira um **fio que nasce no eixo do texto e apaga antes
+   da borda** — emenda em vez de corte.
+4. O aceso deixa de ser verde e passa a ser o metal virando pra luz.
+
+**Fora do escopo:** produção (travada por ordem do dono); a logo da faixa,
+que o dono aprovou como está; a ordem arrastável dos ícones.
+
+---
+
+## DIR-69 — O nome completo do Hábito quando se entra nele
+
+**Emitida por:** dono (05/09/2026), com print do Hábito 03 mostrando só
+"Lista": *"quando eu clico adentro, precisa aparecer o nome completo.
+Exemplo, é Lista de Networking. Contato e Convite. Apresentação de
+Sucesso. Acompanhamento e Fechamento. Verificação do Progresso.
+Duplicação dos oito hábitos do sucesso. Pode até ficar o primeiro nome ali
+na frente, mas quando clica tem que aparecer o complemento do que é, do
+que são os oito hábitos do sucesso."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. Cada Hábito ganha **nome oficial completo** na fonte única
+   (`src/lib/metodo.js`): Sonho · Compromisso · Lista de Networking ·
+   Contato e Convite · Apresentação de Sucesso · Acompanhamento e
+   Fechamento · Verificação do Progresso · Duplicação dos 8 Hábitos do
+   Sucesso.
+2. O **apelido curto continua na frente** (o seletor de 8 botões não cabe
+   com o nome inteiro) e o **complemento aparece na faixa quando se
+   entra**, num peso mais leve — lê como uma frase só.
+3. A lista dos 8 hábitos que estava **duplicada** no modal do Método passa
+   a ler da fonte única. Duas cópias eram dois nomes: um lado mudaria com
+   esta ordem e o outro não.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
+## DIR-68 — Vidro que dá pra ler
+
+**Emitida por:** dono (05/09/2026), com print do modal do Quadro dos
+Sonhos: *"eu adoro esses menus assim transparentes, de verdade. Mas a
+gente só tem que tomar cuidado, porque algumas ficam muito transparentes,
+igual essa parte branca. A gente pode deixar transparente, mas escurecer
+aonde tem letra, pra deixar o fundinho ali atrás do card. O card todo
+transparente é legal. Só a parte que está transparente botar um fundo pra
+ler, sem deixar de deixar o fundo transparente."*
+
+**Data:** 05/09/2026.
+
+**Diagnóstico (medido, não achismo):** o card no meio do painel tem o
+preto do palco atrás, então o filme branco de 4,5% já se lê. O que quebra
+é o que **flutua**: o modal cobre a tela inteira — inclusive os cards
+claros do painel de baixo — e o texto de trás atravessava a letra da
+frente (no print dele dava pra ler "R$ 3.279,24" dentro do formulário).
+
+**Escopo autorizado:**
+1. O que flutua (cortina + cartão do modal) ganha **base escura
+   translúcida + desfoque** do que está atrás. Continua transparente —
+   alfa 0,82 no cartão, 0,72 na cortina —, mas a letra passa a ter chão.
+2. A pastilha `bg-background` do botão "outline" (BRANCO SÓLIDO no tema
+   claro, com letra clara em cima = invisível) vira vidro no palco. É a
+   mesma "parte branca" da ordem, com outro nome de classe.
+3. Botão desabilitado no escuro mantém letra clara e só baixa a força.
+
+**Fora do escopo:** produção (segue travada por ordem do dono); o dropdown
+do seletor, que o dono já aprovou preto na DIR-64.
+
+---
+
+## DIR-67 — A fala do professor sai do canto
+
+**Emitida por:** dono (05/09/2026): *"vamos deixar aqui mais organizado.
+Exemplo, qual é o seu poder? vamos deixar bem do lado do professor Xavier,
+tipo o que ele está falando. Acho que está tudo muito aqui no canto. E o
+método vai pra um lugar melhor ou deixa ali mesmo? Dá uma espaçada sem
+poluir a imagem — esse meio vazio está legal —, mas eu quero tirar um pouco
+dessas coisas aqui. Qual é o seu poder, boa tarde Luiz Santanna, pode
+colocar pra lá. Dá uma organizada pra ficar mais visual."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. A faixa da academia vira **duas colunas**: identidade (marcas ·
+   X-office · seletor) à esquerda, **fala do professor** encostada nele à
+   direita, e o **meio vazio** preservado como respiro.
+2. **"Qual é o seu poder?"** passa a morar do lado da figura, na altura da
+   cabeça dele — lida como frase que ele está dizendo.
+3. A **saudação** ("Boa tarde, Luiz Santanna") sai da pilha da esquerda e
+   vira a primeira linha da fala: ele cumprimenta e então pergunta.
+4. O véu preto que cobria a faixa inteira dá lugar a uma **máscara só na
+   borda esquerda da figura** — o texto não mora mais por cima dela, então
+   o rosto volta em cheio (o "professor em destaque" da DIR-62).
+
+**Decisão minha, dita ao dono:** o **seletor fica onde está**, na coluna da
+esquerda. Ele é a única coisa clicável da faixa, e comando de navegação
+mora do lado de quem assina a tela — do lado do professor ele viraria
+poluição em cima da imagem, exatamente o que a ordem manda evitar.
+
+**Fora do escopo:** produção (segue travada por ordem do dono); a ordem
+dos ícones arrastáveis do menu (intocada desde a DIR-57).
+
+---
+
+## DIR-66 — X-office no título e o acabamento fino
+
+**Emitida por:** dono (05/09/2026): *"só mais uns pequenos ajustes pra
+ficar extremamente perfeito"* e, em seguida: *"aqui não entra Painel de
+Alavancagem — substitui pelo nome X-office, somente aqui; nos restantes,
+fora da Top College, mantém Painel de Alavancagem."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. Dentro da faixa da Top College o título vira **X-office**, com a
+   frase oficial da sub-marca. Fora dela, "Painel de Alavancagem"
+   continua igual.
+2. Acabamento das imagens dos Hábitos: **esfumaçado no pé** (a imagem
+   terminava num corte seco contra o painel) e o **título ancorado
+   embaixo**, que com a faixa alta ficava flutuando no meio.
+
+**Decisão minha, dita ao dono:** o título entra como TEXTO, não como o
+logo do X-office — a faixa já carrega duas marcas, e uma terceira seria
+a repetição que ele mandou tirar na DIR-63.
+
+**Não mexido de propósito:** o card "Espelho do Painel de Alavancagem"
+(Hábito 7) mantém o nome — ele é um ponteiro pra OUTRA tela de mesmo
+nome, e renomear quebraria o sentido da comparação.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
+## DIR-65 — A imagem do Hábito inteira, sem corte
+
+**Emitida por:** dono (05/09/2026): *"quero que você aumente aqui de uma
+forma que a imagem apareça toda, porque está cortando as imagens. Ver a
+parte de baixo, um pouquinho pra cima, pra baixo, pra aparecer essa
+imagem toda — essas imagens são muito bonitas."*
+
+**Data:** 05/09/2026.
+
+**A causa (eram DOIS cortes, não um):** o arquivo já era gerado como uma
+fresta de 33% da página do brandbook, e o `object-cover` cortava de novo
+o que sobrava pra preencher uma altura fixa.
+
+**Escopo autorizado:**
+1. Regerar as 8 imagens guardando **63% da cena** (proporção 2.8 no lugar
+   de 5.38 — quase o dobro de altura).
+2. O bloco passa a ter a **proporção EXATA do arquivo**, sem altura
+   fixa: sem sobra, o CSS não tem o que aparar.
+3. Reenquadrar caso a caso pelo assunto (o carro, as pessoas, a frase).
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
+## DIR-64 — O botão no preto, a abertura limpa e as imagens maiores
+
+**Emitida por:** dono (05/09/2026), navegando o preview: *"esse botão não
+sei se é bom ali, e quando está abrindo está feio. Está muito grande
+esse branco, ele tem que cair em outro lugar. Gostei da transparência,
+mas ela tem que abrir num lugar preto, o botão tem que entrar no lugar
+preto pra ficar bonito e clean. E quando eu clico no Sonho, no
+Compromisso, as imagens estão muito bonitas — elas têm que aparecer.
+Deixar mais visualização, mais organizado."*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O seletor sai do branco e passa a viver **dentro da faixa preta**.
+2. O menu dele abre **preto**, com a tipografia da marca — e num
+   **portal**, pra não ser cortado pela borda arredondada da faixa.
+3. A faixa branca entre a faixa da academia e o painel encolhe.
+4. As imagens de cada Hábito **crescem** (de ~160px pra ~240px), com o
+   véu escuro mais curto — só o necessário pra segurar o texto.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
+## DIR-63 — Parar de repetir as logos
+
+**Emitida por:** dono (05/09/2026), olhando o preview: *"tamo quase lá,
+só estou achando que está repetindo muito as logos. Acho que a de cima
+precisa só deixar da X-eos, o que acha?"*
+
+**Data:** 05/09/2026.
+
+**Minha leitura, dita a ele antes de mexer:** o incômodo não é uma logo a
+mais — é o PAR INTEIRO aparecendo duas vezes na mesma tela, com 300px de
+distância (na faixa da academia e de novo no palco dentro do painel).
+Tirar a Top College da faixa resolveria metade e deixaria a faixa da
+ACADEMIA sem a academia.
+
+**Escopo autorizado:**
+1. O palco de marcas de dentro do painel SAI (era a cópia).
+2. As frases das duas marcas — único conteúdo que só existia lá — sobem
+   pra faixa, numa linha só.
+3. A faixa segue com as duas marcas juntas, agora uma vez só na tela.
+
+**Fora do escopo:** produção (segue travada por ordem do dono).
+
+---
+
+## DIR-62 — A faixa da academia: o topo branco vira preto, com o professor
+
+**Emitida por:** dono (05/09/2026): *"ficou muito pequeno o professor,
+queria dar ênfase nele. E ali em cima onde está branco, usar aquele
+espaço pra botar o professor bem temático, deixando tudo preto ali
+maneirão, pra ficar mais foda a academia — puxando a X-EOS juntamente
+com a Top College, e o professor bem em destaque. E melhorar aquele que
+está escrito ali o método."* Autorização: **"pode fazer o que eu falei,
+só não coloca nada em produção agora, é tudo no preview"**.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O cabeçalho branco do painel vira uma **faixa preta** com o padrão da
+   X-EOS, as **duas marcas juntas** (Top College + X-eos), o título, a
+   saudação e a pergunta **"Qual é o seu poder?"** em degradê.
+2. O **professor em destaque** — imagem grande, entrando pela direita,
+   com esfumaçado pro preto. Deixa de ser miniatura.
+3. O bloco do seletor logo abaixo acompanha o preto, e o seletor volta a
+   dizer ONDE a pessoa está ("Top College / O Método"): a pergunta agora
+   vive grande na faixa, e repetir embaixo era ruído.
+
+**LIMITE DE ESCOPO (decisão de arquitetura, registrada):** a faixa só
+aparece quando a pessoa está numa seção da TOP COLLEGE. O cabeçalho é o
+mesmo em todas as abas do painel — se a faixa ficasse sempre, a
+faculdade voltaria a assinar a Carteira e os Pedidos, exatamente a
+fronteira que a DIR-57 fechou (Top College forma, Leilão NoZap opera).
+
+**Fora do escopo — reforçado pelo dono nesta rodada:** NADA vai pra
+produção. Tudo fica no preview.
+
+---
+
+## DIR-61 — Tudo com cara de uma coisa só: tipografia, X e "qual é o seu poder"
+
+**Emitida por:** dono (05/09/2026), aprovando a rodada anterior ("está
+top") e pedindo três coisas: *"como puxar os nomes de baixo da logo no
+mesmo formato de letra da logo, pra ficar bem bonito, parecer que tudo é
+a mesma coisa. E ali onde está escrito Método, vamos botar só o x — mas
+fazer um x aqui só pra isso. E botar a imagem do professor Xavier, bem
+pequena, perguntando qual é o seu poder."* Aprovação: **"foda,
+vambora"** / *"se for ficar excelente, pode fazer"*.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O menu inteiro da Top College passa a usar **Sora**, a tipografia
+   oficial da X-EOS — os nomes ficam da mesma família da logo e o bloco
+   lê como uma peça só, não como logo + interface.
+2. A **frase da marca** vira TEXTO de verdade abaixo da arte (não pixel
+   dentro da imagem): no lockup ela tem 1/40 da altura do X e só seria
+   legível com a logo em ~300px. Como texto, fica nítida em qualquer
+   tamanho, e a arte segue inteira — o subtítulo foi APAGADO do arquivo,
+   não recortado.
+3. Onde estava escrito "O Método", entra **só o X**, num arquivo feito
+   só pra esse lugar (X centralizado em quadrado, com folga).
+4. Entra o **retrato pequeno** do deck do dono com a pergunta **"Qual é
+   o seu poder?"**, no lugar do rótulo.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
+## DIR-60 — A logo em PRATA, inteira, sem cortar nada
+
+**Emitida por:** dono (05/09/2026), com a foto da logo metálica em
+mockup: *"tá cortado. Pega essa logo, tire o fundo e cole exatamente
+essa só que menor, bem estilo a cor prata, a cor das lâminas. Quero a
+logo com essa cor, sem fundo e sem cortar nada."*
+
+**Data:** 05/09/2026.
+
+**O que estava cortado (erro meu na DIR-59):** pra tirar o subtítulo eu
+recortei a imagem POR BAIXO — e o X da X-eos desce até o pé da arte, com
+um rabo longo na diagonal. O corte amputou esse rabo. A lição: em lockup
+com elementos sobrepostos em altura, não se remove texto cortando o
+retângulo.
+
+**Escopo autorizado:**
+1. Entra o lockup **INTEIRO** (X + "-eos" + a linha "Estrutura de
+   operações e expansão"), sem recorte nenhum.
+2. Acabamento **prata metálico**, no lugar do branco chapado — o mesmo
+   desenho de luz do mockup: claro no topo, banda de brilho no meio, aço
+   mais fundo embaixo.
+3. Fundo transparente. A arte NÃO vem da foto colada no chat (que chegou
+   como imagem no chat, não como arquivo, então não dá pra recortar
+   fundo): vem da logo ORIGINAL com transparência já extraída do PDF do
+   dono, agora metalizada — resultado melhor que remover fundo de foto,
+   sem halo e sem resíduo de textura.
+4. A linha do menu cresce pro logo caber inteiro.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
+## DIR-59 — No menu, a logo INTEIRA da X-eos no lugar do texto
+
+**Emitida por:** dono (05/09/2026): *"onde está escrito O Método eu quero
+que entre a logo inteira da X-eos, sem o nome O Método"*.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. No menu da Top College (lateral do desktop e acordeão do celular), o
+   item "O Método" deixa de escrever o nome: entra a **logo inteira da
+   X-eos** no lugar do texto.
+2. A logo entra SEM a linha "Estrutura de operações e expansão" — na
+   altura de uma linha de menu (22px) aquele subtítulo vira borrão. O
+   corte foi medido varrendo as linhas do arquivo (o subtítulo começa em
+   y=612), não estimado.
+3. O rótulo "O Método" continua existindo como **texto alternativo** da
+   imagem: sem isso o item ficaria mudo pra leitor de tela e sem nome na
+   busca do menu do celular.
+4. O seletor interno da Loja & Vendas NÃO muda: lá o texto "O Método" é
+   o "você está aqui", e trocá-lo por logo tiraria a orientação.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
+## DIR-58 — A marca no lugar do ícone genérico
+
+**Emitida por:** dono (05/09/2026), vendo o menu novo: *"conseguimos
+inserir a logo da Top College onde é o ícone, pra já entrar a logo e
+ficar mais bonito seguindo o padrão da empresa? E onde está escrito
+O Método, inserir a logo da X-EOS da mesma forma?"*
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. O ícone do grupo **Top College** na lateral passa a ser o SÍMBOLO da
+   Top College (o pilar), não um desenho genérico do lucide.
+2. O item **O Método** passa a levar o SÍMBOLO da X-eos (o X) — na
+   lateral, no menu do celular e no seletor interno.
+3. Entra só o SÍMBOLO, nunca o logo inteiro: num quadrado de 20px o nome
+   escrito vira borrão. Medido renderizando nos 20px reais antes de
+   aplicar.
+4. A escolha vem do DADO (campo `marca` na fonte única), então as três
+   telas mostram a mesma coisa sem cada uma decidir por conta.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado).
+
+---
+
+## DIR-57 — A Top College vira um DEPARTAMENTO no menu do painel
+
+**Emitida por:** dono (05/09/2026), depois de uma análise pedida em chat:
+*"pensa que a Leilão NoZap contratou a Top College, que a gente cuida de
+toda a estrutura de expansão, treinamento, desenvolvimento, vendas...
+a Top College não tem que ficar lá embaixo, tem que ficar lá em cima...
+ver o que a gente pode diminuir, mantendo a fluidez"*. Aprovação:
+**"pode fazer"**.
+
+**A ideia que destravou:** a Leilão NoZap CONTRATOU a Top College. Não é
+a faculdade tomando o app — é uma fornecedora ocupando um departamento
+dentro do cliente. Por isso ela não pinta as telas de caixa (Pedidos,
+Comissões, Carteira): ela é dona do que forma a pessoa.
+
+**Regra de fronteira (vale pra qualquer tela futura):** nesta tela a
+pessoa está sendo FORMADA ou está OPERANDO? Formada → Top College.
+Operando → Leilão NoZap.
+
+**Decisões que o dono tomou na análise:**
+1. Vendedores vai pra Top College (gestão de gente é formação);
+   Comissões fica na Loja & Vendas (pagamento é caixa).
+2. Visão Geral fica FORA, como home neutra — *"vamos testar como você
+   falou, caso eu navegando veja que preciso mudar, eu te falo"*.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. Menu lateral reorganizado de ~10 ícones soltos para ~7, aplicando o
+   padrão que JÁ existe na casa (grupo vira 1 ícone com menu flutuante,
+   como "Operação" e "Central de Vendas" já fazem): Visão Geral ·
+   Minha Conta · Operação · Loja & Vendas · **Top College** ·
+   Arrematante · Admin.
+2. Top College reúne: O Método (8 Hábitos), Time (Vendedores), Carreira,
+   Evoluir Nível e Metas — esta última sai de "Operação", onde estava
+   solta.
+3. "Central de Vendas" vira **Loja & Vendas** e fica só com o caixa:
+   Loja Virtual, Relatório, Pedidos, Venda Direta, Comissões.
+4. **"CRM" morre como nome** e vira **O Método** — palavra genérica de
+   software não combina com uma faculdade própria.
+5. O agrupamento passa a ser DADO em `licensingTabs.js` (flag
+   `colapsar`), não mais um `if (grupo.title === 'Operação')` repetido
+   na lateral do desktop e no menu do celular.
+
+**TRAVA EXPLÍCITA DO DONO:** *"não mudar a questão de como o usuário
+organiza... ele pode arrastar e organizar os ícones de acordo com a sua
+usabilidade. Não pode mudar essa função, tem que manter"*. A função de
+arrastar e a ordem salva por usuário ficam INTACTAS. Os ícones novos
+entram no fim da fila de quem já tem ordem salva (o dono foi avisado
+disso e aceitou) — nenhum item some, que é a regra que já existia.
+
+**Fora do escopo:** publicação em produção (só com "pode" separado);
+gamificação; qualquer mudança de permissão por cargo.
+
+---
+
+## DIR-56 — O painel dos 8 Hábitos VIRA o ambiente da marca
+
+**Emitida por:** dono (05/09/2026), reprovando o resultado da DIR-55 ao
+ver no preview: *"CARA QUE LOUCURA É ESSA. EU QUERO O FUNDO FODA COM AS
+CORES DAS LOGOS, EU QUERO AS LOGOS ORIGINAIS, EU QUERO TUDO ISSO
+TEMÁTICO IGUAL ÀS APRESENTAÇÕES QUE EU TE MANDEI. QUERO TODO O FUNDO
+DESSA ÁREA DE TOP COLLEGE E X-EOS. VOCÊ NÃO ENTENDEU ISSO. TODO O
+PAINEL NESSA PARTE PRECISA TER A IDENTIDADE VISUAL DESSAS EMPRESAS.
+EU NÃO QUERO FUNDO BRANCO NA ÁREA DE VENDAS."* Complementada em
+seguida: *"COLOQUE UMAS IMAGENS DO BRANDBOOK NO PAINEL PARA CRIAR MAIS
+CONEXÕES, IMAGENS DO BRANDBOOK EM TODO PAINEL. VAMOS DEIXAR MAIS
+TEMÁTICO E MENOS COM EMOJIS, E DEIXAR O PAINEL COM VONTADE DE SER
+GRANDE. QUERO ISSO FODA."*
+
+**O que a DIR-55 errou:** entregou uma placa de logo no topo de uma
+página branca. Identidade visual não é adesivo — é o ambiente inteiro.
+
+**Material de origem (arte ORIGINAL, não recriada):** as logos e as
+imagens foram extraídas dos PDFs que o próprio dono anexou — a
+apresentação do evento (lockup Top College + X-eos, com canal alfa, em
+alta) e o brandbook oficial da X-EOS (padrão tonal de X, sub-marca
+X-office, imagens temáticas). Os SVGs desenhados à mão na DIR-55 são
+apagados.
+
+**Data:** 05/09/2026.
+
+**Escopo autorizado:**
+1. **Fundo:** todo o painel da Central de Vendas em base escura X-EOS
+   (#00020C → #0A1020), com o padrão tonal de X do brandbook por trás e
+   brilhos suaves no gradiente Top College. Zero área branca.
+2. **Superfícies:** todo card (métricas, hábitos, agenda, fila, modais)
+   vira vidro escuro — fundo translúcido, borda de luz, texto claro.
+3. **Logos originais** no cabeçalho, sobre o fundo escuro, com as
+   frases oficiais das duas marcas.
+4. **Papel de cada marca:** gradiente Top College (azul→roxo→magenta) no
+   que brilha — hábito ativo, título, progresso, botão principal;
+   prata/branco X-EOS no que sustenta — bordas, divisores, ícones,
+   botões secundários.
+5. **Imagens do brandbook em todo o painel:** uma faixa temática por
+   Hábito (sonho→carro, compromisso→"grandes batalhas", lista→pessoas,
+   contato→ambiente, apresentação→papelaria, acompanhamento→mochila,
+   verificação→X-office, duplicação→avião) + a frase "o sucesso é a
+   soma de pequenos esforços repetidos dia após dia".
+6. **Menos emoji:** os emojis decorativos da navegação e dos títulos dão
+   lugar a ícones de traço (lucide), já usados na casa.
+7. **Escala:** tipografia e respiro maiores — "vontade de ser grande".
+
+**Fora do escopo:** gamificação / Human Token (o dono segurou até
+mandar a planilha); qualquer tela fora da Central de Vendas (cabeçalho
+do site, menu lateral, rodapé e demais módulos ficam como estão);
+publicação em produção (só com "pode" separado).
+
+---
+
+## DIR-55 — Identidade Top College + X-EOS no painel dos 8 Hábitos
+
+**Emitida por:** dono (05/09/2026, por áudio transcrito): "todo esse
+sistema dos oito hábitos de sucesso precisa ter essas cores, a
+identidade visual das duas marcas, em locais estratégicos... explicando
+que nós somos a primeira faculdade de empreendedorismo do planeta, e a
+X-EOS significa estrutura de operação e expansão de qualquer negócio, o
+briefing prático do sucesso." Corrigido depois: "eu quero a Top College
+e X-EOS JUNTO, seguindo o princípio: Top College a faculdade de
+empreendedorismo e X-EOS o sistema, aplicação de cultura e
+desenvolvimento — a coluna vertebral da mentalidade." E: "quero que
+você deixe melhor, precisa da ênfase nas duas marcas sem diminuir
+nenhuma, dando um pouco de grandeza na faculdade sem diminuir a X-EOS."
+Desenho do cabeçalho aprovado em chat (faixa azul-marinho, Top College
+~60% maior + X-eos ~40% inteiro, subtítulos no mesmo tamanho de fonte).
+Aprovação final: **"CAPRICHA QUERO ISSO FODA"**.
+**Material de origem:** brandbook oficial da X-EOS (PDF anexado pelo
+dono) — cores exatas #00020C (preto/inovação e força) e #F4F4F4
+(branco gelo/confiança e modernidade), escala #03000D→#F6F6F9,
+tipografia Bauhaus (título)/Sora (corpo); sub-marca "X-office —
+verificando o progresso e mapeando processos". Top College sem
+brandbook próprio localizado — cores extraídas visualmente das imagens
+reais enviadas (gradiente azul→roxo→magenta). Logos das duas marcas
+recriados em SVG fiel ao que foi visto (arquivo de origem/vetor não
+disponível — dono confirmou seguir assim).
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+1. Cabeçalho do painel "🏆 Os 8 Hábitos do Sucesso": faixa #0A1020 com
+   os dois logos lado a lado (responsivo: empilha no celular), Top
+   College maior (~60%), X-eos inteiro (~40%), linha fina separando,
+   subtítulo oficial de cada marca no mesmo tamanho de fonte.
+2. Dentro dos cards de cada Hábito: estrutura (bordas/divisores/barra
+   de progresso) na paleta X-EOS (preto/branco/cinza); destaques
+   (botão principal, conquista) no gradiente Top College.
+3. Hábito 7 (Verificação) ganha o selo "X-office".
+4. Tipografia Sora (Google Fonts) pro corpo; substituto geométrico
+   arredondado de licença livre pro título (sem o arquivo da Bauhaus
+   original).
+**Fora do escopo:** gamificação/Human Token/pontos (dono disse
+"segura" — vai mandar material próprio); rebranding do resto do site
+(só o painel dos Hábitos).
+**Regras fixas:** prova em navegador; produção só com novo "pode".
+**Status:** EM VIGOR.
+
+---
+
+## DIR-54 — Fila identificada por dono (MINHA × TIME) e reunião da empresa com horário de término
+
+**Emitida por:** dono (05/09/2026, por áudio transcrito, testando as
+DIR-50→53 no preview): "nessa parte de cima [a fila do Hábito 4] eu
+preciso saber de quem agenda, e só aparecer as minhas agendas... se são
+de outras pessoas precisa aparecer" — e no cadastro da reunião da
+empresa: "ao invés de botar só duração, melhor botar o horário que
+termina — pode manter os minutos, mas eu poder escolher a hora que
+termina também".
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+1. A fila "Quem contatar" passa a respeitar o MESMO alternador MINHA ×
+   TIME da agenda (só existe pra visão total): MINHA mostra só os
+   contatos que EU cadastrei (`created_by_id`); TIME mostra a lista
+   inteira, cada um com o chip 👤 do dono do cadastro (nome resolvido
+   pelo id — "sem dono definido" pros cadastros legados sem carimbo).
+   O rodapé "sem qualificação" acompanha o mesmo escopo.
+2. No cadastro de "Reuniões da empresa": ao lado da duração em minutos,
+   um alternador "⏱️ Duração" / "🏁 Até às" — no segundo modo, escolhe a
+   HORA DE TÉRMINO e o sistema calcula os minutos sozinho (fonte única
+   testada). Os dois caminhos continuam salvando só `duracao_min`.
+**Regras fixas:** prova em navegador; sem SQL novo.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-50 a DIR-53 — Agenda viva: editar/excluir com Google, identificação, visão macro, alarmes e reuniões da empresa
+
+**Emitidas por:** dono (05/09/2026, por áudio transcrito, após aprovar a
+DIR-49.1: "muito bom, funcionou"): editar e excluir a agenda "e
+automaticamente excluir do Google Agenda"; alarme avisando a reunião,
+de preferência "um popup no aplicativo do Leilão NoZap" (perguntou qual
+é melhor — análise entregue recomendando Google como alarme oficial +
+popup no app agora, web push depois); identificar de quem é a reunião
+("botar o nome, tipo Santanna") logo no início do item; verificar se o
+filtro minha × time está certo (verificado com o banco: os itens eram
+DELE mesmo — o problema era a tela não dizer o dono); no TIME INTEIRO o
+total de reuniões da semana com percentual ("a visão macro"); e o espaço
+das reuniões do negócio ("toda segunda: Mentalidade do Diretor e do
+CEO"), salvo pra todo mundo que participa. Documento em 5 pontos
+aprovado com **"pode"**.
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+- **DIR-50 (editar/excluir + dono visível):** cada reunião do método
+  (hoje e próximas) ganha ✏️ Editar (agendador pré-preenchido; salvar
+  atualiza o registro E o evento no Google via PATCH) e 🗑️ Excluir
+  (confirmação; apaga o registro E o evento no Google via DELETE) — só
+  pra quem registrou ou visão total. Passamos a guardar
+  `google_event_id`; nos eventos antigos o id é extraído do próprio
+  link (fonte única testada). Falha no Google nunca trava: conclui no
+  método e avisa com o link. Identificação: todo item abre com o dono —
+  "👤 você" na MINHA, nome forte no início no TIME.
+- **DIR-51 (visão macro):** faixa no topo do TIME INTEIRO com o total
+  de reuniões da SEMANA, quebra por pessoa e % da meta do método
+  (3 apresentações/dia por executivo). Fonte única testada.
+- **DIR-52 (reuniões da empresa):** tabela nova `reunioes_empresa`
+  (migração no padrão da casa — o dono cola o SQL): título, recorrente
+  semanal (dia_semana) ou data única, hora, duração, público, ativo.
+  Admin cria/desativa na própria agenda; aparece pra TODOS com selo 🏛️
+  na linha do tempo do dia. entityWrite ganha a tabela (escrita só
+  admin — cargo comercial não grava reunião da empresa).
+- **DIR-53 (alarmes):** todo evento criado no Google sai com alarme
+  popup 30 e 10 min antes (reminders na API). No app: aviso fixo
+  "🔔 reunião em X min" quando uma reunião MINHA está pra começar
+  (checagem local, app aberto), dispensável. Web push com app fechado
+  fica REGISTRADO como diretiva futura (depende do service worker).
+**Fora do escopo:** web push; agenda de outra pessoa no Google; editar
+reunião da esteira por aqui.
+**Regras fixas:** prova em navegador; escrita via entityWrite; produção
+só com novo "pode".
+**Status:** EM VIGOR.
+
+---
+
+## DIR-49.1 — Salvar não pode apagar a tela: recarga silenciosa, histórico e próximas reuniões
+
+**Emitida por:** dono (05/09/2026, por escrito, testando a DIR-49 no
+preview): "eu registrei o contato e não aparece salvo o que eu fiz;
+conectei a agenda, aparece conectado, agendei o evento logo após e não
+aparece nada e volta para conectar a agenda — preciso que você resolva
+isso definitivamente de forma diligente e identifique de fato onde está
+o erro".
+**Diagnóstico MEDIDO (banco de produção consultado):** os 3 registros
+dele SALVARAM (feito 10:19 + dois agendados 14/09, ambos com link REAL
+de evento criado na Google Agenda — ele agendou duas vezes por falta de
+feedback). O erro real é de tela: (a) `loadCustomers` liga `isLoading`
+e o CrmClientesTab troca TUDO por "Carregando..." — o CrmMetodo é
+DESMONTADO e o estado do Google (token + eventos) morre, por isso o
+botão volta pra "Conectar"; (b) desfecho "feito" não aparece em lugar
+nenhum; (c) reunião de dia FUTURO é invisível (a agenda só mostra hoje).
+**Data:** 05/09/2026.
+**Escopo autorizado:**
+1. **Recarga silenciosa:** o spinner de página inteira só na PRIMEIRA
+   carga; recarregar clientes depois de salvar não desmonta mais a tela
+   (a conexão do Google sobrevive ao salvamento).
+2. **Histórico visível na fila:** cada contato mostra o último desfecho
+   registrado ("último: ✅ Contato feito · 05/09 07:19").
+3. **📆 Próximas reuniões:** seção na agenda com os agendados de dias
+   futuros (respeitando MINHA × TIME), com data+hora e Abrir no Google.
+   Fonte única `proximasReunioes`/`ultimoContato` em `src/lib/metodo.js`.
+4. **Toast que diz pra onde foi:** agendou → "Reunião agendada — 14/09
+   07:19" (não um genérico "registrado").
+**Regras fixas:** prova em navegador incluindo o cenário
+"Google conectado sobrevive ao salvar"; sem SQL.
+**Status:** EM VIGOR.
+
+---
+
+## DIR-49 — Clareza total do Hábito 4: agendar em 1 clique, minha agenda × time, linha do tempo unificada
+
+**Emitida por:** dono (04/09/2026, por escrito, após ver o Hábito 4
+funcionando em produção): "não está aparecendo de forma clara ainda como
+posso agendar; mais uma coisa — está aparecendo a agenda de todos pois sou
+super admin, isso precisa ter uma comunicação melhor, eu visualizar quem é
+e ter minha própria agenda; quero que faça uma análise sênior e veja os
+pontos para ficar mais foda e tudo mais claro e precisa funcionar".
+Análise sênior entregue em chat ANTES do código (regra da casa); desenho
+em 5 pontos aprovado com **"PODE"**.
+**Data:** 04/09/2026.
+**Escopo autorizado:**
+1. **Fila com dois botões claros por contato:** 📅 **Agendar** (abre o
+   agendador DIRETO com a pessoa já escolhida — um clique) e ✍️
+   **Registrar** (os 5 desfechos de sempre). O caminho de agendar deixa
+   de morar escondido dentro do "Registrar contato".
+2. **Alternador no topo da Agenda do dia:** 🙋 **MINHA AGENDA** · 👥
+   **TIME INTEIRO** — a opção "time" só existe pra quem tem visão total
+   (super admin); o PADRÃO é "minha". No modo time, cada item carrega o
+   chip forte do responsável (👤 Nome) — dono de cada reunião óbvio à
+   primeira vista.
+3. **"Minha agenda de hoje" UNIFICADA:** as reuniões do método DA PESSOA
+   + os eventos do Google DELA numa linha do tempo só, ordenada por hora,
+   cada item marcado pela origem (📅 método · 🗓️ Google). O botão
+   Conectar/Atualizar Google mora no MESMO card. Fonte única em
+   `src/lib/metodo.js` (linha do tempo testada).
+4. **Fila honesta:** rodapé "⭐ +N da sua lista ainda sem qualificação —
+   qualificar no Hábito 3 →" quando existir gente fora da fila (a lista
+   com 7 e a fila "(4)" sem explicação confunde).
+5. **Polimento de clareza:** agendador com passos numerados (1. Com quem
+   · 2. Quando · 3. Onde · 4. Google), botão principal maior, plurais
+   corretos nos contadores (reunião/reuniões, retorno/retornos).
+**Fora do escopo:** SQL novo (nada de migração); editar/cancelar evento
+do Google; agenda de outra pessoa no Google.
+**Regras fixas:** prova em navegador (REL-34.1) antes da entrega;
+escrita via entityWrite; produção só com novo "pode" do dono.
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-48 — Agendador de reuniões de verdade, criando o evento no Google
 
 **Emitida por:** dono (03/09/2026, por escrito, após conectar a agenda

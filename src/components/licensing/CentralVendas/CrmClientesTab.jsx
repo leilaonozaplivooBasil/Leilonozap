@@ -9,7 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   UserPlus, Search, Filter, X, Save, Send, CheckCircle, Package,
-  Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign
+  Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign,
+  // 🏛️ DIR-56 — ícones de traço no lugar dos emojis decorativos
+  Sparkles, ShieldCheck, Users, PhoneCall, Presentation, Route, Gauge,
+  GitBranch, BellRing
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -38,6 +41,7 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
 import CrmQuemContatar from './CrmQuemContatar';
 import CrmFunilKanban from './CrmFunilKanban';
@@ -61,6 +65,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all');
   const [roleTypeFilter, setRoleTypeFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [alertaReuniao, setAlertaReuniao] = useState(null); // 🔔 DIR-53
+  const [alertasVistos, setAlertasVistos] = useState(() => new Set());
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
@@ -274,6 +280,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     return negotiations.filter((n) => meusClientes.has(n.customer_id));
   }, [negotiations, networkManualCustomers, isSuperAdmin]);
 
+  // 👤 DIR-54 — id → nome, pra identificar o DONO de cada cadastro na fila
+  // do Hábito 4 (a visão total via de todo mundo sem dizer de quem era).
+  const nomePorUsuarioId = React.useMemo(
+    () => Object.fromEntries(appUsers.map((u) => [u.id, u.full_name || u.email || 'sem nome'])),
+    [appUsers]
+  );
+
   // Lista unificada: indicados + compras da Loja Virtual + cadastro manual (deduplicados)
   const unifiedCustomers = React.useMemo(
     () => buildUnifiedCustomers({ appUsers: networkAppUsers, catalogSales: networkCatalogSales, auctions: networkAuctions, manualCustomers: networkManualCustomers }),
@@ -402,7 +415,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
 
   const loadCustomers = async () => {
     try {
-      setIsLoading(true);
+      // 🔴 DIR-49.1 — o spinner de página inteira SÓ na primeira carga. Nas
+      // recargas (depois de salvar um registro, qualificar, etc.) a tela fica
+      // montada e os dados trocam no lugar — desmontar aqui matava o estado do
+      // CrmMetodo (a conexão da Google Agenda "sumia" a cada salvamento).
+      if (!customers.length) setIsLoading(true);
       // 🔴 DIR-24 — sem teto de 500 linhas: paginação por id (mesma proteção
       // contra o corte silencioso de 1000 do Supabase usada nos produtos).
       const data = await listarTudo(plataforma.entities.Customer);
@@ -416,6 +433,24 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 🔔 DIR-53 — vigia local: reunião MINHA começando em até 15 min → popup no
+  // app (checa nos dados novos e a cada 30s; o alarme com o app FECHADO é o
+  // do Google, configurado na criação do evento).
+  useEffect(() => {
+    const checar = () => {
+      const r = reuniaoIminente(customers, currentUser?.id, new Date().toISOString(), 15);
+      setAlertaReuniao(r && !alertasVistos.has(r.registro.id) ? r : null);
+    };
+    checar();
+    const timer = setInterval(checar, 30000);
+    return () => clearInterval(timer);
+  }, [customers, currentUser?.id, alertasVistos]);
+
+  const dispensarAlerta = () => {
+    if (alertaReuniao) setAlertasVistos((prev) => new Set(prev).add(alertaReuniao.registro.id));
+    setAlertaReuniao(null);
   };
 
   useEffect(() => {
@@ -763,12 +798,51 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         registrado_por_nome: currentUser?.full_name || '',
       };
       await plataforma.entities.Customer.update(contato.id, { contatos_metodo: [...historico, completo] });
-      toast.success(`Contato registrado: ${contato.full_name || ''}`);
+      // DIR-49.1 — o toast diz PRA ONDE foi: reunião de dia futuro mora na
+      // seção "Próximas reuniões", não na agenda de hoje.
+      if (registro.resultado === 'agendado' && registro.quando) {
+        const d = new Date(registro.quando);
+        toast.success(`Reunião agendada — ${Number.isNaN(d.getTime()) ? registro.quando : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · veja na agenda do Hábito 4`);
+      } else {
+        toast.success(`Contato registrado: ${contato.full_name || ''} — o "último contato" da fila mostra o desfecho`);
+      }
       await loadCustomers();
       return true;
     } catch (error) {
       console.error('Erro ao registrar contato:', error);
       toast.error('Erro ao registrar o contato — a migração da DIR-47 já foi colada no banco?');
+      return false;
+    }
+  };
+
+  // ✏️ DIR-50 — edita um registro existente (mesmo id, campos novos)
+  const handleEditarRegistroMetodo = async (contato, registroAtualizado) => {
+    try {
+      const historico = Array.isArray(contato.contatos_metodo) ? contato.contatos_metodo : [];
+      const novo = historico.map((r) => (r.id === registroAtualizado.id ? { ...registroAtualizado, editado_em: new Date().toISOString() } : r));
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: novo });
+      const d = new Date(registroAtualizado.quando || '');
+      toast.success(`Reunião atualizada${Number.isNaN(d.getTime()) ? '' : ` — ${d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}`);
+      await loadCustomers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao editar registro:', error);
+      toast.error('Erro ao salvar a alteração — tente de novo');
+      return false;
+    }
+  };
+
+  // 🗑️ DIR-50 — exclui um registro (o evento do Google é apagado pelo painel)
+  const handleExcluirRegistroMetodo = async (contato, registroId) => {
+    try {
+      const historico = Array.isArray(contato.contatos_metodo) ? contato.contatos_metodo : [];
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: historico.filter((r) => r.id !== registroId) });
+      toast.success('Reunião excluída da agenda.');
+      await loadCustomers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir registro:', error);
+      toast.error('Erro ao excluir — tente de novo');
       return false;
     }
   };
@@ -1249,16 +1323,24 @@ _Enviado via CRM Leilão NoZap_`;
 
   // 🏆 DIR-43 (correção do dono): o painel É os 8 Hábitos do Sucesso — o CRM
   // mora dentro deles (Hábito 6 = Clientes+Esteira; Hábito 7 = Visão Executiva).
+  // 🏛️ DIR-56 — cada Hábito ganha um ícone de traço (no lugar do emoji) e uma
+  // faixa do BRANDBOOK oficial, escolhida pelo tema do hábito: o carro pro
+  // sonho, "grandes batalhas" pro compromisso, o avião pra duplicação.
   const SECOES = [
-    { id: 'sonho', rotulo: '🌟 1. Sonho' },
-    { id: 'compromisso', rotulo: '✅ 2. Compromisso' },
-    { id: 'lista', rotulo: '🤝 3. Lista' },
-    { id: 'contato', rotulo: '📜 4. Contato' },
-    { id: 'apresentacao', rotulo: '🎤 5. Apresentação' },
-    { id: 'acompanhamento', rotulo: '🛤️ 6. Acompanhamento' },
-    { id: 'verificacao', rotulo: '📊 7. Verificação' },
-    { id: 'duplicacao', rotulo: '🔁 8. Duplicação' },
-  ];
+    { id: 'sonho', n: 1, Icone: Sparkles, faixa: '/marca/habito-1-sonho.webp' },
+    { id: 'compromisso', n: 2, Icone: ShieldCheck, faixa: '/marca/habito-2-compromisso.webp' },
+    { id: 'lista', n: 3, Icone: Users, faixa: '/marca/habito-3-lista.webp' },
+    { id: 'contato', n: 4, Icone: PhoneCall, faixa: '/marca/habito-4-contato.webp' },
+    { id: 'apresentacao', n: 5, Icone: Presentation, faixa: '/marca/habito-5-apresentacao.webp' },
+    { id: 'acompanhamento', n: 6, Icone: Route, faixa: '/marca/habito-6-acompanhamento.webp' },
+    { id: 'verificacao', n: 7, Icone: Gauge, faixa: '/marca/habito-7-verificacao.webp' },
+    { id: 'duplicacao', n: 8, Icone: GitBranch, faixa: '/marca/habito-8-duplicacao.webp' },
+  // 🎓 DIR-69 — o NOME de cada Hábito vem da fonte única (lib/metodo). Aqui
+  // ficam só o ícone e a arte do brandbook, que são desta tela. `nome` é o
+  // apelido curto (o seletor de 8 botões não cabe com o nome inteiro) e
+  // `completo`/`complemento` são o nome oficial, que aparece quando se ENTRA.
+  ].map((s) => ({ ...s, ...partesDoHabito(s.id), nome: partesDoHabito(s.id).curto }));
+  const secaoAtual = SECOES.find((s) => s.id === secaoAtiva) || SECOES[0];
 
   // 🔓 DIR-24 Fase 2 — sem gate de admin: quem não é visão total já chega
   // aqui com TODAS as fontes filtradas pela própria rede (memos network*).
@@ -1280,12 +1362,51 @@ _Enviado via CRM Leilão NoZap_`;
   }
 
   return (
-    <div className="p-3 sm:p-6 bg-white border border-nz-borda rounded-2xl">
-      <div className="max-w-[1800px] mx-auto">
+    /* 🏛️ DIR-56 — O PALCO DA MARCA. A classe .xeos-palco redefine os tokens
+       --nz-* aqui dentro; com isso o tema claro do painel (index.css) passa a
+       pintar escuro sozinho, sem reescrever classe por classe. Por baixo de
+       tudo: o padrão tonal de X do brandbook e o brilho do gradiente Top
+       College. Fora deste bloco, nada muda no sistema. */
+    <div className="xeos-palco relative overflow-hidden p-4 sm:p-8 rounded-3xl border border-white/10" style={{ background: 'var(--xeos-preto)' }}>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.22]"
+        style={{ backgroundImage: 'url(/marca/padrao-xeos.webp)', backgroundSize: '760px auto', backgroundPosition: 'top center' }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(90% 55% at 8% 0%, rgba(59,111,246,0.20), transparent 58%), radial-gradient(85% 55% at 95% 12%, rgba(230,46,139,0.16), transparent 60%), linear-gradient(180deg, rgba(10,16,32,0.55), rgba(0,2,12,0.92))',
+        }}
+      />
+      {/* 🔔 DIR-53 — o popup do Leilão NoZap: reunião MINHA prestes a começar
+          (com o app aberto; o alarme com app fechado é o do Google, já
+          configurado na criação do evento). */}
+      {alertaReuniao && (
+        <div className="xeos-palco fixed bottom-4 right-4 z-40 max-w-sm rounded-2xl border border-white/15 shadow-2xl p-4" style={{ background: 'var(--xeos-fundo)' }}>
+          <p className="text-sm font-bold text-nz-tinta flex items-center gap-2"><BellRing className="w-4 h-4 text-[#FBBF24]" />Reunião em {alertaReuniao.minutos <= 0 ? 'instantes' : `${alertaReuniao.minutos} min`}!</p>
+          <p className="text-sm text-nz-tinta mt-0.5 truncate">{alertaReuniao.registro.titulo_reuniao || `Reunião — ${alertaReuniao.cliente.full_name || 'contato'}`}</p>
+          <p className="text-[11px] text-nz-tinta-fraca">{new Date(alertaReuniao.registro.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}{alertaReuniao.registro.local ? ` · ${alertaReuniao.registro.local}` : ''}</p>
+          <div className="flex gap-2 mt-2">
+            <Button size="sm" onClick={() => { setSecao('contato'); dispensarAlerta(); }} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">Ver agenda</Button>
+            <Button size="sm" variant="outline" onClick={dispensarAlerta} className="border-nz-borda text-nz-tinta-fraca h-8">Dispensar</Button>
+          </div>
+        </div>
+      )}
+      <div className="relative max-w-[1800px] mx-auto">
 
-        {/* HEADER */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold text-nz-tinta">🏆 Os 8 Hábitos do Sucesso</h1>
+        {/* HEADER — escala de instituição, sem emoji */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 sm:mb-8">
+          <div>
+            <p className="text-[11px] sm:text-xs font-semibold tracking-[0.28em] text-white/45 uppercase mb-2">
+              Top College &nbsp;·&nbsp; X-eos
+            </p>
+            <h1 className="text-3xl sm:text-5xl font-extrabold leading-[1.05] tracking-tight text-nz-tinta">
+              Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
+            </h1>
+          </div>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             {vis.gerirVendedores && (
               <Button
@@ -1332,23 +1453,111 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
 
+        {/* 🎓 DIR-63 — o palco das duas marcas saiu daqui. Ele repetia, 300px
+            abaixo, exatamente o mesmo par de logos da faixa da academia — e o
+            dono viu isso na tela: "está repetindo muito as logos". As frases
+            das marcas subiram pra faixa; a identidade continua, uma vez só. */}
         {/* 🧭 DIR-24 Fase 3 — faixa de resumo: 4 números, sempre visíveis */}
         <CrmResumo itens={resumoItens} />
 
-        {/* 🏆 Navegação pelos 8 Hábitos do Sucesso (DIR-43) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-4 sm:mb-5 rounded-xl border border-nz-borda bg-nz-cinza-fundo p-1">
-          {SECOES.map(({ id, rotulo }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSecao(id)}
-              className={`rounded-lg px-2 py-2 text-xs sm:text-sm font-semibold transition-colors ${
-                secaoAtiva === id ? 'bg-white text-nz-verde shadow-sm border border-nz-verde/30' : 'text-nz-tinta-fraca hover:text-nz-tinta'
-              }`}
-            >
-              {rotulo}
-            </button>
-          ))}
+        {/* 🏆 Navegação pelos 8 Hábitos (DIR-43) — trilho escuro, ícone de
+            traço no lugar do emoji e o hábito ativo carregando o gradiente
+            da Top College (DIR-56). */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 sm:mb-7">
+          {SECOES.map(({ id, n, nome, Icone }) => {
+            const ativo = secaoAtiva === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSecao(id)}
+                className={`group relative overflow-hidden rounded-xl border px-3 py-3 text-left transition-all ${
+                  ativo
+                    ? 'border-white/25 shadow-lg'
+                    : 'border-white/10 hover:border-white/25 hover:bg-white/[0.04]'
+                }`}
+                style={ativo ? { background: 'linear-gradient(120deg, var(--topcollege-azul), var(--topcollege-roxo) 55%, var(--topcollege-magenta))' } : undefined}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Icone className={`w-[18px] h-[18px] shrink-0 ${ativo ? 'text-white' : 'text-white/45 group-hover:text-white/75'}`} />
+                  <span className="min-w-0">
+                    <span className={`block text-[10px] font-bold tracking-[0.18em] ${ativo ? 'text-white/75' : 'text-white/35'}`}>
+                      {String(n).padStart(2, '0')}
+                    </span>
+                    <span className={`block text-[13px] sm:text-sm font-bold leading-tight truncate ${ativo ? 'text-white' : 'text-white/70'}`}>
+                      {nome}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 🖼️ DIR-56 — a faixa do brandbook do Hábito aberto: cada hábito tem a
+            sua imagem oficial, com o nome por cima. É o que amarra o painel ao
+            universo da marca em vez de deixar a tela solta. */}
+        <div className="relative overflow-hidden rounded-2xl mb-5 sm:mb-7 border border-white/10">
+          {/* 🎓 DIR-64 — a imagem do Hábito ganhou altura: o dono disse que as
+              imagens do brandbook estão bonitas e precisam APARECER. O véu
+              escuro ficou mais curto do lado esquerdo (só o necessário pra
+              segurar o texto) e some antes da metade, liberando a foto. */}
+          {/* 🎓 DIR-65 — a imagem aparece INTEIRA. Antes ela era cortada duas
+              vezes: no arquivo (uma fresta de 33% da página) e de novo no
+              `object-cover`, que apara o que sobra pra preencher a altura fixa.
+              Agora o arquivo guarda 63% da cena e o bloco tem EXATAMENTE a
+              proporção dele (2.8) — sem altura fixa, não há o que aparar. */}
+          <img
+            src={secaoAtual.faixa}
+            alt=""
+            aria-hidden="true"
+            className="w-full h-auto block"
+            style={{ aspectRatio: '1600 / 571' }}
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(90deg, rgba(0,2,12,0.94) 0%, rgba(0,2,12,0.78) 22%, rgba(0,2,12,0.28) 46%, rgba(0,2,12,0) 68%)' }}
+          />
+          {/* ✨ DIR-66 — acabamento: a imagem terminava num corte seco contra o
+              painel. Este esfumaçado no pé faz ela DERRETER no fundo, e some a
+              costura entre a foto e o conteúdo. Mais visível nas cenas claras
+              (a Lista tem o lado direito quase branco). */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-1/4"
+            style={{ background: 'linear-gradient(180deg, rgba(0,2,12,0) 0%, rgba(0,2,12,0.55) 62%, var(--xeos-preto) 100%)' }}
+          />
+          <div className="absolute inset-0 flex flex-col justify-end pb-6 sm:pb-8 px-5 sm:px-8">
+            <p className="text-[10px] sm:text-[11px] font-bold tracking-[0.28em] text-white/55 uppercase">
+              Hábito {String(secaoAtual.n).padStart(2, '0')}
+            </p>
+            {/* 🎓 DIR-69 — ordem do dono: "quando eu clico adentro precisa
+                aparecer o nome completo — é Lista de Networking, Contato e
+                Convite, Apresentação de Sucesso... pode até ficar o primeiro
+                nome ali na frente, mas quando clica tem que aparecer o
+                complemento". Então o apelido continua grande (é ele que o
+                seletor mostra, e a memória da pessoa acompanha) e o
+                complemento entra logo depois, num peso mais leve: lê como
+                UMA frase — "Lista de Networking" —, não como repetição. */}
+            <p className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-none mt-1.5">
+              {secaoAtual.nome}
+              {/* o espaço é EXPLÍCITO: sem ele o `ml-3` dá o respiro na tela,
+                  mas quem copia o texto (ou o leitor de tela) recebe
+                  "Verificaçãodo Progresso", tudo grudado. */}
+              {secaoAtual.complemento && ' '}
+              {secaoAtual.complemento && (
+                <span className="block sm:inline sm:ml-3 text-xl sm:text-3xl font-semibold text-white/70">
+                  {secaoAtual.complemento}
+                </span>
+              )}
+            </p>
+          </div>
+          <div
+            aria-hidden="true"
+            className="absolute bottom-0 left-0 h-1.5 w-28 sm:w-48"
+            style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }}
+          />
         </div>
 
         {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══ */}
@@ -1356,10 +1565,14 @@ _Enviado via CRM Leilão NoZap_`;
           <CrmMetodo
             painel={secaoAtiva}
             currentUser={currentUser}
+            visaoTotal={isSuperAdmin}
+            nomePorUsuarioId={nomePorUsuarioId}
             clientesManuais={networkManualCustomers}
             oportunidades={networkOportunidades}
             onQualificar={handleQualificarContato}
             onRegistrarContato={handleRegistrarContatoMetodo}
+            onEditarRegistro={handleEditarRegistroMetodo}
+            onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />
@@ -1368,6 +1581,13 @@ _Enviado via CRM Leilão NoZap_`;
         {/* ══ 📊 HÁBITO 7 — VERIFICAÇÃO DO PROGRESSO (Visão Executiva) ══ */}
         {secaoAtiva === 'verificacao' && (
           <>
+            {/* 🏛️ DIR-55/56 — o Hábito 7 É o X-office: "verificando o progresso
+                e mapeando processos", sub-marca oficial do sistema X-EOS.
+                Agora com o logo original, extraído do brandbook. */}
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.05] pl-4 pr-5 py-2 mb-4">
+              <img src="/marca/xoffice.webp" alt="X-office" className="h-6 w-auto" />
+              <span className="text-[11px] sm:text-xs text-nz-tinta-fraca">verificando o progresso e mapeando processos</span>
+            </div>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
             {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
@@ -1429,7 +1649,7 @@ _Enviado via CRM Leilão NoZap_`;
             </TabsTrigger>
             {vis.gerirVendedores && (
               <TabsTrigger value="sellers" className="data-[state=active]:bg-nz-marrom data-[state=active]:text-white text-nz-tinta-fraca flex-1 sm:flex-none">
-                🏛️ Time Corporativo
+                Time Corporativo
               </TabsTrigger>
             )}
           </TabsList>
@@ -1868,7 +2088,7 @@ _Enviado via CRM Leilão NoZap_`;
 
                     {/* 👤 DADOS DO CLIENTE */}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">👤 Dados do cliente</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">Dados do cliente</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label className="text-gray-300">Nome Completo *</Label>
@@ -1891,7 +2111,7 @@ _Enviado via CRM Leilão NoZap_`;
 
                     {/* 📍 ENDEREÇO */}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">📍 Endereço</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">Endereço</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label className="text-gray-300">CEP</Label>
@@ -1920,7 +2140,7 @@ _Enviado via CRM Leilão NoZap_`;
 
                     {/* 🎯 ACOMPANHAMENTO */}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">🎯 Acompanhamento</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">Acompanhamento</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label className="text-gray-300">Status</Label>
@@ -1968,7 +2188,7 @@ _Enviado via CRM Leilão NoZap_`;
 
                     {/* 💼 INTERESSES — produtos, planos de parceiro e licenças */}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">💼 Interesses (produtos, planos e licenças)</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">Interesses (produtos, planos e licenças)</p>
 
                       {/* Produtos do catálogo — TODOS visíveis, busca só refina */}
                       <Label className="text-gray-300 text-sm mb-2 block">
@@ -2120,7 +2340,7 @@ _Enviado via CRM Leilão NoZap_`;
 
                     {/* 📝 OBSERVAÇÕES */}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">📝 Observações</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-green-400 border-b border-gray-700 pb-1.5 mb-3">Observações</p>
                       <Textarea
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -2155,6 +2375,12 @@ _Enviado via CRM Leilão NoZap_`;
             </Card>
           </div>
         )}
+
+        {/* 🖼️ DIR-56 — a frase oficial do brandbook fecha o painel. É imagem da
+            marca, não texto solto: o mesmo material das apresentações. */}
+        <div className="relative overflow-hidden rounded-2xl mt-8 border border-white/10">
+          <img src="/marca/frase.webp" alt="O sucesso é a soma de pequenos esforços repetidos dia após dia." className="w-full h-24 sm:h-36 object-cover" />
+        </div>
 
       </div>
     </div>

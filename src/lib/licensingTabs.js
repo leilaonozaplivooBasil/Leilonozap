@@ -1,5 +1,8 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, Briefcase } from 'lucide-react';
-import { normalizeLevels } from '@/lib/careerLevels';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Target, Handshake, BarChart3, Users, GraduationCap, UserRound, Gamepad2 } from 'lucide-react';
+// caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
+// também roda na suíte do node, que não resolve o alias do Vite. É o que
+// permite testar o agrupamento do menu como qualquer outra regra da casa.
+import { normalizeLevels } from './careerLevels.js';
 
 // 🧭 PONTO 85 — FONTE ÚNICA das abas do Painel de Alavancagem.
 // Antes essa lista estava DUPLICADA em LicensingSidebar.jsx (rail do desktop) e
@@ -14,14 +17,14 @@ import { normalizeLevels } from '@/lib/careerLevels';
 //                           link da loja pra compartilhar)
 export const LICENSING_TABS = [
   { value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard },
-  { value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag },
+  { value: 'catalogo', label: 'Loja & Vendas', icon: ShoppingBag },
   { value: 'plano-carreira', label: 'Carreira', icon: Award },
   { value: 'admin', label: 'Admin', icon: Shield },
 ];
 
 // Abas válidas para o parâmetro ?tab= da URL. Inclui 'minha-loja' por
 // compatibilidade: links antigos continuam abrindo a administração da loja.
-export const VALID_LICENSING_TABS = [...LICENSING_TABS.map((t) => t.value), 'minha-loja'];
+export const VALID_LICENSING_TABS = [...LICENSING_TABS.map((t) => t.value), 'minha-loja', 'xgame-admin'];
 
 // 🧭 FASE 2 DA UNIFICAÇÃO — a lateral do Painel de Alavancagem passa a ser o
 // ÍNDICE ÚNICO de tudo o que o usuário tem. Nesta fase NENHUM painel foi
@@ -49,29 +52,59 @@ export function podeVerOperacao(user) {
   return !cargos.every((c) => CARGOS_SEM_OPERACAO.includes(c));
 }
 
+// 🎓 DIR-57 — SEÇÕES DA LOJA & VENDAS (o caixa) e DA TOP COLLEGE (a formação).
+// A fronteira é uma pergunta só: nesta tela a pessoa está sendo FORMADA ou está
+// OPERANDO? Formada → Top College. Operando → Leilão NoZap.
+// Ficam exportadas porque o seletor interno da Central de Vendas usa as MESMAS
+// listas — fonte única, sem lista paralela pra desencontrar depois.
+export const SECOES_LOJA = [
+  { value: 'catalogo-produtos', label: 'Sua Loja Virtual', icon: Store },
+  { value: 'catalogo-home', label: 'Relatório da Loja', icon: BarChart3 },
+  { value: 'catalogo-pedidos', label: 'Pedidos', icon: Package },
+  { value: 'catalogo-clientes', label: 'Venda Direta', icon: Users },
+  { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
+];
+export const SECOES_TOP_COLLEGE = [
+  // "CRM" morreu como nome (DIR-57): palavra genérica de software não combina
+  // com uma faculdade própria. O valor da aba continua o mesmo — link antigo
+  // (?catalogTab=catalogo-crm) segue abrindo no lugar certo.
+  { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
+  { value: 'catalogo-vendedores', label: 'Time', icon: Handshake },
+];
+
 export function getLicensingGroups(user) {
+  // 🧭 ORDEM POR PRIORIDADE DE USO: Visão Geral → Conta → Operação (dia a dia de
+  // quem tem loja/estoque) → Loja & Vendas → Top College → Leilões → Admin.
+  //
+  // 🎓 DIR-57 — `colapsar` diz que o grupo vira UM ícone com menu flutuante.
+  // Antes isso era um `if (grupo.title === 'Operação')` escrito DUAS vezes (na
+  // lateral do desktop e no menu do celular); agora é dado, num lugar só.
   const grupos = [
     {
-      title: 'Conta',
+      title: 'Visão Geral',
       items: [
         { type: 'tab', value: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: 'Minha Conta',
+      colapsar: { chave: 'group:conta', label: 'Minha Conta', icon: UserRound },
+      items: [
         { type: 'link', to: '/Carteira', label: 'Carteira', icon: Wallet },
         { type: 'link', to: '/MyCatalogOrders', label: 'Minhas Compras', icon: Package },
       ],
     },
   ];
 
-  // 🧭 ORDEM POR PRIORIDADE DE USO (08/08/2026): Conta → Operação (dia a dia de
-  // quem tem loja/estoque) → Vender → Leilões → Carreira → Admin.
   if (podeVerOperacao(user)) {
     grupos.push({
       title: 'Operação',
+      colapsar: { chave: 'group:operacao', label: 'Operação', icon: Store },
       items: [
         { type: 'link', to: '/painel', label: 'Meu Painel', icon: Store },
         { type: 'link', to: '/painel/pdv', label: 'PDV', icon: Receipt },
         { type: 'link', to: '/painel/estoque', label: 'Estoque', icon: Package },
         { type: 'link', to: '/painel/comprar-estoque', label: 'Comprar Estoque', icon: PackagePlus },
-        { type: 'link', to: '/Metas', label: 'Metas', icon: Target },
       ],
     });
   }
@@ -81,19 +114,36 @@ export function getLicensingGroups(user) {
       title: 'Vender',
       items: [
         {
-          type: 'tab', value: 'catalogo', label: 'Central de Vendas', icon: ShoppingBag,
-          // 🛍️ Seções da Central de Vendas — permite ir direto numa seção pelo
-          // menu flutuante da lateral, sem abrir a aba e escolher de novo lá dentro.
-          subItens: [
-            { value: 'catalogo-produtos', label: 'Sua Loja Virtual', icon: Store },
-            { value: 'catalogo-home', label: 'Relatório da Loja', icon: BarChart3 },
-            { value: 'catalogo-pedidos', label: 'Pedidos', icon: Package },
-            { value: 'catalogo-clientes', label: 'Venda Direta', icon: Users },
-            { value: 'catalogo-vendedores', label: 'Vendedores', icon: Handshake },
-            { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
-            { value: 'catalogo-crm', label: 'CRM', icon: Briefcase },
-          ],
+          // a chave da lateral continua sendo `tab:catalogo` — quem já arrastou
+          // este ícone de lugar mantém a posição salva
+          type: 'tab', value: 'catalogo', label: 'Loja & Vendas', icon: ShoppingBag,
+          subItens: SECOES_LOJA,
         },
+      ],
+    },
+    {
+      // 🎓 O DEPARTAMENTO DA TOP COLLEGE dentro do painel do cliente: tudo que
+      // FORMA a pessoa. Metas veio de "Operação", onde estava solta — meta é
+      // acompanhamento, não chão de loja.
+      title: 'Top College',
+      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp' },
+      items: [
+        // 🎓 DIR-59 — no menu, este item NÃO escreve "O Método": entra a logo
+        // inteira da X-eos no lugar do texto (ordem do dono). `marcaCompleta`
+        // quer dizer exatamente isso — a marca SUBSTITUI o rótulo. O `label`
+        // continua existindo porque vira o texto alternativo da imagem e o
+        // nome pra busca no menu do celular.
+        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp', marcaCompleta: '/marca/marca-xeos-lockup.webp', legenda: 'Estrutura de operações e expansão' },
+        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-vendedores', label: 'Time', icon: Handshake },
+        { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
+        { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
+        { type: 'link', to: '/Metas', label: 'Metas', icon: Target },
+        // 🎮 O admin da gamificação mora DENTRO da X-eos (ordem do dono) —
+        // só o super admin enxerga: participantes, verbas, tarefas e a fila
+        // de comprovações (a segunda análise das imagens).
+        ...(user?.role === 'super_admin'
+          ? [{ type: 'tab', value: 'xgame-admin', label: 'Admin X-GAME', icon: Gamepad2 }]
+          : []),
       ],
     },
     {
@@ -104,14 +154,8 @@ export function getLicensingGroups(user) {
       ],
     },
     {
-      title: 'Carreira',
-      items: [
-        { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
-        { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
-      ],
-    },
-    {
       title: 'Admin',
+      colapsar: { chave: 'group:admin', label: 'Admin', icon: Shield },
       items: [
         { type: 'tab', value: 'admin', label: 'Admin', icon: Shield },
         // 🤝 Aprovação dos pedidos de mercadoria consignada — só admin
@@ -123,4 +167,26 @@ export function getLicensingGroups(user) {
   );
 
   return grupos;
+}
+
+// 🔑 DIR-57 — identidade de cada item na lateral. É a chave que guarda a ordem
+// que o usuário arrastou, então precisa ser única: duas seções da mesma aba
+// (O Método e Time vivem as duas em `catalogo`) não podem colidir.
+export function chaveDoItem(item) {
+  if (item.type !== 'tab') return item.to;
+  return item.catalogTab ? `tab:${item.value}:${item.catalogTab}` : `tab:${item.value}`;
+}
+
+// 🧭 DIR-57 — converte um item do menu numa entrada de menu flutuante. Dentro do
+// Painel de Alavancagem (onTabChange presente) troca a aba na hora; fora dele,
+// vira link pra rota que já existe. Um lugar só, usado pelo desktop e pelo
+// celular — era essa duplicação que deixava sub-item sem navegação nenhuma.
+export function entradaFlutuante(item, onTabChange) {
+  const base = { label: item.label, icon: item.icon, marca: item.marca, marcaCompleta: item.marcaCompleta, legenda: item.legenda };
+  if (item.type === 'tab') {
+    if (onTabChange) return { ...base, onClick: () => onTabChange(item.value, item.catalogTab) };
+    const sufixo = item.catalogTab ? `&catalogTab=${item.catalogTab}` : '';
+    return { ...base, to: `/Licensing?tab=${item.value}${sufixo}` };
+  }
+  return { ...base, to: item.to };
 }

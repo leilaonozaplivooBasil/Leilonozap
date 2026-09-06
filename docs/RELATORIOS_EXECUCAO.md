@@ -2303,3 +2303,940 @@ escolhendo outro contato e checkbox desligada NÃO criando no Google.
 **Testes:** 838/838 na suíte completa (4 novos do eventoGoogleDaReuniao; o restante do crescimento veio de outras frentes pela main).
 **Sem migração** (campos novos no JSONB existente).
 **Status:** CONCLUÍDA no preview — aguardando o "pode".
+
+---
+
+## REL-PUB-04/09/2026 — Publicação em produção da DIR-48
+
+**Autorização:** dono, por escrito: "pode colocar em produção para
+funcionar".
+**O que foi publicado:** o agendador de reuniões completo (DIR-48) —
+modal padrão de mercado com criação real do evento na Google Agenda,
+botão Agendar reunião na Agenda do dia, "Abrir no Google" e fallback
+honesto.
+**Ritual:** main mergeada (trouxe a frente do Financeiro de outra
+sessão) → 885/885 testes → build exit 0 → PR #175 → squash-merge →
+main = `e1f4c780` → branch realinhada. Deploy de PRODUÇÃO: **success**
+de primeira; version.json do alias da main com carimbo do build novo
+(13:00 UTC). leilaonozap.net no ar com o agendador.
+**Config Google (dono):** origens produção + preview cadastradas ✅;
+Calendar API ativa ✅; resta o clique "PUBLICAR APP" na tela
+Público-alvo (sem ele, só testadores cadastrados conectam a agenda —
+o erro 403 access_denied visto no teste é exatamente esse estado).
+**Status:** CONCLUÍDA E PUBLICADA.
+
+### REL-48.1 — Configuração Google concluída pelo dono (04/09/2026)
+
+Guiado passo a passo, o dono deixou o OAuth do Google pronto de ponta a
+ponta: origens autorizadas (produção www e sem www + preview), Calendar
+API ativa, usuários de teste (2), Branding completo (nome, suporte, e as
+páginas /privacy e /terms que o site já tinha — sem logo, de propósito,
+pra não travar em revisão de marca) e o app PUBLICADO ("Em produção").
+Rede inteira liberada pra conectar a agenda. Honestidade registrada: com
+escopo sensível (calendar) e app ainda NÃO VERIFICADO, o Google impõe
+teto vitalício de 100 usuários concedendo a permissão — suficiente pro
+arranque; pra rede passar disso, a VERIFICAÇÃO do app na Central de
+verificação vira ação necessária (processo do Google, sem código —
+guiaremos quando o dono quiser).
+
+## REL-49 — Clareza total do Hábito 4 (05/09/2026)
+
+**Diretiva:** DIR-49, aprovada com "PODE" após análise sênior em chat.
+**O que mudou (os 5 pontos, todos entregues):**
+1. **Fila com dois caminhos óbvios:** cada qualificado agora tem 📅
+   **Agendar** (abre o agendador direto, pessoa já escolhida — 1 clique)
+   e ✍️ **Registrar** (os 5 desfechos). O agendar saiu de dentro do
+   "Registrar contato".
+2. **🙋 MINHA AGENDA · 👥 TIME INTEIRO:** alternador no topo da agenda,
+   só pra quem tem visão total (super admin); o padrão é MINHA (o que EU
+   registrei / sou responsável). Na visão do time, cada item carrega o
+   chip forte do responsável (👤 Nome).
+3. **Linha do tempo UNIFICADA:** reuniões do método + reuniões da
+   esteira + eventos do Google numa lista só, ordenada por hora, cada um
+   marcado pela origem (📅 método · 🛤️ esteira · 🗓️ Google). O botão
+   Conectar/Atualizar Google mora no mesmo card. O Google é pessoal —
+   nunca aparece na visão do time (aviso na tela). Fonte única:
+   `linhaDoTempoUnificada` em `src/lib/metodo.js`, testada.
+4. **Fila honesta:** rodapé "⭐ +N da sua lista ainda sem qualificação —
+   qualificar no Hábito 3 →" (o 7-na-lista/4-na-fila deixou de ser
+   mistério).
+5. **Polimento:** agendador com passos numerados (1. Com quem · 2.
+   Quando · 3. Onde e sobre o quê · 4. Google Agenda), botão principal
+   maior (h-12), plurais corretos via `plural()` (1 reunião · 2
+   reuniões · 1 retorno).
+**Arquivos:** `src/lib/metodo.js` (+2 funções testadas),
+`CrmMetodo.jsx` (painel contato reescrito), `CrmContatoRegistroModal.jsx`
+(modo agendar-direto + passos), `CrmClientesTab.jsx` (passa visaoTotal).
+SEM SQL novo, como autorizado.
+**Prova (medida, sem achismo):** suíte **889/889** (885 + 4 testes novos
+da lib); build exit 0; prova em navegador real **100/100** com ZERO
+erros de página/console — cobrindo os dois botões da fila, o rodapé
+honesto, o agendador direto com pessoa preset e sem desfechos, os passos
+numerados, a criação REAL do evento no Google (API stubada), os plurais
+no singular, a linha do tempo com o Google 09:00 ANTES do método 18:00,
+o TIME INTEIRO com chip 👤 e o Google sumindo (pessoal), e a volta pra
+MINHA AGENDA.
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode" do dono.
+
+## REL-49.1 — Salvar não apaga mais a tela (05/09/2026)
+
+**Diretiva:** DIR-49.1, emitida pelo dono após teste real no preview
+("registrei e não aparece salvo; conectei a agenda, agendei e volta para
+conectar — resolva definitivamente e identifique de fato o erro").
+**Diagnóstico com dado real (sem achismo):** consulta direta ao banco de
+produção mostrou que os 3 registros dele SALVARAM (feito 10:19 + DOIS
+agendados de 14/09 às 07:19/07:20, ambos com link REAL de evento criado
+na Google Agenda dele — a duplicata nasceu da falta de feedback). O
+defeito era de TELA, em três partes: (a) `loadCustomers` ligava
+`isLoading` e o CrmClientesTab trocava tudo por "Carregando..." — o
+CrmMetodo era DESMONTADO a cada salvamento e o estado da conexão Google
+(token + eventos) morria, por isso o botão voltava pra "Conectar";
+(b) o desfecho "feito" não aparecia em lugar nenhum; (c) reunião de dia
+futuro era invisível (a agenda só mostra hoje).
+**O que mudou:**
+1. Recarga silenciosa: spinner de página inteira só na PRIMEIRA carga —
+   salvar não desmonta mais a tela; a conexão do Google sobrevive.
+2. Fila com "último: ✅ Contato feito · 05/09 07:19" em cada contato —
+   o registro salvo aparece na hora (`ultimoContato`, testada).
+3. Seção "📆 Próximas reuniões" na agenda (agendados de dias futuros,
+   respeitando MINHA × TIME, com Abrir no Google) — `proximasReunioes`,
+   testada. A reunião de 14/09 dele agora tem casa.
+4. Toast que diz pra onde foi: "Reunião agendada — 14/09 07:19 · veja na
+   agenda do Hábito 4".
+**Prova (medida):** suíte **891/891** (889 + 2 testes novos); build exit
+0; prova em navegador **107/107 ZERO erros** — incluindo o cenário exato
+do dono: conectar o Google, salvar um desfecho e o Google CONTINUAR
+conectado, com o "último" trocando na fila na hora.
+**Pendência anotada:** os dois eventos de 14/09 são DUPLICADOS na Google
+Agenda do dono (efeito da rodada sem feedback) — apagar um deles é ação
+manual dele no Google (nós ainda não editamos/cancelamos evento criado —
+fora do escopo desde a DIR-48).
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+## REL-50/51/52/53 — Agenda viva (05/09/2026)
+
+**Diretivas:** DIR-50 a DIR-53, aprovadas com "pode" após o documento de
+análise em chat.
+**Entregue:**
+- **DIR-50:** ✏️ Editar (agendador reaberto preenchido; o evento no
+  Google muda junto via PATCH) e 🗑️ Excluir com 2 cliques (o evento no
+  Google é apagado via DELETE) em toda reunião do método — só pra quem
+  registrou ou visão total. Registros novos guardam `google_event_id`;
+  nos antigos o id sai de dentro do link (`idDoEventoGoogle`, testada
+  com o eid REAL do banco do dono). Falha do Google nunca trava e avisa
+  honesto. Dono na frente de todo item: "👤 você" na MINHA, nome forte
+  no TIME (o chip do fim virou prefixo no início, como pedido).
+- **DIR-51:** 📊 faixa da SEMANA no TIME INTEIRO — total de reuniões,
+  quebra por pessoa e % da meta (15/semana = 3/dia útil;
+  `resumoSemanaReunioes` + `META_REUNIOES_SEMANA`, testadas).
+- **DIR-52:** tabela nova `reunioes_empresa` (migração
+  `20260905150000_reunioes_empresa.sql` no padrão da casa — DONO PRECISA
+  COLAR O SQL), entidade ReuniaoEmpresa, entityWrite liberado SÓ pra
+  admin (fora de CRM_TABLES de propósito; teste do handler REAL).
+  Gestão 🏛️ no painel (visão total): título, toda semana (dia) ou data
+  única, hora, duração; aparece na agenda de TODOS com selo 🏛️ e
+  "todo mundo participa" (`reunioesEmpresaDoDia`, testada). Sem a
+  migração colada, a tela não quebra (lista vazia + erro honesto ao
+  salvar).
+- **DIR-53:** todo evento criado no Google sai com ALARME popup 30 e 10
+  min antes (reminders na criação — o Google avisa no celular com o app
+  fechado). No app: popup fixo "🔔 Reunião em X min" quando uma reunião
+  MINHA está a até 15 min (checagem local a cada 30s; `reuniaoIminente`
+  testada), com Ver agenda e Dispensar. Web push com app fechado segue
+  REGISTRADO como diretiva futura (service worker).
+**Prova (medida):** suíte **900/900** (891 + 9 novos: lib DIR-50/51/52/53
++ entityWrite reunioes_empresa no handler real); build exit 0; prova em
+navegador **131/131 ZERO erros** — editar com PATCH no evento certo,
+excluir com DELETE, alarme no corpo do evento, 👤 você, 📊 semana,
+🏛️ criada pelo painel e visível nas duas visões, popup 🔔 aparecendo e
+sendo dispensado.
+**Pendência pro dono:** colar o SQL da `reunioes_empresa` no Supabase
+(sem ele, só a parte 🏛️ fica esperando — o resto funciona já).
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+## REL-54 — Dono identificado na fila + horário de término (05/09/2026)
+
+**Diretiva:** DIR-54, ordem do dono testando as DIR-50→53 no preview:
+"eu preciso saber de quem agenda, e só aparecer as minhas agendas...
+identifique se são meus ou de outras pessoas" (na fila do Hábito 4) e
+"ao invés de botar só duração, melhor botar o horário que termina" (no
+cadastro da reunião da empresa).
+**Entregue:**
+1. A fila "Quem contatar" passa a respeitar o MESMO alternador MINHA ×
+   TIME da agenda (só existe pra visão total): **MINHA** mostra só os
+   contatos que EU cadastrei (`created_by_id`); **TIME** mostra a lista
+   inteira, cada linha com o dono identificado pelo NOME REAL (mesmo
+   pro cadastro que é seu — igual já funcionava na agenda desde a
+   DIR-50, agora com o mesmo padrão na fila). O rodapé "sem
+   qualificação" e o cabeçalho ("da sua lista" / "do TIME") acompanham
+   o mesmo escopo. Texto de ajuda explica o alternador pra quem está em
+   MINHA sem saber que existe TIME.
+2. No cadastro de "Reuniões da empresa": alternador **⏱️ Duração** /
+   **🏁 Até às** — no segundo modo, escolhe a hora de TÉRMINO e o
+   sistema mostra e calcula os minutos sozinho ("= 90 min"), via
+   `duracaoEntreHoras` (fonte única testada, trata virada de dia). Os
+   dois caminhos gravam sempre `duracao_min` — sem duplicar campo no
+   banco.
+**Achado durante a prova (registrado, não é bug em produção):** o
+`syncUserData()` do app relê o próprio usuário pelo `AppUser`/`app_users`
+depois do login — um mock incompleto na prova (sem `role`) chegou a
+derrubar o super_admin simulado após um reload; corrigido NA PROVA
+(mock com os campos completos). Não afeta produção, onde o usuário real
+sempre tem o registro completo.
+**Prova (medida):** suíte **903/903** (900 + 3 testes novos de
+`duracaoEntreHoras`); build exit 0; prova em navegador **139/139 ZERO
+erros** — cobrindo MINHA escondendo o contato de outro dono, TIME
+mostrando os dois com nome real, volta pra MINHA escondendo de novo, e
+o cadastro "até às" 10:00-11:30 gravando `duracao_min=90`.
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+## REL-54.1 — Horário de término na listagem, sem minutos crus (05/09/2026)
+
+**Diretiva:** ajuste do dono no preview: "quando salva aparecer ali,
+duzentos e quarenta minutos fica feio... melhor botar de nove às treze".
+**O que mudou:** a linha de cada reunião já cadastrada em "🏛️ Reuniões
+da empresa" trocou "09:00 · 240 min" por **"09:00 às 13:00"** — o
+horário de término calculado, não os minutos crus. Fonte única testada:
+`horaFinal(horaInicio, duracaoMin)` em `src/lib/metodo.js` (o inverso de
+`duracaoEntreHoras`; vira o dia sozinho).
+**Prova (medida):** suíte **906/906** (903 + 3 testes novos de
+`horaFinal`); build exit 0; prova em navegador **141/141 ZERO erros** —
+as duas reuniões cadastradas na prova (uma por duração, outra por "até
+às") aparecem na listagem como "09:30 às 10:30" e "10:00 às 11:30".
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-55 — Identidade Top College + X-EOS no painel dos 8 Hábitos (05/09/2026)
+
+**Diretiva:** DIR-55 — o dono pediu as duas marcas JUNTAS (Top College,
+"a faculdade", com um pouco mais de grandeza; X-eos, "o sistema", sem
+diminuir), aplicadas em locais estratégicos de todo o painel "Os 8
+Hábitos do Sucesso" (não só nos 6 hábitos que passam pelo `CrmMetodo`).
+Especificação escrita no chat e aprovada ("CAPRICHA QUERO ISSO FODA")
+antes de qualquer código, conforme exigido pelo próprio dono.
+**Entregue:**
+1. Placa de marca no topo do painel — fundo azul-marinho escuro
+   (`--xeos-fundo`), Top College à esquerda (~58% da largura, ícone e
+   nome maiores — a "grandeza" pedida) e X-eos à direita (~42%, logo
+   INTEIRO, não reduzido a um ícone), separados por um traço fino.
+   Aparece uma única vez no topo, ANTES do resumo de números, então
+   está presente nos 8 hábitos — não só nos 6 que o `CrmMetodo` cobre.
+2. Os dois logos foram recriados em SVG (não havia arquivo vetor
+   disponível — três tentativas de receber a imagem colada no chat não
+   geraram um arquivo anexado de verdade) fiéis à referência visual
+   enviada pelo dono e ao brandbook oficial em PDF: `TopCollegeLogo.jsx`
+   (pilar em "II", gradiente azul→roxo→magenta) e `XEosLogo.jsx` (o X
+   metálico com ponta em seta).
+3. Tipografia do brandbook: Sora (corpo, real, Google Fonts) e Baloo 2
+   (título, substituta de licença livre pra Bauhaus — indisponível como
+   arquivo — por escolha do próprio dono: "Não tenho o arquivo — use
+   uma parecida").
+4. Paleta X-EOS (`--xeos-*`) e Top College (`--topcollege-*`) como
+   tokens novos em `src/index.css`, usados no acento/título de cada
+   card de Hábito em `CrmMetodo.jsx` (barra + texto em gradiente) sem
+   reescrever a paleta interna inteira do componente — risco de
+   regressão desnecessário pro pedido desta rodada.
+5. Hábito 7 (Verificação) ganhou o selo da sub-marca **X-office**, com
+   a frase oficial ("verificando o progresso e mapeando processos").
+6. Gamificação/Human Token FICOU DE FORA por pedido explícito do dono
+   ("segura a gamificação... vou te enviar uma planilha") — não
+   implementado nesta rodada.
+**Achado durante a prova (não é bug):** o primeiro print (fontSize 48
+na Top College) realmente estourava o viewBox do SVG — corrigido pra
+36. Depois da correção, um segundo print pareceu MOSTRAR o "T" cortado,
+mas era artefato de ampliar um recorte minúsculo (~90px) com
+interpolação — a medição real via `getBBox()` no DOM (não estimativa)
+mostrou o texto inteiro dentro do viewBox com margem de sobra dos dois
+lados, e um screenshot direto do elemento SVG (sem redimensionar)
+confirmou "TOP COLLEGE" e "FACULTY OF ENTREPRENEURS" completos e
+nítidos — igual pro "-eos" e seu subtítulo. Lição: para conferir
+clipping em SVG pequeno, medir com `getBBox()`/screenshot do elemento
+em vez de ampliar um recorte de imagem.
+**Prova (medida):** suíte **906/906** (sem mudança — rodada é só
+visual/apresentação, nenhuma lib nova); build exit 0; prova em
+navegador **147/147 ZERO erros de página/console** — cobrindo os dois
+logos presentes (por `aria-label`) e o texto oficial de cada marca no
+cabeçalho, o cabeçalho se repetindo em todos os 8 hábitos, e o selo
+X-office com a frase oficial no Hábito 7.
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-56 — O painel dos 8 Hábitos VIRA o ambiente da marca (05/09/2026)
+
+**Diretiva:** DIR-56 — o dono REPROVOU a DIR-55 no preview: *"que loucura
+é essa... eu quero as logos originais, tudo isso temático igual às
+apresentações... eu não quero fundo branco na área de vendas"*, e
+completou: *"imagens do brandbook em todo painel... menos emojis...
+o painel com vontade de ser grande"*.
+
+**O que a DIR-55 tinha errado:** uma placa de logo no topo de uma página
+branca. Identidade visual não é adesivo — é o ambiente inteiro.
+
+**Entregue:**
+1. **Arte ORIGINAL, não recriada.** As logos foram extraídas dos PDFs que
+   o próprio dono anexou: a apresentação do evento traz o lockup Top
+   College + X-eos como imagem com canal alfa em alta (1091×753 e
+   1845×942), e o brandbook traz o padrão tonal de X, o X-office e as
+   imagens temáticas. Os dois SVGs desenhados à mão na DIR-55 foram
+   APAGADOS. Descoberta no caminho: o X real da X-eos é vazado (traço
+   aberto), não o X sólido metálico que eu tinha desenhado — mais um
+   motivo pra arte original ganhar da recriação.
+2. **Fundo escuro em todo o painel** (#00020C), com o padrão tonal do
+   brandbook por trás e os brilhos do gradiente Top College nos cantos.
+   Nenhuma área branca sobrou na Central de Vendas.
+3. **Imagens do brandbook em todo o painel:** uma faixa por Hábito,
+   escolhida pelo tema (sonho→carro, compromisso→"grandes batalhas",
+   lista→pessoas, contato→ambiente, apresentação→papelaria,
+   acompanhamento→mochila, verificação→X-office, duplicação→avião), com
+   o nome do Hábito em escala grande por cima; e a frase oficial
+   ("o sucesso é a soma de pequenos esforços repetidos dia após dia")
+   fechando o painel. Tudo em webp: **334 KB somando os 13 arquivos**.
+4. **Menos emoji:** 20 emojis decorativos saíram de títulos, abas e
+   botões visíveis; os dois botões principais da fila (Agendar /
+   Registrar) ganharam ícone de traço, e o sino do alerta de reunião
+   virou ícone. **O que NÃO saiu, de propósito:** os emojis que são
+   MARCADOR DE DADO (o 👤 do dono de cada item, os desfechos tipo
+   "Reunião agendada", as faixas de probabilidade) — ali o emoji funciona
+   como legenda e mexer neles é mudar exibição de registro salvo, com
+   teste em cima. Fica pra uma rodada própria, se o dono quiser.
+5. **Escala:** título do painel de `text-xl` para `text-5xl`, mais
+   respiro entre blocos, nome do Hábito em 4xl sobre a faixa.
+
+**A parte de engenharia que evitou uma reescrita gigante:** o tema claro
+do painel (index.css) não pinta com cor literal — resolve em
+`var(--nz-tinta)`, `var(--nz-borda)`, `var(--nz-cinza-fundo)`.
+Redefinindo essas variáveis dentro de `.xeos-palco`, aquelas mesmas
+regras `!important` passaram a pintar ESCURO sozinhas, sem tocar em
+classe nenhuma do JSX.
+
+**Achado medido no navegador (não suposto):** mesmo assim o título
+"Os 8 Hábitos" saiu preto sobre preto. Medindo o computed style no DOM,
+a causa apareceu: as cores `nz.*` do `tailwind.config.js` são hex
+LITERAL (`nz.tinta: '#0D1310'`), diferente das `pc.*` que são `var()` —
+então `text-nz-tinta` já sai compilado com o claro cravado e não
+obedece à variável. Por isso existe o segundo bloco de CSS, mapeando
+cada utilitária da paleta clara ao seu par escuro. Sem medir, eu teria
+chutado errado.
+
+**Prova (medida):** suíte **906/906** (sem mudança — rodada visual, sem
+lib nova); build exit 0; prova em navegador **152/152 ZERO erros de
+página/console** (147 + 5 asserções novas). As asserções novas cobram o
+que a diretiva pediu, não o que é fácil: que as imagens das logos
+ORIGINAIS realmente carreguem (`naturalWidth > 0`, que pega o caso do
+arquivo faltando no build), que a luminância do fundo da área de vendas
+seja de fato escura (< 40) e que a do título seja clara (> 180) — ou
+seja, tema escuro E legível; e que a faixa do brandbook troque junto com
+o Hábito aberto.
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-57 — A Top College vira um DEPARTAMENTO no menu (05/09/2026)
+
+**Diretiva:** DIR-57 — *"pensa que a Leilão NoZap contratou a Top
+College... ela não tem que ficar lá embaixo, tem que ficar lá em cima...
+ver o que a gente pode diminuir, mantendo a fluidez"*. Aprovado:
+**"pode fazer"**.
+
+**A melhor notícia da rodada, achada lendo o código ANTES de mexer:** os
+grupos que o dono queria JÁ EXISTIAM em `licensingTabs.js` (Conta,
+Operação, Vender, Leilões, Carreira, Admin). A lateral é que achatava
+tudo numa fileira de ícones soltos. Não foi preciso inventar
+arquitetura — foi preciso mostrar a que já estava lá e mover duas peças.
+
+**Entregue:**
+1. **Menu de 10 ícones soltos para 6** (7 pra quem tem loja, com
+   Operação): Visão Geral · Minha Conta · Loja & Vendas · **Top
+   College** · Arrematante · Admin. Nenhum link sumiu — os que saíram da
+   fileira estão dentro do menu flutuante do seu grupo, padrão que a
+   casa JÁ usava em "Operação" e "Central de Vendas" e que agora vale
+   pros demais. Zero interação nova: a fluidez fica igual.
+2. **Top College reúne o que FORMA a pessoa:** O Método, Time
+   (Vendedores), Carreira, Evoluir Nível e Metas — esta última saiu de
+   "Operação", onde estava solta (meta é acompanhamento, não chão de
+   loja). Carreira e Evoluir Nível deixaram de ocupar dois ícones
+   próprios: a faculdade não ACRESCENTOU ícone, ela ABSORVEU dois.
+3. **"Central de Vendas" virou "Loja & Vendas"**, só com o caixa: Loja
+   Virtual, Relatório, Pedidos, Venda Direta, Comissões.
+4. **"CRM" morreu como nome** e virou **O Método**. O VALOR da aba
+   (`catalogo-crm`) não mudou — link antigo continua abrindo no lugar
+   certo, e há teste cobrando exatamente isso.
+5. **O agrupamento virou DADO** (flag `colapsar` na fonte única) em vez
+   de um `if (grupo.title === 'Operação')` escrito duas vezes — na
+   lateral do desktop e no menu do celular. As duas telas agora montam
+   os menus com a MESMA função (`entradaFlutuante`).
+6. Grupo que sobra com um item só não vira menu flutuante: abrir um
+   flutuante pra uma opção sozinha é clique a mais sem ganho (caso do
+   Admin de quem não é admin, que não tem o Consignado).
+7. O seletor interno continua com as duas famílias, cada uma sob o seu
+   rótulo ("Loja & Vendas" / "Top College"), e o rótulo de cima diz de
+   QUEM é a seção aberta — quem está na loja alcança O Método sem voltar
+   pro menu, e ninguém fica num beco sem saída.
+
+**Bug encontrado NA PRÓPRIA PROVA, olhando o print — não foi teste que
+pegou:** com a pessoa em "O Método", quem acendia na lateral era **Loja
+& Vendas**. Causa: as duas moram na MESMA aba (`catalogo`), então olhar
+só a aba ativa não distingue uma da outra — é preciso olhar também a
+SEÇÃO aberta. Corrigido passando `activeCatalogTab` pra lateral, e o
+caso virou asserção permanente na prova.
+
+**TRAVA DO DONO RESPEITADA:** *"não pode mudar a função de arrastar e
+organizar os ícones"*. `aoSoltar` e a ordem salva por usuário não foram
+tocadas. As chaves novas (`group:conta`, `group:topcollege`) entram no
+fim da fila de quem já tem ordem salva — comportamento que já existia
+pra item novo, avisado ao dono e aceito por ele. A aba do catálogo
+manteve a chave antiga (`tab:catalogo`), então quem já arrastou "Central
+de Vendas" de lugar mantém a posição.
+
+**Prova (medida):** suíte **922/922** (906 + **16 testes novos** em
+`tests/menuPainel.test.mjs`); build exit 0; prova em navegador
+**158/158 ZERO erros de página/console** (152 + 6 asserções novas).
+Pra o menu virar regra testável, o import de `careerLevels` em
+`licensingTabs.js` passou do atalho `@/` pro caminho relativo — o node
+da suíte não resolve o alias do Vite. Mudança de caminho, não de
+comportamento.
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-58 — A marca no lugar do ícone genérico (05/09/2026)
+
+**Diretiva:** DIR-58 — *"conseguimos inserir a logo da Top College onde é
+o ícone... e onde está escrito O Método, inserir a logo da X-EOS da
+mesma forma?"*
+
+**Entregue:**
+1. O ícone do grupo **Top College** na lateral é agora o SÍMBOLO oficial
+   da marca (o pilar, em gradiente), extraído do mesmo lockup original.
+2. **O Método** leva o SÍMBOLO da X-eos (o X) — na lateral, no menu do
+   celular e no seletor interno da Loja & Vendas.
+3. `MarcaOuIcone`: um componente só decide entre marca e ícone, e a
+   escolha vem do DADO (campo `marca` na fonte única). As três telas
+   mostram a mesma coisa sem cada uma decidir por conta.
+
+**Decisão de acabamento (medida, não achada):** entra só o SÍMBOLO,
+nunca o logo inteiro. Antes de aplicar, os dois foram renderizados nos
+**20px e 16px reais** em que aparecem: o nome escrito vira borrão nesse
+tamanho, o símbolo sozinho continua legível. Também foi preciso achar o
+limite exato entre o X e o texto "-eos" varrendo as colunas do PNG
+(coluna 1073) — o corte "por porcentagem" que eu tinha chutado antes
+cortava o braço direito do X no meio.
+
+**Defeito encontrado no print, corrigido:** a marca da X-eos é traço
+BRANCO. No seletor interno (fundo claro) ela simplesmente sumia —
+branco no branco. Agora, onde o fundo é claro, a marca ganha um selo
+preto (`--xeos-preto`), que é o fundo pra que ela foi desenhada no
+brandbook. Virou asserção: a prova mede a luminância do selo e falha se
+alguém clarear.
+
+**Bug de teste que a própria prova pegou:** a asserção da DIR-56
+procurava a logo do cabeçalho por `includes('topcollege')` — e passou a
+achar primeiro o ARQUIVO NOVO do ícone (`marca-topcollege.webp`). A
+asserção agora cobra o caminho exato (`/marca/topcollege`). Sem a prova
+rodando, essa troca teria passado despercebida.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**161/161 ZERO erros** (158 + 3 asserções novas: a marca da Top College
+carrega na lateral, a da X-eos carrega no menu, e o selo escuro protege
+a marca branca no seletor claro).
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-59 — A logo inteira da X-eos no lugar do texto (05/09/2026)
+
+**Diretiva:** DIR-59 — *"onde está escrito O Método eu quero que entre a
+logo inteira da X-eos, sem o nome O Método"*.
+
+**Entregue:** no menu da Top College (lateral do desktop e acordeão do
+celular), o item deixou de escrever "O Método" e passou a mostrar a
+**logo inteira da X-eos**. Campo novo na fonte única, `marcaCompleta`,
+que quer dizer exatamente "a marca SUBSTITUI o rótulo" — diferente de
+`marca` (DIR-58), que só troca o ícone e mantém o texto.
+
+**Decisões de acabamento (medidas, não estimadas):**
+1. A logo entra **sem a linha "Estrutura de operações e expansão"**: na
+   altura de uma linha de menu (22px) aquele subtítulo vira borrão. O
+   ponto de corte saiu de uma varredura das linhas do arquivo — o
+   subtítulo começa em y=612 —, e o resultado foi conferido renderizando
+   nos 22px reais antes de aplicar.
+2. O rótulo "O Método" **sobrevive como texto alternativo** da imagem.
+   Sem isso o item ficaria mudo pra leitor de tela e perderia o nome na
+   busca do menu do celular. Virou asserção própria na prova.
+3. O seletor interno da Loja & Vendas ficou como estava: lá o texto
+   "O Método" é o "você está aqui" — trocar por logo tiraria a
+   orientação de quem navega.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**163/163 ZERO erros** (161 + 2 asserções: o menu NÃO escreve mais
+"O Método" e mostra a logo com altura real > 0; e a logo mantém o nome
+acessível).
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-60 — A logo em prata, inteira, sem cortar nada (05/09/2026)
+
+**Diretiva:** DIR-60 — *"tá cortado... quero a logo com essa cor prata,
+sem fundo e sem cortar nada"*.
+
+**O erro que eu tinha cometido, e a causa:** na DIR-59, pra remover o
+subtítulo, recortei a imagem por baixo (`crop` até y=592). Só que o X da
+X-eos **desce até o pé da arte** — tem um rabo longo na diagonal. O
+corte amputou esse rabo, e era isso que ele estava vendo. Lição
+registrada: em lockup com elementos que se sobrepõem em altura, não se
+remove um texto cortando o retângulo.
+
+**Entregue:**
+1. Entra o lockup **INTEIRO** — X completo, "-eos" e a linha "Estrutura
+   de operações e expansão". Zero recorte.
+2. Acabamento **prata metálico** no lugar do branco chapado, com o mesmo
+   desenho de luz do mockup que ele mandou: claro no topo, banda de
+   brilho no meio, aço mais fundo embaixo. O subtítulo ficou em prata
+   clara sólida — no gradiente ele cairia na parte escura e sumiria.
+3. Mesmo tratamento no símbolo pequeno (o X sozinho), pra não ficar uma
+   marca prateada e outra branca na mesma tela.
+4. A linha do menu cresceu de 22px pra 46px pro lockup caber inteiro.
+
+**Sobre "tirar o fundo da foto":** a imagem do mockup chegou colada no
+chat, não como arquivo — não dá pra abrir e recortar. Não foi preciso: a
+logo ORIGINAL com transparência já tinha sido extraída do PDF dele na
+DIR-56, e metalizar essa arte dá resultado melhor que remover fundo de
+uma foto — sem halo, sem resíduo da textura da parede, borda limpa.
+
+**A asserção nova pegou um defeito meu na hora:** o teste compara a
+proporção RENDERIZADA da logo com a proporção NATURAL do arquivo. Falhou
+de primeira — não porque a imagem estivesse cortada, mas porque eu tinha
+posto `py-0.5` na própria imagem, e o padding distorce a medida. Padding
+removido. Agora essa asserção protege os dois casos: se alguém cortar a
+arte OU espremer pelo CSS, a conta não fecha e a prova falha.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**165/165 ZERO erros** (163 + 2 asserções: proporção do arquivo
+preservada, e a logo cabe dentro do menu sem ser cortada pela borda).
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-61 — Uma coisa só: tipografia da marca, o X e "qual é o seu poder" (05/09/2026)
+
+**Diretiva:** DIR-61.
+
+**Entregue:**
+1. **Tipografia:** o menu da Top College inteiro em **Sora**, a fonte
+   oficial da X-EOS. Os nomes passam a ser da mesma família da logo — é
+   o que faz o bloco ler como uma peça só.
+2. **A frase da marca virou TEXTO**, abaixo da arte, com uma divisória
+   separando a faixa de marca do resto do menu. Motivo medido: no
+   lockup original a frase tem 1/40 da altura do X — pra ser LIDA, a
+   logo precisaria de ~300px de altura, o que não existe em menu nenhum.
+   Como texto na fonte da marca, fica nítida em 9,5px. A arte continua
+   inteira: o subtítulo foi **apagado do arquivo** (retângulo), não
+   recortado — foi exatamente o recorte que amputou o rabo do X na
+   DIR-59.
+3. **Só o X** onde estava escrito "O Método", num arquivo feito só pra
+   esse lugar: o X centralizado num quadrado com folga, pra assentar
+   bem no selo.
+4. **"Qual é o seu poder?"** com o retrato do deck do próprio dono
+   (extraído da apresentação do evento que ele anexou), pequeno e
+   redondo, no lugar do rótulo.
+
+**Ajuste de composição feito na hora, olhando o render:** a primeira
+versão colocava o X DUAS vezes na mesma linha — um no selo e outro ao
+lado do retrato —, e o de dentro ainda sumia no fundo claro. Ficou um X
+só, no selo preto, e a linha ficou com o retrato + a pergunta.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**167/167 ZERO erros**. As asserções novas cobram que a frase seja texto
+de verdade (tamanho ≥ 9px, não bitmap) e que o menu use mesmo a
+tipografia da marca — se alguém voltar a "queimar" a frase na imagem ou
+trocar a fonte, a prova falha.
+
+**Nota prática (não é bloqueio):** o retrato veio do deck do próprio
+dono e está sendo usado numa tela interna do time. Se um dia essa
+imagem for pra material público ou de venda, vale ele checar o direito
+de uso da figura antes — uso interno e uso publicitário têm regras
+diferentes.
+
+**Status:** ENTREGUE NO PREVIEW — produção só com novo "pode".
+
+---
+
+## REL-62 — A faixa da academia no topo do painel (05/09/2026)
+
+**Diretiva:** DIR-62.
+
+**Entregue:**
+1. O cabeçalho branco virou **faixa preta** com o padrão tonal da X-EOS,
+   as **duas marcas juntas**, o título, a saudação e **"Qual é o seu
+   poder?"** em degradê da Top College.
+2. **O professor em destaque:** imagem grande entrando pela direita, com
+   esfumaçado pro preto nas bordas (feito na própria arte, no canal
+   alfa, pra ele derreter na faixa em vez de virar um retângulo colado).
+3. O bloco do seletor acompanha o preto, e o seletor **volta a dizer
+   onde a pessoa está** ("Top College / O Método") — a pergunta agora
+   vive grande na faixa, e repetir logo abaixo era ruído e ainda tirava
+   a orientação de quem navega.
+
+**Limite de escopo que eu impus e registrei:** a faixa só aparece nas
+seções da TOP COLLEGE. O cabeçalho é o mesmo em todas as abas — se ela
+ficasse sempre, a faculdade voltaria a assinar a Carteira e os Pedidos,
+que é a fronteira fechada na DIR-57. Tem asserção cobrando que a faixa
+NÃO apareça numa seção da loja.
+
+**Dois defeitos encontrados no render e corrigidos:**
+1. O seletor continuou branco dentro do bloco escuro. Medindo no
+   navegador, o fundo dele JÁ era o vidro do palco (`rgba(255,255,255,
+   .043)`) — o problema é que vidro translúcido sobre página branca dá
+   branco. Faltava o bloco ter fundo preto de verdade, não só o tema.
+2. O degradê da frase morria no azul: com as paradas padrão, a largura
+   do texto acabava antes do magenta. As paradas foram comprimidas
+   (0% / 34% / 72%) pra as três cores caberem na frase.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**169/169 ZERO erros** (167 + 2 asserções: o professor entra com altura
+de destaque — ≥150px, não miniatura —, e a faixa é preta, com as duas
+marcas e a pergunta).
+
+**Status:** ENTREGUE NO PREVIEW. Produção NÃO — reforçado pelo dono
+nesta rodada: "só não coloca nada em produção agora, é tudo no preview".
+
+---
+
+## REL-63 — Parar de repetir as logos (05/09/2026)
+
+**Diretiva:** DIR-63.
+
+**Entregue:** o palco de marcas de dentro do painel foi REMOVIDO — ele
+repetia, 300px abaixo, exatamente o mesmo par de logos da faixa da
+academia. As frases das duas marcas (único conteúdo que só existia nele)
+subiram pra faixa, numa linha só. Medido no DOM: cada marca aparece
+agora **uma vez** na tela, e virou asserção — se o par voltar a se
+repetir, a prova falha.
+
+**Divergi do que o dono propôs, e disse isso a ele:** ele sugeriu tirar
+a Top College da faixa de cima. Isso resolveria metade da repetição e
+deixaria a faixa da ACADEMIA sem a academia. O que incomodava era o par
+aparecendo duas vezes — então saiu a cópia, não metade do original.
+
+**BUG DE TESTE ENCONTRADO E CORRIGIDO (não era do produto):** a prova
+começou a falhar em "linha do tempo ordenada — Google 09:00 ANTES do
+método 18:00". Isolei rodando a prova com as minhas mudanças guardadas
+(`git stash`): **falhava sem elas também**. Instrumentei a asserção pra
+imprimir o trecho da página e a causa apareceu: eram **17:54** no
+relógio da máquina, a reunião de teste é às 18:00, então o popup de
+alerta da DIR-53 abriu e repetiu o título da reunião no topo do
+documento — e a comparação, que varria o texto da PÁGINA INTEIRA,
+passou a olhar o popup em vez da agenda. Era um teste frágil ao horário
+do dia, escrito por mim na DIR-49; o produto estava correto. A
+comparação agora é feita DENTRO do card da agenda.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**169/169 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-64 — O botão no preto, a abertura limpa e as imagens maiores (05/09/2026)
+
+**Diretiva:** DIR-64.
+
+**Entregue:**
+1. **O seletor mudou de lugar:** saiu do branco e passou a viver DENTRO
+   da faixa preta, abaixo da pergunta. Há UMA instância só dele — na Top
+   College ele é entregue pra faixa; fora dela fica onde sempre esteve.
+   Duas instâncias dariam dois menus na tela.
+2. **O menu abre preto e limpo**, com a tipografia da marca.
+3. **O menu foi pra um PORTAL.** Ao mover o botão pra dentro da faixa, o
+   menu passou a ser CORTADO na borda — a faixa tem `overflow-hidden`
+   por causa dos cantos arredondados e do padrão ao fundo. Apareceu no
+   primeiro print: o menu abria e morria na beirada. É exatamente o
+   mesmo problema que a lateral já tinha resolvido com portal, então a
+   solução da casa foi reaproveitada. O clique-fora passou a considerar
+   o menu, que agora vive fora da caixa.
+4. **Menos branco:** o respiro entre a faixa e o painel encolheu.
+5. **As imagens dos Hábitos cresceram** de ~160px pra **240px**, e o véu
+   escuro ficou mais curto — começa forte à esquerda, pra segurar o
+   texto, e some antes da metade, liberando a foto.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**172/172 ZERO erros** (169 + 3 asserções novas). Uma delas vale citar:
+a que garante que o menu não está cortado compara a ALTURA VISÍVEL do
+menu com a altura do conteúdo dele (`scrollHeight`) — se alguém puser o
+menu de volta dentro de um contêiner que corta, as duas divergem e a
+prova falha.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-65 — A imagem do Hábito inteira, sem corte (05/09/2026)
+
+**Diretiva:** DIR-65.
+
+**A causa, que eram DOIS cortes e não um:** o arquivo já nascia como uma
+fresta — 33% da altura da página do brandbook — e o `object-cover`
+cortava mais um tanto pra preencher a altura fixa do bloco. Mexer só no
+CSS não resolveria: a cena já não estava no arquivo.
+
+**Entregue:**
+1. As 8 imagens foram **regeradas guardando 63% da cena** (proporção 2.8
+   no lugar de 5.38 — quase o dobro de altura útil).
+2. O bloco passou a ter a **proporção exata do arquivo**
+   (`aspect-ratio: 1600/571`), sem altura fixa. Sem sobra, o
+   `object-cover` não tem o que aparar: medido no navegador, a proporção
+   na tela é 2.802 e a do arquivo é 2.802.
+3. Reenquadramento caso a caso pelo assunto. O Hábito 3 (Lista) foi
+   ajustado duas vezes: no primeiro corte a cabeça do homem à esquerda
+   ficava de fora; subindo o enquadramento, as duas pessoas entram
+   inteiras.
+
+Peso: **365 KB** somando as 8 imagens (eram 258 KB com metade da cena).
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**173/173 ZERO erros**. A asserção nova compara a proporção do ARQUIVO
+com a proporção NA TELA — se alguém voltar a fixar uma altura que não
+bate com a imagem, as duas divergem e a prova falha.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-66 — X-office no título e o acabamento fino (05/09/2026)
+
+**Diretiva:** DIR-66.
+
+**Entregue:**
+1. **X-office no título da faixa.** Dentro da Top College o `h1` deixou
+   de ser "Painel de Alavancagem" e virou **X-office**, com a frase
+   oficial da sub-marca abaixo. Fora da faculdade o nome de sempre
+   continua — verificado nos dois contextos e virou asserção.
+2. **Acabamento das imagens:** esfumaçado no pé de cada faixa, porque a
+   foto terminava num corte seco contra o painel (mais visível nas cenas
+   claras, como a da Lista); e o título ancorado embaixo, que com a
+   faixa alta ficava flutuando no meio da imagem.
+3. Respiro entre o subtítulo do X-office e a saudação.
+
+**Decisão de composição, dita ao dono:** o título entrou como TEXTO e
+não como o logo do X-office. A faixa já carrega duas marcas; uma
+terceira ali seria exatamente a repetição que ele mandou tirar na
+DIR-63.
+
+**Achado que NÃO virou mudança:** a busca no DOM mostrou que "Painel de
+Alavancagem" ainda aparecia na tela mesmo dentro da faculdade. Fui ver
+onde: é o card **"Espelho do Painel de Alavancagem"**, do Hábito 7 —
+um ponteiro que diz "estes são os mesmos números da OUTRA tela de mesmo
+nome". Renomear ali quebraria o sentido da comparação, então ficou como
+está e o dono foi avisado.
+
+**Prova (medida):** suíte **922/922**; build exit 0; prova em navegador
+**174/174 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-67 — A fala do professor sai do canto (DIR-67)
+
+**Ordem:** *"qual é o seu poder vamos deixar bem do lado do professor,
+tipo o que ele está falando... está tudo muito aqui no canto... esse meio
+vazio está legal, mas quero tirar um pouco dessas coisas aqui... boa
+tarde Luiz Santanna pode colocar pra lá."*
+
+**O que mudou:** a faixa da academia virou duas colunas —
+
+    ┌──────────────┬──── vazio ────┬─────────┬───────────┐
+    │ IDENTIDADE   │ (respiro)     │ A FALA  │ PROFESSOR │
+    │ marcas       │               │ saudação│           │
+    │ X-office     │               │ +       │           │
+    │ seletor      │               │ pergunta│           │
+    └──────────────┴───────────────┴─────────┴───────────┘
+
+A coluna da esquerda perdeu 2 dos 7 blocos que tinha (a saudação e a
+pergunta foram pra fala), que é o "tirar um pouco dessas coisas aqui".
+
+**Decisão de engenharia:** a fala e o professor viraram **irmãos numa flex
+row**. Antes o professor era `absolute` e a distância dele até o texto
+mudava com a altura da faixa — dava pra "quase" acertar em uma largura de
+tela, nunca pra garantir em todas. Como irmãos, a pergunta encosta nele
+por construção.
+
+**Consequência boa:** com o texto FORA de cima da figura, o véu preto que
+cobria a faixa inteira (e existia só pra dar contraste ao texto) pôde
+sair. No lugar entrou uma **máscara só na borda esquerda da figura**: ele
+derrete no preto e o rosto volta em cheio — o "professor em destaque" que
+a DIR-62 pedia e o véu vinha lavando.
+
+**Decisão minha, dita ao dono:** o **seletor "O Método" ficou onde
+estava**. É a única coisa clicável da faixa; comando de navegação mora do
+lado de quem assina a tela. Do lado do professor ele viraria poluição em
+cima da imagem — o oposto da ordem.
+
+**Prova (medida, não olhada):** a prova em navegador mede a distância em
+pixels entre o fim do texto e o começo da figura (`0 ≤ vão ≤ 72px`, e
+`sobrepõe === false`), a altura da fala dentro da figura (entre 5% e 40%
+do topo — a faixa da cabeça dele), a posição horizontal da pergunta
+(depois de 45% da faixa: saiu do canto) e o respiro do meio (≥ 80px
+livres entre a identidade e a fala).
+
+---
+
+## REL-68 — Vidro que dá pra ler (DIR-68)
+
+**Ordem:** *"adoro esses menus transparentes, mas algumas ficam muito
+transparentes, igual essa parte branca. Pode deixar transparente, mas
+escurecer aonde tem letra."*
+
+**Diagnóstico:** o card no meio do painel tem o preto do palco atrás e já
+se lê. Quem quebra é o que **flutua**: o modal cobre a tela inteira,
+inclusive os cards claros do painel de baixo — no print do dono dava pra
+ler "R$ 3.279,24" atravessando o formulário do Quadro dos Sonhos.
+
+**O que mudou:**
+1. Cortina e cartão do modal ganharam **base escura translúcida +
+   desfoque** (`0,72` e `0,82` de alfa). Continua vidro — nada virou
+   opaco —, mas a letra ganhou chão.
+2. A pastilha do botão "outline" do shadcn usava `bg-background`, que no
+   tema claro é **branco sólido**: com a letra clara do palco em cima,
+   virava um retângulo invisível ("Enviar imagem do aparelho" e "Usar").
+   Era a mesma "parte branca" da ordem, com outro nome de classe.
+3. Botão desabilitado mantém letra clara e só baixa a força.
+
+**Prova (medida):** o alfa do cartão é `< 1` **e** `> 0,5` (as duas metades
+da ordem: continua transparente E tem fundo), a luminância dele é `< 30`,
+o `backdrop-filter` tem blur, e a pastilha de dentro tem alfa de fundo
+`< 0,2` com letra de luminância `> 150`.
+
+**Prova geral das duas:** suíte **922/922**; build exit 0; prova em
+navegador **185/185 ZERO erros de página/console**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-69 — O nome completo do Hábito quando se entra nele (DIR-69)
+
+**Ordem:** *"quando eu clico adentro, precisa aparecer o nome completo —
+Lista de Networking, Contato e Convite, Apresentação de Sucesso... pode
+até ficar o primeiro nome ali na frente, mas quando clica tem que
+aparecer o complemento."*
+
+**O que mudou:** a faixa do Hábito agora escreve **"Verificação do
+Progresso"** no lugar de "Verificação" — o apelido segue grande (é ele que
+o seletor mostra, e é por ele que a pessoa se localiza) e o complemento
+entra logo depois num peso mais leve. Os oito nomes oficiais viraram
+campo da fonte única `src/lib/metodo.js`, com o helper `partesDoHabito`.
+
+**Achado que virou correção:** a lista dos 8 hábitos estava **duplicada**
+dentro de `CrmMetodoModal.jsx`. Duas cópias significam dois nomes: esta
+ordem mudaria um lado e deixaria o outro pra trás. O modal passou a ler da
+fonte única e ficou só com a linha que é DELE — onde cada hábito mora
+dentro do CRM.
+
+**Defeito que a prova pegou (e que o olho não pegaria):** o complemento
+entrou num `<span>` com margem lateral. Na tela o respiro aparecia certo,
+mas o TEXTO saía grudado — "Verificaçãodo Progresso" — pra quem copia e
+pro leitor de tela. A prova compara o texto real do DOM, não a foto, então
+acusou. Entrou um espaço explícito.
+
+**Prova (medida):** 5 testes novos na suíte (os 8 nomes oficiais na ordem
+do dono, a separação apelido/complemento, hábito sem complemento não
+inventa texto, id desconhecido volta `null`, e o contrato de que o apelido
+é sempre o começo do nome completo — sem ele a faixa escreveria duas
+palavras que não formam frase). Suíte **927/927**; build exit 0; prova em
+navegador **184/184 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-70 — O menu da Top College lê como uma coisa só (DIR-70)
+
+**Ordem:** *"lá em cima está top, a logo; só o restante ali tem que ficar
+mais conexo, com aquele metálico da X-eos. Estou sentindo elas meio
+divididas."*
+
+**O que eu fui olhar antes de mexer:** ele disse "a tipografia igual",
+mas a Sora já estava no menu inteiro desde a DIR-61 — então a divisão
+vinha de outro lugar. Eram três, e nenhuma era a fonte: a **cor** (os
+itens acendiam no verde do Leilão NoZap, dentro do menu da faculdade), o
+**eixo** (faixa em 16px, itens em 12px) e o **corte** (a faixa tinha fundo
+próprio e uma linha cheia embaixo, virando um cartão sobre outro).
+
+**O prata é medido, não escolhido:** os três tons do degradê saíram da
+média de pixel do próprio `marca-xeos-lockup.webp` — topo (235,237,240),
+meio (198,203,211), base (140,146,155). O item embaixo é feito do mesmo
+metal da logo de cima, literalmente.
+
+**Detalhe de implementação que valeu comentário no código:** o traço do
+ícone usa `stroke: url(#xeosMetal)`, e isso só resolve se o `<defs>`
+estiver no MESMO documento. O menu vive num portal no `body`, então a liga
+foi declarada dentro do próprio menu — fora dele o ícone cairia pra preto.
+
+**Prova (medida):** a prova verifica que o rótulo é degradê (e não cor
+chapada), que o traço do ícone puxa a mesma liga, que a liga existe dentro
+do menu, que o desalinho entre o ícone e a logo é **0px** e que não sobrou
+nenhum `nz-verde` no menu. Suíte **927/927**; build exit 0; prova em
+navegador **188/188 ZERO erros**.
+
+**Status:** ENTREGUE NO PREVIEW. Produção continua travada por ordem do
+dono.
+
+---
+
+## REL-PUB-06/09 — Publicação em produção (DIR-49 → DIR-70)
+
+**Autorização do dono (06/09/2026):** *"pode publicar tudo o que a gente
+fez até agora... pode publicar em produção... pra eu ver como é que está
+no celular."* É a autorização separada que faltava — até aqui tudo vivia
+só no preview por ordem dele.
+
+**O que sobe:** DIR-49→54 (agenda viva), DIR-55→66 (a Top College como
+ambiente de marca), DIR-57→59 (menu de 10 ícones para 6, com a ordem
+arrastável intocada), DIR-67→70 (a fala do professor, o vidro legível, o
+nome completo do Hábito, o menu metálico) e o X-GAME da sessão paralela,
+que vivia no mesmo branch.
+
+**Conferência do banco antes de abrir a PR:** as 5 migrações que o
+workflow aplica sozinho em produção foram lidas uma a uma. Todas
+aditivas — `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`,
+índices e RLS. Nenhum `DROP`, `TRUNCATE`, `DELETE` ou troca de tipo.
+`app_segredos` nasce com RLS ligado e SEM policy: nem anon nem
+authenticated leem, só o service role.
+
+**Conflito resolvido com conferência, não no olho:** `src/lib/xgame.js`
+deu add/add (os dois lados criaram o arquivo). Ficou a versão do branch
+depois de provar que ela é superconjunto estrito da do main — export a
+export (nenhum símbolo se perde) e linha a linha (as duas únicas linhas
+exclusivas do main são a assinatura e a primeira de `resumoDoDia`, que no
+branch ganharam parâmetros).
+
+**Susto que a prova pegou, e o que ele era de verdade:** depois de trazer
+o último trabalho do X-GAME, a prova caiu de 188/188 para **179/188** — e
+os 9 que caíram eram todos do Master Task (períodos MANHÃ/TARDE/NOITE, o
+guia de cada horário, o regerar com confirmação). Fui ver antes de
+publicar: a sessão paralela trocou a **visão padrão** do Master Task para
+a Jornada (X-GAME F11); a lista por período continua inteira atrás do
+seletor 📋 Lista. Ou seja, a prova cobrava uma tela que o produto deixou
+de abrir por padrão — não um defeito. Com a prova abrindo a Lista antes de
+cobrar o que é dela: **189/189**.
+
+**Prova final na árvore exata que foi publicada:** suíte **990/990**;
+build exit 0; prova em navegador **189/189 ZERO erros**; lint 62 (a dívida
+de imports não usados que já existia no main e não bloqueia CI).
+
+**Status:** PUBLICADO EM PRODUÇÃO por autorização expressa do dono.
