@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2, Brain } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap, BookmarkPlus, ListChecks, AlarmClock, CheckCheck, Undo2, Brain, Building2, BriefcaseBusiness } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
+import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES, funcaoDaPessoa, montarDiaDaFuncao } from '@/lib/funcoes';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -72,6 +73,14 @@ import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/
 // 📏 E A COERÊNCIA DO VALOR (dono: "uma tarefa dessa não pode valer cento e
 // seis reais num dia"): o dia completo é a Rotina Perfeita (peso 75) — a
 // conta mora em distribuicaoFixo/xgame; aqui só se mostra.
+//
+// 🏢 SÉTIMA RODADA (dono, mesmo dia): "o que a gente tem que ter é a FUNÇÃO
+// de cada um. O Emanuel: Diretor de Operações — a partir daí o sistema já me
+// dá as tarefas do dia dele. E identificar a EMPRESA: e-Digital (marketing e
+// tecnologia), Leilão no Zap, X-EOS; o Jean, CMO, trabalha pro Leilão no Zap
+// através da e-Digital." No modal da pessoa: função (do painel de controle,
+// ou escolhida: CMO/CTO/CFO), empresa e "através de", e O DIA DA FUNÇÃO com
+// o botão que distribui as tarefas dela (src/lib/funcoes).
 //
 // 🧠 SEXTA RODADA (dono, mesmo dia): "quando eu botei uma palavra ele ficou
 // nela até o final; tem que ir atualizando conforme eu escrevo — um
@@ -151,6 +160,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // 🏛️ o time corporativo, do painel de controle — nome e função de lá
   const equipe = useMemo(() => timeCorporativo(usuarios, nomeExibicao), [usuarios]);
   const funcaoDe = (id) => equipe.find((p) => p.id === id)?.funcao || '—';
+
   // o cadastro do jogo da pessoa (fixo, mínimo) — ou o padrão, até ser definido
   const participanteDe = useCallback((id) => {
     const p = participantes.find((x) => x.user_id === id);
@@ -195,6 +205,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
 
   const participante = pessoa ? participanteDe(pessoa) : null;
+  // a função de trabalho (com o dia dela): a escolhida no painel da pessoa, ou a do nível do painel de controle
+  const funcaoTrabalho = (id) => funcaoDaPessoa({ funcaoTitulo: participanteDe(id)?.funcao_titulo, nivel: equipe.find((p) => p.id === id)?.nivel });
   // a mentalidade: a escolhida; senão a que a régua lê no texto da ação;
   // com o campo vazio, a trilha da pessoa (pelo cargo)
   const lida = classificarAcao(nova.titulo);
@@ -348,6 +360,20 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     toast.success(`↩ devolvida pra ${nomeDe(t.user_id)}: "${patch.devolvida_motivo}"`);
   };
 
+  // 🏢 o dia da função: as tarefas que a função faz todo dia, distribuídas de uma vez
+  const gerarDiaDaFuncao = async (userId, diaISO) => {
+    const f = funcaoTrabalho(userId);
+    if (!f) { toast.error('Defina a função da pessoa primeiro.'); return; }
+    setGerando(true);
+    const jaTem = tarefasCiclo.filter((t) => t.user_id === userId && String(t.data).slice(0, 10) === diaISO).length;
+    const linhas = montarDiaDaFuncao(f, { userId, dia: diaISO, criadoPorId: currentUser?.id || null, prazoISO: prazoDe(diaISO, '18:00'), ordemInicial: jaTem });
+    const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+    setGerando(false);
+    if (error) { toast.error('Não distribuiu o dia da função — tenta de novo'); return; }
+    toast.success(`${f.nome}: ${linhas.length} tarefas do dia distribuídas pra ${nomeDe(userId)} em ${fmtDia(diaISO)}`);
+    carregarTarefas();
+  };
+
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
   const desfazer = async (t) => {
     setTarefasCiclo((l) => l.filter((x) => x.id !== t.id));
@@ -370,7 +396,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         ? l.map((x) => (x.user_id === p.user_id ? { ...x, ...patch } : x))
         : [...l, { ...PARTICIPANTE_PADRAO, ...(gravada || linha), ...patch }];
     });
-    toast.success(`${nomeDe(p.user_id)}: fixo atualizado — o valor do dia já mudou`);
+    toast.success(patch.fixo_mes != null ? `${nomeDe(p.user_id)}: fixo atualizado — o valor do dia já mudou` : `${nomeDe(p.user_id)}: painel atualizado`);
   };
 
   // 💰 o ciclo de cada pessoa
@@ -687,7 +713,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
             >
               <option value="">escolha a pessoa…</option>
               {equipe.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
+                <option key={p.id} value={p.id}>{p.nome} · {funcaoTrabalho(p.id)?.nome || p.funcao}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
               ))}
             </select>
             <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
@@ -712,10 +738,62 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-[15px] font-extrabold truncate">{nomeDe(pessoaFixo)}</p>
-                  <p className="text-[11px] text-white/45">{funcaoDe(pessoaFixo)} <span className="text-white/25">· função do painel de controle</span></p>
+                  <p className="text-[11px] text-white/45">{funcaoTrabalho(pessoaFixo)?.nome || funcaoDe(pessoaFixo)}{base.empresa ? ` · ${rotuloDaEmpresa(base.empresa, base.empresa_via)}` : ''} <span className="text-white/25">· {participanteDe(pessoaFixo)?.funcao_titulo ? 'função escolhida aqui' : 'função do painel de controle'}</span></p>
                 </div>
                 <button type="button" onClick={() => setModalAberto(false)} aria-label="Fechar" className="rounded-lg p-1.5 text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
               </div>
+
+              {/* 🏢 função e empresa — de onde sai o dia da pessoa */}
+              {(() => {
+                const f = funcaoTrabalho(pessoaFixo);
+                const nivel = equipe.find((p) => p.id === pessoaFixo)?.nivel;
+                return (
+                  <div className="mt-3 rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="funcao-empresa">
+                    <div className="flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider">
+                      <label className="inline-flex items-center gap-1"><BriefcaseBusiness className="w-3 h-3" /> função
+                        <select
+                          value={f?.id || ''}
+                          onChange={(e) => salvarFixo(base, { funcao_titulo: e.target.value || null })}
+                          className={`ml-1 ${campo} normal-case`}
+                          data-teste="funcao"
+                        >
+                          <option value="">{nivel ? `(a do painel: ${funcaoDe(pessoaFixo)})` : 'escolha…'}</option>
+                          {FUNCOES.map((x) => <option key={x.id} value={x.id}>{x.nome}{x.nivel ? '' : ' · fora do painel'}</option>)}
+                        </select>
+                      </label>
+                      <label className="inline-flex items-center gap-1"><Building2 className="w-3 h-3" /> empresa
+                        <select value={base.empresa || ''} onChange={(e) => salvarFixo(base, { empresa: e.target.value || null })} className={`ml-1 ${campo} normal-case`} data-teste="empresa">
+                          <option value="">—</option>
+                          {EMPRESAS.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                        </select>
+                      </label>
+                      <label>através da
+                        <select value={base.empresa_via || ''} onChange={(e) => salvarFixo(base, { empresa_via: e.target.value || null })} className={`ml-1 ${campo} normal-case`} data-teste="empresa-via">
+                          <option value="">—</option>
+                          {EMPRESAS.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                        </select>
+                      </label>
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-white/60" data-teste="funcao-resumo">
+                      {f ? <><span className="text-white font-bold">{f.nome}</span> · {mentalidadeDe(f.mentalidade)?.nome} — entrega {f.entrega}</> : 'sem função com dia definido — escolha acima'}
+                      {base.empresa && <span className="text-white/40"> · trabalha pro <span className="text-white/70">{rotuloDaEmpresa(base.empresa, base.empresa_via)}</span>{empresaDe(base.empresa)?.pilar ? <span className="text-white/30"> ({empresaDe(base.empresa).pilar})</span> : null}</span>}
+                    </p>
+                    {f && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">O dia da função ({f.dia.length} tarefas)</p>
+                          <Button size="sm" onClick={() => gerarDiaDaFuncao(pessoaFixo, hoje)} disabled={gerando} className="ml-auto bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-[11px]" data-teste="gerar-dia-funcao">
+                            {gerando ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Send className="w-3 h-3 mr-1" />} distribuir o dia da função (hoje)
+                          </Button>
+                        </div>
+                        <ul className="mt-1 space-y-0.5 text-[11px] text-white/55" data-teste="dia-funcao">
+                          {f.dia.map((t) => <li key={t.hora + t.titulo}><span className="text-white/35 tabular-nums">{t.hora}</span> · {t.titulo} <span className="text-white/30">· H{t.habito}</span></li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-[11px] text-white/50 tabular-nums"><span className="text-white font-bold text-[14px]" data-teste="valor-dia-pessoa">{fmtReais(r.valorDia)}</span> / dia de operação</p>
