@@ -37,6 +37,8 @@ const CuponsAdmin = React.lazy(() => import('@/pages/CuponsAdmin'));
 const AnaliseLoteEstoque = React.lazy(() => import('@/pages/AnaliseLoteEstoque'));
 const EstoqueLotes = React.lazy(() => import('@/pages/EstoqueLotes'));
 const Evoluir = React.lazy(() => import('@/pages/Evoluir'));
+// 🎮 X-GAME — painel da gamificação do Método (Human Token, MvM do Dia, ranking)
+const XGame = React.lazy(() => import('@/pages/XGame'));
 const Carteira = React.lazy(() => import('@/pages/Carteira'));
 const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
 // 💰 Extrato de Aportes do Parceiro de Compra (leitura + conciliação com o Mercado Pago)
@@ -224,6 +226,7 @@ const AuthenticatedApp = () => {
       } />
       {/* 🆕 Landings do Portal (sem Layout — UI 100% própria) */}
       <Route path="/Evoluir" element={<LayoutWrapper currentPageName="Evoluir"><Evoluir /></LayoutWrapper>} />
+      <Route path="/XGame" element={<LayoutWrapper currentPageName="XGame"><XGame /></LayoutWrapper>} />
       <Route path="/Cadastro" element={<Cadastro />} />
       <Route path="/rankpremiado" element={
         <LayoutWrapper currentPageName="ConcursoLeilaoNozap">
