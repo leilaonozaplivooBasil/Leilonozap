@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic, Search, Loader2 } from 'lucide-react';
 import {
-  lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube, buscarNoYoutube,
+  lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube, buscarNoYoutube, resolverEstacao,
   extrairIdYoutube, extrairListaYoutube,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
 } from '@/lib/xmusic';
@@ -162,6 +162,31 @@ export default function XMusic() {
 
   const trocar = useCallback((nova) => { vibrar(VIBRA_TOQUE); setEstacao(nova); setLigado(true); }, []);
 
+  // 📻 AS VAGAS SE RESOLVEM AO ABRIR O PAINEL. Vaga sem escolha da pessoa não
+  // tem link nenhum guardado: ela busca no YouTube (pela nossa rota, que só
+  // devolve o que toca embutido e guarda o resultado pra equipe por 12h). É o
+  // que faz "as opções funcionarem de verdade": não existe ID escrito por mim
+  // que possa ter morrido — o conteúdo é o que está no ar hoje.
+  useEffect(() => {
+    if (!aberto) return undefined;
+    let vivo = true;
+    (async () => {
+      for (const vaga of estacoes) {
+        if (vaga.fila?.length) continue;
+        const itens = await resolverEstacao(vaga.slot, cabecalhosSessao());
+        if (!vivo) return;
+        if (!itens.length) { setFalhou((f) => ({ ...f, [vaga.slot]: true })); continue; }
+        setEstacoes((atuais) => atuais.map((v) => (
+          v.slot === vaga.slot ? { ...v, fila: itens, ...itens[0] } : v
+        )));
+        // "deixar tocando": a primeira vaga que se resolve já vira o que
+        // está no ar, se ainda não havia nada. Ninguém precisa procurar play.
+        setEstacao((e) => (e?.id ? e : { ...vaga, fila: itens, ...itens[0] }));
+      }
+    })();
+    return () => { vivo = false; };
+  }, [aberto, estacoes]);
+
   // ⏭️ A FILA ANDA SOZINHA. Deu erro no que está tocando, o X-Music pula pro
   // próximo candidato daquela vaga sem a pessoa fazer nada — só quando a fila
   // inteira acaba é que a vaga se declara e pede um link. É isto que substitui
@@ -285,20 +310,32 @@ export default function XMusic() {
   }, [playlist]);
 
   return (
-    // 📏 bottom-14, não bottom-4: o selo "Preview oficial" mora em
-    // `fixed bottom-2 left-2` e estava por cima da pílula — o dono não
-    // conseguia ler o que tocava. Agora a pílula senta acima dele.
+    // 📏 A ALTURA NÃO É UM NÚMERO SOLTO: sai da mesma régua dos outros
+    // flutuantes (--nz-dock-b, do FloatingDock), mais uma folga que tira a
+    // pílula de cima do selo "Preview oficial" (fixed bottom-2 left-2), que
+    // estava tapando o nome do que tocava. Como a régua é a mesma, nas
+    // páginas com barra de ação no rodapé — sala de leilão, loja — a pílula
+    // sobe junto sozinha, em vez de cair em cima do botão de lance.
     <div
       ref={painelRef}
       aria-hidden={rolando}
-      className={`fixed bottom-14 left-4 z-40 print:hidden transition-all duration-300 ${rolando ? 'opacity-0 translate-y-3 pointer-events-none' : 'opacity-100 translate-y-0'}`}
+      style={{ bottom: 'calc(var(--nz-dock-b, 1.75rem) + 2.25rem)' }}
+      className={`fixed left-4 z-40 print:hidden transition-all duration-300 ${rolando ? 'opacity-0 translate-y-3 pointer-events-none' : 'opacity-100 translate-y-0'}`}
     >
       <div
         aria-hidden={!aberto}
         className={aberto ? 'mb-2' : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'}
       >
-        <div className="xeos-cru w-[min(88vw,20rem)] rounded-2xl border border-white/12 shadow-2xl p-3 space-y-3"
-          style={{ background: 'rgba(10,16,32,0.97)', backdropFilter: 'blur(12px)' }}
+        {/* 📏 O painel cresce PRA CIMA e nunca vaza pra fora da tela: o teto é
+            a altura da janela menos o espaço da pílula, e o que não couber
+            rola DENTRO dele. Sem isto, com a busca aberta a lista passava do
+            topo e o conteúdo de cima ficava cortado, inalcançável. */}
+        <div className="xeos-cru w-[min(88vw,20rem)] rounded-2xl border border-white/12 shadow-2xl p-3 space-y-3 overflow-y-auto overscroll-contain"
+          style={{
+            background: 'rgba(10,16,32,0.97)',
+            backdropFilter: 'blur(12px)',
+            maxHeight: 'calc(100vh - 8.5rem)',
+          }}
         >
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-extrabold tracking-[0.2em] text-white/70">X-MUSIC</p>
@@ -392,19 +429,23 @@ export default function XMusic() {
             <p className="text-[9px] font-bold uppercase tracking-widest text-white/35 mb-1.5">estações da casa</p>
             <div className="grid grid-cols-2 gap-1.5">
               {estacoes.map((m) => {
-                const vazia = falhou[m.slot] || !m.id;
-                const toca = !vazia;
+                const procurando = !m.id && !falhou[m.slot];
+                const toca = Boolean(m.id) && !falhou[m.slot];
                 const pedindo = vagaAlvo === m.slot;
                 const noAr = estacao?.slot === m.slot && estacao?.tocando;
                 // a segunda linha diz a VERDADE, nesta ordem: o que está no ar
-                // agora (título real vindo do player) > o propósito da vaga >
-                // o pedido de link quando a fila inteira falhou.
-                const legenda = noAr || (toca ? m.nota : 'sem link que toque · ponha a sua');
+                // agora (título real, vindo do player) > procurando no YouTube
+                // > o propósito da vaga > o pedido de link quando nada tocou.
+                const legenda = noAr
+                  || (procurando ? 'procurando no YouTube…'
+                    : toca ? m.nota
+                    : 'nada tocou aqui · ponha a sua');
                 return (
                   <button
                     key={m.slot}
                     type="button"
                     onClick={() => {
+                      if (procurando) return;      // ainda buscando: não faz nada
                       if (toca) { trocar(m); return; }
                       // não toca? não finge que toca: abre a vaga pro link
                       vibrar(VIBRA_TOQUE);
@@ -418,7 +459,7 @@ export default function XMusic() {
                         : 'bg-white/[0.03] hover:bg-white/[0.08]'}`}
                   >
                     <span className={`block text-[11px] font-bold ${toca ? 'text-white' : 'text-white/55'}`}>{m.nome}</span>
-                    <span className={`block text-[9px] truncate ${toca ? 'text-white/45' : 'text-amber-200/70'}`}>
+                    <span className={`block text-[9px] truncate ${toca ? 'text-white/45' : procurando ? 'text-white/30' : 'text-amber-200/70'}`}>
                       {pedindo ? 'cole o link aqui embaixo' : legenda}
                     </span>
                   </button>

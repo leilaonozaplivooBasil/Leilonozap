@@ -46,39 +46,26 @@ export const CHAVE_ACERTOU = 'xmusic_acertou';     // o candidato que TOCOU em c
 // enquanto o canal viver, e vai renovando o conteúdo sozinha — a pessoa não
 // escuta a mesma faixa todo dia.
 export const ESTACOES_PADRAO = [
-  {
-    slot: 'foco', nome: 'Foco', nota: 'pra trabalhar',
-    candidatos: [
-      { id: 'UUSJ4gkVC6NrvII8umztf0Ow', lista: true },  // canal Lofi Girl
-      { id: 'jfKfPfyJRdk' },                            // lofi hip hop radio
-      { id: '4xDzrJKXOOY' },
-    ],
-  },
-  {
-    slot: 'calma', nome: 'Calma', nota: 'relaxar e respirar',
-    candidatos: [
-      { id: 'UfcAVejslrU' },                            // Weightless
-      { id: 'UUUjBEwlyDo1cbVCiJDzYcQg', lista: true },
-      { id: '1ZYbU82GVz4' },
-    ],
-  },
-  {
-    slot: 'estudo', nome: 'Estudo', nota: 'concentração longa',
-    candidatos: [
-      { id: 'UUQINXHZqCU5i06HzxRkujfg', lista: true },
-      { id: '_4kHxtiuML0' },
-      { id: 'lTRiuFIWV54' },
-    ],
-  },
-  {
-    slot: 'energia', nome: 'Energia', nota: 'correr e treinar',
-    candidatos: [
-      { id: 'UU0C-w0YjGpqDXGB8IHb662A', lista: true },
-      { id: 'gJLIiF15wjQ' },
-      { id: 'mgmVOuLgFB0' },
-    ],
-  },
+  { slot: 'foco', nome: 'Foco', nota: 'pra trabalhar' },
+  { slot: 'calma', nome: 'Calma', nota: 'relaxar e respirar' },
+  { slot: 'estudo', nome: 'Estudo', nota: 'concentração longa' },
+  { slot: 'energia', nome: 'Energia', nota: 'correr e treinar' },
 ];
+
+/** 📻 A ESTAÇÃO SE RESOLVE NA HORA, buscando no YouTube pela rota do
+ *  servidor (que já filtra videoEmbeddable e guarda o resultado pra equipe
+ *  inteira por 12h). Devolve a FILA da vaga: o player toca o primeiro e, se
+ *  algum não abrir, anda sozinho pro próximo. */
+export const resolverEstacao = async (slot, cabecalhos = {}) => {
+  try {
+    const r = await fetch(`/api/functions/xmusicBuscar?estacao=${encodeURIComponent(slot)}`, {
+      headers: cabecalhos,
+      signal: AbortSignal.timeout(12000),
+    });
+    const j = await r.json().catch(() => null);
+    return j?.ok && Array.isArray(j.itens) ? j.itens : [];
+  } catch { return []; }
+};
 
 /** Aceita link normal, curto, embed, shorts, live ou o ID puro. */
 export const extrairIdYoutube = (texto) => {
@@ -156,26 +143,19 @@ export const fonteDoPlayer = (estacao) => {
 };
 
 
-/** A FILA DE UMA VAGA: o que a pessoa pôs vence tudo; senão, os candidatos
- *  da casa — começando pelo que JÁ TOCOU aqui neste aparelho. */
-export const filaDaVaga = (vaga) => {
+/** A ESCOLHA DA PESSOA, se houver: ela vence a busca da casa sempre. */
+export const escolhaDaVaga = (slot) => {
   const salvas = ler(CHAVE_ESTACOES, {}) || {};
-  const dela = salvas[vaga.slot];
-  if (dela?.id) return [{ ...dela, dela: true }];
-  const fila = (vaga.candidatos || []).slice();
-  const acertou = (ler(CHAVE_ACERTOU, {}) || {})[vaga.slot];
-  if (acertou) {
-    const i = fila.findIndex((c) => c.id === acertou);
-    if (i > 0) fila.unshift(fila.splice(i, 1)[0]);
-  }
-  return fila;
+  const dela = salvas[slot];
+  return dela?.id ? { ...dela, dela: true } : null;
 };
 
-/** As estações como estão HOJE, já com a fila resolvida e o primeiro
- *  candidato na mão. O rótulo é sempre da casa — é o propósito da vaga. */
+/** As vagas como estão HOJE. Sem fila ainda: quem preenche é resolverEstacao,
+ *  no momento em que o painel abre — assim o conteúdo é o que está no ar
+ *  agora, e não um ID que eu escrevi meses atrás e já morreu. */
 export const lerEstacoes = () => ESTACOES_PADRAO.map((vaga) => {
-  const fila = filaDaVaga(vaga);
-  return { ...vaga, fila, ...(fila[0] || {}) };
+  const dela = escolhaDaVaga(vaga.slot);
+  return dela ? { ...vaga, ...dela, fila: [dela] } : { ...vaga, fila: [] };
 });
 
 export const gravarEstacaoDoSlot = (slot, dados) => {
