@@ -12,6 +12,55 @@
 
 ---
 
+## DIR-76.1 / 76.2 — A cara do MeisterTask, o seletor de ícone e o assistente
+
+**Emitidas por:** dono (06/09/2026), em três recados seguidos:
+*"Agora a gente deixa idêntico ao master. Bem visual, grandão. Está muito ainda
+aparecendo emoji. Pega os detalhes todinho pra você jogar pra cá."* ·
+*"Quando eu escrever Academia, ele traz um espaço pro peso, pra foto, tipo um
+analisador. Faz a entrevista — perder ou ganhar peso — e já gera a rotina de
+treino: segunda, terça, quarta… sempre ajudando ela a escrever menos, e cada
+vez mais ficar viciada na plataforma."* ·
+*"Precisa selecionar emoji, tem que dar tudo isso pra ele, o arrastar de um
+lado pro outro; quando eu adicionar, precisa ficar igual as outras."*
+
+**Data:** 06/09/2026.
+
+**DIR-76.1 — a cara.** Tirada dos prints dele, item por item: cabeçalho de
+coluna em barra sólida de ponta a ponta (46px, ícone + nome em CAIXA ALTA +
+contador); card BRANCO sobre a coluna; **faixa de status no topo do card**,
+largura inteira, verde "Concluída" e laranja "Atrasado"; rodapé de metadados em
+chips com ícone (data, contador do checklist); avatar no canto; coluna
+recolhida vira barra vertical da cor dela. **Zero emoji** — emoji muda de
+desenho em cada sistema e dá cara de rascunho; ícone é desenhado, alinha na
+linha de base e aceita a cor do tema.
+
+**DIR-76.2 — o que o MeisterTask tem e a gente não tinha:**
+- **Seletor de ícone e cor** por lista (o painel "Ícone de seção" do print):
+  grade de ícones em cima, fileira de cores embaixo. Guarda-se o **nome** do
+  ícone, nunca o desenho — o desenho vem do pacote e muda de versão.
+- **Arrastar a lista de um lado pro outro**, com a ordem **renumerada inteira**
+  a cada movimento: ordem com buraco volta embaralhada na leitura seguinte.
+- **A lista nova nasce igual às outras** — o cabeçalho já aparece colorido e
+  com o ícone que o nome sugere **enquanto se digita**, antes de existir.
+
+**DIR-76.2 — o assistente, e é ele que fideliza:**
+Escreveu um nome que a casa conhece ("Academia"), aparece o convite. Três
+perguntas que **mudam o resultado** — objetivo, dias por semana, nível — e a
+semana nasce pronta: um card por dia de treino, com os exercícios e a série já
+escritos. Peso e foto são **opcionais**, porque são acompanhamento e não plano.
+
+**Regras de fronteira:**
+- **O assistente é CONVITE, nunca modal que abre sozinho.** Ferramenta que
+  interrompe é ferramenta que a pessoa aprende a fechar rápido.
+- **O que sai são cards NORMAIS** (título + checklist) — arrastam, editam e vão
+  pro dia como qualquer outro. Formato próprio deixaria metade do quadro sem
+  valer pra eles.
+- **Assistente novo é uma entrada em `src/lib/assistenteDeLista.js`**, não uma
+  migração. A `ficha` é JSONB justamente porque cada contexto pergunta o seu.
+
+---
+
 ## DIR-76 — O nosso quadro, versão "melhor que o MeisterTask e mais simples"
 
 **Emitida por:** dono (06/09/2026), com prints do quadro dele no MeisterTask:
