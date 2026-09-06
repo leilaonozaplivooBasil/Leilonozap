@@ -3855,3 +3855,321 @@ mesma versão** da `xperf_metas_programa` que eles acabavam de subir —
 É o defeito que deixou uma migração 5 semanas fora do banco. Renomeada pra
 `20260906234500`. Sem esse portão, uma das duas teria sumido calada — e a que
 some não avisa: só um dia a coluna não existe.
+
+---
+
+## REL-76.3 — Medi o MeisterTask, subi a escala e dei o emoji (preview)
+
+**Diretiva:** DIR-76.3. **Data:** 06/09/2026. **Escopo:** preview.
+
+**"Está muito pequeno" — medi antes de mexer.** Nos prints dele (janela de
+1920, 1x), o MeisterTask usa:
+
+| | MeisterTask | eu tinha | agora |
+|---|---|---|---|
+| coluna | ~265px | 300px | **340px** |
+| cabeçalho | ~50px | 46px ✗ | **58px** |
+| título do card | ~15px | 15px | **17px** |
+| respiro do card | ~15px | 12px ✗ | **16px** |
+| campo de digitar | botão grande | 40px ✗ | **48px** |
+| avatar | ~26px | 26px | **32px** |
+
+O diagnóstico: **a coluna já era maior que a dele; o apertado era o miolo.**
+Cabeçalho mais baixo, respiro menor e o campo de escrever o tópico — que foi
+exatamente o que ele apontou — pequeno. A escala agora vive numa constante só
+(`T`), e a prova cobra cada número contra o do MeisterTask. "Pequeno" virou
+número: se encolher, reprova.
+
+**O emoji, e por que isso NÃO contradiz a DIR-76.1.** Ele pediu duas coisas
+opostas na aparência: *"está muito ainda aparecendo emoji"* e, agora,
+*"tem que dar a opção de ele selecionar o emoji que ele quer colocar"*. Não é
+contradição — são coisas diferentes:
+
+> emoji que **o programa espalha** pela interface é ruído: some num sistema,
+> muda de desenho no outro, e dá cara de rascunho.
+> emoji que **a pessoa escolhe** pra marcar a lista dela é identidade.
+
+Então o painel ganhou **duas abas** — Ícones (12 da casa) e Emoji (24) — e a
+fileira de cores ficou maior e explícita, porque ele disse *"sei que as cores
+estão automáticas, mas tem que dar a opção de selecionar"*. O automático
+continua: a lista nasce com a marca que o nome sugere; escolher é opção.
+
+O campo `icone` guarda **ou** um nome da casa **ou** um emoji, e `marcaValida`
+recusa qualquer outra coisa — lixo no campo não vira desenho na tela.
+
+**Prova em navegador: 264/264.** As medidas são lidas do DOM renderizado
+(`getBoundingClientRect`, `getComputedStyle`), não do código:
+
+```
+cabeçalho 58px (MT 50) · coluna 340px (MT 265) · card 316px
+título 17px (MT ~15) · campo 48px de altura, fonte 15px
+aba Emoji: 24 opções, nenhuma com svg, amostra 🔥 💪 🏋️ 🏃
+escolheu 🔥 → o cabeçalho passou a mostrar 🔥, sem ícone
+```
+
+**Erro meu na prova:** cliquei na aba e medi **no mesmo `evaluate`** — li o DOM
+de antes do React redesenhar e a prova acusou "não é emoji" quando era. A
+asserção seguinte (o 🔥 no cabeçalho) passava, e foi ela que denunciou a
+contradição. Agora clica, espera o quadro, e só então mede.
+
+**Suíte:** 1203/1203. **Build:** limpo. **Sem migração** — `icone` já existia.
+
+**Uma entrega de território, no rebase.** A sessão paralela levou os três
+portões e o fixo pra **dentro do cartão da pessoa**, na Gestão. O comentário
+lá credita a DIR-74 — **a regra continua minha, a tela virou deles**. Em vez de
+perseguir a tela alheia, tirei essas 4 asserções da minha prova e registrei
+onde a guarda ficou:
+
+- a **tela nova** está coberta pela prova **deles**
+  (`tests/navegador/performance.spec.mjs`, `[data-teste="portoes-pessoa"]`);
+- a **regra** — ninguém valida o próprio card, os três portões valem juntos,
+  consistência conta semanas — segue nos 36 testes de
+  `tests/xperformance.test.mjs`, com as 4 mutações do REL-74.
+
+Tirar dali é reconhecer de quem é a tela; não é abrir mão de guarda. **260/260.**
+
+---
+
+## REL-77 — O horário é a ponte; o concluído mora na coluna (preview)
+
+**Diretiva:** DIR-77 / 77.1. **Data:** 07/09/2026. **Escopo:** preview.
+
+**Primeiro, o que eu conferi antes de prometer:** Lista e Jornada **já eram a
+mesma coisa** — as duas leem `tarefas` do dia. "Adicionei na lista, entra na
+jornada" já funcionava. O que faltava era o horário no card: a tarefa nascida
+de um card ia com `hora: null` e caía no balde "sem hora" — fora da linha do
+tempo da Jornada e fora do período certo da Lista. Era esse o buraco.
+
+**A decisão: o HORÁRIO é que decide onde a coisa aparece.**
+
+O pedido foi "adicionou num lugar, entra em todos". Ao pé da letra isso quebra
+o dia: o quadro é backlog, o dia é compromisso. Jogar todo card no dia incharia
+a Master Task — e como o X-Pay rateia o fixo pelas tarefas do dia, **cada
+tarefa passaria a valer uma fração**. O horário separa as duas coisas do jeito
+que a cabeça já separa: *"isso eu faço às 14h"* é compromisso; *"isso eu
+preciso fazer algum dia"* é backlog. Card com hora entra no dia; sem hora, fica
+no quadro. Zero botão novo pra aprender.
+
+**O que entrou:** `hora` e `hora_fim` no card e na tarefa ("quando termina");
+**sugerir horário** (o primeiro buraco livre); **aviso de conflito**;
+**concluída verde** na Lista e na Jornada; o **concluído na coluna dele**
+(77.1) e a **coluna minimizada indo até o fim**.
+
+**Sobre o verde da Jornada:** a moeda da tarefa feita saía na cor do TIPO da
+tarefa — o "está feito" mudava de cor a cada parada e não dava pra varrer o dia
+de longe. Agora é um verde só, o mesmo da Lista.
+
+**Sobre o concluído — eu tinha errado.** Pus numa gaveta no pé do quadro; o
+dono corrigiu no meio da rodada (*"vai organizando ali dentro mesmo, igual no
+MeisterTask"*). Agora fica na coluna, embaixo dos abertos, com o separador
+"Concluídas N" e a faixa verde. A gaveta saiu.
+
+**Provado por mutação — as 4 regras do horário quebram quando afrouxadas:**
+encostar virando conflito (`<=` no lugar de `<`) → **2 testes**; o card não
+levando a hora → **1**; `emMinutos` devolvendo 0 em vez de `null` (0 é
+meia-noite, não ausência) → **5**; o dia lotado inventando horário → **1**.
+
+**Prova em navegador: 265/265**, zero erro de página/console:
+
+```
+editor com início e fim + sugerir · 13:15 em cima da "Reunião 1" das 13:00
+  → "bate com “Reunião 1 (45-60 min)”"
+a tarefa nasceu com hora 13:15 (antes vinha null)
+concluído na coluna, faixa verde medida (G > R e G > B), gaveta antiga ausente
+```
+
+**Suíte:** 1214/1214. **Build:** limpo. **Migração** aditiva (`hora`,
+`hora_fim` no card; `hora_fim` na tarefa).
+
+**Duas coisas que eu proponho e NÃO fiz** — ficam pra ele decidir:
+1. **arrastar na Jornada pra mudar o horário** (a Jornada é uma linha do tempo;
+   arrastar uma parada mudaria a hora);
+2. **reordenar cards dentro da mesma lista** — hoje arrasta entre listas, e
+   dentro dela a ordem é por hora → prazo → ordem.
+
+---
+
+## REL-77.2 — O punho, o arrasto que ele destravou, e a saída do conflito (preview)
+
+**Diretiva:** DIR-77.2. **Data:** 07/09/2026. **Escopo:** preview.
+**Decisão delegada:** *"o que você decidir eu vou contigo."*
+
+**Mudei de recomendação, e preciso dizer por quê.** Eu tinha proposto
+"arrastar na Jornada pra mudar o horário" como a mais forte. Fui olhar antes de
+fazer: **a Jornada não é uma linha do tempo** — é uma serpentina decorativa
+(`OFFSETS[zig % OFFSETS.length]`), em que a posição é a ORDEM da lista, não o
+relógio. Arrastar ali significaria reordenar a rotina fixa e inventar horários
+antes das 05:00. Minha recomendação estava errada; troquei por duas que valem
+mais:
+
+1. **a saída do conflito em um clique** — avisar "bate com a Reunião 1" e deixar
+   a pessoa resolver na mão é meio serviço; agora o aviso traz **"mover pra
+   13:30"**, o primeiro vão livre depois do choque;
+2. **reordenar cards dentro da lista**, completando o arrasto que ele pediu.
+
+**Dois defeitos REAIS meus, que ele achou usando:**
+
+*"Quando eu clico em sugerir horário não está indo"* e *"ainda não está dando
+pra arrastar um card"*. A causa era a mesma linha:
+
+```jsx
+<div {...alcas} style={{ background: '#FFF', ... }}>   ← o style APAGA o
+                                                          touchAction das alças
+```
+
+`useArrastavel` entrega `style: { touchAction: 'none' }` — e um `style` escrito
+depois do spread **substitui** o objeto inteiro. Sem `touch-action`, o navegador
+lê o gesto como rolagem e rouba o arrasto no dedo. E, como o **card inteiro**
+era a alça, todo botão de dentro disputava com ela — foi isso que engoliu o
+clique do "sugerir". O motor nunca esteve errado: `horaSugerida` devolvia
+11:00 pro dia real; era a tela que não deixava o clique chegar.
+
+**A correção é a que ele pediu:** o **punho de seis pontinhos** (`⠿`) na
+lateral do card — sempre visível no dedo, ao passar o mouse no computador — e
+só ele arrasta. O card volta a ser card.
+
+**Um terceiro defeito, achado pela própria prova:** eu olhava o card embaixo do
+dedo ANTES da coluna. Soltar em cima de um card de OUTRA lista caía no
+reordenar, que recusa listas diferentes — e o arrasto não fazia nada. Como
+coluna cheia é quase toda feita de cards, isso quebrava o caso mais comum.
+Agora coluna diferente vence.
+
+**Uma linha morta removida por mutação.** `saidaDoConflito` pulava pro fim do
+ÚLTIMO conflito (`Math.max` sobre todos). A mutação mostrou que a linha não
+fazia nada — `horaSugerida` já anda de 15 em 15 conferindo todos. Pior: aquele
+salto **mascarava o teste da duração**, porque pulava tão pra frente que
+qualquer tamanho cabia. Tirando a linha, a duração passou a importar de verdade
+e a mutação passou a quebrar.
+
+**Provado.** 22 testes novos; mutações: reordenar misturando listas → quebra;
+sugerir sem haver conflito → quebra; ignorar a duração de quem se move →
+quebra (depois da limpeza). **Prova em navegador: 269/269**, com o arrasto
+disparado por PointerEvents de verdade no punho.
+
+**Três erros meus na prova, todos da mesma família:** seletor posicional
+(`firstElementChild`) que quebrou quando o punho virou o primeiro filho —
+agora a faixa tem marca própria; coordenada de tela fora da janela
+(`elementFromPoint` é viewport, e o card estava rolado pra fora); e o bloco do
+arrasto no meio do fluxo, que **move o card de lista** e estragava tudo que
+vinha depois procurando ele onde estava. Mudança de estado destrutiva vai pro
+fim — é a segunda vez que essa lição me cobra uma rodada.
+
+**Suíte:** 1224/1224. **Build:** limpo. **Sem migração.**
+
+---
+
+## REL-77.3 — Por que o arrasto não funcionava, e o conserto (preview)
+
+**Diretiva:** DIR-77.3. **Data:** 07/09/2026. **Escopo:** preview.
+
+**A queixa dele foi o diagnóstico:** *"só quando eu clico ele sobe e não estou
+conseguindo arrastar nem o card de dentro, e nem todo o painel."*
+
+"Ele sobe e não anda" descreve com precisão o defeito. **`useArrastavel` só
+REPORTA coordenadas — quem move a peça é quem usa o hook.** No X-Music a
+pílula é movida pelo consumidor; no meu card, o `aoMover` só trocava um rótulo
+de texto. O que a pessoa via era o `scale(1.02)` + sombra do estado
+`arrastando`: **a peça levantava e ficava parada.** O gesto inteiro funcionava
+por baixo — o card até trocava de lista ao soltar — mas sem nada acompanhar a
+mão, não há como mirar, e não há por que acreditar que funciona.
+
+**Três defeitos encadeados:**
+
+1. **O card não seguia o ponteiro.** Agora segue, com `translate(dx, dy)` e uma
+   inclinação de 2°, como a peça levantada do Trello.
+2. **A coluna não tinha `aoMover` nenhum** — arrastar o painel não dava sinal
+   algum. Agora também acompanha.
+3. **Latente, e ia aparecer no minuto seguinte:** com a peça seguindo a mão,
+   `document.elementFromPoint` passaria a devolver **o próprio card arrastado**,
+   e o alvo embaixo nunca seria encontrado. Por isso a peça em movimento tem
+   `pointer-events: none`: ela fica transparente ao apontador enquanto anda.
+
+**E o que faltava pra mirar:** a coluna que vai receber **acende** (fundo mais
+claro + contorno tracejado da cor dela), como no Trello. Antes a pessoa soltava
+no escuro e torcia. O punho também deixou de ficar invisível até o mouse passar
+por cima — ele reclamou que "desapareceu", e estava certo.
+
+**A prova antiga passava com o defeito na tela**, e isso é o mais importante
+deste relatório: ela conferia só o **resultado no banco** (o card mudou de
+lista?) e não o **gesto**. Um arrasto pode acertar o destino e ainda assim ser
+inusável. Agora ela mede, **no meio do gesto**:
+
+```
+o card ANDOU 499px acompanhando a mão
+o card arrastado está com pointer-events: none
+a coluna alvo está com outline tracejado
+```
+
+E a mutação fecha o círculo: devolvi o `scale(1.02)` no lugar do `translate` —
+exatamente o defeito que ele sentiu — e a prova **reprovou com "andou −3px"**.
+
+**Três erros meus na prova, nesta rodada:**
+- medi o deslocamento **no mesmo `evaluate`** do gesto, lendo o DOM de antes do
+  React redesenhar: acusou "andou 0px" num arrasto que já funcionava. É a
+  segunda vez que essa armadilha me pega (a primeira foi na aba de emoji);
+- medi o realce **a 60% do caminho**, quando o ponteiro ainda estava dentro da
+  coluna de ORIGEM — as colunas têm 340px, e 60% de 520px não sai dela;
+- e, antes disso, deixei o bloco do arrasto no meio do fluxo: ele **move o card
+  de lista** e estragava tudo que vinha depois.
+
+**Suíte:** 1237/1237. **Prova em navegador:** 272/272. **Build:** limpo.
+**Sem migração.**
+
+---
+
+## REL-78 — O elenco entra na trilha (DIR-78)
+
+**Aprovação:** dono, 07/09/2026 — *"BOOORA SEM QUEBRAR E MUDAR O QUE ESTA BOM.
+ESTAMOS EXTREMAMENTE PRÓXIMO DO DUOLINGO"*.
+
+**O que foi feito**
+
+1. `src/lib/elencoJornada.js` — a REGRA, pura e testável: quem aparece em qual
+   parada, em que pose. Cinco papéis do método (Executivo, Mentor, Diretora,
+   Cliente, Duplicado) e o cinza da parada travada.
+2. `ElencoBoneco.jsx` + `elenco.css` — o desenho e os nove movimentos. Quatro
+   camadas aninhadas (tronco > corpo > cabeça > olhos) porque duas animações no
+   `transform` do mesmo elemento **não somam** — a segunda apaga a primeira.
+3. `XGameJornada.jsx` — o elenco entra **ao lado** da parada, num `<span>`
+   absoluto com `pointer-events:none`, no lado contrário ao da serpentina.
+   `Parada3D`, `Bau`, troféu, `SELOS`, `OFFSETS` e o amanhecer: **intocados**.
+4. A sombra do chão **inverte no palco escuro** — sombra preta em fundo preto
+   não existe, e o boneco voltava a boiar.
+
+**Decisão técnica registrada:** o boneco é desenho no código, não imagem
+gerada. Com IA o rosto muda a cada pose, e o dono pediu justamente pose
+(girar, olhar, rir, acenar, pular). Custo: poucos KB, nenhum arquivo novo,
+nenhuma requisição nova; só `transform` e `opacity` animados.
+
+**Verificado**
+
+- 16 testes novos em `tests/elencoJornada.test.mjs`; suíte inteira **1253/1253**.
+- **Mutação nos testes** — 4 defeitos reintroduzidos de propósito (a travada
+  deixa de cochilar; o momento deixa de acenar; aparece em toda parada; o
+  apagado engole barba/óculos): **cada um quebrou exatamente um teste**.
+- **Prova em navegador (REL-34.1): 282/282, zero erro de página/console.**
+  O boneco foi medido **renderizado**: sem `<img>`, com as camadas do
+  movimento, o corpo girando (matriz diferente em dois instantes), a cabeça em
+  ângulo diferente do corpo (o atraso), a parada do momento acenando, a travada
+  cochilando e sem girar, e o mapa recolhido no fim (a prova sai como entrou).
+- **Mutação na prova** — removido o giro do corpo (`.viva .tronco`): a prova
+  caiu pra 281/282 com `{"a":"none","b":"none"}`. Ela discrimina.
+
+**Defeitos achados e corrigidos nesta rodada**
+
+- **Os braços da comemoração cruzavam o peito e sumiam atrás do paletó** — os
+  sinais de rotação estavam invertidos (esquerdo negativo, direito positivo).
+  Conferido depois: as duas mãos ficam acima do tronco e abertas pra fora.
+- A prova cobrava um botão "fechar/voltar" que no produto se chama
+  **RECOLHER**. Passou a medir o efeito (o mapa fechou) em vez do texto.
+
+**Registrado, fora do escopo desta rodada**
+
+- `/marca/poder-hero.webp`, o "professor Xavier" do Hero da Top College, é o
+  **Patrick Stewart como Charles Xavier** — personagem da Marvel e rosto de ator
+  real, numa tela pública de plataforma licenciada. **O Mentor** nasceu pra
+  ocupar esse lugar; a troca fica pra rodada própria, com autorização.
+- O **Magnific** conecta mas recusa toda chamada (`requires a premium account`,
+  até no `account_profile`). Nada nesta entrega depende dele.
+
+**Não entrou:** nada em produção; o arrastar dos cards (DIR-77.3) não foi tocado.

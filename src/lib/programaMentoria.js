@@ -10,6 +10,7 @@
 // time e o sistema). Gerar o mês pra uma pessoa vira cards no quadro da
 // diretoria (xperf_entregaveis), com prazo no último dia do mês.
 import { mentalidadeDe } from './mentalidades.js';
+import { faseDoMes } from './documentoOficial.js';
 
 const E = (titulo, habito, peso = 3) => ({ titulo, habito, peso });
 
@@ -60,14 +61,14 @@ export const rotuloDoMes = (mes) => {
 
 /** O programa em vigor: o do banco por cima do padrão, mês a mês. */
 export function programaJunto(padrao = PROGRAMA_PADRAO, doBanco = []) {
-  const mapa = new Map(padrao.map((p) => [p.mes, { ...p, padrao: true }]));
+  const mapa = new Map(padrao.map((p) => [p.mes, { ...p, padrao: true, fase: faseDoMes(p.mes) }]));
   for (const p of Array.isArray(doBanco) ? doBanco : []) {
     if (!p?.mes) continue;
     const ent = Array.isArray(p.entregaveis) ? p.entregaveis : [];
     // no banco os entregáveis vêm achatados [{titulo, mentalidade, habito, peso}]; aqui viram por mentalidade
     const porM = { executivo: [], diretor: [], ceo: [] };
     for (const e of ent) (porM[mentalidadeDe(e.mentalidade)?.id || 'executivo']).push({ titulo: e.titulo, habito: Number(e.habito) || null, peso: Number(e.peso) || 3 });
-    mapa.set(p.mes, { id: p.id, mes: p.mes, tema: p.tema, habitos: p.habitos || [], entregaveis: porM, padrao: false });
+    mapa.set(p.mes, { id: p.id, mes: p.mes, tema: p.tema, habitos: p.habitos || [], entregaveis: porM, padrao: false, fase: faseDoMes(p.mes) });
   }
   return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes));
 }
@@ -78,6 +79,9 @@ export function programaParaGravar(mes) {
   for (const m of ['executivo', 'diretor', 'ceo']) for (const e of mes.entregaveis?.[m] || []) ent.push({ titulo: e.titulo, mentalidade: m, habito: e.habito, peso: e.peso });
   return { mes: mes.mes, tema: mes.tema, habitos: mes.habitos || [], entregaveis: ent, ordem: MESES.indexOf(mes.mes) };
 }
+
+/** A fase oficial do ciclo (Documento p. 39) — março/2027 é o pós-ciclo: a conversa de sociedade. */
+export const faseDoPrograma = (mes) => faseDoMes(mes) || (mes === '2027-03' ? { mes, fase: 'Pós-ciclo · sociedade', foco: 'o ciclo oficial fecha em fevereiro; março é a conversa de sociedade com quem acendeu os três portões' } : null);
 
 /** O último dia do mês, ISO. */
 export const fimDoMes = (mes) => { const [a, m] = String(mes).split('-').map(Number); return `${mes}-${String(new Date(a, m, 0).getDate()).padStart(2, '0')}`; };

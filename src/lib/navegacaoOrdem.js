@@ -50,7 +50,11 @@ export function achatarItens(user, onTabChange) {
     // opção sozinha é clique a mais sem ganho nenhum.
     if (grupo.colapsar) {
       const visiveis = grupo.items.filter((item) => !ITENS_OCULTOS.includes(chaveDoItem(item)));
-      if (visiveis.length > 1) {
+      // 🎓 06/09/2026 — `sempre`: o grupo continua sendo o botão e o menu MESMO
+      // com um item só. É a Top College: o botão dela fica na lateral e, ao
+      // clicar, aparece só a marca X-EOS (dono: "era pra deixar do jeito que
+      // estava — a Top College ali, e ao clicar só a X-EOS").
+      if (visiveis.length > 1 || (grupo.colapsar.sempre && visiveis.length === 1)) {
         const subItens = visiveis.map((item) => entradaFlutuante(item, onTabChange));
         // quais abas/seções pertencem a este grupo, pra acender o ícone certo
         const abas = visiveis.filter((i) => i.type === 'tab' && !i.catalogTab).map((i) => i.value);

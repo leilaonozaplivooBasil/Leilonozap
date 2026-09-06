@@ -27,11 +27,16 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     // 06/09/2026 — o Admin X-GAME saiu do menu: virou a gestão DENTRO do
     // X-Performance (ordem do dono). O super admin vê a mesma lista que os
     // outros; o que muda pra ele é o que abre na aba X-Performance.
-    assert.deepEqual(valores(tc.items), [
-      'catalogo', 'catalogo', 'catalogo', 'plano-carreira', '/Evoluir',
-    ]);
-    const rotulos = tc.items.map((i) => i.label);
-    assert.deepEqual(rotulos, ['O Método', 'Time', 'X-Performance', 'Carreira', 'Evoluir Nível']);
+    // 06/09/2026 — dono: "deixa somente a X-EOS ali, clicável, e joga o
+    // restante pra dentro". No MENU fica um item só (a marca → O Método); o
+    // resto mora nas SEÇÕES da Top College, dentro da página.
+    assert.deepEqual(valores(tc.items), ['catalogo']);
+    assert.deepEqual(tc.items.map((i) => i.label), ['O Método']);
+    assert.equal(tc.items[0].catalogTab, 'catalogo-crm');
+    assert.ok(tc.items[0].marcaCompleta, 'a marca X-EOS é o que aparece no menu');
+    assert.equal(tc.colapsar.sempre, true, 'o botão Top College continua na lateral; ao clicar, só a X-EOS');
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira']);
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira']);
   });
 
   test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {

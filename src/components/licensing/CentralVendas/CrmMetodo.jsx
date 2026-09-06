@@ -1482,6 +1482,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 currentUser={currentUser}
                 hojeISO={dia}
                 onIr={onIr}
+                tarefasDoDia={tarefas}
                 onTarefaCriada={(t) => setTarefas((prev) => [...prev, t])}
               />
             ) : tarefas.length === 0 ? (
@@ -1525,8 +1526,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 </span>
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
-                                  {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
+                                {/* ✅ DIR-77 — concluída fica VERDE (ordem do dono), e o
+                                    horário mostra quando TERMINA quando isso existe. */}
+                                <p className={`text-sm ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`}>
+                                  {t.hora && <span className="font-bold">{t.hora_fim ? `${t.hora}–${t.hora_fim}` : t.hora} · </span>}{t.titulo}
                                 </p>
                                 {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou */}
                                 {t.prazo_em && (() => { const est = estadoDoPronto(t); return (

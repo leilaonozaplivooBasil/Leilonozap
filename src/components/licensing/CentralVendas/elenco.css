@@ -1,0 +1,134 @@
+/* 👔 O MOVIMENTO DO ELENCO — DIR-78
+ *
+ * Fica em arquivo próprio, e não no index.css, por dois motivos:
+ *  1. tudo aqui é escopado em .xeos-boneco — não vaza pra tela nenhuma;
+ *  2. o index.css é território compartilhado; isolar evita conflito.
+ *
+ * REGRA DE OURO deste arquivo: cada peça que se move sozinha precisa do SEU
+ * próprio grupo. Duas animações no transform do MESMO elemento não somam — a
+ * segunda apaga a primeira. Por isso tronco > corpo > cabeça > olhos são
+ * quatro grupos aninhados, e não um só.
+ *
+ * Só se anima transform e opacity: é o que a GPU resolve sozinha, sem
+ * recalcular layout. Por isso a rolagem da Jornada não engasga.
+ */
+
+.xeos-boneco .tronco,
+.xeos-boneco .corpo,
+.xeos-boneco .cabeca,
+.xeos-boneco .bracoD,
+.xeos-boneco .bracoE,
+.xeos-boneco .olhos,
+.xeos-boneco .olhosIn,
+.xeos-boneco .faiscas,
+.xeos-boneco .zzz { transform-box: fill-box; }
+
+.xeos-boneco .tronco { transform-origin: 50% 100%; }  /* gira a partir dos PÉS */
+.xeos-boneco .corpo  { transform-origin: 50% 100%; }
+.xeos-boneco .cabeca { transform-origin: 50% 96%; }   /* gira no pescoço */
+.xeos-boneco .bracoD,
+.xeos-boneco .bracoE { transform-origin: 50% 6%; }    /* gira no ombro */
+.xeos-boneco .olhos,
+.xeos-boneco .olhosIn { transform-origin: 50% 50%; }
+.xeos-boneco .faiscas { transform-origin: 50% 60%; opacity: 0; }
+.xeos-boneco .bocaA   { opacity: 0; }
+
+@keyframes xeosRespiro {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50%      { transform: translateY(-3px) scaleY(1.016); }
+}
+@keyframes xeosPiscar {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(.07); }
+}
+/* o corpo INTEIRO vira de um lado pro outro */
+@keyframes xeosGingar {
+  0%, 12%   { transform: rotate(0deg); }
+  26%, 40%  { transform: rotate(-6deg); }
+  54%, 70%  { transform: rotate(6deg); }
+  84%, 100% { transform: rotate(0deg); }
+}
+/* a cabeça chega DEPOIS do corpo. O atraso está nas porcentagens, e não em
+ * animation-delay, porque as classes de defasagem (.xd1/.xd2/.xd3) mexem no
+ * delay — se o atraso morasse lá, elas o apagariam. */
+@keyframes xeosGirar {
+  0%, 18%   { transform: rotate(0deg) translateX(0); }
+  33%, 46%  { transform: rotate(-7deg) translateX(-2px); }
+  61%, 76%  { transform: rotate(7deg) translateX(2px); }
+  90%, 100% { transform: rotate(0deg) translateX(0); }
+}
+@keyframes xeosOlhar {
+  0%, 18%   { transform: translateX(0); }
+  33%, 46%  { transform: translateX(-2.8px); }
+  61%, 76%  { transform: translateX(2.8px); }
+  90%, 100% { transform: translateX(0); }
+}
+@keyframes xeosRirA { 0%, 64%, 100% { opacity: 0; } 68%, 90% { opacity: 1; } }
+@keyframes xeosRirF { 0%, 64%, 100% { opacity: 1; } 68%, 90% { opacity: 0; } }
+@keyframes xeosAcenar {
+  0%, 100% { transform: rotate(-15deg); }
+  50%      { transform: rotate(17deg); }
+}
+/* o pulo com ESMAGADA na aterrissagem — é ela que faz parecer desenho
+ * animado de verdade; sem ela o boneco parece elevador */
+@keyframes xeosPular {
+  0%   { transform: translateY(0) scale(1, 1); }
+  11%  { transform: translateY(1px) scale(1.09, .89); }
+  28%  { transform: translateY(-27px) scale(.93, 1.09); }
+  44%  { transform: translateY(-31px) scale(1, 1); }
+  62%  { transform: translateY(1px) scale(1.11, .87); }
+  78%  { transform: translateY(-7px) scale(.98, 1.03); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes xeosFaiscar {
+  0%   { opacity: 0; transform: scale(.35); }
+  28%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+@keyframes xeosFlutuar {
+  0%   { opacity: 0; transform: translate(0, 2px) scale(.65); }
+  22%  { opacity: .95; }
+  100% { opacity: 0; transform: translate(11px, -24px) scale(1.2); }
+}
+
+/* O REPOUSO ATIVO: respira, gira o corpo, a cabeça acompanha, o olho segue,
+ * pisca e ri. É isso que o dono chamou de "mais ativo". */
+.xeos-boneco.viva .tronco  { animation: xeosGingar 3.4s ease-in-out infinite; }
+.xeos-boneco.viva .corpo   { animation: xeosRespiro 1.9s ease-in-out infinite; }
+.xeos-boneco.viva .cabeca  { animation: xeosGirar 3.4s ease-in-out infinite; }
+.xeos-boneco.viva .olhos   { animation: xeosOlhar 3.4s ease-in-out infinite; }
+.xeos-boneco.viva .olhosIn { animation: xeosPiscar 2.9s linear infinite; }
+.xeos-boneco.viva .bocaA   { animation: xeosRirA 4.4s ease-in-out infinite; }
+.xeos-boneco.viva .bocaF   { animation: xeosRirF 4.4s ease-in-out infinite; }
+.xeos-boneco.acena .bracoD { animation: xeosAcenar .42s ease-in-out infinite; }
+
+/* A PARADA TRAVADA: cochila. Respira devagar e só — não gira, não ri.
+ * É o desenho contando o estado; animada igual às outras, viraria enfeite. */
+.xeos-boneco.dormindo .corpo  { animation: xeosRespiro 4.4s ease-in-out infinite; }
+.xeos-boneco.dormindo .zzz    { animation: xeosFlutuar 2.4s ease-out infinite; }
+.xeos-boneco.dormindo .zzz.b  { animation-delay: 1.2s; }
+
+.xeos-boneco.festa .corpo   { animation: xeosPular .82s cubic-bezier(.3,.7,.4,1) both; }
+.xeos-boneco.festa .faiscas { animation: xeosFaiscar .82s ease-out both; }
+
+/* defasagem: se todo mundo respira e olha no mesmo instante, parece robô */
+.xeos-boneco.xd1 .tronco, .xeos-boneco.xd1 .corpo, .xeos-boneco.xd1 .cabeca,
+.xeos-boneco.xd1 .olhos, .xeos-boneco.xd1 .olhosIn,
+.xeos-boneco.xd1 .bocaA, .xeos-boneco.xd1 .bocaF { animation-delay: -.7s; }
+.xeos-boneco.xd2 .tronco, .xeos-boneco.xd2 .corpo, .xeos-boneco.xd2 .cabeca,
+.xeos-boneco.xd2 .olhos, .xeos-boneco.xd2 .olhosIn,
+.xeos-boneco.xd2 .bocaA, .xeos-boneco.xd2 .bocaF { animation-delay: -1.9s; }
+.xeos-boneco.xd3 .tronco, .xeos-boneco.xd3 .corpo, .xeos-boneco.xd3 .cabeca,
+.xeos-boneco.xd3 .olhos, .xeos-boneco.xd3 .olhosIn,
+.xeos-boneco.xd3 .bocaA, .xeos-boneco.xd3 .bocaF { animation-delay: -3.1s; }
+
+/* quem liga "reduzir movimento" no aparelho vê tudo parado — e não perde
+ * informação nenhuma, porque o estado também está na cor e na pose */
+@media (prefers-reduced-motion: reduce) {
+  .xeos-boneco * { animation: none !important; }
+}
+
+/* No PALCO ESCURO (.xeos-palco) a sombra preta desaparece no fundo preto e o
+ * boneco volta a boiar. Aqui ela vira luz: o mesmo papel — separar o boneco do
+ * chão — com o sinal invertido. Escopado, não vaza pra tela clara nenhuma. */
+.xeos-palco .xeos-boneco .sombra { fill: #FFFFFF; opacity: .14; }

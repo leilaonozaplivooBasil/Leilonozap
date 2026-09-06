@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, TrendingUp, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -69,11 +69,24 @@ export const SECOES_TOP_COLLEGE = [
   // com uma faculdade própria. O valor da aba continua o mesmo — link antigo
   // (?catalogTab=catalogo-crm) segue abrindo no lugar certo.
   { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
+  // 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: "um lugar estratégico, não na
+  // parte administrativa, junto com os 8 Hábitos" — a segunda-feira num espaço
+  // só (Executivo · Diretor · CEO): apresentação, tópico pela IA, cronômetro
+  // 15+45+120 e as demandas direcionadas ao vivo.
+  { value: 'catalogo-encontro', label: 'Mentalidade', icon: Brain },
   { value: 'catalogo-vendedores', label: 'Time', icon: Handshake },
   // 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria. Fica
   // AQUI, e não solto no menu, porque é a Top College que forma — o quadro de
   // entregáveis é a mesma faculdade cobrando o que ensinou.
-  { value: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
+  // 🎮 06/09/2026 — dono: "onde era X-Performance, tudo que for administração
+  // do X-Game, tarefas, organização de cima pra baixo, vira ADM X-Game. A
+  // X-Performance (dado, visão executiva do time) mora em Mentalidade."
+  { value: 'catalogo-xperformance', label: 'ADM X-Game', icon: Wrench },
+  // 🎖️ 06/09/2026 — Carreira + Evoluir Nível viraram UMA seção aqui dentro
+  // (dono: "no menu fica só a X-EOS; o resto vai pra dentro, unindo o que
+  // precisa unir"). A aba `plano-carreira` e a rota /Evoluir continuam
+  // valendo pra link antigo — a Licensing redireciona pra cá.
+  { value: 'catalogo-carreira', label: 'Carreira', icon: Award },
 ];
 
 export function getLicensingGroups(user) {
@@ -130,18 +143,20 @@ export function getLicensingGroups(user) {
       // FORMA a pessoa. Metas veio de "Operação", onde estava solta — meta é
       // acompanhamento, não chão de loja.
       title: 'Top College',
-      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp' },
+      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp', sempre: true },
       items: [
         // 🎓 DIR-59 — no menu, este item NÃO escreve "O Método": entra a logo
         // inteira da X-eos no lugar do texto (ordem do dono). `marcaCompleta`
         // quer dizer exatamente isso — a marca SUBSTITUI o rótulo. O `label`
         // continua existindo porque vira o texto alternativo da imagem e o
         // nome pra busca no menu do celular.
+        // 🎓 06/09/2026 — o dono: "deixa somente a X-EOS ali, com o botão
+        // clicável, e joga o restante pra dentro". No menu fica UM item — a
+        // marca — que abre a faculdade; Mentalidade, Time, X-Performance e
+        // Carreira (com o Evoluir Nível) moram nas SEÇÕES da Top College
+        // (SECOES_TOP_COLLEGE), na faixa de dentro da página. Grupo com um
+        // item só não vira menu suspenso: é o botão direto (navegacaoOrdem).
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp', marcaCompleta: '/marca/marca-xeos-lockup.webp', legenda: 'Estrutura de operações e expansão' },
-        { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-vendedores', label: 'Time', icon: Handshake },
-      { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
-        { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
-        { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
         // 🎯 06/09/2026 — "Metas" saiu do menu: "acaba com ela e joga pra
         // dentro". As metas de cada pessoa moram no Quadro Geral dela, no
         // X-Performance. A rota /Metas continua existindo pra link antigo.

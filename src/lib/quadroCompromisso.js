@@ -78,6 +78,33 @@ export const ICONES_LISTA = [
 ];
 
 /**
+ * E os EMOJI, porque o dono pediu os dois: "dar a opção de ele selecionar a
+ * cor, de ele selecionar o emoji que ele quer colocar".
+ *
+ * ⚠️ Isto NÃO contradiz a DIR-76.1 ("está muito aparecendo emoji"). São coisas
+ * diferentes: lá o emoji era enfeite que EU espalhava pela interface — some em
+ * um sistema, muda de desenho no outro, e dá cara de rascunho. Aqui é ESCOLHA
+ * DELE pra marcar a lista dele. Emoji que a pessoa escolhe é identidade;
+ * emoji que o programa espalha é ruído.
+ */
+export const EMOJIS_LISTA = [
+  '🔥', '💪', '🏋️', '🏃', '⚽', '🧠',
+  '💼', '📈', '💰', '🤝', '📞', '📊',
+  '🏠', '❤️', '🎯', '⭐', '🚀', '⚡',
+  '📚', '✍️', '🎓', '🎨', '🎵', '☕',
+];
+
+/** O que pode ir no campo `icone`: um nome da casa OU um emoji escolhido. */
+export function marcaValida(marca) {
+  const m = String(marca || '');
+  if (!m) return false;
+  return ICONES_LISTA.includes(m) || EMOJIS_LISTA.includes(m);
+}
+
+/** É emoji (desenha como texto) ou nome (desenha como ícone)? */
+export const ehEmoji = (marca) => EMOJIS_LISTA.includes(String(marca || ''));
+
+/**
  * Arrastar a lista de um lado pro outro. Devolve a lista TODA com `ordem`
  * recalculada — e não só as duas que trocaram: ordem que só muda em quem se
  * mexeu deixa buracos e empates, e aí a próxima leitura vem embaralhada.
@@ -180,11 +207,29 @@ export function cartoesDaLista(cartoes = [], listaId) {
   const lista = (Array.isArray(cartoes) ? cartoes : [])
     .filter((c) => estaAberto(c) && String(c.lista_id || '') === String(listaId || ''));
   return [...lista].sort((a, b) => {
+    // ⏰ DIR-77 — quem TEM hora vem primeiro, e em ordem de relógio: são os
+    // compromissos de hoje. Depois o prazo, depois a ordem da pessoa.
+    const ha = emMinutos(a.hora);
+    const hb = emMinutos(b.hora);
+    if (ha !== null && hb !== null && ha !== hb) return ha - hb;
+    if ((ha === null) !== (hb === null)) return ha === null ? 1 : -1;
     const pa = a.prazo ? String(a.prazo) : '9999';
     const pb = b.prazo ? String(b.prazo) : '9999';
     if (pa !== pb) return pa < pb ? -1 : 1;
     return (Number(a.ordem) || 0) - (Number(b.ordem) || 0);
   });
+}
+
+/**
+ * Os feitos DE UMA LISTA, ainda na mesa. DIR-77.1 — ordem do dono: "tarefa
+ * concluída vai organizando ali dentro mesmo, igual no MeisterTask". O feito
+ * fica na coluna dele, com a faixa verde, embaixo dos abertos — e não numa
+ * gaveta separada no pé do quadro, que era onde eu tinha posto.
+ */
+export function feitosDaLista(cartoes = [], listaId, hojeISO) {
+  return (Array.isArray(cartoes) ? cartoes : [])
+    .filter((c) => estaFeito(c) && String(c.lista_id || '') === String(listaId || '') && !arquivavel(c, hojeISO))
+    .sort((a, b) => String(b.feito_em || '').localeCompare(String(a.feito_em || '')));
 }
 
 /** Os feitos ainda na mesa (menos de N dias), do mais recente pro mais antigo. */
@@ -209,11 +254,126 @@ export function tarefaDoCartao(cartao, { userId, dataISO, hora = null } = {}) {
   return {
     user_id: userId,
     data: String(dataISO).slice(0, 10),
-    hora: hora || null,
+    // ⏰ DIR-77 — a hora do CARD vai junto. Sem isto a tarefa caía no balde
+    // "sem hora" e não aparecia nem na linha do tempo da Jornada nem no
+    // período certo da Lista — que era exatamente a queixa do dono.
+    hora: hora || cartao.hora || null,
+    hora_fim: cartao.hora_fim || null,
     titulo: String(cartao.titulo || '').trim(),
     detalhe: cartao.detalhe || null,
     feito: false,
   };
+}
+
+// ── ⏰ O HORÁRIO (DIR-77) ────────────────────────────────────────────────────
+// Minutos desde a meia-noite. `null` pra qualquer coisa que não seja HH:mm —
+// e é `null`, não 0, porque 0 é meia-noite e meia-noite é um horário válido.
+export function emMinutos(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+  if (!m) return null;
+  const h = Number(m[1]); const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+export const emHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+/** O fim de uma peça: `hora_fim` quando existe, senão início + duração. */
+export function fimDe(item, duracaoPadrao = 30) {
+  const ini = emMinutos(item?.hora);
+  if (ini === null) return null;
+  const fim = emMinutos(item?.hora_fim);
+  return fim !== null && fim > ini ? fim : ini + duracaoPadrao;
+}
+
+/**
+ * 🔒 O QUE SE ENCAVALA COM ESTE HORÁRIO. Duas coisas às 14h no mesmo dia é o
+ * defeito mais caro de uma agenda — e hoje nada avisa. Sobreposição é
+ * `começa antes do outro terminar E termina depois do outro começar`; encostar
+ * (uma acaba 15:00, a outra começa 15:00) NÃO é conflito.
+ */
+export function conflitosDeHorario(itens = [], { hora, hora_fim = null, ignorarId = null, duracaoPadrao = 30 } = {}) {
+  const ini = emMinutos(hora);
+  if (ini === null) return [];
+  const fim = fimDe({ hora, hora_fim }, duracaoPadrao);
+  return (Array.isArray(itens) ? itens : []).filter((t) => {
+    if (!t || t.id === ignorarId || t.feito) return false;
+    const tIni = emMinutos(t.hora);
+    if (tIni === null) return false;
+    const tFim = fimDe(t, duracaoPadrao);
+    return ini < tFim && fim > tIni;
+  });
+}
+
+/**
+ * O primeiro buraco livre do dia — pra pessoa não ter que procurar horário na
+ * mão. Devolve `null` quando o dia está cheio da janela inteira: inventar um
+ * horário conflitado seria pior que não sugerir nada.
+ */
+export function horaSugerida(itens = [], { duracaoMin = 30, aPartirDe = '08:00', ateAs = '22:00', passo = 15 } = {}) {
+  const inicio = emMinutos(aPartirDe);
+  const limite = emMinutos(ateAs);
+  if (inicio === null || limite === null) return null;
+  for (let m = inicio; m + duracaoMin <= limite; m += passo) {
+    if (conflitosDeHorario(itens, { hora: emHora(m), hora_fim: emHora(m + duracaoMin) }).length === 0) return emHora(m);
+  }
+  return null;
+}
+
+/**
+ * 🔧 A SAÍDA DO CONFLITO, em um clique. Avisar "bate com a Reunião 1" e deixar
+ * a pessoa resolver na mão é meio serviço: ela vai ter que abrir a agenda,
+ * procurar um vão e digitar. Aqui devolve-se o primeiro horário livre A PARTIR
+ * do fim do choque — o mais perto possível de onde ela queria pôr.
+ * `null` quando não há conflito (nada a resolver) ou quando não sobra vão.
+ */
+export function saidaDoConflito(itens = [], { hora, hora_fim = null, ignorarId = null, duracaoPadrao = 30 } = {}) {
+  const choque = conflitosDeHorario(itens, { hora, hora_fim, ignorarId, duracaoPadrao });
+  if (!choque.length) return null;
+  const ini = emMinutos(hora);
+  const dura = Math.max(15, (fimDe({ hora, hora_fim }, duracaoPadrao) || 0) - ini);
+  // 🩹 Começa no fim do PRIMEIRO choque e deixa o resto com `horaSugerida`.
+  // A primeira versão pulava pro fim do ÚLTIMO conflito (`Math.max` sobre
+  // todos), e a mutação mostrou que aquela linha não fazia nada: `horaSugerida`
+  // já anda de 15 em 15 conferindo TODOS os conflitos, então os dois caminhos
+  // davam a mesma resposta. Pior: o `max` mascarava o teste da DURAÇÃO — ele
+  // pulava tão pra frente que qualquer duração cabia. Tirar a linha morta fez
+  // a duração passar a importar de verdade.
+  const partida = fimDe(choque[0], duracaoPadrao) || ini;
+  return horaSugerida(itens.filter((t) => t.id !== ignorarId), {
+    duracaoMin: dura, aPartirDe: emHora(partida), ateAs: '23:30',
+  });
+}
+
+/**
+ * 🖐️ Reordenar cards DENTRO da mesma lista, arrastando um sobre o outro.
+ *
+ * ⚠️ Vale pros cards SEM horário. Card com hora é ordenado pelo relógio
+ * (`cartoesDaLista`), e tem que ser assim: se o arrasto pudesse pôr o das 16h
+ * antes do das 08h, a coluna passaria a mentir sobre a ordem do dia. Mandar na
+ * ordem é do backlog; no compromisso, quem manda é a hora.
+ */
+export function reordenarCartoes(cartoes, id, alvoId) {
+  const arr = Array.isArray(cartoes) ? cartoes : [];
+  const movido = arr.find((c) => c.id === id);
+  const alvo = arr.find((c) => c.id === alvoId);
+  if (!movido || !alvo || id === alvoId) return arr;
+  if (String(movido.lista_id || '') !== String(alvo.lista_id || '')) return arr;
+  const daLista = arr.filter((c) => String(c.lista_id || '') === String(movido.lista_id || ''));
+  const de = daLista.findIndex((c) => c.id === id);
+  const para = daLista.findIndex((c) => c.id === alvoId);
+  const nova = [...daLista];
+  nova.splice(de, 1);
+  nova.splice(para, 0, movido);
+  const ordemPorId = new Map(nova.map((c, i) => [c.id, i]));
+  return arr.map((c) => (ordemPorId.has(c.id) ? { ...c, ordem: ordemPorId.get(c.id) } : c));
+}
+
+/** "10:30 às 11:30", ou só "10:30" quando não há fim. '' quando não há hora. */
+export function faixaDeHorario(item) {
+  const ini = emMinutos(item?.hora);
+  if (ini === null) return '';
+  const fim = emMinutos(item?.hora_fim);
+  return fim !== null && fim > ini ? `${item.hora} às ${item.hora_fim}` : String(item.hora);
 }
 
 /**

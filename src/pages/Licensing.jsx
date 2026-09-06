@@ -57,6 +57,8 @@ import LicensingBanners from '../components/licensing/LicensingBanners';
 import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
+import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
+import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
 import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
@@ -128,7 +130,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -157,6 +159,12 @@ const DashboardContent = ({ user, isAdmin }) => {
   useEffect(() => {
     if (activeTab !== 'xgame-admin') return;
     setCatalogSubTab('catalogo-xperformance');
+    setActiveTab('catalogo');
+  }, [activeTab]);
+  // 🎖️ link antigo de Carreira (?tab=plano-carreira) → a seção Carreira da Top College
+  useEffect(() => {
+    if (activeTab !== 'plano-carreira') return;
+    setCatalogSubTab('catalogo-carreira');
     setActiveTab('catalogo');
   }, [activeTab]);
 
@@ -1206,6 +1214,19 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <XPerformance currentUser={user} visaoTotal={isAdmin} gestao={visibilidadeDoUsuario(user).superAdmin} />
               </TabsContent>
 
+              {/* 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: a segunda-feira num
+                  espaço só. Quem conduz (pautas, IA, cronômetro, direcionar) é a
+                  gestão e a diretoria; o resto vê e acompanha a apresentação. */}
+              <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
+                <MentalidadePagina currentUser={user} podeConduzir={visibilidadeDoUsuario(user).superAdmin || visibilidadeDoUsuario(user).visaoTotal} gestao={visibilidadeDoUsuario(user).superAdmin} />
+              </TabsContent>
+
+              {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}
+              <TabsContent value="catalogo-carreira" className="mt-6">
+                <CarreiraSecao currentUser={user} />
+              </TabsContent>
+
               <TabsContent value="catalogo-vendedores" className="mt-6">
                 <Card className={'bg-white border-gray-200'}>
                   <CardHeader>
@@ -1326,20 +1347,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
-        {/* ABA: PLANO DE CARREIRA */}
-        <TabsContent value="plano-carreira" className="space-y-6">
-          <Card className={'bg-white border-gray-200'}>
-            <CardHeader>
-              <CardTitle className={'text-gray-900'}>Seu Plano de Carreira</CardTitle>
-              <CardDescription className={'text-gray-500'}>
-                Veja sua evolução no sistema de alavancagem
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CareerPath currentUser={user} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* ABA: PLANO DE CARREIRA — virou a seção catalogo-carreira (redireciona acima) */}
 
         <TabsContent value="visao-geral" className="space-y-6">
           <HowItWorksCard isSaiDeBaixo={isSaiDeBaixo} />

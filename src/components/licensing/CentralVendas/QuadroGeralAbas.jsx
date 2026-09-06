@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { fmtReais, fixoDoParticipante, pesoReferenciaDe, categoriaDaTarefa, PARTICIPANTE_PADRAO } from '@/lib/xgame';
 import { distribuirDia } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
-import { CHAVES, metasDoModelo, progressoDasMetas, mesDe } from '@/lib/metasPessoa';
-import { PROGRAMA_PADRAO, programaJunto, programaParaGravar, cardsDoMes, rotuloDoMes } from '@/lib/programaMentoria';
+import { CHAVES, metasDoModelo, modeloDaFuncao, progressoDasMetas, carteiraDeCapital, mesDe } from '@/lib/metasPessoa';
+import { RituaisSemana } from '@/components/licensing/CentralVendas/PainelOficial';
+import { PROGRAMA_PADRAO, programaJunto, programaParaGravar, cardsDoMes, rotuloDoMes, faseDoPrograma } from '@/lib/programaMentoria';
 import { MENTALIDADES, mentalidadeDe, habitoDe, planejamentoDoDia } from '@/lib/mentalidades';
 import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
 import { estaAberto, progressoChecklist, atrasado as cartaoAtrasado } from '@/lib/quadroCompromisso';
@@ -43,23 +44,31 @@ const fmtDia = (iso) => {
 export function useMetasDaPessoa({ pessoaId, mes, hoje, tarefasDoMes }) {
   const [metas, setMetas] = useState([]);
   const [vendas, setVendas] = useState([]);
+  const [oportunidades, setOportunidades] = useState([]); // captação da pessoa (responsável) — carteira e meta do mês
+  const [cadastros, setCadastros] = useState([]);         // app_users novos no mês — vendedores/licenciados/influenciadores/entradas
   const [carregando, setCarregando] = useState(true);
   const carregar = useCallback(async () => {
     if (!pessoaId || !mes) return;
     setCarregando(true);
-    const [m, v] = await Promise.all([
+    const [m, v, o, c] = await Promise.all([
       supabase.from('xperf_metas').select('*').eq('user_id', pessoaId).eq('mes', mes).order('created_at'),
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,product_title,product_id,quantity')
         .or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`)
         .gte('created_date', `${mes}-01T00:00:00`),
+      supabase.from('captacao_oportunidades').select('id,estagio,valor_previsto,fechado_em,responsavel_id,indicacao_user_id').eq('responsavel_id', pessoaId),
+      supabase.from('app_users').select('id,primary_career_level,career_levels,recruited_by_id,referred_by_id,created_date').gte('created_date', `${mes}-01T00:00:00`),
     ]);
     setMetas(m.data || []);
     setVendas((v.data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s) && mesDe(String(s.created_date)) === mes));
+    setOportunidades(o.data || []);
+    setCadastros((c.data || []).filter((u) => mesDe(String(u.created_date)) === mes));
     setCarregando(false);
   }, [pessoaId, mes]);
   useEffect(() => { carregar(); }, [carregar]);
-  const progresso = useMemo(() => progressoDasMetas({ metas, tarefasDoMes, vendasDoMes: vendas, mes, hojeISO: hoje }), [metas, tarefasDoMes, vendas, mes, hoje]);
-  return { metas, setMetas, vendas, progresso, carregando, carregar };
+  const oportunidadesDoMes = useMemo(() => oportunidades.filter((o) => o.fechado_em && mesDe(String(o.fechado_em)) === mes), [oportunidades, mes]);
+  const carteira = useMemo(() => carteiraDeCapital(oportunidades, hoje), [oportunidades, hoje]);
+  const progresso = useMemo(() => progressoDasMetas({ metas, tarefasDoMes, vendasDoMes: vendas, oportunidadesDoMes, cadastrosDoMes: cadastros, pessoaId, mes, hojeISO: hoje }), [metas, tarefasDoMes, vendas, oportunidadesDoMes, cadastros, pessoaId, mes, hoje]);
+  return { metas, setMetas, vendas, oportunidades, carteira, progresso, carregando, carregar };
 }
 
 export function AbaMetas({ pessoaId, nome, funcaoId, mes, criadoPorId, metasInfo }) {
@@ -67,6 +76,8 @@ export function AbaMetas({ pessoaId, nome, funcaoId, mes, criadoPorId, metasInfo
   const [nova, setNova] = useState({ tipo: 'numero', chave: 'contatos', produto_nome: '', alvo: '' });
   const [salvando, setSalvando] = useState(false);
 
+  const modelo = useMemo(() => modeloDaFuncao(funcaoId), [funcaoId]);
+  const ehOficial = (chave) => modelo.find((x) => x.chave === chave)?.oficial === true;
   const usarModelo = async () => {
     const linhas = metasDoModelo(funcaoId, { userId: pessoaId, mes, criadoPorId });
     if (!linhas.length) { toast.error('A função ainda não tem modelo de metas.'); return; }
@@ -111,7 +122,7 @@ export function AbaMetas({ pessoaId, nome, funcaoId, mes, criadoPorId, metasInfo
         <span className="text-[10px] text-white/35">· {vendas.length} venda{vendas.length === 1 ? '' : 's'} paga{vendas.length === 1 ? '' : 's'} no mês</span>
         {metas.length === 0 && funcaoId && (
           <Button size="sm" onClick={usarModelo} disabled={salvando} className="ml-auto bg-white/10 hover:bg-white/20 text-white h-7 text-[11px]" data-teste="metas-modelo">
-            <Target className="w-3 h-3 mr-1" /> usar o modelo da função
+            <Target className="w-3 h-3 mr-1" /> usar o modelo da função{modelo.some((x) => x.oficial) ? ' (Documento Oficial)' : ''}
           </Button>
         )}
       </div>
@@ -123,6 +134,7 @@ export function AbaMetas({ pessoaId, nome, funcaoId, mes, criadoPorId, metasInfo
             <li key={m.id} className="rounded-lg border border-white/10 px-2.5 py-2" style={caixa} data-teste="meta" data-no-ritmo={m.noRitmo ? 'sim' : 'nao'}>
               <div className="flex items-center gap-2 flex-wrap text-[11px]">
                 <span className="font-bold text-white/85 truncate">{m.rotulo}</span>
+                {ehOficial(m.chave) && <span className="shrink-0 rounded-full border border-white/20 px-1.5 text-[9px] uppercase tracking-wider text-white/55" title="meta do Documento Oficial de Operação" data-teste="meta-oficial">oficial</span>}
                 <span className="text-white/45 tabular-nums">
                   {m.unidade === 'R$' ? fmtReais(m.feito) : m.feito} de{' '}
                   <input type="number" defaultValue={m.alvo} onBlur={(e) => mudarAlvo(m, e.target.value)} className={`${campo} w-24 inline tabular-nums`} data-teste="meta-alvo" />{' '}
@@ -232,8 +244,9 @@ export function AbaPrograma({ pessoaId, nome, mentalidade, hoje, criadoPorId }) 
       </div>
       <div className="rounded-lg border border-white/10 p-2.5" style={caixa}>
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-[12px] font-extrabold text-white">{rotuloDoMes(mes.mes)} · {mes.tema}</p>
+          <p className="text-[12px] font-extrabold text-white">{rotuloDoMes(mes.mes)} · {mes.tema}{(mes.fase || faseDoPrograma(mes.mes)) ? <span className="text-white/45 font-medium" data-teste="programa-fase"> · {(mes.fase || faseDoPrograma(mes.mes)).fase}</span> : null}</p>
           <span className="text-[10px] text-white/40">Hábito{mes.habitos.length > 1 ? 's' : ''} {mes.habitos.join(' · ')} · {mentalidadeDe(m)?.nome}{mes.padrao ? '' : ' · editado por você'}</span>
+          {(mes.fase || faseDoPrograma(mes.mes))?.foco && <span className="basis-full text-[10px] text-white/35">ciclo oficial: {(mes.fase || faseDoPrograma(mes.mes)).foco}</span>}
           <Button size="sm" onClick={gerarCards} disabled={salvando || !lista.length} className="ml-auto bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-[11px]" data-teste="programa-gerar">
             <Send className="w-3 h-3 mr-1" /> pôr no quadro dela
           </Button>
@@ -278,6 +291,8 @@ export function AbaSemana({ pessoaId, tarefasCiclo, hoje, participante }) {
   }, [hoje]);
   const ehProd = (t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; };
   return (
+    <div>
+    <RituaisSemana hoje={hoje} />
     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5" data-teste="aba-semana">
       {dias.map((dia) => {
         const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaId && String(t.data).slice(0, 10) === dia);
@@ -300,6 +315,7 @@ export function AbaSemana({ pessoaId, tarefasCiclo, hoje, participante }) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

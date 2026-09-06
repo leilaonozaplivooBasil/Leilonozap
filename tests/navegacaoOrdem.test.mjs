@@ -22,7 +22,8 @@ test('achatarItens: vira lista única, cada item com chave estável e o bloco de
     assert.equal(typeof item.chave, 'string');
     assert.equal(typeof item.grupo, 'number');
     assert.equal(typeof item.titulo, 'string');
-    if (item.type === 'group') assert.ok(item.subItens.length > 1, `grupo ${item.label} com ${item.subItens.length} destino`);
+    // 06/09/2026 — a Top College (`sempre`) é grupo mesmo com um destino: o botão fica, e ao clicar aparece só a X-EOS
+    if (item.type === 'group') assert.ok(item.subItens.length > 1 || item.sempre, `grupo ${item.label} com ${item.subItens.length} destino`);
   }
 });
 
@@ -42,16 +43,21 @@ test('achatarItens: quem não é admin não alcança o Consignado (a regra de ca
   assert.equal(alcanca(COMUM), false);
 });
 
-test('achatarItens: grupo colapsado que sobrou com 1 item NÃO vira menu — vira o item direto', () => {
+test('achatarItens: grupo colapsado que sobrou com 1 item NÃO vira menu — vira o item direto (menos a Top College, que é `sempre` grupo)', () => {
   const grupos = getLicensingGroups(COMUM);
   const lista = achatarItens(COMUM);
   for (const g of grupos) {
     if (!g.colapsar) continue;
     const visiveis = g.items.filter((i) => !ITENS_OCULTOS.includes(chaveDoItem(i)));
-    if (visiveis.length === 1) {
+    if (visiveis.length === 1 && !g.colapsar.sempre) {
       assert.ok(lista.some((i) => i.chave === chaveDoItem(visiveis[0])), `${g.title}: item único deveria estar solto`);
     }
   }
+  // 06/09/2026 — a Top College: o botão continua na lateral e o menu mostra só a marca X-EOS
+  const tc = lista.find((i) => i.type === 'group' && i.chave === 'group:topcollege');
+  assert.ok(tc, 'o botão Top College continua na lateral');
+  assert.equal(tc.subItens.length, 1);
+  assert.ok(tc.subItens[0].marcaCompleta, 'ao clicar, só a X-EOS');
 });
 
 test('aplicarOrdem: sem ordem guardada, a lista é a de fábrica; com ordem, obedece; item novo vai pro fim', () => {
