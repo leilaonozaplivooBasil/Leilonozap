@@ -12,6 +12,77 @@
 
 ---
 
+## DIR-79 — A segunda que vem, o treinamento que existe, e a IA presa nos fatos
+
+**Emitida por:** dono (06/09/2026), com o Encontro da Mentalidade aberto na
+tela: *"organizar a data, que a data está puxando errado — tem que botar a data
+de hoje, a agenda pra amanhã. Organizar essa parte de treinamento, pra importar
+o treinamento ou fazer um treinamento ali. Organizar essa questão da IA, que a
+IA está alucinando pra caramba."* Coordenação explícita: o outro chat está
+editando **outra coisa** dentro da mesma área — *"pode pegar essa parte"*.
+
+**Data:** 06/09/2026.
+
+**O que eu conferi antes de prometer** (rodando as funções reais, não lendo):
+
+| | resultado | veredito |
+|---|---|---|
+| hoje | domingo, 06/09/2026 | — |
+| `segundaDaSemana('2026-09-06')` | 2026-08-31 | conta **certa** |
+| `proximaSegunda('2026-09-06')` | 2026-09-07 | conta **certa** |
+
+**Não existe erro de aritmética.** O `EncontroMentalidade` ancora em
+`segundaDaSemana` — a segunda que **já passou**. Num domingo ele mostra a
+reunião de seis dias atrás em vez da de amanhã.
+
+E o **"fora do ciclo oficial" é filho do mesmo defeito**: o Ciclo Executivo
+começa em `2026-09`; ancorado em 31/08 a tela pergunta a fase de **agosto**,
+que não existe no ciclo. Trocando a âncora, o rótulo se conserta sozinho —
+07/09 é setembro = *Estruturação*. **Um conserto, dois sintomas.**
+
+**O que entra:**
+
+1. **A âncora vira a PRÓXIMA segunda** (`proximaSegunda` já devolve *hoje*
+   quando hoje é segunda). Segunda → "é hoje"; terça a domingo → a de amanhã /
+   da semana que vem, que é a que se prepara.
+2. **Setas ← → entre as semanas.** Sem elas o conserto quebraria outra coisa:
+   de terça a sexta o time ainda escreve as demandas da segunda que passou, e
+   só trocar a âncora deixaria aquele registro **inalcançável**. O padrão é a
+   próxima; andar pra trás continua possível.
+3. **O treinamento passa a existir.** Hoje só se grava `treinamento_por_nome` —
+   o *nome de quem treina*. Não há o que importar nem o que abrir. O bloco de
+   45 min ganha conteúdo próprio (título, link/material e passos), gravado no
+   encontro e exibido no **Apresentar**.
+4. **A IA presa nos fatos.** Duas causas achadas no código, não supostas:
+   - `normalizarRoteiro` repassa `apresentador` **cru** (`t.apresentador ||
+     base.apresentador || null`) — nada confere contra quem está de fato na
+     sala, que já chega no contexto. Daí sair gente que não existe.
+   - `responsavel_funcao` idem: qualquer string passa, sem bater com os cargos
+     oficiais.
+   Entra a **conferência contra os fatos**: apresentador que não está na sala
+   vira nulo; função que não é cargo oficial vira nula; e a tela **avisa** o que
+   foi descartado, em vez de exibir invenção com cara de verdade.
+5. **O `max_tokens` deixa de mentir.** Com pautas longas o JSON estoura, cai no
+   `catch` e a tela diz "a IA não respondeu" — quando ela respondeu e foi
+   cortada. Passa a distinguir as duas coisas.
+
+**O que NÃO entra:**
+- A régua local (`roteiroLocal`) continua sendo o plano B — não se mexe nela.
+- O cronômetro, os blocos, as demandas e o Apresentar não mudam de
+  comportamento; o treinamento só **acrescenta** um slide.
+- Nada vai a produção nesta rodada.
+
+**Pendente do dono:** um caso concreto de alucinação (um tópico que saiu
+errado), pra confirmar qual das causas mordeu. As duas acima são defeitos
+visíveis no código e entram de qualquer jeito.
+
+**Prova exigida (REL-34.1):** a tela renderizada mostrando a segunda de
+**amanhã** (não a que passou), sem "fora do ciclo oficial"; as setas andando
+entre semanas; o treinamento aparecendo no Apresentar; e um roteiro com
+apresentador inventado sendo **descartado com aviso**.
+
+---
+
 ## DIR-78 — O elenco entra na trilha, e a trilha passa a respirar
 
 **Emitida por:** dono (07/09/2026), olhando a Jornada ao lado do Duolingo:
