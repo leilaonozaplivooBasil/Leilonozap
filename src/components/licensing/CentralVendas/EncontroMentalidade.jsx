@@ -158,7 +158,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     const contexto = { pautas: lista, mes, tema: temaDoMes, habitosDoMes: mesDoPrograma?.habitos || [], time, conduzidoPor, treinamentoPor };
     let novo = null; let origem = 'local';
     try {
-      const r = await plataforma.integrations.Core.InvokeLLM({ prompt: promptDoRoteiro(contexto), response_json_schema: SCHEMA_ROTEIRO });
+      const r = await plataforma.integrations.Core.InvokeLLM({ prompt: promptDoRoteiro(contexto), response_json_schema: SCHEMA_ROTEIRO, max_tokens: 3000 });
       if (r && r.ok !== false && (r.reuniao || r.tema)) { novo = normalizarRoteiro(r, contexto); origem = 'ia'; }
       else if (r?.needs_key) toast.message('IA não conectada — o tópico saiu pela régua da casa.');
       else toast.message('A IA não respondeu — o tópico saiu pela régua da casa.');
@@ -276,7 +276,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
       <div className="grid lg:grid-cols-5 gap-3">
         <div className="lg:col-span-2 rounded-xl border border-white/10 p-3" style={caixa} data-teste="pautas">
           <p className={titulo}>As pautas <span className="normal-case tracking-normal text-white/30">— uma por linha</span></p>
-          <Textarea value={pautas} onChange={(ev) => setPautas(ev.target.value)} disabled={!podeConduzir} rows={9} placeholder={'ex.:\nAbrir o ponto de retirada de Jacarepaguá\nO tráfego do Ranking está caro\nFechar o caixa de agosto'} className="mt-1.5 border-white/15 bg-white/[0.06] text-white text-[12px] leading-relaxed" data-teste="pautas-texto" />
+          <Textarea value={pautas} onChange={(ev) => setPautas(ev.target.value)} disabled={!podeConduzir} rows={9} placeholder={'dite do seu jeito — a IA organiza, corrige o português e dá o tempo de cada um. ex.:\nLuciano fala sobre a meta de parceiro de compra\nAline fala sobre o financeiro, 30 min\nLuiz fala sobre o X-Game e a Top College, pelo menos 1 hora'} className="mt-1.5 border-white/15 bg-white/[0.06] text-white text-[12px] leading-relaxed" data-teste="pautas-texto" />
           <div className="mt-2 flex items-center gap-2 flex-wrap">
             {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
             <span className="text-[10px] text-white/35">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'}{encontro?.roteiro_origem ? ` · tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
@@ -310,7 +310,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                 <ol className="mt-1 space-y-1.5">
                   {(roteiro.reuniao?.topicos || []).map((t, i) => (
                     <li key={`${t.titulo}-${i}`} className="text-[11px]" data-teste="topico-item">
-                      <p className="text-white font-bold">{i + 1}. {t.titulo} <span className="text-white/40 font-medium tabular-nums">· {t.minutos} min · {mentalidadeDe(t.mentalidade)?.nome?.replace('Mentalidade do ', '')}{t.habito ? ` · H${t.habito}` : ''}</span></p>
+                      <p className="text-white font-bold">{i + 1}. {t.titulo} <span className="text-white/40 font-medium tabular-nums">· {t.minutos} min{t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · {mentalidadeDe(t.mentalidade)?.nome?.replace('Mentalidade do ', '')}{t.habito ? ` · H${t.habito}` : ''}</span></p>
                       <p className="text-white/60">{t.objetivo}</p>
                       {t.decisao && <p className="text-white/45">decisão: {t.decisao}</p>}
                     </li>

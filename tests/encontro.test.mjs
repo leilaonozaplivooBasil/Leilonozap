@@ -157,3 +157,31 @@ test('a visão executiva de todo mundo: quem planejou, quem produziu, a semana e
   assert.deepEqual(v.linhas.map((l) => l.pessoaId), ['c', 'e', 'j'], 'vermelho primeiro; entre verdes, quem tem mais demanda');
   assert.deepEqual([v.planejaramHoje, v.semPlanejarHoje, v.produziram, v.naoProduziram, v.demandas.pct, v.vermelhos], [1, 2, 1, 2, 50, 1]);
 });
+
+test('a pauta DITADA (garrafal, com erro, várias numa linha) vira tópicos limpos: separa por vírgula, corrige o português, lê quem fala e o tempo pedido', async () => {
+  const { pautasDoTexto, lerPauta, limparPauta, minutosDaPauta, roteiroLocal, sugerirResponsavel } = await import('../src/lib/encontro.js');
+  const time = [{ id: 'luciano', nome: 'Paulo Luciano Pinheiro', funcaoId: 'cco' }, { id: 'aline', nome: 'Aline Mendes', funcaoId: 'cao' }, { id: 'dono', nome: 'Luiz Santanna', funcaoId: 'ceo' }];
+  const ditado = 'PAULO LUCIANO PINHEIRO FALRA SOBRE META DE PARCEIRO DE COPRA E O TEMPO DELA, ALINE FALAR SOBRE O FINECEIRO E DA O TMEPO PRA ELA, LUIZ SANTANNA FALLARAR SOBRE RTODA X - GAME E TOOOP COLLEG PELO MENOS 1 HORA PRA ELE';
+  const pautas = pautasDoTexto(ditado);
+  assert.equal(pautas.length, 3, 'a vírgula separa quando cada pedaço tem corpo');
+  assert.equal(pautasDoTexto('Fechar o caixa, hoje').length, 1, 'vírgula solta não separa');
+  assert.equal(limparPauta('ALINE FALAR SOBRE O FINECEIRO', { time }), 'Aline falar sobre o financeiro');
+  assert.equal(minutosDaPauta('pelo menos 1 hora pra ele'), 60);
+  assert.equal(minutosDaPauta('meia hora'), 30);
+  assert.equal(minutosDaPauta('uns 40 minutos'), 40);
+  assert.equal(minutosDaPauta('sem tempo'), null);
+  const lidas = pautas.map((p) => lerPauta(p, { time }));
+  assert.deepEqual(lidas.map((l) => [l.assunto, l.quemFala?.id, l.minutos]), [
+    ['Meta de parceiro de compra e o tempo dela', 'luciano', null],
+    ['O financeiro', 'aline', null],
+    ['Toda X-Game e Top College', 'dono', 60],
+  ]);
+  const r = roteiroLocal({ pautas, mes: '2026-09', time });
+  assert.deepEqual(r.reuniao.topicos.map((t) => [t.titulo, t.minutos, t.apresentador, t.responsavel_funcao]), [
+    ['Meta de parceiro de compra e o tempo dela', 30, 'Paulo Luciano Pinheiro', 'cco'],
+    ['O financeiro', 30, 'Aline Mendes', 'cao'],
+    ['Toda X-Game e Top College', 60, 'Luiz Santanna', 'ceo'],
+  ], 'quem pediu 1 hora leva 60; o resto reparte os 60 que sobram');
+  assert.equal(sugerirResponsavel(r.reuniao.topicos[1], time).id, 'aline', 'quem apresenta leva a demanda');
+  assert.match(r.reuniao.topicos[0].objetivo, /^Paulo apresenta/);
+});

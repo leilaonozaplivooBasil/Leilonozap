@@ -112,9 +112,109 @@ export function fmtTempo(segundos) {
 // ── 📝 as pautas → o tópico ──
 /** O texto cru vira uma lista: uma pauta por linha, sem marcador. */
 export function pautasDoTexto(texto) {
-  return String(texto || '').split(/\r?\n|;/)
+  const linhas = String(texto || '').split(/\r?\n|;/)
     .map((l) => l.replace(/^\s*(?:[-•*·]|\d+[.)])\s*/, '').trim())
     .filter(Boolean);
+  // o dono dita tudo numa linha só, separando por vírgula ("Fulano fala sobre X, Ciclana
+  // fala sobre Y, …"): quando cada pedaço tem corpo (3+ palavras), a vírgula separa pauta
+  return linhas.flatMap((l) => {
+    const pedacos = l.split(/\s*,\s*/).map((x) => x.trim()).filter(Boolean);
+    return pedacos.length >= 2 && pedacos.every((x) => x.split(/\s+/).length >= 3) ? pedacos : [l];
+  });
+}
+
+// ── ✍️ a pauta ditada vira frase limpa (a IA faz isso melhor; a régua faz o possível) ──
+const VOCABULARIO = ['falar', 'sobre', 'meta', 'metas', 'parceiro', 'parceiros', 'compra', 'compras', 'tempo', 'financeiro', 'financeira', 'rotina', 'ranking', 'trafego', 'estoque', 'distribuidora', 'ponto', 'retirada', 'contrato', 'contratos', 'captacao', 'investidor', 'investidores', 'reuniao', 'reunioes', 'treinamento', 'apresentacao', 'fechamento', 'cliente', 'clientes', 'vendedor', 'vendedores', 'licenciado', 'licenciados', 'influenciador', 'influenciadores', 'marketing', 'conteudo', 'caixa', 'pagamento', 'pagamentos', 'proposta', 'fornecedor', 'fornecedores', 'planejamento', 'resultado', 'resultados', 'relatorio', 'semana', 'cadastro', 'cadastros', 'equipe', 'numeros', 'decisao', 'prazo', 'entrega', 'entregas', 'produto', 'produtos', 'venda', 'vendas', 'estrategia', 'expansao', 'franquia', 'juridico', 'dados', 'atendimento', 'pessoas', 'sistema', 'aplicativo', 'tecnologia', 'operacao', 'logistica', 'college', 'whatsapp', 'apresentar', 'revisar', 'definir', 'fechar', 'abrir', 'contratar', 'organizar', 'orcamento', 'comissao', 'comissoes', 'campanha', 'anuncio', 'anuncios', 'processo', 'processos', 'mentoria', 'habito', 'habitos', 'toda', 'todo', 'todos', 'menos', 'hora', 'horas', 'minutos'];
+const CORRECOES = { falra: 'falar', falrar: 'falar', fallar: 'falar', fallarar: 'falar', falarar: 'falar', fala: 'fala', tmepo: 'tempo', tempoo: 'tempo', fineceiro: 'financeiro', finaceiro: 'financeiro', copra: 'compra', tooop: 'top', toop: 'top', colleg: 'College', xgame: 'X-Game', 'x-game': 'X-Game', xeos: 'X-EOS', 'x-eos': 'X-EOS', whatsapp: 'WhatsApp', ranking: 'Ranking', pix: 'PIX', ceo: 'CEO', coo: 'COO', cro: 'CRO', cmo: 'CMO', cbdo: 'CBDO', cao: 'CAO', cfo: 'CFO', cto: 'CTO', clo: 'CLO', top: 'Top', college: 'College' };
+const ACENTOS = { trafego: 'tráfego', captacao: 'captação', reuniao: 'reunião', reunioes: 'reuniões', apresentacao: 'apresentação', conteudo: 'conteúdo', relatorio: 'relatório', numeros: 'números', decisao: 'decisão', estrategia: 'estratégia', expansao: 'expansão', juridico: 'jurídico', operacao: 'operação', logistica: 'logística', orcamento: 'orçamento', comissao: 'comissão', comissoes: 'comissões', anuncio: 'anúncio', anuncios: 'anúncios', habito: 'hábito', habitos: 'hábitos', mes: 'mês' };
+const semAcentoPalavra = (w) => String(w || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function distancia(a, b) {
+  const m = a.length; const n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+/** Uma palavra ditada errada vira a do vocabulário mais próxima (só quando a distância é pequena e a palavra não é nome). */
+export function corrigirPalavra(palavra, nomes = []) {
+  const bruta = String(palavra || '');
+  const w = semAcentoPalavra(bruta.replace(/[.,;:!?]+$/, ''));
+  const pontuacao = bruta.match(/[.,;:!?]+$/)?.[0] || '';
+  if (!w) return bruta;
+  if (nomes.includes(w)) return bruta.charAt(0).toUpperCase() + bruta.slice(1).toLowerCase() + '';
+  if (CORRECOES[w]) return CORRECOES[w] + pontuacao;
+  if (ACENTOS[w]) return ACENTOS[w] + pontuacao;
+  if (VOCABULARIO.includes(w) || w.length < 5 || /\d/.test(w)) return bruta.toLowerCase() + '';
+  let melhor = null; let melhorD = 3;
+  for (const v of VOCABULARIO) {
+    if (Math.abs(v.length - w.length) > 2) continue;
+    const d = distancia(w, v);
+    if (d < melhorD || (d === melhorD && melhor && v.length > melhor.length)) { melhorD = d; melhor = v; }
+  }
+  if (melhor && melhorD <= 2) return (CORRECOES[melhor] || ACENTOS[melhor] || melhor) + pontuacao;
+  return bruta.toLowerCase();
+}
+/** "PAULO LUCIANO PINHEIRO FALRA SOBRE META DE PARCEIRO DE COPRA" → "Paulo Luciano Pinheiro falar sobre meta de parceiro de compra". */
+export function limparPauta(texto, { time = [] } = {}) {
+  const t = String(texto || '').replace(/\s+/g, ' ').replace(/\s*-\s*/g, (m) => (/[a-z]\s*-\s*[a-z]/i.test(m) ? '-' : m)).trim();
+  if (!t) return '';
+  const nomes = new Set(time.flatMap((p) => String(p.nome || '').toLowerCase().split(/\s+/)).map(semAcentoPalavra).filter((n) => n.length >= 3));
+  const letras = t.replace(/[^A-Za-zÀ-ÿ]/g, '');
+  const garrafal = letras.length > 0 && letras.replace(/[^A-ZÀ-Ý]/g, '').length / letras.length > 0.8;
+  const palavras = t.split(' ').map((w) => {
+    if (!garrafal && !/^[A-ZÀ-Ý]{2,}$/.test(w) && !CORRECOES[semAcentoPalavra(w)] && !ACENTOS[semAcentoPalavra(w)]) {
+      // texto já em caixa normal: só corrige o que está claramente errado
+      const c = corrigirPalavra(w, [...nomes]);
+      return c.toLowerCase() === w.toLowerCase() ? w : c;
+    }
+    return corrigirPalavra(w, [...nomes]);
+  });
+  // "x - game" / "x game" → X-Game; "top college" → Top College
+  let frase = palavras.join(' ')
+    .replace(/\bx\s*-?\s*game\b/gi, 'X-Game').replace(/\bx\s*-?\s*eos\b/gi, 'X-EOS').replace(/\btop\s+college\b/gi, 'Top College')
+    .replace(/\bx\s*-?\s*performance\b/gi, 'X-Performance');
+  // nomes de gente: cada palavra do nome com inicial maiúscula (Paulo Luciano Pinheiro)
+  frase = frase.split(' ').map((w) => (nomes.has(semAcentoPalavra(w)) ? w.charAt(0).toUpperCase() + w.slice(1) : w)).join(' ');
+  return frase.charAt(0).toUpperCase() + frase.slice(1);
+}
+/** Os minutos que a pauta pede ("pelo menos 1 hora", "30 min", "meia hora"); null quando não diz. */
+export function minutosDaPauta(texto) {
+  const t = semAcentoPalavra(texto);
+  const h = t.match(/(\d+(?:[.,]\d+)?)\s*(?:h\b|hora|horas)/);
+  if (h) return Math.round(Number(h[1].replace(',', '.')) * 60);
+  if (/meia\s+hora/.test(t)) return 30;
+  const m = t.match(/(\d+)\s*(?:min\b|mins\b|minutos?)/);
+  if (m) return Number(m[1]);
+  return null;
+}
+/**
+ * A pauta ditada, lida: quem fala (pelo nome no time), quanto tempo pede, e o
+ * assunto limpo pra virar título ("Meta de parceiro de compra e o tempo dela").
+ */
+export function lerPauta(texto, { time = [] } = {}) {
+  const limpa = limparPauta(texto, { time });
+  const minutos = minutosDaPauta(limpa);
+  const baixa = semAcentoPalavra(limpa);
+  const quemFala = time.find((p) => {
+    const partes = String(p.nome || '').toLowerCase().split(/\s+/).map(semAcentoPalavra).filter((n) => n.length >= 3);
+    return partes.length && (baixa.includes(semAcentoPalavra(p.nome)) || partes.some((n) => new RegExp(`\\b${n}\\b`).test(baixa)));
+  }) || null;
+  let assunto = limpa
+    // "Fulano (de Tal) vai falar sobre X" / "Fulano falar sobre X" / "Fulano fala X"
+    .replace(/^(?:[A-ZÀ-Ý][\wÀ-ÿ'-]*\s+){1,4}(?:vai\s+|ira\s+|irá\s+)?fala(?:r|ra|rá)?\s+(?:sobre\s+|de\s+|do\s+|da\s+)?/i, '')
+    // "…e dá o tempo pra ela" / "pelo menos 1 hora pra ele" / "30 min pra ele"
+    .replace(/(?:\s*,|\s+e)?\s+(?:da|dá|dar)\s+o\s+tempo\s+(?:pra|para)\s+(?:ela|ele)\.?$/i, '')
+    .replace(/(?:\s*,|\s+e)?\s+(?:pelo\s+menos\s+)?\d+(?:[.,]\d+)?\s*(?:h\b|horas?|min\b|mins\b|minutos?)\s*(?:pra|para)\s+(?:ela|ele|isso)\.?$/i, '')
+    .replace(/(?:\s*,|\s+e)?\s+meia\s+hora\s*(?:pra|para)\s+(?:ela|ele|isso)\.?$/i, '')
+    .trim();
+  if (!assunto) assunto = limpa;
+  assunto = assunto.replace(/^[,.\s]+|[,.\s]+$/g, '');
+  assunto = assunto.charAt(0).toUpperCase() + assunto.slice(1);
+  return { limpa, assunto, quemFala, minutos };
 }
 
 export const SCHEMA_ROTEIRO = {
@@ -130,7 +230,7 @@ export const SCHEMA_ROTEIRO = {
         topicos: { type: 'array', items: { type: 'object', properties: {
           titulo: { type: 'string' }, objetivo: { type: 'string' }, decisao: { type: 'string' }, minutos: { type: 'number' },
           mentalidade: { type: 'string', enum: ['executivo', 'diretor', 'ceo'] }, habito: { type: 'number' },
-          responsavel_funcao: { type: 'string' }, demanda: { type: 'string' },
+          responsavel_funcao: { type: 'string' }, apresentador: { type: 'string' }, demanda: { type: 'string' },
         } } },
       },
     },
@@ -155,7 +255,7 @@ export function promptDoRoteiro({ pautas = [], mes, tema, time = [], conduzidoPo
     `Funções oficiais (use o id em responsavel_funcao): ${funcoes}.`,
     'PAUTAS ditadas pelo dono (uma por linha):',
     ...pautas.map((p, i) => `${i + 1}. ${p}`),
-    'Gere o TÓPICO do encontro. Regras: português do Brasil, direto, sem enrolação; a LEITURA liga o tema do mês a um Hábito; o TREINAMENTO é prático (3 a 5 passos e uma prática de 10 minutos); a REUNIÃO tem um tópico por pauta (mantenha a ordem), cada um com objetivo, decisão esperada, minutos (a soma dos minutos = 120), a mentalidade que ele mais exige, o Hábito (1–8), a função responsável (id) e a DEMANDA que sai dele (uma frase no imperativo, começando com verbo, que vira tarefa da pessoa até sexta). O fechamento é uma frase que o time repete.',
+    'Gere o TÓPICO do encontro. Regras: português do Brasil correto e profissional — as pautas foram DITADAS (podem vir em letras garrafais, com erros de digitação e várias pautas numa linha só separadas por vírgula): corrija a ortografia, escreva em caixa normal (só nomes próprios e siglas em maiúscula), separe cada pauta num tópico próprio e dê a cada tópico um TÍTULO limpo (frase nominal curta, sem "fulano vai falar sobre"). Quando a pauta diz QUEM fala ("Aline fala sobre o financeiro"), ponha o nome em `apresentador`. Quando a pauta pede tempo ("pelo menos 1 hora pra ele", "30 min"), respeite em `minutos`; o resto se reparte no que sobrar. A LEITURA liga o tema do mês a um Hábito; o TREINAMENTO é prático (3 a 5 passos e uma prática de 10 minutos); a REUNIÃO tem um tópico por pauta (mantenha a ordem), cada um com objetivo, decisão esperada, minutos (a soma dos minutos = 120), a mentalidade que ele mais exige, o Hábito (1–8), a função responsável (id), o apresentador (nome, quando a pauta diz) e a DEMANDA que sai dele (uma frase no imperativo, começando com verbo, que vira tarefa da pessoa até sexta). Tudo vai pra tela da apresentação: escreva como quem apresenta pra uma diretoria. O fechamento é uma frase que o time repete.',
   ].filter(Boolean).join('\n');
 }
 
@@ -189,21 +289,35 @@ export function repartirMinutos(n, total = 120, minimo = 10) {
 }
 
 /** O tópico pela régua local — quando a IA não está ligada, o encontro não fica sem roteiro. */
-export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [] } = {}) {
+export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [], time = [] } = {}) {
   const fase = faseDoMes(mes);
   const h = habitoDe(habitosDoMes[0] || 7) || HABITOS[6];
   const hObj = HABITOS.find((x) => x.n === h.n) || HABITOS[6];
-  const minutos = repartirMinutos(pautas.length || 1);
-  const topicos = (pautas.length ? pautas : ['Os números da semana e o gargalo']).map((p, i) => {
+  const lidas = (pautas.length ? pautas : ['Os números da semana e o gargalo']).map((p) => lerPauta(p, { time }));
+  // os minutos: quem pediu tempo leva o que pediu; o resto se reparte no que sobrar (mínimo 10); a soma fecha em 120
+  const pedidos = lidas.reduce((s, l) => s + (l.minutos || 0), 0);
+  const semPedido = lidas.filter((l) => !l.minutos).length;
+  const sobra = Math.max(semPedido * 10, 120 - pedidos);
+  const repartidos = repartirMinutos(semPedido, sobra);
+  let k = 0;
+  let minutos = lidas.map((l) => l.minutos || repartidos[k++]);
+  const soma = minutos.reduce((s, m) => s + m, 0);
+  if (soma !== 120 && minutos.length) minutos = minutos.map((m) => Math.max(5, Math.round((m * 120) / soma)));
+  const dif = 120 - minutos.reduce((s, m) => s + m, 0);
+  if (minutos.length) minutos[minutos.length - 1] += dif;
+  const topicos = lidas.map((l, i) => {
+    const p = l.assunto;
     const lida = classificarAcao(p);
+    const quem = l.quemFala;
     return {
       titulo: p,
-      objetivo: `Deixar claro o que travou, o que fica decidido e quem leva "${p}" até sexta.`,
+      objetivo: quem ? `${quem.nome.split(' ')[0]} apresenta "${p}": o que travou, o que fica decidido e quem leva até sexta.` : `Deixar claro o que travou, o que fica decidido e quem leva "${p}" até sexta.`,
       decisao: 'Uma decisão escrita: quem faz, até quando, com que número.',
       minutos: minutos[i],
       mentalidade: lida.mentalidade,
       habito: lida.habito || hObj.n,
-      responsavel_funcao: funcaoDaPauta(p),
+      responsavel_funcao: quem?.funcaoId || funcaoDaPauta(p),
+      apresentador: quem?.nome || null,
       demanda: /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]?[a-záéíóúâêôãõç]+(ar|er|ir)\b/.test(p.trim()) ? p.trim() : `Resolver: ${p.trim()}`,
     };
   });
@@ -234,6 +348,7 @@ export function normalizarRoteiro(obj, contexto = {}) {
       mentalidade: mentalidadeDe(t.mentalidade)?.id || lida.mentalidade,
       habito: Number(t.habito) >= 1 && Number(t.habito) <= 8 ? Number(t.habito) : (lida.habito || base.habito || null),
       responsavel_funcao: t.responsavel_funcao || base.responsavel_funcao || funcaoDaPauta(titulo),
+      apresentador: t.apresentador || base.apresentador || null,
       demanda: String(t.demanda || base.demanda || titulo),
     };
   });
@@ -254,6 +369,12 @@ export function normalizarRoteiro(obj, contexto = {}) {
 // ── 📥 a demanda que sai do tópico ──
 /** Quem do time leva o tópico: pela função sugerida; senão ninguém (o dono escolhe). */
 export function sugerirResponsavel(topico, time = []) {
+  // quem apresenta a pauta é quem leva a demanda dela — se o nome está no time
+  if (topico?.apresentador) {
+    const alvo = semAcentoPalavra(topico.apresentador);
+    const porNome = time.find((p) => alvo && (semAcentoPalavra(p.nome) === alvo || semAcentoPalavra(p.nome).split(' ').some((n) => n.length >= 3 && alvo.split(' ').includes(n))));
+    if (porNome) return porNome;
+  }
   const f = topico?.responsavel_funcao;
   if (!f) return null;
   return time.find((p) => p.funcaoId === f) || null;
@@ -353,7 +474,7 @@ export function slidesDoEncontro({ data, roteiro, mes, conduzidoPor, treinamento
     { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '15 leitura · 45 treinamento · 120 reunião', corpo: [r.abertura], rodape: null },
     { id: 'leitura', bloco: 'leitura', titulo: r.leitura?.titulo || 'Leitura', sub: '15 minutos', corpo: [r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação' },
     { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: `45 minutos${treinamentoPor ? ` · quem treina: ${treinamentoPor}` : ''}`, corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null },
-    ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),
+    ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min${t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),
     { id: 'fechamento', bloco: null, titulo: 'Fechamento', sub: `${demandas.length} demanda${demandas.length === 1 ? '' : 's'} direcionada${demandas.length === 1 ? '' : 's'}`, corpo: [r.fechamento, ...demandas.slice(0, 8).map((d) => `• ${d.pessoa_nome || d.pessoa_id}: ${d.titulo}`)].filter(Boolean), rodape: 'até sexta' },
   ];
   return slides;

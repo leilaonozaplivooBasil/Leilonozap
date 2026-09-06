@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: MODEL,
         messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }],
-        max_tokens: 1200, temperature: 0.6,
+        max_tokens: Math.min(4000, Math.max(256, Number(body?.max_tokens) || 1200)), temperature: 0.6,
       }),
       signal: AbortSignal.timeout(28000),
     });
