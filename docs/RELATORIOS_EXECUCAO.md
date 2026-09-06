@@ -3986,3 +3986,72 @@ concluído na coluna, faixa verde medida (G > R e G > B), gaveta antiga ausente
    arrastar uma parada mudaria a hora);
 2. **reordenar cards dentro da mesma lista** — hoje arrasta entre listas, e
    dentro dela a ordem é por hora → prazo → ordem.
+
+---
+
+## REL-77.2 — O punho, o arrasto que ele destravou, e a saída do conflito (preview)
+
+**Diretiva:** DIR-77.2. **Data:** 07/09/2026. **Escopo:** preview.
+**Decisão delegada:** *"o que você decidir eu vou contigo."*
+
+**Mudei de recomendação, e preciso dizer por quê.** Eu tinha proposto
+"arrastar na Jornada pra mudar o horário" como a mais forte. Fui olhar antes de
+fazer: **a Jornada não é uma linha do tempo** — é uma serpentina decorativa
+(`OFFSETS[zig % OFFSETS.length]`), em que a posição é a ORDEM da lista, não o
+relógio. Arrastar ali significaria reordenar a rotina fixa e inventar horários
+antes das 05:00. Minha recomendação estava errada; troquei por duas que valem
+mais:
+
+1. **a saída do conflito em um clique** — avisar "bate com a Reunião 1" e deixar
+   a pessoa resolver na mão é meio serviço; agora o aviso traz **"mover pra
+   13:30"**, o primeiro vão livre depois do choque;
+2. **reordenar cards dentro da lista**, completando o arrasto que ele pediu.
+
+**Dois defeitos REAIS meus, que ele achou usando:**
+
+*"Quando eu clico em sugerir horário não está indo"* e *"ainda não está dando
+pra arrastar um card"*. A causa era a mesma linha:
+
+```jsx
+<div {...alcas} style={{ background: '#FFF', ... }}>   ← o style APAGA o
+                                                          touchAction das alças
+```
+
+`useArrastavel` entrega `style: { touchAction: 'none' }` — e um `style` escrito
+depois do spread **substitui** o objeto inteiro. Sem `touch-action`, o navegador
+lê o gesto como rolagem e rouba o arrasto no dedo. E, como o **card inteiro**
+era a alça, todo botão de dentro disputava com ela — foi isso que engoliu o
+clique do "sugerir". O motor nunca esteve errado: `horaSugerida` devolvia
+11:00 pro dia real; era a tela que não deixava o clique chegar.
+
+**A correção é a que ele pediu:** o **punho de seis pontinhos** (`⠿`) na
+lateral do card — sempre visível no dedo, ao passar o mouse no computador — e
+só ele arrasta. O card volta a ser card.
+
+**Um terceiro defeito, achado pela própria prova:** eu olhava o card embaixo do
+dedo ANTES da coluna. Soltar em cima de um card de OUTRA lista caía no
+reordenar, que recusa listas diferentes — e o arrasto não fazia nada. Como
+coluna cheia é quase toda feita de cards, isso quebrava o caso mais comum.
+Agora coluna diferente vence.
+
+**Uma linha morta removida por mutação.** `saidaDoConflito` pulava pro fim do
+ÚLTIMO conflito (`Math.max` sobre todos). A mutação mostrou que a linha não
+fazia nada — `horaSugerida` já anda de 15 em 15 conferindo todos. Pior: aquele
+salto **mascarava o teste da duração**, porque pulava tão pra frente que
+qualquer tamanho cabia. Tirando a linha, a duração passou a importar de verdade
+e a mutação passou a quebrar.
+
+**Provado.** 22 testes novos; mutações: reordenar misturando listas → quebra;
+sugerir sem haver conflito → quebra; ignorar a duração de quem se move →
+quebra (depois da limpeza). **Prova em navegador: 269/269**, com o arrasto
+disparado por PointerEvents de verdade no punho.
+
+**Três erros meus na prova, todos da mesma família:** seletor posicional
+(`firstElementChild`) que quebrou quando o punho virou o primeiro filho —
+agora a faixa tem marca própria; coordenada de tela fora da janela
+(`elementFromPoint` é viewport, e o card estava rolado pra fora); e o bloco do
+arrasto no meio do fluxo, que **move o card de lista** e estragava tudo que
+vinha depois procurando ele onde estava. Mudança de estado destrutiva vai pro
+fim — é a segunda vez que essa lição me cobra uma rodada.
+
+**Suíte:** 1224/1224. **Build:** limpo. **Sem migração.**

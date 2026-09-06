@@ -319,6 +319,55 @@ export function horaSugerida(itens = [], { duracaoMin = 30, aPartirDe = '08:00',
   return null;
 }
 
+/**
+ * 🔧 A SAÍDA DO CONFLITO, em um clique. Avisar "bate com a Reunião 1" e deixar
+ * a pessoa resolver na mão é meio serviço: ela vai ter que abrir a agenda,
+ * procurar um vão e digitar. Aqui devolve-se o primeiro horário livre A PARTIR
+ * do fim do choque — o mais perto possível de onde ela queria pôr.
+ * `null` quando não há conflito (nada a resolver) ou quando não sobra vão.
+ */
+export function saidaDoConflito(itens = [], { hora, hora_fim = null, ignorarId = null, duracaoPadrao = 30 } = {}) {
+  const choque = conflitosDeHorario(itens, { hora, hora_fim, ignorarId, duracaoPadrao });
+  if (!choque.length) return null;
+  const ini = emMinutos(hora);
+  const dura = Math.max(15, (fimDe({ hora, hora_fim }, duracaoPadrao) || 0) - ini);
+  // 🩹 Começa no fim do PRIMEIRO choque e deixa o resto com `horaSugerida`.
+  // A primeira versão pulava pro fim do ÚLTIMO conflito (`Math.max` sobre
+  // todos), e a mutação mostrou que aquela linha não fazia nada: `horaSugerida`
+  // já anda de 15 em 15 conferindo TODOS os conflitos, então os dois caminhos
+  // davam a mesma resposta. Pior: o `max` mascarava o teste da DURAÇÃO — ele
+  // pulava tão pra frente que qualquer duração cabia. Tirar a linha morta fez
+  // a duração passar a importar de verdade.
+  const partida = fimDe(choque[0], duracaoPadrao) || ini;
+  return horaSugerida(itens.filter((t) => t.id !== ignorarId), {
+    duracaoMin: dura, aPartirDe: emHora(partida), ateAs: '23:30',
+  });
+}
+
+/**
+ * 🖐️ Reordenar cards DENTRO da mesma lista, arrastando um sobre o outro.
+ *
+ * ⚠️ Vale pros cards SEM horário. Card com hora é ordenado pelo relógio
+ * (`cartoesDaLista`), e tem que ser assim: se o arrasto pudesse pôr o das 16h
+ * antes do das 08h, a coluna passaria a mentir sobre a ordem do dia. Mandar na
+ * ordem é do backlog; no compromisso, quem manda é a hora.
+ */
+export function reordenarCartoes(cartoes, id, alvoId) {
+  const arr = Array.isArray(cartoes) ? cartoes : [];
+  const movido = arr.find((c) => c.id === id);
+  const alvo = arr.find((c) => c.id === alvoId);
+  if (!movido || !alvo || id === alvoId) return arr;
+  if (String(movido.lista_id || '') !== String(alvo.lista_id || '')) return arr;
+  const daLista = arr.filter((c) => String(c.lista_id || '') === String(movido.lista_id || ''));
+  const de = daLista.findIndex((c) => c.id === id);
+  const para = daLista.findIndex((c) => c.id === alvoId);
+  const nova = [...daLista];
+  nova.splice(de, 1);
+  nova.splice(para, 0, movido);
+  const ordemPorId = new Map(nova.map((c, i) => [c.id, i]));
+  return arr.map((c) => (ordemPorId.has(c.id) ? { ...c, ordem: ordemPorId.get(c.id) } : c));
+}
+
 /** "10:30 às 11:30", ou só "10:30" quando não há fim. '' quando não há hora. */
 export function faixaDeHorario(item) {
   const ini = emMinutos(item?.hora);
