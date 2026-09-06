@@ -18,6 +18,8 @@ import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/
 import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES, funcaoDaPessoa, montarDiaDaFuncao } from '@/lib/funcoes';
 import { semaforo, mesDe } from '@/lib/metasPessoa';
 import { useMetasDaPessoa, AbaMetas, AbaPrograma, AbaSemana, AbaQuadro, AbaHistorico, ABAS } from '@/components/licensing/CentralVendas/QuadroGeralAbas';
+import ComprovacoesPainel from '@/components/licensing/CentralVendas/Comprovacoes';
+import { portoesDaSociedade } from '@/lib/xperformance';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -279,6 +281,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // 🎯 as metas do mês da pessoa aberta no modal (o semáforo do topo também lê)
   const tarefasDoMesDaPessoa = useMemo(() => tarefasCiclo.filter((t) => t.user_id === pessoaFixo && mesDe(String(t.data)) === mesDe(hoje)), [tarefasCiclo, pessoaFixo, hoje]);
   const metasInfo = useMetasDaPessoa({ pessoaId: modalAberto ? pessoaFixo : null, mes: mesDe(hoje), hoje, tarefasDoMes: tarefasDoMesDaPessoa });
+  // 🚪 o caminho pra sociedade da pessoa aberta (os três portões, DIR-74) — saiu de baixo e veio pra cá
+  const [entregaveisDaPessoa, setEntregaveisDaPessoa] = useState([]);
+  useEffect(() => {
+    if (!modalAberto || !pessoaFixo) return;
+    supabase.from('xperf_entregaveis').select('*').eq('dono_id', pessoaFixo).then(({ data }) => setEntregaveisDaPessoa(data || []));
+  }, [modalAberto, pessoaFixo]);
   // a função de trabalho (com o dia dela): a escolhida no painel da pessoa, ou a do nível do painel de controle
   const funcaoTrabalho = (id) => funcaoDaPessoa({ funcaoTitulo: participanteDe(id)?.funcao_titulo, nivel: equipe.find((p) => p.id === id)?.nivel });
   // a mentalidade: a escolhida; senão a que a régua lê no texto da ação;
@@ -829,6 +837,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         );
       })()}
 
+      {/* ── 📸 AS COMPROVAÇÕES, em cima (dono: "têm que subir") ──────────── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <ComprovacoesPainel nomeDe={nomeDe} />
+      </div>
+
       {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
       {equipe.length > 0 && (
         <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
@@ -966,6 +979,27 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   : ' · dia completo'}
               </p>
 
+              {/* 🚪 os três portões da sociedade desta pessoa */}
+              {(() => {
+                const p = portoesDaSociedade({ entregaveis: entregaveisDaPessoa, pessoaId: pessoaFixo, hojeISO: hoje });
+                return (
+                  <div className="mt-3 rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="portoes-pessoa">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">Caminho pra sociedade</p>
+                      <p className={`text-[10px] font-bold ${p.liberado ? 'text-nz-verde' : 'text-white/35'}`}>{p.abertos} de {p.total} portões</p>
+                    </div>
+                    <div className="mt-1.5 grid grid-cols-3 gap-1">
+                      {p.portoes.map((g) => (
+                        <div key={g.id} className="rounded-md border border-white/10 px-2 py-1">
+                          <p className={`text-[10px] font-bold ${g.aberto ? 'text-white' : 'text-white/55'}`}>{g.aberto ? '✓' : '○'} {g.titulo}</p>
+                          <p className="text-[10px] text-white/35 tabular-nums">{g.valor} / {g.alvo}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* 🗓️ o planejamento do dia: gerou ou não gerou? */}
               {(() => {
                 const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) === hoje);
@@ -1038,6 +1072,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               {abaModal === 'semana' && <AbaSemana pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} hoje={hoje} participante={base} />}
               {abaModal === 'quadro' && <AbaQuadro pessoaId={pessoaFixo} hoje={hoje} responsavelNome={nomeDe(currentUser?.id)} />}
               {abaModal === 'historico' && <AbaHistorico pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} />}
+              {abaModal === 'comprovacoes' && <ComprovacoesPainel pessoaId={pessoaFixo} nomeDe={nomeDe} compacto />}
               <div className="mt-3 flex justify-end">
                 <Button size="sm" onClick={() => { setPessoa(pessoaFixo); setModalAberto(false); }} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]">
                   <Send className="w-3.5 h-3.5 mr-1" /> distribuir tarefa pra {nomeDe(pessoaFixo).split(' ')[0]}
@@ -1058,8 +1093,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           data-teste="abrir-admin"
         >
           <Wrench className="w-4 h-4 text-nz-verde" />
-          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Gestão do X-GAME</span>
-          <span className="text-[10px] text-white/35">· participantes, verbas, ciclo, conferência dupla e comprovações</span>
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Ciclo, verbas e participantes</span>
+          <span className="text-[10px] text-white/35">· o admin do X-GAME de sempre (o que é de cada pessoa já está no Quadro Geral dela)</span>
           <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${adminAberto ? 'rotate-180' : ''}`} />
         </button>
         {adminAberto && (
