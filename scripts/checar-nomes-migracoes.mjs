@@ -77,15 +77,10 @@ if (invalidos.length) {
 // a mesma versão. O check-in do concurso vinha vivendo só no localStorage,
 // porque a API engole o erro do PATCH.
 //
-// Como a trava de cima, esta tem lista de herança: as colisões que já existiam
-// e já estão registradas no histórico do banco. Renomeá-las faria o CLI vê-las
-// como novas e tentar reaplicar — e ali dentro tem backfill e limpeza de dados.
-// Colisão NOVA é erro.
-const HERANCA_COLISAO = new Set([
-  '20260716', '20260801', '20260803', '20260805', '20260806', '20260808',
-  '20260828', '20260905210000',
-]);
-
+// Esta trava NÃO tem lista de herança, e isso é de propósito: as 8 colisões que
+// existiam foram desfeitas no mesmo dia. Cada arquivo ganhou versão única e a
+// sua própria linha no histórico do banco, então nenhum deles voltou pra fila.
+// Colisão, aqui, é sempre erro.
 const porVersao = new Map();
 for (const f of arquivos) {
   const m = /^(\d+)_/.exec(f);
@@ -93,7 +88,7 @@ for (const f of arquivos) {
   if (!porVersao.has(m[1])) porVersao.set(m[1], []);
   porVersao.get(m[1]).push(f);
 }
-const colisoes = [...porVersao].filter(([v, fs]) => fs.length > 1 && !HERANCA_COLISAO.has(v));
+const colisoes = [...porVersao].filter(([, fs]) => fs.length > 1);
 
 if (colisoes.length) {
   console.error('\n❌ Duas migrações dividindo a MESMA versão:\n');
