@@ -70,6 +70,10 @@ export const SECOES_TOP_COLLEGE = [
   // (?catalogTab=catalogo-crm) segue abrindo no lugar certo.
   { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
   { value: 'catalogo-vendedores', label: 'Time', icon: Handshake },
+  // 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria. Fica
+  // AQUI, e não solto no menu, porque é a Top College que forma — o quadro de
+  // entregáveis é a mesma faculdade cobrando o que ensinou.
+  { value: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
 ];
 
 export function getLicensingGroups(user) {
@@ -135,6 +139,7 @@ export function getLicensingGroups(user) {
         // nome pra busca no menu do celular.
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp', marcaCompleta: '/marca/marca-xeos-lockup.webp', legenda: 'Estrutura de operações e expansão' },
         { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-vendedores', label: 'Time', icon: Handshake },
+      { type: 'tab', value: 'catalogo', catalogTab: 'catalogo-xperformance', label: 'X-Performance', icon: Trophy },
         { type: 'tab', value: 'plano-carreira', label: 'Carreira', icon: Award },
         { type: 'link', to: '/Evoluir', label: 'Evoluir Nível', icon: TrendingUp },
         { type: 'link', to: '/Metas', label: 'Metas', icon: Target },

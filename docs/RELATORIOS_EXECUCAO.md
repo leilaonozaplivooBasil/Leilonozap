@@ -3403,3 +3403,67 @@ que a primeira correção ainda clicava no guia errado. 189/189.
 
 Não mexi em nenhum dos dois. Os dois estão marcados como aplicados no
 histórico justamente para o robô não resolver isso sozinho.
+
+---
+
+## REL-72 — X-PERFORMANCE entregue (preview)
+
+**Diretiva:** DIR-72. **Data:** 06/09/2026. **Escopo:** preview.
+
+**O que foi construído, e por que assim:**
+
+`src/lib/xperformance.js` é o motor, e ele **não desenha nada** — é lá que
+moram as três decisões que sustentam o módulo: a Mentalidade é uma lente sobre
+os 8 Hábitos (e não um método concorrente), não existe moeda nova (o fixo vem
+do X-Game), e fixo e sociedade são **duas contas que nunca se somam**. Ter isso
+numa lib pura é o que permite testar a regra sem abrir navegador.
+
+`tests/xperformance.test.mjs` — **23 testes**. Os dois que importam foram
+verificados por **mutação**, não por otimismo:
+
+- afrouxei `podeMover` para deixar pular direto pra "Entregue": **2 testes
+  quebraram**;
+- fiz `pontosDaPessoa` contar card que não está entregue: **3 testes
+  quebraram**.
+
+Se eu não tivesse feito isso, eu estaria entregando 23 testes verdes sem saber
+se algum deles enxerga a trava que é o valor inteiro do quadro.
+
+`supabase/migrations/20260906120000_xperformance.sql` — duas tabelas, e só.
+`xperf_encontros` tem chave **única na data**: é isso que impede duas atas da
+mesma segunda brigando pela verdade. `xperf_entregaveis` aponta pro encontro
+com `ON DELETE SET NULL` — apagar a ata não pode sumir com o compromisso que
+foi combinado nela. RLS ligada, com leitura compartilhada **de propósito**: o
+valor do quadro é todo mundo ver o que cada um assumiu; quadro particular não
+organiza diretoria nenhuma.
+
+`XPerformance.jsx` segue a gramática do Master Task, como o dono pediu.
+
+**Prova em navegador (REL-34.1): 203/203, zero erro de página/console.**
+As duas asserções que carregam a diretiva:
+
+```
+✅ DIR-72: as DUAS contas aparecem separadas — {"fixo":"1.300","pontos":5,"meta":100}
+✅ DIR-72: de "Fazendo" o único passo oferecido é "Em revisão" — não dá pra pular pra Entregue
+```
+
+O `pontos: 5` é a trava vista de fora: o mock tem **dois** entregáveis do
+Luiz — um de peso 3 em "Fazendo" e um de peso 5 em "Entregue". Se a regra
+vazasse, o número na tela seria 8.
+
+**Erro meu no caminho, e o que ele ensinou:** o bloco do DIR-72 entrou no meio
+do fluxo da prova e **navegava para outra seção**, deixando as ~60 asserções
+seguintes rodando na tela errada — a suíte caiu para 203 com falhas a partir de
+"clicou em 4. Contato". Tentei consertar voltando pelo menu e insisti nisso
+mais de uma rodada: o menu flutuante já estava fechado ali, e clicar em item
+que não está no DOM não navega nada. A saída certa era a mais simples e eu
+demorei a pegá-la: **provar a tela por último, abrindo-a pela própria URL**
+(`?catalogTab=catalogo-xperformance`), que não é atalho de teste — é o contrato
+que a lateral usa. A presença no menu ficou provada onde o menu já estava
+aberto de qualquer jeito (bloco do DIR-64).
+
+**Suíte:** 1051/1051. **Build:** limpo.
+
+**Continua aberto com o dono:** a régua da sociedade (entrou 100 provisório) e
+se a reunião de segunda é uma para todos ou uma por trilha (entrou uma por
+semana, com a trilha marcada). Nenhum dos dois trava o uso.
