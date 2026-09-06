@@ -33,7 +33,8 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     assert.deepEqual(valores(tc.items), ['catalogo']);
     assert.deepEqual(tc.items.map((i) => i.label), ['O Método']);
     assert.equal(tc.items[0].catalogTab, 'catalogo-crm');
-    assert.ok(tc.items[0].marcaCompleta, 'a marca X-EOS é o botão');
+    assert.ok(tc.items[0].marcaCompleta, 'a marca X-EOS é o que aparece no menu');
+    assert.equal(tc.colapsar.sempre, true, 'o botão Top College continua na lateral; ao clicar, só a X-EOS');
     assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira']);
     assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'X-Performance', 'Carreira']);
   });

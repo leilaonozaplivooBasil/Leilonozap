@@ -140,7 +140,7 @@ export function getLicensingGroups(user) {
       // FORMA a pessoa. Metas veio de "Operação", onde estava solta — meta é
       // acompanhamento, não chão de loja.
       title: 'Top College',
-      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp' },
+      colapsar: { chave: 'group:topcollege', label: 'Top College', icon: GraduationCap, marca: '/marca/marca-topcollege.webp', sempre: true },
       items: [
         // 🎓 DIR-59 — no menu, este item NÃO escreve "O Método": entra a logo
         // inteira da X-eos no lugar do texto (ordem do dono). `marcaCompleta`
