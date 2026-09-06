@@ -4055,3 +4055,62 @@ vinha depois procurando ele onde estava. Mudança de estado destrutiva vai pro
 fim — é a segunda vez que essa lição me cobra uma rodada.
 
 **Suíte:** 1224/1224. **Build:** limpo. **Sem migração.**
+
+---
+
+## REL-77.3 — Por que o arrasto não funcionava, e o conserto (preview)
+
+**Diretiva:** DIR-77.3. **Data:** 07/09/2026. **Escopo:** preview.
+
+**A queixa dele foi o diagnóstico:** *"só quando eu clico ele sobe e não estou
+conseguindo arrastar nem o card de dentro, e nem todo o painel."*
+
+"Ele sobe e não anda" descreve com precisão o defeito. **`useArrastavel` só
+REPORTA coordenadas — quem move a peça é quem usa o hook.** No X-Music a
+pílula é movida pelo consumidor; no meu card, o `aoMover` só trocava um rótulo
+de texto. O que a pessoa via era o `scale(1.02)` + sombra do estado
+`arrastando`: **a peça levantava e ficava parada.** O gesto inteiro funcionava
+por baixo — o card até trocava de lista ao soltar — mas sem nada acompanhar a
+mão, não há como mirar, e não há por que acreditar que funciona.
+
+**Três defeitos encadeados:**
+
+1. **O card não seguia o ponteiro.** Agora segue, com `translate(dx, dy)` e uma
+   inclinação de 2°, como a peça levantada do Trello.
+2. **A coluna não tinha `aoMover` nenhum** — arrastar o painel não dava sinal
+   algum. Agora também acompanha.
+3. **Latente, e ia aparecer no minuto seguinte:** com a peça seguindo a mão,
+   `document.elementFromPoint` passaria a devolver **o próprio card arrastado**,
+   e o alvo embaixo nunca seria encontrado. Por isso a peça em movimento tem
+   `pointer-events: none`: ela fica transparente ao apontador enquanto anda.
+
+**E o que faltava pra mirar:** a coluna que vai receber **acende** (fundo mais
+claro + contorno tracejado da cor dela), como no Trello. Antes a pessoa soltava
+no escuro e torcia. O punho também deixou de ficar invisível até o mouse passar
+por cima — ele reclamou que "desapareceu", e estava certo.
+
+**A prova antiga passava com o defeito na tela**, e isso é o mais importante
+deste relatório: ela conferia só o **resultado no banco** (o card mudou de
+lista?) e não o **gesto**. Um arrasto pode acertar o destino e ainda assim ser
+inusável. Agora ela mede, **no meio do gesto**:
+
+```
+o card ANDOU 499px acompanhando a mão
+o card arrastado está com pointer-events: none
+a coluna alvo está com outline tracejado
+```
+
+E a mutação fecha o círculo: devolvi o `scale(1.02)` no lugar do `translate` —
+exatamente o defeito que ele sentiu — e a prova **reprovou com "andou −3px"**.
+
+**Três erros meus na prova, nesta rodada:**
+- medi o deslocamento **no mesmo `evaluate`** do gesto, lendo o DOM de antes do
+  React redesenhar: acusou "andou 0px" num arrasto que já funcionava. É a
+  segunda vez que essa armadilha me pega (a primeira foi na aba de emoji);
+- medi o realce **a 60% do caminho**, quando o ponteiro ainda estava dentro da
+  coluna de ORIGEM — as colunas têm 340px, e 60% de 520px não sai dela;
+- e, antes disso, deixei o bloco do arrasto no meio do fluxo: ele **move o card
+  de lista** e estragava tudo que vinha depois.
+
+**Suíte:** 1237/1237. **Prova em navegador:** 272/272. **Build:** limpo.
+**Sem migração.**
