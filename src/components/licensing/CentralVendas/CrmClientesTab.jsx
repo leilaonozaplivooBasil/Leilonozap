@@ -1367,7 +1367,16 @@ _Enviado via CRM Leilão NoZap_`;
        pintar escuro sozinho, sem reescrever classe por classe. Por baixo de
        tudo: o padrão tonal de X do brandbook e o brilho do gradiente Top
        College. Fora deste bloco, nada muda no sistema. */
-    <div className="xeos-palco relative overflow-hidden p-4 sm:p-8 rounded-3xl border border-white/10" style={{ background: 'var(--xeos-preto)' }}>
+    /* 🩹 O PALCO ENCOSTA NA TELA (ordem do dono: "some com essa linha, quero
+       encostar tudo"). A linha em volta não separava nada — só embrulhava,
+       e a mudança de cor do palco já faz esse trabalho sozinha. No celular
+       ela ainda custava caro: 16px de respiro da página + 16px do palco +
+       a borda dos dois lados comiam ~1/6 da largura de um telefone. Agora:
+         • borda: removida (o fundo é o divisor);
+         • celular: -mx-4 anula o respiro da página e o palco vai de ponta a
+           ponta, sem canto arredondado, com só 12px de folga interna;
+         • do sm pra cima: volta pra dentro, arredondado e espaçoso. */
+    <div className="xeos-palco relative overflow-hidden -mx-4 sm:mx-0 px-3 py-5 sm:p-8 rounded-none sm:rounded-3xl" style={{ background: 'var(--xeos-preto)' }}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-[0.22]"

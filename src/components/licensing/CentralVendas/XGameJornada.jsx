@@ -337,7 +337,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           </div>
         </div>
 
-        <div className="relative flex flex-col items-center gap-9 px-4 pb-16 pt-12">
+        <div className="relative flex flex-col items-center gap-9 px-1 sm:px-4 pb-16 pt-12">
           {/* o troféu no TOPO do dia */}
           <div className="relative flex flex-col items-center mb-2">
             {completou ? (
@@ -445,7 +445,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           Vem mascarada num radial — se dissolve no fundo, sem moldura. */}
       {foco && <XGameCapa titulo={foco.titulo} capaUrl={foco.capa_url} />}
 
-      <div className="relative mx-auto max-w-2xl px-5 py-16 sm:py-24 text-center">
+      <div className="relative mx-auto max-w-2xl px-4 sm:px-5 py-14 sm:py-24 text-center">
         <p className="text-3xl sm:text-4xl font-bold tracking-tight text-nz-tinta">
           {saudacao(agoraMin)}, {nome || 'campeão'}.
         </p>
