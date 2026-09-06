@@ -1506,7 +1506,7 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🖼️ DIR-56 — a faixa do brandbook do Hábito aberto: cada hábito tem a
             sua imagem oficial, com o nome por cima. É o que amarra o painel ao
             universo da marca em vez de deixar a tela solta. */}
-        <div className="relative overflow-hidden rounded-2xl mb-5 sm:mb-7 border border-white/10">
+        <div className="relative overflow-hidden rounded-2xl mb-5 sm:mb-7">
           {/* 🎓 DIR-64 — a imagem do Hábito ganhou altura: o dono disse que as
               imagens do brandbook estão bonitas e precisam APARECER. O véu
               escuro ficou mais curto do lado esquerdo (só o necessário pra

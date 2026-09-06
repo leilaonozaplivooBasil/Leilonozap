@@ -942,7 +942,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const grupos = agruparSonhosPorHorizonte(sonhos);
           return (
             <div className="space-y-4">
-              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
+              <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
                 🖼️ <strong>Monte o seu quadro.</strong> O sonho tem três prazos — ⚡ curto (1 a 2 anos), 🎯 médio (2 a 4) e 🏆 longo (5 pra frente).
                 Coloque quantas imagens quiser em cada um (busque pelo nome sem sair daqui, ou envie do aparelho) e escreva os
                 <strong> detalhes exatos</strong> embaixo de cada imagem — se for um carro: ano, cor, banco de couro, roda. Sonho detalhado vira meta.
@@ -1069,7 +1069,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 />
               );
             })()}
-            <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca space-y-1.5">
+            <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1.5">
               <p>
                 📣 <strong>A Rotina Perfeita não é agenda de posts</strong> — é a sua rotina real virando narrativa nas redes:{' '}
                 <strong className="text-nz-tinta">{PRINCIPIO_ROTINA.percepcoes.join(' → ')}</strong>.
@@ -1153,7 +1153,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
 
             {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
             {xgame && ehHoje && (
-              <div className={`flex items-center justify-between gap-2 flex-wrap rounded-lg border px-3 py-2 ${hojeFechou ? 'border-orange-300 bg-orange-50' : 'border-nz-borda bg-nz-cinza-fundo/60'}`}>
+              <div className="flex items-center justify-between gap-2 flex-wrap border-t border-nz-borda/40 pt-3">
                 <p className="text-sm font-bold text-nz-tinta">
                   🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
                   {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-600">🧊 congelador usado</span>}
@@ -1167,32 +1167,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               </div>
             )}
             {xgame && ehHoje && progressoJogo.pct >= 100 && (
-              <div className="rounded-lg border border-nz-verde bg-nz-verde-fundo/60 px-3 py-2 text-center animate-pulse">
+              <div className="py-2 text-center animate-pulse">
                 <p className="text-sm font-bold text-nz-verde">🎊 💎 DIA PERFEITO — BRILHANTE! PARABÉNS! 🎊</p>
               </div>
             )}
 
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-t border-nz-borda/40 pt-4">
+                <div className="py-1" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das 20h às 22h), que é a que entra no Human Token oficial.'}>
+                <div className="py-1" title={'MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das 20h às 22h), que é a que entra no Human Token oficial.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
                   <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
                     {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
                   </p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
+                <div className="py-1" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
+                <div className="py-1" title={'X-PAY — o valor do seu dia em R$, com as verbas que o admin definiu: verba fixa ÷ 22 dias ÷ nº de tarefas do dia × o peso de cada tarefa. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
                   <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
@@ -1204,7 +1204,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
 
             {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══ */}
             {xgame && ciclo && mostrarPainel && (
-              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+              <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <p className="font-semibold text-nz-tinta">🎯 Onde estou × EXECUTIVO IDEAL</p>
                   <span className="text-[10px] font-bold text-nz-tinta-fraca tabular-nums">formação: {ciclo.formacao.pct}% dos 100%</span>
@@ -1255,7 +1255,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
 
             {/* ══ 🏅 F8 — MISSÕES DA SEMANA + CONQUISTAS ══ */}
             {xgame && missoes.length > 0 && mostrarPainel && (
-              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+              <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <p className="font-semibold text-nz-tinta">🎯 Missões da semana</p>
                   <button type="button" onClick={() => setMedalhasAbertas(!medalhasAbertas)} className="text-[11px] font-bold text-nz-tinta-fraca hover:text-nz-verde">
@@ -1289,7 +1289,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
 
             {/* ══ 🗳️ F3 — VOTAÇÃO MvM (20h–22h) + RANKING DAS VIRTUDES ══ */}
             {xgame && ehHoje && mostrarPainel && (
-              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+              <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde">
                     {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das 20h às 22h · Ranking das Virtudes
@@ -1365,7 +1365,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
 
             {/* ══ 🏆 F5 — RANKING H-TOKEN DA EQUIPE (filtros da planilha) ══ */}
             {xgame && mostrarPainel && (
-              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 space-y-2 text-xs">
+              <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button type="button" onClick={() => setRankingAberto(!rankingAberto)} className="font-semibold text-nz-tinta hover:text-nz-verde">
                     {rankingAberto ? '▾' : '▸'} 🏆 Ranking H-TOKEN da equipe
@@ -1456,7 +1456,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                       {doPeriodo.map((t) => {
                         const guia = guiaDaRotina(t.titulo);
                         return (
-                          <div key={t.id} className={`rounded-lg border p-2.5 ${t.feito ? 'border-nz-verde/30 bg-nz-verde-fundo/50' : 'border-nz-borda bg-white'}`}>
+                          <div key={t.id} className={`border-b border-nz-borda/35 py-3 ${t.feito ? 'opacity-70' : ''}`}>
                             <div className="flex items-center gap-2.5">
                               <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer" />
                               {/* ⚡ o XP voando no clique — feedback imediato do jogo */}
@@ -1658,7 +1658,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
           return (
             <div className="space-y-4">
-              <div className="rounded-lg bg-nz-cinza-fundo/60 border border-nz-borda p-3 text-xs text-nz-tinta-fraca">
+              <div className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
                 📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
               </div>
 
