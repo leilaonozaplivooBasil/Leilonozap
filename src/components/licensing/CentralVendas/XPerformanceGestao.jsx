@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, GraduationCap, Zap } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
 import {
-  fmtReais, nomeExibicao, pesoAutomatico, porqueDoPeso, categoriaDaTarefa,
+  fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
 } from '@/lib/xgame';
 import { distribuirDia, simularNovaTarefa, resumoDoCiclo, DIAS_FIXO, PESO_MIN, PESO_MAX } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
+import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
+import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, planejamentoDoDia, resumoPorMentalidade, habitoDe } from '@/lib/mentalidades';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -47,6 +49,16 @@ import { timeCorporativo } from '@/lib/timeCorporativo';
 //     MODAL dela — em vez de vinte cartões um embaixo do outro.
 //   • O PESO nasce preenchido sozinho assim que a tarefa é escrita (a regra
 //     do dono pelo título, com o motivo ao lado); mexer no peso trava o seu.
+//
+// 🎓 TERCEIRA RODADA (dono, mesmo dia): "planejamento com ensinamento".
+//   • Toda tarefa distribuída leva uma MENTALIDADE (executivo / diretor /
+//     CEO — as trilhas do X-Performance) e o Hábito que serve; o peso ganha o
+//     acréscimo da mentalidade e o `detalhe` recebe o ENSINAMENTO de como
+//     aquela mentalidade trabalha (src/lib/mentalidades). É o que a pessoa lê
+//     no Compromisso dela, embaixo do título.
+//   • O modal da pessoa abre a gamificação inteira: se o planejamento do dia
+//     foi gerado (a Rotina Perfeita) ou não — e um botão pra gerar daqui —,
+//     e o resumo do ciclo por mentalidade.
 
 const CATEGORIAS = [
   ['mentoria', 'Mentoria'], ['producao', 'Produção'], ['visao', 'Visão estratégica'], ['bonus', 'Bônus / estudo'],
@@ -92,7 +104,8 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
   const [dia, setDia] = useState(() => proximoDiaUtil(hoje));
-  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria' });
+  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria', mentalidade: '', habito: '' });
+  const [gerando, setGerando] = useState(false);
   // o menu suspenso do fixo: a pessoa escolhida abre o modal dela
   const [pessoaFixo, setPessoaFixo] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
@@ -136,7 +149,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     const ate = diasCiclo[diasCiclo.length - 1] > dia ? diasCiclo[diasCiclo.length - 1] : dia;
     const de = diasCiclo[0] < dia ? diasCiclo[0] : dia;
     const { data } = await supabase.from('metodo_tarefas')
-      .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem')
+      .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem,mentalidade,habito')
       .in('user_id', equipe.map((p) => p.id))
       .gte('data', de).lte('data', ate)
       .order('data').order('hora');
@@ -147,6 +160,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
 
   const participante = pessoa ? participanteDe(pessoa) : null;
+  // a mentalidade nasce da trilha da pessoa (pelo cargo) e pode ser trocada
+  const mentalidadeAtual = nova.mentalidade || mentalidadePadrao(participante?.cargo);
+  const mentalidadeObj = mentalidadeDe(mentalidadeAtual);
   const ehProducao = (t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; };
   const tarefasDoDia = useMemo(
     () => tarefasCiclo.filter((t) => t.user_id === pessoa && String(t.data).slice(0, 10) === dia),
@@ -155,14 +171,13 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
 
   // 🔮 A PRÉVIA: quanto vale a tarefa que está sendo digitada, e o que as
   // outras do dia perdem — antes de gravar qualquer coisa.
-  const pesoEfetivo = Number(nova.peso) || 3;
-  // 🪄 assim que a tarefa é escrita, o peso nasce sozinho (regra do dono pelo
-  // título); quem mexeu no peso mantém o seu até limpar o campo
-  const mudarTitulo = (titulo) => setNova((n) => ({
-    ...n, titulo,
-    peso: n.pesoManual && titulo.trim() ? n.peso : pesoAutomatico(titulo),
-    pesoManual: titulo.trim() ? n.pesoManual : false,
-  }));
+  // 🪄 assim que a tarefa é escrita, o peso nasce sozinho: a regra do dono
+  // pelo título + o acréscimo da mentalidade; quem mexeu no peso mantém o
+  // seu até limpar o campo
+  const pesoSugerido = pesoComMentalidade(nova.titulo, mentalidadeAtual);
+  const pesoEfetivo = nova.pesoManual ? (Number(nova.peso) || 3) : pesoSugerido.peso;
+  const mudarTitulo = (titulo) => setNova((n) => ({ ...n, titulo, pesoManual: titulo.trim() ? n.pesoManual : false }));
+  const ensinamento = ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: nova.habito });
   const previa = useMemo(() => {
     if (!participante) return null;
     const base = participante;
@@ -183,6 +198,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       user_id: pessoa, data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
       feito: false, ordem: tarefasDoDia.length, categoria: nova.categoria, peso: pesoEfetivo,
       origem: 'xperf', criado_por_id: currentUser?.id || null,
+      // 🎓 a mentalidade, o Hábito e o ensinamento que a pessoa vai ler
+      mentalidade: mentalidadeAtual, habito: nova.habito ? Number(nova.habito) : null,
+      detalhe: ensinamento || null,
     };
     const { error } = await supabase.from('metodo_tarefas').insert(linha);
     setSalvando(false);
@@ -193,8 +211,28 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — as outras do dia foram recalculadas`
         : `Tarefa distribuída pra ${nomeDe(pessoa)}`,
     );
-    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria });
+    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria, mentalidade: nova.mentalidade, habito: '' });
     carregarTarefas();
+  };
+
+  // ⚡ gerar o planejamento do dia da pessoa daqui — a MESMA conta do
+  // Compromisso e do admin: a rotina dela (metodo_perfil) ou a Rotina do
+  // Método, com peso automático e categoria deduzida
+  const gerarPlanejamento = async (userId, diaISO) => {
+    setGerando(true);
+    try {
+      const { data: perfil } = await supabase.from('metodo_perfil').select('rotina').eq('user_id', userId).maybeSingle();
+      const rotina = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
+      const linhas = gerarTarefasDaRotina(rotina, userId, diaISO).map((l) => ({
+        ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
+      }));
+      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      if (error) throw error;
+      toast.success(`Planejamento de ${fmtDia(diaISO)} gerado pra ${nomeDe(userId)}: ${linhas.length} tarefas da Rotina Perfeita`);
+      carregarTarefas();
+    } catch {
+      toast.error('Não gerou o planejamento — tenta de novo');
+    } finally { setGerando(false); }
   };
 
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
@@ -286,10 +324,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   data-teste="titulo"
                 />
               </label>
-              <label className="text-[10px] text-white/45 uppercase tracking-wider" title={nova.pesoManual ? 'peso escolhido por você' : `gerado pelo título: ${porqueDoPeso(nova.titulo)}`}>
+              <label className="text-[10px] text-white/45 uppercase tracking-wider" title={nova.pesoManual ? 'peso escolhido por você' : `gerado pelo título e pela mentalidade: ${pesoSugerido.porque}`}>
                 peso {nova.pesoManual
-                  ? <button type="button" onClick={() => setNova((n) => ({ ...n, peso: pesoAutomatico(n.titulo), pesoManual: false }))} className="normal-case text-nz-verde hover:underline" data-teste="peso-auto">(voltar ao automático)</button>
-                  : <span className="normal-case text-white/30" data-teste="peso-motivo">{nova.titulo.trim() ? `· ${porqueDoPeso(nova.titulo)}` : '(automático)'}</span>}
+                  ? <button type="button" onClick={() => setNova((n) => ({ ...n, pesoManual: false }))} className="normal-case text-nz-verde hover:underline" data-teste="peso-auto">(voltar ao automático)</button>
+                  : <span className="normal-case text-white/30" data-teste="peso-motivo">{nova.titulo.trim() ? `· ${pesoSugerido.porque}` : '(automático)'}</span>}
                 <select value={pesoEfetivo} onChange={(e) => setNova((n) => ({ ...n, peso: Number(e.target.value), pesoManual: true }))} className={`mt-1 block ${campo}`} data-teste="peso">
                   {Array.from({ length: PESO_MAX - PESO_MIN + 1 }, (_, i) => PESO_MIN + i).map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
@@ -300,6 +338,27 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   {CATEGORIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
                 </select>
               </label>
+            </div>
+
+            {/* 🎓 a mentalidade e o Hábito — o ensinamento que vai junto */}
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[auto_auto_1fr] gap-2 items-start">
+              <label className="text-[10px] text-white/45 uppercase tracking-wider">
+                mentalidade
+                <select value={mentalidadeAtual} onChange={(e) => setNova((n) => ({ ...n, mentalidade: e.target.value, habito: '' }))} className={`mt-1 block ${campo}`} data-teste="mentalidade">
+                  {MENTALIDADES.map((m) => <option key={m.id} value={m.id}>{m.nome}{m.acrescimo ? ` (+${m.acrescimo} no peso)` : ''}</option>)}
+                </select>
+              </label>
+              <label className="text-[10px] text-white/45 uppercase tracking-wider">
+                hábito
+                <select value={nova.habito} onChange={(e) => setNova((n) => ({ ...n, habito: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="habito">
+                  <option value="">—</option>
+                  {(mentalidadeObj?.foco || []).map((n) => { const h = habitoDe(n); return <option key={n} value={n}>{n} · {h?.completo || ''}</option>; })}
+                </select>
+              </label>
+              <div className="rounded-lg border border-white/10 px-2.5 py-2 text-[11px] text-white/60 whitespace-pre-line sm:mt-4" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="ensinamento">
+                <span className="inline-flex items-center gap-1 text-white/40 text-[10px] uppercase tracking-wider"><GraduationCap className="w-3 h-3" /> o que a pessoa vai ler embaixo da tarefa</span>
+                {'\n'}{ensinamento}
+              </div>
             </div>
 
             {/* 🔮 a prévia */}
@@ -362,6 +421,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   <li key={t.id} className="flex items-center gap-2 rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.02)' }} data-origem={t.origem || ''}>
                     <span className="text-white/40 tabular-nums w-10 shrink-0">{t.hora ? String(t.hora).slice(0, 5) : '—'}</span>
                     <span className={`truncate ${t.feito ? 'line-through text-white/40' : 'text-white/85'}`}>{t.titulo}</span>
+                    {t.mentalidade && <span className="shrink-0 rounded-full border border-white/15 px-1.5 text-[9px] uppercase tracking-wider text-white/50" title={mentalidadeDe(t.mentalidade)?.nome}>{t.mentalidade}{t.habito ? ` · H${t.habito}` : ''}</span>}
                     <span className="text-white/30 shrink-0">peso {t.peso ?? 3}</span>
                     <span className="ml-auto shrink-0 font-bold tabular-nums text-white/80">{ehProducao(t) ? fmtReais(valoresDoDia[t.id] || 0) : 'bônus'}</span>
                     {t.origem === 'xperf' && (
@@ -469,6 +529,51 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   ? <span className="text-amber-300/80"> · faltam {reguaHoje.faltam} pro mínimo de {reguaHoje.minimoDia} ({fmtReais(reguaHoje.emAberto)} em aberto)</span>
                   : ' · mínimo batido'}
               </p>
+
+              {/* 🗓️ o planejamento do dia: gerou ou não gerou? */}
+              {(() => {
+                const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) === hoje);
+                const plano = planejamentoDoDia(doDia);
+                return (
+                  <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] ${plano.gerado ? 'border-white/10 text-white/60' : 'border-red-400/40 text-red-200'}`} style={{ background: plano.gerado ? 'rgba(255,255,255,0.03)' : 'rgba(248,113,113,0.08)' }} data-teste="planejamento-dia" data-gerado={plano.gerado ? 'sim' : 'nao'}>
+                    {plano.gerado ? (
+                      <p><span className="font-bold text-white">Planejamento de hoje gerado</span> · {plano.daRotina} da rotina{plano.distribuidas ? ` + ${plano.distribuidas} distribuída${plano.distribuidas > 1 ? 's' : ''}` : ''} · {plano.feitas} feita{plano.feitas === 1 ? '' : 's'}</p>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="flex-1 min-w-[160px]"><span className="font-bold">⚠️ Não gerou o planejamento de hoje</span>{plano.distribuidas ? ` · só ${plano.distribuidas} tarefa${plano.distribuidas > 1 ? 's' : ''} distribuída${plano.distribuidas > 1 ? 's' : ''}` : ' · dia vazio'}</p>
+                        <Button size="sm" onClick={() => gerarPlanejamento(pessoaFixo, hoje)} disabled={gerando} className="bg-amber-400 hover:bg-amber-300 text-amber-950 h-7 text-[11px] font-extrabold" data-teste="gerar-planejamento">
+                          {gerando ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Zap className="w-3 h-3 mr-1" />} gerar a Rotina Perfeita dele
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 🎓 o ciclo por mentalidade */}
+              {(() => {
+                const doCiclo = tarefasCiclo.filter((t) => t.user_id === pessoaFixo);
+                const porDia = {};
+                for (const t of doCiclo) (porDia[String(t.data).slice(0, 10)] ||= []).push(t);
+                const valores = {};
+                for (const lista of Object.values(porDia)) Object.assign(valores, valoresDasTarefas(lista, base));
+                const r = resumoPorMentalidade(doCiclo, valores);
+                return (
+                  <div className="mt-3" data-teste="por-mentalidade">
+                    <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">O ciclo por mentalidade</p>
+                    <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-1">
+                      {[...MENTALIDADES.map((m) => [m.id, m.nome.replace('Mentalidade do ', '')]), ['rotina', 'Rotina']].map(([id, rotulo]) => (
+                        <div key={id} className="rounded-md border border-white/10 px-2 py-1" data-mentalidade={id}>
+                          <p className="text-[9px] text-white/35 uppercase tracking-wider">{rotulo}</p>
+                          <p className="text-[12px] font-bold text-white tabular-nums">{r[id].n} <span className="text-white/40 font-medium">tarefa{r[id].n === 1 ? '' : 's'}</span></p>
+                          <p className="text-[10px] text-white/50 tabular-nums">peso {r[id].peso} · {fmtReais(r[id].valor)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-[10px] text-white/35">{mentalidadeDe(mentalidadePadrao(base.cargo))?.nome}: a trilha dela hoje — {mentalidadeDe(mentalidadePadrao(base.cargo))?.lema.toLowerCase()}.</p>
+                  </div>
+                );
+              })()}
 
               {proximos.length > 0 && (
                 <div className="mt-3">
