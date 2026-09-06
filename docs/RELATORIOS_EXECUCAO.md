@@ -3601,3 +3601,91 @@ já existiam desde a DIR-72; isto é regra, não esquema.
 **Os números são régua do dono, não lei da natureza:** 100 pontos, 8 de 12
 semanas, Hábito 8. Cada um numa constante nomeada no topo do arquivo, pra ele
 trocar sem procurar.
+
+---
+
+## REL-75 — Ferramentas no Compromisso: o dia virou painel (preview)
+
+**Diretiva:** DIR-75. **Data:** 06/09/2026. **Escopo:** preview, tudo dentro do
+Hábito 2. Nada do X-Performance/Mentalidades foi tocado.
+
+**O que mudou pra quem usa:**
+
+1. **Cada tarefa do dia leva pra ferramenta dela.** "Reunião 1" → 🔗 Agenda e
+   contatos (Hábito 4). "Contratos + follow-ups" → 🔗 Esteira (Hábito 6).
+   "Treinamento diário" → Hábito 8. "Acordar — gratidão e foco no sonho" →
+   Quadro dos Sonhos. "Organização do negócio" e "Fechamento do dia" → 🗂️ o
+   nosso quadro. **Almoço, leitura, story e treino não ganham botão** — link
+   errado é pior que link nenhum. Tarefa escrita à mão pela pessoa também acha
+   a ferramenta ("ligar pro Renan" → Hábito 4).
+2. **O nosso quadro**, terceiro lado da faixa Jornada · Lista · **Quadro**.
+   Colunas por horizonte — Hoje · Esta semana · Depois · Feito — arrastando.
+   Escrever é uma linha, sem modal. Cada cartão leva pra ferramenta do Hábito
+   dele e **vira tarefa do dia em um clique** ("pro meu dia"), que é a frase do
+   dono. Vira **uma vez**: o cartão guarda que já entrou, e o segundo clique não
+   duplica — tarefa repetida no X-Pay dilui o dinheiro de todas.
+3. **Colar o print na comprovação** — Ctrl+V no computador, "Colar" do dedo no
+   celular. Reuso da lib do Quadro dos Sonhos. O bloqueio de colar TEXTO no
+   resumo do aprendizado continua intacto: só imagem entra por aqui.
+4. **O dinheiro fecha a conta.**
+
+**Sobre o dinheiro — duas correções minhas, e uma delas é ceder.**
+
+Primeira: eu reportei que a fórmula pagava R$ 9.988 num fixo de R$ 7.000. A
+fórmula estava errada mesmo, mas **hoje ela não aparece**: o gerador do dia
+nunca aplicava o peso automático, toda tarefa nascia peso 3, e com peso
+uniforme a fórmula velha fecha certinho. É por isso que no print do dono
+**toda** linha mostra R$ 2,95.
+
+Segunda: enquanto eu corrigia o rateio aqui, **a sessão do X-Performance
+corrigiu o mesmo defeito** — e a versão dela cobre mais: tem o "dia completo é
+a Rotina Perfeita, peso 75" e o "mínimo de tarefas por dia" que o dono pediu.
+No merge, **fiquei com a dela e joguei a minha fora** (`distribuicaoFixo.js`).
+Dois rateios pra mesma folha é o mesmo que nenhum.
+
+O que ficou meu, e que a régua dela PRECISA: **o gerador do dia agora aplica o
+peso automático** (`pesoAutomatico`, que existia desde o X-GAME e nunca era
+chamado). A régua do dia completo (75) é calculada com esse mesmo
+`pesoAutomatico` — então, sem esta ligação, um dia gerado somava 54 e pagava
+**72% do fixo** sem ninguém avisar. Testado: dia gerado com a régua soma
+exatamente 75 e paga o dia inteiro; sem ela, fica devendo.
+
+**Dois erros meus nesta rodada, e como a prova pegou cada um:**
+- O quadro criava a tarefa do dia com `supabase.from('metodo_tarefas').insert`,
+  furando o caminho de escrita que o app inteiro usa (`plataforma.entities.
+  MetodoTarefa`, via entityWrite). A prova acusou "criadas: 0". Corrigido: a
+  tarefa é criada pela entidade; só o quadro (tabela nova, sem entidade) fala
+  com o cliente direto.
+- A asserção do dinheiro somava os R$ da **página inteira** (placar, cabeçalho)
+  e acusou 22 valores pra 20 tarefas. Agora soma uma vez por linha de tarefa.
+  E a primeira mutação da fórmula **não quebrou a prova** — porque o dia da
+  prova tinha peso 3 em tudo, igual à produção. Foi isso que revelou o defeito
+  do gerador.
+
+**Prova em navegador (REL-34.1): 227/227, zero erro de página/console.**
+Mutada: regra de ferramenta larga demais ("Almoço" ganhando link) → reprova. A
+asserção do dinheiro soma o dia por linha de tarefa e cobra a verba do dia.
+
+**Suíte:** 1130/1130. **Build:** limpo. **Migração:** uma tabela nova,
+`metodo_quadro` (pessoal, `user_id`) — de propósito separada de
+`xperf_entregaveis`, que é o quadro compartilhado da diretoria.
+
+**Achado no caminho, pra outra sessão saber:** `pesoAutomatico` existe, é bom,
+e até hoje ninguém o chamava ao gerar o dia. Se o admin dela for definir peso
+na mão, o campo já está lá e o rateio já respeita.
+
+**Três rebases durante a entrega, e o que cada um ensinou:**
+
+1. A migração colidiu na VERSÃO duas vezes seguidas (`20260906160000` e depois
+   `20260906200000`, as duas já usadas pela outra sessão). O portão da DIR-71
+   barrou as duas antes do push. Ficou `20260906210000`.
+2. O #198 passou o fixo de 22 pra **24 dias de operação**. Minha prova em
+   navegador tinha 22 cravado na mão e ia acusar defeito no produto por um
+   defeito da prova. Agora ela importa `DIAS_FIXO` do próprio código.
+3. O #198 também trouxe `classificarAcao` — um motor de título→Hábito pro
+   catálogo do admin. **Não é duplicata do meu `ferramentaDe`**: o deles
+   classifica a ação e GRAVA o `habito` na tarefa; o meu lê o `habito` gravado
+   primeiro e só cai no título quando não há — e ainda conhece um alvo que não
+   é Hábito (o quadro). A gestão escreve, a linha obedece. Deixei os dois e
+   registrei aqui pra ninguém "unificar" sem saber por que são dois.
+

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Map, ListChecks, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
+import { Map, ListChecks, LayoutGrid, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
 // 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista, o placar completo e,
@@ -27,9 +27,12 @@ const GRADIENTE_TC = 'linear-gradient(135deg, var(--topcollege-azul, #3B6FF6), v
 
 export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null }) {
   const [testeAberto, setTesteAberto] = useState(false);
+  // DIR-75 — o terceiro lado: o nosso quadro. Entra aqui e não num botão solto
+  // porque é uma VISÃO do mesmo dia, igual às outras duas.
   const opcoes = [
     { id: 'jornada', rotulo: 'Jornada', Icone: Map },
     { id: 'lista', rotulo: 'Lista', Icone: ListChecks },
+    { id: 'quadro', rotulo: 'Quadro', Icone: LayoutGrid },
   ];
 
   return (

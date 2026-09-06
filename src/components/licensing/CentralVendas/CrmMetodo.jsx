@@ -28,6 +28,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
+  pesoAutomatico,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
@@ -35,6 +36,8 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
+import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
+import QuadroCompromisso from './QuadroCompromisso';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import FaixaVisao from './FaixaVisao';
@@ -411,7 +414,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const gerarDia = async () => {
     setSalvando(true);
     try {
-      const linhas = gerarTarefasDaRotina(rotina, uid, dia);
+      const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
       for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
       toast.success(`Dia gerado com ${linhas.length} tarefas da sua rotina!`);
       carregarTarefas();
@@ -427,7 +430,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
     setSalvando(true);
     try {
       for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
-      const linhas = gerarTarefasDaRotina(rotina, uid, dia);
+      const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
       for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
       toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
       setConfirmaRegerar(false);
@@ -1139,7 +1142,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
                 A faixa inteira (seletor, placar e o relógio de teste temporário)
                 mora em FaixaVisao — bonita, funcional e com prova em navegador. */}
-            {tarefas.length > 0 && (
+            {(tarefas.length > 0 || visao === 'quadro') && (
               <FaixaVisao
                 visao={visao}
                 onVisao={setVisao}
@@ -1437,13 +1440,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
             )}
 
 
-            {tarefas.length === 0 ? (
+            {/* 🗂️ DIR-75 — o nosso quadro é uma VISÃO do dia, e vem antes do
+                "dia vazio": a mesa da organização existe mesmo num dia sem
+                Master Task gerada. */}
+            {visao === 'quadro' ? (
+              <QuadroCompromisso
+                currentUser={currentUser}
+                hojeISO={dia}
+                onIr={onIr}
+                onTarefaCriada={(t) => setTarefas((prev) => [...prev, t])}
+              />
+            ) : tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
                 <p className="text-sm text-nz-tinta-fraca">Dia sem Master Task ainda. "O compromisso é uma decisão diária."</p>
                 <Button onClick={gerarDia} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
                   ⚡ {salvando ? 'Gerando...' : 'Gerar Minha Rotina Perfeita (Rotina do Método)'}
                 </Button>
                 <p className="text-[11px] text-nz-tinta-fraca">Cria as {rotina.length} tarefas da Rotina Perfeita — das 5h ao descanso, com o guia de cada horário.</p>
+                <button type="button" onClick={() => setVisao('quadro')} className="text-[11px] font-semibold text-nz-verde hover:text-nz-verde-claro">🗂️ ou abrir o nosso quadro →</button>
               </div>
             ) : visao === 'jornada' ? (
               /* 🗺️ F11 — a JORNADA DO DIA: o caminho, não a lista */
@@ -1527,6 +1541,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                   <span className={`shrink-0 text-[10px] font-bold ${COR_ESTADO[est.id]}`} title={est.id === 'PERDIDO' ? 'ISSO IMPACTA NO SEU RESULTADO FINANCEIRO' : undefined}>
                                     {SELO_ESTADO[est.id]}{perda}
                                   </span>
+                                );
+                              })()}
+                              {/* 🔗 DIR-75 — a tarefa leva pra ferramenta dela. Tarefa
+                                  sem ferramenta NÃO ganha botão: link errado é pior
+                                  que link nenhum. */}
+                              {(() => {
+                                const f = ferramentaDe(t);
+                                if (!f || t.feito) return null;
+                                const abrir = () => {
+                                  if (f.chave === 'quadro') { setVisao('quadro'); return; }
+                                  onIr?.(f.secao, f.sub);
+                                };
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={abrir}
+                                    title={`Abrir ${f.rotulo} (Hábito ${f.habito})`}
+                                    className="shrink-0 text-[11px] font-semibold text-nz-verde hover:text-nz-verde-claro"
+                                  >{f.chave === 'quadro' ? '🗂️' : '🔗'} {f.rotulo} →</button>
                                 );
                               })()}
                               {guia && !t.feito && (
