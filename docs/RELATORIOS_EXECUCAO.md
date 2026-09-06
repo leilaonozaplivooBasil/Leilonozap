@@ -3689,3 +3689,69 @@ na mão, o campo já está lá e o rateio já respeita.
    é Hábito (o quadro). A gestão escreve, a linha obedece. Deixei os dois e
    registrei aqui pra ninguém "unificar" sem saber por que são dois.
 
+
+---
+
+## REL-76 — O nosso quadro: listas, checklist, foto, feito automático, ida e volta (preview)
+
+**Diretiva:** DIR-76. **Data:** 06/09/2026. **Escopo:** preview, Hábito 2.
+Decisão de fundo delegada pelo dono ("o que você decidir está decidido").
+
+**O que mudou pra quem usa:**
+
+- **As colunas são as suas listas** — Trabalho · Academia · Pessoal, nomeadas
+  por você, com **recolher** em barra vertical (o print do MeisterTask). Os
+  horizontes da DIR-75 saíram: **o tempo é o Compromisso**, não coluna.
+- **Card = título + checklist + prazo + foto + Hábito.** Edita clicando em
+  cima. "1/2" na cara do card, com barra de progresso. A foto é a de perfil
+  que a pessoa já tem; sem foto, as iniciais.
+- **Feito é automático.** Fechou o último item do checklist → Feito sozinho,
+  com carimbo. Sai da mesa depois de 7 dias. Ninguém move feito pra lugar
+  nenhum — as colunas "CONCLUÍDAS" feitas à mão deixam de existir.
+- **Atrasado sobe pro topo** da lista e ganha "remarcar pra hoje".
+- **Sincronizado nos dois sentidos:** "pro meu dia" (uma vez) · **a volta** —
+  marcou no Compromisso a tarefa que veio de um card, o card vai pro Feito
+  sozinho · **"guardar"** — tarefa que não sai hoje vira card numa lista em
+  vez de virar PERDIDO pra sempre, e some do dia (o X-Pay dos que ficaram se
+  reparte entre eles: ela foi adiada, não perdida).
+- **Modelo pronto** no primeiro uso: três listas e um card de exemplo com
+  checklist. Quadro vazio não ensina ninguém a usar quadro.
+- Card órfão da DIR-75 (coluna `hoje`, sem lista) cai na primeira lista
+  sozinho — nenhuma linha se perde na troca.
+
+**Provado, não presumido.** 20 testes na lib, verificados por mutação:
+fechar o último item sem levar pro Feito → **2 quebram**; cartão virando
+tarefa mais de uma vez → **1 quebra**; a volta sem devolver → **1 quebra**.
+E uma mutação **não quebrou nada**: tirei a regra "atrasado primeiro" da
+ordenação e todos passaram — porque vencido é prazo < hoje, e ordenar por
+prazo já põe ele na frente. **A regra era redundante e saiu.** Código que não
+faz nada é código que um dia alguém acha que faz.
+
+**Prova em navegador (REL-34.1): 239/239, zero erro de página/console.** As
+18 asserções da DIR-76 cobrem: listas em vez de horizontes, órfão realocado,
+checklist "1/2" e Hábito no card, foto na tela, feito automático ao fechar o
+último item (o card **sai da lista** e a seção Feito aparece, com carimbo
+gravado), recolher vira barra vertical medida (<60px de largura, >150px de
+altura), editar título clicando em cima grava, "pro meu dia" uma vez, **a volta
+achada pela tarefa** (PATCH por `virou_tarefa_id`, não por id de card), e
+"guardar" tirando a tarefa do dia e pondo o card na primeira lista.
+
+**Duas escolhas de fixture, ditas como são:** a tarefa que nasce do card recebe
+`validacao: 'nenhuma'` **só no mock** — a regra da casa é "toda tarefa comprova
+por padrão", e marcar no dia abriria o modal de prova em vez de marcar; a
+asserção da volta é sobre "marcou → o card acompanha", não sobre prova de
+trabalho, e o produto não foi tocado pra isso passar. E a contagem do
+"regerar" passou a medir o **delta** de apagadas (o "guardar" apaga uma antes
+dela) — número acumulado numa prova envelhece.
+
+**Não fiz a mutação em navegador do feito automático** nesta rodada: a mutação
+na lib já mostrou que a regra quebra 2 testes, e a asserção da tela observa o
+efeito direto (o card some da lista e a seção Feito aparece). Registro que é
+uma cobertura por dois lados, não por três.
+
+**Suíte:** 1164/1164. **Build:** limpo. **Migração** aditiva (tabela de listas
++ colunas no card; o CHECK antigo aceita os valores velhos). Nada do
+X-Performance foi tocado. A tarefa do dia continua nascendo pela entidade.
+
+**O que NÃO trouxe do MeisterTask, de propósito:** automações, impressão,
+limite por seção, ícone e cor de seção, comentários, anexos.

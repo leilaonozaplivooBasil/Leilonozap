@@ -12,6 +12,64 @@
 
 ---
 
+## DIR-76 — O nosso quadro, versão "melhor que o MeisterTask e mais simples"
+
+**Emitida por:** dono (06/09/2026), com prints do quadro dele no MeisterTask:
+*"faz um estudo foda e traz simplificado pra gente, com algumas coisas dali —
+recolher, botar foto pra pessoa dar sentido de pertencimento, editar os cards
+ali — e tudo sincronizado e conectado com a agenda diária, botando dali e
+levando pro Compromisso, do Compromisso pra ali, fazendo lista de tarefas. Pode
+até botar um modelo pronto pra ele seguir. Quero melhor que o MeisterTask, mas
+mais simplificado, mais eficiente."* E, sobre a decisão de fundo: *"o que você
+decidir está decidido."*
+
+**Data:** 06/09/2026.
+
+**O estudo (em cima dos prints dele, porque o MeisterTask exige login):**
+
+1. Ele usa colunas como CONTEXTOS (Academia · Tarefas dia · Sant'Anna ·
+   Segunda · Terça…), não como etapas. A ferramenta obriga um eixo por coluna
+   e ele misturou contexto com tempo.
+2. Criou colunas "CONCLUÍDAS" na mão ao lado de cada contexto — a ferramenta
+   deixa o feito acumular e ele teve que inventar onde esconder.
+3. Nas colunas de dia da semana ele pré-numera vagas ("1 -", "2 -"… "11 -").
+   É um MODELO PRONTO fabricado à mão: "até onze tarefas por dia, em ordem".
+4. O card que mais trabalha é o de checklist: "TAREFA DO DIA 12.03.26 — 1ª…
+   5ª — 2/5". Um card que é o dia inteiro, com sub-itens marcáveis.
+5. "Não atribuído: 66". A foto na pessoa, lá, é atrito — ninguém atribui.
+6. Muito "Atrasado" com data de março. A ferramenta pinta de laranja e para.
+
+**As decisões (tomadas, por delegação dele):**
+
+- **O tempo não é coluna — é o Compromisso.** As colunas SEGUNDA/TERÇA/QUARTA
+  com vagas numeradas deixam de existir: o dia já é o Hábito 2. Card vai pro
+  dia pelo "pro meu dia". Isso apaga metade do quadro dele sem perder nada. Os
+  horizontes da DIR-75 (Hoje/Semana/Depois) saem pelo mesmo motivo.
+- **Colunas são LISTAS que a pessoa nomeia, e RECOLHEM** em barra vertical
+  (o print 5 dele). Modelo pronto no primeiro uso: Trabalho · Academia ·
+  Pessoal, com um card de exemplo com checklist.
+- **Card = título + checklist + prazo + foto do dono + Hábito.** Edita clicando
+  em cima. "2/5" na cara do card. A foto é a de perfil que a pessoa já tem
+  (`getFotoPerfil`); sem foto, as iniciais.
+- **Feito é AUTOMÁTICO.** Marcou o card ou fechou o último item do checklist →
+  Feito, sozinho, com carimbo de quando. Some da mesa depois de 7 dias.
+- **Atrasado com saída.** Card vencido sobe pro topo da lista dele; um clique
+  remarca ou manda pro dia. Pintar de laranja e parar não ajuda ninguém.
+- **Sincronizado nos DOIS sentidos:** quadro→dia ("pro meu dia", existe) e
+  agora a VOLTA — marcou feita no Compromisso a tarefa que veio de um card, o
+  card vai pro Feito sozinho; e tarefa do dia que não saiu ganha "guardar no
+  quadro" em vez de virar PERDIDO pra sempre.
+- **O que NÃO entra, de propósito:** automações, impressão, limite por seção,
+  ícone e cor de seção, comentários, anexos. Cada um é um menu a mais pra
+  ninguém usar.
+
+**Regras de fronteira:** migração aditiva (tabela de listas + colunas novas no
+quadro; as colunas `hoje/semana/depois` viram "aberto" sem perder linha). Nada
+do X-Performance é tocado. A tarefa do dia continua sendo escrita pela
+entidade `MetodoTarefa`, nunca pelo cliente direto.
+
+---
+
 ## DIR-75 — Ferramentas no Compromisso: o dia deixa de ser lista e vira painel
 
 **Emitida por:** dono (06/09/2026): *"eu não quero que crie ali, eu quero que
