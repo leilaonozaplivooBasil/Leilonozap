@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import {
   fixoDoParticipante, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
 } from '@/lib/xgame';
 import { distribuirDia, simularNovaTarefa, resumoDoCiclo, DIAS_FIXO, PESO_MIN, PESO_MAX } from '@/lib/distribuicaoFixo';
+import { timeCorporativo } from '@/lib/timeCorporativo';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -33,13 +34,23 @@ import { distribuirDia, simularNovaTarefa, resumoDoCiclo, DIAS_FIXO, PESO_MIN, P
 //   3. 🛠️ GESTÃO DO X-GAME — o admin de sempre (participantes, verbas, ciclo,
 //      conferência dupla, comprovações), embutido e dobrado.
 //
-// O que NÃO mudou: quem participa, as verbas e o ciclo continuam sendo
-// decididos no admin de sempre; esta tela não duplica nada disso.
+// O que NÃO mudou: as verbas e o ciclo continuam sendo decididos no admin de
+// sempre; esta tela não duplica nada disso.
+//
+// 🔁 SEGUNDA RODADA (dono, mesmo dia, olhando a tela no ar): "bem pontual,
+// bem devagar":
+//   • QUEM APARECE vem do PAINEL DE CONTROLE — o time corporativo, do Sócio
+//     Executivo ao Embaixador (src/lib/timeCorporativo), com a função de lá.
+//     Não é mais a lista de participantes do jogo: quem ainda não tem fixo
+//     definido entra com a verba padrão até você definir.
+//   • O FIXO DE CADA UM virou um menu suspenso: escolhe a pessoa e abre o
+//     MODAL dela — em vez de vinte cartões um embaixo do outro.
+//   • O PESO nasce preenchido sozinho assim que a tarefa é escrita (a regra
+//     do dono pelo título, com o motivo ao lado); mexer no peso trava o seu.
 
 const CATEGORIAS = [
   ['mentoria', 'Mentoria'], ['producao', 'Produção'], ['visao', 'Visão estratégica'], ['bonus', 'Bônus / estudo'],
 ];
-const CARGO = { trainee: 'Trainee', executivo: 'Executivo', diretor: 'Diretor', ceo: 'CEO' };
 
 /** Próximo dia útil a partir de amanhã (o dono distribui "pra amanhã"). */
 export function proximoDiaUtil(hojeISO) {
@@ -81,12 +92,26 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
   const [dia, setDia] = useState(() => proximoDiaUtil(hoje));
-  const [nova, setNova] = useState({ titulo: '', hora: '', peso: '', categoria: 'mentoria' });
+  const [nova, setNova] = useState({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: 'mentoria' });
+  // o menu suspenso do fixo: a pessoa escolhida abre o modal dela
+  const [pessoaFixo, setPessoaFixo] = useState('');
+  const [modalAberto, setModalAberto] = useState(false);
 
   const nomeDe = useCallback((id) => {
     const u = usuarios.find((x) => x.id === id);
     return u ? nomeExibicao(u) : (id ? String(id).slice(0, 6) : '—');
   }, [usuarios]);
+
+  // 🏛️ o time corporativo, do painel de controle — nome e função de lá
+  const equipe = useMemo(() => timeCorporativo(usuarios, nomeExibicao), [usuarios]);
+  const funcaoDe = (id) => equipe.find((p) => p.id === id)?.funcao || '—';
+  // o cadastro do jogo da pessoa (fixo, mínimo) — ou o padrão, até ser definido
+  const participanteDe = useCallback((id) => {
+    const p = participantes.find((x) => x.user_id === id);
+    if (p) return { ...PARTICIPANTE_PADRAO, ...p, temFixo: p.fixo_mes !== null && p.fixo_mes !== undefined };
+    const membro = equipe.find((x) => x.id === id);
+    return { ...PARTICIPANTE_PADRAO, user_id: id, cargo: membro?.cargo || 'executivo', temFixo: false, semCadastro: true };
+  }, [participantes, equipe]);
 
   const inicio = useMemo(() => inicioCicloOficial(cicloConfig, new Date(`${hoje}T12:00:00`)), [cicloConfig, hoje]);
   const diasCiclo = useMemo(() => diasDoCicloISO(inicio), [inicio]);
@@ -107,21 +132,21 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // as tarefas do ciclo de todo mundo — é daqui que sai "a distribuição de
   // todas as tarefas" e a prévia do dia escolhido
   const carregarTarefas = useCallback(async () => {
-    if (!participantes.length || !diasCiclo.length) { setTarefasCiclo([]); return; }
+    if (!equipe.length || !diasCiclo.length) { setTarefasCiclo([]); return; }
     const ate = diasCiclo[diasCiclo.length - 1] > dia ? diasCiclo[diasCiclo.length - 1] : dia;
     const de = diasCiclo[0] < dia ? diasCiclo[0] : dia;
     const { data } = await supabase.from('metodo_tarefas')
       .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem')
-      .in('user_id', participantes.map((p) => p.user_id))
+      .in('user_id', equipe.map((p) => p.id))
       .gte('data', de).lte('data', ate)
       .order('data').order('hora');
     setTarefasCiclo(data || []);
-  }, [participantes, diasCiclo, dia]);
+  }, [equipe, diasCiclo, dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
 
-  useEffect(() => { if (!pessoa && participantes.length) setPessoa(participantes[0].user_id); }, [participantes, pessoa]);
+  useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
 
-  const participante = participantes.find((p) => p.user_id === pessoa) || null;
+  const participante = pessoa ? participanteDe(pessoa) : null;
   const ehProducao = (t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; };
   const tarefasDoDia = useMemo(
     () => tarefasCiclo.filter((t) => t.user_id === pessoa && String(t.data).slice(0, 10) === dia),
@@ -130,10 +155,17 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
 
   // 🔮 A PRÉVIA: quanto vale a tarefa que está sendo digitada, e o que as
   // outras do dia perdem — antes de gravar qualquer coisa.
-  const pesoEfetivo = nova.peso !== '' ? Number(nova.peso) : pesoAutomatico(nova.titulo);
+  const pesoEfetivo = Number(nova.peso) || 3;
+  // 🪄 assim que a tarefa é escrita, o peso nasce sozinho (regra do dono pelo
+  // título); quem mexeu no peso mantém o seu até limpar o campo
+  const mudarTitulo = (titulo) => setNova((n) => ({
+    ...n, titulo,
+    peso: n.pesoManual && titulo.trim() ? n.peso : pesoAutomatico(titulo),
+    pesoManual: titulo.trim() ? n.pesoManual : false,
+  }));
   const previa = useMemo(() => {
     if (!participante) return null;
-    const base = { ...PARTICIPANTE_PADRAO, ...participante };
+    const base = participante;
     const producao = tarefasDoDia.filter(ehProducao);
     const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: producao });
     const cat = nova.categoria;
@@ -161,7 +193,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — as outras do dia foram recalculadas`
         : `Tarefa distribuída pra ${nomeDe(pessoa)}`,
     );
-    setNova({ titulo: '', hora: '', peso: '', categoria: nova.categoria });
+    setNova({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria: nova.categoria });
     carregarTarefas();
   };
 
@@ -172,20 +204,30 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     if (error) { toast.error('Não apagou — recarregando'); carregarTarefas(); }
   };
 
+  // grava o fixo/mínimo; quem ainda não tinha cadastro no jogo ganha um
+  // (user_id é único na tabela — o upsert cria ou atualiza)
   const salvarFixo = async (p, patch) => {
-    const { error } = await supabase.from('xgame_participantes')
-      .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', p.id);
+    const linha = p.semCadastro
+      ? { user_id: p.user_id, cargo: p.cargo, ativo: true, ...patch, updated_at: new Date().toISOString() }
+      : { user_id: p.user_id, ...patch, updated_at: new Date().toISOString() };
+    const { data, error } = await supabase.from('xgame_participantes').upsert(linha, { onConflict: 'user_id' }).select();
     if (error) { toast.error('Não salvou'); return; }
-    setParticipantes((l) => l.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
+    const gravada = Array.isArray(data) ? data[0] : data;
+    setParticipantes((l) => {
+      const existe = l.some((x) => x.user_id === p.user_id);
+      return existe
+        ? l.map((x) => (x.user_id === p.user_id ? { ...x, ...patch } : x))
+        : [...l, { ...PARTICIPANTE_PADRAO, ...(gravada || linha), ...patch }];
+    });
     toast.success(`${nomeDe(p.user_id)}: fixo atualizado — o valor do dia já mudou`);
   };
 
   // 💰 o ciclo de cada pessoa
-  const resumoDe = (p) => {
-    const base = { ...PARTICIPANTE_PADRAO, ...p };
+  const resumoDe = (userId) => {
+    const base = participanteDe(userId);
     const porDia = {};
     for (const t of tarefasCiclo) {
-      if (t.user_id !== p.user_id || !ehProducao(t)) continue;
+      if (t.user_id !== userId || !ehProducao(t)) continue;
       const d = String(t.data).slice(0, 10);
       (porDia[d] ||= []).push(t);
     }
@@ -210,16 +252,16 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           Escolhe quem, o dia e a tarefa. Antes de gravar, a prévia diz quanto ela vale e o que as outras do dia perdem — a soma do dia nunca passa do fixo.
         </p>
 
-        {!participantes.length ? (
-          <p className="mt-3 text-[12px] text-amber-300/80">Ninguém no jogo ainda — cadastre os participantes na gestão do X-GAME, logo abaixo.</p>
+        {!equipe.length ? (
+          <p className="mt-3 text-[12px] text-amber-300/80">Ninguém do time corporativo no painel de controle ainda (do Sócio Executivo ao Embaixador).</p>
         ) : (
           <>
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <label className="text-[10px] text-white/45 uppercase tracking-wider">
                 responsável
                 <select value={pessoa} onChange={(e) => setPessoa(e.target.value)} className={`mt-1 block w-full ${campo}`} data-teste="pessoa">
-                  {participantes.map((p) => (
-                    <option key={p.user_id} value={p.user_id}>{nomeDe(p.user_id)} · {CARGO[p.cargo] || p.cargo}</option>
+                  {equipe.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome} · {p.funcao}</option>
                   ))}
                 </select>
               </label>
@@ -237,17 +279,18 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                 qual é a tarefa
                 <Input
                   value={nova.titulo}
-                  onChange={(e) => setNova((n) => ({ ...n, titulo: e.target.value }))}
+                  onChange={(e) => mudarTitulo(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') distribuir(); }}
                   placeholder='ex.: "Pegar as pautas da reunião de amanhã"'
                   className="mt-1 h-9 border-white/15 bg-white/[0.06] text-white placeholder:text-white/30"
                   data-teste="titulo"
                 />
               </label>
-              <label className="text-[10px] text-white/45 uppercase tracking-wider" title={nova.peso === '' ? `sugestão pelo título: ${porqueDoPeso(nova.titulo)}` : 'peso escolhido por você'}>
-                peso {nova.peso === '' && <span className="normal-case text-white/30">(auto {pesoEfetivo})</span>}
-                <select value={nova.peso} onChange={(e) => setNova((n) => ({ ...n, peso: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="peso">
-                  <option value="">automático</option>
+              <label className="text-[10px] text-white/45 uppercase tracking-wider" title={nova.pesoManual ? 'peso escolhido por você' : `gerado pelo título: ${porqueDoPeso(nova.titulo)}`}>
+                peso {nova.pesoManual
+                  ? <button type="button" onClick={() => setNova((n) => ({ ...n, peso: pesoAutomatico(n.titulo), pesoManual: false }))} className="normal-case text-nz-verde hover:underline" data-teste="peso-auto">(voltar ao automático)</button>
+                  : <span className="normal-case text-white/30" data-teste="peso-motivo">{nova.titulo.trim() ? `· ${porqueDoPeso(nova.titulo)}` : '(automático)'}</span>}
+                <select value={pesoEfetivo} onChange={(e) => setNova((n) => ({ ...n, peso: Number(e.target.value), pesoManual: true }))} className={`mt-1 block ${campo}`} data-teste="peso">
                   {Array.from({ length: PESO_MAX - PESO_MIN + 1 }, (_, i) => PESO_MIN + i).map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </label>
@@ -266,6 +309,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   {fmtDia(dia)} de <span className="text-white font-bold">{nomeDe(pessoa)}</span> vale{' '}
                   <span className="text-white font-bold tabular-nums" data-teste="valor-dia">{fmtReais(previa.dist.valorDia)}</span>
                   <span className="text-white/35"> (fixo {fmtReais(previa.fixo)} ÷ {DIAS_FIXO} dias úteis)</span>
+                  {!participante?.temFixo && <span className="text-amber-300/80" data-teste="sem-fixo"> · sem fixo definido: usando a verba padrão — defina no modal da pessoa</span>}
                   {' · '}{tarefasDoDia.length} tarefa{tarefasDoDia.length === 1 ? '' : 's'} no dia
                 </p>
                 {previa.entraNoFixo ? (
@@ -333,69 +377,127 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         )}
       </div>
 
-      {/* ── 2. 💰 O FIXO DE CADA UM ─────────────────────────────────────── */}
-      {participantes.length > 0 && (
-        <div>
+      {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
+      {equipe.length > 0 && (
+        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-nz-verde" />
             <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">O fixo de cada um</p>
             <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
           </div>
-          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2" data-teste="fixos">
-            {participantes.map((p) => {
-              const base = { ...PARTICIPANTE_PADRAO, ...p };
-              const r = resumoDe(p);
-              const hojeDele = tarefasCiclo.filter((t) => t.user_id === p.user_id && ehProducao(t) && String(t.data).slice(0, 10) === hoje);
-              const reguaHoje = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: hojeDele });
-              return (
-                <div key={p.id} className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="fixo-pessoa" data-pessoa={p.user_id}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[13px] font-extrabold text-white truncate">{nomeDe(p.user_id)} <span className="text-white/35 font-medium">· {CARGO[p.cargo] || p.cargo}</span></p>
-                    <p className="text-[11px] text-white/50 shrink-0 tabular-nums"><span className="text-white font-bold" data-teste="valor-dia-pessoa">{fmtReais(r.valorDia)}</span> / dia útil</p>
-                  </div>
-                  <div className="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider">
-                    <label>fixo mensal R$
-                      <input
-                        type="number" min="0" step="50"
-                        defaultValue={p.fixo_mes ?? p.verba_producao ?? ''}
-                        onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== Number(p.fixo_mes)) salvarFixo(p, { fixo_mes: v }); }}
-                        className={`ml-1 w-24 ${campo} normal-case tabular-nums`}
-                        data-teste="fixo-mes"
-                      />
-                    </label>
-                    <label>mínimo / dia
-                      <input
-                        type="number" min="1" max="30"
-                        defaultValue={p.minimo_dia ?? 3}
-                        onBlur={(e) => { const v = Math.max(1, Math.round(Number(e.target.value) || 0)); if (v !== Number(p.minimo_dia ?? 3)) salvarFixo(p, { minimo_dia: v }); }}
-                        className={`ml-1 w-14 ${campo} normal-case tabular-nums`}
-                        data-teste="minimo-dia"
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-2 grid grid-cols-4 gap-1 text-center">
-                    {[
-                      ['ganho', r.ganho, 'text-nz-verde'], ['a conferir', r.aConferir, 'text-amber-300'],
-                      ['em jogo', r.emJogo, 'text-white/70'], ['perdido', r.perdido, 'text-red-300'],
-                    ].map(([rotulo, v, cor]) => (
-                      <div key={rotulo} className="rounded-md border border-white/10 py-1">
-                        <p className={`text-[12px] font-bold tabular-nums ${cor}`}>{fmtReais(v)}</p>
-                        <p className="text-[9px] text-white/35 uppercase tracking-wider">{rotulo}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-1.5 text-[10px] text-white/40">
-                    hoje: {hojeDele.length} tarefa{hojeDele.length === 1 ? '' : 's'}
-                    {reguaHoje.faltam > 0
-                      ? <span className="text-amber-300/80"> · faltam {reguaHoje.faltam} pro mínimo de {reguaHoje.minimoDia} ({fmtReais(reguaHoje.emAberto)} em aberto)</span>
-                      : ' · mínimo batido'}
-                  </p>
-                </div>
-              );
-            })}
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <select
+              value={pessoaFixo}
+              onChange={(e) => { setPessoaFixo(e.target.value); if (e.target.value) setModalAberto(true); }}
+              className={`${campo} min-w-[240px]`}
+              data-teste="pessoa-fixo"
+            >
+              <option value="">escolha a pessoa…</option>
+              {equipe.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
+              ))}
+            </select>
+            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
+              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
+            </Button>
+            <span className="text-[10px] text-white/35">{equipe.length} no time corporativo (do painel de controle) · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
           </div>
         </div>
       )}
+
+      {modalAberto && pessoaFixo && (() => {
+        const base = participanteDe(pessoaFixo);
+        const r = resumoDe(pessoaFixo);
+        const hojeDele = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && ehProducao(t) && String(t.data).slice(0, 10) === hoje);
+        const reguaHoje = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: hojeDele });
+        // os dias do ciclo com tarefa, de hoje em diante — o que está distribuído
+        const proximos = [...new Set(tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) >= hoje).map((t) => String(t.data).slice(0, 10)))].sort().slice(0, 8);
+        return (
+          <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center p-0 sm:p-4" data-teste="modal-pessoa" data-pessoa={pessoaFixo}>
+            <div className="absolute inset-0 bg-black/70" onClick={() => setModalAberto(false)} />
+            <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-white/15 p-4 text-white" style={{ background: 'var(--xeos-preto, #00020C)' }}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-extrabold truncate">{nomeDe(pessoaFixo)}</p>
+                  <p className="text-[11px] text-white/45">{funcaoDe(pessoaFixo)} <span className="text-white/25">· função do painel de controle</span></p>
+                </div>
+                <button type="button" onClick={() => setModalAberto(false)} aria-label="Fechar" className="rounded-lg p-1.5 text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[11px] text-white/50 tabular-nums"><span className="text-white font-bold text-[14px]" data-teste="valor-dia-pessoa">{fmtReais(r.valorDia)}</span> / dia útil</p>
+                {!base.temFixo && <span className="text-[10px] text-amber-300/80" data-teste="sem-fixo-modal">sem fixo definido · usando {fmtReais(fixoDoParticipante(base))}</span>}
+              </div>
+              <div className="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider">
+                <label>fixo mensal R$
+                  <input
+                    key={`fixo-${pessoaFixo}`}
+                    type="number" min="0" step="50"
+                    defaultValue={base.temFixo ? base.fixo_mes : ''}
+                    placeholder={String(fixoDoParticipante(base))}
+                    onBlur={(e) => { if (e.target.value === '') return; const v = Number(e.target.value); if (Number.isFinite(v) && (!base.temFixo || v !== Number(base.fixo_mes))) salvarFixo(base, { fixo_mes: v }); }}
+                    className={`ml-1 w-28 ${campo} normal-case tabular-nums`}
+                    data-teste="fixo-mes"
+                  />
+                </label>
+                <label>mínimo / dia
+                  <input
+                    key={`min-${pessoaFixo}`}
+                    type="number" min="1" max="30"
+                    defaultValue={base.minimo_dia ?? 3}
+                    onBlur={(e) => { const v = Math.max(1, Math.round(Number(e.target.value) || 0)); if (v !== Number(base.minimo_dia ?? 3)) salvarFixo(base, { minimo_dia: v }); }}
+                    className={`ml-1 w-14 ${campo} normal-case tabular-nums`}
+                    data-teste="minimo-dia"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-3 grid grid-cols-4 gap-1 text-center">
+                {[
+                  ['ganho', r.ganho, 'text-nz-verde'], ['a conferir', r.aConferir, 'text-amber-300'],
+                  ['em jogo', r.emJogo, 'text-white/70'], ['perdido', r.perdido, 'text-red-300'],
+                ].map(([rotulo, v, cor]) => (
+                  <div key={rotulo} className="rounded-md border border-white/10 py-1">
+                    <p className={`text-[12px] font-bold tabular-nums ${cor}`}>{fmtReais(v)}</p>
+                    <p className="text-[9px] text-white/35 uppercase tracking-wider">{rotulo}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] text-white/40">
+                hoje: {hojeDele.length} tarefa{hojeDele.length === 1 ? '' : 's'}
+                {reguaHoje.faltam > 0
+                  ? <span className="text-amber-300/80"> · faltam {reguaHoje.faltam} pro mínimo de {reguaHoje.minimoDia} ({fmtReais(reguaHoje.emAberto)} em aberto)</span>
+                  : ' · mínimo batido'}
+              </p>
+
+              {proximos.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">Distribuído de hoje em diante</p>
+                  <ul className="mt-1 space-y-0.5 text-[11px]" data-teste="proximos">
+                    {proximos.map((d) => {
+                      const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) === d);
+                      const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), minimoDia: base.minimo_dia, tarefas: doDia.filter(ehProducao) });
+                      return (
+                        <li key={d} className="flex items-center gap-2 text-white/60">
+                          <span className="w-24 shrink-0">{fmtDia(d)}</span>
+                          <span className="truncate">{doDia.length} tarefa{doDia.length === 1 ? '' : 's'}{dist.faltam ? ` · faltam ${dist.faltam}` : ''}</span>
+                          <span className="ml-auto tabular-nums text-white/80">{fmtReais(dist.pago)}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              <div className="mt-3 flex justify-end">
+                <Button size="sm" onClick={() => { setPessoa(pessoaFixo); setModalAberto(false); }} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]">
+                  <Send className="w-3.5 h-3.5 mr-1" /> distribuir tarefa pra {nomeDe(pessoaFixo).split(' ')[0]}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 3. 🛠️ GESTÃO DO X-GAME (o admin de sempre, dobrado) ────────── */}
       <div className="rounded-xl border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>

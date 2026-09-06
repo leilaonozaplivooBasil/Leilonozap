@@ -21,11 +21,12 @@ window.__bancoFalso = {
     app_users: [
       { id: 'dono', full_name: 'Luiz Santanna', nickname: 'Luiz', role: 'super_admin', career_levels: ['ceo'] },
       { id: 'emanuel', full_name: 'Emanuel Silva', nickname: 'Emanuel', role: 'user', career_levels: ['executivo_conta'] },
-      { id: 'carla', full_name: 'Carla Souza', nickname: 'Carla', role: 'user', career_levels: ['trainee_diretor'] },
+      { id: 'carla', full_name: 'Carla Souza', nickname: 'Carla', role: 'user', career_levels: ['embaixador'] },
+      { id: 'tiago', full_name: 'Tiago Trainee', nickname: 'Tiago', role: 'user', career_levels: ['trainee_diretor'] },
     ],
     xgame_participantes: [
       { id: 'p1', user_id: 'emanuel', cargo: 'executivo', perfil: 'estrategico', verba_producao: 1300, verba_bonus: 200, valor_venda: 50, multa_atraso: 200, ativo: true, fixo_mes: 7000, minimo_dia: 3, created_date: '2026-09-01' },
-      { id: 'p2', user_id: 'carla', cargo: 'trainee', perfil: 'operacional', verba_producao: 1300, verba_bonus: 200, valor_venda: 50, multa_atraso: 50, ativo: true, fixo_mes: null, minimo_dia: 3, created_date: '2026-09-02' },
+      { id: 'p2', user_id: 'carla', cargo: 'diretor', perfil: 'operacional', verba_producao: 1300, verba_bonus: 200, valor_venda: 50, multa_atraso: 50, ativo: true, fixo_mes: null, minimo_dia: 3, created_date: '2026-09-02' },
     ],
     xgame_config: [{ id: 'atual', ciclo_inicio: '2026-09-01' }],
     metodo_tarefas: [

@@ -1,46 +1,44 @@
-// timeCorporativo — O TOPO da estrutura de negócio (DIR-39, 01/09/2026).
-// Regra do dono: as metas de licença e parceiro de compra são do time
-// corporativo — TODOS os cargos executivos, do Sócio Executivo ao Fundador
-// (Trainee fica fora: está em formação). Responsável de contrato da esteira
-// SEMPRE sai daqui. Fonte única sobre careerLevels — nada de lista paralela.
-import { CAREER_LEVELS, normalizeLevels, getLevel } from './careerLevels.js';
+// 🏛️ O TIME CORPORATIVO — quem aparece na gestão do X-Performance, e com
+// qual função. Vem do PAINEL DE CONTROLE (os níveis de carreira do usuário),
+// não de um cadastro à parte.
+//
+// Ordem do dono (06/09/2026): "tem que puxar a função do painel de controle,
+// que já tem a função da pessoa. Só quem tem que aparecer ali é o time
+// corporativo, que vai do executivo até o embaixador — todas essas pessoas".
+import { CAREER_LEVELS, normalizeLevels, levelName } from './careerLevels.js';
 
-// Do Sócio Executivo (ordem 102) pra cima — o bloco diretor sem o Trainee.
-export const CARGOS_TOPO = CAREER_LEVELS
-  .filter((l) => l.bloco === 'diretor' && l.id !== 'trainee_diretor')
+/** Do Sócio Executivo (102) ao Embaixador (107), na ordem do plano de carreira. */
+export const NIVEIS_TIME = CAREER_LEVELS
+  .filter((l) => l.bloco === 'diretor' && l.ordem >= 102 && l.ordem <= 107)
   .map((l) => l.id);
 
-const TOPO_SET = new Set(CARGOS_TOPO);
+const ORDEM = Object.fromEntries(CAREER_LEVELS.map((l) => [l.id, l.ordem]));
 
-/** Cargos do topo que a pessoa carrega (normalizados, ordenados pela hierarquia). */
-export function cargosTopoDe(user) {
-  const levels = normalizeLevels([
-    ...(Array.isArray(user?.career_levels) ? user.career_levels : []),
-    ...(user?.primary_career_level ? [user.primary_career_level] : []),
-  ]);
-  return [...new Set(levels)]
-    .filter((id) => TOPO_SET.has(id))
-    .sort((a, b) => getLevel(b).ordem - getLevel(a).ordem);
+/** O nível mais alto da pessoa dentro do time — ou null se ela não é do time. */
+export function nivelNoTime(user) {
+  const meus = normalizeLevels(user?.career_levels).filter((id) => NIVEIS_TIME.includes(id));
+  if (!meus.length) return null;
+  return meus.sort((a, b) => ORDEM[b] - ORDEM[a])[0];
 }
 
-/** A pessoa faz parte do topo? */
-export const ehExecutivoTopo = (user) => cargosTopoDe(user).length > 0;
+/** A função como está no painel de controle ("Sócio Executivo", "CEO"…). */
+export const funcaoNoTime = (user) => { const n = nivelNoTime(user); return n ? levelName(n) : null; };
+
+/** O cargo do jogo (xgame_participantes.cargo) que corresponde ao nível do painel. */
+export function cargoDoNivel(nivel) {
+  if (nivel === 'executivo_conta') return 'executivo';
+  if (nivel === 'ceo') return 'ceo';
+  return 'diretor';
+}
 
 /**
- * Os membros do time corporativo cadastrados no app, com a FUNÇÃO PRINCIPAL:
- * o primary_career_level quando ele é do topo; senão o cargo de topo mais
- * alto que a pessoa carrega. Ordenado pela hierarquia (Fundador → Sócio).
+ * A lista pra tela: só quem é do time, em ordem alfabética, cada um com a
+ * função do painel. `nome` já vem pronto pra mostrar.
  */
-export function membrosDoTopo(users = []) {
-  return users
-    .map((u) => {
-      const cargos = cargosTopoDe(u);
-      if (cargos.length === 0) return null;
-      const principalNorm = normalizeLevels(u.primary_career_level ? [u.primary_career_level] : [])[0];
-      const funcaoPrincipal = (principalNorm && TOPO_SET.has(principalNorm)) ? principalNorm : cargos[0];
-      return { user: u, funcaoPrincipal, cargos };
-    })
-    .filter(Boolean)
-    .sort((a, b) => getLevel(b.funcaoPrincipal).ordem - getLevel(a.funcaoPrincipal).ordem
-      || String(a.user.full_name || '').localeCompare(String(b.user.full_name || ''), 'pt-BR'));
+export function timeCorporativo(usuarios, nomeDe = (u) => u.full_name || u.nickname || u.email || u.id) {
+  return (Array.isArray(usuarios) ? usuarios : [])
+    .map((u) => ({ u, nivel: nivelNoTime(u) }))
+    .filter(({ nivel }) => nivel)
+    .map(({ u, nivel }) => ({ id: u.id, nome: nomeDe(u), nivel, funcao: levelName(nivel), cargo: cargoDoNivel(nivel) }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
