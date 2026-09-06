@@ -59,6 +59,20 @@ const periodoDe = (t) => {
   return PERIODOS.find(([lim]) => min < lim) || PERIODOS[PERIODOS.length - 1];
 };
 
+/** O soquete do Duolingo: glifo SÓLIDO flutuando sobre o pratinho em
+ *  meia-lua com lábio 3D (dois arcos, o de baixo mais claro — lâmina 6). */
+function PratinhoGlifo({ Icone }) {
+  return (
+    <span className="relative flex flex-col items-center">
+      <Icone className="relative z-10 w-9 h-9 text-slate-500 -mb-2.5" fill="currentColor" strokeWidth={1.4} />
+      <span className="relative w-[68px] h-[32px] overflow-hidden">
+        <span className="absolute left-0 -top-[32px] w-[68px] h-[68px] rounded-full border-[10px] border-slate-200 translate-y-[5px]" />
+        <span className="absolute left-0 -top-[32px] w-[68px] h-[68px] rounded-full border-[10px] border-slate-300" />
+      </span>
+    </span>
+  );
+}
+
 /** O botão de lição do Duolingo, versão executiva:
  *  GRANDE, borda 3D da mesma cor (mais escura), feito = CHECK gigante no
  *  lugar do ícone, atual = aceso com halo + balão COMEÇAR, futuro/perdido =
@@ -94,17 +108,15 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
             {feito ? (
               <Check className="w-9 h-9 text-white drop-shadow-sm" strokeWidth={3.5} />
             ) : (
-              <Icone className="w-8 h-8 text-white drop-shadow-sm" strokeWidth={2.4} />
+              /* desenho CHEIO (preenchido), gordinho como o glifo do Duolingo */
+              <Icone className="w-8 h-8 text-white drop-shadow-sm" fill="currentColor" strokeWidth={1.6} />
             )}
           </span>
         ) : (
-          /* futura/perdida: o SOQUETE VAZIO do Duolingo — o ícone solto
-             flutuando sobre um pratinho em meia-lua, leve, sem círculo cheio */
+          /* futura/perdida: o SOQUETE VAZIO do Duolingo — o desenho sólido
+             flutuando sobre o pratinho em meia-lua com lábio 3D */
           <span className="relative flex flex-col items-center transition-opacity group-hover:opacity-75">
-            <Icone className="relative z-10 w-9 h-9 text-slate-500 -mb-2.5" strokeWidth={2.3} />
-            <span className="relative w-[64px] h-[30px] overflow-hidden">
-              <span className="absolute left-0 -top-[34px] w-[64px] h-[64px] rounded-full border-[9px] border-slate-300/80" />
-            </span>
+            <PratinhoGlifo Icone={Icone} />
             {perdido && (
               <span className="absolute top-0 -right-1 z-10 w-4 h-4 rounded-full bg-red-400 ring-2 ring-white flex items-center justify-center">
                 <XIcon className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />
@@ -232,58 +244,81 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
               </span>
             ) : (
               /* troféu ainda trancado: o glifo sobre a meia-lua, como no Duolingo */
-              <span className="relative flex flex-col items-center">
-                <Trophy className="relative z-10 w-9 h-9 text-slate-500 -mb-2.5" strokeWidth={2.2} />
-                <span className="relative w-[64px] h-[30px] overflow-hidden">
-                  <span className="absolute left-0 -top-[34px] w-[64px] h-[64px] rounded-full border-[9px] border-slate-300/80" />
-                </span>
-              </span>
+              <PratinhoGlifo Icone={Trophy} />
             )}
             <p className={`mt-2 text-[10px] font-extrabold tracking-wide ${completou ? 'text-amber-600' : 'text-slate-400'}`}>{completou ? 'DIA PERFEITO!' : 'O TOPO DO DIA'}</p>
           </div>
 
-          {gruposSubida.map((g) => (
-            <React.Fragment key={g.rotulo}>
-              {/* o BAÚ do período: abre quando o período fecha inteiro */}
-              <div
-                className="relative flex flex-col items-center"
-                title={g.completo ? `${g.rotulo} completo — recompensa garantida!` : `Complete ${g.rotulo === 'AMANHECER' ? 'o' : 'a'} ${g.rotulo} pra abrir o baú`}
-              >
-                <span
-                  className={`w-[66px] h-[60px] rounded-2xl flex items-center justify-center ${g.completo ? 'bg-gradient-to-b from-amber-300 to-amber-500' : 'bg-slate-200'}`}
-                  style={{ boxShadow: g.completo ? '0 7px 0 0 #92400e' : '0 7px 0 0 #cbd5e1' }}
+          {gruposSubida.map((g) => {
+            // a receita da lâmina 6 do Duolingo, subindo: TROFÉU fecha o
+            // período (topo do grupo), o BAÚ fica no MEIO da unidade
+            const posBau = Math.floor(g.itens.length / 2);
+            return (
+              <React.Fragment key={g.rotulo}>
+                {/* o troféu do período */}
+                <div
+                  className="relative flex flex-col items-center"
+                  title={g.completo ? `${g.rotulo} completo — troféu garantido!` : `Feche ${g.rotulo === 'AMANHECER' ? 'o' : 'a'} ${g.rotulo} inteiro pro troféu`}
                 >
-                  <Gift className={`w-8 h-8 ${g.completo ? 'text-white drop-shadow-sm' : 'text-slate-400'}`} strokeWidth={2.2} />
-                </span>
-              </div>
+                  {g.completo ? (
+                    <span
+                      className="w-[74px] h-[70px] rounded-[50%] flex items-center justify-center bg-gradient-to-b from-amber-400 to-yellow-500 -rotate-6"
+                      style={{ boxShadow: '0 7px 0 0 #b45309' }}
+                    >
+                      <Trophy className="w-9 h-9 text-white drop-shadow-sm" fill="currentColor" strokeWidth={1.4} />
+                    </span>
+                  ) : (
+                    <PratinhoGlifo Icone={Trophy} />
+                  )}
+                </div>
 
-              {g.itens.map((t) => {
-                const ehAtual = atual && t.id === atual.id;
-                const offset = OFFSETS[zig % OFFSETS.length];
-                zig += 1;
-                return (
-                  <div key={t.id} className="relative" style={{ transform: `translateX(${offset}px)` }}>
-                    <Parada3D
-                      titulo={t.titulo}
-                      hora={t.hora}
-                      feito={!!t.feito}
-                      perdido={t.estado?.id === 'PERDIDO'}
-                      atual={ehAtual}
-                      refEl={ehAtual ? refAtual : undefined}
-                      onClick={() => { setFocoId(t.id); setExpandida(false); }}
-                    />
-                  </div>
-                );
-              })}
+                {g.itens.map((t, i) => {
+                  const ehAtual = atual && t.id === atual.id;
+                  const offset = OFFSETS[zig % OFFSETS.length];
+                  zig += 1;
+                  const offsetBau = OFFSETS[zig % OFFSETS.length];
+                  return (
+                    <React.Fragment key={t.id}>
+                      <div className="relative" style={{ transform: `translateX(${offset}px)` }}>
+                        <Parada3D
+                          titulo={t.titulo}
+                          hora={t.hora}
+                          feito={!!t.feito}
+                          perdido={t.estado?.id === 'PERDIDO'}
+                          atual={ehAtual}
+                          refEl={ehAtual ? refAtual : undefined}
+                          onClick={() => { setFocoId(t.id); setExpandida(false); }}
+                        />
+                      </div>
+                      {i === posBau && g.itens.length > 1 && (
+                        /* o BAÚ no meio da unidade: chumbo 3D trancado,
+                           dourado quando o período fecha */
+                        <div
+                          className="relative flex flex-col items-center"
+                          style={{ transform: `translateX(${offsetBau}px)` }}
+                          title={g.completo ? 'Baú aberto — recompensa do período!' : 'O baú abre quando o período fechar inteiro'}
+                        >
+                          <span
+                            className={`w-[64px] h-[56px] rounded-xl flex items-center justify-center ${g.completo ? 'bg-gradient-to-b from-amber-300 to-amber-500' : 'bg-gradient-to-b from-slate-500 to-slate-700'}`}
+                            style={{ boxShadow: g.completo ? '0 6px 0 0 #92400e' : '0 6px 0 0 #1e293b' }}
+                          >
+                            <Gift className={`w-8 h-8 ${g.completo ? 'text-white' : 'text-slate-300'} drop-shadow-sm`} fill="currentColor" strokeWidth={1.4} />
+                          </span>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
 
-              {/* o divisor do período (o "— Diga de onde você é —" do Duolingo) */}
-              <div className="w-full max-w-sm flex items-center gap-3 py-2">
-                <span className="flex-1 border-t border-slate-200" />
-                <span className="text-[10px] font-extrabold tracking-[0.22em] text-slate-400">{g.rotulo}</span>
-                <span className="flex-1 border-t border-slate-200" />
-              </div>
-            </React.Fragment>
-          ))}
+                {/* o divisor do período (o "— Diga de onde você é —" do Duolingo) */}
+                <div className="w-full max-w-sm flex items-center gap-3 py-2">
+                  <span className="flex-1 border-t border-slate-200" />
+                  <span className="text-[10px] font-extrabold tracking-[0.22em] text-slate-400">{g.rotulo}</span>
+                  <span className="flex-1 border-t border-slate-200" />
+                </div>
+              </React.Fragment>
+            );
+          })}
 
           {/* o amanhecer na BASE: é daqui que o dia sobe */}
           <span
