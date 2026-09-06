@@ -24,7 +24,14 @@ export default defineConfig({
   base: './',
   logLevel: 'error',
   plugins: [react()],
-  resolve: { alias: { '@': path.resolve(aqui, '../../src') } },
+  resolve: {
+    alias: {
+      // a plataforma (rotas/upload) é de mentira na banca — vem antes do '@'
+      // porque o Vite casa os atalhos na ordem em que estão aqui
+      '@/api/plataformaClient': path.resolve(aqui, 'falso/plataformaClient.js'),
+      '@': path.resolve(aqui, '../../src'),
+    },
+  },
   define: { __BUILD_VERSION__: JSON.stringify('banca') },
   build: {
     outDir: process.env.SAIDA_BANCA || '/tmp/banca-carrossel',
