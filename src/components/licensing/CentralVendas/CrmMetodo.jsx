@@ -1477,7 +1477,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                                 <p className={`text-sm ${t.feito ? 'line-through text-nz-tinta-fraca' : 'text-nz-tinta font-medium'}`}>
                                   {t.hora && <span className="font-bold">{t.hora} · </span>}{t.titulo}
                                 </p>
-                                {t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>}
+                                {/* 🎓 tarefa com mentalidade (distribuída na gestão): o ensinamento aparece inteiro, não cortado */}
+                                {t.mentalidade && !t.feito ? (
+                                  <p className="text-[11px] text-nz-tinta-fraca whitespace-pre-line" data-teste="ensinamento-tarefa">{t.detalhe}</p>
+                                ) : (
+                                  t.detalhe && !t.feito && <p className="text-[11px] text-nz-tinta-fraca truncate">{t.detalhe}</p>
+                                )}
                               </div>
                               {/* 💰 X-PAY — a fatia da tarefa no valor do dia (fixo ÷ 22, repartido pelo peso) */}
                               {xgame && xgame.valores[t.id] > 0 && (t.feito || estadoDaTarefa(t)?.id !== 'PERDIDO') && (

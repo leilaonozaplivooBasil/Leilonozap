@@ -223,6 +223,60 @@ test('ADMIN EMBUTIDO: a gestão do X-GAME de sempre abre dentro do X-Performance
   await ctx.close();
 });
 
+test('MENTALIDADE: a tarefa nasce com a trilha da pessoa, o peso ganha o acréscimo e o ensinamento vai junto — no banco e na prévia', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  // Emanuel é executivo no jogo → a mentalidade nasce na do executivo
+  assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'executivo');
+  await pagina.locator('[data-teste="titulo"]').fill('Leitura do capítulo 3');
+  assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '4', 'leitura = peso 4 pelo título');
+  await pagina.locator('[data-teste="mentalidade"]').selectOption('diretor');
+  assert.equal(await pagina.locator('[data-teste="peso"]').inputValue(), '5', 'diretor soma 1');
+  assert.match(await texto(pagina, '[data-teste="peso-motivo"]'), /\+ 1 pela Mentalidade do Diretor/);
+  // os hábitos oferecidos são os da trilha do diretor (5 a 8)
+  const habitos = await pagina.locator('[data-teste="habito"] option').allTextContents();
+  assert.deepEqual(habitos.map((h) => h.trim().slice(0, 1)), ['—', '5', '6', '7', '8']);
+  await pagina.locator('[data-teste="habito"]').selectOption('6');
+  const ens = await texto(pagina, '[data-teste="ensinamento"]');
+  assert.match(ens, /Mentalidade do Diretor — multiplicar e medir/);
+  assert.match(ens, /O diretor multiplica e mede/);
+  assert.match(ens, /Hábito 6 \(Acompanhamento e Fechamento\)/);
+
+  await pagina.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Tarefa distribuída pra Emanuel/).waitFor();
+  const l = (await escritas(pagina)).at(-1).linhas[0];
+  assert.equal(l.mentalidade, 'diretor');
+  assert.equal(l.habito, 6);
+  assert.equal(l.peso, 5);
+  assert.match(l.detalhe, /^🎓 Mentalidade do Diretor/);
+  assert.match(l.detalhe, /Hábito 6/);
+  // a lista do dia mostra a etiqueta da mentalidade
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="tarefas-dia"] li').length === 4);
+  assert.match((await pagina.locator('[data-teste="tarefas-dia"] li').allTextContents()).join(' | '), /diretor · H6/);
+  await ctx.close();
+});
+
+test('PLANEJAMENTO: o modal avisa quem não gerou o dia, e gera a Rotina Perfeita dele daqui', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  // Emanuel não tem tarefa em 07/09 (hoje) → não gerou
+  await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
+  const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
+  await modal.locator('[data-teste="planejamento-dia"][data-gerado="nao"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="planejamento-dia"]'), /Não gerou o planejamento de hoje/);
+  // o ciclo por mentalidade: as 5 tarefas semeadas são da rotina (sem mentalidade)
+  assert.match(await texto(pagina, '[data-teste="por-mentalidade"] [data-mentalidade="rotina"]'), /5 tarefas/);
+
+  await modal.locator('[data-teste="gerar-planejamento"]').click();
+  await pagina.getByText(/gerado pra Emanuel Silva: 20 tarefas da Rotina Perfeita/).waitFor();
+  const e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tipo, 'insert');
+  assert.equal(e.linhas.length, 20, 'a Rotina do Método inteira');
+  assert.ok(e.linhas.every((x) => x.user_id === 'emanuel' && x.data === '2026-09-07' && x.peso >= 1 && x.categoria));
+  await modal.locator('[data-teste="planejamento-dia"][data-gerado="sim"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="planejamento-dia"]'), /Planejamento de hoje gerado · 20 da rotina/);
+  await pagina.screenshot({ path: path.join(FOTOS, 'performance-planejamento.png') });
+  await ctx.close();
+});
+
 test('CELULAR: a gestão cabe na tela — foto pra julgar', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
