@@ -8,11 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import useArrastavel from '@/hooks/useArrastavel';
 import {
   TRILHAS, trilhaDoCargo, COLUNAS, ORDEM_COLUNAS, moverEntregavel, podeMover, podeValidar,
-  encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX,
+  encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX, PAUTA_PADRAO,
 } from '@/lib/xperformance';
 import { HABITOS } from '@/lib/metodo';
 import { fixoDoParticipante } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
+import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
 //
@@ -227,8 +228,23 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
 
   const doQuadro = visaoTotal ? entregaveis : entregaveis.filter((e) => e.dono_id === uid);
 
-  return (
-    <div className="space-y-5">
+  // 🧹 FAXINA (dono, 06/09/2026): "deixar o painel mais limpo, mais fluido:
+  // tirar os quadradões explicando as mentalidades e as partes de baixo —
+  // um menu suspenso explicando as três, só pra quem quiser ver". Cada
+  // bloco virou uma DOBRA fechada; na gestão, a pessoa vem primeiro.
+  const Dobra = ({ id, titulo, resumo, aberta = false, children }) => (
+    <details className="rounded-xl border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }} data-teste={`dobra-${id}`} open={aberta || undefined}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase [&::-webkit-details-marker]:hidden">
+        <span>{titulo}</span>
+        {resumo && <span className="normal-case tracking-normal font-medium text-white/35">· {resumo}</span>}
+        <span className="ml-auto text-white/30">▾</span>
+      </summary>
+      <div className="px-3 pb-3">{children}</div>
+    </details>
+  );
+
+  const blocoMentalidade = (
+    <>
       {/* ── 1. QUEM EU SOU NA TRILHA ─────────────────────────────────────── */}
       <div>
         <p className="text-[10px] font-bold tracking-[0.28em] text-white/40 uppercase">Mentalidade</p>
@@ -252,6 +268,10 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
         </div>
       </div>
 
+    </>
+  );
+  const blocoContas = (
+    <>
       {/* ── 2. AS DUAS CONTAS, SEPARADAS ─────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
@@ -305,9 +325,243 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
         </div>
       </div>
 
-      {/* ── 🎯 A GESTÃO (só super admin): o antigo Admin X-GAME + o fixo
-          distribuído pelo peso — "junta o admin do X-Game com o X-Performance" */}
-      {gestao && <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />}
+    </>
+  );
+  const blocoEncontro = (
+    <>
+      {/* ── 3. O ENCONTRO DE SEGUNDA ─────────────────────────────────────── */}
+      <div>
+        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+          <p className="text-[10px] font-bold tracking-[0.28em] text-white/40 uppercase">
+            Encontro de segunda · {fmtDia(encontro.data)}
+          </p>
+          <p className="text-[10px] text-white/35">
+            {encontro.preenchidos} de {encontro.total} blocos escritos
+            {encontro.data === hoje ? ' · é hoje' : ` · próxima: ${fmtDia(proximaSegunda(hoje))}`}
+          </p>
+        </div>
+        <div className="mt-2 space-y-2">
+          {encontro.blocos.map((b) => {
+            const anteriorTexto = anterior?.blocos.find((x) => x.id === b.id)?.texto;
+            const valor = rascunho[b.id] !== undefined ? rascunho[b.id] : b.texto;
+            return (
+              <div key={b.id} className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className="flex items-center gap-2">
+                  <p className="text-[12px] font-bold text-white">{b.titulo}</p>
+                  {b.vazio
+                    ? <span className="text-[10px] text-amber-300 inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> em branco</span>
+                    : <Check className="w-3.5 h-3.5 text-nz-verde" />}
+                </div>
+                <p className="text-[10px] text-white/35 mb-1.5">{b.ajuda}</p>
+                <Textarea
+                  value={valor}
+                  onChange={(e) => setRascunho((r) => ({ ...r, [b.id]: e.target.value }))}
+                  placeholder={b.ajuda}
+                  rows={3}
+                  className="text-[12px]"
+                />
+                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                  <Button size="sm" disabled={salvando || rascunho[b.id] === undefined} onClick={() => salvarBloco(b.id)}
+                    className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-[11px]">
+                    {salvando ? 'Salvando...' : 'Salvar bloco'}
+                  </Button>
+                  {/* 📚 O QUE UM DOCUMENTO SOLTO NÃO DÁ: o mesmo bloco da semana
+                      passada, do lado. É por isso que a pauta é fixa. */}
+                  {anteriorTexto && (
+                    <details className="text-[10px] text-white/40">
+                      <summary className="cursor-pointer hover:text-white/70">semana passada ({fmtDia(anterior.data)})</summary>
+                      <p className="mt-1 whitespace-pre-line text-white/50 max-w-prose">{anteriorTexto}</p>
+                    </details>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+    </>
+  );
+  const blocoQuadro = (
+    <>
+      {/* ── 4. O QUADRO ──────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <p className="text-[10px] font-bold tracking-[0.28em] text-white/40 uppercase">
+            X-Performance · o quadro {visaoTotal ? 'da diretoria' : 'que está na sua mão'}
+          </p>
+          <Button size="sm" onClick={() => setNovo({ peso: 1 })} className="bg-white/10 hover:bg-white/20 text-white h-7 text-[11px]">
+            <Plus className="w-3 h-3 mr-1" /> Novo entregável
+          </Button>
+        </div>
+
+        {novo && (
+          <div className="mt-2 rounded-xl border border-white/20 p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <Input autoFocus placeholder="O que precisa ficar pronto?" value={novo.titulo || ''}
+              onChange={(e) => setNovo((n) => ({ ...n, titulo: e.target.value }))} />
+            <Input placeholder="detalhe (opcional)" value={novo.detalhe || ''}
+              onChange={(e) => setNovo((n) => ({ ...n, detalhe: e.target.value }))} />
+            <div className="flex gap-2 flex-wrap items-center">
+              <label className="text-[11px] text-white/50">peso
+                <select value={novo.peso} onChange={(e) => setNovo((n) => ({ ...n, peso: e.target.value }))}
+                  className="ml-1 rounded bg-white/10 px-2 py-1 text-white text-[11px]">
+                  {[1, 2, 3, 4, 5].map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </label>
+              <label className="text-[11px] text-white/50">hábito
+                <select value={novo.habito || ''} onChange={(e) => setNovo((n) => ({ ...n, habito: e.target.value }))}
+                  className="ml-1 rounded bg-white/10 px-2 py-1 text-white text-[11px]">
+                  <option value="">—</option>
+                  {trilha.foco.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+              <Input type="date" value={novo.prazo || ''} onChange={(e) => setNovo((n) => ({ ...n, prazo: e.target.value }))}
+                className="w-auto h-8 text-[11px]" />
+              <Button size="sm" onClick={criar} disabled={salvando || !novo.titulo?.trim()}
+                className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]">Criar</Button>
+              <Button size="sm" variant="ghost" onClick={() => setNovo(null)} className="h-8 text-[11px] text-white/50">Cancelar</Button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {COLUNAS.map((c) => {
+            const doColuna = doQuadro.filter((e) => e.coluna === c.id);
+            return (
+              <div key={c.id} data-coluna={c.id}
+                className="rounded-xl border border-white/8 p-2 min-h-[120px]"
+                style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <p className="text-[11px] font-bold text-white/70">{c.nome} <span className="text-white/30">{doColuna.length}</span></p>
+                <p className="text-[9px] text-white/30 mb-2 leading-snug">{c.ajuda}</p>
+                <div className="space-y-2">
+                  {doColuna.map((item) => (
+                    <Card key={item.id} item={item} onMover={mover} onExcluir={excluir} ehValidador={visaoTotal} meuId={uid} />
+                  ))}
+                  {!doColuna.length && <p className="text-[10px] text-white/20 py-2 text-center">vazio</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {!visaoTotal && (
+          <p className="mt-2 text-[10px] text-white/30">
+            Mover pra “Entregue” é de quem valida — por isso o botão fica travado aqui.
+          </p>
+        )}
+      </div>
+    </>
+  );
+
+  const blocosEscritos = Object.values(encontro?.blocos || {}).filter((v) => String(v || '').trim()).length;
+
+  // 🏛️ o grupo, pra todo mundo ter a visão geral: a holding, os pilares, a
+  // visão, a missão e os valores — palavra por palavra da página da cultura
+  const blocoGrupo = (
+    <div className="space-y-3 pt-1" data-teste="grupo">
+      <p className="text-[12px] text-white/70"><span className="font-extrabold text-white">{GRUPO.nome}</span> — {GRUPO.papel}. <span className="text-white/45">{GRUPO.frase}</span></p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        {PILARES.map((e, i) => (
+          <div key={e.id} className="rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="pilar">
+            <p className="text-[9px] font-bold tracking-[0.22em] text-white/35 uppercase">{e.pilar}</p>
+            <p className="text-[13px] font-extrabold text-white mt-0.5">{e.nome}</p>
+            <p className="text-[10px] text-white/45 mt-0.5 leading-snug">{e.faz}</p>
+            <span className="sr-only">pilar {i + 1}</span>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+          <p className="text-[10px] font-bold tracking-[0.22em] text-amber-300/80 uppercase">Visão</p>
+          <p className="text-[12px] font-bold text-white mt-0.5">{VISAO.titulo}</p>
+          <p className="text-[11px] text-white/55 mt-1 leading-snug">{VISAO.texto}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+          <p className="text-[10px] font-bold tracking-[0.22em] text-amber-300/80 uppercase">Missão</p>
+          <p className="text-[12px] font-bold text-white mt-0.5">{MISSAO.titulo}, {MISSAO.texto}</p>
+          <p className="text-[11px] text-white/45 mt-1 leading-snug">{MISSAO.nota}</p>
+        </div>
+      </div>
+      <div className="rounded-lg border border-white/10 p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <p className="text-[10px] font-bold tracking-[0.22em] text-amber-300/80 uppercase">Valores inegociáveis</p>
+        <div className="mt-1.5 flex flex-wrap gap-1" data-teste="valores">
+          {VALORES.map((v) => <span key={v} className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-white/80">{v}</span>)}
+        </div>
+        <p className="mt-1.5 text-[10px] italic text-white/35">Esses valores não são slogans. São critérios de decisão, de liderança e de permanência. · {GRUPO.principio}</p>
+      </div>
+    </div>
+  );
+
+  if (gestao) {
+    return (
+      <div className="space-y-4">
+        {/* 🎯 a pessoa primeiro: função, empresa, o dia dela, o fixo, o pronto */}
+        <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />
+        <Dobra id="mentalidades" titulo="As três mentalidades" resumo="executivo · diretor · CEO — o que cada uma significa">{blocoMentalidade}</Dobra>
+        <Dobra id="contas" titulo="Meu fixo e o caminho pra sociedade" resumo={`${meuResumo.portoes.abertos} de ${meuResumo.portoes.total} portões`}>{blocoContas}</Dobra>
+        <Dobra id="encontro" titulo="Encontro de segunda" resumo={`${fmtDia(encontro.data)} · ${blocosEscritos} de ${PAUTA_PADRAO.length} blocos escritos`}>{blocoEncontro}</Dobra>
+        <Dobra id="quadro" titulo="O quadro da diretoria" resumo={`${doQuadro.length} entregáve${doQuadro.length === 1 ? 'l' : 'is'}`}>{blocoQuadro}</Dobra>
+        <Dobra id="grupo" titulo="O grupo To The Top" resumo="a holding, os cinco pilares, visão, missão e os valores inegociáveis">{blocoGrupo}</Dobra>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* a trilha da pessoa numa linha; as três mentalidades explicadas ficam dobradas */}
+      <Dobra id="mentalidades" titulo="Mentalidade" resumo={`a sua trilha hoje: ${trilha.nome} — ${trilha.lema.toLowerCase()} · ver as três`}>{blocoMentalidade}</Dobra>
+      <Dobra id="grupo" titulo="O grupo To The Top" resumo="a holding, os cinco pilares, visão, missão e os valores inegociáveis">{blocoGrupo}</Dobra>
+      {/* ── 2. AS DUAS CONTAS, SEPARADAS ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+          <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">O fixo do mês</p>
+          <p className="mt-1 text-xl font-extrabold text-white">
+            {meuResumo.fixo != null ? `R$ ${Number(meuResumo.fixo).toLocaleString('pt-BR')}` : '—'}
+          </p>
+          <p className="text-[10px] text-white/35">paga o combinado. Fecha e zera todo mês.</p>
+        </div>
+        {/* 🚪 DIR-74 — a sociedade deixou de ser UMA barra. Uma barra que só sobe
+            premia acervo: quem entregou muito num semestre e nada no seguinte
+            seguia parecendo perto. São três portões, e valem juntos. */}
+        <div className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase">Caminho pra sociedade</p>
+            <p className={`text-[10px] font-bold ${meuResumo.portoes.liberado ? 'text-nz-verde' : 'text-white/35'}`}>
+              {meuResumo.portoes.abertos} de {meuResumo.portoes.total} portões
+            </p>
+          </div>
+          <div className="mt-2 space-y-2">
+            {meuResumo.portoes.portoes.map((g) => {
+              const pct = Math.min(100, Math.round((g.valor / Math.max(1, g.alvo)) * 100));
+              return (
+                <div key={g.id}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className={`text-[11px] font-bold ${g.aberto ? 'text-white' : 'text-white/55'}`}>
+                      {g.aberto ? '✓' : '○'} {g.titulo}
+                    </p>
+                    <p className="text-[10px] text-white/35 tabular-nums">
+                      {g.valor} / {g.alvo} <span className="text-white/25">{g.unidade}</span>
+                    </p>
+                  </div>
+                  <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{
+                      width: `${pct}%`,
+                      background: g.aberto
+                        ? 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))'
+                        : 'rgba(255,255,255,0.28)',
+                    }} />
+                  </div>
+                  <p className="mt-0.5 text-[9px] leading-snug text-white/30">{g.ajuda}</p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10px] text-white/35">
+            {meuResumo.portoes.liberado
+              ? 'os três acesos — a conversa de sociedade está aberta.'
+              : 'a conversa abre com os TRÊS acesos. Não é média: falta um, não abre.'}
+          </p>
+        </div>
+      </div>
 
       {/* ── 3. O ENCONTRO DE SEGUNDA ─────────────────────────────────────── */}
       <div>

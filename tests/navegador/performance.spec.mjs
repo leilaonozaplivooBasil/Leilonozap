@@ -418,6 +418,59 @@ test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião v
   await ctx.close();
 });
 
+test('FAXINA: pra gestão, a pessoa vem primeiro; mentalidades, contas, encontro e quadro ficam dobrados', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const ordem = await pagina.evaluate(() => [...document.querySelectorAll('[data-teste="gestao"], details[data-teste^="dobra-"]')].map((e) => e.getAttribute('data-teste')));
+  assert.deepEqual(ordem, ['gestao', 'dobra-mentalidades', 'dobra-contas', 'dobra-encontro', 'dobra-quadro', 'dobra-grupo']);
+  for (const id of ['mentalidades', 'contas', 'encontro', 'quadro', 'grupo']) {
+    assert.equal(await pagina.locator(`details[data-teste="dobra-${id}"]`).evaluate((e) => e.open), false, `${id} devia nascer dobrada`);
+  }
+  // os quadradões só aparecem pra quem abre
+  assert.equal(await pagina.getByText('Mentalidade do CEO', { exact: true }).isVisible(), false);
+  await pagina.locator('details[data-teste="dobra-mentalidades"] summary').click();
+  await pagina.getByText('Construir o sistema').waitFor();
+  // 🏛️ o grupo: a holding, os quatro pilares-empresa, visão, missão e os 18 valores
+  await pagina.locator('details[data-teste="dobra-grupo"] summary').click();
+  await pagina.getByText('Estamos lendo o jornal de 2044.').waitFor();
+  assert.equal(await pagina.locator('[data-teste="pilar"]').count(), 4);
+  assert.equal(await pagina.locator('[data-teste="valores"] span').count(), 18);
+  assert.match(await texto(pagina, '[data-teste="grupo"]'), /To The Top Corporate — Venture Builder, Venture Capital e Holding Estratégica/);
+  await ctx.close();
+});
+
+test('FUNÇÃO E EMPRESA: a função vem do painel de controle, pode ser trocada (CMO), a empresa e o "através da" gravam, e o dia da função é distribuído de uma vez', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
+  const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
+  await modal.locator('[data-teste="funcao-empresa"]').waitFor();
+  // Sócio Executivo no painel → a função com o dia dela
+  assert.match(await texto(pagina, '[data-teste="funcao-resumo"]'), /Sócio Executivo · Mentalidade do Executivo — entrega o resultado da própria mão/);
+  assert.equal(await modal.locator('[data-teste="dia-funcao"] li').count(), 6);
+
+  await modal.locator('[data-teste="funcao"]').selectOption('cmo');
+  await pagina.getByText(/painel atualizado/).waitFor();
+  assert.equal((await escritas(pagina)).at(-1).linhas[0].funcao_titulo, 'cmo');
+  await pagina.waitForFunction(() => /CMO \(marketing\)/.test(document.querySelector('[data-teste="funcao-resumo"]')?.textContent || ''));
+  await modal.locator('[data-teste="empresa"]').selectOption('leilao_no_zap');
+  await modal.locator('[data-teste="empresa-via"]').selectOption('top_tech_digital');
+  await pagina.waitForFunction(() => /Leilão no Zap, através da Top Tech Digital/.test(document.querySelector('[data-teste="funcao-resumo"]')?.textContent || ''));
+  const gravadas = (await escritas(pagina)).filter((e) => e.tipo === 'upsert' && e.tabela === 'xgame_participantes').map((e) => e.linhas[0]);
+  assert.ok(gravadas.some((l) => l.empresa === 'leilao_no_zap'));
+  assert.ok(gravadas.some((l) => l.empresa_via === 'top_tech_digital'));
+  // as cinco do grupo estão no menu, a holding primeiro
+  assert.deepEqual((await modal.locator('[data-teste="empresa"] option').allTextContents()).slice(1), ['To The Top Corporate', 'X-EOS', 'Top Tech Digital', 'Leilão no Zap', 'Human Bank']);
+
+  // o dia do CMO, distribuído de uma vez pra hoje
+  await modal.locator('[data-teste="gerar-dia-funcao"]').click();
+  await pagina.getByText(/CMO \(marketing\): 6 tarefas do dia distribuídas pra Emanuel Silva/).waitFor();
+  const e = (await escritas(pagina)).at(-1);
+  assert.equal(e.tabela, 'metodo_tarefas');
+  assert.equal(e.linhas.length, 6);
+  assert.deepEqual([e.linhas[0].hora, e.linhas[0].mentalidade, e.linhas[0].origem, e.linhas[0].data], ['08:30', 'diretor', 'xperf', '2026-09-07']);
+  assert.ok(e.linhas.every((l) => l.prazo_em && /Tarefa da função CMO/.test(l.detalhe)));
+  await ctx.close();
+});
+
 test('CELULAR: a gestão cabe na tela — foto pra julgar', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
