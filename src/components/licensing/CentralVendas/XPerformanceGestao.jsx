@@ -872,7 +872,9 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                         </div>
                       ))}
                     </div>
-                    <p className="mt-1 text-[10px] text-white/35">{mentalidadeDe(mentalidadePadrao(base.cargo))?.nome}: a trilha dela hoje — {mentalidadeDe(mentalidadePadrao(base.cargo))?.lema.toLowerCase()}.</p>
+                    {(() => { const m = mentalidadeDe(funcaoTrabalho(pessoaFixo)?.mentalidade || mentalidadePadrao(base.cargo)); return (
+                      <p className="mt-1 text-[10px] text-white/35">{m?.nome}: a trilha dela hoje — {m?.lema.toLowerCase()}.</p>
+                    ); })()}
                   </div>
                 );
               })()}
