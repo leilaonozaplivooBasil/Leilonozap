@@ -3855,3 +3855,75 @@ mesma versão** da `xperf_metas_programa` que eles acabavam de subir —
 É o defeito que deixou uma migração 5 semanas fora do banco. Renomeada pra
 `20260906234500`. Sem esse portão, uma das duas teria sumido calada — e a que
 some não avisa: só um dia a coluna não existe.
+
+---
+
+## REL-76.3 — Medi o MeisterTask, subi a escala e dei o emoji (preview)
+
+**Diretiva:** DIR-76.3. **Data:** 06/09/2026. **Escopo:** preview.
+
+**"Está muito pequeno" — medi antes de mexer.** Nos prints dele (janela de
+1920, 1x), o MeisterTask usa:
+
+| | MeisterTask | eu tinha | agora |
+|---|---|---|---|
+| coluna | ~265px | 300px | **340px** |
+| cabeçalho | ~50px | 46px ✗ | **58px** |
+| título do card | ~15px | 15px | **17px** |
+| respiro do card | ~15px | 12px ✗ | **16px** |
+| campo de digitar | botão grande | 40px ✗ | **48px** |
+| avatar | ~26px | 26px | **32px** |
+
+O diagnóstico: **a coluna já era maior que a dele; o apertado era o miolo.**
+Cabeçalho mais baixo, respiro menor e o campo de escrever o tópico — que foi
+exatamente o que ele apontou — pequeno. A escala agora vive numa constante só
+(`T`), e a prova cobra cada número contra o do MeisterTask. "Pequeno" virou
+número: se encolher, reprova.
+
+**O emoji, e por que isso NÃO contradiz a DIR-76.1.** Ele pediu duas coisas
+opostas na aparência: *"está muito ainda aparecendo emoji"* e, agora,
+*"tem que dar a opção de ele selecionar o emoji que ele quer colocar"*. Não é
+contradição — são coisas diferentes:
+
+> emoji que **o programa espalha** pela interface é ruído: some num sistema,
+> muda de desenho no outro, e dá cara de rascunho.
+> emoji que **a pessoa escolhe** pra marcar a lista dela é identidade.
+
+Então o painel ganhou **duas abas** — Ícones (12 da casa) e Emoji (24) — e a
+fileira de cores ficou maior e explícita, porque ele disse *"sei que as cores
+estão automáticas, mas tem que dar a opção de selecionar"*. O automático
+continua: a lista nasce com a marca que o nome sugere; escolher é opção.
+
+O campo `icone` guarda **ou** um nome da casa **ou** um emoji, e `marcaValida`
+recusa qualquer outra coisa — lixo no campo não vira desenho na tela.
+
+**Prova em navegador: 264/264.** As medidas são lidas do DOM renderizado
+(`getBoundingClientRect`, `getComputedStyle`), não do código:
+
+```
+cabeçalho 58px (MT 50) · coluna 340px (MT 265) · card 316px
+título 17px (MT ~15) · campo 48px de altura, fonte 15px
+aba Emoji: 24 opções, nenhuma com svg, amostra 🔥 💪 🏋️ 🏃
+escolheu 🔥 → o cabeçalho passou a mostrar 🔥, sem ícone
+```
+
+**Erro meu na prova:** cliquei na aba e medi **no mesmo `evaluate`** — li o DOM
+de antes do React redesenhar e a prova acusou "não é emoji" quando era. A
+asserção seguinte (o 🔥 no cabeçalho) passava, e foi ela que denunciou a
+contradição. Agora clica, espera o quadro, e só então mede.
+
+**Suíte:** 1203/1203. **Build:** limpo. **Sem migração** — `icone` já existia.
+
+**Uma entrega de território, no rebase.** A sessão paralela levou os três
+portões e o fixo pra **dentro do cartão da pessoa**, na Gestão. O comentário
+lá credita a DIR-74 — **a regra continua minha, a tela virou deles**. Em vez de
+perseguir a tela alheia, tirei essas 4 asserções da minha prova e registrei
+onde a guarda ficou:
+
+- a **tela nova** está coberta pela prova **deles**
+  (`tests/navegador/performance.spec.mjs`, `[data-teste="portoes-pessoa"]`);
+- a **regra** — ninguém valida o próprio card, os três portões valem juntos,
+  consistência conta semanas — segue nos 36 testes de
+  `tests/xperformance.test.mjs`, com as 4 mutações do REL-74.
+
+Tirar dali é reconhecer de quem é a tela; não é abrir mão de guarda. **260/260.**

@@ -78,6 +78,33 @@ export const ICONES_LISTA = [
 ];
 
 /**
+ * E os EMOJI, porque o dono pediu os dois: "dar a opção de ele selecionar a
+ * cor, de ele selecionar o emoji que ele quer colocar".
+ *
+ * ⚠️ Isto NÃO contradiz a DIR-76.1 ("está muito aparecendo emoji"). São coisas
+ * diferentes: lá o emoji era enfeite que EU espalhava pela interface — some em
+ * um sistema, muda de desenho no outro, e dá cara de rascunho. Aqui é ESCOLHA
+ * DELE pra marcar a lista dele. Emoji que a pessoa escolhe é identidade;
+ * emoji que o programa espalha é ruído.
+ */
+export const EMOJIS_LISTA = [
+  '🔥', '💪', '🏋️', '🏃', '⚽', '🧠',
+  '💼', '📈', '💰', '🤝', '📞', '📊',
+  '🏠', '❤️', '🎯', '⭐', '🚀', '⚡',
+  '📚', '✍️', '🎓', '🎨', '🎵', '☕',
+];
+
+/** O que pode ir no campo `icone`: um nome da casa OU um emoji escolhido. */
+export function marcaValida(marca) {
+  const m = String(marca || '');
+  if (!m) return false;
+  return ICONES_LISTA.includes(m) || EMOJIS_LISTA.includes(m);
+}
+
+/** É emoji (desenha como texto) ou nome (desenha como ícone)? */
+export const ehEmoji = (marca) => EMOJIS_LISTA.includes(String(marca || ''));
+
+/**
  * Arrastar a lista de um lado pro outro. Devolve a lista TODA com `ordem`
  * recalculada — e não só as duas que trocaram: ordem que só muda em quem se
  * mexeu deixa buracos e empates, e aí a próxima leitura vem embaralhada.

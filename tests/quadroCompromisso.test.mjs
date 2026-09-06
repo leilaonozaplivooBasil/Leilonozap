@@ -13,7 +13,7 @@ import {
   estaFeito, estaAberto, progressoChecklist, atrasado, marcarFeito, reabrir,
   alternarItem, adicionarItem, removerItem, arquivavel, cartoesDaLista, feitosNaMesa,
   semLista, tarefaDoCartao, cartaoDaTarefa, cartaoDaTarefaFeita, resumoDoQuadro,
-  reordenarListas, ICONES_LISTA,
+  reordenarListas, ICONES_LISTA, EMOJIS_LISTA, marcaValida, ehEmoji,
 } from '../src/lib/quadroCompromisso.js';
 
 const HOJE = '2026-09-07';
@@ -212,5 +212,28 @@ describe('arrastar a lista de um lado pro outro (DIR-76.2)', () => {
     assert.ok(ICONES_LISTA.length >= 8);
     assert.equal(new Set(ICONES_LISTA).size, ICONES_LISTA.length);
     assert.ok(ICONES_LISTA.every((i) => typeof i === 'string' && i.trim()));
+  });
+});
+
+describe('a marca da lista: ícone da casa OU emoji escolhido (DIR-76.3)', () => {
+  test('as duas famílias existem, sem repetido dentro de cada uma', () => {
+    assert.ok(EMOJIS_LISTA.length >= 12);
+    assert.equal(new Set(EMOJIS_LISTA).size, EMOJIS_LISTA.length);
+    assert.equal(new Set(ICONES_LISTA).size, ICONES_LISTA.length);
+  });
+
+  test('nome e emoji não se misturam — cada marca é de uma família só', () => {
+    const cruzados = ICONES_LISTA.filter((i) => EMOJIS_LISTA.includes(i));
+    assert.deepEqual(cruzados, []);
+    assert.equal(ehEmoji('🔥'), true);
+    assert.equal(ehEmoji('academia'), false);
+  });
+
+  test('só marca conhecida é aceita — lixo no campo não vira desenho', () => {
+    assert.equal(marcaValida('academia'), true);
+    assert.equal(marcaValida('🔥'), true);
+    assert.equal(marcaValida('nao-existe'), false);
+    assert.equal(marcaValida(''), false);
+    assert.equal(marcaValida(null), false);
   });
 });
