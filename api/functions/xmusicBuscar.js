@@ -15,11 +15,23 @@
 // youtube_api_key) ou na variável de ambiente. O navegador chama esta rota,
 // e só esta rota fala com o Google.
 //
-// 🚧 E A COTA É PROTEGIDA: a busca custa 100 unidades das 10.000 diárias
-// gratuitas (~100 buscas/dia). Rota aberta viraria torneira pra qualquer um
-// esvaziar a cota do dono, então aqui o crachá de sessão é EXIGIDO de
-// verdade — sem a etapa "só anota no log" que outras rotas usam, porque
-// aqui o prejuízo de deixar passar é imediato.
+// 🚧 A COTA: a busca custa 100 unidades das 10.000 diárias gratuitas (~100
+// buscas/dia). Ela é protegida de DOIS jeitos diferentes, porque os dois
+// caminhos desta rota têm riscos diferentes:
+//   • ESTAÇÃO — é cache-first e LIMITADA POR CONSTRUÇÃO: são 4 vagas e cada
+//     uma só gasta cota quando o cache de 12h vence. Não importa quem chame
+//     nem quantas vezes: no máximo ~8 buscas/dia. Por isso NÃO exige crachá.
+//   • BUSCA LIVRE — cada termo novo gasta cota, então passa pelo crachá de
+//     sessão na MESMA convenção das outras rotas (exigirSessao: anota no log
+//     e, com SESSAO_MODO=bloquear, recusa), e o resultado de cada termo fica
+//     12h no cache, o que corta as repetições.
+//
+// 🔴 A LIÇÃO QUE CUSTOU UMA PUBLICAÇÃO (06/09/2026): a primeira versão exigia
+// o crachá até pra estação, com recusa de verdade. Em produção o celular do
+// dono não tem crachá (logou antes de ele existir) e as quatro estações
+// caíram em "nada tocou aqui" — 401 em TODAS as chamadas, nos logs. Exigir
+// mais do que o resto do sistema exige quebra o produto na mão de quem está
+// logado. A proteção certa da estação é o cache, não o crachá.
 //
 // 📻 E AS ESTAÇÕES DA CASA NASCEM DAQUI TAMBÉM. Elas deixaram de ser link
 // chumbado — que morre calado e vira o "botão só por ser" — e passaram a ser
@@ -32,7 +44,7 @@
 // GET ?q=termo            → { ok, itens: [{ id, titulo, canal, lista }] }
 // GET ?estacao=foco       → { ok, itens } já cacheado pra equipe
 // GET sem nada            → health { ok, chave: true|false }
-import { conferirSessao } from '../_lib/sessao.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const API = 'https://www.googleapis.com/youtube/v3/search';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -123,16 +135,9 @@ export default async function handler(req, res) {
     // health: diz se a chave já chegou, sem gastar nada da cota
     if (!termo && !slot) return res.status(200).json({ ok: true, chave: Boolean(k) });
 
-    // 🔐 O CRACHÁ VEM ANTES DE QUALQUER COISA QUE POSSA GASTAR COTA — estação
-    // inclusive. Numa primeira versão eu deixei a estação passar antes desta
-    // linha: como o cache vence a cada 12h, bastava alguém de fora chamar
-    // ?estacao=foco na hora certa pra disparar busca real e queimar a cota do
-    // dono. Health check é o único que fica de fora, porque não gasta nada.
-    const sessao = conferirSessao(req);
-    if (!sessao.ok) return res.status(401).json({ ok: false, error: 'sessao', motivo: sessao.motivo });
-
-    // 📻 ESTAÇÃO DA CASA: primeiro o cache da equipe, e só se estiver velho é
-    // que se gasta cota. É o que torna viável a estação ser busca e não link.
+    // 📻 ESTAÇÃO DA CASA: sem crachá — a proteção dela é o cache (ver o topo
+    // do arquivo). Primeiro o resultado guardado pra equipe; só se estiver
+    // velho é que se gasta cota, e isso acontece no máximo 2x por dia por vaga.
     if (slot) {
       if (!TERMOS[slot]) return res.status(200).json({ ok: false, error: 'estacao_desconhecida' });
       const guardado = await cacheLer(`estacao_${slot}`);
@@ -147,11 +152,22 @@ export default async function handler(req, res) {
       }
     }
 
+    // 🔎 BUSCA LIVRE: crachá na convenção do resto do sistema (anota; recusa
+    // só com SESSAO_MODO=bloquear) — e cache de 12h por termo, pra o mesmo
+    // "deep house" digitado dez vezes gastar cota uma vez.
+    const sessao = exigirSessao(req, null, 'xmusicBuscar');
+    if (!sessao.liberado) return res.status(sessao.http || 401).json({ ok: false, error: 'sessao', motivo: sessao.motivo });
+
+    const chaveTermo = `busca_${termo.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '_').slice(0, 80)}`;
+    const guardado = await cacheLer(chaveTermo);
+    if (guardado?.length) return res.status(200).json({ ok: true, itens: guardado, cache: true });
+
     if (!k) return res.status(200).json({ ok: false, error: 'sem_chave' });
 
     try {
       const itens = await buscar(termo, k);
-      return res.status(200).json({ ok: true, itens });
+      if (itens.length) await cacheGravar(chaveTermo, itens);
+      return res.status(200).json({ ok: true, itens, cache: false });
     } catch (e) {
       return res.status(200).json({ ok: false, error: String(e?.message || e).slice(0, 60) });
     }
