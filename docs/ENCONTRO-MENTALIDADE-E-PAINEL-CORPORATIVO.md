@@ -38,6 +38,28 @@
       tem cor própria; nenhum degradê de fundo. Os seis números numa régua; os 8 Hábitos numa grade; a semana em
       uma linha no cabeçalho do detalhamento.
 
+## "Só o meu" ou "tudo" — o escopo de visão (06/09)
+
+O dono é dois ao mesmo tempo: o usuário Luiz (a lista, a agenda, a carteira dele) e o super admin (a plataforma
+inteira). A tela misturava os dois sem dizer qual estava mostrando ("está confundindo a orquestra").
+
+**Onde estava misturando (auditoria de todo o painel):**
+
+| Lugar | Como estava | Como ficou |
+| --- | --- | --- |
+| Os 8 Hábitos (CRM): Lista, Contato, Agendamento | quem tinha visão total (admins, financeiro, diretoria) via a lista de TODO MUNDO junto com a própria, e a rede abaixo entrava na do executivo | **individual**: cada um vê só o que cadastrou (`escopoDoMetodo.js`); só o super admin, e só em "Tudo", vê todas |
+| Os 8 Hábitos (CRM): Esteira, Clientes, Visão Executiva, KPIs | visão total automática pra quem a matriz de papéis dá | visão total **só quando a pessoa escolhe "Tudo"**; em "Só o meu" a tela é a de um usuário comum |
+| Contato: o botão "MINHA AGENDA / TIME INTEIRO" escondido dentro da agenda | um botão local, só ali, e a fila "minha" só filtrava pelo dono na visão total | saiu; o escopo é o do seletor do topo; a fila "minha" filtra pelo dono sempre |
+| Relógio de teste e agenda da empresa (gestão) | apareciam junto com a visão total dos dados | separados: são capacidades do super admin (`gestao`), valem mesmo em "Só o meu" |
+| Mentalidade / X-Performance | já era explícito (o detalhamento é de todo mundo por desenho; o painel diz "painel de …") | sem mudança |
+| ADM X-Game | já dizia "o quadro da diretoria" × "o que está na sua mão" | sem mudança |
+
+**O seletor** (`SeletorEscopo.jsx`, regra em `escopoDeVisao.js`): aparece no topo dos 8 Hábitos só pra quem tem
+visão total. Duas opções, "Só o meu" e "Tudo · Super Admin" (ou "Tudo · Diretoria…"), e uma linha embaixo dizendo
+"Você está vendo: só o meu · como usuário" ou "tudo · como Super Admin". A escolha fica guardada no aparelho e vale pra
+todas as seções. Padrão: "só o meu". Duas camadas: `crmTudo` (o resto do CRM, pra quem a matriz dá) e `metodoTudo`
+(lista/contato/agendamento, só o super admin).
+
 ## O que estava duplicado e virou uma coisa só (06/09)
 
 O dono pediu uma análise do painel inteiro ("o que der pra juntar, une — exemplo: enviar demanda"). O que se

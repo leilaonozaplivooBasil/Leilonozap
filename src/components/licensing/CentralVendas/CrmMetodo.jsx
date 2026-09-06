@@ -65,8 +65,12 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr }) {
+// `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
+// `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
+// o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr }) {
   const uid = currentUser?.id;
+  const podeGerir = gestao ?? visaoTotal;
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
   const [tarefas, setTarefas] = useState([]);
@@ -83,7 +87,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
   const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
   const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato, editar:registro} = editar (DIR-50); {contato:null} = agendar livre
-  const [escopoAgenda, setEscopoAgenda] = useState('minha'); // DIR-49: 'minha' é o padrão; 'time' só pra visão total
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
   const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
@@ -163,7 +166,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
   // 🧪 MODO DESENVOLVEDOR (só super admin): SIMULAÇÃO PURA — o dia ZERA,
   // roda no horário escolhido e NADA é salvo no banco. As marcações da
   // sessão de teste vivem só na memória (devMarcas); sair = tudo volta.
-  const modoDev = visaoTotal && !!horaTeste;
+  const modoDev = podeGerir && !!horaTeste;
   const [devMarcas, setDevMarcas] = useState({}); // { tarefaId: { feito, comprovacao } }
   const tarefasJogo = useMemo(
     () => (modoDev
@@ -1183,7 +1186,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 placarAberto={painelAberto}
                 onPlacar={() => setPainelAberto(!painelAberto)}
                 mostrarPlacar={visao === 'jornada' || celular}
-                teste={visaoTotal ? {
+                teste={podeGerir ? {
                   hora: horaTeste,
                   rascunho: horaRascunho,
                   onRascunho: setHoraRascunho,
@@ -1735,7 +1738,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
           const fmtQuando = (s) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
           // 🙋/👥 DIR-49 — o escopo (fila + agenda): MINHA é o padrão; TIME só
           // existe pra visão total. "Minha" = o que EU cadastrei/registrei.
-          const minha = !visaoTotal || escopoAgenda === 'minha';
+          const minha = !visaoTotal; // 06/09: o escopo vem do seletor "só o meu / tudo" lá em cima, não de um botão aqui
           const quem = (nome) => (minha ? 'você' : (nome || 'sem dono definido')); // DIR-50/54: dono na frente
           const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
 
@@ -1785,7 +1788,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                   Quem contatar — {visaoTotal && !minha ? 'os qualificados do TIME' : 'os qualificados da sua lista'}{fila.length > 0 ? ` (${fila.length})` : ''}
                 </p>
                 {visaoTotal && (
-                  <p className="text-[11px] text-nz-tinta-fraca mb-1.5">{minha ? '🙋 mostrando só os SEUS cadastros — troque pra TIME INTEIRO na agenda abaixo pra ver de todo mundo' : '👥 mostrando os cadastros de TODO MUNDO, cada um com o dono identificado'}</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mb-1.5">{minha ? '🙋 mostrando só os SEUS cadastros — pra ver de todo mundo, troque pra "Tudo" no seletor do topo' : '👥 mostrando os cadastros de TODO MUNDO, cada um com o dono identificado'}</p>
                 )}
                 {fila.length === 0 ? (
                   <p className="text-xs text-nz-tinta-fraca py-3 text-center border border-dashed border-nz-borda rounded-xl">
@@ -1834,24 +1837,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
               {/* 📅 DIR-49 — A AGENDA UNIFICADA: minha (padrão) × time inteiro,
                   método + esteira + Google numa linha do tempo só */}
               <div className="rounded-xl border border-nz-verde/25 bg-nz-verde-fundo/30 p-3 space-y-2">
-                {visaoTotal && (
-                  <div className="grid grid-cols-2 rounded-lg border border-nz-verde/30 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setEscopoAgenda('minha')}
-                      className={`py-2 text-xs font-bold transition-colors ${minha ? 'bg-nz-verde text-white' : 'bg-white text-nz-tinta-fraca hover:text-nz-tinta'}`}
-                    >
-                      MINHA AGENDA
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEscopoAgenda('time')}
-                      className={`py-2 text-xs font-bold transition-colors ${!minha ? 'bg-nz-verde text-white' : 'bg-white text-nz-tinta-fraca hover:text-nz-tinta'}`}
-                    >
-                      TIME INTEIRO
-                    </button>
-                  </div>
-                )}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <p className="text-sm font-bold text-nz-tinta">
                     {minha ? 'Minha agenda de hoje' : 'Agenda do TIME hoje'} · {plural(nReunioes, 'reunião', 'reuniões')} · {plural(retornos.length, 'retorno', 'retornos')}
@@ -2003,8 +1988,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 )}
               </div>
 
-              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só visão total) */}
-              {visaoTotal && (
+              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só a gestão) */}
+              {podeGerir && (
                 <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2">
                   <p className="text-sm font-bold text-nz-tinta">Reuniões da empresa <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span></p>
                   {reunioesEmpresa.length > 0 && (
@@ -2090,7 +2075,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
                 onSalvar={salvarRegistroContato}
                 salvando={salvando}
                 criarNoGoogleFn={registroAberto?.editar ? atualizarEventoNoGoogle(registroAberto.editar) : criarEventoNoGoogle}
-                onSalvarAgendaEmpresa={visaoTotal ? salvarAgendaEmpresa : null}
+                onSalvarAgendaEmpresa={podeGerir ? salvarAgendaEmpresa : null}
                 visaoTotal={visaoTotal}
                 autor={currentUser}
               />

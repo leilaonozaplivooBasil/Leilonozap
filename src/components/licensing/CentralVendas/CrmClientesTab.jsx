@@ -41,6 +41,8 @@ import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
 import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
+import { resolverEscopo } from '@/lib/escopoDeVisao';
+import SeletorEscopo, { useEscopoDeVisao } from './SeletorEscopo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
 import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
@@ -234,7 +236,13 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // = só super_admin/admin/admin_financeiro; diretoria vê VENDA × META.
   // O nome isSuperAdmin foi mantido nos memos = "bypass do escopo de rede".
   const vis = React.useMemo(() => visibilidadeDoUsuario(currentUser), [currentUser]);
-  const isSuperAdmin = vis.visaoTotal;
+  // 👤/🛡️ 06/09 — quem tem visão total ESCOLHE, num seletor só no topo, se
+  // está vendo "só o meu" (como usuário) ou "tudo" (como Super Admin /
+  // diretoria). Antes o dono via os dois misturados sem a tela dizer qual.
+  // isSuperAdmin (= bypass do escopo de rede) agora só liga quando ele pediu.
+  const [escopo, setEscopo] = useEscopoDeVisao();
+  const visao = React.useMemo(() => resolverEscopo({ vis, escopo }), [vis, escopo]);
+  const isSuperAdmin = visao.crmTudo;
   const networkIds = React.useMemo(
     () => (!isSuperAdmin && currentUser?.id ? getNetworkDescendantIds(appUsers, currentUser.id) : new Set()),
     [appUsers, currentUser?.id, isSuperAdmin]
@@ -287,8 +295,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Lê os clientes CRUS (não o networkManualCustomers), porque a rede abaixo
   // também não entra aqui.
   const metodoEscopo = React.useMemo(
-    () => escopoDoMetodo({ clientes: customers, oportunidades, uid: currentUser?.id, superAdmin: vis.superAdmin }),
-    [customers, oportunidades, currentUser?.id, vis.superAdmin]
+    () => escopoDoMetodo({ clientes: customers, oportunidades, uid: currentUser?.id, superAdmin: visao.metodoTudo }),
+    [customers, oportunidades, currentUser?.id, visao.metodoTudo]
   );
   // Negociação manual segue o cliente: só entra se o cliente dela está no
   // meu escopo (a tabela não tem dono próprio — o vínculo real é o cliente).
@@ -1448,6 +1456,8 @@ _Enviado via CRM Leilão NoZap_`;
               Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
             </h1>
           </div>
+          {/* 👤/🛡️ o seletor "só o meu / tudo" — só pra quem tem visão total */}
+          <SeletorEscopo vis={vis} escopo={escopo} onEscopo={setEscopo} />
           {/* 🧹 "Novo Vendedor" e "Novo Cliente" SAÍRAM DAQUI (ordem do dono:
               "está fora de contexto, tem que entrar lá na lista de contato").
               Conferido antes de mexer: o Hábito 03 — Lista de Networking já
@@ -1584,7 +1594,8 @@ _Enviado via CRM Leilão NoZap_`;
           <CrmMetodo
             painel={secaoAtiva}
             currentUser={currentUser}
-            visaoTotal={vis.superAdmin}
+            visaoTotal={visao.metodoTudo}
+            gestao={vis.superAdmin}
             nomePorUsuarioId={nomePorUsuarioId}
             clientesManuais={metodoEscopo.clientes}
             oportunidades={metodoEscopo.oportunidades}
