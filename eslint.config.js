@@ -36,6 +36,13 @@ export default [
     },
     rules: {
       "no-unused-vars": "off",
+      // ⛑️ Este bloco de `rules` SOBRESCREVE o eslint:recommended espalhado
+      // acima — por isso o no-undef ficava desligado e um componente apagado
+      // (mas ainda usado no JSX) só quebrava na tela do usuário. As duas
+      // regras abaixo pegam isso no lint: `no-undef` para variáveis e
+      // `react/jsx-no-undef` para componentes JSX (o core não vê JSX).
+      "no-undef": "error",
+      "react/jsx-no-undef": "error",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
       "unused-imports/no-unused-imports": "error",
