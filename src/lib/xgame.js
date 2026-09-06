@@ -690,6 +690,32 @@ export function validarComprovacao(tipo, entrega) {
 // 400 caracteres ≈ um parágrafo sólido de 5-6 linhas: desafia a elaborar e
 // digitar de verdade sem virar gargalo na rotina (uma folha inteira todo dia
 // travaria a jornada — o desafio sobe depois, se o time engolir fácil).
+// 📳 O TOQUE QUE VIBRA (ordem do dono: "tocando, mexendo no telefone,
+// sentindo, vibrando — é assim que tem que ser"). É o que faz o jogo
+// responder ao dedo, igual ao Duolingo.
+//
+// COMO SE COMPORTA EM CADA APARELHO:
+//   • Android/Chrome: vibra de verdade;
+//   • iPhone: o Safari não expõe a API — a chamada simplesmente não existe
+//     e nada acontece (sem erro, sem travar);
+//   • navegador de computador: idem, silencioso.
+// Por isso a checagem é por typeof: em ambiente sem navigator (o Node dos
+// testes, por exemplo) nem a referência é avaliada.
+// os padrões, em milissegundos (número = um pulso; lista = pulso/pausa/pulso)
+export const VIBRA_TOQUE = 12;                        // encostou num botão
+export const VIBRA_ABRIR = [10, 30, 10];              // abriu a jornada
+export const VIBRA_CONCLUIU = [18, 45, 28];           // fechou uma tarefa
+export const VIBRA_CONQUISTA = [22, 50, 22, 50, 60];  // baú, troféu, dia perfeito
+export const VIBRA_ERRO = [40, 60, 40];               // reprovou / faltou algo
+
+export const vibrar = (padrao = VIBRA_TOQUE) => {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(padrao);
+    }
+  } catch { /* aparelho sem motor de vibração */ }
+};
+
 export const RESUMO_MIN = 400;
 
 // ── 👤 O PADRÃO DE NOME DO JOGO (ordem do dono, 05/09) ──────────────

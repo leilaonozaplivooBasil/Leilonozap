@@ -28,6 +28,7 @@ import {
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
+  vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
 } from '@/lib/xgame';
 import { supabase } from '@/api/supabaseClient';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -519,6 +520,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
         setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
       }
+      // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
+      vibrar(VIBRA_CONQUISTA);
       toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo — vai pra análise do gestor (grave o vídeo dentro da janela do amanhecer pra aprovar direto).');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
@@ -544,6 +547,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         setComprovando({ ...comprovando, erro: 'anexe uma imagem pra simular a comprovação' });
         return;
       }
+      vibrar(VIBRA_CONCLUIU);
       setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: true, comprovacao: { tipo, valido: true, status: 'aprovada_ia', dev: true, entrega: '(simulada no modo dev)', quando: new Date().toISOString() } } }));
       setComprovando(null);
       toast.success('🧪 modo dev: comprovação simulada — nada foi salvo');
@@ -617,6 +621,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
         setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
       }
+      vibrar(VIBRA_CONCLUIU);
       toast.success('Comprovada e concluída! ✔');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
@@ -629,6 +634,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
         const tipoDev = tipoDeValidacao(t);
         if (tipoDev) { setComprovando({ id: t.id, tipo: tipoDev, erro: '', enviando: false }); return; }
       }
+      vibrar(t.feito ? VIBRA_ERRO : VIBRA_CONCLUIU);
       setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: !t.feito, comprovacao: null } }));
       return;
     }
@@ -653,6 +659,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, nom
       setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
       setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
     }
+    // 📳 o telefone responde na hora — antes mesmo do banco confirmar
+    vibrar(t.feito ? VIBRA_ERRO : VIBRA_CONCLUIU);
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !t.feito } : x)));
     try { await plataforma.entities.MetodoTarefa.update(t.id, { feito: !t.feito }); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
