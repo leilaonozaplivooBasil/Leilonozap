@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Users, Sun, CalendarRange, Inbox, Trophy, ChevronDown, ChevronUp, Award, Sparkles, Phone, HandCoins } from 'lucide-react';
+import { Loader2, Users, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
@@ -24,72 +24,68 @@ import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 // detalhamento de cada um, já com uma prévia na primeira linha; quando clicar
 // abre tudo dele — quadro dos sonhos, convite, tudo — e dali gera o PDF."
 //
-// Então, de cima pra baixo:
-//   1. OS NÚMEROS DO TIME — o período (hoje · semana · mês), seis números do
-//      time, os 8 Hábitos em oito cartões só com número e barra (nenhum nome),
-//      e os quatro números da semana (planejaram, produziram, demandas, semáforo).
-//   2. O DETALHAMENTO POR PESSOA — uma linha por pessoa (a prévia: semáforo,
-//      hábitos em bolinhas, hoje, semana, demandas, produção). Clicou, abre
-//      embaixo da linha: os 8 Hábitos DELA com o detalhe (fez / não fez e o
-//      porquê), o botão do PDF e o Painel Corporativo dela (metas, demandas,
-//      a semana de todo mundo — que também tem o PDF).
+// A CARA (dono, 06/09, de novo): "está muito colorido, está deixando a mente
+// bugada; quero bem clean, bem executivo". Então a regra de cor daqui é uma
+// só: número em branco, apoio em cinza, e COR SÓ ONDE É SINAL — o semáforo da
+// pessoa (verde/amarelo/vermelho), o "atrasada", o "sem agendar", o "não fez".
+// Nenhum hábito tem cor própria; nenhum degradê de fundo.
+//
+// De cima pra baixo:
+//   1. OS NÚMEROS DO TIME — o período (hoje · semana · mês); seis números numa
+//      régua; os 8 Hábitos numa grade, só número, % e barra. Nenhum nome.
+//   2. O DETALHAMENTO POR PESSOA — a semana em uma linha (planejaram,
+//      produziram, demandas, semáforo) e uma linha por pessoa (a prévia).
+//      Clicou, abre embaixo da linha: os 8 Hábitos DELA com o detalhe, o PDF
+//      (no cabeçalho e no rodapé) e o Painel Corporativo dela embutido (metas
+//      e demandas — sem repetir quem é, o seletor nem a semana de todo mundo,
+//      que a tabela de cima já mostra).
 
 const caixa = { background: 'rgba(255,255,255,0.03)' };
 const titulo = 'text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase';
 const COR = { verde: 'bg-nz-verde', amarelo: 'bg-amber-400', vermelho: 'bg-red-500' };
 const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const somaDias = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const CORES_HABITO = ['#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#34d399', '#22d3ee', '#e879f9'];
+const dois = (n) => String(n).padStart(2, '0');
 
-/** Um número do time: rótulo pequeno em cima, número grande embaixo. Nenhum nome. */
-function Numero({ rotulo, valor, cor = 'text-white', Icone = null, apoio = null, tamanho = 'text-[18px]' }) {
+/** Um número do time na régua: rótulo pequeno, número grande em branco, apoio em cinza. Cor só se for alerta. */
+function Numero({ rotulo, valor, apoio = null, alerta = false }) {
   return (
-    <div className="rounded-lg border border-white/10 px-3 py-2.5" style={caixa}>
-      <p className="text-[9px] text-white/35 uppercase tracking-wider truncate">{Icone ? <Icone className="w-3 h-3 inline mr-1" /> : null}{rotulo}</p>
-      <p className={`mt-0.5 ${tamanho} font-black tabular-nums leading-none ${cor}`}>{valor}</p>
-      {apoio && <p className="mt-0.5 text-[10px] text-white/40 truncate">{apoio}</p>}
+    <div className="px-3 py-2.5 min-w-0">
+      <p className="text-[9px] text-white/40 uppercase tracking-wider truncate">{rotulo}</p>
+      <p className={`mt-1 text-[20px] font-black tabular-nums leading-none ${alerta ? 'text-red-300' : 'text-white'}`}>{valor}</p>
+      {apoio && <p className="mt-1 text-[10px] text-white/35 truncate">{apoio}</p>}
     </div>
   );
 }
 
-/** Um Hábito do time em número: quantos de quantos, a barra, o total. Sem nome. */
-function HabitoDoTime({ h, cor }) {
+/** Um Hábito do time em número: quantos de quantos, %, a barra, o total. Sem nome, sem cor própria. */
+function HabitoDoTime({ h }) {
   return (
-    <div className="rounded-xl border border-white/10 p-3" style={caixa} data-teste="habito" data-n={h.n} data-quantos={h.quantos}>
-      <div className="flex items-start gap-2.5">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px] font-black tabular-nums" style={{ background: `${cor}22`, color: cor }}>{h.n}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-extrabold leading-tight text-white truncate" title={h.nome}>{h.nome}</p>
-          <p className="text-[10px] text-white/40 truncate" title={h.pergunta}>{h.sub}</p>
-        </div>
+    <div className="p-3 min-w-0" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="habito" data-n={h.n} data-quantos={h.quantos}>
+      <p className="text-[10px] font-bold text-white/85 truncate" title={h.pergunta}><span className="text-white/35 tabular-nums mr-1.5">{dois(h.n)}</span>{h.nome}</p>
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <p className="text-[22px] font-black tabular-nums leading-none text-white" data-teste="habito-quantos">{h.quantos}<span className="text-[11px] font-semibold text-white/35"> de {h.deQuantos}</span></p>
+        <p className="text-[11px] font-semibold tabular-nums text-white/45">{h.pct}%</p>
       </div>
-      <div className="mt-2.5 flex items-end justify-between gap-2">
-        <p className="text-[22px] font-black tabular-nums leading-none" style={{ color: cor }} data-teste="habito-quantos">{h.quantos}<span className="text-[11px] font-bold text-white/35"> de {h.deQuantos}</span></p>
-        <p className="text-[11px] font-bold tabular-nums text-white/60">{h.pct}%</p>
-      </div>
-      <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.07] overflow-hidden"><div className="h-full rounded-full transition-[width]" style={{ width: `${h.pct}%`, background: cor }} /></div>
-      <p className="mt-1.5 text-[10px] text-white/45 tabular-nums truncate">{h.totalRotulo} no time</p>
+      <div className="mt-2 h-[3px] rounded-full bg-white/[0.08] overflow-hidden"><div className="h-full rounded-full bg-white/70 transition-[width]" style={{ width: `${h.pct}%` }} /></div>
+      <p className="mt-1.5 text-[10px] text-white/40 tabular-nums truncate">{h.totalRotulo} no time</p>
     </div>
   );
 }
 
-/** Os 8 Hábitos de UMA pessoa, com o detalhe: fez (e quanto) ou não fez (e por quê). */
+/** Os 8 Hábitos de UMA pessoa, com o detalhe: fez (e quanto) ou não fez (e por quê). O ponto é o único sinal. */
 function HabitosDaPessoa({ habitos }) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5" data-teste="habitos-pessoa">
-      {habitos.map((h) => {
-        const cor = CORES_HABITO[h.n - 1];
-        return (
-          <div key={h.n} className={`rounded-lg border px-2.5 py-2 ${h.fez ? 'border-white/10' : 'border-red-400/20'}`} style={{ background: h.fez ? 'rgba(255,255,255,0.03)' : 'rgba(239,68,68,0.05)' }} data-teste="habito-pessoa" data-n={h.n} data-fez={h.fez ? 'sim' : 'nao'}>
-            <div className="flex items-center gap-1.5">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded text-[10px] font-black tabular-nums" style={{ background: `${cor}22`, color: cor }}>{h.n}</span>
-              <p className="text-[11px] font-bold text-white truncate flex-1" title={h.nome}>{h.curto || h.nome}</p>
-              <span className={`inline-block h-2 w-2 rounded-full shrink-0 ${h.fez ? (h.fraco ? 'bg-amber-400' : 'bg-nz-verde') : 'bg-red-500'}`} />
-            </div>
-            <p className={`mt-1 text-[10.5px] leading-snug ${h.fez ? (h.fraco ? 'text-amber-200/80' : 'text-white/65') : 'text-red-200/70'}`}>{h.texto}</p>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-lg overflow-hidden border border-white/10 bg-white/10" data-teste="habitos-pessoa">
+      {habitos.map((h) => (
+        <div key={h.n} className="px-2.5 py-2 min-w-0" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="habito-pessoa" data-n={h.n} data-fez={h.fez ? 'sim' : 'nao'}>
+          <div className="flex items-center gap-1.5">
+            <span className={`inline-block h-2 w-2 rounded-full shrink-0 ${h.fez ? (h.fraco ? 'bg-amber-400' : 'bg-nz-verde') : 'bg-red-500'}`} />
+            <p className="text-[11px] font-bold text-white truncate flex-1" title={h.nome}><span className="text-white/35 tabular-nums mr-1">{dois(h.n)}</span>{h.curto || h.nome}</p>
           </div>
-        );
-      })}
+          <p className={`mt-1 text-[10.5px] leading-snug ${h.fez ? 'text-white/60' : 'text-white/40'}`}>{h.texto}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -113,7 +109,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
   const [entregaveis, setEntregaveis] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [pessoaId, setPessoaId] = useState(currentUser?.id || null); // quem está aberto no detalhamento
-  const [relatorio, setRelatorio] = useState(null); // o relatório de quem está aberto (vem do painel, pro PDF do cabeçalho)
+  const [relatorio, setRelatorio] = useState(null); // o relatório de quem está aberto (vem do painel, pro PDF)
   const [versao, setVersao] = useState(0); // recarrega quando o painel de baixo mexe
 
   // a janela de tarefas cobre a semana E o período escolhido (o mês pode ser maior)
@@ -161,11 +157,12 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
   const oito = useMemo(() => habitosDoTime({ time, tarefas, perfis, clientes, vendas, oportunidades, entregaveis, periodo, hojeISO: hoje }), [time, tarefas, perfis, clientes, vendas, oportunidades, entregaveis, periodo, hoje]);
   const r = oito.resumo;
   const rotuloPeriodo = periodoTipo !== 'hoje' ? `${oito.periodo.rotulo} (${fmtDia(oito.periodo.de)} a ${fmtDia(oito.periodo.ate)})` : `hoje · ${fmtDia(hoje)}`;
+  const Stat = ({ rotulo, valor, alerta = false }) => <span className="text-[11px] text-white/45">{rotulo} <b className={`font-bold tabular-nums ${alerta ? 'text-red-300' : 'text-white'}`}>{valor}</b></span>;
 
   return (
     <div className="space-y-4 text-white" data-teste="performance-equipe" data-periodo={periodoTipo}>
-      {/* ── 1. os números do time (nenhum nome) ── */}
-      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.14), rgba(217,70,239,0.10) 60%, rgba(0,0,0,0))' }} data-teste="oito-habitos">
+      {/* ── 1. os números do time (nenhum nome, nenhuma cor) ── */}
+      <div className="rounded-xl border border-white/10 p-3 sm:p-4" style={caixa} data-teste="oito-habitos">
         <div className="flex items-center gap-2 flex-wrap">
           <p className={titulo}><Trophy className="w-3 h-3 inline mr-1" />X-Performance · os números do time</p>
           <span className="text-[10px] text-white/35">· {r.pessoas} pessoa{r.pessoas === 1 ? '' : 's'} · {rotuloPeriodo}</span>
@@ -175,29 +172,21 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
             ))}
           </div>
         </div>
-        {carregando ? <p className="mt-2 text-[11px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> lendo o time…</p> : time.length === 0 ? <p className="mt-2 text-[11px] text-amber-300/80">Ninguém do time corporativo (executivo ao embaixador) no painel de controle ainda.</p> : (
+        {carregando ? <p className="mt-2 text-[11px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> lendo o time…</p> : time.length === 0 ? <p className="mt-2 text-[11px] text-white/50">Ninguém do time corporativo (executivo ao embaixador) no painel de controle ainda.</p> : (
           <>
-            {/* os seis números */}
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5" data-teste="oito-resumo">
-              <Numero rotulo="média de hábitos" valor={`${r.mediaHabitos.toLocaleString('pt-BR')} de 8`} cor={r.mediaHabitos >= 6 ? 'text-nz-verde' : r.mediaHabitos >= 3 ? 'text-amber-300' : 'text-red-300'} Icone={Sparkles} apoio="por pessoa" />
-              <Numero rotulo="com os 8 inteiros" valor={String(r.inteiros.length)} cor={r.inteiros.length ? 'text-nz-verde' : 'text-white/50'} Icone={Award} apoio={`de ${r.pessoas}`} />
-              <Numero rotulo="sem nenhum hábito" valor={String(r.zerados.length)} cor={r.zerados.length ? 'text-red-300' : 'text-nz-verde'} Icone={Users} apoio={`de ${r.pessoas}`} />
-              <Numero rotulo="acordaram às 5" valor={`${r.acordaram} de ${r.pessoas}`} cor={r.acordaram < r.pessoas ? 'text-amber-300' : 'text-nz-verde'} Icone={Sun} />
-              <Numero rotulo="contatos feitos" valor={String(r.contatos)} Icone={Phone} apoio="no time" />
-              <Numero rotulo="venderam ou fecharam" valor={`${r.venderam} de ${r.pessoas}`} cor={r.venderam ? 'text-nz-verde' : 'text-red-300'} Icone={HandCoins} />
+            {/* a régua dos seis números */}
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-lg border border-white/10 divide-x divide-white/10 [&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(n+3)]:border-t-0 sm:[&>*:nth-child(n+4)]:border-t lg:[&>*]:!border-t-0 [&>*]:border-white/10" data-teste="oito-resumo">
+              <Numero rotulo="média de hábitos" valor={`${r.mediaHabitos.toLocaleString('pt-BR')} de 8`} apoio="por pessoa" />
+              <Numero rotulo="com os 8 inteiros" valor={String(r.inteiros.length)} apoio={`de ${r.pessoas}`} />
+              <Numero rotulo="sem nenhum hábito" valor={String(r.zerados.length)} apoio={`de ${r.pessoas}`} alerta={r.zerados.length > 0} />
+              <Numero rotulo="acordaram às 5" valor={`${r.acordaram} de ${r.pessoas}`} />
+              <Numero rotulo="contatos feitos" valor={String(r.contatos)} apoio="no time" />
+              <Numero rotulo="venderam ou fecharam" valor={`${r.venderam} de ${r.pessoas}`} />
             </div>
 
-            {/* os oito Hábitos em número */}
-            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-2" data-teste="oito-cartoes">
-              {oito.habitos.map((h) => <HabitoDoTime key={h.n} h={h} cor={CORES_HABITO[h.n - 1]} />)}
-            </div>
-
-            {/* a semana em número */}
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5" data-teste="visao-resumo">
-              <Numero rotulo="planejaram hoje" valor={`${visao.planejaramHoje} de ${visao.linhas.length}`} cor={visao.semPlanejarHoje ? 'text-amber-300' : 'text-nz-verde'} Icone={Sun} />
-              <Numero rotulo="produziram na semana" valor={`${visao.produziram} de ${visao.linhas.length}`} cor={visao.naoProduziram ? 'text-amber-300' : 'text-nz-verde'} Icone={CalendarRange} apoio={`${fmtDia(segunda)} a ${fmtDia(domingo)}`} />
-              <Numero rotulo="demandas concluídas" valor={`${visao.demandas.concluidas} de ${visao.demandas.total} · ${visao.demandas.pct}%`} cor={visao.demandas.atrasadas ? 'text-red-300' : 'text-white'} Icone={Inbox} apoio={visao.demandas.atrasadas ? `${visao.demandas.atrasadas} atrasada${visao.demandas.atrasadas > 1 ? 's' : ''}` : 'na semana'} />
-              <Numero rotulo="semáforo" valor={`${visao.verdes} 🟢 · ${visao.amarelos} 🟡 · ${visao.vermelhos} 🔴`} tamanho="text-[15px]" />
+            {/* os oito Hábitos em número, numa grade */}
+            <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-px rounded-lg overflow-hidden border border-white/10 bg-white/10" data-teste="oito-cartoes">
+              {oito.habitos.map((h) => <HabitoDoTime key={h.n} h={h} />)}
             </div>
           </>
         )}
@@ -209,6 +198,19 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
           <p className={titulo}><Users className="w-3 h-3 inline mr-1" />Detalhamento por pessoa</p>
           <span className="text-[10px] text-white/35">· a prévia na linha; clique pra abrir os 8 Hábitos, as metas, as demandas e o PDF</span>
         </div>
+        {!carregando && visao.linhas.length > 0 && (
+          <div className="mt-2 flex items-center gap-x-4 gap-y-1 flex-wrap rounded-lg border border-white/10 px-3 py-2" data-teste="visao-resumo">
+            <span className="text-[10px] text-white/35 uppercase tracking-wider">semana {fmtDia(segunda)} a {fmtDia(domingo)}</span>
+            <Stat rotulo="planejaram hoje" valor={`${visao.planejaramHoje} de ${visao.linhas.length}`} />
+            <Stat rotulo="produziram na semana" valor={`${visao.produziram} de ${visao.linhas.length}`} />
+            <Stat rotulo="demandas concluídas" valor={`${visao.demandas.concluidas} de ${visao.demandas.total} · ${visao.demandas.pct}%${visao.demandas.atrasadas ? ` · ${visao.demandas.atrasadas} atrasada${visao.demandas.atrasadas > 1 ? 's' : ''}` : ''}`} alerta={visao.demandas.atrasadas > 0} />
+            <span className="ml-auto inline-flex items-center gap-2 text-[11px] tabular-nums text-white/70" title="semáforo do time">
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-nz-verde" />{visao.verdes}</span>
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" />{visao.amarelos}</span>
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-500" />{visao.vermelhos}</span>
+            </span>
+          </div>
+        )}
         {carregando ? <p className="mt-2 text-[11px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> lendo a semana…</p> : visao.linhas.length > 0 && (
           <div className="mt-2 overflow-x-auto">
             <table className="w-full text-[11px]" data-teste="visao-tabela">
@@ -235,17 +237,17 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
                           <p className="text-[10px] text-white/40 pl-[18px]">{l.nivel ? getLevel(l.nivel).name : ''}{l.funcaoCurta ? ` · ${l.funcaoCurta}` : ''}</p>
                         </td>
                         <td className="py-1.5 pr-2 tabular-nums">
-                          <div className="flex items-center gap-1.5"><span className={`font-bold ${hab >= 6 ? 'text-nz-verde' : hab >= 3 ? 'text-amber-300' : 'text-red-300'}`}>{hab}/8</span>
-                            <span className="flex gap-0.5">{oito.habitos.map((h) => <span key={h.n} className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: h.fizeram.some((f) => f.pessoaId === l.pessoaId) ? CORES_HABITO[h.n - 1] : 'rgba(255,255,255,0.12)' }} title={h.nome} />)}</span>
+                          <div className="flex items-center gap-1.5"><span className="font-bold text-white">{hab}<span className="text-white/35">/8</span></span>
+                            <span className="flex gap-0.5">{oito.habitos.map((h) => <span key={h.n} className={`inline-block h-1.5 w-1.5 rounded-full ${h.fizeram.some((f) => f.pessoaId === l.pessoaId) ? 'bg-white/80' : 'bg-white/[0.12]'}`} title={h.nome} />)}</span>
                           </div>
                         </td>
-                        <td className="py-1.5 pr-2 tabular-nums">{l.hoje.vazio ? <span className="text-white/30">dia vazio</span> : <><span className={l.hoje.planejou ? 'text-white/80' : 'text-amber-300'}>{l.hoje.planejou ? 'planejou' : 'não planejou'}</span><span className="text-white/45"> · {l.hoje.feitas}/{l.hoje.total} feitas</span></>}</td>
+                        <td className="py-1.5 pr-2 tabular-nums">{l.hoje.vazio ? <span className="text-white/30">dia vazio</span> : <><span className="text-white/80">{l.hoje.planejou ? 'planejou' : 'não planejou'}</span><span className="text-white/45"> · {l.hoje.feitas}/{l.hoje.total} feitas</span></>}</td>
                         <td className="py-1.5 pr-2 tabular-nums"><span className="text-white/80">{l.semana.feitas}/{l.semana.total}</span><span className="text-white/45"> · {l.semana.pct}%</span>{l.semana.atrasadas ? <span className="text-red-300"> · {l.semana.atrasadas} atrasada{l.semana.atrasadas > 1 ? 's' : ''}</span> : null}</td>
-                        <td className="py-1.5 pr-2 tabular-nums">{l.demandas.total ? <><span className="text-white/80">{l.demandas.concluidas}/{l.demandas.total}</span>{l.demandas.semAgendar ? <span className="text-amber-300"> · {l.demandas.semAgendar} sem agendar</span> : null}{l.demandas.atrasadas ? <span className="text-red-300"> · {l.demandas.atrasadas} atrasada{l.demandas.atrasadas > 1 ? 's' : ''}</span> : null}</> : <span className="text-white/30">—</span>}</td>
+                        <td className="py-1.5 pr-2 tabular-nums">{l.demandas.total ? <><span className="text-white/80">{l.demandas.concluidas}/{l.demandas.total}</span>{l.demandas.semAgendar ? <span className="text-amber-300/90"> · {l.demandas.semAgendar} sem agendar</span> : null}{l.demandas.atrasadas ? <span className="text-red-300"> · {l.demandas.atrasadas} atrasada{l.demandas.atrasadas > 1 ? 's' : ''}</span> : null}</> : <span className="text-white/30">—</span>}</td>
                         <td className="py-1.5 pr-2">
                           <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-20 rounded-full bg-white/10 overflow-hidden"><div className="h-full" style={{ width: `${Math.max(l.semana.pct, l.demandas.pct)}%`, background: l.produziu ? 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' : 'rgba(255,255,255,0.2)' }} /></div>
-                            <span className={`text-[10px] font-bold ${l.produziu ? 'text-nz-verde' : 'text-red-300'}`}>{l.produziu ? 'fez' : 'não fez'}</span>
+                            <div className="h-[3px] w-20 rounded-full bg-white/10 overflow-hidden"><div className="h-full bg-white/70" style={{ width: `${Math.max(l.semana.pct, l.demandas.pct)}%` }} /></div>
+                            <span className={`text-[10px] font-bold ${l.produziu ? 'text-white/70' : 'text-red-300'}`}>{l.produziu ? 'fez' : 'não fez'}</span>
                           </div>
                         </td>
                         <td className="py-1.5 text-white/40">{aberto ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}</td>
@@ -253,7 +255,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
                       {aberto && (
                         <tr className="border-t border-white/10" data-teste="detalhe-pessoa" data-pessoa={l.pessoaId}>
                           <td colSpan={7} className="p-0">
-                            <div className="my-2 rounded-xl border border-white/15 p-3 sm:p-4 space-y-3" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))' }}>
+                            <div className="my-2 rounded-xl border border-white/15 p-3 sm:p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`inline-block h-3 w-3 rounded-full ${COR[l.cor]}`} />
                                 <p className="text-[16px] font-extrabold">{nomeBonito(l.nome)}</p>
@@ -268,7 +270,11 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
                                 <p className={`${titulo} mb-1.5`}>Os 8 Hábitos de {primeiroNome(l.nome)} · {rotuloPeriodo}</p>
                                 <HabitosDaPessoa habitos={habitosDaPessoa(oito, l.pessoaId)} />
                               </div>
-                              <PainelCorporativo key={l.pessoaId} currentUser={currentUser} hojeISO={hoje} gestao={gestao} pessoaInicial={l.pessoaId} onMudou={() => setVersao((v) => v + 1)} onPessoa={trocar} onRelatorio={setRelatorio} habitos={habitosDaPessoa(oito, l.pessoaId)} periodo={periodo} />
+                              <PainelCorporativo key={l.pessoaId} currentUser={currentUser} hojeISO={hoje} gestao={gestao} pessoaInicial={l.pessoaId} onMudou={() => setVersao((v) => v + 1)} onPessoa={trocar} onRelatorio={setRelatorio} habitos={habitosDaPessoa(oito, l.pessoaId)} periodo={periodo} embutido />
+                              <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/10">
+                                <span className="text-[10px] text-white/35">compartilhar este executivo</span>
+                                <PdfExecutivo relatorio={relatorio} />
+                              </div>
                             </div>
                           </td>
                         </tr>

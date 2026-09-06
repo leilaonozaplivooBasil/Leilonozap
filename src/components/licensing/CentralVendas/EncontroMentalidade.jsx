@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Brain, Play, Pause, SkipForward, Sparkles, Presentation, X, ChevronLeft, ChevronRight, Send, Loader2, Users, CheckCheck, RotateCcw } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
@@ -6,7 +6,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { segundaDaSemana, proximaSegunda } from '@/lib/xperformance';
+import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
 import {
   BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo,
   pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro,
@@ -441,16 +441,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
           })}
         </ul>
         {podeConduzir && (
-          <div className="mt-2 rounded-lg border border-dashed border-white/15 px-2.5 py-2 flex items-center gap-2 flex-wrap" data-teste="demanda-livre">
-            <span className="text-[10px] text-white/35">+ demanda que surgiu na hora</span>
-            <Input value={livre.titulo} onChange={(ev) => setLivre((l) => ({ ...l, titulo: ev.target.value }))} onKeyDown={(ev) => { if (ev.key === 'Enter') direcionarLivre(); }} placeholder="ex.: Mandar a proposta pro fornecedor da lista nova" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white text-[12px]" data-teste="livre-titulo" />
-            <select value={livre.pessoa} onChange={(ev) => setLivre((l) => ({ ...l, pessoa: ev.target.value }))} className={campo} data-teste="livre-pessoa">
-              <option value="">quem leva…</option>
-              {time.map((p) => <option key={p.id} value={p.id}>{p.nome}{p.funcaoCurta ? ` · ${p.funcaoCurta}` : ''}</option>)}
-            </select>
-            <input type="date" value={livre.prazo || sextaDaSemana(dataEncontro)} onChange={(ev) => setLivre((l) => ({ ...l, prazo: ev.target.value }))} className={campo} />
-            <Button size="sm" onClick={direcionarLivre} disabled={salvando || !livre.titulo.trim() || !livre.pessoa} className="bg-white/10 hover:bg-white/20 text-white h-8" data-teste="livre-direcionar"><Send className="w-3.5 h-3.5 mr-1" /> direcionar</Button>
-          </div>
+          <MandarDemanda valor={livre} onChange={setLivre} onMandar={direcionarLivre} time={time} prazoPadrao={sextaDaSemana(dataEncontro)} legenda="+ demanda que surgiu na hora" placeholder="ex.: Mandar a proposta pro fornecedor da lista nova" opcaoVazia="quem leva…" rotuloBotao="direcionar" desabilitado={salvando} prefixoTeste="livre" testeCaixa="demanda-livre" testeBotao="livre-direcionar" />
         )}
       </div>
 

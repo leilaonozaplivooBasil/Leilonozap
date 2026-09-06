@@ -33,6 +33,25 @@
       ~30 KB). No celular que compartilha arquivo abre a folha de compartilhar (WhatsApp); senão baixa
       `x-performance-nome-da-pessoa-AAAA-MM-DD.pdf`. O balão ao lado copia o relatório em texto pro WhatsApp.
     - Nome bonito em todo lugar (o painel guarda "JOSÉ AMÂNCIO" e "DISTRIBUIDOR").
+    - **A cara (dono, 06/09: "está muito colorido, quero bem clean, bem executivo")**: número em branco, apoio em
+      cinza, e cor só onde é sinal — o semáforo da pessoa, "atrasada", "sem agendar", "não fez". Nenhum Hábito
+      tem cor própria; nenhum degradê de fundo. Os seis números numa régua; os 8 Hábitos numa grade; a semana em
+      uma linha no cabeçalho do detalhamento.
+
+## O que estava duplicado e virou uma coisa só (06/09)
+
+O dono pediu uma análise do painel inteiro ("o que der pra juntar, une — exemplo: enviar demanda"). O que se
+repetia entre o Encontro, a X-Performance e o Painel Corporativo:
+
+| Repetia | Onde | Ficou |
+| --- | --- | --- |
+| Mandar uma demanda (linha com título, pessoa, prazo, botão) | Encontro ("demanda que surgiu na hora") e Painel Corporativo ("mandar uma demanda") | Um componente só, `MandarDemanda.jsx`, nos dois lugares. Continuam dois momentos (na reunião, ligada ao encontro; qualquer dia, do CEO/diretor), mas um código e uma cara. O "direcionar" por tópico do Encontro fica, é o coração da reunião. |
+| A semana de todo mundo (quem concluiu quantas demandas) | Encontro ("Visão executiva da semana"), Painel ("A semana de todo mundo") e X-Performance (coluna demandas do detalhamento) | Dentro da X-Performance o painel embutido **não repete** — a tabela de cima já é isso. O Encontro mantém a Visão executiva (é a leitura ao vivo da reunião). O painel sozinho (fora da X-Performance) mantém a sua. |
+| Quem é a pessoa (nome, posição, função, semáforo, seletor, PDF) | Cabeçalho do detalhe da X-Performance e cabeçalho do Painel Corporativo | O painel embutido (`embutido`) esconde o dele: só metas e demandas. O detalhe tem o cabeçalho e o PDF (em cima e no rodapé). |
+| Os números da semana (planejaram, produziram, demandas, semáforo) | Um bloco de quatro cartões no topo da X-Performance e a mesma coisa lida linha a linha na tabela | Uma linha compacta no cabeçalho do detalhamento; o topo fica só com os Hábitos. |
+
+O que ficou de propósito: "Produção da semana" dentro das metas da pessoa (é o número dela, não do time) e a
+Visão executiva do Encontro (é a reunião olhando a semana).
 - A seção administrativa da faixa virou **ADM X-Game** (dono: "tudo que for administração do X-Game,
   tarefas, organização de cima pra baixo"): fixo, distribuir, quadro geral, ciclo, fila do pronto,
   comprovações. Só a gestão.
@@ -81,8 +100,9 @@ Quem manda demanda daqui: a gestão (origem `ceo`) e quem tem posição de diret
 - `src/lib/habitosDoTime.js` — os 8 Hábitos do time lidos do dado real.
 - `src/lib/relatorioExecutivo.js` — `nomeBonito`, `habitosDaPessoa`, `agruparPorMotivo`, `relatorioDoExecutivo`
   (o conteúdo do PDF, puro), `textoDoRelatorio` (WhatsApp), `paraPdf` (só o que a Helvetica desenha).
-- `EncontroMentalidade.jsx`, `PainelCorporativo.jsx`, `PerformanceEquipe.jsx` (os 8 cartões) e
-  `PdfExecutivo.jsx` (o desenho em jsPDF) em `src/components/licensing/CentralVendas/`.
+- `EncontroMentalidade.jsx`, `PainelCorporativo.jsx` (`embutido`), `PerformanceEquipe.jsx` (os números e o
+  detalhamento), `MandarDemanda.jsx` (a linha única de mandar demanda) e `PdfExecutivo.jsx` (o desenho em jsPDF)
+  em `src/components/licensing/CentralVendas/`.
 - Provas: `tests/encontro.test.mjs`, `tests/habitosDoTime.test.mjs`, `tests/relatorioExecutivo.test.mjs` e
   `tests/navegador/encontro.spec.mjs` (12 casos, com a IA de mentira `window.__iaFalsa`; o do PDF baixa o
   arquivo de verdade e lê o texto copiado).

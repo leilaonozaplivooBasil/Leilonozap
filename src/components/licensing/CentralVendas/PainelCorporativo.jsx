@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Inbox, CalendarPlus, LayoutGrid, Undo2, Loader2, Target, Users, Send, Eye } from 'lucide-react';
+import { Inbox, CalendarPlus, LayoutGrid, Undo2, Loader2, Target, Users, Eye } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { fmtReais } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { relatorioDoExecutivo, nomeBonito } from '@/lib/relatorioExecutivo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
+import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
 
 // 🏢 O PAINEL CORPORATIVO — a visão geral de cada um (dono, 06/09/2026).
 //
@@ -48,7 +49,9 @@ const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.i
 const amanha = (iso) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão' };
 
-export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null, onRelatorio = null, habitos = null, periodo = null }) {
+// `embutido`: dentro do detalhamento da X-Performance, que já mostra quem é, o
+// seletor, o PDF e a semana de todo mundo — aqui só metas e demandas.
+export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null, onRelatorio = null, habitos = null, periodo = null, embutido = false }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const mes = mesDe(hoje);
   const segunda = segundaDaSemana(hoje);
@@ -188,7 +191,8 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   };
 
   return (
-    <div className="rounded-xl border border-white/15 p-3 sm:p-4 text-white" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))' }} data-teste="painel-corporativo" data-pessoa={pessoaId || ''}>
+    <div className={embutido ? 'text-white' : 'rounded-xl border border-white/15 p-3 sm:p-4 text-white'} style={embutido ? undefined : { background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))' }} data-teste="painel-corporativo" data-pessoa={pessoaId || ''} data-embutido={embutido ? 'sim' : 'nao'}>
+      {!embutido && (
       <div className="flex items-center gap-2 flex-wrap">
         <p className={titulo}><Users className="w-3 h-3 inline mr-1" />Painel Corporativo</p>
         <span className="text-[10px] text-white/35">· metas, demandas recebidas e a produção da semana — todo mundo vê todo mundo</span>
@@ -200,9 +204,11 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
         </label>
         <PdfExecutivo relatorio={relatorio} />
       </div>
+      )}
 
       {carregando || !pessoa ? <p className="mt-3 text-[11px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> abrindo o painel…</p> : (
         <>
+          {!embutido && (<>
           {/* quem é */}
           <div className="mt-2 flex items-center gap-2 flex-wrap">
             <span className={`inline-block h-3 w-3 rounded-full ${COR[sem.cor]}`} title={sem.motivos.join(' · ') || 'tudo em dia'} data-teste="painel-semaforo" data-cor={sem.cor} />
@@ -210,6 +216,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
             <p className="text-[11px] text-white/50">{pessoa.nivel ? getLevel(pessoa.nivel).name : '—'}{pessoa.funcaoCurta ? ` · ${pessoa.funcaoCurta}` : ''}{pessoa.fixo ? ` · fixo ${fmtReais(pessoa.fixo)}` : ''}</p>
             <p className="text-[11px] text-white/40 flex-1 min-w-[140px] truncate">{sem.motivos.length ? sem.motivos.join(' · ') : 'tudo em dia'}</p>
           </div>
+          </>)}
 
           <div className="mt-3 grid lg:grid-cols-5 gap-3">
             {/* 🎯 metas */}
@@ -291,21 +298,13 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
                 <p className="mt-2 text-[10px] text-white/35">{concluidas.length ? `${concluidas.length} conferida${concluidas.length > 1 ? 's' : ''} ✔✔` : ''}{concluidas.length && devolvidas.length ? ' · ' : ''}{devolvidas.length ? `${devolvidas.length} devolvida${devolvidas.length > 1 ? 's' : ''}` : ''}</p>
               )}
               {podeMandar && (
-                <div className="mt-2 rounded-lg border border-dashed border-white/15 px-2.5 py-2 flex items-center gap-2 flex-wrap" data-teste="mandar-demanda">
-                  <Send className="w-3 h-3 text-white/40" />
-                  <Input value={nova.titulo} onChange={(ev) => setNova((n) => ({ ...n, titulo: ev.target.value }))} onKeyDown={(ev) => { if (ev.key === 'Enter') mandar(); }} placeholder={`mandar uma demanda ${origemDeQuemManda === 'ceo' ? 'do CEO' : 'de diretor'}…`} className="h-7 flex-1 min-w-[180px] border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="nova-demanda-titulo" />
-                  <select value={nova.pessoa || pessoaId || ''} onChange={(ev) => setNova((n) => ({ ...n, pessoa: ev.target.value }))} className={campo} data-teste="nova-demanda-pessoa">
-                    {time.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
-                  <input type="date" value={nova.prazo || sextaDaSemana(hoje)} onChange={(ev) => setNova((n) => ({ ...n, prazo: ev.target.value }))} className={campo} data-teste="nova-demanda-prazo" />
-                  <Button size="sm" onClick={mandar} disabled={salvando || !nova.titulo.trim()} className="bg-white/10 hover:bg-white/20 text-white h-7 text-[11px]" data-teste="nova-demanda-mandar">mandar</Button>
-                </div>
+                <MandarDemanda valor={{ ...nova, pessoa: nova.pessoa || pessoaId || '' }} onChange={setNova} onMandar={mandar} time={time} prazoPadrao={sextaDaSemana(hoje)} placeholder={`mandar uma demanda ${origemDeQuemManda === 'ceo' ? 'do CEO' : 'de diretor'}…`} desabilitado={salvando} />
               )}
             </div>
           </div>
 
           {/* 👀 todo mundo: um fica tomando conta do outro */}
-          {producaoGeral.total > 0 && (
+          {!embutido && producaoGeral.total > 0 && (
             <div className="mt-3 rounded-lg border border-white/10 p-2.5" style={caixa} data-teste="painel-todos">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <p className={titulo}>A semana de todo mundo</p>

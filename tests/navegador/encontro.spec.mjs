@@ -188,7 +188,7 @@ test('DIRECIONAR: a demanda cai RECEBIDA no Painel Corporativo da pessoa, ligada
   await pagina.getByText(/No Painel Corporativo de Carla: "Mandar a proposta pro fornecedor da lista nova"/).waitFor();
   assert.match(await texto(pagina, '[data-teste="producao-total"]'), /0 de 2/);
   // ⤵ e o painel corporativo (logo abaixo, como dono) já vê: escolhe o Emanuel
-  await pagina.locator('[data-teste="painel-pessoa"]').selectOption('emanuel');
+  await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').click(); // abre o detalhe do Emanuel (o painel dele fica embutido)
   await pagina.locator('[data-teste="demanda-recebida"]').first().waitFor();
   const recebidas = await pagina.locator('[data-teste="demanda-recebida"]').allTextContents();
   assert.ok(recebidas.some((t) => /Abrir o ponto de retirada de Jacarepaguá/.test(t) && /do encontro de segunda/.test(t)));
@@ -222,7 +222,7 @@ test('APRESENTAR: a tela cheia abre na capa, anda com a seta, mostra o bloco e o
 
 test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no dia e no quadro com o rastro; mandar demanda daqui; a semana de todo mundo', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  await pagina.locator('[data-teste="painel-pessoa"]').selectOption('emanuel');
+  await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').click(); // abre o detalhe do Emanuel (o painel dele fica embutido)
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="demanda-recebida"]').waitFor();
   const painel = pagina.locator('[data-teste="painel-corporativo"]');
   assert.match(await texto(pagina, '[data-teste="painel-metas"]'), /Reuniões de investimento.*0 \/ 44/);
@@ -250,11 +250,11 @@ test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no
   await pagina.getByText(/Demanda no painel de Carla: "Preparar a live de quinta"/).waitFor();
   const nova = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_demandas' && e.tipo === 'insert').at(-1).linhas[0];
   assert.deepEqual([nova.pessoa_id, nova.origem, nova.status, String(nova.prazo_em).slice(0, 10)], ['carla', 'ceo', 'recebida', '2026-09-11']);
-  // a semana de todo mundo: Emanuel e Carla
-  await painel.locator('[data-teste="todos-pessoa"][data-pessoa="carla"]').waitFor();
-  const todos = (await texto(pagina, '[data-teste="painel-todos"]'));
-  assert.match(todos, /Carla Souza.*1\/2/, 'a conferida de sexta passada + a nova sem agendar');
-  assert.match(todos, /Emanuel Silva.*0\/1/);
+  // a semana de todo mundo é a tabela de cima (o painel embutido não repete): Carla 1/2, Emanuel 0/1
+  await pagina.waitForFunction(() => /1\/2/.test(document.querySelector('[data-teste="visao-linha"][data-pessoa="carla"]')?.textContent || ''));
+  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="carla"]').textContent()).replace(/\s+/g, ' '), /Carla Souza.*1\/2 · 1 sem agendar/, 'a conferida de sexta passada + a nova sem agendar');
+  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*0\/1/);
+  assert.equal(await painel.locator('[data-teste="painel-todos"]').count(), 0, 'embutido não repete a semana de todo mundo');
   await pagina.screenshot({ path: path.join(FOTOS, 'painel-corporativo.png'), fullPage: true });
   await ctx.close();
 });
@@ -306,7 +306,7 @@ test('PERFORMANCE (sem administração): a visão executiva de todo mundo — qu
   assert.match(await linhas.nth(2).textContent(), /Jean Aranha.*dia vazio.*não fez/);
   await linhas.nth(1).click();
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
-  assert.match(await texto(pagina, '[data-teste="painel-corporativo"]'), /Carla Souza/);
+  assert.match(await texto(pagina, '[data-teste="detalhe-pessoa"]'), /Carla Souza/);
   assert.deepEqual(erros, []);
   await ctx.close();
 });
@@ -328,7 +328,8 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
   assert.match(await txt(2), /2\s*Compromisso.*1 de 4/);
   assert.match(await txt(4), /4\s*Contato e Convite.*1 de 4.*2 contatos no time/);
   assert.match(await txt(6), /6\s*Acompanhamento e Fechamento.*2 de 4.*50%.*R\$ 51\.200,00 no time/);
-  assert.match(topo, /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
+  // a semana em uma linha, no cabeçalho do detalhamento (não no topo)
+  assert.match((await pagina.locator('[data-teste="visao-resumo"]').textContent()).replace(/\s+/g, ' '), /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
   // 👤 o detalhamento: o dono (quem está logado) abre por padrão; a linha do Emanuel é a prévia
   const linha = (id) => pagina.locator(`[data-teste="visao-linha"][data-pessoa="${id}"]`);
   assert.equal(await linha('dono').getAttribute('data-aberto'), 'sim');
@@ -373,7 +374,7 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
 
 test('PDF DO EXECUTIVO: o botão do Painel Corporativo baixa o PDF da pessoa aberta (nome dela no arquivo) e copia o texto pro WhatsApp', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir();
-  await pagina.locator('[data-teste="painel-pessoa"]').selectOption('emanuel');
+  await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').click(); // abre o detalhe do Emanuel (o painel dele fica embutido)
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();
   const [download] = await Promise.all([
     pagina.waitForEvent('download'),
