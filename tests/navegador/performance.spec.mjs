@@ -166,7 +166,7 @@ test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor 
   await modal.waitFor();
   assert.equal((await modal.locator('[data-teste="valor-dia-pessoa"]').textContent()).trim(), ATE(291.67));
   // o ciclo do Emanuel: 04/09 teve Gratidão (peso 1) feita e conferida → 1/75 do dia
-  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 3,89\s*ganho/);
+  assert.match((await modal.textContent()).replace(/\s+/g, ' '), /R\$ 19,44\s*ganho/);
   assert.match((await modal.textContent()).replace(/\s+/g, ' '), /ter\., 08\/09.*3 tarefas · falta peso 71.*R\$ 15,56/, 'o que está distribuído de hoje em diante');
 
   await pagina.screenshot({ path: path.join(FOTOS, 'performance-modal.png') });

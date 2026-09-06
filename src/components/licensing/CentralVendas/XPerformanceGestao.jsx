@@ -172,8 +172,10 @@ function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, on
     : `Oi ${nome.split(' ')[0]}, tudo bem? Passando pra ver como está o seu dia. 💪`;
   const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(msg)}` : null;
   return (
-    <div className="sticky -top-4 -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-white/10 z-10" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="quadro-geral-topo">
+    <div className="pb-2 mb-2 border-b border-white/10" data-teste="quadro-geral-topo">
       <div className="flex items-center gap-2 flex-wrap">
+        <UserRound className="w-4 h-4 text-nz-verde" />
+        <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral · {nome}</p>
         <span className={`inline-block h-3 w-3 rounded-full ${COR[sem.cor]}`} title={sem.motivos.join(' · ') || 'tudo em dia'} data-teste="semaforo" data-cor={sem.cor} />
         <p className="text-[11px] text-white/60 truncate flex-1 min-w-[120px]">{sem.motivos.length ? sem.motivos.join(' · ') : 'tudo em dia: planejou, sem atraso, metas no ritmo'}</p>
         {wa && (
@@ -181,7 +183,7 @@ function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, on
             <MessageCircle className="w-3.5 h-3.5" /> {cobrar ? 'cobrar o pronto' : 'chamar'} no WhatsApp
           </a>
         )}
-        <button type="button" onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-white/50 hover:bg-white/10"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={onFechar} aria-label="Fechar" title="fechar o Quadro Geral" className="inline-flex items-center gap-1 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-white/60 hover:bg-white/10"><X className="w-3.5 h-3.5" /> fechar</button>
       </div>
       <div className="mt-2 flex gap-1 overflow-x-auto" role="tablist" data-teste="abas-quadro-geral">
         {ABAS.map(([id, rotulo, Icone]) => (
@@ -791,85 +793,6 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         )}
       </div>
 
-      {/* ── ⏰ A FILA DO PRONTO — o enviar-e-voltar ─────────────────────── */}
-      {(() => {
-        const fila = filaDoPronto(tarefasCiclo).filter((f) => f.estado.id !== 'conferida');
-        const conferidas = filaDoPronto(tarefasCiclo).filter((f) => f.estado.id === 'conferida').length;
-        const COR = { atrasada: 'border-red-400/40 text-red-200', pronto: 'border-nz-verde/50 text-nz-verde', devolvida: 'border-amber-400/40 text-amber-200', aguardando: 'border-white/15 text-white/50' };
-        return (
-          <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="fila-pronto">
-            <div className="flex items-center gap-2 flex-wrap">
-              <AlarmClock className="w-4 h-4 text-nz-verde" />
-              <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">A fila do pronto</p>
-              <span className="text-[10px] text-white/35">· {fila.length} pra olhar · {conferidas} conferida{conferidas === 1 ? '' : 's'} no ciclo</span>
-            </div>
-            {fila.length === 0 ? (
-              <p className="mt-2 text-[11px] text-white/35">Nada esperando: toda tarefa distribuída está conferida — ou ainda não distribuiu nenhuma.</p>
-            ) : (
-              <ul className="mt-2 space-y-1">
-                {fila.map(({ tarefa: t, estado }) => (
-                  <li key={t.id} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.02)' }} data-teste="pronto-item" data-estado={estado.id}>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[estado.id] || ''}`}>{estado.rotulo}</span>
-                      <span className="font-bold text-white/85 truncate">{nomeDe(t.user_id)}</span>
-                      <span className="text-white/70 truncate">{t.titulo}</span>
-                      <span className="text-white/40 shrink-0">{fmtDia(String(t.data).slice(0, 10))}{t.prazo_em ? ` · ${rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10))}` : ''}</span>
-                      {estado.id === 'pronto' && (
-                        <span className="ml-auto flex items-center gap-1 shrink-0">
-                          <button type="button" onClick={() => conferir(t)} className="inline-flex items-center gap-1 rounded-full bg-nz-verde/20 hover:bg-nz-verde/35 px-2 py-0.5 text-nz-verde font-bold" data-teste="conferir"><CheckCheck className="w-3 h-3" /> conferir</button>
-                          <button type="button" onClick={() => setDevolvendo({ id: t.id, motivo: '' })} className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 hover:bg-amber-400/30 px-2 py-0.5 text-amber-200 font-bold" data-teste="devolver"><Undo2 className="w-3 h-3" /> devolver</button>
-                        </span>
-                      )}
-                      {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
-                    </div>
-                    {devolvendo?.id === t.id && (
-                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap" data-teste="devolver-recado">
-                        <Input autoFocus value={devolvendo.motivo} onChange={(e) => setDevolvendo((d) => ({ ...d, motivo: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') devolver(t, devolvendo.motivo); }} placeholder="o recado: o que faltou pra valer o pronto" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white placeholder:text-white/30 text-[11px]" data-teste="recado" />
-                        <Button size="sm" onClick={() => devolver(t, devolvendo.motivo)} className="bg-amber-400 hover:bg-amber-300 text-amber-950 h-8 text-[11px] font-extrabold" data-teste="devolver-confirmar">devolver com o recado</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setDevolvendo(null)} className="h-8 text-[11px] text-white/50">cancelar</Button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* ── 📸 AS COMPROVAÇÕES, em cima (dono: "têm que subir") ──────────── */}
-      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-        <ComprovacoesPainel nomeDe={nomeDe} />
-      </div>
-
-      {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
-      {equipe.length > 0 && (
-        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-nz-verde" />
-            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
-            <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
-          </div>
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <select
-              value={pessoaFixo}
-              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
-              className={`${campo} min-w-[240px]`}
-              data-teste="pessoa-fixo"
-            >
-              <option value="">escolha a pessoa…</option>
-              {equipe.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome} · {funcaoTrabalho(p.id)?.nome || p.funcao}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
-              ))}
-            </select>
-            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
-              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
-            </Button>
-            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
-          </div>
-        </div>
-      )}
-
       {modalAberto && pessoaFixo && (() => {
         const base = participanteDe(pessoaFixo);
         const r = resumoDe(pessoaFixo);
@@ -878,9 +801,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         // os dias do ciclo com tarefa, de hoje em diante — o que está distribuído
         const proximos = [...new Set(tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) >= hoje).map((t) => String(t.data).slice(0, 10)))].sort().slice(0, 8);
         return (
-          <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center p-0 sm:p-4" data-teste="modal-pessoa" data-pessoa={pessoaFixo}>
-            <div className="absolute inset-0 bg-black/70" onClick={() => setModalAberto(false)} />
-            <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-white/15 p-4 text-white" style={{ background: 'var(--xeos-preto, #00020C)' }}>
+          /* 🗂️ dono (06/09/2026): "não é um modalzinho: quando eu clico, ele abre
+             pegando a página toda, na linha do cartão Distribuir tarefa". Então o
+             Quadro Geral é um PAINEL de página inteira, logo abaixo do Distribuir;
+             enquanto está aberto, o resto da gestão sai da frente. */
+          <div className="rounded-xl border border-white/15 p-3 sm:p-4 text-white" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="modal-pessoa" data-pessoa={pessoaFixo} ref={(el) => { if (el && !el.dataset.rolou) { el.dataset.rolou = '1'; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
+            <div className="relative w-full">
               <QuadroGeralTopo pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} telefone={usuarios.find((u) => u.id === pessoaFixo)?.phone} tarefasCiclo={tarefasCiclo} hoje={hoje} aba={abaModal} onAba={setAbaModal} onFechar={() => setModalAberto(false)} metasInfo={metasInfo} />
               <div className="flex items-start justify-between gap-2" hidden={abaModal !== 'pessoa'}>
                 <div className="min-w-0">
@@ -1083,6 +1009,89 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         );
       })()}
 
+      {/* enquanto o Quadro Geral está aberto, o resto sai da frente */}
+      <div hidden={modalAberto && !!pessoaFixo}>
+      {/* ── ⏰ A FILA DO PRONTO — o enviar-e-voltar ─────────────────────── */}
+      {(() => {
+        const fila = filaDoPronto(tarefasCiclo).filter((f) => f.estado.id !== 'conferida');
+        const conferidas = filaDoPronto(tarefasCiclo).filter((f) => f.estado.id === 'conferida').length;
+        const COR = { atrasada: 'border-red-400/40 text-red-200', pronto: 'border-nz-verde/50 text-nz-verde', devolvida: 'border-amber-400/40 text-amber-200', aguardando: 'border-white/15 text-white/50' };
+        return (
+          <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="fila-pronto">
+            <div className="flex items-center gap-2 flex-wrap">
+              <AlarmClock className="w-4 h-4 text-nz-verde" />
+              <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">A fila do pronto</p>
+              <span className="text-[10px] text-white/35">· {fila.length} pra olhar · {conferidas} conferida{conferidas === 1 ? '' : 's'} no ciclo</span>
+            </div>
+            {fila.length === 0 ? (
+              <p className="mt-2 text-[11px] text-white/35">Nada esperando: toda tarefa distribuída está conferida — ou ainda não distribuiu nenhuma.</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {fila.map(({ tarefa: t, estado }) => (
+                  <li key={t.id} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.02)' }} data-teste="pronto-item" data-estado={estado.id}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[estado.id] || ''}`}>{estado.rotulo}</span>
+                      <span className="font-bold text-white/85 truncate">{nomeDe(t.user_id)}</span>
+                      <span className="text-white/70 truncate">{t.titulo}</span>
+                      <span className="text-white/40 shrink-0">{fmtDia(String(t.data).slice(0, 10))}{t.prazo_em ? ` · ${rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10))}` : ''}</span>
+                      {estado.id === 'pronto' && (
+                        <span className="ml-auto flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => conferir(t)} className="inline-flex items-center gap-1 rounded-full bg-nz-verde/20 hover:bg-nz-verde/35 px-2 py-0.5 text-nz-verde font-bold" data-teste="conferir"><CheckCheck className="w-3 h-3" /> conferir</button>
+                          <button type="button" onClick={() => setDevolvendo({ id: t.id, motivo: '' })} className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 hover:bg-amber-400/30 px-2 py-0.5 text-amber-200 font-bold" data-teste="devolver"><Undo2 className="w-3 h-3" /> devolver</button>
+                        </span>
+                      )}
+                      {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
+                    </div>
+                    {devolvendo?.id === t.id && (
+                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap" data-teste="devolver-recado">
+                        <Input autoFocus value={devolvendo.motivo} onChange={(e) => setDevolvendo((d) => ({ ...d, motivo: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') devolver(t, devolvendo.motivo); }} placeholder="o recado: o que faltou pra valer o pronto" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white placeholder:text-white/30 text-[11px]" data-teste="recado" />
+                        <Button size="sm" onClick={() => devolver(t, devolvendo.motivo)} className="bg-amber-400 hover:bg-amber-300 text-amber-950 h-8 text-[11px] font-extrabold" data-teste="devolver-confirmar">devolver com o recado</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDevolvendo(null)} className="h-8 text-[11px] text-white/50">cancelar</Button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── 📸 AS COMPROVAÇÕES, em cima (dono: "têm que subir") ──────────── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <ComprovacoesPainel nomeDe={nomeDe} />
+      </div>
+
+      {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
+      {equipe.length > 0 && (
+        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-nz-verde" />
+            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
+            <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
+          </div>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <select
+              value={pessoaFixo}
+              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
+              className={`${campo} min-w-[240px]`}
+              data-teste="pessoa-fixo"
+            >
+              <option value="">escolha a pessoa…</option>
+              {equipe.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome} · {funcaoTrabalho(p.id)?.nome || p.funcao}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
+              ))}
+            </select>
+            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
+              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
+            </Button>
+            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
+          </div>
+        </div>
+      )}
+
+
+      </div>
       {/* ── 3. 🛠️ GESTÃO DO X-GAME (o admin de sempre, dobrado) ────────── */}
       <div className="rounded-xl border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
         <button
