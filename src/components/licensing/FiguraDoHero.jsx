@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ExecutivoHero from './ExecutivoHero';
 
 // 🖼️ QUEM APARECE NA FAIXA — a foto do dono, com o desenho de reserva.
 //
@@ -37,20 +36,13 @@ export default function FiguraDoHero({ altura = 220 }) {
   const [qual, setQual] = useState(0);
   const temFoto = qual < CAMINHOS.length;
 
-  if (!temFoto) {
-    return (
-      <div
-        className="relative origin-bottom"
-        style={{
-          filter: 'drop-shadow(0 14px 30px rgba(0,2,12,0.72))',
-          WebkitMaskImage: 'linear-gradient(0deg, transparent 0%, #000 14%)',
-          maskImage: 'linear-gradient(0deg, transparent 0%, #000 14%)',
-        }}
-      >
-        <ExecutivoHero altura={altura} />
-      </div>
-    );
-  }
+  // 07/09, depois de ver no ar: o desenho vetorial não está à altura de um
+  // painel executivo (dono: "esse desenho está me deixando puto"). Enquanto a
+  // foto não sobe, a faixa fica LIMPA — vazio bem feito é melhor que desenho
+  // ruim, e a frase "Qual é o seu poder?" segura a faixa sozinha. O desenho
+  // continua no repositório (ExecutivoHero.jsx), fora do ar, caso um dia
+  // sirva de reserva.
+  if (!temFoto) return null;
 
   return (
     <img
