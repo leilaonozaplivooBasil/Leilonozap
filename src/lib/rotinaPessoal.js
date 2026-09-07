@@ -101,6 +101,24 @@ export function devePreAbrirAutomatico(perfil) {
 }
 
 /**
+ * DIR-81.1 — a Rotina Perfeita já foi gerada HOJE pra esta pessoa (por
+ * qualquer caminho: o cron, o botão "gerar", o "regerar o dia" ou a
+ * repetição automática)?
+ *
+ * NÃO conta linha de `metodo_tarefas` — foi exatamente isso que quebrou no
+ * primeiro dia do cron: uma reunião avulsa (sincronizada do Contato &
+ * Convite, ou uma demanda direcionada) já deixava o dia "não vazio" pra
+ * quem só contava linha, e a Rotina Perfeita inteira ficava de fora por
+ * causa de UM compromisso isolado. `rotina_gerada_em` é a data que cada
+ * gerador grava DEPOIS de gerar — é só isso que prova que a rotina, e não
+ * um compromisso qualquer, já nasceu nesse dia.
+ */
+export function jaGerouHoje(perfil, diaISO) {
+  const gerado = perfil?.rotina_gerada_em ? String(perfil.rotina_gerada_em).slice(0, 10) : null;
+  return Boolean(gerado) && gerado === String(diaISO || '').slice(0, 10);
+}
+
+/**
  * Deve gerar o dia sozinha AGORA?
  *
  * As duas travas da diretiva moram aqui, e não na tela — é o único jeito de

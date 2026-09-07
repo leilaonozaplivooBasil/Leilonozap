@@ -453,9 +453,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
       // 🔁 DIR-80 — gerar uma vez LIGA a repetição. "Só se a pessoa pedir pra
       // parar" — então o liga é aqui, e o desliga é um botão dela.
-      if (!estadoRotina.automatica) {
-        await salvarPerfil({ rotina_automatica: true, rotina_automatica_desde: dia });
-      }
+      // 🌅 DIR-81.1 — `rotina_gerada_em` sempre grava, ligada ou não: é contra
+      // ISSO que o cron gerarJornadaDoDia confere antes de gerar de novo — não
+      // contra a tabela de tarefas, que uma reunião avulsa também escreve.
+      await salvarPerfil({ ...(estadoRotina.automatica ? {} : { rotina_automatica: true, rotina_automatica_desde: dia }), rotina_gerada_em: dia });
       toast.success(`Dia gerado com ${linhas.length} tarefas da sua rotina — a partir de agora ela se repete todo dia.`);
       carregarTarefas();
     } catch (e) {
@@ -482,6 +483,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       try {
         const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
         for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+        // DIR-81.1 — grava direto (sem salvarPerfil) pra não estourar o toast
+        // "Salvo!" por cima do aviso de baixo, que é o que importa aqui.
+        if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
         toast.success(`Seu dia já nasceu com as ${linhas.length} tarefas da sua rotina.`);
         carregarTarefas();
       } catch (e) { console.error(e); }
@@ -497,6 +501,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
       const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
       for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
       toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
       setConfirmaRegerar(false);
       carregarTarefas();

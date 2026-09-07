@@ -19,18 +19,23 @@
 //
 // IDEMPOTÊNCIA: cada uma das três coisas (ligar o automático, gerar o dia,
 // semear o quadro) só acontece pra quem ainda NÃO tem aquilo — rodar de novo
-// no mesmo dia, ou depois de falhar no meio, não duplica nada.
+// no mesmo dia, ou depois de falhar no meio, não duplica nada. A geração do
+// dia NÃO conta linha de `metodo_tarefas` pra decidir "já tem algo hoje"
+// (DIR-81.1 — um compromisso avulso, tipo reunião sincronizada ou demanda
+// direcionada, quebrava essa conta e travava a Rotina Perfeita de nascer);
+// a prova é `rotina_gerada_em`, escrita por qualquer caminho que gere o dia
+// (este cron, o botão "gerar", "regerar o dia" e a repetição automática).
 //
-// PERFORMANCE: nada de round-trip por pessoa. As leituras são 4 SELECTs no
-// total (usuários, perfis, tarefas de hoje, listas do quadro) e as escritas
-// são lotes (bulk insert/patch) — o tempo não cresce linearmente com o
-// número de pessoas elegíveis.
+// PERFORMANCE: nada de round-trip por pessoa. As leituras são 3 SELECTs no
+// total (usuários, perfis, listas do quadro) e as escritas são lotes (bulk
+// insert/patch) — o tempo não cresce linearmente com o número de pessoas
+// elegíveis.
 //
 // SEGURANÇA: best-effort. Isto é abrir uma tela vazia com um rascunho — não é
 // movimento de dinheiro. Se o quadro de alguém falhar, os outros continuam.
 import { gerarTarefasDaRotina, ROTINA_PADRAO } from '../../src/lib/metodo.js';
 import { pesoAutomatico } from '../../src/lib/xgame.js';
-import { rotinaEmVigor, devePreAbrirAutomatico } from '../../src/lib/rotinaPessoal.js';
+import { rotinaEmVigor, devePreAbrirAutomatico, jaGerouHoje } from '../../src/lib/rotinaPessoal.js';
 import { temDireitoAoXGame } from '../../src/lib/careerLevels.js';
 import { LISTAS_MODELO, CARD_EXEMPLO, ESTADO_ABERTO } from '../../src/lib/quadroCompromisso.js';
 
@@ -96,16 +101,28 @@ export default async function handler(req, res) {
       paraLigar.forEach((p) => { p.rotina_automatica = true; p.rotina_automatica_desde = hoje; });
     }
 
-    // ── 3. a jornada de hoje, pra quem está com o automático ligado e o dia ainda está vazio ──
-    const comTarefasHoje = new Set(arr(await j(await sb(`metodo_tarefas?data=eq.${hoje}&select=user_id`))).map((t) => t.user_id));
+    // ── 3. a jornada de hoje, pra quem está com o automático ligado e ainda
+    // não foi gerada hoje — NÃO conta linha de metodo_tarefas (DIR-81.1: um
+    // compromisso avulso, tipo uma reunião sincronizada do Contato & Convite
+    // ou uma demanda direcionada, não pode travar a Rotina Perfeita de nascer
+    // ao redor dele). `rotina_gerada_em` é a prova de que a ROTINA, e não
+    // qualquer outra coisa, já nasceu nesse dia.
+    const paraGerar = ids.filter((id) => {
+      const p = perfilPor.get(id);
+      return p?.rotina_automatica && !jaGerouHoje(p, hoje);
+    });
     const linhasNovas = [];
-    for (const id of ids) {
-      const perfil = perfilPor.get(id);
-      if (!perfil?.rotina_automatica || comTarefasHoje.has(id)) continue;
-      const rotina = rotinaEmVigor(perfil, ROTINA_PADRAO);
+    for (const id of paraGerar) {
+      const rotina = rotinaEmVigor(perfilPor.get(id), ROTINA_PADRAO);
       linhasNovas.push(...gerarTarefasDaRotina(rotina, id, hoje, pesoAutomatico));
     }
     if (linhasNovas.length) await sb('metodo_tarefas', { method: 'POST', body: JSON.stringify(linhasNovas) });
+    if (paraGerar.length) {
+      const perfilIds = paraGerar.map((id) => perfilPor.get(id).id);
+      for (const lote of emLotes(perfilIds)) {
+        await sb(`metodo_perfil?id=in.(${listaFiltro(lote)})`, { method: 'PATCH', body: JSON.stringify({ rotina_gerada_em: hoje }) });
+      }
+    }
 
     // ── 4. o quadro (as 3 listas-modelo + 1 card de exemplo), pra quem nunca teve nenhuma lista ──
     const comQuadro = new Set(arr(await j(await sb('metodo_quadro_listas?select=user_id'))).map((l) => l.user_id));
@@ -129,7 +146,7 @@ export default async function handler(req, res) {
       success: true,
       elegiveis: ids.length,
       automatico_ligado_agora: paraLigar.length,
-      jornadas_geradas: new Set(linhasNovas.map((l) => l.user_id)).size,
+      jornadas_geradas: paraGerar.length,
       quadros_montados: quadrosMontados,
     });
   } catch (e) {
