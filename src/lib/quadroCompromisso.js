@@ -415,3 +415,30 @@ export function resumoDoQuadro(cartoes = [], hojeISO) {
     viraramTarefa: lista.filter((c) => !!c.virou_tarefa_id).length,
   };
 }
+
+/**
+ * ➕ DIR-81 — a ordem de quem nasce AGORA, pelo `+` do topo.
+ *
+ * O dono: "quando eu adicionar, já entra o novo". Então o card novo não pode
+ * cair no fim da coluna — que é justamente de onde ele estava fugindo (ter que
+ * rolar tudo pra baixo). Uma ordem MENOR que a de todos põe ele em primeiro.
+ *
+ * Não force o card novo acima de quem tem HORA: card com hora é compromisso
+ * marcado e continua vindo primeiro (regra da DIR-77, em cartoesDaLista). Este
+ * número decide só a briga entre os SEM hora — que é onde o novo nasce.
+ */
+export function ordemDoTopo(cartoes = [], listaId) {
+  const daLista = (Array.isArray(cartoes) ? cartoes : [])
+    .filter((c) => String(c?.lista_id || '') === String(listaId || ''));
+  if (!daLista.length) return 0;
+  const menor = daLista.reduce((m, c) => {
+    const o = Number(c?.ordem);
+    return Number.isFinite(o) && o < m ? o : m;
+  }, Infinity);
+  // a ordenação lê `Number(ordem) || 0`, então card sem ordem vale 0. Se
+  // NENHUM tiver ordem válida, a base é 0 e o novo tem que ficar abaixo dela.
+  return Number.isFinite(menor) ? menor - 1 : -1;
+}
+
+/** O nome de um card que nasceu sem nome — some assim que a pessoa digita. */
+export const TITULO_NOVO_CARD = 'Novo tópico';

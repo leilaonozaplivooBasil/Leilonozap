@@ -12,6 +12,41 @@
 
 ---
 
+## DIR-81 — O mais no topo da coluna: adicionar sem rolar
+
+**Emitida por:** dono (07/09/2026), com o quadro aberto: *"pra adicionar,
+quando está vazio, tem que rolá-lo tudo lá pra baixo. E não pode ser assim. Tem
+que ter um lugar pra adicionar, um maiszinho bem transparente ali, e já gera um
+novo cartão... É só botar um mais, nem precisa escrever. Pode ser até verdinho,
+bem clarinho. E aí, quando eu adicionar, já entra o novo."*
+
+**Data:** 07/09/2026.
+
+**O que eu conferi:** o único jeito de criar card hoje é o campo *"escreva o
+tópico"* no **pé** da coluna (`mt-auto`). Numa lista com muitos cards — a
+Academia, com uma rotina de treino inteira — isso fica a uma tela inteira de
+rolagem do topo. O campo não está errado; **está longe**.
+
+**O que entra:**
+1. Um **`+`** no **topo** da coluna, logo abaixo do cabeçalho: discreto,
+   translúcido, no verde claro da lista.
+2. Clicar **cria o card na hora**, sem digitar nada antes — e ele entra **no
+   topo** da coluna, não no fim: o que acabou de nascer tem que estar à vista.
+3. O card nasce **já aberto pra digitar o nome**. Criar um card e obrigar a
+   pessoa a caçar onde clicar pra nomear é trocar uma rolagem por outra.
+
+**O que NÃO entra:**
+- O campo *"escreva o tópico"* do pé **continua**: quem já está lá embaixo,
+  depois de ler a lista inteira, escreve ali mesmo. Tirar seria trocar um
+  incômodo por outro.
+- Nada muda no arrastar, na ordem, no concluído ou no assistente.
+
+**Prova exigida (REL-34.1):** o `+` existe no topo de cada coluna; clicar nele
+**cria o card sem digitar**; o card novo aparece **em primeiro** na coluna; e o
+campo do pé continua funcionando.
+
+---
+
 ## DIR-80 — O celular em dois andares, e a rotina passa a ser DELA
 
 **Emitida por:** dono (06/09/2026), com o Compromisso aberto no celular:
