@@ -1862,7 +1862,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       {estadoRotina.automatica && (
                         <button
                           type="button"
-                          onClick={() => salvarPerfil({ rotina_automatica: false }).then((ok) => ok && toast.success('Parei de gerar sozinha. Você continua podendo gerar na mão.'))}
+                          onClick={() => salvarPerfil({ rotina_automatica: false, rotina_automatica_recusada: true }).then((ok) => ok && toast.success('Parei de gerar sozinha. Você continua podendo gerar na mão.'))}
                           className="ml-auto text-[11px] font-bold text-red-600 hover:underline shrink-0"
                           data-teste="parar-rotina"
                         >parar de gerar todo dia</button>
