@@ -12,6 +12,41 @@
 
 ---
 
+## DIR-87 — Reunião da empresa não aparece duplicada no Hábito 4
+
+**Emitida por:** dono (07/09/2026), com print do Hábito 4 (Contato e Convite):
+*"eu ia apagar esse segundo aí, olha, porque a gente já organiza em outro
+lugar — não, acho que é aqui mesmo (Contato e Convite). Melhorar essa
+[lista] de cima, que não está muito clara."* Pediu minha recomendação
+("o que você acha melhor?") em vez de prescrever a solução.
+
+**Data:** 07/09/2026.
+
+**O que existia:** a reunião fixa da empresa (ex.: "Mentalidade do Diretor
+/ CEO, toda segunda 09h") aparecia DUAS vezes, empilhada na mesma tela: uma
+vez dentro de "Minha agenda de hoje" (destacada, 🏛️ — correto, é hoje) e de
+novo, sempre aberta, no card de gestão "Reuniões da empresa" logo abaixo —
+que lista TODAS as reuniões fixas cadastradas (não só as de hoje), pra quem
+pode excluir/gerenciar. Duas listas parecidas, uma embaixo da outra, sempre
+visíveis — lia como duplicado, mesmo não sendo (uma é "o que é hoje", a
+outra é "o cadastro completo").
+
+**Minha recomendação, aplicada:** manter as duas funções (a agenda de hoje
+precisa mostrar o que é hoje; a gestão precisa do cadastro completo pra
+excluir), mas o card de gestão vira **fechado por padrão** — some da rolagem
+constante, e abre com um clique ("Reuniões fixas da empresa ▾") só quando
+alguém realmente vai cadastrar ou excluir uma. Resolve a leitura de
+duplicado sem tirar nenhuma função: "cadastra uma vez" não precisa ficar
+exposto o tempo todo.
+
+**Código:** `CrmMetodo.jsx` — estado `gestaoEmpresaAberta` (default
+`false`); o cabeçalho do card virou um botão com chevron que alterna a
+lista + formulário de cadastro.
+
+**Prova:** suíte 1390/1390, build limpo, lint sem erro novo.
+
+---
+
 ## DIR-86 — Dentro da Top College, tudo puxa pra identidade visual da casa
 
 **Emitida por:** dono (07/09/2026), com 5 prints do seletor e das seções

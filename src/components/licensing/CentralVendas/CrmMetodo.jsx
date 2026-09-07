@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2 } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -98,6 +98,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
   const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
+  // 🏛️ 07/09/2026 — dono: a reunião da empresa já aparece hoje na "Minha
+  // agenda de hoje" (🏛️ destacada); ter a MESMA reunião de novo, sempre
+  // aberta, logo abaixo, lia como duplicado. Fica fechado por padrão —
+  // "cadastra uma vez" não precisa ficar exposto o tempo todo.
+  const [gestaoEmpresaAberta, setGestaoEmpresaAberta] = useState(false);
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
   const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
@@ -2254,10 +2259,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 )}
               </div>
 
-              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só a gestão) */}
+              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só a gestão).
+                  Fechada por padrão (ver comentário no estado acima): abre só
+                  quando alguém realmente vai cadastrar ou excluir uma. */}
               {podeGerir && (
                 <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2">
-                  <p className="text-sm font-bold text-nz-tinta">Reuniões da empresa <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span></p>
+                  <button
+                    type="button"
+                    onClick={() => setGestaoEmpresaAberta((v) => !v)}
+                    className="w-full flex items-center justify-between gap-2 text-left"
+                  >
+                    <span className="text-sm font-bold text-nz-tinta flex items-center gap-1.5">
+                      <Settings2 className="w-4 h-4 text-nz-tinta-fraca" /> Reuniões fixas da empresa
+                      <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span>
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-nz-tinta-fraca shrink-0 transition-transform ${gestaoEmpresaAberta ? 'rotate-180' : ''}`} />
+                  </button>
+                  {gestaoEmpresaAberta && (
+                  <>
                   {reunioesEmpresa.length > 0 && (
                     <div className="space-y-1">
                       {reunioesEmpresa.map((r) => (
@@ -2316,6 +2335,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       <Plus className="w-4 h-4 mr-1" /> Salvar pra todo mundo
                     </Button>
                   </div>
+                  </>
+                  )}
                 </div>
               )}
 
