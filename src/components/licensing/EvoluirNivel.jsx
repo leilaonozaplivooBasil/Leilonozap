@@ -21,7 +21,27 @@ const PITCH = {
 const money = (n) => 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
 
+// 🎓 07/09/2026 — dono: "puxar pra identidade visual da Top College, as
+// cores do ícone não são verde". `embutido` já dizia "estou dentro da
+// faculdade" (usado só pra ajustar o layout) — agora também escolhe a cor:
+// dentro da Top College o par azul→magenta da casa; na rota solta /Evoluir
+// (fora da faculdade, link antigo pro público) o verde de sempre continua.
+const TEMA_TOPCOLLEGE = {
+  azul: 'var(--topcollege-azul)', magenta: 'var(--topcollege-magenta)',
+  gradiente: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))',
+  chipBg: 'rgba(59,111,246,0.1)', chipBorder: 'rgba(59,111,246,0.3)', chip: 'var(--topcollege-azul)',
+  ownedBorder: 'rgba(59,111,246,0.4)', ownedBg: 'rgba(59,111,246,0.06)',
+  iconBg: 'rgba(59,111,246,0.15)', iconBorder: 'rgba(59,111,246,0.3)',
+};
+const TEMA_VERDE = {
+  azul: '#4ade80', magenta: '#4ade80', gradiente: 'linear-gradient(90deg, #4ade80, #10b981)',
+  chipBg: 'rgba(34,197,94,0.1)', chipBorder: 'rgba(34,197,94,0.3)', chip: '#4ade80',
+  ownedBorder: 'rgba(34,197,94,0.4)', ownedBg: 'rgba(34,197,94,0.05)',
+  iconBg: 'rgba(34,197,94,0.15)', iconBorder: 'rgba(34,197,94,0.3)',
+};
+
 export default function EvoluirNivel({ embutido = false }) {
+  const tema = embutido ? TEMA_TOPCOLLEGE : TEMA_VERDE;
   const { copiado: pixCopiado, copiar: copiarPix } = useCopiarPix();
   const [user, setUser] = useState(null);
   const [levels, setLevels] = useState([]);
@@ -74,11 +94,11 @@ export default function EvoluirNivel({ embutido = false }) {
     <div className={embutido ? 'rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-nz-tinta py-6 px-4' : 'min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-nz-tinta py-10 px-4'} data-teste="evoluir-nivel">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-3">
-            <TrendingUp className="w-4 h-4 text-green-400" />
-            <span className="text-green-400 text-sm font-semibold">Evolua seu nível</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-3" style={{ background: tema.chipBg, border: `1px solid ${tema.chipBorder}` }}>
+            <TrendingUp className="w-4 h-4" style={{ color: tema.chip }} />
+            <span className="text-sm font-semibold" style={{ color: tema.chip }}>Evolua seu nível</span>
           </div>
-          <h1 className={`${embutido ? 'text-2xl md:text-3xl' : 'text-3xl md:text-4xl'} font-black mb-2 text-white`}>Quanto mais alto, <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">mais você ganha</span></h1>
+          <h1 className={`${embutido ? 'text-2xl md:text-3xl' : 'text-3xl md:text-4xl'} font-black mb-2 text-white`}>Quanto mais alto, <span style={{ backgroundImage: tema.gradiente, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>mais você ganha</span></h1>
           <p className="text-gray-400">Você está como <strong className="text-white">{LABEL[user?.primary_career_level] || 'Usuário'}</strong>. Toda adesão volta 100% em produto.</p>
         </div>
 
@@ -89,30 +109,30 @@ export default function EvoluirNivel({ embutido = false }) {
             const Icon = pitch.icon || ArrowUp;
             const unlocks = (perms[l.id] || []).map((x) => LABEL[x] || x);
             return (
-              <div key={l.id} className={`rounded-2xl border-2 p-5 ${owned ? 'border-green-500/40 bg-green-500/5' : 'border-gray-700 bg-gray-800/50'}`}>
+              <div key={l.id} className="rounded-2xl border-2 p-5" style={owned ? { borderColor: tema.ownedBorder, background: tema.ownedBg } : { borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-green-500/15 border border-green-500/30 flex items-center justify-center"><Icon className="w-5 h-5 text-green-400" /></div>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: tema.iconBg, border: `1px solid ${tema.iconBorder}` }}><Icon className="w-5 h-5" style={{ color: tema.chip }} /></div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-bold">{LABEL[l.id]}</h3>
                         {pitch.tag && <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">{pitch.tag}</span>}
                       </div>
-                      <div className="text-2xl font-black text-green-400">{money(l.adesao_valor)}</div>
+                      <div className="text-2xl font-black" style={{ color: tema.chip }}>{money(l.adesao_valor)}</div>
                     </div>
                   </div>
-                  {owned && <span className="text-xs flex items-center gap-1 text-green-400"><Check className="w-4 h-4" /> Seu nível</span>}
+                  {owned && <span className="text-xs flex items-center gap-1" style={{ color: tema.chip }}><Check className="w-4 h-4" /> Seu nível</span>}
                 </div>
                 <p className="text-sm text-gray-300 mb-3">{pitch.desc}</p>
                 <div className="space-y-1.5 text-sm mb-4">
-                  <div className="flex items-center gap-2 text-gray-300"><Check className="w-4 h-4 text-green-400 flex-shrink-0" /> Comissão direta de <strong className="text-white">{l.venda_direta_pct}%</strong> nas suas vendas</div>
+                  <div className="flex items-center gap-2 text-gray-300"><Check className="w-4 h-4 flex-shrink-0" style={{ color: tema.chip }} /> Comissão direta de <strong className="text-white">{l.venda_direta_pct}%</strong> nas suas vendas</div>
                   <div className="flex items-center gap-2 text-gray-300"><Package className="w-4 h-4 text-yellow-400 flex-shrink-0" /> <strong className="text-white">{money(l.adesao_valor)}</strong> de volta em produtos</div>
                   {unlocks.length > 0 && <div className="flex items-start gap-2 text-gray-300"><Users className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" /> Pode cadastrar: <span className="text-white">{unlocks.join(', ')}</span></div>}
                 </div>
                 {owned ? (
-                  <Button disabled className="w-full bg-green-700/40 text-green-200 cursor-default"><Check className="w-4 h-4 mr-2" /> Você já tem este nível</Button>
+                  <Button disabled className="w-full cursor-default" style={{ background: tema.ownedBg, color: tema.chip }}><Check className="w-4 h-4 mr-2" /> Você já tem este nível</Button>
                 ) : (
-                  <Button onClick={() => { setSelected(l); setPix(null); setGateway('pix'); }} className="w-full bg-green-600 hover:bg-green-700"><ArrowUp className="w-4 h-4 mr-2" /> Fazer upgrade agora</Button>
+                  <Button onClick={() => { setSelected(l); setPix(null); setGateway('pix'); }} className="w-full text-white border-0" style={{ backgroundImage: tema.gradiente }}><ArrowUp className="w-4 h-4 mr-2" /> Fazer upgrade agora</Button>
                 )}
               </div>
             );
@@ -129,17 +149,20 @@ export default function EvoluirNivel({ embutido = false }) {
               <button onClick={() => !processing && setSelected(null)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
 
+            {/* 💚 o verde do PIX/Cartão AQUI é a marca do meio de pagamento
+                (o próprio PIX é verde no Brasil todo) — não é acento do
+                design da casa, por isso fica fora do `tema`. */}
             {!pix ? (
               <>
                 <div className="bg-gray-900/60 rounded-xl p-4 mb-4 text-center">
                   <div className="text-sm text-gray-400">Investimento (volta em produto)</div>
-                  <div className="text-3xl font-black text-green-400">{money(selected.adesao_valor)}</div>
+                  <div className="text-3xl font-black" style={{ color: tema.chip }}>{money(selected.adesao_valor)}</div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mb-4">
                   <button onClick={() => setGateway('pix')} className={`p-3 rounded-lg border-2 ${gateway === 'pix' ? 'border-green-500 bg-green-500/10' : 'border-gray-600'}`}>💚 PIX</button>
                   <button onClick={() => setGateway('card')} className={`p-3 rounded-lg border-2 ${gateway === 'card' ? 'border-green-500 bg-green-500/10' : 'border-gray-600'}`}>💳 Cartão</button>
                 </div>
-                <Button onClick={pay} disabled={processing} className="w-full bg-green-600 hover:bg-green-700">
+                <Button onClick={pay} disabled={processing} className="w-full text-white border-0" style={{ backgroundImage: tema.gradiente }}>
                   {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando…</> : (gateway === 'pix' ? 'Gerar PIX' : 'Pagar com Cartão')}
                 </Button>
                 <p className="text-[11px] text-gray-500 text-center mt-3">Ao confirmar o pagamento, seu nível é ativado automaticamente e seu pedido de produtos é gerado.</p>

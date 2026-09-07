@@ -12,6 +12,120 @@
 
 ---
 
+## DIR-86 — Dentro da Top College, tudo puxa pra identidade visual da casa
+
+**Emitida por:** dono (07/09/2026), com 5 prints do seletor e das seções
+Mentalidade/Time/ADM X-Game/Carreira: *"aqui puxar pra tipografia da Top
+College, da logo da Top College e da x traço (...) as cores do ícone não são
+verde, puxar pra identidade visual da Top College (...) esse método está com
+o nome, o de baixo está com o outro, manter a mesma a mesma tipologia (...)
+Dentro da Top College precisa tudo puxar pra identidade visual todas as
+páginas, não pode ser branco (...) tem que puxar a mesma tipologia, a mesma
+identidade visual pra ficar tudo perfeito. Faz essa análise aí pra gente
+deixar tudo perfeito."*
+
+**Data:** 07/09/2026.
+
+**O que existia:** dentro da faculdade (fundo preto `--xeos-preto`
+estabelecido no Hero), várias seções ainda usavam o verde/marrom da
+OPERAÇÃO (Leilão NoZap) ou `Card`s brancos soltos no meio da faixa escura —
+resíduo de terem sido construídas antes da identidade Top College existir:
+o ícone do seletor sem `marca` própria (Mentalidade/Time/ADM X-Game/Carreira)
+ficava verde mesmo em modo escuro; a seção Carreira era um `Card` branco;
+a aba Time/Vendedores (`RoleLinksGrid`, `SellersListPanel`, o modal de
+cadastro) era inteiramente marrom/verde/branca.
+
+**O que entra — pergunta feita ao dono e respondida (`AskUserQuestion`):**
+"cromado + gradiente azul→magenta" (moderação: o par de cores da casa é
+destaque pontual — um botão por card, não tudo colorido — o resto é
+branco/prata sobre o preto, espelhando o próprio Hero).
+
+1. **`CentralVendasTabs.jsx`** — o quadrado de ícone do botão fechado, para
+   itens sem `marca` própria, para de ser verde fixo e passa a seguir
+   `escuro` (branco/10 + ícone branco dentro da faculdade).
+2. **`CareerPath.jsx`** — re-pele completa: verde/marrom/preto/cinza viram
+   branco/neutro sobre o preto, com azul (`--topcollege-azul`) marcando
+   "alcançado/venda direta" e magenta (`--topcollege-magenta`) marcando
+   "função principal/rebate" — mesmo papel que verde/marrom faziam antes.
+3. **`CarreiraSecao.jsx`** — o `Card` branco do Plano de Carreira vira o
+   mesmo tratamento escuro que o `EvoluirNivel` (linha de baixo) já tinha.
+4. **`EvoluirNivel.jsx`** — como é usado TANTO dentro da Top College
+   (`embutido`) QUANTO na rota pública `/Evoluir` (sem `embutido`, com marca
+   verde própria e correta), ganhou um objeto de tema condicional
+   (`TEMA_TOPCOLLEGE` vs `TEMA_VERDE`) em vez de um recolorir incondicional
+   — preserva a marca pública. PIX/Cartão continuam verdes de propósito (cor
+   do meio de pagamento, não da casa).
+5. **`RoleLinksGrid.jsx`** — ganhou `escuro` (default `false`, único uso real
+   é dentro da Top College): cards e input de link viram cromados; o botão
+   de copiar (o único destaque por card) ganha o gradiente azul→magenta.
+6. **`SellersListPanel.jsx`** — ganhou `escuro`: cabeçalho, estado vazio,
+   cards de vendedor (avatar, textos, chip do link) viram cromados; dos três
+   botões por card, "Abrir Loja" (ação primária) ganha o gradiente, os
+   outros dois ficam neutros; o modal de confirmação de exclusão fica com a
+   casca escura mas o vermelho de perigo (ícone, texto "EXCLUIR", botão
+   final) fica intocado — vermelho é sinal universal de perigo, não cor de
+   marca, mesmo critério que preservou o verde do PIX.
+7. **`SellerFormModal.jsx`** — já era escuro por padrão (único uso é dentro
+   da Top College); só o botão "Cadastrar/Salvar", que era verde fixo,
+   passou a usar o gradiente azul→magenta.
+8. **`Licensing.jsx`** — a aba Time/Vendedores (que estava com um `Card`
+   branco montado inline) passou a ter o mesmo fundo escuro das outras abas
+   da faculdade, com `escuro={naTopCollege}` propagado pros componentes
+   filhos; corrigido também o `mt-0`/`mt-6` da aba Carreira, que tinha
+   ficado esquecido no padrão das outras abas.
+
+**Fora de escopo (flagado, não mexido):** `EncontroMentalidade.jsx` (7
+resíduos de `nz-verde`) e `PerformanceEquipe.jsx` (3 resíduos) — drift
+adicional fora do que foi pedido agora; precisam de autorização à parte.
+
+**Prova:** suíte 1390/1390, `npm run build` limpo, `npx eslint` nos 8
+arquivos tocados sem erro novo (só avisos pré-existentes de vars não usadas,
+confirmados via diff que não vieram desta mudança).
+
+---
+
+## DIR-85 — A X-eos no seletor: sem repetir, com a marca completa
+
+**Emitida por:** dono (07/09/2026), com print do seletor de seções da Top
+College aberto e fechado: *"tira essa logo do primeiro, já está aparecendo
+lá em cima. E ali onde está escrito o método você vai tirar a logo antes, e
+vai escrever o método — X-eos, se possível, colar logo depois. Porque tem a
+logo da Top College ali, aí elas duas vão ficar aparecendo duas vezes de
+maneira bem sublime. Mas a logo mesma, essa mesma logo aqui [anexou o
+lockup X-eos]."*
+
+**Data:** 07/09/2026.
+
+**O que existia:** `CentralVendasTabs.jsx` (o seletor "TOP COLLEGE / O
+Método" com o menu de duas famílias) desenhava, pro item "O Método", um
+selo pequeno (só o X, `marca-xeos.webp`) ANTES do texto — tanto no botão
+fechado quanto na linha da lista. A mesma marca X-eos já aparece acima, na
+faixa da academia (HeroTopCollege) — repetir o selo aqui era a mesma marca
+duas vezes na mesma tela, sem necessidade.
+
+**O que entra:**
+1. **Botão fechado** — quando o item ativo tem marca própria (só "O
+   Método"), o quadradinho de logo/ícone não aparece mais: fica só o texto
+   "TOP COLLEGE" / "O Método". Os outros itens (Mentalidade, Time,
+   X-Performance, Carreira) continuam com o ícone deles, sem mudança.
+2. **Linha da lista "O Método"** — o texto abre a linha (sem ícone antes),
+   e a marca completa (`marca-xeos-lockup.webp`, a mesma imagem que o dono
+   anexou — "X" + "-eos") fecha DEPOIS do texto, sem quadrado de fundo
+   preto (ela já é legível em fundo claro ou escuro, tem transparência
+   real). O check de "selecionado" continua por último.
+3. `licensingTabs.js`: o campo `marca` do item `catalogo-crm` (O Método)
+   trocou de `marca-xeos.webp` (só o X) pra `marca-xeos-lockup.webp` (X +
+   "-eos") — é a marca que o `CentralVendasTabs.jsx` agora desenha depois
+   do texto.
+
+**Prova:** prints reais da banca (`tests/navegador/secoes.harness.jsx`,
+Chromium via CDP puro — o pacote `playwright` não está instalado neste
+ambiente, só o binário) confirmam: botão fechado sem ícone; linha "O
+Método" com texto → logo X-eos → check, nessa ordem. Suíte 1390/1390,
+build e lint limpos.
+
+---
+
 ## DIR-84.5 — O InvokeLLM (9 telas) sai do modelo morto; o acesso à IA vira um lugar só
 
 **Emitida por:** dono (07/09/2026): *"me oriente, tudo isso liberado de ação,

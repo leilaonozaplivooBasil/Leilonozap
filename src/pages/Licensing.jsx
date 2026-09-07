@@ -1256,26 +1256,30 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}
-              <TabsContent value="catalogo-carreira" className="mt-6">
+              <TabsContent value="catalogo-carreira" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 <CarreiraSecao currentUser={user} />
               </TabsContent>
 
-              <TabsContent value="catalogo-vendedores" className="mt-6">
-                <Card className={'bg-white border-gray-200'}>
+              {/* 🎓 07/09 — dono: "dentro da Top College precisa tudo puxar pra
+                  identidade visual, não pode ser branco". Era um Card branco
+                  chumbado no meio da faixa escura — agora segue o mesmo
+                  tratamento das outras seções (fundo escuro, borda sutil). */}
+              <TabsContent value="catalogo-vendedores" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
                   <CardHeader>
                     <div>
-                      <CardTitle className={'text-gray-900'}>Meus Vendedores</CardTitle>
-                      <CardDescription className={'text-gray-500'}>Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua estrutura de negócio.</CardDescription>
+                      <CardTitle className="text-white">Meus Vendedores</CardTitle>
+                      <CardDescription className="text-white/50">Compartilhe o link do cargo — a pessoa se cadastra, paga e já entra na sua estrutura de negócio.</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <RoleLinksGrid referralCode={user.referral_code} isSaiDeBaixo={isSaiDeBaixo} />
+                    <RoleLinksGrid referralCode={user.referral_code} isSaiDeBaixo={isSaiDeBaixo} escuro={naTopCollege} />
                     <div className="flex justify-end">
-                      <Button onClick={() => setShowSellerModal(true)} variant="outline" size="sm" className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-600 text-gray-300'}>
+                      <Button onClick={() => setShowSellerModal(true)} variant="outline" size="sm" className={naTopCollege ? 'border-white/15 text-white/70 hover:bg-white/5 hover:text-white' : (isSaiDeBaixo ? 'border-gray-300' : 'border-gray-600 text-gray-300')}>
                         Cadastro manual (avançado)
                       </Button>
                     </div>
-                    <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} />
+                    <SellersListPanel licenseeId={user.id} refreshKey={sellersRefreshCounter} escuro={naTopCollege} />
                   </CardContent>
                 </Card>
               </TabsContent>

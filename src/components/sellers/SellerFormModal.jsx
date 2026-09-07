@@ -316,10 +316,14 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
             >
               Cancelar
             </Button>
+            {/* 🎓 07/09/2026 — dono: identidade visual da Top College. Este modal
+                só abre dentro da faculdade (aba Time/Vendedores) — o verde da
+                operação vira o azul→magenta da casa. */}
             <Button
               type="submit"
               disabled={isSubmitting || isUploading}
-              className="bg-green-600 hover:bg-green-700"
+              className="text-white"
+              style={{ backgroundImage: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }}
             >
               {isSubmitting ? (
                 <>
