@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Camera, ImagePlus, Loader2 } from 'lucide-react';
-import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR } from '@/lib/xgame';
+import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
+import { useSegurarCamada } from '@/hooks/useCamadaModal';
 
 // ✅ X-GAME F10.3 → DIR-84 — O MODAL DE COMPROVAÇÃO (leve e direto, ordem do
 // dono: "não quadradão"). Um cartão só: vê a tarefa, abre o Instagram se for
@@ -71,10 +72,17 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
     }, 'image/jpeg', 0.92);
   };
 
+  // 🪟 enquanto este cartão estiver aberto, os flutuantes (X-MUSIC, Leila)
+  // saem da frente — eles cobriam o botão de concluir no celular.
+  useSegurarCamada();
+
   // 📚 estudo = FOTO do estudo + RESUMO digitado (mínimo de verdade)
   const podeConcluir = tipo === 'aprendizado'
     ? !!file && texto.trim().length >= RESUMO_MIN
     : !!file;
+
+  // 🔒 e o botão apagado DIZ o que está faltando, em vez de só ficar opaco
+  const motivoTravado = motivoDoBotaoTravado({ tipo, temFoto: !!file, texto });
 
   // 🚫 anti copiar-e-colar no resumo: colar não entra e a pessoa é avisada
   const bloquearCola = (e) => {
@@ -104,7 +112,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   // na segunda rodada — se ainda ficar em dúvida, vai pro gestor).
   if (pergunta) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()} data-teste="comprovar-modal-justificativa">
           <div className="flex items-start justify-between gap-3 px-5 pt-4">
             <div className="min-w-0">
@@ -144,7 +152,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -176,18 +184,28 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
           {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino) */}
           {tipo === 'aprendizado' && (
             <div className="space-y-1">
+              <p className="text-[11px] text-nz-tinta-fraca">
+                Escreva com as <span className="font-bold text-nz-tinta">suas palavras</span>, no mínimo{' '}
+                <span className="font-bold text-nz-tinta">{RESUMO_MIN} caracteres</span> — dá umas 6 linhas.
+              </p>
               <Textarea
                 autoFocus
-                placeholder="Digita com as SUAS palavras o que você aprendeu na leitura de hoje..."
+                placeholder={`O que você aprendeu hoje, com as suas palavras (pelo menos ${RESUMO_MIN} caracteres)...`}
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onPaste={bloquearCola}
                 onDrop={bloquearCola}
                 className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[100px] rounded-xl"
               />
-              <div className="flex items-center justify-between">
-                <span className={`text-[10px] font-semibold ${texto.trim().length >= RESUMO_MIN ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
-                  {texto.trim().length >= RESUMO_MIN ? '✔ resumo no tamanho' : `${texto.trim().length}/${RESUMO_MIN} caracteres`}
+              <div className="flex items-center justify-between gap-2">
+                {/* 🗣️ diz quanto FALTA, e já diz o tamanho antes de começar.
+                    "18/400 caracteres" lia-se como "18 de um limite de 400" —
+                    o oposto do que a regra pede. */}
+                <span
+                  data-teste="contador-resumo"
+                  className={`text-[10px] font-semibold ${texto.trim().length >= RESUMO_MIN ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}
+                >
+                  {textoDoContador(texto)}
                 </span>
                 <span className="text-[10px] text-nz-tinta-fraca">✍️ só digitando — colar não vale</span>
               </div>
@@ -267,6 +285,14 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
           >
             {enviando ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> A IA está conferindo...</>) : 'Comprovar e concluir ✔'}
           </Button>
+
+          {/* 🔒 botão apagado explica o motivo — ninguém deduz por que um
+              botão está opaco, e quem não deduz liga pro suporte */}
+          {!enviando && motivoTravado && (
+            <p data-teste="motivo-travado" className="text-[11px] text-center font-semibold text-nz-tinta-fraca">
+              🔒 {motivoTravado}
+            </p>
+          )}
 
           <p className="text-[10px] text-center text-nz-tinta-fraca">
             🤖 validação automática por IA · print repetido é barrado · horário carimbado
