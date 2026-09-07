@@ -74,7 +74,12 @@ export default function NavegacaoLateralGlobal({ user, activeTab, activeCatalogT
 
   return (
     // 🖤 Faixa escura em toda a altura do conteúdo; o menu segue fixo dentro dela.
-    <aside className="hidden md:block w-24 shrink-0 self-stretch bg-nz-preto-barra border-r border-black/40" style={{ minHeight: 'calc(100vh - 64px)' }}>
+    // 🎓 07/09 (2ª limpeza, dono: "a tipografia da logo, puxar mais pra isso…
+    // deixar mais um pouquinho espaçado ali, que ainda está vazando"): a
+    // barra ganhou 12px a mais de largura e o menu 4px a mais de margem —
+    // só pra letra maior (10px, Sora) ter a mesma folga de antes, sem
+    // apertar contra a borda.
+    <aside className="hidden md:block w-28 shrink-0 self-stretch bg-nz-preto-barra border-r border-black/40" style={{ minHeight: 'calc(100vh - 64px)' }}>
       <div
         className="flex flex-col items-center py-4 sticky overflow-y-auto"
         style={{ top: 64, maxHeight: 'calc(100vh - 64px)' }}
@@ -82,7 +87,7 @@ export default function NavegacaoLateralGlobal({ user, activeTab, activeCatalogT
         <DragDropContext onDragEnd={aoSoltar}>
           <Droppable droppableId="navLateral">
             {(provided) => (
-              <nav ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1 w-full px-2 pb-12">
+              <nav ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1.5 w-full px-2.5 pb-12">
                 {itens.map((item, i) => (
                   item.type === 'group' ? (
                     <ItemLateralGrupo

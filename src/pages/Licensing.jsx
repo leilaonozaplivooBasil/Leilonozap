@@ -1182,7 +1182,15 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores
             PONTO 85 — liberada para TODOS: toda loja tem central de vendas. */}
         {
-          <TabsContent value="catalogo" className={naTopCollege ? '' : 'space-y-6'}>
+          /* 🎓 07/09 (2ª limpeza) — "ainda está vazando": abaixo da faixa da
+             academia, o conteúdo (as abas, o X-Performance, O Método…) corria
+             a página inteira sem margem nenhuma — encostava direto na barra
+             lateral, sem o respiro que a própria faixa preta tem (px-6/px-9).
+             Este px alinha o conteúdo com o mesmo eixo esquerdo do "X-office"
+             lá em cima, em TODAS as seções da Top College de uma vez (esta é
+             a ÚNICA aba-mãe: X-Performance, Mentalidade, O Método, Carreira…
+             passam todas por aqui). */
+          <TabsContent value="catalogo" className={naTopCollege ? 'px-4 sm:px-6 lg:px-9' : 'space-y-6'}>
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               {/* na Top College o seletor já foi desenhado dentro da faixa —
                   aqui ele não se repete, senão viriam dois menus na tela */}
