@@ -100,12 +100,19 @@ describe('DIR-57 — agrupamento como DADO (não mais um if no nome do grupo)', 
     }
   });
 
-  test('quem não é admin não recebe o Consignado — permissão intacta', () => {
-    const comum = { role: 'user', career_levels: ['executivo'] };
-    const admin = grupoDe(comum, 'Admin');
-    assert.equal(admin.items.length, 1);
-    assert.ok(!valores(admin.items).includes('/painel/consignado'));
-    assert.equal(grupoDe(dono, 'Admin').items.length, 2);
+  test('quem não é admin não recebe o Consignado nem as Demandas — permissão intacta', () => {
+    // 07/09/2026 — entrou /Demandas: a fila do Tira Dúvidas 24h, onde SE DECIDE
+    // o que vira trabalho. É tela de gestão; nenhum outro papel pode alcançá-la
+    // pelo menu (a rota também exige admin, em App.jsx).
+    const admin = grupoDe(dono, 'Admin');
+    assert.deepEqual(valores(admin.items), ['admin', '/painel/consignado', '/Demandas']);
+
+    for (const role of ['user', 'licensee', 'admin_financeiro']) {
+      const g = grupoDe({ role, career_levels: ['executivo'] }, 'Admin');
+      assert.equal(g.items.length, 1, `${role} devia ver só a aba Admin`);
+      assert.ok(!valores(g.items).includes('/painel/consignado'), `${role} não pode ver o Consignado`);
+      assert.ok(!valores(g.items).includes('/Demandas'), `${role} não pode ver as Demandas`);
+    }
   });
 });
 
