@@ -638,7 +638,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                   disabled={!podeClicar(pl)}
                   data-teste={`pilula-${pl.id}`}
                   data-acesa={pl.acesa ? 'sim' : 'nao'}
-                  className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default inline-flex items-center gap-1"
+                  className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default"
                   style={{
                     background: pl.alerta ? '#FFF3E0' : pl.acesa ? '#E3F5E9' : '#F4F5F7',
                     color: pl.alerta ? '#C4470F' : pl.acesa ? '#177245' : '#8993A4',
@@ -646,8 +646,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                   }}
                   title={podeClicar(pl) ? `Clique para ${pl.id === 'dia' ? 'levar pro seu dia' : 'ajustar horário'}` : ''}
                 >
-                  <span>{pl.icon}</span>
-                  <span>{pl.texto}</span>
+                  {pl.texto}
                 </button>
               ))}
               {habito && <span className="rounded px-1.5 py-0.5" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>}

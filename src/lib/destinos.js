@@ -31,8 +31,10 @@ export function ondeEsta({ tarefa = null, cartao = null } = {}) {
 /**
  * As pílulas de estado do card/tarefa — uma por destino, acesa ou apagada,
  * com o texto que a pessoa lê. `alerta` marca o caso confuso de verdade: está
- * no dia mas sem horário, logo fora da Jornada. DIR-82: cada pílula tem ícone
- * e é clicável.
+ * no dia mas sem horário, logo fora da Jornada. DIR-82: cada pílula é clicável
+ * (a tela decide o que o clique faz). O `icon` fica disponível, mas a tela do
+ * quadro NÃO o desenha — regra da casa (DIR-76.1): emoji que o programa
+ * espalha é ruído; a pílula fala por texto.
  */
 export function pilulasOndeEsta(estado, { listaNome = null } = {}) {
   const e = estado || {};
