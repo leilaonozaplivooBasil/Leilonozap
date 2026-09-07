@@ -211,9 +211,22 @@ export default async function handler(req, res) {
     const ia = await resolverIA();
     if (!ia) return indisponivel(res, { status: 0, tipo: 'sem_chave', mensagem: 'nem ANTHROPIC_API_KEY nem AI_GATEWAY_API_KEY configuradas' }, 'IA não conectada — configure a chave da Anthropic ou do AI Gateway.');
 
-    const contexto = `TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.
-${REGRAS_POR_TIPO[tipo] || REGRAS_POR_TIPO.foto}
-${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence ou é evasiva, responda "duvida" de novo, com pergunta_para_pessoa vazia (isso já vai pra análise do gestor).` : ''}`;
+    // 💸 DIR-84.3 — CACHE: tudo que NÃO muda entre chamadas (papel + regra do
+    // tipo + cruzamento, ~1,2 mil tokens) vai no `system` com cache_control;
+    // a partir da 2ª chamada do mesmo tipo é cobrado a 10% (Opus 5 aceita a
+    // partir de 512 tokens). O que muda (tarefa, resumo, justificativa) fica
+    // na mensagem do usuário, DEPOIS do prefixo cacheado.
+    // TODAS as regras de tipo vão no prefixo (não só a do tipo atual): assim o
+    // prefixo é IDÊNTICO em toda chamada — uma entrada de cache só pra tudo,
+    // e folgado acima do mínimo — e a mensagem diz qual regra vale agora.
+    const tipoRegra = REGRAS_POR_TIPO[tipo] ? tipo : 'foto';
+    const sistema = [{
+      type: 'text',
+      text: `${SISTEMA}\n\nREGRAS POR TIPO DE COMPROVAÇÃO (a mensagem diz qual tipo vale nesta análise):\n${Object.entries(REGRAS_POR_TIPO).map(([k, v]) => `\n[TIPO ${k}]\n${v}`).join('\n')}\n${CRUZAMENTO}`,
+      cache_control: { type: 'ephemeral' },
+    }];
+    const contexto = `TIPO DE COMPROVAÇÃO: ${tipoRegra} — aplique a regra [TIPO ${tipoRegra}].
+TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence ou é evasiva, responda "duvida" de novo, com pergunta_para_pessoa vazia (isso já vai pra análise do gestor).` : ''}`;
 
     const conteudo = [
       { type: 'text', text: contexto },
@@ -226,9 +239,12 @@ ${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imag
       resposta = await clienteIA(ia).messages.parse({
         model: ia.model,
         max_tokens: 2000,
-        system: SISTEMA,
+        system: sistema,
         messages: [{ role: 'user', content: conteudo }],
-        output_config: { format: zodOutputFormat(Veredito) },
+        // effort medium: julgar uma foto contra uma regra não precisa do
+        // raciocínio máximo — corta tokens de pensamento sem perder rigor.
+        // (o thinking adaptativo do Opus 5 segue ligado por padrão)
+        output_config: { format: zodOutputFormat(Veredito), effort: 'medium' },
         // extensão do AI Gateway: se o modelo principal falhar, ele tenta o reserva
         ...(ia.reserva ? { providerOptions: { gateway: { models: [ia.reserva] } } } : {}),
       });

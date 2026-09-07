@@ -74,22 +74,51 @@ test('a saída é ESTRUTURADA por contrato (output_config.format), não JSON ras
   assert.equal(corpo.temperature, undefined, 'Opus 5 não aceita temperature — não pode ir');
 });
 
+test('DIR-84.3 — as regras fixas vão no system COM cache (10% do preço) e o esforço é medium', async () => {
+  await post({ image_url: FOTO, tipo: 'foto', titulo: 'Treino' });
+  const corpo = soIA()[0].corpo;
+  assert.ok(Array.isArray(corpo.system) && corpo.system.length === 1, 'system em blocos');
+  assert.deepEqual(corpo.system[0].cache_control, { type: 'ephemeral' });
+  assert.match(corpo.system[0].text, /VALIDADOR DE COMPROVAÇÕES/);
+  assert.match(corpo.system[0].text, /CRUZAMENTO OBRIGATÓRIO/);
+  assert.ok(corpo.system[0].text.length > 3500, `prefixo grande o bastante pra cachear (≥512 tokens): ${corpo.system[0].text.length} chars`);
+  assert.equal(corpo.output_config.effort, 'medium');
+  // o que MUDA por chamada fica FORA do prefixo cacheado
+  const texto = corpo.messages[0].content.find((b) => b.type === 'text').text;
+  assert.doesNotMatch(texto, /CRUZAMENTO OBRIGATÓRIO/);
+  assert.match(texto, /TIPO DE COMPROVAÇÃO: foto — aplique a regra \[TIPO foto\]/);
+  assert.match(texto, /TAREFA COMPROVADA: "Treino"/);
+
+  // o prefixo é IDÊNTICO entre tipos diferentes — é isso que faz o cache valer
+  // pra TODA chamada, não uma entrada por tipo
+  await post({ image_url: FOTO, tipo: 'instagram', titulo: 'Story' });
+  const corpo2 = soIA()[1].corpo;
+  assert.equal(corpo2.system[0].text, corpo.system[0].text, 'mesmo prefixo pra foto e instagram');
+  assert.match(corpo2.messages[0].content.find((b) => b.type === 'text').text, /aplique a regra \[TIPO instagram\]/);
+  // tipo desconhecido cai na regra de foto, sem quebrar o prefixo
+  await post({ image_url: FOTO, tipo: 'xpto', titulo: 'Qualquer' });
+  assert.match(soIA()[2].corpo.messages[0].content.find((b) => b.type === 'text').text, /aplique a regra \[TIPO foto\]/);
+});
+
 test('a foto de hoje vai primeiro e as anteriores vão junto, como imagens (anti-reciclagem visual)', async () => {
   await post({ image_url: FOTO, tipo: 'foto', titulo: 'Treino', imagens_anteriores: ANTERIORES });
   const conteudo = soIA()[0].corpo.messages[0].content;
   const imagens = conteudo.filter((b) => b.type === 'image').map((b) => b.source.url);
   assert.deepEqual(imagens, [FOTO, ...ANTERIORES]);
   const texto = conteudo.find((b) => b.type === 'text').text;
-  assert.match(texto, /Resolver|Treino/);
-  assert.match(texto, /CRUZAMENTO OBRIGATÓRIO/);
+  assert.match(texto, /Treino/);
   assert.match(texto, /2 seguinte\(s\) são comprovações ANTERIORES/);
+  assert.match(soIA()[0].corpo.system[0].text, /ANTI-RECICLAGEM/);
 });
 
 test('o cruzamento tarefa×imagem está no prompt — o exemplo do dono (cama × trabalho) é citado', async () => {
   await post({ image_url: FOTO, tipo: 'foto', titulo: 'Resolver: o financeiro' });
-  const texto = soIA()[0].corpo.messages[0].content.find((b) => b.type === 'text').text;
-  assert.match(texto, /Resolver: o financeiro.*foto de lazer,\s*de cama/s);
-  assert.match(texto, /pergunta_para_pessoa/);
+  const corpo = soIA()[0].corpo;
+  const regras = corpo.system[0].text;
+  const texto = corpo.messages[0].content.find((b) => b.type === 'text').text;
+  assert.match(regras, /Resolver: o financeiro.*foto de lazer,\s*de cama/s, 'o exemplo do dono está na regra');
+  assert.match(regras, /pergunta_para_pessoa/);
+  assert.match(texto, /TAREFA COMPROVADA: "Resolver: o financeiro"/, 'a tarefa real vai na mensagem');
 });
 
 test('lê o veredito estruturado e devolve pergunta quando é dúvida na 1ª rodada', async () => {
