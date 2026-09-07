@@ -123,9 +123,13 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
             na faixa acima (HeroTopCollege) — repetir o selo aqui era a MESMA
             marca duas vezes na mesma tela. O quadradinho só aparece pros
             itens sem marca própria (Mentalidade, Time, X-Performance…). */}
+        {/* 🎓 07/09 — dono: "as cores do ícone não são verde, puxar pra
+            identidade visual da Top College". Verde é a cor da OPERAÇÃO
+            (Loja & Vendas); dentro da faculdade o neutro é cromado
+            (branco/prata sobre o preto), sem depender da família. */}
         {!atual.marca && (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-nz-verde-fundo">
-            <MarcaOuIcone icone={IconeAtual} className="h-5 w-5 text-nz-verde" />
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${escuro ? 'bg-white/10' : 'bg-nz-verde-fundo'}`}>
+            <MarcaOuIcone icone={IconeAtual} className={`h-5 w-5 ${escuro ? 'text-white' : 'text-nz-verde'}`} />
           </span>
         )}
         <span className="min-w-0 flex-1">

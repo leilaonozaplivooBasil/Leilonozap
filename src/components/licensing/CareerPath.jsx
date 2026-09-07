@@ -124,23 +124,35 @@ export default function CareerPath({ currentUser }) {
     // Diretoria: só mostra os cargos institucionais que o usuário realmente tem (destacados em verde).
     const myDirectorSteps = directorSteps.filter((s) => s.match.some((m) => userLevels.includes(m)));
 
+    // 🎓 07/09/2026 — dono: "as cores do ícone não são verde, puxar pra
+    // identidade visual da Top College". Verde/marrom eram os tokens da
+    // OPERAÇÃO (Leilão NoZap); aqui dentro da faculdade o neutro é branco/
+    // prata sobre o preto, e o par de cores da casa (azul → magenta) faz o
+    // MESMO papel que verde/marrom faziam: azul marca "conquistado" (o
+    // cargo e a % de venda direta), magenta marca o destaque de segundo
+    // nível (função principal, rebate) — dois tons só, com moderação.
+    const AZUL = 'var(--topcollege-azul)';
+    const MAGENTA = 'var(--topcollege-magenta)';
     return (
         <div className="p-6">
             {myDirectorSteps.length > 0 && (
-                <div className="mb-6 pb-6 border-b border-nz-borda">
-                    <h3 className="text-sm font-bold text-nz-verde mb-3 flex items-center gap-2">Seus Cargos de Diretoria</h3>
+                <div className="mb-6 pb-6 border-b border-white/10">
+                    <h3
+                        className="text-sm font-bold mb-3 flex items-center gap-2"
+                        style={{ backgroundImage: `linear-gradient(90deg, ${AZUL}, ${MAGENTA})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}
+                    >Seus Cargos de Diretoria</h3>
                     <ul className="space-y-3">
                         {myDirectorSteps.map((s) => (
                             <li key={s.id} className="flex items-start gap-4">
-                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-nz-verde-fundo ring-4 ring-nz-verde/20 animate-pulse-subtle">
-                                    <s.icon className="h-5 w-5 text-nz-verde" />
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/10 ring-4 animate-pulse-subtle" style={{ '--tw-ring-color': 'rgba(59,111,246,0.25)' }}>
+                                    <s.icon className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold flex items-center gap-2 flex-wrap text-black">
+                                    <h4 className="font-bold flex items-center gap-2 flex-wrap text-white">
                                         {s.title}
-                                        <span className="ml-1 text-xs px-2 py-0.5 rounded border bg-nz-verde-fundo text-nz-verde border-nz-verde/30">{s.gov}</span>
+                                        <span className="ml-1 text-xs px-2 py-0.5 rounded border" style={{ color: AZUL, borderColor: 'rgba(59,111,246,0.3)', background: 'rgba(59,111,246,0.1)' }}>{s.gov}</span>
                                     </h4>
-                                    <p className="mt-1 text-sm text-black">{s.desc}</p>
+                                    <p className="mt-1 text-sm text-white/60">{s.desc}</p>
                                 </div>
                             </li>
                         ))}
@@ -149,8 +161,8 @@ export default function CareerPath({ currentUser }) {
             )}
             <div className="relative">
                 {/* Linha de Conexão - ATRÁS DOS CÍRCULOS */}
-                <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-nz-borda z-0" aria-hidden="true" />
-                
+                <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-white/10 z-0" aria-hidden="true" />
+
                 <ul className="space-y-8">
                     {careerSteps.map((step) => {
                         const isActive = userLevels.includes(step.id);
@@ -158,50 +170,52 @@ export default function CareerPath({ currentUser }) {
 
                         return (
                             <li key={step.id} className="flex items-start gap-4 relative z-10">
-                                <div className={cn(
-                                    "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
-                                    isActive ? "bg-nz-verde-fundo ring-4 ring-nz-verde/20 animate-pulse-subtle" : "border-2 border-nz-borda bg-white",
-                                    isPrimary && "ring-4 ring-nz-marrom/30"
-                                )}>
+                                <div
+                                    className={cn(
+                                        "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
+                                        isActive ? "bg-white/10 ring-4 animate-pulse-subtle" : "border-2 border-white/15 bg-white/5"
+                                    )}
+                                    style={isActive ? { '--tw-ring-color': isPrimary ? 'rgba(230,46,139,0.3)' : 'rgba(59,111,246,0.25)' } : undefined}
+                                >
                                     {isActive ? (
-                                        <ArrowUp className="h-6 w-6 text-nz-verde" />
+                                        <ArrowUp className="h-6 w-6" style={{ color: AZUL }} />
                                     ) : (
-                                        <step.icon className="h-6 w-6 text-gray-400" />
+                                        <step.icon className="h-6 w-6 text-white/30" />
                                     )}
                                 </div>
                                 <div>
                                     <h4 className={cn(
                                         "font-bold flex items-center gap-2 flex-wrap",
-                                        isActive ? "text-black" : "text-gray-400"
+                                        isActive ? "text-white" : "text-white/40"
                                     )}>
                                         {step.title}
-                                        {isPrimary && <span className="text-xs font-normal text-nz-marrom">(Função Principal)</span>}
+                                        {isPrimary && <span className="text-xs font-normal" style={{ color: MAGENTA }}>(Função Principal)</span>}
                                         {rolePercentages[step.id] ? (
-                                          <span className={cn(
-                                            "ml-2 text-xs px-2 py-0.5 rounded border",
-                                            isActive ? "bg-nz-verde-fundo text-nz-verde border-nz-verde/30" : "bg-nz-cinza-fundo text-gray-400 border-nz-borda"
-                                          )}>{rolePercentages[step.id]}% venda direta</span>
+                                          <span
+                                            className="ml-2 text-xs px-2 py-0.5 rounded border"
+                                            style={isActive ? { color: AZUL, borderColor: 'rgba(59,111,246,0.3)', background: 'rgba(59,111,246,0.1)' } : { color: 'rgba(255,255,255,0.35)', borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)' }}
+                                          >{rolePercentages[step.id]}% venda direta</span>
                                         ) : null}
                                         {roleRebate[step.id] ? (
-                                          <span className={cn(
-                                            "ml-1 text-xs px-2 py-0.5 rounded border",
-                                            isActive ? "bg-nz-marrom-fundo text-nz-marrom border-nz-marrom/30" : "bg-nz-cinza-fundo text-gray-400 border-nz-borda"
-                                          )}>+{roleRebate[step.id].pct}% rebate</span>
+                                          <span
+                                            className="ml-1 text-xs px-2 py-0.5 rounded border"
+                                            style={isActive ? { color: MAGENTA, borderColor: 'rgba(230,46,139,0.3)', background: 'rgba(230,46,139,0.1)' } : { color: 'rgba(255,255,255,0.35)', borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)' }}
+                                          >+{roleRebate[step.id].pct}% rebate</span>
                                         ) : null}
                                     </h4>
                                     <p className={cn(
                                         "mt-1 text-sm",
-                                        isActive ? "text-black" : "text-gray-400"
+                                        isActive ? "text-white/70" : "text-white/35"
                                     )}>
                                         {isActive ? step.achievedDescription : step.lockedDescription}
                                     </p>
                                     {roleRebate[step.id] ? (
-                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-nz-verde font-semibold" : "text-gray-400")}>
+                                      <p className={cn("mt-0.5 text-xs font-semibold", !isActive && "text-white/35")} style={isActive ? { color: MAGENTA } : undefined}>
                                         Rebate de {roleRebate[step.id].pct}% sobre {roleRebate[step.id].sobre} (quando alguém da sua árvore vende).
                                       </p>
                                     ) : null}
                                     {roleCadastra[step.id] ? (
-                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-black" : "text-gray-400")}>
+                                      <p className={cn("mt-0.5 text-xs", isActive ? "text-white/60" : "text-white/35")}>
                                         {roleCadastra[step.id]}
                                       </p>
                                     ) : null}

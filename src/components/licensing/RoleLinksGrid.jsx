@@ -37,7 +37,11 @@ const ROLE_LINKS = (referralCode) => [
   },
 ];
 
-export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
+// 🎓 07/09/2026 — dono: "dentro da Top College... puxar pra identidade
+// visual, não pode ser branco". `escuro` (só true dentro da faculdade)
+// troca o marrom/verde da operação pelo cromado + o azul da casa no botão
+// de copiar (a única cor de destaque aqui — moderação: um botão só).
+export default function RoleLinksGrid({ referralCode, isSaiDeBaixo, escuro = false }) {
   const [copiedIdx, setCopiedIdx] = useState(null);
 
   const handleCopy = (link, idx) => {
@@ -90,7 +94,7 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
       {ROLE_LINKS(referralCode).map((role, idx) => (
         <div
           key={role.title}
-          className="rounded-xl border p-3 flex items-center gap-3 bg-nz-marrom-fundo border-nz-marrom/25"
+          className={`rounded-xl border p-3 flex items-center gap-3 ${escuro ? 'bg-white/5 border-white/10' : 'bg-nz-marrom-fundo border-nz-marrom/25'}`}
         >
           <img
             src={role.image}
@@ -99,24 +103,25 @@ export default function RoleLinksGrid({ referralCode, isSaiDeBaixo }) {
             loading="lazy"
           />
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-nz-marrom-escuro">{role.title}</p>
-            <p className="text-xs mb-1.5 text-gray-500">{role.desc}</p>
+            <p className={`font-bold text-sm ${escuro ? 'text-white' : 'text-nz-marrom-escuro'}`}>{role.title}</p>
+            <p className={`text-xs mb-1.5 ${escuro ? 'text-white/50' : 'text-gray-500'}`}>{role.desc}</p>
             <div className="flex gap-1.5">
               <input
                 value={role.link}
                 readOnly
-                className="flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-2 border truncate bg-white border-nz-marrom/25 text-gray-700"
+                className={`flex-1 min-w-0 text-[11px] font-mono rounded-md px-2 py-2 border truncate ${escuro ? 'bg-white/5 border-white/10 text-white/70' : 'bg-white border-nz-marrom/25 text-gray-700'}`}
               />
               <button
                 onClick={() => handleCopy(role.link, idx)}
-                className={`shrink-0 rounded-md w-9 h-9 flex items-center justify-center transition-colors ${copiedIdx === idx ? 'bg-nz-verde-escuro' : 'bg-nz-verde hover:bg-nz-verde-escuro'} text-white`}
+                className={`shrink-0 rounded-md w-9 h-9 flex items-center justify-center transition-colors text-white ${escuro ? '' : (copiedIdx === idx ? 'bg-nz-verde-escuro' : 'bg-nz-verde hover:bg-nz-verde-escuro')}`}
+                style={escuro ? { backgroundImage: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))', opacity: copiedIdx === idx ? 0.85 : 1 } : undefined}
                 title="Copiar link"
               >
                 {copiedIdx === idx ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
               <button
                 onClick={() => handleShare(role)}
-                className="shrink-0 rounded-md w-9 h-9 flex items-center justify-center transition-colors bg-nz-marrom hover:bg-nz-marrom-escuro text-white"
+                className={`shrink-0 rounded-md w-9 h-9 flex items-center justify-center transition-colors text-white ${escuro ? 'bg-white/10 hover:bg-white/20' : 'bg-nz-marrom hover:bg-nz-marrom-escuro'}`}
                 title="Compartilhar"
               >
                 <Share2 className="w-3.5 h-3.5" />
