@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
 import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
+import { resolverEscopo } from '@/lib/escopoDeVisao';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -58,6 +59,7 @@ import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
+import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
@@ -115,6 +117,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
   const walletCardRef = useRef(null);
+  // 👤/🛡️ 06/09 — o escopo "só o meu / tudo" (escopoDeVisao.js) resolvido UMA vez
+  // aqui e passado pra baixo. Antes o X-Performance recebia o CRACHÁ (isAdmin) e
+  // ignorava a escolha do dono: ele escolhia "só o meu" no Método e a ADM X-Game
+  // continuava mostrando o quadro da diretoria inteira.
+  const [escopo, setEscopo] = useEscopoDeVisao();
+  const visPapel = useMemo(() => visibilidadeDoUsuario(user), [user]);
+  const visao = useMemo(() => resolverEscopo({ vis: visPapel, escopo }), [visPapel, escopo]);
 
   // 🛡️ FASE 4.6 — Lê ?tab=xxx APENAS na primeira render (links externos ainda
   // funcionam). Sem polling — a sidebar do Licenciado foi removida na FASE 4.6.
@@ -1210,8 +1219,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                   College a página é uma superfície só, e cartão aqui traria de
                   volta o retângulo que o dono mandou tirar. */}
               <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
-                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin */}
-                <XPerformance currentUser={user} visaoTotal={isAdmin} gestao={visibilidadeDoUsuario(user).superAdmin} />
+                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin;
+                    o ESCOPO dos dados (o quadro de todo mundo × só o meu) obedece o seletor */}
+                <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} className="mb-3" />
+                <XPerformance currentUser={user} visaoTotal={visao.crmTudo} gestao={visPapel.superAdmin} />
               </TabsContent>
 
               {/* 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: a segunda-feira num

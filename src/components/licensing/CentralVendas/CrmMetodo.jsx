@@ -832,31 +832,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
   };
 
-  // ✏️ DIR-80 — editar a tarefa DE HOJE (não a rotina: são coisas diferentes,
-  // e a tela diz qual é qual no título de cada botão)
-  // 📅 DIR-80 — o painel da ROTINA DELA (diferente de editar a tarefa de hoje)
-  const [rotinaAberta, setRotinaAberta] = useState(false);
-  const [editandoRotina, setEditandoRotina] = useState(null);
-  const [rascunho, setRascunho] = useState({ hora: '', titulo: '' });
-  const [novoDaRotina, setNovoDaRotina] = useState({ hora: '', titulo: '' });
-  const gravarRotina = async (nova) => {
-    const ok = await salvarPerfil({ rotina: nova });
-    if (ok) toast.success(`Rotina salva — vale a partir de ${valeAPartirDe(hojeStr())?.split('-').reverse().slice(0, 2).join('/') || 'amanhã'}.`);
-    else toast.error('Erro ao salvar a rotina');
-    return ok;
-  };
-
-  const [editandoId, setEditandoId] = useState(null);
-  const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
-  const salvarEdicao = async (t) => {
-    const titulo = String(edicao.titulo || '').trim();
-    if (!titulo) { toast.error('O título não pode ficar vazio — pra tirar, use a lixeira.'); return; }
-    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, titulo, hora: edicao.hora || '' } : x)));
-    setEditandoId(null);
-    try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora: edicao.hora || '' }); }
-    catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
-  };
-
   const removerTarefa = async (t) => {
     setTarefas((prev) => prev.filter((x) => x.id !== t.id));
     try { await plataforma.entities.MetodoTarefa.delete(t.id); }

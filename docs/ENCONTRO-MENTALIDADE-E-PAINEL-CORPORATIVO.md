@@ -52,7 +52,7 @@ inteira). A tela misturava os dois sem dizer qual estava mostrando ("está confu
 | Contato: o botão "MINHA AGENDA / TIME INTEIRO" escondido dentro da agenda | um botão local, só ali, e a fila "minha" só filtrava pelo dono na visão total | saiu; o escopo é o do seletor do topo; a fila "minha" filtra pelo dono sempre |
 | Relógio de teste e agenda da empresa (gestão) | apareciam junto com a visão total dos dados | separados: são capacidades do super admin (`gestao`), valem mesmo em "Só o meu" |
 | Mentalidade / X-Performance | já era explícito (o detalhamento é de todo mundo por desenho; o painel diz "painel de …") | sem mudança |
-| ADM X-Game | já dizia "o quadro da diretoria" × "o que está na sua mão" | sem mudança |
+| ADM X-Game (o quadro de entregáveis) | recebia o CRACHÁ (`isAdmin`) e ignorava a escolha: o dono escolhia "só o meu" no Método e a ADM X-Game seguia mostrando o quadro da diretoria inteira (diagnóstico do outro chat, 07/09) | a Licensing resolve o escopo UMA vez (`useEscopoDeVisao` + `resolverEscopo`) e passa `visaoTotal = crmTudo`; o seletor aparece ali também. "Só o meu" = só os entregáveis dele (paralelo direto do Método) |
 
 **O seletor** (`SeletorEscopo.jsx`, regra em `escopoDeVisao.js`): aparece no topo dos 8 Hábitos só pra quem tem
 visão total. Duas opções, "Só o meu" e "Tudo · Super Admin" (ou "Tudo · Diretoria…"), e uma linha embaixo dizendo
