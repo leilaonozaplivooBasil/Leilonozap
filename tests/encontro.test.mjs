@@ -8,6 +8,7 @@ import {
   pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro, funcaoDaPauta, repartirMinutos,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, tarefaDaDemanda, cardDaDemanda, estadoDaDemanda, producaoDaSemana, slidesDoEncontro,
   conversaInicial, responderConversa, perguntaAtual, contextoDaConversa, PERGUNTAS_CONVERSA,
+  ehPerguntaDoApp, pautasDescartadasDoTexto,
 } from '../src/lib/encontro.js';
 
 const T = (hhmm) => `2026-09-07T${hhmm}:00.000Z`;
@@ -215,6 +216,36 @@ test('A CONVERSA: pergunta uma coisa de cada vez (livro, o que tirar dele, o tre
   assert.equal(perguntaAtual(parado).id, 'livro');
   // sem responder nada, a conversa fecha sem pautas nem livro
   assert.deepEqual(contextoDaConversa(conversaInicial()), { pautas: [], livro: null, leituraFoco: null, treinamentoTema: null });
+});
+
+test('🧯 07/09 — colar a conversa inteira (pergunta do app + resposta) na caixa de "colar tudo" não vira 10 tópicos de mentira', () => {
+  // exatamente o que apareceu na tela real: cada pergunta do app virou um
+  // "tópico", inclusive a palavra "pronto" que fecha a conversa
+  const colado = [
+    'Qual vai ser o livro de hoje?',
+    'As 16 leis do triunfo e Salomão o Homem mais rico que já existiu',
+    'Desse livro, o que você quer tirar pra essa leitura?',
+    '16 Leis sempre menos uma pagina aleatória funciona como nossa biblia',
+    'E de salomão precisamos meditar sobre diligencia',
+    'E o treinamento — qual vai ser o tema de hoje?',
+    'A mentalidade do sucesso compra no invisivel',
+    'Mais algum assunto pra pauta da reunião? Um de cada vez — quando terminar, escreva "pronto".',
+    'A pauta principal que é nossa meta de 1 milhão e como devemos ser diligentes para isso, ponto',
+    'pronto',
+  ].join('\n');
+  const pautas = pautasDoTexto(colado);
+  assert.deepEqual(pautas, [
+    'As 16 leis do triunfo e Salomão o Homem mais rico que já existiu',
+    '16 Leis sempre menos uma pagina aleatória funciona como nossa biblia',
+    'E de salomão precisamos meditar sobre diligencia',
+    'A mentalidade do sucesso compra no invisivel',
+    'A pauta principal que é nossa meta de 1 milhão e como devemos ser diligentes para isso, ponto',
+  ], 'as 4 perguntas do app e o "pronto" final somem — só sobra o que a pessoa realmente disse');
+  assert.equal(pautasDescartadasDoTexto(colado).length, 5, 'a tela usa isto pra avisar quantas linhas foram ignoradas');
+  for (const p of PERGUNTAS_CONVERSA) assert.equal(ehPerguntaDoApp(p.pergunta), true);
+  assert.equal(ehPerguntaDoApp('pronto'), true);
+  assert.equal(ehPerguntaDoApp('Pronto.'), true);
+  assert.equal(ehPerguntaDoApp('Fechar o caixa de agosto'), false, 'pauta de verdade não é descartada');
 });
 
 test('A CONVERSA vira o tópico: livro e treinamento combinados aparecem na leitura e no treinamento (régua local, sem IA)', () => {
