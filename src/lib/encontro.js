@@ -275,7 +275,7 @@ export const SCHEMA_ROTEIRO = {
 };
 
 /** O prompt pra IA: as pautas, o mês, quem está na sala e a régua da casa. */
-export function promptDoRoteiro({ pautas = [], mes, tema, time = [], conduzidoPor, treinamentoPor } = {}) {
+export function promptDoRoteiro({ pautas = [], mes, tema, time = [], conduzidoPor, treinamentoPor, livro, leituraFoco, treinamentoTema } = {}) {
   const fase = faseDoMes(mes);
   const funcoes = CARGOS_OFICIAIS.map((c) => `${c.id} = ${c.sigla} (${c.cargoPt}: ${c.dono})`).join('; ');
   const sala = time.map((p) => `${p.nome} (${p.funcaoCurta || p.funcao || 'sem função'})`).join(', ');
@@ -288,6 +288,13 @@ export function promptDoRoteiro({ pautas = [], mes, tema, time = [], conduzidoPo
     conduzidoPor ? `Conduz: ${conduzidoPor}.` : '',
     sala ? `Na sala: ${sala}.` : '',
     `Funções oficiais (use o id em responsavel_funcao): ${funcoes}.`,
+    // 💬 07/09 — "vamos botar a IA pra conversar com ele: qual vai ser o
+    // livro? o que tirar dele? qual o treinamento? a partir dali ela gera".
+    // Quando a conversa (EncontroMentalidade.jsx) respondeu essas perguntas,
+    // a LEITURA e o TREINAMENTO param de vir do Hábito do mês/régua genérica
+    // e passam a vir do que a pessoa combinou de verdade.
+    livro ? `O LIVRO desta semana, escolhido pelo dono: ${livro}.${leituraFoco ? ` O que ele quer tirar dele pra hoje: ${leituraFoco}.` : ''} Monte a LEITURA (15 min) a partir DESTE livro e deste foco — não do Hábito do mês.` : '',
+    treinamentoTema ? `O TREINAMENTO de hoje, combinado pelo dono: ${treinamentoTema}. Monte o treinamento (40 min) em cima DISSO.` : '',
     // 🧯 DIR-79 — a trava contra invenção. A regra antiga mandava produzir
     // "números, gargalo, decisões" sem entregar número nenhum: modelo obrigado
     // a preencher campo sem dado preenche com o que soa plausível. Agora ele é
@@ -329,7 +336,7 @@ export function repartirMinutos(n, total = 120, minimo = 10) {
 }
 
 /** O tópico pela régua local — quando a IA não está ligada, o encontro não fica sem roteiro. */
-export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [], time = [] } = {}) {
+export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [], time = [], livro, leituraFoco, treinamentoTema } = {}) {
   const fase = faseDoMes(mes);
   const h = habitoDe(habitosDoMes[0] || 7) || HABITOS[6];
   const hObj = HABITOS.find((x) => x.n === h.n) || HABITOS[6];
@@ -361,11 +368,18 @@ export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [], time =
       demanda: /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]?[a-záéíóúâêôãõç]+(ar|er|ir)\b/.test(p.trim()) ? p.trim() : `Resolver: ${p.trim()}`,
     };
   });
+  // 💬 07/09 — quando a conversa já deu o livro/foco/treinamento, a régua
+  // local (o plano B, sem IA) usa isso em vez do Hábito genérico do mês —
+  // mesmo sem IA, o encontro reflete o que a pessoa combinou de verdade.
   return {
     tema: tema || (fase ? `${fase.fase} · ${hObj.completo}` : hObj.completo),
     abertura: `Bem-vindos ao Encontro da Mentalidade. ${fase ? `Estamos na fase "${fase.fase}" do ciclo. ` : ''}Hoje: 5 minutos sobre a mentalidade do Diretor e do CEO, 15 de leitura, 40 de treinamento e 2 horas de reunião estratégica.`,
-    leitura: { titulo: `Hábito ${hObj.n} — ${hObj.completo}`, trecho: hObj.texto, perguntas: ['Onde esse hábito falhou na minha semana?', 'O que eu faço diferente amanhã de manhã?'], aplicacao: `Cada um escreve uma ação de ${hObj.curto.toLowerCase()} pra esta semana.` },
-    treinamento: { tema: `${hObj.completo} na prática`, objetivo: `Sair com o Hábito ${hObj.n} aplicado ao trabalho de cada função.`, passos: ['Quem treina mostra como faz (5 min)', 'Um exemplo real da semana (10 min)', 'Prática em dupla (20 min)', 'Cada um apresenta o que vai fazer (10 min)'], pratica: 'Em dupla: aplicar o hábito a uma pauta de hoje.' },
+    leitura: livro
+      ? { titulo: livro, trecho: leituraFoco || `O que tirar de "${livro}" pra hoje.`, perguntas: ['Onde esse ensinamento falhou na minha semana?', 'O que eu faço diferente amanhã de manhã?'], aplicacao: `Cada um escreve uma ação a partir de "${livro}" pra esta semana.` }
+      : { titulo: `Hábito ${hObj.n} — ${hObj.completo}`, trecho: hObj.texto, perguntas: ['Onde esse hábito falhou na minha semana?', 'O que eu faço diferente amanhã de manhã?'], aplicacao: `Cada um escreve uma ação de ${hObj.curto.toLowerCase()} pra esta semana.` },
+    treinamento: treinamentoTema
+      ? { tema: treinamentoTema, objetivo: `Sair com "${treinamentoTema}" aplicado ao trabalho de cada função.`, passos: ['Quem treina mostra como faz (5 min)', 'Um exemplo real da semana (10 min)', 'Prática em dupla (20 min)', 'Cada um apresenta o que vai fazer (10 min)'], pratica: `Em dupla: aplicar "${treinamentoTema}" a uma pauta de hoje.` }
+      : { tema: `${hObj.completo} na prática`, objetivo: `Sair com o Hábito ${hObj.n} aplicado ao trabalho de cada função.`, passos: ['Quem treina mostra como faz (5 min)', 'Um exemplo real da semana (10 min)', 'Prática em dupla (20 min)', 'Cada um apresenta o que vai fazer (10 min)'], pratica: 'Em dupla: aplicar o hábito a uma pauta de hoje.' },
     reuniao: { topicos },
     fechamento: 'Combinado é combinado: cada demanda tem dono e prazo até sexta.',
   };
@@ -462,6 +476,66 @@ export function normalizarRoteiro(obj, contexto = {}) {
     reuniao: { topicos },
     fechamento: String(obj.fechamento || local.fechamento),
     origem: 'ia',
+  };
+}
+
+// ── 💬 A CONVERSA — a IA pergunta, uma de cada vez, em vez de um parágrafo só ──
+// Dono (07/09): "vamos botar a IA pra conversar com ele aqui… ela pergunta,
+// qual vai ser o livro? aí ele responde. Desse livro, o que você quer tirar?
+// aí ela vem: qual vai ser o treinamento? a partir dali ela gera os tópicos
+// das reuniões, e a apresentação." Uma resposta curta de cada vez é bem mais
+// fácil de ditar direito que um parágrafo inteiro — e ainda dá o material
+// (o livro, o que tirar dele, o treinamento) que o texto livre não pedia.
+//
+// As três primeiras perguntas são de PASSAGEM ÚNICA (livro, foco da leitura,
+// treinamento); a última REPETE — cada resposta vira uma pauta da reunião,
+// até a pessoa dizer "pronto".
+export const PERGUNTAS_CONVERSA = [
+  { id: 'livro', pergunta: 'Qual vai ser o livro de hoje?' },
+  { id: 'leituraFoco', pergunta: 'Desse livro, o que você quer tirar pra essa leitura?' },
+  { id: 'treinamentoTema', pergunta: 'E o treinamento — qual vai ser o tema de hoje?' },
+  { id: 'pauta', pergunta: 'Mais algum assunto pra pauta da reunião? Um de cada vez — quando terminar, escreva "pronto".', repete: true },
+];
+
+const CONVERSA_PRONTO = /^(pronto|não|nao|acabou|só isso|so isso|é isso|e isso|nada|chega|nenhum|nenhuma)\.?$/i;
+
+/** A conversa zerada: primeira pergunta, nada respondido ainda. */
+export function conversaInicial() {
+  return { passo: 0, respostas: {}, pautasColetadas: [], concluida: false };
+}
+
+/** Uma resposta chega; decide se passa pra próxima pergunta ou fecha a conversa. */
+export function responderConversa(estado, resposta) {
+  const e = { ...(estado || conversaInicial()), respostas: { ...(estado?.respostas || {}) }, pautasColetadas: [...(estado?.pautasColetadas || [])] };
+  const r = String(resposta || '').trim();
+  if (e.concluida || !r) return e;
+  const atual = PERGUNTAS_CONVERSA[e.passo];
+  if (!atual) { e.concluida = true; return e; }
+  if (atual.repete) {
+    if (CONVERSA_PRONTO.test(r)) { e.concluida = true; return e; }
+    e.pautasColetadas.push(r);
+    return e; // a mesma pergunta continua valendo — ela pode responder de novo
+  }
+  e.respostas[atual.id] = r;
+  e.passo += 1;
+  if (!PERGUNTAS_CONVERSA[e.passo]) e.concluida = true;
+  return e;
+}
+
+/** A pergunta que deve aparecer agora — null quando a conversa já fechou. */
+export function perguntaAtual(estado) {
+  const e = estado || conversaInicial();
+  return e.concluida ? null : (PERGUNTAS_CONVERSA[e.passo] || null);
+}
+
+/** A conversa virou o que o gerador de tópico precisa: as pautas da reunião + o contexto extra (livro, foco, treinamento). */
+export function contextoDaConversa(estado) {
+  const e = estado || conversaInicial();
+  return {
+    pautas: e.pautasColetadas,
+    livro: e.respostas.livro || null,
+    leituraFoco: e.respostas.leituraFoco || null,
+    treinamentoTema: e.respostas.treinamentoTema || null,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo,
   pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro, funcaoDaPauta, repartirMinutos,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, tarefaDaDemanda, cardDaDemanda, estadoDaDemanda, producaoDaSemana, slidesDoEncontro,
+  conversaInicial, responderConversa, perguntaAtual, contextoDaConversa, PERGUNTAS_CONVERSA,
 } from '../src/lib/encontro.js';
 
 const T = (hhmm) => `2026-09-07T${hhmm}:00.000Z`;
@@ -185,4 +186,53 @@ test('a pauta DITADA (garrafal, com erro, várias numa linha) vira tópicos limp
   ], 'quem pediu 1 hora leva 60; o resto reparte os 60 que sobram');
   assert.equal(sugerirResponsavel(r.reuniao.topicos[1], time).id, 'aline', 'quem apresenta leva a demanda');
   assert.match(r.reuniao.topicos[0].objetivo, /^Paulo apresenta/);
+});
+
+test('A CONVERSA: pergunta uma coisa de cada vez (livro, o que tirar dele, o treinamento) e a última pergunta repete até a pessoa dizer "pronto"', () => {
+  let c = conversaInicial();
+  assert.equal(perguntaAtual(c).id, 'livro');
+  c = responderConversa(c, 'Os Segredos da Mente Milionária');
+  assert.equal(perguntaAtual(c).id, 'leituraFoco');
+  c = responderConversa(c, 'A diferença entre pobre e rico');
+  assert.equal(perguntaAtual(c).id, 'treinamentoTema');
+  c = responderConversa(c, 'Script de fechamento no WhatsApp');
+  assert.equal(perguntaAtual(c).id, 'pauta');
+  c = responderConversa(c, 'Fechar o caixa de agosto');
+  assert.equal(perguntaAtual(c).id, 'pauta', 'a pergunta da pauta repete — ainda não disse "pronto"');
+  c = responderConversa(c, 'Tráfego do ranking está caro');
+  assert.equal(c.pautasColetadas.length, 2);
+  c = responderConversa(c, 'pronto');
+  assert.equal(c.concluida, true);
+  assert.equal(perguntaAtual(c), null);
+  assert.deepEqual(contextoDaConversa(c), {
+    pautas: ['Fechar o caixa de agosto', 'Tráfego do ranking está caro'],
+    livro: 'Os Segredos da Mente Milionária',
+    leituraFoco: 'A diferença entre pobre e rico',
+    treinamentoTema: 'Script de fechamento no WhatsApp',
+  });
+  // resposta vazia não avança nem quebra
+  const parado = responderConversa(conversaInicial(), '   ');
+  assert.equal(perguntaAtual(parado).id, 'livro');
+  // sem responder nada, a conversa fecha sem pautas nem livro
+  assert.deepEqual(contextoDaConversa(conversaInicial()), { pautas: [], livro: null, leituraFoco: null, treinamentoTema: null });
+});
+
+test('A CONVERSA vira o tópico: livro e treinamento combinados aparecem na leitura e no treinamento (régua local, sem IA)', () => {
+  let c = conversaInicial();
+  c = responderConversa(c, 'Os Segredos da Mente Milionária');
+  c = responderConversa(c, 'A diferença entre pobre e rico');
+  c = responderConversa(c, 'Script de fechamento no WhatsApp');
+  c = responderConversa(c, 'Fechar o caixa de agosto');
+  c = responderConversa(c, 'pronto');
+  const ctx = contextoDaConversa(c);
+  const r = roteiroLocal({ ...ctx, mes: '2026-09' });
+  assert.equal(r.leitura.titulo, 'Os Segredos da Mente Milionária');
+  assert.equal(r.leitura.trecho, 'A diferença entre pobre e rico');
+  assert.equal(r.treinamento.tema, 'Script de fechamento no WhatsApp');
+  assert.equal(r.reuniao.topicos.length, 1);
+  assert.equal(r.reuniao.topicos[0].titulo, 'Fechar o caixa de agosto');
+  // o prompt da IA também carrega o livro e o treinamento combinados
+  const prompt = promptDoRoteiro({ ...ctx, mes: '2026-09' });
+  assert.match(prompt, /O LIVRO desta semana.*Os Segredos da Mente Milionária/);
+  assert.match(prompt, /O TREINAMENTO de hoje.*Script de fechamento no WhatsApp/);
 });

@@ -71,6 +71,13 @@ async function abrir({ celular = false, comoEmanuel = false } = {}) {
 const escritas = (pagina) => pagina.evaluate(() => window.__bancoFalso.escritas);
 const texto = async (pagina, sel) => (await pagina.locator(sel).first().textContent()).replace(/\s+/g, ' ').trim();
 const PAUTAS = 'Abrir o ponto de retirada de Jacarepaguá\nTráfego do Ranking está caro\nFechar o caixa de agosto';
+// 07/09 — o modo padrão virou a conversa (dono: "vamos botar a IA pra
+// conversar com ele"); os testes que só querem colar tudo de uma vez trocam
+// pro modo antigo primeiro.
+const colarPautas = async (pagina, texto2) => {
+  await pagina.locator('[data-teste="modo-texto"]').click();
+  await pagina.locator('[data-teste="pautas-texto"]').fill(texto2);
+};
 
 test('ENCONTRO: abre na segunda de hoje, com a fase do ciclo, o cronômetro pronto e as pautas vazias', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir();
@@ -87,7 +94,7 @@ test('ENCONTRO: abre na segunda de hoje, com a fase do ciclo, o cronômetro pron
 
 test('TÓPICO: sem IA conectada, as pautas viram tópico pela régua local — leitura do Hábito do mês, 3 tópicos somando 120 min, responsável sugerido pela função; e grava no encontro', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  await pagina.locator('[data-teste="pautas-texto"]').fill(PAUTAS);
+  await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
   await pagina.getByText(/IA não conectada — o tópico saiu pela régua da casa/).waitFor();
   await pagina.locator('[data-teste="topico-item"]').first().waitFor();
@@ -127,7 +134,7 @@ test('TÓPICO PELA IA: quando a IA responde, o tópico é dela (tema, leitura, t
       fechamento: 'Combinado é combinado.',
     });
   });
-  await pagina.locator('[data-teste="pautas-texto"]').fill('Ponto de retirada de Jacarepaguá\nTráfego do Ranking');
+  await colarPautas(pagina, 'Ponto de retirada de Jacarepaguá\nTráfego do Ranking');
   await pagina.locator('[data-teste="gerar-topico"]').click();
   await pagina.getByText(/Tópico gerado pela IA: 2 tópicos/).waitFor();
   assert.match(await texto(pagina, '[data-teste="topico"]'), /Capital e execução/);
@@ -137,6 +144,55 @@ test('TÓPICO PELA IA: quando a IA responde, o tópico é dela (tema, leitura, t
   const g = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_encontros').at(-1);
   assert.equal(g.linhas[0].roteiro_origem, 'ia');
   assert.equal(await pagina.locator('[data-teste="linha-demanda"]').first().locator('[data-teste="demanda-titulo"]').inputValue(), 'Assinar o contrato do ponto de Jacarepaguá');
+  await ctx.close();
+});
+
+test('CONVERSA: a IA pergunta uma coisa de cada vez (o livro, o que tirar dele, o treinamento, as pautas) e ao dizer "pronto" o tópico sai do que foi respondido', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const responder = async (r) => {
+    await pagina.locator('[data-teste="conversa-resposta"]').fill(r);
+    await pagina.locator('[data-teste="conversa-enviar"]').click();
+  };
+  await pagina.getByText('Qual vai ser o livro de hoje?').waitFor();
+  await responder('As 16 Leis do Triunfo');
+  await pagina.getByText('Desse livro, o que você quer tirar pra essa leitura?').waitFor();
+  await responder('A lei da fé aplicada');
+  await pagina.getByText('E o treinamento — qual vai ser o tema de hoje?').waitFor();
+  await responder('Como fechar objeção de preço');
+  await pagina.getByText('Mais algum assunto pra pauta da reunião?', { exact: false }).waitFor();
+  await responder('Abrir o ponto de retirada de Jacarepaguá');
+  await responder('Fechar o caixa de agosto');
+  await responder('pronto');
+  // a conversa fechou: some o campo de resposta, aparece gerar + reiniciar
+  assert.equal(await pagina.locator('[data-teste="conversa-resposta"]').count(), 0);
+  await pagina.locator('[data-teste="conversa-reiniciar"]').waitFor();
+  await pagina.locator('[data-teste="gerar-topico"]').click();
+  await pagina.getByText(/IA não conectada — o tópico saiu pela régua da casa/).waitFor();
+  assert.match(await texto(pagina, '[data-teste="topico-leitura"]'), /As 16 Leis do Triunfo/);
+  assert.match(await texto(pagina, '[data-teste="topico-leitura"]'), /A lei da fé aplicada/);
+  assert.match(await texto(pagina, '[data-teste="topico-treinamento"]'), /Como fechar objeção de preço/);
+  assert.equal(await pagina.locator('[data-teste="topico-item"]').count(), 2);
+  const g = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_encontros').at(-1);
+  assert.match(g.linhas[0].pautas, /Abrir o ponto de retirada de Jacarepaguá/);
+  assert.match(g.linhas[0].pautas, /Fechar o caixa de agosto/);
+  await ctx.close();
+});
+
+test('COMEÇAR DO ZERO: apaga as pautas, o tópico gerado E o treinamento da apresentação juntos — dono: "quando zerar, zera tudo na apresentação do treinamento também"', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="treinamento-texto"]').fill('Script de abordagem\nAbrir com pergunta\nEscutar 2 minutos');
+  await pagina.locator('[data-teste="treinamento-salvar"]').click();
+  await pagina.locator('[data-teste="treinamento-pronto"]').waitFor();
+  await colarPautas(pagina, PAUTAS);
+  await pagina.locator('[data-teste="gerar-topico"]').click();
+  await pagina.locator('[data-teste="topico-item"]').first().waitFor();
+  pagina.once('dialog', (d) => d.accept());
+  await pagina.locator('[data-teste="comecar-do-zero"]').click();
+  await pagina.locator('[data-teste="treinamento-vazio"]').waitFor();
+  assert.match(await texto(pagina, '[data-teste="topico"]'), /Digite as pautas e gere o tópico/);
+  const g = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_encontros').at(-1);
+  assert.deepEqual([g.linhas[0].roteiro, g.linhas[0].roteiro_origem, g.linhas[0].pautas], [null, null, '']);
+  assert.equal(g.linhas[0].treinamento.titulo, '', 'o treinamento também zera junto');
   await ctx.close();
 });
 
@@ -166,7 +222,7 @@ test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo avan�
 
 test('DIRECIONAR: a demanda cai RECEBIDA no Painel Corporativo da pessoa, ligada ao encontro, até sexta 18h; a visão executiva mostra "sem agendar"; a demanda que surgiu na hora também', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  await pagina.locator('[data-teste="pautas-texto"]').fill(PAUTAS);
+  await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
   await pagina.locator('[data-teste="linha-demanda"]').first().waitFor();
   const primeira = pagina.locator('[data-teste="linha-demanda"]').first();
@@ -199,7 +255,7 @@ test('DIRECIONAR: a demanda cai RECEBIDA no Painel Corporativo da pessoa, ligada
 
 test('APRESENTAR: a tela cheia abre na capa, anda com a seta, mostra o bloco e o tempo, e fecha no ESC', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  await pagina.locator('[data-teste="pautas-texto"]').fill(PAUTAS);
+  await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
   await pagina.locator('[data-teste="topico-item"]').first().waitFor();
   await pagina.locator('[data-teste="apresentar"]').click();
@@ -290,7 +346,7 @@ test('PAINEL CORPORATIVO (a própria pessoa): o Emanuel vê o dele, agenda só n
 
 test('CELULAR: o encontro e o painel cabem na tela — foto pra julgar', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
-  await pagina.locator('[data-teste="pautas-texto"]').fill(PAUTAS);
+  await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
   await pagina.locator('[data-teste="topico-item"]').first().waitFor();
   const larguraDoc = await pagina.evaluate(() => document.documentElement.scrollWidth);

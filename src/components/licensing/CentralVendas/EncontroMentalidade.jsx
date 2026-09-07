@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Brain, Play, Pause, SkipForward, Sparkles, Presentation, X, ChevronLeft, ChevronRight, Send, Loader2, Users, CheckCheck, RotateCcw } from 'lucide-react';
+import { Brain, Play, Pause, SkipForward, Sparkles, Presentation, X, ChevronLeft, ChevronRight, Send, Loader2, Users, CheckCheck, RotateCcw, MessageSquare, PencilLine } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
 import {
   BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo, blocoDe, aberturaDaMentalidade,
   pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro,
+  conversaInicial, responderConversa, perguntaAtual, contextoDaConversa, PERGUNTAS_CONVERSA,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
   ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
   normalizarTreinamento, temTreinamento, materialEhLink, treinamentoDoTexto, TREINAMENTO_VAZIO,
@@ -50,6 +51,7 @@ const fmtDia = (iso) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
 };
 const nomeCurto = (n) => String(n || '').split(' ')[0];
+const PERGUNTAS_CONVERSA_MAP = Object.fromEntries(PERGUNTAS_CONVERSA.map((p) => [p.id, p]));
 
 /** ⏱️ o anel do bloco atual */
 function Anel({ pct, cor, children }) {
@@ -98,6 +100,14 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   // "editando" liga os campos de texto por cima do que a IA/régua rascunhou.
   const [pautasAbertas, setPautasAbertas] = useState(true);
   const [editando, setEditando] = useState(false);
+  // 💬 07/09 — dono: "vamos botar a IA pra conversar com ele: qual vai ser o
+  // livro, o que tirar dele, qual o treinamento — e a partir dali ela gera".
+  // Uma pergunta de cada vez em vez de um parágrafo só. 'modoPauta' escolhe
+  // entre a conversa (o padrão, mais fácil de ditar certo) e colar tudo de
+  // uma vez (o jeito antigo, pra quem preferir).
+  const [modoPauta, setModoPauta] = useState('conversa');
+  const [conversa, setConversa] = useState(() => conversaInicial());
+  const [respostaConversa, setRespostaConversa] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [apresentando, setApresentando] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -182,11 +192,16 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   const zerar = () => { if (window.confirm('Zerar o cronômetro deste encontro?')) salvarEncontro({ cronometro: cronometroInicial() }); };
 
   // ✨ as pautas viram o tópico: pela IA, ou pela régua local
+  // 💬 a conversa OU o texto colado — os dois viram o mesmo formato pro
+  // gerador: uma lista de pautas + o contexto extra (livro/foco/treinamento)
+  // que só a conversa dá.
   const gerarTopico = async () => {
-    const lista = pautasDoTexto(pautas);
-    if (!lista.length) { toast.error('Digite as pautas primeiro — uma por linha.'); return; }
+    const daConversa = modoPauta === 'conversa';
+    const extra = daConversa ? contextoDaConversa(conversa) : {};
+    const lista = daConversa ? extra.pautas : pautasDoTexto(pautas);
+    if (!lista.length) { toast.error(daConversa ? 'Responda pelo menos uma pauta da reunião antes de gerar.' : 'Digite as pautas primeiro — uma por linha.'); return; }
     setGerando(true);
-    const contexto = { pautas: lista, mes, tema: temaDoMes, habitosDoMes: mesDoPrograma?.habitos || [], time, conduzidoPor, treinamentoPor };
+    const contexto = { pautas: lista, mes, tema: temaDoMes, habitosDoMes: mesDoPrograma?.habitos || [], time, conduzidoPor, treinamentoPor, livro: extra.livro, leituraFoco: extra.leituraFoco, treinamentoTema: extra.treinamentoTema };
     let novo = null; let origem = 'local';
     try {
       // 🧯 DIR-79 — o teto subiu porque com pautas longas o JSON estourava, caía
@@ -204,11 +219,35 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
       else toast.message('A IA não respondeu — o tópico saiu pela régua da casa.');
     } catch { toast.message('A IA não respondeu — o tópico saiu pela régua da casa.'); }
     if (!novo) novo = { ...roteiroLocal(contexto), origem: 'local' };
-    await salvarEncontro({ pautas, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor });
+    const pautasTexto = daConversa ? lista.join('\n') : pautas;
+    await salvarEncontro({ pautas: pautasTexto, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor });
+    if (daConversa) setPautas(pautasTexto);
     setGerando(false);
     setPautasAbertas(false);
     toast.success(origem === 'ia' ? `Tópico gerado pela IA: ${novo.reuniao.topicos.length} tópicos` : `Tópico montado: ${novo.reuniao.topicos.length} tópicos`);
   };
+
+  // 💬 a conversa: uma resposta por vez, a pergunta muda sozinha
+  const enviarResposta = () => {
+    if (!respostaConversa.trim()) return;
+    setConversa((c) => responderConversa(c, respostaConversa));
+    setRespostaConversa('');
+  };
+  const reiniciarConversa = () => { setConversa(conversaInicial()); setRespostaConversa(''); };
+  // as mensagens da conversa até agora, pra desenhar como um chat
+  const mensagensConversa = useMemo(() => {
+    const msgs = [];
+    for (const id of ['livro', 'leituraFoco', 'treinamentoTema']) {
+      const p = PERGUNTAS_CONVERSA_MAP[id];
+      msgs.push({ quem: 'ia', texto: p.pergunta });
+      if (!conversa.respostas[id]) return msgs;
+      msgs.push({ quem: 'dono', texto: conversa.respostas[id] });
+    }
+    msgs.push({ quem: 'ia', texto: PERGUNTAS_CONVERSA_MAP.pauta.pergunta });
+    conversa.pautasColetadas.forEach((p) => msgs.push({ quem: 'dono', texto: p }));
+    if (conversa.concluida) msgs.push({ quem: 'dono', texto: 'pronto' });
+    return msgs;
+  }, [conversa]);
 
   // ✏️ 07/09 — "precisa ter botão de edição, depois que for gerado": o
   // rascunho (IA ou régua) é só o ponto de partida — a palavra final é
@@ -219,15 +258,19 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     const topicos = (roteiro.reuniao?.topicos || []).map((t, idx) => (idx === i ? { ...t, [campo]: valor } : t));
     salvarEncontro({ roteiro: { ...roteiro, reuniao: { ...roteiro.reuniao, topicos } } });
   };
-  // 🗑️ "se eu quiser apagar e começar de novo": zera as pautas E o tópico
-  // juntos — continuar só com um dos dois apagado deixava a tela pela metade.
+  // 🗑️ "se eu quiser apagar e começar de novo": zera as pautas, o tópico E o
+  // treinamento da apresentação juntos — dono, 07/09: "quando zerar, zera
+  // tudo na apresentação do treinamento também". Continuar com um pedaço
+  // velho (a conversa, o material importado) deixava a tela pela metade.
   const apagarTudo = () => {
-    if (!window.confirm('Apagar as pautas e o tópico gerado, e começar do zero?')) return;
+    if (!window.confirm('Apagar as pautas, o tópico gerado e o treinamento, e começar do zero?')) return;
     setPautas('');
     setDescartes(null);
     setEditando(false);
     setPautasAbertas(true);
-    salvarEncontro({ pautas: '', roteiro: null, roteiro_origem: null });
+    reiniciarConversa();
+    setImportando('');
+    salvarEncontro({ pautas: '', roteiro: null, roteiro_origem: null, treinamento: TREINAMENTO_VAZIO });
   };
 
   // 📥 direcionar: a demanda cai RECEBIDA no Painel Corporativo da pessoa
@@ -400,13 +443,54 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
         {pautasAbertas ? (
           <div className="lg:col-span-2 rounded-xl border border-white/10 p-3" style={caixa} data-teste="pautas">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className={titulo}>As pautas <span className="normal-case tracking-normal text-white/30">— uma por linha</span></p>
-              {roteiro && <button type="button" onClick={() => setPautasAbertas(false)} className="ml-auto text-[10px] text-white/35 hover:text-white" data-teste="pautas-recolher">recolher</button>}
+              <p className={titulo}>As pautas</p>
+              <div className="ml-auto flex items-center gap-0.5 rounded-full border border-white/10 p-0.5" data-teste="modo-pauta">
+                <button type="button" onClick={() => setModoPauta('conversa')} className={`rounded-full px-2 py-0.5 text-[10px] font-bold inline-flex items-center gap-1 ${modoPauta === 'conversa' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`} data-teste="modo-conversa"><MessageSquare className="w-3 h-3" /> conversar</button>
+                <button type="button" onClick={() => setModoPauta('texto')} className={`rounded-full px-2 py-0.5 text-[10px] font-bold inline-flex items-center gap-1 ${modoPauta === 'texto' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`} data-teste="modo-texto"><PencilLine className="w-3 h-3" /> colar tudo</button>
+              </div>
+              {roteiro && <button type="button" onClick={() => setPautasAbertas(false)} className="text-[10px] text-white/35 hover:text-white" data-teste="pautas-recolher">recolher</button>}
             </div>
-            <Textarea value={pautas} onChange={(ev) => setPautas(ev.target.value)} disabled={!podeConduzir} rows={9} placeholder={'dite do seu jeito — a IA organiza, corrige o português e dá o tempo de cada um. ex.:\nLuciano fala sobre a meta de parceiro de compra\nAline fala sobre o financeiro, 30 min\nLuiz fala sobre o X-Game e a Top College, pelo menos 1 hora'} className="mt-1.5 border-white/15 bg-white/[0.06] text-white text-[12px] leading-relaxed" data-teste="pautas-texto" />
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
-              <span className="text-[10px] text-white/35">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'}{encontro?.roteiro_origem ? ` · tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
+
+            {/* 💬 07/09 — dono: "a IA pergunta, qual vai ser o livro? ele
+                responde… aí ela vem: qual vai ser o treinamento?" — uma
+                pergunta de cada vez em vez de ditar um parágrafo só. */}
+            {modoPauta === 'conversa' ? (
+              <div className="mt-1.5">
+                <div className="max-h-[280px] overflow-y-auto space-y-1.5 pr-1" data-teste="conversa-mensagens">
+                  {mensagensConversa.map((m, i) => (
+                    <div key={i} className={`flex ${m.quem === 'dono' ? 'justify-end' : 'justify-start'}`}>
+                      <p className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[12px] leading-snug ${m.quem === 'dono' ? 'bg-white/15 text-white font-medium' : 'bg-white/[0.05] border border-white/10 text-white/70'}`}>{m.texto}</p>
+                    </div>
+                  ))}
+                </div>
+                {perguntaAtual(conversa) ? (
+                  podeConduzir && (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <Input value={respostaConversa} onChange={(ev) => setRespostaConversa(ev.target.value)}
+                        onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); enviarResposta(); } }}
+                        placeholder="responde aqui…" className="h-8 flex-1 border-white/15 bg-white/[0.06] text-white text-[12px] normal-case" data-teste="conversa-resposta" />
+                      <Button size="sm" onClick={enviarResposta} disabled={!respostaConversa.trim()} className="h-8 w-8 p-0 bg-white/10 hover:bg-white/20 text-white" data-teste="conversa-enviar"><Send className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  )
+                ) : (
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
+                    {podeConduzir && <button type="button" onClick={reiniciarConversa} className="text-[10px] text-white/35 hover:text-white" data-teste="conversa-reiniciar">reiniciar conversa</button>}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Textarea value={pautas} onChange={(ev) => setPautas(ev.target.value)} disabled={!podeConduzir} rows={9} placeholder={'dite do seu jeito — a IA organiza, corrige o português e dá o tempo de cada um. ex.:\nLuciano fala sobre a meta de parceiro de compra\nAline fala sobre o financeiro, 30 min\nLuiz fala sobre o X-Game e a Top College, pelo menos 1 hora'} className="mt-1.5 border-white/15 bg-white/[0.06] text-white text-[12px] leading-relaxed" data-teste="pautas-texto" />
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
+                  <span className="text-[10px] text-white/35">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'}</span>
+                </div>
+              </>
+            )}
+
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] text-white/35">{encontro?.roteiro_origem ? `tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
               {podeConduzir && roteiro && <button type="button" onClick={apagarTudo} className="ml-auto text-[10px] text-white/35 hover:text-red-300" data-teste="comecar-do-zero">apagar e começar do zero</button>}
             </div>
             {/* 🧯 DIR-79 — o que a IA inventou e foi descartado. Silêncio aqui é o
