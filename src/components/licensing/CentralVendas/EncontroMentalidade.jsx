@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
 import {
   BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo, blocoDe, aberturaDaMentalidade,
-  pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro,
+  pautasDoTexto, pautasDescartadasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro,
   conversaInicial, responderConversa, perguntaAtual, contextoDaConversa, PERGUNTAS_CONVERSA,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
   ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
@@ -200,6 +200,13 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     const extra = daConversa ? contextoDaConversa(conversa) : {};
     const lista = daConversa ? extra.pautas : pautasDoTexto(pautas);
     if (!lista.length) { toast.error(daConversa ? 'Responda pelo menos uma pauta da reunião antes de gerar.' : 'Digite as pautas primeiro — uma por linha.'); return; }
+    // 🧯 07/09 — dono colou a conversa (pergunta do app + resposta) na caixa de
+    // "colar tudo": a régua já ignora essas linhas (`pautasDoTexto`), mas sem
+    // avisar ele veria só "sumiu pauta" sem entender o porquê.
+    if (!daConversa) {
+      const descartadas = pautasDescartadasDoTexto(pautas);
+      if (descartadas.length) toast.message(`${descartadas.length} linha${descartadas.length === 1 ? '' : 's'} ignorada${descartadas.length === 1 ? '' : 's'} por ser a própria pergunta do app (ex.: "${descartadas[0]}") — cole só as SUAS pautas, não a conversa inteira.`, { duration: 8000 });
+    }
     setGerando(true);
     const contexto = { pautas: lista, mes, tema: temaDoMes, habitosDoMes: mesDoPrograma?.habitos || [], time, conduzidoPor, treinamentoPor, livro: extra.livro, leituraFoco: extra.leituraFoco, treinamentoTema: extra.treinamentoTema };
     let novo = null; let origem = 'local';
@@ -256,6 +263,19 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   const mudarTreinamento = (campo, valor) => salvarEncontro({ roteiro: { ...roteiro, treinamento: { ...roteiro.treinamento, [campo]: valor } } });
   const mudarTopicoReuniao = (i, campo, valor) => {
     const topicos = (roteiro.reuniao?.topicos || []).map((t, idx) => (idx === i ? { ...t, [campo]: valor } : t));
+    salvarEncontro({ roteiro: { ...roteiro, reuniao: { ...roteiro.reuniao, topicos } } });
+  };
+  // 🧯 07/09 — dono: "no ruim no ruim, os cards da apresentação botar pra eu
+  // editar, escrever, apagar, numa emergência". "editar" já reescrevia campo;
+  // faltava apagar um tópico ruim (ex.: um que veio da IA torto) ou escrever
+  // um novo do zero, sem precisar regenerar tudo.
+  const apagarTopicoReuniao = (i) => {
+    const topicos = (roteiro.reuniao?.topicos || []).filter((_, idx) => idx !== i);
+    salvarEncontro({ roteiro: { ...roteiro, reuniao: { ...roteiro.reuniao, topicos } } });
+  };
+  const adicionarTopicoReuniao = () => {
+    const topico = { titulo: '', objetivo: '', decisao: '', minutos: 10, mentalidade: null, habito: null, responsavel_funcao: null, apresentador: null, demanda: '' };
+    const topicos = [...(roteiro.reuniao?.topicos || []), topico];
     salvarEncontro({ roteiro: { ...roteiro, reuniao: { ...roteiro.reuniao, topicos } } });
   };
   // 🗑️ "se eu quiser apagar e começar de novo": zera as pautas, o tópico E o
@@ -579,7 +599,10 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                     <li key={`${t.titulo}-${i}`} className="text-[11px]" data-teste="topico-item">
                       {editando ? (
                         <div className="space-y-1">
-                          <Input defaultValue={t.titulo} onBlur={(ev) => mudarTopicoReuniao(i, 'titulo', ev.target.value)} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-topico-titulo" />
+                          <div className="flex items-center gap-1.5">
+                            <Input defaultValue={t.titulo} onBlur={(ev) => mudarTopicoReuniao(i, 'titulo', ev.target.value)} className="h-7 flex-1 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-topico-titulo" />
+                            <button type="button" onClick={() => apagarTopicoReuniao(i)} className="shrink-0 rounded-md h-7 w-7 flex items-center justify-center text-white/35 hover:text-red-300 hover:bg-red-500/10" title="Apagar este tópico" data-teste="apagar-topico"><X className="w-3.5 h-3.5" /></button>
+                          </div>
                           <Textarea defaultValue={t.objetivo} onBlur={(ev) => mudarTopicoReuniao(i, 'objetivo', ev.target.value)} rows={2} className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-topico-objetivo" />
                           <Input defaultValue={t.decisao} onBlur={(ev) => mudarTopicoReuniao(i, 'decisao', ev.target.value)} placeholder="a decisão esperada" className="h-7 border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-topico-decisao" />
                         </div>
@@ -593,6 +616,10 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                     </li>
                   ))}
                 </ol>
+                {/* 🧯 07/09 — "escrever" um tópico do zero, sem depender da IA/régua nem de regenerar tudo. */}
+                {editando && (
+                  <button type="button" onClick={adicionarTopicoReuniao} className="mt-2 text-[10px] font-bold text-white/50 hover:text-white inline-flex items-center gap-1" data-teste="adicionar-topico">+ novo tópico</button>
+                )}
                 {roteiro.fechamento && <p className="mt-2 text-[11px] text-white/70 italic">“{roteiro.fechamento}”</p>}
               </div>
             </div>
