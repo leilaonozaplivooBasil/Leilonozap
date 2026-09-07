@@ -118,15 +118,16 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
             : 'border-nz-borda bg-white hover:border-nz-verde/50'
         }`}
       >
-        {/* 🎓 DIR-58 — a marca da X-eos é traço BRANCO: no selo verde-claro ela
-            sumia (branco no branco). Quando o item traz marca, o selo vai pro
-            preto do brandbook, que é onde ela foi desenhada pra viver. */}
-        <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${atual.marca ? '' : 'bg-nz-verde-fundo'}`}
-          style={atual.marca ? { background: 'var(--xeos-preto)' } : undefined}
-        >
-          <MarcaOuIcone marca={atual.marca ? '/marca/marca-x-selo.webp' : null} icone={IconeAtual} className="h-5 w-5 text-nz-verde" />
-        </span>
+        {/* 🎓 07/09 — dono: "tira essa logo do primeiro... já está aparecendo
+            lá em cima": quando o item ativo é O Método, a marca X-eos já mora
+            na faixa acima (HeroTopCollege) — repetir o selo aqui era a MESMA
+            marca duas vezes na mesma tela. O quadradinho só aparece pros
+            itens sem marca própria (Mentalidade, Time, X-Performance…). */}
+        {!atual.marca && (
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-nz-verde-fundo">
+            <MarcaOuIcone icone={IconeAtual} className="h-5 w-5 text-nz-verde" />
+          </span>
+        )}
         <span className="min-w-0 flex-1">
           <span className={`block text-[11px] font-semibold uppercase tracking-wide ${escuro ? 'text-white/45' : 'text-nz-tinta-fraca'}`}>
             {familiaAtual.titulo}
@@ -198,14 +199,18 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
                         >
                           {/* o fio da seção aberta */}
                           {ativo && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ background: escuro ? 'linear-gradient(180deg, var(--topcollege-azul), var(--topcollege-magenta))' : 'var(--nz-verde, #16a34a)' }} />}
-                          {item.marca ? (
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ background: 'var(--xeos-preto)' }}>
-                              <MarcaOuIcone marca={item.marca} className="h-3.5 w-3.5" />
-                            </span>
-                          ) : (
+                          {/* 🎓 07/09 — dono: "onde está escrito o método, tira a
+                              logo antes e escreve o método; a logo, se possível,
+                              cola depois". Item com marca própria (O Método) não
+                              leva ícone antes — o TEXTO abre a linha, e a marca
+                              completa (o lockup X-eos que ele mandou) fecha
+                              DEPOIS, sem quadrado de fundo: ela já lê sozinha,
+                              clara ou escura. Os outros itens seguem com ícone. */}
+                          {!item.marca && (
                             <Icon className={`h-4 w-4 shrink-0 ${ativo ? (escuro ? 'text-white' : 'text-nz-verde') : (escuro ? 'text-white/40' : 'text-nz-tinta-fraca')}`} />
                           )}
                           <span className="flex-1 truncate">{rotuloDe(item)}</span>
+                          {item.marca && <MarcaOuIcone marca={item.marca} className="h-4 w-auto shrink-0" />}
                           {ativo && <Check className={`h-4 w-4 shrink-0 ${escuro ? 'text-white' : 'text-nz-verde'}`} />}
                         </button>
                       );

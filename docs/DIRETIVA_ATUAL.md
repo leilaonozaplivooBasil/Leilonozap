@@ -12,6 +12,48 @@
 
 ---
 
+## DIR-85 — A X-eos no seletor: sem repetir, com a marca completa
+
+**Emitida por:** dono (07/09/2026), com print do seletor de seções da Top
+College aberto e fechado: *"tira essa logo do primeiro, já está aparecendo
+lá em cima. E ali onde está escrito o método você vai tirar a logo antes, e
+vai escrever o método — X-eos, se possível, colar logo depois. Porque tem a
+logo da Top College ali, aí elas duas vão ficar aparecendo duas vezes de
+maneira bem sublime. Mas a logo mesma, essa mesma logo aqui [anexou o
+lockup X-eos]."*
+
+**Data:** 07/09/2026.
+
+**O que existia:** `CentralVendasTabs.jsx` (o seletor "TOP COLLEGE / O
+Método" com o menu de duas famílias) desenhava, pro item "O Método", um
+selo pequeno (só o X, `marca-xeos.webp`) ANTES do texto — tanto no botão
+fechado quanto na linha da lista. A mesma marca X-eos já aparece acima, na
+faixa da academia (HeroTopCollege) — repetir o selo aqui era a mesma marca
+duas vezes na mesma tela, sem necessidade.
+
+**O que entra:**
+1. **Botão fechado** — quando o item ativo tem marca própria (só "O
+   Método"), o quadradinho de logo/ícone não aparece mais: fica só o texto
+   "TOP COLLEGE" / "O Método". Os outros itens (Mentalidade, Time,
+   X-Performance, Carreira) continuam com o ícone deles, sem mudança.
+2. **Linha da lista "O Método"** — o texto abre a linha (sem ícone antes),
+   e a marca completa (`marca-xeos-lockup.webp`, a mesma imagem que o dono
+   anexou — "X" + "-eos") fecha DEPOIS do texto, sem quadrado de fundo
+   preto (ela já é legível em fundo claro ou escuro, tem transparência
+   real). O check de "selecionado" continua por último.
+3. `licensingTabs.js`: o campo `marca` do item `catalogo-crm` (O Método)
+   trocou de `marca-xeos.webp` (só o X) pra `marca-xeos-lockup.webp` (X +
+   "-eos") — é a marca que o `CentralVendasTabs.jsx` agora desenha depois
+   do texto.
+
+**Prova:** prints reais da banca (`tests/navegador/secoes.harness.jsx`,
+Chromium via CDP puro — o pacote `playwright` não está instalado neste
+ambiente, só o binário) confirmam: botão fechado sem ícone; linha "O
+Método" com texto → logo X-eos → check, nessa ordem. Suíte 1390/1390,
+build e lint limpos.
+
+---
+
 ## DIR-84.5 — O InvokeLLM (9 telas) sai do modelo morto; o acesso à IA vira um lugar só
 
 **Emitida por:** dono (07/09/2026): *"me oriente, tudo isso liberado de ação,

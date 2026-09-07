@@ -68,7 +68,11 @@ export const SECOES_TOP_COLLEGE = [
   // "CRM" morreu como nome (DIR-57): palavra genérica de software não combina
   // com uma faculdade própria. O valor da aba continua o mesmo — link antigo
   // (?catalogTab=catalogo-crm) segue abrindo no lugar certo.
-  { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos.webp' },
+  // 🎓 07/09/2026 — dono: "a logo mesma, essa mesma logo aqui" (a marca
+  // completa X-eos, não só o X sozinho). Trocado o SELO pelo LOCKUP
+  // (marca-xeos-lockup.webp) — é o que o CentralVendasTabs.jsx agora
+  // desenha DEPOIS do texto "O Método", não mais um ícone antes dele.
+  { value: 'catalogo-crm', label: 'O Método', icon: GraduationCap, marca: '/marca/marca-xeos-lockup.webp' },
   // 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: "um lugar estratégico, não na
   // parte administrativa, junto com os 8 Hábitos" — a segunda-feira num espaço
   // só (Executivo · Diretor · CEO): apresentação, tópico pela IA, cronômetro
