@@ -34,7 +34,8 @@ test('faltaDoResumo: conta o que falta, nunca negativo, ignorando espaço nas po
 test('textoDoContador: avisa o tamanho ANTES de escrever, depois diz o que falta', () => {
   assert.equal(textoDoContador(''), 'escreva pelo menos 400 caracteres (umas 6 linhas)');
   assert.equal(textoDoContador('a'.repeat(18)), 'faltam 382 caracteres');
-  assert.equal(textoDoContador('a'.repeat(399)), 'faltam 1 caracteres');
+  assert.equal(textoDoContador('a'.repeat(399)), 'falta 1 caractere', 'plural quebrado estraga o que o conserto veio fazer');
+  assert.equal(textoDoContador('a'.repeat(398)), 'faltam 2 caracteres');
   assert.equal(textoDoContador('a'.repeat(400)), '✔ resumo no tamanho');
 });
 
@@ -52,6 +53,7 @@ test('motivoDoBotaoTravado: sem foto, o texto diz que falta a foto', () => {
 
 test('motivoDoBotaoTravado: com foto e resumo curto, diz quantas letras faltam', () => {
   assert.equal(motivoDoBotaoTravado({ tipo: 'aprendizado', temFoto: true, texto: 'a'.repeat(18) }), 'escreva mais 382 caracteres para liberar');
+  assert.equal(motivoDoBotaoTravado({ tipo: 'aprendizado', temFoto: true, texto: 'a'.repeat(399) }), 'escreva mais 1 caractere para liberar');
 });
 
 test('motivoDoBotaoTravado: liberado devolve vazio — nada aparece embaixo do botão', () => {

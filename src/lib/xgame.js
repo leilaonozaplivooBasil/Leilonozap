@@ -771,11 +771,15 @@ export function faltaDoResumo(texto) {
   return Math.max(0, RESUMO_MIN - String(texto || '').trim().length);
 }
 
+// "faltam 1 caracteres" estraga justamente o que este conserto foi fazer.
+const letras = (n) => `${n} ${n === 1 ? 'caractere' : 'caracteres'}`;
+
 export function textoDoContador(texto) {
   const escrito = String(texto || '').trim().length;
   if (escrito === 0) return `escreva pelo menos ${RESUMO_MIN} caracteres (umas 6 linhas)`;
   const falta = faltaDoResumo(texto);
-  return falta === 0 ? '✔ resumo no tamanho' : `faltam ${falta} caracteres`;
+  if (falta === 0) return '✔ resumo no tamanho';
+  return falta === 1 ? 'falta 1 caractere' : `faltam ${letras(falta)}`;
 }
 
 // 🔒 BOTÃO APAGADO TEM QUE DIZER POR QUÊ. Inclusão digital: quem não tem
@@ -785,7 +789,7 @@ export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
   if (!temFoto) return tipo === 'aprendizado' ? 'falta a foto do estudo para liberar' : 'falta a foto para liberar';
   if (tipo !== 'aprendizado') return '';
   const falta = faltaDoResumo(texto);
-  return falta > 0 ? `escreva mais ${falta} caracteres para liberar` : '';
+  return falta > 0 ? `escreva mais ${letras(falta)} para liberar` : '';
 }
 
 // ── 👤 O PADRÃO DE NOME DO JOGO (ordem do dono, 05/09) ──────────────
