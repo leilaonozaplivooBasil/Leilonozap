@@ -93,11 +93,32 @@ recortada, comprimida, com filtro ou brilho diferente — reconheça a cena,
 não só o arquivo). Se for reciclagem, isso é motivo de REPROVAÇÃO direta
 (não precisa perguntar: reciclar prova antiga não tem explicação válida).`;
 
+// 🩺 PING — chamada mínima (só texto) ao modelo de visão pra saber se ele
+// RESPONDE de verdade. "Tem chave" ≠ "a IA funciona": foi assim que a tela
+// disse "IA ligada" enquanto toda comprovação caía em "IA indisponível".
+async function pingModelo(auth) {
+  try {
+    const r = await fetch(GATEWAY, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: 'responda só: ok' }], max_tokens: 5 }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const corpo = (await r.text()).slice(0, 400);
+    return { status: r.status, ok: r.ok, corpo: r.ok ? undefined : corpo };
+  } catch (e) {
+    return { status: 0, ok: false, corpo: String(e?.message || e).slice(0, 200) };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method === 'GET') {
     const chave = await chaveDaIA();
-    return res.status(200).json({ ok: true, ia: Boolean(chave), model: MODEL });
+    const querPing = String(req.query?.ping || '') === '1';
+    const ping = chave && querPing ? await pingModelo(chave) : undefined;
+    // `ia` só é true quando o modelo RESPONDEU (se pediu ping); sem ping, é só "tem chave"
+    return res.status(200).json({ ok: true, ia: ping ? ping.ok : Boolean(chave), tem_chave: Boolean(chave), model: MODEL, ...(ping ? { ping } : {}) });
   }
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
@@ -150,7 +171,11 @@ ${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imag
       signal: AbortSignal.timeout(28000),
     });
     if (!r.ok) {
-      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'IA indisponível agora — comprovação enviada pra análise manual.' });
+      // 🔍 DIR-84.1 — o erro do gateway NÃO pode mais sumir: vai pro log da
+      // Vercel e volta em `details` pra tela/painel saberem POR QUE caiu.
+      const corpo = (await r.text().catch(() => '')).slice(0, 400);
+      console.error('[xgameValidarPrint] gateway falhou', { status: r.status, model: MODEL, corpo });
+      return res.status(200).json({ ok: true, ia_indisponivel: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'IA indisponível agora — comprovação enviada pra análise manual.', details: { status: r.status, model: MODEL, corpo } });
     }
     const j = await r.json();
     let clean = String(j?.choices?.[0]?.message?.content || '').replace(/```(json)?/gi, '').trim();

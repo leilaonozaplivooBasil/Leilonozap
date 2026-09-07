@@ -39,6 +39,14 @@ test('veredito ausente ou inesperado nunca aprova nem reprova por omissão — t
   assert.equal(decisaoAposIA({ veredito: 'xpto' }, { tentativa: 1 }).acao, 'analise_gestor');
 });
 
+test('IA FORA DO AR não é dúvida: bloqueia — não conta, não conclui, não vai pro gestor (o buraco que deixou a foto na cama passar)', () => {
+  const r = decisaoAposIA({ veredito: 'duvida', ia_indisponivel: true, motivo: 'gateway 404' }, { tentativa: 1 });
+  assert.equal(r.acao, 'ia_fora');
+  assert.match(r.motivo, /404/);
+  // vale mesmo que o gateway tenha devolvido um veredito "por engano"
+  assert.equal(decisaoAposIA({ veredito: 'aprovada', ia_indisponivel: true }, {}).acao, 'ia_fora');
+});
+
 test('aprovada na segunda tentativa (a justificativa convenceu) aprova normalmente', () => {
   assert.deepEqual(decisaoAposIA({ veredito: 'aprovada' }, { tentativa: 2, foraDaJanela: false }), { acao: 'aprovar' });
 });

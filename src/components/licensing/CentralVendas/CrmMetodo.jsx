@@ -630,7 +630,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const imagensAnteriores = tentativa === 1
       ? imagensParaComparar(comprovacoesRecentes.filter((c) => c?.tipo === tipo && c.print_url !== printUrl))
       : [];
-    let ia = { veredito: 'duvida', motivo: 'análise manual' };
+    // 🚫 DIR-84.1 — sem resposta da IA = IA FORA (não "dúvida"): a régua
+    // bloqueia em vez de deixar contar. Só um veredito REAL muda isso.
+    let ia = { veredito: 'duvida', ia_indisponivel: true, motivo: 'a IA de validação não respondeu' };
     try {
       const r = await plataforma.functions.xgameValidarPrint({
         image_url: printUrl, tipo, titulo: t.titulo, hora: t.hora, data: hojeStr(),
@@ -639,10 +641,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         ...(justificativa ? { justificativa, tentativa: 2 } : {}),
       });
       if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) ia = r;
-    } catch { /* IA fora do ar → dúvida → régua manda pro gestor */ }
+    } catch { /* fica como ia_indisponivel → régua bloqueia */ }
 
     const decisao = decisaoAposIA(ia, { foraDaJanela, tentativa });
 
+    if (decisao.acao === 'ia_fora') {
+      const det = ia?.details ? ` (${ia.details.status || 'erro'}${ia.details.model ? ` · ${ia.details.model}` : ''})` : '';
+      setComprovando({ ...comprovando, enviando: false, pergunta: null,
+        erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto NÃO foi descartada, tenta de novo em 1 minuto. Sem a IA conferir, a tarefa não conclui.` });
+      return;
+    }
     if (decisao.acao === 'pedir_justificativa') {
       // 🗣️ a pessoa se explica ANTES de qualquer humano ser acionado —
       // guarda o que já foi upado pra reenviar sem pedir a imagem de novo.

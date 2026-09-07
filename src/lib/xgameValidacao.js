@@ -50,6 +50,14 @@ export function imagensParaComparar(lista = [], n = JANELA_ANTI_RECICLAGEM) {
  * @returns {{acao: 'aprovar'|'reprovar'|'pedir_justificativa'|'analise_gestor', motivo?: string, pergunta?: string}}
  */
 export function decisaoAposIA(ia, { foraDaJanela = false, tentativa = 1 } = {}) {
+  // 🚫 DIR-84.1 — IA FORA DO AR NÃO É "DÚVIDA". Antes, gateway caído virava
+  // 'duvida' → 'em_analise' → a tarefa CONTAVA provisoriamente: qualquer foto
+  // passava enquanto a IA estivesse fora (foi exatamente o que o dono viu —
+  // foto na cama aceita pra "Resolver: o financeiro"). Sem IA não há
+  // validação; sem validação não há conclusão. A pessoa tenta de novo.
+  if (ia?.ia_indisponivel) {
+    return { acao: 'ia_fora', motivo: ia?.motivo || 'a IA de validação está fora do ar agora' };
+  }
   const veredito = ia?.veredito;
   const pergunta = String(ia?.pergunta_para_pessoa || '').trim();
 
