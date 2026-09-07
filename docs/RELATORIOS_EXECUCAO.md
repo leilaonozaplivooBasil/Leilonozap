@@ -4384,3 +4384,27 @@ fechamento_real). Nenhum caso caiu em `ia_indisponivel`.
 "Resolver: Toda X-Game e Top College", 07/09 09:00) segue em `em_analise`
 contando provisoriamente — foi feita enquanto a IA estava fora; reprovar no
 painel do gestor (ou eu, se ele mandar).
+
+---
+
+## REL — DIR-84.5 · "tudo isso liberado de ação" (07/09/2026, 03:26 UTC)
+
+1. **Banco** — a comprovação de teste do dono (foto na cama, 07/09 09:00) →
+   `reprovada`, `feito=false`, motivo escrito. "Fechamento do dia" (af8f…,
+   07/09 18:30): reprovada pelo gestor com a IA fora; a IA reanalisa e APROVA
+   (82%) → devolvida a `em_analise` com o veredito novo e o motivo antigo
+   preservado. Reversível pelo painel.
+2. **InvokeLLM (9 telas + roteiro do Encontro)** migrado pro SDK oficial com
+   Claude Sonnet 5, saída estruturada, fallback se o schema for recusado,
+   `max_tokens` até 8000. Acesso à IA compartilhado em `api/_lib/ia.js` (o
+   validador passou a usar). Testes: 9 novos; 3 rotas 34/34; suíte 1390/1390.
+3. **Prova no preview (deploy d3709b52):**
+   - `InvokeLLM?ping=1` → `ia:true`, `anthropic/claude-sonnet-5`, `saida:"ok"`
+     — schema cru em `output_config.format` **aceito** pelo gateway;
+   - `xgameValidarPrint?ping=1` → `ia:true`, `anthropic/claude-opus-5`,
+     `saida:"ok"` — a extração pro helper não quebrou nada.
+4. **Produção:** PR #207 aberto (`claude/project-structure-analysis-r1prad` →
+   `main`), pro dono revisar e mergear.
+
+**Fica pra rodada própria:** os geradores de imagem (`xgameGerarImagem`,
+`GenerateImage`) ainda em modelos Google — pingar antes de contar com eles.
