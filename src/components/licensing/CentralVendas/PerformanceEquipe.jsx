@@ -42,13 +42,16 @@ const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.i
 const somaDias = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
-/** Um número do time: rótulo pequeno em cima, número grande embaixo. Nenhum nome. */
+/** Um número do time: rótulo pequeno em cima, número grande embaixo. Nenhum nome.
+ * 07/09 (dono, na print): "está muito feio assim, encaixado — pode expandir
+ * tudo, pegando até o final da tela, muito fluido, só aberto pra ler bem
+ * legal". O número virou o protagonista do cartão. */
 function Numero({ rotulo, valor, apoio = null, alerta = false }) {
   return (
-    <div className="px-3 py-3 sm:px-4">
-      <p className="text-[10px] text-white/40 uppercase tracking-wider truncate">{rotulo}</p>
-      <p className={`mt-1 text-[22px] font-black tabular-nums leading-none ${alerta ? 'text-red-300' : 'text-white'}`}>{valor}</p>
-      {apoio && <p className="mt-1 text-[10.5px] text-white/35 truncate">{apoio}</p>}
+    <div className="px-5 py-6 sm:px-7 sm:py-8">
+      <p className="text-[11px] sm:text-xs text-white/40 uppercase tracking-wider truncate">{rotulo}</p>
+      <p className={`mt-2 text-[34px] sm:text-[42px] lg:text-[48px] font-black tabular-nums leading-none ${alerta ? 'text-red-300' : 'text-white'}`}>{valor}</p>
+      {apoio && <p className="mt-2 text-[12px] sm:text-[13px] text-white/35 truncate">{apoio}</p>}
     </div>
   );
 }
@@ -56,14 +59,14 @@ function Numero({ rotulo, valor, apoio = null, alerta = false }) {
 /** Um Hábito do time em número: quantos de quantos, %, barra e o total. Sem nome. */
 function HabitoDoTime({ h }) {
   return (
-    <div className="p-3 sm:p-3.5" data-teste="habito" data-n={h.n} data-quantos={h.quantos}>
-      <p className="text-[11px] font-bold text-white leading-tight truncate" title={`${h.nome} · ${h.pergunta}`}><span className="text-white/35 font-bold tabular-nums mr-1.5">{String(h.n).padStart(2, '0')}</span>{h.nome}</p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="text-[26px] font-black tabular-nums leading-none text-white" data-teste="habito-quantos">{h.quantos}<span className="text-[11px] font-bold text-white/35"> de {h.deQuantos}</span></p>
-        <p className="text-[11px] font-bold tabular-nums text-white/50">{h.pct}%</p>
+    <div className="p-5 sm:p-6" data-teste="habito" data-n={h.n} data-quantos={h.quantos}>
+      <p className="text-[12.5px] sm:text-[13px] font-bold text-white leading-tight truncate" title={`${h.nome} · ${h.pergunta}`}><span className="text-white/35 font-bold tabular-nums mr-1.5">{String(h.n).padStart(2, '0')}</span>{h.nome}</p>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <p className="text-[32px] sm:text-[36px] font-black tabular-nums leading-none text-white" data-teste="habito-quantos">{h.quantos}<span className="text-[12px] font-bold text-white/35"> de {h.deQuantos}</span></p>
+        <p className="text-[12px] font-bold tabular-nums text-white/50">{h.pct}%</p>
       </div>
-      <div className="mt-2 h-[3px] rounded-full bg-white/[0.08] overflow-hidden"><div className="h-full rounded-full bg-white/60 transition-[width]" style={{ width: `${h.pct}%` }} /></div>
-      <p className="mt-1.5 text-[10.5px] text-white/40 tabular-nums truncate">{h.quantos === 0 ? 'ninguém ainda' : `${h.totalRotulo} no time`}</p>
+      <div className="mt-3 h-[4px] rounded-full bg-white/[0.08] overflow-hidden"><div className="h-full rounded-full bg-white/60 transition-[width]" style={{ width: `${h.pct}%` }} /></div>
+      <p className="mt-2 text-[11.5px] text-white/40 tabular-nums truncate">{h.quantos === 0 ? 'ninguém ainda' : `${h.totalRotulo} no time`}</p>
     </div>
   );
 }
@@ -231,9 +234,14 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
   };
 
   return (
-    <div className="space-y-4 text-white max-w-[1400px] mx-auto" data-teste="performance-equipe" data-periodo={periodoTipo} data-so-eu={soEu ? 'sim' : 'nao'}>
-      {/* ── 1. os números do time (nenhum nome) ── */}
-      <div className="rounded-xl border border-white/10 p-3 sm:p-4" style={caixa} data-teste="oito-habitos">
+    <div className="space-y-4 text-white w-full max-w-[1900px] mx-auto" data-teste="performance-equipe" data-periodo={periodoTipo} data-so-eu={soEu ? 'sim' : 'nao'}>
+      {/* ── 1. os números do time (nenhum nome) ──
+          07/09 (dono, na print): "está muito feio assim, encaixado — pode
+          expandir tudo, pegando até o final da tela, deixando muito bonito,
+          muito fluido, só aberto pra ler bem legal". O cartão passou a usar a
+          largura inteira disponível (a página já tira o padding lateral na
+          Top College) e ganhou muito mais respiro por dentro. */}
+      <div className="rounded-2xl border border-white/10 p-5 sm:p-7 lg:p-9" style={caixa} data-teste="oito-habitos">
         <div className="flex items-center gap-2 flex-wrap">
           <p className={titulo}><Trophy className="w-3 h-3 inline mr-1" />X-Performance · {soEu ? 'os meus números' : 'os números do time'}</p>
           <span className="text-[11px] text-white/35">· {plural(r.pessoas, 'pessoa', 'pessoas')} · {rotuloPeriodo}{!soEu && contas > 0 ? ` · ${plural(contas, 'conta institucional fora do time', 'contas institucionais fora do time')}` : ''}</span>
@@ -246,8 +254,8 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
         </div>
         {carregando ? <p className="mt-2 text-[12px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> lendo o time…</p> : time.length === 0 ? <p className="mt-2 text-[12px] text-amber-300/80">{soEu ? 'Você não está no time corporativo do painel — troque pra "Tudo" pra ver o time.' : 'Ninguém do time corporativo (executivo ao embaixador) no painel de controle ainda.'}</p> : (
           <>
-            {/* os seis números, numa régua só */}
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-xl border border-white/10 divide-x divide-y sm:divide-y-0 divide-white/10 overflow-hidden" data-teste="oito-resumo">
+            {/* os seis números, numa régua só, agora grande e espaçosa */}
+            <div className="mt-5 sm:mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-2xl border border-white/10 divide-x divide-y sm:divide-y-0 divide-white/10 overflow-hidden" data-teste="oito-resumo">
               <Numero rotulo="média de hábitos" valor={`${r.mediaHabitos.toLocaleString('pt-BR')} de 8`} apoio="por pessoa" />
               <Numero rotulo="com os 8 inteiros" valor={String(r.inteiros.length)} apoio={`de ${r.pessoas}`} />
               <Numero rotulo="sem nenhum hábito" valor={String(r.zerados.length)} apoio={`de ${r.pessoas}`} alerta={r.zerados.length > 0} />
@@ -256,8 +264,8 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
               <Numero rotulo="venderam ou fecharam" valor={`${r.venderam} de ${r.pessoas}`} />
             </div>
 
-            {/* os oito Hábitos, uma linha só no desktop */}
-            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-px rounded-xl overflow-hidden border border-white/10" style={{ background: 'rgba(255,255,255,0.08)' }} data-teste="oito-cartoes">
+            {/* os oito Hábitos, uma linha só no desktop, também ampliados */}
+            <div className="mt-5 sm:mt-6 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-px rounded-2xl overflow-hidden border border-white/10" style={{ background: 'rgba(255,255,255,0.08)' }} data-teste="oito-cartoes">
               {oito.habitos.map((h) => <div key={h.n} style={{ background: '#05070F' }}><HabitoDoTime h={h} /></div>)}
             </div>
           </>
