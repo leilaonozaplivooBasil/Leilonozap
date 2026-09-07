@@ -4,7 +4,7 @@ import {
   lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube, buscarNoYoutube, resolverEstacao,
   extrairIdYoutube, extrairListaYoutube,
   lerPlaylist, gravarPlaylist, lerEstacao, gravarEstacao, lerLigado, gravarLigado, buscarTitulo,
-  lerPosicao, gravarPosicao, apagarPosicao,
+  lerPosicao, gravarPosicao, apagarPosicao, proximaDaSequencia,
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
@@ -53,17 +53,19 @@ import { ladoDaAbertura } from '@/lib/flutuante';
 //     nome que vai pra playlist da pessoa quando ela salva;
 //   • trocar de estação sem REMONTAR nada (loadVideoById/loadPlaylist), o
 //     que é ainda mais seguro pro som contínuo do que o iframe memoizado.
-const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo }) {
+const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, onFim }) {
   const hostRef = useRef(null);
   const playerRef = useRef(null);
   const alvoRef = useRef(alvo);
   const ligadoRef = useRef(ligado);
   const onErroRef = useRef(onErro);
   const onTituloRef = useRef(onTitulo);
+  const onFimRef = useRef(onFim);
   alvoRef.current = alvo;
   ligadoRef.current = ligado;
   onErroRef.current = onErro;
   onTituloRef.current = onTitulo;
+  onFimRef.current = onFim;
 
   const carregarAlvo = useCallback(() => {
     const p = playerRef.current;
@@ -93,6 +95,15 @@ const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo }
             if (e?.data === YT.PlayerState?.PLAYING) {
               const t = playerRef.current?.getVideoData?.()?.title;
               if (t) onTituloRef.current?.(String(t).slice(0, 70), alvoRef.current);
+            }
+            // ⏭️ ACABOU: a sequência anda sozinha. Se não houver pra onde ir
+            // (uma faixa avulsa, sem playlist salva), ela recomeça — rádio de
+            // trabalho não pode emudecer no meio do expediente.
+            if (e?.data === YT.PlayerState?.ENDED) {
+              const seguiu = onFimRef.current?.(alvoRef.current);
+              if (!seguiu) {
+                try { playerRef.current?.seekTo?.(0); playerRef.current?.playVideo?.(); } catch { /* player saindo */ }
+              }
             }
           },
         },
@@ -270,6 +281,21 @@ export default function XMusic() {
     }
   }, []);
 
+  // ⏭️ ACABOU A FAIXA: a sequência anda sozinha (pedido do Ávilla, 07/09).
+  // Quem decide pra onde ir é proximaDaSequencia, em src/lib/xmusic.js —
+  // aqui só se aplica o resultado. Devolve `true` quando trocou de faixa;
+  // `false` faz o player repetir a que acabou (é o caso da faixa avulsa sem
+  // playlist salva: silêncio no meio do expediente não é opção).
+  const aoTerminar = useCallback((alvo) => {
+    const prox = proximaDaSequencia({ atual: alvo, playlist, estacao, estacoes });
+    // lista de um item só: a "próxima" é ela mesma. Trocar não recarregaria
+    // nada (o efeito olha alvo.id) — então deixa o player repetir.
+    if (!prox?.id || prox.id === (alvo?.id || estacao?.id)) return false;
+    setEstacao(prox);
+    setLigado(true);
+    return true;
+  }, [playlist, estacao, estacoes]);
+
   const tocarLink = useCallback(async () => {
     const lista = extrairListaYoutube(link);
     const idVideo = extrairIdYoutube(link);
@@ -414,7 +440,7 @@ export default function XMusic() {
             </button>
           </div>
 
-          <PlayerYT alvo={estacao} ligado={ligado} onErro={aoErrar} onTitulo={aoTocar} />
+          <PlayerYT alvo={estacao} ligado={ligado} onErro={aoErrar} onTitulo={aoTocar} onFim={aoTerminar} />
 
           {/* 🔎 O BUSCADOR — a resposta definitiva pro link que não toca: em
               vez de alguém adivinhar, a pessoa procura. Tudo que aparece
