@@ -24,7 +24,11 @@ const FAMILIAS = [
   { id: 'top', titulo: 'Top College', legenda: 'o que forma: método, encontro, time, carreira', icone: GraduationCap, marca: '/marca/marca-topcollege.webp', itens: SECOES_TOP_COLLEGE },
 ];
 const ITENS = FAMILIAS.flatMap((f) => f.itens);
-const LARGURA_DESEJADA = 620; // duas colunas confortáveis no desktop
+// 2ª limpeza (07/09) — dono: "esse painel está muito grande, puxa mais pra
+// cá": 620px de menu abrindo a partir de um botão de 384px (sm:max-w-sm)
+// deixava o painel flutuando longe do próprio gatilho, "no meio" da tela.
+// 520px ainda cabe duas colunas confortáveis e fica mais perto do botão.
+const LARGURA_DESEJADA = 520;
 const MARGEM = 12;
 
 export default function CentralVendasTabs({ value, onChange, clientesCount = 0, escuro = false }) {
@@ -108,7 +112,7 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
         onClick={abrirFechar}
         aria-expanded={aberto}
         aria-haspopup="menu"
-        className={`flex min-h-[52px] w-full items-center gap-3 rounded-xl border px-4 text-left shadow-sm transition-colors ${
+        className={`flex min-h-[46px] w-full items-center gap-2.5 rounded-lg border px-3.5 text-left shadow-sm transition-colors ${
           escuro
             ? 'border-white/15 bg-white/[0.06] hover:border-white/30 hover:bg-white/[0.10]'
             : 'border-nz-borda bg-white hover:border-nz-verde/50'
@@ -118,7 +122,7 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
             sumia (branco no branco). Quando o item traz marca, o selo vai pro
             preto do brandbook, que é onde ela foi desenhada pra viver. */}
         <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${atual.marca ? '' : 'bg-nz-verde-fundo'}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${atual.marca ? '' : 'bg-nz-verde-fundo'}`}
           style={atual.marca ? { background: 'var(--xeos-preto)' } : undefined}
         >
           <MarcaOuIcone marca={atual.marca ? '/marca/marca-x-selo.webp' : null} icone={IconeAtual} className="h-5 w-5 text-nz-verde" />
@@ -167,7 +171,7 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
                   className={`min-w-0 ${fi === 1 ? (escuro ? 'border-t sm:border-t-0 sm:border-l border-white/10' : 'border-t sm:border-t-0 sm:border-l border-nz-borda') : ''}`}
                 >
                   {/* o selo e a legenda da família: quem está aqui sabe em que casa está */}
-                  <div className={`flex items-center gap-2.5 px-3.5 pt-3 pb-2 ${daFamilia ? '' : 'opacity-80'}`}>
+                  <div className={`flex items-center gap-2 px-3 pt-2.5 pb-1.5 ${daFamilia ? '' : 'opacity-80'}`}>
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${familia.marca ? '' : (escuro ? 'bg-white/10' : 'bg-nz-verde-fundo')}`} style={familia.marca ? { background: 'var(--xeos-preto)', border: escuro ? '1px solid rgba(255,255,255,0.12)' : 'none' } : undefined}>
                       <MarcaOuIcone marca={familia.marca || null} icone={Fam} className={`h-4 w-4 ${escuro ? 'text-white' : 'text-nz-verde'}`} />
                     </span>
@@ -186,7 +190,7 @@ export default function CentralVendasTabs({ value, onChange, clientesCount = 0, 
                           type="button"
                           role="menuitem"
                           onClick={() => escolher(item)}
-                          className={`relative flex min-h-[40px] w-full items-center gap-2.5 pl-4 pr-3 text-left text-[13.5px] transition-colors ${
+                          className={`relative flex min-h-[36px] w-full items-center gap-2.5 pl-4 pr-3 text-left text-[13px] transition-colors ${
                             escuro
                               ? (ativo ? 'bg-white/10 font-bold text-white' : 'font-medium text-white/70 hover:bg-white/[0.06] hover:text-white')
                               : (ativo ? 'bg-nz-verde-fundo font-bold text-nz-verde' : 'font-medium text-nz-tinta hover:bg-nz-cinza-fundo')
