@@ -147,6 +147,58 @@ export const fonteDoPlayer = (estacao) => {
 };
 
 
+// ⏭️ ACABOU A FAIXA — E AGORA? (pedido do Ávilla, 07/09/2026: "colocar a
+// playlist para tocar em sequência de acordo com a primeira escolha dele se
+// ele não tiver a playlist salva de sua preferência; caso ele tenha, é essa
+// a ordem da playlist salva".)
+//
+// O QUE ESTAVA ACONTECENDO: o player só escutava o evento PLAYING, pra pegar
+// o título. Não existia tratamento de FIM. Acabou a música, silêncio — e a
+// pessoa tinha que voltar no painel e clicar de novo. "A SUA PLAYLIST" era
+// uma prateleira, não uma fila: as músicas salvas só tocavam uma por clique.
+// E a `fila` das estações da casa, que já existia, só era usada pra pular
+// vídeo bloqueado (aoErrar) — no fim natural ela não andava.
+// A única coisa que emendava sozinha era link de PLAYLIST do YouTube, porque
+// quem avançava era o YouTube, não a gente. Por isso passou despercebido.
+//
+// A ORDEM DE PREFERÊNCIA, e o porquê de cada degrau:
+//   1. tocava algo DA playlist salva → próxima na ORDEM SALVA. É a ordem que
+//      a pessoa montou; ela manda.
+//   2. tocava uma estação da casa → próxima da FILA daquela estação. A
+//      estação foi uma escolha explícita do dedo dela: terminar uma faixa do
+//      Foco não é motivo pra sequestrar o som pra outra lista.
+//   3. tocava um link avulso e existe playlist salva → começa a playlist.
+//   4. nada disso → devolve null, e quem chama repete a faixa.
+// Em 1 e 2 a lista dá a volta no fim (`% tamanho`): é rádio de trabalho,
+// parar no meio do expediente é justamente o que este pedido veio matar.
+export function proximaDaSequencia({ atual = null, playlist = [], estacao = null, estacoes = [] } = {}) {
+  const lista = (Array.isArray(playlist) ? playlist : []).filter((m) => m?.id);
+  const id = atual?.id || estacao?.id || null;
+
+  // 1) está tocando algo da playlist salva: a ordem é a dela
+  if (id && lista.length) {
+    const i = lista.findIndex((m) => m.id === id);
+    if (i >= 0) return { ...lista[(i + 1) % lista.length], tocando: null };
+  }
+
+  // 2) está tocando uma estação da casa: anda na fila DELA
+  const slot = atual?.slot || estacao?.slot || null;
+  if (slot) {
+    const vaga = (Array.isArray(estacoes) ? estacoes : []).find((e) => e?.slot === slot);
+    const fila = (vaga?.fila || []).filter((c) => c?.id);
+    if (fila.length) {
+      const i = fila.findIndex((c) => c.id === id);
+      return { ...vaga, ...fila[i >= 0 ? (i + 1) % fila.length : 0], tocando: null };
+    }
+  }
+
+  // 3) link avulso, mas ela tem coleção: entra na coleção
+  if (lista.length) return { ...lista[0], tocando: null };
+
+  // 4) só essa faixa mesmo — quem chama repete
+  return null;
+}
+
 /** A ESCOLHA DA PESSOA, se houver: ela vence a busca da casa sempre. */
 export const escolhaDaVaga = (slot) => {
   const salvas = ler(CHAVE_ESTACOES, {}) || {};
