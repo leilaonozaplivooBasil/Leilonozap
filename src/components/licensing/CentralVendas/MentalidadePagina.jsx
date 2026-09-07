@@ -17,13 +17,19 @@ const ABAS = [
   { id: 'performance', rotulo: 'X-Performance', Icone: Trophy },
 ];
 
-export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null }) {
+// `soEu` (07/09): quem tem visão total e escolheu "só o meu" vê a X-Performance só dele.
+// 07/09 (2ª limpeza) — "está vazando": o rótulo "Você está vendo: X" repetia,
+// solto no canto desta faixa, o que as pílulas "Só o meu / Tudo" já dizem lá
+// em cima, na faixa da academia — e o ml-auto jogava o texto pra debaixo do
+// professor, longe do controle de verdade. UMA fonte só: as pílulas.
+export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null, soEu = false }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const ehSegunda = new Date(`${hoje}T12:00:00`).getDay() === 1;
   const [aba, setAba] = useState(abaInicial || (ehSegunda ? 'encontro' : 'performance'));
   return (
     <div className="space-y-3 text-white" data-teste="mentalidade" data-aba={aba}>
-      <div className="flex gap-1 flex-wrap" role="tablist" data-teste="mentalidade-abas">
+      {/* 07/09 — a faixa das abas fica grudada no topo ao rolar */}
+      <div className="sticky top-0 z-30 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 flex gap-1 flex-wrap items-center" role="tablist" data-teste="mentalidade-abas" style={{ background: 'rgba(0,2,12,0.86)', backdropFilter: 'blur(8px)' }}>
         {ABAS.map(({ id, rotulo, Icone }) => (
           <button key={id} type="button" role="tab" aria-selected={aba === id} onClick={() => setAba(id)}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold ${aba === id ? 'bg-white text-black' : 'border border-white/15 text-white/60 hover:text-white'}`} data-aba={id}>
@@ -31,7 +37,7 @@ export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir =
           </button>
         ))}
       </div>
-      {aba === 'encontro' ? <EncontroMentalidade currentUser={currentUser} hojeISO={hoje} podeConduzir={podeConduzir} /> : <PerformanceEquipe currentUser={currentUser} hojeISO={hoje} gestao={gestao} />}
+      {aba === 'encontro' ? <EncontroMentalidade currentUser={currentUser} hojeISO={hoje} podeConduzir={podeConduzir} /> : <PerformanceEquipe currentUser={currentUser} hojeISO={hoje} gestao={gestao} soEu={soEu} />}
     </div>
   );
 }

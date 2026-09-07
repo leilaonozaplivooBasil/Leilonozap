@@ -50,7 +50,7 @@ class Consulta {
       const novas = this.carga.map((l) => ({ id: novoId(), ...l }));
       t.push(...novas);
       banco().escritas.push({ tipo: 'insert', tabela: this.nome, linhas: novas });
-      return { data: novas, error: null };
+      return { data: this.unico ? (novas[0] ?? null) : novas, error: null }; // .single() depois do insert devolve A linha, não a lista
     }
     if (this.modo === 'upsert') {
       const ch = this.conflito;
@@ -60,13 +60,13 @@ class Consulta {
         if (i >= 0) { t[i] = { ...t[i], ...l }; saida.push(t[i]); } else { const n = { id: novoId(), ...l }; t.push(n); saida.push(n); }
       }
       banco().escritas.push({ tipo: 'upsert', tabela: this.nome, linhas: saida });
-      return { data: saida, error: null };
+      return { data: this.unico ? (saida[0] ?? null) : saida, error: null };
     }
     if (this.modo === 'update') {
       const alvo = this._linhas();
       for (const r of alvo) Object.assign(r, this.carga);
       banco().escritas.push({ tipo: 'update', tabela: this.nome, patch: this.carga, quantas: alvo.length });
-      return { data: alvo, error: null };
+      return { data: this.unico ? (alvo[0] ?? null) : alvo, error: null };
     }
     if (this.modo === 'delete') {
       const alvo = this._linhas();

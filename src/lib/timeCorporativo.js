@@ -72,14 +72,33 @@ export function cargoDoNivel(nivel) {
   return 'diretor';
 }
 
+// 🏢 07/09 — CONTAS não são PESSOAS. "Distribuidor Recreio – Eloha", "Leilão
+// Nozap – Site Oficial" e "Livoo Live" carregam nível do painel (pra receber
+// participação), mas não acordam às 5 nem fazem lista: contá-las como gente
+// deixava a média em 0,7 de 8 e "11 sem nenhum hábito" — números desonestos.
+// Até existir a marca no cadastro, a leitura é pelo nome: sinais de empresa,
+// canal ou loja. Quem some daqui é mostrado na tela como "N contas fora do time".
+const SINAIS_DE_CONTA = /\b(site oficial|oficial|distribuidor(a)?|loja|live|canal|ltda|s\/a|holding|franquia|unidade|filial|matriz|equipe|time|suporte|financeiro|admin(istra[cç][aã]o)?)\b/i;
+export function pareceConta(nome) {
+  const n = String(nome || '').trim();
+  if (!n) return false;
+  if (/\s[–—-]\s/.test(n)) return true; // "Distribuidor Recreio – Eloha", "Leilão Nozap – Site Oficial"
+  return SINAIS_DE_CONTA.test(n.normalize('NFD').replace(/[̀-ͯ]/g, ''));
+}
+/** As contas que têm nível do painel mas não entram no time de pessoas. */
+export function contasForaDoTime(usuarios, nomeDe = (u) => u.full_name || u.nickname || u.email || u.id) {
+  return (Array.isArray(usuarios) ? usuarios : []).filter((u) => nivelNoTime(u) && pareceConta(nomeDe(u)));
+}
+
 /**
  * A lista pra tela da gestão: só quem é do time, em ordem alfabética, cada
  * um com a função do painel. `nome` já vem pronto pra mostrar.
+ * Contas institucionais (pareceConta) ficam fora — são empresa, não gente.
  */
 export function timeCorporativo(usuarios, nomeDe = (u) => u.full_name || u.nickname || u.email || u.id) {
   return (Array.isArray(usuarios) ? usuarios : [])
     .map((u) => ({ u, nivel: nivelNoTime(u) }))
-    .filter(({ nivel }) => nivel)
+    .filter(({ u, nivel }) => nivel && !pareceConta(nomeDe(u)))
     .map(({ u, nivel }) => ({ id: u.id, nome: nomeDe(u), nivel, funcao: getLevel(nivel).name, cargo: cargoDoNivel(nivel) }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }

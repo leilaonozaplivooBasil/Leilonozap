@@ -15,6 +15,7 @@
     "test:navegador": "node --test --test-timeout=90000 \"tests/navegador/*.spec.mjs\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "@base44/sdk": "^0.8.43",
     "@base44/vite-plugin": "^1.0.30",
     "@capacitor/android": "^8.0.2",

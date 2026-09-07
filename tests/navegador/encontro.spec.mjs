@@ -243,16 +243,21 @@ test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no
   assert.deepEqual([u.status, u.agendada_para, u.hora, u.tarefa_id, u.card_id], ['agendada', '2026-09-08', '10:30', t.id, c.id]);
   await painel.locator('[data-teste="demanda-andamento"]').first().waitFor();
   assert.match(await texto(pagina, '[data-teste="andamento"]'), /agendada · 08\/09 10:30.*Mandar a proposta/);
-  // o CEO manda uma demanda daqui pra Carla
-  await painel.locator('[data-teste="nova-demanda-titulo"]').fill('Preparar a live de quinta');
-  await painel.locator('[data-teste="nova-demanda-pessoa"]').selectOption('carla');
-  await painel.locator('[data-teste="nova-demanda-mandar"]').click();
-  await pagina.getByText(/Demanda no painel de Carla: "Preparar a live de quinta"/).waitFor();
-  const nova = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_demandas' && e.tipo === 'insert').at(-1).linhas[0];
-  assert.deepEqual([nova.pessoa_id, nova.origem, nova.status, String(nova.prazo_em).slice(0, 10)], ['carla', 'ceo', 'recebida', '2026-09-11']);
-  // a semana de todo mundo é a tabela de cima (o painel embutido não repete): Carla 1/2, Emanuel 0/1
-  await pagina.waitForFunction(() => /1\/2/.test(document.querySelector('[data-teste="visao-linha"][data-pessoa="carla"]')?.textContent || ''));
-  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="carla"]').textContent()).replace(/\s+/g, ' '), /Carla Souza.*1\/2 · 1 sem agendar/, 'a conferida de sexta passada + a nova sem agendar');
+  // 07/09 — o CEO distribui daqui, com o MESMO Distribuir da ADM X-Game: a pessoa aberta vem escolhida, mas dá pra trocar
+  const distribuir = painel.locator('[data-teste="distribuir-tarefa"]');
+  await distribuir.waitFor();
+  assert.equal(await distribuir.locator('[data-teste="pessoa"]').inputValue(), 'emanuel', 'a pessoa aberta já vem como responsável');
+  await distribuir.locator('[data-teste="pessoa"]').selectOption('carla');
+  await distribuir.locator('[data-teste="titulo"]').fill('Preparar a live de quinta');
+  await distribuir.locator('[data-teste="previa"]').waitFor();
+  await distribuir.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Tarefa distribuída pra Carla/).waitFor();
+  const nova = (await escritas(pagina)).filter((e) => e.tabela === 'metodo_tarefas' && e.tipo === 'insert').at(-1).linhas[0];
+  assert.deepEqual([nova.user_id, nova.origem, nova.data, nova.criado_por_id], ['carla', 'xperf', '2026-09-08', 'dono'], 'entra no Compromisso da Carla, no próximo dia útil, assinada pelo CEO');
+  // a tarefa distribuída aparece na lista do dia escolhido (08/09) da Carla, dentro do próprio Distribuir
+  await distribuir.locator('[data-teste="tarefas-dia"]').getByText('Preparar a live de quinta').waitFor();
+  // a semana de todo mundo é a tabela de cima (o painel embutido não repete); a tarefa é de amanhã, então a semana da Carla ainda não muda
+  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="carla"]').textContent()).replace(/\s+/g, ' '), /Carla Souza.*1\/1/, 'a demanda conferida de sexta passada continua 1/1');
   assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*0\/1/);
   assert.equal(await painel.locator('[data-teste="painel-todos"]').count(), 0, 'embutido não repete a semana de todo mundo');
   await pagina.screenshot({ path: path.join(FOTOS, 'painel-corporativo.png'), fullPage: true });
@@ -264,7 +269,7 @@ test('PAINEL CORPORATIVO (a própria pessoa): o Emanuel vê o dele, agenda só n
   const painel = pagina.locator('[data-teste="painel-corporativo"]');
   await painel.locator('[data-teste="demanda-recebida"]').waitFor();
   assert.equal(await painel.getAttribute('data-pessoa'), 'emanuel');
-  assert.equal(await painel.locator('[data-teste="mandar-demanda"]').count(), 0, 'Sócio Executivo não manda demanda');
+  assert.equal(await painel.locator('[data-teste="distribuir-tarefa"]').count(), 0, 'Sócio Executivo não distribui tarefa daqui');
   assert.equal(await painel.locator('[data-teste="encontro"]').count(), 0);
   const d = painel.locator('[data-teste="demanda-recebida"][data-id="d1"]');
   // devolver com motivo
@@ -296,15 +301,18 @@ test('PERFORMANCE (sem administração): a visão executiva de todo mundo — qu
   await pagina.locator('[data-teste="visao-linha"]').first().waitFor();
   assert.match(await texto(pagina, '[data-teste="visao-resumo"]'), /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
   const linhas = pagina.locator('[data-teste="visao-linha"]');
+  // 07/09: dia vazio é um furo (amarelo) — todo mundo tem um furo hoje; quem tem demanda vem primeiro, depois o nome.
+  // Jean e Luiz (dia vazio, sem demanda) vão pro grupo "sem atividade"; mas o dono está aberto por padrão, então o grupo já vem em linhas.
   assert.deepEqual(await linhas.evaluateAll((els) => els.map((e) => [e.dataset.pessoa, e.dataset.cor, e.dataset.produziu])), [
-    ['emanuel', 'amarelo', 'sim'], // planejou e fez 1/2, mas tem demanda sem agendar
-    ['carla', 'verde', 'sim'],     // dia vazio hoje; a demanda dela já foi conferida
-    ['jean', 'verde', 'nao'],      // dia vazio, nada feito: não fez
-    ['dono', 'verde', 'nao'],      // o CEO também está no time — e também não fez
+    ['carla', 'amarelo', 'sim'],   // dia vazio; a demanda dela já foi conferida
+    ['emanuel', 'amarelo', 'sim'], // planejou e fez 2/3, mas tem demanda sem agendar
+    ['jean', 'amarelo', 'nao'],
+    ['dono', 'amarelo', 'nao'],
   ]);
-  assert.match(await linhas.nth(0).textContent(), /Emanuel Silva.*planejou · 2\/3 feitas.*1 sem agendar.*fez/);
-  assert.match(await linhas.nth(2).textContent(), /Jean Aranha.*dia vazio.*não fez/);
-  await linhas.nth(1).click();
+  assert.match((await linhas.nth(1).textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*planejou · 2\/3 feitas.*2 de 3 feitas.*1 sem agendar/);
+  const grupo = pagina.locator('[data-teste="sem-atividade"]');
+  assert.deepEqual([await grupo.getAttribute('data-quantos'), await grupo.getAttribute('data-aberto')], ['2', 'sim']);
+  await linhas.nth(0).click();
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="detalhe-pessoa"]'), /Carla Souza/);
   assert.deepEqual(erros, []);
@@ -348,8 +356,11 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
   // o painel dela está dentro do detalhe, e o PDF sai de dois lugares (cabeçalho do detalhe e painel)
   await detalhe.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();
   assert.equal(await detalhe.locator('[data-teste="pdf-executivo"]').count(), 2);
-  // o Jean: não vendeu, sem quadro
-  await linha('jean').click();
+  // o Jean: não vendeu, sem quadro — fecha o Emanuel, o grupo "sem atividade" recolhe e o Jean abre pelo nome
+  await linha('emanuel').click();
+  await pagina.locator('[data-teste="sem-atividade"][data-aberto="nao"]').waitFor();
+  assert.match((await pagina.locator('[data-teste="sem-atividade"]').textContent()).replace(/\s+/g, ' '), /sem atividade hoje \(2\).*Jean, Luiz/);
+  await pagina.locator('[data-teste="sem-atividade-nome"][data-pessoa="jean"]').click();
   const dj = pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="jean"]');
   await dj.waitFor();
   assert.match((await dj.locator('[data-teste="habito-pessoa"][data-n="6"]').textContent()).replace(/\s+/g, ' '), /não vendeu/);
@@ -365,6 +376,8 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
   // clicar de novo na linha aberta fecha
   await linha('emanuel').click();
   assert.equal(await pagina.locator('[data-teste="detalhe-pessoa"]').count(), 0);
+  // vazio que fala: nenhum "0/0 · 0%", "dia vazio" ou "não fez" na tabela
+  assert.doesNotMatch(await pagina.locator('[data-teste="visao-tabela"]').textContent(), /0\/0 · 0%|dia vazio|não fez/);
   await linha('carla').click();
   await pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="carla"] [data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   await pagina.screenshot({ path: path.join(FOTOS, 'xperformance-oito-habitos.png'), fullPage: true });

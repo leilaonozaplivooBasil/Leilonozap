@@ -153,8 +153,8 @@ test('a visão executiva de todo mundo: quem planejou, quem produziu, a semana e
   const c = v.linhas.find((l) => l.pessoaId === 'c');
   assert.deepEqual([c.cor, c.hoje.planejou, c.demandas.semAgendar, c.produziu], ['vermelho', false, 1, false], 'só distribuída hoje (não planejou) + demanda sem agendar');
   const j = v.linhas.find((l) => l.pessoaId === 'j');
-  assert.deepEqual([j.cor, j.hoje.vazio, j.produziu], ['verde', true, false], 'dia vazio não é furo — mas não produziu');
-  assert.deepEqual(v.linhas.map((l) => l.pessoaId), ['c', 'e', 'j'], 'vermelho primeiro; entre verdes, quem tem mais demanda');
+  assert.deepEqual([j.cor, j.hoje.vazio, j.produziu], ['amarelo', true, false], 'dia vazio é UM furo (não planejou) — e não produziu');
+  assert.deepEqual(v.linhas.map((l) => l.pessoaId), ['c', 'j', 'e'], 'vermelho primeiro, depois o amarelo, depois o verde');
   assert.deepEqual([v.planejaramHoje, v.semPlanejarHoje, v.produziram, v.naoProduziram, v.demandas.pct, v.vermelhos], [1, 2, 1, 2, 50, 1]);
 });
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import FiguraDoHero from './FiguraDoHero';
 
 // 🎓 DIR-62/67 — A FAIXA DA ACADEMIA no topo do painel.
 //
@@ -124,7 +125,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               Ele FICA nesta coluna de propósito: agora é a única coisa clicável
               da faixa, e comando de navegação mora do lado de quem assina a
               tela, não em cima da figura. */}
-          {seletor && <div className="mt-6 sm:mt-7 max-w-xs">{seletor}</div>}
+          {seletor && <div className="mt-6 sm:mt-7 max-w-xl">{seletor}</div>}
         </div>
 
         {/* ────────── coluna 2: o professor e a fala dele ──────────
@@ -164,23 +165,34 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               faixa inteira: antes o texto morava POR CIMA dele e precisava do
               escurecimento pra ser lido; agora o texto está do lado, então dá
               pra derreter só a borda e devolver o rosto em cheio — que é o
-              "professor em destaque" da DIR-62. */}
-          <img
-            src="/marca/poder-hero.webp"
-            alt=""
+              "professor em destaque" da DIR-62.
+              DIR-83 — a imagem antiga (/marca/poder-hero.webp) era o Patrick
+              Stewart como Charles Xavier (Marvel): personagem licenciado e
+              rosto de ator real numa tela pública de plataforma de terceiros.
+              Trocado pelo Mentor do elenco próprio (ElencoBoneco/DIR-78) —
+              mesma silhueta de professor (barba, óculos), sem depender de
+              imagem de terceiro nenhuma. */}
+          <div
             aria-hidden="true"
-            draggable="false"
-            className="pointer-events-none shrink-0 h-[170px] sm:h-[290px] lg:h-[320px] w-auto object-contain select-none"
-            style={{
-              // derrete nos QUATRO lados: entra pela esquerda, sai pela direita
-              // e pelo pé, então o professor se funde na página em vez de
-              // terminar numa aresta reta (ordem do dono: "sumindo na lateral")
-              WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 14%, #000 44%, #000 84%, transparent 100%), linear-gradient(0deg, transparent 0%, #000 16%)',
-              maskImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 14%, #000 44%, #000 84%, transparent 100%), linear-gradient(0deg, transparent 0%, #000 16%)',
-              WebkitMaskComposite: 'source-in',
-              maskComposite: 'intersect',
-            }}
-          />
+            className="relative pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end justify-end select-none overflow-hidden"
+          >
+            {/* 🔦 o holofote atrás da figura: as mesmas cores azul/magenta da
+                frase ao lado. É ele que dá o "professor em destaque" da
+                DIR-62 sem depender do que a figura é — foto ou desenho.
+                A máscara de borda mora DENTRO do FiguraDoHero, porque foto
+                (retângulo com fundo) e desenho (recortado) pedem recortes
+                diferentes. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{ background: 'radial-gradient(48% 64% at 64% 82%, rgba(59,111,246,0.38), transparent 68%), radial-gradient(40% 52% at 80% 58%, rgba(230,46,139,0.24), transparent 70%)' }}
+            />
+            {/* a figura nasce no tamanho grande (220) e ENCOLHE via scale nas
+                telas menores — uma peça só, três tamanhos. */}
+            <div className="relative origin-bottom scale-[0.591] sm:scale-[0.909] lg:scale-100" style={{ filter: 'drop-shadow(0 14px 30px rgba(0,2,12,0.72))' }}>
+              <FiguraDoHero altura={220} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

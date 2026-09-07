@@ -52,13 +52,92 @@ inteira). A tela misturava os dois sem dizer qual estava mostrando ("está confu
 | Contato: o botão "MINHA AGENDA / TIME INTEIRO" escondido dentro da agenda | um botão local, só ali, e a fila "minha" só filtrava pelo dono na visão total | saiu; o escopo é o do seletor do topo; a fila "minha" filtra pelo dono sempre |
 | Relógio de teste e agenda da empresa (gestão) | apareciam junto com a visão total dos dados | separados: são capacidades do super admin (`gestao`), valem mesmo em "Só o meu" |
 | Mentalidade / X-Performance | já era explícito (o detalhamento é de todo mundo por desenho; o painel diz "painel de …") | sem mudança |
-| ADM X-Game | já dizia "o quadro da diretoria" × "o que está na sua mão" | sem mudança |
+| ADM X-Game (o quadro de entregáveis) | recebia o CRACHÁ (`isAdmin`) e ignorava a escolha: o dono escolhia "só o meu" no Método e a ADM X-Game seguia mostrando o quadro da diretoria inteira (diagnóstico do outro chat, 07/09) | a Licensing resolve o escopo UMA vez (`useEscopoDeVisao` + `resolverEscopo`) e passa `visaoTotal = crmTudo`; o seletor aparece ali também. "Só o meu" = só os entregáveis dele (paralelo direto do Método) |
 
 **O seletor** (`SeletorEscopo.jsx`, regra em `escopoDeVisao.js`): aparece no topo dos 8 Hábitos só pra quem tem
 visão total. Duas opções, "Só o meu" e "Tudo · Super Admin" (ou "Tudo · Diretoria…"), e uma linha embaixo dizendo
 "Você está vendo: só o meu · como usuário" ou "tudo · como Super Admin". A escolha fica guardada no aparelho e vale pra
 todas as seções. Padrão: "só o meu". Duas camadas: `crmTudo` (o resto do CRM, pra quem a matriz dá) e `metodoTudo`
 (lista/contato/agendamento, só o super admin).
+
+## Os três destinos — o dia, a Jornada e o quadro (06/09)
+
+Dono: "quando eu adicionar na lista, dá a opção de botar na Jornada e no quadro; quando adicionar no quadro, dá a
+opção de botar na lista e na Jornada. Toda alimentação alimenta ambas. E com uma comunicação mais clara — a pessoa
+não está entendendo o quadro."
+
+**O que cada destino é** (regra escrita em `src/lib/destinos.js`):
+
+| Destino | O que é no banco | Como se entra |
+| --- | --- | --- |
+| O dia (a Lista) | uma linha em `metodo_tarefas` na data | é o compromisso do dia |
+| A Jornada | a MESMA tarefa do dia, quando tem horário | "botar na Jornada" = dar uma hora; sem hora a tarefa fica no balde "sem hora", fora da linha do tempo |
+| O quadro | um card em `metodo_quadro`, numa lista da pessoa | é o backlog; card e tarefa se ligam por `virou_tarefa_id` |
+
+**A peça única** (`EntradaComDestinos.jsx`), nos dois lugares: na Lista o dia é certo e ela oferece a hora (= a
+Jornada) e "também no quadro" (com a lista); no quadro o quadro é certo e ela oferece "também no meu dia" e a hora.
+Enquanto a pessoa escreve, a frase embaixo diz por extenso: "Vai entrar: no quadro (Academia) · no seu dia, na Jornada
+às 07:30"; sem hora avisa "sem horário fica fora da Jornada". Ao gravar: "Entrou no quadro (Academia) e no seu dia, na
+Jornada às 07:30."
+
+**O card fala onde está**: três pílulas fixas — quadro · dia · Jornada — acesas ou apagadas ("no quadro · Academia",
+"no seu dia", "na Jornada às 07:00"). O caso que confundia (no dia sem horário) virou alerta escrito: "sem horário ·
+fora da Jornada". Saíram os chips soltos "horário" / "no dia" e o botão "pro meu dia / já está no dia": agora é **levar
+pro meu dia**, que abre um painel dizendo "Levar pro meu dia — hoje · com horário entra na Jornada; sem horário fica
+no dia, fora da linha do tempo", com a hora, o sugerir, o aviso de choque e o botão "Entrar no dia às 19:30". Quem já
+está no dia vê "dar um horário" ou "mudar horário (07:00)".
+
+Provas: `tests/destinos.test.mjs` (6) e a banca `tests/navegador/quadro.spec.mjs` (3: as pílulas, levar pro dia com
+hora e choque, a entrada nova com os destinos).
+
+## A limpeza de sênior da X-Performance (07/09)
+
+Dono: "está ficando muito confuso… todas as abas têm que ter o botão de super admin, bem pequeno… faça o que
+precisa ser feito e deixe fluido". O que mudou, em ordem do que mais muda a leitura:
+
+1. **O seletor "Só o meu / Tudo" mora no topo da página inteira**, compacto, junto do seletor de seções da Top
+   College (Licensing). Vale pra todas as áreas. Em "Tudo" a página ganha um fio âmbar no topo e cada seção diz
+   "Você está vendo: tudo · como Super Admin". Todos os usos do hook ficam sincronizados (um store no módulo).
+   Na X-Performance, "Só o meu" faz o time virar só a própria pessoa: os números viram os dela e a tabela fica
+   com a linha dela aberta.
+2. **Contas institucionais fora do time** (`pareceConta` em `timeCorporativo.js`): nomes com " – ", "Site
+   Oficial", "Distribuidor", "Live", "Loja", "Canal"… não são gente. Saem da média, do "sem nenhum hábito" e da
+   tabela; a tela diz "N contas institucionais fora do time". Até existir a marca no cadastro, a leitura é pelo nome.
+3. **A tabela sem ruído**: quem tem atividade vira linha; quem não tem nada vai pra um grupo fechado embaixo,
+   "sem atividade hoje (11): Aline, Beatriz…", nomes clicáveis (abre o detalhe) e "mostrar as linhas".
+4. **Cor só onde é sinal**: saiu a coluna "produção" (fez / não fez em vermelho pra 14 de 16). Vermelho só em
+   "atrasada"; âmbar em "sem agendar" e "não planejou". O semáforo passou a contar dia vazio como um furo
+   (amarelo) — verde é só quem planejou e está em dia.
+5. **Largura máxima 1400 e tipografia maior**; os seis números numa régua; os 8 Hábitos numa linha só no desktop.
+6. **Herói do X-office menor** e a faixa de abas da Mentalidade fixa ao rolar.
+7. **Período inteligente**: se "hoje" está vazio pra todo mundo, abre em "semana" e avisa.
+8. **Vazio que fala**: "—" no lugar de "0/0 · 0%", "ninguém ainda" no lugar de "0 sonhos no time", "nenhum
+   ainda" nos contatos.
+9. **Prévia mais útil**: a semana vira "2 de 3 feitas" em vez de "2/3 · 67%".
+
+Ficou de fora, de propósito: "definir a meta" a partir do detalhe (precisa de um caminho até o Quadro Geral) e a
+marca de conta no cadastro (precisa de migração — entra pelo workflow, não pela mão).
+
+## O Distribuir do admin dentro do detalhe de cada pessoa (07/09)
+
+Dono: "esse aí [o detalhe da pessoa na X-Performance] precisa ficar igual o terceiro, o Distribuir do admin —
+puxar o admin pra cá e fazer uma junção da demanda recebida com o enviar a demanda". E: "o seletor está vazando".
+
+- O formulário **Distribuir tarefa** saiu de dentro do `XPerformanceGestao.jsx` e virou uma peça só,
+  `DistribuirTarefa.jsx` (controlado: a ADM passa equipe, cadastro do jogo, tarefas do ciclo e catálogo) com a
+  irmã `DistribuirTarefaSozinho` (carrega o que precisa sozinha). A ADM X-Game continua idêntica — os 24 casos da
+  banca dela passam sem mudar uma linha. Os três helpers (`proximoDiaUtil`, `diasUteisAteSexta`,
+  `prazoDaPrioridade`) moram lá e a ADM reexporta.
+- No **Painel Corporativo embutido** (o detalhe de cada pessoa na X-Performance), quem pode mandar (gestão ou
+  diretoria) vê, embaixo das demandas recebidas, uma dobra "Distribuir tarefa pra Fulano — igual à ADM X-Game" com
+  o formulário INTEIRO: responsável (a pessoa aberta já vem escolhida, dá pra trocar), dia, começar às, pronto até,
+  catálogo, título com a leitura viva, mentalidade, Hábito, ensinamento, prévia do valor no fixo, destino,
+  prioridade, repetir até sexta, e a lista das tarefas do dia escolhido. O bloco passou a se chamar "Demandas ·
+  recebidas e distribuídas". A linha simples "mandar uma demanda" (xperf_demandas) saiu do painel; o Encontro
+  continua com a dele (`MandarDemanda.jsx`).
+- **O seletor "Só o meu / Tudo"** deixou de vazar: saiu o fio âmbar fixo no topo da página (batia no cabeçalho do
+  app); o seletor fica na mesma linha do botão da Top College, e em "Tudo" a pílula fica âmbar com "como Super Admin"
+  ao lado. A coluna do herói alargou (max-w-xl) pra caber os dois.
 
 ## O que estava duplicado e virou uma coisa só (06/09)
 

@@ -12,6 +12,253 @@
 
 ---
 
+## DIR-84.5 — O InvokeLLM (9 telas) sai do modelo morto; o acesso à IA vira um lugar só
+
+**Emitida por:** dono (07/09/2026): *"me oriente, tudo isso liberado de ação,
+faça da melhor maneira"* — autorizando os quatro itens que eu tinha listado:
+reprovar a comprovação de teste dele, decidir sobre a de "Fechamento do dia",
+migrar o `InvokeLLM` e levar pra produção.
+
+**Data:** 07/09/2026.
+
+**Banco (feito, reversível pelo painel do gestor):**
+- a comprovação de teste do dono (foto na cama, "Resolver: Toda X-Game e Top
+  College", 07/09 09:00) → `reprovada`, `feito=false`, com o motivo escrito;
+- "Fechamento do dia" (af8f…, 07/09 18:30): o gestor tinha reprovado na mão
+  enquanto a IA estava fora; a IA, reanalisando, APROVA (82%: print de
+  relatório de entregas do dia no grupo). Voltou pra `em_analise` com o
+  veredito novo e o motivo antigo preservado (`motivo_gestor_anterior`) — o
+  gestor decide de novo, agora com o mesmo contexto que a IA teve.
+
+**Código:**
+- `api/_lib/ia.js`: o acesso à IA compartilhado (qual chave existe, por onde
+  ir — Anthropic direto ou AI Gateway —, cliente do SDK, reserva do gateway,
+  erro → `details`). O validador passou a importar daqui; duplicar isso seria
+  plantar o próximo erro escondido.
+- `api/integrations/InvokeLLM.js`: sai o `google/gemini-2.0-flash-001` no
+  chat/completions (404, engolido) e o JSON raspado; entra **Claude Sonnet 5**
+  pelo SDK (texto é o forte dele, 40% do Opus — o Opus fica na validação de
+  foto), **saída estruturada** quando a tela manda schema, `body.model`
+  ignorado (era como apontavam pro modelo morto), `max_tokens` até 8000 (o
+  roteiro pedia 6000 e era cortado em 4000), `truncated`/`stop_reason` de
+  volta pra tela do Encontro, e **rede de segurança**: schema recusado pela
+  API (400) → refaz UMA vez sem formato e faz o parse do texto, avisando no
+  log. Contrato Base44 intacto (objeto direto com schema; `{ok,text,response}`
+  sem). GET `?ping=1` prova o caminho com schema cru pelo gateway real.
+- Testes: `tests/invokeLLM.test.mjs` (rota real com gateway simulado: modelo,
+  sem temperature, formato, contrato, fallback do schema, 404, truncado,
+  body.model ignorado, reserva, caminho direto, ping).
+
+**Produção:** PR da branch `claude/project-structure-analysis-r1prad` para
+`main`, pro dono revisar e mergear — merge em produção é clique dele.
+
+---
+
+## DIR-84.3 / 84.4 — Barato sem perder rigor, e a prova por dentro
+
+**Emitida por:** dono (07/09/2026). Depois de colocar crédito no AI Gateway
+(US$ 20) e ver o primeiro teste real pegar a foto na cama pelos DOIS motivos
+(*"não aparece planilha, extrato, tela de sistema…"* e *"é a mesma cena da
+comprovação anterior, apenas com ângulo/recorte diferente"*): *"parece que
+está foda — será que você consegue fazer mais uns testes reais aí por dentro
+como usuário, só para termos certeza?"* Antes, sobre custo: *"o que você me
+indica pra ficar foda e barato?"*
+
+**Data:** 07/09/2026.
+
+**Custo (84.3), com o volume real do banco (4 comprovações em 30 dias, 10
+pessoas ativas, 68 tarefas/dia):** ~R$ 0,15–0,30 por validação no Opus 5;
+R$ 15/mês no volume de hoje, ~R$ 450/mês se TODAS as tarefas do dia fossem
+comprovadas. Duas alavancas ligadas:
+- **cache**: papel + todas as regras de tipo + cruzamento num único bloco
+  `system` com `cache_control` — prefixo IDÊNTICO em toda chamada (a
+  mensagem diz qual `[TIPO]` vale), acima do mínimo de 512 tokens do Opus 5,
+  cobrado a 10% a partir da 2ª chamada;
+- **esforço medium** em `output_config` — julgar foto contra regra não pede o
+  raciocínio máximo; o thinking adaptativo segue ligado.
+O ping (`?ping=1`) passou a mandar a MESMA forma da validação (saída
+estruturada + effort + cache): se o gateway recusar qualquer parte, aparece
+no painel do gestor, não na primeira pessoa comprovando de manhã. Ping real
+no preview: `ia: true`, `saida: "ok"`.
+
+**Recomendação registrada:** Opus 5 só na validação (o cérebro anti-fraude,
+volume pequeno); Sonnet 5 nos textos do `InvokeLLM` (9 telas, mais volume);
+Whisper segue na chave da OpenAI (única coisa que a usa). Um provedor por
+função — o buraco de hoje nasceu de um erro escondido; menos peças, melhor.
+
+**A bateria de prova (84.4):** `api/functions/xgameProvaValidador.js` roda a
+validação DE VERDADE (mesmo handler, gateway, Opus 5) contra 12 casos e
+devolve veredito × esperado — a foto real da cama contra tarefa de trabalho,
+acordar e pré-treino (a pergunta) e reciclada; a 2ª rodada com justificativa
+evasiva; telas renderizadas em `public/prova/` (planilha de fluxo de caixa,
+que TEM que aprovar; página de livro com resumo; tela preta; meme); e duas
+fotos reais de pessoas do time como exploratórias. Senha no cofre
+(`app_segredos.xgame_prova_token`, tempo constante); sem token, 401 e zero
+chamada de IA; um caso por GET; apagar a linha desliga. Resultado da rodada
+real fica em `docs/RELATORIOS_EXECUCAO.md`.
+
+---
+
+## DIR-84.1 / 84.2 — A IA não estava rodando: o furo, a causa e a troca
+
+**Emitida por:** dono (07/09/2026), com a print da fila do gestor: *"olha qual
+era a tarefa ['Resolver: o financeiro'], fui lá bati uma foto qualquer
+[deitado na cama], ela aceitou. Ou seja ela não cruzou, não está
+funcionando. Isso é a parte mais importante da gamificação. Se tiver que
+botar outra IA aqui você fala, que eu troco. Tem que fazer funcionar.
+Urgentemente."*
+
+**Data:** 07/09/2026.
+
+**O que a print já dizia e eu fui confirmar:** a linha da fila trazia *"IA:
+IA indisponível agora — comprovação enviada pra análise manual"*. A IA **não
+rodou**. Dois defeitos, um em cima do outro:
+
+1. **O furo (84.1):** gateway caído virava `veredito: 'duvida'` → a régua
+   mandava pra `em_analise` → que **conta provisoriamente**. Enquanto a IA
+   estivesse fora, **qualquer foto passava**. E a função engolia o erro sem
+   log — a tela do gestor dizia "IA ligada" porque só conferia se havia
+   chave.
+2. **A causa (84.2):** com um `?ping=1` que faz uma chamada real ao modelo,
+   o gateway respondeu **HTTP 404 `model_not_found`: `google/gemini-2.0-flash`
+   não existe mais**. O modelo foi descontinuado e ninguém foi avisado, porque
+   o erro nunca chegava a lugar nenhum.
+
+**O que entra:**
+
+1. **IA fora do ar BLOQUEIA.** `ia_indisponivel` é uma ação própria da régua
+   (`ia_fora`): a tarefa não conclui, não conta, não vai pro gestor — a tela
+   diz que a foto não foi descartada e pede pra tentar de novo. Sem IA não há
+   validação; sem validação não há conclusão.
+2. **A troca de IA — Claude Opus 5 pelo SDK oficial da Anthropic**, apontado
+   pro **mesmo AI Gateway da Vercel** com a **mesma chave** que já está no
+   cofre (a Vercel documenta exatamente esse caminho). Nada pra o dono
+   configurar. Sai o chat/completions "compatível com OpenAI" e o JSON raspado
+   por regex; entra **saída estruturada por contrato** (o modelo é obrigado a
+   devolver o formato). Modelo reserva no gateway (`claude-sonnet-5`) se o
+   principal cair.
+3. **O erro deixa de sumir:** vai pro log da Vercel e volta em `details`
+   (status, tipo, mensagem, modelo) pra tela e pro painel. O indicador do
+   gestor passa a fazer o ping real e a mostrar o erro do gateway quando cai.
+
+**O que o ping mostrou DEPOIS da troca (07/09, 02:29 UTC):** o caminho novo
+chegou ao Claude Opus 5 pelo gateway, mas o gateway respondeu **HTTP 403
+`no_providers_available`: "Free tier users do not have access to this model.
+Upgrade to paid credits"**. A conta do AI Gateway da Vercel está no plano
+gratuito — era por isso que o projeto inteiro usava modelos "free tier"
+(que a Google depois descontinuou). **Isto é decisão do dono, com custo**, e
+a validação fica corretamente BLOQUEADA até ela ser tomada:
+
+- **(a)** colocar crédito no AI Gateway da Vercel (link no próprio erro,
+  Vercel → AI → top-up) — nada mais muda, a chave `vck_` de sempre passa a
+  servir Claude; **ou**
+- **(b)** criar uma `ANTHROPIC_API_KEY` em console.anthropic.com e publicar
+  na Vercel (ou gravar no cofre `app_segredos` com id `anthropic_api_key`)
+  — o código já dá **prioridade a ela** e vai direto na Anthropic.
+
+O código está pronto para os dois: `resolverIA()` escolhe pelo que existir,
+sem redeploy. O painel do gestor mostra o erro exato e o link.
+
+**Também afetados pelo mesmo defeito (modelo free-tier descontinuado, erro
+engolido):** `api/integrations/InvokeLLM.js` (default
+`google/gemini-2.0-flash-001`) — usado por 9 telas (descrição de produto
+com IA, anúncio OLX, texto promocional, perfil, e o **roteiro do Encontro da
+Mentalidade**, que por isso sempre "saía pela régua da casa"); e os
+geradores de imagem (`xgameGerarImagem`, `GenerateImage`) em modelos Google
+que precisam de ping pra confirmar. Migração pro mesmo padrão fica pra
+rodada própria, depois da decisão (a)/(b).
+
+**Prova:** teste da rota real (`tests/xgameValidarPrintHandler.test.mjs`)
+com o gateway simulado no formato da Messages API — cobre os dois caminhos
+(gateway e Anthropic direto), saída estruturada, imagens anteriores, prompt
+de cruzamento, o 404 exato que derrubou tudo e o 403 do free tier virando
+`ia_indisponivel`; régua com o caso `ia_fora`.
+
+---
+
+## DIR-84 — A validação da X-Game vira "o maior validador do caralho"
+
+**Emitida por:** dono (07/09/2026), depois de confirmar que a IA em questão
+era o validador de comprovações da X-Game (`xgameValidarPrint.js`): *"a
+gente tem que pegar as comprovações e ela tem que pensar. Não deixa a foto
+repetida. Se a pessoa está comprovando um pré-treino com uma imagem deitada
+na cama, com uma imagem bebendo água, ela vai ter que perguntar pra pessoa
+justificar, antes mesmo de validar direto. Mas ela tem que cruzar imagem,
+ela tem que ser o maior validador do caralho pra ficar tudo automático e
+pouco ter intervenção humana. Na verdade tem que ser intervenção humana
+zero — ela tem que ser mais foda que humano. Tanto de print, tanto de link
+de endereço, tanto de imagem colada."*
+
+**Data:** 07/09/2026.
+
+**O que já existia:** a IA (F10.2) olhava UMA imagem isolada e devolvia
+aprovada/reprovada/dúvida; dúvida caía DIRETO na fila do gestor — humano
+acionado na primeira hesitação, o oposto do pedido. O anti-reuso só pegava
+hash EXATO do arquivo (`lib/xgame.js`) — imagem reciclada reprocessada
+(recortada, comprimida, com filtro) passava batido.
+
+**O que entra:**
+
+1. **Cruzamento obrigatório** — o prompt exige coerência explícita entre o
+   TÍTULO da tarefa e o CONTEÚDO da imagem (o exemplo do dono: pré-treino
+   com foto na cama ou só bebendo água é incoerência, não passa despercebido).
+2. **Anti-reciclagem visual** — a IA recebe as últimas fotos da MESMA
+   pessoa pro MESMO tipo de tarefa e compara a CENA (não só o arquivo).
+3. **Uma pergunta antes de qualquer humano** — incoerência real mas sem
+   certeza de má-fé vira `pergunta_para_pessoa`: a tela abre uma segunda
+   etapa pedindo a explicação dela, reenvia pra IA com a resposta, e SÓ SE
+   ainda ficar em dúvida depois disso é que cai pro gestor. A régua de
+   quando pedir/quando aceitar/quando esgotar é `lib/xgameValidacao.js`
+   (pura, 12 testes) — a chamada de rede e o prompt ficam isolados em
+   `api/functions/xgameValidarPrint.js`.
+4. **Tipo `link`** adicionado às regras (print/imagem colada já cobertos).
+5. O gestor agora VÊ a justificativa da pessoa quando o caso chega até ele
+   (`XGameAdmin.jsx`) — decide com o mesmo contexto que a IA teve.
+
+**O que NÃO muda:** o hash exato continua barrando ANTES de gastar chamada
+de IA (grátis, client-side); a janela de validade de 2h e o fluxo de quem
+aprova/reprova no painel do gestor seguem os mesmos.
+
+**Prova exigida:** os 12 testes de `xgameValidacao.test.mjs` verdes, suíte
+completa (1355 testes) sem quebra, build limpo.
+
+---
+
+## DIR-81 — O mais no topo da coluna: adicionar sem rolar
+
+**Emitida por:** dono (07/09/2026), com o quadro aberto: *"pra adicionar,
+quando está vazio, tem que rolá-lo tudo lá pra baixo. E não pode ser assim. Tem
+que ter um lugar pra adicionar, um maiszinho bem transparente ali, e já gera um
+novo cartão... É só botar um mais, nem precisa escrever. Pode ser até verdinho,
+bem clarinho. E aí, quando eu adicionar, já entra o novo."*
+
+**Data:** 07/09/2026.
+
+**O que eu conferi:** o único jeito de criar card hoje é o campo *"escreva o
+tópico"* no **pé** da coluna (`mt-auto`). Numa lista com muitos cards — a
+Academia, com uma rotina de treino inteira — isso fica a uma tela inteira de
+rolagem do topo. O campo não está errado; **está longe**.
+
+**O que entra:**
+1. Um **`+`** no **topo** da coluna, logo abaixo do cabeçalho: discreto,
+   translúcido, no verde claro da lista.
+2. Clicar **cria o card na hora**, sem digitar nada antes — e ele entra **no
+   topo** da coluna, não no fim: o que acabou de nascer tem que estar à vista.
+3. O card nasce **já aberto pra digitar o nome**. Criar um card e obrigar a
+   pessoa a caçar onde clicar pra nomear é trocar uma rolagem por outra.
+
+**O que NÃO entra:**
+- O campo *"escreva o tópico"* do pé **continua**: quem já está lá embaixo,
+  depois de ler a lista inteira, escreve ali mesmo. Tirar seria trocar um
+  incômodo por outro.
+- Nada muda no arrastar, na ordem, no concluído ou no assistente.
+
+**Prova exigida (REL-34.1):** o `+` existe no topo de cada coluna; clicar nele
+**cria o card sem digitar**; o card novo aparece **em primeiro** na coluna; e o
+campo do pé continua funcionando.
+
+---
+
 ## DIR-80 — O celular em dois andares, e a rotina passa a ser DELA
 
 **Emitida por:** dono (06/09/2026), com o Compromisso aberto no celular:

@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
 import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
+import { resolverEscopo } from '@/lib/escopoDeVisao';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
@@ -58,6 +59,7 @@ import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
+import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
@@ -115,6 +117,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
   const walletCardRef = useRef(null);
+  // 👤/🛡️ 06/09 — o escopo "só o meu / tudo" (escopoDeVisao.js) resolvido UMA vez
+  // aqui e passado pra baixo. Antes o X-Performance recebia o CRACHÁ (isAdmin) e
+  // ignorava a escolha do dono: ele escolhia "só o meu" no Método e a ADM X-Game
+  // continuava mostrando o quadro da diretoria inteira.
+  const [escopo, setEscopo] = useEscopoDeVisao();
+  const visPapel = useMemo(() => visibilidadeDoUsuario(user), [user]);
+  const visao = useMemo(() => resolverEscopo({ vis: visPapel, escopo }), [visPapel, escopo]);
 
   // 🛡️ FASE 4.6 — Lê ?tab=xxx APENAS na primeira render (links externos ainda
   // funcionam). Sem polling — a sidebar do Licenciado foi removida na FASE 4.6.
@@ -1067,13 +1076,18 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
   // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
   // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.
+  // 👤/🛡️ 07/09 — o seletor "Só o meu / Tudo" mora AQUI, uma vez, junto do
+  // seletor de seções: vale pra todas as áreas (Método, Mentalidade, ADM X-Game…).
   const seletorDaCentral = (
-    <CentralVendasTabs
-      value={catalogSubTab}
-      onChange={setCatalogSubTab}
-      clientesCount={myClients.length}
-      escuro={naTopCollege}
-    />
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <CentralVendasTabs
+        value={catalogSubTab}
+        onChange={setCatalogSubTab}
+        clientesCount={myClients.length}
+        escuro={naTopCollege}
+      />
+      <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} compacto />
+    </div>
   );
   const saudacaoDaHora = (() => {
     const h = new Date().getHours();
@@ -1168,7 +1182,15 @@ const DashboardContent = ({ user, isAdmin }) => {
         {/* ABA: LOJA VIRTUAL - Dashboard, Pedidos, Clientes, Produtos e Vendedores
             PONTO 85 — liberada para TODOS: toda loja tem central de vendas. */}
         {
-          <TabsContent value="catalogo" className={naTopCollege ? '' : 'space-y-6'}>
+          /* 🎓 07/09 (2ª limpeza) — "ainda está vazando": abaixo da faixa da
+             academia, o conteúdo (as abas, o X-Performance, O Método…) corria
+             a página inteira sem margem nenhuma — encostava direto na barra
+             lateral, sem o respiro que a própria faixa preta tem (px-6/px-9).
+             Este px alinha o conteúdo com o mesmo eixo esquerdo do "X-office"
+             lá em cima, em TODAS as seções da Top College de uma vez (esta é
+             a ÚNICA aba-mãe: X-Performance, Mentalidade, O Método, Carreira…
+             passam todas por aqui). */
+          <TabsContent value="catalogo" className={naTopCollege ? 'px-4 sm:px-6 lg:px-9' : 'space-y-6'}>
             <Tabs value={catalogSubTab} onValueChange={setCatalogSubTab} className="w-full">
               {/* na Top College o seletor já foi desenhado dentro da faixa —
                   aqui ele não se repete, senão viriam dois menus na tela */}
@@ -1210,8 +1232,9 @@ const DashboardContent = ({ user, isAdmin }) => {
                   College a página é uma superfície só, e cartão aqui traria de
                   volta o retângulo que o dono mandou tirar. */}
               <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
-                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin */}
-                <XPerformance currentUser={user} visaoTotal={isAdmin} gestao={visibilidadeDoUsuario(user).superAdmin} />
+                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin;
+                    o ESCOPO dos dados (o quadro de todo mundo × só o meu) obedece o seletor */}
+                <XPerformance currentUser={user} visaoTotal={visao.crmTudo} gestao={visPapel.superAdmin} />
               </TabsContent>
 
               {/* 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: a segunda-feira num
@@ -1219,7 +1242,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   gestão e a diretoria; o resto vê e acompanha a apresentação. */}
               <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
-                <MentalidadePagina currentUser={user} podeConduzir={visibilidadeDoUsuario(user).superAdmin || visibilidadeDoUsuario(user).visaoTotal} gestao={visibilidadeDoUsuario(user).superAdmin} />
+                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} />
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}

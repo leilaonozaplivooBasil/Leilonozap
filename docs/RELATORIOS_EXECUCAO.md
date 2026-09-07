@@ -4291,3 +4291,120 @@ hoje só muda por botão.
 
 **Das 5 falhas restantes:** 4 da DIR-70 e 1 da DIR-72 — todas do menu que o
 outro chat redesenhou (o item virou "ADM X-Game" no commit db9dd64f).
+
+---
+
+## REL-81 — O mais no topo da coluna (DIR-81)
+
+**Aprovação:** dono, 07/09/2026 — *"antes de você organizar o Xavier, só pega
+aqui no nosso quadro"*.
+
+**O que foi feito**
+
+1. **`ordemDoTopo(cartoes, listaId)`** em `quadroCompromisso.js`: a ordem de quem
+   nasce agora — menor que a de todos, sem furar quem tem HORA (regra da DIR-77).
+2. **Um `+` no topo de cada coluna**, translúcido, no verde claro: clicar cria
+   o card **sem digitar nada** e ele entra **em primeiro**.
+3. **O card nasce já aberto pra digitar** (`autoEditar` no `Editavel`, com o
+   campo vazio — não com "Novo tópico" pra apagar antes). Criar e obrigar a
+   caçar onde nomear seria trocar uma rolagem por outra.
+4. O campo *"escreva o tópico"* do pé **continua**: quem já leu a lista escreve
+   ali. O `+` somou, não substituiu.
+
+**Verificado**
+
+- 5 testes novos; suíte **1335/1335**; build; **lint limpo nos arquivos
+  tocados** (é o portão que faltava — REL-80 saiu com um import morto porque eu
+  não rodava lint; agora rodo).
+- Prova em navegador: **4/4 da DIR-81, zero erro de console** — o `+` acima dos
+  cards, 3 → 4 cards sem digitar, o novo em primeiro com `input` dentro, o campo
+  do pé de pé. Mutação: com a mudança guardada (`git stash`), as 4 caem.
+- Sobras removidas no caminho: `feitoAberto`, o `feitos` do rodapé e o import
+  `feitosNaMesa` — órfãos da gaveta que a DIR-77.1 aposentou.
+
+**Sobre as 22 asserções vermelhas (282/304)**
+
+- 5 do menu da Top College (DIR-70/72), já atribuídas ao redesenho da sessão
+  paralela em rodadas anteriores.
+- **17 da Agenda do Hábito 4 (DIR-49/50/51/54/73).** Provei que não são minhas:
+  guardei a mudança e rodei — **caem igual sem ela**. A causa é o seletor
+  "Só o meu / Tudo" da sessão paralela, que virou padrão: o super admin passou
+  a entrar como usuário comum e a Agenda mudou nos DOIS escopos (em "tudo" caem
+  30). São réguas escritas antes do seletor, medindo uma tela que não existe
+  mais. **Não reescrevi no escuro**: a tela é da sessão paralela, e a régua nova
+  tem que sair da spec dela. Ficou anotado no próprio harness.
+- Também endureci a asserção do atraso da cabeça (DIR-78): amostra em 5
+  instantes, porque nos primeiros 12% do ciclo corpo e cabeça estão ambos em
+  repouso e uma amostra única caía ali às vezes.
+
+**Erro meu no processo, pego a tempo:** estava no `main` local desde a auditoria
+das migrações; o commit foi feito no branch designado, com o `main` fundido nele.
+
+**Adendo (07/09, após rebase em bdb5e407/95cb1fb1):** a sessão paralela passou
+a mostrar o chip de horário do card **só depois que ele entra no dia**
+(`cartao.virou_tarefa_id &&`); card só-no-quadro ganha hora por "levar pro meu
+dia", que abre o mesmo editor, e a criação da tarefa passou pro botão
+`confirmar-pro-dia` ("Entrar no dia às HH:MM"). É o modelo "três destinos" ditado
+pelo dono — **não é regressão**; a feature da DIR-77 está inteira. A prova foi
+recolocada nesse caminho (e um campo nulo deixou de virar CRASH que matava o
+resto da corrida). Resultado final: **284/306, DIR-77 13/13, DIR-81 4/4, zero
+erro de console**; as 22 vermelhas seguem sendo as do menu (5) e da Agenda sob o
+novo seletor de escopo (17).
+
+---
+
+## REL — DIR-84.4 · Bateria de prova do validador, rodada REAL (07/09/2026, 03:14 UTC)
+
+Rodado por dentro (mesmo handler, AI Gateway da Vercel, `anthropic/claude-opus-5`,
+saída estruturada, cache + effort medium), um caso por GET com a senha do cofre.
+**12/12 dentro do esperado.** Tempo por caso: 5–13 s.
+
+| caso | esperado | veredito | conf. | o que a IA disse (resumo) |
+|---|---|---|---|---|
+| cama_financeiro | reprovada/dúvida | **reprovada** | 88 | "ambiente de descanso, sem tela, planilha, notas, boletos… incoerência gritante" |
+| cama_reciclada (mesma foto como anterior) | reprovada | **reprovada** | 95 | "(1) nada de treino; (2) é a MESMA imagem já usada — reciclagem" |
+| cama_acordar (tipo instagram, 05:00) | reprovada/dúvida | **reprovada** | 86 | "pessoa ainda deitada — justamente o que a regra reprova pra acordar" |
+| cama_pretreino (05:15) | dúvida/reprovada | **reprovada** | 86 | "cena de descanso, sem nenhum sinal de pré-treino — refaça de pé, com roupa/tênis" |
+| cama_pretreino_justificativa (2ª rodada, "acabei de acordar…") | dúvida/reprovada, sem pergunta | **dúvida** (sem pergunta) | 72 | "a explicação é plausível como contexto, mas não mostra que o treino vai acontecer" → gestor |
+| planilha_financeiro | aprovada | **aprovada** | 88 | "financeiro trabalhado hoje (08:52, perto das 09:00), números do mês e decisão com responsável, prazo e número" |
+| livro_leitura (aprendizado + resumo) | aprovada | **aprovada** | 74 | "página de livro com anotação; o resumo conversa com o texto e traz aplicação própria" |
+| livro_financeiro | dúvida/reprovada | **reprovada** | 88 | "página de livro sobre disciplina — nenhum elemento financeiro" |
+| preto_treino | reprovada | **reprovada** | 97 | "imagem 100% preta" |
+| meme_financeiro | reprovada | **reprovada** | 96 | "isso é um meme, não uma comprovação" |
+| fechamento_real (foto real do time) | exploratório | aprovada | 82 | "print de relatório de entregas do dia enviado no grupo às 21:05 — coerente com Fechamento do dia" (o gestor tinha reprovado na mão quando a IA estava fora) |
+| contratos_real (foto real do time) | exploratório | **dúvida COM pergunta** | 72 | pergunta: *"Na foto você aparece só de rosto, sentado no sofá, sem contrato ou tela à vista: o que exatamente você estava fazendo às 17:30 e consegue mandar o print dos contratos ou dos follow-ups?"* |
+
+**O que isso prova:** cruzamento tarefa×imagem (6 casos), anti-reciclagem visual
+(1), regra específica de tipo (acordar, aprendizado), a pergunta antes do gestor
+num caso real ambíguo (contratos_real), a 2ª rodada sem pergunta nova, e — o
+lado que importa tanto quanto — **quem cumpriu é aprovado** (planilha, livro,
+fechamento_real). Nenhum caso caiu em `ia_indisponivel`.
+
+**Ficou registrado pro dono:** a comprovação de teste dele (foto na cama em
+"Resolver: Toda X-Game e Top College", 07/09 09:00) segue em `em_analise`
+contando provisoriamente — foi feita enquanto a IA estava fora; reprovar no
+painel do gestor (ou eu, se ele mandar).
+
+---
+
+## REL — DIR-84.5 · "tudo isso liberado de ação" (07/09/2026, 03:26 UTC)
+
+1. **Banco** — a comprovação de teste do dono (foto na cama, 07/09 09:00) →
+   `reprovada`, `feito=false`, motivo escrito. "Fechamento do dia" (af8f…,
+   07/09 18:30): reprovada pelo gestor com a IA fora; a IA reanalisa e APROVA
+   (82%) → devolvida a `em_analise` com o veredito novo e o motivo antigo
+   preservado. Reversível pelo painel.
+2. **InvokeLLM (9 telas + roteiro do Encontro)** migrado pro SDK oficial com
+   Claude Sonnet 5, saída estruturada, fallback se o schema for recusado,
+   `max_tokens` até 8000. Acesso à IA compartilhado em `api/_lib/ia.js` (o
+   validador passou a usar). Testes: 9 novos; 3 rotas 34/34; suíte 1390/1390.
+3. **Prova no preview (deploy d3709b52):**
+   - `InvokeLLM?ping=1` → `ia:true`, `anthropic/claude-sonnet-5`, `saida:"ok"`
+     — schema cru em `output_config.format` **aceito** pelo gateway;
+   - `xgameValidarPrint?ping=1` → `ia:true`, `anthropic/claude-opus-5`,
+     `saida:"ok"` — a extração pro helper não quebrou nada.
+4. **Produção:** PR #207 aberto (`claude/project-structure-analysis-r1prad` →
+   `main`), pro dono revisar e mergear.
+
+**Fica pra rodada própria:** os geradores de imagem (`xgameGerarImagem`,
+`GenerateImage`) ainda em modelos Google — pingar antes de contar com eles.

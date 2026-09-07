@@ -13,14 +13,17 @@ import useArrastavel from '@/hooks/useArrastavel';
 import {
   ESTADO_ABERTO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA, ICONES_LISTA, EMOJIS_LISTA, ehEmoji,
   estaFeito, progressoChecklist, atrasado, marcarFeito, reabrir,
-  alternarItem, adicionarItem, removerItem, cartoesDaLista, feitosNaMesa, semLista,
+  alternarItem, adicionarItem, removerItem, cartoesDaLista, semLista,
   tarefaDoCartao, resumoDoQuadro, reordenarListas, feitosDaLista, reordenarCartoes, saidaDoConflito,
   faixaDeHorario, horaSugerida, conflitosDeHorario,
+  ordemDoTopo, TITULO_NOVO_CARD,
 } from '@/lib/quadroCompromisso';
 import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } from '@/lib/assistenteDeLista';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import { HABITOS } from '@/lib/metodo';
+import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou, ondeEsta, pilulasOndeEsta } from '@/lib/destinos';
+import EntradaComDestinos from './EntradaComDestinos';
 
 // 🗂️ O NOSSO QUADRO — a mesa de trabalho do Compromisso (DIR-76/76.1).
 //
@@ -135,9 +138,13 @@ function Foto({ user, nome, tamanho = 26 }) {
 }
 
 /** Texto que vira campo ao clicar. Enter salva, Esc desiste, vazio não salva. */
-function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, tamanhoTexto }) {
-  const [editando, setEditando] = useState(false);
-  const [txt, setTxt] = useState(valor || '');
+function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, tamanhoTexto, autoEditar = false }) {
+  // ➕ DIR-81 — `autoEditar` faz o card recém-criado já nascer com o cursor
+  // dentro. Sem isso o `+` trocaria uma caçada (rolar até o pé) por outra
+  // (achar onde clicar pra nomear).
+  const [editando, setEditando] = useState(!!autoEditar);
+  // e nasce VAZIO, não com "Novo tópico" pra apagar antes de escrever
+  const [txt, setTxt] = useState(autoEditar ? '' : (valor || ''));
   useEffect(() => { if (!editando) setTxt(valor || ''); }, [valor, editando]);
   const salvar = () => {
     const t = txt.trim();
@@ -330,7 +337,7 @@ function Entrevista({ assistente, onGerar, onFechar }) {
 function Coluna({
   lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia, alvo,
   onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente, onArrastandoSobre,
-  onMudarCard, onExcluirCard, onVirarTarefa, onIr, onReordenarCard, valorNovo, onNovo, onCriar,
+  onMudarCard, onExcluirCard, onVirarTarefa, onIr, onReordenarCard, valorNovo, onNovo, onCriar, onCriarNoTopo, recemCriado,
 }) {
   const p = paleta(lista.cor);
   const assistente = assistenteDaLista(lista.nome);
@@ -412,8 +419,23 @@ function Coluna({
           <p className="text-[12px] font-semibold px-1 text-nz-tinta-fraca" data-teste="ficha-da-lista">{resumoFicha}</p>
         )}
 
+        {/* ➕ DIR-81 — O MAIS NO TOPO. O campo do pé continua existindo (quem
+            já leu a lista inteira escreve lá mesmo), mas pra QUEM CHEGA agora o
+            caminho de criar não pode ser "role a coluna toda até o fim". */}
+        <button
+          type="button"
+          onClick={() => onCriarNoTopo?.(lista.id)}
+          data-teste="mais-no-topo"
+          title="novo tópico aqui em cima"
+          aria-label="adicionar tópico no topo da lista"
+          className="w-full rounded-xl flex items-center justify-center transition-colors"
+          style={{ height: 34, background: 'rgba(74,222,128,0.10)', border: '1px dashed rgba(74,222,128,0.45)', color: '#4ADE80' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(74,222,128,0.20)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(74,222,128,0.10)'; }}
+        ><Plus className="w-4 h-4" /></button>
+
         {cartoes.map((cartao) => (
-          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
+          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia} listaNome={lista.nome} autoEditar={cartao.id === recemCriado}
             onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} onArrastandoSobre={onArrastandoSobre} />
         ))}
 
@@ -428,32 +450,23 @@ function Coluna({
               <span className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.14)' }} />
             </div>
             {feitos.map((cartao) => (
-              <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia}
+              <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia} listaNome={lista.nome}
                 onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} onArrastandoSobre={onArrastandoSobre} />
             ))}
           </>
         )}
 
-        <div className="flex items-center gap-2 mt-auto">
-          <input
-            value={valorNovo}
-            onChange={(e) => onNovo(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onCriar(); }}
-            placeholder="escreva o tópico"
-            data-teste="campo-novo-card"
-            className="flex-1 min-w-0 rounded-xl px-3.5 text-[15px] outline-none placeholder:text-[#B3BAC5]"
-            style={{ background: '#FFFFFF', color: '#172B4D', height: T.campo, boxShadow: '0 1px 3px rgba(9,30,66,0.28)' }}
-          />
-          <Button size="sm" onClick={onCriar} disabled={!String(valorNovo || '').trim()}
-            className="p-0 shrink-0 text-white rounded-xl"
-            style={{ background: p.barra, height: T.campo, width: T.campo }}><Plus className="w-5 h-5" /></Button>
+        <div className="mt-auto">
+          {/* 🔗 06/09 — a entrada fala pra onde vai: o quadro é certo; "também no meu
+              dia" e a hora (= a Jornada) são escolha, ditas por extenso embaixo */}
+          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} />
         </div>
       </div>
     </div>
   );
 }
 
-function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTarefa, onIr, onReordenar, onArrastandoSobre }) {
+function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onExcluir, onVirarTarefa, onIr, onReordenar, onArrastandoSobre, autoEditar = false }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
   const [abrindoHora, setAbrindoHora] = useState(false);
@@ -557,6 +570,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
 
           <div className="flex-1 min-w-0">
             <Editavel
+              autoEditar={autoEditar}
               valor={cartao.titulo}
               onSalvar={(t) => onMudar({ ...cartao, titulo: t })}
               estilo={{ color: feito ? '#7A869A' : '#172B4D', textDecoration: feito ? 'line-through' : 'none' }}
@@ -593,7 +607,53 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
         )}
 
         {/* ── RODAPÉ DE METADADOS, tudo em chip com ícone ── */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px]" style={{ color: '#5E6C84' }}>
+        {/* 🔗 06/09 — ONDE ESTE CARD ESTÁ, dito por extenso (dono: "a pessoa não está
+            entendendo o quadro"). Três pílulas fixas — quadro · dia · Jornada — acesas
+            ou apagadas; o caso confuso (no dia sem horário) vira alerta escrito.
+            DIR-82: as pílulas são clicáveis — "fora do dia" leva pro dia, "fora da
+            Jornada" abre editor de hora. A ação marca no banco e volta com emojis certos. */}
+        {(() => {
+          const estado = ondeEsta({ cartao });
+          const pilulas = pilulasOndeEsta(estado, { listaNome });
+          const aoClicar = (pl) => {
+            if (pl.id === 'dia' && !pl.acesa) {
+              // "fora do dia" → levar pro meu dia
+              onVirarTarefa(cartao);
+            } else if (pl.id === 'jornada' && (!pl.acesa || pl.alerta)) {
+              // "fora da Jornada" ou "sem horário · fora da Jornada" → abrir editor de hora
+              setAbrindoHora(true);
+            } else if (pl.id === 'jornada' && pl.acesa) {
+              // "na Jornada" → editar horário
+              setAbrindoHora((v) => !v);
+            }
+          };
+          const podeClicar = (pl) => (pl.id === 'dia' && !pl.acesa) || (pl.id === 'jornada' && (!pl.acesa || pl.alerta || estado.jornada));
+          return (
+            <div className="mt-3.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold" data-teste="onde-esta">
+              {pilulas.map((pl) => (
+                <button
+                  key={pl.id}
+                  type="button"
+                  onClick={() => aoClicar(pl)}
+                  disabled={!podeClicar(pl)}
+                  data-teste={`pilula-${pl.id}`}
+                  data-acesa={pl.acesa ? 'sim' : 'nao'}
+                  className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default"
+                  style={{
+                    background: pl.alerta ? '#FFF3E0' : pl.acesa ? '#E3F5E9' : '#F4F5F7',
+                    color: pl.alerta ? '#C4470F' : pl.acesa ? '#177245' : '#8993A4',
+                    ...(podeClicar(pl) ? { cursor: 'pointer' } : {}),
+                  }}
+                  title={podeClicar(pl) ? `Clique para ${pl.id === 'dia' ? 'levar pro seu dia' : 'ajustar horário'}` : ''}
+                >
+                  {pl.texto}
+                </button>
+              ))}
+              {habito && <span className="rounded px-1.5 py-0.5" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>}
+            </div>
+          );
+        })()}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px]" style={{ color: '#5E6C84' }}>
           <label className="inline-flex items-center gap-1 cursor-pointer relative font-semibold"
             style={venceu ? { color: '#C4470F' } : undefined} title="prazo">
             <CalendarDays className="w-3.5 h-3.5" />
@@ -604,27 +664,24 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
           {prog.total > 0 && (
             <span className="inline-flex items-center gap-1 tabular-nums font-semibold"><ListChecks className="w-3.5 h-3.5" /> {prog.feitos}/{prog.total}</span>
           )}
-          {/* ⏰ DIR-77 — o HORÁRIO. É ele que faz o card virar compromisso do dia
-              e aparecer na Lista e na Jornada no lugar certo. Sem hora, o card
-              fica no quadro — que é a diferença entre backlog e compromisso. */}
-          <button type="button" onClick={() => setAbrindoHora((v) => !v)} data-teste="chip-hora"
-            className="inline-flex items-center gap-1 font-semibold tabular-nums hover:underline"
-            style={cartao.hora ? { color: '#0B5FFF' } : undefined}
-            title={cartao.hora ? 'mudar o horário' : 'dar um horário faz entrar no seu dia'}>
-            <Clock3 className="w-3.5 h-3.5" /> {faixaDeHorario(cartao) || 'horário'}
-          </button>
-          {habito && (
-            <span className="rounded px-1.5 py-0.5 text-[11px] font-bold" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>
-          )}
           {cartao.virou_tarefa_id && (
-            <span className="rounded px-1.5 py-0.5 text-[11px] font-bold" style={{ background: '#E3F5E9', color: '#177245' }}>no dia</span>
+            <button type="button" onClick={() => setAbrindoHora((v) => !v)} data-teste="chip-hora"
+              className="inline-flex items-center gap-1 font-semibold tabular-nums hover:underline" style={{ color: '#0B5FFF' }}
+              title="mudar o horário na Jornada">
+              <Clock3 className="w-3.5 h-3.5" /> {faixaDeHorario(cartao) ? `mudar horário (${faixaDeHorario(cartao)})` : 'dar um horário'}
+            </button>
           )}
         </div>
 
         {abrindoHora && (() => {
           const choque = conflitosDeHorario(doDia, { hora: cartao.hora, hora_fim: cartao.hora_fim, ignorarId: cartao.virou_tarefa_id });
+          const noDia = !!cartao.virou_tarefa_id;
           return (
             <div className="mt-3 rounded-lg p-2.5" style={{ background: '#F4F5F7' }} data-teste="editor-hora">
+              <p className="text-[12px] font-bold mb-2" style={{ color: '#172B4D' }}>
+                {noDia ? 'O horário na Jornada' : 'Levar pro meu dia — hoje'}
+                <span className="font-normal" style={{ color: '#8993A4' }}> · com horário entra na Jornada; sem horário fica no dia, fora da linha do tempo</span>
+              </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <input type="time" value={cartao.hora || ''} data-teste="hora-inicio"
                   onChange={(e) => onMudar({ ...cartao, hora: e.target.value || null })}
@@ -641,6 +698,13 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
                     }}
                     className="text-[13px] font-bold hover:underline" style={{ color: '#0B5FFF' }}>sugerir</button>
                 )}
+                {!noDia && !feito && (
+                  <button type="button" data-teste="confirmar-pro-dia" onClick={() => { onVirarTarefa(cartao); setAbrindoHora(false); }}
+                    className="rounded-md px-3 h-9 font-bold text-white text-[13px]" style={{ background: '#1B7A48' }}>
+                    {cartao.hora ? `Entrar no dia às ${cartao.hora}` : 'Entrar no dia sem horário'}
+                  </button>
+                )}
+                <button type="button" onClick={() => setAbrindoHora(false)} className="text-[12px] hover:underline" style={{ color: '#8993A4' }}>fechar</button>
               </div>
               {/* 🔒 duas coisas no mesmo horário é o defeito mais caro de uma
                   agenda, e até aqui NADA avisava */}
@@ -672,15 +736,15 @@ function Cartao({ cartao, dono, hoje, doDia = [], onMudar, onExcluir, onVirarTar
               abrir <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
-          {!feito && (
+          {!feito && !cartao.virou_tarefa_id && (
             <button
               type="button"
-              disabled={!!cartao.virou_tarefa_id}
-              onClick={() => onVirarTarefa(cartao)}
-              title={cartao.virou_tarefa_id ? 'já está no seu dia' : 'entra na sua Master Task de hoje'}
-              className="inline-flex items-center gap-1 hover:underline disabled:no-underline"
-              style={{ color: cartao.virou_tarefa_id ? '#B3BAC5' : venceu ? '#C4470F' : '#5E6C84' }}
-            ><CalendarPlus className="w-3.5 h-3.5" /> {cartao.virou_tarefa_id ? 'já está no dia' : venceu ? 'remarcar pra hoje' : 'pro meu dia'}</button>
+              onClick={() => setAbrindoHora((v) => !v)}
+              data-teste="levar-pro-dia"
+              title="entra na sua Master Task de hoje — escolha o horário pra entrar na Jornada"
+              className="inline-flex items-center gap-1 hover:underline"
+              style={{ color: venceu ? '#C4470F' : '#1B7A48' }}
+            ><CalendarPlus className="w-3.5 h-3.5" /> {venceu ? 'venceu — levar pro meu dia' : 'levar pro meu dia'}</button>
           )}
           <button type="button" onClick={() => onExcluir(cartao)}
             className="ml-auto opacity-0 group-hover:opacity-100 text-[#B3BAC5] hover:text-[#C4470F]"><Trash2 className="w-4 h-4" /></button>
@@ -704,7 +768,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
   const [carregando, setCarregando] = useState(true);
   const [novo, setNovo] = useState({});
   const [novaLista, setNovaLista] = useState('');
-  const [feitoAberto, setFeitoAberto] = useState(false);
   const [painelDe, setPainelDe] = useState(null);      // id da lista com o painel aberto
   const [entrevistando, setEntrevistando] = useState(null); // { lista, assistente }
   const [listaAlvo, setListaAlvo] = useState(null);         // a coluna sob o card arrastado
@@ -723,7 +786,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
 
   const resumo = useMemo(() => resumoDoQuadro(cartoes, hoje), [cartoes, hoje]);
   const orfaos = useMemo(() => semLista(cartoes), [cartoes]);
-  const feitos = useMemo(() => feitosNaMesa(cartoes, hoje), [cartoes, hoje]);
 
   const criarLista = async (nome, cor) => {
     const n = String(nome || '').trim();
@@ -783,16 +845,45 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
     toast.success('Quadro montado — edite o que quiser clicando em cima.');
   };
 
+  // 🔗 06/09 — o card nasce com os destinos escolhidos: o quadro é certo;
+  // "também no meu dia" cria a tarefa de hoje ligada; a hora põe na Jornada.
   const criar = async (listaId) => {
-    const titulo = String(novo[listaId] || '').trim();
+    const e = novo[listaId] || {};
+    const titulo = String(e.titulo || '').trim();
     if (!titulo || !uid) return;
     const f = ferramentaDe({ titulo });
-    const linha = { user_id: uid, lista_id: listaId, titulo, coluna: ESTADO_ABERTO, habito: f?.habito || null, checklist: [], ordem: cartoes.length };
+    const plano = planoDeEntrada({ origem: 'quadro', titulo, hora: e.hora || null, noDia: !!e.noDia, listaId, userId: uid, dataISO: hoje, ordemCard: cartoes.length, ordemTarefa: tarefasDoDia.length, habito: f?.habito || null });
+    if (!plano.cartao) { toast.error('Não deu pra salvar o card'); return; }
+    let criada = null;
+    if (plano.tarefa) {
+      try { criada = await plataforma.entities.MetodoTarefa.create(plano.tarefa); }
+      catch (err) { console.error(err); toast.error('Não deu pra pôr no dia — o card vai só pro quadro'); }
+    }
+    const linha = criada ? ligarCartaoATarefa(plano.cartao, criada.id || 'sem-id') : plano.cartao;
     const { data, error } = await supabase.from('metodo_quadro').insert(linha).select().single();
     if (error) { toast.error('Não deu pra salvar o card'); return; }
     setCartoes((cs) => [...cs, data]);
-    setNovo((n) => ({ ...n, [listaId]: '' }));
+    setNovo((n) => ({ ...n, [listaId]: { titulo: '', noDia: e.noDia, hora: '' } }));
+    if (criada) onTarefaCriada?.(criada);
+    toast.success(fraseEntrou({ cartao: data, tarefa: criada }, { listaNome: listas.find((l) => l.id === listaId)?.nome }));
   };
+  // ➕ DIR-81 — cria o card SEM digitar nada, e no TOPO da coluna.
+  // Ordem do dono: "é só botar um mais... e aí, quando eu adicionar, já entra o
+  // novo". Nasce com um nome provisório e com o cursor dentro (recemCriado) —
+  // criar e obrigar a caçar onde nomear seria trocar uma rolagem por outra.
+  const [recemCriado, setRecemCriado] = useState(null);
+  const criarNoTopo = async (listaId) => {
+    if (!uid) return;
+    const linha = {
+      user_id: uid, lista_id: listaId, titulo: TITULO_NOVO_CARD, coluna: ESTADO_ABERTO,
+      habito: null, checklist: [], ordem: ordemDoTopo(cartoes, listaId),
+    };
+    const { data, error } = await supabase.from('metodo_quadro').insert(linha).select().single();
+    if (error) { toast.error('Não deu pra criar o card'); return; }
+    setCartoes((cs) => [...cs, data]);
+    setRecemCriado(data.id);
+  };
+
   const mudar = async (cartaoNovo) => {
     setCartoes((cs) => cs.map((c) => (c.id === cartaoNovo.id ? cartaoNovo : c)));
     const { id, created_date: _criado, ...resto } = cartaoNovo;
@@ -916,9 +1007,11 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 onExcluirCard={excluir}
                 onVirarTarefa={virarTarefa}
                 onIr={onIr}
-                valorNovo={novo[lista.id] || ''}
+                valorNovo={novo[lista.id] || { titulo: '', noDia: false, hora: '' }}
                 onNovo={(v) => setNovo((n) => ({ ...n, [lista.id]: v }))}
                 onCriar={() => criar(lista.id)}
+                onCriarNoTopo={criarNoTopo}
+                recemCriado={recemCriado}
               />
             );
           })}
