@@ -174,7 +174,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               imagem de terceiro nenhuma. */}
           <div
             aria-hidden="true"
-            className="pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end select-none overflow-hidden"
+            className="relative pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end select-none overflow-hidden"
             style={{
               // derrete nos QUATRO lados: entra pela esquerda, sai pela direita
               // e pelo pé, então o professor se funde na página em vez de
@@ -185,11 +185,22 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               maskComposite: 'intersect',
             }}
           >
+            {/* 🔦 07/09 — DIR-83 trocou a foto de terceiro pelo Mentor do
+                elenco próprio, mas sozinho ele lia pequeno/sem graça num
+                banner deste tamanho (dono: "tá horrível"). O holofote atrás
+                (as mesmas cores azul/magenta da marca, da frase ao lado) e a
+                sombra projetada dão o "professor em destaque" da DIR-62 sem
+                precisar de imagem de terceiro nenhuma. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{ background: 'radial-gradient(48% 64% at 64% 82%, rgba(59,111,246,0.38), transparent 68%), radial-gradient(40% 52% at 80% 58%, rgba(230,46,139,0.24), transparent 70%)' }}
+            />
             {/* o boneco nasce no tamanho grande (220) e ENCOLHE via scale nas
                 telas menores — o SVG tem width/height fixos em px (é assim em
                 todo o resto do elenco), então escalar o traço é mais simples
-                e mais fiel que redesenhar three tamanhos diferentes. */}
-            <div className="origin-bottom scale-[0.591] sm:scale-[0.909] lg:scale-100">
+                e mais fiel que redesenhar três tamanhos diferentes. */}
+            <div className="relative origin-bottom scale-[0.591] sm:scale-[0.909] lg:scale-100" style={{ filter: 'drop-shadow(0 12px 26px rgba(0,2,12,0.6))' }}>
               <ElencoBoneco chave="mentor" pose="acena" tam={220} titulo="O Mentor" />
             </div>
           </div>
