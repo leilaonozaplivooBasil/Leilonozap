@@ -35,12 +35,12 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     assert.equal(tc.items[0].catalogTab, 'catalogo-crm');
     assert.ok(tc.items[0].marcaCompleta, 'a marca X-EOS é o que aparece no menu');
     assert.equal(tc.colapsar.sempre, true, 'o botão Top College continua na lateral; ao clicar, só a X-EOS');
-    // 07/09/2026 — entrou "Como jogar": o guia do X-GAME virou página da
+    // 07/09/2026 — entrou "Guia do Usuário": o guia do X-GAME virou página da
     // plataforma (dono: "vira página"), com o Tira Dúvidas 24h no topo. Fica
     // por último de propósito — é onde quem travou vem procurar, não a porta
     // de entrada de quem já joga. Continua sendo SEÇÃO, não item de menu.
     assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira', 'catalogo-guia']);
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira', 'Como jogar']);
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira', 'Guia do Usuário']);
   });
 
   test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {

@@ -257,7 +257,7 @@ export default function Demandas() {
         ) : fila.length === 0 ? (
           <p className="text-white/40 text-[13px] py-6" data-teste="fila-vazia">
             {chamados.length === 0
-              ? 'Nenhum chamado ainda. Quando alguém usar o Tira Dúvidas na página “Como jogar”, aparece aqui.'
+              ? 'Nenhum chamado ainda. Quando alguém usar o Tira Dúvidas no Guia do Usuário, aparece aqui.'
               : 'Nada com esse filtro. Tente “todos os status”.'}
           </p>
         ) : (

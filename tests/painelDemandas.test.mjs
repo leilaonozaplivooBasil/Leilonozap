@@ -195,5 +195,5 @@ test('os rótulos falam português de gente, não nome de coluna', () => {
 });
 
 test('fila vazia explica de onde vêm os chamados, em vez de só dizer "vazio"', () => {
-  assert.match(TELA, /Quando alguém usar o Tira Dúvidas na página/);
+  assert.match(TELA, /Quando alguém usar o Tira Dúvidas no Guia do Usuário/);
 });

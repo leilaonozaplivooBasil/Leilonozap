@@ -95,7 +95,7 @@ export const SECOES_TOP_COLLEGE = [
   // (dono: "vira página"), com o Tira Dúvidas 24h no topo. Fica por ÚLTIMO de
   // propósito: é o lugar pra onde quem travou vem, não a porta de entrada de
   // quem já joga. E não é tarefa do Método — ordem explícita do dono.
-  { value: 'catalogo-guia', label: 'Como jogar', icon: LifeBuoy },
+  { value: 'catalogo-guia', label: 'Guia do Usuário', icon: LifeBuoy },
 ];
 
 export function getLicensingGroups(user) {

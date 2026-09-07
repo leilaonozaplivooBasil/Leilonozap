@@ -106,8 +106,11 @@ test('progressoDasAulas conta só o que existe e ignora id inventado', () => {
 });
 
 // ── a página existe de verdade ───────────────────────────────────────
-test('a seção "Como jogar" está registrada na Top College e ligada na tela', () => {
-  assert.match(ABAS, /value: 'catalogo-guia', label: 'Como jogar'/);
+test('a seção "Guia do Usuário" está registrada na Top College e ligada na tela', () => {
+  assert.match(ABAS, /value: 'catalogo-guia', label: 'Guia do Usuário'/);
+  // o título da página é o MESMO nome da opção: aba dizendo uma coisa e
+  // título dizendo outra é a pessoa se perguntando se clicou no lugar certo
+  assert.match(TELA, />Guia do Usuário<\/h2>/);
   assert.match(PAGINA, /'catalogo-guia'/);
   assert.match(PAGINA, /<GuiaXGame currentUser=\{user\} \/>/);
   assert.match(PAGINA, /import GuiaXGame from/);

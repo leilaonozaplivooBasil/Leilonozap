@@ -105,7 +105,7 @@ export const AULAS = [
         'Time — as pessoas do seu time.',
         'ADM X-Game — administração. É do gestor, não é para você.',
         'Carreira — seus níveis e sua evolução.',
-        'Como jogar — esta página, sempre que precisar.',
+        'Guia do Usuário — esta página, sempre que precisar.',
       ],
     }],
   },
