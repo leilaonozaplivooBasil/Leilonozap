@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
 import {
-  BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo,
+  BLOCOS, MINUTOS_TOTAL, cronometroInicial, iniciarBloco, pausar, avancar, estadoDoCronometro, fmtTempo, blocoDe, aberturaDaMentalidade,
   pautasDoTexto, promptDoRoteiro, SCHEMA_ROTEIRO, roteiroLocal, normalizarRoteiro,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
   ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
@@ -93,6 +93,11 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   const [cards, setCards] = useState([]);
   const [pautas, setPautas] = useState('');
   const [gerando, setGerando] = useState(false);
+  // 07/09 — depois de gerado, as pautas recolhem (dono: "esse comando já tem
+  // que sumir… precisa ficar mais organizado") e o tópico ganha o espaço;
+  // "editando" liga os campos de texto por cima do que a IA/régua rascunhou.
+  const [pautasAbertas, setPautasAbertas] = useState(true);
+  const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [apresentando, setApresentando] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -129,6 +134,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     setCarregando(false);
   }, [dataEncontro]);
   useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => { setPautasAbertas(!encontro?.roteiro); setEditando(false); }, [encontro?.id]);
 
   // 👥 o time com a função de cada um (posição do painel + função escolhida/sugerida)
   const time = useMemo(() => timeCorporativo(usuarios).map((p) => {
@@ -142,6 +148,14 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   const mesDoPrograma = programa.find((m) => m.mes === mes) || null;
   const temaDoMes = encontro?.tema || (mesDoPrograma ? `${mesDoPrograma.tema}` : '');
   const roteiro = encontro?.roteiro || null;
+  // 07/09 — os quatro blocos por NOME, não por posição: a Mentalidade entrou
+  // na frente da Leitura, e código que dizia "BLOCOS[1] é o treinamento"
+  // ficaria errado sem avisar.
+  const blocoMentalidade = blocoDe('mentalidade');
+  const blocoLeitura = blocoDe('leitura');
+  const blocoTreinamento = blocoDe('treinamento');
+  const blocoReuniao = blocoDe('reuniao');
+  const aberturaMentalidade = useMemo(() => aberturaDaMentalidade(), []);
   const cron = encontro?.cronometro && Object.keys(encontro.cronometro).length ? encontro.cronometro : cronometroInicial();
   const estado = estadoDoCronometro(cron, agora);
   const conduzidoPor = encontro?.conduzido_por_nome ?? (currentUser?.full_name || currentUser?.nickname || '');
@@ -192,7 +206,28 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     if (!novo) novo = { ...roteiroLocal(contexto), origem: 'local' };
     await salvarEncontro({ pautas, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor });
     setGerando(false);
+    setPautasAbertas(false);
     toast.success(origem === 'ia' ? `Tópico gerado pela IA: ${novo.reuniao.topicos.length} tópicos` : `Tópico montado: ${novo.reuniao.topicos.length} tópicos`);
+  };
+
+  // ✏️ 07/09 — "precisa ter botão de edição, depois que for gerado": o
+  // rascunho (IA ou régua) é só o ponto de partida — a palavra final é
+  // sempre da pessoa, sem precisar regenerar tudo de novo.
+  const mudarLeitura = (campo, valor) => salvarEncontro({ roteiro: { ...roteiro, leitura: { ...roteiro.leitura, [campo]: valor } } });
+  const mudarTreinamento = (campo, valor) => salvarEncontro({ roteiro: { ...roteiro, treinamento: { ...roteiro.treinamento, [campo]: valor } } });
+  const mudarTopicoReuniao = (i, campo, valor) => {
+    const topicos = (roteiro.reuniao?.topicos || []).map((t, idx) => (idx === i ? { ...t, [campo]: valor } : t));
+    salvarEncontro({ roteiro: { ...roteiro, reuniao: { ...roteiro.reuniao, topicos } } });
+  };
+  // 🗑️ "se eu quiser apagar e começar de novo": zera as pautas E o tópico
+  // juntos — continuar só com um dos dois apagado deixava a tela pela metade.
+  const apagarTudo = () => {
+    if (!window.confirm('Apagar as pautas e o tópico gerado, e começar do zero?')) return;
+    setPautas('');
+    setDescartes(null);
+    setEditando(false);
+    setPautasAbertas(true);
+    salvarEncontro({ pautas: '', roteiro: null, roteiro_origem: null });
   };
 
   // 📥 direcionar: a demanda cai RECEBIDA no Painel Corporativo da pessoa
@@ -275,7 +310,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
           <label className="text-[10px] text-white/45 uppercase tracking-wider">quem conduz
             <Input defaultValue={conduzidoPor} key={`cond-${encontro?.id || 'novo'}`} disabled={!podeConduzir} onBlur={(ev) => salvarEncontro({ conduzido_por_nome: ev.target.value })} className="mt-0.5 h-8 border-white/15 bg-white/[0.06] text-white text-[12px] normal-case" data-teste="conduz" />
           </label>
-          <label className="text-[10px] text-white/45 uppercase tracking-wider">quem dá o treinamento (45 min)
+          <label className="text-[10px] text-white/45 uppercase tracking-wider">quem dá o treinamento ({blocoTreinamento.minutos} min)
             <Input defaultValue={treinamentoPor} key={`trein-${encontro?.id || 'novo'}`} placeholder="nome de quem treina" disabled={!podeConduzir} onBlur={(ev) => salvarEncontro({ treinamento_por_nome: ev.target.value })} className="mt-0.5 h-8 border-white/15 bg-white/[0.06] text-white text-[12px] normal-case" data-teste="treina" />
           </label>
           {/* 🎓 DIR-79 — o TREINAMENTO em si. Antes daqui só existia o nome de
@@ -283,7 +318,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
               importar e nada pra abrir na hora de apresentar. */}
           <div className="mt-2 rounded-lg border border-white/10 p-2.5" data-teste="treinamento-caixa">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento (45 min)</p>
+              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento ({blocoTreinamento.minutos} min)</p>
               {temTreinamento(treinamento)
                 ? <span className="text-[10px] font-bold text-nz-verde" data-teste="treinamento-pronto">pronto · {treinamento.passos.length} passo{treinamento.passos.length === 1 ? '' : 's'}</span>
                 : <span className="text-[10px] text-amber-300/80" data-teste="treinamento-vazio">ainda sem material</span>}
@@ -349,58 +384,128 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
         </div>
       </div>
 
-      {/* ── 3. as pautas → o tópico ── */}
-      <div className="grid lg:grid-cols-5 gap-3">
-        <div className="lg:col-span-2 rounded-xl border border-white/10 p-3" style={caixa} data-teste="pautas">
-          <p className={titulo}>As pautas <span className="normal-case tracking-normal text-white/30">— uma por linha</span></p>
-          <Textarea value={pautas} onChange={(ev) => setPautas(ev.target.value)} disabled={!podeConduzir} rows={9} placeholder={'dite do seu jeito — a IA organiza, corrige o português e dá o tempo de cada um. ex.:\nLuciano fala sobre a meta de parceiro de compra\nAline fala sobre o financeiro, 30 min\nLuiz fala sobre o X-Game e a Top College, pelo menos 1 hora'} className="mt-1.5 border-white/15 bg-white/[0.06] text-white text-[12px] leading-relaxed" data-teste="pautas-texto" />
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
-            <span className="text-[10px] text-white/35">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'}{encontro?.roteiro_origem ? ` · tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
+      {/* ── 3. as pautas → o tópico ──
+          07/09 — dono: "está muito bom, são só ajustes: precisa ter botão de
+          edição depois que for gerado; se eu quiser apagar e começar de
+          novo; quando eu enviar o comando, esse comando já tem que sumir…
+          precisa ficar mais organizado." Três mudanças:
+            • as pautas COLAPSAM assim que um tópico existe — vira uma tira
+              fina ("3 pautas usadas · editar as pautas"), e o tópico (que
+              era 3 de 5 colunas) passa a usar a largura toda;
+            • um botão "editar" no tópico: liga campos de texto de verdade
+              em cima do que foi gerado — a IA/régua dá o rascunho, a
+              palavra final é sempre da pessoa;
+            • "começar do zero": apaga pautas e tópico juntos, com confirmação. */}
+      <div className={pautasAbertas ? 'grid lg:grid-cols-5 gap-3' : 'space-y-3'}>
+        {pautasAbertas ? (
+          <div className="lg:col-span-2 rounded-xl border border-white/10 p-3" style={caixa} data-teste="pautas">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className={titulo}>As pautas <span className="normal-case tracking-normal text-white/30">— uma por linha</span></p>
+              {roteiro && <button type="button" onClick={() => setPautasAbertas(false)} className="ml-auto text-[10px] text-white/35 hover:text-white" data-teste="pautas-recolher">recolher</button>}
+            </div>
+            <Textarea value={pautas} onChange={(ev) => setPautas(ev.target.value)} disabled={!podeConduzir} rows={9} placeholder={'dite do seu jeito — a IA organiza, corrige o português e dá o tempo de cada um. ex.:\nLuciano fala sobre a meta de parceiro de compra\nAline fala sobre o financeiro, 30 min\nLuiz fala sobre o X-Game e a Top College, pelo menos 1 hora'} className="mt-1.5 border-white/15 bg-white/[0.06] text-white text-[12px] leading-relaxed" data-teste="pautas-texto" />
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              {podeConduzir && <Button size="sm" onClick={gerarTopico} disabled={gerando} className="h-8 font-bold text-white" style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' }} data-teste="gerar-topico">{gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} gerar o tópico com a IA</Button>}
+              <span className="text-[10px] text-white/35">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'}{encontro?.roteiro_origem ? ` · tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
+              {podeConduzir && roteiro && <button type="button" onClick={apagarTudo} className="ml-auto text-[10px] text-white/35 hover:text-red-300" data-teste="comecar-do-zero">apagar e começar do zero</button>}
+            </div>
+            {/* 🧯 DIR-79 — o que a IA inventou e foi descartado. Silêncio aqui é o
+                que fazia a alucinação passar por verdade. */}
+            {descartes && (descartes.nomes.length > 0 || descartes.funcoes.length > 0) && (
+              <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200" data-teste="aviso-invencao">
+                A IA inventou e eu descartei:
+                {descartes.nomes.length > 0 && <> gente que não está na sala (<b>{descartes.nomes.join(', ')}</b>)</>}
+                {descartes.nomes.length > 0 && descartes.funcoes.length > 0 && ' e'}
+                {descartes.funcoes.length > 0 && <> função que não existe (<b>{descartes.funcoes.join(', ')}</b>)</>}
+                . O resto do tópico está de pé.
+              </p>
+            )}
           </div>
-          {/* 🧯 DIR-79 — o que a IA inventou e foi descartado. Silêncio aqui é o
-              que fazia a alucinação passar por verdade. */}
-          {descartes && (descartes.nomes.length > 0 || descartes.funcoes.length > 0) && (
-            <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1.5 text-[11px] text-amber-200" data-teste="aviso-invencao">
-              A IA inventou e eu descartei:
-              {descartes.nomes.length > 0 && <> gente que não está na sala (<b>{descartes.nomes.join(', ')}</b>)</>}
-              {descartes.nomes.length > 0 && descartes.funcoes.length > 0 && ' e'}
-              {descartes.funcoes.length > 0 && <> função que não existe (<b>{descartes.funcoes.join(', ')}</b>)</>}
-              . O resto do tópico está de pé.
-            </p>
-          )}
-        </div>
-        <div className="lg:col-span-3 rounded-xl border border-white/10 p-3" style={caixa} data-teste="topico">
+        ) : (
+          <div className="rounded-xl border border-white/10 px-3 py-2 flex items-center gap-2 flex-wrap" style={caixa} data-teste="pautas-colapsadas">
+            <p className={titulo}>As pautas</p>
+            <span className="text-[11px] text-white/40">{pautasDoTexto(pautas).length} pauta{pautasDoTexto(pautas).length === 1 ? '' : 's'} usada{pautasDoTexto(pautas).length === 1 ? '' : 's'}{encontro?.roteiro_origem ? ` · tópico atual: ${encontro.roteiro_origem === 'ia' ? 'gerado pela IA' : 'régua local'}` : ''}</span>
+            {podeConduzir && (
+              <div className="ml-auto flex items-center gap-3">
+                <button type="button" onClick={() => setPautasAbertas(true)} className="text-[11px] text-white/50 hover:text-white underline" data-teste="pautas-abrir">editar as pautas</button>
+                <button type="button" onClick={apagarTudo} className="text-[11px] text-white/35 hover:text-red-300" data-teste="comecar-do-zero">começar do zero</button>
+              </div>
+            )}
+          </div>
+        )}
+        <div className={pautasAbertas ? 'lg:col-span-3 rounded-xl border border-white/10 p-3' : 'rounded-xl border border-white/10 p-3'} style={caixa} data-teste="topico">
           <div className="flex items-baseline gap-2 flex-wrap">
             <p className={titulo}>O tópico do encontro</p>
             {roteiro && <span className="text-[12px] font-extrabold text-white">{roteiro.tema}</span>}
+            {roteiro && podeConduzir && (
+              <button type="button" onClick={() => setEditando((v) => !v)} className={`ml-auto text-[10px] font-bold rounded-full px-2 py-0.5 ${editando ? 'bg-white text-black' : 'text-white/45 hover:text-white border border-white/15'}`} data-teste="topico-editar">
+                {editando ? 'concluir edição' : 'editar'}
+              </button>
+            )}
           </div>
           {!roteiro ? (
-            <p className="mt-2 text-[12px] text-white/45">Digite as pautas e gere o tópico: a leitura de 15 minutos, o treinamento de 45 e os tópicos das 2 horas de reunião, cada um com objetivo, decisão esperada, minutos e a demanda que sai dele.</p>
+            <p className="mt-2 text-[12px] text-white/45">Digite as pautas e gere o tópico: a mentalidade de {blocoMentalidade.minutos} minutos, a leitura de {blocoLeitura.minutos}, o treinamento de {blocoTreinamento.minutos} e os tópicos das 2 horas de reunião, cada um com objetivo, decisão esperada, minutos e a demanda que sai dele.</p>
           ) : (
             <div className="mt-2 space-y-3">
-              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${BLOCOS[0].cor}` }} data-teste="topico-leitura">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">1 · Leitura · 15 min</p>
-                <p className="text-[12px] font-bold text-white">{roteiro.leitura?.titulo}</p>
-                <p className="text-[11px] text-white/65 mt-0.5 italic">“{roteiro.leitura?.trecho}”</p>
-                <ul className="mt-1 text-[11px] text-white/60">{(roteiro.leitura?.perguntas || []).map((q) => <li key={q}>• {q}</li>)}</ul>
-                {roteiro.leitura?.aplicacao && <p className="text-[11px] text-white/50 mt-0.5">→ {roteiro.leitura.aplicacao}</p>}
+              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoMentalidade.cor}` }} data-teste="topico-mentalidade">
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">1 · Mentalidade · {blocoMentalidade.minutos} min</p>
+                <p className="text-[12px] font-bold text-white">{aberturaMentalidade.titulo}</p>
+                {aberturaMentalidade.corpo.map((linha) => <p key={linha} className="text-[11px] text-white/60 mt-0.5">{linha}</p>)}
+                <p className="text-[10px] text-white/30 mt-1">conteúdo fixo da casa — não muda de encontro pra encontro</p>
               </div>
-              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${BLOCOS[1].cor}` }} data-teste="topico-treinamento">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">2 · Treinamento · 45 min{treinamentoPor ? ` · ${treinamentoPor}` : ''}</p>
-                <p className="text-[12px] font-bold text-white">{roteiro.treinamento?.tema}</p>
-                <p className="text-[11px] text-white/60">{roteiro.treinamento?.objetivo}</p>
-                <ol className="mt-1 text-[11px] text-white/60">{(roteiro.treinamento?.passos || []).map((q, i) => <li key={q}>{i + 1}. {q}</li>)}</ol>
-                {roteiro.treinamento?.pratica && <p className="text-[11px] text-white/50 mt-0.5">prática: {roteiro.treinamento.pratica}</p>}
+              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoLeitura.cor}` }} data-teste="topico-leitura">
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">2 · Leitura · {blocoLeitura.minutos} min</p>
+                {editando ? (
+                  <div className="mt-1 space-y-1.5">
+                    <Input defaultValue={roteiro.leitura?.titulo} onBlur={(ev) => mudarLeitura('titulo', ev.target.value)} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-leitura-titulo" />
+                    <Textarea defaultValue={roteiro.leitura?.trecho} onBlur={(ev) => mudarLeitura('trecho', ev.target.value)} rows={2} className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-leitura-trecho" />
+                    <Textarea defaultValue={(roteiro.leitura?.perguntas || []).join('\n')} onBlur={(ev) => mudarLeitura('perguntas', ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean))} rows={2} placeholder="uma pergunta por linha" className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-leitura-perguntas" />
+                    <Input defaultValue={roteiro.leitura?.aplicacao} onBlur={(ev) => mudarLeitura('aplicacao', ev.target.value)} placeholder="a aplicação" className="h-7 border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-leitura-aplicacao" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[12px] font-bold text-white">{roteiro.leitura?.titulo}</p>
+                    <p className="text-[11px] text-white/65 mt-0.5 italic">“{roteiro.leitura?.trecho}”</p>
+                    <ul className="mt-1 text-[11px] text-white/60">{(roteiro.leitura?.perguntas || []).map((q) => <li key={q}>• {q}</li>)}</ul>
+                    {roteiro.leitura?.aplicacao && <p className="text-[11px] text-white/50 mt-0.5">→ {roteiro.leitura.aplicacao}</p>}
+                  </>
+                )}
               </div>
-              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${BLOCOS[2].cor}` }} data-teste="topico-reuniao">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">3 · Reunião estratégica · 120 min · {roteiro.reuniao?.topicos?.length || 0} tópicos</p>
+              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoTreinamento.cor}` }} data-teste="topico-treinamento">
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">3 · Treinamento · {blocoTreinamento.minutos} min{treinamentoPor ? ` · ${treinamentoPor}` : ''}</p>
+                {editando ? (
+                  <div className="mt-1 space-y-1.5">
+                    <Input defaultValue={roteiro.treinamento?.tema} onBlur={(ev) => mudarTreinamento('tema', ev.target.value)} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-treinamento-tema" />
+                    <Textarea defaultValue={roteiro.treinamento?.objetivo} onBlur={(ev) => mudarTreinamento('objetivo', ev.target.value)} rows={2} className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-treinamento-objetivo" />
+                    <Textarea defaultValue={(roteiro.treinamento?.passos || []).join('\n')} onBlur={(ev) => mudarTreinamento('passos', ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean))} rows={3} placeholder="um passo por linha" className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-treinamento-passos" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[12px] font-bold text-white">{roteiro.treinamento?.tema}</p>
+                    <p className="text-[11px] text-white/60">{roteiro.treinamento?.objetivo}</p>
+                    <ol className="mt-1 text-[11px] text-white/60">{(roteiro.treinamento?.passos || []).map((q, i) => <li key={q}>{i + 1}. {q}</li>)}</ol>
+                    {roteiro.treinamento?.pratica && <p className="text-[11px] text-white/50 mt-0.5">prática: {roteiro.treinamento.pratica}</p>}
+                  </>
+                )}
+              </div>
+              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoReuniao.cor}` }} data-teste="topico-reuniao">
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">4 · Reunião estratégica · {blocoReuniao.minutos} min · {roteiro.reuniao?.topicos?.length || 0} tópicos</p>
                 <ol className="mt-1 space-y-1.5">
                   {(roteiro.reuniao?.topicos || []).map((t, i) => (
                     <li key={`${t.titulo}-${i}`} className="text-[11px]" data-teste="topico-item">
-                      <p className="text-white font-bold">{i + 1}. {t.titulo} <span className="text-white/40 font-medium tabular-nums">· {t.minutos} min{t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · {mentalidadeDe(t.mentalidade)?.nome?.replace('Mentalidade do ', '')}{t.habito ? ` · H${t.habito}` : ''}</span></p>
-                      <p className="text-white/60">{t.objetivo}</p>
-                      {t.decisao && <p className="text-white/45">decisão: {t.decisao}</p>}
+                      {editando ? (
+                        <div className="space-y-1">
+                          <Input defaultValue={t.titulo} onBlur={(ev) => mudarTopicoReuniao(i, 'titulo', ev.target.value)} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-topico-titulo" />
+                          <Textarea defaultValue={t.objetivo} onBlur={(ev) => mudarTopicoReuniao(i, 'objetivo', ev.target.value)} rows={2} className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-topico-objetivo" />
+                          <Input defaultValue={t.decisao} onBlur={(ev) => mudarTopicoReuniao(i, 'decisao', ev.target.value)} placeholder="a decisão esperada" className="h-7 border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-topico-decisao" />
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-white font-bold">{i + 1}. {t.titulo} <span className="text-white/40 font-medium tabular-nums">· {t.minutos} min{t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · {mentalidadeDe(t.mentalidade)?.nome?.replace('Mentalidade do ', '')}{t.habito ? ` · H${t.habito}` : ''}</span></p>
+                          <p className="text-white/60">{t.objetivo}</p>
+                          {t.decisao && <p className="text-white/45">decisão: {t.decisao}</p>}
+                        </>
+                      )}
                     </li>
                   ))}
                 </ol>

@@ -11,15 +11,15 @@ import {
 
 const T = (hhmm) => `2026-09-07T${hhmm}:00.000Z`;
 
-test('os três blocos: 15 de leitura, 45 de treinamento, 120 de reunião — 3 horas', () => {
-  assert.deepEqual(BLOCOS.map((b) => [b.id, b.minutos]), [['leitura', 15], ['treinamento', 45], ['reuniao', 120]]);
+test('os quatro blocos: 5 de mentalidade, 15 de leitura, 40 de treinamento, 120 de reunião — 3 horas', () => {
+  assert.deepEqual(BLOCOS.map((b) => [b.id, b.minutos]), [['mentalidade', 5], ['leitura', 15], ['treinamento', 40], ['reuniao', 120]]);
   assert.equal(MINUTOS_TOTAL, 180);
 });
 
 test('cronômetro: começa, pausa (o acumulado absorve), retoma, estoura, avança e fecha — sem relógio de dentro', () => {
   let c = cronometroInicial();
   let e = estadoDoCronometro(c, T('09:00'));
-  assert.deepEqual([e.atual, e.rodando, e.comecou, e.proximo.id], [null, false, false, 'leitura']);
+  assert.deepEqual([e.atual, e.rodando, e.comecou, e.proximo.id], [null, false, false, 'mentalidade']);
   c = iniciarBloco(c, 'leitura', T('09:00'));
   e = estadoDoCronometro(c, T('09:10'));
   assert.deepEqual([e.atual.id, e.atual.decorrido, e.atual.restante, e.rodando], ['leitura', 600, 300, true]);
@@ -31,7 +31,7 @@ test('cronômetro: começa, pausa (o acumulado absorve), retoma, estoura, avanç
   assert.deepEqual([e.atual.decorrido, e.atual.estourou, e.atual.estouro, e.atual.restante], [1200, true, 300, 0], 'passou dos 15 min: estourou 5');
   c = avancar(c, T('09:40'));
   e = estadoDoCronometro(c, T('09:40'));
-  assert.deepEqual([e.atual.id, e.blocos[0].feito, e.blocos[0].decorrido, e.proximo.id], ['treinamento', true, 1200, 'reuniao']);
+  assert.deepEqual([e.atual.id, e.blocos.find((b) => b.id === 'leitura').feito, e.blocos.find((b) => b.id === 'leitura').decorrido, e.proximo.id], ['treinamento', true, 1200, 'reuniao']);
   c = avancar(c, T('10:25'));
   c = avancar(c, T('12:25'));
   e = estadoDoCronometro(c, T('12:30'));
@@ -39,7 +39,7 @@ test('cronômetro: começa, pausa (o acumulado absorve), retoma, estoura, avanç
   assert.equal(fmtTempo(e.totalDecorrido), '3:05:00');
   assert.equal(fmtTempo(59), '0:59');
   // avançar do zero começa a leitura
-  assert.equal(estadoDoCronometro(avancar(cronometroInicial(), T('09:00')), T('09:00')).atual.id, 'leitura');
+  assert.equal(estadoDoCronometro(avancar(cronometroInicial(), T('09:00')), T('09:00')).atual.id, 'mentalidade');
   // lixo no banco não derruba a tela
   assert.equal(estadoDoCronometro({ atual: 'inventado', blocos: { leitura: { acumulado: 'x' } } }, T('09:00')).atual, null);
 });
@@ -125,13 +125,14 @@ test('a produção da semana: o estado de cada demanda vem da tarefa/card; por p
   assert.deepEqual([p.total, p.concluidas, p.pct, p.atrasadas, p.semAgendar], [5, 2, 40, 1, 1]);
 });
 
-test('os slides: capa, abertura, leitura, treinamento, um por tópico, fechamento com as demandas', () => {
+test('os slides: capa, mentalidade, abertura, leitura, treinamento, um por tópico, fechamento com as demandas', () => {
   const r = roteiroLocal({ pautas: ['A', 'B'], mes: '2026-09' });
   const s = slidesDoEncontro({ data: 'segunda, 07/09', roteiro: r, mes: '2026-09', conduzidoPor: 'Luiz', treinamentoPor: 'Karen', demandas: [{ pessoa_nome: 'Emanuel', titulo: 'Fazer A' }] });
-  assert.deepEqual(s.map((x) => x.id), ['capa', 'abertura', 'leitura', 'treinamento', 'topico-0', 'topico-1', 'fechamento']);
-  assert.deepEqual(s.map((x) => x.bloco), [null, null, 'leitura', 'treinamento', 'reuniao', 'reuniao', null]);
+  assert.deepEqual(s.map((x) => x.id), ['capa', 'mentalidade', 'abertura', 'leitura', 'treinamento', 'topico-0', 'topico-1', 'fechamento']);
+  assert.deepEqual(s.map((x) => x.bloco), [null, 'mentalidade', null, 'leitura', 'treinamento', 'reuniao', 'reuniao', null]);
   assert.match(s[0].sub, /Estruturação/);
-  assert.match(s[3].sub, /quem treina: Karen/);
+  assert.match(s[1].corpo.join(' '), /Diretor.*multiplica e mede/);
+  assert.match(s[4].sub, /quem treina: Karen/);
   assert.match(s.at(-1).corpo.join(' '), /Emanuel: Fazer A/);
 });
 
