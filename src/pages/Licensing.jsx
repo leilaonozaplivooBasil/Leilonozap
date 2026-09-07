@@ -1076,17 +1076,27 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
   // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
   // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.
-  // 👤/🛡️ 07/09 — o seletor "Só o meu / Tudo" mora AQUI, uma vez, junto do
-  // seletor de seções: vale pra todas as áreas (Método, Mentalidade, ADM X-Game…).
+  // 👤/🛡️ 07/09 — o seletor "Só o meu / Tudo" vale pra todas as áreas
+  // (Método, Mentalidade, ADM X-Game…), então mora numa peça só (`escopoView`).
+  // 2ª limpeza (07/09): "o lado esquerdo está com muita letra… o Só o
+  // meu/Tudo está feio ali, bota em lugar mais estratégico" — na faixa da
+  // academia ele sai de baixo do seletor de seções (que já ia bem sozinho)
+  // e vai pro lado do NOME, lá em cima (é dali que se fala "como quem" a
+  // pessoa está vendo a tela). Fora da faixa, os dois continuam juntos,
+  // exatamente como sempre foram.
+  const navegacaoSecoes = (
+    <CentralVendasTabs
+      value={catalogSubTab}
+      onChange={setCatalogSubTab}
+      clientesCount={myClients.length}
+      escuro={naTopCollege}
+    />
+  );
+  const escopoView = <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} compacto />;
   const seletorDaCentral = (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <CentralVendasTabs
-        value={catalogSubTab}
-        onChange={setCatalogSubTab}
-        clientesCount={myClients.length}
-        escuro={naTopCollege}
-      />
-      <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} compacto />
+      {navegacaoSecoes}
+      {escopoView}
     </div>
   );
   const saudacaoDaHora = (() => {
@@ -1127,7 +1137,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             (preta, com as duas marcas e o professor). Fora dela, o cabeçalho
             de sempre: a faculdade não assina a Carteira nem os Pedidos. */}
         {naTopCollege ? (
-          <HeroTopCollege saudacao={saudacaoDaHora} nome={shortName} seletor={seletorDaCentral} />
+          <HeroTopCollege saudacao={saudacaoDaHora} nome={shortName} seletor={navegacaoSecoes} escopo={escopoView} />
         ) : (
           <div className="flex flex-col gap-4 mb-6 sm:mb-8">
             <div>
