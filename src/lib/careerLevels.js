@@ -80,3 +80,18 @@ export const levelColor = (id) => (BY_ID[normalizeLevel(id)] || DEFAULT_LEVEL).c
 
 /** Nome amigável. */
 export const levelName = (id) => (BY_ID[normalizeLevel(id)] || DEFAULT_LEVEL).name;
+
+// 🎮 DIR-81 (dono, 07/09/2026) — quem tem DIREITO ao X-Game/Compromisso
+// automático: "todas as pessoas que têm direito... só os influencers e
+// usuário que a gente não colocou" — a mesma régua já usada pra Loja & Vendas
+// (Gabriel, 08/08/2026: "estoque próprio e PDV valem DO VENDEDOR PRA CIMA").
+// Do vendedor pra cima inclui o bloco inteiro da diretoria — só quem só
+// divulga (influenciador) ou só compra (usuário) fica de fora.
+const NIVEIS_SEM_XGAME = ['usuario', 'influenciador', 'influencer'];
+
+/** Tem direito ao X-Game (a jornada/lista/quadro automáticos do Compromisso)? */
+export function temDireitoAoXGame(careerLevels) {
+  const niveis = normalizeLevels(careerLevels);
+  if (!niveis.length) return false;
+  return !niveis.every((n) => NIVEIS_SEM_XGAME.includes(n));
+}

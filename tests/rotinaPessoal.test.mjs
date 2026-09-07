@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   itemDaRotina, ordenarRotina, incluirNaRotina, editarNaRotina, excluirDaRotina,
-  estadoDaRotina, deveGerarSozinha, rotinaEmVigor, valeAPartirDe,
+  estadoDaRotina, deveGerarSozinha, rotinaEmVigor, valeAPartirDe, devePreAbrirAutomatico,
 } from '../src/lib/rotinaPessoal.js';
 
 const CASA = [{ hora: '05:00', titulo: 'Acordar' }, { hora: '08:00', titulo: 'Caminho pra empresa' }];
@@ -112,6 +112,22 @@ test('perfil ausente não quebra e não gera', () => {
   assert.equal(deveGerarSozinha({ perfil: null, dia: '2026-09-06', hojeISO: '2026-09-06', tarefasDoDia: [] }), false);
   assert.equal(estadoDaRotina(null).automatica, false);
   assert.equal(estadoDaRotina(undefined).propria, false);
+});
+
+// ─── DIR-81 — a casa liga sozinha quem nunca decidiu nada ────────────────────
+
+test('quem nunca mexeu em nada: a casa pode ligar sozinha', () => {
+  assert.equal(devePreAbrirAutomatico({}), true);
+  assert.equal(devePreAbrirAutomatico(null), true);
+});
+
+test('quem já ligou por conta própria: a casa não mexe de novo', () => {
+  assert.equal(devePreAbrirAutomatico(LIGADA), false);
+});
+
+test('quem já PEDIU pra parar: a casa nunca religa sozinha, mesmo com automatica false', () => {
+  assert.equal(devePreAbrirAutomatico({ rotina_automatica: false, rotina_automatica_recusada: true }), false);
+  assert.equal(estadoDaRotina({ rotina_automatica_recusada: true }).recusada, true);
 });
 
 test('editar a rotina vale a partir de AMANHÃ — o dia de hoje fica como está', () => {

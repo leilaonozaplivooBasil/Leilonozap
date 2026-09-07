@@ -82,7 +82,22 @@ export function estadoDaRotina(perfil) {
     // liga na primeira geração e só desliga se a pessoa pedir
     automatica: p.rotina_automatica === true,
     desde: p.rotina_automatica_desde || null,
+    // DIR-81 — ela PEDIU pra parar (botão "parar de gerar todo dia"). Diferente
+    // de "nunca decidiu": é o que trava o cron de religar sozinho.
+    recusada: p.rotina_automatica_recusada === true,
   };
+}
+
+/**
+ * DIR-81 — dono: "eu quero mudar a questão de depender delas gerarem
+ * automáticas, já vamos deixar abertas pra incentivá-las". Quem tem direito
+ * ao X-Game não devia precisar clicar uma vez antes da rotina se repetir
+ * sozinha — a CASA liga por ela, na primeira vez que o cron a vir. Só não
+ * liga quem JÁ decidiu (ligou por conta própria, ou pediu pra parar).
+ */
+export function devePreAbrirAutomatico(perfil) {
+  const estado = estadoDaRotina(perfil);
+  return !estado.automatica && !estado.recusada;
 }
 
 /**
