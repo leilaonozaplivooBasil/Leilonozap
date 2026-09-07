@@ -243,16 +243,21 @@ test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no
   assert.deepEqual([u.status, u.agendada_para, u.hora, u.tarefa_id, u.card_id], ['agendada', '2026-09-08', '10:30', t.id, c.id]);
   await painel.locator('[data-teste="demanda-andamento"]').first().waitFor();
   assert.match(await texto(pagina, '[data-teste="andamento"]'), /agendada · 08\/09 10:30.*Mandar a proposta/);
-  // o CEO manda uma demanda daqui pra Carla
-  await painel.locator('[data-teste="nova-demanda-titulo"]').fill('Preparar a live de quinta');
-  await painel.locator('[data-teste="nova-demanda-pessoa"]').selectOption('carla');
-  await painel.locator('[data-teste="nova-demanda-mandar"]').click();
-  await pagina.getByText(/Demanda no painel de Carla: "Preparar a live de quinta"/).waitFor();
-  const nova = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_demandas' && e.tipo === 'insert').at(-1).linhas[0];
-  assert.deepEqual([nova.pessoa_id, nova.origem, nova.status, String(nova.prazo_em).slice(0, 10)], ['carla', 'ceo', 'recebida', '2026-09-11']);
-  // a semana de todo mundo é a tabela de cima (o painel embutido não repete): Carla 1/2, Emanuel 0/1
-  await pagina.waitForFunction(() => /1\/2/.test(document.querySelector('[data-teste="visao-linha"][data-pessoa="carla"]')?.textContent || ''));
-  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="carla"]').textContent()).replace(/\s+/g, ' '), /Carla Souza.*1\/2 · 1 sem agendar/, 'a conferida de sexta passada + a nova sem agendar');
+  // 07/09 — o CEO distribui daqui, com o MESMO Distribuir da ADM X-Game: a pessoa aberta vem escolhida, mas dá pra trocar
+  const distribuir = painel.locator('[data-teste="distribuir-tarefa"]');
+  await distribuir.waitFor();
+  assert.equal(await distribuir.locator('[data-teste="pessoa"]').inputValue(), 'emanuel', 'a pessoa aberta já vem como responsável');
+  await distribuir.locator('[data-teste="pessoa"]').selectOption('carla');
+  await distribuir.locator('[data-teste="titulo"]').fill('Preparar a live de quinta');
+  await distribuir.locator('[data-teste="previa"]').waitFor();
+  await distribuir.locator('[data-teste="distribuir"]').click();
+  await pagina.getByText(/Tarefa distribuída pra Carla/).waitFor();
+  const nova = (await escritas(pagina)).filter((e) => e.tabela === 'metodo_tarefas' && e.tipo === 'insert').at(-1).linhas[0];
+  assert.deepEqual([nova.user_id, nova.origem, nova.data, nova.criado_por_id], ['carla', 'xperf', '2026-09-08', 'dono'], 'entra no Compromisso da Carla, no próximo dia útil, assinada pelo CEO');
+  // a tarefa distribuída aparece na lista do dia escolhido (08/09) da Carla, dentro do próprio Distribuir
+  await distribuir.locator('[data-teste="tarefas-dia"]').getByText('Preparar a live de quinta').waitFor();
+  // a semana de todo mundo é a tabela de cima (o painel embutido não repete); a tarefa é de amanhã, então a semana da Carla ainda não muda
+  assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="carla"]').textContent()).replace(/\s+/g, ' '), /Carla Souza.*1\/1/, 'a demanda conferida de sexta passada continua 1/1');
   assert.match((await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*0\/1/);
   assert.equal(await painel.locator('[data-teste="painel-todos"]').count(), 0, 'embutido não repete a semana de todo mundo');
   await pagina.screenshot({ path: path.join(FOTOS, 'painel-corporativo.png'), fullPage: true });
@@ -264,7 +269,7 @@ test('PAINEL CORPORATIVO (a própria pessoa): o Emanuel vê o dele, agenda só n
   const painel = pagina.locator('[data-teste="painel-corporativo"]');
   await painel.locator('[data-teste="demanda-recebida"]').waitFor();
   assert.equal(await painel.getAttribute('data-pessoa'), 'emanuel');
-  assert.equal(await painel.locator('[data-teste="mandar-demanda"]').count(), 0, 'Sócio Executivo não manda demanda');
+  assert.equal(await painel.locator('[data-teste="distribuir-tarefa"]').count(), 0, 'Sócio Executivo não distribui tarefa daqui');
   assert.equal(await painel.locator('[data-teste="encontro"]').count(), 0);
   const d = painel.locator('[data-teste="demanda-recebida"][data-id="d1"]');
   // devolver com motivo

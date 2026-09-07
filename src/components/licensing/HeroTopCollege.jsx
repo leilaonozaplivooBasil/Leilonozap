@@ -124,7 +124,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               Ele FICA nesta coluna de propósito: agora é a única coisa clicável
               da faixa, e comando de navegação mora do lado de quem assina a
               tela, não em cima da figura. */}
-          {seletor && <div className="mt-6 sm:mt-7 max-w-xs">{seletor}</div>}
+          {seletor && <div className="mt-6 sm:mt-7 max-w-xl">{seletor}</div>}
         </div>
 
         {/* ────────── coluna 2: o professor e a fala dele ──────────
