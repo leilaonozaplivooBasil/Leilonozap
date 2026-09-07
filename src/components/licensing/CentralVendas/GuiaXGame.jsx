@@ -223,7 +223,7 @@ export default function GuiaXGame({ currentUser = null }) {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">Top College · X-EOS</p>
-            <h2 className="text-lg sm:text-xl font-black text-white leading-tight">Como jogar o X-GAME</h2>
+            <h2 className="text-lg sm:text-xl font-black text-white leading-tight">Guia do Usuário</h2>
             <p className="text-white/60 mt-0.5">
               Entrar, achar suas tarefas, marcar o que fez e entender sua pontuação. Do zero, pelo celular.
             </p>
@@ -245,7 +245,7 @@ export default function GuiaXGame({ currentUser = null }) {
         </div>
 
         <div className="mt-3">
-          <TiraDuvidas usuario={currentUser} pagina="Guia do X-GAME (Como jogar)" />
+          <TiraDuvidas usuario={currentUser} pagina="Guia do Usuário" />
         </div>
       </div>
 
