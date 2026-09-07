@@ -1,5 +1,5 @@
 import React from 'react';
-import ExecutivoHero from './ExecutivoHero';
+import FiguraDoHero from './FiguraDoHero';
 
 // 🎓 DIR-62/67 — A FAIXA DA ACADEMIA no topo do painel.
 //
@@ -174,34 +174,23 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               imagem de terceiro nenhuma. */}
           <div
             aria-hidden="true"
-            className="relative pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end select-none overflow-hidden"
-            style={{
-              // derrete nos QUATRO lados: entra pela esquerda, sai pela direita
-              // e pelo pé, então o professor se funde na página em vez de
-              // terminar numa aresta reta (ordem do dono: "sumindo na lateral")
-              // 07/09 — a máscara lateral existia pra esconder a BORDA RETA da
-              // foto antiga. O executivo é desenho recortado (sem fundo) e o
-              // braço dele aponta pra ESQUERDA: a máscara lateral comeria
-              // justamente o dedo. Ficou só o pé derretendo na página.
-              WebkitMaskImage: 'linear-gradient(0deg, transparent 0%, #000 14%)',
-              maskImage: 'linear-gradient(0deg, transparent 0%, #000 14%)',
-            }}
+            className="relative pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end justify-end select-none overflow-hidden"
           >
-            {/* 🔦 07/09 — DIR-83 trocou a foto de terceiro pelo Mentor do
-                elenco próprio, mas sozinho ele lia pequeno/sem graça num
-                banner deste tamanho (dono: "tá horrível"). O holofote atrás
-                (as mesmas cores azul/magenta da marca, da frase ao lado) e a
-                sombra projetada dão o "professor em destaque" da DIR-62 sem
-                precisar de imagem de terceiro nenhuma. */}
+            {/* 🔦 o holofote atrás da figura: as mesmas cores azul/magenta da
+                frase ao lado. É ele que dá o "professor em destaque" da
+                DIR-62 sem depender do que a figura é — foto ou desenho.
+                A máscara de borda mora DENTRO do FiguraDoHero, porque foto
+                (retângulo com fundo) e desenho (recortado) pedem recortes
+                diferentes. */}
             <div
               aria-hidden="true"
               className="absolute inset-0"
               style={{ background: 'radial-gradient(48% 64% at 64% 82%, rgba(59,111,246,0.38), transparent 68%), radial-gradient(40% 52% at 80% 58%, rgba(230,46,139,0.24), transparent 70%)' }}
             />
-            {/* o executivo nasce no tamanho grande (220) e ENCOLHE via scale
-                nas telas menores — um desenho só, três tamanhos. */}
+            {/* a figura nasce no tamanho grande (220) e ENCOLHE via scale nas
+                telas menores — uma peça só, três tamanhos. */}
             <div className="relative origin-bottom scale-[0.591] sm:scale-[0.909] lg:scale-100" style={{ filter: 'drop-shadow(0 14px 30px rgba(0,2,12,0.72))' }}>
-              <ExecutivoHero altura={220} />
+              <FiguraDoHero altura={220} />
             </div>
           </div>
         </div>
