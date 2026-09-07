@@ -13,11 +13,13 @@ import useArrastavel from '@/hooks/useArrastavel';
 import {
   ESTADO_ABERTO, LISTAS_MODELO, CARD_EXEMPLO, CORES_LISTA, ICONES_LISTA, EMOJIS_LISTA, ehEmoji,
   estaFeito, progressoChecklist, atrasado, marcarFeito, reabrir,
-  alternarItem, adicionarItem, removerItem, cartoesDaLista, feitosNaMesa, semLista,
+  alternarItem, adicionarItem, removerItem, cartoesDaLista, semLista,
   tarefaDoCartao, resumoDoQuadro, reordenarListas, feitosDaLista, reordenarCartoes, saidaDoConflito,
   faixaDeHorario, horaSugerida, conflitosDeHorario,
+  ordemDoTopo, TITULO_NOVO_CARD,
 } from '@/lib/quadroCompromisso';
 import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } from '@/lib/assistenteDeLista';
+import './quadro.css';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import { HABITOS } from '@/lib/metodo';
@@ -137,9 +139,13 @@ function Foto({ user, nome, tamanho = 26 }) {
 }
 
 /** Texto que vira campo ao clicar. Enter salva, Esc desiste, vazio não salva. */
-function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, tamanhoTexto }) {
-  const [editando, setEditando] = useState(false);
-  const [txt, setTxt] = useState(valor || '');
+function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, tamanhoTexto, autoEditar = false }) {
+  // ➕ DIR-81 — `autoEditar` faz o card recém-criado já nascer com o cursor
+  // dentro. Sem isso o `+` trocaria uma caçada (rolar até o pé) por outra
+  // (achar onde clicar pra nomear).
+  const [editando, setEditando] = useState(!!autoEditar);
+  // e nasce VAZIO, não com "Novo tópico" pra apagar antes de escrever
+  const [txt, setTxt] = useState(autoEditar ? '' : (valor || ''));
   useEffect(() => { if (!editando) setTxt(valor || ''); }, [valor, editando]);
   const salvar = () => {
     const t = txt.trim();
@@ -161,7 +167,7 @@ function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, t
       onChange={(e) => setTxt(e.target.value)}
       onBlur={salvar}
       onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') { setTxt(valor || ''); setEditando(false); } }}
-      className={`rounded px-1 -mx-1 outline-none w-full bg-white ring-2 ring-[#0B5FFF]/40 ${className}`}
+      className={`rounded px-1 -mx-1 outline-none w-full bg-white xeos-cru ring-2 ring-[#0B5FFF]/40 ${className}`}
     />
   );
 }
@@ -177,7 +183,7 @@ function PainelDaLista({ lista, onEscolher, onFechar }) {
   const [aba, setAba] = useState(ehEmoji(nomeDoIcone(lista)) ? 'emoji' : 'icone');
   const marcas = aba === 'emoji' ? EMOJIS_LISTA : ICONES_LISTA;
   return (
-    <div className="absolute z-30 left-0 w-[268px] rounded-xl p-3.5 shadow-2xl"
+    <div className="absolute z-30 left-0 w-[268px] rounded-xl p-3.5 shadow-2xl xeos-card-claro"
       style={{ background: '#FFFFFF', top: T.cabecalho + 4 }} data-teste="painel-da-lista"
       onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between mb-2.5">
@@ -251,7 +257,7 @@ function Entrevista({ assistente, onGerar, onFechar }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,2,12,0.72)' }} onClick={onFechar}>
-      <div className="w-full max-w-md rounded-2xl overflow-hidden max-h-[88vh] flex flex-col"
+      <div className="w-full max-w-md rounded-2xl overflow-hidden max-h-[88vh] flex flex-col xeos-card-claro"
         style={{ background: '#FFFFFF' }} onClick={(e) => e.stopPropagation()} data-teste="entrevista">
         <div className="px-5 py-4 flex items-start gap-3" style={{ background: '#0B5FFF' }}>
           <Sparkles className="w-5 h-5 text-white/90 mt-0.5 shrink-0" />
@@ -332,7 +338,7 @@ function Entrevista({ assistente, onGerar, onFechar }) {
 function Coluna({
   lista, cartoes, feitos, dono, hoje, indice, painelAberto, doDia, alvo,
   onPainel, onMudarLista, onExcluirLista, onReordenar, onAssistente, onArrastandoSobre,
-  onMudarCard, onExcluirCard, onVirarTarefa, onIr, onReordenarCard, valorNovo, onNovo, onCriar,
+  onMudarCard, onExcluirCard, onVirarTarefa, onIr, onReordenarCard, valorNovo, onNovo, onCriar, onCriarNoTopo, recemCriado,
 }) {
   const p = paleta(lista.cor);
   const assistente = assistenteDaLista(lista.nome);
@@ -414,8 +420,23 @@ function Coluna({
           <p className="text-[12px] font-semibold px-1 text-nz-tinta-fraca" data-teste="ficha-da-lista">{resumoFicha}</p>
         )}
 
+        {/* ➕ DIR-81 — O MAIS NO TOPO. O campo do pé continua existindo (quem
+            já leu a lista inteira escreve lá mesmo), mas pra QUEM CHEGA agora o
+            caminho de criar não pode ser "role a coluna toda até o fim". */}
+        <button
+          type="button"
+          onClick={() => onCriarNoTopo?.(lista.id)}
+          data-teste="mais-no-topo"
+          title="novo tópico aqui em cima"
+          aria-label="adicionar tópico no topo da lista"
+          className="w-full rounded-xl flex items-center justify-center transition-colors"
+          style={{ height: 34, background: 'rgba(74,222,128,0.10)', border: '1px dashed rgba(74,222,128,0.45)', color: '#4ADE80' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(74,222,128,0.20)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(74,222,128,0.10)'; }}
+        ><Plus className="w-4 h-4" /></button>
+
         {cartoes.map((cartao) => (
-          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia} listaNome={lista.nome}
+          <Cartao key={cartao.id} cartao={cartao} dono={dono} hoje={hoje} doDia={doDia} listaNome={lista.nome} autoEditar={cartao.id === recemCriado}
             onMudar={onMudarCard} onExcluir={onExcluirCard} onVirarTarefa={onVirarTarefa} onIr={onIr} onReordenar={onReordenarCard} onArrastandoSobre={onArrastandoSobre} />
         ))}
 
@@ -435,18 +456,12 @@ function Coluna({
             ))}
           </>
         )}
-
-        <div className="mt-auto">
-          {/* 🔗 06/09 — a entrada fala pra onde vai: o quadro é certo; "também no meu
-              dia" e a hora (= a Jornada) são escolha, ditas por extenso embaixo */}
-          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} />
-        </div>
       </div>
     </div>
   );
 }
 
-function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onExcluir, onVirarTarefa, onIr, onReordenar, onArrastandoSobre }) {
+function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onExcluir, onVirarTarefa, onIr, onReordenar, onArrastandoSobre, autoEditar = false }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
   const [abrindoHora, setAbrindoHora] = useState(false);
@@ -501,7 +516,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
       onClickCapture={engolirCliqueDoArrasto}
       data-teste="cartao-quadro"
       data-cartao={cartao.id}
-      className="group rounded-lg overflow-hidden relative"
+      className="group rounded-lg overflow-hidden relative xeos-card-claro"
       style={{
         background: '#FFFFFF',
         boxShadow: desloc ? '0 16px 32px rgba(0,0,0,0.4)' : '0 1px 2px rgba(9,30,66,0.25)',
@@ -550,6 +565,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
 
           <div className="flex-1 min-w-0">
             <Editavel
+              autoEditar={autoEditar}
               valor={cartao.titulo}
               onSalvar={(t) => onMudar({ ...cartao, titulo: t })}
               estilo={{ color: feito ? '#7A869A' : '#172B4D', textDecoration: feito ? 'line-through' : 'none' }}
@@ -718,7 +734,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
   const [carregando, setCarregando] = useState(true);
   const [novo, setNovo] = useState({});
   const [novaLista, setNovaLista] = useState('');
-  const [feitoAberto, setFeitoAberto] = useState(false);
   const [painelDe, setPainelDe] = useState(null);      // id da lista com o painel aberto
   const [entrevistando, setEntrevistando] = useState(null); // { lista, assistente }
   const [listaAlvo, setListaAlvo] = useState(null);         // a coluna sob o card arrastado
@@ -737,7 +752,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
 
   const resumo = useMemo(() => resumoDoQuadro(cartoes, hoje), [cartoes, hoje]);
   const orfaos = useMemo(() => semLista(cartoes), [cartoes]);
-  const feitos = useMemo(() => feitosNaMesa(cartoes, hoje), [cartoes, hoje]);
 
   const criarLista = async (nome, cor) => {
     const n = String(nome || '').trim();
@@ -819,6 +833,23 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
     if (criada) onTarefaCriada?.(criada);
     toast.success(fraseEntrou({ cartao: data, tarefa: criada }, { listaNome: listas.find((l) => l.id === listaId)?.nome }));
   };
+  // ➕ DIR-81 — cria o card SEM digitar nada, e no TOPO da coluna.
+  // Ordem do dono: "é só botar um mais... e aí, quando eu adicionar, já entra o
+  // novo". Nasce com um nome provisório e com o cursor dentro (recemCriado) —
+  // criar e obrigar a caçar onde nomear seria trocar uma rolagem por outra.
+  const [recemCriado, setRecemCriado] = useState(null);
+  const criarNoTopo = async (listaId) => {
+    if (!uid) return;
+    const linha = {
+      user_id: uid, lista_id: listaId, titulo: TITULO_NOVO_CARD, coluna: ESTADO_ABERTO,
+      habito: null, checklist: [], ordem: ordemDoTopo(cartoes, listaId),
+    };
+    const { data, error } = await supabase.from('metodo_quadro').insert(linha).select().single();
+    if (error) { toast.error('Não deu pra criar o card'); return; }
+    setCartoes((cs) => [...cs, data]);
+    setRecemCriado(data.id);
+  };
+
   const mudar = async (cartaoNovo) => {
     setCartoes((cs) => cs.map((c) => (c.id === cartaoNovo.id ? cartaoNovo : c)));
     const { id, created_date: _criado, ...resto } = cartaoNovo;
@@ -945,6 +976,8 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 valorNovo={novo[lista.id] || { titulo: '', noDia: false, hora: '' }}
                 onNovo={(v) => setNovo((n) => ({ ...n, [lista.id]: v }))}
                 onCriar={() => criar(lista.id)}
+                onCriarNoTopo={criarNoTopo}
+                recemCriado={recemCriado}
               />
             );
           })}

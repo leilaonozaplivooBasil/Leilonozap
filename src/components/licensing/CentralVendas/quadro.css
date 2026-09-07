@@ -1,0 +1,26 @@
+/* 🗂️ O QUADRO DENTRO DO PALCO ESCURO — DIR-81.1
+ *
+ * O palco (.xeos-palco, index.css) pinta TODO input de texto branco com
+ * !important — certo pras superfícies escuras dele, errado dentro do card
+ * BRANCO do quadro: vira branco-no-branco. O título "ficava transparente e só
+ * ficava preto ao sair" (quando o input vira span), e a hora "estava horrível".
+ *
+ * Duas regras do palco precisam ser vencidas, e as duas usam !important:
+ *   .xeos-palco.xeos-palco input                           → (0,2,1)
+ *   .xeos-palco.xeos-palco [class*="bg-white"]:not(.xeos-cru) → (0,4,0)
+ * Por isso a classe vai DOBRADA no seletor: (0,4,1) ganha das duas.
+ * Fica em arquivo próprio, escopado — não toca o index.css compartilhado.
+ */
+.xeos-card-claro { color-scheme: light; }
+
+.xeos-palco.xeos-palco .xeos-card-claro.xeos-card-claro input,
+.xeos-palco.xeos-palco .xeos-card-claro.xeos-card-claro textarea,
+.xeos-palco.xeos-palco .xeos-card-claro.xeos-card-claro select {
+  background-color: #FFFFFF !important;
+  color: #172B4D !important;
+  border-color: #DFE1E6 !important;
+}
+.xeos-palco.xeos-palco .xeos-card-claro.xeos-card-claro input::placeholder,
+.xeos-palco.xeos-palco .xeos-card-claro.xeos-card-claro textarea::placeholder {
+  color: #8993A4 !important;
+}

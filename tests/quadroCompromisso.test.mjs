@@ -16,6 +16,7 @@ import {
   reordenarListas, ICONES_LISTA, EMOJIS_LISTA, marcaValida, ehEmoji,
   emMinutos, emHora, fimDe, conflitosDeHorario, horaSugerida, faixaDeHorario,
   saidaDoConflito, reordenarCartoes,
+ ordemDoTopo,
 } from '../src/lib/quadroCompromisso.js';
 
 const HOJE = '2026-09-07';
@@ -417,4 +418,41 @@ describe('reordenar cards dentro da lista (DIR-77.2)', () => {
     ];
     assert.deepEqual(cartoesDaLista(comHora, 'l').map((c) => c.id), ['cedo', 'tarde']);
   });
+});
+
+// ─── DIR-81 — o + do topo ────────────────────────────────────────────────────
+
+test('DIR-81: em lista vazia o primeiro card nasce com ordem 0', () => {
+  assert.equal(ordemDoTopo([], 'l1'), 0);
+});
+
+test('DIR-81: o card novo nasce ACIMA de todos — é isso que tira a rolagem', () => {
+  const cs = [
+    { id: 'a', lista_id: 'l1', ordem: 0 },
+    { id: 'b', lista_id: 'l1', ordem: 1 },
+    { id: 'c', lista_id: 'l1', ordem: 2 },
+  ];
+  const nova = ordemDoTopo(cs, 'l1');
+  assert.ok(cs.every((c) => nova < c.ordem), 'tem que ser menor que TODAS');
+  const ordenados = cartoesDaLista([...cs, { id: 'novo', lista_id: 'l1', ordem: nova }], 'l1');
+  assert.equal(ordenados[0].id, 'novo', 'o recém-criado tem que aparecer em primeiro');
+});
+
+test('DIR-81: card de outra lista não influencia a ordem do topo', () => {
+  assert.equal(ordemDoTopo([{ id: 'x', lista_id: 'l2', ordem: -99 }], 'l1'), 0);
+});
+
+test('DIR-81: lista sem ordem nenhuma ainda põe o novo em primeiro', () => {
+  const cs = [{ id: 'a', lista_id: 'l1' }, { id: 'b', lista_id: 'l1' }];
+  const nova = ordemDoTopo(cs, 'l1');
+  const ordenados = cartoesDaLista([...cs, { id: 'novo', lista_id: 'l1', ordem: nova }], 'l1');
+  assert.equal(ordenados[0].id, 'novo');
+});
+
+test('DIR-81: quem tem HORA continua vindo antes — o novo não fura o compromisso marcado', () => {
+  const cs = [{ id: 'as8', lista_id: 'l1', hora: '08:00', ordem: 5 }];
+  const nova = ordemDoTopo(cs, 'l1');
+  const ordenados = cartoesDaLista([...cs, { id: 'novo', lista_id: 'l1', ordem: nova }], 'l1');
+  assert.equal(ordenados[0].id, 'as8', 'card com hora é compromisso marcado e vem primeiro');
+  assert.equal(ordenados[1].id, 'novo');
 });

@@ -4291,3 +4291,62 @@ hoje só muda por botão.
 
 **Das 5 falhas restantes:** 4 da DIR-70 e 1 da DIR-72 — todas do menu que o
 outro chat redesenhou (o item virou "ADM X-Game" no commit db9dd64f).
+
+---
+
+## REL-81 — O mais no topo da coluna (DIR-81)
+
+**Aprovação:** dono, 07/09/2026 — *"antes de você organizar o Xavier, só pega
+aqui no nosso quadro"*.
+
+**O que foi feito**
+
+1. **`ordemDoTopo(cartoes, listaId)`** em `quadroCompromisso.js`: a ordem de quem
+   nasce agora — menor que a de todos, sem furar quem tem HORA (regra da DIR-77).
+2. **Um `+` no topo de cada coluna**, translúcido, no verde claro: clicar cria
+   o card **sem digitar nada** e ele entra **em primeiro**.
+3. **O card nasce já aberto pra digitar** (`autoEditar` no `Editavel`, com o
+   campo vazio — não com "Novo tópico" pra apagar antes). Criar e obrigar a
+   caçar onde nomear seria trocar uma rolagem por outra.
+4. O campo *"escreva o tópico"* do pé **continua**: quem já leu a lista escreve
+   ali. O `+` somou, não substituiu.
+
+**Verificado**
+
+- 5 testes novos; suíte **1335/1335**; build; **lint limpo nos arquivos
+  tocados** (é o portão que faltava — REL-80 saiu com um import morto porque eu
+  não rodava lint; agora rodo).
+- Prova em navegador: **4/4 da DIR-81, zero erro de console** — o `+` acima dos
+  cards, 3 → 4 cards sem digitar, o novo em primeiro com `input` dentro, o campo
+  do pé de pé. Mutação: com a mudança guardada (`git stash`), as 4 caem.
+- Sobras removidas no caminho: `feitoAberto`, o `feitos` do rodapé e o import
+  `feitosNaMesa` — órfãos da gaveta que a DIR-77.1 aposentou.
+
+**Sobre as 22 asserções vermelhas (282/304)**
+
+- 5 do menu da Top College (DIR-70/72), já atribuídas ao redesenho da sessão
+  paralela em rodadas anteriores.
+- **17 da Agenda do Hábito 4 (DIR-49/50/51/54/73).** Provei que não são minhas:
+  guardei a mudança e rodei — **caem igual sem ela**. A causa é o seletor
+  "Só o meu / Tudo" da sessão paralela, que virou padrão: o super admin passou
+  a entrar como usuário comum e a Agenda mudou nos DOIS escopos (em "tudo" caem
+  30). São réguas escritas antes do seletor, medindo uma tela que não existe
+  mais. **Não reescrevi no escuro**: a tela é da sessão paralela, e a régua nova
+  tem que sair da spec dela. Ficou anotado no próprio harness.
+- Também endureci a asserção do atraso da cabeça (DIR-78): amostra em 5
+  instantes, porque nos primeiros 12% do ciclo corpo e cabeça estão ambos em
+  repouso e uma amostra única caía ali às vezes.
+
+**Erro meu no processo, pego a tempo:** estava no `main` local desde a auditoria
+das migrações; o commit foi feito no branch designado, com o `main` fundido nele.
+
+**Adendo (07/09, após rebase em bdb5e407/95cb1fb1):** a sessão paralela passou
+a mostrar o chip de horário do card **só depois que ele entra no dia**
+(`cartao.virou_tarefa_id &&`); card só-no-quadro ganha hora por "levar pro meu
+dia", que abre o mesmo editor, e a criação da tarefa passou pro botão
+`confirmar-pro-dia` ("Entrar no dia às HH:MM"). É o modelo "três destinos" ditado
+pelo dono — **não é regressão**; a feature da DIR-77 está inteira. A prova foi
+recolocada nesse caminho (e um campo nulo deixou de virar CRASH que matava o
+resto da corrida). Resultado final: **284/306, DIR-77 13/13, DIR-81 4/4, zero
+erro de console**; as 22 vermelhas seguem sendo as do menu (5) e da Agenda sob o
+novo seletor de escopo (17).
