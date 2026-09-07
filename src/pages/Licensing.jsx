@@ -1234,7 +1234,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   gestão e a diretoria; o resto vê e acompanha a apresentação. */}
               <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
-                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} escopoRotulo={visao.podeTudo ? visao.rotulo : null} />
+                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} />
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}

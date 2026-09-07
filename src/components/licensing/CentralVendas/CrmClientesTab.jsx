@@ -1456,8 +1456,6 @@ _Enviado via CRM Leilão NoZap_`;
               Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
             </h1>
           </div>
-          {/* 👤/🛡️ o seletor "só o meu / tudo" mora no topo da página (Licensing); aqui só a leitura */}
-          {visao.podeTudo && <p className={`text-[11px] ${visao.tudo ? 'text-amber-200/90' : 'text-white/45'}`} data-teste="escopo-aqui">Você está vendo: <span className="font-bold">{visao.rotulo}</span></p>}
           {/* 🧹 "Novo Vendedor" e "Novo Cliente" SAÍRAM DAQUI (ordem do dono:
               "está fora de contexto, tem que entrar lá na lista de contato").
               Conferido antes de mexer: o Hábito 03 — Lista de Networking já
