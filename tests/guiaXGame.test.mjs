@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS,
-  ENDERECOS, COTACAO_DIA_1, COTACAO_ULTIMO, progressoDasAulas,
+  ENDERECOS, COTACAO_DIA_1, COTACAO_ULTIMO, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '../src/lib/guiaXGame.js';
 import { RESUMO_MIN, TRAVA_SEM_ESTUDO, CICLO_DIAS_UTEIS, FAIXAS_TOKEN, cotacaoDoDia } from '../src/lib/xgame.js';
 
@@ -22,10 +22,39 @@ const LETRAS_NA_TELA = TELA.match(/\{ id: '[pmg]', rotulo: 'A'/g) || [];
 const br = (n) => Number(n).toFixed(2).replace('.', ',');
 
 // ── conteúdo íntegro ─────────────────────────────────────────────────
-test('as 8 aulas existem, numeradas e sem id repetido', () => {
-  assert.equal(AULAS.length, 8);
-  assert.deepEqual(AULAS.map((a) => a.n), [1, 2, 3, 4, 5, 6, 7, 8]);
-  assert.equal(new Set(AULAS.map((a) => a.id)).size, 8);
+test('as aulas são numeradas pela POSIÇÃO — tirar uma não deixa o guia contando "1, 2, 4"', () => {
+  assert.deepEqual(AULAS.map((a) => a.n), AULAS.map((_, i) => i + 1));
+  assert.equal(new Set(AULAS.map((a) => a.id)).size, AULAS.length);
+  assert.ok(AULAS.length >= 5, 'o guia ficou curto demais pra ensinar alguma coisa');
+});
+
+// 07/09/2026 — dono: "os dois passos parecem desnecessários, já que para
+// chegar ao Guia o usuário já teria passado por essas etapas só de estar ali
+// lendo". A página mora atrás do login, dentro da Top College: quem lê já
+// entrou e já achou o Método. Instrução pra situação impossível é ruído — e
+// ruído em material de inclusão digital custa a atenção de quem tem menos.
+test('o guia NÃO ensina a entrar nem a achar o Método — quem lê já fez as duas coisas', () => {
+  const ids = AULAS.map((a) => a.id);
+  assert.ok(!ids.includes('entrar'), 'voltou a aula de entrar na plataforma');
+  assert.ok(!ids.includes('achar-metodo'), 'voltou a aula de achar o Método');
+  const tudo = JSON.stringify(AULAS).toLowerCase();
+  assert.ok(!tudo.includes('código de verificação'), 'voltou o passo a passo do login');
+  assert.ok(!tudo.includes('/licensing'), 'voltou o caminho longo pelo menu');
+});
+
+test('mas o que ainda serve a quem JÁ está aqui foi preservado, como consulta', () => {
+  // o mapa das seções vizinhas
+  assert.ok(MAPA_TOP_COLLEGE.length >= 5);
+  for (const m of MAPA_TOP_COLLEGE) assert.ok(m.nome && m.o_que_e, `${m.nome} incompleto`);
+  assert.deepEqual(MAPA_TOP_COLLEGE.filter((m) => m.aqui).map((m) => m.nome), ['Guia do Usuário']);
+  assert.deepEqual(MAPA_TOP_COLLEGE.filter((m) => m.destaque).map((m) => m.nome), ['O Método']);
+  // e a dica da tela inicial, que é sobre conveniência, não sobre entrar
+  assert.ok(DICA_TELA_INICIAL.titulo && DICA_TELA_INICIAL.linhas.length >= 2);
+});
+
+test('nenhuma pergunta frequente supõe que a pessoa está de fora', () => {
+  const perguntas = PERGUNTAS.map((q) => q.p.toLowerCase()).join(' | ');
+  assert.ok(!perguntas.includes('não achei o menu'), 'quem lê isto está DENTRO do menu');
 });
 
 test('toda aula tem título e resumo — nenhuma casca vazia', () => {
@@ -90,6 +119,12 @@ test('nenhum número do X-GAME está chumbado no arquivo do guia', () => {
   assert.ok(!/\b400\b/.test(corpo), '400 chumbado — tem que vir de RESUMO_MIN');
 });
 
+test('a tela mostra o mapa como consulta, e não como mais uma aula pra "fazer"', () => {
+  assert.match(TELA, /data-teste="guia-atalhos"/);
+  assert.match(TELA, /MAPA_TOP_COLLEGE\.map/);
+  assert.ok(!/<Aula[\s\S]{0,200}MAPA_TOP_COLLEGE/.test(TELA), 'o mapa virou aula de novo');
+});
+
 test('a aula da comprovação explica que o mínimo é MÍNIMO — o caso do Paim', () => {
   const aula = AULAS.find((a) => a.id === 'comprovar');
   const tudo = JSON.stringify(aula);
@@ -99,10 +134,13 @@ test('a aula da comprovação explica que o mínimo é MÍNIMO — o caso do Pai
 
 // ── progresso ────────────────────────────────────────────────────────
 test('progressoDasAulas conta só o que existe e ignora id inventado', () => {
-  assert.deepEqual(progressoDasAulas([]), { feitas: 0, total: 8, pct: 0 });
-  assert.deepEqual(progressoDasAulas(AULAS.map((a) => a.id)), { feitas: 8, total: 8, pct: 100 });
-  assert.equal(progressoDasAulas(['entrar', 'nao-existe']).feitas, 1);
-  assert.equal(progressoDasAulas(['entrar', 'habitos']).pct, 25);
+  const total = AULAS.length;
+  assert.deepEqual(progressoDasAulas([]), { feitas: 0, total, pct: 0 });
+  assert.deepEqual(progressoDasAulas(AULAS.map((a) => a.id)), { feitas: total, total, pct: 100 });
+  assert.equal(progressoDasAulas(['habitos', 'nao-existe']).feitas, 1);
+  // ids de aulas que NÃO existem mais não podem inflar o progresso de quem
+  // marcou tudo antes desta mudança
+  assert.equal(progressoDasAulas(['entrar', 'achar-metodo']).feitas, 0);
 });
 
 // ── a página existe de verdade ───────────────────────────────────────
