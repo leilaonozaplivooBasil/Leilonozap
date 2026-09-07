@@ -6,17 +6,24 @@ import { X, Camera, ImagePlus, Loader2 } from 'lucide-react';
 import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
 
-// ✅ X-GAME F10.3 — O MODAL DE COMPROVAÇÃO (leve e direto, ordem do dono:
-// "não quadradão"). Um cartão só: vê a tarefa, abre o Instagram se for o
-// caso, tira a foto NA HORA (câmera de verdade, via getUserMedia — funciona
+// ✅ X-GAME F10.3 → DIR-84 — O MODAL DE COMPROVAÇÃO (leve e direto, ordem do
+// dono: "não quadradão"). Um cartão só: vê a tarefa, abre o Instagram se for
+// o caso, tira a foto NA HORA (câmera de verdade, via getUserMedia — funciona
 // no computador e no celular) ou escolhe da galeria, vê o preview e conclui.
 // A validação (hash anti-reuso, upload, IA de visão) fica com o pai — aqui é
 // só a experiência.
+//
+// 🗣️ DIR-84 — quando a IA nota uma incoerência (ex.: comprova pré-treino
+// com foto deitada na cama) ela não reprova nem manda pro gestor de cara:
+// pergunta pra pessoa. `pergunta` vindo do pai troca o cartão inteiro por
+// essa segunda etapa — mostra a pergunta, pede a explicação e reenvia SEM
+// pedir a imagem de novo (o pai já guardou o que foi upado).
 
-export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, onFechar, onComprovar }) {
+export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, pergunta, onFechar, onComprovar }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState('');
   const [texto, setTexto] = useState('');   // resumo do aprendizado OU link opcional do insta
+  const [justificativa, setJustificativa] = useState('');
   const [avisoCola, setAvisoCola] = useState(''); // 🚫 tentou colar no resumo
   const [cameraAberta, setCameraAberta] = useState(false);
   const videoRef = useRef(null);
@@ -90,6 +97,51 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, onFe
     evento.preventDefault();
     setFile(imagens[0]);
   };
+
+  // 🗣️ DIR-84 — a IA tem uma pergunta. É uma etapa própria: SEM câmera, SEM
+  // trocar imagem — a imagem já enviada está fixa, só a explicação da
+  // pessoa muda o resultado. Uma chance só (o pai não manda pergunta de novo
+  // na segunda rodada — se ainda ficar em dúvida, vai pro gestor).
+  if (pergunta) {
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()} data-teste="comprovar-modal-justificativa">
+          <div className="flex items-start justify-between gap-3 px-5 pt-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">🤖 a IA quer confirmar</p>
+              <p className="text-sm font-bold text-nz-tinta truncate">{tarefa?.hora ? `${tarefa.hora} · ` : ''}{tarefa?.titulo}</p>
+            </div>
+            <button type="button" onClick={onFechar} className="shrink-0 rounded-full p-1.5 text-nz-tinta-fraca hover:bg-nz-cinza-fundo hover:text-nz-tinta">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-sm font-semibold text-nz-tinta bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5" data-teste="pergunta-ia">
+              {pergunta}
+            </p>
+            <Textarea
+              autoFocus
+              placeholder="explica pra IA o que essa foto mostra..."
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              data-teste="justificativa-ia"
+              className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[90px] rounded-xl"
+            />
+            {erro && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{erro}</p>}
+            <Button
+              onClick={() => onComprovar({ justificativa })}
+              disabled={!justificativa.trim() || enviando}
+              data-teste="enviar-justificativa"
+              className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white rounded-xl h-11 text-sm font-bold disabled:opacity-50"
+            >
+              {enviando ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> A IA está reavaliando...</>) : 'Enviar explicação'}
+            </Button>
+            <p className="text-[10px] text-center text-nz-tinta-fraca">esta é a sua chance de esclarecer — depois disso, se a dúvida continuar, vai pra análise do gestor</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>

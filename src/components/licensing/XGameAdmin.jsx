@@ -346,6 +346,15 @@ export default function XGameAdmin() {
                         {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
                         {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
                       </p>
+                      {/* 🗣️ DIR-84 — chegou aqui DEPOIS de a pessoa já ter
+                          tentado se explicar pra IA e ainda assim ficou em
+                          dúvida: o gestor precisa ver essa explicação, não só
+                          a imagem, pra decidir com o mesmo contexto que a IA teve. */}
+                      {c.justificativa_pessoa && (
+                        <p className="text-[10px] text-gray-600 italic bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-0.5">
+                          🗣️ a pessoa explicou: "{c.justificativa_pessoa}"
+                        </p>
+                      )}
                       {reprovando?.id === t.id && (
                         <div className="flex items-center gap-1.5 pt-1">
                           <Input placeholder="motivo (a pessoa vai ler)" value={reprovando.motivo} onChange={(e) => setReprovando({ ...reprovando, motivo: e.target.value })} className="h-7 text-[11px] bg-white border-gray-300" />

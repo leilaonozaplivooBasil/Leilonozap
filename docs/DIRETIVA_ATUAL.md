@@ -12,6 +12,54 @@
 
 ---
 
+## DIR-84 — A validação da X-Game vira "o maior validador do caralho"
+
+**Emitida por:** dono (07/09/2026), depois de confirmar que a IA em questão
+era o validador de comprovações da X-Game (`xgameValidarPrint.js`): *"a
+gente tem que pegar as comprovações e ela tem que pensar. Não deixa a foto
+repetida. Se a pessoa está comprovando um pré-treino com uma imagem deitada
+na cama, com uma imagem bebendo água, ela vai ter que perguntar pra pessoa
+justificar, antes mesmo de validar direto. Mas ela tem que cruzar imagem,
+ela tem que ser o maior validador do caralho pra ficar tudo automático e
+pouco ter intervenção humana. Na verdade tem que ser intervenção humana
+zero — ela tem que ser mais foda que humano. Tanto de print, tanto de link
+de endereço, tanto de imagem colada."*
+
+**Data:** 07/09/2026.
+
+**O que já existia:** a IA (F10.2) olhava UMA imagem isolada e devolvia
+aprovada/reprovada/dúvida; dúvida caía DIRETO na fila do gestor — humano
+acionado na primeira hesitação, o oposto do pedido. O anti-reuso só pegava
+hash EXATO do arquivo (`lib/xgame.js`) — imagem reciclada reprocessada
+(recortada, comprimida, com filtro) passava batido.
+
+**O que entra:**
+
+1. **Cruzamento obrigatório** — o prompt exige coerência explícita entre o
+   TÍTULO da tarefa e o CONTEÚDO da imagem (o exemplo do dono: pré-treino
+   com foto na cama ou só bebendo água é incoerência, não passa despercebido).
+2. **Anti-reciclagem visual** — a IA recebe as últimas fotos da MESMA
+   pessoa pro MESMO tipo de tarefa e compara a CENA (não só o arquivo).
+3. **Uma pergunta antes de qualquer humano** — incoerência real mas sem
+   certeza de má-fé vira `pergunta_para_pessoa`: a tela abre uma segunda
+   etapa pedindo a explicação dela, reenvia pra IA com a resposta, e SÓ SE
+   ainda ficar em dúvida depois disso é que cai pro gestor. A régua de
+   quando pedir/quando aceitar/quando esgotar é `lib/xgameValidacao.js`
+   (pura, 12 testes) — a chamada de rede e o prompt ficam isolados em
+   `api/functions/xgameValidarPrint.js`.
+4. **Tipo `link`** adicionado às regras (print/imagem colada já cobertos).
+5. O gestor agora VÊ a justificativa da pessoa quando o caso chega até ele
+   (`XGameAdmin.jsx`) — decide com o mesmo contexto que a IA teve.
+
+**O que NÃO muda:** o hash exato continua barrando ANTES de gastar chamada
+de IA (grátis, client-side); a janela de validade de 2h e o fluxo de quem
+aprova/reprova no painel do gestor seguem os mesmos.
+
+**Prova exigida:** os 12 testes de `xgameValidacao.test.mjs` verdes, suíte
+completa (1355 testes) sem quebra, build limpo.
+
+---
+
 ## DIR-81 — O mais no topo da coluna: adicionar sem rolar
 
 **Emitida por:** dono (07/09/2026), com o quadro aberto: *"pra adicionar,
