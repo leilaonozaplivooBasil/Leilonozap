@@ -59,7 +59,7 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
             type="button"
             title={item.label}
             onClick={abrir}
-            className={`flex min-h-[56px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center transition-colors ${
+            className={`flex min-h-[58px] w-full flex-col items-center justify-center gap-1.5 rounded-xl px-1.5 py-2.5 text-center transition-colors ${
               snapshot.isDragging
                 ? 'bg-white/20 text-nz-verde-claro shadow-lg'
                 : ativo || aberto
@@ -68,7 +68,10 @@ export default function ItemLateralGrupo({ item, indice, separador, ativo: ativo
             }`}
           >
             <MarcaOuIcone marca={item.marca} icone={Icone} className="w-5 h-5" />
-            <span className="text-[9px] font-medium leading-tight">{item.label}</span>
+            {/* 🎓 07/09 (2ª limpeza) — mesma letra da marca (Sora) que o resto
+                da lateral, um pouco maior e mais espaçada: "a tipografia da
+                logo, puxar mais pra isso… estava vazando". */}
+            <span className="text-[10px] font-semibold leading-tight tracking-wide" style={{ fontFamily: 'Sora, sans-serif' }}>{item.label}</span>
           </button>
 
           {aberto && posicao && createPortal(
