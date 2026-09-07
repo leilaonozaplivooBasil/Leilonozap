@@ -204,7 +204,9 @@ export default function Demandas() {
   const fila = useMemo(() => ordenarFila(filtrarFila(chamados, { status, tipo, busca })), [chamados, status, tipo, busca]);
 
   return (
-    <div className="min-h-screen bg-[#0b1018] px-3 sm:px-6 py-5">
+    // 📏 nz-tela-cheia, não min-h-screen: esta página também mora dentro do
+    // <main> que já desce 4rem pelo cabeçalho fixo (ver src/index.css).
+    <div className="nz-tela-cheia bg-[#0b1018] px-3 sm:px-6 py-5">
       <div className="max-w-4xl mx-auto space-y-3">
         <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-xl font-black text-white">Demandas do time</h1>

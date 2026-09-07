@@ -1112,9 +1112,18 @@ const DashboardContent = ({ user, isAdmin }) => {
        volta de tudo e virava aquelas listras brancas nas laterais do
        celular. Na Top College o fundo passa a ser o mesmo preto dos
        painéis — aí os cartões param de flutuar sobre o claro e derretem
-       na página. Fora da faculdade, nada muda: segue branco. */
+       na página. Fora da faculdade, nada muda: segue branco.
+
+       📏 07/09/2026 — `nz-tela-cheia` no lugar de `min-h-screen` (dono: "no
+       desktop, o topo da página está cortado"). O <main> do Layout já desce
+       4rem pra livrar o cabeçalho `fixed top-0`; pedir 100vh INTEIROS aqui
+       dentro deixava a página 4rem mais alta que a janela. Essas 4rem viravam
+       rolagem que não deveria existir, e bastava rolar pra que o topo do
+       painel escorregasse exatamente 4rem pra debaixo da barra — que é
+       translúcida, então aparecia borrado por trás dela e lia como "cortado".
+       Medido num Chromium: janela 830, documento 894, topo sumindo 64px. */
     <div
-      className={`flex min-h-screen ${naTopCollege ? '' : 'bg-white'}`}
+      className={`flex nz-tela-cheia ${naTopCollege ? '' : 'bg-white'}`}
       style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
     >
       <NavegacaoLateralGlobal
