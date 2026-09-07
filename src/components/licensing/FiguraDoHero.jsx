@@ -32,7 +32,7 @@ const MASCARA_FOTO = [
   'linear-gradient(0deg, transparent 0%, #000 15%, #000 88%, transparent 100%)',
 ].join(', ');
 
-export default function FiguraDoHero({ altura = 220 }) {
+export default function FiguraDoHero({ classeAltura = 'h-[220px]' }) {
   const [qual, setQual] = useState(0);
   const temFoto = qual < CAMINHOS.length;
 
@@ -44,6 +44,13 @@ export default function FiguraDoHero({ altura = 220 }) {
   // sirva de reserva.
   if (!temFoto) return null;
 
+  // 07/09 (3ª limpeza) — a altura vem em CLASSES Tailwind responsivas
+  // (`h-[…] sm:h-[…] lg:h-[…]`), não mais num número + `transform: scale`.
+  // O scale antigo só MUDA A PINTURA — a caixa no layout continuava do
+  // tamanho do desktop em qualquer tela, e a foto (mais larga que o desenho
+  // vetorial que ele substituiu) passou a estourar a largura no celular.
+  // Com a altura de verdade mudando por breakpoint, a largura automática
+  // (`w-auto`, pela proporção da imagem) acompanha corretamente em cada uma.
   return (
     <img
       src={CAMINHOS[qual]}
@@ -51,9 +58,8 @@ export default function FiguraDoHero({ altura = 220 }) {
       aria-hidden="true"
       draggable="false"
       onError={() => setQual((n) => n + 1)}
-      className="pointer-events-none select-none w-auto object-cover"
+      className={`pointer-events-none select-none w-auto object-cover ${classeAltura}`}
       style={{
-        height: altura,
         objectPosition: 'center top',
         WebkitMaskImage: MASCARA_FOTO,
         maskImage: MASCARA_FOTO,

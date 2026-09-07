@@ -26,6 +26,41 @@ export function useEscopoDeVisao() {
 export default function SeletorEscopo({ vis, escopo, onEscopo, compacto = false, className = '' }) {
   const r = resolverEscopo({ vis, escopo });
   if (!r.podeTudo) return null;
+
+  // 07/09 (3ª limpeza) — dono, olhando a faixa: "está muito feio ainda esse
+  // botão do Tudo/Super Admin… não precisa colocar que é Super Admin quando
+  // clica no amarelo… dois botãozinho bem pequenininho, duas linhas escritas,
+  // bem no cantinho, bem clean, que só eu vou saber… mais masculino." Na
+  // versão compacta (a que mora perto do nome, no Hero) o desenho muda por
+  // completo: sem ícone, sem pílula amarela, sem o texto "como Super Admin"
+  // — duas letrinhas em DUAS LINHAS, monocromático. A versão cheia (usada
+  // dentro d'O Método) não mudou.
+  if (compacto) {
+    const pequeno = (id, l1, l2) => {
+      const ativo = r.escopo === id;
+      return (
+        <button
+          type="button"
+          onClick={() => onEscopo(id)}
+          aria-pressed={ativo}
+          title={id === 'tudo' ? `Ver tudo, como ${vis.papelLabel}` : 'Ver só o que é seu, como usuário'}
+          className={`flex flex-col items-center justify-center gap-0 rounded px-2.5 py-1 leading-[1.2] transition-colors ${ativo ? 'bg-white/[0.10] text-white' : 'text-white/30 hover:text-white/60'}`}
+          data-teste={`escopo-${id}`}
+        >
+          <span className="text-[8.5px] font-bold uppercase tracking-[0.09em]">{l1}</span>
+          <span className="text-[8.5px] font-bold uppercase tracking-[0.09em]">{l2}</span>
+        </button>
+      );
+    };
+    return (
+      <div className="inline-flex items-center rounded-md border border-white/[0.08] bg-black/10" data-teste="escopo-visao" data-escopo={r.escopo}>
+        {pequeno('eu', 'Só', 'meu')}
+        <span aria-hidden="true" className="h-5 w-px bg-white/[0.08]" />
+        {pequeno('tudo', 'Ver', 'tudo')}
+      </div>
+    );
+  }
+
   const opcao = (id, Icone, rotulo) => {
     const ativo = r.escopo === id;
     return (

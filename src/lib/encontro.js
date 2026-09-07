@@ -28,11 +28,16 @@ import { CARGOS_OFICIAIS } from './documentoOficial.js';
 import { prazoDe } from './pronto.js';
 import { proximaSegunda } from './xperformance.js';
 
-// ── ⏱️ os três blocos (Documento Oficial p. 33: Bloco 1 formação, Bloco 2 organização; dono: 15 + 45 + 120) ──
+// ── ⏱️ os quatro blocos (Documento Oficial p. 33: Bloco 1 formação, Bloco 2
+// organização; dono, 07/09: "a apresentação começa explicando a mentalidade
+// dos diretores e do CEO, cinco minutos, depois quinze de leitura, e mais
+// quarenta de treinamento" — 5 + 15 + 40 + 120, os mesmos 180 minutos de
+// sempre, só com a abertura ganhando um bloco próprio no cronômetro) ──
 export const BLOCOS = [
-  { id: 'leitura', n: 1, nome: 'Leitura', minutos: 15, descricao: 'um trecho, uma pergunta, uma aplicação', cor: 'var(--topcollege-azul)' },
-  { id: 'treinamento', n: 2, nome: 'Treinamento', minutos: 45, descricao: 'quem treina apresenta; o time pratica', cor: 'var(--topcollege-magenta)' },
-  { id: 'reuniao', n: 3, nome: 'Reunião estratégica', minutos: 120, descricao: 'números, gargalo, decisões e as demandas de cada um', cor: '#22c55e' },
+  { id: 'mentalidade', n: 1, nome: 'Mentalidade', minutos: 5, descricao: 'a mentalidade do Diretor e do CEO, explicada', cor: '#F5C451' },
+  { id: 'leitura', n: 2, nome: 'Leitura', minutos: 15, descricao: 'um trecho, uma pergunta, uma aplicação', cor: 'var(--topcollege-azul)' },
+  { id: 'treinamento', n: 3, nome: 'Treinamento', minutos: 40, descricao: 'quem treina apresenta; o time pratica', cor: 'var(--topcollege-magenta)' },
+  { id: 'reuniao', n: 4, nome: 'Reunião estratégica', minutos: 120, descricao: 'números, gargalo, decisões e as demandas de cada um', cor: '#22c55e' },
 ];
 export const MINUTOS_TOTAL = BLOCOS.reduce((s, b) => s + b.minutos, 0); // 180
 export const blocoDe = (id) => BLOCOS.find((b) => b.id === id) || null;
@@ -103,6 +108,25 @@ export function estadoDoCronometro(cron, agoraISO) {
   };
 }
 
+/**
+ * O bloco fixo de abertura (5 min): a mentalidade do Diretor e do CEO,
+ * sempre o mesmo texto — não depende de pauta nem de IA, porque não muda de
+ * um encontro pro outro (dono, 07/09: "a reunião começa explicando a
+ * mentalidade dos diretores do CEO"). Reaproveita o texto que já existia em
+ * mentalidades.js (`comoFunciona`), a mesma régua usada no X-Performance.
+ */
+export function aberturaDaMentalidade() {
+  const diretor = mentalidadeDe('diretor');
+  const ceo = mentalidadeDe('ceo');
+  return {
+    titulo: 'Mentalidade do Diretor e do CEO',
+    corpo: [
+      diretor ? `Diretor — ${diretor.comoFunciona}` : null,
+      ceo ? `CEO — ${ceo.comoFunciona}` : null,
+    ].filter(Boolean),
+  };
+}
+
 /** "1:23:05" / "14:59" */
 export function fmtTempo(segundos) {
   const s = Math.max(0, Math.round(segundos));
@@ -126,7 +150,17 @@ export function pautasDoTexto(texto) {
 
 // ── ✍️ a pauta ditada vira frase limpa (a IA faz isso melhor; a régua faz o possível) ──
 const VOCABULARIO = ['falar', 'sobre', 'meta', 'metas', 'parceiro', 'parceiros', 'compra', 'compras', 'tempo', 'financeiro', 'financeira', 'rotina', 'ranking', 'trafego', 'estoque', 'distribuidora', 'ponto', 'retirada', 'contrato', 'contratos', 'captacao', 'investidor', 'investidores', 'reuniao', 'reunioes', 'treinamento', 'apresentacao', 'fechamento', 'cliente', 'clientes', 'vendedor', 'vendedores', 'licenciado', 'licenciados', 'influenciador', 'influenciadores', 'marketing', 'conteudo', 'caixa', 'pagamento', 'pagamentos', 'proposta', 'fornecedor', 'fornecedores', 'planejamento', 'resultado', 'resultados', 'relatorio', 'semana', 'cadastro', 'cadastros', 'equipe', 'numeros', 'decisao', 'prazo', 'entrega', 'entregas', 'produto', 'produtos', 'venda', 'vendas', 'estrategia', 'expansao', 'franquia', 'juridico', 'dados', 'atendimento', 'pessoas', 'sistema', 'aplicativo', 'tecnologia', 'operacao', 'logistica', 'college', 'whatsapp', 'apresentar', 'revisar', 'definir', 'fechar', 'abrir', 'contratar', 'organizar', 'orcamento', 'comissao', 'comissoes', 'campanha', 'anuncio', 'anuncios', 'processo', 'processos', 'mentoria', 'habito', 'habitos', 'toda', 'todo', 'todos', 'menos', 'hora', 'horas', 'minutos'];
-const CORRECOES = { falra: 'falar', falrar: 'falar', fallar: 'falar', fallarar: 'falar', falarar: 'falar', fala: 'fala', tmepo: 'tempo', tempoo: 'tempo', fineceiro: 'financeiro', finaceiro: 'financeiro', copra: 'compra', tooop: 'top', toop: 'top', colleg: 'College', xgame: 'X-Game', 'x-game': 'X-Game', xeos: 'X-EOS', 'x-eos': 'X-EOS', whatsapp: 'WhatsApp', ranking: 'Ranking', pix: 'PIX', ceo: 'CEO', coo: 'COO', cro: 'CRO', cmo: 'CMO', cbdo: 'CBDO', cao: 'CAO', cfo: 'CFO', cto: 'CTO', clo: 'CLO', top: 'Top', college: 'College' };
+const CORRECOES = {
+  falra: 'falar', falrar: 'falar', fallar: 'falar', fallarar: 'falar', falarar: 'falar', fala: 'fala',
+  tmepo: 'tempo', tempoo: 'tempo', tepo: 'tempo', fineceiro: 'financeiro', finaceiro: 'financeiro', copra: 'compra',
+  tooop: 'top', toop: 'top', colleg: 'College', xgame: 'X-Game', 'x-game': 'X-Game', xeos: 'X-EOS', 'x-eos': 'X-EOS',
+  whatsapp: 'WhatsApp', ranking: 'Ranking', pix: 'PIX', ceo: 'CEO', coo: 'COO', cro: 'CRO', cmo: 'CMO', cbdo: 'CBDO',
+  cao: 'CAO', cfo: 'CFO', cto: 'CTO', clo: 'CLO', top: 'Top', college: 'College',
+  // 07/09 — palavras que voltaram erradas na ditada real do dono (a régua
+  // local não tem como "aprender" sozinha; cada uma daqui é um caso visto).
+  necessraio: 'necessário', alcanacarmos: 'alcançarmos', numeoro: 'número', caotacao: 'captação',
+  anotasd: 'anotada', spara: 'para', gmae: 'game', hotas: 'horas', devera: 'deverá', perceiro: 'parceiro',
+};
 const ACENTOS = { trafego: 'tráfego', captacao: 'captação', reuniao: 'reunião', reunioes: 'reuniões', apresentacao: 'apresentação', conteudo: 'conteúdo', relatorio: 'relatório', numeros: 'números', decisao: 'decisão', estrategia: 'estratégia', expansao: 'expansão', juridico: 'jurídico', operacao: 'operação', logistica: 'logística', orcamento: 'orçamento', comissao: 'comissão', comissoes: 'comissões', anuncio: 'anúncio', anuncios: 'anúncios', habito: 'hábito', habitos: 'hábitos', mes: 'mês' };
 const semAcentoPalavra = (w) => String(w || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 function distancia(a, b) {
@@ -248,7 +282,7 @@ export function promptDoRoteiro({ pautas = [], mes, tema, time = [], conduzidoPo
   return [
     'Você é o roteirista do ENCONTRO DA MENTALIDADE de segunda-feira da Leilão NoZap (Top College + X-EOS). É UM encontro só, com três mentalidades na sala: Executivo (Hábitos 1–5, faz com a própria mão), Diretor (Hábitos 5–8, multiplica e mede) e CEO (Hábitos 5–8, constrói o sistema).',
     'Os 8 Hábitos do Sucesso: ' + HABITOS.map((h) => `${h.n} ${h.completo} — ${h.sub}`).join('; ') + '.',
-    `Estrutura fixa do encontro: 15 minutos de LEITURA (um trecho curto + perguntas + aplicação), 45 minutos de TREINAMENTO (${treinamentoPor ? `quem treina: ${treinamentoPor}` : 'quem treina apresenta'}; passos práticos + prática guiada), 120 minutos de REUNIÃO ESTRATÉGICA (números, gargalo, decisões, demandas).`,
+    `Estrutura fixa do encontro: 5 minutos de MENTALIDADE (abertura fixa explicando a mentalidade do Diretor e do CEO — conteúdo já pronto, você não escreve isso), 15 minutos de LEITURA (um trecho curto + perguntas + aplicação), 40 minutos de TREINAMENTO (${treinamentoPor ? `quem treina: ${treinamentoPor}` : 'quem treina apresenta'}; passos práticos + prática guiada), 120 minutos de REUNIÃO ESTRATÉGICA (números, gargalo, decisões, demandas).`,
     mes ? `Mês: ${mes}${fase ? ` — fase oficial do ciclo: ${fase.fase} (${fase.foco})` : ''}.` : '',
     tema ? `Tema do mês: ${tema}.` : '',
     conduzidoPor ? `Conduz: ${conduzidoPor}.` : '',
@@ -329,7 +363,7 @@ export function roteiroLocal({ pautas = [], mes, tema, habitosDoMes = [], time =
   });
   return {
     tema: tema || (fase ? `${fase.fase} · ${hObj.completo}` : hObj.completo),
-    abertura: `Bem-vindos ao Encontro da Mentalidade. ${fase ? `Estamos na fase "${fase.fase}" do ciclo. ` : ''}Hoje: 15 minutos de leitura, 45 de treinamento e 2 horas de reunião estratégica.`,
+    abertura: `Bem-vindos ao Encontro da Mentalidade. ${fase ? `Estamos na fase "${fase.fase}" do ciclo. ` : ''}Hoje: 5 minutos sobre a mentalidade do Diretor e do CEO, 15 de leitura, 40 de treinamento e 2 horas de reunião estratégica.`,
     leitura: { titulo: `Hábito ${hObj.n} — ${hObj.completo}`, trecho: hObj.texto, perguntas: ['Onde esse hábito falhou na minha semana?', 'O que eu faço diferente amanhã de manhã?'], aplicacao: `Cada um escreve uma ação de ${hObj.curto.toLowerCase()} pra esta semana.` },
     treinamento: { tema: `${hObj.completo} na prática`, objetivo: `Sair com o Hábito ${hObj.n} aplicado ao trabalho de cada função.`, passos: ['Quem treina mostra como faz (5 min)', 'Um exemplo real da semana (10 min)', 'Prática em dupla (20 min)', 'Cada um apresenta o que vai fazer (10 min)'], pratica: 'Em dupla: aplicar o hábito a uma pauta de hoje.' },
     reuniao: { topicos },
@@ -544,9 +578,11 @@ export function slidesDoEncontro({ data, roteiro, mes, conduzidoPor, treinamento
         corpo: [tre.material || null, ...tre.passos.map((p, i) => `${i + 1}. ${p}`)].filter(Boolean),
         rodape: materialEhLink(tre.material) ? 'material: abra o link antes de começar' : null }
     : { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: `45 minutos${treinamentoPor ? ` · quem treina: ${treinamentoPor}` : ''}`, corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null };
+  const mentalidade = aberturaDaMentalidade();
   const slides = [
     { id: 'capa', bloco: null, titulo: 'Encontro da Mentalidade', sub: `${data || ''}${fase ? ` · ${fase.fase}` : ''}`, corpo: [r.tema, conduzidoPor ? `conduz: ${conduzidoPor}` : null].filter(Boolean), rodape: 'Executivo · Diretor · CEO — um espaço só' },
-    { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '15 leitura · 45 treinamento · 120 reunião', corpo: [r.abertura], rodape: null },
+    { id: 'mentalidade', bloco: 'mentalidade', titulo: mentalidade.titulo, sub: '5 minutos', corpo: mentalidade.corpo, rodape: 'antes da leitura' },
+    { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '5 mentalidade · 15 leitura · 40 treinamento · 120 reunião', corpo: [r.abertura], rodape: null },
     { id: 'leitura', bloco: 'leitura', titulo: r.leitura?.titulo || 'Leitura', sub: '15 minutos', corpo: [r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação' },
     slideTreino,
     ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min${t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),

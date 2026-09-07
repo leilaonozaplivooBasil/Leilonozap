@@ -78,8 +78,8 @@ test('ENCONTRO: abre na segunda de hoje, com a fase do ciclo, o cronômetro pron
   assert.match(await texto(pagina, '[data-teste="encontro"]'), /Estruturação/);
   const cron = pagina.locator('[data-teste="cronometro"]');
   assert.equal(await cron.getAttribute('data-rodando'), 'nao');
-  assert.equal(await texto(pagina, '[data-teste="tempo-bloco"]'), '15:00');
-  assert.match(await texto(pagina, '[data-teste="comecar"]'), /começar: leitura \(15 min\)/);
+  assert.equal(await texto(pagina, '[data-teste="tempo-bloco"]'), '5:00');
+  assert.match(await texto(pagina, '[data-teste="comecar"]'), /começar: mentalidade \(5 min\)/);
   assert.match(await texto(pagina, '[data-teste="topico"]'), /Digite as pautas e gere o tópico/);
   assert.deepEqual(erros, []);
   await ctx.close();
@@ -133,20 +133,22 @@ test('TÓPICO PELA IA: quando a IA responde, o tópico é dela (tema, leitura, t
   assert.match(await texto(pagina, '[data-teste="topico"]'), /Capital e execução/);
   assert.match(await texto(pagina, '[data-teste="topico-treinamento"]'), /Reunião de investimento em 20 minutos/);
   assert.match(await texto(pagina, '[data-teste="topico-item"]'), /Ponto de retirada de Jacarepaguá · 60 min · Diretor · H6/);
-  assert.match(await texto(pagina, '[data-teste="pautas"]'), /tópico atual: gerado pela IA/);
+  assert.match(await texto(pagina, '[data-teste="pautas-colapsadas"]'), /tópico atual: gerado pela IA/);
   const g = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_encontros').at(-1);
   assert.equal(g.linhas[0].roteiro_origem, 'ia');
   assert.equal(await pagina.locator('[data-teste="linha-demanda"]').first().locator('[data-teste="demanda-titulo"]').inputValue(), 'Assinar o contrato do ponto de Jacarepaguá');
   await ctx.close();
 });
 
-test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo abre o treinamento — o estado vive no banco', { skip: semNavegador }, async () => {
+test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo avança bloco a bloco (mentalidade → leitura → treinamento) — o estado vive no banco', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="comecar"]').click();
-  await pagina.locator('[data-teste="cronometro"][data-rodando="sim"][data-bloco="leitura"]').waitFor();
+  await pagina.locator('[data-teste="cronometro"][data-rodando="sim"][data-bloco="mentalidade"]').waitFor();
   let g = (await escritas(pagina)).filter((e) => e.tabela === 'xperf_encontros').at(-1);
-  assert.equal(g.linhas[0].cronometro.atual, 'leitura');
-  assert.ok(g.linhas[0].cronometro.blocos.leitura.inicio);
+  assert.equal(g.linhas[0].cronometro.atual, 'mentalidade');
+  assert.ok(g.linhas[0].cronometro.blocos.mentalidade.inicio);
+  await pagina.locator('[data-teste="proximo"]').click(); // fecha a mentalidade (5 min), abre a leitura
+  await pagina.locator('[data-teste="cronometro"][data-rodando="sim"][data-bloco="leitura"]').waitFor();
   await pagina.waitForTimeout(1200);
   assert.match(await texto(pagina, '[data-teste="tempo-bloco"]'), /^14:5[0-9]$/, 'está contando pra baixo');
   await pagina.locator('[data-teste="pausar"]').click();
@@ -158,7 +160,7 @@ test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo abre 
   await pagina.locator('[data-teste="proximo"]').click();
   await pagina.locator('[data-teste="cronometro"][data-rodando="sim"][data-bloco="treinamento"]').waitFor();
   assert.equal(await pagina.locator('[data-teste="blocos"] [data-bloco="leitura"]').getAttribute('data-feito'), 'sim');
-  assert.match(await texto(pagina, '[data-teste="tempo-bloco"]'), /^4[45]:/);
+  assert.match(await texto(pagina, '[data-teste="tempo-bloco"]'), /^(39|40):/);
   await ctx.close();
 });
 
@@ -205,6 +207,7 @@ test('APRESENTAR: a tela cheia abre na capa, anda com a seta, mostra o bloco e o
   await ap.waitFor();
   assert.equal(await ap.getAttribute('data-slide'), 'capa');
   assert.match(await texto(pagina, '[data-teste="slide-titulo"]'), /Encontro da Mentalidade/);
+  await pagina.keyboard.press('ArrowRight');
   await pagina.keyboard.press('ArrowRight');
   await pagina.keyboard.press('ArrowRight');
   await pagina.locator('[data-teste="apresentacao"][data-slide="leitura"]').waitFor();
