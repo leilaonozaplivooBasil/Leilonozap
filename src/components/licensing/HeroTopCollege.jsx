@@ -1,4 +1,5 @@
 import React from 'react';
+import ElencoBoneco from './CentralVendas/ElencoBoneco';
 
 // 🎓 DIR-62/67 — A FAIXA DA ACADEMIA no topo do painel.
 //
@@ -164,13 +165,16 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               faixa inteira: antes o texto morava POR CIMA dele e precisava do
               escurecimento pra ser lido; agora o texto está do lado, então dá
               pra derreter só a borda e devolver o rosto em cheio — que é o
-              "professor em destaque" da DIR-62. */}
-          <img
-            src="/marca/poder-hero.webp"
-            alt=""
+              "professor em destaque" da DIR-62.
+              DIR-83 — a imagem antiga (/marca/poder-hero.webp) era o Patrick
+              Stewart como Charles Xavier (Marvel): personagem licenciado e
+              rosto de ator real numa tela pública de plataforma de terceiros.
+              Trocado pelo Mentor do elenco próprio (ElencoBoneco/DIR-78) —
+              mesma silhueta de professor (barba, óculos), sem depender de
+              imagem de terceiro nenhuma. */}
+          <div
             aria-hidden="true"
-            draggable="false"
-            className="pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] w-auto object-contain select-none"
+            className="pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end select-none overflow-hidden"
             style={{
               // derrete nos QUATRO lados: entra pela esquerda, sai pela direita
               // e pelo pé, então o professor se funde na página em vez de
@@ -180,7 +184,15 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
               WebkitMaskComposite: 'source-in',
               maskComposite: 'intersect',
             }}
-          />
+          >
+            {/* o boneco nasce no tamanho grande (220) e ENCOLHE via scale nas
+                telas menores — o SVG tem width/height fixos em px (é assim em
+                todo o resto do elenco), então escalar o traço é mais simples
+                e mais fiel que redesenhar three tamanhos diferentes. */}
+            <div className="origin-bottom scale-[0.591] sm:scale-[0.909] lg:scale-100">
+              <ElencoBoneco chave="mentor" pose="acena" tam={220} titulo="O Mentor" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
