@@ -760,6 +760,34 @@ export const vibrar = (padrao = VIBRA_TOQUE) => {
 
 export const RESUMO_MIN = 400;
 
+// 🗣️ FALAR A LÍNGUA DE QUEM LÊ (chamado do Paim, 07/09/2026). O contador
+// dizia "18/400 caracteres". Todo mundo lê isso como "18 de um limite de
+// 400" e conclui que já escreveu bastante — é o CONTRÁRIO: 400 é o mínimo.
+// Ele escreveu 18 letras, achou que estava certo, o botão não acendeu e a
+// ligação caiu no suporte. O número não estava errado; a frase estava.
+// Agora o texto diz quanto FALTA, e diz o tamanho ANTES de a pessoa começar
+// a escrever — não depois de ela falhar.
+export function faltaDoResumo(texto) {
+  return Math.max(0, RESUMO_MIN - String(texto || '').trim().length);
+}
+
+export function textoDoContador(texto) {
+  const escrito = String(texto || '').trim().length;
+  if (escrito === 0) return `escreva pelo menos ${RESUMO_MIN} caracteres (umas 6 linhas)`;
+  const falta = faltaDoResumo(texto);
+  return falta === 0 ? '✔ resumo no tamanho' : `faltam ${falta} caracteres`;
+}
+
+// 🔒 BOTÃO APAGADO TEM QUE DIZER POR QUÊ. Inclusão digital: quem não tem
+// intimidade com tela não deduz motivo de botão opaco — fica olhando, tenta
+// de novo e liga pro suporte. Devolve '' quando o botão está liberado.
+export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
+  if (!temFoto) return tipo === 'aprendizado' ? 'falta a foto do estudo para liberar' : 'falta a foto para liberar';
+  if (tipo !== 'aprendizado') return '';
+  const falta = faltaDoResumo(texto);
+  return falta > 0 ? `escreva mais ${falta} caracteres para liberar` : '';
+}
+
 // ── 👤 O PADRÃO DE NOME DO JOGO (ordem do dono, 05/09) ──────────────
 // Sempre o nome do CADASTRO, sempre "Nome Sobrenome" (primeiro + último),
 // sempre com inicial maiúscula — nunca apelido, nunca CAIXA ALTA, nunca o

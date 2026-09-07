@@ -8,6 +8,7 @@ import {
 } from '@/lib/xmusic';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 import useOcultarAoRolar from '@/hooks/useOcultarAoRolar';
+import useCamadaAberta from '@/hooks/useCamadaModal';
 import useArrastavel, { dentroDaTela } from '@/hooks/useArrastavel';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
 import { ladoDaAbertura } from '@/lib/flutuante';
@@ -174,6 +175,12 @@ export default function XMusic() {
   // tocando; se isto desmontasse qualquer coisa, a música cortaria a cada
   // rolagem de dedo, que é justamente o erro que a gente acabou de matar.
   const rolando = useOcultarAoRolar(aberto);
+
+  // 🪟 E SAI DA FRENTE DE MODAL (chamado do Paim, 07/09/2026). O X-MUSIC vive
+  // em z-[60]: no celular ele ficava POR CIMA do botão "Comprovar e concluir"
+  // do X-GAME. O dedo batia no player. Mesmo sumiço da rolagem — a música
+  // NÃO para, só a aparência sai; nada aqui desmonta o iframe.
+  const coberto = useCamadaAberta();
 
   const naPlaylist = playlist.some((m) => m.id === estacao?.id);
 
@@ -381,7 +388,7 @@ export default function XMusic() {
         // do dedo em vez de colada nele)
         ? { left: posicao.x, top: posicao.y, bottom: 'auto' }
         : { bottom: 'calc(var(--nz-dock-b, 1.75rem) + 2.25rem)', left: '1rem' }}
-      className={`fixed z-[60] print:hidden ${arrastando ? '' : 'transition-opacity duration-300'} ${rolando && !arrastando ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      className={`fixed z-[60] print:hidden ${arrastando ? '' : 'transition-opacity duration-300'} ${(rolando || coberto) && !arrastando ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
     >
       <div
         aria-hidden={!aberto}
