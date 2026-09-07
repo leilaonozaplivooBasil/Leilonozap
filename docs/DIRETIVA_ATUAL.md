@@ -12,35 +12,6 @@
 
 ---
 
-## DIR-81.1 — O input dentro do card branco tem que ser legível
-
-**Emitida por:** dono (07/09/2026), com o card recém-criado pelo `+` na tela:
-*"o nome está ficando transparente, só fica preto quando eu saio, e a hora está
-horrível. Vamos bem devagar e bem rápido — faz essa mudança e já traz aqui o
-pronto."*
-
-**Causa, conferida no CSS (não suposta):** `src/index.css:953` —
-`.xeos-palco.xeos-palco input/textarea/select { color: var(--xeos-branco)
-!important; background-color: rgba(255,255,255,.06) !important }`. O palco
-escuro pinta **todo** input de texto branco. Dentro do card **branco** isso vira
-branco-no-branco: o título só fica preto quando sai do modo edição (vira
-`span`), e os dois campos de hora somem no painel cinza. O placeholder "lista de
-tarefas" esmaecido é o mesmo defeito. Um só bug, três sintomas.
-
-**O que entra:** `quadro.css` (arquivo próprio, mesmo isolamento do
-`elenco.css`) com a regra escopada `.xeos-card-claro` em especificidade maior
-que as duas do palco (a de `input` e a de `[class*="bg-white"]`), `color-scheme:
-light` pro seletor nativo de hora, e a classe nos três blocos brancos do quadro:
-o card, o painel da lista e a entrevista. O input do título ganha `xeos-cru`, a
-válvula que o próprio palco documenta.
-
-**O que NÃO entra:** nada no `index.css` (compartilhado); nada fora do quadro.
-
-**Prova exigida:** contraste medido no navegador — texto escuro sobre fundo
-claro no input do título recém-criado e no campo de hora — e o print do card.
-
----
-
 ## DIR-81 — O mais no topo da coluna: adicionar sem rolar
 
 **Emitida por:** dono (07/09/2026), com o quadro aberto: *"pra adicionar,

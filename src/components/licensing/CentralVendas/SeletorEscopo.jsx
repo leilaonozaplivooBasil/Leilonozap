@@ -41,6 +41,7 @@ export default function SeletorEscopo({ vis, escopo, onEscopo, compacto = false,
         {opcao('eu', User, 'Só o meu')}
         {opcao('tudo', ShieldCheck, compacto ? 'Tudo' : `Tudo · ${vis.papelLabel}`)}
       </div>
+      {compacto && r.tudo && <span className="text-[10.5px] font-bold text-amber-200/90 whitespace-nowrap" data-teste="escopo-como">como {vis.papelLabel}</span>}
       {!compacto && (
         <p className={`text-[11px] ${r.tudo ? 'text-amber-200/90' : 'text-white/45'}`} data-teste="escopo-explicacao">
           {r.tudo ? <ShieldCheck className="w-3 h-3 inline mr-1" /> : <User className="w-3 h-3 inline mr-1" />}

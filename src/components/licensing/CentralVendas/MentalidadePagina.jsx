@@ -18,7 +18,11 @@ const ABAS = [
 ];
 
 // `soEu` (07/09): quem tem visão total e escolheu "só o meu" vê a X-Performance só dele.
-export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null, soEu = false, escopoRotulo = null }) {
+// 07/09 (2ª limpeza) — "está vazando": o rótulo "Você está vendo: X" repetia,
+// solto no canto desta faixa, o que as pílulas "Só o meu / Tudo" já dizem lá
+// em cima, na faixa da academia — e o ml-auto jogava o texto pra debaixo do
+// professor, longe do controle de verdade. UMA fonte só: as pílulas.
+export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null, soEu = false }) {
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const ehSegunda = new Date(`${hoje}T12:00:00`).getDay() === 1;
   const [aba, setAba] = useState(abaInicial || (ehSegunda ? 'encontro' : 'performance'));
@@ -32,7 +36,6 @@ export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir =
             <Icone className="w-3.5 h-3.5" />{rotulo}
           </button>
         ))}
-        {escopoRotulo && <span className={`ml-auto text-[10.5px] ${soEu ? 'text-white/45' : 'text-amber-200/90'}`} data-teste="escopo-aqui">Você está vendo: <span className="font-bold">{escopoRotulo}</span></span>}
       </div>
       {aba === 'encontro' ? <EncontroMentalidade currentUser={currentUser} hojeISO={hoje} podeConduzir={podeConduzir} /> : <PerformanceEquipe currentUser={currentUser} hojeISO={hoje} gestao={gestao} soEu={soEu} />}
     </div>

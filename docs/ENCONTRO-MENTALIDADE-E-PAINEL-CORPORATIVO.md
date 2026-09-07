@@ -118,6 +118,27 @@ precisa ser feito e deixe fluido". O que mudou, em ordem do que mais muda a leit
 Ficou de fora, de propósito: "definir a meta" a partir do detalhe (precisa de um caminho até o Quadro Geral) e a
 marca de conta no cadastro (precisa de migração — entra pelo workflow, não pela mão).
 
+## O Distribuir do admin dentro do detalhe de cada pessoa (07/09)
+
+Dono: "esse aí [o detalhe da pessoa na X-Performance] precisa ficar igual o terceiro, o Distribuir do admin —
+puxar o admin pra cá e fazer uma junção da demanda recebida com o enviar a demanda". E: "o seletor está vazando".
+
+- O formulário **Distribuir tarefa** saiu de dentro do `XPerformanceGestao.jsx` e virou uma peça só,
+  `DistribuirTarefa.jsx` (controlado: a ADM passa equipe, cadastro do jogo, tarefas do ciclo e catálogo) com a
+  irmã `DistribuirTarefaSozinho` (carrega o que precisa sozinha). A ADM X-Game continua idêntica — os 24 casos da
+  banca dela passam sem mudar uma linha. Os três helpers (`proximoDiaUtil`, `diasUteisAteSexta`,
+  `prazoDaPrioridade`) moram lá e a ADM reexporta.
+- No **Painel Corporativo embutido** (o detalhe de cada pessoa na X-Performance), quem pode mandar (gestão ou
+  diretoria) vê, embaixo das demandas recebidas, uma dobra "Distribuir tarefa pra Fulano — igual à ADM X-Game" com
+  o formulário INTEIRO: responsável (a pessoa aberta já vem escolhida, dá pra trocar), dia, começar às, pronto até,
+  catálogo, título com a leitura viva, mentalidade, Hábito, ensinamento, prévia do valor no fixo, destino,
+  prioridade, repetir até sexta, e a lista das tarefas do dia escolhido. O bloco passou a se chamar "Demandas ·
+  recebidas e distribuídas". A linha simples "mandar uma demanda" (xperf_demandas) saiu do painel; o Encontro
+  continua com a dele (`MandarDemanda.jsx`).
+- **O seletor "Só o meu / Tudo"** deixou de vazar: saiu o fio âmbar fixo no topo da página (batia no cabeçalho do
+  app); o seletor fica na mesma linha do botão da Top College, e em "Tudo" a pílula fica âmbar com "como Super Admin"
+  ao lado. A coluna do herói alargou (max-w-xl) pra caber os dois.
+
 ## O que estava duplicado e virou uma coisa só (06/09)
 
 O dono pediu uma análise do painel inteiro ("o que der pra juntar, une — exemplo: enviar demanda"). O que se

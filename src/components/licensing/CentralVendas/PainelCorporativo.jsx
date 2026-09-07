@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Inbox, CalendarPlus, LayoutGrid, Undo2, Loader2, Target, Users, Eye } from 'lucide-react';
+import { Inbox, CalendarPlus, LayoutGrid, Undo2, Loader2, Target, Users, Eye, Send } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,15 @@ import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
 import { getLevel } from '@/lib/careerLevels';
 import { progressoDasMetas, mesDe, semaforo } from '@/lib/metasPessoa';
-import { tarefaDaDemanda, cardDaDemanda, estadoDaDemanda, producaoDaSemana, sextaDaSemana, demandaDoTopico } from '@/lib/encontro';
+import { tarefaDaDemanda, cardDaDemanda, estadoDaDemanda, producaoDaSemana } from '@/lib/encontro';
 import { segundaDaSemana } from '@/lib/xperformance';
 import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
 import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import { fmtReais } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
-import { relatorioDoExecutivo, nomeBonito } from '@/lib/relatorioExecutivo';
+import { relatorioDoExecutivo, nomeBonito, primeiroNome } from '@/lib/relatorioExecutivo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
-import MandarDemanda from '@/components/licensing/CentralVendas/MandarDemanda';
+import { DistribuirTarefaSozinho } from '@/components/licensing/CentralVendas/DistribuirTarefa';
 
 // 🏢 O PAINEL CORPORATIVO — a visão geral de cada um (dono, 06/09/2026).
 //
@@ -69,7 +69,6 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const [carregando, setCarregando] = useState(true);
   const [agendando, setAgendando] = useState(null); // {id, dia, hora, destino}
   const [devolvendo, setDevolvendo] = useState(null); // {id, motivo}
-  const [nova, setNova] = useState({ titulo: '', pessoa: '', prazo: '' });
   const [salvando, setSalvando] = useState(false);
 
   const carregarTime = useCallback(async () => {
@@ -79,9 +78,13 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     ]);
     setUsuarios(u.data || []); setParticipantes(p.data || []);
   }, []);
+  // 🔴 o spinner de "abrindo o painel" SÓ na primeira carga: nas recargas (agendou,
+  // distribuiu, devolveu) a tela fica montada e os dados trocam no lugar — desmontar
+  // aqui matava o estado do Distribuir embutido (a pessoa e o dia escolhidos).
+  const primeiraCarga = useRef(true);
   const carregarPessoa = useCallback(async () => {
     if (!pessoaId) { setCarregando(false); return; }
-    setCarregando(true);
+    if (primeiraCarga.current) setCarregando(true);
     const [d, t, c, m, v, td] = await Promise.all([
       supabase.from('xperf_demandas').select('*').eq('pessoa_id', pessoaId).order('created_at', { ascending: false }).limit(120),
       supabase.from('metodo_tarefas').select('id,data,hora,titulo,feito,conferido,pronto_em,prazo_em,devolvida_motivo,habito,origem,demanda_id,categoria').eq('user_id', pessoaId).gte('data', `${mes}-01`),
@@ -101,12 +104,13 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
       idsC.length ? supabase.from('metodo_quadro').select('id,coluna').in('id', idsC) : Promise.resolve({ data: [] }),
     ]);
     setTarefasTodas(tt.data || []); setCardsTodas(ct.data || []);
+    primeiraCarga.current = false;
     setCarregando(false);
   }, [pessoaId, mes, segunda]);
   useEffect(() => { carregarTime(); }, [carregarTime]);
   useEffect(() => { carregarPessoa(); }, [carregarPessoa]);
   // quem está por fora (a Performance) acompanha a pessoa escolhida aqui
-  useEffect(() => { if (pessoaInicial && pessoaInicial !== pessoaId) setPessoaId(pessoaInicial); }, [pessoaInicial]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (pessoaInicial && pessoaInicial !== pessoaId) setPessoaId(pessoaInicial); }, [pessoaInicial]);  
   const escolher = (id) => { setPessoaId(id); if (onPessoa) onPessoa(id); };
   const recarregar = () => { carregarPessoa(); if (onMudou) onMudou(); };
 
@@ -122,7 +126,6 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const podeAgendar = ehMeu || gestao;
   const minhaPosicao = time.find((p) => p.id === currentUser?.id);
   const podeMandar = gestao || ['diretoria_operacao', 'diretoria_executiva', 'ceo'].includes(minhaPosicao?.nivel);
-  const origemDeQuemManda = gestao || minhaPosicao?.nivel === 'ceo' ? 'ceo' : 'diretor';
 
   // 🎯 as metas do mês, lidas do que ela fez
   const tarefasDoMes = useMemo(() => tarefas.filter((t) => mesDe(String(t.data)) === mes), [tarefas, mes]);
@@ -176,19 +179,6 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     await supabase.from('xperf_demandas').update({ status: 'devolvida', devolvida_motivo: motivo, updated_at: new Date().toISOString() }).eq('id', d.id);
     setDevolvendo(null); toast.message(`Devolvida: "${d.titulo}"`); recarregar();
   };
-  // 📤 mandar uma demanda daqui (o CEO ou um diretor)
-  const mandar = async () => {
-    const alvo = time.find((p) => p.id === (nova.pessoa || pessoaId));
-    if (!nova.titulo.trim() || !alvo) { toast.error('Diga a demanda e pra quem.'); return; }
-    const linha = demandaDoTopico({ titulo: nova.titulo.trim(), demanda: nova.titulo.trim() }, { pessoaId: alvo.id, pessoaNome: alvo.nome, criadoPorId: currentUser?.id, criadoPorNome: currentUser?.full_name || null, origem: origemDeQuemManda, prazoDia: nova.prazo || sextaDaSemana(hoje) });
-    setSalvando(true);
-    const { error } = await supabase.from('xperf_demandas').insert(linha);
-    setSalvando(false);
-    if (error) { toast.error('Não mandou — tenta de novo'); return; }
-    toast.success(`Demanda no painel de ${alvo.nome.split(' ')[0]}: "${linha.titulo}"`);
-    setNova({ titulo: '', pessoa: nova.pessoa, prazo: '' });
-    recarregar();
-  };
 
   return (
     <div className={embutido ? 'text-white' : 'rounded-xl border border-white/15 p-3 sm:p-4 text-white'} style={embutido ? undefined : { background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))' }} data-teste="painel-corporativo" data-pessoa={pessoaId || ''} data-embutido={embutido ? 'sim' : 'nao'}>
@@ -241,7 +231,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
             {/* 📥 demandas */}
             <div className="lg:col-span-3 rounded-lg border border-white/10 p-2.5" style={caixa} data-teste="painel-demandas">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <p className={titulo}><Inbox className="w-3 h-3 inline mr-1" />Demandas recebidas</p>
+                <p className={titulo}><Inbox className="w-3 h-3 inline mr-1" />Demandas · recebidas e distribuídas</p>
                 <span className="text-[10px] text-white/35">· {recebidas.length} pra agendar · {emAndamento.length} em andamento · {concluidas.length} conferida{concluidas.length === 1 ? '' : 's'}</span>
               </div>
               {recebidas.length === 0 && <p className="mt-1 text-[11px] text-white/40">nada esperando — o que chegar do encontro, do CEO ou dos diretores aparece aqui</p>}
@@ -298,7 +288,16 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
                 <p className="mt-2 text-[10px] text-white/35">{concluidas.length ? `${concluidas.length} conferida${concluidas.length > 1 ? 's' : ''} ✔✔` : ''}{concluidas.length && devolvidas.length ? ' · ' : ''}{devolvidas.length ? `${devolvidas.length} devolvida${devolvidas.length > 1 ? 's' : ''}` : ''}</p>
               )}
               {podeMandar && (
-                <MandarDemanda valor={{ ...nova, pessoa: nova.pessoa || pessoaId || '' }} onChange={setNova} onMandar={mandar} time={time} prazoPadrao={sextaDaSemana(hoje)} placeholder={`mandar uma demanda ${origemDeQuemManda === 'ceo' ? 'do CEO' : 'de diretor'}…`} desabilitado={salvando} />
+                <details className="mt-2 rounded-lg border border-dashed border-white/15" data-teste="distribuir-dobra" open>
+                  <summary className="cursor-pointer select-none px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/50 hover:text-white/80">
+                    <Send className="w-3 h-3 inline mr-1" /> Distribuir tarefa pra {primeiroNome(pessoa?.nome)} — igual à ADM X-Game
+                  </summary>
+                  {/* 🎯 07/09 (dono): "esse aí precisa ficar igual o distribuir do admin — puxar o admin pra cá
+                      e fazer a junção da demanda recebida com o enviar a demanda". É a MESMA peça da ADM X-Game. */}
+                  <div className="px-2.5 pb-2.5">
+                    <DistribuirTarefaSozinho currentUser={currentUser} hojeISO={hoje} equipe={time} pessoaFixa={pessoaId} onDistribuiu={recarregar} />
+                  </div>
+                </details>
               )}
             </div>
           </div>

@@ -19,7 +19,6 @@ import {
   ordemDoTopo, TITULO_NOVO_CARD,
 } from '@/lib/quadroCompromisso';
 import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } from '@/lib/assistenteDeLista';
-import './quadro.css';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import { HABITOS } from '@/lib/metodo';
@@ -167,7 +166,7 @@ function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, t
       onChange={(e) => setTxt(e.target.value)}
       onBlur={salvar}
       onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') { setTxt(valor || ''); setEditando(false); } }}
-      className={`rounded px-1 -mx-1 outline-none w-full bg-white xeos-cru ring-2 ring-[#0B5FFF]/40 ${className}`}
+      className={`rounded px-1 -mx-1 outline-none w-full bg-white ring-2 ring-[#0B5FFF]/40 ${className}`}
     />
   );
 }
@@ -183,7 +182,7 @@ function PainelDaLista({ lista, onEscolher, onFechar }) {
   const [aba, setAba] = useState(ehEmoji(nomeDoIcone(lista)) ? 'emoji' : 'icone');
   const marcas = aba === 'emoji' ? EMOJIS_LISTA : ICONES_LISTA;
   return (
-    <div className="absolute z-30 left-0 w-[268px] rounded-xl p-3.5 shadow-2xl xeos-card-claro"
+    <div className="absolute z-30 left-0 w-[268px] rounded-xl p-3.5 shadow-2xl"
       style={{ background: '#FFFFFF', top: T.cabecalho + 4 }} data-teste="painel-da-lista"
       onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between mb-2.5">
@@ -257,7 +256,7 @@ function Entrevista({ assistente, onGerar, onFechar }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,2,12,0.72)' }} onClick={onFechar}>
-      <div className="w-full max-w-md rounded-2xl overflow-hidden max-h-[88vh] flex flex-col xeos-card-claro"
+      <div className="w-full max-w-md rounded-2xl overflow-hidden max-h-[88vh] flex flex-col"
         style={{ background: '#FFFFFF' }} onClick={(e) => e.stopPropagation()} data-teste="entrevista">
         <div className="px-5 py-4 flex items-start gap-3" style={{ background: '#0B5FFF' }}>
           <Sparkles className="w-5 h-5 text-white/90 mt-0.5 shrink-0" />
@@ -456,6 +455,12 @@ function Coluna({
             ))}
           </>
         )}
+
+        <div className="mt-auto">
+          {/* 🔗 06/09 — a entrada fala pra onde vai: o quadro é certo; "também no meu
+              dia" e a hora (= a Jornada) são escolha, ditas por extenso embaixo */}
+          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} />
+        </div>
       </div>
     </div>
   );
@@ -516,7 +521,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
       onClickCapture={engolirCliqueDoArrasto}
       data-teste="cartao-quadro"
       data-cartao={cartao.id}
-      className="group rounded-lg overflow-hidden relative xeos-card-claro"
+      className="group rounded-lg overflow-hidden relative"
       style={{
         background: '#FFFFFF',
         boxShadow: desloc ? '0 16px 32px rgba(0,0,0,0.4)' : '0 1px 2px rgba(9,30,66,0.25)',
@@ -633,7 +638,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                   disabled={!podeClicar(pl)}
                   data-teste={`pilula-${pl.id}`}
                   data-acesa={pl.acesa ? 'sim' : 'nao'}
-                  className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default inline-flex items-center gap-1"
+                  className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default"
                   style={{
                     background: pl.alerta ? '#FFF3E0' : pl.acesa ? '#E3F5E9' : '#F4F5F7',
                     color: pl.alerta ? '#C4470F' : pl.acesa ? '#177245' : '#8993A4',
@@ -641,8 +646,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                   }}
                   title={podeClicar(pl) ? `Clique para ${pl.id === 'dia' ? 'levar pro seu dia' : 'ajustar horário'}` : ''}
                 >
-                  <span>{pl.icon}</span>
-                  <span>{pl.texto}</span>
+                  {pl.texto}
                 </button>
               ))}
               {habito && <span className="rounded px-1.5 py-0.5" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>}

@@ -1079,7 +1079,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 👤/🛡️ 07/09 — o seletor "Só o meu / Tudo" mora AQUI, uma vez, junto do
   // seletor de seções: vale pra todas as áreas (Método, Mentalidade, ADM X-Game…).
   const seletorDaCentral = (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <CentralVendasTabs
         value={catalogSubTab}
         onChange={setCatalogSubTab}
@@ -1106,8 +1106,6 @@ const DashboardContent = ({ user, isAdmin }) => {
       className={`flex min-h-screen ${naTopCollege ? '' : 'bg-white'}`}
       style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
     >
-      {/* 🛡️ em "Tudo", um fio âmbar no topo da página inteira: você está como Super Admin */}
-      {visao.tudo && <div className="fixed top-0 left-0 right-0 h-[3px] z-[80] pointer-events-none" style={{ background: '#f59e0b' }} title={`Você está vendo tudo, como ${visPapel.papelLabel}`} data-teste="fio-tudo" />}
       <NavegacaoLateralGlobal
         user={user}
         activeTab={activeTab}
@@ -1236,7 +1234,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   gestão e a diretoria; o resto vê e acompanha a apresentação. */}
               <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
-                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} escopoRotulo={visao.podeTudo ? visao.rotulo : null} />
+                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} />
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}
