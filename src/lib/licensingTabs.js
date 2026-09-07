@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy, ClipboardList } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -191,6 +191,12 @@ export function getLicensingGroups(user) {
         // 🤝 Aprovação dos pedidos de mercadoria consignada — só admin
         ...((user?.role === 'admin' || user?.role === 'super_admin')
           ? [{ type: 'link', to: '/painel/consignado', label: 'Consignado', icon: Handshake }]
+          : []),
+        // 📋 07/09/2026 — DEMANDAS: a fila do Tira Dúvidas 24h. Item próprio no
+        // menu (escolha do dono), e só pra gestão: é onde SE DECIDE o que vira
+        // trabalho, não onde o time consulta.
+        ...((user?.role === 'admin' || user?.role === 'super_admin')
+          ? [{ type: 'link', to: '/Demandas', label: 'Demandas', icon: ClipboardList }]
           : []),
       ],
     }

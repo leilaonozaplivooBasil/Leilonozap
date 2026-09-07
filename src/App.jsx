@@ -56,6 +56,8 @@ const MeuEstoque = React.lazy(() => import('@/pages/MeuEstoque'));
 const ComprarEstoque = React.lazy(() => import('@/pages/ComprarEstoque'));
 // 🤝 Consignado: aprovação e acompanhamento da mercadoria da casa na mão da rede
 const AdminConsignado = React.lazy(() => import('@/pages/AdminConsignado'));
+// 📋 07/09/2026 — a fila do que os usuários mandaram pelo Tira Dúvidas 24h
+const Demandas = React.lazy(() => import('@/pages/Demandas'));
 const ImageOptimizer = React.lazy(() => import('@/pages/ImageOptimizer'));
 const VisualizarLote = React.lazy(() => import('@/pages/VisualizarLote'));
 const SentinelNoZap = React.lazy(() => import('@/pages/SentinelNoZap'));
@@ -253,6 +255,17 @@ const AuthenticatedApp = () => {
       <Route path="/painel/estoque" element={<LayoutWrapper currentPageName="MeuEstoque"><MeuEstoque /></LayoutWrapper>} />
       {/* 🧭 A compra virou aba do estoque — o link antigo continua valendo e leva pra aba certa */}
       <Route path="/painel/comprar-estoque" element={<Navigate to="/painel/estoque?aba=comprar" replace />} />
+      {/* 📋 07/09/2026 — DEMANDAS: os chamados do Tira Dúvidas 24h, com
+          prioridade, e o botão que transforma um deles em demanda direcionada
+          (xperf_demandas → Painel Corporativo). Só gestão: é a fila de decisão
+          do dono, não uma tela de time. */}
+      <Route path="/Demandas" element={
+        <LayoutWrapper currentPageName="Demandas">
+          <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <Demandas />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/painel/consignado" element={
         <LayoutWrapper currentPageName="AdminConsignado">
           <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home" noAuthRoute="Landing">
