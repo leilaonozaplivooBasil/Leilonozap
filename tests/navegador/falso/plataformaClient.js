@@ -3,6 +3,8 @@
 // componentes que chamam rotas/uploads rodam sem rede e a prova enxerga
 // cada chamada em window.__plataformaFalsa.chamadas.
 const estado = { chamadas: [], respostas: {} };
+// entidade → tabela (só o que as bancas do Método usam; o resto ecoa o que recebeu)
+const TABELA_DA_ENTIDADE = { MetodoTarefa: 'metodo_tarefas', MetodoPerfil: 'metodo_perfil', Customer: 'customers', CaptacaoOportunidade: 'captacao_oportunidades', ReuniaoEmpresa: 'reunioes_empresa' };
 if (typeof window !== 'undefined') window.__plataformaFalsa = estado;
 
 const responder = (nome, corpo) => {
@@ -29,7 +31,24 @@ export const plataforma = {
       },
     },
   },
-  entities: new Proxy({}, { get: () => ({ list: async () => [], filter: async () => [], create: async (d) => d, update: async (d) => d }) }),
+  // 📝 06/09 — `create` GRAVA no banco de mentira (as telas do Método criam a
+  // tarefa do dia pela entidade, e a prova precisa enxergar a linha em
+  // `escritas`); o resto continua vazio/eco, como sempre foi.
+  entities: new Proxy({}, { get: (_, entidade) => ({
+    list: async () => [],
+    filter: async () => [],
+    create: async (d) => {
+      const tabela = TABELA_DA_ENTIDADE[entidade];
+      const b = typeof window !== 'undefined' ? (window.__bancoFalso ||= { tabelas: {}, escritas: [] }) : null;
+      if (!tabela || !b) return d;
+      const linha = { id: `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, ...d };
+      (b.tabelas[tabela] ||= []).push(linha);
+      b.escritas.push({ tipo: 'insert', tabela, linhas: [linha] });
+      return linha;
+    },
+    update: async (d) => d,
+    delete: async () => ({}),
+  }) }),
   auth: { me: async () => null },
 };
 export const supabase = null;

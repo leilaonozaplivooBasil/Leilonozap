@@ -60,6 +60,36 @@ visão total. Duas opções, "Só o meu" e "Tudo · Super Admin" (ou "Tudo · Di
 todas as seções. Padrão: "só o meu". Duas camadas: `crmTudo` (o resto do CRM, pra quem a matriz dá) e `metodoTudo`
 (lista/contato/agendamento, só o super admin).
 
+## Os três destinos — o dia, a Jornada e o quadro (06/09)
+
+Dono: "quando eu adicionar na lista, dá a opção de botar na Jornada e no quadro; quando adicionar no quadro, dá a
+opção de botar na lista e na Jornada. Toda alimentação alimenta ambas. E com uma comunicação mais clara — a pessoa
+não está entendendo o quadro."
+
+**O que cada destino é** (regra escrita em `src/lib/destinos.js`):
+
+| Destino | O que é no banco | Como se entra |
+| --- | --- | --- |
+| O dia (a Lista) | uma linha em `metodo_tarefas` na data | é o compromisso do dia |
+| A Jornada | a MESMA tarefa do dia, quando tem horário | "botar na Jornada" = dar uma hora; sem hora a tarefa fica no balde "sem hora", fora da linha do tempo |
+| O quadro | um card em `metodo_quadro`, numa lista da pessoa | é o backlog; card e tarefa se ligam por `virou_tarefa_id` |
+
+**A peça única** (`EntradaComDestinos.jsx`), nos dois lugares: na Lista o dia é certo e ela oferece a hora (= a
+Jornada) e "também no quadro" (com a lista); no quadro o quadro é certo e ela oferece "também no meu dia" e a hora.
+Enquanto a pessoa escreve, a frase embaixo diz por extenso: "Vai entrar: no quadro (Academia) · no seu dia, na Jornada
+às 07:30"; sem hora avisa "sem horário fica fora da Jornada". Ao gravar: "Entrou no quadro (Academia) e no seu dia, na
+Jornada às 07:30."
+
+**O card fala onde está**: três pílulas fixas — quadro · dia · Jornada — acesas ou apagadas ("no quadro · Academia",
+"no seu dia", "na Jornada às 07:00"). O caso que confundia (no dia sem horário) virou alerta escrito: "sem horário ·
+fora da Jornada". Saíram os chips soltos "horário" / "no dia" e o botão "pro meu dia / já está no dia": agora é **levar
+pro meu dia**, que abre um painel dizendo "Levar pro meu dia — hoje · com horário entra na Jornada; sem horário fica
+no dia, fora da linha do tempo", com a hora, o sugerir, o aviso de choque e o botão "Entrar no dia às 19:30". Quem já
+está no dia vê "dar um horário" ou "mudar horário (07:00)".
+
+Provas: `tests/destinos.test.mjs` (6) e a banca `tests/navegador/quadro.spec.mjs` (3: as pílulas, levar pro dia com
+hora e choque, a entrada nova com os destinos).
+
 ## O que estava duplicado e virou uma coisa só (06/09)
 
 O dono pediu uma análise do painel inteiro ("o que der pra juntar, une — exemplo: enviar demanda"). O que se

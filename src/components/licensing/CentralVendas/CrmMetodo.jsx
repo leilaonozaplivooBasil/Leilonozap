@@ -34,6 +34,8 @@ import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
+import EntradaComDestinos from './EntradaComDestinos';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import {
@@ -84,7 +86,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [editandoSonho, setEditandoSonho] = useState(null); // { indice, texto }
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
-  const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '' });
+  const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '', noQuadro: false, listaId: '' });
+  const [listasDoQuadro, setListasDoQuadro] = useState([]); // 🔗 pra "também no quadro" da Lista
   const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
@@ -773,14 +776,36 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     toast.success(`"${t.titulo}" guardada em ${lista?.nome || 'no quadro'} — volta pro dia quando você quiser.`);
   };
 
+  // 🔗 06/09 — a entrada da Lista com os três destinos: o dia é certo; a hora
+  // põe na Jornada; "também no quadro" cria o card ligado (lib/destinos.js).
   const addTarefa = async () => {
-    if (!novaTarefa.titulo.trim()) return;
+    if (!novaTarefa.titulo.trim() || !uid) return;
+    let listaId = novaTarefa.listaId || listasDoQuadro[0]?.id || null;
+    let listaNome = listasDoQuadro.find((l) => l.id === listaId)?.nome || null;
+    if (novaTarefa.noQuadro && !listaId) {
+      // sem lista ainda: nasce a primeira do modelo, pra ter onde pôr
+      const { data } = await supabase.from('metodo_quadro_listas').insert({ user_id: uid, nome: LISTAS_MODELO[0].nome, cor: LISTAS_MODELO[0].cor, ordem: 0 }).select().single();
+      if (data) { listaId = data.id; listaNome = data.nome; setListasDoQuadro([data]); }
+    }
+    const plano = planoDeEntrada({ origem: 'lista', titulo: novaTarefa.titulo, hora: novaTarefa.hora || null, noQuadro: novaTarefa.noQuadro, listaId, userId: uid, dataISO: dia, ordemTarefa: tarefas.length });
+    if (!plano.tarefa) { toast.error('Não deu pra adicionar'); return; }
     try {
-      await plataforma.entities.MetodoTarefa.create({ user_id: uid, data: dia, hora: novaTarefa.hora, titulo: novaTarefa.titulo.trim(), detalhe: '', feito: false, ordem: tarefas.length });
-      setNovaTarefa({ hora: '', titulo: '' });
+      const criada = await plataforma.entities.MetodoTarefa.create(plano.tarefa);
+      if (plano.cartao) {
+        const { error } = await supabase.from('metodo_quadro').insert(ligarCartaoATarefa(plano.cartao, criada?.id || 'sem-id'));
+        if (error) toast.error('Entrou no dia, mas não deu pra pôr no quadro');
+      } else if (novaTarefa.noQuadro) toast.error('Entrou no dia, mas o quadro está sem lista');
+      toast.success(fraseEntrou(plano, { listaNome }));
+      setNovaTarefa({ hora: '', titulo: '', noQuadro: false, listaId: novaTarefa.listaId });
       carregarTarefas();
     } catch { toast.error('Erro ao adicionar'); }
   };
+  useEffect(() => {
+    if (visao !== 'lista' || !uid) return;
+    supabase.from('metodo_quadro_listas').select('id,nome,cor,ordem').eq('user_id', uid).order('ordem', { ascending: true })
+      .then(({ data }) => setListasDoQuadro(Array.isArray(data) ? data : []))
+      .catch(() => setListasDoQuadro([]));
+  }, [visao, uid]);
 
   // ✏️ DIR-80 — editar a tarefa DE HOJE (não a rotina: são coisas diferentes,
   // e a tela diz qual é qual no título de cada botão)
@@ -1749,10 +1774,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             )}
 
             {visao === 'lista' && (
-            <div className="flex gap-2 pt-1">
-              <Input type="time" value={novaTarefa.hora} onChange={(e) => setNovaTarefa({ ...novaTarefa, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" />
-              <Input value={novaTarefa.titulo} onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })} placeholder="nova tarefa do dia..." className="bg-white border-nz-borda text-nz-tinta" />
-              <Button onClick={addTarefa} disabled={!novaTarefa.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0"><Plus className="w-4 h-4" /></Button>
+            <div className="pt-1">
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
