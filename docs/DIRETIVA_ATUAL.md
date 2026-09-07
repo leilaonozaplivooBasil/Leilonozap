@@ -12,6 +12,51 @@
 
 ---
 
+## DIR-84.3 / 84.4 — Barato sem perder rigor, e a prova por dentro
+
+**Emitida por:** dono (07/09/2026). Depois de colocar crédito no AI Gateway
+(US$ 20) e ver o primeiro teste real pegar a foto na cama pelos DOIS motivos
+(*"não aparece planilha, extrato, tela de sistema…"* e *"é a mesma cena da
+comprovação anterior, apenas com ângulo/recorte diferente"*): *"parece que
+está foda — será que você consegue fazer mais uns testes reais aí por dentro
+como usuário, só para termos certeza?"* Antes, sobre custo: *"o que você me
+indica pra ficar foda e barato?"*
+
+**Data:** 07/09/2026.
+
+**Custo (84.3), com o volume real do banco (4 comprovações em 30 dias, 10
+pessoas ativas, 68 tarefas/dia):** ~R$ 0,15–0,30 por validação no Opus 5;
+R$ 15/mês no volume de hoje, ~R$ 450/mês se TODAS as tarefas do dia fossem
+comprovadas. Duas alavancas ligadas:
+- **cache**: papel + todas as regras de tipo + cruzamento num único bloco
+  `system` com `cache_control` — prefixo IDÊNTICO em toda chamada (a
+  mensagem diz qual `[TIPO]` vale), acima do mínimo de 512 tokens do Opus 5,
+  cobrado a 10% a partir da 2ª chamada;
+- **esforço medium** em `output_config` — julgar foto contra regra não pede o
+  raciocínio máximo; o thinking adaptativo segue ligado.
+O ping (`?ping=1`) passou a mandar a MESMA forma da validação (saída
+estruturada + effort + cache): se o gateway recusar qualquer parte, aparece
+no painel do gestor, não na primeira pessoa comprovando de manhã. Ping real
+no preview: `ia: true`, `saida: "ok"`.
+
+**Recomendação registrada:** Opus 5 só na validação (o cérebro anti-fraude,
+volume pequeno); Sonnet 5 nos textos do `InvokeLLM` (9 telas, mais volume);
+Whisper segue na chave da OpenAI (única coisa que a usa). Um provedor por
+função — o buraco de hoje nasceu de um erro escondido; menos peças, melhor.
+
+**A bateria de prova (84.4):** `api/functions/xgameProvaValidador.js` roda a
+validação DE VERDADE (mesmo handler, gateway, Opus 5) contra 12 casos e
+devolve veredito × esperado — a foto real da cama contra tarefa de trabalho,
+acordar e pré-treino (a pergunta) e reciclada; a 2ª rodada com justificativa
+evasiva; telas renderizadas em `public/prova/` (planilha de fluxo de caixa,
+que TEM que aprovar; página de livro com resumo; tela preta; meme); e duas
+fotos reais de pessoas do time como exploratórias. Senha no cofre
+(`app_segredos.xgame_prova_token`, tempo constante); sem token, 401 e zero
+chamada de IA; um caso por GET; apagar a linha desliga. Resultado da rodada
+real fica em `docs/RELATORIOS_EXECUCAO.md`.
+
+---
+
 ## DIR-84.1 / 84.2 — A IA não estava rodando: o furo, a causa e a troca
 
 **Emitida por:** dono (07/09/2026), com a print da fila do gestor: *"olha qual

@@ -4350,3 +4350,37 @@ recolocada nesse caminho (e um campo nulo deixou de virar CRASH que matava o
 resto da corrida). Resultado final: **284/306, DIR-77 13/13, DIR-81 4/4, zero
 erro de console**; as 22 vermelhas seguem sendo as do menu (5) e da Agenda sob o
 novo seletor de escopo (17).
+
+---
+
+## REL — DIR-84.4 · Bateria de prova do validador, rodada REAL (07/09/2026, 03:14 UTC)
+
+Rodado por dentro (mesmo handler, AI Gateway da Vercel, `anthropic/claude-opus-5`,
+saída estruturada, cache + effort medium), um caso por GET com a senha do cofre.
+**12/12 dentro do esperado.** Tempo por caso: 5–13 s.
+
+| caso | esperado | veredito | conf. | o que a IA disse (resumo) |
+|---|---|---|---|---|
+| cama_financeiro | reprovada/dúvida | **reprovada** | 88 | "ambiente de descanso, sem tela, planilha, notas, boletos… incoerência gritante" |
+| cama_reciclada (mesma foto como anterior) | reprovada | **reprovada** | 95 | "(1) nada de treino; (2) é a MESMA imagem já usada — reciclagem" |
+| cama_acordar (tipo instagram, 05:00) | reprovada/dúvida | **reprovada** | 86 | "pessoa ainda deitada — justamente o que a regra reprova pra acordar" |
+| cama_pretreino (05:15) | dúvida/reprovada | **reprovada** | 86 | "cena de descanso, sem nenhum sinal de pré-treino — refaça de pé, com roupa/tênis" |
+| cama_pretreino_justificativa (2ª rodada, "acabei de acordar…") | dúvida/reprovada, sem pergunta | **dúvida** (sem pergunta) | 72 | "a explicação é plausível como contexto, mas não mostra que o treino vai acontecer" → gestor |
+| planilha_financeiro | aprovada | **aprovada** | 88 | "financeiro trabalhado hoje (08:52, perto das 09:00), números do mês e decisão com responsável, prazo e número" |
+| livro_leitura (aprendizado + resumo) | aprovada | **aprovada** | 74 | "página de livro com anotação; o resumo conversa com o texto e traz aplicação própria" |
+| livro_financeiro | dúvida/reprovada | **reprovada** | 88 | "página de livro sobre disciplina — nenhum elemento financeiro" |
+| preto_treino | reprovada | **reprovada** | 97 | "imagem 100% preta" |
+| meme_financeiro | reprovada | **reprovada** | 96 | "isso é um meme, não uma comprovação" |
+| fechamento_real (foto real do time) | exploratório | aprovada | 82 | "print de relatório de entregas do dia enviado no grupo às 21:05 — coerente com Fechamento do dia" (o gestor tinha reprovado na mão quando a IA estava fora) |
+| contratos_real (foto real do time) | exploratório | **dúvida COM pergunta** | 72 | pergunta: *"Na foto você aparece só de rosto, sentado no sofá, sem contrato ou tela à vista: o que exatamente você estava fazendo às 17:30 e consegue mandar o print dos contratos ou dos follow-ups?"* |
+
+**O que isso prova:** cruzamento tarefa×imagem (6 casos), anti-reciclagem visual
+(1), regra específica de tipo (acordar, aprendizado), a pergunta antes do gestor
+num caso real ambíguo (contratos_real), a 2ª rodada sem pergunta nova, e — o
+lado que importa tanto quanto — **quem cumpriu é aprovado** (planilha, livro,
+fechamento_real). Nenhum caso caiu em `ia_indisponivel`.
+
+**Ficou registrado pro dono:** a comprovação de teste dele (foto na cama em
+"Resolver: Toda X-Game e Top College", 07/09 09:00) segue em `em_analise`
+contando provisoriamente — foi feita enquanto a IA estava fora; reprovar no
+painel do gestor (ou eu, se ele mandar).
