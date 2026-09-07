@@ -42,7 +42,7 @@ import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
 import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
-import SeletorEscopo, { useEscopoDeVisao } from './SeletorEscopo';
+import { useEscopoDeVisao } from './SeletorEscopo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
 import { reuniaoIminente, partesDoHabito } from '@/lib/metodo'; // 🔔 DIR-53 — popup de reunião; 🎓 DIR-69 — nomes oficiais dos Hábitos
 import CrmResumo from './CrmResumo';
@@ -240,7 +240,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // está vendo "só o meu" (como usuário) ou "tudo" (como Super Admin /
   // diretoria). Antes o dono via os dois misturados sem a tela dizer qual.
   // isSuperAdmin (= bypass do escopo de rede) agora só liga quando ele pediu.
-  const [escopo, setEscopo] = useEscopoDeVisao();
+  const [escopo] = useEscopoDeVisao();
   const visao = React.useMemo(() => resolverEscopo({ vis, escopo }), [vis, escopo]);
   const isSuperAdmin = visao.crmTudo;
   const networkIds = React.useMemo(
@@ -1456,8 +1456,8 @@ _Enviado via CRM Leilão NoZap_`;
               Os 8 Hábitos<br className="hidden sm:block" /> do Sucesso
             </h1>
           </div>
-          {/* 👤/🛡️ o seletor "só o meu / tudo" — só pra quem tem visão total */}
-          <SeletorEscopo vis={vis} escopo={escopo} onEscopo={setEscopo} />
+          {/* 👤/🛡️ o seletor "só o meu / tudo" mora no topo da página (Licensing); aqui só a leitura */}
+          {visao.podeTudo && <p className={`text-[11px] ${visao.tudo ? 'text-amber-200/90' : 'text-white/45'}`} data-teste="escopo-aqui">Você está vendo: <span className="font-bold">{visao.rotulo}</span></p>}
           {/* 🧹 "Novo Vendedor" e "Novo Cliente" SAÍRAM DAQUI (ordem do dono:
               "está fora de contexto, tem que entrar lá na lista de contato").
               Conferido antes de mexer: o Hábito 03 — Lista de Networking já

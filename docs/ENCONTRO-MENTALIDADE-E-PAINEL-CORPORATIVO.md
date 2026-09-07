@@ -90,6 +90,34 @@ está no dia vê "dar um horário" ou "mudar horário (07:00)".
 Provas: `tests/destinos.test.mjs` (6) e a banca `tests/navegador/quadro.spec.mjs` (3: as pílulas, levar pro dia com
 hora e choque, a entrada nova com os destinos).
 
+## A limpeza de sênior da X-Performance (07/09)
+
+Dono: "está ficando muito confuso… todas as abas têm que ter o botão de super admin, bem pequeno… faça o que
+precisa ser feito e deixe fluido". O que mudou, em ordem do que mais muda a leitura:
+
+1. **O seletor "Só o meu / Tudo" mora no topo da página inteira**, compacto, junto do seletor de seções da Top
+   College (Licensing). Vale pra todas as áreas. Em "Tudo" a página ganha um fio âmbar no topo e cada seção diz
+   "Você está vendo: tudo · como Super Admin". Todos os usos do hook ficam sincronizados (um store no módulo).
+   Na X-Performance, "Só o meu" faz o time virar só a própria pessoa: os números viram os dela e a tabela fica
+   com a linha dela aberta.
+2. **Contas institucionais fora do time** (`pareceConta` em `timeCorporativo.js`): nomes com " – ", "Site
+   Oficial", "Distribuidor", "Live", "Loja", "Canal"… não são gente. Saem da média, do "sem nenhum hábito" e da
+   tabela; a tela diz "N contas institucionais fora do time". Até existir a marca no cadastro, a leitura é pelo nome.
+3. **A tabela sem ruído**: quem tem atividade vira linha; quem não tem nada vai pra um grupo fechado embaixo,
+   "sem atividade hoje (11): Aline, Beatriz…", nomes clicáveis (abre o detalhe) e "mostrar as linhas".
+4. **Cor só onde é sinal**: saiu a coluna "produção" (fez / não fez em vermelho pra 14 de 16). Vermelho só em
+   "atrasada"; âmbar em "sem agendar" e "não planejou". O semáforo passou a contar dia vazio como um furo
+   (amarelo) — verde é só quem planejou e está em dia.
+5. **Largura máxima 1400 e tipografia maior**; os seis números numa régua; os 8 Hábitos numa linha só no desktop.
+6. **Herói do X-office menor** e a faixa de abas da Mentalidade fixa ao rolar.
+7. **Período inteligente**: se "hoje" está vazio pra todo mundo, abre em "semana" e avisa.
+8. **Vazio que fala**: "—" no lugar de "0/0 · 0%", "ninguém ainda" no lugar de "0 sonhos no time", "nenhum
+   ainda" nos contatos.
+9. **Prévia mais útil**: a semana vira "2 de 3 feitas" em vez de "2/3 · 67%".
+
+Ficou de fora, de propósito: "definir a meta" a partir do detalhe (precisa de um caminho até o Quadro Geral) e a
+marca de conta no cadastro (precisa de migração — entra pelo workflow, não pela mão).
+
 ## O que estava duplicado e virou uma coisa só (06/09)
 
 O dono pediu uma análise do painel inteiro ("o que der pra juntar, une — exemplo: enviar demanda"). O que se

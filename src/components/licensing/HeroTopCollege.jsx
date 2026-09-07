@@ -170,7 +170,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
             alt=""
             aria-hidden="true"
             draggable="false"
-            className="pointer-events-none shrink-0 h-[170px] sm:h-[290px] lg:h-[320px] w-auto object-contain select-none"
+            className="pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] w-auto object-contain select-none"
             style={{
               // derrete nos QUATRO lados: entra pela esquerda, sai pela direita
               // e pelo pé, então o professor se funde na página em vez de

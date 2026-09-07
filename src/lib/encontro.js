@@ -574,7 +574,10 @@ export function visaoExecutiva({ time = [], tarefas = [], demandas = [], tarefas
     const feitasSemana = atePassado.filter((t) => t.feito).length;
     const atrasadas = minhas.filter((t) => !t.feito && t.prazo_em && new Date(t.prazo_em).getTime() < new Date(`${hojeISO}T23:59:59`).getTime() && dia(t) < String(hojeISO)).length;
     const prod = producaoDaSemana({ demandas: demandas.filter((d) => d.pessoa_id === p.id), tarefas: tarefasDasDemandas, cards, hojeISO });
-    const furos = (planejou || hoje.length === 0 ? 0 : 1) + (atrasadas > 0 ? 1 : 0) + (prod.atrasadas > 0 ? 1 : 0) + (prod.semAgendar > 0 ? 1 : 0);
+    // 07/09 (dono: "o semáforo contradiz a produção"): dia VAZIO é um furo — a
+    // pessoa não planejou o dia. Antes contava como verde e a tela dizia
+    // "está bem" pra quem não fez nada. Verde é só quem planejou e está em dia.
+    const furos = (planejou ? 0 : 1) + (atrasadas > 0 ? 1 : 0) + (prod.atrasadas > 0 ? 1 : 0) + (prod.semAgendar > 0 ? 1 : 0);
     return {
       pessoaId: p.id, nome: p.nome, nivel: p.nivel || null, funcaoCurta: p.funcaoCurta || null,
       hoje: { total: hoje.length, feitas: feitasHoje, planejou, vazio: hoje.length === 0 },

@@ -1076,13 +1076,18 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
   // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
   // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.
+  // 👤/🛡️ 07/09 — o seletor "Só o meu / Tudo" mora AQUI, uma vez, junto do
+  // seletor de seções: vale pra todas as áreas (Método, Mentalidade, ADM X-Game…).
   const seletorDaCentral = (
-    <CentralVendasTabs
-      value={catalogSubTab}
-      onChange={setCatalogSubTab}
-      clientesCount={myClients.length}
-      escuro={naTopCollege}
-    />
+    <div className="flex flex-col gap-2">
+      <CentralVendasTabs
+        value={catalogSubTab}
+        onChange={setCatalogSubTab}
+        clientesCount={myClients.length}
+        escuro={naTopCollege}
+      />
+      <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} compacto />
+    </div>
   );
   const saudacaoDaHora = (() => {
     const h = new Date().getHours();
@@ -1101,6 +1106,8 @@ const DashboardContent = ({ user, isAdmin }) => {
       className={`flex min-h-screen ${naTopCollege ? '' : 'bg-white'}`}
       style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
     >
+      {/* 🛡️ em "Tudo", um fio âmbar no topo da página inteira: você está como Super Admin */}
+      {visao.tudo && <div className="fixed top-0 left-0 right-0 h-[3px] z-[80] pointer-events-none" style={{ background: '#f59e0b' }} title={`Você está vendo tudo, como ${visPapel.papelLabel}`} data-teste="fio-tudo" />}
       <NavegacaoLateralGlobal
         user={user}
         activeTab={activeTab}
@@ -1221,7 +1228,6 @@ const DashboardContent = ({ user, isAdmin }) => {
               <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin;
                     o ESCOPO dos dados (o quadro de todo mundo × só o meu) obedece o seletor */}
-                <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} className="mb-3" />
                 <XPerformance currentUser={user} visaoTotal={visao.crmTudo} gestao={visPapel.superAdmin} />
               </TabsContent>
 
@@ -1230,7 +1236,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   gestão e a diretoria; o resto vê e acompanha a apresentação. */}
               <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
-                <MentalidadePagina currentUser={user} podeConduzir={visibilidadeDoUsuario(user).superAdmin || visibilidadeDoUsuario(user).visaoTotal} gestao={visibilidadeDoUsuario(user).superAdmin} />
+                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} escopoRotulo={visao.podeTudo ? visao.rotulo : null} />
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}

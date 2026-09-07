@@ -296,15 +296,18 @@ test('PERFORMANCE (sem administração): a visão executiva de todo mundo — qu
   await pagina.locator('[data-teste="visao-linha"]').first().waitFor();
   assert.match(await texto(pagina, '[data-teste="visao-resumo"]'), /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
   const linhas = pagina.locator('[data-teste="visao-linha"]');
+  // 07/09: dia vazio é um furo (amarelo) — todo mundo tem um furo hoje; quem tem demanda vem primeiro, depois o nome.
+  // Jean e Luiz (dia vazio, sem demanda) vão pro grupo "sem atividade"; mas o dono está aberto por padrão, então o grupo já vem em linhas.
   assert.deepEqual(await linhas.evaluateAll((els) => els.map((e) => [e.dataset.pessoa, e.dataset.cor, e.dataset.produziu])), [
-    ['emanuel', 'amarelo', 'sim'], // planejou e fez 1/2, mas tem demanda sem agendar
-    ['carla', 'verde', 'sim'],     // dia vazio hoje; a demanda dela já foi conferida
-    ['jean', 'verde', 'nao'],      // dia vazio, nada feito: não fez
-    ['dono', 'verde', 'nao'],      // o CEO também está no time — e também não fez
+    ['carla', 'amarelo', 'sim'],   // dia vazio; a demanda dela já foi conferida
+    ['emanuel', 'amarelo', 'sim'], // planejou e fez 2/3, mas tem demanda sem agendar
+    ['jean', 'amarelo', 'nao'],
+    ['dono', 'amarelo', 'nao'],
   ]);
-  assert.match(await linhas.nth(0).textContent(), /Emanuel Silva.*planejou · 2\/3 feitas.*1 sem agendar.*fez/);
-  assert.match(await linhas.nth(2).textContent(), /Jean Aranha.*dia vazio.*não fez/);
-  await linhas.nth(1).click();
+  assert.match((await linhas.nth(1).textContent()).replace(/\s+/g, ' '), /Emanuel Silva.*planejou · 2\/3 feitas.*2 de 3 feitas.*1 sem agendar/);
+  const grupo = pagina.locator('[data-teste="sem-atividade"]');
+  assert.deepEqual([await grupo.getAttribute('data-quantos'), await grupo.getAttribute('data-aberto')], ['2', 'sim']);
+  await linhas.nth(0).click();
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   assert.match(await texto(pagina, '[data-teste="detalhe-pessoa"]'), /Carla Souza/);
   assert.deepEqual(erros, []);
@@ -348,8 +351,11 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
   // o painel dela está dentro do detalhe, e o PDF sai de dois lugares (cabeçalho do detalhe e painel)
   await detalhe.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();
   assert.equal(await detalhe.locator('[data-teste="pdf-executivo"]').count(), 2);
-  // o Jean: não vendeu, sem quadro
-  await linha('jean').click();
+  // o Jean: não vendeu, sem quadro — fecha o Emanuel, o grupo "sem atividade" recolhe e o Jean abre pelo nome
+  await linha('emanuel').click();
+  await pagina.locator('[data-teste="sem-atividade"][data-aberto="nao"]').waitFor();
+  assert.match((await pagina.locator('[data-teste="sem-atividade"]').textContent()).replace(/\s+/g, ' '), /sem atividade hoje \(2\).*Jean, Luiz/);
+  await pagina.locator('[data-teste="sem-atividade-nome"][data-pessoa="jean"]').click();
   const dj = pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="jean"]');
   await dj.waitFor();
   assert.match((await dj.locator('[data-teste="habito-pessoa"][data-n="6"]').textContent()).replace(/\s+/g, ' '), /não vendeu/);
@@ -365,6 +371,8 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
   // clicar de novo na linha aberta fecha
   await linha('emanuel').click();
   assert.equal(await pagina.locator('[data-teste="detalhe-pessoa"]').count(), 0);
+  // vazio que fala: nenhum "0/0 · 0%", "dia vazio" ou "não fez" na tabela
+  assert.doesNotMatch(await pagina.locator('[data-teste="visao-tabela"]').textContent(), /0\/0 · 0%|dia vazio|não fez/);
   await linha('carla').click();
   await pagina.locator('[data-teste="detalhe-pessoa"][data-pessoa="carla"] [data-teste="painel-corporativo"][data-pessoa="carla"]').waitFor();
   await pagina.screenshot({ path: path.join(FOTOS, 'xperformance-oito-habitos.png'), fullPage: true });
