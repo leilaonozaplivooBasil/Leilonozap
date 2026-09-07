@@ -142,10 +142,29 @@ export function pautasDoTexto(texto) {
     .filter(Boolean);
   // o dono dita tudo numa linha só, separando por vírgula ("Fulano fala sobre X, Ciclana
   // fala sobre Y, …"): quando cada pedaço tem corpo (3+ palavras), a vírgula separa pauta
-  return linhas.flatMap((l) => {
+  const pautas = linhas.flatMap((l) => {
     const pedacos = l.split(/\s*,\s*/).map((x) => x.trim()).filter(Boolean);
     return pedacos.length >= 2 && pedacos.every((x) => x.split(/\s+/).length >= 3) ? pedacos : [l];
   });
+  // 🧯 07/09/2026 — dono: colou o histórico da CONVERSA (pergunta do app +
+  // resposta) na caixa de "colar tudo", e cada linha virou um tópico da
+  // reunião — inclusive a pergunta em si ("Resolver: Qual vai ser o livro de
+  // hoje?") e a palavra "pronto" que fecha a conversa ("Resolver: 'pronto'").
+  // A régua não sabia diferenciar "isto é uma pauta real" de "isto é o app
+  // falando" — filtra fora antes de virar tópico.
+  return pautas.filter((p) => !ehPerguntaDoApp(p));
+}
+
+/** As linhas que `pautasDoTexto` DESCARTOU por serem o app falando — pra tela avisar por quê sobrou menos pauta do que linha colada. */
+export function pautasDescartadasDoTexto(texto) {
+  const linhas = String(texto || '').split(/\r?\n|;/)
+    .map((l) => l.replace(/^\s*(?:[-•*·]|\d+[.)])\s*/, '').trim())
+    .filter(Boolean);
+  const pautas = linhas.flatMap((l) => {
+    const pedacos = l.split(/\s*,\s*/).map((x) => x.trim()).filter(Boolean);
+    return pedacos.length >= 2 && pedacos.every((x) => x.split(/\s+/).length >= 3) ? pedacos : [l];
+  });
+  return pautas.filter((p) => ehPerguntaDoApp(p));
 }
 
 // ── ✍️ a pauta ditada vira frase limpa (a IA faz isso melhor; a régua faz o possível) ──
@@ -499,6 +518,18 @@ export const PERGUNTAS_CONVERSA = [
 
 const CONVERSA_PRONTO = /^(pronto|não|nao|acabou|só isso|so isso|é isso|e isso|nada|chega|nenhum|nenhuma)\.?$/i;
 
+// 🧯 07/09/2026 — a mesma linha que fecha uma conversa ("pronto") ou que É uma
+// das perguntas do app não pode virar pauta — nem vinda da conversa (defesa,
+// já que `responderConversa` não deveria deixar passar) nem colada como texto
+// cru (onde não há passo-a-passo protegendo, ver `pautasDoTexto`).
+const PERGUNTAS_TEXTO_NORMALIZADO = PERGUNTAS_CONVERSA.map((p) => p.pergunta.toLowerCase().replace(/["“”]/g, "'").replace(/[.?!]+\s*$/, '').trim());
+export function ehPerguntaDoApp(linha) {
+  const l = String(linha || '').toLowerCase().replace(/["“”]/g, "'").replace(/[.?!]+\s*$/, '').trim();
+  if (!l) return false;
+  if (CONVERSA_PRONTO.test(l)) return true;
+  return PERGUNTAS_TEXTO_NORMALIZADO.some((p) => l === p || l.includes(p));
+}
+
 /** A conversa zerada: primeira pergunta, nada respondido ainda. */
 export function conversaInicial() {
   return { passo: 0, respostas: {}, pautasColetadas: [], concluida: false };
@@ -532,7 +563,7 @@ export function perguntaAtual(estado) {
 export function contextoDaConversa(estado) {
   const e = estado || conversaInicial();
   return {
-    pautas: e.pautasColetadas,
+    pautas: e.pautasColetadas.filter((p) => !ehPerguntaDoApp(p)),
     livro: e.respostas.livro || null,
     leituraFoco: e.respostas.leituraFoco || null,
     treinamentoTema: e.respostas.treinamentoTema || null,

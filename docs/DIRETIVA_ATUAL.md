@@ -12,6 +12,60 @@
 
 ---
 
+## DIR-88 — O Encontro da Mentalidade "alucinava": era a própria conversa virando pauta
+
+**Emitida por:** dono (07/09/2026), com prints do Encontro da Mentalidade real
+(07/09) mostrando 10 "tópicos" quebrados: *"ela está alucinando, ela me faz
+umas perguntas aqui pra eu dar o tema da apresentação, e ela não me dá lugar
+lá pra editar... quando eu já botei o tema, aí ela decide botar hábito
+automático (...) Ela tem que seguir o que eu escrevo (...) não pode
+alucinar (...) no ruim no ruim, os cards da apresentação botar pra eu
+editar, pra eu escrever, pra eu apagar, numa emergência. Faz uma análise aí
+pra gente poder deixar isso perfeito."* Pedido de análise antes do código.
+
+**Data:** 07/09/2026.
+
+**O achado (não é a IA inventando fatos — é mistura de texto):** os 10
+"tópicos" da reunião real eram, um por um, a pergunta do próprio app
+("Qual vai ser o livro de hoje?") alternada com a resposta do dono —
+incluindo a palavra "pronto" (que fecha a conversa) virando um tópico
+("Resolver: 'pronto'"). Isso só acontece de um jeito: o texto que virou
+pauta veio da CONVERSA INTEIRA colada na caixa "colar tudo", não das
+respostas isoladas. O modo "conversar" (o chat, já padrão) isola certinho
+cada resposta — quem falhava era "colar tudo": ele quebra qualquer linha
+colada em um tópico, sem saber diferenciar "isto é uma pauta real" de
+"isto é o app falando". Efeito colateral: como o "livro"/"foco da
+leitura"/"treinamento" só existem no modo conversa, a Leitura caiu no
+Hábito genérico do mês em vez do livro que o dono escolheu — não porque a
+régua ignorou o que ele disse, mas porque o que ele disse nunca chegou
+como "livro" (chegou misturado com pergunta, no campo errado).
+
+**O que entra:**
+1. `src/lib/encontro.js` — `ehPerguntaDoApp()` reconhece uma linha que é a
+   pergunta do app (ou "pronto"/variações) e `pautasDoTexto()` descarta essas
+   linhas antes de virarem pauta; `pautasDescartadasDoTexto()` devolve o que
+   foi descartado, pra tela avisar por quê sobrou menos pauta que linha
+   colada. `contextoDaConversa()` ganhou o mesmo filtro como segunda trava.
+2. `EncontroMentalidade.jsx` — ao gerar pelo modo "colar tudo", um toast
+   avisa quantas linhas foram ignoradas por serem a própria pergunta do app,
+   com exemplo, e recomenda usar o modo "conversar" pra isso não acontecer.
+3. **A válvula de emergência que faltava:** dentro de "editar" (que já
+   existia e só deixava reescrever), cada tópico da reunião ganhou um ✕ pra
+   apagar, e a lista ganhou "+ novo tópico" pra escrever um do zero — sem
+   depender de regenerar tudo ou da IA.
+
+**Fora de escopo (recomendação, não mudança de código):** o registro real
+de 07/09, já salvo com os tópicos quebrados, continua quebrado até ser
+regenerado — a tela já tinha (e continua tendo) o botão "apagar e começar
+do zero"; a recomendação é usar o modo "conversar" (padrão) desta vez,
+respondendo uma pergunta de cada vez em vez de colar a conversa inteira.
+
+**Prova:** teste novo reproduz o print exato (as 10 linhas coladas, uma por
+uma) e confirma que sobram só as 5 pautas reais; suíte 1402/1402, build
+limpo, lint sem erro novo.
+
+---
+
 ## DIR-87 — Reunião da empresa não aparece duplicada no Hábito 4
 
 **Emitida por:** dono (07/09/2026), com print do Hábito 4 (Contato e Convite):

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   itemDaRotina, ordenarRotina, incluirNaRotina, editarNaRotina, excluirDaRotina,
-  estadoDaRotina, deveGerarSozinha, rotinaEmVigor, valeAPartirDe, devePreAbrirAutomatico,
+  estadoDaRotina, deveGerarSozinha, rotinaEmVigor, valeAPartirDe, devePreAbrirAutomatico, jaGerouHoje,
 } from '../src/lib/rotinaPessoal.js';
 
 const CASA = [{ hora: '05:00', titulo: 'Acordar' }, { hora: '08:00', titulo: 'Caminho pra empresa' }];
@@ -128,6 +128,29 @@ test('quem já ligou por conta própria: a casa não mexe de novo', () => {
 test('quem já PEDIU pra parar: a casa nunca religa sozinha, mesmo com automatica false', () => {
   assert.equal(devePreAbrirAutomatico({ rotina_automatica: false, rotina_automatica_recusada: true }), false);
   assert.equal(estadoDaRotina({ rotina_automatica_recusada: true }).recusada, true);
+});
+
+// ─── DIR-81.1 — a idempotência do cron não pode depender de metodo_tarefas ──
+// Um compromisso avulso (reunião sincronizada, demanda) não é a Rotina
+// Perfeita — não pode travar ela de nascer.
+
+test('rotina_gerada_em de hoje: já gerou hoje', () => {
+  assert.equal(jaGerouHoje({ rotina_gerada_em: '2026-09-07' }, '2026-09-07'), true);
+});
+
+test('rotina_gerada_em de outro dia: não conta como hoje', () => {
+  assert.equal(jaGerouHoje({ rotina_gerada_em: '2026-09-06' }, '2026-09-07'), false);
+});
+
+test('sem rotina_gerada_em nenhuma: nunca gerou', () => {
+  assert.equal(jaGerouHoje({}, '2026-09-07'), false);
+  assert.equal(jaGerouHoje(null, '2026-09-07'), false);
+});
+
+test('um compromisso avulso em metodo_tarefas não é rotina_gerada_em — a régua é só o perfil', () => {
+  // o cenário real: o perfil nunca gerou nada, mas o dia já tem uma reunião
+  // sincronizada do Contato & Convite — jaGerouHoje nem olha pra isso.
+  assert.equal(jaGerouHoje({ rotina_automatica: true }, '2026-09-07'), false);
 });
 
 test('editar a rotina vale a partir de AMANHÃ — o dia de hoje fica como está', () => {
