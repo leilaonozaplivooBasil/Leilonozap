@@ -4408,3 +4408,10 @@ painel do gestor (ou eu, se ele mandar).
 
 **Fica pra rodada própria:** os geradores de imagem (`xgameGerarImagem`,
 `GenerateImage`) ainda em modelos Google — pingar antes de contar com eles.
+
+**Em produção (07/09/2026, 03:31 UTC):** PR #207 mergeado (squash) em `main`
+= `b4d2d125`, por ordem do dono ("pode colocar em produção"). Deploy de
+produção pronto e pingado: `xgameValidarPrint?ping=1` → `ia:true`, Claude
+Opus 5, `saida:"ok"`; `InvokeLLM?ping=1` → `ia:true`, Claude Sonnet 5,
+`saida:"ok"`. Branch de preview realinhada com a `main` (nenhum commit
+perdido — o remoto estava exatamente no head mergeado).
