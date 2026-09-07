@@ -40,7 +40,7 @@ const MASCARA_COSTURA = [
   'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
 ].join(', ');
 
-export default function HeroTopCollege({ saudacao, nome, seletor }) {
+export default function HeroTopCollege({ saudacao, nome, seletor, escopo }) {
   return (
     /* a faixa não é mais um cartão: sem borda, sem canto no celular e no
        mesmo preto da página — ela DERRETE no resto em vez de ser recortada */
@@ -104,8 +104,15 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
       </div>
 
       <div className="relative flex flex-col sm:flex-row sm:items-end">
-        {/* ────────── coluna 1: quem assina isto aqui ────────── */}
-        <div className="px-6 sm:px-9 pt-5 sm:pt-6 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[24rem] shrink-0">
+        {/* ────────── coluna 1: quem assina isto aqui ──────────
+            2ª limpeza (07/09) — dono: "o lado esquerdo está com muita letra,
+            dar mais uma espalhada". O bloco tinha três níveis (título,
+            subtítulo, seletor) quase colados um no outro; agora cada um
+            respira mais, e o "Só o meu / Tudo" SAIU daqui — foi morar do
+            lado do nome, na coluna 2 (é lá que se diz "como quem" a pessoa
+            está vendo a tela; misturado com a navegação de seções, ele
+            brigava por atenção com o próprio menu). */}
+        <div className="px-6 sm:px-9 pt-6 sm:pt-8 pb-6 sm:pb-9 w-full sm:w-auto sm:max-w-[25rem] shrink-0">
           {/* 🎓 DIR-66 — ordem do dono: DENTRO da Top College este título não é
               "Painel de Alavancagem" — é o X-office, a sub-marca que cuida de
               verificar o progresso e mapear processos. Fora da faculdade o nome
@@ -115,47 +122,55 @@ export default function HeroTopCollege({ saudacao, nome, seletor }) {
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.08]">
             X-office
           </h1>
-          <p className="mt-1 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-white/35" style={{ fontFamily: 'Sora, sans-serif' }}>
+          <p className="mt-2 sm:mt-2.5 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-white/35" style={{ fontFamily: 'Sora, sans-serif' }}>
             Verificando o progresso e mapeando processos
           </p>
 
-          {/* 🎓 DIR-64/67 — o seletor mora DENTRO da faixa: assim ele abre sobre
-              o preto (era o pedido — abria branco por cima do painel e ficava
-              feio) e some a faixa branca que sobrava entre a faixa e o painel.
-              Ele FICA nesta coluna de propósito: agora é a única coisa clicável
-              da faixa, e comando de navegação mora do lado de quem assina a
-              tela, não em cima da figura. */}
-          {seletor && <div className="mt-6 sm:mt-7 max-w-xl">{seletor}</div>}
+          {/* 🎓 DIR-64/67 — o seletor de SEÇÕES mora DENTRO da faixa: assim ele
+              abre sobre o preto (era o pedido — abria branco por cima do
+              painel e ficava feio) e some a faixa branca que sobrava entre a
+              faixa e o painel. Sozinho agora — sem o "Só o meu/Tudo" grudado
+              embaixo —, ganhou o respiro que faltava. */}
+          {seletor && <div className="mt-8 sm:mt-10 max-w-xl">{seletor}</div>}
         </div>
 
         {/* ────────── coluna 2: o professor e a fala dele ──────────
             flex-1 + justify-end = todo o espaço que sobrar vira o meio vazio
             que o dono pediu pra manter; o par fala+professor fica colado na
             direita, sempre junto. */}
-        <div className="relative flex w-full sm:w-auto sm:flex-1 min-w-0 items-end justify-end sm:self-stretch">
-          <div
-            className="text-right pb-[62px] sm:pb-[145px] lg:pb-[160px] pr-3 sm:pr-4 max-w-[10rem] sm:max-w-[15rem]"
-            style={{ textShadow: '0 2px 18px rgba(0,2,12,0.9)' }}
-          >
-            {/* a saudação virou FALA do professor: ele cumprimenta e, na linha
-                seguinte, faz a pergunta da marca. Era isso que ela ganhava
-                saindo do canto — deixou de ser rodapé de cabeçalho. */}
-            {saudacao && (
-              <p className="text-[10px] sm:text-xs text-white/50 mb-1 sm:mb-1.5" style={{ fontFamily: 'Sora, sans-serif' }}>
-                {saudacao}{nome ? `, ${nome}` : ''}
-              </p>
-            )}
-            <p
-              className="text-base sm:text-3xl font-extrabold tracking-tight leading-[1.12] bg-clip-text text-transparent"
-              style={{
-                fontFamily: 'Sora, sans-serif',
-                // as três cores precisam CABER na largura da frase: com as paradas
-                // padrão, o texto acabava ainda no azul e o magenta nunca aparecia
-                backgroundImage: 'linear-gradient(100deg, var(--topcollege-azul) 0%, var(--topcollege-roxo) 34%, var(--topcollege-magenta) 72%)',
-              }}
+        <div className="relative flex w-full sm:w-auto sm:flex-1 min-w-0 items-end justify-end sm:self-stretch pr-6 sm:pr-9">
+          <div className="flex flex-col items-end">
+            {/* 👤/🛡️ 2ª limpeza (07/09) — o "Só o meu / Tudo" mudou pra cá:
+                do lado de quem está vendo a tela, não misturado na navegação
+                de seções. É ele quem responde "como quem eu vejo isto". Mora
+                FORA do bloco da fala (que tem teto estreito, pensado pro
+                texto) — a pílula precisa da própria largura pra não quebrar
+                linha no meio de "Só o meu". */}
+            {escopo && <div className="mb-2.5 sm:mb-3">{escopo}</div>}
+            <div
+              className="text-right pb-[62px] sm:pb-[145px] lg:pb-[160px] pr-3 sm:pr-4 max-w-[11rem] sm:max-w-[16rem]"
+              style={{ textShadow: '0 2px 18px rgba(0,2,12,0.9)' }}
             >
-              Qual é o seu poder?
-            </p>
+              {/* a saudação virou FALA do professor: ele cumprimenta e, na linha
+                  seguinte, faz a pergunta da marca. Era isso que ela ganhava
+                  saindo do canto — deixou de ser rodapé de cabeçalho. */}
+              {saudacao && (
+                <p className="text-[10px] sm:text-xs text-white/50 mb-1 sm:mb-1.5" style={{ fontFamily: 'Sora, sans-serif' }}>
+                  {saudacao}{nome ? `, ${nome}` : ''}
+                </p>
+              )}
+              <p
+                className="text-base sm:text-3xl font-extrabold tracking-tight leading-[1.12] bg-clip-text text-transparent"
+                style={{
+                  fontFamily: 'Sora, sans-serif',
+                  // as três cores precisam CABER na largura da frase: com as paradas
+                  // padrão, o texto acabava ainda no azul e o magenta nunca aparecia
+                  backgroundImage: 'linear-gradient(100deg, var(--topcollege-azul) 0%, var(--topcollege-roxo) 34%, var(--topcollege-magenta) 72%)',
+                }}
+              >
+                Qual é o seu poder?
+              </p>
+            </div>
           </div>
 
           {/* 🧑‍🏫 o professor. É decorativo — a fala ao lado é que carrega a
