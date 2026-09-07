@@ -148,7 +148,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor, escopo }) {
                 linha no meio de "Só o meu". */}
             {escopo && <div className="mb-2.5 sm:mb-3">{escopo}</div>}
             <div
-              className="text-right pb-[62px] sm:pb-[145px] lg:pb-[160px] pr-3 sm:pr-4 max-w-[11rem] sm:max-w-[16rem]"
+              className="text-right pb-[85px] sm:pb-[198px] lg:pb-[220px] pr-3 sm:pr-5 max-w-[11rem] sm:max-w-[16rem]"
               style={{ textShadow: '0 2px 18px rgba(0,2,12,0.9)' }}
             >
               {/* a saudação virou FALA do professor: ele cumprimenta e, na linha
@@ -189,7 +189,7 @@ export default function HeroTopCollege({ saudacao, nome, seletor, escopo }) {
               imagem de terceiro nenhuma. */}
           <div
             aria-hidden="true"
-            className="relative pointer-events-none shrink-0 h-[130px] sm:h-[200px] lg:h-[220px] flex items-end justify-end select-none overflow-hidden"
+            className="relative pointer-events-none shrink-0 h-[177px] sm:h-[272px] lg:h-[300px] flex items-end justify-end select-none overflow-hidden"
           >
             {/* 🔦 o holofote atrás da figura: as mesmas cores azul/magenta da
                 frase ao lado. É ele que dá o "professor em destaque" da
@@ -202,10 +202,14 @@ export default function HeroTopCollege({ saudacao, nome, seletor, escopo }) {
               className="absolute inset-0"
               style={{ background: 'radial-gradient(48% 64% at 64% 82%, rgba(59,111,246,0.38), transparent 68%), radial-gradient(40% 52% at 80% 58%, rgba(230,46,139,0.24), transparent 70%)' }}
             />
-            {/* a figura nasce no tamanho grande (220) e ENCOLHE via scale nas
-                telas menores — uma peça só, três tamanhos. */}
-            <div className="relative origin-bottom scale-[0.591] sm:scale-[0.909] lg:scale-100" style={{ filter: 'drop-shadow(0 14px 30px rgba(0,2,12,0.72))' }}>
-              <FiguraDoHero altura={220} />
+            {/* 07/09 (3ª limpeza) — dono: "a imagem ainda está muito pequena,
+                pouco impactante… deixa ela maior, com mais conexão com a
+                frase, tanto no desktop quanto no celular". Os três tamanhos
+                cresceram 36% (eram 130/200/220) — em CLASSES responsivas de
+                verdade, não mais via `transform: scale` (que só mudava a
+                pintura e deixava a foto estourar a largura no celular). */}
+            <div className="relative" style={{ filter: 'drop-shadow(0 16px 34px rgba(0,2,12,0.72))' }}>
+              <FiguraDoHero classeAltura="h-[177px] sm:h-[272px] lg:h-[300px]" />
             </div>
           </div>
         </div>
