@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -91,6 +91,11 @@ export const SECOES_TOP_COLLEGE = [
   // precisa unir"). A aba `plano-carreira` e a rota /Evoluir continuam
   // valendo pra link antigo — a Licensing redireciona pra cá.
   { value: 'catalogo-carreira', label: 'Carreira', icon: Award },
+  // 🎓 07/09/2026 — COMO JOGAR: o guia do X-GAME virou página da plataforma
+  // (dono: "vira página"), com o Tira Dúvidas 24h no topo. Fica por ÚLTIMO de
+  // propósito: é o lugar pra onde quem travou vem, não a porta de entrada de
+  // quem já joga. E não é tarefa do Método — ordem explícita do dono.
+  { value: 'catalogo-guia', label: 'Como jogar', icon: LifeBuoy },
 ];
 
 export function getLicensingGroups(user) {
