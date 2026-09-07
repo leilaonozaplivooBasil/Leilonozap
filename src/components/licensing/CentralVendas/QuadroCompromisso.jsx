@@ -609,16 +609,46 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
         {/* ── RODAPÉ DE METADADOS, tudo em chip com ícone ── */}
         {/* 🔗 06/09 — ONDE ESTE CARD ESTÁ, dito por extenso (dono: "a pessoa não está
             entendendo o quadro"). Três pílulas fixas — quadro · dia · Jornada — acesas
-            ou apagadas; o caso confuso (no dia sem horário) vira alerta escrito. */}
+            ou apagadas; o caso confuso (no dia sem horário) vira alerta escrito.
+            DIR-82: as pílulas são clicáveis — "fora do dia" leva pro dia, "fora da
+            Jornada" abre editor de hora. A ação marca no banco e volta com emojis certos. */}
         {(() => {
-          const pilulas = pilulasOndeEsta(ondeEsta({ cartao }), { listaNome });
+          const estado = ondeEsta({ cartao });
+          const pilulas = pilulasOndeEsta(estado, { listaNome });
+          const aoClicar = (pl) => {
+            if (pl.id === 'dia' && !pl.acesa) {
+              // "fora do dia" → levar pro meu dia
+              onVirarTarefa(cartao);
+            } else if (pl.id === 'jornada' && (!pl.acesa || pl.alerta)) {
+              // "fora da Jornada" ou "sem horário · fora da Jornada" → abrir editor de hora
+              setAbrindoHora(true);
+            } else if (pl.id === 'jornada' && pl.acesa) {
+              // "na Jornada" → editar horário
+              setAbrindoHora((v) => !v);
+            }
+          };
+          const podeClicar = (pl) => (pl.id === 'dia' && !pl.acesa) || (pl.id === 'jornada' && (!pl.acesa || pl.alerta || estado.jornada));
           return (
             <div className="mt-3.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold" data-teste="onde-esta">
               {pilulas.map((pl) => (
-                <span key={pl.id} className="rounded px-1.5 py-0.5" data-teste={`pilula-${pl.id}`} data-acesa={pl.acesa ? 'sim' : 'nao'}
-                  style={pl.alerta ? { background: '#FFF3E0', color: '#C4470F' } : pl.acesa ? { background: '#E3F5E9', color: '#177245' } : { background: '#F4F5F7', color: '#8993A4' }}>
-                  {pl.texto}
-                </span>
+                <button
+                  key={pl.id}
+                  type="button"
+                  onClick={() => aoClicar(pl)}
+                  disabled={!podeClicar(pl)}
+                  data-teste={`pilula-${pl.id}`}
+                  data-acesa={pl.acesa ? 'sim' : 'nao'}
+                  className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default inline-flex items-center gap-1"
+                  style={{
+                    background: pl.alerta ? '#FFF3E0' : pl.acesa ? '#E3F5E9' : '#F4F5F7',
+                    color: pl.alerta ? '#C4470F' : pl.acesa ? '#177245' : '#8993A4',
+                    ...(podeClicar(pl) ? { cursor: 'pointer' } : {}),
+                  }}
+                  title={podeClicar(pl) ? `Clique para ${pl.id === 'dia' ? 'levar pro seu dia' : 'ajustar horário'}` : ''}
+                >
+                  <span>{pl.icon}</span>
+                  <span>{pl.texto}</span>
+                </button>
               ))}
               {habito && <span className="rounded px-1.5 py-0.5" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>}
             </div>

@@ -31,16 +31,27 @@ export function ondeEsta({ tarefa = null, cartao = null } = {}) {
 /**
  * As pílulas de estado do card/tarefa — uma por destino, acesa ou apagada,
  * com o texto que a pessoa lê. `alerta` marca o caso confuso de verdade: está
- * no dia mas sem horário, logo fora da Jornada.
+ * no dia mas sem horário, logo fora da Jornada. DIR-82: cada pílula tem ícone
+ * e é clicável.
  */
 export function pilulasOndeEsta(estado, { listaNome = null } = {}) {
   const e = estado || {};
   return [
-    { id: 'quadro', acesa: !!e.quadro, texto: e.quadro ? `no quadro${listaNome ? ` · ${listaNome}` : ''}` : 'fora do quadro' },
-    { id: 'dia', acesa: !!e.dia, texto: e.dia ? 'no seu dia' : 'fora do dia' },
+    {
+      id: 'quadro',
+      acesa: !!e.quadro,
+      icon: '📋',
+      texto: e.quadro ? `no quadro${listaNome ? ` · ${listaNome}` : ''}` : 'fora do quadro',
+    },
+    {
+      id: 'dia',
+      acesa: !!e.dia,
+      icon: '📅',
+      texto: e.dia ? 'no seu dia' : 'fora do dia',
+    },
     e.dia && !e.jornada
-      ? { id: 'jornada', acesa: false, alerta: true, texto: 'sem horário · fora da Jornada' }
-      : { id: 'jornada', acesa: !!e.jornada, texto: e.jornada ? `na Jornada às ${e.hora}` : 'fora da Jornada' },
+      ? { id: 'jornada', acesa: false, alerta: true, icon: '🚫', texto: 'sem horário · fora da Jornada' }
+      : { id: 'jornada', acesa: !!e.jornada, icon: e.jornada ? '⏰' : '⏳', texto: e.jornada ? `na Jornada às ${e.hora}` : 'fora da Jornada' },
   ];
 }
 
