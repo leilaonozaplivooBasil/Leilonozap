@@ -163,10 +163,14 @@ sem redeploy. O painel do gestor mostra o erro exato e o link.
 engolido):** `api/integrations/InvokeLLM.js` (default
 `google/gemini-2.0-flash-001`) — usado por 9 telas (descrição de produto
 com IA, anúncio OLX, texto promocional, perfil, e o **roteiro do Encontro da
-Mentalidade**, que por isso sempre "saía pela régua da casa"); e os
-geradores de imagem (`xgameGerarImagem`, `GenerateImage`) em modelos Google
-que precisam de ping pra confirmar. Migração pro mesmo padrão fica pra
-rodada própria, depois da decisão (a)/(b).
+Mentalidade**, que por isso sempre "saía pela régua da casa"); e o gerador
+de imagem `GenerateImage` (Material Promocional, Perfil, ranking do PDV,
+convidado) em modelo Google que precisa de ping pra confirmar. Migração pro
+mesmo padrão fica pra rodada própria. O `xgameGerarImagem` (gerador interno
+de arte dos personagens, 06/09, uso único, sem tela chamando, duas chamadas
+na vida — ambas de teste) foi **removido** em 07/09 por ordem do dono, junto
+com a senha `gerador_imagem_token` do cofre; os personagens da Jornada são o
+elenco em SVG (DIR-78), sem IA.
 
 **Prova:** teste da rota real (`tests/xgameValidarPrintHandler.test.mjs`)
 com o gateway simulado no formato da Messages API — cobre os dois caminhos

@@ -4406,8 +4406,12 @@ painel do gestor (ou eu, se ele mandar).
 4. **Produção:** PR #207 aberto (`claude/project-structure-analysis-r1prad` →
    `main`), pro dono revisar e mergear.
 
-**Fica pra rodada própria:** os geradores de imagem (`xgameGerarImagem`,
-`GenerateImage`) ainda em modelos Google — pingar antes de contar com eles.
+**Fica pra rodada própria:** o gerador de imagem `GenerateImage` (4 telas)
+ainda em modelo Google — pingar antes de contar com ele. O `xgameGerarImagem`
+foi removido (07/09, ordem do dono): ferramenta interna de uso único, sem
+chamador, 2 chamadas na vida (ambas de teste em 06/09), nenhuma em produção;
+senha `gerador_imagem_token` apagada do cofre. As imagens que ele gerou
+ficam no storage (`xgame/personagens/`), e nenhuma tela as usa.
 
 **Em produção (07/09/2026, 03:31 UTC):** PR #207 mergeado (squash) em `main`
 = `b4d2d125`, por ordem do dono ("pode colocar em produção"). Deploy de
