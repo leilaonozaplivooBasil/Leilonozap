@@ -2,7 +2,7 @@
 // A IA de visão olha o print/foto SABENDO qual tarefa está sendo comprovada
 // e responde: aprovada / reprovada / duvida + o que viu + (se dúvida) a
 // pergunta pra pessoa.
-// GET  → health check: {ok, ia, tem_chave, model}; com ?ping=1 faz uma
+// GET  → health check: {ok, ia, tem_chave, model, via}; com ?ping=1 faz uma
 //        chamada REAL ao modelo e devolve {ping:{ok,status,corpo}}.
 // POST → {image_url, tipo, titulo, hora, data, imagens_anteriores?, justificativa?, tentativa?}
 //     → {veredito, confianca, o_que_viu, motivo, pergunta_para_pessoa}
@@ -19,11 +19,20 @@
 // toda comprovação cair em "indisponível": HTTP 404 model_not_found — o
 // `google/gemini-2.0-flash` foi descontinuado no gateway e a função engolia
 // o erro. Sai o chat/completions "compatível com OpenAI" com JSON raspado por
-// regex; entra o SDK oficial da Anthropic apontado pro MESMO AI Gateway da
-// Vercel (a Vercel documenta exatamente isso: baseURL ai-gateway.vercel.sh +
-// AI_GATEWAY_API_KEY), com Claude Opus 5 e SAÍDA ESTRUTURADA — o JSON volta
-// no formato certo por contrato, não por sorte. A chave é a mesma de sempre.
-// Modelo reserva no gateway se o principal cair (sobrecarga, indisponível).
+// regex; entra o SDK oficial da Anthropic com Claude Opus 5 e SAÍDA
+// ESTRUTURADA — o JSON volta no formato certo por contrato, não por sorte.
+//
+// DOIS CAMINHOS pra chegar no Claude, escolhidos pela chave que existir (sem
+// mexer em código nem redeploy):
+//   1. ANTHROPIC_API_KEY (env ou cofre `anthropic_api_key`) → api.anthropic.com
+//      direto. Prioridade quando existe.
+//   2. AI_GATEWAY_API_KEY (env ou cofre `ai_gateway_key`) → o MESMO AI Gateway
+//      da Vercel de sempre, que fala a Messages API (baseURL
+//      ai-gateway.vercel.sh, caminho documentado pela Vercel) — MAS exige
+//      créditos pagos no gateway: no free tier o Claude devolve 403
+//      "Free tier users do not have access to this model" (foi o que o ping
+//      mostrou em 07/09). Modelo reserva do gateway (claude-sonnet-5) se o
+//      principal cair.
 //
 // A régua de QUANDO pedir justificativa / quando bloquear / quando só então
 // acionar o gestor mora em src/lib/xgameValidacao.js (pura, testada). Esta
@@ -35,67 +44,78 @@ import Anthropic from '@anthropic-ai/sdk';
 import * as z from 'zod/v4';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 
-const AI_KEY = process.env.AI_GATEWAY_API_KEY || '';
-const OIDC = process.env.VERCEL_OIDC_TOKEN || '';
-// o AI Gateway da Vercel fala a Messages API da Anthropic neste endereço
 const GATEWAY = 'https://ai-gateway.vercel.sh';
-// modelo de visão principal e o reserva (fallback DO GATEWAY, não da Anthropic:
-// a requisição passa pelo gateway, então é ele quem redireciona se o
-// principal falhar). Troque via env sem mexer no código.
-const MODEL = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
-const MODEL_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
+// modelos: pelo gateway levam o prefixo do provedor; direto na Anthropic, não.
+const MODEL_DIRETO = process.env.AI_MODEL_VISION_ANTHROPIC || 'claude-opus-5';
+const MODEL_GATEWAY = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
+const MODEL_GATEWAY_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
 
-// 🔐 Sem env? A chave pode morar no COFRE do banco (app_segredos, RLS sem
+// 🔐 Sem env? As chaves podem morar no COFRE do banco (app_segredos, RLS sem
 // policy — só o service role lê). Cache de 5 min pra não bater no banco toda hora.
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-let _cacheChave = { valor: null, ate: 0 };
-async function chaveDaIA() {
-  if (AI_KEY || OIDC) return AI_KEY || OIDC;
-  if (_cacheChave.ate > Date.now()) return _cacheChave.valor;
-  let valor = null;
+let _cacheCofre = { valor: null, ate: 0 };
+async function chavesDoCofre() {
+  const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (_cacheCofre.ate > Date.now()) return _cacheCofre.valor;
+  let valor = {};
   try {
     if (SUPABASE_URL && SR) {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_segredos?id=eq.ai_gateway_key&select=valor&limit=1`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_segredos?id=in.(anthropic_api_key,ai_gateway_key)&select=id,valor`, {
         headers: { apikey: SR, Authorization: `Bearer ${SR}` },
         signal: AbortSignal.timeout(5000),
       });
       const j = await r.json().catch(() => []);
-      valor = Array.isArray(j) && j[0]?.valor ? String(j[0].valor) : null;
+      for (const linha of Array.isArray(j) ? j : []) if (linha?.id && linha?.valor) valor[linha.id] = String(linha.valor);
     }
-  } catch { valor = null; }
-  _cacheChave = { valor, ate: Date.now() + 5 * 60 * 1000 };
+  } catch { valor = {}; }
+  _cacheCofre = { valor, ate: Date.now() + 5 * 60 * 1000 };
   return valor;
 }
 
-function clienteIA(auth) {
+/** Qual IA usar agora: { via, apiKey, model, reserva } — ou null sem chave. */
+async function resolverIA() {
+  const env = process.env;
+  let anthropic = env.ANTHROPIC_API_KEY || '';
+  let gateway = env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN || '';
+  if (!anthropic && !gateway) {
+    const cofre = await chavesDoCofre();
+    anthropic = cofre.anthropic_api_key || '';
+    gateway = cofre.ai_gateway_key || '';
+  }
+  if (anthropic) return { via: 'anthropic', apiKey: anthropic, model: MODEL_DIRETO, reserva: null };
+  if (gateway) return { via: 'gateway', apiKey: gateway, model: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA };
+  return null;
+}
+
+function clienteIA(ia) {
   // maxRetries 1: o SDK já refaz 429/5xx/queda de rede uma vez; mais que isso
   // estoura o tempo da função com a pessoa esperando no celular.
-  return new Anthropic({ apiKey: auth, baseURL: GATEWAY, timeout: 40_000, maxRetries: 1 });
+  return new Anthropic({ apiKey: ia.apiKey, ...(ia.via === 'gateway' ? { baseURL: GATEWAY } : {}), timeout: 40_000, maxRetries: 1 });
 }
 
 // o erro do SDK vira um `details` legível pra tela e pro log — e o motivo
-// certo: 404 é modelo que não existe (foi o caso do gemini), 401/403 é chave,
-// 429 é limite, 5xx/529 é a IA fora, rede é rede.
+// certo: 404 é modelo que não existe (foi o caso do gemini), 401 é chave,
+// 403 é permissão/plano (free tier do gateway), 429 é limite, 5xx/529 é a
+// IA fora, rede é rede.
 function detalhesDoErro(e) {
-  if (e instanceof Anthropic.APIConnectionError) return { status: 0, tipo: 'rede', mensagem: String(e.message || '').slice(0, 300) };
-  if (e instanceof Anthropic.APIError) return { status: e.status ?? 0, tipo: e.type || e.name || 'api', mensagem: String(e.message || '').slice(0, 300) };
-  return { status: 0, tipo: 'desconhecido', mensagem: String(e?.message || e).slice(0, 300) };
+  if (e instanceof Anthropic.APIConnectionError) return { status: 0, tipo: 'rede', mensagem: String(e.message || '').slice(0, 400) };
+  if (e instanceof Anthropic.APIError) return { status: e.status ?? 0, tipo: e.type || e.name || 'api', mensagem: String(e.message || '').slice(0, 400) };
+  return { status: 0, tipo: 'desconhecido', mensagem: String(e?.message || e).slice(0, 400) };
 }
 
 // 🩺 PING — chamada mínima (só texto) ao modelo, pelo MESMO caminho da
 // validação. "Tem chave" ≠ "a IA funciona": foi assim que a tela disse "IA
 // ligada" enquanto toda comprovação caía em "IA indisponível".
-async function pingModelo(auth) {
+async function pingModelo(ia) {
   try {
-    const m = await clienteIA(auth).messages.create({
-      model: MODEL, max_tokens: 16,
+    const m = await clienteIA(ia).messages.create({
+      model: ia.model, max_tokens: 16,
       messages: [{ role: 'user', content: 'responda só: ok' }],
     });
     return { status: 200, ok: true, model: m.model };
   } catch (e) {
     const d = detalhesDoErro(e);
-    console.error('[xgameValidarPrint] ping falhou', { model: MODEL, ...d });
+    console.error('[xgameValidarPrint] ping falhou', { via: ia.via, model: ia.model, ...d });
     return { status: d.status, ok: false, corpo: `${d.tipo}: ${d.mensagem}` };
   }
 }
@@ -161,11 +181,14 @@ const indisponivel = (res, details, motivo = 'IA indisponível agora — tente d
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method === 'GET') {
-    const chave = await chaveDaIA();
+    const ia = await resolverIA();
     const querPing = String(req.query?.ping || '') === '1';
-    const ping = chave && querPing ? await pingModelo(chave) : undefined;
+    const ping = ia && querPing ? await pingModelo(ia) : undefined;
     // `ia` só é true quando o modelo RESPONDEU (se pediu ping); sem ping, é só "tem chave"
-    return res.status(200).json({ ok: true, ia: ping ? ping.ok : Boolean(chave), tem_chave: Boolean(chave), model: MODEL, ...(ping ? { ping } : {}) });
+    return res.status(200).json({
+      ok: true, ia: ping ? ping.ok : Boolean(ia), tem_chave: Boolean(ia),
+      model: ia?.model || MODEL_GATEWAY, via: ia?.via || null, ...(ping ? { ping } : {}),
+    });
   }
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
@@ -185,8 +208,8 @@ export default async function handler(req, res) {
     const tentativa = Number(body?.tentativa) === 2 ? 2 : 1;
     if (!/^https?:\/\//.test(imageUrl)) return res.status(400).json({ ok: false, error: 'image_url obrigatório (http/https)' });
 
-    const auth = await chaveDaIA();
-    if (!auth) return indisponivel(res, { status: 0, tipo: 'sem_chave', mensagem: 'AI_GATEWAY_API_KEY ausente' }, 'IA não conectada — configure a chave do AI Gateway.');
+    const ia = await resolverIA();
+    if (!ia) return indisponivel(res, { status: 0, tipo: 'sem_chave', mensagem: 'nem ANTHROPIC_API_KEY nem AI_GATEWAY_API_KEY configuradas' }, 'IA não conectada — configure a chave da Anthropic ou do AI Gateway.');
 
     const contexto = `TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.
 ${REGRAS_POR_TIPO[tipo] || REGRAS_POR_TIPO.foto}
@@ -200,19 +223,19 @@ ${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imag
 
     let resposta;
     try {
-      resposta = await clienteIA(auth).messages.parse({
-        model: MODEL,
+      resposta = await clienteIA(ia).messages.parse({
+        model: ia.model,
         max_tokens: 2000,
         system: SISTEMA,
         messages: [{ role: 'user', content: conteudo }],
         output_config: { format: zodOutputFormat(Veredito) },
         // extensão do AI Gateway: se o modelo principal falhar, ele tenta o reserva
-        providerOptions: { gateway: { models: [MODEL_RESERVA] } },
+        ...(ia.reserva ? { providerOptions: { gateway: { models: [ia.reserva] } } } : {}),
       });
     } catch (e) {
       const d = detalhesDoErro(e);
-      console.error('[xgameValidarPrint] IA falhou', { model: MODEL, ...d });
-      return indisponivel(res, { model: MODEL, ...d });
+      console.error('[xgameValidarPrint] IA falhou', { via: ia.via, model: ia.model, ...d });
+      return indisponivel(res, { via: ia.via, model: ia.model, ...d });
     }
 
     if (resposta.stop_reason === 'refusal') {
@@ -229,6 +252,7 @@ ${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imag
     return res.status(200).json({
       ok: true,
       model: resposta.model,
+      via: ia.via,
       veredito: out.veredito,
       confianca: Math.max(0, Math.min(100, Math.round(Number(out.confianca) || 0))),
       o_que_viu: String(out.o_que_viu || '').slice(0, 300),

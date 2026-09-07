@@ -160,6 +160,34 @@ test('recusa do modelo (refusal) não é IA fora: vira dúvida SEM pergunta → 
   assert.equal(r.corpo.pergunta_para_pessoa, '');
 });
 
+test('403 do free tier do gateway ("Upgrade to paid credits") → ia_indisponivel com o aviso inteiro — é decisão do dono, não dúvida', async () => {
+  estado.responder = () => ({ status: 403, body: { error: { type: 'no_providers_available', message: 'Free tier users do not have access to this model. Upgrade to paid credits at https://vercel.com/d?to=x' } } });
+  const r = await post({ image_url: FOTO, tipo: 'foto', titulo: 'Treino' });
+  assert.equal(r.corpo.ia_indisponivel, true);
+  assert.equal(r.corpo.details.status, 403);
+  assert.equal(r.corpo.details.via, 'gateway');
+  assert.match(r.corpo.details.mensagem, /Free tier.*paid credits/);
+});
+
+// ─── o segundo caminho: ANTHROPIC_API_KEY vai direto, sem gateway ───────────
+
+test('com ANTHROPIC_API_KEY, vai direto na api.anthropic.com com claude-opus-5 (sem prefixo, sem providerOptions) e tem prioridade sobre o gateway', async () => {
+  process.env.ANTHROPIC_API_KEY = 'sk-ant-teste';
+  try {
+    await post({ image_url: FOTO, tipo: 'foto', titulo: 'Treino' });
+    const direta = estado.chamadas.filter((c) => c.url.includes('api.anthropic.com'));
+    assert.equal(soIA().length, 0, 'não passou pelo gateway');
+    assert.equal(direta.length, 1);
+    assert.match(direta[0].url, /^https:\/\/api\.anthropic\.com\/v1\/messages/);
+    assert.equal(direta[0].corpo.model, 'claude-opus-5');
+    assert.equal(direta[0].corpo.providerOptions, undefined, 'extensão do gateway não vai pra Anthropic');
+    assert.equal(direta[0].headers.get('x-api-key'), 'sk-ant-teste');
+    const g = await get();
+    assert.equal(g.corpo.via, 'anthropic');
+    assert.equal(g.corpo.model, 'claude-opus-5');
+  } finally { delete process.env.ANTHROPIC_API_KEY; }
+});
+
 // ─── o health check que não mente ───────────────────────────────────────────
 
 test('GET sem ping: só diz se tem chave (e o modelo configurado)', async () => {
@@ -167,6 +195,7 @@ test('GET sem ping: só diz se tem chave (e o modelo configurado)', async () => 
   assert.equal(r.corpo.tem_chave, true);
   assert.equal(r.corpo.ia, true);
   assert.equal(r.corpo.model, 'anthropic/claude-opus-5');
+  assert.equal(r.corpo.via, 'gateway');
   assert.equal(r.corpo.ping, undefined);
   assert.equal(soIA().length, 0, 'sem ping não chama modelo');
 });

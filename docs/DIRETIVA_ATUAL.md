@@ -54,11 +54,38 @@ rodou**. Dois defeitos, um em cima do outro:
    (status, tipo, mensagem, modelo) pra tela e pro painel. O indicador do
    gestor passa a fazer o ping real e a mostrar o erro do gateway quando cai.
 
+**O que o ping mostrou DEPOIS da troca (07/09, 02:29 UTC):** o caminho novo
+chegou ao Claude Opus 5 pelo gateway, mas o gateway respondeu **HTTP 403
+`no_providers_available`: "Free tier users do not have access to this model.
+Upgrade to paid credits"**. A conta do AI Gateway da Vercel está no plano
+gratuito — era por isso que o projeto inteiro usava modelos "free tier"
+(que a Google depois descontinuou). **Isto é decisão do dono, com custo**, e
+a validação fica corretamente BLOQUEADA até ela ser tomada:
+
+- **(a)** colocar crédito no AI Gateway da Vercel (link no próprio erro,
+  Vercel → AI → top-up) — nada mais muda, a chave `vck_` de sempre passa a
+  servir Claude; **ou**
+- **(b)** criar uma `ANTHROPIC_API_KEY` em console.anthropic.com e publicar
+  na Vercel (ou gravar no cofre `app_segredos` com id `anthropic_api_key`)
+  — o código já dá **prioridade a ela** e vai direto na Anthropic.
+
+O código está pronto para os dois: `resolverIA()` escolhe pelo que existir,
+sem redeploy. O painel do gestor mostra o erro exato e o link.
+
+**Também afetados pelo mesmo defeito (modelo free-tier descontinuado, erro
+engolido):** `api/integrations/InvokeLLM.js` (default
+`google/gemini-2.0-flash-001`) — usado por 9 telas (descrição de produto
+com IA, anúncio OLX, texto promocional, perfil, e o **roteiro do Encontro da
+Mentalidade**, que por isso sempre "saía pela régua da casa"); e os
+geradores de imagem (`xgameGerarImagem`, `GenerateImage`) em modelos Google
+que precisam de ping pra confirmar. Migração pro mesmo padrão fica pra
+rodada própria, depois da decisão (a)/(b).
+
 **Prova:** teste da rota real (`tests/xgameValidarPrintHandler.test.mjs`)
-com o gateway simulado no formato da Messages API — cobre o caminho certo
-(modelo, chave, saída estruturada, imagens anteriores, prompt de cruzamento)
-e o 404 exato que derrubou tudo virando `ia_indisponivel`; régua com o caso
-`ia_fora`; ping real no preview voltando `ia: true` com o modelo novo.
+com o gateway simulado no formato da Messages API — cobre os dois caminhos
+(gateway e Anthropic direto), saída estruturada, imagens anteriores, prompt
+de cruzamento, o 404 exato que derrubou tudo e o 403 do free tier virando
+`ia_indisponivel`; régua com o caso `ia_fora`.
 
 ---
 

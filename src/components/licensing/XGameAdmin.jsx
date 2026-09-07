@@ -192,7 +192,7 @@ export default function XGameAdmin() {
     // sozinho mentia "IA ligada" enquanto toda comprovação caía em indisponível.
     fetch('/api/functions/xgameValidarPrint?ping=1')
       .then((r) => r.json())
-      .then((j) => { setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 160)}` : ''}` : (j?.model || '')); })
+      .then((j) => { setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} (${j.via || '?'}) → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 320)}` : ''}` : `${j?.model || ''}${j?.via ? ` · via ${j.via}` : ''}`); })
       .catch(() => { setIaLigada(false); setIaDetalhe('a função de validação não respondeu'); });
   }, []);
   useEffect(() => { carregarComprovacoes(); }, [carregarComprovacoes]);
