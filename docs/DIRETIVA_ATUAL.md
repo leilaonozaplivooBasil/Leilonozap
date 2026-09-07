@@ -12,6 +12,48 @@
 
 ---
 
+## DIR-84.5 — O InvokeLLM (9 telas) sai do modelo morto; o acesso à IA vira um lugar só
+
+**Emitida por:** dono (07/09/2026): *"me oriente, tudo isso liberado de ação,
+faça da melhor maneira"* — autorizando os quatro itens que eu tinha listado:
+reprovar a comprovação de teste dele, decidir sobre a de "Fechamento do dia",
+migrar o `InvokeLLM` e levar pra produção.
+
+**Data:** 07/09/2026.
+
+**Banco (feito, reversível pelo painel do gestor):**
+- a comprovação de teste do dono (foto na cama, "Resolver: Toda X-Game e Top
+  College", 07/09 09:00) → `reprovada`, `feito=false`, com o motivo escrito;
+- "Fechamento do dia" (af8f…, 07/09 18:30): o gestor tinha reprovado na mão
+  enquanto a IA estava fora; a IA, reanalisando, APROVA (82%: print de
+  relatório de entregas do dia no grupo). Voltou pra `em_analise` com o
+  veredito novo e o motivo antigo preservado (`motivo_gestor_anterior`) — o
+  gestor decide de novo, agora com o mesmo contexto que a IA teve.
+
+**Código:**
+- `api/_lib/ia.js`: o acesso à IA compartilhado (qual chave existe, por onde
+  ir — Anthropic direto ou AI Gateway —, cliente do SDK, reserva do gateway,
+  erro → `details`). O validador passou a importar daqui; duplicar isso seria
+  plantar o próximo erro escondido.
+- `api/integrations/InvokeLLM.js`: sai o `google/gemini-2.0-flash-001` no
+  chat/completions (404, engolido) e o JSON raspado; entra **Claude Sonnet 5**
+  pelo SDK (texto é o forte dele, 40% do Opus — o Opus fica na validação de
+  foto), **saída estruturada** quando a tela manda schema, `body.model`
+  ignorado (era como apontavam pro modelo morto), `max_tokens` até 8000 (o
+  roteiro pedia 6000 e era cortado em 4000), `truncated`/`stop_reason` de
+  volta pra tela do Encontro, e **rede de segurança**: schema recusado pela
+  API (400) → refaz UMA vez sem formato e faz o parse do texto, avisando no
+  log. Contrato Base44 intacto (objeto direto com schema; `{ok,text,response}`
+  sem). GET `?ping=1` prova o caminho com schema cru pelo gateway real.
+- Testes: `tests/invokeLLM.test.mjs` (rota real com gateway simulado: modelo,
+  sem temperature, formato, contrato, fallback do schema, 404, truncado,
+  body.model ignorado, reserva, caminho direto, ping).
+
+**Produção:** PR da branch `claude/project-structure-analysis-r1prad` para
+`main`, pro dono revisar e mergear — merge em produção é clique dele.
+
+---
+
 ## DIR-84.3 / 84.4 — Barato sem perder rigor, e a prova por dentro
 
 **Emitida por:** dono (07/09/2026). Depois de colocar crédito no AI Gateway
