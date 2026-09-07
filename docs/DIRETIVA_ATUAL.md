@@ -12,6 +12,131 @@
 
 ---
 
+## DIR-84.1 / 84.2 — A IA não estava rodando: o furo, a causa e a troca
+
+**Emitida por:** dono (07/09/2026), com a print da fila do gestor: *"olha qual
+era a tarefa ['Resolver: o financeiro'], fui lá bati uma foto qualquer
+[deitado na cama], ela aceitou. Ou seja ela não cruzou, não está
+funcionando. Isso é a parte mais importante da gamificação. Se tiver que
+botar outra IA aqui você fala, que eu troco. Tem que fazer funcionar.
+Urgentemente."*
+
+**Data:** 07/09/2026.
+
+**O que a print já dizia e eu fui confirmar:** a linha da fila trazia *"IA:
+IA indisponível agora — comprovação enviada pra análise manual"*. A IA **não
+rodou**. Dois defeitos, um em cima do outro:
+
+1. **O furo (84.1):** gateway caído virava `veredito: 'duvida'` → a régua
+   mandava pra `em_analise` → que **conta provisoriamente**. Enquanto a IA
+   estivesse fora, **qualquer foto passava**. E a função engolia o erro sem
+   log — a tela do gestor dizia "IA ligada" porque só conferia se havia
+   chave.
+2. **A causa (84.2):** com um `?ping=1` que faz uma chamada real ao modelo,
+   o gateway respondeu **HTTP 404 `model_not_found`: `google/gemini-2.0-flash`
+   não existe mais**. O modelo foi descontinuado e ninguém foi avisado, porque
+   o erro nunca chegava a lugar nenhum.
+
+**O que entra:**
+
+1. **IA fora do ar BLOQUEIA.** `ia_indisponivel` é uma ação própria da régua
+   (`ia_fora`): a tarefa não conclui, não conta, não vai pro gestor — a tela
+   diz que a foto não foi descartada e pede pra tentar de novo. Sem IA não há
+   validação; sem validação não há conclusão.
+2. **A troca de IA — Claude Opus 5 pelo SDK oficial da Anthropic**, apontado
+   pro **mesmo AI Gateway da Vercel** com a **mesma chave** que já está no
+   cofre (a Vercel documenta exatamente esse caminho). Nada pra o dono
+   configurar. Sai o chat/completions "compatível com OpenAI" e o JSON raspado
+   por regex; entra **saída estruturada por contrato** (o modelo é obrigado a
+   devolver o formato). Modelo reserva no gateway (`claude-sonnet-5`) se o
+   principal cair.
+3. **O erro deixa de sumir:** vai pro log da Vercel e volta em `details`
+   (status, tipo, mensagem, modelo) pra tela e pro painel. O indicador do
+   gestor passa a fazer o ping real e a mostrar o erro do gateway quando cai.
+
+**O que o ping mostrou DEPOIS da troca (07/09, 02:29 UTC):** o caminho novo
+chegou ao Claude Opus 5 pelo gateway, mas o gateway respondeu **HTTP 403
+`no_providers_available`: "Free tier users do not have access to this model.
+Upgrade to paid credits"**. A conta do AI Gateway da Vercel está no plano
+gratuito — era por isso que o projeto inteiro usava modelos "free tier"
+(que a Google depois descontinuou). **Isto é decisão do dono, com custo**, e
+a validação fica corretamente BLOQUEADA até ela ser tomada:
+
+- **(a)** colocar crédito no AI Gateway da Vercel (link no próprio erro,
+  Vercel → AI → top-up) — nada mais muda, a chave `vck_` de sempre passa a
+  servir Claude; **ou**
+- **(b)** criar uma `ANTHROPIC_API_KEY` em console.anthropic.com e publicar
+  na Vercel (ou gravar no cofre `app_segredos` com id `anthropic_api_key`)
+  — o código já dá **prioridade a ela** e vai direto na Anthropic.
+
+O código está pronto para os dois: `resolverIA()` escolhe pelo que existir,
+sem redeploy. O painel do gestor mostra o erro exato e o link.
+
+**Também afetados pelo mesmo defeito (modelo free-tier descontinuado, erro
+engolido):** `api/integrations/InvokeLLM.js` (default
+`google/gemini-2.0-flash-001`) — usado por 9 telas (descrição de produto
+com IA, anúncio OLX, texto promocional, perfil, e o **roteiro do Encontro da
+Mentalidade**, que por isso sempre "saía pela régua da casa"); e os
+geradores de imagem (`xgameGerarImagem`, `GenerateImage`) em modelos Google
+que precisam de ping pra confirmar. Migração pro mesmo padrão fica pra
+rodada própria, depois da decisão (a)/(b).
+
+**Prova:** teste da rota real (`tests/xgameValidarPrintHandler.test.mjs`)
+com o gateway simulado no formato da Messages API — cobre os dois caminhos
+(gateway e Anthropic direto), saída estruturada, imagens anteriores, prompt
+de cruzamento, o 404 exato que derrubou tudo e o 403 do free tier virando
+`ia_indisponivel`; régua com o caso `ia_fora`.
+
+---
+
+## DIR-84 — A validação da X-Game vira "o maior validador do caralho"
+
+**Emitida por:** dono (07/09/2026), depois de confirmar que a IA em questão
+era o validador de comprovações da X-Game (`xgameValidarPrint.js`): *"a
+gente tem que pegar as comprovações e ela tem que pensar. Não deixa a foto
+repetida. Se a pessoa está comprovando um pré-treino com uma imagem deitada
+na cama, com uma imagem bebendo água, ela vai ter que perguntar pra pessoa
+justificar, antes mesmo de validar direto. Mas ela tem que cruzar imagem,
+ela tem que ser o maior validador do caralho pra ficar tudo automático e
+pouco ter intervenção humana. Na verdade tem que ser intervenção humana
+zero — ela tem que ser mais foda que humano. Tanto de print, tanto de link
+de endereço, tanto de imagem colada."*
+
+**Data:** 07/09/2026.
+
+**O que já existia:** a IA (F10.2) olhava UMA imagem isolada e devolvia
+aprovada/reprovada/dúvida; dúvida caía DIRETO na fila do gestor — humano
+acionado na primeira hesitação, o oposto do pedido. O anti-reuso só pegava
+hash EXATO do arquivo (`lib/xgame.js`) — imagem reciclada reprocessada
+(recortada, comprimida, com filtro) passava batido.
+
+**O que entra:**
+
+1. **Cruzamento obrigatório** — o prompt exige coerência explícita entre o
+   TÍTULO da tarefa e o CONTEÚDO da imagem (o exemplo do dono: pré-treino
+   com foto na cama ou só bebendo água é incoerência, não passa despercebido).
+2. **Anti-reciclagem visual** — a IA recebe as últimas fotos da MESMA
+   pessoa pro MESMO tipo de tarefa e compara a CENA (não só o arquivo).
+3. **Uma pergunta antes de qualquer humano** — incoerência real mas sem
+   certeza de má-fé vira `pergunta_para_pessoa`: a tela abre uma segunda
+   etapa pedindo a explicação dela, reenvia pra IA com a resposta, e SÓ SE
+   ainda ficar em dúvida depois disso é que cai pro gestor. A régua de
+   quando pedir/quando aceitar/quando esgotar é `lib/xgameValidacao.js`
+   (pura, 12 testes) — a chamada de rede e o prompt ficam isolados em
+   `api/functions/xgameValidarPrint.js`.
+4. **Tipo `link`** adicionado às regras (print/imagem colada já cobertos).
+5. O gestor agora VÊ a justificativa da pessoa quando o caso chega até ele
+   (`XGameAdmin.jsx`) — decide com o mesmo contexto que a IA teve.
+
+**O que NÃO muda:** o hash exato continua barrando ANTES de gastar chamada
+de IA (grátis, client-side); a janela de validade de 2h e o fluxo de quem
+aprova/reprova no painel do gestor seguem os mesmos.
+
+**Prova exigida:** os 12 testes de `xgameValidacao.test.mjs` verdes, suíte
+completa (1355 testes) sem quebra, build limpo.
+
+---
+
 ## DIR-81 — O mais no topo da coluna: adicionar sem rolar
 
 **Emitida por:** dono (07/09/2026), com o quadro aberto: *"pra adicionar,

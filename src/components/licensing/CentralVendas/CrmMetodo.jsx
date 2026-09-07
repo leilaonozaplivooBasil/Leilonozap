@@ -30,6 +30,7 @@ import {
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
   pesoAutomatico,
 } from '@/lib/xgame';
+import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -602,16 +603,100 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
-  // ✅ F10 — comprovação em MODAL (leve): tarefa com validação não conclui sem provar
-  const [comprovando, setComprovando] = useState(null); // { id, tipo, erro, enviando }
-  const [hashesUsados, setHashesUsados] = useState(new Set()); // prints já usados (anti-reuso)
+  // ✅ F10 → DIR-84 — comprovação em MODAL (leve): tarefa com validação não
+  // conclui sem provar, e a IA agora é "o maior validador" — cruza a imagem
+  // com a tarefa e com o HISTÓRICO da pessoa antes de decidir. `comprovando`
+  // carrega, além do básico, o estado de uma eventual pergunta pendente da
+  // IA: { id, tipo, erro, enviando, pergunta, _printUrl, _hash, _dados }.
+  const [comprovando, setComprovando] = useState(null);
+  const [comprovacoesRecentes, setComprovacoesRecentes] = useState([]); // [comprovacao,...] da pessoa
   useEffect(() => {
     if (!comprovando || comprovando.tipo === 'aprendizado' || !uid) return;
     supabase.from('metodo_tarefas').select('comprovacao').eq('user_id', uid).not('comprovacao', 'is', null).limit(300)
-      .then(({ data }) => setHashesUsados(new Set((data || []).map((r) => r.comprovacao?.hash).filter(Boolean))));
-     
+      .then(({ data }) => setComprovacoesRecentes((data || []).map((r) => r.comprovacao).filter(Boolean)));
   }, [comprovando?.id, uid]);
-  // dados = { file, texto } vindos do modal (texto = aprendizado OU link opcional)
+  // prints já usados (anti-reuso EXATO, por hash) — a comparação VISUAL
+  // (reciclagem reprocessada) é responsabilidade da IA, ver imagensParaComparar abaixo
+  const hashesUsados = useMemo(() => new Set(comprovacoesRecentes.map((c) => c?.hash).filter(Boolean)), [comprovacoesRecentes]);
+
+  // 🤖 chama a IA (1ª olhada OU 2ª, já com a justificativa da pessoa) e
+  // aplica a régua de decisão (lib/xgameValidacao.decisaoAposIA) — nunca cai
+  // pro gestor na primeira dúvida se a IA sabe o que perguntar.
+  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1 }) => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
+    const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
+    const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
+    const foraDaJanela = ehHoje && iniMin !== null && agoraM > iniMin + 120;
+    const imagensAnteriores = tentativa === 1
+      ? imagensParaComparar(comprovacoesRecentes.filter((c) => c?.tipo === tipo && c.print_url !== printUrl))
+      : [];
+    // 🚫 DIR-84.1 — sem resposta da IA = IA FORA (não "dúvida"): a régua
+    // bloqueia em vez de deixar contar. Só um veredito REAL muda isso.
+    let ia = { veredito: 'duvida', ia_indisponivel: true, motivo: 'a IA de validação não respondeu' };
+    try {
+      const r = await plataforma.functions.xgameValidarPrint({
+        image_url: printUrl, tipo, titulo: t.titulo, hora: t.hora, data: hojeStr(),
+        ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+        ...(imagensAnteriores.length ? { imagens_anteriores: imagensAnteriores } : {}),
+        ...(justificativa ? { justificativa, tentativa: 2 } : {}),
+      });
+      if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) ia = r;
+    } catch { /* fica como ia_indisponivel → régua bloqueia */ }
+
+    const decisao = decisaoAposIA(ia, { foraDaJanela, tentativa });
+
+    if (decisao.acao === 'ia_fora') {
+      const det = ia?.details ? ` (${ia.details.status || 'erro'}${ia.details.model ? ` · ${ia.details.model}` : ''})` : '';
+      setComprovando({ ...comprovando, enviando: false, pergunta: null,
+        erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto NÃO foi descartada, tenta de novo em 1 minuto. Sem a IA conferir, a tarefa não conclui.` });
+      return;
+    }
+    if (decisao.acao === 'pedir_justificativa') {
+      // 🗣️ a pessoa se explica ANTES de qualquer humano ser acionado —
+      // guarda o que já foi upado pra reenviar sem pedir a imagem de novo.
+      setComprovando({
+        ...comprovando, enviando: false, erro: '',
+        pergunta: decisao.pergunta, _printUrl: printUrl, _hash: hash, _tipo: tipo, _dados: dadosOriginais,
+      });
+      return;
+    }
+    if (decisao.acao === 'reprovar') {
+      setComprovando({ ...comprovando, enviando: false, erro: `🤖 A IA reprovou: ${decisao.motivo}`, pergunta: null });
+      return;
+    }
+    const status = decisao.acao === 'aprovar' ? 'aprovada_ia' : 'em_analise';
+    const comprovacao = {
+      tipo, print_url: printUrl, hash,
+      ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
+      ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+      entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
+      quando: new Date().toISOString(), valido: true,
+      status,
+      veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
+      ...(justificativa ? { justificativa_pessoa: justificativa } : {}),
+      ...(foraDaJanela ? { fora_da_janela: true } : {}),
+    };
+    if (status === 'aprovada_ia') toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
+    else toast.info('⏳ Comprovação em análise do gestor — conta provisoriamente.');
+
+    setComprovando(null);
+    try {
+      await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
+      if (ehHoje && xgame) {
+        const est = estadoDaTarefa(t);
+        const noHorario = !est || est.id === 'AGORA' || est.id === 'FUTURO';
+        const pts = Math.round((10 + (noHorario ? 5 : 0)) * (xgame.cotacao || 1));
+        setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
+        setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
+      }
+      vibrar(VIBRA_CONCLUIU);
+      toast.success('Comprovada e concluída! ✔');
+    } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
+  };
+
+  // dados = { file, texto } (primeira vez) OU { justificativa } (a pessoa
+  // respondendo a pergunta da IA) vindos do modal.
   const concluirComComprovacao = async (t, dados) => {
     const tipo = comprovando.tipo;
     // 🧪 MODO DEV: valida o fluxo na tela, mas nada sobe nem grava
@@ -629,77 +714,41 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       toast.success('🧪 modo dev: comprovação simulada — nada foi salvo');
       return;
     }
-    let comprovacao;
+
+    // 🔁 SEGUNDA RODADA: a pessoa está respondendo a pergunta da IA — reusa
+    // a imagem já enviada, não sobe de novo.
+    if (comprovando.pergunta && dados.justificativa) {
+      setComprovando({ ...comprovando, enviando: true, erro: '' });
+      await avaliarComIA(t, {
+        printUrl: comprovando._printUrl, hash: comprovando._hash, tipo: comprovando._tipo,
+        dadosOriginais: comprovando._dados, justificativa: dados.justificativa.trim(), tentativa: 2,
+      });
+      return;
+    }
+
     // 📚 estudo exige o RESUMO DIGITADO primeiro (mínimo de verdade, sem colar)
     if (tipo === 'aprendizado') {
       const v = validarComprovacao(tipo, dados.texto);
       if (!v.valido) { setComprovando({ ...comprovando, erro: v.motivo }); return; }
     }
-    {
-      // 📸 a IMAGEM é a prova em TODOS os tipos: valida + impressão digital antes de subir
-      const hash = dados.file ? await hashDoArquivo(dados.file) : '';
-      const vp = validarPrint(dados.file, hashesUsados, hash);
-      if (!vp.valido) { setComprovando({ ...comprovando, erro: vp.motivo }); return; }
-      setComprovando({ ...comprovando, enviando: true, erro: '' });
-      let printUrl = '';
-      try {
-        const ext = (dados.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
-        const up = await plataforma.integrations.Core.UploadFile({
-          file: dados.file,
-          path: `xgame/prints/${uid}/${hojeStr()}_${t.id}.${ext}`,
-        });
-        printUrl = up?.file_url || up?.url || '';
-      } catch {
-        setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar a imagem — tente de novo.' });
-        return;
-      }
-      // ⏰ REGRA DURA — janela de validade: a prova vale enviada até 2h depois
-      // do horário da tarefa (print velho nem discute: cai pra análise)
-      const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
-      const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
-      const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
-      const foraDaJanela = ehHoje && iniMin !== null && agoraM > iniMin + 120;
-      // 🤖 A IA DE VISÃO olha a imagem sabendo qual tarefa está comprovando
-      let ia = { veredito: 'duvida', motivo: 'análise manual' };
-      try {
-        const r = await plataforma.functions.xgameValidarPrint({
-          image_url: printUrl, tipo, titulo: t.titulo, hora: t.hora, data: hojeStr(),
-          ...(tipo === 'aprendizado' ? { resumo: (dados.texto || '').trim() } : {}),
-        });
-        if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) ia = r;
-      } catch { /* IA fora do ar → dúvida → fila manual */ }
-      if (ia.veredito === 'reprovada') {
-        setComprovando({ ...comprovando, enviando: false, erro: `🤖 A IA reprovou: ${ia.motivo || 'a imagem não comprova essa tarefa'}` });
-        return;
-      }
-      const status = ia.veredito === 'aprovada' && !foraDaJanela ? 'aprovada_ia' : 'em_analise';
-      comprovacao = {
-        tipo, print_url: printUrl, hash,
-        ...(tipo === 'instagram' ? { link: (dados.texto || '').trim() || null } : {}),
-        ...(tipo === 'aprendizado' ? { resumo: (dados.texto || '').trim() } : {}),
-        entrega: tipo === 'aprendizado' ? (dados.texto || '').trim() : printUrl,
-        quando: new Date().toISOString(), valido: true,
-        status,
-        veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
-        ...(foraDaJanela ? { fora_da_janela: true } : {}),
-      };
-      if (status === 'aprovada_ia') toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
-      else toast.info('⏳ Comprovação em análise do gestor — conta provisoriamente.');
-    }
-    setComprovando(null);
+    // 📸 a IMAGEM é a prova em TODOS os tipos: valida + impressão digital antes de subir
+    const hash = dados.file ? await hashDoArquivo(dados.file) : '';
+    const vp = validarPrint(dados.file, hashesUsados, hash);
+    if (!vp.valido) { setComprovando({ ...comprovando, erro: vp.motivo }); return; }
+    setComprovando({ ...comprovando, enviando: true, erro: '' });
+    let printUrl = '';
     try {
-      await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
-      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
-      if (ehHoje && xgame) {
-        const est = estadoDaTarefa(t);
-        const noHorario = !est || est.id === 'AGORA' || est.id === 'FUTURO';
-        const pts = Math.round((10 + (noHorario ? 5 : 0)) * (xgame.cotacao || 1));
-        setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
-        setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
-      }
-      vibrar(VIBRA_CONCLUIU);
-      toast.success('Comprovada e concluída! ✔');
-    } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
+      const ext = (dados.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
+      const up = await plataforma.integrations.Core.UploadFile({
+        file: dados.file,
+        path: `xgame/prints/${uid}/${hojeStr()}_${t.id}.${ext}`,
+      });
+      printUrl = up?.file_url || up?.url || '';
+    } catch {
+      setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar a imagem — tente de novo.' });
+      return;
+    }
+    await avaliarComIA(t, { printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1 });
   };
 
   const alternarFeito = async (t) => {
@@ -1242,6 +1291,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   tipo={comprovando.tipo}
                   enviando={!!comprovando.enviando}
                   erro={comprovando.erro}
+                  pergunta={comprovando.pergunta}
                   onFechar={() => setComprovando(null)}
                   onComprovar={(dados) => concluirComComprovacao(t, dados)}
                 />

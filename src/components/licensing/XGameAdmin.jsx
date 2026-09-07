@@ -179,6 +179,7 @@ export default function XGameAdmin() {
   const [comprovacoes, setComprovacoes] = useState([]);
   const [filtroComp, setFiltroComp] = useState('em_analise');
   const [iaLigada, setIaLigada] = useState(null);
+  const [iaDetalhe, setIaDetalhe] = useState(''); // modelo, ou o erro real do gateway quando cai
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
   const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 'reprovada');
   const carregarComprovacoes = useCallback(() => {
@@ -187,8 +188,12 @@ export default function XGameAdmin() {
       .not('comprovacao', 'is', null)
       .order('data', { ascending: false }).limit(150)
       .then(({ data }) => setComprovacoes(data || []));
-    fetch('/api/functions/xgameValidarPrint')
-      .then((r) => r.json()).then((j) => setIaLigada(!!j?.ia)).catch(() => setIaLigada(false));
+    // 🩺 DIR-84.1 — `?ping=1` faz o modelo RESPONDER de verdade; "tem chave"
+    // sozinho mentia "IA ligada" enquanto toda comprovação caía em indisponível.
+    fetch('/api/functions/xgameValidarPrint?ping=1')
+      .then((r) => r.json())
+      .then((j) => { setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} (${j.via || '?'}) → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 320)}` : ''}` : `${j?.model || ''}${j?.via ? ` · via ${j.via}` : ''}`); })
+      .catch(() => { setIaLigada(false); setIaDetalhe('a função de validação não respondeu'); });
   }, []);
   useEffect(() => { carregarComprovacoes(); }, [carregarComprovacoes]);
   const aprovarComp = async (t) => {
@@ -288,8 +293,8 @@ export default function XGameAdmin() {
             className={`px-3 py-1.5 rounded-md text-xs font-bold ${abaAdmin === v ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >{rotulo}</button>
         ))}
-        <span className={`ml-auto text-[10px] font-bold ${iaLigada === null ? 'text-gray-400' : iaLigada ? 'text-emerald-600' : 'text-amber-600'}`}>
-          {iaLigada === null ? '… conferindo a IA' : iaLigada ? '🧠 IA de visão CONECTADA' : '⚠ IA desligada — tudo cai na fila manual'}
+        <span className={`ml-auto text-[10px] font-bold ${iaLigada === null ? 'text-gray-400' : iaLigada ? 'text-emerald-600' : 'text-red-600'}`} title={iaDetalhe} data-teste="ia-status">
+          {iaLigada === null ? '… conferindo a IA (chamada real ao modelo)' : iaLigada ? `🧠 IA de visão RESPONDENDO · ${iaDetalhe}` : `🚨 IA FORA DO AR — comprovações BLOQUEADAS até voltar${iaDetalhe ? ` · ${iaDetalhe}` : ''}`}
         </span>
       </div>
 
@@ -346,6 +351,15 @@ export default function XGameAdmin() {
                         {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
                         {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
                       </p>
+                      {/* 🗣️ DIR-84 — chegou aqui DEPOIS de a pessoa já ter
+                          tentado se explicar pra IA e ainda assim ficou em
+                          dúvida: o gestor precisa ver essa explicação, não só
+                          a imagem, pra decidir com o mesmo contexto que a IA teve. */}
+                      {c.justificativa_pessoa && (
+                        <p className="text-[10px] text-gray-600 italic bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-0.5">
+                          🗣️ a pessoa explicou: "{c.justificativa_pessoa}"
+                        </p>
+                      )}
                       {reprovando?.id === t.id && (
                         <div className="flex items-center gap-1.5 pt-1">
                           <Input placeholder="motivo (a pessoa vai ler)" value={reprovando.motivo} onChange={(e) => setReprovando({ ...reprovando, motivo: e.target.value })} className="h-7 text-[11px] bg-white border-gray-300" />
