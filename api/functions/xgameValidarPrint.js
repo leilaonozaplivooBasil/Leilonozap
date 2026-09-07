@@ -38,70 +38,20 @@
 // acionar o gestor mora em src/lib/xgameValidacao.js (pura, testada). Esta
 // função só OLHA e RESPONDE — e quando NÃO consegue olhar, DIZ (ia_indisponivel)
 // em vez de fingir dúvida.
-import Anthropic from '@anthropic-ai/sdk';
 // o helper do SDK fala zod v4 (`zod/v4`, que o zod 3.25+ já exporta); schema
 // feito com o `zod` v3 chega sem `.def` e quebra ANTES de chamar a IA
 import * as z from 'zod/v4';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+// o acesso à IA (chave, caminho, erros) é compartilhado com o InvokeLLM — DIR-84.5
+import { resolverIA as resolverIACompartilhada, clienteIA, opcoesDeReserva, detalhesDoErro } from '../_lib/ia.js';
 
-const GATEWAY = 'https://ai-gateway.vercel.sh';
 // modelos: pelo gateway levam o prefixo do provedor; direto na Anthropic, não.
 const MODEL_DIRETO = process.env.AI_MODEL_VISION_ANTHROPIC || 'claude-opus-5';
 const MODEL_GATEWAY = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
 const MODEL_GATEWAY_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
 
-// 🔐 Sem env? As chaves podem morar no COFRE do banco (app_segredos, RLS sem
-// policy — só o service role lê). Cache de 5 min pra não bater no banco toda hora.
-let _cacheCofre = { valor: null, ate: 0 };
-async function chavesDoCofre() {
-  const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (_cacheCofre.ate > Date.now()) return _cacheCofre.valor;
-  let valor = {};
-  try {
-    if (SUPABASE_URL && SR) {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/app_segredos?id=in.(anthropic_api_key,ai_gateway_key)&select=id,valor`, {
-        headers: { apikey: SR, Authorization: `Bearer ${SR}` },
-        signal: AbortSignal.timeout(5000),
-      });
-      const j = await r.json().catch(() => []);
-      for (const linha of Array.isArray(j) ? j : []) if (linha?.id && linha?.valor) valor[linha.id] = String(linha.valor);
-    }
-  } catch { valor = {}; }
-  _cacheCofre = { valor, ate: Date.now() + 5 * 60 * 1000 };
-  return valor;
-}
-
 /** Qual IA usar agora: { via, apiKey, model, reserva } — ou null sem chave. */
-async function resolverIA() {
-  const env = process.env;
-  let anthropic = env.ANTHROPIC_API_KEY || '';
-  let gateway = env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN || '';
-  if (!anthropic && !gateway) {
-    const cofre = await chavesDoCofre();
-    anthropic = cofre.anthropic_api_key || '';
-    gateway = cofre.ai_gateway_key || '';
-  }
-  if (anthropic) return { via: 'anthropic', apiKey: anthropic, model: MODEL_DIRETO, reserva: null };
-  if (gateway) return { via: 'gateway', apiKey: gateway, model: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA };
-  return null;
-}
-
-function clienteIA(ia) {
-  // maxRetries 1: o SDK já refaz 429/5xx/queda de rede uma vez; mais que isso
-  // estoura o tempo da função com a pessoa esperando no celular.
-  return new Anthropic({ apiKey: ia.apiKey, ...(ia.via === 'gateway' ? { baseURL: GATEWAY } : {}), timeout: 40_000, maxRetries: 1 });
-}
-
-// o erro do SDK vira um `details` legível pra tela e pro log — e o motivo
-// certo: 404 é modelo que não existe (foi o caso do gemini), 401 é chave,
-// 403 é permissão/plano (free tier do gateway), 429 é limite, 5xx/529 é a
-// IA fora, rede é rede.
-function detalhesDoErro(e) {
-  if (e instanceof Anthropic.APIConnectionError) return { status: 0, tipo: 'rede', mensagem: String(e.message || '').slice(0, 400) };
-  if (e instanceof Anthropic.APIError) return { status: e.status ?? 0, tipo: e.type || e.name || 'api', mensagem: String(e.message || '').slice(0, 400) };
-  return { status: 0, tipo: 'desconhecido', mensagem: String(e?.message || e).slice(0, 400) };
-}
+const resolverIA = () => resolverIACompartilhada({ modelDireto: MODEL_DIRETO, modelGateway: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA });
 
 // 🩺 PING — chamada mínima (só texto) ao modelo, pelo MESMO caminho da
 // validação. "Tem chave" ≠ "a IA funciona": foi assim que a tela disse "IA
@@ -252,7 +202,7 @@ TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${d
         // (o thinking adaptativo do Opus 5 segue ligado por padrão)
         output_config: { format: zodOutputFormat(Veredito), effort: 'medium' },
         // extensão do AI Gateway: se o modelo principal falhar, ele tenta o reserva
-        ...(ia.reserva ? { providerOptions: { gateway: { models: [ia.reserva] } } } : {}),
+        ...opcoesDeReserva(ia),
       });
     } catch (e) {
       const d = detalhesDoErro(e);
