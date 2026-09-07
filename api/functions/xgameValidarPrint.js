@@ -106,13 +106,19 @@ function detalhesDoErro(e) {
 // 🩺 PING — chamada mínima (só texto) ao modelo, pelo MESMO caminho da
 // validação. "Tem chave" ≠ "a IA funciona": foi assim que a tela disse "IA
 // ligada" enquanto toda comprovação caía em "IA indisponível".
+const PingSaida = z.object({ ok: z.string().describe('escreva exatamente: ok') });
 async function pingModelo(ia) {
   try {
-    const m = await clienteIA(ia).messages.create({
-      model: ia.model, max_tokens: 16,
+    // a MESMA forma da validação real (saída estruturada + effort + system com
+    // cache_control), só sem imagem: se o gateway recusar qualquer parte dessa
+    // forma, é AQUI que aparece — não na primeira pessoa comprovando de manhã.
+    const m = await clienteIA(ia).messages.parse({
+      model: ia.model, max_tokens: 64,
+      system: [{ type: 'text', text: 'Você é um health check. Responda só o que for pedido.', cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: 'responda só: ok' }],
+      output_config: { format: zodOutputFormat(PingSaida), effort: 'medium' },
     });
-    return { status: 200, ok: true, model: m.model };
+    return { status: 200, ok: true, model: m.model, saida: m.parsed_output?.ok ?? null };
   } catch (e) {
     const d = detalhesDoErro(e);
     console.error('[xgameValidarPrint] ping falhou', { via: ia.via, model: ia.model, ...d });

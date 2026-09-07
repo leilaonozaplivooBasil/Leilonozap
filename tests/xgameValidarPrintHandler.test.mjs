@@ -236,8 +236,15 @@ test('GET ?ping=1 chama o modelo de verdade: 404 → ia:false com o erro; 200 �
   assert.equal(caiu.corpo.ping.status, 404);
   assert.match(caiu.corpo.ping.corpo, /not found/i);
 
-  estado.responder = () => ({ status: 200, body: respostaIA({}) });
+  estado.responder = () => ({ status: 200, body: respostaIA({ ok: 'ok' }) });
   const ok = await get({ ping: '1' });
   assert.equal(ok.corpo.ia, true);
   assert.equal(ok.corpo.ping.ok, true);
+  assert.equal(ok.corpo.ping.saida, 'ok');
+  // o ping manda a MESMA forma da validação real — é ele que prova que o
+  // gateway aceita effort, saída estruturada e cache_control
+  const req = soIA().at(-1).corpo;
+  assert.equal(req.output_config?.effort, 'medium');
+  assert.equal(req.output_config?.format?.type, 'json_schema');
+  assert.deepEqual(req.system?.[0]?.cache_control, { type: 'ephemeral' });
 });
