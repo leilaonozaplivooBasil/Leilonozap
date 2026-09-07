@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ExternalLink, Check, BookOpen, HelpCircle, Type } from 'lucide-react';
+import { ChevronDown, ExternalLink, Check, BookOpen, HelpCircle, Type, Compass } from 'lucide-react';
 import TiraDuvidas from '@/components/licensing/TiraDuvidas';
 import {
   AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS,
-  ENDERECOS, FRASES_DO_RODAPE, progressoDasAulas,
+  ENDERECOS, FRASES_DO_RODAPE, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '@/lib/guiaXGame';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
@@ -225,7 +225,7 @@ export default function GuiaXGame({ currentUser = null }) {
             <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">Top College · X-EOS</p>
             <h2 className="text-lg sm:text-xl font-black text-white leading-tight">Guia do Usuário</h2>
             <p className="text-white/60 mt-0.5">
-              Entrar, achar suas tarefas, marcar o que fez e entender sua pontuação. Do zero, pelo celular.
+              Suas tarefas do dia, como marcar o que fez e o que significa cada número da sua pontuação.
             </p>
           </div>
           {/* tamanho da letra: botão à vista, não configuração escondida */}
@@ -257,6 +257,25 @@ export default function GuiaXGame({ currentUser = null }) {
         </div>
         <span className="text-[11px] text-white/45 shrink-0" data-teste="progresso-aulas">{progresso.feitas} de {progresso.total} aulas</span>
       </div>
+
+      {/* 🧭 ONDE FICA CADA COISA — o mapa das seções vizinhas, herdado da
+          antiga Aula 2. Fica como CONSULTA, não como aula: quem está lendo
+          isto já entrou e já está na Top College; não há passo a passo a
+          seguir, só um lugar pra conferir onde mora o resto. */}
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4 space-y-2" data-teste="guia-atalhos">
+        <p className="font-bold text-white flex items-center gap-1.5"><Compass className="w-4 h-4 text-white/40" /> Onde fica cada coisa</p>
+        <div className="grid gap-1.5">
+          {MAPA_TOP_COLLEGE.map((m) => (
+            <div key={m.nome} className={`flex flex-col sm:flex-row sm:gap-3 rounded-lg px-2.5 py-1.5 ${m.destaque ? 'bg-emerald-500/10 border border-emerald-400/25' : 'bg-white/[0.04]'}`}>
+              <span className="font-semibold text-white sm:w-40 shrink-0">
+                {m.nome}{m.aqui && <span className="ml-1.5 text-[10px] font-normal text-white/35">você está aqui</span>}
+              </span>
+              <span className="text-white/60">{m.o_que_e}</span>
+            </div>
+          ))}
+        </div>
+        <Caixa tom="dica" titulo={DICA_TELA_INICIAL.titulo} linhas={DICA_TELA_INICIAL.linhas} />
+      </section>
 
       {AULAS.map((a) => (
         <Aula key={a.id} aula={a} aberta={aberta === a.id} onAbrir={setAberta} lida={lidas.includes(a.id)} onLida={marcarLida} />

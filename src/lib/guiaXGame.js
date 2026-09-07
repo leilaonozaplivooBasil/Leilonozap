@@ -40,7 +40,6 @@ export const ENDERECOS = {
   plataforma: 'leilaonozap.net',
   metodo: 'leilaonozap.net/CRM',
   placar: 'leilaonozap.net/XGame',
-  licensing: 'leilaonozap.net/Licensing',
 };
 
 export const HABITOS = [
@@ -61,56 +60,43 @@ export const CORES_DA_TAREFA = [
   { id: 'perdido', rotulo: 'PERDIDO', cor: '#ef4444', o_que_e: 'Passou muito. A nota do dia já foi descontada.' },
 ];
 
-export const AULAS = [
+// 🧭 O QUE SOBROU DAS AULAS 1 E 2, E POR QUÊ (07/09/2026 — dono: "os dois
+// passos parecem desnecessários, já que para chegar ao Guia o usuário já teria
+// passado por essas etapas só de estar ali lendo").
+//
+// Ele está certo, e o motivo é estrutural: o guia nasceu como arquivo solto,
+// pra ser lido ANTES de entrar. Agora ele mora dentro da plataforma, atrás do
+// login — quem lê já entrou e já está na Top College. "Entrar na plataforma" e
+// "Achar o Método" viraram instrução pra uma situação impossível.
+//
+// Mas duas coisas que moravam lá dentro continuam servindo pra quem JÁ está
+// aqui, e por isso não foram jogadas fora com o resto:
+//   • o MAPA das seções vizinhas — é exatamente o que alguém parado aqui
+//     precisa pra saber onde fica o resto;
+//   • deixar na TELA INICIAL do celular — isso não é sobre entrar, é sobre não
+//     ter que digitar endereço nunca mais.
+// Viraram um bloco de atalhos no topo, e não uma aula: ninguém precisa "fazer"
+// isso passo a passo.
+export const MAPA_TOP_COLLEGE = [
+  { nome: 'O Método', o_que_e: 'seus 8 Hábitos e as tarefas do dia — é onde você vai ficar', destaque: true },
+  { nome: 'Mentalidade', o_que_e: 'o encontro de segunda-feira' },
+  { nome: 'Time', o_que_e: 'as pessoas do seu time' },
+  { nome: 'ADM X-Game', o_que_e: 'administração — é do gestor, não é para você' },
+  { nome: 'Carreira', o_que_e: 'seus níveis e sua evolução' },
+  { nome: 'Guia do Usuário', o_que_e: 'esta página, sempre que precisar', aqui: true },
+];
+
+export const DICA_TELA_INICIAL = {
+  titulo: 'Deixe na tela inicial do celular',
+  linhas: [
+    'No Chrome: toque nos três pontinhos ⋮ e escolha Adicionar à tela inicial.',
+    'No iPhone: toque no quadradinho com a seta para cima e escolha Adicionar à Tela de Início.',
+    'Vira um ícone igual a um aplicativo. Nunca mais precisa digitar o endereço.',
+  ],
+};
+
+export const AULAS_BRUTAS = [
   {
-    n: 1,
-    id: 'entrar',
-    titulo: 'Entrar na plataforma',
-    resumo: 'Você entra com o seu e-mail. Não precisa decorar senha: o sistema manda um código para o seu e-mail e você digita.',
-    passos: [
-      { faca: 'Abra o navegador do celular', detalhe: 'Chrome ou Safari — aquele que você usa para pesquisar coisas.' },
-      { faca: `Vá para ${ENDERECOS.plataforma}`, link: `https://${ENDERECOS.plataforma}` },
-      { faca: 'Toque em Entrar', detalhe: 'Costuma ficar no canto de cima da tela, perto do seu nome ou de um bonequinho.' },
-      { faca: 'Digite seu e-mail no campo E-mail e confirme' },
-      { faca: 'Abra seu e-mail em outra aba', detalhe: 'Vai ter chegado uma mensagem com 6 números. Se não chegou em 2 minutos, olhe na caixa de spam ou lixo eletrônico.' },
-      { faca: 'Volte e digite esses 6 números no campo Código de Verificação' },
-    ],
-    caixas: [{
-      tom: 'dica',
-      titulo: 'Faça isso uma vez só',
-      linhas: [
-        'Depois de entrar, salve o site na tela inicial do celular.',
-        'No Chrome: toque nos três pontinhos ⋮ e escolha Adicionar à tela inicial.',
-        'No iPhone: toque no quadradinho com a seta para cima e escolha Adicionar à Tela de Início.',
-        'Vai virar um ícone igual a um aplicativo. Nunca mais precisa digitar o endereço.',
-      ],
-    }],
-  },
-  {
-    n: 2,
-    id: 'achar-metodo',
-    titulo: 'Achar o Método',
-    resumo: 'O X-GAME acontece dentro do Método. É lá que ficam suas tarefas do dia.',
-    passos: [
-      { faca: 'O caminho curto', detalhe: `Este endereço abre o Método direto. Guarde nos favoritos: ${ENDERECOS.metodo}`, link: `https://${ENDERECOS.metodo}` },
-      { faca: `O caminho pelo menu: abra ${ENDERECOS.licensing}`, detalhe: 'Procure o menu de seções e escolha a família Top College — é a parte que forma. A outra, Loja & Vendas, é a parte que vende.' },
-      { faca: 'Dentro de Top College, toque em O Método' },
-    ],
-    caixas: [{
-      tom: 'mapa',
-      titulo: 'O que tem dentro de Top College',
-      linhas: [
-        'O Método — seus 8 Hábitos e as tarefas do dia. É onde você vai ficar.',
-        'Mentalidade — o encontro de segunda-feira.',
-        'Time — as pessoas do seu time.',
-        'ADM X-Game — administração. É do gestor, não é para você.',
-        'Carreira — seus níveis e sua evolução.',
-        'Guia do Usuário — esta página, sempre que precisar.',
-      ],
-    }],
-  },
-  {
-    n: 3,
     id: 'habitos',
     titulo: 'Os 8 Hábitos, em uma frase cada',
     resumo: 'O Método é organizado em 8 Hábitos. Eles aparecem como 8 botões. Você vai usar o Hábito 2 todo dia — os outros, conforme a etapa.',
@@ -122,7 +108,6 @@ export const AULAS = [
     }],
   },
   {
-    n: 4,
     id: 'cores',
     titulo: 'Sua rotina do dia, e as cores',
     resumo: 'No Hábito 2 você vê a lista de tarefas de hoje, cada uma com um horário. O sistema pinta cada tarefa de uma cor, conforme a hora do relógio.',
@@ -148,7 +133,6 @@ export const AULAS = [
     ],
   },
   {
-    n: 5,
     id: 'comprovar',
     titulo: 'Marcar a tarefa e comprovar',
     resumo: 'Marcar é um toque. Algumas tarefas pedem uma foto como prova.',
@@ -188,7 +172,6 @@ export const AULAS = [
     ],
   },
   {
-    n: 6,
     id: 'pontuacao',
     titulo: 'Entender sua pontuação',
     resumo: 'São quatro números. Parecem muitos, mas cada um responde uma pergunta simples.',
@@ -220,7 +203,6 @@ export const AULAS = [
     ],
   },
   {
-    n: 7,
     id: 'ranking',
     titulo: 'Ver o ranking',
     resumo: `Existe uma tela só do placar: ${ENDERECOS.placar}`,
@@ -244,7 +226,6 @@ export const AULAS = [
     ],
   },
   {
-    n: 8,
     id: 'primeiro-dia',
     titulo: 'Mãos na prática: seu primeiro dia',
     resumo: 'Faça exatamente isto amanhã. Vá marcando conforme cumprir — a página guarda no seu celular.',
@@ -267,6 +248,10 @@ export const AULAS = [
   },
 ];
 
+// A numeração vem da POSIÇÃO, não escrita à mão: tirar uma aula não pode
+// deixar o guia contando "1, 2, 4".
+export const AULAS = AULAS_BRUTAS.map((a, i) => ({ ...a, n: i + 1 }));
+
 export const PERGUNTAS = [
   { p: 'Esqueci de marcar ontem. Perdi tudo?', r: `Não. Você perdeu os pontos daquele dia, mas o ciclo tem ${CICLO_DIAS_UTEIS} dias. A Aplicabilidade é média — um dia ruim entre vinte bons quase não aparece.` },
   { p: 'Preciso de computador?', r: 'Não. Tudo funciona no celular. A maioria das pessoas do time usa só o celular.' },
@@ -275,7 +260,7 @@ export const PERGUNTAS = [
   { p: `Por que meu token não passa de ${br(TRAVA_SEM_ESTUDO)}?`, r: 'É a trava do estudo. Sem constância na tarefa de leitura, o sistema segura você um centésimo abaixo do ouro. Retome a leitura e ela destrava.' },
   { p: 'Quando começa um ciclo novo?', r: `No primeiro dia útil de cada mês. Ele dura ${CICLO_DIAS_UTEIS} dias úteis. Sábado e domingo não contam.` },
   { p: 'Fim de semana conta?', r: 'Não. O ciclo só anda em dia útil.' },
-  { p: 'Não achei o menu Top College.', r: `Use o caminho curto: abra ${ENDERECOS.metodo}. Vai direto para o Método.` },
+  { p: 'Como volto rápido pras minhas tarefas?', r: `Use o atalho aqui de cima, ou guarde este endereço nos favoritos: ${ENDERECOS.metodo}. Ele abre o Método direto.` },
   { p: 'A tela ficou branca ou travou.', r: 'Puxe a tela para baixo para recarregar. Se continuar, feche o navegador e abra de novo. Se persistir, use o Tira Dúvidas aqui em cima e mande um print.' },
 ];
 
