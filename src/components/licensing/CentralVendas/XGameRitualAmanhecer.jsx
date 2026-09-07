@@ -14,8 +14,8 @@ import { extrairIdYoutube, extrairListaYoutube, fonteDoPlayer } from '@/lib/xmus
 //     Um toque desliga.
 //   • Na visualização, as IMAGENS DO QUADRO DOS SONHOS sobem flutuando na
 //     tela enquanto a câmera grava a meditação — o vídeo é a comprovação.
-//   • Sem gravar? O sistema EXPLICA que precisa gravar pra comprovar (e
-//     deixa seguir sem vídeo só caindo na análise do gestor).
+//   • Sem gravar? O sistema EXPLICA que o vídeo é o que dá o selo BRILHANTE
+//     (DIR-89: mesmo sem ele o ritual conclui igual, sozinho — sem gestor).
 //   • No fim, um convite só: o post do bom dia no Instagram.
 
 // 🎵 A MÚSICA DO AMANHECER agora é YOUTUBE (ordem do dono): prévias prontas
@@ -174,7 +174,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
       }), 1000);
     } catch {
       setSemVideoLiberado(true);
-      setAviso('Não consegui abrir a câmera — dá pra concluir sem o vídeo, mas o ritual vai pra análise do gestor.');
+      setAviso('Não consegui abrir a câmera — dá pra concluir sem o vídeo, só não ganha o selo BRILHANTE.');
       setTimeout(() => setAviso(''), 7000);
     }
   };
