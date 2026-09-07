@@ -1,32 +1,49 @@
-// xgameValidarPrint — O VALIDADOR DE COMPROVAÇÕES DA X-GAME (F10.2 → DIR-84).
+// xgameValidarPrint — O VALIDADOR DE COMPROVAÇÕES DA X-GAME (F10.2 → DIR-84 → DIR-84.2).
 // A IA de visão olha o print/foto SABENDO qual tarefa está sendo comprovada
-// e responde JSON: aprovada / reprovada / duvida + o que viu. Usa o MESMO
-// gateway de IA do atendimento (AI_GATEWAY_API_KEY) com um modelo de visão.
-// GET  → health check: {ok, ia} — a tela mostra se a IA está ligada.
+// e responde: aprovada / reprovada / duvida + o que viu + (se dúvida) a
+// pergunta pra pessoa.
+// GET  → health check: {ok, ia, tem_chave, model}; com ?ping=1 faz uma
+//        chamada REAL ao modelo e devolve {ping:{ok,status,corpo}}.
 // POST → {image_url, tipo, titulo, hora, data, imagens_anteriores?, justificativa?, tentativa?}
-//     → {veredito, confianca, o_que_viu, motivo, pergunta_para_pessoa?}
-// Sem chave ou IA fora do ar: degrada pra {veredito:'duvida'} — cai na fila
-// manual do gestor, nada trava.
+//     → {veredito, confianca, o_que_viu, motivo, pergunta_para_pessoa}
+//        ou {ia_indisponivel:true, details} quando a IA não respondeu.
 //
 // 🤖 DIR-84 (07/09/2026) — ordem do dono: "ela tem que ser o maior validador
 // do caralho, ela tem que cruzar imagem, ela tem que pensar — se a pessoa
 // comprova um pré-treino com foto na cama ou bebendo água, ela pergunta pra
 // pessoa justificar ANTES de validar. Intervenção humana zero: ela tem que
-// ser mais foda que humano." Duas coisas novas nesta rodada:
-// 1. CRUZAMENTO: o prompt agora exige coerência explícita entre o TÍTULO da
-//    tarefa e o CONTEÚDO da imagem — não só "tem uma pessoa numa foto".
-// 2. ANTI-RECICLAGEM VISUAL: o hash exato (lib/xgame.js) já barra o MESMO
-//    arquivo de novo; aqui a IA recebe as últimas fotos da pessoa pro MESMO
-//    tipo de tarefa e compara visualmente — pega reciclagem reprocessada
-//    (recortada, comprimida, com filtro) que o hash sozinho não vê.
-// A régua de QUANDO pedir justificativa e quando só então acionar o gestor
-// mora em src/lib/xgameValidacao.js (pura, testada) — a tela é quem decide
-// com o veredito daqui; esta função só OLHA e RESPONDE.
+// ser mais foda que humano." Aqui: CRUZAMENTO explícito tarefa×imagem e
+// ANTI-RECICLAGEM visual (as últimas fotos da pessoa vêm junto).
+//
+// 🔁 DIR-84.2 — A TROCA DE IA. O ping real (DIR-84.1) mostrou a causa de
+// toda comprovação cair em "indisponível": HTTP 404 model_not_found — o
+// `google/gemini-2.0-flash` foi descontinuado no gateway e a função engolia
+// o erro. Sai o chat/completions "compatível com OpenAI" com JSON raspado por
+// regex; entra o SDK oficial da Anthropic apontado pro MESMO AI Gateway da
+// Vercel (a Vercel documenta exatamente isso: baseURL ai-gateway.vercel.sh +
+// AI_GATEWAY_API_KEY), com Claude Opus 5 e SAÍDA ESTRUTURADA — o JSON volta
+// no formato certo por contrato, não por sorte. A chave é a mesma de sempre.
+// Modelo reserva no gateway se o principal cair (sobrecarga, indisponível).
+//
+// A régua de QUANDO pedir justificativa / quando bloquear / quando só então
+// acionar o gestor mora em src/lib/xgameValidacao.js (pura, testada). Esta
+// função só OLHA e RESPONDE — e quando NÃO consegue olhar, DIZ (ia_indisponivel)
+// em vez de fingir dúvida.
+import Anthropic from '@anthropic-ai/sdk';
+// o helper do SDK fala zod v4 (`zod/v4`, que o zod 3.25+ já exporta); schema
+// feito com o `zod` v3 chega sem `.def` e quebra ANTES de chamar a IA
+import * as z from 'zod/v4';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+
 const AI_KEY = process.env.AI_GATEWAY_API_KEY || '';
 const OIDC = process.env.VERCEL_OIDC_TOKEN || '';
-const GATEWAY = 'https://ai-gateway.vercel.sh/v1/chat/completions';
-// gemini flash lê imagem e está no free tier do gateway; troque via env se quiser
-const MODEL = process.env.AI_MODEL_VISION || 'google/gemini-2.0-flash-001';
+// o AI Gateway da Vercel fala a Messages API da Anthropic neste endereço
+const GATEWAY = 'https://ai-gateway.vercel.sh';
+// modelo de visão principal e o reserva (fallback DO GATEWAY, não da Anthropic:
+// a requisição passa pelo gateway, então é ele quem redireciona se o
+// principal falhar). Troque via env sem mexer no código.
+const MODEL = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
+const MODEL_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
 
 // 🔐 Sem env? A chave pode morar no COFRE do banco (app_segredos, RLS sem
 // policy — só o service role lê). Cache de 5 min pra não bater no banco toda hora.
@@ -50,6 +67,48 @@ async function chaveDaIA() {
   _cacheChave = { valor, ate: Date.now() + 5 * 60 * 1000 };
   return valor;
 }
+
+function clienteIA(auth) {
+  // maxRetries 1: o SDK já refaz 429/5xx/queda de rede uma vez; mais que isso
+  // estoura o tempo da função com a pessoa esperando no celular.
+  return new Anthropic({ apiKey: auth, baseURL: GATEWAY, timeout: 40_000, maxRetries: 1 });
+}
+
+// o erro do SDK vira um `details` legível pra tela e pro log — e o motivo
+// certo: 404 é modelo que não existe (foi o caso do gemini), 401/403 é chave,
+// 429 é limite, 5xx/529 é a IA fora, rede é rede.
+function detalhesDoErro(e) {
+  if (e instanceof Anthropic.APIConnectionError) return { status: 0, tipo: 'rede', mensagem: String(e.message || '').slice(0, 300) };
+  if (e instanceof Anthropic.APIError) return { status: e.status ?? 0, tipo: e.type || e.name || 'api', mensagem: String(e.message || '').slice(0, 300) };
+  return { status: 0, tipo: 'desconhecido', mensagem: String(e?.message || e).slice(0, 300) };
+}
+
+// 🩺 PING — chamada mínima (só texto) ao modelo, pelo MESMO caminho da
+// validação. "Tem chave" ≠ "a IA funciona": foi assim que a tela disse "IA
+// ligada" enquanto toda comprovação caía em "IA indisponível".
+async function pingModelo(auth) {
+  try {
+    const m = await clienteIA(auth).messages.create({
+      model: MODEL, max_tokens: 16,
+      messages: [{ role: 'user', content: 'responda só: ok' }],
+    });
+    return { status: 200, ok: true, model: m.model };
+  } catch (e) {
+    const d = detalhesDoErro(e);
+    console.error('[xgameValidarPrint] ping falhou', { model: MODEL, ...d });
+    return { status: d.status, ok: false, corpo: `${d.tipo}: ${d.mensagem}` };
+  }
+}
+
+// 📐 O CONTRATO DA RESPOSTA — saída estruturada: o modelo é obrigado a
+// devolver exatamente isto. Não existe mais "a IA respondeu fora do formato".
+const Veredito = z.object({
+  veredito: z.enum(['aprovada', 'reprovada', 'duvida']),
+  confianca: z.number().describe('0 a 100'),
+  o_que_viu: z.string().describe('descrição curta e objetiva do que a imagem mostra'),
+  motivo: z.string().describe('explicação curta e PEDAGÓGICA em pt-BR; se reprovar, diga exatamente o que faltou e como corrigir'),
+  pergunta_para_pessoa: z.string().describe('SÓ quando veredito=duvida por incoerência: uma pergunta curta e específica pra pessoa se explicar, citando o que você viu; string vazia nos outros casos'),
+});
 
 const REGRAS_POR_TIPO = {
   instagram: `A tarefa exige comprovação VISUAL de que foi cumprida AGORA (não vale coisa antiga). ACEITE apenas um destes três:
@@ -80,12 +139,13 @@ pessoa" ou "ter uma foto". Exemplos de INCOERÊNCIA que você TEM que pegar:
 tarefa de treino/pré-treino com foto da pessoa deitada, sonolenta, na cama,
 ou só bebendo água sem NENHUM sinal de treino (roupa/ambiente/equipamento de
 treino); tarefa de leitura com foto sem livro/tela/anotação nenhuma; tarefa
-de reunião com foto de lazer. Quando notar incoerência REAL mas não tiver
-certeza absoluta de má-fé, NÃO reprove de cara — responda "duvida" e
-preencha "pergunta_para_pessoa" com uma pergunta CURTA, direta e específica
-pedindo pra ela explicar a foto (cite o que você viu). Só reprove sem
-perguntar quando a incoerência for GRITANTE e óbvia (imagem aleatória, meme,
-nada a ver mesmo perguntando).
+de reunião ou de trabalho (ex.: "Resolver: o financeiro") com foto de lazer,
+de cama, de descanso. Quando notar incoerência REAL mas não tiver certeza
+absoluta de má-fé, NÃO reprove de cara — responda "duvida" e preencha
+"pergunta_para_pessoa" com uma pergunta CURTA, direta e específica pedindo
+pra ela explicar a foto (cite o que você viu). Só reprove sem perguntar
+quando a incoerência for GRITANTE e óbvia (imagem aleatória, meme, nada a
+ver mesmo perguntando).
 
 ANTI-RECICLAGEM: se vieram FOTOS ANTERIORES da mesma pessoa pra comparar,
 olhe se a foto NOVA é a MESMA cena/imagem reaproveitada (mesmo que
@@ -93,23 +153,10 @@ recortada, comprimida, com filtro ou brilho diferente — reconheça a cena,
 não só o arquivo). Se for reciclagem, isso é motivo de REPROVAÇÃO direta
 (não precisa perguntar: reciclar prova antiga não tem explicação válida).`;
 
-// 🩺 PING — chamada mínima (só texto) ao modelo de visão pra saber se ele
-// RESPONDE de verdade. "Tem chave" ≠ "a IA funciona": foi assim que a tela
-// disse "IA ligada" enquanto toda comprovação caía em "IA indisponível".
-async function pingModelo(auth) {
-  try {
-    const r = await fetch(GATEWAY, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: 'responda só: ok' }], max_tokens: 5 }),
-      signal: AbortSignal.timeout(15000),
-    });
-    const corpo = (await r.text()).slice(0, 400);
-    return { status: r.status, ok: r.ok, corpo: r.ok ? undefined : corpo };
-  } catch (e) {
-    return { status: 0, ok: false, corpo: String(e?.message || e).slice(0, 200) };
-  }
-}
+const SISTEMA = `Você é o VALIDADOR DE COMPROVAÇÕES da gamificação X-GAME (Leilão no Zap). O padrão é ALTO: intervenção humana deve ser rara, então você precisa ser mais rigoroso e mais atento do que um humano seria — mas justo: quem cumpriu de verdade tem que ser aprovado sem burocracia. Analise a imagem principal com cuidado antes de decidir.`;
+
+const indisponivel = (res, details, motivo = 'IA indisponível agora — tente de novo em instantes.') =>
+  res.status(200).json({ ok: true, ia_indisponivel: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo, pergunta_para_pessoa: '', details });
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -133,72 +180,66 @@ export default async function handler(req, res) {
     // pra cruzamento anti-reciclagem visual; e a justificativa da pessoa
     // quando esta é a SEGUNDA rodada (depois que a IA pediu explicação).
     const imagensAnteriores = (Array.isArray(body?.imagens_anteriores) ? body.imagens_anteriores : [])
-      .map((u) => String(u || '').slice(0, 2000)).filter(Boolean).slice(0, 4);
+      .map((u) => String(u || '').slice(0, 2000)).filter((u) => /^https?:\/\//.test(u)).slice(0, 4);
     const justificativa = String(body?.justificativa || '').slice(0, 800);
     const tentativa = Number(body?.tentativa) === 2 ? 2 : 1;
-    if (!imageUrl) return res.status(400).json({ ok: false, error: 'image_url obrigatório' });
+    if (!/^https?:\/\//.test(imageUrl)) return res.status(400).json({ ok: false, error: 'image_url obrigatório (http/https)' });
 
     const auth = await chaveDaIA();
-    if (!auth) {
-      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'IA não conectada — comprovação enviada pra análise manual do gestor.' });
-    }
+    if (!auth) return indisponivel(res, { status: 0, tipo: 'sem_chave', mensagem: 'AI_GATEWAY_API_KEY ausente' }, 'IA não conectada — configure a chave do AI Gateway.');
 
-    const sys = `Você é o VALIDADOR DE COMPROVAÇÕES da gamificação X-GAME (Leilão no Zap) — o padrão é ALTO: intervenção humana deve ser rara, então você precisa ser mais rigorosa e mais atenta que um humano faria. Responda SOMENTE com JSON válido, sem markdown:
-{"veredito":"aprovada"|"reprovada"|"duvida","confianca":0-100,"o_que_viu":"descrição curta do que a imagem mostra","motivo":"explicação curta e PEDAGÓGICA em pt-BR (se reprovar, diga exatamente o que faltou e como corrigir)","pergunta_para_pessoa":"só quando veredito=duvida por incoerência: uma pergunta curta e específica pra pessoa se explicar; string vazia nos outros casos"}`;
     const contexto = `TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.
 ${REGRAS_POR_TIPO[tipo] || REGRAS_POR_TIPO.foto}
-${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nAs próximas ${imagensAnteriores.length} imagem(ns) anexada(s) DEPOIS desta primeira são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : ''}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence ou é evasiva, responda "duvida" de novo (sem pergunta nova: isso já vai pra análise do gestor).` : ''}`;
+${CRUZAMENTO}${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence ou é evasiva, responda "duvida" de novo, com pergunta_para_pessoa vazia (isso já vai pra análise do gestor).` : ''}`;
 
-    const conteudoImagens = [
-      { type: 'image_url', image_url: { url: imageUrl } },
-      ...imagensAnteriores.map((u) => ({ type: 'image_url', image_url: { url: u } })),
+    const conteudo = [
+      { type: 'text', text: contexto },
+      { type: 'image', source: { type: 'url', url: imageUrl } },
+      ...imagensAnteriores.map((u) => ({ type: 'image', source: { type: 'url', url: u } })),
     ];
 
-    const r = await fetch(GATEWAY, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    let resposta;
+    try {
+      resposta = await clienteIA(auth).messages.parse({
         model: MODEL,
-        messages: [
-          { role: 'system', content: sys },
-          { role: 'user', content: [
-            { type: 'text', text: contexto },
-            ...conteudoImagens,
-          ] },
-        ],
-        max_tokens: 400, temperature: 0.1,
-      }),
-      signal: AbortSignal.timeout(28000),
-    });
-    if (!r.ok) {
-      // 🔍 DIR-84.1 — o erro do gateway NÃO pode mais sumir: vai pro log da
-      // Vercel e volta em `details` pra tela/painel saberem POR QUE caiu.
-      const corpo = (await r.text().catch(() => '')).slice(0, 400);
-      console.error('[xgameValidarPrint] gateway falhou', { status: r.status, model: MODEL, corpo });
-      return res.status(200).json({ ok: true, ia_indisponivel: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'IA indisponível agora — comprovação enviada pra análise manual.', details: { status: r.status, model: MODEL, corpo } });
+        max_tokens: 2000,
+        system: SISTEMA,
+        messages: [{ role: 'user', content: conteudo }],
+        output_config: { format: zodOutputFormat(Veredito) },
+        // extensão do AI Gateway: se o modelo principal falhar, ele tenta o reserva
+        providerOptions: { gateway: { models: [MODEL_RESERVA] } },
+      });
+    } catch (e) {
+      const d = detalhesDoErro(e);
+      console.error('[xgameValidarPrint] IA falhou', { model: MODEL, ...d });
+      return indisponivel(res, { model: MODEL, ...d });
     }
-    const j = await r.json();
-    let clean = String(j?.choices?.[0]?.message?.content || '').replace(/```(json)?/gi, '').trim();
-    const a = clean.indexOf('{'); const b = clean.lastIndexOf('}');
-    if (a >= 0 && b > a) clean = clean.slice(a, b + 1);
-    let out;
-    try { out = JSON.parse(clean); } catch { out = null; }
-    if (!out || !['aprovada', 'reprovada', 'duvida'].includes(out.veredito)) {
-      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não conseguiu analisar — vai pra análise manual.' });
+
+    if (resposta.stop_reason === 'refusal') {
+      // o modelo se recusou a analisar (raro numa foto de comprovação): não é
+      // IA fora, é um caso que precisa de olho humano — dúvida sem pergunta
+      console.warn('[xgameValidarPrint] refusal', resposta.stop_details);
+      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não pôde analisar esta imagem — vai pra análise do gestor.', pergunta_para_pessoa: '' });
+    }
+    const out = resposta.parsed_output;
+    if (!out) {
+      console.error('[xgameValidarPrint] resposta sem parsed_output', { stop_reason: resposta.stop_reason });
+      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não conseguiu concluir a análise — vai pra análise do gestor.', pergunta_para_pessoa: '' });
     }
     return res.status(200).json({
       ok: true,
+      model: resposta.model,
       veredito: out.veredito,
-      confianca: Math.max(0, Math.min(100, Number(out.confianca) || 0)),
+      confianca: Math.max(0, Math.min(100, Math.round(Number(out.confianca) || 0))),
       o_que_viu: String(out.o_que_viu || '').slice(0, 300),
       motivo: String(out.motivo || '').slice(0, 300),
-      // 🔒 blindagem contra o LLM "esquecer" a instrução: a SEGUNDA rodada
-      // NUNCA gera pergunta nova — a régua (lib/xgameValidacao.decisaoAposIA)
-      // manda pro gestor se ainda houver dúvida aqui, e é isso que garante
-      // que a pessoa tem exatamente UMA chance de se justificar, não um loop.
-      pergunta_para_pessoa: tentativa === 2 ? '' : String(out.pergunta_para_pessoa || '').slice(0, 300),
+      // 🔒 blindagem: a SEGUNDA rodada NUNCA gera pergunta nova — a régua
+      // (lib/xgameValidacao.decisaoAposIA) manda pro gestor se ainda houver
+      // dúvida, e é isso que garante UMA chance de se justificar, não um loop.
+      pergunta_para_pessoa: tentativa === 2 || out.veredito !== 'duvida' ? '' : String(out.pergunta_para_pessoa || '').slice(0, 300),
     });
   } catch (e) {
-    return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'Erro na análise — vai pra fila manual.', details: String(e?.message || e).slice(0, 120) });
+    console.error('[xgameValidarPrint] erro inesperado', String(e?.message || e));
+    return indisponivel(res, { status: 0, tipo: 'inesperado', mensagem: String(e?.message || e).slice(0, 200) });
   }
 }

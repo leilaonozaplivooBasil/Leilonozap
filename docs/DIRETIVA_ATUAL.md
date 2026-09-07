@@ -12,6 +12,56 @@
 
 ---
 
+## DIR-84.1 / 84.2 — A IA não estava rodando: o furo, a causa e a troca
+
+**Emitida por:** dono (07/09/2026), com a print da fila do gestor: *"olha qual
+era a tarefa ['Resolver: o financeiro'], fui lá bati uma foto qualquer
+[deitado na cama], ela aceitou. Ou seja ela não cruzou, não está
+funcionando. Isso é a parte mais importante da gamificação. Se tiver que
+botar outra IA aqui você fala, que eu troco. Tem que fazer funcionar.
+Urgentemente."*
+
+**Data:** 07/09/2026.
+
+**O que a print já dizia e eu fui confirmar:** a linha da fila trazia *"IA:
+IA indisponível agora — comprovação enviada pra análise manual"*. A IA **não
+rodou**. Dois defeitos, um em cima do outro:
+
+1. **O furo (84.1):** gateway caído virava `veredito: 'duvida'` → a régua
+   mandava pra `em_analise` → que **conta provisoriamente**. Enquanto a IA
+   estivesse fora, **qualquer foto passava**. E a função engolia o erro sem
+   log — a tela do gestor dizia "IA ligada" porque só conferia se havia
+   chave.
+2. **A causa (84.2):** com um `?ping=1` que faz uma chamada real ao modelo,
+   o gateway respondeu **HTTP 404 `model_not_found`: `google/gemini-2.0-flash`
+   não existe mais**. O modelo foi descontinuado e ninguém foi avisado, porque
+   o erro nunca chegava a lugar nenhum.
+
+**O que entra:**
+
+1. **IA fora do ar BLOQUEIA.** `ia_indisponivel` é uma ação própria da régua
+   (`ia_fora`): a tarefa não conclui, não conta, não vai pro gestor — a tela
+   diz que a foto não foi descartada e pede pra tentar de novo. Sem IA não há
+   validação; sem validação não há conclusão.
+2. **A troca de IA — Claude Opus 5 pelo SDK oficial da Anthropic**, apontado
+   pro **mesmo AI Gateway da Vercel** com a **mesma chave** que já está no
+   cofre (a Vercel documenta exatamente esse caminho). Nada pra o dono
+   configurar. Sai o chat/completions "compatível com OpenAI" e o JSON raspado
+   por regex; entra **saída estruturada por contrato** (o modelo é obrigado a
+   devolver o formato). Modelo reserva no gateway (`claude-sonnet-5`) se o
+   principal cair.
+3. **O erro deixa de sumir:** vai pro log da Vercel e volta em `details`
+   (status, tipo, mensagem, modelo) pra tela e pro painel. O indicador do
+   gestor passa a fazer o ping real e a mostrar o erro do gateway quando cai.
+
+**Prova:** teste da rota real (`tests/xgameValidarPrintHandler.test.mjs`)
+com o gateway simulado no formato da Messages API — cobre o caminho certo
+(modelo, chave, saída estruturada, imagens anteriores, prompt de cruzamento)
+e o 404 exato que derrubou tudo virando `ia_indisponivel`; régua com o caso
+`ia_fora`; ping real no preview voltando `ia: true` com o modelo novo.
+
+---
+
 ## DIR-84 — A validação da X-Game vira "o maior validador do caralho"
 
 **Emitida por:** dono (07/09/2026), depois de confirmar que a IA em questão
