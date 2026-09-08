@@ -23,30 +23,69 @@
 //      simples (nem toda tarefa tem "aprendizado" pra contar, e está certo).
 import { ensinamentoDaTarefa } from './mentalidades.js';
 
-/** O texto de uma entrada — a prioridade acima, primeira que tiver algo. */
-export function textoDaEntrada(tarefa = {}) {
+/**
+ * O texto de uma entrada, com a FONTE (pra Fase 2 saber o que gravar em
+ * `diario_bolso_entradas.fonte` e a tela poder rotular diferente: "escrito
+ * por você" vs "a IA viu" vs "o método explica"). A prioridade do
+ * comentário acima do arquivo, primeira fonte que tiver algo.
+ */
+export function textoEFonte(tarefa = {}) {
   const c = tarefa.comprovacao || {};
-  if (typeof c.resumo === 'string' && c.resumo.trim()) return c.resumo.trim();
-  if (typeof c.entrega === 'string' && c.entrega.trim() && !/^https?:\/\//i.test(c.entrega.trim())) return c.entrega.trim();
-  if (typeof c.veredito_ia?.o_que_viu === 'string' && c.veredito_ia.o_que_viu.trim()) return c.veredito_ia.o_que_viu.trim();
+  if (typeof c.resumo === 'string' && c.resumo.trim()) return { texto: c.resumo.trim(), fonte: 'resumo' };
+  if (typeof c.entrega === 'string' && c.entrega.trim() && !/^https?:\/\//i.test(c.entrega.trim())) return { texto: c.entrega.trim(), fonte: 'resumo' };
+  if (typeof c.veredito_ia?.o_que_viu === 'string' && c.veredito_ia.o_que_viu.trim()) return { texto: c.veredito_ia.o_que_viu.trim(), fonte: 'ia' };
   if (tarefa.mentalidade || tarefa.habito) {
     const ensinamento = ensinamentoDaTarefa({ mentalidade: tarefa.mentalidade, habito: tarefa.habito, detalhe: tarefa.detalhe });
-    if (ensinamento) return ensinamento;
+    if (ensinamento) return { texto: ensinamento, fonte: 'ensinamento' };
   }
-  if (typeof tarefa.detalhe === 'string' && tarefa.detalhe.trim()) return tarefa.detalhe.trim();
-  return null;
+  if (typeof tarefa.detalhe === 'string' && tarefa.detalhe.trim()) return { texto: tarefa.detalhe.trim(), fonte: 'detalhe' };
+  return { texto: null, fonte: null };
+}
+
+/** O texto de uma entrada — a prioridade acima, primeira que tiver algo. */
+export function textoDaEntrada(tarefa = {}) {
+  return textoEFonte(tarefa).texto;
 }
 
 /** Uma tarefa feita → uma entrada do diário: só o que a tela precisa desenhar. */
 export function entradaDe(tarefa = {}) {
+  const { texto, fonte } = textoEFonte(tarefa);
   return {
     id: tarefa.id,
     data: String(tarefa.data || '').slice(0, 10),
     hora: tarefa.hora ? String(tarefa.hora).slice(0, 5) : null,
     titulo: tarefa.titulo || '',
-    texto: textoDaEntrada(tarefa),
+    texto,
+    fonte,
     temFoto: !!(tarefa.comprovacao?.print_url),
   };
+}
+
+// ── 🚧 FASE 2 (terreno preparado em 08/09/2026) ─────────────────────────────
+// A função abaixo NÃO é chamada por nenhuma tela ainda — a Fase 1 continua só
+// leitura. Ela existe pronta pra quando a Fase 2 for ligada: monta a linha
+// exata que `diario_bolso_entradas` espera (migração
+// 20260908180000_diario_bolso_entradas.sql), a partir da MESMA tarefa que a
+// Fase 1 já lê — sem duplicar a régua do texto.
+/**
+ * A linha pronta pra gravar em `diario_bolso_entradas`, a partir de uma
+ * tarefa feita e de quem é a pessoa. `notaPessoal` (opcional) é o que a
+ * PRÓPRIA pessoa escreveu por cima — passa `undefined`/omite pra não mexer
+ * numa nota já existente ao regravar a mesma tarefa.
+ */
+export function linhaParaGravar(tarefa = {}, userId, notaPessoal) {
+  const e = entradaDe(tarefa);
+  const linha = {
+    user_id: userId,
+    data: e.data,
+    hora: e.hora,
+    tarefa_id: tarefa.id ?? null,
+    titulo: e.titulo,
+    texto: e.texto,
+    fonte: e.fonte,
+  };
+  if (notaPessoal !== undefined) linha.nota_pessoal = notaPessoal;
+  return linha;
 }
 
 /**

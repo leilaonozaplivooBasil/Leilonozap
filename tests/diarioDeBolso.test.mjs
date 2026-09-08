@@ -2,7 +2,7 @@
 // entrada, o agrupamento por dia e a busca. A tela só desenha o que isto monta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { textoDaEntrada, entradaDe, diarioAgrupado, filtrarDiario } from '../src/lib/diarioDeBolso.js';
+import { textoDaEntrada, textoEFonte, entradaDe, diarioAgrupado, filtrarDiario, linhaParaGravar } from '../src/lib/diarioDeBolso.js';
 
 test('textoDaEntrada: o resumo que a própria pessoa escreveu vence tudo', () => {
   const t = { comprovacao: { resumo: 'Aprendi a fechar melhor uma objeção de preço.', veredito_ia: { o_que_viu: 'um livro aberto' } }, mentalidade: 'diretor', habito: 7 };
@@ -35,9 +35,34 @@ test('textoDaEntrada: tarefa realmente sem nada pra contar devolve null — não
   assert.equal(textoDaEntrada({ titulo: 'Almoço' }), null);
 });
 
-test('entradaDe: monta a forma que a tela desenha, com hora cortada pra HH:mm e a foto sinalizada', () => {
+test('entradaDe: monta a forma que a tela desenha, com hora cortada pra HH:mm, a fonte do texto e a foto sinalizada', () => {
   const e = entradaDe({ id: 't1', data: '2026-09-08T00:00:00', hora: '09:15:00', titulo: 'Leitura do dia', comprovacao: { resumo: 'boa ideia', print_url: 'https://x/foto.jpg' } });
-  assert.deepEqual(e, { id: 't1', data: '2026-09-08', hora: '09:15', titulo: 'Leitura do dia', texto: 'boa ideia', temFoto: true });
+  assert.deepEqual(e, { id: 't1', data: '2026-09-08', hora: '09:15', titulo: 'Leitura do dia', texto: 'boa ideia', fonte: 'resumo', temFoto: true });
+});
+
+test('textoEFonte: cada prioridade marca a fonte certa (pra Fase 2 rotular diferente)', () => {
+  assert.deepEqual(textoEFonte({ comprovacao: { resumo: 'minha ideia' } }), { texto: 'minha ideia', fonte: 'resumo' });
+  assert.deepEqual(textoEFonte({ comprovacao: { veredito_ia: { o_que_viu: 'a IA viu isso' } } }), { texto: 'a IA viu isso', fonte: 'ia' });
+  assert.deepEqual(textoEFonte({ mentalidade: 'executivo', habito: 2 }).fonte, 'ensinamento');
+  assert.deepEqual(textoEFonte({ detalhe: 'só o detalhe' }), { texto: 'só o detalhe', fonte: 'detalhe' });
+  assert.deepEqual(textoEFonte({}), { texto: null, fonte: null });
+});
+
+// ── Fase 2 (terreno preparado, ainda não usado por nenhuma tela) ──
+test('linhaParaGravar: monta a linha exata que diario_bolso_entradas espera, sem nota pessoal por padrão', () => {
+  const t = { id: 'tarefa-1', data: '2026-09-08T00:00:00', hora: '09:15:00', titulo: 'Leitura do dia', comprovacao: { resumo: 'boa ideia' } };
+  const linha = linhaParaGravar(t, 'user-1');
+  assert.deepEqual(linha, {
+    user_id: 'user-1', data: '2026-09-08', hora: '09:15', tarefa_id: 'tarefa-1',
+    titulo: 'Leitura do dia', texto: 'boa ideia', fonte: 'resumo',
+  });
+  assert.equal('nota_pessoal' in linha, false, 'sem nota passada, a coluna nem entra na linha — regravar não apaga a nota que já existia');
+});
+
+test('linhaParaGravar: com nota pessoal, ela entra na linha (mesmo vazia, se foi passada de propósito)', () => {
+  const t = { id: 'tarefa-1', data: '2026-09-08', titulo: 'Leitura do dia' };
+  assert.equal(linhaParaGravar(t, 'user-1', 'gostei muito disso').nota_pessoal, 'gostei muito disso');
+  assert.equal(linhaParaGravar(t, 'user-1', '').nota_pessoal, '');
 });
 
 test('diarioAgrupado: agrupa por dia (mais recente primeiro) e por hora dentro do dia', () => {
