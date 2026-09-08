@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
-  VIRTUDES, podeSerVotado, votouEmTodosOsColegas,
-  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_FIM_MIN, horaDeMin,
+  VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
+  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
 } from '@/lib/xgame';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
@@ -24,11 +26,11 @@ import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisao
 // que já existe dentro da Verificação do Progresso — nada duplicado, só o
 // individual reunido com o time num espaço só. Estética X-EOS: preto + branco-gelo.
 //
-// O que fica de fora, de propósito: votar nas 10 Virtudes (isso já mora no
-// Compromisso, onde a ação faz sentido) e o Human Token OFICIAL do ciclo
-// (que soma a votação dos pares — precisaria repetir aquele cálculo inteiro
-// aqui). Esta página é o retrato rico do que já está gravado, não mais um
-// lugar pra agir.
+// 🗳️ 08/09/2026 — dono, direto: "a gente precisa botar a votação aqui,
+// votar por aqui que é o mais correto." Reverte a decisão original (que
+// deixava a votação só no Compromisso) — o voto grava na MESMA tabela
+// (xgame_votos_mvm), então votar daqui ou de lá é exatamente a mesma coisa
+// pro jogo; só o lugar onde a pessoa aperta o botão que muda.
 
 const fmt2 = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 
@@ -49,6 +51,14 @@ export default function XGame() {
   // nas duas telas, senão a punição vale só numa e some na outra.
   const [colegasVotaveis, setColegasVotaveis] = useState([]);
   const [votosHoje, setVotosHoje] = useState([]);
+  // 🗳️ 08/09/2026 — o ato de votar em si, agora também aqui (antes só
+  // existia no Compromisso). Mesma tabela, mesmas regras.
+  const [nomesColegas, setNomesColegas] = useState({});
+  const [votosRecebidos, setVotosRecebidos] = useState([]);
+  const [votando, setVotando] = useState('');
+  const [notas, setNotas] = useState({});
+  const [salvandoVoto, setSalvandoVoto] = useState(false);
+  const [meuAceitaSerVotado, setMeuAceitaSerVotado] = useState(true);
 
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), 60000);
@@ -67,9 +77,10 @@ export default function XGame() {
           supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
           supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true),
-          supabase.from('xgame_votos_mvm').select('votado_id,virtude').eq('votante_id', u.id).eq('data', dataISO(hoje)),
+          supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', u.id).eq('data', dataISO(hoje)),
         ]);
         setParticipante(part || null);
+        setMeuAceitaSerVotado(part?.aceita_ser_votado !== false);
         setCicloConfig(cfg?.ciclo_inicio || null);
         setTarefas(tf || []);
 
@@ -79,22 +90,27 @@ export default function XGame() {
         const linhas = (parts || []).filter((p) => p.user_id !== u.id);
         if (linhas.length) {
           const idsColegas = linhas.map((p) => p.user_id);
-          const { data: usColegas } = await supabase.from('app_users').select('id,role').in('id', idsColegas);
+          const { data: usColegas } = await supabase.from('app_users').select('id,full_name,nickname,role').in('id', idsColegas);
           const porId = new Map((usColegas || []).map((x) => [x.id, x]));
-          setColegasVotaveis(linhas.filter((p) => podeSerVotado({ role: porId.get(p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado })).map((p) => p.user_id));
+          const votaveis = linhas.filter((p) => podeSerVotado({ role: porId.get(p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }));
+          setColegasVotaveis(votaveis.map((p) => p.user_id));
+          const nomes = {}; votaveis.forEach((p) => { const uc = porId.get(p.user_id); if (uc) nomes[uc.id] = nomeExibicao(uc); });
+          setNomesColegas(nomes);
         }
         setVotosHoje(vh || []);
 
         const ini = dataISO(inicioCicloOficial(cfg?.ciclo_inicio || null, hoje));
         const iniSemana = dataISO(inicioDaSemana(hoje));
-        const [{ data: dc }, { data: hist }, { data: vd }] = await Promise.all([
+        const [{ data: dc }, { data: hist }, { data: vd }, { data: vr }] = await Promise.all([
           supabase.from('xgame_diario').select('*').eq('user_id', u.id).eq('ciclo_inicio', ini).lt('data', dataISO(hoje)).order('data'),
           supabase.from('xgame_diario').select('data,tarefas_total,tarefas_feitas,mvm_dia,detalhes').eq('user_id', u.id).lt('data', dataISO(hoje)).order('data', { ascending: false }).limit(90),
           supabase.from('xgame_votos_mvm').select('data').eq('votante_id', u.id).gte('data', iniSemana),
+          supabase.from('xgame_votos_mvm').select('virtude,nota').eq('votado_id', u.id).gte('data', ini),
         ]);
         setDiasCiclo(dc || []);
         setHistoricoOfensiva(hist || []);
         setVotosDias([...new Set((vd || []).map((v) => String(v.data).slice(0, 10)))]);
+        setVotosRecebidos(vr || []);
       } catch (e) { console.error('[X-GAME] carregar', e); }
       setLoading(false);
     })();
@@ -109,6 +125,37 @@ export default function XGame() {
     () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos }),
     [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos],
   );
+
+  // 🗳️ votar nos colegas — mesma lógica do Compromisso, mesma tabela.
+  const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
+  const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  const janelaAberta = janelaVotacaoAberta(agoraMin);
+  const escolherColega = (id) => {
+    setVotando(id);
+    const prev = {};
+    votosHoje.filter((v) => v.votado_id === id).forEach((v) => { prev[String(v.virtude).toUpperCase()] = v.nota; });
+    setNotas(prev);
+  };
+  const salvarVotos = async () => {
+    const linhas = VIRTUDES.filter((v) => notas[v] >= 1).map((v) => ({
+      votante_id: user.id, votado_id: votando, data: dataISO(agora), virtude: v, nota: notas[v], updated_at: new Date().toISOString(),
+    }));
+    if (!votando || linhas.length !== VIRTUDES.length) { toast.error('Dê a nota de 1 a 10 nas 10 virtudes.'); return; }
+    setSalvandoVoto(true);
+    const { error } = await supabase.from('xgame_votos_mvm').upsert(linhas, { onConflict: 'votante_id,votado_id,data,virtude' });
+    setSalvandoVoto(false);
+    if (error) { toast.error('Erro ao salvar a votação — tente de novo.'); return; }
+    toast.success(`Votação registrada pra ${nomesColegas[votando] || 'colega'}!`);
+    setVotosHoje((prev) => [...prev.filter((v) => v.votado_id !== votando), ...linhas]);
+    setVotando(''); setNotas({});
+  };
+  const alternarAceitaSerVotado = async () => {
+    const novo = !meuAceitaSerVotado;
+    setMeuAceitaSerVotado(novo);
+    const { error } = await supabase.from('xgame_participantes').update({ aceita_ser_votado: novo }).eq('user_id', user.id);
+    if (error) { setMeuAceitaSerVotado(!novo); toast.error('Não deu pra salvar — tenta de novo.'); return; }
+    toast.success(novo ? 'Você entrou na votação da MvM — os colegas já podem te avaliar hoje.' : 'Você saiu da votação da MvM — ninguém vota em você até você religar.');
+  };
 
   // 🔥 Ofensiva: hoje entra na conta assim que fecha 80%+ do Master Task.
   const hojeFechou = resumo.tarefas_total > 0 && resumo.tarefas_feitas / resumo.tarefas_total >= OFENSIVA_META;
@@ -238,6 +285,89 @@ export default function XGame() {
               dica={`O seu fixo ÷ ${DIAS_FIXO} dias de operação, repartido pelo peso de cada tarefa. Tarefa perdida é dinheiro que sai do resultado.`}
             />
             <Card titulo="Pontos de hoje" valor={String(resumo.pontos)} sub={`${resumo.tarefas_feitas}/${resumo.tarefas_total} tarefas`} />
+          </div>
+
+          {/* ══ 🗳️ VOTAÇÃO MvM — dono: "a gente precisa botar a votação aqui,
+              votar por aqui que é o mais correto." Mesma tabela do Compromisso,
+              mesmas regras — votar daqui ou de lá é a mesma coisa pro jogo. ══ */}
+          <div id="votacao-mvm" className="rounded-2xl border-2 border-emerald-500/30 bg-emerald-950/10 p-4 sm:p-5 mt-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <p className="text-sm font-extrabold text-white">🗳️ Votação MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)}</p>
+                <p className="text-[11px] text-[#817E8C]">a ação mais importante do dia, junto com as vendas — 1 a 10 em cada uma das 10 Virtudes, pra cada colega</p>
+              </div>
+              <span className={`text-[10px] font-bold shrink-0 ${janelaAberta ? (naJanelaIdeal(agoraMin) ? 'text-emerald-400' : 'text-amber-400') : 'text-[#817E8C]'}`}>
+                {janelaAberta
+                  ? (naJanelaIdeal(agoraMin) ? '● JANELA ABERTA' : `● ÚLTIMA CHANCE — vote até ${horaDeMin(VOTACAO_FIM_MIN)}`)
+                  : `janela fechada — abre às ${horaDeMin(VOTACAO_INICIO_MIN)}`}
+              </span>
+            </div>
+            <p className="text-[10.5px] font-semibold text-red-400">⚠️ Não votar em TODOS os colegas até as {horaDeMin(VOTACAO_FIM_MIN)} zera o DIA INTEIRO — MvM, Human Token, pontos e X-Pay — sem exceção.</p>
+
+            {user?.role === 'super_admin' && (
+              <label className="flex items-center gap-2 rounded-lg border border-[#2B2B2B] bg-[#0b0d14] px-2.5 py-2 cursor-pointer">
+                <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} className="h-4 w-4" />
+                <span className="text-[11px] text-[#C1BECA]">
+                  <span className="font-semibold text-white">Aceito ser votado na MvM</span> — como Super Admin, você só aparece na lista dos colegas se ligar isto (fica desligado por padrão).
+                </span>
+              </label>
+            )}
+
+            {recebido.ranking.length > 0 ? (
+              <div className="space-y-0.5">
+                <p className="text-[11px] font-semibold text-white">Seu Ranking das Virtudes neste ciclo (média {fmt2(recebido.media)} · {recebido.totalVotos} votos):</p>
+                {recebido.ranking.map((r, i) => (
+                  <p key={r.virtude} className="text-[11px] text-[#817E8C] tabular-nums">
+                    <span className="font-bold text-white">{i + 1}ª</span> {r.virtude} — <span className={`font-semibold ${r.media >= 7 ? 'text-emerald-400' : r.media < 4 ? 'text-red-400' : 'text-amber-400'}`}>{fmt2(r.media)}</span>
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[11px] text-[#817E8C]">Você ainda não recebeu votos neste ciclo — o Ranking das Virtudes nasce da votação diária do grupo.</p>
+            )}
+
+            {colegasVotaveis.length === 0 ? (
+              <p className="text-[11px] text-[#817E8C]">Nenhum outro participante ativo na X-GAME ainda — o painel do admin cadastra o time.</p>
+            ) : (
+              <div className="space-y-2 pt-1 border-t border-[#2B2B2B]">
+                <p className="text-[11px] font-semibold text-white">Vote nos colegas de hoje:</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {colegasVotaveis.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={!janelaAberta}
+                      onClick={() => escolherColega(id)}
+                      className={`px-2 py-1 rounded border text-[11px] font-medium ${votando === id ? 'border-emerald-400 text-emerald-400 bg-emerald-950/40' : jaVoteiEm(id) ? 'border-emerald-500/30 text-[#817E8C]' : 'border-[#2B2B2B] text-white'} ${!janelaAberta ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-400'}`}
+                    >
+                      {jaVoteiEm(id) ? '✅ ' : ''}{nomesColegas[id] || id.slice(0, 6)}
+                    </button>
+                  ))}
+                </div>
+                {votando && janelaAberta && (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {VIRTUDES.map((v) => (
+                        <label key={v} className="flex items-center justify-between gap-2 rounded border border-[#2B2B2B] bg-[#0b0d14] px-2 py-1.5">
+                          <span className="text-[11px] text-[#C1BECA]">{v}</span>
+                          <select
+                            value={notas[v] || ''}
+                            onChange={(e) => setNotas({ ...notas, [v]: Number(e.target.value) })}
+                            className="text-[11px] border border-[#2B2B2B] rounded px-1 py-0.5 bg-[#0b0d14] text-white"
+                          >
+                            <option value="">nota</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                    <Button size="sm" onClick={salvarVotos} disabled={salvandoVoto} className="bg-emerald-600 hover:bg-emerald-500 text-white h-8">
+                      {salvandoVoto ? 'Salvando...' : `Salvar votação de ${nomesColegas[votando] || 'colega'}`}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-4 mt-4">

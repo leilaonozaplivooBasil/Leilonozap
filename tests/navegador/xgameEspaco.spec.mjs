@@ -59,8 +59,13 @@ test('o espaço X-GAME, em largura de desktop, renderiza "Seu dia" + "Todo mundo
   await pagina.getByText('Voltar pro Top College').waitFor();
 
   // MEU DIA — os 4 cartões, incluindo o X-Pay que a página órfã nunca mostrou
-  await pagina.getByText('Human Token').waitFor();
+  // .first() porque "Human Token" também aparece dentro do aviso de dia
+  // zerado da votação (08/09/2026 — a votação passou a viver aqui também)
+  await pagina.getByText('Human Token').first().waitFor();
   await pagina.getByText('X-Pay de hoje').waitFor();
+
+  // 🗳️ a votação agora vive aqui também, não só no Compromisso
+  await pagina.getByText(/Votação MvM das/).waitFor();
 
   // Ofensiva
   await pagina.getByText(/de ofensiva/).waitFor();
