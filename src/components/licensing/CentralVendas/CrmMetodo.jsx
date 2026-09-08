@@ -45,6 +45,7 @@ import {
   incluirNaRotina, editarNaRotina, excluirDaRotina,
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
+import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -580,7 +581,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       try {
         const up = await plataforma.integrations.Core.UploadFile({
           file: new File([videoBlob], `ritual_${hojeStr()}.webm`, { type: videoBlob.type || 'video/webm' }),
-          path: `xgame/rituais/${uid}/${hojeStr()}_${t.id}.webm`,
+          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'webm' }),
         });
         videoUrl = up?.file_url || up?.url || '';
       } catch { videoUrl = ''; }
@@ -755,11 +756,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       const ext = (dados.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
       const up = await plataforma.integrations.Core.UploadFile({
         file: dados.file,
-        path: `xgame/prints/${uid}/${hojeStr()}_${t.id}.${ext}`,
+        path: caminhoDeProva({ pasta: 'prints', uid, dia: hojeStr(), tarefaId: t.id, ext }),
       });
       printUrl = up?.file_url || up?.url || '';
-    } catch {
-      setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar a imagem — tente de novo.' });
+    } catch (e) {
+      // 🗣️ o `catch` era vazio: engolia a mensagem do Storage e todo mundo via a
+      // mesma frase genérica. Sem o motivo real, ninguém consegue diagnosticar.
+      const motivo = e?.message ? ` (${e.message})` : '';
+      setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }
     await avaliarComIA(t, { printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1 });
