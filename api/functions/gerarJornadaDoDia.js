@@ -34,6 +34,7 @@
 // SEGURANÇA: best-effort. Isto é abrir uma tela vazia com um rascunho — não é
 // movimento de dinheiro. Se o quadro de alguém falhar, os outros continuam.
 import { gerarTarefasDaRotina, ROTINA_PADRAO } from '../../src/lib/metodo.js';
+import { contaNaLixeira } from '../_lib/contaAtiva.js';
 import { pesoAutomatico } from '../../src/lib/xgame.js';
 import { rotinaEmVigor, devePreAbrirAutomatico, jaGerouHoje } from '../../src/lib/rotinaPessoal.js';
 import { temDireitoAoXGame } from '../../src/lib/careerLevels.js';
@@ -72,8 +73,16 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
     const hoje = hojeBrasil();
 
-    const usuarios = arr(await j(await sb('app_users?select=id,career_levels')));
-    const ids = usuarios.filter((u) => temDireitoAoXGame(u.career_levels)).map((u) => u.id);
+    // 🚪 Conta na Lixeira não recebe jornada (08/09/2026). Sem isto, desativar
+    // alguém no admin não parava nada: a conta seguia nascendo tarefa todo dia,
+    // com ninguém para abrir. Foi o que aconteceu com uma conta duplicada — 40
+    // tarefas geradas, 0 comprovadas, porque a pessoa nunca entrou nela.
+    // O filtro é em JavaScript, e não na consulta, porque a regra é `=== false`:
+    // conta com o campo nulo é conta normal e continua recebendo.
+    const usuarios = arr(await j(await sb('app_users?select=id,career_levels,active')));
+    const ids = usuarios
+      .filter((u) => !contaNaLixeira(u) && temDireitoAoXGame(u.career_levels))
+      .map((u) => u.id);
     if (!ids.length) return res.status(200).json({ success: true, elegiveis: 0 });
 
     // ── 1. o perfil de cada elegível (rotina, rotina_automatica, recusada) ──
