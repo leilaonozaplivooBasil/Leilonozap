@@ -1,9 +1,11 @@
 /**
  * A GRAMÁTICA COMPARTILHADA DA VERIFICAÇÃO DO PROGRESSO (DIR-96, 08/09/2026)
  * — nascida da análise "Nove Telas, Um Número". Prova em navegador real que
- * BarraProgresso/SeloConfianca/Semaforo renderizam certo sozinhos E dentro
- * de dois consumidores reais — CrmDashboardDiretoria (dialeto claro) e
- * ScoreEscada (dialeto escuro, com a marca de limite) — sem erro nenhum.
+ * BarraProgresso/BarraProgressoSegmentada/SeloConfianca/Semaforo renderizam
+ * certo sozinhos E dentro de três consumidores reais — CrmDashboardDiretoria
+ * (dialeto claro), ScoreEscada (dialeto escuro, com a marca de limite) e
+ * CrmEsteiraResumoExecutivo (a barra da honestidade, em fatias) — sem erro
+ * nenhum.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -44,7 +46,7 @@ async function garantirNavegador() {
 }
 test.after(async () => { if (navegador) await navegador.close(); if (servidor) servidor.close(); });
 
-test('BarraProgresso/SeloConfianca/Semaforo, e os dois consumidores reais, renderizam sem erro', { skip: semNavegador }, async () => {
+test('BarraProgresso/BarraProgressoSegmentada/SeloConfianca/Semaforo, e os três consumidores reais, renderizam sem erro', { skip: semNavegador }, async () => {
   const nav = await garantirNavegador();
   const ctx = await nav.newContext({ viewport: { width: 700, height: 1100 } });
   const pagina = await ctx.newPage();
@@ -71,6 +73,17 @@ test('BarraProgresso/SeloConfianca/Semaforo, e os dois consumidores reais, rende
   await pagina.getByText('63,5').waitFor();
   await pagina.locator('[data-teste="barra-limite"]').waitFor();
   await pagina.getByText('sem dado').waitFor(); // a fração "Cultura" sem dado
+
+  // A barra segmentada isolada (a "barra da honestidade" fora do consumidor)
+  const segmentosDoShowcase = pagina.locator('[data-teste="showcase-claro"] [data-teste="barra-progresso-segmentada"] [data-teste="barra-segmento"]');
+  assert.equal(await segmentosDoShowcase.count(), 3, 'a barra segmentada de exemplo tem que ter as 3 fatias');
+
+  // CrmEsteiraResumoExecutivo — a mesma barra da honestidade, agora dentro
+  // do consumidor real, com "na conta" (verde) e "declarado" (âmbar) reais
+  await pagina.getByText('Esteira de Captação').waitFor();
+  await pagina.getByText('Fechado declarado:').waitFor();
+  const segmentosDaEsteira = pagina.locator('[data-teste="showcase-esteira"] [data-teste="barra-progresso-segmentada"] [data-teste="barra-segmento"]');
+  assert.equal(await segmentosDaEsteira.count(), 3, 'a barra da Esteira tem que ter as 3 fatias (na conta / declarado / ponderado)');
 
   await pagina.screenshot({ path: path.join(FOTOS, 'verificacao-ui-showcase.png'), fullPage: true });
   assert.deepEqual(erros, []);
