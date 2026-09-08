@@ -10,6 +10,7 @@ import ElencoBoneco from './ElencoBoneco';
 import { elencoDaParada } from '@/lib/elencoJornada';
 import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
 import { faixaDeHorario } from '@/lib/quadroCompromisso';
+import { familiaDaTarefa } from '@/lib/capaDaTarefa';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
 //   • O dia começa LIMPO: só a saudação e A TAREFA DO MOMENTO.
@@ -54,9 +55,25 @@ const SELOS = [
   [/caminho|chegar|desloca|transporte/i, Car, 'from-lime-400 to-green-600', '#15803d'],
 ];
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const seloDa = (titulo) => {
+
+// familia visual (o Habito, quando o titulo sozinho nao converge, DIR-94) --
+// a mesma cor/icone que o SELOS ja usa pro parente mais proximo do Habito.
+const SELO_DA_FAMILIA = {
+  sonho: { Icone: Heart, grad: 'from-rose-400 to-pink-600', borda: '#9d174d' },
+  compromisso: { Icone: ClipboardList, grad: 'from-blue-400 to-indigo-600', borda: '#3730a3' },
+  lista: { Icone: Users, grad: 'from-indigo-400 to-blue-600', borda: '#1e3a8a' },
+  contato: { Icone: MessageCircle, grad: 'from-emerald-400 to-green-600', borda: '#166534' },
+  apresentacao: { Icone: Handshake, grad: 'from-indigo-400 to-violet-600', borda: '#5b21b6' },
+  fechamento: { Icone: FileText, grad: 'from-slate-400 to-slate-600', borda: '#334155' },
+  verificacao: { Icone: Target, grad: 'from-red-400 to-rose-600', borda: '#9f1239' },
+  treinamento: { Icone: GraduationCap, grad: 'from-violet-500 to-purple-700', borda: '#6b21a8' },
+};
+
+const seloDa = (titulo, habito) => {
   const t = semAcento(titulo);
   for (const [re, Icone, grad, borda] of SELOS) if (re.test(t)) return { Icone, grad, borda };
+  const familia = familiaDaTarefa({ titulo, habito });
+  if (familia && SELO_DA_FAMILIA[familia]) return SELO_DA_FAMILIA[familia];
   return { Icone: Star, grad: 'from-amber-300 to-yellow-500', borda: '#a16207' };
 };
 
@@ -183,8 +200,8 @@ function ParadaNaMesa({ Icone }) {
  *  lugar do ícone, atual = aceso com halo + balão COMEÇAR, futuro/perdido =
  *  apagado e quieto (zero muro de X vermelho). Sem legenda embaixo — o
  *  contexto vem do banner e do clique. */
-function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
-  const selo = seloDa(titulo);
+function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl, habito }) {
+  const selo = seloDa(titulo, habito);
   // ✅ DIR-77 — CONCLUÍDA É VERDE, ordem do dono ("tarefa concluída, pra ficar
   // verde"). Antes a moeda da feita saía na cor do TIPO da tarefa, então o
   // "está feito" tinha uma cor diferente a cada parada e não dava pra varrer a
@@ -252,8 +269,8 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl }) {
 }
 
 /** O selo redondo de uma parada: ícone vetorial sobre gradiente. */
-function MoedaGrande({ titulo, perdido }) {
-  const { Icone, grad, borda } = seloDa(titulo);
+function MoedaGrande({ titulo, perdido, habito }) {
+  const { Icone, grad, borda } = seloDa(titulo, habito);
   return (
     <span
       className={[
@@ -429,6 +446,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                           feito={!!t.feito}
                           perdido={t.estado?.id === 'PERDIDO'}
                           atual={ehAtual}
+                          habito={t.habito}
                           refEl={ehAtual ? refAtual : undefined}
                           onClick={() => { setFocoId(t.id); setExpandida(false); }}
                         />
@@ -481,7 +499,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
     <div className="relative w-full overflow-hidden">
       {/* A CAPA DO MOMENTO: a cena que representa a tarefa, de marca d'água.
           Vem mascarada num radial — se dissolve no fundo, sem moldura. */}
-      {foco && <XGameCapa titulo={foco.titulo} capaUrl={foco.capa_url} />}
+      {foco && <XGameCapa titulo={foco.titulo} capaUrl={foco.capa_url} habito={foco.habito} />}
 
       <div className="relative mx-auto max-w-2xl px-4 sm:px-5 py-14 sm:py-24 text-center">
         <p className="text-3xl sm:text-4xl font-bold tracking-tight text-nz-tinta">
@@ -506,7 +524,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
         ) : (
           <div className="mt-14 flex flex-col items-center">
             {/* o selo do momento: a mesma moeda da trilha, em tamanho de herói */}
-            <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} />
+            <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} habito={foco.habito} />
 
             <p className={`mt-8 text-[11px] font-extrabold uppercase tracking-[0.22em] ${estado === 'PERDIDO' ? 'text-nz-tinta-fraca' : estado === 'ATRASADO' ? 'text-nz-fogo' : 'text-nz-verde'}`}>
               {estado === 'PERDIDO' ? 'ainda dá pra comprovar' : estado === 'ATRASADO' ? 'tá na hora — corre' : 'o seu momento agora'}
@@ -542,7 +560,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
             <p className="text-[9px] font-extrabold uppercase tracking-[0.24em] text-nz-tinta-fraca/70">o seu rastro de hoje</p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {[...feitas].reverse().map((t) => {
-                const { Icone } = seloDa(t.titulo);
+                const { Icone } = seloDa(t.titulo, t.habito);
                 return (
                   <span
                     key={t.id}
