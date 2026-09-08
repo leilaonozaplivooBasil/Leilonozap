@@ -1419,7 +1419,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm font-bold text-nz-tinta capitalize min-w-[180px] text-center">{fmtDia(dia)}{dia === hojeStr() ? ' · HOJE' : ''}</p>
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(1)}><ChevronRight className="w-5 h-5 text-nz-tinta" /></Button>
               </div>
-              <p className="text-sm font-semibold text-nz-tinta">{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}%</p>
+              <p className="text-sm font-semibold text-nz-tinta" title={'PROGRESSO DO DIA — "Apresenta o desempenho do executivo baseado no dia atual, com os resultados da gamificação — isso permite projeção de crescimento do executivo e perspectiva de futuro ao longo do mês corrente. É possível extrapolar os valores de 100%, o que permite compensar a falta em alguns fatores com a entrega em outros."'}>{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}% ⓘ</p>
             </div>
             <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
 
@@ -1432,7 +1432,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 onVisao={setVisao}
                 placarAberto={painelAberto}
                 onPlacar={() => setPainelAberto(!painelAberto)}
-                mostrarPlacar={visao === 'jornada' || celular}
+                mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
                 teste={podeGerir ? {
                   hora: horaTeste,
                   rascunho: horaRascunho,
@@ -1478,27 +1478,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-t border-nz-borda/40 pt-4">
-                <div className="py-1" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4">
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="py-1" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
                   <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
                     {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
                   </p>
                 </div>
-                <div className="py-1" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="py-1" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ ${DIAS_FIXO} dias de operação = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ ${DIAS_FIXO} dias de operação = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
-                  <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
+                  <p className="text-xl font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
@@ -1512,37 +1512,66 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
-            {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══ */}
+            {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══
+                🎨 08/09/2026 — dono, olhando o preview: "não está legal ainda,
+                não está visual, não está comunicando, precisa comunicar."
+                Sai da lista fina, sem card, texto de 10px — vira o painel de
+                verdade que a análise técnica desenhou: card próprio (a mesma
+                borda verde de destaque que o Quadro dos Sonhos já usa),
+                número grande da formação como âncora visual, os 2 tooltips
+                oficiais da planilha ("Onde Estou" e "Executivo Ideal", ditados
+                pelo dono ao pé da letra), ícone + card + barra grossa por
+                eixo. Reaparece nas 3 visões (Jornada/Lista/Quadro) porque o
+                "meu placar" agora também abre no Quadro (FaixaVisao acima). */}
             {xgame && ciclo && mostrarPainel && (
-              <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="font-semibold text-nz-tinta">🎯 Onde estou × EXECUTIVO IDEAL</p>
-                  <span className="text-[10px] font-bold text-nz-tinta-fraca tabular-nums">formação: {ciclo.formacao.pct}% dos 100%</span>
+              <div className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/20 p-4 sm:p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <p
+                      className="text-sm font-extrabold text-nz-tinta cursor-help"
+                      title={'"Esse painel representa o desempenho do executivo nos dias corridos do mês. Ou seja: através destas informações, é possível acompanhar se o progresso está à frente ou atrás do Executivo Ideal."'}
+                    >
+                      🎯 Onde estou × EXECUTIVO IDEAL ⓘ
+                    </p>
+                    <p className="text-[11px] text-nz-tinta-fraca mt-0.5">os 5 pilares que formam o Executivo Ideal, ciclo após ciclo</p>
+                  </div>
+                  <div
+                    className="text-right shrink-0 cursor-help"
+                    title={'"São os parâmetros que definem o desempenho do executivo ideal, que será considerado para formação emancipada ao longo da mentoria. Uma vez que a barra de progresso do executivo esteja maximizada em 100%, o trainee será então considerado através de votação do conselho da corporação para ter sua formação como um executivo sem limites adiantada."'}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-nz-tinta-fraca">formação ⓘ</p>
+                    <p className="text-2xl font-black text-nz-verde tabular-nums leading-none">{ciclo.formacao.pct}%</p>
+                    <p className="text-[10px] text-nz-tinta-fraca">dos 100%</p>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
+                <BarraProgresso pct={ciclo.formacao.pct} dialeto="claro" altura="extra" corClasse="bg-nz-verde" trilhoClasse="bg-white border border-nz-verde/20" />
+
+                <div className="space-y-2.5">
                   {[
-                    { k: 'mvm', rotulo: 'MvM (votação do grupo)' },
-                    { k: 'producao', rotulo: 'Produção' },
-                    { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)' },
-                    { k: 'bonus', rotulo: 'Bônus / Estudo' },
-                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)` },
-                  ].map(({ k, rotulo }) => {
+                    { k: 'mvm', rotulo: 'MvM (votação do grupo)', emoji: '🗳️' },
+                    { k: 'producao', rotulo: 'Produção', emoji: '📋' },
+                    { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
+                    { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
+                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+                  ].map(({ k, rotulo, emoji }) => {
                     const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                     const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
                     const ok = atual >= alvo;
                     return (
-                      <div key={k}>
+                      <div key={k} className="rounded-xl border border-nz-borda bg-white p-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-nz-tinta">{rotulo}</span>
-                          <span className={`text-[11px] font-semibold tabular-nums ${ok ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                          <span className="text-xs font-semibold text-nz-tinta">{emoji} {rotulo}</span>
+                          <span className={`text-xs font-bold tabular-nums shrink-0 ${ok ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
                             {atual}% <span className="text-nz-tinta-fraca font-normal">/ alvo {alvo}%</span>{ok ? ' ✅' : ''}
                           </span>
                         </div>
-                        <BarraProgresso
-                          pct={atual} dialeto="claro" altura="padrao"
-                          corClasse={ok ? 'bg-nz-verde' : 'bg-amber-500'}
-                          trilhoClasse="bg-nz-borda/60" limite={alvo}
-                        />
+                        <div className="mt-1.5">
+                          <BarraProgresso
+                            pct={atual} dialeto="claro" altura="grossa"
+                            corClasse={ok ? 'bg-nz-verde' : 'bg-amber-500'}
+                            trilhoClasse="bg-nz-cinza-fundo" limite={alvo}
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -1551,7 +1580,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <p className="text-[11px] font-semibold text-nz-verde">{ciclo.formacao.mensagem}</p>
                 )}
                 {/* o guia — como funciona o jogo e a formação em 3 meses */}
-                <details className="text-[11px] text-nz-tinta-fraca">
+                <details className="text-[11px] text-nz-tinta-fraca border-t border-nz-verde/15 pt-2">
                   <summary className="cursor-pointer font-semibold text-nz-tinta hover:text-nz-verde">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
                   <div className="pt-1.5 space-y-1">
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
@@ -1575,7 +1604,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {missoes.map((m) => (
-                    <div key={m.id} className={`rounded border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
+                    <div key={m.id} className={`rounded-lg border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
                       <p className="text-[11px] font-semibold text-nz-tinta">{m.emoji} {m.nome} {m.ok ? '✅' : ''}</p>
                       <div className="mt-1">
                         <BarraProgresso
@@ -1591,7 +1620,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 {medalhasAbertas && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-nz-borda">
                     {medalhas.map((m) => (
-                      <div key={m.id} title={m.regra} className={`rounded border px-2 py-1.5 text-center ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white opacity-50 grayscale'}`}>
+                      <div key={m.id} title={m.regra} className={`rounded-lg border px-2 py-1.5 text-center ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white opacity-50 grayscale'}`}>
                         <p className="text-base leading-none">{m.emoji}</p>
                         <p className="text-[10px] font-semibold text-nz-tinta mt-0.5">{m.nome}</p>
                         <p className="text-[9px] text-nz-tinta-fraca">{m.ok ? 'conquistada!' : m.regra}</p>
@@ -1615,10 +1644,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       : `janela fechada — abre às ${horaDeMin(VOTACAO_INICIO_MIN)}`}
                   </span>
                 </div>
-                {/* 🧯 08/09 — fica de pé mesmo com o bloco recolhido: é a
-                    regra principal da gamificação, não um detalhe pra achar. */}
+                {/* 🔥 08/09 — fica de pé mesmo com o bloco recolhido: é a
+                    regra principal da gamificação, não um detalhe pra achar.
+                    Radical de verdade: não é só a MvM, é o dia inteiro. */}
                 <p className="text-[10.5px] font-semibold text-red-600">
-                  ⚠️ Não votar em TODOS os colegas até as 22h zera a sua MvM do Dia — sem exceção.
+                  ⚠️ Não votar em TODOS os colegas até as {horaDeMin(VOTACAO_FIM_MIN)} zera o DIA INTEIRO — MvM, Human Token, pontos e X-Pay — sem exceção.
                 </p>
 
                 {/* 🎓 08/09 — só o super_admin vê isto: o interruptor pra
