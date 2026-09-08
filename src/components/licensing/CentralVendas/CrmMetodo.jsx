@@ -421,18 +421,31 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   useEffect(() => {
     if (!rankingAberto || painel !== 'compromisso') return;
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('xgame_diario').select('user_id,mvm_dia,token_dia,pontos,detalhes').eq('ciclo_inicio', ini)
-      .then(async ({ data }) => {
+    // 🗳️ 08/09/2026 — dono: "o MVM é só votação... tem gente que nem foi
+    // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
+    // (real time disfarçado de MVM) — agora vem só da votação de verdade.
+    Promise.all([
+      supabase.from('xgame_diario').select('user_id,token_dia,pontos,detalhes').eq('ciclo_inicio', ini),
+      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+    ]).then(async ([{ data }, { data: votos }]) => {
+        const votosPor = {};
+        (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
         const por = {};
         (data || []).forEach((d) => {
-          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, token: 0, mvm: 0, pontos: 0, xpay: 0 });
+          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, token: 0, pontos: 0, xpay: 0 });
           r.dias += 1;
           r.token += Number(d.token_dia) || 0;
-          r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
         });
-        const linhas = Object.values(por).map((r) => ({ ...r, token: r.token / r.dias, mvm: r.mvm / r.dias }));
+        Object.keys(votosPor).forEach((uid) => {
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, token: 0, pontos: 0, xpay: 0 };
+        });
+        const linhas = Object.values(por).map((r) => ({
+          ...r,
+          token: r.dias ? r.token / r.dias : 0,
+          mvm: votosPor[r.user_id] ? mvmManual(votosPor[r.user_id]).media : null,
+        }));
         const ids = linhas.map((l) => l.user_id);
         if (ids.length) {
           const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
@@ -1781,7 +1794,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
                             </span>
                             <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
-                              {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
+                              {fmtToken(l.token)} · MvM {l.mvm === null ? '—' : fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
                             </span>
                           </div>
                         </React.Fragment>

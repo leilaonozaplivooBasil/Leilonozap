@@ -453,8 +453,14 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
     : soma('vendas_feitas');
   const xpayGanho = soma('xpay_ganho'); const xpayPossivel = soma('xpay_possivel');
   const taxa = (a, b) => (b > 0 ? Math.min(1, a / b) : 0);
+  // 🗳️ 08/09/2026 — dono: "o real time não pode contar dentro do MVM... o
+  // MVM é só votação, de um a dez." Antes, sem voto nenhum recebido no
+  // ciclo, caía pro mvm_dia AUTOMÁTICO (10 menos desconto por tarefa
+  // atrasada — real time disfarçado de MVM), inflando gente que ninguém
+  // votou. Sem voto = sem MVM (0), ponto — exatamente como o tooltip da
+  // tela já dizia hoje: só a votação manual entra no Human Token oficial.
   const taxas = {
-    mvm: (mvmVotacao !== null && mvmVotacao !== undefined ? mvmVotacao : (hojeResumo?.mvm_dia ?? 0)) / MVM_MAX,
+    mvm: (mvmVotacao !== null && mvmVotacao !== undefined ? mvmVotacao : 0) / MVM_MAX,
     producao: taxa(prodFeitas, prodTotal),
     realtime: taxa(xpayGanho, xpayPossivel),
     bonus: taxa(bonusFeitas, bonusTotal),
