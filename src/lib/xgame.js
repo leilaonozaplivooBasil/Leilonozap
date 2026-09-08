@@ -328,29 +328,38 @@ export function xpayDoDia(tarefasComEstado = [], valores = {}) {
 export const fmtReais = (n) => `R$ ${Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // ── 🗳️ MvM MANUAL — a votação dos pares nas 10 Virtudes ─────────────
-// 08/09/2026 — dono mudou a janela de 20h-22h pra 17h-20h: "não deixar
-// fixo [tarde demais] — deixar a votação a partir das cinco/seis da tarde,
-// que eu já consigo avaliar bem a pessoa... de cinco até oito da noite."
-// Às 22h muita gente já estava fora do ar (jantar, família, dormindo) — a
-// punição de não votar (zerar o dia) pegava gente por indisponibilidade,
-// não por desleixo. Terminar às 20h dá folga real pra quem só consegue à
-// noite. A média das virtudes recebidas é o "RANKING DAS VIRTUDES" e o
-// componente MvM oficial do Human Token (0-10).
+// Planilha original: 20h às 22h. Revisado pelo dono em 08/09/2026: "a
+// votação tem que ser de 17h às 20h, é a ação mais importante do dia, junto
+// com as vendas" — e das 20h até 21h30 é a ÚLTIMA CHANCE, sem desconto
+// nenhum (protege quem está numa reunião ou atrasou de verdade). Depois de
+// 21h30 sem fechar o voto em TODOS os colegas, é radical — ver
+// `resumoDoDia`. O horário final não é 23h59: "ninguém acorda tarde aqui,
+// todo mundo tem que estar dormindo antes das dez, todo mundo acorda às
+// cinco da manhã" — por isso 21h30, não meia-noite.
 
 export const VIRTUDES = [
   'GRATIDÃO', 'RELACIONAMENTO', 'ORGANIZAÇÃO', 'PONTUALIDADE', 'PROATIVIDADE',
   'COMPROMISSO', 'AUTORRESPONSABILIDADE', 'ORATÓRIA', 'LIDERANÇA', 'ESPÍRITO DE EQUIPE',
 ];
 
-export const VOTACAO_INICIO_MIN = 17 * 60; // 17:00
-export const VOTACAO_FIM_MIN = 20 * 60;    // 20:00
+export const VOTACAO_INICIO_MIN = 17 * 60;      // 17:00 — janela ideal começa
+export const VOTACAO_IDEAL_FIM_MIN = 20 * 60;   // 20:00 — janela ideal termina, começa a última chance
+export const VOTACAO_FIM_MIN = 21 * 60 + 30;    // 21:30 — última chance fecha, e é quando o radical entra
 
-/** "17h" / "20h" — pra tela e guia nunca escreverem a hora à mão (a régua muda aqui, não em 10 lugares). */
-export const horaBr = (min) => `${Math.floor(Number(min) / 60)}h`;
-
-/** A janela de votação está aberta agora? (17h–20h) */
+/** A janela de votação (ideal + última chance) está aberta agora? (17h–21h30). */
 export const janelaVotacaoAberta = (agoraMin) =>
   agoraMin >= VOTACAO_INICIO_MIN && agoraMin < VOTACAO_FIM_MIN;
+
+/** Ainda está na janela IDEAL (17h–20h), antes de virar "última chance"? */
+export const naJanelaIdeal = (agoraMin) =>
+  agoraMin >= VOTACAO_INICIO_MIN && agoraMin < VOTACAO_IDEAL_FIM_MIN;
+
+/** Minutos desde 00:00 → "17h" ou "21h30" (sem zero à esquerda, estilo do app). */
+export function horaDeMin(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
+}
 
 // 🎓 08/09/2026 — dono: "Super Admin não pode ser votado a não ser que ele
 // esteja participando por dentro de uma mentoria — não é viável nem
@@ -521,14 +530,16 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 }
 
 /** Resumo completo do dia — o que a tela grava em xgame_diario. */
-// 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
-// o dia." `votouEmTodos` é null enquanto não dá pra julgar (janela ainda não
-// fechou, ou a tela que chamou não carregou colegas/votos ainda) — só
-// depois de fechada a janela, com `votouEmTodos === false`, a MvM do Dia vira ZERO,
-// arrastando o Human Token e a frase junto (é isso que faz a punição ser
-// SENTIDA, e não só um aviso na tela). `votouEmTodos` continua opcional
-// (default null) — quem chama sem saber de votação (histórico, testes
-// antigos) se comporta exatamente como antes desta mudança.
+// 🔥 08/09/2026 — dono, sem meio-termo: "não vou, perde o dinheiro, perde a
+// MvM, perde tudo do dia... precisa ser radical." Não fechar o voto em TODOS
+// os colegas até o fim da janela (17h–21h30) não pune só a MvM — o DIA
+// INTEIRO zera: MvM, Human Token, pontos, e o dinheiro (X-Pay) que seria
+// ganho vira PERDIDO de verdade, não some. `votouEmTodos` é null enquanto
+// não dá pra julgar (janela ainda não fechou, ou a tela que chamou não
+// carregou colegas/votos ainda) — só depois das 21h30, com
+// `votouEmTodos === false`, a régua radical entra. `votouEmTodos` continua
+// opcional (default null) — quem chama sem saber de votação (histórico,
+// testes antigos) se comporta exatamente como antes desta mudança.
 export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null }) {
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
@@ -542,9 +553,17 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
-  const token = humanToken(mvm, aplic, estudoOk);
+  const token = perdeuPorNaoVotar ? 0 : humanToken(mvm, aplic, estudoOk);
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
   const xpay = { ...xpayDoDia(comEstado, valores), ...reguaDoDia(tarefas, participante || PARTICIPANTE_PADRAO) };
+  if (perdeuPorNaoVotar) {
+    // o que seria ganho vira perdido — o dinheiro não some em silêncio,
+    // fica registrado como o que a falta de voto custou de verdade.
+    xpay.perdido = Math.round((xpay.ganho + xpay.perdido) * 100) / 100;
+    xpay.ganho = 0;
+    xpay.emJogo = 0;
+  }
+  const pontos = perdeuPorNaoVotar ? 0 : pontosDoDia(comEstado, cotacao);
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
@@ -571,8 +590,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     faixa: faixaToken(token),
     estudo_em_dia: estudoOk,
     leitura_feita: leituraHoje,
-    pontos: pontosDoDia(comEstado, cotacao),
-    frase_mvm: perdeuPorNaoVotar ? 'ZEROU POR NÃO VOTAR' : fraseDoMvm(mvm),
+    pontos,
+    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : fraseDoMvm(mvm),
     perdeu_por_nao_votar: perdeuPorNaoVotar,
     valores,
     xpay,
@@ -583,6 +602,25 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
 /** Data em ISO local (YYYY-MM-DD), sem sofrer com fuso do toISOString. */
 export function dataISO(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ── Recuperação no fim de semana (dono, 08/09/2026) ─────────────────
+// "Se ele perder as tarefas do dia, ele pode recompensar no fim de semana,
+// comprovando que fez, pra manter o fixo — sem lesar, sem se ferrar." Livre,
+// sem teto de quantidade, mas só dentro do fim de semana DO MESMO CICLO em
+// que a tarefa foi perdida. O dinheiro (X-Pay) volta — a nota do dia em si
+// (Real Time) continua honesta, marcando que foi tarde: "ANTECIPAÇÃO É PODER."
+export function ehFimDeSemana(d = new Date()) {
+  return d.getDay() === 0 || d.getDay() === 6;
+}
+
+/** A tarefa PERDIDA de `dataTarefaISO` pode ser recuperada HOJE? */
+export function podeRecuperarNoFds({ estadoId, dataTarefaISO, cicloInicioISO, hoje = new Date() }) {
+  if (estadoId !== 'PERDIDO' || !ehFimDeSemana(hoje) || !dataTarefaISO || !cicloInicioISO) return false;
+  const inicio = new Date(`${String(cicloInicioISO).slice(0, 10)}T12:00:00`);
+  const fim = fimCiclo(inicio);
+  const alvo = new Date(`${String(dataTarefaISO).slice(0, 10)}T12:00:00`);
+  return alvo >= inicio && alvo <= fim;
 }
 
 // ── 🔥 OFENSIVA (F7 — o streak do Duolingo) ─────────────────────────

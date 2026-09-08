@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaBr } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -16,8 +16,9 @@ import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 //   • quais são as tarefas da gamificação de cada pessoa (categoria + peso);
 //   • quando o ciclo oficial de 22 dias úteis começa;
 //   • a conferência dupla — o "SIM" do gestor tarefa a tarefa.
-// A votação do MvM (1 a 10 nas 10 Virtudes, 17h–20h) acontece entre os
-// participantes ATIVOS cadastrados aqui — quem está fora não vota nem recebe voto.
+// A votação do MvM (1 a 10 nas 10 Virtudes, 17h–21h30 — radical se não
+// fechar em todos) acontece entre os participantes ATIVOS cadastrados
+// aqui — quem está fora não vota nem recebe voto.
 
 // Multas de atraso do FAQ da planilha: Trainee R$50 · Executivo R$200 · Diretor R$500.
 const MULTA_POR_CARGO = { trainee: 50, executivo: 200, diretor: 500, ceo: 500 };
@@ -452,7 +453,7 @@ export default function XGameAdmin() {
           tabela do Compromisso, então aparece na hora no perfil dela. */}
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
-          <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das {horaBr(VOTACAO_INICIO_MIN)} às {horaBr(VOTACAO_FIM_MIN)}:</p>
+          <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)}:</p>
           {/* 🎓 08/09/2026 — dono: Super Admin não é votável a não ser que
               ele mesmo permita (interruptor "Aceito ser votado" no X-GAME
               dele) — aqui é só leitura, pra quem gerencia não achar que ele

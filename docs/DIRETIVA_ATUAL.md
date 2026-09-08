@@ -12,32 +12,87 @@
 
 ---
 
-## DIR-97 — Janela de votação da MvM muda de 20h–22h pra 17h–20h
+## DIR-98 — X-GAME ganha espaço dedicado, recuperação de fim de semana e visão executiva com pódio
 
-**Emitida por:** dono (08/09/2026): *"não deixar fixo [tarde demais] — deixar
-a votação a partir das cinco/seis da tarde, que eu já consigo avaliar bem a
-pessoa... de cinco até oito da noite."* Às 22h muita gente já estava fora do
-ar (jantar, família, dormindo) — a punição de não votar (zerar o dia) pegava
-gente por indisponibilidade, não por desleixo. Terminar às 20h dá folga real
-pra quem só consegue votar à noite.
+**Emitida por:** dono (08/09/2026), em vários pedidos que convergiram no
+mesmo lote de publicação: a página `XGame.jsx` (até aqui órfã, sem link em
+lugar nenhum) virou o espaço individual completo do jogo; *"se ele perder as
+tarefas do dia, pode recompensar no fim de semana, comprovando que fez, pra
+manter o fixo — sem lesar, sem se ferrar"*; *"você esqueceu de botar pessoal
+meu"* (três vezes, sobre a Visão Executiva enterrar "VOCÊ" no fim de uma
+lista de 10+ linhas); e *"esse ranking com emoji está muito feio... deixa
+mais clean, mais Vale do Silício"*.
 
 **Data:** 08/09/2026.
 
 **O que entra:**
-1. `src/lib/xgame.js` — `VOTACAO_INICIO_MIN`/`VOTACAO_FIM_MIN` viram 17h/20h
-   (eram 20h/22h). Novo helper `horaBr(min)` (ex.: `horaBr(17*60) === '17h'`)
-   pra tela e guia lerem a hora da constante, em vez de escrevê-la à mão em
-   10 lugares.
-2. `src/lib/guiaXGame.js`, `src/components/licensing/CentralVendas/CrmMetodo.jsx`,
+1. `src/pages/XGame.jsx` — deixa de ser uma tela órfã e ganha X-Pay, ofensiva
+   (fogo) e missões da semana, que só existiam no Compromisso; passa a usar
+   `resumoDoDia()` com o mesmo participante/ciclo oficial, e a seção do time
+   é a mesma `XGameVisaoExecutiva` já usada na Verificação do Progresso —
+   nada duplicado. A gravação do placar (`xgame_diario`) ganha `xpay_ganho`/
+   `xpay_perdido`, que antes faltavam aqui e sobrescreviam dado incompleto
+   por cima do que o Compromisso já tinha gravado certo.
+2. `src/lib/xgame.js` — recuperação no fim de semana: `ehFimDeSemana()` e
+   `podeRecuperarNoFds()` liberam repor, sem teto de quantidade, uma tarefa
+   PERDIDA comprovando que foi feita — mas só dentro do fim de semana DO
+   MESMO CICLO em que a tarefa foi perdida. O X-Pay da tarefa volta
+   (`xpay_recuperado`); a nota do dia (Real Time) continua honesta, marcando
+   que foi tarde.
+3. `src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx` — pódio
+   visual (2º·1º·3º em ordem de palco, com altura/cor por posição), cartão
+   "onde eu estou" sempre no topo (nome + posição no ranking, antes de
+   qualquer coisa do time), e o selo de liga trocou emoji por um ponto de
+   cor (`SeloLiga`) — mesma informação, sem "figurinha".
+4. `src/components/licensing/CentralVendas/VerificacaoUI.jsx` (novo) — a
+   `BarraProgresso` compartilhada entre as 9 telas que desenhavam sua
+   própria barra de progresso (motivo da limpeza de emergência da
+   X-Performance em 07/09); mesmo visual de cada tela, só nomeado num lugar
+   só, com os dois dialetos do app (`claro`/`escuro`).
+
+**Prova:** `tests/xgameRecuperacaoFds.test.mjs` (novo), `tests/xgame.test.mjs`
+estendido, `tests/navegador/xgameEspaco.spec.mjs` e
+`tests/navegador/verificacaoUI.spec.mjs` (novos, prova em navegador real);
+suíte e build verificados antes do push.
+
+---
+
+## DIR-97 — Janela de votação da MvM vira 17h–20h ideal + 20h–21h30 última chance; não fechar o voto zera o DIA INTEIRO (dinheiro incluído)
+
+**Emitida por:** dono (08/09/2026). Primeiro: *"a votação tem que ser de 17h
+às 20h, é a ação mais importante do dia, junto com as vendas"* — a janela
+antiga (20h–22h) pegava gente já fora do ar (jantar, família, dormindo),
+punindo indisponibilidade, não desleixo. Depois, sem meio-termo: *"não vou,
+perde o dinheiro, perde a MvM, perde tudo do dia... precisa ser radical."*
+E sobre o horário final não ser meia-noite: *"ninguém acorda tarde aqui,
+todo mundo tem que estar dormindo antes das dez, todo mundo acorda às cinco
+da manhã."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `VOTACAO_INICIO_MIN` (17h) e `VOTACAO_IDEAL_FIM_MIN`
+   (20h) marcam a janela ideal; `VOTACAO_FIM_MIN` (21h30) é a "última
+   chance" — de 20h às 21h30 ainda dá pra fechar o voto em todos, sem
+   desconto nenhum (protege quem está numa reunião ou atrasou de verdade).
+   Só depois das 21h30, sem fechar TODOS os colegas, a régua radical entra.
+   Novo helper `horaDeMin(min)` formata `"17h"` ou `"21h30"` (com minutos
+   quando não é hora cheia) pra tela e guia nunca escreverem o horário à
+   mão.
+2. `resumoDoDia()` — não fechar a votação até as 21h30 não zera só a MvM:
+   zera o DIA INTEIRO — MvM, Human Token, pontos, e o X-Pay que seria ganho
+   vira PERDIDO de verdade (registrado, não some em silêncio).
+3. `src/lib/guiaXGame.js`, `src/components/licensing/CentralVendas/CrmMetodo.jsx`,
    `src/pages/XGame.jsx` e `src/components/licensing/XGameAdmin.jsx` — todo
-   texto que citava "20h às 22h" (título/resumo da aula, dicionário, tooltips
-   do placar, alerta de MvM zerada, rótulo do painel admin) passou a ler
-   `horaBr(VOTACAO_INICIO_MIN)`/`horaBr(VOTACAO_FIM_MIN)`, pra nunca mais
-   ficar uma tela dizendo 22h enquanto o sistema já fecha às 20h.
+   texto que citava "20h às 22h" (aula, dicionário, tooltips do placar,
+   alerta de MvM zerada, rótulo do painel admin) passou a ler
+   `horaDeMin(VOTACAO_INICIO_MIN)`/`horaDeMin(VOTACAO_FIM_MIN)`, e os
+   alertas de "MvM zerada" viraram "DIA ZERADO", deixando explícito que
+   Human Token, pontos e X-Pay caem junto — não só a MvM.
 
 **Prova:** `tests/guiaXGame.test.mjs` ajustado pra não travar mais o texto
-"22h" (a régua real agora fecha às 20h); suíte e build verificados antes do
-push.
+"22h" (a régua real fecha às 21h30, com a janela ideal terminando às 20h);
+suíte e build verificados antes do push.
 
 ---
 

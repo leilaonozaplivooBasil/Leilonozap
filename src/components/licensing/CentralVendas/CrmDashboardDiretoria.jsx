@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Gauge } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
+import { BarraProgresso, SeloConfianca } from './VerificacaoUI';
 
 // 📊 DIR-23 (30/08/2026) — DASHBOARD DIÁRIO DA DIRETORIA: os 12 números da
 // Seção 37 do Resumo Executivo, cada um com Realizado × Meta e a etiqueta de
@@ -20,14 +21,7 @@ function fmtValor(v, unidade) {
   return fmtNum(v);
 }
 
-const ETIQUETAS = {
-  dado: { texto: 'Dado', cls: 'bg-nz-verde/10 text-nz-verde border-nz-verde/30' },
-  aproximacao: { texto: 'Aproximação', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  sem_fonte: { texto: 'Sem fonte', cls: 'bg-nz-cinza-fundo text-nz-tinta-fraca border-nz-borda' },
-};
-
 function KpiCard({ kpi }) {
-  const etiqueta = ETIQUETAS[kpi.tipo] || ETIQUETAS.sem_fonte;
   const temNumero = kpi.realizado !== null && kpi.realizado !== undefined;
   // Custo de aquisição tem meta-TETO (quanto menor, melhor) — barra não se aplica.
   const pct = temNumero && kpi.meta && !kpi.metaEhTeto ? Math.min(100, (kpi.realizado / kpi.meta) * 100) : null;
@@ -41,12 +35,8 @@ function KpiCard({ kpi }) {
       <p className="text-[11px] text-nz-tinta-fraca mb-1">
         meta {kpi.metaEhTeto ? '≤ ' : ''}{fmtValor(kpi.meta, kpi.unidade)}
       </p>
-      {pct !== null && (
-        <div className="h-1.5 rounded-full bg-white border border-nz-borda overflow-hidden mb-1.5">
-          <div className="h-full bg-nz-verde rounded-full" style={{ width: `${pct}%` }} />
-        </div>
-      )}
-      <span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${etiqueta.cls}`}>{etiqueta.texto}</span>
+      {pct !== null && <div className="mb-1.5"><BarraProgresso pct={pct} dialeto="claro" altura="padrao" trilhoClasse="bg-white border border-nz-borda" /></div>}
+      <SeloConfianca tipo={kpi.tipo} dialeto="claro" />
     </div>
   );
 }
