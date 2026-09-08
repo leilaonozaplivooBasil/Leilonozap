@@ -89,6 +89,37 @@ test('CLIQUE: tocar na reunião da fila abre DIRETO o card de editar na Esteira 
   await ctx.close();
 });
 
+test('ATALHO "Nova oportunidade": quem não passou pela Lista/Contato do Método vê o aviso e fica travado até marcar "seguir mesmo assim"', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="esteira-nova"]').click();
+  await pagina.getByText('Buscar cliente do CRM').waitFor();
+  await pagina.locator('p:text-is("Telefone (WhatsApp)") + input').fill('11966665555'); // Diego — nada feito no Método
+  await pagina.getByText('🪜 Antes da esteira, o caminho do Método:').waitFor();
+  await pagina.getByText('❌ Está na Lista, qualificada (Hábito 3)').waitFor();
+  await pagina.getByText('❌ Já registrou o contato (Hábito 4)').waitFor();
+
+  // preenche o resto do formulário — mesmo assim, Salvar continua travado
+  await pagina.locator('p:text-is("Nome do cliente *") + input').fill('Diego Prado');
+  await pagina.locator('p:text-is("Executivo responsável *") + select').selectOption('exec1');
+  const salvar = pagina.getByRole('button', { name: 'Salvar' });
+  assert.equal(await salvar.isDisabled(), true, 'sem marcar "seguir mesmo assim", não pode pular o Método');
+  await pagina.screenshot({ path: path.join(FOTOS, 'esteira-gate.png') });
+
+  // "ir qualificar" manda pro Hábito 3
+  await pagina.getByRole('button', { name: 'ir qualificar →' }).click();
+  assert.deepEqual(await pagina.evaluate(() => window.__foiPara), ['lista']);
+  await ctx.close();
+});
+
+test('ATALHO "Nova oportunidade": quem JÁ fez Lista + Contato + Agenda não vê aviso nenhum', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  await pagina.locator('[data-teste="esteira-nova"]').click();
+  await pagina.locator('p:text-is("Telefone (WhatsApp)") + input').fill('11977776666'); // Roberta — já fez tudo
+  await pagina.waitForTimeout(200);
+  assert.equal(await pagina.getByText('🪜 Antes da esteira').count(), 0, 'quem já fez a Lista/Contato/Agenda não precisa ver aviso nenhum');
+  await ctx.close();
+});
+
 test('MÃOZINHA: abre sozinha na primeira visita, aponta pra elementos reais, anda com "próximo" e não volta mais', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir({ tourVisto: false });
   await pagina.getByText('Essa é a Esteira de Captação').waitFor();

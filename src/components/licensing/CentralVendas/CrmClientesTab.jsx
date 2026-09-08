@@ -1715,6 +1715,7 @@ _Enviado via CRM Leilão NoZap_`;
               executivos={timeCorporativo}
               usuariosApp={appUsers}
               clientes={unifiedCustomers}
+              clientesManuais={metodoEscopo.clientes}
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
               onSalvar={handleSalvarOportunidade}
@@ -1724,6 +1725,7 @@ _Enviado via CRM Leilão NoZap_`;
               onClientePreenchidoConsumido={() => setClientePreenchido(null)}
               oportunidadeParaAbrir={oportunidadeParaAbrir}
               onOportunidadeParaAbrirConsumida={() => setOportunidadeParaAbrir(null)}
+              onIr={(sec) => setSecao(sec)}
             />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
