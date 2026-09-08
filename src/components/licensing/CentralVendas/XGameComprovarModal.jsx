@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Camera, ImagePlus, Loader2 } from 'lucide-react';
+import { X, Camera, ImagePlus, Loader2, SwitchCamera } from 'lucide-react';
 import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
 import { useSegurarCamada } from '@/hooks/useCamadaModal';
@@ -27,6 +27,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   const [justificativa, setJustificativa] = useState('');
   const [avisoCola, setAvisoCola] = useState(''); // 🚫 tentou colar no resumo
   const [cameraAberta, setCameraAberta] = useState(false);
+  const [ladoCamera, setLadoCamera] = useState('user'); // DIR-93 — de qual lado a câmera está
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const galeriaRef = useRef(null);
@@ -48,16 +49,39 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   useEffect(() => () => fecharCamera(), []); // desmontou = câmera desliga
 
   // 📷 câmera DE VERDADE: preview ao vivo + capturar (não dá pra usar foto velha)
+  //
+  // 🔄 DIR-93 — ordem do dono: "toda comprovação tenha a possibilidade de
+  // virar a câmera para bater a foto do livro por exemplo". `pedirStream`
+  // fica separado de `abrirCamera` pra `virarCamera` poder repedir o vídeo
+  // com o outro lado sem duplicar a lógica de ligar no <video>.
+  const pedirStream = async (lado) => {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: lado } }, audio: false });
+    streamRef.current = stream;
+    // o <video> só existe depois do render
+    setTimeout(() => { if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }, 50);
+    return stream;
+  };
   const abrirCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-      streamRef.current = stream;
+      await pedirStream(ladoCamera);
       setCameraAberta(true);
-      // o <video> só existe depois do render
-      setTimeout(() => { if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }, 50);
     } catch {
       // sem permissão/câmera → cai pro seletor nativo do celular (que abre a câmera)
       celularRef.current?.click();
+    }
+  };
+  const virarCamera = async () => {
+    const novoLado = ladoCamera === 'user' ? 'environment' : 'user';
+    // 📵 no celular a câmera é recurso exclusivo — parar a atual ANTES de
+    // pedir a outra, senão o navegador trava a promise ou devolve a mesma.
+    streamRef.current?.getTracks?.().forEach((t) => t.stop());
+    try {
+      await pedirStream(novoLado);
+      setLadoCamera(novoLado);
+    } catch {
+      // esse aparelho não tem o lado pedido (ex.: notebook só tem frontal)
+      // — volta pro lado que já funcionava, pra não deixar o vídeo congelado
+      try { await pedirStream(ladoCamera); } catch { fecharCamera(); }
     }
   };
   const capturar = () => {
@@ -236,6 +260,9 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
                 <Button onClick={capturar} className="flex-1 bg-nz-verde hover:bg-nz-verde-claro text-white rounded-xl h-11 text-sm font-bold">
                   📸 Capturar
                 </Button>
+                <Button variant="outline" onClick={virarCamera} title="virar câmera" data-teste="virar-camera" className="rounded-xl h-11 w-11 p-0 border-nz-borda text-nz-tinta-fraca shrink-0">
+                  <SwitchCamera className="w-4 h-4" />
+                </Button>
                 <Button variant="outline" onClick={fecharCamera} className="rounded-xl h-11 border-nz-borda text-nz-tinta-fraca">
                   cancelar
                 </Button>
@@ -279,7 +306,10 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             </div>
           )}
           <input ref={galeriaRef} type="file" accept="image/*" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <input ref={celularRef} type="file" accept="image/*" capture="user" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          {/* 🔄 DIR-93 — sem `capture` fixo: esse input só entra em cena quando
+              o getUserMedia falhou de vez, e aí a pessoa já está no app de
+              câmera nativo do celular — que tem o próprio botão de virar. */}
+          <input ref={celularRef} type="file" accept="image/*" capture hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
 
           {tipo === 'instagram' && (
             <Input

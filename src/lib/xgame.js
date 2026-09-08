@@ -792,6 +792,29 @@ export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
   return falta > 0 ? `escreva mais ${letras(falta)} para liberar` : '';
 }
 
+// 🎥 VISUALIZAÇÃO GRAVADA — mínimo de verdade, sem teto apertado (dono,
+// 08/09/2026): "precisa de pelo menos 01 minuto obrigatório e isso precisa
+// ficar claro pra pessoa, e deixar livre até a pessoa quiser". Antes não
+// tinha piso nenhum (um vídeo de 1 segundo já valia) e o teto era 2 minutos
+// rígido, cortando a gravação sem avisar. Agora: 60s de piso, visível igual
+// ao contador do resumo escrito (faltaDoResumo/textoDoContador, acima); o
+// teto vira só uma rede de segurança técnica — 15 min, o tempo que a parte
+// de gratidão + visualização dura — não é mais o alvo da gravação.
+export const VISUALIZACAO_MIN_SEG = 60;
+export const VISUALIZACAO_TETO_SEG = 15 * 60; // 900 — rede de segurança, não o alvo
+
+const segundos = (n) => `${n} ${n === 1 ? 'segundo' : 'segundos'}`;
+
+export function faltaDaVisualizacao(seg) {
+  return Math.max(0, VISUALIZACAO_MIN_SEG - Number(seg || 0));
+}
+
+export function textoDoCronometroVisualizacao(seg) {
+  const falta = faltaDaVisualizacao(seg);
+  if (falta === 0) return `gravando sua visualização · ${seg}s`;
+  return `gravando sua visualização · ${seg}s — grava mais ${segundos(falta)} pra poder concluir`;
+}
+
 // ── 👤 O PADRÃO DE NOME DO JOGO (ordem do dono, 05/09) ──────────────
 // Sempre o nome do CADASTRO, sempre "Nome Sobrenome" (primeiro + último),
 // sempre com inicial maiúscula — nunca apelido, nunca CAIXA ALTA, nunca o
