@@ -5,6 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
+import XGame from '@/pages/XGame';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
@@ -659,6 +660,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               )}
 
               </div>
+              {/* 🔍 dono: "quero saber agora como ele está olhando o MvM
+                  dele... eu estou às cegas." A tela X-GAME dela mesma,
+                  aberta pelo Super Admin em modo só-olhar. */}
+              {abaModal === 'mvm' && <div className="-mx-3 sm:-mx-4"><XGame userIdForcado={pessoaFixo} nomeForcado={nomeDe(pessoaFixo)} modoAdmin /></div>}
               {abaModal === 'metas' && <AbaMetas pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} funcaoId={funcaoTrabalho(pessoaFixo)?.id} mes={mesDe(hoje)} criadoPorId={currentUser?.id} metasInfo={metasInfo} />}
               {abaModal === 'programa' && <AbaPrograma pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} mentalidade={funcaoTrabalho(pessoaFixo)?.mentalidade || mentalidadePadrao(base.cargo)} hoje={hoje} criadoPorId={currentUser?.id} />}
               {abaModal === 'semana' && <AbaSemana pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} hoje={hoje} participante={base} />}

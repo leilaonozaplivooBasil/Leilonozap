@@ -36,7 +36,17 @@ import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisao
 
 const fmt2 = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 
-export default function XGame() {
+// 🔍 08/09/2026 — dono, direto: "eu quero ter a visualização do painel da
+// pessoa como ela está visualizando... entrando no painel dele, uma página
+// dentro da página. Eu quero saber agora como ele está olhando o MVM dele...
+// eu estou às cegas." O Super Admin PRECISA ver exatamente esta mesma tela
+// que a pessoa vê — não um resumo reconstruído à parte. Por isso o modo
+// "ver como ele vê" reaproveita este MESMO componente (com `userIdForcado`
+// no lugar do `currentUser` do localStorage), em vez de duplicar a tela em
+// outro lugar: `modoAdmin` só desliga as AÇÕES (votar pelo colega, mexer no
+// "aceito ser votado" dele, gravar o placar do dia por cima do dele) — o que
+// se VÊ continua sendo idêntico ao que a pessoa vê ao abrir sozinha.
+export default function XGame({ userIdForcado = null, nomeForcado = null, modoAdmin = false } = {}) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [tarefas, setTarefas] = useState([]);
@@ -69,19 +79,33 @@ export default function XGame() {
   }, []);
 
   useEffect(() => {
-    let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    let u = null;
+    if (userIdForcado) {
+      // 🔍 modo "ver como ele vê" — a identidade vem do admin, não do
+      // localStorage; o nome real (e o cargo, pro gate do super_admin) é
+      // conferido logo abaixo, junto com o resto dos dados dessa pessoa.
+      u = { id: userIdForcado, full_name: nomeForcado, nickname: nomeForcado, role: null };
+    } else {
+      try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    }
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
     (async () => {
       try {
         const hoje = new Date();
-        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }] = await Promise.all([
+        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, uReal] = await Promise.all([
           supabase.from('xgame_participantes').select('*').eq('user_id', u.id).maybeSingle(),
           supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
           supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true),
           supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', u.id).eq('data', dataISO(hoje)),
+          // 🔍 no modo "ver como ele vê" o localStorage não tem o cargo real
+          // dela — busca pra o gate do "Aceito ser votado" (só super_admin) valer certo
+          userIdForcado
+            ? supabase.from('app_users').select('id,full_name,nickname,role').eq('id', userIdForcado).maybeSingle().then((r) => r.data)
+            : Promise.resolve(null),
         ]);
+        if (uReal) { u = { ...u, ...uReal }; setUser(u); }
         setParticipante(part || null);
         setMeuAceitaSerVotado(part?.aceita_ser_votado !== false);
         setCicloConfig(cfg?.ciclo_inicio || null);
@@ -117,7 +141,7 @@ export default function XGame() {
       } catch (e) { console.error('[X-GAME] carregar', e); }
       setLoading(false);
     })();
-  }, []);
+  }, [userIdForcado, nomeForcado]);
 
   // 💳 vendas REAIS da loja no ciclo — mesma conta do Compromisso, precisa
   // pro Human Token oficial (F4) e pro eixo "Vendas" do Executivo Ideal.
@@ -162,13 +186,19 @@ export default function XGame() {
   }, [resumo, diasCiclo, recebido.media, participante, vendasCiclo]);
   const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
   const janelaAberta = janelaVotacaoAberta(agoraMin);
+  // 🔍 modoAdmin é só olhar — o Super Admin vasculhando não pode votar,
+  // desligar o interruptor de outra pessoa, nem gravar o placar dela por
+  // cima. As três ações abaixo (e o "gravar o placar" logo adiante) saem
+  // fora no primeiro passo em modoAdmin.
   const escolherColega = (id) => {
+    if (modoAdmin) return;
     setVotando(id);
     const prev = {};
     votosHoje.filter((v) => v.votado_id === id).forEach((v) => { prev[String(v.virtude).toUpperCase()] = v.nota; });
     setNotas(prev);
   };
   const salvarVotos = async () => {
+    if (modoAdmin) return;
     const linhas = VIRTUDES.filter((v) => notas[v] >= 1).map((v) => ({
       votante_id: user.id, votado_id: votando, data: dataISO(agora), virtude: v, nota: notas[v], updated_at: new Date().toISOString(),
     }));
@@ -182,6 +212,7 @@ export default function XGame() {
     setVotando(''); setNotas({});
   };
   const alternarAceitaSerVotado = async () => {
+    if (modoAdmin) return;
     const novo = !meuAceitaSerVotado;
     setMeuAceitaSerVotado(novo);
     const { error } = await supabase.from('xgame_participantes').update({ aceita_ser_votado: novo }).eq('user_id', user.id);
@@ -222,7 +253,8 @@ export default function XGame() {
   // formato de `detalhes` do Compromisso — inclui xpay_ganho/xpay_perdido,
   // que o time (XGameVisaoExecutiva) lê pro X-Pay do ciclo.
   useEffect(() => {
-    if (!user?.id || loading || !tarefas.length) return;
+    // 🔍 modoAdmin não grava nada por cima do placar dela — é só visita.
+    if (!user?.id || loading || !tarefas.length || modoAdmin) return;
     const linha = {
       user_id: user.id,
       data: dataISO(agora),
@@ -253,7 +285,7 @@ export default function XGame() {
   const meuNome = user.nickname || user.full_name || 'Guerreiro(a)';
 
   return (
-    <div className="min-h-screen bg-[#00020C] text-[#F4F4F4]">
+    <div className={modoAdmin ? 'bg-[#00020C] text-[#F4F4F4] rounded-2xl overflow-hidden' : 'min-h-screen bg-[#00020C] text-[#F4F4F4]'}>
       {/* 🏛️ DIR-97.1 — a tela era uma coluna estreita (max-w-3xl) num app
           que promete "executivo". Ganhou um teto (max-w-[1440px]) que
           ainda sobrava dos dois lados em monitor grande — o dono viu isso
@@ -262,18 +294,32 @@ export default function XGame() {
           Hábitos (CrmClientesTab.jsx) que já não tem max-w nenhum. */}
       <div className="w-full px-3 sm:px-8 py-8 sm:py-10 space-y-8 sm:space-y-10">
 
+        {/* 🔍 dono: "eu quero ter a visualização do painel da pessoa como
+            ela está visualizando... uma página dentro da página." Aqui é
+            EXATAMENTE a tela dela — o aviso deixa claro que é uma visita,
+            não a conta do Super Admin. */}
+        {modoAdmin && (
+          <div className="rounded-xl border-2 border-sky-500/40 bg-sky-950/30 px-4 py-2.5 flex items-center gap-2">
+            <span className="text-lg">🔍</span>
+            <p className="text-[12px] font-bold text-sky-300">Visualização do Super Admin — exatamente o que {nomeForcado || 'esta pessoa'} vê agora. Só olhar: votar e mexer nos interruptores continuam sendo dela.</p>
+          </div>
+        )}
+
         {/* 🧭 08/09/2026 — "o botão pra eu ir pras outras áreas não pode
             sair" (ordem do dono, olhando o preview): /XGame é uma rota
             própria, fora do painel do Top College — não herda o menu
             lateral de lá. Sem isto, chegar aqui pelo banner "Visão
-            Executiva X-GAME" virava rua sem saída. */}
-        <button
-          type="button"
-          onClick={() => navigate('/Licensing?tab=catalogo&catalogTab=catalogo-crm')}
-          className="inline-flex items-center gap-2 text-sm font-bold text-[#C1BECA] hover:text-[#F4F4F4] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar pro Top College
-        </button>
+            Executiva X-GAME" virava rua sem saída. Dentro do modal do
+            admin (modoAdmin) esse botão não faz sentido — some. */}
+        {!modoAdmin && (
+          <button
+            type="button"
+            onClick={() => navigate('/Licensing?tab=catalogo&catalogTab=catalogo-crm')}
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#C1BECA] hover:text-[#F4F4F4] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Voltar pro Top College
+          </button>
+        )}
 
         <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#2B2B2B] pb-5">
           <div>
@@ -401,7 +447,7 @@ export default function XGame() {
 
             {user?.role === 'super_admin' && (
               <label className="flex items-center gap-2 rounded-lg border border-[#2B2B2B] bg-[#0b0d14] px-2.5 py-2 cursor-pointer">
-                <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} className="h-4 w-4" />
+                <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} disabled={modoAdmin} className="h-4 w-4" />
                 <span className="text-[11px] text-[#C1BECA]">
                   <span className="font-semibold text-white">Aceito ser votado na MvM</span> — como Super Admin, você só aparece na lista dos colegas se ligar isto (fica desligado por padrão).
                 </span>
@@ -431,9 +477,9 @@ export default function XGame() {
                     <button
                       key={id}
                       type="button"
-                      disabled={!janelaAberta}
+                      disabled={!janelaAberta || modoAdmin}
                       onClick={() => escolherColega(id)}
-                      className={`px-2 py-1 rounded border text-[11px] font-medium ${votando === id ? 'border-emerald-400 text-emerald-400 bg-emerald-950/40' : jaVoteiEm(id) ? 'border-emerald-500/30 text-[#817E8C]' : 'border-[#2B2B2B] text-white'} ${!janelaAberta ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-400'}`}
+                      className={`px-2 py-1 rounded border text-[11px] font-medium ${votando === id ? 'border-emerald-400 text-emerald-400 bg-emerald-950/40' : jaVoteiEm(id) ? 'border-emerald-500/30 text-[#817E8C]' : 'border-[#2B2B2B] text-white'} ${!janelaAberta || modoAdmin ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-400'}`}
                     >
                       {jaVoteiEm(id) ? '✅ ' : ''}{nomesColegas[id] || id.slice(0, 6)}
                     </button>
@@ -523,16 +569,20 @@ export default function XGame() {
         {/* ══ O TIME — a mesma visão executiva da equipe que já mora dentro
             da Verificação do Progresso, agora também aqui: pulso, pódio,
             radar e a tabela inteira, sem duplicar cálculo nenhum. Painel
-            largo, ocupando a página inteira. ══ */}
-        <section className="xeos-palco" data-teste="xgame-o-time">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Todo mundo</span>
-            <span className="h-px flex-1 bg-[#2B2B2B]" />
-          </div>
-          <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-6">
-            <XGameVisaoExecutiva />
-          </div>
-        </section>
+            largo, ocupando a página inteira. Some no modoAdmin — o Super
+            Admin já vê o time inteiro em vários outros lugares; aqui ele
+            entrou pra olhar UMA pessoa, não repetir a visão de todo mundo. ══ */}
+        {!modoAdmin && (
+          <section className="xeos-palco" data-teste="xgame-o-time">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Todo mundo</span>
+              <span className="h-px flex-1 bg-[#2B2B2B]" />
+            </div>
+            <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-6">
+              <XGameVisaoExecutiva />
+            </div>
+          </section>
+        )}
 
         <footer className="text-center text-xs text-[#4c4a56] pt-4 border-t border-[#1c1f28]">
           {FRASES.reacao} · {FRASES.realtime} · até {fim.toLocaleDateString('pt-BR')}

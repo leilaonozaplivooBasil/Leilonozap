@@ -12,8 +12,18 @@ import { linkWhatsApp } from '@/lib/quemContatarHoje';
 // motivo. Regra e mensagens: src/lib/quemContatarHoje.js.
 const fmtBRL = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// 🎨 08/09/2026 — faltavam os 3 motivos da esteira aqui (esteira_reuniao,
+// esteira_recontato, esteira_parada): sem entrada no mapa, a pastilha
+// nascia SEM classe nenhuma — sem cor, sem borda, quase invisível. Achado
+// lendo o próprio código, não só reportado pelo dono.
 const COR_MOTIVO = {
   follow_up: 'bg-nz-verde/10 text-nz-verde border-nz-verde/30',
+  esteira_reuniao: 'bg-sky-50 text-sky-700 border-sky-200',
+  // reunião que JÁ aconteceu pede o resultado — cor própria, mais chamativa
+  // que um lembrete comum: é a "mãozinha" cutucando pra não deixar parado.
+  esteira_reuniao_feita: 'bg-violet-50 text-violet-700 border-violet-300',
+  esteira_recontato: 'bg-nz-verde/10 text-nz-verde border-nz-verde/30',
+  esteira_parada: 'bg-red-50 text-red-600 border-red-200',
   pedido_nao_pago: 'bg-amber-50 text-amber-700 border-amber-200',
   arremate_nao_pago: 'bg-amber-50 text-amber-700 border-amber-200',
   deposito_sem_compra: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -22,12 +32,12 @@ const COR_MOTIVO = {
 
 const VISIVEIS_FECHADO = 5;
 
-export default function CrmQuemContatar({ fila = [], onAbrirCliente }) {
+export default function CrmQuemContatar({ fila = [], onAbrirCliente, onAbrirOportunidade }) {
   const [expandido, setExpandido] = useState(false);
   if (fila.length === 0) return null;
   const visiveis = expandido ? fila : fila.slice(0, VISIVEIS_FECHADO);
   return (
-    <Card className="bg-white border-nz-verde/40 mb-4 sm:mb-6 shadow-sm">
+    <Card className="bg-white border-nz-verde/40 mb-4 sm:mb-6 shadow-sm" data-teste="quem-contatar-hoje">
       <CardContent className="p-4 sm:p-5">
         <p className="text-sm font-semibold text-nz-tinta mb-3 flex items-center gap-2">
           <PhoneCall className="w-4 h-4 text-nz-verde" />
@@ -41,7 +51,12 @@ export default function CrmQuemContatar({ fila = [], onAbrirCliente }) {
               <div key={item.key} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-nz-cinza-fundo/60 p-2.5">
                 <button
                   type="button"
-                  onClick={() => onAbrirCliente?.(item.cliente)}
+                  // 🔗 08/09/2026 — dono: "eu estou com dificuldade de ver
+                  // aonde é o contato pra entrar na esteira". Item da
+                  // esteira leva DIRETO pro card dela (editar estágio); só
+                  // os outros motivos (pedido, depósito, sumido...) abrem o
+                  // cliente, que é onde eles realmente vivem.
+                  onClick={() => (item.oportunidade ? onAbrirOportunidade?.(item.oportunidade) : onAbrirCliente?.(item.cliente))}
                   className="flex-1 min-w-0 text-left"
                 >
                   <p className="text-sm font-semibold text-nz-tinta truncate">{item.cliente.full_name}</p>

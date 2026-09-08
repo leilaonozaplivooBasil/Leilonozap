@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History, GraduationCap, Camera } from 'lucide-react';
+import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History, GraduationCap, Camera, Vote } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -417,6 +417,10 @@ export function AbaHistorico({ pessoaId, tarefasCiclo }) {
   );
 }
 
+// 🔍 08/09/2026 — dono: "eu preciso entrar, vasculhar, olhar o quadro dele,
+// olhar tudo... eu quero saber agora como ele está olhando o MvM dele...
+// eu estou às cegas." A aba "MvM dele" é a tela X-GAME dela mesma, aberta
+// pelo Super Admin em modo só-olhar (ver XGame.jsx, prop modoAdmin).
 export const ABAS = [
-  ['pessoa', 'Pessoa', null], ['metas', 'Metas', Target], ['programa', 'Programa', GraduationCap], ['semana', 'Semana', CalendarDays], ['quadro', 'Quadro dele', LayoutGrid], ['comprovacoes', 'Comprovações', Camera], ['historico', 'Histórico', History],
+  ['pessoa', 'Pessoa', null], ['mvm', 'MvM dele', Vote], ['metas', 'Metas', Target], ['programa', 'Programa', GraduationCap], ['semana', 'Semana', CalendarDays], ['quadro', 'Quadro dele', LayoutGrid], ['comprovacoes', 'Comprovações', Camera], ['historico', 'Histórico', History],
 ];

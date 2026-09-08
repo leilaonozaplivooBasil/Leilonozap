@@ -341,12 +341,30 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const timeCorporativo = React.useMemo(() => membrosDoTopo(appUsers), [appUsers]);
 
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
+  const alertasEsteiraAtual = React.useMemo(() => alertasEsteira(networkOportunidades), [networkOportunidades]);
   const filaContato = React.useMemo(
-    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteira(networkOportunidades) }),
-    [unifiedCustomers, networkCatalogSales, networkOportunidades]
+    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteiraAtual }),
+    [unifiedCustomers, networkCatalogSales, alertasEsteiraAtual]
+  );
+  // 🎯 08/09/2026 — dono: "assim que ele fizer o contato... atualiza as
+  // informações." Contagem de reuniões que JÁ aconteceram e ninguém mexeu
+  // ainda — vira o número vermelho na aba "Esteira & Expansão", pra quem
+  // nunca abre a aba Clientes também ver que tem gente esperando.
+  const reunioesParaAtualizar = React.useMemo(
+    () => alertasEsteiraAtual.filter((a) => a.tipo === 'reuniao_concluida').length,
+    [alertasEsteiraAtual]
   );
 
   const [detailCustomer, setDetailCustomer] = useState(null);
+  // 🔗 08/09/2026 — a oportunidade que veio de fora (fila ou modal do
+  // cliente) pedindo pra abrir DIRETO o card de editar na Esteira.
+  const [oportunidadeParaAbrir, setOportunidadeParaAbrir] = useState(null);
+  const abrirOportunidadeExistente = (o) => {
+    setDetailCustomer(null);
+    setSecao('acompanhamento');
+    setSubAcomp('expansao');
+    setOportunidadeParaAbrir(o);
+  };
   // 🛤️ DIR-36 — "Nova oportunidade" pré-preenchida a partir do cliente
   const [clientePreenchido, setClientePreenchido] = useState(null);
 
@@ -1631,6 +1649,7 @@ _Enviado via CRM Leilão NoZap_`;
             onNovoCliente={() => setShowAddForm(true)}
             onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
+            onCriarOportunidade={criarOportunidadeDoCliente}
           />
         )}
 
@@ -1670,9 +1689,17 @@ _Enviado via CRM Leilão NoZap_`;
                 key={id}
                 type="button"
                 onClick={() => setSubAcomp(id)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${subAcomp === id ? 'bg-nz-verde text-white border-nz-verde' : 'bg-white text-nz-tinta-fraca border-nz-borda hover:text-nz-tinta'}`}
+                className={`relative px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${subAcomp === id ? 'bg-nz-verde text-white border-nz-verde' : 'bg-white text-nz-tinta-fraca border-nz-borda hover:text-nz-tinta'}`}
               >
                 {rotulo}
+                {/* 🎯 dono: "assim que ele fizer o contato... atualiza as
+                    informações" — o número vermelho aparece mesmo pra quem
+                    nunca entra na aba Clientes pra ver a fila. */}
+                {id === 'expansao' && reunioesParaAtualizar > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white" title={`${reunioesParaAtualizar} reunião(ões) aconteceram e esperam atualização`}>
+                    {reunioesParaAtualizar}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -1695,6 +1722,8 @@ _Enviado via CRM Leilão NoZap_`;
               podeRegistrarAporte={vis.verDinheiroEmpresa}
               clientePreenchido={clientePreenchido}
               onClientePreenchidoConsumido={() => setClientePreenchido(null)}
+              oportunidadeParaAbrir={oportunidadeParaAbrir}
+              onOportunidadeParaAbrirConsumida={() => setOportunidadeParaAbrir(null)}
             />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
@@ -1717,7 +1746,7 @@ _Enviado via CRM Leilão NoZap_`;
           <TabsContent value="customers">
             {/* 📞 DIR-24 Fase 4 — a fila de ação vem ANTES de tudo: é o que
                 transforma o CRM de relatório em ferramenta de venda. */}
-            <CrmQuemContatar fila={filaContato} onAbrirCliente={setDetailCustomer} />
+            <CrmQuemContatar fila={filaContato} onAbrirCliente={setDetailCustomer} onAbrirOportunidade={abrirOportunidadeExistente} />
 
             <CrmStatsCards
               stats={stats}
@@ -1836,6 +1865,7 @@ _Enviado via CRM Leilão NoZap_`;
               oportunidades={oportunidadesDoCliente}
               eventos={eventosDoCliente}
               onCriarOportunidade={criarOportunidadeDoCliente}
+              onAbrirOportunidade={abrirOportunidadeExistente}
               onEditarContato={handleEditarContato}
               podeEditarUsuarioApp={vis.gerirVendedores}
             />
