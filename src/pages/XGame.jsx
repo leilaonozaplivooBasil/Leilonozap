@@ -346,6 +346,15 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           </div>
         )}
 
+        {/* ⏰ 08/09/2026 — dono: "se o cara se atrasou, além de perder o
+            dinheiro, isso tem que tirar pontos dele." */}
+        {resumo.perdeu_por_atraso_pronto && (
+          <div className="rounded-xl border-2 border-red-500 bg-red-950/40 px-4 py-3 text-center">
+            <p className="text-sm font-extrabold text-red-400">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem o pronto</p>
+            <p className="text-[11px] text-red-300 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
+          </div>
+        )}
+
         {/* ══ SEU DIA — o hero, cheio de largura ══ */}
         <section data-teste="xgame-meu-dia">
           <div className="flex items-center gap-2 mb-4">

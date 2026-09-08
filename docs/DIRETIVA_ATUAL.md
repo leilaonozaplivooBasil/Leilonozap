@@ -12,6 +12,62 @@
 
 ---
 
+## DIR-102 — Atraso na Fila do Pronto zera o dia (mesma régua radical do MvM); painel do time ganha reuniões e atrasadas; histórico vira relatório
+
+**Emitida por:** dono (08/09/2026), continuação do DIR-101: *"se o cara se
+atrasou, eu tenho que ter uma mensagem pro cara, e isso tirar pontos dele.
+Além de ele perder o dinheiro, isso tem que tirar pontos. E ter uma
+historicidade pra eu até mostrar o relatório da pessoa de todos os
+pontos."* Sobre o mecanismo exato e o "percentual de reunião do time",
+perguntado e respondido: *"como você acha que deve ser"* / *"o melhor
+possível, pense grande, dados é o que manda, quanto mais e melhor visível
+melhor."*
+
+**Data:** 08/09/2026.
+
+**Decisões tomadas (delegadas pelo dono):**
+1. Penalidade de atraso = reaproveitar a régua radical do não-votar, não
+   inventar um desconto novo — atrasar o "pronto até" de uma tarefa da
+   gestão zera o dia inteiro (MvM, Human Token, pontos e X-Pay), a punição
+   mais séria que o jogo já tem.
+2. "Percentual de reunião do time" = tarefas do dia cujo título bate com
+   reunião/apresentação/encontro/call (mesma régua de título que o app já
+   usa em outros lugares pra ícone e peso), feitas ÷ total, hoje.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `ehTarefaDeReuniao(titulo)` (nova); `resumoDoDia()`
+   ganha `perdeuPorAtrasoPronto`: alguma tarefa de gestão (`origem: 'xperf'`,
+   com `prazo_em`) vencida e sem o pronto zera o dia — MESMO efeito do não
+   votar, com campo próprio (`perdeu_por_atraso_pronto`) pra não confundir
+   a causa na tela. Só julga em tempo real (`votouEmTodos !== null`) — um
+   dia histórico não se recalcula.
+2. `CrmMetodo.jsx` e `XGame.jsx` — nova mensagem pro atrasado: "DIA ZERADO
+   — uma tarefa da gestão passou do pronto até", mesmo peso visual do
+   alerta de não-votar.
+3. `XPerformanceGestao.jsx` — o resumo do time ganhou reuniões do dia
+   (feitas/total) e atrasadas na Fila do Pronto (destacado em vermelho
+   quando > 0); a própria Fila do Pronto avisa, item a item, quando o
+   atraso já zerou o dia da pessoa.
+4. `QuadroGeralAbas.jsx` (`AbaHistorico`) — virou o relatório que faltava:
+   conta quantos atrasos zeraram o dia inteiro no ciclo, e marca cada item
+   vencido com o mesmo aviso.
+
+**O que ficou de fora, por decisão consciente de escopo:** o percentual de
+reunião não entrou em `XGameVisaoExecutiva.jsx` (Verificação do Progresso)
+porque a fonte de dados de lá é o retrato já gravado em `xgame_diario`, que
+não guarda título de tarefa — só entrou no ADM X-Game, que lê a tabela ao
+vivo. Trazer pra lá também exigiria uma nova coluna no retrato diário ou
+uma consulta ao vivo adicional — fica pra quando o dono quiser esse
+alcance.
+
+**Prova:** `tests/xgame.test.mjs` — 4 testes novos (`resumoDoDia` com
+tarefa xperf vencida zera; dentro do prazo ou já pronta não pune; tarefa da
+rotina sem `prazo_em` não conta; dia histórico não recalcula). Suíte
+1593/1593, `tests/navegador/performance.spec.mjs` 26/26 em navegador real,
+lint e build limpos.
+
+---
+
 ## DIR-101 — ADM X-Game reorganizado: ciclo de cada um no topo, Distribuir Tarefa vira painel, resumo do time e faxina nas dobras genéricas
 
 **Emitida por:** dono (08/09/2026), olhando o painel administrativo ao vivo:

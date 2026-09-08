@@ -1489,6 +1489,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
+            {/* ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto],
+                além de ele perder o dinheiro, isso tem que tirar pontos dele."
+                A mensagem pro cara, na hora, do mesmo jeito grave do não-votar. */}
+            {xgame && ehHoje && xgame.perdeu_por_atraso_pronto && mostrarPainel && (
+              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-red-700">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
+                <p className="text-[11px] text-red-600 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
+              </div>
+            )}
+
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4">

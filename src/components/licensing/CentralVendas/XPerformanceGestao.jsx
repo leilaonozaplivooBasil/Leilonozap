@@ -9,6 +9,7 @@ import XGame from '@/pages/XGame';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
+  ehTarefaDeReuniao,
 } from '@/lib/xgame';
 import { distribuirDia, resumoDoCiclo } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
@@ -372,14 +373,22 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   };
 
   // 📊 08/09/2026 — dono: "quero ver a quantidade de tarefas que nós temos
-  // do grupo — quantas o time concluiu, qual o percentual." O painel vivo
-  // que faltava: o time inteiro, num relance, antes de entrar pessoa por
-  // pessoa. Mesma conta em XGameVisaoExecutiva (Verificação do Progresso).
+  // do grupo — quantas o time concluiu, qual o percentual [...] e o
+  // percentual de reunião do time." E depois, sobre o quanto mostrar: "o
+  // melhor possível, pense grande, dados é o que manda, quanto mais e
+  // melhor visível melhor." O painel vivo que faltava: o time inteiro, num
+  // relance, antes de entrar pessoa por pessoa. Mesma conta em
+  // XGameVisaoExecutiva (Verificação do Progresso).
   const tarefasHoje = tarefasCiclo.filter((t) => String(t.data).slice(0, 10) === hoje);
+  const reunioesHoje = tarefasHoje.filter((t) => ehTarefaDeReuniao(t.titulo));
+  const filaHoje = filaDoPronto(tarefasCiclo);
   const resumoTimeHoje = {
     pessoas: equipe.length,
     total: tarefasHoje.length,
     feitas: tarefasHoje.filter((t) => t.feito).length,
+    reunioesTotal: reunioesHoje.length,
+    reunioesFeitas: reunioesHoje.filter((t) => t.feito).length,
+    atrasadas: filaHoje.filter((f) => f.estado.id === 'atrasada').length,
   };
 
   if (carregando) {
@@ -390,8 +399,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   return (
     <div className="space-y-5" data-teste="gestao">
       {/* ── 📊 O TIME, NUM RELANCE — a quantidade que faltava (dono, 08/09/2026):
-          "quantas tarefas nós temos, quanto o time concluiu, qual o percentual". ── */}
-      <div className="grid grid-cols-3 gap-2" data-teste="resumo-time-hoje">
+          "quantas tarefas nós temos, quanto o time concluiu, qual o percentual,
+          qual o percentual de reunião do time". E depois: "pense grande, dados
+          é o que manda, quanto mais e melhor visível melhor." ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" data-teste="resumo-time-hoje">
         <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
           <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.pessoas}</p>
           <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">no time corporativo</p>
@@ -403,6 +414,14 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
           <p className="text-xl font-extrabold text-nz-verde tabular-nums">{resumoTimeHoje.total ? Math.round((resumoTimeHoje.feitas / resumoTimeHoje.total) * 100) : 0}%</p>
           <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">do time, hoje</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.reunioesFeitas} <span className="text-white/35 font-medium">/ {resumoTimeHoje.reunioesTotal}</span></p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">reuniões do time hoje</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: resumoTimeHoje.atrasadas > 0 ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.04)' }}>
+          <p className={`text-xl font-extrabold tabular-nums ${resumoTimeHoje.atrasadas > 0 ? 'text-red-300' : 'text-white'}`}>{resumoTimeHoje.atrasadas}</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">atrasadas na fila do pronto</p>
         </div>
       </div>
 
@@ -743,6 +762,13 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                       )}
                       {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
                     </div>
+                    {/* ⏰ 08/09/2026 — dono: "isso tem que tirar pontos dele,
+                        além de perder o dinheiro." A mesma régua radical do
+                        não-votar já zera o dia de quem está aqui — a fila
+                        avisa a gestão, não só a pessoa lá na tela dela. */}
+                    {!t.feito && estado.atrasou && (
+                      <p className="mt-1 text-[10px] font-bold text-red-300">⚠️ passou do prazo sem o pronto — zerou o dia inteiro dela (MvM, Human Token, pontos e X-Pay)</p>
+                    )}
                     {devolvendo?.id === t.id && (
                       <div className="mt-1.5 flex items-center gap-1.5 flex-wrap" data-teste="devolver-recado">
                         <Input autoFocus value={devolvendo.motivo} onChange={(e) => setDevolvendo((d) => ({ ...d, motivo: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') devolver(t, devolvendo.motivo); }} placeholder="o recado: o que faltou pra valer o pronto" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white placeholder:text-white/30 text-[11px]" data-teste="recado" />
