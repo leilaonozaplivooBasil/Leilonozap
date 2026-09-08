@@ -30,6 +30,21 @@ const OPORTUNIDADES = [
   },
 ];
 
+// 🪜 08/09/2026 — a Lista do Método (Hábito 3): a Roberta já fez tudo
+// (qualificada, contatada, reunião marcada) — a mãozinha não deve avisar
+// nada pra ela. O Diego não fez nada — clicar "Nova oportunidade" e digitar
+// o telefone dele tem que acender o aviso "🪜 antes da esteira...".
+const CLIENTES_MANUAIS = [
+  {
+    id: 'cm1', full_name: 'Roberta Nunes', email: 'roberta@exemplo.com', phone: '11977776666',
+    qualificacao_network: { confianca: 5, financeiro: 4, apetite: 5 },
+    contatos_metodo: [{ resultado: 'agendado', quando: '2026-09-10T10:00:00Z', em: '2026-09-08T09:00:00Z' }],
+  },
+  { id: 'cm2', full_name: 'Diego Prado', email: 'diego@exemplo.com', phone: '11966665555', qualificacao_network: null, contatos_metodo: [] },
+];
+
+window.__foiPara = []; // registra pra onde o botão "ir qualificar/registrar" mandou
+
 function Banca() {
   const [oportunidades] = useState(OPORTUNIDADES);
   const [oportunidadeParaAbrir, setOportunidadeParaAbrir] = useState(null);
@@ -46,12 +61,14 @@ function Banca() {
         executivos={[{ user: { id: 'exec1', full_name: 'Ribeiro' }, funcaoPrincipal: 'executivo_conta' }]}
         usuariosApp={[]}
         clientes={[]}
+        clientesManuais={CLIENTES_MANUAIS}
         currentUser={{ id: 'exec1', full_name: 'Ribeiro' }}
         visaoTotal
         onSalvar={async () => {}}
         onRegistrarAporteExterno={async () => {}}
         oportunidadeParaAbrir={oportunidadeParaAbrir}
         onOportunidadeParaAbrirConsumida={() => setOportunidadeParaAbrir(null)}
+        onIr={(sec) => window.__foiPara.push(sec)}
       />
     </div>
   );

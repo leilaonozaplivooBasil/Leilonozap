@@ -83,7 +83,7 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <Card className="bg-white border-nz-borda max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col">
         <CardHeader className="border-b border-nz-borda flex-shrink-0">
           <div className="flex items-center justify-between">

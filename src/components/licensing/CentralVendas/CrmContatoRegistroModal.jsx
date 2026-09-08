@@ -141,7 +141,7 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
   const p = (n) => (modoAgendar ? n : n - 1);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <Card className="bg-white border-nz-borda max-w-lg w-full max-h-[88vh] overflow-hidden flex flex-col">
         <CardContent className="p-5 overflow-y-auto space-y-4">
           <div className="flex items-center justify-between">
