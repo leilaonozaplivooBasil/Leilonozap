@@ -260,6 +260,28 @@ test('a dedupe é contra a MINHA lista, não a carteira toda', () => {
   assert.match(TAB, /existentes=\{metodoEscopo\.clientes\}/);
 });
 
+test('o modal é ALCANÇÁVEL de onde o botão vive — não dentro da aba Clientes', () => {
+  // 🔴 09/09 — o bug que passou pra produção. O modal estava renderizado
+  // dentro de <TabsContent value="customers">, que só existe quando
+  // secaoAtiva === 'acompanhamento'; na Lista de Networking aquele bloco está
+  // `hidden` e o Radix desmonta a aba inativa. O clique mudava o estado e não
+  // havia modal montado: botão sem efeito, sem erro, sem log.
+  //
+  // A assertiva antiga ("o modal está ligado com as props certas") passava
+  // verde com o bug em pé, porque ligação existir não é ligação alcançável.
+  // Esta cobra o LUGAR: o modal tem que estar antes do <Tabs, no mesmo nível
+  // do CrmMetodo, que é quem tem o botão.
+  const modal = TAB.indexOf('<CrmImportarContatosModal');
+  const metodo = TAB.indexOf('<CrmMetodo');
+  const abas = TAB.indexOf('<Tabs value={activeTab}');
+  assert.ok(modal > 0, 'o modal sumiu da tela');
+  assert.ok(modal > metodo, 'o modal tem que vir depois do CrmMetodo, no mesmo nível');
+  assert.ok(
+    modal < abas,
+    'o modal voltou pra dentro do bloco de abas — ali ele não existe na Lista de Networking',
+  );
+});
+
 test('a gravação vai em lote e conta o que o banco confirmou', () => {
   assert.match(TAB, /for \(const lote of emLotes\(linhas\)\)/);
   assert.match(TAB, /Customer\.bulkCreate\(lote\)/);
