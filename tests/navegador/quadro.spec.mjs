@@ -118,6 +118,10 @@ test('ENTRADA NOVA: a frase diz pra onde vai enquanto escreve; "também no meu d
   await coluna.locator('[data-teste="destino-hora"]').fill('07:30');
   assert.match(await coluna.locator('[data-teste="frase-destinos"]').textContent(), /Vai entrar: no quadro \(Academia\) · no seu dia, na Jornada às 07:30$/);
   await coluna.locator('[data-teste="campo-novo-card-criar"]').click();
+  // 🔮 DIR-91 — tem hora: mostra a prévia da Jornada ANTES de criar
+  await pagina.locator('[data-teste="previa-jornada"]').waitFor();
+  await pagina.locator('[data-teste="previa-livre"]').waitFor();
+  await pagina.locator('[data-teste="previa-confirmar"]').click();
   await pagina.getByText(/Entrou no quadro \(Academia\) e no seu dia, na Jornada às 07:30\./).waitFor();
   const esc = await escritas(pagina);
   const t = esc.filter((e) => e.tabela === 'metodo_tarefas' && e.tipo === 'insert').at(-1).linhas[0];
@@ -132,6 +136,35 @@ test('ENTRADA NOVA: a frase diz pra onde vai enquanto escreve; "também no meu d
   // a tela de fora foi avisada da tarefa criada
   assert.equal(await pagina.evaluate(() => (window.__tarefasCriadas || []).length), 1);
   await pagina.screenshot({ path: path.join(FOTOS, 'quadro-entrada-destinos.png'), fullPage: true });
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+test('PRÉVIA DA JORNADA: hora que bate avisa e oferece o horário livre; usar o livre limpa o aviso (DIR-91)', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  const coluna = pagina.locator('[data-teste="entrada-quadro"]').first(); // a Academia
+  await coluna.locator('[data-teste="campo-novo-card"]').fill('Puxada extra');
+  await coluna.locator('[data-teste="destinos"]').waitFor();
+  await coluna.locator('[data-teste="destino-dia"]').check();
+  // 18:30 cai dentro do "Fechamento do dia" (18:00–19:00, banco de mentira)
+  await coluna.locator('[data-teste="destino-hora"]').fill('18:30');
+  await coluna.locator('[data-teste="campo-novo-card-criar"]').click();
+  await pagina.locator('[data-teste="previa-jornada"]').waitFor();
+  assert.match(await pagina.locator('[data-teste="previa-aviso"]').textContent(), /bate com "Fechamento do dia"/);
+  assert.match(await pagina.locator('[data-teste="previa-confirmar"]').textContent(), /confirmar mesmo assim/);
+  // a peça nova aparece na linha do tempo, marcada como conflito
+  await pagina.locator('[data-teste="previa-item-novo"]').filter({ hasText: 'Puxada extra' }).waitFor();
+  await pagina.screenshot({ path: path.join(FOTOS, 'quadro-previa-conflito.png') });
+  // usar o horário livre sugerido tira o choque, sem fechar o popup
+  await pagina.locator('[data-teste="previa-usar-livre"]').click();
+  await pagina.locator('[data-teste="previa-livre"]').waitFor();
+  assert.equal(await pagina.locator('[data-teste="previa-aviso"]').count(), 0);
+  await pagina.locator('[data-teste="previa-confirmar"]').click();
+  await pagina.getByText(/Entrou no quadro \(Academia\) e no seu dia, na Jornada às/).waitFor();
+  const esc = await escritas(pagina);
+  const t = esc.filter((e) => e.tabela === 'metodo_tarefas' && e.tipo === 'insert').at(-1).linhas[0];
+  // o horário final não é mais 18:30 (o choque original) — o livre venceu
+  assert.notEqual(t.hora, '18:30');
   assert.deepEqual(erros, []);
   await ctx.close();
 });

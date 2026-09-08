@@ -37,6 +37,7 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import EntradaComDestinos from './EntradaComDestinos';
+import PreviaJornadaModal from './PreviaJornadaModal';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import {
@@ -885,6 +886,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
+  const [previaEdicaoAberta, setPreviaEdicaoAberta] = useState(false);
   const salvarEdicao = async (t) => {
     const titulo = String(edicao.titulo || '').trim();
     if (!titulo) { toast.error('O título não pode ficar vazio — pra tirar, use a lixeira.'); return; }
@@ -892,6 +894,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setEditandoId(null);
     try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora: edicao.hora || '' }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
+  };
+  // 🔮 DIR-91 — mudou a hora? mostra a prévia da Jornada antes de gravar.
+  const tentarSalvarEdicao = (t) => {
+    if (String(edicao.hora || '').trim()) { setPreviaEdicaoAberta(true); return; }
+    salvarEdicao(t);
   };
 
   const removerTarefa = async (t) => {
@@ -1819,9 +1826,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <div className="mt-2 flex flex-wrap items-center gap-2" data-teste="editor-tarefa">
                                 <Input type="time" value={edicao.hora} onChange={(e) => setEdicao({ ...edicao, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="editar-hora" />
                                 <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
-                                <Button size="sm" onClick={() => salvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
+                                <Button size="sm" onClick={() => tentarSalvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
                                 <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
                                 <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina.</p>
+                                {/* 🔮 DIR-91 — prévia da Jornada antes de gravar um horário mudado */}
+                                {previaEdicaoAberta && (
+                                  <PreviaJornadaModal
+                                    itens={tarefas}
+                                    novo={{ titulo: edicao.titulo, hora: edicao.hora, ignorarId: t.id }}
+                                    onFechar={() => setPreviaEdicaoAberta(false)}
+                                    onAjustar={() => setPreviaEdicaoAberta(false)}
+                                    onUsarLivre={(h) => setEdicao((e) => ({ ...e, hora: h }))}
+                                    onConfirmar={() => { setPreviaEdicaoAberta(false); salvarEdicao(t); }}
+                                  />
+                                )}
                               </div>
                             )}
                             {guia && guiaAberto === t.id && !t.feito && (
@@ -1838,7 +1856,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {visao === 'lista' && (
             <div className="pt-1">
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} />
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
