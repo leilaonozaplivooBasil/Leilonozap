@@ -1,13 +1,19 @@
-// 📔 O DIÁRIO DE BOLSO — Fase 1 (dono, 08/09/2026): "essa funcionalidade
-// sirva para 'anotar' e 'documentar' os passos, tarefas e etc dos usuários
-// de forma automática para que tudo que foi feito e aprendido esteja de
-// fácil acesso pra eles conseguirem acessar/recapitular/conferir".
+// 📔 O DIÁRIO DE BOLSO — dono, 08/09/2026: "essa funcionalidade sirva para
+// 'anotar' e 'documentar' os passos, tarefas e etc dos usuários de forma
+// automática para que tudo que foi feito e aprendido esteja de fácil acesso
+// pra eles conseguirem acessar/recapitular/conferir".
 //
-// FASE 1 É SÓ LEITURA: nada aqui grava nada novo no banco. As entradas são
-// MONTADAS na hora, a partir do que a tarefa já carrega (a régua pura vive
-// aqui pra dar pra testar sem tela) — se o formato agradar, a Fase 2 decide
-// se vale persistir. Zero tabela nova, zero cron novo, zero risco pro que já
-// funciona: é puramente aditivo.
+// FASE 1 (só leitura): o diário é MONTADO na hora, a partir do que a tarefa
+// já carrega — nenhuma tabela, nenhuma gravação.
+//
+// FASE 2 (dono, 08/09/2026: "prepare o terreno" → "prossiga"): a mesma
+// entrada agora pode carregar uma NOTA PESSOAL por cima (o que só a Fase 2
+// permite escrever) e o texto/fonte já computados pela Fase 1 são
+// MATERIALIZADOS em segundo plano em `diario_bolso_entradas` (migração
+// 20260908180000) — "de forma automática", sem a pessoa precisar apertar
+// nada. A LEITURA da lista continua vindo de `metodo_tarefas` (fonte da
+// verdade, sempre fresca); a tabela nova só entra pra (a) guardar a nota
+// pessoal e (b) congelar o texto pro dia em que a tarefa de origem sumir.
 //
 // A ORDEM DE PRIORIDADE DO TEXTO de cada entrada (o que a pessoa vê como "o
 // que aconteceu aqui"):
@@ -47,8 +53,12 @@ export function textoDaEntrada(tarefa = {}) {
   return textoEFonte(tarefa).texto;
 }
 
-/** Uma tarefa feita → uma entrada do diário: só o que a tela precisa desenhar. */
-export function entradaDe(tarefa = {}) {
+/**
+ * Uma tarefa feita → uma entrada do diário: só o que a tela precisa
+ * desenhar. `notaPessoal` (Fase 2, opcional): o que a pessoa escreveu por
+ * cima, já lido de `diario_bolso_entradas` — a Fase 1 nunca passa isto.
+ */
+export function entradaDe(tarefa = {}, notaPessoal = null) {
   const { texto, fonte } = textoEFonte(tarefa);
   return {
     id: tarefa.id,
@@ -57,21 +67,17 @@ export function entradaDe(tarefa = {}) {
     titulo: tarefa.titulo || '',
     texto,
     fonte,
+    notaPessoal: notaPessoal || null,
     temFoto: !!(tarefa.comprovacao?.print_url),
   };
 }
 
-// ── 🚧 FASE 2 (terreno preparado em 08/09/2026) ─────────────────────────────
-// A função abaixo NÃO é chamada por nenhuma tela ainda — a Fase 1 continua só
-// leitura. Ela existe pronta pra quando a Fase 2 for ligada: monta a linha
-// exata que `diario_bolso_entradas` espera (migração
-// 20260908180000_diario_bolso_entradas.sql), a partir da MESMA tarefa que a
-// Fase 1 já lê — sem duplicar a régua do texto.
 /**
  * A linha pronta pra gravar em `diario_bolso_entradas`, a partir de uma
  * tarefa feita e de quem é a pessoa. `notaPessoal` (opcional) é o que a
  * PRÓPRIA pessoa escreveu por cima — passa `undefined`/omite pra não mexer
- * numa nota já existente ao regravar a mesma tarefa.
+ * numa nota já existente ao regravar a mesma tarefa (a materialização
+ * automática em segundo plano nunca passa nota; só o campo de nota passa).
  */
 export function linhaParaGravar(tarefa = {}, userId, notaPessoal) {
   const e = entradaDe(tarefa);
@@ -92,12 +98,14 @@ export function linhaParaGravar(tarefa = {}, userId, notaPessoal) {
  * As tarefas feitas, uma entrada por tarefa, agrupadas por dia (mais recente
  * primeiro) e por horário dentro do dia. `tarefas` já vem filtrada por
  * pessoa e por `feito = true` — esta função é pura, não busca nada.
+ * `notasPorTarefa` (Fase 2, opcional): mapa `{ [tarefa_id]: nota_pessoal }`,
+ * já lido de `diario_bolso_entradas`.
  */
-export function diarioAgrupado(tarefas = []) {
+export function diarioAgrupado(tarefas = [], notasPorTarefa = {}) {
   const porDia = new Map();
   for (const t of Array.isArray(tarefas) ? tarefas : []) {
     if (!t?.data) continue;
-    const entrada = entradaDe(t);
+    const entrada = entradaDe(t, notasPorTarefa[t.id]);
     const lista = porDia.get(entrada.data) || [];
     lista.push(entrada);
     porDia.set(entrada.data, lista);
@@ -110,12 +118,25 @@ export function diarioAgrupado(tarefas = []) {
     }));
 }
 
-/** Busca por palavra: casa no título ou no texto da entrada (sem acento, sem caixa). */
+/**
+ * Fase 2 — quais tarefas ainda não viraram linha em `diario_bolso_entradas`
+ * (materialização automática em segundo plano). `idsJaGravados` é o
+ * conjunto de `tarefa_id` já presentes na tabela — o que sobra aqui é o que
+ * falta gravar, pronto pra virar um upsert em lote com `linhaParaGravar`.
+ */
+export function tarefasParaMaterializar(tarefas = [], idsJaGravados = new Set()) {
+  return (Array.isArray(tarefas) ? tarefas : []).filter((t) => t?.id && !idsJaGravados.has(t.id));
+}
+
+/** Busca por palavra: casa no título, no texto ou na nota pessoal (sem acento, sem caixa). */
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 export function filtrarDiario(dias = [], termo = '') {
   const alvo = semAcento(termo).trim();
   if (!alvo) return dias;
   return dias
-    .map((d) => ({ ...d, entradas: d.entradas.filter((e) => semAcento(e.titulo).includes(alvo) || semAcento(e.texto).includes(alvo)) }))
+    .map((d) => ({
+      ...d,
+      entradas: d.entradas.filter((e) => semAcento(e.titulo).includes(alvo) || semAcento(e.texto).includes(alvo) || semAcento(e.notaPessoal).includes(alvo)),
+    }))
     .filter((d) => d.entradas.length > 0);
 }
