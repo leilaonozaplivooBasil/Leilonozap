@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, NotebookText, Search, Sparkles, Camera as CameraIcon, MessageSquarePlus, Pencil, Check, X as XIcon } from 'lucide-react';
+import { Loader2, NotebookText, Search, Sparkles, Camera as CameraIcon, MessageSquarePlus, Pencil, Check, X as XIcon, ScrollText } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
+import { plataforma } from '@/api/plataformaClient';
 import { diarioAgrupado, filtrarDiario, linhaParaGravar, tarefasParaMaterializar } from '@/lib/diarioDeBolso';
+import { semanaDe } from '@/lib/metodo';
 
 // 📔 DIÁRIO DE BOLSO — dono, 08/09/2026: "anotar e documentar os passos,
 // tarefas e etc dos usuários de forma automática pra que tudo que foi feito
@@ -23,6 +25,12 @@ import { diarioAgrupado, filtrarDiario, linhaParaGravar, tarefasParaMaterializar
 //      LEITURA da lista nunca depende da tabela nova, só a nota depende).
 // A lista em si continua vindo de `metodo_tarefas` — sempre fresca, nunca
 // desatualiza mesmo que a materialização de fundo ainda não tenha rodado.
+//
+// FASE 3 (dono: "prepare o terreno" → "analisado, prossiga"): o resumo
+// narrado da semana. DECISÃO DE CUSTO — a única chamada de IA desta tela é
+// MANUAL, por clique, nunca automática: ler o resumo já gerado é de graça
+// (só um select), e cada "gerar" é UM clique = UMA chamada, nunca um cron
+// gerando pra todo mundo sozinho. Isso é o dono quem decide depois.
 const fmtDia = (iso) => {
   const d = new Date(`${iso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
@@ -39,6 +47,9 @@ export default function DiarioDeBolso({ currentUser = null }) {
   const [notaAberta, setNotaAberta] = useState(null); // tarefa_id em edição
   const [rascunho, setRascunho] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [semanaInicio] = useState(() => semanaDe(new Date().toISOString().slice(0, 10))?.inicio || null);
+  const [resumoSemana, setResumoSemana] = useState(null); // { resumo, gerado_em } | null
+  const [gerandoResumo, setGerandoResumo] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -80,6 +91,27 @@ export default function DiarioDeBolso({ currentUser = null }) {
       });
     return () => { vivo = false; };
   }, [uid]);
+
+  // Fase 3 — só LÊ o que já foi gerado (de graça, um select); nunca gera sozinha.
+  useEffect(() => {
+    let vivo = true;
+    if (!uid || !semanaInicio) return undefined;
+    supabase.from('diario_bolso_semanas').select('resumo,gerado_em').eq('user_id', uid).eq('semana_inicio', semanaInicio).maybeSingle()
+      .then(({ data, error }) => { if (vivo && !error && data) setResumoSemana(data); });
+    return () => { vivo = false; };
+  }, [uid, semanaInicio]);
+
+  const gerarResumoSemana = async () => {
+    if (!uid || !semanaInicio || gerandoResumo) return;
+    setGerandoResumo(true);
+    try {
+      const resp = await plataforma.functions.invoke('diarioResumoSemanal', { user_id: uid, semana_inicio: semanaInicio });
+      if (resp?.ok) { setResumoSemana({ resumo: resp.resumo, gerado_em: new Date().toISOString() }); toast.success('Resumo da semana pronto.'); }
+      else toast.error(resp?.error || 'Não deu pra gerar o resumo agora — tenta de novo.');
+    } catch {
+      toast.error('Não deu pra gerar o resumo agora — tenta de novo.');
+    } finally { setGerandoResumo(false); }
+  };
 
   const dias = useMemo(() => diarioAgrupado(tarefas, notas), [tarefas, notas]);
   const diasVisiveis = useMemo(() => filtrarDiario(dias, busca), [dias, busca]);
@@ -126,6 +158,33 @@ export default function DiarioDeBolso({ currentUser = null }) {
           />
         </div>
       </div>
+
+      {semanaInicio && (
+        <section className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.05] p-3 sm:p-4" data-teste="diario-resumo-semana">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-200/70 mb-1.5 flex items-center gap-1.5">
+            <ScrollText className="w-3.5 h-3.5" /> resumo da semana
+          </p>
+          {resumoSemana ? (
+            <>
+              <p className="text-white/80 text-[13px] leading-relaxed whitespace-pre-line">{resumoSemana.resumo}</p>
+              <button type="button" onClick={gerarResumoSemana} disabled={gerandoResumo} className="mt-2 text-[11px] text-white/30 hover:text-white/60 disabled:opacity-40" data-teste="diario-resumo-gerar-de-novo">
+                {gerandoResumo ? 'gerando…' : 'gerar de novo'}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={gerarResumoSemana}
+              disabled={gerandoResumo}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 disabled:opacity-40 px-3 py-1.5 text-[12px] font-semibold text-emerald-200"
+              data-teste="diario-resumo-gerar"
+            >
+              {gerandoResumo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ScrollText className="w-3.5 h-3.5" />}
+              {gerandoResumo ? 'gerando…' : 'gerar o resumo da semana'}
+            </button>
+          )}
+        </section>
+      )}
 
       {carregando && (
         <p className="text-[11px] text-white/40 py-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> montando o seu diário…</p>
