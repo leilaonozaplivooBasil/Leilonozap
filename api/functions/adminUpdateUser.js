@@ -105,6 +105,19 @@ const CARGOS_VALIDOS = new Set([
 ]);
 const RENOMEAR_CARGO = { influencer: 'influenciador', user: 'usuario', trainee: 'trainee_diretor' };
 
+// 🧭 08/09/2026 — dono: "quando eu altero isso, todas as funções dentro da
+// diretoria na X-Game precisam atualizar também". O bloco "diretor" do plano
+// (espelha CAREER_LEVELS de src/lib/careerLevels.js) — quem SAI inteiramente
+// dele deixa de contar como diretoria; a participação dela no X-Game
+// (xgame_participantes) não pode continuar ativa sozinha, órfã do cargo.
+const CARGOS_DIRETORIA = new Set([
+  'trainee_diretor', 'executivo_conta', 'diretoria_operacao',
+  'diretoria_executiva', 'ceo', 'livoo_live', 'embaixador', 'conselheiro', 'fundador',
+]);
+const saiDaDiretoria = (antes, depois) =>
+  Array.isArray(antes) && antes.some((c) => CARGOS_DIRETORIA.has(c)) &&
+  !(Array.isArray(depois) && depois.some((c) => CARGOS_DIRETORIA.has(c)));
+
 function sanearCargos(lista) {
   const out = new Set();
   for (const c of Array.isArray(lista) ? lista : []) {
@@ -191,17 +204,28 @@ export default async function handler(req, res) {
     // 🛡️ ANTI-REBAIXAMENTO: nunca tirar o acesso de um admin/super_admin sem pedir explicitamente.
     // O form "Loja Virtual do Vendedor" manda role='licensee'; se o alvo já é admin, isso apagava
     // o acesso dele (aconteceu com um super_admin em 12/07). Só rebaixa com allow_role_downgrade=true.
-    const tgtArr = await (await sb(`app_users?select=id,role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    const tgtArr = await (await sb(`app_users?select=id,role,career_levels&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
     const target = Array.isArray(tgtArr) ? tgtArr[0] : null;
     const targetIsAdmin = target && ['admin', 'super_admin'].includes(target.role);
+    // 🧯 08/09/2026 — dono, sobre um usuário admin que "era diretora": editou o
+    // cargo E a permissão de trabalho na mesma tela, salvou, e nada mudou — a
+    // tela só dizia "o servidor não confirmou". A trava abaixo estava agindo
+    // (certo!), mas CALADA: ela apagava role/career_levels/primary_career_level
+    // do payload inteiro e seguia como se tivesse dado tudo certo. Agora ela
+    // avisa exatamente o que foi barrado, em vez de fingir sucesso.
+    let camposProtegidos = [];
     if (targetIsAdmin && payload.role && !['admin', 'super_admin'].includes(payload.role) && body?.allow_role_downgrade !== true) {
+      camposProtegidos = ['role', 'career_levels', 'primary_career_level'].filter((k) => k in payload);
       delete payload.role;            // preserva o acesso admin
       delete payload.career_levels;   // e o cargo que vem junto (ex.: ceo → licenciado_catalogo)
       delete payload.primary_career_level;
     }
 
     if (Object.keys(payload).length === 0) {
-      return res.status(200).json({ success: true, skipped: 'nada a atualizar (role de admin preservado)' });
+      return res.status(200).json({
+        success: true, skipped: 'nada a atualizar (role de admin preservado)', camposProtegidos,
+        error: camposProtegidos.length ? 'rebaixamento_de_admin_bloqueado' : undefined,
+      });
     }
     payload.updated_date = new Date().toISOString();
 
@@ -266,6 +290,21 @@ export default async function handler(req, res) {
       newParentName = Array.isArray(p) && p[0] ? p[0].full_name : null;
     }
 
+    // 🧭 08/09/2026 — dono: "quando eu altero isso, todas as funções dentro da
+    // diretoria na X-Game precisam atualizar também". Saiu do bloco diretor
+    // (career_levels não tem mais nenhum cargo de diretoria) → a participação
+    // dela no X-Game (xgame_participantes) não pode continuar ativa sozinha,
+    // órfã do cargo que a justificava. Desativa (não apaga — histórico fica).
+    let participantesDesativados = 0;
+    if ('career_levels' in payload && saiDaDiretoria(target?.career_levels, payload.career_levels)) {
+      const rParts = await sb(
+        `xgame_participantes?user_id=eq.${encodeURIComponent(userId)}&ativo=eq.true`,
+        { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ ativo: false }) }
+      );
+      const partRows = await rParts.json().catch(() => []);
+      participantesDesativados = Array.isArray(partRows) ? partRows.length : 0;
+    }
+
     await writeAudit({
       action,
       actor_id: actorId,
@@ -277,9 +316,10 @@ export default async function handler(req, res) {
       fields: Object.keys(payload).filter((k) => k !== 'updated_date'),
       new_parent_id: action === 'move' ? (payload.referred_by_id || null) : undefined,
       new_parent_name: action === 'move' ? newParentName : undefined,
+      participantes_desativados: participantesDesativados || undefined,
     });
 
-    return res.status(200).json({ success: true, user: saved });
+    return res.status(200).json({ success: true, user: saved, camposProtegidos, participantesDesativados });
   } catch (e) {
     return res.status(500).json({ success: false, error: 'Erro ao salvar', details: String((e && e.message) || e) });
   }

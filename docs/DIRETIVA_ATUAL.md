@@ -12,6 +12,54 @@
 
 ---
 
+## DIR-89 — Tirar admin e tirar diretoria juntos ficava mudo; sair da diretoria não soltava o X-Game
+
+**Emitida por:** dono (08/09/2026), com prints do Painel de Controle editando
+Aline Mendes Rossa: *"não estou conseguindo editar esse usuário, ela era
+diretora e agora não está salvando, faça a análise e me diga o que houve. E
+quando eu altero isso, todas as funções dentro da diretoria na X-Game
+precisam atualizar também, entendeu?"*
+
+**Data:** 08/09/2026.
+
+**O achado (confirmado no banco real, não só no código):** Aline está com
+`role: 'admin'` e `career_levels: ['usuario', 'diretoria_operacao']`. O dono
+tentou, na MESMA tela, tirar o admin dela (Permissão de Trabalho → Usuário
+Comum) E tirar o cargo de diretoria (só "Usuário" marcado). A trava
+anti-rebaixamento de `adminUpdateUser.js` — que existe pra ninguém perder
+acesso de admin sem querer, desde um incidente com um super_admin em 12/07 —
+apaga `role`, `career_levels` E `primary_career_level` do payload inteiro
+sempre que `role` sai de admin/super_admin sem confirmação explícita
+(`allow_role_downgrade`). Ela agiu certo, mas CALADA: respondia sucesso, e
+a tela só descobria pela releitura de conferência, com uma mensagem genérica
+("o servidor não confirmou").
+
+**O que entra:**
+1. `api/functions/adminUpdateUser.js` — a trava agora devolve
+   `camposProtegidos` (quais campos foram barrados) em vez de fingir sucesso
+   liso; `src/api/plataformaAdapter.js` trata isso como falha de verdade
+   quando `allow_role_downgrade` não foi confirmado, com uma mensagem que diz
+   exatamente o que fazer.
+2. `UserEditModal.jsx` — detecta ANTES de salvar que a edição tira alguém do
+   admin/super_admin; pergunta com `window.confirm` (nomeando a pessoa) e,
+   confirmando, manda `allow_role_downgrade: true` — as duas mudanças (acesso
+   e cargo) vão juntas, do jeito que o dono realmente quis.
+3. **A ponte com o X-Game:** `adminUpdateUser.js` agora compara o
+   `career_levels` de antes com o de depois; quem SAI inteiramente do bloco
+   "diretor" do plano (nenhum cargo institucional sobra) tem a participação
+   ativa dela em `xgame_participantes` desativada (`ativo:false`, preserva
+   histórico) automaticamente — sem precisar ir noutra tela desativar na mão.
+   A tela avisa quantas participações foram desativadas no toast de sucesso.
+
+**Prova:** `tests/adminUpdateUser.test.mjs` (novo) — a trava barra sem
+confirmar e avisa o quê; com `allow_role_downgrade` as duas mudanças vão
+juntas; sair da diretoria desativa a participação no X-Game; continuar na
+diretoria (trocar de cargo institucional) não mexe nela; quem nunca esteve
+na diretoria não gera escrita nenhuma. Suíte 1412/1412, build limpo, lint
+sem erro novo.
+
+---
+
 ## DIR-88 — O Encontro da Mentalidade "alucinava": era a própria conversa virando pauta
 
 **Emitida por:** dono (07/09/2026), com prints do Encontro da Mentalidade real
