@@ -44,6 +44,10 @@ const TONS = {
   dica: { borda: 'border-emerald-400/25', fundo: 'bg-emerald-500/[0.07]', titulo: 'text-emerald-200' },
   atencao: { borda: 'border-amber-400/25', fundo: 'bg-amber-500/[0.07]', titulo: 'text-amber-200' },
   mapa: { borda: 'border-white/12', fundo: 'bg-white/[0.04]', titulo: 'text-white/70' },
+  // 🧯 08/09/2026 — "atencao" (âmbar) já servia pra alerta comum; a regra da
+  // votação é mais grave que isso (zera o dia inteiro) e pediu um tom
+  // próprio, mais forte — reutilizável pra qualquer outra regra do mesmo peso.
+  perigo: { borda: 'border-red-500/40', fundo: 'bg-red-500/[0.10]', titulo: 'text-red-300' },
 };
 
 function Caixa({ tom = 'mapa', titulo, linhas = [] }) {

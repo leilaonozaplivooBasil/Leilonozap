@@ -12,6 +12,62 @@
 
 ---
 
+## DIR-96 — Super Admin sai da votação por padrão; não votar em todos zera a MvM do Dia
+
+**Emitida por:** dono (08/09/2026): *"Super Admin não pode ser votado a não
+ser que ele esteja participando por dentro de uma mentoria, não é viável
+nem saudável pro negócio se expor tanto o principal, ainda mais quando as
+pessoas às vezes não têm capacidade de votar em um mentor, salvo se ele
+permitir ser votado no MvM. (...) a falta de voto dos integrantes uns nos
+outros zera o dia — isso precisa ser explícito tanto na X-Game e no Guia do
+Usuário, bem grande, bem explícito. Isso é uma das coisas principais da
+gamificação."* Pedido de análise e confirmação de entendimento antes do
+código — a análise identificou a MvM Manual (votação das 10 Virtudes, 20h–
+22h) já existente e implementada, sem nenhuma das duas regras. Depois da
+análise, o dono confirmou por pergunta direta: votar precisa ser em TODOS
+os colegas ativos (não basta votar em alguém), e a punição é zerar a MvM do
+Dia (não só capar o Human Token, como já fazia a trava de estudo).
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `supabase/migrations/20260908200000_xgame_super_admin_votavel.sql` —
+   `xgame_participantes.aceita_ser_votado` (default `true`, aplicada em
+   produção). Só tem efeito prático pra quem é `super_admin`.
+2. `src/lib/xgame.js` — `podeSerVotado({role, aceita_ser_votado})`: só o
+   cargo super_admin precisa do interruptor ligado pra aparecer votável;
+   todo mundo mais continua exatamente como sempre foi.
+   `votouEmTodosOsColegas(colegasIds, votadosCompletosIds)`: precisa fechar
+   TODOS os colegas votáveis do dia — voto parcial não conta.
+   `resumoDoDia()` ganhou `votouEmTodos` (default `null` — comportamento
+   intocado pra quem não informa): com a janela de votação fechada (22h) e
+   `votouEmTodos === false`, a MvM do Dia vira ZERO — cascata real pro Human
+   Token do dia, não só um aviso na tela.
+3. `CrmMetodo.jsx` (o jogo de verdade, Hábito 2) e `pages/XGame.jsx` (o
+   placar "só de olhar", que também grava `xgame_diario` e por isso
+   precisava da MESMA régua, senão reescreveria por cima a nota zerada) —
+   colegas votáveis cruzam com o `role`; um interruptor "Aceito ser votado
+   na MvM" aparece só pro próprio super_admin; um alerta vermelho, do
+   tamanho do problema (não escondido dentro do bloco recolhível da
+   votação), avisa quando a MvM zerou por falta de voto.
+4. `XGameAdmin.jsx` — o painel de quem gerencia o time mostra "🛡️ não
+   votável (Super Admin)" quando é o caso, pra ninguém achar que a pessoa
+   "sumiu" da lista sem explicação. Só leitura — quem liga/desliga é o
+   próprio super_admin, na tela dele.
+5. `src/lib/guiaXGame.js` — nova aula "A votação das 20h às 22h — e o que
+   acontece se você esquecer", com uma caixa de tom PRÓPRIO (`perigo`,
+   vermelho — mais forte que o `atencao` âmbar já existente) escrevendo a
+   punição sem eufemismo. Até aqui o guia só documentava a MvM AUTOMÁTICA;
+   a votação manual nunca tinha sido ensinada em lugar nenhum.
+
+**Prova:** `tests/xgame.test.mjs` (novo) — `podeSerVotado`, `votouEmTodosOsColegas`
+e `resumoDoDia` com a janela aberta/fechada, votou/não votou, e sem informar
+(compatibilidade); `tests/guiaXGame.test.mjs` — trava a aula existindo com a
+palavra "ZERA", "TODOS os colegas" e o tom `perigo` de verdade. Suíte
+1577/1577, build limpo, lint sem erro novo.
+
+---
+
 ## DIR-89 — Tirar admin e tirar diretoria juntos ficava mudo; sair da diretoria não soltava o X-Game
 
 **Emitida por:** dono (08/09/2026), com prints do Painel de Controle editando

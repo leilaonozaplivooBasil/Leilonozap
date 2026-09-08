@@ -453,8 +453,15 @@ export default function XGameAdmin() {
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das 20h às 22h:</p>
+          {/* 🎓 08/09/2026 — dono: Super Admin não é votável a não ser que
+              ele mesmo permita (interruptor "Aceito ser votado" no X-GAME
+              dele) — aqui é só leitura, pra quem gerencia não achar que ele
+              "sumiu" da lista de colegas sem explicação. */}
+          <p className="text-[10.5px] text-gray-500">🛡️ Super Admin fica FORA da lista votável por padrão — só entra se ele mesmo ligar o interruptor no X-GAME dele.</p>
           {participantes.map((p) => {
             const cardAberto = participanteAberto === p.id;
+            const usu = usuarios.find((x) => x.id === p.user_id);
+            const ehSuperAdminNaoVotavel = usu?.role === 'super_admin' && p.aceita_ser_votado !== true;
             return (
             <div key={p.id} className={`rounded-lg border px-3 py-2 bg-white space-y-1.5 ${p.ativo ? 'border-gray-200' : 'border-gray-200 opacity-60'}`}>
               {/* cabeçalho: sempre visível — clica e abre; abrir um fecha o outro */}
@@ -466,6 +473,7 @@ export default function XGameAdmin() {
                 >
                   {cardAberto ? '▾' : '▸'} {nomeDe(p.user_id)}
                   <span className="ml-2 text-[10px] font-normal text-gray-400">{p.cargo} · {p.perfil}</span>
+                  {ehSuperAdminNaoVotavel && <span className="ml-2 text-[10px] font-semibold text-purple-600">🛡️ não votável (Super Admin)</span>}
                 </button>
                 <span className="flex items-center gap-3">
                   {cardAberto && (

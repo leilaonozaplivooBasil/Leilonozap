@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, inicioCiclo, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
+  VIRTUDES, podeSerVotado, votouEmTodosOsColegas,
 } from '@/lib/xgame';
 
 // X-GAME — o painel da gamificação do Método (v1, somente leitura).
@@ -19,6 +20,12 @@ export default function XGame() {
   const [nomes, setNomes] = useState({});
   const [agora, setAgora] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  // 🧯 08/09/2026 — esta tela também grava xgame_diario (linha 78 abaixo);
+  // sem o mesmo gate do Compromisso, ela reescreveria por cima uma MvM que
+  // já tinha zerado por falta de voto — a régua da votação PRECISA valer
+  // nas duas telas, senão a punição vale só numa e some na outra.
+  const [colegasVotaveis, setColegasVotaveis] = useState([]);
+  const [votosHoje, setVotosHoje] = useState([]);
 
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), 60000);
@@ -33,10 +40,12 @@ export default function XGame() {
       try {
         const hoje = new Date();
         const ini = dataISO(inicioCiclo(hoje));
-        const [{ data: tf }, { data: dc }, { data: rk }] = await Promise.all([
+        const [{ data: tf }, { data: dc }, { data: rk }, { data: parts }, { data: vh }] = await Promise.all([
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
           supabase.from('xgame_diario').select('*').eq('user_id', u.id).eq('ciclo_inicio', ini).lt('data', dataISO(hoje)).order('data'),
           supabase.from('xgame_ranking_ciclo').select('*').eq('ciclo_inicio', ini).order('pontos', { ascending: false }).limit(10),
+          supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true),
+          supabase.from('xgame_votos_mvm').select('votado_id,virtude').eq('votante_id', u.id).eq('data', dataISO(hoje)),
         ]);
         setTarefas(tf || []);
         setDiasCiclo(dc || []);
@@ -47,15 +56,30 @@ export default function XGame() {
           const m = {}; (us || []).forEach((x) => { m[x.id] = x.nickname || x.full_name || 'Guerreiro(a)'; });
           setNomes(m);
         }
+        // 🧯 08/09 — os mesmos colegas votáveis (sem Super Admin fechado) e os
+        // mesmos votos de hoje que o Compromisso usa — a régua da votação não
+        // pode divergir de tela pra tela.
+        const linhas = (parts || []).filter((p) => p.user_id !== u.id);
+        if (linhas.length) {
+          const idsColegas = linhas.map((p) => p.user_id);
+          const { data: usColegas } = await supabase.from('app_users').select('id,role').in('id', idsColegas);
+          const porId = new Map((usColegas || []).map((x) => [x.id, x]));
+          setColegasVotaveis(linhas.filter((p) => podeSerVotado({ role: porId.get(p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado })).map((p) => p.user_id));
+        }
+        setVotosHoje(vh || []);
       } catch (e) { console.error('[X-GAME] carregar', e); }
       setLoading(false);
     })();
   }, []);
 
   const agoraMin = agora.getHours() * 60 + agora.getMinutes();
+  const votouEmTodos = useMemo(() => {
+    const completos = colegasVotaveis.filter((id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length);
+    return votouEmTodosOsColegas(colegasVotaveis, completos);
+  }, [colegasVotaveis, votosHoje]);
   const resumo = useMemo(
-    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora }),
-    [tarefas, agoraMin, diasCiclo, agora],
+    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, votouEmTodos }),
+    [tarefas, agoraMin, diasCiclo, agora, votouEmTodos],
   );
 
   // Fotografia do dia: grava/atualiza o placar sem bloquear a tela.
@@ -100,6 +124,15 @@ export default function XGame() {
             <div className="text-xs text-[#817E8C]">{resumo.faixa.label}</div>
           </div>
         </header>
+
+        {/* 🧯 08/09/2026 — mesma regra explícita do Compromisso: não votar em
+            todo mundo até as 22h zera a MvM do Dia. */}
+        {resumo.perdeu_por_nao_votar && (
+          <div className="rounded-lg border-2 border-red-500 bg-red-950/40 px-3 py-2.5 text-center">
+            <p className="text-sm font-extrabold text-red-400">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as 22h</p>
+            <p className="text-[11px] text-red-300 mt-0.5">Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
+          </div>
+        )}
 
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card titulo="Human Token" valor={fmt2(resumo.token_dia)} sub={`teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />

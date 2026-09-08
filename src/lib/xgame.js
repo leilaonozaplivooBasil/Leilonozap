@@ -344,6 +344,34 @@ export const VOTACAO_FIM_MIN = 22 * 60;    // 22:00
 export const janelaVotacaoAberta = (agoraMin) =>
   agoraMin >= VOTACAO_INICIO_MIN && agoraMin < VOTACAO_FIM_MIN;
 
+// 🎓 08/09/2026 — dono: "Super Admin não pode ser votado a não ser que ele
+// esteja participando por dentro de uma mentoria — não é viável nem
+// saudável pro negócio se expor tanto o principal, ainda mais quando as
+// pessoas às vezes não têm capacidade de votar num mentor — salvo se ele
+// mesmo permitir ser votado na MvM." Só o cargo super_admin é afetado; todo
+// outro participante ativo continua votável exatamente como sempre foi.
+/** Esta pessoa pode aparecer na lista de colegas votáveis da MvM Manual? */
+export function podeSerVotado({ role, aceita_ser_votado } = {}) {
+  return role !== 'super_admin' || aceita_ser_votado === true;
+}
+
+// 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
+// o dia — isso precisa ser explícito, é uma das coisas principais da
+// gamificação." Votar em ALGUÉM não é o suficiente: precisa fechar os 10
+// votos (as 10 virtudes) em CADA colega votável do dia — voto parcial não
+// conta como cumprido, do mesmo jeito que `jaVoteiEm` já exige na tela.
+/**
+ * Vazio (ninguém pra votar) não é falta — é não ter nem como votar.
+ * @param colegasIds ids de todos os colegas votáveis hoje (já sem o super_admin
+ *   que não se abriu, e sem a própria pessoa)
+ * @param votadosCompletosIds ids dos colegas em quem a pessoa JÁ fechou os 10 votos hoje
+ */
+export function votouEmTodosOsColegas(colegasIds = [], votadosCompletosIds = []) {
+  if (!colegasIds.length) return true;
+  const feitos = new Set(votadosCompletosIds);
+  return colegasIds.every((id) => feitos.has(id));
+}
+
 /**
  * Consolida os votos RECEBIDOS por uma pessoa no ciclo:
  * média geral (o MvM manual, 0-10) e o Ranking das Virtudes (média por
@@ -485,14 +513,24 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 }
 
 /** Resumo completo do dia — o que a tela grava em xgame_diario. */
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null }) {
+// 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
+// o dia." `votouEmTodos` é null enquanto não dá pra julgar (janela ainda não
+// fechou, ou a tela que chamou não carregou colegas/votos ainda) — só
+// depois das 22h, com `votouEmTodos === false`, a MvM do Dia vira ZERO,
+// arrastando o Human Token e a frase junto (é isso que faz a punição ser
+// SENTIDA, e não só um aviso na tela). `votouEmTodos` continua opcional
+// (default null) — quem chama sem saber de votação (histórico, testes
+// antigos) se comporta exatamente como antes desta mudança.
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null }) {
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);
   const comEstado = estadoDasTarefas(tarefas, agoraMin);
   const feitas = comEstado.filter((t) => t.feito).length;
   const total = comEstado.length;
-  const mvm = mvmDoDia(tarefas, agoraMin);
+  const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
+  const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
+  const mvm = perdeuPorNaoVotar ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
@@ -526,7 +564,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     estudo_em_dia: estudoOk,
     leitura_feita: leituraHoje,
     pontos: pontosDoDia(comEstado, cotacao),
-    frase_mvm: fraseDoMvm(mvm),
+    frase_mvm: perdeuPorNaoVotar ? 'ZEROU POR NÃO VOTAR' : fraseDoMvm(mvm),
+    perdeu_por_nao_votar: perdeuPorNaoVotar,
     valores,
     xpay,
     contagens,

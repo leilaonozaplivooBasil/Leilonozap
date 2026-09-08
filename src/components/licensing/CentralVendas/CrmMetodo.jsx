@@ -21,7 +21,7 @@ import { ehAtiva } from '@/lib/esteiraCaptacao';
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
-  VIRTUDES, janelaVotacaoAberta, mvmManual,
+  VIRTUDES, janelaVotacaoAberta, mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
@@ -247,6 +247,31 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
       });
   }, [painel, uid, cicloConfig]);
+  // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
+  // (declarado ANTES do useMemo do xgame de propósito — a nota do dia agora
+  // depende de ter votado em todos os colegas, ver "não pode ser votado" abaixo)
+  const [colegas, setColegas] = useState([]); // participantes votáveis ativos (sem eu, sem super_admin fechado)
+  const [nomesColegas, setNomesColegas] = useState({});
+  const [votando, setVotando] = useState(''); // user_id do colega escolhido
+  const [notas, setNotas] = useState({});     // { VIRTUDE: nota }
+  const [votosDadosHoje, setVotosDadosHoje] = useState([]); // meus votos de hoje
+  const [votosRecebidos, setVotosRecebidos] = useState([]); // recebidos no ciclo
+  const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
+  // 🎓 08/09/2026 — dono: "Super Admin não pode ser votado a não ser que ele
+  // esteja participando por dentro de uma mentoria... salvo se ele mesmo
+  // permitir ser votado na MvM." Só o próprio super_admin vê e mexe nisto.
+  const [meuAceitaSerVotado, setMeuAceitaSerVotado] = useState(true);
+  const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
+  const janelaAberta = janelaVotacaoAberta(agoraMinJogo);
+  const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros
+  // zera o dia — isso precisa ser explícito, é uma das coisas principais da
+  // gamificação." Precisa fechar TODOS os colegas votáveis do dia — voto
+  // parcial não conta (mesma régua de `jaVoteiEm`, colega por colega).
+  const votouEmTodosHoje = useMemo(
+    () => votouEmTodosOsColegas(colegas, colegas.filter((id) => jaVoteiEm(id))),
+    [colegas, votosDadosHoje],
+  );
   const xgame = useMemo(() => {
     if (painel !== 'compromisso' || tarefasJogo.length === 0) return null;
     return resumoDoDia({
@@ -256,20 +281,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       hoje: ehHoje ? new Date() : new Date(`${dia}T12:00:00`),
       participante,
       cicloConfigISO: cicloConfig,
+      // só julga o dia de HOJE que está sendo jogado agora — um dia passado
+      // (histórico) já está fechado nos próprios registros, não se recalcula
+      votouEmTodos: ehHoje ? votouEmTodosHoje : null,
     });
-  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig]);
+  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje]);
   const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
-
-  // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
-  const [colegas, setColegas] = useState([]); // participantes ativos (sem eu)
-  const [nomesColegas, setNomesColegas] = useState({});
-  const [votando, setVotando] = useState(''); // user_id do colega escolhido
-  const [notas, setNotas] = useState({});     // { VIRTUDE: nota }
-  const [votosDadosHoje, setVotosDadosHoje] = useState([]); // meus votos de hoje
-  const [votosRecebidos, setVotosRecebidos] = useState([]); // recebidos no ciclo
-  const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
-  const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
-  const janelaAberta = janelaVotacaoAberta(agoraMinJogo);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
   // com a trava 17,77 quando a leitura do ciclo está em atraso.
@@ -290,15 +307,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const fogo = useMemo(() => ofensiva(historicoOfensiva, new Date(), hojeFechou), [historicoOfensiva, hojeFechou]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
-    supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
+    // 🎓 08/09/2026 — dono: Super Admin só entra na lista votável se ELE
+    // MESMO abrir (`aceita_ser_votado`, ver podeSerVotado em lib/xgame.js) —
+    // por isso a lista de colegas cruza com o `role` de cada um, e não só
+    // com `xgame_participantes.ativo`.
+    supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true)
       .then(async ({ data }) => {
-        const outros = (data || []).map((p) => p.user_id).filter((id) => id !== uid);
-        setColegas(outros);
-        if (outros.length) {
-          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', outros);
-          const m = {}; (us || []).forEach((u) => { m[u.id] = nomeExibicao(u); });
-          setNomesColegas(m);
-        }
+        const linhas = (data || []).filter((p) => p.user_id !== uid);
+        const mine = (data || []).find((p) => p.user_id === uid);
+        if (mine) setMeuAceitaSerVotado(mine.aceita_ser_votado !== false);
+        if (!linhas.length) { setColegas([]); return; }
+        const ids = linhas.map((p) => p.user_id);
+        const { data: us } = await supabase.from('app_users').select('id,full_name,nickname,role').in('id', ids);
+        const porId = new Map((us || []).map((u) => [u.id, u]));
+        const votaveis = linhas.filter((p) => podeSerVotado({ role: porId.get(p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }));
+        setColegas(votaveis.map((p) => p.user_id));
+        const m = {}; votaveis.forEach((p) => { const u = porId.get(p.user_id); if (u) m[u.id] = nomeExibicao(u); });
+        setNomesColegas(m);
       });
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     supabase.from('xgame_votos_mvm').select('virtude,nota').eq('votado_id', uid).gte('data', ini)
@@ -326,7 +351,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setVotando('');
     setNotas({});
   };
-  const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🎓 08/09/2026 — só o próprio super_admin liga/desliga isto (ver a régua
+  // `podeSerVotado`) — ninguém mais decide por ele se ele entra na MvM.
+  const alternarAceitaSerVotado = async () => {
+    const novo = !meuAceitaSerVotado;
+    setMeuAceitaSerVotado(novo); // otimista — a tela não trava esperando o banco
+    const { error } = await supabase.from('xgame_participantes').update({ aceita_ser_votado: novo }).eq('user_id', uid);
+    if (error) { setMeuAceitaSerVotado(!novo); toast.error('Não deu pra salvar — tenta de novo.'); return; }
+    toast.success(novo ? 'Você entrou na votação da MvM — os colegas já podem te avaliar hoje.' : 'Você saiu da votação da MvM — ninguém vota em você até você religar.');
+  };
   // 🗳️ em quantos dias do ciclo eu votei (pra conquista e missão da votação)
   const [votosDias, setVotosDias] = useState([]);
   useEffect(() => {
@@ -1393,6 +1426,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
+            {/* 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos
+                outros zera o dia — isso precisa ser explícito, é uma das
+                coisas principais da gamificação." Não é um detalhe dentro
+                do bloco de votação (que pode estar recolhido) — é um alerta
+                do tamanho do problema, no topo do placar. */}
+            {xgame && ehHoje && xgame.perdeu_por_nao_votar && mostrarPainel && (
+              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-red-700">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as 22h</p>
+                <p className="text-[11px] text-red-600 mt-0.5">Votar em todo mundo, todo dia, não é opcional: quem não vota tira a nota de si mesmo. Amanhã dá pra recomeçar.</p>
+              </div>
+            )}
+
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-t border-nz-borda/40 pt-4">
@@ -1525,6 +1570,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     {janelaAberta ? '● JANELA ABERTA' : 'janela fechada — abre às 20h'}
                   </span>
                 </div>
+                {/* 🧯 08/09 — fica de pé mesmo com o bloco recolhido: é a
+                    regra principal da gamificação, não um detalhe pra achar. */}
+                <p className="text-[10.5px] font-semibold text-red-600">
+                  ⚠️ Não votar em TODOS os colegas até as 22h zera a sua MvM do Dia — sem exceção.
+                </p>
+
+                {/* 🎓 08/09 — só o super_admin vê isto: o interruptor pra
+                    entrar ou sair de ser votável na MvM (dono: "não é
+                    viável expor tanto o principal... salvo se ele permitir"). */}
+                {currentUser?.role === 'super_admin' && (
+                  <label className="flex items-center gap-2 rounded-lg border border-nz-borda bg-nz-cinza-fundo px-2.5 py-2 cursor-pointer">
+                    <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} className="h-4 w-4" />
+                    <span className="text-[11px] text-nz-tinta">
+                      <span className="font-semibold">Aceito ser votado na MvM</span> — como Super Admin, você só aparece na lista dos colegas se ligar isto (fica desligado por padrão).
+                    </span>
+                  </label>
+                )}
 
                 {votacaoAberta && (
                   <>

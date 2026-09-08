@@ -202,6 +202,38 @@ export const AULAS_BRUTAS = [
       },
     ],
   },
+  // 🗳️ 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros
+  // zera o dia — isso precisa ser explícito, é uma das coisas principais da
+  // gamificação." Até aqui o guia só falava da MvM AUTOMÁTICA (some sozinha
+  // com tarefa atrasada); a votação manual das 20h-22h nunca tinha sido
+  // ensinada em lugar nenhum — esta aula existe pra fechar esse buraco.
+  {
+    id: 'votacao',
+    titulo: 'A votação das 20h às 22h — e o que acontece se você esquecer',
+    resumo: 'Todo dia, das 20h às 22h, você vota nas 10 Virtudes de cada colega ativo do jogo. Essa votação é a OUTRA metade da sua nota — e ela pune quem esquece.',
+    caixas: [
+      {
+        tom: 'mapa',
+        titulo: 'Como funciona',
+        linhas: [
+          'No Hábito 2, abra "🗳️ Votação MvM das 20h às 22h" e escolha um colega.',
+          'Dê uma nota de 1 a 10 em cada uma das 10 Virtudes (Gratidão, Relacionamento, Organização, Pontualidade, Proatividade, Compromisso, Autorresponsabilidade, Oratória, Liderança, Espírito de Equipe).',
+          'Repita pra CADA colega ativo do jogo. Faltou um, a votação daquele dia não fechou.',
+          'A média que você RECEBE dos colegas vira o seu Ranking das Virtudes — e é essa nota, não a automática, que entra no Human Token oficial do ciclo.',
+        ],
+      },
+      {
+        tom: 'perigo',
+        titulo: 'ISTO É UMA DAS COISAS PRINCIPAIS DO JOGO — LEIA COM ATENÇÃO',
+        linhas: [
+          `Não votar em TODOS os colegas até as 22h ZERA a sua MvM do Dia — a nota que começa em ${br(MVM_MAX)} vai a ZERO, mesmo que você tenha feito 100% das suas tarefas.`,
+          'Não é um aviso, não é um desconto pequeno: é a nota do dia inteira, apagada. O Human Token do dia cai junto.',
+          'A falta de voto de um integrante no outro prejudica o grupo inteiro — por isso a régua é rígida: não é sobre "lembrar de votar em alguém", é sobre fechar TODOS, todo dia, sem exceção.',
+          'A janela fecha às 22h e não reabre. Perdeu a hora, o dia já era — mas amanhã é um dia novo, a régua não carrega punição de um dia pro outro.',
+        ],
+      },
+    ],
+  },
   {
     id: 'ranking',
     titulo: 'Ver o ranking',
@@ -273,6 +305,7 @@ export const DICIONARIO = [
   { palavra: 'Human Token', significa: `A moeda do jogo. MvM + Aplicabilidade, no máximo ${br(TOKEN_MAX)}.` },
   { palavra: 'Master Task', significa: 'A lista das suas tarefas do dia.' },
   { palavra: 'MvM do Dia', significa: `Sua nota de hoje. Começa em ${br(MVM_MAX)} e cai sozinha.` },
+  { palavra: 'Votação MvM (20h-22h)', significa: `Você avalia cada colega em 10 Virtudes. ATENÇÃO: não votar em TODOS até as 22h zera a MvM do Dia inteira.` },
   { palavra: 'Print', significa: 'Uma foto da própria tela do celular.' },
   { palavra: 'Ranking', significa: 'A lista das pessoas do time por pontos no ciclo.' },
   { palavra: 'Ritual do Amanhecer', significa: 'A rotina da manhã, com música e o quadro dos sonhos.' },
