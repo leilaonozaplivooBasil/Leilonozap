@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Map, ListChecks, LayoutGrid, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
-// 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista, o placar completo e,
-// por enquanto, o relógio de teste.
+// 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Como estou"
+// (o placar completo) e, por enquanto, o relógio de teste.
 //
 // Ordem do dono (06/09/2026), olhando a faixa antiga — dois botões soltos,
 // um relógio "--:--" e um botão âmbar "Entrar no modo dev" gritando ao lado
@@ -23,7 +23,18 @@ import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 //     EXATAMENTE as mesmas de antes (aplicar hora, sair, zerar marcas).
 //     ⏳ TEMPORÁRIO: sai depois da semana de testes — quando sair, é só
 //     parar de passar a prop `teste`; nada mais depende dele.
+//
+// 🎨 08/09/2026 — dono, olhando de novo: "dar esse nome no meu placar pra
+// ficar mais... como estou no jogo... mais pra perto aqui do quadro, da
+// lista e da jornada... vamos deixar isso aqui dos circuitões mais bonito,
+// mais chamativo, deixar só o teste lá no fundo." Virou "Como estou" — não
+// "Jornada" pra não colidir com a visão que já tem esse nome — colado no
+// mesmo grupo do seletor (não mais lá longe, do lado do relógio de teste);
+// o teste ficou sozinho, empurrado pro canto. O aberto/fechado agora também
+// PERSISTE (localStorage) — "tem gente que vai querer deixar fixo": quem
+// deixa aberto, abre aberto da próxima vez; quem fecha, fecha.
 const GRADIENTE_TC = 'linear-gradient(135deg, var(--topcollege-azul, #3B6FF6), var(--topcollege-magenta, #E62E8B))';
+const GRADIENTE_VERDE = 'linear-gradient(135deg, #16a34a, #22c55e)';
 
 export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null }) {
   const [testeAberto, setTesteAberto] = useState(false);
@@ -37,36 +48,59 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
 
   return (
     <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap" data-teste="faixa-visao">
-      {/* ── o controle segmentado ── */}
-      <div className="inline-flex items-center rounded-full border border-nz-borda/50 bg-white/[0.04] p-0.5" role="tablist" aria-label="Visão do dia">
-        {opcoes.map(({ id, rotulo, Icone }) => {
-          const ativo = visao === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={ativo}
-              aria-label={rotulo}
-              title={rotulo}
-              onClick={() => { if (!ativo) { vibrar(VIBRA_TOQUE); onVisao(id); } }}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 sm:px-3.5 py-1.5 text-xs font-bold transition-colors ${
-                ativo ? 'text-white shadow-md' : 'text-nz-tinta-fraca hover:text-nz-tinta'}`}
-              style={ativo ? { background: GRADIENTE_TC } : undefined}
-            >
-              <Icone className="w-3.5 h-3.5" />
-              {/* 📱 com três lados (DIR-75) a faixa não cabia em 390px: no celular
-                  só o lado ATIVO mostra a palavra; os outros ficam no ícone */}
-              <span className={ativo ? '' : 'hidden sm:inline'}>{rotulo}</span>
-            </button>
-          );
-        })}
+      {/* ── o grupo principal: as 3 visões + "Como estou", coladas — dono:
+          "mais pra perto aqui do quadro, da lista e da jornada" ── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="inline-flex items-center rounded-full border border-nz-borda/50 bg-white/[0.04] p-0.5" role="tablist" aria-label="Visão do dia">
+          {opcoes.map(({ id, rotulo, Icone }) => {
+            const ativo = visao === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={ativo}
+                aria-label={rotulo}
+                title={rotulo}
+                onClick={() => { if (!ativo) { vibrar(VIBRA_TOQUE); onVisao(id); } }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition-all ${
+                  ativo ? 'text-white shadow-lg scale-[1.03]' : 'text-nz-tinta-fraca hover:text-nz-tinta'}`}
+                style={ativo ? { background: GRADIENTE_TC, boxShadow: '0 4px 14px -2px rgba(59,111,246,0.5)' } : undefined}
+              >
+                <Icone className="w-3.5 h-3.5" />
+                {/* 📱 com três lados (DIR-75) a faixa não cabia em 390px: no celular
+                    só o lado ATIVO mostra a palavra; os outros ficam no ícone */}
+                <span className={ativo ? '' : 'hidden sm:inline'}>{rotulo}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── "Como estou" — o placar completo, agora colado no grupo das
+            visões, não solto lá longe perto do relógio de teste ── */}
+        {mostrarPlacar && (
+          <button
+            type="button"
+            onClick={() => { vibrar(VIBRA_TOQUE); onPlacar(); }}
+            aria-expanded={placarAberto}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] font-bold transition-all ${
+              placarAberto ? 'text-white shadow-lg scale-[1.03]' : 'border border-nz-borda/50 text-nz-tinta-fraca hover:text-nz-tinta hover:border-nz-verde/50'}`}
+            style={placarAberto ? { background: GRADIENTE_VERDE, boxShadow: '0 4px 14px -2px rgba(34,197,94,0.5)' } : undefined}
+            data-teste="placar-botao"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            {/* 📱 mesma regra da faixa (DIR-75): "Como estou" é 2 palavras —
+                no celular vira só ícone, senão a faixa quebra em duas linhas */}
+            <span className="hidden sm:inline">Como estou</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${placarAberto ? 'rotate-180' : ''}`} />
+          </button>
+        )}
       </div>
 
-      <span className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-        {/* ── 🧪 relógio de teste (temporário) ── */}
-        {teste && (
-          teste.hora ? (
+      {/* ── 🧪 relógio de teste — sozinho, discreto, empurrado pro fundo ── */}
+      {teste && (
+        <span className="flex items-center">
+          {teste.hora ? (
             <span
               className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-200 text-[10px] font-bold px-2.5 py-1"
               data-teste="modo-teste-ligado"
@@ -104,33 +138,15 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
               type="button"
               onClick={() => { vibrar(VIBRA_TOQUE); setTesteAberto(true); }}
               title="Relógio de teste (só super admin, temporário)"
-              className="inline-flex items-center gap-1 rounded-full border border-amber-400/25 text-amber-300/70 hover:text-amber-200 hover:border-amber-400/50 text-[10px] font-bold px-2.5 py-1"
+              className="inline-flex items-center gap-1 rounded-full border border-amber-400/15 text-amber-300/40 hover:text-amber-200 hover:border-amber-400/50 text-[10px] font-bold px-2 py-0.5 opacity-60 hover:opacity-100 transition-opacity"
               data-teste="modo-teste-pastilha"
             >
               {/* no celular só o ícone: com a palavra, a fileira não cabia em 390px */}
               <FlaskConical className="w-3 h-3" /><span className="hidden sm:inline">teste</span>
             </button>
-          )
-        )}
-
-        {/* ── o placar completo ── */}
-        {mostrarPlacar && (
-          <button
-            type="button"
-            onClick={() => { vibrar(VIBRA_TOQUE); onPlacar(); }}
-            aria-expanded={placarAberto}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors ${
-              placarAberto
-                ? 'border-nz-verde/60 text-nz-tinta bg-nz-verde/10'
-                : 'border-nz-borda/50 text-nz-tinta-fraca hover:text-nz-tinta hover:border-nz-verde/50'}`}
-            data-teste="placar-botao"
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span><span className="hidden sm:inline">meu </span>placar</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${placarAberto ? 'rotate-180' : ''}`} />
-          </button>
-        )}
-      </span>
+          )}
+        </span>
+      )}
     </div>
   );
 }

@@ -12,6 +12,194 @@
 
 ---
 
+## DIR-98 — X-GAME ganha espaço dedicado, recuperação de fim de semana e visão executiva com pódio
+
+**Emitida por:** dono (08/09/2026), em vários pedidos que convergiram no
+mesmo lote de publicação: a página `XGame.jsx` (até aqui órfã, sem link em
+lugar nenhum) virou o espaço individual completo do jogo; *"se ele perder as
+tarefas do dia, pode recompensar no fim de semana, comprovando que fez, pra
+manter o fixo — sem lesar, sem se ferrar"*; *"você esqueceu de botar pessoal
+meu"* (três vezes, sobre a Visão Executiva enterrar "VOCÊ" no fim de uma
+lista de 10+ linhas); e *"esse ranking com emoji está muito feio... deixa
+mais clean, mais Vale do Silício"*.
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/pages/XGame.jsx` — deixa de ser uma tela órfã e ganha X-Pay, ofensiva
+   (fogo) e missões da semana, que só existiam no Compromisso; passa a usar
+   `resumoDoDia()` com o mesmo participante/ciclo oficial, e a seção do time
+   é a mesma `XGameVisaoExecutiva` já usada na Verificação do Progresso —
+   nada duplicado. A gravação do placar (`xgame_diario`) ganha `xpay_ganho`/
+   `xpay_perdido`, que antes faltavam aqui e sobrescreviam dado incompleto
+   por cima do que o Compromisso já tinha gravado certo.
+2. `src/lib/xgame.js` — recuperação no fim de semana: `ehFimDeSemana()` e
+   `podeRecuperarNoFds()` liberam repor, sem teto de quantidade, uma tarefa
+   PERDIDA comprovando que foi feita — mas só dentro do fim de semana DO
+   MESMO CICLO em que a tarefa foi perdida. O X-Pay da tarefa volta
+   (`xpay_recuperado`); a nota do dia (Real Time) continua honesta, marcando
+   que foi tarde.
+3. `src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx` — pódio
+   visual (2º·1º·3º em ordem de palco, com altura/cor por posição), cartão
+   "onde eu estou" sempre no topo (nome + posição no ranking, antes de
+   qualquer coisa do time), e o selo de liga trocou emoji por um ponto de
+   cor (`SeloLiga`) — mesma informação, sem "figurinha".
+4. `src/components/licensing/CentralVendas/VerificacaoUI.jsx` (novo) — a
+   `BarraProgresso` compartilhada entre as 9 telas que desenhavam sua
+   própria barra de progresso (motivo da limpeza de emergência da
+   X-Performance em 07/09); mesmo visual de cada tela, só nomeado num lugar
+   só, com os dois dialetos do app (`claro`/`escuro`).
+
+**Prova:** `tests/xgameRecuperacaoFds.test.mjs` (novo), `tests/xgame.test.mjs`
+estendido, `tests/navegador/xgameEspaco.spec.mjs` e
+`tests/navegador/verificacaoUI.spec.mjs` (novos, prova em navegador real);
+suíte e build verificados antes do push.
+
+---
+
+## DIR-97 — Janela de votação da MvM vira 17h–20h ideal + 20h–21h30 última chance; não fechar o voto zera o DIA INTEIRO (dinheiro incluído)
+
+**Emitida por:** dono (08/09/2026). Primeiro: *"a votação tem que ser de 17h
+às 20h, é a ação mais importante do dia, junto com as vendas"* — a janela
+antiga (20h–22h) pegava gente já fora do ar (jantar, família, dormindo),
+punindo indisponibilidade, não desleixo. Depois, sem meio-termo: *"não vou,
+perde o dinheiro, perde a MvM, perde tudo do dia... precisa ser radical."*
+E sobre o horário final não ser meia-noite: *"ninguém acorda tarde aqui,
+todo mundo tem que estar dormindo antes das dez, todo mundo acorda às cinco
+da manhã."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `VOTACAO_INICIO_MIN` (17h) e `VOTACAO_IDEAL_FIM_MIN`
+   (20h) marcam a janela ideal; `VOTACAO_FIM_MIN` (21h30) é a "última
+   chance" — de 20h às 21h30 ainda dá pra fechar o voto em todos, sem
+   desconto nenhum (protege quem está numa reunião ou atrasou de verdade).
+   Só depois das 21h30, sem fechar TODOS os colegas, a régua radical entra.
+   Novo helper `horaDeMin(min)` formata `"17h"` ou `"21h30"` (com minutos
+   quando não é hora cheia) pra tela e guia nunca escreverem o horário à
+   mão.
+2. `resumoDoDia()` — não fechar a votação até as 21h30 não zera só a MvM:
+   zera o DIA INTEIRO — MvM, Human Token, pontos, e o X-Pay que seria ganho
+   vira PERDIDO de verdade (registrado, não some em silêncio).
+3. `src/lib/guiaXGame.js`, `src/components/licensing/CentralVendas/CrmMetodo.jsx`,
+   `src/pages/XGame.jsx` e `src/components/licensing/XGameAdmin.jsx` — todo
+   texto que citava "20h às 22h" (aula, dicionário, tooltips do placar,
+   alerta de MvM zerada, rótulo do painel admin) passou a ler
+   `horaDeMin(VOTACAO_INICIO_MIN)`/`horaDeMin(VOTACAO_FIM_MIN)`, e os
+   alertas de "MvM zerada" viraram "DIA ZERADO", deixando explícito que
+   Human Token, pontos e X-Pay caem junto — não só a MvM.
+
+**Prova:** `tests/guiaXGame.test.mjs` ajustado pra não travar mais o texto
+"22h" (a régua real fecha às 21h30, com a janela ideal terminando às 20h);
+suíte e build verificados antes do push.
+
+---
+
+## DIR-96 — Super Admin sai da votação por padrão; não votar em todos zera a MvM do Dia
+
+**Emitida por:** dono (08/09/2026): *"Super Admin não pode ser votado a não
+ser que ele esteja participando por dentro de uma mentoria, não é viável
+nem saudável pro negócio se expor tanto o principal, ainda mais quando as
+pessoas às vezes não têm capacidade de votar em um mentor, salvo se ele
+permitir ser votado no MvM. (...) a falta de voto dos integrantes uns nos
+outros zera o dia — isso precisa ser explícito tanto na X-Game e no Guia do
+Usuário, bem grande, bem explícito. Isso é uma das coisas principais da
+gamificação."* Pedido de análise e confirmação de entendimento antes do
+código — a análise identificou a MvM Manual (votação das 10 Virtudes, 20h–
+22h) já existente e implementada, sem nenhuma das duas regras. Depois da
+análise, o dono confirmou por pergunta direta: votar precisa ser em TODOS
+os colegas ativos (não basta votar em alguém), e a punição é zerar a MvM do
+Dia (não só capar o Human Token, como já fazia a trava de estudo).
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `supabase/migrations/20260908200000_xgame_super_admin_votavel.sql` —
+   `xgame_participantes.aceita_ser_votado` (default `true`, aplicada em
+   produção). Só tem efeito prático pra quem é `super_admin`.
+2. `src/lib/xgame.js` — `podeSerVotado({role, aceita_ser_votado})`: só o
+   cargo super_admin precisa do interruptor ligado pra aparecer votável;
+   todo mundo mais continua exatamente como sempre foi.
+   `votouEmTodosOsColegas(colegasIds, votadosCompletosIds)`: precisa fechar
+   TODOS os colegas votáveis do dia — voto parcial não conta.
+   `resumoDoDia()` ganhou `votouEmTodos` (default `null` — comportamento
+   intocado pra quem não informa): com a janela de votação fechada (22h) e
+   `votouEmTodos === false`, a MvM do Dia vira ZERO — cascata real pro Human
+   Token do dia, não só um aviso na tela.
+3. `CrmMetodo.jsx` (o jogo de verdade, Hábito 2) e `pages/XGame.jsx` (o
+   placar "só de olhar", que também grava `xgame_diario` e por isso
+   precisava da MESMA régua, senão reescreveria por cima a nota zerada) —
+   colegas votáveis cruzam com o `role`; um interruptor "Aceito ser votado
+   na MvM" aparece só pro próprio super_admin; um alerta vermelho, do
+   tamanho do problema (não escondido dentro do bloco recolhível da
+   votação), avisa quando a MvM zerou por falta de voto.
+4. `XGameAdmin.jsx` — o painel de quem gerencia o time mostra "🛡️ não
+   votável (Super Admin)" quando é o caso, pra ninguém achar que a pessoa
+   "sumiu" da lista sem explicação. Só leitura — quem liga/desliga é o
+   próprio super_admin, na tela dele.
+5. `src/lib/guiaXGame.js` — nova aula "A votação das 20h às 22h — e o que
+   acontece se você esquecer", com uma caixa de tom PRÓPRIO (`perigo`,
+   vermelho — mais forte que o `atencao` âmbar já existente) escrevendo a
+   punição sem eufemismo. Até aqui o guia só documentava a MvM AUTOMÁTICA;
+   a votação manual nunca tinha sido ensinada em lugar nenhum.
+
+**Prova:** `tests/xgame.test.mjs` (novo) — `podeSerVotado`, `votouEmTodosOsColegas`
+e `resumoDoDia` com a janela aberta/fechada, votou/não votou, e sem informar
+(compatibilidade); `tests/guiaXGame.test.mjs` — trava a aula existindo com a
+palavra "ZERA", "TODOS os colegas" e o tom `perigo` de verdade. Suíte
+1577/1577, build limpo, lint sem erro novo.
+
+---
+
+## DIR-89 — Tirar admin e tirar diretoria juntos ficava mudo; sair da diretoria não soltava o X-Game
+
+**Emitida por:** dono (08/09/2026), com prints do Painel de Controle editando
+Aline Mendes Rossa: *"não estou conseguindo editar esse usuário, ela era
+diretora e agora não está salvando, faça a análise e me diga o que houve. E
+quando eu altero isso, todas as funções dentro da diretoria na X-Game
+precisam atualizar também, entendeu?"*
+
+**Data:** 08/09/2026.
+
+**O achado (confirmado no banco real, não só no código):** Aline está com
+`role: 'admin'` e `career_levels: ['usuario', 'diretoria_operacao']`. O dono
+tentou, na MESMA tela, tirar o admin dela (Permissão de Trabalho → Usuário
+Comum) E tirar o cargo de diretoria (só "Usuário" marcado). A trava
+anti-rebaixamento de `adminUpdateUser.js` — que existe pra ninguém perder
+acesso de admin sem querer, desde um incidente com um super_admin em 12/07 —
+apaga `role`, `career_levels` E `primary_career_level` do payload inteiro
+sempre que `role` sai de admin/super_admin sem confirmação explícita
+(`allow_role_downgrade`). Ela agiu certo, mas CALADA: respondia sucesso, e
+a tela só descobria pela releitura de conferência, com uma mensagem genérica
+("o servidor não confirmou").
+
+**O que entra:**
+1. `api/functions/adminUpdateUser.js` — a trava agora devolve
+   `camposProtegidos` (quais campos foram barrados) em vez de fingir sucesso
+   liso; `src/api/plataformaAdapter.js` trata isso como falha de verdade
+   quando `allow_role_downgrade` não foi confirmado, com uma mensagem que diz
+   exatamente o que fazer.
+2. `UserEditModal.jsx` — detecta ANTES de salvar que a edição tira alguém do
+   admin/super_admin; pergunta com `window.confirm` (nomeando a pessoa) e,
+   confirmando, manda `allow_role_downgrade: true` — as duas mudanças (acesso
+   e cargo) vão juntas, do jeito que o dono realmente quis.
+3. **A ponte com o X-Game:** `adminUpdateUser.js` agora compara o
+   `career_levels` de antes com o de depois; quem SAI inteiramente do bloco
+   "diretor" do plano (nenhum cargo institucional sobra) tem a participação
+   ativa dela em `xgame_participantes` desativada (`ativo:false`, preserva
+   histórico) automaticamente — sem precisar ir noutra tela desativar na mão.
+   A tela avisa quantas participações foram desativadas no toast de sucesso.
+
+**Prova:** `tests/adminUpdateUser.test.mjs` (novo) — a trava barra sem
+confirmar e avisa o quê; com `allow_role_downgrade` as duas mudanças vão
+juntas; sair da diretoria desativa a participação no X-Game; continuar na
+diretoria (trocar de cargo institucional) não mexe nela; quem nunca esteve
+na diretoria não gera escrita nenhuma. Suíte 1412/1412, build limpo, lint
+sem erro novo.
+
+---
+
 ## DIR-88 — O Encontro da Mentalidade "alucinava": era a própria conversa virando pauta
 
 **Emitida por:** dono (07/09/2026), com prints do Encontro da Mentalidade real

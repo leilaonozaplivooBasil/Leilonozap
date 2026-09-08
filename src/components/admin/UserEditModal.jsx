@@ -163,6 +163,22 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             return;
         }
 
+        // 🧯 08/09/2026 — dono: editou o cargo (tirou a diretoria) E a Permissão
+        // de Trabalho (tirou o admin) de alguém na MESMA tela, salvou, e nada
+        // mudou — a trava anti-rebaixamento (adminUpdateUser.js) barra os dois
+        // campos JUNTOS sempre que role sai de admin/super_admin sem confirmação
+        // explícita, pra ninguém perder acesso de admin sem querer. Pergunta
+        // aqui, na hora, em vez de deixar a tela dizer só "não confirmou".
+        const eraAdmin = ['admin', 'super_admin'].includes(user.role);
+        const vaiDeixarDeSerAdmin = eraAdmin && !['admin', 'super_admin'].includes(userData.role);
+        let confirmaRebaixamento = false;
+        if (vaiDeixarDeSerAdmin) {
+            confirmaRebaixamento = window.confirm(
+                `Isto tira o acesso de administrador de ${userData.full_name} (Permissão de Trabalho) AO MESMO TEMPO que muda o cargo dela. Confirma as duas coisas juntas?`
+            );
+            if (!confirmaRebaixamento) return;
+        }
+
         setIsSaving(true);
         try {
             const newReferrerId = referrerId && String(referrerId).trim() !== '' ? referrerId : null;
@@ -206,6 +222,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 avatar_url: userData.avatar_url || null,
                 // Carteira do Sócio Executivo (1% sobre a própria estrutura)
                 ...buildExecutiveUpdate(executiveOwnerId || null, { pinned: executivePinned }),
+                ...(confirmaRebaixamento ? { allow_role_downgrade: true } : {}),
             };
             // ⚠️ Antes o indicador só era gravado quando havia alguém escolhido — então
             // escolher "Sem indicação" não salvava nada e a árvore continuava igual.
@@ -213,7 +230,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
             updatePayload.referred_by_id = newReferrerId;
 
             // Update direto via Supabase (AppUser tem RLS null — funciona com anon key)
-            await AppUser.update(user.id, updatePayload);
+            const salvo = await AppUser.update(user.id, updatePayload);
 
             // Confirma relendo o registro do banco (o retorno do update pode vir incompleto)
             const confirmRows = await AppUser.filter({ id: user.id });
@@ -224,8 +241,14 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
             const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
             const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
+            // 🧭 08/09 — quando a mudança tirou a diretoria, adminUpdateUser.js já
+            // desativou sozinho a participação ativa dela na ADM X-Game; avisa aqui
+            // pra quem salvou não achar que precisa ir lá desativar na mão também.
+            const avisoXGame = salvo?.participantesDesativados
+                ? `\nADM X-Game: ${salvo.participantesDesativados} participação${salvo.participantesDesativados === 1 ? '' : 'ões'} desativada${salvo.participantesDesativados === 1 ? '' : 's'} (saiu da diretoria).`
+                : '';
 
-            toast.success(`Usuário atualizado!\nCargos: ${levelNames}\nPrincipal: ${primaryName}`);
+            toast.success(`Usuário atualizado!\nCargos: ${levelNames}\nPrincipal: ${primaryName}${avisoXGame}`);
             onSuccess(confirmed);
             onClose();
         } catch (error) {

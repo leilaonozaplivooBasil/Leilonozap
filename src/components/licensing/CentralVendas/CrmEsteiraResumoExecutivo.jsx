@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { GitBranch, CalendarClock } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
+import { BarraProgressoSegmentada } from './VerificacaoUI';
 import {
   ESTAGIOS_ESTEIRA, resumoEsteira, conversaoPorResponsavel, fechadoProvado,
   semPPV, placarObjecoes,
@@ -88,11 +89,15 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
             <p className="text-xs text-nz-tinta-fraca">{resumo.ativas} negociações ativas · caminho de {pct.toFixed(1).replace('.', ',')}% da meta</p>
           </div>
           {/* Barra da meta: verde (na conta) + âmbar (declarado) + cinza (ponderado) */}
-          <div className="h-2.5 rounded-full bg-nz-cinza-fundo overflow-hidden flex">
-            <div className="bg-nz-verde h-full" style={{ width: `${pctNaConta}%` }} />
-            <div className="bg-amber-400 h-full" style={{ width: `${pctDeclarado}%` }} />
-            <div className="bg-nz-tinta-fraca/30 h-full" style={{ width: `${Math.max(0, pct - pctNaConta - pctDeclarado)}%` }} />
-          </div>
+          <BarraProgressoSegmentada
+            dialeto="claro"
+            altura="grossa"
+            segmentos={[
+              { pct: pctNaConta, corClasse: 'bg-nz-verde' },
+              { pct: pctDeclarado, corClasse: 'bg-amber-400' },
+              { pct: Math.max(0, pct - pctNaConta - pctDeclarado), corClasse: 'bg-nz-tinta-fraca/30' },
+            ]}
+          />
         </div>
 
         {/* Funil em chips: quantidade por estágio, batendo o olho */}

@@ -10,8 +10,9 @@ import fs from 'node:fs';
 import {
   AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS,
   ENDERECOS, COTACAO_DIA_1, COTACAO_ULTIMO, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
+  JANELA_INICIO, JANELA_FIM,
 } from '../src/lib/guiaXGame.js';
-import { RESUMO_MIN, TRAVA_SEM_ESTUDO, CICLO_DIAS_UTEIS, FAIXAS_TOKEN, cotacaoDoDia } from '../src/lib/xgame.js';
+import { RESUMO_MIN, TRAVA_SEM_ESTUDO, CICLO_DIAS_UTEIS, FAIXAS_TOKEN, cotacaoDoDia, MVM_MAX } from '../src/lib/xgame.js';
 
 const TELA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/GuiaXGame.jsx', import.meta.url), 'utf8');
 const ABAS = fs.readFileSync(new URL('../src/lib/licensingTabs.js', import.meta.url), 'utf8');
@@ -175,4 +176,25 @@ test('uma aula aberta por vez — nada de paredão de texto', () => {
 test('o guia NÃO vira tarefa do Método — ordem explícita do dono', () => {
   assert.ok(!/metodo_tarefas|xgame_diario|criarTarefa|gerarJornada/i.test(TELA), 'a tela do guia está escrevendo no Método');
   assert.ok(!/pontos|Human Token do dia/i.test(TELA.replace(/\/\*[\s\S]*?\*\//g, '')), 'o guia está tentando pontuar alguém');
+});
+
+// 🔥 08/09/2026 — dono, sem meio-termo: "não vou, perde o dinheiro, perde a
+// MvM, perde tudo do dia... precisa ser radical." Este teste trava a aula
+// existindo com a força certa, e agora também trava que a punição é do DIA
+// INTEIRO (dinheiro incluído), não só da MvM — suavizar a frase ou encolher
+// o escopo de volta pra "só a MvM" quebra aqui de propósito.
+test('a votação MvM tem aula própria, com a punição escrita BEM explícita (tom perigo)', () => {
+  const votacao = AULAS.find((a) => a.id === 'votacao');
+  assert.ok(votacao, `sumiu a aula que explica a votação das ${JANELA_INICIO}-${JANELA_FIM}`);
+  const caixaPerigo = votacao.caixas.find((c) => c.tom === 'perigo');
+  assert.ok(caixaPerigo, 'a aula perdeu a caixa de maior gravidade (tom perigo)');
+  const texto = caixaPerigo.linhas.join(' ');
+  assert.match(texto, /ZERA/, 'a palavra tem que ser ZERA, não "pode afetar" ou eufemismo parecido');
+  assert.match(texto, new RegExp(`${br(MVM_MAX).replace(',', '\\,')}.*ZERO`), 'precisa dizer de onde (a nota cheia) até onde (zero) ela cai');
+  assert.match(texto, /TODOS os colegas/, 'precisa deixar claro que é TODOS, não "alguém"');
+  assert.match(texto, new RegExp(JANELA_FIM), 'precisa dizer o horário final de verdade, não um valor antigo');
+  assert.match(texto, /X-Pay/, 'a punição radical inclui o dinheiro — não pode encolher pra "só a MvM"');
+  // e a tela mostra o "tom perigo" com uma cor própria — não reaproveitando
+  // o âmbar do "atencao" comum, senão a gravidade não aparece visualmente
+  assert.match(TELA, /perigo:\s*\{[^}]*red/);
 });

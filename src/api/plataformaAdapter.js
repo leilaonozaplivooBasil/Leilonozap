@@ -372,14 +372,27 @@ async function _routeWrite(table, action, id, payload) {
   if (table === 'app_users') {
     if (action === 'create') return { _skip: true };
     if (action === 'update') {
+      // 🧯 08/09/2026 — `allow_role_downgrade` não é coluna de app_users: viaja
+      // dentro de `data` (não polui o payload gravado) e sai daqui pro nível
+      // que a rota confere (`body.allow_role_downgrade`), não dentro de `updates`.
+      const allowRoleDowngrade = payload.allow_role_downgrade === true;
+      if ('allow_role_downgrade' in payload) delete payload.allow_role_downgrade;
       try {
         const resp = await fetch('/api/functions/adminUpdateUser', {
           method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ userId: id, updates: payload, actorId: op.id }),
+          body: JSON.stringify({ userId: id, updates: payload, actorId: op.id, allow_role_downgrade: allowRoleDowngrade }),
         });
         const j = await resp.json();
-        if (j.success) return { success: true, rows: [j.user] };
-        return { success: false, error: j.error, details: j.details };
+        // 🧯 08/09/2026 — a trava anti-rebaixamento (ver adminUpdateUser.js)
+        // apagava role/career_levels/primary_career_level do payload e
+        // respondia sucesso — quem salvou via aqui achava que tinha dado
+        // certo. Sem `allow_role_downgrade` confirmado, isto é falha de
+        // verdade (o cargo pedido não foi gravado), não um "sucesso parcial".
+        if (j.camposProtegidos?.length && !allowRoleDowngrade) {
+          return { success: false, error: 'rebaixamento_de_admin_bloqueado', details: `Pra tirar o acesso de admin (Permissão de Trabalho) e mudar o cargo desta pessoa ao mesmo tempo, confirme a saída do admin primeiro — não gravado: ${j.camposProtegidos.join(', ')}.`, camposProtegidos: j.camposProtegidos };
+        }
+        if (j.success) return { success: true, rows: [j.user], camposProtegidos: j.camposProtegidos, participantesDesativados: j.participantesDesativados };
+        return { success: false, error: j.error, details: j.details, camposProtegidos: j.camposProtegidos };
       } catch (e) { return { success: false, error: String(e?.message || e) }; }
     }
     // delete: mantém o comportamento atual (fora de escopo desta correção)
@@ -466,7 +479,10 @@ function entityProxy(entity) {
       const payload = mapToDB(entity, data);
       const w = await _routeWrite(table, 'update', id, payload);
       if (!w._skip) {
-        if (w.success) return mapFromDB(entity, w.rows?.[0] || { id, ...payload });
+        // 🧯 08/09/2026 — `participantesDesativados` (só app_users/adminUpdateUser
+        // manda isto) precisa chegar até a tela sem mudar o contrato pra todo
+        // mundo que chama `.update()` — outras tabelas nunca têm este campo.
+        if (w.success) return { ...mapFromDB(entity, w.rows?.[0] || { id, ...payload }), ...(w.participantesDesativados ? { participantesDesativados: w.participantesDesativados } : {}) };
         throw new Error(w.error || w.details || 'Falha ao salvar (servidor)');
       }
       const { data: row, error } = await supabase

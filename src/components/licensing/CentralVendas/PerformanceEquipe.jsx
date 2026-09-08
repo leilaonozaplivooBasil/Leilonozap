@@ -11,6 +11,7 @@ import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { nomeBonito, primeiroNome, habitosDaPessoa } from '@/lib/relatorioExecutivo';
 import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
+import { Semaforo } from '@/components/licensing/CentralVendas/VerificacaoUI';
 
 // 🏆 X-PERFORMANCE — a versão SEM administração (dono, 06/09/2026):
 // "a X-Performance vai abrir os oito hábitos do sucesso do time, numa visão
@@ -37,7 +38,6 @@ import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 
 const caixa = { background: 'rgba(255,255,255,0.03)' };
 const titulo = 'text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase';
-const COR = { verde: 'bg-nz-verde', amarelo: 'bg-amber-400', vermelho: 'bg-red-500' };
 const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const somaDias = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
@@ -189,7 +189,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
       <React.Fragment key={l.pessoaId}>
         <tr onClick={() => abrir(l.pessoaId)} className={`cursor-pointer border-t border-white/[0.07] hover:bg-white/[0.04] ${aberto ? 'bg-white/[0.06]' : ''}`} data-teste="visao-linha" data-pessoa={l.pessoaId} data-cor={l.cor} data-produziu={l.produziu ? 'sim' : 'nao'} data-aberto={aberto ? 'sim' : 'nao'}>
           <td className="py-2 pr-3">
-            <div className="flex items-center gap-2"><span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${COR[l.cor]}`} title={l.cor === 'verde' ? 'em dia' : l.cor === 'amarelo' ? 'um furo' : 'dois ou mais furos'} /><span className="font-bold text-white truncate">{nomeBonito(l.nome)}</span></div>
+            <div className="flex items-center gap-2"><Semaforo cor={l.cor} /><span className="font-bold text-white truncate">{nomeBonito(l.nome)}</span></div>
             <p className="text-[11px] text-white/40 pl-[18px]">{l.nivel ? getLevel(l.nivel).name : ''}{l.funcaoCurta ? ` · ${l.funcaoCurta}` : ''}</p>
           </td>
           <td className="py-2 pr-3 tabular-nums">
@@ -207,7 +207,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
             <td colSpan={6} className="p-0">
               <div className="my-2 rounded-xl border border-white/15 p-3 sm:p-4 space-y-3" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))' }}>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-block h-3 w-3 rounded-full ${COR[l.cor]}`} />
+                  <Semaforo cor={l.cor} tamanho="grande" />
                   <p className="text-[17px] font-extrabold">{nomeBonito(l.nome)}</p>
                   <p className="text-[12px] text-white/50">{l.nivel ? getLevel(l.nivel).name : ''}{l.funcaoCurta ? ` · ${l.funcaoCurta}` : ''}</p>
                   <span className="text-[11px] text-white/35">· {hab} de 8 Hábitos {oito.periodo.rotulo}</span>
@@ -284,7 +284,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
             <span>planejaram hoje <b className="text-white">{visao.planejaramHoje} de {visao.linhas.length}</b></span>
             <span>produziram na semana <b className="text-white">{visao.produziram} de {visao.linhas.length}</b></span>
             <span>demandas concluídas <b className="text-white">{visao.demandas.total ? `${visao.demandas.concluidas} de ${visao.demandas.total} · ${visao.demandas.pct}%` : '—'}</b>{visao.demandas.atrasadas ? <span className="text-red-300"> · {plural(visao.demandas.atrasadas, 'atrasada', 'atrasadas')}</span> : null}</span>
-            <span className="ml-auto inline-flex items-center gap-2 tabular-nums" title="semáforo: em dia · um furo · dois ou mais furos"><span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-nz-verde" />{visao.verdes}</span><span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" />{visao.amarelos}</span><span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-500" />{visao.vermelhos}</span></span>
+            <span className="ml-auto inline-flex items-center gap-2 tabular-nums"><span className="inline-flex items-center gap-1"><Semaforo cor="verde" tamanho="pequeno" /> {visao.verdes}</span><span className="inline-flex items-center gap-1"><Semaforo cor="amarelo" tamanho="pequeno" /> {visao.amarelos}</span><span className="inline-flex items-center gap-1"><Semaforo cor="vermelho" tamanho="pequeno" /> {visao.vermelhos}</span></span>
           </div>
         )}
         {carregando ? <p className="mt-2 text-[12px] text-white/40"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> lendo a semana…</p> : visao.linhas.length > 0 && (

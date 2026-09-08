@@ -21,14 +21,15 @@ import { ehAtiva } from '@/lib/esteiraCaptacao';
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
-  VIRTUDES, janelaVotacaoAberta, mvmManual,
+  VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
+  mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import { supabase } from '@/api/supabaseClient';
@@ -36,6 +37,7 @@ import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
+import { BarraProgresso } from './VerificacaoUI';
 import EntradaComDestinos from './EntradaComDestinos';
 import PreviaJornadaModal from './PreviaJornadaModal';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -247,6 +249,31 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
       });
   }, [painel, uid, cicloConfig]);
+  // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
+  // (declarado ANTES do useMemo do xgame de propósito — a nota do dia agora
+  // depende de ter votado em todos os colegas, ver "não pode ser votado" abaixo)
+  const [colegas, setColegas] = useState([]); // participantes votáveis ativos (sem eu, sem super_admin fechado)
+  const [nomesColegas, setNomesColegas] = useState({});
+  const [votando, setVotando] = useState(''); // user_id do colega escolhido
+  const [notas, setNotas] = useState({});     // { VIRTUDE: nota }
+  const [votosDadosHoje, setVotosDadosHoje] = useState([]); // meus votos de hoje
+  const [votosRecebidos, setVotosRecebidos] = useState([]); // recebidos no ciclo
+  const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
+  // 🎓 08/09/2026 — dono: "Super Admin não pode ser votado a não ser que ele
+  // esteja participando por dentro de uma mentoria... salvo se ele mesmo
+  // permitir ser votado na MvM." Só o próprio super_admin vê e mexe nisto.
+  const [meuAceitaSerVotado, setMeuAceitaSerVotado] = useState(true);
+  const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
+  const janelaAberta = janelaVotacaoAberta(agoraMinJogo);
+  const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros
+  // zera o dia — isso precisa ser explícito, é uma das coisas principais da
+  // gamificação." Precisa fechar TODOS os colegas votáveis do dia — voto
+  // parcial não conta (mesma régua de `jaVoteiEm`, colega por colega).
+  const votouEmTodosHoje = useMemo(
+    () => votouEmTodosOsColegas(colegas, colegas.filter((id) => jaVoteiEm(id))),
+    [colegas, votosDadosHoje],
+  );
   const xgame = useMemo(() => {
     if (painel !== 'compromisso' || tarefasJogo.length === 0) return null;
     return resumoDoDia({
@@ -256,20 +283,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       hoje: ehHoje ? new Date() : new Date(`${dia}T12:00:00`),
       participante,
       cicloConfigISO: cicloConfig,
+      // só julga o dia de HOJE que está sendo jogado agora — um dia passado
+      // (histórico) já está fechado nos próprios registros, não se recalcula
+      votouEmTodos: ehHoje ? votouEmTodosHoje : null,
     });
-  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig]);
-  const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
-
-  // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
-  const [colegas, setColegas] = useState([]); // participantes ativos (sem eu)
-  const [nomesColegas, setNomesColegas] = useState({});
-  const [votando, setVotando] = useState(''); // user_id do colega escolhido
-  const [notas, setNotas] = useState({});     // { VIRTUDE: nota }
-  const [votosDadosHoje, setVotosDadosHoje] = useState([]); // meus votos de hoje
-  const [votosRecebidos, setVotosRecebidos] = useState([]); // recebidos no ciclo
-  const [votacaoAberta, setVotacaoAberta] = useState(false); // bloco expandido
-  const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
-  const janelaAberta = janelaVotacaoAberta(agoraMinJogo);
+  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje]);
+  // 🩹 08/09/2026 — `xgame` já é recalculado pro `dia` que está sendo visto
+  // (não só hoje: veja o useMemo acima), então o estado de uma tarefa de um
+  // dia passado também sai certo daqui — precisa pra recuperação de fim de
+  // semana saber se a tarefa está mesmo PERDIDA.
+  const estadoDaTarefa = (t) => (xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
   // com a trava 17,77 quando a leitura do ciclo está em atraso.
@@ -290,15 +313,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const fogo = useMemo(() => ofensiva(historicoOfensiva, new Date(), hojeFechou), [historicoOfensiva, hojeFechou]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) return;
-    supabase.from('xgame_participantes').select('user_id').eq('ativo', true)
+    // 🎓 08/09/2026 — dono: Super Admin só entra na lista votável se ELE
+    // MESMO abrir (`aceita_ser_votado`, ver podeSerVotado em lib/xgame.js) —
+    // por isso a lista de colegas cruza com o `role` de cada um, e não só
+    // com `xgame_participantes.ativo`.
+    supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true)
       .then(async ({ data }) => {
-        const outros = (data || []).map((p) => p.user_id).filter((id) => id !== uid);
-        setColegas(outros);
-        if (outros.length) {
-          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', outros);
-          const m = {}; (us || []).forEach((u) => { m[u.id] = nomeExibicao(u); });
-          setNomesColegas(m);
-        }
+        const linhas = (data || []).filter((p) => p.user_id !== uid);
+        const mine = (data || []).find((p) => p.user_id === uid);
+        if (mine) setMeuAceitaSerVotado(mine.aceita_ser_votado !== false);
+        if (!linhas.length) { setColegas([]); return; }
+        const ids = linhas.map((p) => p.user_id);
+        const { data: us } = await supabase.from('app_users').select('id,full_name,nickname,role').in('id', ids);
+        const porId = new Map((us || []).map((u) => [u.id, u]));
+        const votaveis = linhas.filter((p) => podeSerVotado({ role: porId.get(p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }));
+        setColegas(votaveis.map((p) => p.user_id));
+        const m = {}; votaveis.forEach((p) => { const u = porId.get(p.user_id); if (u) m[u.id] = nomeExibicao(u); });
+        setNomesColegas(m);
       });
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     supabase.from('xgame_votos_mvm').select('virtude,nota').eq('votado_id', uid).gte('data', ini)
@@ -326,7 +357,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setVotando('');
     setNotas({});
   };
-  const jaVoteiEm = (id) => votosDadosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
+  // 🎓 08/09/2026 — só o próprio super_admin liga/desliga isto (ver a régua
+  // `podeSerVotado`) — ninguém mais decide por ele se ele entra na MvM.
+  const alternarAceitaSerVotado = async () => {
+    const novo = !meuAceitaSerVotado;
+    setMeuAceitaSerVotado(novo); // otimista — a tela não trava esperando o banco
+    const { error } = await supabase.from('xgame_participantes').update({ aceita_ser_votado: novo }).eq('user_id', uid);
+    if (error) { setMeuAceitaSerVotado(!novo); toast.error('Não deu pra salvar — tenta de novo.'); return; }
+    toast.success(novo ? 'Você entrou na votação da MvM — os colegas já podem te avaliar hoje.' : 'Você saiu da votação da MvM — ninguém vota em você até você religar.');
+  };
   // 🗳️ em quantos dias do ciclo eu votei (pra conquista e missão da votação)
   const [votosDias, setVotosDias] = useState([]);
   useEffect(() => {
@@ -391,7 +430,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           r.token += Number(d.token_dia) || 0;
           r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
-          r.xpay += Number(d.detalhes?.xpay_ganho) || 0;
+          r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
         });
         const linhas = Object.values(por).map((r) => ({ ...r, token: r.token / r.dias, mvm: r.mvm / r.dias }));
         const ids = linhas.map((l) => l.user_id);
@@ -557,7 +596,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
-  const [painelAberto, setPainelAberto] = useState(false);
+  // 📌 08/09/2026 — dono: "vamos deixar a opção de a pessoa deixar fixo ou
+  // recolhendo, porque tem gente que vai querer deixar fixo." O aberto/
+  // fechado do "Como estou" persiste (localStorage) — quem deixa aberto,
+  // abre aberto da próxima vez; quem fecha, fecha.
+  const [painelAberto, setPainelAberto] = useState(() => {
+    try { return localStorage.getItem('xgame_placar_aberto') === '1'; } catch { return false; }
+  });
+  const alternarPainel = () => {
+    setPainelAberto((prev) => {
+      const novo = !prev;
+      try { localStorage.setItem('xgame_placar_aberto', novo ? '1' : '0'); } catch { /* sem storage, só não persiste */ }
+      return novo;
+    });
+  };
   // 📱 no celular o placar completo NÃO abre sozinho na visão "lista" — só pelo
   // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
   // "muito texto explicando"). No desktop segue como sempre foi.
@@ -781,6 +833,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: !t.feito, comprovacao: null } }));
       return;
     }
+    // 🔓 08/09/2026 — dono: "se ele perder as tarefas do dia, pode recompensar
+    // no fim de semana, comprovando que fez, pra manter o fixo — sem lesar,
+    // sem se ferrar." Livre (sem teto de quantidade), só limitado ao fim de
+    // semana DO MESMO CICLO em que a tarefa foi perdida — fora disso o dia
+    // passado fica trancado (é histórico, não dá pra reescrever qualquer hora).
+    const recuperandoNoFds = !t.feito && !ehHoje && xgame
+      && podeRecuperarNoFds({
+        estadoId: estadoDaTarefa(t)?.id, dataTarefaISO: dia, cicloInicioISO: dataISO(xgame.ciclo_inicio), hoje: new Date(),
+      });
+    if (!t.feito && !ehHoje && !recuperandoNoFds) {
+      toast.error(ehFimDeSemana(new Date())
+        ? 'Essa tarefa não pode mais ser recuperada — está fora do ciclo atual.'
+        : 'Dia passado é histórico. Você pode recuperar tarefas PERDIDAS no fim de semana deste ciclo, comprovando que fez — sem perder o fixo.');
+      return;
+    }
     // 🌅 F11 — gratidão abre o RITUAL DO AMANHECER, não formulário
     if (!t.feito && ehTarefaDeGratidao(t.titulo) && !t.comprovacao?.valido) {
       setRitualId(t.id);
@@ -808,6 +875,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // ⏰ o carimbo do pronto: quando deu, e limpa a devolução (se a tarefa tinha voltado)
     try { await plataforma.entities.MetodoTarefa.update(t.id, carimboDoPronto(!t.feito)); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
+    // 💰 08/09/2026 — recuperou uma PERDIDA no fim de semana: o X-Pay dela
+    // volta pro jogador, SOMADO ao que já estava gravado — sem tocar em
+    // xpay_ganho/mvm_dia/token_dia do dia (o Real Time daquele dia continua
+    // honesto; só o dinheiro é que não se perde. "sem lesar, sem se ferrar")
+    if (recuperandoNoFds && uid) {
+      const valorRecuperado = Number(xgame.valores?.[t.id]) || 0;
+      if (valorRecuperado > 0) {
+        try {
+          const { data: linhaExistente } = await supabase.from('xgame_diario')
+            .select('detalhes').eq('user_id', uid).eq('data', dia).maybeSingle();
+          const detalhesAntigos = linhaExistente?.detalhes || {};
+          await supabase.from('xgame_diario').upsert({
+            user_id: uid, data: dia,
+            detalhes: { ...detalhesAntigos, xpay_recuperado: Math.round((Number(detalhesAntigos.xpay_recuperado || 0) + valorRecuperado) * 100) / 100 },
+          }, { onConflict: 'user_id,data' });
+          toast.success(`💪 Recuperada! ${fmtReais(valorRecuperado)} voltou pro seu X-Pay.`);
+        } catch { /* recuperação de dinheiro não pode travar a tarefa marcada */ }
+      }
+    }
     // 🔗 DIR-76 — A VOLTA. Se esta tarefa nasceu de um card do quadro, o card
     // acompanha: feita → Feito (com carimbo); desmarcada → volta pra mesa. Sem
     // isto a pessoa faz o trabalho no dia e ainda tem que ir marcar no quadro —
@@ -1346,11 +1432,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm font-bold text-nz-tinta capitalize min-w-[180px] text-center">{fmtDia(dia)}{dia === hojeStr() ? ' · HOJE' : ''}</p>
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(1)}><ChevronRight className="w-5 h-5 text-nz-tinta" /></Button>
               </div>
-              <p className="text-sm font-semibold text-nz-tinta">{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}%</p>
+              <p className="text-sm font-semibold text-nz-tinta" title={'PROGRESSO DO DIA — "Apresenta o desempenho do executivo baseado no dia atual, com os resultados da gamificação — isso permite projeção de crescimento do executivo e perspectiva de futuro ao longo do mês corrente. É possível extrapolar os valores de 100%, o que permite compensar a falta em alguns fatores com a entrega em outros."'}>{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}% ⓘ</p>
             </div>
-            <div className="h-2 rounded-full bg-nz-cinza-fundo overflow-hidden">
-              <div className="bg-nz-verde h-full transition-all" style={{ width: `${progressoJogo.pct}%` }} />
-            </div>
+            <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
 
             {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
                 A faixa inteira (seletor, placar e o relógio de teste temporário)
@@ -1360,8 +1444,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 visao={visao}
                 onVisao={setVisao}
                 placarAberto={painelAberto}
-                onPlacar={() => setPainelAberto(!painelAberto)}
-                mostrarPlacar={visao === 'jornada' || celular}
+                onPlacar={alternarPainel}
+                mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
                 teste={podeGerir ? {
                   hora: horaTeste,
                   rascunho: horaRascunho,
@@ -1393,29 +1477,41 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
+            {/* 🔥 08/09/2026 — dono: "não vou, perde o dinheiro, perde a MvM,
+                perde tudo do dia... precisa ser radical." Não é um detalhe
+                dentro do bloco de votação (que pode estar recolhido) — é um
+                alerta do tamanho real do problema, no topo do placar: o dia
+                inteiro, dinheiro incluído, não só a MvM. */}
+            {xgame && ehHoje && xgame.perdeu_por_nao_votar && mostrarPainel && (
+              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-red-700">🗳️ DIA ZERADO — você não votou em todos os colegas até as {horaDeMin(VOTACAO_FIM_MIN)}</p>
+                <p className="text-[11px] text-red-600 mt-0.5">Não é só a MvM: hoje o Human Token, os pontos e o X-Pay que você ganharia também zeraram. Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
+              </div>
+            )}
+
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-t border-nz-borda/40 pt-4">
-                <div className="py-1" title={'HUMAN TOKEN (0 a 22,22) — a moeda do jogo. Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4">
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="py-1" title={'MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das 20h às 22h), que é a que entra no Human Token oficial.'}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
                   <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
                     {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
                   </p>
                 </div>
-                <div className="py-1" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
-                  <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
                 </div>
-                <div className="py-1" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ ${DIAS_FIXO} dias de operação = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ ${DIAS_FIXO} dias de operação = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
-                  <p className="text-lg font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
+                  <p className="text-xl font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">
                     {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
                   </p>
@@ -1429,35 +1525,65 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
-            {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══ */}
+            {/* ══ 🎯 F4 — ONDE ESTOU × EXECUTIVO IDEAL (os 5 componentes do ciclo) ══
+                🎨 08/09/2026 — dono, olhando o preview: "não está legal ainda,
+                não está visual, não está comunicando, precisa comunicar."
+                Sai da lista fina, sem card, texto de 10px — vira o painel de
+                verdade que a análise técnica desenhou: card próprio (a mesma
+                borda verde de destaque que o Quadro dos Sonhos já usa),
+                número grande da formação como âncora visual, os 2 tooltips
+                oficiais da planilha ("Onde Estou" e "Executivo Ideal", ditados
+                pelo dono ao pé da letra), ícone + card + barra grossa por
+                eixo. Reaparece nas 3 visões (Jornada/Lista/Quadro) porque o
+                "meu placar" agora também abre no Quadro (FaixaVisao acima). */}
             {xgame && ciclo && mostrarPainel && (
-              <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="font-semibold text-nz-tinta">🎯 Onde estou × EXECUTIVO IDEAL</p>
-                  <span className="text-[10px] font-bold text-nz-tinta-fraca tabular-nums">formação: {ciclo.formacao.pct}% dos 100%</span>
+              <div className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/20 p-4 sm:p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <p
+                      className="text-sm font-extrabold text-nz-tinta cursor-help"
+                      title={'"Esse painel representa o desempenho do executivo nos dias corridos do mês. Ou seja: através destas informações, é possível acompanhar se o progresso está à frente ou atrás do Executivo Ideal."'}
+                    >
+                      🎯 Onde estou × EXECUTIVO IDEAL ⓘ
+                    </p>
+                    <p className="text-[11px] text-nz-tinta-fraca mt-0.5">os 5 pilares que formam o Executivo Ideal, ciclo após ciclo</p>
+                  </div>
+                  <div
+                    className="text-right shrink-0 cursor-help"
+                    title={'"São os parâmetros que definem o desempenho do executivo ideal, que será considerado para formação emancipada ao longo da mentoria. Uma vez que a barra de progresso do executivo esteja maximizada em 100%, o trainee será então considerado através de votação do conselho da corporação para ter sua formação como um executivo sem limites adiantada."'}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-nz-tinta-fraca">formação ⓘ</p>
+                    <p className="text-2xl font-black text-nz-verde tabular-nums leading-none">{ciclo.formacao.pct}%</p>
+                    <p className="text-[10px] text-nz-tinta-fraca">dos 100%</p>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
+                <BarraProgresso pct={ciclo.formacao.pct} dialeto="claro" altura="extra" corClasse="bg-nz-verde" trilhoClasse="bg-white border border-nz-verde/20" />
+
+                <div className="space-y-2.5">
                   {[
-                    { k: 'mvm', rotulo: 'MvM (votação do grupo)' },
-                    { k: 'producao', rotulo: 'Produção' },
-                    { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)' },
-                    { k: 'bonus', rotulo: 'Bônus / Estudo' },
-                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)` },
-                  ].map(({ k, rotulo }) => {
+                    { k: 'mvm', rotulo: 'MvM (votação do grupo)', emoji: '🗳️' },
+                    { k: 'producao', rotulo: 'Produção', emoji: '📋' },
+                    { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
+                    { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
+                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+                  ].map(({ k, rotulo, emoji }) => {
                     const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                     const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
                     const ok = atual >= alvo;
                     return (
-                      <div key={k}>
+                      <div key={k} className="rounded-xl border border-nz-borda bg-white p-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-nz-tinta">{rotulo}</span>
-                          <span className={`text-[11px] font-semibold tabular-nums ${ok ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
+                          <span className="text-xs font-semibold text-nz-tinta">{emoji} {rotulo}</span>
+                          <span className={`text-xs font-bold tabular-nums shrink-0 ${ok ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
                             {atual}% <span className="text-nz-tinta-fraca font-normal">/ alvo {alvo}%</span>{ok ? ' ✅' : ''}
                           </span>
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
-                          <div className={`h-full rounded-full ${ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, atual)}%` }} />
-                          <div className="absolute top-0 h-full w-px bg-nz-tinta/50" style={{ left: `${alvo}%` }} />
+                        <div className="mt-1.5">
+                          <BarraProgresso
+                            pct={atual} dialeto="claro" altura="grossa"
+                            corClasse={ok ? 'bg-nz-verde' : 'bg-amber-500'}
+                            trilhoClasse="bg-nz-cinza-fundo" limite={alvo}
+                          />
                         </div>
                       </div>
                     );
@@ -1467,13 +1593,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <p className="text-[11px] font-semibold text-nz-verde">{ciclo.formacao.mensagem}</p>
                 )}
                 {/* o guia — como funciona o jogo e a formação em 3 meses */}
-                <details className="text-[11px] text-nz-tinta-fraca">
+                <details className="text-[11px] text-nz-tinta-fraca border-t border-nz-verde/15 pt-2">
                   <summary className="cursor-pointer font-semibold text-nz-tinta hover:text-nz-verde">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
                   <div className="pt-1.5 space-y-1">
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
                     <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
-                    <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é tarefa diária: das 20h às 22h, de casa, dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora — quem participa é escolhido pelo admin.</p>
+                    <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
                 </details>
@@ -1491,10 +1617,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {missoes.map((m) => (
-                    <div key={m.id} className={`rounded border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
+                    <div key={m.id} className={`rounded-lg border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
                       <p className="text-[11px] font-semibold text-nz-tinta">{m.emoji} {m.nome} {m.ok ? '✅' : ''}</p>
-                      <div className="mt-1 h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
-                        <div className={`h-full rounded-full ${m.ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.atual / m.alvo) * 100)}%` }} />
+                      <div className="mt-1">
+                        <BarraProgresso
+                          pct={(m.atual / m.alvo) * 100} dialeto="claro" altura="padrao"
+                          corClasse={m.ok ? 'bg-nz-verde' : 'bg-amber-500'}
+                          trilhoClasse="bg-nz-borda/60"
+                        />
                       </div>
                       <p className="text-[10px] text-nz-tinta-fraca tabular-nums mt-0.5">{m.atual} de {m.alvo}</p>
                     </div>
@@ -1503,7 +1633,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 {medalhasAbertas && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-nz-borda">
                     {medalhas.map((m) => (
-                      <div key={m.id} title={m.regra} className={`rounded border px-2 py-1.5 text-center ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white opacity-50 grayscale'}`}>
+                      <div key={m.id} title={m.regra} className={`rounded-lg border px-2 py-1.5 text-center ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white opacity-50 grayscale'}`}>
                         <p className="text-base leading-none">{m.emoji}</p>
                         <p className="text-[10px] font-semibold text-nz-tinta mt-0.5">{m.nome}</p>
                         <p className="text-[9px] text-nz-tinta-fraca">{m.ok ? 'conquistada!' : m.regra}</p>
@@ -1514,17 +1644,37 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
-            {/* ══ 🗳️ F3 — VOTAÇÃO MvM (20h–22h) + RANKING DAS VIRTUDES ══ */}
+            {/* ══ 🗳️ F3 — VOTAÇÃO MvM (17h–21h30, radical se não fechar em todos) + RANKING DAS VIRTUDES ══ */}
             {xgame && ehHoje && mostrarPainel && (
               <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde">
-                    {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das 20h às 22h · Ranking das Virtudes
+                    {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)} · Ranking das Virtudes
                   </button>
-                  <span className={`text-[10px] font-bold ${janelaAberta ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
-                    {janelaAberta ? '● JANELA ABERTA' : 'janela fechada — abre às 20h'}
+                  <span className={`text-[10px] font-bold ${janelaAberta ? (naJanelaIdeal(agoraMinJogo) ? 'text-nz-verde' : 'text-amber-600') : 'text-nz-tinta-fraca'}`}>
+                    {janelaAberta
+                      ? (naJanelaIdeal(agoraMinJogo) ? '● JANELA ABERTA' : `● ÚLTIMA CHANCE — vote até ${horaDeMin(VOTACAO_FIM_MIN)}`)
+                      : `janela fechada — abre às ${horaDeMin(VOTACAO_INICIO_MIN)}`}
                   </span>
                 </div>
+                {/* 🔥 08/09 — fica de pé mesmo com o bloco recolhido: é a
+                    regra principal da gamificação, não um detalhe pra achar.
+                    Radical de verdade: não é só a MvM, é o dia inteiro. */}
+                <p className="text-[10.5px] font-semibold text-red-600">
+                  ⚠️ Não votar em TODOS os colegas até as {horaDeMin(VOTACAO_FIM_MIN)} zera o DIA INTEIRO — MvM, Human Token, pontos e X-Pay — sem exceção.
+                </p>
+
+                {/* 🎓 08/09 — só o super_admin vê isto: o interruptor pra
+                    entrar ou sair de ser votável na MvM (dono: "não é
+                    viável expor tanto o principal... salvo se ele permitir"). */}
+                {currentUser?.role === 'super_admin' && (
+                  <label className="flex items-center gap-2 rounded-lg border border-nz-borda bg-nz-cinza-fundo px-2.5 py-2 cursor-pointer">
+                    <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} className="h-4 w-4" />
+                    <span className="text-[11px] text-nz-tinta">
+                      <span className="font-semibold">Aceito ser votado na MvM</span> — como Super Admin, você só aparece na lista dos colegas se ligar isto (fica desligado por padrão).
+                    </span>
+                  </label>
+                )}
 
                 {votacaoAberta && (
                   <>
@@ -1773,6 +1923,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   </span>
                                 );
                               })()}
+                              {/* 🔓 08/09/2026 — dono: "o sistema tem que dar isso pra
+                                  ele, conversar com ele" — o convite pra recuperar
+                                  aparece na própria tarefa perdida, no fim de semana. */}
+                              {!t.feito && !ehHoje && estadoDaTarefa(t)?.id === 'PERDIDO' && podeRecuperarNoFds({
+                                estadoId: 'PERDIDO', dataTarefaISO: dia, cicloInicioISO: xgame ? dataISO(xgame.ciclo_inicio) : null, hoje: new Date(),
+                              }) && (
+                                <span className="shrink-0 text-[10px] font-bold text-nz-verde" title="Comprove que fez agora — o X-Pay volta pra você, sem perder o fixo.">
+                                  ↺ recupere hoje
+                                </span>
+                              )}
                               {/* 🔗 DIR-75 — a tarefa leva pra ferramenta dela. Tarefa
                                   sem ferramenta NÃO ganha botão: link errado é pior
                                   que link nenhum. */}
