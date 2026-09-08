@@ -60,6 +60,7 @@ import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
+import DiarioDeBolso from '../components/licensing/CentralVendas/DiarioDeBolso';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
@@ -140,7 +141,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1276,6 +1277,14 @@ const DashboardContent = ({ user, isAdmin }) => {
                   perguntar, e era esse público que o pedido queria alcançar. */}
               <TabsContent value="catalogo-guia" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 <GuiaXGame currentUser={user} />
+              </TabsContent>
+
+              {/* 📔 08/09/2026 — DIÁRIO DE BOLSO (Fase 1, só leitura): logo
+                  abaixo do Guia do Usuário, por pedido do dono. Monta o
+                  diário na hora a partir das tarefas já feitas — nenhuma
+                  tabela nova, nenhum cron novo (ver src/lib/diarioDeBolso.js). */}
+              <TabsContent value="catalogo-diario" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                <DiarioDeBolso currentUser={user} />
               </TabsContent>
 
               {/* 🎓 07/09 — dono: "dentro da Top College precisa tudo puxar pra
