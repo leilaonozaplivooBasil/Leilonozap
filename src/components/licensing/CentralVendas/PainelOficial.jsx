@@ -8,6 +8,7 @@ import {
 } from '@/lib/documentoOficial';
 import { cargoOficialDaFuncao } from '@/lib/funcoes';
 import { chaveDe } from '@/lib/metasPessoa';
+import { BarraProgresso } from './VerificacaoUI';
 
 // 📜 O PAINEL OFICIAL DA PESSOA — o que o Documento Oficial de Operação diz
 // sobre a função dela, transferido pro Quadro Geral (06/09/2026). Quatro
@@ -126,9 +127,8 @@ export function ScoreEscada({ fracoes, niveis = [], portoesAbertos = 0, emFormac
         <span className="text-[10px] text-white/35">· pra consolidar o equity de 0,5% (Documento p. 42) · linha {LINHA_SCORE}%</span>
         <p className={`ml-auto text-[14px] font-extrabold tabular-nums ${score.liberado ? 'text-nz-verde' : 'text-white'}`}>{score.total.toLocaleString('pt-BR')}<span className="text-[10px] text-white/40 font-medium">/100</span></p>
       </div>
-      <div className="mt-1.5 relative h-2 rounded-full bg-white/10 overflow-hidden">
-        <div className={`h-full ${score.liberado ? 'bg-nz-verde' : 'bg-amber-400'}`} style={{ width: `${Math.min(100, score.total)}%` }} />
-        <div className="absolute top-0 h-full w-px bg-white/70" style={{ left: `${LINHA_SCORE}%` }} title={`linha dos ${LINHA_SCORE}%`} />
+      <div className="mt-1.5">
+        <BarraProgresso pct={score.total} dialeto="escuro" altura="media" corClasse={score.liberado ? 'bg-nz-verde' : 'bg-amber-400'} limite={LINHA_SCORE} />
       </div>
       <div className="mt-1.5 grid grid-cols-2 sm:grid-cols-5 gap-1">
         {score.partes.map((p) => (
