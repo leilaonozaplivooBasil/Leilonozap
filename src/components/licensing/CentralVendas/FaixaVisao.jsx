@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Map, ListChecks, LayoutGrid, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
-// 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Como estou"
+// 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Eu no Game"
 // (o placar completo) e, por enquanto, o relógio de teste.
 //
 // Ordem do dono (06/09/2026), olhando a faixa antiga — dois botões soltos,
@@ -27,7 +27,7 @@ import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 // 🎨 08/09/2026 — dono, olhando de novo: "dar esse nome no meu placar pra
 // ficar mais... como estou no jogo... mais pra perto aqui do quadro, da
 // lista e da jornada... vamos deixar isso aqui dos circuitões mais bonito,
-// mais chamativo, deixar só o teste lá no fundo." Virou "Como estou" — não
+// mais chamativo, deixar só o teste lá no fundo." Virou "Eu no Game" — não
 // "Jornada" pra não colidir com a visão que já tem esse nome — colado no
 // mesmo grupo do seletor (não mais lá longe, do lado do relógio de teste);
 // o teste ficou sozinho, empurrado pro canto. O aberto/fechado agora também
@@ -48,7 +48,7 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
 
   return (
     <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap" data-teste="faixa-visao">
-      {/* ── o grupo principal: as 3 visões + "Como estou", coladas — dono:
+      {/* ── o grupo principal: as 3 visões + "Eu no Game", coladas — dono:
           "mais pra perto aqui do quadro, da lista e da jornada" ── */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="inline-flex items-center rounded-full border border-nz-borda/50 bg-white/[0.04] p-0.5" role="tablist" aria-label="Visão do dia">
@@ -76,7 +76,7 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
           })}
         </div>
 
-        {/* ── "Como estou" — o placar completo, agora colado no grupo das
+        {/* ── "Eu no Game" — o placar completo, agora colado no grupo das
             visões, não solto lá longe perto do relógio de teste ── */}
         {mostrarPlacar && (
           <button
@@ -89,9 +89,9 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
             data-teste="placar-botao"
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            {/* 📱 mesma regra da faixa (DIR-75): "Como estou" é 2 palavras —
+            {/* 📱 mesma regra da faixa (DIR-75): "Eu no Game" é comprido —
                 no celular vira só ícone, senão a faixa quebra em duas linhas */}
-            <span className="hidden sm:inline">Como estou</span>
+            <span className="hidden sm:inline">Eu no Game</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${placarAberto ? 'rotate-180' : ''}`} />
           </button>
         )}
