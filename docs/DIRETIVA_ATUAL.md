@@ -12,6 +12,31 @@
 
 ---
 
+## DIR-100 — Jornada: setas de navegar sem expandir, com prévia no mouse e no dedo
+
+**Emitida por:** dono (08/09/2026), sobre a tela do Momento: *"a gente tem um botão de passar pra frente ou pra trás... quando a gente passa esse mouse em cima do botão, tanto no desktop quanto no celular, essa tarefa entra numa prévia, uma expansão da tarefa... e volta quando a gente tirar o mouse. Como isso funcionaria no celular? Colocasse o dedo em cima, abrisse uma prévia."* E, sobre os botões da jornada expandida: *"eu tenho que clicar pra saber o que cada botão é — quando eu passar o mouse em cima, ele já dá uma expandida, bem rápido."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/components/licensing/CentralVendas/XGameJornada.jsx` — o Momento
+   ganha duas setas (◀ ▶) ao lado da moeda grande, navegando só entre os
+   passos PENDENTES (os feitos já têm o rastro embaixo). Passar o mouse (ou
+   encostar o dedo, `onTouchStart`) numa seta mostra uma bolha com o nome +
+   horário do passo vizinho, sem trocar de tela; tirar o mouse esconde;
+   clicar/soltar comete a troca. Sem passo naquele lado, o espaço fica vazio
+   (sem seta morta, sem pular o layout).
+2. `PreviaBolha` (novo, compartilhado) — a mesma bolha também substitui o
+   tooltip nativo lento dos botões da jornada expandida (`Parada3D`): hover
+   ou toque mostra nome + horário na hora, em vez do `title` do navegador
+   (que não existe no toque e demora pra aparecer no mouse).
+
+**Prova:** `npx eslint` limpo, suíte 1588/1588, `npm run build` sem erro;
+`tests/navegador/jornadaCapa.spec.mjs` (não usa os botões tocados) segue
+verde/skip conforme o ambiente.
+
+---
+
 ## DIR-99 — Cadastro no X-GAME vira multi-seleção: marcar vários do Time Corporativo de uma vez
 
 **Emitida por:** dono (08/09/2026): *"agora vai lá no administrativo e seleciona as pessoas do topo em que a gente vai colocar na gamificação, porque nem todo mundo que está no topo, que são o grupo corporativo, estão na gamificação — eu preciso selecionar as pessoas que estão, pra elas serem votadas."*

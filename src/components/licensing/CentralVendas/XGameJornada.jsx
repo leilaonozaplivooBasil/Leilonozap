@@ -3,7 +3,7 @@ import {
   Sunrise, BookOpen, Dumbbell, Camera, Store, Utensils, Handshake,
   GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays,
   Target, Users, Phone, MessageCircle, Wallet, ClipboardList, Heart, Droplet, Bed, ShoppingBag,
-  Mic, Rocket, Flame,
+  Mic, Rocket, Flame, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import XGameCapa from './XGameCapas';
 import ElencoBoneco from './ElencoBoneco';
@@ -195,6 +195,25 @@ function ParadaNaMesa({ Icone }) {
   );
 }
 
+/** 👀 08/09/2026 — dono: "eu tenho que clicar pra saber o que cada botão é
+ *  — quando eu passar o mouse em cima, ele já dá uma expandida, bem rápido."
+ *  Tooltip nativo (`title`) é lento e não existe no toque; esta bolha
+ *  aparece na hora, no mouse E no dedo (touchstart), e fica sempre montada
+ *  (só troca opacidade) pra animar sem re-render de layout. */
+function PreviaBolha({ titulo, hora, visivel, alinhamento = 'centro' }) {
+  const pos = alinhamento === 'esquerda' ? 'left-0' : alinhamento === 'direita' ? 'right-0' : 'left-1/2 -translate-x-1/2';
+  const rabicho = alinhamento === 'esquerda' ? 'left-5' : alinhamento === 'direita' ? 'right-5' : 'left-1/2 -translate-x-1/2';
+  return (
+    <div
+      className={`pointer-events-none absolute bottom-full mb-3 ${pos} z-30 w-44 rounded-xl bg-nz-tinta px-3.5 py-2.5 text-left shadow-xl transition-all duration-150 ease-out ${visivel ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}
+    >
+      <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-white/55">{hora}</p>
+      <p className="mt-0.5 text-xs font-bold leading-snug text-white line-clamp-2">{titulo}</p>
+      <span className={`absolute -bottom-1.5 ${rabicho} h-3 w-3 rotate-45 bg-nz-tinta`} />
+    </div>
+  );
+}
+
 /** O botão de lição do Duolingo, versão executiva:
  *  GRANDE, borda 3D da mesma cor (mais escura), feito = CHECK gigante no
  *  lugar do ícone, atual = aceso com halo + balão COMEÇAR, futuro/perdido =
@@ -202,6 +221,10 @@ function ParadaNaMesa({ Icone }) {
  *  contexto vem do banner e do clique. */
 function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl, habito }) {
   const selo = seloDa(titulo, habito);
+  // 👀 08/09/2026 — a prévia por cima (mouse OU dedo); some sozinha um
+  // pouco depois de soltar o dedo, já que o toque não tem "tirar o mouse".
+  const [previa, setPrevia] = useState(false);
+  const escondeAoSoltar = () => setTimeout(() => setPrevia(false), 1400);
   // ✅ DIR-77 — CONCLUÍDA É VERDE, ordem do dono ("tarefa concluída, pra ficar
   // verde"). Antes a moeda da feita saía na cor do TIPO da tarefa, então o
   // "está feito" tinha uma cor diferente a cada parada e não dava pra varrer a
@@ -219,7 +242,21 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl, habito 
           <span className="xeos-cru absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 bg-white" />
         </span>
       )}
-      <button type="button" onClick={() => { vibrar(VIBRA_TOQUE); onClick(); }} title={`${hora} — ${titulo}`} className="relative group outline-none">
+      <div className={`absolute ${atual ? '-top-24' : '-top-3'} left-1/2 -translate-x-1/2`}>
+        <PreviaBolha titulo={titulo} hora={hora} visivel={previa} />
+      </div>
+      <button
+        type="button"
+        onClick={() => { vibrar(VIBRA_TOQUE); onClick(); }}
+        onMouseEnter={() => setPrevia(true)}
+        onMouseLeave={() => setPrevia(false)}
+        onFocus={() => setPrevia(true)}
+        onBlur={() => setPrevia(false)}
+        onTouchStart={() => setPrevia(true)}
+        onTouchEnd={escondeAoSoltar}
+        aria-label={`${hora} — ${titulo}`}
+        className="relative group outline-none"
+      >
         {/* ⬆️ A LEVANTADA: passou o mouse, a peça inteira sobe (banquinho +
             desenho juntos); tirou, desce de volta; clicou, afunda. */}
         <span className="relative block transition-transform duration-200 ease-out group-hover:-translate-y-2 group-active:translate-y-[3px]">
@@ -290,9 +327,40 @@ function MoedaGrande({ titulo, perdido, habito }) {
   );
 }
 
+/** A seta de navegar o Momento sem expandir — mouse mostra a prévia,
+ *  dedo (touchstart) também; clicar/soltar comete a troca de passo.
+ *  Sem alvo, mantém o espaço vazio (não pula o layout, não vira "seta morta"). */
+function BotaoSetaMomento({ lado, alvo, previaAtiva, onPrevia, onEsconder, onIr }) {
+  if (!alvo) return <span className="w-11 h-11 sm:w-12 sm:h-12 shrink-0" aria-hidden="true" />;
+  const Icone = lado === 'esq' ? ChevronLeft : ChevronRight;
+  return (
+    <div className="relative shrink-0">
+      <PreviaBolha titulo={alvo.titulo} hora={faixaDeHorario(alvo)} visivel={previaAtiva} alinhamento={lado === 'esq' ? 'esquerda' : 'direita'} />
+      <button
+        type="button"
+        onMouseEnter={() => onPrevia(lado)}
+        onMouseLeave={onEsconder}
+        onFocus={() => onPrevia(lado)}
+        onBlur={onEsconder}
+        onTouchStart={() => onPrevia(lado)}
+        onClick={() => onIr(alvo)}
+        aria-label={`${lado === 'esq' ? 'Passo anterior' : 'Próximo passo'}: ${alvo.titulo}`}
+        className="group flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full text-nz-tinta-fraca/40 hover:text-nz-tinta hover:bg-nz-tinta/5 active:scale-90 transition-all outline-none"
+      >
+        <Icone className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2.4} />
+      </button>
+    </div>
+  );
+}
+
 export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTarefa, acaoExtra, agoraMin = null }) {
   const [expandida, setExpandida] = useState(false);
   const [focoId, setFocoId] = useState(null);
+  // ⬅️➡️ 08/09/2026 — dono: "um botão de passar pra frente ou pra trás, bem
+  // fluido — passa o mouse e vê uma prévia da tarefa, sem precisar expandir
+  // a jornada." `previaSeta` guarda de que LADO (esq/dir) a prévia está
+  // ativa, pra não precisar de dois estados.
+  const [previaSeta, setPreviaSeta] = useState(null);
   const refAtual = useRef(null);
   // expandiu → a jornada rola sozinha até onde a pessoa está (o "você está aqui")
   useEffect(() => {
@@ -306,6 +374,13 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
   const atual = tarefas.find((t) => !t.feito && (t.estado?.id === 'AGORA' || t.estado?.id === 'ATRASADO')) || pendentes[0] || null;
   const foco = tarefas.find((x) => x.id === focoId && !x.feito) || atual;
   const completou = pct >= 100;
+  // navega só entre os PENDENTES (os feitos já têm o rastro lá embaixo) —
+  // "pra trás" volta a um passo pendente que você já tinha espiado, "pra
+  // frente" espia o que vem sem precisar expandir a jornada inteira.
+  const idxFoco = foco ? pendentes.findIndex((t) => t.id === foco.id) : -1;
+  const paradaAnterior = idxFoco > 0 ? pendentes[idxFoco - 1] : null;
+  const proximaParada = idxFoco >= 0 && idxFoco < pendentes.length - 1 ? pendentes[idxFoco + 1] : null;
+  const irParaPasso = (t) => { vibrar(VIBRA_TOQUE); setFocoId(t.id); setPreviaSeta(null); };
 
   // ══ A JORNADA EXPANDIDA — estilo Duolingo, de baixo pra cima: o dia SOBE.
   //    Sem linha; períodos com cor própria; a parada atual ACESA com balão
@@ -523,8 +598,28 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
           </div>
         ) : (
           <div className="mt-14 flex flex-col items-center">
-            {/* o selo do momento: a mesma moeda da trilha, em tamanho de herói */}
-            <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} habito={foco.habito} />
+            {/* ⬅️➡️ o selo do momento, ladeado pelas setas de navegar sem
+                expandir a jornada — a prévia (nome + hora) aparece no
+                mouse OU no dedo, antes de comprometer a troca de passo. */}
+            <div className="flex items-center justify-center gap-3 sm:gap-6">
+              <BotaoSetaMomento
+                lado="esq"
+                alvo={paradaAnterior}
+                previaAtiva={previaSeta === 'esq'}
+                onPrevia={setPreviaSeta}
+                onEsconder={() => setPreviaSeta(null)}
+                onIr={irParaPasso}
+              />
+              <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} habito={foco.habito} />
+              <BotaoSetaMomento
+                lado="dir"
+                alvo={proximaParada}
+                previaAtiva={previaSeta === 'dir'}
+                onPrevia={setPreviaSeta}
+                onEsconder={() => setPreviaSeta(null)}
+                onIr={irParaPasso}
+              />
+            </div>
 
             <p className={`mt-8 text-[11px] font-extrabold uppercase tracking-[0.22em] ${estado === 'PERDIDO' ? 'text-nz-tinta-fraca' : estado === 'ATRASADO' ? 'text-nz-fogo' : 'text-nz-verde'}`}>
               {estado === 'PERDIDO' ? 'ainda dá pra comprovar' : estado === 'ATRASADO' ? 'tá na hora — corre' : 'o seu momento agora'}
