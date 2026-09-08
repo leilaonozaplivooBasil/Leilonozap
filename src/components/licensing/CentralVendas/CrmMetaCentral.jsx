@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Rocket, Store, Globe } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 import { ALVO_META_CENTRAL } from '@/lib/metaCentral';
+import { BarraProgresso } from './VerificacaoUI';
 
 // 🚀 DIR-23 (30/08/2026) — META CENTRAL DE VENDAS: R$ 5.000.000/mês
 // (R$ 4M online + R$ 1M física), alvo março/2027 — números oficiais do
@@ -33,9 +34,7 @@ function Trilho({ icone: Icone, titulo, valor, meta, semFonte, detalhe }) {
             <span className="text-lg font-bold text-nz-tinta">{fmtBRL(valor)}</span>
             <span className="text-[11px] text-nz-tinta-fraca">{fmtPct((valor / meta) * 100)}</span>
           </div>
-          <div className="h-2 rounded-full bg-white border border-nz-borda overflow-hidden mb-1">
-            <div className="h-full bg-nz-verde rounded-full transition-all" style={{ width: `${pct}%` }} />
-          </div>
+          <div className="mb-1"><BarraProgresso pct={pct} dialeto="claro" altura="media" trilhoClasse="bg-white border border-nz-borda" /></div>
           <p className="text-[11px] text-nz-tinta-fraca leading-tight">{detalhe}</p>
         </>
       )}
@@ -61,9 +60,7 @@ export default function CrmMetaCentral({ metaCentral, ritmo }) {
           <span className="text-2xl font-bold text-nz-verde">{fmtBRL(metaCentral.total)}</span>
           <span className="text-xs text-nz-tinta-fraca">faltam {fmtBRL(metaCentral.faltamTotal)} · {fmtPct(metaCentral.pctTotal)} da meta</span>
         </div>
-        <div className="h-3 rounded-full bg-nz-cinza-fundo border border-nz-borda overflow-hidden mb-4">
-          <div className="h-full bg-nz-verde rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
+        <div className="mb-4"><BarraProgresso pct={pct} dialeto="claro" altura="extra" /></div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <Trilho
