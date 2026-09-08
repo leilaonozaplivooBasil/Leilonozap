@@ -3,8 +3,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { GitBranch, Plus, X, Save, Trophy, Search, History } from 'lucide-react';
+import { GitBranch, Plus, X, Save, Trophy, Search, History, HelpCircle } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
+import TourGuiado from './TourGuiado';
 import {
   ESTAGIOS_ESTEIRA, MOTIVOS_PERDA, estagioDe, pendenciasParaEstagio,
   resumoEsteira, conversaoPorResponsavel, diasNoEstagio, dinheiroNaConta,
@@ -38,10 +39,21 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  // 🖐️ 08/09/2026 — a mãozinha da Esteira: abre sozinha na PRIMEIRA visita
+  // (a marca fica no localStorage — nunca mais incomoda sozinha depois
+  // disso), e sempre pode ser reaberta pelo botão "Como funciona".
+  const [tourAberto, setTourAberto] = useState(false);
+  useEffect(() => {
+    try { if (!localStorage.getItem('tour_esteira_visto')) setTourAberto(true); } catch { /* localStorage indisponível — sem tour automático, sem quebrar a tela */ }
+  }, []);
+  const fecharTour = () => {
+    setTourAberto(false);
+    try { localStorage.setItem('tour_esteira_visto', '1'); } catch { /* idem */ }
+  };
   // 💵 DIR-40 — registro de aporte que entrou POR FORA (Santander/Itaú)
   const [aporteForm, setAporteForm] = useState(null); // null | {banco, valor, data}
   // 🔎 DIR-36 — busca de cliente EXISTENTE na nova oportunidade (nada de
@@ -116,6 +128,16 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     onClientePreenchidoConsumido?.();
   }, [clientePreenchido]);
 
+  // 🔗 08/09/2026 — dono: "eu estou com dificuldade de ver aonde é o
+  // contato pra entrar na esteira". Chega aqui vindo de fora (a fila "Quem
+  // contatar hoje", ou o cliente com negociação existente): abre DIRETO o
+  // card pra editar — mesmo jeito do "abrirEdicao" de clicar no kanban.
+  useEffect(() => {
+    if (!oportunidadeParaAbrir) return;
+    abrirEdicao(oportunidadeParaAbrir);
+    onOportunidadeParaAbrirConsumida?.();
+  }, [oportunidadeParaAbrir]);
+
   const salvar = async () => {
     setSalvando(true);
     try {
@@ -135,21 +157,35 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
   const NOMES_CAMPO = { valor_previsto: 'valor do aporte', motivo_perda: 'motivo da perda', reuniao_em: 'data da reunião', recontato_em: 'data de recontato' };
 
   return (
-    <Card className="bg-white border-nz-borda mb-4 sm:mb-6">
+    <>
+    <Card className="bg-white border-nz-borda mb-4 sm:mb-6" data-teste="esteira-painel">
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-          <p className="text-sm font-semibold text-nz-tinta flex items-center gap-2">
+          <p className="text-sm font-semibold text-nz-tinta flex items-center gap-2" data-teste="esteira-titulo">
             <GitBranch className="w-4 h-4 text-nz-verde" />
             Esteira de Captação — do agendamento à assinatura
             <StatInfoTooltip text="Cada negociação de aporte ou licença acompanhada pelos 8 estágios oficiais, com a probabilidade de fechamento de cada um. O forecast pondera valor × probabilidade; o Fechado 100% se prova contra o dinheiro real (se o aporte não entrou na conta, o cartão avisa em âmbar). Cada responsável vê e move a própria carteira; a visão total vê tudo e o ranking do time." />
           </p>
-          <Button size="sm" onClick={abrirNova} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-            <Plus className="w-4 h-4 mr-1" /> Nova oportunidade
-          </Button>
+          <span className="flex items-center gap-2">
+            {/* 🖐️ 08/09/2026 — dono: "a plataforma tem que ensinar ela
+                direto, não só o guia". Reabre o tour guiado quando quiser,
+                sem precisar esperar a primeira visita. */}
+            <button
+              type="button"
+              onClick={() => setTourAberto(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-nz-borda px-2.5 py-1.5 text-xs font-semibold text-nz-tinta-fraca hover:text-nz-verde hover:border-nz-verde/40"
+              data-teste="esteira-como-funciona"
+            >
+              <HelpCircle className="w-3.5 h-3.5" /> Como funciona
+            </button>
+            <Button size="sm" onClick={abrirNova} className="bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="esteira-nova">
+              <Plus className="w-4 h-4 mr-1" /> Nova oportunidade
+            </Button>
+          </span>
         </div>
 
         {/* Forecast */}
-        <div className="grid grid-cols-3 gap-2 mb-4 mt-2">
+        <div className="grid grid-cols-3 gap-2 mb-4 mt-2" data-teste="esteira-forecast">
           <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo p-2.5">
             <p className="text-[11px] text-nz-tinta-fraca">Em esteira (ponderado)</p>
             <p className="text-base font-bold text-nz-tinta">{fmtBRL(resumo.pipelinePonderado)}</p>
@@ -167,7 +203,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
         </div>
 
         {/* Kanban dos 8 estágios */}
-        <div className="overflow-x-auto pb-2">
+        <div className="overflow-x-auto pb-2" data-teste="esteira-kanban">
           <div className="flex gap-2 min-w-[1100px]">
             {ESTAGIOS_ESTEIRA.map((est) => {
               const doEstagio = oportunidades.filter((o) => o.estagio === est.id);
@@ -521,5 +557,33 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
         )}
       </CardContent>
     </Card>
+    <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_ESTEIRA} onFechar={fecharTour} />
+    </>
   );
 }
+
+// 🖐️ os passos da mãozinha da Esteira — a mesma história que a análise
+// pediu pra ficar clara: a fila avisa, o card é onde você atualiza, e o
+// forecast mostra se está indo bem.
+const PASSOS_TOUR_ESTEIRA = [
+  {
+    alvo: 'esteira-titulo',
+    titulo: 'Essa é a Esteira de Captação',
+    texto: 'Toda negociação de aporte ou licença mora aqui, do agendamento da reunião até a assinatura. 8 estágios oficiais, cada um com a probabilidade de fechar.',
+  },
+  {
+    alvo: 'esteira-nova',
+    titulo: 'Comece por aqui',
+    texto: 'Toque em "Nova oportunidade" assim que agendar a primeira reunião com alguém — mesmo sem valor fechado ainda.',
+  },
+  {
+    alvo: 'esteira-kanban',
+    titulo: 'Cada coluna é um estágio',
+    texto: 'Toque em qualquer card pra abrir e atualizar: o que aconteceu na reunião, pra qual estágio a negociação foi, a próxima data. É sempre aqui que você mexe — e assim que uma reunião acontece, ela também te cutuca na fila "Quem contatar hoje" (aba Clientes), levando direto pra este mesmo card.',
+  },
+  {
+    alvo: 'esteira-forecast',
+    titulo: 'E aqui você vê se está indo bem',
+    texto: 'O forecast pondera valor × probabilidade de cada estágio, e mostra o quanto falta pra meta. Sobe sozinho conforme você mantém a esteira atualizada.',
+  },
+];

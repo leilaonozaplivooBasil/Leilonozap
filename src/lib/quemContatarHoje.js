@@ -9,6 +9,12 @@ import { isVendaMercadoria } from './crmUnifiedCustomers.js';
 
 export const MOTIVOS = {
   esteira_reuniao: { label: 'Reunião da esteira', prioridade: 0 },
+  // 🎯 08/09/2026 — dono: "assim que ele fizer o contato... você fez um
+  // contato agora, atualiza as informações, pra entrar na esteira." A
+  // reunião que JÁ ACONTECEU pede o resultado — prioridade 0 igual às
+  // outras urgências do dia, mas com rótulo e cor próprios (não é mais
+  // "atrasada", é "aconteceu, falta atualizar").
+  esteira_reuniao_feita: { label: 'Reunião aconteceu — atualize', prioridade: 0 },
   esteira_recontato: { label: 'Recontato da esteira', prioridade: 0 },
   follow_up: { label: 'Follow-up marcado', prioridade: 0 },
   esteira_parada: { label: 'Negociação parada', prioridade: 2 },
@@ -45,10 +51,18 @@ export function quemContatarHoje({ unifiedCustomers = [], sales = [], alertasEst
   // recontato vencido e negociação parada — o dinheiro grande mora aqui.
   for (const a of alertasEsteiraLista) {
     const o = a.oportunidade;
+    const motivo = a.tipo === 'reuniao_hoje' ? 'esteira_reuniao'
+      : a.tipo === 'reuniao_concluida' ? 'esteira_reuniao_feita'
+      : a.tipo === 'recontato' ? 'esteira_recontato' : 'esteira_parada';
     itens.push({
       key: `est_${a.tipo}_${o.id}`,
-      motivo: a.tipo === 'reuniao' ? 'esteira_reuniao' : a.tipo === 'recontato' ? 'esteira_recontato' : 'esteira_parada',
+      motivo,
       cliente: { id: `op_${o.id}`, full_name: o.cliente_nome, phone: o.cliente_telefone, email: o.cliente_email },
+      // 🔗 08/09/2026 — a oportunidade DE VERDADE, não só o clone pro card:
+      // é o que deixa o clique abrir direto o card da esteira (editar
+      // estágio), em vez de tentar achar um cliente que pode nem casar
+      // (oportunidade sem e-mail preenchido, por exemplo).
+      oportunidade: o,
       valor: Number(o.valor_previsto) || 0,
       desde: o.estagio_desde || null,
       detalhe: a.detalhe,
@@ -154,7 +168,11 @@ export function mensagemWhatsApp(item) {
     case 'sumido_30d':
       return `Olá ${nome}, sentimos sua falta por aqui! 👋 Chegaram produtos novos com preço de fábrica — quer dar uma olhada?`;
     case 'esteira_reuniao':
-      return `Olá ${nome}! Passando pra confirmar a nossa reunião. ${item.detalhe.includes('HOJE') ? 'Nos falamos hoje!' : 'Podemos remarcar se precisar — qual o melhor horário pra você?'} 🤝`;
+      return `Olá ${nome}! Passando pra confirmar a nossa reunião de hoje. Nos falamos daqui a pouco! 🤝`;
+    // 🎯 08/09/2026 — pós-reunião: mensagem pro CLIENTE (o clique no card,
+    // separado, é o que leva o vendedor a atualizar o estágio na esteira).
+    case 'esteira_reuniao_feita':
+      return `Olá ${nome}! Foi ótimo falar com você na nossa reunião. Ficou alguma dúvida ou posso te ajudar com o próximo passo? 🤝`;
     case 'esteira_recontato':
       return `Olá ${nome}! Conforme combinamos, estou retomando a nossa conversa sobre a parceria. Esse é um bom momento pra falarmos?`;
     case 'esteira_parada':
