@@ -112,47 +112,64 @@ export default function CrmStatsCards({ stats, isSuperAdmin, verDinheiro, purcha
           />
         </div>
 
-        {/* Rede por Tipo — Vendedor, Licenciado, Influencer, Investidor, Leiloeiro, Arrematante */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
-          {ROLE_CARDS.map(({ key, label, icon: Icon, info }) => (
-            <Card key={key} className="bg-white border-nz-borda">
-              <CardContent className="p-3">
-                <div className="text-center">
+        {/* 🎨 08/09/2026 — dono, olhando a tela: "os números de baixo estão
+            muito embolados". Eram 13 pastilhas soltas, todas do mesmo
+            tamanho e cor, sem nada dizendo QUE PERGUNTA cada grupo responde
+            — lidas como uma parede só. Agora são duas caixas com título
+            próprio (o mesmo formato do "Espelho do Painel de Alavancagem"
+            logo abaixo, na parte executiva) — cada uma responde UMA
+            pergunta: quem são (papel na rede) e onde estão na compra. */}
+        <Card className="bg-white border-nz-borda mb-4 sm:mb-6">
+          <CardContent className="p-4 sm:p-5">
+            <p className="text-sm font-semibold text-nz-tinta mb-3 flex items-center gap-2">
+              <Award className="w-4 h-4 text-nz-verde" />
+              Rede por tipo
+              <StatInfoTooltip text="Que papel cada pessoa do seu escopo ocupa na estrutura — vendedor, licenciado, influencer, investidor, leiloeiro ou arrematante puro (só ganhou leilão, sem outro cargo)." />
+            </p>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
+              {ROLE_CARDS.map(({ key, label, icon: Icon, info }) => (
+                <div key={key} className="rounded-lg border border-nz-borda bg-nz-cinza-fundo p-3 text-center">
                   <Icon className="w-5 h-5 mx-auto mb-1.5 text-nz-marrom" />
-                  <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center">
+                  <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center gap-0.5">
                     {label}
                     <StatInfoTooltip text={info} />
                   </p>
-                  <p className="text-xl font-bold text-nz-tinta">{stats[key]}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{stats[key]}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
-          {PURCHASE_CARDS.map(({ key, label, icon: Icon, info }) => {
-            const ativo = purchaseStatusFilter === key;
-            return (
-              <Card
-                key={key}
-                className={`cursor-pointer transition-all ${ativo ? 'bg-nz-verde-fundo border-nz-verde ring-2 ring-nz-verde/40' : 'bg-white border-nz-borda hover:bg-nz-cinza-fundo'}`}
-                onClick={() => onPurchaseStatusClick(ativo ? 'all' : key)}
-              >
-                <CardContent className="p-3">
-                  <div className="text-center">
-                    <Icon className={`w-6 h-6 mx-auto mb-2 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
-                    <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center">
+        <Card className="bg-white border-nz-borda mb-4 sm:mb-6">
+          <CardContent className="p-4 sm:p-5">
+            <p className="text-sm font-semibold text-nz-tinta mb-3 flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-nz-verde" />
+              Funil de compra
+              <StatInfoTooltip text="Onde a ÚLTIMA compra de cada cliente está agora — do zero (nunca comprou) até entregue. Toque num número pra filtrar a lista de clientes só por ele; toque de novo pra tirar o filtro." />
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
+              {PURCHASE_CARDS.map(({ key, label, icon: Icon, info }) => {
+                const ativo = purchaseStatusFilter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => onPurchaseStatusClick(ativo ? 'all' : key)}
+                    className={`rounded-lg border p-3 text-center transition-colors ${ativo ? 'bg-nz-verde-fundo border-nz-verde ring-2 ring-nz-verde/40' : 'bg-nz-cinza-fundo border-nz-borda hover:border-nz-verde/40'}`}
+                  >
+                    <Icon className={`w-5 h-5 mx-auto mb-1.5 ${ativo ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} />
+                    <p className="text-xs mb-1 text-nz-tinta-fraca flex items-center justify-center gap-0.5">
                       {label}
                       <StatInfoTooltip text={info} />
                     </p>
-                    <p className="text-2xl font-bold text-nz-tinta">{key === 'sem_compra' ? stats.semCompra : stats[key]}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    <p className="text-xl font-bold text-nz-tinta tabular-nums">{key === 'sem_compra' ? stats.semCompra : stats[key]}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </>
     );
   }

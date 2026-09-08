@@ -73,10 +73,23 @@ describe('alertas da esteira', () => {
       { estagio: 'fechado_50', estagio_desde: '2026-08-28', valor_previsto: 100 }, // 2 dias: ok
     ], REF);
     assert.equal(alertas.length, 3);
-    assert.equal(alertas[0].tipo, 'reuniao');
+    assert.equal(alertas[0].tipo, 'reuniao_hoje');
     assert.equal(alertas[1].tipo, 'recontato');
     assert.equal(alertas[2].tipo, 'parada');
     assert.equal(alertas[2].critico, true); // 20 dias ≥ 15
+  });
+
+  // 🎯 08/09/2026 — dono: "assim que ele fizer o contato... você fez um
+  // contato agora, atualiza as informações." Reunião com data NO PASSADO
+  // (não hoje) vira um alerta DIFERENTE — pedindo o resultado, não avisando
+  // que "atrasou".
+  test('reunião com data no passado vira "reuniao_concluida" — pede o resultado, não avisa atraso', () => {
+    const alertas = alertasEsteira([
+      { estagio: 'reuniao_agendada', reuniao_em: '2026-08-27T15:00:00Z', estagio_desde: '2026-08-27' },
+    ], REF);
+    assert.equal(alertas.length, 1);
+    assert.equal(alertas[0].tipo, 'reuniao_concluida');
+    assert.match(alertas[0].detalhe, /já aconteceu.*como foi/i);
   });
 
   test('diasNoEstagio conta a partir de estagio_desde', () => {

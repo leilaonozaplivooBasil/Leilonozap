@@ -104,16 +104,33 @@ export const diasNoEstagio = (o, ref = new Date()) => {
 
 /**
  * Alertas da esteira (alimentam a fila "Quem contatar hoje"):
- * reunião hoje/atrasada, recontato vencido, oportunidade parada.
+ * reunião hoje, reunião JÁ ACONTECIDA sem atualização, recontato vencido,
+ * oportunidade parada.
+ *
+ * 🎯 08/09/2026 — dono: "assim que ele fizer o contato, precisa chegar a
+ * mensagem... você fez um contato agora, atualiza as informações." Antes,
+ * "reunião hoje" e "reunião atrasada" eram o MESMO alerta ('reuniao'), com o
+ * mesmo tom — quem via "atrasada" lia como "você perdeu a reunião", não
+ * "a reunião já rolou, registra o resultado". Agora são dois tipos:
+ * 'reuniao_hoje' (ainda pode nem ter acontecido) e 'reuniao_concluida' (a
+ * data já passou — a esteira está te cobrando o resultado). O alerta some
+ * sozinho assim que a pessoa mexe no estágio ou marca outra reunião.
  */
 export function alertasEsteira(oportunidades = [], ref = new Date()) {
   const hojeStr = ref.toISOString().slice(0, 10);
   const alertas = [];
   for (const o of oportunidades) {
     if (!ehAtiva(o)) continue;
-    if (o.reuniao_em && String(o.reuniao_em).slice(0, 10) <= hojeStr) {
-      alertas.push({ tipo: 'reuniao', oportunidade: o, detalhe: `Reunião ${String(o.reuniao_em).slice(0, 10) === hojeStr ? 'HOJE' : 'atrasada'} — ${estagioDe(o.estagio).label}` });
-      continue;
+    if (o.reuniao_em) {
+      const dataReuniao = String(o.reuniao_em).slice(0, 10);
+      if (dataReuniao === hojeStr) {
+        alertas.push({ tipo: 'reuniao_hoje', oportunidade: o, detalhe: `Reunião HOJE — ${estagioDe(o.estagio).label}` });
+        continue;
+      }
+      if (dataReuniao < hojeStr) {
+        alertas.push({ tipo: 'reuniao_concluida', oportunidade: o, detalhe: `A reunião já aconteceu — como foi? Atualize o estágio de "${estagioDe(o.estagio).label}".` });
+        continue;
+      }
     }
     if (o.estagio === 'interesse_futuro' && o.recontato_em && String(o.recontato_em).slice(0, 10) <= hojeStr) {
       alertas.push({ tipo: 'recontato', oportunidade: o, detalhe: 'Data de recontato chegou — retomar a conversa.' });

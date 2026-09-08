@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2 } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -79,7 +79,7 @@ Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade }) {
   const uid = currentUser?.id;
   const podeGerir = gestao ?? visaoTotal;
   const [perfil, setPerfil] = useState(null);
@@ -2281,6 +2281,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: c })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">
                             <PenLine className="w-3.5 h-3.5 mr-1.5" />Registrar
                           </Button>
+                          {/* 🔗 08/09/2026 — dono: "quando falar contato e convite,
+                              isso tem que me levar numa esteira... a jornada não
+                              está conexa." Vira negociação de verdade sem
+                              redigitar nada — mesmo caminho do "+ Criar
+                              oportunidade" do modal do cliente, só que direto
+                              daqui, no exato passo em que ela vira interesse real. */}
+                          {onCriarOportunidade && (
+                            <Button size="sm" variant="outline" onClick={() => onCriarOportunidade(c)} title="Virou negociação de verdade? Leva pra Esteira de Captação, já com o nome e contato preenchidos." className="border-nz-marrom/40 text-nz-marrom hover:bg-nz-marrom/10 h-8">
+                              <GitBranch className="w-3.5 h-3.5 mr-1.5" />Esteira
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
