@@ -596,7 +596,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
-  const [painelAberto, setPainelAberto] = useState(false);
+  // 📌 08/09/2026 — dono: "vamos deixar a opção de a pessoa deixar fixo ou
+  // recolhendo, porque tem gente que vai querer deixar fixo." O aberto/
+  // fechado do "Como estou" persiste (localStorage) — quem deixa aberto,
+  // abre aberto da próxima vez; quem fecha, fecha.
+  const [painelAberto, setPainelAberto] = useState(() => {
+    try { return localStorage.getItem('xgame_placar_aberto') === '1'; } catch { return false; }
+  });
+  const alternarPainel = () => {
+    setPainelAberto((prev) => {
+      const novo = !prev;
+      try { localStorage.setItem('xgame_placar_aberto', novo ? '1' : '0'); } catch { /* sem storage, só não persiste */ }
+      return novo;
+    });
+  };
   // 📱 no celular o placar completo NÃO abre sozinho na visão "lista" — só pelo
   // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
   // "muito texto explicando"). No desktop segue como sempre foi.
@@ -1431,7 +1444,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 visao={visao}
                 onVisao={setVisao}
                 placarAberto={painelAberto}
-                onPlacar={() => setPainelAberto(!painelAberto)}
+                onPlacar={alternarPainel}
                 mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
                 teste={podeGerir ? {
                   hora: horaTeste,
