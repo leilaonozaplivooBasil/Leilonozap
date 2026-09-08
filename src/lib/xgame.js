@@ -577,6 +577,25 @@ export function dataISO(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// ── Recuperação no fim de semana (dono, 08/09/2026) ─────────────────
+// "Se ele perder as tarefas do dia, ele pode recompensar no fim de semana,
+// comprovando que fez, pra manter o fixo — sem lesar, sem se ferrar." Livre,
+// sem teto de quantidade, mas só dentro do fim de semana DO MESMO CICLO em
+// que a tarefa foi perdida. O dinheiro (X-Pay) volta — a nota do dia em si
+// (Real Time) continua honesta, marcando que foi tarde: "ANTECIPAÇÃO É PODER."
+export function ehFimDeSemana(d = new Date()) {
+  return d.getDay() === 0 || d.getDay() === 6;
+}
+
+/** A tarefa PERDIDA de `dataTarefaISO` pode ser recuperada HOJE? */
+export function podeRecuperarNoFds({ estadoId, dataTarefaISO, cicloInicioISO, hoje = new Date() }) {
+  if (estadoId !== 'PERDIDO' || !ehFimDeSemana(hoje) || !dataTarefaISO || !cicloInicioISO) return false;
+  const inicio = new Date(`${String(cicloInicioISO).slice(0, 10)}T12:00:00`);
+  const fim = fimCiclo(inicio);
+  const alvo = new Date(`${String(dataTarefaISO).slice(0, 10)}T12:00:00`);
+  return alvo >= inicio && alvo <= fim;
+}
+
 // ── 🔥 OFENSIVA (F7 — o streak do Duolingo) ─────────────────────────
 // Dias seguidos FECHANDO o dia (≥80% do Master Task). Fim de semana sem
 // registro não quebra; dia útil perdido quebra — com direito a 1 CONGELADOR

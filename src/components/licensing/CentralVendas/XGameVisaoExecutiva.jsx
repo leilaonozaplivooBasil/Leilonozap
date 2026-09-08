@@ -83,7 +83,9 @@ export default function XGameVisaoExecutiva() {
           r.token += Number(d.token_dia) || 0;
           r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
-          r.xpay += Number(d.detalhes?.xpay_ganho) || 0;
+          // 💰 08/09/2026 — a recuperação de fim de semana devolve o X-Pay de
+          // uma tarefa PERDIDA sem reescrever o dia em si: soma direto aqui.
+          r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
           r.perdido += Number(d.detalhes?.xpay_perdido) || 0;
           if (fatia >= OFENSIVA_META) r.dias_fechados += 1;
           r.porData[d.data] = fatia;

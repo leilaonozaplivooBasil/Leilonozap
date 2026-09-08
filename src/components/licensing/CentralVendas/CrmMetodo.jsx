@@ -28,7 +28,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import { supabase } from '@/api/supabaseClient';
@@ -287,7 +287,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       votouEmTodos: ehHoje ? votouEmTodosHoje : null,
     });
   }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje]);
-  const estadoDaTarefa = (t) => (ehHoje && xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
+  // 🩹 08/09/2026 — `xgame` já é recalculado pro `dia` que está sendo visto
+  // (não só hoje: veja o useMemo acima), então o estado de uma tarefa de um
+  // dia passado também sai certo daqui — precisa pra recuperação de fim de
+  // semana saber se a tarefa está mesmo PERDIDA.
+  const estadoDaTarefa = (t) => (xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
   // com a trava 17,77 quando a leitura do ciclo está em atraso.
@@ -425,7 +429,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           r.token += Number(d.token_dia) || 0;
           r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
-          r.xpay += Number(d.detalhes?.xpay_ganho) || 0;
+          r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
         });
         const linhas = Object.values(por).map((r) => ({ ...r, token: r.token / r.dias, mvm: r.mvm / r.dias }));
         const ids = linhas.map((l) => l.user_id);
@@ -815,6 +819,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: !t.feito, comprovacao: null } }));
       return;
     }
+    // 🔓 08/09/2026 — dono: "se ele perder as tarefas do dia, pode recompensar
+    // no fim de semana, comprovando que fez, pra manter o fixo — sem lesar,
+    // sem se ferrar." Livre (sem teto de quantidade), só limitado ao fim de
+    // semana DO MESMO CICLO em que a tarefa foi perdida — fora disso o dia
+    // passado fica trancado (é histórico, não dá pra reescrever qualquer hora).
+    const recuperandoNoFds = !t.feito && !ehHoje && xgame
+      && podeRecuperarNoFds({
+        estadoId: estadoDaTarefa(t)?.id, dataTarefaISO: dia, cicloInicioISO: dataISO(xgame.ciclo_inicio), hoje: new Date(),
+      });
+    if (!t.feito && !ehHoje && !recuperandoNoFds) {
+      toast.error(ehFimDeSemana(new Date())
+        ? 'Essa tarefa não pode mais ser recuperada — está fora do ciclo atual.'
+        : 'Dia passado é histórico. Você pode recuperar tarefas PERDIDAS no fim de semana deste ciclo, comprovando que fez — sem perder o fixo.');
+      return;
+    }
     // 🌅 F11 — gratidão abre o RITUAL DO AMANHECER, não formulário
     if (!t.feito && ehTarefaDeGratidao(t.titulo) && !t.comprovacao?.valido) {
       setRitualId(t.id);
@@ -842,6 +861,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // ⏰ o carimbo do pronto: quando deu, e limpa a devolução (se a tarefa tinha voltado)
     try { await plataforma.entities.MetodoTarefa.update(t.id, carimboDoPronto(!t.feito)); }
     catch { toast.error('Erro ao salvar'); carregarTarefas(); }
+    // 💰 08/09/2026 — recuperou uma PERDIDA no fim de semana: o X-Pay dela
+    // volta pro jogador, SOMADO ao que já estava gravado — sem tocar em
+    // xpay_ganho/mvm_dia/token_dia do dia (o Real Time daquele dia continua
+    // honesto; só o dinheiro é que não se perde. "sem lesar, sem se ferrar")
+    if (recuperandoNoFds && uid) {
+      const valorRecuperado = Number(xgame.valores?.[t.id]) || 0;
+      if (valorRecuperado > 0) {
+        try {
+          const { data: linhaExistente } = await supabase.from('xgame_diario')
+            .select('detalhes').eq('user_id', uid).eq('data', dia).maybeSingle();
+          const detalhesAntigos = linhaExistente?.detalhes || {};
+          await supabase.from('xgame_diario').upsert({
+            user_id: uid, data: dia,
+            detalhes: { ...detalhesAntigos, xpay_recuperado: Math.round((Number(detalhesAntigos.xpay_recuperado || 0) + valorRecuperado) * 100) / 100 },
+          }, { onConflict: 'user_id,data' });
+          toast.success(`💪 Recuperada! ${fmtReais(valorRecuperado)} voltou pro seu X-Pay.`);
+        } catch { /* recuperação de dinheiro não pode travar a tarefa marcada */ }
+      }
+    }
     // 🔗 DIR-76 — A VOLTA. Se esta tarefa nasceu de um card do quadro, o card
     // acompanha: feita → Feito (com carimbo); desmarcada → volta pra mesa. Sem
     // isto a pessoa faz o trabalho no dia e ainda tem que ir marcar no quadro —
@@ -1839,6 +1877,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   </span>
                                 );
                               })()}
+                              {/* 🔓 08/09/2026 — dono: "o sistema tem que dar isso pra
+                                  ele, conversar com ele" — o convite pra recuperar
+                                  aparece na própria tarefa perdida, no fim de semana. */}
+                              {!t.feito && !ehHoje && estadoDaTarefa(t)?.id === 'PERDIDO' && podeRecuperarNoFds({
+                                estadoId: 'PERDIDO', dataTarefaISO: dia, cicloInicioISO: xgame ? dataISO(xgame.ciclo_inicio) : null, hoje: new Date(),
+                              }) && (
+                                <span className="shrink-0 text-[10px] font-bold text-nz-verde" title="Comprove que fez agora — o X-Pay volta pra você, sem perder o fixo.">
+                                  ↺ recupere hoje
+                                </span>
+                              )}
                               {/* 🔗 DIR-75 — a tarefa leva pra ferramenta dela. Tarefa
                                   sem ferramenta NÃO ganha botão: link errado é pior
                                   que link nenhum. */}
