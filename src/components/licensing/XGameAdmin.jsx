@@ -100,6 +100,12 @@ const DICAS = {
 export default function XGameAdmin() {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
+  // 🎯 08/09/2026 — dono: "nem todo mundo que está no topo, no grupo
+  // corporativo, está na gamificação — preciso selecionar as pessoas que
+  // vão ser votadas." Cadastrar um por um não dava pra escolher o time
+  // corporativo inteiro de uma vez; agora marca vários e cadastra juntos.
+  const [selecionados, setSelecionados] = useState([]);
+  const alternarSelecionado = (id) => setSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const [busca, setBusca] = useState('');
   // filtro do "Colocar no jogo" (pílula ativa) + um participante aberto por
   // vez (abrir um fecha o outro) — pra página não ficar quilométrica
@@ -159,17 +165,22 @@ export default function XGameAdmin() {
     toast.success('Ciclo X-GAME aberto!');
   };
 
-  // 🎯 um clique adiciona — dono: "não está fluido, eu preciso... adicionar
-  // essa pessoa logo". Sem passo de "selecionar depois confirmar": tocar no
-  // candidato (corporativo OU usuário comum, tanto faz) já coloca no jogo.
-  const adicionar = async (id) => {
-    if (!id) return;
+  // 🎯 um toque marca, "Cadastrar N" grava todos de uma vez — dono pediu as
+  // DUAS coisas: fluidez pra achar QUALQUER pessoa (corporativo OU usuário
+  // comum, "não está fluido... eu preciso selecionar o time corporativo mas
+  // também preciso selecionar o usuário") E marcar vários de uma vez ("nem
+  // todo mundo que está no topo, no grupo corporativo, está na
+  // gamificação — preciso selecionar as pessoas que vão ser votadas").
+  const adicionar = async (ids) => {
+    const lista = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
+    if (!lista.length) return;
     setSalvando(true);
-    const { error } = await supabase.from('xgame_participantes')
-      .upsert({ user_id: id, ativo: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    const linhas = lista.map((user_id) => ({ user_id, ativo: true, updated_at: new Date().toISOString() }));
+    const { error } = await supabase.from('xgame_participantes').upsert(linhas, { onConflict: 'user_id' });
     setSalvando(false);
-    if (error) { toast.error('Erro ao cadastrar participante.'); return; }
-    toast.success(`${nomeDe(id)} no jogo — já vota e recebe voto no MvM!`);
+    if (error) { toast.error('Erro ao cadastrar participante(s).'); return; }
+    toast.success(lista.length > 1 ? `${lista.length} pessoas no jogo — já votam e recebem voto no MvM!` : `${nomeDe(lista[0])} no jogo — já vota e recebe voto no MvM!`);
+    setSelecionados((prev) => prev.filter((id) => !lista.includes(id)));
     setBusca('');
     carregar();
   };
@@ -441,12 +452,20 @@ export default function XGameAdmin() {
           não está fluido" — as pílulas são só um recorte, "Todos" é o padrão. */}
       <div className="space-y-2 border-t border-gray-200 pt-3">
         <p className="text-xs font-semibold text-gray-900">Colocar no jogo — quem vota e recebe voto no MvM (time corporativo OU usuário comum, tanto faz):</p>
-        <Input
-          placeholder="🔎 digite o nome — ex.: “lu” acha todos os Lucianos"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="h-9 bg-white border-gray-300"
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input
+            placeholder="🔎 digite o nome — ex.: “lu” acha todos os Lucianos"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="h-9 bg-white border-gray-300 flex-1 min-w-[220px]"
+          />
+          {/* 🎯 dono: "nem todo mundo que está no topo, no grupo corporativo,
+              está na gamificação — preciso selecionar as pessoas que vão ser
+              votadas" — marca vários (ou o filtro inteiro) e cadastra juntos. */}
+          <Button size="sm" onClick={() => adicionar(selecionados)} disabled={salvando || !selecionados.length} className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+            <UserPlus className="w-4 h-4 mr-1" /> {selecionados.length > 1 ? `Cadastrar ${selecionados.length} selecionados` : selecionados.length === 1 ? `Cadastrar ${nomeDe(selecionados[0])}` : 'Cadastrar'}
+          </Button>
+        </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           {FILTROS_CANDIDATOS.map(([g, rotulo]) => (
             <button
@@ -456,28 +475,45 @@ export default function XGameAdmin() {
               className={`px-2.5 py-1 rounded-full border text-[11px] font-bold ${filtroCandidato === g ? 'border-emerald-600 text-emerald-700 bg-emerald-50' : 'border-gray-300 text-gray-500 hover:border-emerald-400'}`}
             >{rotulo} ({contagemPorGrupo[g]})</button>
           ))}
+          {/* marca/desmarca TODOS os que estão na lista agora — funciona com
+              qualquer pílula (inclusive "Todos" ou uma busca por nome), não só
+              por categoria fixa como o "marcar todo o grupo" de antes */}
+          {candidatos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const ids = candidatos.map((u) => u.id);
+                const todosMarcados = ids.every((id) => selecionados.includes(id));
+                setSelecionados((prev) => (todosMarcados ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]));
+              }}
+              className="ml-auto text-[11px] font-semibold text-emerald-700 hover:underline"
+            >
+              {candidatos.every((u) => selecionados.includes(u.id)) ? '✔ desmarcar' : '☐ marcar'} os {candidatos.length} listados
+            </button>
+          )}
         </div>
         {candidatos.length === 0 ? (
           <p className="text-[11px] text-gray-500">{busca ? `Ninguém com "${busca}" fora do jogo.` : 'Todo mundo desse filtro já está no jogo.'}</p>
         ) : (
           <div className="max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white divide-y divide-gray-100">
-            {candidatos.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                disabled={salvando}
-                onClick={() => adicionar(u.id)}
-                title="Toque pra colocar no jogo"
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-emerald-50 disabled:opacity-50"
-              >
-                <AvatarPessoa u={u} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium text-gray-900 truncate">{nomeExibicao(u)}</span>
-                  <span className="block text-[10px] text-gray-400">{ROTULO_GRUPO[grupoDoUsuario(u)]}{cargoLabel(u) ? ` · ${cargoLabel(u)}` : ''}</span>
-                </span>
-                <UserPlus className="w-4 h-4 text-emerald-600 shrink-0" />
-              </button>
-            ))}
+            {candidatos.map((u) => {
+              const marcado = selecionados.includes(u.id);
+              return (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => alternarSelecionado(u.id)}
+                  title="Toque pra marcar/desmarcar"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-left ${marcado ? 'bg-emerald-50' : 'hover:bg-gray-50'}`}
+                >
+                  <AvatarPessoa u={u} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium text-gray-900 truncate">{marcado ? '✔ ' : ''}{nomeExibicao(u)}</span>
+                    <span className="block text-[10px] text-gray-400">{ROTULO_GRUPO[grupoDoUsuario(u)]}{cargoLabel(u) ? ` · ${cargoLabel(u)}` : ''}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

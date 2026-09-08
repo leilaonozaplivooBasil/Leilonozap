@@ -12,6 +12,143 @@
 
 ---
 
+## DIR-100 — Jornada: setas de navegar sem expandir, com prévia no mouse e no dedo
+
+**Emitida por:** dono (08/09/2026), sobre a tela do Momento: *"a gente tem um botão de passar pra frente ou pra trás... quando a gente passa esse mouse em cima do botão, tanto no desktop quanto no celular, essa tarefa entra numa prévia, uma expansão da tarefa... e volta quando a gente tirar o mouse. Como isso funcionaria no celular? Colocasse o dedo em cima, abrisse uma prévia."* E, sobre os botões da jornada expandida: *"eu tenho que clicar pra saber o que cada botão é — quando eu passar o mouse em cima, ele já dá uma expandida, bem rápido."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/components/licensing/CentralVendas/XGameJornada.jsx` — o Momento
+   ganha duas setas (◀ ▶) ao lado da moeda grande, navegando só entre os
+   passos PENDENTES (os feitos já têm o rastro embaixo). Passar o mouse (ou
+   encostar o dedo, `onTouchStart`) numa seta mostra uma bolha com o nome +
+   horário do passo vizinho, sem trocar de tela; tirar o mouse esconde;
+   clicar/soltar comete a troca. Sem passo naquele lado, o espaço fica vazio
+   (sem seta morta, sem pular o layout).
+2. `PreviaBolha` (novo, compartilhado) — a mesma bolha também substitui o
+   tooltip nativo lento dos botões da jornada expandida (`Parada3D`): hover
+   ou toque mostra nome + horário na hora, em vez do `title` do navegador
+   (que não existe no toque e demora pra aparecer no mouse).
+
+**Prova:** `npx eslint` limpo, suíte 1588/1588, `npm run build` sem erro;
+`tests/navegador/jornadaCapa.spec.mjs` (não usa os botões tocados) segue
+verde/skip conforme o ambiente.
+
+---
+
+## DIR-99 — Cadastro no X-GAME vira multi-seleção: marcar vários do Time Corporativo de uma vez
+
+**Emitida por:** dono (08/09/2026): *"agora vai lá no administrativo e seleciona as pessoas do topo em que a gente vai colocar na gamificação, porque nem todo mundo que está no topo, que são o grupo corporativo, estão na gamificação — eu preciso selecionar as pessoas que estão, pra elas serem votadas."*
+
+**Data:** 08/09/2026.
+
+**O que já existia:** `XGameAdmin.jsx` já buscava candidatos agrupados pelo
+plano de carreira (`GRUPOS_BUSCA`, com "👔 Time Corporativo" = o bloco
+diretor + admins), e cadastrava em `xgame_participantes` (quem está ativo
+ali é quem vota e recebe voto na MvM) — mas só deixava marcar **uma pessoa
+por vez**, cadastrar, buscar de novo, marcar a próxima.
+
+**O que entra:**
+1. `src/components/licensing/XGameAdmin.jsx` — a seleção vira multi (estado
+   `selecionados`, array de ids, no lugar do `novo` de uma string só). Cada
+   pessoa clicada entra/sai da seleção sem perder as outras.
+2. Botão "☐ marcar todo o grupo" / "✔ desmarcar" no cabeçalho de cada grupo
+   da busca (ex.: Time Corporativo inteiro) — marca ou desmarca todo mundo
+   daquele grupo de uma vez, sem clicar pessoa por pessoa.
+3. `adicionar()` agora faz um único `upsert` em lote com todos os
+   selecionados, e o botão mostra a contagem ("Cadastrar 4 selecionados").
+
+**Prova:** `npx eslint` limpo, suíte 1588/1588 e `npm run build` sem erro
+(o componente não tinha teste de unidade próprio — é lógica de estado de UI
+sobre uma tabela já coberta por `tests/xgame.test.mjs`).
+
+---
+
+## DIR-98 — X-GAME ganha espaço dedicado, recuperação de fim de semana e visão executiva com pódio
+
+**Emitida por:** dono (08/09/2026), em vários pedidos que convergiram no
+mesmo lote de publicação: a página `XGame.jsx` (até aqui órfã, sem link em
+lugar nenhum) virou o espaço individual completo do jogo; *"se ele perder as
+tarefas do dia, pode recompensar no fim de semana, comprovando que fez, pra
+manter o fixo — sem lesar, sem se ferrar"*; *"você esqueceu de botar pessoal
+meu"* (três vezes, sobre a Visão Executiva enterrar "VOCÊ" no fim de uma
+lista de 10+ linhas); e *"esse ranking com emoji está muito feio... deixa
+mais clean, mais Vale do Silício"*.
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/pages/XGame.jsx` — deixa de ser uma tela órfã e ganha X-Pay, ofensiva
+   (fogo) e missões da semana, que só existiam no Compromisso; passa a usar
+   `resumoDoDia()` com o mesmo participante/ciclo oficial, e a seção do time
+   é a mesma `XGameVisaoExecutiva` já usada na Verificação do Progresso —
+   nada duplicado. A gravação do placar (`xgame_diario`) ganha `xpay_ganho`/
+   `xpay_perdido`, que antes faltavam aqui e sobrescreviam dado incompleto
+   por cima do que o Compromisso já tinha gravado certo.
+2. `src/lib/xgame.js` — recuperação no fim de semana: `ehFimDeSemana()` e
+   `podeRecuperarNoFds()` liberam repor, sem teto de quantidade, uma tarefa
+   PERDIDA comprovando que foi feita — mas só dentro do fim de semana DO
+   MESMO CICLO em que a tarefa foi perdida. O X-Pay da tarefa volta
+   (`xpay_recuperado`); a nota do dia (Real Time) continua honesta, marcando
+   que foi tarde.
+3. `src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx` — pódio
+   visual (2º·1º·3º em ordem de palco, com altura/cor por posição), cartão
+   "onde eu estou" sempre no topo (nome + posição no ranking, antes de
+   qualquer coisa do time), e o selo de liga trocou emoji por um ponto de
+   cor (`SeloLiga`) — mesma informação, sem "figurinha".
+4. `src/components/licensing/CentralVendas/VerificacaoUI.jsx` (novo) — a
+   `BarraProgresso` compartilhada entre as 9 telas que desenhavam sua
+   própria barra de progresso (motivo da limpeza de emergência da
+   X-Performance em 07/09); mesmo visual de cada tela, só nomeado num lugar
+   só, com os dois dialetos do app (`claro`/`escuro`).
+
+**Prova:** `tests/xgameRecuperacaoFds.test.mjs` (novo), `tests/xgame.test.mjs`
+estendido, `tests/navegador/xgameEspaco.spec.mjs` e
+`tests/navegador/verificacaoUI.spec.mjs` (novos, prova em navegador real);
+suíte e build verificados antes do push.
+
+---
+
+## DIR-97 — Janela de votação da MvM vira 17h–20h ideal + 20h–21h30 última chance; não fechar o voto zera o DIA INTEIRO (dinheiro incluído)
+
+**Emitida por:** dono (08/09/2026). Primeiro: *"a votação tem que ser de 17h
+às 20h, é a ação mais importante do dia, junto com as vendas"* — a janela
+antiga (20h–22h) pegava gente já fora do ar (jantar, família, dormindo),
+punindo indisponibilidade, não desleixo. Depois, sem meio-termo: *"não vou,
+perde o dinheiro, perde a MvM, perde tudo do dia... precisa ser radical."*
+E sobre o horário final não ser meia-noite: *"ninguém acorda tarde aqui,
+todo mundo tem que estar dormindo antes das dez, todo mundo acorda às cinco
+da manhã."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `VOTACAO_INICIO_MIN` (17h) e `VOTACAO_IDEAL_FIM_MIN`
+   (20h) marcam a janela ideal; `VOTACAO_FIM_MIN` (21h30) é a "última
+   chance" — de 20h às 21h30 ainda dá pra fechar o voto em todos, sem
+   desconto nenhum (protege quem está numa reunião ou atrasou de verdade).
+   Só depois das 21h30, sem fechar TODOS os colegas, a régua radical entra.
+   Novo helper `horaDeMin(min)` formata `"17h"` ou `"21h30"` (com minutos
+   quando não é hora cheia) pra tela e guia nunca escreverem o horário à
+   mão.
+2. `resumoDoDia()` — não fechar a votação até as 21h30 não zera só a MvM:
+   zera o DIA INTEIRO — MvM, Human Token, pontos, e o X-Pay que seria ganho
+   vira PERDIDO de verdade (registrado, não some em silêncio).
+3. `src/lib/guiaXGame.js`, `src/components/licensing/CentralVendas/CrmMetodo.jsx`,
+   `src/pages/XGame.jsx` e `src/components/licensing/XGameAdmin.jsx` — todo
+   texto que citava "20h às 22h" (aula, dicionário, tooltips do placar,
+   alerta de MvM zerada, rótulo do painel admin) passou a ler
+   `horaDeMin(VOTACAO_INICIO_MIN)`/`horaDeMin(VOTACAO_FIM_MIN)`, e os
+   alertas de "MvM zerada" viraram "DIA ZERADO", deixando explícito que
+   Human Token, pontos e X-Pay caem junto — não só a MvM.
+
+**Prova:** `tests/guiaXGame.test.mjs` ajustado pra não travar mais o texto
+"22h" (a régua real fecha às 21h30, com a janela ideal terminando às 20h);
+suíte e build verificados antes do push.
+
+---
+
 ## DIR-96 — Super Admin sai da votação por padrão; não votar em todos zera a MvM do Dia
 
 **Emitida por:** dono (08/09/2026): *"Super Admin não pode ser votado a não
