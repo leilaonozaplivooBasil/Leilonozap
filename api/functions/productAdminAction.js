@@ -2,6 +2,7 @@
 // Guard: ator admin/super_admin OU cargo de estoque (distribuidor/loja_fisica/ponto_retirada).
 import { oid } from '../_lib/oid.js';
 import { exigirSessao } from '../_lib/sessao.js';
+import { faltaCategoria, AVISO_CATEGORIA } from '../../src/lib/sugestaoDeCategoria.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
@@ -91,6 +92,12 @@ export default async function handler(req, res) {
       row.base44_id = row.id;
       for (const k of Object.keys(fields)) { if (ALLOWED.includes(k)) row[k] = fields[k]; }
       if (!row.description) return res.status(400).json({ success: false, error: 'Descrição obrigatória' });
+      // 🏷️ SEM CATEGORIA NÃO ENTRA (08/09/2026). A trava é AQUI, não só na tela:
+      // validação de formulário some no dia em que alguém chamar a rota por fora,
+      // e foi assim que 948 dos 2.853 produtos ficaram sem categoria. A outra
+      // metade da regra é a rota sugerirCategoria — exigir sem ajudar só empurra
+      // o trabalho pro operador, que é como o passivo se formou.
+      if (faltaCategoria({ action, fields })) return res.status(400).json({ success: false, error: AVISO_CATEGORIA });
       const r = await sb('products', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) });
       if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao cadastrar', details: t.slice(0, 200) }); }
       const created = await r.json();
@@ -121,6 +128,9 @@ export default async function handler(req, res) {
       patch = { quantity: 0, qty_perfeito: 0, qty_bom: 0, qty_oficina: 0, qty_ruim: 0, catalog_active: false, updated_date: now };
     } else if (action === 'update' || action === 'setField') {
       const fields = body?.fields || {};
+      // Só o formulário completo manda `category_id`; as ações rápidas (tirar da
+      // vitrine, desvincular leilão) mandam um campo só e seguem passando.
+      if (faltaCategoria({ action, fields })) return res.status(400).json({ success: false, error: AVISO_CATEGORIA });
       for (const k of Object.keys(fields)) { if (ALLOWED.includes(k)) patch[k] = fields[k]; }
       // "Preço Varejo" e "Preço Catálogo" são o MESMO preço de venda em telas diferentes.
       // A Gestão de Estoque só mandava selling_price_retail, então o price_catalog ficava velho
