@@ -168,99 +168,128 @@ export default function XGame() {
 
   const fim = fimCiclo(resumo.ciclo_inicio);
   const pctDia = resumo.tarefas_total ? (resumo.tarefas_feitas / resumo.tarefas_total) * 100 : 0;
+  const meuNome = user.nickname || user.full_name || 'Guerreiro(a)';
 
   return (
     <div className="min-h-screen bg-[#00020C] text-[#F4F4F4]">
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      {/* 🏛️ DIR-97.1 — a tela era uma coluna estreita (max-w-3xl) num app
+          que promete "executivo". Agora ocupa a largura de ponta a ponta
+          (ordem do dono: "a página tem que pegar tudo"), com o SEU dia
+          num hero cheio no topo e O TIME num painel largo embaixo — as
+          duas metades que ele pediu pra enxergar lado a lado, não uma
+          atrás da outra escondida numa coluna. */}
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 py-8 sm:py-10 space-y-8 sm:space-y-10">
 
-        <header className="flex items-end justify-between border-b border-[#2B2B2B] pb-4">
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#2B2B2B] pb-5">
           <div>
-            <div className="text-xs tracking-widest text-[#817E8C] uppercase">To The Top · X-EOS</div>
-            <h1 className="text-3xl font-extrabold">X-GAME</h1>
-            <div className="text-sm text-[#C1BECA]">{FRASES.antecipacao} — dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
+            <div className="text-[11px] tracking-[0.28em] text-[#817E8C] uppercase font-semibold">To The Top · X-EOS · Visão Executiva</div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">X-GAME</h1>
+            <div className="text-sm text-[#C1BECA] mt-1">Boa {new Date().getHours() < 12 ? 'manhã' : new Date().getHours() < 18 ? 'tarde' : 'noite'}, {meuNome} — {FRASES.antecipacao.toLowerCase()} · dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
           </div>
-          <div className="text-right">
-            <div className="text-4xl">{resumo.faixa.medalha}</div>
-            <div className="text-xs text-[#817E8C]">{resumo.faixa.label}</div>
+          <div className="flex items-center gap-3 rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] px-5 py-3 self-start sm:self-auto">
+            <div className="text-4xl leading-none">{resumo.faixa.medalha}</div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[#817E8C]">faixa do dia</div>
+              <div className="text-sm font-extrabold">{resumo.faixa.label}</div>
+            </div>
           </div>
         </header>
 
         {/* 🧯 08/09/2026 — mesma regra explícita do Compromisso: não votar em
             todo mundo até as 22h zera a MvM do Dia. */}
         {resumo.perdeu_por_nao_votar && (
-          <div className="rounded-lg border-2 border-red-500 bg-red-950/40 px-3 py-2.5 text-center">
+          <div className="rounded-xl border-2 border-red-500 bg-red-950/40 px-4 py-3 text-center">
             <p className="text-sm font-extrabold text-red-400">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as 22h</p>
             <p className="text-[11px] text-red-300 mt-0.5">Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
           </div>
         )}
 
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card titulo="Human Token" valor={fmt2(resumo.token_dia)} sub={`teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
-          <Card titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)} sub={resumo.frase_mvm} destaque={resumo.mvm_dia < 4} />
-          <Card
-            titulo="X-Pay de hoje" valor={resumo.xpay ? `R$ ${fmt2(resumo.xpay.ganho)}` : '—'}
-            sub={resumo.xpay?.perdido > 0 ? `− R$ ${fmt2(resumo.xpay.perdido)} perdido` : `R$ ${fmt2(resumo.xpay?.emJogo || 0)} em jogo`}
-            destaque={resumo.xpay?.perdido > 0}
-            dica={`O seu fixo ÷ ${DIAS_FIXO} dias de operação, repartido pelo peso de cada tarefa. Tarefa perdida é dinheiro que sai do resultado.`}
-          />
-          <Card titulo="Pontos de hoje" valor={String(resumo.pontos)} sub={`${resumo.tarefas_feitas}/${resumo.tarefas_total} tarefas`} />
-        </section>
-
-        {/* 🔥 Ofensiva — dias seguidos fechando 80%+ do Master Task */}
-        <section className="flex items-center justify-between gap-2 flex-wrap border border-[#2B2B2B] rounded p-3">
-          <p className="text-sm font-bold">
-            🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
-            {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-400">🧊 congelador usado</span>}
-          </p>
-          <p className="text-[11px] text-[#817E8C]">
-            {hojeFechou ? 'hoje FECHADO ✔ — o fogo continua' : `feche ${Math.round(OFENSIVA_META * 100)}% do dia pra ${fogo.dias > 0 ? 'manter' : 'acender'} o fogo`}
-          </p>
-        </section>
-
-        <section>
-          <div className="flex justify-between text-xs text-[#817E8C] mb-1">
-            <span>Progresso do dia</span>
-            <span>{Math.round(pctDia)}%</span>
+        {/* ══ SEU DIA — o hero, cheio de largura ══ */}
+        <section data-teste="xgame-meu-dia">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Seu dia</span>
+            <span className="h-px flex-1 bg-[#2B2B2B]" />
           </div>
-          <BarraProgresso pct={pctDia} dialeto="escuro" altura="media" corClasse="bg-[#F4F4F4]" trilhoClasse="bg-[#2B2B2B]" />
-        </section>
 
-        {/* 🎯 Missões da semana */}
-        <section>
-          <h2 className="text-sm uppercase tracking-widest text-[#817E8C] mb-2">Missões da semana</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" data-teste="missoes-da-semana">
-            {missoes.map((m) => (
-              <div key={m.id} className={`rounded border px-3 py-2 ${m.ok ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-[#2B2B2B]'}`} data-teste="missao">
-                <p className="text-xs font-semibold">{m.emoji} {m.nome} {m.ok ? '✅' : ''}</p>
-                <div className="mt-1.5"><BarraProgresso pct={(m.atual / m.alvo) * 100} dialeto="escuro" altura="fina" corClasse={m.ok ? 'bg-emerald-400' : 'bg-[#F4F4F4]'} trilhoClasse="bg-[#2B2B2B]" /></div>
-                <p className="text-[10px] text-[#817E8C] mt-1 tabular-nums">{m.atual} de {m.alvo}</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card titulo="Human Token" valor={fmt2(resumo.token_dia)} sub={`teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
+            <Card titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)} sub={resumo.frase_mvm} destaque={resumo.mvm_dia < 4} />
+            <Card
+              titulo="X-Pay de hoje" valor={resumo.xpay ? `R$ ${fmt2(resumo.xpay.ganho)}` : '—'}
+              sub={resumo.xpay?.perdido > 0 ? `− R$ ${fmt2(resumo.xpay.perdido)} perdido` : `R$ ${fmt2(resumo.xpay?.emJogo || 0)} em jogo`}
+              destaque={resumo.xpay?.perdido > 0}
+              dica={`O seu fixo ÷ ${DIAS_FIXO} dias de operação, repartido pelo peso de cada tarefa. Tarefa perdida é dinheiro que sai do resultado.`}
+            />
+            <Card titulo="Pontos de hoje" valor={String(resumo.pontos)} sub={`${resumo.tarefas_feitas}/${resumo.tarefas_total} tarefas`} />
+          </div>
+
+          <div className="grid lg:grid-cols-[1fr_360px] gap-4 mt-4">
+            {/* Master Task — a coluna principal, agora larga de verdade */}
+            <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-5">
+              <h2 className="text-xs uppercase tracking-widest text-[#817E8C] mb-3">Master Task — tempo real</h2>
+              {resumo.tarefas.length === 0 && (
+                <div className="text-sm text-[#C1BECA] border border-[#2B2B2B] rounded-lg p-4">
+                  Nenhuma tarefa gerada pra hoje. Abra o Método e gere seu dia a partir da Rotina Perfeita.
+                </div>
+              )}
+              <div className="grid sm:grid-cols-2 gap-2">
+                {resumo.tarefas.map((t) => (
+                  <div key={t.id} className="flex items-center gap-3 border border-[#1c1f28] rounded-lg px-3 py-2">
+                    <span className="w-12 text-xs text-[#817E8C] tabular-nums shrink-0">{t.hora || '—'}</span>
+                    <span className={`flex-1 min-w-0 truncate text-sm ${t.feito ? 'line-through text-[#817E8C]' : ''}`}>{t.titulo}</span>
+                    <span className={`text-[11px] font-bold shrink-0 ${t.estado.cor}`}>{t.estado.id === 'PERDIDO' ? 'PERDIDO' : t.estado.label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Sidebar — ofensiva + progresso + missões, sempre à vista */}
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4">
+                <p className="text-sm font-bold">
+                  🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
+                  {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-400">🧊 congelador usado</span>}
+                </p>
+                <p className="text-[11px] text-[#817E8C] mt-1">
+                  {hojeFechou ? 'hoje FECHADO ✔ — o fogo continua' : `feche ${Math.round(OFENSIVA_META * 100)}% do dia pra ${fogo.dias > 0 ? 'manter' : 'acender'} o fogo`}
+                </p>
+                <div className="flex justify-between text-[11px] text-[#817E8C] mt-3 mb-1">
+                  <span>Progresso do dia</span>
+                  <span>{Math.round(pctDia)}%</span>
+                </div>
+                <BarraProgresso pct={pctDia} dialeto="escuro" altura="media" corClasse="bg-[#F4F4F4]" trilhoClasse="bg-[#2B2B2B]" />
+              </div>
+
+              <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4" data-teste="missoes-da-semana">
+                <h2 className="text-xs uppercase tracking-widest text-[#817E8C] mb-3">Missões da semana</h2>
+                <div className="space-y-2.5">
+                  {missoes.map((m) => (
+                    <div key={m.id} data-teste="missao">
+                      <p className="text-xs font-semibold flex items-center justify-between">
+                        <span>{m.emoji} {m.nome} {m.ok ? '✅' : ''}</span>
+                        <span className="text-[10px] text-[#817E8C] tabular-nums">{m.atual}/{m.alvo}</span>
+                      </p>
+                      <div className="mt-1.5"><BarraProgresso pct={(m.atual / m.alvo) * 100} dialeto="escuro" altura="fina" corClasse={m.ok ? 'bg-emerald-400' : 'bg-[#F4F4F4]'} trilhoClasse="bg-[#2B2B2B]" /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="space-y-1">
-          <h2 className="text-sm uppercase tracking-widest text-[#817E8C] mb-2">Master Task — tempo real</h2>
-          {resumo.tarefas.length === 0 && (
-            <div className="text-sm text-[#C1BECA] border border-[#2B2B2B] rounded p-4">
-              Nenhuma tarefa gerada pra hoje. Abra o Método e gere seu dia a partir da Rotina Perfeita.
-            </div>
-          )}
-          {resumo.tarefas.map((t) => (
-            <div key={t.id} className="flex items-center gap-3 border border-[#1c1f28] rounded px-3 py-2">
-              <span className="w-12 text-xs text-[#817E8C] tabular-nums">{t.hora || '—'}</span>
-              <span className={`flex-1 text-sm ${t.feito ? 'line-through text-[#817E8C]' : ''}`}>{t.titulo}</span>
-              <span className={`text-xs font-bold ${t.estado.cor}`}>{t.estado.id === 'PERDIDO' ? `PERDIDO · ${FRASES.impacto}` : t.estado.label}</span>
-            </div>
-          ))}
-        </section>
-
-        {/* 🏆 O time — a mesma visão executiva da equipe que já mora dentro
+        {/* ══ O TIME — a mesma visão executiva da equipe que já mora dentro
             da Verificação do Progresso, agora também aqui: pulso, pódio,
-            radar e a tabela inteira, sem duplicar cálculo nenhum. */}
+            radar e a tabela inteira, sem duplicar cálculo nenhum. Painel
+            largo, ocupando a página inteira. ══ */}
         <section className="xeos-palco" data-teste="xgame-o-time">
-          <h2 className="text-sm uppercase tracking-widest text-[#817E8C] mb-3">O time</h2>
-          <XGameVisaoExecutiva />
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Todo mundo</span>
+            <span className="h-px flex-1 bg-[#2B2B2B]" />
+          </div>
+          <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-6">
+            <XGameVisaoExecutiva />
+          </div>
         </section>
 
         <footer className="text-center text-xs text-[#4c4a56] pt-4 border-t border-[#1c1f28]">
@@ -273,10 +302,10 @@ export default function XGame() {
 
 function Card({ titulo, valor, sub, destaque = false, dica }) {
   return (
-    <div className={`rounded border p-3 ${destaque ? 'border-red-500/60' : 'border-[#2B2B2B]'} bg-[#0b0d14]`} title={dica}>
+    <div className={`rounded-2xl border p-4 sm:p-5 ${destaque ? 'border-red-500/60' : 'border-[#2B2B2B]'} bg-[#0b0d14]`} title={dica}>
       <div className="text-[11px] uppercase tracking-wider text-[#817E8C]">{titulo}</div>
-      <div className="text-2xl font-extrabold tabular-nums">{valor}</div>
-      <div className={`text-[11px] mt-0.5 ${destaque ? 'text-red-400 font-bold' : 'text-[#C1BECA]'}`}>{sub}</div>
+      <div className="text-2xl sm:text-3xl font-extrabold tabular-nums mt-1">{valor}</div>
+      <div className={`text-[11px] mt-1 ${destaque ? 'text-red-400 font-bold' : 'text-[#C1BECA]'}`}>{sub}</div>
     </div>
   );
 }

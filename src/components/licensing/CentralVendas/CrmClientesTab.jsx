@@ -11,7 +11,7 @@ import { Search, Filter, X, Save, Send, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign,
   // 🏛️ DIR-56 — ícones de traço no lugar dos emojis decorativos
   Sparkles, ShieldCheck, Users, PhoneCall, Presentation, Route, Gauge,
-  GitBranch, BellRing, Trophy
+  GitBranch, BellRing, Trophy, ArrowRight
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -1464,20 +1464,34 @@ _Enviado via CRM Leilão NoZap_`;
               tinha par: em vez de sumir com ele, foi junto pro Hábito 03, ao
               lado do outro — é lá que se constrói a rede. O topo fica só com
               o que a página promete: os 8 Hábitos. */}
-          {/* 🏆 DIR-97 — o ranking X-GAME que aparece dentro do Hábito 7 é só
-              o atalho; o espaço com mais riqueza de detalhe (X-Pay, ofensiva,
-              missões da semana) mora em /XGame. Botão fixo aqui em cima —
-              visível em qualquer um dos 8 Hábitos, não só dentro da
-              Verificação — porque o pedido foi "perto dos oito". */}
-          <button
-            type="button"
-            onClick={() => navigate('/XGame')}
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.09] px-4 py-2 text-sm font-bold text-nz-tinta transition-colors shrink-0"
-            data-teste="atalho-xgame"
-          >
-            <Trophy className="w-4 h-4 text-amber-400" /> Espaço X-GAME
-          </button>
         </div>
+
+        {/* 🏆 DIR-97 — o botão pro Espaço X-GAME (ranking + o seu dia, com
+            mais riqueza de detalhe que o atalho de dentro da Verificação)
+            saiu de um badge solto no cabeçalho (ordem do dono: "está muito
+            feio nesse canto") pra um banner cheio, na mesma gramática visual
+            dos 8 Hábitos logo abaixo — mesmo gradiente do hábito ativo,
+            convergindo com a grade em vez de flutuar do lado. */}
+        <button
+          type="button"
+          onClick={() => navigate('/XGame')}
+          className="group relative overflow-hidden rounded-2xl border border-white/15 hover:border-white/30 px-5 py-4 mb-5 sm:mb-7 w-full text-left transition-all"
+          style={{ background: 'linear-gradient(120deg, var(--topcollege-azul), var(--topcollege-roxo) 55%, var(--topcollege-magenta))' }}
+          data-teste="atalho-xgame"
+        >
+          <span className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-3 min-w-0">
+              <Trophy className="w-5 h-5 text-white shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-[10px] font-bold tracking-[0.18em] text-white/75">X-GAME</span>
+                <span className="block text-base sm:text-lg font-extrabold text-white leading-tight truncate">Visão Executiva X-GAME</span>
+              </span>
+            </span>
+            <span className="flex items-center gap-1 text-xs font-bold text-white/80 group-hover:text-white shrink-0">
+              abrir <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </span>
+        </button>
 
         {/* 🎓 DIR-63 — o palco das duas marcas saiu daqui. Ele repetia, 300px
             abaixo, exatamente o mesmo par de logos da faixa da academia — e o
