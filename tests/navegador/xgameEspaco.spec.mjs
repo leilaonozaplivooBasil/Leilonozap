@@ -1,8 +1,9 @@
 /**
- * O ESPAÇO X-GAME (DIR-97, 08/09/2026) — prova em navegador real que a
- * página /XGame, atualizada, renderiza o MEU DIA rico (Human Token, MvM,
- * X-Pay, ofensiva, missões da semana) e O TIME (XGameVisaoExecutiva
- * embutida, escurecida pelo .xeos-palco) sem erro nenhum.
+ * O ESPAÇO X-GAME (DIR-97, 08/09/2026, layout largo em 08/09) — prova em
+ * navegador real, em largura de desktop, que a página /XGame ocupa a
+ * largura inteira e renderiza "Seu dia" (Human Token, MvM, X-Pay, ofensiva,
+ * missões da semana) e "Todo mundo" (XGameVisaoExecutiva embutida,
+ * escurecida pelo .xeos-palco) sem erro nenhum.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,15 +44,16 @@ async function garantirNavegador() {
 }
 test.after(async () => { if (navegador) await navegador.close(); if (servidor) servidor.close(); });
 
-test('o espaço X-GAME (meu dia + time) renderiza sem erro', { skip: semNavegador }, async () => {
+test('o espaço X-GAME, em largura de desktop, renderiza "Seu dia" + "Todo mundo" sem erro', { skip: semNavegador }, async () => {
   const nav = await garantirNavegador();
-  const ctx = await nav.newContext({ viewport: { width: 760, height: 1400 } });
+  const ctx = await nav.newContext({ viewport: { width: 1440, height: 1600 } });
   const pagina = await ctx.newPage();
   const erros = [];
   pagina.on('pageerror', (e) => erros.push(e.message));
   await pagina.goto(BASE);
 
   await pagina.getByText('X-GAME', { exact: true }).waitFor();
+  await pagina.getByText('Seu dia', { exact: true }).waitFor();
 
   // MEU DIA — os 4 cartões, incluindo o X-Pay que a página órfã nunca mostrou
   await pagina.getByText('Human Token').waitFor();
@@ -64,14 +66,18 @@ test('o espaço X-GAME (meu dia + time) renderiza sem erro', { skip: semNavegado
   const missoes = pagina.locator('[data-teste="missoes-da-semana"] [data-teste="missao"]');
   assert.equal(await missoes.count(), 3, 'têm que aparecer as 3 missões da semana');
 
-  // O TIME — a Visão Executiva embutida, escurecida pelo .xeos-palco
-  await pagina.getByText('O time', { exact: true }).waitFor();
+  // TODO MUNDO — a Visão Executiva embutida, escurecida pelo .xeos-palco
+  await pagina.getByText('Todo mundo', { exact: true }).first().waitFor();
   await pagina.getByText('A X-GAME da equipe').waitFor();
   await pagina.getByText('Carla Souza').first().waitFor();
   const tintaEscurecida = await pagina.locator('[data-teste="xgame-o-time"]').evaluate(
     (el) => getComputedStyle(el).getPropertyValue('--nz-tinta').trim(),
   );
   assert.equal(tintaEscurecida, '#F4F4F4', 'o .xeos-palco tem que escurecer os tokens --nz-* pro time renderizar legível');
+
+  // A largura de ponta a ponta (ordem do dono: "a página tem que pegar tudo")
+  const largura = await pagina.locator('[data-teste="xgame-meu-dia"]').evaluate((el) => el.getBoundingClientRect().width);
+  assert.ok(largura > 1200, `"Seu dia" tem que ocupar a largura de desktop (achei ${largura}px)`);
 
   await pagina.screenshot({ path: path.join(FOTOS, 'xgame-espaco.png'), fullPage: true });
   assert.deepEqual(erros, []);
