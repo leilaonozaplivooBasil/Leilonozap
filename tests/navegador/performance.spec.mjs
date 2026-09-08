@@ -82,6 +82,10 @@ async function abrir({ celular = false } = {}) {
   pagina.on('pageerror', (e) => erros.push(e.message));
   await pagina.goto(BASE);
   await pagina.locator('[data-teste="gestao"]').waitFor();
+  // 🗂️ 08/09/2026 — Distribuir Tarefa deixou de vir sempre aberta (dono:
+  // "não esse quadradão que vem de cara"); os testes abrem o painel antes
+  // de mexer nos campos dela.
+  await pagina.locator('[data-teste="abrir-distribuir"]').click();
   await pagina.locator('[data-teste="pessoa"]').selectOption('emanuel');
   await pagina.locator('[data-teste="tarefas-dia"] li').first().waitFor(); // as tarefas do 08/09 do Emanuel
   return { pagina, ctx, erros };
@@ -418,22 +422,26 @@ test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião v
   await ctx.close();
 });
 
-test('FAXINA: pra gestão, a pessoa vem primeiro; mentalidades, contas, encontro e quadro ficam dobrados', { skip: semNavegador }, async () => {
+test('FAXINA: pra gestão, só a XPerformanceGestao — sem as dobras de "diretoria" e "sobre"', { skip: semNavegador }, async () => {
+  // 🧹 08/09/2026 — dono: "essa diretoria [encontro de segunda + quadro]
+  // pode tirar, foi um começo que a gente não fez. E a mentalidade está
+  // muito genérica, muito feia — pode tirar isso também." As duas dobras
+  // que ficavam abaixo da gestão saíram de vez.
   const { pagina, ctx } = await abrir();
-  const ordem = await pagina.evaluate(() => [...document.querySelectorAll('[data-teste="gestao"], details[data-teste^="dobra-"]')].map((e) => e.getAttribute('data-teste')));
-  assert.deepEqual(ordem, ['gestao', 'dobra-diretoria', 'dobra-sobre'], 'embaixo só o que é da diretoria e o "sobre"; o resto foi pro Quadro Geral');
-  for (const id of ['diretoria', 'sobre']) {
-    assert.equal(await pagina.locator(`details[data-teste="dobra-${id}"]`).evaluate((e) => e.open), false, `${id} devia nascer dobrada`);
-  }
-  // os quadradões só aparecem pra quem abre
-  assert.equal(await pagina.getByText('Mentalidade do CEO', { exact: true }).isVisible(), false);
-  await pagina.locator('details[data-teste="dobra-sobre"] summary').click();
-  await pagina.getByText('Construir o sistema').waitFor();
-  // 🏛️ o grupo: a holding, os quatro pilares-empresa, visão, missão e os 18 valores
-  await pagina.getByText('Estamos lendo o jornal de 2044.').waitFor();
-  assert.equal(await pagina.locator('[data-teste="pilar"]').count(), 4);
-  assert.equal(await pagina.locator('[data-teste="valores"] span').count(), 18);
-  assert.match(await texto(pagina, '[data-teste="grupo"]'), /To The Top Corporate — Venture Builder, Venture Capital e Holding Estratégica/);
+  const dobras = await pagina.locator('details[data-teste^="dobra-"]').count();
+  assert.equal(dobras, 0, 'nenhuma dobra deveria sobrar embaixo da gestão');
+  assert.equal(await pagina.getByText('Mentalidade do CEO', { exact: true }).isVisible(), false, 'a explicação das mentalidades saiu do painel');
+  assert.equal(await pagina.getByText('Encontro de segunda', { exact: false }).count(), 0, 'a diretoria (encontro + quadro) saiu do painel');
+  await ctx.close();
+});
+
+test('O TIME NUM RELANCE: o resumo de quantidade fica no topo, antes de qualquer coisa', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const resumo = pagina.locator('[data-teste="resumo-time-hoje"]');
+  await resumo.waitFor();
+  const primeiroFilho = await pagina.evaluate(() => document.querySelector('[data-teste="gestao"]').firstElementChild.getAttribute('data-teste'));
+  assert.equal(primeiroFilho, 'resumo-time-hoje', 'o resumo do time é a primeira coisa da gestão, não escondido lá embaixo');
+  assert.match((await resumo.textContent()).replace(/\s+/g, ' '), /no time corporativo/);
   await ctx.close();
 });
 

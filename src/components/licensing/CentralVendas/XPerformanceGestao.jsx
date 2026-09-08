@@ -113,7 +113,15 @@ import { portoesDaSociedade } from '@/lib/xperformance';
 // até" (prazo_em) e a FILA DO PRONTO fecha o enviar-e-voltar: o que está
 // atrasado, o que está pronto esperando o ✔✔, e o DEVOLVER com recado —
 // que a pessoa lê embaixo da tarefa (src/lib/pronto).
-
+//
+// 🗂️ NONA RODADA (dono, 08/09/2026): "quero trazer o ciclo de vendas de
+// participantes pra cima; embaixo, a distribuição de tarefa — mas como um
+// modal de abertura, não esse quadradão que vem de cara." A ORDEM VIROU:
+//   1. 💰 QUADRO GERAL DE CADA UM — o ciclo de cada participante, agora
+//      primeiro; escolhe a pessoa, abre o painel dela.
+//   2. 🎯 DISTRIBUIR TAREFA — deixou de vir sempre aberta; agora é um botão
+//      que abre o painel (o "modal de abertura" pedido).
+//   3. 🛠️ GESTÃO DO X-GAME — sem mudança, continua embutida e dobrada.
 
 import DistribuirTarefa, { proximoDiaUtil, diasUteisAteSexta, prazoDaPrioridade } from '@/components/licensing/CentralVendas/DistribuirTarefa';
 export { proximoDiaUtil, diasUteisAteSexta, prazoDaPrioridade };
@@ -187,6 +195,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const [cicloConfig, setCicloConfig] = useState(null);
   const [tarefasCiclo, setTarefasCiclo] = useState([]);
   const [adminAberto, setAdminAberto] = useState(false);
+  // 🗂️ 08/09/2026 — dono: "quero a distribuição de tarefa como um modal de
+  // abertura, não esse quadradão que vem de cara." Antes ela vinha sempre
+  // aberta, ocupando o topo da tela; agora é um botão que abre o painel.
+  const [distribuirAberto, setDistribuirAberto] = useState(false);
 
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
@@ -358,6 +370,17 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     return resumoDoCiclo({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefasPorDia: porDia, diasDoCiclo: diasCiclo, hojeISO: hoje });
   };
 
+  // 📊 08/09/2026 — dono: "quero ver a quantidade de tarefas que nós temos
+  // do grupo — quantas o time concluiu, qual o percentual." O painel vivo
+  // que faltava: o time inteiro, num relance, antes de entrar pessoa por
+  // pessoa. Mesma conta em XGameVisaoExecutiva (Verificação do Progresso).
+  const tarefasHoje = tarefasCiclo.filter((t) => String(t.data).slice(0, 10) === hoje);
+  const resumoTimeHoje = {
+    pessoas: equipe.length,
+    total: tarefasHoje.length,
+    feitas: tarefasHoje.filter((t) => t.feito).length,
+  };
+
   if (carregando) {
     return <div className="py-6 text-center text-white/40"><Loader2 className="w-5 h-5 animate-spin inline" /></div>;
   }
@@ -365,13 +388,52 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
 
   return (
     <div className="space-y-5" data-teste="gestao">
-      {/* ── 1. 🎯 DISTRIBUIR TAREFA — a peça única (DistribuirTarefa.jsx), a mesma do Painel Corporativo ── */}
-      <DistribuirTarefa
-        currentUser={currentUser} equipe={equipe} participanteDe={participanteDe} nomeDe={nomeDe}
-        tarefasCiclo={tarefasCiclo} carregarTarefas={carregarTarefas} catalogo={catalogo} acoesDoBanco={acoesDoBanco} onAcoesDoBanco={setAcoesDoBanco}
-        pessoa={pessoa} onPessoa={setPessoa} dia={dia} onDia={setDia} desfazer={desfazer}
-        onAbrirQuadroGeral={(id) => { setPessoaFixo(id); setAbaModal('pessoa'); setModalAberto(true); }}
-      />
+      {/* ── 📊 O TIME, NUM RELANCE — a quantidade que faltava (dono, 08/09/2026):
+          "quantas tarefas nós temos, quanto o time concluiu, qual o percentual". ── */}
+      <div className="grid grid-cols-3 gap-2" data-teste="resumo-time-hoje">
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.pessoas}</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">no time corporativo</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.feitas} <span className="text-white/35 font-medium">/ {resumoTimeHoje.total}</span></p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">tarefas concluídas hoje</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-nz-verde tabular-nums">{resumoTimeHoje.total ? Math.round((resumoTimeHoje.feitas / resumoTimeHoje.total) * 100) : 0}%</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">do time, hoje</p>
+        </div>
+      </div>
+
+      {/* ── 1. 💰 QUADRO GERAL DE CADA UM — o ciclo de cada participante, agora
+          no topo (dono, 08/09/2026): "quero trazer o ciclo de vendas de
+          participantes pra cima". Escolhe a pessoa, abre o painel dela. ── */}
+      {equipe.length > 0 && (
+        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-nz-verde" />
+            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
+            <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
+          </div>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <select
+              value={pessoaFixo}
+              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
+              className={`${campo} min-w-[240px]`}
+              data-teste="pessoa-fixo"
+            >
+              <option value="">escolha a pessoa…</option>
+              {equipe.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{funcaoTrabalho(p.id) && (funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome) !== p.funcao ? ` · ${funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome}` : ''}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
+              ))}
+            </select>
+            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
+              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
+            </Button>
+            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
+          </div>
+        </div>
+      )}
 
       {modalAberto && pessoaFixo && (() => {
         const base = participanteDe(pessoaFixo);
@@ -613,6 +675,36 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         );
       })()}
 
+      {/* ── 🎯 DISTRIBUIR TAREFA — agora um painel que abre no clique (dono,
+          08/09/2026): "quero a distribuição de tarefa como um modal de
+          abertura, não esse quadradão que vem de cara". Fica logo abaixo do
+          Quadro Geral, mesmo com o painel de alguém aberto — distribuir uma
+          tarefa não deveria exigir fechar quem você está vendo. ── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <button
+          type="button"
+          onClick={() => setDistribuirAberto((v) => !v)}
+          aria-expanded={distribuirAberto}
+          className="w-full flex items-center gap-2 text-left"
+          data-teste="abrir-distribuir"
+        >
+          <Send className="w-4 h-4 text-nz-verde" />
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Distribuir tarefa</span>
+          <span className="text-[10px] text-white/35">· escolhe quem, o dia e a tarefa</span>
+          <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${distribuirAberto ? 'rotate-180' : ''}`} />
+        </button>
+        {distribuirAberto && (
+          <div className="mt-3">
+            <DistribuirTarefa
+              currentUser={currentUser} equipe={equipe} participanteDe={participanteDe} nomeDe={nomeDe}
+              tarefasCiclo={tarefasCiclo} carregarTarefas={carregarTarefas} catalogo={catalogo} acoesDoBanco={acoesDoBanco} onAcoesDoBanco={setAcoesDoBanco}
+              pessoa={pessoa} onPessoa={setPessoa} dia={dia} onDia={setDia} desfazer={desfazer}
+              onAbrirQuadroGeral={(id) => { setPessoaFixo(id); setAbaModal('pessoa'); setModalAberto(true); }}
+            />
+          </div>
+        )}
+      </div>
+
       {/* enquanto o Quadro Geral está aberto, o resto sai da frente */}
       <div hidden={modalAberto && !!pessoaFixo}>
       {/* ── ⏰ A FILA DO PRONTO — o enviar-e-voltar ─────────────────────── */}
@@ -665,35 +757,6 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
         <ComprovacoesPainel nomeDe={nomeDe} />
       </div>
-
-      {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
-      {equipe.length > 0 && (
-        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-nz-verde" />
-            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
-            <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
-          </div>
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <select
-              value={pessoaFixo}
-              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
-              className={`${campo} min-w-[240px]`}
-              data-teste="pessoa-fixo"
-            >
-              <option value="">escolha a pessoa…</option>
-              {equipe.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{funcaoTrabalho(p.id) && (funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome) !== p.funcao ? ` · ${funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome}` : ''}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
-              ))}
-            </select>
-            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
-              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
-            </Button>
-            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
-          </div>
-        </div>
-      )}
-
 
       </div>
       {/* ── 3. 🛠️ GESTÃO DO X-GAME (o admin de sempre, dobrado) ────────── */}

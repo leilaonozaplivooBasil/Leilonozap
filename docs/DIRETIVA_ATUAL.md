@@ -12,6 +12,54 @@
 
 ---
 
+## DIR-101 — ADM X-Game reorganizado: ciclo de cada um no topo, Distribuir Tarefa vira painel, resumo do time e faxina nas dobras genéricas
+
+**Emitida por:** dono (08/09/2026), olhando o painel administrativo ao vivo:
+*"quero trazer o ciclo de vendas de participante pra cima. E embaixo do
+ciclo de vendas de participante, eu quero a distribuição de tarefa, mas
+como um modal de abertura, não esse quadradão que vem de cara. Essa
+diretoria [encontro de segunda + o quadro] pode tirar, foi um começo que a
+gente não fez, não está legal. E a mentalidade está muito genérica, muito
+feia — pode tirar isso também, já tem tudo isso, depois a gente faz um
+negócio melhor. (...) Eu quero também a quantidade de tarefas que nós temos
+do grupo — quantas tarefas, quanto o time concluiu, qual o percentual.
+Isso pode aparecer na verificação do progresso mas também tem que ter
+aqui."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/components/licensing/CentralVendas/XPerformanceGestao.jsx` — o
+   "Quadro Geral de cada um" (o ciclo financeiro de cada participante:
+   ganho, a conferir, em jogo, perdido) virou a PRIMEIRA coisa da tela.
+   "Distribuir Tarefa" deixou de vir sempre aberta — agora é um botão
+   ("Distribuir tarefa ▾") que abre o painel dela, embaixo do Quadro Geral,
+   e continua acessível mesmo com o painel de alguém aberto.
+2. Novo resumo no topo de tudo: quantas pessoas no time corporativo, quantas
+   tarefas o time tem hoje, quantas concluiu e o percentual — a mesma conta
+   entra em `XGameVisaoExecutiva.jsx` (Verificação do Progresso), como um
+   quinto cartão do Pulso da equipe.
+3. `src/components/licensing/CentralVendas/XPerformance.jsx` — as duas
+   dobras que ficavam abaixo da gestão saíram: "Diretoria: encontro de
+   segunda e o quadro" (um começo que não vingou) e "Sobre: as três
+   mentalidades e o grupo To The Top" (a explicação genérica das
+   mentalidades). O Encontro de Segunda e o Quadro continuam existindo pra
+   quem NÃO é gestão — só saíram do painel do super admin.
+
+**O que fica pra depois, por falta de definição ainda (dono pediu análise,
+não decidiu os números):** mensagem automática + desconto de pontos por
+atraso na Fila do Pronto, arquivar com histórico/relatório da pessoa, e o
+"percentual de reunião do time" — ver a mensagem de acompanhamento desta
+sessão com a análise e as perguntas em aberto.
+
+**Prova:** `tests/navegador/performance.spec.mjs` — `abrir()` agora abre o
+painel de Distribuir antes de usar os campos dela; a FAXINA foi reescrita
+pra confirmar que as duas dobras sumiram; teste novo confirma que o resumo
+do time é a primeira coisa da gestão. Suíte 25/25 em navegador real,
+1588/1588 na suíte principal, lint e build limpos.
+
+---
+
 ## DIR-100 — Jornada: setas de navegar sem expandir, com prévia no mouse e no dedo
 
 **Emitida por:** dono (08/09/2026), sobre a tela do Momento: *"a gente tem um botão de passar pra frente ou pra trás... quando a gente passa esse mouse em cima do botão, tanto no desktop quanto no celular, essa tarefa entra numa prévia, uma expansão da tarefa... e volta quando a gente tirar o mouse. Como isso funcionaria no celular? Colocasse o dedo em cima, abrisse uma prévia."* E, sobre os botões da jornada expandida: *"eu tenho que clicar pra saber o que cada botão é — quando eu passar o mouse em cima, ele já dá uma expandida, bem rápido."*

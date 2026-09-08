@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown } from 'lucide-react';
+import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList } from 'lucide-react';
 import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao } from '@/lib/xgame';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
@@ -150,6 +150,12 @@ export default function XGameVisaoExecutiva() {
       xpay: linhas.reduce((a, l) => a + l.xpay, 0),
       perdido: linhas.reduce((a, l) => a + l.perdido, 0),
       fogos: linhas.filter((l) => l.fogo > 0).length,
+      // 📊 08/09/2026 — dono: "quero a quantidade de tarefas do grupo — X
+      // pessoas, Y tarefas, quantas o time concluiu, qual o percentual."
+      // Mesma conta do ADM X-Game (XPerformanceGestao), só que a partir do
+      // retrato já gravado em xgame_diario, não da tabela ao vivo.
+      tarefasHojeTotal: comHoje.reduce((a, l) => a + (l.hoje.total || 0), 0),
+      tarefasHojeFeitas: comHoje.reduce((a, l) => a + (l.hoje.feitas || 0), 0),
     };
   }, [linhas]);
 
@@ -254,12 +260,17 @@ export default function XGameVisaoExecutiva() {
       )}
 
       {/* ── 1. O PULSO ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={<SeloLiga liga={ligaTime} className="text-nz-tinta-fraca" />} />
         </div>
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Users} rotulo="O dia de hoje" valor={pct(time.diaHoje)} nota={`fecha em ${Math.round(OFENSIVA_META * 100)}%`} cor={time.diaHoje >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
+        </div>
+        {/* 📊 08/09/2026 — dono: "quero a quantidade de tarefas do grupo —
+            quantas o time tem, quanto concluiu, qual o percentual." */}
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={ClipboardList} rotulo="Tarefas do time hoje" valor={`${time.tarefasHojeFeitas}/${time.tarefasHojeTotal}`} nota={`${time.tarefasHojeTotal ? Math.round((time.tarefasHojeFeitas / time.tarefasHojeTotal) * 100) : 0}% concluído`} cor={time.tarefasHojeTotal && time.tarefasHojeFeitas / time.tarefasHojeTotal >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
         </div>
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Flame} rotulo="Ofensivas acesas" valor={`${time.fogos}/${time.pessoas}`} nota="dias seguidos fechados" cor={time.fogos > 0 ? 'text-nz-fogo' : 'text-nz-tinta'} />
