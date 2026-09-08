@@ -9,6 +9,7 @@ import { distribuirDia } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { CHAVES, metasDoModelo, modeloDaFuncao, progressoDasMetas, carteiraDeCapital, mesDe } from '@/lib/metasPessoa';
 import { RituaisSemana } from '@/components/licensing/CentralVendas/PainelOficial';
+import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import { PROGRAMA_PADRAO, programaJunto, programaParaGravar, cardsDoMes, rotuloDoMes, faseDoPrograma } from '@/lib/programaMentoria';
 import { MENTALIDADES, mentalidadeDe, habitoDe, planejamentoDoDia } from '@/lib/mentalidades';
 import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
@@ -145,8 +146,13 @@ export function AbaMetas({ pessoaId, nome, funcaoId, mes, criadoPorId, metasInfo
                 </span>
                 <button type="button" onClick={() => remover(m)} className="text-white/30 hover:text-red-300" aria-label={`remover ${m.rotulo}`}><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
-              <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${Math.min(100, m.pct)}%`, background: m.noRitmo ? 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' : 'rgba(251,191,36,0.7)' }} />
+              <div className="mt-1">
+                <BarraProgresso
+                  pct={m.pct}
+                  dialeto="escuro"
+                  altura="fina"
+                  corEstilo={m.noRitmo ? 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-magenta))' : 'rgba(251,191,36,0.7)'}
+                />
               </div>
             </li>
           ))}

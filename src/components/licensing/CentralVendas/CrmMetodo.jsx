@@ -36,6 +36,7 @@ import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
+import { BarraProgresso } from './VerificacaoUI';
 import EntradaComDestinos from './EntradaComDestinos';
 import PreviaJornadaModal from './PreviaJornadaModal';
 import CrmSonhoModal from './CrmSonhoModal';
@@ -1381,9 +1382,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
               <p className="text-sm font-semibold text-nz-tinta">{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}%</p>
             </div>
-            <div className="h-2 rounded-full bg-nz-cinza-fundo overflow-hidden">
-              <div className="bg-nz-verde h-full transition-all" style={{ width: `${progressoJogo.pct}%` }} />
-            </div>
+            <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
 
             {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
                 A faixa inteira (seletor, placar e o relógio de teste temporário)
@@ -1500,10 +1499,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             {atual}% <span className="text-nz-tinta-fraca font-normal">/ alvo {alvo}%</span>{ok ? ' ✅' : ''}
                           </span>
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
-                          <div className={`h-full rounded-full ${ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, atual)}%` }} />
-                          <div className="absolute top-0 h-full w-px bg-nz-tinta/50" style={{ left: `${alvo}%` }} />
-                        </div>
+                        <BarraProgresso
+                          pct={atual} dialeto="claro" altura="padrao"
+                          corClasse={ok ? 'bg-nz-verde' : 'bg-amber-500'}
+                          trilhoClasse="bg-nz-borda/60" limite={alvo}
+                        />
                       </div>
                     );
                   })}
@@ -1538,8 +1538,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   {missoes.map((m) => (
                     <div key={m.id} className={`rounded border px-2 py-1.5 ${m.ok ? 'border-nz-verde/50 bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}>
                       <p className="text-[11px] font-semibold text-nz-tinta">{m.emoji} {m.nome} {m.ok ? '✅' : ''}</p>
-                      <div className="mt-1 h-1.5 rounded-full bg-nz-borda/60 overflow-hidden">
-                        <div className={`h-full rounded-full ${m.ok ? 'bg-nz-verde' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, (m.atual / m.alvo) * 100)}%` }} />
+                      <div className="mt-1">
+                        <BarraProgresso
+                          pct={(m.atual / m.alvo) * 100} dialeto="claro" altura="padrao"
+                          corClasse={m.ok ? 'bg-nz-verde' : 'bg-amber-500'}
+                          trilhoClasse="bg-nz-borda/60"
+                        />
                       </div>
                       <p className="text-[10px] text-nz-tinta-fraca tabular-nums mt-0.5">{m.atual} de {m.alvo}</p>
                     </div>
