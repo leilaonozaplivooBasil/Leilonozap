@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Clock3, LayoutGrid, CalendarPlus, Route } from 'lucide-react';
 import { fraseVaiEntrar } from '@/lib/destinos';
+import PreviaJornadaModal from './PreviaJornadaModal';
 
 // 🔗 A ENTRADA COM DESTINOS — a linha de "adicionar" que fala pra onde vai
 // (dono, 06/09/2026): "toda alimentação na lista ou no quadro dá a opção de
@@ -26,7 +27,7 @@ const estiloCampoEscuro = { color: '#F4F4F4', borderColor: 'rgba(255,255,255,0.1
  *   A cor é decidida por quem usa o componente — não pelo `origem`, que já
  *   significa outra coisa (pra onde o card entra).
  */
-export default function EntradaComDestinos({ origem = 'lista', valor, onChange, onCriar, listas = [], listaNome = null, salvando = false, placeholder, testeCampo = 'campo-nova-entrada', altura = 44, escuro = false }) {
+export default function EntradaComDestinos({ origem = 'lista', valor, onChange, onCriar, listas = [], listaNome = null, salvando = false, placeholder, testeCampo = 'campo-nova-entrada', altura = 44, escuro = false, itensDoDia = null }) {
   const v = valor || {};
   const muda = (parte) => onChange({ ...v, ...parte });
   const escrevendo = !!String(v.titulo || '').trim();
@@ -39,13 +40,25 @@ export default function EntradaComDestinos({ origem = 'lista', valor, onChange, 
   const corMuitoFraca = '#8993A4';
   const azul = escuro ? '#7AB2FF' : '#0B5FFF';
 
+  // 🔮 DIR-91 — vai entrar na Jornada (tem hora) e temos a agenda do dia pra
+  // comparar? Mostra a prévia ANTES de criar. Sem hora não tem sobreposição
+  // possível ("sem hora = fora da Jornada" já é a régua desta mesma tela).
+  const [previaAberta, setPreviaAberta] = useState(false);
+  const temHora = !!String(v.hora || '').trim();
+  const podePrever = temHora && Array.isArray(itensDoDia);
+  const tentarCriar = () => {
+    if (!pronto) return;
+    if (podePrever) { setPreviaAberta(true); return; }
+    onCriar();
+  };
+
   return (
     <div className="space-y-2" data-teste={`entrada-${origem}`} data-escrevendo={escrevendo ? 'sim' : 'nao'}>
       <div className="flex items-center gap-2">
         <input
           value={v.titulo || ''}
           onChange={(e) => muda({ titulo: e.target.value })}
-          onKeyDown={(e) => { if (e.key === 'Enter' && pronto) onCriar(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && pronto) tentarCriar(); }}
           placeholder={placeholder || (origem === 'quadro' ? 'escreva o tópico' : 'nova tarefa do dia…')}
           data-teste={testeCampo}
           className={`flex-1 min-w-0 rounded-xl px-3.5 text-[15px] outline-none ${escuro ? 'placeholder:text-white/35' : 'placeholder:text-[#B3BAC5]'}`}
@@ -53,12 +66,23 @@ export default function EntradaComDestinos({ origem = 'lista', valor, onChange, 
             ? { background: 'rgba(255,255,255,0.06)', color: '#F4F4F4', height: altura, border: '1px solid rgba(255,255,255,0.14)' }
             : { background: '#FFFFFF', color: '#172B4D', height: altura, boxShadow: '0 1px 3px rgba(9,30,66,0.28)' }}
         />
-        <button type="button" onClick={onCriar} disabled={!pronto} data-teste={`${testeCampo}-criar`}
+        <button type="button" onClick={tentarCriar} disabled={!pronto} data-teste={`${testeCampo}-criar`}
           className="shrink-0 rounded-xl text-white grid place-items-center disabled:opacity-40"
           style={{ background: '#1B7A48', height: altura, width: altura }} title={frase.texto}>
           <Plus className="w-5 h-5" />
         </button>
       </div>
+
+      {previaAberta && (
+        <PreviaJornadaModal
+          itens={itensDoDia}
+          novo={{ titulo: v.titulo, hora: v.hora, ignorarId: null }}
+          onFechar={() => setPreviaAberta(false)}
+          onAjustar={() => setPreviaAberta(false)}
+          onUsarLivre={(h) => muda({ hora: h })}
+          onConfirmar={() => { setPreviaAberta(false); onCriar(); }}
+        />
+      )}
 
       {escrevendo && (
         <div className="rounded-xl p-2.5 space-y-2" style={escuro ? { background: 'rgba(255,255,255,0.06)', color: '#F4F4F4', border: '1px solid rgba(255,255,255,0.12)' } : { background: 'rgba(255,255,255,0.92)', color: '#172B4D' }} data-teste="destinos">

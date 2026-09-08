@@ -490,7 +490,7 @@ function Coluna({
         <div className="mt-auto">
           {/* 🔗 06/09 — a entrada fala pra onde vai: o quadro é certo; "também no meu
               dia" e a hora (= a Jornada) são escolha, ditas por extenso embaixo */}
-          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} escuro />
+          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} escuro itensDoDia={doDia} />
         </div>
       </div>
     </div>
