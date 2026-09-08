@@ -11,7 +11,7 @@ import { Search, Filter, X, Save, Send, CheckCircle, Package,
   Pencil, Plus, RefreshCw, TriangleAlert, ShieldAlert, Briefcase, DollarSign,
   // 🏛️ DIR-56 — ícones de traço no lugar dos emojis decorativos
   Sparkles, ShieldCheck, Users, PhoneCall, Presentation, Route, Gauge,
-  GitBranch, BellRing
+  GitBranch, BellRing, Trophy
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -1464,6 +1464,19 @@ _Enviado via CRM Leilão NoZap_`;
               tinha par: em vez de sumir com ele, foi junto pro Hábito 03, ao
               lado do outro — é lá que se constrói a rede. O topo fica só com
               o que a página promete: os 8 Hábitos. */}
+          {/* 🏆 DIR-97 — o ranking X-GAME que aparece dentro do Hábito 7 é só
+              o atalho; o espaço com mais riqueza de detalhe (X-Pay, ofensiva,
+              missões da semana) mora em /XGame. Botão fixo aqui em cima —
+              visível em qualquer um dos 8 Hábitos, não só dentro da
+              Verificação — porque o pedido foi "perto dos oito". */}
+          <button
+            type="button"
+            onClick={() => navigate('/XGame')}
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.09] px-4 py-2 text-sm font-bold text-nz-tinta transition-colors shrink-0"
+            data-teste="atalho-xgame"
+          >
+            <Trophy className="w-4 h-4 text-amber-400" /> Espaço X-GAME
+          </button>
         </div>
 
         {/* 🎓 DIR-63 — o palco das duas marcas saiu daqui. Ele repetia, 300px
