@@ -113,7 +113,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   if (pergunta) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()} data-teste="comprovar-modal-justificativa">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden [color-scheme:light]" onClick={(e) => e.stopPropagation()} data-teste="comprovar-modal-justificativa">
           <div className="flex items-start justify-between gap-3 px-5 pt-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">🤖 a IA quer confirmar</p>
@@ -124,7 +124,21 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             </button>
           </div>
           <div className="px-5 py-4 space-y-3">
-            <p className="text-sm font-semibold text-nz-tinta bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5" data-teste="pergunta-ia">
+            {/* 🩹 DIR-92 — o dono viu essa caixa em branco (fundo aparecendo,
+                texto invisível) em produção, mesmo com a régua de cor batendo
+                certinho em todo teste que eu consigo rodar aqui. Isso é a
+                marca de um repintador de "modo escuro" no navegador (extensão
+                ou tema do sistema) forçando as cores por cima da página.
+                `color-scheme: light` é o sinal padrão que o PRÓPRIO Chrome
+                (e a maioria dessas ferramentas) respeita pra saber que este
+                pedaço já É claro de propósito e não deve ser invertido. Cor
+                também virou inline (não só classe) — outra camada de defesa,
+                caso algo esteja lendo computed style em vez de herdar cascata. */}
+            <p
+              className="text-sm font-semibold rounded-xl px-3 py-2.5 [color-scheme:light]"
+              style={{ color: '#1A1A1A', background: '#FFFBEB', border: '1px solid #FDE68A' }}
+              data-teste="pergunta-ia"
+            >
               {pergunta}
             </p>
             <Textarea
@@ -154,7 +168,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden [color-scheme:light]"
         onClick={(e) => e.stopPropagation()}
         onPaste={colarPrint}
         data-teste="comprovar-modal"
