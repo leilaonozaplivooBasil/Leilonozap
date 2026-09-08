@@ -1,4 +1,5 @@
 import React from 'react';
+import { familiaDaTarefa } from '@/lib/capaDaTarefa';
 
 // 🖼️ AS CAPAS DO MOMENTO — a cena de fundo de cada tarefa (ordem do dono:
 // "treino, duas pessoas treinando numa academia; de manhã, o mar com o sol
@@ -341,9 +342,20 @@ const CENAS = [
 
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+// família visual (o Hábito, quando o título sozinho não converge, DIR-94) →
+// a cena mais próxima entre as 8 que já existem. Só entram famílias que têm
+// um paralelo de verdade — as demais seguem pro horizonte padrão.
+const CENA_DA_FAMILIA = {
+  sonho: CenaAmanhecer,
+  apresentacao: CenaReuniao,
+  fechamento: CenaLoja,
+  verificacao: CenaReuniao,
+  treinamento: CenaReuniao,
+};
+
 /** A capa do momento: a foto do gestor quando existir, senão a cena da
  *  família. Vem sempre mascarada num radial — nunca vira retângulo. */
-export default function XGameCapa({ titulo, capaUrl }) {
+export default function XGameCapa({ titulo, capaUrl, habito }) {
   const [quebrou, setQuebrou] = React.useState(false);
   const mascara = 'radial-gradient(80% 66% at 50% 34%, #000 24%, rgba(0,0,0,0.5) 56%, transparent 82%)';
 
@@ -362,7 +374,7 @@ export default function XGameCapa({ titulo, capaUrl }) {
 
   const t = semAcento(titulo);
   const achada = CENAS.find(([re]) => re.test(t));
-  const Cena = achada ? achada[1] : CenaPadrao;
+  const Cena = achada ? achada[1] : (CENA_DA_FAMILIA[familiaDaTarefa({ titulo, habito })] || CenaPadrao);
   return (
     <div
       className="pointer-events-none absolute inset-0 opacity-[0.34]"

@@ -24,6 +24,36 @@ const ALLOWED = ['description', 'quantity', 'cost_price', 'selling_price_retail'
   // Loja Virtual ter as mesmas pílulas de filtro da área de leilão.
   'product_source'];
 
+/** Vazio de verdade: null, undefined e '' são a mesma coisa pro nosso uso. */
+const vazio = (v) => v === null || v === undefined || v === '';
+
+/**
+ * Quais campos NÃO voltaram do banco com o valor que a gente mandou.
+ *
+ * Compara só o que dá pra comparar com segurança: escalares. Lista e objeto
+ * (image_urls, linked_auctions) ficam de fora — o banco pode devolver em ordem
+ * ou formato diferentes sem que isso seja erro, e um falso alarme aqui seria
+ * pior que o defeito, porque ensinaria a ignorar o aviso.
+ *
+ * `updated_date` também sai: é carimbo nosso, não pedido do usuário.
+ */
+export function camposQueNaoGravaram(patch, linha) {
+  const fora = [];
+  for (const campo of Object.keys(patch || {})) {
+    if (campo === 'updated_date') continue;
+    const pedido = patch[campo];
+    if (pedido !== null && typeof pedido === 'object') continue;   // lista/objeto
+    const veio = (linha || {})[campo];
+    if (vazio(pedido) && vazio(veio)) continue;
+    if (vazio(pedido) !== vazio(veio)) { fora.push(campo); continue; }
+    // número escrito como texto ("150" vs 150) é o mesmo valor
+    const a = Number(pedido), b = Number(veio);
+    if (Number.isFinite(a) && Number.isFinite(b)) { if (a !== b) fora.push(campo); continue; }
+    if (String(pedido) !== String(veio)) fora.push(campo);
+  }
+  return fora;
+}
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
 }
@@ -114,15 +144,40 @@ export default async function handler(req, res) {
 
     const r = await sb(`products?id=eq.${encodeURIComponent(productId)}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch) });
     if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: t.slice(0, 200) }); }
-    // 🔴 zerarEstoque: PostgREST devolve 200/204 MESMO quando 0 linhas casam com o filtro,
-    // e um trigger/constraint pode reverter o quantity. Validar a linha retornada antes de
-    // confirmar sucesso — senão o frontend mostra "zerado" sem o estoque ter sido zerado.
-    if (action === 'zerarEstoque') {
-      let rows = [];
-      try { rows = await r.json(); } catch (_) { rows = []; }
-      const row = Array.isArray(rows) ? rows[0] : null;
-      if (!row) return res.status(200).json({ success: false, error: 'Produto não encontrado (0 linhas afetadas)' });
-      if (Number(row.quantity) !== 0) return res.status(200).json({ success: false, error: 'Estoque não foi zerado (trigger/constraint bloqueou)', details: `quantity=${row.quantity}` });
+
+    // 🔴 "SALVOU MAS NÃO SALVOU" — a conferência vale pra TODA atualização (08/09/2026).
+    //
+    // O PostgREST devolve 200 MESMO quando 0 linhas casam com o filtro, e um
+    // trigger pode reverter o que a gente mandou. Esta trava existia desde
+    // 06/09, mas só rodava no `zerarEstoque` — o `update`, que é por onde passa
+    // TODA edição da Gestão de Estoque, seguia devolvendo sucesso sem conferir
+    // nada. A tela dizia "Produto atualizado!" e o banco não mudava.
+    //
+    // Foi o que aconteceu com a Beatriz: ela recategorizou produtos, o sistema
+    // confirmou a cada um, e nenhuma linha tinha sido escrita — a última
+    // alteração em `products` era de dois dias antes. Não se perdeu dado; o
+    // trabalho dela nunca chegou ao banco, e nada na tela avisou.
+    //
+    // A conferência agora é dupla: a linha existe, E os campos que a gente pediu
+    // voltaram com o valor pedido. A segunda metade também pega o outro defeito
+    // desta rota — campo fora da lista ALLOWED é descartado em silêncio (foi o
+    // que escondeu `category_id` até 01/09 e `condicao` até 02/09).
+    let linhas = [];
+    try { linhas = await r.json(); } catch (_) { linhas = []; }
+    const linha = Array.isArray(linhas) ? linhas[0] : linhas;
+    if (!linha) {
+      return res.status(200).json({ success: false, error: 'Nada foi salvo: o produto não foi encontrado (0 linhas afetadas)' });
+    }
+    const naoGravaram = camposQueNaoGravaram(patch, linha);
+    if (naoGravaram.length) {
+      return res.status(200).json({
+        success: false,
+        error: `Nada foi salvo em: ${naoGravaram.join(', ')}`,
+        campos_nao_gravados: naoGravaram,
+      });
+    }
+    if (action === 'zerarEstoque' && Number(linha.quantity) !== 0) {
+      return res.status(200).json({ success: false, error: 'Estoque não foi zerado (trigger/constraint bloqueou)', details: `quantity=${linha.quantity}` });
     }
 
     // 🏬 PROPAGA PRA VITRINE. A vitrine lê store_inventory.price (COALESCE com o produto), e esse

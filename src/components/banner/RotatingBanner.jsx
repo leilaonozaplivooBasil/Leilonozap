@@ -6,7 +6,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 // PONTO 92 — mobileFit: permite um encaixe diferente só no celular (ex.: a Home
 // usa "contain" no desktop, mas no mobile precisa "cover" pra não sobrar faixa
 // escura acima/abaixo, igual à Loja Virtual). Sem mobileFit, nada muda.
-export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false }) {
+// 🖼️ objectPosition: onde a área do "cover" ancora o corte quando a foto não
+// cabe inteira no container (célula normal do CSS: some da tela quem não
+// coube, quem fica é decidido por isto). Sem isto, o corte é 50% 50% (centro
+// exato) — em foto de gente, isso corta cabeça em cima e perna embaixo em
+// proporções iguais quando o container fica bem baixo e largo (desktop). Só
+// afeta quem passar a prop; sem ela, nada muda no comportamento de hoje.
+export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -189,6 +195,7 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                   decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
                     objectFit: fitAtual,
+                    objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
                     backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
@@ -208,6 +215,7 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                   decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
                     objectFit: fitAtual,
+                    objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
                     backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,

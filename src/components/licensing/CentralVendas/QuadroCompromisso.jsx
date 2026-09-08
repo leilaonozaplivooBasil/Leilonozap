@@ -81,6 +81,34 @@ const PALETA = {
 // as CHAVES vêm da lib (uma verdade só); aqui moram só os valores de cor
 const paleta = (cor) => PALETA[cor] || PALETA.grafite;
 
+// 🌑 DIR-90 — o CARD do quadro era branco sólido (MeisterTask, DIR-76.1) e o
+// dono corrigiu: "esse fundo branco está pessimo pro usuario visualizar".
+// Trocado por vidro escuro — a mesma família translúcida que já veste o
+// resto do app (--nz-cinza-fundo / --nz-borda em modo escuro, .xeos-palco):
+// card não "salta" mais em branco puro, mas continua se destacando da coluna
+// (7% de branco contra os 5% da coluna) com uma borda pra separar as bordas.
+const CARD = {
+  fundo: 'rgba(255,255,255,0.07)',
+  borda: 'rgba(255,255,255,0.14)',
+  linha: 'rgba(255,255,255,0.12)',
+  sombra: '0 1px 2px rgba(0,0,0,0.35)',
+  sombraArrasto: '0 16px 32px rgba(0,0,0,0.55)',
+  texto: '#F4F4F4',
+  textoFraco: '#A7A4B4',
+  textoMuitoFraco: 'rgba(244,244,244,0.4)',
+  azul: '#7AB2FF',
+  verde: '#4ADE80',
+  verdeForte: '#1B7A48',
+  concluidaBg: 'rgba(53,208,127,0.16)',
+  concluidaTexto: '#7CE0A8',
+  atrasadoBg: 'rgba(255,160,0,0.18)',
+  atrasadoTexto: '#FFC46B',
+  acesaBg: 'rgba(53,208,127,0.14)',
+  acesaTexto: '#7CE0A8',
+  apagadaBg: 'rgba(255,255,255,0.06)',
+  apagadaTexto: '#8993A4',
+};
+
 // Os desenhos dos ícones que a lib nomeia. A lib guarda o NOME; aqui mora o
 // desenho — trocar de pacote de ícones um dia não mexe em nenhum dado gravado.
 const DESENHO = {
@@ -166,7 +194,10 @@ function Editavel({ valor, onSalvar, className = '', placeholder = '', estilo, t
       onChange={(e) => setTxt(e.target.value)}
       onBlur={salvar}
       onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') { setTxt(valor || ''); setEditando(false); } }}
-      className={`rounded px-1 -mx-1 outline-none w-full bg-white ring-2 ring-[#0B5FFF]/40 ${className}`}
+      // 🌑 DIR-90 — bg-white ficava texto branco (ex.: nome da coluna) escrito
+      // sobre fundo branco = invisível. bg-white/10 funciona tanto na barra
+      // colorida do cabeçalho quanto no card escuro, sem apagar a cor do texto.
+      className={`rounded px-1 -mx-1 outline-none w-full bg-white/10 ring-2 ring-[#7AB2FF]/50 ${className}`}
     />
   );
 }
@@ -459,7 +490,7 @@ function Coluna({
         <div className="mt-auto">
           {/* 🔗 06/09 — a entrada fala pra onde vai: o quadro é certo; "também no meu
               dia" e a hora (= a Jornada) são escolha, ditas por extenso embaixo */}
-          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} />
+          <EntradaComDestinos origem="quadro" valor={valorNovo} onChange={onNovo} onCriar={onCriar} listaNome={lista.nome} testeCampo="campo-novo-card" altura={T.campo} escuro itensDoDia={doDia} />
         </div>
       </div>
     </div>
@@ -521,10 +552,11 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
       onClickCapture={engolirCliqueDoArrasto}
       data-teste="cartao-quadro"
       data-cartao={cartao.id}
-      className="group rounded-lg overflow-hidden relative"
+      className="group rounded-lg overflow-hidden relative border"
       style={{
-        background: '#FFFFFF',
-        boxShadow: desloc ? '0 16px 32px rgba(0,0,0,0.4)' : '0 1px 2px rgba(9,30,66,0.25)',
+        background: CARD.fundo,
+        borderColor: CARD.borda,
+        boxShadow: desloc ? CARD.sombraArrasto : CARD.sombra,
         // A PEÇA SEGUE A MÃO. E `pointerEvents: none` enquanto anda, senão
         // `elementFromPoint` devolve O PRÓPRIO CARD que está sendo arrastado e
         // o alvo embaixo nunca é encontrado — o arrasto "funcionaria" sem
@@ -545,14 +577,14 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
         style={{ ...alcas.style, cursor: arrastando ? 'grabbing' : 'grab' }}
         data-teste="punho-card"
         title="arraste pra mover ou reordenar"
-        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center text-[#B3BAC5] hover:text-[#42526E] hover:bg-black/[0.04] transition-colors"
+        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center text-white/35 hover:text-white/80 hover:bg-white/5 transition-colors"
       >
         <GripVertical className="w-4 h-4" />
       </span>
       {/* ── A FAIXA DE STATUS, largura inteira, no topo — o traço do MeisterTask ── */}
       {(feito || venceu) && (
         <div data-teste="faixa-status" className="flex items-center gap-2 pl-9 pr-4 py-2 text-[12px] font-bold"
-          style={feito ? { background: '#E3F5E9', color: '#177245' } : { background: '#FFE8DF', color: '#C4470F' }}>
+          style={feito ? { background: CARD.concluidaBg, color: CARD.concluidaTexto } : { background: CARD.atrasadoBg, color: CARD.atrasadoTexto }}>
           {feito ? <CheckCircle2 className="w-4 h-4" /> : <CalendarDays className="w-4 h-4" />}
           {feito ? 'Concluída' : 'Atrasado'}
         </div>
@@ -565,7 +597,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
             onClick={() => onMudar(feito ? reabrir(cartao) : marcarFeito(cartao, agoraISO()))}
             title={feito ? 'reabrir' : 'marcar concluída'}
             className="mt-0.5 w-5 h-5 rounded-full border-2 shrink-0 inline-flex items-center justify-center transition-colors"
-            style={feito ? { background: '#2FA36B', borderColor: '#2FA36B' } : { borderColor: '#C1C7D0' }}
+            style={feito ? { background: '#2FA36B', borderColor: '#2FA36B' } : { borderColor: 'rgba(255,255,255,0.3)' }}
           >{feito && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}</button>
 
           <div className="flex-1 min-w-0">
@@ -573,7 +605,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
               autoEditar={autoEditar}
               valor={cartao.titulo}
               onSalvar={(t) => onMudar({ ...cartao, titulo: t })}
-              estilo={{ color: feito ? '#7A869A' : '#172B4D', textDecoration: feito ? 'line-through' : 'none' }}
+              estilo={{ color: feito ? CARD.textoFraco : CARD.texto, textDecoration: feito ? 'line-through' : 'none' }}
               className="font-bold leading-snug block"
               tamanhoTexto={T.tituloCard}
             />
@@ -588,9 +620,9 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
               <label key={i} className="flex items-start gap-2.5 leading-snug group/item cursor-pointer" style={{ fontSize: T.item }}>
                 <input type="checkbox" checked={!!item.feito} onChange={() => onMudar(alternarItem(cartao, i, agoraISO()))}
                   className="mt-0.5 w-4 h-4 accent-[#2FA36B] shrink-0" />
-                <span className="flex-1" style={{ color: item.feito ? '#7A869A' : '#42526E', textDecoration: item.feito ? 'line-through' : 'none' }}>{item.texto}</span>
+                <span className="flex-1" style={{ color: item.feito ? CARD.textoFraco : CARD.texto, textDecoration: item.feito ? 'line-through' : 'none' }}>{item.texto}</span>
                 <button type="button" onClick={(e) => { e.preventDefault(); onMudar(removerItem(cartao, i)); }}
-                  className="opacity-0 group-hover/item:opacity-100 text-[#7A869A] hover:text-[#C4470F]"><X className="w-4 h-4" /></button>
+                  className="opacity-0 group-hover/item:opacity-100 text-white/40 hover:text-[#FF8A65]"><X className="w-4 h-4" /></button>
               </label>
             ))}
           </div>
@@ -601,8 +633,8 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
             onChange={(e) => setNovoItem(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && novoItem.trim()) { onMudar(adicionarItem(cartao, novoItem)); setNovoItem(''); } }}
             placeholder={prog.total ? 'novo item' : 'lista de tarefas'}
-            className="mt-2.5 w-full bg-transparent outline-none border-b border-transparent focus:border-[#0B5FFF]/40 placeholder:text-[#B3BAC5] pb-1"
-            style={{ color: '#42526E', fontSize: T.item }}
+            className="mt-2.5 w-full bg-transparent outline-none border-b border-transparent focus:border-[#7AB2FF]/40 placeholder:text-white/30 pb-1"
+            style={{ color: CARD.texto, fontSize: T.item }}
           />
         )}
 
@@ -640,8 +672,8 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                   data-acesa={pl.acesa ? 'sim' : 'nao'}
                   className="rounded px-1.5 py-0.5 transition-all disabled:cursor-default"
                   style={{
-                    background: pl.alerta ? '#FFF3E0' : pl.acesa ? '#E3F5E9' : '#F4F5F7',
-                    color: pl.alerta ? '#C4470F' : pl.acesa ? '#177245' : '#8993A4',
+                    background: pl.alerta ? CARD.atrasadoBg : pl.acesa ? CARD.acesaBg : CARD.apagadaBg,
+                    color: pl.alerta ? CARD.atrasadoTexto : pl.acesa ? CARD.acesaTexto : CARD.apagadaTexto,
                     ...(podeClicar(pl) ? { cursor: 'pointer' } : {}),
                   }}
                   title={podeClicar(pl) ? `Clique para ${pl.id === 'dia' ? 'levar pro seu dia' : 'ajustar horário'}` : ''}
@@ -649,13 +681,13 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                   {pl.texto}
                 </button>
               ))}
-              {habito && <span className="rounded px-1.5 py-0.5" style={{ background: '#E9F2FF', color: '#0B5FFF' }}>Hábito {habito.n}</span>}
+              {habito && <span className="rounded px-1.5 py-0.5" style={{ background: 'rgba(122,178,255,0.16)', color: CARD.azul }}>Hábito {habito.n}</span>}
             </div>
           );
         })()}
-        <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px]" style={{ color: '#5E6C84' }}>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px]" style={{ color: CARD.textoFraco }}>
           <label className="inline-flex items-center gap-1 cursor-pointer relative font-semibold"
-            style={venceu ? { color: '#C4470F' } : undefined} title="prazo">
+            style={venceu ? { color: CARD.atrasadoTexto } : undefined} title="prazo">
             <CalendarDays className="w-3.5 h-3.5" />
             {cartao.prazo ? dataCurta(cartao.prazo) : 'prazo'}
             <input type="date" value={cartao.prazo || ''} onChange={(e) => onMudar({ ...cartao, prazo: e.target.value || null })}
@@ -666,7 +698,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
           )}
           {cartao.virou_tarefa_id && (
             <button type="button" onClick={() => setAbrindoHora((v) => !v)} data-teste="chip-hora"
-              className="inline-flex items-center gap-1 font-semibold tabular-nums hover:underline" style={{ color: '#0B5FFF' }}
+              className="inline-flex items-center gap-1 font-semibold tabular-nums hover:underline" style={{ color: CARD.azul }}
               title="mudar o horário na Jornada">
               <Clock3 className="w-3.5 h-3.5" /> {faixaDeHorario(cartao) ? `mudar horário (${faixaDeHorario(cartao)})` : 'dar um horário'}
             </button>
@@ -677,34 +709,34 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
           const choque = conflitosDeHorario(doDia, { hora: cartao.hora, hora_fim: cartao.hora_fim, ignorarId: cartao.virou_tarefa_id });
           const noDia = !!cartao.virou_tarefa_id;
           return (
-            <div className="mt-3 rounded-lg p-2.5" style={{ background: '#F4F5F7' }} data-teste="editor-hora">
-              <p className="text-[12px] font-bold mb-2" style={{ color: '#172B4D' }}>
+            <div className="mt-3 rounded-lg p-2.5" style={{ background: 'rgba(255,255,255,0.06)' }} data-teste="editor-hora">
+              <p className="text-[12px] font-bold mb-2" style={{ color: CARD.texto }}>
                 {noDia ? 'O horário na Jornada' : 'Levar pro meu dia — hoje'}
-                <span className="font-normal" style={{ color: '#8993A4' }}> · com horário entra na Jornada; sem horário fica no dia, fora da linha do tempo</span>
+                <span className="font-normal" style={{ color: CARD.apagadaTexto }}> · com horário entra na Jornada; sem horário fica no dia, fora da linha do tempo</span>
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <input type="time" value={cartao.hora || ''} data-teste="hora-inicio"
                   onChange={(e) => onMudar({ ...cartao, hora: e.target.value || null })}
-                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none" style={{ borderColor: '#DFE1E6', color: '#172B4D' }} />
-                <span className="text-[13px]" style={{ color: '#5E6C84' }}>às</span>
+                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none bg-transparent [color-scheme:dark]" style={{ borderColor: CARD.linha, color: CARD.texto }} />
+                <span className="text-[13px]" style={{ color: CARD.textoFraco }}>às</span>
                 <input type="time" value={cartao.hora_fim || ''}
                   onChange={(e) => onMudar({ ...cartao, hora_fim: e.target.value || null })}
-                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none" style={{ borderColor: '#DFE1E6', color: '#172B4D' }} />
+                  className="rounded-md h-9 px-2 text-[14px] border-2 outline-none bg-transparent [color-scheme:dark]" style={{ borderColor: CARD.linha, color: CARD.texto }} />
                 {!cartao.hora && (
                   <button type="button" data-teste="sugerir-hora"
                     onClick={() => {
                       const h = horaSugerida(doDia, { duracaoMin: 30 });
                       if (h) onMudar({ ...cartao, hora: h });
                     }}
-                    className="text-[13px] font-bold hover:underline" style={{ color: '#0B5FFF' }}>sugerir</button>
+                    className="text-[13px] font-bold hover:underline" style={{ color: CARD.azul }}>sugerir</button>
                 )}
                 {!noDia && !feito && (
                   <button type="button" data-teste="confirmar-pro-dia" onClick={() => { onVirarTarefa(cartao); setAbrindoHora(false); }}
-                    className="rounded-md px-3 h-9 font-bold text-white text-[13px]" style={{ background: '#1B7A48' }}>
+                    className="rounded-md px-3 h-9 font-bold text-white text-[13px]" style={{ background: CARD.verdeForte }}>
                     {cartao.hora ? `Entrar no dia às ${cartao.hora}` : 'Entrar no dia sem horário'}
                   </button>
                 )}
-                <button type="button" onClick={() => setAbrindoHora(false)} className="text-[12px] hover:underline" style={{ color: '#8993A4' }}>fechar</button>
+                <button type="button" onClick={() => setAbrindoHora(false)} className="text-[12px] hover:underline" style={{ color: CARD.apagadaTexto }}>fechar</button>
               </div>
               {/* 🔒 duas coisas no mesmo horário é o defeito mais caro de uma
                   agenda, e até aqui NADA avisava */}
@@ -712,7 +744,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
                 // 🔧 avisar é meio serviço: a saída em um clique é o serviço
                 const livre = saidaDoConflito(doDia, { hora: cartao.hora, hora_fim: cartao.hora_fim, ignorarId: cartao.virou_tarefa_id });
                 return (
-                  <p className="mt-2 text-[12px] font-bold flex items-center gap-2 flex-wrap" style={{ color: '#C4470F' }} data-teste="aviso-conflito">
+                  <p className="mt-2 text-[12px] font-bold flex items-center gap-2 flex-wrap" style={{ color: CARD.atrasadoTexto }} data-teste="aviso-conflito">
                     <span>bate com {choque.length === 1 ? `“${choque[0].titulo}”` : `${choque.length} tarefas do dia`}</span>
                     {livre && (
                       <button type="button" data-teste="mover-pro-livre"
@@ -727,12 +759,12 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
           );
         })()}
 
-        {sobre && <p className="mt-2 text-[12px] font-bold" style={{ color: '#0B5FFF' }}>soltar em “{sobre}”</p>}
+        {sobre && <p className="mt-2 text-[12px] font-bold" style={{ color: CARD.azul }}>soltar em “{sobre}”</p>}
 
         <div className="mt-3 flex items-center gap-3.5 text-[13px] font-bold">
           {ferramenta && !feito && (
             <button type="button" onClick={() => onIr?.(ferramenta.secao, ferramenta.sub)} title={`Abrir ${ferramenta.rotulo}`}
-              className="inline-flex items-center gap-1 hover:underline" style={{ color: '#0B5FFF' }}>
+              className="inline-flex items-center gap-1 hover:underline" style={{ color: CARD.azul }}>
               abrir <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
@@ -743,11 +775,11 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
               data-teste="levar-pro-dia"
               title="entra na sua Master Task de hoje — escolha o horário pra entrar na Jornada"
               className="inline-flex items-center gap-1 hover:underline"
-              style={{ color: venceu ? '#C4470F' : '#1B7A48' }}
+              style={{ color: venceu ? CARD.atrasadoTexto : CARD.verde }}
             ><CalendarPlus className="w-3.5 h-3.5" /> {venceu ? 'venceu — levar pro meu dia' : 'levar pro meu dia'}</button>
           )}
           <button type="button" onClick={() => onExcluir(cartao)}
-            className="ml-auto opacity-0 group-hover:opacity-100 text-[#B3BAC5] hover:text-[#C4470F]"><Trash2 className="w-4 h-4" /></button>
+            className="ml-auto opacity-0 group-hover:opacity-100 text-white/35 hover:text-[#FF8A65]"><Trash2 className="w-4 h-4" /></button>
         </div>
       </div>
     </div>

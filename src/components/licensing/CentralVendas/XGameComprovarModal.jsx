@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Camera, ImagePlus, Loader2 } from 'lucide-react';
-import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR } from '@/lib/xgame';
+import { X, Camera, ImagePlus, Loader2, SwitchCamera } from 'lucide-react';
+import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
+import { useSegurarCamada } from '@/hooks/useCamadaModal';
 
 // ✅ X-GAME F10.3 → DIR-84 — O MODAL DE COMPROVAÇÃO (leve e direto, ordem do
 // dono: "não quadradão"). Um cartão só: vê a tarefa, abre o Instagram se for
@@ -26,6 +27,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   const [justificativa, setJustificativa] = useState('');
   const [avisoCola, setAvisoCola] = useState(''); // 🚫 tentou colar no resumo
   const [cameraAberta, setCameraAberta] = useState(false);
+  const [ladoCamera, setLadoCamera] = useState('user'); // DIR-93 — de qual lado a câmera está
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const galeriaRef = useRef(null);
@@ -47,16 +49,39 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   useEffect(() => () => fecharCamera(), []); // desmontou = câmera desliga
 
   // 📷 câmera DE VERDADE: preview ao vivo + capturar (não dá pra usar foto velha)
+  //
+  // 🔄 DIR-93 — ordem do dono: "toda comprovação tenha a possibilidade de
+  // virar a câmera para bater a foto do livro por exemplo". `pedirStream`
+  // fica separado de `abrirCamera` pra `virarCamera` poder repedir o vídeo
+  // com o outro lado sem duplicar a lógica de ligar no <video>.
+  const pedirStream = async (lado) => {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: lado } }, audio: false });
+    streamRef.current = stream;
+    // o <video> só existe depois do render
+    setTimeout(() => { if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }, 50);
+    return stream;
+  };
   const abrirCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-      streamRef.current = stream;
+      await pedirStream(ladoCamera);
       setCameraAberta(true);
-      // o <video> só existe depois do render
-      setTimeout(() => { if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }, 50);
     } catch {
       // sem permissão/câmera → cai pro seletor nativo do celular (que abre a câmera)
       celularRef.current?.click();
+    }
+  };
+  const virarCamera = async () => {
+    const novoLado = ladoCamera === 'user' ? 'environment' : 'user';
+    // 📵 no celular a câmera é recurso exclusivo — parar a atual ANTES de
+    // pedir a outra, senão o navegador trava a promise ou devolve a mesma.
+    streamRef.current?.getTracks?.().forEach((t) => t.stop());
+    try {
+      await pedirStream(novoLado);
+      setLadoCamera(novoLado);
+    } catch {
+      // esse aparelho não tem o lado pedido (ex.: notebook só tem frontal)
+      // — volta pro lado que já funcionava, pra não deixar o vídeo congelado
+      try { await pedirStream(ladoCamera); } catch { fecharCamera(); }
     }
   };
   const capturar = () => {
@@ -71,10 +96,17 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
     }, 'image/jpeg', 0.92);
   };
 
+  // 🪟 enquanto este cartão estiver aberto, os flutuantes (X-MUSIC, Leila)
+  // saem da frente — eles cobriam o botão de concluir no celular.
+  useSegurarCamada();
+
   // 📚 estudo = FOTO do estudo + RESUMO digitado (mínimo de verdade)
   const podeConcluir = tipo === 'aprendizado'
     ? !!file && texto.trim().length >= RESUMO_MIN
     : !!file;
+
+  // 🔒 e o botão apagado DIZ o que está faltando, em vez de só ficar opaco
+  const motivoTravado = motivoDoBotaoTravado({ tipo, temFoto: !!file, texto });
 
   // 🚫 anti copiar-e-colar no resumo: colar não entra e a pessoa é avisada
   const bloquearCola = (e) => {
@@ -104,8 +136,8 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   // na segunda rodada — se ainda ficar em dúvida, vai pro gestor).
   if (pergunta) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()} data-teste="comprovar-modal-justificativa">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden [color-scheme:light]" onClick={(e) => e.stopPropagation()} data-teste="comprovar-modal-justificativa">
           <div className="flex items-start justify-between gap-3 px-5 pt-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">🤖 a IA quer confirmar</p>
@@ -116,7 +148,21 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             </button>
           </div>
           <div className="px-5 py-4 space-y-3">
-            <p className="text-sm font-semibold text-nz-tinta bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5" data-teste="pergunta-ia">
+            {/* 🩹 DIR-92 — o dono viu essa caixa em branco (fundo aparecendo,
+                texto invisível) em produção, mesmo com a régua de cor batendo
+                certinho em todo teste que eu consigo rodar aqui. Isso é a
+                marca de um repintador de "modo escuro" no navegador (extensão
+                ou tema do sistema) forçando as cores por cima da página.
+                `color-scheme: light` é o sinal padrão que o PRÓPRIO Chrome
+                (e a maioria dessas ferramentas) respeita pra saber que este
+                pedaço já É claro de propósito e não deve ser invertido. Cor
+                também virou inline (não só classe) — outra camada de defesa,
+                caso algo esteja lendo computed style em vez de herdar cascata. */}
+            <p
+              className="text-sm font-semibold rounded-xl px-3 py-2.5 [color-scheme:light]"
+              style={{ color: '#1A1A1A', background: '#FFFBEB', border: '1px solid #FDE68A' }}
+              data-teste="pergunta-ia"
+            >
               {pergunta}
             </p>
             <Textarea
@@ -136,7 +182,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             >
               {enviando ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> A IA está reavaliando...</>) : 'Enviar explicação'}
             </Button>
-            <p className="text-[10px] text-center text-nz-tinta-fraca">esta é a sua chance de esclarecer — depois disso, se a dúvida continuar, vai pra análise do gestor</p>
+            <p className="text-[10px] text-center text-nz-tinta-fraca">esta é a sua chance de esclarecer pra IA o que a foto mostra</p>
           </div>
         </div>
       </div>
@@ -144,9 +190,9 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onFechar}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden [color-scheme:light]"
         onClick={(e) => e.stopPropagation()}
         onPaste={colarPrint}
         data-teste="comprovar-modal"
@@ -176,18 +222,28 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
           {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino) */}
           {tipo === 'aprendizado' && (
             <div className="space-y-1">
+              <p className="text-[11px] text-nz-tinta-fraca">
+                Escreva com as <span className="font-bold text-nz-tinta">suas palavras</span>, no mínimo{' '}
+                <span className="font-bold text-nz-tinta">{RESUMO_MIN} caracteres</span> — dá umas 6 linhas.
+              </p>
               <Textarea
                 autoFocus
-                placeholder="Digita com as SUAS palavras o que você aprendeu na leitura de hoje..."
+                placeholder={`O que você aprendeu hoje, com as suas palavras (pelo menos ${RESUMO_MIN} caracteres)...`}
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onPaste={bloquearCola}
                 onDrop={bloquearCola}
                 className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[100px] rounded-xl"
               />
-              <div className="flex items-center justify-between">
-                <span className={`text-[10px] font-semibold ${texto.trim().length >= RESUMO_MIN ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
-                  {texto.trim().length >= RESUMO_MIN ? '✔ resumo no tamanho' : `${texto.trim().length}/${RESUMO_MIN} caracteres`}
+              <div className="flex items-center justify-between gap-2">
+                {/* 🗣️ diz quanto FALTA, e já diz o tamanho antes de começar.
+                    "18/400 caracteres" lia-se como "18 de um limite de 400" —
+                    o oposto do que a regra pede. */}
+                <span
+                  data-teste="contador-resumo"
+                  className={`text-[10px] font-semibold ${texto.trim().length >= RESUMO_MIN ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}
+                >
+                  {textoDoContador(texto)}
                 </span>
                 <span className="text-[10px] text-nz-tinta-fraca">✍️ só digitando — colar não vale</span>
               </div>
@@ -203,6 +259,9 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
               <div className="flex gap-2">
                 <Button onClick={capturar} className="flex-1 bg-nz-verde hover:bg-nz-verde-claro text-white rounded-xl h-11 text-sm font-bold">
                   📸 Capturar
+                </Button>
+                <Button variant="outline" onClick={virarCamera} title="virar câmera" data-teste="virar-camera" className="rounded-xl h-11 w-11 p-0 border-nz-borda text-nz-tinta-fraca shrink-0">
+                  <SwitchCamera className="w-4 h-4" />
                 </Button>
                 <Button variant="outline" onClick={fecharCamera} className="rounded-xl h-11 border-nz-borda text-nz-tinta-fraca">
                   cancelar
@@ -247,7 +306,10 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             </div>
           )}
           <input ref={galeriaRef} type="file" accept="image/*" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <input ref={celularRef} type="file" accept="image/*" capture="user" hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          {/* 🔄 DIR-93 — sem `capture` fixo: esse input só entra em cena quando
+              o getUserMedia falhou de vez, e aí a pessoa já está no app de
+              câmera nativo do celular — que tem o próprio botão de virar. */}
+          <input ref={celularRef} type="file" accept="image/*" capture hidden onChange={(e) => setFile(e.target.files?.[0] || null)} />
 
           {tipo === 'instagram' && (
             <Input
@@ -267,6 +329,14 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
           >
             {enviando ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> A IA está conferindo...</>) : 'Comprovar e concluir ✔'}
           </Button>
+
+          {/* 🔒 botão apagado explica o motivo — ninguém deduz por que um
+              botão está opaco, e quem não deduz liga pro suporte */}
+          {!enviando && motivoTravado && (
+            <p data-teste="motivo-travado" className="text-[11px] text-center font-semibold text-nz-tinta-fraca">
+              🔒 {motivoTravado}
+            </p>
+          )}
 
           <p className="text-[10px] text-center text-nz-tinta-fraca">
             🤖 validação automática por IA · print repetido é barrado · horário carimbado

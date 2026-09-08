@@ -37,6 +37,7 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import EntradaComDestinos from './EntradaComDestinos';
+import PreviaJornadaModal from './PreviaJornadaModal';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import {
@@ -44,6 +45,7 @@ import {
   incluirNaRotina, editarNaRotina, excluirDaRotina,
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
+import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -579,24 +581,26 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       try {
         const up = await plataforma.integrations.Core.UploadFile({
           file: new File([videoBlob], `ritual_${hojeStr()}.webm`, { type: videoBlob.type || 'video/webm' }),
-          path: `xgame/rituais/${uid}/${hojeStr()}_${t.id}.webm`,
+          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'webm' }),
         });
         videoUrl = up?.file_url || up?.url || '';
       } catch { videoUrl = ''; }
     }
-    // ritual na janela E com o vídeo gravado = aprovado direto; sem vídeo ou
-    // fora de hora = segunda análise do gestor
+    // 🌊 DIR-89 — ritual na janela E com o vídeo gravado ganha o selo completo;
+    // sem vídeo ou fora de hora, antes caía pra segunda análise do gestor —
+    // agora aprova igual (o gestor não decide mais nada aqui), só sem o selo
+    // "BRILHANTE". `naJanela`/`videoUrl` viram só metadado do que aconteceu.
     const aprovadoDireto = naJanela && !!videoUrl;
     const comprovacao = {
       tipo: 'ritual', gratidao, acao, entrega: gratidao,
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
-      status: aprovadoDireto ? 'aprovada_ritual' : 'em_analise',
+      status: 'aprovada_ritual',
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
         o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização — segunda análise' : 'ritual fora da janela do amanhecer (04:40–07:15) — segunda análise'),
+        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : 'ritual fora da janela do amanhecer (04:40–07:15)'),
       },
     };
     try {
@@ -609,7 +613,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo — vai pra análise do gestor (grave o vídeo dentro da janela do amanhecer pra aprovar direto).');
+      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
@@ -674,20 +678,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setComprovando({ ...comprovando, enviando: false, erro: `🤖 A IA reprovou: ${decisao.motivo}`, pergunta: null });
       return;
     }
-    const status = decisao.acao === 'aprovar' ? 'aprovada_ia' : 'em_analise';
+    // 🌊 DIR-89 — chegou até aqui só existindo 'aprovar': 'ia_fora',
+    // 'pedir_justificativa' e 'reprovar' já retornaram lá em cima. Intervenção
+    // humana zero, de vez — nenhuma comprovação nasce mais "em análise".
     const comprovacao = {
       tipo, print_url: printUrl, hash,
       ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
       ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
       quando: new Date().toISOString(), valido: true,
-      status,
+      status: 'aprovada_ia',
       veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
       ...(justificativa ? { justificativa_pessoa: justificativa } : {}),
       ...(foraDaJanela ? { fora_da_janela: true } : {}),
     };
-    if (status === 'aprovada_ia') toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
-    else toast.info('⏳ Comprovação em análise do gestor — conta provisoriamente.');
+    toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
 
     setComprovando(null);
     try {
@@ -751,11 +756,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       const ext = (dados.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
       const up = await plataforma.integrations.Core.UploadFile({
         file: dados.file,
-        path: `xgame/prints/${uid}/${hojeStr()}_${t.id}.${ext}`,
+        path: caminhoDeProva({ pasta: 'prints', uid, dia: hojeStr(), tarefaId: t.id, ext }),
       });
       printUrl = up?.file_url || up?.url || '';
-    } catch {
-      setComprovando({ ...comprovando, enviando: false, erro: 'Erro ao enviar a imagem — tente de novo.' });
+    } catch (e) {
+      // 🗣️ o `catch` era vazio: engolia a mensagem do Storage e todo mundo via a
+      // mesma frase genérica. Sem o motivo real, ninguém consegue diagnosticar.
+      const motivo = e?.message ? ` (${e.message})` : '';
+      setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }
     await avaliarComIA(t, { printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1 });
@@ -882,6 +890,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
+  const [previaEdicaoAberta, setPreviaEdicaoAberta] = useState(false);
   const salvarEdicao = async (t) => {
     const titulo = String(edicao.titulo || '').trim();
     if (!titulo) { toast.error('O título não pode ficar vazio — pra tirar, use a lixeira.'); return; }
@@ -889,6 +898,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setEditandoId(null);
     try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora: edicao.hora || '' }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
+  };
+  // 🔮 DIR-91 — mudou a hora? mostra a prévia da Jornada antes de gravar.
+  const tentarSalvarEdicao = (t) => {
+    if (String(edicao.hora || '').trim()) { setPreviaEdicaoAberta(true); return; }
+    salvarEdicao(t);
   };
 
   const removerTarefa = async (t) => {
@@ -1816,9 +1830,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <div className="mt-2 flex flex-wrap items-center gap-2" data-teste="editor-tarefa">
                                 <Input type="time" value={edicao.hora} onChange={(e) => setEdicao({ ...edicao, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="editar-hora" />
                                 <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
-                                <Button size="sm" onClick={() => salvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
+                                <Button size="sm" onClick={() => tentarSalvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
                                 <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
                                 <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina.</p>
+                                {/* 🔮 DIR-91 — prévia da Jornada antes de gravar um horário mudado */}
+                                {previaEdicaoAberta && (
+                                  <PreviaJornadaModal
+                                    itens={tarefas}
+                                    novo={{ titulo: edicao.titulo, hora: edicao.hora, ignorarId: t.id }}
+                                    onFechar={() => setPreviaEdicaoAberta(false)}
+                                    onAjustar={() => setPreviaEdicaoAberta(false)}
+                                    onUsarLivre={(h) => setEdicao((e) => ({ ...e, hora: h }))}
+                                    onConfirmar={() => { setPreviaEdicaoAberta(false); salvarEdicao(t); }}
+                                  />
+                                )}
                               </div>
                             )}
                             {guia && guiaAberto === t.id && !t.feito && (
@@ -1835,7 +1860,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {visao === 'lista' && (
             <div className="pt-1">
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} />
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══

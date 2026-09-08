@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight } from 'lucide-react';
-import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM } from '@/lib/xgame';
+import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera } from 'lucide-react';
+import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
 // O que a pessoa salva às 5h toca no expediente, e o que ela salva
@@ -14,8 +14,8 @@ import { extrairIdYoutube, extrairListaYoutube, fonteDoPlayer } from '@/lib/xmus
 //     Um toque desliga.
 //   • Na visualização, as IMAGENS DO QUADRO DOS SONHOS sobem flutuando na
 //     tela enquanto a câmera grava a meditação — o vídeo é a comprovação.
-//   • Sem gravar? O sistema EXPLICA que precisa gravar pra comprovar (e
-//     deixa seguir sem vídeo só caindo na análise do gestor).
+//   • Sem gravar? O sistema EXPLICA que o vídeo é o que dá o selo BRILHANTE
+//     (DIR-89: mesmo sem ele o ritual conclui igual, sozinho — sem gestor).
 //   • No fim, um convite só: o post do bom dia no Instagram.
 
 // 🎵 A MÚSICA DO AMANHECER agora é YOUTUBE (ordem do dono): prévias prontas
@@ -139,6 +139,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const camRef = useRef(null);
   const videoAoVivoRef = useRef(null);
   const timerRef = useRef(null);
+  const [ladoCamera, setLadoCamera] = useState('user'); // DIR-93 — de qual lado a câmera está
 
   const usarLinkMusica = () => {
     const lista = extrairListaYoutube(linkMusica);
@@ -156,9 +157,12 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
     clearInterval(timerRef.current);
     setGravando(false);
   };
-  const iniciarGravacao = async () => {
+  // 🔄 DIR-93 — ordem do dono: "toda comprovação tenha a possibilidade de
+  // virar a câmera". `lado` vem parametrizado pra `virarCamera` poder pedir
+  // o outro lado sem duplicar a lógica de ligar o MediaRecorder.
+  const iniciarGravacaoCom = async (lado) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480 }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: lado }, width: 480 }, audio: false });
       camRef.current = stream;
       const pedacos = [];
       const rec = new MediaRecorder(stream, MediaRecorder.isTypeSupported('video/webm') ? { mimeType: 'video/webm' } : undefined);
@@ -169,14 +173,25 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
       setVideoBlob(null); setGravSeg(0); setGravando(true); setAviso('');
       setTimeout(() => { if (videoAoVivoRef.current) { videoAoVivoRef.current.srcObject = stream; videoAoVivoRef.current.play().catch(() => {}); } }, 50);
       timerRef.current = setInterval(() => setGravSeg((s) => {
-        if (s + 1 >= 120) pararGravacao(); // teto de 2 min — visualização, não filme
+        if (s + 1 >= VISUALIZACAO_TETO_SEG) pararGravacao(); // rede de segurança — não é o alvo
         return s + 1;
       }), 1000);
     } catch {
       setSemVideoLiberado(true);
-      setAviso('Não consegui abrir a câmera — dá pra concluir sem o vídeo, mas o ritual vai pra análise do gestor.');
+      setAviso('Não consegui abrir a câmera — dá pra concluir sem o vídeo, só não ganha o selo BRILHANTE.');
       setTimeout(() => setAviso(''), 7000);
     }
+  };
+  const iniciarGravacao = () => iniciarGravacaoCom(ladoCamera);
+  // 🔄 trocar de câmera NO MEIO da gravação reinicia ela: o MediaRecorder
+  // não troca de trilha de vídeo em andamento, e o vídeo é curto (teto de
+  // 2 min) — regravar do zero com o lado certo é mais simples e mais seguro
+  // do que tentar costurar dois streams num blob só.
+  const virarCamera = () => {
+    const novoLado = ladoCamera === 'user' ? 'environment' : 'user';
+    setLadoCamera(novoLado);
+    pararGravacao();
+    setTimeout(() => iniciarGravacaoCom(novoLado), 60);
   };
   useEffect(() => () => { pararGravacao(); }, []);
 
@@ -359,14 +374,32 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             {gravando ? (
               <div className="space-y-2">
                 <video ref={videoAoVivoRef} playsInline muted className="mx-auto w-40 h-40 rounded-full object-cover ring-4 ring-amber-300/60" />
-                <p className="flex items-center justify-center gap-2 text-amber-200 text-xs font-extrabold tracking-wide">
+                {/* 🕐 DIR-93 — ordem do dono: "precisa de pelo menos 01 minuto
+                    obrigatório e isso precisa ficar claro pra pessoa, e
+                    deixar livre até a pessoa quiser". O piso (60s) é a única
+                    trava; o teto (VISUALIZACAO_TETO_SEG, 15min) é só uma
+                    rede de segurança que quase nunca vai ser alcançada. */}
+                <p className="flex items-center justify-center gap-2 text-amber-200 text-xs font-extrabold tracking-wide" data-teste="cronometro-visualizacao">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  gravando sua visualização · {gravSeg}s
+                  {textoDoCronometroVisualizacao(gravSeg)}
                 </p>
                 <p className="text-white/60 text-[11px]">Olha os sonhos subindo. Respira. Visualiza você chegando lá.</p>
-                <button type="button" onClick={pararGravacao} className="xeos-cru inline-flex items-center gap-2 rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2.5 hover:bg-white/25">
-                  <Square className="w-3.5 h-3.5" fill="currentColor" strokeWidth={0} /> concluir a visualização
-                </button>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={pararGravacao}
+                    disabled={faltaDaVisualizacao(gravSeg) > 0}
+                    data-teste="concluir-visualizacao"
+                    title={faltaDaVisualizacao(gravSeg) > 0 ? `grava mais ${faltaDaVisualizacao(gravSeg)}s pra liberar` : ''}
+                    className="xeos-cru inline-flex items-center gap-2 rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-2.5 hover:bg-white/25 disabled:opacity-40 disabled:hover:bg-white/15"
+                  >
+                    <Square className="w-3.5 h-3.5" fill="currentColor" strokeWidth={0} />
+                    {faltaDaVisualizacao(gravSeg) > 0 ? `libera em ${faltaDaVisualizacao(gravSeg)}s` : 'concluir a visualização'}
+                  </button>
+                  <button type="button" onClick={virarCamera} title="virar câmera" data-teste="virar-camera-ritual" className="xeos-cru rounded-2xl bg-white/15 border border-white/30 text-white p-2.5 hover:bg-white/25">
+                    <SwitchCamera className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ) : videoBlob ? (
               <p className="inline-flex items-center gap-2 text-emerald-300 text-xs font-bold">
