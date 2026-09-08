@@ -46,7 +46,7 @@ test.after(async () => { if (navegador) await navegador.close(); if (servidor) s
 
 test('o espaço X-GAME, em largura de desktop, renderiza "Seu dia" + "Todo mundo" sem erro', { skip: semNavegador }, async () => {
   const nav = await garantirNavegador();
-  const ctx = await nav.newContext({ viewport: { width: 1440, height: 1600 } });
+  const ctx = await nav.newContext({ viewport: { width: 1920, height: 1600 } });
   const pagina = await ctx.newPage();
   const erros = [];
   pagina.on('pageerror', (e) => erros.push(e.message));
@@ -78,9 +78,10 @@ test('o espaço X-GAME, em largura de desktop, renderiza "Seu dia" + "Todo mundo
   );
   assert.equal(tintaEscurecida, '#F4F4F4', 'o .xeos-palco tem que escurecer os tokens --nz-* pro time renderizar legível');
 
-  // A largura de ponta a ponta (ordem do dono: "a página tem que pegar tudo")
+  // A largura de ponta a ponta de verdade (ordem do dono: "não pode espremer
+  // isso tipo numa landing page" — sem max-w nenhum, só o padding do palco)
   const largura = await pagina.locator('[data-teste="xgame-meu-dia"]').evaluate((el) => el.getBoundingClientRect().width);
-  assert.ok(largura > 1200, `"Seu dia" tem que ocupar a largura de desktop (achei ${largura}px)`);
+  assert.ok(largura > 1800, `"Seu dia" tem que quase encostar nas bordas em 1920px (achei ${largura}px)`);
 
   await pagina.screenshot({ path: path.join(FOTOS, 'xgame-espaco.png'), fullPage: true });
   assert.deepEqual(erros, []);

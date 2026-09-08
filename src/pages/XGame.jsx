@@ -176,12 +176,12 @@ export default function XGame() {
   return (
     <div className="min-h-screen bg-[#00020C] text-[#F4F4F4]">
       {/* 🏛️ DIR-97.1 — a tela era uma coluna estreita (max-w-3xl) num app
-          que promete "executivo". Agora ocupa a largura de ponta a ponta
-          (ordem do dono: "a página tem que pegar tudo"), com o SEU dia
-          num hero cheio no topo e O TIME num painel largo embaixo — as
-          duas metades que ele pediu pra enxergar lado a lado, não uma
-          atrás da outra escondida numa coluna. */}
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 py-8 sm:py-10 space-y-8 sm:space-y-10">
+          que promete "executivo". Ganhou um teto (max-w-[1440px]) que
+          ainda sobrava dos dois lados em monitor grande — o dono viu isso
+          ao vivo: "não pode espremer isso tipo numa landing page". Sem
+          teto nenhum agora: w-full, ponta a ponta, igual ao palco dos 8
+          Hábitos (CrmClientesTab.jsx) que já não tem max-w nenhum. */}
+      <div className="w-full px-3 sm:px-8 py-8 sm:py-10 space-y-8 sm:space-y-10">
 
         {/* 🧭 08/09/2026 — "o botão pra eu ir pras outras áreas não pode
             sair" (ordem do dono, olhando o preview): /XGame é uma rota
