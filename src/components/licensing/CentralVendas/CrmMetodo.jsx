@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2 } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -79,7 +79,7 @@ Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr }) {
   const uid = currentUser?.id;
   const podeGerir = gestao ?? visaoTotal;
   const [perfil, setPerfil] = useState(null);
@@ -2128,10 +2128,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm text-nz-tinta-fraca">
                   {clientesManuais.length} pessoas na sua lista · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
                     <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
                   </Button>
+                  {/* 📥 08/09 — importar em massa. Fica ao lado de "Adicionar
+                      pessoa" porque é a mesma pergunta ("como entra gente
+                      aqui?"), respondida de dois jeitos: um a um ou a agenda
+                      inteira. Só aparece pra quem pode importar — na visão de
+                      time, a lista é de outra pessoa, e importar contato pra
+                      carteira alheia não é uma operação que exista. */}
+                  {onImportarContatos && (
+                    <Button size="sm" variant="outline" onClick={onImportarContatos} className="border-nz-verde text-nz-verde hover:bg-nz-verde-fundo">
+                      <Upload className="w-4 h-4 mr-1" /> Importar contatos
+                    </Button>
+                  )}
                   {/* o cadastro de vendedor mora aqui agora: é na Lista de
                       Networking que a rede é construída, não no topo da página */}
                   {onNovoVendedor && (
