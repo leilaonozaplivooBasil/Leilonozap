@@ -5,7 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas,
-  ofensiva, OFENSIVA_META, missoesDaSemana,
+  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_FIM_MIN, horaDeMin,
 } from '@/lib/xgame';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
@@ -211,12 +211,13 @@ export default function XGame() {
           </div>
         </header>
 
-        {/* 🧯 08/09/2026 — mesma regra explícita do Compromisso: não votar em
-            todo mundo até as 22h zera a MvM do Dia. */}
+        {/* 🔥 08/09/2026 — mesma regra explícita do Compromisso, radical: não
+            votar em todo mundo até a última chance zera o dia inteiro,
+            dinheiro incluído — não só a MvM. */}
         {resumo.perdeu_por_nao_votar && (
           <div className="rounded-xl border-2 border-red-500 bg-red-950/40 px-4 py-3 text-center">
-            <p className="text-sm font-extrabold text-red-400">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as 22h</p>
-            <p className="text-[11px] text-red-300 mt-0.5">Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
+            <p className="text-sm font-extrabold text-red-400">🗳️ DIA ZERADO — você não votou em todos os colegas até as {horaDeMin(VOTACAO_FIM_MIN)}</p>
+            <p className="text-[11px] text-red-300 mt-0.5">Não é só a MvM: Human Token, pontos e X-Pay que você ganharia hoje também zeraram. Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
           </div>
         )}
 
