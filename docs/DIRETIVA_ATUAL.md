@@ -12,6 +12,34 @@
 
 ---
 
+## DIR-99 — Cadastro no X-GAME vira multi-seleção: marcar vários do Time Corporativo de uma vez
+
+**Emitida por:** dono (08/09/2026): *"agora vai lá no administrativo e seleciona as pessoas do topo em que a gente vai colocar na gamificação, porque nem todo mundo que está no topo, que são o grupo corporativo, estão na gamificação — eu preciso selecionar as pessoas que estão, pra elas serem votadas."*
+
+**Data:** 08/09/2026.
+
+**O que já existia:** `XGameAdmin.jsx` já buscava candidatos agrupados pelo
+plano de carreira (`GRUPOS_BUSCA`, com "👔 Time Corporativo" = o bloco
+diretor + admins), e cadastrava em `xgame_participantes` (quem está ativo
+ali é quem vota e recebe voto na MvM) — mas só deixava marcar **uma pessoa
+por vez**, cadastrar, buscar de novo, marcar a próxima.
+
+**O que entra:**
+1. `src/components/licensing/XGameAdmin.jsx` — a seleção vira multi (estado
+   `selecionados`, array de ids, no lugar do `novo` de uma string só). Cada
+   pessoa clicada entra/sai da seleção sem perder as outras.
+2. Botão "☐ marcar todo o grupo" / "✔ desmarcar" no cabeçalho de cada grupo
+   da busca (ex.: Time Corporativo inteiro) — marca ou desmarca todo mundo
+   daquele grupo de uma vez, sem clicar pessoa por pessoa.
+3. `adicionar()` agora faz um único `upsert` em lote com todos os
+   selecionados, e o botão mostra a contagem ("Cadastrar 4 selecionados").
+
+**Prova:** `npx eslint` limpo, suíte 1588/1588 e `npm run build` sem erro
+(o componente não tinha teste de unidade próprio — é lógica de estado de UI
+sobre uma tabela já coberta por `tests/xgame.test.mjs`).
+
+---
+
 ## DIR-98 — X-GAME ganha espaço dedicado, recuperação de fim de semana e visão executiva com pódio
 
 **Emitida por:** dono (08/09/2026), em vários pedidos que convergiram no

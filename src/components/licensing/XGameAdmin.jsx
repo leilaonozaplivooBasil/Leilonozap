@@ -74,7 +74,12 @@ const DICAS = {
 export default function XGameAdmin() {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
-  const [novo, setNovo] = useState('');
+  // 🎯 08/09/2026 — dono: "nem todo mundo que está no topo, no grupo
+  // corporativo, está na gamificação — preciso selecionar as pessoas que
+  // vão ser votadas." Cadastrar um por um não dava pra escolher o time
+  // corporativo inteiro de uma vez; agora marca vários e cadastra juntos.
+  const [selecionados, setSelecionados] = useState([]);
+  const alternarSelecionado = (id) => setSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const [busca, setBusca] = useState('');
   // menus suspensos: um grupo da busca aberto por vez, um participante aberto
   // por vez (abrir um fecha o outro) — pra página não ficar quilométrica
@@ -126,14 +131,14 @@ export default function XGameAdmin() {
   };
 
   const adicionar = async () => {
-    if (!novo) return;
+    if (!selecionados.length) return;
     setSalvando(true);
-    const { error } = await supabase.from('xgame_participantes')
-      .upsert({ user_id: novo, ativo: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    const linhas = selecionados.map((user_id) => ({ user_id, ativo: true, updated_at: new Date().toISOString() }));
+    const { error } = await supabase.from('xgame_participantes').upsert(linhas, { onConflict: 'user_id' });
     setSalvando(false);
-    if (error) { toast.error('Erro ao cadastrar participante.'); return; }
-    toast.success('Participante no jogo!');
-    setNovo('');
+    if (error) { toast.error('Erro ao cadastrar participante(s).'); return; }
+    toast.success(selecionados.length > 1 ? `${selecionados.length} participantes no jogo!` : 'Participante no jogo!');
+    setSelecionados([]);
     carregar();
   };
 
@@ -408,8 +413,8 @@ export default function XGameAdmin() {
             onChange={(e) => setBusca(e.target.value)}
             className="h-9 bg-white border-gray-300 flex-1 min-w-[220px]"
           />
-          <Button size="sm" onClick={adicionar} disabled={salvando || !novo} className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
-            <UserPlus className="w-4 h-4 mr-1" /> Cadastrar{novo ? ` ${nomeDe(novo)}` : ''}
+          <Button size="sm" onClick={adicionar} disabled={salvando || !selecionados.length} className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+            <UserPlus className="w-4 h-4 mr-1" /> {selecionados.length > 1 ? `Cadastrar ${selecionados.length} selecionados` : selecionados.length === 1 ? `Cadastrar ${nomeDe(selecionados[0])}` : 'Cadastrar'}
           </Button>
         </div>
         {GRUPOS_BUSCA.every(([g]) => gruposDeCandidatos[g].length === 0) ? (
@@ -420,6 +425,8 @@ export default function XGameAdmin() {
               if (gruposDeCandidatos[g].length === 0) return null;
               // buscando, o grupo com resultado abre sozinho; sem busca, é menu suspenso
               const aberto = busca.trim() ? true : grupoAberto === g;
+              const idsDoGrupo = gruposDeCandidatos[g].map((u) => u.id);
+              const todosSelecionados = idsDoGrupo.every((id) => selecionados.includes(id));
               return (
                 <div key={g}>
                   <button
@@ -430,17 +437,30 @@ export default function XGameAdmin() {
                     <span>{aberto ? '▾' : '▸'} {rotulo} ({gruposDeCandidatos[g].length})</span>
                     {!aberto && <span className="normal-case font-normal text-gray-400">toque pra abrir</span>}
                   </button>
-                  {aberto && gruposDeCandidatos[g].map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => setNovo(novo === u.id ? '' : u.id)}
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${novo === u.id ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
-                    >
-                      <span className="text-xs truncate">{novo === u.id ? '✔ ' : ''}{nomeExibicao(u)}</span>
-                      {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
-                    </button>
-                  ))}
+                  {aberto && (
+                    <>
+                      {/* 🎯 08/09/2026 — marcar o grupo inteiro de uma vez (ex.: todo
+                          o Time Corporativo), em vez de clicar pessoa por pessoa. */}
+                      <button
+                        type="button"
+                        onClick={() => setSelecionados((prev) => (todosSelecionados ? prev.filter((id) => !idsDoGrupo.includes(id)) : [...new Set([...prev, ...idsDoGrupo])]))}
+                        className="w-full text-left px-3 py-1 text-[10.5px] font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-gray-100"
+                      >
+                        {todosSelecionados ? '✔ desmarcar' : '☐ marcar'} todo o grupo "{rotulo}"
+                      </button>
+                      {gruposDeCandidatos[g].map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => alternarSelecionado(u.id)}
+                          className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${selecionados.includes(u.id) ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
+                        >
+                          <span className="text-xs truncate">{selecionados.includes(u.id) ? '✔ ' : ''}{nomeExibicao(u)}</span>
+                          {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
               );
             })}
