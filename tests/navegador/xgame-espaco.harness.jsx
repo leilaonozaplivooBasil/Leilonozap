@@ -8,6 +8,7 @@
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import '@/index.css';
 import { dataISO, inicioCiclo } from '@/lib/xgame';
 import XGame from '@/pages/XGame';
@@ -46,4 +47,4 @@ window.__bancoFalso = {
   },
 };
 
-createRoot(document.getElementById('raiz')).render(<XGame />);
+createRoot(document.getElementById('raiz')).render(<BrowserRouter><XGame /></BrowserRouter>);

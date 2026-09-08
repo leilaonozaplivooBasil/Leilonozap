@@ -55,6 +55,9 @@ test('o espaço X-GAME, em largura de desktop, renderiza "Seu dia" + "Todo mundo
   await pagina.getByText('X-GAME', { exact: true }).waitFor();
   await pagina.getByText('Seu dia', { exact: true }).waitFor();
 
+  // 🧭 o caminho de volta pro resto do app — a página não pode virar beco sem saída
+  await pagina.getByText('Voltar pro Top College').waitFor();
+
   // MEU DIA — os 4 cartões, incluindo o X-Pay que a página órfã nunca mostrou
   await pagina.getByText('Human Token').waitFor();
   await pagina.getByText('X-Pay de hoje').waitFor();

@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
@@ -31,6 +33,7 @@ import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisao
 const fmt2 = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 
 export default function XGame() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [tarefas, setTarefas] = useState([]);
   const [diasCiclo, setDiasCiclo] = useState([]);
@@ -179,6 +182,19 @@ export default function XGame() {
           duas metades que ele pediu pra enxergar lado a lado, não uma
           atrás da outra escondida numa coluna. */}
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 py-8 sm:py-10 space-y-8 sm:space-y-10">
+
+        {/* 🧭 08/09/2026 — "o botão pra eu ir pras outras áreas não pode
+            sair" (ordem do dono, olhando o preview): /XGame é uma rota
+            própria, fora do painel do Top College — não herda o menu
+            lateral de lá. Sem isto, chegar aqui pelo banner "Visão
+            Executiva X-GAME" virava rua sem saída. */}
+        <button
+          type="button"
+          onClick={() => navigate('/Licensing?tab=catalogo&catalogTab=catalogo-crm')}
+          className="inline-flex items-center gap-2 text-sm font-bold text-[#C1BECA] hover:text-[#F4F4F4] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Voltar pro Top College
+        </button>
 
         <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#2B2B2B] pb-5">
           <div>
