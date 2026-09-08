@@ -328,8 +328,13 @@ export function xpayDoDia(tarefasComEstado = [], valores = {}) {
 export const fmtReais = (n) => `R$ ${Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // ── 🗳️ MvM MANUAL — a votação dos pares nas 10 Virtudes ─────────────
-// Planilha: cada pessoa vota 1-10 em cada colega, todo dia, das 20h às 22h,
-// de casa. A média das virtudes recebidas é o "RANKING DAS VIRTUDES" e o
+// 08/09/2026 — dono mudou a janela de 20h-22h pra 17h-20h: "não deixar
+// fixo [tarde demais] — deixar a votação a partir das cinco/seis da tarde,
+// que eu já consigo avaliar bem a pessoa... de cinco até oito da noite."
+// Às 22h muita gente já estava fora do ar (jantar, família, dormindo) — a
+// punição de não votar (zerar o dia) pegava gente por indisponibilidade,
+// não por desleixo. Terminar às 20h dá folga real pra quem só consegue à
+// noite. A média das virtudes recebidas é o "RANKING DAS VIRTUDES" e o
 // componente MvM oficial do Human Token (0-10).
 
 export const VIRTUDES = [
@@ -337,10 +342,13 @@ export const VIRTUDES = [
   'COMPROMISSO', 'AUTORRESPONSABILIDADE', 'ORATÓRIA', 'LIDERANÇA', 'ESPÍRITO DE EQUIPE',
 ];
 
-export const VOTACAO_INICIO_MIN = 20 * 60; // 20:00
-export const VOTACAO_FIM_MIN = 22 * 60;    // 22:00
+export const VOTACAO_INICIO_MIN = 17 * 60; // 17:00
+export const VOTACAO_FIM_MIN = 20 * 60;    // 20:00
 
-/** A janela de votação está aberta agora? (20h–22h, regra da planilha) */
+/** "17h" / "20h" — pra tela e guia nunca escreverem a hora à mão (a régua muda aqui, não em 10 lugares). */
+export const horaBr = (min) => `${Math.floor(Number(min) / 60)}h`;
+
+/** A janela de votação está aberta agora? (17h–20h) */
 export const janelaVotacaoAberta = (agoraMin) =>
   agoraMin >= VOTACAO_INICIO_MIN && agoraMin < VOTACAO_FIM_MIN;
 
@@ -516,7 +524,7 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
 // o dia." `votouEmTodos` é null enquanto não dá pra julgar (janela ainda não
 // fechou, ou a tela que chamou não carregou colegas/votos ainda) — só
-// depois das 22h, com `votouEmTodos === false`, a MvM do Dia vira ZERO,
+// depois de fechada a janela, com `votouEmTodos === false`, a MvM do Dia vira ZERO,
 // arrastando o Human Token e a frase junto (é isso que faz a punição ser
 // SENTIDA, e não só um aviso na tela). `votouEmTodos` continua opcional
 // (default null) — quem chama sem saber de votação (histórico, testes

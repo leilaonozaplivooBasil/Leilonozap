@@ -184,14 +184,14 @@ test('o guia NÃO vira tarefa do Método — ordem explícita do dono', () => {
 // tirar a aula, ou suavizar a frase, quebra aqui de propósito.
 test('a votação MvM tem aula própria, com a punição escrita BEM explícita (tom perigo)', () => {
   const votacao = AULAS.find((a) => a.id === 'votacao');
-  assert.ok(votacao, 'sumiu a aula que explica a votação das 20h-22h');
+  assert.ok(votacao, 'sumiu a aula que explica a votação da MvM manual');
   const caixaPerigo = votacao.caixas.find((c) => c.tom === 'perigo');
   assert.ok(caixaPerigo, 'a aula perdeu a caixa de maior gravidade (tom perigo)');
   const texto = caixaPerigo.linhas.join(' ');
   assert.match(texto, /ZERA/, 'a palavra tem que ser ZERA, não "pode afetar" ou eufemismo parecido');
   assert.match(texto, new RegExp(`${br(MVM_MAX).replace(',', '\\,')}.*ZERO`), 'precisa dizer de onde (a nota cheia) até onde (zero) ela cai');
   assert.match(texto, /TODOS os colegas/, 'precisa deixar claro que é TODOS, não "alguém"');
-  assert.match(texto, /22h/);
+  assert.match(texto, /20h/, 'a janela de votação é 17h-20h — a régua vem de VOTACAO_FIM_MIN, não deve ficar hardcoded 22h');
   // e a tela mostra o "tom perigo" com uma cor própria — não reaproveitando
   // o âmbar do "atencao" comum, senão a gravidade não aparece visualmente
   assert.match(TELA, /perigo:\s*\{[^}]*red/);

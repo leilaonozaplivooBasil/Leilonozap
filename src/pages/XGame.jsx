@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, inicioCiclo, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
-  VIRTUDES, podeSerVotado, votouEmTodosOsColegas,
+  VIRTUDES, podeSerVotado, votouEmTodosOsColegas, VOTACAO_FIM_MIN, horaBr,
 } from '@/lib/xgame';
 
 // X-GAME — o painel da gamificação do Método (v1, somente leitura).
@@ -126,10 +126,10 @@ export default function XGame() {
         </header>
 
         {/* 🧯 08/09/2026 — mesma regra explícita do Compromisso: não votar em
-            todo mundo até as 22h zera a MvM do Dia. */}
+            todo mundo até o fim da janela zera a MvM do Dia. */}
         {resumo.perdeu_por_nao_votar && (
           <div className="rounded-lg border-2 border-red-500 bg-red-950/40 px-3 py-2.5 text-center">
-            <p className="text-sm font-extrabold text-red-400">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as 22h</p>
+            <p className="text-sm font-extrabold text-red-400">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as {horaBr(VOTACAO_FIM_MIN)}</p>
             <p className="text-[11px] text-red-300 mt-0.5">Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
           </div>
         )}

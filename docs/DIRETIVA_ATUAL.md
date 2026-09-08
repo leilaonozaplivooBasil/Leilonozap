@@ -12,6 +12,35 @@
 
 ---
 
+## DIR-97 — Janela de votação da MvM muda de 20h–22h pra 17h–20h
+
+**Emitida por:** dono (08/09/2026): *"não deixar fixo [tarde demais] — deixar
+a votação a partir das cinco/seis da tarde, que eu já consigo avaliar bem a
+pessoa... de cinco até oito da noite."* Às 22h muita gente já estava fora do
+ar (jantar, família, dormindo) — a punição de não votar (zerar o dia) pegava
+gente por indisponibilidade, não por desleixo. Terminar às 20h dá folga real
+pra quem só consegue votar à noite.
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `VOTACAO_INICIO_MIN`/`VOTACAO_FIM_MIN` viram 17h/20h
+   (eram 20h/22h). Novo helper `horaBr(min)` (ex.: `horaBr(17*60) === '17h'`)
+   pra tela e guia lerem a hora da constante, em vez de escrevê-la à mão em
+   10 lugares.
+2. `src/lib/guiaXGame.js`, `src/components/licensing/CentralVendas/CrmMetodo.jsx`,
+   `src/pages/XGame.jsx` e `src/components/licensing/XGameAdmin.jsx` — todo
+   texto que citava "20h às 22h" (título/resumo da aula, dicionário, tooltips
+   do placar, alerta de MvM zerada, rótulo do painel admin) passou a ler
+   `horaBr(VOTACAO_INICIO_MIN)`/`horaBr(VOTACAO_FIM_MIN)`, pra nunca mais
+   ficar uma tela dizendo 22h enquanto o sistema já fecha às 20h.
+
+**Prova:** `tests/guiaXGame.test.mjs` ajustado pra não travar mais o texto
+"22h" (a régua real agora fecha às 20h); suíte e build verificados antes do
+push.
+
+---
+
 ## DIR-96 — Super Admin sai da votação por padrão; não votar em todos zera a MvM do Dia
 
 **Emitida por:** dono (08/09/2026): *"Super Admin não pode ser votado a não

@@ -28,7 +28,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico,
+  pesoAutomatico, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaBr,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import { supabase } from '@/api/supabaseClient';
@@ -1433,7 +1433,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 do tamanho do problema, no topo do placar. */}
             {xgame && ehHoje && xgame.perdeu_por_nao_votar && mostrarPainel && (
               <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-red-700">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as 22h</p>
+                <p className="text-sm font-extrabold text-red-700">🗳️ MvM DO DIA ZERADA — você não votou em todos os colegas até as {horaBr(VOTACAO_FIM_MIN)}</p>
                 <p className="text-[11px] text-red-600 mt-0.5">Votar em todo mundo, todo dia, não é opcional: quem não vota tira a nota de si mesmo. Amanhã dá pra recomeçar.</p>
               </div>
             )}
@@ -1446,7 +1446,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="py-1" title={'MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das 20h às 22h), que é a que entra no Human Token oficial.'}>
+                <div className="py-1" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaBr(VOTACAO_INICIO_MIN)} às ${horaBr(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
                   <p className="text-lg font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
                   <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
@@ -1518,7 +1518,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
                     <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
-                    <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é tarefa diária: das 20h às 22h, de casa, dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora — quem participa é escolhido pelo admin.</p>
+                    <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é tarefa diária: das {horaBr(VOTACAO_INICIO_MIN)} às {horaBr(VOTACAO_FIM_MIN)}, de casa, dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora — quem participa é escolhido pelo admin.</p>
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
                 </details>
@@ -1559,21 +1559,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
-            {/* ══ 🗳️ F3 — VOTAÇÃO MvM (20h–22h) + RANKING DAS VIRTUDES ══ */}
+            {/* ══ 🗳️ F3 — VOTAÇÃO MvM (17h–20h) + RANKING DAS VIRTUDES ══ */}
             {xgame && ehHoje && mostrarPainel && (
               <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde">
-                    {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das 20h às 22h · Ranking das Virtudes
+                    {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das {horaBr(VOTACAO_INICIO_MIN)} às {horaBr(VOTACAO_FIM_MIN)} · Ranking das Virtudes
                   </button>
                   <span className={`text-[10px] font-bold ${janelaAberta ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
-                    {janelaAberta ? '● JANELA ABERTA' : 'janela fechada — abre às 20h'}
+                    {janelaAberta ? '● JANELA ABERTA' : `janela fechada — abre às ${horaBr(VOTACAO_INICIO_MIN)}`}
                   </span>
                 </div>
                 {/* 🧯 08/09 — fica de pé mesmo com o bloco recolhido: é a
                     regra principal da gamificação, não um detalhe pra achar. */}
                 <p className="text-[10.5px] font-semibold text-red-600">
-                  ⚠️ Não votar em TODOS os colegas até as 22h zera a sua MvM do Dia — sem exceção.
+                  ⚠️ Não votar em TODOS os colegas até as {horaBr(VOTACAO_FIM_MIN)} zera a sua MvM do Dia — sem exceção.
                 </p>
 
                 {/* 🎓 08/09 — só o super_admin vê isto: o interruptor pra

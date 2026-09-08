@@ -17,8 +17,11 @@
 // com autoridade. Aqui cada número é lido da constante de verdade.
 import {
   TOKEN_MAX, APLICABILIDADE_MAX, MVM_MAX, TRAVA_SEM_ESTUDO, CICLO_DIAS_UTEIS,
-  FAIXAS_TOKEN, RESUMO_MIN, cotacaoDoDia,
+  FAIXAS_TOKEN, RESUMO_MIN, cotacaoDoDia, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaBr,
 } from './xgame.js';
+
+const INICIO_VOTACAO = horaBr(VOTACAO_INICIO_MIN);
+const FIM_VOTACAO = horaBr(VOTACAO_FIM_MIN);
 
 const br = (n) => Number(n).toFixed(2).replace('.', ',');
 
@@ -207,16 +210,18 @@ export const AULAS_BRUTAS = [
   // gamificação." Até aqui o guia só falava da MvM AUTOMÁTICA (some sozinha
   // com tarefa atrasada); a votação manual das 20h-22h nunca tinha sido
   // ensinada em lugar nenhum — esta aula existe pra fechar esse buraco.
+  // 🗳️ 08/09/2026 — janela mudou de 20h-22h pra 17h-20h (dono: "às 22h eu já
+  // não consigo mais avaliar bem, e às 22h muita gente já tinha saído do ar").
   {
     id: 'votacao',
-    titulo: 'A votação das 20h às 22h — e o que acontece se você esquecer',
-    resumo: 'Todo dia, das 20h às 22h, você vota nas 10 Virtudes de cada colega ativo do jogo. Essa votação é a OUTRA metade da sua nota — e ela pune quem esquece.',
+    titulo: `A votação das ${INICIO_VOTACAO} às ${FIM_VOTACAO} — e o que acontece se você esquecer`,
+    resumo: `Todo dia, das ${INICIO_VOTACAO} às ${FIM_VOTACAO}, você vota nas 10 Virtudes de cada colega ativo do jogo. Essa votação é a OUTRA metade da sua nota — e ela pune quem esquece.`,
     caixas: [
       {
         tom: 'mapa',
         titulo: 'Como funciona',
         linhas: [
-          'No Hábito 2, abra "🗳️ Votação MvM das 20h às 22h" e escolha um colega.',
+          `No Hábito 2, abra "🗳️ Votação MvM das ${INICIO_VOTACAO} às ${FIM_VOTACAO}" e escolha um colega.`,
           'Dê uma nota de 1 a 10 em cada uma das 10 Virtudes (Gratidão, Relacionamento, Organização, Pontualidade, Proatividade, Compromisso, Autorresponsabilidade, Oratória, Liderança, Espírito de Equipe).',
           'Repita pra CADA colega ativo do jogo. Faltou um, a votação daquele dia não fechou.',
           'A média que você RECEBE dos colegas vira o seu Ranking das Virtudes — e é essa nota, não a automática, que entra no Human Token oficial do ciclo.',
@@ -226,10 +231,10 @@ export const AULAS_BRUTAS = [
         tom: 'perigo',
         titulo: 'ISTO É UMA DAS COISAS PRINCIPAIS DO JOGO — LEIA COM ATENÇÃO',
         linhas: [
-          `Não votar em TODOS os colegas até as 22h ZERA a sua MvM do Dia — a nota que começa em ${br(MVM_MAX)} vai a ZERO, mesmo que você tenha feito 100% das suas tarefas.`,
+          `Não votar em TODOS os colegas até as ${FIM_VOTACAO} ZERA a sua MvM do Dia — a nota que começa em ${br(MVM_MAX)} vai a ZERO, mesmo que você tenha feito 100% das suas tarefas.`,
           'Não é um aviso, não é um desconto pequeno: é a nota do dia inteira, apagada. O Human Token do dia cai junto.',
           'A falta de voto de um integrante no outro prejudica o grupo inteiro — por isso a régua é rígida: não é sobre "lembrar de votar em alguém", é sobre fechar TODOS, todo dia, sem exceção.',
-          'A janela fecha às 22h e não reabre. Perdeu a hora, o dia já era — mas amanhã é um dia novo, a régua não carrega punição de um dia pro outro.',
+          `A janela fecha às ${FIM_VOTACAO} e não reabre. Perdeu a hora, o dia já era — mas amanhã é um dia novo, a régua não carrega punição de um dia pro outro.`,
         ],
       },
     ],
@@ -305,7 +310,7 @@ export const DICIONARIO = [
   { palavra: 'Human Token', significa: `A moeda do jogo. MvM + Aplicabilidade, no máximo ${br(TOKEN_MAX)}.` },
   { palavra: 'Master Task', significa: 'A lista das suas tarefas do dia.' },
   { palavra: 'MvM do Dia', significa: `Sua nota de hoje. Começa em ${br(MVM_MAX)} e cai sozinha.` },
-  { palavra: 'Votação MvM (20h-22h)', significa: `Você avalia cada colega em 10 Virtudes. ATENÇÃO: não votar em TODOS até as 22h zera a MvM do Dia inteira.` },
+  { palavra: `Votação MvM (${INICIO_VOTACAO}-${FIM_VOTACAO})`, significa: `Você avalia cada colega em 10 Virtudes. ATENÇÃO: não votar em TODOS até as ${FIM_VOTACAO} zera a MvM do Dia inteira.` },
   { palavra: 'Print', significa: 'Uma foto da própria tela do celular.' },
   { palavra: 'Ranking', significa: 'A lista das pessoas do time por pontos no ciclo.' },
   { palavra: 'Ritual do Amanhecer', significa: 'A rotina da manhã, com música e o quadro dos sonhos.' },
