@@ -39,6 +39,20 @@ function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
   );
 }
 
+// 🎨 08/09/2026 — dono: "esse ranking com emoji está muito feio... deixa
+// mais clean, mais Vale do Silício." Troca 💠🥇🥈🥉 por um ponto de cor —
+// mesma informação (a liga), sem o visual de figurinha. Cor só existe
+// aqui (não mexe em LIGAS, que outras telas do app ainda usam com emoji).
+const COR_LIGA = { diamante: '#67E8F9', ouro: '#FBBF24', prata: '#CBD5E1', bronze: '#D08A56' };
+function SeloLiga({ liga, className = '' }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: COR_LIGA[liga.id] || '#94a3b8' }} />
+      {liga.label.replace('LIGA ', '').toLowerCase()}
+    </span>
+  );
+}
+
 export default function XGameVisaoExecutiva() {
   const [linhas, setLinhas] = useState(null); // null = carregando
   const [ordem, setOrdem] = useState('token');
@@ -139,7 +153,18 @@ export default function XGameVisaoExecutiva() {
     };
   }, [linhas]);
 
-  const podio = useMemo(() => (linhas ? [...linhas].sort((a, b) => b.token - a.token).slice(0, 3) : []), [linhas]);
+  const rankPorToken = useMemo(() => (linhas ? [...linhas].sort((a, b) => b.token - a.token) : []), [linhas]);
+  const podio = useMemo(() => rankPorToken.slice(0, 3), [rankPorToken]);
+  // 📍 08/09/2026 — dono, três vezes: "você esqueceu de botar pessoal meu."
+  // A tabela já marcava "VOCÊ" (verde, discreto), mas enterrado lá embaixo
+  // numa lista de 10+ linhas não é "botar" — é escutar que ele nunca olha
+  // até lá. Isto aqui é o cartão que aparece primeiro, antes de qualquer
+  // outra coisa do time.
+  const meuLinha = useMemo(() => linhas?.find((l) => l.user_id === meuId) || null, [linhas, meuId]);
+  const minhaPosicao = useMemo(() => {
+    const i = rankPorToken.findIndex((l) => l.user_id === meuId);
+    return i >= 0 ? i + 1 : null;
+  }, [rankPorToken, meuId]);
 
   // 🚨 O RADAR: quem precisa de atenção, com o motivo escrito
   const radar = useMemo(() => {
@@ -196,10 +221,42 @@ export default function XGameVisaoExecutiva() {
         <p className="text-[11px] text-nz-tinta-fraca">o ciclo corrente, {time.pessoas} {time.pessoas === 1 ? 'pessoa' : 'pessoas'} em jogo</p>
       </div>
 
+      {/* ── 0. VOCÊ — antes de qualquer coisa do time, a sua própria posição ── */}
+      {meuLinha && (
+        <div data-teste="sua-posicao" className="rounded-2xl border border-nz-verde/30 bg-nz-verde/[0.06] p-4 sm:p-5 flex flex-wrap items-center gap-4 sm:gap-6">
+          <div className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center bg-nz-verde/15 border border-nz-verde/40 text-nz-verde font-black text-lg">
+            {iniciais(meuLinha.nome)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-nz-verde">Sua posição no ciclo</p>
+            <p className="text-2xl font-black text-nz-tinta leading-tight tabular-nums">
+              {minhaPosicao}º<span className="text-sm font-semibold text-nz-tinta-fraca"> de {time.pessoas}</span>
+            </p>
+            <SeloLiga liga={ligaDoToken(meuLinha.token)} className="text-[11px] font-semibold text-nz-tinta-fraca mt-0.5" />
+          </div>
+          <div className="flex items-center gap-5 sm:gap-7 ml-auto">
+            <div className="text-right">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-nz-tinta-fraca">Token</p>
+              <p className="text-lg font-bold tabular-nums text-nz-tinta">{fmt(meuLinha.token)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-nz-tinta-fraca">X-Pay</p>
+              <p className="text-lg font-bold tabular-nums text-nz-verde">{brl(meuLinha.xpay)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-nz-tinta-fraca">Ofensiva</p>
+              <p className="text-lg font-bold tabular-nums text-nz-tinta flex items-center justify-end gap-1">
+                {meuLinha.fogo > 0 && <Flame className="w-3.5 h-3.5 text-nz-fogo" />}{meuLinha.fogo}d
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 1. O PULSO ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
-          <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={`${ligaTime.emoji} ${ligaTime.label.toLowerCase()} · teto 22,22`} />
+          <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={<SeloLiga liga={ligaTime} className="text-nz-tinta-fraca" />} />
         </div>
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Users} rotulo="O dia de hoje" valor={pct(time.diaHoje)} nota={`fecha em ${Math.round(OFENSIVA_META * 100)}%`} cor={time.diaHoje >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
@@ -232,9 +289,10 @@ export default function XGameVisaoExecutiva() {
                 <p className="text-sm font-bold text-nz-tinta mt-2 truncate max-w-full text-center">
                   {l.nome}{souEu && <span className="ml-1 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
                 </p>
-                <p className="text-[11px] text-nz-tinta-fraca tabular-nums text-center">
-                  {liga.emoji} {fmt(l.token)} · MvM {fmt(l.mvm, 1)}
-                  {l.fogo > 0 && <span className="text-nz-fogo font-semibold"> · {l.fogo}d 🔥</span>}
+                <p className="flex items-center justify-center gap-1 text-[11px] text-nz-tinta-fraca tabular-nums text-center">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: COR_LIGA[liga.id] || '#94a3b8' }} />
+                  {fmt(l.token)} · MvM {fmt(l.mvm, 1)}
+                  {l.fogo > 0 && <span className="flex items-center gap-0.5 text-nz-fogo font-semibold"> · <Flame className="w-3 h-3" />{l.fogo}d</span>}
                 </p>
                 <div className={`w-full ${ALTURA_PALCO[i]} rounded-t-lg bg-gradient-to-b ${COR_PALCO[i]} mt-2 flex items-start justify-center pt-1.5`}>
                   <span className="text-white font-black text-xl drop-shadow">{POSICAO_PALCO[i]}</span>
@@ -251,7 +309,7 @@ export default function XGameVisaoExecutiva() {
           <TrendingDown className="w-3.5 h-3.5" /> Quem precisa de você
         </p>
         {radar.length === 0 ? (
-          <p className="text-xs text-nz-verde font-semibold">Ninguém no radar — o time inteiro está de pé. 🎯</p>
+          <p className="text-xs text-nz-verde font-semibold">Ninguém no radar — o time inteiro está de pé.</p>
         ) : (
           <div className="space-y-2">
             {radar.map((l) => {
@@ -309,7 +367,7 @@ export default function XGameVisaoExecutiva() {
                     <td className="py-2.5 font-semibold text-nz-tinta">
                       {l.nome}{souEu && <span className="ml-1.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
                     </td>
-                    <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap">{liga.emoji} {liga.label.replace('LIGA ', '').toLowerCase()}</td>
+                    <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap"><SeloLiga liga={liga} /></td>
                     <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
                     <td className={`py-2.5 text-right tabular-nums ${l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{fmt(l.mvm, 1)}</td>
                     <td className={`py-2.5 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
@@ -321,9 +379,13 @@ export default function XGameVisaoExecutiva() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-[10px] text-nz-tinta-fraca">
-          Token e MvM são a MÉDIA do ciclo · Fogo = dias seguidos fechados ({Math.round(OFENSIVA_META * 100)}% do dia) ·
-          Dias = fechados sobre registrados · Ligas: {LIGAS.map((x) => `${x.emoji} ${x.label.replace('LIGA ', '').toLowerCase()}`).join(' · ')}
+        <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] text-nz-tinta-fraca">
+          <span>Token e MvM são a MÉDIA do ciclo · Fogo = dias seguidos fechados ({Math.round(OFENSIVA_META * 100)}% do dia) · Dias = fechados sobre registrados · Ligas:</span>
+          {LIGAS.map((x, i) => (
+            <span key={x.id} className="inline-flex items-center gap-1">
+              <SeloLiga liga={x} />{i < LIGAS.length - 1 && <span>·</span>}
+            </span>
+          ))}
         </p>
       </div>
     </div>
