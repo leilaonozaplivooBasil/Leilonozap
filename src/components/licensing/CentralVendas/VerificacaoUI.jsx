@@ -44,6 +44,29 @@ export function BarraProgresso({ pct = 0, dialeto = 'claro', altura = 'padrao', 
   );
 }
 
+/**
+ * A variante em fatias da mesma barra — mais de uma cor dividindo o mesmo
+ * trilho (a "barra da honestidade" da Esteira de Captação: verde = na
+ * conta, âmbar = declarado, cinza = ponderado). Mesmo trilho arredondado,
+ * só que com várias fatias em vez de um preenchimento só.
+ */
+export function BarraProgressoSegmentada({ segmentos = [], dialeto = 'claro', altura = 'padrao', trilhoClasse }) {
+  const h = ALTURA_BARRA[altura] || ALTURA_BARRA.padrao;
+  const trilho = trilhoClasse || (dialeto === 'escuro' ? 'bg-white/10' : 'bg-nz-cinza-fundo');
+  return (
+    <div className={`${h} rounded-full overflow-hidden flex ${trilho}`} data-teste="barra-progresso-segmentada">
+      {segmentos.map((s, i) => (
+        <div
+          key={i}
+          className={`h-full transition-all ${s.corClasse || ''}`}
+          style={{ width: `${Math.max(0, Number(s.pct) || 0)}%`, ...(s.corEstilo ? { background: s.corEstilo } : {}) }}
+          data-teste="barra-segmento"
+        />
+      ))}
+    </div>
+  );
+}
+
 // dado = medido de venda/cadastro real; aproximação = fórmula-proxy declarada;
 // sem fonte = o sistema ainda não mede — pendência explícita, nunca número
 // inventado (a régua de governança do Resumo Executivo, Seção 37).
