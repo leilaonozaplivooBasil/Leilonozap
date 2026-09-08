@@ -224,7 +224,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const carregar = useCallback(async () => {
     const [p, u, c, a] = await Promise.all([
       supabase.from('xgame_participantes').select('*').eq('ativo', true).order('created_date'),
-      supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level,phone').order('full_name'),
+      supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level,phone,profile_photo_url,avatar_url,avatar_color').order('full_name'),
       supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
       supabase.from('xperf_acoes').select('*').order('titulo'),
     ]);
@@ -707,7 +707,24 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         >
           <Wrench className="w-4 h-4 text-nz-verde" />
           <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Ciclo, verbas e participantes</span>
-          <span className="text-[10px] text-white/35">· o admin do X-GAME de sempre (o que é de cada pessoa já está no Quadro Geral dela)</span>
+          {/* 🖼️ dono: "não está claro" — quem vota no MvM aparece aqui MESMO
+              fechado, sem precisar abrir pra descobrir */}
+          {participantes.length > 0 && (
+            <span className="flex items-center -space-x-1.5" title={`${participantes.length} votando no MvM: ${participantes.map((p) => nomeDe(p.user_id)).join(', ')}`}>
+              {participantes.slice(0, 6).map((p) => {
+                const u = usuarios.find((x) => x.id === p.user_id);
+                const foto = u?.profile_photo_url || u?.avatar_url;
+                const cor = u?.avatar_color || 'linear-gradient(135deg, #10b981, #f59e0b)';
+                return (
+                  <span key={p.id} className="w-5 h-5 rounded-full ring-2 ring-[#0b0d14] flex items-center justify-center overflow-hidden text-[8px] font-bold text-white" style={{ background: foto ? 'transparent' : cor }}>
+                    {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : (u ? nomeDe(u.id) : '?').slice(0, 1)}
+                  </span>
+                );
+              })}
+              {participantes.length > 6 && <span className="w-5 h-5 rounded-full ring-2 ring-[#0b0d14] bg-white/10 flex items-center justify-center text-[8px] font-bold text-white/70">+{participantes.length - 6}</span>}
+            </span>
+          )}
+          <span className="text-[10px] text-white/35">· {participantes.length} votando no MvM · o admin do X-GAME de sempre</span>
           <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${adminAberto ? 'rotate-180' : ''}`} />
         </button>
         {adminAberto && (
