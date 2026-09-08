@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown } from 'lucide-react';
+import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown } from 'lucide-react';
 import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao } from '@/lib/xgame';
+
+/** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
+const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
 
 // 🎖️ X-GAME — A VISÃO EXECUTIVA DA EQUIPE (ordem do dono: "quero a
 // gamificação de todos na visão executiva, muito bem organizada").
@@ -39,6 +42,14 @@ function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
 export default function XGameVisaoExecutiva() {
   const [linhas, setLinhas] = useState(null); // null = carregando
   const [ordem, setOrdem] = useState('token');
+  // 🎯 08/09/2026 — "quero ver onde EU estou" (ordem do dono): a tela
+  // sempre foi só do time, sem marcar quem é o dono da sessão. Mesmo jeito
+  // de achar o usuário que XGame.jsx já usa — direto do localStorage, sem
+  // precisar de prop nova em quem já monta este componente.
+  const [meuId, setMeuId] = useState(null);
+  useEffect(() => {
+    try { setMeuId(JSON.parse(localStorage.getItem('currentUser') || 'null')?.id || null); } catch { setMeuId(null); }
+  }, []);
   // o início oficial do ciclo é do jogo, não da tela: busca direto na
   // config, do mesmo jeito que o Compromisso faz
   const [cicloConfig, setCicloConfig] = useState(undefined); // undefined = ainda buscando
@@ -168,42 +179,63 @@ export default function XGameVisaoExecutiva() {
   }
 
   const ligaTime = ligaDoToken(time.tokenMedio);
+  // pódio em ordem de PALCO (2º · 1º · 3º), não de ranking — é assim que um
+  // pódio de verdade se lê da esquerda pra direita
+  const palco = [podio[1], podio[0], podio[2]];
+  const ALTURA_PALCO = ['h-16 sm:h-20', 'h-24 sm:h-32', 'h-10 sm:h-12'];
+  const COR_PALCO = ['from-slate-300 to-slate-400', 'from-amber-300 to-yellow-500', 'from-orange-400 to-amber-700'];
+  const BORDA_PALCO = ['#64748b', '#b45309', '#9a3412'];
+  const POSICAO_PALCO = [2, 1, 3];
 
   return (
-    <div className="border-t border-nz-borda/40 pt-5 space-y-6">
+    <div className="border-t border-nz-borda/40 pt-5 space-y-8">
       <div>
         <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-nz-tinta-fraca">A X-GAME da equipe</p>
         <p className="text-[11px] text-nz-tinta-fraca">o ciclo corrente, {time.pessoas} {time.pessoas === 1 ? 'pessoa' : 'pessoas'} em jogo</p>
       </div>
 
       {/* ── 1. O PULSO ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
-        <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={`${ligaTime.emoji} ${ligaTime.label.toLowerCase()} · teto 22,22`} />
-        <Pulso Icone={Users} rotulo="O dia de hoje" valor={pct(time.diaHoje)} nota={`fecha em ${Math.round(OFENSIVA_META * 100)}%`} cor={time.diaHoje >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
-        <Pulso Icone={Flame} rotulo="Ofensivas acesas" valor={`${time.fogos}/${time.pessoas}`} nota="dias seguidos fechados" cor={time.fogos > 0 ? 'text-nz-fogo' : 'text-nz-tinta'} />
-        <Pulso Icone={Coins} rotulo="X-Pay do ciclo" valor={brl(time.xpay)} nota={time.perdido > 0 ? `${brl(time.perdido)} perdidos por atraso` : 'nada perdido por atraso'} cor="text-nz-verde" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={`${ligaTime.emoji} ${ligaTime.label.toLowerCase()} · teto 22,22`} />
+        </div>
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={Users} rotulo="O dia de hoje" valor={pct(time.diaHoje)} nota={`fecha em ${Math.round(OFENSIVA_META * 100)}%`} cor={time.diaHoje >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
+        </div>
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={Flame} rotulo="Ofensivas acesas" valor={`${time.fogos}/${time.pessoas}`} nota="dias seguidos fechados" cor={time.fogos > 0 ? 'text-nz-fogo' : 'text-nz-tinta'} />
+        </div>
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={Coins} rotulo="X-Pay do ciclo" valor={brl(time.xpay)} nota={time.perdido > 0 ? `${brl(time.perdido)} perdidos por atraso` : 'nada perdido por atraso'} cor="text-nz-verde" />
+        </div>
       </div>
 
-      {/* ── 2. O PÓDIO ── */}
+      {/* ── 2. O PÓDIO — um palco de verdade, 2º·1º·3º, com quem é "você" ── */}
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-nz-tinta-fraca mb-3">O pódio do ciclo</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {podio.map((l, i) => {
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-nz-tinta-fraca mb-4">O pódio do ciclo</p>
+        <div className="flex items-end justify-center gap-3 sm:gap-5 max-w-xl mx-auto">
+          {palco.map((l, i) => {
+            if (!l) return <div key={i} className="flex-1 max-w-[180px]" />;
             const liga = ligaDoToken(l.token);
-            const cor = ['from-amber-400 to-yellow-500', 'from-slate-300 to-slate-400', 'from-orange-400 to-amber-600'][i];
-            const borda = ['#b45309', '#64748b', '#9a3412'][i];
+            const souEu = l.user_id === meuId;
             return (
-              <div key={l.user_id} className="flex items-center gap-3">
-                <span
-                  className={`shrink-0 w-12 h-11 rounded-[50%] flex items-center justify-center bg-gradient-to-b ${cor} text-white font-extrabold text-lg`}
-                  style={{ boxShadow: `0 5px 0 0 ${borda}, inset 0 3px 7px rgba(255,255,255,0.4)` }}
-                >{i + 1}</span>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-nz-tinta truncate">{l.nome}</p>
-                  <p className="text-[11px] text-nz-tinta-fraca tabular-nums">
-                    {liga.emoji} {fmt(l.token)} · MvM {fmt(l.mvm, 1)}
-                    {l.fogo > 0 && <span className="text-nz-fogo font-semibold"> · {l.fogo}d de fogo</span>}
-                  </p>
+              <div key={l.user_id} className="flex-1 max-w-[180px] flex flex-col items-center">
+                {i === 1 && <Crown className="w-5 h-5 text-amber-300 mb-1" />}
+                <div
+                  className={`relative shrink-0 w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-b ${COR_PALCO[i]} text-white font-extrabold text-lg ${souEu ? 'ring-2 ring-nz-verde ring-offset-2 ring-offset-[#05060c]' : ''}`}
+                  style={{ boxShadow: `0 4px 0 0 ${BORDA_PALCO[i]}, inset 0 3px 7px rgba(255,255,255,0.4)` }}
+                >
+                  {iniciais(l.nome)}
+                </div>
+                <p className="text-sm font-bold text-nz-tinta mt-2 truncate max-w-full text-center">
+                  {l.nome}{souEu && <span className="ml-1 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                </p>
+                <p className="text-[11px] text-nz-tinta-fraca tabular-nums text-center">
+                  {liga.emoji} {fmt(l.token)} · MvM {fmt(l.mvm, 1)}
+                  {l.fogo > 0 && <span className="text-nz-fogo font-semibold"> · {l.fogo}d 🔥</span>}
+                </p>
+                <div className={`w-full ${ALTURA_PALCO[i]} rounded-t-lg bg-gradient-to-b ${COR_PALCO[i]} mt-2 flex items-start justify-center pt-1.5`}>
+                  <span className="text-white font-black text-xl drop-shadow">{POSICAO_PALCO[i]}</span>
                 </div>
               </div>
             );
@@ -220,15 +252,18 @@ export default function XGameVisaoExecutiva() {
           <p className="text-xs text-nz-verde font-semibold">Ninguém no radar — o time inteiro está de pé. 🎯</p>
         ) : (
           <div className="space-y-2">
-            {radar.map((l) => (
-              <div key={l.user_id} className="flex items-start justify-between gap-3 border-b border-nz-borda/30 pb-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-nz-tinta truncate">{l.nome}</p>
-                  <p className="text-[11px] text-nz-fogo">{l.motivos.join(' · ')}</p>
+            {radar.map((l) => {
+              const souEu = l.user_id === meuId;
+              return (
+                <div key={l.user_id} className={`flex items-start justify-between gap-3 rounded-lg px-3 py-2 ${souEu ? 'bg-nz-verde/10 border border-nz-verde/30' : 'border-b border-nz-borda/30'}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-nz-tinta truncate">{l.nome}{souEu && <span className="ml-1.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}</p>
+                    <p className="text-[11px] text-nz-fogo">{l.motivos.join(' · ')}</p>
+                  </div>
+                  <p className="shrink-0 text-[11px] text-nz-tinta-fraca tabular-nums">token {fmt(l.token)}</p>
                 </div>
-                <p className="shrink-0 text-[11px] text-nz-tinta-fraca tabular-nums">token {fmt(l.token)}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -248,33 +283,36 @@ export default function XGameVisaoExecutiva() {
             >{rot}</button>
           ))}
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-nz-borda">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-nz-tinta-fraca text-[10px] uppercase tracking-wide">
-                <th className="text-left font-bold pb-2">#</th>
-                <th className="text-left font-bold pb-2">Pessoa</th>
-                <th className="text-left font-bold pb-2">Liga</th>
-                <th className="text-right font-bold pb-2">Token</th>
-                <th className="text-right font-bold pb-2">MvM</th>
-                <th className="text-right font-bold pb-2">Fogo</th>
-                <th className="text-right font-bold pb-2">Dias</th>
-                <th className="text-right font-bold pb-2">X-Pay</th>
+              <tr className="text-nz-tinta-fraca text-[10px] uppercase tracking-wide bg-white/[0.03]">
+                <th className="text-left font-bold py-2.5 px-3">#</th>
+                <th className="text-left font-bold py-2.5">Pessoa</th>
+                <th className="text-left font-bold py-2.5">Liga</th>
+                <th className="text-right font-bold py-2.5">Token</th>
+                <th className="text-right font-bold py-2.5">MvM</th>
+                <th className="text-right font-bold py-2.5">Fogo</th>
+                <th className="text-right font-bold py-2.5">Dias</th>
+                <th className="text-right font-bold py-2.5 px-3">X-Pay</th>
               </tr>
             </thead>
             <tbody>
               {ordenadas.map((l, i) => {
                 const liga = ligaDoToken(l.token);
+                const souEu = l.user_id === meuId;
                 return (
-                  <tr key={l.user_id} className="border-t border-nz-borda/30">
-                    <td className="py-2 text-nz-tinta-fraca tabular-nums">{i + 1}</td>
-                    <td className="py-2 font-semibold text-nz-tinta">{l.nome}</td>
-                    <td className="py-2 text-nz-tinta-fraca whitespace-nowrap">{liga.emoji} {liga.label.replace('LIGA ', '').toLowerCase()}</td>
-                    <td className="py-2 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
-                    <td className={`py-2 text-right tabular-nums ${l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{fmt(l.mvm, 1)}</td>
-                    <td className={`py-2 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
-                    <td className="py-2 text-right text-nz-tinta-fraca tabular-nums">{l.dias_fechados}/{l.dias}</td>
-                    <td className="py-2 text-right text-nz-verde font-semibold tabular-nums">{brl(l.xpay)}</td>
+                  <tr key={l.user_id} className={`border-t border-nz-borda/30 transition-colors ${souEu ? 'bg-nz-verde/10' : 'hover:bg-white/[0.03]'}`}>
+                    <td className="py-2.5 px-3 text-nz-tinta-fraca tabular-nums">{i + 1}</td>
+                    <td className="py-2.5 font-semibold text-nz-tinta">
+                      {l.nome}{souEu && <span className="ml-1.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                    </td>
+                    <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap">{liga.emoji} {liga.label.replace('LIGA ', '').toLowerCase()}</td>
+                    <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
+                    <td className={`py-2.5 text-right tabular-nums ${l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{fmt(l.mvm, 1)}</td>
+                    <td className={`py-2.5 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
+                    <td className="py-2.5 text-right text-nz-tinta-fraca tabular-nums">{l.dias_fechados}/{l.dias}</td>
+                    <td className="py-2.5 text-right text-nz-verde font-semibold tabular-nums px-3">{brl(l.xpay)}</td>
                   </tr>
                 );
               })}
