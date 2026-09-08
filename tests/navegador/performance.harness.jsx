@@ -10,6 +10,7 @@
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import '@/index.css';
 import XPerformance from '@/components/licensing/CentralVendas/XPerformance';
@@ -64,8 +65,13 @@ window.__bancoFalso = {
 const DONO = { id: 'dono', full_name: 'Luiz Santanna', email: 'luiz@x.com', role: 'super_admin', career_levels: ['ceo'] };
 
 createRoot(document.getElementById('raiz')).render(
-  <div className="xeos-palco min-h-screen p-3 sm:p-6" style={{ background: 'var(--xeos-preto, #00020C)' }}>
-    <Toaster position="top-center" />
-    <XPerformance currentUser={DONO} visaoTotal gestao hojeISO={HOJE} />
-  </div>,
+  // 🔍 08/09/2026 — a aba "MvM dele" embute a página /XGame de verdade
+  // (useNavigate lá dentro), então a banca agora precisa do mesmo Router
+  // que a produção sempre teve em volta de tudo.
+  <BrowserRouter>
+    <div className="xeos-palco min-h-screen p-3 sm:p-6" style={{ background: 'var(--xeos-preto, #00020C)' }}>
+      <Toaster position="top-center" />
+      <XPerformance currentUser={DONO} visaoTotal gestao hojeISO={HOJE} />
+    </div>
+  </BrowserRouter>,
 );

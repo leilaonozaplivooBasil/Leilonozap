@@ -585,7 +585,7 @@ test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e What
   await pagina.locator('[data-teste="abrir-quadro-geral"]').click();
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.locator('[data-teste="quadro-geral-topo"]').waitFor();
-  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Comprovações', 'Histórico']);
+  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'MvM dele', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Comprovações', 'Histórico']);
   // 🚪 o caminho pra sociedade veio de baixo pra dentro da pessoa
   assert.match(await texto(pagina, '[data-teste="portoes-pessoa"]'), /Caminho pra sociedade.*0 de 3 portões/s);
   // Emanuel não gerou hoje → amarelo, com o motivo
@@ -594,6 +594,26 @@ test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e What
   const wa = await modal.locator('[data-teste="whatsapp"]').getAttribute('href');
   assert.match(wa, /^https:\/\/wa\.me\/5521999991234\?text=/, 'o telefone do painel de controle, com o 55');
   assert.match(decodeURIComponent(wa), /Oi Emanuel/);
+  await ctx.close();
+});
+
+test('MVM DELE: a aba abre a tela X-GAME de Emanuel de verdade, em modo só-olhar — sem botão de votar nem "voltar"', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  await aba(modal, 'mvm');
+  // o aviso de "isso é uma visita", e a tela dela mesma por baixo — mesmo
+  // cabeçalho "X-GAME" que /XGame mostra pra qualquer um
+  await modal.getByText(/Visualização do Super Admin — exatamente o que Emanuel Silva vê agora/).waitFor();
+  await modal.getByText('X-GAME', { exact: true }).waitFor();
+  await modal.getByText(/Boa (manhã|tarde|noite), Emanuel/).waitFor();
+  // sem rota pra sair (não faz sentido dentro do modal) e sem "Todo mundo" duplicando o time
+  assert.equal(await modal.getByText('Voltar pro Top College').count(), 0);
+  assert.equal(await modal.getByText('Todo mundo', { exact: true }).count(), 0);
+  // a Carla (outra participante ativa) aparece como colega votável, mas o botão está DESLIGADO — só visita
+  const colega = modal.locator('button', { hasText: 'Carla Souza' });
+  await colega.waitFor();
+  assert.equal(await colega.isDisabled(), true, 'modoAdmin não deixa votar pelo colega dela');
+  assert.deepEqual(erros, []);
   await ctx.close();
 });
 

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, VIRTUDES, podeSerVotado, votouEmTodosOsColegas } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -128,6 +128,27 @@ export default function XGameAdmin() {
       .then(({ data }) => setCicloInicio(data?.ciclo_inicio ? String(data.ciclo_inicio).slice(0, 10) : ''));
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
+
+  // 🗳️ 08/09/2026 — dono: "quero ver se todo mundo votou... eu estou às
+  // cegas." Um raio-x de quem já fechou a MvM de hoje em TODOS os colegas
+  // votáveis, sem precisar abrir card por card ou entrar no painel de
+  // ninguém — a mesma régua de xgame.js (votouEmTodosOsColegas), lida aqui
+  // pra todo mundo de uma vez.
+  const [votosHojeTodos, setVotosHojeTodos] = useState([]);
+  useEffect(() => {
+    supabase.from('xgame_votos_mvm').select('votante_id,votado_id,virtude').eq('data', hojeStr())
+      .then(({ data }) => setVotosHojeTodos(data || []));
+  }, []);
+  const colegasVotaveisIds = useMemo(() => participantes.filter((p) => p.ativo)
+    .filter((p) => podeSerVotado({ role: usuarios.find((x) => x.id === p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }))
+    .map((p) => p.user_id), [participantes, usuarios]);
+  const statusVotoDe = useCallback((userId) => {
+    const colegas = colegasVotaveisIds.filter((id) => id !== userId);
+    const porColega = {};
+    votosHojeTodos.filter((v) => v.votante_id === userId).forEach((v) => { (porColega[v.votado_id] ||= new Set()).add(v.virtude); });
+    const completos = colegas.filter((id) => (porColega[id]?.size || 0) >= VIRTUDES.length);
+    return { total: colegas.length, feitos: completos.length, completo: votouEmTodosOsColegas(colegas, completos) };
+  }, [colegasVotaveisIds, votosHojeTodos]);
 
   const nomeDe = (id) => {
     const u = usuarios.find((x) => x.id === id);
@@ -524,17 +545,28 @@ export default function XGameAdmin() {
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)}:</p>
-          {/* 🖼️ "quem vota hoje" numa olhada só — os avatares de quem está
-              ATIVO, sem precisar abrir card por card pra descobrir */}
+          {/* 🗳️ 08/09/2026 — dono: "quero ver se todo mundo votou... eu
+              estou às cegas." Raio-x de hoje: cada chip já mostra se a
+              pessoa fechou o voto em TODOS os colegas votáveis (✅) ou
+              ainda falta alguém (⏳ N/M) — sem abrir card nem entrar no
+              painel de ninguém. */}
           {participantes.some((p) => p.ativo) && (
             <div className="flex items-center gap-1.5 flex-wrap rounded-md border border-emerald-100 bg-emerald-50/50 px-2.5 py-2" data-teste="quem-vota">
-              {participantes.filter((p) => p.ativo).map((p) => (
-                <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-2 py-0.5" title={nomeDe(p.user_id)}>
-                  <AvatarPessoa u={usuarios.find((x) => x.id === p.user_id)} tamanho={20} />
-                  <span className="text-[10.5px] font-medium text-gray-700 truncate max-w-[110px]">{nomeDe(p.user_id)}</span>
-                  {p.em_mentoria && <span title="está na mentoria">🎓</span>}
-                </span>
-              ))}
+              {participantes.filter((p) => p.ativo).map((p) => {
+                const sv = statusVotoDe(p.user_id);
+                return (
+                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-2 py-0.5" title={`${nomeDe(p.user_id)} — votou em ${sv.feitos} de ${sv.total} colegas hoje`}>
+                    <AvatarPessoa u={usuarios.find((x) => x.id === p.user_id)} tamanho={20} />
+                    <span className="text-[10.5px] font-medium text-gray-700 truncate max-w-[110px]">{nomeDe(p.user_id)}</span>
+                    {p.em_mentoria && <span title="está na mentoria">🎓</span>}
+                    {sv.total > 0 && (
+                      <span className={`text-[9.5px] font-bold tabular-nums ${sv.completo ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {sv.completo ? '✅' : `⏳ ${sv.feitos}/${sv.total}`}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
             </div>
           )}
           {/* 🎓 08/09/2026 — dono: Super Admin não é votável a não ser que
