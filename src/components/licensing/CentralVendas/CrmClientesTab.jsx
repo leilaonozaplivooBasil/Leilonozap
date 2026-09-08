@@ -1682,6 +1682,28 @@ _Enviado via CRM Leilão NoZap_`;
           />
         )}
 
+        {/* 📥 IMPORTADOR DA LISTA DE NETWORKING — mora AQUI, colado no
+            CrmMetodo, e não lá embaixo no <TabsContent value="customers">.
+            🔴 09/09 — foi exatamente isso que quebrou o botão no dia em que
+            subiu: o modal estava dentro da aba "Clientes", que só existe
+            quando secaoAtiva === 'acompanhamento'. Na Lista de Networking
+            (secaoAtiva === 'lista') aquele bloco está `hidden` E o Radix
+            desmonta o conteúdo da aba inativa — então o clique mudava o
+            estado e não havia modal nenhum montado pra aparecer. Sem erro,
+            sem log, sem nada: o botão simplesmente não fazia efeito.
+            Regra que fica: modal mora no mesmo nível de quem tem o botão.
+
+            `existentes` é o escopo do MÉTODO (a minha lista), não a carteira
+            toda: duplicata aqui é "essa pessoa já está na SUA lista". A
+            carteira de cada um é separada — o mesmo contato pode existir em
+            duas listas. */}
+        <CrmImportarContatosModal
+          aberto={showImportarContatos}
+          onFechar={() => setShowImportarContatos(false)}
+          existentes={metodoEscopo.clientes}
+          onImportar={handleImportarContatos}
+        />
+
         {/* ══ 📊 HÁBITO 7 — VERIFICAÇÃO DO PROGRESSO (Visão Executiva) ══ */}
         {secaoAtiva === 'verificacao' && (
           <>
@@ -1889,16 +1911,6 @@ _Enviado via CRM Leilão NoZap_`;
             />
           )}
 
-          {/* 📥 Importador da Lista de Networking. `existentes` é o escopo do
-              MÉTODO (a minha lista), não a carteira toda: duplicata aqui é
-              "essa pessoa já está na SUA lista". A carteira de cada um é
-              separada — o mesmo contato pode existir em duas listas. */}
-          <CrmImportarContatosModal
-            aberto={showImportarContatos}
-            onFechar={() => setShowImportarContatos(false)}
-            existentes={metodoEscopo.clientes}
-            onImportar={handleImportarContatos}
-          />
           </TabsContent>
 
           <TabsContent value="sellers">
