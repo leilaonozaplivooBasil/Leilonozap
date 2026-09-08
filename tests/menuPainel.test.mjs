@@ -39,8 +39,10 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     // plataforma (dono: "vira página"), com o Tira Dúvidas 24h no topo. Fica
     // por último de propósito — é onde quem travou vem procurar, não a porta
     // de entrada de quem já joga. Continua sendo SEÇÃO, não item de menu.
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira', 'catalogo-guia']);
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira', 'Guia do Usuário']);
+    // 08/09/2026 — "Diário de bolso" (Fase 1, só leitura) entrou logo ABAIXO
+    // do Guia do Usuário, por pedido do dono.
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario']);
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira', 'Guia do Usuário', 'Diário de bolso']);
   });
 
   test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {

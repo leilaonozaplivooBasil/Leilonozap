@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy, ClipboardList, NotebookText } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -96,6 +96,12 @@ export const SECOES_TOP_COLLEGE = [
   // propósito: é o lugar pra onde quem travou vem, não a porta de entrada de
   // quem já joga. E não é tarefa do Método — ordem explícita do dono.
   { value: 'catalogo-guia', label: 'Guia do Usuário', icon: LifeBuoy },
+  // 📔 08/09/2026 — DIÁRIO DE BOLSO (Fase 1, só leitura): "anotar e
+  // documentar os passos, tarefas e etc dos usuários de forma automática
+  // pra que tudo que foi feito e aprendido esteja de fácil acesso". Logo
+  // ABAIXO do Guia do Usuário, por pedido do dono. Nasce só lendo o que já
+  // existe (nenhuma tabela nova, nenhum cron novo) — ver src/lib/diarioDeBolso.js.
+  { value: 'catalogo-diario', label: 'Diário de bolso', icon: NotebookText },
 ];
 
 export function getLicensingGroups(user) {
