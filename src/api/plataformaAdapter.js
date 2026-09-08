@@ -35,6 +35,7 @@
  * Functions: redirecionadas para /api/functions/<name> (Vercel) ou Edge Functions.
  */
 import { supabase } from './supabaseClient';
+import { caminhoSeguro } from '@/lib/caminhoDeProva';
 
 import { lerCracha, guardarCracha, cabecalhosSessao } from '@/lib/sessaoCliente';
 // Mapa Entidade → tabela (snake_case plural)
@@ -724,9 +725,11 @@ async function invokeIntegration(name, body) {
 const CoreImpl = {
   async UploadFile({ file, path }) {
     const bucket = 'public-assets';
+    // 🧼 a limpeza de caracteres valia SÓ pro caminho automático — caminho vindo
+    // de fora ia cru pro Storage. Agora os dois passam pela mesma peneira.
     const finalPath =
-      path ||
-      `uploads/${Date.now()}_${(file?.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      caminhoSeguro(path) ||
+      caminhoSeguro(`uploads/${Date.now()}_${file?.name || 'file'}`);
     const { error } = await supabase.storage.from(bucket).upload(finalPath, file, {
       upsert: true,
       contentType: file?.type,
