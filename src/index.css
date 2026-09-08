@@ -1138,3 +1138,31 @@ body.pc-tema .livoo-brilho-forte {
   height: 1px;
   background: linear-gradient(90deg, rgba(198, 203, 211, 0.55) 0%, rgba(198, 203, 211, 0.14) 55%, rgba(198, 203, 211, 0) 100%);
 }
+
+/* 📏 A ALTURA DE UMA TELA QUE JÁ COMEÇA ABAIXO DO CABEÇALHO (07/09/2026).
+ *
+ * O DEFEITO (dono: "no desktop, o topo da página está cortado"): o <main> do
+ * Layout já desce 3.5rem/4rem pra livrar o cabeçalho, que é `fixed top-0`.
+ * Quando o conteúdo lá dentro pede `min-h-screen` (100vh), a página inteira
+ * fica 4rem MAIS ALTA do que a janela — e essas 4rem viram rolagem que não
+ * deveria existir. Basta rolar (ou o navegador restaurar a posição, ou um
+ * campo receber foco) pra que o topo do painel escorregue exatamente 4rem
+ * pra debaixo do cabeçalho. Medido num Chromium: janela 830, documento 894,
+ * e o topo do painel some 64px — a altura exata da barra.
+ *
+ * Piora porque o cabeçalho é translúcido (0.86 + blur): o conteúdo aparece
+ * borrado por trás dele, e a barra parece "cortada" em vez de sobreposta.
+ *
+ * Use isto no lugar de `min-h-screen` em QUALQUER tela que renderiza dentro
+ * do <main> do Layout. É o mesmo 100vh, menos o cabeçalho.
+ */
+.nz-tela-cheia {
+  min-height: calc(100vh - 3.5rem);
+  min-height: calc(100dvh - 3.5rem);   /* celular: desconta a barra do navegador */
+}
+@media (min-width: 640px) {
+  .nz-tela-cheia {
+    min-height: calc(100vh - 4rem);
+    min-height: calc(100dvh - 4rem);
+  }
+}

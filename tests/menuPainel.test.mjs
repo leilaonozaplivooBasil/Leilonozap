@@ -35,8 +35,12 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     assert.equal(tc.items[0].catalogTab, 'catalogo-crm');
     assert.ok(tc.items[0].marcaCompleta, 'a marca X-EOS é o que aparece no menu');
     assert.equal(tc.colapsar.sempre, true, 'o botão Top College continua na lateral; ao clicar, só a X-EOS');
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira']);
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira']);
+    // 07/09/2026 — entrou "Guia do Usuário": o guia do X-GAME virou página da
+    // plataforma (dono: "vira página"), com o Tira Dúvidas 24h no topo. Fica
+    // por último de propósito — é onde quem travou vem procurar, não a porta
+    // de entrada de quem já joga. Continua sendo SEÇÃO, não item de menu.
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira', 'catalogo-guia']);
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira', 'Guia do Usuário']);
   });
 
   test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {
@@ -96,12 +100,19 @@ describe('DIR-57 — agrupamento como DADO (não mais um if no nome do grupo)', 
     }
   });
 
-  test('quem não é admin não recebe o Consignado — permissão intacta', () => {
-    const comum = { role: 'user', career_levels: ['executivo'] };
-    const admin = grupoDe(comum, 'Admin');
-    assert.equal(admin.items.length, 1);
-    assert.ok(!valores(admin.items).includes('/painel/consignado'));
-    assert.equal(grupoDe(dono, 'Admin').items.length, 2);
+  test('quem não é admin não recebe o Consignado nem as Demandas — permissão intacta', () => {
+    // 07/09/2026 — entrou /Demandas: a fila do Tira Dúvidas 24h, onde SE DECIDE
+    // o que vira trabalho. É tela de gestão; nenhum outro papel pode alcançá-la
+    // pelo menu (a rota também exige admin, em App.jsx).
+    const admin = grupoDe(dono, 'Admin');
+    assert.deepEqual(valores(admin.items), ['admin', '/painel/consignado', '/Demandas']);
+
+    for (const role of ['user', 'licensee', 'admin_financeiro']) {
+      const g = grupoDe({ role, career_levels: ['executivo'] }, 'Admin');
+      assert.equal(g.items.length, 1, `${role} devia ver só a aba Admin`);
+      assert.ok(!valores(g.items).includes('/painel/consignado'), `${role} não pode ver o Consignado`);
+      assert.ok(!valores(g.items).includes('/Demandas'), `${role} não pode ver as Demandas`);
+    }
   });
 });
 

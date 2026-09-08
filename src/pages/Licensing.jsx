@@ -59,6 +59,7 @@ import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
+import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
@@ -139,7 +140,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1111,9 +1112,18 @@ const DashboardContent = ({ user, isAdmin }) => {
        volta de tudo e virava aquelas listras brancas nas laterais do
        celular. Na Top College o fundo passa a ser o mesmo preto dos
        painéis — aí os cartões param de flutuar sobre o claro e derretem
-       na página. Fora da faculdade, nada muda: segue branco. */
+       na página. Fora da faculdade, nada muda: segue branco.
+
+       📏 07/09/2026 — `nz-tela-cheia` no lugar de `min-h-screen` (dono: "no
+       desktop, o topo da página está cortado"). O <main> do Layout já desce
+       4rem pra livrar o cabeçalho `fixed top-0`; pedir 100vh INTEIROS aqui
+       dentro deixava a página 4rem mais alta que a janela. Essas 4rem viravam
+       rolagem que não deveria existir, e bastava rolar pra que o topo do
+       painel escorregasse exatamente 4rem pra debaixo da barra — que é
+       translúcida, então aparecia borrado por trás dela e lia como "cortado".
+       Medido num Chromium: janela 830, documento 894, topo sumindo 64px. */
     <div
-      className={`flex min-h-screen ${naTopCollege ? '' : 'bg-white'}`}
+      className={`flex nz-tela-cheia ${naTopCollege ? '' : 'bg-white'}`}
       style={naTopCollege ? { background: 'var(--xeos-preto)' } : undefined}
     >
       <NavegacaoLateralGlobal
@@ -1258,6 +1268,14 @@ const DashboardContent = ({ user, isAdmin }) => {
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}
               <TabsContent value="catalogo-carreira" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 <CarreiraSecao currentUser={user} />
+              </TabsContent>
+
+              {/* 🎓 07/09/2026 — COMO JOGAR: o guia do X-GAME (aula por aula) com
+                  o Tira Dúvidas 24h no topo. Aberto a TODO MUNDO da Top College —
+                  quem não tem intimidade com tela é justamente quem mais precisa
+                  perguntar, e era esse público que o pedido queria alcançar. */}
+              <TabsContent value="catalogo-guia" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                <GuiaXGame currentUser={user} />
               </TabsContent>
 
               {/* 🎓 07/09 — dono: "dentro da Top College precisa tudo puxar pra
