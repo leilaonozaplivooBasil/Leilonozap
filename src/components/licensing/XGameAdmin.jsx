@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, Plus } from 'lucide-react';
+import { UserPlus, Plus, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
 import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin } from '@/lib/xgame';
@@ -44,6 +44,31 @@ const GRUPOS_BUSCA = [
   ['vendedores', '🛒 Vendedores & Influenciadores'],
   ['usuarios', '👤 Usuários'],
 ];
+// filtro do "Colocar no jogo" — "Todos" primeiro pra achar QUALQUER pessoa
+// (corporativa OU usuário comum) sem precisar adivinhar a categoria antes;
+// as pílulas são só um atalho de recorte, não uma pasta obrigatória.
+const FILTROS_CANDIDATOS = [['todos', '✨ Todos'], ...GRUPOS_BUSCA];
+const ROTULO_GRUPO = Object.fromEntries(GRUPOS_BUSCA);
+
+function getIniciais(nome = '') {
+  return nome.trim().split(/\s+/).slice(0, 2).map((n) => n[0]).join('').toUpperCase() || '?';
+}
+
+// 🖼️ "esse logo" — o dono pediu foto/avatar pra ficar óbvio QUEM está sendo
+// adicionado/votado, não só o nome. Mesma régua de fallback do menu do
+// usuário (foto → cor + iniciais), só que em miniatura.
+function AvatarPessoa({ u, tamanho = 28 }) {
+  const foto = u?.profile_photo_url || u?.avatar_url;
+  const cor = u?.avatar_color || 'linear-gradient(135deg, #10b981, #f59e0b)';
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-full font-bold text-white shrink-0 overflow-hidden"
+      style={{ width: tamanho, height: tamanho, fontSize: tamanho * 0.36, background: foto ? 'transparent' : cor }}
+    >
+      {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : getIniciais(u ? nomeExibicao(u) : '')}
+    </span>
+  );
+}
 function grupoDoUsuario(u) {
   const cargos = normalizeLevels(u?.career_levels);
   if (isAdminRole(u?.role) || cargos.some((c) => BLOCO_DIRETOR.has(c))) return 'corporativo';
@@ -65,6 +90,7 @@ const DICAS = {
   verba_bonus: 'Verba mensal de BÔNUS/ESTUDO (leitura, cursos). Mesma régua, só entre as tarefas de bônus do dia.',
   perfil: 'O perfil muda os pesos do Human Token: estratégico/operacional têm 12,22 de aplicabilidade (50% produção, 30% real time, 20% bônus); comercial tem 2,22 + PT VENDA 2,5 (vendas valem muito mais).',
   cargo: 'O cargo define a multa de atraso do FAQ: Trainee R$50, Executivo R$200, Diretor R$500.',
+  mentoria: 'Está participando do Programa da Mentoria (8 Hábitos, set/2026 a mar/2027)? Independente de estar ATIVO no MvM — dá pra votar sem estar na mentoria, e vice-versa.',
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',
   categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus. Venda NÃO entra aqui — a venda da loja já remunera pelas comissões da plataforma.',
   conferencia: 'Conferência dupla da planilha: a pessoa marca a tarefa (o checkbox dela) e o gestor confirma o SIM aqui. Sem o SIM, a tarefa fica pendente de conferência.',
@@ -81,9 +107,9 @@ export default function XGameAdmin() {
   const [selecionados, setSelecionados] = useState([]);
   const alternarSelecionado = (id) => setSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const [busca, setBusca] = useState('');
-  // menus suspensos: um grupo da busca aberto por vez, um participante aberto
-  // por vez (abrir um fecha o outro) — pra página não ficar quilométrica
-  const [grupoAberto, setGrupoAberto] = useState(null);
+  // filtro do "Colocar no jogo" (pílula ativa) + um participante aberto por
+  // vez (abrir um fecha o outro) — pra página não ficar quilométrica
+  const [filtroCandidato, setFiltroCandidato] = useState('todos');
   const [participanteAberto, setParticipanteAberto] = useState(null);
   const [cicloInicio, setCicloInicio] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -96,7 +122,7 @@ export default function XGameAdmin() {
   const carregar = useCallback(() => {
     supabase.from('xgame_participantes').select('*').order('created_date')
       .then(({ data }) => setParticipantes(data || []));
-    supabase.from('app_users').select('id,full_name,nickname,role,career_levels').order('full_name')
+    supabase.from('app_users').select('id,full_name,nickname,role,career_levels,profile_photo_url,avatar_url,avatar_color').order('full_name')
       .then(({ data }) => setUsuarios(data || []));
     supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle()
       .then(({ data }) => setCicloInicio(data?.ciclo_inicio ? String(data.ciclo_inicio).slice(0, 10) : ''));
@@ -108,15 +134,24 @@ export default function XGameAdmin() {
     return u ? nomeExibicao(u) : (id ? id.slice(0, 6) : '—');
   };
 
-  // candidatos agrupados pelo plano de carreira + filtro do nome ao digitar
-  const gruposDeCandidatos = useMemo(() => {
+  // candidatos livres (corporativo OU usuário comum, junto) + filtro do nome
+  // e da pílula de categoria — "Todos" é o padrão pra achar QUALQUER pessoa
+  // sem ter que adivinhar a caixinha dela antes
+  const candidatos = useMemo(() => {
     const q = semAcento(busca.trim());
     const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
-    const filtrados = q
+    const porNome = q
       ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q))
       : livres;
-    const por = { corporativo: [], licenciados: [], vendedores: [], usuarios: [] };
-    filtrados.forEach((u) => por[grupoDoUsuario(u)].push(u));
+    const filtrados = filtroCandidato === 'todos' ? porNome : porNome.filter((u) => grupoDoUsuario(u) === filtroCandidato);
+    return filtrados.sort((a, b) => nomeExibicao(a).localeCompare(nomeExibicao(b)));
+  }, [usuarios, participantes, busca, filtroCandidato]);
+  const contagemPorGrupo = useMemo(() => {
+    const q = semAcento(busca.trim());
+    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
+    const porNome = q ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q)) : livres;
+    const por = { todos: porNome.length, corporativo: 0, licenciados: 0, vendedores: 0, usuarios: 0 };
+    porNome.forEach((u) => { por[grupoDoUsuario(u)] += 1; });
     return por;
   }, [usuarios, participantes, busca]);
 
@@ -130,15 +165,23 @@ export default function XGameAdmin() {
     toast.success('Ciclo X-GAME aberto!');
   };
 
-  const adicionar = async () => {
-    if (!selecionados.length) return;
+  // 🎯 um toque marca, "Cadastrar N" grava todos de uma vez — dono pediu as
+  // DUAS coisas: fluidez pra achar QUALQUER pessoa (corporativo OU usuário
+  // comum, "não está fluido... eu preciso selecionar o time corporativo mas
+  // também preciso selecionar o usuário") E marcar vários de uma vez ("nem
+  // todo mundo que está no topo, no grupo corporativo, está na
+  // gamificação — preciso selecionar as pessoas que vão ser votadas").
+  const adicionar = async (ids) => {
+    const lista = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
+    if (!lista.length) return;
     setSalvando(true);
-    const linhas = selecionados.map((user_id) => ({ user_id, ativo: true, updated_at: new Date().toISOString() }));
+    const linhas = lista.map((user_id) => ({ user_id, ativo: true, updated_at: new Date().toISOString() }));
     const { error } = await supabase.from('xgame_participantes').upsert(linhas, { onConflict: 'user_id' });
     setSalvando(false);
     if (error) { toast.error('Erro ao cadastrar participante(s).'); return; }
-    toast.success(selecionados.length > 1 ? `${selecionados.length} participantes no jogo!` : 'Participante no jogo!');
-    setSelecionados([]);
+    toast.success(lista.length > 1 ? `${lista.length} pessoas no jogo — já votam e recebem voto no MvM!` : `${nomeDe(lista[0])} no jogo — já vota e recebe voto no MvM!`);
+    setSelecionados((prev) => prev.filter((id) => !lista.includes(id)));
+    setBusca('');
     carregar();
   };
 
@@ -403,9 +446,12 @@ export default function XGameAdmin() {
         <span className="text-[11px] text-gray-500">sem data vigente, vale o 1º dia útil do mês</span>
       </div>
 
-      {/* cadastrar participante — busca por nome + categorias do plano de carreira */}
+      {/* cadastrar participante — busca por nome, TODOS numa lista só (corporativo
+          e usuário comum juntos), um toque já coloca no jogo. Dono: "eu preciso
+          selecionar o time corporativo mas também preciso selecionar o usuário...
+          não está fluido" — as pílulas são só um recorte, "Todos" é o padrão. */}
       <div className="space-y-2 border-t border-gray-200 pt-3">
-        <p className="text-xs font-semibold text-gray-900">Colocar no jogo (os integrantes da egrégora):</p>
+        <p className="text-xs font-semibold text-gray-900">Colocar no jogo — quem vota e recebe voto no MvM (time corporativo OU usuário comum, tanto faz):</p>
         <div className="flex items-center gap-2 flex-wrap">
           <Input
             placeholder="🔎 digite o nome — ex.: “lu” acha todos os Lucianos"
@@ -413,55 +459,59 @@ export default function XGameAdmin() {
             onChange={(e) => setBusca(e.target.value)}
             className="h-9 bg-white border-gray-300 flex-1 min-w-[220px]"
           />
-          <Button size="sm" onClick={adicionar} disabled={salvando || !selecionados.length} className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+          {/* 🎯 dono: "nem todo mundo que está no topo, no grupo corporativo,
+              está na gamificação — preciso selecionar as pessoas que vão ser
+              votadas" — marca vários (ou o filtro inteiro) e cadastra juntos. */}
+          <Button size="sm" onClick={() => adicionar(selecionados)} disabled={salvando || !selecionados.length} className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
             <UserPlus className="w-4 h-4 mr-1" /> {selecionados.length > 1 ? `Cadastrar ${selecionados.length} selecionados` : selecionados.length === 1 ? `Cadastrar ${nomeDe(selecionados[0])}` : 'Cadastrar'}
           </Button>
         </div>
-        {GRUPOS_BUSCA.every(([g]) => gruposDeCandidatos[g].length === 0) ? (
-          <p className="text-[11px] text-gray-500">{busca ? `Ninguém com "${busca}" fora do jogo.` : 'Todo mundo já está no jogo.'}</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {FILTROS_CANDIDATOS.map(([g, rotulo]) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setFiltroCandidato(g)}
+              className={`px-2.5 py-1 rounded-full border text-[11px] font-bold ${filtroCandidato === g ? 'border-emerald-600 text-emerald-700 bg-emerald-50' : 'border-gray-300 text-gray-500 hover:border-emerald-400'}`}
+            >{rotulo} ({contagemPorGrupo[g]})</button>
+          ))}
+          {/* marca/desmarca TODOS os que estão na lista agora — funciona com
+              qualquer pílula (inclusive "Todos" ou uma busca por nome), não só
+              por categoria fixa como o "marcar todo o grupo" de antes */}
+          {candidatos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const ids = candidatos.map((u) => u.id);
+                const todosMarcados = ids.every((id) => selecionados.includes(id));
+                setSelecionados((prev) => (todosMarcados ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]));
+              }}
+              className="ml-auto text-[11px] font-semibold text-emerald-700 hover:underline"
+            >
+              {candidatos.every((u) => selecionados.includes(u.id)) ? '✔ desmarcar' : '☐ marcar'} os {candidatos.length} listados
+            </button>
+          )}
+        </div>
+        {candidatos.length === 0 ? (
+          <p className="text-[11px] text-gray-500">{busca ? `Ninguém com "${busca}" fora do jogo.` : 'Todo mundo desse filtro já está no jogo.'}</p>
         ) : (
-          <div className="max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white">
-            {GRUPOS_BUSCA.map(([g, rotulo]) => {
-              if (gruposDeCandidatos[g].length === 0) return null;
-              // buscando, o grupo com resultado abre sozinho; sem busca, é menu suspenso
-              const aberto = busca.trim() ? true : grupoAberto === g;
-              const idsDoGrupo = gruposDeCandidatos[g].map((u) => u.id);
-              const todosSelecionados = idsDoGrupo.every((id) => selecionados.includes(id));
+          <div className="max-h-80 overflow-y-auto rounded-md border border-gray-200 bg-white divide-y divide-gray-100">
+            {candidatos.map((u) => {
+              const marcado = selecionados.includes(u.id);
               return (
-                <div key={g}>
-                  <button
-                    type="button"
-                    onClick={() => setGrupoAberto(grupoAberto === g ? null : g)}
-                    className="sticky top-0 w-full flex items-center justify-between bg-gray-100 border-b border-gray-200 px-3 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-wide hover:bg-gray-200"
-                  >
-                    <span>{aberto ? '▾' : '▸'} {rotulo} ({gruposDeCandidatos[g].length})</span>
-                    {!aberto && <span className="normal-case font-normal text-gray-400">toque pra abrir</span>}
-                  </button>
-                  {aberto && (
-                    <>
-                      {/* 🎯 08/09/2026 — marcar o grupo inteiro de uma vez (ex.: todo
-                          o Time Corporativo), em vez de clicar pessoa por pessoa. */}
-                      <button
-                        type="button"
-                        onClick={() => setSelecionados((prev) => (todosSelecionados ? prev.filter((id) => !idsDoGrupo.includes(id)) : [...new Set([...prev, ...idsDoGrupo])]))}
-                        className="w-full text-left px-3 py-1 text-[10.5px] font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-gray-100"
-                      >
-                        {todosSelecionados ? '✔ desmarcar' : '☐ marcar'} todo o grupo "{rotulo}"
-                      </button>
-                      {gruposDeCandidatos[g].map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => alternarSelecionado(u.id)}
-                          className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left border-b border-gray-100 last:border-b-0 ${selecionados.includes(u.id) ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'}`}
-                        >
-                          <span className="text-xs truncate">{selecionados.includes(u.id) ? '✔ ' : ''}{nomeExibicao(u)}</span>
-                          {cargoLabel(u) && <span className="shrink-0 text-[10px] text-gray-400">{cargoLabel(u)}</span>}
-                        </button>
-                      ))}
-                    </>
-                  )}
-                </div>
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => alternarSelecionado(u.id)}
+                  title="Toque pra marcar/desmarcar"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-left ${marcado ? 'bg-emerald-50' : 'hover:bg-gray-50'}`}
+                >
+                  <AvatarPessoa u={u} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium text-gray-900 truncate">{marcado ? '✔ ' : ''}{nomeExibicao(u)}</span>
+                    <span className="block text-[10px] text-gray-400">{ROTULO_GRUPO[grupoDoUsuario(u)]}{cargoLabel(u) ? ` · ${cargoLabel(u)}` : ''}</span>
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -474,6 +524,19 @@ export default function XGameAdmin() {
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)}:</p>
+          {/* 🖼️ "quem vota hoje" numa olhada só — os avatares de quem está
+              ATIVO, sem precisar abrir card por card pra descobrir */}
+          {participantes.some((p) => p.ativo) && (
+            <div className="flex items-center gap-1.5 flex-wrap rounded-md border border-emerald-100 bg-emerald-50/50 px-2.5 py-2" data-teste="quem-vota">
+              {participantes.filter((p) => p.ativo).map((p) => (
+                <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-2 py-0.5" title={nomeDe(p.user_id)}>
+                  <AvatarPessoa u={usuarios.find((x) => x.id === p.user_id)} tamanho={20} />
+                  <span className="text-[10.5px] font-medium text-gray-700 truncate max-w-[110px]">{nomeDe(p.user_id)}</span>
+                  {p.em_mentoria && <span title="está na mentoria">🎓</span>}
+                </span>
+              ))}
+            </div>
+          )}
           {/* 🎓 08/09/2026 — dono: Super Admin não é votável a não ser que
               ele mesmo permita (interruptor "Aceito ser votado" no X-GAME
               dele) — aqui é só leitura, pra quem gerencia não achar que ele
@@ -490,11 +553,14 @@ export default function XGameAdmin() {
                 <button
                   type="button"
                   onClick={() => { setParticipanteAberto(cardAberto ? null : p.id); setTarefaUser(''); }}
-                  className="flex-1 min-w-[140px] text-left text-sm font-semibold text-gray-900 hover:text-emerald-700"
+                  className="flex-1 min-w-[140px] flex items-center gap-2 text-left text-sm font-semibold text-gray-900 hover:text-emerald-700"
                 >
-                  {cardAberto ? '▾' : '▸'} {nomeDe(p.user_id)}
-                  <span className="ml-2 text-[10px] font-normal text-gray-400">{p.cargo} · {p.perfil}</span>
-                  {ehSuperAdminNaoVotavel && <span className="ml-2 text-[10px] font-semibold text-purple-600">🛡️ não votável (Super Admin)</span>}
+                  <AvatarPessoa u={usu} tamanho={26} />
+                  <span className="min-w-0 truncate">
+                    {cardAberto ? '▾' : '▸'} {nomeDe(p.user_id)}
+                    <span className="ml-2 text-[10px] font-normal text-gray-400">{p.cargo} · {p.perfil}</span>
+                    {ehSuperAdminNaoVotavel && <span className="ml-2 text-[10px] font-semibold text-purple-600">🛡️ não votável (Super Admin)</span>}
+                  </span>
                 </button>
                 <span className="flex items-center gap-3">
                   {cardAberto && (
@@ -505,6 +571,12 @@ export default function XGameAdmin() {
                       className={`text-[11px] font-bold ${tarefaUser === p.user_id ? 'text-emerald-700' : 'text-gray-500 hover:text-emerald-700'}`}
                     >{tarefaUser === p.user_id ? '▾ 📋 Tarefas' : '▸ 📋 Tarefas'}</button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => salvarParticipante(p, { em_mentoria: !p.em_mentoria })}
+                    title={DICAS.mentoria}
+                    className={`inline-flex items-center gap-1 text-[11px] font-bold ${p.em_mentoria ? 'text-purple-600' : 'text-gray-300 hover:text-purple-500'}`}
+                  ><GraduationCap className="w-3.5 h-3.5" /> {p.em_mentoria ? 'na mentoria' : 'sem mentoria'}</button>
                   <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {p.ativo ? '● ATIVO' : '○ inativo'}
                   </button>
