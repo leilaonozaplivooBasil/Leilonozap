@@ -8,7 +8,9 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
 } from '@/lib/xgame';
+import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
@@ -45,6 +47,7 @@ export default function XGame() {
   const [votosDias, setVotosDias] = useState([]);
   const [agora, setAgora] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [vendasCiclo, setVendasCiclo] = useState(null);
   // 🧯 08/09/2026 — esta tela também grava xgame_diario (linha 78 abaixo);
   // sem o mesmo gate do Compromisso, ela reescreveria por cima uma MvM que
   // já tinha zerado por falta de voto — a régua da votação PRECISA valer
@@ -116,6 +119,20 @@ export default function XGame() {
     })();
   }, []);
 
+  // 💳 vendas REAIS da loja no ciclo — mesma conta do Compromisso, precisa
+  // pro Human Token oficial (F4) e pro eixo "Vendas" do Executivo Ideal.
+  useEffect(() => {
+    if (!user?.id) { setVendasCiclo(null); return; }
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    supabase.from('catalog_sales').select('id,status,kind,created_date')
+      .or(`seller_id.eq.${user.id},licensee_id.eq.${user.id},anchor_id.eq.${user.id},owner_id.eq.${user.id}`)
+      .gte('created_date', `${ini}T00:00:00`)
+      .then(({ data, error }) => {
+        if (error) { setVendasCiclo(null); return; }
+        setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
+      });
+  }, [user?.id, cicloConfig]);
+
   const agoraMin = agora.getHours() * 60 + agora.getMinutes();
   const votouEmTodos = useMemo(() => {
     const completos = colegasVotaveis.filter((id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length);
@@ -128,6 +145,21 @@ export default function XGame() {
 
   // 🗳️ votar nos colegas — mesma lógica do Compromisso, mesma tabela.
   const recebido = useMemo(() => mvmManual(votosRecebidos), [votosRecebidos]);
+  // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo + o Executivo Ideal, a MESMA
+  // conta do Compromisso (tokenDoCiclo/formacaoExecutivoIdeal) — dono:
+  // "não é duplicar de lá pra cá, é duplicar aqui" — o painel de lá
+  // continua existindo, este é a MESMA fórmula, calculada de novo aqui.
+  const ciclo = useMemo(() => {
+    const r = tokenDoCiclo({
+      diasCiclo,
+      hojeResumo: { ...resumo.contagens, mvm_dia: resumo.mvm_dia },
+      mvmVotacao: recebido.media,
+      perfil: participante?.perfil || 'estrategico',
+      vendasReais: vendasCiclo,
+    });
+    const total = resumo.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+  }, [resumo, diasCiclo, recebido.media, participante, vendasCiclo]);
   const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
   const janelaAberta = janelaVotacaoAberta(agoraMin);
   const escolherColega = (id) => {
@@ -273,6 +305,69 @@ export default function XGame() {
           <div className="flex items-center gap-2 mb-4">
             <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Seu dia</span>
             <span className="h-px flex-1 bg-[#2B2B2B]" />
+          </div>
+
+          {/* ══ 🎯 EXECUTIVO IDEAL — dono: "não é tirar de lá e jogar pra cá,
+              é duplicar aqui, mas aqui tem que ser fixo, bem lá em cima. E
+              bonito." Mesma fórmula do Compromisso (tokenDoCiclo +
+              formacaoExecutivoIdeal), calculada de novo aqui — o painel de
+              lá continua existindo, este é o mesmo painel, na Visão
+              Executiva, sempre visível, sem toggle nenhum. ══ */}
+          <div id="executivo-ideal" className="rounded-2xl border-2 border-emerald-500/30 bg-emerald-950/10 p-4 sm:p-5 space-y-4 mb-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p
+                  className="text-sm font-extrabold text-white cursor-help"
+                  title={'"Esse painel representa o desempenho do executivo nos dias corridos do mês. Ou seja: através destas informações, é possível acompanhar se o progresso está à frente ou atrás do Executivo Ideal."'}
+                >
+                  🎯 Onde estou × EXECUTIVO IDEAL ⓘ
+                </p>
+                <p className="text-[11px] text-[#817E8C] mt-0.5">os 5 pilares que formam o Executivo Ideal, ciclo após ciclo</p>
+              </div>
+              <div
+                className="text-right shrink-0 cursor-help"
+                title={'"São os parâmetros que definem o desempenho do executivo ideal, que será considerado para formação emancipada ao longo da mentoria. Uma vez que a barra de progresso do executivo esteja maximizada em 100%, o trainee será então considerado através de votação do conselho da corporação para ter sua formação como um executivo sem limites adiantada."'}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-[#817E8C]">formação ⓘ</p>
+                <p className="text-2xl font-black text-emerald-400 tabular-nums leading-none">{ciclo.formacao.pct}%</p>
+                <p className="text-[10px] text-[#817E8C]">dos 100%</p>
+              </div>
+            </div>
+            <BarraProgresso pct={ciclo.formacao.pct} dialeto="escuro" altura="extra" corClasse="bg-emerald-400" trilhoClasse="bg-[#2B2B2B]" />
+
+            <div className="space-y-2.5">
+              {[
+                { k: 'mvm', rotulo: 'MvM (votação do grupo)', emoji: '🗳️' },
+                { k: 'producao', rotulo: 'Produção', emoji: '📋' },
+                { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
+                { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
+                { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+              ].map(({ k, rotulo, emoji }) => {
+                const atual = Math.round((ciclo.taxas[k] || 0) * 100);
+                const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
+                const ok = atual >= alvo;
+                return (
+                  <div key={k} className="rounded-xl border border-[#2B2B2B] bg-[#0b0d14] p-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-white">{emoji} {rotulo}</span>
+                      <span className={`text-xs font-bold tabular-nums shrink-0 ${ok ? 'text-emerald-400' : 'text-[#817E8C]'}`}>
+                        {atual}% <span className="text-[#817E8C] font-normal">/ alvo {alvo}%</span>{ok ? ' ✅' : ''}
+                      </span>
+                    </div>
+                    <div className="mt-1.5">
+                      <BarraProgresso
+                        pct={atual} dialeto="escuro" altura="grossa"
+                        corClasse={ok ? 'bg-emerald-400' : 'bg-amber-400'}
+                        trilhoClasse="bg-[#2B2B2B]" limite={alvo}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {ciclo.formacao.mensagem && (
+              <p className="text-[11px] font-semibold text-emerald-400">{ciclo.formacao.mensagem}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
