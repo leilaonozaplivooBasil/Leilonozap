@@ -18,6 +18,7 @@ import { parseValorBR } from '@/lib/money';
 import { getLevel } from '@/lib/careerLevels';
 import { ESCADA_LICENCAS } from '@/lib/escadaLicencas';
 import { META_CAPTACAO } from '@/lib/captacaoParceiros';
+import { probabilidadeFechamento, ultimoContato } from '@/lib/metodo';
 
 // 🛤️ DIR-34 (30/08/2026) — ESTEIRA DE CAPTAÇÃO: do agendamento da reunião ao
 // contrato assinado, pelos 8 estágios oficiais do dono. Kanban com valor por
@@ -39,7 +40,7 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
@@ -62,6 +63,10 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
   // 🧬 DIR-39 — busca de quem INDICOU (só gente cadastrada no app: indicação
   // sem cadastro não existe).
   const [buscaIndicacao, setBuscaIndicacao] = useState('');
+  // 🪜 confirma que sabe que está pulando Lista/Contato/Agenda (ex.: aporte
+  // direto de investidor, que nunca passa pelo funil de rede) — sem isso,
+  // "Salvar" fica bloqueado quando falta alguma etapa do Método.
+  const [pulaEtapas, setPulaEtapas] = useState(false);
 
   const resumo = useMemo(() => resumoEsteira(oportunidades), [oportunidades]);
   const ranking = useMemo(() => conversaoPorResponsavel(oportunidades), [oportunidades]);
@@ -86,6 +91,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     setBuscaCliente('');
     setBuscaIndicacao('');
     setAporteForm(null);
+    setPulaEtapas(false);
     setEditando('nova');
   };
   const abrirEdicao = (o) => {
@@ -98,6 +104,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     setBuscaCliente('');
     setBuscaIndicacao('');
     setAporteForm(null);
+    setPulaEtapas(false);
     setEditando(o);
   };
   const escolherCliente = (c) => {
@@ -124,6 +131,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     setBuscaCliente('');
     setBuscaIndicacao('');
     setAporteForm(null);
+    setPulaEtapas(false);
     setEditando('nova');
     onClientePreenchidoConsumido?.();
   }, [clientePreenchido]);
@@ -155,6 +163,35 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     form.estagio
   );
   const NOMES_CAMPO = { valor_previsto: 'valor do aporte', motivo_perda: 'motivo da perda', reuniao_em: 'data da reunião', recontato_em: 'data de recontato' };
+
+  // 🪜 08/09/2026 — dono: "não faz sentido botar direto ali porque o cara
+  // tem que listar, tem que qualificar, tem que dizer se contatou, se
+  // agendou... se ele for colocar pelo atalho, ele tem que fazer o segundo,
+  // terceiro, quarto e quinto hábito." O atalho "Nova oportunidade" não
+  // pode pular a Lista (Hábito 3) → Contato (Hábito 4) → Agenda. Acha a
+  // MESMA pessoa na Lista do Método (por e-mail/telefone/cadastro) e avisa
+  // o que falta — quem já veio do botão "🚀 Esteira" do Contato (Hábito 4)
+  // chega aqui com tudo isso já feito, então o aviso nem aparece.
+  const pessoaDoMetodo = useMemo(() => {
+    const email = String(form.cliente_email || '').trim().toLowerCase();
+    const tel = String(form.cliente_telefone || '').replace(/\D/g, '');
+    if (!email && !tel && !form.cliente_user_id) return null;
+    return clientesManuais.find((c) => (
+      (form.cliente_user_id && c.user_id === form.cliente_user_id)
+      || (email && String(c.email || '').trim().toLowerCase() === email)
+      || (tel && tel.length >= 8 && String(c.phone || '').replace(/\D/g, '') === tel)
+    )) || null;
+  }, [clientesManuais, form.cliente_email, form.cliente_telefone, form.cliente_user_id]);
+  const statusMetodo = useMemo(() => {
+    const naLista = !!pessoaDoMetodo;
+    const qualificado = naLista && !!probabilidadeFechamento(pessoaDoMetodo.qualificacao_network);
+    const ultimo = naLista ? ultimoContato(pessoaDoMetodo) : null;
+    const contatado = !!ultimo;
+    const agendado = ultimo?.resultado === 'agendado';
+    return { naLista, qualificado, contatado, agendado, completo: naLista && qualificado && contatado };
+  }, [pessoaDoMetodo]);
+  // só pergunta quando já tem COMO identificar alguém (nome sozinho não amarra a ninguém)
+  const identificavel = !!(form.cliente_email || form.cliente_telefone || form.cliente_user_id);
 
   return (
     <>
@@ -287,7 +324,11 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
 
         {/* Modal nova/editar */}
         {editando !== null && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          // 🎨 08/09/2026 — dono: "o fundo transparente está deixando meio
+          // confuso... não pode disputar a leitura." De 50% pra 80% + um
+          // leve desfoque — o formulário se separa do que está atrás sem
+          // perder a sensação de "página por cima", só ficando mais sólido.
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <Card className="bg-white border-nz-borda max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-center justify-between">
@@ -334,6 +375,40 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                     <p className="text-xs text-nz-tinta-fraca mb-1">Telefone (WhatsApp)</p>
                     <Input value={form.cliente_telefone || ''} onChange={(e) => setForm({ ...form, cliente_telefone: e.target.value })} className="bg-white border-nz-borda text-nz-tinta" />
                   </div>
+
+                  {/* 🪜 08/09/2026 — dono: "não faz sentido botar direto ali...
+                      ele tem que listar, tem que qualificar, tem que dizer se
+                      contatou, se agendou." Só aparece em oportunidade NOVA,
+                      com alguém já identificável, e com alguma etapa faltando
+                      — quem veio do "🚀 Esteira" do Contato já chega com tudo
+                      feito, então não vê nada disto. */}
+                  {editando === 'nova' && identificavel && !statusMetodo.completo && (
+                    <div className="sm:col-span-2 rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
+                      <p className="text-xs font-bold text-amber-900">🪜 Antes da esteira, o caminho do Método:</p>
+                      <ul className="space-y-1 text-xs text-amber-900">
+                        <li className="flex items-center gap-1.5">
+                          {statusMetodo.naLista && statusMetodo.qualificado ? '✅' : '❌'} Está na Lista, qualificada (Hábito 3)
+                          {!(statusMetodo.naLista && statusMetodo.qualificado) && (
+                            <button type="button" onClick={() => onIr?.('lista')} className="font-semibold text-amber-700 hover:text-amber-900 underline">ir qualificar →</button>
+                          )}
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          {statusMetodo.contatado ? '✅' : '❌'} Já registrou o contato (Hábito 4)
+                          {!statusMetodo.contatado && (
+                            <button type="button" onClick={() => onIr?.('contato')} className="font-semibold text-amber-700 hover:text-amber-900 underline">ir registrar →</button>
+                          )}
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          {statusMetodo.agendado ? '✅' : '❌'} Já tem reunião marcada
+                        </li>
+                      </ul>
+                      <label className="flex items-start gap-2 pt-1 border-t border-amber-200 cursor-pointer">
+                        <input type="checkbox" checked={pulaEtapas} onChange={(e) => setPulaEtapas(e.target.checked)} className="mt-0.5" />
+                        <span className="text-[11px] text-amber-900">Não é um contato da rede (ex.: aporte de investidor direto) — seguir mesmo sem essas etapas.</span>
+                      </label>
+                    </div>
+                  )}
+
                   <div>
                     <p className="text-xs text-nz-tinta-fraca mb-1">O que está sendo negociado</p>
                     <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} className="w-full bg-white text-nz-tinta rounded-md px-3 py-2 border border-nz-borda">
@@ -544,9 +619,10 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                     Todo contrato precisa de um <strong>executivo responsável</strong> do topo (Sócio Executivo → Fundador).
                   </p>
                 )}
+                {/* 🪜 etapa do Método faltando + atalho novo + sem marcar "seguir mesmo assim" → trava o Salvar */}
                 <Button
                   onClick={salvar}
-                  disabled={salvando || !String(form.cliente_nome || '').trim() || !form.responsavel_id || faltamNoEstagio.length > 0}
+                  disabled={salvando || !String(form.cliente_nome || '').trim() || !form.responsavel_id || faltamNoEstagio.length > 0 || (editando === 'nova' && identificavel && !statusMetodo.completo && !pulaEtapas)}
                   className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white"
                 >
                   <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar'}
