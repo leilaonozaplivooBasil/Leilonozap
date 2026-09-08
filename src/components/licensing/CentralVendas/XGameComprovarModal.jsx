@@ -144,7 +144,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             >
               {enviando ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> A IA está reavaliando...</>) : 'Enviar explicação'}
             </Button>
-            <p className="text-[10px] text-center text-nz-tinta-fraca">esta é a sua chance de esclarecer — depois disso, se a dúvida continuar, vai pra análise do gestor</p>
+            <p className="text-[10px] text-center text-nz-tinta-fraca">esta é a sua chance de esclarecer pra IA o que a foto mostra</p>
           </div>
         </div>
       </div>

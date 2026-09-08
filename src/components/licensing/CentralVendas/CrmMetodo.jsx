@@ -584,19 +584,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         videoUrl = up?.file_url || up?.url || '';
       } catch { videoUrl = ''; }
     }
-    // ritual na janela E com o vídeo gravado = aprovado direto; sem vídeo ou
-    // fora de hora = segunda análise do gestor
+    // 🌊 DIR-89 — ritual na janela E com o vídeo gravado ganha o selo completo;
+    // sem vídeo ou fora de hora, antes caía pra segunda análise do gestor —
+    // agora aprova igual (o gestor não decide mais nada aqui), só sem o selo
+    // "BRILHANTE". `naJanela`/`videoUrl` viram só metadado do que aconteceu.
     const aprovadoDireto = naJanela && !!videoUrl;
     const comprovacao = {
       tipo: 'ritual', gratidao, acao, entrega: gratidao,
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
-      status: aprovadoDireto ? 'aprovada_ritual' : 'em_analise',
+      status: 'aprovada_ritual',
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
         o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização — segunda análise' : 'ritual fora da janela do amanhecer (04:40–07:15) — segunda análise'),
+        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : 'ritual fora da janela do amanhecer (04:40–07:15)'),
       },
     };
     try {
@@ -609,7 +611,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo — vai pra análise do gestor (grave o vídeo dentro da janela do amanhecer pra aprovar direto).');
+      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
@@ -674,20 +676,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setComprovando({ ...comprovando, enviando: false, erro: `🤖 A IA reprovou: ${decisao.motivo}`, pergunta: null });
       return;
     }
-    const status = decisao.acao === 'aprovar' ? 'aprovada_ia' : 'em_analise';
+    // 🌊 DIR-89 — chegou até aqui só existindo 'aprovar': 'ia_fora',
+    // 'pedir_justificativa' e 'reprovar' já retornaram lá em cima. Intervenção
+    // humana zero, de vez — nenhuma comprovação nasce mais "em análise".
     const comprovacao = {
       tipo, print_url: printUrl, hash,
       ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
       ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
       quando: new Date().toISOString(), valido: true,
-      status,
+      status: 'aprovada_ia',
       veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
       ...(justificativa ? { justificativa_pessoa: justificativa } : {}),
       ...(foraDaJanela ? { fora_da_janela: true } : {}),
     };
-    if (status === 'aprovada_ia') toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
-    else toast.info('⏳ Comprovação em análise do gestor — conta provisoriamente.');
+    toast.success(`📸 Aprovada pela IA ✔${ia.o_que_viu ? ` — ${ia.o_que_viu}` : ''}`);
 
     setComprovando(null);
     try {

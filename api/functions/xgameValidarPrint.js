@@ -182,7 +182,7 @@ export default async function handler(req, res) {
       cache_control: { type: 'ephemeral' },
     }];
     const contexto = `TIPO DE COMPROVAÇÃO: ${tipoRegra} — aplique a regra [TIPO ${tipoRegra}].
-TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence ou é evasiva, responda "duvida" de novo, com pergunta_para_pessoa vazia (isso já vai pra análise do gestor).` : ''}`;
+TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE, e a última — não existe terceira chance nem análise humana depois desta: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence mas também não é evasiva ou contraditória, responda "duvida" (ela segue com o benefício da dúvida); reserve "reprovada" só pra explicação claramente falsa, evasiva ou contraditória com o que a imagem mostra.` : ''}`;
 
     const conteudo = [
       { type: 'text', text: contexto },
@@ -214,12 +214,12 @@ TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${d
       // o modelo se recusou a analisar (raro numa foto de comprovação): não é
       // IA fora, é um caso que precisa de olho humano — dúvida sem pergunta
       console.warn('[xgameValidarPrint] refusal', resposta.stop_details);
-      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não pôde analisar esta imagem — vai pra análise do gestor.', pergunta_para_pessoa: '' });
+      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não pôde analisar esta imagem — aprovada com o benefício da dúvida.', pergunta_para_pessoa: '' });
     }
     const out = resposta.parsed_output;
     if (!out) {
       console.error('[xgameValidarPrint] resposta sem parsed_output', { stop_reason: resposta.stop_reason });
-      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não conseguiu concluir a análise — vai pra análise do gestor.', pergunta_para_pessoa: '' });
+      return res.status(200).json({ ok: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: 'A IA não conseguiu concluir a análise — aprovada com o benefício da dúvida.', pergunta_para_pessoa: '' });
     }
     return res.status(200).json({
       ok: true,

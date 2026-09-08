@@ -37,11 +37,19 @@ export default function HeroBannerLeiloes({ banners }) {
         }
       `}</style>
 
+      {/* 🖼️ 07/09 — dono: "está cortando no desktop". Container full-bleed com
+          altura fixa (220→460px) fica MUITO mais largo que alto (lg: ~4:1) —
+          uma foto de gente, ao preencher isso com "cover", sobra só uma tira
+          fina da foto original, e o corte 50%/50% (centro) tirava fatia igual
+          de cima e de baixo: cortava cabeça pela metade. "top" (testado com
+          uma foto sintética nessa mesma proporção extrema) ancora no topo:
+          NUNCA corta de cima, só de baixo — a cabeça sempre sobra inteira. */}
       <RotatingBanner
         banners={banners}
         heightClass="h-[220px] md:h-[340px] lg:h-[460px]"
         fit="cover"
         rounded={false}
+        objectPosition="top"
       />
     </section>
   );

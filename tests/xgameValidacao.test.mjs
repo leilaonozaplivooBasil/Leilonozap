@@ -8,8 +8,8 @@ test('aprovada dentro da janela: aprova direto, sem humano', () => {
   assert.deepEqual(decisaoAposIA({ veredito: 'aprovada' }, { foraDaJanela: false }), { acao: 'aprovar' });
 });
 
-test('aprovada mas fora da janela de horário: vira análise do gestor (prazo é regra da casa, não da IA)', () => {
-  assert.deepEqual(decisaoAposIA({ veredito: 'aprovada' }, { foraDaJanela: true }), { acao: 'analise_gestor' });
+test('aprovada mas fora da janela de horário: aprova igual — atraso é regra de horário, não motivo pra segurar (DIR-89)', () => {
+  assert.deepEqual(decisaoAposIA({ veredito: 'aprovada' }, { foraDaJanela: true }), { acao: 'aprovar' });
 });
 
 test('reprovada é reprovada na hora — não precisa de segunda chance pra imagem sem relação nenhuma', () => {
@@ -24,19 +24,19 @@ test('dúvida NA PRIMEIRA tentativa com pergunta: pede justificativa — não va
   assert.match(r.pergunta, /bebendo água/);
 });
 
-test('dúvida sem pergunta pra fazer (a IA não soube o que perguntar): vai direto pro gestor', () => {
+test('dúvida sem pergunta pra fazer (a IA não soube o que perguntar): aprova com o benefício da dúvida (DIR-89, sem gestor)', () => {
   const r = decisaoAposIA({ veredito: 'duvida', motivo: 'imagem de baixa qualidade' }, { tentativa: 1 });
-  assert.equal(r.acao, 'analise_gestor');
+  assert.equal(r.acao, 'aprovar');
 });
 
-test('dúvida na SEGUNDA tentativa (pessoa já se justificou): esgotou — cai pro gestor, é ZERO tentativa a mais', () => {
+test('dúvida na SEGUNDA tentativa (pessoa já se justificou): esgotou a pergunta — aprova, não cai mais pra ninguém decidir', () => {
   const r = decisaoAposIA({ veredito: 'duvida', pergunta_para_pessoa: 'ainda não convence' }, { tentativa: 2 });
-  assert.equal(r.acao, 'analise_gestor');
+  assert.equal(r.acao, 'aprovar');
 });
 
-test('veredito ausente ou inesperado nunca aprova nem reprova por omissão — trata como dúvida', () => {
-  assert.equal(decisaoAposIA({}, { tentativa: 1 }).acao, 'analise_gestor');
-  assert.equal(decisaoAposIA({ veredito: 'xpto' }, { tentativa: 1 }).acao, 'analise_gestor');
+test('veredito ausente ou inesperado nunca REPROVA por omissão — trata como dúvida residual e aprova (DIR-89)', () => {
+  assert.equal(decisaoAposIA({}, { tentativa: 1 }).acao, 'aprovar');
+  assert.equal(decisaoAposIA({ veredito: 'xpto' }, { tentativa: 1 }).acao, 'aprovar');
 });
 
 test('IA FORA DO AR não é dúvida: bloqueia — não conta, não conclui, não vai pro gestor (o buraco que deixou a foto na cama passar)', () => {
