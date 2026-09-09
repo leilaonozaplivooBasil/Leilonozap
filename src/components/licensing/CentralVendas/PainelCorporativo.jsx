@@ -15,8 +15,10 @@ import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import {
   fmtReais, dataISO, inicioCicloOficial, tokenDoCiclo, formacaoExecutivoIdeal, proporcoesExecutivoIdeal,
   EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaComPortoesDoCiclo, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
-  estudoEmDia, estudoFdsEmDia, travarTopoPorEstudo,
+  estudoEmDia, estudoFdsEmDia, travarTopoPorEstudo, ehTarefaDeGratidao,
 } from '@/lib/xgame';
+import { textoEFonte } from '@/lib/diarioDeBolso';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
 import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
@@ -156,7 +158,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     if (primeiraCarga.current) setCarregando(true);
     const [d, t, c, m, v, td] = await Promise.all([
       supabase.from('xperf_demandas').select('*').eq('pessoa_id', pessoaId).order('created_at', { ascending: false }).limit(120),
-      supabase.from('metodo_tarefas').select('id,data,hora,titulo,feito,conferido,pronto_em,prazo_em,devolvida_motivo,habito,origem,demanda_id,categoria').eq('user_id', pessoaId).gte('data', `${mes}-01`),
+      supabase.from('metodo_tarefas').select('id,data,hora,titulo,feito,conferido,pronto_em,prazo_em,devolvida_motivo,habito,origem,demanda_id,categoria,comprovacao').eq('user_id', pessoaId).gte('data', `${mes}-01`),
       supabase.from('metodo_quadro').select('id,coluna,titulo,prazo,demanda_id').eq('user_id', pessoaId),
       supabase.from('xperf_metas').select('*').eq('user_id', pessoaId).eq('mes', mes).order('created_at'),
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,product_id,quantity').or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`).gte('created_date', `${mes}-01T00:00:00`),
@@ -234,6 +236,27 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
       eixos,
     };
   }, [pessoa, cicloToken]);
+
+  // 🎙️ DIR-123 — dono: "transcrever o áudio automático pra ele ter isso no
+  // seu histórico e vermos isso também." A transcrição já cai no Diário de
+  // Bolso da PRÓPRIA pessoa (comprovacao.entrega); aqui é a mesma conta
+  // (textoEFonte, diarioDeBolso.js), só que pro GESTOR ver sem precisar
+  // abrir o diário de cada um — a gratidão MAIS RECENTE de quem está aberto.
+  const gratidaoRecente = useMemo(() => {
+    const feitas = tarefas
+      .filter((t) => t.feito && ehTarefaDeGratidao(t.titulo) && t.comprovacao)
+      .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+    const ultima = feitas[0];
+    if (!ultima) return null;
+    const { texto } = textoEFonte(ultima);
+    if (!texto) return null;
+    return {
+      data: ultima.data,
+      texto,
+      audioPath: ultima.comprovacao?.audio_gratidao_path || null,
+      audioSeg: Number(ultima.comprovacao?.audio_gratidao_seg) || 0,
+    };
+  }, [tarefas]);
 
   // 🎯 as metas do mês, lidas do que ela fez
   const tarefasDoMes = useMemo(() => tarefas.filter((t) => mesDe(String(t.data)) === mes), [tarefas, mes]);
@@ -314,6 +337,23 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
             <p className="text-[11px] text-white/50">{pessoa.nivel ? getLevel(pessoa.nivel).name : '—'}{pessoa.funcaoCurta ? ` · ${pessoa.funcaoCurta}` : ''}{pessoa.fixo ? ` · fixo ${fmtReais(pessoa.fixo)}` : ''}</p>
             <p className="text-[11px] text-white/40 flex-1 min-w-[140px] truncate">{sem.motivos.length ? sem.motivos.join(' · ') : 'tudo em dia'}</p>
           </div>
+
+          {/* 🎙️ DIR-123 — dono: "transcrever o áudio automático pra ele ter
+              isso no seu histórico e vermos isso também." O ÁUDIO em si
+              continua só do dono dele (api/functions/audioDoDitado.js barra
+              qualquer actorId que não seja o dono do caminho, de propósito —
+              "nem gestão ouve por aqui"); o que a gestão passa a ver aqui é
+              só a TRANSCRIÇÃO, a mesma que já cai no Diário de Bolso da
+              pessoa. O play só aparece quando é a própria pessoa olhando. */}
+          {gratidaoRecente && (
+            <div className="mt-2 rounded-lg border border-white/10 p-2.5" style={caixa} data-teste="painel-gratidao">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-white/50">🙏 Gratidão · {new Date(`${gratidaoRecente.data}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p>
+              <p className="text-[12px] text-white/80 mt-0.5">{gratidaoRecente.texto}</p>
+              {ehMeu && gratidaoRecente.audioPath && (
+                <div className="mt-1"><OuvirGratidao caminho={gratidaoRecente.audioPath} uid={pessoaId} dia={gratidaoRecente.data} segundos={gratidaoRecente.audioSeg} tom="escuro" /></div>
+              )}
+            </div>
+          )}
           </>)}
 
           <div className="mt-3 grid lg:grid-cols-5 gap-3">
