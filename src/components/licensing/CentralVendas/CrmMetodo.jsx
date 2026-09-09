@@ -72,6 +72,7 @@ import FaixaVisao from './FaixaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
+import SinoNotificacoes from '@/components/common/SinoNotificacoes';
 
 // DIR-46 — cor da faixa de probabilidade na lista
 const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
@@ -1714,7 +1715,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm font-bold text-nz-tinta capitalize min-w-[180px] text-center">{fmtDia(dia)}{dia === hojeStr() ? ' · HOJE' : ''}</p>
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(1)}><ChevronRight className="w-5 h-5 text-nz-tinta" /></Button>
               </div>
-              <p className="text-sm font-semibold text-nz-tinta" title={'PROGRESSO DO DIA — "Apresenta o desempenho do executivo baseado no dia atual, com os resultados da gamificação — isso permite projeção de crescimento do executivo e perspectiva de futuro ao longo do mês corrente. É possível extrapolar os valores de 100%, o que permite compensar a falta em alguns fatores com a entrega em outros."'}>{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}% ⓘ</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-nz-tinta" title={'PROGRESSO DO DIA — "Apresenta o desempenho do executivo baseado no dia atual, com os resultados da gamificação — isso permite projeção de crescimento do executivo e perspectiva de futuro ao longo do mês corrente. É possível extrapolar os valores de 100%, o que permite compensar a falta em alguns fatores com a entrega em outros."'}>{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}% ⓘ</p>
+                {/* 🔔 DIR-130 — o sino: mora aqui porque é a tela que a pessoa abre
+                    todo dia (o Compromisso); ver src/lib/notificacoesXgame.js */}
+                <SinoNotificacoes currentUser={currentUser} />
+              </div>
             </div>
             <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
 
