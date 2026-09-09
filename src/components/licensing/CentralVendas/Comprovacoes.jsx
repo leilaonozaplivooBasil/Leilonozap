@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Camera, Check, X, Video } from 'lucide-react';
+import { Loader2, Camera, Check, X, Video, Mic } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +17,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 // reprovar carimba `reprovada` com o motivo e devolve a tarefa pra pessoa.
 
 export const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 'reprovada');
-const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', reprovada: 'reprovada' };
-const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
+// 🩹 09/09/2026 — DIR-125, dono: "a informação do ritual tem que ficar mais
+// clara... tem que ter mais comunicação aí." Achado: `concluirRitual`
+// (CrmMetodo.jsx) grava `status: 'aprovada_ritual'` pro Ritual do
+// Amanhecer — um status que nunca tinha entrado neste dicionário, então a
+// pastilha ficava sem rótulo E sem cor (`ROTULO[s] || s` devolvia a chave
+// crua, sem classe nenhuma pra pintar). Faltava aqui, não em outro lugar.
+const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual aprovado', reprovada: 'reprovada' };
+const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
 const fmtDia = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
 
 // 🖱️ 09/09/2026 — dono: "ver uma prévia do print sem clicar e levar pra
@@ -131,6 +137,23 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
                     <PreviaDaProva url={c.video_url} tipo="video" className="shrink-0 inline-flex items-center gap-1 text-amber-300 hover:underline">
                       <Video className="w-3 h-3" /> ver o vídeo{c.video_seg ? ` (${c.video_seg}s)` : ''}
                     </PreviaDaProva>
+                  )}
+                  {/* 🎙️ DIR-125 — dono: "gravou o vídeo, mandou áudio, tem que
+                      ficar mais claro." O ÁUDIO em si continua protegido (só
+                      o dono ouve, api/functions/audioDoDitado.js) — aqui é só
+                      o AVISO de que ele existe, igual ao "ver o vídeo" acima
+                      avisa da visualização. Sem vídeo E sem áudio, o ritual
+                      foi só por texto — também vale dizer isso claramente. */}
+                  {c.entrada_gratidao === 'audio' && (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-sky-300" title="Voz da pessoa — só ela pode ouvir; aqui é só o aviso de que ela mandou.">
+                      <Mic className="w-3 h-3" /> gratidão em áudio{c.audio_gratidao_seg ? ` (${c.audio_gratidao_seg}s)` : ''}
+                    </span>
+                  )}
+                  {c.tipo === 'ritual' && !c.video_url && c.entrada_gratidao !== 'audio' && (
+                    <span className="shrink-0 text-white/35">só por texto, sem vídeo nem áudio</span>
+                  )}
+                  {c.entrega && !/^https?:\/\//i.test(c.entrega) && (
+                    <span className="text-white/55 italic truncate" title={c.entrega}>"{c.entrega}"</span>
                   )}
                   {c.veredito_ia?.motivo && <span className="text-white/35 truncate" title={c.veredito_ia.o_que_viu || ''}>IA: {c.veredito_ia.motivo}</span>}
                   {s === 'reprovada' && c.motivo_gestor && <span className="text-red-200/70 truncate">↩ {c.motivo_gestor}</span>}
