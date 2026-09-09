@@ -12,6 +12,20 @@
 
 ---
 
+## DIR-132 — o botão de compartilhar no WhatsApp volta na Fila do Pronto, com texto pronto
+
+**Emitida por:** dono (09/09/2026), olhando a Fila do Pronto: *"tinha um botão WhatsApp aqui, eu acho que a gente tirou porque a gente ia mandar mensagem mais personalizada, mais bonita... só um texto mesmo, mas um texto bem bonito... quero botar isso aqui no WhatsApp pra compartilhar também."*
+
+**O que entra:**
+1. `textoCompartilharPronto(t, nomeDaPessoa)` (`src/lib/pronto.js`) — um texto pronto, com identidade (🎯 X-GAME), o título da tarefa, o prazo (`rotuloDoPrazo`) e um convite — é lembrete gentil, não cobrança (o tom sério de "atrasou" continua só no "avisar" já existente).
+2. Botão **compartilhar** (`XPerformanceGestao.jsx`, `MessageCircle`) nas tarefas em `aguardando o pronto` da Fila do Pronto — abre o WhatsApp (`wa.me`) já com o texto pronto pro telefone cadastrado da pessoa; sem telefone, avisa em vez de abrir link quebrado.
+
+**Fora do escopo, por ora:** imagem/banner junto do texto (o dono pediu pra "pesar" — decidido: só texto agora, mais simples e não depende de gerar/hospedar imagem; pode entrar depois se pedir). O botão "avisar" da tarefa atrasada (cobrança, mais sério) não mudou.
+
+**Prova:** suíte 1955/1955 (5 testes novos: `pronto.test.mjs` trava o texto — nome, título, prazo, tom gentil; `compartilharPronto.test.mjs` trava a fiação do botão), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-131 — menu suspenso de data + galera lado a lado (grid) na fila de comprovações
 
 **Emitida por:** dono (09/09/2026): *"Vamos botar um menu suspenso pra escolher qual é a data do mês. Hoje, ontem... E ver se a gente consegue colocar ao invés de um embaixo do outro, colocar a galera lateral pra ficar mais organizado... pro gestor não ficar forçando a mente."*

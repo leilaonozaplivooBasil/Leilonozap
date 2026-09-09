@@ -62,6 +62,27 @@ export function carimboDaDevolucao(motivo, agora = new Date()) {
   return { feito: false, pronto_em: null, conferido: null, devolvida_motivo: String(motivo || '').trim() || 'refazer', devolvida_em: agora.toISOString() };
 }
 
+// 📲 09/09/2026 — dono, vendo a Fila do Pronto: "tinha um botão WhatsApp
+// aqui... a gente tirou porque ia mandar mensagem mais personalizada, mais
+// bonita... só um texto mesmo, mas bem bonito." O compartilhamento volta —
+// só texto por ora (imagem/banner fica pra outra rodada), pra lembrar a
+// pessoa do pronto que está esperando, sem esperar ela atrasar (isso já
+// existe, é o "avisar" da tarefa atrasada — este é o lembrete ANTES).
+/** O texto pronto pra compartilhar no WhatsApp — um lembrete, não uma cobrança. */
+export function textoCompartilharPronto(t, nomeDaPessoa) {
+  const primeiroNome = String(nomeDaPessoa || '').trim().split(' ')[0] || 'você';
+  const prazo = rotuloDoPrazo(t?.prazo_em, String(t?.data || '').slice(0, 10));
+  return [
+    '🎯 *X-GAME — seu Pronto*',
+    '',
+    `Oi ${primeiroNome}! Passando pra lembrar:`,
+    `📋 ${t?.titulo || 'sua tarefa'}`,
+    prazo ? `⏰ ${prazo}` : null,
+    '',
+    'Quando terminar, dá o *pronto* na plataforma — é ele que garante seus pontos e o X-Pay do dia. Bora! 💪',
+  ].filter(Boolean).join('\n');
+}
+
 const ORDEM = { atrasada: 0, pronto: 1, devolvida: 2, aguardando: 3, conferida: 4 };
 /** A fila do pronto: o que precisa de olho primeiro (atrasadas, depois prontos a conferir). */
 export function filaDoPronto(tarefas = [], agora = new Date()) {

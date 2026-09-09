@@ -19,7 +19,7 @@ import { timeCorporativo } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, planejamentoDoDia, resumoPorMentalidade } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto } from '@/lib/catalogoAcoes';
-import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
+import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao, textoCompartilharPronto } from '@/lib/pronto';
 import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES_OFICIAIS, FUNCOES_DE_MERCADO, FUNCOES_DO_PAINEL, funcaoDaPessoaComOrigem, montarDiaDaFuncao } from '@/lib/funcoes';
 import { CartaoFuncaoOficial, ModeloEconomico, ScoreEscada } from '@/components/licensing/CentralVendas/PainelOficial';
 import { getLevel, normalizeLevels } from '@/lib/careerLevels';
@@ -415,6 +415,20 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     if (e1 || e2 || e3) { toast.error('Não avisou — recarregando'); carregarTarefas(); return; }
     toast.success(`${novoAvisos}º aviso registrado pra ${nome} — por dentro${wa ? ' e no WhatsApp' : ' (sem telefone cadastrado pro WhatsApp)'}${novoAvisos >= AVISOS_ANTES_DE_ZERAR ? ' — próximo atraso zera o dia' : ''}`);
     if (wa) window.open(wa, '_blank', 'noopener');
+  };
+
+  // 📲 09/09/2026 — dono: "tinha um botão WhatsApp aqui... a gente tirou
+  // porque ia mandar mensagem mais personalizada, mais bonita... só um
+  // texto mesmo, mas bem bonito." O lembrete ANTES de atrasar (o "avisar"
+  // já cobre a tarefa atrasada, com o tom mais sério de cobrança) — este é
+  // gentil, só compartilha o que está esperando.
+  const compartilhar = (t) => {
+    const nome = nomeDe(t.user_id);
+    const numero = String(usuarios.find((u) => u.id === t.user_id)?.phone || '').replace(/\D/g, '');
+    if (!numero) { toast.error(`${nome} não tem telefone cadastrado pro WhatsApp`); return; }
+    const texto = textoCompartilharPronto(t, nome);
+    const wa = `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(texto)}`;
+    window.open(wa, '_blank', 'noopener');
   };
 
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
@@ -897,6 +911,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                         </span>
                       )}
                       {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
+                      {estado.id === 'aguardando' && (
+                        <span className="ml-auto shrink-0">
+                          <button type="button" onClick={() => compartilhar(t)} title="compartilhar um lembrete bonito no WhatsApp" className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/30 px-2 py-0.5 text-emerald-200 font-bold" data-teste="compartilhar-pronto"><MessageCircle className="w-3 h-3" /> compartilhar</button>
+                        </span>
+                      )}
                       {/* ⚠️ 09/09/2026 — DIR-105, dono: "eu aqui no Admin
                           tenho que ter [um botão], avisar ela... e também
                           tenho que ter o botão de excluir, porque eu posso
