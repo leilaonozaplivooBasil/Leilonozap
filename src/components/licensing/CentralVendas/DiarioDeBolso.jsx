@@ -9,6 +9,8 @@ import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
+import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
+import useTourDaTela from '@/hooks/useTourDaTela';
 
 // 📔 DIÁRIO DE BOLSO — dono, 08/09/2026: "anotar e documentar os passos,
 // tarefas e etc dos usuários de forma automática pra que tudo que foi feito
@@ -41,7 +43,41 @@ const fmtDia = (iso) => {
   return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
+const PASSOS_TOUR_DIARIO = [
+  {
+    alvo: 'diario-de-bolso',
+    titulo: 'Este é o seu diário, e ele se escreve sozinho',
+    texto: 'Você não precisa lembrar de anotar nada aqui. Toda tarefa que você marca como feita vira uma página deste diário automaticamente — com o dia, a hora e o que você comprovou.',
+  },
+  {
+    alvo: 'diario-busca',
+    titulo: 'Procurando aquilo que você não lembra quando foi',
+    texto: 'Sabe aquela ideia boa de duas semanas atrás? Digite uma palavra dela aqui. A busca varre título, texto e as suas notas — sem acento e sem se importar com maiúscula.',
+  },
+  {
+    alvo: 'diario-entrada',
+    titulo: 'Cada dia vira uma página',
+    texto: 'Foto, áudio, o que a IA viu na sua comprovação, o que o método ensina — o que existir daquele dia aparece aqui, sem você digitar nada.',
+  },
+  {
+    alvo: 'diario-gratidao',
+    titulo: 'A sua voz fica guardada — por 1 mês',
+    texto: 'Gravou a gratidão em áudio? Dá pra ouvir de novo aqui. Só que ela fica guardada por 30 dias — depois disso é apagada. Quer guardar pra sempre? Use o ⬇️ baixar e o arquivo fica no seu aparelho.',
+  },
+  {
+    alvo: 'diario-adicionar-nota',
+    titulo: 'O que só você sabe daquele dia',
+    texto: 'O sistema registra o que aconteceu. O que você SENTIU ninguém registra por você — e daqui a seis meses é isso que vale. Escreva aqui.',
+  },
+  {
+    alvo: 'diario-resumo-semana',
+    titulo: 'A sua semana em um parágrafo',
+    texto: 'Um resumo da sua semana, gerado a partir das suas próprias entradas. Bom pra levar pra reunião sem ter que reler sete dias.',
+  },
+];
+
 export default function DiarioDeBolso({ currentUser = null }) {
+  const [tourAberto, setTourAberto] = useTourDaTela('diario');
   const uid = currentUser?.id;
   const [tarefas, setTarefas] = useState([]);
   const [notas, setNotas] = useState({}); // { [tarefa_id]: nota_pessoal }
@@ -303,6 +339,7 @@ export default function DiarioDeBolso({ currentUser = null }) {
           </section>
         ))}
       </div>
+      <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_DIARIO} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }

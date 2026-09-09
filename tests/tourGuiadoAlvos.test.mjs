@@ -43,7 +43,9 @@ function alvosDe(fonte) {
   return [...fonte.matchAll(/alvo:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]);
 }
 
-const ALVOS = [...new Set([...alvosDe(METODO), ...alvosDe(CLIENTES), ...alvosDe(ESTEIRA)])];
+// Varre a PASTA inteira, não três arquivos escolhidos a dedo: tela nova com
+// tour entra na conta sozinha, sem ninguém lembrar de editar este teste.
+const ALVOS = [...new Set(alvosDe(TODO_JSX))];
 
 test('🔴 todo alvo do tour existe como data-teste na tela', () => {
   assert.ok(ALVOS.length >= 20, `esperava a coleção inteira de passos, achei ${ALVOS.length}`);
@@ -99,16 +101,31 @@ test('🔴 os 8 Hábitos têm tour — e nenhum abre VAZIO', () => {
 });
 
 test('🔴 quem oferece o botão do tour tem alguém do outro lado pra atender', () => {
-  // A cilada: pôr uma aba nova em TOURS_DISPONIVEIS cujo componente NÃO escuta.
-  // O botão verde aparece, a pessoa clica, e não acontece nada — pior que não
-  // ter botão. `catalogo-clientes` (MyClientsTab) é exatamente essa tentação:
-  // o nome parece, mas quem tem o tour é `catalogo-crm` (CrmClientesTab).
+  // A cilada: pôr uma aba em TOURS_DISPONIVEIS cujo componente NÃO escuta. O
+  // botão verde aparece, a pessoa clica, e não acontece nada — pior que não ter
+  // botão. `catalogo-clientes` (MyClientsTab) é a tentação: o nome parece, mas
+  // quem tem o tour do Método é `catalogo-crm` (CrmClientesTab).
+  //
+  // Atender vale das duas formas que existem hoje: o hook `useTourDaTela('id')`
+  // das telas simples, ou o listener do CrmClientesTab, que roteia os 8 Hábitos.
   const ids = [...new Set(Object.values(TOURS_DISPONIVEIS))];
   assert.ok(ids.length > 0, 'nenhuma tela oferece tour');
-  for (const id of ids) {
-    const atendido = new RegExp(`ouvirPedidoDeTour\\(\\(id\\) => \\{[\\s\\S]{0,120}id !== '${id}'`).test(CLIENTES);
-    assert.ok(atendido, `'${id}' é oferecido mas ninguém escuta esse pedido`);
-  }
+  const orfaos = ids.filter((id) => {
+    if (new RegExp(`useTourDaTela\\('${id}'\\)`).test(TODO_JSX)) return false;
+    if (new RegExp(`id !== '${id}'`).test(CLIENTES)) return false;
+    return true;
+  });
+  assert.deepEqual(orfaos, [], `oferecido mas ninguém escuta — o botão não faria nada: ${orfaos.join(', ')}`);
+
   assert.equal(TOURS_DISPONIVEIS['catalogo-clientes'], undefined,
     'catalogo-clientes é o MyClientsTab, que não tem tour — o botão apareceria sem fazer nada');
+});
+
+test('🎮 o tour fica no X-GAME — a operação da loja fica de fora', () => {
+  // Dono, 09/09/2026: "devemos aplicar apenas a parte do X-GAME, não tem nexo
+  // levar para area de vendas, pedidos, produtos e etc."
+  const FORA = ['catalogo-home', 'catalogo-pedidos', 'catalogo-produtos',
+    'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-clientes', 'catalogo-carreira'];
+  const invasores = FORA.filter((t) => TOURS_DISPONIVEIS[t]);
+  assert.deepEqual(invasores, [], `aba de operação com tour, contra a decisão do dono: ${invasores.join(', ')}`);
 });
