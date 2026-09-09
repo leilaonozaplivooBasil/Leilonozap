@@ -278,7 +278,10 @@ const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
 // bater no título vence (ex.: "Leitura leve + descanso" é leitura, peso 4).
 const _semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const REGRAS_PESO = [
-  { re: /gratidao|foco no sonho/, peso: 5, porque: 'gratidão abre o dia e a mente' },
+  // 🌅 09/09/2026 — dono, ao vivo: "o ritual tem que ser um dos maiores
+  // valores da gamificação do dia... botar um peso maior e um valor maior."
+  // Empatado no teto (6) com a ação de negócio — não é mais só "importante".
+  { re: /gratidao|foco no sonho/, peso: 6, porque: 'o ritual do amanhecer — um dos maiores valores do dia' },
   { re: /treinament|treinar|mentoria|mentor|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
   { re: /loja|venda|cliente|reuni|apresenta|contrato|follow|prospec/, peso: 6, porque: 'ação de negócio — o peso principal' },
   { re: /leitura|estudo|curso|licao|aula/, peso: 4, porque: 'mentalidade: estudo em dia' },
@@ -1011,7 +1014,9 @@ export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
 // ao contador do resumo escrito (faltaDoResumo/textoDoContador, acima); o
 // teto vira só uma rede de segurança técnica — 15 min, o tempo que a parte
 // de gratidão + visualização dura — não é mais o alvo da gravação.
-export const VISUALIZACAO_MIN_SEG = 60;
+// 🌅 09/09/2026 — dono, ao vivo: "você tem que ter um mínimo de
+// visualização, e o mínimo são dois minutos." Sobe de 60s pra 120s.
+export const VISUALIZACAO_MIN_SEG = 120;
 export const VISUALIZACAO_TETO_SEG = 15 * 60; // 900 — rede de segurança, não o alvo
 
 const segundos = (n) => `${n} ${n === 1 ? 'segundo' : 'segundos'}`;
@@ -1043,9 +1048,17 @@ export function nomeExibicao(p) {
 
 /** 🌅 A tarefa de gratidão/acordar abre o RITUAL DO AMANHECER (não formulário). */
 export const ehTarefaDeGratidao = (titulo) => /acordar|gratidao|bom dia/.test(_semAcento(titulo));
-// janela do ritual: de 04:40 até 07:15 vale direto; fora disso vai pra análise
+// 📋 09/09/2026 — dono: "organização do negócio... tem que ser dentro do
+// Quadro, papel nunca." Mesmo recorte do REGRAS_PESO (gestão do próprio
+// negócio) — usado pro aviso PROATIVO no modal de comprovação, antes da
+// pessoa mandar a foto errada (a régua de verdade mora na IA, servidor).
+export const ehOrganizacaoDoNegocio = (titulo) => /organizacao do negocio|planejament|fechamento do dia/.test(_semAcento(titulo));
+// 🕐 09/09/2026 — dono, ao vivo: "não tem como ela fazer depois de cinco e
+// quinze. Se ela não fizer até cinco e quinze ela perde o ritual." Era uma
+// janela até 07:15 que só tirava o selo por fora dela; virou prazo seco —
+// passou de 05:15, o ritual está perdido, ponto.
 export const RITUAL_INICIO_MIN = 4 * 60 + 40;
-export const RITUAL_FIM_MIN = 7 * 60 + 15;
+export const RITUAL_FIM_MIN = 5 * 60 + 15;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────

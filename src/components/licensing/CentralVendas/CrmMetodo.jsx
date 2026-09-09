@@ -664,7 +664,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
@@ -673,7 +673,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return;
     }
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
-    const naJanela = agoraM >= RITUAL_INICIO_MIN && agoraM <= RITUAL_FIM_MIN;
+    // 🕐 09/09/2026 — dono, ao vivo: "não tem como ela fazer depois de cinco
+    // e quinze... ela perde o ritual." A entrada já é bloqueada em
+    // alternarFeito, mas isso cobre quem abriu ANTES do prazo e só terminou
+    // depois — com 2min de visualização + gratidão, dá pra passar do corte
+    // quem começa em cima da hora.
+    if (agoraM > RITUAL_FIM_MIN) {
+      const comprovacaoPerdida = {
+        tipo: 'ritual', gratidao, acao, entrega: gratidao,
+        quando: new Date().toISOString(), valido: false, status: 'reprovada',
+        veredito_ia: { veredito: 'reprovada', confianca: 100, o_que_viu: '', motivo: `Ritual perdido — passou do prazo de ${horaDeMin(RITUAL_FIM_MIN)}.` },
+      };
+      try {
+        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPerdida });
+        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoPerdida } : x)));
+      } catch { /* o toast abaixo já avisa, mesmo se o registro falhar */ }
+      toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+      return;
+    }
+    const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
     // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
     let videoUrl = '';
     if (videoBlob) {
@@ -685,21 +703,60 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         videoUrl = up?.file_url || up?.url || '';
       } catch { videoUrl = ''; }
     }
-    // 🌊 DIR-89 — ritual na janela E com o vídeo gravado ganha o selo completo;
-    // sem vídeo ou fora de hora, antes caía pra segunda análise do gestor —
-    // agora aprova igual (o gestor não decide mais nada aqui), só sem o selo
-    // "BRILHANTE". `naJanela`/`videoUrl` viram só metadado do que aconteceu.
-    const aprovadoDireto = naJanela && !!videoUrl;
+    // 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
+    // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
+    // MESMO validador que já julga print/foto (xgameValidarPrint) olha um
+    // frame do vídeo, com uma regra nova pro tipo 'ritual': ambiente de casa.
+    let vereditoAmbiente = null;
+    if (frameBlob) {
+      try {
+        const upFrame = await plataforma.integrations.Core.UploadFile({
+          file: new File([frameBlob], `ritual_frame_${hojeStr()}.jpg`, { type: 'image/jpeg' }),
+          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'jpg' }),
+        });
+        const frameUrl = upFrame?.file_url || upFrame?.url || '';
+        if (frameUrl) {
+          const r = await plataforma.functions.xgameValidarPrint({ image_url: frameUrl, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
+          if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) vereditoAmbiente = r;
+        }
+      } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }
+    }
+    // ambiente claramente errado (carro/academia/escritório): reprova direto,
+    // sem selo, sem feito — não é "dúvida", é a régua nova funcionando.
+    if (vereditoAmbiente?.veredito === 'reprovada') {
+      const comprovacaoReprovada = {
+        tipo: 'ritual', gratidao, acao, entrega: gratidao,
+        ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+        tempo_tela_s: tempoTelaS || 0,
+        quando: new Date().toISOString(), valido: false, status: 'reprovada',
+        motivo_gestor: vereditoAmbiente.motivo,
+        veredito_ia: vereditoAmbiente,
+      };
+      try {
+        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoReprovada });
+        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoReprovada } : x)));
+      } catch { /* o toast abaixo já avisa, mesmo se o registro falhar */ }
+      toast.error(`🏠 Ritual reprovado: ${vereditoAmbiente.motivo || 'o ambiente precisa ser a sua casa, com tranquilidade.'}`);
+      return;
+    }
+    // ambiente incerto: em vez de aprovar ou perder de cara, cai pro gestor
+    // decidir — igual às outras comprovações em dúvida.
+    const emDuvida = vereditoAmbiente?.veredito === 'duvida';
+    // 🌊 DIR-89 — ritual dentro do prazo E com o vídeo gravado ganha o selo
+    // completo; sem vídeo (mas ainda dentro do prazo) aprova igual, só sem o
+    // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como perdido
+    // acima.
+    const aprovadoDireto = naJanela && !!videoUrl && !emDuvida;
     const comprovacao = {
       tipo: 'ritual', gratidao, acao, entrega: gratidao,
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
-      status: 'aprovada_ritual',
-      veredito_ia: {
+      status: emDuvida ? 'em_analise' : 'aprovada_ritual',
+      veredito_ia: emDuvida ? vereditoAmbiente : {
         veredito: 'aprovada', confianca: 100,
         o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : 'ritual fora da janela do amanhecer (04:40–07:15)'),
+        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
       },
     };
     try {
@@ -712,7 +769,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)');
+      toast.success(emDuvida
+        ? '🌅 Ritual enviado — o gestor vai conferir o ambiente antes de valer.'
+        : (aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)'));
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
@@ -897,6 +956,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     }
     // 🌅 F11 — gratidão abre o RITUAL DO AMANHECER, não formulário
     if (!t.feito && ehTarefaDeGratidao(t.titulo) && !t.comprovacao?.valido) {
+      // 🕐 09/09/2026 — dono, ao vivo: "não tem como ela fazer depois de
+      // cinco e quinze. Se ela não fizer até cinco e quinze ela perde o
+      // ritual." Passou do prazo: nem abre a experiência — fazer o ritual
+      // inteiro só pra descobrir no fim que não conta seria pior.
+      if (ehHoje && agoraMinJogo > RITUAL_FIM_MIN) {
+        toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+        return;
+      }
       setRitualId(t.id);
       return;
     }
