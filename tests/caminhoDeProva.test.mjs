@@ -7,10 +7,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { caminhoDeProva, caminhoSeguro } from '../src/lib/caminhoDeProva.js';
+import { semComentarios } from './_ajuda.mjs';
 
-/** Tira comentários pra assertiva não casar com a explicação do bug. */
-const semComentarios = (txt) =>
-  txt.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const CRM = readFileSync(
   new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url),

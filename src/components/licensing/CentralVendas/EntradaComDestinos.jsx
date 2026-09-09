@@ -20,6 +20,18 @@ const estiloCampo = { background: '#FFFFFF', color: '#172B4D', borderColor: '#DF
 // 🌑 DIR-90 — o mesmo campo, em vidro escuro pro quadro (que deixou de ser branco).
 const campoEscuro = 'rounded-lg border px-2 text-[13px] outline-none bg-transparent [color-scheme:dark]';
 const estiloCampoEscuro = { color: '#F4F4F4', borderColor: 'rgba(255,255,255,0.18)', height: 36 };
+// 🌑 09/09/2026 — dono: "mais fundo branco", com print da lista ABERTA.
+//
+// O <select> fechado já estava escuro; a LISTA que ele abre, não. A lista é
+// desenhada pelo sistema operacional a partir do fundo do próprio <select> —
+// e `bg-transparent` não é fundo nenhum, então ela caía no branco padrão.
+// Fundo OPACO no select, e a mesma cor nas <option>: sem as duas coisas, ou a
+// lista fica branca (Windows/Linux) ou o texto some nela (alguns Chrome).
+// A cor da lista mora numa regra só, `select.lista-escura` no index.css —
+// duas cópias do mesmo conserto é como metade dos <select> do sistema ficou
+// pra trás na primeira vez. Aqui sobra só o fundo OPACO do campo, que o
+// `campoEscuro` não tem (ele é `bg-transparent` de propósito, pro vidro).
+const estiloSelectEscuro = { ...estiloCampoEscuro, background: '#1F2937' };
 
 /**
  * @param {boolean} escuro — DIR-90: "O nosso quadro" mora num card de vidro
@@ -105,7 +117,7 @@ export default function EntradaComDestinos({ origem = 'lista', valor, onChange, 
                 <input type="checkbox" checked={!!v.noQuadro} onChange={(e) => muda({ noQuadro: e.target.checked })} data-teste="destino-quadro" className="accent-[#1B7A48]" />
                 <LayoutGrid className="w-3.5 h-3.5" style={{ color: corFraca }} /> também no quadro
                 {v.noQuadro && listas.length > 0 && (
-                  <select value={v.listaId || listas[0]?.id || ''} onChange={(e) => muda({ listaId: e.target.value })} data-teste="destino-lista" className={campo} style={estilo}>
+                  <select value={v.listaId || listas[0]?.id || ''} onChange={(e) => muda({ listaId: e.target.value })} data-teste="destino-lista" className={`${campo}${escuro ? ' lista-escura' : ''}`} style={escuro ? estiloSelectEscuro : estilo}>
                     {listas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
                   </select>
                 )}

@@ -143,6 +143,7 @@ test('resumoDoDia: perdoado=true NUNCA zera, nem por não-votar nem por atraso d
   assert.equal(semVotarPerdoado.perdeu_por_nao_votar, false, 'perdoado esconde até o CAMPO que registra o motivo — outras telas não podem ver isso como zerado');
   assert.equal(semVotarPerdoado.mvm_dia, MVM_MAX, 'sem o perdão zeraria — com o perdão, a nota é a de sempre (dia impecável)');
   assert.ok(!/ZEROU/.test(semVotarPerdoado.frase_mvm), 'a frase não pode dizer que zerou um dia que foi perdoado');
+  assert.equal(semVotarPerdoado.token_dia > 0, true, 'o dia não zerou');
 
   const atrasoVencidoPerdoado = resumoDoDia({
     tarefas: [...TAREFAS, { id: 'x1', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-08T18:00:00' }],

@@ -298,8 +298,25 @@ export default async function handler(req, res) {
       }
       // Carimba o dono na criação, ignorando o que vier do navegador: é este
       // campo que decide quem pode editar depois.
-      if (action === 'create' && body?.payload && !Array.isArray(body.payload)) {
-        body.payload.created_by_id = eu;
+      //
+      // 🔴 08/09/2026 — O CARIMBO ESTAVA CEGO PRA CRIAÇÃO EM LOTE.
+      // Até hoje a condição era `action === 'create' && !Array.isArray(payload)`,
+      // ou seja: `bulkCreate` (que SEMPRE manda array, e que `podeCrm` já
+      // liberava desde sempre por não ser 'delete') passava batido. Dois
+      // estragos, os dois em produção:
+      //   1) o contato criado em lote nascia SEM DONO — não aparecia no escopo
+      //      "só o meu" da Lista de Networking, e ninguém mais conseguia
+      //      editá-lo, porque o `update` exige created_by_id === eu e um campo
+      //      vazio nunca vai bater. Contato importado virava contato morto.
+      //   2) sem o carimbo, valia o que o navegador mandasse: um cargo
+      //      comercial podia despejar contatos direto na carteira de outra
+      //      pessoa da rede.
+      // Agora o dono é carimbado item a item, e o que vier do navegador é
+      // descartado — mesma regra dos dois caminhos, um só lugar.
+      if (action === 'create' || action === 'bulkCreate') {
+        const carimbar = (p) => (p && typeof p === 'object' ? { ...p, created_by_id: eu } : p);
+        if (Array.isArray(body?.payload)) body.payload = body.payload.map(carimbar);
+        else if (body?.payload) body.payload = carimbar(body.payload);
       }
     }
 

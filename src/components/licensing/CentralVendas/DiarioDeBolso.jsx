@@ -5,6 +5,10 @@ import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaClient';
 import { diarioAgrupado, filtrarDiario, linhaParaGravar, tarefasParaMaterializar } from '@/lib/diarioDeBolso';
 import { semanaDe } from '@/lib/metodo';
+import useDitado from '@/hooks/useDitado';
+import BotaoDitado from '@/components/common/BotaoDitado';
+import { juntarTexto } from '@/lib/ditado';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 
 // 📔 DIÁRIO DE BOLSO — dono, 08/09/2026: "anotar e documentar os passos,
 // tarefas e etc dos usuários de forma automática pra que tudo que foi feito
@@ -46,6 +50,11 @@ export default function DiarioDeBolso({ currentUser = null }) {
   const [busca, setBusca] = useState('');
   const [notaAberta, setNotaAberta] = useState(null); // tarefa_id em edição
   const [rascunho, setRascunho] = useState('');
+  // 🎙️ DIR-101 — a nota do diário é retrospectiva: a pessoa está recapitulando
+  // o que fez. Falar cai melhor que digitar aqui. NÃO guarda o áudio: a nota é
+  // um lembrete operacional, não um acervo como a voz da gratidão — guardar
+  // gravação de todo mundo sem uso é armazenamento por armazenamento.
+  const ditado = useDitado({ onTexto: (t) => setRascunho((atual) => juntarTexto(atual, t)) });
   const [salvando, setSalvando] = useState(false);
   const [semanaInicio] = useState(() => semanaDe(new Date().toISOString().slice(0, 10))?.inicio || null);
   const [resumoSemana, setResumoSemana] = useState(null); // { resumo, gerado_em } | null
@@ -220,6 +229,20 @@ export default function DiarioDeBolso({ currentUser = null }) {
                     <span className="font-semibold text-white/90 text-[13px]">{e.titulo}</span>
                     {e.temFoto && <CameraIcon className="w-3 h-3 text-white/30 shrink-0" />}
                   </div>
+                  {/* 🎙️ DIR-104 — a voz da gratidão daquele dia, ouvível AQUI.
+                      O diário é onde se revisita; era a metade que faltava.
+                      Junto vem o botão de baixar e o prazo de 1 mês, porque a
+                      gravação some depois disso e quem não souber, perde. */}
+                  {e.audioPath && (
+                    <div className="mt-1.5" data-teste="diario-gratidao">
+                      <OuvirGratidao caminho={e.audioPath} uid={uid} dia={e.data} segundos={e.audioSeg} tom="escuro" />
+                    </div>
+                  )}
+                  {!e.audioPath && e.audioExpirou && (
+                    <p className="mt-1.5 text-[10px] text-white/35" data-teste="diario-gratidao-expirada">
+                      🎙️ você gravou a gratidão deste dia — as gravações ficam guardadas por 1 mês, então esta já foi apagada.
+                    </p>
+                  )}
                   {e.texto && (
                     <p className="mt-1 text-white/65 text-[12px] leading-relaxed flex gap-1.5">
                       <Sparkles className="w-3 h-3 text-white/25 shrink-0 mt-0.5" />
@@ -260,6 +283,11 @@ export default function DiarioDeBolso({ currentUser = null }) {
                         data-teste="diario-nota-campo"
                       />
                       <div className="flex flex-col gap-1 shrink-0">
+                        <BotaoDitado
+                          ditado={ditado}
+                          compacto
+                          className="w-6 h-6 !p-0 justify-center bg-white/10 hover:bg-white/20 text-white/70 !rounded-md"
+                        />
                         <button type="button" disabled={salvando} onClick={() => salvarNota(e.id)} className="w-6 h-6 rounded-md bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 grid place-items-center disabled:opacity-40" title="salvar" data-teste="diario-nota-salvar">
                           <Check className="w-3.5 h-3.5" />
                         </button>

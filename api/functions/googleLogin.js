@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 
 import { emitirSessao } from '../_lib/sessao.js';
+import { contaNaLixeira, AVISO_CONTA_NA_LIXEIRA } from '../_lib/contaAtiva.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -112,6 +113,13 @@ export default async function handler(req, res) {
     // Aproveita o adiantamento SÓ se o e-mail confirmado bater; senão busca do zero.
     let user = userAdiantado && String(userAdiantado.email || '').toLowerCase() === email ? userAdiantado : null;
     if (!user) user = await buscarPorEmail(email);
+
+    // 🚪 CONTA NA LIXEIRA NÃO ENTRA (08/09/2026). Ver api/_lib/contaAtiva.js.
+    // Aqui a checagem pode vir logo: o Google já provou quem é a pessoa, então
+    // avisar não entrega informação de conta alheia a ninguém.
+    if (user && contaNaLixeira(user)) {
+      return res.status(200).json({ success: false, error: AVISO_CONTA_NA_LIXEIRA });
+    }
 
     if (!user) {
       // 🌳 REGRA DA ÁRVORE GENEALÓGICA: ninguém entra solto — sem link de indicação,

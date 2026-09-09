@@ -3,6 +3,7 @@
 import bcrypt from 'bcryptjs';
 
 import { emitirSessao } from '../_lib/sessao.js';
+import { contaNaLixeira, AVISO_CONTA_NA_LIXEIRA } from '../_lib/contaAtiva.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -44,6 +45,14 @@ export default async function handler(req, res) {
       }
     }
     if (!valid) return fail();
+
+    // 🚪 CONTA NA LIXEIRA NÃO ENTRA (08/09/2026). Ver api/_lib/contaAtiva.js:
+    // desativar no admin não cortava o acesso — a conta só sumia das listas.
+    //
+    // A checagem vem DEPOIS da senha de propósito. Antes dela, qualquer pessoa
+    // poderia descobrir quais e-mails existem e estão desativados só pela
+    // mensagem diferente. Depois da senha, quem vê o aviso já provou ser o dono.
+    if (contaNaLixeira(user)) return res.status(200).json({ success: false, error: AVISO_CONTA_NA_LIXEIRA });
 
     // 🕐 DIR-29 — rastro de login pro KPI "Usuários ativos" da diretoria.
     // Aguardado mas tolerante: se a coluna last_login ainda não existir

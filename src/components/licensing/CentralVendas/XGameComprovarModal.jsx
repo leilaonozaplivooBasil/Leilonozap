@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Camera, ImagePlus, Loader2, SwitchCamera } from 'lucide-react';
+import useDitado from '@/hooks/useDitado';
+import BotaoDitado from '@/components/common/BotaoDitado';
+import { juntarTexto } from '@/lib/ditado';
 import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, RESUMO_MIN_FDS, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado, faltaDoResumo, ehOrganizacaoDoNegocio } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
 import { useSegurarCamada } from '@/hooks/useCamadaModal';
@@ -117,6 +120,22 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
     setTimeout(() => setAvisoCola(''), 6000);
   };
 
+  // 🎙️ DIR-101 — FALAR O RESUMO (09/09/2026).
+  //
+  // Este é o campo de MAIOR atrito do sistema: 400 caracteres digitados no
+  // celular é onde a pessoa desiste, e ele aparece em toda comprovação de
+  // estudo. Por isso o áudio paga mais aqui do que em qualquer outro lugar.
+  //
+  // ⚠️ E o "só digitando — colar não vale"? Continua valendo, e o áudio não
+  // fura: a regra é contra copiar as palavras dos OUTROS, e falar é autoria.
+  // Decisão do dono: áudio conta como "as suas palavras". O que NÃO muda:
+  // RESUMO_MIN segue em 400 (ordem do dono: "não diminua"), e o texto ditado
+  // cai no campo pra pessoa ler e corrigir antes de concluir.
+  const [audioResumo, setAudioResumo] = useState(null);
+  const ditado = useDitado({
+    onTexto: (t, blob) => { setTexto((atual) => juntarTexto(atual, t)); setAudioResumo(blob); },
+  });
+
   // 📋 DIR-75 — COLAR O PRINT (Ctrl+V no computador, "Colar" do dedo no
   // celular). Reusa a mesma lib do Quadro dos Sonhos.
   //
@@ -230,8 +249,9 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-sm font-bold py-2.5 hover:opacity-90"
           >📱 Postar no Instagram</a>
 
-          {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino).
-              No fim de semana o mínimo é bem maior — é o mergulho fundo. */}
+          {/* 📚 estudo: o resumo DIGITADO OU FALADO (colar é bloqueado —
+              digitar/falar é treino, copiar não). No fim de semana o mínimo
+              é bem maior — é o mergulho fundo. */}
           {ehEstudo && (() => {
             const minimo = tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN;
             return (
@@ -260,8 +280,21 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
                   >
                     {textoDoContador(texto, tipo)}
                   </span>
-                  <span className="text-[10px] text-nz-tinta-fraca">✍️ só digitando — colar não vale</span>
+                  {/* o rótulo passa a dizer a verdade: escrever OU falar valem;
+                      o que não vale continua sendo colar o texto dos outros */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-nz-tinta-fraca">
+                      {ditado.disponivel ? '✍️🎙️ escreva ou fale — colar não vale' : '✍️ só digitando — colar não vale'}
+                    </span>
+                    <BotaoDitado
+                      ditado={ditado}
+                      rotulo="falar"
+                      rotuloGravando="parar"
+                      className="border border-nz-borda bg-white text-nz-verde hover:bg-nz-verde-fundo !px-2.5 !py-1 !text-[11px]"
+                    />
+                  </div>
                 </div>
+                {ditado.erro && <p className="text-xs font-semibold text-amber-700 bg-amber-50 rounded-xl px-3 py-2">{ditado.erro}</p>}
                 {avisoCola && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{avisoCola}</p>}
                 <p className="text-[11px] text-nz-tinta-fraca pt-1">E a foto do estudo (a página, a anotação):</p>
               </div>
@@ -339,7 +372,7 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
           {erro && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{erro}</p>}
 
           <Button
-            onClick={() => onComprovar({ file, texto })}
+            onClick={() => onComprovar({ file, texto, audioResumo })}
             disabled={!podeConcluir || enviando}
             className="w-full bg-nz-verde hover:bg-nz-verde-claro text-white rounded-xl h-11 text-sm font-bold disabled:opacity-50"
           >

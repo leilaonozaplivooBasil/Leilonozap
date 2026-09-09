@@ -20,7 +20,7 @@ const catalogo = ler('src/pages/AddCatalogProduct.jsx');
 
 describe('camada 1 — a tela do Estoque (a do print)', () => {
   test('🔴 o pedido: existe um campo de Categoria no formulário', () => {
-    assert.match(estoque, /<Label className="text-gray-300">Categoria<\/Label>/);
+    assert.match(estoque, /<Label className="text-gray-300">Categoria \*<\/Label>/);
     assert.match(estoque, /value=\{formData\.category_id \|\| ''\}/);
   });
 
@@ -45,18 +45,26 @@ describe('camada 1 — a tela do Estoque (a do print)', () => {
     assert.match(estoque, /category_id: formData\.category_id \|\| null/);
   });
 
-  test('categoria é OPCIONAL — nunca bloqueia salvar', () => {
-    const i = estoque.indexOf('<Label className="text-gray-300">Categoria</Label>');
+  // 08/09/2026 — A DECISÃO VIROU. Este teste dizia o contrário até hoje, e por
+  // um bom motivo: com milhares de produtos sem categoria, exigir travaria quem
+  // só quisesse corrigir uma descrição. Esse motivo acabou — 2.834 dos 2.853 já
+  // têm categoria. O que fechou a mudança foi o ritmo de entrada: 27% dos
+  // cadastros de abril, 23% de maio e 56% de agosto entraram sem categoria.
+  test('categoria é OBRIGATÓRIA — e a tela avisa antes de perder o preenchimento', () => {
+    const i = estoque.indexOf('<Label className="text-gray-300">Categoria *</Label>');
     const bloco = estoque.slice(i, i + 900);
-    assert.ok(!/\brequired\b/.test(bloco), 'obrigatória travaria a edição de todo produto legado');
-    assert.match(bloco, /— sem categoria —/, 'precisa da opção explícita de não classificar');
+    assert.ok(!/— sem categoria —/.test(bloco), 'a opção de não classificar voltou ao seletor');
+    assert.match(bloco, /— escolha a categoria —/, 'sumiu o texto que pede a escolha');
+    assert.match(estoque, /AVISO_CATEGORIA/, 'a tela parou de avisar antes de salvar');
   });
 
   test('se a lista de categorias falhar, ainda dá pra salvar o produto', () => {
     // Dropdown com problema não pode travar cadastro de produto.
     assert.match(estoque, /setCategoriasErro\(true\)/);
     assert.match(estoque, /disabled=\{categoriasErro\}/);
-    assert.match(estoque, /pode salvar o produto normalmente/);
+    // A frase mudou junto com a regra: sem a lista não dá pra classificar, então
+    // o caminho passou a ser recarregar — não salvar sem categoria.
+    assert.match(estoque, /recarregue a página antes de cadastrar/);
   });
 
   test('só categorias principais e ativas entram na lista', () => {

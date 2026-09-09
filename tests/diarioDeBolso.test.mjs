@@ -37,7 +37,9 @@ test('textoDaEntrada: tarefa realmente sem nada pra contar devolve null — não
 
 test('entradaDe: monta a forma que a tela desenha, com hora cortada pra HH:mm, a fonte do texto e a foto sinalizada', () => {
   const e = entradaDe({ id: 't1', data: '2026-09-08T00:00:00', hora: '09:15:00', titulo: 'Leitura do dia', comprovacao: { resumo: 'boa ideia', print_url: 'https://x/foto.jpg' } });
-  assert.deepEqual(e, { id: 't1', data: '2026-09-08', hora: '09:15', titulo: 'Leitura do dia', texto: 'boa ideia', fonte: 'resumo', notaPessoal: null, temFoto: true });
+  // DIR-104: a entrada passou a carregar a VOZ daquele dia. Sem gravação os
+  // três campos vêm neutros — nunca `undefined`, que quebraria deepEqual/JSON.
+  assert.deepEqual(e, { id: 't1', data: '2026-09-08', hora: '09:15', titulo: 'Leitura do dia', texto: 'boa ideia', fonte: 'resumo', notaPessoal: null, temFoto: true, audioPath: null, audioSeg: 0, audioExpirou: false });
 });
 
 test('entradaDe: com nota pessoal (Fase 2), ela entra na entrada; sem nota, fica null (nunca undefined, pra não quebrar deepEqual/JSON)', () => {

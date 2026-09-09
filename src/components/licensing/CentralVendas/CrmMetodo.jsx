@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -17,6 +17,13 @@ import {
   reunioesEmpresaDoDia, DIAS_SEMANA,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
+// 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
+// o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
+// nova janela de autorização no meio do agendamento (ver src/lib/googleAgenda.js).
+import {
+  tokenDoGoogle, erroDoGoogle, statusDoErro, invalidarTokenSePreciso,
+  contaLembrada, esquecerConta,
+} from '@/lib/googleAgenda';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
@@ -54,6 +61,8 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
+import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -100,7 +109,7 @@ const personalizarScript = (texto, nomeCompleto) => {
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
   const uid = currentUser?.id;
   // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
   // recomeçando... já me coloca ela no meu contato e pisca." O destaque
@@ -158,7 +167,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
-  const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
+  // qual conta do Google está ligada aqui — mostrada na tela de propósito:
+  // ver o e-mail antes de agendar é o que evita a reunião cair na conta errada.
+  const [googleConta, setGoogleConta] = useState(() => contaLembrada());
+
+  // 🔥 DIR-103 — AQUECIMENTO SILENCIOSO. Quem já autorizou neste aparelho
+  // ganha o token ANTES de precisar dele. É este pedaço que acaba com a
+  // janela do Google aparecendo no meio do agendamento — que era onde a
+  // pessoa clicava na conta errada.
+  useEffect(() => { if (contaLembrada()) tokenDoGoogle({ interativo: false }).catch(() => {}); }, []);
+
   // 📜 DIR-112 (09/09/2026) — dono, ao vivo: "imagina ele com fone, começando
   // a fazer a ligação... ele clica, esse papel vem pra frente." O script vira
   // um cartão que aparece na FRENTE de tudo quando a pessoa vai contatar —
@@ -768,7 +786,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, tempoTelaS }) => {
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
@@ -846,14 +864,52 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // ambiente incerto: em vez de aprovar ou perder de cara, cai pro gestor
     // decidir — igual às outras comprovações em dúvida.
     const emDuvida = vereditoAmbiente?.veredito === 'duvida';
+
+    // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
+    // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
+    // onde mora o vídeo: é voz, é íntimo, e link público não se desfaz depois
+    // que circulou. Guardar é o EXTRA — se falhar, o ritual segue e o texto,
+    // que é o que vale nota, já está aqui.
+    const guardarVoz = async (blob, pasta) => (blob
+      ? guardarAudio({
+        blob,
+        caminho: caminhoDoAudio({ pasta, uid, dia: hojeStr(), tarefaId: t.id, mime: blob.type }),
+        actorId: uid,
+      })
+      : null);
+    const [vozGratidao, vozAcao] = await Promise.all([
+      guardarVoz(audioGratidao, 'gratidao'),
+      guardarVoz(audioAcao, 'acao'),
+    ]);
+
     // 🌊 DIR-89 — ritual dentro do prazo E com o vídeo gravado ganha o selo
     // completo; sem vídeo (mas ainda dentro do prazo) aprova igual, só sem o
     // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como perdido
-    // acima.
+    // acima. Ambiente em dúvida (emDuvida) também segura o selo — cai pro
+    // gestor decidir, igual às outras comprovações em dúvida.
     const aprovadoDireto = naJanela && !!videoUrl && !emDuvida;
     const comprovacao = {
-      tipo: 'ritual', gratidao, acao, entrega: gratidao,
+      // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
+      // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
+      // mostraria a gratidão em branco. A ordem: o que ela escreveu, senão o
+      // que ela falou (transcrito), senão uma frase honesta com o botão de
+      // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
+      tipo: 'ritual', gratidao, acao,
+      entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
+      // "as suas palavras", COM a origem registrada. Não é desconfiança: é
+      // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
+      ...(audioGratidao ? { entrada_gratidao: 'audio', audio_gratidao_seg: audioGratidaoSeg || 0 } : {}),
+      // 🎙️ DIR-101.1 — a transcrição existe pro REGISTRO, não pra pessoa.
+      // Ela nunca apareceu na tela de quem gravou; está aqui pro Diário de
+      // Bolso ter o que mostrar e pra dar pra buscar depois. Se o Whisper não
+      // respondeu a tempo, fica sem — e o ritual vale do mesmo jeito, porque
+      // a entrega é o áudio.
+      ...(transcricaoGratidao ? { gratidao_transcricao: transcricaoGratidao } : {}),
+      ...(audioAcao ? { entrada_acao: 'audio' } : {}),
+      ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
+      ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
       status: emDuvida ? 'em_analise' : 'aprovada_ritual',
@@ -898,7 +954,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 🤖 chama a IA (1ª olhada OU 2ª, já com a justificativa da pessoa) e
   // aplica a régua de decisão (lib/xgameValidacao.decisaoAposIA) — nunca cai
   // pro gestor na primeira dúvida se a IA sabe o que perguntar.
-  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1 }) => {
+  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1, entradaResumo = null, audioResumoPath = null }) => {
     const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
     const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
@@ -947,6 +1003,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       tipo, print_url: printUrl, hash,
       ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
       ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+      // 🎙️ DIR-101 — origem do resumo e a voz guardada. Só aparecem quando
+      // houve fala: quem digitou continua com exatamente o mesmo registro.
+      ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
+      ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ia',
@@ -1028,7 +1088,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }
-    await avaliarComIA(t, { printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1 });
+    // 🎙️ DIR-101 — a voz do resumo também vira acervo, no cofre PRIVADO.
+    // Best-effort e DEPOIS do print: o print é a prova e não pode esperar o
+    // áudio; se o cofre piscar, a comprovação segue com o texto, que é o que
+    // vale nota.
+    let vozResumo = null;
+    if (dados.audioResumo) {
+      vozResumo = await guardarAudio({
+        blob: dados.audioResumo,
+        caminho: caminhoDoAudio({ pasta: 'resumos', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.audioResumo.type }),
+        actorId: uid,
+      });
+    }
+    await avaliarComIA(t, {
+      printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1,
+      // como o texto entrou — decisão do dono: áudio conta como "suas
+      // palavras", COM a origem registrada.
+      ...(dados.audioResumo ? { entradaResumo: 'audio' } : {}),
+      ...(vozResumo ? { audioResumoPath: vozResumo } : {}),
+    });
   };
 
   const alternarFeito = async (t) => {
@@ -1257,54 +1335,38 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     if (ok) setRegistroAberto(null);
   };
 
-  // 🗓️ DIR-47/48 — token da Google Agenda da PRÓPRIA pessoa (leitura +
-  // criação de evento; mesmo GOOGLE_CLIENT_ID do login; o token vive só
-  // nesta sessão do navegador — nunca vai pro servidor).
-  const obterTokenGoogle = async () => {
-    if (googleToken) return googleToken;
-    const r = await plataforma.functions.invoke('getGoogleClientId', {});
-    const clientId = r?.clientId;
-    if (!clientId) throw new Error('login Google não configurado');
-    if (!window.google?.accounts?.oauth2) {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://accounts.google.com/gsi/client';
-        s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
-        document.head.appendChild(s);
-      });
-    }
-    if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
-    const token = await new Promise((res, rej) => {
-      const tc = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-        callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
-        error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
-      });
-      tc.requestAccessToken();
-    });
-    setGoogleToken(token);
-    return token;
-  };
-
+  // 🗓️ DIR-47/48/103 — a Google Agenda da PRÓPRIA pessoa (leitura + criação
+  // de evento; mesmo GOOGLE_CLIENT_ID do login). O token nunca vai pro
+  // servidor; quem cuida dele é o `src/lib/googleAgenda.js`.
   const conectarGoogleAgenda = async () => {
     setGoogleConectando(true);
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const ini = new Date(); ini.setHours(0, 0, 0, 0);
       const fim = new Date(ini.getTime() + 86400000);
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(ini.toISOString())}&timeMax=${encodeURIComponent(fim.toISOString())}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       setGoogleEventos((j.items || []).map((e) => ({ id: e.id, titulo: e.summary || '(sem título)', inicio: e.start?.dateTime || e.start?.date || '' })));
+      setGoogleConta(contaLembrada());
       toast.success('Google Agenda conectada — eventos de hoje na tela');
     } catch (e) {
       console.warn('Google Agenda:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.error(`Não deu pra conectar a Google Agenda: ${e.message}`);
     } finally { setGoogleConectando(false); }
+  };
+
+  // "Trocar conta": esquecer o e-mail lembrado é o ÚNICO jeito de o Google
+  // voltar a perguntar. Sem este botão, lembrar a conta viraria prisão pra
+  // quem realmente tem duas agendas.
+  const trocarContaGoogle = async () => {
+    esquecerConta();
+    setGoogleConta(null);
+    setGoogleEventos(null);
+    await conectarGoogleAgenda();
   };
 
   // DIR-48 — cria o evento DE VERDADE na agenda da própria pessoa. Falhou?
@@ -1320,20 +1382,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       if (j?.id) registro.google_event_id = j.id; // DIR-50: o id permite editar/apagar depois
       toast.success('Evento criado na sua Google Agenda!');
       return j?.htmlLink || null;
     } catch (e) {
       console.warn('Criar evento Google:', e);
-      setGoogleToken(null);
+      // 🔴 DIR-103 — antes isto era `setGoogleToken(null)` em QUALQUER erro: um
+      // 500 do Google ou a internet oscilando jogava fora um token bom e
+      // obrigava nova janela de autorização — e é na janela que a pessoa erra
+      // a conta. Agora só 401/403 (a autorização acabou de verdade) derruba.
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Não deu pra criar no Google agora (${e.message}) — o agendamento foi salvo e o botão Google Agenda continua na agenda do dia.`);
       return null;
     }
@@ -1355,20 +1421,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return registroOriginal.google_event_link || null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       registro.google_event_id = j?.id || eventId;
       toast.success('Evento atualizado na sua Google Agenda!');
       return j?.htmlLink || registroOriginal.google_event_link || null;
     } catch (e) {
       console.warn('Atualizar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`A reunião foi atualizada no método, mas o Google não deixou mexer no evento agora (${e.message}) — ajuste por lá pelo link.`);
       return registroOriginal.google_event_link || null;
     }
@@ -1380,17 +1446,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const eventId = idDoEventoGoogle(registro);
     if (!eventId) return true;
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw erroDoGoogle(resp);
       toast.success('Evento apagado da sua Google Agenda.');
       return true;
     } catch (e) {
       console.warn('Apagar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Excluída do método — mas o Google não deixou apagar o evento agora (${e.message}). Apague por lá pelo link, se ainda existir.`);
       return false;
     }
@@ -2199,6 +2265,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>{t.comprovacao.tipo === 'ritual' ? '🌅 ritual completo' : '📚 comprovada'}</span>
                                 )
                               )}
+                              {/* 🎙️ DIR-101.1 — "posteriormente pode ouvir o áudio".
+                                  A gratidão falada não some depois de gravada: ela
+                                  vira acervo. O link é ASSINADO e de curta validade
+                                  (o cofre é privado), então é pedido na hora do
+                                  clique — nunca fica guardado na tela. */}
+                              {t.feito && t.comprovacao?.audio_gratidao_path && (
+                                <OuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} dia={t.data} segundos={t.comprovacao.audio_gratidao_seg || 0} />
+                              )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
                                 const est = estadoDaTarefa(t);
@@ -2307,7 +2381,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {visao === 'lista' && (
             <div className="pt-1">
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} />
+              {/* 🌑 09/09/2026 — dono: "fundo branco em mais um campo descoberto".
+                  Este campo nasceu quando a Jornada ainda era painel claro. O painel
+                  virou escuro e ele ficou pra trás: caixa branca no meio do preto,
+                  com a hora sumindo de tão clara. O componente já sabe ser escuro
+                  desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
@@ -2420,10 +2499,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm text-nz-tinta-fraca">
                   {clientesManuais.length} pessoas {visaoTotal ? 'na lista do TIME' : 'na sua lista'} · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="lista-adicionar-pessoa">
                     <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
                   </Button>
+                  {/* 📥 08/09 — importar em massa. Fica ao lado de "Adicionar
+                      pessoa" porque é a mesma pergunta ("como entra gente
+                      aqui?"), respondida de dois jeitos: um a um ou a agenda
+                      inteira. Só aparece pra quem pode importar — na visão de
+                      time, a lista é de outra pessoa, e importar contato pra
+                      carteira alheia não é uma operação que exista. */}
+                  {onImportarContatos && (
+                    <Button size="sm" variant="outline" onClick={onImportarContatos} className="border-nz-verde text-nz-verde hover:bg-nz-verde-fundo">
+                      <Upload className="w-4 h-4 mr-1" /> Importar contatos
+                    </Button>
+                  )}
                   {/* o cadastro de vendedor mora aqui agora: é na Lista de
                       Networking que a rede é construída, não no topo da página */}
                   {onNovoVendedor && (
@@ -2729,7 +2819,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     </Button>
                   </div>
                 </div>
-                {minha && googleEventos === null && (
+                {minha && googleConta && (
+                  <p className="text-[11px] text-nz-tinta-fraca">
+                    🗓️ Conectado como <span className="font-semibold text-nz-tinta">{googleConta}</span> —{' '}
+                    <button type="button" onClick={trocarContaGoogle} className="font-semibold text-nz-verde hover:text-nz-verde-claro">trocar conta</button>
+                  </p>
+                )}
+                {minha && googleEventos === null && !googleConta && (
                   <p className="text-[11px] text-nz-tinta-fraca">🗓️ Conecte o Google pra ver os SEUS eventos de hoje aqui no meio (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
                 )}
                 {!minha && (
