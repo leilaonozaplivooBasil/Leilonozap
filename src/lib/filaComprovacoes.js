@@ -46,6 +46,30 @@ export function agruparComprovacoesPorData(lista = []) {
   return grupos;
 }
 
+/**
+ * Dentro de um grupo de UM dia (saída de `agruparComprovacoesPorData`),
+ * agrupa por PESSOA — dono: "eu quero já separado por datas e por nomes...
+ * data de hoje, nome das pessoas que estão participando." Mesma regra da
+ * função acima: preserva a ORDEM de chegada, só junta quem é a mesma
+ * pessoa (`user_id`), nunca reordena por conta própria.
+ * @param {Array<{user_id:string}>} itens itens de um único dia
+ * @param {(id:string)=>string} nomeDe já resolvido por quem chama
+ * @returns {Array<[string, string, Array]>} triplas [user_id, nome, itensDaPessoa]
+ */
+export function agruparComprovacoesPorPessoa(itens = [], nomeDe = (id) => id) {
+  const grupos = [];
+  const porPessoa = new Map();
+  itens.forEach((item) => {
+    if (!porPessoa.has(item.user_id)) {
+      const bucket = [];
+      porPessoa.set(item.user_id, bucket);
+      grupos.push([item.user_id, nomeDe(item.user_id), bucket]);
+    }
+    porPessoa.get(item.user_id).push(item);
+  });
+  return grupos;
+}
+
 const DIA_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
 
 /** "09/09 · terça-feira" — o cabeçalho de cada grupo do dia. */

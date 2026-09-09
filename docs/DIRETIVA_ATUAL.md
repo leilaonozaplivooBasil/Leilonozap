@@ -12,6 +12,21 @@
 
 ---
 
+## DIR-128 — a fila de comprovações separa cada dia por pessoa, nos dois painéis
+
+**Emitida por:** dono (09/09/2026), olhando o dia de hoje com várias pessoas misturadas na mesma lista: *"eu quero já separado por datas e por nomes, cara. Data de hoje, nome das pessoas que estão participando."*
+
+**O que entra:**
+1. `agruparComprovacoesPorPessoa` nova em `src/lib/filaComprovacoes.js` — dentro de UM grupo de dia (saída de `agruparComprovacoesPorData`), junta quem é a mesma pessoa, preservando a ordem de chegada (mesma regra da função de data: nunca reordena por conta própria).
+2. Aplicada nos DOIS lugares que já tinham o agrupamento por dia (DIR-124/126): `XGameAdmin.jsx` (aba Comprovações) e `Comprovacoes.jsx` (a fila geral que o dono vê todo dia, logo após a Fila do Pronto). Em cada dia, um subcabeçalho por pessoa ("👤 Nome · N"), com as comprovações dela agrupadas ali embaixo — o nome sai da linha de cada item (já está no subcabeçalho), deixando a lista mais enxuta.
+3. Em `Comprovacoes.jsx`, o subagrupamento só entra na fila GERAL (`!pessoaId`) — a fila de UMA pessoa já não repetia o nome por linha, então não ganha subcabeçalho (seria repetir o óbvio).
+
+**Fora do escopo:** nenhuma mudança na busca por nome/data (DIR-124/126), na aprovação/reprovação, ou nos filtros de status — só um segundo nível de agrupamento visual.
+
+**Prova:** suíte 1931/1931 (4 testes novos em `tests/filaComprovacoes.test.mjs`: a função pura + a fiação nos dois componentes), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-127 — a Rotina Perfeita nunca mais duplica o dia inteiro
 
 **Emitida por:** dono (09/09/2026), vendo a fila de comprovações "bagunçada": *"isso é muito sério, muito sério, coloca isso aí, coloca uma trava pra tu não errar isso."*
