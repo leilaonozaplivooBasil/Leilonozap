@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { GitBranch, Plus, X, Save, Trophy, Search, History, HelpCircle } from 'lucide-react';
+import { GitBranch, Plus, X, Save, Trophy, Search, History, HelpCircle, ArrowLeftRight } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 import TourGuiado from './TourGuiado';
 import {
@@ -248,6 +248,14 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
         </div>
 
         {/* Kanban dos 8 estágios */}
+        {/* 👆 dono: "a esteira... está vazando no celular" — o Kanban é largo
+            demais pro celular de propósito (8 estágios lado a lado), então
+            SEMPRE precisou rolar de lado; sem esse aviso, quem só usa touch
+            achava que estava quebrado. Só aparece abaixo de `sm` (no desktop
+            as 8 colunas já cabem sem rolar). */}
+        <p className="sm:hidden text-[10px] text-nz-tinta-fraca flex items-center gap-1 mb-1" data-teste="esteira-dica-arrastar">
+          <ArrowLeftRight className="w-3 h-3" /> arraste pra ver os outros estágios
+        </p>
         <div className="overflow-x-auto pb-2" data-teste="esteira-kanban">
           <div className="flex gap-2 min-w-[1100px]">
             {ESTAGIOS_ESTEIRA.map((est) => {

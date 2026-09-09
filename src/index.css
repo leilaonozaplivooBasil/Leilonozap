@@ -555,6 +555,23 @@ body.pc-tema .livoo-brilho-forte {
   html, body {
     overflow-x: hidden;
     max-width: 100%;
+    overscroll-behavior-x: contain;
+  }
+
+  /* 🩹 09/09/2026 — dono: "a esteira... está vazando no celular... ajustar
+     pra aparecer no tablet, no celular e no computador, sem vazar nada."
+     Causa real: um Kanban/carrossel horizontal (`overflow-x-auto`) tem seu
+     PRÓPRIO scroll — mas no Safari/Chrome do celular, ao arrastar até o fim
+     dele, o gesto "vaza" e continua arrastando a PÁGINA inteira de lado
+     (scroll chaining + rubber-band), mesmo com o `overflow-x:hidden` do
+     html/body acima — porque isso acontece DEPOIS que o toque já iniciou
+     dentro do carrossel. `overscroll-behavior-x: contain` trava o arrasto
+     dentro do próprio carrossel, sem vazar pro resto da tela — em qualquer
+     área horizontal do app (Esteira de Captação, Funil Kanban do CRM, e
+     qualquer outra que use o mesmo padrão), sem precisar caçar tela por
+     tela. Nunca muda o layout — só a física do toque. */
+  .overflow-x-auto, .overflow-x-scroll {
+    overscroll-behavior-x: contain;
   }
 
   /* 🩹 Anti-"tremida" ao navegar: reserva sempre o espaço da barra de rolagem
