@@ -3,7 +3,7 @@
 // pesou na moeda... se possível deixar até o desenho da moeda, pra ver o que
 // cada fatia de pizza está pesando... e vai botando a cor de acordo com cada
 // fatia, porque só isso aqui é bronze, fez isso fez isso virou prata, fez
-// isso fez isso fez isso pra ter o diamante."
+// isso fez isso fez isso pra ter a platina."
 //
 // Lógica PURA aqui (testável sem montar SVG/JSX) — quem desenha é
 // MoedaPizza.jsx. Duas contas, nunca uma reinventando o Human Token:

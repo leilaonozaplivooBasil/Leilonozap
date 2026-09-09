@@ -271,9 +271,9 @@ export const AULAS_BRUTAS = [
       { nome: 'MvM do Dia', pergunta: 'como foi hoje?', explica: `Começa em ${br(MVM_MAX)} e cai a cada tarefa que passa da hora sem marcar. É a nota de hoje, só de hoje.` },
       { nome: 'Aplicabilidade', pergunta: 'como foi o mês?', explica: `É a sua constância no ciclo: a média dos dias que já passaram. Vale no máximo ${br(APLICABILIDADE_MAX)}. Um dia ruim não derruba; uma semana de descuido derruba.` },
       {
-        nome: 'Human Token',
+        nome: 'Human Token do dia',
         pergunta: 'quanto vale o seu dia',
-        explica: `É MvM + Aplicabilidade, no máximo ${br(TOKEN_MAX)}. É a moeda do jogo, e ela tem faixas. No CICLO inteiro (22 dias), essa mesma moeda de ${br(TOKEN_MAX)} é dividida em 5 fatias — MvM, Produção, Real Time, Bônus/Estudo e Vendas — e é ela, não o dia isolado, que decide sua liga.`,
+        explica: `É MvM do Dia + Aplicabilidade, no máximo ${br(TOKEN_MAX)}. É a moeda do SEU DIA, e ela tem faixas. No CICLO inteiro (22 dias), essa mesma moeda de ${br(TOKEN_MAX)} é dividida em 5 fatias — MvM, Produção, Real Time, Bônus/Estudo e Vendas — e é ela, o Human Token OFICIAL DO CICLO, não o dia isolado, que decide sua liga.`,
         faixas: true,
         moedaModelo: true,
       },
@@ -282,10 +282,10 @@ export const AULAS_BRUTAS = [
     caixas: [
       {
         tom: 'atencao',
-        titulo: 'A trava do estudo',
+        titulo: 'A trava do estudo — SÓ no Human Token DO DIA',
         linhas: [
-          `Se você não mantém constância na tarefa de leitura, seu token trava em ${br(TRAVA_SEM_ESTUDO)} — um centésimo abaixo do ouro. De propósito.`,
-          'Você pode fazer tudo o resto perfeito e mesmo assim não chegar ao ouro. Sem estudo, não tem ouro.',
+          `Se você não mantém constância na tarefa de leitura, seu Human Token DO DIA trava em ${br(TRAVA_SEM_ESTUDO)} — um centésimo abaixo do ouro do dia. De propósito.`,
+          'Repare: isso é só a nota de hoje. O Human Token OFICIAL DO CICLO (o do Hábito 2 e do X-GAME, com Bronze/Prata/Ouro/Platina) é outra conta, com outra trava — sem estudo, você trava um degrau ABAIXO da Platina, mas o Ouro do ciclo continua alcançável. Veja "Onde estou × Executivo Ideal" pra essa conta oficial.',
         ],
       },
       {
@@ -412,7 +412,7 @@ export const PERGUNTAS = [
   { p: 'Preciso de computador?', r: 'Não. Tudo funciona no celular. A maioria das pessoas do time usa só o celular.' },
   { p: 'Fiz a tarefa mas esqueci de tirar a foto. E agora?', r: 'Fale com seu gestor. Sem a comprovação a tarefa não fecha sozinha — ela cai na análise dele.' },
   { p: 'O botão de concluir não acende, mesmo com tudo preenchido.', r: `Na tarefa de estudo o botão só libera com a foto E o resumo de no mínimo ${RESUMO_MIN} caracteres. Olhe embaixo do botão: ele diz o que ainda falta. E o contador em cima diz quantas letras faltam.` },
-  { p: `Por que meu token não passa de ${br(TRAVA_SEM_ESTUDO)}?`, r: 'É a trava do estudo. Sem constância na tarefa de leitura, o sistema segura você um centésimo abaixo do ouro. Retome a leitura e ela destrava.' },
+  { p: `Por que meu Human Token DO DIA não passa de ${br(TRAVA_SEM_ESTUDO)}?`, r: 'É a trava do estudo. Sem constância na tarefa de leitura, o sistema segura a nota de hoje um centésimo abaixo do ouro do dia. Retome a leitura e ela destrava. Isso não afeta o Human Token OFICIAL DO CICLO — lá, sem estudo, quem trava é só a Platina; o Ouro do ciclo continua alcançável.' },
   { p: 'Quando começa um ciclo novo?', r: `No primeiro dia útil de cada mês. Ele dura ${CICLO_DIAS_UTEIS} dias úteis. Sábado e domingo não contam.` },
   { p: 'Fim de semana conta?', r: 'Não. O ciclo só anda em dia útil.' },
   { p: 'Como volto rápido pras minhas tarefas?', r: `Use o atalho aqui de cima, ou guarde este endereço nos favoritos: ${ENDERECOS.metodo}. Ele abre o Método direto.` },
@@ -425,7 +425,8 @@ export const DICIONARIO = [
   { palavra: 'Ciclo', significa: `O período do jogo: ${CICLO_DIAS_UTEIS} dias úteis, começando no primeiro dia útil do mês.` },
   { palavra: 'Comprovação', significa: 'A foto que prova que você fez a tarefa.' },
   { palavra: 'Cotação', significa: `Quanto o dia de hoje vale. Começa em ${br(COTACAO_DIA_1)} e cai até ${br(COTACAO_ULTIMO)}.` },
-  { palavra: 'Human Token', significa: `A moeda do jogo. MvM + Aplicabilidade, no máximo ${br(TOKEN_MAX)}.` },
+  { palavra: 'Human Token do dia', significa: `A moeda do SEU DIA. MvM do Dia + Aplicabilidade, no máximo ${br(TOKEN_MAX)}.` },
+  { palavra: 'Human Token oficial do ciclo', significa: `A moeda do CICLO inteiro — MvM da votação + Produção + Real Time + Bônus/Estudo + Vendas, no máximo ${br(TOKEN_MAX)}. É a que define sua liga: Bronze, Prata, Ouro ou Platina.` },
   { palavra: 'Master Task', significa: 'A lista das suas tarefas do dia.' },
   { palavra: 'MvM do Dia', significa: `Sua nota de hoje. Começa em ${br(MVM_MAX)} e cai sozinha.` },
   { palavra: `Votação MvM (${JANELA_INICIO}-${JANELA_FIM})`, significa: `Você avalia cada colega em 10 Virtudes. ATENÇÃO: não votar em TODOS até as ${JANELA_FIM} zera o dia inteiro — MvM, Human Token, pontos e X-Pay.` },

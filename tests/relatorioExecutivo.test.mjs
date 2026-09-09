@@ -115,7 +115,7 @@ test('DIR-112: posicao vira posicaoDoDia com a leitura da roda (redondez/faixa)'
     hojeISO: HOJE,
     posicao: {
       liga: { id: 'ouro', label: 'LIGA OURO', emoji: '🥇' },
-      proxima: { label: 'LIGA DIAMANTE', emoji: '💠', falta: 2.44 },
+      proxima: { label: 'LIGA PLATINA', emoji: '💠', falta: 2.44 },
       tokenCiclo: 18.5,
       tokenMax: 22.22,
       formacaoPct: 82,
@@ -138,7 +138,7 @@ test('DIR-112: posicao vira posicaoDoDia com a leitura da roda (redondez/faixa)'
 
   const txt = textoDoRelatorio(rel);
   assert.match(txt, /\*Posição do dia\* — 🥇 LIGA OURO/);
-  assert.match(txt, /Faltam 2\.44 pontos de Human Token pra 💠 LIGA DIAMANTE/);
+  assert.match(txt, /Faltam 2\.44 pontos de Human Token pra 💠 LIGA PLATINA/);
   assert.match(txt, /Human Token médio do ciclo: 18\.5 de 22\.22/);
   assert.match(txt, /Formação do Executivo Ideal: 82% — Parabéns!/);
 });
