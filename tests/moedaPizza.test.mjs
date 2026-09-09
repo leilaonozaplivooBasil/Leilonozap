@@ -148,14 +148,22 @@ test('XGameVisaoExecutiva.jsx: "sua posição" também desenha a moeda, com os c
 // XGameVisaoExecutiva (embutida na MESMA página, seção "Sua posição no
 // ciclo") mostravam os MESMOS ciclo.componentes da MESMA pessoa duas vezes
 // na mesma tela. A direta saiu — só a da XGameVisaoExecutiva embutida fica.
-test('pages/XGame.jsx: NÃO desenha a moeda diretamente — só a XGameVisaoExecutiva embutida, pra não duplicar', () => {
+//
+// 🐛 09/09/2026 — dono, comparando o próprio painel com o "MvM dele" (Super
+// Admin olhando outra pessoa): "não está aparecendo as duas moedas... tem
+// que aparecer, igual aparece pra mim tem que aparecer no dele." Achado: a
+// XGameVisaoExecutiva embutida (única dona da moeda) SOME inteira em
+// `modoAdmin` — então em modoAdmin nenhuma das duas moedas aparecia pra
+// ninguém. A regra vira: MoedaPizza pode ser importada de novo, mas só
+// pode DESENHAR dentro do gate `modoAdmin &&` — nunca fora dele (senão
+// duplica de novo no modo normal, o bug original).
+test('pages/XGame.jsx: só desenha a moeda direto em modoAdmin (onde a XGameVisaoExecutiva embutida some) — nunca fora disso, pra não duplicar', () => {
   const XGAME = fs.readFileSync(new URL('../src/pages/XGame.jsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(
-    XGAME,
-    /import MoedaPizza from/,
-    'a página não pode mais importar MoedaPizza diretamente — isso é o que causava a moeda duplicada que o dono reportou',
-  );
-  assert.match(XGAME, /import XGameVisaoExecutiva from/, 'a moeda "sua posição" continua vindo de dentro da XGameVisaoExecutiva embutida na página');
+  assert.match(XGAME, /import MoedaPizza from/, 'em modoAdmin a XGameVisaoExecutiva embutida some — precisa de um jeito próprio de desenhar a moeda da pessoa sendo olhada');
+  assert.match(XGAME, /\{modoAdmin && ciclo && \(/, 'as duas moedas diretas só podem existir dentro do gate modoAdmin — fora dele é a duplicata que o dono reportou');
+  assert.match(XGAME, /data-teste="moeda-pizza-admin"/);
+  assert.match(XGAME, /data-teste="moeda-pizza-admin-modelo"/, 'o modelo (DIR-118) também precisa aparecer em modoAdmin, igual aparece no modo normal');
+  assert.match(XGAME, /import XGameVisaoExecutiva from/, 'a moeda "sua posição" do modo normal continua vindo de dentro da XGameVisaoExecutiva embutida na página');
 });
 
 // 🩹 DIR-113.2 — dono, direto: "se o MVM dele é sete, vai aparecer sete, não

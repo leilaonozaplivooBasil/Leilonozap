@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-119 — as duas moedas voltam a aparecer quando o Super Admin olha outra pessoa (modoAdmin)
+
+**Emitida por:** dono (09/09/2026), comparando o próprio painel com o "MvM dele" (Quadro Geral → pessoa → aba "MvM dele"): *"eu olhei o meu painel, está aparecendo as duas moedas... só que eu sou superior de mim, eu olho o dos outros... eu olhei de um executivo aqui, não está aparecendo as duas moedas comparativas... tem que aparecer, igual aparece pra mim tem que aparecer no dele."*
+
+**Causa raiz:** a única seção que desenha as duas moedas (`pages/XGame.jsx`) é a `XGameVisaoExecutiva` embutida — e ela SOME inteira quando `modoAdmin` é verdadeiro (`{!modoAdmin && (...)}`, decisão de propósito pra não repetir o ranking do time inteiro na visita do Super Admin). Resultado: em `modoAdmin`, nenhuma das duas moedas aparecia pra ninguém — quebrando a promessa da própria página ("o que se VÊ continua sendo idêntico ao que a pessoa vê ao abrir sozinha").
+
+**O que entra:** dentro de `{modoAdmin && ciclo && (...)}`, `pages/XGame.jsx` volta a desenhar as duas moedas direto — real (`ciclo.componentes`/`ciclo.total`/`ciclo.liga`, o mesmo `ciclo` já calculado pra `userIdForcado`) e o modelo (`moedaModelo`, DIR-118) — sem tocar no modo normal (que continua vindo só da `XGameVisaoExecutiva` embutida, sem duplicar). `tests/moedaPizza.test.mjs` reescrito pra travar essa regra exata: `MoedaPizza` só pode desenhar dentro do gate `modoAdmin`, nunca fora.
+
+**Fora do escopo:** a "Todo mundo" (pódio/tabela do time inteiro) continua escondida em `modoAdmin`, como já era — o dono só pediu as moedas da pessoa sendo olhada, não o ranking geral repetido.
+
+**Achado à parte, aguardando decisão do dono (auditoria pedida na mesma mensagem — "confere, se não tem nenhuma moeda zerada, porque quem somou ponto não pode estar zerado"):** conta duplicada real no banco. "Joao Vitor Paim Pereira" (`e90ed562...`, e-mail auto-gerado `@concurso.leilaonozap.net`) é quem está oficialmente cadastrado em `xgame_participantes` (perfil comercial, em mentoria) e recebeu 70 votos de MvM (média 7,24) neste ciclo — mas tem ZERO linhas em `xgame_diario`. O trabalho de verdade (180 e 223 pontos nos últimos 2 dias, tarefas comprovadas) está gravado sob OUTRA conta, `4380f43a-...` ("paim", e-mail pessoal `joaovitorpaim06@gmail.com`), que não tem nenhum voto e não está em `xgame_participantes`. Resultado: a moeda oficial dele (a que conta pro X-Pay/liga) não enxerga a produção real, porque estão em contas diferentes. Não mexi no banco — é decisão do dono qual conta é a "oficial" pra unificar (histórico de votos e X-Pay são dados sensíveis). Auditoria no restante do time (17 participantes ativos) não achou nenhum outro caso de "somou ponto e ficou zerado" — os únicos com voto recebido mas zero produção este ciclo (Flavio Monteiro, José Amancio, Luciene Soares, Livoo Live) também têm zero tarefas feitas — ainda não abriram o "Meu Dia" neste ciclo, não é bug.
+
+**Prova:** suíte 1881/1881 (`tests/moedaPizza.test.mjs` reescrito pra validar a estrutura exata do gate), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-118 — a moeda-modelo cheia ao lado da moeda real, na tela viva
 
 **Emitida por:** dono (09/09/2026), olhando o próprio radar em 0% no dia 3 de 22: *"não é que ele acumula ponto no MvM, é que o dia de hoje ele está com o MvM de ontem... a moeda ganhou vida... é a cotação... a moeda tem que estar ali, pra ele se inspirar nela cheia, e entender como ela fica cheia, junto com a dele que está sendo preenchida."*

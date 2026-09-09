@@ -9,6 +9,7 @@ import {
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
+  TOKEN_MAX, ligaDoToken, moedaModelo,
   estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
@@ -18,6 +19,7 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 
 // X-GAME — o ESPAÇO DEDICADO da gamificação do Método (DIR-97, 08/09/2026).
 // Até aqui esta página era órfã — ninguém no app linkava pra ela — e tinha
@@ -526,7 +528,43 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
               duas vezes a moeda." A MoedaPizza direta que existia aqui (com
               os MESMOS ciclo.componentes) saiu — a seção "Sua posição no
               ciclo" da XGameVisaoExecutiva, logo abaixo nesta mesma página,
-              já desenha a MESMA moeda pro mesmo ciclo/pessoa. Uma só. */}
+              já desenha a MESMA moeda pro mesmo ciclo/pessoa. Uma só.
+
+              🐛 09/09/2026 — dono, comparando o PRÓPRIO painel com o "MvM
+              dele" que ele abre como Super Admin pra olhar outra pessoa:
+              "não está aparecendo as duas moedas... tem que aparecer, igual
+              aparece pra mim tem que aparecer no dele." Achado: a seção que
+              desenha essas moedas (XGameVisaoExecutiva, "Todo mundo", logo
+              abaixo) SOME inteira em `modoAdmin` (ver `{!modoAdmin && (...)}`
+              adiante) — de propósito, pra não repetir o ranking do time
+              inteiro. Mas ela também era o ÚNICO lugar que desenhava a moeda
+              da PESSOA sendo olhada, então em modoAdmin nenhuma das duas
+              moedas aparecia pra ninguém — quebrando a promessa desta
+              própria página (comment acima, linha ~43): "o que se VÊ
+              continua sendo idêntico ao que a pessoa vê ao abrir sozinha."
+              Conserto: só em modoAdmin (onde a versão de baixo não roda),
+              desenha aqui as duas moedas do `ciclo` já calculado pra
+              `userIdForcado` — real + o modelo cheio (moedaModelo, DIR-118).
+              Fora do modoAdmin nada muda: a pessoa continua vendo as duas
+              moedas só uma vez, na seção de baixo, como sempre. */}
+          {modoAdmin && ciclo && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-admin">
+                <div>
+                  <p className="text-sm font-extrabold text-white">🪙 Human Token — de onde vem cada ponto dele</p>
+                  <p className="text-[11px] text-[#817E8C] mt-0.5">cada fatia é o quanto aquilo pesou de verdade no Human Token de hoje, até o teto de {fmt2(TOKEN_MAX)}</p>
+                </div>
+                <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />
+              </div>
+              <div className="rounded-2xl border border-dashed border-amber-400/50 bg-amber-950/10 p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-admin-modelo">
+                <div>
+                  <p className="text-sm font-extrabold text-white">🏆 O Modelo — pra onde ele está indo</p>
+                  <p className="text-[11px] text-[#817E8C] mt-0.5">a mesma moeda, cheia — a referência de como ela fica quando cada fatia bate no teto</p>
+                </div>
+                <MoedaPizza componentes={moedaModelo(participante?.perfil || 'estrategico')} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
+              </div>
+            </div>
+          )}
 
           {/* ══ 🗳️ VOTAÇÃO MvM — dono: "a gente precisa botar a votação aqui,
               votar por aqui que é o mais correto." Mesma tabela do Compromisso,
