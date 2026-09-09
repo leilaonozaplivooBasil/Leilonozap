@@ -42,6 +42,22 @@ test('XGameAdmin.jsx: o cabeçalho do card avisa quando alguém comum está sem 
   assert.match(ADMIN, /ehParticipanteComum && !recebeVoto && <span[^>]*>🗳️ não recebe voto<\/span>/);
 });
 
+// 🚫 DIR-122 (09/09/2026) — dono, depois de eu unificar a conta duplicada
+// de Joao Vitor Paim Pereira na conta pessoal dele: "mas ele não pode
+// ganhar duas vezes... eu só escolhi uma conta no painel admin." A conta
+// duplicada (login auto-gerado, sem atividade) continua existindo — sem
+// esta trava, ela reaparecia na lista de "adicionar participante" e podia
+// ser escolhida de novo por engano, recriando a mesma confusão.
+test('XGameAdmin.jsx: a conta duplicada de Joao Vitor Paim Pereira nunca mais aparece pra ser escolhida como participante', () => {
+  assert.match(ADMIN, /IDS_DUPLICADOS_FORA_DO_XGAME = new Set\(\['e90ed56209c71d4bf4dd3bc3'\]\)/, 'a lista de exclusão precisa existir e conter o id exato da conta duplicada');
+  const inicioCandidatos = ADMIN.indexOf('const candidatos = useMemo(');
+  const trechoCandidatos = ADMIN.slice(inicioCandidatos, inicioCandidatos + 300);
+  assert.match(trechoCandidatos, /!IDS_DUPLICADOS_FORA_DO_XGAME\.has\(u\.id\)/, 'a lista de candidatos a virar participante precisa filtrar a conta duplicada');
+  const inicioContagem = ADMIN.indexOf('const contagemPorGrupo = useMemo(');
+  const trechoContagem = ADMIN.slice(inicioContagem, inicioContagem + 300);
+  assert.match(trechoContagem, /!IDS_DUPLICADOS_FORA_DO_XGAME\.has\(u\.id\)/, 'a contagem por grupo (o número ao lado de cada filtro) também não pode contar a conta duplicada');
+});
+
 test('DICAS.recebeVoto explica que ativo/mentoria/poder-votar continuam intocados', () => {
   const inicio = ADMIN.indexOf('recebeVoto:');
   assert.ok(inicio >= 0);
