@@ -424,28 +424,40 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // 🗳️ 08/09/2026 — dono: "o MVM é só votação... tem gente que nem foi
     // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
     // (real time disfarçado de MVM) — agora vem só da votação de verdade.
+    // 🏆 09/09/2026 — achado maior: o TOKEN deste ranking vinha da média de
+    // token_dia (mvm_dia automático + aplicabilidade) — um cálculo PARALELO
+    // que nunca levou voto em conta. Agora usa a MESMA fórmula com peso de
+    // voto (tokenDoCiclo) do painel pessoal — por isso precisa do perfil.
     Promise.all([
-      supabase.from('xgame_diario').select('user_id,token_dia,pontos,detalhes').eq('ciclo_inicio', ini),
+      supabase.from('xgame_diario').select('user_id,pontos,detalhes').eq('ciclo_inicio', ini),
       supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
-    ]).then(async ([{ data }, { data: votos }]) => {
+      supabase.from('xgame_participantes').select('user_id,perfil'),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
         const votosPor = {};
         (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
+        const perfilPor = {};
+        (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
         const por = {};
         (data || []).forEach((d) => {
-          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, token: 0, pontos: 0, xpay: 0 });
+          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, diasDetalhes: [] });
           r.dias += 1;
-          r.token += Number(d.token_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
+          r.diasDetalhes.push(d.detalhes || {});
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
         });
         Object.keys(votosPor).forEach((uid) => {
-          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, token: 0, pontos: 0, xpay: 0 };
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, diasDetalhes: [] };
         });
-        const linhas = Object.values(por).map((r) => ({
-          ...r,
-          token: r.dias ? r.token / r.dias : 0,
-          mvm: votosPor[r.user_id] ? mvmManual(votosPor[r.user_id]).media : null,
-        }));
+        const linhas = Object.values(por).map((r) => {
+          const votosRecebidos = votosPor[r.user_id];
+          const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
+          const { total: token } = tokenDoCiclo({
+            diasCiclo: r.diasDetalhes.map((detalhes) => ({ detalhes })),
+            mvmVotacao: mvmDoVoto,
+            perfil: perfilPor[r.user_id],
+          });
+          return { ...r, token, mvm: mvmDoVoto };
+        });
         const ids = linhas.map((l) => l.user_id);
         if (ids.length) {
           const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);

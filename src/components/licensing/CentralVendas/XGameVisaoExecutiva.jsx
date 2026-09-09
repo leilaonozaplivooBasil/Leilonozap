@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo } from '@/lib/xgame';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -88,22 +88,32 @@ export default function XGameVisaoExecutiva() {
       // (10 menos desconto por tarefa atrasada) — real time disfarçado de
       // MVM. Agora vem só da votação de verdade (xgame_votos_mvm) do ciclo.
       supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
-    ]).then(async ([{ data }, { data: votos }]) => {
+      // 🏆 09/09/2026 — dono: "o MVM pesa muito na moeda... mas o real time
+      // está pesando mais." Achado: o TOKEN/LIGA desta tabela vinha da média
+      // de token_dia (mvm_dia AUTOMÁTICO + aplicabilidade) — um cálculo
+      // PARALELO que nunca levou voto em conta, nem antes nem depois da
+      // repesagem em pesosDoPerfil. Agora o Token oficial do ranking usa a
+      // MESMA fórmula com peso de voto (tokenDoCiclo) do painel pessoal —
+      // por isso precisa do perfil de cada um (pesos diferentes por perfil).
+      supabase.from('xgame_participantes').select('user_id,perfil'),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
         if (!vivo) return;
         const votosPor = {};
         (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
+        const perfilPor = {};
+        (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
 
         const por = {};
         (data || []).forEach((d) => {
           const r = por[d.user_id] || (por[d.user_id] = {
-            user_id: d.user_id, dias: 0, token: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {},
+            user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDetalhes: [],
           });
           const total = Number(d.tarefas_total) || 0;
           const feitas = Number(d.tarefas_feitas) || 0;
           const fatia = total > 0 ? feitas / total : 0;
           r.dias += 1;
-          r.token += Number(d.token_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
+          r.diasDetalhes.push(d.detalhes || {});
           // 💰 08/09/2026 — a recuperação de fim de semana devolve o X-Pay de
           // uma tarefa PERDIDA sem reescrever o dia em si: soma direto aqui.
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
@@ -124,7 +134,7 @@ export default function XGameVisaoExecutiva() {
         // gente com voto recebido mas sem nenhum dia registrado ainda —
         // sem isso, ela nunca aparece na tabela pra mostrar o MvM dela
         Object.keys(votosPor).forEach((uid) => {
-          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, token: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {} };
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDetalhes: [] };
         });
 
         const lista = Object.values(por).map((r) => {
@@ -140,10 +150,16 @@ export default function XGameVisaoExecutiva() {
             d.setDate(d.getDate() - 1);
           }
           const votosRecebidos = votosPor[r.user_id];
+          const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
+          const { total: token } = tokenDoCiclo({
+            diasCiclo: r.diasDetalhes.map((detalhes) => ({ detalhes })),
+            mvmVotacao: mvmDoVoto,
+            perfil: perfilPor[r.user_id],
+          });
           return {
             ...r,
-            token: r.dias ? r.token / r.dias : 0,
-            mvm: votosRecebidos ? mvmManual(votosRecebidos).media : null,
+            token,
+            mvm: mvmDoVoto,
             regularidade: r.dias ? r.dias_fechados / r.dias : 0,
             fogo,
           };
