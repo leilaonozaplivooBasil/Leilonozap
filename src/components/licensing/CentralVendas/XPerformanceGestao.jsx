@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
 import XGame from '@/pages/XGame';
 import CaixaDeMensagensAdmin from '@/components/licensing/CentralVendas/CaixaDeMensagensAdmin';
+import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
+import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
@@ -148,8 +150,8 @@ const fmtDia = (iso) => {
 
 const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[12px] text-white outline-none focus:border-white/40';
 
-// 🚦 o topo do Quadro Geral: semáforo, cobrar no WhatsApp e as abas
-function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, onAba, onFechar, metasInfo }) {
+// 🚦 o topo do Quadro Geral: semáforo, cobrar no WhatsApp, PDF e as abas
+function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, onAba, onFechar, metasInfo, relatorio }) {
   const doHoje = tarefasCiclo.filter((t) => t.user_id === pessoaId && String(t.data).slice(0, 10) === hoje);
   const fila = filaDoPronto(tarefasCiclo.filter((t) => t.user_id === pessoaId));
   const atrasadas = fila.filter((f) => f.estado.id === 'atrasada');
@@ -175,6 +177,12 @@ function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, on
             <MessageCircle className="w-3.5 h-3.5" /> {cobrar ? 'cobrar o pronto' : 'chamar'} no WhatsApp
           </a>
         )}
+        {/* 📄 09/09/2026 — DIR-108, dono: "eu tinha um compartilhamento de
+            PDF... tem que puxar, duplicar esse compartilhamento aqui
+            dentro do painel administrativo da XGame." Mesmo componente do
+            X-Performance (PdfExecutivo/relatorioExecutivo) — nada
+            duplicado na lógica, só o botão chegando aqui também. */}
+        <PdfExecutivo relatorio={relatorio} />
         <button type="button" onClick={onFechar} aria-label="Fechar" title="fechar o Quadro Geral" className="inline-flex items-center gap-1 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-white/60 hover:bg-white/10"><X className="w-3.5 h-3.5" /> fechar</button>
       </div>
       <div className="mt-2 flex gap-1 overflow-x-auto" role="tablist" data-teste="abas-quadro-geral">
@@ -206,6 +214,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // isso... tanto eu como super admin." A caixa fica fechada por padrão,
   // igual Distribuir Tarefa — abre com 1 clique.
   const [mensagensAberto, setMensagensAberto] = useState(false);
+  // 📄 09/09/2026 — DIR-108: o relatório em PDF da pessoa aberta no Quadro
+  // Geral, computado por um PainelCorporativo oculto (mesma lógica do
+  // X-Performance, sem reescrever nada) via onRelatorio.
+  const [relatorioPessoa, setRelatorioPessoa] = useState(null);
 
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
@@ -536,7 +548,14 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
              enquanto está aberto, o resto da gestão sai da frente. */
           <div className="rounded-xl border border-white/15 p-3 sm:p-4 text-white" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="modal-pessoa" data-pessoa={pessoaFixo} ref={(el) => { if (el && !el.dataset.rolou) { el.dataset.rolou = '1'; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
             <div className="relative w-full">
-              <QuadroGeralTopo pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} telefone={usuarios.find((u) => u.id === pessoaFixo)?.phone} tarefasCiclo={tarefasCiclo} hoje={hoje} aba={abaModal} onAba={setAbaModal} onFechar={() => setModalAberto(false)} metasInfo={metasInfo} />
+              {/* 📄 DIR-108 — calcula o relatório da pessoa aberta, sem
+                  aparecer na tela (a própria X-Performance já mostra as
+                  metas/demandas dela nas outras abas daqui). `key` força
+                  recalcular do zero a cada pessoa trocada. */}
+              <div className="hidden" aria-hidden="true">
+                <PainelCorporativo key={pessoaFixo} currentUser={currentUser} hojeISO={hoje} gestao pessoaInicial={pessoaFixo} onRelatorio={setRelatorioPessoa} embutido />
+              </div>
+              <QuadroGeralTopo pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} telefone={usuarios.find((u) => u.id === pessoaFixo)?.phone} tarefasCiclo={tarefasCiclo} hoje={hoje} aba={abaModal} onAba={setAbaModal} onFechar={() => setModalAberto(false)} metasInfo={metasInfo} relatorio={relatorioPessoa} />
               <div className="flex items-start justify-between gap-2" hidden={abaModal !== 'pessoa'}>
                 <div className="min-w-0">
                   <p className="text-[15px] font-extrabold truncate">{nomeDe(pessoaFixo)}</p>

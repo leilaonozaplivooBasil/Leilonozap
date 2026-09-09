@@ -95,9 +95,22 @@ test('o relatório do executivo: cabeçalho, números, os quatro blocos e o nome
 
 test('sem meta, sem demanda e sem período: o relatório não quebra', () => {
   const rel = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE });
-  assert.deepEqual(rel.numeros.map((n) => n.valor), ['0/8', '—', '0/0', '0']);
-  assert.deepEqual(rel.blocos.map((b) => b.resumo), ['0 de 8', 'sem meta definida', 'nenhuma demanda']);
+  // 📄 09/09/2026 — DIR-108: sem `habitos` passado (não computado nesta
+  // tela), o bloco/número de Hábitos nem aparece — "0/8" seria dizer que a
+  // pessoa não fez nada, quando é só um dado que não foi lido aqui.
+  assert.deepEqual(rel.numeros.map((n) => n.valor), ['—', '0/0', '0']);
+  assert.deepEqual(rel.blocos.map((b) => b.resumo), ['sem meta definida', 'nenhuma demanda']);
   assert.equal(rel.semaforo, null);
+});
+
+test('habitos=null (não computado) omite o bloco; habitos=[] (computado, ninguém fez nada) mostra 0/8', () => {
+  const semHabitos = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE, habitos: null });
+  assert.ok(!semHabitos.blocos.some((b) => b.id === 'habitos'), 'não computado — nem aparece');
+  assert.ok(!semHabitos.numeros.some((n) => n.rotulo === 'Hábitos'));
+
+  const comHabitosVazio = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE, habitos: [] });
+  assert.ok(comHabitosVazio.blocos.some((b) => b.id === 'habitos'), 'array vazio É um dado — computado, zero feitos');
+  assert.equal(comHabitosVazio.numeros.find((n) => n.rotulo === 'Hábitos')?.valor, '0/8');
 });
 
 test('paraPdf: só o que a Helvetica desenha — travessão, aspas, setas, emoji e ✔✔ viram o parente mais próximo', () => {

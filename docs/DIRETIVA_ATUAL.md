@@ -12,6 +12,89 @@
 
 ---
 
+## DIR-109 — o mapa do jogador: radar dos 5 eixos do Executivo Ideal
+
+**Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107/108: *"a
+gente também conversou sobre a visualização... a gente falou que ia
+botar aí assim roda, você decidiu não botar em roda, pra gente ter um
+mapa, um mapa da pessoa, como se fosse um relatório, tipo de jogador de
+futebol que joga, que chuta... aonde ele está ruim ele tem que
+potencializar, onde ele tem que melhorar."*
+
+**O dado já existia** — `ciclo.taxas` × `EXECUTIVO_IDEAL` (MvM, Produção,
+Real Time, Bônus/Estudo, Vendas) já formava as 5 barras do painel
+"🎯 Onde estou × EXECUTIVO IDEAL", em `XGame.jsx` e `CrmMetodo.jsx`. Só
+faltava o formato "roda" que o dono pediu — a barra mostra o número
+certo, mas não a SILHUETA do desempenho num olhar só.
+
+**O que entra:**
+1. `RadarEixos.jsx` (novo) — um radar/pentágono em SVG puro (sem lib
+   nova): pentágono do alvo do Executivo Ideal (contorno tracejado
+   âmbar), sobreposto pela silhueta real da pessoa (preenchido, verde ou
+   vermelho onde fica abaixo do alvo) — exatamente a leitura "onde chuta
+   bem, onde tem que melhorar" de um mapa de jogador. Suporta os dois
+   dialetos do app (`escuro`/`claro`), igual `BarraProgresso`.
+2. `src/lib/xgame.js` ganhou `EIXOS_EXECUTIVO_IDEAL` — os mesmos 5 eixos
+   de `EXECUTIVO_IDEAL`, com rótulo curto (cabe na ponta do radar) e
+   emoji, pra não duplicar a leitura de dados entre o radar e as barras.
+3. O radar aparece logo abaixo da barra de formação, ANTES da lista de
+   barras — nas duas telas onde o painel Executivo Ideal já existe
+   (`XGame.jsx` e `CrmMetodo.jsx`). Como o "MvM dele" do Quadro Geral do
+   ADM já reaproveita `XGame.jsx` em `modoAdmin`, o Super Admin também
+   passa a ver o radar de qualquer pessoa, sem código novo lá.
+
+**Prova:** `tests/xgame.test.mjs` — 1 teste novo trava que
+`EIXOS_EXECUTIVO_IDEAL` nunca desalinha de `EXECUTIVO_IDEAL` (mesmas
+chaves, mesma ordem — senão o radar desenharia eixo fantasma ou
+esqueceria um de verdade, em silêncio). Suíte 1624/1624, lint limpo,
+`npm run build` sem erro. **Verificação em navegador rodou** — e achou
+exatamente o bug que um componente visual novo costuma esconder: os
+rótulos das pontas direita/esquerda ("Produção", "Real Time", "Vendas")
+saíam cortados, porque o texto estica bem além do raio do pentágono e o
+`<svg>` corta tudo que passa do `viewBox` por padrão. Corrigido com uma
+folga (`PAD_X`/`PAD_Y`) reservada só pro texto, nas quatro direções — a
+segunda foto confirma os 5 rótulos completos, sem corte.
+
+---
+
+## DIR-108 — o PDF compartilhável do Executivo chega no ADM X-Game
+
+**Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107: *"eu tinha
+um compartilhamento de PDF em algum lugar, né, um compartilhamento
+desse, de PDF dos números da pessoa, que eu não estou vendo digital, e
+você tem que ver onde está, e também tem que puxar, duplicar esse
+compartilhamento aqui dentro do painel administrativo da XGame."*
+
+**Onde estava:** `PdfExecutivo.jsx`/`relatorioExecutivo.js` (06/09/2026,
+"quero geração de PDF de cada executivo, pra ser compartilhado") — já
+existia, mas só dentro do X-Performance (`PerformanceEquipe.jsx` /
+`PainelCorporativo.jsx`), nunca no ADM X-Game.
+
+**O que entra:**
+1. O Quadro Geral (`XPerformanceGestao.jsx`) ganhou o botão **PDF** ao
+   lado de "cobrar no WhatsApp", pra qualquer pessoa aberta — reusando o
+   MESMO `PdfExecutivo`/`relatorioDoExecutivo` de sempre, sem duplicar
+   lógica: um `PainelCorporativo` oculto (`embutido`, escondido com
+   `hidden`) computa o relatório da pessoa via `onRelatorio`, exatamente
+   como o X-Performance já fazia.
+2. **Correção de bônus encontrada no caminho**: como o ADM X-Game não
+   calcula os 8 Hábitos, `relatorioDoExecutivo` mostrava "Hábitos 0/8" —
+   dado errado, não "não calculado". `habitos` agora é `null` por padrão
+   (não mais `[]`): `null` omite o bloco/número de Hábitos inteiro;
+   `[]` (quando alguém de fato computou e ninguém fez nada) continua
+   mostrando "0/8" normalmente. Isso também corrigiu o mesmo problema que
+   já existia silenciosamente no PDF "da própria pessoa" dentro do
+   X-Performance (`PainelCorporativo` sem `habitos` passado).
+
+**Prova:** `tests/relatorioExecutivo.test.mjs` — 1 teste novo trava a
+distinção `null` (omite) × `[]` (mostra 0/8); o teste existente de
+"relatório não quebra sem nada" foi ajustado pro novo comportamento
+correto. Suíte 1623/1623, lint limpo, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada — recomendado gerar um
+PDF ao vivo do Quadro Geral pra conferir o layout final.
+
+---
+
 ## DIR-107 — o aviso da Fila do Pronto passa a comunicar por dentro (e pede resposta por dentro)
 
 **Emitida por:** dono (09/09/2026), depois de testar o DIR-105 ao vivo:

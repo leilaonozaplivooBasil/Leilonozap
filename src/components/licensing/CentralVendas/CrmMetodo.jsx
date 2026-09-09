@@ -30,9 +30,10 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
+import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -1695,6 +1696,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   </div>
                 </div>
                 <BarraProgresso pct={ciclo.formacao.pct} dialeto="claro" altura="extra" corClasse="bg-nz-verde" trilhoClasse="bg-white border border-nz-verde/20" />
+
+                {/* 🎯 09/09/2026 — DIR-109, dono: "um mapa da pessoa, tipo
+                    de jogador de futebol... aonde ele está ruim ele tem
+                    que potencializar." */}
+                <RadarEixos
+                  dialeto="claro"
+                  eixos={EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({
+                    k, rotuloCurto, emoji,
+                    atual: Math.round((ciclo.taxas[k] || 0) * 100),
+                    alvo: Math.round(EXECUTIVO_IDEAL[k] * 100),
+                  }))}
+                />
 
                 <div className="space-y-2.5">
                   {[
