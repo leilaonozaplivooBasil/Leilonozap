@@ -936,7 +936,7 @@ export function dataISO(d = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
 }
 
-// 🐛 DIR-133 (09/09/2026) — auditoria noturna pedida pelo dono sobre o
+// 🐛 DIR-134 (09/09/2026) — auditoria noturna pedida pelo dono sobre o
 // Ritual do Amanhecer: o MESMO problema da DIR-129 (dataISO — o "hoje"
 // dependia do fuso do aparelho), só que na HORA do dia, não na data. A
 // janela do ritual (RITUAL_INICIO_MIN/RITUAL_FIM_MIN), o "AGORA/ATRASADO/
@@ -1421,7 +1421,7 @@ export const RITUAL_INICIO_MIN = 4 * 60 + 40;
 export const RITUAL_FIM_MIN = 5 * 60 + 30;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
-// 🌅 DIR-133 (09/09/2026) — auditoria noturna do Ritual do Amanhecer, dono:
+// 🌅 DIR-134 (09/09/2026) — auditoria noturna do Ritual do Amanhecer, dono:
 // "algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente
 // melhora a comunicação no ritual, pras pessoas lerem... vê se a gente cria
 // um aviso antes de começar o ritual dez minutos pra quando ela abrir,

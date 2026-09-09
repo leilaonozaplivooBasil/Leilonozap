@@ -68,7 +68,7 @@ test('CrmMetodo.jsx: mudarDia() usa somarDiasISO() (calendário puro) — não t
   assert.ok(!/d\.toISOString\(\)\.slice\(0, 10\)\);\s*\};/.test(CRM_METODO), 'mudarDia voltou a depender do fuso do aparelho');
 });
 
-// 🐛 DIR-133 (09/09/2026) — auditoria do Ritual do Amanhecer, dono: "vamos
+// 🐛 DIR-134 (09/09/2026) — auditoria do Ritual do Amanhecer, dono: "vamos
 // ver se a gente melhora... algumas pessoas reclamaram que não conseguiram."
 // Achado direto no banco: três pessoas reprovadas no ritual de hoje às
 // 05h17–05h25 de Brasília pelo corte de 5h15 — que já tinha sido corrigido

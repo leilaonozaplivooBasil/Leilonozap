@@ -12,7 +12,7 @@
 
 ---
 
-## DIR-133 — o relógio do jogo (não só a data) agora é sempre Brasília, e o ritual explica a si mesmo antes de começar
+## DIR-134 — o relógio do jogo (não só a data) agora é sempre Brasília, e o ritual explica a si mesmo antes de começar
 
 **Emitida por:** dono (09/09/2026), pedindo uma auditoria noturna: *"vamos fazer uma análise no ritual que algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente melhora a comunicação no ritual... vê se a gente cria um aviso antes de começar o ritual, dez minutos pra quando ela abrir, explicar como funciona."*
 
@@ -25,6 +25,22 @@
 **Verificado, não é achado novo:** o sistema de auto-atualização do app (`useAppVersion.js`/`AtualizacaoDisponivel.jsx`) já detecta deploy novo e troca de versão sozinho (com contagem visível, dentro de 4-10s) sempre que o app está aberto ou volta de segundo plano — os dois fixes acima devem alcançar quem abrir o app antes do ritual de amanhã, mesmo sem fechar e abrir de novo.
 
 **Prova:** suíte 1967/1967 (11 testes novos: `minutosBrasilia()` na virada exata de Brasília e no horário real das três reprovações de hoje; `deveAvisarRitual()` nos limites exatos dos 10min/janela; a fiação do aviso em `CrmMetodo.jsx`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-133 — o Kanban horizontal não vaza mais o arrasto pra página inteira no celular
+
+**Emitida por:** dono (09/09/2026), testando no celular: *"Fui em contatos agora, a esteira onde aparece uma esteira está vazando no celular. Então vamos ajustar pra aparecer no tablet, no celular e no computador, sem vazar nada, né? Em todo o aplicativo, principalmente na página aí da Top College."*
+
+**Causa:** os dois Kanbans horizontais do CRM (Esteira de Captação, 8 estágios; Funil do CRM, várias colunas) já usam `overflow-x-auto` — rolagem própria, correta. Mas no Safari/Chrome do celular, ao arrastar até o fim de um carrossel horizontal, o gesto "vaza" e continua arrastando a PÁGINA inteira de lado (scroll chaining/rubber-band) — mesmo com o `overflow-x:hidden` do `html`/`body` já existente, porque isso acontece DEPOIS que o toque já começou dentro do carrossel.
+
+**O que entra:**
+1. `overscroll-behavior-x: contain` em `src/index.css`, tanto no `html`/`body` quanto em **qualquer** elemento com `.overflow-x-auto`/`.overflow-x-scroll` — trava o arrasto dentro do próprio carrossel, sem vazar pro resto da tela, em **todo o app**, sem precisar caçar tela por tela. Não muda nenhum layout — só a física do toque.
+2. Uma dica "arraste pra ver os outros estágios/colunas" (só no celular, `sm:hidden`) acima dos dois Kanbans — pra quem só usa touch não achar que travou.
+
+**Fora do escopo:** nenhuma mudança de layout, cor ou estrutura — só a física do toque (scroll chaining) e uma dica de texto.
+
+**Prova:** suíte 1958/1958 (4 testes novos em `tests/mobileOverflowKanban.test.mjs`), lint limpo, `npm run build` sem erro.
 
 ---
 

@@ -801,7 +801,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  // 📣 DIR-133 — o aviso "como funciona o ritual", dos 10min antes da
+  // 📣 DIR-134 — o aviso "como funciona o ritual", dos 10min antes da
   // abertura até o fim da janela, pra quem ainda não fez hoje. Fechar vale
   // só pra essa sessão de tela — reaparece se recarregar ou amanhã, de
   // propósito: "não pode ter certeza que ela viu" (mesmo princípio do sino).
@@ -1732,7 +1732,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             </div>
             <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
 
-            {/* 📣 DIR-133 (09/09/2026) — dono: "algumas pessoas reclamaram,
+            {/* 📣 DIR-134 (09/09/2026) — dono: "algumas pessoas reclamaram,
                 falaram que não conseguiram [fazer o ritual]... vê se a gente
                 cria um aviso antes de começar o ritual, dez minutos pra
                 quando ela abrir, explicar como funciona." Aparece ANTES de

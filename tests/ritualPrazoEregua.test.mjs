@@ -59,7 +59,7 @@ test('ehOrganizacaoDoNegocio: pega o negócio/planejamento, não a organização
   assert.equal(ehOrganizacaoDoNegocio('Reunião 1 (45-60 min)'), false);
 });
 
-// 📣 DIR-133 (09/09/2026) — auditoria noturna do ritual, dono: "algumas
+// 📣 DIR-134 (09/09/2026) — auditoria noturna do ritual, dono: "algumas
 // pessoas reclamaram, falaram que não conseguiram... vê se a gente cria um
 // aviso antes de começar o ritual, dez minutos pra quando ela abrir,
 // explicar como funciona."
