@@ -221,14 +221,15 @@ test('tokenDoCiclo: reunião conta como princípio da venda, mas tem teto — n�
   assert.equal(comMuitasReunioes.reuniaoEquivalente, teto, `mesmo com 1000 reuniões, o teto (${teto}) segura — reunião não substitui vender`);
 });
 
-test('vendasEquivalentesAltoValor: parceria/adesão convertida pelo ticket médio — venda grande já preenche a meta', () => {
+test('vendasEquivalentesAltoValor: parceiro de compra/vendedor/adesão convertidos pelo ticket médio — venda grande já preenche a meta', () => {
   const vendas = [
     { kind: 'loja', total_amount: 197 }, // não é alto valor — ignorada aqui
     { kind: 'partner_plan', total_amount: 20000 },
+    { kind: 'seller_adhesion', total_amount: 5000 },
     { kind: 'adesao', total_amount: 5000 },
   ];
   const equivalentes = vendasEquivalentesAltoValor(vendas);
-  assert.equal(equivalentes, (20000 + 5000) / TICKET_MEDIO_VENDA);
+  assert.equal(equivalentes, (20000 + 5000 + 5000) / TICKET_MEDIO_VENDA);
   assert.ok(equivalentes > META_VENDAS_CICLO, 'uma licença de 20 mil sozinha já satura a meta do ciclo inteiro');
 });
 
