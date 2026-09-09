@@ -125,7 +125,25 @@ export default async function handler(req, res) {
       const rotina = rotinaEmVigor(perfilPor.get(id), ROTINA_PADRAO);
       linhasNovas.push(...gerarTarefasDaRotina(rotina, id, hoje, pesoAutomatico));
     }
-    if (linhasNovas.length) await sb('metodo_tarefas', { method: 'POST', body: JSON.stringify(linhasNovas) });
+    // 🐛 09/09/2026 — DIR-127, dono, direto: "isso é muito sério... coloca
+    // uma trava." Este cron rodava de madrugada; se o cliente de alguém
+    // TAMBÉM gerasse o mesmo dia (auto-repetição, CrmMetodo.jsx) antes de
+    // qualquer um dos dois marcar `rotina_gerada_em`, os DOIS inseriam a
+    // rotina inteira — 97 linhas duplicadas achadas no banco, 10 delas já
+    // com comprovação dupla (X-Pay contando a mesma tarefa duas vezes). A
+    // trava de verdade é o UNIQUE(user_id,data,hora,titulo) do banco
+    // (metodo_tarefas_unique_user_data_hora_titulo); aqui só troca o INSERT
+    // por um upsert com resolution=ignore-duplicates (o mesmo ON CONFLICT DO
+    // NOTHING do Postgres, via header do PostgREST).
+    if (linhasNovas.length) {
+      // 🎯 o PostgREST só usa a constraint NOVA (não a primary key) como alvo
+      // do conflito quando `on_conflict` vem explícito na URL.
+      await sb('metodo_tarefas?on_conflict=user_id,data,hora,titulo', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=ignore-duplicates' },
+        body: JSON.stringify(linhasNovas),
+      });
+    }
     if (paraGerar.length) {
       const perfilIds = paraGerar.map((id) => perfilPor.get(id).id);
       for (const lote of emLotes(perfilIds)) {

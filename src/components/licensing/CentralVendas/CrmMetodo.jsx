@@ -95,6 +95,19 @@ const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 const hojeStr = () => dataISO();
 const fmtDia = (s) => new Date(`${s}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
 
+// 🐛 09/09/2026 — DIR-127, dono, direto: "isso é muito sério... coloca uma
+// trava pra tu não errar isso." Achado: o cron (gerarJornadaDoDia) e a
+// auto-repetição do cliente (useEffect abaixo) podiam rodar pro MESMO dia
+// antes de qualquer um marcar `rotina_gerada_em` — gerava a rotina INTEIRA
+// em dobro (97 linhas duplicadas achadas no banco; 10 delas já com
+// comprovação dupla — X-Pay contando a mesma tarefa duas vezes). A trava de
+// verdade agora mora no BANCO (UNIQUE em user_id+data+hora+titulo,
+// metodo_tarefas_unique_user_data_hora_titulo); aqui só troca o
+// insert-um-a-um por um upsert em lote que IGNORA a duplicata em vez de
+// tentar criar (ou quebrar tentando) — nunca mais 40 tarefas no lugar de 20.
+const criarTarefasSemDuplicar = (linhas) => supabase.from('metodo_tarefas')
+  .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
+
 const EXEMPLO_SCRIPT = `Ex.: "Oi {nome}! Lembrei de você por causa do {contexto da pessoa — FORM}.
 Estou construindo um negócio de leilões e loja com preço de fábrica que está crescendo forte,
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
@@ -663,7 +676,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     try {
       diasGerados.current.add(dia); // o automático não repete o que a mão acabou de fazer
       const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
-      for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      await criarTarefasSemDuplicar(linhas);
       // 🔁 DIR-80 — gerar uma vez LIGA a repetição. "Só se a pessoa pedir pra
       // parar" — então o liga é aqui, e o desliga é um botão dela.
       // 🌅 DIR-81.1 — `rotina_gerada_em` sempre grava, ligada ou não: é contra
@@ -695,7 +708,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     (async () => {
       try {
         const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
-        for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+        await criarTarefasSemDuplicar(linhas);
         // DIR-81.1 — grava direto (sem salvarPerfil) pra não estourar o toast
         // "Salvo!" por cima do aviso de baixo, que é o que importa aqui.
         if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
@@ -713,7 +726,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     try {
       for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
       const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
-      for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      await criarTarefasSemDuplicar(linhas);
       if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
       toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
       setConfirmaRegerar(false);
@@ -846,11 +859,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         }
       } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }
     }
-    // ambiente claramente errado (carro/academia/escritório): reprova direto,
-    // sem selo, sem feito — não é "dúvida", é a régua nova funcionando.
-    if (vereditoAmbiente?.veredito === 'reprovada') {
+    // ambiente claramente errado (carro/academia/escritório) OU incerto
+    // (não dá pra cravar que é em casa): reprova direto, sem selo, sem feito.
+    //
+    // 🌊 09/09/2026 — DIR-125, dono, vendo comprovações presas em "em
+    // análise" esperando ele: "ela tem que pegar tudo... vai reprovar
+    // automático, entendeu? Só em casos impossíveis, mas não precisa."
+    // Antes, "duvida" caía pro gestor decidir — a ÚNICA rota do X-GAME
+    // inteiro que ainda tinha isso (toda comprovação normal já resolve
+    // sozinha desde a DIR-89). Agora dúvida de ambiente é reprovação
+    // automática igual ao ambiente claramente errado: intervenção humana
+    // ZERO, a pessoa tenta de novo (o motivo da IA já é pedagógico —
+    // SISTEMA, xgameValidarPrint.js — explica exatamente o que corrigir).
+    if (vereditoAmbiente?.veredito === 'reprovada' || vereditoAmbiente?.veredito === 'duvida') {
       const comprovacaoReprovada = {
-        tipo: 'ritual', gratidao, acao, entrega: gratidao,
+        tipo: 'ritual', gratidao, acao,
+        entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
         ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
         tempo_tela_s: tempoTelaS || 0,
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
@@ -864,9 +888,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       toast.error(`🏠 Ritual reprovado: ${vereditoAmbiente.motivo || 'o ambiente precisa ser a sua casa, com tranquilidade.'}`);
       return;
     }
-    // ambiente incerto: em vez de aprovar ou perder de cara, cai pro gestor
-    // decidir — igual às outras comprovações em dúvida.
-    const emDuvida = vereditoAmbiente?.veredito === 'duvida';
 
     // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
     // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
@@ -887,10 +908,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
     // 🌊 DIR-89 — ritual dentro do prazo E com o vídeo gravado ganha o selo
     // completo; sem vídeo (mas ainda dentro do prazo) aprova igual, só sem o
-    // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como perdido
-    // acima. Ambiente em dúvida (emDuvida) também segura o selo — cai pro
-    // gestor decidir, igual às outras comprovações em dúvida.
-    const aprovadoDireto = naJanela && !!videoUrl && !emDuvida;
+    // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como
+    // perdido acima; ambiente errado ou em dúvida nem chega aqui — já
+    // voltou reprovado automático acima (DIR-125).
+    const aprovadoDireto = naJanela && !!videoUrl;
     const comprovacao = {
       // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
       // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
@@ -915,8 +936,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
-      status: emDuvida ? 'em_analise' : 'aprovada_ritual',
-      veredito_ia: emDuvida ? vereditoAmbiente : {
+      status: 'aprovada_ritual',
+      veredito_ia: {
         veredito: 'aprovada', confianca: 100,
         o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
         motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
@@ -932,9 +953,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      toast.success(emDuvida
-        ? '🌅 Ritual enviado — o gestor vai conferir o ambiente antes de valer.'
-        : (aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)'));
+      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 

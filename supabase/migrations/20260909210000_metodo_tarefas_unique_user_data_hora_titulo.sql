@@ -1,0 +1,21 @@
+-- 🐛 DIR-127 (09/09/2026) — dono, direto: "isso é muito sério... coloca uma
+-- trava pra tu não errar isso." O cron `gerarJornadaDoDia` (madrugada) e a
+-- auto-repetição do cliente (CrmMetodo.jsx) podiam gerar a rotina INTEIRA do
+-- mesmo dia pra mesma pessoa antes de qualquer um dos dois marcar
+-- `rotina_gerada_em` — achamos 97 linhas duplicadas em produção, 10 delas já
+-- com comprovação dupla (X-Pay contando a mesma tarefa duas vezes).
+--
+-- Esta migração já foi aplicada DIRETO em produção (via mcp Supabase) antes
+-- de existir este arquivo, porque o pipeline automático de migração está
+-- quebrado (ver docs/DIRETIVA_ATUAL.md, achado da sessão sobre
+-- SUPABASE_ACCESS_TOKEN inválido) — este arquivo é o registro no repo, pra
+-- não perder a migração da história e pra ambientes novos nascerem com a
+-- trava certa.
+--
+-- A limpeza dos 97 duplicados já existentes também foi feita manualmente
+-- antes desta migração (mantendo, por grupo, a linha com feito=true,
+-- comprovacao preenchida e o created_date mais antigo) — sem isso, o ALTER
+-- TABLE abaixo teria falhado (não dá pra criar UNIQUE em cima de duplicata
+-- já existente).
+ALTER TABLE metodo_tarefas
+  ADD CONSTRAINT metodo_tarefas_user_data_hora_titulo_key UNIQUE (user_id, data, hora, titulo);

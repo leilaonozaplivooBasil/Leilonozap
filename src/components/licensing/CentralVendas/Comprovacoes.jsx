@@ -5,6 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, rotuloDataComprovacao } from '@/lib/filaComprovacoes';
 
 // 📸 AS COMPROVAÇÕES — a segunda análise do gestor, em cima.
 //
@@ -17,8 +18,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 // reprovar carimba `reprovada` com o motivo e devolve a tarefa pra pessoa.
 
 export const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 'reprovada');
-const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', reprovada: 'reprovada' };
-const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
+// 🐛 09/09/2026 — dono, vendo a fila: o Ritual do Amanhecer ('aprovada_ritual',
+// CrmMetodo.jsx) tinha selo VAZIO aqui — faltava o rótulo E a cor, então o
+// badge desenhava um retângulo sem nada dentro. As outras telas da fila
+// (XGameAdmin.jsx) já tratavam esse status; aqui não.
+const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual completo', reprovada: 'reprovada' };
+const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
 const fmtDia = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
 
 // 🖱️ 09/09/2026 — dono: "ver uma prévia do print sem clicar e levar pra
@@ -85,8 +90,17 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
   const { lista, carregando, radar, aprovar, reprovar } = useComprovacoes({ pessoaId });
   const [filtro, setFiltro] = useState('em_analise');
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
+  // 🔎 09/09/2026 — DIR-126, dono, mesma régua do ADM X-Game (DIR-124):
+  // "eu preciso separar por data... busca... tanto a data e tanto o dia."
+  // Esta é a fila que ele vê TODO dia, logo depois da Fila do Pronto — a
+  // busca/agrupamento tinha ido só pra dentro do ADM, sem passar por aqui.
+  const [busca, setBusca] = useState('');
   const pendentes = lista.filter((t) => statusDaComp(t.comprovacao) === 'em_analise').length;
-  const visiveis = lista.filter((t) => filtro === 'todas' || statusDaComp(t.comprovacao) === filtro);
+  const visiveis = useMemo(() => lista.filter((t) => {
+    if (filtro !== 'todas' && statusDaComp(t.comprovacao) !== filtro) return false;
+    return comprovacaoBateNaBusca(t, nomeDe(t.user_id), busca);
+  }), [lista, filtro, busca, nomeDe]);
+  const visiveisPorData = useMemo(() => agruparComprovacoesPorData(visiveis), [visiveis]);
   const r = pessoaId ? radar[pessoaId] : null;
 
   if (carregando) return <p className="text-[11px] text-white/40 py-2"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> carregando as comprovações…</p>;
@@ -100,8 +114,13 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
             <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Comprovações</p>
           </>
         )}
+        {/* 🤖 09/09/2026 — DIR-125, dono: "a IA tem que pegar tudo... intervenção
+            humana zero." Desde a DIR-89 (comprovação normal) e a DIR-125 (o
+            Ritual do Amanhecer, a última rota que ainda caía pro gestor), a
+            IA decide sozinha — aprova ou reprova. Este número deve ficar em
+            zero quase sempre; quando não fica, é caso raro de verdade. */}
         <span className={`text-[10px] ${pendentes ? 'text-amber-300 font-bold' : 'text-white/35'}`} data-teste="comprovacoes-pendentes">
-          {pendentes ? `${pendentes} em análise — a segunda análise é sua` : 'nada em análise'}
+          {pendentes ? `${pendentes} em análise — casos raros que a IA não decidiu sozinha` : 'nada em análise — a IA decide tudo sozinha'}
         </span>
         {r && <span className="text-[10px] text-white/35" data-teste="comprovacoes-radar">· radar: {r.aprovadas} aprovada{r.aprovadas === 1 ? '' : 's'} · {r.analise} em análise · {r.reprovadas} reprovada{r.reprovadas === 1 ? '' : 's'}</span>}
         <span className="ml-auto flex gap-1">
@@ -110,11 +129,28 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
           ))}
         </span>
       </div>
+      {!compacto && (
+        <input
+          placeholder="🔎 buscar por nome ou por data (ex.: “luciano” ou “09/09”)"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          className="w-full h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white placeholder:text-white/30 px-2.5"
+          data-teste="comprovacoes-busca"
+        />
+      )}
       {visiveis.length === 0 ? (
-        <p className="text-[11px] text-white/35">{filtro === 'em_analise' ? 'Nenhuma comprovação esperando a sua análise.' : 'Nenhuma comprovação.'}</p>
+        <p className="text-[11px] text-white/35">{busca ? 'Nada encontrado nessa busca.' : filtro === 'em_analise' ? 'Nenhuma comprovação esperando a sua análise.' : 'Nenhuma comprovação.'}</p>
       ) : (
+        <div className="space-y-2" data-teste="comprovacoes-por-data">
+        {visiveisPorData.map(([data, itens]) => (
+          <div key={data} className="space-y-1">
+            {!compacto && (
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-wide" data-teste="comprovacoes-cabecalho-data">
+                📅 {rotuloDataComprovacao(data)} <span className="font-normal normal-case text-white/25">· {itens.length}</span>
+              </p>
+            )}
         <ul className="space-y-1">
-          {visiveis.map((t) => {
+          {itens.map((t) => {
             const s = statusDaComp(t.comprovacao);
             const c = t.comprovacao || {};
             return (
@@ -123,7 +159,7 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
                   <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[s] || ''}`}>{ROTULO[s] || s}</span>
                   {!pessoaId && <span className="font-bold text-white/85 truncate">{nomeDe(t.user_id)}</span>}
                   <span className="text-white/70 truncate">{t.titulo}</span>
-                  <span className="text-white/40 shrink-0">{fmtDia(t.data)}{t.hora ? ` ${String(t.hora).slice(0, 5)}` : ''}</span>
+                  <span className="text-white/40 shrink-0">{compacto ? fmtDia(t.data) : ''}{t.hora ? ` ${String(t.hora).slice(0, 5)}` : ''}</span>
                   {c.print_url && (
                     <PreviaDaProva url={c.print_url} tipo="imagem" className="shrink-0 text-nz-verde hover:underline">ver o print</PreviaDaProva>
                   )}
@@ -131,6 +167,16 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
                     <PreviaDaProva url={c.video_url} tipo="video" className="shrink-0 inline-flex items-center gap-1 text-amber-300 hover:underline">
                       <Video className="w-3 h-3" /> ver o vídeo{c.video_seg ? ` (${c.video_seg}s)` : ''}
                     </PreviaDaProva>
+                  )}
+                  {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio, tem que
+                      tudo transcrever e mostrar ali." O texto que a pessoa
+                      escreveu OU falou (já transcrito — gratidão do ritual,
+                      resumo da leitura) nunca aparecia aqui, só o veredito da
+                      IA. `entrega` já é essa fonte única (CrmMetodo.jsx); só
+                      não mostra quando é uma URL (foto/print/link — a prévia
+                      acima já cobre isso). */}
+                  {c.entrega && !/^https?:\/\//.test(c.entrega) && (
+                    <span className="text-white/60 italic truncate" title={c.entrega}>"{c.entrega}"</span>
                   )}
                   {c.veredito_ia?.motivo && <span className="text-white/35 truncate" title={c.veredito_ia.o_que_viu || ''}>IA: {c.veredito_ia.motivo}</span>}
                   {s === 'reprovada' && c.motivo_gestor && <span className="text-red-200/70 truncate">↩ {c.motivo_gestor}</span>}
@@ -152,6 +198,9 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
             );
           })}
         </ul>
+          </div>
+        ))}
+        </div>
       )}
     </div>
     </TooltipProvider>
