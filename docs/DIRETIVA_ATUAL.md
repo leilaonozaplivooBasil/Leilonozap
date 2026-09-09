@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-116 — o pódio da Visão Executiva ganha foto real, emoldurada pela cor da liga
+
+**Emitida por:** dono (09/09/2026), depois de ver o pódio no preview: *"vamos puxar a imagem, a foto da pessoa do perfil dela pra dentro da visão executiva... e melhorar esse ranking com a imagem dele... fazer a imagem dele dentro da moeda que ele está... o pódio está muito feio, dá muito cara de emoji. Pode mais foda mesmo, entendeu? Pra dar mais vontade da pra pessoa."* — pediu explicitamente o design por escrito antes de mexer no código; o plano foi discutido e aprovado ("boooraaaaa") antes desta implementação.
+
+**O que entra:**
+1. A busca de `app_users` na Visão Executiva passa a trazer `avatar_url`/`profile_photo_url` (antes só nome) e resolve a foto com `getFotoPerfil` (`src/lib/selosCargo.js`) — a mesma fonte que o Quadro de Compromisso já usa, nenhuma lógica nova de onde a foto mora.
+2. Componente `Avatar` novo: desenha a foto (ou, sem foto, as iniciais num círculo com gradiente — nunca fica vazio) **emoldurada por um anel na cor da própria liga** da pessoa (a mesma paleta `COR_LIGA` que já existia, sem duplicar) — é isso que faz "a moeda" ser a própria foto, não uma forma solta do lado do nome.
+3. O pódio (2º·1º·3º) troca o círculo de iniciais por esse Avatar — o 1º lugar com a foto maior (80px vs. 56px dos outros dois), continuando no degrau mais alto do palco. "Você" ganha um segundo anel verde por fora do anel de liga, compondo os dois em vez de substituir.
+4. A tabela "Todo mundo" ganha o mesmo Avatar (menor, 22px) ao lado do nome — consistência entre pódio e tabela, sem o pontinho solto de antes.
+
+**Nota de reconciliação (merge, 09/09/2026):** esta diretiva nasceu numerada DIR-115 numa branch paralela (`claude/project-structure-analysis-r1prad`), na mesma hora em que a outra sessão registrava a repesagem da moeda como DIR-115 na `xgame-visual-polish` — colisão de numeração entre as duas frentes, cada uma sem ver a entrada da outra. Renumerada pra DIR-116 ao mergear as duas branches; nenhum conteúdo mudou, só o número. `COR_LIGA['diamante']` também foi renomeada pra `COR_LIGA['platina']` no merge, pra acompanhar o DIR-115 (Diamante → Platina) — só o nome da chave, a paleta de cor é a mesma.
+
+**Prova:** suíte 1701/1701 (sem teste novo — é troca visual, sem lógica de negócio nova), lint limpo, `npm run build` sem erro. Verificação em navegador nova (`tests/navegador/podio-visao-executiva.*`): banca com 5 pessoas, 4 com foto (SVG de mentira) e 1 sem foto de propósito — screenshot confirma foto real emoldurada pela cor da liga no pódio e na tabela, fallback de iniciais funcionando pra quem não tem foto, e o anel duplo (liga + verde) em "você".
+
+---
+
 ## DIR-115 — repesagem da moeda: MvM vira portão (caráter), Diamante vira Platina, 4 ligas parelhas
 
 **Emitida por:** dono (09/09/2026), depois de revisar a planilha original junto com Claude, em conversa: *"o jargão da empresa é recrutamos caráter e treinamos habilidade... a produção ela chega aos quarenta e cinco por cento com o realtime"*; sobre o nome do topo: *"eu não quero botar diamante... que não lembre multinível — o nível pica de chegar mesmo, que é o executivo ideal pica, que tem que ser infalível"*; aprovação final: *"bora gostei capricha."*
