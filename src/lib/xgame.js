@@ -483,19 +483,26 @@ export const PESO_REUNIAO_EQUIVALENTE = 0.25;
 export const TETO_REUNIAO_NA_META = 0.3;
 
 /**
- * Venda de valor alto (parceria de compra, adesão/licença) convertida em
- * "vendas equivalentes" pelo ticket médio — dono: "se ele fechou uma
- * licença de vinte mil, já preencheu." `vendasPagas` já vem filtrada por
- * quem chama (mesma régua `isSalePago` que a venda de mercadoria usa) —
- * aqui só soma o `total_amount` de quem é kind 'partner_plan'/'adesao' e
- * divide pelo ticket médio.
+ * Venda de valor alto (parceiro de compra, licenciado, ponto de retirada,
+ * vendedor...) convertida em "vendas equivalentes" pelo ticket médio —
+ * dono: "se ele fechou uma licença de vinte mil, já preencheu."
  *
- * 🔴 "investimento" (aporte/investidor) ficou de fora por enquanto: não
- * achamos nenhuma tabela que registre esse tipo de negociação hoje — é
- * outra pergunta pro dono antes de inventar uma conta pra um dado que
- * não existe ainda.
+ * 🔧 09/09/2026 — DIR-110.1, correção depois do dono explicar o caso real
+ * (Luciano Pinheiro fechou o Renan, R$200.000, parceiro de compra "por
+ * fora" — depósito fora da plataforma): os kinds aqui são os MESMOS que
+ * `bucketDaVenda()` (src/lib/captacaoParceiros.js) já usa oficialmente
+ * pra captação — 'partner_plan' (parceiro de compra), 'seller_adhesion'
+ * (vendedor) e 'adesao' (licenciado/loja física/ponto de retirada/
+ * distribuidor, todos como adesão de cargo). `vendasPagas` já vem
+ * filtrada por quem chama.
+ *
+ * O que fecha "por fora" (depósito direto, sem passar pela plataforma)
+ * NÃO aparece aqui — isso vem de `captacao_oportunidades.aporte_externo`
+ * (a esteira de captação, DIR-40), somado à parte por quem chama, porque
+ * mora numa tabela diferente com sua própria validação
+ * (`aporteExternoValido`, em `esteiraCaptacao.js`).
  */
-const KINDS_ALTO_VALOR = new Set(['partner_plan', 'adesao']);
+const KINDS_ALTO_VALOR = new Set(['partner_plan', 'seller_adhesion', 'adesao']);
 export function vendasEquivalentesAltoValor(vendasPagas = [], ticketMedio = TICKET_MEDIO_VENDA) {
   const total = (Array.isArray(vendasPagas) ? vendasPagas : [])
     .filter((s) => KINDS_ALTO_VALOR.has(s?.kind))

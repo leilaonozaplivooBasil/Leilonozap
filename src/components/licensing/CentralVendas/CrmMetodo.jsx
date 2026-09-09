@@ -30,10 +30,12 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
+import { isVendaReal } from '@/lib/dinheiroReal';
+import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -249,19 +251,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // só a comissão da plataforma — aqui é ponto, não dinheiro). O dono da venda
   // pode estar em 4 colunas (legado — mesmo OR do CrmClientesTab).
   const [vendasCiclo, setVendasCiclo] = useState(null);
-  // 🟢 09/09/2026 — DIR-110: venda de alto valor (parceria, adesão) entra
-  // somada, convertida em "vendas equivalentes" pelo ticket médio.
+  // 🟢 09/09/2026 — DIR-110/110.1, dono: "o parceiro de compra... ele pode
+  // fechar pela plataforma ou pode fazer depósito por fora." Venda de alto
+  // valor na plataforma soma via catalog_sales; a "por fora" soma pela
+  // esteira de captação (captacao_oportunidades.aporte_externo, DIR-40).
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setVendasCiclo(null); return; }
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
-      .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
-      .gte('created_date', `${ini}T00:00:00`)
-      .then(({ data, error }) => {
-        if (error) { setVendasCiclo(null); return; }
-        const pagas = (data || []).filter(isSalePago);
-        setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(pagas));
-      });
+    Promise.all([
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
+        .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
+        .gte('created_date', `${ini}T00:00:00`),
+      supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
+        .eq('responsavel_id', uid)
+        .gte('fechado_em', `${ini}T00:00:00`),
+    ]).then(([{ data: sales, error: e1 }, { data: oportunidades, error: e2 }]) => {
+      if (e1 || e2) { setVendasCiclo(null); return; }
+      const pagas = (sales || []).filter(isSalePago);
+      const reais = (sales || []).filter(isVendaReal);
+      const aporteExterno = (oportunidades || [])
+        .filter((o) => ehFechada(o) && aporteExternoValido(o))
+        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
+      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+    });
   }, [painel, uid, cicloConfig]);
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
   // (declarado ANTES do useMemo do xgame de propósito — a nota do dia agora

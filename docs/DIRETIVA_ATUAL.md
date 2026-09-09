@@ -12,6 +12,55 @@
 
 ---
 
+## DIR-110.1 — correção: venda de alto valor "por fora" também conta (esteira de captação)
+
+**Emitida por:** dono (09/09/2026), explicando o caso real que faltou:
+*"Luciano Pinheiro fechou o Renan, duzentos mil, foi um parceiro de
+compra. Ele pode fechar pela plataforma ou pode fazer depósito por fora
+— no caso dele foi por fora... tem o parceiro de compra e tem as
+licenças, depois vem o licenciado, depois vem o ponto de retirada...
+tem que olhar a plataforma que você já tem documento, que já tem como
+funciona pra fazer isso aí."*
+
+**O erro no DIR-110:** eu tinha assumido que venda de alto valor só
+existia dentro de `catalog_sales` (kind `partner_plan`/`adesao`) — e
+sinalizei "investimento" como sem fonte de dado. Fui investigar o
+documento que o dono mencionou (`docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`
+e `src/lib/captacaoParceiros.js`, a régua OFICIAL da meta de captação de
+R$1.000.000, DIR-22) e descobri: existe sim um mecanismo pra fechar
+"por fora" — a esteira de captação (`captacao_oportunidades`, DIR-40),
+com o campo `aporte_externo` (banco, valor, data, quem registrou) pra
+depósito direto fora do checkout automático. É exatamente o caso do
+Renan.
+
+**A correção:**
+1. `vendasEquivalentesAltoValor()` ganhou o kind `seller_adhesion`
+   (Vendedor) além de `partner_plan`/`adesao` — os mesmos 3 kinds que
+   `bucketDaVenda()` (a régua oficial da meta de captação) já trata como
+   captação de verdade, não mercadoria.
+2. Nova soma, em paralelo à de `catalog_sales`: `captacao_oportunidades`
+   filtrada por `responsavel_id` da pessoa e fechada
+   (`ehFechada` + `aporteExternoValido`, ambas de `esteiraCaptacao.js` —
+   sem duplicar a validação, só reusando a que já existe) dentro do
+   ciclo, com o `aporte_externo.valor` somado e convertido pelo mesmo
+   ticket médio.
+3. O filtro de "venda paga" pra alto valor trocou de `isSalePago` (usada
+   só pra mercadoria) pra `isVendaReal` (`dinheiroReal.js`) — a régua
+   OFICIAL de "isso é dinheiro real" já usada na meta de captação.
+
+**"Investimento" já estava certo** — não é uma categoria separada: é o
+"Parceiro de Compra" (aporte com retorno, `src/lib/planosParceiro.js`),
+a mesma coisa que Luciano fechou com o Renan. Não sobrou nada sem fonte
+de dado.
+
+**Prova:** teste de `vendasEquivalentesAltoValor` ampliado pro terceiro
+kind (`seller_adhesion`). Suíte 1637/1637, lint limpo, `npm run build`
+sem erro. Verificação em navegador não rodou nesta rodada — recomendo
+testar ao vivo com um aporte externo real registrado na esteira de
+captação pra confirmar que o número chega certo no Executivo Ideal.
+
+---
+
 ## DIR-110 — o eixo Vendas do Executivo Ideal: meta maior, reunião conta, venda grande satura
 
 **Emitida por:** dono (09/09/2026): *"o executivo ideal exige venda de
