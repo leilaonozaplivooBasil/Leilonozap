@@ -48,7 +48,7 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
-import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
+import { caminhoDoAudio, guardarAudio, ouvirAudio } from '@/lib/cofreDeAudio';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -88,6 +88,38 @@ Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
+// 🎙️ DIR-101.1 — OUVIR A PRÓPRIA GRATIDÃO DEPOIS.
+// O cofre é privado: não existe URL fixa, só link assinado de 10 minutos. Por
+// isso o link é pedido no CLIQUE e não fica pendurado na tela — link assinado
+// guardado em componente vence sozinho e vira "não abre" sem explicação.
+function BotaoOuvirGratidao({ caminho, uid }) {
+  const [url, setUrl] = React.useState(null);
+  const [buscando, setBuscando] = React.useState(false);
+  const [erro, setErro] = React.useState(false);
+
+  const abrir = async () => {
+    if (url || buscando) return;
+    setBuscando(true); setErro(false);
+    const link = await ouvirAudio({ caminho, actorId: uid });
+    if (link) setUrl(link); else setErro(true);
+    setBuscando(false);
+  };
+
+  if (url) return <audio src={url} controls autoPlay className="h-8 w-44 shrink-0" data-teste="ouvir-gratidao" />;
+  return (
+    <button
+      type="button"
+      onClick={abrir}
+      disabled={buscando}
+      data-teste="botao-ouvir-gratidao"
+      className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline disabled:opacity-50"
+      title="ouvir a gratidão que você gravou"
+    >
+      {buscando ? '🎙️ abrindo…' : erro ? '🎙️ não abriu — tente de novo' : '🎙️ ouvir'}
+    </button>
+  );
+}
+
 export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr }) {
   const uid = currentUser?.id;
   const podeGerir = gestao ?? visaoTotal;
@@ -626,7 +658,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, audioGratidao, audioAcao, tempoTelaS }) => {
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
@@ -670,12 +702,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // "BRILHANTE". `naJanela`/`videoUrl` viram só metadado do que aconteceu.
     const aprovadoDireto = naJanela && !!videoUrl;
     const comprovacao = {
-      tipo: 'ritual', gratidao, acao, entrega: gratidao,
+      // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
+      // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
+      // mostraria a gratidão em branco. A ordem: o que ela escreveu, senão o
+      // que ela falou (transcrito), senão uma frase honesta com o botão de
+      // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
+      tipo: 'ritual', gratidao, acao,
+      entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
       // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
       // "as suas palavras", COM a origem registrada. Não é desconfiança: é
       // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
-      ...(audioGratidao ? { entrada_gratidao: 'audio' } : {}),
+      ...(audioGratidao ? { entrada_gratidao: 'audio', audio_gratidao_seg: audioGratidaoSeg || 0 } : {}),
+      // 🎙️ DIR-101.1 — a transcrição existe pro REGISTRO, não pra pessoa.
+      // Ela nunca apareceu na tela de quem gravou; está aqui pro Diário de
+      // Bolso ter o que mostrar e pra dar pra buscar depois. Se o Whisper não
+      // respondeu a tempo, fica sem — e o ritual vale do mesmo jeito, porque
+      // a entrega é o áudio.
+      ...(transcricaoGratidao ? { gratidao_transcricao: transcricaoGratidao } : {}),
       ...(audioAcao ? { entrada_acao: 'audio' } : {}),
       ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
       ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
@@ -1966,6 +2010,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 ) : (
                                   <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>{t.comprovacao.tipo === 'ritual' ? '🌅 ritual completo' : '📚 comprovada'}</span>
                                 )
+                              )}
+                              {/* 🎙️ DIR-101.1 — "posteriormente pode ouvir o áudio".
+                                  A gratidão falada não some depois de gravada: ela
+                                  vira acervo. O link é ASSINADO e de curta validade
+                                  (o cofre é privado), então é pedido na hora do
+                                  clique — nunca fica guardado na tela. */}
+                              {t.feito && t.comprovacao?.audio_gratidao_path && (
+                                <BotaoOuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} />
                               )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {

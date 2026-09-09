@@ -24,11 +24,17 @@ test('os dois campos do ritual ganharam microfone', () => {
 });
 
 test('🔒 os mínimos NÃO caíram por causa do áudio', () => {
-  // Falar é outro jeito de produzir as próprias palavras — não é desconto.
-  assert.match(RITUAL, /const GRATIDAO_MIN = 20;/);
+  // 09/09 (DIR-101.1) — esta assertiva cobrava os 20 caracteres DENTRO da
+  // tela. O dono corrigiu o rumo: no Momento de Gratidão o áudio é a entrega,
+  // e falar não se mede em caracteres. A régua não sumiu — mudou de unidade,
+  // e mudou de lugar (a conta agora mora em xgame.js, junto do RESUMO_MIN,
+  // pra não haver duas verdades pro mesmo número). O piso continua sendo
+  // cobrado, agora pelos dois caminhos, e está testado em gratidaoFalada.
+  assert.match(RITUAL, /disabled=\{!entrega\.ok\}/, 'o botão continua travado até haver entrega');
+  assert.match(RITUAL, /gratidaoEntregue\(\{ texto: gratidao, audioSeg: audioGratidaoSeg \}\)/);
+  assert.match(RITUAL, /disabled=\{acao\.trim\(\)\.length < ACAO_MIN\}/, 'a ação do dia NÃO mudou');
   assert.match(RITUAL, /const ACAO_MIN = 10;/);
-  assert.match(RITUAL, /disabled=\{gratidao\.trim\(\)\.length < GRATIDAO_MIN\}/);
-  assert.match(RITUAL, /disabled=\{acao\.trim\(\)\.length < ACAO_MIN\}/);
+  assert.ok(!/const GRATIDAO_MIN = 20;/.test(RITUAL), 'a cópia local da régua voltou');
 });
 
 test('🔒 colar continua bloqueado — a voz não abriu essa porta', () => {
@@ -39,9 +45,15 @@ test('🔒 colar continua bloqueado — a voz não abriu essa porta', () => {
   assert.match(RITUAL, /AVISO_COLAR/);
 });
 
-test('o texto ditado cai no CAMPO — nada é enviado sem a pessoa ler', () => {
-  assert.match(RITUAL, /setGratidao\(\(atual\) => juntarTexto\(atual, t\)\)/);
-  assert.match(RITUAL, /setAcao\(\(atual\) => juntarTexto\(atual, t\)\)/);
+test('nada é enviado sem a pessoa mandar — nem o áudio', () => {
+  // 09/09 (DIR-101.1) — na GRATIDÃO o texto ditado não cai mais no campo: o
+  // áudio vale sozinho e a transcrição é invisível (era justamente o "ler e
+  // corrigir" que custava tempo e energia). O que essa assertiva protegia
+  // continua protegido por outro caminho: nada sobe sozinho, é a pessoa que
+  // aperta Continuar. Na AÇÃO do dia o ditado segue como era.
+  assert.match(RITUAL, /setAcao\(\(atual\) => juntarTexto\(atual, t\)\)/, 'a ação do dia não mudou');
+  assert.match(RITUAL, /onClick=\{\(\) => setPasso\(2\)\}/, 'quem avança é a pessoa, no botão');
+  assert.match(RITUAL, /data-teste="gratidao-continuar"/);
 });
 
 test('a voz vai pro cofre PRIVADO, não pro bucket público do vídeo', () => {
@@ -73,6 +85,7 @@ test('guardar a voz é o EXTRA: falhar não derruba o ritual', () => {
 test('sem áudio, nada muda — quem digita segue igual', () => {
   // O campo `entrada_*` e o path só aparecem quando houve fala. Cadastro
   // digitado continua com exatamente a mesma comprovação de antes.
-  assert.match(METODO, /\.\.\.\(audioGratidao \? \{ entrada_gratidao: 'audio' \} : \{\}\)/);
-  assert.match(METODO, /audioGratidao, audioAcao, tempoTelaS/, 'o ritual precisa entregar os áudios pra cima');
+  assert.match(METODO, /\.\.\.\(audioGratidao \? \{ entrada_gratidao: 'audio'/);
+  assert.match(METODO, /audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS/,
+    'o ritual precisa entregar áudio, duração e transcrição pra cima');
 });

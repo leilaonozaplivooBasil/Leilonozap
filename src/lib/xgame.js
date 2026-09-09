@@ -845,6 +845,60 @@ export const vibrar = (padrao = VIBRA_TOQUE) => {
 
 export const RESUMO_MIN = 400;
 
+// ══════════════════════════════════════════════════════════════════════════
+// 🎙️ DIR-101.1 — NO MOMENTO DE GRATIDÃO, O ÁUDIO É A ENTREGA (09/09/2026)
+// ══════════════════════════════════════════════════════════════════════════
+// Correção de rumo do próprio dono, no mesmo dia em que a primeira versão
+// subiu: "o esforço de ter que transcrever o áudio gasta muito tempo e
+// energia. A lógica deve ser: ao escolher enviar um áudio, o usuário envia e
+// posteriormente pode ouvir o áudio — não precisaria necessariamente
+// escrever, APENAS no Momento Gratidão."
+//
+// O QUE EU TINHA ERRADO: tratei o áudio como RASCUNHO pra produzir texto —
+// fala, o computador escreve, a pessoa lê, corrige, e só então vale. Isso
+// não tira atrito, troca: em vez de digitar, revisar. Agora o áudio VALE
+// SOZINHO aqui, e a transcrição vira tarefa da máquina, não da pessoa.
+//
+// A RÉGUA NÃO SUMIU, MUDOU DE UNIDADE: caractere não mede fala. "Obrigado"
+// em dois segundos não é ritual. 15 segundos é o equivalente honesto dos 20
+// caracteres que o campo escrito já pedia — continua havendo um piso, ele só
+// passou a medir a coisa certa.
+//
+// ⚠️ VALE SÓ AQUI. O resumo de estudo continua com RESUMO_MIN = 400 escrito
+// ("não diminua", ordem do dono) — lá o áudio segue sendo ajuda pra digitar,
+// não substituto.
+export const GRATIDAO_MIN = 20;
+export const GRATIDAO_AUDIO_MIN_SEG = 15;
+
+/** Falou tempo suficiente pra valer como entrega? */
+export const audioEntregaValido = (segundos) =>
+  Number.isFinite(Number(segundos)) && Number(segundos) >= GRATIDAO_AUDIO_MIN_SEG;
+
+/**
+ * A gratidão foi entregue? Escrever OU falar — um dos dois basta, nunca os
+ * dois. Devolve { ok, por, falta } pra tela poder dizer o que ainda falta em
+ * vez de só apagar o botão.
+ */
+export function gratidaoEntregue({ texto = '', audioSeg = 0 } = {}) {
+  const escrito = String(texto || '').trim().length;
+  if (audioEntregaValido(audioSeg)) return { ok: true, por: 'audio', falta: 0 };
+  if (escrito >= GRATIDAO_MIN) return { ok: true, por: 'texto', falta: 0 };
+  // Gravou, mas curto demais: a falta é de SEGUNDOS, não de letras — dizer
+  // "faltam 12 caracteres" pra quem acabou de falar é falar grego.
+  if (Number(audioSeg) > 0) {
+    return { ok: false, por: 'audio', falta: Math.max(0, GRATIDAO_AUDIO_MIN_SEG - Math.floor(Number(audioSeg))) };
+  }
+  return { ok: false, por: 'texto', falta: Math.max(0, GRATIDAO_MIN - escrito) };
+}
+
+/** O que dizer embaixo do botão apagado, na unidade certa. */
+export function faltaDaGratidao({ texto = '', audioSeg = 0 } = {}) {
+  const r = gratidaoEntregue({ texto, audioSeg });
+  if (r.ok) return '';
+  if (r.por === 'audio') return `fale mais ${r.falta}s — ou escreva`;
+  return `escreva ${r.falta} caractere${r.falta === 1 ? '' : 's'} a mais — ou grave um áudio`;
+}
+
 // 🗣️ FALAR A LÍNGUA DE QUEM LÊ (chamado do Paim, 07/09/2026). O contador
 // dizia "18/400 caracteres". Todo mundo lê isso como "18 de um limite de
 // 400" e conclui que já escreveu bastante — é o CONTRÁRIO: 400 é o mínimo.
