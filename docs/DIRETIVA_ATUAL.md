@@ -12,6 +12,25 @@
 
 ---
 
+## DIR-129 — "hoje" agora é sempre Brasília, não importa o fuso do aparelho
+
+**Emitida por:** dono (09/09/2026), voltando no mesmo assunto da DIR-127 com um caso concreto: *"o Emanuel leu o livro no dia oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem que ser o horário de Brasília, não pode ter essa confusão."*
+
+**O que era:** `dataISO()` (`src/lib/xgame.js`) — a função que define "hoje" em TODO o Método/X-Game (`hojeStr()`, o dia mostrado no Compromisso, a data gravada em cada tarefa/comprovação/placar, em 13 arquivos) — usava `getFullYear/getMonth/getDate`, ou seja, hora **local do aparelho**, não de Brasília. Isso já tinha corrigido um bug ANTERIOR (usar `toISOString()`, hora UTC — `tests/xgameFusoHorario.test.mjs`), mas só por acaso, assumindo que o celular de quem usa está sempre certo no fuso de Brasília.
+
+**Achado no banco (a prova de que não era suposição):** a leitura do Emannuel Alves de Lima ("Leitura leve + descanso"), feita de verdade às 21h11 de Brasília do dia 7 (confirmado pelos timestamps reais em UTC, `created_date`/`comprovacao.quando` — não dependem de fuso nenhum), nasceu com `data: '2026-09-09'` — dois dias à frente. O aparelho dele, naquele momento, não estava contando Brasília certo.
+
+**O que entra:**
+1. `dataISO()` passa a forçar `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })` sempre — do mesmo jeito que o cron do servidor (`hojeBrasil()`, `gerarJornadaDoDia.js`) já fazia. Não depende mais do fuso/relógio de ninguém.
+2. `mudarDia()` (as setas ← HOJE → do Compromisso, `CrmMetodo.jsx`) trocou de "monta Date local e reconverte por `toISOString()`" pra `somarDiasISO()` (`xgame.js`, nova função pura) — conta de calendário (ano/mês/dia), nunca conversão de horário.
+3. **Dado corrigido no banco** (a leitura do Emannuel): a comprovação (texto, foto, veredito da IA, `feito: true`) foi movida da linha errada (dia 9) pra linha certa que já existia vazia (dia 7); a linha fantasma do dia 9 foi apagada, liberando o lugar pra leitura de HOJE à noite nascer certa.
+
+**Auditoria feita, nada mais pra corrigir agora:** varri o banco inteiro por lotes de tarefas cujo `data` destoa 2+ dias do dia real (Brasília) do `created_date`. O ÚNICO caso isolado (uma comprovação real presa no dia errado) era o do Emannuel, já corrigido. Achado à parte, sem dano: a conta do "paim" (`4380f43a...`, já conhecida da DIR-122) tem 8 dias de rotina pré-gerados à frente (dias 7 a 14) numa sequência rápida de ~40s — parecem geração automática por navegação (setas de dia), sem nenhuma comprovação anexada, sem risco de X-Pay. Não mexido agora.
+
+**Prova:** suíte 1931/1931 (5 testes novos travando `dataISO()`/`somarDiasISO()` na virada exata das 21h/00h de Brasília e a fonte de `mudarDia`), lint limpo, `npm run build` sem erro. Correção de dado conferida direto no banco de produção.
+
+---
+
 ## DIR-128 — a fila de comprovações separa cada dia por pessoa, nos dois painéis
 
 **Emitida por:** dono (09/09/2026), olhando o dia de hoje com várias pessoas misturadas na mesma lista: *"eu quero já separado por datas e por nomes, cara. Data de hoje, nome das pessoas que estão participando."*

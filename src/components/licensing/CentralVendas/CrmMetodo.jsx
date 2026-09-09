@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  resumoDoDia, dataISO, somarDiasISO, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -658,9 +658,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   }, [uid, ehHoje, xgame?.pontos, xgame?.tarefas_feitas, xgame?.token_dia]);
 
   const mudarDia = (delta) => {
-    const d = new Date(`${dia}T12:00:00`);
-    d.setDate(d.getDate() + delta);
-    setDia(d.toISOString().slice(0, 10));
+    setDia(somarDiasISO(dia, delta));
   };
 
   // 🔒 DIR-80 — os dias que ESTA sessão já gerou (na mão ou sozinha).

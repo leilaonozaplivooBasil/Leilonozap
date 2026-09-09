@@ -912,9 +912,43 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   };
 }
 
-/** Data em ISO local (YYYY-MM-DD), sem sofrer com fuso do toISOString. */
+// 🐛 DIR-129 (09/09/2026) — dono, direto, de novo: "ele leu o livro no dia
+// oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem
+// que ser o horário de Brasília, não pode ter essa confusão."
+//
+// A CAUSA: esta função usava getFullYear/getMonth/getDate — hora LOCAL DO
+// APARELHO, não de Brasília. Isso já tinha corrigido o bug ANTERIOR (usar
+// toISOString(), hora UTC — ver tests/xgameFusoHorario.test.mjs), mas só
+// por acaso, assumindo que o celular de quem usa está sempre configurado
+// pro fuso certo. Achado no banco: uma rotina inteira do Emannuel (várias
+// tarefas, mesmo instante de criação) nasceu com `data` DOIS dias à frente
+// do horário real de Brasília no momento (confirmado pelos timestamps reais
+// — `created_date`/`quando`, sempre em UTC de verdade) — o aparelho não
+// estava contando Brasília certo, e como TUDO nesta função (`hojeStr()`, o
+// dia mostrado, o dia gravado em toda tarefa/comprovação/placar) vem daqui,
+// o erro contaminava o app inteiro.
+//
+// A CORREÇÃO: força America/Sao_Paulo sempre, do mesmo jeito que o cron do
+// servidor (`hojeBrasil()`, api/functions/gerarJornadaDoDia.js) já faz —
+// não depende mais do fuso/relógio do aparelho de ninguém, nunca.
+/** Data em Brasília (YYYY-MM-DD) — sempre, não importa o fuso do aparelho. */
 export function dataISO(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
+}
+
+/**
+ * Soma/subtrai dias a uma data ISO (YYYY-MM-DD) sem tocar em fuso horário
+ * nenhum — é conta de calendário pura (ano/mês/dia), nunca conversão de
+ * horário. Usada pra navegar dia a dia (← HOJE →) sem repetir o erro da
+ * DIR-129: antes disso, `mudarDia` (CrmMetodo.jsx) montava um Date local
+ * (`${dia}T12:00:00`) e voltava por `toISOString()` — dependia do fuso do
+ * aparelho pra não pular o dia errado.
+ */
+export function somarDiasISO(diaISO, delta) {
+  const [y, m, d] = String(diaISO).slice(0, 10).split('-').map(Number);
+  const alvo = new Date(Date.UTC(y, m - 1, d));
+  alvo.setUTCDate(alvo.getUTCDate() + delta);
+  return `${alvo.getUTCFullYear()}-${String(alvo.getUTCMonth() + 1).padStart(2, '0')}-${String(alvo.getUTCDate()).padStart(2, '0')}`;
 }
 
 // ── Recuperação no fim de semana (dono, 08/09/2026) ─────────────────
