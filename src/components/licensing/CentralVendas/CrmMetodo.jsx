@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -2309,11 +2309,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         {/* ══ 🤝 HÁBITO 3 — LISTA DE NETWORK QUALIFICADA (DIR-46) ══ */}
         {painel === 'lista' && (() => {
           const qualificadas = clientesManuais.filter((c) => probabilidadeFechamento(c.qualificacao_network)).length;
+          // 👤 09/09/2026 — DIR-111, dono (super admin): "eu vejo aqui todo
+          // mundo... tem que botar de quem é o nome da pessoa que
+          // qualificou a lista, igual você colocou no Contato." Mesmo par
+          // de helpers que o Hábito 4 (contato) já usa — só faltava aqui.
+          const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
           return (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-sm text-nz-tinta-fraca">
-                  {clientesManuais.length} pessoas na sua lista · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
+                  {clientesManuais.length} pessoas {visaoTotal ? 'na lista do TIME' : 'na sua lista'} · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
@@ -2347,7 +2352,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     return (
                       <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
+                          <p className="text-sm font-medium text-nz-tinta truncate">
+                            {visaoTotal && <span className="font-bold text-nz-verde">👤 {nomeDoDono(c) || 'sem dono definido'} · </span>}
+                            {c.full_name || 'Sem nome'}
+                          </p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
                         </div>
                         {prob ? (
@@ -2426,8 +2434,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
           return (
             <div className="space-y-4">
-              <GuiaMovel titulo="Como fazer o contato" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
-                📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
+              {/* 🔀 09/09/2026 — DIR-111, dono: "tudo tem que ter uma ordem...
+                  tem que ter lá em cima explicando classificação da lista,
+                  cem por cento, tal tal tal." O guia agora também explica o
+                  % (vem da qualificação do Hábito 3) e a ordem dos 4 passos. */}
+              <GuiaMovel titulo="Como fazer o contato" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1">
+                <p>📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).</p>
+                <p>🎯 O % ao lado do nome vem da qualificação que você fez no Hábito 3 (confiança + financeiro + apetite) — quanto mais alto, mais perto de fechar.</p>
+                <p>🔀 A ordem dos botões é a ordem do fluxo: <strong>Contatar</strong> (chama no WhatsApp) → <strong>Agendar</strong> (marcou reunião) ou <strong>Registrar</strong> (anota o desfecho, sem reunião) → <strong>Esteira</strong> (virou negociação de verdade).</p>
               </GuiaMovel>
 
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
@@ -2460,8 +2474,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           })()}
                         </div>
                         <p className={`text-xs font-bold shrink-0 ${COR_FAIXA[prob.faixa.id]}`}>{prob.faixa.emoji} {prob.pct}%</p>
-                        {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho */}
-                        <div className="flex gap-1.5 shrink-0">
+                        {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho.
+                            🔀 09/09/2026 — DIR-111, dono: "tudo tem que ter uma ordem... quando eu clicar
+                            em contatar, me gera WhatsApp." Contatar vem primeiro — é o gesto físico de
+                            chamar a pessoa; só depois entram agendar/registrar o desfecho. */}
+                        <div className="flex gap-1.5 shrink-0 flex-wrap">
+                          {(() => {
+                            const numero = String(c.phone || '').replace(/\D/g, '');
+                            const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(`Oi ${(c.full_name || '').split(' ')[0] || ''}, tudo bem?`)}` : null;
+                            return wa ? (
+                              <a href={wa} target="_blank" rel="noreferrer">
+                                <Button size="sm" variant="outline" className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">
+                                  <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
+                                </Button>
+                              </a>
+                            ) : null;
+                          })()}
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: c, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
                             <CalendarPlus className="w-3.5 h-3.5 mr-1.5" />Agendar
                           </Button>
