@@ -476,6 +476,18 @@ export function pesosDoPerfil(perfil) {
 /** Alvos do EXECUTIVO IDEAL (planilha F18:F21 + vendas 100%). */
 export const EXECUTIVO_IDEAL = { mvm: 0.8, producao: 0.9, realtime: 0.9, bonus: 0.8, vendas: 1 };
 
+// 🎯 09/09/2026 — DIR-109: os mesmos 5 eixos do painel Executivo Ideal
+// (chaves de EXECUTIVO_IDEAL/ciclo.taxas), só que com um rótulo CURTO —
+// pro radar (mapa do jogador), que precisa de rótulo que caiba na ponta
+// do eixo, ao contrário da barra, que tem a linha inteira pra descrever.
+export const EIXOS_EXECUTIVO_IDEAL = [
+  { k: 'mvm', rotuloCurto: 'MvM', emoji: '🗳️' },
+  { k: 'producao', rotuloCurto: 'Produção', emoji: '📋' },
+  { k: 'realtime', rotuloCurto: 'Real Time', emoji: '⏱️' },
+  { k: 'bonus', rotuloCurto: 'Bônus', emoji: '📚' },
+  { k: 'vendas', rotuloCurto: 'Vendas', emoji: '🛒' },
+];
+
 /**
  * Consolida o ciclo (snapshots + hoje) e monta o Human Token oficial com os
  * 5 componentes. As taxas vêm das contagens por categoria gravadas nos

@@ -12,6 +12,51 @@
 
 ---
 
+## DIR-109 — o mapa do jogador: radar dos 5 eixos do Executivo Ideal
+
+**Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107/108: *"a
+gente também conversou sobre a visualização... a gente falou que ia
+botar aí assim roda, você decidiu não botar em roda, pra gente ter um
+mapa, um mapa da pessoa, como se fosse um relatório, tipo de jogador de
+futebol que joga, que chuta... aonde ele está ruim ele tem que
+potencializar, onde ele tem que melhorar."*
+
+**O dado já existia** — `ciclo.taxas` × `EXECUTIVO_IDEAL` (MvM, Produção,
+Real Time, Bônus/Estudo, Vendas) já formava as 5 barras do painel
+"🎯 Onde estou × EXECUTIVO IDEAL", em `XGame.jsx` e `CrmMetodo.jsx`. Só
+faltava o formato "roda" que o dono pediu — a barra mostra o número
+certo, mas não a SILHUETA do desempenho num olhar só.
+
+**O que entra:**
+1. `RadarEixos.jsx` (novo) — um radar/pentágono em SVG puro (sem lib
+   nova): pentágono do alvo do Executivo Ideal (contorno tracejado
+   âmbar), sobreposto pela silhueta real da pessoa (preenchido, verde ou
+   vermelho onde fica abaixo do alvo) — exatamente a leitura "onde chuta
+   bem, onde tem que melhorar" de um mapa de jogador. Suporta os dois
+   dialetos do app (`escuro`/`claro`), igual `BarraProgresso`.
+2. `src/lib/xgame.js` ganhou `EIXOS_EXECUTIVO_IDEAL` — os mesmos 5 eixos
+   de `EXECUTIVO_IDEAL`, com rótulo curto (cabe na ponta do radar) e
+   emoji, pra não duplicar a leitura de dados entre o radar e as barras.
+3. O radar aparece logo abaixo da barra de formação, ANTES da lista de
+   barras — nas duas telas onde o painel Executivo Ideal já existe
+   (`XGame.jsx` e `CrmMetodo.jsx`). Como o "MvM dele" do Quadro Geral do
+   ADM já reaproveita `XGame.jsx` em `modoAdmin`, o Super Admin também
+   passa a ver o radar de qualquer pessoa, sem código novo lá.
+
+**Prova:** `tests/xgame.test.mjs` — 1 teste novo trava que
+`EIXOS_EXECUTIVO_IDEAL` nunca desalinha de `EXECUTIVO_IDEAL` (mesmas
+chaves, mesma ordem — senão o radar desenharia eixo fantasma ou
+esqueceria um de verdade, em silêncio). Suíte 1624/1624, lint limpo,
+`npm run build` sem erro. **Verificação em navegador rodou** — e achou
+exatamente o bug que um componente visual novo costuma esconder: os
+rótulos das pontas direita/esquerda ("Produção", "Real Time", "Vendas")
+saíam cortados, porque o texto estica bem além do raio do pentágono e o
+`<svg>` corta tudo que passa do `viewBox` por padrão. Corrigido com uma
+folga (`PAD_X`/`PAD_Y`) reservada só pro texto, nas quatro direções — a
+segunda foto confirma os 5 rótulos completos, sem corte.
+
+---
+
 ## DIR-108 — o PDF compartilhável do Executivo chega no ADM X-Game
 
 **Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107: *"eu tinha

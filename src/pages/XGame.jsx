@@ -9,12 +9,13 @@ import {
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
-  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR,
+  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
+import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 
 // X-GAME — o ESPAÇO DEDICADO da gamificação do Método (DIR-97, 08/09/2026).
 // Até aqui esta página era órfã — ninguém no app linkava pra ela — e tinha
@@ -415,6 +416,20 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
               </div>
             </div>
             <BarraProgresso pct={ciclo.formacao.pct} dialeto="escuro" altura="extra" corClasse="bg-emerald-400" trilhoClasse="bg-[#2B2B2B]" />
+
+            {/* 🎯 09/09/2026 — DIR-109, dono: "um mapa da pessoa, tipo de
+                jogador de futebol... aonde ele está ruim ele tem que
+                potencializar." O mesmo ciclo.taxas × EXECUTIVO_IDEAL das
+                barras abaixo, só que num olhar só — o formato da silhueta
+                mostra onde falta e onde já é ponto forte. */}
+            <RadarEixos
+              dialeto="escuro"
+              eixos={EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({
+                k, rotuloCurto, emoji,
+                atual: Math.round((ciclo.taxas[k] || 0) * 100),
+                alvo: Math.round(EXECUTIVO_IDEAL[k] * 100),
+              }))}
+            />
 
             <div className="space-y-2.5">
               {[

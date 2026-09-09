@@ -11,8 +11,20 @@ import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
-  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE,
+  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL,
 } from '../src/lib/xgame.js';
+
+// 🎯 09/09/2026 — DIR-109: o radar (mapa do jogador) lê EIXOS_EXECUTIVO_IDEAL
+// pra saber quais eixos desenhar — se ele um dia desalinhar de
+// EXECUTIVO_IDEAL (a fonte real dos alvos/taxas), o radar mostraria eixo
+// fantasma ou esqueceria um de verdade, em silêncio.
+test('EIXOS_EXECUTIVO_IDEAL: as mesmas chaves de EXECUTIVO_IDEAL, na mesma ordem — nada desalinhado', () => {
+  assert.deepEqual(EIXOS_EXECUTIVO_IDEAL.map((e) => e.k), Object.keys(EXECUTIVO_IDEAL));
+  for (const e of EIXOS_EXECUTIVO_IDEAL) {
+    assert.ok(e.rotuloCurto, `${e.k} precisa de um rótulo curto pro radar`);
+    assert.ok(e.emoji, `${e.k} precisa de um emoji`);
+  }
+});
 
 test('horaDeMin: minutos vira "17h" ou "21h30" (sem zero à esquerda, estilo do app)', () => {
   assert.equal(horaDeMin(VOTACAO_INICIO_MIN), '17h');
