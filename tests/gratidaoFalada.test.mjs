@@ -56,7 +56,10 @@ test('🔒 o resumo de estudo NÃO foi afrouxado junto', () => {
   // pra digitar, e os 400 continuam de pé.
   assert.equal(RESUMO_MIN, 400);
   const MODAL = semComentarios(ler('../src/components/licensing/CentralVendas/XGameComprovarModal.jsx'));
-  assert.match(MODAL, /texto\.trim\(\)\.length >= RESUMO_MIN/);
+  // 🏆 DIR-115 — a trava virou `faltaDoResumo(texto, tipo) === 0` (mesma
+  // régua, generalizada pro estudo de fim de semana) em vez do literal
+  // `texto.trim().length >= RESUMO_MIN` — ver tests/ditadoNoResumo.test.mjs.
+  assert.match(MODAL, /faltaDoResumo\(texto, tipo\) === 0/);
   assert.ok(!/gratidaoEntregue|audioEntregaValido/.test(MODAL), 'a regra da gratidão vazou pro resumo');
 });
 

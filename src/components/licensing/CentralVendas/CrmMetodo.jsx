@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
