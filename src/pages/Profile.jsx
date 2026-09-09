@@ -475,7 +475,20 @@ export default function Profile() {
       try {
         const cached = localStorage.getItem('currentUser');
         const baseUser = cached ? JSON.parse(cached) : currentUser;
-        localStorage.setItem('currentUser', JSON.stringify({ ...baseUser, ...finalData }));
+        const atualizado = { ...baseUser, ...finalData };
+        localStorage.setItem('currentUser', JSON.stringify(atualizado));
+        // 🖼️ 09/09/2026 — avisa o app inteiro que o cadastro mudou.
+        //
+        // Gravar no localStorage não basta: o Layout lê esse cache UMA VEZ, na
+        // abertura do app. Sem este aviso, a foto nova fica salva no banco e o
+        // avatar da barra e do menu lateral continuam mostrando a antiga até a
+        // pessoa fechar e abrir — que foi exatamente o caso da Iara, quatro
+        // tentativas seguidas de uma troca que já tinha funcionado.
+        //
+        // Vai fora do try do localStorage? Não: se o storage falhou, o cache
+        // não mudou e não há novidade pra anunciar. Mas o objeto vai junto no
+        // `detail`, pra quem escuta não depender de reler o storage.
+        window.dispatchEvent(new CustomEvent('usuarioAtualizado', { detail: atualizado }));
       } catch (_) {}
       
       if (passwordData.newPassword) {
