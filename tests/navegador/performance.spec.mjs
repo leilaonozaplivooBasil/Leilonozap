@@ -540,42 +540,40 @@ test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis;
   await ctx.close();
 });
 
-test('DESTINO: a demanda pode cair na lista, no quadro dele ou nos dois (ligados); a prioridade vira o prazo do card; repetir até sexta', { skip: semNavegador }, async () => {
+test('DIR-130: toda demanda distribuída SEMPRE cai na Jornada, no Quadro (ligado) e acende o sino — nunca mais só uma das três', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  // só o quadro, prioridade média → card com prazo em 3 dias, sem tarefa do dia
+  // sem escolha de destino nenhuma: uma tarefa distribuída grava nos TRÊS —
+  // a tarefa do dia (Jornada), o card do quadro (ligado pelo id) e a
+  // mensagem interna (o sino) — nessa ordem, sempre juntos.
   await pagina.locator('[data-teste="titulo"]').fill('Fechar a proposta da loja Norte');
-  await pagina.locator('[data-teste="destino"]').selectOption('quadro');
   await pagina.locator('[data-teste="prioridade"]').selectOption('media');
   await pagina.locator('[data-teste="distribuir"]').click();
-  await pagina.getByText(/Card no quadro de Emanuel Silva/).waitFor();
-  let e = (await escritas(pagina)).at(-1);
-  assert.equal(e.tabela, 'metodo_quadro');
-  assert.deepEqual([e.linhas[0].user_id, e.linhas[0].coluna, e.linhas[0].prazo, e.linhas[0].virou_tarefa_id, e.linhas[0].responsavel_nome], ['emanuel', 'aberto', '2026-09-11', null, 'Luiz Santanna']);
-  assert.ok(!(await escritas(pagina)).some((x) => x.tabela === 'metodo_tarefas'), 'no quadro só, não entra tarefa do dia');
+  await pagina.getByText(/jornada, quadro e sino avisados/).waitFor();
+  const tudo1 = await escritas(pagina);
+  const tarefa1 = tudo1.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
+  const card1 = tudo1.filter((x) => x.tabela === 'metodo_quadro').at(-1);
+  const aviso1 = tudo1.filter((x) => x.tabela === 'xgame_mensagens').at(-1);
+  assert.equal(tarefa1.linhas.length, 1, 'sempre entra na jornada, mesmo sem destino escolhido');
+  assert.equal(card1.linhas[0].user_id, 'emanuel');
+  assert.equal(card1.linhas[0].prazo, '2026-09-11', 'prioridade média = card em 3 dias');
+  assert.ok(card1.linhas[0].virou_tarefa_id, 'o card sempre nasce ligado à tarefa da jornada');
+  assert.equal(aviso1.linhas[0].destino_tipo, 'pessoa');
+  assert.equal(aviso1.linhas[0].destino_id, 'emanuel');
+  assert.equal(aviso1.linhas[0].tipo, 'demanda');
+  assert.match(aviso1.linhas[0].texto, /Fechar a proposta da loja Norte/);
 
-  // os dois: a tarefa do dia E o card, ligado pelo id da tarefa
-  await pagina.locator('[data-teste="titulo"]').fill('Visitar a loja do Centro');
-  await pagina.locator('[data-teste="destino"]').selectOption('ambos');
-  await pagina.locator('[data-teste="prioridade"]').selectOption('alta');
-  await pagina.locator('[data-teste="distribuir"]').click();
-  await pagina.getByText(/Tarefa distribuída pra Emanuel/).waitFor();
-  await pagina.waitForFunction(() => window.__bancoFalso.escritas.filter((x) => x.tabela === 'metodo_quadro').length === 2);
-  const tudo = await escritas(pagina);
-  const tarefa = tudo.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
-  const card = tudo.filter((x) => x.tabela === 'metodo_quadro').at(-1);
-  assert.equal(card.linhas[0].prazo, '2026-09-08', 'alta = card pro dia');
-  assert.ok(card.linhas[0].virou_tarefa_id, 'o card nasce ligado à tarefa');
-  assert.equal(tarefa.linhas.length, 1);
-
-  // repetir até sexta: 08/09 (ter) → ter, qua, qui, sex = 4 dias
+  // repetir até sexta: 08/09 (ter) → ter, qua, qui, sex = 4 dias — continua
+  // criando o card do quadro (ligado à PRIMEIRA tarefa) e o sino, uma vez só
   await pagina.locator('[data-teste="titulo"]').fill('Ligar pros 20 contatos do dia');
-  await pagina.locator('[data-teste="destino"]').selectOption('lista');
   await pagina.locator('[data-teste="repetir-semana"]').check();
   await pagina.locator('[data-teste="distribuir"]').click();
   await pagina.getByText(/4 dias: "Ligar pros 20 contatos do dia" de ter\., 08\/09 a sex\., 11\/09/).waitFor();
-  e = (await escritas(pagina)).filter((x) => x.tabela === 'metodo_tarefas').at(-1);
-  assert.deepEqual(e.linhas.map((l) => l.data), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
-  assert.ok(e.linhas.every((l) => l.prazo_em));
+  const tudo2 = await escritas(pagina);
+  const tarefa2 = tudo2.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
+  assert.deepEqual(tarefa2.linhas.map((l) => l.data), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
+  assert.ok(tarefa2.linhas.every((l) => l.prazo_em));
+  assert.equal(tudo2.filter((x) => x.tabela === 'metodo_quadro').length, 2, 'mais um card (o segundo distribuir), não um por dia repetido');
+  assert.equal(tudo2.filter((x) => x.tabela === 'xgame_mensagens').length, 2, 'mais um aviso, não um por dia repetido');
   await ctx.close();
 });
 

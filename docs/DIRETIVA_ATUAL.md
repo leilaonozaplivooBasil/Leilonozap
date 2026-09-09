@@ -12,6 +12,24 @@
 
 ---
 
+## DIR-130 — a demanda distribuída entra sozinha em três lugares, e ganha um sino que não deixa passar batido
+
+**Emitida por:** dono (09/09/2026): *"eu preciso que o envio de tarefa chegue na jornada, automático... ela está entrando no quadro, aí tem a opção de botar lá no quadro e na minha lista, né? Já estava entrando automático na jornada e não entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo automático... está faltando um sininho de notificação... eu mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro."*
+
+**Achado:** `DistribuirTarefa.jsx` tinha um seletor "destino" (lista / quadro / os dois) — só com "quadro" a demanda nunca entrava na Jornada; só com "lista" nunca virava card do Quadro. E a única forma de a pessoa "ver" que recebeu algo era abrir o Quadro ou a aba dobrada "Mensagem pro CEO" por conta própria — nada avisava proativamente.
+
+**O que entra:**
+1. **Escolha de destino removida** — toda tarefa distribuída agora SEMPRE grava nos três: `metodo_tarefas` (a Jornada, `origem: 'xperf'`), `metodo_quadro` (o card, ligado pelo id da tarefa — cai sozinho na primeira Lista dele, mecanismo já existente do `QuadroCompromisso.jsx`) e `xgame_mensagens` (`tipo: 'demanda'`, o aviso que acende o sino).
+2. **Horário vira opcional/flexível** (`"ela não tem que entrar na hora que eu coloquei... deixando a opção da pessoa escolher o melhor horário pra ela fazer"`): o campo "começar às" virou "horário (opcional)"; sem horário, a tarefa entra flexível na Jornada. A pessoa já podia editar hora/título de qualquer tarefa do dia inline (✏️, DIR-80) — copy nova deixa isso explícito no formulário do gestor.
+3. **Ícone que não fica genérico** (`"gerando um ícone compatível, sem deixar feio a jornada"`): `seloDa()` (`XGameJornada.jsx`) ganha um terceiro parâmetro (`origem`) — quando o título de uma demanda não bate com nenhum selo nem família de Hábito, em vez da ⭐ genérica de qualquer coisa sem categoria, ganha um selo próprio (`SELO_DEMANDA`, ícone `Send`, verde da marca).
+4. **O sino** (`SinoNotificacoes.jsx`, novo componente, montado no topo do Compromisso) — reaproveita `xgame_mensagens` (DIR-106/107), a MESMA rota server-side (`xgameMensagensListar`) e as mesmas funções puras (`mensagensXgame.js`) do "Mensagem pro CEO". Badge de não lidas; um **banner fixo** (como um alerta de venda) mostra a mensagem mais antiga ainda não vista — fechar o banner NUNCA marca como lida (só sai da tela; continua no sino até a pessoa abrir de verdade), e o botão de fechar fica travado por 10 segundos (`SEGUNDOS_ANTES_DE_FECHAR`, `src/lib/notificacoesXgame.js`) — *"não pode ter certeza que ela viu"*. Responder funciona por dentro, no banner e no painel do sino (mesmo padrão "responder por dentro" do DIR-107) — a ida e volta pedida.
+
+**Fora do escopo:** nenhuma mudança na fórmula de valor/peso da tarefa, na Fila do Pronto (conferir/devolver) ou na aba "Mensagem pro CEO" em si — só quem gera a demanda (`DistribuirTarefa`) e quem avisa que ela chegou (`SinoNotificacoes`, novo). O sino está montado só na tela do Compromisso (a que a pessoa abre todo dia) — não em toda tela do app.
+
+**Prova:** suíte 1950/1950 (14 testes novos: `notificacoesXgame.test.mjs` trava a escolha da mensagem certa pro banner e os 10 segundos; `distribuirTarefaTresLugares.test.mjs` trava que a escolha de destino sumiu e que as três gravações sempre acontecem juntas; `xgameJornadaSeloDemanda.test.mjs` trava o selo próprio da demanda), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-129 — "hoje" agora é sempre Brasília, não importa o fuso do aparelho
 
 **Emitida por:** dono (09/09/2026), voltando no mesmo assunto da DIR-127 com um caso concreto: *"o Emanuel leu o livro no dia oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem que ser o horário de Brasília, não pode ter essa confusão."*

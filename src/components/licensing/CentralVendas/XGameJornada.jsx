@@ -3,7 +3,7 @@ import {
   Sunrise, BookOpen, Dumbbell, Camera, Store, Utensils, Handshake,
   GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays,
   Target, Users, Phone, MessageCircle, Wallet, ClipboardList, Heart, Droplet, Bed, ShoppingBag,
-  Mic, Rocket, Flame, ChevronLeft, ChevronRight,
+  Mic, Rocket, Flame, ChevronLeft, ChevronRight, Send,
 } from 'lucide-react';
 import XGameCapa from './XGameCapas';
 import ElencoBoneco from './ElencoBoneco';
@@ -69,11 +69,21 @@ const SELO_DA_FAMILIA = {
   treinamento: { Icone: GraduationCap, grad: 'from-violet-500 to-purple-700', borda: '#6b21a8' },
 };
 
-const seloDa = (titulo, habito) => {
+// 📬 09/09/2026 — dono: "gerando um ícone compatível, sem deixar feio a
+// jornada — seguindo todo o processo da jornada." Uma tarefa distribuída
+// pela gestão (`origem === 'xperf'`) cujo título não bate com NENHUM selo
+// nem família de Hábito caía na ⭐ genérica — a mesma estrela de qualquer
+// coisa sem classificação. Agora ela ganha um selo próprio, do mesmo jeito
+// visual dos outros (gradiente + borda 3D), em vez de se misturar com o
+// "sem categoria" — sem inventar categoria nova pro texto em si.
+const SELO_DEMANDA = { Icone: Send, grad: 'from-nz-verde to-emerald-700', borda: '#14532d' };
+
+const seloDa = (titulo, habito, origem) => {
   const t = semAcento(titulo);
   for (const [re, Icone, grad, borda] of SELOS) if (re.test(t)) return { Icone, grad, borda };
   const familia = familiaDaTarefa({ titulo, habito });
   if (familia && SELO_DA_FAMILIA[familia]) return SELO_DA_FAMILIA[familia];
+  if (origem === 'xperf') return SELO_DEMANDA;
   return { Icone: Star, grad: 'from-amber-300 to-yellow-500', borda: '#a16207' };
 };
 
@@ -219,8 +229,8 @@ function PreviaBolha({ titulo, hora, visivel, alinhamento = 'centro' }) {
  *  lugar do ícone, atual = aceso com halo + balão COMEÇAR, futuro/perdido =
  *  apagado e quieto (zero muro de X vermelho). Sem legenda embaixo — o
  *  contexto vem do banner e do clique. */
-function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl, habito }) {
-  const selo = seloDa(titulo, habito);
+function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl, habito, origem }) {
+  const selo = seloDa(titulo, habito, origem);
   // 👀 08/09/2026 — a prévia por cima (mouse OU dedo); some sozinha um
   // pouco depois de soltar o dedo, já que o toque não tem "tirar o mouse".
   const [previa, setPrevia] = useState(false);
@@ -306,8 +316,8 @@ function Parada3D({ titulo, hora, feito, perdido, atual, onClick, refEl, habito 
 }
 
 /** O selo redondo de uma parada: ícone vetorial sobre gradiente. */
-function MoedaGrande({ titulo, perdido, habito }) {
-  const { Icone, grad, borda } = seloDa(titulo, habito);
+function MoedaGrande({ titulo, perdido, habito, origem }) {
+  const { Icone, grad, borda } = seloDa(titulo, habito, origem);
   return (
     <span
       className={[
@@ -522,6 +532,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                           perdido={t.estado?.id === 'PERDIDO'}
                           atual={ehAtual}
                           habito={t.habito}
+                          origem={t.origem}
                           refEl={ehAtual ? refAtual : undefined}
                           onClick={() => { setFocoId(t.id); setExpandida(false); }}
                         />
@@ -610,7 +621,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
                 onEsconder={() => setPreviaSeta(null)}
                 onIr={irParaPasso}
               />
-              <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} habito={foco.habito} />
+              <MoedaGrande titulo={foco.titulo} perdido={estado === 'PERDIDO'} habito={foco.habito} origem={foco.origem} />
               <BotaoSetaMomento
                 lado="dir"
                 alvo={proximaParada}
@@ -655,7 +666,7 @@ export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTare
             <p className="text-[9px] font-extrabold uppercase tracking-[0.24em] text-nz-tinta-fraca/70">o seu rastro de hoje</p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {[...feitas].reverse().map((t) => {
-                const { Icone } = seloDa(t.titulo, t.habito);
+                const { Icone } = seloDa(t.titulo, t.habito, t.origem);
                 return (
                   <span
                     key={t.id}

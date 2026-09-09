@@ -22,11 +22,13 @@ import { prazoDe, rotuloDoPrazo } from '@/lib/pronto';
 // Corporativo embutido (com a pessoa já escolhida).
 //
 // O que ele faz (a história inteira está no cabeçalho do XPerformanceGestao):
-// pessoa, dia, começar às, pronto até, catálogo de ações, o título lido pela
-// régua (mentalidade, Hábito, peso, categoria, temas — a leitura viva), o
+// pessoa, dia, horário opcional, pronto até, catálogo de ações, o título lido
+// pela régua (mentalidade, Hábito, peso, categoria, temas — a leitura viva), o
 // ensinamento que a pessoa lê, a mentoria completa (15+45+120), a PRÉVIA do
-// valor no fixo do dia, o destino (lista / quadro / os dois), a prioridade e o
-// repetir até sexta. Grava em metodo_tarefas (origem 'xperf') e/ou metodo_quadro.
+// valor no fixo do dia, a prioridade e o repetir até sexta. Sempre grava nos
+// TRÊS lugares (DIR-130, 09/09/2026 — "tudo automático"): metodo_tarefas
+// (origem 'xperf', a Jornada), metodo_quadro (o card, ligado, cai na lista
+// dele) e xgame_mensagens (tipo 'demanda', acende o sino da pessoa).
 //
 // `DistribuirTarefa` é CONTROLADO: quem monta passa a equipe, o cadastro do
 // jogo, as tarefas do ciclo e o catálogo (a ADM já tem tudo carregado).
@@ -70,7 +72,6 @@ export default function DistribuirTarefa({
   const [salvando, setSalvando] = useState(false);
   const [nova, setNova] = useState(() => NOVA_VAZIA());
   const [mentoriaCompleta, setMentoriaCompleta] = useState(false);
-  const [destino, setDestino] = useState('lista');        // lista | quadro | ambos
   const [prioridade, setPrioridade] = useState('alta');   // alta | media | baixa
   const [repetirSemana, setRepetirSemana] = useState(false);
   const [acaoEscolhida, setAcaoEscolhida] = useState('');
@@ -175,15 +176,6 @@ export default function DistribuirTarefa({
       limparFormulario();
       return;
     }
-    // 🗂️ destino: só o quadro (card, sem tarefa do dia)
-    if (destino === 'quadro') {
-      const { error } = await supabase.from('metodo_quadro').insert(cardDaDemanda(null));
-      setSalvando(false);
-      if (error) { toast.error('Não pôs no quadro — tenta de novo'); return; }
-      toast.success(`Card no quadro de ${nomeDe(pessoa)}: "${nova.titulo.trim()}" (prioridade ${prioridade})`);
-      limparFormulario();
-      return;
-    }
     const linha = {
       user_id: pessoa, data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
       feito: false, ordem: tarefasDoDia.length, categoria: categoriaAtual, peso: pesoEfetivo,
@@ -196,13 +188,28 @@ export default function DistribuirTarefa({
     const diasAlvo = repetirSemana ? diasUteisAteSexta(dia) : [dia];
     const linhas = diasAlvo.map((d) => ({ ...linha, data: d, prazo_em: prazoDe(d === dia ? (nova.prazoDia || d) : d, nova.prazoHora || '18:00') }));
     const { data: gravadas, error } = await supabase.from('metodo_tarefas').insert(linhas).select();
+    if (error) { setSalvando(false); toast.error('Não distribuiu a tarefa — tenta de novo'); return; }
+    // 🗂️ 09/09/2026 — dono: "já estava entrando automático na jornada e não
+    // entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo
+    // automático." Antes o card do quadro só nascia se o gestor escolhesse
+    // "quadro"/"ambos" — agora SEMPRE nasce, ligado à tarefa do dia (que já
+    // aparece na Jornada por si só — mesma tabela, mesma leitura do dia).
+    const primeira = Array.isArray(gravadas) ? gravadas[0] : gravadas;
+    const { error: erroQuadro } = await supabase.from('metodo_quadro').insert(cardDaDemanda(primeira?.id || null));
+    // 🔔 09/09/2026 — dono: "eu mandei essas duas notificações aí, a pessoa
+    // ficou com dificuldade de receber, só apareceu no quadro." A demanda
+    // agora sempre acende o sino da pessoa (mesmo canal do "avisar" da Fila
+    // do Pronto, DIR-107) — não fica só esperando ser encontrada no quadro.
+    const { error: erroAviso } = await supabase.from('xgame_mensagens').insert({
+      remetente_id: currentUser?.id || null,
+      remetente_nome: nomeExibicao(currentUser) || currentUser?.full_name || 'a gestão',
+      destino_tipo: 'pessoa', destino_id: pessoa, destino_nome: nomeDe(pessoa),
+      tipo: 'demanda',
+      texto: `📋 nova tarefa: "${linha.titulo}" — ${rotuloDoPrazo(linha.prazo_em, dia) || 'combine o pronto com a gestão'}.`,
+    });
     setSalvando(false);
-    if (error) { toast.error('Não distribuiu a tarefa — tenta de novo'); return; }
-    // 🗂️ os dois: o card do quadro nasce ligado à tarefa do dia
-    if (destino === 'ambos') {
-      const primeira = Array.isArray(gravadas) ? gravadas[0] : gravadas;
-      await supabase.from('metodo_quadro').insert(cardDaDemanda(primeira?.id || null));
-    }
+    if (erroQuadro) toast.error('Entrou na jornada, mas o card do quadro não gravou — confere lá');
+    if (erroAviso) toast.error('Entrou na jornada, mas o sino não avisou a pessoa — confere lá');
     if (diasAlvo.length > 1) toast.success(`${diasAlvo.length} dias: "${linha.titulo}" de ${fmtDia(diasAlvo[0])} a ${fmtDia(diasAlvo.at(-1))}`);
     // a ação do catálogo (do banco) conta um uso — é o que sobe na lista
     const usada = catalogo.find((a) => a.id === acaoEscolhida);
@@ -210,8 +217,8 @@ export default function DistribuirTarefa({
     const valor = previa?.sim?.valorNova;
     toast.success(
       valor != null
-        ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — as outras do dia foram recalculadas`
-        : `Tarefa distribuída pra ${nomeDe(pessoa)}`,
+        ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — jornada, quadro e sino avisados`
+        : `Tarefa distribuída pra ${nomeDe(pessoa)} — jornada, quadro e sino avisados`,
     );
     limparFormulario();
   };
@@ -242,10 +249,20 @@ export default function DistribuirTarefa({
           <input type="date" value={dia} onChange={(e) => onDia(e.target.value)} className={`mt-1 block ${campo}`} data-teste="dia" />
         </label>
         <label className="text-[10px] text-white/45 uppercase tracking-wider">
-          começar às
+          horário (opcional)
           <input type="time" value={nova.hora} onChange={(e) => setNova((n) => ({ ...n, hora: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="hora-inicio" />
         </label>
       </div>
+      {/* 🕐 09/09/2026 — dono: "ela não tem que entrar na hora que eu coloquei...
+          deixando a opção da pessoa escolher o melhor horário pra ela fazer,
+          sabendo que ela tem o pronto." Sem horário, a tarefa entra flexível
+          na Jornada — perto do prazo, não travada num horário fixo — e a
+          própria pessoa escolhe quando fazer, editando o horário por lá. */}
+      {!nova.hora && (
+        <p className="mt-1 text-[10px] text-white/35" data-teste="hora-flexivel-aviso">
+          sem horário: a tarefa entra flexível na Jornada (perto do "pronto até") — a pessoa escolhe/edita quando vai fazer
+        </p>
+      )}
       {/* ⏰ o pronto: entregar até tal hora (no mesmo dia, ou noutro) */}
       <div className="mt-2 flex items-end gap-2 flex-wrap">
         <label className="text-[10px] text-white/45 uppercase tracking-wider">
@@ -350,7 +367,7 @@ export default function DistribuirTarefa({
         <label className="mt-2 flex items-start gap-2 rounded-lg border border-white/10 px-2.5 py-2 text-[11px] text-white/70 cursor-pointer" style={{ background: 'rgba(255,255,255,0.03)' }} data-teste="mentoria-completa">
           <input type="checkbox" checked={mentoriaCompleta} onChange={(e) => setMentoriaCompleta(e.target.checked)} className="mt-0.5 accent-green-600" data-teste="mentoria-caixa" />
           <span>
-            <span className="font-bold text-white">Distribuir como mentoria completa</span> — {ROTEIRO_MENTORIA.map((b) => `${b.minutos} min de ${b.bloco === 'reuniao' ? 'reunião' : b.bloco}`).join(' · ')}, encadeados a partir de "começar às"{nova.hora ? ` (${nova.hora})` : ' (09:00)'}.
+            <span className="font-bold text-white">Distribuir como mentoria completa</span> — {ROTEIRO_MENTORIA.map((b) => `${b.minutos} min de ${b.bloco === 'reuniao' ? 'reunião' : b.bloco}`).join(' · ')}, encadeados a partir do horário{nova.hora ? ` (${nova.hora})` : ' (09:00 — nenhum escolhido acima)'}.
             {blocosMentoria && (
               <span className="mt-1 block space-y-0.5" data-teste="mentoria-blocos">
                 {blocosMentoria.map((b) => <span key={b.bloco} className="block text-white/55">{b.hora} · {b.titulo} <span className="text-white/35">· H{b.habito} · peso {pesoComMentalidade(b.titulo, mentalidadeAtual).peso}</span></span>)}
@@ -407,31 +424,29 @@ export default function DistribuirTarefa({
         </div>
       )}
 
-      {/* 🗂️ onde a demanda cai, com que prioridade, e se repete na semana */}
+      {/* 🗂️ 09/09/2026 — dono: "no quadro, tá? Na lista e na jornada. Tudo
+          automático." A escolha de destino saiu: toda tarefa distribuída
+          agora sempre cai nos três (Jornada, Quadro e a primeira Lista dele),
+          ligados — só a prioridade (o prazo do card) e o repetir continuam
+          escolha do gestor. */}
       <div className="mt-3 flex items-center gap-3 flex-wrap text-[10px] text-white/45 uppercase tracking-wider" data-teste="destino-bloco">
-        <label>destino
-          <select value={destino} onChange={(e) => setDestino(e.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="destino">
-            <option value="lista">lista do dia</option><option value="quadro">quadro dele</option><option value="ambos">os dois (ligados)</option>
-          </select>
-        </label>
+        <span className="normal-case text-white/35" data-teste="destino-fixo">entra automático na jornada, no quadro e na lista dele</span>
         <label>prioridade
           <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={`ml-1 ${campo} normal-case`} data-teste="prioridade">
             <option value="alta">alta · card pra hoje</option><option value="media">média · card em 3 dias</option><option value="baixa">baixa · card em 7 dias</option>
           </select>
         </label>
-        {destino !== 'quadro' && (
-          <label className="inline-flex items-center gap-1 normal-case">
-            <input type="checkbox" checked={repetirSemana} onChange={(e) => setRepetirSemana(e.target.checked)} className="accent-green-600" data-teste="repetir-semana" />
-            repetir nos dias úteis até sexta ({diasUteisAteSexta(dia).length} dia{diasUteisAteSexta(dia).length === 1 ? '' : 's'})
-          </label>
-        )}
+        <label className="inline-flex items-center gap-1 normal-case">
+          <input type="checkbox" checked={repetirSemana} onChange={(e) => setRepetirSemana(e.target.checked)} className="accent-green-600" data-teste="repetir-semana" />
+          repetir nos dias úteis até sexta ({diasUteisAteSexta(dia).length} dia{diasUteisAteSexta(dia).length === 1 ? '' : 's'})
+        </label>
       </div>
       <div className="mt-3 flex items-center gap-2 flex-wrap">
         <Button size="sm" onClick={distribuir} disabled={salvando || !nova.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]" data-teste="distribuir">
           {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
           Distribuir tarefa
         </Button>
-        <span className="text-[10px] text-white/35">entra na hora no Compromisso da pessoa, no dia escolhido</span>
+        <span className="text-[10px] text-white/35">entra na Jornada, no Quadro e na Lista dele, e acende o sino — no dia escolhido</span>
         {nova.titulo.trim() && !noCatalogo && (
           <Button size="sm" variant="ghost" onClick={salvarNoCatalogo} disabled={salvandoAcao} className="ml-auto h-8 text-[11px] text-white/70 hover:text-white hover:bg-white/10" title="guarda esta ação no menu, com a mentalidade, o Hábito e o peso de agora" data-teste="salvar-catalogo">
             {salvandoAcao ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}
