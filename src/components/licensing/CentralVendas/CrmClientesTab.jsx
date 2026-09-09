@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { fmtBR, parseValorBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -44,6 +44,7 @@ import CrmImportarContatosModal from './CrmImportarContatosModal';
 import { paraGravar, emLotes } from '@/lib/importarContatos';
 import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
 import { ouvirPedidoDeTour } from '@/lib/pedidoDeTour';
+import TourGuiado from './TourGuiado';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
 import { useEscopoDeVisao } from './SeletorEscopo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
@@ -70,6 +71,45 @@ const MASCARA_COSTURA_PALCO = [
   'linear-gradient(180deg, transparent 0%, #000 18%)',
   'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
 ].join(', ');
+
+// 🖐️ 09/09/2026 — DIR-124: os Hábitos 6 (Acompanhamento, visão Clientes) e
+// 7 (Verificação) não tinham NENHUM tour — o achado que fechou a auditoria
+// pedida pelo dono ("tem aba que não está funcionando"). `nav-habitos` é o
+// mesmo alvo do passo 1 de todo tour do app (o grid dos 8 Hábitos).
+const PASSOS_TOUR_ACOMPANHAMENTO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Você está no Hábito 6 — Acompanhamento e Fechamento. É aqui que o cliente vive depois da apresentação: negociação, fechamento, ou virar oportunidade na Esteira.',
+  },
+  {
+    alvo: 'clientes-busca',
+    titulo: 'Ache qualquer pessoa em segundos',
+    texto: 'Nome, e-mail, telefone, CPF, status ou origem — filtre por qualquer um pra achar quem procura, sem rolar a lista inteira.',
+  },
+  {
+    alvo: 'clientes-lista-funil',
+    titulo: 'Duas formas de ver a mesma coisa',
+    texto: 'Lista mostra todo mundo em linha; Funil mostra por etapa da negociação — troque conforme o que você precisa enxergar agora.',
+  },
+];
+const PASSOS_TOUR_VERIFICACAO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Você está no Hábito 7 — Verificação do Progresso. "O que não se mede não se corrige": é aqui que os números de todo mundo aparecem juntos.',
+  },
+  {
+    alvo: 'verificacao-resumo',
+    titulo: 'Os números que importam, num só lugar',
+    texto: 'Vendas, meta, conversão e captação — os 4 números que você vê espalhados nas outras telas se juntam aqui, pra bater o olho e saber como está o dia.',
+  },
+  {
+    alvo: 'verificacao-time',
+    titulo: 'O placar humano do time',
+    texto: 'Pulso, pódio, radar e a tabela do X-Game — a mesma gamificação que cada pessoa vê de si, só que do time inteiro, junto.',
+  },
+];
 
 export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [customers, setCustomers] = useState([]);
@@ -104,13 +144,40 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // "Contatar" na Lista de Network chega no Hábito 4 já apontado pra ela.
   const [contatoDestacado, setContatoDestacado] = useState(null);
   // 🖐️ 09/09/2026 — dono, ao vivo, depois de testar o Compromisso: "pode
-  // seguir pros outros hábitos". O botão global "Como Funciona" pede o tour
-  // de fora desta tela (src/lib/pedidoDeTour.js) sem saber em qual dos 8
-  // Hábitos a pessoa está — só repassa o pedido pro CrmMetodo, que decide
-  // sozinho (PASSOS_POR_PAINEL) se o Hábito atual tem tour, e qual.
-  const [tourPendente, setTourPendente] = useState(false);
+  // seguir pros outros hábitos", e depois, urgente: "tem aba que não está
+  // funcionando... vamos fazer análise e deixar funcionando perfeito." O
+  // botão global "Como Funciona" pede o tour de fora desta tela
+  // (src/lib/pedidoDeTour.js) sem saber em qual dos 8 Hábitos a pessoa está.
+  //
+  // 🐛 DIR-124 — o BUG que fazia "algumas abas não funcionarem": o pedido
+  // sempre virava `tourPendente = true`, repassado pro CrmMetodo — mas
+  // CrmMetodo só existe em 6 dos 8 Hábitos (nunca em Acompanhamento nem em
+  // Verificação). Nesses dois, o clique não fazia NADA (`tourPendente`
+  // ficava true, esquecido) — e se a pessoa então trocasse pra um Hábito
+  // que TEM CrmMetodo (ex.: Sonho), ele montava já com `iniciarTour=true`
+  // e disparava um tour QUE NINGUÉM PEDIU ali, sem aviso — o "tour do Sonho
+  // travado/estranho" que o dono via era exatamente essa sobra.
+  //
+  // A CORREÇÃO: decidir a rota NA HORA do clique, olhando pra tela atual —
+  // `secaoAtivaRef` existe só porque `secaoAtiva` nasce mais abaixo neste
+  // componente (depois deste efeito) e um efeito só vê o valor que
+  // existia quando ele foi CRIADO; o ref sempre lê o valor de agora.
+  const [tourPendente, setTourPendente] = useState(false); // Hábitos 1,2,3,4,5,8 (CrmMetodo)
+  const [tourVerificacaoAberto, setTourVerificacaoAberto] = useState(false); // Hábito 7
+  const [tourAcompanhamentoAberto, setTourAcompanhamentoAberto] = useState(false); // Hábito 6 (Clientes)
+  const [tourEsteiraPendente, setTourEsteiraPendente] = useState(false); // Hábito 6b (Esteira/Expansão)
+  const secaoAtivaRef = useRef('acompanhamento');
+  const subAcompRef = useRef(subAcomp);
+  useEffect(() => { subAcompRef.current = subAcomp; }, [subAcomp]);
   useEffect(() => ouvirPedidoDeTour((id) => {
-    if (id === 'metodo') setTourPendente(true);
+    if (id !== 'metodo') return;
+    const atual = secaoAtivaRef.current;
+    if (['sonho', 'compromisso', 'lista', 'contato', 'apresentacao', 'duplicacao'].includes(atual)) { setTourPendente(true); return; }
+    if (atual === 'verificacao') { setTourVerificacaoAberto(true); return; }
+    if (atual === 'acompanhamento') {
+      if (subAcompRef.current === 'expansao') setTourEsteiraPendente(true);
+      else setTourAcompanhamentoAberto(true);
+    }
   }), []);
   // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
   const [visaoClientes, setVisaoClientes] = useState('lista');
@@ -1383,6 +1450,7 @@ _Enviado via CRM Leilão NoZap_`;
   // 🧭 DIR-24 Fase 3 — seção ativa e a faixa de resumo (os 4 números que
   // importam, sempre visíveis, pro leitor apressado e pro alto nível).
   const secaoAtiva = secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento');
+  secaoAtivaRef.current = secaoAtiva; // 🐛 DIR-124 — ver comentário do listener de tour, acima
   // dentro do Hábito 6: alterna entre 👥 Clientes e 🚀 Esteira/Expansão
   const brl = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const resumoItens = [
@@ -1753,7 +1821,7 @@ _Enviado via CRM Leilão NoZap_`;
               <span className="text-[11px] sm:text-xs text-nz-tinta-fraca">verificando o progresso e mapeando processos</span>
             </div>
             {/* os 4 números que vieram do topo: é aqui que eles pertencem */}
-            <CrmResumo itens={resumoItens} />
+            <div data-teste="verificacao-resumo"><CrmResumo itens={resumoItens} /></div>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
             {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
@@ -1766,7 +1834,8 @@ _Enviado via CRM Leilão NoZap_`;
             />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
             {/* 🎖️ o placar humano do time: pulso, pódio, radar e a tabela */}
-            <XGameVisaoExecutiva />
+            <div data-teste="verificacao-time"><XGameVisaoExecutiva /></div>
+            <TourGuiado ativo={tourVerificacaoAberto} passos={PASSOS_TOUR_VERIFICACAO} onFechar={() => setTourVerificacaoAberto(false)} />
           </>
         )}
 
@@ -1815,6 +1884,8 @@ _Enviado via CRM Leilão NoZap_`;
               oportunidadeParaAbrir={oportunidadeParaAbrir}
               onOportunidadeParaAbrirConsumida={() => setOportunidadeParaAbrir(null)}
               onIr={(sec) => setSecao(sec)}
+              iniciarTour={tourEsteiraPendente}
+              onTourIniciado={() => setTourEsteiraPendente(false)}
             />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
@@ -1847,7 +1918,7 @@ _Enviado via CRM Leilão NoZap_`;
               onPurchaseStatusClick={setPurchaseStatusFilter}
             />
             {/* FILTROS DE CLIENTES */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6" data-teste="clientes-busca">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nz-tinta-fraca" />
             <Input
@@ -1914,7 +1985,7 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
 
           {/* 🌊 DIR-24 Fase 5 — alternador Lista/Funil + exportação CSV */}
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-3" data-teste="clientes-lista-funil">
             <div className="flex gap-1 rounded-lg border border-nz-borda bg-nz-cinza-fundo p-0.5">
               <button
                 type="button"
@@ -1961,6 +2032,7 @@ _Enviado via CRM Leilão NoZap_`;
               podeEditarUsuarioApp={vis.gerirVendedores}
             />
           )}
+          <TourGuiado ativo={tourAcompanhamentoAberto} passos={PASSOS_TOUR_ACOMPANHAMENTO} onFechar={() => setTourAcompanhamentoAberto(false)} />
 
           </TabsContent>
 
