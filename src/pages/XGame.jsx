@@ -8,8 +8,8 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
-  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
-  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaDoToken,
+  estudoFdsEmDia, travarDiamantePorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -207,12 +207,14 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    const semEstudoSemana = resumo.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
-    // 🎓 09/09/2026 — dono: sem o estudo de fim de semana em dia, trava antes
-    // do Diamante — mesmo padrão da trava de estudo de semana, um degrau acima.
+    // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
+    // estudo (semana OU fim de semana) trava só o DIAMANTE, nunca o OURO
+    // — Ouro tem que dar pra chegar via produção/MvM/vendas mesmo sem
+    // estudar em casa. `travarDiamantePorEstudo` é a MESMA função usada
+    // no Compromisso, no ranking do time e no Painel Corporativo.
     const fdsOk = estudoFdsEmDia(diasCiclo, { data: dataISO(agora), feito: resumo.estudo_fds_feito });
-    const total = fdsOk ? semEstudoSemana : Math.min(semEstudoSemana, TRAVA_SEM_DIAMANTE);
-    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+    const total = travarDiamantePorEstudo(r.total, { estudoSemanaOk: resumo.estudo_em_dia, estudoFdsOk: fdsOk });
+    return { ...r, total, liga: ligaDoToken(total), estudoEmDiaCompleto: resumo.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [resumo, diasCiclo, recebido.media, participante, vendasCiclo]);
   const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
   const janelaAberta = janelaVotacaoAberta(agoraMin);
@@ -494,7 +496,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card titulo="Human Token" valor={`${ciclo.faixa.medalha} ${fmt2(ciclo.total)}`} sub={`${ciclo.faixa.label} do ciclo · teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
+            <Card titulo="Human Token" valor={`${ciclo.liga.emoji} ${fmt2(ciclo.total)}`} sub={`${ciclo.liga.label} do ciclo · teto 22,22${ciclo.estudoEmDiaCompleto ? '' : ' · trava 19,99 pro Diamante (estude!)'}`} />
             <Card
               titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)}
               sub={`${resumo.frase_mvm}${recebido.media !== null ? ` · votação do ciclo: ${fmt2(recebido.media)}` : ''}`}

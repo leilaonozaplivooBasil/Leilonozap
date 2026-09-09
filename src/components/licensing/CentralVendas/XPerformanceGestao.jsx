@@ -415,10 +415,32 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   };
 
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
+  // 🐛 09/09/2026 — achado na auditoria pré-publicação: o comentário acima
+  // já dizia a regra, mas o código nunca conferia `origem` — o botão
+  // "excluir" aparecia (e funcionava) pra QUALQUER tarefa atrasada, mesmo
+  // as da própria Rotina Perfeita da pessoa, sem pedir confirmação. Agora
+  // só apaga tarefa distribuída pela gestão (`origem === 'xperf'`, o mesmo
+  // filtro que `resumoDoDia` já usa pra decidir o que é atraso "da
+  // gestão") e sempre confirma antes — apagar tarefa é sem volta.
   const desfazer = async (t) => {
+    if (t.origem !== 'xperf') { toast.error('Só dá pra excluir aqui o que a gestão distribuiu — a rotina da própria pessoa é dela.'); return; }
+    if (!window.confirm(`Excluir "${t.titulo}" de ${nomeDe(t.user_id)}? Isso apaga a tarefa pra sempre, sem desfazer.`)) return;
     setTarefasCiclo((l) => l.filter((x) => x.id !== t.id));
     const { error } = await supabase.from('metodo_tarefas').delete().eq('id', t.id);
     if (error) { toast.error('Não apagou — recarregando'); carregarTarefas(); }
+  };
+
+  // 🟡 09/09/2026 — achado na auditoria: o comentário do "avisar" (acima)
+  // promete "reset é manual, o admin decide quando ela aprendeu", mas não
+  // existia botão nenhum pra isso — uma vez chegando aos 3 avisos, qualquer
+  // atraso futuro (mesmo isolado, meses depois) zerava o dia pra sempre.
+  const resetarAvisos = async (userId) => {
+    const nome = nomeDe(userId);
+    if (!window.confirm(`Zerar os avisos de atraso do pronto de ${nome}? O próximo atraso dela volta a contar como o 1º.`)) return;
+    setParticipantes((l) => l.map((x) => (x.user_id === userId ? { ...x, avisos_pronto: 0 } : x)));
+    const { error } = await supabase.from('xgame_participantes').update({ avisos_pronto: 0, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    if (error) { toast.error('Não resetou — recarregando'); carregarTarefas(); return; }
+    toast.success(`${nome}: avisos de atraso zerados — o próximo volta a contar como o 1º.`);
   };
 
   // grava o fixo/mínimo; quem ainda não tinha cadastro no jogo ganha um
@@ -835,7 +857,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         </button>
         {mensagensAberto && (
           <div className="mt-3">
-            <CaixaDeMensagensAdmin />
+            <CaixaDeMensagensAdmin currentUser={currentUser} />
           </div>
         )}
       </div>
@@ -883,7 +905,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                           ) : (
                             <button type="button" onClick={() => avisar(t)} className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 hover:bg-amber-400/30 px-2 py-0.5 text-amber-200 font-bold" data-teste="avisar"><MessageCircle className="w-3 h-3" /> avisar</button>
                           )}
-                          <button type="button" onClick={() => desfazer(t)} title="excluir (desistir desse pronto)" className="inline-flex items-center gap-1 rounded-full bg-red-500/15 hover:bg-red-500/30 px-2 py-0.5 text-red-200 font-bold" data-teste="excluir-pronto"><Trash2 className="w-3 h-3" /> excluir</button>
+                          {/* 🐛 09/09/2026 — achado na auditoria: excluir só pode valer pra tarefa que a GESTÃO distribuiu — a rotina da própria pessoa (origem !== 'xperf') não some por aqui */}
+                          {t.origem === 'xperf' && (
+                            <button type="button" onClick={() => desfazer(t)} title="excluir (desistir desse pronto)" className="inline-flex items-center gap-1 rounded-full bg-red-500/15 hover:bg-red-500/30 px-2 py-0.5 text-red-200 font-bold" data-teste="excluir-pronto"><Trash2 className="w-3 h-3" /> excluir</button>
+                          )}
                         </span>
                       )}
                     </div>
@@ -898,6 +923,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                         <p className={`mt-1 text-[10px] font-bold ${zerou ? 'text-red-300' : 'text-amber-300'}`}>
                           ⚠️ passou do prazo sem o pronto — {avisos} de {AVISOS_ANTES_DE_ZERAR} avisos já dados.{' '}
                           {zerou ? 'Zerou o dia inteiro dela (MvM, Human Token, pontos e X-Pay).' : 'Ainda é treino — só perde pontos. Clique em avisar pra registrar e cobrar no WhatsApp.'}
+                          {/* 🐛 09/09/2026 — achado na auditoria: faltava a UI do reset que o comentário do "avisar" já prometia — sem isso, o castigo virava permanente */}
+                          {avisos > 0 && (
+                            <button type="button" onClick={() => resetarAvisos(t.user_id)} className="ml-2 font-bold underline decoration-dotted text-white/50 hover:text-white/80" data-teste="resetar-avisos">resetar avisos</button>
+                          )}
                         </p>
                       );
                     })()}

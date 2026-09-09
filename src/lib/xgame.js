@@ -231,6 +231,29 @@ export function estudoFdsEmDia(diasCiclo = [], hoje = null) {
   return feitos / fimDeSemana.length >= 0.6;
 }
 
+/**
+ * A trava de estudo do CICLO — e só do Diamante (DIR-113, 09/09/2026).
+ * Dono, revendo o próprio pedido anterior: "o que ditava o diamante é só
+ * um estudo em casa, mas ela tem que chegar ao ouro... até mesmo se ela
+ * não estudar em casa — que é a produção, mais MvM, mais tudo isso."
+ *
+ * Sem constância de leitura de semana OU sem o estudo de fim de semana, o
+ * total do ciclo capa em `TRAVA_SEM_DIAMANTE` (19,99) — NUNCA em
+ * `TRAVA_SEM_ESTUDO` (17,77), que é a trava de um mecanismo diferente e
+ * mais antigo: o Human Token DO DIA (`humanToken()`), que continua
+ * intocado. Antes desta função, `XGame.jsx`/`CrmMetodo.jsx` reaplicavam
+ * `TRAVA_SEM_ESTUDO` por fora, em cima do total do CICLO — bloqueando
+ * Ouro pra quem não lê todo dia, o oposto do que o dono quer agora. Uma
+ * função só, usada nos 4 lugares que calculam liga de ciclo (painel
+ * pessoal em XGame.jsx e CrmMetodo.jsx, ranking do time em CrmMetodo.jsx
+ * e XGameVisaoExecutiva.jsx, e o Painel Corporativo/PDF Executivo),
+ * pra nunca mais dessincronizar entre telas.
+ */
+export function travarDiamantePorEstudo(totalBruto, { estudoSemanaOk, estudoFdsOk }) {
+  if (estudoSemanaOk && estudoFdsOk) return totalBruto;
+  return Math.min(totalBruto, TRAVA_SEM_DIAMANTE);
+}
+
 // 📊 08/09/2026 — dono: "quero o percentual de reunião do time" no painel
 // vivo. Mesma régua que já classifica ícone/peso pelo título em outros
 // lugares do app (XGameJornada, REGRAS_PESO) — reunião/apresentação/
@@ -510,13 +533,22 @@ export function vendasEquivalentesAltoValor(vendasPagas = [], ticketMedio = TICK
   return ticketMedio > 0 ? total / ticketMedio : 0;
 }
 
+// 🐛 09/09/2026 — achado na auditoria pré-publicação: os pesos do perfil
+// 'comercial' somavam 14,72, não 22,22 — quase 7,5 pontos abaixo do teto.
+// Como Ouro começa em 17,78 e Diamante em 20, um executivo comercial NUNCA
+// conseguia chegar lá, mesmo fechando 100% em tudo (achava-se que a soma
+// batia — o teste só conferia a ORDEM dos pesos, nunca o total). Corrigido
+// mantendo a MESMA proporção entre produção/realtime/bônus do perfil não
+// comercial (1,5 : 3,67 : 5,55), só reescalada pra sobrar espaço pro
+// PT VENDA maior (2,5, intocado — é o que "domina" quem vende): a soma dos
+// três (9,72) + PT VENDA (2,5) + MvM (10) volta a fechar 22,22 certinho.
 export function pesosDoPerfil(perfil) {
   const comercial = String(perfil || '').toLowerCase() === 'comercial';
   return {
     mvm: MVM_MAX,
-    producao: comercial ? 0.3 : 1.5,   // "real time" — não pode mais pesar 50%
-    realtime: comercial ? 0.666 : 3.67, // desempenho (X-Pay ganho/possível) — intocado
-    bonus: comercial ? 1.25 : 5.55,     // estudo/leitura mora aqui — o grande ganhador
+    producao: comercial ? 1.36 : 1.5,   // "real time" — não pode mais pesar 50%
+    realtime: comercial ? 3.33 : 3.67, // desempenho (X-Pay ganho/possível) — intocado
+    bonus: comercial ? 5.03 : 5.55,     // estudo/leitura mora aqui — o grande ganhador
     ptVenda: comercial ? 2.5 : 1.5,     // sobe um pouco pra quem não é comercial também
   };
 }
@@ -704,7 +736,14 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     && tarefas.some((t) => t?.origem === 'xperf' && t?.prazo_em && !t?.feito && new Date(t.prazo_em) < hoje);
   const avisosPronto = Number(participante?.avisos_pronto) || 0;
   const perdeuPorAtrasoPronto = tarefaAtrasadaPronto && avisosPronto >= AVISOS_ANTES_DE_ZERAR;
-  const emAvisoPronto = tarefaAtrasadaPronto && !perdeuPorAtrasoPronto;
+  // 🐛 09/09/2026 — achado na auditoria pré-publicação: sem o `&&
+  // !perdeuPorNaoVotar`, dava pra `emAvisoPronto` ficar `true` no MESMO dia
+  // em que `perdeuPorNaoVotar` já zerou tudo — a tela mostrava os dois
+  // banners juntos: o vermelho "DIA ZERADO" e, embaixo, o âmbar "você só
+  // perdeu pontos, MvM/Token/X-Pay continuam de pé", que é falso nesse
+  // caso. O aviso graduado só faz sentido quando ELE é o motivo do dia
+  // ainda estar de pé — não quando outra régua mais radical já zerou tudo.
+  const emAvisoPronto = tarefaAtrasadaPronto && !perdeuPorAtrasoPronto && !perdeuPorNaoVotar;
   // 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de
   // amanhã a regra é séria." `perdoado` é ligado por fora (xgame_config.
   // perdao_zeragem_ate) pra um dia excepcional inteiro — a régua radical

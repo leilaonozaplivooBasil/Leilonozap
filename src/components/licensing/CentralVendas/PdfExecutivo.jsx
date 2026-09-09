@@ -123,13 +123,32 @@ export async function desenharPdf(rel, { jsPDF, logo = null } = {}) {
   doc.text(paraPdf(rel.marca).toUpperCase(), W - M, 15, { align: 'right' });
   doc.text(paraPdf(rel.periodoRotulo), W - M, 20.5, { align: 'right' });
   // quem
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
+  // 🐛 09/09/2026 — achado na auditoria: nome sem limite de largura, ao
+  // contrário do resto do PDF (que sempre usa splitTextToSize). Um nome
+  // completo brasileiro mais longo empurrava o subtítulo pra fora da
+  // página ou por cima do "X-EOS/período" alinhado à direita. Agora o
+  // tamanho da fonte encolhe até caber, e o subtítulo só divide a linha
+  // com o nome se sobrar espaço — senão desce pra linha de baixo.
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
   const nomePdf = paraPdf(rel.pessoa.nome);
+  const largDisponivelNome = W - M - xT;
+  let tamNome = 15;
+  doc.setFontSize(tamNome);
+  while (doc.getTextWidth(nomePdf) > largDisponivelNome && tamNome > 9) { tamNome -= 0.5; doc.setFontSize(tamNome); }
   doc.text(nomePdf, xT, 33);
-  const largNome = doc.getTextWidth(nomePdf); // medido ainda em 15pt
+  const largNome = doc.getTextWidth(nomePdf);
   const sub = [rel.pessoa.posicao, rel.pessoa.funcao, rel.pessoa.fixo ? `fixo ${rel.pessoa.fixo}` : null].filter(Boolean).join('  ·  ');
-  if (sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(180, 185, 205); doc.text(paraPdf(sub), xT + largNome + 4, 33); }
   y = 48;
+  if (sub) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(180, 185, 205);
+    const subPdf = paraPdf(sub);
+    if (xT + largNome + 4 + doc.getTextWidth(subPdf) <= W - M) {
+      doc.text(subPdf, xT + largNome + 4, 33);
+    } else {
+      doc.text(subPdf, xT, 38.5);
+      y = 52;
+    }
+  }
 
   // ── semáforo + números ──
   if (rel.semaforo) {

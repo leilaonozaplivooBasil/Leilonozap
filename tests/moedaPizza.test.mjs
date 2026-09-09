@@ -54,6 +54,28 @@ test('fatiasDaMoeda: token acima do teto (bug em outro lugar) não estoura o des
   assert.equal(restante, 0);
 });
 
+// 🐛 09/09/2026 — achado na auditoria: o teste acima só provava
+// `conquistado`/`restante` — nunca `fatia.inicio`/`fatia.fim`, que são os
+// números que MoedaPizza.jsx usa DE VERDADE pra desenhar (strokeDasharray/
+// strokeDashoffset). Antes da correção, um componente gigante (aqui, MvM
+// sozinho passando do teto) fazia toda fatia SEGUINTE nascer e terminar
+// além de TOKEN_MAX — no desenho, isso é uma fatia além de 360°,
+// sobrepondo cores no início do círculo.
+test('fatiasDaMoeda: nenhuma fatia (inicio/fim) passa do teto, mesmo com um componente sozinho estourando', () => {
+  const { fatias } = fatiasDaMoeda({ mvm: 999, producao: 5, realtime: 5, bonus: 5, vendas: 5 }, TOKEN_MAX);
+  for (const f of fatias) {
+    assert.ok(f.inicio <= TOKEN_MAX, `${f.k}.inicio (${f.inicio}) não pode passar do teto`);
+    assert.ok(f.fim <= TOKEN_MAX, `${f.k}.fim (${f.fim}) não pode passar do teto`);
+    assert.ok(f.fim >= f.inicio, `${f.k}: fim tem que vir depois (ou igual) do início`);
+  }
+  // as fatias que vêm DEPOIS do estouro (producao em diante) ficam
+  // "achatadas" no próprio teto — nascem e terminam no mesmo ponto, não
+  // desenham porção nenhuma do anel.
+  const producao = fatias.find((f) => f.k === 'producao');
+  assert.equal(producao.inicio, TOKEN_MAX);
+  assert.equal(producao.fim, TOKEN_MAX);
+});
+
 test('ORDEM_COMPONENTES/COMPONENTE_INFO: todo componente do Human Token tem cor e rótulo — nenhuma fatia muda sozinha', () => {
   for (const k of ORDEM_COMPONENTES) {
     assert.ok(COMPONENTE_INFO[k], `falta a info visual do componente "${k}"`);

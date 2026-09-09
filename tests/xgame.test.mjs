@@ -11,8 +11,8 @@ import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
-  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
-  META_VENDAS_CICLO, TICKET_MEDIO_VENDA, PESO_REUNIAO_EQUIVALENTE, TETO_REUNIAO_NA_META, vendasEquivalentesAltoValor,
+  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, estudoEmDia, TRAVA_SEM_DIAMANTE, travarDiamantePorEstudo, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
+  META_VENDAS_CICLO, TICKET_MEDIO_VENDA, PESO_REUNIAO_EQUIVALENTE, TETO_REUNIAO_NA_META, vendasEquivalentesAltoValor, TOKEN_MAX,
 } from '../src/lib/xgame.js';
 
 // 🎯 09/09/2026 — DIR-109: o radar (mapa do jogador) lê EIXOS_EXECUTIVO_IDEAL
@@ -260,6 +260,19 @@ test('pesosDoPerfil: perfil comercial mantém vendas como o principal, real time
   assert.ok(p.producao < p.bonus, 'mesmo no comercial, real time reduzido não pode pesar mais que o estudo');
 });
 
+// 🐛 09/09/2026 — achado na auditoria pré-publicação: essa suíte nunca
+// conferiu a SOMA pro perfil comercial (só a ordem dos pesos) — por isso
+// não pegou que ela dava 14,72 em vez de 22,22, travando qualquer
+// executivo comercial abaixo de Ouro (17,78) pra sempre, mesmo fechando
+// 100% em tudo. Trava explícita pros dois perfis, pra nunca mais destoar.
+test('pesosDoPerfil: a soma bate com TOKEN_MAX pros dois perfis — comercial não pode ficar travado abaixo de Ouro/Diamante', () => {
+  for (const perfil of ['estrategico', 'operacional', 'comercial']) {
+    const p = pesosDoPerfil(perfil);
+    const total = p.mvm + p.producao + p.realtime + p.bonus + p.ptVenda;
+    assert.ok(Math.abs(total - TOKEN_MAX) < 0.01, `perfil '${perfil}': soma dos pesos (${total}) tem que bater com TOKEN_MAX (${TOKEN_MAX})`);
+  }
+});
+
 // ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
 // ele perder o dinheiro, isso tem que tirar pontos dele." Reaproveita a
 // MESMA régua radical do não-votar: uma tarefa de gestão (origem 'xperf',
@@ -309,6 +322,27 @@ test('resumoDoDia: 4o aviso em diante na Fila do Pronto zera o dia inteiro — m
 
   const maisAvisos = resumoDoDia({ tarefas: vencida, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true, participante: { avisos_pronto: 7 } });
   assert.equal(maisAvisos.perdeu_por_atraso_pronto, true, 'acima de 3 avisos continua zerando');
+});
+
+// 🐛 09/09/2026 — achado na auditoria pré-publicação: no mesmo dia em que
+// `perdeuPorNaoVotar` já zera tudo (depois das 21h30, sem votar em todo
+// mundo), um atraso de pronto com poucos avisos acumulados fazia
+// `em_aviso_pronto` ficar `true` AO MESMO TEMPO — a tela mostrava os dois
+// banners juntos: o vermelho "DIA ZERADO" e, embaixo, o âmbar "você só
+// perdeu pontos, MvM/Token/X-Pay continuam de pé", que é falso nesse caso
+// específico (os dois JÁ zeraram, pela régua do não-voto).
+test('resumoDoDia: zerado por não votar SUPRIME o aviso graduado do pronto — os dois banners não podem aparecer juntos', () => {
+  const agora = new Date('2026-09-08T22:00:00'); // depois das 21h30 — votação fechada
+  const vencida = [
+    ...TAREFAS,
+    { id: 'x1', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-08T18:00:00' },
+  ];
+  const r = resumoDoDia({ tarefas: vencida, agoraMin: 22 * 60, hoje: agora, votouEmTodos: false, participante: { avisos_pronto: 1 } });
+  assert.equal(r.perdeu_por_nao_votar, true, 'o não-voto já zerou o dia');
+  assert.equal(r.perdeu_por_atraso_pronto, false, 'só 1 aviso — o atraso sozinho não zeraria');
+  assert.equal(r.em_aviso_pronto, false, 'mas o dia JÁ zerou por outro motivo — não é "só perdeu pontos"');
+  assert.equal(r.token_dia, 0);
+  assert.equal(r.pontos, 0);
 });
 
 test('resumoDoDia: tarefa xperf ainda dentro do prazo, ou já com o pronto dado, não pune', () => {
@@ -436,4 +470,34 @@ test('TRAVA_SEM_DIAMANTE aplicada por fora (padrão dos call-sites): sem o estud
   assert.ok(semEstudoFds <= TRAVA_SEM_DIAMANTE);
   assert.ok(semEstudoFds >= 17.78, 'a trava é só do Diamante — Ouro continua alcançável');
   assert.equal(totalComTrava, r.total, 'sem fim de semana ainda vivido no ciclo, estudoFdsEmDia não trava nada');
+});
+
+// 🎓 09/09/2026 — DIR-113: o dono revisou o próprio pedido anterior — "o que
+// ditava o diamante é só um estudo em casa, mas ela tem que chegar ao
+// ouro... até mesmo se ela não estudar em casa." `travarDiamantePorEstudo`
+// é a função ÚNICA que os 4 lugares que calculam liga de ciclo (X-Game,
+// Compromisso pessoal + ranking, Painel Corporativo) agora usam — antes,
+// cada lugar reaplicava a trava manualmente, e um deles (XGame.jsx/
+// CrmMetodo.jsx pessoal) usava por engano TRAVA_SEM_ESTUDO (17,77, a trava
+// do TOKEN DO DIA) pra capar o total do CICLO, bloqueando Ouro sem motivo.
+test('travarDiamantePorEstudo: com os dois estudos em dia, o total passa reto — Diamante alcançável', () => {
+  assert.equal(travarDiamantePorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: true }), 21.5);
+});
+
+test('travarDiamantePorEstudo: falta a leitura de semana → capa no teto do Diamante, nunca abaixo de Ouro', () => {
+  const capado = travarDiamantePorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: true });
+  assert.equal(capado, TRAVA_SEM_DIAMANTE);
+  assert.ok(capado >= 17.78, 'Ouro continua alcançável mesmo sem a leitura de semana em dia');
+});
+
+test('travarDiamantePorEstudo: falta o estudo de fim de semana → mesma trava do Diamante', () => {
+  assert.equal(travarDiamantePorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: false }), TRAVA_SEM_DIAMANTE);
+});
+
+test('travarDiamantePorEstudo: faltando os dois, trava igual (não empilha)', () => {
+  assert.equal(travarDiamantePorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: false }), TRAVA_SEM_DIAMANTE);
+});
+
+test('travarDiamantePorEstudo: total abaixo do teto do Diamante nunca é afetado, com ou sem estudo', () => {
+  assert.equal(travarDiamantePorEstudo(15, { estudoSemanaOk: false, estudoFdsOk: false }), 15);
 });

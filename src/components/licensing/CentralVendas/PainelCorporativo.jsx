@@ -15,6 +15,7 @@ import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import {
   fmtReais, dataISO, inicioCicloOficial, tokenDoCiclo, formacaoExecutivoIdeal, proporcoesExecutivoIdeal,
   EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaDoToken, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  estudoEmDia, estudoFdsEmDia, travarDiamantePorEstudo,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -92,6 +93,16 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const [mvmRecebidoCiclo, setMvmRecebidoCiclo] = useState([]);
   const [vendasCiclo, setVendasCiclo] = useState(null);
 
+  // 🐛 09/09/2026 — achado na auditoria pré-publicação: trocar de pessoa
+  // rápido no seletor "painel de" (uso avulso, fora do X-Performance) podia
+  // misturar dado de duas pessoas — nenhuma busca descartava a resposta
+  // antiga quando `pessoaId` mudava no meio do caminho. `pessoaIdRef`
+  // guarda sempre o ID mais recente; cada busca assíncrona confere, ao
+  // terminar, se ainda é a pessoa que estava selecionada quando ela
+  // começou — senão, descarta a resposta em vez de aplicar no estado.
+  const pessoaIdRef = useRef(pessoaId);
+  useEffect(() => { pessoaIdRef.current = pessoaId; }, [pessoaId]);
+
   const carregarTime = useCallback(async () => {
     const [u, p, cfg] = await Promise.all([
       supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level').order('full_name'),
@@ -108,6 +119,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   // X-Game já faz pra própria pessoa, aqui repetida pra pessoa selecionada.
   useEffect(() => {
     if (!pessoaId) { setDiasCicloPessoa([]); setMvmRecebidoCiclo([]); setVendasCiclo(null); return; }
+    const pessoaDaBusca = pessoaId;
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     Promise.all([
       supabase.from('xgame_diario').select('detalhes').eq('user_id', pessoaId).eq('ciclo_inicio', ini).lt('data', dataISO(new Date())).order('data'),
@@ -119,6 +131,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
         .eq('responsavel_id', pessoaId)
         .gte('fechado_em', `${ini}T00:00:00`),
     ]).then(([dc, vr, sales, oport]) => {
+      if (pessoaIdRef.current !== pessoaDaBusca) return; // a pessoa trocou antes desta resposta chegar
       setDiasCicloPessoa(dc.data || []);
       setMvmRecebidoCiclo(vr.data || []);
       if (sales.error || oport.error) { setVendasCiclo(null); return; }
@@ -136,6 +149,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const primeiraCarga = useRef(true);
   const carregarPessoa = useCallback(async () => {
     if (!pessoaId) { setCarregando(false); return; }
+    const pessoaDaBusca = pessoaId;
     if (primeiraCarga.current) setCarregando(true);
     const [d, t, c, m, v, td] = await Promise.all([
       supabase.from('xperf_demandas').select('*').eq('pessoa_id', pessoaId).order('created_at', { ascending: false }).limit(120),
@@ -145,6 +159,9 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,product_id,quantity').or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`).gte('created_date', `${mes}-01T00:00:00`),
       supabase.from('xperf_demandas').select('*').gte('created_at', `${segunda}T00:00:00`).order('created_at'),
     ]);
+    // a pessoa trocou antes desta resposta chegar — descarta em vez de
+    // misturar o dado de uma pessoa com o cabeçalho de outra
+    if (pessoaIdRef.current !== pessoaDaBusca) return;
     setDemandas(d.data || []); setTarefas(t.data || []); setCards(c.data || []); setMetas(m.data || []);
     setVendas((v.data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s) && mesDe(String(s.created_date)) === mes));
     setTodas(td.data || []);
@@ -155,6 +172,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
       idsT.length ? supabase.from('metodo_tarefas').select('id,feito,conferido,pronto_em').in('id', idsT) : Promise.resolve({ data: [] }),
       idsC.length ? supabase.from('metodo_quadro').select('id,coluna').in('id', idsC) : Promise.resolve({ data: [] }),
     ]);
+    if (pessoaIdRef.current !== pessoaDaBusca) return;
     setTarefasTodas(tt.data || []); setCardsTodas(ct.data || []);
     primeiraCarga.current = false;
     setCarregando(false);
@@ -185,7 +203,14 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const mvmRecebidoMedia = useMemo(() => mvmManual(mvmRecebidoCiclo).media, [mvmRecebidoCiclo]);
   const cicloToken = useMemo(() => {
     const r = tokenDoCiclo({ diasCiclo: diasCicloPessoa, mvmVotacao: mvmRecebidoMedia, perfil: participanteAtual?.perfil || 'estrategico', vendasReais: vendasCiclo });
-    return { ...r, formacao: formacaoExecutivoIdeal(r.taxas) };
+    // 🎓 09/09/2026 — DIR-113: a MESMA trava de Diamante-só (nunca Ouro) que
+    // o X-Game/Compromisso aplicam — sem isso, a "posição do dia" do PDF
+    // podia mostrar uma liga diferente da que a própria pessoa vê no jogo.
+    const total = travarDiamantePorEstudo(r.total, {
+      estudoSemanaOk: estudoEmDia(diasCicloPessoa),
+      estudoFdsOk: estudoFdsEmDia(diasCicloPessoa),
+    });
+    return { ...r, total, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [diasCicloPessoa, mvmRecebidoMedia, participanteAtual, vendasCiclo]);
   const posicaoDoDia = useMemo(() => {
     if (!pessoa) return null;

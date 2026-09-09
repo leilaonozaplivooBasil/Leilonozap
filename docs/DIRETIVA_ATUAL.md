@@ -12,6 +12,55 @@
 
 ---
 
+## DIR-114 — a auditoria pré-publicação: 4 críticos, 9 importantes e 7 nice-to-have corrigidos
+
+**Emitida por:** dono (09/09/2026): *"corrigir tudo que tem pra corrigir... faz uma análise de novo pra corrigir e deixar perfeito."* — em resposta ao relatório da auditoria em 3 frentes (Painel Corporativo/PDF/roda, motor do X-Game, Hábito 3/4 + trabalho mesclado) publicado antes desta entrada.
+
+**O que entra** (agrupado pelas mesmas letras do relatório da auditoria):
+
+**A — motor do X-Game:**
+- **A1 (crítico):** `pesosDoPerfil('comercial')` somava 14,72 em vez de 22,22 — corrigido mantendo a mesma proporção produção/realtime/bônus do perfil não-comercial, reescalada pra sobrar espaço pro PT VENDA (2,5, intocado).
+- **A4 (importante):** `resumoDoDia` podia mostrar o banner de "aviso graduado" (âmbar) no MESMO dia em que o não-voto já zerou tudo (vermelho) — `emAvisoPronto` agora exige `!perdeuPorNaoVotar`.
+- **A5 (importante):** não existia forma de resetar `avisos_pronto` — o comentário já prometia "reset manual" desde o DIR-105. Botão **"resetar avisos"** novo na Fila do Pronto (XPerformanceGestao.jsx), com confirmação.
+- **A6 (nice-to-have):** tooltip do perfil em XGameAdmin.jsx descrevia a fórmula de antes da repesagem — atualizado com os pesos e a trava atuais.
+
+**B — Painel Corporativo, PDF, roda e mensagens:**
+- **B1 (CRÍTICO/segurança):** a policy de SELECT de `xgame_mensagens` era `qual: true` — qualquer requisição com a chave anon lia a caixa de entrada de qualquer um (inbox do CEO incluído). Fechada (`using (false)`); toda leitura agora passa por `api/functions/xgameMensagensListar.js` (chave de serviço, filtra no servidor com `mensagensRecebidasPor`/`papeisDoCargo`, os mesmos que a tela já usava). INSERT agora exige `remetente_id` de uma pessoa real; UPDATE restrito à coluna `lida` (column-level grant).
+- **B2 (importante):** `xgame_mensagens` e as colunas de `avisos_pronto`/`aviso_pronto_em` existiam em produção sem migração commitada. Reconstruídas com o texto EXATO do que já rodou (consultado em `supabase_migrations.schema_migrations`), como reconciliação — não é uma tabela nova.
+- **B3 (importante):** trocar de pessoa rápido no Painel Corporativo (uso avulso) podia misturar dado de duas pessoas — as buscas agora descartam a resposta se a pessoa selecionada já mudou (`pessoaIdRef`).
+- **B4 (importante):** "excluir" na Fila do Pronto apagava qualquer tarefa (inclusive da Rotina da própria pessoa) sem confirmar. Agora só apaga `origem === 'xperf'` (o que a gestão distribuiu) e sempre confirma antes.
+- **B6 (nice-to-have):** nome muito longo estourava o cabeçalho do PDF Executivo — a fonte agora encolhe até caber, e o subtítulo desce de linha se não sobrar espaço.
+- **B7 (nice-to-have):** `marcarLida` não era esperado antes de recarregar a lista — corrida que podia mostrar "não lida" numa mensagem já respondida.
+
+**C — Hábito 3/4 e integração TourGuiado/MoedaPizza/scriptContatoCoach:**
+- **C1 (CRÍTICO):** `scriptContatoCoach.js` nunca devolvia o campo `aprovado` na resposta de sucesso — o front sempre lia `undefined` (⇒ reprovado), então NINGUÉM jamais ganhava o ponto do script, mesmo perfeito. Um campo, uma linha — a feature pedida duas vezes ao vivo estava 100% inoperante.
+- **C3 (importante):** o destaque de 4s do "Contatar" (DIR-111.2) podia ficar preso — o timer reiniciava a cada render do componente pai. Agora usa uma ref pro callback, só `contatoDestacado` reinicia o timer.
+- **C4 (importante):** `fatiasDaMoeda` não capava `inicio`/`fim` de cada fatia ao teto — geometria segura agora, mesmo se os pesos mudarem no futuro sem preservar a invariante.
+- **C5 (nice-to-have):** contato sem telefone: "Contatar" some sem explicar — agora mostra "sem telefone cadastrado".
+- **C6 (nice-to-have):** helper `nomeDoDono` estava copiado (Lista + Contato) — uma versão só, no topo do componente.
+- **C7 (nice-to-have):** `tests/tourCrmMetodo.test.mjs` (novo) — trava que todo alvo dos 6 tours de CrmMetodo.jsx tem elemento correspondente na tela (mesma rede de segurança que a Esteira já tinha, faltava aqui — exatamente o arquivo que teve o conflito de merge).
+
+**Deliberadamente não resolvido nesta rodada** (fora de escopo pontual, registrado com o dono):
+- **A2/A3** (a divergência de liga entre telas por causa da trava de estudo) foi resolvida junto com a correção da própria trava — ver DIR-113 abaixo.
+- **C2** (teste de `scriptContatoCoach` não invoca o handler de verdade) — melhorado pra conferir TODOS os campos do schema na resposta real (o suficiente pra travar o bug do C1), mas sem montar um mock completo da Anthropic — investimento maior, fora de escopo pontual.
+- Uma auditoria completa de TODO o histórico de migrações do projeto (só as 3 flagradas por esta auditoria foram reconciliadas) e uma revisão de RLS em todas as outras tabelas do app (o mesmo padrão `qual: true` existe em várias) ficam como frentes futuras, não desta rodada.
+
+**Prova:** suíte 1696/1696 (44 testes novos: `tests/xgame.test.mjs` +9, `tests/moedaPizza.test.mjs` +1, `tests/scriptContatoValidacao.test.mjs` +1, `tests/tourCrmMetodo.test.mjs` novo com 7), lint limpo nos arquivos tocados, `npm run build` sem erro. B1 verificado direto no banco (policies e column grants conferidos via SQL depois de aplicar). B6 verificado gerando um PDF de verdade com nome longo e rasterizando pra olhar.
+
+---
+
+## DIR-113 — a trava de estudo passa a bloquear só o Diamante, nunca mais o Ouro
+
+**Emitida por:** dono (09/09/2026), revendo o próprio pedido de trava de estudo: *"O bônus, pra ela chegar a diamante — o que ditava o diamante é só um estudo em casa — mas ela tem que chegar ao ouro, a pessoa tem que chegar ao ouro, até mesmo se ela não estudar em casa, que é a produção, mais MvM, mais tudo isso."*
+
+**O problema:** `XGame.jsx`/`CrmMetodo.jsx` (painel pessoal) reaplicavam `TRAVA_SEM_ESTUDO` (17,77 — a trava do Human Token DO DIA, `humanToken()`) em cima do total do CICLO, além da trava correta do fim de semana (`TRAVA_SEM_DIAMANTE`, 19,99). Isso bloqueava Liga Ouro (17,78+) pra quem não lê todo dia — o oposto do que o dono quer agora. O ranking do time (CrmMetodo.jsx/XGameVisaoExecutiva.jsx), por acidente, já fazia o certo (só a trava do fim de semana) — a divergência entre "o que a pessoa vê de si" e "o que o time vê dela" era justamente o achado A2/A3 da auditoria.
+
+**O que entra:** `travarDiamantePorEstudo(totalBruto, {estudoSemanaOk, estudoFdsOk})`, nova função única em `xgame.js` — sem qualquer um dos dois estudos (leitura de semana OU fim de semana) em dia, capa em `TRAVA_SEM_DIAMANTE` (19,99), NUNCA em `TRAVA_SEM_ESTUDO`. Aplicada nos 4 lugares que calculam liga de ciclo: `XGame.jsx`, `CrmMetodo.jsx` (painel pessoal + ranking, que ganhou a checagem da leitura de semana que faltava), `XGameVisaoExecutiva.jsx` (ranking) e `PainelCorporativo.jsx` (que não tinha trava NENHUMA — bônus da correção). Achado no caminho: o cartão pessoal de "Human Token" do ciclo usava `faixaToken()` (3 faixas, sem Diamante) em vez de `ligaDoToken()` (4 ligas) — ninguém via "💠 Diamante" na própria tela mesmo batendo o token; corrigido junto.
+
+**Prova:** `tests/xgame.test.mjs` — 5 testes novos pra `travarDiamantePorEstudo` (passa reto com os dois estudos ok; capa em 19,99 faltando qualquer um dos dois, nunca abaixo de 17,78; não mexe em total já abaixo do teto). Suíte completa incluída na prova do DIR-114 acima (a mesma rodada de testes/lint/build cobre as duas entradas).
+
+---
+
 ## DIR-112 — a roda da vida vira roda de verdade + o PDF Executivo ganha "posição do dia"
 
 **Emitida por:** dono (09/09/2026), depois de ver o radar (DIR-109/109.1)

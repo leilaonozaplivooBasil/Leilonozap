@@ -23,8 +23,8 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
-  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
-  estudoFdsEmDia, TRAVA_SEM_DIAMANTE,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
+  estudoFdsEmDia, estudoEmDia, travarDiamantePorEstudo,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
@@ -105,12 +105,28 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
   // recomeçando... já me coloca ela no meu contato e pisca." O destaque
   // dura pouco — pisca, chama atenção, some sozinho — não fica preso lá.
+  //
+  // 🐛 09/09/2026 — achado na auditoria: `onContatoDestacadoConsumido` é
+  // recriada a cada render do pai (CrmClientesTab.jsx, um componente
+  // grande com efeitos assíncronos e um setInterval de 30s rodando o
+  // tempo todo) — como ela entrava nas dependências do efeito, qualquer
+  // render do pai reiniciava o timer de 4s do zero, e o destaque podia
+  // ficar preso por muito mais tempo que o prometido (ou pra sempre, se
+  // os renders forem mais frequentes que 4s). Uma ref guarda sempre a
+  // versão mais nova do callback sem entrar na dependência — só
+  // `contatoDestacado` (o gatilho de verdade) reinicia o timer agora.
+  const onContatoDestacadoConsumidoRef = useRef(onContatoDestacadoConsumido);
+  useEffect(() => { onContatoDestacadoConsumidoRef.current = onContatoDestacadoConsumido; }, [onContatoDestacadoConsumido]);
   useEffect(() => {
     if (!contatoDestacado) return undefined;
-    const t = setTimeout(() => onContatoDestacadoConsumido?.(), 4000);
+    const t = setTimeout(() => onContatoDestacadoConsumidoRef.current?.(), 4000);
     return () => clearTimeout(t);
-  }, [contatoDestacado, onContatoDestacadoConsumido]);
+  }, [contatoDestacado]);
   const podeGerir = gestao ?? visaoTotal;
+  // 👤 09/09/2026 — DIR-111, "quem qualificou" — achado na auditoria: este
+  // helper estava copiado (corpo idêntico) dentro dos painéis 'lista' e
+  // 'contato'; uma versão só, aqui em cima, pra não dessincronizar de novo.
+  const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
   // 🖐️ 09/09/2026 — dono, ao vivo: "Como Funciona é um tour... a pessoa vai
   // clicando e a plataforma vai ensinando." A mesma mãozinha da Esteira de
   // Captação (TourGuiado.jsx), pedida de fora (o botão global "Como
@@ -399,12 +415,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    const semEstudoSemana = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
-    // 🎓 09/09/2026 — dono: sem o estudo de fim de semana em dia, trava antes
-    // do Diamante — mesmo padrão da trava de estudo de semana, um degrau acima.
+    // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
+    // estudo (semana OU fim de semana) trava só o DIAMANTE, nunca o OURO
+    // — mesma função usada no X-Game, no ranking e no Painel Corporativo.
     const fdsOk = estudoFdsEmDia(diasCiclo, { data: hojeStr(), feito: xgame.estudo_fds_feito });
-    const total = fdsOk ? semEstudoSemana : Math.min(semEstudoSemana, TRAVA_SEM_DIAMANTE);
-    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+    const total = travarDiamantePorEstudo(r.total, { estudoSemanaOk: xgame.estudo_em_dia, estudoFdsOk: fdsOk });
+    return { ...r, total, liga: ligaDoToken(total), estudoEmDiaCompleto: xgame.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
   const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
     && xgame.tarefas_feitas / xgame.tarefas_total >= OFENSIVA_META);
@@ -554,9 +570,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
           });
-          // 🎓 09/09/2026 — mesma trava do Diamante do painel pessoal: sem o
-          // estudo de fim de semana em dia, o ranking também não deixa passar.
-          const token = estudoFdsEmDia(r.diasDatados) ? tokenBruto : Math.min(tokenBruto, TRAVA_SEM_DIAMANTE);
+          // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
+          // estudo (semana OU fim de semana) trava só o Diamante, nunca o
+          // Ouro. Antes só checava o fim de semana; agora checa os dois,
+          // igual ao painel individual.
+          const token = travarDiamantePorEstudo(tokenBruto, {
+            estudoSemanaOk: estudoEmDia(r.diasDatados),
+            estudoFdsOk: estudoFdsEmDia(r.diasDatados),
+          });
           return { ...r, token, mvm: mvmDoVoto };
         });
         const ids = linhas.map((l) => l.user_id);
@@ -1672,10 +1693,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). Ligas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 · 💠 diamante de 20 pra cima. Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só o Diamante exige leitura de semana + estudo de fim de semana em dia.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{ciclo ? ciclo.liga.emoji : xgame.faixa.medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pro Diamante — estudo em atraso no ciclo'}</p>
                 </div>
                 <div className="rounded-xl border border-nz-borda bg-white p-3" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
@@ -2003,7 +2024,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           )}
                           <div className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
                             <span className="text-[11px] font-medium text-nz-tinta truncate">
-                              <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
+                              <span className="font-bold">{i + 1}º</span> {liga.emoji} {l.nome}{l.user_id === uid ? ' (você)' : ''}
                             </span>
                             <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
                               {fmtToken(l.token)} · MvM {l.mvm === null ? '—' : fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
@@ -2352,9 +2373,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           const qualificadas = clientesManuais.filter((c) => probabilidadeFechamento(c.qualificacao_network)).length;
           // 👤 09/09/2026 — DIR-111, dono (super admin): "eu vejo aqui todo
           // mundo... tem que botar de quem é o nome da pessoa que
-          // qualificou a lista, igual você colocou no Contato." Mesmo par
-          // de helpers que o Hábito 4 (contato) já usa — só faltava aqui.
-          const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
+          // qualificou a lista, igual você colocou no Contato." `nomeDoDono`
+          // é o mesmo helper do componente (topo do arquivo) — deduplicado
+          // na auditoria pré-publicação (estava copiado aqui e no Contato).
           return (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2452,7 +2473,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           // existe pra visão total. "Minha" = o que EU cadastrei/registrei.
           const minha = !visaoTotal; // 06/09: o escopo vem do seletor "só o meu / tudo" lá em cima, não de um botão aqui
           const quem = (nome) => (minha ? 'você' : (nome || 'sem dono definido')); // DIR-50/54: dono na frente
-          const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
+          // `nomeDoDono` é o helper do componente (topo do arquivo) —
+          // deduplicado na auditoria pré-publicação (estava copiado aqui e na Lista).
 
           // 🎯 DIR-54 — a fila respeita o MESMO escopo: MINHA só os que EU
           // cadastrei; TIME mostra todos, com o dono identificado em cada um.
@@ -2609,11 +2631,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           {(() => {
                             const numero = String(c.phone || '').replace(/\D/g, '');
                             const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(`Oi ${(c.full_name || '').split(' ')[0] || ''}, tudo bem?`)}` : null;
+                            // 🐛 09/09/2026 — achado na auditoria: sem telefone, o botão só
+                            // sumia — sem explicar por quê, parecia bug. Agora avisa.
                             return wa ? (
                               <Button size="sm" variant="outline" onClick={() => setChamadaAberta({ contato: c, wa })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8" data-teste="contato-abrir-chamada">
                                 <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
                               </Button>
-                            ) : null;
+                            ) : (
+                              <span className="text-[11px] text-nz-tinta-fraca italic self-center" data-teste="contato-sem-telefone">sem telefone cadastrado</span>
+                            );
                           })()}
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: c, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
                             <CalendarPlus className="w-3.5 h-3.5 mr-1.5" />Agendar

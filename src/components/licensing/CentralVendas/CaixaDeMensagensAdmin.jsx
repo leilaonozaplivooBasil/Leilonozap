@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Inbox, Loader2 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { DESTINOS, TIPOS_MENSAGEM, ordenarMensagens, contarNaoLidas } from '@/lib/mensagensXgame';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
 const fmtQuando = (iso) => {
   const d = new Date(iso);
@@ -19,17 +20,27 @@ const fmtQuando = (iso) => {
  * Executivos e as demandas de colega pra colega — porque o super admin
  * enxerga o negócio inteiro, não só o que é endereçado a ele.
  */
-export default function CaixaDeMensagensAdmin() {
+export default function CaixaDeMensagensAdmin({ currentUser }) {
   const [carregando, setCarregando] = useState(true);
   const [mensagens, setMensagens] = useState([]);
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroDestino, setFiltroDestino] = useState('');
 
+  // 🔐 09/09/2026 — achado crítico na auditoria pré-publicação: mesmo
+  // vazamento do MensagemProCeo.jsx, só que aqui pior — esta caixa buscava
+  // as 300 mensagens mais recentes de TODO MUNDO sem filtro nenhum. Agora
+  // passa pela mesma rota server-side (api/functions/xgameMensagensListar),
+  // que só devolve "tudo" quando o `actorId` é de fato admin/super_admin
+  // ou CEO — conferido no servidor, não no navegador.
   const carregar = useCallback(async () => {
-    const { data } = await supabase.from('xgame_mensagens').select('*').order('created_at', { ascending: false }).limit(300);
-    setMensagens(data || []);
+    const r = await fetch('/api/functions/xgameMensagensListar', {
+      method: 'POST',
+      headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ actorId: currentUser?.id, verTudo: true }),
+    }).then((res) => res.json()).catch(() => null);
+    setMensagens(r?.ok ? r.mensagens : []);
     setCarregando(false);
-  }, []);
+  }, [currentUser?.id]);
   useEffect(() => { carregar(); }, [carregar]);
 
   const marcarLida = async (m) => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, TRAVA_SEM_DIAMANTE } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarDiamantePorEstudo } from '@/lib/xgame';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -156,9 +156,13 @@ export default function XGameVisaoExecutiva() {
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
           });
-          // 🎓 09/09/2026 — mesma trava do Diamante do painel pessoal: sem o
-          // estudo de fim de semana em dia, o ranking também não deixa passar.
-          const token = estudoFdsEmDia(r.diasDatados) ? tokenBruto : Math.min(tokenBruto, TRAVA_SEM_DIAMANTE);
+          // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
+          // estudo (semana OU fim de semana) trava só o Diamante, nunca o
+          // Ouro. Antes só checava o fim de semana; agora checa os dois.
+          const token = travarDiamantePorEstudo(tokenBruto, {
+            estudoSemanaOk: estudoEmDia(r.diasDatados),
+            estudoFdsOk: estudoFdsEmDia(r.diasDatados),
+          });
           return {
             ...r,
             token,

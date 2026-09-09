@@ -10,6 +10,7 @@ import {
   DESTINOS, TIPOS_MENSAGEM, TIPOS_COMPOSIVEIS, TAMANHO_MINIMO_TEXTO, mensagemValida, respostaValida,
   ordenarMensagens, mensagensRecebidasPor, mensagensEnviadasPor, papeisDoCargo,
 } from '@/lib/mensagensXgame';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
 const fmtQuando = (iso) => {
   const d = new Date(iso);
@@ -41,12 +42,23 @@ export default function MensagemProCeo({ currentUser, cargo }) {
   const [respondendo, setRespondendo] = useState(null); // { id, texto }
   const [respondendoEnviando, setRespondendoEnviando] = useState(false);
 
+  // 🔐 09/09/2026 — achado crítico na auditoria pré-publicação: esta tela
+  // buscava a tabela `xgame_mensagens` inteira (as 200 mais recentes de
+  // TODO MUNDO) e só filtrava depois, no navegador — o "pra quem é essa
+  // mensagem" era só de fachada, qualquer um com o DevTools aberto lia o
+  // inbox do CEO. Agora quem filtra é o servidor (api/functions/
+  // xgameMensagensListar.js, chave de serviço) — a tabela em si nem
+  // aceita mais SELECT direto (ver a migration xgame_mensagens_rls).
   const carregar = useCallback(async () => {
-    const [msgs, usuarios] = await Promise.all([
-      supabase.from('xgame_mensagens').select('*').order('created_at', { ascending: false }).limit(200),
+    const [msgsR, usuarios] = await Promise.all([
+      fetch('/api/functions/xgameMensagensListar', {
+        method: 'POST',
+        headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ actorId: uid }),
+      }).then((r) => r.json()).catch(() => null),
       supabase.from('app_users').select('id,full_name,nickname,career_levels,primary_career_level'),
     ]);
-    setMensagens(msgs.data || []);
+    setMensagens(msgsR?.ok ? msgsR.mensagens : []);
     setColegas(timeCorporativo(usuarios.data || [], nomeExibicao).filter((p) => p.id !== uid));
     setCarregando(false);
   }, [uid]);
@@ -108,7 +120,11 @@ export default function MensagemProCeo({ currentUser, cargo }) {
     if (error) { toast.error('Não enviou a resposta — tenta de novo'); return; }
     toast.success(`Resposta enviada pra ${original.remetente_nome}`);
     setRespondendo(null);
-    marcarLida(original);
+    // 🐛 09/09/2026 — achado na auditoria: sem esperar o UPDATE "lida"
+    // terminar, `carregar()` já buscava a lista de novo — se a resposta
+    // ainda não tivesse comitado, a mensagem voltava a aparecer como não
+    // lida, mesmo já respondida.
+    await marcarLida(original);
     carregar();
   };
 

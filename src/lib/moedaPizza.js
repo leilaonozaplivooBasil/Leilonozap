@@ -41,11 +41,21 @@ export const COMPONENTE_INFO = {
 export function fatiasDaMoeda(componentes = {}, max) {
   const tetoMax = Number(max) || 0;
   let acumulado = 0;
+  // 🐛 09/09/2026 — achado na auditoria: só `conquistado`/`restante` eram
+  // capados ao teto — `inicio`/`fim` de cada fatia (os números que
+  // MoedaPizza.jsx usa direto em strokeDasharray/strokeDashoffset) não
+  // eram. Hoje isso não estoura porque `tokenDoCiclo()` já garante que a
+  // soma dos pesos nunca passa de TOKEN_MAX — mas essa é uma garantia
+  // EXTERNA a este arquivo; se um dia os pesos mudarem sem preservar isso,
+  // uma fatia além de 360° sobrepõe cores no desenho, em silêncio. Capar
+  // `inicio`/`fim` aqui torna a geometria segura por si mesma, sem
+  // depender de ninguém lá fora se lembrar da invariante.
   const fatias = ORDEM_COMPONENTES.map((k) => {
     const valor = Math.max(0, Number(componentes[k]) || 0);
-    const inicio = acumulado;
+    const inicio = Math.min(acumulado, tetoMax);
     acumulado += valor;
-    return { k, valor, inicio, fim: acumulado, pct: tetoMax > 0 ? (valor / tetoMax) * 100 : 0 };
+    const fim = Math.min(acumulado, tetoMax);
+    return { k, valor, inicio, fim, pct: tetoMax > 0 ? (valor / tetoMax) * 100 : 0 };
   });
   const conquistado = Math.min(acumulado, tetoMax);
   const restante = Math.max(0, tetoMax - acumulado);

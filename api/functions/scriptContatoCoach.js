@@ -82,9 +82,16 @@ export default async function handler(req, res) {
 
     const out = resposta.parsed_output;
     if (resposta.stop_reason === 'refusal' || !out) {
-      return res.status(200).json({ ok: true, pontos_fortes: '', dica: 'A IA não conseguiu olhar o script agora — tenta de novo em instantes?' });
+      return res.status(200).json({ ok: true, aprovado: false, pontos_fortes: '', dica: 'A IA não conseguiu olhar o script agora — tenta de novo em instantes?' });
     }
-    return res.status(200).json({ ok: true, pontos_fortes: out.pontos_fortes, dica: out.dica });
+    // 🐛 09/09/2026 — achado na auditoria pré-publicação: esta resposta
+    // esquecia o campo `aprovado` — o front sempre lia `undefined` e tratava
+    // como reprovado, então NINGUÉM jamais ganhava o ponto do script,
+    // mesmo escrevendo um script perfeito. É o contrato documentado no
+    // topo do arquivo (POST → {aprovado, dica, pontos_fortes}) e o schema
+    // Zod (`Dica`) já garantia que `out.aprovado` sempre existe — só faltava
+    // devolver.
+    return res.status(200).json({ ok: true, aprovado: out.aprovado, pontos_fortes: out.pontos_fortes, dica: out.dica });
   } catch (e) {
     console.error('[scriptContatoCoach] erro geral', String(e?.message || e));
     return res.status(500).json({ ok: false, error: 'Erro interno' });
