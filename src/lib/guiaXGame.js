@@ -270,7 +270,13 @@ export const AULAS_BRUTAS = [
     numeros: [
       { nome: 'MvM do Dia', pergunta: 'como foi hoje?', explica: `Começa em ${br(MVM_MAX)} e cai a cada tarefa que passa da hora sem marcar. É a nota de hoje, só de hoje.` },
       { nome: 'Aplicabilidade', pergunta: 'como foi o mês?', explica: `É a sua constância no ciclo: a média dos dias que já passaram. Vale no máximo ${br(APLICABILIDADE_MAX)}. Um dia ruim não derruba; uma semana de descuido derruba.` },
-      { nome: 'Human Token', pergunta: 'quanto vale o seu dia', explica: `É MvM + Aplicabilidade, no máximo ${br(TOKEN_MAX)}. É a moeda do jogo, e ela tem faixas.`, faixas: true },
+      {
+        nome: 'Human Token',
+        pergunta: 'quanto vale o seu dia',
+        explica: `É MvM + Aplicabilidade, no máximo ${br(TOKEN_MAX)}. É a moeda do jogo, e ela tem faixas. No CICLO inteiro (22 dias), essa mesma moeda de ${br(TOKEN_MAX)} é dividida em 5 fatias — MvM, Produção, Real Time, Bônus/Estudo e Vendas — e é ela, não o dia isolado, que decide sua liga.`,
+        faixas: true,
+        moedaModelo: true,
+      },
       { nome: 'Cotação do dia', pergunta: 'por que hoje vale mais que amanhã', explica: `O ciclo tem ${CICLO_DIAS_UTEIS} dias úteis e começa no primeiro dia útil do mês. A cotação começa em ${br(COTACAO_DIA_1)} no dia 1 e cai 1 centavo por dia útil, até parar em ${br(COTACAO_ULTIMO)}.` },
     ],
     caixas: [
