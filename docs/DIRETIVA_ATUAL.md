@@ -12,6 +12,19 @@
 
 ---
 
+## DIR-117 — botão "recebe voto" por pessoa + selo "Preview oficial" corrigido
+
+**Emitida por:** dono (09/09/2026): *"tem pessoas que vão receber valor na gamificação, já participaram da mentoria e não vão receber voto... eles podem votar, mas não recebem voto... eu não tenho esse botão... preciso desse botão ali na mentoria."* — e, sobre o link de prévia: *"tá vendo escrito prévia oficial, só trabalho nele."*
+
+**O que entra:**
+1. **Botão "recebe voto" no ADM X-Game** (`XGameAdmin.jsx`): `podeSerVotado` (xgame.js) ganha um segundo uso, com polaridade OPOSTA à do Super Admin — lá é opt-in (desligado até ele mesmo ligar); pra todo mundo mais agora é opt-out por ADMIN (ligado até o dono desligar essa pessoa específica). Desligar não mexe em `ativo` (continua paga/gamificada) nem em quem ELA pode votar — só em quem RECEBE o voto dela dos colegas.
+2. **O selo "Preview oficial" mentia**: `tipoDeHost` (DIR-42) classificava QUALQUER host `*.vercel.app` com "-git-" como oficial — com duas branches rodando em paralelo (`xgame-visual-polish` e `claude/project-structure-analysis-r1prad`), as DUAS mostravam o selo verde, e o dono foi parar na branch errada sem nenhum aviso na tela. Corrigido: só o host EXATAMENTE igual a `HOST_PREVIEW_OFICIAL` ganha o selo verde; qualquer outro cai no aviso âmbar de sempre.
+3. **Reconciliação de branches**: todo o trabalho de `xgame-visual-polish` (DIR-113 a DIR-115 + este) foi mergeado direto em `claude/project-structure-analysis-r1prad` — a branch que `HOST_PREVIEW_OFICIAL` de fato aponta — junto com o trabalho paralelo de lá (DIR-116, pódio com foto). Nada perdido dos dois lados.
+
+**Prova:** suíte 1879/1879 (6 testes novos pro botão de voto — lógica pura + presença/gate/efeito colateral no código-fonte da tela; 2 testes novos travando que duas branches "-git-" diferentes não podem as duas ganhar o selo verde), lint limpo, build ok.
+
+---
+
 ## DIR-116 — o pódio da Visão Executiva ganha foto real, emoldurada pela cor da liga
 
 **Emitida por:** dono (09/09/2026), depois de ver o pódio no preview: *"vamos puxar a imagem, a foto da pessoa do perfil dela pra dentro da visão executiva... e melhorar esse ranking com a imagem dele... fazer a imagem dele dentro da moeda que ele está... o pódio está muito feio, dá muito cara de emoji. Pode mais foda mesmo, entendeu? Pra dar mais vontade da pra pessoa."* — pediu explicitamente o design por escrito antes de mexer no código; o plano foi discutido e aprovado ("boooraaaaa") antes desta implementação.

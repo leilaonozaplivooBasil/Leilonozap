@@ -482,9 +482,20 @@ export function horaDeMin(min) {
 // pessoas às vezes não têm capacidade de votar num mentor — salvo se ele
 // mesmo permitir ser votado na MvM." Só o cargo super_admin é afetado; todo
 // outro participante ativo continua votável exatamente como sempre foi.
+//
+// 🗳️ 09/09/2026 — dono: "tem pessoas que vão receber valor na gamificação,
+// já participaram da mentoria, mas não vão receber voto — só não quero que
+// eles recebam voto... eles podem votar, mas não recebem voto." O MESMO
+// campo `aceita_ser_votado` ganha o segundo uso, com polaridade oposta pra
+// quem não é Super Admin: lá é OPT-IN (desligado por padrão, o próprio
+// dono liga pra si); aqui é OPT-OUT controlado pelo ADMIN por pessoa
+// (ligado por padrão — comportamento de sempre — só quem o dono desligar
+// explicitamente some da lista votável). Ninguém tinha esse campo setado
+// antes desta mudança, então nada muda pra quem já estava votável.
 /** Esta pessoa pode aparecer na lista de colegas votáveis da MvM Manual? */
 export function podeSerVotado({ role, aceita_ser_votado } = {}) {
-  return role !== 'super_admin' || aceita_ser_votado === true;
+  if (role === 'super_admin') return aceita_ser_votado === true;
+  return aceita_ser_votado !== false;
 }
 
 // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera

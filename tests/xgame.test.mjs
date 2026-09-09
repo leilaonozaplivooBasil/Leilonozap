@@ -74,13 +74,24 @@ test('naJanelaIdeal × janelaVotacaoAberta: 17h-20h é ideal, 20h-21h30 é só �
   assert.equal(janelaVotacaoAberta(fechada), false, 'depois das 21h30 não tem mais chance nenhuma');
 });
 
-test('podeSerVotado: só o super_admin precisa do interruptor — todo mundo mais continua votável', () => {
+test('podeSerVotado: super_admin é OPT-IN (desligado por padrão); todo mundo mais é OPT-OUT (ligado por padrão)', () => {
   assert.equal(podeSerVotado({ role: 'super_admin', aceita_ser_votado: false }), false);
   assert.equal(podeSerVotado({ role: 'super_admin', aceita_ser_votado: true }), true);
   assert.equal(podeSerVotado({ role: 'super_admin' }), false, 'sem o campo, o default é NÃO votável pro super_admin');
-  assert.equal(podeSerVotado({ role: 'admin', aceita_ser_votado: false }), true, 'admin comum não é afetado pela régua');
-  assert.equal(podeSerVotado({ role: 'user', aceita_ser_votado: false }), true);
+  assert.equal(podeSerVotado({ role: 'admin' }), true, 'sem o campo, admin comum continua votável — o comportamento de sempre não muda pra quem nunca foi desligado');
+  assert.equal(podeSerVotado({ role: 'user' }), true);
   assert.equal(podeSerVotado({}), true, 'sem role nenhum, não é super_admin — continua votável');
+});
+
+// 🗳️ 09/09/2026 — dono: "tem pessoas que já participaram da mentoria e não
+// vão receber voto... eles podem votar, mas não recebem voto." O admin
+// desliga `aceita_ser_votado` na mão, pessoa por pessoa — diferente do
+// super_admin, aqui é o admin quem decide, e o padrão é o oposto (votável
+// até alguém desligar, não o contrário).
+test('podeSerVotado: o admin pode DESLIGAR um participante comum da lista votável, pessoa por pessoa', () => {
+  assert.equal(podeSerVotado({ role: 'diretor', aceita_ser_votado: false }), false, 'o dono desligou esta pessoa — não recebe voto, mesmo sendo diretor ativo');
+  assert.equal(podeSerVotado({ role: 'diretor', aceita_ser_votado: true }), true, 'explicitamente ligado — votável, igual ao padrão');
+  assert.equal(podeSerVotado({ role: 'executivo', aceita_ser_votado: undefined }), true, 'ninguém mexeu no campo — continua votável, o padrão de sempre');
 });
 
 test('votouEmTodosOsColegas: precisa fechar TODOS, não só algum — e ninguém pra votar não é falta', () => {
