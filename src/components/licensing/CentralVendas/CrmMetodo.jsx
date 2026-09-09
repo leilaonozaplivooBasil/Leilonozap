@@ -92,8 +92,16 @@ Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
   const uid = currentUser?.id;
+  // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
+  // recomeçando... já me coloca ela no meu contato e pisca." O destaque
+  // dura pouco — pisca, chama atenção, some sozinho — não fica preso lá.
+  useEffect(() => {
+    if (!contatoDestacado) return undefined;
+    const t = setTimeout(() => onContatoDestacadoConsumido?.(), 4000);
+    return () => clearTimeout(t);
+  }, [contatoDestacado, onContatoDestacadoConsumido]);
   const podeGerir = gestao ?? visaoTotal;
   // 🖐️ 09/09/2026 — dono, ao vivo: "Como Funciona é um tour... a pessoa vai
   // clicando e a plataforma vai ensinando." A mesma mãozinha da Esteira de
@@ -2368,14 +2376,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
                               </p>
                             </button>
-                            {/* 🔗 09/09/2026 — DIR-111.1, dono: "assim que eu
-                                qualifiquei tenho que ter o botão de contatar
-                                [que] vai me levar pra página do quarto
-                                hábito, que é o contato e convite... faltou
-                                essa conexão." Qualificou → já pode ir direto
-                                pro Hábito 4, onde ela já aparece na fila. */}
+                            {/* 🔗 09/09/2026 — DIR-111.2, dono: "eu cliquei
+                                nessa pessoa, ela me levou pra página
+                                seguinte, eu não posso ter a sensação que eu
+                                estou recomeçando... já me coloca ela no meu
+                                contato e pisca no contato que eu vou
+                                fazer... achar direto na lista, não ficar
+                                procurando." Leva o ID de quem clicou — o
+                                Hábito 4 rola até ela e pisca a linha. */}
                             {onIr && (
-                              <Button size="sm" onClick={() => onIr('contato')} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8" title="Ir contatar essa pessoa no Hábito 4">
+                              <Button size="sm" onClick={() => onIr('contato', null, c.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8" title="Ir contatar essa pessoa no Hábito 4">
                                 <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
                               </Button>
                             )}
@@ -2472,8 +2482,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {fila.map(({ c, prob }) => (
-                      <div key={c.id} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                    {fila.map(({ c, prob }) => {
+                      // 🔦 09/09/2026 — DIR-111.2, dono: "já me coloca ela no
+                      // meu contato e pisca... achar direto na lista, não
+                      // ficar procurando." Rola até ela UMA vez e pisca —
+                      // `contatoDestacado` some sozinho em 4s (useEffect acima).
+                      const destacada = c.id === contatoDestacado;
+                      return (
+                      <div
+                        key={c.id}
+                        ref={destacada ? (el) => { if (el && !el.dataset.rolou) { el.dataset.rolou = '1'; el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } : undefined}
+                        className={`flex items-center gap-2 sm:gap-3 rounded-lg border p-2.5 flex-wrap ${destacada ? 'border-nz-verde ring-2 ring-nz-verde/50 animate-pulse bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}
+                      >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-nz-tinta truncate">
                             {visaoTotal && <span className="font-bold text-nz-verde">👤 {quem(nomeDoDono(c))} · </span>}
@@ -2522,7 +2542,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 {/* DIR-49/54 — fila honesta: quem ficou de fora e por quê, no MESMO escopo */}
