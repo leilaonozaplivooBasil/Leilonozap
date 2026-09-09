@@ -12,6 +12,60 @@
 
 ---
 
+## DIR-107 — o aviso da Fila do Pronto passa a comunicar por dentro (e pede resposta por dentro)
+
+**Emitida por:** dono (09/09/2026), depois de testar o DIR-105 ao vivo:
+*"funcionou... e esse aviso tem que ser no WhatsApp e comunicar por
+dentro. A plataforma tem que se comunicar muito por dentro... tem que
+enviar essa mensagem no WhatsApp, e pedir pra ele enviar por dentro,
+sempre comunicar por dentro da plataforma... quando eu mandar no
+WhatsApp, automaticamente ele comunica por dentro... eu quero sempre o
+retorno deles dentro... e sempre ensinando o que é o pronto. Tem gente
+que confunde muito, acha que o pronto é só quando termina a tarefa. A
+gente tem que ensinar: se você estiver no meio da demanda, avise que
+está fazendo, comunique."*
+
+**O que entra:**
+1. O botão **avisar** da Fila do Pronto agora SEMPRE cria, além do
+   WhatsApp, uma mensagem interna (`xgame_mensagens`, tipo `aviso`) que
+   cai direto na caixa "Mensagem pro CEO" da pessoa avisada — com o
+   MESMO texto do WhatsApp. Comunicar por dentro deixou de ser opcional.
+2. O texto do aviso (WhatsApp + interno) agora sempre termina pedindo
+   *"responde por dentro da plataforma, na Mensagem pro CEO"*, e nos
+   avisos 1º/2º ensina o conceito: *"o pronto não é só marcar como feito
+   no fim — se você ainda está no meio da tarefa, avise que está em
+   andamento."*
+3. **Resposta por dentro** — `MensagemProCeo.jsx` ganhou "responder por
+   dentro" em cada mensagem recebida: abre uma caixa de texto ali mesmo,
+   sem sair da tela, e a resposta volta pro remetente original citando o
+   trecho da mensagem original. Barra de qualidade mais baixa que iniciar
+   contato (3 caracteres, não 20) — responder não pode exigir o mesmo
+   esforço de quem chama o CEO.
+4. `src/lib/mensagensXgame.js` ganhou os tipos `aviso` (⚠️, gerado pelo
+   sistema) e `resposta` (↩️, gerado por quem responde) — só os 4 tipos
+   originais (sugestão/pedido/agradecimento/demanda) continuam
+   escolhíveis ao compor uma mensagem nova (`TIPOS_COMPOSIVEIS`).
+5. Tooltip educativo na linha "pronto até" do dia de cada pessoa
+   (`CrmMetodo.jsx`), pra reforçar o conceito no lugar onde ela realmente
+   marca a tarefa.
+
+**Sobre o resto do pedido** — o dono também pediu, na mesma mensagem,
+um relatório profissional de tarefas, um "mapa do jogador" (radar tipo
+futebol, mostrando onde a pessoa está pecando/tem que potencializar) e
+pra localizar/duplicar dentro do ADM X-Game um compartilhamento de PDF
+que já existe (`PdfExecutivo.jsx`/`relatorioExecutivo.js`, hoje só em
+`PerformanceEquipe.jsx`/`PainelCorporativo.jsx`). Essas três frentes
+seguem em rodadas separadas (DIR-108 e DIR-109), documentadas à parte —
+esta entrada é só a comunicação por dentro.
+
+**Prova:** `tests/mensagensXgame.test.mjs` — 2 testes novos (a barra de
+`resposta` é mais baixa que a de iniciar contato; `aviso`/`resposta`
+não aparecem como opção ao compor). Suíte 1620/1620, lint limpo,
+`npm run build` sem erro. Verificação em navegador não rodou nesta
+rodada (mesmo padrão do DIR-105/106).
+
+---
+
 ## DIR-106 — Mensagem pro CEO: comunicação interna do time corporativo do X-GAME
 
 **Emitida por:** dono (09/09/2026), na mesma mensagem do DIR-105: *"a
