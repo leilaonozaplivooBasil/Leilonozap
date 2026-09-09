@@ -2359,14 +2359,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
                         </div>
                         {prob ? (
-                          <button type="button" onClick={() => setQualificando(c)} className="shrink-0 text-right" title="Editar qualificação">
-                            <p className="text-[11px] text-nz-tinta-fraca">
-                              🫱{q.confianca} 💰{q.financeiro} 🔥{q.apetite}{prod ? ` · ${prod.emoji} ${prod.label}` : ''}
-                            </p>
-                            <p className={`text-xs font-bold ${COR_FAIXA[prob.faixa.id]}`}>
-                              {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
-                            </p>
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button type="button" onClick={() => setQualificando(c)} className="shrink-0 text-right" title="Editar qualificação">
+                              <p className="text-[11px] text-nz-tinta-fraca">
+                                🫱{q.confianca} 💰{q.financeiro} 🔥{q.apetite}{prod ? ` · ${prod.emoji} ${prod.label}` : ''}
+                              </p>
+                              <p className={`text-xs font-bold ${COR_FAIXA[prob.faixa.id]}`}>
+                                {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
+                              </p>
+                            </button>
+                            {/* 🔗 09/09/2026 — DIR-111.1, dono: "assim que eu
+                                qualifiquei tenho que ter o botão de contatar
+                                [que] vai me levar pra página do quarto
+                                hábito, que é o contato e convite... faltou
+                                essa conexão." Qualificou → já pode ir direto
+                                pro Hábito 4, onde ela já aparece na fila. */}
+                            {onIr && (
+                              <Button size="sm" onClick={() => onIr('contato')} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8" title="Ir contatar essa pessoa no Hábito 4">
+                                <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
+                              </Button>
+                            )}
+                          </div>
                         ) : (
                           <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0">
                             <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar

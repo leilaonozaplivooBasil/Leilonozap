@@ -12,6 +12,25 @@
 
 ---
 
+## DIR-111.1 — a conexão que faltava: qualificou → botão leva pro Hábito 4
+
+**Emitida por:** dono (09/09/2026), depois de ver o DIR-111 no ar:
+*"Você esqueceu de fazer a conexão... assim que eu qualifiquei tenho que
+ter o botão de contatar [que] vai me levar pra página do quarto hábito,
+que é o contato e convite... faltou isso aqui, nessa parte."*
+
+**O que entra:** na Lista de Network (Hábito 3), quem já está qualificada
+ganhou um botão **Contatar** ao lado da pontuação — leva direto pro
+Hábito 4 (Contato e Convite), onde ela já aparece na fila (afinal já está
+qualificada). Fecha o ciclo que faltava: qualificar → contatar, sem
+precisar trocar de aba manualmente.
+
+**Prova:** lint limpo, suíte 1648/1648, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada (mesmo motivo do
+DIR-111 — sem banca de teste pra esta tela).
+
+---
+
 ## DIR-111 — Hábito 4 mais fluido: botão Contatar (WhatsApp), guia da ordem, dono aparece na Lista
 
 **Emitida por:** dono (09/09/2026), duas mensagens seguidas:
