@@ -102,11 +102,19 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
           style={{
             top: retangulo.top - PAD, left: retangulo.left - PAD,
             width: retangulo.width + PAD * 2, height: retangulo.height + PAD * 2,
-            boxShadow: '0 0 0 9999px rgba(6,10,20,0.88)',
+            // 🌑 09/09/2026 — dono, revendo o tour do Hábito 4: "ficou
+            // perfeito, só está muito transparente ainda, está confundindo
+            // um pouco... deixar um pouquinho mais escuro, sem perder essa
+            // jogada de eu continuar vendo o fundo." Já tinha ido de 0.72 (o
+            // valor original) pra 0.88 nesta mesma sessão — ainda não bastou.
+            // 0.93 escurece mais, mas continua ABAIXO de opaco: o resto da
+            // tela segue visível como silhueta, só que sem competir de
+            // verdade com o elemento em destaque nem com o balão.
+            boxShadow: '0 0 0 9999px rgba(6,10,20,0.93)',
           }}
         />
       ) : (
-        <div className="fixed inset-0 bg-[#060a14]/88 transition-opacity duration-300" />
+        <div className="fixed inset-0 bg-[#060a14]/93 transition-opacity duration-300" />
       )}
 
       {/* 🩹 flex-col + maxHeight: o rodapé (bolinhas + botões) é `shrink-0`,
