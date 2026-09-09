@@ -8,6 +8,7 @@ import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAut
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, rotuloDataComprovacao } from '@/lib/filaComprovacoes';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
 // feito pelo painel Admin do Licensing). É AQUI que o dono do jogo decide:
@@ -278,6 +279,14 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [abaAdmin, setAbaAdmin] = useState('participantes');
   const [comprovacoes, setComprovacoes] = useState([]);
   const [filtroComp, setFiltroComp] = useState('em_analise');
+  // 🔎 09/09/2026 — dono, olhando a fila crescer: "eu preciso separar por
+  // data... data de comprovação, nome das pessoas, pra ficar mais fácil...
+  // ainda precisa ter uma busca, quando eu fizer buscar mais rápido, tanto
+  // a data e tanto o dia." Uma busca só (nome OU data, ex.: "09/09" ou
+  // "luciano") + a fila agrupada por dia, cada dia com seu próprio
+  // cabeçalho — em vez de uma lista corrida que só o texto de cada linha
+  // já dizia a data.
+  const [buscaComp, setBuscaComp] = useState('');
   const [iaLigada, setIaLigada] = useState(null);
   const [iaDetalhe, setIaDetalhe] = useState(''); // modelo, ou o erro real do gateway quando cai
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
@@ -379,7 +388,15 @@ export default function XGameAdmin({ onVerComo } = {}) {
   };
 
   const pendentesAnalise = comprovacoes.filter((t) => statusDaComp(t.comprovacao) === 'em_analise').length;
-  const compFiltradas = comprovacoes.filter((t) => filtroComp === 'todas' || statusDaComp(t.comprovacao) === filtroComp);
+  const compFiltradas = useMemo(() => comprovacoes.filter((t) => {
+    if (filtroComp !== 'todas' && statusDaComp(t.comprovacao) !== filtroComp) return false;
+    return comprovacaoBateNaBusca(t, nomeDe(t.user_id), buscaComp);
+  }), [comprovacoes, filtroComp, buscaComp, usuarios]);
+  // 📅 agrupada por dia — a fila vem do banco já em ORDER BY data DESC
+  // (carregarComprovacoes); `agruparComprovacoesPorData` só junta quem tem
+  // a mesma data, nunca reordena por conta própria (lógica pura, testada
+  // em tests/filaComprovacoes.test.mjs).
+  const compPorData = useMemo(() => agruparComprovacoesPorData(compFiltradas), [compFiltradas]);
 
   return (
     <div className="space-y-4 text-sm">
@@ -409,6 +426,20 @@ export default function XGameAdmin({ onVerComo } = {}) {
             ))}
           </div>
 
+          {/* 🔎 busca única — nome ("luciano") OU data ("09/09") — pra achar
+              rápido sem precisar rolar a fila inteira dia por dia. */}
+          <div className="flex items-center gap-1.5">
+            <Input
+              placeholder="🔎 buscar por nome ou por data (ex.: “luciano” ou “09/09”)"
+              value={buscaComp}
+              onChange={(e) => setBuscaComp(e.target.value)}
+              className="h-8 text-[11px] bg-white border-gray-300 flex-1 min-w-[220px]"
+            />
+            {buscaComp && (
+              <button type="button" onClick={() => setBuscaComp('')} className="text-[11px] text-gray-400 hover:text-gray-600">limpar</button>
+            )}
+          </div>
+
           {/* 🚨 radar: quem acumula reprova/dúvida · 🎖️ quem só aprova de primeira */}
           {Object.keys(radarPorPessoa).length > 0 && (
             <p className="text-[11px] text-gray-600">
@@ -421,64 +452,71 @@ export default function XGameAdmin({ onVerComo } = {}) {
           )}
 
           {compFiltradas.length === 0 ? (
-            <p className="text-[11px] text-gray-500">Nada aqui nesse filtro — quando alguém comprovar uma tarefa, a imagem chega nesta fila.</p>
+            <p className="text-[11px] text-gray-500">{buscaComp ? 'Nada encontrado nessa busca.' : 'Nada aqui nesse filtro — quando alguém comprovar uma tarefa, a imagem chega nesta fila.'}</p>
           ) : (
-            <div className="space-y-1.5">
-              {compFiltradas.map((t) => {
-                const c = t.comprovacao || {};
-                const s = statusDaComp(c);
-                return (
-                  <div key={t.id} className="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
-                    {c.print_url ? (
-                      <a href={c.print_url} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
-                        <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
-                      </a>
-                    ) : (
-                      <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>{c.tipo === 'ritual' ? '🌅' : '📚'}</span>
-                    )}
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-[11px] font-semibold text-gray-900 truncate">
-                        {nomeDe(t.user_id)} · {String(t.data).slice(8, 10)}/{String(t.data).slice(5, 7)} {t.hora} — {t.titulo}
-                      </p>
-                      <p className="text-[10px] text-gray-500">
-                        {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
-                        {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
-                        {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
-                        {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
-                        {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
-                        {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
-                        {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
-                        {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
-                        {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
-                      </p>
-                      {/* 🗣️ DIR-84 — chegou aqui DEPOIS de a pessoa já ter
-                          tentado se explicar pra IA e ainda assim ficou em
-                          dúvida: o gestor precisa ver essa explicação, não só
-                          a imagem, pra decidir com o mesmo contexto que a IA teve. */}
-                      {c.justificativa_pessoa && (
-                        <p className="text-[10px] text-gray-600 italic bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-0.5">
-                          🗣️ a pessoa explicou: "{c.justificativa_pessoa}"
-                        </p>
-                      )}
-                      {reprovando?.id === t.id && (
-                        <div className="flex items-center gap-1.5 pt-1">
-                          <Input placeholder="motivo (a pessoa vai ler)" value={reprovando.motivo} onChange={(e) => setReprovando({ ...reprovando, motivo: e.target.value })} className="h-7 text-[11px] bg-white border-gray-300" />
-                          <Button size="sm" onClick={() => reprovarComp(t)} className="bg-red-600 hover:bg-red-700 text-white h-7 text-[11px]">Confirmar reprova</Button>
-                          <button type="button" onClick={() => setReprovando(null)} className="text-[11px] text-gray-400 hover:text-gray-600">cancelar</button>
-                        </div>
-                      )}
-                    </div>
-                    {s !== 'reprovada' && reprovando?.id !== t.id && (
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        {s === 'em_analise' && (
-                          <Button size="sm" onClick={() => aprovarComp(t)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-[11px]">Aprovar ✔</Button>
+            <div className="space-y-3" data-teste="comprovacoes-por-data">
+              {compPorData.map(([data, itens]) => (
+                <div key={data} className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide sticky top-0 bg-gray-50 -mx-1 px-1 py-0.5" data-teste="comprovacoes-cabecalho-data">
+                    📅 {rotuloDataComprovacao(data)} <span className="font-normal normal-case text-gray-400">· {itens.length} comprovaç{itens.length > 1 ? 'ões' : 'ão'}</span>
+                  </p>
+                  {itens.map((t) => {
+                    const c = t.comprovacao || {};
+                    const s = statusDaComp(c);
+                    return (
+                      <div key={t.id} className="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
+                        {c.print_url ? (
+                          <a href={c.print_url} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
+                            <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
+                          </a>
+                        ) : (
+                          <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>{c.tipo === 'ritual' ? '🌅' : '📚'}</span>
                         )}
-                        <button type="button" onClick={() => setReprovando({ id: t.id, motivo: '' })} className="text-[11px] font-bold text-gray-400 hover:text-red-600">reprovar</button>
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <p className="text-[11px] font-semibold text-gray-900 truncate">
+                            {nomeDe(t.user_id)} · {t.hora} — {t.titulo}
+                          </p>
+                          <p className="text-[10px] text-gray-500">
+                            {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
+                            {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
+                            {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
+                            {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
+                            {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
+                            {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
+                            {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
+                            {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
+                            {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
+                          </p>
+                          {/* 🗣️ DIR-84 — chegou aqui DEPOIS de a pessoa já ter
+                              tentado se explicar pra IA e ainda assim ficou em
+                              dúvida: o gestor precisa ver essa explicação, não só
+                              a imagem, pra decidir com o mesmo contexto que a IA teve. */}
+                          {c.justificativa_pessoa && (
+                            <p className="text-[10px] text-gray-600 italic bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-0.5">
+                              🗣️ a pessoa explicou: "{c.justificativa_pessoa}"
+                            </p>
+                          )}
+                          {reprovando?.id === t.id && (
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <Input placeholder="motivo (a pessoa vai ler)" value={reprovando.motivo} onChange={(e) => setReprovando({ ...reprovando, motivo: e.target.value })} className="h-7 text-[11px] bg-white border-gray-300" />
+                              <Button size="sm" onClick={() => reprovarComp(t)} className="bg-red-600 hover:bg-red-700 text-white h-7 text-[11px]">Confirmar reprova</Button>
+                              <button type="button" onClick={() => setReprovando(null)} className="text-[11px] text-gray-400 hover:text-gray-600">cancelar</button>
+                            </div>
+                          )}
+                        </div>
+                        {s !== 'reprovada' && reprovando?.id !== t.id && (
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {s === 'em_analise' && (
+                              <Button size="sm" onClick={() => aprovarComp(t)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-[11px]">Aprovar ✔</Button>
+                            )}
+                            <button type="button" onClick={() => setReprovando({ id: t.id, motivo: '' })} className="text-[11px] font-bold text-gray-400 hover:text-red-600">reprovar</button>
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </div>
