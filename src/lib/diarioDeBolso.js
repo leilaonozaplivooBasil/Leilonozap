@@ -69,6 +69,19 @@ export function entradaDe(tarefa = {}, notaPessoal = null) {
     fonte,
     notaPessoal: notaPessoal || null,
     temFoto: !!(tarefa.comprovacao?.print_url),
+    // 🎙️ DIR-104 — a VOZ entra no diário (dono, 09/09: "4. Fazer").
+    //
+    // O diário é onde a pessoa REVISITA. Ler "🎙️ gratidão gravada em áudio" e
+    // não poder ouvir era a metade errada da funcionalidade: a gravação existe,
+    // é dela, e estava a um clique de distância que ninguém tinha.
+    //
+    // Só o CAMINHO viaja daqui. O link é assinado e vale 10 minutos — pedir no
+    // clique é o que impede a tela de mostrar um play que já venceu.
+    audioPath: tarefa.comprovacao?.audio_gratidao_path || null,
+    audioSeg: Number(tarefa.comprovacao?.audio_gratidao_seg) || 0,
+    // A gravação já foi levada pela faxina de 1 mês. Vale dizer isso: apagar o
+    // arquivo não pode apagar a lembrança de que a pessoa gravou naquele dia.
+    audioExpirou: !!tarefa.comprovacao?.audio_gratidao_expirado,
   };
 }
 

@@ -1,6 +1,7 @@
 import { cabecalhosSessao } from './sessaoCliente.js';
 import { caminhoDeProva } from './caminhoDeProva.js';
 import { extensaoDoMime } from './ditado.js';
+import { nomeDoArquivo, linkParaBaixar } from './acervoDeVoz.js';
 
 // 🎙️ COFRE DE ÁUDIO — o lado do navegador (09/09/2026).
 //
@@ -57,4 +58,21 @@ export async function ouvirAudio({ caminho, actorId }) {
   } catch {
     return null;
   }
+}
+
+/**
+ * O link pra BAIXAR a gravação — a contrapartida da faxina de 30 dias.
+ *
+ * Sem isto, "guardamos por 1 mês" seria só "apagamos depois de 1 mês". O
+ * arquivo é da pessoa; ela tem que conseguir levar embora antes de sumir.
+ *
+ * Passa pelo MESMO link assinado do ouvir (mesma checagem de dono no servidor),
+ * só que pedindo ao Storage pra responder como anexo. Nada de `<a download>`:
+ * o navegador ignora esse atributo quando o arquivo vem de outro domínio, e a
+ * pessoa acabaria com uma aba tocando o áudio em vez do arquivo salvo.
+ */
+export async function baixarAudio({ caminho, actorId, dia }) {
+  const url = await ouvirAudio({ caminho, actorId });
+  if (!url) return null;
+  return linkParaBaixar(url, nomeDoArquivo(caminho, dia));
 }

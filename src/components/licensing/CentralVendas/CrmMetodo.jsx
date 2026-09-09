@@ -55,7 +55,8 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
-import { caminhoDoAudio, guardarAudio, ouvirAudio } from '@/lib/cofreDeAudio';
+import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -95,38 +96,6 @@ Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-// 🎙️ DIR-101.1 — OUVIR A PRÓPRIA GRATIDÃO DEPOIS.
-// O cofre é privado: não existe URL fixa, só link assinado de 10 minutos. Por
-// isso o link é pedido no CLIQUE e não fica pendurado na tela — link assinado
-// guardado em componente vence sozinho e vira "não abre" sem explicação.
-function BotaoOuvirGratidao({ caminho, uid }) {
-  const [url, setUrl] = React.useState(null);
-  const [buscando, setBuscando] = React.useState(false);
-  const [erro, setErro] = React.useState(false);
-
-  const abrir = async () => {
-    if (url || buscando) return;
-    setBuscando(true); setErro(false);
-    const link = await ouvirAudio({ caminho, actorId: uid });
-    if (link) setUrl(link); else setErro(true);
-    setBuscando(false);
-  };
-
-  if (url) return <audio src={url} controls autoPlay className="h-8 w-44 shrink-0" data-teste="ouvir-gratidao" />;
-  return (
-    <button
-      type="button"
-      onClick={abrir}
-      disabled={buscando}
-      data-teste="botao-ouvir-gratidao"
-      className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline disabled:opacity-50"
-      title="ouvir a gratidão que você gravou"
-    >
-      {buscando ? '🎙️ abrindo…' : erro ? '🎙️ não abriu — tente de novo' : '🎙️ ouvir'}
-    </button>
-  );
-}
-
 export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr }) {
   const uid = currentUser?.id;
   const podeGerir = gestao ?? visaoTotal;
@@ -2024,7 +1993,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   (o cofre é privado), então é pedido na hora do
                                   clique — nunca fica guardado na tela. */}
                               {t.feito && t.comprovacao?.audio_gratidao_path && (
-                                <BotaoOuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} />
+                                <OuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} dia={t.data} segundos={t.comprovacao.audio_gratidao_seg || 0} />
                               )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
