@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, Plus, GraduationCap } from 'lucide-react';
+import { UserPlus, Plus, GraduationCap, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, VIRTUDES, podeSerVotado, votouEmTodosOsColegas } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, VIRTUDES, podeSerVotado, votouEmTodosOsColegas, mvmManual } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -97,7 +97,7 @@ const DICAS = {
   validacao: 'Validação automática (F10): a tarefa só conclui com a comprovação — 📸 link do post/story do Instagram DO DIA, ou 📚 escrever o principal aprendizado da leitura. "Automática" deixa o sistema deduzir pelo título; "nenhuma" conclui direto. Vendas e reuniões validam sozinhas pelos dados do sistema.',
 };
 
-export default function XGameAdmin() {
+export default function XGameAdmin({ onVerComo } = {}) {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   // 🎯 08/09/2026 — dono: "nem todo mundo que está no topo, no grupo
@@ -139,6 +139,20 @@ export default function XGameAdmin() {
     supabase.from('xgame_votos_mvm').select('votante_id,votado_id,virtude').eq('data', hojeStr())
       .then(({ data }) => setVotosHojeTodos(data || []));
   }, []);
+  // 🗳️ 08/09/2026 — dono: "eu também quero ver como as pessoas votaram."
+  // O raio-x acima só mostra SE a pessoa votou (✅/⏳) — não mostra a NOTA
+  // que ela deu nem a que recebeu. Isto traz a nota de verdade (1 a 10),
+  // a mesma conta de mvmManual usada no Human Token oficial.
+  const [votosCicloRecebidos, setVotosCicloRecebidos] = useState([]);
+  useEffect(() => {
+    if (!cicloInicio) return;
+    supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', cicloInicio)
+      .then(({ data }) => setVotosCicloRecebidos(data || []));
+  }, [cicloInicio]);
+  const mvmCicloDe = useCallback((userId) => {
+    const votos = votosCicloRecebidos.filter((v) => v.votado_id === userId);
+    return votos.length ? mvmManual(votos).media : null;
+  }, [votosCicloRecebidos]);
   const colegasVotaveisIds = useMemo(() => participantes.filter((p) => p.ativo)
     .filter((p) => podeSerVotado({ role: usuarios.find((x) => x.id === p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }))
     .map((p) => p.user_id), [participantes, usuarios]);
@@ -554,8 +568,9 @@ export default function XGameAdmin() {
             <div className="flex items-center gap-1.5 flex-wrap rounded-md border border-emerald-100 bg-emerald-50/50 px-2.5 py-2" data-teste="quem-vota">
               {participantes.filter((p) => p.ativo).map((p) => {
                 const sv = statusVotoDe(p.user_id);
+                const mvm = mvmCicloDe(p.user_id);
                 return (
-                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-2 py-0.5" title={`${nomeDe(p.user_id)} — votou em ${sv.feitos} de ${sv.total} colegas hoje`}>
+                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-1.5 py-0.5" title={`${nomeDe(p.user_id)} — votou em ${sv.feitos} de ${sv.total} colegas hoje · MvM recebida no ciclo: ${mvm === null ? 'ninguém votou nela ainda' : mvm.toFixed(2)}`}>
                     <AvatarPessoa u={usuarios.find((x) => x.id === p.user_id)} tamanho={20} />
                     <span className="text-[10.5px] font-medium text-gray-700 truncate max-w-[110px]">{nomeDe(p.user_id)}</span>
                     {p.em_mentoria && <span title="está na mentoria">🎓</span>}
@@ -563,6 +578,20 @@ export default function XGameAdmin() {
                       <span className={`text-[9.5px] font-bold tabular-nums ${sv.completo ? 'text-emerald-600' : 'text-amber-600'}`}>
                         {sv.completo ? '✅' : `⏳ ${sv.feitos}/${sv.total}`}
                       </span>
+                    )}
+                    {/* 🗳️ a NOTA recebida de verdade (não só se votou) */}
+                    <span className={`text-[9.5px] font-bold tabular-nums ${mvm === null ? 'text-gray-400' : mvm < 4 ? 'text-red-600' : 'text-gray-600'}`}>
+                      MvM {mvm === null ? '—' : mvm.toFixed(1)}
+                    </span>
+                    {onVerComo && (
+                      <button
+                        type="button"
+                        onClick={() => onVerComo(p.user_id)}
+                        title={`Ver como ${nomeDe(p.user_id)} vê o MvM dela`}
+                        className="text-gray-400 hover:text-nz-verde"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </button>
                     )}
                   </span>
                 );

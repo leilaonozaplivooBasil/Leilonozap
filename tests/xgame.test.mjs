@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
-  janelaVotacaoAberta, naJanelaIdeal, horaDeMin,
+  janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo,
 } from '../src/lib/xgame.js';
 
 test('horaDeMin: minutos vira "17h" ou "21h30" (sem zero à esquerda, estilo do app)', () => {
@@ -106,6 +106,32 @@ test('resumoDoDia: sem informar votouEmTodos (chamador antigo, ou histórico) �
   const r = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim });
   assert.equal(r.perdeu_por_nao_votar, false, 'votouEmTodos null não é o mesmo que false — não pune quem a tela não avaliou');
   assert.equal(r.mvm_dia, MVM_MAX);
+});
+
+// 🗳️ 08/09/2026 — dono: "o MVM é só votação... tem gente que nem foi votada
+// com MVM alto." O bug: sem voto nenhum no ciclo (mvmVotacao null), o
+// Human Token oficial caía pro mvm_dia AUTOMÁTICO (real time disfarçado de
+// MVM) em vez de tratar como "ainda não tem MVM nenhum".
+test('tokenDoCiclo: sem voto nenhum no ciclo, o componente MVM é ZERO — não pega emprestado o mvm_dia automático', () => {
+  const semVoto = tokenDoCiclo({
+    diasCiclo: [],
+    hojeResumo: { mvm_dia: 10, prod_total: 10, prod_feitas: 10 }, // dia impecável, mas ninguém votou ainda
+    mvmVotacao: null,
+    perfil: 'estrategico',
+  });
+  assert.equal(semVoto.taxas.mvm, 0, 'sem voto, a taxa de MVM é zero, não a nota automática do dia');
+  assert.equal(semVoto.componentes.mvm, 0);
+});
+
+test('tokenDoCiclo: com voto de verdade, o MVM vem da votação — o mvm_dia automático não entra em jogo', () => {
+  const comVoto = tokenDoCiclo({
+    diasCiclo: [],
+    hojeResumo: { mvm_dia: 2 }, // dia automático baixo — não pode contaminar o MVM votado
+    mvmVotacao: 8,
+    perfil: 'estrategico',
+  });
+  assert.equal(comVoto.taxas.mvm, 0.8, 'usa a votação (8/10), ignora o mvm_dia automático');
+  assert.equal(comVoto.componentes.mvm, 8, 'peso do MVM é 10, 80% disso é 8 pontos');
 });
 
 // ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
