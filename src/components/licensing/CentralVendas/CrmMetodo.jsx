@@ -20,7 +20,7 @@ import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
+  resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
@@ -35,6 +35,7 @@ import {
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import TourGuiado from './TourGuiado';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 import { isVendaReal } from '@/lib/dinheiroReal';
 import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
 import { supabase } from '@/api/supabaseClient';
@@ -1701,6 +1702,30 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     </p>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* 🪙 DIR-113 (09/09/2026) — dono, ao vivo, olhando o placar:
+                "tem que aparecer a produtividade, quanto pesou na moeda...
+                se possível deixar até o desenho da moeda, fatia de pizza, o
+                que cada um está pesando... e vai botando a cor de acordo com
+                cada fatia, bronze, prata, até o diamante." O anel é o Human
+                Token (0 a 22,22) dividido pelos MESMOS 5 componentes que
+                `ciclo` já calcula — nenhuma conta nova, só o desenho que
+                faltava. As marcas no anel são as ligas oficiais (LIGAS,
+                xgame.js): bronze → prata → ouro → diamante.
+                🗳️ e a correção do dono na mesma mensagem: "o MvM só é a
+                média do valor mental, a média da votação, só isso" — é
+                exatamente o que `ciclo.componentes.mvm` já vale (ver
+                tokenDoCiclo em xgame.js: peso 10 ÷ régua de 10 = a média
+                crua), então a fatia do MvM aqui é essa média, sem distorcer. */}
+            {xgame && ciclo && mostrarPainel && (
+              <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza">
+                <div>
+                  <p className="text-sm font-extrabold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do seu Human Token</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda de hoje, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                </div>
+                <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ligaDoToken(ciclo.total)} />
               </div>
             )}
 
