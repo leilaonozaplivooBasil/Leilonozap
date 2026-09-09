@@ -230,11 +230,9 @@ test('vai pro servidor em lotes de 25', () => {
 // A regra acima pode estar perfeita e o botão não existir. Estas assertivas
 // seguram o caminho: botão na Lista de Networking → modal → gravação em lote.
 import { readFileSync } from 'node:fs';
+import { semComentarios } from './_ajuda.mjs';
 
 const ler = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-/** Tira comentários pra assertiva não casar com a explicação. */
-const semComentarios = (txt) =>
-  txt.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const METODO = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
 const TAB = semComentarios(ler('../src/components/licensing/CentralVendas/CrmClientesTab.jsx'));
