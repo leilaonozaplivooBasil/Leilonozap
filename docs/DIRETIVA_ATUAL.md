@@ -12,6 +12,36 @@
 
 ---
 
+## DIR-103 — % de reunião do time chega na Verificação do Progresso (o alcance que faltava do DIR-102)
+
+**Emitida por:** dono (09/09/2026): *"eu quero esse alcance, o que
+sugere???"* — sobre a limitação registrada no DIR-102 (o % de reunião só
+tinha entrado no ADM X-Game, não na Verificação do Progresso).
+
+**Data:** 09/09/2026.
+
+**A sugestão aceita:** sem coluna nova no banco e sem consulta a mais.
+`resumoDoDia()` já calcula `contagens` (produção, bônus, vendas), e os dois
+lugares que gravam o placar do dia (`CrmMetodo.jsx`, `XGame.jsx`) já
+espalham esse objeto inteiro dentro de `xgame_diario.detalhes` via
+`...contagens` — só faltava reunião entrar nessa mesma conta.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `contagens.reunioes_total`/`reunioes_feitas` (usa
+   `ehTarefaDeReuniao`, do DIR-102), gravado automaticamente no retrato do
+   dia pelos dois pontos que já faziam o upsert — nenhum dos dois precisou
+   de código novo.
+2. `src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx` — lê
+   `detalhes.reunioes_total`/`reunioes_feitas` de hoje, soma pro time, e
+   ganha um sexto cartão no Pulso: "Reuniões do time hoje".
+
+**Prova:** `tests/xgame.test.mjs` — novo teste trava a contagem
+(`reuniões_total`/`feitas` só conta título de reunião/apresentação/
+encontro/call, o resto não entra). Suíte 1594/1594,
+`tests/navegador/xgameEspaco.spec.mjs` verde, lint e build limpos.
+
+---
+
 ## DIR-102 — Atraso na Fila do Pronto zera o dia (mesma régua radical do MvM); painel do time ganha reuniões e atrasadas; histórico vira relatório
 
 **Emitida por:** dono (08/09/2026), continuação do DIR-101: *"se o cara se
