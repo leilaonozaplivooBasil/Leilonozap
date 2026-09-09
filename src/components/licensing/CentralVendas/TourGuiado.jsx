@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { estiloBalao } from '@/lib/tourGuiado';
 
 // 🖐️ A MÃOZINHA — tour guiado genérico, spotlight na tela DE VERDADE (não
 // uma tela à parte explicando).
@@ -31,6 +32,20 @@ const PAD = 8;
 export default function TourGuiado({ ativo, passos = [], onFechar }) {
   const [indice, setIndice] = useState(0);
   const [retangulo, setRetangulo] = useState(null);
+  // 🩹 09/09/2026 — dono, ao vivo, testando: "abriu tanto que não dava pra
+  // ver o botão de continuar." Os textos dos passos cresceram (a pergunta
+  // socrática antes da explicação), e o balão não tinha limite de altura —
+  // num alvo perto do rodapé da tela, ele estourava pra baixo do viewport e
+  // o botão "próximo" ficava fora, sem nada que rolasse até ele. `alturaMax`
+  // é o mesmo número usado pra POSICIONAR (estiloBalao) e pra LIMITAR
+  // (maxHeight do JSX) — os dois têm que concordar, senão volta o mesmo erro.
+  const [alturaMax, setAlturaMax] = useState(420);
+  useEffect(() => {
+    const medirAltura = () => setAlturaMax(Math.min(420, window.innerHeight - 24));
+    medirAltura();
+    window.addEventListener('resize', medirAltura);
+    return () => window.removeEventListener('resize', medirAltura);
+  }, []);
   const esperaRef = useRef(null);
 
   useEffect(() => { if (ativo) setIndice(0); }, [ativo]);
@@ -94,15 +109,21 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
         <div className="fixed inset-0 bg-[#060a14]/88 transition-opacity duration-300" />
       )}
 
-      <div className="fixed z-[101] w-[92vw] max-w-sm rounded-xl border border-nz-verde/40 bg-white p-4 shadow-2xl transition-all duration-300" style={estiloBalao(retangulo)}>
-        <div className="flex items-start justify-between gap-2">
+      {/* 🩹 flex-col + maxHeight: o rodapé (bolinhas + botões) é `shrink-0`,
+          então ele NUNCA fica de fora — quem rola, se o texto for grande
+          demais pro espaço, é só o parágrafo do meio. */}
+      <div
+        className="fixed z-[101] w-[92vw] max-w-sm rounded-xl border border-nz-verde/40 bg-white shadow-2xl transition-all duration-300 flex flex-col overflow-hidden"
+        style={{ ...estiloBalao(retangulo, alturaMax), maxHeight: alturaMax }}
+      >
+        <div className="flex items-start justify-between gap-2 p-4 pb-0 shrink-0">
           <p className="text-sm font-bold text-nz-tinta">🖐️ {passo.titulo}</p>
           <button type="button" onClick={() => onFechar?.(false)} aria-label="Fechar o tour" className="shrink-0 text-nz-tinta-fraca hover:text-nz-tinta">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="mt-1.5 text-xs text-nz-tinta-fraca leading-relaxed">{passo.texto}</p>
-        <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="mt-1.5 px-4 text-xs text-nz-tinta-fraca leading-relaxed overflow-y-auto min-h-0">{passo.texto}</p>
+        <div className="mt-3 flex items-center justify-between gap-2 p-4 pt-3 shrink-0 border-t border-nz-borda/40">
           <div className="flex items-center gap-1" aria-hidden="true">
             {passos.map((_, i) => (
               <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === indice ? 'bg-nz-verde' : 'bg-nz-borda'}`} />
@@ -117,6 +138,7 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
             <button
               type="button"
               onClick={() => (ultimo ? onFechar?.(true) : setIndice((i) => i + 1))}
+              data-teste="tour-proximo"
               className="inline-flex items-center gap-1 rounded-full bg-nz-verde px-3 py-1.5 text-xs font-bold text-white hover:bg-nz-verde-claro"
             >
               {ultimo ? 'entendi!' : 'próximo'} {!ultimo && <ArrowRight className="w-3.5 h-3.5" />}
@@ -126,15 +148,4 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
       </div>
     </div>
   );
-}
-
-function estiloBalao(retangulo) {
-  if (typeof window === 'undefined' || !retangulo) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const esperaBalaoAlt = 200; // estimativa de altura pra decidir cima/baixo
-  const cabeBaixo = retangulo.top + retangulo.height + 16 + esperaBalaoAlt < vh;
-  const left = Math.min(Math.max(retangulo.left, 12), Math.max(12, vw - 340));
-  if (cabeBaixo) return { top: retangulo.top + retangulo.height + 16, left };
-  return { bottom: Math.max(12, vh - retangulo.top + 16), left };
 }
