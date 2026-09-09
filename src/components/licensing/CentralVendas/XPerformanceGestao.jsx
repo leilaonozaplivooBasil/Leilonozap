@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, Zap, AlarmClock, CheckCheck, Undo2, Building2, BriefcaseBusiness, MessageCircle, Trash2 } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, Zap, AlarmClock, CheckCheck, Undo2, Building2, BriefcaseBusiness, MessageCircle, Trash2, Inbox } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
 import XGame from '@/pages/XGame';
+import CaixaDeMensagensAdmin from '@/components/licensing/CentralVendas/CaixaDeMensagensAdmin';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
@@ -201,6 +202,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // abertura, não esse quadradão que vem de cara." Antes ela vinha sempre
   // aberta, ocupando o topo da tela; agora é um botão que abre o painel.
   const [distribuirAberto, setDistribuirAberto] = useState(false);
+  // 📨 09/09/2026 — DIR-106, dono: "eu queria saber onde é que a gente vê
+  // isso... tanto eu como super admin." A caixa fica fechada por padrão,
+  // igual Distribuir Tarefa — abre com 1 clique.
+  const [mensagensAberto, setMensagensAberto] = useState(false);
 
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
@@ -764,6 +769,31 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               pessoa={pessoa} onPessoa={setPessoa} dia={dia} onDia={setDia} desfazer={desfazer}
               onAbrirQuadroGeral={(id) => { setPessoaFixo(id); setAbaModal('pessoa'); setModalAberto(true); }}
             />
+          </div>
+        )}
+      </div>
+
+      {/* ── 📨 MENSAGENS — a caixa de entrada do CEO/Super Admin (DIR-106,
+          09/09/2026). Dono: "eu queria saber onde é que a gente vê isso...
+          tanto eu como super admin." Tudo que o time mandou — pro CEO, pra
+          Diretoria, pros Executivos e as demandas entre colegas — num só
+          lugar, porque o super admin enxerga o negócio inteiro. ── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <button
+          type="button"
+          onClick={() => setMensagensAberto((v) => !v)}
+          aria-expanded={mensagensAberto}
+          className="w-full flex items-center gap-2 text-left"
+          data-teste="abrir-mensagens"
+        >
+          <Inbox className="w-4 h-4 text-nz-verde" />
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Mensagens</span>
+          <span className="text-[10px] text-white/35">· o que o time mandou pro CEO, diretoria, executivos e entre eles</span>
+          <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${mensagensAberto ? 'rotate-180' : ''}`} />
+        </button>
+        {mensagensAberto && (
+          <div className="mt-3">
+            <CaixaDeMensagensAdmin />
           </div>
         )}
       </div>

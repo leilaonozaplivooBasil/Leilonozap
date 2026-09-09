@@ -12,6 +12,59 @@
 
 ---
 
+## DIR-106 — Mensagem pro CEO: comunicação interna do time corporativo do X-GAME
+
+**Emitida por:** dono (09/09/2026), na mesma mensagem do DIR-105: *"a
+mensagem pro CEO, a mensagem pra diretoria, a mensagem pros executivos, a
+gente tem que ter isso aí... eles precisam entender que pra falar com o
+CEO, precisa, não pode ser bobeira, tá? Tem que ser algo assim que eles
+queiram compartilhar, sugestão, pedido, agradecimento... e eles podem
+mandar um pro outros, uns pros outros, demandas... todo mundo que faz
+parte do time corporativo e que está no game, tem direito a fazer isso...
+eu queria saber onde é que a gente vê isso, eu gostaria que você me
+ajudasse. Tanto eu como super admin, tanto eles, aonde eles veem isso."*
+
+**A decisão de onde fica** (a pergunta que o dono fez diretamente): dentro
+da própria tela do X-Performance, que já é o espaço do time corporativo —
+sem inventar uma página nova pra achar.
+- **O time** vê e manda em "Mensagem pro CEO", uma dobra aberta por padrão
+  dentro do X-Performance deles (a mesma tela do Encontro de Segunda e do
+  quadro).
+- **O Super Admin/CEO** vê tudo — inclusive as demandas de colega pra
+  colega, porque quem enxerga o negócio inteiro precisa ver o negócio
+  inteiro — numa caixa "Mensagens" dentro do ADM X-Game, ao lado de
+  Distribuir Tarefa e da Fila do Pronto.
+
+**O que entra:**
+1. **Banco** — tabela nova `xgame_mensagens` (remetente, destino —
+   ceo/diretoria/executivos/uma pessoa —, tipo — sugestão/pedido/
+   agradecimento/demanda —, texto, lida, quando).
+2. **`src/lib/mensagensXgame.js`** — a barra de qualidade que o dono pediu
+   ("não pode ser bobeira"): `mensagemValida` exige destino, tipo e pelo
+   menos 20 caracteres de texto. `papeisDoCargo` traduz o cargo do jogo
+   (ceo/diretor/executivo, o mesmo que já vem de `xgame_participantes.cargo`
+   via `cargoDoNivel`) pro destino coletivo que a pessoa recebe.
+3. **`MensagemProCeo.jsx`** (novo) — a tela do time: escolhe destino (CEO,
+   Diretoria, Executivos ou um colega específico), tipo, escreve, manda;
+   vê as recebidas (com contador de não lidas) e as enviadas.
+4. **`CaixaDeMensagensAdmin.jsx`** (novo) — a caixa do Super Admin: tudo
+   que foi mandado, com filtro por destino e por tipo, contador de não
+   lidas, marca como lida com 1 clique.
+
+**O que ficou de fora desta rodada, de propósito:** notificação
+proativa (push/WhatsApp quando chega mensagem nova) — por ora é preciso
+abrir a caixa pra ver, igual o resto do painel. Se o volume de mensagens
+justificar, entra numa rodada futura.
+
+**Prova:** `tests/mensagensXgame.test.mjs` — 7 testes novos (validação da
+barra de qualidade, ordenação, contagem de não lidas, quem recebe o quê
+por papel, quem mandou o quê). Suíte 1619/1619, lint limpo, `npm run
+build` sem erro. Verificação em navegador não rodou nesta rodada (mesmo
+motivo do DIR-105: JSX novo, sem alterar nenhuma tela existente que já
+tivesse prova em navegador) — recomendado revisar ao vivo com o time.
+
+---
+
 ## DIR-105 — Fila do Pronto: régua graduada de avisos (3 chances antes de zerar) + botões avisar/excluir
 
 **Emitida por:** dono (09/09/2026), olhando dois atrasos de "Emannuel Lima"
