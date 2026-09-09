@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Camera, Check, X } from 'lucide-react';
+import { Loader2, Camera, Check, X, Video } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // 📸 AS COMPROVAÇÕES — a segunda análise do gestor, em cima.
 //
@@ -19,6 +20,28 @@ export const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 're
 const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', reprovada: 'reprovada' };
 const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
 const fmtDia = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
+
+// 🖱️ 09/09/2026 — dono: "ver uma prévia do print sem clicar e levar pra
+// fora, só em passar o mouse". O link continua abrindo a prova inteira num
+// clique (histórico/zoom), mas passar o mouse já mostra a imagem — sem sair
+// da fila de análise. O vídeo do ritual (sem print — a comprovação dele É o
+// vídeo) ganha a mesma prévia, só que tocando mudo em loop.
+function PreviaDaProva({ url, tipo, className, children }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <a href={url} target="_blank" rel="noreferrer" className={className}>{children}</a>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="bg-black/95 border border-white/15 p-1 rounded-lg">
+        {tipo === 'video' ? (
+          <video src={url} className="max-w-[240px] max-h-[240px] rounded object-contain" muted autoPlay loop playsInline />
+        ) : (
+          <img src={url} alt="prévia da comprovação" className="max-w-[240px] max-h-[240px] rounded object-contain" loading="lazy" />
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 /** As comprovações (de todo mundo, ou de uma pessoa). O radar por pessoa sai da própria fila. */
 export function useComprovacoes({ pessoaId = null } = {}) {
@@ -68,6 +91,7 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
 
   if (carregando) return <p className="text-[11px] text-white/40 py-2"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> carregando as comprovações…</p>;
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-2" data-teste={pessoaId ? 'comprovacoes-pessoa' : 'comprovacoes-geral'} data-pendentes={pendentes}>
       <div className="flex items-center gap-2 flex-wrap">
         {!compacto && (
@@ -100,7 +124,14 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
                   {!pessoaId && <span className="font-bold text-white/85 truncate">{nomeDe(t.user_id)}</span>}
                   <span className="text-white/70 truncate">{t.titulo}</span>
                   <span className="text-white/40 shrink-0">{fmtDia(t.data)}{t.hora ? ` ${String(t.hora).slice(0, 5)}` : ''}</span>
-                  {c.print_url && <a href={c.print_url} target="_blank" rel="noreferrer" className="shrink-0 text-nz-verde hover:underline">ver o print</a>}
+                  {c.print_url && (
+                    <PreviaDaProva url={c.print_url} tipo="imagem" className="shrink-0 text-nz-verde hover:underline">ver o print</PreviaDaProva>
+                  )}
+                  {c.video_url && (
+                    <PreviaDaProva url={c.video_url} tipo="video" className="shrink-0 inline-flex items-center gap-1 text-amber-300 hover:underline">
+                      <Video className="w-3 h-3" /> ver o vídeo{c.video_seg ? ` (${c.video_seg}s)` : ''}
+                    </PreviaDaProva>
+                  )}
                   {c.veredito_ia?.motivo && <span className="text-white/35 truncate" title={c.veredito_ia.o_que_viu || ''}>IA: {c.veredito_ia.motivo}</span>}
                   {s === 'reprovada' && c.motivo_gestor && <span className="text-red-200/70 truncate">↩ {c.motivo_gestor}</span>}
                   {s === 'em_analise' && (
@@ -123,5 +154,6 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
         </ul>
       )}
     </div>
+    </TooltipProvider>
   );
 }
