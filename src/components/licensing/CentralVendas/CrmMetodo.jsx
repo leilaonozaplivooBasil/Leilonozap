@@ -30,7 +30,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
@@ -249,15 +249,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // só a comissão da plataforma — aqui é ponto, não dinheiro). O dono da venda
   // pode estar em 4 colunas (legado — mesmo OR do CrmClientesTab).
   const [vendasCiclo, setVendasCiclo] = useState(null);
+  // 🟢 09/09/2026 — DIR-110: venda de alto valor (parceria, adesão) entra
+  // somada, convertida em "vendas equivalentes" pelo ticket médio.
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setVendasCiclo(null); return; }
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('catalog_sales').select('id,status,kind,created_date')
+    supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
       .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
       .gte('created_date', `${ini}T00:00:00`)
       .then(({ data, error }) => {
         if (error) { setVendasCiclo(null); return; }
-        setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
+        const pagas = (data || []).filter(isSalePago);
+        setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(pagas));
       });
   }, [painel, uid, cicloConfig]);
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
@@ -1718,7 +1721,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     { k: 'producao', rotulo: 'Produção', emoji: '📋' },
                     { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
                     { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
-                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+                    {
+                      k: 'vendas',
+                      // 🟢 09/09/2026 — DIR-110: mostra o quebra-cabeça
+                      // (venda direta + reunião como princípio da venda).
+                      rotulo: `Vendas — automático (meta ${META_VENDAS_CICLO} no ciclo · ${fmtToken(ciclo.vendasDiretas)} vendida${ciclo.vendasDiretas === 1 ? '' : 's'}${ciclo.reuniaoEquivalente > 0 ? ` + ${fmtToken(ciclo.reuniaoEquivalente)} de reunião` : ''} = ${fmtToken(ciclo.vendasFeitas)})`,
+                      emoji: '🛒',
+                    },
                   ].map(({ k, rotulo, emoji }) => {
                     const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                     const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);

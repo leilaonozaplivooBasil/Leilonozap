@@ -463,7 +463,45 @@ export function mvmManual(votos = []) {
 // não mudou. Perfil comercial já é dominado pelo PT VENDA (2,5×) — a
 // trava de venda pra prata/ouro fica só pra quem já tem meta de venda,
 // por pedido do dono ("só pra quem já vende").
-export const META_VENDAS_CICLO = 4;
+// 🟢 09/09/2026 — DIR-110, dono: "quatro vendas é muito pouco pra um
+// executivo de venda... vamos botar vinte e seis vendas." Fixo por ciclo,
+// sem tentar amarrar aos dias úteis do ciclo (22) — ele pensou em dias
+// corridos (uma venda por dia, com uma folga de poucos dias), e misturar
+// as duas réguas de "dia" só ia complicar sem ganhar precisão.
+export const META_VENDAS_CICLO = 26;
+// 💳 o ticket médio de referência (planilha/dono) — usado pra converter
+// venda de valor alto (parceria, adesão) em "vendas equivalentes":
+// valor ÷ TICKET_MEDIO_VENDA. Uma parceria de R$20.000 já vira ~101
+// vendas equivalentes — satura a meta na hora ("já preencheu").
+export const TICKET_MEDIO_VENDA = 197;
+// 🤝 dono: "a reunião pode ser o princípio da venda... duas reuniões
+// agendadas pode contar pra parte da venda." Cada reunião feita no ciclo
+// vale uma fração de venda — mas com teto: reunião sozinha não pode
+// preencher a meta inteira ("não posso parabenizar... sem gerar
+// resultado em venda ou reunião. Peso maior é venda").
+export const PESO_REUNIAO_EQUIVALENTE = 0.25;
+export const TETO_REUNIAO_NA_META = 0.3;
+
+/**
+ * Venda de valor alto (parceria de compra, adesão/licença) convertida em
+ * "vendas equivalentes" pelo ticket médio — dono: "se ele fechou uma
+ * licença de vinte mil, já preencheu." `vendasPagas` já vem filtrada por
+ * quem chama (mesma régua `isSalePago` que a venda de mercadoria usa) —
+ * aqui só soma o `total_amount` de quem é kind 'partner_plan'/'adesao' e
+ * divide pelo ticket médio.
+ *
+ * 🔴 "investimento" (aporte/investidor) ficou de fora por enquanto: não
+ * achamos nenhuma tabela que registre esse tipo de negociação hoje — é
+ * outra pergunta pro dono antes de inventar uma conta pra um dado que
+ * não existe ainda.
+ */
+const KINDS_ALTO_VALOR = new Set(['partner_plan', 'adesao']);
+export function vendasEquivalentesAltoValor(vendasPagas = [], ticketMedio = TICKET_MEDIO_VENDA) {
+  const total = (Array.isArray(vendasPagas) ? vendasPagas : [])
+    .filter((s) => KINDS_ALTO_VALOR.has(s?.kind))
+    .reduce((soma, s) => soma + (Number(s?.total_amount) || 0), 0);
+  return ticketMedio > 0 ? total / ticketMedio : 0;
+}
 
 export function pesosDoPerfil(perfil) {
   const comercial = String(perfil || '').toLowerCase() === 'comercial';
@@ -503,11 +541,18 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
   const prodTotal = soma('prod_total'); const prodFeitas = soma('prod_feitas');
   const bonusTotal = soma('bonus_total'); const bonusFeitas = soma('bonus_feitas');
   // Vendas AUTOMÁTICAS: quando a tela informa as vendas reais da loja da
-  // pessoa no ciclo (vendasReais), são elas que pontuam — antes era manual
-  // na planilha, via tarefa [VENDA]. Sem o dado, cai nas tarefas gravadas.
-  const vendasFeitas = vendasReais !== null && vendasReais !== undefined
+  // pessoa no ciclo (vendasReais — já inclui a conversão de venda de alto
+  // valor via vendasEquivalentesAltoValor, calculada por quem chama), são
+  // elas que pontuam — antes era manual na planilha, via tarefa [VENDA].
+  // Sem o dado, cai nas tarefas gravadas.
+  const vendasDiretas = vendasReais !== null && vendasReais !== undefined
     ? Number(vendasReais) || 0
     : soma('vendas_feitas');
+  // 🤝 09/09/2026 — DIR-110: a reunião é o princípio da venda, mas não
+  // substitui vender — o teto (TETO_REUNIAO_NA_META da meta) garante isso.
+  const reunioesFeitas = soma('reunioes_feitas');
+  const reuniaoEquivalente = Math.min(reunioesFeitas * PESO_REUNIAO_EQUIVALENTE, META_VENDAS_CICLO * TETO_REUNIAO_NA_META);
+  const vendasFeitas = vendasDiretas + reuniaoEquivalente;
   const xpayGanho = soma('xpay_ganho'); const xpayPossivel = soma('xpay_possivel');
   const taxa = (a, b) => (b > 0 ? Math.min(1, a / b) : 0);
   // 🗳️ 08/09/2026 — dono: "o real time não pode contar dentro do MVM... o
@@ -538,6 +583,8 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
     componentes: Object.fromEntries(Object.entries(comp).map(([k, v]) => [k, r2(v)])),
     total: r2(Math.min(TOKEN_MAX, bruto)),
     vendasFeitas,
+    vendasDiretas,
+    reuniaoEquivalente: r2(reuniaoEquivalente),
   };
 }
 

@@ -12,6 +12,68 @@
 
 ---
 
+## DIR-110 — o eixo Vendas do Executivo Ideal: meta maior, reunião conta, venda grande satura
+
+**Emitida por:** dono (09/09/2026): *"o executivo ideal exige venda de
+quem é comercial... vamos melhorar o ciclo de venda, que ele só tem
+quatro vendas, é muito pouco... vamos botar vinte e seis vendas... a
+reunião pode ser o princípio da venda... duas reuniões agendadas pode
+contar pra parte da venda... eu não posso parabenizar um time comercial
+sem gerar resultado em venda ou reunião, peso maior é venda... se ele
+fechou uma licença de vinte mil, já preencheu, se ele fechou um
+investimento de cem mil, já preencheu, se ele fechou quatro licenciados
+de cinco mil, fechou... a gente tem que equilibrar isso."*
+
+Confirmado com o dono antes de programar (as 4 perguntas — peso da
+reunião, meta nova, conversão de venda grande, sequência) — as
+recomendadas foram todas aceitas.
+
+**O que entra:**
+1. `META_VENDAS_CICLO`: 4 → **26** por ciclo, fixo (sem tentar amarrar
+   aos 22 dias úteis do ciclo — o dono pensou em dias corridos, misturar
+   as duas réguas de "dia" só ia complicar).
+2. **Reunião conta como princípio da venda** — cada reunião feita no
+   ciclo (`contagens.reunioes_feitas`, já existia do DIR-103) vale
+   `PESO_REUNIAO_EQUIVALENTE = 0,25` de venda equivalente, com teto de
+   `TETO_REUNIAO_NA_META = 30%` da meta — reunião ajuda, mas não
+   substitui vender.
+3. **Venda de valor alto satura a meta** — `vendasEquivalentesAltoValor()`
+   soma o `total_amount` das vendas pagas de kind `partner_plan`
+   (parceiro de compra) e `adesao`, divide pelo `TICKET_MEDIO_VENDA` (R$
+   197, o valor que o dono citou). Uma parceria de R$20.000 vira ~101
+   vendas equivalentes — satura a meta na hora, exatamente como descrito.
+4. A régua "Vendas" agora mostra o quebra-cabeça inteiro: `meta 26 no
+   ciclo · X vendida(s) + Y de reunião = Z`, em vez de só o total.
+
+**🔴 Ficou de fora, sem dado pra sustentar** — fui procurar onde
+"investimento" (aporte/investidor, ex. "fechou um investimento de cem
+mil") fica registrado hoje, pra incluir na mesma conta da venda de valor
+alto. Não achei nenhuma tabela (`catalog_sales`, `commission_records`,
+`negotiations`) com esse tipo de negociação — os únicos kinds de venda de
+valor alto que existem de verdade no banco são `partner_plan` e `adesao`
+(e ambos, hoje, só têm registros CANCELADOS — nenhum fechado ainda, então
+esta conta nova ainda não foi testada com dado real de produção). Preciso
+saber do dono onde "investimento" é registrado (ou se ainda é só um
+combinado verbal/manual) antes de inventar uma fonte de dado que talvez
+não exista.
+
+**Adiado por decisão do dono:** a régua do Executivo Ideal por FUNÇÃO
+(logística, marketing, RH, jurídico... cada um com seu próprio critério,
+não só "vendas") fica pra depois — o pedido explícito foi fechar o
+comercial primeiro.
+
+**Prova:** `tests/xgame.test.mjs` — 4 testes novos (meta em 26; reunião
+conta com teto; venda de valor alto satura a meta; venda de mercadoria
+comum não conta como "alto valor"). Os 2 testes que usavam a meta antiga
+(4) como valor "perfeito" foram ajustados pra usar `META_VENDAS_CICLO`
+em vez do número fixo — não quebram mais quando a meta mudar de novo.
+Suíte 1633/1633, lint limpo, `npm run build` sem erro. Verificação em
+navegador não rodou nesta rodada (mudança de fórmula, não de layout —
+mas recomendo testar ao vivo com uma venda ou reunião real registrada
+pra ver o número bater).
+
+---
+
 ## DIR-109.1 — o radar vira "a roda da vida" (pentágono da meta sempre perfeito)
 
 **Emitida por:** dono (09/09/2026), vendo o radar do DIR-109: *"esse

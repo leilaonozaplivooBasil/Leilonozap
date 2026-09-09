@@ -12,6 +12,7 @@ import {
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
   RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
+  META_VENDAS_CICLO, TICKET_MEDIO_VENDA, PESO_REUNIAO_EQUIVALENTE, TETO_REUNIAO_NA_META, vendasEquivalentesAltoValor,
 } from '../src/lib/xgame.js';
 
 // 🎯 09/09/2026 — DIR-109: o radar (mapa do jogador) lê EIXOS_EXECUTIVO_IDEAL
@@ -196,6 +197,44 @@ test('tokenDoCiclo: com voto de verdade, o MVM vem da votação — o mvm_dia au
   });
   assert.equal(comVoto.taxas.mvm, 0.8, 'usa a votação (8/10), ignora o mvm_dia automático');
   assert.equal(comVoto.componentes.mvm, 8, 'peso do MVM é 10, 80% disso é 8 pontos');
+});
+
+// 🟢 09/09/2026 — DIR-110, dono: "quatro vendas é muito pouco pra um
+// executivo de venda... vamos botar vinte e seis vendas." + "a reunião
+// pode ser o princípio da venda... mas peso maior é venda" (teto) + "se
+// ele fechou uma licença de vinte mil, já preencheu" (valor alto).
+test('META_VENDAS_CICLO: subiu pra 26 — quatro vendas era pouco demais pra um executivo de vendas', () => {
+  assert.equal(META_VENDAS_CICLO, 26);
+});
+
+test('tokenDoCiclo: reunião conta como princípio da venda, mas tem teto — não dá pra só agendar reunião e nunca vender', () => {
+  const semReuniao = tokenDoCiclo({ diasCiclo: [], hojeResumo: { vendas_feitas: 2, reunioes_feitas: 0 }, mvmVotacao: null, perfil: 'estrategico' });
+  const comPoucasReunioes = tokenDoCiclo({ diasCiclo: [], hojeResumo: { vendas_feitas: 2, reunioes_feitas: 4 }, mvmVotacao: null, perfil: 'estrategico' });
+  assert.equal(semReuniao.vendasFeitas, 2);
+  assert.equal(comPoucasReunioes.vendasDiretas, 2, 'venda direta não muda');
+  assert.equal(comPoucasReunioes.reuniaoEquivalente, 4 * PESO_REUNIAO_EQUIVALENTE, '4 reuniões × 0,25 = 1 venda equivalente, ainda dentro do teto');
+  assert.equal(comPoucasReunioes.vendasFeitas, 2 + 4 * PESO_REUNIAO_EQUIVALENTE);
+
+  // um exagero de reuniões — o teto tem que segurar
+  const teto = META_VENDAS_CICLO * TETO_REUNIAO_NA_META;
+  const comMuitasReunioes = tokenDoCiclo({ diasCiclo: [], hojeResumo: { vendas_feitas: 0, reunioes_feitas: 1000 }, mvmVotacao: null, perfil: 'estrategico' });
+  assert.equal(comMuitasReunioes.reuniaoEquivalente, teto, `mesmo com 1000 reuniões, o teto (${teto}) segura — reunião não substitui vender`);
+});
+
+test('vendasEquivalentesAltoValor: parceria/adesão convertida pelo ticket médio — venda grande já preenche a meta', () => {
+  const vendas = [
+    { kind: 'loja', total_amount: 197 }, // não é alto valor — ignorada aqui
+    { kind: 'partner_plan', total_amount: 20000 },
+    { kind: 'adesao', total_amount: 5000 },
+  ];
+  const equivalentes = vendasEquivalentesAltoValor(vendas);
+  assert.equal(equivalentes, (20000 + 5000) / TICKET_MEDIO_VENDA);
+  assert.ok(equivalentes > META_VENDAS_CICLO, 'uma licença de 20 mil sozinha já satura a meta do ciclo inteiro');
+});
+
+test('vendasEquivalentesAltoValor: sem venda de alto valor, devolve zero — não inventa conta em cima de venda de mercadoria comum', () => {
+  assert.equal(vendasEquivalentesAltoValor([{ kind: 'loja', total_amount: 500 }, { kind: 'produto', total_amount: 300 }]), 0);
+  assert.equal(vendasEquivalentesAltoValor([]), 0);
 });
 
 // 🔀 09/09/2026 — dono: "o real time não pode pesar tanto... quero aumentar
@@ -385,12 +424,12 @@ test('estudoFdsEmDia: o "hoje" entra na conta quando ainda não está em diasCic
 const DIA_PERFEITO = { prod_total: 1, prod_feitas: 1, bonus_total: 1, bonus_feitas: 1, xpay_ganho: 1, xpay_possivel: 1 };
 
 test('tokenDoCiclo: o ciclo perfeito passa do teto do Diamante — é isso que a trava de fim de semana precisa segurar', () => {
-  const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: 4, perfil: 'estrategico' });
+  const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: META_VENDAS_CICLO, perfil: 'estrategico' });
   assert.ok(r.total > TRAVA_SEM_DIAMANTE, `o ciclo perfeito (${r.total}) tem que passar de ${TRAVA_SEM_DIAMANTE} pra trava fazer sentido`);
 });
 
 test('TRAVA_SEM_DIAMANTE aplicada por fora (padrão dos call-sites): sem o estudo de fim de semana, Ouro continua alcançável mas não vira Diamante', () => {
-  const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: 4, perfil: 'estrategico' });
+  const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: META_VENDAS_CICLO, perfil: 'estrategico' });
   const totalComTrava = estudoFdsEmDia([]) ? r.total : Math.min(r.total, TRAVA_SEM_DIAMANTE);
   const semEstudoFds = Math.min(r.total, TRAVA_SEM_DIAMANTE); // simula estudoFdsEmDia(...) === false
   assert.ok(semEstudoFds <= TRAVA_SEM_DIAMANTE);

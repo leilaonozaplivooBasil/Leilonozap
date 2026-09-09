@@ -9,7 +9,7 @@ import {
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
-  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
+  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -149,15 +149,18 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
 
   // 💳 vendas REAIS da loja no ciclo — mesma conta do Compromisso, precisa
   // pro Human Token oficial (F4) e pro eixo "Vendas" do Executivo Ideal.
+  // 🟢 09/09/2026 — DIR-110: venda de alto valor (parceria, adesão) entra
+  // somada, convertida em "vendas equivalentes" pelo ticket médio.
   useEffect(() => {
     if (!user?.id) { setVendasCiclo(null); return; }
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('catalog_sales').select('id,status,kind,created_date')
+    supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
       .or(`seller_id.eq.${user.id},licensee_id.eq.${user.id},anchor_id.eq.${user.id},owner_id.eq.${user.id}`)
       .gte('created_date', `${ini}T00:00:00`)
       .then(({ data, error }) => {
         if (error) { setVendasCiclo(null); return; }
-        setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
+        const pagas = (data || []).filter(isSalePago);
+        setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(pagas));
       });
   }, [user?.id, cicloConfig]);
 
@@ -440,7 +443,13 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
                 { k: 'producao', rotulo: 'Produção', emoji: '📋' },
                 { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
                 { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
-                { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+                {
+                  k: 'vendas',
+                  // 🟢 09/09/2026 — DIR-110: mostra o quebra-cabeça (venda
+                  // direta + reunião como princípio da venda), não só o total.
+                  rotulo: `Vendas — automático (meta ${META_VENDAS_CICLO} no ciclo · ${fmt2(ciclo.vendasDiretas)} vendida${ciclo.vendasDiretas === 1 ? '' : 's'}${ciclo.reuniaoEquivalente > 0 ? ` + ${fmt2(ciclo.reuniaoEquivalente)} de reunião` : ''} = ${fmt2(ciclo.vendasFeitas)})`,
+                  emoji: '🛒',
+                },
               ].map(({ k, rotulo, emoji }) => {
                 const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                 const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
