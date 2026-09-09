@@ -8,7 +8,9 @@ import {
 import XGameCapa from './XGameCapas';
 import ElencoBoneco from './ElencoBoneco';
 import { elencoDaParada } from '@/lib/elencoJornada';
-import { vibrar, VIBRA_TOQUE, VIBRA_ABRIR } from '@/lib/xgame';
+import {
+  vibrar, VIBRA_TOQUE, VIBRA_ABRIR, minutosBrasilia,
+} from '@/lib/xgame';
 import { faixaDeHorario } from '@/lib/quadroCompromisso';
 import { familiaDaTarefa } from '@/lib/capaDaTarefa';
 
@@ -89,7 +91,9 @@ const seloDa = (titulo, habito, origem) => {
 
 // a saudação segue o RELÓGIO DO JOGO (o teste do super admin muda o dia inteiro)
 const saudacao = (min) => {
-  const h = min != null ? Math.floor(min / 60) : new Date().getHours();
+  // sem min (vendo um dia que não é hoje), a hora ainda precisa ser a de
+  // Brasília — nunca o fuso do aparelho (mesmo bug da DIR-129/134).
+  const h = Math.floor((min ?? minutosBrasilia()) / 60);
   if (h < 12) return 'Bom dia';
   if (h < 18) return 'Boa tarde';
   return 'Boa noite';

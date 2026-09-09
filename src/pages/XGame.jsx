@@ -362,7 +362,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           <div>
             <div className="text-[11px] tracking-[0.28em] text-[#817E8C] uppercase font-semibold">To The Top · X-EOS · Visão Executiva</div>
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">X-GAME</h1>
-            <div className="text-sm text-[#C1BECA] mt-1">Boa {new Date().getHours() < 12 ? 'manhã' : new Date().getHours() < 18 ? 'tarde' : 'noite'}, {meuNome} — {FRASES.antecipacao.toLowerCase()} · dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
+            <div className="text-sm text-[#C1BECA] mt-1">Boa {agoraMin < 12 * 60 ? 'manhã' : agoraMin < 18 * 60 ? 'tarde' : 'noite'}, {meuNome} — {FRASES.antecipacao.toLowerCase()} · dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] px-5 py-3 self-start sm:self-auto">
             <SeloMoeda medalha={resumo.faixa.medalha} tamanho={44} />

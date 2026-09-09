@@ -12,6 +12,21 @@
 
 ---
 
+## DIR-136 — auditoria noturna (parte 2): mais três resíduos do "fuso do aparelho" corrigidos, e o validador de comprovações ganha o tempo que precisa pra pensar
+
+**Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135).
+
+**Achados (mesma classe de bug já corrigida em DIR-129/134 — código lendo hora/data do APARELHO em vez de forçar Brasília):**
+1. `src/pages/XGame.jsx` — a saudação do cabeçalho ("Bom dia/tarde/noite") ainda usava `new Date().getHours()` mesmo já existindo `agoraMin` (o relógio do jogo, Brasília forçada) calculado logo acima. Trocado por `agoraMin`.
+2. `src/components/licensing/CentralVendas/XGameJornada.jsx` — `saudacao()` caía pra `new Date().getHours()` quando `min` não vinha (acontece ao olhar um dia que não é hoje — `CrmMetodo.jsx` passa `agoraMin={null}` nesse caso). Trocado o fallback por `minutosBrasilia()`.
+3. `src/lib/pronto.js` — `prazoDe()`/`rotuloDoPrazo()` (o "pronto até HH:mm" e a decisão de atraso) montavam e liam a hora com `Date` local do aparelho (`T12:00:00` sem fuso, `.setHours`, `.getHours`/`.getDate`). Corrigido: `prazoDe()` monta o horário com offset explícito `-03:00` (Brasil não tem mais horário de verão desde 2019 — `America/Sao_Paulo` é sempre UTC-3); `rotuloDoPrazo()` lê de volta com `Intl.DateTimeFormat` forçando `America/Sao_Paulo`, igual `dataISO()`.
+4. `src/lib/filaComprovacoes.js` — `rotuloDataAmigavel()` tinha `hoje = new Date()` como default (usado nos dois lugares reais, `XGameAdmin.jsx` e `Comprovacoes.jsx`, sem passar `hoje`) — perto da virada do dia, um aparelho fora de Brasília rotularia "Hoje"/"Ontem" errado. Default trocado pra `dataISO()`.
+5. `api/functions/xgameValidarPrint.js` — chamada DIRETO do front em três lugares (`CrmMetodo.jsx`, `XGameAdmin.jsx` e o próprio Ritual do Amanhecer), sem `export const config = { maxDuration: 60 }` (que `xgameProvaValidador.js`, o único outro caminho até essa função, já tinha). Sem isso, o timeout padrão da Vercel podia cortar uma análise de imagem com raciocínio no meio — exatamente o tipo de falha intermitente que se parece com "a pessoa não conseguiu comprovar".
+
+**Prova:** suíte 1973/1973 (2 testes de `prazoDe`/`estadoDoPronto`/`filaDoPronto` reescritos pra travar Brasília em vez do fuso do runner de CI — que roda em UTC — e 1 teste novo pro `maxDuration`), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-135 — auditoria noturna: o dinheiro "em jogo" não some mais quando o dia zera, e a demanda distribuída na mentoria completa também cria o card do quadro e o sino
 
 **Emitida por:** dono (09/09/2026), indo dormir: *"eu vou deixar você rodando aí, pra você me trazer um relatório diligente... de toda a gamificação, que está bom, que não está, o que está quebrado... não pode passar nada em branco, nada nada nada nada."* — autorização explícita pra auditoria e correção autônoma durante a madrugada.

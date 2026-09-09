@@ -50,6 +50,15 @@ const MODEL_DIRETO = process.env.AI_MODEL_VISION_ANTHROPIC || 'claude-opus-5';
 const MODEL_GATEWAY = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
 const MODEL_GATEWAY_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
 
+// 🐛 09/09/2026 — auditoria noturna: esta função é chamada DIRETO do front
+// (CrmMetodo.jsx, XGameAdmin.jsx e o próprio Ritual do Amanhecer, não só
+// através de xgameProvaValidador.js, que já tinha maxDuration:60) — sem
+// isto, o timeout padrão da Vercel podia cortar no meio de uma análise de
+// imagem com raciocínio (effort medium + thinking adaptativo do Opus 5,
+// às vezes com fotos anteriores pra anti-reciclagem), virando exatamente o
+// tipo de falha intermitente relatada ("difícil receber").
+export const config = { maxDuration: 60 };
+
 /** Qual IA usar agora: { via, apiKey, model, reserva } — ou null sem chave. */
 const resolverIA = () => resolverIACompartilhada({ modelDireto: MODEL_DIRETO, modelGateway: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA });
 

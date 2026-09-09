@@ -10,26 +10,39 @@
 // Cada seta tem carimbo: prazo_em (até quando), pronto_em (quando deu),
 // conferido (o SIM), devolvida_motivo/devolvida_em (por que voltou).
 
-/** Monta o "pronto até" a partir do dia (YYYY-MM-DD) e da hora (HH:MM), no fuso local. */
+// 🐛 09/09/2026 — auditoria noturna: igual DIR-129/134, `prazoDe`/`rotuloDoPrazo`
+// montavam e liam a hora com Date local do APARELHO (`T12:00:00` sem fuso,
+// `.setHours`, `.getHours`/`.getDate`), não Brasília forçada. Um aparelho em
+// outro fuso gravaria (ou leria/decidiria atraso de) um "pronto até" errado
+// — o mesmo bug de classe já corrigido em dataISO()/minutosBrasilia().
+// Brasil não tem mais horário de verão desde 2019: América/São_Paulo é
+// SEMPRE UTC-3, então o offset fixo abaixo é seguro e evita puxar
+// Intl.DateTimeFormat só pra montar uma data.
+
+/** Monta o "pronto até" a partir do dia (YYYY-MM-DD) e da hora (HH:MM), sempre em Brasília. */
 export function prazoDe(diaISO, horaHHMM) {
   if (!diaISO) return null;
   const [h, m] = String(horaHHMM || '18:00').split(':').map(Number);
-  const d = new Date(`${diaISO}T12:00:00`);
+  const hh = String(Number.isFinite(h) ? h : 18).padStart(2, '0');
+  const mm = String(Number.isFinite(m) ? m : 0).padStart(2, '0');
+  const d = new Date(`${diaISO}T${hh}:${mm}:00-03:00`);
   if (Number.isNaN(d.getTime())) return null;
-  d.setHours(Number.isFinite(h) ? h : 18, Number.isFinite(m) ? m : 0, 0, 0);
   return d.toISOString();
 }
 
-const fmtHora = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-const fmtDia = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+const PARTES_BRASILIA = (d) => new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+}).formatToParts(d).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
 
-/** "pronto até 18:00" (mesmo dia) ou "pronto até 09/09 18:00". */
+/** "pronto até 18:00" (mesmo dia) ou "pronto até 09/09 18:00" — sempre lido em Brasília. */
 export function rotuloDoPrazo(prazoISO, hojeISO) {
   if (!prazoISO) return null;
   const d = new Date(prazoISO);
   if (Number.isNaN(d.getTime())) return null;
-  const mesmoDia = hojeISO && `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === hojeISO;
-  return `pronto até ${mesmoDia ? '' : `${fmtDia(d)} `}${fmtHora(d)}`;
+  const p = PARTES_BRASILIA(d);
+  const diaISO = `${p.year}-${p.month}-${p.day}`;
+  const mesmoDia = hojeISO && diaISO === hojeISO;
+  return `pronto até ${mesmoDia ? '' : `${p.day}/${p.month} `}${p.hour}:${p.minute}`;
 }
 
 /**
