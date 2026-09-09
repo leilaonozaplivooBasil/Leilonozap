@@ -1,0 +1,30 @@
+-- 🔐 find_user_by_phone deixa de ser chamável por quem não fez login (09/09/2026).
+--
+-- Achado da auditoria noturna ("26 funções SECURITY DEFINER chamáveis sem
+-- login"), investigado uma a uma. Esta é a mais grave das 26, e a única que dá
+-- pra fechar HOJE com risco zero de quebrar tela.
+--
+-- O QUE ELA DEVOLVE, hoje, pra qualquer um com a chave `anon` — que vai no
+-- pacote do site e portanto é pública:
+--
+--     id, full_name, email, role, primary_career_level,
+--     referral_code, commission_balance, store_slug
+--
+-- 🔴 A partir de UM TELEFONE. E o casamento é pelos ÚLTIMOS 8 DÍGITOS, o que
+-- torna varredura viável: dá pra descobrir se um número está cadastrado, e daí
+-- tirar nome, e-mail, cargo, código de indicação e SALDO DE COMISSÃO da pessoa.
+-- Não é exposição teórica — é dado pessoal e financeiro por número de telefone.
+--
+-- POR QUE FECHAR AQUI NÃO QUEBRA NADA (conferido antes, não suposto):
+-- o único lugar do projeto que chama esta função é api/functions/waWebhook.js
+-- (o robô do WhatsApp reconhecendo quem está falando), e ele chama com a
+-- SERVICE ROLE KEY — que ignora grants por definição. Nenhuma tela do site
+-- chama. Revogar do `anon` e do `public` não tira nada de ninguém.
+--
+-- ⚠️ AS OUTRAS 25 NÃO ENTRAM AQUI DE PROPÓSITO: 17 delas são chamadas pelo
+-- front como `anon` (painéis de loja e distribuidor) — revogar derruba tela em
+-- produção. Elas precisam de uma decisão de arquitetura (rota de servidor com
+-- crachá, como já foi feito no cofre de áudio), não de um REVOKE. Está tudo
+-- classificado no relatório do dia.
+revoke execute on function public.find_user_by_phone(text) from anon;
+revoke execute on function public.find_user_by_phone(text) from public;
