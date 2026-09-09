@@ -3,10 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { GitBranch, Plus, X, Save, Trophy, Search, History, HelpCircle, ArrowLeftRight } from 'lucide-react';
+import { GitBranch, Plus, X, Save, Trophy, Search, History, HelpCircle, ArrowLeftRight, Trash2, AlertTriangle } from 'lucide-react';
 import StatInfoTooltip from './StatInfoTooltip';
 import TourGuiado from './TourGuiado';
-import {
+import { possiveisDuplicatas,
   ESTAGIOS_ESTEIRA, MOTIVOS_PERDA, estagioDe, pendenciasParaEstagio,
   resumoEsteira, conversaoPorResponsavel, diasNoEstagio, dinheiroNaConta,
   aporteExternoValido, BANCOS_APORTE_EXTERNO,
@@ -40,10 +40,14 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr, iniciarTour = false, onTourIniciado }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, onApagar, podeApagar = false, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr, iniciarTour = false, onTourIniciado }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  // 🔁 09/09/2026 — candidatas a duplicata seguradas na frente do salvar.
+  // null = não perguntei ainda; array = estou perguntando.
+  const [duplicatas, setDuplicatas] = useState(null);
+  const [apagando, setApagando] = useState(null);
   // 🖐️ 08/09/2026 — a mãozinha da Esteira: abre sozinha na PRIMEIRA visita
   // (a marca fica no localStorage — nunca mais incomoda sozinha depois
   // disso), e sempre pode ser reaberta pelo botão "Como funciona".
@@ -154,14 +158,33 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
     onOportunidadeParaAbrirConsumida?.();
   }, [oportunidadeParaAbrir]);
 
-  const salvar = async () => {
+  // grava de verdade, sem perguntar nada (já perguntei, ou não havia o que perguntar)
+  const gravar = async () => {
     setSalvando(true);
     try {
       await onSalvar(editando === 'nova' ? null : editando, form);
       setEditando(null);
+      setDuplicatas(null);
     } finally {
       setSalvando(false);
     }
+  };
+
+  // 🔁 09/09/2026 — A CONFERÊNCIA DE DUPLICATA, antes de criar.
+  //
+  // Relato do admin: ele lançou o fechamento do Luciano pela conta de admin, o
+  // Luciano lançou de novo pela dele, e ficaram dois cards de R$ 200.000 —
+  // somando R$ 400.000 no painel, com o forecast a 304% da meta.
+  //
+  // ⚠️ AVISA, NÃO PROÍBE. O mesmo cliente aportando duas vezes é receita, não
+  // erro. Trava dura mataria isso em silêncio, que é o pior desfecho. Aqui a
+  // pessoa vê o que já existe e escolhe: abrir aquele, ou criar mesmo assim.
+  const salvar = async () => {
+    if (editando === 'nova' && duplicatas === null) {
+      const achadas = possiveisDuplicatas(oportunidades, form, null);
+      if (achadas.length) { setDuplicatas(achadas); return; }
+    }
+    await gravar();
   };
 
   // REL-34.2: valor digitado em português — "200.000" é duzentos mil
@@ -273,8 +296,25 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                       const parada = o.estagio !== 'sem_interesse' && o.estagio !== 'fechado_100' && dias >= DIAS_PARADA_ATENCAO;
                       const provado = o.estagio === 'fechado_100' ? dinheiroNaConta(o, sales) : null;
                       return (
+                        /* 🗑️ 09/09/2026 — o card virou div com DOIS botões: o
+                           corpo (abre a edição) e o apagar no canto. Antes o
+                           card inteiro era um <button>, e botão dentro de botão
+                           é HTML inválido — o clique de apagar seria engolido
+                           pelo de abrir. */
+                        <div key={o.id} className="relative group">
+                        {podeApagar && (
+                          <button
+                            type="button"
+                            onClick={() => setApagando(o)}
+                            title="apagar este card da esteira"
+                            aria-label={`Apagar a oportunidade de ${o.cliente_nome}`}
+                            data-teste="apagar-oportunidade"
+                            className="absolute top-1 right-1 z-10 rounded p-1 text-nz-tinta-fraca/50 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
-                          key={o.id}
                           type="button"
                           onClick={() => abrirEdicao(o)}
                           className="w-full text-left rounded-lg border border-nz-borda bg-white p-2 hover:border-nz-verde/50 transition-colors"
@@ -292,6 +332,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                             {provado === false && <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">⚠️ sem dinheiro na conta</span>}
                           </div>
                         </button>
+                        </div>
                       );
                     })}
                     {doEstagio.length === 0 && <p className="text-[10px] text-center text-nz-tinta-fraca py-2">vazio</p>}
@@ -339,6 +380,89 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
         )}
 
         {/* Modal nova/editar */}
+        {/* 🔁 AVISO DE DUPLICATA — segura o salvar e mostra o que já existe.
+            Avisa, não proíbe: cliente que aporta duas vezes é receita. */}
+        {duplicatas !== null && duplicatas.length > 0 && (
+          <div className="fixed inset-0 z-[95] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" data-teste="aviso-duplicata">
+            <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-5 space-y-3">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-base font-bold text-nz-tinta">Já existe {duplicatas.length === 1 ? 'uma oportunidade' : `${duplicatas.length} oportunidades`} desse cliente</p>
+                  <p className="text-[12px] text-nz-tinta-fraca mt-0.5">
+                    Se for a mesma negociação, abra a que já está na esteira em vez de criar outra —
+                    dois cards do mesmo negócio <strong className="text-nz-tinta">somam em dobro</strong> no fechado e no forecast.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                {duplicatas.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => { setDuplicatas(null); abrirEdicao(d); }}
+                    data-teste="abrir-a-existente"
+                    className="w-full text-left rounded-lg border border-nz-borda hover:border-nz-verde p-2.5 transition-colors"
+                  >
+                    <p className="text-[13px] font-semibold text-nz-tinta">{d.cliente_nome}</p>
+                    <p className="text-[11px] text-nz-tinta-fraca">
+                      {estagioDe(d.estagio).label}
+                      {Number(d.valor_previsto) > 0 ? ` · ${fmtBRL(d.valor_previsto)}` : ''}
+                      {d.responsavel_nome ? ` · ${String(d.responsavel_nome).split(' ')[0]}` : ''}
+                    </p>
+                    {aporteExternoValido(d) && <p className="text-[10px] font-semibold text-nz-verde mt-0.5">💰 já tem o dinheiro registrado na conta</p>}
+                    <p className="text-[10px] text-nz-verde font-semibold mt-1">abrir esta →</p>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button variant="outline" onClick={() => setDuplicatas(null)} className="flex-1">Voltar</Button>
+                {/* ⚠️ o caminho de criar mesmo assim existe de propósito: mesmo
+                    cliente aportando de novo é negócio novo, não engano. */}
+                <Button onClick={gravar} disabled={salvando} data-teste="criar-assim-mesmo" className="flex-1 bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  {salvando ? 'Criando...' : 'É outra negociação — criar'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🗑️ APAGAR — a confirmação DIZ O QUE SE PERDE. No caso do Renan, um
+            dos cards carregava o registro dos R$ 200.000 no Santander; apagar o
+            errado apagaria o comprovante. */}
+        {apagando && (
+          <div className="fixed inset-0 z-[95] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" data-teste="confirmar-apagar">
+            <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-5 space-y-3">
+              <p className="text-base font-bold text-nz-tinta">Apagar da esteira?</p>
+              <div className="rounded-lg border border-nz-borda p-2.5">
+                <p className="text-[13px] font-semibold text-nz-tinta">{apagando.cliente_nome}</p>
+                <p className="text-[11px] text-nz-tinta-fraca">
+                  {estagioDe(apagando.estagio).label}
+                  {Number(apagando.valor_previsto) > 0 ? ` · ${fmtBRL(apagando.valor_previsto)}` : ''}
+                </p>
+              </div>
+              {aporteExternoValido(apagando) && (
+                <p className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 text-[12px] text-amber-800">
+                  ⚠️ <strong>Este card é o que guarda a prova do dinheiro</strong>
+                  {` (${BANCOS_APORTE_EXTERNO.find((b) => b.id === apagando.aporte_externo?.banco)?.label || 'banco'})`}.
+                  Se o duplicado for o outro, apague o outro.
+                </p>
+              )}
+              <p className="text-[11px] text-nz-tinta-fraca">Fica registrado quem apagou, e o conteúdo é guardado no log — dá pra reconstruir se for engano.</p>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" onClick={() => setApagando(null)} className="flex-1">Cancelar</Button>
+                <Button
+                  onClick={async () => { const alvo = apagando; setApagando(null); await onApagar?.(alvo); }}
+                  data-teste="confirmar-apagar-botao"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Apagar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {editando !== null && (
           // 🎨 08/09/2026 — dono: "o fundo transparente está deixando meio
           // confuso... não pode disputar a leitura." De 50% pra 80% + um
