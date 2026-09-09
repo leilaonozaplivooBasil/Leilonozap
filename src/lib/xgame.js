@@ -588,7 +588,7 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 // `votouEmTodos === false`, a régua radical entra. `votouEmTodos` continua
 // opcional (default null) — quem chama sem saber de votação (histórico,
 // testes antigos) se comporta exatamente como antes desta mudança.
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null }) {
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null, perdoado = false }) {
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);
@@ -609,7 +609,12 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   // um dia histórico já fechou nos próprios registros, não se recalcula.
   const perdeuPorAtrasoPronto = votouEmTodos !== null
     && tarefas.some((t) => t?.origem === 'xperf' && t?.prazo_em && !t?.feito && new Date(t.prazo_em) < hoje);
-  const diaZerado = perdeuPorNaoVotar || perdeuPorAtrasoPronto;
+  // 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de
+  // amanhã a regra é séria." `perdoado` é ligado por fora (xgame_config.
+  // perdao_zeragem_ate) pra um dia excepcional inteiro — a régua radical
+  // continua de pé pros próximos dias, só este aqui não pune ninguém,
+  // não importa o motivo (bug, lista de votação mudou no meio do dia...).
+  const diaZerado = !perdoado && (perdeuPorNaoVotar || perdeuPorAtrasoPronto);
   const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   // 🎓 09/09/2026 — o estudo de FIM DE SEMANA é uma tarefa à parte (tipo
@@ -664,9 +669,11 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     leitura_feita: leituraHoje,
     estudo_fds_feito: estudoFdsHoje,
     pontos,
-    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : perdeuPorAtrasoPronto ? 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO' : fraseDoMvm(mvm),
-    perdeu_por_nao_votar: perdeuPorNaoVotar,
-    perdeu_por_atraso_pronto: perdeuPorAtrasoPronto,
+    frase_mvm: diaZerado
+      ? (perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO')
+      : fraseDoMvm(mvm),
+    perdeu_por_nao_votar: !perdoado && perdeuPorNaoVotar,
+    perdeu_por_atraso_pronto: !perdoado && perdeuPorAtrasoPronto,
     valores,
     xpay,
     contagens,
