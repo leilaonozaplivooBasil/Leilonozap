@@ -13,6 +13,7 @@ import {
 import { HABITOS } from '@/lib/metodo';
 import { fixoDoParticipante } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
+import MensagemProCeo from '@/components/licensing/CentralVendas/MensagemProCeo';
 import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
@@ -386,6 +387,12 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
     <div className="space-y-5">
       {/* a trilha da pessoa numa linha; as três mentalidades explicadas ficam dobradas */}
       <Dobra id="mentalidades" titulo="Mentalidade" resumo={`a sua trilha hoje: ${trilha.nome} — ${trilha.lema.toLowerCase()} · ver as três`}>{blocoMentalidade}</Dobra>
+      {/* 📨 09/09/2026 — DIR-106, dono: "a mensagem pro CEO, a mensagem pra
+          diretoria, a mensagem pros executivos, a gente tem que ter isso
+          aí... e eles podem mandar um pros outros, demandas." */}
+      <Dobra id="mensagem-ceo" titulo="Mensagem pro CEO" resumo="sugestão, pedido, agradecimento — ou uma demanda pra um colega" aberta>
+        <MensagemProCeo currentUser={currentUser} cargo={participante?.cargo} />
+      </Dobra>
       <Dobra id="grupo" titulo="O grupo To The Top" resumo="a holding, os cinco pilares, visão, missão e os valores inegociáveis">{blocoGrupo}</Dobra>
       {/* ── 2. AS DUAS CONTAS, SEPARADAS ─────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

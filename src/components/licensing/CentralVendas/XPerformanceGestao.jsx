@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, Zap, AlarmClock, CheckCheck, Undo2, Building2, BriefcaseBusiness, MessageCircle } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, Zap, AlarmClock, CheckCheck, Undo2, Building2, BriefcaseBusiness, MessageCircle, Trash2, Inbox } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
 import XGame from '@/pages/XGame';
+import CaixaDeMensagensAdmin from '@/components/licensing/CentralVendas/CaixaDeMensagensAdmin';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
-  ehTarefaDeReuniao,
+  ehTarefaDeReuniao, AVISOS_ANTES_DE_ZERAR,
 } from '@/lib/xgame';
 import { distribuirDia, resumoDoCiclo } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
@@ -201,6 +202,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // abertura, não esse quadradão que vem de cara." Antes ela vinha sempre
   // aberta, ocupando o topo da tela; agora é um botão que abre o painel.
   const [distribuirAberto, setDistribuirAberto] = useState(false);
+  // 📨 09/09/2026 — DIR-106, dono: "eu queria saber onde é que a gente vê
+  // isso... tanto eu como super admin." A caixa fica fechada por padrão,
+  // igual Distribuir Tarefa — abre com 1 clique.
+  const [mensagensAberto, setMensagensAberto] = useState(false);
 
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
@@ -333,6 +338,45 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     if (error) { toast.error('Não distribuiu o dia da função — tenta de novo'); return; }
     toast.success(`${f.nome}: ${linhas.length} tarefas do dia distribuídas pra ${nomeDe(userId)} em ${fmtDia(diaISO)}`);
     carregarTarefas();
+  };
+
+  // ⚠️ 09/09/2026 — DIR-105, dono: "eu aqui no Admin tenho que ter [um
+  // botão], avisar ela de mandar um pronto... e aí eu retorno pra ela e
+  // falo: olha, você não me deu pronto, estou te avisando a primeira vez."
+  // Cada clique soma 1 no contador `avisos_pronto` da pessoa (persistido —
+  // reset é manual, o admin decide quando ela "aprendeu") e abre o
+  // WhatsApp com um texto que escala: 1º/2º aviso é cobrança normal, do 3º
+  // em diante vira a "mensagem do CEO" (dono: "ela vai perder todos os
+  // seus pontos do dia... o pronto é uma das coisas mais importantes do
+  // nosso negócio"). `aviso_pronto_em` marca a tarefa pra saber que ESTE
+  // atraso específico já foi avisado.
+  const avisar = async (t) => {
+    const p = participanteDe(t.user_id);
+    const novoAvisos = (Number(p.avisos_pronto) || 0) + 1;
+    const nome = nomeDe(t.user_id);
+    const prazoTxt = (rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10)) || '').replace('pronto até ', '') || 'o prazo combinado';
+    const primeiroNome = nome.split(' ')[0];
+    const msg = novoAvisos >= AVISOS_ANTES_DE_ZERAR
+      ? `${primeiroNome}, aqui é o CEO. Essa já é a ${novoAvisos}ª vez que peço o pronto de "${t.titulo}" (tinha até ${prazoTxt}) e não recebi. A partir de agora, o PRÓXIMO atraso zera TODOS os seus pontos do dia — MvM, Human Token, pontos e X-Pay. O pronto é uma das coisas mais importantes do nosso negócio. Preciso que isso não se repita.`
+      : `Oi ${primeiroNome}, tudo bem? A tarefa "${t.titulo}" tinha pronto até ${prazoTxt} e ainda não recebi. Estou te avisando (aviso ${novoAvisos} de ${AVISOS_ANTES_DE_ZERAR}) — me dá o pronto assim que puder? 🙏`;
+    const numero = String(usuarios.find((u) => u.id === t.user_id)?.phone || '').replace(/\D/g, '');
+    const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(msg)}` : null;
+
+    const agora = new Date().toISOString();
+    setTarefasCiclo((l) => l.map((x) => (x.id === t.id ? { ...x, aviso_pronto_em: agora } : x)));
+    setParticipantes((l) => {
+      const existe = l.some((x) => x.user_id === t.user_id);
+      return existe
+        ? l.map((x) => (x.user_id === t.user_id ? { ...x, avisos_pronto: novoAvisos } : x))
+        : [...l, { ...PARTICIPANTE_PADRAO, user_id: t.user_id, cargo: p.cargo, ativo: true, avisos_pronto: novoAvisos }];
+    });
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      supabase.from('metodo_tarefas').update({ aviso_pronto_em: agora }).eq('id', t.id),
+      supabase.from('xgame_participantes').upsert({ user_id: t.user_id, cargo: p.cargo, ativo: true, avisos_pronto: novoAvisos, updated_at: agora }, { onConflict: 'user_id' }),
+    ]);
+    if (e1 || e2) { toast.error('Não avisou — recarregando'); carregarTarefas(); return; }
+    toast.success(`${novoAvisos}º aviso registrado pra ${nome}${novoAvisos >= AVISOS_ANTES_DE_ZERAR ? ' — próximo atraso zera o dia' : ''}`);
+    if (wa) window.open(wa, '_blank', 'noopener');
   };
 
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
@@ -729,6 +773,31 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         )}
       </div>
 
+      {/* ── 📨 MENSAGENS — a caixa de entrada do CEO/Super Admin (DIR-106,
+          09/09/2026). Dono: "eu queria saber onde é que a gente vê isso...
+          tanto eu como super admin." Tudo que o time mandou — pro CEO, pra
+          Diretoria, pros Executivos e as demandas entre colegas — num só
+          lugar, porque o super admin enxerga o negócio inteiro. ── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <button
+          type="button"
+          onClick={() => setMensagensAberto((v) => !v)}
+          aria-expanded={mensagensAberto}
+          className="w-full flex items-center gap-2 text-left"
+          data-teste="abrir-mensagens"
+        >
+          <Inbox className="w-4 h-4 text-nz-verde" />
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Mensagens</span>
+          <span className="text-[10px] text-white/35">· o que o time mandou pro CEO, diretoria, executivos e entre eles</span>
+          <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${mensagensAberto ? 'rotate-180' : ''}`} />
+        </button>
+        {mensagensAberto && (
+          <div className="mt-3">
+            <CaixaDeMensagensAdmin />
+          </div>
+        )}
+      </div>
+
       {/* enquanto o Quadro Geral está aberto, o resto sai da frente */}
       <div hidden={modalAberto && !!pessoaFixo}>
       {/* ── ⏰ A FILA DO PRONTO — o enviar-e-voltar ─────────────────────── */}
@@ -761,14 +830,35 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                         </span>
                       )}
                       {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
+                      {/* ⚠️ 09/09/2026 — DIR-105, dono: "eu aqui no Admin
+                          tenho que ter [um botão], avisar ela... e também
+                          tenho que ter o botão de excluir, porque eu posso
+                          desistir desse pronto." */}
+                      {estado.id === 'atrasada' && (
+                        <span className="ml-auto flex items-center gap-1 shrink-0">
+                          {t.aviso_pronto_em ? (
+                            <span className="text-white/30 italic">já avisada</span>
+                          ) : (
+                            <button type="button" onClick={() => avisar(t)} className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 hover:bg-amber-400/30 px-2 py-0.5 text-amber-200 font-bold" data-teste="avisar"><MessageCircle className="w-3 h-3" /> avisar</button>
+                          )}
+                          <button type="button" onClick={() => desfazer(t)} title="excluir (desistir desse pronto)" className="inline-flex items-center gap-1 rounded-full bg-red-500/15 hover:bg-red-500/30 px-2 py-0.5 text-red-200 font-bold" data-teste="excluir-pronto"><Trash2 className="w-3 h-3" /> excluir</button>
+                        </span>
+                      )}
                     </div>
                     {/* ⏰ 08/09/2026 — dono: "isso tem que tirar pontos dele,
-                        além de perder o dinheiro." A mesma régua radical do
-                        não-votar já zera o dia de quem está aqui — a fila
-                        avisa a gestão, não só a pessoa lá na tela dela. */}
-                    {!t.feito && estado.atrasou && (
-                      <p className="mt-1 text-[10px] font-bold text-red-300">⚠️ passou do prazo sem o pronto — zerou o dia inteiro dela (MvM, Human Token, pontos e X-Pay)</p>
-                    )}
+                        além de perder o dinheiro." 🟡 09/09/2026 — DIR-105
+                        amoleceu: só do 4º aviso em diante zera o dia
+                        inteiro; antes disso é treino (só pontos). */}
+                    {!t.feito && estado.atrasou && (() => {
+                      const avisos = Number(participanteDe(t.user_id).avisos_pronto) || 0;
+                      const zerou = avisos >= AVISOS_ANTES_DE_ZERAR;
+                      return (
+                        <p className={`mt-1 text-[10px] font-bold ${zerou ? 'text-red-300' : 'text-amber-300'}`}>
+                          ⚠️ passou do prazo sem o pronto — {avisos} de {AVISOS_ANTES_DE_ZERAR} avisos já dados.{' '}
+                          {zerou ? 'Zerou o dia inteiro dela (MvM, Human Token, pontos e X-Pay).' : 'Ainda é treino — só perde pontos. Clique em avisar pra registrar e cobrar no WhatsApp.'}
+                        </p>
+                      );
+                    })()}
                     {devolvendo?.id === t.id && (
                       <div className="mt-1.5 flex items-center gap-1.5 flex-wrap" data-teste="devolver-recado">
                         <Input autoFocus value={devolvendo.motivo} onChange={(e) => setDevolvendo((d) => ({ ...d, motivo: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') devolver(t, devolvendo.motivo); }} placeholder="o recado: o que faltou pra valer o pronto" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white placeholder:text-white/30 text-[11px]" data-teste="recado" />

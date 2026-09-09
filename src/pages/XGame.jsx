@@ -9,7 +9,7 @@ import {
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
-  estudoFdsEmDia, TRAVA_SEM_DIAMANTE,
+  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -367,6 +367,20 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           </div>
         )}
 
+        {/* 🟡 09/09/2026 — DIR-105: 1º-3º atraso na Fila do Pronto é só
+            aviso/treino (perde alguns pontos, resto do dia intacto) — só o
+            4º em diante vira o zero radical acima. */}
+        {resumo.em_aviso_pronto && (
+          <div className="rounded-xl border-2 border-amber-500 bg-amber-950/30 px-4 py-3 text-center">
+            <p className="text-sm font-extrabold text-amber-400">⚠️ AVISO {resumo.avisos_pronto + 1} DE {AVISOS_ANTES_DE_ZERAR} — uma tarefa da gestão passou do "pronto até" sem o pronto</p>
+            <p className="text-[11px] text-amber-300 mt-0.5">
+              Você perdeu pontos hoje por isso, mas MvM, Human Token e X-Pay continuam de pé. {resumo.avisos_pronto + 1 >= AVISOS_ANTES_DE_ZERAR
+                ? 'Da próxima vez o dia INTEIRO zera — sem exceção.'
+                : `Da próxima vez o aviso sobe pra ${resumo.avisos_pronto + 2} de ${AVISOS_ANTES_DE_ZERAR}. No ${AVISOS_ANTES_DE_ZERAR + 1}º, zera tudo.`}
+            </p>
+          </div>
+        )}
+
         {/* ══ SEU DIA — o hero, cheio de largura ══ */}
         <section data-teste="xgame-meu-dia">
           <div className="flex items-center gap-2 mb-4">
@@ -438,8 +452,13 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card titulo="Human Token" valor={fmt2(resumo.token_dia)} sub={`teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
-            <Card titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)} sub={resumo.frase_mvm} destaque={resumo.mvm_dia < 4} />
+            <Card titulo="Human Token" valor={`${ciclo.faixa.medalha} ${fmt2(ciclo.total)}`} sub={`${ciclo.faixa.label} do ciclo · teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
+            <Card
+              titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)}
+              sub={`${resumo.frase_mvm}${recebido.media !== null ? ` · votação do ciclo: ${fmt2(recebido.media)}` : ''}`}
+              destaque={resumo.mvm_dia < 4}
+              dica="Dois tipos de MvM: o AUTOMÁTICO aqui em cima (o dia começa em 10 e cai por tarefa atrasada) e o da VOTAÇÃO DO CICLO (as notas que você recebe dos colegas) — é o da votação que entra no Human Token oficial, no painel Executivo Ideal."
+            />
             <Card
               titulo="X-Pay de hoje" valor={resumo.xpay ? `R$ ${fmt2(resumo.xpay.ganho)}` : '—'}
               sub={resumo.xpay?.perdido > 0 ? `− R$ ${fmt2(resumo.xpay.perdido)} perdido` : `R$ ${fmt2(resumo.xpay?.emJogo || 0)} em jogo`}

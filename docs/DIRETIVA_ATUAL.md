@@ -12,6 +12,154 @@
 
 ---
 
+## DIR-106 — Mensagem pro CEO: comunicação interna do time corporativo do X-GAME
+
+**Emitida por:** dono (09/09/2026), na mesma mensagem do DIR-105: *"a
+mensagem pro CEO, a mensagem pra diretoria, a mensagem pros executivos, a
+gente tem que ter isso aí... eles precisam entender que pra falar com o
+CEO, precisa, não pode ser bobeira, tá? Tem que ser algo assim que eles
+queiram compartilhar, sugestão, pedido, agradecimento... e eles podem
+mandar um pro outros, uns pros outros, demandas... todo mundo que faz
+parte do time corporativo e que está no game, tem direito a fazer isso...
+eu queria saber onde é que a gente vê isso, eu gostaria que você me
+ajudasse. Tanto eu como super admin, tanto eles, aonde eles veem isso."*
+
+**A decisão de onde fica** (a pergunta que o dono fez diretamente): dentro
+da própria tela do X-Performance, que já é o espaço do time corporativo —
+sem inventar uma página nova pra achar.
+- **O time** vê e manda em "Mensagem pro CEO", uma dobra aberta por padrão
+  dentro do X-Performance deles (a mesma tela do Encontro de Segunda e do
+  quadro).
+- **O Super Admin/CEO** vê tudo — inclusive as demandas de colega pra
+  colega, porque quem enxerga o negócio inteiro precisa ver o negócio
+  inteiro — numa caixa "Mensagens" dentro do ADM X-Game, ao lado de
+  Distribuir Tarefa e da Fila do Pronto.
+
+**O que entra:**
+1. **Banco** — tabela nova `xgame_mensagens` (remetente, destino —
+   ceo/diretoria/executivos/uma pessoa —, tipo — sugestão/pedido/
+   agradecimento/demanda —, texto, lida, quando).
+2. **`src/lib/mensagensXgame.js`** — a barra de qualidade que o dono pediu
+   ("não pode ser bobeira"): `mensagemValida` exige destino, tipo e pelo
+   menos 20 caracteres de texto. `papeisDoCargo` traduz o cargo do jogo
+   (ceo/diretor/executivo, o mesmo que já vem de `xgame_participantes.cargo`
+   via `cargoDoNivel`) pro destino coletivo que a pessoa recebe.
+3. **`MensagemProCeo.jsx`** (novo) — a tela do time: escolhe destino (CEO,
+   Diretoria, Executivos ou um colega específico), tipo, escreve, manda;
+   vê as recebidas (com contador de não lidas) e as enviadas.
+4. **`CaixaDeMensagensAdmin.jsx`** (novo) — a caixa do Super Admin: tudo
+   que foi mandado, com filtro por destino e por tipo, contador de não
+   lidas, marca como lida com 1 clique.
+
+**O que ficou de fora desta rodada, de propósito:** notificação
+proativa (push/WhatsApp quando chega mensagem nova) — por ora é preciso
+abrir a caixa pra ver, igual o resto do painel. Se o volume de mensagens
+justificar, entra numa rodada futura.
+
+**Prova:** `tests/mensagensXgame.test.mjs` — 7 testes novos (validação da
+barra de qualidade, ordenação, contagem de não lidas, quem recebe o quê
+por papel, quem mandou o quê). Suíte 1619/1619, lint limpo, `npm run
+build` sem erro. Verificação em navegador não rodou nesta rodada (mesmo
+motivo do DIR-105: JSX novo, sem alterar nenhuma tela existente que já
+tivesse prova em navegador) — recomendado revisar ao vivo com o time.
+
+---
+
+## DIR-105 — Fila do Pronto: régua graduada de avisos (3 chances antes de zerar) + botões avisar/excluir
+
+**Emitida por:** dono (09/09/2026), olhando dois atrasos de "Emannuel Lima"
+na Fila do Pronto: *"tem que me dar a opção de zerar o ponto da pessoa,
+mas antes de zerar o ponto dela, eu dar uma cobrada o primeiro aviso.
+Essa pessoa tem que ter três avisos. Ela pode perder até três pontos. Pra
+treinar ela. A partir do quarto ponto que ela não entregar, ela vai zerar
+a pontuação (...) eu aqui no Admin tenho que ter [um botão], avisar ela
+de mandar um pronto, ela não retornou, e aí eu retorno pra ela e falo:
+olha, você não me deu pronto, estou te avisando a primeira vez. A partir
+do terceiro pronto que eu te pedi você não voltar, ela vai entrar a
+mensagem do CEO pra ela (...) você não me deu nenhum botão aqui no ADM,
+eu já tinha te pedido isso. E também eu tenho que ter o botão de excluir,
+porque eu posso desistir desse pronto."*
+
+**Data:** 09/09/2026.
+
+**O que entra:**
+1. **Banco** — `xgame_participantes.avisos_pronto` (contador, default 0,
+   reset manual pelo admin — o dono foi explícito: *"depois que ela
+   aprendeu, eu não posso mais ficar avisando toda hora"*, ou seja, quem
+   decide quando zerar o contador é o admin, não o sistema sozinho) e
+   `metodo_tarefas.aviso_pronto_em` (marca que ESSE atraso específico já
+   foi avisado, pra não avisar a mesma tarefa duas vezes).
+2. **`src/lib/xgame.js`** — a régua radical do DIR-102 (zerar MvM, Human
+   Token, pontos e X-Pay do dia inteiro) só entra a partir do **4º** aviso
+   (`avisos_pronto >= 3`). Do 1º ao 3º, só desconta até 3 pontos — o resto
+   do dia (MvM, Human Token, X-Pay) fica intacto. Novos campos no retorno:
+   `em_aviso_pronto` (true nos 3 primeiros) e `avisos_pronto` (o contador
+   atual, pra tela mostrar "aviso X de 3").
+3. **A Fila do Pronto** (`XPerformanceGestao.jsx`) ganhou os dois botões
+   que faltavam num item atrasado:
+   - **avisar** — soma 1 no contador da pessoa, marca a tarefa como avisada
+     e abre o WhatsApp com uma mensagem pronta: 1º e 2º aviso é cobrança
+     normal ("estou te avisando..."); do 3º em diante vira a "mensagem do
+     CEO" (tom sério, avisando que o PRÓXIMO atraso zera tudo).
+   - **excluir** — apaga a tarefa (mesmo mecanismo do `desfazer` que já
+     existia pra Distribuir Tarefa) — "desistir desse pronto", sem afetar
+     pontuação.
+   O texto de aviso embaixo de cada item atrasado agora mostra quantos
+   avisos já foram dados e se já é treino ou já zerou o dia.
+4. Banner âmbar novo em `XGame.jsx` e `CrmMetodo.jsx` pro 1º-3º aviso
+   ("AVISO X DE 3" — perdeu pontos, mas MvM/Human Token/X-Pay de pé),
+   distinto do banner vermelho "DIA ZERADO" que continua valendo do 4º
+   aviso em diante.
+
+**Prova:** `tests/xgame.test.mjs` — 2 testes novos travam a régua graduada
+(0/1/2 avisos só descontam pontos, mantendo MvM/Token/X-Pay intactos; 3+
+avisos mantém o zero radical de sempre). Suíte 1612/1612, lint limpo,
+`npm run build` sem erro. Verificação visual dos botões não rodou em
+navegador nesta rodada (JSX segue exatamente o padrão já provado dos
+botões conferir/devolver e do link de WhatsApp já existente em
+`QuadroGeralTopo`) — recomendado revisar ao vivo na próxima janela de
+teste com o time.
+
+---
+
+## DIR-104 — corrige sincronismo: Human Token e MvM do Dia na XGame.jsx usavam o número errado
+
+**Emitida por:** dono (09/09/2026), olhando o painel da Beatriz Sant'anna
+como Super Admin: *"estou olhando aqui o caminho vermelho dela está
+zerado, apesar de já estar aparecendo ali as votações dela lá embaixo. O
+painel tem que ter sincronismo, vamos olhar esse sincronismo aí e ver o
+que está funcionando e que não está. Olha tudo por dentro, vê o que está
+errado, faz uma análise aí pra gente corrigir tudo. Tem que estar tudo
+funcionando."*
+
+**Data:** 09/09/2026.
+
+**O bug:** `src/pages/XGame.jsx` (a tela usada no "MvM dele" do Quadro
+Geral do ADM, em `modoAdmin`) mostrava nos cartões "Human Token" e "MvM do
+Dia" o número AUTOMÁTICO do dia (`resumo.token_dia`/`resumo.mvm_dia`), não
+o número OFICIAL do ciclo (`ciclo.total`/`ciclo.taxas.mvm`, vindo da
+votação real dos colegas) — que o painel "Executivo Ideal", na mesma tela,
+já usava corretamente. Confirmado com consulta direta no Supabase de
+produção: a Beatriz tinha votos registrados hoje em `xgame_votos_mvm`, mas
+o cartão "Human Token" continuava zerado porque lia a conta errada.
+`src/components/licensing/CentralVendas/CrmMetodo.jsx` (o Compromisso) já
+fazia certo — os dois cartões só precisavam ler a mesma variável que lá.
+
+**O que entra:**
+1. "Human Token" agora mostra `ciclo.faixa.medalha` + `ciclo.total` (o
+   valor oficial do ciclo, com a medalha de faixa), não mais o automático
+   do dia.
+2. "MvM do Dia" continua mostrando o automático (`resumo.mvm_dia` — é uma
+   métrica diferente e legítima), mas agora com um texto extra "· votação
+   do ciclo: X" ao lado, e uma dica explicando a diferença entre as duas
+   MvM (a automática desconta por atraso; a da votação é a que vale pro
+   Human Token oficial) — pra ninguém mais achar que são a mesma coisa ou
+   que uma está "errada" quando a outra cai.
+
+**Prova:** suíte 1609/1609, lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-103 — % de reunião do time chega na Verificação do Progresso (o alcance que faltava do DIR-102)
 
 **Emitida por:** dono (09/09/2026): *"eu quero esse alcance, o que
