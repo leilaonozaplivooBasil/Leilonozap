@@ -24,7 +24,7 @@ import {
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
-  estudoFdsEmDia, estudoEmDia, travarDiamantePorEstudo,
+  estudoFdsEmDia, estudoEmDia, travarPlatinaPorEstudo,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
@@ -270,8 +270,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // ══ 🎮 X-GAME por cima do Master Task (mesma tela, zero mudança de fluxo) ══
   // MvM do Dia começa em 10 e DECAI quando a tarefa passa da hora sem marcar;
-  // Human Token = MvM + constância do ciclo (teto 22,22; trava 17,77 sem a
-  // leitura em dia); cotação cai do dia 1 ao 22 ("antecipação é poder").
+  // Human Token = MvM + constância do ciclo (teto 22,22; trava 19,99 pro
+  // Platina, nunca pro Ouro, sem estudo — DIR-113); cotação cai do dia 1
+  // ao 22 ("antecipação é poder").
   const ehHoje = dia === hojeStr();
   const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
   // 🕐 RELÓGIO DE TESTE (só super admin): o jogo inteiro obedece o horário
@@ -405,7 +406,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const estadoDaTarefa = (t) => (xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
-  // com a trava 17,77 quando a leitura do ciclo está em atraso.
+  // com a trava 19,99 (só pra Platina — DIR-113) quando a leitura do ciclo
+  // está em atraso.
   const ciclo = useMemo(() => {
     if (!xgame) return null;
     const r = tokenDoCiclo({
@@ -416,10 +418,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       vendasReais: vendasCiclo,
     });
     // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
-    // estudo (semana OU fim de semana) trava só o DIAMANTE, nunca o OURO
+    // estudo (semana OU fim de semana) trava só a PLATINA, nunca o OURO
     // — mesma função usada no X-Game, no ranking e no Painel Corporativo.
     const fdsOk = estudoFdsEmDia(diasCiclo, { data: hojeStr(), feito: xgame.estudo_fds_feito });
-    const total = travarDiamantePorEstudo(r.total, { estudoSemanaOk: xgame.estudo_em_dia, estudoFdsOk: fdsOk });
+    const total = travarPlatinaPorEstudo(r.total, { estudoSemanaOk: xgame.estudo_em_dia, estudoFdsOk: fdsOk });
     return { ...r, total, liga: ligaDoToken(total), estudoEmDiaCompleto: xgame.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
   const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
@@ -571,10 +573,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             perfil: perfilPor[r.user_id],
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
-          // estudo (semana OU fim de semana) trava só o Diamante, nunca o
+          // estudo (semana OU fim de semana) trava só a Platina, nunca o
           // Ouro. Antes só checava o fim de semana; agora checa os dois,
           // igual ao painel individual.
-          const token = travarDiamantePorEstudo(tokenBruto, {
+          const token = travarPlatinaPorEstudo(tokenBruto, {
             estudoSemanaOk: estudoEmDia(r.diasDatados),
             estudoFdsOk: estudoFdsEmDia(r.diasDatados),
           });
@@ -1693,10 +1695,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). Ligas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 · 💠 diamante de 20 pra cima. Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só o Diamante exige leitura de semana + estudo de fim de semana em dia.`}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). Ligas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 · 💠 platina de 20 pra cima. Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
                   <p className="text-xl font-bold text-nz-tinta tabular-nums">{ciclo ? ciclo.liga.emoji : xgame.faixa.medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pro Diamante — estudo em atraso no ciclo'}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}</p>
                 </div>
                 {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o
                     MVM dele é sete, vai aparecer sete, não sete ponto
@@ -1736,11 +1738,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 "tem que aparecer a produtividade, quanto pesou na moeda...
                 se possível deixar até o desenho da moeda, fatia de pizza, o
                 que cada um está pesando... e vai botando a cor de acordo com
-                cada fatia, bronze, prata, até o diamante." O anel é o Human
+                cada fatia, bronze, prata, até o platina." O anel é o Human
                 Token (0 a 22,22) dividido pelos MESMOS 5 componentes que
                 `ciclo` já calcula — nenhuma conta nova, só o desenho que
                 faltava. As marcas no anel são as ligas oficiais (LIGAS,
-                xgame.js): bronze → prata → ouro → diamante.
+                xgame.js): bronze → prata → ouro → platina.
                 🗳️ e a correção do dono na mesma mensagem: "o MvM só é a
                 média do valor mental, a média da votação, só isso" — é
                 exatamente o que `ciclo.componentes.mvm` já vale (ver
@@ -1750,7 +1752,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza">
                 <div>
                   <p className="text-sm font-extrabold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do seu Human Token</p>
-                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda de hoje, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda deste ciclo, até o teto de {fmtToken(TOKEN_MAX)}</p>
                 </div>
                 <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ligaDoToken(ciclo.total)} />
               </div>
@@ -1850,7 +1852,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <div className="pt-1.5 space-y-1">
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
-                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
+                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 · 💠 platina de 20 pra cima. Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia; sem isso, o token trava em 19,99.</p>
                     <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
@@ -2046,7 +2048,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           ↑ Faltam <span className="text-nz-verde tabular-nums">{fmtToken(promo.falta)}</span> de token pra você subir pra {promo.liga.emoji} {promo.liga.label} — feche os dias, faça no horário e busque nota alta na votação!
                         </p>
                       ) : ciclo.total >= 20 ? (
-                        <p className="text-[11px] font-semibold text-nz-verde pt-1">💠 Você está na elite — LIGA DIAMANTE, o território do Executivo Ideal. Segura o trono!</p>
+                        <p className="text-[11px] font-semibold text-nz-verde pt-1">💠 Você está na elite — LIGA PLATINA, o território do Executivo Ideal. Segura o trono!</p>
                       ) : null;
                     })()}
                   </div>

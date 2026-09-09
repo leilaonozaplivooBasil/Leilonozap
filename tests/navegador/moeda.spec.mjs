@@ -76,11 +76,11 @@ test('MOEDA EM FATIAS: renderiza as 5 fatias + as marcas de liga, sem erro nenhu
   const arcos = await pagina.locator('[data-teste="moeda-pizza"] svg circle').count();
   assert.equal(arcos, 10, 'borda(2) + rosto(2) + trilho(1) + 5 fatias (mvm, produção, real time, bônus, vendas)');
 
-  // as 3 marcas de liga que cabem no exemplo (prata/ouro/diamante — bronze é o início, sem marca)
+  // as 3 marcas de liga que cabem no exemplo (prata/ouro/platina — bronze é o início, sem marca)
   const marcas = await pagina.locator('[data-teste="moeda-pizza"] svg text').allTextContents();
   assert.ok(marcas.some((t) => t.includes('🥈')), 'faltou a marca da liga prata no anel');
   assert.ok(marcas.some((t) => t.includes('🥇')), 'faltou a marca da liga ouro no anel');
-  assert.ok(marcas.some((t) => t.includes('💠')), 'faltou a marca da liga diamante no anel');
+  assert.ok(marcas.some((t) => t.includes('💠')), 'faltou a marca da liga platina no anel');
 
   // a legenda embaixo do anel mostra cada componente com o peso % na moeda
   const legenda = (await pagina.locator('[data-teste="moeda-pizza"]').textContent()).replace(/\s+/g, ' ');

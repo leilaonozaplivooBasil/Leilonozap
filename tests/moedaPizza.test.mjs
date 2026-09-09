@@ -1,6 +1,6 @@
 // 🪙 DIR-113 (09/09/2026) — dono: "tem que aparecer quanto pesou na moeda...
 // deixar até o desenho da moeda, com fatia de pizza, e a cor de acordo com
-// cada fatia — bronze, prata, até o diamante." Este arquivo prova a conta
+// cada fatia — bronze, prata, até o platina." Este arquivo prova a conta
 // PURA por trás do desenho: cada fatia é o valor real que `tokenDoCiclo()`
 // já calcula (nunca reinventado aqui), e a marca de liga cai exatamente onde
 // LIGAS diz que ela cai.
@@ -86,12 +86,12 @@ test('ORDEM_COMPONENTES/COMPONENTE_INFO: todo componente do Human Token tem cor 
   assert.equal(new Set(cores).size, cores.length, 'duas fatias com a mesma cor confundem mais do que ajudam');
 });
 
-test('marcasDeLiga: bronze/prata/ouro/diamante caem exatamente nos limiares oficiais de LIGAS', () => {
+test('marcasDeLiga: bronze/prata/ouro/platina caem exatamente nos limiares oficiais de LIGAS', () => {
   const marcas = marcasDeLiga(LIGAS, TOKEN_MAX);
   const porId = Object.fromEntries(marcas.map((m) => [m.id, m]));
   assert.equal(porId.prata.posicao, 6.66 / TOKEN_MAX);
   assert.equal(porId.ouro.posicao, 17.78 / TOKEN_MAX);
-  assert.equal(porId.diamante.posicao, 20 / TOKEN_MAX);
+  assert.equal(porId.platina.posicao, 20 / TOKEN_MAX);
   // bronze começa em 0 — não é uma "marca de corte" no anel, é o próprio início
   assert.ok(!porId.bronze, 'bronze (min 0) não é uma marca de corte — é de onde o anel começa');
 });
@@ -151,7 +151,7 @@ test('CrmMetodo.jsx e pages/XGame.jsx: o card de MvM mostra GRANDE o oficial (vo
   assert.match(XGAME, /titulo="MvM \(oficial\)" valor=\{recebido\.media !== null \? fmt2\(recebido\.media\) : '—'\}/, 'pages/XGame.jsx: o número GRANDE tem que ser a votação (recebido.media), não resumo.mvm_dia');
 });
 
-// 🩹 DIR-113.1 — a trava (TRAVA_SEM_DIAMANTE/TRAVA_SEM_ESTUDO, xgame.js) pode
+// 🩹 DIR-113.1 — a trava (TRAVA_SEM_PLATINA/TRAVA_SEM_ESTUDO, xgame.js) pode
 // segurar o TOTAL exibido abaixo da soma crua dos componentes (a pessoa fez
 // por merecer mais, mas uma trava prende o número). Sem isso, o desenho
 // mostraria fatias somando mais do que o número no centro da moeda.

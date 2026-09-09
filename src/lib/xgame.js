@@ -32,9 +32,9 @@ export const MVM_MAX = 10;
 export const TRAVA_SEM_ESTUDO = 17.77; // "Mediana" na planilha: nunca chega ao ouro
 // 🎓 09/09/2026 — dono: sem o estudo de fim de semana (resumo bem
 // detalhado), a pessoa pode ser Ouro, mas não passa disso — igual à trava
-// de estudo de semana, só que travando o Diamante (LIGAS, min 20) em vez
+// de estudo de semana, só que travando a Platina (LIGAS, min 20) em vez
 // do Ouro (FAIXAS_TOKEN, min 17,78).
-export const TRAVA_SEM_DIAMANTE = 19.99;
+export const TRAVA_SEM_PLATINA = 19.99;
 export const CICLO_DIAS_UTEIS = 22;
 
 export const FAIXAS_TOKEN = [
@@ -212,7 +212,7 @@ export const ehTarefaDeEstudo = (titulo) =>
 /**
  * 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
  * quero um resumo bem detalhado para gerar esse bônus, tanto diariamente
- * quanto fim de semana, para ser Diamante." A trava do Diamante: entre os
+ * quanto fim de semana, para ser Platina." A trava da Platina: entre os
  * sábados/domingos já vividos no ciclo, pelo menos 60% precisam ter o
  * estudo de fim de semana feito (mesma régua da leitura de semana, só que
  * olhando só pros dias de fim de semana). Nenhum fim de semana ainda no
@@ -232,13 +232,14 @@ export function estudoFdsEmDia(diasCiclo = [], hoje = null) {
 }
 
 /**
- * A trava de estudo do CICLO — e só do Diamante (DIR-113, 09/09/2026).
- * Dono, revendo o próprio pedido anterior: "o que ditava o diamante é só
+ * A trava de estudo do CICLO — e só da Platina (DIR-113, 09/09/2026;
+ * DIR-117: a liga virou Platina, não Diamante).
+ * Dono, revendo o próprio pedido anterior: "o que ditava a platina é só
  * um estudo em casa, mas ela tem que chegar ao ouro... até mesmo se ela
  * não estudar em casa — que é a produção, mais MvM, mais tudo isso."
  *
  * Sem constância de leitura de semana OU sem o estudo de fim de semana, o
- * total do ciclo capa em `TRAVA_SEM_DIAMANTE` (19,99) — NUNCA em
+ * total do ciclo capa em `TRAVA_SEM_PLATINA` (19,99) — NUNCA em
  * `TRAVA_SEM_ESTUDO` (17,77), que é a trava de um mecanismo diferente e
  * mais antigo: o Human Token DO DIA (`humanToken()`), que continua
  * intocado. Antes desta função, `XGame.jsx`/`CrmMetodo.jsx` reaplicavam
@@ -249,9 +250,9 @@ export function estudoFdsEmDia(diasCiclo = [], hoje = null) {
  * e XGameVisaoExecutiva.jsx, e o Painel Corporativo/PDF Executivo),
  * pra nunca mais dessincronizar entre telas.
  */
-export function travarDiamantePorEstudo(totalBruto, { estudoSemanaOk, estudoFdsOk }) {
+export function travarPlatinaPorEstudo(totalBruto, { estudoSemanaOk, estudoFdsOk }) {
   if (estudoSemanaOk && estudoFdsOk) return totalBruto;
-  return Math.min(totalBruto, TRAVA_SEM_DIAMANTE);
+  return Math.min(totalBruto, TRAVA_SEM_PLATINA);
 }
 
 // 📊 08/09/2026 — dono: "quero o percentual de reunião do time" no painel
@@ -535,7 +536,7 @@ export function vendasEquivalentesAltoValor(vendasPagas = [], ticketMedio = TICK
 
 // 🐛 09/09/2026 — achado na auditoria pré-publicação: os pesos do perfil
 // 'comercial' somavam 14,72, não 22,22 — quase 7,5 pontos abaixo do teto.
-// Como Ouro começa em 17,78 e Diamante em 20, um executivo comercial NUNCA
+// Como Ouro começa em 17,78 e Platina em 20, um executivo comercial NUNCA
 // conseguia chegar lá, mesmo fechando 100% em tudo (achava-se que a soma
 // batia — o teste só conferia a ORDEM dos pesos, nunca o total). Corrigido
 // mantendo a MESMA proporção entre produção/realtime/bônus do perfil não
@@ -754,7 +755,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   // 🎓 09/09/2026 — o estudo de FIM DE SEMANA é uma tarefa à parte (tipo
-  // 'aprendizado_fds', resumo bem maior) — trava o Diamante, não o Ouro.
+  // 'aprendizado_fds', resumo bem maior) — trava a Platina, não o Ouro.
   const estudoFdsHoje = comEstado.some((t) => tipoDeValidacao(t) === 'aprendizado_fds' && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
@@ -960,11 +961,14 @@ export function inicioDaSemana(d = new Date()) {
 
 // ── 🏆 LIGAS (F9 — promoção e rebaixamento por ciclo) ───────────────
 // As faixas da moeda viram LIGAS: o Human Token médio do ciclo decide onde
-// você joga. Diamante é a elite acima do ouro — o território do Executivo
+// você joga. Platina é a elite acima do ouro — o território do Executivo
 // Ideal. Subir de liga = fechar o ciclo acima da linha da liga de cima.
+// 🩹 09/09/2026 — DIR-117, dono: "esqueça a palavra diamante, é tudo
+// platina onde tiver diamante" — renomeada a liga de cima (id e label),
+// sem mexer no valor de corte (min 20) nem em nenhuma outra regra.
 
 export const LIGAS = [
-  { id: 'diamante', label: 'LIGA DIAMANTE', emoji: '💠', min: 20 },
+  { id: 'platina', label: 'LIGA PLATINA', emoji: '💠', min: 20 },
   { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 17.78 },
   { id: 'prata', label: 'LIGA PRATA', emoji: '🥈', min: 6.66 },
   { id: 'bronze', label: 'LIGA BRONZE', emoji: '🥉', min: 0 },

@@ -25,7 +25,7 @@ const PRETO = [0, 2, 12];
 const AZUL = [59, 111, 246];
 const MAGENTA = [230, 46, 139];
 const LOGO = '/brand/icon-3d-256.png';
-const LIGA_COR = { diamante: [59, 130, 246], ouro: [217, 119, 6], prata: [130, 138, 156], bronze: [180, 98, 47] };
+const LIGA_COR = { platina: [59, 130, 246], ouro: [217, 119, 6], prata: [130, 138, 156], bronze: [180, 98, 47] };
 
 async function carregarLogo() {
   try {

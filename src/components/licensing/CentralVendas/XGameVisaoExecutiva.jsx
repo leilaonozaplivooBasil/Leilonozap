@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarDiamantePorEstudo, TOKEN_MAX } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarPlatinaPorEstudo, TOKEN_MAX } from '@/lib/xgame';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import MoedaPizza from './MoedaPizza';
 
@@ -47,7 +47,7 @@ function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
 // mais clean, mais Vale do Silício." Troca 💠🥇🥈🥉 por um ponto de cor —
 // mesma informação (a liga), sem o visual de figurinha. Cor só existe
 // aqui (não mexe em LIGAS, que outras telas do app ainda usam com emoji).
-const COR_LIGA = { diamante: '#67E8F9', ouro: '#FBBF24', prata: '#CBD5E1', bronze: '#D08A56' };
+const COR_LIGA = { platina: '#67E8F9', ouro: '#FBBF24', prata: '#CBD5E1', bronze: '#D08A56' };
 
 // 🖼️ 09/09/2026 — dono, sobre o pódio: "botar a imagem da pessoa ali, e a
 // imagem dentro da moeda... pra dar mais vontade da pra pessoa." A "moeda"
@@ -190,9 +190,9 @@ export default function XGameVisaoExecutiva() {
             perfil: perfilPor[r.user_id],
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
-          // estudo (semana OU fim de semana) trava só o Diamante, nunca o
+          // estudo (semana OU fim de semana) trava só a Platina, nunca o
           // Ouro. Antes só checava o fim de semana; agora checa os dois.
-          const token = travarDiamantePorEstudo(tokenBruto, {
+          const token = travarPlatinaPorEstudo(tokenBruto, {
             estudoSemanaOk: estudoEmDia(r.diasDatados),
             estudoFdsOk: estudoFdsEmDia(r.diasDatados),
           });

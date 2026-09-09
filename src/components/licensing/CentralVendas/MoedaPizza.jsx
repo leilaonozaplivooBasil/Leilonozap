@@ -6,7 +6,7 @@ import { LIGAS } from '@/lib/xgame';
 // olhando o placar do Human Token: "produtividade, peso X% na moeda... se
 // possível deixar até o desenho da moeda, fatia de pizza, o que cada um está
 // pesando... e vai botando a cor de acordo com cada fatia, porque só isso
-// aqui é bronze, fez isso fez isso virou prata, até chegar no diamante."
+// aqui é bronze, fez isso fez isso virou prata, até chegar na platina."
 //
 // 🎨 09/09/2026 — dono, vendo o primeiro desenho: "é uma MOEDA, não é uma
 // MEDALHA, entendeu? A gente tem que desenhar uma moeda legal, bonita ali,
@@ -110,7 +110,7 @@ export default function MoedaPizza({ componentes = {}, total = 0, max, liga = nu
 
         {/* as marcas de liga — entalhes na BORDA (mais grossos que a
             serrilha comum) onde bronze vira prata, prata vira ouro, ouro
-            vira diamante */}
+            vira platina */}
         {marcas.map((m) => {
           const graus = anguloDe(m.posicao);
           const [x1, y1] = pontoNoAngulo(graus, R_BORDA - ESPESSURA_BORDA / 2 - 2);

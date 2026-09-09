@@ -15,7 +15,7 @@ import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import {
   fmtReais, dataISO, inicioCicloOficial, tokenDoCiclo, formacaoExecutivoIdeal, proporcoesExecutivoIdeal,
   EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaDoToken, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
-  estudoEmDia, estudoFdsEmDia, travarDiamantePorEstudo,
+  estudoEmDia, estudoFdsEmDia, travarPlatinaPorEstudo,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -203,10 +203,10 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const mvmRecebidoMedia = useMemo(() => mvmManual(mvmRecebidoCiclo).media, [mvmRecebidoCiclo]);
   const cicloToken = useMemo(() => {
     const r = tokenDoCiclo({ diasCiclo: diasCicloPessoa, mvmVotacao: mvmRecebidoMedia, perfil: participanteAtual?.perfil || 'estrategico', vendasReais: vendasCiclo });
-    // 🎓 09/09/2026 — DIR-113: a MESMA trava de Diamante-só (nunca Ouro) que
+    // 🎓 09/09/2026 — DIR-113: a MESMA trava de Platina-só (nunca Ouro) que
     // o X-Game/Compromisso aplicam — sem isso, a "posição do dia" do PDF
     // podia mostrar uma liga diferente da que a própria pessoa vê no jogo.
-    const total = travarDiamantePorEstudo(r.total, {
+    const total = travarPlatinaPorEstudo(r.total, {
       estudoSemanaOk: estudoEmDia(diasCicloPessoa),
       estudoFdsOk: estudoFdsEmDia(diasCicloPessoa),
     });

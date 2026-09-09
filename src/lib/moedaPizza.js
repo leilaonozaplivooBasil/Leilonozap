@@ -3,7 +3,7 @@
 // pesou na moeda... se possível deixar até o desenho da moeda, pra ver o que
 // cada fatia de pizza está pesando... e vai botando a cor de acordo com cada
 // fatia, porque só isso aqui é bronze, fez isso fez isso virou prata, fez
-// isso fez isso fez isso pra ter o diamante."
+// isso fez isso fez isso pra ter a platina."
 //
 // Lógica PURA aqui (testável sem montar SVG/JSX) — quem desenha é
 // MoedaPizza.jsx. Duas contas, nunca uma reinventando o Human Token:
@@ -11,7 +11,7 @@
 //      vira uma fatia do TAMANHO REAL que ele pesou na moeda — os mesmos
 //      valores de `tokenDoCiclo(...).componentes` (xgame.js), nunca
 //      recalculados aqui. O que falta pra fechar TOKEN_MAX fica cinza.
-//   2. `marcasDeLiga`: onde bronze/prata/ouro/diamante caem no anel de 0 a
+//   2. `marcasDeLiga`: onde bronze/prata/ouro/platina caem no anel de 0 a
 //      TOKEN_MAX — os mesmos limiares de LIGAS (xgame.js), nunca duplicados
 //      com números escritos à mão.
 //
@@ -35,7 +35,7 @@ export const COMPONENTE_INFO = {
  * Monta as fatias da moeda a partir dos componentes JÁ CALCULADOS por
  * `tokenDoCiclo()` — nunca recebe taxas/pesos crus, só o resultado.
  *
- * 🩹 09/09/2026 — trava do Diamante/estudo (TRAVA_SEM_DIAMANTE,
+ * 🩹 09/09/2026 — trava da Platina/estudo (TRAVA_SEM_PLATINA,
  * TRAVA_SEM_ESTUDO em xgame.js): o TOTAL exibido em outras telas pode ser
  * MENOR que a soma crua dos componentes (a pessoa fez por merecer mais, mas
  * uma trava segura o número). Sem `totalConquistado`, a moeda desenharia
@@ -75,7 +75,7 @@ export function fatiasDaMoeda(componentes = {}, max, totalConquistado) {
 
 /**
  * Onde cada liga corta o anel (posição de 0 a 1, de 0 até `max`) — pra
- * desenhar as marcas de bronze/prata/ouro/diamante no desenho da moeda.
+ * desenhar as marcas de bronze/prata/ouro/platina no desenho da moeda.
  * @param {Array<{id,label,emoji,min}>} ligas LIGAS (xgame.js), injetado
  * @param {number} max TOKEN_MAX
  */

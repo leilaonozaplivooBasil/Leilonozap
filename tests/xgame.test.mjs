@@ -11,7 +11,7 @@ import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
-  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, estudoEmDia, TRAVA_SEM_DIAMANTE, travarDiamantePorEstudo, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
+  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, estudoEmDia, TRAVA_SEM_PLATINA, travarPlatinaPorEstudo, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
   META_VENDAS_CICLO, TICKET_MEDIO_VENDA, PESO_REUNIAO_EQUIVALENTE, TETO_REUNIAO_NA_META, vendasEquivalentesAltoValor, TOKEN_MAX,
 } from '../src/lib/xgame.js';
 
@@ -265,7 +265,7 @@ test('pesosDoPerfil: perfil comercial mantém vendas como o principal, real time
 // não pegou que ela dava 14,72 em vez de 22,22, travando qualquer
 // executivo comercial abaixo de Ouro (17,78) pra sempre, mesmo fechando
 // 100% em tudo. Trava explícita pros dois perfis, pra nunca mais destoar.
-test('pesosDoPerfil: a soma bate com TOKEN_MAX pros dois perfis — comercial não pode ficar travado abaixo de Ouro/Diamante', () => {
+test('pesosDoPerfil: a soma bate com TOKEN_MAX pros dois perfis — comercial não pode ficar travado abaixo de Ouro/Platina', () => {
   for (const perfil of ['estrategico', 'operacional', 'comercial']) {
     const p = pesosDoPerfil(perfil);
     const total = p.mvm + p.producao + p.realtime + p.bonus + p.ptVenda;
@@ -385,9 +385,9 @@ test('resumoDoDia: contagens.reunioes_total/feitas contam só título de reuniã
 });
 
 // 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
-// quero um resumo bem detalhado... pra ser Diamante." O estudo de fim de
+// quero um resumo bem detalhado... pra ser Platina." O estudo de fim de
 // semana é um tipo de comprovação À PARTE (mínimo bem maior) que trava o
-// Diamante, não o Ouro — igual à trava de estudo de semana, só que um
+// Platina, não o Ouro — igual à trava de estudo de semana, só que um
 // degrau acima.
 test('validacaoAutomatica: "Estudo do Fim de Semana" vira aprendizado_fds, não o aprendizado comum', () => {
   assert.equal(validacaoAutomatica('Estudo do Fim de Semana'), 'aprendizado_fds');
@@ -436,7 +436,7 @@ test('estudoFdsEmDia: 60%+ dos fins de semana já vividos com o estudo feito →
   assert.equal(estudoFdsEmDia(dias), true, '2 de 3 fins de semana registrados = 66%, passa dos 60%');
 });
 
-test('estudoFdsEmDia: menos de 60% dos fins de semana feitos → false, trava o Diamante', () => {
+test('estudoFdsEmDia: menos de 60% dos fins de semana feitos → false, trava a Platina', () => {
   const dias = [
     { data: '2026-09-05', detalhes: { estudo_fds_feito: false } },
     { data: '2026-09-06', detalhes: { estudo_fds_feito: false } },
@@ -458,46 +458,46 @@ test('estudoFdsEmDia: o "hoje" entra na conta quando ainda não está em diasCic
 // tokenDoCiclo continua puro, sem saber de travas de estudo.
 const DIA_PERFEITO = { prod_total: 1, prod_feitas: 1, bonus_total: 1, bonus_feitas: 1, xpay_ganho: 1, xpay_possivel: 1 };
 
-test('tokenDoCiclo: o ciclo perfeito passa do teto do Diamante — é isso que a trava de fim de semana precisa segurar', () => {
+test('tokenDoCiclo: o ciclo perfeito passa do teto da Platina — é isso que a trava de fim de semana precisa segurar', () => {
   const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: META_VENDAS_CICLO, perfil: 'estrategico' });
-  assert.ok(r.total > TRAVA_SEM_DIAMANTE, `o ciclo perfeito (${r.total}) tem que passar de ${TRAVA_SEM_DIAMANTE} pra trava fazer sentido`);
+  assert.ok(r.total > TRAVA_SEM_PLATINA, `o ciclo perfeito (${r.total}) tem que passar de ${TRAVA_SEM_PLATINA} pra trava fazer sentido`);
 });
 
-test('TRAVA_SEM_DIAMANTE aplicada por fora (padrão dos call-sites): sem o estudo de fim de semana, Ouro continua alcançável mas não vira Diamante', () => {
+test('TRAVA_SEM_PLATINA aplicada por fora (padrão dos call-sites): sem o estudo de fim de semana, Ouro continua alcançável mas não vira Platina', () => {
   const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: META_VENDAS_CICLO, perfil: 'estrategico' });
-  const totalComTrava = estudoFdsEmDia([]) ? r.total : Math.min(r.total, TRAVA_SEM_DIAMANTE);
-  const semEstudoFds = Math.min(r.total, TRAVA_SEM_DIAMANTE); // simula estudoFdsEmDia(...) === false
-  assert.ok(semEstudoFds <= TRAVA_SEM_DIAMANTE);
-  assert.ok(semEstudoFds >= 17.78, 'a trava é só do Diamante — Ouro continua alcançável');
+  const totalComTrava = estudoFdsEmDia([]) ? r.total : Math.min(r.total, TRAVA_SEM_PLATINA);
+  const semEstudoFds = Math.min(r.total, TRAVA_SEM_PLATINA); // simula estudoFdsEmDia(...) === false
+  assert.ok(semEstudoFds <= TRAVA_SEM_PLATINA);
+  assert.ok(semEstudoFds >= 17.78, 'a trava é só da Platina — Ouro continua alcançável');
   assert.equal(totalComTrava, r.total, 'sem fim de semana ainda vivido no ciclo, estudoFdsEmDia não trava nada');
 });
 
 // 🎓 09/09/2026 — DIR-113: o dono revisou o próprio pedido anterior — "o que
-// ditava o diamante é só um estudo em casa, mas ela tem que chegar ao
-// ouro... até mesmo se ela não estudar em casa." `travarDiamantePorEstudo`
+// ditava o platina é só um estudo em casa, mas ela tem que chegar ao
+// ouro... até mesmo se ela não estudar em casa." `travarPlatinaPorEstudo`
 // é a função ÚNICA que os 4 lugares que calculam liga de ciclo (X-Game,
 // Compromisso pessoal + ranking, Painel Corporativo) agora usam — antes,
 // cada lugar reaplicava a trava manualmente, e um deles (XGame.jsx/
 // CrmMetodo.jsx pessoal) usava por engano TRAVA_SEM_ESTUDO (17,77, a trava
 // do TOKEN DO DIA) pra capar o total do CICLO, bloqueando Ouro sem motivo.
-test('travarDiamantePorEstudo: com os dois estudos em dia, o total passa reto — Diamante alcançável', () => {
-  assert.equal(travarDiamantePorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: true }), 21.5);
+test('travarPlatinaPorEstudo: com os dois estudos em dia, o total passa reto — Platina alcançável', () => {
+  assert.equal(travarPlatinaPorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: true }), 21.5);
 });
 
-test('travarDiamantePorEstudo: falta a leitura de semana → capa no teto do Diamante, nunca abaixo de Ouro', () => {
-  const capado = travarDiamantePorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: true });
-  assert.equal(capado, TRAVA_SEM_DIAMANTE);
+test('travarPlatinaPorEstudo: falta a leitura de semana → capa no teto da Platina, nunca abaixo de Ouro', () => {
+  const capado = travarPlatinaPorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: true });
+  assert.equal(capado, TRAVA_SEM_PLATINA);
   assert.ok(capado >= 17.78, 'Ouro continua alcançável mesmo sem a leitura de semana em dia');
 });
 
-test('travarDiamantePorEstudo: falta o estudo de fim de semana → mesma trava do Diamante', () => {
-  assert.equal(travarDiamantePorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: false }), TRAVA_SEM_DIAMANTE);
+test('travarPlatinaPorEstudo: falta o estudo de fim de semana → mesma trava da Platina', () => {
+  assert.equal(travarPlatinaPorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: false }), TRAVA_SEM_PLATINA);
 });
 
-test('travarDiamantePorEstudo: faltando os dois, trava igual (não empilha)', () => {
-  assert.equal(travarDiamantePorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: false }), TRAVA_SEM_DIAMANTE);
+test('travarPlatinaPorEstudo: faltando os dois, trava igual (não empilha)', () => {
+  assert.equal(travarPlatinaPorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: false }), TRAVA_SEM_PLATINA);
 });
 
-test('travarDiamantePorEstudo: total abaixo do teto do Diamante nunca é afetado, com ou sem estudo', () => {
-  assert.equal(travarDiamantePorEstudo(15, { estudoSemanaOk: false, estudoFdsOk: false }), 15);
+test('travarPlatinaPorEstudo: total abaixo do teto da Platina nunca é afetado, com ou sem estudo', () => {
+  assert.equal(travarPlatinaPorEstudo(15, { estudoSemanaOk: false, estudoFdsOk: false }), 15);
 });
