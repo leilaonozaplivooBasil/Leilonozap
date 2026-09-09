@@ -102,6 +102,33 @@ test('XGameVisaoExecutiva.jsx: "sua posição" também desenha a moeda, com os c
   );
 });
 
+// 🪙 DIR-113.2 (09/09/2026) — dono, direto: "aonde está aparecendo a
+// moeda?... eu quero uma moeda completa com 22,22." A moeda só existia em
+// CrmMetodo.jsx e XGameVisaoExecutiva.jsx — faltava a PÁGINA /XGame
+// (pages/XGame.jsx), que duplica o mesmo painel de propósito (dono, comentário
+// já existente no arquivo: "não é duplicar de lá pra cá, é duplicar aqui").
+test('pages/XGame.jsx: também desenha a moeda, com os MESMOS ciclo.componentes já calculados na página', () => {
+  const XGAME = fs.readFileSync(new URL('../src/pages/XGame.jsx', import.meta.url), 'utf8');
+  assert.match(XGAME, /import MoedaPizza from '@\/components\/licensing\/CentralVendas\/MoedaPizza'/);
+  assert.match(
+    XGAME,
+    /<MoedaPizza componentes=\{ciclo\.componentes\} total=\{ciclo\.total\} max=\{TOKEN_MAX\} liga=\{ligaDoToken\(ciclo\.total\)\}/,
+    'a página não pode calcular a moeda de novo — só repassar ciclo.componentes/ciclo.total já calculados ali em cima',
+  );
+});
+
+// 🩹 DIR-113.2 — dono, direto: "se o MVM dele é sete, vai aparecer sete, não
+// sete ponto setenta e cinco e nove em cima." O card "MvM do Dia" mostrava
+// GRANDE o número AUTOMÁTICO (mvm_dia) e escondia pequeno o da votação — o
+// único que conta pra moeda. Prova de que o número grande agora É o oficial,
+// nas DUAS telas que têm esse card (CrmMetodo e a página /XGame).
+test('CrmMetodo.jsx e pages/XGame.jsx: o card de MvM mostra GRANDE o oficial (votação), não o automático', () => {
+  const XGAME = fs.readFileSync(new URL('../src/pages/XGame.jsx', import.meta.url), 'utf8');
+  assert.match(METODO, /MvM \(oficial\) ⓘ/, 'CrmMetodo.jsx: o título do card precisa deixar claro que este é o oficial');
+  assert.match(METODO, /\{recebido\.media !== null \? fmtToken\(recebido\.media\) : '—'\}/, 'CrmMetodo.jsx: o número GRANDE tem que ser a votação (recebido.media), não xgame.mvm_dia');
+  assert.match(XGAME, /titulo="MvM \(oficial\)" valor=\{recebido\.media !== null \? fmt2\(recebido\.media\) : '—'\}/, 'pages/XGame.jsx: o número GRANDE tem que ser a votação (recebido.media), não resumo.mvm_dia');
+});
+
 // 🩹 DIR-113.1 — a trava (TRAVA_SEM_DIAMANTE/TRAVA_SEM_ESTUDO, xgame.js) pode
 // segurar o TOTAL exibido abaixo da soma crua dos componentes (a pessoa fez
 // por merecer mais, mas uma trava prende o número). Sem isso, o desenho

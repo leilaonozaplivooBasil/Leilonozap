@@ -1677,11 +1677,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <p className="text-xl font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
                 </div>
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
-                  <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
-                    {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
+                {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o
+                    MVM dele é sete, vai aparecer sete, não sete ponto
+                    setenta e cinco e nove em cima" — o número GRANDE virava
+                    o automático (mvm_dia), com o de verdade (a votação, o
+                    único que entra na moeda) escondido no rodapé pequeno.
+                    Trocado: o número grande agora É o oficial. */}
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`Só a VOTAÇÃO DO CICLO (as notas que você recebe dos colegas, 1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}) entra no Human Token — é este número. O "automático" (o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta) é só uma estimativa de humor do dia — NÃO conta pra moeda.`}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM (oficial) ⓘ</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{recebido.media !== null ? fmtToken(recebido.media) : '—'}</p>
+                  <p className={`text-[10px] font-semibold ${recebido.media !== null && recebido.media < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
+                    {recebido.media !== null ? `${xgame.frase_mvm} · o que conta na moeda` : 'ainda sem voto recebido neste ciclo'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-nz-borda bg-white p-3" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>

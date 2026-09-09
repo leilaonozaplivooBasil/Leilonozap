@@ -10,6 +10,7 @@ import {
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
   estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  TOKEN_MAX, ligaDoToken,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -18,6 +19,7 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 
 // X-GAME — o ESPAÇO DEDICADO da gamificação do Método (DIR-97, 08/09/2026).
 // Até aqui esta página era órfã — ninguém no app linkava pra ela — e tinha
@@ -495,11 +497,18 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card titulo="Human Token" valor={`${ciclo.faixa.medalha} ${fmt2(ciclo.total)}`} sub={`${ciclo.faixa.label} do ciclo · teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
+            {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o MVM
+                dele é sete, vai aparecer sete, não sete ponto setenta e
+                cinco e nove em cima" — o número GRANDE virava o automático
+                (mvm_dia), com o de verdade (a votação, o único que entra na
+                moeda) escondido no rodapé pequeno. Trocado: o número grande
+                agora É o oficial; o automático (quando existe voto) vira só
+                a explicação de por que ele difere. */}
             <Card
-              titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)}
-              sub={`${resumo.frase_mvm}${recebido.media !== null ? ` · votação do ciclo: ${fmt2(recebido.media)}` : ''}`}
-              destaque={resumo.mvm_dia < 4}
-              dica="Dois tipos de MvM: o AUTOMÁTICO aqui em cima (o dia começa em 10 e cai por tarefa atrasada) e o da VOTAÇÃO DO CICLO (as notas que você recebe dos colegas) — é o da votação que entra no Human Token oficial, no painel Executivo Ideal."
+              titulo="MvM (oficial)" valor={recebido.media !== null ? fmt2(recebido.media) : '—'}
+              sub={recebido.media !== null ? `${resumo.frase_mvm} · o que conta na moeda` : 'ainda sem voto recebido neste ciclo'}
+              destaque={recebido.media !== null && recebido.media < 4}
+              dica={`Só a VOTAÇÃO DO CICLO (as notas que você recebe dos colegas) entra no Human Token — é este número. O "automático" de hoje (o dia começa em 10 e cai por tarefa atrasada) é só uma estimativa de humor do dia: ${fmt2(resumo.mvm_dia)} — ele NÃO conta pra moeda.`}
             />
             <Card
               titulo="X-Pay de hoje" valor={resumo.xpay ? `R$ ${fmt2(resumo.xpay.ganho)}` : '—'}
@@ -508,6 +517,21 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
               dica={`O seu fixo ÷ ${DIAS_FIXO} dias de operação, repartido pelo peso de cada tarefa. Tarefa perdida é dinheiro que sai do resultado.`}
             />
             <Card titulo="Pontos de hoje" valor={String(resumo.pontos)} sub={`${resumo.tarefas_feitas}/${resumo.tarefas_total} tarefas`} />
+          </div>
+
+          {/* 🪙 DIR-113.2 (09/09/2026) — dono: "aonde está aparecendo a
+              moeda?... eu quero uma moeda completa com 22,22, mostrando pro
+              executivo como ele chega lá." A MESMA MoedaPizza do Compromisso
+              e da Visão Executiva — esta página duplica o painel de
+              propósito (ver comentário do Executivo Ideal acima), então
+              duplica a moeda também, com os MESMOS ciclo.componentes já
+              calculados logo ali em cima. */}
+          <div className="rounded-2xl border-2 border-[#2B2B2B] bg-white p-4 sm:p-5 space-y-3">
+            <div>
+              <p className="text-sm font-extrabold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do seu Human Token</p>
+              <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda deste ciclo, até o teto de {fmt2(TOKEN_MAX)}</p>
+            </div>
+            <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ligaDoToken(ciclo.total)} />
           </div>
 
           {/* ══ 🗳️ VOTAÇÃO MvM — dono: "a gente precisa botar a votação aqui,
