@@ -80,7 +80,9 @@ test('o motivo do botão bate com a regra que habilita o botão — nunca "trava
 
 // ── a tela usa mesmo essas funções ───────────────────────────────────
 test('o modal usa textoDoContador e não monta mais o "X/400" na mão', () => {
-  assert.match(MODAL, /textoDoContador\(texto\)/);
+  // 09/09/2026 — ganhou o 2º argumento (tipo) pro estudo de fim de semana
+  // usar o mínimo maior (RESUMO_MIN_FDS) em vez do de sempre.
+  assert.match(MODAL, /textoDoContador\(texto, tipo\)/);
   assert.ok(!MODAL.includes('${texto.trim().length}/${RESUMO_MIN} caracteres'));
 });
 

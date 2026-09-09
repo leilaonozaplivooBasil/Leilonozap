@@ -24,6 +24,7 @@ import {
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
+  estudoFdsEmDia, TRAVA_SEM_DIAMANTE,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
@@ -305,7 +306,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    const semEstudoSemana = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    // 🎓 09/09/2026 — dono: sem o estudo de fim de semana em dia, trava antes
+    // do Diamante — mesmo padrão da trava de estudo de semana, um degrau acima.
+    const fdsOk = estudoFdsEmDia(diasCiclo, { data: hojeStr(), feito: xgame.estudo_fds_feito });
+    const total = fdsOk ? semEstudoSemana : Math.min(semEstudoSemana, TRAVA_SEM_DIAMANTE);
     return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
   const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
@@ -429,7 +434,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // que nunca levou voto em conta. Agora usa a MESMA fórmula com peso de
     // voto (tokenDoCiclo) do painel pessoal — por isso precisa do perfil.
     Promise.all([
-      supabase.from('xgame_diario').select('user_id,pontos,detalhes').eq('ciclo_inicio', ini),
+      supabase.from('xgame_diario').select('user_id,data,pontos,detalhes').eq('ciclo_inicio', ini),
       supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
       supabase.from('xgame_participantes').select('user_id,perfil'),
     ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
@@ -439,23 +444,26 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
         const por = {};
         (data || []).forEach((d) => {
-          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, diasDetalhes: [] });
+          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, diasDatados: [] });
           r.dias += 1;
           r.pontos += Number(d.pontos) || 0;
-          r.diasDetalhes.push(d.detalhes || {});
+          r.diasDatados.push({ data: d.data, detalhes: d.detalhes || {} });
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
         });
         Object.keys(votosPor).forEach((uid) => {
-          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, diasDetalhes: [] };
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, diasDatados: [] };
         });
         const linhas = Object.values(por).map((r) => {
           const votosRecebidos = votosPor[r.user_id];
           const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
-          const { total: token } = tokenDoCiclo({
-            diasCiclo: r.diasDetalhes.map((detalhes) => ({ detalhes })),
+          const { total: tokenBruto } = tokenDoCiclo({
+            diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
           });
+          // 🎓 09/09/2026 — mesma trava do Diamante do painel pessoal: sem o
+          // estudo de fim de semana em dia, o ranking também não deixa passar.
+          const token = estudoFdsEmDia(r.diasDatados) ? tokenBruto : Math.min(tokenBruto, TRAVA_SEM_DIAMANTE);
           return { ...r, token, mvm: mvmDoVoto };
         });
         const ids = linhas.map((l) => l.user_id);
@@ -489,6 +497,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // mundo desde sempre. Agora entram no retrato do dia.
       detalhes: {
         leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util,
+        estudo_fds_feito: xgame.estudo_fds_feito,
         xpay_ganho: xgame.xpay?.ganho || 0, xpay_perdido: xgame.xpay?.perdido || 0,
         ...xgame.contagens,
       },
