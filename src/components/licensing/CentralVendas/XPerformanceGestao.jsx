@@ -823,7 +823,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         </button>
         {adminAberto && (
           <div className="xeos-cru rounded-b-xl bg-white p-3 text-gray-900">
-            <XGameAdmin />
+            <XGameAdmin onVerComo={(id) => { setPessoaFixo(id); setAbaModal('mvm'); setModalAberto(true); }} />
           </div>
         )}
       </div>
