@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { cpfValido, formatarCpf, soDigitos } from "@/lib/cpf";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { plataforma } from "@/api/plataformaClient";
@@ -51,6 +52,18 @@ export default function VendedorCheckout() {
   const [address, setAddress] = useState({ zip: "", number: "", street: "", complement: "", neighborhood: "", city: "", state: "" });
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [gateway, setGateway] = useState("pix"); // "pix" | "card" | "test_balance"
+  // 🪪 09/09/2026 — O CPF PASSA A SER PEDIDO AQUI, E O MOTIVO É CONCRETO.
+  //
+  // Um cliente tentou a adesão duas vezes (17h56 e 18h34) e o botão do
+  // Mercado Pago nunca habilitou. O cadastro dele tinha `cpf` NULL, e o
+  // createSellerAdhesionPayment só manda `payer.identification` SE houver CPF
+  // — então a preferência saía sem identificação do pagador, e cartão de
+  // R$ 1.497 no Brasil exige CPF. A página do MP tentava arrancar o dado na
+  // hora e travava.
+  //
+  // A tela do carrinho sempre pediu CPF; esta aqui só repassava o que
+  // estivesse no perfil, sem campo e sem conferência. Era a assimetria.
+  const [cpf, setCpf] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -68,6 +81,7 @@ export default function VendedorCheckout() {
         const fresh = await plataforma.entities.AppUser.filter({ id: localUser.id });
         const freshUser = fresh?.[0] || localUser;
         setUser(freshUser);
+        setCpf(formatarCpf(freshUser.cpf || ""));
         setAddress({
           zip: freshUser.address_zip_code || "",
           number: freshUser.address_number || "",
@@ -131,6 +145,10 @@ export default function VendedorCheckout() {
   }, [address.zip]);
 
   const isAddressComplete = address.zip?.trim() && address.number?.trim() && address.street?.trim() && address.city?.trim() && address.state?.trim();
+  // O CPF vale pros dois meios: no cartão o Mercado Pago exige, e no PIX ele
+  // vira o pagador do comprovante. Travar aqui é avisar na tela em vez de
+  // deixar a pessoa descobrir no gateway, onde ninguém consegue ajudar.
+  const cpfOk = cpfValido(cpf);
 
   const blockBeforePayment = () => {
     toast.info("Faça seu pagamento para poder escolher seus produtos.");
@@ -172,7 +190,7 @@ export default function VendedorCheckout() {
         amount: VALOR_ADESAO,
         buyer_name: user.full_name,
         buyer_email: user.email,
-        buyer_cpf: user.cpf,
+        buyer_cpf: soDigitos(cpf),
         address,
         gateway,
       });
@@ -259,6 +277,34 @@ export default function VendedorCheckout() {
           <VendedorAddressForm address={address} onChange={setAddress} isLoadingCep={isLoadingCep} />
         )}
 
+        {user && !confirmed && (
+          <div className="rounded-2xl border-2 border-nz-verde/30 bg-white mt-4 p-5">
+            <label htmlFor="cpf-adesao" className="block font-bold text-nz-tinta text-sm">
+              CPF do titular do pagamento
+            </label>
+            <p className="text-xs text-nz-tinta-fraca mt-1">
+              O Mercado Pago exige o CPF pra concluir a compra. Sem ele, o botão de pagar não habilita lá.
+            </p>
+            <input
+              id="cpf-adesao"
+              inputMode="numeric"
+              autoComplete="off"
+              value={cpf}
+              onChange={(e) => setCpf(formatarCpf(e.target.value))}
+              placeholder="000.000.000-00"
+              data-teste="cpf-adesao"
+              className={`mt-2.5 w-full h-11 rounded-lg border-2 px-3 text-[15px] text-nz-tinta outline-none transition-colors ${
+                cpf && !cpfOk ? "border-red-400 focus:border-red-500" : "border-nz-borda focus:border-nz-verde"
+              }`}
+            />
+            {cpf && !cpfOk && (
+              <p className="text-xs font-semibold text-red-600 mt-1.5" data-teste="cpf-adesao-erro">
+                Este CPF não confere. Confira os números antes de continuar.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="rounded-2xl border-2 border-nz-verde/30 bg-white mt-6 p-6 text-center">
           {!user ? (
             <div className="py-2">
@@ -328,7 +374,7 @@ export default function VendedorCheckout() {
 
               <button
                 onClick={handlePagar}
-                disabled={creating || !isAddressComplete}
+                disabled={creating || !isAddressComplete || !cpfOk}
                 className="mt-4 w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-white text-lg bg-nz-verde hover:bg-nz-verde/90 disabled:opacity-60 transition-colors"
               >
                 {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : gateway === "card" ? <CreditCard className="w-5 h-5" /> : gateway === "test_balance" ? <Wallet className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
@@ -336,6 +382,11 @@ export default function VendedorCheckout() {
               </button>
               {!isAddressComplete && (
                 <p className="text-xs text-nz-tinta-fraca mt-2">Preencha seu endereço de entrega acima para continuar.</p>
+              )}
+              {isAddressComplete && !cpfOk && (
+                <p className="text-xs text-nz-tinta-fraca mt-2" data-teste="cpf-adesao-falta">
+                  Informe um CPF válido acima para continuar.
+                </p>
               )}
             </div>
           )}
