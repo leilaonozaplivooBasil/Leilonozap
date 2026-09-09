@@ -26,5 +26,23 @@
 -- produção. Elas precisam de uma decisão de arquitetura (rota de servidor com
 -- crachá, como já foi feito no cofre de áudio), não de um REVOKE. Está tudo
 -- classificado no relatório do dia.
+--
+-- 🔴 E POR QUE `authenticated` TAMBÉM ENTRA (acréscimo de 09/09, antes do merge):
+-- revogar só de `anon` e `public` fecharia DUAS das TRÊS portas. O grant real da
+-- função é:
+--
+--     =X/postgres | postgres=X | anon=X | authenticated=X | service_role=X
+--
+-- O login do site não é Supabase Auth (é localStorage + app_users), então a
+-- primeira leitura é que `authenticated` nunca aparece. Só que o projeto TEM
+-- Supabase Auth ligado — 35 contas em auth.users — e `plataformaAdapter.auth`
+-- ainda expõe `signInWithPassword`. Quem conseguir um token `authenticated`
+-- continuaria chamando a função pelo caminho de trás, e o revoke daria a
+-- impressão de resolvido sem resolver. Deixar assim é pior do que não ter feito.
+--
+-- Fechar as três é seguro pelo MESMO motivo que fechar `anon` é: NENHUMA tela
+-- do site chama esta função, em nenhum papel — só api/functions/waWebhook.js,
+-- com service role, que ignora grant. Tem teste cobrando as duas pontas.
 revoke execute on function public.find_user_by_phone(text) from anon;
+revoke execute on function public.find_user_by_phone(text) from authenticated;
 revoke execute on function public.find_user_by_phone(text) from public;

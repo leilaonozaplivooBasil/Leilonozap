@@ -24,6 +24,23 @@ test('🔐 a migração que revoga o acesso anônimo continua no lugar', () => {
   assert.match(sql, /commission_balance/, 'o arquivo precisa dizer O QUE vazava — senão vira revoke sem motivo');
 });
 
+test('🔴 e `authenticated` também — senão o revoke fecha 2 das 3 portas', () => {
+  // O grant real da função tem TRÊS papéis abertos: anon, public e
+  // authenticated. Fechar só os dois primeiros deixa o caminho de trás aberto:
+  // o projeto tem Supabase Auth ligado (contas em auth.users) e
+  // plataformaAdapter.auth ainda expõe signInWithPassword. Um revoke pela
+  // metade é pior que nenhum — passa a impressão de resolvido.
+  //
+  // Este teste existe porque a primeira versão desta migração esquecia
+  // `authenticated`, e o esquecimento não aparecia em lugar nenhum.
+  const sql = readFileSync(new URL(MIG, DIR), 'utf8');
+  assert.match(
+    sql,
+    /revoke execute on function public\.find_user_by_phone\(text\) from authenticated/i,
+    'faltou revogar de `authenticated` — a função continua alcançável por quem tiver um token do Supabase Auth',
+  );
+});
+
 test('🔴 nenhuma tela do site chama find_user_by_phone', () => {
   // Se alguém chamar do front, a chamada vai como `anon` e passa a falhar. O
   // caminho certo é uma rota de servidor com crachá, como o cofre de áudio.
