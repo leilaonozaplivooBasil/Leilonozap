@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-133 — o Kanban horizontal não vaza mais o arrasto pra página inteira no celular
+
+**Emitida por:** dono (09/09/2026), testando no celular: *"Fui em contatos agora, a esteira onde aparece uma esteira está vazando no celular. Então vamos ajustar pra aparecer no tablet, no celular e no computador, sem vazar nada, né? Em todo o aplicativo, principalmente na página aí da Top College."*
+
+**Causa:** os dois Kanbans horizontais do CRM (Esteira de Captação, 8 estágios; Funil do CRM, várias colunas) já usam `overflow-x-auto` — rolagem própria, correta. Mas no Safari/Chrome do celular, ao arrastar até o fim de um carrossel horizontal, o gesto "vaza" e continua arrastando a PÁGINA inteira de lado (scroll chaining/rubber-band) — mesmo com o `overflow-x:hidden` do `html`/`body` já existente, porque isso acontece DEPOIS que o toque já começou dentro do carrossel.
+
+**O que entra:**
+1. `overscroll-behavior-x: contain` em `src/index.css`, tanto no `html`/`body` quanto em **qualquer** elemento com `.overflow-x-auto`/`.overflow-x-scroll` — trava o arrasto dentro do próprio carrossel, sem vazar pro resto da tela, em **todo o app**, sem precisar caçar tela por tela. Não muda nenhum layout — só a física do toque.
+2. Uma dica "arraste pra ver os outros estágios/colunas" (só no celular, `sm:hidden`) acima dos dois Kanbans — pra quem só usa touch não achar que travou.
+
+**Fora do escopo:** nenhuma mudança de layout, cor ou estrutura — só a física do toque (scroll chaining) e uma dica de texto.
+
+**Prova:** suíte 1958/1958 (4 testes novos em `tests/mobileOverflowKanban.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-132 — o botão de compartilhar no WhatsApp volta na Fila do Pronto, com texto pronto
 
 **Emitida por:** dono (09/09/2026), olhando a Fila do Pronto: *"tinha um botão WhatsApp aqui, eu acho que a gente tirou porque a gente ia mandar mensagem mais personalizada, mais bonita... só um texto mesmo, mas um texto bem bonito... quero botar isso aqui no WhatsApp pra compartilhar também."*

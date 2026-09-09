@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Move, X } from 'lucide-react';
+import { ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Move, X, ArrowLeftRight } from 'lucide-react';
 
 // 🌊 DIR-24 Fase 5 (30/08/2026) — FUNIL VISUAL (kanban) por status de compra.
 // As colunas são os mesmos status dos cards (mesma fonte, buildUnifiedCustomers)
@@ -84,6 +84,12 @@ export default function CrmFunilKanban({ customers = [], onAbrirCliente, onMover
           ><X className="w-4 h-4" /></button>
         </div>
       )}
+      {/* 👆 dono: "vazando no celular" — o funil é largo demais pro celular
+          de propósito (várias colunas lado a lado), sempre precisou rolar
+          de lado; sem o aviso, quem só usa touch achava que tinha travado. */}
+      <p className="sm:hidden text-[10px] text-nz-tinta-fraca flex items-center gap-1 mb-1" data-teste="funil-dica-arrastar">
+        <ArrowLeftRight className="w-3 h-3" /> arraste pra ver as outras colunas
+      </p>
       <div className="overflow-x-auto">
       <div className="flex gap-3 min-w-[980px]">
         {COLUNAS.map(({ key, label, icon: Icon }) => {
