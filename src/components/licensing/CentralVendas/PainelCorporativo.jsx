@@ -14,8 +14,8 @@ import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
 import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import {
   fmtReais, dataISO, inicioCicloOficial, tokenDoCiclo, formacaoExecutivoIdeal, proporcoesExecutivoIdeal,
-  EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaDoToken, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
-  estudoEmDia, estudoFdsEmDia, travarPlatinaPorEstudo,
+  EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaComPortoesDoCiclo, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  estudoEmDia, estudoFdsEmDia, travarTopoPorEstudo,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -61,7 +61,10 @@ import { DistribuirTarefaSozinho } from '@/components/licensing/CentralVendas/Di
 
 const caixa = { background: 'rgba(255,255,255,0.03)' };
 const titulo = 'text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase';
-const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none focus:border-white/40';
+const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none focus:border-white/40 lista-escura';
+// 🌑 `lista-escura` (index.css) é pro <select>: sem ela a LISTA que ele abre
+// vira branca com texto branco — o fundo `bg-white/[0.06]` é translúcido, e
+// o sistema desenha a lista a partir do fundo do próprio campo.
 const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const amanha = (iso) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão' };
@@ -203,10 +206,10 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const mvmRecebidoMedia = useMemo(() => mvmManual(mvmRecebidoCiclo).media, [mvmRecebidoCiclo]);
   const cicloToken = useMemo(() => {
     const r = tokenDoCiclo({ diasCiclo: diasCicloPessoa, mvmVotacao: mvmRecebidoMedia, perfil: participanteAtual?.perfil || 'estrategico', vendasReais: vendasCiclo });
-    // 🎓 09/09/2026 — DIR-113: a MESMA trava de Platina-só (nunca Ouro) que
+    // 🎓 09/09/2026 — DIR-113: a MESMA trava de topo-só (nunca Ouro) que
     // o X-Game/Compromisso aplicam — sem isso, a "posição do dia" do PDF
     // podia mostrar uma liga diferente da que a própria pessoa vê no jogo.
-    const total = travarPlatinaPorEstudo(r.total, {
+    const total = travarTopoPorEstudo(r.total, {
       estudoSemanaOk: estudoEmDia(diasCicloPessoa),
       estudoFdsOk: estudoFdsEmDia(diasCicloPessoa),
     });
@@ -216,7 +219,10 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     if (!pessoa) return null;
     const prop = proporcoesExecutivoIdeal(cicloToken.taxas);
     const eixos = EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({ k, rotuloCurto, emoji, atual: Math.round(prop[k] * 100), alvo: 100 }));
-    const liga = ligaDoToken(cicloToken.total);
+    // 🎖️ DIR-115 — os portões de caráter (MvM) e meta de vendas também
+    // decidem a liga aqui, senão o PDF Executivo podia imprimir Platina
+    // pra quem os portões ainda travam em Ouro.
+    const liga = ligaComPortoesDoCiclo(cicloToken.total, { mvmVotacao: mvmRecebidoMedia, vendasFeitas: cicloToken.vendasFeitas });
     const prox = proximaLiga(cicloToken.total);
     return {
       liga,

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarPlatinaPorEstudo, TOKEN_MAX } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX } from '@/lib/xgame';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import MoedaPizza from './MoedaPizza';
 
@@ -184,15 +184,15 @@ export default function XGameVisaoExecutiva() {
           }
           const votosRecebidos = votosPor[r.user_id];
           const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
-          const { total: tokenBruto, componentes } = tokenDoCiclo({
+          const { total: tokenBruto, componentes, vendasFeitas } = tokenDoCiclo({
             diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
-          // estudo (semana OU fim de semana) trava só a Platina, nunca o
-          // Ouro. Antes só checava o fim de semana; agora checa os dois.
-          const token = travarPlatinaPorEstudo(tokenBruto, {
+          // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca
+          // o Ouro. Antes só checava o fim de semana; agora checa os dois.
+          const token = travarTopoPorEstudo(tokenBruto, {
             estudoSemanaOk: estudoEmDia(r.diasDatados),
             estudoFdsOk: estudoFdsEmDia(r.diasDatados),
           });
@@ -205,6 +205,7 @@ export default function XGameVisaoExecutiva() {
             // MESMA MoedaPizza do Compromisso, sem recalcular nada.
             componentes,
             mvm: mvmDoVoto,
+            vendasFeitas, // 🎖️ DIR-115 — precisa pro portão de vendas da Platina
             regularidade: r.dias ? r.dias_fechados / r.dias : 0,
             fogo,
           };
@@ -333,7 +334,7 @@ export default function XGameVisaoExecutiva() {
             <p className="text-2xl font-black text-nz-tinta leading-tight tabular-nums">
               {minhaPosicao}º<span className="text-sm font-semibold text-nz-tinta-fraca"> de {time.pessoas}</span>
             </p>
-            <SeloLiga liga={ligaDoToken(meuLinha.token)} className="text-[11px] font-semibold text-nz-tinta-fraca mt-0.5" />
+            <SeloLiga liga={ligaComPortoesDoCiclo(meuLinha.token, { mvmVotacao: meuLinha.mvm, vendasFeitas: meuLinha.vendasFeitas })} className="text-[11px] font-semibold text-nz-tinta-fraca mt-0.5" />
           </div>
           <div className="flex items-center gap-5 sm:gap-7 ml-auto">
             <div className="text-right">
@@ -366,10 +367,11 @@ export default function XGameVisaoExecutiva() {
       {meuLinha && (
         <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-executivo">
           <div>
-            <p className="text-sm font-extrabold text-nz-tinta">🪙 Sua Moeda — de onde vem cada ponto do seu Human Token</p>
-            <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda deste ciclo, até o teto de {fmt(TOKEN_MAX)}</p>
+            <p className="text-sm font-extrabold text-nz-tinta">🪙 Seu Human Token — de onde vem cada ponto dele</p>
+            <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token deste ciclo, até o teto de {fmt(TOKEN_MAX)}</p>
+            <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
           </div>
-          <MoedaPizza componentes={meuLinha.componentes} total={meuLinha.token} max={TOKEN_MAX} liga={ligaDoToken(meuLinha.token)} />
+          <MoedaPizza componentes={meuLinha.componentes} total={meuLinha.token} max={TOKEN_MAX} liga={ligaComPortoesDoCiclo(meuLinha.token, { mvmVotacao: meuLinha.mvm, vendasFeitas: meuLinha.vendasFeitas })} />
         </div>
       )}
 
@@ -405,7 +407,7 @@ export default function XGameVisaoExecutiva() {
         <div className="flex items-end justify-center gap-3 sm:gap-5 max-w-xl mx-auto">
           {palco.map((l, i) => {
             if (!l) return <div key={i} className="flex-1 max-w-[180px]" />;
-            const liga = ligaDoToken(l.token);
+            const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
             const souEu = l.user_id === meuId;
             return (
               <div key={l.user_id} className="flex-1 max-w-[180px] flex flex-col items-center">
@@ -488,7 +490,7 @@ export default function XGameVisaoExecutiva() {
             </thead>
             <tbody>
               {ordenadas.map((l, i) => {
-                const liga = ligaDoToken(l.token);
+                const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
                 const souEu = l.user_id === meuId;
                 return (
                   <tr key={l.user_id} className={`border-t border-nz-borda/30 transition-colors ${souEu ? 'bg-nz-verde/10' : 'hover:bg-white/[0.03]'}`}>

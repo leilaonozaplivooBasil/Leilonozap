@@ -11,8 +11,9 @@ import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
-  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, estudoEmDia, TRAVA_SEM_PLATINA, travarPlatinaPorEstudo, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
+  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, estudoEmDia, TRAVA_SEM_ESTUDO_CICLO, travarTopoPorEstudo, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
   META_VENDAS_CICLO, TICKET_MEDIO_VENDA, PESO_REUNIAO_EQUIVALENTE, TETO_REUNIAO_NA_META, vendasEquivalentesAltoValor, TOKEN_MAX,
+  LIGAS, FAIXAS_TOKEN, ligaDoToken, ligaComPortoesDoCiclo, PISO_CARATER_LIGA, PISO_CARATER_PLATINA,
 } from '../src/lib/xgame.js';
 
 // 🎯 09/09/2026 — DIR-109: o radar (mapa do jogador) lê EIXOS_EXECUTIVO_IDEAL
@@ -73,13 +74,24 @@ test('naJanelaIdeal × janelaVotacaoAberta: 17h-20h é ideal, 20h-21h30 é só �
   assert.equal(janelaVotacaoAberta(fechada), false, 'depois das 21h30 não tem mais chance nenhuma');
 });
 
-test('podeSerVotado: só o super_admin precisa do interruptor — todo mundo mais continua votável', () => {
+test('podeSerVotado: super_admin é OPT-IN (desligado por padrão); todo mundo mais é OPT-OUT (ligado por padrão)', () => {
   assert.equal(podeSerVotado({ role: 'super_admin', aceita_ser_votado: false }), false);
   assert.equal(podeSerVotado({ role: 'super_admin', aceita_ser_votado: true }), true);
   assert.equal(podeSerVotado({ role: 'super_admin' }), false, 'sem o campo, o default é NÃO votável pro super_admin');
-  assert.equal(podeSerVotado({ role: 'admin', aceita_ser_votado: false }), true, 'admin comum não é afetado pela régua');
-  assert.equal(podeSerVotado({ role: 'user', aceita_ser_votado: false }), true);
+  assert.equal(podeSerVotado({ role: 'admin' }), true, 'sem o campo, admin comum continua votável — o comportamento de sempre não muda pra quem nunca foi desligado');
+  assert.equal(podeSerVotado({ role: 'user' }), true);
   assert.equal(podeSerVotado({}), true, 'sem role nenhum, não é super_admin — continua votável');
+});
+
+// 🗳️ 09/09/2026 — dono: "tem pessoas que já participaram da mentoria e não
+// vão receber voto... eles podem votar, mas não recebem voto." O admin
+// desliga `aceita_ser_votado` na mão, pessoa por pessoa — diferente do
+// super_admin, aqui é o admin quem decide, e o padrão é o oposto (votável
+// até alguém desligar, não o contrário).
+test('podeSerVotado: o admin pode DESLIGAR um participante comum da lista votável, pessoa por pessoa', () => {
+  assert.equal(podeSerVotado({ role: 'diretor', aceita_ser_votado: false }), false, 'o dono desligou esta pessoa — não recebe voto, mesmo sendo diretor ativo');
+  assert.equal(podeSerVotado({ role: 'diretor', aceita_ser_votado: true }), true, 'explicitamente ligado — votável, igual ao padrão');
+  assert.equal(podeSerVotado({ role: 'executivo', aceita_ser_votado: undefined }), true, 'ninguém mexeu no campo — continua votável, o padrão de sempre');
 });
 
 test('votouEmTodosOsColegas: precisa fechar TODOS, não só algum — e ninguém pra votar não é falta', () => {
@@ -142,6 +154,7 @@ test('resumoDoDia: perdoado=true NUNCA zera, nem por não-votar nem por atraso d
   assert.equal(semVotarPerdoado.perdeu_por_nao_votar, false, 'perdoado esconde até o CAMPO que registra o motivo — outras telas não podem ver isso como zerado');
   assert.equal(semVotarPerdoado.mvm_dia, MVM_MAX, 'sem o perdão zeraria — com o perdão, a nota é a de sempre (dia impecável)');
   assert.ok(!/ZEROU/.test(semVotarPerdoado.frase_mvm), 'a frase não pode dizer que zerou um dia que foi perdoado');
+  assert.equal(semVotarPerdoado.token_dia > 0, true, 'o dia não zerou');
 
   const atrasoVencidoPerdoado = resumoDoDia({
     tarefas: [...TAREFAS, { id: 'x1', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-08T18:00:00' }],
@@ -196,7 +209,7 @@ test('tokenDoCiclo: com voto de verdade, o MVM vem da votação — o mvm_dia au
     perfil: 'estrategico',
   });
   assert.equal(comVoto.taxas.mvm, 0.8, 'usa a votação (8/10), ignora o mvm_dia automático');
-  assert.equal(comVoto.componentes.mvm, 8, 'peso do MVM é 10, 80% disso é 8 pontos');
+  assert.equal(comVoto.componentes.mvm, 5.34, 'peso do MVM (perfil estratégico, DIR-115) é 6,67, 80% disso é 5,336 ≈ 5,34');
 });
 
 // 🟢 09/09/2026 — DIR-110, dono: "quatro vendas é muito pouco pra um
@@ -238,24 +251,28 @@ test('vendasEquivalentesAltoValor: sem venda de alto valor, devolve zero — nã
   assert.equal(vendasEquivalentesAltoValor([]), 0);
 });
 
-// 🔀 09/09/2026 — dono: "o real time não pode pesar tanto... quero aumentar
-// o peso de quem vende e quem estuda." Trava o resultado da repesagem: real
-// time (produção) vira pequeno, o estudo (bônus) vira o grande peso depois
-// do MvM, e vendas sobe um pouco pra quem não é comercial.
-test('pesosDoPerfil: real time pequeno, estudo grande — a repesagem pedida pelo dono', () => {
+// 🏆 DIR-115 (09/09/2026) — REPESAGEM, dono: "recrutamos caráter e treinamos
+// habilidade... a produção ela chega aos quarenta e cinco por cento com o
+// realtime." O MvM deixa de ser a maior fatia sozinha (era 45%) porque virou
+// PORTÃO (ver ligaComPortoesDoCiclo) — "30% + veto é mais forte que 45% sem
+// veto". Produção+Real Time juntos voltam a somar 45% (30+15), Vendas sobe
+// pra 15% contínuo (a meta cheia é portão da Platina, não peso), Bônus/
+// Estudo fecha em 10%.
+test('pesosDoPerfil: repesagem DIR-115 — MvM 30%, Produção 30%, Real Time 15%, Vendas 15%, Bônus 10%', () => {
   const p = pesosDoPerfil('estrategico');
-  assert.equal(p.mvm, 10, 'MvM continua o maior peso sozinho');
-  assert.equal(p.producao, 1.5, 'real time não pesa mais 50% da base — agora é só 1,5 ponto');
-  assert.equal(p.bonus, 5.55, 'estudo/leitura (categoria bonus) vira o segundo maior peso');
-  assert.ok(p.bonus > p.producao, 'estudo tem que pesar mais que o real time, não menos');
-  assert.equal(p.realtime, 3.67, 'desempenho (X-Pay ganho/possível) não mudou nesta repesagem');
-  assert.equal(p.ptVenda, 1.5, 'vendas sobe um pouco pra quem não é comercial também');
+  assert.equal(p.mvm, 6.67, 'MvM caiu de 45% pra 30% — o resto do caráter agora mora no portão, não no peso');
+  assert.equal(p.producao, 6.67, 'produção sobe pra 30% — o maior peso ao lado do MvM');
+  assert.equal(p.realtime, 3.33, 'real time (15%) multiplica o valor da produção, mas pesa menos que ela sozinho');
+  assert.equal(p.bonus, 2.22, 'bônus/estudo (10%) é o menor peso — mas nunca zero: dono não abriu mão do estudo');
+  assert.equal(p.ptVenda, 3.33, 'vendas (15%) contínuo — o "100% da meta" é portão da Platina, não este peso');
+  assert.ok(p.producao + p.realtime > p.mvm, 'produção+real time (45%) supera o MvM (30%) sozinho — bate com "a produção chega aos 45% com o realtime"');
   const total = p.mvm + p.producao + p.realtime + p.bonus + p.ptVenda;
   assert.ok(Math.abs(total - 22.22) < 0.01, `soma dos pesos tem que bater com o teto (22,22), deu ${total}`);
 });
 
-test('pesosDoPerfil: perfil comercial mantém vendas como o principal, real time reduzido igual', () => {
+test('pesosDoPerfil: perfil comercial NÃO faz parte da repesagem DIR-115 — mantém os próprios pesos', () => {
   const p = pesosDoPerfil('comercial');
+  assert.equal(p.mvm, MVM_MAX, 'comercial continua com o MvM no peso cheio — decisão de outra conversa, intocada aqui');
   assert.equal(p.ptVenda, 2.5, 'comercial continua dominado pelas vendas — a trava de venda dele já é isso');
   assert.ok(p.producao < p.bonus, 'mesmo no comercial, real time reduzido não pode pesar mais que o estudo');
 });
@@ -264,7 +281,9 @@ test('pesosDoPerfil: perfil comercial mantém vendas como o principal, real time
 // conferiu a SOMA pro perfil comercial (só a ordem dos pesos) — por isso
 // não pegou que ela dava 14,72 em vez de 22,22, travando qualquer
 // executivo comercial abaixo de Ouro (17,78) pra sempre, mesmo fechando
-// 100% em tudo. Trava explícita pros dois perfis, pra nunca mais destoar.
+// 100% em tudo. Trava explícita pros dois perfis, pra nunca mais destoar —
+// e continua valendo depois da repesagem DIR-115, que mexeu só no
+// 'estrategico'.
 test('pesosDoPerfil: a soma bate com TOKEN_MAX pros dois perfis — comercial não pode ficar travado abaixo de Ouro/Platina', () => {
   for (const perfil of ['estrategico', 'operacional', 'comercial']) {
     const p = pesosDoPerfil(perfil);
@@ -385,10 +404,10 @@ test('resumoDoDia: contagens.reunioes_total/feitas contam só título de reuniã
 });
 
 // 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
-// quero um resumo bem detalhado... pra ser Platina." O estudo de fim de
-// semana é um tipo de comprovação À PARTE (mínimo bem maior) que trava o
-// Platina, não o Ouro — igual à trava de estudo de semana, só que um
-// degrau acima.
+// quero um resumo bem detalhado... pra ser Diamante [Platina, DIR-115]." O
+// estudo de fim de semana é um tipo de comprovação À PARTE (mínimo bem
+// maior) que trava o TOPO, não o Ouro — igual à trava de estudo de semana,
+// só que um degrau acima.
 test('validacaoAutomatica: "Estudo do Fim de Semana" vira aprendizado_fds, não o aprendizado comum', () => {
   assert.equal(validacaoAutomatica('Estudo do Fim de Semana'), 'aprendizado_fds');
   assert.equal(validacaoAutomatica('Leitura de fim de semana'), 'aprendizado_fds');
@@ -436,7 +455,7 @@ test('estudoFdsEmDia: 60%+ dos fins de semana já vividos com o estudo feito →
   assert.equal(estudoFdsEmDia(dias), true, '2 de 3 fins de semana registrados = 66%, passa dos 60%');
 });
 
-test('estudoFdsEmDia: menos de 60% dos fins de semana feitos → false, trava a Platina', () => {
+test('estudoFdsEmDia: menos de 60% dos fins de semana feitos → false, trava o topo (Platina)', () => {
   const dias = [
     { data: '2026-09-05', detalhes: { estudo_fds_feito: false } },
     { data: '2026-09-06', detalhes: { estudo_fds_feito: false } },
@@ -458,46 +477,127 @@ test('estudoFdsEmDia: o "hoje" entra na conta quando ainda não está em diasCic
 // tokenDoCiclo continua puro, sem saber de travas de estudo.
 const DIA_PERFEITO = { prod_total: 1, prod_feitas: 1, bonus_total: 1, bonus_feitas: 1, xpay_ganho: 1, xpay_possivel: 1 };
 
-test('tokenDoCiclo: o ciclo perfeito passa do teto da Platina — é isso que a trava de fim de semana precisa segurar', () => {
+test('tokenDoCiclo: o ciclo perfeito passa do teto do topo (Platina) — é isso que a trava de fim de semana precisa segurar', () => {
   const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: META_VENDAS_CICLO, perfil: 'estrategico' });
-  assert.ok(r.total > TRAVA_SEM_PLATINA, `o ciclo perfeito (${r.total}) tem que passar de ${TRAVA_SEM_PLATINA} pra trava fazer sentido`);
+  assert.ok(r.total > TRAVA_SEM_ESTUDO_CICLO, `o ciclo perfeito (${r.total}) tem que passar de ${TRAVA_SEM_ESTUDO_CICLO} pra trava fazer sentido`);
+  assert.ok(Math.abs(r.total - TOKEN_MAX) < 0.01, 'a soma dos pesos da repesagem DIR-115 continua fechando o teto exato, só a distribuição interna mudou');
 });
 
-test('TRAVA_SEM_PLATINA aplicada por fora (padrão dos call-sites): sem o estudo de fim de semana, Ouro continua alcançável mas não vira Platina', () => {
+test('TRAVA_SEM_ESTUDO_CICLO aplicada por fora (padrão dos call-sites): sem o estudo de fim de semana, Ouro continua alcançável mas não vira o topo', () => {
   const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: META_VENDAS_CICLO, perfil: 'estrategico' });
-  const totalComTrava = estudoFdsEmDia([]) ? r.total : Math.min(r.total, TRAVA_SEM_PLATINA);
-  const semEstudoFds = Math.min(r.total, TRAVA_SEM_PLATINA); // simula estudoFdsEmDia(...) === false
-  assert.ok(semEstudoFds <= TRAVA_SEM_PLATINA);
-  assert.ok(semEstudoFds >= 17.78, 'a trava é só da Platina — Ouro continua alcançável');
+  const totalComTrava = estudoFdsEmDia([]) ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO_CICLO);
+  const semEstudoFds = Math.min(r.total, TRAVA_SEM_ESTUDO_CICLO); // simula estudoFdsEmDia(...) === false
+  assert.ok(semEstudoFds <= TRAVA_SEM_ESTUDO_CICLO);
+  assert.ok(semEstudoFds >= 17.78, 'a trava é só do topo — Ouro continua alcançável');
   assert.equal(totalComTrava, r.total, 'sem fim de semana ainda vivido no ciclo, estudoFdsEmDia não trava nada');
 });
 
 // 🎓 09/09/2026 — DIR-113: o dono revisou o próprio pedido anterior — "o que
-// ditava o platina é só um estudo em casa, mas ela tem que chegar ao
-// ouro... até mesmo se ela não estudar em casa." `travarPlatinaPorEstudo`
-// é a função ÚNICA que os 4 lugares que calculam liga de ciclo (X-Game,
-// Compromisso pessoal + ranking, Painel Corporativo) agora usam — antes,
-// cada lugar reaplicava a trava manualmente, e um deles (XGame.jsx/
-// CrmMetodo.jsx pessoal) usava por engano TRAVA_SEM_ESTUDO (17,77, a trava
-// do TOKEN DO DIA) pra capar o total do CICLO, bloqueando Ouro sem motivo.
-test('travarPlatinaPorEstudo: com os dois estudos em dia, o total passa reto — Platina alcançável', () => {
-  assert.equal(travarPlatinaPorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: true }), 21.5);
+// ditava o diamante [Platina, DIR-115] é só um estudo em casa, mas ela tem
+// que chegar ao ouro... até mesmo se ela não estudar em casa."
+// `travarTopoPorEstudo` (renomeada de `travarDiamantePorEstudo`) é a função
+// ÚNICA que os lugares que calculam liga de ciclo (X-Game, Compromisso
+// pessoal + ranking, Painel Corporativo) usam — antes, cada lugar
+// reaplicava a trava manualmente, e um deles (XGame.jsx/CrmMetodo.jsx
+// pessoal) usava por engano TRAVA_SEM_ESTUDO (17,77, a trava do TOKEN DO
+// DIA) pra capar o total do CICLO, bloqueando Ouro sem motivo.
+test('travarTopoPorEstudo: com os dois estudos em dia, o total passa reto — topo (Platina) alcançável', () => {
+  assert.equal(travarTopoPorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: true }), 21.5);
 });
 
-test('travarPlatinaPorEstudo: falta a leitura de semana → capa no teto da Platina, nunca abaixo de Ouro', () => {
-  const capado = travarPlatinaPorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: true });
-  assert.equal(capado, TRAVA_SEM_PLATINA);
+test('travarTopoPorEstudo: falta a leitura de semana → capa no teto do topo, nunca abaixo de Ouro', () => {
+  const capado = travarTopoPorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: true });
+  assert.equal(capado, TRAVA_SEM_ESTUDO_CICLO);
   assert.ok(capado >= 17.78, 'Ouro continua alcançável mesmo sem a leitura de semana em dia');
 });
 
-test('travarPlatinaPorEstudo: falta o estudo de fim de semana → mesma trava da Platina', () => {
-  assert.equal(travarPlatinaPorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: false }), TRAVA_SEM_PLATINA);
+test('travarTopoPorEstudo: falta o estudo de fim de semana → mesma trava do topo', () => {
+  assert.equal(travarTopoPorEstudo(21.5, { estudoSemanaOk: true, estudoFdsOk: false }), TRAVA_SEM_ESTUDO_CICLO);
 });
 
-test('travarPlatinaPorEstudo: faltando os dois, trava igual (não empilha)', () => {
-  assert.equal(travarPlatinaPorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: false }), TRAVA_SEM_PLATINA);
+test('travarTopoPorEstudo: faltando os dois, trava igual (não empilha)', () => {
+  assert.equal(travarTopoPorEstudo(21.5, { estudoSemanaOk: false, estudoFdsOk: false }), TRAVA_SEM_ESTUDO_CICLO);
 });
 
-test('travarPlatinaPorEstudo: total abaixo do teto da Platina nunca é afetado, com ou sem estudo', () => {
-  assert.equal(travarPlatinaPorEstudo(15, { estudoSemanaOk: false, estudoFdsOk: false }), 15);
+test('travarTopoPorEstudo: total abaixo do teto do topo nunca é afetado, com ou sem estudo', () => {
+  assert.equal(travarTopoPorEstudo(15, { estudoSemanaOk: false, estudoFdsOk: false }), 15);
+});
+
+// 🏆 DIR-115 (09/09/2026) — as 4 faixas viram degraus de ~20-30% cada,
+// fechando o "deserto" antigo (prata em 30%, ouro só em 80% — 50 pontos
+// sem nenhuma linha no meio). Platina começa EXATAMENTE onde o Ouro antigo
+// começava (17,78) — o topo não ficou mais fácil, só ganhou dois degraus
+// novos no meio e perdeu o nome de multinível.
+test('FAIXAS_TOKEN/LIGAS: 4 faixas — bronze/prata/ouro/platina, Platina começa em 17,78 (o Ouro antigo), sem "deserto" no meio', () => {
+  assert.deepEqual(FAIXAS_TOKEN.map((f) => f.id), ['platina', 'ouro', 'prata', 'bronze']);
+  assert.deepEqual(LIGAS.map((l) => l.id), ['platina', 'ouro', 'prata', 'bronze']);
+  assert.equal(LIGAS.find((l) => l.id === 'platina').min, 17.78);
+  assert.equal(LIGAS.find((l) => l.id === 'ouro').min, 12.22);
+  assert.equal(LIGAS.find((l) => l.id === 'prata').min, 6.66);
+  assert.equal(LIGAS.find((l) => l.id === 'bronze').min, 0);
+  // 🐛 a régua que importa não é "faixas idênticas", é "nenhum buraco
+  // gigante": o antigo tinha 50 pontos (30%→80%) sem nenhuma linha no
+  // meio. Cada degrau novo agora fica entre 20% e 30% do teto — bem
+  // distante do buraco antigo, mesmo sem serem idênticos entre si.
+  const tetos = [0, 6.66, 12.22, 17.78, TOKEN_MAX];
+  for (let i = 1; i < tetos.length; i += 1) {
+    const tamanho = tetos[i] - tetos[i - 1];
+    const pct = tamanho / TOKEN_MAX;
+    assert.ok(pct >= 0.19 && pct <= 0.31, `degrau ${tetos[i - 1]}→${tetos[i]} é ${Math.round(pct * 100)}% do teto — bem longe do buraco de 50% que existia antes`);
+  }
+});
+
+// 🎖️ DIR-115 (09/09/2026) — OS PORTÕES: dono, "recrutamos caráter e
+// treinamos habilidade" — caráter não é nota que compensa com produção ou
+// venda, é PRÉ-REQUISITO. Dois portões, nunca sobre o TOTAL exibido, só
+// sobre a LIGA que aquele total pode valer.
+test('ligaComPortoesDoCiclo: MvM abaixo do piso de caráter (7) trava TUDO em Bronze, mesmo com token de Platina', () => {
+  const liga = ligaComPortoesDoCiclo(22, { mvmVotacao: 6.9, vendasFeitas: 26 });
+  assert.equal(liga.id, 'bronze', 'sem o mínimo de caráter, nem Prata nem Ouro perdoam — direto pro Bronze');
+});
+
+test('ligaComPortoesDoCiclo: MvM exatamente no piso de caráter (7) NÃO trava em Bronze — o piso é "abaixo de", não "até"', () => {
+  const liga = ligaComPortoesDoCiclo(10, { mvmVotacao: PISO_CARATER_LIGA, vendasFeitas: 0 });
+  assert.notEqual(liga.id, 'bronze', 'MvM = 7 exatamente já passa do piso — a trava é só pra quem fica ABAIXO de 7');
+});
+
+test('ligaComPortoesDoCiclo: MvM entre 7 e 8 barra só a Platina — Ouro continua de pé', () => {
+  const liga = ligaComPortoesDoCiclo(20, { mvmVotacao: 7.5, vendasFeitas: 26 });
+  assert.equal(liga.id, 'ouro', 'token de Platina, mas MvM abaixo de 8 — teto vira Ouro, não Bronze');
+});
+
+test('ligaComPortoesDoCiclo: MvM exatamente 8 (o alvo do Executivo Ideal) já abre a Platina, se as vendas também baterem', () => {
+  const liga = ligaComPortoesDoCiclo(20, { mvmVotacao: PISO_CARATER_PLATINA, vendasFeitas: META_VENDAS_CICLO });
+  assert.equal(liga.id, 'platina', 'MvM = 8 exatamente já passa do piso da Platina — a trava é só pra quem fica ABAIXO de 8');
+});
+
+test('ligaComPortoesDoCiclo: sem bater 100% da meta de vendas, a Platina não abre — mesmo com MvM alto', () => {
+  const liga = ligaComPortoesDoCiclo(20, { mvmVotacao: 10, vendasFeitas: META_VENDAS_CICLO - 1 });
+  assert.equal(liga.id, 'ouro', 'faltou 1 venda pra meta cheia — "métodologia garante venda", sorte/quase não abre o topo');
+});
+
+test('ligaComPortoesDoCiclo: os dois portões abertos (caráter ≥ 8 e meta cheia de vendas) — Platina de verdade', () => {
+  const liga = ligaComPortoesDoCiclo(20, { mvmVotacao: 9, vendasFeitas: META_VENDAS_CICLO });
+  assert.equal(liga.id, 'platina');
+});
+
+test('ligaComPortoesDoCiclo: os portões nunca mexem no TOTAL — só na liga que ele pode valer', () => {
+  const semPortao = ligaComPortoesDoCiclo(20, { mvmVotacao: 10, vendasFeitas: META_VENDAS_CICLO });
+  const comPortaoFechado = ligaComPortoesDoCiclo(20, { mvmVotacao: 5, vendasFeitas: 0 });
+  assert.equal(semPortao.id, 'platina');
+  assert.equal(comPortaoFechado.id, 'bronze');
+  // o "20" passado pros dois é o MESMO número — só a liga retornada muda,
+  // provando que a função nunca mexe no total, só decide a liga por cima.
+});
+
+test('ligaComPortoesDoCiclo: sem mvmVotacao (ninguém votou ainda) não trava em Bronze por engano — só o portão de vendas da Platina se aplica', () => {
+  const semVoto = ligaComPortoesDoCiclo(20, { mvmVotacao: null, vendasFeitas: META_VENDAS_CICLO });
+  assert.equal(semVoto.id, 'platina', 'mvmVotacao null não é "abaixo do piso" — é "não sei ainda", não pune');
+});
+
+test('ligaComPortoesDoCiclo: token abaixo de Platina não sofre o portão de vendas/caráter da Platina (só ela é vetada)', () => {
+  const liga = ligaComPortoesDoCiclo(10, { mvmVotacao: 3, vendasFeitas: 0 });
+  // MvM 3 é abaixo do piso de LIGA (7) — trava geral em Bronze, então este
+  // caso confirma o piso de CARÁTER GERAL, não o de Platina especificamente.
+  assert.equal(liga.id, 'bronze');
 });

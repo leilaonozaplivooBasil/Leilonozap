@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -17,6 +17,13 @@ import {
   reunioesEmpresaDoDia, DIAS_SEMANA,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
+// 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
+// o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
+// nova janela de autorização no meio do agendamento (ver src/lib/googleAgenda.js).
+import {
+  tokenDoGoogle, erroDoGoogle, statusDoErro, invalidarTokenSePreciso,
+  contaLembrada, esquecerConta,
+} from '@/lib/googleAgenda';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
@@ -24,7 +31,7 @@ import {
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
-  estudoFdsEmDia, estudoEmDia, travarPlatinaPorEstudo,
+  estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, ligaComPortoesDoCiclo, PISO_CARATER_PLATINA,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
@@ -54,6 +61,8 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
+import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -100,7 +109,7 @@ const personalizarScript = (texto, nomeCompleto) => {
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
   const uid = currentUser?.id;
   // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
   // recomeçando... já me coloca ela no meu contato e pisca." O destaque
@@ -158,7 +167,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
-  const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
+  // qual conta do Google está ligada aqui — mostrada na tela de propósito:
+  // ver o e-mail antes de agendar é o que evita a reunião cair na conta errada.
+  const [googleConta, setGoogleConta] = useState(() => contaLembrada());
+
+  // 🔥 DIR-103 — AQUECIMENTO SILENCIOSO. Quem já autorizou neste aparelho
+  // ganha o token ANTES de precisar dele. É este pedaço que acaba com a
+  // janela do Google aparecendo no meio do agendamento — que era onde a
+  // pessoa clicava na conta errada.
+  useEffect(() => { if (contaLembrada()) tokenDoGoogle({ interativo: false }).catch(() => {}); }, []);
+
   // 📜 DIR-112 (09/09/2026) — dono, ao vivo: "imagina ele com fone, começando
   // a fazer a ligação... ele clica, esse papel vem pra frente." O script vira
   // um cartão que aparece na FRENTE de tudo quando a pessoa vai contatar —
@@ -418,11 +436,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       vendasReais: vendasCiclo,
     });
     // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
-    // estudo (semana OU fim de semana) trava só a PLATINA, nunca o OURO
-    // — mesma função usada no X-Game, no ranking e no Painel Corporativo.
+    // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca o
+    // OURO — mesma função usada no X-Game, no ranking e no Painel Corporativo.
     const fdsOk = estudoFdsEmDia(diasCiclo, { data: hojeStr(), feito: xgame.estudo_fds_feito });
-    const total = travarPlatinaPorEstudo(r.total, { estudoSemanaOk: xgame.estudo_em_dia, estudoFdsOk: fdsOk });
-    return { ...r, total, liga: ligaDoToken(total), estudoEmDiaCompleto: xgame.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
+    const total = travarTopoPorEstudo(r.total, { estudoSemanaOk: xgame.estudo_em_dia, estudoFdsOk: fdsOk });
+    // 🎖️ DIR-115 — portões de caráter (MvM) e meta de vendas: só decidem
+    // QUAL liga o total pode valer, nunca o número exibido.
+    const liga = ligaComPortoesDoCiclo(total, { mvmVotacao: recebido.media, vendasFeitas: r.vendasFeitas });
+    return { ...r, total, liga, estudoEmDiaCompleto: xgame.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
   const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
     && xgame.tarefas_feitas / xgame.tarefas_total >= OFENSIVA_META);
@@ -567,20 +588,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         const linhas = Object.values(por).map((r) => {
           const votosRecebidos = votosPor[r.user_id];
           const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
-          const { total: tokenBruto } = tokenDoCiclo({
+          const { total: tokenBruto, vendasFeitas } = tokenDoCiclo({
             diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
-          // estudo (semana OU fim de semana) trava só a Platina, nunca o
-          // Ouro. Antes só checava o fim de semana; agora checa os dois,
+          // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca
+          // o Ouro. Antes só checava o fim de semana; agora checa os dois,
           // igual ao painel individual.
-          const token = travarPlatinaPorEstudo(tokenBruto, {
+          const token = travarTopoPorEstudo(tokenBruto, {
             estudoSemanaOk: estudoEmDia(r.diasDatados),
             estudoFdsOk: estudoFdsEmDia(r.diasDatados),
           });
-          return { ...r, token, mvm: mvmDoVoto };
+          return { ...r, token, mvm: mvmDoVoto, vendasFeitas };
         });
         const ids = linhas.map((l) => l.user_id);
         if (ids.length) {
@@ -767,7 +788,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, tempoTelaS }) => {
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
@@ -845,14 +866,52 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // ambiente incerto: em vez de aprovar ou perder de cara, cai pro gestor
     // decidir — igual às outras comprovações em dúvida.
     const emDuvida = vereditoAmbiente?.veredito === 'duvida';
+
+    // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
+    // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
+    // onde mora o vídeo: é voz, é íntimo, e link público não se desfaz depois
+    // que circulou. Guardar é o EXTRA — se falhar, o ritual segue e o texto,
+    // que é o que vale nota, já está aqui.
+    const guardarVoz = async (blob, pasta) => (blob
+      ? guardarAudio({
+        blob,
+        caminho: caminhoDoAudio({ pasta, uid, dia: hojeStr(), tarefaId: t.id, mime: blob.type }),
+        actorId: uid,
+      })
+      : null);
+    const [vozGratidao, vozAcao] = await Promise.all([
+      guardarVoz(audioGratidao, 'gratidao'),
+      guardarVoz(audioAcao, 'acao'),
+    ]);
+
     // 🌊 DIR-89 — ritual dentro do prazo E com o vídeo gravado ganha o selo
     // completo; sem vídeo (mas ainda dentro do prazo) aprova igual, só sem o
     // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como perdido
-    // acima.
+    // acima. Ambiente em dúvida (emDuvida) também segura o selo — cai pro
+    // gestor decidir, igual às outras comprovações em dúvida.
     const aprovadoDireto = naJanela && !!videoUrl && !emDuvida;
     const comprovacao = {
-      tipo: 'ritual', gratidao, acao, entrega: gratidao,
+      // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
+      // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
+      // mostraria a gratidão em branco. A ordem: o que ela escreveu, senão o
+      // que ela falou (transcrito), senão uma frase honesta com o botão de
+      // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
+      tipo: 'ritual', gratidao, acao,
+      entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
+      // "as suas palavras", COM a origem registrada. Não é desconfiança: é
+      // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
+      ...(audioGratidao ? { entrada_gratidao: 'audio', audio_gratidao_seg: audioGratidaoSeg || 0 } : {}),
+      // 🎙️ DIR-101.1 — a transcrição existe pro REGISTRO, não pra pessoa.
+      // Ela nunca apareceu na tela de quem gravou; está aqui pro Diário de
+      // Bolso ter o que mostrar e pra dar pra buscar depois. Se o Whisper não
+      // respondeu a tempo, fica sem — e o ritual vale do mesmo jeito, porque
+      // a entrega é o áudio.
+      ...(transcricaoGratidao ? { gratidao_transcricao: transcricaoGratidao } : {}),
+      ...(audioAcao ? { entrada_acao: 'audio' } : {}),
+      ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
+      ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
       status: emDuvida ? 'em_analise' : 'aprovada_ritual',
@@ -897,7 +956,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 🤖 chama a IA (1ª olhada OU 2ª, já com a justificativa da pessoa) e
   // aplica a régua de decisão (lib/xgameValidacao.decisaoAposIA) — nunca cai
   // pro gestor na primeira dúvida se a IA sabe o que perguntar.
-  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1 }) => {
+  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1, entradaResumo = null, audioResumoPath = null }) => {
     const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
     const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
@@ -946,6 +1005,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       tipo, print_url: printUrl, hash,
       ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
       ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+      // 🎙️ DIR-101 — origem do resumo e a voz guardada. Só aparecem quando
+      // houve fala: quem digitou continua com exatamente o mesmo registro.
+      ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
+      ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ia',
@@ -1027,7 +1090,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }
-    await avaliarComIA(t, { printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1 });
+    // 🎙️ DIR-101 — a voz do resumo também vira acervo, no cofre PRIVADO.
+    // Best-effort e DEPOIS do print: o print é a prova e não pode esperar o
+    // áudio; se o cofre piscar, a comprovação segue com o texto, que é o que
+    // vale nota.
+    let vozResumo = null;
+    if (dados.audioResumo) {
+      vozResumo = await guardarAudio({
+        blob: dados.audioResumo,
+        caminho: caminhoDoAudio({ pasta: 'resumos', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.audioResumo.type }),
+        actorId: uid,
+      });
+    }
+    await avaliarComIA(t, {
+      printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1,
+      // como o texto entrou — decisão do dono: áudio conta como "suas
+      // palavras", COM a origem registrada.
+      ...(dados.audioResumo ? { entradaResumo: 'audio' } : {}),
+      ...(vozResumo ? { audioResumoPath: vozResumo } : {}),
+    });
   };
 
   const alternarFeito = async (t) => {
@@ -1256,54 +1337,38 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     if (ok) setRegistroAberto(null);
   };
 
-  // 🗓️ DIR-47/48 — token da Google Agenda da PRÓPRIA pessoa (leitura +
-  // criação de evento; mesmo GOOGLE_CLIENT_ID do login; o token vive só
-  // nesta sessão do navegador — nunca vai pro servidor).
-  const obterTokenGoogle = async () => {
-    if (googleToken) return googleToken;
-    const r = await plataforma.functions.invoke('getGoogleClientId', {});
-    const clientId = r?.clientId;
-    if (!clientId) throw new Error('login Google não configurado');
-    if (!window.google?.accounts?.oauth2) {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://accounts.google.com/gsi/client';
-        s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
-        document.head.appendChild(s);
-      });
-    }
-    if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
-    const token = await new Promise((res, rej) => {
-      const tc = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-        callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
-        error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
-      });
-      tc.requestAccessToken();
-    });
-    setGoogleToken(token);
-    return token;
-  };
-
+  // 🗓️ DIR-47/48/103 — a Google Agenda da PRÓPRIA pessoa (leitura + criação
+  // de evento; mesmo GOOGLE_CLIENT_ID do login). O token nunca vai pro
+  // servidor; quem cuida dele é o `src/lib/googleAgenda.js`.
   const conectarGoogleAgenda = async () => {
     setGoogleConectando(true);
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const ini = new Date(); ini.setHours(0, 0, 0, 0);
       const fim = new Date(ini.getTime() + 86400000);
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(ini.toISOString())}&timeMax=${encodeURIComponent(fim.toISOString())}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       setGoogleEventos((j.items || []).map((e) => ({ id: e.id, titulo: e.summary || '(sem título)', inicio: e.start?.dateTime || e.start?.date || '' })));
+      setGoogleConta(contaLembrada());
       toast.success('Google Agenda conectada — eventos de hoje na tela');
     } catch (e) {
       console.warn('Google Agenda:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.error(`Não deu pra conectar a Google Agenda: ${e.message}`);
     } finally { setGoogleConectando(false); }
+  };
+
+  // "Trocar conta": esquecer o e-mail lembrado é o ÚNICO jeito de o Google
+  // voltar a perguntar. Sem este botão, lembrar a conta viraria prisão pra
+  // quem realmente tem duas agendas.
+  const trocarContaGoogle = async () => {
+    esquecerConta();
+    setGoogleConta(null);
+    setGoogleEventos(null);
+    await conectarGoogleAgenda();
   };
 
   // DIR-48 — cria o evento DE VERDADE na agenda da própria pessoa. Falhou?
@@ -1319,20 +1384,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       if (j?.id) registro.google_event_id = j.id; // DIR-50: o id permite editar/apagar depois
       toast.success('Evento criado na sua Google Agenda!');
       return j?.htmlLink || null;
     } catch (e) {
       console.warn('Criar evento Google:', e);
-      setGoogleToken(null);
+      // 🔴 DIR-103 — antes isto era `setGoogleToken(null)` em QUALQUER erro: um
+      // 500 do Google ou a internet oscilando jogava fora um token bom e
+      // obrigava nova janela de autorização — e é na janela que a pessoa erra
+      // a conta. Agora só 401/403 (a autorização acabou de verdade) derruba.
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Não deu pra criar no Google agora (${e.message}) — o agendamento foi salvo e o botão Google Agenda continua na agenda do dia.`);
       return null;
     }
@@ -1354,20 +1423,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return registroOriginal.google_event_link || null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       registro.google_event_id = j?.id || eventId;
       toast.success('Evento atualizado na sua Google Agenda!');
       return j?.htmlLink || registroOriginal.google_event_link || null;
     } catch (e) {
       console.warn('Atualizar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`A reunião foi atualizada no método, mas o Google não deixou mexer no evento agora (${e.message}) — ajuste por lá pelo link.`);
       return registroOriginal.google_event_link || null;
     }
@@ -1379,17 +1448,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const eventId = idDoEventoGoogle(registro);
     if (!eventId) return true;
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw erroDoGoogle(resp);
       toast.success('Evento apagado da sua Google Agenda.');
       return true;
     } catch (e) {
       console.warn('Apagar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Excluída do método — mas o Google não deixou apagar o evento agora (${e.message}). Apague por lá pelo link, se ainda existir.`);
       return false;
     }
@@ -1695,7 +1764,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). Ligas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 · 💠 platina de 20 pra cima. Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}>
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze, abaixo de 8 barra a Platina. Ligas: 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima (só abre batendo os dois portões: caráter e 100% da meta de vendas). Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
                   <p className="text-xl font-bold text-nz-tinta tabular-nums">{ciclo ? ciclo.liga.emoji : xgame.faixa.medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
                   <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}</p>
@@ -1738,7 +1807,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 "tem que aparecer a produtividade, quanto pesou na moeda...
                 se possível deixar até o desenho da moeda, fatia de pizza, o
                 que cada um está pesando... e vai botando a cor de acordo com
-                cada fatia, bronze, prata, até o platina." O anel é o Human
+                cada fatia, bronze, prata, até o topo." O anel é o Human
                 Token (0 a 22,22) dividido pelos MESMOS 5 componentes que
                 `ciclo` já calcula — nenhuma conta nova, só o desenho que
                 faltava. As marcas no anel são as ligas oficiais (LIGAS,
@@ -1746,15 +1815,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 🗳️ e a correção do dono na mesma mensagem: "o MvM só é a
                 média do valor mental, a média da votação, só isso" — é
                 exatamente o que `ciclo.componentes.mvm` já vale (ver
-                tokenDoCiclo em xgame.js: peso 10 ÷ régua de 10 = a média
-                crua), então a fatia do MvM aqui é essa média, sem distorcer. */}
+                tokenDoCiclo em xgame.js: peso × régua de 10 = a média
+                crua), então a fatia do MvM aqui é essa média, sem distorcer.
+                🏆 DIR-115 (09/09/2026) — repesagem, dono: "recrutamos
+                caráter e treinamos habilidade" é o jargão que decidiu os
+                pesos novos — por isso ele aparece escrito aqui, junto do
+                desenho que ele explica. */}
             {xgame && ciclo && mostrarPainel && (
               <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza">
                 <div>
-                  <p className="text-sm font-extrabold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do seu Human Token</p>
-                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda deste ciclo, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                  <p className="text-sm font-extrabold text-nz-tinta">🪙 Seu Human Token — de onde vem cada ponto dele</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token deste ciclo, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                  <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — por isso o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
                 </div>
-                <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ligaDoToken(ciclo.total)} />
+                <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />
               </div>
             )}
 
@@ -1852,7 +1926,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <div className="pt-1.5 space-y-1">
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
-                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 · 💠 platina de 20 pra cima. Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia; sem isso, o token trava em 19,99.</p>
+                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima. "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina. A Platina só abre batendo os dois portões (caráter e 100% da meta de vendas); Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.</p>
                     <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
@@ -2020,8 +2094,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <div className="space-y-1">
                     {rankingOrdenado.map((l, i) => {
                       // 🏆 F9 — ordenando por Moeda, o ranking vira a tabela das LIGAS
-                      const liga = ligaDoToken(l.token);
-                      const ligaAnterior = i > 0 ? ligaDoToken(rankingOrdenado[i - 1].token) : null;
+                      // 🎖️ DIR-115 — os portões de caráter/vendas valem também
+                      // no ranking do time, senão alguém sem o piso de MvM ou
+                      // sem bater a meta apareceria classificado como Platina.
+                      const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
+                      const ligaAnterior = i > 0
+                        ? ligaComPortoesDoCiclo(rankingOrdenado[i - 1].token, { mvmVotacao: rankingOrdenado[i - 1].mvm, vendasFeitas: rankingOrdenado[i - 1].vendasFeitas })
+                        : null;
                       const cabecalho = ordemRanking === 'token' && liga.id !== ligaAnterior?.id;
                       return (
                         <React.Fragment key={l.user_id}>
@@ -2042,13 +2121,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       );
                     })}
                     {ciclo && (() => {
+                      // 🎖️ DIR-115 — o token pode já valer Platina e a LIGA
+                      // ainda travar em Ouro: os portões de caráter/vendas
+                      // seguram a promoção mesmo com pontuação de sobra.
+                      // "Falta pontuação" e "falta abrir o portão" são avisos
+                      // diferentes — misturar os dois esconde o que resolve.
+                      const ligaPelaPontuacao = ligaDoToken(ciclo.total);
+                      const travadoPorPortao = ciclo.liga.id !== ligaPelaPontuacao.id;
+                      if (travadoPorPortao) {
+                        const semCarater = recebido.media !== null && recebido.media !== undefined && recebido.media < PISO_CARATER_PLATINA;
+                        const semVendas = (Number(ciclo.vendasFeitas) || 0) < META_VENDAS_CICLO;
+                        return (
+                          <p className="text-[11px] font-semibold text-amber-600 pt-1">
+                            🔒 Sua pontuação já é de {ligaPelaPontuacao.emoji} {ligaPelaPontuacao.label}, mas a Platina tem portão: {[
+                              semCarater ? `MvM da votação ≥ ${fmtToken(PISO_CARATER_PLATINA)} (você está em ${recebido.media === null ? '—' : fmtToken(recebido.media)})` : null,
+                              semVendas ? `bater os ${META_VENDAS_CICLO} de meta de vendas do ciclo (você está em ${fmtToken(ciclo.vendasFeitas)})` : null,
+                            ].filter(Boolean).join(' e ')} — "recrutamos caráter e treinamos habilidade": sem os dois, o topo não abre.
+                          </p>
+                        );
+                      }
                       const promo = proximaLiga(ciclo.total);
                       return promo && promo.falta > 0 ? (
                         <p className="text-[11px] font-semibold text-nz-tinta pt-1">
                           ↑ Faltam <span className="text-nz-verde tabular-nums">{fmtToken(promo.falta)}</span> de token pra você subir pra {promo.liga.emoji} {promo.liga.label} — feche os dias, faça no horário e busque nota alta na votação!
                         </p>
-                      ) : ciclo.total >= 20 ? (
-                        <p className="text-[11px] font-semibold text-nz-verde pt-1">💠 Você está na elite — LIGA PLATINA, o território do Executivo Ideal. Segura o trono!</p>
+                      ) : ciclo.liga.id === 'platina' ? (
+                        <p className="text-[11px] font-semibold text-nz-verde pt-1">🏆 Você está na elite — LIGA PLATINA, o território do Executivo Ideal. Segura o trono!</p>
                       ) : null;
                     })()}
                   </div>
@@ -2169,6 +2267,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>{t.comprovacao.tipo === 'ritual' ? '🌅 ritual completo' : '📚 comprovada'}</span>
                                 )
                               )}
+                              {/* 🎙️ DIR-101.1 — "posteriormente pode ouvir o áudio".
+                                  A gratidão falada não some depois de gravada: ela
+                                  vira acervo. O link é ASSINADO e de curta validade
+                                  (o cofre é privado), então é pedido na hora do
+                                  clique — nunca fica guardado na tela. */}
+                              {t.feito && t.comprovacao?.audio_gratidao_path && (
+                                <OuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} dia={t.data} segundos={t.comprovacao.audio_gratidao_seg || 0} />
+                              )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
                                 const est = estadoDaTarefa(t);
@@ -2277,7 +2383,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {visao === 'lista' && (
             <div className="pt-1">
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} />
+              {/* 🌑 09/09/2026 — dono: "fundo branco em mais um campo descoberto".
+                  Este campo nasceu quando a Jornada ainda era painel claro. O painel
+                  virou escuro e ele ficou pra trás: caixa branca no meio do preto,
+                  com a hora sumindo de tão clara. O componente já sabe ser escuro
+                  desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
@@ -2390,10 +2501,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm text-nz-tinta-fraca">
                   {clientesManuais.length} pessoas {visaoTotal ? 'na lista do TIME' : 'na sua lista'} · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="lista-adicionar-pessoa">
                     <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
                   </Button>
+                  {/* 📥 08/09 — importar em massa. Fica ao lado de "Adicionar
+                      pessoa" porque é a mesma pergunta ("como entra gente
+                      aqui?"), respondida de dois jeitos: um a um ou a agenda
+                      inteira. Só aparece pra quem pode importar — na visão de
+                      time, a lista é de outra pessoa, e importar contato pra
+                      carteira alheia não é uma operação que exista. */}
+                  {onImportarContatos && (
+                    <Button size="sm" variant="outline" onClick={onImportarContatos} className="border-nz-verde text-nz-verde hover:bg-nz-verde-fundo">
+                      <Upload className="w-4 h-4 mr-1" /> Importar contatos
+                    </Button>
+                  )}
                   {/* o cadastro de vendedor mora aqui agora: é na Lista de
                       Networking que a rede é construída, não no topo da página */}
                   {onNovoVendedor && (
@@ -2699,7 +2821,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     </Button>
                   </div>
                 </div>
-                {minha && googleEventos === null && (
+                {minha && googleConta && (
+                  <p className="text-[11px] text-nz-tinta-fraca">
+                    🗓️ Conectado como <span className="font-semibold text-nz-tinta">{googleConta}</span> —{' '}
+                    <button type="button" onClick={trocarContaGoogle} className="font-semibold text-nz-verde hover:text-nz-verde-claro">trocar conta</button>
+                  </p>
+                )}
+                {minha && googleEventos === null && !googleConta && (
                   <p className="text-[11px] text-nz-tinta-fraca">🗓️ Conecte o Google pra ver os SEUS eventos de hoje aqui no meio (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
                 )}
                 {!minha && (

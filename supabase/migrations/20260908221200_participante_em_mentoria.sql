@@ -1,3 +1,17 @@
+-- ⚠️ NÃO APAGUE ESTE ARQUIVO POR PARECER DUPLICADO DO 20260908223124.
+--
+-- 09/09/2026 — conferido no banco: as DUAS versões estão registradas em
+-- supabase_migrations.schema_migrations (20260908221200 e 20260908223124).
+-- Apagar qualquer um dos dois arquivos faz o `supabase db push --include-all`
+-- do deploy falhar com "Remote migration versions not found in local
+-- migrations directory" — e a partir daí NENHUMA migração nova entra em
+-- produção até alguém perceber. Foi exatamente o que travou o deploy por
+-- horas em 08/09 (PR #248).
+--
+-- Os dois SQLs são idempotentes (`add column if not exists`), então rodar os
+-- dois não custa nada. A duplicata é feia; o conserto dela é caro e arriscado.
+-- Fica.
+
 -- QUEM ESTÁ NA MENTORIA — separado de quem só vota no MVM (08/09/2026).
 --
 -- Dono: "eu preciso decidir quais pessoas estão participando do MVM, da

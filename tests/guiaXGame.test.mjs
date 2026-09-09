@@ -91,11 +91,17 @@ test('perguntas e dicionário têm par completo', () => {
 });
 
 // ── os números vêm da fonte, não da memória ──────────────────────────
+// 🏆 DIR-115 (09/09/2026) — repesagem: FAIXAS_TOKEN ganhou um 4º degrau
+// (Platina). FAIXAS é CALCULADA a partir de FAIXAS_TOKEN (nunca hardcoded
+// aqui) — este teste só precisa reconhecer o novo degrau, a derivação
+// continua intocada.
 test('as faixas da moeda saem de FAIXAS_TOKEN, com o intervalo calculado', () => {
   assert.equal(FAIXAS.length, FAIXAS_TOKEN.length);
-  assert.deepEqual(FAIXAS.map((f) => f.label), ['BRONZE', 'PRATA', 'OURO']);
-  assert.equal(FAIXAS.find((f) => f.id === 'prata').intervalo, '6,66 a 17,77');
-  assert.equal(FAIXAS.find((f) => f.id === 'ouro').intervalo, '17,78 ou mais');
+  assert.deepEqual(FAIXAS.map((f) => f.label), ['BRONZE', 'PRATA', 'OURO', 'PLATINA']);
+  assert.equal(FAIXAS.find((f) => f.id === 'bronze').intervalo, '0,00 a 6,65');
+  assert.equal(FAIXAS.find((f) => f.id === 'prata').intervalo, '6,66 a 12,21');
+  assert.equal(FAIXAS.find((f) => f.id === 'ouro').intervalo, '12,22 a 17,77');
+  assert.equal(FAIXAS.find((f) => f.id === 'platina').intervalo, '17,78 ou mais');
 });
 
 test('a cotação das pontas vem de cotacaoDoDia, não de um número solto', () => {

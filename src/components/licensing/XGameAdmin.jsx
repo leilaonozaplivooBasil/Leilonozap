@@ -93,9 +93,10 @@ const DICAS = {
   ciclo: 'O jogo roda em ciclos de 22 dias úteis. A cotação do dia começa em 1,00 e cai 0,01 por dia útil até 0,80 no dia 22 — "ANTECIPAÇÃO É PODER". Sem data aberta aqui, o app usa o 1º dia útil do mês.',
   verba_producao: 'Verba mensal de PRODUÇÃO — usada como fixo quando a pessoa não tem "fixo mensal" definido na gestão do X-Performance. A conta: fixo ÷ 24 dias de operação = valor do dia; dentro do dia o PESO reparte o valor (a soma das tarefas é sempre o dia inteiro); dia com menos tarefas que o mínimo paga proporcional.',
   verba_bonus: 'Verba mensal de BÔNUS/ESTUDO (leitura, cursos). Mesma régua, só entre as tarefas de bônus do dia.',
-  perfil: 'O perfil muda os pesos do Human Token (teto 22,22 pros dois): estratégico/operacional — produção 1,5 + real time 3,67 + bônus/estudo 5,55 + PT VENDA 1,5; comercial — produção 1,36 + real time 3,33 + bônus/estudo 5,03 + PT VENDA 2,5 (vendas valem bem mais). MvM (10) é igual nos dois. Sem estudo em dia (semana ou fim de semana), o ciclo trava em 19,99 — só a Platina, Ouro continua alcançável via produção/MvM/vendas.',
+  perfil: 'O perfil muda os pesos do Human Token (teto 22,22 pros dois): estratégico/operacional — MvM 6,67 (30%, PORTÃO de caráter) + produção 6,67 + real time 3,33 + bônus/estudo 2,22 + PT VENDA 3,33; comercial — MvM 10 + produção 1,36 + real time 3,33 + bônus/estudo 5,03 + PT VENDA 2,5 (vendas valem bem mais). "Recrutamos caráter e treinamos habilidade": MvM da votação abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina — mesmo com pontuação de sobra. Vendas só abre a Platina batendo 100% da meta do ciclo. Sem estudo em dia (semana ou fim de semana), o ciclo trava em 19,99 — só o topo (Platina), Ouro continua alcançável via produção/MvM/vendas.',
   cargo: 'O cargo define a multa de atraso do FAQ: Trainee R$50, Executivo R$200, Diretor R$500.',
   mentoria: 'Está participando do Programa da Mentoria (8 Hábitos, set/2026 a mar/2027)? Independente de estar ATIVO no MvM — dá pra votar sem estar na mentoria, e vice-versa.',
+  recebeVoto: 'Ela aparece na lista de colegas votáveis da MvM? Desligado só tira ela de RECEBER voto — ela continua podendo VOTAR nos outros se quiser, continua ATIVA no jogo e continua recebendo o fixo gamificado normalmente. Pra quem já passou pela mentoria mas não deve receber avaliação dos colegas.',
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',
   categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus. Venda NÃO entra aqui — a venda da loja já remunera pelas comissões da plataforma.',
   conferencia: 'Conferência dupla da planilha: a pessoa marca a tarefa (o checkbox dela) e o gestor confirma o SIM aqui. Sem o SIM, a tarefa fica pendente de conferência.',
@@ -612,6 +613,14 @@ export default function XGameAdmin({ onVerComo } = {}) {
             const cardAberto = participanteAberto === p.id;
             const usu = usuarios.find((x) => x.id === p.user_id);
             const ehSuperAdminNaoVotavel = usu?.role === 'super_admin' && p.aceita_ser_votado !== true;
+            // 🗳️ 09/09/2026 — dono: "tem pessoas que já participaram da
+            // mentoria e não vão receber voto... eles podem votar, mas não
+            // recebem voto." Diferente do Super Admin (opt-IN, ele mesmo se
+            // liga): aqui o ADMIN desliga por pessoa, e o padrão continua
+            // sendo votável — só quem for desligado explicitamente some da
+            // lista de quem RECEBE voto (podeSerVotado, xgame.js).
+            const ehParticipanteComum = usu?.role !== 'super_admin';
+            const recebeVoto = podeSerVotado({ role: usu?.role, aceita_ser_votado: p.aceita_ser_votado });
             return (
             <div key={p.id} className={`rounded-lg border px-3 py-2 bg-white space-y-1.5 ${p.ativo ? 'border-gray-200' : 'border-gray-200 opacity-60'}`}>
               {/* cabeçalho: sempre visível — clica e abre; abrir um fecha o outro */}
@@ -626,6 +635,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                     {cardAberto ? '▾' : '▸'} {nomeDe(p.user_id)}
                     <span className="ml-2 text-[10px] font-normal text-gray-400">{p.cargo} · {p.perfil}</span>
                     {ehSuperAdminNaoVotavel && <span className="ml-2 text-[10px] font-semibold text-purple-600">🛡️ não votável (Super Admin)</span>}
+                    {ehParticipanteComum && !recebeVoto && <span className="ml-2 text-[10px] font-semibold text-blue-600" title={DICAS.recebeVoto}>🗳️ não recebe voto</span>}
                   </span>
                 </button>
                 <span className="flex items-center gap-3">
@@ -643,6 +653,14 @@ export default function XGameAdmin({ onVerComo } = {}) {
                     title={DICAS.mentoria}
                     className={`inline-flex items-center gap-1 text-[11px] font-bold ${p.em_mentoria ? 'text-purple-600' : 'text-gray-300 hover:text-purple-500'}`}
                   ><GraduationCap className="w-3.5 h-3.5" /> {p.em_mentoria ? 'na mentoria' : 'sem mentoria'}</button>
+                  {ehParticipanteComum && (
+                    <button
+                      type="button"
+                      onClick={() => salvarParticipante(p, { aceita_ser_votado: recebeVoto ? false : true })}
+                      title={DICAS.recebeVoto}
+                      className={`text-[11px] font-bold ${recebeVoto ? 'text-blue-600' : 'text-gray-300 hover:text-blue-500'}`}
+                    >🗳️ {recebeVoto ? 'recebe voto' : 'sem voto'}</button>
+                  )}
                   <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {p.ativo ? '● ATIVO' : '○ inativo'}
                   </button>

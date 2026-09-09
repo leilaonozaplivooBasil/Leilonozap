@@ -40,6 +40,8 @@ import CrmEsteiraCaptacao from './CrmEsteiraCaptacao';
 import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
+import CrmImportarContatosModal from './CrmImportarContatosModal';
+import { paraGravar, emLotes } from '@/lib/importarContatos';
 import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
 import { ouvirPedidoDeTour } from '@/lib/pedidoDeTour';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
@@ -81,6 +83,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [alertaReuniao, setAlertaReuniao] = useState(null); // 🔔 DIR-53
   const [alertasVistos, setAlertasVistos] = useState(() => new Set());
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showImportarContatos, setShowImportarContatos] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -828,6 +831,44 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   };
 
   // 🤝 DIR-43 — qualificação 1-5 da lista de network (Hábito 3)
+  // 📥 IMPORTAR CONTATOS EM MASSA (08/09/2026) — Fase B.
+  //
+  // Vai em lotes de 25 pelo mesmo caminho do lote de produtos: um POST com
+  // 800 linhas de uma vez é uma aposta — se falhar, falha tudo, e o operador
+  // não sabe o que entrou. Em lote, uma parte pode falhar sem derrubar as
+  // outras, e a tela diz quantas.
+  //
+  // ⚠️ `created_by_id` NÃO é mandado daqui de propósito: quem carimba o dono é
+  // o servidor (entityWrite), que ignora o que vier do navegador nesse campo.
+  // Mandar aqui só daria a falsa impressão de que a tela decide de quem é o
+  // contato — e foi justamente o carimbo faltando no lote que a Fase A
+  // consertou.
+  const handleImportarContatos = async (prontos) => {
+    const linhas = prontos.map(paraGravar);
+    let criados = 0;
+    let ultimoErro = null;
+    for (const lote of emLotes(linhas)) {
+      try {
+        const r = await plataforma.entities.Customer.bulkCreate(lote);
+        // A rota devolve as linhas gravadas. Conta o que o BANCO confirmou, não
+        // o que foi enviado: dizer "800 importados" sem conferir é como o
+        // "X produtos publicados na loja!" da importação de planilha, que
+        // anuncia publicação que não aconteceu.
+        criados += Array.isArray(r) ? r.length : lote.length;
+      } catch (error) {
+        console.error('[IMPORTAR CONTATOS] lote falhou:', error);
+        ultimoErro = error;
+      }
+    }
+    await loadCustomers();
+    const falhas = linhas.length - criados;
+    if (criados) toast.success(`${criados} contato${criados === 1 ? '' : 's'} na sua Lista de Networking!`);
+    // Nenhum entrou: é erro, não resultado parcial — devolve a mensagem real
+    // do servidor pra tela ("Sem permissão" é problema diferente de rede caiu).
+    if (!criados && ultimoErro) throw ultimoErro;
+    return { criados, falhas };
+  };
+
   // DIR-46 — qualificação completa da lista de network: produto apresentado +
   // 3 notas 1-5. A coluna legada `qualificacao` (estrela única) fica intocada.
   const handleQualificarContato = async (contato, quali) => {
@@ -1669,8 +1710,37 @@ _Enviado via CRM Leilão NoZap_`;
             contatoDestacado={contatoDestacado}
             onContatoDestacadoConsumido={() => setContatoDestacado(null)}
             onCriarOportunidade={criarOportunidadeDoCliente}
+            onImportarContatos={
+              // 📥 Importar só na visão "só o meu": na visão de time a lista na
+              // tela é de outras pessoas, e contato importado é carimbado pelo
+              // servidor como SEU — importar dali criaria contato na carteira
+              // errada. Quem vê tudo troca o seletor pra "só o meu" e importa.
+              visao.metodoTudo ? null : () => setShowImportarContatos(true)
+            }
           />
         )}
+
+        {/* 📥 IMPORTADOR DA LISTA DE NETWORKING — mora AQUI, colado no
+            CrmMetodo, e não lá embaixo no <TabsContent value="customers">.
+            🔴 09/09 — foi exatamente isso que quebrou o botão no dia em que
+            subiu: o modal estava dentro da aba "Clientes", que só existe
+            quando secaoAtiva === 'acompanhamento'. Na Lista de Networking
+            (secaoAtiva === 'lista') aquele bloco está `hidden` E o Radix
+            desmonta o conteúdo da aba inativa — então o clique mudava o
+            estado e não havia modal nenhum montado pra aparecer. Sem erro,
+            sem log, sem nada: o botão simplesmente não fazia efeito.
+            Regra que fica: modal mora no mesmo nível de quem tem o botão.
+
+            `existentes` é o escopo do MÉTODO (a minha lista), não a carteira
+            toda: duplicata aqui é "essa pessoa já está na SUA lista". A
+            carteira de cada um é separada — o mesmo contato pode existir em
+            duas listas. */}
+        <CrmImportarContatosModal
+          aberto={showImportarContatos}
+          onFechar={() => setShowImportarContatos(false)}
+          existentes={metodoEscopo.clientes}
+          onImportar={handleImportarContatos}
+        />
 
         {/* ══ 📊 HÁBITO 7 — VERIFICAÇÃO DO PROGRESSO (Visão Executiva) ══ */}
         {secaoAtiva === 'verificacao' && (
@@ -1891,6 +1961,7 @@ _Enviado via CRM Leilão NoZap_`;
               podeEditarUsuarioApp={vis.gerirVendedores}
             />
           )}
+
           </TabsContent>
 
           <TabsContent value="sellers">

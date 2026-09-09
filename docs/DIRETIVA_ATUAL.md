@@ -12,17 +12,17 @@
 
 ---
 
-## DIR-117 — a liga do topo vira PLATINA, não mais Diamante
+## DIR-119 — a liga do topo vira PLATINA em todo lugar (sincronizada com a repesagem que já tinha renomeado o motor)
 
-**Emitida por:** dono (09/09/2026): *"esqueça a palavra diamante e tudo platina, onde tiver diamante tira, lembra é liga platina em todos os lugares, pra não aparecer múltiplo [nome]."*
+**Emitida por:** dono (09/09/2026): *"esqueça a palavra diamante e tudo platina, onde tiver diamante tira, lembra é liga platina em todos os lugares, pra não aparecer múltiplo [nome]."* — pedido em paralelo à repesagem do DIR-115 (abaixo), que já tinha renomeado o motor (`xgame.js`) de Diamante pra Platina por conta própria; esta entrada é a reconciliação das duas pontas.
 
-**O que entra:** troca de nome pura (nenhuma regra, nenhum valor de corte mudou) — `LIGAS` em `xgame.js` (`id: 'diamante'` → `'platina'`, `'LIGA DIAMANTE'` → `'LIGA PLATINA'`), a função e a constante do DIR-113 (`travarDiamantePorEstudo`/`TRAVA_SEM_DIAMANTE` → `travarPlatinaPorEstudo`/`TRAVA_SEM_PLATINA`) e todo texto visível (painéis, tooltips, guias, o atendente 24h) em `XGame.jsx`, `CrmMetodo.jsx`, `XGameVisaoExecutiva.jsx`, `PainelCorporativo.jsx`, `PdfExecutivo.jsx`, `XGameAdmin.jsx`, `guiaXGame.js` e `tiraDuvidas.js`, com a concordância de gênero corrigida ("a Platina", não "o Platina"). Não mexe em nada fora do X-Game — o "Plano Diamante" de `PartnerPlanActivation.jsx` e as peças reais de joalheria do catálogo (`LuxuryCollection.jsx`, `insert_products.sql`, etc.) são outro contexto e ficaram intocados. O nome interno não é persistido em banco (`ligaDoToken()` calcula na hora), então não precisou de migração.
+**O que entra:** ao fazer merge com o trabalho paralelo, `xgame.js` já vinha com a liga renomeada (LIGAS, `travarTopoPorEstudo`, `ligaComPortoesDoCiclo`) — mantido como está, sem duplicar a troca de nome. O que faltava sincronizar: os textos visíveis que ainda citavam os limiares e a trava de ANTES da repesagem (ex.: "prata até 17,77 · ouro de 17,78 · platina de 20") em `XGame.jsx` e `CrmMetodo.jsx`, atualizados pros limiares reais de hoje (prata até 12,21 · ouro até 17,77 · platina de 17,78) e pros dois portões (caráter/MvM e meta de vendas). Concordância de gênero corrigida em todo lugar ("a Platina", não "o Platina"). Não mexe em nada fora do X-Game — o "Plano Diamante" de `PartnerPlanActivation.jsx` e as peças reais de joalheria do catálogo (`LuxuryCollection.jsx`, `insert_products.sql`, etc.) são outro contexto e ficaram intocados.
 
-**Prova:** suíte 1701/1701 (renomeados os mesmos casos de teste que cobriam a trava — `tests/xgame.test.mjs`, `tests/moedaPizza.test.mjs`, `tests/relatorioExecutivo.test.mjs`, `tests/navegador/moeda.spec.mjs`), lint limpo, `npm run build` sem erro. Varredura (`grep`) confirma zero sobra da palavra "diamante" nos arquivos do X-Game, fora das próprias linhas que documentam a mudança de nome.
+**Prova:** suíte 1879/1879, lint limpo, `npm run build` sem erro. Varredura (`grep`) confirma zero sobra da palavra "diamante" nos arquivos do X-Game, fora das linhas que documentam a mudança de nome.
 
 ---
 
-## DIR-116 — sincronizar o painel "Executivo Ideal" entre o Compromisso e o X-Game, e tirar a crença errada do estudo do ar
+## DIR-118 — sincronizar o painel "Executivo Ideal" entre o Compromisso e o X-Game, e tirar a crença errada do estudo do ar
 
 **Emitida por:** dono (09/09/2026): *"o executivo ideal lá da lista, do quadro, está desatualizado... eu preciso pegar do que nós fizemos agora e atualizar lá, e o que estava lá que não está constando no novo, atualizar aqui também, fazer essa sincronização, tanto de lá pra cá e daqui pra lá."*
 
@@ -38,7 +38,20 @@
 
 ---
 
-## DIR-115 — o pódio da Visão Executiva ganha foto real, emoldurada pela cor da liga
+## DIR-117 — botão "recebe voto" por pessoa + selo "Preview oficial" corrigido
+
+**Emitida por:** dono (09/09/2026): *"tem pessoas que vão receber valor na gamificação, já participaram da mentoria e não vão receber voto... eles podem votar, mas não recebem voto... eu não tenho esse botão... preciso desse botão ali na mentoria."* — e, sobre o link de prévia: *"tá vendo escrito prévia oficial, só trabalho nele."*
+
+**O que entra:**
+1. **Botão "recebe voto" no ADM X-Game** (`XGameAdmin.jsx`): `podeSerVotado` (xgame.js) ganha um segundo uso, com polaridade OPOSTA à do Super Admin — lá é opt-in (desligado até ele mesmo ligar); pra todo mundo mais agora é opt-out por ADMIN (ligado até o dono desligar essa pessoa específica). Desligar não mexe em `ativo` (continua paga/gamificada) nem em quem ELA pode votar — só em quem RECEBE o voto dela dos colegas.
+2. **O selo "Preview oficial" mentia**: `tipoDeHost` (DIR-42) classificava QUALQUER host `*.vercel.app` com "-git-" como oficial — com duas branches rodando em paralelo (`xgame-visual-polish` e `claude/project-structure-analysis-r1prad`), as DUAS mostravam o selo verde, e o dono foi parar na branch errada sem nenhum aviso na tela. Corrigido: só o host EXATAMENTE igual a `HOST_PREVIEW_OFICIAL` ganha o selo verde; qualquer outro cai no aviso âmbar de sempre.
+3. **Reconciliação de branches**: todo o trabalho de `xgame-visual-polish` (DIR-113 a DIR-115 + este) foi mergeado direto em `claude/project-structure-analysis-r1prad` — a branch que `HOST_PREVIEW_OFICIAL` de fato aponta — junto com o trabalho paralelo de lá (DIR-116, pódio com foto). Nada perdido dos dois lados.
+
+**Prova:** suíte 1879/1879 (6 testes novos pro botão de voto — lógica pura + presença/gate/efeito colateral no código-fonte da tela; 2 testes novos travando que duas branches "-git-" diferentes não podem as duas ganhar o selo verde), lint limpo, build ok.
+
+---
+
+## DIR-116 — o pódio da Visão Executiva ganha foto real, emoldurada pela cor da liga
 
 **Emitida por:** dono (09/09/2026), depois de ver o pódio no preview: *"vamos puxar a imagem, a foto da pessoa do perfil dela pra dentro da visão executiva... e melhorar esse ranking com a imagem dele... fazer a imagem dele dentro da moeda que ele está... o pódio está muito feio, dá muito cara de emoji. Pode mais foda mesmo, entendeu? Pra dar mais vontade da pra pessoa."* — pediu explicitamente o design por escrito antes de mexer no código; o plano foi discutido e aprovado ("boooraaaaa") antes desta implementação.
 
@@ -48,7 +61,30 @@
 3. O pódio (2º·1º·3º) troca o círculo de iniciais por esse Avatar — o 1º lugar com a foto maior (80px vs. 56px dos outros dois), continuando no degrau mais alto do palco. "Você" ganha um segundo anel verde por fora do anel de liga, compondo os dois em vez de substituir.
 4. A tabela "Todo mundo" ganha o mesmo Avatar (menor, 22px) ao lado do nome — consistência entre pódio e tabela, sem o pontinho solto de antes.
 
+**Nota de reconciliação (merge, 09/09/2026):** esta diretiva nasceu numerada DIR-115 numa branch paralela (`claude/project-structure-analysis-r1prad`), na mesma hora em que a outra sessão registrava a repesagem da moeda como DIR-115 na `xgame-visual-polish` — colisão de numeração entre as duas frentes, cada uma sem ver a entrada da outra. Renumerada pra DIR-116 ao mergear as duas branches; nenhum conteúdo mudou, só o número. `COR_LIGA['diamante']` também foi renomeada pra `COR_LIGA['platina']` no merge, pra acompanhar o DIR-115 (Diamante → Platina) — só o nome da chave, a paleta de cor é a mesma.
+
 **Prova:** suíte 1701/1701 (sem teste novo — é troca visual, sem lógica de negócio nova), lint limpo, `npm run build` sem erro. Verificação em navegador nova (`tests/navegador/podio-visao-executiva.*`): banca com 5 pessoas, 4 com foto (SVG de mentira) e 1 sem foto de propósito — screenshot confirma foto real emoldurada pela cor da liga no pódio e na tabela, fallback de iniciais funcionando pra quem não tem foto, e o anel duplo (liga + verde) em "você".
+
+---
+
+## DIR-115 — repesagem da moeda: MvM vira portão (caráter), Diamante vira Platina, 4 ligas parelhas
+
+**Emitida por:** dono (09/09/2026), depois de revisar a planilha original junto com Claude, em conversa: *"o jargão da empresa é recrutamos caráter e treinamos habilidade... a produção ela chega aos quarenta e cinco por cento com o realtime"*; sobre o nome do topo: *"eu não quero botar diamante... que não lembre multinível — o nível pica de chegar mesmo, que é o executivo ideal pica, que tem que ser infalível"*; aprovação final: *"bora gostei capricha."*
+
+**Objetivo:** corrigir dois problemas do desenho anterior da moeda — (1) o MvM, sozinho, valia quase metade do Human Token (45%), uma fatia grande demais pra um eixo que estatisticamente quase não varia entre pessoas (a votação real do dono, por exemplo, ficou entre 7,38 e 9,38 — 2 pontos de amplitude, contra 0-100% dos outros eixos); (2) as 3 ligas antigas tinham um "deserto" de 50 pontos sem nenhum degrau entre Prata (30%) e Ouro (80%).
+
+**Escopo autorizado (`src/lib/xgame.js`):**
+1. **Repesagem do perfil `'estrategico'`** (perfil `'comercial'` INTOCADO — decisão de outra conversa): MvM 30% (6,67) · Produção 30% (6,67) · Real Time 15% (3,33) · Vendas 15% (3,33) · Bônus/Estudo 10% (2,22) — soma 22,22 exata. Produção+Real Time juntos voltam a somar 45%, igual ao MvM antigo.
+2. **Piso de caráter** (`PISO_CARATER_LIGA = 7`, `PISO_CARATER_PLATINA = 8`) e **porteira de vendas** (100% de `META_VENDAS_CICLO`), nova função `ligaComPortoesDoCiclo(total, {mvmVotacao, vendasFeitas})`: MvM da votação abaixo de 7 trava TUDO em Bronze (mesmo com token de Platina); abaixo de 8 (mas ≥ 7) barra só a Platina (Ouro continua de pé); sem bater a meta cheia de vendas, a Platina também não abre. Os portões NUNCA alteram o número exibido (`total`) — só decidem qual liga aquele total pode valer. Usada nos 5 lugares que calculam liga de ciclo: `XGame.jsx`, `CrmMetodo.jsx` (pessoal + ranking), `XGameVisaoExecutiva.jsx` (ranking + "sua posição"), `PainelCorporativo.jsx`/PDF Executivo.
+3. **"Diamante" → "Platina"** em todo o código/UI que nomeia a liga (`LIGAS`, `FAIXAS_TOKEN`, `COR_LIGA`, `LIGA_COR` do PDF, tooltips) — só o nome mudou, os valores não.
+4. **4 ligas em degraus de ~20-30% cada** (Bronze 0-6,65 · Prata 6,66-12,21 · Ouro 12,22-17,77 · Platina 17,78-22,22), fechando o "deserto" antigo. Platina começa EXATAMENTE onde o Ouro antigo começava (17,78) — o topo não ficou mais fácil, só ganhou dois degraus novos abaixo dele.
+5. `travarDiamantePorEstudo`/`TRAVA_SEM_DIAMANTE` (DIR-113) renomeadas pra `travarTopoPorEstudo`/`TRAVA_SEM_ESTUDO_CICLO` — mesmo valor (19,99), mesmo comportamento, só o nome.
+6. Removida a Moeda duplicada em `pages/XGame.jsx` (dono, vendo a tela: *"você duplicou duas vezes a moeda"*) — a página já embute `XGameVisaoExecutiva`, que desenha a mesma moeda da mesma pessoa.
+7. Jargão **"Recrutamos caráter e treinamos habilidade"** visível nas 4 telas da moeda (Compromisso, Visão Executiva, tooltip do Human Token, tooltip do perfil em XGameAdmin), junto da explicação dos portões.
+
+**Fora do escopo / proibido:** perfil `'comercial'` (pesos e trava de vendas, decididos numa conversa separada); qualquer outro uso de "diamante" no app fora da liga da moeda (achievement "Colecionador de diamantes", templates de promoção, plano parceiro) — não é a mesma coisa e não foi pedido.
+
+**Prova:** suíte 1711/1711 (`tests/xgame.test.mjs` com os pesos novos + 9 testes novos de `ligaComPortoesDoCiclo`/`PISO_CARATER_*` + a nova geometria de `FAIXAS_TOKEN`/`LIGAS`; `tests/moedaPizza.test.mjs` e `tests/guiaXGame.test.mjs` recalculados pros novos limiares e pesos), lint limpo nos arquivos tocados, `npm run build` sem erro.
 
 ---
 

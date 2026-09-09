@@ -1,11 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ExternalLink, Check, BookOpen, HelpCircle, Type, Compass } from 'lucide-react';
 import TiraDuvidas from '@/components/licensing/TiraDuvidas';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 import {
   AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS, PAPEIS,
   ENDERECOS, FRASES_DO_RODAPE, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '@/lib/guiaXGame';
-import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
+import { vibrar, VIBRA_TOQUE, TOKEN_MAX, ligaDoToken, pesosDoPerfil } from '@/lib/xgame';
+
+// 🪙 09/09/2026 — dono: "a moeda tem que aparecer aqui... como modelo, pra
+// explicar o modelo, pra ensinar as pessoas — ela tem que ter algum lugar."
+// A moeda CHEIA do modelo (perfil padrão), pros 5 pesos no valor MÁXIMO —
+// igual ao print de prova que já foi mandado pro dono, só que agora
+// morando de verdade no Guia, não só num teste local.
+const PESOS_MODELO = pesosDoPerfil('estrategico');
+const MOEDA_MODELO = { mvm: PESOS_MODELO.mvm, producao: PESOS_MODELO.producao, realtime: PESOS_MODELO.realtime, bonus: PESOS_MODELO.bonus, vendas: PESOS_MODELO.ptVenda };
 
 // 🎓 COMO JOGAR — o guia do X-GAME dentro da plataforma (07/09/2026).
 //
@@ -168,6 +177,16 @@ function Aula({ aula, aberta, onAbrir, lida, onLida }) {
                       {f.medalha} <strong className="text-white">{f.label}</strong> {f.intervalo}
                     </span>
                   ))}
+                </div>
+              )}
+              {n.moedaModelo && (
+                <div className="mt-3 rounded-xl bg-white p-3 sm:p-4">
+                  <p className="text-[12px] font-bold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do Human Token</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">a moeda CHEIA do modelo — não é o seu progresso, é o peso máximo de cada fatia no ciclo</p>
+                  <div className="mt-2">
+                    <MoedaPizza componentes={MOEDA_MODELO} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
+                  </div>
+                  <p className="text-[11px] font-semibold text-nz-verde mt-2">"Recrutamos caráter e treinamos habilidade" — o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
                 </div>
               )}
             </div>

@@ -1166,3 +1166,77 @@ body.pc-tema .livoo-brilho-forte {
     min-height: calc(100dvh - 4rem);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 🕶️ SELECT ESCURO: A LISTA ABRIA BRANCA COM LETRA BRANCA (08/09/2026)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Reportado pelo Paim: "as letras estão em branco na aba do acompanhamento no
+ * CRM" — no "Encaminhar para Vendedor" a lista de vendedores abria ilegível.
+ *
+ * O QUE ACONTECE: um <select> com fundo escuro e `text-white` só pinta a
+ * CAIXINHA. A lista que abre no clique é desenhada pelo sistema operacional,
+ * não pela página — e no Chrome do Windows ela vem com fundo claro. As opções,
+ * porém, herdam a cor do texto do <select>: branco no branco.
+ *
+ * A CORREÇÃO é `color-scheme: dark`, que avisa o navegador para desenhar o
+ * controle nativo inteiro no tema escuro. O `option` explícito fica como rede
+ * de segurança para navegador que ignore a dica.
+ *
+ * ESCOPO: só os selects que JÁ declaram fundo escuro. O app tem 132 selects
+ * nativos — 45 escuros e 44 claros — e uma regra em `select` solto quebraria
+ * os claros. Por isso a mira é a classe de fundo que a marcação já usa.
+ *
+ * Trocou o fundo de um select para outro tom escuro? Acrescente aqui, senão
+ * a lista dele volta a abrir ilegível.
+ */
+select.bg-gray-700,
+select.bg-gray-800,
+select.bg-gray-900,
+select.bg-gray-950,
+select[class*="bg-gray-700/"],
+select[class*="bg-gray-800/"],
+select[class*="bg-gray-900/"],
+select[class*="bg-slate-700"],
+select[class*="bg-slate-800"],
+select[class*="bg-slate-900"] {
+  color-scheme: dark;
+}
+
+select.bg-gray-700 option,
+select.bg-gray-800 option,
+select.bg-gray-900 option,
+select.bg-gray-950 option,
+select[class*="bg-gray-700/"] option,
+select[class*="bg-gray-800/"] option,
+select[class*="bg-gray-900/"] option,
+select[class*="bg-slate-700"] option,
+select[class*="bg-slate-800"] option,
+select[class*="bg-slate-900"] option {
+  background-color: #1f2937;   /* gray-800 */
+  color: #f9fafb;              /* gray-50  */
+}
+
+/* 🌑 A LISTA DO <select> EM PAINEL ESCURO — 09/09/2026.
+   Dono, com print: "mais fundo branco".
+
+   O <select> fechado a gente estiliza; a LISTA que ele abre, não. Ela é
+   desenhada pelo sistema operacional a partir do fundo do PRÓPRIO <select> —
+   e os nossos usam `bg-white/[0.06]`, que é translúcido, ou seja: fundo
+   nenhum. O sistema cai no branco padrão. Junto com o `text-white` desses
+   campos, o resultado é texto branco em lista branca — invisível.
+
+   Duas coisas juntas, porque cada navegador olha pra uma:
+     • `color-scheme: dark`  → Chrome/Edge no Mac pintam a lista sozinhos
+     • fundo opaco nas <option> → Windows e Linux, que ignoram o de cima
+   Aplicar só uma delas conserta em metade das máquinas — e "consertou aqui"
+   é exatamente como este bug sobreviveu até agora. */
+@layer components {
+  select.lista-escura {
+    color-scheme: dark;
+  }
+  select.lista-escura option,
+  select.lista-escura optgroup {
+    background-color: #1F2937;
+    color: #F4F4F4;
+  }
+}

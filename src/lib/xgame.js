@@ -32,13 +32,27 @@ export const MVM_MAX = 10;
 export const TRAVA_SEM_ESTUDO = 17.77; // "Mediana" na planilha: nunca chega ao ouro
 // 🎓 09/09/2026 — dono: sem o estudo de fim de semana (resumo bem
 // detalhado), a pessoa pode ser Ouro, mas não passa disso — igual à trava
-// de estudo de semana, só que travando a Platina (LIGAS, min 20) em vez
-// do Ouro (FAIXAS_TOKEN, min 17,78).
-export const TRAVA_SEM_PLATINA = 19.99;
+// de estudo de semana, só que travando o TOPO (LIGAS, min 17,78) em vez
+// do Ouro antigo (FAIXAS_TOKEN, min 17,78 antes da repesagem DIR-115).
+//
+// 🏆 09/09/2026 — DIR-115, dono: "eu não quero botar diamante... que não
+// lembre multinível — o nível pica de chegar mesmo." Diamante virou
+// PLATINA em toda a moeda (LIGAS, FAIXAS_TOKEN, esta trava) — só o NOME
+// mudou; o valor (19,99, um sub-teto dentro da própria Platina pra quem
+// não tem o fim de semana em dia) continua o mesmo.
+export const TRAVA_SEM_ESTUDO_CICLO = 19.99;
 export const CICLO_DIAS_UTEIS = 22;
 
+// 🏆 DIR-115 (09/09/2026) — REPESAGEM da moeda, dono: "recrutamos caráter e
+// treinamos habilidade" é o jargão que decide os pesos. 4 degraus de
+// ~20-30% cada, no lugar do "deserto" antigo (prata em 30%, ouro só em
+// 80% — 50 pontos sem nenhuma linha no meio): Bronze 0-29% · Prata 30-54%
+// · Ouro 55-79% · Platina 80-100%. Platina começa EXATAMENTE onde o Ouro
+// antigo começava (17,78) — o topo não ficou mais fácil, só ganhou dois
+// degraus novos no meio do caminho e perdeu o nome de multinível.
 export const FAIXAS_TOKEN = [
-  { id: 'ouro', label: 'OURO', min: 17.78, medalha: '🥇' },
+  { id: 'platina', label: 'PLATINA', min: 17.78, medalha: '🏆' },
+  { id: 'ouro', label: 'OURO', min: 12.22, medalha: '🥇' },
   { id: 'prata', label: 'PRATA', min: 6.66, medalha: '🥈' },
   { id: 'bronze', label: 'BRONZE', min: 0, medalha: '🥉' },
 ];
@@ -212,7 +226,7 @@ export const ehTarefaDeEstudo = (titulo) =>
 /**
  * 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
  * quero um resumo bem detalhado para gerar esse bônus, tanto diariamente
- * quanto fim de semana, para ser Platina." A trava da Platina: entre os
+ * quanto fim de semana, para ser Diamante." A trava do Diamante: entre os
  * sábados/domingos já vividos no ciclo, pelo menos 60% precisam ter o
  * estudo de fim de semana feito (mesma régua da leitura de semana, só que
  * olhando só pros dias de fim de semana). Nenhum fim de semana ainda no
@@ -232,27 +246,67 @@ export function estudoFdsEmDia(diasCiclo = [], hoje = null) {
 }
 
 /**
- * A trava de estudo do CICLO — e só da Platina (DIR-113, 09/09/2026;
- * DIR-117: a liga virou Platina, não Diamante).
- * Dono, revendo o próprio pedido anterior: "o que ditava a platina é só
+ * A trava de estudo do CICLO — e só do TOPO da moeda (DIR-113, 09/09/2026;
+ * renomeada de "Diamante" pra "Platina" na repesagem DIR-115, mesmo valor).
+ * Dono, revendo o próprio pedido anterior: "o que ditava o diamante é só
  * um estudo em casa, mas ela tem que chegar ao ouro... até mesmo se ela
  * não estudar em casa — que é a produção, mais MvM, mais tudo isso."
  *
  * Sem constância de leitura de semana OU sem o estudo de fim de semana, o
- * total do ciclo capa em `TRAVA_SEM_PLATINA` (19,99) — NUNCA em
+ * total do ciclo capa em `TRAVA_SEM_ESTUDO_CICLO` (19,99) — NUNCA em
  * `TRAVA_SEM_ESTUDO` (17,77), que é a trava de um mecanismo diferente e
  * mais antigo: o Human Token DO DIA (`humanToken()`), que continua
  * intocado. Antes desta função, `XGame.jsx`/`CrmMetodo.jsx` reaplicavam
  * `TRAVA_SEM_ESTUDO` por fora, em cima do total do CICLO — bloqueando
  * Ouro pra quem não lê todo dia, o oposto do que o dono quer agora. Uma
- * função só, usada nos 4 lugares que calculam liga de ciclo (painel
+ * função só, usada nos 5 lugares que calculam liga de ciclo (painel
  * pessoal em XGame.jsx e CrmMetodo.jsx, ranking do time em CrmMetodo.jsx
  * e XGameVisaoExecutiva.jsx, e o Painel Corporativo/PDF Executivo),
  * pra nunca mais dessincronizar entre telas.
  */
-export function travarPlatinaPorEstudo(totalBruto, { estudoSemanaOk, estudoFdsOk }) {
+export function travarTopoPorEstudo(totalBruto, { estudoSemanaOk, estudoFdsOk }) {
   if (estudoSemanaOk && estudoFdsOk) return totalBruto;
-  return Math.min(totalBruto, TRAVA_SEM_PLATINA);
+  return Math.min(totalBruto, TRAVA_SEM_ESTUDO_CICLO);
+}
+
+// 🎖️ DIR-115 (09/09/2026) — OS PORTÕES DA LIGA. Dono, ao vivo, decidindo o
+// peso do MvM: "recrutamos caráter e treinamos habilidade" — caráter não é
+// nota que compensa com produção ou venda, é PRÉ-REQUISITO. "30% + veto é
+// mais forte que 45% sem veto": o MvM desceu de peso (era MVM_MAX=10,
+// 45%; agora 6,67, 30% — ver pesosDoPerfil) exatamente PORQUE virou
+// portão em vez de fatia que dinheiro compra.
+//
+// Dois portões, NUNCA sobre o número exibido (`total` — o Human Token
+// mostrado é sempre o valor real, verdadeiro) — só sobre a LIGA que aquele
+// número pode valer:
+//   1. CARÁTER — MvM abaixo de `PISO_CARATER_LIGA` trava TUDO em Bronze,
+//      não importa quanto ela produziu ou vendeu; abaixo de
+//      `PISO_CARATER_PLATINA` (mas acima do piso de Bronze) não impede
+//      Ouro, só tranca a Platina.
+//   2. VENDA — dono: "métodologia garante venda... vendas 100%" (o próprio
+//      alvo que a planilha já pedia pro Executivo Ideal, diferente dos
+//      outros 4 eixos, que pedem 80-90%). Sem bater a meta cheia do ciclo
+//      (`META_VENDAS_CICLO`), a Platina não abre — sorte não compra o topo,
+//      só método (a meta já tem caminhos: reunião conta fração, venda de
+//      alto valor converte pelo ticket médio).
+export const PISO_CARATER_LIGA = 7;      // MvM abaixo disso: Bronze, sempre
+export const PISO_CARATER_PLATINA = 8;   // MvM abaixo disso: sem Platina (Ouro é o teto)
+
+/**
+ * A liga final do ciclo, depois dos portões de caráter e venda — `total`
+ * (o número da moeda) nunca é alterado aqui, só QUAL liga ele pode valer.
+ * @param {number} total o token do ciclo, JÁ passado por `travarTopoPorEstudo`
+ * @param {{mvmVotacao?: number|null, vendasFeitas?: number}} portoes
+ */
+export function ligaComPortoesDoCiclo(total, { mvmVotacao = null, vendasFeitas = 0 } = {}) {
+  const semCaraterMinimo = mvmVotacao !== null && mvmVotacao !== undefined && mvmVotacao < PISO_CARATER_LIGA;
+  if (semCaraterMinimo) return LIGAS.at(-1); // bronze — o piso de caráter não perdoa nem prata/ouro
+  let liga = ligaDoToken(total);
+  if (liga.id !== 'platina') return liga;
+  const semCaraterPlatina = mvmVotacao !== null && mvmVotacao !== undefined && mvmVotacao < PISO_CARATER_PLATINA;
+  const semMetaDeVendas = (Number(vendasFeitas) || 0) < META_VENDAS_CICLO;
+  if (semCaraterPlatina || semMetaDeVendas) liga = LIGAS.find((l) => l.id === 'ouro') || liga;
+  return liga;
 }
 
 // 📊 08/09/2026 — dono: "quero o percentual de reunião do time" no painel
@@ -428,9 +482,20 @@ export function horaDeMin(min) {
 // pessoas às vezes não têm capacidade de votar num mentor — salvo se ele
 // mesmo permitir ser votado na MvM." Só o cargo super_admin é afetado; todo
 // outro participante ativo continua votável exatamente como sempre foi.
+//
+// 🗳️ 09/09/2026 — dono: "tem pessoas que vão receber valor na gamificação,
+// já participaram da mentoria, mas não vão receber voto — só não quero que
+// eles recebam voto... eles podem votar, mas não recebem voto." O MESMO
+// campo `aceita_ser_votado` ganha o segundo uso, com polaridade oposta pra
+// quem não é Super Admin: lá é OPT-IN (desligado por padrão, o próprio
+// dono liga pra si); aqui é OPT-OUT controlado pelo ADMIN por pessoa
+// (ligado por padrão — comportamento de sempre — só quem o dono desligar
+// explicitamente some da lista votável). Ninguém tinha esse campo setado
+// antes desta mudança, então nada muda pra quem já estava votável.
 /** Esta pessoa pode aparecer na lista de colegas votáveis da MvM Manual? */
 export function podeSerVotado({ role, aceita_ser_votado } = {}) {
-  return role !== 'super_admin' || aceita_ser_votado === true;
+  if (role === 'super_admin') return aceita_ser_votado === true;
+  return aceita_ser_votado !== false;
 }
 
 // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
@@ -536,21 +601,37 @@ export function vendasEquivalentesAltoValor(vendasPagas = [], ticketMedio = TICK
 
 // 🐛 09/09/2026 — achado na auditoria pré-publicação: os pesos do perfil
 // 'comercial' somavam 14,72, não 22,22 — quase 7,5 pontos abaixo do teto.
-// Como Ouro começa em 17,78 e Platina em 20, um executivo comercial NUNCA
+// Como Ouro começa em 17,78 e Diamante em 20, um executivo comercial NUNCA
 // conseguia chegar lá, mesmo fechando 100% em tudo (achava-se que a soma
 // batia — o teste só conferia a ORDEM dos pesos, nunca o total). Corrigido
 // mantendo a MESMA proporção entre produção/realtime/bônus do perfil não
-// comercial (1,5 : 3,67 : 5,55), só reescalada pra sobrar espaço pro
-// PT VENDA maior (2,5, intocado — é o que "domina" quem vende): a soma dos
-// três (9,72) + PT VENDA (2,5) + MvM (10) volta a fechar 22,22 certinho.
+// comercial (proporção de ANTES da repesagem abaixo), só reescalada pra
+// sobrar espaço pro PT VENDA maior (2,5, intocado — é o que "domina" quem
+// vende). Este perfil 'comercial' NÃO faz parte da repesagem DIR-115 —
+// segue com seus próprios pesos, decididos numa conversa diferente.
+//
+// 🏆 DIR-115 (09/09/2026) — REPESAGEM do perfil padrão ('estrategico'),
+// dono, ao vivo, mudando de ideia várias vezes até fechar: "recrutamos
+// caráter e treinamos habilidade... a produção ela chega aos quarenta e
+// cinco por cento com o realtime." Caráter (MvM) deixa de ser a maior
+// fatia (era MVM_MAX=10, 45%) porque virou PORTÃO — ver
+// `ligaComPortoesDoCiclo` — e um portão protege mais do que um peso
+// grande sem portão ("30% + veto é mais forte que 45% sem veto",
+// estatisticamente: a votação real quase não varia entre pessoas, então
+// um peso enorme nela era "ilusão de importância"). Produção+Real Time
+// juntos chegam aos mesmos 45% que o MvM tinha (30+15), Vendas sobe pra
+// 15% (contínuo — a meta cheia de 26 vendas é PORTÃO da Platina, não do
+// peso), e Estudo/Bônus fecha em 10%. Tudo em cima de TOKEN_MAX=22,22:
+//   MvM 30% = 6,67 · Produção 30% = 6,67 · Real Time 15% = 3,33 ·
+//   Vendas 15% = 3,33 · Bônus/Estudo 10% = 2,22 → soma 22,22 exata.
 export function pesosDoPerfil(perfil) {
   const comercial = String(perfil || '').toLowerCase() === 'comercial';
   return {
-    mvm: MVM_MAX,
-    producao: comercial ? 1.36 : 1.5,   // "real time" — não pode mais pesar 50%
-    realtime: comercial ? 3.33 : 3.67, // desempenho (X-Pay ganho/possível) — intocado
-    bonus: comercial ? 5.03 : 5.55,     // estudo/leitura mora aqui — o grande ganhador
-    ptVenda: comercial ? 2.5 : 1.5,     // sobe um pouco pra quem não é comercial também
+    mvm: comercial ? MVM_MAX : 6.67,
+    producao: comercial ? 1.36 : 6.67,
+    realtime: comercial ? 3.33 : 3.33, // desempenho (X-Pay ganho/possível) — intocado nos dois perfis
+    bonus: comercial ? 5.03 : 2.22,     // estudo/leitura mora aqui
+    ptVenda: comercial ? 2.5 : 3.33,
   };
 }
 
@@ -755,7 +836,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   // 🎓 09/09/2026 — o estudo de FIM DE SEMANA é uma tarefa à parte (tipo
-  // 'aprendizado_fds', resumo bem maior) — trava a Platina, não o Ouro.
+  // 'aprendizado_fds', resumo bem maior) — trava o topo (Platina), não o Ouro.
   const estudoFdsHoje = comEstado.some((t) => tipoDeValidacao(t) === 'aprendizado_fds' && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
@@ -962,14 +1043,21 @@ export function inicioDaSemana(d = new Date()) {
 // ── 🏆 LIGAS (F9 — promoção e rebaixamento por ciclo) ───────────────
 // As faixas da moeda viram LIGAS: o Human Token médio do ciclo decide onde
 // você joga. Platina é a elite acima do ouro — o território do Executivo
-// Ideal. Subir de liga = fechar o ciclo acima da linha da liga de cima.
-// 🩹 09/09/2026 — DIR-117, dono: "esqueça a palavra diamante, é tudo
-// platina onde tiver diamante" — renomeada a liga de cima (id e label),
-// sem mexer no valor de corte (min 20) nem em nenhuma outra regra.
-
+// Ideal, só alcançável de verdade passando pelos portões de
+// `ligaComPortoesDoCiclo` (caráter + meta de vendas). Subir de liga =
+// fechar o ciclo acima da linha da liga de cima.
+//
+// 🏆 DIR-115 (09/09/2026) — repesagem: (1) "Diamante" virou "Platina" —
+// dono, explícito: "não quero botar diamante... não lembrar multinível";
+// (2) as 4 faixas ficaram em degraus de ~20-30% cada (iguais a
+// FAIXAS_TOKEN), fechando o "deserto" antigo — prata começava em 30% e
+// ouro só em 80%, cinquenta pontos sem nenhum degrau no meio. Platina
+// continua começando EXATAMENTE onde o Ouro antigo começava (17,78): o
+// topo não ficou mais fácil de bater, só ganhou um nome novo e dois
+// degraus intermediários abaixo dele.
 export const LIGAS = [
-  { id: 'platina', label: 'LIGA PLATINA', emoji: '💠', min: 20 },
-  { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 17.78 },
+  { id: 'platina', label: 'LIGA PLATINA', emoji: '🏆', min: 17.78 },
+  { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 12.22 },
   { id: 'prata', label: 'LIGA PRATA', emoji: '🥈', min: 6.66 },
   { id: 'bronze', label: 'LIGA BRONZE', emoji: '🥉', min: 0 },
 ];
@@ -1082,6 +1170,60 @@ export const vibrar = (padrao = VIBRA_TOQUE) => {
 };
 
 const minimoDoTipo = (tipo) => (tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN);
+
+// ══════════════════════════════════════════════════════════════════════════
+// 🎙️ DIR-101.1 — NO MOMENTO DE GRATIDÃO, O ÁUDIO É A ENTREGA (09/09/2026)
+// ══════════════════════════════════════════════════════════════════════════
+// Correção de rumo do próprio dono, no mesmo dia em que a primeira versão
+// subiu: "o esforço de ter que transcrever o áudio gasta muito tempo e
+// energia. A lógica deve ser: ao escolher enviar um áudio, o usuário envia e
+// posteriormente pode ouvir o áudio — não precisaria necessariamente
+// escrever, APENAS no Momento Gratidão."
+//
+// O QUE EU TINHA ERRADO: tratei o áudio como RASCUNHO pra produzir texto —
+// fala, o computador escreve, a pessoa lê, corrige, e só então vale. Isso
+// não tira atrito, troca: em vez de digitar, revisar. Agora o áudio VALE
+// SOZINHO aqui, e a transcrição vira tarefa da máquina, não da pessoa.
+//
+// A RÉGUA NÃO SUMIU, MUDOU DE UNIDADE: caractere não mede fala. "Obrigado"
+// em dois segundos não é ritual. 15 segundos é o equivalente honesto dos 20
+// caracteres que o campo escrito já pedia — continua havendo um piso, ele só
+// passou a medir a coisa certa.
+//
+// ⚠️ VALE SÓ AQUI. O resumo de estudo continua com RESUMO_MIN = 400 escrito
+// ("não diminua", ordem do dono) — lá o áudio segue sendo ajuda pra digitar,
+// não substituto.
+export const GRATIDAO_MIN = 20;
+export const GRATIDAO_AUDIO_MIN_SEG = 15;
+
+/** Falou tempo suficiente pra valer como entrega? */
+export const audioEntregaValido = (segundos) =>
+  Number.isFinite(Number(segundos)) && Number(segundos) >= GRATIDAO_AUDIO_MIN_SEG;
+
+/**
+ * A gratidão foi entregue? Escrever OU falar — um dos dois basta, nunca os
+ * dois. Devolve { ok, por, falta } pra tela poder dizer o que ainda falta em
+ * vez de só apagar o botão.
+ */
+export function gratidaoEntregue({ texto = '', audioSeg = 0 } = {}) {
+  const escrito = String(texto || '').trim().length;
+  if (audioEntregaValido(audioSeg)) return { ok: true, por: 'audio', falta: 0 };
+  if (escrito >= GRATIDAO_MIN) return { ok: true, por: 'texto', falta: 0 };
+  // Gravou, mas curto demais: a falta é de SEGUNDOS, não de letras — dizer
+  // "faltam 12 caracteres" pra quem acabou de falar é falar grego.
+  if (Number(audioSeg) > 0) {
+    return { ok: false, por: 'audio', falta: Math.max(0, GRATIDAO_AUDIO_MIN_SEG - Math.floor(Number(audioSeg))) };
+  }
+  return { ok: false, por: 'texto', falta: Math.max(0, GRATIDAO_MIN - escrito) };
+}
+
+/** O que dizer embaixo do botão apagado, na unidade certa. */
+export function faltaDaGratidao({ texto = '', audioSeg = 0 } = {}) {
+  const r = gratidaoEntregue({ texto, audioSeg });
+  if (r.ok) return '';
+  if (r.por === 'audio') return `fale mais ${r.falta}s — ou escreva`;
+  return `escreva ${r.falta} caractere${r.falta === 1 ? '' : 's'} a mais — ou grave um áudio`;
+}
 
 // 🗣️ FALAR A LÍNGUA DE QUEM LÊ (chamado do Paim, 07/09/2026). O contador
 // dizia "18/400 caracteres". Todo mundo lê isso como "18 de um limite de

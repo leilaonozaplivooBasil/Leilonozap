@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera } from 'lucide-react';
-import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
+import useDitado from '@/hooks/useDitado';
+import BotaoDitado from '@/components/common/BotaoDitado';
+import { juntarTexto } from '@/lib/ditado';
+import { gratidaoEntregue, faltaDaGratidao, GRATIDAO_AUDIO_MIN_SEG, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
 // O que a pessoa salva às 5h toca no expediente, e o que ela salva
@@ -93,13 +96,48 @@ function BotaoRitual({ onClick, children, disabled }) {
   );
 }
 
-const GRATIDAO_MIN = 20;
 const ACAO_MIN = 10;
+
+// 🎙️ FALAR EM VEZ DE DIGITAR (DIR-101, 09/09/2026)
+//
+// Ordem do dono: levar o "enviar áudio" do Guia do Usuário pros módulos do
+// X-GAME, começando por aqui. Faz sentido justo neste: são 6h da manhã, a
+// pessoa está meio dormindo, no celular. Digitar gratidão com sentimento nessa
+// hora é o atrito que a voz tira.
+//
+// ⚠️ E A REGRA DE COLAR, QUE ESTA TELA BLOQUEIA DE PROPÓSITO?
+// Continua de pé, e o áudio NÃO fura ela. A regra existe contra copiar as
+// palavras dos OUTROS — falar a própria gratidão é autoria, e ninguém cola uma
+// fala. Digitar era o proxy que a regra usava porque era a única entrada que
+// existia. Decisão do dono em 09/09: áudio conta como "as suas palavras".
+//
+// As três defesas que sustentam isso: o texto ditado cai no CAMPO pra pessoa
+// ler e corrigir (nada sai sem ela ver), os mínimos NÃO caem (20 e 10
+// caracteres continuam valendo), e a origem fica marcada no registro.
 
 export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onConcluir }) {
   const [passo, setPasso] = useState(0);
   const [gratidao, setGratidao] = useState('');
   const [acao, setAcao] = useState('');
+  // 🎙️ o áudio de cada campo, pra virar acervo (o dono pediu pra guardar).
+  // `null` = a pessoa digitou; com blob = ela falou.
+  const [audioGratidao, setAudioGratidao] = useState(null);
+  const [audioGratidaoSeg, setAudioGratidaoSeg] = useState(0);
+  const [audioGratidaoUrl, setAudioGratidaoUrl] = useState(null);
+  // 🎙️ a transcrição da gratidão NÃO aparece na tela: ela existe só pro
+  // registro, pro Diário de Bolso e pra busca. Quem falou não revisa nada.
+  const [transcricaoGratidao, setTranscricaoGratidao] = useState('');
+  const [audioAcao, setAudioAcao] = useState(null);
+  const ditadoGratidao = useDitado({
+    // sai NA HORA que solta o botão, sem esperar o Whisper: aqui o áudio é a
+    // entrega, e fazer a pessoa esperar pra liberar o "Continuar" seria o
+    // mesmo atrito de antes com outra roupa.
+    onAudio: (blob, seg) => { setAudioGratidao(blob); setAudioGratidaoSeg(seg); },
+    onTexto: (t) => setTranscricaoGratidao(t),
+  });
+  const ditadoAcao = useDitado({
+    onTexto: (t, blob) => { setAcao((atual) => juntarTexto(atual, t)); setAudioAcao(blob); },
+  });
   const [aviso, setAviso] = useState('');
   const [semVideoLiberado, setSemVideoLiberado] = useState(false);
   // 🎵 a música do amanhecer: a do dia salva → 1ª da playlist dela → prévia
@@ -217,6 +255,16 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   useEffect(() => () => { pararGravacao(); }, []);
 
   const bloquearCola = (e) => { e.preventDefault(); setAviso(AVISO_COLAR); setTimeout(() => setAviso(''), 6000); };
+
+  // ouvir o que acabou de gravar, ali mesmo — sem ida ao servidor
+  useEffect(() => {
+    if (!audioGratidao) { setAudioGratidaoUrl(null); return undefined; }
+    const url = URL.createObjectURL(audioGratidao);
+    setAudioGratidaoUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [audioGratidao]);
+
+  const entrega = gratidaoEntregue({ texto: gratidao, audioSeg: audioGratidaoSeg });
 
   // o QUADRO DOS SONHOS: as imagens do Hábito 1 (o campo oficial é imagem_url)
   // — em ordem ALEATÓRIA que muda a cada dia (semente = a data de hoje): a
@@ -362,23 +410,69 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
           <>
             <Halo><HeartHandshake className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pelo que você é grato hoje?</h2>
+            {/* 🎙️ DIR-101.1 — FALAR VEM PRIMEIRO, e vale sozinho.
+                Às 6h da manhã, no celular, meio dormindo, falar é o caminho
+                natural. Gravou, parou: acabou. Não lê, não corrige, não
+                confere. A transcrição corre por baixo, calada, só pro
+                registro. Quem prefere escrever continua podendo — o campo
+                está logo abaixo, com o mesmo peso de sempre. */}
+            {ditadoGratidao.disponivel && !audioGratidaoUrl && (
+              <div className="space-y-1.5">
+                <BotaoDitado
+                  ditado={ditadoGratidao}
+                  rotulo="Gravar minha gratidão"
+                  rotuloGravando="Pronto, terminei"
+                  className="xeos-cru w-full justify-center !py-4 !text-[15px] !font-extrabold border-2 border-white/30 bg-white/10 text-white hover:bg-white/20"
+                />
+                <p className="text-[11px] text-white/45">
+                  {ditadoGratidao.gravando
+                    ? 'fala com o coração — toque de novo quando terminar'
+                    : `fale pelo menos ${GRATIDAO_AUDIO_MIN_SEG} segundos, e pronto: não precisa escrever nada`}
+                </p>
+              </div>
+            )}
+
+            {/* o que acabou de ser gravado: ouve na hora, e regrava se quiser */}
+            {audioGratidaoUrl && (
+              <div className="xeos-cru rounded-2xl border border-emerald-300/40 bg-emerald-400/10 p-3 space-y-2" data-teste="gratidao-gravada">
+                <p className="text-xs font-bold text-emerald-200 flex items-center justify-center gap-1.5">
+                  <Check className="w-4 h-4" strokeWidth={3} /> gratidão gravada ({audioGratidaoSeg}s)
+                </p>
+                <audio src={audioGratidaoUrl} controls className="w-full h-9" />
+                <button
+                  type="button"
+                  onClick={() => { setAudioGratidao(null); setAudioGratidaoSeg(0); setTranscricaoGratidao(''); }}
+                  className="text-[11px] text-white/55 underline hover:text-white/80"
+                >regravar</button>
+              </div>
+            )}
+
             <textarea
-              autoFocus
               value={gratidao}
               onChange={(e) => setGratidao(e.target.value)}
               onPaste={bloquearCola}
               onDrop={bloquearCola}
-              placeholder="Escreve com o coração — uma linha já muda o dia."
+              placeholder={audioGratidaoUrl
+                ? 'quer acrescentar algo escrito? (opcional)'
+                : 'ou escreve com o coração — uma linha já muda o dia.'}
               className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm p-4 min-h-[90px] focus:outline-none focus:border-white/50"
             />
-            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
-            <button
-              type="button"
-              disabled={gratidao.trim().length < GRATIDAO_MIN}
-              onClick={() => setPasso(2)}
-              className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
-              style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
-            >Continuar</button>
+            {(aviso || ditadoGratidao.erro) && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso || ditadoGratidao.erro}</p>}
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                disabled={!entrega.ok}
+                onClick={() => setPasso(2)}
+                data-teste="gratidao-continuar"
+                className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
+                style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
+              >Continuar</button>
+              {/* botão apagado tem que DIZER o que falta, na unidade certa:
+                  "faltam 12 caracteres" pra quem acabou de falar é grego */}
+              {!entrega.ok && (
+                <p className="text-[11px] text-white/45">{faltaDaGratidao({ texto: gratidao, audioSeg: audioGratidaoSeg })}</p>
+              )}
+            </div>
           </>
         )}
 
@@ -453,9 +547,17 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
                   placeholder="a ação de hoje..."
                   className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
                 />
+                <div className="flex justify-center">
+                  <BotaoDitado
+                    ditado={ditadoAcao}
+                    rotulo="falar"
+                    rotuloGravando="parar"
+                    className="xeos-cru border border-white/25 bg-white/10 text-white hover:bg-white/20"
+                  />
+                </div>
               </>
             )}
-            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso}</p>}
+            {(aviso || ditadoAcao.erro) && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso || ditadoAcao.erro}</p>}
             {(videoBlob || semVideoLiberado) && !gravando && (
               <>
                 <button
@@ -486,7 +588,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             <div>
               <button
                 type="button"
-                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
+                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
                 className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>

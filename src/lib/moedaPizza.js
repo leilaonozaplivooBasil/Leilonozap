@@ -17,10 +17,18 @@
 //
 // 🗳️ Dono, na mesma mensagem, corrigindo um mal-entendido: "o MvM só é a
 // média do valor mental, a média da votação, só isso." Isso já é verdade na
-// conta de `tokenDoCiclo`: o peso do MvM é exatamente `MVM_MAX` (10), e a
-// taxa é `mvmVotacao / MVM_MAX` — então `componentes.mvm` SEMPRE equivale à
-// própria média da votação, sem distorcer pra cima ou pra baixo. Este
-// arquivo só desenha o que já existe; não pode reinterpretar isso.
+// conta de `tokenDoCiclo`: `componentes.mvm` é sempre `pesos.mvm * (mvmVotacao
+// / MVM_MAX)` — a média da votação, nunca outra coisa (real time, tarefa
+// atrasada) disfarçada de MvM.
+//
+// 🏆 DIR-115 (09/09/2026) — antes da repesagem, `pesos.mvm` era sempre
+// `MVM_MAX` (10), então a fatia batia com o próprio número da votação sem
+// escala nenhuma. Depois da repesagem, o perfil padrão ('estrategico') tem
+// `pesos.mvm = 6,67` (30% — o MvM virou PORTÃO, não a maior fatia) — a
+// fatia ainda é proporcional à votação, só que na escala do PESO dela, não
+// mais 1 pra 1 com a nota de 0 a 10. Só o perfil 'comercial' manteve
+// `pesos.mvm = MVM_MAX`. Este arquivo só desenha o que `tokenDoCiclo` já
+// calculou; não pode reinterpretar isso.
 export const ORDEM_COMPONENTES = ['mvm', 'producao', 'realtime', 'bonus', 'vendas'];
 
 export const COMPONENTE_INFO = {
@@ -35,7 +43,7 @@ export const COMPONENTE_INFO = {
  * Monta as fatias da moeda a partir dos componentes JÁ CALCULADOS por
  * `tokenDoCiclo()` — nunca recebe taxas/pesos crus, só o resultado.
  *
- * 🩹 09/09/2026 — trava da Platina/estudo (TRAVA_SEM_PLATINA,
+ * 🩹 09/09/2026 — trava do topo/estudo (TRAVA_SEM_ESTUDO_CICLO,
  * TRAVA_SEM_ESTUDO em xgame.js): o TOTAL exibido em outras telas pode ser
  * MENOR que a soma crua dos componentes (a pessoa fez por merecer mais, mas
  * uma trava segura o número). Sem `totalConquistado`, a moeda desenharia

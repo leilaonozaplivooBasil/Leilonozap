@@ -2,6 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ondeEsta, pilulasOndeEsta, fraseVaiEntrar, planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '../src/lib/destinos.js';
+import { readFileSync } from 'node:fs';
+import { semComentarios } from './_ajuda.mjs';
 
 test('onde está: card solto = só quadro; card ligado sem hora = dia mas fora da Jornada; com hora = Jornada', () => {
   assert.deepEqual(ondeEsta({ cartao: { id: 'c' } }), { quadro: true, dia: false, jornada: false, hora: null });
@@ -67,4 +69,27 @@ test('ligar o card à tarefa e a frase do "entrou"', () => {
   assert.equal(fraseEntrou({ tarefa: { hora: '18:00' }, cartao: { id: 'c' } }, { listaNome: 'Academia' }), 'Entrou no quadro (Academia) e no seu dia, na Jornada às 18:00.');
   assert.equal(fraseEntrou({ tarefa: { hora: null }, cartao: null }), 'Entrou no seu dia (sem horário).');
   assert.equal(fraseEntrou({ tarefa: null, cartao: { id: 'c' } }), 'Entrou no quadro.');
+});
+
+// ── 🌑 09/09/2026 — "fundo branco em mais um campo descoberto" (dono, com print) ──
+test('🌑 o campo de nova tarefa da Jornada é ESCURO — a Jornada deixou de ser branca', () => {
+  // Ele nasceu quando a Jornada ainda era painel claro. O painel virou escuro e
+  // o campo ficou pra trás: caixa branca no meio do preto, com a hora sumindo de
+  // tão clara. O componente sabe ser escuro desde a DIR-90; faltava avisar aqui.
+  const METODO = semComentarios(readFileSync(new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url), 'utf8'));
+  const linha = METODO.split('\n').find((l) => l.includes('testeCampo="campo-nova-tarefa"'));
+  assert.ok(linha, 'sumiu o campo de nova tarefa da Jornada');
+  assert.match(linha, /\bescuro\b/, 'sem `escuro` ele volta a ser uma caixa branca no meio do painel preto');
+});
+
+test('🌑 o componente é escuro de ponta a ponta — nada de meio-termo ilegível', () => {
+  // Um pedaço claro no meio do escuro é pior que tudo claro: o campo da hora
+  // fica branco no branco e a pessoa não vê o que digitou.
+  const PECA = semComentarios(readFileSync(new URL('../src/components/licensing/CentralVendas/EntradaComDestinos.jsx', import.meta.url), 'utf8'));
+  // os três lugares que pintam fundo: o campo do título, a caixa de destinos e
+  // os campinhos (hora/lista). Todos têm que perguntar pelo `escuro`.
+  assert.equal((PECA.match(/escuro\s*\n?\s*\?/g) || []).length + (PECA.match(/escuro \?/g) || []).length >= 3, true,
+    'algum fundo deixou de perguntar se a tela é escura');
+  assert.match(PECA, /campoEscuro/, 'sumiu o estilo escuro dos campinhos (hora/lista)');
+  assert.match(PECA, /\[color-scheme:dark\]/, 'sem color-scheme:dark o seletor de hora do navegador volta branco');
 });

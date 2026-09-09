@@ -11,20 +11,21 @@ import {
   fichaDeRegras, sistemaDoAtendente, validarChamado, normalizarTipo,
   normalizarPrioridade, tituloDoChamado, viraTrabalho, TIPOS, LIMITE_PERGUNTA,
 } from '../src/lib/tiraDuvidas.js';
+import { semComentarios } from './_ajuda.mjs';
 import { RESUMO_MIN, TRAVA_SEM_ESTUDO, TOKEN_MAX, APLICABILIDADE_MAX, CICLO_DIAS_UTEIS, cotacaoDoDia } from '../src/lib/xgame.js';
 
 const ROTA = fs.readFileSync(new URL('../api/functions/tiraDuvidas.js', import.meta.url), 'utf8');
 const WIDGET = fs.readFileSync(new URL('../src/components/licensing/TiraDuvidas.jsx', import.meta.url), 'utf8');
 const AUDIO = fs.readFileSync(new URL('../api/functions/transcreverAudio.js', import.meta.url), 'utf8');
+const ler = (rel) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
 
 const br = (n) => Number(n).toFixed(2).replace('.', ',');
 
 // os comentários deste projeto EXPLICAM os números ("jurando que são 400",
 // "a tentação era três abas") — e é isso que se quer ler lá. As checagens
 // abaixo são sobre o CÓDIGO, então o comentário sai antes.
-const semComentarios = (fonte) => fonte
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/(^|[^:])\/\/.*$/gm, '$1');
+// (o removedor de comentários mora em tests/_ajuda.mjs — a cópia local tratava
+//  qualquer `/*` como comentário e engolia JSX tipo accept="image/*")
 
 // ── a ficha sai dos números reais, não de memória ────────────────────
 test('a ficha de regras carrega os valores de verdade do X-GAME', () => {
@@ -138,13 +139,26 @@ test('o áudio tem teto de tamanho, cortado ANTES de encher a memória', () => {
   assert.match(AUDIO, /total > LIMITE_BYTES/);
 });
 
+// 🎙️ 09/09/2026 — estas duas assertivas fixavam as LINHAS do gravador que
+// vivia dentro desta tela. O gravador saiu pro `useDitado` (o dono pediu o
+// mesmo microfone em módulos do X-GAME, e quatro cópias daquelas 60 linhas
+// seriam quatro cópias do bug de microfone-que-fica-ligado). As GARANTIAS
+// continuam valendo — mudou só quem as cumpre —, então elas passam a ser
+// cobradas onde a regra mora agora, em vez de sumirem do teste.
+const HOOK_DITADO = semComentarios(ler('../src/hooks/useDitado.js'));
+const BOTAO_DITADO = semComentarios(ler('../src/components/common/BotaoDitado.jsx'));
+
 test('a tela só desenha o microfone se a rota disser que dá — nada de botão que falha', () => {
-  assert.match(WIDGET, /setTemMicrofone\(!!j\?\.disponivel\)/);
-  assert.match(WIDGET, /\{temMicrofone && \(/);
+  assert.match(HOOK_DITADO, /\.then\(\(j\) => !!j\?\.disponivel\)/, 'a rota é quem diz se o microfone existe');
+  assert.match(BOTAO_DITADO, /if \(!ditado\?\.disponivel\) return null;/, 'sem disponibilidade, o botão não é desenhado');
+  // e a tela não pode ter voltado a desenhar um microfone por conta própria
+  assert.ok(!/new MediaRecorder|getUserMedia/.test(WIDGET), 'voltou gravador solto na tela');
 });
 
 test('o áudio vira TEXTO NO CAMPO, pra pessoa conferir antes de mandar', () => {
-  assert.match(WIDGET, /setTexto\(\(t\) => \(t \? `\$\{t\} \$\{j\.texto\}` : j\.texto\)/);
+  // A decisão que torna o áudio seguro: nada sai sem a pessoa ler.
+  assert.match(WIDGET, /onTexto: \(t\) => setTexto\(\(atual\) => juntarTexto\(atual, t, LIMITE_PERGUNTA\)\)/);
+  assert.ok(!/enviar\(|submit/i.test(HOOK_DITADO), 'o ditado não pode mandar a pergunta sozinho');
 });
 
 test('um campo só: a pessoa conta o problema, quem classifica é a IA', () => {

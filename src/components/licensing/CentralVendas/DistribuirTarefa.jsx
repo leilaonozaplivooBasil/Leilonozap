@@ -56,7 +56,10 @@ export function prazoDaPrioridade(diaISO, prioridade) {
   return dataISO(d);
 }
 const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
-const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[12px] text-white outline-none focus:border-white/40';
+const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[12px] text-white outline-none focus:border-white/40 lista-escura';
+// 🌑 `lista-escura` (index.css) é pro <select>: sem ela a LISTA que ele abre
+// vira branca com texto branco — o fundo `bg-white/[0.06]` é translúcido, e
+// o sistema desenha a lista a partir do fundo do próprio campo.
 export const ehProducao = (t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; };
 const NOVA_VAZIA = (categoria = 'mentoria', prazoHora = '18:00') => ({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria, categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora });
 

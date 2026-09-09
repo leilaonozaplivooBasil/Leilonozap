@@ -17,6 +17,7 @@ import { unidadesEmEstoque, custoEstoqueRestante } from '@/lib/custoProduto';
 import { listarTudo } from '@/lib/listarTudo';
 import { CONDICOES } from '@/lib/condicaoProduto';
 import { ORIGENS } from '@/lib/origemProduto';
+import { AVISO_CATEGORIA, CONFIANCA_MINIMA } from '@/lib/sugestaoDeCategoria';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
@@ -115,6 +116,9 @@ export default function ProductManagement() {
   // continua funcionando. Dropdown com problema não pode travar cadastro.
   const [categorias, setCategorias] = useState([]);
   const [categoriasErro, setCategoriasErro] = useState(false);
+  // 🤖 SUGESTÃO DE CATEGORIA (08/09/2026). Só preenche o campo — quem confirma
+  // é a pessoa. Categoria errada é dano escondido; a vazia esta tela já mostra.
+  const [sugestao, setSugestao] = useState(null); // null | { carregando: true } | { name, confianca, conferir }
   // 🖼️ Upload de imagens do produto — mesmo caminho já usado em EditCatalogProduct.
   const [enviandoImagens, setEnviandoImagens] = useState(false);
   const inputImagensRef = React.useRef(null);
@@ -678,6 +682,31 @@ export default function ProductManagement() {
     setShowAddForm(true);
   };
 
+  /**
+   * Pede a sugestão quando a pessoa termina de escrever a descrição.
+   *
+   * Só age com o campo de categoria VAZIO: sugerir por cima de escolha humana
+   * seria desfazer o trabalho de quem já decidiu. E nunca trava o cadastro —
+   * se a rota falhar, o seletor continua ali do jeito de sempre.
+   */
+  const pedirSugestaoDeCategoria = useCallback(async () => {
+    const descricao = String(formData.description || '').trim();
+    if (formData.category_id || descricao.length < 8) return;
+    setSugestao({ carregando: true });
+    try {
+      const r = await plataforma.functions.invoke('sugerirCategoria', { descricao });
+      if (r?.ok && r.category_id) {
+        setFormData((f) => (f.category_id ? f : { ...f, category_id: r.category_id }));
+        setSugestao({ name: r.name, confianca: r.confianca, conferir: r.confianca < CONFIANCA_MINIMA });
+      } else {
+        setSugestao(null);
+      }
+    } catch (e) {
+      console.debug('Sugestão de categoria indisponível:', e?.message);
+      setSugestao(null);
+    }
+  }, [formData.description, formData.category_id]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -690,6 +719,14 @@ export default function ProductManagement() {
       const qtdNum = Number(qtdTexto);
       if (qtdTexto === '' || !Number.isInteger(qtdNum) || qtdNum < 0) {
         alert('Informe a Quantidade Total: um número inteiro de 0 para cima. Digite 0 para zerar o estoque.');
+        return;
+      }
+
+      // 🏷️ CATEGORIA OBRIGATÓRIA (08/09/2026). A rota recusa igual — isto aqui é
+      // só pra pessoa saber antes de perder o preenchimento. Era opcional de
+      // propósito enquanto milhares de produtos estavam sem categoria; hoje são 19.
+      if (!String(formData.category_id || '').trim()) {
+        alert(AVISO_CATEGORIA);
         return;
       }
 
@@ -1659,35 +1696,47 @@ export default function ProductManagement() {
                       <Input
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        onBlur={pedirSugestaoDeCategoria}
                         className="bg-gray-700 text-white"
                         placeholder="Ex: Fritadeira Air Fryer 8L"
                         required
                       />
                     </div>
 
-                    {/* 🏷️ CATEGORIA (01/09/2026) — pedido da operação: não existia
-                        onde escolher, nem ao criar nem ao editar.
-                        OPCIONAL de propósito. Tornar obrigatório travaria a edição
-                        dos milhares de produtos já cadastrados sem categoria: quem
-                        só quisesse corrigir uma descrição teria que classificar o
-                        produto antes de conseguir salvar. */}
+                    {/* 🏷️ CATEGORIA (01/09/2026, obrigatória desde 08/09/2026).
+                        Era opcional DE PROPÓSITO enquanto milhares de produtos
+                        estavam sem categoria: exigir travaria quem só quisesse
+                        corrigir uma descrição. Esse motivo acabou — 2.834 dos
+                        2.853 já têm categoria, sobraram 19.
+                        O que fechou a decisão foi o ritmo: 27% dos cadastros de
+                        abril, 23% de maio e 56% de agosto entraram sem categoria.
+                        Limpar sem fechar a torneira é refazer tudo em dois meses.
+                        A IA sugere pela descrição (rota sugerirCategoria) — exigir
+                        sem ajudar só empurraria o trabalho pro operador, que foi
+                        exatamente como o passivo se formou. */}
                     <div>
-                      <Label className="text-gray-300">Categoria</Label>
+                      <Label className="text-gray-300">Categoria *</Label>
                       <select
                         value={formData.category_id || ''}
-                        onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                        onChange={(e) => { setFormData({ ...formData, category_id: e.target.value }); setSugestao(null); }}
                         disabled={categoriasErro}
                         className="w-full h-10 px-3 rounded-md bg-gray-700 text-white border border-gray-600 text-sm disabled:opacity-60"
                       >
-                        <option value="">— sem categoria —</option>
+                        <option value="">— escolha a categoria —</option>
                         {categorias.map((c) => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                       </select>
                       <p className="text-xs text-gray-400 mt-1">
                         {categoriasErro
-                          ? 'Não consegui carregar as categorias agora — você pode salvar o produto normalmente e definir a categoria depois.'
-                          : 'Produto sem categoria não aparece quando o cliente filtra por categoria na Loja Virtual.'}
+                          ? 'Não consegui carregar as categorias agora — recarregue a página antes de cadastrar.'
+                          : sugestao?.carregando
+                            ? 'Lendo a descrição para sugerir a categoria…'
+                            : sugestao?.name
+                              ? (sugestao.conferir
+                                  ? `Sugeri "${sugestao.name}" pela descrição, mas fiquei em dúvida — confira antes de salvar.`
+                                  : `Sugeri "${sugestao.name}" pela descrição. Troque se não for isso.`)
+                              : 'Produto sem categoria não aparece quando o cliente filtra por categoria na Loja Virtual.'}
                       </p>
                     </div>
 

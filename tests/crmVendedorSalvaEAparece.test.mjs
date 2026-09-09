@@ -145,7 +145,16 @@ test('vendedor só edita o cliente que ele mesmo criou', () => {
 
 test('o dono é carimbado pelo servidor, não pelo navegador', () => {
   // É o campo que decide quem pode editar depois — não pode vir do cliente.
-  assert.match(rota, /body\.payload\.created_by_id = eu/);
+  //
+  // 08/09/2026 — esta assertiva era `body.payload.created_by_id = eu`, a linha
+  // literal de quando só existia o cadastro um a um. Ela passava verde enquanto
+  // o carimbo IGNORAVA a criação em lote: `bulkCreate` manda array, a condição
+  // antiga exigia `!Array.isArray`, e o contato criado em lote nascia sem dono —
+  // invisível no escopo "só o meu" e impossível de editar depois. A assertiva
+  // agora cobra a REGRA, não o formato da linha: carimbar nos dois caminhos.
+  assert.match(rota, /created_by_id: eu/);
+  assert.match(rota, /action === 'create' \|\| action === 'bulkCreate'/);
+  assert.match(rota, /body\.payload\.map\(carimbar\)/);
   assert.match(rota, /const eu = _ses\.userId \|\| actorId/);
 });
 
