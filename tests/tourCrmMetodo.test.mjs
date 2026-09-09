@@ -33,7 +33,11 @@ for (const nomeConst of PASSOS) {
     const alvos = [...trecho.matchAll(/alvo:\s*'([^']+)'/g)].map((m) => m[1]);
     assert.ok(alvos.length >= 3, `${nomeConst} tem poucos passos pra ensinar o hábito inteiro`);
     for (const alvo of alvos) {
-      assert.match(TELA, new RegExp(`data-teste="${alvo}"`), `o alvo "${alvo}" de ${nomeConst} não tem elemento correspondente em CrmMetodo.jsx nem em CrmClientesTab.jsx — provável sobra de um merge`);
+      // 🖐️ 09/09/2026 — DIR-124: alguns alvos moram dentro de `.map()` e
+      // precisaram virar condicionais (`data-teste={i === 0 ? 'alvo' : undefined}`)
+      // pra não duplicar o mesmo data-teste em toda linha da lista — o
+      // regex aceita as duas formas, string pura ou dentro de um `{...}`.
+      assert.match(TELA, new RegExp(`data-teste=(?:"${alvo}"|\\{[^}]*'${alvo}'[^}]*\\})`), `o alvo "${alvo}" de ${nomeConst} não tem elemento correspondente em CrmMetodo.jsx nem em CrmClientesTab.jsx — provável sobra de um merge`);
     }
   });
 }

@@ -40,7 +40,7 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr, iniciarTour = false, onTourIniciado }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
@@ -51,6 +51,14 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
   useEffect(() => {
     try { if (!localStorage.getItem('tour_esteira_visto')) setTourAberto(true); } catch { /* localStorage indisponível — sem tour automático, sem quebrar a tela */ }
   }, []);
+  // 🖐️ 09/09/2026 — DIR-124: a Esteira era a ÚNICA das 8 sub-telas do
+  // Hábito 6 com um botão "Como funciona" PRÓPRIO, desconectado do botão
+  // global do topo (ComoFuncionaModal/pedidoDeTour.js) — quem clicava
+  // "Fazer o tour guiado desta tela" aqui não via nada acontecer. Agora
+  // esta tela também aceita o pedido de fora, igual às outras 7.
+  useEffect(() => {
+    if (iniciarTour) { setTourAberto(true); onTourIniciado?.(); }
+  }, [iniciarTour, onTourIniciado]);
   const fecharTour = () => {
     setTourAberto(false);
     try { localStorage.setItem('tour_esteira_visto', '1'); } catch { /* idem */ }

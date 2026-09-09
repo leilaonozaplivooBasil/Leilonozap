@@ -61,7 +61,10 @@ test('PASSOS_POR_PAINEL: um Hábito por chave, e todo alvo existe de verdade na 
   // exemplo, é a navegação dos 8 Hábitos, em CrmClientesTab.jsx.
   const telaInteira = METODO + CLIENTES_TAB;
   for (const alvo of alvos) {
-    assert.match(telaInteira, new RegExp(`data-teste=(\\{\`)?"${alvo}`), `o alvo "${alvo}" não tem nenhum data-teste correspondente na tela`);
+    // 🖐️ DIR-124 — alguns alvos moram dentro de `.map()` e viraram
+    // condicionais (`data-teste={i === 0 ? 'alvo' : undefined}`) pra não
+    // duplicar o mesmo data-teste em toda linha — aceita as duas formas.
+    assert.match(telaInteira, new RegExp(`data-teste=(?:(\\{\`)?"${alvo}|\\{[^}]*'${alvo}'[^}]*\\})`), `o alvo "${alvo}" não tem nenhum data-teste correspondente na tela`);
   }
 });
 
@@ -74,10 +77,25 @@ test('todo passo de todo tour tem título e um texto que ENSINA (não só descre
   }
 });
 
-test('CrmClientesTab.jsx: ouve o pedido genérico e repassa pro CrmMetodo, sem forçar navegação', () => {
+test('CrmClientesTab.jsx: ouve o pedido genérico e roteia pra quem sabe atender AGORA, sem forçar navegação', () => {
+  // 🐛 DIR-124 — o pedido virou GENÉRICO ('metodo') muito antes de existir
+  // tour pros 8 Hábitos: quando só CrmMetodo tinha tour, bastava repassar
+  // `tourPendente=true` cegamente. Agora que os 8 Hábitos têm tour (em 3
+  // componentes diferentes: CrmMetodo, CrmEsteiraCaptacao e esta própria
+  // tela), o pedido tem que decidir NA HORA qual dos 4 destinos atender,
+  // olhando a tela atual (`secaoAtivaRef`/`subAcompRef`) — nunca forçando
+  // `setSecao(...)` (isso SIM seria navegação forçada).
   assert.match(CLIENTES_TAB, /import \{ ouvirPedidoDeTour \} from '@\/lib\/pedidoDeTour'/);
   assert.match(CLIENTES_TAB, /ouvirPedidoDeTour\(\(id\) => \{/);
-  assert.match(CLIENTES_TAB, /if \(id === 'metodo'\) setTourPendente\(true\);/, 'o pedido é genérico — quem decide o Hábito é o CrmMetodo, não esta tela forçando setSecao');
+  const listenerInicio = CLIENTES_TAB.indexOf('useEffect(() => ouvirPedidoDeTour((id) => {');
+  const listenerFim = CLIENTES_TAB.indexOf('}), []);', listenerInicio);
+  const listener = CLIENTES_TAB.slice(listenerInicio, listenerFim);
+  assert.ok(!/setSecao\(/.test(listener), 'o listener nunca pode forçar navegação pra outro Hábito');
+  assert.match(listener, /secaoAtivaRef\.current/, 'precisa olhar a tela ATUAL pra decidir o destino certo');
+  assert.match(listener, /setTourPendente\(true\)/);
+  assert.match(listener, /setTourVerificacaoAberto\(true\)/);
+  assert.match(listener, /setTourAcompanhamentoAberto\(true\)/);
+  assert.match(listener, /setTourEsteiraPendente\(true\)/);
   assert.match(CLIENTES_TAB, /iniciarTour=\{tourPendente\}/);
   assert.match(CLIENTES_TAB, /onTourIniciado=\{\(\) => setTourPendente\(false\)\}/);
 });
