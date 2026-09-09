@@ -34,21 +34,32 @@ export const COMPONENTE_INFO = {
 /**
  * Monta as fatias da moeda a partir dos componentes JÁ CALCULADOS por
  * `tokenDoCiclo()` — nunca recebe taxas/pesos crus, só o resultado.
+ *
+ * 🩹 09/09/2026 — trava do Diamante/estudo (TRAVA_SEM_DIAMANTE,
+ * TRAVA_SEM_ESTUDO em xgame.js): o TOTAL exibido em outras telas pode ser
+ * MENOR que a soma crua dos componentes (a pessoa fez por merecer mais, mas
+ * uma trava segura o número). Sem `totalConquistado`, a moeda desenharia
+ * fatias somando mais do que o número no centro do desenho — dois números
+ * discordando na mesma tela. Passando o total JÁ TRAVADO, as fatias
+ * truncam exatamente onde o total real para, igual que ele.
  * @param {{mvm?:number, producao?:number, realtime?:number, bonus?:number, vendas?:number}} componentes
  * @param {number} max TOKEN_MAX (22,22) — injetado, nunca importado, pra este arquivo não depender de xgame.js
+ * @param {number} [totalConquistado] o total JÁ TRAVADO (ex.: ciclo.total) — default: soma crua dos componentes, sem trava
  * @returns {{fatias: Array<{k,valor,pct,inicio,fim}>, conquistado:number, restante:number, max:number}}
  */
-export function fatiasDaMoeda(componentes = {}, max) {
+export function fatiasDaMoeda(componentes = {}, max, totalConquistado) {
   const tetoMax = Number(max) || 0;
+  const limite = totalConquistado != null ? Math.max(0, Math.min(Number(totalConquistado) || 0, tetoMax)) : tetoMax;
   let acumulado = 0;
   const fatias = ORDEM_COMPONENTES.map((k) => {
-    const valor = Math.max(0, Number(componentes[k]) || 0);
+    const bruto = Math.max(0, Number(componentes[k]) || 0);
+    const valor = Math.min(bruto, Math.max(0, limite - acumulado)); // nunca passa do total já travado
     const inicio = acumulado;
     acumulado += valor;
     return { k, valor, inicio, fim: acumulado, pct: tetoMax > 0 ? (valor / tetoMax) * 100 : 0 };
   });
   const conquistado = Math.min(acumulado, tetoMax);
-  const restante = Math.max(0, tetoMax - acumulado);
+  const restante = Math.max(0, tetoMax - conquistado);
   return { fatias, conquistado, restante, max: tetoMax };
 }
 

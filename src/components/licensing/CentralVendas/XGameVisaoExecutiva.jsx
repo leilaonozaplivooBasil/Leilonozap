@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, TRAVA_SEM_DIAMANTE } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, TRAVA_SEM_DIAMANTE, TOKEN_MAX } from '@/lib/xgame';
+import MoedaPizza from './MoedaPizza';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -151,7 +152,7 @@ export default function XGameVisaoExecutiva() {
           }
           const votosRecebidos = votosPor[r.user_id];
           const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
-          const { total: tokenBruto } = tokenDoCiclo({
+          const { total: tokenBruto, componentes } = tokenDoCiclo({
             diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
@@ -162,6 +163,11 @@ export default function XGameVisaoExecutiva() {
           return {
             ...r,
             token,
+            // 🪙 09/09/2026 — DIR-113.1, dono: "precisa ter uma explicação...
+            // no painel dele da pessoa, na visão executiva, mostrando a
+            // moeda completa." Guardado aqui pra "Sua posição" desenhar a
+            // MESMA MoedaPizza do Compromisso, sem recalcular nada.
+            componentes,
             mvm: mvmDoVoto,
             regularidade: r.dias ? r.dias_fechados / r.dias : 0,
             fogo,
@@ -302,6 +308,25 @@ export default function XGameVisaoExecutiva() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 🪙 DIR-113.1 (09/09/2026) — dono, ao vivo: "precisa ter uma
+          explicação... no painel dele da pessoa, na visão executiva,
+          explicando como chega aos 22,22, mostrando a moeda completa."
+          A MESMA MoedaPizza do Compromisso, com os componentes já
+          calculados ali em cima (nada recalculado) — pra quem só olha a
+          Visão Executiva também entender de onde vem o Token, não só o
+          número final. Cartão sólido de propósito: esta seção mistura
+          fundos claros e escuros pela tela, e um fundo translúcido aqui
+          já rendeu "cor feia" noutra tela nesta mesma sessão. */}
+      {meuLinha && (
+        <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-executivo">
+          <div>
+            <p className="text-sm font-extrabold text-nz-tinta">🪙 Sua Moeda — de onde vem cada ponto do seu Human Token</p>
+            <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda deste ciclo, até o teto de {fmt(TOKEN_MAX)}</p>
+          </div>
+          <MoedaPizza componentes={meuLinha.componentes} total={meuLinha.token} max={TOKEN_MAX} liga={ligaDoToken(meuLinha.token)} />
         </div>
       )}
 

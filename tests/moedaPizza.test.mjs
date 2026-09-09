@@ -90,3 +90,44 @@ test('CrmMetodo.jsx: a moeda em fatias usa OS MESMOS dados já calculados do cic
   );
 });
 
+test('XGameVisaoExecutiva.jsx: "sua posição" também desenha a moeda, com os componentes já calculados no ranking', () => {
+  const EXECUTIVA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx', import.meta.url), 'utf8');
+  assert.match(EXECUTIVA, /import MoedaPizza from '\.\/MoedaPizza'/);
+  assert.match(EXECUTIVA, /const \{ total: tokenBruto, componentes \} = tokenDoCiclo\(/, 'precisa guardar os componentes retornados por tokenDoCiclo, não só o total');
+  assert.match(EXECUTIVA, /componentes,\s*\n\s*mvm: mvmDoVoto,/, 'os componentes têm que sobreviver no objeto da linha (não descartados)');
+  assert.match(
+    EXECUTIVA,
+    /<MoedaPizza componentes=\{meuLinha\.componentes\} total=\{meuLinha\.token\} max=\{TOKEN_MAX\} liga=\{ligaDoToken\(meuLinha\.token\)\}/,
+    'a Visão Executiva não pode calcular a moeda de novo — só repassar o que o ranking já calculou',
+  );
+});
+
+// 🩹 DIR-113.1 — a trava (TRAVA_SEM_DIAMANTE/TRAVA_SEM_ESTUDO, xgame.js) pode
+// segurar o TOTAL exibido abaixo da soma crua dos componentes (a pessoa fez
+// por merecer mais, mas uma trava prende o número). Sem isso, o desenho
+// mostraria fatias somando mais do que o número no centro da moeda.
+test('fatiasDaMoeda: com um total já TRAVADO (abaixo da soma crua), as fatias truncam no mesmo lugar — nunca discordam do número central', () => {
+  const componentesSemTrava = { mvm: 10, producao: 1.5, realtime: 3.67, bonus: 5.55, vendas: 1.5 }; // soma 22.22
+  const totalTravado = 17.77; // TRAVA_SEM_ESTUDO
+  const { fatias, conquistado, restante } = fatiasDaMoeda(componentesSemTrava, TOKEN_MAX, totalTravado);
+  const somaFatias = fatias.reduce((s, f) => s + f.valor, 0);
+  assert.equal(Math.round(somaFatias * 100) / 100, totalTravado, 'as fatias não podem somar mais do que o total travado');
+  assert.equal(Math.round(conquistado * 100) / 100, totalTravado);
+  assert.equal(Math.round((conquistado + restante) * 100) / 100, TOKEN_MAX);
+  // mvm(10) + producao(1.5) + realtime(3.67) = 15.17 cabem inteiros; bônus
+  // (5.55) só cabe até completar 17.77 (mais 2.6) — o resto dele, e vendas
+  // inteiro, ficam de fora (é exatamente esse "de fora" que a trava segura)
+  const porK = Object.fromEntries(fatias.map((f) => [f.k, f.valor]));
+  assert.equal(porK.mvm, 10);
+  assert.equal(porK.producao, 1.5);
+  assert.equal(porK.realtime, 3.67);
+  assert.equal(Math.round(porK.bonus * 100) / 100, 2.6);
+  assert.equal(porK.vendas, 0);
+});
+
+test('fatiasDaMoeda: sem passar totalConquistado, continua somando cru (compatível com quem já chamava sem o 3º argumento)', () => {
+  const componentes = { mvm: 5, producao: 1, realtime: 2, bonus: 3, vendas: 0.5 };
+  const { conquistado } = fatiasDaMoeda(componentes, TOKEN_MAX);
+  assert.equal(conquistado, 11.5);
+});
+
