@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  ordenarPorHora, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -218,7 +218,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const carregarTarefas = useCallback(() => {
     if (!uid) return;
     plataforma.entities.MetodoTarefa.filter({ user_id: uid, data: dia })
-      .then((rows) => { setTarefas((Array.isArray(rows) ? rows : []).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.hora).localeCompare(String(b.hora)))); setDiaLido(dia); })
+      // 🕐 09/09/2026 — A HORA MANDA. Aqui estava o inverso: ordenava por
+      // `ordem` e só desempatava por `hora`. Como toda tarefa nova nascia com
+      // `ordem` = fim da fila, uma tarefa marcada pras 08:00 entrava depois das
+      // 22h — na Lista E na Jornada, que são a MESMA linha (ver destinos.js).
+      // E lista fora de ordem cronológica faz `estadoDasTarefas` marcar como
+      // PERDIDA uma tarefa que está acontecendo agora (ver ordenarPorHora).
+      .then((rows) => { setTarefas(ordenarPorHora(Array.isArray(rows) ? rows : [])); setDiaLido(dia); })
       .catch(() => { setTarefas([]); setDiaLido(dia); });
   }, [uid, dia]);
   useEffect(() => { setDiaLido(null); }, [dia]);

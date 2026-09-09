@@ -133,8 +133,50 @@ export const ESTADOS = {
  * @param tarefas linhas de metodo_tarefas do dia, em ordem
  * @param agoraMin minutos desde 00:00 (hora local do jogador)
  */
+/**
+ * 🕐 A ORDEM DO DIA É A HORA. `ordem` só desempata.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 🔴 POR QUE ISTO EXISTE (09/09/2026) — E POR QUE NÃO É COSMÉTICO
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Dono, com print: criou uma tarefa para as 08:00 do dia seguinte e ela entrou
+ * DEPOIS das 22h. A causa: `DistribuirTarefa` gravava toda tarefa nova com
+ * `ordem: tarefasDoDia.length` — o fim da fila — e a jornada ordenava por
+ * `ordem`, não por `hora`.
+ *
+ * Parecia desalinho de tela. Não é. `estadoDasTarefas` (logo abaixo) calcula a
+ * janela de cada tarefa como "da hora dela até a hora da PRÓXIMA DA LISTA".
+ * Com a lista fora de ordem cronológica, a janela de uma tarefa pode TERMINAR
+ * ANTES DE COMEÇAR — e aí ela pula AGORA e ATRASADO e cai direto em PERDIDO.
+ *
+ * Medido no motor de verdade, com a lista do print, às 10h45:
+ *   10:30 "Organização do negócio" → PERDIDO   (ordenando por hora: AGORA)
+ * A tarefa que a pessoa está fazendo NAQUELE MINUTO era dada como perdida.
+ *
+ * E isso decide X-Pay e zeragem do dia. Medido no banco: 3 a 4 pessoas por dia
+ * nessa situação, nos quatro dias anteriores.
+ *
+ * ⚠️ SEM HORA VAI PRO FIM, e não pro começo. `''` e `null` comparados como
+ * texto ordenam ANTES de qualquer dígito — ordenar ingenuamente por hora
+ * jogaria as 4 tarefas sem hora do banco pro topo do dia. Elas ficam no fim,
+ * mantendo a ordem relativa que já tinham.
+ */
+export function ordenarPorHora(tarefas = []) {
+  return [...(Array.isArray(tarefas) ? tarefas : [])]
+    .map((t, i) => ({ t, i, min: minutos(t?.hora) }))
+    .sort((a, b) => {
+      if (a.min === null && b.min === null) return (a.t?.ordem ?? 0) - (b.t?.ordem ?? 0) || a.i - b.i;
+      if (a.min === null) return 1;
+      if (b.min === null) return -1;
+      return a.min - b.min || (a.t?.ordem ?? 0) - (b.t?.ordem ?? 0) || a.i - b.i;
+    })
+    .map((x) => x.t);
+}
+
 export function estadoDasTarefas(tarefas = [], agoraMin) {
-  const lista = [...tarefas].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  // 🕐 a hora manda (ver ordenarPorHora): a janela de cada tarefa depende de a
+  // lista estar em ordem cronológica, senão o estado mente.
+  const lista = ordenarPorHora(tarefas);
   return lista.map((t, i) => {
     if (t.feito) return { ...t, estado: ESTADOS.FEITO };
     const ini = minutos(t.hora);
