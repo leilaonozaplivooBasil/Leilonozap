@@ -5,92 +5,35 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    {
-      "source": "/c/:cargo",
-      "destination": "/api/convite?cargo=:cargo"
-    },
-    {
-      "source": "/p/:id",
-      "destination": "/api/produto?id=:id"
-    },
-    {
-      "source": "/l/:id",
-      "destination": "/api/leilao?id=:id"
-    },
-    {
-      "source": "/((?!api/|assets/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/c/:cargo", "destination": "/api/convite?cargo=:cargo" },
+    { "source": "/p/:id", "destination": "/api/produto?id=:id" },
+    { "source": "/l/:id", "destination": "/api/leilao?id=:id" },
+    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/version.json",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, must-revalidate"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-store, must-revalidate" }]
     },
     {
       "source": "/(sw.js|registerSW.js|manifest.webmanifest)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     },
     {
       "source": "/((?!api/|assets/)(?!.*\\.(?:js|mjs|css|png|jpg|jpeg|webp|avif|gif|svg|ico|woff|woff2|ttf|mp4|txt|xml)$).*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     }
   ],
   "crons": [
-    {
-      "path": "/api/functions/syncNexusSheet",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/functions/finalizeExpiredAuctions",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/functions/activateScheduledAuctions",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/functions/expirarReservasEstoque",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/functions/alertaReservasOrfas",
-      "schedule": "30 9 * * *"
-    },
-    {
-      "path": "/api/functions/renovarTokenMelhorEnvio",
-      "schedule": "17 5 * * *"
-    },
-    {
-      "path": "/api/functions/liquidarArrematesPendentes",
-      "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/functions/gerarGastosFixos",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/functions/gerarJornadaDoDia",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/functions/purgarAudiosAntigos",
-      "schedule": "20 3 * * *"
-    }
+    { "path": "/api/functions/syncNexusSheet", "schedule": "0 2 * * *" },
+    { "path": "/api/functions/finalizeExpiredAuctions", "schedule": "* * * * *" },
+    { "path": "/api/functions/activateScheduledAuctions", "schedule": "* * * * *" },
+    { "path": "/api/functions/expirarReservasEstoque", "schedule": "* * * * *" },
+    { "path": "/api/functions/alertaReservasOrfas", "schedule": "30 9 * * *" },
+    { "path": "/api/functions/renovarTokenMelhorEnvio", "schedule": "17 5 * * *" },
+    { "path": "/api/functions/liquidarArrematesPendentes", "schedule": "*/10 * * * *" },
+    { "path": "/api/functions/gerarGastosFixos", "schedule": "0 6 * * *" },
+    { "path": "/api/functions/gerarJornadaDoDia", "schedule": "0 7 * * *" },
+    { "path": "/api/functions/purgarAudiosAntigos", "schedule": "20 3 * * *" }
   ]
 }

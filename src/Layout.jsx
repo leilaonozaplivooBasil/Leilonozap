@@ -209,12 +209,49 @@ export default function Layout({ children, currentPageName }) {
     };
     window.addEventListener('openLoginModal', handleOpenLoginModal);
 
+    // 🖼️ 09/09/2026 — A FOTO SALVAVA E A TELA NÃO MOSTRAVA.
+    //
+    // A Iara trocou a foto QUATRO vezes num dia. As três primeiras falharam de
+    // verdade (era o PONTO do #304, corrigido às 14h33). A quarta GRAVOU — dá
+    // pra ver no banco, `avatar_url` escrito às 17h32 — e mesmo assim ela
+    // mandou "não consigo" três minutos depois.
+    //
+    // O motivo: `currentUser` aqui é lido do localStorage UMA VEZ, na abertura
+    // do app (o useState com função lá em cima). O Perfil grava no banco e no
+    // localStorage, mas ninguém avisa este componente — então o avatar da barra
+    // e do menu lateral seguem mostrando o antigo até fechar e abrir o app.
+    //
+    // Do lado de quem usa, salvar-e-não-mudar é indistinguível de não salvar.
+    // Por isso ela tentou de novo, e de novo.
+    //
+    // ⚠️ Existe um `syncUserData` neste arquivo que buscaria o dado fresco do
+    // banco — e ele NUNCA É CHAMADO em lugar nenhum. Não passei a chamá-lo de
+    // propósito: ele consulta o banco, e o evento resolve sem custo nenhum.
+    // Mesmo padrão do `cartUpdated` logo acima.
+    //
+    // ⚠️ Passa pelo `safeMergeUser` como todo `setCurrentUser` deste arquivo:
+    // sem isso, salvar o perfil rebaixaria o próprio admin pra 'user' — trocar
+    // um bug por outro pior.
+    const handleUsuarioAtualizado = (ev) => {
+      const vindoDoEvento = ev?.detail && typeof ev.detail === 'object' ? ev.detail : null;
+      let atualizado = vindoDoEvento;
+      if (!atualizado) {
+        // Sem carona no evento, lê do localStorage — que o Perfil acabou de gravar.
+        try { atualizado = JSON.parse(localStorage.getItem('currentUser') || 'null'); }
+        catch { atualizado = null; }
+      }
+      if (!atualizado?.id) return;
+      setCurrentUser((anterior) => safeMergeUser(atualizado, anterior));
+    };
+    window.addEventListener('usuarioAtualizado', handleUsuarioAtualizado);
+
     return () => {
       window.removeEventListener('cartUpdated', updateCartCount);
       window.removeEventListener('openCartPopup', handleOpenCartPopup);
       window.removeEventListener('openLoginModal', handleOpenLoginModal);
+      window.removeEventListener('usuarioAtualizado', handleUsuarioAtualizado);
     };
-  }, []);
+  }, [safeMergeUser]);
 
   // 🎯 Popup de cadastro por indicação: quem chega por um link ?ref= (influenciador/licenciado)
   // e ainda não é logado recebe o convite pra se cadastrar vinculado a quem indicou.
