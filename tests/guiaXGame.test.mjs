@@ -239,9 +239,28 @@ test('a aula "Quem é quem aqui dentro" existe e desenha os papéis', () => {
   assert.match(TELA, /PAPEIS\.map/);
 });
 
-test('o botão "Como Funciona" leva pro Guia de qualquer aba da Top College', () => {
+test('o botão "Como Funciona" está em toda aba da Top College, menos dentro do próprio Guia', () => {
   assert.match(PAGINA, /Como Funciona/);
-  assert.match(PAGINA, /setCatalogSubTab\('catalogo-guia'\)/);
   // não pode aparecer duplicado dentro do próprio Guia — ela já está lá
   assert.match(PAGINA, /catalogSubTab !== 'catalogo-guia'/);
+});
+
+// 🆙 09/09/2026, 2ª rodada do mesmo dia — dono: "quando ela tiver dúvida ela
+// vai no Como Funciona pra dominar a plataforma". O botão evoluiu de "só
+// navega pra aba do Guia" pra "abre o Tira Dúvidas na hora, sabendo em qual
+// tela a pessoa está perdida" — sem inventar mais um flutuante brigando com
+// a Leila e o X-Music.
+test('o botão "Como Funciona" abre o Tira Dúvidas na hora, sem sair da tela', () => {
+  const MODAL = fs.readFileSync(new URL('../src/components/licensing/ComoFuncionaModal.jsx', import.meta.url), 'utf8');
+  assert.match(PAGINA, /import ComoFuncionaModal from/);
+  assert.match(PAGINA, /setComoFuncionaAberto\(true\)/, 'o botão precisa abrir o modal, não só trocar de aba direto');
+  assert.match(PAGINA, /<ComoFuncionaModal/);
+  assert.match(PAGINA, /pagina=\{paginaAtual\}/, 'o modal precisa saber em qual seção a pessoa está');
+  assert.match(MODAL, /<TiraDuvidas/, 'o modal tem que trazer o mesmo Tira Dúvidas de sempre, não reinventar um chat novo');
+  assert.match(MODAL, /useSegurarCamada/, 'sem isso os outros flutuantes (X-Music, Leila) não sabem sumir da frente dele');
+  assert.match(MODAL, /onAbrirGuia/, 'precisa deixar um caminho pro guia completo, pra quem quiser os 8 Hábitos do zero');
+});
+
+test('"Ver o guia completo" do modal leva pra aba certa e fecha o modal', () => {
+  assert.match(PAGINA, /onAbrirGuia=\{\(\) => \{ setCatalogSubTab\('catalogo-guia'\); setComoFuncionaAberto\(false\); \}\}/);
 });
