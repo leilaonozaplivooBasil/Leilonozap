@@ -8,7 +8,7 @@ import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAut
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
-import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao } from '@/lib/filaComprovacoes';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
 // feito pelo painel Admin do Licensing). É AQUI que o dono do jogo decide:
@@ -287,6 +287,9 @@ export default function XGameAdmin({ onVerComo } = {}) {
   // cabeçalho — em vez de uma lista corrida que só o texto de cada linha
   // já dizia a data.
   const [buscaComp, setBuscaComp] = useState('');
+  // 📅 dono: "um menu suspenso pra escolher qual é a data do mês. Hoje,
+  // ontem..." — filtro A MAIS, soma com a busca acima (nunca substitui).
+  const [dataEscolhidaComp, setDataEscolhidaComp] = useState('todas');
   const [iaLigada, setIaLigada] = useState(null);
   const [iaDetalhe, setIaDetalhe] = useState(''); // modelo, ou o erro real do gateway quando cai
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
@@ -400,6 +403,9 @@ export default function XGameAdmin({ onVerComo } = {}) {
   // a mesma data, nunca reordena por conta própria (lógica pura, testada
   // em tests/filaComprovacoes.test.mjs).
   const compPorData = useMemo(() => agruparComprovacoesPorData(compFiltradas), [compFiltradas]);
+  const compGruposExibidos = useMemo(() => (
+    dataEscolhidaComp === 'todas' ? compPorData : compPorData.filter(([data]) => data === dataEscolhidaComp)
+  ), [compPorData, dataEscolhidaComp]);
 
   return (
     <div className="space-y-4 text-sm">
@@ -430,7 +436,9 @@ export default function XGameAdmin({ onVerComo } = {}) {
           </div>
 
           {/* 🔎 busca única — nome ("luciano") OU data ("09/09") — pra achar
-              rápido sem precisar rolar a fila inteira dia por dia. */}
+              rápido sem precisar rolar a fila inteira dia por dia. Mais o
+              menu suspenso de data (dono: "Hoje, ontem...") — um filtro A
+              MAIS, que soma com a busca, nunca a substitui. */}
           <div className="flex items-center gap-1.5">
             <Input
               placeholder="🔎 buscar por nome ou por data (ex.: “luciano” ou “09/09”)"
@@ -441,6 +449,17 @@ export default function XGameAdmin({ onVerComo } = {}) {
             {buscaComp && (
               <button type="button" onClick={() => setBuscaComp('')} className="text-[11px] text-gray-400 hover:text-gray-600">limpar</button>
             )}
+            <select
+              value={dataEscolhidaComp}
+              onChange={(e) => setDataEscolhidaComp(e.target.value)}
+              className="h-8 shrink-0 text-[11px] rounded-md border border-gray-300 bg-white px-1.5"
+              data-teste="comprovacoes-filtro-data"
+            >
+              <option value="todas">todas as datas</option>
+              {compPorData.map(([data]) => (
+                <option key={data} value={data}>{rotuloDataAmigavel(data)}</option>
+              ))}
+            </select>
           </div>
 
           {/* 🚨 radar: quem acumula reprova/dúvida · 🎖️ quem só aprova de primeira */}
@@ -456,19 +475,23 @@ export default function XGameAdmin({ onVerComo } = {}) {
 
           {compFiltradas.length === 0 ? (
             <p className="text-[11px] text-gray-500">{buscaComp ? 'Nada encontrado nessa busca.' : 'Nada aqui nesse filtro — quando alguém comprovar uma tarefa, a imagem chega nesta fila.'}</p>
+          ) : compGruposExibidos.length === 0 ? (
+            <p className="text-[11px] text-gray-500">Nada nessa data.</p>
           ) : (
             <div className="space-y-3" data-teste="comprovacoes-por-data">
-              {compPorData.map(([data, itens]) => (
+              {compGruposExibidos.map(([data, itens]) => (
                 <div key={data} className="space-y-2">
                   <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide sticky top-0 bg-gray-50 -mx-1 px-1 py-0.5" data-teste="comprovacoes-cabecalho-data">
                     📅 {rotuloDataComprovacao(data)} <span className="font-normal normal-case text-gray-400">· {itens.length} comprovaç{itens.length > 1 ? 'ões' : 'ão'}</span>
                   </p>
                   {/* 👤 dono: "eu quero já separado por datas e por nomes...
-                      nome das pessoas que estão participando." Mesmo
-                      subagrupamento por pessoa de Comprovacoes.jsx, dentro do
-                      dia — o nome sai da linha (já está no subcabeçalho). */}
+                      nome das pessoas que estão participando" — depois: "a
+                      galera lateral, pra ficar mais organizado... pro gestor
+                      não ficar forçando a mente." Um CARD por pessoa, lado a
+                      lado num grid, em vez de empilhado. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
                   {agruparComprovacoesPorPessoa(itens, nomeDe).map(([pessoaId, nome, itensDaPessoa]) => (
-                    <div key={pessoaId} className="space-y-1 pl-2 border-l-2 border-gray-100" data-teste="comprovacoes-grupo-pessoa">
+                    <div key={pessoaId} className="space-y-1 rounded-lg border border-gray-200 bg-gray-50/60 p-2" data-teste="comprovacoes-grupo-pessoa">
                       <p className="text-[10px] font-bold text-gray-700 truncate" data-teste="comprovacoes-cabecalho-pessoa">
                         👤 {nome} <span className="font-normal text-gray-400">· {itensDaPessoa.length}</span>
                       </p>
@@ -535,6 +558,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                       })}
                     </div>
                   ))}
+                  </div>
                 </div>
               ))}
             </div>

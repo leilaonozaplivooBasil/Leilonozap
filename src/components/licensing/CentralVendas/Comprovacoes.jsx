@@ -5,7 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao } from '@/lib/filaComprovacoes';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 
 // 📸 AS COMPROVAÇÕES — a segunda análise do gestor, em cima.
 //
@@ -96,12 +96,19 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
   // Esta é a fila que ele vê TODO dia, logo depois da Fila do Pronto — a
   // busca/agrupamento tinha ido só pra dentro do ADM, sem passar por aqui.
   const [busca, setBusca] = useState('');
+  // 📅 dono: "um menu suspenso pra escolher qual é a data do mês. Hoje,
+  // ontem..." — um filtro A MAIS, que soma com a busca de texto acima
+  // (nunca substitui): "todas" mostra tudo agrupado, como hoje.
+  const [dataEscolhida, setDataEscolhida] = useState('todas');
   const pendentes = lista.filter((t) => statusDaComp(t.comprovacao) === 'em_analise').length;
   const visiveis = useMemo(() => lista.filter((t) => {
     if (filtro !== 'todas' && statusDaComp(t.comprovacao) !== filtro) return false;
     return comprovacaoBateNaBusca(t, nomeDe(t.user_id), busca);
   }), [lista, filtro, busca, nomeDe]);
   const visiveisPorData = useMemo(() => agruparComprovacoesPorData(visiveis), [visiveis]);
+  const gruposExibidos = useMemo(() => (
+    dataEscolhida === 'todas' ? visiveisPorData : visiveisPorData.filter(([data]) => data === dataEscolhida)
+  ), [visiveisPorData, dataEscolhida]);
   const r = pessoaId ? radar[pessoaId] : null;
 
   if (carregando) return <p className="text-[11px] text-white/40 py-2"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> carregando as comprovações…</p>;
@@ -131,32 +138,49 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
         </span>
       </div>
       {!compacto && (
-        <input
-          placeholder="🔎 buscar por nome ou por data (ex.: “luciano” ou “09/09”)"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white placeholder:text-white/30 px-2.5"
-          data-teste="comprovacoes-busca"
-        />
+        <div className="flex items-center gap-1.5">
+          <input
+            placeholder="🔎 buscar por nome ou por data (ex.: “luciano” ou “09/09”)"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="flex-1 h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white placeholder:text-white/30 px-2.5"
+            data-teste="comprovacoes-busca"
+          />
+          <select
+            value={dataEscolhida}
+            onChange={(e) => setDataEscolhida(e.target.value)}
+            className="h-7 shrink-0 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
+            data-teste="comprovacoes-filtro-data"
+          >
+            <option value="todas">todas as datas</option>
+            {visiveisPorData.map(([data]) => (
+              <option key={data} value={data}>{rotuloDataAmigavel(data)}</option>
+            ))}
+          </select>
+        </div>
       )}
       {visiveis.length === 0 ? (
         <p className="text-[11px] text-white/35">{busca ? 'Nada encontrado nessa busca.' : filtro === 'em_analise' ? 'Nenhuma comprovação esperando a sua análise.' : 'Nenhuma comprovação.'}</p>
+      ) : gruposExibidos.length === 0 ? (
+        <p className="text-[11px] text-white/35">Nada nessa data.</p>
       ) : (
         <div className="space-y-2" data-teste="comprovacoes-por-data">
-        {visiveisPorData.map(([data, itens]) => (
+        {gruposExibidos.map(([data, itens]) => (
           <div key={data} className="space-y-1.5">
             {!compacto && (
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wide" data-teste="comprovacoes-cabecalho-data">
                 📅 {rotuloDataComprovacao(data)} <span className="font-normal normal-case text-white/25">· {itens.length}</span>
               </p>
             )}
-            {/* 👤 09/09/2026 — dono: "eu quero já separado por datas e por
-                nomes... nome das pessoas que estão participando." Dentro do
-                dia, um bloco por pessoa — só faz sentido na fila GERAL
-                (`!pessoaId`); a fila de UMA pessoa já não repete o nome em
-                cada linha, então agrupar por pessoa aqui não diria nada. */}
+            {/* 👤 dono: "eu quero já separado por datas e por nomes... nome
+                das pessoas que estão participando" — depois: "a galera
+                lateral, pra ficar mais organizado... pro gestor não ficar
+                forçando a mente." Um CARD por pessoa, lado a lado num grid —
+                só faz sentido na fila GERAL (`!pessoaId`); a fila de UMA
+                pessoa já não repete o nome em cada linha. */}
+            <div className={pessoaId ? 'space-y-1' : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2'}>
             {(pessoaId ? [[pessoaId, null, itens]] : agruparComprovacoesPorPessoa(itens, nomeDe)).map(([pid, nome, itensDaPessoa]) => (
-              <div key={pid} className={pessoaId ? '' : 'space-y-1 pl-2 border-l-2 border-white/10'}>
+              <div key={pid} className={pessoaId ? '' : 'space-y-1 rounded-lg border border-white/10 bg-white/[0.015] p-2'} data-teste={pessoaId ? undefined : 'comprovacoes-grupo-pessoa'}>
                 {!pessoaId && (
                   <p className="text-[10px] font-bold text-white/55 truncate" data-teste="comprovacoes-cabecalho-pessoa">
                     👤 {nome} <span className="font-normal text-white/25">· {itensDaPessoa.length}</span>
@@ -226,6 +250,7 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
         </ul>
               </div>
             ))}
+            </div>
           </div>
         ))}
         </div>
