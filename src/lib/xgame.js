@@ -912,7 +912,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   };
 }
 
-// 🐛 DIR-128 (09/09/2026) — dono, direto, de novo: "ele leu o livro no dia
+// 🐛 DIR-129 (09/09/2026) — dono, direto, de novo: "ele leu o livro no dia
 // oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem
 // que ser o horário de Brasília, não pode ter essa confusão."
 //
@@ -940,7 +940,7 @@ export function dataISO(d = new Date()) {
  * Soma/subtrai dias a uma data ISO (YYYY-MM-DD) sem tocar em fuso horário
  * nenhum — é conta de calendário pura (ano/mês/dia), nunca conversão de
  * horário. Usada pra navegar dia a dia (← HOJE →) sem repetir o erro da
- * DIR-128: antes disso, `mudarDia` (CrmMetodo.jsx) montava um Date local
+ * DIR-129: antes disso, `mudarDia` (CrmMetodo.jsx) montava um Date local
  * (`${dia}T12:00:00`) e voltava por `toISOString()` — dependia do fuso do
  * aparelho pra não pular o dia errado.
  */

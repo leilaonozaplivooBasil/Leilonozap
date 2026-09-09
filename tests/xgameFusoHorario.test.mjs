@@ -11,8 +11,9 @@
 // A prova é textual (não dá pra importar hojeStr — não é exportado, e
 // re-implementar o bug aqui pra "provar" com Date.now() seria frágil):
 // garante que os dois arquivos não voltam a usar toISOString() pra data de
-// hoje, e que ambos reaproveitam dataISO() (xgame.js), que já usa
-// getFullYear/getMonth/getDate — sem sofrer com fuso.
+// hoje, e que ambos reaproveitam dataISO() (xgame.js). ⚠️ dataISO() em si
+// usava getFullYear/getMonth/getDate (hora do APARELHO) até a DIR-129 —
+// ver os testes abaixo, que travam a versão corrigida (força Brasília).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,7 @@ for (const [nome, codigo] of [['CrmMetodo.jsx', CRM_METODO], ['XGameAdmin.jsx', 
   });
 }
 
-// 🐛 DIR-128 (09/09/2026) — dono, de novo, achado concreto no banco: a
+// 🐛 DIR-129 (09/09/2026) — dono, de novo, achado concreto no banco: a
 // leitura do Emannuel, feita às 21h11 de Brasília do dia 7, nasceu com
 // `data: '2026-09-09'` (dois dias à frente). Causa: dataISO() usava
 // getFullYear/getMonth/getDate — hora do APARELHO, não de Brasília. A

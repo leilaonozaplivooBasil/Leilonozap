@@ -4,7 +4,11 @@
 // data e tanto o dia."
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { comprovacaoBateNaBusca, agruparComprovacoesPorData, rotuloDataComprovacao, ddmmDaData, semAcentoFila } from '../src/lib/filaComprovacoes.js';
+import fs from 'node:fs';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, ddmmDaData, semAcentoFila } from '../src/lib/filaComprovacoes.js';
+
+const XGAME_ADMIN = fs.readFileSync(new URL('../src/components/licensing/XGameAdmin.jsx', import.meta.url), 'utf8');
+const COMPROVACOES = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/Comprovacoes.jsx', import.meta.url), 'utf8');
 
 test('semAcentoFila: tira acento e maiúscula, igual "lu" acha Luciano/Lúcia/LUIZ', () => {
   assert.equal(semAcentoFila('Luciano'), 'luciano');
@@ -64,4 +68,46 @@ test('rotuloDataComprovacao: "dd/mm · dia da semana" — o cabeçalho de cada g
 test('rotuloDataComprovacao: data inválida não quebra, devolve o que recebeu', () => {
   assert.equal(rotuloDataComprovacao('lixo'), 'lixo');
   assert.equal(rotuloDataComprovacao(''), '');
+});
+
+// 👤 dono, olhando a fila de um dia só com várias pessoas misturadas: "eu
+// quero já separado por datas e por nomes... nome das pessoas que estão
+// participando."
+test('agruparComprovacoesPorPessoa: dentro do dia, junta quem é a mesma pessoa, sem reordenar', () => {
+  const doDia = [
+    { id: 1, user_id: 'jean' },
+    { id: 2, user_id: 'paim' },
+    { id: 3, user_id: 'jean' },
+    { id: 4, user_id: 'emmanuel' },
+    { id: 5, user_id: 'jean' },
+  ];
+  const nomeDe = (id) => ({ jean: 'Jean David', paim: 'Paim', emmanuel: 'Emmanuel Lima' })[id] || id;
+  const grupos = agruparComprovacoesPorPessoa(doDia, nomeDe);
+  assert.deepEqual(grupos.map(([id]) => id), ['jean', 'paim', 'emmanuel'], 'a ordem das PESSOAS segue a ordem de chegada, igual a de data');
+  assert.deepEqual(grupos[0], ['jean', 'Jean David', [doDia[0], doDia[2], doDia[4]]], 'as 3 comprovações do Jean ficam juntas, com o nome já resolvido');
+  assert.equal(grupos[1][2].length, 1);
+  assert.equal(grupos[2][2].length, 1);
+});
+
+test('agruparComprovacoesPorPessoa: lista vazia não quebra, devolve vazio; sem nomeDe usa o próprio id', () => {
+  assert.deepEqual(agruparComprovacoesPorPessoa([]), []);
+  assert.deepEqual(agruparComprovacoesPorPessoa(), []);
+  const grupos = agruparComprovacoesPorPessoa([{ id: 1, user_id: 'abc123' }]);
+  assert.deepEqual(grupos, [['abc123', 'abc123', [{ id: 1, user_id: 'abc123' }]]]);
+});
+
+test('XGameAdmin.jsx: dentro de cada dia, a fila também agrupa por pessoa', () => {
+  assert.match(XGAME_ADMIN, /import \{ comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao \} from '@\/lib\/filaComprovacoes'/);
+  assert.match(XGAME_ADMIN, /agruparComprovacoesPorPessoa\(itens, nomeDe\)\.map/);
+  assert.match(XGAME_ADMIN, /data-teste="comprovacoes-cabecalho-pessoa"/);
+  // o nome não pode mais repetir em cada linha — já está no subcabeçalho
+  assert.ok(!/\{nomeDe\(t\.user_id\)\} · \{t\.hora\}/.test(XGAME_ADMIN), 'o nome sumiu do subcabeçalho mas ainda repete na linha — duplicado');
+});
+
+test('Comprovacoes.jsx: dentro de cada dia, a fila geral também agrupa por pessoa (a fila de UMA pessoa não precisa)', () => {
+  assert.match(COMPROVACOES, /import \{ comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao \} from '@\/lib\/filaComprovacoes'/);
+  assert.match(COMPROVACOES, /agruparComprovacoesPorPessoa\(itens, nomeDe\)/);
+  assert.match(COMPROVACOES, /data-teste="comprovacoes-cabecalho-pessoa"/);
+  // a fila de uma pessoa (pessoaId) nunca mostrava o nome por linha — segue sem mostrar, e sem subcabeçalho também
+  assert.match(COMPROVACOES, /pessoaId \? \[\[pessoaId, null, itens\]\]/, 'pra uma pessoa só, não tem por que quebrar em subgrupos');
 });

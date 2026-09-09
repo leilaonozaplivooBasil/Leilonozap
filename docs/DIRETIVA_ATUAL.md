@@ -12,7 +12,7 @@
 
 ---
 
-## DIR-128 — "hoje" agora é sempre Brasília, não importa o fuso do aparelho
+## DIR-129 — "hoje" agora é sempre Brasília, não importa o fuso do aparelho
 
 **Emitida por:** dono (09/09/2026), voltando no mesmo assunto da DIR-127 com um caso concreto: *"o Emanuel leu o livro no dia oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem que ser o horário de Brasília, não pode ter essa confusão."*
 
@@ -28,6 +28,21 @@
 **Auditoria feita, nada mais pra corrigir agora:** varri o banco inteiro por lotes de tarefas cujo `data` destoa 2+ dias do dia real (Brasília) do `created_date`. O ÚNICO caso isolado (uma comprovação real presa no dia errado) era o do Emannuel, já corrigido. Achado à parte, sem dano: a conta do "paim" (`4380f43a...`, já conhecida da DIR-122) tem 8 dias de rotina pré-gerados à frente (dias 7 a 14) numa sequência rápida de ~40s — parecem geração automática por navegação (setas de dia), sem nenhuma comprovação anexada, sem risco de X-Pay. Não mexido agora.
 
 **Prova:** suíte 1931/1931 (5 testes novos travando `dataISO()`/`somarDiasISO()` na virada exata das 21h/00h de Brasília e a fonte de `mudarDia`), lint limpo, `npm run build` sem erro. Correção de dado conferida direto no banco de produção.
+
+---
+
+## DIR-128 — a fila de comprovações separa cada dia por pessoa, nos dois painéis
+
+**Emitida por:** dono (09/09/2026), olhando o dia de hoje com várias pessoas misturadas na mesma lista: *"eu quero já separado por datas e por nomes, cara. Data de hoje, nome das pessoas que estão participando."*
+
+**O que entra:**
+1. `agruparComprovacoesPorPessoa` nova em `src/lib/filaComprovacoes.js` — dentro de UM grupo de dia (saída de `agruparComprovacoesPorData`), junta quem é a mesma pessoa, preservando a ordem de chegada (mesma regra da função de data: nunca reordena por conta própria).
+2. Aplicada nos DOIS lugares que já tinham o agrupamento por dia (DIR-124/126): `XGameAdmin.jsx` (aba Comprovações) e `Comprovacoes.jsx` (a fila geral que o dono vê todo dia, logo após a Fila do Pronto). Em cada dia, um subcabeçalho por pessoa ("👤 Nome · N"), com as comprovações dela agrupadas ali embaixo — o nome sai da linha de cada item (já está no subcabeçalho), deixando a lista mais enxuta.
+3. Em `Comprovacoes.jsx`, o subagrupamento só entra na fila GERAL (`!pessoaId`) — a fila de UMA pessoa já não repetia o nome por linha, então não ganha subcabeçalho (seria repetir o óbvio).
+
+**Fora do escopo:** nenhuma mudança na busca por nome/data (DIR-124/126), na aprovação/reprovação, ou nos filtros de status — só um segundo nível de agrupamento visual.
+
+**Prova:** suíte 1931/1931 (4 testes novos em `tests/filaComprovacoes.test.mjs`: a função pura + a fiação nos dois componentes), lint limpo, `npm run build` sem erro.
 
 ---
 

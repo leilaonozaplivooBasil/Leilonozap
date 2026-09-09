@@ -5,7 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { comprovacaoBateNaBusca, agruparComprovacoesPorData, rotuloDataComprovacao } from '@/lib/filaComprovacoes';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao } from '@/lib/filaComprovacoes';
 
 // 📸 AS COMPROVAÇÕES — a segunda análise do gestor, em cima.
 //
@@ -144,21 +144,32 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
       ) : (
         <div className="space-y-2" data-teste="comprovacoes-por-data">
         {visiveisPorData.map(([data, itens]) => (
-          <div key={data} className="space-y-1">
+          <div key={data} className="space-y-1.5">
             {!compacto && (
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wide" data-teste="comprovacoes-cabecalho-data">
                 📅 {rotuloDataComprovacao(data)} <span className="font-normal normal-case text-white/25">· {itens.length}</span>
               </p>
             )}
+            {/* 👤 09/09/2026 — dono: "eu quero já separado por datas e por
+                nomes... nome das pessoas que estão participando." Dentro do
+                dia, um bloco por pessoa — só faz sentido na fila GERAL
+                (`!pessoaId`); a fila de UMA pessoa já não repete o nome em
+                cada linha, então agrupar por pessoa aqui não diria nada. */}
+            {(pessoaId ? [[pessoaId, null, itens]] : agruparComprovacoesPorPessoa(itens, nomeDe)).map(([pid, nome, itensDaPessoa]) => (
+              <div key={pid} className={pessoaId ? '' : 'space-y-1 pl-2 border-l-2 border-white/10'}>
+                {!pessoaId && (
+                  <p className="text-[10px] font-bold text-white/55 truncate" data-teste="comprovacoes-cabecalho-pessoa">
+                    👤 {nome} <span className="font-normal text-white/25">· {itensDaPessoa.length}</span>
+                  </p>
+                )}
         <ul className="space-y-1">
-          {itens.map((t) => {
+          {itensDaPessoa.map((t) => {
             const s = statusDaComp(t.comprovacao);
             const c = t.comprovacao || {};
             return (
               <li key={t.id} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.02)' }} data-teste="comprovacao" data-status={s}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[s] || ''}`}>{ROTULO[s] || s}</span>
-                  {!pessoaId && <span className="font-bold text-white/85 truncate">{nomeDe(t.user_id)}</span>}
                   <span className="text-white/70 truncate">{t.titulo}</span>
                   <span className="text-white/40 shrink-0">{compacto ? fmtDia(t.data) : ''}{t.hora ? ` ${String(t.hora).slice(0, 5)}` : ''}</span>
                   {c.print_url && (
@@ -213,6 +224,8 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
             );
           })}
         </ul>
+              </div>
+            ))}
           </div>
         ))}
         </div>
