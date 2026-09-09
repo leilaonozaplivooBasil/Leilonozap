@@ -6,6 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { X, Check, Loader2, PhoneCall, CalendarPlus } from 'lucide-react';
 import { RESULTADOS_CONTATO, registroContatoValido, DURACOES_REUNIAO, DIAS_SEMANA } from '@/lib/metodo';
 import { agendasVisiveis, agendaPorId, linhaDaAgenda } from '@/lib/agendaEmpresa';
+import useDitado from '@/hooks/useDitado';
+import BotaoDitado from '@/components/common/BotaoDitado';
+import { juntarTexto } from '@/lib/ditado';
 
 // 📜 DIR-47/48/49 — REGISTRAR O CONTATO + AGENDADOR DE REUNIÃO DE VERDADE.
 // Três jeitos de abrir (DIR-49 deixou cada um óbvio):
@@ -48,6 +51,11 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
   const [local, setLocal] = useState('');
   const [retornarEm, setRetornarEm] = useState('');
   const [obs, setObs] = useState('');
+  // 🎙️ DIR-101 — o vendedor acabou de desligar o telefone, muitas vezes na rua
+  // ou no carro. Falar "cliente pediu pra ligar terça, quer ver a loja" é bem
+  // mais provável de acontecer do que digitar. Sem guardar o áudio: a anotação
+  // é dado operacional do cliente, não acervo pessoal de quem registrou.
+  const ditado = useDitado({ onTexto: (t) => setObs((atual) => juntarTexto(atual, t)) });
   const [criarNoGoogle, setCriarNoGoogle] = useState(true);
   const [criando, setCriando] = useState(false);
   // 🏛️ DIR-73 — a segunda porta do passo 1
@@ -303,6 +311,15 @@ export default function CrmContatoRegistroModal({ aberto, contatoInicial = null,
           <div>
             <p className="text-xs font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1.5">{alvo === 'empresa' ? 'Detalhes desta agenda (opcional)' : resultado === 'agendado' ? 'Detalhes da reunião (opcional)' : 'Observação (opcional)'}</p>
             <Textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} placeholder="ex.: levar os números; cliente quer ver a loja..." className="bg-white border-nz-borda text-nz-tinta text-sm" />
+            <div className="flex items-center gap-2 mt-1">
+              <BotaoDitado
+                ditado={ditado}
+                rotulo="falar"
+                rotuloGravando="parar"
+                className="border border-nz-borda bg-white text-nz-verde hover:bg-nz-verde-fundo !px-2.5 !py-1 !text-[11px]"
+              />
+              {ditado.erro && <span className="text-[11px] text-amber-700">{ditado.erro}</span>}
+            </div>
           </div>
 
           <Button onClick={salvar} disabled={!pronto || salvando || criando} className="w-full h-12 text-base bg-nz-verde hover:bg-nz-verde-claro text-white font-bold">

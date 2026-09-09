@@ -48,6 +48,7 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
+import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -617,7 +618,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, tempoTelaS }) => {
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, audioGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
@@ -638,6 +639,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         videoUrl = up?.file_url || up?.url || '';
       } catch { videoUrl = ''; }
     }
+    // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
+    // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
+    // onde mora o vídeo: é voz, é íntimo, e link público não se desfaz depois
+    // que circulou. Guardar é o EXTRA — se falhar, o ritual segue e o texto,
+    // que é o que vale nota, já está aqui.
+    const guardarVoz = async (blob, pasta) => (blob
+      ? guardarAudio({
+        blob,
+        caminho: caminhoDoAudio({ pasta, uid, dia: hojeStr(), tarefaId: t.id, mime: blob.type }),
+        actorId: uid,
+      })
+      : null);
+    const [vozGratidao, vozAcao] = await Promise.all([
+      guardarVoz(audioGratidao, 'gratidao'),
+      guardarVoz(audioAcao, 'acao'),
+    ]);
+
     // 🌊 DIR-89 — ritual na janela E com o vídeo gravado ganha o selo completo;
     // sem vídeo ou fora de hora, antes caía pra segunda análise do gestor —
     // agora aprova igual (o gestor não decide mais nada aqui), só sem o selo
@@ -646,6 +664,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const comprovacao = {
       tipo: 'ritual', gratidao, acao, entrega: gratidao,
       ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
+      // "as suas palavras", COM a origem registrada. Não é desconfiança: é
+      // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
+      ...(audioGratidao ? { entrada_gratidao: 'audio' } : {}),
+      ...(audioAcao ? { entrada_acao: 'audio' } : {}),
+      ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
+      ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
       tempo_tela_s: tempoTelaS || 0,
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ritual',
@@ -688,7 +713,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 🤖 chama a IA (1ª olhada OU 2ª, já com a justificativa da pessoa) e
   // aplica a régua de decisão (lib/xgameValidacao.decisaoAposIA) — nunca cai
   // pro gestor na primeira dúvida se a IA sabe o que perguntar.
-  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1 }) => {
+  const avaliarComIA = async (t, { printUrl, hash, tipo, dadosOriginais, justificativa = '', tentativa = 1, entradaResumo = null, audioResumoPath = null }) => {
     const m = /^(\d{1,2}):(\d{2})/.exec(String(t.hora || ''));
     const iniMin = m ? Number(m[1]) * 60 + Number(m[2]) : null;
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
@@ -737,6 +762,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       tipo, print_url: printUrl, hash,
       ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
       ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+      // 🎙️ DIR-101 — origem do resumo e a voz guardada. Só aparecem quando
+      // houve fala: quem digitou continua com exatamente o mesmo registro.
+      ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
+      ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ia',
@@ -818,7 +847,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }
-    await avaliarComIA(t, { printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1 });
+    // 🎙️ DIR-101 — a voz do resumo também vira acervo, no cofre PRIVADO.
+    // Best-effort e DEPOIS do print: o print é a prova e não pode esperar o
+    // áudio; se o cofre piscar, a comprovação segue com o texto, que é o que
+    // vale nota.
+    let vozResumo = null;
+    if (dados.audioResumo) {
+      vozResumo = await guardarAudio({
+        blob: dados.audioResumo,
+        caminho: caminhoDoAudio({ pasta: 'resumos', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.audioResumo.type }),
+        actorId: uid,
+      });
+    }
+    await avaliarComIA(t, {
+      printUrl, hash, tipo, dadosOriginais: dados, tentativa: 1,
+      // como o texto entrou — decisão do dono: áudio conta como "suas
+      // palavras", COM a origem registrada.
+      ...(dados.audioResumo ? { entradaResumo: 'audio' } : {}),
+      ...(vozResumo ? { audioResumoPath: vozResumo } : {}),
+    });
   };
 
   const alternarFeito = async (t) => {
