@@ -37,7 +37,7 @@ function perguntarSeTemMicrofone() {
 /** Só pros testes: esquece a resposta guardada. */
 export function _limparCacheDoDitado() { promessaDisponivel = null; }
 
-export default function useDitado({ onTexto, tetoSeg = TETO_GRAVACAO_SEG } = {}) {
+export default function useDitado({ onTexto, onAudio, tetoSeg = TETO_GRAVACAO_SEG } = {}) {
   const [disponivel, setDisponivel] = useState(false);
   const [gravando, setGravando] = useState(false);
   const [transcrevendo, setTranscrevendo] = useState(false);
@@ -51,6 +51,10 @@ export default function useDitado({ onTexto, tetoSeg = TETO_GRAVACAO_SEG } = {})
   // reconstruir `gravar` (e com ele o MediaRecorder) a cada tecla digitada.
   const aoTextoRef = useRef(onTexto);
   aoTextoRef.current = onTexto;
+  const aoAudioRef = useRef(onAudio);
+  aoAudioRef.current = onAudio;
+  // quanto tempo a pessoa falou — lido no `onstop`, onde o state já é velho
+  const segRef = useRef(0);
 
   useEffect(() => {
     let vivo = true;
@@ -104,14 +108,22 @@ export default function useDitado({ onTexto, tetoSeg = TETO_GRAVACAO_SEG } = {})
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(pedacos, { type: rec.mimeType || mime || 'audio/webm' });
         // clique sem querer não vira chamada paga ao Whisper
-        if (gravacaoUtil(blob)) transcrever(blob);
-        else setErro(MENSAGENS.semFala);
+        if (!gravacaoUtil(blob)) { setErro(MENSAGENS.semFala); return; }
+        // 🎙️ DIR-101.1 — O ÁUDIO SAI PRIMEIRO, E NÃO ESPERA A TRANSCRIÇÃO.
+        // Onde o áudio É a entrega (o Momento de Gratidão), a pessoa tem que
+        // poder seguir no instante em que solta o botão. Fazer ela esperar o
+        // Whisper responder pra liberar o "Continuar" seria o mesmo atrito de
+        // antes com outra roupa. A transcrição corre atrás, calada.
+        aoAudioRef.current?.(blob, segRef.current);
+        transcrever(blob);
       };
       recRef.current = rec;
       rec.start(1000);
+      segRef.current = 0;
       setGravando(true); setSegundos(0); setErro('');
       relogioRef.current = setInterval(() => setSegundos((s) => {
         const proximo = s + 1;
+        segRef.current = proximo;
         if (bateuOTeto(proximo, tetoSeg)) parar();
         return proximo;
       }), 1000);
