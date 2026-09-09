@@ -432,8 +432,13 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card titulo="Human Token" valor={fmt2(resumo.token_dia)} sub={`teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
-            <Card titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)} sub={resumo.frase_mvm} destaque={resumo.mvm_dia < 4} />
+            <Card titulo="Human Token" valor={`${ciclo.faixa.medalha} ${fmt2(ciclo.total)}`} sub={`${ciclo.faixa.label} do ciclo · teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
+            <Card
+              titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)}
+              sub={`${resumo.frase_mvm}${recebido.media !== null ? ` · votação do ciclo: ${fmt2(recebido.media)}` : ''}`}
+              destaque={resumo.mvm_dia < 4}
+              dica="Dois tipos de MvM: o AUTOMÁTICO aqui em cima (o dia começa em 10 e cai por tarefa atrasada) e o da VOTAÇÃO DO CICLO (as notas que você recebe dos colegas) — é o da votação que entra no Human Token oficial, no painel Executivo Ideal."
+            />
             <Card
               titulo="X-Pay de hoje" valor={resumo.xpay ? `R$ ${fmt2(resumo.xpay.ganho)}` : '—'}
               sub={resumo.xpay?.perdido > 0 ? `− R$ ${fmt2(resumo.xpay.perdido)} perdido` : `R$ ${fmt2(resumo.xpay?.emJogo || 0)} em jogo`}

@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-104 — corrige sincronismo: Human Token e MvM do Dia na XGame.jsx usavam o número errado
+
+**Emitida por:** dono (09/09/2026), olhando o painel da Beatriz Sant'anna
+como Super Admin: *"estou olhando aqui o caminho vermelho dela está
+zerado, apesar de já estar aparecendo ali as votações dela lá embaixo. O
+painel tem que ter sincronismo, vamos olhar esse sincronismo aí e ver o
+que está funcionando e que não está. Olha tudo por dentro, vê o que está
+errado, faz uma análise aí pra gente corrigir tudo. Tem que estar tudo
+funcionando."*
+
+**Data:** 09/09/2026.
+
+**O bug:** `src/pages/XGame.jsx` (a tela usada no "MvM dele" do Quadro
+Geral do ADM, em `modoAdmin`) mostrava nos cartões "Human Token" e "MvM do
+Dia" o número AUTOMÁTICO do dia (`resumo.token_dia`/`resumo.mvm_dia`), não
+o número OFICIAL do ciclo (`ciclo.total`/`ciclo.taxas.mvm`, vindo da
+votação real dos colegas) — que o painel "Executivo Ideal", na mesma tela,
+já usava corretamente. Confirmado com consulta direta no Supabase de
+produção: a Beatriz tinha votos registrados hoje em `xgame_votos_mvm`, mas
+o cartão "Human Token" continuava zerado porque lia a conta errada.
+`src/components/licensing/CentralVendas/CrmMetodo.jsx` (o Compromisso) já
+fazia certo — os dois cartões só precisavam ler a mesma variável que lá.
+
+**O que entra:**
+1. "Human Token" agora mostra `ciclo.faixa.medalha` + `ciclo.total` (o
+   valor oficial do ciclo, com a medalha de faixa), não mais o automático
+   do dia.
+2. "MvM do Dia" continua mostrando o automático (`resumo.mvm_dia` — é uma
+   métrica diferente e legítima), mas agora com um texto extra "· votação
+   do ciclo: X" ao lado, e uma dica explicando a diferença entre as duas
+   MvM (a automática desconta por atraso; a da votação é a que vale pro
+   Human Token oficial) — pra ninguém mais achar que são a mesma coisa ou
+   que uma está "errada" quando a outra cai.
+
+**Prova:** suíte 1609/1609, lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-103 — % de reunião do time chega na Verificação do Progresso (o alcance que faltava do DIR-102)
 
 **Emitida por:** dono (09/09/2026): *"eu quero esse alcance, o que
