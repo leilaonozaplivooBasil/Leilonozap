@@ -12,6 +12,27 @@
 
 ---
 
+## DIR-115 — repesagem da moeda: MvM vira portão (caráter), Diamante vira Platina, 4 ligas parelhas
+
+**Emitida por:** dono (09/09/2026), depois de revisar a planilha original junto com Claude, em conversa: *"o jargão da empresa é recrutamos caráter e treinamos habilidade... a produção ela chega aos quarenta e cinco por cento com o realtime"*; sobre o nome do topo: *"eu não quero botar diamante... que não lembre multinível — o nível pica de chegar mesmo, que é o executivo ideal pica, que tem que ser infalível"*; aprovação final: *"bora gostei capricha."*
+
+**Objetivo:** corrigir dois problemas do desenho anterior da moeda — (1) o MvM, sozinho, valia quase metade do Human Token (45%), uma fatia grande demais pra um eixo que estatisticamente quase não varia entre pessoas (a votação real do dono, por exemplo, ficou entre 7,38 e 9,38 — 2 pontos de amplitude, contra 0-100% dos outros eixos); (2) as 3 ligas antigas tinham um "deserto" de 50 pontos sem nenhum degrau entre Prata (30%) e Ouro (80%).
+
+**Escopo autorizado (`src/lib/xgame.js`):**
+1. **Repesagem do perfil `'estrategico'`** (perfil `'comercial'` INTOCADO — decisão de outra conversa): MvM 30% (6,67) · Produção 30% (6,67) · Real Time 15% (3,33) · Vendas 15% (3,33) · Bônus/Estudo 10% (2,22) — soma 22,22 exata. Produção+Real Time juntos voltam a somar 45%, igual ao MvM antigo.
+2. **Piso de caráter** (`PISO_CARATER_LIGA = 7`, `PISO_CARATER_PLATINA = 8`) e **porteira de vendas** (100% de `META_VENDAS_CICLO`), nova função `ligaComPortoesDoCiclo(total, {mvmVotacao, vendasFeitas})`: MvM da votação abaixo de 7 trava TUDO em Bronze (mesmo com token de Platina); abaixo de 8 (mas ≥ 7) barra só a Platina (Ouro continua de pé); sem bater a meta cheia de vendas, a Platina também não abre. Os portões NUNCA alteram o número exibido (`total`) — só decidem qual liga aquele total pode valer. Usada nos 5 lugares que calculam liga de ciclo: `XGame.jsx`, `CrmMetodo.jsx` (pessoal + ranking), `XGameVisaoExecutiva.jsx` (ranking + "sua posição"), `PainelCorporativo.jsx`/PDF Executivo.
+3. **"Diamante" → "Platina"** em todo o código/UI que nomeia a liga (`LIGAS`, `FAIXAS_TOKEN`, `COR_LIGA`, `LIGA_COR` do PDF, tooltips) — só o nome mudou, os valores não.
+4. **4 ligas em degraus de ~20-30% cada** (Bronze 0-6,65 · Prata 6,66-12,21 · Ouro 12,22-17,77 · Platina 17,78-22,22), fechando o "deserto" antigo. Platina começa EXATAMENTE onde o Ouro antigo começava (17,78) — o topo não ficou mais fácil, só ganhou dois degraus novos abaixo dele.
+5. `travarDiamantePorEstudo`/`TRAVA_SEM_DIAMANTE` (DIR-113) renomeadas pra `travarTopoPorEstudo`/`TRAVA_SEM_ESTUDO_CICLO` — mesmo valor (19,99), mesmo comportamento, só o nome.
+6. Removida a Moeda duplicada em `pages/XGame.jsx` (dono, vendo a tela: *"você duplicou duas vezes a moeda"*) — a página já embute `XGameVisaoExecutiva`, que desenha a mesma moeda da mesma pessoa.
+7. Jargão **"Recrutamos caráter e treinamos habilidade"** visível nas 4 telas da moeda (Compromisso, Visão Executiva, tooltip do Human Token, tooltip do perfil em XGameAdmin), junto da explicação dos portões.
+
+**Fora do escopo / proibido:** perfil `'comercial'` (pesos e trava de vendas, decididos numa conversa separada); qualquer outro uso de "diamante" no app fora da liga da moeda (achievement "Colecionador de diamantes", templates de promoção, plano parceiro) — não é a mesma coisa e não foi pedido.
+
+**Prova:** suíte 1711/1711 (`tests/xgame.test.mjs` com os pesos novos + 9 testes novos de `ligaComPortoesDoCiclo`/`PISO_CARATER_*` + a nova geometria de `FAIXAS_TOKEN`/`LIGAS`; `tests/moedaPizza.test.mjs` e `tests/guiaXGame.test.mjs` recalculados pros novos limiares e pesos), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+---
+
 ## DIR-114 — a auditoria pré-publicação: 4 críticos, 9 importantes e 7 nice-to-have corrigidos
 
 **Emitida por:** dono (09/09/2026): *"corrigir tudo que tem pra corrigir... faz uma análise de novo pra corrigir e deixar perfeito."* — em resposta ao relatório da auditoria em 3 frentes (Painel Corporativo/PDF/roda, motor do X-Game, Hábito 3/4 + trabalho mesclado) publicado antes desta entrada.

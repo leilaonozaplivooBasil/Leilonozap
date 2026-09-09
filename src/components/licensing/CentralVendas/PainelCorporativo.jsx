@@ -14,8 +14,8 @@ import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
 import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
 import {
   fmtReais, dataISO, inicioCicloOficial, tokenDoCiclo, formacaoExecutivoIdeal, proporcoesExecutivoIdeal,
-  EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaDoToken, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
-  estudoEmDia, estudoFdsEmDia, travarDiamantePorEstudo,
+  EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaComPortoesDoCiclo, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  estudoEmDia, estudoFdsEmDia, travarTopoPorEstudo,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -203,10 +203,10 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const mvmRecebidoMedia = useMemo(() => mvmManual(mvmRecebidoCiclo).media, [mvmRecebidoCiclo]);
   const cicloToken = useMemo(() => {
     const r = tokenDoCiclo({ diasCiclo: diasCicloPessoa, mvmVotacao: mvmRecebidoMedia, perfil: participanteAtual?.perfil || 'estrategico', vendasReais: vendasCiclo });
-    // 🎓 09/09/2026 — DIR-113: a MESMA trava de Diamante-só (nunca Ouro) que
+    // 🎓 09/09/2026 — DIR-113: a MESMA trava de topo-só (nunca Ouro) que
     // o X-Game/Compromisso aplicam — sem isso, a "posição do dia" do PDF
     // podia mostrar uma liga diferente da que a própria pessoa vê no jogo.
-    const total = travarDiamantePorEstudo(r.total, {
+    const total = travarTopoPorEstudo(r.total, {
       estudoSemanaOk: estudoEmDia(diasCicloPessoa),
       estudoFdsOk: estudoFdsEmDia(diasCicloPessoa),
     });
@@ -216,7 +216,10 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     if (!pessoa) return null;
     const prop = proporcoesExecutivoIdeal(cicloToken.taxas);
     const eixos = EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({ k, rotuloCurto, emoji, atual: Math.round(prop[k] * 100), alvo: 100 }));
-    const liga = ligaDoToken(cicloToken.total);
+    // 🎖️ DIR-115 — os portões de caráter (MvM) e meta de vendas também
+    // decidem a liga aqui, senão o PDF Executivo podia imprimir Platina
+    // pra quem os portões ainda travam em Ouro.
+    const liga = ligaComPortoesDoCiclo(cicloToken.total, { mvmVotacao: mvmRecebidoMedia, vendasFeitas: cicloToken.vendasFeitas });
     const prox = proximaLiga(cicloToken.total);
     return {
       liga,

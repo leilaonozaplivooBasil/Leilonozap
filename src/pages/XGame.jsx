@@ -8,8 +8,8 @@ import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
-  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaDoToken, TOKEN_MAX,
-  estudoFdsEmDia, travarDiamantePorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
+  estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
@@ -18,7 +18,6 @@ import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
-import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 
 // X-GAME — o ESPAÇO DEDICADO da gamificação do Método (DIR-97, 08/09/2026).
 // Até aqui esta página era órfã — ninguém no app linkava pra ela — e tinha
@@ -209,13 +208,16 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
       vendasReais: vendasCiclo,
     });
     // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
-    // estudo (semana OU fim de semana) trava só o DIAMANTE, nunca o OURO
-    // — Ouro tem que dar pra chegar via produção/MvM/vendas mesmo sem
-    // estudar em casa. `travarDiamantePorEstudo` é a MESMA função usada
+    // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca o
+    // OURO — Ouro tem que dar pra chegar via produção/MvM/vendas mesmo sem
+    // estudar em casa. `travarTopoPorEstudo` é a MESMA função usada
     // no Compromisso, no ranking do time e no Painel Corporativo.
     const fdsOk = estudoFdsEmDia(diasCiclo, { data: dataISO(agora), feito: resumo.estudo_fds_feito });
-    const total = travarDiamantePorEstudo(r.total, { estudoSemanaOk: resumo.estudo_em_dia, estudoFdsOk: fdsOk });
-    return { ...r, total, liga: ligaDoToken(total), estudoEmDiaCompleto: resumo.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
+    const total = travarTopoPorEstudo(r.total, { estudoSemanaOk: resumo.estudo_em_dia, estudoFdsOk: fdsOk });
+    // 🎖️ DIR-115 — portões de caráter (MvM) e meta de vendas: só decidem
+    // QUAL liga o total pode valer, nunca o número exibido.
+    const liga = ligaComPortoesDoCiclo(total, { mvmVotacao: recebido.media, vendasFeitas: r.vendasFeitas });
+    return { ...r, total, liga, estudoEmDiaCompleto: resumo.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [resumo, diasCiclo, recebido.media, participante, vendasCiclo]);
   const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
   const janelaAberta = janelaVotacaoAberta(agoraMin);
@@ -497,7 +499,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card titulo="Human Token" valor={`${ciclo.liga.emoji} ${fmt2(ciclo.total)}`} sub={`${ciclo.liga.label} do ciclo · teto 22,22${ciclo.estudoEmDiaCompleto ? '' : ' · trava 19,99 pro Diamante (estude!)'}`} />
+            <Card titulo="Human Token" valor={`${ciclo.liga.emoji} ${fmt2(ciclo.total)}`} sub={`${ciclo.liga.label} do ciclo · teto 22,22${ciclo.estudoEmDiaCompleto ? '' : ' · trava 19,99 pra Platina (estude!)'}`} />
             {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o MVM
                 dele é sete, vai aparecer sete, não sete ponto setenta e
                 cinco e nove em cima" — o número GRANDE virava o automático
@@ -520,20 +522,11 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
             <Card titulo="Pontos de hoje" valor={String(resumo.pontos)} sub={`${resumo.tarefas_feitas}/${resumo.tarefas_total} tarefas`} />
           </div>
 
-          {/* 🪙 DIR-113.2 (09/09/2026) — dono: "aonde está aparecendo a
-              moeda?... eu quero uma moeda completa com 22,22, mostrando pro
-              executivo como ele chega lá." A MESMA MoedaPizza do Compromisso
-              e da Visão Executiva — esta página duplica o painel de
-              propósito (ver comentário do Executivo Ideal acima), então
-              duplica a moeda também, com os MESMOS ciclo.componentes já
-              calculados logo ali em cima. */}
-          <div className="rounded-2xl border-2 border-[#2B2B2B] bg-white p-4 sm:p-5 space-y-3">
-            <div>
-              <p className="text-sm font-extrabold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do seu Human Token</p>
-              <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda deste ciclo, até o teto de {fmt2(TOKEN_MAX)}</p>
-            </div>
-            <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ligaDoToken(ciclo.total)} />
-          </div>
+          {/* 🪙 09/09/2026 — dono, vendo a página renderizada: "você duplicou
+              duas vezes a moeda." A MoedaPizza direta que existia aqui (com
+              os MESMOS ciclo.componentes) saiu — a seção "Sua posição no
+              ciclo" da XGameVisaoExecutiva, logo abaixo nesta mesma página,
+              já desenha a MESMA moeda pro mesmo ciclo/pessoa. Uma só. */}
 
           {/* ══ 🗳️ VOTAÇÃO MvM — dono: "a gente precisa botar a votação aqui,
               votar por aqui que é o mais correto." Mesma tabela do Compromisso,

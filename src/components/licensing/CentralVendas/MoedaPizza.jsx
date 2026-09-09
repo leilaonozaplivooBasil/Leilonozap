@@ -110,7 +110,7 @@ export default function MoedaPizza({ componentes = {}, total = 0, max, liga = nu
 
         {/* as marcas de liga — entalhes na BORDA (mais grossos que a
             serrilha comum) onde bronze vira prata, prata vira ouro, ouro
-            vira diamante */}
+            vira platina */}
         {marcas.map((m) => {
           const graus = anguloDe(m.posicao);
           const [x1, y1] = pontoNoAngulo(graus, R_BORDA - ESPESSURA_BORDA / 2 - 2);

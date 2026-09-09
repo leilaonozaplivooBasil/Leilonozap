@@ -76,16 +76,20 @@ test('MOEDA EM FATIAS: renderiza as 5 fatias + as marcas de liga, sem erro nenhu
   const arcos = await pagina.locator('[data-teste="moeda-pizza"] svg circle').count();
   assert.equal(arcos, 10, 'borda(2) + rosto(2) + trilho(1) + 5 fatias (mvm, produção, real time, bônus, vendas)');
 
-  // as 3 marcas de liga que cabem no exemplo (prata/ouro/diamante — bronze é o início, sem marca)
+  // as 3 marcas de liga que cabem no exemplo (prata/ouro/platina — bronze é o início, sem marca)
   const marcas = await pagina.locator('[data-teste="moeda-pizza"] svg text').allTextContents();
   assert.ok(marcas.some((t) => t.includes('🥈')), 'faltou a marca da liga prata no anel');
   assert.ok(marcas.some((t) => t.includes('🥇')), 'faltou a marca da liga ouro no anel');
-  assert.ok(marcas.some((t) => t.includes('💠')), 'faltou a marca da liga diamante no anel');
+  assert.ok(marcas.some((t) => t.includes('🏆')), 'faltou a marca da liga platina no anel');
 
   // a legenda embaixo do anel mostra cada componente com o peso % na moeda
   const legenda = (await pagina.locator('[data-teste="moeda-pizza"]').textContent()).replace(/\s+/g, ' ');
   assert.match(legenda, /MvM \(votação\).*peso \d+([.,]\d+)?% da moeda/);
-  assert.match(legenda, /ainda não conquistado/);
+  // 🏆 DIR-115 — o exemplo agora é a moeda CHEIA do modelo (soma exata dos
+  // pesos, sem sobra) — "ainda não conquistado" só aparece quando falta
+  // algo pro teto, então não pode aparecer aqui.
+  assert.doesNotMatch(legenda, /ainda não conquistado/, 'a moeda cheia do modelo não deixa nada "não conquistado" — soma exata do teto');
+  assert.match(legenda, /Recrutamos caráter e treinamos habilidade/, 'o jargão que decidiu os pesos precisa estar escrito junto do desenho');
 
   await pagina.screenshot({ path: path.join(FOTOS, 'moeda-pizza.png') });
   assert.deepEqual(erros, [], `a tela não pode quebrar sozinha: ${erros.join(' | ')}`);

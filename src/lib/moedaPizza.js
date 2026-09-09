@@ -11,16 +11,24 @@
 //      vira uma fatia do TAMANHO REAL que ele pesou na moeda — os mesmos
 //      valores de `tokenDoCiclo(...).componentes` (xgame.js), nunca
 //      recalculados aqui. O que falta pra fechar TOKEN_MAX fica cinza.
-//   2. `marcasDeLiga`: onde bronze/prata/ouro/diamante caem no anel de 0 a
+//   2. `marcasDeLiga`: onde bronze/prata/ouro/platina caem no anel de 0 a
 //      TOKEN_MAX — os mesmos limiares de LIGAS (xgame.js), nunca duplicados
 //      com números escritos à mão.
 //
 // 🗳️ Dono, na mesma mensagem, corrigindo um mal-entendido: "o MvM só é a
 // média do valor mental, a média da votação, só isso." Isso já é verdade na
-// conta de `tokenDoCiclo`: o peso do MvM é exatamente `MVM_MAX` (10), e a
-// taxa é `mvmVotacao / MVM_MAX` — então `componentes.mvm` SEMPRE equivale à
-// própria média da votação, sem distorcer pra cima ou pra baixo. Este
-// arquivo só desenha o que já existe; não pode reinterpretar isso.
+// conta de `tokenDoCiclo`: `componentes.mvm` é sempre `pesos.mvm * (mvmVotacao
+// / MVM_MAX)` — a média da votação, nunca outra coisa (real time, tarefa
+// atrasada) disfarçada de MvM.
+//
+// 🏆 DIR-115 (09/09/2026) — antes da repesagem, `pesos.mvm` era sempre
+// `MVM_MAX` (10), então a fatia batia com o próprio número da votação sem
+// escala nenhuma. Depois da repesagem, o perfil padrão ('estrategico') tem
+// `pesos.mvm = 6,67` (30% — o MvM virou PORTÃO, não a maior fatia) — a
+// fatia ainda é proporcional à votação, só que na escala do PESO dela, não
+// mais 1 pra 1 com a nota de 0 a 10. Só o perfil 'comercial' manteve
+// `pesos.mvm = MVM_MAX`. Este arquivo só desenha o que `tokenDoCiclo` já
+// calculou; não pode reinterpretar isso.
 export const ORDEM_COMPONENTES = ['mvm', 'producao', 'realtime', 'bonus', 'vendas'];
 
 export const COMPONENTE_INFO = {
@@ -35,7 +43,7 @@ export const COMPONENTE_INFO = {
  * Monta as fatias da moeda a partir dos componentes JÁ CALCULADOS por
  * `tokenDoCiclo()` — nunca recebe taxas/pesos crus, só o resultado.
  *
- * 🩹 09/09/2026 — trava do Diamante/estudo (TRAVA_SEM_DIAMANTE,
+ * 🩹 09/09/2026 — trava do topo/estudo (TRAVA_SEM_ESTUDO_CICLO,
  * TRAVA_SEM_ESTUDO em xgame.js): o TOTAL exibido em outras telas pode ser
  * MENOR que a soma crua dos componentes (a pessoa fez por merecer mais, mas
  * uma trava segura o número). Sem `totalConquistado`, a moeda desenharia
@@ -75,7 +83,7 @@ export function fatiasDaMoeda(componentes = {}, max, totalConquistado) {
 
 /**
  * Onde cada liga corta o anel (posição de 0 a 1, de 0 até `max`) — pra
- * desenhar as marcas de bronze/prata/ouro/diamante no desenho da moeda.
+ * desenhar as marcas de bronze/prata/ouro/platina no desenho da moeda.
  * @param {Array<{id,label,emoji,min}>} ligas LIGAS (xgame.js), injetado
  * @param {number} max TOKEN_MAX
  */
