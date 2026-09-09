@@ -12,6 +12,20 @@
 
 ---
 
+## DIR-135 — auditoria noturna: o dinheiro "em jogo" não some mais quando o dia zera, e a demanda distribuída na mentoria completa também cria o card do quadro e o sino
+
+**Emitida por:** dono (09/09/2026), indo dormir: *"eu vou deixar você rodando aí, pra você me trazer um relatório diligente... de toda a gamificação, que está bom, que não está, o que está quebrado... não pode passar nada em branco, nada nada nada nada."* — autorização explícita pra auditoria e correção autônoma durante a madrugada.
+
+**Achado 1 (X-Pay, dinheiro real) — `resumoDoDia` em `src/lib/xgame.js`:** quando o dia zera (`diaZerado`, por não votar ou atraso do pronto), o valor que já era `ganho` corretamente virava `perdido` (registrado, não some). Mas o valor que ainda estava **em jogo** (tarefa pendente, nem feita nem com prazo estourado no momento do corte) era descartado com `xpay.emJogo = 0` — o dinheiro simplesmente desaparecia da conta em vez de virar prejuízo registrado, igual o `ganho` já fazia. `xpay_possivel` (usado em relatórios/telas de equipe) ficava subestimado nesses dias.
+**Fix:** `xpay.perdido` agora soma `ganho + perdido + emJogo` antes de zerar os três — o mesmo padrão que já existia pro `ganho`, agora completo.
+
+**Achado 2 (distribuição de tarefa) — `DistribuirTarefa.jsx`:** o caminho "distribuir como mentoria completa" (o que o dono mais usa, feedback ao vivo da reunião) tinha um `return` antes de chegar no trecho que cria o card do Quadro e o aviso (sino, `xgame_mensagens`) — só a tarefa na Jornada nascia; quadro e sino ficavam vazios, exatamente o sintoma relatado ("mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro"). Além disso, o toast de sucesso mentia dizendo "jornada, quadro e sino avisados" mesmo quando a gravação do quadro ou do aviso falhava silenciosamente no banco.
+**Fix:** extraído `criarQuadroEAviso(tarefaId, titulo, prazo)` — chamado nos DOIS caminhos (distribuição normal e mentoria completa); cada falha (quadro ou aviso) gera seu próprio `toast.error` específico, e o toast final só promete "jornada, quadro e sino avisados" quando os dois realmente gravaram.
+
+**Prova:** suíte 1972/1972 (1 teste novo em `tests/xgame.test.mjs` — dia zerado com tarefa pendente, prova que `emJogo` não some; 2 testes reescritos + 1 novo em `tests/distribuirTarefaTresLugares.test.mjs` — trava `criarQuadroEAviso` e o caminho da mentoria chamando ele), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-134 — o relógio do jogo (não só a data) agora é sempre Brasília, e o ritual explica a si mesmo antes de começar
 
 **Emitida por:** dono (09/09/2026), pedindo uma auditoria noturna: *"vamos fazer uma análise no ritual que algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente melhora a comunicação no ritual... vê se a gente cria um aviso antes de começar o ritual, dez minutos pra quando ela abrir, explicar como funciona."*

@@ -155,6 +155,28 @@ export default function DistribuirTarefa({
     carregarTarefas?.();
   };
 
+  // 🗂️🔔 09/09/2026 — dono: "já estava entrando automático na jornada e não
+  // entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo
+  // automático." + "eu mandei essas duas notificações aí, a pessoa ficou
+  // com dificuldade de receber, só apareceu no quadro." Os dois lados de
+  // "sempre os três lugares" — o card do quadro (ligado à tarefa) e o
+  // aviso que acende o sino — numa função só, pra nunca faltar nenhum
+  // caminho que distribui tarefa (achado na auditoria noturna: a mentoria
+  // completa gravava só a Jornada, os outros dois nunca eram chamados).
+  const criarQuadroEAviso = async (tarefaId, tituloParaAviso, prazoEmParaAviso) => {
+    const { error: erroQuadro } = await supabase.from('metodo_quadro').insert(cardDaDemanda(tarefaId || null));
+    const { error: erroAviso } = await supabase.from('xgame_mensagens').insert({
+      remetente_id: currentUser?.id || null,
+      remetente_nome: nomeExibicao(currentUser) || currentUser?.full_name || 'a gestão',
+      destino_tipo: 'pessoa', destino_id: pessoa, destino_nome: nomeDe(pessoa),
+      tipo: 'demanda',
+      texto: `📋 nova tarefa: "${tituloParaAviso}" — ${rotuloDoPrazo(prazoEmParaAviso, dia) || 'combine o pronto com a gestão'}.`,
+    });
+    if (erroQuadro) toast.error('Entrou na jornada, mas o card do quadro não gravou — confere lá');
+    if (erroAviso) toast.error('Entrou na jornada, mas o sino não avisou a pessoa — confere lá');
+    return { ok: !erroQuadro && !erroAviso };
+  };
+
   const distribuir = async () => {
     if (!pessoa || !nova.titulo.trim()) { toast.error('Escolha a pessoa e diga qual é a tarefa.'); return; }
     setSalvando(true);
@@ -168,10 +190,12 @@ export default function DistribuirTarefa({
         detalhe: ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: b.habito, detalhe: `Bloco da mentoria (${b.minutos} min): ${b.tema}.` }),
         prazo_em: prazoDe(nova.prazoDia || dia, nova.prazoHora || '18:00'),
       }));
-      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      const { data: gravadasMentoria, error } = await supabase.from('metodo_tarefas').insert(linhas).select();
+      if (error) { setSalvando(false); toast.error('Não distribuiu a mentoria — tenta de novo'); return; }
+      const primeiraMentoria = Array.isArray(gravadasMentoria) ? gravadasMentoria[0] : gravadasMentoria;
+      const { ok } = await criarQuadroEAviso(primeiraMentoria?.id, `Mentoria: ${linhas[0].titulo}`, linhas[0].prazo_em);
       setSalvando(false);
-      if (error) { toast.error('Não distribuiu a mentoria — tenta de novo'); return; }
-      toast.success(`Mentoria distribuída pra ${nomeDe(pessoa)}: ${linhas.length} blocos, das ${linhas[0].hora} às ${linhas[2].hora} (+2h)`);
+      toast.success(`Mentoria distribuída pra ${nomeDe(pessoa)}: ${linhas.length} blocos, das ${linhas[0].hora} às ${linhas[2].hora} (+2h)${ok ? ' — jornada, quadro e sino avisados' : ''}`);
       setMentoriaCompleta(false);
       limparFormulario();
       return;
@@ -189,36 +213,22 @@ export default function DistribuirTarefa({
     const linhas = diasAlvo.map((d) => ({ ...linha, data: d, prazo_em: prazoDe(d === dia ? (nova.prazoDia || d) : d, nova.prazoHora || '18:00') }));
     const { data: gravadas, error } = await supabase.from('metodo_tarefas').insert(linhas).select();
     if (error) { setSalvando(false); toast.error('Não distribuiu a tarefa — tenta de novo'); return; }
-    // 🗂️ 09/09/2026 — dono: "já estava entrando automático na jornada e não
-    // entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo
-    // automático." Antes o card do quadro só nascia se o gestor escolhesse
-    // "quadro"/"ambos" — agora SEMPRE nasce, ligado à tarefa do dia (que já
-    // aparece na Jornada por si só — mesma tabela, mesma leitura do dia).
     const primeira = Array.isArray(gravadas) ? gravadas[0] : gravadas;
-    const { error: erroQuadro } = await supabase.from('metodo_quadro').insert(cardDaDemanda(primeira?.id || null));
-    // 🔔 09/09/2026 — dono: "eu mandei essas duas notificações aí, a pessoa
-    // ficou com dificuldade de receber, só apareceu no quadro." A demanda
-    // agora sempre acende o sino da pessoa (mesmo canal do "avisar" da Fila
-    // do Pronto, DIR-107) — não fica só esperando ser encontrada no quadro.
-    const { error: erroAviso } = await supabase.from('xgame_mensagens').insert({
-      remetente_id: currentUser?.id || null,
-      remetente_nome: nomeExibicao(currentUser) || currentUser?.full_name || 'a gestão',
-      destino_tipo: 'pessoa', destino_id: pessoa, destino_nome: nomeDe(pessoa),
-      tipo: 'demanda',
-      texto: `📋 nova tarefa: "${linha.titulo}" — ${rotuloDoPrazo(linha.prazo_em, dia) || 'combine o pronto com a gestão'}.`,
-    });
+    const { ok } = await criarQuadroEAviso(primeira?.id, linha.titulo, linha.prazo_em);
     setSalvando(false);
-    if (erroQuadro) toast.error('Entrou na jornada, mas o card do quadro não gravou — confere lá');
-    if (erroAviso) toast.error('Entrou na jornada, mas o sino não avisou a pessoa — confere lá');
     if (diasAlvo.length > 1) toast.success(`${diasAlvo.length} dias: "${linha.titulo}" de ${fmtDia(diasAlvo[0])} a ${fmtDia(diasAlvo.at(-1))}`);
     // a ação do catálogo (do banco) conta um uso — é o que sobe na lista
     const usada = catalogo.find((a) => a.id === acaoEscolhida);
     if (usada && !usada.padrao) supabase.from('xperf_acoes').update({ usos: (Number(usada.usos) || 0) + 1 }).eq('id', usada.id).then(() => {});
     const valor = previa?.sim?.valorNova;
+    // 🐛 09/09/2026 — achado na auditoria noturna: este toast disparava
+    // incondicional, dizendo "jornada, quadro e sino avisados" mesmo quando
+    // um dos dois tinha acabado de falhar (toast de erro logo acima). Agora
+    // só promete o que de fato aconteceu.
     toast.success(
       valor != null
-        ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)} — jornada, quadro e sino avisados`
-        : `Tarefa distribuída pra ${nomeDe(pessoa)} — jornada, quadro e sino avisados`,
+        ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)}${ok ? ' — jornada, quadro e sino avisados' : ''}`
+        : `Tarefa distribuída pra ${nomeDe(pessoa)}${ok ? ' — jornada, quadro e sino avisados' : ''}`,
     );
     limparFormulario();
   };

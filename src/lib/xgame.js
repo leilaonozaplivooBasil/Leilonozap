@@ -855,9 +855,11 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
   const xpay = { ...xpayDoDia(comEstado, valores), ...reguaDoDia(tarefas, participante || PARTICIPANTE_PADRAO) };
   if (diaZerado) {
-    // o que seria ganho vira perdido — o dinheiro não some em silêncio,
-    // fica registrado como o que a falta de voto (ou o atraso) custou de verdade.
-    xpay.perdido = Math.round((xpay.ganho + xpay.perdido) * 100) / 100;
+    // o que seria ganho E o que ainda estava em jogo (tarefa não concluída,
+    // ainda dentro do prazo) viram perdido — o dinheiro não some em
+    // silêncio, fica registrado como o que a falta de voto (ou o atraso)
+    // custou de verdade.
+    xpay.perdido = Math.round((xpay.ganho + xpay.perdido + xpay.emJogo) * 100) / 100;
     xpay.ganho = 0;
     xpay.emJogo = 0;
   }
