@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  resumoDoDia, dataISO, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -1339,6 +1339,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return pb - pa || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR');
     });
   }, [clientesManuais, buscaLista]);
+  // 🖐️ 09/09/2026 — achado no tour: o botão "Qualificar" só existe pra quem
+  // ainda não tem nota, e todo mundo nesse estado tinha o MESMO data-teste —
+  // o alvo do tour não era necessariamente o primeiro da lista visível.
+  // Aqui é a pessoa CERTA: a primeira sem qualificação, na mesma ordem que
+  // a tela mostra.
+  const primeiroNaoQualificadoId = useMemo(
+    () => listaOrdenada.find((c) => !c.qualificacao_network)?.id || null,
+    [listaOrdenada],
+  );
 
   const salvarQualificacao = async (contato, quali) => {
     setSalvando(true);
@@ -1553,16 +1562,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <strong> detalhes exatos</strong> embaixo de cada imagem — se for um carro: ano, cor, banco de couro, roda. Sonho detalhado vira meta.
               </GuiaMovel>
 
-              {HORIZONTES_SONHO.map((hz) => {
+              {HORIZONTES_SONHO.map((hz, i) => {
                 const doHorizonte = grupos[hz.id];
                 return (
-                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4" data-teste="sonho-horizonte">
+                  // 🖐️ 09/09/2026 — achado no tour: os 3 horizontes tinham o
+                  // MESMO data-teste, e `querySelector` sempre pega o
+                  // primeiro — a mãozinha do Hábito 1 sempre mirava no card
+                  // de curto prazo, não importa a intenção. Marcado só no
+                  // primeiro (i === 0), que é exatamente o card que o passo
+                  // do tour aponta.
+                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4" data-teste={i === 0 ? 'sonho-horizonte' : undefined}>
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <p className="text-sm font-bold text-nz-tinta">
                         {hz.emoji} {hz.label}
                         <span className="text-nz-tinta-fraca font-normal"> · {hz.faixa}{doHorizonte.length > 0 ? ` · ${doHorizonte.length} sonho${doHorizonte.length === 1 ? '' : 's'}` : ''}</span>
                       </p>
-                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0" data-teste="sonho-adicionar">
+                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0" data-teste={i === 0 ? 'sonho-adicionar' : undefined}>
                         <Plus className="w-4 h-4 mr-1" /> Adicionar
                       </Button>
                     </div>
@@ -1653,6 +1668,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <XGameRitualAmanhecer
                   nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
                   sonhos={sonhos.map(normalizarSonho)}
+                  diaCorridoCiclo={diaCorridoDoCiclo(new Date(), inicioCicloOficial(cicloConfig, new Date()))}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
                 />
@@ -2255,7 +2271,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <div className="flex-1 min-w-0">
                                 {/* ✅ DIR-77 — concluída fica VERDE (ordem do dono), e o
                                     horário mostra quando TERMINA quando isso existe. */}
-                                <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste="titulo-tarefa">
+                                {/* 🖐️ 09/09/2026 — achado no tour: cada linha da lista tinha
+                                    o MESMO data-teste, e o tour sempre mirava na primeira
+                                    tarefa renderizada (não necessariamente a primeira da
+                                    lista). Marcado só na tarefa que É a primeira de
+                                    `tarefasJogo` — o que o passo do tour de fato descreve. */}
+                                <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste={t.id === tarefasJogo[0]?.id ? 'titulo-tarefa' : undefined}>
                                   {t.hora && <span className="font-bold">{t.hora_fim ? `${t.hora}–${t.hora_fim}` : t.hora} · </span>}{t.titulo}
                                 </p>
                                 {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou.
@@ -2279,7 +2300,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               </div>
                               {/* o ANDAR DE BAIXO no celular; no desktop `sm:contents`
                                   dissolve este contêiner e nada muda de lugar */}
-                              <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 pl-6 sm:pl-0 sm:w-auto sm:contents" data-teste="acoes-tarefa">
+                              <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 pl-6 sm:pl-0 sm:w-auto sm:contents" data-teste={t.id === tarefasJogo[0]?.id ? 'acoes-tarefa' : undefined}>
                               {/* 💰 X-PAY — a fatia da tarefa no valor do dia (fixo ÷ 22, repartido pelo peso) */}
                               {xgame && xgame.valores[t.id] > 0 && (t.feito || estadoDaTarefa(t)?.id !== 'PERDIDO') && (
                                 <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
@@ -2610,7 +2631,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             )}
                           </div>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0" data-teste="lista-qualificar">
+                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0" data-teste={c.id === primeiroNaoQualificadoId ? 'lista-qualificar' : undefined}>
                             <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
                           </Button>
                         )}
@@ -2759,7 +2780,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {fila.map(({ c, prob }) => {
+                    {fila.map(({ c, prob }, i) => {
                       // 🔦 09/09/2026 — DIR-111.2, dono: "já me coloca ela no
                       // meu contato e pisca... achar direto na lista, não
                       // ficar procurando." Rola até ela UMA vez e pisca —
@@ -2792,7 +2813,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             clica, esse papel vem pra frente." Em vez de ir direto pro WhatsApp, o
                             clique primeiro traz o SCRIPT da pessoa pra frente (chamadaAberta) — o
                             WhatsApp abre só depois, do próprio modal. */}
-                        <div className="flex gap-1.5 shrink-0 flex-wrap" data-teste="contato-acoes">
+                        {/* 🖐️ 09/09/2026 — mesmo achado do tour: marcado só na
+                            PRIMEIRA linha da fila (já ordenada por %), que é
+                            de fato a pessoa que o passo do tour descreve. */}
+                        <div className="flex gap-1.5 shrink-0 flex-wrap" data-teste={i === 0 ? 'contato-acoes' : undefined}>
                           {(() => {
                             const numero = String(c.phone || '').replace(/\D/g, '');
                             const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(`Oi ${(c.full_name || '').split(' ')[0] || ''}, tudo bem?`)}` : null;
