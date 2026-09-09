@@ -60,6 +60,7 @@ import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
+import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
 import DiarioDeBolso from '../components/licensing/CentralVendas/DiarioDeBolso';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
@@ -166,6 +167,9 @@ const DashboardContent = ({ user, isAdmin }) => {
     } catch {}
   };
   const [catalogSubTab, setCatalogSubTab] = useState(getInitialCatalogSubTab);
+  // 🎓❓ 09/09/2026 — o modal do "Como Funciona": pergunta na hora, de
+  // qualquer tela da Top College, sem navegar até achar a aba do Guia.
+  const [comoFuncionaAberto, setComoFuncionaAberto] = useState(false);
   // 🎮 link antigo do Admin X-GAME → a gestão dentro do X-Performance
   useEffect(() => {
     if (activeTab !== 'xgame-admin') return;
@@ -1093,11 +1097,18 @@ const DashboardContent = ({ user, isAdmin }) => {
   // lado dele é o único lugar que aparece em Método, Mentalidade, Time, ADM
   // X-Game e Carreira ao mesmo tempo, sem inventar um flutuante novo por
   // cima do X-Music e da Leila que já disputam aquele canto da tela.
+  //
+  // 🆙 2ª rodada (mesmo dia) — em vez de só levar pra aba do Guia, o botão
+  // abre um modal com o Tira Dúvidas NA HORA, já sabendo em qual seção a
+  // pessoa está perdida (`pagina`). "Ver o guia completo" dentro dele
+  // continua levando pra aba, pra quem quiser ler os 8 Hábitos do zero.
+  const paginaAtual = SECOES_TOP_COLLEGE.find((s) => s.value === catalogSubTab)?.label || null;
   const botaoComoFunciona = catalogSubTab !== 'catalogo-guia' && (
     <button
       type="button"
-      onClick={() => setCatalogSubTab('catalogo-guia')}
-      title="Como Funciona — o guia do X-GAME, os 8 Hábitos e quem pode o quê"
+      onClick={() => setComoFuncionaAberto(true)}
+      title="Como Funciona — pergunte na hora ou veja o guia do X-GAME"
+      data-teste="botao-como-funciona"
       className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2.5 text-[13px] font-bold text-white/80 hover:border-white/30 hover:bg-white/[0.10] hover:text-white"
     >
       <HelpCircle className="h-4 w-4" /> Como Funciona
@@ -1702,6 +1713,15 @@ const DashboardContent = ({ user, isAdmin }) => {
         isProcessingWithdrawal={isProcessingWithdrawal}
         onSubmit={handleWithdrawalSubmit}
       />
+
+      {comoFuncionaAberto &&
+        <ComoFuncionaModal
+          usuario={user}
+          pagina={paginaAtual}
+          onFechar={() => setComoFuncionaAberto(false)}
+          onAbrirGuia={() => { setCatalogSubTab('catalogo-guia'); setComoFuncionaAberto(false); }}
+        />
+      }
 
       </div>
 
