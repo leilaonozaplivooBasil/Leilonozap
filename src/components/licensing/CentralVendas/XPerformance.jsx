@@ -8,12 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import useArrastavel from '@/hooks/useArrastavel';
 import {
   TRILHAS, trilhaDoCargo, COLUNAS, ORDEM_COLUNAS, moverEntregavel, podeMover, podeValidar,
-  encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX, PAUTA_PADRAO,
+  encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX,
 } from '@/lib/xperformance';
 import { HABITOS } from '@/lib/metodo';
 import { fixoDoParticipante } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
+import MensagemProCeo from '@/components/licensing/CentralVendas/MensagemProCeo';
 import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
+import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
+import useTourDaTela from '@/hooks/useTourDaTela';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
 //
@@ -117,7 +120,26 @@ function Card({ item, onMover, onExcluir, ehValidador, meuId }) {
   );
 }
 
+const PASSOS_TOUR_XPERFORMANCE = [
+  {
+    alvo: 'grupo',
+    titulo: 'Onde você está, no todo',
+    texto: 'Antes dos seus números: esta é a estrutura da qual você faz parte. Entender o todo é o que faz o seu pedaço parar de parecer aleatório.',
+  },
+  {
+    alvo: 'pilar',
+    titulo: 'Os pilares — e por que eles importam pra você',
+    texto: 'Cada pilar é uma frente do negócio. O seu trabalho encosta em pelo menos um deles; saber qual ajuda a decidir onde investir a sua energia.',
+  },
+  {
+    alvo: 'valores',
+    titulo: 'Os valores não são enfeite de parede',
+    texto: 'Eles são o critério de decisão quando a resposta não é óbvia. Leia uma vez — a próxima decisão difícil fica mais fácil.',
+  },
+];
+
 export default function XPerformance({ currentUser, visaoTotal = false, gestao = false, hojeISO }) {
+  const [tourAberto, setTourAberto] = useTourDaTela('xperformance');
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const uid = currentUser?.id;
   // o cargo e o fixo moram no X-Game; esta tela busca, não guarda cópia — uma
@@ -327,132 +349,9 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
 
     </>
   );
-  const blocoEncontro = (
-    <>
-      {/* ── 3. O ENCONTRO DE SEGUNDA ─────────────────────────────────────── */}
-      <div>
-        <div className="flex items-baseline justify-between gap-2 flex-wrap">
-          <p className="text-[10px] font-bold tracking-[0.28em] text-white/40 uppercase">
-            Encontro de segunda · {fmtDia(encontro.data)}
-          </p>
-          <p className="text-[10px] text-white/35">
-            {encontro.preenchidos} de {encontro.total} blocos escritos
-            {encontro.data === hoje ? ' · é hoje' : ` · próxima: ${fmtDia(proximaSegunda(hoje))}`}
-          </p>
-        </div>
-        <div className="mt-2 space-y-2">
-          {encontro.blocos.map((b) => {
-            const anteriorTexto = anterior?.blocos.find((x) => x.id === b.id)?.texto;
-            const valor = rascunho[b.id] !== undefined ? rascunho[b.id] : b.texto;
-            return (
-              <div key={b.id} className="rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                <div className="flex items-center gap-2">
-                  <p className="text-[12px] font-bold text-white">{b.titulo}</p>
-                  {b.vazio
-                    ? <span className="text-[10px] text-amber-300 inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> em branco</span>
-                    : <Check className="w-3.5 h-3.5 text-nz-verde" />}
-                </div>
-                <p className="text-[10px] text-white/35 mb-1.5">{b.ajuda}</p>
-                <Textarea
-                  value={valor}
-                  onChange={(e) => setRascunho((r) => ({ ...r, [b.id]: e.target.value }))}
-                  placeholder={b.ajuda}
-                  rows={3}
-                  className="text-[12px]"
-                />
-                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                  <Button size="sm" disabled={salvando || rascunho[b.id] === undefined} onClick={() => salvarBloco(b.id)}
-                    className="bg-nz-verde hover:bg-nz-verde-claro text-white h-7 text-[11px]">
-                    {salvando ? 'Salvando...' : 'Salvar bloco'}
-                  </Button>
-                  {/* 📚 O QUE UM DOCUMENTO SOLTO NÃO DÁ: o mesmo bloco da semana
-                      passada, do lado. É por isso que a pauta é fixa. */}
-                  {anteriorTexto && (
-                    <details className="text-[10px] text-white/40">
-                      <summary className="cursor-pointer hover:text-white/70">semana passada ({fmtDia(anterior.data)})</summary>
-                      <p className="mt-1 whitespace-pre-line text-white/50 max-w-prose">{anteriorTexto}</p>
-                    </details>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-    </>
-  );
-  const blocoQuadro = (
-    <>
-      {/* ── 4. O QUADRO ──────────────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <p className="text-[10px] font-bold tracking-[0.28em] text-white/40 uppercase">
-            X-Performance · o quadro {visaoTotal ? 'da diretoria' : 'que está na sua mão'}
-          </p>
-          <Button size="sm" onClick={() => setNovo({ peso: 1 })} className="bg-white/10 hover:bg-white/20 text-white h-7 text-[11px]">
-            <Plus className="w-3 h-3 mr-1" /> Novo entregável
-          </Button>
-        </div>
-
-        {novo && (
-          <div className="mt-2 rounded-xl border border-white/20 p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <Input autoFocus placeholder="O que precisa ficar pronto?" value={novo.titulo || ''}
-              onChange={(e) => setNovo((n) => ({ ...n, titulo: e.target.value }))} />
-            <Input placeholder="detalhe (opcional)" value={novo.detalhe || ''}
-              onChange={(e) => setNovo((n) => ({ ...n, detalhe: e.target.value }))} />
-            <div className="flex gap-2 flex-wrap items-center">
-              <label className="text-[11px] text-white/50">peso
-                <select value={novo.peso} onChange={(e) => setNovo((n) => ({ ...n, peso: e.target.value }))}
-                  className="ml-1 rounded bg-white/10 px-2 py-1 text-white text-[11px]">
-                  {[1, 2, 3, 4, 5].map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </label>
-              <label className="text-[11px] text-white/50">hábito
-                <select value={novo.habito || ''} onChange={(e) => setNovo((n) => ({ ...n, habito: e.target.value }))}
-                  className="ml-1 rounded bg-white/10 px-2 py-1 text-white text-[11px]">
-                  <option value="">—</option>
-                  {trilha.foco.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </label>
-              <Input type="date" value={novo.prazo || ''} onChange={(e) => setNovo((n) => ({ ...n, prazo: e.target.value }))}
-                className="w-auto h-8 text-[11px]" />
-              <Button size="sm" onClick={criar} disabled={salvando || !novo.titulo?.trim()}
-                className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]">Criar</Button>
-              <Button size="sm" variant="ghost" onClick={() => setNovo(null)} className="h-8 text-[11px] text-white/50">Cancelar</Button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {COLUNAS.map((c) => {
-            const doColuna = doQuadro.filter((e) => e.coluna === c.id);
-            return (
-              <div key={c.id} data-coluna={c.id}
-                className="rounded-xl border border-white/8 p-2 min-h-[120px]"
-                style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <p className="text-[11px] font-bold text-white/70">{c.nome} <span className="text-white/30">{doColuna.length}</span></p>
-                <p className="text-[9px] text-white/30 mb-2 leading-snug">{c.ajuda}</p>
-                <div className="space-y-2">
-                  {doColuna.map((item) => (
-                    <Card key={item.id} item={item} onMover={mover} onExcluir={excluir} ehValidador={visaoTotal} meuId={uid} />
-                  ))}
-                  {!doColuna.length && <p className="text-[10px] text-white/20 py-2 text-center">vazio</p>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {!visaoTotal && (
-          <p className="mt-2 text-[10px] text-white/30">
-            Mover pra “Entregue” é de quem valida — por isso o botão fica travado aqui.
-          </p>
-        )}
-      </div>
-    </>
-  );
-
-  const blocosEscritos = Object.values(encontro?.blocos || {}).filter((v) => String(v || '').trim()).length;
+  // 🧹 08/09/2026 — `blocoEncontro` e `blocoQuadro` (a dobra "Diretoria" da
+  // gestão) saíram por pedido do dono; o Encontro de Segunda e o Quadro
+  // continuam existindo pra quem NÃO é gestão (JSX próprio, mais abaixo).
 
   // 🏛️ o grupo, pra todo mundo ter a visão geral: a holding, os pilares, a
   // visão, a missão e os valores — palavra por palavra da página da cultura
@@ -492,19 +391,15 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
   );
 
   if (gestao) {
-    // 🧹 dono (06/09/2026): "tirar isso dali de baixo e botar no quadro geral;
-    // as comprovações têm que subir". O que é de cada pessoa (fixo, caminho
-    // pra sociedade, comprovações) foi pro Quadro Geral dela. Aqui embaixo só
-    // fica o que é da diretoria (encontro e quadro) e o "sobre".
+    // 🧹 08/09/2026 — dono: "essa diretoria [encontro de segunda + quadro]
+    // pode tirar, foi um começo que a gente não fez, não está legal. E a
+    // mentalidade está muito genérica, muito feia — pode tirar isso também,
+    // já tem tudo isso lá, depois a gente faz um negócio melhor." As duas
+    // dobras que ficavam abaixo da gestão saem; o que sobra é só o que o
+    // painel realmente usa.
     return (
       <div className="space-y-4">
         <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />
-        <Dobra id="diretoria" titulo="Diretoria: encontro de segunda e o quadro" resumo={`${fmtDia(encontro.data)} · ${blocosEscritos} de ${PAUTA_PADRAO.length} blocos · ${doQuadro.length} entregáve${doQuadro.length === 1 ? 'l' : 'is'}`}>
-          <div className="space-y-5">{blocoEncontro}{blocoQuadro}</div>
-        </Dobra>
-        <Dobra id="sobre" titulo="Sobre: as três mentalidades e o grupo To The Top" resumo="o que cada mentalidade significa · a holding, os pilares, visão, missão e valores">
-          <div className="space-y-5">{blocoMentalidade}{blocoGrupo}</div>
-        </Dobra>
       </div>
     );
   }
@@ -513,6 +408,12 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
     <div className="space-y-5">
       {/* a trilha da pessoa numa linha; as três mentalidades explicadas ficam dobradas */}
       <Dobra id="mentalidades" titulo="Mentalidade" resumo={`a sua trilha hoje: ${trilha.nome} — ${trilha.lema.toLowerCase()} · ver as três`}>{blocoMentalidade}</Dobra>
+      {/* 📨 09/09/2026 — DIR-106, dono: "a mensagem pro CEO, a mensagem pra
+          diretoria, a mensagem pros executivos, a gente tem que ter isso
+          aí... e eles podem mandar um pros outros, demandas." */}
+      <Dobra id="mensagem-ceo" titulo="Mensagem pro CEO" resumo="sugestão, pedido, agradecimento — ou uma demanda pra um colega" aberta>
+        <MensagemProCeo currentUser={currentUser} cargo={participante?.cargo} />
+      </Dobra>
       <Dobra id="grupo" titulo="O grupo To The Top" resumo="a holding, os cinco pilares, visão, missão e os valores inegociáveis">{blocoGrupo}</Dobra>
       {/* ── 2. AS DUAS CONTAS, SEPARADAS ─────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -683,6 +584,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
           </p>
         )}
       </div>
+      <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_XPERFORMANCE} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }

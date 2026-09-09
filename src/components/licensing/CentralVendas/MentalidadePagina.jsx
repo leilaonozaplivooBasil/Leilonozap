@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Brain, Trophy } from 'lucide-react';
 import EncontroMentalidade from '@/components/licensing/CentralVendas/EncontroMentalidade';
 import PerformanceEquipe from '@/components/licensing/CentralVendas/PerformanceEquipe';
+import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
+import useTourDaTela from '@/hooks/useTourDaTela';
 
 // 🧠📊 MENTALIDADE — o espaço da segunda e do fluxo, junto d'O Método (dono, 06/09/2026).
 // Duas abas, sem nada administrativo:
@@ -22,7 +24,21 @@ const ABAS = [
 // solto no canto desta faixa, o que as pílulas "Só o meu / Tudo" já dizem lá
 // em cima, na faixa da academia — e o ml-auto jogava o texto pra debaixo do
 // professor, longe do controle de verdade. UMA fonte só: as pílulas.
+const PASSOS_TOUR_ENCONTRO = [
+  {
+    alvo: 'mentalidade',
+    titulo: 'O encontro é onde o método vira cabeça',
+    texto: 'Aqui não é tarefa nem número: é o que sustenta os dois. É a parte que parece a menos urgente e é a que mais muda resultado.',
+  },
+  {
+    alvo: 'mentalidade-abas',
+    titulo: 'Cada aba é um encontro',
+    texto: 'Você pode voltar em qualquer um, quando quiser. Nada aqui expira.',
+  },
+];
+
 export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null, soEu = false }) {
+  const [tourAberto, setTourAberto] = useTourDaTela('encontro');
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const ehSegunda = new Date(`${hoje}T12:00:00`).getDay() === 1;
   const [aba, setAba] = useState(abaInicial || (ehSegunda ? 'encontro' : 'performance'));
@@ -38,6 +54,7 @@ export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir =
         ))}
       </div>
       {aba === 'encontro' ? <EncontroMentalidade currentUser={currentUser} hojeISO={hoje} podeConduzir={podeConduzir} /> : <PerformanceEquipe currentUser={currentUser} hojeISO={hoje} gestao={gestao} soEu={soEu} />}
+      <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_ENCONTRO} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }

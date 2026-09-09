@@ -6,7 +6,7 @@ import { X, Camera, ImagePlus, Loader2, SwitchCamera } from 'lucide-react';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
-import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado } from '@/lib/xgame';
+import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, RESUMO_MIN_FDS, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado, faltaDoResumo, ehOrganizacaoDoNegocio } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
 import { useSegurarCamada } from '@/hooks/useCamadaModal';
 
@@ -103,9 +103,11 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   // saem da frente — eles cobriam o botão de concluir no celular.
   useSegurarCamada();
 
-  // 📚 estudo = FOTO do estudo + RESUMO digitado (mínimo de verdade)
-  const podeConcluir = tipo === 'aprendizado'
-    ? !!file && texto.trim().length >= RESUMO_MIN
+  // 📚 estudo = FOTO do estudo + RESUMO digitado (mínimo de verdade — bem
+  // maior no estudo de fim de semana, o "estudo foda" do dono)
+  const ehEstudo = tipo === 'aprendizado' || tipo === 'aprendizado_fds';
+  const podeConcluir = ehEstudo
+    ? !!file && faltaDoResumo(texto, tipo) === 0
     : !!file;
 
   // 🔒 e o botão apagado DIZ o que está faltando, em vez de só ficar opaco
@@ -229,6 +231,15 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
         </div>
 
         <div className="px-5 py-4 space-y-3">
+          {/* 📋 09/09/2026 — dono, ao vivo, vendo uma foto de papel aceita
+              como "organização do negócio": "isso é horrível, não pode...
+              tem que ser dentro do Quadro. Papel nunca." Avisa ANTES de
+              tirar a foto errada, não depois de reprovar. */}
+          {ehOrganizacaoDoNegocio(tarefa?.titulo) && (
+            <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              🗂️ Isso só vale registrado dentro do <strong>Quadro</strong> — abra o Quadro, organize por lá e mande o print de TELA. Foto de papel/caderno não vai ser aceita.
+            </p>
+          )}
           {/* 📱 POSTAR NO INSTAGRAM EM TUDO (ordem do dono): toda comprovação
               é também conteúdo — o botão abre o app pra postar o momento */}
           <a
@@ -238,51 +249,57 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-sm font-bold py-2.5 hover:opacity-90"
           >📱 Postar no Instagram</a>
 
-          {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino) */}
-          {tipo === 'aprendizado' && (
-            <div className="space-y-1">
-              <p className="text-[11px] text-nz-tinta-fraca">
-                Escreva com as <span className="font-bold text-nz-tinta">suas palavras</span>, no mínimo{' '}
-                <span className="font-bold text-nz-tinta">{RESUMO_MIN} caracteres</span> — dá umas 6 linhas.
-              </p>
-              <Textarea
-                autoFocus
-                placeholder={`O que você aprendeu hoje, com as suas palavras (pelo menos ${RESUMO_MIN} caracteres)...`}
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                onPaste={bloquearCola}
-                onDrop={bloquearCola}
-                className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[100px] rounded-xl"
-              />
-              <div className="flex items-center justify-between gap-2">
-                {/* 🗣️ diz quanto FALTA, e já diz o tamanho antes de começar.
-                    "18/400 caracteres" lia-se como "18 de um limite de 400" —
-                    o oposto do que a regra pede. */}
-                <span
-                  data-teste="contador-resumo"
-                  className={`text-[10px] font-semibold ${texto.trim().length >= RESUMO_MIN ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}
-                >
-                  {textoDoContador(texto)}
-                </span>
-                {/* o rótulo passa a dizer a verdade: escrever OU falar valem;
-                    o que não vale continua sendo colar o texto dos outros */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-nz-tinta-fraca">
-                    {ditado.disponivel ? '✍️🎙️ escreva ou fale — colar não vale' : '✍️ só digitando — colar não vale'}
+          {/* 📚 estudo: o resumo DIGITADO OU FALADO (colar é bloqueado —
+              digitar/falar é treino, copiar não). No fim de semana o mínimo
+              é bem maior — é o mergulho fundo. */}
+          {ehEstudo && (() => {
+            const minimo = tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN;
+            return (
+              <div className="space-y-1">
+                <p className="text-[11px] text-nz-tinta-fraca">
+                  Escreva com as <span className="font-bold text-nz-tinta">suas palavras</span>, no mínimo{' '}
+                  <span className="font-bold text-nz-tinta">{minimo} caracteres</span>
+                  {tipo === 'aprendizado_fds' ? ' — o estudo foda de fim de semana, um resumo bem detalhado.' : ' — dá umas 6 linhas.'}
+                </p>
+                <Textarea
+                  autoFocus
+                  placeholder={`O que você aprendeu, com as suas palavras (pelo menos ${minimo} caracteres)...`}
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value)}
+                  onPaste={bloquearCola}
+                  onDrop={bloquearCola}
+                  className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[100px] rounded-xl"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  {/* 🗣️ diz quanto FALTA, e já diz o tamanho antes de começar.
+                      "18/400 caracteres" lia-se como "18 de um limite de 400" —
+                      o oposto do que a regra pede. */}
+                  <span
+                    data-teste="contador-resumo"
+                    className={`text-[10px] font-semibold ${faltaDoResumo(texto, tipo) === 0 ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}
+                  >
+                    {textoDoContador(texto, tipo)}
                   </span>
-                  <BotaoDitado
-                    ditado={ditado}
-                    rotulo="falar"
-                    rotuloGravando="parar"
-                    className="border border-nz-borda bg-white text-nz-verde hover:bg-nz-verde-fundo !px-2.5 !py-1 !text-[11px]"
-                  />
+                  {/* o rótulo passa a dizer a verdade: escrever OU falar valem;
+                      o que não vale continua sendo colar o texto dos outros */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-nz-tinta-fraca">
+                      {ditado.disponivel ? '✍️🎙️ escreva ou fale — colar não vale' : '✍️ só digitando — colar não vale'}
+                    </span>
+                    <BotaoDitado
+                      ditado={ditado}
+                      rotulo="falar"
+                      rotuloGravando="parar"
+                      className="border border-nz-borda bg-white text-nz-verde hover:bg-nz-verde-fundo !px-2.5 !py-1 !text-[11px]"
+                    />
+                  </div>
                 </div>
+                {ditado.erro && <p className="text-xs font-semibold text-amber-700 bg-amber-50 rounded-xl px-3 py-2">{ditado.erro}</p>}
+                {avisoCola && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{avisoCola}</p>}
+                <p className="text-[11px] text-nz-tinta-fraca pt-1">E a foto do estudo (a página, a anotação):</p>
               </div>
-              {ditado.erro && <p className="text-xs font-semibold text-amber-700 bg-amber-50 rounded-xl px-3 py-2">{ditado.erro}</p>}
-              {avisoCola && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{avisoCola}</p>}
-              <p className="text-[11px] text-nz-tinta-fraca pt-1">E a foto do estudo (a página, a anotação):</p>
-            </div>
-          )}
+            );
+          })()}
 
           {cameraAberta ? (
             /* 🎥 a câmera ao vivo */

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { fmtBR, parseValorBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -43,6 +43,8 @@ import CrmMetodo from './CrmMetodo';
 import CrmImportarContatosModal from './CrmImportarContatosModal';
 import { paraGravar, emLotes } from '@/lib/importarContatos';
 import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
+import { ouvirPedidoDeTour } from '@/lib/pedidoDeTour';
+import TourGuiado from './TourGuiado';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
 import { useEscopoDeVisao } from './SeletorEscopo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
@@ -69,6 +71,45 @@ const MASCARA_COSTURA_PALCO = [
   'linear-gradient(180deg, transparent 0%, #000 18%)',
   'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)',
 ].join(', ');
+
+// 🖐️ 09/09/2026 — DIR-124: os Hábitos 6 (Acompanhamento, visão Clientes) e
+// 7 (Verificação) não tinham NENHUM tour — o achado que fechou a auditoria
+// pedida pelo dono ("tem aba que não está funcionando"). `nav-habitos` é o
+// mesmo alvo do passo 1 de todo tour do app (o grid dos 8 Hábitos).
+const PASSOS_TOUR_ACOMPANHAMENTO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Você está no Hábito 6 — Acompanhamento e Fechamento. É aqui que o cliente vive depois da apresentação: negociação, fechamento, ou virar oportunidade na Esteira.',
+  },
+  {
+    alvo: 'clientes-busca',
+    titulo: 'Ache qualquer pessoa em segundos',
+    texto: 'Nome, e-mail, telefone, CPF, status ou origem — filtre por qualquer um pra achar quem procura, sem rolar a lista inteira.',
+  },
+  {
+    alvo: 'clientes-lista-funil',
+    titulo: 'Duas formas de ver a mesma coisa',
+    texto: 'Lista mostra todo mundo em linha; Funil mostra por etapa da negociação — troque conforme o que você precisa enxergar agora.',
+  },
+];
+const PASSOS_TOUR_VERIFICACAO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Você está no Hábito 7 — Verificação do Progresso. "O que não se mede não se corrige": é aqui que os números de todo mundo aparecem juntos.',
+  },
+  {
+    alvo: 'verificacao-resumo',
+    titulo: 'Os números que importam, num só lugar',
+    texto: 'Vendas, meta, conversão e captação — os 4 números que você vê espalhados nas outras telas se juntam aqui, pra bater o olho e saber como está o dia.',
+  },
+  {
+    alvo: 'verificacao-time',
+    titulo: 'O placar humano do time',
+    texto: 'Pulso, pódio, radar e a tabela do X-Game — a mesma gamificação que cada pessoa vê de si, só que do time inteiro, junto.',
+  },
+];
 
 export default function CrmClientesTab({ isAdmin, currentUser }) {
   const [customers, setCustomers] = useState([]);
@@ -97,6 +138,47 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
   const [secao, setSecao] = useState(null);
   const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
+  // 🔦 09/09/2026 — DIR-111.2, dono: "eu cliquei nessa pessoa, ela me
+  // levou pra página seguinte, eu não posso ter a sensação que estou
+  // recomeçando... já me coloca ela no meu contato e pisca." Quem clicou
+  // "Contatar" na Lista de Network chega no Hábito 4 já apontado pra ela.
+  const [contatoDestacado, setContatoDestacado] = useState(null);
+  // 🖐️ 09/09/2026 — dono, ao vivo, depois de testar o Compromisso: "pode
+  // seguir pros outros hábitos", e depois, urgente: "tem aba que não está
+  // funcionando... vamos fazer análise e deixar funcionando perfeito." O
+  // botão global "Como Funciona" pede o tour de fora desta tela
+  // (src/lib/pedidoDeTour.js) sem saber em qual dos 8 Hábitos a pessoa está.
+  //
+  // 🐛 DIR-124 — o BUG que fazia "algumas abas não funcionarem": o pedido
+  // sempre virava `tourPendente = true`, repassado pro CrmMetodo — mas
+  // CrmMetodo só existe em 6 dos 8 Hábitos (nunca em Acompanhamento nem em
+  // Verificação). Nesses dois, o clique não fazia NADA (`tourPendente`
+  // ficava true, esquecido) — e se a pessoa então trocasse pra um Hábito
+  // que TEM CrmMetodo (ex.: Sonho), ele montava já com `iniciarTour=true`
+  // e disparava um tour QUE NINGUÉM PEDIU ali, sem aviso — o "tour do Sonho
+  // travado/estranho" que o dono via era exatamente essa sobra.
+  //
+  // A CORREÇÃO: decidir a rota NA HORA do clique, olhando pra tela atual —
+  // `secaoAtivaRef` existe só porque `secaoAtiva` nasce mais abaixo neste
+  // componente (depois deste efeito) e um efeito só vê o valor que
+  // existia quando ele foi CRIADO; o ref sempre lê o valor de agora.
+  const [tourPendente, setTourPendente] = useState(false); // Hábitos 1,2,3,4,5,8 (CrmMetodo)
+  const [tourVerificacaoAberto, setTourVerificacaoAberto] = useState(false); // Hábito 7
+  const [tourAcompanhamentoAberto, setTourAcompanhamentoAberto] = useState(false); // Hábito 6 (Clientes)
+  const [tourEsteiraPendente, setTourEsteiraPendente] = useState(false); // Hábito 6b (Esteira/Expansão)
+  const secaoAtivaRef = useRef('acompanhamento');
+  const subAcompRef = useRef(subAcomp);
+  useEffect(() => { subAcompRef.current = subAcomp; }, [subAcomp]);
+  useEffect(() => ouvirPedidoDeTour((id) => {
+    if (id !== 'metodo') return;
+    const atual = secaoAtivaRef.current;
+    if (['sonho', 'compromisso', 'lista', 'contato', 'apresentacao', 'duplicacao'].includes(atual)) { setTourPendente(true); return; }
+    if (atual === 'verificacao') { setTourVerificacaoAberto(true); return; }
+    if (atual === 'acompanhamento') {
+      if (subAcompRef.current === 'expansao') setTourEsteiraPendente(true);
+      else setTourAcompanhamentoAberto(true);
+    }
+  }), []);
   // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
   const [visaoClientes, setVisaoClientes] = useState('lista');
   const [negotiations, setNegotiations] = useState([]);
@@ -344,12 +426,30 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   const timeCorporativo = React.useMemo(() => membrosDoTopo(appUsers), [appUsers]);
 
   // 📞 DIR-24 Fase 4 — a fila diária de ação, no MESMO escopo de quem vê.
+  const alertasEsteiraAtual = React.useMemo(() => alertasEsteira(networkOportunidades), [networkOportunidades]);
   const filaContato = React.useMemo(
-    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteira(networkOportunidades) }),
-    [unifiedCustomers, networkCatalogSales, networkOportunidades]
+    () => quemContatarHoje({ unifiedCustomers, sales: networkCatalogSales, alertasEsteiraLista: alertasEsteiraAtual }),
+    [unifiedCustomers, networkCatalogSales, alertasEsteiraAtual]
+  );
+  // 🎯 08/09/2026 — dono: "assim que ele fizer o contato... atualiza as
+  // informações." Contagem de reuniões que JÁ aconteceram e ninguém mexeu
+  // ainda — vira o número vermelho na aba "Esteira & Expansão", pra quem
+  // nunca abre a aba Clientes também ver que tem gente esperando.
+  const reunioesParaAtualizar = React.useMemo(
+    () => alertasEsteiraAtual.filter((a) => a.tipo === 'reuniao_concluida').length,
+    [alertasEsteiraAtual]
   );
 
   const [detailCustomer, setDetailCustomer] = useState(null);
+  // 🔗 08/09/2026 — a oportunidade que veio de fora (fila ou modal do
+  // cliente) pedindo pra abrir DIRETO o card de editar na Esteira.
+  const [oportunidadeParaAbrir, setOportunidadeParaAbrir] = useState(null);
+  const abrirOportunidadeExistente = (o) => {
+    setDetailCustomer(null);
+    setSecao('acompanhamento');
+    setSubAcomp('expansao');
+    setOportunidadeParaAbrir(o);
+  };
   // 🛤️ DIR-36 — "Nova oportunidade" pré-preenchida a partir do cliente
   const [clientePreenchido, setClientePreenchido] = useState(null);
 
@@ -1350,6 +1450,7 @@ _Enviado via CRM Leilão NoZap_`;
   // 🧭 DIR-24 Fase 3 — seção ativa e a faixa de resumo (os 4 números que
   // importam, sempre visíveis, pro leitor apressado e pro alto nível).
   const secaoAtiva = secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento');
+  secaoAtivaRef.current = secaoAtiva; // 🐛 DIR-124 — ver comentário do listener de tour, acima
   // dentro do Hábito 6: alterna entre 👥 Clientes e 🚀 Esteira/Expansão
   const brl = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const resumoItens = [
@@ -1547,7 +1648,7 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🏆 Navegação pelos 8 Hábitos (DIR-43) — trilho escuro, ícone de
             traço no lugar do emoji e o hábito ativo carregando o gradiente
             da Top College (DIR-56). */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 sm:mb-7">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 sm:mb-7" data-teste="nav-habitos">
           {SECOES.map(({ id, n, nome, Icone }) => {
             const ativo = secaoAtiva === id;
             return (
@@ -1671,6 +1772,12 @@ _Enviado via CRM Leilão NoZap_`;
             onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
+            iniciarTour={tourPendente}
+            onTourIniciado={() => setTourPendente(false)}
+            onIr={(sec, sub, contatoId) => { setSecao(sec); if (sub) setSubAcomp(sub); setContatoDestacado(contatoId || null); }}
+            contatoDestacado={contatoDestacado}
+            onContatoDestacadoConsumido={() => setContatoDestacado(null)}
+            onCriarOportunidade={criarOportunidadeDoCliente}
             onImportarContatos={
               // 📥 Importar só na visão "só o meu": na visão de time a lista na
               // tela é de outras pessoas, e contato importado é carimbado pelo
@@ -1678,7 +1785,6 @@ _Enviado via CRM Leilão NoZap_`;
               // errada. Quem vê tudo troca o seletor pra "só o meu" e importa.
               visao.metodoTudo ? null : () => setShowImportarContatos(true)
             }
-            onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
           />
         )}
 
@@ -1715,7 +1821,7 @@ _Enviado via CRM Leilão NoZap_`;
               <span className="text-[11px] sm:text-xs text-nz-tinta-fraca">verificando o progresso e mapeando processos</span>
             </div>
             {/* os 4 números que vieram do topo: é aqui que eles pertencem */}
-            <CrmResumo itens={resumoItens} />
+            <div data-teste="verificacao-resumo"><CrmResumo itens={resumoItens} /></div>
             {isSuperAdmin && metaCentral && <CrmMetaCentral metaCentral={metaCentral} ritmo={ritmo} />}
             {isSuperAdmin && kpisDiretoria && <CrmDashboardDiretoria kpis={filtrarKpisPorVisao(kpisDiretoria, vis)} />}
             {/* 🎯 DIR-38 — centro de comando: esteira em números, agenda do
@@ -1728,7 +1834,8 @@ _Enviado via CRM Leilão NoZap_`;
             />
             <CrmStatsCards stats={stats} isSuperAdmin={isSuperAdmin} verDinheiro={vis.verDinheiroEmpresa} parte="executiva" />
             {/* 🎖️ o placar humano do time: pulso, pódio, radar e a tabela */}
-            <XGameVisaoExecutiva />
+            <div data-teste="verificacao-time"><XGameVisaoExecutiva /></div>
+            <TourGuiado ativo={tourVerificacaoAberto} passos={PASSOS_TOUR_VERIFICACAO} onFechar={() => setTourVerificacaoAberto(false)} />
           </>
         )}
 
@@ -1740,9 +1847,17 @@ _Enviado via CRM Leilão NoZap_`;
                 key={id}
                 type="button"
                 onClick={() => setSubAcomp(id)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${subAcomp === id ? 'bg-nz-verde text-white border-nz-verde' : 'bg-white text-nz-tinta-fraca border-nz-borda hover:text-nz-tinta'}`}
+                className={`relative px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${subAcomp === id ? 'bg-nz-verde text-white border-nz-verde' : 'bg-white text-nz-tinta-fraca border-nz-borda hover:text-nz-tinta'}`}
               >
                 {rotulo}
+                {/* 🎯 dono: "assim que ele fizer o contato... atualiza as
+                    informações" — o número vermelho aparece mesmo pra quem
+                    nunca entra na aba Clientes pra ver a fila. */}
+                {id === 'expansao' && reunioesParaAtualizar > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white" title={`${reunioesParaAtualizar} reunião(ões) aconteceram e esperam atualização`}>
+                    {reunioesParaAtualizar}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -1758,6 +1873,7 @@ _Enviado via CRM Leilão NoZap_`;
               executivos={timeCorporativo}
               usuariosApp={appUsers}
               clientes={unifiedCustomers}
+              clientesManuais={metodoEscopo.clientes}
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
               onSalvar={handleSalvarOportunidade}
@@ -1765,6 +1881,11 @@ _Enviado via CRM Leilão NoZap_`;
               podeRegistrarAporte={vis.verDinheiroEmpresa}
               clientePreenchido={clientePreenchido}
               onClientePreenchidoConsumido={() => setClientePreenchido(null)}
+              oportunidadeParaAbrir={oportunidadeParaAbrir}
+              onOportunidadeParaAbrirConsumida={() => setOportunidadeParaAbrir(null)}
+              onIr={(sec) => setSecao(sec)}
+              iniciarTour={tourEsteiraPendente}
+              onTourIniciado={() => setTourEsteiraPendente(false)}
             />
             <CrmParceirosCompra captacao={captacao} parceiros={parceirosCompra} />
             {isSuperAdmin && escadaLicencas && <CrmEscadaLicencas escada={escadaLicencas} />}
@@ -1787,7 +1908,7 @@ _Enviado via CRM Leilão NoZap_`;
           <TabsContent value="customers">
             {/* 📞 DIR-24 Fase 4 — a fila de ação vem ANTES de tudo: é o que
                 transforma o CRM de relatório em ferramenta de venda. */}
-            <CrmQuemContatar fila={filaContato} onAbrirCliente={setDetailCustomer} />
+            <CrmQuemContatar fila={filaContato} onAbrirCliente={setDetailCustomer} onAbrirOportunidade={abrirOportunidadeExistente} />
 
             <CrmStatsCards
               stats={stats}
@@ -1797,7 +1918,7 @@ _Enviado via CRM Leilão NoZap_`;
               onPurchaseStatusClick={setPurchaseStatusFilter}
             />
             {/* FILTROS DE CLIENTES */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6" data-teste="clientes-busca">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nz-tinta-fraca" />
             <Input
@@ -1864,7 +1985,7 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
 
           {/* 🌊 DIR-24 Fase 5 — alternador Lista/Funil + exportação CSV */}
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-3" data-teste="clientes-lista-funil">
             <div className="flex gap-1 rounded-lg border border-nz-borda bg-nz-cinza-fundo p-0.5">
               <button
                 type="button"
@@ -1906,10 +2027,12 @@ _Enviado via CRM Leilão NoZap_`;
               oportunidades={oportunidadesDoCliente}
               eventos={eventosDoCliente}
               onCriarOportunidade={criarOportunidadeDoCliente}
+              onAbrirOportunidade={abrirOportunidadeExistente}
               onEditarContato={handleEditarContato}
               podeEditarUsuarioApp={vis.gerirVendedores}
             />
           )}
+          <TourGuiado ativo={tourAcompanhamentoAberto} passos={PASSOS_TOUR_ACOMPANHAMENTO} onFechar={() => setTourAcompanhamentoAberto(false)} />
 
           </TabsContent>
 

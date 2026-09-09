@@ -107,9 +107,12 @@ test('o vídeo do ritual saiu do bucket PÚBLICO', () => {
   assert.ok(!/create policy/i.test(MIG_VIDEO), 'apareceu policy — o cofre deixou de ser cofre');
   assert.match(ROTA_VIDEO, /bucket: 'xgame-videos'/);
   const METODO = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
-  const trecho = METODO.slice(METODO.indexOf('let videoPath'), METODO.indexOf('const aprovadoDireto'));
-  assert.ok(!/Core\.UploadFile/.test(trecho), 'o vídeo voltou pro bucket público');
-  assert.match(trecho, /guardarVideo\(/);
+  // O upload DO VÍDEO — do `let videoPath` até o fim do bloco `if (videoBlob)`.
+  // O recorte é estreito de propósito: logo abaixo existe outro upload, o do
+  // frame, que é assunto do teste seguinte.
+  const doVideo = METODO.slice(METODO.indexOf('let videoPath'), METODO.indexOf('let vereditoAmbiente'));
+  assert.ok(!/Core\.UploadFile/.test(doVideo), 'o vídeo voltou pro bucket público');
+  assert.match(doVideo, /guardarVideo\(/);
 });
 
 test('o gestor VÊ o vídeo — porque a tela sempre prometeu isso', () => {
@@ -160,4 +163,26 @@ test('só admin move arquivo dos outros, e o papel vem do banco', () => {
   assert.match(MOVER, /só admin/);
   // e nada acontece sem confirmação explícita: o GET só CONTA
   assert.match(MOVER, /corpo\.confirmar !== true/);
+});
+
+test('⚠️ BURACO CONHECIDO: o FRAME do vídeo ainda vai pro bucket público', () => {
+  // Este teste não protege uma vitória — ele deixa uma DÍVIDA à vista.
+  //
+  // O vídeo do ritual foi pro cofre privado. Mas o main ganhou depois (DIR-125)
+  // uma validação de ambiente por IA que captura um FRAME e o sobe pelo
+  // Core.UploadFile — ou seja, pro `public-assets`. É a mesma exposição que
+  // este PR existe pra fechar, num único quadro: o rosto da pessoa, em casa,
+  // aberto por link.
+  //
+  // Por que não foi consertado junto: `xgameValidarPrint` recebe `image_url` e
+  // a IA precisa BUSCAR essa imagem. Mandar pro cofre exige devolver link
+  // assinado e conferir que o validador aceita — mexer no caminho da IA dentro
+  // de uma resolução de conflito seria alargar o risco em vez de reduzir.
+  //
+  // 🔴 SE ESTE TESTE COMEÇAR A FALHAR, é porque alguém consertou o frame — e aí
+  // ele deve ser APAGADO, não ajustado. Enquanto passar, a dívida existe.
+  const METODO = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
+  const doFrame = METODO.slice(METODO.indexOf('let vereditoAmbiente'), METODO.indexOf('vereditoAmbiente?.veredito'));
+  assert.match(doFrame, /Core\.UploadFile/,
+    'o frame saiu do bucket público — ótimo: apague este teste, a dívida acabou');
 });

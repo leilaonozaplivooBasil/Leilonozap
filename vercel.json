@@ -32,6 +32,7 @@
     { "path": "/api/functions/renovarTokenMelhorEnvio", "schedule": "17 5 * * *" },
     { "path": "/api/functions/liquidarArrematesPendentes", "schedule": "*/10 * * * *" },
     { "path": "/api/functions/gerarGastosFixos", "schedule": "0 6 * * *" },
-    { "path": "/api/functions/gerarJornadaDoDia", "schedule": "0 7 * * *" }
+    { "path": "/api/functions/gerarJornadaDoDia", "schedule": "0 7 * * *" },
+    { "path": "/api/functions/purgarAudiosAntigos", "schedule": "20 3 * * *" }
   ]
 }

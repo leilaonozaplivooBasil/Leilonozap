@@ -95,9 +95,62 @@ test('o relatório do executivo: cabeçalho, números, os quatro blocos e o nome
 
 test('sem meta, sem demanda e sem período: o relatório não quebra', () => {
   const rel = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE });
-  assert.deepEqual(rel.numeros.map((n) => n.valor), ['0/8', '—', '0/0', '0']);
-  assert.deepEqual(rel.blocos.map((b) => b.resumo), ['0 de 8', 'sem meta definida', 'nenhuma demanda']);
+  // 📄 09/09/2026 — DIR-108: sem `habitos` passado (não computado nesta
+  // tela), o bloco/número de Hábitos nem aparece — "0/8" seria dizer que a
+  // pessoa não fez nada, quando é só um dado que não foi lido aqui.
+  assert.deepEqual(rel.numeros.map((n) => n.valor), ['—', '0/0', '0']);
+  assert.deepEqual(rel.blocos.map((b) => b.resumo), ['sem meta definida', 'nenhuma demanda']);
   assert.equal(rel.semaforo, null);
+});
+
+test('sem `posicao`: posicaoDoDia fica null e o texto não menciona liga nenhuma', () => {
+  const rel = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE });
+  assert.equal(rel.posicaoDoDia, null);
+  assert.ok(!textoDoRelatorio(rel).includes('Posição do dia'));
+});
+
+test('DIR-112: posicao vira posicaoDoDia com a leitura da roda (redondez/faixa)', () => {
+  const rel = relatorioDoExecutivo({
+    pessoa: { id: 'x', nome: 'Fulano' },
+    hojeISO: HOJE,
+    posicao: {
+      liga: { id: 'ouro', label: 'LIGA OURO', emoji: '🥇' },
+      proxima: { label: 'LIGA PLATINA', emoji: '💠', falta: 2.44 },
+      tokenCiclo: 18.5,
+      tokenMax: 22.22,
+      formacaoPct: 82,
+      formacaoMensagem: 'Parabéns! Continue assim e em 1 MÊS você abrirá votação extraordinária.',
+      eixos: [
+        { k: 'mvm', rotuloCurto: 'MvM', emoji: '🗳️', atual: 90, alvo: 100 },
+        { k: 'producao', rotuloCurto: 'Produção', emoji: '📋', atual: 95, alvo: 100 },
+        { k: 'realtime', rotuloCurto: 'Real Time', emoji: '⏱️', atual: 88, alvo: 100 },
+        { k: 'bonus', rotuloCurto: 'Bônus', emoji: '📚', atual: 92, alvo: 100 },
+        { k: 'vendas', rotuloCurto: 'Vendas', emoji: '🛒', atual: 60, alvo: 100 },
+      ],
+    },
+  });
+  assert.equal(rel.posicaoDoDia.liga.label, 'LIGA OURO');
+  assert.equal(rel.posicaoDoDia.proxima.falta, 2.44);
+  assert.equal(rel.posicaoDoDia.tokenCiclo, 18.5);
+  assert.equal(rel.posicaoDoDia.formacaoPct, 82);
+  assert.equal(rel.posicaoDoDia.eixos.length, 5);
+  assert.ok(rel.posicaoDoDia.roda?.id, 'a roda tem uma faixa (redondez lida)');
+
+  const txt = textoDoRelatorio(rel);
+  assert.match(txt, /\*Posição do dia\* — 🥇 LIGA OURO/);
+  assert.match(txt, /Faltam 2\.44 pontos de Human Token pra 💠 LIGA PLATINA/);
+  assert.match(txt, /Human Token médio do ciclo: 18\.5 de 22\.22/);
+  assert.match(txt, /Formação do Executivo Ideal: 82% — Parabéns!/);
+});
+
+test('habitos=null (não computado) omite o bloco; habitos=[] (computado, ninguém fez nada) mostra 0/8', () => {
+  const semHabitos = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE, habitos: null });
+  assert.ok(!semHabitos.blocos.some((b) => b.id === 'habitos'), 'não computado — nem aparece');
+  assert.ok(!semHabitos.numeros.some((n) => n.rotulo === 'Hábitos'));
+
+  const comHabitosVazio = relatorioDoExecutivo({ pessoa: { id: 'x', nome: 'Fulano' }, hojeISO: HOJE, habitos: [] });
+  assert.ok(comHabitosVazio.blocos.some((b) => b.id === 'habitos'), 'array vazio É um dado — computado, zero feitos');
+  assert.equal(comHabitosVazio.numeros.find((n) => n.rotulo === 'Hábitos')?.valor, '0/8');
 });
 
 test('paraPdf: só o que a Helvetica desenha — travessão, aspas, setas, emoji e ✔✔ viram o parente mais próximo', () => {

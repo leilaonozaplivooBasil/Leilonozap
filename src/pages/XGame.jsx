@@ -5,15 +5,21 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/api/supabaseClient';
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
+  resumoDoDia, dataISO, minutosBrasilia, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
-  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
-  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
+  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
+  TOKEN_MAX, ligaDoToken, moedaModelo,
+  estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { isVendaReal } from '@/lib/dinheiroReal';
+import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
+import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 
 // X-GAME — o ESPAÇO DEDICADO da gamificação do Método (DIR-97, 08/09/2026).
 // Até aqui esta página era órfã — ninguém no app linkava pra ela — e tinha
@@ -36,13 +42,24 @@ import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisao
 
 const fmt2 = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 
-export default function XGame() {
+// 🔍 08/09/2026 — dono, direto: "eu quero ter a visualização do painel da
+// pessoa como ela está visualizando... entrando no painel dele, uma página
+// dentro da página. Eu quero saber agora como ele está olhando o MVM dele...
+// eu estou às cegas." O Super Admin PRECISA ver exatamente esta mesma tela
+// que a pessoa vê — não um resumo reconstruído à parte. Por isso o modo
+// "ver como ele vê" reaproveita este MESMO componente (com `userIdForcado`
+// no lugar do `currentUser` do localStorage), em vez de duplicar a tela em
+// outro lugar: `modoAdmin` só desliga as AÇÕES (votar pelo colega, mexer no
+// "aceito ser votado" dele, gravar o placar do dia por cima do dele) — o que
+// se VÊ continua sendo idêntico ao que a pessoa vê ao abrir sozinha.
+export default function XGame({ userIdForcado = null, nomeForcado = null, modoAdmin = false } = {}) {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [tarefas, setTarefas] = useState([]);
   const [diasCiclo, setDiasCiclo] = useState([]);
   const [participante, setParticipante] = useState(null);
   const [cicloConfig, setCicloConfig] = useState(null);
+  const [perdaoAte, setPerdaoAte] = useState(null);
   const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
   const [votosDias, setVotosDias] = useState([]);
   const [agora, setAgora] = useState(new Date());
@@ -69,22 +86,37 @@ export default function XGame() {
   }, []);
 
   useEffect(() => {
-    let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    let u = null;
+    if (userIdForcado) {
+      // 🔍 modo "ver como ele vê" — a identidade vem do admin, não do
+      // localStorage; o nome real (e o cargo, pro gate do super_admin) é
+      // conferido logo abaixo, junto com o resto dos dados dessa pessoa.
+      u = { id: userIdForcado, full_name: nomeForcado, nickname: nomeForcado, role: null };
+    } else {
+      try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
+    }
     setUser(u);
     if (!u?.id) { setLoading(false); return; }
     (async () => {
       try {
         const hoje = new Date();
-        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }] = await Promise.all([
+        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, uReal] = await Promise.all([
           supabase.from('xgame_participantes').select('*').eq('user_id', u.id).maybeSingle(),
-          supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
+          supabase.from('xgame_config').select('ciclo_inicio,perdao_zeragem_ate').eq('id', 'atual').maybeSingle(),
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
           supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true),
           supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', u.id).eq('data', dataISO(hoje)),
+          // 🔍 no modo "ver como ele vê" o localStorage não tem o cargo real
+          // dela — busca pra o gate do "Aceito ser votado" (só super_admin) valer certo
+          userIdForcado
+            ? supabase.from('app_users').select('id,full_name,nickname,role').eq('id', userIdForcado).maybeSingle().then((r) => r.data)
+            : Promise.resolve(null),
         ]);
+        if (uReal) { u = { ...u, ...uReal }; setUser(u); }
         setParticipante(part || null);
         setMeuAceitaSerVotado(part?.aceita_ser_votado !== false);
         setCicloConfig(cfg?.ciclo_inicio || null);
+        setPerdaoAte(cfg?.perdao_zeragem_ate || null);
         setTarefas(tf || []);
 
         // 🧯 08/09 — os mesmos colegas votáveis (sem Super Admin fechado) e os
@@ -117,30 +149,50 @@ export default function XGame() {
       } catch (e) { console.error('[X-GAME] carregar', e); }
       setLoading(false);
     })();
-  }, []);
+  }, [userIdForcado, nomeForcado]);
 
   // 💳 vendas REAIS da loja no ciclo — mesma conta do Compromisso, precisa
   // pro Human Token oficial (F4) e pro eixo "Vendas" do Executivo Ideal.
+  // 🟢 09/09/2026 — DIR-110/110.1, dono: "o parceiro de compra... ele pode
+  // fechar pela plataforma ou pode fazer depósito por fora." Venda de alto
+  // valor FEITA na plataforma (parceiro de compra, vendedor, licenciado...)
+  // soma via catalog_sales; a "por fora" (depósito direto, sem passar pelo
+  // checkout) soma pela esteira de captação (captacao_oportunidades.
+  // aporte_externo, DIR-40) — é o caso real que o dono deu (Luciano
+  // Pinheiro fechou o Renan, R$200.000, depósito fora da plataforma).
   useEffect(() => {
     if (!user?.id) { setVendasCiclo(null); return; }
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('catalog_sales').select('id,status,kind,created_date')
-      .or(`seller_id.eq.${user.id},licensee_id.eq.${user.id},anchor_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .gte('created_date', `${ini}T00:00:00`)
-      .then(({ data, error }) => {
-        if (error) { setVendasCiclo(null); return; }
-        setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
-      });
+    Promise.all([
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
+        .or(`seller_id.eq.${user.id},licensee_id.eq.${user.id},anchor_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .gte('created_date', `${ini}T00:00:00`),
+      supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
+        .eq('responsavel_id', user.id)
+        .gte('fechado_em', `${ini}T00:00:00`),
+    ]).then(([{ data: sales, error: e1 }, { data: oportunidades, error: e2 }]) => {
+      if (e1 || e2) { setVendasCiclo(null); return; }
+      const pagas = (sales || []).filter(isSalePago);
+      const reais = (sales || []).filter(isVendaReal);
+      const aporteExterno = (oportunidades || [])
+        .filter((o) => ehFechada(o) && aporteExternoValido(o))
+        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
+      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+    });
   }, [user?.id, cicloConfig]);
 
-  const agoraMin = agora.getHours() * 60 + agora.getMinutes();
+  const agoraMin = minutosBrasilia(agora);
   const votouEmTodos = useMemo(() => {
     const completos = colegasVotaveis.filter((id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length);
     return votouEmTodosOsColegas(colegasVotaveis, completos);
   }, [colegasVotaveis, votosHoje]);
+  // 🕊️ 09/09/2026 — perdão de um dia excepcional inteiro (xgame_config.
+  // perdao_zeragem_ate), ligado à mão pelo super_admin — não desliga a
+  // régua radical, só perdoa o dia marcado.
+  const perdoado = !!perdaoAte && dataISO(agora) <= perdaoAte;
   const resumo = useMemo(
-    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos }),
-    [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos],
+    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos, perdoado }),
+    [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos, perdoado],
   );
 
   // 🗳️ votar nos colegas — mesma lógica do Compromisso, mesma tabela.
@@ -157,18 +209,32 @@ export default function XGame() {
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    const total = resumo.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
-    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+    // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca o
+    // OURO — Ouro tem que dar pra chegar via produção/MvM/vendas mesmo sem
+    // estudar em casa. `travarTopoPorEstudo` é a MESMA função usada
+    // no Compromisso, no ranking do time e no Painel Corporativo.
+    const fdsOk = estudoFdsEmDia(diasCiclo, { data: dataISO(agora), feito: resumo.estudo_fds_feito });
+    const total = travarTopoPorEstudo(r.total, { estudoSemanaOk: resumo.estudo_em_dia, estudoFdsOk: fdsOk });
+    // 🎖️ DIR-115 — portões de caráter (MvM) e meta de vendas: só decidem
+    // QUAL liga o total pode valer, nunca o número exibido.
+    const liga = ligaComPortoesDoCiclo(total, { mvmVotacao: recebido.media, vendasFeitas: r.vendasFeitas });
+    return { ...r, total, liga, estudoEmDiaCompleto: resumo.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [resumo, diasCiclo, recebido.media, participante, vendasCiclo]);
   const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
   const janelaAberta = janelaVotacaoAberta(agoraMin);
+  // 🔍 modoAdmin é só olhar — o Super Admin vasculhando não pode votar,
+  // desligar o interruptor de outra pessoa, nem gravar o placar dela por
+  // cima. As três ações abaixo (e o "gravar o placar" logo adiante) saem
+  // fora no primeiro passo em modoAdmin.
   const escolherColega = (id) => {
+    if (modoAdmin) return;
     setVotando(id);
     const prev = {};
     votosHoje.filter((v) => v.votado_id === id).forEach((v) => { prev[String(v.virtude).toUpperCase()] = v.nota; });
     setNotas(prev);
   };
   const salvarVotos = async () => {
+    if (modoAdmin) return;
     const linhas = VIRTUDES.filter((v) => notas[v] >= 1).map((v) => ({
       votante_id: user.id, votado_id: votando, data: dataISO(agora), virtude: v, nota: notas[v], updated_at: new Date().toISOString(),
     }));
@@ -182,6 +248,7 @@ export default function XGame() {
     setVotando(''); setNotas({});
   };
   const alternarAceitaSerVotado = async () => {
+    if (modoAdmin) return;
     const novo = !meuAceitaSerVotado;
     setMeuAceitaSerVotado(novo);
     const { error } = await supabase.from('xgame_participantes').update({ aceita_ser_votado: novo }).eq('user_id', user.id);
@@ -222,7 +289,8 @@ export default function XGame() {
   // formato de `detalhes` do Compromisso — inclui xpay_ganho/xpay_perdido,
   // que o time (XGameVisaoExecutiva) lê pro X-Pay do ciclo.
   useEffect(() => {
-    if (!user?.id || loading || !tarefas.length) return;
+    // 🔍 modoAdmin não grava nada por cima do placar dela — é só visita.
+    if (!user?.id || loading || !tarefas.length || modoAdmin) return;
     const linha = {
       user_id: user.id,
       data: dataISO(agora),
@@ -236,6 +304,7 @@ export default function XGame() {
       pontos: resumo.pontos,
       detalhes: {
         leitura_feita: resumo.leitura_feita, estudo_em_dia: resumo.estudo_em_dia, dia_util: resumo.dia_util,
+        estudo_fds_feito: resumo.estudo_fds_feito,
         xpay_ganho: resumo.xpay?.ganho || 0, xpay_perdido: resumo.xpay?.perdido || 0,
         ...resumo.contagens,
       },
@@ -253,7 +322,7 @@ export default function XGame() {
   const meuNome = user.nickname || user.full_name || 'Guerreiro(a)';
 
   return (
-    <div className="min-h-screen bg-[#00020C] text-[#F4F4F4]">
+    <div className={modoAdmin ? 'bg-[#00020C] text-[#F4F4F4] rounded-2xl overflow-hidden' : 'min-h-screen bg-[#00020C] text-[#F4F4F4]'}>
       {/* 🏛️ DIR-97.1 — a tela era uma coluna estreita (max-w-3xl) num app
           que promete "executivo". Ganhou um teto (max-w-[1440px]) que
           ainda sobrava dos dois lados em monitor grande — o dono viu isso
@@ -262,27 +331,41 @@ export default function XGame() {
           Hábitos (CrmClientesTab.jsx) que já não tem max-w nenhum. */}
       <div className="w-full px-3 sm:px-8 py-8 sm:py-10 space-y-8 sm:space-y-10">
 
+        {/* 🔍 dono: "eu quero ter a visualização do painel da pessoa como
+            ela está visualizando... uma página dentro da página." Aqui é
+            EXATAMENTE a tela dela — o aviso deixa claro que é uma visita,
+            não a conta do Super Admin. */}
+        {modoAdmin && (
+          <div className="rounded-xl border-2 border-sky-500/40 bg-sky-950/30 px-4 py-2.5 flex items-center gap-2">
+            <span className="text-lg">🔍</span>
+            <p className="text-[12px] font-bold text-sky-300">Visualização do Super Admin — exatamente o que {nomeForcado || 'esta pessoa'} vê agora. Só olhar: votar e mexer nos interruptores continuam sendo dela.</p>
+          </div>
+        )}
+
         {/* 🧭 08/09/2026 — "o botão pra eu ir pras outras áreas não pode
             sair" (ordem do dono, olhando o preview): /XGame é uma rota
             própria, fora do painel do Top College — não herda o menu
             lateral de lá. Sem isto, chegar aqui pelo banner "Visão
-            Executiva X-GAME" virava rua sem saída. */}
-        <button
-          type="button"
-          onClick={() => navigate('/Licensing?tab=catalogo&catalogTab=catalogo-crm')}
-          className="inline-flex items-center gap-2 text-sm font-bold text-[#C1BECA] hover:text-[#F4F4F4] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar pro Top College
-        </button>
+            Executiva X-GAME" virava rua sem saída. Dentro do modal do
+            admin (modoAdmin) esse botão não faz sentido — some. */}
+        {!modoAdmin && (
+          <button
+            type="button"
+            onClick={() => navigate('/Licensing?tab=catalogo&catalogTab=catalogo-crm')}
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#C1BECA] hover:text-[#F4F4F4] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Voltar pro Top College
+          </button>
+        )}
 
         <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#2B2B2B] pb-5">
           <div>
             <div className="text-[11px] tracking-[0.28em] text-[#817E8C] uppercase font-semibold">To The Top · X-EOS · Visão Executiva</div>
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1">X-GAME</h1>
-            <div className="text-sm text-[#C1BECA] mt-1">Boa {new Date().getHours() < 12 ? 'manhã' : new Date().getHours() < 18 ? 'tarde' : 'noite'}, {meuNome} — {FRASES.antecipacao.toLowerCase()} · dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
+            <div className="text-sm text-[#C1BECA] mt-1">Boa {agoraMin < 12 * 60 ? 'manhã' : agoraMin < 18 * 60 ? 'tarde' : 'noite'}, {meuNome} — {FRASES.antecipacao.toLowerCase()} · dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] px-5 py-3 self-start sm:self-auto">
-            <div className="text-4xl leading-none">{resumo.faixa.medalha}</div>
+            <SeloMoeda medalha={resumo.faixa.medalha} tamanho={44} />
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[#817E8C]">faixa do dia</div>
               <div className="text-sm font-extrabold">{resumo.faixa.label}</div>
@@ -297,6 +380,29 @@ export default function XGame() {
           <div className="rounded-xl border-2 border-red-500 bg-red-950/40 px-4 py-3 text-center">
             <p className="text-sm font-extrabold text-red-400">🗳️ DIA ZERADO — você não votou em todos os colegas até as {horaDeMin(VOTACAO_FIM_MIN)}</p>
             <p className="text-[11px] text-red-300 mt-0.5">Não é só a MvM: Human Token, pontos e X-Pay que você ganharia hoje também zeraram. Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
+          </div>
+        )}
+
+        {/* ⏰ 08/09/2026 — dono: "se o cara se atrasou, além de perder o
+            dinheiro, isso tem que tirar pontos dele." */}
+        {resumo.perdeu_por_atraso_pronto && (
+          <div className="rounded-xl border-2 border-red-500 bg-red-950/40 px-4 py-3 text-center">
+            <p className="text-sm font-extrabold text-red-400">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem o pronto</p>
+            <p className="text-[11px] text-red-300 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
+          </div>
+        )}
+
+        {/* 🟡 09/09/2026 — DIR-105: 1º-3º atraso na Fila do Pronto é só
+            aviso/treino (perde alguns pontos, resto do dia intacto) — só o
+            4º em diante vira o zero radical acima. */}
+        {resumo.em_aviso_pronto && (
+          <div className="rounded-xl border-2 border-amber-500 bg-amber-950/30 px-4 py-3 text-center">
+            <p className="text-sm font-extrabold text-amber-400">⚠️ AVISO {resumo.avisos_pronto + 1} DE {AVISOS_ANTES_DE_ZERAR} — uma tarefa da gestão passou do "pronto até" sem o pronto</p>
+            <p className="text-[11px] text-amber-300 mt-0.5">
+              Você perdeu pontos hoje por isso, mas MvM, Human Token e X-Pay continuam de pé. {resumo.avisos_pronto + 1 >= AVISOS_ANTES_DE_ZERAR
+                ? 'Da próxima vez o dia INTEIRO zera — sem exceção.'
+                : `Da próxima vez o aviso sobe pra ${resumo.avisos_pronto + 2} de ${AVISOS_ANTES_DE_ZERAR}. No ${AVISOS_ANTES_DE_ZERAR + 1}º, zera tudo.`}
+            </p>
           </div>
         )}
 
@@ -335,13 +441,36 @@ export default function XGame() {
             </div>
             <BarraProgresso pct={ciclo.formacao.pct} dialeto="escuro" altura="extra" corClasse="bg-emerald-400" trilhoClasse="bg-[#2B2B2B]" />
 
+            {/* 🎡 09/09/2026 — DIR-109.1, dono: "a roda da vida... se a
+                roda dele rodar, a vida dele anda." Cada eixo mostra a
+                PROPORÇÃO do alvo batida (não o % bruto) — o alvo vira um
+                pentágono PERFEITO na borda; a roda da pessoa é redonda só
+                quando os 5 eixos estão em dia, e murcha exatamente onde
+                falta rodar. */}
+            <RadarEixos
+              dialeto="escuro"
+              eixos={(() => {
+                const prop = proporcoesExecutivoIdeal(ciclo.taxas);
+                return EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({ k, rotuloCurto, emoji, atual: Math.round(prop[k] * 100), alvo: 100 }));
+              })()}
+            />
+            <p className="text-center text-[10.5px] text-[#817E8C] -mt-2">
+              🎡 a <strong className="text-white/70">roda da vida</strong> do Executivo Ideal — quanto mais redonda, mais a carreira anda
+            </p>
+
             <div className="space-y-2.5">
               {[
                 { k: 'mvm', rotulo: 'MvM (votação do grupo)', emoji: '🗳️' },
                 { k: 'producao', rotulo: 'Produção', emoji: '📋' },
                 { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
                 { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
-                { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+                {
+                  k: 'vendas',
+                  // 🟢 09/09/2026 — DIR-110: mostra o quebra-cabeça (venda
+                  // direta + reunião como princípio da venda), não só o total.
+                  rotulo: `Vendas — automático (meta ${META_VENDAS_CICLO} no ciclo · ${fmt2(ciclo.vendasDiretas)} vendida${ciclo.vendasDiretas === 1 ? '' : 's'}${ciclo.reuniaoEquivalente > 0 ? ` + ${fmt2(ciclo.reuniaoEquivalente)} de reunião` : ''} = ${fmt2(ciclo.vendasFeitas)})`,
+                  emoji: '🛒',
+                },
               ].map(({ k, rotulo, emoji }) => {
                 const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                 const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
@@ -368,11 +497,43 @@ export default function XGame() {
             {ciclo.formacao.mensagem && (
               <p className="text-[11px] font-semibold text-emerald-400">{ciclo.formacao.mensagem}</p>
             )}
+            {/* ℹ️ 09/09/2026 — DIR-116, dono: "o executivo ideal lá da lista, do
+                quadro, está desatualizado... pegar do que nós fizemos agora e
+                atualizar lá, e o que estava lá que não está constando no novo,
+                atualizar aqui também." Este guia só existia no Compromisso
+                (CrmMetodo.jsx) — duplicado aqui, com a MESMA correção do
+                DIR-113 (Platina, não Ouro, trava por falta de estudo). */}
+            <details className="text-[11px] text-[#817E8C] border-t border-emerald-500/15 pt-2">
+              <summary className="cursor-pointer font-semibold text-white hover:text-emerald-400">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
+              <div className="pt-1.5 space-y-1">
+                <p>• <strong className="text-white">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
+                <p>• <strong className="text-white">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
+                <p>• <strong className="text-white">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima. "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina. A Platina só abre batendo os dois portões (caráter e 100% da meta de vendas); Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.</p>
+                <p>• <strong className="text-white">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
+                <p>• <strong className="text-white">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
+              </div>
+            </details>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card titulo="Human Token" valor={fmt2(resumo.token_dia)} sub={`teto 22,22${resumo.estudo_em_dia ? '' : ' · trava 17,77 (estude!)'}`} />
-            <Card titulo="MvM do Dia" valor={fmt2(resumo.mvm_dia)} sub={resumo.frase_mvm} destaque={resumo.mvm_dia < 4} />
+            <Card
+              titulo="Human Token" valor={`${ciclo.liga.emoji} ${fmt2(ciclo.total)}`}
+              sub={ciclo.estudoEmDiaCompleto ? `${ciclo.liga.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}
+              dica={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze, abaixo de 8 barra a Platina. Ligas: 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima (só abre batendo os dois portões: caráter e 100% da meta de vendas). Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}
+            />
+            {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o MVM
+                dele é sete, vai aparecer sete, não sete ponto setenta e
+                cinco e nove em cima" — o número GRANDE virava o automático
+                (mvm_dia), com o de verdade (a votação, o único que entra na
+                moeda) escondido no rodapé pequeno. Trocado: o número grande
+                agora É o oficial; o automático (quando existe voto) vira só
+                a explicação de por que ele difere. */}
+            <Card
+              titulo="MvM (oficial)" valor={recebido.media !== null ? fmt2(recebido.media) : '—'}
+              sub={recebido.media !== null ? `${resumo.frase_mvm} · o que conta na moeda` : 'ainda sem voto recebido neste ciclo'}
+              destaque={recebido.media !== null && recebido.media < 4}
+              dica={`Só a VOTAÇÃO DO CICLO (as notas que você recebe dos colegas) entra no Human Token — é este número. O "automático" de hoje (o dia começa em 10 e cai por tarefa atrasada) é só uma estimativa de humor do dia: ${fmt2(resumo.mvm_dia)} — ele NÃO conta pra moeda.`}
+            />
             <Card
               titulo="X-Pay de hoje" valor={resumo.xpay ? `R$ ${fmt2(resumo.xpay.ganho)}` : '—'}
               sub={resumo.xpay?.perdido > 0 ? `− R$ ${fmt2(resumo.xpay.perdido)} perdido` : `R$ ${fmt2(resumo.xpay?.emJogo || 0)} em jogo`}
@@ -381,6 +542,48 @@ export default function XGame() {
             />
             <Card titulo="Pontos de hoje" valor={String(resumo.pontos)} sub={`${resumo.tarefas_feitas}/${resumo.tarefas_total} tarefas`} />
           </div>
+
+          {/* 🪙 09/09/2026 — dono, vendo a página renderizada: "você duplicou
+              duas vezes a moeda." A MoedaPizza direta que existia aqui (com
+              os MESMOS ciclo.componentes) saiu — a seção "Sua posição no
+              ciclo" da XGameVisaoExecutiva, logo abaixo nesta mesma página,
+              já desenha a MESMA moeda pro mesmo ciclo/pessoa. Uma só.
+
+              🐛 09/09/2026 — dono, comparando o PRÓPRIO painel com o "MvM
+              dele" que ele abre como Super Admin pra olhar outra pessoa:
+              "não está aparecendo as duas moedas... tem que aparecer, igual
+              aparece pra mim tem que aparecer no dele." Achado: a seção que
+              desenha essas moedas (XGameVisaoExecutiva, "Todo mundo", logo
+              abaixo) SOME inteira em `modoAdmin` (ver `{!modoAdmin && (...)}`
+              adiante) — de propósito, pra não repetir o ranking do time
+              inteiro. Mas ela também era o ÚNICO lugar que desenhava a moeda
+              da PESSOA sendo olhada, então em modoAdmin nenhuma das duas
+              moedas aparecia pra ninguém — quebrando a promessa desta
+              própria página (comment acima, linha ~43): "o que se VÊ
+              continua sendo idêntico ao que a pessoa vê ao abrir sozinha."
+              Conserto: só em modoAdmin (onde a versão de baixo não roda),
+              desenha aqui as duas moedas do `ciclo` já calculado pra
+              `userIdForcado` — real + o modelo cheio (moedaModelo, DIR-118).
+              Fora do modoAdmin nada muda: a pessoa continua vendo as duas
+              moedas só uma vez, na seção de baixo, como sempre. */}
+          {modoAdmin && ciclo && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-admin">
+                <div>
+                  <p className="text-sm font-extrabold text-white">🪙 Human Token — de onde vem cada ponto dele</p>
+                  <p className="text-[11px] text-[#817E8C] mt-0.5">cada fatia é o quanto aquilo pesou de verdade no Human Token de hoje, até o teto de {fmt2(TOKEN_MAX)}</p>
+                </div>
+                <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />
+              </div>
+              <div className="rounded-2xl border border-dashed border-amber-400/50 bg-amber-950/10 p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-admin-modelo">
+                <div>
+                  <p className="text-sm font-extrabold text-white">🏆 O Modelo — pra onde ele está indo</p>
+                  <p className="text-[11px] text-[#817E8C] mt-0.5">a mesma moeda, cheia — a referência de como ela fica quando cada fatia bate no teto</p>
+                </div>
+                <MoedaPizza componentes={moedaModelo(participante?.perfil || 'estrategico')} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
+              </div>
+            </div>
+          )}
 
           {/* ══ 🗳️ VOTAÇÃO MvM — dono: "a gente precisa botar a votação aqui,
               votar por aqui que é o mais correto." Mesma tabela do Compromisso,
@@ -401,7 +604,7 @@ export default function XGame() {
 
             {user?.role === 'super_admin' && (
               <label className="flex items-center gap-2 rounded-lg border border-[#2B2B2B] bg-[#0b0d14] px-2.5 py-2 cursor-pointer">
-                <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} className="h-4 w-4" />
+                <input type="checkbox" checked={meuAceitaSerVotado} onChange={alternarAceitaSerVotado} disabled={modoAdmin} className="h-4 w-4" />
                 <span className="text-[11px] text-[#C1BECA]">
                   <span className="font-semibold text-white">Aceito ser votado na MvM</span> — como Super Admin, você só aparece na lista dos colegas se ligar isto (fica desligado por padrão).
                 </span>
@@ -431,9 +634,9 @@ export default function XGame() {
                     <button
                       key={id}
                       type="button"
-                      disabled={!janelaAberta}
+                      disabled={!janelaAberta || modoAdmin}
                       onClick={() => escolherColega(id)}
-                      className={`px-2 py-1 rounded border text-[11px] font-medium ${votando === id ? 'border-emerald-400 text-emerald-400 bg-emerald-950/40' : jaVoteiEm(id) ? 'border-emerald-500/30 text-[#817E8C]' : 'border-[#2B2B2B] text-white'} ${!janelaAberta ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-400'}`}
+                      className={`px-2 py-1 rounded border text-[11px] font-medium ${votando === id ? 'border-emerald-400 text-emerald-400 bg-emerald-950/40' : jaVoteiEm(id) ? 'border-emerald-500/30 text-[#817E8C]' : 'border-[#2B2B2B] text-white'} ${!janelaAberta || modoAdmin ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-400'}`}
                     >
                       {jaVoteiEm(id) ? '✅ ' : ''}{nomesColegas[id] || id.slice(0, 6)}
                     </button>
@@ -523,16 +726,20 @@ export default function XGame() {
         {/* ══ O TIME — a mesma visão executiva da equipe que já mora dentro
             da Verificação do Progresso, agora também aqui: pulso, pódio,
             radar e a tabela inteira, sem duplicar cálculo nenhum. Painel
-            largo, ocupando a página inteira. ══ */}
-        <section className="xeos-palco" data-teste="xgame-o-time">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Todo mundo</span>
-            <span className="h-px flex-1 bg-[#2B2B2B]" />
-          </div>
-          <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-6">
-            <XGameVisaoExecutiva />
-          </div>
-        </section>
+            largo, ocupando a página inteira. Some no modoAdmin — o Super
+            Admin já vê o time inteiro em vários outros lugares; aqui ele
+            entrou pra olhar UMA pessoa, não repetir a visão de todo mundo. ══ */}
+        {!modoAdmin && (
+          <section className="xeos-palco" data-teste="xgame-o-time">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#817E8C]">Todo mundo</span>
+              <span className="h-px flex-1 bg-[#2B2B2B]" />
+            </div>
+            <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4 sm:p-6">
+              <XGameVisaoExecutiva />
+            </div>
+          </section>
+        )}
 
         <footer className="text-center text-xs text-[#4c4a56] pt-4 border-t border-[#1c1f28]">
           {FRASES.reacao} · {FRASES.realtime} · até {fim.toLocaleDateString('pt-BR')}
@@ -549,5 +756,34 @@ function Card({ titulo, valor, sub, destaque = false, dica }) {
       <div className="text-2xl sm:text-3xl font-extrabold tabular-nums mt-1">{valor}</div>
       <div className={`text-[11px] mt-1 ${destaque ? 'text-red-400 font-bold' : 'text-[#C1BECA]'}`}>{sub}</div>
     </div>
+  );
+}
+
+// 🪙 09/09/2026 — dono, vendo o cabeçalho: "não é medalha, é moeda... moeda,
+// moeda é muito bonita." O emoji de medalha nativo (🥉🥈🥇) saiu — no lugar,
+// o MESMO desenho de moeda (aro dourado + rosto creme) da MoedaPizza, só em
+// miniatura, com o selo da faixa gravado no meio.
+function SeloMoeda({ medalha, tamanho = 40 }) {
+  const uid = React.useId();
+  const c = tamanho / 2;
+  const rBorda = tamanho * 0.46;
+  const rRosto = tamanho * 0.37;
+  return (
+    <svg viewBox={`0 0 ${tamanho} ${tamanho}`} width={tamanho} height={tamanho} className="shrink-0" role="img" aria-label="moeda da faixa do dia">
+      <defs>
+        <linearGradient id={`${uid}-borda`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F4D976" />
+          <stop offset="45%" stopColor="#C99A2E" />
+          <stop offset="100%" stopColor="#8A6413" />
+        </linearGradient>
+        <radialGradient id={`${uid}-rosto`} cx="38%" cy="32%" r="75%">
+          <stop offset="0%" stopColor="#FFFBEF" />
+          <stop offset="100%" stopColor="#F1E3BE" />
+        </radialGradient>
+      </defs>
+      <circle cx={c} cy={c} r={rBorda} fill="none" stroke={`url(#${uid}-borda)`} strokeWidth={tamanho * 0.13} />
+      <circle cx={c} cy={c} r={rRosto} fill={`url(#${uid}-rosto)`} stroke="#B8933A" strokeWidth={1} />
+      <text x={c} y={c} textAnchor="middle" dominantBaseline="central" fontSize={tamanho * 0.4}>{medalha}</text>
+    </svg>
   );
 }

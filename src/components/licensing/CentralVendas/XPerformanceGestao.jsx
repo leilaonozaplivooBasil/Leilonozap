@@ -1,20 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, Zap, AlarmClock, CheckCheck, Undo2, Building2, BriefcaseBusiness, MessageCircle } from 'lucide-react';
+import { Loader2, Send, Wallet, Wrench, ChevronDown, X, UserRound, Zap, AlarmClock, CheckCheck, Undo2, Building2, BriefcaseBusiness, MessageCircle, Trash2, Inbox } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import XGameAdmin from '@/components/licensing/XGameAdmin';
+import XGame from '@/pages/XGame';
+import CaixaDeMensagensAdmin from '@/components/licensing/CentralVendas/CaixaDeMensagensAdmin';
+import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
+import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
+  ehTarefaDeReuniao, AVISOS_ANTES_DE_ZERAR,
 } from '@/lib/xgame';
 import { distribuirDia, resumoDoCiclo } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, planejamentoDoDia, resumoPorMentalidade } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto } from '@/lib/catalogoAcoes';
-import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao } from '@/lib/pronto';
+import { prazoDe, rotuloDoPrazo, filaDoPronto, carimboDaDevolucao, textoCompartilharPronto } from '@/lib/pronto';
 import { EMPRESAS, empresaDe, rotuloDaEmpresa, FUNCOES_OFICIAIS, FUNCOES_DE_MERCADO, FUNCOES_DO_PAINEL, funcaoDaPessoaComOrigem, montarDiaDaFuncao } from '@/lib/funcoes';
 import { CartaoFuncaoOficial, ModeloEconomico, ScoreEscada } from '@/components/licensing/CentralVendas/PainelOficial';
 import { getLevel, normalizeLevels } from '@/lib/careerLevels';
@@ -113,7 +118,15 @@ import { portoesDaSociedade } from '@/lib/xperformance';
 // até" (prazo_em) e a FILA DO PRONTO fecha o enviar-e-voltar: o que está
 // atrasado, o que está pronto esperando o ✔✔, e o DEVOLVER com recado —
 // que a pessoa lê embaixo da tarefa (src/lib/pronto).
-
+//
+// 🗂️ NONA RODADA (dono, 08/09/2026): "quero trazer o ciclo de vendas de
+// participantes pra cima; embaixo, a distribuição de tarefa — mas como um
+// modal de abertura, não esse quadradão que vem de cara." A ORDEM VIROU:
+//   1. 💰 QUADRO GERAL DE CADA UM — o ciclo de cada participante, agora
+//      primeiro; escolhe a pessoa, abre o painel dela.
+//   2. 🎯 DISTRIBUIR TAREFA — deixou de vir sempre aberta; agora é um botão
+//      que abre o painel (o "modal de abertura" pedido).
+//   3. 🛠️ GESTÃO DO X-GAME — sem mudança, continua embutida e dobrada.
 
 import DistribuirTarefa, { proximoDiaUtil, diasUteisAteSexta, prazoDaPrioridade } from '@/components/licensing/CentralVendas/DistribuirTarefa';
 export { proximoDiaUtil, diasUteisAteSexta, prazoDaPrioridade };
@@ -137,8 +150,8 @@ const fmtDia = (iso) => {
 
 const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[12px] text-white outline-none focus:border-white/40';
 
-// 🚦 o topo do Quadro Geral: semáforo, cobrar no WhatsApp e as abas
-function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, onAba, onFechar, metasInfo }) {
+// 🚦 o topo do Quadro Geral: semáforo, cobrar no WhatsApp, PDF e as abas
+function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, onAba, onFechar, metasInfo, relatorio }) {
   const doHoje = tarefasCiclo.filter((t) => t.user_id === pessoaId && String(t.data).slice(0, 10) === hoje);
   const fila = filaDoPronto(tarefasCiclo.filter((t) => t.user_id === pessoaId));
   const atrasadas = fila.filter((f) => f.estado.id === 'atrasada');
@@ -164,6 +177,12 @@ function QuadroGeralTopo({ pessoaId, nome, telefone, tarefasCiclo, hoje, aba, on
             <MessageCircle className="w-3.5 h-3.5" /> {cobrar ? 'cobrar o pronto' : 'chamar'} no WhatsApp
           </a>
         )}
+        {/* 📄 09/09/2026 — DIR-108, dono: "eu tinha um compartilhamento de
+            PDF... tem que puxar, duplicar esse compartilhamento aqui
+            dentro do painel administrativo da XGame." Mesmo componente do
+            X-Performance (PdfExecutivo/relatorioExecutivo) — nada
+            duplicado na lógica, só o botão chegando aqui também. */}
+        <PdfExecutivo relatorio={relatorio} />
         <button type="button" onClick={onFechar} aria-label="Fechar" title="fechar o Quadro Geral" className="inline-flex items-center gap-1 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-white/60 hover:bg-white/10"><X className="w-3.5 h-3.5" /> fechar</button>
       </div>
       <div className="mt-2 flex gap-1 overflow-x-auto" role="tablist" data-teste="abas-quadro-geral">
@@ -187,6 +206,18 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   const [cicloConfig, setCicloConfig] = useState(null);
   const [tarefasCiclo, setTarefasCiclo] = useState([]);
   const [adminAberto, setAdminAberto] = useState(false);
+  // 🗂️ 08/09/2026 — dono: "quero a distribuição de tarefa como um modal de
+  // abertura, não esse quadradão que vem de cara." Antes ela vinha sempre
+  // aberta, ocupando o topo da tela; agora é um botão que abre o painel.
+  const [distribuirAberto, setDistribuirAberto] = useState(false);
+  // 📨 09/09/2026 — DIR-106, dono: "eu queria saber onde é que a gente vê
+  // isso... tanto eu como super admin." A caixa fica fechada por padrão,
+  // igual Distribuir Tarefa — abre com 1 clique.
+  const [mensagensAberto, setMensagensAberto] = useState(false);
+  // 📄 09/09/2026 — DIR-108: o relatório em PDF da pessoa aberta no Quadro
+  // Geral, computado por um PainelCorporativo oculto (mesma lógica do
+  // X-Performance, sem reescrever nada) via onRelatorio.
+  const [relatorioPessoa, setRelatorioPessoa] = useState(null);
 
   // o formulário do "menu suspenso"
   const [pessoa, setPessoa] = useState('');
@@ -282,7 +313,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       const linhas = gerarTarefasDaRotina(rotina, userId, diaISO).map((l) => ({
         ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
       }));
-      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      // 🐛 09/09/2026 — DIR-127: ignora duplicata em vez de criar (ou quebrar
+      // tentando) — a trava real é o UNIQUE(user_id,data,hora,titulo) do banco.
+      const { error } = await supabase.from('metodo_tarefas')
+        .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
       if (error) throw error;
       toast.success(`Planejamento de ${fmtDia(diaISO)} gerado pra ${nomeDe(userId)}: ${linhas.length} tarefas da Rotina Perfeita`);
       carregarTarefas();
@@ -321,11 +355,109 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     carregarTarefas();
   };
 
+  // ⚠️ 09/09/2026 — DIR-105, dono: "eu aqui no Admin tenho que ter [um
+  // botão], avisar ela de mandar um pronto... e aí eu retorno pra ela e
+  // falo: olha, você não me deu pronto, estou te avisando a primeira vez."
+  // Cada clique soma 1 no contador `avisos_pronto` da pessoa (persistido —
+  // reset é manual, o admin decide quando ela "aprendeu") e abre o
+  // WhatsApp com um texto que escala: 1º/2º aviso é cobrança normal, do 3º
+  // em diante vira a "mensagem do CEO" (dono: "ela vai perder todos os
+  // seus pontos do dia... o pronto é uma das coisas mais importantes do
+  // nosso negócio"). `aviso_pronto_em` marca a tarefa pra saber que ESTE
+  // atraso específico já foi avisado.
+  // 🟡 09/09/2026 — DIR-107, dono testou e pediu mais: "esse aviso tem que
+  // ser no WhatsApp E comunicar por dentro... quando eu mandar no
+  // WhatsApp, automaticamente ele comunica por dentro... eu quero sempre
+  // o retorno deles dentro. E sempre ensinando o que é o pronto — tem
+  // gente que confunde, acha que só vale quando termina. A gente tem que
+  // ensinar: se estiver no meio da demanda, avise que está fazendo,
+  // comunique." O texto agora sempre pede resposta PELA PLATAFORMA (não só
+  // pelo WhatsApp) e, nos avisos 1-2, ensina o conceito do pronto.
+  const avisar = async (t) => {
+    const p = participanteDe(t.user_id);
+    const novoAvisos = (Number(p.avisos_pronto) || 0) + 1;
+    const nome = nomeDe(t.user_id);
+    const prazoTxt = (rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10)) || '').replace('pronto até ', '') || 'o prazo combinado';
+    const primeiroNome = nome.split(' ')[0];
+    const ensinamento = 'Lembrando: o pronto não é só marcar como feito no fim — se você ainda está no meio da tarefa, me avise por dentro da plataforma que está em andamento. Comunicar é tão importante quanto entregar.';
+    const pedidoDeRetorno = 'Responde por dentro da plataforma, na Mensagem pro CEO — quero seu retorno lá.';
+    const msg = novoAvisos >= AVISOS_ANTES_DE_ZERAR
+      ? `${primeiroNome}, aqui é o CEO. Essa já é a ${novoAvisos}ª vez que peço o pronto de "${t.titulo}" (tinha até ${prazoTxt}) e não recebi. A partir de agora, o PRÓXIMO atraso zera TODOS os seus pontos do dia — MvM, Human Token, pontos e X-Pay. O pronto é uma das coisas mais importantes do nosso negócio. Preciso que isso não se repita. ${pedidoDeRetorno}`
+      : `Oi ${primeiroNome}, tudo bem? A tarefa "${t.titulo}" tinha pronto até ${prazoTxt} e ainda não recebi. Estou te avisando (aviso ${novoAvisos} de ${AVISOS_ANTES_DE_ZERAR}) — me dá o pronto assim que puder? ${ensinamento} ${pedidoDeRetorno} 🙏`;
+    const numero = String(usuarios.find((u) => u.id === t.user_id)?.phone || '').replace(/\D/g, '');
+    const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(msg)}` : null;
+
+    const agora = new Date().toISOString();
+    setTarefasCiclo((l) => l.map((x) => (x.id === t.id ? { ...x, aviso_pronto_em: agora } : x)));
+    setParticipantes((l) => {
+      const existe = l.some((x) => x.user_id === t.user_id);
+      return existe
+        ? l.map((x) => (x.user_id === t.user_id ? { ...x, avisos_pronto: novoAvisos } : x))
+        : [...l, { ...PARTICIPANTE_PADRAO, user_id: t.user_id, cargo: p.cargo, ativo: true, avisos_pronto: novoAvisos }];
+    });
+    // 📨 a mensagem chega SEMPRE por dentro da plataforma também — o
+    // WhatsApp não é a única via. Ela cai na caixa de "Mensagem pro CEO"
+    // da própria pessoa, exatamente com o mesmo texto do WhatsApp.
+    const mensagemInterna = {
+      remetente_id: currentUser?.id || null,
+      remetente_nome: nomeExibicao(currentUser) || currentUser?.full_name || 'ADM',
+      destino_tipo: 'pessoa',
+      destino_id: t.user_id,
+      destino_nome: nome,
+      tipo: 'aviso',
+      texto: msg,
+    };
+    const [{ error: e1 }, { error: e2 }, { error: e3 }] = await Promise.all([
+      supabase.from('metodo_tarefas').update({ aviso_pronto_em: agora }).eq('id', t.id),
+      supabase.from('xgame_participantes').upsert({ user_id: t.user_id, cargo: p.cargo, ativo: true, avisos_pronto: novoAvisos, updated_at: agora }, { onConflict: 'user_id' }),
+      supabase.from('xgame_mensagens').insert(mensagemInterna),
+    ]);
+    if (e1 || e2 || e3) { toast.error('Não avisou — recarregando'); carregarTarefas(); return; }
+    toast.success(`${novoAvisos}º aviso registrado pra ${nome} — por dentro${wa ? ' e no WhatsApp' : ' (sem telefone cadastrado pro WhatsApp)'}${novoAvisos >= AVISOS_ANTES_DE_ZERAR ? ' — próximo atraso zera o dia' : ''}`);
+    if (wa) window.open(wa, '_blank', 'noopener');
+  };
+
+  // 📲 09/09/2026 — dono: "tinha um botão WhatsApp aqui... a gente tirou
+  // porque ia mandar mensagem mais personalizada, mais bonita... só um
+  // texto mesmo, mas bem bonito." O lembrete ANTES de atrasar (o "avisar"
+  // já cobre a tarefa atrasada, com o tom mais sério de cobrança) — este é
+  // gentil, só compartilha o que está esperando.
+  const compartilhar = (t) => {
+    const nome = nomeDe(t.user_id);
+    const numero = String(usuarios.find((u) => u.id === t.user_id)?.phone || '').replace(/\D/g, '');
+    if (!numero) { toast.error(`${nome} não tem telefone cadastrado pro WhatsApp`); return; }
+    const texto = textoCompartilharPronto(t, nome);
+    const wa = `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(texto)}`;
+    window.open(wa, '_blank', 'noopener');
+  };
+
   // só o que nasceu aqui pode ser desfeito aqui — a rotina da pessoa é dela
+  // 🐛 09/09/2026 — achado na auditoria pré-publicação: o comentário acima
+  // já dizia a regra, mas o código nunca conferia `origem` — o botão
+  // "excluir" aparecia (e funcionava) pra QUALQUER tarefa atrasada, mesmo
+  // as da própria Rotina Perfeita da pessoa, sem pedir confirmação. Agora
+  // só apaga tarefa distribuída pela gestão (`origem === 'xperf'`, o mesmo
+  // filtro que `resumoDoDia` já usa pra decidir o que é atraso "da
+  // gestão") e sempre confirma antes — apagar tarefa é sem volta.
   const desfazer = async (t) => {
+    if (t.origem !== 'xperf') { toast.error('Só dá pra excluir aqui o que a gestão distribuiu — a rotina da própria pessoa é dela.'); return; }
+    if (!window.confirm(`Excluir "${t.titulo}" de ${nomeDe(t.user_id)}? Isso apaga a tarefa pra sempre, sem desfazer.`)) return;
     setTarefasCiclo((l) => l.filter((x) => x.id !== t.id));
     const { error } = await supabase.from('metodo_tarefas').delete().eq('id', t.id);
     if (error) { toast.error('Não apagou — recarregando'); carregarTarefas(); }
+  };
+
+  // 🟡 09/09/2026 — achado na auditoria: o comentário do "avisar" (acima)
+  // promete "reset é manual, o admin decide quando ela aprendeu", mas não
+  // existia botão nenhum pra isso — uma vez chegando aos 3 avisos, qualquer
+  // atraso futuro (mesmo isolado, meses depois) zerava o dia pra sempre.
+  const resetarAvisos = async (userId) => {
+    const nome = nomeDe(userId);
+    if (!window.confirm(`Zerar os avisos de atraso do pronto de ${nome}? O próximo atraso dela volta a contar como o 1º.`)) return;
+    setParticipantes((l) => l.map((x) => (x.user_id === userId ? { ...x, avisos_pronto: 0 } : x)));
+    const { error } = await supabase.from('xgame_participantes').update({ avisos_pronto: 0, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    if (error) { toast.error('Não resetou — recarregando'); carregarTarefas(); return; }
+    toast.success(`${nome}: avisos de atraso zerados — o próximo volta a contar como o 1º.`);
   };
 
   // grava o fixo/mínimo; quem ainda não tinha cadastro no jogo ganha um
@@ -358,6 +490,25 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     return resumoDoCiclo({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefasPorDia: porDia, diasDoCiclo: diasCiclo, hojeISO: hoje });
   };
 
+  // 📊 08/09/2026 — dono: "quero ver a quantidade de tarefas que nós temos
+  // do grupo — quantas o time concluiu, qual o percentual [...] e o
+  // percentual de reunião do time." E depois, sobre o quanto mostrar: "o
+  // melhor possível, pense grande, dados é o que manda, quanto mais e
+  // melhor visível melhor." O painel vivo que faltava: o time inteiro, num
+  // relance, antes de entrar pessoa por pessoa. Mesma conta em
+  // XGameVisaoExecutiva (Verificação do Progresso).
+  const tarefasHoje = tarefasCiclo.filter((t) => String(t.data).slice(0, 10) === hoje);
+  const reunioesHoje = tarefasHoje.filter((t) => ehTarefaDeReuniao(t.titulo));
+  const filaHoje = filaDoPronto(tarefasCiclo);
+  const resumoTimeHoje = {
+    pessoas: equipe.length,
+    total: tarefasHoje.length,
+    feitas: tarefasHoje.filter((t) => t.feito).length,
+    reunioesTotal: reunioesHoje.length,
+    reunioesFeitas: reunioesHoje.filter((t) => t.feito).length,
+    atrasadas: filaHoje.filter((f) => f.estado.id === 'atrasada').length,
+  };
+
   if (carregando) {
     return <div className="py-6 text-center text-white/40"><Loader2 className="w-5 h-5 animate-spin inline" /></div>;
   }
@@ -365,13 +516,62 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
 
   return (
     <div className="space-y-5" data-teste="gestao">
-      {/* ── 1. 🎯 DISTRIBUIR TAREFA — a peça única (DistribuirTarefa.jsx), a mesma do Painel Corporativo ── */}
-      <DistribuirTarefa
-        currentUser={currentUser} equipe={equipe} participanteDe={participanteDe} nomeDe={nomeDe}
-        tarefasCiclo={tarefasCiclo} carregarTarefas={carregarTarefas} catalogo={catalogo} acoesDoBanco={acoesDoBanco} onAcoesDoBanco={setAcoesDoBanco}
-        pessoa={pessoa} onPessoa={setPessoa} dia={dia} onDia={setDia} desfazer={desfazer}
-        onAbrirQuadroGeral={(id) => { setPessoaFixo(id); setAbaModal('pessoa'); setModalAberto(true); }}
-      />
+      {/* ── 📊 O TIME, NUM RELANCE — a quantidade que faltava (dono, 08/09/2026):
+          "quantas tarefas nós temos, quanto o time concluiu, qual o percentual,
+          qual o percentual de reunião do time". E depois: "pense grande, dados
+          é o que manda, quanto mais e melhor visível melhor." ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" data-teste="resumo-time-hoje">
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.pessoas}</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">no time corporativo</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.feitas} <span className="text-white/35 font-medium">/ {resumoTimeHoje.total}</span></p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">tarefas concluídas hoje</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-nz-verde tabular-nums">{resumoTimeHoje.total ? Math.round((resumoTimeHoje.feitas / resumoTimeHoje.total) * 100) : 0}%</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">do time, hoje</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.reunioesFeitas} <span className="text-white/35 font-medium">/ {resumoTimeHoje.reunioesTotal}</span></p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">reuniões do time hoje</p>
+        </div>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: resumoTimeHoje.atrasadas > 0 ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.04)' }}>
+          <p className={`text-xl font-extrabold tabular-nums ${resumoTimeHoje.atrasadas > 0 ? 'text-red-300' : 'text-white'}`}>{resumoTimeHoje.atrasadas}</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">atrasadas na fila do pronto</p>
+        </div>
+      </div>
+
+      {/* ── 1. 💰 QUADRO GERAL DE CADA UM — o ciclo de cada participante, agora
+          no topo (dono, 08/09/2026): "quero trazer o ciclo de vendas de
+          participantes pra cima". Escolhe a pessoa, abre o painel dela. ── */}
+      {equipe.length > 0 && (
+        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-nz-verde" />
+            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
+            <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
+          </div>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <select
+              value={pessoaFixo}
+              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
+              className={`${campo} min-w-[240px]`}
+              data-teste="pessoa-fixo"
+            >
+              <option value="">escolha a pessoa…</option>
+              {equipe.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{funcaoTrabalho(p.id) && (funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome) !== p.funcao ? ` · ${funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome}` : ''}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
+              ))}
+            </select>
+            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
+              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
+            </Button>
+            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
+          </div>
+        </div>
+      )}
 
       {modalAberto && pessoaFixo && (() => {
         const base = participanteDe(pessoaFixo);
@@ -387,7 +587,14 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
              enquanto está aberto, o resto da gestão sai da frente. */
           <div className="rounded-xl border border-white/15 p-3 sm:p-4 text-white" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="modal-pessoa" data-pessoa={pessoaFixo} ref={(el) => { if (el && !el.dataset.rolou) { el.dataset.rolou = '1'; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
             <div className="relative w-full">
-              <QuadroGeralTopo pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} telefone={usuarios.find((u) => u.id === pessoaFixo)?.phone} tarefasCiclo={tarefasCiclo} hoje={hoje} aba={abaModal} onAba={setAbaModal} onFechar={() => setModalAberto(false)} metasInfo={metasInfo} />
+              {/* 📄 DIR-108 — calcula o relatório da pessoa aberta, sem
+                  aparecer na tela (a própria X-Performance já mostra as
+                  metas/demandas dela nas outras abas daqui). `key` força
+                  recalcular do zero a cada pessoa trocada. */}
+              <div className="hidden" aria-hidden="true">
+                <PainelCorporativo key={pessoaFixo} currentUser={currentUser} hojeISO={hoje} gestao pessoaInicial={pessoaFixo} onRelatorio={setRelatorioPessoa} embutido />
+              </div>
+              <QuadroGeralTopo pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} telefone={usuarios.find((u) => u.id === pessoaFixo)?.phone} tarefasCiclo={tarefasCiclo} hoje={hoje} aba={abaModal} onAba={setAbaModal} onFechar={() => setModalAberto(false)} metasInfo={metasInfo} relatorio={relatorioPessoa} />
               <div className="flex items-start justify-between gap-2" hidden={abaModal !== 'pessoa'}>
                 <div className="min-w-0">
                   <p className="text-[15px] font-extrabold truncate">{nomeDe(pessoaFixo)}</p>
@@ -597,6 +804,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               )}
 
               </div>
+              {/* 🔍 dono: "quero saber agora como ele está olhando o MvM
+                  dele... eu estou às cegas." A tela X-GAME dela mesma,
+                  aberta pelo Super Admin em modo só-olhar. */}
+              {abaModal === 'mvm' && <div className="-mx-3 sm:-mx-4"><XGame userIdForcado={pessoaFixo} nomeForcado={nomeDe(pessoaFixo)} modoAdmin /></div>}
               {abaModal === 'metas' && <AbaMetas pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} funcaoId={funcaoTrabalho(pessoaFixo)?.id} mes={mesDe(hoje)} criadoPorId={currentUser?.id} metasInfo={metasInfo} />}
               {abaModal === 'programa' && <AbaPrograma pessoaId={pessoaFixo} nome={nomeDe(pessoaFixo)} mentalidade={funcaoTrabalho(pessoaFixo)?.mentalidade || mentalidadePadrao(base.cargo)} hoje={hoje} criadoPorId={currentUser?.id} />}
               {abaModal === 'semana' && <AbaSemana pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} hoje={hoje} participante={base} />}
@@ -612,6 +823,61 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           </div>
         );
       })()}
+
+      {/* ── 🎯 DISTRIBUIR TAREFA — agora um painel que abre no clique (dono,
+          08/09/2026): "quero a distribuição de tarefa como um modal de
+          abertura, não esse quadradão que vem de cara". Fica logo abaixo do
+          Quadro Geral, mesmo com o painel de alguém aberto — distribuir uma
+          tarefa não deveria exigir fechar quem você está vendo. ── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <button
+          type="button"
+          onClick={() => setDistribuirAberto((v) => !v)}
+          aria-expanded={distribuirAberto}
+          className="w-full flex items-center gap-2 text-left"
+          data-teste="abrir-distribuir"
+        >
+          <Send className="w-4 h-4 text-nz-verde" />
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Distribuir tarefa</span>
+          <span className="text-[10px] text-white/35">· escolhe quem, o dia e a tarefa</span>
+          <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${distribuirAberto ? 'rotate-180' : ''}`} />
+        </button>
+        {distribuirAberto && (
+          <div className="mt-3">
+            <DistribuirTarefa
+              currentUser={currentUser} equipe={equipe} participanteDe={participanteDe} nomeDe={nomeDe}
+              tarefasCiclo={tarefasCiclo} carregarTarefas={carregarTarefas} catalogo={catalogo} acoesDoBanco={acoesDoBanco} onAcoesDoBanco={setAcoesDoBanco}
+              pessoa={pessoa} onPessoa={setPessoa} dia={dia} onDia={setDia} desfazer={desfazer}
+              onAbrirQuadroGeral={(id) => { setPessoaFixo(id); setAbaModal('pessoa'); setModalAberto(true); }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── 📨 MENSAGENS — a caixa de entrada do CEO/Super Admin (DIR-106,
+          09/09/2026). Dono: "eu queria saber onde é que a gente vê isso...
+          tanto eu como super admin." Tudo que o time mandou — pro CEO, pra
+          Diretoria, pros Executivos e as demandas entre colegas — num só
+          lugar, porque o super admin enxerga o negócio inteiro. ── */}
+      <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <button
+          type="button"
+          onClick={() => setMensagensAberto((v) => !v)}
+          aria-expanded={mensagensAberto}
+          className="w-full flex items-center gap-2 text-left"
+          data-teste="abrir-mensagens"
+        >
+          <Inbox className="w-4 h-4 text-nz-verde" />
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Mensagens</span>
+          <span className="text-[10px] text-white/35">· o que o time mandou pro CEO, diretoria, executivos e entre eles</span>
+          <ChevronDown className={`ml-auto w-4 h-4 text-white/40 transition-transform ${mensagensAberto ? 'rotate-180' : ''}`} />
+        </button>
+        {mensagensAberto && (
+          <div className="mt-3">
+            <CaixaDeMensagensAdmin currentUser={currentUser} />
+          </div>
+        )}
+      </div>
 
       {/* enquanto o Quadro Geral está aberto, o resto sai da frente */}
       <div hidden={modalAberto && !!pessoaFixo}>
@@ -645,7 +911,47 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                         </span>
                       )}
                       {estado.id === 'devolvida' && <span className="ml-auto text-amber-200/80 truncate">↩ "{t.devolvida_motivo}"</span>}
+                      {estado.id === 'aguardando' && (
+                        <span className="ml-auto shrink-0">
+                          <button type="button" onClick={() => compartilhar(t)} title="compartilhar um lembrete bonito no WhatsApp" className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/30 px-2 py-0.5 text-emerald-200 font-bold" data-teste="compartilhar-pronto"><MessageCircle className="w-3 h-3" /> compartilhar</button>
+                        </span>
+                      )}
+                      {/* ⚠️ 09/09/2026 — DIR-105, dono: "eu aqui no Admin
+                          tenho que ter [um botão], avisar ela... e também
+                          tenho que ter o botão de excluir, porque eu posso
+                          desistir desse pronto." */}
+                      {estado.id === 'atrasada' && (
+                        <span className="ml-auto flex items-center gap-1 shrink-0">
+                          {t.aviso_pronto_em ? (
+                            <span className="text-white/30 italic">já avisada</span>
+                          ) : (
+                            <button type="button" onClick={() => avisar(t)} className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 hover:bg-amber-400/30 px-2 py-0.5 text-amber-200 font-bold" data-teste="avisar"><MessageCircle className="w-3 h-3" /> avisar</button>
+                          )}
+                          {/* 🐛 09/09/2026 — achado na auditoria: excluir só pode valer pra tarefa que a GESTÃO distribuiu — a rotina da própria pessoa (origem !== 'xperf') não some por aqui */}
+                          {t.origem === 'xperf' && (
+                            <button type="button" onClick={() => desfazer(t)} title="excluir (desistir desse pronto)" className="inline-flex items-center gap-1 rounded-full bg-red-500/15 hover:bg-red-500/30 px-2 py-0.5 text-red-200 font-bold" data-teste="excluir-pronto"><Trash2 className="w-3 h-3" /> excluir</button>
+                          )}
+                        </span>
+                      )}
                     </div>
+                    {/* ⏰ 08/09/2026 — dono: "isso tem que tirar pontos dele,
+                        além de perder o dinheiro." 🟡 09/09/2026 — DIR-105
+                        amoleceu: só do 4º aviso em diante zera o dia
+                        inteiro; antes disso é treino (só pontos). */}
+                    {!t.feito && estado.atrasou && (() => {
+                      const avisos = Number(participanteDe(t.user_id).avisos_pronto) || 0;
+                      const zerou = avisos >= AVISOS_ANTES_DE_ZERAR;
+                      return (
+                        <p className={`mt-1 text-[10px] font-bold ${zerou ? 'text-red-300' : 'text-amber-300'}`}>
+                          ⚠️ passou do prazo sem o pronto — {avisos} de {AVISOS_ANTES_DE_ZERAR} avisos já dados.{' '}
+                          {zerou ? 'Zerou o dia inteiro dela (MvM, Human Token, pontos e X-Pay).' : 'Ainda é treino — só perde pontos. Clique em avisar pra registrar e cobrar no WhatsApp.'}
+                          {/* 🐛 09/09/2026 — achado na auditoria: faltava a UI do reset que o comentário do "avisar" já prometia — sem isso, o castigo virava permanente */}
+                          {avisos > 0 && (
+                            <button type="button" onClick={() => resetarAvisos(t.user_id)} className="ml-2 font-bold underline decoration-dotted text-white/50 hover:text-white/80" data-teste="resetar-avisos">resetar avisos</button>
+                          )}
+                        </p>
+                      );
+                    })()}
                     {devolvendo?.id === t.id && (
                       <div className="mt-1.5 flex items-center gap-1.5 flex-wrap" data-teste="devolver-recado">
                         <Input autoFocus value={devolvendo.motivo} onChange={(e) => setDevolvendo((d) => ({ ...d, motivo: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') devolver(t, devolvendo.motivo); }} placeholder="o recado: o que faltou pra valer o pronto" className="h-8 flex-1 min-w-[200px] border-white/15 bg-white/[0.06] text-white placeholder:text-white/30 text-[11px]" data-teste="recado" />
@@ -665,35 +971,6 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
         <ComprovacoesPainel nomeDe={nomeDe} />
       </div>
-
-      {/* ── 2. 💰 O FIXO DE CADA UM — menu suspenso, e o modal da pessoa ── */}
-      {equipe.length > 0 && (
-        <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-nz-verde" />
-            <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Quadro Geral de cada um</p>
-            <span className="text-[10px] text-white/35">· ciclo de {fmtDia(diasCiclo[0])} a {fmtDia(diasCiclo[diasCiclo.length - 1])}</span>
-          </div>
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <select
-              value={pessoaFixo}
-              onChange={(e) => { setPessoaFixo(e.target.value); setAbaModal('pessoa'); if (e.target.value) setModalAberto(true); }}
-              className={`${campo} min-w-[240px]`}
-              data-teste="pessoa-fixo"
-            >
-              <option value="">escolha a pessoa…</option>
-              {equipe.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{funcaoTrabalho(p.id) && (funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome) !== p.funcao ? ` · ${funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome}` : ''}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
-              ))}
-            </select>
-            <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
-              <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
-            </Button>
-            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
-          </div>
-        </div>
-      )}
-
 
       </div>
       {/* ── 3. 🛠️ GESTÃO DO X-GAME (o admin de sempre, dobrado) ────────── */}
@@ -729,7 +1006,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         </button>
         {adminAberto && (
           <div className="xeos-cru rounded-b-xl bg-white p-3 text-gray-900">
-            <XGameAdmin />
+            <XGameAdmin onVerComo={(id) => { setPessoaFixo(id); setAbaModal('mvm'); setModalAberto(true); }} />
           </div>
         )}
       </div>

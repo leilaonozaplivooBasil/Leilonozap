@@ -13,6 +13,8 @@
 // AMÂNCIO" e "DISTRIBUIDOR") e o agrupamento de quem não fez pelo motivo —
 // "sem quadro dos sonhos: Jean, Karen, +6" em vez de dezesseis etiquetas.
 
+import { redondezDaRoda, faixaDaRoda } from './rodaDaVida.js';
+
 const CONECTIVOS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'di', 'del', 'della', 'van', 'von']);
 
 /** "JOSÉ AMÂNCIO" → "José Amâncio"; "maria de souza" → "Maria de Souza"; siglas de 2–3 letras ficam (ex.: "JR"). */
@@ -75,12 +77,28 @@ const semAcentoArquivo = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ
  * demandas    = xperf_demandas da pessoa, cada uma com `estado` opcional (estadoDaDemanda)
  * producao    = producaoDaSemana(...) → {total, concluidas, pct, semAgendar, atrasadas}
  * semaforo    = {cor, motivos}
+ * posicao     = onde ela está HOJE dentro do jogo (DIR-112, 09/09/2026) — dono:
+ *               "aonde a pessoa se encontra na posição do dia dentro do game,
+ *               dentro dessa jornada do sucesso... riqueza de detalhes, pra
+ *               ela ter ciência como está o negócio dela." Quem chama monta
+ *               este objeto com a MESMA conta do X-Game (tokenDoCiclo +
+ *               formacaoExecutivoIdeal + ligaDoToken/proximaLiga, em
+ *               src/lib/xgame.js):
+ *               { liga: {id,label,emoji}, proxima: {label,emoji,falta}|null,
+ *                 tokenCiclo, tokenMax, formacaoPct, formacaoMensagem,
+ *                 eixos: [{k,rotuloCurto,emoji,atual,alvo}] }
  */
-export function relatorioDoExecutivo({ pessoa, periodo, habitos = [], metas = [], demandas = [], producao = null, semaforo = null, hojeISO, geradoPor = null, mes } = {}) {
+export function relatorioDoExecutivo({ pessoa, periodo, habitos = null, metas = [], demandas = [], producao = null, semaforo = null, posicao = null, hojeISO, geradoPor = null, mes } = {}) {
   const nome = nomeBonito(pessoa?.nome);
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const mesRef = mes || hoje.slice(0, 7);
-  const feitos = habitos.filter((h) => h.fez).length;
+  // 📄 09/09/2026 — DIR-108: `habitos` vira null (não array vazio) quando
+  // quem chamou não tem essa conta feita nesta tela — é o caso do ADM
+  // X-Game, que não computa os 8 Hábitos. Mostrar "0/8" aí seria dizer
+  // que a pessoa não fez NADA, quando é só um dado que não foi lido.
+  const temHabitos = Array.isArray(habitos);
+  const listaHabitos = temHabitos ? habitos : [];
+  const feitos = listaHabitos.filter((h) => h.fez).length;
   const periodoRotulo = !periodo || periodo.tipo === 'hoje' ? `hoje, ${fmtDiaLongo(hoje)}` : `${periodo.rotulo} (${fmtDia(periodo.de)} a ${fmtDia(periodo.ate)})`;
 
   const recebidas = demandas.filter((d) => d.status === 'recebida');
@@ -94,11 +112,11 @@ export function relatorioDoExecutivo({ pessoa, periodo, habitos = [], metas = []
   });
 
   const blocos = [
-    {
+    ...(temHabitos ? [{
       id: 'habitos', titulo: `Os 8 Hábitos do Sucesso · ${periodoRotulo}`,
       resumo: `${feitos} de 8`,
-      linhas: habitos.map((h) => ({ n: h.n, texto: `${h.n}. ${h.nome}`, apoio: h.texto, cor: h.fez ? (h.fraco ? 'amarelo' : 'verde') : 'vermelho', fez: h.fez })),
-    },
+      linhas: listaHabitos.map((h) => ({ n: h.n, texto: `${h.n}. ${h.nome}`, apoio: h.texto, cor: h.fez ? (h.fraco ? 'amarelo' : 'verde') : 'vermelho', fez: h.fez })),
+    }] : []),
     {
       id: 'metas', titulo: `Metas de ${mesRef.slice(5)}/${mesRef.slice(0, 4)}`,
       resumo: metas.length ? `${metas.filter((m) => m.noRitmo).length} de ${metas.length} no ritmo` : 'sem meta definida',
@@ -123,13 +141,32 @@ export function relatorioDoExecutivo({ pessoa, periodo, habitos = [], metas = []
     });
   }
 
+  // 🎯 09/09/2026 — DIR-112: "posição do dia" — onde ela está AGORA dentro
+  // da jornada do jogo, não só o que ela fez. `posicao` chega pronta de
+  // quem chama (a mesma conta do X-Game); aqui só se soma a leitura da
+  // roda (redondez/faixa), pra o PDF e o texto falarem a MESMA língua da
+  // tela sem recalcular por fora.
+  const posicaoDoDia = posicao ? {
+    liga: posicao.liga,
+    proxima: posicao.proxima || null,
+    tokenCiclo: posicao.tokenCiclo ?? null,
+    tokenMax: posicao.tokenMax ?? null,
+    formacaoPct: posicao.formacaoPct ?? null,
+    formacaoMensagem: posicao.formacaoMensagem || null,
+    eixos: Array.isArray(posicao.eixos) ? posicao.eixos : [],
+    roda: Array.isArray(posicao.eixos) && posicao.eixos.length >= 3
+      ? faixaDaRoda(redondezDaRoda(posicao.eixos))
+      : null,
+  } : null;
+
   return {
     titulo: 'X-Performance · Relatório do Executivo',
     marca: 'Top College · X-EOS',
     pessoa: { id: pessoa?.id, nome, posicao: pessoa?.posicao || null, funcao: pessoa?.funcaoCurta || null, fixo: pessoa?.fixo ? fmtReais(pessoa.fixo) : null },
     semaforo: semaforo ? { cor: semaforo.cor, texto: semaforo.motivos?.length ? semaforo.motivos.join(' · ') : 'tudo em dia' } : null,
+    posicaoDoDia,
     numeros: [
-      { rotulo: 'Hábitos', valor: `${feitos}/8`, cor: feitos >= 6 ? 'verde' : feitos >= 3 ? 'amarelo' : 'vermelho' },
+      ...(temHabitos ? [{ rotulo: 'Hábitos', valor: `${feitos}/8`, cor: feitos >= 6 ? 'verde' : feitos >= 3 ? 'amarelo' : 'vermelho' }] : []),
       { rotulo: 'Metas no ritmo', valor: metas.length ? `${metas.filter((m) => m.noRitmo).length}/${metas.length}` : '—', cor: !metas.length ? 'cinza' : metas.every((m) => m.noRitmo) ? 'verde' : 'amarelo' },
       { rotulo: 'Demandas', valor: producao ? `${producao.concluidas}/${producao.total}` : `${concluidas.length}/${demandas.length}`, cor: (producao?.atrasadas || 0) ? 'vermelho' : 'azul' },
       { rotulo: 'Sem agendar', valor: String(recebidas.length), cor: recebidas.length ? 'amarelo' : 'verde' },
@@ -148,6 +185,15 @@ export function textoDoRelatorio(rel) {
   l.push(`*${rel.titulo}*`);
   l.push(`*${rel.pessoa.nome}*${rel.pessoa.posicao ? ` · ${rel.pessoa.posicao}` : ''}${rel.pessoa.funcao ? ` · ${rel.pessoa.funcao}` : ''}`);
   if (rel.semaforo) l.push(`${BOLA[rel.semaforo.cor] || ''} ${rel.semaforo.texto}`);
+  if (rel.posicaoDoDia) {
+    const p = rel.posicaoDoDia;
+    l.push('');
+    l.push(`*Posição do dia* — ${p.liga?.emoji || ''} ${p.liga?.label || ''}`);
+    if (p.proxima) l.push(`Faltam ${p.proxima.falta} pontos de Human Token pra ${p.proxima.emoji} ${p.proxima.label}`);
+    if (p.tokenCiclo !== null) l.push(`Human Token médio do ciclo: ${p.tokenCiclo}${p.tokenMax ? ` de ${p.tokenMax}` : ''}`);
+    if (p.formacaoPct !== null) l.push(`Formação do Executivo Ideal: ${p.formacaoPct}%${p.formacaoMensagem ? ` — ${p.formacaoMensagem}` : ''}`);
+    if (p.roda) l.push(`${p.roda.emoji} ${p.roda.rotulo}`);
+  }
   l.push('');
   for (const b of rel.blocos) {
     l.push(`*${b.titulo}* — ${b.resumo}`);
@@ -163,7 +209,13 @@ export function paraPdf(texto) {
   return String(texto ?? '')
     .replace(/[—–]/g, '-').replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
     .replace(/…/g, '...').replace(/→/g, '->').replace(/[✓✔]+/g, 'ok').replace(/×/g, 'x')
-    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    // 🐛 09/09/2026 — DIR-112: achado ao gerar um PDF de verdade e OLHAR pra
+    // ele — "⏱️"(stopwatch)/"🗳️"(urna) sobravam como "??"/"?" na legenda da
+    // roda: fora do miolo 1F300-1FAFF e sem contar a variação (U+FE0F) que
+    // some sozinha, não estritamente virariam texto Latin-1. Trocado pelo
+    // property escape de emoji de verdade (\p{Extended_Pictographic}) +
+    // variação/ZWJ — cobre QUALQUER emoji, não só a faixa mais comum.
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '')
     .replace(/[^ -ÿ]/g, '?')
     .replace(/\s+/g, ' ').trim();
 }

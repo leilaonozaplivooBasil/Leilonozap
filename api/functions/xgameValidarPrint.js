@@ -50,6 +50,15 @@ const MODEL_DIRETO = process.env.AI_MODEL_VISION_ANTHROPIC || 'claude-opus-5';
 const MODEL_GATEWAY = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
 const MODEL_GATEWAY_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
 
+// 🐛 09/09/2026 — auditoria noturna: esta função é chamada DIRETO do front
+// (CrmMetodo.jsx, XGameAdmin.jsx e o próprio Ritual do Amanhecer, não só
+// através de xgameProvaValidador.js, que já tinha maxDuration:60) — sem
+// isto, o timeout padrão da Vercel podia cortar no meio de uma análise de
+// imagem com raciocínio (effort medium + thinking adaptativo do Opus 5,
+// às vezes com fotos anteriores pra anti-reciclagem), virando exatamente o
+// tipo de falha intermitente relatada ("difícil receber").
+export const config = { maxDuration: 60 };
+
 /** Qual IA usar agora: { via, apiKey, model, reserva } — ou null sem chave. */
 const resolverIA = () => resolverIACompartilhada({ modelDireto: MODEL_DIRETO, modelGateway: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA });
 
@@ -100,7 +109,35 @@ Se a imagem é plausível mas não dá pra cravar a relação com a tarefa, resp
   link: `A comprovação esperada é um LINK/ENDEREÇO que leva a algo real e coerente com a tarefa (ex.: link de um post, de um documento, de um endereço/localização). A imagem anexada é o PRINT desse link aberto — confira que a página/local realmente mostrado bate com o que a tarefa pede.
 REPROVE: link quebrado, página em branco, print que não mostra conteúdo nenhum, conteúdo sem NENHUMA relação com a tarefa.
 Se o link abre mas o conteúdo é ambíguo, responda "duvida".`,
+  // 🌅 09/09/2026 — dono, ao vivo: "não pode ser no carro, não pode ser em
+  // academia, não pode ser no escritório — tem que ser em casa, com
+  // tranquilidade." Um frame do vídeo da visualização, não um print.
+  ritual: `A imagem é um FRAME do vídeo da visualização do Ritual do Amanhecer — a pessoa meditando/refletindo, olhando o Quadro dos Sonhos, bem cedo. O AMBIENTE tem que ser a CASA da pessoa, num momento de tranquilidade (quarto, sala, varanda, qualquer cômodo doméstico calmo).
+REPROVE diretamente (sem perguntar) se o ambiente for CLARAMENTE: o interior de um carro (parado ou em movimento — volante, painel, banco, cinto, vidro/estrada visível), uma ACADEMIA (aparelhos, pesos, espelho de parede tipo academia, esteira), ou um ESCRITÓRIO/local de trabalho (mesa corporativa, outras estações de trabalho, ambiente de empresa). Esses três NUNCA valem para o ritual, mesmo que a pessoa esteja quieta e concentrada.
+Se o ambiente for plausivelmente doméstico mas a imagem não deixar claro (enquadramento fechado no rosto, pouca luz, não dá pra ver o cômodo), responda "duvida" — não puna a falta de contexto visual como se fosse má-fé.`,
 };
+
+// 🎯 REGRA ESPECIAL — organização/planejamento do NEGÓCIO (não confundir com
+// "organização do AMBIENTE", que é físico e continua aceitando foto real).
+// Dono, ao vivo (09/09): olhou uma comprovação de "Organização do negócio"
+// que era uma FOTO DE PAPEL — anotação à mão, ilegível — e reprovou na hora:
+// "isso é horrível, não pode... tem que ser dentro do Quadro, a gente tem um
+// quadro pra isso. Papel nunca." O Quadro é a ferramenta de tarefas do
+// próprio sistema (colunas coloridas no topo, cards brancos com faixa de
+// status, ícones — ver QuadroCompromisso.jsx), então a comprovação certa é
+// um PRINT DE TELA de dentro do app, nunca uma foto do mundo real.
+const RE_ORGANIZACAO_NEGOCIO = /organiza[cç][aã]o do neg[oó]cio|planejament|fechamento do dia/i;
+const REGRA_ORGANIZACAO_NEGOCIO = `
+REGRA ESPECIAL DESTA TAREFA — é organização/planejamento do NEGÓCIO: a única
+comprovação válida é um PRINT DE TELA do Quadro do próprio sistema (a
+ferramenta de tarefas do app: colunas coloridas de ponta a ponta no topo,
+cards brancos com faixa de status, ícones) mostrando a organização feita ali
+dentro. REPROVE diretamente — sem perguntar, sem dúvida — qualquer foto de
+papel, caderno, agenda física ou anotação à mão, mesmo que pareça muito bem
+organizada: isso não vale mais para este tipo de tarefa. No motivo, diga
+exatamente isso: que organização do negócio só conta registrada dentro do
+Quadro do sistema, nunca em papel, e que a pessoa deve abrir o Quadro,
+organizar por lá e tirar o print de tela de lá.`;
 
 // 🎯 CRUZAMENTO — DIR-84. Vale pra TODOS os tipos, além da regra específica
 // acima: a IMAGEM tem que bater com o TÍTULO da tarefa, não só "parecer uma
@@ -129,7 +166,14 @@ recortada, comprimida, com filtro ou brilho diferente — reconheça a cena,
 não só o arquivo). Se for reciclagem, isso é motivo de REPROVAÇÃO direta
 (não precisa perguntar: reciclar prova antiga não tem explicação válida).`;
 
-const SISTEMA = `Você é o VALIDADOR DE COMPROVAÇÕES da gamificação X-GAME (Leilão no Zap). O padrão é ALTO: intervenção humana deve ser rara, então você precisa ser mais rigoroso e mais atento do que um humano seria — mas justo: quem cumpriu de verdade tem que ser aprovado sem burocracia. Analise a imagem principal com cuidado antes de decidir.`;
+// 🧠 09/09/2026 — dono, ao vivo: "quero que a IA seja até uma pessoa vendo,
+// mas tem que ser justo... exigente sem travar um negócio, sempre
+// comunicando da maneira correta, fazendo a pessoa pensar, sendo um
+// treinador — método socrático." O tom do `motivo` quando reprova ou fica em
+// dúvida vira pergunta reflexiva, não sentença — sem amolecer o veredito.
+const SISTEMA = `Você é o VALIDADOR DE COMPROVAÇÕES da gamificação X-GAME (Leilão no Zap). O padrão é ALTO: intervenção humana deve ser rara, então você precisa ser mais rigoroso e mais atento do que um humano seria — mas justo: quem cumpriu de verdade tem que ser aprovado sem burocracia. Analise a imagem principal com cuidado antes de decidir.
+
+TOM: você é um TREINADOR, não um fiscal. Isto vale dinheiro de verdade pra essa pessoa — leve isso a sério, mas nunca com deboche ou frieza. Quando reprovar ou ficar em dúvida, o "motivo" não é uma sentença seca: é uma pergunta ou observação que faz a pessoa PENSAR sozinha sobre o que ela entregou (método socrático) — ex.: em vez de só "reprovado: ambiente errado", diga algo como "você acredita que fazer o ritual dentro do carro te dá o mesmo estado de calma que fazer em casa?" ou "essa organização escrita no papel — ela realmente te ajuda a acompanhar o negócio, ou só cumpre a tarefa?". Sempre feche dizendo, em uma frase direta, exatamente o que falta e como corrigir — a pergunta abre, a instrução fecha.`;
 
 const indisponivel = (res, details, motivo = 'IA indisponível agora — tente de novo em instantes.') =>
   res.status(200).json({ ok: true, ia_indisponivel: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo, pergunta_para_pessoa: '', details });
@@ -182,7 +226,7 @@ export default async function handler(req, res) {
       cache_control: { type: 'ephemeral' },
     }];
     const contexto = `TIPO DE COMPROVAÇÃO: ${tipoRegra} — aplique a regra [TIPO ${tipoRegra}].
-TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE, e a última — não existe terceira chance nem análise humana depois desta: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence mas também não é evasiva ou contraditória, responda "duvida" (ela segue com o benefício da dúvida); reserve "reprovada" só pra explicação claramente falsa, evasiva ou contraditória com o que a imagem mostra.` : ''}`;
+TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${RE_ORGANIZACAO_NEGOCIO.test(titulo) ? `\n${REGRA_ORGANIZACAO_NEGOCIO}` : ''}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE, e a última — não existe terceira chance nem análise humana depois desta: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence mas também não é evasiva ou contraditória, responda "duvida" (ela segue com o benefício da dúvida); reserve "reprovada" só pra explicação claramente falsa, evasiva ou contraditória com o que a imagem mostra.` : ''}`;
 
     const conteudo = [
       { type: 'text', text: contexto },

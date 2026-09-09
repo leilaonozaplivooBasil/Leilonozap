@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao } from '@/lib/xgame';
+import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
+import { LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX, moedaModelo } from '@/lib/xgame';
+import { getFotoPerfil } from '@/lib/selosCargo';
+import MoedaPizza from './MoedaPizza';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -25,6 +27,8 @@ const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).m
 const fmt = (n, casas = 2) => (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 const brl = (v) => `R$ ${fmt(v)}`;
 const pct = (n) => `${Math.round((Number(n) || 0) * 100)}%`;
+/** Sem voto recebido no ciclo ainda, mostra "—" — não é zero, é "não sei". */
+const mvmTexto = (mvm) => (mvm === null ? '—' : fmt(mvm, 1));
 
 /** Um número grande do pulso: rótulo em cima, valor gigante, nota embaixo. */
 function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
@@ -43,7 +47,38 @@ function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
 // mais clean, mais Vale do Silício." Troca 💠🥇🥈🥉 por um ponto de cor —
 // mesma informação (a liga), sem o visual de figurinha. Cor só existe
 // aqui (não mexe em LIGAS, que outras telas do app ainda usam com emoji).
-const COR_LIGA = { diamante: '#67E8F9', ouro: '#FBBF24', prata: '#CBD5E1', bronze: '#D08A56' };
+const COR_LIGA = { platina: '#67E8F9', ouro: '#FBBF24', prata: '#CBD5E1', bronze: '#D08A56' };
+
+// 🖼️ 09/09/2026 — dono, sobre o pódio: "botar a imagem da pessoa ali, e a
+// imagem dentro da moeda... pra dar mais vontade da pra pessoa." A "moeda"
+// vira a própria foto — emoldurada por um anel na cor da liga (a mesma
+// paleta de COR_LIGA, sem duplicar), em vez do pontinho solto de antes.
+// Duas camadas de sombra criam o anel com um respiro escuro entre a foto e
+// a cor — lê bem sobre o fundo escuro do X-EOS sem precisar de borda dura.
+// `souEu` soma um segundo anel, verde, por fora — o mesmo destaque que a
+// tela já usava, agora compondo com o anel de liga em vez de substituí-lo.
+function anelDaMoeda({ cor, souEu }) {
+  const camadas = [`0 0 0 3px #05060c`, `0 0 0 5px ${cor}`];
+  if (souEu) camadas.push('0 0 0 8px #05060c', '0 0 0 10px #22C55E');
+  return camadas.join(', ');
+}
+
+function Avatar({ url, nome, tamanho = 40, anelCor = null, souEu = false, corFallback = 'from-slate-300 to-slate-400' }) {
+  const estilo = { width: tamanho, height: tamanho, boxShadow: anelCor ? anelDaMoeda({ cor: anelCor, souEu }) : undefined };
+  if (url) {
+    return <img src={url} alt={nome} title={nome} className="shrink-0 rounded-full object-cover" style={estilo} />;
+  }
+  return (
+    <div
+      className={`shrink-0 rounded-full flex items-center justify-center bg-gradient-to-b ${corFallback} text-white font-extrabold`}
+      style={{ ...estilo, fontSize: tamanho * 0.34 }}
+      title={nome}
+    >
+      {iniciais(nome)}
+    </div>
+  );
+}
+
 function SeloLiga({ liga, className = '' }) {
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
@@ -79,31 +114,66 @@ export default function XGameVisaoExecutiva() {
     let vivo = true;
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     const hoje = dataISO(new Date());
-    supabase
-      .from('xgame_diario')
-      .select('user_id,data,tarefas_total,tarefas_feitas,mvm_dia,token_dia,pontos,detalhes')
-      .eq('ciclo_inicio', ini)
-      .then(async ({ data }) => {
+    Promise.all([
+      supabase.from('xgame_diario').select('user_id,data,tarefas_total,tarefas_feitas,token_dia,pontos,detalhes').eq('ciclo_inicio', ini),
+      // 🗳️ 08/09/2026 — dono: "o MVM é só votação... tem gente que nem foi
+      // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
+      // (10 menos desconto por tarefa atrasada) — real time disfarçado de
+      // MVM. Agora vem só da votação de verdade (xgame_votos_mvm) do ciclo.
+      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+      // 🏆 09/09/2026 — dono: "o MVM pesa muito na moeda... mas o real time
+      // está pesando mais." Achado: o TOKEN/LIGA desta tabela vinha da média
+      // de token_dia (mvm_dia AUTOMÁTICO + aplicabilidade) — um cálculo
+      // PARALELO que nunca levou voto em conta, nem antes nem depois da
+      // repesagem em pesosDoPerfil. Agora o Token oficial do ranking usa a
+      // MESMA fórmula com peso de voto (tokenDoCiclo) do painel pessoal —
+      // por isso precisa do perfil de cada um (pesos diferentes por perfil).
+      supabase.from('xgame_participantes').select('user_id,perfil'),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
         if (!vivo) return;
+        const votosPor = {};
+        (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
+        const perfilPor = {};
+        (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
+
         const por = {};
         (data || []).forEach((d) => {
           const r = por[d.user_id] || (por[d.user_id] = {
-            user_id: d.user_id, dias: 0, token: 0, mvm: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {},
+            user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDatados: [],
           });
           const total = Number(d.tarefas_total) || 0;
           const feitas = Number(d.tarefas_feitas) || 0;
           const fatia = total > 0 ? feitas / total : 0;
           r.dias += 1;
-          r.token += Number(d.token_dia) || 0;
-          r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
+          r.diasDatados.push({ data: d.data, detalhes: d.detalhes || {} });
           // 💰 08/09/2026 — a recuperação de fim de semana devolve o X-Pay de
           // uma tarefa PERDIDA sem reescrever o dia em si: soma direto aqui.
+          // 🐛 09/09/2026 — auditoria noturna: o que foi recuperado entrava
+          // em DOBRO contra a pessoa — contava como ganho aqui EM CIMA E
+          // continuava contando como perdido embaixo, porque xpay_perdido do
+          // dia original nunca é reescrito. Sem subtrair, o painel do time
+          // mostrava dinheiro "perdido" que a pessoa já tinha recuperado de
+          // volta.
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
-          r.perdido += Number(d.detalhes?.xpay_perdido) || 0;
+          r.perdido += Math.max(0, (Number(d.detalhes?.xpay_perdido) || 0) - (Number(d.detalhes?.xpay_recuperado) || 0));
           if (fatia >= OFENSIVA_META) r.dias_fechados += 1;
           r.porData[d.data] = fatia;
-          if (d.data === hoje) r.hoje = { fatia, total, feitas, mvm: Number(d.mvm_dia) || 0 };
+          // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião
+          // também aqui. Vem de `detalhes.reunioes_*`, gravado pelo mesmo
+          // `contagens` que resumoDoDia já calcula — sem query nova.
+          if (d.data === hoje) {
+            r.hoje = {
+              fatia, total, feitas,
+              reunioesTotal: Number(d.detalhes?.reunioes_total) || 0,
+              reunioesFeitas: Number(d.detalhes?.reunioes_feitas) || 0,
+            };
+          }
+        });
+        // gente com voto recebido mas sem nenhum dia registrado ainda —
+        // sem isso, ela nunca aparece na tabela pra mostrar o MvM dela
+        Object.keys(votosPor).forEach((uid) => {
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDatados: [] };
         });
 
         const lista = Object.values(por).map((r) => {
@@ -118,21 +188,46 @@ export default function XGameVisaoExecutiva() {
             else break;
             d.setDate(d.getDate() - 1);
           }
+          const votosRecebidos = votosPor[r.user_id];
+          const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
+          const { total: tokenBruto, componentes, vendasFeitas } = tokenDoCiclo({
+            diasCiclo: r.diasDatados,
+            mvmVotacao: mvmDoVoto,
+            perfil: perfilPor[r.user_id],
+          });
+          // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
+          // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca
+          // o Ouro. Antes só checava o fim de semana; agora checa os dois.
+          const token = travarTopoPorEstudo(tokenBruto, {
+            estudoSemanaOk: estudoEmDia(r.diasDatados),
+            estudoFdsOk: estudoFdsEmDia(r.diasDatados),
+          });
           return {
             ...r,
-            token: r.token / r.dias,
-            mvm: r.mvm / r.dias,
-            regularidade: r.dias_fechados / r.dias,
+            token,
+            // 🪙 09/09/2026 — DIR-113.1, dono: "precisa ter uma explicação...
+            // no painel dele da pessoa, na visão executiva, mostrando a
+            // moeda completa." Guardado aqui pra "Sua posição" desenhar a
+            // MESMA MoedaPizza do Compromisso, sem recalcular nada.
+            componentes,
+            mvm: mvmDoVoto,
+            vendasFeitas, // 🎖️ DIR-115 — precisa pro portão de vendas da Platina
+            regularidade: r.dias ? r.dias_fechados / r.dias : 0,
             fogo,
           };
         });
 
         const ids = lista.map((l) => l.user_id);
         if (ids.length) {
-          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
-          const nomes = {};
-          (us || []).forEach((u) => { nomes[u.id] = nomeExibicao(u); });
-          lista.forEach((l) => { l.nome = nomes[l.user_id] || l.user_id.slice(0, 6); });
+          // 🖼️ 09/09/2026 — dono, olhando o pódio: "está muito feio... vamos
+          // puxar a imagem, a foto da pessoa, do perfil dela... e a imagem
+          // dentro da moeda que ele está." A foto real (getFotoPerfil, mesma
+          // fonte que o Quadro de Compromisso já usa) — iniciais continuam
+          // sendo o único fallback, pra nunca ficar vazio.
+          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname,avatar_url,profile_photo_url').in('id', ids);
+          const nomes = {}; const fotos = {};
+          (us || []).forEach((u) => { nomes[u.id] = nomeExibicao(u); fotos[u.id] = getFotoPerfil(u); });
+          lista.forEach((l) => { l.nome = nomes[l.user_id] || l.user_id.slice(0, 6); l.foto = fotos[l.user_id] || null; });
         }
         if (vivo) setLinhas(lista);
       });
@@ -150,6 +245,16 @@ export default function XGameVisaoExecutiva() {
       xpay: linhas.reduce((a, l) => a + l.xpay, 0),
       perdido: linhas.reduce((a, l) => a + l.perdido, 0),
       fogos: linhas.filter((l) => l.fogo > 0).length,
+      // 📊 08/09/2026 — dono: "quero a quantidade de tarefas do grupo — X
+      // pessoas, Y tarefas, quantas o time concluiu, qual o percentual."
+      // Mesma conta do ADM X-Game (XPerformanceGestao), só que a partir do
+      // retrato já gravado em xgame_diario, não da tabela ao vivo.
+      tarefasHojeTotal: comHoje.reduce((a, l) => a + (l.hoje.total || 0), 0),
+      tarefasHojeFeitas: comHoje.reduce((a, l) => a + (l.hoje.feitas || 0), 0),
+      // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião do
+      // time também na Verificação do Progresso, não só no ADM X-Game.
+      reunioesHojeTotal: comHoje.reduce((a, l) => a + (l.hoje.reunioesTotal || 0), 0),
+      reunioesHojeFeitas: comHoje.reduce((a, l) => a + (l.hoje.reunioesFeitas || 0), 0),
     };
   }, [linhas]);
 
@@ -173,7 +278,8 @@ export default function XGameVisaoExecutiva() {
       .map((l) => {
         const motivos = [];
         if (l.fogo === 0) motivos.push('ofensiva apagada');
-        if (l.mvm < 4) motivos.push(`MvM ${fmt(l.mvm, 1)} — abaixo de 4`);
+        if (l.mvm === null) motivos.push('ninguém votou nela ainda');
+        else if (l.mvm < 4) motivos.push(`MvM ${fmt(l.mvm, 1)} — abaixo de 4`);
         if (l.regularidade < 0.5) motivos.push(`fechou só ${pct(l.regularidade)} dos dias`);
         if (l.hoje && l.hoje.fatia < 0.3) motivos.push(`hoje em ${pct(l.hoje.fatia)}`);
         if (!l.hoje) motivos.push('sem registro hoje');
@@ -211,8 +317,10 @@ export default function XGameVisaoExecutiva() {
   const palco = [podio[1], podio[0], podio[2]];
   const ALTURA_PALCO = ['h-16 sm:h-20', 'h-24 sm:h-32', 'h-10 sm:h-12'];
   const COR_PALCO = ['from-slate-300 to-slate-400', 'from-amber-300 to-yellow-500', 'from-orange-400 to-amber-700'];
-  const BORDA_PALCO = ['#64748b', '#b45309', '#9a3412'];
   const POSICAO_PALCO = [2, 1, 3];
+  // 🖼️ 09/09/2026 — o 1º lugar também ganha a foto maior — um degrau
+  // acima dos outros dois, igual ao palco em si.
+  const TAMANHO_FOTO_PALCO = [56, 80, 56];
 
   return (
     <div className="border-t border-nz-borda/40 pt-5 space-y-8">
@@ -232,7 +340,7 @@ export default function XGameVisaoExecutiva() {
             <p className="text-2xl font-black text-nz-tinta leading-tight tabular-nums">
               {minhaPosicao}º<span className="text-sm font-semibold text-nz-tinta-fraca"> de {time.pessoas}</span>
             </p>
-            <SeloLiga liga={ligaDoToken(meuLinha.token)} className="text-[11px] font-semibold text-nz-tinta-fraca mt-0.5" />
+            <SeloLiga liga={ligaComPortoesDoCiclo(meuLinha.token, { mvmVotacao: meuLinha.mvm, vendasFeitas: meuLinha.vendasFeitas })} className="text-[11px] font-semibold text-nz-tinta-fraca mt-0.5" />
           </div>
           <div className="flex items-center gap-5 sm:gap-7 ml-auto">
             <div className="text-right">
@@ -253,13 +361,57 @@ export default function XGameVisaoExecutiva() {
         </div>
       )}
 
+      {/* 🪙 DIR-113.1 (09/09/2026) — dono, ao vivo: "precisa ter uma
+          explicação... no painel dele da pessoa, na visão executiva,
+          explicando como chega aos 22,22, mostrando a moeda completa."
+          A MESMA MoedaPizza do Compromisso, com os componentes já
+          calculados ali em cima (nada recalculado) — pra quem só olha a
+          Visão Executiva também entender de onde vem o Token, não só o
+          número final. Cartão sólido de propósito: esta seção mistura
+          fundos claros e escuros pela tela, e um fundo translúcido aqui
+          já rendeu "cor feia" noutra tela nesta mesma sessão. */}
+      {meuLinha && (
+        <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-executivo">
+          <div>
+            <p className="text-sm font-extrabold text-nz-tinta">🪙 Seu Human Token — de onde vem cada ponto dele</p>
+            <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token deste ciclo, até o teto de {fmt(TOKEN_MAX)}</p>
+            <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
+          </div>
+          <MoedaPizza componentes={meuLinha.componentes} total={meuLinha.token} max={TOKEN_MAX} liga={ligaComPortoesDoCiclo(meuLinha.token, { mvmVotacao: meuLinha.mvm, vendasFeitas: meuLinha.vendasFeitas })} />
+        </div>
+      )}
+
+      {/* 🪙 09/09/2026 — dono: "a moeda tem que estar ali, pra ele se
+          inspirar nela cheia... junto com a dele que está sendo preenchida."
+          A moeda-modelo (`moedaModelo`, xgame.js) ao lado da moeda real de
+          cima — sempre no teto, a referência de "como ela fica cheia". */}
+      {meuLinha && (
+        <div className="rounded-2xl border-2 border-dashed border-nz-ouro-claro bg-nz-ouro-fundo p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-executivo-modelo">
+          <div>
+            <p className="text-sm font-extrabold text-nz-tinta">🏆 O Modelo — pra onde você está indo</p>
+            <p className="text-[11px] text-nz-tinta-fraca mt-0.5">a mesma moeda, cheia — a referência de como ela fica quando cada fatia bate no teto</p>
+          </div>
+          <MoedaPizza componentes={moedaModelo('estrategico')} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
+        </div>
+      )}
+
       {/* ── 1. O PULSO ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={<SeloLiga liga={ligaTime} className="text-nz-tinta-fraca" />} />
         </div>
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Users} rotulo="O dia de hoje" valor={pct(time.diaHoje)} nota={`fecha em ${Math.round(OFENSIVA_META * 100)}%`} cor={time.diaHoje >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
+        </div>
+        {/* 📊 08/09/2026 — dono: "quero a quantidade de tarefas do grupo —
+            quantas o time tem, quanto concluiu, qual o percentual." */}
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={ClipboardList} rotulo="Tarefas do time hoje" valor={`${time.tarefasHojeFeitas}/${time.tarefasHojeTotal}`} nota={`${time.tarefasHojeTotal ? Math.round((time.tarefasHojeFeitas / time.tarefasHojeTotal) * 100) : 0}% concluído`} cor={time.tarefasHojeTotal && time.tarefasHojeFeitas / time.tarefasHojeTotal >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
+        </div>
+        {/* 📊 09/09/2026 — dono: "eu quero esse alcance" — o percentual de
+            reunião do time também aqui, não só no ADM X-Game. */}
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={Handshake} rotulo="Reuniões do time hoje" valor={`${time.reunioesHojeFeitas}/${time.reunioesHojeTotal}`} nota={`${time.reunioesHojeTotal ? Math.round((time.reunioesHojeFeitas / time.reunioesHojeTotal) * 100) : 0}% concluído`} cor={time.reunioesHojeTotal && time.reunioesHojeFeitas / time.reunioesHojeTotal >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
         </div>
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Flame} rotulo="Ofensivas acesas" valor={`${time.fogos}/${time.pessoas}`} nota="dias seguidos fechados" cor={time.fogos > 0 ? 'text-nz-fogo' : 'text-nz-tinta'} />
@@ -275,23 +427,22 @@ export default function XGameVisaoExecutiva() {
         <div className="flex items-end justify-center gap-3 sm:gap-5 max-w-xl mx-auto">
           {palco.map((l, i) => {
             if (!l) return <div key={i} className="flex-1 max-w-[180px]" />;
-            const liga = ligaDoToken(l.token);
+            const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
             const souEu = l.user_id === meuId;
             return (
               <div key={l.user_id} className="flex-1 max-w-[180px] flex flex-col items-center">
                 {i === 1 && <Crown className="w-5 h-5 text-amber-300 mb-1" />}
-                <div
-                  className={`relative shrink-0 w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-b ${COR_PALCO[i]} text-white font-extrabold text-lg ${souEu ? 'ring-2 ring-nz-verde ring-offset-2 ring-offset-[#05060c]' : ''}`}
-                  style={{ boxShadow: `0 4px 0 0 ${BORDA_PALCO[i]}, inset 0 3px 7px rgba(255,255,255,0.4)` }}
-                >
-                  {iniciais(l.nome)}
-                </div>
+                {/* 🖼️ 09/09/2026 — dono: "botar a imagem da pessoa ali, e a
+                    imagem dentro da moeda... pra dar mais vontade da pra
+                    pessoa." A foto real (Avatar) substitui o círculo só de
+                    iniciais — emoldurada pelo anel da própria liga dela. */}
+                <Avatar url={l.foto} nome={l.nome} tamanho={TAMANHO_FOTO_PALCO[i]} anelCor={COR_LIGA[liga.id] || '#94a3b8'} souEu={souEu} corFallback={COR_PALCO[i]} />
                 <p className="text-sm font-bold text-nz-tinta mt-2 truncate max-w-full text-center">
                   {l.nome}{souEu && <span className="ml-1 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
                 </p>
                 <p className="flex items-center justify-center gap-1 text-[11px] text-nz-tinta-fraca tabular-nums text-center">
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: COR_LIGA[liga.id] || '#94a3b8' }} />
-                  {fmt(l.token)} · MvM {fmt(l.mvm, 1)}
+                  {fmt(l.token)} · MvM {mvmTexto(l.mvm)}
                   {l.fogo > 0 && <span className="flex items-center gap-0.5 text-nz-fogo font-semibold"> · <Flame className="w-3 h-3" />{l.fogo}d</span>}
                 </p>
                 <div className={`w-full ${ALTURA_PALCO[i]} rounded-t-lg bg-gradient-to-b ${COR_PALCO[i]} mt-2 flex items-start justify-center pt-1.5`}>
@@ -359,17 +510,20 @@ export default function XGameVisaoExecutiva() {
             </thead>
             <tbody>
               {ordenadas.map((l, i) => {
-                const liga = ligaDoToken(l.token);
+                const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
                 const souEu = l.user_id === meuId;
                 return (
                   <tr key={l.user_id} className={`border-t border-nz-borda/30 transition-colors ${souEu ? 'bg-nz-verde/10' : 'hover:bg-white/[0.03]'}`}>
                     <td className="py-2.5 px-3 text-nz-tinta-fraca tabular-nums">{i + 1}</td>
                     <td className="py-2.5 font-semibold text-nz-tinta">
-                      {l.nome}{souEu && <span className="ml-1.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                      <span className="inline-flex items-center gap-2">
+                        <Avatar url={l.foto} nome={l.nome} tamanho={22} anelCor={COR_LIGA[liga.id] || '#94a3b8'} souEu={false} corFallback="from-slate-300 to-slate-400" />
+                        {l.nome}{souEu && <span className="ml-0.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                      </span>
                     </td>
                     <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap"><SeloLiga liga={liga} /></td>
                     <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
-                    <td className={`py-2.5 text-right tabular-nums ${l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{fmt(l.mvm, 1)}</td>
+                    <td className={`py-2.5 text-right tabular-nums ${l.mvm !== null && l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{mvmTexto(l.mvm)}</td>
                     <td className={`py-2.5 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
                     <td className="py-2.5 text-right text-nz-tinta-fraca tabular-nums">{l.dias_fechados}/{l.dias}</td>
                     <td className="py-2.5 text-right text-nz-verde font-semibold tabular-nums px-3">{brl(l.xpay)}</td>

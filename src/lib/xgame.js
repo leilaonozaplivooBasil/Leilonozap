@@ -30,10 +30,29 @@ export const TOKEN_MAX = 22.22;
 export const APLICABILIDADE_MAX = 12.22;
 export const MVM_MAX = 10;
 export const TRAVA_SEM_ESTUDO = 17.77; // "Mediana" na planilha: nunca chega ao ouro
+// 🎓 09/09/2026 — dono: sem o estudo de fim de semana (resumo bem
+// detalhado), a pessoa pode ser Ouro, mas não passa disso — igual à trava
+// de estudo de semana, só que travando o TOPO (LIGAS, min 17,78) em vez
+// do Ouro antigo (FAIXAS_TOKEN, min 17,78 antes da repesagem DIR-115).
+//
+// 🏆 09/09/2026 — DIR-115, dono: "eu não quero botar diamante... que não
+// lembre multinível — o nível pica de chegar mesmo." Diamante virou
+// PLATINA em toda a moeda (LIGAS, FAIXAS_TOKEN, esta trava) — só o NOME
+// mudou; o valor (19,99, um sub-teto dentro da própria Platina pra quem
+// não tem o fim de semana em dia) continua o mesmo.
+export const TRAVA_SEM_ESTUDO_CICLO = 19.99;
 export const CICLO_DIAS_UTEIS = 22;
 
+// 🏆 DIR-115 (09/09/2026) — REPESAGEM da moeda, dono: "recrutamos caráter e
+// treinamos habilidade" é o jargão que decide os pesos. 4 degraus de
+// ~20-30% cada, no lugar do "deserto" antigo (prata em 30%, ouro só em
+// 80% — 50 pontos sem nenhuma linha no meio): Bronze 0-29% · Prata 30-54%
+// · Ouro 55-79% · Platina 80-100%. Platina começa EXATAMENTE onde o Ouro
+// antigo começava (17,78) — o topo não ficou mais fácil, só ganhou dois
+// degraus novos no meio do caminho e perdeu o nome de multinível.
 export const FAIXAS_TOKEN = [
-  { id: 'ouro', label: 'OURO', min: 17.78, medalha: '🥇' },
+  { id: 'platina', label: 'PLATINA', min: 17.78, medalha: '🏆' },
+  { id: 'ouro', label: 'OURO', min: 12.22, medalha: '🥇' },
   { id: 'prata', label: 'PRATA', min: 6.66, medalha: '🥈' },
   { id: 'bronze', label: 'BRONZE', min: 0, medalha: '🥉' },
 ];
@@ -204,6 +223,99 @@ export function estudoEmDia(diasCiclo = [], leituraHoje = false) {
 export const ehTarefaDeEstudo = (titulo) =>
   /leitura|estudo/i.test(String(titulo || ''));
 
+/**
+ * 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
+ * quero um resumo bem detalhado para gerar esse bônus, tanto diariamente
+ * quanto fim de semana, para ser Diamante." A trava do Diamante: entre os
+ * sábados/domingos já vividos no ciclo, pelo menos 60% precisam ter o
+ * estudo de fim de semana feito (mesma régua da leitura de semana, só que
+ * olhando só pros dias de fim de semana). Nenhum fim de semana ainda no
+ * ciclo → não julga (`true`), não é justo travar antes de a régua valer.
+ * @param diasCiclo snapshots do ciclo, cada um com {data, detalhes.estudo_fds_feito}
+ * @param hoje {data, feito} de hoje, quando hoje ainda não está em diasCiclo
+ */
+export function estudoFdsEmDia(diasCiclo = [], hoje = null) {
+  const dias = hoje?.data ? [...diasCiclo, { data: hoje.data, detalhes: { estudo_fds_feito: !!hoje.feito } }] : diasCiclo;
+  const fimDeSemana = dias.filter((d) => {
+    const dia = new Date(`${String(d?.data || '').slice(0, 10)}T12:00:00`).getDay();
+    return dia === 0 || dia === 6;
+  });
+  if (!fimDeSemana.length) return true;
+  const feitos = fimDeSemana.filter((d) => d?.detalhes?.estudo_fds_feito).length;
+  return feitos / fimDeSemana.length >= 0.6;
+}
+
+/**
+ * A trava de estudo do CICLO — e só do TOPO da moeda (DIR-113, 09/09/2026;
+ * renomeada de "Diamante" pra "Platina" na repesagem DIR-115, mesmo valor).
+ * Dono, revendo o próprio pedido anterior: "o que ditava o diamante é só
+ * um estudo em casa, mas ela tem que chegar ao ouro... até mesmo se ela
+ * não estudar em casa — que é a produção, mais MvM, mais tudo isso."
+ *
+ * Sem constância de leitura de semana OU sem o estudo de fim de semana, o
+ * total do ciclo capa em `TRAVA_SEM_ESTUDO_CICLO` (19,99) — NUNCA em
+ * `TRAVA_SEM_ESTUDO` (17,77), que é a trava de um mecanismo diferente e
+ * mais antigo: o Human Token DO DIA (`humanToken()`), que continua
+ * intocado. Antes desta função, `XGame.jsx`/`CrmMetodo.jsx` reaplicavam
+ * `TRAVA_SEM_ESTUDO` por fora, em cima do total do CICLO — bloqueando
+ * Ouro pra quem não lê todo dia, o oposto do que o dono quer agora. Uma
+ * função só, usada nos 5 lugares que calculam liga de ciclo (painel
+ * pessoal em XGame.jsx e CrmMetodo.jsx, ranking do time em CrmMetodo.jsx
+ * e XGameVisaoExecutiva.jsx, e o Painel Corporativo/PDF Executivo),
+ * pra nunca mais dessincronizar entre telas.
+ */
+export function travarTopoPorEstudo(totalBruto, { estudoSemanaOk, estudoFdsOk }) {
+  if (estudoSemanaOk && estudoFdsOk) return totalBruto;
+  return Math.min(totalBruto, TRAVA_SEM_ESTUDO_CICLO);
+}
+
+// 🎖️ DIR-115 (09/09/2026) — OS PORTÕES DA LIGA. Dono, ao vivo, decidindo o
+// peso do MvM: "recrutamos caráter e treinamos habilidade" — caráter não é
+// nota que compensa com produção ou venda, é PRÉ-REQUISITO. "30% + veto é
+// mais forte que 45% sem veto": o MvM desceu de peso (era MVM_MAX=10,
+// 45%; agora 6,67, 30% — ver pesosDoPerfil) exatamente PORQUE virou
+// portão em vez de fatia que dinheiro compra.
+//
+// Dois portões, NUNCA sobre o número exibido (`total` — o Human Token
+// mostrado é sempre o valor real, verdadeiro) — só sobre a LIGA que aquele
+// número pode valer:
+//   1. CARÁTER — MvM abaixo de `PISO_CARATER_LIGA` trava TUDO em Bronze,
+//      não importa quanto ela produziu ou vendeu; abaixo de
+//      `PISO_CARATER_PLATINA` (mas acima do piso de Bronze) não impede
+//      Ouro, só tranca a Platina.
+//   2. VENDA — dono: "métodologia garante venda... vendas 100%" (o próprio
+//      alvo que a planilha já pedia pro Executivo Ideal, diferente dos
+//      outros 4 eixos, que pedem 80-90%). Sem bater a meta cheia do ciclo
+//      (`META_VENDAS_CICLO`), a Platina não abre — sorte não compra o topo,
+//      só método (a meta já tem caminhos: reunião conta fração, venda de
+//      alto valor converte pelo ticket médio).
+export const PISO_CARATER_LIGA = 7;      // MvM abaixo disso: Bronze, sempre
+export const PISO_CARATER_PLATINA = 8;   // MvM abaixo disso: sem Platina (Ouro é o teto)
+
+/**
+ * A liga final do ciclo, depois dos portões de caráter e venda — `total`
+ * (o número da moeda) nunca é alterado aqui, só QUAL liga ele pode valer.
+ * @param {number} total o token do ciclo, JÁ passado por `travarTopoPorEstudo`
+ * @param {{mvmVotacao?: number|null, vendasFeitas?: number}} portoes
+ */
+export function ligaComPortoesDoCiclo(total, { mvmVotacao = null, vendasFeitas = 0 } = {}) {
+  const semCaraterMinimo = mvmVotacao !== null && mvmVotacao !== undefined && mvmVotacao < PISO_CARATER_LIGA;
+  if (semCaraterMinimo) return LIGAS.at(-1); // bronze — o piso de caráter não perdoa nem prata/ouro
+  let liga = ligaDoToken(total);
+  if (liga.id !== 'platina') return liga;
+  const semCaraterPlatina = mvmVotacao !== null && mvmVotacao !== undefined && mvmVotacao < PISO_CARATER_PLATINA;
+  const semMetaDeVendas = (Number(vendasFeitas) || 0) < META_VENDAS_CICLO;
+  if (semCaraterPlatina || semMetaDeVendas) liga = LIGAS.find((l) => l.id === 'ouro') || liga;
+  return liga;
+}
+
+// 📊 08/09/2026 — dono: "quero o percentual de reunião do time" no painel
+// vivo. Mesma régua que já classifica ícone/peso pelo título em outros
+// lugares do app (XGameJornada, REGRAS_PESO) — reunião/apresentação/
+// encontro é ação de negócio; aqui só nomeia pra virar métrica de equipe.
+export const ehTarefaDeReuniao = (titulo) =>
+  /reuni[aã]o|apresenta[cç][aã]o|encontro com|call com/i.test(String(titulo || ''));
+
 // ── 💰 X-PAY (a remuneração) ─────────────────────────────────────────
 // 06/09/2026 — A FÓRMULA MUDOU, por ordem do dono (X-Performance): o fixo do
 // mês ÷ 24 dias de operação vira o valor do dia, e dentro do dia o PESO reparte o
@@ -244,7 +356,10 @@ const pesoDaTarefa = (t) => Math.min(6, Math.max(1, Number(t?.peso) || 3));
 // bater no título vence (ex.: "Leitura leve + descanso" é leitura, peso 4).
 const _semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const REGRAS_PESO = [
-  { re: /gratidao|foco no sonho/, peso: 5, porque: 'gratidão abre o dia e a mente' },
+  // 🌅 09/09/2026 — dono, ao vivo: "o ritual tem que ser um dos maiores
+  // valores da gamificação do dia... botar um peso maior e um valor maior."
+  // Empatado no teto (6) com a ação de negócio — não é mais só "importante".
+  { re: /gratidao|foco no sonho/, peso: 6, porque: 'o ritual do amanhecer — um dos maiores valores do dia' },
   { re: /treinament|treinar|mentoria|mentor|sala de treinament/, peso: 5, porque: 'treinamento constrói o time' },
   { re: /loja|venda|cliente|reuni|apresenta|contrato|follow|prospec/, peso: 6, porque: 'ação de negócio — o peso principal' },
   { re: /leitura|estudo|curso|licao|aula/, peso: 4, porque: 'mentalidade: estudo em dia' },
@@ -367,9 +482,20 @@ export function horaDeMin(min) {
 // pessoas às vezes não têm capacidade de votar num mentor — salvo se ele
 // mesmo permitir ser votado na MvM." Só o cargo super_admin é afetado; todo
 // outro participante ativo continua votável exatamente como sempre foi.
+//
+// 🗳️ 09/09/2026 — dono: "tem pessoas que vão receber valor na gamificação,
+// já participaram da mentoria, mas não vão receber voto — só não quero que
+// eles recebam voto... eles podem votar, mas não recebem voto." O MESMO
+// campo `aceita_ser_votado` ganha o segundo uso, com polaridade oposta pra
+// quem não é Super Admin: lá é OPT-IN (desligado por padrão, o próprio
+// dono liga pra si); aqui é OPT-OUT controlado pelo ADMIN por pessoa
+// (ligado por padrão — comportamento de sempre — só quem o dono desligar
+// explicitamente some da lista votável). Ninguém tinha esse campo setado
+// antes desta mudança, então nada muda pra quem já estava votável.
 /** Esta pessoa pode aparecer na lista de colegas votáveis da MvM Manual? */
 export function podeSerVotado({ role, aceita_ser_votado } = {}) {
-  return role !== 'super_admin' || aceita_ser_votado === true;
+  if (role === 'super_admin') return aceita_ser_votado === true;
+  return aceita_ser_votado !== false;
 }
 
 // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
@@ -412,27 +538,128 @@ export function mvmManual(votos = []) {
   return { media, ranking, totalVotos: votos.length };
 }
 
-// ── 🏆 HUMAN TOKEN COMPLETO — os 5 componentes da planilha ──────────
-// F2 = MvM (peso 10) + Produção + Real Time + Bônus + Vendas, teto 22,22.
-// Pesos por perfil (planilha A19:A21): base 12,22 (estratégico/operacional)
-// ou 2,22 (comercial) repartida em 50% produção · 30% real time · 20% bônus.
-// Vendas: meta 4/mês; perfil comercial multiplica por PT VENDA 2,5.
+// ── 🏆 HUMAN TOKEN COMPLETO — os 5 componentes ──────────────────────
+// F2 = MvM + Produção (real time) + Desempenho + Bônus (estudo) + Vendas,
+// teto 22,22.
+//
+// 🔀 09/09/2026 — REPESAGEM, ordem do dono: "o real time não pode pesar
+// tanto... quero aumentar o peso de quem vende e quem estuda." A "Produção"
+// aqui é o que a planilha chama de "REAL TIME" (tarefa comprovada na hora)
+// — era 50% da base (6,11 pontos), virou peso fixo pequeno (1,5). O que
+// sobrou foi quase todo pro Bônus/Estudo (a leitura/estudo já cai em
+// categoria 'bonus' — ver categoriaDaTarefa) e um pouco pra Vendas.
+// "Desempenho" (nome interno: realtime — eficiência do X-Pay ganho/possível)
+// não mudou. Perfil comercial já é dominado pelo PT VENDA (2,5×) — a
+// trava de venda pra prata/ouro fica só pra quem já tem meta de venda,
+// por pedido do dono ("só pra quem já vende").
+// 🟢 09/09/2026 — DIR-110, dono: "quatro vendas é muito pouco pra um
+// executivo de venda... vamos botar vinte e seis vendas." Fixo por ciclo,
+// sem tentar amarrar aos dias úteis do ciclo (22) — ele pensou em dias
+// corridos (uma venda por dia, com uma folga de poucos dias), e misturar
+// as duas réguas de "dia" só ia complicar sem ganhar precisão.
+export const META_VENDAS_CICLO = 26;
+// 💳 o ticket médio de referência (planilha/dono) — usado pra converter
+// venda de valor alto (parceria, adesão) em "vendas equivalentes":
+// valor ÷ TICKET_MEDIO_VENDA. Uma parceria de R$20.000 já vira ~101
+// vendas equivalentes — satura a meta na hora ("já preencheu").
+export const TICKET_MEDIO_VENDA = 197;
+// 🤝 dono: "a reunião pode ser o princípio da venda... duas reuniões
+// agendadas pode contar pra parte da venda." Cada reunião feita no ciclo
+// vale uma fração de venda — mas com teto: reunião sozinha não pode
+// preencher a meta inteira ("não posso parabenizar... sem gerar
+// resultado em venda ou reunião. Peso maior é venda").
+export const PESO_REUNIAO_EQUIVALENTE = 0.25;
+export const TETO_REUNIAO_NA_META = 0.3;
 
-export const META_VENDAS_CICLO = 4;
+/**
+ * Venda de valor alto (parceiro de compra, licenciado, ponto de retirada,
+ * vendedor...) convertida em "vendas equivalentes" pelo ticket médio —
+ * dono: "se ele fechou uma licença de vinte mil, já preencheu."
+ *
+ * 🔧 09/09/2026 — DIR-110.1, correção depois do dono explicar o caso real
+ * (Luciano Pinheiro fechou o Renan, R$200.000, parceiro de compra "por
+ * fora" — depósito fora da plataforma): os kinds aqui são os MESMOS que
+ * `bucketDaVenda()` (src/lib/captacaoParceiros.js) já usa oficialmente
+ * pra captação — 'partner_plan' (parceiro de compra), 'seller_adhesion'
+ * (vendedor) e 'adesao' (licenciado/loja física/ponto de retirada/
+ * distribuidor, todos como adesão de cargo). `vendasPagas` já vem
+ * filtrada por quem chama.
+ *
+ * O que fecha "por fora" (depósito direto, sem passar pela plataforma)
+ * NÃO aparece aqui — isso vem de `captacao_oportunidades.aporte_externo`
+ * (a esteira de captação, DIR-40), somado à parte por quem chama, porque
+ * mora numa tabela diferente com sua própria validação
+ * (`aporteExternoValido`, em `esteiraCaptacao.js`).
+ */
+const KINDS_ALTO_VALOR = new Set(['partner_plan', 'seller_adhesion', 'adesao']);
+export function vendasEquivalentesAltoValor(vendasPagas = [], ticketMedio = TICKET_MEDIO_VENDA) {
+  const total = (Array.isArray(vendasPagas) ? vendasPagas : [])
+    .filter((s) => KINDS_ALTO_VALOR.has(s?.kind))
+    .reduce((soma, s) => soma + (Number(s?.total_amount) || 0), 0);
+  return ticketMedio > 0 ? total / ticketMedio : 0;
+}
 
+// 🐛 09/09/2026 — achado na auditoria pré-publicação: os pesos do perfil
+// 'comercial' somavam 14,72, não 22,22 — quase 7,5 pontos abaixo do teto.
+// Como Ouro começa em 17,78 e Diamante em 20, um executivo comercial NUNCA
+// conseguia chegar lá, mesmo fechando 100% em tudo (achava-se que a soma
+// batia — o teste só conferia a ORDEM dos pesos, nunca o total). Corrigido
+// mantendo a MESMA proporção entre produção/realtime/bônus do perfil não
+// comercial (proporção de ANTES da repesagem abaixo), só reescalada pra
+// sobrar espaço pro PT VENDA maior (2,5, intocado — é o que "domina" quem
+// vende). Este perfil 'comercial' NÃO faz parte da repesagem DIR-115 —
+// segue com seus próprios pesos, decididos numa conversa diferente.
+//
+// 🏆 DIR-115 (09/09/2026) — REPESAGEM do perfil padrão ('estrategico'),
+// dono, ao vivo, mudando de ideia várias vezes até fechar: "recrutamos
+// caráter e treinamos habilidade... a produção ela chega aos quarenta e
+// cinco por cento com o realtime." Caráter (MvM) deixa de ser a maior
+// fatia (era MVM_MAX=10, 45%) porque virou PORTÃO — ver
+// `ligaComPortoesDoCiclo` — e um portão protege mais do que um peso
+// grande sem portão ("30% + veto é mais forte que 45% sem veto",
+// estatisticamente: a votação real quase não varia entre pessoas, então
+// um peso enorme nela era "ilusão de importância"). Produção+Real Time
+// juntos chegam aos mesmos 45% que o MvM tinha (30+15), Vendas sobe pra
+// 15% (contínuo — a meta cheia de 26 vendas é PORTÃO da Platina, não do
+// peso), e Estudo/Bônus fecha em 10%. Tudo em cima de TOKEN_MAX=22,22:
+//   MvM 30% = 6,67 · Produção 30% = 6,67 · Real Time 15% = 3,33 ·
+//   Vendas 15% = 3,33 · Bônus/Estudo 10% = 2,22 → soma 22,22 exata.
 export function pesosDoPerfil(perfil) {
-  const base = String(perfil || '').toLowerCase() === 'comercial' ? 2.22 : 12.22;
+  const comercial = String(perfil || '').toLowerCase() === 'comercial';
   return {
-    mvm: MVM_MAX,
-    producao: base * 0.5,
-    realtime: base * 0.3,
-    bonus: base * 0.2,
-    ptVenda: String(perfil || '').toLowerCase() === 'comercial' ? 2.5 : 1,
+    mvm: comercial ? MVM_MAX : 6.67,
+    producao: comercial ? 1.36 : 6.67,
+    realtime: comercial ? 3.33 : 3.33, // desempenho (X-Pay ganho/possível) — intocado nos dois perfis
+    bonus: comercial ? 5.03 : 2.22,     // estudo/leitura mora aqui
+    ptVenda: comercial ? 2.5 : 3.33,
   };
+}
+
+// 🪙 09/09/2026 — dono: "a moeda tem que estar ali, pra ele se inspirar
+// nela cheia, e entender como ela fica cheia, junto com a dele que está
+// sendo preenchida." A moeda-modelo — os 5 pesos no valor MÁXIMO — é o
+// ALVO, nunca o progresso de ninguém. Vive aqui (não em cada tela) pra
+// nunca dessincronizar de `pesosDoPerfil`: o dia em que os pesos mudarem
+// de novo, o modelo muda sozinho em toda tela que o desenha.
+export function moedaModelo(perfil = 'estrategico') {
+  const p = pesosDoPerfil(perfil);
+  return { mvm: p.mvm, producao: p.producao, realtime: p.realtime, bonus: p.bonus, vendas: p.ptVenda };
 }
 
 /** Alvos do EXECUTIVO IDEAL (planilha F18:F21 + vendas 100%). */
 export const EXECUTIVO_IDEAL = { mvm: 0.8, producao: 0.9, realtime: 0.9, bonus: 0.8, vendas: 1 };
+
+// 🎯 09/09/2026 — DIR-109: os mesmos 5 eixos do painel Executivo Ideal
+// (chaves de EXECUTIVO_IDEAL/ciclo.taxas), só que com um rótulo CURTO —
+// pro radar (mapa do jogador), que precisa de rótulo que caiba na ponta
+// do eixo, ao contrário da barra, que tem a linha inteira pra descrever.
+export const EIXOS_EXECUTIVO_IDEAL = [
+  { k: 'mvm', rotuloCurto: 'MvM', emoji: '🗳️' },
+  { k: 'producao', rotuloCurto: 'Produção', emoji: '📋' },
+  { k: 'realtime', rotuloCurto: 'Real Time', emoji: '⏱️' },
+  { k: 'bonus', rotuloCurto: 'Bônus', emoji: '📚' },
+  { k: 'vendas', rotuloCurto: 'Vendas', emoji: '🛒' },
+];
 
 /**
  * Consolida o ciclo (snapshots + hoje) e monta o Human Token oficial com os
@@ -446,15 +673,28 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
   const prodTotal = soma('prod_total'); const prodFeitas = soma('prod_feitas');
   const bonusTotal = soma('bonus_total'); const bonusFeitas = soma('bonus_feitas');
   // Vendas AUTOMÁTICAS: quando a tela informa as vendas reais da loja da
-  // pessoa no ciclo (vendasReais), são elas que pontuam — antes era manual
-  // na planilha, via tarefa [VENDA]. Sem o dado, cai nas tarefas gravadas.
-  const vendasFeitas = vendasReais !== null && vendasReais !== undefined
+  // pessoa no ciclo (vendasReais — já inclui a conversão de venda de alto
+  // valor via vendasEquivalentesAltoValor, calculada por quem chama), são
+  // elas que pontuam — antes era manual na planilha, via tarefa [VENDA].
+  // Sem o dado, cai nas tarefas gravadas.
+  const vendasDiretas = vendasReais !== null && vendasReais !== undefined
     ? Number(vendasReais) || 0
     : soma('vendas_feitas');
+  // 🤝 09/09/2026 — DIR-110: a reunião é o princípio da venda, mas não
+  // substitui vender — o teto (TETO_REUNIAO_NA_META da meta) garante isso.
+  const reunioesFeitas = soma('reunioes_feitas');
+  const reuniaoEquivalente = Math.min(reunioesFeitas * PESO_REUNIAO_EQUIVALENTE, META_VENDAS_CICLO * TETO_REUNIAO_NA_META);
+  const vendasFeitas = vendasDiretas + reuniaoEquivalente;
   const xpayGanho = soma('xpay_ganho'); const xpayPossivel = soma('xpay_possivel');
   const taxa = (a, b) => (b > 0 ? Math.min(1, a / b) : 0);
+  // 🗳️ 08/09/2026 — dono: "o real time não pode contar dentro do MVM... o
+  // MVM é só votação, de um a dez." Antes, sem voto nenhum recebido no
+  // ciclo, caía pro mvm_dia AUTOMÁTICO (10 menos desconto por tarefa
+  // atrasada — real time disfarçado de MVM), inflando gente que ninguém
+  // votou. Sem voto = sem MVM (0), ponto — exatamente como o tooltip da
+  // tela já dizia hoje: só a votação manual entra no Human Token oficial.
   const taxas = {
-    mvm: (mvmVotacao !== null && mvmVotacao !== undefined ? mvmVotacao : (hojeResumo?.mvm_dia ?? 0)) / MVM_MAX,
+    mvm: (mvmVotacao !== null && mvmVotacao !== undefined ? mvmVotacao : 0) / MVM_MAX,
     producao: taxa(prodFeitas, prodTotal),
     realtime: taxa(xpayGanho, xpayPossivel),
     bonus: taxa(bonusFeitas, bonusTotal),
@@ -475,7 +715,21 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
     componentes: Object.fromEntries(Object.entries(comp).map(([k, v]) => [k, r2(v)])),
     total: r2(Math.min(TOKEN_MAX, bruto)),
     vendasFeitas,
+    vendasDiretas,
+    reuniaoEquivalente: r2(reuniaoEquivalente),
   };
+}
+
+/**
+ * Cada eixo do Executivo Ideal, como fração do próprio alvo dele (1 =
+ * bateu o alvo, capado — não passa de 1). Extraído pra ser a MESMA conta
+ * usada tanto na % de formação (a média dos 5) quanto na "roda da vida"
+ * (DIR-109.1): sem isso, o eixo que já bateu 100% do alvo dele apareceria
+ * "murcho" do lado dos outros só porque o alvo dele é mais baixo — a roda
+ * pareceria torta por causa da régua, não do desempenho de verdade.
+ */
+export function proporcoesExecutivoIdeal(taxas = {}) {
+  return Object.fromEntries(Object.keys(EXECUTIVO_IDEAL).map((k) => [k, Math.min(1, (taxas[k] || 0) / EXECUTIVO_IDEAL[k])]));
 }
 
 /**
@@ -484,8 +738,9 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
  * 66% = 1 mês, 88% = em breve (planilha I14 nova geração).
  */
 export function formacaoExecutivoIdeal(taxas = {}) {
+  const proporcoes = proporcoesExecutivoIdeal(taxas);
   const eixos = Object.keys(EXECUTIVO_IDEAL);
-  const indice = eixos.reduce((s, k) => s + Math.min(1, (taxas[k] || 0) / EXECUTIVO_IDEAL[k]), 0) / eixos.length;
+  const indice = eixos.reduce((s, k) => s + proporcoes[k], 0) / eixos.length;
   const pct = Math.round(indice * 100);
   let mensagem = null;
   if (pct >= 88) mensagem = 'Parabéns! Continue assim e EM BREVE você abrirá votação extraordinária.';
@@ -512,6 +767,12 @@ export function inicioCicloOficial(configISO, hoje = new Date()) {
 
 const PONTOS_TAREFA = 10;
 const BONUS_NO_HORARIO = 5;
+
+// 🟡 09/09/2026 — DIR-105: quantos avisos de atraso na Fila do Pronto a
+// pessoa já tem antes da régua radical (zerar o dia) entrar. Do 1º ao 3º
+// aviso ela só perde pontos (treino); do 4º em diante zera tudo.
+export const AVISOS_ANTES_DE_ZERAR = 3;
+export const PENALIDADE_AVISO_PRONTO = 3;
 
 /**
  * Pontos do dia: 10 por tarefa feita (+5 quando `feito_no_horario` — na v1,
@@ -540,7 +801,7 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 // `votouEmTodos === false`, a régua radical entra. `votouEmTodos` continua
 // opcional (default null) — quem chama sem saber de votação (histórico,
 // testes antigos) se comporta exatamente como antes desta mudança.
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null }) {
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null, perdoado = false }) {
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);
@@ -549,31 +810,79 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const total = comEstado.length;
   const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
   const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
-  const mvm = perdeuPorNaoVotar ? 0 : mvmDoDia(tarefas, agoraMin);
+  // 📉 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
+  // ele perder o dinheiro, isso tem que tirar pontos dele." Só conta tarefa
+  // de GESTÃO (origem 'xperf', com prazo_em) que passou do prazo sem o
+  // pronto; a Master Task da rotina não tem prazo_em. E só julga em tempo
+  // real (`votouEmTodos !== null` é a MESMA régua que o não-votar já usa
+  // pra saber se está olhando hoje ou um dia passado) — um dia histórico já
+  // fechou nos próprios registros, não se recalcula.
+  //
+  // 🟡 09/09/2026 — DIR-105, dono amoleceu a régua: "ela pode perder até
+  // três pontos [nos primeiros três atrasos], pra treinar ela. A partir do
+  // quarto ponto que ela não entregar, ela vai zerar a pontuação." Os 3
+  // primeiros avisos (contador `avisos_pronto`, dado manualmente pelo botão
+  // "avisar" do ADM na Fila do Pronto) só descontam PENALIDADE_AVISO_PRONTO
+  // pontos — MvM, Human Token e X-Pay ficam intactos. Só a partir do 4º
+  // aviso a régua radical do DIR-102 volta a valer (zera o dia inteiro).
+  const tarefaAtrasadaPronto = votouEmTodos !== null
+    && tarefas.some((t) => t?.origem === 'xperf' && t?.prazo_em && !t?.feito && new Date(t.prazo_em) < hoje);
+  const avisosPronto = Number(participante?.avisos_pronto) || 0;
+  const perdeuPorAtrasoPronto = tarefaAtrasadaPronto && avisosPronto >= AVISOS_ANTES_DE_ZERAR;
+  // 🐛 09/09/2026 — achado na auditoria pré-publicação: sem o `&&
+  // !perdeuPorNaoVotar`, dava pra `emAvisoPronto` ficar `true` no MESMO dia
+  // em que `perdeuPorNaoVotar` já zerou tudo — a tela mostrava os dois
+  // banners juntos: o vermelho "DIA ZERADO" e, embaixo, o âmbar "você só
+  // perdeu pontos, MvM/Token/X-Pay continuam de pé", que é falso nesse
+  // caso. O aviso graduado só faz sentido quando ELE é o motivo do dia
+  // ainda estar de pé — não quando outra régua mais radical já zerou tudo.
+  const emAvisoPronto = tarefaAtrasadaPronto && !perdeuPorAtrasoPronto && !perdeuPorNaoVotar;
+  // 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de
+  // amanhã a regra é séria." `perdoado` é ligado por fora (xgame_config.
+  // perdao_zeragem_ate) pra um dia excepcional inteiro — a régua radical
+  // (incluindo a graduada dos avisos do pronto, acima) continua de pé pros
+  // próximos dias, só este aqui não pune ninguém, não importa o motivo
+  // (bug, lista de votação mudou no meio do dia...).
+  const diaZerado = !perdoado && (perdeuPorNaoVotar || perdeuPorAtrasoPronto);
+  const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
+  // 🎓 09/09/2026 — o estudo de FIM DE SEMANA é uma tarefa à parte (tipo
+  // 'aprendizado_fds', resumo bem maior) — trava o topo (Platina), não o Ouro.
+  const estudoFdsHoje = comEstado.some((t) => tipoDeValidacao(t) === 'aprendizado_fds' && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
-  const token = perdeuPorNaoVotar ? 0 : humanToken(mvm, aplic, estudoOk);
+  const token = diaZerado ? 0 : humanToken(mvm, aplic, estudoOk);
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
   const xpay = { ...xpayDoDia(comEstado, valores), ...reguaDoDia(tarefas, participante || PARTICIPANTE_PADRAO) };
-  if (perdeuPorNaoVotar) {
-    // o que seria ganho vira perdido — o dinheiro não some em silêncio,
-    // fica registrado como o que a falta de voto custou de verdade.
-    xpay.perdido = Math.round((xpay.ganho + xpay.perdido) * 100) / 100;
+  if (diaZerado) {
+    // o que seria ganho E o que ainda estava em jogo (tarefa não concluída,
+    // ainda dentro do prazo) viram perdido — o dinheiro não some em
+    // silêncio, fica registrado como o que a falta de voto (ou o atraso)
+    // custou de verdade.
+    xpay.perdido = Math.round((xpay.ganho + xpay.perdido + xpay.emJogo) * 100) / 100;
     xpay.ganho = 0;
     xpay.emJogo = 0;
   }
-  const pontos = perdeuPorNaoVotar ? 0 : pontosDoDia(comEstado, cotacao);
+  const pontosBase = diaZerado ? 0 : pontosDoDia(comEstado, cotacao);
+  const pontos = (!perdoado && emAvisoPronto) ? Math.max(0, pontosBase - PENALIDADE_AVISO_PRONTO) : pontosBase;
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
   const ehProd = (c) => c !== 'bonus' && c !== 'venda';
+  // 📊 09/09/2026 — dono: "eu quero esse alcance" (o % de reunião também na
+  // Verificação do Progresso). `contagens` já é gravado inteiro dentro de
+  // `xgame_diario.detalhes` (CrmMetodo.jsx e XGame.jsx fazem `...contagens`
+  // no upsert) — somar aqui é o único lugar que precisa mudar; a tela da
+  // equipe só lê o que já está salvo, sem query nova nem coluna nova.
+  const reunioesHoje = comEstado.filter((t) => ehTarefaDeReuniao(t.titulo));
   const contagens = {
     prod_total: cats.filter(ehProd).length,
     prod_feitas: comEstado.filter((t, i) => ehProd(cats[i]) && t.feito).length,
     bonus_total: cats.filter((c) => c === 'bonus').length,
     bonus_feitas: comEstado.filter((t, i) => cats[i] === 'bonus' && t.feito).length,
     vendas_feitas: comEstado.filter((t, i) => cats[i] === 'venda' && t.feito).length,
+    reunioes_total: reunioesHoje.length,
+    reunioes_feitas: reunioesHoje.filter((t) => t.feito).length,
     xpay_ganho: xpay.ganho,
     xpay_possivel: Math.round((xpay.ganho + xpay.perdido + xpay.emJogo) * 100) / 100,
   };
@@ -590,18 +899,81 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     faixa: faixaToken(token),
     estudo_em_dia: estudoOk,
     leitura_feita: leituraHoje,
+    estudo_fds_feito: estudoFdsHoje,
     pontos,
-    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : fraseDoMvm(mvm),
-    perdeu_por_nao_votar: perdeuPorNaoVotar,
+    frase_mvm: diaZerado
+      ? (perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO')
+      : fraseDoMvm(mvm),
+    perdeu_por_nao_votar: !perdoado && perdeuPorNaoVotar,
+    perdeu_por_atraso_pronto: !perdoado && perdeuPorAtrasoPronto,
+    em_aviso_pronto: !perdoado && emAvisoPronto,
+    avisos_pronto: avisosPronto,
     valores,
     xpay,
     contagens,
   };
 }
 
-/** Data em ISO local (YYYY-MM-DD), sem sofrer com fuso do toISOString. */
+// 🐛 DIR-129 (09/09/2026) — dono, direto, de novo: "ele leu o livro no dia
+// oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem
+// que ser o horário de Brasília, não pode ter essa confusão."
+//
+// A CAUSA: esta função usava getFullYear/getMonth/getDate — hora LOCAL DO
+// APARELHO, não de Brasília. Isso já tinha corrigido o bug ANTERIOR (usar
+// toISOString(), hora UTC — ver tests/xgameFusoHorario.test.mjs), mas só
+// por acaso, assumindo que o celular de quem usa está sempre configurado
+// pro fuso certo. Achado no banco: uma rotina inteira do Emannuel (várias
+// tarefas, mesmo instante de criação) nasceu com `data` DOIS dias à frente
+// do horário real de Brasília no momento (confirmado pelos timestamps reais
+// — `created_date`/`quando`, sempre em UTC de verdade) — o aparelho não
+// estava contando Brasília certo, e como TUDO nesta função (`hojeStr()`, o
+// dia mostrado, o dia gravado em toda tarefa/comprovação/placar) vem daqui,
+// o erro contaminava o app inteiro.
+//
+// A CORREÇÃO: força America/Sao_Paulo sempre, do mesmo jeito que o cron do
+// servidor (`hojeBrasil()`, api/functions/gerarJornadaDoDia.js) já faz —
+// não depende mais do fuso/relógio do aparelho de ninguém, nunca.
+/** Data em Brasília (YYYY-MM-DD) — sempre, não importa o fuso do aparelho. */
 export function dataISO(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
+}
+
+// 🐛 DIR-134 (09/09/2026) — auditoria noturna pedida pelo dono sobre o
+// Ritual do Amanhecer: o MESMO problema da DIR-129 (dataISO — o "hoje"
+// dependia do fuso do aparelho), só que na HORA do dia, não na data. A
+// janela do ritual (RITUAL_INICIO_MIN/RITUAL_FIM_MIN), o "AGORA/ATRASADO/
+// PERDIDO" de toda tarefa e a janela de votação do MvM comparavam minutos
+// tirados de `d.getHours()*60 + d.getMinutes()` — hora LOCAL DO APARELHO.
+// Um aparelho com o relógio uns minutos errado (comum: fuso trocado,
+// sincronização fraca, viagem) podia julgar "passou do prazo" um pouco
+// antes ou depois da hora real de Brasília — achado direto no banco: três
+// pessoas reprovadas no ritual de hoje (05:17–05:25 de Brasília) pelo corte
+// ANTIGO de 5h15 que já tinha sido corrigido no código minutos antes —
+// prova de que o relógio do jogo é sensível a exatamente esse tipo de
+// desalinho.
+/** Minutos desde a meia-noite EM BRASÍLIA — sempre, não importa o fuso do aparelho. */
+export function minutosBrasilia(d = new Date()) {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d);
+  const h = Number(partes.find((p) => p.type === 'hour')?.value || 0);
+  const m = Number(partes.find((p) => p.type === 'minute')?.value || 0);
+  return h * 60 + m;
+}
+
+/**
+ * Soma/subtrai dias a uma data ISO (YYYY-MM-DD) sem tocar em fuso horário
+ * nenhum — é conta de calendário pura (ano/mês/dia), nunca conversão de
+ * horário. Usada pra navegar dia a dia (← HOJE →) sem repetir o erro da
+ * DIR-129: antes disso, `mudarDia` (CrmMetodo.jsx) montava um Date local
+ * (`${dia}T12:00:00`) e voltava por `toISOString()` — dependia do fuso do
+ * aparelho pra não pular o dia errado.
+ */
+export function somarDiasISO(diaISO, delta) {
+  const [y, m, d] = String(diaISO).slice(0, 10).split('-').map(Number);
+  const alvo = new Date(Date.UTC(y, m - 1, d));
+  alvo.setUTCDate(alvo.getUTCDate() + delta);
+  return `${alvo.getUTCFullYear()}-${String(alvo.getUTCMonth() + 1).padStart(2, '0')}-${String(alvo.getUTCDate()).padStart(2, '0')}`;
 }
 
 // ── Recuperação no fim de semana (dono, 08/09/2026) ─────────────────
@@ -740,12 +1112,22 @@ export function inicioDaSemana(d = new Date()) {
 
 // ── 🏆 LIGAS (F9 — promoção e rebaixamento por ciclo) ───────────────
 // As faixas da moeda viram LIGAS: o Human Token médio do ciclo decide onde
-// você joga. Diamante é a elite acima do ouro — o território do Executivo
-// Ideal. Subir de liga = fechar o ciclo acima da linha da liga de cima.
-
+// você joga. Platina é a elite acima do ouro — o território do Executivo
+// Ideal, só alcançável de verdade passando pelos portões de
+// `ligaComPortoesDoCiclo` (caráter + meta de vendas). Subir de liga =
+// fechar o ciclo acima da linha da liga de cima.
+//
+// 🏆 DIR-115 (09/09/2026) — repesagem: (1) "Diamante" virou "Platina" —
+// dono, explícito: "não quero botar diamante... não lembrar multinível";
+// (2) as 4 faixas ficaram em degraus de ~20-30% cada (iguais a
+// FAIXAS_TOKEN), fechando o "deserto" antigo — prata começava em 30% e
+// ouro só em 80%, cinquenta pontos sem nenhum degrau no meio. Platina
+// continua começando EXATAMENTE onde o Ouro antigo começava (17,78): o
+// topo não ficou mais fácil de bater, só ganhou um nome novo e dois
+// degraus intermediários abaixo dele.
 export const LIGAS = [
-  { id: 'diamante', label: 'LIGA DIAMANTE', emoji: '💠', min: 20 },
-  { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 17.78 },
+  { id: 'platina', label: 'LIGA PLATINA', emoji: '🏆', min: 17.78 },
+  { id: 'ouro', label: 'LIGA OURO', emoji: '🥇', min: 12.22 },
   { id: 'prata', label: 'LIGA PRATA', emoji: '🥈', min: 6.66 },
   { id: 'bronze', label: 'LIGA BRONZE', emoji: '🥉', min: 0 },
 ];
@@ -770,6 +1152,13 @@ export function proximaLiga(token) {
 // Vendas e reuniões nem precisam disso — validam sozinhas pelos dados do
 // sistema (catalog_sales e os registros do CRM).
 
+export const RESUMO_MIN = 400;
+// 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
+// quero um resumo bem detalhado." O estudo de fim de semana ("Estudo do
+// Fim de Semana" no título) exige um resumo bem mais longo que o do dia a
+// dia — 3× o mínimo — porque é o mergulho fundo, não a leitura corrida.
+export const RESUMO_MIN_FDS = 1200;
+
 /** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar).
  *  REGRA DO DONO (05/09): TODA tarefa tem comprovação por padrão — quem não
  *  cai em Instagram nem aprendizado comprova com FOTO/print fazendo a tarefa.
@@ -779,6 +1168,11 @@ export function validacaoAutomatica(titulo) {
   // acordar/gratidão comprova com o post do BOM DIA (o exemplo do dono:
   // "como eu provo que acordei 5h? posto o bom dia no Instagram")
   if (/story|post|instagram|conteudo|acordar|gratidao|bom dia/.test(t)) return 'instagram';
+  // 🎓 09/09/2026 — o estudo de FIM DE SEMANA (mergulho fundo, resumo bem
+  // maior) tem que bater ANTES da regra genérica de leitura/estudo — senão
+  // "Estudo do Fim de Semana" cairia no 'aprendizado' comum, com o mínimo
+  // pequeno de dia de semana.
+  if (/(estudo|leitura).*fim de semana|fim de semana.*(estudo|leitura)|estudo profundo|estudo foda/.test(t)) return 'aprendizado_fds';
   if (/leitura|estudo|curso|licao/.test(t)) return 'aprendizado';
   return 'foto';
 }
@@ -787,13 +1181,14 @@ export function validacaoAutomatica(titulo) {
 export function tipoDeValidacao(t) {
   const v = String(t?.validacao || '').toLowerCase();
   if (v === 'nenhuma') return null;
-  if (['instagram', 'aprendizado', 'foto'].includes(v)) return v;
+  if (['instagram', 'aprendizado', 'aprendizado_fds', 'foto'].includes(v)) return v;
   return validacaoAutomatica(t?.titulo);
 }
 
 export const ROTULO_VALIDACAO = {
   instagram: '📸 o post do Instagram de hoje',
   aprendizado: '📚 foto do estudo + resumo digitado (sem colar!)',
+  aprendizado_fds: `📚🔥 estudo de fim de semana — foto + resumo BEM detalhado (mín. ${RESUMO_MIN_FDS} caracteres, sem colar!)`,
   foto: '📷 foto ou print fazendo a tarefa',
 };
 
@@ -804,9 +1199,10 @@ export function validarComprovacao(tipo, entrega) {
     const ok = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|reels|stories|tv)\/.+/i.test(texto);
     return { valido: ok, motivo: ok ? 'link do Instagram registrado ✔' : 'cole o link do post/story de HOJE (instagram.com/p/… ou /reel/…)' };
   }
-  if (tipo === 'aprendizado') {
-    const ok = texto.length >= RESUMO_MIN;
-    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : `resumo curto demais: escreva pelo menos ${RESUMO_MIN} caracteres COM AS SUAS PALAVRAS (faltam ${Math.max(0, RESUMO_MIN - texto.length)})` };
+  if (tipo === 'aprendizado' || tipo === 'aprendizado_fds') {
+    const minimo = tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN;
+    const ok = texto.length >= minimo;
+    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : `resumo curto demais: escreva pelo menos ${minimo} caracteres COM AS SUAS PALAVRAS (faltam ${Math.max(0, minimo - texto.length)})` };
   }
   return { valido: true, motivo: '' };
 }
@@ -843,7 +1239,7 @@ export const vibrar = (padrao = VIBRA_TOQUE) => {
   } catch { /* aparelho sem motor de vibração */ }
 };
 
-export const RESUMO_MIN = 400;
+const minimoDoTipo = (tipo) => (tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN);
 
 // ══════════════════════════════════════════════════════════════════════════
 // 🎙️ DIR-101.1 — NO MOMENTO DE GRATIDÃO, O ÁUDIO É A ENTREGA (09/09/2026)
@@ -870,30 +1266,62 @@ export const RESUMO_MIN = 400;
 export const GRATIDAO_MIN = 20;
 export const GRATIDAO_AUDIO_MIN_SEG = 15;
 
+// 🙏 09/09/2026 — DIR-121, dono: "ele está pedindo um áudio só de quinze
+// segundos, isso é muito pouco. Ele tem que ter ali pelo menos uns vinte
+// motivos pra agradecer, vamos crescendo isso gradativamente... a ideia é
+// que a gente chegue dentro do mês com cinquenta agradecimentos. Quem
+// começa agradecendo, dorme agradecendo." A régua cresce 1 motivo por dia
+// corrido desde o início do ciclo (não só dia útil — gratidão é todo dia),
+// começando em 20 e parando no teto de 50. Convertido pra segundos porque
+// é isso que o app mede de verdade (nenhuma transcrição conta motivo por
+// motivo) — no ritmo de uma pessoa falando com calma, sem pressa.
+export const GRATIDAO_MOTIVOS_INICIAL = 20;
+export const GRATIDAO_MOTIVOS_TETO = 50;
+export const GRATIDAO_SEG_POR_MOTIVO = 2.5;
+
+/** Quantos motivos a régua pede hoje — sobe 1 por dia corrido, até o teto. */
+export function metaMotivosGratidaoHoje(diaCorridoCiclo = 1) {
+  const dia = Math.max(1, Math.floor(Number(diaCorridoCiclo) || 1));
+  return Math.min(GRATIDAO_MOTIVOS_TETO, GRATIDAO_MOTIVOS_INICIAL + (dia - 1));
+}
+
+/** O piso de segundos de HOJE — derivado da meta de motivos de hoje. */
+export function gratidaoAudioMinSegHoje(diaCorridoCiclo = 1) {
+  return Math.round(metaMotivosGratidaoHoje(diaCorridoCiclo) * GRATIDAO_SEG_POR_MOTIVO);
+}
+
+/** Dias corridos (não só úteis) desde o início do ciclo, 1-indexado. */
+export function diaCorridoDoCiclo(hoje, inicio) {
+  const d0 = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+  const d1 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  return Math.max(1, Math.round((d1 - d0) / 86400000) + 1);
+}
+
 /** Falou tempo suficiente pra valer como entrega? */
-export const audioEntregaValido = (segundos) =>
-  Number.isFinite(Number(segundos)) && Number(segundos) >= GRATIDAO_AUDIO_MIN_SEG;
+export const audioEntregaValido = (segundos, minSeg = GRATIDAO_AUDIO_MIN_SEG) =>
+  Number.isFinite(Number(segundos)) && Number(segundos) >= minSeg;
 
 /**
  * A gratidão foi entregue? Escrever OU falar — um dos dois basta, nunca os
  * dois. Devolve { ok, por, falta } pra tela poder dizer o que ainda falta em
- * vez de só apagar o botão.
+ * vez de só apagar o botão. `minSeg` é o piso de HOJE (GRATIDAO_AUDIO_MIN_SEG
+ * por padrão, pra quem chama sem saber o dia do ciclo).
  */
-export function gratidaoEntregue({ texto = '', audioSeg = 0 } = {}) {
+export function gratidaoEntregue({ texto = '', audioSeg = 0, minSeg = GRATIDAO_AUDIO_MIN_SEG } = {}) {
   const escrito = String(texto || '').trim().length;
-  if (audioEntregaValido(audioSeg)) return { ok: true, por: 'audio', falta: 0 };
+  if (audioEntregaValido(audioSeg, minSeg)) return { ok: true, por: 'audio', falta: 0 };
   if (escrito >= GRATIDAO_MIN) return { ok: true, por: 'texto', falta: 0 };
   // Gravou, mas curto demais: a falta é de SEGUNDOS, não de letras — dizer
   // "faltam 12 caracteres" pra quem acabou de falar é falar grego.
   if (Number(audioSeg) > 0) {
-    return { ok: false, por: 'audio', falta: Math.max(0, GRATIDAO_AUDIO_MIN_SEG - Math.floor(Number(audioSeg))) };
+    return { ok: false, por: 'audio', falta: Math.max(0, minSeg - Math.floor(Number(audioSeg))) };
   }
   return { ok: false, por: 'texto', falta: Math.max(0, GRATIDAO_MIN - escrito) };
 }
 
 /** O que dizer embaixo do botão apagado, na unidade certa. */
-export function faltaDaGratidao({ texto = '', audioSeg = 0 } = {}) {
-  const r = gratidaoEntregue({ texto, audioSeg });
+export function faltaDaGratidao({ texto = '', audioSeg = 0, minSeg = GRATIDAO_AUDIO_MIN_SEG } = {}) {
+  const r = gratidaoEntregue({ texto, audioSeg, minSeg });
   if (r.ok) return '';
   if (r.por === 'audio') return `fale mais ${r.falta}s — ou escreva`;
   return `escreva ${r.falta} caractere${r.falta === 1 ? '' : 's'} a mais — ou grave um áudio`;
@@ -906,17 +1334,18 @@ export function faltaDaGratidao({ texto = '', audioSeg = 0 } = {}) {
 // ligação caiu no suporte. O número não estava errado; a frase estava.
 // Agora o texto diz quanto FALTA, e diz o tamanho ANTES de a pessoa começar
 // a escrever — não depois de ela falhar.
-export function faltaDoResumo(texto) {
-  return Math.max(0, RESUMO_MIN - String(texto || '').trim().length);
+export function faltaDoResumo(texto, tipo = 'aprendizado') {
+  return Math.max(0, minimoDoTipo(tipo) - String(texto || '').trim().length);
 }
 
 // "faltam 1 caracteres" estraga justamente o que este conserto foi fazer.
 const letras = (n) => `${n} ${n === 1 ? 'caractere' : 'caracteres'}`;
 
-export function textoDoContador(texto) {
+export function textoDoContador(texto, tipo = 'aprendizado') {
+  const minimo = minimoDoTipo(tipo);
   const escrito = String(texto || '').trim().length;
-  if (escrito === 0) return `escreva pelo menos ${RESUMO_MIN} caracteres (umas 6 linhas)`;
-  const falta = faltaDoResumo(texto);
+  if (escrito === 0) return `escreva pelo menos ${minimo} caracteres (umas ${tipo === 'aprendizado_fds' ? '18' : '6'} linhas)`;
+  const falta = faltaDoResumo(texto, tipo);
   if (falta === 0) return '✔ resumo no tamanho';
   return falta === 1 ? 'falta 1 caractere' : `faltam ${letras(falta)}`;
 }
@@ -925,9 +1354,9 @@ export function textoDoContador(texto) {
 // intimidade com tela não deduz motivo de botão opaco — fica olhando, tenta
 // de novo e liga pro suporte. Devolve '' quando o botão está liberado.
 export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
-  if (!temFoto) return tipo === 'aprendizado' ? 'falta a foto do estudo para liberar' : 'falta a foto para liberar';
-  if (tipo !== 'aprendizado') return '';
-  const falta = faltaDoResumo(texto);
+  if (!temFoto) return (tipo === 'aprendizado' || tipo === 'aprendizado_fds') ? 'falta a foto do estudo para liberar' : 'falta a foto para liberar';
+  if (tipo !== 'aprendizado' && tipo !== 'aprendizado_fds') return '';
+  const falta = faltaDoResumo(texto, tipo);
   return falta > 0 ? `escreva mais ${letras(falta)} para liberar` : '';
 }
 
@@ -939,7 +1368,9 @@ export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
 // ao contador do resumo escrito (faltaDoResumo/textoDoContador, acima); o
 // teto vira só uma rede de segurança técnica — 15 min, o tempo que a parte
 // de gratidão + visualização dura — não é mais o alvo da gravação.
-export const VISUALIZACAO_MIN_SEG = 60;
+// 🌅 09/09/2026 — dono, ao vivo: "você tem que ter um mínimo de
+// visualização, e o mínimo são dois minutos." Sobe de 60s pra 120s.
+export const VISUALIZACAO_MIN_SEG = 120;
 export const VISUALIZACAO_TETO_SEG = 15 * 60; // 900 — rede de segurança, não o alvo
 
 const segundos = (n) => `${n} ${n === 1 ? 'segundo' : 'segundos'}`;
@@ -971,10 +1402,46 @@ export function nomeExibicao(p) {
 
 /** 🌅 A tarefa de gratidão/acordar abre o RITUAL DO AMANHECER (não formulário). */
 export const ehTarefaDeGratidao = (titulo) => /acordar|gratidao|bom dia/.test(_semAcento(titulo));
-// janela do ritual: de 04:40 até 07:15 vale direto; fora disso vai pra análise
+// 📋 09/09/2026 — dono: "organização do negócio... tem que ser dentro do
+// Quadro, papel nunca." Mesmo recorte do REGRAS_PESO (gestão do próprio
+// negócio) — usado pro aviso PROATIVO no modal de comprovação, antes da
+// pessoa mandar a foto errada (a régua de verdade mora na IA, servidor).
+export const ehOrganizacaoDoNegocio = (titulo) => /organizacao do negocio|planejament|fechamento do dia/.test(_semAcento(titulo));
+// 🕐 09/09/2026 — dono, ao vivo: "não tem como ela fazer depois de cinco e
+// quinze. Se ela não fizer até cinco e quinze ela perde o ritual." Era uma
+// janela até 07:15 que só tirava o selo por fora dela; virou prazo seco —
+// passou de 05:15, o ritual está perdido, ponto.
+//
+// 🕐 09/09/2026 — DIR-125, mesmo dono, revendo depois de ver a régua nova
+// (dúvida de ambiente vira reprova automática — a pessoa refaz, não perde
+// o dia por má sorte de câmera): "se o cara acordou e teve a intenção de
+// fazer, a gente não pode penalizar... quinze minutos final é pouco tempo,
+// vamos deixar trinta — dá tempo da pessoa acordar e ficar meio lenta."
+// FIM sobe de 05:15 pra 05:30 (INÍCIO intocado — ele só pediu mais tempo
+// no fim, não mais cedo no começo).
 export const RITUAL_INICIO_MIN = 4 * 60 + 40;
-export const RITUAL_FIM_MIN = 7 * 60 + 15;
+export const RITUAL_FIM_MIN = 5 * 60 + 30;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
+
+// 🌅 DIR-134 (09/09/2026) — auditoria noturna do Ritual do Amanhecer, dono:
+// "algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente
+// melhora a comunicação no ritual, pras pessoas lerem... vê se a gente cria
+// um aviso antes de começar o ritual dez minutos pra quando ela abrir,
+// explicar como funciona." Achado (banco): a maior parte das reprovações
+// reais do ritual não é "esqueceu" — é "não sabia a regra": perdeu por
+// atraso sem noção de quanto tempo tinha, ou a comprovação caiu em dúvida
+// porque o ambiente não parecia claramente "em casa". O aviso avisa ANTES
+// de ela clicar em nada, não depois de errar.
+export const RITUAL_AVISO_ANTES_MIN = 10;
+/**
+ * Mostra o aviso "como funciona o ritual" — dos dez minutos antes da
+ * abertura até o fechamento da janela, só pra quem ainda não fez hoje.
+ */
+export function deveAvisarRitual({ agoraMin, ritualFeitoHoje } = {}) {
+  if (ritualFeitoHoje) return false;
+  if (typeof agoraMin !== 'number') return false;
+  return agoraMin >= RITUAL_INICIO_MIN - RITUAL_AVISO_ANTES_MIN && agoraMin <= RITUAL_FIM_MIN;
+}
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────
 // O fluxo do dono: a tarefa abre o Instagram pra fazer o post NA HORA,

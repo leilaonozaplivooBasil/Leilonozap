@@ -23,7 +23,7 @@ const ICONE_EVENTO = {
   oportunidade: GitBranch, followup: Calendar, reuniao: Calendar, recontato: Clock,
 };
 
-export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes, oportunidades = [], eventos = null, onCriarOportunidade, onEditarContato, podeEditarUsuarioApp = false }) {
+export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes, oportunidades = [], eventos = null, onCriarOportunidade, onAbrirOportunidade, onEditarContato, podeEditarUsuarioApp = false }) {
   const [notas, setNotas] = useState(customer?.notes || '');
   const [followUp, setFollowUp] = useState(customer?.follow_up_date ? String(customer.follow_up_date).slice(0, 10) : '');
   const [proximoPasso, setProximoPasso] = useState(customer?.next_steps || '');
@@ -83,7 +83,7 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <Card className="bg-white border-nz-borda max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col">
         <CardHeader className="border-b border-nz-borda flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -201,10 +201,20 @@ export default function CrmCustomerDetailModal({ customer, onClose, onSaveNotes,
                 <p className="text-xs text-nz-tinta-fraca">Nenhuma negociação de aporte ou licença com este cliente ainda.</p>
               ) : (
                 oportunidades.map((o) => (
-                  <div key={o.id} className="flex items-center justify-between bg-nz-cinza-fundo border border-nz-borda rounded-lg px-2.5 py-1.5">
+                  // 🔗 08/09/2026 — dono: "não estou achando" pra atualizar o
+                  // estágio. Antes era um <div> mudo; agora um toque leva
+                  // direto pro card de editar na Esteira (mesmo destino do
+                  // clique no kanban e na fila "Quem contatar hoje").
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => onAbrirOportunidade?.(o)}
+                    disabled={!onAbrirOportunidade}
+                    className="w-full flex items-center justify-between bg-nz-cinza-fundo border border-nz-borda rounded-lg px-2.5 py-1.5 text-left enabled:hover:border-nz-verde/50 enabled:cursor-pointer"
+                  >
                     <span className="text-xs text-nz-tinta">{estagioDe(o.estagio).label}</span>
                     {Number(o.valor_previsto) > 0 && <span className="text-xs font-semibold text-nz-verde">R$ {fmtBR(o.valor_previsto)}</span>}
-                  </div>
+                  </button>
                 ))
               )}
             </div>

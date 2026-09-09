@@ -20,7 +20,12 @@ test('🔒 RESUMO_MIN continua 400 — ordem do dono: "não diminua"', () => {
   // Falar é outro jeito de produzir as próprias palavras, não um desconto no
   // tamanho. Se o áudio virasse desculpa pra baixar o mínimo, o treino morria.
   assert.equal(RESUMO_MIN, 400);
-  assert.match(MODAL, /texto\.trim\(\)\.length >= RESUMO_MIN/, 'a trava do botão continua no mínimo real');
+  // 🏆 DIR-115 — o modal generalizou a trava pra também aceitar o estudo de
+  // fim de semana (RESUMO_MIN_FDS, maior ainda) via `faltaDoResumo(texto,
+  // tipo)` em vez do literal `texto.trim().length >= RESUMO_MIN` de antes —
+  // mesma régua, agora também vale pro tipo novo. `faltaDoResumo` (xgame.js)
+  // usa RESUMO_MIN exato pro tipo 'aprendizado', sem afrouxar nada.
+  assert.match(MODAL, /faltaDoResumo\(texto, tipo\) === 0/, 'a trava do botão continua no mínimo real');
 });
 
 test('🔒 colar continua bloqueado no resumo', () => {

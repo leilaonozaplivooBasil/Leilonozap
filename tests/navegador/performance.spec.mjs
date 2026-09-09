@@ -82,6 +82,10 @@ async function abrir({ celular = false } = {}) {
   pagina.on('pageerror', (e) => erros.push(e.message));
   await pagina.goto(BASE);
   await pagina.locator('[data-teste="gestao"]').waitFor();
+  // 🗂️ 08/09/2026 — Distribuir Tarefa deixou de vir sempre aberta (dono:
+  // "não esse quadradão que vem de cara"); os testes abrem o painel antes
+  // de mexer nos campos dela.
+  await pagina.locator('[data-teste="abrir-distribuir"]').click();
   await pagina.locator('[data-teste="pessoa"]').selectOption('emanuel');
   await pagina.locator('[data-teste="tarefas-dia"] li').first().waitFor(); // as tarefas do 08/09 do Emanuel
   return { pagina, ctx, erros };
@@ -418,22 +422,26 @@ test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião v
   await ctx.close();
 });
 
-test('FAXINA: pra gestão, a pessoa vem primeiro; mentalidades, contas, encontro e quadro ficam dobrados', { skip: semNavegador }, async () => {
+test('FAXINA: pra gestão, só a XPerformanceGestao — sem as dobras de "diretoria" e "sobre"', { skip: semNavegador }, async () => {
+  // 🧹 08/09/2026 — dono: "essa diretoria [encontro de segunda + quadro]
+  // pode tirar, foi um começo que a gente não fez. E a mentalidade está
+  // muito genérica, muito feia — pode tirar isso também." As duas dobras
+  // que ficavam abaixo da gestão saíram de vez.
   const { pagina, ctx } = await abrir();
-  const ordem = await pagina.evaluate(() => [...document.querySelectorAll('[data-teste="gestao"], details[data-teste^="dobra-"]')].map((e) => e.getAttribute('data-teste')));
-  assert.deepEqual(ordem, ['gestao', 'dobra-diretoria', 'dobra-sobre'], 'embaixo só o que é da diretoria e o "sobre"; o resto foi pro Quadro Geral');
-  for (const id of ['diretoria', 'sobre']) {
-    assert.equal(await pagina.locator(`details[data-teste="dobra-${id}"]`).evaluate((e) => e.open), false, `${id} devia nascer dobrada`);
-  }
-  // os quadradões só aparecem pra quem abre
-  assert.equal(await pagina.getByText('Mentalidade do CEO', { exact: true }).isVisible(), false);
-  await pagina.locator('details[data-teste="dobra-sobre"] summary').click();
-  await pagina.getByText('Construir o sistema').waitFor();
-  // 🏛️ o grupo: a holding, os quatro pilares-empresa, visão, missão e os 18 valores
-  await pagina.getByText('Estamos lendo o jornal de 2044.').waitFor();
-  assert.equal(await pagina.locator('[data-teste="pilar"]').count(), 4);
-  assert.equal(await pagina.locator('[data-teste="valores"] span').count(), 18);
-  assert.match(await texto(pagina, '[data-teste="grupo"]'), /To The Top Corporate — Venture Builder, Venture Capital e Holding Estratégica/);
+  const dobras = await pagina.locator('details[data-teste^="dobra-"]').count();
+  assert.equal(dobras, 0, 'nenhuma dobra deveria sobrar embaixo da gestão');
+  assert.equal(await pagina.getByText('Mentalidade do CEO', { exact: true }).isVisible(), false, 'a explicação das mentalidades saiu do painel');
+  assert.equal(await pagina.getByText('Encontro de segunda', { exact: false }).count(), 0, 'a diretoria (encontro + quadro) saiu do painel');
+  await ctx.close();
+});
+
+test('O TIME NUM RELANCE: o resumo de quantidade fica no topo, antes de qualquer coisa', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir();
+  const resumo = pagina.locator('[data-teste="resumo-time-hoje"]');
+  await resumo.waitFor();
+  const primeiroFilho = await pagina.evaluate(() => document.querySelector('[data-teste="gestao"]').firstElementChild.getAttribute('data-teste'));
+  assert.equal(primeiroFilho, 'resumo-time-hoje', 'o resumo do time é a primeira coisa da gestão, não escondido lá embaixo');
+  assert.match((await resumo.textContent()).replace(/\s+/g, ' '), /no time corporativo/);
   await ctx.close();
 });
 
@@ -532,42 +540,40 @@ test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis;
   await ctx.close();
 });
 
-test('DESTINO: a demanda pode cair na lista, no quadro dele ou nos dois (ligados); a prioridade vira o prazo do card; repetir até sexta', { skip: semNavegador }, async () => {
+test('DIR-130: toda demanda distribuída SEMPRE cai na Jornada, no Quadro (ligado) e acende o sino — nunca mais só uma das três', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir();
-  // só o quadro, prioridade média → card com prazo em 3 dias, sem tarefa do dia
+  // sem escolha de destino nenhuma: uma tarefa distribuída grava nos TRÊS —
+  // a tarefa do dia (Jornada), o card do quadro (ligado pelo id) e a
+  // mensagem interna (o sino) — nessa ordem, sempre juntos.
   await pagina.locator('[data-teste="titulo"]').fill('Fechar a proposta da loja Norte');
-  await pagina.locator('[data-teste="destino"]').selectOption('quadro');
   await pagina.locator('[data-teste="prioridade"]').selectOption('media');
   await pagina.locator('[data-teste="distribuir"]').click();
-  await pagina.getByText(/Card no quadro de Emanuel Silva/).waitFor();
-  let e = (await escritas(pagina)).at(-1);
-  assert.equal(e.tabela, 'metodo_quadro');
-  assert.deepEqual([e.linhas[0].user_id, e.linhas[0].coluna, e.linhas[0].prazo, e.linhas[0].virou_tarefa_id, e.linhas[0].responsavel_nome], ['emanuel', 'aberto', '2026-09-11', null, 'Luiz Santanna']);
-  assert.ok(!(await escritas(pagina)).some((x) => x.tabela === 'metodo_tarefas'), 'no quadro só, não entra tarefa do dia');
+  await pagina.getByText(/jornada, quadro e sino avisados/).waitFor();
+  const tudo1 = await escritas(pagina);
+  const tarefa1 = tudo1.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
+  const card1 = tudo1.filter((x) => x.tabela === 'metodo_quadro').at(-1);
+  const aviso1 = tudo1.filter((x) => x.tabela === 'xgame_mensagens').at(-1);
+  assert.equal(tarefa1.linhas.length, 1, 'sempre entra na jornada, mesmo sem destino escolhido');
+  assert.equal(card1.linhas[0].user_id, 'emanuel');
+  assert.equal(card1.linhas[0].prazo, '2026-09-11', 'prioridade média = card em 3 dias');
+  assert.ok(card1.linhas[0].virou_tarefa_id, 'o card sempre nasce ligado à tarefa da jornada');
+  assert.equal(aviso1.linhas[0].destino_tipo, 'pessoa');
+  assert.equal(aviso1.linhas[0].destino_id, 'emanuel');
+  assert.equal(aviso1.linhas[0].tipo, 'demanda');
+  assert.match(aviso1.linhas[0].texto, /Fechar a proposta da loja Norte/);
 
-  // os dois: a tarefa do dia E o card, ligado pelo id da tarefa
-  await pagina.locator('[data-teste="titulo"]').fill('Visitar a loja do Centro');
-  await pagina.locator('[data-teste="destino"]').selectOption('ambos');
-  await pagina.locator('[data-teste="prioridade"]').selectOption('alta');
-  await pagina.locator('[data-teste="distribuir"]').click();
-  await pagina.getByText(/Tarefa distribuída pra Emanuel/).waitFor();
-  await pagina.waitForFunction(() => window.__bancoFalso.escritas.filter((x) => x.tabela === 'metodo_quadro').length === 2);
-  const tudo = await escritas(pagina);
-  const tarefa = tudo.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
-  const card = tudo.filter((x) => x.tabela === 'metodo_quadro').at(-1);
-  assert.equal(card.linhas[0].prazo, '2026-09-08', 'alta = card pro dia');
-  assert.ok(card.linhas[0].virou_tarefa_id, 'o card nasce ligado à tarefa');
-  assert.equal(tarefa.linhas.length, 1);
-
-  // repetir até sexta: 08/09 (ter) → ter, qua, qui, sex = 4 dias
+  // repetir até sexta: 08/09 (ter) → ter, qua, qui, sex = 4 dias — continua
+  // criando o card do quadro (ligado à PRIMEIRA tarefa) e o sino, uma vez só
   await pagina.locator('[data-teste="titulo"]').fill('Ligar pros 20 contatos do dia');
-  await pagina.locator('[data-teste="destino"]').selectOption('lista');
   await pagina.locator('[data-teste="repetir-semana"]').check();
   await pagina.locator('[data-teste="distribuir"]').click();
   await pagina.getByText(/4 dias: "Ligar pros 20 contatos do dia" de ter\., 08\/09 a sex\., 11\/09/).waitFor();
-  e = (await escritas(pagina)).filter((x) => x.tabela === 'metodo_tarefas').at(-1);
-  assert.deepEqual(e.linhas.map((l) => l.data), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
-  assert.ok(e.linhas.every((l) => l.prazo_em));
+  const tudo2 = await escritas(pagina);
+  const tarefa2 = tudo2.filter((x) => x.tabela === 'metodo_tarefas').at(-1);
+  assert.deepEqual(tarefa2.linhas.map((l) => l.data), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
+  assert.ok(tarefa2.linhas.every((l) => l.prazo_em));
+  assert.equal(tudo2.filter((x) => x.tabela === 'metodo_quadro').length, 2, 'mais um card (o segundo distribuir), não um por dia repetido');
+  assert.equal(tudo2.filter((x) => x.tabela === 'xgame_mensagens').length, 2, 'mais um aviso, não um por dia repetido');
   await ctx.close();
 });
 
@@ -585,7 +591,7 @@ test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e What
   await pagina.locator('[data-teste="abrir-quadro-geral"]').click();
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
   await modal.locator('[data-teste="quadro-geral-topo"]').waitFor();
-  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Comprovações', 'Histórico']);
+  assert.deepEqual(await modal.locator('[data-teste="abas-quadro-geral"] [role="tab"]').allTextContents(), ['Pessoa', 'MvM dele', 'Metas', 'Programa', 'Semana', 'Quadro dele', 'Comprovações', 'Histórico']);
   // 🚪 o caminho pra sociedade veio de baixo pra dentro da pessoa
   assert.match(await texto(pagina, '[data-teste="portoes-pessoa"]'), /Caminho pra sociedade.*0 de 3 portões/s);
   // Emanuel não gerou hoje → amarelo, com o motivo
@@ -594,6 +600,26 @@ test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e What
   const wa = await modal.locator('[data-teste="whatsapp"]').getAttribute('href');
   assert.match(wa, /^https:\/\/wa\.me\/5521999991234\?text=/, 'o telefone do painel de controle, com o 55');
   assert.match(decodeURIComponent(wa), /Oi Emanuel/);
+  await ctx.close();
+});
+
+test('MVM DELE: a aba abre a tela X-GAME de Emanuel de verdade, em modo só-olhar — sem botão de votar nem "voltar"', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  const modal = await abrirQuadroGeral(pagina);
+  await aba(modal, 'mvm');
+  // o aviso de "isso é uma visita", e a tela dela mesma por baixo — mesmo
+  // cabeçalho "X-GAME" que /XGame mostra pra qualquer um
+  await modal.getByText(/Visualização do Super Admin — exatamente o que Emanuel Silva vê agora/).waitFor();
+  await modal.getByText('X-GAME', { exact: true }).waitFor();
+  await modal.getByText(/Boa (manhã|tarde|noite), Emanuel/).waitFor();
+  // sem rota pra sair (não faz sentido dentro do modal) e sem "Todo mundo" duplicando o time
+  assert.equal(await modal.getByText('Voltar pro Top College').count(), 0);
+  assert.equal(await modal.getByText('Todo mundo', { exact: true }).count(), 0);
+  // a Carla (outra participante ativa) aparece como colega votável, mas o botão está DESLIGADO — só visita
+  const colega = modal.locator('button', { hasText: 'Carla Souza' });
+  await colega.waitFor();
+  assert.equal(await colega.isDisabled(), true, 'modoAdmin não deixa votar pelo colega dela');
+  assert.deepEqual(erros, []);
   await ctx.close();
 });
 

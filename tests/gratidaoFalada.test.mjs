@@ -21,6 +21,7 @@ const ler = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const RITUAL = semComentarios(ler('../src/components/licensing/CentralVendas/XGameRitualAmanhecer.jsx'));
 const METODO = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
 const HOOK = semComentarios(ler('../src/hooks/useDitado.js'));
+const PECA = semComentarios(ler('../src/components/common/OuvirGratidao.jsx'));
 
 test('falar 15 segundos entrega a gratidão, sem escrever NADA', () => {
   const r = gratidaoEntregue({ texto: '', audioSeg: 15 });
@@ -55,7 +56,10 @@ test('🔒 o resumo de estudo NÃO foi afrouxado junto', () => {
   // pra digitar, e os 400 continuam de pé.
   assert.equal(RESUMO_MIN, 400);
   const MODAL = semComentarios(ler('../src/components/licensing/CentralVendas/XGameComprovarModal.jsx'));
-  assert.match(MODAL, /texto\.trim\(\)\.length >= RESUMO_MIN/);
+  // 🏆 DIR-115 — a trava virou `faltaDoResumo(texto, tipo) === 0` (mesma
+  // régua, generalizada pro estudo de fim de semana) em vez do literal
+  // `texto.trim().length >= RESUMO_MIN` — ver tests/ditadoNoResumo.test.mjs.
+  assert.match(MODAL, /faltaDoResumo\(texto, tipo\) === 0/);
   assert.ok(!/gratidaoEntregue|audioEntregaValido/.test(MODAL), 'a regra da gratidão vazou pro resumo');
 });
 
@@ -84,11 +88,15 @@ test('o Diário de Bolso não fica em branco quando só houve áudio', () => {
 });
 
 test('dá pra ouvir a gratidão depois, por link assinado pedido no clique', () => {
-  assert.match(METODO, /function BotaoOuvirGratidao/);
-  assert.match(METODO, /ouvirAudio\(\{ caminho, actorId: uid \}\)/);
+  // DIR-104 — o botão saiu do CrmMetodo e virou peça compartilhada: o Diário de
+  // Bolso passou a oferecer o mesmo ouvir. Duas cópias divergiriam, e a que
+  // ficasse pra trás avisaria o prazo de retenção errado.
+  assert.match(METODO, /<OuvirGratidao caminho=\{t\.comprovacao\.audio_gratidao_path\}/);
   assert.match(METODO, /t\.comprovacao\?\.audio_gratidao_path/);
+  assert.match(PECA, /ouvirAudio\(\{ caminho, actorId: uid \}\)/);
   // link assinado vence: guardar na tela vira "não abre" sem explicação
-  assert.match(METODO, /if \(url \|\| buscando\) return;/);
+  assert.match(PECA, /if \(url \|\| buscando\) return;/);
+  assert.ok(!/function BotaoOuvirGratidao/.test(METODO), 'voltou a cópia local — é assim que as duas telas divergem');
 });
 
 test('a duração falada fica registrada junto', () => {

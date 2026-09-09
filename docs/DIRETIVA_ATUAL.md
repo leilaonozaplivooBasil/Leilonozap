@@ -12,6 +12,1141 @@
 
 ---
 
+## DIR-137 — auditoria noturna (parte 3): o X-Pay recuperado no fim de semana não entra mais em dobro contra a pessoa no painel do time
+
+**Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135/136).
+
+**Achado (dinheiro real, painel executivo) — `XGameVisaoExecutiva.jsx`:** a recuperação de tarefa perdida no fim de semana grava `xpay_recuperado` no dia (sem reescrever o `xpay_perdido` original — decisão certa, é histórico). Mas a soma da Visão Executiva contava os dois lados sem cruzar: `r.xpay` já soma `xpay_ganho + xpay_recuperado` (o dinheiro que a pessoa realmente tem agora), e `r.perdido` continuava somando o `xpay_perdido` cru, sem descontar o que foi recuperado — a mesma tarefa contava como ganha E como perdida ao mesmo tempo. O card "X-Pay perdidos por atraso" no painel do dono mostrava um valor inflado pra quem já tinha recuperado.
+
+**Fix:** `r.perdido` agora desconta `xpay_recuperado`, com piso em zero (`Math.max(0, perdido - recuperado)`).
+
+**Prova:** suíte 1974/1974 (1 teste novo, `tests/xpayPerdidoRecuperado.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-136 — auditoria noturna (parte 2): mais três resíduos do "fuso do aparelho" corrigidos, e o validador de comprovações ganha o tempo que precisa pra pensar
+
+**Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135).
+
+**Achados (mesma classe de bug já corrigida em DIR-129/134 — código lendo hora/data do APARELHO em vez de forçar Brasília):**
+1. `src/pages/XGame.jsx` — a saudação do cabeçalho ("Bom dia/tarde/noite") ainda usava `new Date().getHours()` mesmo já existindo `agoraMin` (o relógio do jogo, Brasília forçada) calculado logo acima. Trocado por `agoraMin`.
+2. `src/components/licensing/CentralVendas/XGameJornada.jsx` — `saudacao()` caía pra `new Date().getHours()` quando `min` não vinha (acontece ao olhar um dia que não é hoje — `CrmMetodo.jsx` passa `agoraMin={null}` nesse caso). Trocado o fallback por `minutosBrasilia()`.
+3. `src/lib/pronto.js` — `prazoDe()`/`rotuloDoPrazo()` (o "pronto até HH:mm" e a decisão de atraso) montavam e liam a hora com `Date` local do aparelho (`T12:00:00` sem fuso, `.setHours`, `.getHours`/`.getDate`). Corrigido: `prazoDe()` monta o horário com offset explícito `-03:00` (Brasil não tem mais horário de verão desde 2019 — `America/Sao_Paulo` é sempre UTC-3); `rotuloDoPrazo()` lê de volta com `Intl.DateTimeFormat` forçando `America/Sao_Paulo`, igual `dataISO()`.
+4. `src/lib/filaComprovacoes.js` — `rotuloDataAmigavel()` tinha `hoje = new Date()` como default (usado nos dois lugares reais, `XGameAdmin.jsx` e `Comprovacoes.jsx`, sem passar `hoje`) — perto da virada do dia, um aparelho fora de Brasília rotularia "Hoje"/"Ontem" errado. Default trocado pra `dataISO()`.
+5. `api/functions/xgameValidarPrint.js` — chamada DIRETO do front em três lugares (`CrmMetodo.jsx`, `XGameAdmin.jsx` e o próprio Ritual do Amanhecer), sem `export const config = { maxDuration: 60 }` (que `xgameProvaValidador.js`, o único outro caminho até essa função, já tinha). Sem isso, o timeout padrão da Vercel podia cortar uma análise de imagem com raciocínio no meio — exatamente o tipo de falha intermitente que se parece com "a pessoa não conseguiu comprovar".
+
+**Prova:** suíte 1973/1973 (2 testes de `prazoDe`/`estadoDoPronto`/`filaDoPronto` reescritos pra travar Brasília em vez do fuso do runner de CI — que roda em UTC — e 1 teste novo pro `maxDuration`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-135 — auditoria noturna: o dinheiro "em jogo" não some mais quando o dia zera, e a demanda distribuída na mentoria completa também cria o card do quadro e o sino
+
+**Emitida por:** dono (09/09/2026), indo dormir: *"eu vou deixar você rodando aí, pra você me trazer um relatório diligente... de toda a gamificação, que está bom, que não está, o que está quebrado... não pode passar nada em branco, nada nada nada nada."* — autorização explícita pra auditoria e correção autônoma durante a madrugada.
+
+**Achado 1 (X-Pay, dinheiro real) — `resumoDoDia` em `src/lib/xgame.js`:** quando o dia zera (`diaZerado`, por não votar ou atraso do pronto), o valor que já era `ganho` corretamente virava `perdido` (registrado, não some). Mas o valor que ainda estava **em jogo** (tarefa pendente, nem feita nem com prazo estourado no momento do corte) era descartado com `xpay.emJogo = 0` — o dinheiro simplesmente desaparecia da conta em vez de virar prejuízo registrado, igual o `ganho` já fazia. `xpay_possivel` (usado em relatórios/telas de equipe) ficava subestimado nesses dias.
+**Fix:** `xpay.perdido` agora soma `ganho + perdido + emJogo` antes de zerar os três — o mesmo padrão que já existia pro `ganho`, agora completo.
+
+**Achado 2 (distribuição de tarefa) — `DistribuirTarefa.jsx`:** o caminho "distribuir como mentoria completa" (o que o dono mais usa, feedback ao vivo da reunião) tinha um `return` antes de chegar no trecho que cria o card do Quadro e o aviso (sino, `xgame_mensagens`) — só a tarefa na Jornada nascia; quadro e sino ficavam vazios, exatamente o sintoma relatado ("mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro"). Além disso, o toast de sucesso mentia dizendo "jornada, quadro e sino avisados" mesmo quando a gravação do quadro ou do aviso falhava silenciosamente no banco.
+**Fix:** extraído `criarQuadroEAviso(tarefaId, titulo, prazo)` — chamado nos DOIS caminhos (distribuição normal e mentoria completa); cada falha (quadro ou aviso) gera seu próprio `toast.error` específico, e o toast final só promete "jornada, quadro e sino avisados" quando os dois realmente gravaram.
+
+**Prova:** suíte 1972/1972 (1 teste novo em `tests/xgame.test.mjs` — dia zerado com tarefa pendente, prova que `emJogo` não some; 2 testes reescritos + 1 novo em `tests/distribuirTarefaTresLugares.test.mjs` — trava `criarQuadroEAviso` e o caminho da mentoria chamando ele), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-134 — o relógio do jogo (não só a data) agora é sempre Brasília, e o ritual explica a si mesmo antes de começar
+
+**Emitida por:** dono (09/09/2026), pedindo uma auditoria noturna: *"vamos fazer uma análise no ritual que algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente melhora a comunicação no ritual... vê se a gente cria um aviso antes de começar o ritual, dez minutos pra quando ela abrir, explicar como funciona."*
+
+**Achado no banco (a causa real das reclamações):** três pessoas (Ribeiro, Iara Figueiredo, Elenice Lima) tiveram o ritual reprovado hoje às 05h17–05h25 de Brasília com o motivo `"Ritual perdido — passou do prazo de 5h15"` — um corte que **já tinha sido corrigido pra 5h30 minutos antes**, na DIR-125. A causa raiz não era o limiar em si (esse já estava certo no código): era `agoraMin` — o relógio que o jogo inteiro usa (janela do ritual, AGORA/ATRASADO/PERDIDO de toda tarefa, janela de votação do MvM) — que vinha de `new Date().getHours()*60 + .getMinutes()`, hora **local do aparelho**, não de Brasília forçada. É o MESMO bug da DIR-129 (`dataISO`), só que na hora do dia em vez da data — um aparelho com o relógio alguns minutos errado (fuso trocado, sincronização fraca) julgava a janela do jeito errado.
+
+**O que entra:**
+1. `minutosBrasilia(d)` nova em `src/lib/xgame.js` — minutos desde a meia-noite, sempre em `America/Sao_Paulo` via `Intl.DateTimeFormat`, o mesmo padrão de `dataISO()`. Substitui `d.getHours()*60+d.getMinutes()` nos três lugares que definiam o relógio do jogo: `CrmMetodo.jsx` (`agoraMin`, o Compromisso inteiro) e `XGame.jsx` (`agoraMin`, a janela de votação do MvM).
+2. **O aviso "como funciona o ritual"** (`deveAvisarRitual()`, `RITUAL_AVISO_ANTES_MIN = 10`) — aparece no Compromisso dos 10 minutos antes da abertura (04h30) até o fechamento (05h30), só pra quem ainda não fez o ritual hoje. Explica em uma tela só, ANTES de qualquer clique: os 3 passos (gratidão falada/escrita, vídeo de visualização **em casa**, a ação do dia), que sem vídeo o ritual conclui igual (só sem o selo brilhante), e o prazo exato depois do qual não tem mais segunda chance hoje.
+
+**Verificado, não é achado novo:** o sistema de auto-atualização do app (`useAppVersion.js`/`AtualizacaoDisponivel.jsx`) já detecta deploy novo e troca de versão sozinho (com contagem visível, dentro de 4-10s) sempre que o app está aberto ou volta de segundo plano — os dois fixes acima devem alcançar quem abrir o app antes do ritual de amanhã, mesmo sem fechar e abrir de novo.
+
+**Prova:** suíte 1967/1967 (11 testes novos: `minutosBrasilia()` na virada exata de Brasília e no horário real das três reprovações de hoje; `deveAvisarRitual()` nos limites exatos dos 10min/janela; a fiação do aviso em `CrmMetodo.jsx`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-133 — o Kanban horizontal não vaza mais o arrasto pra página inteira no celular
+
+**Emitida por:** dono (09/09/2026), testando no celular: *"Fui em contatos agora, a esteira onde aparece uma esteira está vazando no celular. Então vamos ajustar pra aparecer no tablet, no celular e no computador, sem vazar nada, né? Em todo o aplicativo, principalmente na página aí da Top College."*
+
+**Causa:** os dois Kanbans horizontais do CRM (Esteira de Captação, 8 estágios; Funil do CRM, várias colunas) já usam `overflow-x-auto` — rolagem própria, correta. Mas no Safari/Chrome do celular, ao arrastar até o fim de um carrossel horizontal, o gesto "vaza" e continua arrastando a PÁGINA inteira de lado (scroll chaining/rubber-band) — mesmo com o `overflow-x:hidden` do `html`/`body` já existente, porque isso acontece DEPOIS que o toque já começou dentro do carrossel.
+
+**O que entra:**
+1. `overscroll-behavior-x: contain` em `src/index.css`, tanto no `html`/`body` quanto em **qualquer** elemento com `.overflow-x-auto`/`.overflow-x-scroll` — trava o arrasto dentro do próprio carrossel, sem vazar pro resto da tela, em **todo o app**, sem precisar caçar tela por tela. Não muda nenhum layout — só a física do toque.
+2. Uma dica "arraste pra ver os outros estágios/colunas" (só no celular, `sm:hidden`) acima dos dois Kanbans — pra quem só usa touch não achar que travou.
+
+**Fora do escopo:** nenhuma mudança de layout, cor ou estrutura — só a física do toque (scroll chaining) e uma dica de texto.
+
+**Prova:** suíte 1958/1958 (4 testes novos em `tests/mobileOverflowKanban.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-132 — o botão de compartilhar no WhatsApp volta na Fila do Pronto, com texto pronto
+
+**Emitida por:** dono (09/09/2026), olhando a Fila do Pronto: *"tinha um botão WhatsApp aqui, eu acho que a gente tirou porque a gente ia mandar mensagem mais personalizada, mais bonita... só um texto mesmo, mas um texto bem bonito... quero botar isso aqui no WhatsApp pra compartilhar também."*
+
+**O que entra:**
+1. `textoCompartilharPronto(t, nomeDaPessoa)` (`src/lib/pronto.js`) — um texto pronto, com identidade (🎯 X-GAME), o título da tarefa, o prazo (`rotuloDoPrazo`) e um convite — é lembrete gentil, não cobrança (o tom sério de "atrasou" continua só no "avisar" já existente).
+2. Botão **compartilhar** (`XPerformanceGestao.jsx`, `MessageCircle`) nas tarefas em `aguardando o pronto` da Fila do Pronto — abre o WhatsApp (`wa.me`) já com o texto pronto pro telefone cadastrado da pessoa; sem telefone, avisa em vez de abrir link quebrado.
+
+**Fora do escopo, por ora:** imagem/banner junto do texto (o dono pediu pra "pesar" — decidido: só texto agora, mais simples e não depende de gerar/hospedar imagem; pode entrar depois se pedir). O botão "avisar" da tarefa atrasada (cobrança, mais sério) não mudou.
+
+**Prova:** suíte 1955/1955 (5 testes novos: `pronto.test.mjs` trava o texto — nome, título, prazo, tom gentil; `compartilharPronto.test.mjs` trava a fiação do botão), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-131 — menu suspenso de data + galera lado a lado (grid) na fila de comprovações
+
+**Emitida por:** dono (09/09/2026): *"Vamos botar um menu suspenso pra escolher qual é a data do mês. Hoje, ontem... E ver se a gente consegue colocar ao invés de um embaixo do outro, colocar a galera lateral pra ficar mais organizado... pro gestor não ficar forçando a mente."*
+
+**O que entra (nos dois painéis: `Comprovacoes.jsx` e `XGameAdmin.jsx`):**
+1. `rotuloDataAmigavel(data, hoje)` nova em `src/lib/filaComprovacoes.js` — "Hoje"/"Ontem" pras duas datas mais importantes, "dd/mm · dia da semana" (o rótulo de sempre) pro resto.
+2. Um `<select>` com as datas presentes na fila carregada (rótulo amigável) + a opção "todas as datas". É um filtro A MAIS — soma com a busca de texto já existente (DIR-124/126), nunca a substitui.
+3. As pessoas dentro de cada dia, que ficavam empilhadas (uma embaixo da outra), agora aparecem lado a lado num grid responsivo (`grid-cols-1` no celular, 2 colunas a partir de `sm`, 3 a partir de `xl`), cada uma como um cartão com borda.
+
+**Fora do escopo:** nenhuma mudança na busca por texto, no agrupamento por dia em si, na aprovação/reprovação ou nos filtros de status — só o filtro de data a mais e o layout em grid.
+
+**Prova:** suíte 1935/1935 (6 testes novos em `tests/filaComprovacoes.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-130 — a demanda distribuída entra sozinha em três lugares, e ganha um sino que não deixa passar batido
+
+**Emitida por:** dono (09/09/2026): *"eu preciso que o envio de tarefa chegue na jornada, automático... ela está entrando no quadro, aí tem a opção de botar lá no quadro e na minha lista, né? Já estava entrando automático na jornada e não entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo automático... está faltando um sininho de notificação... eu mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro."*
+
+**Achado:** `DistribuirTarefa.jsx` tinha um seletor "destino" (lista / quadro / os dois) — só com "quadro" a demanda nunca entrava na Jornada; só com "lista" nunca virava card do Quadro. E a única forma de a pessoa "ver" que recebeu algo era abrir o Quadro ou a aba dobrada "Mensagem pro CEO" por conta própria — nada avisava proativamente.
+
+**O que entra:**
+1. **Escolha de destino removida** — toda tarefa distribuída agora SEMPRE grava nos três: `metodo_tarefas` (a Jornada, `origem: 'xperf'`), `metodo_quadro` (o card, ligado pelo id da tarefa — cai sozinho na primeira Lista dele, mecanismo já existente do `QuadroCompromisso.jsx`) e `xgame_mensagens` (`tipo: 'demanda'`, o aviso que acende o sino).
+2. **Horário vira opcional/flexível** (`"ela não tem que entrar na hora que eu coloquei... deixando a opção da pessoa escolher o melhor horário pra ela fazer"`): o campo "começar às" virou "horário (opcional)"; sem horário, a tarefa entra flexível na Jornada. A pessoa já podia editar hora/título de qualquer tarefa do dia inline (✏️, DIR-80) — copy nova deixa isso explícito no formulário do gestor.
+3. **Ícone que não fica genérico** (`"gerando um ícone compatível, sem deixar feio a jornada"`): `seloDa()` (`XGameJornada.jsx`) ganha um terceiro parâmetro (`origem`) — quando o título de uma demanda não bate com nenhum selo nem família de Hábito, em vez da ⭐ genérica de qualquer coisa sem categoria, ganha um selo próprio (`SELO_DEMANDA`, ícone `Send`, verde da marca).
+4. **O sino** (`SinoNotificacoes.jsx`, novo componente, montado no topo do Compromisso) — reaproveita `xgame_mensagens` (DIR-106/107), a MESMA rota server-side (`xgameMensagensListar`) e as mesmas funções puras (`mensagensXgame.js`) do "Mensagem pro CEO". Badge de não lidas; um **banner fixo** (como um alerta de venda) mostra a mensagem mais antiga ainda não vista — fechar o banner NUNCA marca como lida (só sai da tela; continua no sino até a pessoa abrir de verdade), e o botão de fechar fica travado por 10 segundos (`SEGUNDOS_ANTES_DE_FECHAR`, `src/lib/notificacoesXgame.js`) — *"não pode ter certeza que ela viu"*. Responder funciona por dentro, no banner e no painel do sino (mesmo padrão "responder por dentro" do DIR-107) — a ida e volta pedida.
+
+**Fora do escopo:** nenhuma mudança na fórmula de valor/peso da tarefa, na Fila do Pronto (conferir/devolver) ou na aba "Mensagem pro CEO" em si — só quem gera a demanda (`DistribuirTarefa`) e quem avisa que ela chegou (`SinoNotificacoes`, novo). O sino está montado só na tela do Compromisso (a que a pessoa abre todo dia) — não em toda tela do app.
+
+**Prova:** suíte 1950/1950 (14 testes novos: `notificacoesXgame.test.mjs` trava a escolha da mensagem certa pro banner e os 10 segundos; `distribuirTarefaTresLugares.test.mjs` trava que a escolha de destino sumiu e que as três gravações sempre acontecem juntas; `xgameJornadaSeloDemanda.test.mjs` trava o selo próprio da demanda), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-129 — "hoje" agora é sempre Brasília, não importa o fuso do aparelho
+
+**Emitida por:** dono (09/09/2026), voltando no mesmo assunto da DIR-127 com um caso concreto: *"o Emanuel leu o livro no dia oito, vinte e uma e trinta, e contou na comprovação como dia nove... tem que ser o horário de Brasília, não pode ter essa confusão."*
+
+**O que era:** `dataISO()` (`src/lib/xgame.js`) — a função que define "hoje" em TODO o Método/X-Game (`hojeStr()`, o dia mostrado no Compromisso, a data gravada em cada tarefa/comprovação/placar, em 13 arquivos) — usava `getFullYear/getMonth/getDate`, ou seja, hora **local do aparelho**, não de Brasília. Isso já tinha corrigido um bug ANTERIOR (usar `toISOString()`, hora UTC — `tests/xgameFusoHorario.test.mjs`), mas só por acaso, assumindo que o celular de quem usa está sempre certo no fuso de Brasília.
+
+**Achado no banco (a prova de que não era suposição):** a leitura do Emannuel Alves de Lima ("Leitura leve + descanso"), feita de verdade às 21h11 de Brasília do dia 7 (confirmado pelos timestamps reais em UTC, `created_date`/`comprovacao.quando` — não dependem de fuso nenhum), nasceu com `data: '2026-09-09'` — dois dias à frente. O aparelho dele, naquele momento, não estava contando Brasília certo.
+
+**O que entra:**
+1. `dataISO()` passa a forçar `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })` sempre — do mesmo jeito que o cron do servidor (`hojeBrasil()`, `gerarJornadaDoDia.js`) já fazia. Não depende mais do fuso/relógio de ninguém.
+2. `mudarDia()` (as setas ← HOJE → do Compromisso, `CrmMetodo.jsx`) trocou de "monta Date local e reconverte por `toISOString()`" pra `somarDiasISO()` (`xgame.js`, nova função pura) — conta de calendário (ano/mês/dia), nunca conversão de horário.
+3. **Dado corrigido no banco** (a leitura do Emannuel): a comprovação (texto, foto, veredito da IA, `feito: true`) foi movida da linha errada (dia 9) pra linha certa que já existia vazia (dia 7); a linha fantasma do dia 9 foi apagada, liberando o lugar pra leitura de HOJE à noite nascer certa.
+
+**Auditoria feita, nada mais pra corrigir agora:** varri o banco inteiro por lotes de tarefas cujo `data` destoa 2+ dias do dia real (Brasília) do `created_date`. O ÚNICO caso isolado (uma comprovação real presa no dia errado) era o do Emannuel, já corrigido. Achado à parte, sem dano: a conta do "paim" (`4380f43a...`, já conhecida da DIR-122) tem 8 dias de rotina pré-gerados à frente (dias 7 a 14) numa sequência rápida de ~40s — parecem geração automática por navegação (setas de dia), sem nenhuma comprovação anexada, sem risco de X-Pay. Não mexido agora.
+
+**Prova:** suíte 1931/1931 (5 testes novos travando `dataISO()`/`somarDiasISO()` na virada exata das 21h/00h de Brasília e a fonte de `mudarDia`), lint limpo, `npm run build` sem erro. Correção de dado conferida direto no banco de produção.
+
+---
+
+## DIR-128 — a fila de comprovações separa cada dia por pessoa, nos dois painéis
+
+**Emitida por:** dono (09/09/2026), olhando o dia de hoje com várias pessoas misturadas na mesma lista: *"eu quero já separado por datas e por nomes, cara. Data de hoje, nome das pessoas que estão participando."*
+
+**O que entra:**
+1. `agruparComprovacoesPorPessoa` nova em `src/lib/filaComprovacoes.js` — dentro de UM grupo de dia (saída de `agruparComprovacoesPorData`), junta quem é a mesma pessoa, preservando a ordem de chegada (mesma regra da função de data: nunca reordena por conta própria).
+2. Aplicada nos DOIS lugares que já tinham o agrupamento por dia (DIR-124/126): `XGameAdmin.jsx` (aba Comprovações) e `Comprovacoes.jsx` (a fila geral que o dono vê todo dia, logo após a Fila do Pronto). Em cada dia, um subcabeçalho por pessoa ("👤 Nome · N"), com as comprovações dela agrupadas ali embaixo — o nome sai da linha de cada item (já está no subcabeçalho), deixando a lista mais enxuta.
+3. Em `Comprovacoes.jsx`, o subagrupamento só entra na fila GERAL (`!pessoaId`) — a fila de UMA pessoa já não repetia o nome por linha, então não ganha subcabeçalho (seria repetir o óbvio).
+
+**Fora do escopo:** nenhuma mudança na busca por nome/data (DIR-124/126), na aprovação/reprovação, ou nos filtros de status — só um segundo nível de agrupamento visual.
+
+**Prova:** suíte 1931/1931 (4 testes novos em `tests/filaComprovacoes.test.mjs`: a função pura + a fiação nos dois componentes), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-127 — a Rotina Perfeita nunca mais duplica o dia inteiro
+
+**Emitida por:** dono (09/09/2026), vendo a fila de comprovações "bagunçada": *"isso é muito sério, muito sério, coloca isso aí, coloca uma trava pra tu não errar isso."*
+
+**O que era:** o cron `gerarJornadaDoDia` (madrugada) e a auto-repetição do cliente (CrmMetodo.jsx, `useEffect` que repete a rotina sozinha) podiam gerar a rotina INTEIRA do mesmo dia pra mesma pessoa antes de qualquer um dos dois marcar `rotina_gerada_em` — uma corrida que a trava da DIR-80 (`diasGerados`, só protege a MESMA aba) nunca cobria. Achado no banco: **97 linhas duplicadas**, praticamente o dia inteiro de várias pessoas em dobro; **10 delas já com comprovação dupla** — a pessoa, vendo a mesma tarefa duas vezes na tela, comprovou as duas, e o X-Pay contava a mesma tarefa duas vezes.
+
+**O que entra:**
+1. **Limpeza dos 97 duplicados já existentes** (SQL direto, produção): por grupo (`user_id, data, hora, titulo`), mantida a linha com `feito=true`, comprovação preenchida e `created_date` mais antigo — as sobras apagadas.
+2. **`UNIQUE(user_id, data, hora, titulo)`** em `metodo_tarefas` — a trava de verdade agora é o banco, não mais um `ref` de sessão. Aplicada direto em produção (o pipeline automático de migração está quebrado, achado de sessão anterior) e registrada em `supabase/migrations/20260909210000_metodo_tarefas_unique_user_data_hora_titulo.sql`.
+3. Os **6 lugares** que geram tarefas trocam `insert`/`create` um-a-um por **upsert com `ignoreDuplicates`** (cliente: `criarTarefasSemDuplicar`, `CrmMetodo.jsx`, usado nos 3 pontos — gerar, auto-repetir, regerar; `XGameAdmin.jsx`; `XPerformanceGestao.jsx`) ou `Prefer: resolution=ignore-duplicates` + `on_conflict` na URL (servidor: `gerarJornadaDoDia.js`, o cron) — a duplicata é ignorada em silêncio, nunca criada e nunca quebra com erro.
+
+**Fora do escopo:** nenhum reembolso/ajuste retroativo de X-Pay — o ciclo ainda não fechou (dia 3 de 22), o pagamento acontece no fechamento, e a limpeza já corrigiu o dado antes de qualquer conta final usar ele.
+
+**Prova:** suíte 1897/1897 (4 testes novos em `tests/geracaoTarefasSemDuplicar.test.mjs` travando os 6 pontos de geração), lint limpo, `npm run build` sem erro. Migração aplicada e conferida direto no banco (zero grupos duplicados restantes).
+
+---
+
+## DIR-126 — a fila de Comprovações que o dono vê TODO dia ganha a mesma organização do ADM
+
+**Emitida por:** dono (09/09/2026): *"eu quero ver o nome das pessoas, data, por caixinha, está muito bagunçado"* — e, numa mensagem anterior, sobre a fila geral que aparece logo depois da Fila do Pronto: *"ela nem me deu a prévia... se for vídeo, se for áudio, tem que tudo transcrever e mostrar ali."*
+
+**Achado:** a DIR-124 (busca + agrupamento por data) só tinha entrado em `XGameAdmin.jsx` — mas a tela que o dono realmente abre todo dia é `Comprovacoes.jsx` (`ComprovacoesPainel`), embutida direto na página principal (logo após "A Fila do Pronto") e na aba "Comprovações" do Quadro Geral. Essa tela nunca recebeu a atualização.
+
+**O que entra (`Comprovacoes.jsx`):**
+1. Mesma busca única (nome ou data) e agrupamento por dia da DIR-124, reaproveitando as MESMAS funções puras (`src/lib/filaComprovacoes.js`) — uma fonte só.
+2. **Selo vazio do Ritual do Amanhecer corrigido**: `ROTULO`/`COR` não tinham entrada pra `aprovada_ritual` — o badge desenhava um retângulo sem nada dentro. Agora mostra "ritual aprovado".
+3. **O texto entregue aparece na fila** (`c.entrega` — a gratidão escrita OU falada e já transcrita, o resumo da leitura): antes só o veredito da IA aparecia, nunca o que a pessoa efetivamente disse. Mesma correção em `XGameAdmin.jsx`.
+4. **Comunicação clara de como o ritual chegou** (achado em paralelo, mesmo pedido do dono): quando a gratidão veio em ÁUDIO, a linha avisa a duração sem tocar o áudio (privacidade — é voz de quem gravou, nunca vira um botão de play); quando não teve nem vídeo nem áudio, a linha diz isso explicitamente em vez de ficar muda.
+5. Copy do contador de pendências atualizada pra refletir a realidade pós-DIR-125: "a IA decide tudo sozinha" em vez de "a segunda análise é sua".
+
+**Prova:** lint limpo, `npm run build` sem erro (mudança de UI, sem lógica nova além da já testada na DIR-124/DIR-125).
+
+---
+
+## DIR-125 — o Ritual do Amanhecer nunca mais cai pro gestor decidir + janela sobe pra 30min
+
+**Emitida por:** dono (09/09/2026), vendo comprovações presas em "em análise": *"a Yata tem que aprovar tudo... vai reprovar automático, entendeu? Só em casos impossíveis, mas não precisa"* — e, na sequência, sobre o prazo: *"se o cara acordou e teve a intenção de fazer, a gente não pode penalizar... quinze minutos final é pouco tempo, vamos deixar trinta."*
+
+**O que era:** o Ritual do Amanhecer (`concluirRitual`, `CrmMetodo.jsx`) era a ÚLTIMA rota do X-GAME que ainda caía pro gestor decidir — ambiente em dúvida (nem claramente errado, nem claramente em casa) virava `status: 'em_analise'`, esperando alguém aprovar/reprovar na mão. Todo o resto do X-GAME já resolve sozinho desde a DIR-89 ("intervenção humana zero").
+
+**O que entra:**
+1. Ambiente em dúvida agora cai na MESMA rota automática do ambiente claramente errado — **reprova sozinha**, com o motivo pedagógico da própria IA (a pessoa refaz; não é punição definitiva, é uma segunda chance). `emDuvida`/`status: 'em_analise'` removidos do ritual — nunca mais nasce nesse estado.
+2. **`RITUAL_FIM_MIN` sobe de 05h15 para 05h30** (`RITUAL_INICIO_MIN`, a abertura antecipada às 4h40, intocada) — trinta minutos a partir do horário oficial da gratidão (05:00), não mais quinze.
+
+**Prova:** suíte 1893/1893 (1 teste travando a régua nova de horário + 1 teste de fonte travando que `em_analise`/`emDuvida` não existem mais no ritual), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-124 — a fila de Comprovações do ADM X-GAME agora agrupa por dia e tem busca
+
+**Emitida por:** dono (09/09/2026), olhando a fila crescer: *"eu preciso separar por data, né? Data de comprovação, nome das pessoas, pra ficar mais fácil isso, ainda precisa ter uma busca quando eu fizer buscar mais rápido, tanto a data e tanto o dia."*
+
+**O que entra:**
+1. **Busca única** (`XGameAdmin.jsx`, aba Comprovações): uma caixa de texto que acha tanto por NOME (sem acento/maiúscula, ex.: "luciano") quanto por DATA (dd/mm, ex.: "09/09", ou só "09" pro dia) — nunca precisa escolher qual campo buscar.
+2. **Agrupada por dia**: a fila (antes uma lista corrida) agora tem um cabeçalho por data ("09/09 · quarta-feira · N comprovações"), com as comprovações daquele dia embaixo — a data some da linha de cada item (já está no cabeçalho do grupo) e vira só nome + hora + título, mais limpo.
+3. Lógica pura nova em `src/lib/filaComprovacoes.js` (`comprovacaoBateNaBusca`, `agruparComprovacoesPorData`, `rotuloDataComprovacao`) — testável sem montar a tela, em vez de ficar espalhada dentro do componente.
+
+**Fora do escopo:** nenhuma mudança na aprovação/reprovação em si, nem na IA de validação, nem nos filtros de status já existentes (em análise/aprovada/reprovada) — só a organização visual e a busca.
+
+**Prova:** suíte 1891/1891 (9 testes novos em `tests/filaComprovacoes.test.mjs` cobrindo busca por nome, por data completa, por só o dia, agrupamento preservando ordem, e o rótulo do cabeçalho), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-123 — a conta duplicada de "paim" some da lista de "adicionar participante"
+
+**Emitida por:** dono (09/09/2026), depois da unificação da DIR-122: *"mas ele não pode ganhar duas vezes, man??? e eu só escolhi uma conta no painel admin pra participar do game."* Confirmado que não há risco (registro único, zero pagamento em qualquer das duas contas) — mas o login duplicado ("Joao Vitor Paim Pereira", e-mail auto-gerado) continuava existindo, então continuava aparecendo na lista de "adicionar participante" do ADM X-Game, pronto pra ser escolhido de novo por engano. Autorização final: *"sim"*.
+
+**O que entra:** `XGameAdmin.jsx` ganha `IDS_DUPLICADOS_FORA_DO_XGAME` — um Set com o id exato dessa conta — filtrado tanto da lista de candidatos quanto da contagem por grupo, na tela de "adicionar participante". O login em si (`app_users`) não foi tocado — só parou de aparecer como opção pra virar participante do jogo; continua servindo pra o que quer que seja o "concurso" (o e-mail auto-gerado sugere outra funcionalidade, não mexida).
+
+**Fora do escopo:** nenhuma mudança em `xgame_participantes`/`xgame_votos_mvm` (já resolvido na DIR-122) — esta entrada é só a trava pra não recriar o mesmo problema no futuro.
+
+**Prova:** suíte 1882/1882 (1 teste novo em `tests/xgameRecebeVoto.test.mjs` travando a exclusão nas duas listas), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-122 — conta duplicada de Joao Vitor Paim Pereira ("paim") unificada na conta pessoal
+
+**Emitida por:** dono (09/09/2026), resposta direta ao achado da DIR-121: *"faz o que precisa ser feito, a pessoal com certeza."*
+
+**O que era:** duas contas para a mesma pessoa. `e90ed56209c71d4bf4dd3bc3` ("Joao Vitor Paim Pereira", e-mail auto-gerado `@concurso.leilaonozap.net`) era a conta OFICIAL do X-Game — cadastrada em `xgame_participantes` (perfil comercial, em mentoria, ativa) e dona dos 70 votos de MvM recebidos neste ciclo (média 7,24) — mas com ZERO linhas em `xgame_diario`. `4380f43a-5722-4633-af1f-d29f163103ef` ("paim", e-mail pessoal `joaovitorpaim06@gmail.com`) é a conta que ele usa de verdade pra trabalhar — 3 dias de `xgame_diario` neste ciclo (180-223 pontos/dia, tarefas comprovadas) — mas sem nenhum voto e fora de `xgame_participantes`. Resultado: a moeda oficial dele nunca via a produção real.
+
+**O que entra (banco, migração manual via SQL — não passou pelo pipeline de migration do repo, é dado, não schema):**
+1. `UPDATE xgame_participantes SET user_id = '4380f43a-...' WHERE user_id = 'e90ed562...'` — o registro oficial (perfil comercial, em mentoria, ativo, aceita ser votado) passa a apontar pra conta pessoal. Sem colisão: a conta pessoal não tinha nenhum registro em `xgame_participantes` (`UNIQUE(user_id)`).
+2. `UPDATE xgame_votos_mvm SET votado_id = '4380f43a-...' WHERE votado_id = 'e90ed562...'` — os 70 votos recebidos migram junto. Sem colisão: conferido antes que nenhum `(votante_id, data, virtude)` já existia pra `votado_id = 4380f43a` (`UNIQUE(votante_id, votado_id, data, virtude)`), e que ninguém ficaria votando em si mesmo depois da troca.
+3. Conferido depois: zero linhas restantes na conta duplicada em `xgame_participantes`/`xgame_votos_mvm`/`xgame_diario`.
+
+**Fora do escopo, achado à parte (aguardando decisão futura, não é a mesma questão):** as DUAS contas também têm histórico PRÓPRIO no Método (`metodo_tarefas`: 40 tarefas na duplicada × 214 na pessoal; `metodo_perfil` e `metodo_quadro`: 1 linha em CADA conta — `metodo_perfil.user_id` tem `UNIQUE`, então mesclar às cegas quebraria). Isso é uma duplicação mais profunda (uso paralelo do app, não só do X-Game) que o dono não pediu pra resolver agora — só o X-Game (moeda/voto) foi migrado. Se um dia isso também precisar unificar, precisa de revisão manual do conteúdo de cada `metodo_perfil`/`metodo_quadro`, não um UPDATE cego.
+
+**Prova:** consultas antes/depois via Supabase MCP confirmando a contagem de linhas migradas e zero sobra na conta duplicada (ver histórico da sessão). Não mexe em código — nenhuma mudança em `src/` ou testes por esta entrada.
+
+---
+
+## DIR-121 — as duas moedas voltam a aparecer quando o Super Admin olha outra pessoa (modoAdmin)
+
+**Emitida por:** dono (09/09/2026), comparando o próprio painel com o "MvM dele" (Quadro Geral → pessoa → aba "MvM dele"): *"eu olhei o meu painel, está aparecendo as duas moedas... só que eu sou superior de mim, eu olho o dos outros... eu olhei de um executivo aqui, não está aparecendo as duas moedas comparativas... tem que aparecer, igual aparece pra mim tem que aparecer no dele."*
+
+**Causa raiz:** a única seção que desenha as duas moedas (`pages/XGame.jsx`) é a `XGameVisaoExecutiva` embutida — e ela SOME inteira quando `modoAdmin` é verdadeiro (`{!modoAdmin && (...)}`, decisão de propósito pra não repetir o ranking do time inteiro na visita do Super Admin). Resultado: em `modoAdmin`, nenhuma das duas moedas aparecia pra ninguém — quebrando a promessa da própria página ("o que se VÊ continua sendo idêntico ao que a pessoa vê ao abrir sozinha").
+
+**O que entra:** dentro de `{modoAdmin && ciclo && (...)}`, `pages/XGame.jsx` volta a desenhar as duas moedas direto — real (`ciclo.componentes`/`ciclo.total`/`ciclo.liga`, o mesmo `ciclo` já calculado pra `userIdForcado`) e o modelo (`moedaModelo`, DIR-120) — sem tocar no modo normal (que continua vindo só da `XGameVisaoExecutiva` embutida, sem duplicar). `tests/moedaPizza.test.mjs` reescrito pra travar essa regra exata: `MoedaPizza` só pode desenhar dentro do gate `modoAdmin`, nunca fora.
+
+**Fora do escopo:** a "Todo mundo" (pódio/tabela do time inteiro) continua escondida em `modoAdmin`, como já era — o dono só pediu as moedas da pessoa sendo olhada, não o ranking geral repetido.
+
+**Achado à parte, aguardando decisão do dono (auditoria pedida na mesma mensagem — "confere, se não tem nenhuma moeda zerada, porque quem somou ponto não pode estar zerado"):** conta duplicada real no banco. "Joao Vitor Paim Pereira" (`e90ed562...`, e-mail auto-gerado `@concurso.leilaonozap.net`) é quem está oficialmente cadastrado em `xgame_participantes` (perfil comercial, em mentoria) e recebeu 70 votos de MvM (média 7,24) neste ciclo — mas tem ZERO linhas em `xgame_diario`. O trabalho de verdade (180 e 223 pontos nos últimos 2 dias, tarefas comprovadas) está gravado sob OUTRA conta, `4380f43a-...` ("paim", e-mail pessoal `joaovitorpaim06@gmail.com`), que não tem nenhum voto e não está em `xgame_participantes`. Resultado: a moeda oficial dele (a que conta pro X-Pay/liga) não enxerga a produção real, porque estão em contas diferentes. Não mexi no banco — é decisão do dono qual conta é a "oficial" pra unificar (histórico de votos e X-Pay são dados sensíveis). Auditoria no restante do time (17 participantes ativos) não achou nenhum outro caso de "somou ponto e ficou zerado" — os únicos com voto recebido mas zero produção este ciclo (Flavio Monteiro, José Amancio, Luciene Soares, Livoo Live) também têm zero tarefas feitas — ainda não abriram o "Meu Dia" neste ciclo, não é bug.
+
+**Prova:** suíte 1881/1881 (`tests/moedaPizza.test.mjs` reescrito pra validar a estrutura exata do gate), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-120 — a moeda-modelo cheia ao lado da moeda real, na tela viva
+
+**Emitida por:** dono (09/09/2026), olhando o próprio radar em 0% no dia 3 de 22: *"não é que ele acumula ponto no MvM, é que o dia de hoje ele está com o MvM de ontem... a moeda ganhou vida... é a cotação... a moeda tem que estar ali, pra ele se inspirar nela cheia, e entender como ela fica cheia, junto com a dele que está sendo preenchida."*
+
+**O que entra:**
+1. Nova função pura `moedaModelo(perfil = 'estrategico')` (`src/lib/xgame.js`): os 5 componentes do Human Token no valor MÁXIMO — `pesosDoPerfil` remapeado (`ptVenda` → `vendas`), nunca duplicado à mão. Já era usada só no Guia (aula de pontuação); virou a fonte única também para as telas ao vivo.
+2. **`CrmMetodo.jsx`** (Compromisso) e **`XGameVisaoExecutiva.jsx`** ("sua posição no ciclo"): logo abaixo do cartão da moeda REAL da pessoa, um segundo cartão — borda tracejada dourada, "🏆 O Modelo — pra onde você está indo" — desenha a MESMA `MoedaPizza`, com `moedaModelo('estrategico')` no lugar dos componentes reais, sempre no teto (`TOKEN_MAX`, Liga Platina). Não recalcula nada da pessoa; é só a referência ao lado.
+3. `GuiaXGame.jsx` refatorado pra importar `moedaModelo` em vez de remontar os pesos à mão (mesmo resultado, uma fonte só).
+
+**Fora do escopo / proibido:** a fórmula de cálculo do MvM/Produção/Real Time/Vendas/Bônus (`tokenDoCiclo`) — o relato do dono sobre "moeda viva" descreve um comportamento que a função já tem (soma cumulativa dos dias do ciclo, nunca reseta no meio); nenhuma conta mudou aqui, só o desenho.
+
+**Prova:** suíte 1881/1881 (2 testes novos em `tests/xgame.test.mjs` pra `moedaModelo`: bate com `pesosDoPerfil` remapeado e fecha o teto exato; default sem perfil = `'estrategico'`), lint limpo, `npm run build` sem erro. Banca nova em navegador (`tests/navegador/moedaLadoALado.*`): print real dos dois cartões juntos — moeda parcial (início de ciclo, "ainda não conquistado" visível) ao lado da moeda-modelo cheia (22,22, Liga Platina, sem sobra).
+
+---
+
+## DIR-119 — a liga do topo vira PLATINA em todo lugar (sincronizada com a repesagem que já tinha renomeado o motor)
+
+**Emitida por:** dono (09/09/2026): *"esqueça a palavra diamante e tudo platina, onde tiver diamante tira, lembra é liga platina em todos os lugares, pra não aparecer múltiplo [nome]."* — pedido em paralelo à repesagem do DIR-115 (abaixo), que já tinha renomeado o motor (`xgame.js`) de Diamante pra Platina por conta própria; esta entrada é a reconciliação das duas pontas.
+
+**O que entra:** ao fazer merge com o trabalho paralelo, `xgame.js` já vinha com a liga renomeada (LIGAS, `travarTopoPorEstudo`, `ligaComPortoesDoCiclo`) — mantido como está, sem duplicar a troca de nome. O que faltava sincronizar: os textos visíveis que ainda citavam os limiares e a trava de ANTES da repesagem (ex.: "prata até 17,77 · ouro de 17,78 · platina de 20") em `XGame.jsx` e `CrmMetodo.jsx`, atualizados pros limiares reais de hoje (prata até 12,21 · ouro até 17,77 · platina de 17,78) e pros dois portões (caráter/MvM e meta de vendas). Concordância de gênero corrigida em todo lugar ("a Platina", não "o Platina"). Não mexe em nada fora do X-Game — o "Plano Diamante" de `PartnerPlanActivation.jsx` e as peças reais de joalheria do catálogo (`LuxuryCollection.jsx`, `insert_products.sql`, etc.) são outro contexto e ficaram intocados.
+
+**Prova:** suíte 1879/1879, lint limpo, `npm run build` sem erro. Varredura (`grep`) confirma zero sobra da palavra "diamante" nos arquivos do X-Game, fora das linhas que documentam a mudança de nome.
+
+---
+
+## DIR-118 — sincronizar o painel "Executivo Ideal" entre o Compromisso e o X-Game, e tirar a crença errada do estudo do ar
+
+**Emitida por:** dono (09/09/2026): *"o executivo ideal lá da lista, do quadro, está desatualizado... eu preciso pegar do que nós fizemos agora e atualizar lá, e o que estava lá que não está constando no novo, atualizar aqui também, fazer essa sincronização, tanto de lá pra cá e daqui pra lá."*
+
+**O problema:** o painel "Onde estou × Executivo Ideal" é duplicado de propósito em `XGame.jsx` e `CrmMetodo.jsx`, mas só `CrmMetodo.jsx` tinha o guia "como me formo Executivo Ideal em 3 meses?" — e esse guia (junto com 2 comentários de código no mesmo arquivo) ainda ensinava a regra de ANTES do DIR-113: *"sem a leitura em dia, o token trava em 17,77"*, sem falar da liga do topo — a crença exata que o dono corrigiu na rodada passada. O guia de onboarding (`guiaXGame.js`, aba "Guia do Usuário") tinha o mesmo risco por outro caminho: ensinava a trava do Human Token DO DIA (17,77, que é real e não mudou) só como "Sem estudo, não tem ouro", sem separar essa conta da conta OFICIAL DO CICLO — quem lesse podia achar que a trava do dia valia pro Ouro do ciclo também. O atendente 24h (`tiraDuvidas.js`) tinha o mesmo buraco: só conhecia a régua do dia, nada da régua do ciclo.
+
+**O que entra:**
+1. `CrmMetodo.jsx` — o guia corrigido (a régua completa: bronze/prata/ouro/liga do topo, com a trava certa) e os 2 comentários de código atualizados.
+2. `XGame.jsx` — ganhou o MESMO guia (não existia lá) e o mesmo tooltip rico do card "Human Token" que só `CrmMetodo.jsx` tinha; texto da trava e legenda da MoedaPizza unificados entre as duas telas.
+3. `guiaXGame.js` — a aula "Entender sua pontuação" agora chama a conta do dia de "Human Token DO DIA" (não só "Human Token"), com uma nota explícita de que a conta OFICIAL DO CICLO é outra, com outra trava; mesma correção na pergunta frequente e no dicionário.
+4. `tiraDuvidas.js` — `fichaDeRegras()` ganhou a régua do ciclo inteira (Executivo Ideal, ligas, meta de vendas, a trava certa) ao lado da régua do dia que já existia, pra o atendente nunca mais ter que adivinhar.
+
+**Prova:** suíte 1701/1701 (nenhum teste quebrou com as strings novas), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-117 — botão "recebe voto" por pessoa + selo "Preview oficial" corrigido
+
+**Emitida por:** dono (09/09/2026): *"tem pessoas que vão receber valor na gamificação, já participaram da mentoria e não vão receber voto... eles podem votar, mas não recebem voto... eu não tenho esse botão... preciso desse botão ali na mentoria."* — e, sobre o link de prévia: *"tá vendo escrito prévia oficial, só trabalho nele."*
+
+**O que entra:**
+1. **Botão "recebe voto" no ADM X-Game** (`XGameAdmin.jsx`): `podeSerVotado` (xgame.js) ganha um segundo uso, com polaridade OPOSTA à do Super Admin — lá é opt-in (desligado até ele mesmo ligar); pra todo mundo mais agora é opt-out por ADMIN (ligado até o dono desligar essa pessoa específica). Desligar não mexe em `ativo` (continua paga/gamificada) nem em quem ELA pode votar — só em quem RECEBE o voto dela dos colegas.
+2. **O selo "Preview oficial" mentia**: `tipoDeHost` (DIR-42) classificava QUALQUER host `*.vercel.app` com "-git-" como oficial — com duas branches rodando em paralelo (`xgame-visual-polish` e `claude/project-structure-analysis-r1prad`), as DUAS mostravam o selo verde, e o dono foi parar na branch errada sem nenhum aviso na tela. Corrigido: só o host EXATAMENTE igual a `HOST_PREVIEW_OFICIAL` ganha o selo verde; qualquer outro cai no aviso âmbar de sempre.
+3. **Reconciliação de branches**: todo o trabalho de `xgame-visual-polish` (DIR-113 a DIR-115 + este) foi mergeado direto em `claude/project-structure-analysis-r1prad` — a branch que `HOST_PREVIEW_OFICIAL` de fato aponta — junto com o trabalho paralelo de lá (DIR-116, pódio com foto). Nada perdido dos dois lados.
+
+**Prova:** suíte 1879/1879 (6 testes novos pro botão de voto — lógica pura + presença/gate/efeito colateral no código-fonte da tela; 2 testes novos travando que duas branches "-git-" diferentes não podem as duas ganhar o selo verde), lint limpo, build ok.
+
+---
+
+## DIR-116 — o pódio da Visão Executiva ganha foto real, emoldurada pela cor da liga
+
+**Emitida por:** dono (09/09/2026), depois de ver o pódio no preview: *"vamos puxar a imagem, a foto da pessoa do perfil dela pra dentro da visão executiva... e melhorar esse ranking com a imagem dele... fazer a imagem dele dentro da moeda que ele está... o pódio está muito feio, dá muito cara de emoji. Pode mais foda mesmo, entendeu? Pra dar mais vontade da pra pessoa."* — pediu explicitamente o design por escrito antes de mexer no código; o plano foi discutido e aprovado ("boooraaaaa") antes desta implementação.
+
+**O que entra:**
+1. A busca de `app_users` na Visão Executiva passa a trazer `avatar_url`/`profile_photo_url` (antes só nome) e resolve a foto com `getFotoPerfil` (`src/lib/selosCargo.js`) — a mesma fonte que o Quadro de Compromisso já usa, nenhuma lógica nova de onde a foto mora.
+2. Componente `Avatar` novo: desenha a foto (ou, sem foto, as iniciais num círculo com gradiente — nunca fica vazio) **emoldurada por um anel na cor da própria liga** da pessoa (a mesma paleta `COR_LIGA` que já existia, sem duplicar) — é isso que faz "a moeda" ser a própria foto, não uma forma solta do lado do nome.
+3. O pódio (2º·1º·3º) troca o círculo de iniciais por esse Avatar — o 1º lugar com a foto maior (80px vs. 56px dos outros dois), continuando no degrau mais alto do palco. "Você" ganha um segundo anel verde por fora do anel de liga, compondo os dois em vez de substituir.
+4. A tabela "Todo mundo" ganha o mesmo Avatar (menor, 22px) ao lado do nome — consistência entre pódio e tabela, sem o pontinho solto de antes.
+
+**Nota de reconciliação (merge, 09/09/2026):** esta diretiva nasceu numerada DIR-115 numa branch paralela (`claude/project-structure-analysis-r1prad`), na mesma hora em que a outra sessão registrava a repesagem da moeda como DIR-115 na `xgame-visual-polish` — colisão de numeração entre as duas frentes, cada uma sem ver a entrada da outra. Renumerada pra DIR-116 ao mergear as duas branches; nenhum conteúdo mudou, só o número. `COR_LIGA['diamante']` também foi renomeada pra `COR_LIGA['platina']` no merge, pra acompanhar o DIR-115 (Diamante → Platina) — só o nome da chave, a paleta de cor é a mesma.
+
+**Prova:** suíte 1701/1701 (sem teste novo — é troca visual, sem lógica de negócio nova), lint limpo, `npm run build` sem erro. Verificação em navegador nova (`tests/navegador/podio-visao-executiva.*`): banca com 5 pessoas, 4 com foto (SVG de mentira) e 1 sem foto de propósito — screenshot confirma foto real emoldurada pela cor da liga no pódio e na tabela, fallback de iniciais funcionando pra quem não tem foto, e o anel duplo (liga + verde) em "você".
+
+---
+
+## DIR-115 — repesagem da moeda: MvM vira portão (caráter), Diamante vira Platina, 4 ligas parelhas
+
+**Emitida por:** dono (09/09/2026), depois de revisar a planilha original junto com Claude, em conversa: *"o jargão da empresa é recrutamos caráter e treinamos habilidade... a produção ela chega aos quarenta e cinco por cento com o realtime"*; sobre o nome do topo: *"eu não quero botar diamante... que não lembre multinível — o nível pica de chegar mesmo, que é o executivo ideal pica, que tem que ser infalível"*; aprovação final: *"bora gostei capricha."*
+
+**Objetivo:** corrigir dois problemas do desenho anterior da moeda — (1) o MvM, sozinho, valia quase metade do Human Token (45%), uma fatia grande demais pra um eixo que estatisticamente quase não varia entre pessoas (a votação real do dono, por exemplo, ficou entre 7,38 e 9,38 — 2 pontos de amplitude, contra 0-100% dos outros eixos); (2) as 3 ligas antigas tinham um "deserto" de 50 pontos sem nenhum degrau entre Prata (30%) e Ouro (80%).
+
+**Escopo autorizado (`src/lib/xgame.js`):**
+1. **Repesagem do perfil `'estrategico'`** (perfil `'comercial'` INTOCADO — decisão de outra conversa): MvM 30% (6,67) · Produção 30% (6,67) · Real Time 15% (3,33) · Vendas 15% (3,33) · Bônus/Estudo 10% (2,22) — soma 22,22 exata. Produção+Real Time juntos voltam a somar 45%, igual ao MvM antigo.
+2. **Piso de caráter** (`PISO_CARATER_LIGA = 7`, `PISO_CARATER_PLATINA = 8`) e **porteira de vendas** (100% de `META_VENDAS_CICLO`), nova função `ligaComPortoesDoCiclo(total, {mvmVotacao, vendasFeitas})`: MvM da votação abaixo de 7 trava TUDO em Bronze (mesmo com token de Platina); abaixo de 8 (mas ≥ 7) barra só a Platina (Ouro continua de pé); sem bater a meta cheia de vendas, a Platina também não abre. Os portões NUNCA alteram o número exibido (`total`) — só decidem qual liga aquele total pode valer. Usada nos 5 lugares que calculam liga de ciclo: `XGame.jsx`, `CrmMetodo.jsx` (pessoal + ranking), `XGameVisaoExecutiva.jsx` (ranking + "sua posição"), `PainelCorporativo.jsx`/PDF Executivo.
+3. **"Diamante" → "Platina"** em todo o código/UI que nomeia a liga (`LIGAS`, `FAIXAS_TOKEN`, `COR_LIGA`, `LIGA_COR` do PDF, tooltips) — só o nome mudou, os valores não.
+4. **4 ligas em degraus de ~20-30% cada** (Bronze 0-6,65 · Prata 6,66-12,21 · Ouro 12,22-17,77 · Platina 17,78-22,22), fechando o "deserto" antigo. Platina começa EXATAMENTE onde o Ouro antigo começava (17,78) — o topo não ficou mais fácil, só ganhou dois degraus novos abaixo dele.
+5. `travarDiamantePorEstudo`/`TRAVA_SEM_DIAMANTE` (DIR-113) renomeadas pra `travarTopoPorEstudo`/`TRAVA_SEM_ESTUDO_CICLO` — mesmo valor (19,99), mesmo comportamento, só o nome.
+6. Removida a Moeda duplicada em `pages/XGame.jsx` (dono, vendo a tela: *"você duplicou duas vezes a moeda"*) — a página já embute `XGameVisaoExecutiva`, que desenha a mesma moeda da mesma pessoa.
+7. Jargão **"Recrutamos caráter e treinamos habilidade"** visível nas 4 telas da moeda (Compromisso, Visão Executiva, tooltip do Human Token, tooltip do perfil em XGameAdmin), junto da explicação dos portões.
+
+**Fora do escopo / proibido:** perfil `'comercial'` (pesos e trava de vendas, decididos numa conversa separada); qualquer outro uso de "diamante" no app fora da liga da moeda (achievement "Colecionador de diamantes", templates de promoção, plano parceiro) — não é a mesma coisa e não foi pedido.
+
+**Prova:** suíte 1711/1711 (`tests/xgame.test.mjs` com os pesos novos + 9 testes novos de `ligaComPortoesDoCiclo`/`PISO_CARATER_*` + a nova geometria de `FAIXAS_TOKEN`/`LIGAS`; `tests/moedaPizza.test.mjs` e `tests/guiaXGame.test.mjs` recalculados pros novos limiares e pesos), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+---
+
+## DIR-114 — a auditoria pré-publicação: 4 críticos, 9 importantes e 7 nice-to-have corrigidos
+
+**Emitida por:** dono (09/09/2026): *"corrigir tudo que tem pra corrigir... faz uma análise de novo pra corrigir e deixar perfeito."* — em resposta ao relatório da auditoria em 3 frentes (Painel Corporativo/PDF/roda, motor do X-Game, Hábito 3/4 + trabalho mesclado) publicado antes desta entrada.
+
+**O que entra** (agrupado pelas mesmas letras do relatório da auditoria):
+
+**A — motor do X-Game:**
+- **A1 (crítico):** `pesosDoPerfil('comercial')` somava 14,72 em vez de 22,22 — corrigido mantendo a mesma proporção produção/realtime/bônus do perfil não-comercial, reescalada pra sobrar espaço pro PT VENDA (2,5, intocado).
+- **A4 (importante):** `resumoDoDia` podia mostrar o banner de "aviso graduado" (âmbar) no MESMO dia em que o não-voto já zerou tudo (vermelho) — `emAvisoPronto` agora exige `!perdeuPorNaoVotar`.
+- **A5 (importante):** não existia forma de resetar `avisos_pronto` — o comentário já prometia "reset manual" desde o DIR-105. Botão **"resetar avisos"** novo na Fila do Pronto (XPerformanceGestao.jsx), com confirmação.
+- **A6 (nice-to-have):** tooltip do perfil em XGameAdmin.jsx descrevia a fórmula de antes da repesagem — atualizado com os pesos e a trava atuais.
+
+**B — Painel Corporativo, PDF, roda e mensagens:**
+- **B1 (CRÍTICO/segurança):** a policy de SELECT de `xgame_mensagens` era `qual: true` — qualquer requisição com a chave anon lia a caixa de entrada de qualquer um (inbox do CEO incluído). Fechada (`using (false)`); toda leitura agora passa por `api/functions/xgameMensagensListar.js` (chave de serviço, filtra no servidor com `mensagensRecebidasPor`/`papeisDoCargo`, os mesmos que a tela já usava). INSERT agora exige `remetente_id` de uma pessoa real; UPDATE restrito à coluna `lida` (column-level grant).
+- **B2 (importante):** `xgame_mensagens` e as colunas de `avisos_pronto`/`aviso_pronto_em` existiam em produção sem migração commitada. Reconstruídas com o texto EXATO do que já rodou (consultado em `supabase_migrations.schema_migrations`), como reconciliação — não é uma tabela nova.
+- **B3 (importante):** trocar de pessoa rápido no Painel Corporativo (uso avulso) podia misturar dado de duas pessoas — as buscas agora descartam a resposta se a pessoa selecionada já mudou (`pessoaIdRef`).
+- **B4 (importante):** "excluir" na Fila do Pronto apagava qualquer tarefa (inclusive da Rotina da própria pessoa) sem confirmar. Agora só apaga `origem === 'xperf'` (o que a gestão distribuiu) e sempre confirma antes.
+- **B6 (nice-to-have):** nome muito longo estourava o cabeçalho do PDF Executivo — a fonte agora encolhe até caber, e o subtítulo desce de linha se não sobrar espaço.
+- **B7 (nice-to-have):** `marcarLida` não era esperado antes de recarregar a lista — corrida que podia mostrar "não lida" numa mensagem já respondida.
+
+**C — Hábito 3/4 e integração TourGuiado/MoedaPizza/scriptContatoCoach:**
+- **C1 (CRÍTICO):** `scriptContatoCoach.js` nunca devolvia o campo `aprovado` na resposta de sucesso — o front sempre lia `undefined` (⇒ reprovado), então NINGUÉM jamais ganhava o ponto do script, mesmo perfeito. Um campo, uma linha — a feature pedida duas vezes ao vivo estava 100% inoperante.
+- **C3 (importante):** o destaque de 4s do "Contatar" (DIR-111.2) podia ficar preso — o timer reiniciava a cada render do componente pai. Agora usa uma ref pro callback, só `contatoDestacado` reinicia o timer.
+- **C4 (importante):** `fatiasDaMoeda` não capava `inicio`/`fim` de cada fatia ao teto — geometria segura agora, mesmo se os pesos mudarem no futuro sem preservar a invariante.
+- **C5 (nice-to-have):** contato sem telefone: "Contatar" some sem explicar — agora mostra "sem telefone cadastrado".
+- **C6 (nice-to-have):** helper `nomeDoDono` estava copiado (Lista + Contato) — uma versão só, no topo do componente.
+- **C7 (nice-to-have):** `tests/tourCrmMetodo.test.mjs` (novo) — trava que todo alvo dos 6 tours de CrmMetodo.jsx tem elemento correspondente na tela (mesma rede de segurança que a Esteira já tinha, faltava aqui — exatamente o arquivo que teve o conflito de merge).
+
+**Deliberadamente não resolvido nesta rodada** (fora de escopo pontual, registrado com o dono):
+- **A2/A3** (a divergência de liga entre telas por causa da trava de estudo) foi resolvida junto com a correção da própria trava — ver DIR-113 abaixo.
+- **C2** (teste de `scriptContatoCoach` não invoca o handler de verdade) — melhorado pra conferir TODOS os campos do schema na resposta real (o suficiente pra travar o bug do C1), mas sem montar um mock completo da Anthropic — investimento maior, fora de escopo pontual.
+- Uma auditoria completa de TODO o histórico de migrações do projeto (só as 3 flagradas por esta auditoria foram reconciliadas) e uma revisão de RLS em todas as outras tabelas do app (o mesmo padrão `qual: true` existe em várias) ficam como frentes futuras, não desta rodada.
+
+**Prova:** suíte 1696/1696 (44 testes novos: `tests/xgame.test.mjs` +9, `tests/moedaPizza.test.mjs` +1, `tests/scriptContatoValidacao.test.mjs` +1, `tests/tourCrmMetodo.test.mjs` novo com 7), lint limpo nos arquivos tocados, `npm run build` sem erro. B1 verificado direto no banco (policies e column grants conferidos via SQL depois de aplicar). B6 verificado gerando um PDF de verdade com nome longo e rasterizando pra olhar.
+
+---
+
+## DIR-113 — a trava de estudo passa a bloquear só o Diamante, nunca mais o Ouro
+
+**Emitida por:** dono (09/09/2026), revendo o próprio pedido de trava de estudo: *"O bônus, pra ela chegar a diamante — o que ditava o diamante é só um estudo em casa — mas ela tem que chegar ao ouro, a pessoa tem que chegar ao ouro, até mesmo se ela não estudar em casa, que é a produção, mais MvM, mais tudo isso."*
+
+**O problema:** `XGame.jsx`/`CrmMetodo.jsx` (painel pessoal) reaplicavam `TRAVA_SEM_ESTUDO` (17,77 — a trava do Human Token DO DIA, `humanToken()`) em cima do total do CICLO, além da trava correta do fim de semana (`TRAVA_SEM_DIAMANTE`, 19,99). Isso bloqueava Liga Ouro (17,78+) pra quem não lê todo dia — o oposto do que o dono quer agora. O ranking do time (CrmMetodo.jsx/XGameVisaoExecutiva.jsx), por acidente, já fazia o certo (só a trava do fim de semana) — a divergência entre "o que a pessoa vê de si" e "o que o time vê dela" era justamente o achado A2/A3 da auditoria.
+
+**O que entra:** `travarDiamantePorEstudo(totalBruto, {estudoSemanaOk, estudoFdsOk})`, nova função única em `xgame.js` — sem qualquer um dos dois estudos (leitura de semana OU fim de semana) em dia, capa em `TRAVA_SEM_DIAMANTE` (19,99), NUNCA em `TRAVA_SEM_ESTUDO`. Aplicada nos 4 lugares que calculam liga de ciclo: `XGame.jsx`, `CrmMetodo.jsx` (painel pessoal + ranking, que ganhou a checagem da leitura de semana que faltava), `XGameVisaoExecutiva.jsx` (ranking) e `PainelCorporativo.jsx` (que não tinha trava NENHUMA — bônus da correção). Achado no caminho: o cartão pessoal de "Human Token" do ciclo usava `faixaToken()` (3 faixas, sem Diamante) em vez de `ligaDoToken()` (4 ligas) — ninguém via "💠 Diamante" na própria tela mesmo batendo o token; corrigido junto.
+
+**Prova:** `tests/xgame.test.mjs` — 5 testes novos pra `travarDiamantePorEstudo` (passa reto com os dois estudos ok; capa em 19,99 faltando qualquer um dos dois, nunca abaixo de 17,78; não mexe em total já abaixo do teto). Suíte completa incluída na prova do DIR-114 acima (a mesma rodada de testes/lint/build cobre as duas entradas). *(Nota do DIR-117: essa função e essa liga foram renomeadas depois — hoje é `travarPlatinaPorEstudo`/LIGA PLATINA; a regra e os números continuam exatamente os mesmos.)*
+
+---
+
+## DIR-112 — a roda da vida vira roda de verdade + o PDF Executivo ganha "posição do dia"
+
+**Emitida por:** dono (09/09/2026), depois de ver o radar (DIR-109/109.1)
+e o PDF (DIR-108) ao vivo: *"O PDF do executivo está muito raso. Tem que
+mostrar qual a posição dele do dia. O radar roda da vida, não está
+aparecendo uma roda. Quando eu falei a roda, é, ele faz, o painel dele
+virar uma roda de acordo, pra ele tem que ser quase dez em tudo, pra
+transformar numa roda... pra a vida andar. [...] Está aparecendo
+qualquer outra coisa menos uma roda. [...] eu gostaria que você olhasse
+com carinho isso, [...] pra gente fazer uma [prova] foda pro cara olhar
+e falar assim, porra, eu melhorando isso, você precisa rodar, precisa
+girar."* E, sobre o processo: *"Eu gostaria que você compartilhasse
+comigo, não saindo e fazendo... vamos conversar."* — as duas frentes só
+entraram em código depois de alinhar por escrito, na conversa, o
+desenho da roda (curva fechando círculo vs. o pentágono antigo) e o
+conteúdo da "posição do dia" (ele delegou a decisão: *"aonde a pessoa se
+encontra na posição do dia dentro do game, dentro dessa jornada do
+sucesso... riqueza de detalhes, pra ela ter ciência como está o negócio
+dela"*).
+
+**O problema, achado ao ler o próprio desenho:** `RadarEixos.jsx`
+desenhava um **pentágono** (5 lados retos) ligando os 5 eixos. Um
+pentágono nunca vira círculo, por melhor que seja a nota — a forma de
+base é poligonal. Por isso "aparecia qualquer coisa menos uma roda",
+mesmo com desempenho alto.
+
+**O que entra:**
+1. `src/lib/rodaDaVida.js` (novo) — a curva da roda é Catmull-Rom por
+   cima dos 5 eixos (`pontosDaRoda`), não retas: com tudo perto de
+   100%, a curva fecha um círculo quase perfeito; um eixo fraco
+   "amassa" a curva só daquele lado, como um pneu murcho.
+   `redondezDaRoda`/`faixaDaRoda` leem o quanto ela já gira (4 faixas:
+   murcha/torta/quase/girando).
+2. `RadarEixos.jsx` redesenhado: o **alvo** agora É um círculo perfeito
+   (os eixos já chegam normalizados a 100% do próprio alvo — bater a
+   meta em tudo LITERALMENTE é virar um círculo); o **desempenho real**
+   é a curva suave por cima. Quando a redondez passa de 85%, a curva
+   GIRA (animação CSS, respeita `prefers-reduced-motion`) e a legenda
+   embaixo muda de frase conforme a faixa.
+3. `relatorioExecutivo.js` ganha `posicao` (novo parâmetro) →
+   `rel.posicaoDoDia`: liga atual (Bronze/Prata/Ouro/Diamante,
+   `ligaDoToken`), quanto falta pra próxima (`proximaLiga`), Human
+   Token médio do ciclo, % de formação do Executivo Ideal (com a
+   mensagem de "votação extraordinária" já existente) e os 5 eixos pra
+   roda — tudo com a MESMA fórmula que o X-Game já usa pra própria
+   pessoa (`tokenDoCiclo`/`formacaoExecutivoIdeal`/
+   `proporcoesExecutivoIdeal`). Também entra em `textoDoRelatorio()`
+   (a versão WhatsApp).
+4. `PdfExecutivo.jsx` ganha o painel **POSIÇÃO DO DIA**: a MESMA roda
+   (vetorial, via `pontosDaRoda`/`pontoDoEixo` — não é imagem, é
+   desenho jsPDF de verdade) ao lado da liga, da barra de formação e da
+   legenda dos 5 eixos.
+5. `PainelCorporativo.jsx` calcula a posição do dia de QUALQUER pessoa
+   que a gestão abrir (não só de quem está logada): busca
+   `xgame_diario`/`xgame_votos_mvm` do ciclo já fechado (dias antes de
+   hoje) + `catalog_sales`/`captacao_oportunidades` no ciclo (mesma
+   conta de vendas de alto valor do DIR-110.1) — é uma FOTO do ciclo,
+   não tenta recalcular a régua radical do dia corrente de outra
+   pessoa.
+6. **Bug achado ao gerar um PDF de verdade e OLHAR pra ele** (não só
+   ler o código): `paraPdf()` deixava "⏱️"/"🗳️" viraram "??"/"?" soltos
+   na legenda da roda — a faixa de emoji coberta não incluía todo
+   emoji, e a variação (U+FE0F) sobrava como "?". Trocado pelo property
+   escape `\p{Extended_Pictographic}` (+ variação/ZWJ), que cobre
+   qualquer emoji de verdade.
+
+**Prova:** `tests/rodaDaVida.test.mjs` (8 testes novos — a curva fecha
+em ~raio 1 quando tudo é 100%, um eixo fraco amassa só daquele lado,
+`redondezDaRoda`/`faixaDaRoda` nas 4 faixas); `tests/relatorioExecutivo.test.mjs`
+(+2 testes — sem `posicao` fica `null`; com `posicao` monta
+`posicaoDoDia` e o texto do WhatsApp). Suíte 1658/1658, lint limpo,
+`npm run build` sem erro. **Verificação em navegador rodou de
+verdade nesta rodada**: banca nova (`tests/navegador/roda-da-vida.*`)
+prova que os rótulos mais compridos não clipam em nenhum dos 4
+cenários (cheio/torta/murcho/escuro) e que a legenda muda de frase
+certa; e um PDF de verdade foi gerado com jsPDF (via bundle esbuild) e
+rasterizado com `pdftoppm` pra ser OLHADO — foi assim que o bug do
+emoji foi achado, e foi assim que se confirmou que a roda cheia (todos
+os eixos ~95-100%) realmente fecha em círculo dentro do alvo tracejado,
+com a legenda "a roda GIRA — a vida anda".
+
+---
+
+## DIR-111.2 — chegou no Hábito 4 já sabendo por quem: rola até ela e pisca
+
+**Emitida por:** dono (09/09/2026), depois de testar o DIR-111.1: *"Eu
+cliquei nessa pessoa, ela me levou pra página seguinte, eu não posso ter
+a sensação que eu estou recomeçando. Então ela já me coloca ela no meu
+contato na outra página e pisca no contato que eu vou fazer. Pra não
+ficar com uma sensação de bloqueio... claro, achar direto na lista, não
+ficar procurando."*
+
+**O problema:** o botão "Contatar" do DIR-111.1 levava pro Hábito 4, mas
+só isso — a pessoa aparecia em algum lugar da fila e ficava por conta de
+quem clicou achar ela de novo. Exatamente a "sensação de recomeçar" que
+o dono descreveu.
+
+**O que entra:** o clique agora carrega o ID de quem foi clicada até o
+Hábito 4. Lá, a linha dela rola pra tela automaticamente (uma vez só) e
+pisca por 4 segundos (borda + fundo verde, `animate-pulse`) — dá pra
+achar na hora, sem procurar. O destaque some sozinho depois de 4s, não
+fica preso. Fiação: `CrmClientesTab.jsx` ganhou o estado
+`contatoDestacado`; `onIr` agora aceita um 3º parâmetro (o ID) só usado
+nessa passagem lista→contato.
+
+**Prova:** lint limpo, suíte 1648/1648, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada (mesmo motivo do
+DIR-111 — sem banca de teste pra esta tela) — recomendo clicar
+"Contatar" numa pessoa qualificada e conferir o scroll + o pisca ao vivo.
+
+---
+
+## DIR-111.1 — a conexão que faltava: qualificou → botão leva pro Hábito 4
+
+**Emitida por:** dono (09/09/2026), depois de ver o DIR-111 no ar:
+*"Você esqueceu de fazer a conexão... assim que eu qualifiquei tenho que
+ter o botão de contatar [que] vai me levar pra página do quarto hábito,
+que é o contato e convite... faltou isso aqui, nessa parte."*
+
+**O que entra:** na Lista de Network (Hábito 3), quem já está qualificada
+ganhou um botão **Contatar** ao lado da pontuação — leva direto pro
+Hábito 4 (Contato e Convite), onde ela já aparece na fila (afinal já está
+qualificada). Fecha o ciclo que faltava: qualificar → contatar, sem
+precisar trocar de aba manualmente.
+
+**Prova:** lint limpo, suíte 1648/1648, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada (mesmo motivo do
+DIR-111 — sem banca de teste pra esta tela).
+
+---
+
+## DIR-111 — Hábito 4 mais fluido: botão Contatar (WhatsApp), guia da ordem, dono aparece na Lista
+
+**Emitida por:** dono (09/09/2026), duas mensagens seguidas:
+
+1. *"Tudo tem que ter uma ordem. No quarto hábito... a qualificação da
+lista, depois... quando eu clicar em contatar, me gera WhatsApp... Depois
+disso, atualizar a pós-contato, registrar... Depois disso, vem a
+esteira... Deixar isso tudo mais fluido, está dando noventa por
+cento."*
+
+2. *"No contato, na lista de qualificação, tem que aparecer quem
+qualificou — eu sou super admin, [...] todo mundo está botando a lista
+ali, eu vejo a minha e eu vejo aqui todo mundo. Então tem que botar de
+quem é o nome da pessoa que qualificou a lista, igual você colocou no
+contato."*
+
+**O que entra:**
+1. **Botão "Contatar"** (novo, primeiro da fila de botões, antes de
+   Agendar/Registrar) na fila "Quem contatar" do Hábito 4
+   (`CrmMetodo.jsx`) — abre o WhatsApp da pessoa direto (mesmo padrão
+   `wa.me` já usado em outros cantos do app). A ordem agora é: **Contatar
+   → Agendar/Registrar → Esteira**.
+2. **Guia da ordem** — o `GuiaMovel` "Como fazer o contato" ganhou duas
+   linhas novas: o que o % ao lado do nome significa (vem da qualificação
+   do Hábito 3) e a ordem explícita dos 4 botões.
+3. **Dono aparece na Lista de Network também** (Hábito 3, `painel ===
+   'lista'`) — antes só a fila de "Quem contatar" (Hábito 4) mostrava
+   "👤 Fulano · " na frente do nome pra quem é super admin vendo o time
+   inteiro; a Lista de Network (onde a qualificação acontece) não
+   mostrava, então o dono via "26 pessoas na sua lista" sem saber que era
+   o TIME inteiro, nem de quem era cada uma. Mesmo padrão, mesma fonte de
+   dado (`nomePorUsuarioId`/`created_by_id`), reaproveitado — cabeçalho
+   também corrigido pra "na lista do TIME" quando é visão total.
+
+**Prova:** lint limpo, suíte 1639/1639 (sem teste novo — mudança de UI
+pura, reaproveitando padrões já testados em outras telas), `npm run
+build` sem erro. Verificação em navegador não rodou nesta rodada — não
+existe banca de teste pra esta tela específica (Hábito 4 dentro de
+`CrmMetodo.jsx` exige muitas props pra montar isoladamente); recomendo
+conferir ao vivo o botão Contatar e o nome do dono na Lista.
+
+---
+
+## DIR-110.1 — correção: venda de alto valor "por fora" também conta (esteira de captação)
+
+**Emitida por:** dono (09/09/2026), explicando o caso real que faltou:
+*"Luciano Pinheiro fechou o Renan, duzentos mil, foi um parceiro de
+compra. Ele pode fechar pela plataforma ou pode fazer depósito por fora
+— no caso dele foi por fora... tem o parceiro de compra e tem as
+licenças, depois vem o licenciado, depois vem o ponto de retirada...
+tem que olhar a plataforma que você já tem documento, que já tem como
+funciona pra fazer isso aí."*
+
+**O erro no DIR-110:** eu tinha assumido que venda de alto valor só
+existia dentro de `catalog_sales` (kind `partner_plan`/`adesao`) — e
+sinalizei "investimento" como sem fonte de dado. Fui investigar o
+documento que o dono mencionou (`docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md`
+e `src/lib/captacaoParceiros.js`, a régua OFICIAL da meta de captação de
+R$1.000.000, DIR-22) e descobri: existe sim um mecanismo pra fechar
+"por fora" — a esteira de captação (`captacao_oportunidades`, DIR-40),
+com o campo `aporte_externo` (banco, valor, data, quem registrou) pra
+depósito direto fora do checkout automático. É exatamente o caso do
+Renan.
+
+**A correção:**
+1. `vendasEquivalentesAltoValor()` ganhou o kind `seller_adhesion`
+   (Vendedor) além de `partner_plan`/`adesao` — os mesmos 3 kinds que
+   `bucketDaVenda()` (a régua oficial da meta de captação) já trata como
+   captação de verdade, não mercadoria.
+2. Nova soma, em paralelo à de `catalog_sales`: `captacao_oportunidades`
+   filtrada por `responsavel_id` da pessoa e fechada
+   (`ehFechada` + `aporteExternoValido`, ambas de `esteiraCaptacao.js` —
+   sem duplicar a validação, só reusando a que já existe) dentro do
+   ciclo, com o `aporte_externo.valor` somado e convertido pelo mesmo
+   ticket médio.
+3. O filtro de "venda paga" pra alto valor trocou de `isSalePago` (usada
+   só pra mercadoria) pra `isVendaReal` (`dinheiroReal.js`) — a régua
+   OFICIAL de "isso é dinheiro real" já usada na meta de captação.
+
+**"Investimento" já estava certo** — não é uma categoria separada: é o
+"Parceiro de Compra" (aporte com retorno, `src/lib/planosParceiro.js`),
+a mesma coisa que Luciano fechou com o Renan. Não sobrou nada sem fonte
+de dado.
+
+**Prova:** teste de `vendasEquivalentesAltoValor` ampliado pro terceiro
+kind (`seller_adhesion`). Suíte 1637/1637, lint limpo, `npm run build`
+sem erro. Verificação em navegador não rodou nesta rodada — recomendo
+testar ao vivo com um aporte externo real registrado na esteira de
+captação pra confirmar que o número chega certo no Executivo Ideal.
+
+---
+
+## DIR-110 — o eixo Vendas do Executivo Ideal: meta maior, reunião conta, venda grande satura
+
+**Emitida por:** dono (09/09/2026): *"o executivo ideal exige venda de
+quem é comercial... vamos melhorar o ciclo de venda, que ele só tem
+quatro vendas, é muito pouco... vamos botar vinte e seis vendas... a
+reunião pode ser o princípio da venda... duas reuniões agendadas pode
+contar pra parte da venda... eu não posso parabenizar um time comercial
+sem gerar resultado em venda ou reunião, peso maior é venda... se ele
+fechou uma licença de vinte mil, já preencheu, se ele fechou um
+investimento de cem mil, já preencheu, se ele fechou quatro licenciados
+de cinco mil, fechou... a gente tem que equilibrar isso."*
+
+Confirmado com o dono antes de programar (as 4 perguntas — peso da
+reunião, meta nova, conversão de venda grande, sequência) — as
+recomendadas foram todas aceitas.
+
+**O que entra:**
+1. `META_VENDAS_CICLO`: 4 → **26** por ciclo, fixo (sem tentar amarrar
+   aos 22 dias úteis do ciclo — o dono pensou em dias corridos, misturar
+   as duas réguas de "dia" só ia complicar).
+2. **Reunião conta como princípio da venda** — cada reunião feita no
+   ciclo (`contagens.reunioes_feitas`, já existia do DIR-103) vale
+   `PESO_REUNIAO_EQUIVALENTE = 0,25` de venda equivalente, com teto de
+   `TETO_REUNIAO_NA_META = 30%` da meta — reunião ajuda, mas não
+   substitui vender.
+3. **Venda de valor alto satura a meta** — `vendasEquivalentesAltoValor()`
+   soma o `total_amount` das vendas pagas de kind `partner_plan`
+   (parceiro de compra) e `adesao`, divide pelo `TICKET_MEDIO_VENDA` (R$
+   197, o valor que o dono citou). Uma parceria de R$20.000 vira ~101
+   vendas equivalentes — satura a meta na hora, exatamente como descrito.
+4. A régua "Vendas" agora mostra o quebra-cabeça inteiro: `meta 26 no
+   ciclo · X vendida(s) + Y de reunião = Z`, em vez de só o total.
+
+**🔴 Ficou de fora, sem dado pra sustentar** — fui procurar onde
+"investimento" (aporte/investidor, ex. "fechou um investimento de cem
+mil") fica registrado hoje, pra incluir na mesma conta da venda de valor
+alto. Não achei nenhuma tabela (`catalog_sales`, `commission_records`,
+`negotiations`) com esse tipo de negociação — os únicos kinds de venda de
+valor alto que existem de verdade no banco são `partner_plan` e `adesao`
+(e ambos, hoje, só têm registros CANCELADOS — nenhum fechado ainda, então
+esta conta nova ainda não foi testada com dado real de produção). Preciso
+saber do dono onde "investimento" é registrado (ou se ainda é só um
+combinado verbal/manual) antes de inventar uma fonte de dado que talvez
+não exista.
+
+**Adiado por decisão do dono:** a régua do Executivo Ideal por FUNÇÃO
+(logística, marketing, RH, jurídico... cada um com seu próprio critério,
+não só "vendas") fica pra depois — o pedido explícito foi fechar o
+comercial primeiro.
+
+**Prova:** `tests/xgame.test.mjs` — 4 testes novos (meta em 26; reunião
+conta com teto; venda de valor alto satura a meta; venda de mercadoria
+comum não conta como "alto valor"). Os 2 testes que usavam a meta antiga
+(4) como valor "perfeito" foram ajustados pra usar `META_VENDAS_CICLO`
+em vez do número fixo — não quebram mais quando a meta mudar de novo.
+Suíte 1633/1633, lint limpo, `npm run build` sem erro. Verificação em
+navegador não rodou nesta rodada (mudança de fórmula, não de layout —
+mas recomendo testar ao vivo com uma venda ou reunião real registrada
+pra ver o número bater).
+
+---
+
+## DIR-109.1 — o radar vira "a roda da vida" (pentágono da meta sempre perfeito)
+
+**Emitida por:** dono (09/09/2026), vendo o radar do DIR-109: *"esse
+desenho não está visual, eu quero que o burrão entenda... por isso que eu
+sugeri a roda da vida, porque aí a gente explica que se a roda dele
+rodar, a vida dele anda."*
+
+**O problema:** o radar do DIR-109 plotava o % BRUTO de cada eixo contra
+o alvo dele — como os 5 alvos são diferentes (80/90/90/80/100%), o
+pentágono da META não era um pentágono regular, e a leitura "a roda está
+redonda = você está bem" não batia visualmente.
+
+**A correção:** cada eixo agora mostra a PROPORÇÃO do próprio alvo
+(capada em 100%) — `proporcoesExecutivoIdeal()`, extraída de dentro de
+`formacaoExecutivoIdeal()` pra ser a mesma conta nos dois lugares. Bater
+o alvo em qualquer eixo sempre encosta na borda; o alvo em si vira um
+pentágono PERFEITO. A roda da pessoa só fica redonda quando os 5 eixos
+estão em dia — e murcha exatamente onde falta rodar. Legenda nova embaixo
+do radar: *"a roda da vida do Executivo Ideal — quanto mais redonda, mais
+a carreira anda."*
+
+**Prova:** 2 testes novos (`proporcoesExecutivoIdeal` capa em 1 por eixo;
+`formacaoExecutivoIdeal` continua a mesma % de sempre depois do refactor).
+Suíte 1626/1626, lint limpo, `npm run build` sem erro. Verificação em
+navegador rodou de novo — confirmado visualmente que o pentágono tracejado
+da meta agora é regular e a legenda aparece corretamente.
+
+---
+
+## DIR-109 — o mapa do jogador: radar dos 5 eixos do Executivo Ideal
+
+**Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107/108: *"a
+gente também conversou sobre a visualização... a gente falou que ia
+botar aí assim roda, você decidiu não botar em roda, pra gente ter um
+mapa, um mapa da pessoa, como se fosse um relatório, tipo de jogador de
+futebol que joga, que chuta... aonde ele está ruim ele tem que
+potencializar, onde ele tem que melhorar."*
+
+**O dado já existia** — `ciclo.taxas` × `EXECUTIVO_IDEAL` (MvM, Produção,
+Real Time, Bônus/Estudo, Vendas) já formava as 5 barras do painel
+"🎯 Onde estou × EXECUTIVO IDEAL", em `XGame.jsx` e `CrmMetodo.jsx`. Só
+faltava o formato "roda" que o dono pediu — a barra mostra o número
+certo, mas não a SILHUETA do desempenho num olhar só.
+
+**O que entra:**
+1. `RadarEixos.jsx` (novo) — um radar/pentágono em SVG puro (sem lib
+   nova): pentágono do alvo do Executivo Ideal (contorno tracejado
+   âmbar), sobreposto pela silhueta real da pessoa (preenchido, verde ou
+   vermelho onde fica abaixo do alvo) — exatamente a leitura "onde chuta
+   bem, onde tem que melhorar" de um mapa de jogador. Suporta os dois
+   dialetos do app (`escuro`/`claro`), igual `BarraProgresso`.
+2. `src/lib/xgame.js` ganhou `EIXOS_EXECUTIVO_IDEAL` — os mesmos 5 eixos
+   de `EXECUTIVO_IDEAL`, com rótulo curto (cabe na ponta do radar) e
+   emoji, pra não duplicar a leitura de dados entre o radar e as barras.
+3. O radar aparece logo abaixo da barra de formação, ANTES da lista de
+   barras — nas duas telas onde o painel Executivo Ideal já existe
+   (`XGame.jsx` e `CrmMetodo.jsx`). Como o "MvM dele" do Quadro Geral do
+   ADM já reaproveita `XGame.jsx` em `modoAdmin`, o Super Admin também
+   passa a ver o radar de qualquer pessoa, sem código novo lá.
+
+**Prova:** `tests/xgame.test.mjs` — 1 teste novo trava que
+`EIXOS_EXECUTIVO_IDEAL` nunca desalinha de `EXECUTIVO_IDEAL` (mesmas
+chaves, mesma ordem — senão o radar desenharia eixo fantasma ou
+esqueceria um de verdade, em silêncio). Suíte 1624/1624, lint limpo,
+`npm run build` sem erro. **Verificação em navegador rodou** — e achou
+exatamente o bug que um componente visual novo costuma esconder: os
+rótulos das pontas direita/esquerda ("Produção", "Real Time", "Vendas")
+saíam cortados, porque o texto estica bem além do raio do pentágono e o
+`<svg>` corta tudo que passa do `viewBox` por padrão. Corrigido com uma
+folga (`PAD_X`/`PAD_Y`) reservada só pro texto, nas quatro direções — a
+segunda foto confirma os 5 rótulos completos, sem corte.
+
+---
+
+## DIR-108 — o PDF compartilhável do Executivo chega no ADM X-Game
+
+**Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107: *"eu tinha
+um compartilhamento de PDF em algum lugar, né, um compartilhamento
+desse, de PDF dos números da pessoa, que eu não estou vendo digital, e
+você tem que ver onde está, e também tem que puxar, duplicar esse
+compartilhamento aqui dentro do painel administrativo da XGame."*
+
+**Onde estava:** `PdfExecutivo.jsx`/`relatorioExecutivo.js` (06/09/2026,
+"quero geração de PDF de cada executivo, pra ser compartilhado") — já
+existia, mas só dentro do X-Performance (`PerformanceEquipe.jsx` /
+`PainelCorporativo.jsx`), nunca no ADM X-Game.
+
+**O que entra:**
+1. O Quadro Geral (`XPerformanceGestao.jsx`) ganhou o botão **PDF** ao
+   lado de "cobrar no WhatsApp", pra qualquer pessoa aberta — reusando o
+   MESMO `PdfExecutivo`/`relatorioDoExecutivo` de sempre, sem duplicar
+   lógica: um `PainelCorporativo` oculto (`embutido`, escondido com
+   `hidden`) computa o relatório da pessoa via `onRelatorio`, exatamente
+   como o X-Performance já fazia.
+2. **Correção de bônus encontrada no caminho**: como o ADM X-Game não
+   calcula os 8 Hábitos, `relatorioDoExecutivo` mostrava "Hábitos 0/8" —
+   dado errado, não "não calculado". `habitos` agora é `null` por padrão
+   (não mais `[]`): `null` omite o bloco/número de Hábitos inteiro;
+   `[]` (quando alguém de fato computou e ninguém fez nada) continua
+   mostrando "0/8" normalmente. Isso também corrigiu o mesmo problema que
+   já existia silenciosamente no PDF "da própria pessoa" dentro do
+   X-Performance (`PainelCorporativo` sem `habitos` passado).
+
+**Prova:** `tests/relatorioExecutivo.test.mjs` — 1 teste novo trava a
+distinção `null` (omite) × `[]` (mostra 0/8); o teste existente de
+"relatório não quebra sem nada" foi ajustado pro novo comportamento
+correto. Suíte 1623/1623, lint limpo, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada — recomendado gerar um
+PDF ao vivo do Quadro Geral pra conferir o layout final.
+
+---
+
+## DIR-107 — o aviso da Fila do Pronto passa a comunicar por dentro (e pede resposta por dentro)
+
+**Emitida por:** dono (09/09/2026), depois de testar o DIR-105 ao vivo:
+*"funcionou... e esse aviso tem que ser no WhatsApp e comunicar por
+dentro. A plataforma tem que se comunicar muito por dentro... tem que
+enviar essa mensagem no WhatsApp, e pedir pra ele enviar por dentro,
+sempre comunicar por dentro da plataforma... quando eu mandar no
+WhatsApp, automaticamente ele comunica por dentro... eu quero sempre o
+retorno deles dentro... e sempre ensinando o que é o pronto. Tem gente
+que confunde muito, acha que o pronto é só quando termina a tarefa. A
+gente tem que ensinar: se você estiver no meio da demanda, avise que
+está fazendo, comunique."*
+
+**O que entra:**
+1. O botão **avisar** da Fila do Pronto agora SEMPRE cria, além do
+   WhatsApp, uma mensagem interna (`xgame_mensagens`, tipo `aviso`) que
+   cai direto na caixa "Mensagem pro CEO" da pessoa avisada — com o
+   MESMO texto do WhatsApp. Comunicar por dentro deixou de ser opcional.
+2. O texto do aviso (WhatsApp + interno) agora sempre termina pedindo
+   *"responde por dentro da plataforma, na Mensagem pro CEO"*, e nos
+   avisos 1º/2º ensina o conceito: *"o pronto não é só marcar como feito
+   no fim — se você ainda está no meio da tarefa, avise que está em
+   andamento."*
+3. **Resposta por dentro** — `MensagemProCeo.jsx` ganhou "responder por
+   dentro" em cada mensagem recebida: abre uma caixa de texto ali mesmo,
+   sem sair da tela, e a resposta volta pro remetente original citando o
+   trecho da mensagem original. Barra de qualidade mais baixa que iniciar
+   contato (3 caracteres, não 20) — responder não pode exigir o mesmo
+   esforço de quem chama o CEO.
+4. `src/lib/mensagensXgame.js` ganhou os tipos `aviso` (⚠️, gerado pelo
+   sistema) e `resposta` (↩️, gerado por quem responde) — só os 4 tipos
+   originais (sugestão/pedido/agradecimento/demanda) continuam
+   escolhíveis ao compor uma mensagem nova (`TIPOS_COMPOSIVEIS`).
+5. Tooltip educativo na linha "pronto até" do dia de cada pessoa
+   (`CrmMetodo.jsx`), pra reforçar o conceito no lugar onde ela realmente
+   marca a tarefa.
+
+**Sobre o resto do pedido** — o dono também pediu, na mesma mensagem,
+um relatório profissional de tarefas, um "mapa do jogador" (radar tipo
+futebol, mostrando onde a pessoa está pecando/tem que potencializar) e
+pra localizar/duplicar dentro do ADM X-Game um compartilhamento de PDF
+que já existe (`PdfExecutivo.jsx`/`relatorioExecutivo.js`, hoje só em
+`PerformanceEquipe.jsx`/`PainelCorporativo.jsx`). Essas três frentes
+seguem em rodadas separadas (DIR-108 e DIR-109), documentadas à parte —
+esta entrada é só a comunicação por dentro.
+
+**Prova:** `tests/mensagensXgame.test.mjs` — 2 testes novos (a barra de
+`resposta` é mais baixa que a de iniciar contato; `aviso`/`resposta`
+não aparecem como opção ao compor). Suíte 1620/1620, lint limpo,
+`npm run build` sem erro. Verificação em navegador não rodou nesta
+rodada (mesmo padrão do DIR-105/106).
+
+---
+
+## DIR-106 — Mensagem pro CEO: comunicação interna do time corporativo do X-GAME
+
+**Emitida por:** dono (09/09/2026), na mesma mensagem do DIR-105: *"a
+mensagem pro CEO, a mensagem pra diretoria, a mensagem pros executivos, a
+gente tem que ter isso aí... eles precisam entender que pra falar com o
+CEO, precisa, não pode ser bobeira, tá? Tem que ser algo assim que eles
+queiram compartilhar, sugestão, pedido, agradecimento... e eles podem
+mandar um pro outros, uns pros outros, demandas... todo mundo que faz
+parte do time corporativo e que está no game, tem direito a fazer isso...
+eu queria saber onde é que a gente vê isso, eu gostaria que você me
+ajudasse. Tanto eu como super admin, tanto eles, aonde eles veem isso."*
+
+**A decisão de onde fica** (a pergunta que o dono fez diretamente): dentro
+da própria tela do X-Performance, que já é o espaço do time corporativo —
+sem inventar uma página nova pra achar.
+- **O time** vê e manda em "Mensagem pro CEO", uma dobra aberta por padrão
+  dentro do X-Performance deles (a mesma tela do Encontro de Segunda e do
+  quadro).
+- **O Super Admin/CEO** vê tudo — inclusive as demandas de colega pra
+  colega, porque quem enxerga o negócio inteiro precisa ver o negócio
+  inteiro — numa caixa "Mensagens" dentro do ADM X-Game, ao lado de
+  Distribuir Tarefa e da Fila do Pronto.
+
+**O que entra:**
+1. **Banco** — tabela nova `xgame_mensagens` (remetente, destino —
+   ceo/diretoria/executivos/uma pessoa —, tipo — sugestão/pedido/
+   agradecimento/demanda —, texto, lida, quando).
+2. **`src/lib/mensagensXgame.js`** — a barra de qualidade que o dono pediu
+   ("não pode ser bobeira"): `mensagemValida` exige destino, tipo e pelo
+   menos 20 caracteres de texto. `papeisDoCargo` traduz o cargo do jogo
+   (ceo/diretor/executivo, o mesmo que já vem de `xgame_participantes.cargo`
+   via `cargoDoNivel`) pro destino coletivo que a pessoa recebe.
+3. **`MensagemProCeo.jsx`** (novo) — a tela do time: escolhe destino (CEO,
+   Diretoria, Executivos ou um colega específico), tipo, escreve, manda;
+   vê as recebidas (com contador de não lidas) e as enviadas.
+4. **`CaixaDeMensagensAdmin.jsx`** (novo) — a caixa do Super Admin: tudo
+   que foi mandado, com filtro por destino e por tipo, contador de não
+   lidas, marca como lida com 1 clique.
+
+**O que ficou de fora desta rodada, de propósito:** notificação
+proativa (push/WhatsApp quando chega mensagem nova) — por ora é preciso
+abrir a caixa pra ver, igual o resto do painel. Se o volume de mensagens
+justificar, entra numa rodada futura.
+
+**Prova:** `tests/mensagensXgame.test.mjs` — 7 testes novos (validação da
+barra de qualidade, ordenação, contagem de não lidas, quem recebe o quê
+por papel, quem mandou o quê). Suíte 1619/1619, lint limpo, `npm run
+build` sem erro. Verificação em navegador não rodou nesta rodada (mesmo
+motivo do DIR-105: JSX novo, sem alterar nenhuma tela existente que já
+tivesse prova em navegador) — recomendado revisar ao vivo com o time.
+
+---
+
+## DIR-105 — Fila do Pronto: régua graduada de avisos (3 chances antes de zerar) + botões avisar/excluir
+
+**Emitida por:** dono (09/09/2026), olhando dois atrasos de "Emannuel Lima"
+na Fila do Pronto: *"tem que me dar a opção de zerar o ponto da pessoa,
+mas antes de zerar o ponto dela, eu dar uma cobrada o primeiro aviso.
+Essa pessoa tem que ter três avisos. Ela pode perder até três pontos. Pra
+treinar ela. A partir do quarto ponto que ela não entregar, ela vai zerar
+a pontuação (...) eu aqui no Admin tenho que ter [um botão], avisar ela
+de mandar um pronto, ela não retornou, e aí eu retorno pra ela e falo:
+olha, você não me deu pronto, estou te avisando a primeira vez. A partir
+do terceiro pronto que eu te pedi você não voltar, ela vai entrar a
+mensagem do CEO pra ela (...) você não me deu nenhum botão aqui no ADM,
+eu já tinha te pedido isso. E também eu tenho que ter o botão de excluir,
+porque eu posso desistir desse pronto."*
+
+**Data:** 09/09/2026.
+
+**O que entra:**
+1. **Banco** — `xgame_participantes.avisos_pronto` (contador, default 0,
+   reset manual pelo admin — o dono foi explícito: *"depois que ela
+   aprendeu, eu não posso mais ficar avisando toda hora"*, ou seja, quem
+   decide quando zerar o contador é o admin, não o sistema sozinho) e
+   `metodo_tarefas.aviso_pronto_em` (marca que ESSE atraso específico já
+   foi avisado, pra não avisar a mesma tarefa duas vezes).
+2. **`src/lib/xgame.js`** — a régua radical do DIR-102 (zerar MvM, Human
+   Token, pontos e X-Pay do dia inteiro) só entra a partir do **4º** aviso
+   (`avisos_pronto >= 3`). Do 1º ao 3º, só desconta até 3 pontos — o resto
+   do dia (MvM, Human Token, X-Pay) fica intacto. Novos campos no retorno:
+   `em_aviso_pronto` (true nos 3 primeiros) e `avisos_pronto` (o contador
+   atual, pra tela mostrar "aviso X de 3").
+3. **A Fila do Pronto** (`XPerformanceGestao.jsx`) ganhou os dois botões
+   que faltavam num item atrasado:
+   - **avisar** — soma 1 no contador da pessoa, marca a tarefa como avisada
+     e abre o WhatsApp com uma mensagem pronta: 1º e 2º aviso é cobrança
+     normal ("estou te avisando..."); do 3º em diante vira a "mensagem do
+     CEO" (tom sério, avisando que o PRÓXIMO atraso zera tudo).
+   - **excluir** — apaga a tarefa (mesmo mecanismo do `desfazer` que já
+     existia pra Distribuir Tarefa) — "desistir desse pronto", sem afetar
+     pontuação.
+   O texto de aviso embaixo de cada item atrasado agora mostra quantos
+   avisos já foram dados e se já é treino ou já zerou o dia.
+4. Banner âmbar novo em `XGame.jsx` e `CrmMetodo.jsx` pro 1º-3º aviso
+   ("AVISO X DE 3" — perdeu pontos, mas MvM/Human Token/X-Pay de pé),
+   distinto do banner vermelho "DIA ZERADO" que continua valendo do 4º
+   aviso em diante.
+
+**Prova:** `tests/xgame.test.mjs` — 2 testes novos travam a régua graduada
+(0/1/2 avisos só descontam pontos, mantendo MvM/Token/X-Pay intactos; 3+
+avisos mantém o zero radical de sempre). Suíte 1612/1612, lint limpo,
+`npm run build` sem erro. Verificação visual dos botões não rodou em
+navegador nesta rodada (JSX segue exatamente o padrão já provado dos
+botões conferir/devolver e do link de WhatsApp já existente em
+`QuadroGeralTopo`) — recomendado revisar ao vivo na próxima janela de
+teste com o time.
+
+---
+
+## DIR-104 — corrige sincronismo: Human Token e MvM do Dia na XGame.jsx usavam o número errado
+
+**Emitida por:** dono (09/09/2026), olhando o painel da Beatriz Sant'anna
+como Super Admin: *"estou olhando aqui o caminho vermelho dela está
+zerado, apesar de já estar aparecendo ali as votações dela lá embaixo. O
+painel tem que ter sincronismo, vamos olhar esse sincronismo aí e ver o
+que está funcionando e que não está. Olha tudo por dentro, vê o que está
+errado, faz uma análise aí pra gente corrigir tudo. Tem que estar tudo
+funcionando."*
+
+**Data:** 09/09/2026.
+
+**O bug:** `src/pages/XGame.jsx` (a tela usada no "MvM dele" do Quadro
+Geral do ADM, em `modoAdmin`) mostrava nos cartões "Human Token" e "MvM do
+Dia" o número AUTOMÁTICO do dia (`resumo.token_dia`/`resumo.mvm_dia`), não
+o número OFICIAL do ciclo (`ciclo.total`/`ciclo.taxas.mvm`, vindo da
+votação real dos colegas) — que o painel "Executivo Ideal", na mesma tela,
+já usava corretamente. Confirmado com consulta direta no Supabase de
+produção: a Beatriz tinha votos registrados hoje em `xgame_votos_mvm`, mas
+o cartão "Human Token" continuava zerado porque lia a conta errada.
+`src/components/licensing/CentralVendas/CrmMetodo.jsx` (o Compromisso) já
+fazia certo — os dois cartões só precisavam ler a mesma variável que lá.
+
+**O que entra:**
+1. "Human Token" agora mostra `ciclo.faixa.medalha` + `ciclo.total` (o
+   valor oficial do ciclo, com a medalha de faixa), não mais o automático
+   do dia.
+2. "MvM do Dia" continua mostrando o automático (`resumo.mvm_dia` — é uma
+   métrica diferente e legítima), mas agora com um texto extra "· votação
+   do ciclo: X" ao lado, e uma dica explicando a diferença entre as duas
+   MvM (a automática desconta por atraso; a da votação é a que vale pro
+   Human Token oficial) — pra ninguém mais achar que são a mesma coisa ou
+   que uma está "errada" quando a outra cai.
+
+**Prova:** suíte 1609/1609, lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-103 — % de reunião do time chega na Verificação do Progresso (o alcance que faltava do DIR-102)
+
+**Emitida por:** dono (09/09/2026): *"eu quero esse alcance, o que
+sugere???"* — sobre a limitação registrada no DIR-102 (o % de reunião só
+tinha entrado no ADM X-Game, não na Verificação do Progresso).
+
+**Data:** 09/09/2026.
+
+**A sugestão aceita:** sem coluna nova no banco e sem consulta a mais.
+`resumoDoDia()` já calcula `contagens` (produção, bônus, vendas), e os dois
+lugares que gravam o placar do dia (`CrmMetodo.jsx`, `XGame.jsx`) já
+espalham esse objeto inteiro dentro de `xgame_diario.detalhes` via
+`...contagens` — só faltava reunião entrar nessa mesma conta.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `contagens.reunioes_total`/`reunioes_feitas` (usa
+   `ehTarefaDeReuniao`, do DIR-102), gravado automaticamente no retrato do
+   dia pelos dois pontos que já faziam o upsert — nenhum dos dois precisou
+   de código novo.
+2. `src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx` — lê
+   `detalhes.reunioes_total`/`reunioes_feitas` de hoje, soma pro time, e
+   ganha um sexto cartão no Pulso: "Reuniões do time hoje".
+
+**Prova:** `tests/xgame.test.mjs` — novo teste trava a contagem
+(`reuniões_total`/`feitas` só conta título de reunião/apresentação/
+encontro/call, o resto não entra). Suíte 1594/1594,
+`tests/navegador/xgameEspaco.spec.mjs` verde, lint e build limpos.
+
+---
+
+## DIR-102 — Atraso na Fila do Pronto zera o dia (mesma régua radical do MvM); painel do time ganha reuniões e atrasadas; histórico vira relatório
+
+**Emitida por:** dono (08/09/2026), continuação do DIR-101: *"se o cara se
+atrasou, eu tenho que ter uma mensagem pro cara, e isso tirar pontos dele.
+Além de ele perder o dinheiro, isso tem que tirar pontos. E ter uma
+historicidade pra eu até mostrar o relatório da pessoa de todos os
+pontos."* Sobre o mecanismo exato e o "percentual de reunião do time",
+perguntado e respondido: *"como você acha que deve ser"* / *"o melhor
+possível, pense grande, dados é o que manda, quanto mais e melhor visível
+melhor."*
+
+**Data:** 08/09/2026.
+
+**Decisões tomadas (delegadas pelo dono):**
+1. Penalidade de atraso = reaproveitar a régua radical do não-votar, não
+   inventar um desconto novo — atrasar o "pronto até" de uma tarefa da
+   gestão zera o dia inteiro (MvM, Human Token, pontos e X-Pay), a punição
+   mais séria que o jogo já tem.
+2. "Percentual de reunião do time" = tarefas do dia cujo título bate com
+   reunião/apresentação/encontro/call (mesma régua de título que o app já
+   usa em outros lugares pra ícone e peso), feitas ÷ total, hoje.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `ehTarefaDeReuniao(titulo)` (nova); `resumoDoDia()`
+   ganha `perdeuPorAtrasoPronto`: alguma tarefa de gestão (`origem: 'xperf'`,
+   com `prazo_em`) vencida e sem o pronto zera o dia — MESMO efeito do não
+   votar, com campo próprio (`perdeu_por_atraso_pronto`) pra não confundir
+   a causa na tela. Só julga em tempo real (`votouEmTodos !== null`) — um
+   dia histórico não se recalcula.
+2. `CrmMetodo.jsx` e `XGame.jsx` — nova mensagem pro atrasado: "DIA ZERADO
+   — uma tarefa da gestão passou do pronto até", mesmo peso visual do
+   alerta de não-votar.
+3. `XPerformanceGestao.jsx` — o resumo do time ganhou reuniões do dia
+   (feitas/total) e atrasadas na Fila do Pronto (destacado em vermelho
+   quando > 0); a própria Fila do Pronto avisa, item a item, quando o
+   atraso já zerou o dia da pessoa.
+4. `QuadroGeralAbas.jsx` (`AbaHistorico`) — virou o relatório que faltava:
+   conta quantos atrasos zeraram o dia inteiro no ciclo, e marca cada item
+   vencido com o mesmo aviso.
+
+**O que ficou de fora, por decisão consciente de escopo:** o percentual de
+reunião não entrou em `XGameVisaoExecutiva.jsx` (Verificação do Progresso)
+porque a fonte de dados de lá é o retrato já gravado em `xgame_diario`, que
+não guarda título de tarefa — só entrou no ADM X-Game, que lê a tabela ao
+vivo. Trazer pra lá também exigiria uma nova coluna no retrato diário ou
+uma consulta ao vivo adicional — fica pra quando o dono quiser esse
+alcance.
+
+**Prova:** `tests/xgame.test.mjs` — 4 testes novos (`resumoDoDia` com
+tarefa xperf vencida zera; dentro do prazo ou já pronta não pune; tarefa da
+rotina sem `prazo_em` não conta; dia histórico não recalcula). Suíte
+1593/1593, `tests/navegador/performance.spec.mjs` 26/26 em navegador real,
+lint e build limpos.
+
+---
+
+## DIR-101 — ADM X-Game reorganizado: ciclo de cada um no topo, Distribuir Tarefa vira painel, resumo do time e faxina nas dobras genéricas
+
+**Emitida por:** dono (08/09/2026), olhando o painel administrativo ao vivo:
+*"quero trazer o ciclo de vendas de participante pra cima. E embaixo do
+ciclo de vendas de participante, eu quero a distribuição de tarefa, mas
+como um modal de abertura, não esse quadradão que vem de cara. Essa
+diretoria [encontro de segunda + o quadro] pode tirar, foi um começo que a
+gente não fez, não está legal. E a mentalidade está muito genérica, muito
+feia — pode tirar isso também, já tem tudo isso, depois a gente faz um
+negócio melhor. (...) Eu quero também a quantidade de tarefas que nós temos
+do grupo — quantas tarefas, quanto o time concluiu, qual o percentual.
+Isso pode aparecer na verificação do progresso mas também tem que ter
+aqui."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/components/licensing/CentralVendas/XPerformanceGestao.jsx` — o
+   "Quadro Geral de cada um" (o ciclo financeiro de cada participante:
+   ganho, a conferir, em jogo, perdido) virou a PRIMEIRA coisa da tela.
+   "Distribuir Tarefa" deixou de vir sempre aberta — agora é um botão
+   ("Distribuir tarefa ▾") que abre o painel dela, embaixo do Quadro Geral,
+   e continua acessível mesmo com o painel de alguém aberto.
+2. Novo resumo no topo de tudo: quantas pessoas no time corporativo, quantas
+   tarefas o time tem hoje, quantas concluiu e o percentual — a mesma conta
+   entra em `XGameVisaoExecutiva.jsx` (Verificação do Progresso), como um
+   quinto cartão do Pulso da equipe.
+3. `src/components/licensing/CentralVendas/XPerformance.jsx` — as duas
+   dobras que ficavam abaixo da gestão saíram: "Diretoria: encontro de
+   segunda e o quadro" (um começo que não vingou) e "Sobre: as três
+   mentalidades e o grupo To The Top" (a explicação genérica das
+   mentalidades). O Encontro de Segunda e o Quadro continuam existindo pra
+   quem NÃO é gestão — só saíram do painel do super admin.
+
+**O que fica pra depois, por falta de definição ainda (dono pediu análise,
+não decidiu os números):** mensagem automática + desconto de pontos por
+atraso na Fila do Pronto, arquivar com histórico/relatório da pessoa, e o
+"percentual de reunião do time" — ver a mensagem de acompanhamento desta
+sessão com a análise e as perguntas em aberto.
+
+**Prova:** `tests/navegador/performance.spec.mjs` — `abrir()` agora abre o
+painel de Distribuir antes de usar os campos dela; a FAXINA foi reescrita
+pra confirmar que as duas dobras sumiram; teste novo confirma que o resumo
+do time é a primeira coisa da gestão. Suíte 25/25 em navegador real,
+1588/1588 na suíte principal, lint e build limpos.
+
+---
+
 ## DIR-100 — Jornada: setas de navegar sem expandir, com prévia no mouse e no dedo
 
 **Emitida por:** dono (08/09/2026), sobre a tela do Momento: *"a gente tem um botão de passar pra frente ou pra trás... quando a gente passa esse mouse em cima do botão, tanto no desktop quanto no celular, essa tarefa entra numa prévia, uma expansão da tarefa... e volta quando a gente tirar o mouse. Como isso funcionaria no celular? Colocasse o dedo em cima, abrisse uma prévia."* E, sobre os botões da jornada expandida: *"eu tenho que clicar pra saber o que cada botão é — quando eu passar o mouse em cima, ele já dá uma expandida, bem rápido."*

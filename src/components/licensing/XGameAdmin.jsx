@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus, Plus, GraduationCap } from 'lucide-react';
+import { UserPlus, Plus, GraduationCap, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, dataISO } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, VIRTUDES, podeSerVotado, votouEmTodosOsColegas, mvmManual, dataISO } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { verVideo } from '@/lib/cofreDeAudio';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
 // feito pelo painel Admin do Licensing). É AQUI que o dono do jogo decide:
@@ -29,6 +30,16 @@ const CATEGORIAS = [
   ['producao', '[PRODUÇÃO]'], ['bonus', '[BÔNUS]'],
   ['mentoria', '[MENTORIA]'], ['visao', '[VISÃO ESTRATÉGICA]'],
 ];
+// 🚫 09/09/2026 — DIR-122, dono, direto: "faz o que precisa ser feito, a
+// pessoal com certeza" — depois disso, preocupado com o próprio jogo:
+// "mas ele não pode ganhar duas vezes... eu só escolhi uma conta." A conta
+// duplicada de Joao Vitor Paim Pereira (e-mail auto-gerado, sem atividade
+// nenhuma) foi unificada com a pessoal dele direto no banco — mas o LOGIN
+// duplicado continua existindo (serve pra outra coisa, o "concurso"), então
+// ainda aparecia como candidato pra "adicionar participante", pronto pra
+// alguém recriar a mesma confusão sem querer. Nunca mais aparece na lista.
+const IDS_DUPLICADOS_FORA_DO_XGAME = new Set(['e90ed56209c71d4bf4dd3bc3']);
+
 // 🐛 09/09/2026 — mesmo bug de fuso do CrmMetodo.jsx: toISOString() usa UTC,
 // e no Brasil (UTC-3) o dia vira 3h antes da meia-noite local (a partir das
 // 21h) — bem no fim da janela de votação. O raio-x "quem votou hoje" olhava
@@ -94,9 +105,10 @@ const DICAS = {
   ciclo: 'O jogo roda em ciclos de 22 dias úteis. A cotação do dia começa em 1,00 e cai 0,01 por dia útil até 0,80 no dia 22 — "ANTECIPAÇÃO É PODER". Sem data aberta aqui, o app usa o 1º dia útil do mês.',
   verba_producao: 'Verba mensal de PRODUÇÃO — usada como fixo quando a pessoa não tem "fixo mensal" definido na gestão do X-Performance. A conta: fixo ÷ 24 dias de operação = valor do dia; dentro do dia o PESO reparte o valor (a soma das tarefas é sempre o dia inteiro); dia com menos tarefas que o mínimo paga proporcional.',
   verba_bonus: 'Verba mensal de BÔNUS/ESTUDO (leitura, cursos). Mesma régua, só entre as tarefas de bônus do dia.',
-  perfil: 'O perfil muda os pesos do Human Token: estratégico/operacional têm 12,22 de aplicabilidade (50% produção, 30% real time, 20% bônus); comercial tem 2,22 + PT VENDA 2,5 (vendas valem muito mais).',
+  perfil: 'O perfil muda os pesos do Human Token (teto 22,22 pros dois): estratégico/operacional — MvM 6,67 (30%, PORTÃO de caráter) + produção 6,67 + real time 3,33 + bônus/estudo 2,22 + PT VENDA 3,33; comercial — MvM 10 + produção 1,36 + real time 3,33 + bônus/estudo 5,03 + PT VENDA 2,5 (vendas valem bem mais). "Recrutamos caráter e treinamos habilidade": MvM da votação abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina — mesmo com pontuação de sobra. Vendas só abre a Platina batendo 100% da meta do ciclo. Sem estudo em dia (semana ou fim de semana), o ciclo trava em 19,99 — só o topo (Platina), Ouro continua alcançável via produção/MvM/vendas.',
   cargo: 'O cargo define a multa de atraso do FAQ: Trainee R$50, Executivo R$200, Diretor R$500.',
   mentoria: 'Está participando do Programa da Mentoria (8 Hábitos, set/2026 a mar/2027)? Independente de estar ATIVO no MvM — dá pra votar sem estar na mentoria, e vice-versa.',
+  recebeVoto: 'Ela aparece na lista de colegas votáveis da MvM? Desligado só tira ela de RECEBER voto — ela continua podendo VOTAR nos outros se quiser, continua ATIVA no jogo e continua recebendo o fixo gamificado normalmente. Pra quem já passou pela mentoria mas não deve receber avaliação dos colegas.',
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',
   categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus. Venda NÃO entra aqui — a venda da loja já remunera pelas comissões da plataforma.',
   conferencia: 'Conferência dupla da planilha: a pessoa marca a tarefa (o checkbox dela) e o gestor confirma o SIM aqui. Sem o SIM, a tarefa fica pendente de conferência.',
@@ -138,7 +150,7 @@ function BotaoVerVisualizacao({ caminho, segundos, actorId }) {
   );
 }
 
-export default function XGameAdmin() {
+export default function XGameAdmin({ onVerComo } = {}) {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   // 🎯 08/09/2026 — dono: "nem todo mundo que está no topo, no grupo
@@ -170,6 +182,41 @@ export default function XGameAdmin() {
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
 
+  // 🗳️ 08/09/2026 — dono: "quero ver se todo mundo votou... eu estou às
+  // cegas." Um raio-x de quem já fechou a MvM de hoje em TODOS os colegas
+  // votáveis, sem precisar abrir card por card ou entrar no painel de
+  // ninguém — a mesma régua de xgame.js (votouEmTodosOsColegas), lida aqui
+  // pra todo mundo de uma vez.
+  const [votosHojeTodos, setVotosHojeTodos] = useState([]);
+  useEffect(() => {
+    supabase.from('xgame_votos_mvm').select('votante_id,votado_id,virtude').eq('data', hojeStr())
+      .then(({ data }) => setVotosHojeTodos(data || []));
+  }, []);
+  // 🗳️ 08/09/2026 — dono: "eu também quero ver como as pessoas votaram."
+  // O raio-x acima só mostra SE a pessoa votou (✅/⏳) — não mostra a NOTA
+  // que ela deu nem a que recebeu. Isto traz a nota de verdade (1 a 10),
+  // a mesma conta de mvmManual usada no Human Token oficial.
+  const [votosCicloRecebidos, setVotosCicloRecebidos] = useState([]);
+  useEffect(() => {
+    if (!cicloInicio) return;
+    supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', cicloInicio)
+      .then(({ data }) => setVotosCicloRecebidos(data || []));
+  }, [cicloInicio]);
+  const mvmCicloDe = useCallback((userId) => {
+    const votos = votosCicloRecebidos.filter((v) => v.votado_id === userId);
+    return votos.length ? mvmManual(votos).media : null;
+  }, [votosCicloRecebidos]);
+  const colegasVotaveisIds = useMemo(() => participantes.filter((p) => p.ativo)
+    .filter((p) => podeSerVotado({ role: usuarios.find((x) => x.id === p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }))
+    .map((p) => p.user_id), [participantes, usuarios]);
+  const statusVotoDe = useCallback((userId) => {
+    const colegas = colegasVotaveisIds.filter((id) => id !== userId);
+    const porColega = {};
+    votosHojeTodos.filter((v) => v.votante_id === userId).forEach((v) => { (porColega[v.votado_id] ||= new Set()).add(v.virtude); });
+    const completos = colegas.filter((id) => (porColega[id]?.size || 0) >= VIRTUDES.length);
+    return { total: colegas.length, feitos: completos.length, completo: votouEmTodosOsColegas(colegas, completos) };
+  }, [colegasVotaveisIds, votosHojeTodos]);
+
   const nomeDe = (id) => {
     const u = usuarios.find((x) => x.id === id);
     return u ? nomeExibicao(u) : (id ? id.slice(0, 6) : '—');
@@ -180,7 +227,7 @@ export default function XGameAdmin() {
   // sem ter que adivinhar a caixinha dela antes
   const candidatos = useMemo(() => {
     const q = semAcento(busca.trim());
-    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
+    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id) && !IDS_DUPLICADOS_FORA_DO_XGAME.has(u.id));
     const porNome = q
       ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q))
       : livres;
@@ -189,7 +236,7 @@ export default function XGameAdmin() {
   }, [usuarios, participantes, busca, filtroCandidato]);
   const contagemPorGrupo = useMemo(() => {
     const q = semAcento(busca.trim());
-    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
+    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id) && !IDS_DUPLICADOS_FORA_DO_XGAME.has(u.id));
     const porNome = q ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q)) : livres;
     const por = { todos: porNome.length, corporativo: 0, licenciados: 0, vendedores: 0, usuarios: 0 };
     porNome.forEach((u) => { por[grupoDoUsuario(u)] += 1; });
@@ -268,6 +315,17 @@ export default function XGameAdmin() {
   const [abaAdmin, setAbaAdmin] = useState('participantes');
   const [comprovacoes, setComprovacoes] = useState([]);
   const [filtroComp, setFiltroComp] = useState('em_analise');
+  // 🔎 09/09/2026 — dono, olhando a fila crescer: "eu preciso separar por
+  // data... data de comprovação, nome das pessoas, pra ficar mais fácil...
+  // ainda precisa ter uma busca, quando eu fizer buscar mais rápido, tanto
+  // a data e tanto o dia." Uma busca só (nome OU data, ex.: "09/09" ou
+  // "luciano") + a fila agrupada por dia, cada dia com seu próprio
+  // cabeçalho — em vez de uma lista corrida que só o texto de cada linha
+  // já dizia a data.
+  const [buscaComp, setBuscaComp] = useState('');
+  // 📅 dono: "um menu suspenso pra escolher qual é a data do mês. Hoje,
+  // ontem..." — filtro A MAIS, soma com a busca acima (nunca substitui).
+  const [dataEscolhidaComp, setDataEscolhidaComp] = useState('todas');
   const [iaLigada, setIaLigada] = useState(null);
   const [iaDetalhe, setIaDetalhe] = useState(''); // modelo, ou o erro real do gateway quando cai
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
@@ -341,7 +399,10 @@ export default function XGameAdmin() {
       const linhas = gerarTarefasDaRotina(rotina, tarefaUser, tarefaDia).map((l) => ({
         ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
       }));
-      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      // 🐛 09/09/2026 — DIR-127: ignora duplicata em vez de criar (ou quebrar
+      // tentando) — a trava real é o UNIQUE(user_id,data,hora,titulo) do banco.
+      const { error } = await supabase.from('metodo_tarefas')
+        .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
       if (error) throw error;
       toast.success(`Dia gerado com ${linhas.length} tarefas da Rotina Perfeita!`);
       carregarTarefas(tarefaUser, tarefaDia);
@@ -369,7 +430,18 @@ export default function XGameAdmin() {
   };
 
   const pendentesAnalise = comprovacoes.filter((t) => statusDaComp(t.comprovacao) === 'em_analise').length;
-  const compFiltradas = comprovacoes.filter((t) => filtroComp === 'todas' || statusDaComp(t.comprovacao) === filtroComp);
+  const compFiltradas = useMemo(() => comprovacoes.filter((t) => {
+    if (filtroComp !== 'todas' && statusDaComp(t.comprovacao) !== filtroComp) return false;
+    return comprovacaoBateNaBusca(t, nomeDe(t.user_id), buscaComp);
+  }), [comprovacoes, filtroComp, buscaComp, usuarios]);
+  // 📅 agrupada por dia — a fila vem do banco já em ORDER BY data DESC
+  // (carregarComprovacoes); `agruparComprovacoesPorData` só junta quem tem
+  // a mesma data, nunca reordena por conta própria (lógica pura, testada
+  // em tests/filaComprovacoes.test.mjs).
+  const compPorData = useMemo(() => agruparComprovacoesPorData(compFiltradas), [compFiltradas]);
+  const compGruposExibidos = useMemo(() => (
+    dataEscolhidaComp === 'todas' ? compPorData : compPorData.filter(([data]) => data === dataEscolhidaComp)
+  ), [compPorData, dataEscolhidaComp]);
 
   return (
     <div className="space-y-4 text-sm">
@@ -399,6 +471,33 @@ export default function XGameAdmin() {
             ))}
           </div>
 
+          {/* 🔎 busca única — nome ("luciano") OU data ("09/09") — pra achar
+              rápido sem precisar rolar a fila inteira dia por dia. Mais o
+              menu suspenso de data (dono: "Hoje, ontem...") — um filtro A
+              MAIS, que soma com a busca, nunca a substitui. */}
+          <div className="flex items-center gap-1.5">
+            <Input
+              placeholder="🔎 buscar por nome ou por data (ex.: “luciano” ou “09/09”)"
+              value={buscaComp}
+              onChange={(e) => setBuscaComp(e.target.value)}
+              className="h-8 text-[11px] bg-white border-gray-300 flex-1 min-w-[220px]"
+            />
+            {buscaComp && (
+              <button type="button" onClick={() => setBuscaComp('')} className="text-[11px] text-gray-400 hover:text-gray-600">limpar</button>
+            )}
+            <select
+              value={dataEscolhidaComp}
+              onChange={(e) => setDataEscolhidaComp(e.target.value)}
+              className="h-8 shrink-0 text-[11px] rounded-md border border-gray-300 bg-white px-1.5"
+              data-teste="comprovacoes-filtro-data"
+            >
+              <option value="todas">todas as datas</option>
+              {compPorData.map(([data]) => (
+                <option key={data} value={data}>{rotuloDataAmigavel(data)}</option>
+              ))}
+            </select>
+          </div>
+
           {/* 🚨 radar: quem acumula reprova/dúvida · 🎖️ quem só aprova de primeira */}
           {Object.keys(radarPorPessoa).length > 0 && (
             <p className="text-[11px] text-gray-600">
@@ -411,72 +510,101 @@ export default function XGameAdmin() {
           )}
 
           {compFiltradas.length === 0 ? (
-            <p className="text-[11px] text-gray-500">Nada aqui nesse filtro — quando alguém comprovar uma tarefa, a imagem chega nesta fila.</p>
+            <p className="text-[11px] text-gray-500">{buscaComp ? 'Nada encontrado nessa busca.' : 'Nada aqui nesse filtro — quando alguém comprovar uma tarefa, a imagem chega nesta fila.'}</p>
+          ) : compGruposExibidos.length === 0 ? (
+            <p className="text-[11px] text-gray-500">Nada nessa data.</p>
           ) : (
-            <div className="space-y-1.5">
-              {compFiltradas.map((t) => {
-                const c = t.comprovacao || {};
-                const s = statusDaComp(c);
-                return (
-                  <div key={t.id} className="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
-                    {c.print_url ? (
-                      <a href={c.print_url} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
-                        <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
-                      </a>
-                    ) : (
-                      <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>{c.tipo === 'ritual' ? '🌅' : '📚'}</span>
-                    )}
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-[11px] font-semibold text-gray-900 truncate">
-                        {nomeDe(t.user_id)} · {String(t.data).slice(8, 10)}/{String(t.data).slice(5, 7)} {t.hora} — {t.titulo}
+            <div className="space-y-3" data-teste="comprovacoes-por-data">
+              {compGruposExibidos.map(([data, itens]) => (
+                <div key={data} className="space-y-2">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide sticky top-0 bg-gray-50 -mx-1 px-1 py-0.5" data-teste="comprovacoes-cabecalho-data">
+                    📅 {rotuloDataComprovacao(data)} <span className="font-normal normal-case text-gray-400">· {itens.length} comprovaç{itens.length > 1 ? 'ões' : 'ão'}</span>
+                  </p>
+                  {/* 👤 dono: "eu quero já separado por datas e por nomes...
+                      nome das pessoas que estão participando" — depois: "a
+                      galera lateral, pra ficar mais organizado... pro gestor
+                      não ficar forçando a mente." Um CARD por pessoa, lado a
+                      lado num grid, em vez de empilhado. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                  {agruparComprovacoesPorPessoa(itens, nomeDe).map(([pessoaId, nome, itensDaPessoa]) => (
+                    <div key={pessoaId} className="space-y-1 rounded-lg border border-gray-200 bg-gray-50/60 p-2" data-teste="comprovacoes-grupo-pessoa">
+                      <p className="text-[10px] font-bold text-gray-700 truncate" data-teste="comprovacoes-cabecalho-pessoa">
+                        👤 {nome} <span className="font-normal text-gray-400">· {itensDaPessoa.length}</span>
                       </p>
-                      <p className="text-[10px] text-gray-500">
-                        {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
-                        {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
-                        {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
-                        {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
-                        {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
-                        {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
-                        {/* 🎥 09/09 — o vídeo saiu do bucket público pro cofre
-                            privado. `video_path` é o novo (link assinado no
-                            clique); `video_url` são os 9 gravados ANTES da
-                            mudança, que continuam abrindo direto até serem
-                            movidos. Os dois convivem de propósito: o gestor não
-                            pode perder acesso ao que já existe. */}
-                        {c.video_path
-                          ? <BotaoVerVisualizacao caminho={c.video_path} segundos={c.video_seg || 0} actorId={t.user_id} />
-                          : c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
-                        {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
-                        {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
-                      </p>
-                      {/* 🗣️ DIR-84 — chegou aqui DEPOIS de a pessoa já ter
-                          tentado se explicar pra IA e ainda assim ficou em
-                          dúvida: o gestor precisa ver essa explicação, não só
-                          a imagem, pra decidir com o mesmo contexto que a IA teve. */}
-                      {c.justificativa_pessoa && (
-                        <p className="text-[10px] text-gray-600 italic bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-0.5">
-                          🗣️ a pessoa explicou: "{c.justificativa_pessoa}"
-                        </p>
-                      )}
-                      {reprovando?.id === t.id && (
-                        <div className="flex items-center gap-1.5 pt-1">
-                          <Input placeholder="motivo (a pessoa vai ler)" value={reprovando.motivo} onChange={(e) => setReprovando({ ...reprovando, motivo: e.target.value })} className="h-7 text-[11px] bg-white border-gray-300" />
-                          <Button size="sm" onClick={() => reprovarComp(t)} className="bg-red-600 hover:bg-red-700 text-white h-7 text-[11px]">Confirmar reprova</Button>
-                          <button type="button" onClick={() => setReprovando(null)} className="text-[11px] text-gray-400 hover:text-gray-600">cancelar</button>
-                        </div>
-                      )}
+                      {itensDaPessoa.map((t) => {
+                        const c = t.comprovacao || {};
+                        const s = statusDaComp(c);
+                        return (
+                          <div key={t.id} className="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
+                            {c.print_url ? (
+                              <a href={c.print_url} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
+                                <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
+                              </a>
+                            ) : (
+                              <span className="w-14 h-14 rounded border border-gray-200 bg-gray-50 flex items-center justify-center text-lg" title={c.entrega}>{c.tipo === 'ritual' ? '🌅' : '📚'}</span>
+                            )}
+                            <div className="flex-1 min-w-0 space-y-0.5">
+                              <p className="text-[11px] font-semibold text-gray-900 truncate">
+                                {t.hora} — {t.titulo}
+                              </p>
+                              <p className="text-[10px] text-gray-500">
+                                {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
+                                {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
+                                {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
+                                {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
+                                {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
+                                {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
+                                {/* 🎥 09/09 — o vídeo saiu do bucket público pro cofre privado.
+                                    `video_path` é o novo (link assinado no clique);
+                                    `video_url` são os gravados ANTES da mudança, que
+                                    continuam abrindo direto até serem movidos. Os dois
+                                    convivem de propósito: o gestor não pode perder
+                                    acesso ao que já existe. */}
+                                {c.video_path
+                                  ? <BotaoVerVisualizacao caminho={c.video_path} segundos={c.video_seg || 0} actorId={t.user_id} />
+                                  : c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
+                                {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio,
+                                    tem que tudo transcrever e mostrar ali." `entrega`
+                                    já é o texto — escrito ou falado (transcrito) —
+                                    CrmMetodo.jsx; só não mostra quando é URL (a
+                                    miniatura já cobre foto/print/link). */}
+                                {c.entrega && !/^https?:\/\//.test(c.entrega) && <span className="ml-2 italic text-gray-700">"{c.entrega}"</span>}
+                                {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
+                                {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
+                              </p>
+                              {/* 🗣️ DIR-84 — chegou aqui DEPOIS de a pessoa já ter
+                                  tentado se explicar pra IA e ainda assim ficou em
+                                  dúvida: o gestor precisa ver essa explicação, não só
+                                  a imagem, pra decidir com o mesmo contexto que a IA teve. */}
+                              {c.justificativa_pessoa && (
+                                <p className="text-[10px] text-gray-600 italic bg-amber-50 border border-amber-100 rounded px-1.5 py-1 mt-0.5">
+                                  🗣️ a pessoa explicou: "{c.justificativa_pessoa}"
+                                </p>
+                              )}
+                              {reprovando?.id === t.id && (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <Input placeholder="motivo (a pessoa vai ler)" value={reprovando.motivo} onChange={(e) => setReprovando({ ...reprovando, motivo: e.target.value })} className="h-7 text-[11px] bg-white border-gray-300" />
+                                  <Button size="sm" onClick={() => reprovarComp(t)} className="bg-red-600 hover:bg-red-700 text-white h-7 text-[11px]">Confirmar reprova</Button>
+                                  <button type="button" onClick={() => setReprovando(null)} className="text-[11px] text-gray-400 hover:text-gray-600">cancelar</button>
+                                </div>
+                              )}
+                            </div>
+                            {s !== 'reprovada' && reprovando?.id !== t.id && (
+                              <span className="flex items-center gap-1.5 shrink-0">
+                                {s === 'em_analise' && (
+                                  <Button size="sm" onClick={() => aprovarComp(t)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-[11px]">Aprovar ✔</Button>
+                                )}
+                                <button type="button" onClick={() => setReprovando({ id: t.id, motivo: '' })} className="text-[11px] font-bold text-gray-400 hover:text-red-600">reprovar</button>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    {s !== 'reprovada' && reprovando?.id !== t.id && (
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        {s === 'em_analise' && (
-                          <Button size="sm" onClick={() => aprovarComp(t)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-[11px]">Aprovar ✔</Button>
-                        )}
-                        <button type="button" onClick={() => setReprovando({ id: t.id, motivo: '' })} className="text-[11px] font-bold text-gray-400 hover:text-red-600">reprovar</button>
-                      </span>
-                    )}
+                  ))}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -573,17 +701,43 @@ export default function XGameAdmin() {
       {participantes.length > 0 && (
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-xs font-semibold text-gray-900">Participantes ({participantes.filter((p) => p.ativo).length} ativos) — quem está ativo vota e recebe voto no MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)}:</p>
-          {/* 🖼️ "quem vota hoje" numa olhada só — os avatares de quem está
-              ATIVO, sem precisar abrir card por card pra descobrir */}
+          {/* 🗳️ 08/09/2026 — dono: "quero ver se todo mundo votou... eu
+              estou às cegas." Raio-x de hoje: cada chip já mostra se a
+              pessoa fechou o voto em TODOS os colegas votáveis (✅) ou
+              ainda falta alguém (⏳ N/M) — sem abrir card nem entrar no
+              painel de ninguém. */}
           {participantes.some((p) => p.ativo) && (
             <div className="flex items-center gap-1.5 flex-wrap rounded-md border border-emerald-100 bg-emerald-50/50 px-2.5 py-2" data-teste="quem-vota">
-              {participantes.filter((p) => p.ativo).map((p) => (
-                <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-2 py-0.5" title={nomeDe(p.user_id)}>
-                  <AvatarPessoa u={usuarios.find((x) => x.id === p.user_id)} tamanho={20} />
-                  <span className="text-[10.5px] font-medium text-gray-700 truncate max-w-[110px]">{nomeDe(p.user_id)}</span>
-                  {p.em_mentoria && <span title="está na mentoria">🎓</span>}
-                </span>
-              ))}
+              {participantes.filter((p) => p.ativo).map((p) => {
+                const sv = statusVotoDe(p.user_id);
+                const mvm = mvmCicloDe(p.user_id);
+                return (
+                  <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-white border border-emerald-200 pl-1 pr-1.5 py-0.5" title={`${nomeDe(p.user_id)} — votou em ${sv.feitos} de ${sv.total} colegas hoje · MvM recebida no ciclo: ${mvm === null ? 'ninguém votou nela ainda' : mvm.toFixed(2)}`}>
+                    <AvatarPessoa u={usuarios.find((x) => x.id === p.user_id)} tamanho={20} />
+                    <span className="text-[10.5px] font-medium text-gray-700 truncate max-w-[110px]">{nomeDe(p.user_id)}</span>
+                    {p.em_mentoria && <span title="está na mentoria">🎓</span>}
+                    {sv.total > 0 && (
+                      <span className={`text-[9.5px] font-bold tabular-nums ${sv.completo ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {sv.completo ? '✅' : `⏳ ${sv.feitos}/${sv.total}`}
+                      </span>
+                    )}
+                    {/* 🗳️ a NOTA recebida de verdade (não só se votou) */}
+                    <span className={`text-[9.5px] font-bold tabular-nums ${mvm === null ? 'text-gray-400' : mvm < 4 ? 'text-red-600' : 'text-gray-600'}`}>
+                      MvM {mvm === null ? '—' : mvm.toFixed(1)}
+                    </span>
+                    {onVerComo && (
+                      <button
+                        type="button"
+                        onClick={() => onVerComo(p.user_id)}
+                        title={`Ver como ${nomeDe(p.user_id)} vê o MvM dela`}
+                        className="text-gray-400 hover:text-nz-verde"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
             </div>
           )}
           {/* 🎓 08/09/2026 — dono: Super Admin não é votável a não ser que
@@ -595,6 +749,14 @@ export default function XGameAdmin() {
             const cardAberto = participanteAberto === p.id;
             const usu = usuarios.find((x) => x.id === p.user_id);
             const ehSuperAdminNaoVotavel = usu?.role === 'super_admin' && p.aceita_ser_votado !== true;
+            // 🗳️ 09/09/2026 — dono: "tem pessoas que já participaram da
+            // mentoria e não vão receber voto... eles podem votar, mas não
+            // recebem voto." Diferente do Super Admin (opt-IN, ele mesmo se
+            // liga): aqui o ADMIN desliga por pessoa, e o padrão continua
+            // sendo votável — só quem for desligado explicitamente some da
+            // lista de quem RECEBE voto (podeSerVotado, xgame.js).
+            const ehParticipanteComum = usu?.role !== 'super_admin';
+            const recebeVoto = podeSerVotado({ role: usu?.role, aceita_ser_votado: p.aceita_ser_votado });
             return (
             <div key={p.id} className={`rounded-lg border px-3 py-2 bg-white space-y-1.5 ${p.ativo ? 'border-gray-200' : 'border-gray-200 opacity-60'}`}>
               {/* cabeçalho: sempre visível — clica e abre; abrir um fecha o outro */}
@@ -609,6 +771,7 @@ export default function XGameAdmin() {
                     {cardAberto ? '▾' : '▸'} {nomeDe(p.user_id)}
                     <span className="ml-2 text-[10px] font-normal text-gray-400">{p.cargo} · {p.perfil}</span>
                     {ehSuperAdminNaoVotavel && <span className="ml-2 text-[10px] font-semibold text-purple-600">🛡️ não votável (Super Admin)</span>}
+                    {ehParticipanteComum && !recebeVoto && <span className="ml-2 text-[10px] font-semibold text-blue-600" title={DICAS.recebeVoto}>🗳️ não recebe voto</span>}
                   </span>
                 </button>
                 <span className="flex items-center gap-3">
@@ -626,6 +789,14 @@ export default function XGameAdmin() {
                     title={DICAS.mentoria}
                     className={`inline-flex items-center gap-1 text-[11px] font-bold ${p.em_mentoria ? 'text-purple-600' : 'text-gray-300 hover:text-purple-500'}`}
                   ><GraduationCap className="w-3.5 h-3.5" /> {p.em_mentoria ? 'na mentoria' : 'sem mentoria'}</button>
+                  {ehParticipanteComum && (
+                    <button
+                      type="button"
+                      onClick={() => salvarParticipante(p, { aceita_ser_votado: recebeVoto ? false : true })}
+                      title={DICAS.recebeVoto}
+                      className={`text-[11px] font-bold ${recebeVoto ? 'text-blue-600' : 'text-gray-300 hover:text-blue-500'}`}
+                    >🗳️ {recebeVoto ? 'recebe voto' : 'sem voto'}</button>
+                  )}
                   <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {p.ativo ? '● ATIVO' : '○ inativo'}
                   </button>
@@ -696,10 +867,11 @@ export default function XGameAdmin() {
                               title={DICAS.validacao}
                               className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900"
                             >
-                              <option value="">✅ auto ({{ instagram: '📸 insta', aprendizado: '📚 aprendizado', foto: '📷 foto' }[validacaoAutomatica(t.titulo)] || '📷 foto'})</option>
+                              <option value="">✅ auto ({{ instagram: '📸 insta', aprendizado: '📚 aprendizado', aprendizado_fds: '📚🔥 estudo fds', foto: '📷 foto' }[validacaoAutomatica(t.titulo)] || '📷 foto'})</option>
                               <option value="nenhuma">sem prova</option>
                               <option value="instagram">📸 Instagram</option>
                               <option value="aprendizado">📚 aprendizado</option>
+                              <option value="aprendizado_fds">📚🔥 estudo de fim de semana (resumo bem maior)</option>
                               <option value="foto">📷 foto/print</option>
                             </select>
                             <select value={t.categoria || 'producao'} onChange={(e) => salvarTarefa(t, { categoria: e.target.value })} title={DICAS.categoria} className="text-[10px] border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-900">

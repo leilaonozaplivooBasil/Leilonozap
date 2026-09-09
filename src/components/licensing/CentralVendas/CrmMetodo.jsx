@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2 } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -14,24 +14,38 @@ import {
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
   ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
-  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras, horaFinal,
+  reunioesEmpresaDoDia, DIAS_SEMANA,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
+// 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
+// o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
+// nova janela de autorização no meio do agendamento (ver src/lib/googleAgenda.js).
+import {
+  tokenDoGoogle, erroDoGoogle, statusDoErro, invalidarTokenSePreciso,
+  contaLembrada, esquecerConta,
+} from '@/lib/googleAgenda';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais,
+  resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
-  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, TRAVA_SEM_ESTUDO, faixaToken, META_VENDAS_CICLO,
+  tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
+  estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, ligaComPortoesDoCiclo, PISO_CARATER_PLATINA,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
+  moedaModelo,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
-  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
+  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, deveAvisarRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
+import TourGuiado from './TourGuiado';
+import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
+import { isVendaReal } from '@/lib/dinheiroReal';
+import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -48,7 +62,8 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
-import { caminhoDoAudio, guardarAudio, ouvirAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
+import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -57,6 +72,7 @@ import FaixaVisao from './FaixaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
+import SinoNotificacoes from '@/components/common/SinoNotificacoes';
 
 // DIR-46 — cor da faixa de probabilidade na lista
 const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
@@ -80,49 +96,71 @@ const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 const hojeStr = () => dataISO();
 const fmtDia = (s) => new Date(`${s}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
 
+// 🐛 09/09/2026 — DIR-127, dono, direto: "isso é muito sério... coloca uma
+// trava pra tu não errar isso." Achado: o cron (gerarJornadaDoDia) e a
+// auto-repetição do cliente (useEffect abaixo) podiam rodar pro MESMO dia
+// antes de qualquer um marcar `rotina_gerada_em` — gerava a rotina INTEIRA
+// em dobro (97 linhas duplicadas achadas no banco; 10 delas já com
+// comprovação dupla — X-Pay contando a mesma tarefa duas vezes). A trava de
+// verdade agora mora no BANCO (UNIQUE em user_id+data+hora+titulo,
+// metodo_tarefas_unique_user_data_hora_titulo); aqui só troca o
+// insert-um-a-um por um upsert em lote que IGNORA a duplicata em vez de
+// tentar criar (ou quebrar tentando) — nunca mais 40 tarefas no lugar de 20.
+const criarTarefasSemDuplicar = (linhas) => supabase.from('metodo_tarefas')
+  .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
+
 const EXEMPLO_SCRIPT = `Ex.: "Oi {nome}! Lembrei de você por causa do {contexto da pessoa — FORM}.
 Estou construindo um negócio de leilões e loja com preço de fábrica que está crescendo forte,
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
+// 📜 DIR-112 (09/09/2026) — "o papel vem pra frente": o {nome} do script vira
+// o primeiro nome de verdade da pessoa sendo contatada, na hora de ligar.
+const personalizarScript = (texto, nomeCompleto) => {
+  const primeiroNome = (nomeCompleto || '').trim().split(' ')[0] || 'essa pessoa';
+  return String(texto || '').replace(/\{\s*nome\s*\}/gi, primeiroNome);
+};
+
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-// 🎙️ DIR-101.1 — OUVIR A PRÓPRIA GRATIDÃO DEPOIS.
-// O cofre é privado: não existe URL fixa, só link assinado de 10 minutos. Por
-// isso o link é pedido no CLIQUE e não fica pendurado na tela — link assinado
-// guardado em componente vence sozinho e vira "não abre" sem explicação.
-function BotaoOuvirGratidao({ caminho, uid }) {
-  const [url, setUrl] = React.useState(null);
-  const [buscando, setBuscando] = React.useState(false);
-  const [erro, setErro] = React.useState(false);
-
-  const abrir = async () => {
-    if (url || buscando) return;
-    setBuscando(true); setErro(false);
-    const link = await ouvirAudio({ caminho, actorId: uid });
-    if (link) setUrl(link); else setErro(true);
-    setBuscando(false);
-  };
-
-  if (url) return <audio src={url} controls autoPlay className="h-8 w-44 shrink-0" data-teste="ouvir-gratidao" />;
-  return (
-    <button
-      type="button"
-      onClick={abrir}
-      disabled={buscando}
-      data-teste="botao-ouvir-gratidao"
-      className="shrink-0 text-[10px] font-bold text-nz-verde hover:underline disabled:opacity-50"
-      title="ouvir a gratidão que você gravou"
-    >
-      {buscando ? '🎙️ abrindo…' : erro ? '🎙️ não abriu — tente de novo' : '🎙️ ouvir'}
-    </button>
-  );
-}
-
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
   const uid = currentUser?.id;
+  // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
+  // recomeçando... já me coloca ela no meu contato e pisca." O destaque
+  // dura pouco — pisca, chama atenção, some sozinho — não fica preso lá.
+  //
+  // 🐛 09/09/2026 — achado na auditoria: `onContatoDestacadoConsumido` é
+  // recriada a cada render do pai (CrmClientesTab.jsx, um componente
+  // grande com efeitos assíncronos e um setInterval de 30s rodando o
+  // tempo todo) — como ela entrava nas dependências do efeito, qualquer
+  // render do pai reiniciava o timer de 4s do zero, e o destaque podia
+  // ficar preso por muito mais tempo que o prometido (ou pra sempre, se
+  // os renders forem mais frequentes que 4s). Uma ref guarda sempre a
+  // versão mais nova do callback sem entrar na dependência — só
+  // `contatoDestacado` (o gatilho de verdade) reinicia o timer agora.
+  const onContatoDestacadoConsumidoRef = useRef(onContatoDestacadoConsumido);
+  useEffect(() => { onContatoDestacadoConsumidoRef.current = onContatoDestacadoConsumido; }, [onContatoDestacadoConsumido]);
+  useEffect(() => {
+    if (!contatoDestacado) return undefined;
+    const t = setTimeout(() => onContatoDestacadoConsumidoRef.current?.(), 4000);
+    return () => clearTimeout(t);
+  }, [contatoDestacado]);
   const podeGerir = gestao ?? visaoTotal;
+  // 👤 09/09/2026 — DIR-111, "quem qualificou" — achado na auditoria: este
+  // helper estava copiado (corpo idêntico) dentro dos painéis 'lista' e
+  // 'contato'; uma versão só, aqui em cima, pra não dessincronizar de novo.
+  const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
+  // 🖐️ 09/09/2026 — dono, ao vivo: "Como Funciona é um tour... a pessoa vai
+  // clicando e a plataforma vai ensinando." A mesma mãozinha da Esteira de
+  // Captação (TourGuiado.jsx), pedida de fora (o botão global "Como
+  // Funciona") via `iniciarTour` — abre o tour de QUALQUER Hábito que já
+  // esteja na tela (PASSOS_POR_PAINEL, definido embaixo), nunca um Hábito
+  // diferente do que a pessoa está vendo.
+  const [tourAberto, setTourAberto] = useState(false);
+  useEffect(() => {
+    if (iniciarTour && PASSOS_POR_PAINEL[painel]) { setTourAberto(true); onTourIniciado?.(); }
+  }, [iniciarTour, painel, onTourIniciado]);
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
   const [tarefas, setTarefas] = useState([]);
@@ -142,15 +180,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato, editar:registro} = editar (DIR-50); {contato:null} = agendar livre
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
-  const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
-  // 🏛️ 07/09/2026 — dono: a reunião da empresa já aparece hoje na "Minha
-  // agenda de hoje" (🏛️ destacada); ter a MESMA reunião de novo, sempre
-  // aberta, logo abaixo, lia como duplicado. Fica fechado por padrão —
-  // "cadastra uma vez" não precisa ficar exposto o tempo todo.
-  const [gestaoEmpresaAberta, setGestaoEmpresaAberta] = useState(false);
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
-  const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
+  // qual conta do Google está ligada aqui — mostrada na tela de propósito:
+  // ver o e-mail antes de agendar é o que evita a reunião cair na conta errada.
+  const [googleConta, setGoogleConta] = useState(() => contaLembrada());
+
+  // 🔥 DIR-103 — AQUECIMENTO SILENCIOSO. Quem já autorizou neste aparelho
+  // ganha o token ANTES de precisar dele. É este pedaço que acaba com a
+  // janela do Google aparecendo no meio do agendamento — que era onde a
+  // pessoa clicava na conta errada.
+  useEffect(() => { if (contaLembrada()) tokenDoGoogle({ interativo: false }).catch(() => {}); }, []);
+
+  // 📜 DIR-112 (09/09/2026) — dono, ao vivo: "imagina ele com fone, começando
+  // a fazer a ligação... ele clica, esse papel vem pra frente." O script vira
+  // um cartão que aparece na FRENTE de tudo quando a pessoa vai contatar —
+  // ela lê enquanto liga, em vez de decorar antes.
+  const [chamadaAberta, setChamadaAberta] = useState(null); // {contato, wa} ou null
+  const [dicaScript, setDicaScript] = useState(null); // {pontos_fortes, dica} do treinador de IA
+  const [pedindoDica, setPedindoDica] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -197,6 +245,43 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     } finally { setSalvando(false); }
   };
 
+  // 📜 DIR-112 (09/09/2026) — só salva o TEXTO. O ponto de gamificação não
+  // é mais daqui — ver `pedirDicaDoScript` logo abaixo.
+  const salvarScript = () => salvarPerfil({ script });
+
+  // 💡 o "validador" pedido pelo dono: ajuda a MELHORAR o script da própria
+  // pessoa — nunca escreve por ela (ver api/functions/scriptContatoCoach.js).
+  //
+  // 🎯 DIR-112.1 (09/09/2026) — dono, ao vivo, depois de ver o ponto virar
+  // automático por tamanho: "você só vai dar um ponto quando você conferir,
+  // como se fosse uma validação... se o script estiver bom, aí você vai
+  // fixar e dar esse ponto." O ponto SAIU do "escreveu 20 caracteres" e
+  // passou a depender do `aprovado` que a própria IA decide neste pedido —
+  // uma vez só (script_pontuado_em trava), sem mexer no motor de
+  // peso/pagamento do X-GAME (dinheiro real do X-Pay pede rodada própria).
+  const pedirDicaDoScript = async () => {
+    if (script.trim().length < 15) return;
+    setPedindoDica(true); setDicaScript(null);
+    try {
+      const r = await fetch('/api/functions/scriptContatoCoach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!j?.dica) { toast.error(j?.error || 'Não consegui conferir o script agora — tenta de novo?'); return; }
+      setDicaScript({ pontos_fortes: j.pontos_fortes || '', dica: j.dica, aprovado: !!j.aprovado });
+      if (j.aprovado && !perfil?.script_pontuado_em) {
+        const ok = await salvarPerfil({ script, script_pontuado_em: new Date().toISOString() });
+        if (ok) toast.success('🎉 Script aprovado! Isso já conta ponto pra você na hora do contato.');
+      }
+    } catch {
+      toast.error('Deu erro ao conferir o script — tenta de novo em instantes?');
+    } finally {
+      setPedindoDica(false);
+    }
+  };
+
   // 🌟 DIR-44 — o quadro dos sonhos por horizonte
   const adicionarSonhos = async (itens) => {
     const ok = await salvarPerfil({ sonhos: [...sonhos, ...itens] });
@@ -218,10 +303,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // ══ 🎮 X-GAME por cima do Master Task (mesma tela, zero mudança de fluxo) ══
   // MvM do Dia começa em 10 e DECAI quando a tarefa passa da hora sem marcar;
-  // Human Token = MvM + constância do ciclo (teto 22,22; trava 17,77 sem a
-  // leitura em dia); cotação cai do dia 1 ao 22 ("antecipação é poder").
+  // Human Token = MvM + constância do ciclo (teto 22,22; trava 19,99 pro
+  // Platina, nunca pro Ouro, sem estudo — DIR-113); cotação cai do dia 1
+  // ao 22 ("antecipação é poder").
   const ehHoje = dia === hojeStr();
-  const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
+  const [agoraMin, setAgoraMin] = useState(() => minutosBrasilia());
   // 🕐 RELÓGIO DE TESTE (só super admin): o jogo inteiro obedece o horário
   // simulado — estados AGORA/ATRASADO/PERDIDO, janela do ritual e da votação.
   const [horaTeste, setHoraTeste] = useState('');
@@ -245,17 +331,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [diasCiclo, setDiasCiclo] = useState([]);
   const [participante, setParticipante] = useState(null); // verbas/cargo (F1); sem cadastro = padrão da planilha
   const [cicloConfig, setCicloConfig] = useState(null); // xgame_config.ciclo_inicio (o INÍCIO X-GAME oficial)
+  const [perdaoAte, setPerdaoAte] = useState(null); // xgame_config.perdao_zeragem_ate — perdão manual de um dia inteiro
   useEffect(() => {
     if (painel !== 'compromisso') return;
-    const t = setInterval(() => { const d = new Date(); setAgoraMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
+    const t = setInterval(() => setAgoraMin(minutosBrasilia()), 60000);
     return () => clearInterval(t);
   }, [painel]);
   useEffect(() => {
-    if (painel !== 'compromisso' || !uid) { setParticipante(null); setCicloConfig(null); return; }
+    if (painel !== 'compromisso' || !uid) { setParticipante(null); setCicloConfig(null); setPerdaoAte(null); return; }
     supabase.from('xgame_participantes').select('*').eq('user_id', uid).maybeSingle()
       .then(({ data }) => setParticipante(data || null));
-    supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle()
-      .then(({ data }) => setCicloConfig(data?.ciclo_inicio || null));
+    supabase.from('xgame_config').select('ciclo_inicio,perdao_zeragem_ate').eq('id', 'atual').maybeSingle()
+      .then(({ data }) => { setCicloConfig(data?.ciclo_inicio || null); setPerdaoAte(data?.perdao_zeragem_ate || null); });
   }, [painel, uid]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setDiasCiclo([]); return; }
@@ -279,16 +366,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // só a comissão da plataforma — aqui é ponto, não dinheiro). O dono da venda
   // pode estar em 4 colunas (legado — mesmo OR do CrmClientesTab).
   const [vendasCiclo, setVendasCiclo] = useState(null);
+  // 🟢 09/09/2026 — DIR-110/110.1, dono: "o parceiro de compra... ele pode
+  // fechar pela plataforma ou pode fazer depósito por fora." Venda de alto
+  // valor na plataforma soma via catalog_sales; a "por fora" soma pela
+  // esteira de captação (captacao_oportunidades.aporte_externo, DIR-40).
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setVendasCiclo(null); return; }
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('catalog_sales').select('id,status,kind,created_date')
-      .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
-      .gte('created_date', `${ini}T00:00:00`)
-      .then(({ data, error }) => {
-        if (error) { setVendasCiclo(null); return; }
-        setVendasCiclo((data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)).length);
-      });
+    Promise.all([
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
+        .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
+        .gte('created_date', `${ini}T00:00:00`),
+      supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
+        .eq('responsavel_id', uid)
+        .gte('fechado_em', `${ini}T00:00:00`),
+    ]).then(([{ data: sales, error: e1 }, { data: oportunidades, error: e2 }]) => {
+      if (e1 || e2) { setVendasCiclo(null); return; }
+      const pagas = (sales || []).filter(isSalePago);
+      const reais = (sales || []).filter(isVendaReal);
+      const aporteExterno = (oportunidades || [])
+        .filter((o) => ehFechada(o) && aporteExternoValido(o))
+        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
+      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+    });
   }, [painel, uid, cicloConfig]);
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
   // (declarado ANTES do useMemo do xgame de propósito — a nota do dia agora
@@ -327,8 +427,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // só julga o dia de HOJE que está sendo jogado agora — um dia passado
       // (histórico) já está fechado nos próprios registros, não se recalcula
       votouEmTodos: ehHoje ? votouEmTodosHoje : null,
+      // 🕊️ 09/09/2026 — perdão de um dia excepcional inteiro, só vale se o
+      // dia sendo jogado agora É o perdoado — histórico não se reescreve.
+      perdoado: ehHoje && !!perdaoAte && hojeStr() <= perdaoAte,
     });
-  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje]);
+  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje, perdaoAte]);
   // 🩹 08/09/2026 — `xgame` já é recalculado pro `dia` que está sendo visto
   // (não só hoje: veja o useMemo acima), então o estado de uma tarefa de um
   // dia passado também sai certo daqui — precisa pra recuperação de fim de
@@ -336,7 +439,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const estadoDaTarefa = (t) => (xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
-  // com a trava 17,77 quando a leitura do ciclo está em atraso.
+  // com a trava 19,99 (só pra Platina — DIR-113) quando a leitura do ciclo
+  // está em atraso.
   const ciclo = useMemo(() => {
     if (!xgame) return null;
     const r = tokenDoCiclo({
@@ -346,8 +450,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    const total = xgame.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
-    return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
+    // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
+    // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca o
+    // OURO — mesma função usada no X-Game, no ranking e no Painel Corporativo.
+    const fdsOk = estudoFdsEmDia(diasCiclo, { data: hojeStr(), feito: xgame.estudo_fds_feito });
+    const total = travarTopoPorEstudo(r.total, { estudoSemanaOk: xgame.estudo_em_dia, estudoFdsOk: fdsOk });
+    // 🎖️ DIR-115 — portões de caráter (MvM) e meta de vendas: só decidem
+    // QUAL liga o total pode valer, nunca o número exibido.
+    const liga = ligaComPortoesDoCiclo(total, { mvmVotacao: recebido.media, vendasFeitas: r.vendasFeitas });
+    return { ...r, total, liga, estudoEmDiaCompleto: xgame.estudo_em_dia && fdsOk, formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [xgame, diasCiclo, recebido.media, participante, vendasCiclo]);
   const hojeFechou = !!(ehHoje && xgame && xgame.tarefas_total > 0
     && xgame.tarefas_feitas / xgame.tarefas_total >= OFENSIVA_META);
@@ -462,18 +573,51 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   useEffect(() => {
     if (!rankingAberto || painel !== 'compromisso') return;
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
-    supabase.from('xgame_diario').select('user_id,mvm_dia,token_dia,pontos,detalhes').eq('ciclo_inicio', ini)
-      .then(async ({ data }) => {
+    // 🗳️ 08/09/2026 — dono: "o MVM é só votação... tem gente que nem foi
+    // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
+    // (real time disfarçado de MVM) — agora vem só da votação de verdade.
+    // 🏆 09/09/2026 — achado maior: o TOKEN deste ranking vinha da média de
+    // token_dia (mvm_dia automático + aplicabilidade) — um cálculo PARALELO
+    // que nunca levou voto em conta. Agora usa a MESMA fórmula com peso de
+    // voto (tokenDoCiclo) do painel pessoal — por isso precisa do perfil.
+    Promise.all([
+      supabase.from('xgame_diario').select('user_id,data,pontos,detalhes').eq('ciclo_inicio', ini),
+      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+      supabase.from('xgame_participantes').select('user_id,perfil'),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
+        const votosPor = {};
+        (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
+        const perfilPor = {};
+        (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
         const por = {};
         (data || []).forEach((d) => {
-          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, token: 0, mvm: 0, pontos: 0, xpay: 0 });
+          const r = por[d.user_id] || (por[d.user_id] = { user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, diasDatados: [] });
           r.dias += 1;
-          r.token += Number(d.token_dia) || 0;
-          r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
+          r.diasDatados.push({ data: d.data, detalhes: d.detalhes || {} });
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
         });
-        const linhas = Object.values(por).map((r) => ({ ...r, token: r.token / r.dias, mvm: r.mvm / r.dias }));
+        Object.keys(votosPor).forEach((uid) => {
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, diasDatados: [] };
+        });
+        const linhas = Object.values(por).map((r) => {
+          const votosRecebidos = votosPor[r.user_id];
+          const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
+          const { total: tokenBruto, vendasFeitas } = tokenDoCiclo({
+            diasCiclo: r.diasDatados,
+            mvmVotacao: mvmDoVoto,
+            perfil: perfilPor[r.user_id],
+          });
+          // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
+          // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca
+          // o Ouro. Antes só checava o fim de semana; agora checa os dois,
+          // igual ao painel individual.
+          const token = travarTopoPorEstudo(tokenBruto, {
+            estudoSemanaOk: estudoEmDia(r.diasDatados),
+            estudoFdsOk: estudoFdsEmDia(r.diasDatados),
+          });
+          return { ...r, token, mvm: mvmDoVoto, vendasFeitas };
+        });
         const ids = linhas.map((l) => l.user_id);
         if (ids.length) {
           const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
@@ -505,6 +649,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // mundo desde sempre. Agora entram no retrato do dia.
       detalhes: {
         leitura_feita: xgame.leitura_feita, estudo_em_dia: xgame.estudo_em_dia, dia_util: xgame.dia_util,
+        estudo_fds_feito: xgame.estudo_fds_feito,
         xpay_ganho: xgame.xpay?.ganho || 0, xpay_perdido: xgame.xpay?.perdido || 0,
         ...xgame.contagens,
       },
@@ -514,9 +659,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   }, [uid, ehHoje, xgame?.pontos, xgame?.tarefas_feitas, xgame?.token_dia]);
 
   const mudarDia = (delta) => {
-    const d = new Date(`${dia}T12:00:00`);
-    d.setDate(d.getDate() + delta);
-    setDia(d.toISOString().slice(0, 10));
+    setDia(somarDiasISO(dia, delta));
   };
 
   // 🔒 DIR-80 — os dias que ESTA sessão já gerou (na mão ou sozinha).
@@ -532,7 +675,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     try {
       diasGerados.current.add(dia); // o automático não repete o que a mão acabou de fazer
       const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
-      for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      await criarTarefasSemDuplicar(linhas);
       // 🔁 DIR-80 — gerar uma vez LIGA a repetição. "Só se a pessoa pedir pra
       // parar" — então o liga é aqui, e o desliga é um botão dela.
       // 🌅 DIR-81.1 — `rotina_gerada_em` sempre grava, ligada ou não: é contra
@@ -564,7 +707,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     (async () => {
       try {
         const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
-        for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+        await criarTarefasSemDuplicar(linhas);
         // DIR-81.1 — grava direto (sem salvarPerfil) pra não estourar o toast
         // "Salvo!" por cima do aviso de baixo, que é o que importa aqui.
         if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
@@ -582,7 +725,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     try {
       for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
       const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
-      for (const linha of linhas) await plataforma.entities.MetodoTarefa.create(linha);
+      await criarTarefasSemDuplicar(linhas);
       if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
       toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
       setConfirmaRegerar(false);
@@ -658,7 +801,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
-  const concluirRitual = async (t, { gratidao, acao, videoBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
+  // 📣 DIR-134 — o aviso "como funciona o ritual", dos 10min antes da
+  // abertura até o fim da janela, pra quem ainda não fez hoje. Fechar vale
+  // só pra essa sessão de tela — reaparece se recarregar ou amanhã, de
+  // propósito: "não pode ter certeza que ela viu" (mesmo princípio do sino).
+  const [avisoRitualFechado, setAvisoRitualFechado] = useState(false);
+  const tarefaRitualHoje = useMemo(() => tarefas.find((x) => ehTarefaDeGratidao(x.titulo)), [tarefas]);
+  const mostrarAvisoRitual = ehHoje && !avisoRitualFechado
+    && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito });
+  const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
@@ -667,7 +818,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return;
     }
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
-    const naJanela = agoraM >= RITUAL_INICIO_MIN && agoraM <= RITUAL_FIM_MIN;
+    // 🕐 09/09/2026 — dono, ao vivo: "não tem como ela fazer depois de cinco
+    // e quinze... ela perde o ritual." A entrada já é bloqueada em
+    // alternarFeito, mas isso cobre quem abriu ANTES do prazo e só terminou
+    // depois — com 2min de visualização + gratidão, dá pra passar do corte
+    // quem começa em cima da hora.
+    if (agoraM > RITUAL_FIM_MIN) {
+      const comprovacaoPerdida = {
+        tipo: 'ritual', gratidao, acao, entrega: gratidao,
+        quando: new Date().toISOString(), valido: false, status: 'reprovada',
+        veredito_ia: { veredito: 'reprovada', confianca: 100, o_que_viu: '', motivo: `Ritual perdido — passou do prazo de ${horaDeMin(RITUAL_FIM_MIN)}.` },
+      };
+      try {
+        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPerdida });
+        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoPerdida } : x)));
+      } catch { /* o toast abaixo já avisa, mesmo se o registro falhar */ }
+      toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+      return;
+    }
+    const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
     // 🎥 o vídeo da visualização é a comprovação — vai pro cofre PRIVADO.
     //
     // 🔴 09/09 — antes ia pro `public-assets` via Core.UploadFile, que é
@@ -682,6 +851,58 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         actorId: uid,
       }) || '';
     }
+    // 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
+    // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
+    // MESMO validador que já julga print/foto (xgameValidarPrint) olha um
+    // frame do vídeo, com uma regra nova pro tipo 'ritual': ambiente de casa.
+    let vereditoAmbiente = null;
+    if (frameBlob) {
+      try {
+        const upFrame = await plataforma.integrations.Core.UploadFile({
+          file: new File([frameBlob], `ritual_frame_${hojeStr()}.jpg`, { type: 'image/jpeg' }),
+          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'jpg' }),
+        });
+        const frameUrl = upFrame?.file_url || upFrame?.url || '';
+        if (frameUrl) {
+          const r = await plataforma.functions.xgameValidarPrint({ image_url: frameUrl, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
+          if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) vereditoAmbiente = r;
+        }
+      } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }
+    }
+    // ambiente claramente errado (carro/academia/escritório) OU incerto
+    // (não dá pra cravar que é em casa): reprova direto, sem selo, sem feito.
+    //
+    // 🌊 09/09/2026 — DIR-125, dono, vendo comprovações presas em "em
+    // análise" esperando ele: "ela tem que pegar tudo... vai reprovar
+    // automático, entendeu? Só em casos impossíveis, mas não precisa."
+    // Antes, "duvida" caía pro gestor decidir — a ÚNICA rota do X-GAME
+    // inteiro que ainda tinha isso (toda comprovação normal já resolve
+    // sozinha desde a DIR-89). Agora dúvida de ambiente é reprovação
+    // automática igual ao ambiente claramente errado: intervenção humana
+    // ZERO, a pessoa tenta de novo (o motivo da IA já é pedagógico —
+    // SISTEMA, xgameValidarPrint.js — explica exatamente o que corrigir).
+    if (vereditoAmbiente?.veredito === 'reprovada' || vereditoAmbiente?.veredito === 'duvida') {
+      const comprovacaoReprovada = {
+        tipo: 'ritual', gratidao, acao,
+        entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
+        // ⚠️ 09/09 — este bloco (DIR-125, reprovação por ambiente) nasceu no
+        // main DEPOIS que o cofre foi escrito, então ainda falava `videoUrl`.
+        // O git juntou os dois sem conflito e a variável tinha sumido: dava
+        // ReferenceError na hora de reprovar alguém pelo ambiente.
+        ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
+        tempo_tela_s: tempoTelaS || 0,
+        quando: new Date().toISOString(), valido: false, status: 'reprovada',
+        motivo_gestor: vereditoAmbiente.motivo,
+        veredito_ia: vereditoAmbiente,
+      };
+      try {
+        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoReprovada });
+        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoReprovada } : x)));
+      } catch { /* o toast abaixo já avisa, mesmo se o registro falhar */ }
+      toast.error(`🏠 Ritual reprovado: ${vereditoAmbiente.motivo || 'o ambiente precisa ser a sua casa, com tranquilidade.'}`);
+      return;
+    }
+
     // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
     // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
     // onde mora o vídeo: é voz, é íntimo, e link público não se desfaz depois
@@ -699,10 +920,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       guardarVoz(audioAcao, 'acao'),
     ]);
 
-    // 🌊 DIR-89 — ritual na janela E com o vídeo gravado ganha o selo completo;
-    // sem vídeo ou fora de hora, antes caía pra segunda análise do gestor —
-    // agora aprova igual (o gestor não decide mais nada aqui), só sem o selo
-    // "BRILHANTE". `naJanela`/`videoUrl` viram só metadado do que aconteceu.
+    // 🌊 DIR-89 — ritual dentro do prazo E com o vídeo gravado ganha o selo
+    // completo; sem vídeo (mas ainda dentro do prazo) aprova igual, só sem o
+    // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como
+    // perdido acima; ambiente errado ou em dúvida nem chega aqui — já
+    // voltou reprovado automático acima (DIR-125).
     const aprovadoDireto = naJanela && !!videoPath;
     const comprovacao = {
       // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
@@ -732,7 +954,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
         o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoPath ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoPath ? 'ritual sem o vídeo da visualização' : 'ritual fora da janela do amanhecer (04:40–07:15)'),
+        motivo: aprovadoDireto ? '' : (!videoPath ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
       },
     };
     try {
@@ -952,6 +1174,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     }
     // 🌅 F11 — gratidão abre o RITUAL DO AMANHECER, não formulário
     if (!t.feito && ehTarefaDeGratidao(t.titulo) && !t.comprovacao?.valido) {
+      // 🕐 09/09/2026 — dono, ao vivo: "não tem como ela fazer depois de
+      // cinco e quinze. Se ela não fizer até cinco e quinze ela perde o
+      // ritual." Passou do prazo: nem abre a experiência — fazer o ritual
+      // inteiro só pra descobrir no fim que não conta seria pior.
+      if (ehHoje && agoraMinJogo > RITUAL_FIM_MIN) {
+        toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+        return;
+      }
       setRitualId(t.id);
       return;
     }
@@ -1123,6 +1353,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return pb - pa || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR');
     });
   }, [clientesManuais, buscaLista]);
+  // 🖐️ 09/09/2026 — achado no tour: o botão "Qualificar" só existe pra quem
+  // ainda não tem nota, e todo mundo nesse estado tinha o MESMO data-teste —
+  // o alvo do tour não era necessariamente o primeiro da lista visível.
+  // Aqui é a pessoa CERTA: a primeira sem qualificação, na mesma ordem que
+  // a tela mostra.
+  const primeiroNaoQualificadoId = useMemo(
+    () => listaOrdenada.find((c) => !c.qualificacao_network)?.id || null,
+    [listaOrdenada],
+  );
 
   const salvarQualificacao = async (contato, quali) => {
     setSalvando(true);
@@ -1141,54 +1380,38 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     if (ok) setRegistroAberto(null);
   };
 
-  // 🗓️ DIR-47/48 — token da Google Agenda da PRÓPRIA pessoa (leitura +
-  // criação de evento; mesmo GOOGLE_CLIENT_ID do login; o token vive só
-  // nesta sessão do navegador — nunca vai pro servidor).
-  const obterTokenGoogle = async () => {
-    if (googleToken) return googleToken;
-    const r = await plataforma.functions.invoke('getGoogleClientId', {});
-    const clientId = r?.clientId;
-    if (!clientId) throw new Error('login Google não configurado');
-    if (!window.google?.accounts?.oauth2) {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://accounts.google.com/gsi/client';
-        s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
-        document.head.appendChild(s);
-      });
-    }
-    if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
-    const token = await new Promise((res, rej) => {
-      const tc = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-        callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
-        error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
-      });
-      tc.requestAccessToken();
-    });
-    setGoogleToken(token);
-    return token;
-  };
-
+  // 🗓️ DIR-47/48/103 — a Google Agenda da PRÓPRIA pessoa (leitura + criação
+  // de evento; mesmo GOOGLE_CLIENT_ID do login). O token nunca vai pro
+  // servidor; quem cuida dele é o `src/lib/googleAgenda.js`.
   const conectarGoogleAgenda = async () => {
     setGoogleConectando(true);
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const ini = new Date(); ini.setHours(0, 0, 0, 0);
       const fim = new Date(ini.getTime() + 86400000);
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(ini.toISOString())}&timeMax=${encodeURIComponent(fim.toISOString())}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       setGoogleEventos((j.items || []).map((e) => ({ id: e.id, titulo: e.summary || '(sem título)', inicio: e.start?.dateTime || e.start?.date || '' })));
+      setGoogleConta(contaLembrada());
       toast.success('Google Agenda conectada — eventos de hoje na tela');
     } catch (e) {
       console.warn('Google Agenda:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.error(`Não deu pra conectar a Google Agenda: ${e.message}`);
     } finally { setGoogleConectando(false); }
+  };
+
+  // "Trocar conta": esquecer o e-mail lembrado é o ÚNICO jeito de o Google
+  // voltar a perguntar. Sem este botão, lembrar a conta viraria prisão pra
+  // quem realmente tem duas agendas.
+  const trocarContaGoogle = async () => {
+    esquecerConta();
+    setGoogleConta(null);
+    setGoogleEventos(null);
+    await conectarGoogleAgenda();
   };
 
   // DIR-48 — cria o evento DE VERDADE na agenda da própria pessoa. Falhou?
@@ -1204,20 +1427,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       if (j?.id) registro.google_event_id = j.id; // DIR-50: o id permite editar/apagar depois
       toast.success('Evento criado na sua Google Agenda!');
       return j?.htmlLink || null;
     } catch (e) {
       console.warn('Criar evento Google:', e);
-      setGoogleToken(null);
+      // 🔴 DIR-103 — antes isto era `setGoogleToken(null)` em QUALQUER erro: um
+      // 500 do Google ou a internet oscilando jogava fora um token bom e
+      // obrigava nova janela de autorização — e é na janela que a pessoa erra
+      // a conta. Agora só 401/403 (a autorização acabou de verdade) derruba.
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Não deu pra criar no Google agora (${e.message}) — o agendamento foi salvo e o botão Google Agenda continua na agenda do dia.`);
       return null;
     }
@@ -1239,20 +1466,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return registroOriginal.google_event_link || null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       registro.google_event_id = j?.id || eventId;
       toast.success('Evento atualizado na sua Google Agenda!');
       return j?.htmlLink || registroOriginal.google_event_link || null;
     } catch (e) {
       console.warn('Atualizar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`A reunião foi atualizada no método, mas o Google não deixou mexer no evento agora (${e.message}) — ajuste por lá pelo link.`);
       return registroOriginal.google_event_link || null;
     }
@@ -1264,17 +1491,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const eventId = idDoEventoGoogle(registro);
     if (!eventId) return true;
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw erroDoGoogle(resp);
       toast.success('Evento apagado da sua Google Agenda.');
       return true;
     } catch (e) {
       console.warn('Apagar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Excluída do método — mas o Google não deixou apagar o evento agora (${e.message}). Apague por lá pelo link, se ainda existir.`);
       return false;
     }
@@ -1298,36 +1525,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       .catch(() => setReunioesEmpresa([])); // tabela ainda sem migração → lista vazia, sem quebrar
   }, [painel]);
 
-  // DIR-54 — "até às" é só uma outra forma de dizer a duração: convertida
-  // ANTES de gravar, o banco guarda sempre `duracao_min` (fonte única).
-  const duracaoEmpresaMin = novaEmpresa.modoFim === 'fim'
-    ? duracaoEntreHoras(novaEmpresa.hora, novaEmpresa.hora_fim)
-    : Number(novaEmpresa.duracao_min) || 60;
-
-  const criarReuniaoEmpresa = async () => {
-    if (!novaEmpresa.titulo.trim() || !novaEmpresa.hora || !duracaoEmpresaMin) return;
-    setSalvando(true);
-    try {
-      const linha = {
-        titulo: novaEmpresa.titulo.trim(),
-        dia_semana: novaEmpresa.recorrencia === 'semana' ? Number(novaEmpresa.dia_semana) : null,
-        data: novaEmpresa.recorrencia === 'data' ? novaEmpresa.data || null : null,
-        hora: novaEmpresa.hora,
-        duracao_min: duracaoEmpresaMin,
-        ativo: true,
-        criado_por_id: uid || null,
-        criado_por_nome: currentUser?.full_name || '',
-      };
-      const criada = await plataforma.entities.ReuniaoEmpresa.create(linha);
-      setReunioesEmpresa((prev) => [...prev, criada?.id ? criada : linha]);
-      setNovaEmpresa({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
-      toast.success('Reunião da empresa salva — entra na agenda de todo mundo!');
-    } catch (e) {
-      console.error(e);
-      toast.error('Erro ao salvar — a migração da DIR-52 (reunioes_empresa) já foi colada no banco?');
-    } finally { setSalvando(false); }
-  };
-
   // 🏛️ DIR-73 — a agenda escolhida no agendador cai NO MESMO LUGAR que o
   // bloco 🏛️ da gestão já gravava. Uma verdade só: se amanhã a reunião da
   // empresa mudar de tabela, muda num lugar e as duas portas acompanham.
@@ -1343,14 +1540,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       console.error(e);
       toast.error('Erro ao salvar — a migração da DIR-52 (reunioes_empresa) já foi colada no banco?');
     } finally { setSalvando(false); }
-  };
-
-  const excluirReuniaoEmpresa = async (r) => {
-    if (confirmaExcluir !== `emp-${r.id}`) { setConfirmaExcluir(`emp-${r.id}`); return; }
-    setConfirmaExcluir(null);
-    setReunioesEmpresa((prev) => prev.filter((x) => x.id !== r.id));
-    try { await plataforma.entities.ReuniaoEmpresa.delete(r.id); toast.success('Reunião da empresa excluída.'); }
-    catch { toast.error('Erro ao excluir — tente de novo'); }
   };
 
   const habito = HABITOS.find((h) => h.id === painel);
@@ -1387,16 +1576,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <strong> detalhes exatos</strong> embaixo de cada imagem — se for um carro: ano, cor, banco de couro, roda. Sonho detalhado vira meta.
               </GuiaMovel>
 
-              {HORIZONTES_SONHO.map((hz) => {
+              {HORIZONTES_SONHO.map((hz, i) => {
                 const doHorizonte = grupos[hz.id];
                 return (
-                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4">
+                  // 🖐️ 09/09/2026 — achado no tour: os 3 horizontes tinham o
+                  // MESMO data-teste, e `querySelector` sempre pega o
+                  // primeiro — a mãozinha do Hábito 1 sempre mirava no card
+                  // de curto prazo, não importa a intenção. Marcado só no
+                  // primeiro (i === 0), que é exatamente o card que o passo
+                  // do tour aponta.
+                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4" data-teste={i === 0 ? 'sonho-horizonte' : undefined}>
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <p className="text-sm font-bold text-nz-tinta">
                         {hz.emoji} {hz.label}
                         <span className="text-nz-tinta-fraca font-normal"> · {hz.faixa}{doHorizonte.length > 0 ? ` · ${doHorizonte.length} sonho${doHorizonte.length === 1 ? '' : 's'}` : ''}</span>
                       </p>
-                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
+                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0" data-teste={i === 0 ? 'sonho-adicionar' : undefined}>
                         <Plus className="w-4 h-4 mr-1" /> Adicionar
                       </Button>
                     </div>
@@ -1487,6 +1682,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <XGameRitualAmanhecer
                   nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
                   sonhos={sonhos.map(normalizarSonho)}
+                  diaCorridoCiclo={diaCorridoDoCiclo(new Date(), inicioCicloOficial(cicloConfig, new Date()))}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
                 />
@@ -1534,9 +1730,47 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p className="text-sm font-bold text-nz-tinta capitalize min-w-[180px] text-center">{fmtDia(dia)}{dia === hojeStr() ? ' · HOJE' : ''}</p>
                 <Button variant="ghost" size="icon" onClick={() => mudarDia(1)}><ChevronRight className="w-5 h-5 text-nz-tinta" /></Button>
               </div>
-              <p className="text-sm font-semibold text-nz-tinta" title={'PROGRESSO DO DIA — "Apresenta o desempenho do executivo baseado no dia atual, com os resultados da gamificação — isso permite projeção de crescimento do executivo e perspectiva de futuro ao longo do mês corrente. É possível extrapolar os valores de 100%, o que permite compensar a falta em alguns fatores com a entrega em outros."'}>{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}% ⓘ</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-nz-tinta" title={'PROGRESSO DO DIA — "Apresenta o desempenho do executivo baseado no dia atual, com os resultados da gamificação — isso permite projeção de crescimento do executivo e perspectiva de futuro ao longo do mês corrente. É possível extrapolar os valores de 100%, o que permite compensar a falta em alguns fatores com a entrega em outros."'}>{progressoJogo.feitas}/{progressoJogo.total} feitas · {progressoJogo.pct.toFixed(0)}% ⓘ</p>
+                {/* 🔔 DIR-130 — o sino: mora aqui porque é a tela que a pessoa abre
+                    todo dia (o Compromisso); ver src/lib/notificacoesXgame.js */}
+                <SinoNotificacoes currentUser={currentUser} />
+              </div>
             </div>
             <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
+
+            {/* 📣 DIR-134 (09/09/2026) — dono: "algumas pessoas reclamaram,
+                falaram que não conseguiram [fazer o ritual]... vê se a gente
+                cria um aviso antes de começar o ritual, dez minutos pra
+                quando ela abrir, explicar como funciona." Aparece ANTES de
+                ela clicar em qualquer coisa — não depois de errar. */}
+            {mostrarAvisoRitual && (
+              <div className="rounded-xl border border-amber-400/50 bg-amber-50 p-3 sm:p-4 text-nz-tinta" data-teste="aviso-ritual-explicador">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-xl shrink-0" aria-hidden="true">🌅</span>
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <p className="text-sm font-extrabold">
+                      {agoraMinJogo < RITUAL_INICIO_MIN
+                        ? `O Ritual do Amanhecer abre daqui a pouco, às ${horaDeMin(RITUAL_INICIO_MIN)}.`
+                        : `O Ritual do Amanhecer está aberto até ${horaDeMin(RITUAL_FIM_MIN)}.`}
+                    </p>
+                    <p className="text-[12px] text-nz-tinta-fraca leading-relaxed">
+                      Como funciona: <strong>1)</strong> fala (ou escreve) a sua gratidão — pega o caderno antes de abrir.{' '}
+                      <strong>2)</strong> grava um vídeo curto se visualizando com o Quadro dos Sonhos — precisa ser{' '}
+                      <strong>em casa</strong>, com calma (carro, academia e escritório não valem). <strong>3)</strong> escreve a ação do dia.
+                      Sem o vídeo o ritual conclui igual, só não ganha o selo brilhante. Depois de{' '}
+                      <strong>{horaDeMin(RITUAL_FIM_MIN)}</strong> não dá mais pra fazer — o dia fica perdido, sem segunda chance.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setAvisoRitualFechado(true)}
+                      className="text-[11px] font-bold text-nz-verde hover:text-nz-verde-claro"
+                      data-teste="aviso-ritual-fechar"
+                    >entendi</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
                 A faixa inteira (seletor, placar e o relógio de teste temporário)
@@ -1591,19 +1825,49 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
+            {/* ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto],
+                além de ele perder o dinheiro, isso tem que tirar pontos dele."
+                A mensagem pro cara, na hora, do mesmo jeito grave do não-votar. */}
+            {xgame && ehHoje && xgame.perdeu_por_atraso_pronto && mostrarPainel && (
+              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-red-700">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
+                <p className="text-[11px] text-red-600 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
+              </div>
+            )}
+
+            {/* 🟡 09/09/2026 — DIR-105: 1º-3º atraso é só aviso/treino (perde
+                pontos, resto do dia intacto) — só o 4º em diante vira o zero
+                radical acima. */}
+            {xgame && ehHoje && xgame.em_aviso_pronto && mostrarPainel && (
+              <div className="rounded-lg border-2 border-amber-500 bg-amber-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-amber-700">⚠️ AVISO {xgame.avisos_pronto + 1} DE {AVISOS_ANTES_DE_ZERAR} — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
+                <p className="text-[11px] text-amber-700/90 mt-0.5">
+                  Você perdeu pontos hoje por isso, mas MvM, Human Token e X-Pay continuam de pé. {xgame.avisos_pronto + 1 >= AVISOS_ANTES_DE_ZERAR
+                    ? 'Da próxima vez o dia INTEIRO zera — sem exceção.'
+                    : `Da próxima vez o aviso sobe pra ${xgame.avisos_pronto + 2} de ${AVISOS_ANTES_DE_ZERAR}. No ${AVISOS_ANTES_DE_ZERAR + 1}º, zera tudo.`}
+                </p>
+              </div>
+            )}
+
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4">
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze, abaixo de 8 barra a Platina. Ligas: 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima (só abre batendo os dois portões: caráter e 100% da meta de vendas). Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{xgame.estudo_em_dia ? `${(ciclo?.faixa || xgame.faixa).label} do ciclo · teto 22,22` : 'trava 17,77 — leitura em atraso no ciclo'}</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{ciclo ? ciclo.liga.emoji : xgame.faixa.medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
+                  <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}</p>
                 </div>
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`MvM = MÉDIA DO VALOR MENTAL (0 a 10). Dois tipos: o AUTOMÁTICO — o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta 10 ÷ nº de tarefas — e o MANUAL, a votação do grupo (1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}), que é a que entra no Human Token oficial.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM do Dia ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.mvm_dia)}</p>
-                  <p className={`text-[10px] font-semibold ${xgame.mvm_dia < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
-                    {xgame.frase_mvm}{recebido.media !== null ? ` · votação do ciclo: ${fmtToken(recebido.media)}` : ''}
+                {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o
+                    MVM dele é sete, vai aparecer sete, não sete ponto
+                    setenta e cinco e nove em cima" — o número GRANDE virava
+                    o automático (mvm_dia), com o de verdade (a votação, o
+                    único que entra na moeda) escondido no rodapé pequeno.
+                    Trocado: o número grande agora É o oficial. */}
+                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`Só a VOTAÇÃO DO CICLO (as notas que você recebe dos colegas, 1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}) entra no Human Token — é este número. O "automático" (o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta) é só uma estimativa de humor do dia — NÃO conta pra moeda.`}>
+                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM (oficial) ⓘ</p>
+                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{recebido.media !== null ? fmtToken(recebido.media) : '—'}</p>
+                  <p className={`text-[10px] font-semibold ${recebido.media !== null && recebido.media < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
+                    {recebido.media !== null ? `${xgame.frase_mvm} · o que conta na moeda` : 'ainda sem voto recebido neste ciclo'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-nz-borda bg-white p-3" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
@@ -1624,6 +1888,50 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     </p>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* 🪙 DIR-113 (09/09/2026) — dono, ao vivo, olhando o placar:
+                "tem que aparecer a produtividade, quanto pesou na moeda...
+                se possível deixar até o desenho da moeda, fatia de pizza, o
+                que cada um está pesando... e vai botando a cor de acordo com
+                cada fatia, bronze, prata, até o topo." O anel é o Human
+                Token (0 a 22,22) dividido pelos MESMOS 5 componentes que
+                `ciclo` já calcula — nenhuma conta nova, só o desenho que
+                faltava. As marcas no anel são as ligas oficiais (LIGAS,
+                xgame.js): bronze → prata → ouro → platina.
+                🗳️ e a correção do dono na mesma mensagem: "o MvM só é a
+                média do valor mental, a média da votação, só isso" — é
+                exatamente o que `ciclo.componentes.mvm` já vale (ver
+                tokenDoCiclo em xgame.js: peso × régua de 10 = a média
+                crua), então a fatia do MvM aqui é essa média, sem distorcer.
+                🏆 DIR-115 (09/09/2026) — repesagem, dono: "recrutamos
+                caráter e treinamos habilidade" é o jargão que decidiu os
+                pesos novos — por isso ele aparece escrito aqui, junto do
+                desenho que ele explica. */}
+            {xgame && ciclo && mostrarPainel && (
+              <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza">
+                <div>
+                  <p className="text-sm font-extrabold text-nz-tinta">🪙 Seu Human Token — de onde vem cada ponto dele</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token deste ciclo, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                  <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — por isso o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
+                </div>
+                <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />
+              </div>
+            )}
+
+            {/* 🪙 09/09/2026 — dono: "a moeda tem que estar ali, pra ele se
+                inspirar nela cheia, e entender como ela fica cheia, junto com
+                a dele que está sendo preenchida." A moeda-modelo (`moedaModelo`,
+                xgame.js) ao lado da moeda real de cima — mesmo desenho, sempre
+                no teto, pra servir de referência de "como ela fica cheia". */}
+            {xgame && ciclo && mostrarPainel && (
+              <div className="rounded-2xl border-2 border-dashed border-nz-ouro-claro bg-nz-ouro-fundo p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-modelo">
+                <div>
+                  <p className="text-sm font-extrabold text-nz-tinta">🏆 O Modelo — pra onde você está indo</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">a mesma moeda, cheia — a referência de como ela fica quando cada fatia bate no teto</p>
+                </div>
+                <MoedaPizza componentes={moedaModelo('estrategico')} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
               </div>
             )}
 
@@ -1661,13 +1969,34 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 </div>
                 <BarraProgresso pct={ciclo.formacao.pct} dialeto="claro" altura="extra" corClasse="bg-nz-verde" trilhoClasse="bg-white border border-nz-verde/20" />
 
+                {/* 🎡 09/09/2026 — DIR-109.1, dono: "a roda da vida... se a
+                    roda dele rodar, a vida dele anda." O alvo vira um
+                    pentágono PERFEITO (proporção do alvo, não % bruto) —
+                    a roda só fica redonda quando os 5 eixos estão em dia. */}
+                <RadarEixos
+                  dialeto="claro"
+                  eixos={(() => {
+                    const prop = proporcoesExecutivoIdeal(ciclo.taxas);
+                    return EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({ k, rotuloCurto, emoji, atual: Math.round(prop[k] * 100), alvo: 100 }));
+                  })()}
+                />
+                <p className="text-center text-[10.5px] text-nz-tinta-fraca -mt-2">
+                  🎡 a <strong className="text-nz-tinta">roda da vida</strong> do Executivo Ideal — quanto mais redonda, mais a carreira anda
+                </p>
+
                 <div className="space-y-2.5">
                   {[
                     { k: 'mvm', rotulo: 'MvM (votação do grupo)', emoji: '🗳️' },
                     { k: 'producao', rotulo: 'Produção', emoji: '📋' },
                     { k: 'realtime', rotulo: 'Real Time (X-Pay no horário)', emoji: '⏱️' },
                     { k: 'bonus', rotulo: 'Bônus / Estudo', emoji: '📚' },
-                    { k: 'vendas', rotulo: `Vendas da loja — automático (meta ${META_VENDAS_CICLO} no ciclo · ${ciclo.vendasFeitas} feitas)`, emoji: '🛒' },
+                    {
+                      k: 'vendas',
+                      // 🟢 09/09/2026 — DIR-110: mostra o quebra-cabeça
+                      // (venda direta + reunião como princípio da venda).
+                      rotulo: `Vendas — automático (meta ${META_VENDAS_CICLO} no ciclo · ${fmtToken(ciclo.vendasDiretas)} vendida${ciclo.vendasDiretas === 1 ? '' : 's'}${ciclo.reuniaoEquivalente > 0 ? ` + ${fmtToken(ciclo.reuniaoEquivalente)} de reunião` : ''} = ${fmtToken(ciclo.vendasFeitas)})`,
+                      emoji: '🛒',
+                    },
                   ].map(({ k, rotulo, emoji }) => {
                     const atual = Math.round((ciclo.taxas[k] || 0) * 100);
                     const alvo = Math.round(EXECUTIVO_IDEAL[k] * 100);
@@ -1700,7 +2029,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <div className="pt-1.5 space-y-1">
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
-                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
+                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima. "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina. A Platina só abre batendo os dois portões (caráter e 100% da meta de vendas); Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.</p>
                     <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
@@ -1750,7 +2079,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {xgame && ehHoje && mostrarPainel && (
               <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde">
+                  <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde" data-teste="votacao-mvm-toggle">
                     {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)} · Ranking das Virtudes
                   </button>
                   <span className={`text-[10px] font-bold ${janelaAberta ? (naJanelaIdeal(agoraMinJogo) ? 'text-nz-verde' : 'text-amber-600') : 'text-nz-tinta-fraca'}`}>
@@ -1868,8 +2197,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <div className="space-y-1">
                     {rankingOrdenado.map((l, i) => {
                       // 🏆 F9 — ordenando por Moeda, o ranking vira a tabela das LIGAS
-                      const liga = ligaDoToken(l.token);
-                      const ligaAnterior = i > 0 ? ligaDoToken(rankingOrdenado[i - 1].token) : null;
+                      // 🎖️ DIR-115 — os portões de caráter/vendas valem também
+                      // no ranking do time, senão alguém sem o piso de MvM ou
+                      // sem bater a meta apareceria classificado como Platina.
+                      const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
+                      const ligaAnterior = i > 0
+                        ? ligaComPortoesDoCiclo(rankingOrdenado[i - 1].token, { mvmVotacao: rankingOrdenado[i - 1].mvm, vendasFeitas: rankingOrdenado[i - 1].vendasFeitas })
+                        : null;
                       const cabecalho = ordemRanking === 'token' && liga.id !== ligaAnterior?.id;
                       return (
                         <React.Fragment key={l.user_id}>
@@ -1880,23 +2214,42 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           )}
                           <div className={`flex items-center justify-between gap-2 rounded border px-2 py-1.5 ${l.user_id === uid ? 'border-nz-verde/60 bg-nz-verde-fundo/30' : 'border-nz-borda bg-white'}`}>
                             <span className="text-[11px] font-medium text-nz-tinta truncate">
-                              <span className="font-bold">{i + 1}º</span> {faixaToken(l.token).medalha} {l.nome}{l.user_id === uid ? ' (você)' : ''}
+                              <span className="font-bold">{i + 1}º</span> {liga.emoji} {l.nome}{l.user_id === uid ? ' (você)' : ''}
                             </span>
                             <span className="text-[11px] tabular-nums text-nz-tinta-fraca whitespace-nowrap">
-                              {fmtToken(l.token)} · MvM {fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
+                              {fmtToken(l.token)} · MvM {l.mvm === null ? '—' : fmtToken(l.mvm)} · <span className="text-nz-verde font-semibold">{fmtReais(l.xpay)}</span> · {l.pontos} pts
                             </span>
                           </div>
                         </React.Fragment>
                       );
                     })}
                     {ciclo && (() => {
+                      // 🎖️ DIR-115 — o token pode já valer Platina e a LIGA
+                      // ainda travar em Ouro: os portões de caráter/vendas
+                      // seguram a promoção mesmo com pontuação de sobra.
+                      // "Falta pontuação" e "falta abrir o portão" são avisos
+                      // diferentes — misturar os dois esconde o que resolve.
+                      const ligaPelaPontuacao = ligaDoToken(ciclo.total);
+                      const travadoPorPortao = ciclo.liga.id !== ligaPelaPontuacao.id;
+                      if (travadoPorPortao) {
+                        const semCarater = recebido.media !== null && recebido.media !== undefined && recebido.media < PISO_CARATER_PLATINA;
+                        const semVendas = (Number(ciclo.vendasFeitas) || 0) < META_VENDAS_CICLO;
+                        return (
+                          <p className="text-[11px] font-semibold text-amber-600 pt-1">
+                            🔒 Sua pontuação já é de {ligaPelaPontuacao.emoji} {ligaPelaPontuacao.label}, mas a Platina tem portão: {[
+                              semCarater ? `MvM da votação ≥ ${fmtToken(PISO_CARATER_PLATINA)} (você está em ${recebido.media === null ? '—' : fmtToken(recebido.media)})` : null,
+                              semVendas ? `bater os ${META_VENDAS_CICLO} de meta de vendas do ciclo (você está em ${fmtToken(ciclo.vendasFeitas)})` : null,
+                            ].filter(Boolean).join(' e ')} — "recrutamos caráter e treinamos habilidade": sem os dois, o topo não abre.
+                          </p>
+                        );
+                      }
                       const promo = proximaLiga(ciclo.total);
                       return promo && promo.falta > 0 ? (
                         <p className="text-[11px] font-semibold text-nz-tinta pt-1">
                           ↑ Faltam <span className="text-nz-verde tabular-nums">{fmtToken(promo.falta)}</span> de token pra você subir pra {promo.liga.emoji} {promo.liga.label} — feche os dias, faça no horário e busque nota alta na votação!
                         </p>
-                      ) : ciclo.total >= 20 ? (
-                        <p className="text-[11px] font-semibold text-nz-verde pt-1">💠 Você está na elite — LIGA DIAMANTE, o território do Executivo Ideal. Segura o trono!</p>
+                      ) : ciclo.liga.id === 'platina' ? (
+                        <p className="text-[11px] font-semibold text-nz-verde pt-1">🏆 Você está na elite — LIGA PLATINA, o território do Executivo Ideal. Segura o trono!</p>
                       ) : null;
                     })()}
                   </div>
@@ -1970,13 +2323,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <div className="flex-1 min-w-0">
                                 {/* ✅ DIR-77 — concluída fica VERDE (ordem do dono), e o
                                     horário mostra quando TERMINA quando isso existe. */}
-                                <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste="titulo-tarefa">
+                                {/* 🖐️ 09/09/2026 — achado no tour: cada linha da lista tinha
+                                    o MESMO data-teste, e o tour sempre mirava na primeira
+                                    tarefa renderizada (não necessariamente a primeira da
+                                    lista). Marcado só na tarefa que É a primeira de
+                                    `tarefasJogo` — o que o passo do tour de fato descreve. */}
+                                <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste={t.id === tarefasJogo[0]?.id ? 'titulo-tarefa' : undefined}>
                                   {t.hora && <span className="font-bold">{t.hora_fim ? `${t.hora}–${t.hora_fim}` : t.hora} · </span>}{t.titulo}
                                 </p>
-                                {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou */}
+                                {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou.
+                                    🎓 09/09/2026 — DIR-107, dono: "tem gente que confunde o que
+                                    é o pronto... acha que é só quando termina. Se estiver no
+                                    meio da demanda, avise que está fazendo, comunique." */}
                                 {t.prazo_em && (() => { const est = estadoDoPronto(t); return (
-                                  <p className={`text-[10px] font-bold ${est.id === 'atrasada' ? 'text-red-600' : est.atrasou ? 'text-amber-600' : est.id === 'conferida' ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} data-teste="pronto-ate">
-                                    ⏰ {rotuloDoPrazo(t.prazo_em, dia)}{est.id === 'atrasada' ? ' · atrasada — dá o pronto' : est.id === 'pronto' ? (est.atrasou ? ' · pronto dado (atrasado)' : ' · pronto dado, aguardando conferência') : est.id === 'conferida' ? ' · conferida ✔✔' : ''}
+                                  <p className={`text-[10px] font-bold ${est.id === 'atrasada' ? 'text-red-600' : est.atrasou ? 'text-amber-600' : est.id === 'conferida' ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} data-teste="pronto-ate" title='O "pronto" não é só marcar como feito no fim: se você ainda está no meio da tarefa, comunique que está em andamento — pela Mensagem pro CEO ou com o responsável.'>
+                                    ⏰ {rotuloDoPrazo(t.prazo_em, dia)}{est.id === 'atrasada' ? ' · atrasada — dá o pronto (ou avise que está em andamento)' : est.id === 'pronto' ? (est.atrasou ? ' · pronto dado (atrasado)' : ' · pronto dado, aguardando conferência') : est.id === 'conferida' ? ' · conferida ✔✔' : ''}
                                   </p>
                                 ); })()}
                                 {t.devolvida_motivo && !t.feito && (
@@ -1991,7 +2352,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               </div>
                               {/* o ANDAR DE BAIXO no celular; no desktop `sm:contents`
                                   dissolve este contêiner e nada muda de lugar */}
-                              <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 pl-6 sm:pl-0 sm:w-auto sm:contents" data-teste="acoes-tarefa">
+                              <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 pl-6 sm:pl-0 sm:w-auto sm:contents" data-teste={t.id === tarefasJogo[0]?.id ? 'acoes-tarefa' : undefined}>
                               {/* 💰 X-PAY — a fatia da tarefa no valor do dia (fixo ÷ 22, repartido pelo peso) */}
                               {xgame && xgame.valores[t.id] > 0 && (t.feito || estadoDaTarefa(t)?.id !== 'PERDIDO') && (
                                 <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${t.feito ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}>
@@ -2020,7 +2381,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   (o cofre é privado), então é pedido na hora do
                                   clique — nunca fica guardado na tela. */}
                               {t.feito && t.comprovacao?.audio_gratidao_path && (
-                                <BotaoOuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} />
+                                <OuvirGratidao caminho={t.comprovacao.audio_gratidao_path} uid={uid} dia={t.data} segundos={t.comprovacao.audio_gratidao_seg || 0} />
                               )}
                               {/* 🎮 X-GAME — o tempo real da planilha: AGORA / ATRASADO / PERDIDO */}
                               {!t.feito && (() => {
@@ -2130,7 +2491,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {visao === 'lista' && (
             <div className="pt-1">
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} />
+              {/* 🌑 09/09/2026 — dono: "fundo branco em mais um campo descoberto".
+                  Este campo nasceu quando a Jornada ainda era painel claro. O painel
+                  virou escuro e ele ficou pra trás: caixa branca no meio do preto,
+                  com a hora sumindo de tão clara. O componente já sabe ser escuro
+                  desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
@@ -2232,14 +2598,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         {/* ══ 🤝 HÁBITO 3 — LISTA DE NETWORK QUALIFICADA (DIR-46) ══ */}
         {painel === 'lista' && (() => {
           const qualificadas = clientesManuais.filter((c) => probabilidadeFechamento(c.qualificacao_network)).length;
+          // 👤 09/09/2026 — DIR-111, dono (super admin): "eu vejo aqui todo
+          // mundo... tem que botar de quem é o nome da pessoa que
+          // qualificou a lista, igual você colocou no Contato." `nomeDoDono`
+          // é o mesmo helper do componente (topo do arquivo) — deduplicado
+          // na auditoria pré-publicação (estava copiado aqui e no Contato).
           return (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-sm text-nz-tinta-fraca">
-                  {clientesManuais.length} pessoas na sua lista · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
+                  {clientesManuais.length} pessoas {visaoTotal ? 'na lista do TIME' : 'na sua lista'} · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="lista-adicionar-pessoa">
                     <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
                   </Button>
                   {/* 📥 08/09 — importar em massa. Fica ao lado de "Adicionar
@@ -2281,20 +2652,38 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     return (
                       <div key={c.id} className="flex items-center gap-3 rounded-lg border border-nz-borda bg-white p-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate">{c.full_name || 'Sem nome'}</p>
+                          <p className="text-sm font-medium text-nz-tinta truncate">
+                            {visaoTotal && <span className="font-bold text-nz-verde">👤 {nomeDoDono(c) || 'sem dono definido'} · </span>}
+                            {c.full_name || 'Sem nome'}
+                          </p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
                         </div>
                         {prob ? (
-                          <button type="button" onClick={() => setQualificando(c)} className="shrink-0 text-right" title="Editar qualificação">
-                            <p className="text-[11px] text-nz-tinta-fraca">
-                              🫱{q.confianca} 💰{q.financeiro} 🔥{q.apetite}{prod ? ` · ${prod.emoji} ${prod.label}` : ''}
-                            </p>
-                            <p className={`text-xs font-bold ${COR_FAIXA[prob.faixa.id]}`}>
-                              {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
-                            </p>
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button type="button" onClick={() => setQualificando(c)} className="shrink-0 text-right" title="Editar qualificação">
+                              <p className="text-[11px] text-nz-tinta-fraca">
+                                🫱{q.confianca} 💰{q.financeiro} 🔥{q.apetite}{prod ? ` · ${prod.emoji} ${prod.label}` : ''}
+                              </p>
+                              <p className={`text-xs font-bold ${COR_FAIXA[prob.faixa.id]}`}>
+                                {prob.faixa.emoji} {prob.pct}% de fechamento · {prob.total}/15
+                              </p>
+                            </button>
+                            {/* 🔗 09/09/2026 — DIR-111.2, dono: "eu cliquei
+                                nessa pessoa, ela me levou pra página
+                                seguinte, eu não posso ter a sensação que eu
+                                estou recomeçando... já me coloca ela no meu
+                                contato e pisca no contato que eu vou
+                                fazer... achar direto na lista, não ficar
+                                procurando." Leva o ID de quem clicou — o
+                                Hábito 4 rola até ela e pisca a linha. */}
+                            {onIr && (
+                              <Button size="sm" onClick={() => onIr('contato', null, c.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8" title="Ir contatar essa pessoa no Hábito 4">
+                                <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
+                              </Button>
+                            )}
+                          </div>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0">
+                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0" data-teste={c.id === primeiroNaoQualificadoId ? 'lista-qualificar' : undefined}>
                             <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
                           </Button>
                         )}
@@ -2322,7 +2711,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           // existe pra visão total. "Minha" = o que EU cadastrei/registrei.
           const minha = !visaoTotal; // 06/09: o escopo vem do seletor "só o meu / tudo" lá em cima, não de um botão aqui
           const quem = (nome) => (minha ? 'você' : (nome || 'sem dono definido')); // DIR-50/54: dono na frente
-          const nomeDoDono = (c) => (c.created_by_id && c.created_by_id !== 'anonymous' ? nomePorUsuarioId[c.created_by_id] : null);
+          // `nomeDoDono` é o helper do componente (topo do arquivo) —
+          // deduplicado na auditoria pré-publicação (estava copiado aqui e na Lista).
 
           // 🎯 DIR-54 — a fila respeita o MESMO escopo: MINHA só os que EU
           // cadastrei; TIME mostra todos, com o dono identificado em cada um.
@@ -2360,12 +2750,75 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           const podeMexer = (registro) => registro.registrado_por_id === uid || visaoTotal; // DIR-50
           return (
             <div className="space-y-4">
-              <GuiaMovel titulo="Como fazer o contato" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca">
-                📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).
+              {/* 🔀 09/09/2026 — DIR-111, dono: "tudo tem que ter uma ordem...
+                  tem que ter lá em cima explicando classificação da lista,
+                  cem por cento, tal tal tal." O guia agora também explica o
+                  % (vem da qualificação do Hábito 3) e a ordem dos 4 passos. */}
+              <GuiaMovel titulo="Como fazer o contato" className="border-t border-nz-borda/40 pt-4 text-xs text-nz-tinta-fraca space-y-1">
+                <p>📖 Antes do convite, o F.O.R.M. da pessoa: <strong>F</strong>amília · <strong>O</strong>cupação · <strong>R</strong>ecreação · <strong>M</strong>ensagem certa — você preenche na ficha de cada pessoa (Hábito 6 → Clientes).</p>
+                <p>🎯 O % ao lado do nome vem da qualificação que você fez no Hábito 3 (confiança + financeiro + apetite) — quanto mais alto, mais perto de fechar.</p>
+                <p>🔀 A ordem dos botões é a ordem do fluxo: <strong>Contatar</strong> (chama no WhatsApp) → <strong>Agendar</strong> (marcou reunião) ou <strong>Registrar</strong> (anota o desfecho, sem reunião) → <strong>Esteira</strong> (virou negociação de verdade).</p>
               </GuiaMovel>
 
+              {/* 📜 DIR-112 (09/09/2026) — dono, ao vivo: "essa parte de cima
+                  está boa pra caralho... vamos melhorar a apresentação e
+                  obrigar ele fazer o form." O script sobe pro topo da tela,
+                  vira uma ficha chamativa, e conta ponto uma vez só.
+                  🎨 mesmo dia, olhando ao vivo: "só essa cor que está feia,
+                  vamos deixar coeso." O fundo pastel translúcido (amber-50/50
+                  em cima do hero escuro desta parte da tela) virava uma cor
+                  suja/embaçada — trocado pelo MESMO padrão branco sólido dos
+                  outros cartões desta tela (a fila logo abaixo), com o
+                  estado (ainda não validado / já vale ponto) só na
+                  borda+ícone, não no fundo inteiro.
+                  🎯 DIR-112.1 — dono: "você só vai dar um ponto quando
+                  conferir, como validação... se o script estiver bom, aí
+                  fixa e dá o ponto." O ponto NÃO é mais automático por
+                  tamanho — só quando a IA (scriptContatoCoach) aprova. */}
+              <div data-teste="contato-script" className={`rounded-xl border-2 bg-white p-3.5 space-y-2.5 [color-scheme:light] ${perfil?.script_pontuado_em ? 'border-nz-verde/60' : 'border-amber-400/70'}`}>
+                <div className="flex items-start gap-2">
+                  <ScrollText className={`w-5 h-5 mt-0.5 shrink-0 ${perfil?.script_pontuado_em ? 'text-nz-verde' : 'text-amber-600'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold" style={{ color: '#1A1A1A' }}>
+                      {perfil?.script_pontuado_em ? '✅ Seu script de convite (já validado — vale ponto)' : '⚠️ Escreva seu script antes de sair contatando'}
+                    </p>
+                    <p className="text-xs" style={{ color: '#5C6B62' }}>
+                      {perfil?.script_pontuado_em
+                        ? 'O método ensina, mas a voz é sua — aperfeiçoe a cada conversa. Ele aparece na sua frente sempre que você clicar em Contatar.'
+                        : 'Escreva do seu jeito, use {nome} pra personalizar, e peça a dica: quando a IA conferir que está bom, você ganha o ponto. Ele também vai aparecer na sua frente sempre que você clicar em Contatar.'}
+                    </p>
+                  </div>
+                </div>
+                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={6} placeholder={EXEMPLO_SCRIPT} className="bg-white border-nz-borda text-nz-tinta text-sm" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={salvarScript} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                    <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
+                  </Button>
+                  {/* 💡 o "validador" pedido pelo dono: ajuda a MELHORAR — nunca
+                      escreve por ela — e é ele quem confere se já vale o ponto. */}
+                  <Button
+                    type="button" variant="outline" disabled={pedindoDica || script.trim().length < 15}
+                    onClick={pedirDicaDoScript}
+                    className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo"
+                    data-teste="contato-script-dica"
+                  >
+                    {pedindoDica ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lightbulb className="w-4 h-4 mr-2" />}
+                    {pedindoDica ? 'Conferindo...' : 'Peça uma dica pra melhorar'}
+                  </Button>
+                </div>
+                {dicaScript && (
+                  <div className={`rounded-lg border bg-white p-2.5 space-y-1 ${dicaScript.aprovado ? 'border-nz-verde/40' : 'border-amber-400/40'}`} data-teste="contato-script-dica-resultado">
+                    <p className={`text-xs font-bold ${dicaScript.aprovado ? 'text-nz-verde' : 'text-amber-600'}`}>
+                      {dicaScript.aprovado ? '✅ Aprovado — vale ponto!' : '📝 Ainda não vale o ponto — ajuste e peça de novo'}
+                    </p>
+                    {dicaScript.pontos_fortes && <p className="text-xs font-semibold text-nz-verde">👍 {dicaScript.pontos_fortes}</p>}
+                    <p className="text-xs whitespace-pre-line" style={{ color: '#1A1A1A' }}>💡 {dicaScript.dica}</p>
+                  </div>
+                )}
+              </div>
+
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
-              <div>
+              <div data-teste="contato-fila">
                 <p className="text-sm font-bold text-nz-tinta mb-1.5">
                   Quem contatar — {visaoTotal && !minha ? 'os qualificados do TIME' : 'os qualificados da sua lista'}{fila.length > 0 ? ` (${fila.length})` : ''}
                 </p>
@@ -2379,8 +2832,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {fila.map(({ c, prob }) => (
-                      <div key={c.id} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                    {fila.map(({ c, prob }, i) => {
+                      // 🔦 09/09/2026 — DIR-111.2, dono: "já me coloca ela no
+                      // meu contato e pisca... achar direto na lista, não
+                      // ficar procurando." Rola até ela UMA vez e pisca —
+                      // `contatoDestacado` some sozinho em 4s (useEffect acima).
+                      const destacada = c.id === contatoDestacado;
+                      return (
+                      <div
+                        key={c.id}
+                        ref={destacada ? (el) => { if (el && !el.dataset.rolou) { el.dataset.rolou = '1'; el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } : undefined}
+                        className={`flex items-center gap-2 sm:gap-3 rounded-lg border p-2.5 flex-wrap ${destacada ? 'border-nz-verde ring-2 ring-nz-verde/50 animate-pulse bg-nz-verde-fundo/40' : 'border-nz-borda bg-white'}`}
+                      >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-nz-tinta truncate">
                             {visaoTotal && <span className="font-bold text-nz-verde">👤 {quem(nomeDoDono(c))} · </span>}
@@ -2394,17 +2857,52 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           })()}
                         </div>
                         <p className={`text-xs font-bold shrink-0 ${COR_FAIXA[prob.faixa.id]}`}>{prob.faixa.emoji} {prob.pct}%</p>
-                        {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho */}
-                        <div className="flex gap-1.5 shrink-0">
+                        {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho.
+                            🔀 09/09/2026 — DIR-111, dono: "tudo tem que ter uma ordem... quando eu clicar
+                            em contatar, me gera WhatsApp." Contatar vem primeiro — é o gesto físico de
+                            chamar a pessoa; só depois entram agendar/registrar o desfecho.
+                            📜 DIR-112 — "imagina ele com fone, começando a fazer a ligação... ele
+                            clica, esse papel vem pra frente." Em vez de ir direto pro WhatsApp, o
+                            clique primeiro traz o SCRIPT da pessoa pra frente (chamadaAberta) — o
+                            WhatsApp abre só depois, do próprio modal. */}
+                        {/* 🖐️ 09/09/2026 — mesmo achado do tour: marcado só na
+                            PRIMEIRA linha da fila (já ordenada por %), que é
+                            de fato a pessoa que o passo do tour descreve. */}
+                        <div className="flex gap-1.5 shrink-0 flex-wrap" data-teste={i === 0 ? 'contato-acoes' : undefined}>
+                          {(() => {
+                            const numero = String(c.phone || '').replace(/\D/g, '');
+                            const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(`Oi ${(c.full_name || '').split(' ')[0] || ''}, tudo bem?`)}` : null;
+                            // 🐛 09/09/2026 — achado na auditoria: sem telefone, o botão só
+                            // sumia — sem explicar por quê, parecia bug. Agora avisa.
+                            return wa ? (
+                              <Button size="sm" variant="outline" onClick={() => setChamadaAberta({ contato: c, wa })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8" data-teste="contato-abrir-chamada">
+                                <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
+                              </Button>
+                            ) : (
+                              <span className="text-[11px] text-nz-tinta-fraca italic self-center" data-teste="contato-sem-telefone">sem telefone cadastrado</span>
+                            );
+                          })()}
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: c, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
                             <CalendarPlus className="w-3.5 h-3.5 mr-1.5" />Agendar
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setRegistroAberto({ contato: c })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">
                             <PenLine className="w-3.5 h-3.5 mr-1.5" />Registrar
                           </Button>
+                          {/* 🔗 08/09/2026 — dono: "quando falar contato e convite,
+                              isso tem que me levar numa esteira... a jornada não
+                              está conexa." Vira negociação de verdade sem
+                              redigitar nada — mesmo caminho do "+ Criar
+                              oportunidade" do modal do cliente, só que direto
+                              daqui, no exato passo em que ela vira interesse real. */}
+                          {onCriarOportunidade && (
+                            <Button size="sm" variant="outline" onClick={() => onCriarOportunidade(c)} title="Virou negociação de verdade? Leva pra Esteira de Captação, já com o nome e contato preenchidos." className="border-nz-marrom/40 text-nz-marrom hover:bg-nz-marrom/10 h-8">
+                              <GitBranch className="w-3.5 h-3.5 mr-1.5" />Esteira
+                            </Button>
+                          )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 {/* DIR-49/54 — fila honesta: quem ficou de fora e por quê, no MESMO escopo */}
@@ -2434,7 +2932,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     </Button>
                   </div>
                 </div>
-                {minha && googleEventos === null && (
+                {minha && googleConta && (
+                  <p className="text-[11px] text-nz-tinta-fraca">
+                    🗓️ Conectado como <span className="font-semibold text-nz-tinta">{googleConta}</span> —{' '}
+                    <button type="button" onClick={trocarContaGoogle} className="font-semibold text-nz-verde hover:text-nz-verde-claro">trocar conta</button>
+                  </p>
+                )}
+                {minha && googleEventos === null && !googleConta && (
                   <p className="text-[11px] text-nz-tinta-fraca">🗓️ Conecte o Google pra ver os SEUS eventos de hoje aqui no meio (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
                 )}
                 {!minha && (
@@ -2467,7 +2971,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                         const g = registro.google_event_link
                           || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
                         return (
-                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap [color-scheme:light]">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 📅 <span className="font-bold">{fmtHora(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.obs ? ` · ${registro.obs}` : ''}</p>
@@ -2502,7 +3006,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       if (item.origem === 'empresa') {
                         const { r } = item; // 🏛️ DIR-52 — de todos, sinalizada
                         return (
-                          <div key={`emp-${r.id || r.titulo}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border-2 border-amber-400/50 bg-amber-50/70 p-2.5">
+                          <div key={`emp-${r.id || r.titulo}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border-2 border-amber-400/50 bg-amber-50/70 p-2.5 [color-scheme:light]">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-nz-tinta truncate">🏛️ <span className="font-bold">{r.hora}</span> · {r.titulo}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da empresa — todo mundo participa{r.dia_semana !== null && r.dia_semana !== undefined ? ` · toda ${DIAS_SEMANA[r.dia_semana]}` : ''}</p>
@@ -2512,7 +3016,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       }
                       const { e } = item; // origem google — só na MINHA agenda
                       return (
-                        <div key={e.id} className="flex items-center gap-3 rounded-lg border border-dashed border-nz-borda bg-white/70 p-2.5">
+                        <div key={e.id} className="flex items-center gap-3 rounded-lg border border-dashed border-nz-borda bg-white/70 p-2.5 [color-scheme:light]">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-nz-tinta truncate">🗓️ <span className="font-bold">{fmtHora(e.inicio) || 'dia todo'}</span> · {e.titulo}</p>
                             <p className="text-[11px] text-nz-tinta-fraca">da sua Google Agenda</p>
@@ -2521,10 +3025,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       );
                     })}
                     {retornos.map(({ cliente, registro }) => (
-                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap">
+                      // 🩹 09/09/2026 — dono viu essa linha "meio apagada": o
+                      // mesmo repintador de "modo escuro" do navegador (DIR-92)
+                      // forçando cor por cima de um card que é claro de
+                      // propósito. `color-scheme: light` avisa o navegador que
+                      // ISTO já é claro por design; a cor também vira inline
+                      // no texto que ele reportou, como segunda camada de defesa.
+                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap [color-scheme:light]">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
-                          <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}</p>
+                          <p className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
+                          <p className="text-[11px] truncate" style={{ color: '#5C6B62' }}>{registro.obs || 'pediu pra retornar'}</p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: cliente, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">📅 Agendar</Button>
@@ -2544,7 +3054,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                         const g = registro.google_event_link
                           || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
                         return (
-                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap [color-scheme:light]">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 📅 <span className="font-bold">{fmtQuando(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.local ? ` · ${registro.local}` : ''}</p>
@@ -2570,95 +3080,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 )}
               </div>
 
-              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só a gestão).
-                  Fechada por padrão (ver comentário no estado acima): abre só
-                  quando alguém realmente vai cadastrar ou excluir uma. */}
-              {podeGerir && (
-                <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setGestaoEmpresaAberta((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 text-left"
-                  >
-                    <span className="text-sm font-bold text-nz-tinta flex items-center gap-1.5">
-                      <Settings2 className="w-4 h-4 text-nz-tinta-fraca" /> Reuniões fixas da empresa
-                      <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span>
-                    </span>
-                    <ChevronDown className={`w-4 h-4 text-nz-tinta-fraca shrink-0 transition-transform ${gestaoEmpresaAberta ? 'rotate-180' : ''}`} />
-                  </button>
-                  {gestaoEmpresaAberta && (
-                  <>
-                  {reunioesEmpresa.length > 0 && (
-                    <div className="space-y-1">
-                      {reunioesEmpresa.map((r) => (
-                        <div key={r.id || r.titulo} className="flex items-center gap-2 rounded-lg border border-nz-borda bg-white p-2 flex-wrap">
-                          <p className="flex-1 min-w-0 text-xs text-nz-tinta truncate"><span className="font-bold">{r.titulo}</span> · {r.dia_semana !== null && r.dia_semana !== undefined ? `toda ${DIAS_SEMANA[r.dia_semana]}` : (r.data || 'sem data')} · {r.hora} às {horaFinal(r.hora, r.duracao_min || 60) || '?'}</p>
-                          <Button size="sm" variant="outline" onClick={() => excluirReuniaoEmpresa(r)} className={`h-7 px-2 text-xs ${confirmaExcluir === `emp-${r.id}` ? 'border-red-500 text-red-600 bg-red-50 font-bold' : 'border-nz-borda text-nz-tinta-fraca'}`}>
-                            {confirmaExcluir === `emp-${r.id}` ? 'Confirma excluir?' : '🗑️'}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex-1 min-w-[180px]">
-                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Título</p>
-                      <Input value={novaEmpresa.titulo} onChange={(e) => setNovaEmpresa((p) => ({ ...p, titulo: e.target.value }))} placeholder="ex.: Mentalidade do Diretor" className="bg-white border-nz-borda text-nz-tinta text-sm h-9" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Quando</p>
-                      <div className="flex gap-1.5">
-                        <select value={novaEmpresa.recorrencia} onChange={(e) => setNovaEmpresa((p) => ({ ...p, recorrencia: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                          <option value="semana">toda semana</option>
-                          <option value="data">data única</option>
-                        </select>
-                        {novaEmpresa.recorrencia === 'semana' ? (
-                          <select value={novaEmpresa.dia_semana} onChange={(e) => setNovaEmpresa((p) => ({ ...p, dia_semana: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                            {DIAS_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
-                          </select>
-                        ) : (
-                          <Input type="date" value={novaEmpresa.data} onChange={(e) => setNovaEmpresa((p) => ({ ...p, data: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                        )}
-                        <Input type="time" value={novaEmpresa.hora} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                      </div>
-                    </div>
-                    <div>
-                      {/* DIR-54 — duas formas de dizer quando termina: minutos OU o horário final */}
-                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Até quando</p>
-                      <div className="flex gap-1.5">
-                        <select value={novaEmpresa.modoFim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, modoFim: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                          <option value="duracao">duração</option>
-                          <option value="fim">até às</option>
-                        </select>
-                        {novaEmpresa.modoFim === 'duracao' ? (
-                          <select value={novaEmpresa.duracao_min} onChange={(e) => setNovaEmpresa((p) => ({ ...p, duracao_min: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                            {DURACOES_REUNIAO.map((d) => <option key={d} value={d}>{d} min</option>)}
-                          </select>
-                        ) : (
-                          <Input type="time" value={novaEmpresa.hora_fim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora_fim: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                        )}
-                      </div>
-                      {novaEmpresa.modoFim === 'fim' && (
-                        <p className="text-[11px] text-nz-tinta-fraca mt-1">{duracaoEmpresaMin ? `= ${duracaoEmpresaMin} min` : 'o término precisa ser depois do início'}</p>
-                      )}
-                    </div>
-                    <Button size="sm" onClick={criarReuniaoEmpresa} disabled={salvando || !novaEmpresa.titulo.trim() || !duracaoEmpresaMin} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-9">
-                      <Plus className="w-4 h-4 mr-1" /> Salvar pra todo mundo
-                    </Button>
-                  </div>
-                  </>
-                  )}
-                </div>
-              )}
-
-              {/* o SEU script (mantém) */}
-              <div className="rounded-lg border border-nz-borda p-3 space-y-2">
-                <p className="text-xs text-nz-tinta-fraca">Escreva o SEU script de convite — o método ensina, mas a voz é sua. Aperfeiçoe a cada conversa.</p>
-                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder={EXEMPLO_SCRIPT} className="bg-white border-nz-borda text-nz-tinta text-sm" />
-                <Button onClick={() => salvarPerfil({ script })} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                  <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
-                </Button>
-              </div>
+              {/* 📜 DIR-112 (09/09/2026) — dono, ao vivo: "tu pode sumir com
+                  aquela parte da agenda ali fixa... pode excluir, pra ficar
+                  ainda mais limpo." O painel de gestão de "Reuniões fixas da
+                  empresa" saiu — quem tem visão total ainda agenda reunião da
+                  empresa pelo botão "Agendar reunião" de cima (mesmo destino,
+                  salvarAgendaEmpresa). O script de convite morou aqui; agora
+                  mora lá em cima, logo depois do guia (ver PASSOS_TOUR_CONTATO
+                  mais abaixo — o alvo "contato-script" segue o card). */}
 
               {/* 🏛️ DIR-73 — a porta da agenda da empresa só é ENTREGUE a quem tem
                   visão total: passando null, o modal nem desenha a opção. A
@@ -2677,6 +3106,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 visaoTotal={visaoTotal}
                 autor={currentUser}
               />
+
+              {/* 📜 DIR-112 (09/09/2026) — "o papel vem pra frente": dono, ao
+                  vivo — "imagina ele com fone, começando a fazer a ligação...
+                  ele clica, esse papel vem pra frente." Em vez de abrir o
+                  WhatsApp direto, o "Contatar" traz o SCRIPT em primeiro
+                  plano — a pessoa lê enquanto liga, o WhatsApp só abre a
+                  partir daqui. */}
+              {chamadaAberta && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70" role="dialog" aria-modal="true" aria-label="Seu script pra este contato" data-teste="contato-chamada-modal">
+                  <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-4 space-y-3 [color-scheme:light]">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-bold" style={{ color: '#1A1A1A' }}>📞 Ligando pra {chamadaAberta.contato?.full_name || 'esse contato'}</p>
+                      <button type="button" onClick={() => setChamadaAberta(null)} aria-label="Fechar" className="shrink-0 text-nz-tinta-fraca hover:text-nz-tinta"><X className="w-4 h-4" /></button>
+                    </div>
+                    <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                      <Headphones className="w-3.5 h-3.5 shrink-0" /> Use fone de ouvido — assim você lê e fala ao mesmo tempo.
+                    </p>
+                    {script.trim() ? (
+                      <div className="rounded-lg border border-nz-borda bg-nz-verde-fundo/20 p-3 max-h-64 overflow-y-auto">
+                        <p className="text-sm whitespace-pre-line" style={{ color: '#1A1A1A' }}>{personalizarScript(script, chamadaAberta.contato?.full_name)}</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-nz-tinta-fraca">Você ainda não escreveu seu script — escreva ali em cima antes de ligar, é rápido e já ajuda nessa e nas próximas ligações.</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button onClick={() => { window.open(chamadaAberta.wa, '_blank', 'noopener'); setChamadaAberta(null); }} className="flex-1 bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="contato-chamada-whatsapp">
+                        <MessageCircle className="w-4 h-4 mr-2" /> Abrir WhatsApp e ligar
+                      </Button>
+                      <Button variant="outline" onClick={() => setChamadaAberta(null)} className="border-nz-borda text-nz-tinta">Fechar</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -2684,7 +3146,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         {/* ══ 🎤 HÁBITO 5 — APRESENTAÇÃO DE SUCESSO (agenda) ══ */}
         {painel === 'apresentacao' && (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1" data-teste="apresentacao-meta">
               <p className={`text-sm font-bold ${reunioesHoje >= 3 ? 'text-nz-verde' : 'text-nz-tinta'}`}>Hoje: {reunioesHoje} de 3 reuniões (meta do método)</p>
               <button type="button" onClick={() => onIr?.('acompanhamento', 'expansao')} className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro">+ Agendar reunião (na esteira) →</button>
             </div>
@@ -2710,7 +3172,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 })}
               </div>
             )}
-            <div className="rounded-lg border border-nz-borda p-3 space-y-2">
+            <div className="rounded-lg border border-nz-borda p-3 space-y-2" data-teste="apresentacao-oficial">
               <p className="text-xs font-semibold text-nz-tinta">Apresentação oficial do negócio</p>
               <div className="flex gap-2">
                 <Input value={apresentacaoUrl} onChange={(e) => setApresentacaoUrl(e.target.value)} placeholder="cole aqui o link da apresentação (deck, página, vídeo)..." className="bg-white border-nz-borda text-nz-tinta text-sm" />
@@ -2729,7 +3191,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         {/* ══ 🔁 HÁBITO 8 — DUPLICAÇÃO (local de treinamento) ══ */}
         {painel === 'duplicacao' && (
           <div className="space-y-3">
-            <div className="space-y-2">
+            <div className="space-y-2" data-teste="duplicacao-habitos">
               {HABITOS.map((h) => (
                 <div key={h.n} className="rounded-lg border border-nz-borda p-3">
                   <p className="text-sm font-bold text-nz-tinta"><span className="text-nz-verde">{h.n}. {h.titulo}</span><span className="text-nz-tinta-fraca font-normal"> — {h.sub}</span></p>
@@ -2737,13 +3199,157 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-dashed border-nz-verde/40 bg-nz-verde-fundo/40 p-4 text-center">
+            <div className="rounded-lg border border-dashed border-nz-verde/40 bg-nz-verde-fundo/40 p-4 text-center" data-teste="duplicacao-treinamento">
               <p className="text-sm font-semibold text-nz-tinta">Local de treinamento do time</p>
               <p className="text-xs text-nz-tinta-fraca mt-1">Aqui entram os materiais oficiais (vídeos, decks, trilha do novo executivo). Estrutura pronta — os conteúdos entram conforme o time for gravando.</p>
             </div>
             <p className="text-xs text-nz-tinta-fraca text-center italic">"A disciplina é a ponte entre objetivos e realização." — Jim Rohn</p>
           </div>
         )}
+    <TourGuiado ativo={tourAberto} passos={PASSOS_POR_PAINEL[painel] || []} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }
+
+// 🖐️ 09/09/2026 — dono, ao vivo, depois de testar o tour do Compromisso:
+// "pode seguir pros outros hábitos". Cada `texto` abre com uma pergunta
+// (método socrático, o mesmo tom pedido pra IA de comprovação hoje) antes
+// de explicar — a plataforma ensinando, não só narrando.
+
+// Hábito 2 — Compromisso, a tela que a pessoa vive todo dia
+const PASSOS_TOUR_METODO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Sabe qual você vai usar todo santo dia? O Hábito 2 — Compromisso. Os outros sete entram conforme a etapa do seu negócio, mas é aqui que o jogo acontece.',
+  },
+  {
+    alvo: 'titulo-tarefa',
+    titulo: 'Sua rotina de hoje, tarefa por tarefa',
+    texto: 'Reparou que cada uma tem um horário? É esse horário que decide se ela conta cheia, atrasada ou perdida — não a ordem da lista.',
+  },
+  {
+    alvo: 'acoes-tarefa',
+    titulo: 'Marcar é um toque',
+    texto: 'Fez a tarefa? Marque NA HORA, não no fim do dia — marcar tudo às 22h faz o sistema contar todas como atrasadas, mesmo que você tenha feito na hora certa. Algumas pedem uma foto como prova antes de fechar.',
+  },
+  {
+    alvo: 'placar-do-dia',
+    titulo: 'Seus 4 números do dia',
+    texto: 'Human Token, MvM, Cotação e X-Pay — sempre aqui, sempre atualizados. Toque no ⓘ de qualquer um pra entender de onde ele sai.',
+  },
+  {
+    alvo: 'votacao-mvm-toggle',
+    titulo: 'A votação que ninguém pode esquecer',
+    texto: 'Você sabia que não votar em TODOS os colegas até o fim da janela zera o seu dia inteiro — dinheiro incluído, mesmo com 100% das suas tarefas feitas? Vote aqui, todo dia, sem falta.',
+  },
+];
+
+// Hábito 1 — Quadro dos Sonhos
+const PASSOS_TOUR_SONHO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Você está no Hábito 1 — Sonho. É por aqui que tudo começa: sem saber onde quer chegar, a energia se espalha.',
+  },
+  {
+    alvo: 'sonho-horizonte',
+    titulo: 'Três prazos, não um só',
+    texto: 'Sabe por que curto, médio e longo prazo são caixas separadas? Porque sonho sem prazo vira desejo vago — com prazo, vira meta.',
+  },
+  {
+    alvo: 'sonho-adicionar',
+    titulo: 'Detalhe o sonho, não só a imagem',
+    texto: 'Vai colocar um carro? Escreva ano, cor, banco de couro, roda. Quanto mais detalhe, mais real ele fica pro seu cérebro perseguir — e é essa imagem que flutua no seu Ritual do Amanhecer.',
+  },
+];
+
+// Hábito 3 — Lista de Networking
+const PASSOS_TOUR_LISTA = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 3 — Lista de Networking',
+    texto: 'Sabe quem você já conhece que podia virar cliente ou parceiro? É isso que essa lista organiza — as pessoas da sua agenda, qualificadas de 1 a 5.',
+  },
+  {
+    alvo: 'lista-adicionar-pessoa',
+    titulo: 'Toda pessoa da sua agenda entra aqui',
+    texto: 'Adicione antes de qualificar — a lista cresce primeiro, a nota vem depois.',
+  },
+  {
+    alvo: 'lista-qualificar',
+    titulo: 'Qualificar é o que decide quem vira prioridade',
+    texto: 'Confiança, financeiro e apetite — três notas que juntas dizem o % de chance de fechar. É essa nota que decide quem aparece primeiro no Hábito 4.',
+  },
+];
+
+// Hábito 4 — Contato e Convite
+const PASSOS_TOUR_CONTATO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 4 — Contato e Convite',
+    texto: 'Já qualificou alguém no Hábito 3? Essas pessoas aparecem aqui, na fila de quem contatar — as mais qualificadas primeiro.',
+  },
+  {
+    alvo: 'contato-script',
+    titulo: 'Seu script vale ponto — e vem com você pra ligação',
+    texto: 'Já pensou por que escrever o SEU jeito de convidar (não um copiado) muda o resultado da ligação? Escreva com {nome} pra personalizar e peça a dica pra IA: quando ela conferir que está bom, você ganha o ponto — uma vez só. Ela te ajuda a pensar, nunca escreve por você. Ele também aparece na sua frente sempre que você clicar em Contatar.',
+  },
+  {
+    alvo: 'contato-fila',
+    titulo: 'A fila é ordenada pelo %',
+    texto: 'Quem tem mais chance de fechar aparece no topo — não é a ordem que você cadastrou, é a ordem de prioridade real.',
+  },
+  {
+    alvo: 'contato-acoes',
+    titulo: 'Três botões, uma ordem só',
+    texto: 'Sabe qual vem primeiro? Contatar traz seu script pra frente (pra você ler enquanto liga, de fone) e leva ao WhatsApp → Agendar ou Registrar o desfecho → Esteira, quando virar negociação de verdade. Sempre nessa ordem.',
+  },
+];
+
+// Hábito 5 — Apresentação de Sucesso
+const PASSOS_TOUR_APRESENTACAO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 5 — Apresentação de Sucesso',
+    texto: 'A reunião marcada no Hábito 4 chega aqui. Sabe a meta do método? 3 apresentações por dia, de 45 a 60 minutos cada.',
+  },
+  {
+    alvo: 'apresentacao-meta',
+    titulo: 'O contador não deixa você esquecer',
+    texto: 'Fica verde quando bate 3 — é o número que o método pede todo dia, nem mais, nem menos.',
+  },
+  {
+    alvo: 'apresentacao-oficial',
+    titulo: 'Uma apresentação, sempre a mesma',
+    texto: 'Cole aqui o link do seu deck ou vídeo oficial — é a mesma apresentação toda vez, pra você não reinventar a roda a cada reunião.',
+  },
+];
+
+// Hábito 8 — Duplicação
+const PASSOS_TOUR_DUPLICACAO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 8 — Duplicação',
+    texto: 'Sabe o que separa quem cresce sozinho de quem constrói um time? Ensinar os outros 7 Hábitos pra frente — é isso que esse hábito é.',
+  },
+  {
+    alvo: 'duplicacao-habitos',
+    titulo: 'Os 8 Hábitos, resumidos',
+    texto: 'Use esta lista pra treinar alguém do zero — é o mesmo roteiro que você aprendeu, só que contado por você agora.',
+  },
+  {
+    alvo: 'duplicacao-treinamento',
+    titulo: 'O local de treinamento do time',
+    texto: '"A disciplina é a ponte entre objetivos e realização." Os materiais oficiais (vídeos, decks) entram aqui conforme o time for gravando.',
+  },
+];
+
+const PASSOS_POR_PAINEL = {
+  sonho: PASSOS_TOUR_SONHO,
+  compromisso: PASSOS_TOUR_METODO,
+  lista: PASSOS_TOUR_LISTA,
+  contato: PASSOS_TOUR_CONTATO,
+  apresentacao: PASSOS_TOUR_APRESENTACAO,
+  duplicacao: PASSOS_TOUR_DUPLICACAO,
+};

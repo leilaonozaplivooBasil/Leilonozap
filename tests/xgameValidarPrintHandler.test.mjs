@@ -16,10 +16,18 @@ process.env.AI_GATEWAY_API_KEY = 'vck_chave_de_teste';
 process.env.VITE_SUPABASE_URL = 'https://exemplo.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'chave-de-teste';
 
-const { default: handler } = await import('../api/functions/xgameValidarPrint.js');
+const { default: handler, config } = await import('../api/functions/xgameValidarPrint.js');
 
 const FOTO = 'https://fotos.exemplo/hoje.jpg';
 const ANTERIORES = ['https://fotos.exemplo/ontem.jpg', 'https://fotos.exemplo/anteontem.jpg'];
+
+// 🐛 09/09/2026 — auditoria noturna: esta rota é chamada DIRETO do front
+// (não só através de xgameProvaValidador.js, que já tinha maxDuration:60) —
+// sem isso o timeout padrão da Vercel podia cortar uma análise de imagem
+// com raciocínio no meio, virando falha intermitente.
+test('config: maxDuration 60s — chamada de IA com imagem não pode estourar o timeout padrão', () => {
+  assert.equal(config?.maxDuration, 60);
+});
 
 // resposta no formato da Messages API, com o JSON estruturado no bloco de texto
 const respostaIA = (saida, { model = 'anthropic/claude-opus-5', stop_reason = 'end_turn' } = {}) => ({

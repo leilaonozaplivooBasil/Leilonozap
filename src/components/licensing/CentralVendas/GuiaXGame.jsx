@@ -1,11 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ExternalLink, Check, BookOpen, HelpCircle, Type, Compass } from 'lucide-react';
 import TiraDuvidas from '@/components/licensing/TiraDuvidas';
+import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 import {
-  AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS,
+  AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS, PAPEIS,
   ENDERECOS, FRASES_DO_RODAPE, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '@/lib/guiaXGame';
-import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
+import { vibrar, VIBRA_TOQUE, TOKEN_MAX, ligaDoToken, moedaModelo } from '@/lib/xgame';
+import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
+import useTourDaTela from '@/hooks/useTourDaTela';
+
+// 🪙 09/09/2026 — dono: "a moeda tem que aparecer aqui... como modelo, pra
+// explicar o modelo, pra ensinar as pessoas — ela tem que ter algum lugar."
+// A moeda CHEIA do modelo (`moedaModelo`, xgame.js — os 5 pesos no valor
+// MÁXIMO), igual ao print de prova que já foi mandado pro dono, só que
+// agora morando de verdade no Guia, não só num teste local.
+const MOEDA_MODELO = moedaModelo('estrategico');
 
 // 🎓 COMO JOGAR — o guia do X-GAME dentro da plataforma (07/09/2026).
 //
@@ -136,6 +146,27 @@ function Aula({ aula, aberta, onAbrir, lida, onLida }) {
             </div>
           )}
 
+          {/* 👥 09/09/2026 — "quem é administrativo, quem é executivo" — a
+              mesma matriz de src/lib/visibilidadePorPapel.js, em português
+              simples, com um cartão por papel. */}
+          {aula.papeis && (
+            <div className="grid gap-2">
+              {PAPEIS.map((p) => (
+                <div key={p.id} className="rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5">
+                  <p className="font-bold text-white text-[13px]">{p.rotulo}</p>
+                  <p className="text-white/50 text-[12px] italic mt-0.5">{p.quemE}</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {p.capacidades.map((c, i) => (
+                      <li key={i} className="flex gap-1.5 text-white/70 text-[12px] leading-relaxed">
+                        <span className="shrink-0 text-white/30">•</span>{c}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+
           {aula.numeros?.map((n) => (
             <div key={n.nome} className="rounded-xl bg-white/[0.04] px-3 py-2.5">
               <p className="font-bold text-white">{n.nome} <span className="font-normal text-white/45">— “{n.pergunta}”</span></p>
@@ -147,6 +178,16 @@ function Aula({ aula, aberta, onAbrir, lida, onLida }) {
                       {f.medalha} <strong className="text-white">{f.label}</strong> {f.intervalo}
                     </span>
                   ))}
+                </div>
+              )}
+              {n.moedaModelo && (
+                <div className="mt-3 rounded-xl bg-white p-3 sm:p-4">
+                  <p className="text-[12px] font-bold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do Human Token</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">a moeda CHEIA do modelo — não é o seu progresso, é o peso máximo de cada fatia no ciclo</p>
+                  <div className="mt-2">
+                    <MoedaPizza componentes={MOEDA_MODELO} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
+                  </div>
+                  <p className="text-[11px] font-semibold text-nz-verde mt-2">"Recrutamos caráter e treinamos habilidade" — o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
                 </div>
               )}
             </div>
@@ -198,7 +239,36 @@ function ChecklistDoPrimeiroDia({ itens }) {
   );
 }
 
+const PASSOS_TOUR_GUIA = [
+  {
+    alvo: 'guia-xgame',
+    titulo: 'O manual da casa, sempre aqui',
+    texto: 'Toda dúvida de "como funciona isso?" tem resposta nesta tela. Você não precisa perguntar pra ninguém pra continuar.',
+  },
+  {
+    alvo: 'progresso-aulas',
+    titulo: 'Quantas aulas você já viu',
+    texto: 'Este contador é seu, ninguém mais vê. Ele existe pra você saber de onde parar e continuar — não pra te cobrar.',
+  },
+  {
+    alvo: 'guia-atalhos',
+    titulo: 'Os atalhos que economizam o seu dia',
+    texto: 'As coisas que todo mundo demora pra descobrir sozinho estão listadas aqui. Vale ler uma vez com calma.',
+  },
+  {
+    alvo: 'guia-perguntas',
+    titulo: 'As dúvidas que todo mundo tem',
+    texto: 'Antes de perguntar no grupo, dá uma olhada aqui. Provavelmente alguém já perguntou — e a resposta já está escrita.',
+  },
+  {
+    alvo: 'guia-dicionario',
+    titulo: 'Human Token? MvM? Cotação?',
+    texto: 'O dicionário da casa. Cada palavra que a plataforma usa, explicada em uma linha.',
+  },
+];
+
 export default function GuiaXGame({ currentUser = null }) {
+  const [tourAberto, setTourAberto] = useTourDaTela('guia');
   const [aberta, setAberta] = useState(AULAS[0]?.id || null);
   const [lidas, setLidas] = useState(() => ler(CHAVE_LIDAS, []));
   const [letra, setLetra] = useState(() => ler(CHAVE_LETRA, 'm'));
@@ -322,6 +392,7 @@ export default function GuiaXGame({ currentUser = null }) {
         <a href={`https://${ENDERECOS.placar}`} target="_blank" rel="noreferrer" className="flex-1 min-w-[140px] text-center rounded-xl bg-white/10 hover:bg-white/20 px-3 py-2.5 font-bold text-white">Placar e ranking</a>
       </div>
       <p className="text-center text-[11px] text-white/30 tracking-wide pt-1">{FRASES_DO_RODAPE}</p>
+      <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_GUIA} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }

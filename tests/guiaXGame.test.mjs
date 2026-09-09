@@ -8,11 +8,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-  AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS,
+  AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS, PAPEIS,
   ENDERECOS, COTACAO_DIA_1, COTACAO_ULTIMO, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
   JANELA_INICIO, JANELA_FIM,
 } from '../src/lib/guiaXGame.js';
 import { RESUMO_MIN, TRAVA_SEM_ESTUDO, CICLO_DIAS_UTEIS, FAIXAS_TOKEN, cotacaoDoDia, MVM_MAX } from '../src/lib/xgame.js';
+import { visibilidadeDoUsuario } from '../src/lib/visibilidadePorPapel.js';
 
 const TELA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/GuiaXGame.jsx', import.meta.url), 'utf8');
 const ABAS = fs.readFileSync(new URL('../src/lib/licensingTabs.js', import.meta.url), 'utf8');
@@ -90,11 +91,17 @@ test('perguntas e dicionário têm par completo', () => {
 });
 
 // ── os números vêm da fonte, não da memória ──────────────────────────
+// 🏆 DIR-115 (09/09/2026) — repesagem: FAIXAS_TOKEN ganhou um 4º degrau
+// (Platina). FAIXAS é CALCULADA a partir de FAIXAS_TOKEN (nunca hardcoded
+// aqui) — este teste só precisa reconhecer o novo degrau, a derivação
+// continua intocada.
 test('as faixas da moeda saem de FAIXAS_TOKEN, com o intervalo calculado', () => {
   assert.equal(FAIXAS.length, FAIXAS_TOKEN.length);
-  assert.deepEqual(FAIXAS.map((f) => f.label), ['BRONZE', 'PRATA', 'OURO']);
-  assert.equal(FAIXAS.find((f) => f.id === 'prata').intervalo, '6,66 a 17,77');
-  assert.equal(FAIXAS.find((f) => f.id === 'ouro').intervalo, '17,78 ou mais');
+  assert.deepEqual(FAIXAS.map((f) => f.label), ['BRONZE', 'PRATA', 'OURO', 'PLATINA']);
+  assert.equal(FAIXAS.find((f) => f.id === 'bronze').intervalo, '0,00 a 6,65');
+  assert.equal(FAIXAS.find((f) => f.id === 'prata').intervalo, '6,66 a 12,21');
+  assert.equal(FAIXAS.find((f) => f.id === 'ouro').intervalo, '12,22 a 17,77');
+  assert.equal(FAIXAS.find((f) => f.id === 'platina').intervalo, '17,78 ou mais');
 });
 
 test('a cotação das pontas vem de cotacaoDoDia, não de um número solto', () => {
@@ -197,4 +204,69 @@ test('a votação MvM tem aula própria, com a punição escrita BEM explícita 
   // e a tela mostra o "tom perigo" com uma cor própria — não reaproveitando
   // o âmbar do "atencao" comum, senão a gravidade não aparece visualmente
   assert.match(TELA, /perigo:\s*\{[^}]*red/);
+});
+
+// 👥 09/09/2026 — dono, ao vivo: "quem é administrativo, quem é executivo, o
+// que cada um pode fazer" — pra dominar a plataforma sem depender do TEC nem
+// do fundador. PAPEIS é a MESMA matriz de visibilidadePorPapel.js (a fonte de
+// verdade de permissão) contada em português simples — os dois precisam
+// continuar de acordo, ou o guia ensina um papel que não existe mais.
+test('PAPEIS cobre exatamente os papéis reais de visibilidadePorPapel.js — nenhum sumiu, nenhum foi inventado', () => {
+  const rotulosReais = [
+    visibilidadeDoUsuario({ role: 'super_admin' }).papelLabel,
+    visibilidadeDoUsuario({ role: 'admin' }).papelLabel,
+    visibilidadeDoUsuario({ role: 'admin_financeiro' }).papelLabel,
+    visibilidadeDoUsuario({ role: 'user', career_levels: ['diretoria_executiva'] }).papelLabel,
+    visibilidadeDoUsuario({ role: 'user', career_levels: ['diretoria_operacao'] }).papelLabel,
+    visibilidadeDoUsuario({ role: 'user', career_levels: ['executivo_conta'] }).papelLabel,
+    visibilidadeDoUsuario({ role: 'licensee' }).papelLabel,
+    visibilidadeDoUsuario({ role: 'user' }).papelLabel,
+  ];
+  assert.equal(new Set(rotulosReais).size, 8, 'o teste em si precisa cobrir 8 papéis distintos');
+  for (const real of rotulosReais) {
+    assert.ok(PAPEIS.some((p) => p.rotulo.startsWith(real)), `o papel real "${real}" não aparece no guia`);
+  }
+  assert.equal(PAPEIS.length, rotulosReais.length, 'o guia tem um papel a mais ou a menos que a matriz real');
+});
+
+test('todo papel do guia tem quem é e pelo menos uma capacidade explicada', () => {
+  for (const p of PAPEIS) {
+    assert.ok(p.rotulo?.trim(), `papel ${p.id} sem rótulo`);
+    assert.ok(p.quemE?.trim(), `papel ${p.id} sem "quem é"`);
+    assert.ok(p.capacidades?.length >= 1, `papel ${p.id} sem nenhuma capacidade`);
+  }
+});
+
+test('a aula "Quem é quem aqui dentro" existe e desenha os papéis', () => {
+  const aula = AULAS.find((a) => a.id === 'papeis');
+  assert.ok(aula, 'sumiu a aula dos papéis/permissões');
+  assert.ok(aula.papeis, 'a aula não está marcada pra desenhar PAPEIS');
+  assert.match(TELA, /aula\.papeis/);
+  assert.match(TELA, /PAPEIS\.map/);
+});
+
+test('o botão "Como Funciona" está em toda aba da Top College, menos dentro do próprio Guia', () => {
+  assert.match(PAGINA, /Como Funciona/);
+  // não pode aparecer duplicado dentro do próprio Guia — ela já está lá
+  assert.match(PAGINA, /catalogSubTab !== 'catalogo-guia'/);
+});
+
+// 🆙 09/09/2026, 2ª rodada do mesmo dia — dono: "quando ela tiver dúvida ela
+// vai no Como Funciona pra dominar a plataforma". O botão evoluiu de "só
+// navega pra aba do Guia" pra "abre o Tira Dúvidas na hora, sabendo em qual
+// tela a pessoa está perdida" — sem inventar mais um flutuante brigando com
+// a Leila e o X-Music.
+test('o botão "Como Funciona" abre o Tira Dúvidas na hora, sem sair da tela', () => {
+  const MODAL = fs.readFileSync(new URL('../src/components/licensing/ComoFuncionaModal.jsx', import.meta.url), 'utf8');
+  assert.match(PAGINA, /import ComoFuncionaModal from/);
+  assert.match(PAGINA, /setComoFuncionaAberto\(true\)/, 'o botão precisa abrir o modal, não só trocar de aba direto');
+  assert.match(PAGINA, /<ComoFuncionaModal/);
+  assert.match(PAGINA, /pagina=\{paginaAtual\}/, 'o modal precisa saber em qual seção a pessoa está');
+  assert.match(MODAL, /<TiraDuvidas/, 'o modal tem que trazer o mesmo Tira Dúvidas de sempre, não reinventar um chat novo');
+  assert.match(MODAL, /useSegurarCamada/, 'sem isso os outros flutuantes (X-Music, Leila) não sabem sumir da frente dele');
+  assert.match(MODAL, /onAbrirGuia/, 'precisa deixar um caminho pro guia completo, pra quem quiser os 8 Hábitos do zero');
+});
+
+test('"Ver o guia completo" do modal leva pra aba certa e fecha o modal', () => {
+  assert.match(PAGINA, /onAbrirGuia=\{\(\) => \{ setCatalogSubTab\('catalogo-guia'\); setComoFuncionaAberto\(false\); \}\}/);
 });

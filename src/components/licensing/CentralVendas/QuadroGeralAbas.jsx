@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History, GraduationCap, Camera } from 'lucide-react';
+import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History, GraduationCap, Camera, Vote } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -396,27 +396,45 @@ export function AbaHistorico({ pessoaId, tarefasCiclo }) {
   const COR = { atrasada: 'text-red-200 border-red-400/40', pronto: 'text-nz-verde border-nz-verde/50', devolvida: 'text-amber-200 border-amber-400/40', aguardando: 'text-white/50 border-white/15', conferida: 'text-white/70 border-white/25' };
   const fmtHora = (iso) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null);
   if (!itens.length) return <p className="text-[11px] text-white/40 py-2"><History className="w-3 h-3 inline mr-1" />nada distribuído pra esta pessoa no ciclo ainda.</p>;
+  // 📉 08/09/2026 — dono: "eu quero ter uma historicidade pra eu até
+  // mostrar o relatório da pessoa de todos os pontos." Não feito + já
+  // vencido = mesmo dia que zerou (MvM, Human Token, pontos e X-Pay).
+  const diasZerados = itens.filter(({ tarefa: t, estado }) => !t.feito && estado.atrasou).length;
   return (
-    <ul className="space-y-1" data-teste="aba-historico">
-      {itens.map(({ tarefa: t, estado }) => (
-        <li key={t.id} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={caixa} data-teste="historico-item" data-estado={estado.id}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white/40 shrink-0 tabular-nums">{fmtDia(String(t.data).slice(0, 10))}{t.hora ? ` ${String(t.hora).slice(0, 5)}` : ''}</span>
-            <span className="text-white/80 truncate">{t.titulo}</span>
-            <span className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[estado.id]}`}>{estado.rotulo}</span>
-          </div>
-          <p className="mt-0.5 text-[10px] text-white/35">
-            {t.prazo_em ? rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10)) : 'sem prazo'}
-            {t.pronto_em ? ` · pronto às ${fmtHora(t.pronto_em)}` : ''}
-            {t.conferido === true ? ' · ✔✔ conferida' : ''}
-            {t.devolvida_motivo ? ` · ↩ "${t.devolvida_motivo}"${t.devolvida_em ? ` às ${fmtHora(t.devolvida_em)}` : ''}` : ''}
-          </p>
-        </li>
-      ))}
-    </ul>
+    <div data-teste="aba-historico">
+      {diasZerados > 0 && (
+        <p className="mb-2 text-[10px] font-bold text-red-300" data-teste="historico-dias-zerados">
+          ⚠️ {diasZerados} atraso{diasZerados === 1 ? '' : 's'} que zerou{diasZerados === 1 ? '' : 'ram'} o dia inteiro dela no ciclo (MvM, Human Token, pontos e X-Pay)
+        </p>
+      )}
+      <ul className="space-y-1">
+        {itens.map(({ tarefa: t, estado }) => (
+          <li key={t.id} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px]" style={caixa} data-teste="historico-item" data-estado={estado.id}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-white/40 shrink-0 tabular-nums">{fmtDia(String(t.data).slice(0, 10))}{t.hora ? ` ${String(t.hora).slice(0, 5)}` : ''}</span>
+              <span className="text-white/80 truncate">{t.titulo}</span>
+              <span className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${COR[estado.id]}`}>{estado.rotulo}</span>
+            </div>
+            <p className="mt-0.5 text-[10px] text-white/35">
+              {t.prazo_em ? rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10)) : 'sem prazo'}
+              {t.pronto_em ? ` · pronto às ${fmtHora(t.pronto_em)}` : ''}
+              {t.conferido === true ? ' · ✔✔ conferida' : ''}
+              {t.devolvida_motivo ? ` · ↩ "${t.devolvida_motivo}"${t.devolvida_em ? ` às ${fmtHora(t.devolvida_em)}` : ''}` : ''}
+            </p>
+            {!t.feito && estado.atrasou && (
+              <p className="mt-0.5 text-[10px] font-bold text-red-300">⚠️ zerou o dia inteiro dela</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
+// 🔍 08/09/2026 — dono: "eu preciso entrar, vasculhar, olhar o quadro dele,
+// olhar tudo... eu quero saber agora como ele está olhando o MvM dele...
+// eu estou às cegas." A aba "MvM dele" é a tela X-GAME dela mesma, aberta
+// pelo Super Admin em modo só-olhar (ver XGame.jsx, prop modoAdmin).
 export const ABAS = [
-  ['pessoa', 'Pessoa', null], ['metas', 'Metas', Target], ['programa', 'Programa', GraduationCap], ['semana', 'Semana', CalendarDays], ['quadro', 'Quadro dele', LayoutGrid], ['comprovacoes', 'Comprovações', Camera], ['historico', 'Histórico', History],
+  ['pessoa', 'Pessoa', null], ['mvm', 'MvM dele', Vote], ['metas', 'Metas', Target], ['programa', 'Programa', GraduationCap], ['semana', 'Semana', CalendarDays], ['quadro', 'Quadro dele', LayoutGrid], ['comprovacoes', 'Comprovações', Camera], ['historico', 'Histórico', History],
 ];

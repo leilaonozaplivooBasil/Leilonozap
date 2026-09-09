@@ -13,7 +13,8 @@
 // sendo outra) que gerou o chamado do Paim em 07/09.
 import {
   TOKEN_MAX, APLICABILIDADE_MAX, MVM_MAX, TRAVA_SEM_ESTUDO, CICLO_DIAS_UTEIS,
-  FAIXAS_TOKEN, RESUMO_MIN, cotacaoDoDia,
+  FAIXAS_TOKEN, RESUMO_MIN, cotacaoDoDia, LIGAS, TRAVA_SEM_ESTUDO_CICLO, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
+  PISO_CARATER_LIGA, PISO_CARATER_PLATINA,
 } from './xgame.js';
 
 // tipos de chamado. `duvida` a IA resolve e encerra; o resto vira trabalho
@@ -72,16 +73,25 @@ export function fichaDeRegras() {
     .map((f) => `${f.medalha} ${f.label}: a partir de ${br(f.min)}`)
     .join(' · ');
 
+  const ligas = LIGAS
+    .slice()
+    .sort((a, b) => a.min - b.min)
+    .map((l) => `${l.emoji} ${l.label}: a partir de ${br(l.min)}`)
+    .join(' · ');
+
   return `REGRAS REAIS DO X-GAME (valores lidos do código agora, não de memória):
 - Ciclo: ${CICLO_DIAS_UTEIS} dias úteis, começando no primeiro dia útil do mês.
 - MvM do Dia: começa em ${br(MVM_MAX)} e CAI em tempo real. Cada tarefa que passa da hora sem ser marcada desconta ${br(MVM_MAX)} dividido pelo número de tarefas do dia. Não é castigo do sistema: é o relógio andando.
 - Aplicabilidade: constância no ciclo, vale no máximo ${br(APLICABILIDADE_MAX)}.
-- Human Token do dia = MvM + Aplicabilidade, teto ${br(TOKEN_MAX)}.
-- Faixas da moeda: ${faixas}.
-- TRAVA DO ESTUDO: sem constância na tarefa de leitura, o Human Token trava em ${br(TRAVA_SEM_ESTUDO)} — um centésimo abaixo do ouro, de propósito. Quem não estuda não chega ao ouro, por mais tarefa que faça.
+- Human Token DO DIA (a nota de hoje) = MvM do Dia + Aplicabilidade, teto ${br(TOKEN_MAX)}. Faixas do dia: ${faixas}.
+- TRAVA DO ESTUDO NO TOKEN DO DIA: sem constância na tarefa de leitura, o Human Token DO DIA trava em ${br(TRAVA_SEM_ESTUDO)} — um centésimo abaixo da Platina do dia, de propósito. Isso vale só pra nota de hoje; o Ouro do dia continua alcançável.
 - Cotação do dia: ${br(cotacaoDoDia(1))} no primeiro dia útil do ciclo, caindo ${br(cotacaoDoDia(1) - cotacaoDoDia(2))} por dia útil até ${br(cotacaoDoDia(CICLO_DIAS_UTEIS))} no último. Fazer cedo vale mais — "ANTECIPAÇÃO É PODER".
 - Pontos do dia: 10 por tarefa feita, +5 se feita dentro da janela do horário, tudo multiplicado pela cotação do dia.
-- COMPROVAÇÃO DE ESTUDO: exige a FOTO do estudo E um resumo DIGITADO de no mínimo ${RESUMO_MIN} caracteres (umas 6 linhas). ${RESUMO_MIN} é MÍNIMO, não limite. Colar é bloqueado de propósito: digitar é parte do treino.`;
+- COMPROVAÇÃO DE ESTUDO: exige a FOTO do estudo E um resumo DIGITADO de no mínimo ${RESUMO_MIN} caracteres (umas 6 linhas). ${RESUMO_MIN} é MÍNIMO, não limite. Colar é bloqueado de propósito: digitar é parte do treino.
+- HUMAN TOKEN OFICIAL DO CICLO (o "Onde estou × Executivo Ideal", outra conta, NÃO CONFUNDIR com a do dia acima): soma MvM da votação + Produção + Real Time + Bônus/Estudo + Vendas (meta ${META_VENDAS_CICLO} no ciclo), teto ${br(TOKEN_MAX)}. Ligas do ciclo: ${ligas}.
+- "RECRUTAMOS CARÁTER E TREINAMOS HABILIDADE" (DIR-115): o MvM do ciclo é PORTÃO, não só peso — MvM abaixo de ${PISO_CARATER_LIGA} trava tudo em Bronze, não importa produção/vendas; MvM abaixo de ${PISO_CARATER_PLATINA} barra a Platina (mas não o Ouro). A Platina também exige bater 100% da meta de vendas do ciclo — sem isso, cai pro Ouro mesmo com o token acima do limiar.
+- TRAVA DO ESTUDO NO CICLO (DIR-113/DIR-115): sem leitura de semana + estudo de fim de semana em dia, o token OFICIAL DO CICLO trava em ${br(TRAVA_SEM_ESTUDO_CICLO)} — isso só afeta a LIGA PLATINA. A LIGA OURO do ciclo continua alcançável mesmo sem estudar em casa, batendo Produção/MvM/Vendas. NUNCA diga que sem estudo a pessoa não chega ao ouro do ciclo — isso está errado.
+- Executivo Ideal (formação de 90 dias): manter, ciclo após ciclo, MvM ≥ ${Math.round(EXECUTIVO_IDEAL.mvm * 100)}%, Produção ≥ ${Math.round(EXECUTIVO_IDEAL.producao * 100)}%, Real Time ≥ ${Math.round(EXECUTIVO_IDEAL.realtime * 100)}%, Bônus/Estudo ≥ ${Math.round(EXECUTIVO_IDEAL.bonus * 100)}% e ${Math.round(EXECUTIVO_IDEAL.vendas * 100)}% da meta de vendas.`;
 }
 
 /**

@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake } from 'lucide-react';
+import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake, HelpCircle } from 'lucide-react';
 import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
 
@@ -60,6 +60,8 @@ import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
+import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
+import { pedirTour, TOURS_DISPONIVEIS } from '@/lib/pedidoDeTour';
 import DiarioDeBolso from '../components/licensing/CentralVendas/DiarioDeBolso';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
@@ -166,6 +168,9 @@ const DashboardContent = ({ user, isAdmin }) => {
     } catch {}
   };
   const [catalogSubTab, setCatalogSubTab] = useState(getInitialCatalogSubTab);
+  // 🎓❓ 09/09/2026 — o modal do "Como Funciona": pergunta na hora, de
+  // qualquer tela da Top College, sem navegar até achar a aba do Guia.
+  const [comoFuncionaAberto, setComoFuncionaAberto] = useState(false);
   // 🎮 link antigo do Admin X-GAME → a gestão dentro do X-Performance
   useEffect(() => {
     if (activeTab !== 'xgame-admin') return;
@@ -1086,13 +1091,40 @@ const DashboardContent = ({ user, isAdmin }) => {
   // e vai pro lado do NOME, lá em cima (é dali que se fala "como quem" a
   // pessoa está vendo a tela). Fora da faixa, os dois continuam juntos,
   // exatamente como sempre foram.
+  // 🎓❓ 09/09/2026 — dono, ao vivo: "quando ela tiver dúvida ela vai no Como
+  // Funciona pra dominar a plataforma, ficar independente sem depender do
+  // TEC nem do fundador." O seletor de seções já mora sozinho, no topo de
+  // TODA tela da Top College (a faixa da academia) — colar o botão bem do
+  // lado dele é o único lugar que aparece em Método, Mentalidade, Time, ADM
+  // X-Game e Carreira ao mesmo tempo, sem inventar um flutuante novo por
+  // cima do X-Music e da Leila que já disputam aquele canto da tela.
+  //
+  // 🆙 2ª rodada (mesmo dia) — em vez de só levar pra aba do Guia, o botão
+  // abre um modal com o Tira Dúvidas NA HORA, já sabendo em qual seção a
+  // pessoa está perdida (`pagina`). "Ver o guia completo" dentro dele
+  // continua levando pra aba, pra quem quiser ler os 8 Hábitos do zero.
+  const paginaAtual = SECOES_TOP_COLLEGE.find((s) => s.value === catalogSubTab)?.label || null;
+  const botaoComoFunciona = catalogSubTab !== 'catalogo-guia' && (
+    <button
+      type="button"
+      onClick={() => setComoFuncionaAberto(true)}
+      title="Como Funciona — pergunte na hora ou veja o guia do X-GAME"
+      data-teste="botao-como-funciona"
+      className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2.5 text-[13px] font-bold text-white/80 hover:border-white/30 hover:bg-white/[0.10] hover:text-white"
+    >
+      <HelpCircle className="h-4 w-4" /> Como Funciona
+    </button>
+  );
   const navegacaoSecoes = (
-    <CentralVendasTabs
-      value={catalogSubTab}
-      onChange={setCatalogSubTab}
-      clientesCount={myClients.length}
-      escuro={naTopCollege}
-    />
+    <div className="flex items-center gap-2 flex-wrap">
+      <CentralVendasTabs
+        value={catalogSubTab}
+        onChange={setCatalogSubTab}
+        clientesCount={myClients.length}
+        escuro={naTopCollege}
+      />
+      {naTopCollege && botaoComoFunciona}
+    </div>
   );
   const escopoView = <SeletorEscopo vis={visPapel} escopo={escopo} onEscopo={setEscopo} compacto />;
   const seletorDaCentral = (
@@ -1682,6 +1714,16 @@ const DashboardContent = ({ user, isAdmin }) => {
         isProcessingWithdrawal={isProcessingWithdrawal}
         onSubmit={handleWithdrawalSubmit}
       />
+
+      {comoFuncionaAberto &&
+        <ComoFuncionaModal
+          usuario={user}
+          pagina={paginaAtual}
+          onFechar={() => setComoFuncionaAberto(false)}
+          onAbrirGuia={() => { setCatalogSubTab('catalogo-guia'); setComoFuncionaAberto(false); }}
+          onIniciarTour={TOURS_DISPONIVEIS[catalogSubTab] ? () => { pedirTour(TOURS_DISPONIVEIS[catalogSubTab]); setComoFuncionaAberto(false); } : undefined}
+        />
+      }
 
       </div>
 

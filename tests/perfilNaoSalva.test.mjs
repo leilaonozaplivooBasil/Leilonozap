@@ -23,13 +23,22 @@ test('a causa continua valendo: escrita direta em app_users e no-op', () => {
   assert.match(admin, /no-op silencioso/);
 });
 
-test('cliente comum passa a salvar pelo servidor', () => {
-  assert.match(adapter, /if \(!op && table === 'app_users' && action === 'update'\)/);
+test('quem não é admin salva o próprio cadastro pelo servidor', () => {
+  // 🩹 09/09/2026 — A CONDIÇÃO MUDOU DE FORMA, NÃO DE INTENÇÃO. Era `!op`, e
+  // isso prendia justamente quem tinha cargo de operador: a Iara (loja física)
+  // levava "Apenas admin pode editar usuários" ao trocar a própria foto. A
+  // pergunta certa é "este cadastro é SEU?", não "você é operador?". O que este
+  // teste protege — o PONTO 130, cliente comum salvando o próprio cadastro pela
+  // rota de servidor — continua igual, e agora vale pro operador também.
+  assert.match(adapter, /if \(!_souAdmin && _ehMeuCadastro && table === 'app_users' && action === 'update'\)/);
   assert.match(adapter, /\/api\/functions\/atualizarMeuCadastro/);
 });
 
 test('so o proprio cadastro — nunca o de outra pessoa', () => {
-  assert.match(adapter, /if \(!eu\?\.id \|\| String\(eu\.id\) !== String\(id\)\) return \{ _skip: true \}/);
+  // A posse está NA CONDIÇÃO do desvio: cadastro de outra pessoa nem entra
+  // aqui, segue pelo caminho de operador como sempre seguiu.
+  assert.match(adapter, /const _ehMeuCadastro = !!_eu\?\.id && String\(_eu\.id\) === String\(id\);/);
+  assert.match(adapter, /if \(!eu\?\.id \|\| String\(eu\.id\) !== String\(id\)\) return \{ _skip: true \}|_ehMeuCadastro && table/);
 });
 
 test('a identidade sai do cracha, nunca do corpo', () => {
