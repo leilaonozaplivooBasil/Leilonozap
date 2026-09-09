@@ -69,7 +69,15 @@ const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 // 🏆 DIR-43 — O MÉTODO VIVO: os painéis dos hábitos 1-5 e 8 (os hábitos 6 e
 // 7 são o próprio CRM: Acompanhamento = Clientes+Esteira, Verificação =
 // Visão Executiva). Dados pessoais em metodo_perfil/metodo_tarefas.
-const hojeStr = () => new Date().toISOString().slice(0, 10);
+// 🐛 09/09/2026 — dono: "todos zerados... eu votei em geral!" Achado: isto
+// usava toISOString (fuso UTC) — no Brasil (UTC-3), a partir das 21h locais
+// o UTC já virou o dia seguinte, então TODA leitura/escrita de voto e placar
+// feita entre 21h e meia-noite local caía num dia ERRADO (o de amanhã), bem
+// no fim da janela de votação (17h–21h30) — a hora de maior movimento. A
+// pessoa votava certinho, mas a checagem "votou em todo mundo hoje" buscava
+// o voto na data errada, não achava nada, e zerava o dia por engano.
+// dataISO() já resolve isso com data local de verdade — reaproveita.
+const hojeStr = () => dataISO();
 const fmtDia = (s) => new Date(`${s}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
 
 const EXEMPLO_SCRIPT = `Ex.: "Oi {nome}! Lembrei de você por causa do {contexto da pessoa — FORM}.
