@@ -12,8 +12,13 @@ import { tarefaDaDemanda, cardDaDemanda, estadoDaDemanda, producaoDaSemana } fro
 import { segundaDaSemana } from '@/lib/xperformance';
 import { filaDoPronto, rotuloDoPrazo } from '@/lib/pronto';
 import { planejamentoDoDia, mentalidadeDe } from '@/lib/mentalidades';
-import { fmtReais } from '@/lib/xgame';
+import {
+  fmtReais, dataISO, inicioCicloOficial, tokenDoCiclo, formacaoExecutivoIdeal, proporcoesExecutivoIdeal,
+  EIXOS_EXECUTIVO_IDEAL, TOKEN_MAX, ligaDoToken, proximaLiga, mvmManual, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+} from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { isVendaReal } from '@/lib/dinheiroReal';
+import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
 import { relatorioDoExecutivo, nomeBonito, primeiroNome } from '@/lib/relatorioExecutivo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 import { DistribuirTarefaSozinho } from '@/components/licensing/CentralVendas/DistribuirTarefa';
@@ -41,6 +46,17 @@ import { DistribuirTarefaSozinho } from '@/components/licensing/CentralVendas/Di
 // 📄 E o PDF do executivo (06/09): o botão no cabeçalho gera o relatório de
 // quem está aberto — 8 Hábitos (quando a X-Performance passa `habitos`),
 // metas, demandas e produção — pra compartilhar no WhatsApp.
+//
+// 🎡 09/09/2026 — DIR-112, dono: "o PDF do executivo está muito raso... tem
+// que mostrar qual a posição dele do dia." Além do que já existia, o
+// relatório ganha a MESMA conta de liga/Human Token/roda que o X-Game
+// mostra pra própria pessoa (tokenDoCiclo/formacaoExecutivoIdeal/
+// proporcoesExecutivoIdeal/ligaDoToken, em xgame.js) — calculada de novo
+// aqui pra QUALQUER pessoa que a gestão abrir, não só pra quem está
+// logada. Usa o ciclo JÁ FECHADO (dias antes de hoje, `xgame_diario`) —
+// sem tentar recalcular a régua radical do dia corrente (zerar por não
+// votar, atraso no pronto...) pra alguém que não é quem está olhando a
+// tela: é uma FOTO da posição no ciclo, não o placar ao vivo de hoje.
 
 const caixa = { background: 'rgba(255,255,255,0.03)' };
 const titulo = 'text-[10px] font-bold tracking-[0.22em] text-white/40 uppercase';
@@ -70,14 +86,50 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const [agendando, setAgendando] = useState(null); // {id, dia, hora, destino}
   const [devolvendo, setDevolvendo] = useState(null); // {id, motivo}
   const [salvando, setSalvando] = useState(false);
+  // 🎡 DIR-112 — a posição do dia: liga, ciclo e a roda da vida da pessoa aberta
+  const [cicloConfig, setCicloConfig] = useState(null);
+  const [diasCicloPessoa, setDiasCicloPessoa] = useState([]);
+  const [mvmRecebidoCiclo, setMvmRecebidoCiclo] = useState([]);
+  const [vendasCiclo, setVendasCiclo] = useState(null);
 
   const carregarTime = useCallback(async () => {
-    const [u, p] = await Promise.all([
+    const [u, p, cfg] = await Promise.all([
       supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level').order('full_name'),
-      supabase.from('xgame_participantes').select('user_id,funcao_titulo,cargo,fixo_mes').eq('ativo', true),
+      supabase.from('xgame_participantes').select('user_id,funcao_titulo,cargo,fixo_mes,perfil').eq('ativo', true),
+      supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
     ]);
     setUsuarios(u.data || []); setParticipantes(p.data || []);
+    setCicloConfig(cfg.data?.ciclo_inicio || null);
   }, []);
+
+  // 🎡 DIR-112 — a posição do dia depende de QUEM está aberto (pessoaId) e de
+  // quando o ciclo oficial começou (cicloConfig, carregado uma vez pro time
+  // inteiro em carregarTime) — mesma conta de vendasCiclo/diasCiclo que o
+  // X-Game já faz pra própria pessoa, aqui repetida pra pessoa selecionada.
+  useEffect(() => {
+    if (!pessoaId) { setDiasCicloPessoa([]); setMvmRecebidoCiclo([]); setVendasCiclo(null); return; }
+    const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
+    Promise.all([
+      supabase.from('xgame_diario').select('detalhes').eq('user_id', pessoaId).eq('ciclo_inicio', ini).lt('data', dataISO(new Date())).order('data'),
+      supabase.from('xgame_votos_mvm').select('virtude,nota').eq('votado_id', pessoaId).gte('data', ini),
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
+        .or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`)
+        .gte('created_date', `${ini}T00:00:00`),
+      supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
+        .eq('responsavel_id', pessoaId)
+        .gte('fechado_em', `${ini}T00:00:00`),
+    ]).then(([dc, vr, sales, oport]) => {
+      setDiasCicloPessoa(dc.data || []);
+      setMvmRecebidoCiclo(vr.data || []);
+      if (sales.error || oport.error) { setVendasCiclo(null); return; }
+      const pagas = (sales.data || []).filter(isSalePago);
+      const reais = (sales.data || []).filter(isVendaReal);
+      const aporteExterno = (oport.data || [])
+        .filter((o) => ehFechada(o) && aporteExternoValido(o))
+        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
+      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+    });
+  }, [pessoaId, cicloConfig]);
   // 🔴 o spinner de "abrindo o painel" SÓ na primeira carga: nas recargas (agendou,
   // distribuiu, devolveu) a tela fica montada e os dados trocam no lugar — desmontar
   // aqui matava o estado do Distribuir embutido (a pessoa e o dia escolhidos).
@@ -127,6 +179,31 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   const minhaPosicao = time.find((p) => p.id === currentUser?.id);
   const podeMandar = gestao || ['diretoria_operacao', 'diretoria_executiva', 'ceo'].includes(minhaPosicao?.nivel);
 
+  // 🎡 DIR-112 — a MESMA conta do X-Game (tokenDoCiclo/formacaoExecutivoIdeal/
+  // proporcoesExecutivoIdeal/ligaDoToken), calculada aqui pra pessoa aberta.
+  const participanteAtual = useMemo(() => participantes.find((x) => x.user_id === pessoaId) || null, [participantes, pessoaId]);
+  const mvmRecebidoMedia = useMemo(() => mvmManual(mvmRecebidoCiclo).media, [mvmRecebidoCiclo]);
+  const cicloToken = useMemo(() => {
+    const r = tokenDoCiclo({ diasCiclo: diasCicloPessoa, mvmVotacao: mvmRecebidoMedia, perfil: participanteAtual?.perfil || 'estrategico', vendasReais: vendasCiclo });
+    return { ...r, formacao: formacaoExecutivoIdeal(r.taxas) };
+  }, [diasCicloPessoa, mvmRecebidoMedia, participanteAtual, vendasCiclo]);
+  const posicaoDoDia = useMemo(() => {
+    if (!pessoa) return null;
+    const prop = proporcoesExecutivoIdeal(cicloToken.taxas);
+    const eixos = EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({ k, rotuloCurto, emoji, atual: Math.round(prop[k] * 100), alvo: 100 }));
+    const liga = ligaDoToken(cicloToken.total);
+    const prox = proximaLiga(cicloToken.total);
+    return {
+      liga,
+      proxima: prox ? { label: prox.liga.label, emoji: prox.liga.emoji, falta: prox.falta } : null,
+      tokenCiclo: cicloToken.total,
+      tokenMax: TOKEN_MAX,
+      formacaoPct: cicloToken.formacao.pct,
+      formacaoMensagem: cicloToken.formacao.mensagem,
+      eixos,
+    };
+  }, [pessoa, cicloToken]);
+
   // 🎯 as metas do mês, lidas do que ela fez
   const tarefasDoMes = useMemo(() => tarefas.filter((t) => mesDe(String(t.data)) === mes), [tarefas, mes]);
   const progresso = useMemo(() => progressoDasMetas({ metas, tarefasDoMes, vendasDoMes: vendas, pessoaId, mes, hojeISO: hoje }), [metas, tarefasDoMes, vendas, pessoaId, mes, hoje]);
@@ -146,8 +223,8 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
     pessoa: { id: pessoa.id, nome: pessoa.nome, posicao: pessoa.nivel ? getLevel(pessoa.nivel).name : null, funcaoCurta: pessoa.funcaoCurta, fixo: pessoa.fixo },
     periodo, habitos, metas: progresso,
     demandas: demandas.map((d) => ({ ...d, estado: estadoDaDemanda(d, { tarefas, cards, hojeISO: hoje }) })),
-    producao: minhaProducao, semaforo: sem, hojeISO: hoje, mes, geradoPor: currentUser?.full_name || null,
-  })), [pessoa, carregando, periodo, habitos, progresso, demandas, tarefas, cards, hoje, minhaProducao, sem, mes, currentUser?.full_name]);
+    producao: minhaProducao, semaforo: sem, posicao: posicaoDoDia, hojeISO: hoje, mes, geradoPor: currentUser?.full_name || null,
+  })), [pessoa, carregando, periodo, habitos, progresso, demandas, tarefas, cards, hoje, minhaProducao, sem, posicaoDoDia, mes, currentUser?.full_name]);
   // quem está por fora (o detalhamento da X-Performance) também gera o PDF — recebe o relatório pronto
   useEffect(() => { if (onRelatorio) onRelatorio(relatorio); }, [relatorio, onRelatorio]);
 

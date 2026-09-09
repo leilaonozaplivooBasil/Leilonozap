@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { FileDown, Loader2, MessageCircle } from 'lucide-react';
 import { textoDoRelatorio, paraPdf } from '@/lib/relatorioExecutivo';
+import { pontosDaRoda, pontoDoEixo } from '@/lib/rodaDaVida';
 
 // 📄 O PDF DO EXECUTIVO (dono, 06/09/2026): "quero geração de PDF de cada
 // executivo, pra ser compartilhado". Um botão; o conteúdo vem pronto de
@@ -10,12 +11,21 @@ import { textoDoRelatorio, paraPdf } from '@/lib/relatorioExecutivo';
 // azul→magenta da Top College, e o resto em papel branco pra ser lido no
 // WhatsApp de qualquer aparelho. Se o aparelho compartilha arquivo
 // (navigator.share), abre a folha de compartilhar direto; senão, baixa.
+//
+// 🎡 09/09/2026 — DIR-112, dono: "o PDF do executivo está muito raso... tem
+// que mostrar qual a posição dele do dia... inclusive botar isso no PDF, o
+// radar." O painel "POSIÇÃO DO DIA" (liga, próxima liga, Human Token do
+// ciclo, % de formação do Executivo Ideal) e a MESMA roda da vida do
+// RadarEixos.jsx — vetorial, com `pontosDaRoda`/`pontoDoEixo` de
+// `rodaDaVida.js` — agora vivem aqui também, quando `rel.posicaoDoDia`
+// chega preenchido.
 
 const COR = { verde: [27, 122, 72], amarelo: [217, 119, 6], vermelho: [220, 38, 38], azul: [59, 111, 246], cinza: [140, 140, 150] };
 const PRETO = [0, 2, 12];
 const AZUL = [59, 111, 246];
 const MAGENTA = [230, 46, 139];
 const LOGO = '/brand/icon-3d-256.png';
+const LIGA_COR = { diamante: [59, 130, 246], ouro: [217, 119, 6], prata: [130, 138, 156], bronze: [180, 98, 47] };
 
 async function carregarLogo() {
   try {
@@ -33,6 +43,48 @@ function regua(doc, x, y, w, h) {
     doc.setFillColor(Math.round(AZUL[0] + (MAGENTA[0] - AZUL[0]) * t), Math.round(AZUL[1] + (MAGENTA[1] - AZUL[1]) * t), Math.round(AZUL[2] + (MAGENTA[2] - AZUL[2]) * t));
     doc.rect(x + (w / passos) * i, y, w / passos + 0.2, h, 'F');
   }
+}
+
+/**
+ * A roda da vida, vetorial — a MESMA curva de RadarEixos.jsx (Catmull-Rom
+ * sobre `pontosDaRoda`), só que desenhada com `doc.lines` em vez de um
+ * `<path>` de SVG. O alvo já é o círculo perfeito (raio cheio) — bater a
+ * meta em tudo É virar uma roda; a curva do desempenho real fecha nele
+ * quando os 5 eixos estão perto de 100%, e "amassa" pra dentro no eixo
+ * fraco.
+ */
+function desenharRoda(doc, { cx, cy, raio, eixos, corAlvo, corAtual, corFraco }) {
+  // os raios-guia, do centro até cada eixo (na marca cheia)
+  doc.setDrawColor(228, 230, 238); doc.setLineWidth(0.25);
+  eixos.forEach((_, i) => {
+    const a = (Math.PI * 2 * i) / eixos.length - Math.PI / 2;
+    doc.line(cx, cy, cx + Math.cos(a) * raio, cy + Math.sin(a) * raio);
+  });
+  // o alvo — círculo perfeito, tracejado
+  doc.setDrawColor(corAlvo[0], corAlvo[1], corAlvo[2]); doc.setLineWidth(0.45);
+  if (doc.setLineDashPattern) doc.setLineDashPattern([1.4, 1.1], 0);
+  doc.circle(cx, cy, raio, 'S');
+  if (doc.setLineDashPattern) doc.setLineDashPattern([], 0);
+
+  // a roda de verdade — a curva suave do desempenho, preenchida e translúcida
+  const curva = pontosDaRoda(eixos).map(([x, y]) => [cx + x * raio, cy + y * raio]);
+  if (curva.length > 2) {
+    const seg = curva.slice(1).map(([x, y], i) => [x - curva[i][0], y - curva[i][1]]);
+    let opacou = false;
+    try { doc.saveGraphicsState(); doc.setGState(new doc.GState({ opacity: 0.26 })); opacou = true; } catch { /* sem transparência, sem drama */ }
+    doc.setFillColor(corAtual[0], corAtual[1], corAtual[2]);
+    doc.setDrawColor(corAtual[0], corAtual[1], corAtual[2]); doc.setLineWidth(0.6);
+    doc.lines(seg, curva[0][0], curva[0][1], [1, 1], 'FD', true);
+    if (opacou) doc.restoreGraphicsState();
+    doc.setDrawColor(corAtual[0], corAtual[1], corAtual[2]); doc.setLineWidth(0.7);
+    doc.lines(seg, curva[0][0], curva[0][1], [1, 1], 'S', true);
+  }
+  // o vértice de cada eixo — um pontinho, vermelho quando fraco
+  eixos.forEach((e, i) => {
+    const [x, y] = pontoDoEixo(eixos, i, raio);
+    const c = (e.atual < e.alvo) ? corFraco : corAtual;
+    doc.setFillColor(c[0], c[1], c[2]); doc.circle(cx + x, cy + y, 1, 'F');
+  });
 }
 
 /** Desenha o relatório e devolve o documento. Exportado pra prova. */
@@ -97,6 +149,74 @@ export async function desenharPdf(rel, { jsPDF, logo = null } = {}) {
     doc.text(paraPdf(n.valor), x + 4, y + 12.5);
   });
   y += 24;
+
+  // ── posição do dia (DIR-112) — liga, próxima liga, token do ciclo,
+  // formação do Executivo Ideal e a roda da vida, lado a lado ──
+  if (rel.posicaoDoDia) {
+    const p = rel.posicaoDoDia;
+    const RAIO_RODA = 22;
+    const ALT_PAINEL = RAIO_RODA * 2 + 14;
+    garantir(ALT_PAINEL + 10);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(120, 120, 135);
+    doc.text('POSIÇÃO DO DIA', M, y, { charSpace: 0.6 });
+    y += 2; doc.setDrawColor(225, 227, 235); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
+
+    doc.setFillColor(250, 250, 252); doc.roundedRect(M, y, larg, ALT_PAINEL, 2, 2, 'F');
+    const cxRoda = M + 14 + RAIO_RODA;
+    const cyRoda = y + ALT_PAINEL / 2;
+    if (Array.isArray(p.eixos) && p.eixos.length >= 3) {
+      desenharRoda(doc, { cx: cxRoda, cy: cyRoda, raio: RAIO_RODA, eixos: p.eixos, corAlvo: COR.amarelo, corAtual: COR.verde, corFraco: COR.vermelho });
+    }
+
+    // liga + próxima liga + token + formação, à direita da roda
+    const xx = M + 14 + RAIO_RODA * 2 + 12;
+    let yy = y + 9;
+    const ligaCor = LIGA_COR[p.liga?.id] || COR.cinza;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(ligaCor[0], ligaCor[1], ligaCor[2]);
+    doc.text(paraPdf(`${p.liga?.emoji || ''} ${p.liga?.label || ''}`), xx, yy);
+    yy += 6.5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 105);
+    if (p.proxima) doc.text(paraPdf(`Faltam ${p.proxima.falta} pontos de Human Token pra ${p.proxima.emoji} ${p.proxima.label}`), xx, yy);
+    else doc.text('Já é a liga mais alta do jogo — a elite do Executivo Ideal.', xx, yy);
+    yy += 7.5;
+    if (p.tokenCiclo !== null) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 30, 40);
+      doc.text(`Human Token do ciclo: ${p.tokenCiclo}${p.tokenMax ? ` / ${p.tokenMax}` : ''}`, xx, yy);
+      yy += 6;
+    }
+    if (p.formacaoPct !== null) {
+      const corForm = p.formacaoPct >= 66 ? COR.verde : p.formacaoPct >= 33 ? COR.amarelo : COR.cinza;
+      doc.setFillColor(232, 234, 240); doc.roundedRect(xx, yy - 3, larg - (xx - M) - 4, 3, 1.5, 1.5, 'F');
+      doc.setFillColor(corForm[0], corForm[1], corForm[2]);
+      doc.roundedRect(xx, yy - 3, Math.max(3, (larg - (xx - M) - 4) * (p.formacaoPct / 100)), 3, 1.5, 1.5, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(corForm[0], corForm[1], corForm[2]);
+      doc.text(`Formação do Executivo Ideal: ${p.formacaoPct}%`, xx, yy + 4.5);
+      yy += 9;
+      if (p.formacaoMensagem) {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(120, 120, 135);
+        const linhas = doc.splitTextToSize(paraPdf(p.formacaoMensagem), larg - (xx - M) - 4);
+        doc.text(linhas, xx, yy); yy += linhas.length * 3.4;
+      }
+    }
+    if (p.roda) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(70, 70, 85);
+      doc.text(paraPdf(`${p.roda.emoji} ${p.roda.rotulo}`), xx, yy + 2);
+    }
+
+    // legenda dos 5 eixos, embaixo da roda (dentro do painel)
+    let ly = y + ALT_PAINEL - 5;
+    const lx0 = M + 6;
+    const passo = (RAIO_RODA * 2 + 8) / Math.max(1, p.eixos.length);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(6.3);
+    p.eixos.forEach((e, i) => {
+      const fraco = e.atual < e.alvo;
+      const c = fraco ? COR.vermelho : COR.verde;
+      doc.setTextColor(c[0], c[1], c[2]);
+      doc.text(paraPdf(`${e.emoji}${Math.round(e.atual)}%`), lx0 + i * passo, ly, { align: 'left' });
+    });
+
+    y += ALT_PAINEL + 6;
+  }
 
   // ── os blocos ──
   for (const b of rel.blocos) {
