@@ -4,6 +4,7 @@
 // uma busca, quando eu fizer buscar mais rápido, tanto a data e tanto o
 // dia." Lógica PURA aqui (testável sem montar a tela) — quem desenha é
 // XGameAdmin.jsx.
+import { dataISO } from './xgame.js';
 
 /** "lu" acha Luciano, Lúcia, LUIZ... — sem sofrer com acento nem maiúscula. */
 export const semAcentoFila = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -85,9 +86,13 @@ export function rotuloDataComprovacao(data) {
  * mês. Hoje, ontem..." — pra ele não precisar decorar nem ler dd/mm pros
  * dois dias que mais importa (hoje e ontem).
  * @param {string} data a data ISO (2026-09-09)
- * @param {Date} [hoje] injetável nos testes; default é agora de verdade
+ * @param {Date} [hoje] injetável nos testes; default é "hoje" sempre em
+ *   Brasília (dataISO()) — não o fuso do aparelho, mesmo bug de classe já
+ *   corrigido em dataISO()/minutosBrasilia() (DIR-129/134): perto da
+ *   virada do dia, um aparelho fora de Brasília rotularia "Hoje"/"Ontem"
+ *   com um dia de diferença.
  */
-export function rotuloDataAmigavel(data, hoje = new Date()) {
+export function rotuloDataAmigavel(data, hoje = new Date(`${dataISO()}T00:00:00`)) {
   const alvo = new Date(`${data}T00:00:00`);
   if (Number.isNaN(alvo.getTime())) return String(data || '');
   const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());

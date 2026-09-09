@@ -142,6 +142,27 @@ test('resumoDoDia: o radical é radical de verdade — token, pontos e X-Pay TAM
   assert.equal(semVotar.xpay.perdido, votando.xpay.ganho + votando.xpay.perdido, 'o que seria ganho + o que já tinha perdido agora é tudo PERDIDO — a conta bate exata, o dinheiro não some, vira prejuízo registrado');
 });
 
+// 🐛 09/09/2026 — auditoria noturna: o bloco acima só prova a conta com as
+// DUAS tarefas do dia já resolvidas (feitas). Com uma tarefa AINDA pendente
+// (nem feita, nem PERDIDA — ainda dentro do prazo, contando como "em jogo")
+// no momento em que o dia zera, o código fazia `xpay.emJogo = 0` sem somar
+// esse valor no `perdido` — o dinheiro em jogo sumia em silêncio em vez de
+// virar prejuízo registrado, ao contrário do `ganho` (que já dobrava certo).
+test('resumoDoDia: diaZerado com tarefa ainda "em jogo" pendente — o valor não pode sumir, tem que dobrar no perdido igual o ganho', () => {
+  const depoisDoFim = VOTACAO_FIM_MIN + 30; // 22:00
+  const tarefasComPendente = [...TAREFAS, { id: 't3', titulo: 'Reunião 1 (45-60 min)', hora: '23:00', feito: false }];
+  const semVotar = resumoDoDia({ tarefas: tarefasComPendente, agoraMin: depoisDoFim, votouEmTodos: false });
+  const votando = resumoDoDia({ tarefas: tarefasComPendente, agoraMin: depoisDoFim, votouEmTodos: true });
+  assert.ok(votando.xpay.emJogo > 0, 'confirma que a tarefa pendente realmente tinha valor em jogo — senão o teste abaixo não prova nada');
+  assert.equal(semVotar.xpay.emJogo, 0, 'nada fica "em jogo" depois que o dia zerou — foi resolvido, não apagado');
+  assert.equal(semVotar.xpay.ganho, 0);
+  assert.equal(
+    semVotar.xpay.perdido,
+    Math.round((votando.xpay.ganho + votando.xpay.perdido + votando.xpay.emJogo) * 100) / 100,
+    'ganho + perdido + emJogo (de quando o dia ainda não tinha zerado) tem que bater exato no perdido — o emJogo não pode sumir',
+  );
+});
+
 // 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de amanhã
 // a regra é séria." O bug de fuso zerou gente injustamente, e além disso
 // duas pessoas entraram na lista de votáveis NO MEIO da janela de votação

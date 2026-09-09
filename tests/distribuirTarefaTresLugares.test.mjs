@@ -29,20 +29,26 @@ test('DistribuirTarefa.jsx: distribuir() sempre insere em metodo_tarefas, sem co
   assert.ok(!/if \(destino === 'ambos'\)/.test(corpo), 'o card do quadro ainda está condicionado a "ambos"');
 });
 
-test('DistribuirTarefa.jsx: o card do quadro (metodo_quadro) sempre nasce, ligado à tarefa', () => {
-  const inicio = ARQ.indexOf('const distribuir = async ()');
-  const fimMentoria = ARQ.indexOf('const conteudo =');
-  const corpo = ARQ.slice(inicio, fimMentoria);
-  assert.match(corpo, /supabase\.from\('metodo_quadro'\)\.insert\(cardDaDemanda\(primeira\?\.id \|\| null\)\)/);
-});
-
-test('DistribuirTarefa.jsx: toda distribuição acende o sino (xgame_mensagens, tipo demanda) — não fica só no quadro', () => {
-  const inicio = ARQ.indexOf('const distribuir = async ()');
-  const fimMentoria = ARQ.indexOf('const conteudo =');
-  const corpo = ARQ.slice(inicio, fimMentoria);
+test('DistribuirTarefa.jsx: criarQuadroEAviso() sempre cria o card do quadro (ligado à tarefa) e o aviso (xgame_mensagens, tipo demanda)', () => {
+  const inicio = ARQ.indexOf('const criarQuadroEAviso = async');
+  const fim = ARQ.indexOf('\n  };', inicio);
+  const corpo = ARQ.slice(inicio, fim);
+  assert.match(corpo, /supabase\.from\('metodo_quadro'\)\.insert\(cardDaDemanda\(tarefaId \|\| null\)\)/);
   assert.match(corpo, /supabase\.from\('xgame_mensagens'\)\.insert\(\{/);
   assert.match(corpo, /tipo:\s*'demanda'/);
   assert.match(corpo, /destino_tipo:\s*'pessoa',\s*destino_id:\s*pessoa/);
+});
+
+// 🐛 09/09/2026 — achado na auditoria noturna (revisão adversarial do
+// próprio trabalho de hoje): o caminho "distribuir como mentoria completa"
+// tinha um `return` antes de chegar no código que cria o card do quadro e
+// o aviso — só a Jornada nascia, quebrando a promessa "sempre os três
+// lugares" bem no caminho que o dono mais valoriza (a mentoria).
+test('DistribuirTarefa.jsx: o caminho da MENTORIA COMPLETA também chama criarQuadroEAviso — não só a linha normal', () => {
+  const inicioMentoria = ARQ.indexOf('if (blocosMentoria) {');
+  const fimMentoria = ARQ.indexOf('\n    }', inicioMentoria);
+  const corpoMentoria = ARQ.slice(inicioMentoria, fimMentoria);
+  assert.match(corpoMentoria, /criarQuadroEAviso\(/, 'a mentoria completa também precisa criar o card do quadro e o aviso — não só a Jornada');
 });
 
 test('DistribuirTarefa.jsx: o horário vira opcional/flexível, não "começar às" obrigatório', () => {

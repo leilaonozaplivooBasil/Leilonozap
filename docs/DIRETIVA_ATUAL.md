@@ -12,6 +12,47 @@
 
 ---
 
+## DIR-137 — auditoria noturna (parte 3): o X-Pay recuperado no fim de semana não entra mais em dobro contra a pessoa no painel do time
+
+**Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135/136).
+
+**Achado (dinheiro real, painel executivo) — `XGameVisaoExecutiva.jsx`:** a recuperação de tarefa perdida no fim de semana grava `xpay_recuperado` no dia (sem reescrever o `xpay_perdido` original — decisão certa, é histórico). Mas a soma da Visão Executiva contava os dois lados sem cruzar: `r.xpay` já soma `xpay_ganho + xpay_recuperado` (o dinheiro que a pessoa realmente tem agora), e `r.perdido` continuava somando o `xpay_perdido` cru, sem descontar o que foi recuperado — a mesma tarefa contava como ganha E como perdida ao mesmo tempo. O card "X-Pay perdidos por atraso" no painel do dono mostrava um valor inflado pra quem já tinha recuperado.
+
+**Fix:** `r.perdido` agora desconta `xpay_recuperado`, com piso em zero (`Math.max(0, perdido - recuperado)`).
+
+**Prova:** suíte 1974/1974 (1 teste novo, `tests/xpayPerdidoRecuperado.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-136 — auditoria noturna (parte 2): mais três resíduos do "fuso do aparelho" corrigidos, e o validador de comprovações ganha o tempo que precisa pra pensar
+
+**Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135).
+
+**Achados (mesma classe de bug já corrigida em DIR-129/134 — código lendo hora/data do APARELHO em vez de forçar Brasília):**
+1. `src/pages/XGame.jsx` — a saudação do cabeçalho ("Bom dia/tarde/noite") ainda usava `new Date().getHours()` mesmo já existindo `agoraMin` (o relógio do jogo, Brasília forçada) calculado logo acima. Trocado por `agoraMin`.
+2. `src/components/licensing/CentralVendas/XGameJornada.jsx` — `saudacao()` caía pra `new Date().getHours()` quando `min` não vinha (acontece ao olhar um dia que não é hoje — `CrmMetodo.jsx` passa `agoraMin={null}` nesse caso). Trocado o fallback por `minutosBrasilia()`.
+3. `src/lib/pronto.js` — `prazoDe()`/`rotuloDoPrazo()` (o "pronto até HH:mm" e a decisão de atraso) montavam e liam a hora com `Date` local do aparelho (`T12:00:00` sem fuso, `.setHours`, `.getHours`/`.getDate`). Corrigido: `prazoDe()` monta o horário com offset explícito `-03:00` (Brasil não tem mais horário de verão desde 2019 — `America/Sao_Paulo` é sempre UTC-3); `rotuloDoPrazo()` lê de volta com `Intl.DateTimeFormat` forçando `America/Sao_Paulo`, igual `dataISO()`.
+4. `src/lib/filaComprovacoes.js` — `rotuloDataAmigavel()` tinha `hoje = new Date()` como default (usado nos dois lugares reais, `XGameAdmin.jsx` e `Comprovacoes.jsx`, sem passar `hoje`) — perto da virada do dia, um aparelho fora de Brasília rotularia "Hoje"/"Ontem" errado. Default trocado pra `dataISO()`.
+5. `api/functions/xgameValidarPrint.js` — chamada DIRETO do front em três lugares (`CrmMetodo.jsx`, `XGameAdmin.jsx` e o próprio Ritual do Amanhecer), sem `export const config = { maxDuration: 60 }` (que `xgameProvaValidador.js`, o único outro caminho até essa função, já tinha). Sem isso, o timeout padrão da Vercel podia cortar uma análise de imagem com raciocínio no meio — exatamente o tipo de falha intermitente que se parece com "a pessoa não conseguiu comprovar".
+
+**Prova:** suíte 1973/1973 (2 testes de `prazoDe`/`estadoDoPronto`/`filaDoPronto` reescritos pra travar Brasília em vez do fuso do runner de CI — que roda em UTC — e 1 teste novo pro `maxDuration`), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-135 — auditoria noturna: o dinheiro "em jogo" não some mais quando o dia zera, e a demanda distribuída na mentoria completa também cria o card do quadro e o sino
+
+**Emitida por:** dono (09/09/2026), indo dormir: *"eu vou deixar você rodando aí, pra você me trazer um relatório diligente... de toda a gamificação, que está bom, que não está, o que está quebrado... não pode passar nada em branco, nada nada nada nada."* — autorização explícita pra auditoria e correção autônoma durante a madrugada.
+
+**Achado 1 (X-Pay, dinheiro real) — `resumoDoDia` em `src/lib/xgame.js`:** quando o dia zera (`diaZerado`, por não votar ou atraso do pronto), o valor que já era `ganho` corretamente virava `perdido` (registrado, não some). Mas o valor que ainda estava **em jogo** (tarefa pendente, nem feita nem com prazo estourado no momento do corte) era descartado com `xpay.emJogo = 0` — o dinheiro simplesmente desaparecia da conta em vez de virar prejuízo registrado, igual o `ganho` já fazia. `xpay_possivel` (usado em relatórios/telas de equipe) ficava subestimado nesses dias.
+**Fix:** `xpay.perdido` agora soma `ganho + perdido + emJogo` antes de zerar os três — o mesmo padrão que já existia pro `ganho`, agora completo.
+
+**Achado 2 (distribuição de tarefa) — `DistribuirTarefa.jsx`:** o caminho "distribuir como mentoria completa" (o que o dono mais usa, feedback ao vivo da reunião) tinha um `return` antes de chegar no trecho que cria o card do Quadro e o aviso (sino, `xgame_mensagens`) — só a tarefa na Jornada nascia; quadro e sino ficavam vazios, exatamente o sintoma relatado ("mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro"). Além disso, o toast de sucesso mentia dizendo "jornada, quadro e sino avisados" mesmo quando a gravação do quadro ou do aviso falhava silenciosamente no banco.
+**Fix:** extraído `criarQuadroEAviso(tarefaId, titulo, prazo)` — chamado nos DOIS caminhos (distribuição normal e mentoria completa); cada falha (quadro ou aviso) gera seu próprio `toast.error` específico, e o toast final só promete "jornada, quadro e sino avisados" quando os dois realmente gravaram.
+
+**Prova:** suíte 1972/1972 (1 teste novo em `tests/xgame.test.mjs` — dia zerado com tarefa pendente, prova que `emJogo` não some; 2 testes reescritos + 1 novo em `tests/distribuirTarefaTresLugares.test.mjs` — trava `criarQuadroEAviso` e o caminho da mentoria chamando ele), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-134 — o relógio do jogo (não só a data) agora é sempre Brasília, e o ritual explica a si mesmo antes de começar
 
 **Emitida por:** dono (09/09/2026), pedindo uma auditoria noturna: *"vamos fazer uma análise no ritual que algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente melhora a comunicação no ritual... vê se a gente cria um aviso antes de começar o ritual, dez minutos pra quando ela abrir, explicar como funciona."*

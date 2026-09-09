@@ -4,10 +4,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { prazoDe, rotuloDoPrazo, estadoDoPronto, carimboDoPronto, carimboDaDevolucao, filaDoPronto, textoCompartilharPronto } from '../src/lib/pronto.js';
 
-test('prazoDe: dia + hora viram o "pronto até" no fuso local; sem hora, 18:00', () => {
-  const p = new Date(prazoDe('2026-09-08', '17:30'));
-  assert.deepEqual([p.getFullYear(), p.getMonth() + 1, p.getDate(), p.getHours(), p.getMinutes()], [2026, 9, 8, 17, 30]);
-  assert.equal(new Date(prazoDe('2026-09-08')).getHours(), 18);
+// 🐛 09/09/2026 — auditoria noturna: dia+hora precisam virar Brasília de
+// verdade, não o fuso do aparelho que roda o código (o CI/produção rodam em
+// UTC) — o mesmo bug de classe já corrigido em dataISO()/minutosBrasilia().
+// 17:30 em Brasília (UTC-3) é 20:30 em UTC — é isso que trava aqui.
+test('prazoDe: dia + hora viram o "pronto até" sempre em Brasília (UTC-3), não no fuso do aparelho; sem hora, 18:00', () => {
+  assert.equal(prazoDe('2026-09-08', '17:30'), '2026-09-08T20:30:00.000Z');
+  assert.equal(prazoDe('2026-09-08'), '2026-09-08T21:00:00.000Z');
   assert.equal(prazoDe(''), null);
   assert.equal(prazoDe('xx'), null);
 });
@@ -19,9 +22,9 @@ test('rotuloDoPrazo: só a hora quando é hoje; dia e hora quando não é', () =
 });
 
 test('estadoDoPronto: aguardando → atrasada → pronto (no prazo ou atrasado) → conferida; devolvida espera a pessoa', () => {
-  const prazo = prazoDe('2026-09-08', '18:00');
-  const antes = new Date('2026-09-08T15:00:00');
-  const depois = new Date('2026-09-08T19:00:00');
+  const prazo = prazoDe('2026-09-08', '18:00'); // 18:00 em Brasília
+  const antes = new Date('2026-09-08T15:00:00-03:00'); // antes das 18:00 em Brasília
+  const depois = new Date('2026-09-08T19:00:00-03:00'); // depois das 18:00 em Brasília
   assert.equal(estadoDoPronto({ prazo_em: prazo }, antes).id, 'aguardando');
   assert.equal(estadoDoPronto({ prazo_em: prazo }, depois).id, 'atrasada');
   assert.deepEqual(estadoDoPronto({ prazo_em: prazo, feito: true, pronto_em: antes.toISOString() }, depois), { id: 'pronto', rotulo: 'pronto', atrasou: false });
@@ -40,7 +43,7 @@ test('os carimbos: dar o pronto limpa a devolução; devolver desfaz o pronto e 
 });
 
 test('filaDoPronto: só as distribuídas, atrasadas primeiro, depois os prontos a conferir; conferidas por último', () => {
-  const agora = new Date('2026-09-08T19:00:00');
+  const agora = new Date('2026-09-08T19:00:00-03:00'); // depois das 18:00 em Brasília
   const prazo = prazoDe('2026-09-08', '18:00');
   const fila = filaDoPronto([
     { id: 'rotina', titulo: 'Gratidão' },
