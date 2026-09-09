@@ -48,7 +48,7 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
-import { caminhoDoAudio, guardarAudio, ouvirAudio } from '@/lib/cofreDeAudio';
+import { caminhoDoAudio, guardarAudio, ouvirAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import XGameJornada from './XGameJornada';
@@ -668,16 +668,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     }
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
     const naJanela = agoraM >= RITUAL_INICIO_MIN && agoraM <= RITUAL_FIM_MIN;
-    // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
-    let videoUrl = '';
+    // 🎥 o vídeo da visualização é a comprovação — vai pro cofre PRIVADO.
+    //
+    // 🔴 09/09 — antes ia pro `public-assets` via Core.UploadFile, que é
+    // `public = true`: a gravação do rosto de alguém meditando às 6h da manhã
+    // ficava aberta por link, sem login. A tela promete "só você e o gestor
+    // veem"; agora isso é verdade. Voz é íntimo, imagem é identificável.
+    let videoPath = '';
     if (videoBlob) {
-      try {
-        const up = await plataforma.integrations.Core.UploadFile({
-          file: new File([videoBlob], `ritual_${hojeStr()}.webm`, { type: videoBlob.type || 'video/webm' }),
-          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'webm' }),
-        });
-        videoUrl = up?.file_url || up?.url || '';
-      } catch { videoUrl = ''; }
+      videoPath = await guardarVideo({
+        blob: videoBlob,
+        caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: videoBlob.type }),
+        actorId: uid,
+      }) || '';
     }
     // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
     // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
@@ -700,7 +703,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // sem vídeo ou fora de hora, antes caía pra segunda análise do gestor —
     // agora aprova igual (o gestor não decide mais nada aqui), só sem o selo
     // "BRILHANTE". `naJanela`/`videoUrl` viram só metadado do que aconteceu.
-    const aprovadoDireto = naJanela && !!videoUrl;
+    const aprovadoDireto = naJanela && !!videoPath;
     const comprovacao = {
       // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
       // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
@@ -709,7 +712,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
       tipo: 'ritual', gratidao, acao,
       entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-      ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
       // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
       // "as suas palavras", COM a origem registrada. Não é desconfiança: é
       // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
@@ -728,8 +731,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       status: 'aprovada_ritual',
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
-        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : 'ritual fora da janela do amanhecer (04:40–07:15)'),
+        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoPath ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
+        motivo: aprovadoDireto ? '' : (!videoPath ? 'ritual sem o vídeo da visualização' : 'ritual fora da janela do amanhecer (04:40–07:15)'),
       },
     };
     try {
