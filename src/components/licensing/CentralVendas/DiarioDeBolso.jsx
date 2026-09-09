@@ -8,6 +8,7 @@ import { semanaDe } from '@/lib/metodo';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
+import OuvirGratidao from '@/components/common/OuvirGratidao';
 
 // 📔 DIÁRIO DE BOLSO — dono, 08/09/2026: "anotar e documentar os passos,
 // tarefas e etc dos usuários de forma automática pra que tudo que foi feito
@@ -228,6 +229,20 @@ export default function DiarioDeBolso({ currentUser = null }) {
                     <span className="font-semibold text-white/90 text-[13px]">{e.titulo}</span>
                     {e.temFoto && <CameraIcon className="w-3 h-3 text-white/30 shrink-0" />}
                   </div>
+                  {/* 🎙️ DIR-104 — a voz da gratidão daquele dia, ouvível AQUI.
+                      O diário é onde se revisita; era a metade que faltava.
+                      Junto vem o botão de baixar e o prazo de 1 mês, porque a
+                      gravação some depois disso e quem não souber, perde. */}
+                  {e.audioPath && (
+                    <div className="mt-1.5" data-teste="diario-gratidao">
+                      <OuvirGratidao caminho={e.audioPath} uid={uid} dia={e.data} segundos={e.audioSeg} tom="escuro" />
+                    </div>
+                  )}
+                  {!e.audioPath && e.audioExpirou && (
+                    <p className="mt-1.5 text-[10px] text-white/35" data-teste="diario-gratidao-expirada">
+                      🎙️ você gravou a gratidão deste dia — as gravações ficam guardadas por 1 mês, então esta já foi apagada.
+                    </p>
+                  )}
                   {e.texto && (
                     <p className="mt-1 text-white/65 text-[12px] leading-relaxed flex gap-1.5">
                       <Sparkles className="w-3 h-3 text-white/25 shrink-0 mt-0.5" />
