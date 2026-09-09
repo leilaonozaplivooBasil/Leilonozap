@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Camera, Check, X, Video } from 'lucide-react';
+import { Loader2, Camera, Check, X, Video, Mic } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,12 @@ import { comprovacaoBateNaBusca, agruparComprovacoesPorData, rotuloDataComprovac
 // reprovar carimba `reprovada` com o motivo e devolve a tarefa pra pessoa.
 
 export const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 'reprovada');
-// 🐛 09/09/2026 — dono, vendo a fila: o Ritual do Amanhecer ('aprovada_ritual',
-// CrmMetodo.jsx) tinha selo VAZIO aqui — faltava o rótulo E a cor, então o
-// badge desenhava um retângulo sem nada dentro. As outras telas da fila
-// (XGameAdmin.jsx) já tratavam esse status; aqui não.
-const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual completo', reprovada: 'reprovada' };
+// 🩹 09/09/2026 — DIR-125/126, dono, achado independente nas duas sessões:
+// o Ritual do Amanhecer ('aprovada_ritual', CrmMetodo.jsx) tinha selo VAZIO
+// aqui — faltava o rótulo E a cor (`ROTULO[s] || s` devolvia a chave crua,
+// sem classe nenhuma pra pintar). As outras telas da fila (XGameAdmin.jsx)
+// já tratavam esse status; aqui não.
+const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual aprovado', reprovada: 'reprovada' };
 const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
 const fmtDia = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
 
@@ -168,15 +169,29 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
                       <Video className="w-3 h-3" /> ver o vídeo{c.video_seg ? ` (${c.video_seg}s)` : ''}
                     </PreviaDaProva>
                   )}
-                  {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio, tem que
-                      tudo transcrever e mostrar ali." O texto que a pessoa
-                      escreveu OU falou (já transcrito — gratidão do ritual,
-                      resumo da leitura) nunca aparecia aqui, só o veredito da
-                      IA. `entrega` já é essa fonte única (CrmMetodo.jsx); só
-                      não mostra quando é uma URL (foto/print/link — a prévia
-                      acima já cobre isso). */}
-                  {c.entrega && !/^https?:\/\//.test(c.entrega) && (
-                    <span className="text-white/60 italic truncate" title={c.entrega}>"{c.entrega}"</span>
+                  {/* 📝 09/09/2026 — DIR-126, dono: "se for vídeo, se for áudio,
+                      tem que tudo transcrever e mostrar ali." O texto que a
+                      pessoa escreveu OU falou (já transcrito — gratidão do
+                      ritual, resumo da leitura) nunca aparecia aqui, só o
+                      veredito da IA. `entrega` já é essa fonte única
+                      (CrmMetodo.jsx); só não mostra quando é uma URL
+                      (foto/print/link — a prévia acima já cobre isso). */}
+                  {/* 🎙️ DIR-125 — dono: "gravou o vídeo, mandou áudio, tem que
+                      ficar mais claro." O ÁUDIO em si continua protegido (só
+                      o dono ouve, api/functions/audioDoDitado.js) — aqui é só
+                      o AVISO de que ele existe, igual ao "ver o vídeo" acima
+                      avisa da visualização. Sem vídeo E sem áudio, o ritual
+                      foi só por texto — também vale dizer isso claramente. */}
+                  {c.entrada_gratidao === 'audio' && (
+                    <span className="shrink-0 inline-flex items-center gap-1 text-sky-300" title="Voz da pessoa — só ela pode ouvir; aqui é só o aviso de que ela mandou.">
+                      <Mic className="w-3 h-3" /> gratidão em áudio{c.audio_gratidao_seg ? ` (${c.audio_gratidao_seg}s)` : ''}
+                    </span>
+                  )}
+                  {c.tipo === 'ritual' && !c.video_url && c.entrada_gratidao !== 'audio' && (
+                    <span className="shrink-0 text-white/35">só por texto, sem vídeo nem áudio</span>
+                  )}
+                  {c.entrega && !/^https?:\/\//i.test(c.entrega) && (
+                    <span className="text-white/55 italic truncate" title={c.entrega}>"{c.entrega}"</span>
                   )}
                   {c.veredito_ia?.motivo && <span className="text-white/35 truncate" title={c.veredito_ia.o_que_viu || ''}>IA: {c.veredito_ia.motivo}</span>}
                   {s === 'reprovada' && c.motivo_gestor && <span className="text-red-200/70 truncate">↩ {c.motivo_gestor}</span>}
