@@ -360,7 +360,10 @@ export default function XGameAdmin({ onVerComo } = {}) {
       const linhas = gerarTarefasDaRotina(rotina, tarefaUser, tarefaDia).map((l) => ({
         ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
       }));
-      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      // 🐛 09/09/2026 — DIR-127: ignora duplicata em vez de criar (ou quebrar
+      // tentando) — a trava real é o UNIQUE(user_id,data,hora,titulo) do banco.
+      const { error } = await supabase.from('metodo_tarefas')
+        .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
       if (error) throw error;
       toast.success(`Dia gerado com ${linhas.length} tarefas da Rotina Perfeita!`);
       carregarTarefas(tarefaUser, tarefaDia);
@@ -484,6 +487,12 @@ export default function XGameAdmin({ onVerComo } = {}) {
                             {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
                             {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
                             {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
+                            {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio,
+                                tem que tudo transcrever e mostrar ali." `entrega`
+                                já é o texto — escrito ou falado (transcrito) —
+                                CrmMetodo.jsx; só não mostra quando é URL (a
+                                miniatura já cobre foto/print/link). */}
+                            {c.entrega && !/^https?:\/\//.test(c.entrega) && <span className="ml-2 italic text-gray-700">"{c.entrega}"</span>}
                             {c.veredito_ia?.o_que_viu && <span className="ml-2">IA viu: {c.veredito_ia.o_que_viu}</span>}
                             {c.motivo_gestor && <span className="ml-2">gestor: {c.motivo_gestor}</span>}
                           </p>

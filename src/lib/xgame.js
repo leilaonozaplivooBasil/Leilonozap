@@ -1352,8 +1352,16 @@ export const ehOrganizacaoDoNegocio = (titulo) => /organizacao do negocio|planej
 // quinze. Se ela não fizer até cinco e quinze ela perde o ritual." Era uma
 // janela até 07:15 que só tirava o selo por fora dela; virou prazo seco —
 // passou de 05:15, o ritual está perdido, ponto.
+//
+// 🕐 09/09/2026 — DIR-125, mesmo dono, revendo depois de ver a régua nova
+// (dúvida de ambiente vira reprova automática — a pessoa refaz, não perde
+// o dia por má sorte de câmera): "se o cara acordou e teve a intenção de
+// fazer, a gente não pode penalizar... quinze minutos final é pouco tempo,
+// vamos deixar trinta — dá tempo da pessoa acordar e ficar meio lenta."
+// FIM sobe de 05:15 pra 05:30 (INÍCIO intocado — ele só pediu mais tempo
+// no fim, não mais cedo no começo).
 export const RITUAL_INICIO_MIN = 4 * 60 + 40;
-export const RITUAL_FIM_MIN = 5 * 60 + 15;
+export const RITUAL_FIM_MIN = 5 * 60 + 30;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────

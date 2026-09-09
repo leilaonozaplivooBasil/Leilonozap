@@ -12,6 +12,54 @@
 
 ---
 
+## DIR-127 — a Rotina Perfeita nunca mais duplica o dia inteiro
+
+**Emitida por:** dono (09/09/2026), vendo a fila de comprovações "bagunçada": *"isso é muito sério, muito sério, coloca isso aí, coloca uma trava pra tu não errar isso."*
+
+**O que era:** o cron `gerarJornadaDoDia` (madrugada) e a auto-repetição do cliente (CrmMetodo.jsx, `useEffect` que repete a rotina sozinha) podiam gerar a rotina INTEIRA do mesmo dia pra mesma pessoa antes de qualquer um dos dois marcar `rotina_gerada_em` — uma corrida que a trava da DIR-80 (`diasGerados`, só protege a MESMA aba) nunca cobria. Achado no banco: **97 linhas duplicadas**, praticamente o dia inteiro de várias pessoas em dobro; **10 delas já com comprovação dupla** — a pessoa, vendo a mesma tarefa duas vezes na tela, comprovou as duas, e o X-Pay contava a mesma tarefa duas vezes.
+
+**O que entra:**
+1. **Limpeza dos 97 duplicados já existentes** (SQL direto, produção): por grupo (`user_id, data, hora, titulo`), mantida a linha com `feito=true`, comprovação preenchida e `created_date` mais antigo — as sobras apagadas.
+2. **`UNIQUE(user_id, data, hora, titulo)`** em `metodo_tarefas` — a trava de verdade agora é o banco, não mais um `ref` de sessão. Aplicada direto em produção (o pipeline automático de migração está quebrado, achado de sessão anterior) e registrada em `supabase/migrations/20260909210000_metodo_tarefas_unique_user_data_hora_titulo.sql`.
+3. Os **6 lugares** que geram tarefas trocam `insert`/`create` um-a-um por **upsert com `ignoreDuplicates`** (cliente: `criarTarefasSemDuplicar`, `CrmMetodo.jsx`, usado nos 3 pontos — gerar, auto-repetir, regerar; `XGameAdmin.jsx`; `XPerformanceGestao.jsx`) ou `Prefer: resolution=ignore-duplicates` + `on_conflict` na URL (servidor: `gerarJornadaDoDia.js`, o cron) — a duplicata é ignorada em silêncio, nunca criada e nunca quebra com erro.
+
+**Fora do escopo:** nenhum reembolso/ajuste retroativo de X-Pay — o ciclo ainda não fechou (dia 3 de 22), o pagamento acontece no fechamento, e a limpeza já corrigiu o dado antes de qualquer conta final usar ele.
+
+**Prova:** suíte 1897/1897 (4 testes novos em `tests/geracaoTarefasSemDuplicar.test.mjs` travando os 6 pontos de geração), lint limpo, `npm run build` sem erro. Migração aplicada e conferida direto no banco (zero grupos duplicados restantes).
+
+---
+
+## DIR-126 — a fila de Comprovações que o dono vê TODO dia ganha a mesma organização do ADM
+
+**Emitida por:** dono (09/09/2026): *"eu quero ver o nome das pessoas, data, por caixinha, está muito bagunçado"* — e, numa mensagem anterior, sobre a fila geral que aparece logo depois da Fila do Pronto: *"ela nem me deu a prévia... se for vídeo, se for áudio, tem que tudo transcrever e mostrar ali."*
+
+**Achado:** a DIR-124 (busca + agrupamento por data) só tinha entrado em `XGameAdmin.jsx` — mas a tela que o dono realmente abre todo dia é `Comprovacoes.jsx` (`ComprovacoesPainel`), embutida direto na página principal (logo após "A Fila do Pronto") e na aba "Comprovações" do Quadro Geral. Essa tela nunca recebeu a atualização.
+
+**O que entra (`Comprovacoes.jsx`):**
+1. Mesma busca única (nome ou data) e agrupamento por dia da DIR-124, reaproveitando as MESMAS funções puras (`src/lib/filaComprovacoes.js`) — uma fonte só.
+2. **Selo vazio do Ritual do Amanhecer corrigido**: `ROTULO`/`COR` não tinham entrada pra `aprovada_ritual` — o badge desenhava um retângulo sem nada dentro. Agora mostra "ritual aprovado".
+3. **O texto entregue aparece na fila** (`c.entrega` — a gratidão escrita OU falada e já transcrita, o resumo da leitura): antes só o veredito da IA aparecia, nunca o que a pessoa efetivamente disse. Mesma correção em `XGameAdmin.jsx`.
+4. **Comunicação clara de como o ritual chegou** (achado em paralelo, mesmo pedido do dono): quando a gratidão veio em ÁUDIO, a linha avisa a duração sem tocar o áudio (privacidade — é voz de quem gravou, nunca vira um botão de play); quando não teve nem vídeo nem áudio, a linha diz isso explicitamente em vez de ficar muda.
+5. Copy do contador de pendências atualizada pra refletir a realidade pós-DIR-125: "a IA decide tudo sozinha" em vez de "a segunda análise é sua".
+
+**Prova:** lint limpo, `npm run build` sem erro (mudança de UI, sem lógica nova além da já testada na DIR-124/DIR-125).
+
+---
+
+## DIR-125 — o Ritual do Amanhecer nunca mais cai pro gestor decidir + janela sobe pra 30min
+
+**Emitida por:** dono (09/09/2026), vendo comprovações presas em "em análise": *"a Yata tem que aprovar tudo... vai reprovar automático, entendeu? Só em casos impossíveis, mas não precisa"* — e, na sequência, sobre o prazo: *"se o cara acordou e teve a intenção de fazer, a gente não pode penalizar... quinze minutos final é pouco tempo, vamos deixar trinta."*
+
+**O que era:** o Ritual do Amanhecer (`concluirRitual`, `CrmMetodo.jsx`) era a ÚLTIMA rota do X-GAME que ainda caía pro gestor decidir — ambiente em dúvida (nem claramente errado, nem claramente em casa) virava `status: 'em_analise'`, esperando alguém aprovar/reprovar na mão. Todo o resto do X-GAME já resolve sozinho desde a DIR-89 ("intervenção humana zero").
+
+**O que entra:**
+1. Ambiente em dúvida agora cai na MESMA rota automática do ambiente claramente errado — **reprova sozinha**, com o motivo pedagógico da própria IA (a pessoa refaz; não é punição definitiva, é uma segunda chance). `emDuvida`/`status: 'em_analise'` removidos do ritual — nunca mais nasce nesse estado.
+2. **`RITUAL_FIM_MIN` sobe de 05h15 para 05h30** (`RITUAL_INICIO_MIN`, a abertura antecipada às 4h40, intocada) — trinta minutos a partir do horário oficial da gratidão (05:00), não mais quinze.
+
+**Prova:** suíte 1893/1893 (1 teste travando a régua nova de horário + 1 teste de fonte travando que `em_analise`/`emDuvida` não existem mais no ritual), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-124 — a fila de Comprovações do ADM X-GAME agora agrupa por dia e tem busca
 
 **Emitida por:** dono (09/09/2026), olhando a fila crescer: *"eu preciso separar por data, né? Data de comprovação, nome das pessoas, pra ficar mais fácil isso, ainda precisa ter uma busca quando eu fizer buscar mais rápido, tanto a data e tanto o dia."*

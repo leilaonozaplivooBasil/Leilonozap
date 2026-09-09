@@ -313,7 +313,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       const linhas = gerarTarefasDaRotina(rotina, userId, diaISO).map((l) => ({
         ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
       }));
-      const { error } = await supabase.from('metodo_tarefas').insert(linhas);
+      // 🐛 09/09/2026 — DIR-127: ignora duplicata em vez de criar (ou quebrar
+      // tentando) — a trava real é o UNIQUE(user_id,data,hora,titulo) do banco.
+      const { error } = await supabase.from('metodo_tarefas')
+        .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
       if (error) throw error;
       toast.success(`Planejamento de ${fmtDia(diaISO)} gerado pra ${nomeDe(userId)}: ${linhas.length} tarefas da Rotina Perfeita`);
       carregarTarefas();
