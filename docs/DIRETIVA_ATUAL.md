@@ -12,6 +12,35 @@
 
 ---
 
+## DIR-109.1 — o radar vira "a roda da vida" (pentágono da meta sempre perfeito)
+
+**Emitida por:** dono (09/09/2026), vendo o radar do DIR-109: *"esse
+desenho não está visual, eu quero que o burrão entenda... por isso que eu
+sugeri a roda da vida, porque aí a gente explica que se a roda dele
+rodar, a vida dele anda."*
+
+**O problema:** o radar do DIR-109 plotava o % BRUTO de cada eixo contra
+o alvo dele — como os 5 alvos são diferentes (80/90/90/80/100%), o
+pentágono da META não era um pentágono regular, e a leitura "a roda está
+redonda = você está bem" não batia visualmente.
+
+**A correção:** cada eixo agora mostra a PROPORÇÃO do próprio alvo
+(capada em 100%) — `proporcoesExecutivoIdeal()`, extraída de dentro de
+`formacaoExecutivoIdeal()` pra ser a mesma conta nos dois lugares. Bater
+o alvo em qualquer eixo sempre encosta na borda; o alvo em si vira um
+pentágono PERFEITO. A roda da pessoa só fica redonda quando os 5 eixos
+estão em dia — e murcha exatamente onde falta rodar. Legenda nova embaixo
+do radar: *"a roda da vida do Executivo Ideal — quanto mais redonda, mais
+a carreira anda."*
+
+**Prova:** 2 testes novos (`proporcoesExecutivoIdeal` capa em 1 por eixo;
+`formacaoExecutivoIdeal` continua a mesma % de sempre depois do refactor).
+Suíte 1626/1626, lint limpo, `npm run build` sem erro. Verificação em
+navegador rodou de novo — confirmado visualmente que o pentágono tracejado
+da meta agora é regular e a legenda aparece corretamente.
+
+---
+
 ## DIR-109 — o mapa do jogador: radar dos 5 eixos do Executivo Ideal
 
 **Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107/108: *"a

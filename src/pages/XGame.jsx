@@ -9,7 +9,7 @@ import {
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
-  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL,
+  estudoFdsEmDia, TRAVA_SEM_DIAMANTE, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -417,19 +417,22 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
             </div>
             <BarraProgresso pct={ciclo.formacao.pct} dialeto="escuro" altura="extra" corClasse="bg-emerald-400" trilhoClasse="bg-[#2B2B2B]" />
 
-            {/* 🎯 09/09/2026 — DIR-109, dono: "um mapa da pessoa, tipo de
-                jogador de futebol... aonde ele está ruim ele tem que
-                potencializar." O mesmo ciclo.taxas × EXECUTIVO_IDEAL das
-                barras abaixo, só que num olhar só — o formato da silhueta
-                mostra onde falta e onde já é ponto forte. */}
+            {/* 🎡 09/09/2026 — DIR-109.1, dono: "a roda da vida... se a
+                roda dele rodar, a vida dele anda." Cada eixo mostra a
+                PROPORÇÃO do alvo batida (não o % bruto) — o alvo vira um
+                pentágono PERFEITO na borda; a roda da pessoa é redonda só
+                quando os 5 eixos estão em dia, e murcha exatamente onde
+                falta rodar. */}
             <RadarEixos
               dialeto="escuro"
-              eixos={EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({
-                k, rotuloCurto, emoji,
-                atual: Math.round((ciclo.taxas[k] || 0) * 100),
-                alvo: Math.round(EXECUTIVO_IDEAL[k] * 100),
-              }))}
+              eixos={(() => {
+                const prop = proporcoesExecutivoIdeal(ciclo.taxas);
+                return EIXOS_EXECUTIVO_IDEAL.map(({ k, rotuloCurto, emoji }) => ({ k, rotuloCurto, emoji, atual: Math.round(prop[k] * 100), alvo: 100 }));
+              })()}
             />
+            <p className="text-center text-[10.5px] text-[#817E8C] -mt-2">
+              🎡 a <strong className="text-white/70">roda da vida</strong> do Executivo Ideal — quanto mais redonda, mais a carreira anda
+            </p>
 
             <div className="space-y-2.5">
               {[

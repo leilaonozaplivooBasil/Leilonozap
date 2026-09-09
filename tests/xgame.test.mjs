@@ -11,7 +11,7 @@ import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
-  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL,
+  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
 } from '../src/lib/xgame.js';
 
 // 🎯 09/09/2026 — DIR-109: o radar (mapa do jogador) lê EIXOS_EXECUTIVO_IDEAL
@@ -24,6 +24,27 @@ test('EIXOS_EXECUTIVO_IDEAL: as mesmas chaves de EXECUTIVO_IDEAL, na mesma ordem
     assert.ok(e.rotuloCurto, `${e.k} precisa de um rótulo curto pro radar`);
     assert.ok(e.emoji, `${e.k} precisa de um emoji`);
   }
+});
+
+// 🎡 09/09/2026 — DIR-109.1, dono: "a roda da vida... se a roda dele rodar,
+// a vida dele anda." proporcoesExecutivoIdeal vira a "roda": cada eixo
+// batendo o próprio alvo é 1 (100%), capado — não estoura de um eixo fácil
+// pra fingir que a roda inteira está redonda.
+test('proporcoesExecutivoIdeal: cada eixo é a fração do PRÓPRIO alvo, capada em 1 — a roda não estoura', () => {
+  const prop = proporcoesExecutivoIdeal({ mvm: 0.4, producao: 0.9, realtime: 1, bonus: 0, vendas: 2 });
+  assert.equal(prop.mvm, 0.5, '0.4 de um alvo de 0.8 é metade do caminho');
+  assert.equal(prop.producao, 1, 'bateu o alvo de 0.9 em cima — pentágono cheio nesse eixo');
+  assert.equal(prop.realtime, Math.min(1, 1 / 0.9), 'passou do alvo, mas capa em 1 — a roda não fica oval');
+  assert.equal(prop.bonus, 0, 'nada de bônus — eixo murcho de vez');
+  assert.equal(prop.vendas, 1, 'vendas dobrou o alvo (200%), mas capa em 1 igual os outros');
+});
+
+test('formacaoExecutivoIdeal continua a média das proporções — o refactor pra proporcoesExecutivoIdeal não muda a % de formação', () => {
+  const taxas = { mvm: 0.6, producao: 0.9, realtime: 0.45, bonus: 0.4, vendas: 1 };
+  const f = formacaoExecutivoIdeal(taxas);
+  const prop = proporcoesExecutivoIdeal(taxas);
+  const mediaEsperada = Object.values(prop).reduce((s, v) => s + v, 0) / Object.keys(prop).length;
+  assert.equal(f.pct, Math.round(mediaEsperada * 100));
 });
 
 test('horaDeMin: minutos vira "17h" ou "21h30" (sem zero à esquerda, estilo do app)', () => {

@@ -539,13 +539,26 @@ export function tokenDoCiclo({ diasCiclo = [], hojeResumo = null, mvmVotacao = n
 }
 
 /**
+ * Cada eixo do Executivo Ideal, como fração do próprio alvo dele (1 =
+ * bateu o alvo, capado — não passa de 1). Extraído pra ser a MESMA conta
+ * usada tanto na % de formação (a média dos 5) quanto na "roda da vida"
+ * (DIR-109.1): sem isso, o eixo que já bateu 100% do alvo dele apareceria
+ * "murcho" do lado dos outros só porque o alvo dele é mais baixo — a roda
+ * pareceria torta por causa da régua, não do desempenho de verdade.
+ */
+export function proporcoesExecutivoIdeal(taxas = {}) {
+  return Object.fromEntries(Object.keys(EXECUTIVO_IDEAL).map((k) => [k, Math.min(1, (taxas[k] || 0) / EXECUTIVO_IDEAL[k])]));
+}
+
+/**
  * A formação do EXECUTIVO IDEAL (90 dias): o índice geral (média das taxas
  * contra os alvos) destrava a "votação extraordinária" — 33% = 2 meses,
  * 66% = 1 mês, 88% = em breve (planilha I14 nova geração).
  */
 export function formacaoExecutivoIdeal(taxas = {}) {
+  const proporcoes = proporcoesExecutivoIdeal(taxas);
   const eixos = Object.keys(EXECUTIVO_IDEAL);
-  const indice = eixos.reduce((s, k) => s + Math.min(1, (taxas[k] || 0) / EXECUTIVO_IDEAL[k]), 0) / eixos.length;
+  const indice = eixos.reduce((s, k) => s + proporcoes[k], 0) / eixos.length;
   const pct = Math.round(indice * 100);
   let mensagem = null;
   if (pct >= 88) mensagem = 'Parabéns! Continue assim e EM BREVE você abrirá votação extraordinária.';
