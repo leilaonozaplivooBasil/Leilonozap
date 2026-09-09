@@ -12,6 +12,20 @@
 
 ---
 
+## DIR-131 — o botão de compartilhar no WhatsApp volta na Fila do Pronto, com texto pronto
+
+**Emitida por:** dono (09/09/2026), olhando a Fila do Pronto: *"tinha um botão WhatsApp aqui, eu acho que a gente tirou porque a gente ia mandar mensagem mais personalizada, mais bonita... só um texto mesmo, mas um texto bem bonito... quero botar isso aqui no WhatsApp pra compartilhar também."*
+
+**O que entra:**
+1. `textoCompartilharPronto(t, nomeDaPessoa)` (`src/lib/pronto.js`) — um texto pronto, com identidade (🎯 X-GAME), o título da tarefa, o prazo (`rotuloDoPrazo`) e um convite — é lembrete gentil, não cobrança (o tom sério de "atrasou" continua só no "avisar" já existente).
+2. Botão **compartilhar** (`XPerformanceGestao.jsx`, `MessageCircle`) nas tarefas em `aguardando o pronto` da Fila do Pronto — abre o WhatsApp (`wa.me`) já com o texto pronto pro telefone cadastrado da pessoa; sem telefone, avisa em vez de abrir link quebrado.
+
+**Fora do escopo, por ora:** imagem/banner junto do texto (o dono pediu pra "pesar" — decidido: só texto agora, mais simples e não depende de gerar/hospedar imagem; pode entrar depois se pedir). O botão "avisar" da tarefa atrasada (cobrança, mais sério) não mudou.
+
+**Prova:** suíte 1955/1955 (5 testes novos: `pronto.test.mjs` trava o texto — nome, título, prazo, tom gentil; `compartilharPronto.test.mjs` trava a fiação do botão), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-130 — a demanda distribuída entra sozinha em três lugares, e ganha um sino que não deixa passar batido
 
 **Emitida por:** dono (09/09/2026): *"eu preciso que o envio de tarefa chegue na jornada, automático... ela está entrando no quadro, aí tem a opção de botar lá no quadro e na minha lista, né? Já estava entrando automático na jornada e não entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo automático... está faltando um sininho de notificação... eu mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro."*

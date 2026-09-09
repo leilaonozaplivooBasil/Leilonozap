@@ -2,7 +2,7 @@
 // entregar até tal hora; aparece pra ele dar o pronto até; a gente cobra".
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { prazoDe, rotuloDoPrazo, estadoDoPronto, carimboDoPronto, carimboDaDevolucao, filaDoPronto } from '../src/lib/pronto.js';
+import { prazoDe, rotuloDoPrazo, estadoDoPronto, carimboDoPronto, carimboDaDevolucao, filaDoPronto, textoCompartilharPronto } from '../src/lib/pronto.js';
 
 test('prazoDe: dia + hora viram o "pronto até" no fuso local; sem hora, 18:00', () => {
   const p = new Date(prazoDe('2026-09-08', '17:30'));
@@ -51,4 +51,23 @@ test('filaDoPronto: só as distribuídas, atrasadas primeiro, depois os prontos 
     { id: 'g', origem: 'xperf', prazo_em: prazoDe('2026-09-09', '18:00') },
   ], agora);
   assert.deepEqual(fila.map((f) => [f.tarefa.id, f.estado.id]), [['a', 'atrasada'], ['p', 'pronto'], ['d', 'devolvida'], ['g', 'aguardando'], ['c', 'conferida']]);
+});
+
+// 📲 09/09/2026 — dono: "tinha um botão WhatsApp aqui... a gente tirou
+// porque ia mandar mensagem mais personalizada, mais bonita... só um texto
+// mesmo, mas bem bonito." O compartilhamento volta, com texto pronto.
+test('textoCompartilharPronto: usa o primeiro nome, o título e o prazo — um lembrete, não cobrança', () => {
+  const t = { titulo: 'Fechar a proposta da loja Norte', data: '2026-09-09', prazo_em: prazoDe('2026-09-09', '18:00') };
+  const texto = textoCompartilharPronto(t, 'Emannuel Alves de Lima');
+  assert.match(texto, /Oi Emannuel!/);
+  assert.match(texto, /Fechar a proposta da loja Norte/);
+  assert.match(texto, /pronto até 18:00/);
+  assert.match(texto, /X-GAME/);
+  assert.ok(!/cobrando|atrasad|zerar|zerou/i.test(texto), 'é lembrete gentil, não a cobrança do "avisar"');
+});
+
+test('textoCompartilharPronto: sem prazo ou sem nome, não quebra', () => {
+  assert.doesNotThrow(() => textoCompartilharPronto({ titulo: 'Tarefa qualquer' }, ''));
+  const texto = textoCompartilharPronto({ titulo: 'Tarefa qualquer' }, '');
+  assert.match(texto, /Oi você!/);
 });
