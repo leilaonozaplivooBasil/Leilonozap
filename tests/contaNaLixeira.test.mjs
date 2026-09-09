@@ -11,10 +11,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { contaNaLixeira, AVISO_CONTA_NA_LIXEIRA } from '../api/_lib/contaAtiva.js';
+import { semComentarios } from './_ajuda.mjs';
 
-/** Tira comentários pra assertiva não casar com a explicação do bug. */
-const semComentarios = (txt) =>
-  txt.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const ler = (p) => semComentarios(readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 

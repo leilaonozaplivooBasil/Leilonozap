@@ -15,10 +15,8 @@ import {
   telefoneParaGravar,
   dddValido,
 } from '../src/lib/telefoneBR.js';
+import { semComentarios } from './_ajuda.mjs';
 
-/** Tira comentários pra assertiva não casar com a explicação do bug. */
-const semComentarios = (txt) =>
-  txt.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 test('o MESMO celular escrito de 6 jeitos é uma pessoa só', () => {
   const formas = [

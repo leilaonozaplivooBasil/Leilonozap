@@ -12,10 +12,8 @@ import {
   faltaCategoria, escolhaValida, normalizar, sistemaDoClassificador,
   AVISO_CATEGORIA, CONFIANCA_MINIMA, LIMITE_DESCRICAO,
 } from '../src/lib/sugestaoDeCategoria.js';
+import { semComentarios } from './_ajuda.mjs';
 
-/** Tira comentários pra assertiva não casar com a explicação do bug. */
-const semComentarios = (txt) =>
-  txt.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const CATS = [
   { id: 'c1', name: 'Eletrônicos' },
