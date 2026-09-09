@@ -24,7 +24,11 @@ import { useSegurarCamada } from '@/hooks/useCamadaModal';
 export default function ComoFuncionaModal({ usuario, pagina, onFechar, onAbrirGuia, onIniciarTour }) {
   useSegurarCamada();
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
+    // 🌑 09/09/2026 — mesmo ajuste do TourGuiado (dono revendo "Como Funciona"
+    // hábito por hábito): o fundo desta janela fazia parte do MESMO exame de
+    // transparência — escurecido de /60 pra /75 pra ficar coerente com o tour
+    // que ela lança, sem virar uma tela preta (o blur já ajuda na leitura).
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
       <div
         className="w-full max-w-lg rounded-2xl border border-white/12 bg-[var(--xeos-preto)] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
