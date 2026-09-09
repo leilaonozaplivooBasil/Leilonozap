@@ -37,9 +37,10 @@
 
 **O que entra (`Comprovacoes.jsx`):**
 1. Mesma busca única (nome ou data) e agrupamento por dia da DIR-124, reaproveitando as MESMAS funções puras (`src/lib/filaComprovacoes.js`) — uma fonte só.
-2. **Selo vazio do Ritual do Amanhecer corrigido**: `ROTULO`/`COR` não tinham entrada pra `aprovada_ritual` — o badge desenhava um retângulo sem nada dentro. Agora mostra "ritual completo".
+2. **Selo vazio do Ritual do Amanhecer corrigido**: `ROTULO`/`COR` não tinham entrada pra `aprovada_ritual` — o badge desenhava um retângulo sem nada dentro. Agora mostra "ritual aprovado".
 3. **O texto entregue aparece na fila** (`c.entrega` — a gratidão escrita OU falada e já transcrita, o resumo da leitura): antes só o veredito da IA aparecia, nunca o que a pessoa efetivamente disse. Mesma correção em `XGameAdmin.jsx`.
-4. Copy do contador de pendências atualizada pra refletir a realidade pós-DIR-125: "a IA decide tudo sozinha" em vez de "a segunda análise é sua".
+4. **Comunicação clara de como o ritual chegou** (achado em paralelo, mesmo pedido do dono): quando a gratidão veio em ÁUDIO, a linha avisa a duração sem tocar o áudio (privacidade — é voz de quem gravou, nunca vira um botão de play); quando não teve nem vídeo nem áudio, a linha diz isso explicitamente em vez de ficar muda.
+5. Copy do contador de pendências atualizada pra refletir a realidade pós-DIR-125: "a IA decide tudo sozinha" em vez de "a segunda análise é sua".
 
 **Prova:** lint limpo, `npm run build` sem erro (mudança de UI, sem lógica nova além da já testada na DIR-124/DIR-125).
 
