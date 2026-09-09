@@ -28,6 +28,16 @@ const CATEGORIAS = [
   ['producao', '[PRODUÇÃO]'], ['bonus', '[BÔNUS]'],
   ['mentoria', '[MENTORIA]'], ['visao', '[VISÃO ESTRATÉGICA]'],
 ];
+// 🚫 09/09/2026 — DIR-122, dono, direto: "faz o que precisa ser feito, a
+// pessoal com certeza" — depois disso, preocupado com o próprio jogo:
+// "mas ele não pode ganhar duas vezes... eu só escolhi uma conta." A conta
+// duplicada de Joao Vitor Paim Pereira (e-mail auto-gerado, sem atividade
+// nenhuma) foi unificada com a pessoal dele direto no banco — mas o LOGIN
+// duplicado continua existindo (serve pra outra coisa, o "concurso"), então
+// ainda aparecia como candidato pra "adicionar participante", pronto pra
+// alguém recriar a mesma confusão sem querer. Nunca mais aparece na lista.
+const IDS_DUPLICADOS_FORA_DO_XGAME = new Set(['e90ed56209c71d4bf4dd3bc3']);
+
 // 🐛 09/09/2026 — mesmo bug de fuso do CrmMetodo.jsx: toISOString() usa UTC,
 // e no Brasil (UTC-3) o dia vira 3h antes da meia-noite local (a partir das
 // 21h) — bem no fim da janela de votação. O raio-x "quem votou hoje" olhava
@@ -180,7 +190,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
   // sem ter que adivinhar a caixinha dela antes
   const candidatos = useMemo(() => {
     const q = semAcento(busca.trim());
-    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
+    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id) && !IDS_DUPLICADOS_FORA_DO_XGAME.has(u.id));
     const porNome = q
       ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q))
       : livres;
@@ -189,7 +199,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
   }, [usuarios, participantes, busca, filtroCandidato]);
   const contagemPorGrupo = useMemo(() => {
     const q = semAcento(busca.trim());
-    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id));
+    const livres = usuarios.filter((u) => !participantes.some((p) => p.user_id === u.id) && !IDS_DUPLICADOS_FORA_DO_XGAME.has(u.id));
     const porNome = q ? livres.filter((u) => semAcento(u.nickname).includes(q) || semAcento(u.full_name).includes(q)) : livres;
     const por = { todos: porNome.length, corporativo: 0, licenciados: 0, vendedores: 0, usuarios: 0 };
     porNome.forEach((u) => { por[grupoDoUsuario(u)] += 1; });

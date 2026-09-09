@@ -12,6 +12,18 @@
 
 ---
 
+## DIR-123 — a conta duplicada de "paim" some da lista de "adicionar participante"
+
+**Emitida por:** dono (09/09/2026), depois da unificação da DIR-122: *"mas ele não pode ganhar duas vezes, man??? e eu só escolhi uma conta no painel admin pra participar do game."* Confirmado que não há risco (registro único, zero pagamento em qualquer das duas contas) — mas o login duplicado ("Joao Vitor Paim Pereira", e-mail auto-gerado) continuava existindo, então continuava aparecendo na lista de "adicionar participante" do ADM X-Game, pronto pra ser escolhido de novo por engano. Autorização final: *"sim"*.
+
+**O que entra:** `XGameAdmin.jsx` ganha `IDS_DUPLICADOS_FORA_DO_XGAME` — um Set com o id exato dessa conta — filtrado tanto da lista de candidatos quanto da contagem por grupo, na tela de "adicionar participante". O login em si (`app_users`) não foi tocado — só parou de aparecer como opção pra virar participante do jogo; continua servindo pra o que quer que seja o "concurso" (o e-mail auto-gerado sugere outra funcionalidade, não mexida).
+
+**Fora do escopo:** nenhuma mudança em `xgame_participantes`/`xgame_votos_mvm` (já resolvido na DIR-122) — esta entrada é só a trava pra não recriar o mesmo problema no futuro.
+
+**Prova:** suíte 1882/1882 (1 teste novo em `tests/xgameRecebeVoto.test.mjs` travando a exclusão nas duas listas), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-122 — conta duplicada de Joao Vitor Paim Pereira ("paim") unificada na conta pessoal
 
 **Emitida por:** dono (09/09/2026), resposta direta ao achado da DIR-121: *"faz o que precisa ser feito, a pessoal com certeza."*
