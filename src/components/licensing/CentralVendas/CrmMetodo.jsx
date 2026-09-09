@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, somarDiasISO, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -36,7 +36,7 @@ import {
   moedaModelo,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
-  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
+  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, deveAvisarRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
   pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
@@ -307,7 +307,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // Platina, nunca pro Ouro, sem estudo — DIR-113); cotação cai do dia 1
   // ao 22 ("antecipação é poder").
   const ehHoje = dia === hojeStr();
-  const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
+  const [agoraMin, setAgoraMin] = useState(() => minutosBrasilia());
   // 🕐 RELÓGIO DE TESTE (só super admin): o jogo inteiro obedece o horário
   // simulado — estados AGORA/ATRASADO/PERDIDO, janela do ritual e da votação.
   const [horaTeste, setHoraTeste] = useState('');
@@ -334,7 +334,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [perdaoAte, setPerdaoAte] = useState(null); // xgame_config.perdao_zeragem_ate — perdão manual de um dia inteiro
   useEffect(() => {
     if (painel !== 'compromisso') return;
-    const t = setInterval(() => { const d = new Date(); setAgoraMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
+    const t = setInterval(() => setAgoraMin(minutosBrasilia()), 60000);
     return () => clearInterval(t);
   }, [painel]);
   useEffect(() => {
@@ -801,6 +801,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
+  // 📣 DIR-134 — o aviso "como funciona o ritual", dos 10min antes da
+  // abertura até o fim da janela, pra quem ainda não fez hoje. Fechar vale
+  // só pra essa sessão de tela — reaparece se recarregar ou amanhã, de
+  // propósito: "não pode ter certeza que ela viu" (mesmo princípio do sino).
+  const [avisoRitualFechado, setAvisoRitualFechado] = useState(false);
+  const tarefaRitualHoje = useMemo(() => tarefas.find((x) => ehTarefaDeGratidao(x.titulo)), [tarefas]);
+  const mostrarAvisoRitual = ehHoje && !avisoRitualFechado
+    && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito });
   const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
@@ -1723,6 +1731,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             </div>
             <BarraProgresso pct={progressoJogo.pct} dialeto="claro" altura="media" trilhoClasse="bg-nz-cinza-fundo" />
+
+            {/* 📣 DIR-134 (09/09/2026) — dono: "algumas pessoas reclamaram,
+                falaram que não conseguiram [fazer o ritual]... vê se a gente
+                cria um aviso antes de começar o ritual, dez minutos pra
+                quando ela abrir, explicar como funciona." Aparece ANTES de
+                ela clicar em qualquer coisa — não depois de errar. */}
+            {mostrarAvisoRitual && (
+              <div className="rounded-xl border border-amber-400/50 bg-amber-50 p-3 sm:p-4 text-nz-tinta" data-teste="aviso-ritual-explicador">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-xl shrink-0" aria-hidden="true">🌅</span>
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <p className="text-sm font-extrabold">
+                      {agoraMinJogo < RITUAL_INICIO_MIN
+                        ? `O Ritual do Amanhecer abre daqui a pouco, às ${horaDeMin(RITUAL_INICIO_MIN)}.`
+                        : `O Ritual do Amanhecer está aberto até ${horaDeMin(RITUAL_FIM_MIN)}.`}
+                    </p>
+                    <p className="text-[12px] text-nz-tinta-fraca leading-relaxed">
+                      Como funciona: <strong>1)</strong> fala (ou escreve) a sua gratidão — pega o caderno antes de abrir.{' '}
+                      <strong>2)</strong> grava um vídeo curto se visualizando com o Quadro dos Sonhos — precisa ser{' '}
+                      <strong>em casa</strong>, com calma (carro, academia e escritório não valem). <strong>3)</strong> escreve a ação do dia.
+                      Sem o vídeo o ritual conclui igual, só não ganha o selo brilhante. Depois de{' '}
+                      <strong>{horaDeMin(RITUAL_FIM_MIN)}</strong> não dá mais pra fazer — o dia fica perdido, sem segunda chance.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setAvisoRitualFechado(true)}
+                      className="text-[11px] font-bold text-nz-verde hover:text-nz-verde-claro"
+                      data-teste="aviso-ritual-fechar"
+                    >entendi</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
                 A faixa inteira (seletor, placar e o relógio de teste temporário)

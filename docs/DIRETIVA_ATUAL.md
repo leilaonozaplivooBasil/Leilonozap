@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-134 — o relógio do jogo (não só a data) agora é sempre Brasília, e o ritual explica a si mesmo antes de começar
+
+**Emitida por:** dono (09/09/2026), pedindo uma auditoria noturna: *"vamos fazer uma análise no ritual que algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente melhora a comunicação no ritual... vê se a gente cria um aviso antes de começar o ritual, dez minutos pra quando ela abrir, explicar como funciona."*
+
+**Achado no banco (a causa real das reclamações):** três pessoas (Ribeiro, Iara Figueiredo, Elenice Lima) tiveram o ritual reprovado hoje às 05h17–05h25 de Brasília com o motivo `"Ritual perdido — passou do prazo de 5h15"` — um corte que **já tinha sido corrigido pra 5h30 minutos antes**, na DIR-125. A causa raiz não era o limiar em si (esse já estava certo no código): era `agoraMin` — o relógio que o jogo inteiro usa (janela do ritual, AGORA/ATRASADO/PERDIDO de toda tarefa, janela de votação do MvM) — que vinha de `new Date().getHours()*60 + .getMinutes()`, hora **local do aparelho**, não de Brasília forçada. É o MESMO bug da DIR-129 (`dataISO`), só que na hora do dia em vez da data — um aparelho com o relógio alguns minutos errado (fuso trocado, sincronização fraca) julgava a janela do jeito errado.
+
+**O que entra:**
+1. `minutosBrasilia(d)` nova em `src/lib/xgame.js` — minutos desde a meia-noite, sempre em `America/Sao_Paulo` via `Intl.DateTimeFormat`, o mesmo padrão de `dataISO()`. Substitui `d.getHours()*60+d.getMinutes()` nos três lugares que definiam o relógio do jogo: `CrmMetodo.jsx` (`agoraMin`, o Compromisso inteiro) e `XGame.jsx` (`agoraMin`, a janela de votação do MvM).
+2. **O aviso "como funciona o ritual"** (`deveAvisarRitual()`, `RITUAL_AVISO_ANTES_MIN = 10`) — aparece no Compromisso dos 10 minutos antes da abertura (04h30) até o fechamento (05h30), só pra quem ainda não fez o ritual hoje. Explica em uma tela só, ANTES de qualquer clique: os 3 passos (gratidão falada/escrita, vídeo de visualização **em casa**, a ação do dia), que sem vídeo o ritual conclui igual (só sem o selo brilhante), e o prazo exato depois do qual não tem mais segunda chance hoje.
+
+**Verificado, não é achado novo:** o sistema de auto-atualização do app (`useAppVersion.js`/`AtualizacaoDisponivel.jsx`) já detecta deploy novo e troca de versão sozinho (com contagem visível, dentro de 4-10s) sempre que o app está aberto ou volta de segundo plano — os dois fixes acima devem alcançar quem abrir o app antes do ritual de amanhã, mesmo sem fechar e abrir de novo.
+
+**Prova:** suíte 1967/1967 (11 testes novos: `minutosBrasilia()` na virada exata de Brasília e no horário real das três reprovações de hoje; `deveAvisarRitual()` nos limites exatos dos 10min/janela; a fiação do aviso em `CrmMetodo.jsx`), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-133 — o Kanban horizontal não vaza mais o arrasto pra página inteira no celular
 
 **Emitida por:** dono (09/09/2026), testando no celular: *"Fui em contatos agora, a esteira onde aparece uma esteira está vazando no celular. Então vamos ajustar pra aparecer no tablet, no celular e no computador, sem vazar nada, né? Em todo o aplicativo, principalmente na página aí da Top College."*

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/api/supabaseClient';
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
+  resumoDoDia, dataISO, minutosBrasilia, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
@@ -181,7 +181,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
     });
   }, [user?.id, cicloConfig]);
 
-  const agoraMin = agora.getHours() * 60 + agora.getMinutes();
+  const agoraMin = minutosBrasilia(agora);
   const votouEmTodos = useMemo(() => {
     const completos = colegasVotaveis.filter((id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length);
     return votouEmTodosOsColegas(colegasVotaveis, completos);

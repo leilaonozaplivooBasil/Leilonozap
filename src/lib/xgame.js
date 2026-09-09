@@ -936,6 +936,29 @@ export function dataISO(d = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
 }
 
+// 🐛 DIR-134 (09/09/2026) — auditoria noturna pedida pelo dono sobre o
+// Ritual do Amanhecer: o MESMO problema da DIR-129 (dataISO — o "hoje"
+// dependia do fuso do aparelho), só que na HORA do dia, não na data. A
+// janela do ritual (RITUAL_INICIO_MIN/RITUAL_FIM_MIN), o "AGORA/ATRASADO/
+// PERDIDO" de toda tarefa e a janela de votação do MvM comparavam minutos
+// tirados de `d.getHours()*60 + d.getMinutes()` — hora LOCAL DO APARELHO.
+// Um aparelho com o relógio uns minutos errado (comum: fuso trocado,
+// sincronização fraca, viagem) podia julgar "passou do prazo" um pouco
+// antes ou depois da hora real de Brasília — achado direto no banco: três
+// pessoas reprovadas no ritual de hoje (05:17–05:25 de Brasília) pelo corte
+// ANTIGO de 5h15 que já tinha sido corrigido no código minutos antes —
+// prova de que o relógio do jogo é sensível a exatamente esse tipo de
+// desalinho.
+/** Minutos desde a meia-noite EM BRASÍLIA — sempre, não importa o fuso do aparelho. */
+export function minutosBrasilia(d = new Date()) {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d);
+  const h = Number(partes.find((p) => p.type === 'hour')?.value || 0);
+  const m = Number(partes.find((p) => p.type === 'minute')?.value || 0);
+  return h * 60 + m;
+}
+
 /**
  * Soma/subtrai dias a uma data ISO (YYYY-MM-DD) sem tocar em fuso horário
  * nenhum — é conta de calendário pura (ano/mês/dia), nunca conversão de
@@ -1397,6 +1420,26 @@ export const ehOrganizacaoDoNegocio = (titulo) => /organizacao do negocio|planej
 export const RITUAL_INICIO_MIN = 4 * 60 + 40;
 export const RITUAL_FIM_MIN = 5 * 60 + 30;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
+
+// 🌅 DIR-134 (09/09/2026) — auditoria noturna do Ritual do Amanhecer, dono:
+// "algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente
+// melhora a comunicação no ritual, pras pessoas lerem... vê se a gente cria
+// um aviso antes de começar o ritual dez minutos pra quando ela abrir,
+// explicar como funciona." Achado (banco): a maior parte das reprovações
+// reais do ritual não é "esqueceu" — é "não sabia a regra": perdeu por
+// atraso sem noção de quanto tempo tinha, ou a comprovação caiu em dúvida
+// porque o ambiente não parecia claramente "em casa". O aviso avisa ANTES
+// de ela clicar em nada, não depois de errar.
+export const RITUAL_AVISO_ANTES_MIN = 10;
+/**
+ * Mostra o aviso "como funciona o ritual" — dos dez minutos antes da
+ * abertura até o fechamento da janela, só pra quem ainda não fez hoje.
+ */
+export function deveAvisarRitual({ agoraMin, ritualFeitoHoje } = {}) {
+  if (ritualFeitoHoje) return false;
+  if (typeof agoraMin !== 'number') return false;
+  return agoraMin >= RITUAL_INICIO_MIN - RITUAL_AVISO_ANTES_MIN && agoraMin <= RITUAL_FIM_MIN;
+}
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────
 // O fluxo do dono: a tarefa abre o Instagram pra fazer o post NA HORA,
