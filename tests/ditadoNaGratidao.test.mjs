@@ -31,7 +31,7 @@ test('🔒 os mínimos NÃO caíram por causa do áudio', () => {
   // pra não haver duas verdades pro mesmo número). O piso continua sendo
   // cobrado, agora pelos dois caminhos, e está testado em gratidaoFalada.
   assert.match(RITUAL, /disabled=\{!entrega\.ok\}/, 'o botão continua travado até haver entrega');
-  assert.match(RITUAL, /gratidaoEntregue\(\{ texto: gratidao, audioSeg: audioGratidaoSeg \}\)/);
+  assert.match(RITUAL, /gratidaoEntregue\(\{ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje \}\)/);
   assert.match(RITUAL, /disabled=\{acao\.trim\(\)\.length < ACAO_MIN\}/, 'a ação do dia NÃO mudou');
   assert.match(RITUAL, /const ACAO_MIN = 10;/);
   assert.ok(!/const GRATIDAO_MIN = 20;/.test(RITUAL), 'a cópia local da régua voltou');
