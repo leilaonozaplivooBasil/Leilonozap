@@ -12,6 +12,89 @@
 
 ---
 
+## DIR-112 — a roda da vida vira roda de verdade + o PDF Executivo ganha "posição do dia"
+
+**Emitida por:** dono (09/09/2026), depois de ver o radar (DIR-109/109.1)
+e o PDF (DIR-108) ao vivo: *"O PDF do executivo está muito raso. Tem que
+mostrar qual a posição dele do dia. O radar roda da vida, não está
+aparecendo uma roda. Quando eu falei a roda, é, ele faz, o painel dele
+virar uma roda de acordo, pra ele tem que ser quase dez em tudo, pra
+transformar numa roda... pra a vida andar. [...] Está aparecendo
+qualquer outra coisa menos uma roda. [...] eu gostaria que você olhasse
+com carinho isso, [...] pra gente fazer uma [prova] foda pro cara olhar
+e falar assim, porra, eu melhorando isso, você precisa rodar, precisa
+girar."* E, sobre o processo: *"Eu gostaria que você compartilhasse
+comigo, não saindo e fazendo... vamos conversar."* — as duas frentes só
+entraram em código depois de alinhar por escrito, na conversa, o
+desenho da roda (curva fechando círculo vs. o pentágono antigo) e o
+conteúdo da "posição do dia" (ele delegou a decisão: *"aonde a pessoa se
+encontra na posição do dia dentro do game, dentro dessa jornada do
+sucesso... riqueza de detalhes, pra ela ter ciência como está o negócio
+dela"*).
+
+**O problema, achado ao ler o próprio desenho:** `RadarEixos.jsx`
+desenhava um **pentágono** (5 lados retos) ligando os 5 eixos. Um
+pentágono nunca vira círculo, por melhor que seja a nota — a forma de
+base é poligonal. Por isso "aparecia qualquer coisa menos uma roda",
+mesmo com desempenho alto.
+
+**O que entra:**
+1. `src/lib/rodaDaVida.js` (novo) — a curva da roda é Catmull-Rom por
+   cima dos 5 eixos (`pontosDaRoda`), não retas: com tudo perto de
+   100%, a curva fecha um círculo quase perfeito; um eixo fraco
+   "amassa" a curva só daquele lado, como um pneu murcho.
+   `redondezDaRoda`/`faixaDaRoda` leem o quanto ela já gira (4 faixas:
+   murcha/torta/quase/girando).
+2. `RadarEixos.jsx` redesenhado: o **alvo** agora É um círculo perfeito
+   (os eixos já chegam normalizados a 100% do próprio alvo — bater a
+   meta em tudo LITERALMENTE é virar um círculo); o **desempenho real**
+   é a curva suave por cima. Quando a redondez passa de 85%, a curva
+   GIRA (animação CSS, respeita `prefers-reduced-motion`) e a legenda
+   embaixo muda de frase conforme a faixa.
+3. `relatorioExecutivo.js` ganha `posicao` (novo parâmetro) →
+   `rel.posicaoDoDia`: liga atual (Bronze/Prata/Ouro/Diamante,
+   `ligaDoToken`), quanto falta pra próxima (`proximaLiga`), Human
+   Token médio do ciclo, % de formação do Executivo Ideal (com a
+   mensagem de "votação extraordinária" já existente) e os 5 eixos pra
+   roda — tudo com a MESMA fórmula que o X-Game já usa pra própria
+   pessoa (`tokenDoCiclo`/`formacaoExecutivoIdeal`/
+   `proporcoesExecutivoIdeal`). Também entra em `textoDoRelatorio()`
+   (a versão WhatsApp).
+4. `PdfExecutivo.jsx` ganha o painel **POSIÇÃO DO DIA**: a MESMA roda
+   (vetorial, via `pontosDaRoda`/`pontoDoEixo` — não é imagem, é
+   desenho jsPDF de verdade) ao lado da liga, da barra de formação e da
+   legenda dos 5 eixos.
+5. `PainelCorporativo.jsx` calcula a posição do dia de QUALQUER pessoa
+   que a gestão abrir (não só de quem está logada): busca
+   `xgame_diario`/`xgame_votos_mvm` do ciclo já fechado (dias antes de
+   hoje) + `catalog_sales`/`captacao_oportunidades` no ciclo (mesma
+   conta de vendas de alto valor do DIR-110.1) — é uma FOTO do ciclo,
+   não tenta recalcular a régua radical do dia corrente de outra
+   pessoa.
+6. **Bug achado ao gerar um PDF de verdade e OLHAR pra ele** (não só
+   ler o código): `paraPdf()` deixava "⏱️"/"🗳️" viraram "??"/"?" soltos
+   na legenda da roda — a faixa de emoji coberta não incluía todo
+   emoji, e a variação (U+FE0F) sobrava como "?". Trocado pelo property
+   escape `\p{Extended_Pictographic}` (+ variação/ZWJ), que cobre
+   qualquer emoji de verdade.
+
+**Prova:** `tests/rodaDaVida.test.mjs` (8 testes novos — a curva fecha
+em ~raio 1 quando tudo é 100%, um eixo fraco amassa só daquele lado,
+`redondezDaRoda`/`faixaDaRoda` nas 4 faixas); `tests/relatorioExecutivo.test.mjs`
+(+2 testes — sem `posicao` fica `null`; com `posicao` monta
+`posicaoDoDia` e o texto do WhatsApp). Suíte 1658/1658, lint limpo,
+`npm run build` sem erro. **Verificação em navegador rodou de
+verdade nesta rodada**: banca nova (`tests/navegador/roda-da-vida.*`)
+prova que os rótulos mais compridos não clipam em nenhum dos 4
+cenários (cheio/torta/murcho/escuro) e que a legenda muda de frase
+certa; e um PDF de verdade foi gerado com jsPDF (via bundle esbuild) e
+rasterizado com `pdftoppm` pra ser OLHADO — foi assim que o bug do
+emoji foi achado, e foi assim que se confirmou que a roda cheia (todos
+os eixos ~95-100%) realmente fecha em círculo dentro do alvo tracejado,
+com a legenda "a roda GIRA — a vida anda".
+
+---
+
 ## DIR-111.2 — chegou no Hábito 4 já sabendo por quem: rola até ela e pisca
 
 **Emitida por:** dono (09/09/2026), depois de testar o DIR-111.1: *"Eu
