@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, dataISO } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -28,7 +28,12 @@ const CATEGORIAS = [
   ['producao', '[PRODUÇÃO]'], ['bonus', '[BÔNUS]'],
   ['mentoria', '[MENTORIA]'], ['visao', '[VISÃO ESTRATÉGICA]'],
 ];
-const hojeStr = () => new Date().toISOString().slice(0, 10);
+// 🐛 09/09/2026 — mesmo bug de fuso do CrmMetodo.jsx: toISOString() usa UTC,
+// e no Brasil (UTC-3) o dia vira 3h antes da meia-noite local (a partir das
+// 21h) — bem no fim da janela de votação. O raio-x "quem votou hoje" olhava
+// a data errada depois das 21h e achava todo mundo sem voto. dataISO() usa
+// data local de verdade.
+const hojeStr = () => dataISO();
 
 // ── Busca de pessoas por categoria do plano de carreira ─────────────
 // Time Corporativo = o bloco diretor inteiro (do trainee/executivo até
