@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DESTINOS, TIPOS_MENSAGEM, TAMANHO_MINIMO_TEXTO, mensagemValida,
+  DESTINOS, TIPOS_MENSAGEM, TIPOS_COMPOSIVEIS, TAMANHO_MINIMO_TEXTO, TAMANHO_MINIMO_RESPOSTA,
+  mensagemValida, respostaValida,
   ordenarMensagens, contarNaoLidas, mensagensRecebidasPor, mensagensEnviadasPor, papeisDoCargo,
 } from '../src/lib/mensagensXgame.js';
 
@@ -13,13 +14,23 @@ test('mensagemValida: exige destino, tipo e um mínimo de texto — "não pode s
   assert.equal(mensagemValida({ destinoTipo: 'ceo', tipo: 'sugestao', texto: 'oi' }).ok, false, 'texto curto demais não pode ir pro CEO');
   assert.equal(mensagemValida({ destinoTipo: 'marte', tipo: 'sugestao', texto: 'x'.repeat(30) }).ok, false, 'destino inválido');
   assert.equal(mensagemValida({ destinoTipo: 'ceo', tipo: 'invalido', texto: 'x'.repeat(30) }).ok, false, 'tipo inválido');
+  assert.equal(mensagemValida({ destinoTipo: 'ceo', tipo: 'aviso', texto: 'x'.repeat(30) }).ok, false, '"aviso" e "resposta" são gerados pelo sistema, não escolhíveis ao compor');
   assert.equal(mensagemValida({ destinoTipo: 'ceo', tipo: 'sugestao', texto: 'x'.repeat(TAMANHO_MINIMO_TEXTO) }).ok, true, 'no mínimo exato já vale');
   assert.equal(mensagemValida({ destinoTipo: 'diretoria', tipo: 'agradecimento', texto: 'Muito obrigado pelo apoio no fechamento do mês, fez toda diferença pra mim.' }).ok, true);
 });
 
-test('DESTINOS e TIPOS_MENSAGEM: os quatro destinos e os quatro tipos que o dono pediu', () => {
+test('respostaValida: barra mais baixa — responder não é o mesmo esforço de iniciar contato com o CEO', () => {
+  assert.equal(respostaValida('').ok, false);
+  assert.equal(respostaValida('  ').ok, false);
+  assert.equal(respostaValida('ok').ok, false, 'menor que o mínimo');
+  assert.equal(respostaValida('x'.repeat(TAMANHO_MINIMO_RESPOSTA)).ok, true);
+  assert.ok(TAMANHO_MINIMO_RESPOSTA < TAMANHO_MINIMO_TEXTO, 'responder tem que ser mais fácil que iniciar');
+});
+
+test('DESTINOS, TIPOS_MENSAGEM e TIPOS_COMPOSIVEIS: os quatro destinos, os seis tipos e os quatro que dá pra escolher ao compor', () => {
   assert.deepEqual(Object.keys(DESTINOS).sort(), ['ceo', 'diretoria', 'executivos', 'pessoa'].sort());
-  assert.deepEqual(Object.keys(TIPOS_MENSAGEM).sort(), ['agradecimento', 'demanda', 'pedido', 'sugestao'].sort());
+  assert.deepEqual(Object.keys(TIPOS_MENSAGEM).sort(), ['agradecimento', 'aviso', 'demanda', 'pedido', 'resposta', 'sugestao'].sort());
+  assert.deepEqual(TIPOS_COMPOSIVEIS.sort(), ['agradecimento', 'demanda', 'pedido', 'sugestao'].sort());
 });
 
 test('ordenarMensagens: a mais nova primeiro', () => {

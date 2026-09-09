@@ -350,15 +350,25 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // seus pontos do dia... o pronto é uma das coisas mais importantes do
   // nosso negócio"). `aviso_pronto_em` marca a tarefa pra saber que ESTE
   // atraso específico já foi avisado.
+  // 🟡 09/09/2026 — DIR-107, dono testou e pediu mais: "esse aviso tem que
+  // ser no WhatsApp E comunicar por dentro... quando eu mandar no
+  // WhatsApp, automaticamente ele comunica por dentro... eu quero sempre
+  // o retorno deles dentro. E sempre ensinando o que é o pronto — tem
+  // gente que confunde, acha que só vale quando termina. A gente tem que
+  // ensinar: se estiver no meio da demanda, avise que está fazendo,
+  // comunique." O texto agora sempre pede resposta PELA PLATAFORMA (não só
+  // pelo WhatsApp) e, nos avisos 1-2, ensina o conceito do pronto.
   const avisar = async (t) => {
     const p = participanteDe(t.user_id);
     const novoAvisos = (Number(p.avisos_pronto) || 0) + 1;
     const nome = nomeDe(t.user_id);
     const prazoTxt = (rotuloDoPrazo(t.prazo_em, String(t.data).slice(0, 10)) || '').replace('pronto até ', '') || 'o prazo combinado';
     const primeiroNome = nome.split(' ')[0];
+    const ensinamento = 'Lembrando: o pronto não é só marcar como feito no fim — se você ainda está no meio da tarefa, me avise por dentro da plataforma que está em andamento. Comunicar é tão importante quanto entregar.';
+    const pedidoDeRetorno = 'Responde por dentro da plataforma, na Mensagem pro CEO — quero seu retorno lá.';
     const msg = novoAvisos >= AVISOS_ANTES_DE_ZERAR
-      ? `${primeiroNome}, aqui é o CEO. Essa já é a ${novoAvisos}ª vez que peço o pronto de "${t.titulo}" (tinha até ${prazoTxt}) e não recebi. A partir de agora, o PRÓXIMO atraso zera TODOS os seus pontos do dia — MvM, Human Token, pontos e X-Pay. O pronto é uma das coisas mais importantes do nosso negócio. Preciso que isso não se repita.`
-      : `Oi ${primeiroNome}, tudo bem? A tarefa "${t.titulo}" tinha pronto até ${prazoTxt} e ainda não recebi. Estou te avisando (aviso ${novoAvisos} de ${AVISOS_ANTES_DE_ZERAR}) — me dá o pronto assim que puder? 🙏`;
+      ? `${primeiroNome}, aqui é o CEO. Essa já é a ${novoAvisos}ª vez que peço o pronto de "${t.titulo}" (tinha até ${prazoTxt}) e não recebi. A partir de agora, o PRÓXIMO atraso zera TODOS os seus pontos do dia — MvM, Human Token, pontos e X-Pay. O pronto é uma das coisas mais importantes do nosso negócio. Preciso que isso não se repita. ${pedidoDeRetorno}`
+      : `Oi ${primeiroNome}, tudo bem? A tarefa "${t.titulo}" tinha pronto até ${prazoTxt} e ainda não recebi. Estou te avisando (aviso ${novoAvisos} de ${AVISOS_ANTES_DE_ZERAR}) — me dá o pronto assim que puder? ${ensinamento} ${pedidoDeRetorno} 🙏`;
     const numero = String(usuarios.find((u) => u.id === t.user_id)?.phone || '').replace(/\D/g, '');
     const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(msg)}` : null;
 
@@ -370,12 +380,25 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         ? l.map((x) => (x.user_id === t.user_id ? { ...x, avisos_pronto: novoAvisos } : x))
         : [...l, { ...PARTICIPANTE_PADRAO, user_id: t.user_id, cargo: p.cargo, ativo: true, avisos_pronto: novoAvisos }];
     });
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+    // 📨 a mensagem chega SEMPRE por dentro da plataforma também — o
+    // WhatsApp não é a única via. Ela cai na caixa de "Mensagem pro CEO"
+    // da própria pessoa, exatamente com o mesmo texto do WhatsApp.
+    const mensagemInterna = {
+      remetente_id: currentUser?.id || null,
+      remetente_nome: nomeExibicao(currentUser) || currentUser?.full_name || 'ADM',
+      destino_tipo: 'pessoa',
+      destino_id: t.user_id,
+      destino_nome: nome,
+      tipo: 'aviso',
+      texto: msg,
+    };
+    const [{ error: e1 }, { error: e2 }, { error: e3 }] = await Promise.all([
       supabase.from('metodo_tarefas').update({ aviso_pronto_em: agora }).eq('id', t.id),
       supabase.from('xgame_participantes').upsert({ user_id: t.user_id, cargo: p.cargo, ativo: true, avisos_pronto: novoAvisos, updated_at: agora }, { onConflict: 'user_id' }),
+      supabase.from('xgame_mensagens').insert(mensagemInterna),
     ]);
-    if (e1 || e2) { toast.error('Não avisou — recarregando'); carregarTarefas(); return; }
-    toast.success(`${novoAvisos}º aviso registrado pra ${nome}${novoAvisos >= AVISOS_ANTES_DE_ZERAR ? ' — próximo atraso zera o dia' : ''}`);
+    if (e1 || e2 || e3) { toast.error('Não avisou — recarregando'); carregarTarefas(); return; }
+    toast.success(`${novoAvisos}º aviso registrado pra ${nome} — por dentro${wa ? ' e no WhatsApp' : ' (sem telefone cadastrado pro WhatsApp)'}${novoAvisos >= AVISOS_ANTES_DE_ZERAR ? ' — próximo atraso zera o dia' : ''}`);
     if (wa) window.open(wa, '_blank', 'noopener');
   };
 

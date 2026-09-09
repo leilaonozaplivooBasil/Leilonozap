@@ -1941,10 +1941,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste="titulo-tarefa">
                                   {t.hora && <span className="font-bold">{t.hora_fim ? `${t.hora}–${t.hora_fim}` : t.hora} · </span>}{t.titulo}
                                 </p>
-                                {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou */}
+                                {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou.
+                                    🎓 09/09/2026 — DIR-107, dono: "tem gente que confunde o que
+                                    é o pronto... acha que é só quando termina. Se estiver no
+                                    meio da demanda, avise que está fazendo, comunique." */}
                                 {t.prazo_em && (() => { const est = estadoDoPronto(t); return (
-                                  <p className={`text-[10px] font-bold ${est.id === 'atrasada' ? 'text-red-600' : est.atrasou ? 'text-amber-600' : est.id === 'conferida' ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} data-teste="pronto-ate">
-                                    ⏰ {rotuloDoPrazo(t.prazo_em, dia)}{est.id === 'atrasada' ? ' · atrasada — dá o pronto' : est.id === 'pronto' ? (est.atrasou ? ' · pronto dado (atrasado)' : ' · pronto dado, aguardando conferência') : est.id === 'conferida' ? ' · conferida ✔✔' : ''}
+                                  <p className={`text-[10px] font-bold ${est.id === 'atrasada' ? 'text-red-600' : est.atrasou ? 'text-amber-600' : est.id === 'conferida' ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`} data-teste="pronto-ate" title='O "pronto" não é só marcar como feito no fim: se você ainda está no meio da tarefa, comunique que está em andamento — pela Mensagem pro CEO ou com o responsável.'>
+                                    ⏰ {rotuloDoPrazo(t.prazo_em, dia)}{est.id === 'atrasada' ? ' · atrasada — dá o pronto (ou avise que está em andamento)' : est.id === 'pronto' ? (est.atrasou ? ' · pronto dado (atrasado)' : ' · pronto dado, aguardando conferência') : est.id === 'conferida' ? ' · conferida ✔✔' : ''}
                                   </p>
                                 ); })()}
                                 {t.devolvida_motivo && !t.feito && (
