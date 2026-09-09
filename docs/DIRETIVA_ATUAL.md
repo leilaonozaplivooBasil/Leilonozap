@@ -12,6 +12,35 @@
 
 ---
 
+## DIR-111.2 — chegou no Hábito 4 já sabendo por quem: rola até ela e pisca
+
+**Emitida por:** dono (09/09/2026), depois de testar o DIR-111.1: *"Eu
+cliquei nessa pessoa, ela me levou pra página seguinte, eu não posso ter
+a sensação que eu estou recomeçando. Então ela já me coloca ela no meu
+contato na outra página e pisca no contato que eu vou fazer. Pra não
+ficar com uma sensação de bloqueio... claro, achar direto na lista, não
+ficar procurando."*
+
+**O problema:** o botão "Contatar" do DIR-111.1 levava pro Hábito 4, mas
+só isso — a pessoa aparecia em algum lugar da fila e ficava por conta de
+quem clicou achar ela de novo. Exatamente a "sensação de recomeçar" que
+o dono descreveu.
+
+**O que entra:** o clique agora carrega o ID de quem foi clicada até o
+Hábito 4. Lá, a linha dela rola pra tela automaticamente (uma vez só) e
+pisca por 4 segundos (borda + fundo verde, `animate-pulse`) — dá pra
+achar na hora, sem procurar. O destaque some sozinho depois de 4s, não
+fica preso. Fiação: `CrmClientesTab.jsx` ganhou o estado
+`contatoDestacado`; `onIr` agora aceita um 3º parâmetro (o ID) só usado
+nessa passagem lista→contato.
+
+**Prova:** lint limpo, suíte 1648/1648, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada (mesmo motivo do
+DIR-111 — sem banca de teste pra esta tela) — recomendo clicar
+"Contatar" numa pessoa qualificada e conferir o scroll + o pisca ao vivo.
+
+---
+
 ## DIR-111.1 — a conexão que faltava: qualificou → botão leva pro Hábito 4
 
 **Emitida por:** dono (09/09/2026), depois de ver o DIR-111 no ar:

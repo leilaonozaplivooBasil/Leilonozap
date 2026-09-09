@@ -95,6 +95,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
   const [secao, setSecao] = useState(null);
   const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
+  // 🔦 09/09/2026 — DIR-111.2, dono: "eu cliquei nessa pessoa, ela me
+  // levou pra página seguinte, eu não posso ter a sensação que estou
+  // recomeçando... já me coloca ela no meu contato e pisca." Quem clicou
+  // "Contatar" na Lista de Network chega no Hábito 4 já apontado pra ela.
+  const [contatoDestacado, setContatoDestacado] = useState(null);
   // 🖐️ 09/09/2026 — dono, ao vivo, depois de testar o Compromisso: "pode
   // seguir pros outros hábitos". O botão global "Como Funciona" pede o tour
   // de fora desta tela (src/lib/pedidoDeTour.js) sem saber em qual dos 8
@@ -1660,7 +1665,9 @@ _Enviado via CRM Leilão NoZap_`;
             onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
             iniciarTour={tourPendente}
             onTourIniciado={() => setTourPendente(false)}
-            onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
+            onIr={(sec, sub, contatoId) => { setSecao(sec); if (sub) setSubAcomp(sub); setContatoDestacado(contatoId || null); }}
+            contatoDestacado={contatoDestacado}
+            onContatoDestacadoConsumido={() => setContatoDestacado(null)}
             onCriarOportunidade={criarOportunidadeDoCliente}
           />
         )}
