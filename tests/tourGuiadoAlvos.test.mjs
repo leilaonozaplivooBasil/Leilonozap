@@ -121,6 +121,22 @@ test('🔴 quem oferece o botão do tour tem alguém do outro lado pra atender',
     'catalogo-clientes é o MyClientsTab, que não tem tour — o botão apareceria sem fazer nada');
 });
 
+test('🔴 a aba que oferece tour mostra o botão que pede o tour', () => {
+  // 🩹 O FURO QUE ISTO FECHA (achado testando o preview, não lendo o código):
+  // eu tinha registrado 'catalogo-guia' e o listener estava lá, então o teste
+  // do atendente passava verde. Só que o botão "Como Funciona" é ESCONDIDO
+  // nessa aba de propósito — o Guia já é o manual. Sem botão, ninguém pede o
+  // tour: 5 passos escritos e inalcançáveis, sem nenhum erro em lugar nenhum.
+  //
+  // Ter atendente não basta: tem que existir quem TOQUE a campainha.
+  const LICENSING = readFileSync(new URL('../src/pages/Licensing.jsx', import.meta.url), 'utf8');
+  const cond = LICENSING.match(/const botaoComoFunciona = ([^&]*?)&&/);
+  assert.ok(cond, 'não achei a condição que mostra o botão Como Funciona');
+  const escondidas = [...cond[1].matchAll(/'(catalogo-[a-z-]+)'/g)].map((m) => m[1]);
+  const conflito = escondidas.filter((t) => TOURS_DISPONIVEIS[t]);
+  assert.deepEqual(conflito, [], `aba oferece tour mas esconde o botão que o pede: ${conflito.join(', ')}`);
+});
+
 test('🎮 o tour fica no X-GAME — a operação da loja fica de fora', () => {
   // Dono, 09/09/2026: "devemos aplicar apenas a parte do X-GAME, não tem nexo
   // levar para area de vendas, pedidos, produtos e etc."

@@ -38,7 +38,11 @@ export const TOURS_DISPONIVEIS = {
   // comissões, clientes indicados) fica de fora de propósito — e o Plano de
   // Carreira junto, que é rede comercial, não X-GAME.
   'catalogo-diario': 'diario',
-  'catalogo-guia': 'guia',
+  // ❌ 'catalogo-guia' NÃO entra: o botão "Como Funciona" é escondido nessa
+  // aba de propósito (Licensing.jsx: `catalogSubTab !== 'catalogo-guia'`) —
+  // o Guia JÁ é o manual, não precisa de um botão que leva ao manual. Sem
+  // botão não há quem peça o tour, então registrar aqui só criaria um par
+  // solto: passos escritos que ninguém alcança.
   'catalogo-xperformance': 'xperformance',
   'catalogo-encontro': 'encontro',
 };
