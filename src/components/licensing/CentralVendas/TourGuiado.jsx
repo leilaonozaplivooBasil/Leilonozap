@@ -87,11 +87,11 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
           style={{
             top: retangulo.top - PAD, left: retangulo.left - PAD,
             width: retangulo.width + PAD * 2, height: retangulo.height + PAD * 2,
-            boxShadow: '0 0 0 9999px rgba(6,10,20,0.72)',
+            boxShadow: '0 0 0 9999px rgba(6,10,20,0.88)',
           }}
         />
       ) : (
-        <div className="fixed inset-0 bg-[#060a14]/72 transition-opacity duration-300" />
+        <div className="fixed inset-0 bg-[#060a14]/88 transition-opacity duration-300" />
       )}
 
       <div className="fixed z-[101] w-[92vw] max-w-sm rounded-xl border border-nz-verde/40 bg-white p-4 shadow-2xl transition-all duration-300" style={estiloBalao(retangulo)}>

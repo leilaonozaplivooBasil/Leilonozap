@@ -2585,7 +2585,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                         const g = registro.google_event_link
                           || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
                         return (
-                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap [color-scheme:light]">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 📅 <span className="font-bold">{fmtHora(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.obs ? ` · ${registro.obs}` : ''}</p>
@@ -2620,7 +2620,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       if (item.origem === 'empresa') {
                         const { r } = item; // 🏛️ DIR-52 — de todos, sinalizada
                         return (
-                          <div key={`emp-${r.id || r.titulo}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border-2 border-amber-400/50 bg-amber-50/70 p-2.5">
+                          <div key={`emp-${r.id || r.titulo}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border-2 border-amber-400/50 bg-amber-50/70 p-2.5 [color-scheme:light]">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-nz-tinta truncate">🏛️ <span className="font-bold">{r.hora}</span> · {r.titulo}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião da empresa — todo mundo participa{r.dia_semana !== null && r.dia_semana !== undefined ? ` · toda ${DIAS_SEMANA[r.dia_semana]}` : ''}</p>
@@ -2630,7 +2630,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       }
                       const { e } = item; // origem google — só na MINHA agenda
                       return (
-                        <div key={e.id} className="flex items-center gap-3 rounded-lg border border-dashed border-nz-borda bg-white/70 p-2.5">
+                        <div key={e.id} className="flex items-center gap-3 rounded-lg border border-dashed border-nz-borda bg-white/70 p-2.5 [color-scheme:light]">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-nz-tinta truncate">🗓️ <span className="font-bold">{fmtHora(e.inicio) || 'dia todo'}</span> · {e.titulo}</p>
                             <p className="text-[11px] text-nz-tinta-fraca">da sua Google Agenda</p>
@@ -2639,10 +2639,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                       );
                     })}
                     {retornos.map(({ cliente, registro }) => (
-                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap">
+                      // 🩹 09/09/2026 — dono viu essa linha "meio apagada": o
+                      // mesmo repintador de "modo escuro" do navegador (DIR-92)
+                      // forçando cor por cima de um card que é claro de
+                      // propósito. `color-scheme: light` avisa o navegador que
+                      // ISTO já é claro por design; a cor também vira inline
+                      // no texto que ele reportou, como segunda camada de defesa.
+                      <div key={registro.id || `${cliente.id}-ret`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-amber-300/60 bg-amber-50 p-2.5 flex-wrap [color-scheme:light]">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
-                          <p className="text-[11px] text-nz-tinta-fraca truncate">{registro.obs || 'pediu pra retornar'}</p>
+                          <p className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · Retornar hoje · {cliente.full_name || 'Sem nome'}</p>
+                          <p className="text-[11px] truncate" style={{ color: '#5C6B62' }}>{registro.obs || 'pediu pra retornar'}</p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: cliente, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">📅 Agendar</Button>
@@ -2662,7 +2668,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                         const g = registro.google_event_link
                           || linkGoogleAgenda({ titulo: registro.titulo_reuniao || `Reunião — ${cliente.full_name || 'contato'} (Leilão NoZap)`, inicio: registro.quando, duracaoMin: registro.duracao_min || 60, detalhes: registro.obs || 'Apresentação de sucesso — Contato e Convite' });
                         return (
-                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap">
+                          <div key={registro.id || `${cliente.id}-${registro.quando}`} className="flex items-center gap-2 sm:gap-3 rounded-lg border border-nz-borda bg-white p-2.5 flex-wrap [color-scheme:light]">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-nz-tinta truncate"><span className="font-bold text-nz-verde">👤 {quem(registro.registrado_por_nome)}</span> · 📅 <span className="font-bold">{fmtQuando(registro.quando)}</span> · {registro.titulo_reuniao || cliente.full_name || 'Sem nome'}</p>
                               <p className="text-[11px] text-nz-tinta-fraca truncate">reunião do método{registro.local ? ` · ${registro.local}` : ''}</p>
