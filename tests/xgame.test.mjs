@@ -94,6 +94,29 @@ test('resumoDoDia: o radical é radical de verdade — token, pontos e X-Pay TAM
   assert.equal(semVotar.xpay.perdido, votando.xpay.ganho + votando.xpay.perdido, 'o que seria ganho + o que já tinha perdido agora é tudo PERDIDO — a conta bate exata, o dinheiro não some, vira prejuízo registrado');
 });
 
+// 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de amanhã
+// a regra é séria." O bug de fuso zerou gente injustamente, e além disso
+// duas pessoas entraram na lista de votáveis NO MEIO da janela de votação
+// (19h11), deixando quem já tinha votado sem ter votado nelas a tempo —
+// não é bug, é a régua funcionando, só que injusta no dia em que a lista
+// mudou. `perdoado` perdoa o dia INTEIRO, não importa o motivo.
+test('resumoDoDia: perdoado=true NUNCA zera por não-votar — o dia inteiro é perdoado, não importa o motivo', () => {
+  const depoisDoFim = VOTACAO_FIM_MIN + 30;
+  const semVotarPerdoado = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, perdoado: true });
+  assert.equal(semVotarPerdoado.perdeu_por_nao_votar, false, 'perdoado esconde até o CAMPO que registra o motivo — outras telas não podem ver isso como zerado');
+  assert.equal(semVotarPerdoado.mvm_dia, MVM_MAX, 'sem o perdão zeraria — com o perdão, a nota é a de sempre (dia impecável)');
+  assert.ok(!/ZEROU/.test(semVotarPerdoado.frase_mvm), 'a frase não pode dizer que zerou um dia que foi perdoado');
+  assert.equal(semVotarPerdoado.token_dia > 0, true, 'o dia não zerou');
+});
+
+test('resumoDoDia: perdoado=false (padrão) — comportamento de sempre, sem mudar nada pra quem não usa o perdão', () => {
+  const depoisDoFim = VOTACAO_FIM_MIN + 30;
+  const semInformar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false });
+  const explicitoFalse = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, perdoado: false });
+  assert.equal(semInformar.mvm_dia, 0);
+  assert.deepEqual(semInformar, explicitoFalse, 'omitir perdoado é idêntico a passar false — nunca perdoa por engano');
+});
+
 test('resumoDoDia: janela fechada e VOTOU em todos → nota normal, sem punição nenhuma', () => {
   const depoisDoFim = VOTACAO_FIM_MIN + 30;
   const r = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: true });

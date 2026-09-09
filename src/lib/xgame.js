@@ -540,7 +540,7 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 // `votouEmTodos === false`, a régua radical entra. `votouEmTodos` continua
 // opcional (default null) — quem chama sem saber de votação (histórico,
 // testes antigos) se comporta exatamente como antes desta mudança.
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null }) {
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null, perdoado = false }) {
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);
@@ -549,21 +549,26 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const total = comEstado.length;
   const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
   const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
-  const mvm = perdeuPorNaoVotar ? 0 : mvmDoDia(tarefas, agoraMin);
+  // 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de
+  // amanhã a regra é séria." `perdoado` é ligado por fora (xgame_config.
+  // perdao_zeragem_ate) pra um dia excepcional inteiro — a régua radical
+  // continua de pé pros próximos dias, só este aqui não pune ninguém.
+  const diaZerado = !perdoado && perdeuPorNaoVotar;
+  const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
-  const token = perdeuPorNaoVotar ? 0 : humanToken(mvm, aplic, estudoOk);
+  const token = diaZerado ? 0 : humanToken(mvm, aplic, estudoOk);
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
   const xpay = { ...xpayDoDia(comEstado, valores), ...reguaDoDia(tarefas, participante || PARTICIPANTE_PADRAO) };
-  if (perdeuPorNaoVotar) {
+  if (diaZerado) {
     // o que seria ganho vira perdido — o dinheiro não some em silêncio,
     // fica registrado como o que a falta de voto custou de verdade.
     xpay.perdido = Math.round((xpay.ganho + xpay.perdido) * 100) / 100;
     xpay.ganho = 0;
     xpay.emJogo = 0;
   }
-  const pontos = perdeuPorNaoVotar ? 0 : pontosDoDia(comEstado, cotacao);
+  const pontos = diaZerado ? 0 : pontosDoDia(comEstado, cotacao);
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
@@ -591,8 +596,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     estudo_em_dia: estudoOk,
     leitura_feita: leituraHoje,
     pontos,
-    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : fraseDoMvm(mvm),
-    perdeu_por_nao_votar: perdeuPorNaoVotar,
+    frase_mvm: diaZerado ? 'ZEROU O DIA POR NÃO VOTAR' : fraseDoMvm(mvm),
+    perdeu_por_nao_votar: !perdoado && perdeuPorNaoVotar,
     valores,
     xpay,
     contagens,
