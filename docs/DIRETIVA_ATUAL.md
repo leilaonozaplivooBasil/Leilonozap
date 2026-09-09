@@ -12,6 +12,21 @@
 
 ---
 
+## DIR-131 — menu suspenso de data + galera lado a lado (grid) na fila de comprovações
+
+**Emitida por:** dono (09/09/2026): *"Vamos botar um menu suspenso pra escolher qual é a data do mês. Hoje, ontem... E ver se a gente consegue colocar ao invés de um embaixo do outro, colocar a galera lateral pra ficar mais organizado... pro gestor não ficar forçando a mente."*
+
+**O que entra (nos dois painéis: `Comprovacoes.jsx` e `XGameAdmin.jsx`):**
+1. `rotuloDataAmigavel(data, hoje)` nova em `src/lib/filaComprovacoes.js` — "Hoje"/"Ontem" pras duas datas mais importantes, "dd/mm · dia da semana" (o rótulo de sempre) pro resto.
+2. Um `<select>` com as datas presentes na fila carregada (rótulo amigável) + a opção "todas as datas". É um filtro A MAIS — soma com a busca de texto já existente (DIR-124/126), nunca a substitui.
+3. As pessoas dentro de cada dia, que ficavam empilhadas (uma embaixo da outra), agora aparecem lado a lado num grid responsivo (`grid-cols-1` no celular, 2 colunas a partir de `sm`, 3 a partir de `xl`), cada uma como um cartão com borda.
+
+**Fora do escopo:** nenhuma mudança na busca por texto, no agrupamento por dia em si, na aprovação/reprovação ou nos filtros de status — só o filtro de data a mais e o layout em grid.
+
+**Prova:** suíte 1935/1935 (6 testes novos em `tests/filaComprovacoes.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-130 — a demanda distribuída entra sozinha em três lugares, e ganha um sino que não deixa passar batido
 
 **Emitida por:** dono (09/09/2026): *"eu preciso que o envio de tarefa chegue na jornada, automático... ela está entrando no quadro, aí tem a opção de botar lá no quadro e na minha lista, né? Já estava entrando automático na jornada e não entrou, precisa entrar. No quadro, tá? Na lista e na jornada. Tudo automático... está faltando um sininho de notificação... eu mandei essas duas notificações aí, a pessoa ficou com dificuldade de receber, só apareceu no quadro."*

@@ -78,3 +78,21 @@ export function rotuloDataComprovacao(data) {
   if (Number.isNaN(d.getTime())) return String(data || '');
   return `${ddmmDaData(data)} · ${DIA_SEMANA[d.getDay()]}`;
 }
+
+/**
+ * "Hoje" / "Ontem" / "09/09 · quarta-feira" — o rótulo amigável do menu
+ * suspenso de datas. Dono: "um menu suspenso pra escolher qual é a data do
+ * mês. Hoje, ontem..." — pra ele não precisar decorar nem ler dd/mm pros
+ * dois dias que mais importa (hoje e ontem).
+ * @param {string} data a data ISO (2026-09-09)
+ * @param {Date} [hoje] injetável nos testes; default é agora de verdade
+ */
+export function rotuloDataAmigavel(data, hoje = new Date()) {
+  const alvo = new Date(`${data}T00:00:00`);
+  if (Number.isNaN(alvo.getTime())) return String(data || '');
+  const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const diffDias = Math.round((inicioDeHoje.getTime() - alvo.getTime()) / 86400000);
+  if (diffDias === 0) return 'Hoje';
+  if (diffDias === 1) return 'Ontem';
+  return rotuloDataComprovacao(data);
+}

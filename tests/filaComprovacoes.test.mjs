@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, ddmmDaData, semAcentoFila } from '../src/lib/filaComprovacoes.js';
+import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel, ddmmDaData, semAcentoFila } from '../src/lib/filaComprovacoes.js';
 
 const XGAME_ADMIN = fs.readFileSync(new URL('../src/components/licensing/XGameAdmin.jsx', import.meta.url), 'utf8');
 const COMPROVACOES = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/Comprovacoes.jsx', import.meta.url), 'utf8');
@@ -70,6 +70,20 @@ test('rotuloDataComprovacao: data inválida não quebra, devolve o que recebeu',
   assert.equal(rotuloDataComprovacao(''), '');
 });
 
+// 📅 dono: "um menu suspenso pra escolher qual é a data do mês. Hoje, ontem..."
+test('rotuloDataAmigavel: hoje vira "Hoje", ontem vira "Ontem", o resto usa o rótulo de sempre', () => {
+  const hoje = new Date(2026, 8, 9); // 09/09/2026, quarta-feira
+  assert.equal(rotuloDataAmigavel('2026-09-09', hoje), 'Hoje');
+  assert.equal(rotuloDataAmigavel('2026-09-08', hoje), 'Ontem');
+  assert.equal(rotuloDataAmigavel('2026-09-07', hoje), rotuloDataComprovacao('2026-09-07'));
+  assert.equal(rotuloDataAmigavel('2026-08-20', hoje), rotuloDataComprovacao('2026-08-20'));
+});
+
+test('rotuloDataAmigavel: data inválida não quebra', () => {
+  assert.equal(rotuloDataAmigavel('lixo'), 'lixo');
+  assert.equal(rotuloDataAmigavel(''), '');
+});
+
 // 👤 dono, olhando a fila de um dia só com várias pessoas misturadas: "eu
 // quero já separado por datas e por nomes... nome das pessoas que estão
 // participando."
@@ -97,7 +111,7 @@ test('agruparComprovacoesPorPessoa: lista vazia não quebra, devolve vazio; sem 
 });
 
 test('XGameAdmin.jsx: dentro de cada dia, a fila também agrupa por pessoa', () => {
-  assert.match(XGAME_ADMIN, /import \{ comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao \} from '@\/lib\/filaComprovacoes'/);
+  assert.match(XGAME_ADMIN, /import \{ comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel \} from '@\/lib\/filaComprovacoes'/);
   assert.match(XGAME_ADMIN, /agruparComprovacoesPorPessoa\(itens, nomeDe\)\.map/);
   assert.match(XGAME_ADMIN, /data-teste="comprovacoes-cabecalho-pessoa"/);
   // o nome não pode mais repetir em cada linha — já está no subcabeçalho
@@ -105,9 +119,21 @@ test('XGameAdmin.jsx: dentro de cada dia, a fila também agrupa por pessoa', () 
 });
 
 test('Comprovacoes.jsx: dentro de cada dia, a fila geral também agrupa por pessoa (a fila de UMA pessoa não precisa)', () => {
-  assert.match(COMPROVACOES, /import \{ comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao \} from '@\/lib\/filaComprovacoes'/);
+  assert.match(COMPROVACOES, /import \{ comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel \} from '@\/lib\/filaComprovacoes'/);
   assert.match(COMPROVACOES, /agruparComprovacoesPorPessoa\(itens, nomeDe\)/);
   assert.match(COMPROVACOES, /data-teste="comprovacoes-cabecalho-pessoa"/);
   // a fila de uma pessoa (pessoaId) nunca mostrava o nome por linha — segue sem mostrar, e sem subcabeçalho também
   assert.match(COMPROVACOES, /pessoaId \? \[\[pessoaId, null, itens\]\]/, 'pra uma pessoa só, não tem por que quebrar em subgrupos');
 });
+
+// 📅🧱 dono: "um menu suspenso pra escolher qual é a data do mês. Hoje,
+// ontem..." e "colocar a galera lateral pra ficar mais organizado... mais
+// visual... pro gestor não ficar forçando a mente."
+for (const [nome, ARQUIVO] of [['XGameAdmin.jsx', XGAME_ADMIN], ['Comprovacoes.jsx', COMPROVACOES]]) {
+  test(`${nome}: tem o menu suspenso de data (soma com a busca, nunca substitui) e o grid lado a lado`, () => {
+    assert.match(ARQUIVO, /<select[\s\S]{0,400}data-teste="comprovacoes-filtro-data"/, 'falta o menu suspenso de data');
+    assert.match(ARQUIVO, /<option value="todas">todas as datas<\/option>/, 'falta a opção de mostrar tudo, sem filtrar por uma data só');
+    assert.match(ARQUIVO, /rotuloDataAmigavel\(data\)/, 'as opções do menu precisam usar o rótulo amigável (Hoje/Ontem/dd-mm)');
+    assert.match(ARQUIVO, /grid grid-cols-1 sm:grid-cols-2/, 'as pessoas dentro do dia precisam estar num grid, não empilhadas');
+  });
+}
