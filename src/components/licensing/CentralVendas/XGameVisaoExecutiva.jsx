@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual } from '@/lib/xgame';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -25,6 +25,8 @@ const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).m
 const fmt = (n, casas = 2) => (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 const brl = (v) => `R$ ${fmt(v)}`;
 const pct = (n) => `${Math.round((Number(n) || 0) * 100)}%`;
+/** Sem voto recebido no ciclo ainda, mostra "—" — não é zero, é "não sei". */
+const mvmTexto = (mvm) => (mvm === null ? '—' : fmt(mvm, 1));
 
 /** Um número grande do pulso: rótulo em cima, valor gigante, nota embaixo. */
 function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
@@ -79,23 +81,28 @@ export default function XGameVisaoExecutiva() {
     let vivo = true;
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     const hoje = dataISO(new Date());
-    supabase
-      .from('xgame_diario')
-      .select('user_id,data,tarefas_total,tarefas_feitas,mvm_dia,token_dia,pontos,detalhes')
-      .eq('ciclo_inicio', ini)
-      .then(async ({ data }) => {
+    Promise.all([
+      supabase.from('xgame_diario').select('user_id,data,tarefas_total,tarefas_feitas,token_dia,pontos,detalhes').eq('ciclo_inicio', ini),
+      // 🗳️ 08/09/2026 — dono: "o MVM é só votação... tem gente que nem foi
+      // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
+      // (10 menos desconto por tarefa atrasada) — real time disfarçado de
+      // MVM. Agora vem só da votação de verdade (xgame_votos_mvm) do ciclo.
+      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+    ]).then(async ([{ data }, { data: votos }]) => {
         if (!vivo) return;
+        const votosPor = {};
+        (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
+
         const por = {};
         (data || []).forEach((d) => {
           const r = por[d.user_id] || (por[d.user_id] = {
-            user_id: d.user_id, dias: 0, token: 0, mvm: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {},
+            user_id: d.user_id, dias: 0, token: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {},
           });
           const total = Number(d.tarefas_total) || 0;
           const feitas = Number(d.tarefas_feitas) || 0;
           const fatia = total > 0 ? feitas / total : 0;
           r.dias += 1;
           r.token += Number(d.token_dia) || 0;
-          r.mvm += Number(d.mvm_dia) || 0;
           r.pontos += Number(d.pontos) || 0;
           // 💰 08/09/2026 — a recuperação de fim de semana devolve o X-Pay de
           // uma tarefa PERDIDA sem reescrever o dia em si: soma direto aqui.
@@ -103,7 +110,12 @@ export default function XGameVisaoExecutiva() {
           r.perdido += Number(d.detalhes?.xpay_perdido) || 0;
           if (fatia >= OFENSIVA_META) r.dias_fechados += 1;
           r.porData[d.data] = fatia;
-          if (d.data === hoje) r.hoje = { fatia, total, feitas, mvm: Number(d.mvm_dia) || 0 };
+          if (d.data === hoje) r.hoje = { fatia, total, feitas };
+        });
+        // gente com voto recebido mas sem nenhum dia registrado ainda —
+        // sem isso, ela nunca aparece na tabela pra mostrar o MvM dela
+        Object.keys(votosPor).forEach((uid) => {
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, token: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {} };
         });
 
         const lista = Object.values(por).map((r) => {
@@ -118,11 +130,12 @@ export default function XGameVisaoExecutiva() {
             else break;
             d.setDate(d.getDate() - 1);
           }
+          const votosRecebidos = votosPor[r.user_id];
           return {
             ...r,
-            token: r.token / r.dias,
-            mvm: r.mvm / r.dias,
-            regularidade: r.dias_fechados / r.dias,
+            token: r.dias ? r.token / r.dias : 0,
+            mvm: votosRecebidos ? mvmManual(votosRecebidos).media : null,
+            regularidade: r.dias ? r.dias_fechados / r.dias : 0,
             fogo,
           };
         });
@@ -179,7 +192,8 @@ export default function XGameVisaoExecutiva() {
       .map((l) => {
         const motivos = [];
         if (l.fogo === 0) motivos.push('ofensiva apagada');
-        if (l.mvm < 4) motivos.push(`MvM ${fmt(l.mvm, 1)} — abaixo de 4`);
+        if (l.mvm === null) motivos.push('ninguém votou nela ainda');
+        else if (l.mvm < 4) motivos.push(`MvM ${fmt(l.mvm, 1)} — abaixo de 4`);
         if (l.regularidade < 0.5) motivos.push(`fechou só ${pct(l.regularidade)} dos dias`);
         if (l.hoje && l.hoje.fatia < 0.3) motivos.push(`hoje em ${pct(l.hoje.fatia)}`);
         if (!l.hoje) motivos.push('sem registro hoje');
@@ -302,7 +316,7 @@ export default function XGameVisaoExecutiva() {
                 </p>
                 <p className="flex items-center justify-center gap-1 text-[11px] text-nz-tinta-fraca tabular-nums text-center">
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: COR_LIGA[liga.id] || '#94a3b8' }} />
-                  {fmt(l.token)} · MvM {fmt(l.mvm, 1)}
+                  {fmt(l.token)} · MvM {mvmTexto(l.mvm)}
                   {l.fogo > 0 && <span className="flex items-center gap-0.5 text-nz-fogo font-semibold"> · <Flame className="w-3 h-3" />{l.fogo}d</span>}
                 </p>
                 <div className={`w-full ${ALTURA_PALCO[i]} rounded-t-lg bg-gradient-to-b ${COR_PALCO[i]} mt-2 flex items-start justify-center pt-1.5`}>
@@ -380,7 +394,7 @@ export default function XGameVisaoExecutiva() {
                     </td>
                     <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap"><SeloLiga liga={liga} /></td>
                     <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
-                    <td className={`py-2.5 text-right tabular-nums ${l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{fmt(l.mvm, 1)}</td>
+                    <td className={`py-2.5 text-right tabular-nums ${l.mvm !== null && l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{mvmTexto(l.mvm)}</td>
                     <td className={`py-2.5 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
                     <td className="py-2.5 text-right text-nz-tinta-fraca tabular-nums">{l.dias_fechados}/{l.dias}</td>
                     <td className="py-2.5 text-right text-nz-verde font-semibold tabular-nums px-3">{brl(l.xpay)}</td>
