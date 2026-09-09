@@ -12,6 +12,23 @@
 
 ---
 
+## DIR-122 — conta duplicada de Joao Vitor Paim Pereira ("paim") unificada na conta pessoal
+
+**Emitida por:** dono (09/09/2026), resposta direta ao achado da DIR-121: *"faz o que precisa ser feito, a pessoal com certeza."*
+
+**O que era:** duas contas para a mesma pessoa. `e90ed56209c71d4bf4dd3bc3` ("Joao Vitor Paim Pereira", e-mail auto-gerado `@concurso.leilaonozap.net`) era a conta OFICIAL do X-Game — cadastrada em `xgame_participantes` (perfil comercial, em mentoria, ativa) e dona dos 70 votos de MvM recebidos neste ciclo (média 7,24) — mas com ZERO linhas em `xgame_diario`. `4380f43a-5722-4633-af1f-d29f163103ef` ("paim", e-mail pessoal `joaovitorpaim06@gmail.com`) é a conta que ele usa de verdade pra trabalhar — 3 dias de `xgame_diario` neste ciclo (180-223 pontos/dia, tarefas comprovadas) — mas sem nenhum voto e fora de `xgame_participantes`. Resultado: a moeda oficial dele nunca via a produção real.
+
+**O que entra (banco, migração manual via SQL — não passou pelo pipeline de migration do repo, é dado, não schema):**
+1. `UPDATE xgame_participantes SET user_id = '4380f43a-...' WHERE user_id = 'e90ed562...'` — o registro oficial (perfil comercial, em mentoria, ativo, aceita ser votado) passa a apontar pra conta pessoal. Sem colisão: a conta pessoal não tinha nenhum registro em `xgame_participantes` (`UNIQUE(user_id)`).
+2. `UPDATE xgame_votos_mvm SET votado_id = '4380f43a-...' WHERE votado_id = 'e90ed562...'` — os 70 votos recebidos migram junto. Sem colisão: conferido antes que nenhum `(votante_id, data, virtude)` já existia pra `votado_id = 4380f43a` (`UNIQUE(votante_id, votado_id, data, virtude)`), e que ninguém ficaria votando em si mesmo depois da troca.
+3. Conferido depois: zero linhas restantes na conta duplicada em `xgame_participantes`/`xgame_votos_mvm`/`xgame_diario`.
+
+**Fora do escopo, achado à parte (aguardando decisão futura, não é a mesma questão):** as DUAS contas também têm histórico PRÓPRIO no Método (`metodo_tarefas`: 40 tarefas na duplicada × 214 na pessoal; `metodo_perfil` e `metodo_quadro`: 1 linha em CADA conta — `metodo_perfil.user_id` tem `UNIQUE`, então mesclar às cegas quebraria). Isso é uma duplicação mais profunda (uso paralelo do app, não só do X-Game) que o dono não pediu pra resolver agora — só o X-Game (moeda/voto) foi migrado. Se um dia isso também precisar unificar, precisa de revisão manual do conteúdo de cada `metodo_perfil`/`metodo_quadro`, não um UPDATE cego.
+
+**Prova:** consultas antes/depois via Supabase MCP confirmando a contagem de linhas migradas e zero sobra na conta duplicada (ver histórico da sessão). Não mexe em código — nenhuma mudança em `src/` ou testes por esta entrada.
+
+---
+
 ## DIR-121 — as duas moedas voltam a aparecer quando o Super Admin olha outra pessoa (modoAdmin)
 
 **Emitida por:** dono (09/09/2026), comparando o próprio painel com o "MvM dele" (Quadro Geral → pessoa → aba "MvM dele"): *"eu olhei o meu painel, está aparecendo as duas moedas... só que eu sou superior de mim, eu olho o dos outros... eu olhei de um executivo aqui, não está aparecendo as duas moedas comparativas... tem que aparecer, igual aparece pra mim tem que aparecer no dele."*
