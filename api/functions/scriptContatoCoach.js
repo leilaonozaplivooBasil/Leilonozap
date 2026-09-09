@@ -1,14 +1,21 @@
-// scriptContatoCoach — a "dica" do Hábito 4 (Contato e Convite), DIR-112 (09/09/2026).
+// scriptContatoCoach — a "dica" (e agora também o VALIDADOR) do Hábito 4
+// (Contato e Convite), DIR-112 (09/09/2026).
 //
-// Dono, ao vivo: "tem que ter um validador do também pra tu ajudá-lo,
-// entendeu? Não escrever pra ele, mas ajudá-lo." Cada um escreve o PRÓPRIO
-// script (metodo.js, Hábito 4) — esta rota NUNCA reescreve o script da
-// pessoa. Ela lê o que a pessoa já escreveu e devolve 2-3 observações
-// socráticas (o mesmo tom treinador do xgameValidarPrint) pra ela mesma
-// melhorar, mais uma nota curta do que já está bom.
+// Dono, ao vivo (1ª rodada): "tem que ter um validador do também pra tu
+// ajudá-lo, entendeu? Não escrever pra ele, mas ajudá-lo." Cada um escreve o
+// PRÓPRIO script (metodo.js, Hábito 4) — esta rota NUNCA reescreve o script
+// da pessoa.
+//
+// Dono, ao vivo (2ª rodada, depois de ver o ponto automático): "você só vai
+// dar um ponto quando você conferir, como se fosse uma validação... se o
+// script estiver bom, aí você vai fixar e dar esse ponto." O ponto de
+// gamificação SAIU do simples "escreveu 20 caracteres" (CrmMetodo.jsx) e
+// passou a depender do `aprovado` que esta rota devolve — a mesma IA que dá
+// a dica agora também é o portão do ponto, no mesmo pedido, sem duplicar
+// chamada.
 //
 // GET  → health check: {ok, ia, tem_chave, model, via}.
-// POST → {script} → {dica, pontos_fortes} ou {ia_indisponivel:true, details}.
+// POST → {script} → {aprovado, dica, pontos_fortes} ou {ia_indisponivel:true, details}.
 import * as z from 'zod/v4';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { resolverIA as resolverIACompartilhada, clienteIA, opcoesDeReserva, detalhesDoErro } from '../_lib/ia.js';
@@ -24,20 +31,22 @@ const resolverIA = () => resolverIACompartilhada({ modelDireto: MODEL_DIRETO, mo
 const LIMITE_SCRIPT = 4000;
 
 const Dica = z.object({
+  aprovado: z.boolean().describe('true SOMENTE se o script já está bom o suficiente pra valer o ponto de gamificação: personalização de verdade (usa {nome} ou é claramente sob medida pra uma pessoa, não genérico de robô), clareza do que está sendo oferecido, convite objetivo (dia/hora ou "topa conversar?"), tamanho suficiente pra ser um script de verdade. Na dúvida, false — reprovar sem querer custa uma dica; aprovar sem merecer custa a credibilidade do ponto.'),
   pontos_fortes: z.string().describe('1 frase curta reconhecendo o que já está bom no script — nunca vazio, nunca genérico'),
-  dica: z.string().describe('2 a 3 observações curtas em português simples, cada uma fechando com o que fazer — nunca reescreva o script inteiro, só aponte o que melhorar'),
+  dica: z.string().describe('2 a 3 observações curtas em português simples, cada uma fechando com o que fazer — nunca reescreva o script inteiro, só aponte o que melhorar. Se aprovado=true, ainda assim traga 1 observação pra próxima evolução (o script pode sempre melhorar, mesmo já valendo o ponto).'),
 });
 
-// mesmo espírito socrático do validador de comprovações: treinador, não
-// corretor — faz a pessoa pensar no PRÓPRIO texto em vez de entregar pronto.
-const SISTEMA = `Você é o TREINADOR de scripts de convite do Hábito 4 (Contato e Convite) da X-GAME (Leilão no Zap). Cada pessoa escreve o PRÓPRIO script — você NUNCA reescreve por ela, NUNCA entrega um script pronto pra copiar. Seu trabalho é olhar o que ela já escreveu e devolver observações curtas, em português simples, que a façam pensar e melhorar com as PRÓPRIAS palavras.
+// mesmo espírito socrático do validador de comprovações (xgameValidarPrint):
+// treinador E validador ao mesmo tempo — faz a pessoa pensar no PRÓPRIO
+// texto em vez de entregar pronto, mas também decide se already vale o ponto.
+const SISTEMA = `Você é o TREINADOR e o VALIDADOR de scripts de convite do Hábito 4 (Contato e Convite) da X-GAME (Leilão no Zap). Cada pessoa escreve o PRÓPRIO script — você NUNCA reescreve por ela, NUNCA entrega um script pronto pra copiar. Seu trabalho tem duas partes: (1) decidir se o script JÁ está bom o suficiente pra valer o ponto de gamificação daquela pessoa (campo aprovado) e (2) devolver observações curtas, em português simples, que a façam pensar e melhorar com as PRÓPRIAS palavras — aprovado ou não.
 
-O que um bom script de convite tem: personalização de verdade (usa {nome} ou mostra que fala com uma pessoa específica, não uma mensagem genérica de robô), clareza sobre o que está oferecendo, um convite objetivo (dia/hora ou "topa conversar?"), tom natural — como a própria pessoa fala, não um discurso decorado.
+O que um bom script de convite tem: personalização de verdade (usa {nome} ou mostra que fala com uma pessoa específica, não uma mensagem genérica de robô), clareza sobre o que está oferecendo, um convite objetivo (dia/hora ou "topa conversar?"), tom natural — como a própria pessoa fala, não um discurso decorado. Um rascunho de uma frase, copiado sem nenhuma personalização, ou sem convite nenhum NÃO aprova.
 
-TOM: sempre comece reconhecendo algo que já está bom (pontos_fortes nunca fica vazio nem genérico — cite algo específico do texto dela). Na dica, use perguntas que abrem reflexão ("Se você recebesse essa mensagem sem conhecer quem mandou, ia entender o que está sendo oferecido?") fechando sempre com uma instrução direta do que ajustar. Nunca seja seco, nunca corrija como quem tira nota.`;
+TOM: sempre comece reconhecendo algo que já está bom (pontos_fortes nunca fica vazio nem genérico — cite algo específico do texto dela). Na dica, use perguntas que abrem reflexão ("Se você recebesse essa mensagem sem conhecer quem mandou, ia entender o que está sendo oferecido?") fechando sempre com uma instrução direta do que ajustar. Nunca seja seco, nunca corrija como quem tira nota — reprovar É dar uma instrução clara do que falta, não uma sentença.`;
 
 const indisponivel = (res, details, motivo = 'IA indisponível agora — tente de novo em instantes.') =>
-  res.status(200).json({ ok: true, ia_indisponivel: true, pontos_fortes: '', dica: motivo, details });
+  res.status(200).json({ ok: true, ia_indisponivel: true, aprovado: false, pontos_fortes: '', dica: motivo, details });
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');

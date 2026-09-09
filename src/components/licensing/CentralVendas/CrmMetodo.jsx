@@ -195,23 +195,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     } finally { setSalvando(false); }
   };
 
-  // 📜 DIR-112 (09/09/2026) — dono, ao vivo: "isso gerar uma pontuação... é
-  // uma vez só." `script_pontuado_em` trava o "uma vez só": a partir da
-  // PRIMEIRA vez que o script deixa de ser vazio/rascunho (20+ caracteres),
-  // salvar de novo só atualiza o texto — não conta ponto de novo. Isto NÃO
-  // mexe no motor de peso/pagamento (xgame.js): é um reconhecimento e um
-  // registro do "quando", não um valor em dinheiro — dado o dinheiro real
-  // envolvido no X-Pay, essa conta pede uma rodada própria, com o dono.
-  const salvarScript = async () => {
-    const primeiraVezDeVerdade = script.trim().length >= 20 && !perfil?.script_pontuado_em;
-    const ok = await salvarPerfil(primeiraVezDeVerdade ? { script, script_pontuado_em: new Date().toISOString() } : { script });
-    if (ok && primeiraVezDeVerdade) {
-      toast.success('🎉 Script registrado! Isso já conta ponto pra você na hora do contato — capriche a cada revisão.');
-    }
-  };
+  // 📜 DIR-112 (09/09/2026) — só salva o TEXTO. O ponto de gamificação não
+  // é mais daqui — ver `pedirDicaDoScript` logo abaixo.
+  const salvarScript = () => salvarPerfil({ script });
 
   // 💡 o "validador" pedido pelo dono: ajuda a MELHORAR o script da própria
   // pessoa — nunca escreve por ela (ver api/functions/scriptContatoCoach.js).
+  //
+  // 🎯 DIR-112.1 (09/09/2026) — dono, ao vivo, depois de ver o ponto virar
+  // automático por tamanho: "você só vai dar um ponto quando você conferir,
+  // como se fosse uma validação... se o script estiver bom, aí você vai
+  // fixar e dar esse ponto." O ponto SAIU do "escreveu 20 caracteres" e
+  // passou a depender do `aprovado` que a própria IA decide neste pedido —
+  // uma vez só (script_pontuado_em trava), sem mexer no motor de
+  // peso/pagamento do X-GAME (dinheiro real do X-Pay pede rodada própria).
   const pedirDicaDoScript = async () => {
     if (script.trim().length < 15) return;
     setPedindoDica(true); setDicaScript(null);
@@ -222,10 +219,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         body: JSON.stringify({ script }),
       });
       const j = await r.json().catch(() => null);
-      if (!j?.dica) { toast.error(j?.error || 'Não consegui pensar numa dica agora — tenta de novo?'); return; }
-      setDicaScript({ pontos_fortes: j.pontos_fortes || '', dica: j.dica });
+      if (!j?.dica) { toast.error(j?.error || 'Não consegui conferir o script agora — tenta de novo?'); return; }
+      setDicaScript({ pontos_fortes: j.pontos_fortes || '', dica: j.dica, aprovado: !!j.aprovado });
+      if (j.aprovado && !perfil?.script_pontuado_em) {
+        const ok = await salvarPerfil({ script, script_pontuado_em: new Date().toISOString() });
+        if (ok) toast.success('🎉 Script aprovado! Isso já conta ponto pra você na hora do contato.');
+      }
     } catch {
-      toast.error('Deu erro ao pedir a dica — tenta de novo em instantes?');
+      toast.error('Deu erro ao conferir o script — tenta de novo em instantes?');
     } finally {
       setPedindoDica(false);
     }
@@ -2477,19 +2478,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               {/* 📜 DIR-112 (09/09/2026) — dono, ao vivo: "essa parte de cima
                   está boa pra caralho... vamos melhorar a apresentação e
                   obrigar ele fazer o form." O script sobe pro topo da tela,
-                  vira uma ficha chamativa (não obrigatória de travar o resto,
-                  mas impossível de ignorar), e conta ponto uma vez só. */}
-              <div data-teste="contato-script" className={`rounded-xl border p-3.5 space-y-2.5 [color-scheme:light] ${script.trim().length >= 20 ? 'border-nz-verde/30 bg-nz-verde-fundo/20' : 'border-amber-400/50 bg-amber-50/50'}`}>
+                  vira uma ficha chamativa, e conta ponto uma vez só.
+                  🎨 mesmo dia, olhando ao vivo: "só essa cor que está feia,
+                  vamos deixar coeso." O fundo pastel translúcido (amber-50/50
+                  em cima do hero escuro desta parte da tela) virava uma cor
+                  suja/embaçada — trocado pelo MESMO padrão branco sólido dos
+                  outros cartões desta tela (a fila logo abaixo), com o
+                  estado (ainda não validado / já vale ponto) só na
+                  borda+ícone, não no fundo inteiro.
+                  🎯 DIR-112.1 — dono: "você só vai dar um ponto quando
+                  conferir, como validação... se o script estiver bom, aí
+                  fixa e dá o ponto." O ponto NÃO é mais automático por
+                  tamanho — só quando a IA (scriptContatoCoach) aprova. */}
+              <div data-teste="contato-script" className={`rounded-xl border-2 bg-white p-3.5 space-y-2.5 [color-scheme:light] ${perfil?.script_pontuado_em ? 'border-nz-verde/60' : 'border-amber-400/70'}`}>
                 <div className="flex items-start gap-2">
-                  <ScrollText className={`w-5 h-5 mt-0.5 shrink-0 ${script.trim().length >= 20 ? 'text-nz-verde' : 'text-amber-600'}`} />
+                  <ScrollText className={`w-5 h-5 mt-0.5 shrink-0 ${perfil?.script_pontuado_em ? 'text-nz-verde' : 'text-amber-600'}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-bold" style={{ color: '#1A1A1A' }}>
-                      {script.trim().length >= 20 ? 'Seu script de convite' : '⚠️ Escreva seu script antes de sair contatando'}
+                      {perfil?.script_pontuado_em ? '✅ Seu script de convite (já validado — vale ponto)' : '⚠️ Escreva seu script antes de sair contatando'}
                     </p>
                     <p className="text-xs" style={{ color: '#5C6B62' }}>
-                      {script.trim().length >= 20
+                      {perfil?.script_pontuado_em
                         ? 'O método ensina, mas a voz é sua — aperfeiçoe a cada conversa. Ele aparece na sua frente sempre que você clicar em Contatar.'
-                        : 'É rápido e já vale ponto: escreva do seu jeito, use {nome} pra personalizar. Ele vai aparecer na sua frente sempre que você clicar em Contatar — pra você ler enquanto liga.'}
+                        : 'Escreva do seu jeito, use {nome} pra personalizar, e peça a dica: quando a IA conferir que está bom, você ganha o ponto. Ele também vai aparecer na sua frente sempre que você clicar em Contatar.'}
                     </p>
                   </div>
                 </div>
@@ -2498,7 +2509,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <Button onClick={salvarScript} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
                     <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
                   </Button>
-                  {/* 💡 o validador pedido pelo dono: ajuda a MELHORAR — nunca escreve por ela */}
+                  {/* 💡 o "validador" pedido pelo dono: ajuda a MELHORAR — nunca
+                      escreve por ela — e é ele quem confere se já vale o ponto. */}
                   <Button
                     type="button" variant="outline" disabled={pedindoDica || script.trim().length < 15}
                     onClick={pedirDicaDoScript}
@@ -2506,11 +2518,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     data-teste="contato-script-dica"
                   >
                     {pedindoDica ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lightbulb className="w-4 h-4 mr-2" />}
-                    {pedindoDica ? 'Pensando...' : 'Peça uma dica pra melhorar'}
+                    {pedindoDica ? 'Conferindo...' : 'Peça uma dica pra melhorar'}
                   </Button>
                 </div>
                 {dicaScript && (
-                  <div className="rounded-lg border border-nz-verde/25 bg-white p-2.5 space-y-1" data-teste="contato-script-dica-resultado">
+                  <div className={`rounded-lg border bg-white p-2.5 space-y-1 ${dicaScript.aprovado ? 'border-nz-verde/40' : 'border-amber-400/40'}`} data-teste="contato-script-dica-resultado">
+                    <p className={`text-xs font-bold ${dicaScript.aprovado ? 'text-nz-verde' : 'text-amber-600'}`}>
+                      {dicaScript.aprovado ? '✅ Aprovado — vale ponto!' : '📝 Ainda não vale o ponto — ajuste e peça de novo'}
+                    </p>
                     {dicaScript.pontos_fortes && <p className="text-xs font-semibold text-nz-verde">👍 {dicaScript.pontos_fortes}</p>}
                     <p className="text-xs whitespace-pre-line" style={{ color: '#1A1A1A' }}>💡 {dicaScript.dica}</p>
                   </div>
@@ -2980,7 +2995,7 @@ const PASSOS_TOUR_CONTATO = [
   {
     alvo: 'contato-script',
     titulo: 'Seu script vale ponto — e vem com você pra ligação',
-    texto: 'Já pensou por que escrever o SEU jeito de convidar (não um copiado) muda o resultado da ligação? Escreva com {nome} pra personalizar — ele conta ponto na primeira vez e aparece na sua frente sempre que você clicar em Contatar. Peça uma dica pra IA melhorar: ela te ajuda a pensar, nunca escreve por você.',
+    texto: 'Já pensou por que escrever o SEU jeito de convidar (não um copiado) muda o resultado da ligação? Escreva com {nome} pra personalizar e peça a dica pra IA: quando ela conferir que está bom, você ganha o ponto — uma vez só. Ela te ajuda a pensar, nunca escreve por você. Ele também aparece na sua frente sempre que você clicar em Contatar.',
   },
   {
     alvo: 'contato-fila',
