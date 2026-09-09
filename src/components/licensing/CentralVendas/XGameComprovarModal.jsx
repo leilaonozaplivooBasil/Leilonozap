@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Camera, ImagePlus, Loader2, SwitchCamera } from 'lucide-react';
-import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, RESUMO_MIN_FDS, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado, faltaDoResumo } from '@/lib/xgame';
+import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, RESUMO_MIN_FDS, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado, faltaDoResumo, ehOrganizacaoDoNegocio } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
 import { useSegurarCamada } from '@/hooks/useCamadaModal';
 
@@ -212,6 +212,15 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
         </div>
 
         <div className="px-5 py-4 space-y-3">
+          {/* 📋 09/09/2026 — dono, ao vivo, vendo uma foto de papel aceita
+              como "organização do negócio": "isso é horrível, não pode...
+              tem que ser dentro do Quadro. Papel nunca." Avisa ANTES de
+              tirar a foto errada, não depois de reprovar. */}
+          {ehOrganizacaoDoNegocio(tarefa?.titulo) && (
+            <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              🗂️ Isso só vale registrado dentro do <strong>Quadro</strong> — abra o Quadro, organize por lá e mande o print de TELA. Foto de papel/caderno não vai ser aceita.
+            </p>
+          )}
           {/* 📱 POSTAR NO INSTAGRAM EM TUDO (ordem do dono): toda comprovação
               é também conteúdo — o botão abre o app pra postar o momento */}
           <a

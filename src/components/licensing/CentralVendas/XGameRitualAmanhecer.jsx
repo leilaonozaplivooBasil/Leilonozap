@@ -135,6 +135,12 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
   const [gravando, setGravando] = useState(false);
   const [gravSeg, setGravSeg] = useState(0);
   const [videoBlob, setVideoBlob] = useState(null);
+  // 🖼️ 09/09/2026 — dono, ao vivo: "não pode ser no carro, na academia, no
+  // escritório — tem que ser em casa." Um frame do vídeo, capturado ENQUANTO
+  // a câmera ainda está ligada (antes de parar a trilha), pra IA de visão
+  // julgar o ambiente — a MESMA IA e o mesmo caminho que já julga as outras
+  // comprovações (xgameValidarPrint), com uma regra nova pro tipo 'ritual'.
+  const [frameBlob, setFrameBlob] = useState(null);
   const recRef = useRef(null);
   const camRef = useRef(null);
   const videoAoVivoRef = useRef(null);
@@ -150,7 +156,22 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
     setMusicaAberta(false);
   };
 
+  // captura UM frame do <video> ao vivo — precisa rodar ANTES de parar a
+  // trilha da câmera, senão o vídeo já não tem imagem nenhuma pra desenhar
+  const capturarFrame = () => {
+    try {
+      const v = videoAoVivoRef.current;
+      if (!v || !v.videoWidth) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = v.videoWidth;
+      canvas.height = v.videoHeight;
+      canvas.getContext('2d').drawImage(v, 0, 0);
+      canvas.toBlob((b) => { if (b) setFrameBlob(b); }, 'image/jpeg', 0.85);
+    } catch { /* sem frame — a comprovação segue, só sem o cruzamento de ambiente */ }
+  };
+
   const pararGravacao = () => {
+    capturarFrame();
     try { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); } catch { /* já parou */ }
     camRef.current?.getTracks?.().forEach((t) => t.stop());
     camRef.current = null;
@@ -369,6 +390,12 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             ) : imagensDosSonhos.length === 0 ? (
               <p className="text-white/60 text-sm">Seu Quadro dos Sonhos ainda está vazio — depois do ritual, coloca o primeiro sonho com foto lá no Hábito 1, e amanhã ele flutua aqui na sua visualização.</p>
             ) : null}
+            {/* 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
+                escritório — tem que ser em casa, com tranquilidade." Avisa
+                ANTES de gravar, não depois de reprovar. */}
+            {!gravando && !videoBlob && (
+              <p className="text-amber-200/80 text-[11px]">🏠 tem que ser em casa, com tranquilidade — carro, academia e escritório não valem.</p>
+            )}
 
             {/* 🎥 a visualização gravada — a comprovação nasce do momento */}
             {gravando ? (
@@ -459,7 +486,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             <div>
               <button
                 type="button"
-                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, gravSeg, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
+                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
                 className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
