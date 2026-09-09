@@ -147,3 +147,19 @@ test('resumoDoDia: dia histórico (votouEmTodos null) não recalcula o atraso �
   const r = resumoDoDia({ tarefas: vencida, agoraMin: 24 * 60, hoje: agora, votouEmTodos: null });
   assert.equal(r.perdeu_por_atraso_pronto, false);
 });
+
+// 📊 09/09/2026 — dono: "eu quero esse alcance" (o % de reunião também na
+// Verificação do Progresso). `contagens` é o que os dois lugares que gravam
+// o placar (`CrmMetodo.jsx`, `XGame.jsx`) espalham dentro de
+// `xgame_diario.detalhes` via `...contagens` — travar aqui garante que o
+// número certo chega até lá, sem precisar de teste em cada tela.
+test('resumoDoDia: contagens.reunioes_total/feitas contam só título de reunião/apresentação/encontro/call', () => {
+  const dia = [
+    { id: 'r1', titulo: 'Reunião de investimento', hora: '09:00', feito: true },
+    { id: 'r2', titulo: 'Apresentação de sucesso pro cliente', hora: '10:00', feito: false },
+    { id: 'r3', titulo: 'Gratidão', hora: '08:00', feito: true },
+  ];
+  const r = resumoDoDia({ tarefas: dia, agoraMin: 11 * 60 });
+  assert.equal(r.contagens.reunioes_total, 2);
+  assert.equal(r.contagens.reunioes_feitas, 1);
+});

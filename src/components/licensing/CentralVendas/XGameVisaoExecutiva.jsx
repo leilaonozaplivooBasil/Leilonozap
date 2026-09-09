@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList } from 'lucide-react';
+import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
 import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao } from '@/lib/xgame';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
@@ -103,7 +103,16 @@ export default function XGameVisaoExecutiva() {
           r.perdido += Number(d.detalhes?.xpay_perdido) || 0;
           if (fatia >= OFENSIVA_META) r.dias_fechados += 1;
           r.porData[d.data] = fatia;
-          if (d.data === hoje) r.hoje = { fatia, total, feitas, mvm: Number(d.mvm_dia) || 0 };
+          // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião
+          // também aqui. Vem de `detalhes.reunioes_*`, gravado pelo mesmo
+          // `contagens` que resumoDoDia já calcula — sem query nova.
+          if (d.data === hoje) {
+            r.hoje = {
+              fatia, total, feitas, mvm: Number(d.mvm_dia) || 0,
+              reunioesTotal: Number(d.detalhes?.reunioes_total) || 0,
+              reunioesFeitas: Number(d.detalhes?.reunioes_feitas) || 0,
+            };
+          }
         });
 
         const lista = Object.values(por).map((r) => {
@@ -156,6 +165,10 @@ export default function XGameVisaoExecutiva() {
       // retrato já gravado em xgame_diario, não da tabela ao vivo.
       tarefasHojeTotal: comHoje.reduce((a, l) => a + (l.hoje.total || 0), 0),
       tarefasHojeFeitas: comHoje.reduce((a, l) => a + (l.hoje.feitas || 0), 0),
+      // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião do
+      // time também na Verificação do Progresso, não só no ADM X-Game.
+      reunioesHojeTotal: comHoje.reduce((a, l) => a + (l.hoje.reunioesTotal || 0), 0),
+      reunioesHojeFeitas: comHoje.reduce((a, l) => a + (l.hoje.reunioesFeitas || 0), 0),
     };
   }, [linhas]);
 
@@ -260,7 +273,7 @@ export default function XGameVisaoExecutiva() {
       )}
 
       {/* ── 1. O PULSO ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Trophy} rotulo="Token médio" valor={fmt(time.tokenMedio)} nota={<SeloLiga liga={ligaTime} className="text-nz-tinta-fraca" />} />
         </div>
@@ -271,6 +284,11 @@ export default function XGameVisaoExecutiva() {
             quantas o time tem, quanto concluiu, qual o percentual." */}
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={ClipboardList} rotulo="Tarefas do time hoje" valor={`${time.tarefasHojeFeitas}/${time.tarefasHojeTotal}`} nota={`${time.tarefasHojeTotal ? Math.round((time.tarefasHojeFeitas / time.tarefasHojeTotal) * 100) : 0}% concluído`} cor={time.tarefasHojeTotal && time.tarefasHojeFeitas / time.tarefasHojeTotal >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
+        </div>
+        {/* 📊 09/09/2026 — dono: "eu quero esse alcance" — o percentual de
+            reunião do time também aqui, não só no ADM X-Game. */}
+        <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
+          <Pulso Icone={Handshake} rotulo="Reuniões do time hoje" valor={`${time.reunioesHojeFeitas}/${time.reunioesHojeTotal}`} nota={`${time.reunioesHojeTotal ? Math.round((time.reunioesHojeFeitas / time.reunioesHojeTotal) * 100) : 0}% concluído`} cor={time.reunioesHojeTotal && time.reunioesHojeFeitas / time.reunioesHojeTotal >= OFENSIVA_META ? 'text-nz-verde' : 'text-nz-tinta'} />
         </div>
         <div className="rounded-xl border border-nz-borda bg-white/[0.02] p-3.5">
           <Pulso Icone={Flame} rotulo="Ofensivas acesas" valor={`${time.fogos}/${time.pessoas}`} nota="dias seguidos fechados" cor={time.fogos > 0 ? 'text-nz-fogo' : 'text-nz-tinta'} />

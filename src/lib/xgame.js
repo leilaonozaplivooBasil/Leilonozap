@@ -588,12 +588,20 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
   const ehProd = (c) => c !== 'bonus' && c !== 'venda';
+  // 📊 09/09/2026 — dono: "eu quero esse alcance" (o % de reunião também na
+  // Verificação do Progresso). `contagens` já é gravado inteiro dentro de
+  // `xgame_diario.detalhes` (CrmMetodo.jsx e XGame.jsx fazem `...contagens`
+  // no upsert) — somar aqui é o único lugar que precisa mudar; a tela da
+  // equipe só lê o que já está salvo, sem query nova nem coluna nova.
+  const reunioesHoje = comEstado.filter((t) => ehTarefaDeReuniao(t.titulo));
   const contagens = {
     prod_total: cats.filter(ehProd).length,
     prod_feitas: comEstado.filter((t, i) => ehProd(cats[i]) && t.feito).length,
     bonus_total: cats.filter((c) => c === 'bonus').length,
     bonus_feitas: comEstado.filter((t, i) => cats[i] === 'bonus' && t.feito).length,
     vendas_feitas: comEstado.filter((t, i) => cats[i] === 'venda' && t.feito).length,
+    reunioes_total: reunioesHoje.length,
+    reunioes_feitas: reunioesHoje.filter((t) => t.feito).length,
     xpay_ganho: xpay.ganho,
     xpay_possivel: Math.round((xpay.ganho + xpay.perdido + xpay.emJogo) * 100) / 100,
   };
