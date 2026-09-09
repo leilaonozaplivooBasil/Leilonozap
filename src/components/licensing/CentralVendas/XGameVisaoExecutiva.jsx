@@ -149,8 +149,14 @@ export default function XGameVisaoExecutiva() {
           r.diasDatados.push({ data: d.data, detalhes: d.detalhes || {} });
           // 💰 08/09/2026 — a recuperação de fim de semana devolve o X-Pay de
           // uma tarefa PERDIDA sem reescrever o dia em si: soma direto aqui.
+          // 🐛 09/09/2026 — auditoria noturna: o que foi recuperado entrava
+          // em DOBRO contra a pessoa — contava como ganho aqui EM CIMA E
+          // continuava contando como perdido embaixo, porque xpay_perdido do
+          // dia original nunca é reescrito. Sem subtrair, o painel do time
+          // mostrava dinheiro "perdido" que a pessoa já tinha recuperado de
+          // volta.
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
-          r.perdido += Number(d.detalhes?.xpay_perdido) || 0;
+          r.perdido += Math.max(0, (Number(d.detalhes?.xpay_perdido) || 0) - (Number(d.detalhes?.xpay_recuperado) || 0));
           if (fatia >= OFENSIVA_META) r.dias_fechados += 1;
           r.porData[d.data] = fatia;
           // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião

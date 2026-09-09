@@ -12,6 +12,18 @@
 
 ---
 
+## DIR-137 — auditoria noturna (parte 3): o X-Pay recuperado no fim de semana não entra mais em dobro contra a pessoa no painel do time
+
+**Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135/136).
+
+**Achado (dinheiro real, painel executivo) — `XGameVisaoExecutiva.jsx`:** a recuperação de tarefa perdida no fim de semana grava `xpay_recuperado` no dia (sem reescrever o `xpay_perdido` original — decisão certa, é histórico). Mas a soma da Visão Executiva contava os dois lados sem cruzar: `r.xpay` já soma `xpay_ganho + xpay_recuperado` (o dinheiro que a pessoa realmente tem agora), e `r.perdido` continuava somando o `xpay_perdido` cru, sem descontar o que foi recuperado — a mesma tarefa contava como ganha E como perdida ao mesmo tempo. O card "X-Pay perdidos por atraso" no painel do dono mostrava um valor inflado pra quem já tinha recuperado.
+
+**Fix:** `r.perdido` agora desconta `xpay_recuperado`, com piso em zero (`Math.max(0, perdido - recuperado)`).
+
+**Prova:** suíte 1974/1974 (1 teste novo, `tests/xpayPerdidoRecuperado.test.mjs`), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-136 — auditoria noturna (parte 2): mais três resíduos do "fuso do aparelho" corrigidos, e o validador de comprovações ganha o tempo que precisa pra pensar
 
 **Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135).
