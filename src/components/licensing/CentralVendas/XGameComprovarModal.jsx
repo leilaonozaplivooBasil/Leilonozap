@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { X, Camera, ImagePlus, Loader2, SwitchCamera } from 'lucide-react';
-import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado } from '@/lib/xgame';
+import { ROTULO_VALIDACAO, LINK_ABRIR_INSTAGRAM, RESUMO_MIN, RESUMO_MIN_FDS, AVISO_COLAR, textoDoContador, motivoDoBotaoTravado, faltaDoResumo } from '@/lib/xgame';
 import { arquivosDoColar } from '@/lib/colarImagem';
 import { useSegurarCamada } from '@/hooks/useCamadaModal';
 
@@ -100,9 +100,11 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
   // saem da frente — eles cobriam o botão de concluir no celular.
   useSegurarCamada();
 
-  // 📚 estudo = FOTO do estudo + RESUMO digitado (mínimo de verdade)
-  const podeConcluir = tipo === 'aprendizado'
-    ? !!file && texto.trim().length >= RESUMO_MIN
+  // 📚 estudo = FOTO do estudo + RESUMO digitado (mínimo de verdade — bem
+  // maior no estudo de fim de semana, o "estudo foda" do dono)
+  const ehEstudo = tipo === 'aprendizado' || tipo === 'aprendizado_fds';
+  const podeConcluir = ehEstudo
+    ? !!file && faltaDoResumo(texto, tipo) === 0
     : !!file;
 
   // 🔒 e o botão apagado DIZ o que está faltando, em vez de só ficar opaco
@@ -219,38 +221,43 @@ export default function XGameComprovarModal({ tarefa, tipo, enviando, erro, perg
             className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white text-sm font-bold py-2.5 hover:opacity-90"
           >📱 Postar no Instagram</a>
 
-          {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino) */}
-          {tipo === 'aprendizado' && (
-            <div className="space-y-1">
-              <p className="text-[11px] text-nz-tinta-fraca">
-                Escreva com as <span className="font-bold text-nz-tinta">suas palavras</span>, no mínimo{' '}
-                <span className="font-bold text-nz-tinta">{RESUMO_MIN} caracteres</span> — dá umas 6 linhas.
-              </p>
-              <Textarea
-                autoFocus
-                placeholder={`O que você aprendeu hoje, com as suas palavras (pelo menos ${RESUMO_MIN} caracteres)...`}
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                onPaste={bloquearCola}
-                onDrop={bloquearCola}
-                className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[100px] rounded-xl"
-              />
-              <div className="flex items-center justify-between gap-2">
-                {/* 🗣️ diz quanto FALTA, e já diz o tamanho antes de começar.
-                    "18/400 caracteres" lia-se como "18 de um limite de 400" —
-                    o oposto do que a regra pede. */}
-                <span
-                  data-teste="contador-resumo"
-                  className={`text-[10px] font-semibold ${texto.trim().length >= RESUMO_MIN ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}
-                >
-                  {textoDoContador(texto)}
-                </span>
-                <span className="text-[10px] text-nz-tinta-fraca">✍️ só digitando — colar não vale</span>
+          {/* 📚 estudo: o resumo DIGITADO (colar é bloqueado — digitar é treino).
+              No fim de semana o mínimo é bem maior — é o mergulho fundo. */}
+          {ehEstudo && (() => {
+            const minimo = tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN;
+            return (
+              <div className="space-y-1">
+                <p className="text-[11px] text-nz-tinta-fraca">
+                  Escreva com as <span className="font-bold text-nz-tinta">suas palavras</span>, no mínimo{' '}
+                  <span className="font-bold text-nz-tinta">{minimo} caracteres</span>
+                  {tipo === 'aprendizado_fds' ? ' — o estudo foda de fim de semana, um resumo bem detalhado.' : ' — dá umas 6 linhas.'}
+                </p>
+                <Textarea
+                  autoFocus
+                  placeholder={`O que você aprendeu, com as suas palavras (pelo menos ${minimo} caracteres)...`}
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value)}
+                  onPaste={bloquearCola}
+                  onDrop={bloquearCola}
+                  className="bg-nz-cinza-fundo/50 border-nz-borda text-nz-tinta text-sm min-h-[100px] rounded-xl"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  {/* 🗣️ diz quanto FALTA, e já diz o tamanho antes de começar.
+                      "18/400 caracteres" lia-se como "18 de um limite de 400" —
+                      o oposto do que a regra pede. */}
+                  <span
+                    data-teste="contador-resumo"
+                    className={`text-[10px] font-semibold ${faltaDoResumo(texto, tipo) === 0 ? 'text-nz-verde' : 'text-nz-tinta-fraca'}`}
+                  >
+                    {textoDoContador(texto, tipo)}
+                  </span>
+                  <span className="text-[10px] text-nz-tinta-fraca">✍️ só digitando — colar não vale</span>
+                </div>
+                {avisoCola && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{avisoCola}</p>}
+                <p className="text-[11px] text-nz-tinta-fraca pt-1">E a foto do estudo (a página, a anotação):</p>
               </div>
-              {avisoCola && <p className="text-xs font-semibold text-red-600 bg-red-50 rounded-xl px-3 py-2">{avisoCola}</p>}
-              <p className="text-[11px] text-nz-tinta-fraca pt-1">E a foto do estudo (a página, a anotação):</p>
-            </div>
-          )}
+            );
+          })()}
 
           {cameraAberta ? (
             /* 🎥 a câmera ao vivo */

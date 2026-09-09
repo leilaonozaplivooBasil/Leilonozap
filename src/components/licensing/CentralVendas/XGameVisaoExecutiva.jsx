@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo } from '@/lib/xgame';
+import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, TRAVA_SEM_DIAMANTE } from '@/lib/xgame';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -106,14 +106,14 @@ export default function XGameVisaoExecutiva() {
         const por = {};
         (data || []).forEach((d) => {
           const r = por[d.user_id] || (por[d.user_id] = {
-            user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDetalhes: [],
+            user_id: d.user_id, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDatados: [],
           });
           const total = Number(d.tarefas_total) || 0;
           const feitas = Number(d.tarefas_feitas) || 0;
           const fatia = total > 0 ? feitas / total : 0;
           r.dias += 1;
           r.pontos += Number(d.pontos) || 0;
-          r.diasDetalhes.push(d.detalhes || {});
+          r.diasDatados.push({ data: d.data, detalhes: d.detalhes || {} });
           // 💰 08/09/2026 — a recuperação de fim de semana devolve o X-Pay de
           // uma tarefa PERDIDA sem reescrever o dia em si: soma direto aqui.
           r.xpay += (Number(d.detalhes?.xpay_ganho) || 0) + (Number(d.detalhes?.xpay_recuperado) || 0);
@@ -134,7 +134,7 @@ export default function XGameVisaoExecutiva() {
         // gente com voto recebido mas sem nenhum dia registrado ainda —
         // sem isso, ela nunca aparece na tabela pra mostrar o MvM dela
         Object.keys(votosPor).forEach((uid) => {
-          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDetalhes: [] };
+          if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDatados: [] };
         });
 
         const lista = Object.values(por).map((r) => {
@@ -151,11 +151,14 @@ export default function XGameVisaoExecutiva() {
           }
           const votosRecebidos = votosPor[r.user_id];
           const mvmDoVoto = votosRecebidos ? mvmManual(votosRecebidos).media : null;
-          const { total: token } = tokenDoCiclo({
-            diasCiclo: r.diasDetalhes.map((detalhes) => ({ detalhes })),
+          const { total: tokenBruto } = tokenDoCiclo({
+            diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
           });
+          // 🎓 09/09/2026 — mesma trava do Diamante do painel pessoal: sem o
+          // estudo de fim de semana em dia, o ranking também não deixa passar.
+          const token = estudoFdsEmDia(r.diasDatados) ? tokenBruto : Math.min(tokenBruto, TRAVA_SEM_DIAMANTE);
           return {
             ...r,
             token,

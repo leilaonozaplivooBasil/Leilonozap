@@ -9,6 +9,7 @@ import {
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, faixaToken, META_VENDAS_CICLO, TRAVA_SEM_ESTUDO,
+  estudoFdsEmDia, TRAVA_SEM_DIAMANTE,
 } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -181,7 +182,11 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    const total = resumo.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    const semEstudoSemana = resumo.estudo_em_dia ? r.total : Math.min(r.total, TRAVA_SEM_ESTUDO);
+    // 🎓 09/09/2026 — dono: sem o estudo de fim de semana em dia, trava antes
+    // do Diamante — mesmo padrão da trava de estudo de semana, um degrau acima.
+    const fdsOk = estudoFdsEmDia(diasCiclo, { data: dataISO(agora), feito: resumo.estudo_fds_feito });
+    const total = fdsOk ? semEstudoSemana : Math.min(semEstudoSemana, TRAVA_SEM_DIAMANTE);
     return { ...r, total, faixa: faixaToken(total), formacao: formacaoExecutivoIdeal(r.taxas) };
   }, [resumo, diasCiclo, recebido.media, participante, vendasCiclo]);
   const jaVoteiEm = (id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length;
@@ -268,6 +273,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
       pontos: resumo.pontos,
       detalhes: {
         leitura_feita: resumo.leitura_feita, estudo_em_dia: resumo.estudo_em_dia, dia_util: resumo.dia_util,
+        estudo_fds_feito: resumo.estudo_fds_feito,
         xpay_ganho: resumo.xpay?.ganho || 0, xpay_perdido: resumo.xpay?.perdido || 0,
         ...resumo.contagens,
       },

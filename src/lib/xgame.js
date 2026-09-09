@@ -30,6 +30,11 @@ export const TOKEN_MAX = 22.22;
 export const APLICABILIDADE_MAX = 12.22;
 export const MVM_MAX = 10;
 export const TRAVA_SEM_ESTUDO = 17.77; // "Mediana" na planilha: nunca chega ao ouro
+// 🎓 09/09/2026 — dono: sem o estudo de fim de semana (resumo bem
+// detalhado), a pessoa pode ser Ouro, mas não passa disso — igual à trava
+// de estudo de semana, só que travando o Diamante (LIGAS, min 20) em vez
+// do Ouro (FAIXAS_TOKEN, min 17,78).
+export const TRAVA_SEM_DIAMANTE = 19.99;
 export const CICLO_DIAS_UTEIS = 22;
 
 export const FAIXAS_TOKEN = [
@@ -203,6 +208,28 @@ export function estudoEmDia(diasCiclo = [], leituraHoje = false) {
 
 export const ehTarefaDeEstudo = (titulo) =>
   /leitura|estudo/i.test(String(titulo || ''));
+
+/**
+ * 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
+ * quero um resumo bem detalhado para gerar esse bônus, tanto diariamente
+ * quanto fim de semana, para ser Diamante." A trava do Diamante: entre os
+ * sábados/domingos já vividos no ciclo, pelo menos 60% precisam ter o
+ * estudo de fim de semana feito (mesma régua da leitura de semana, só que
+ * olhando só pros dias de fim de semana). Nenhum fim de semana ainda no
+ * ciclo → não julga (`true`), não é justo travar antes de a régua valer.
+ * @param diasCiclo snapshots do ciclo, cada um com {data, detalhes.estudo_fds_feito}
+ * @param hoje {data, feito} de hoje, quando hoje ainda não está em diasCiclo
+ */
+export function estudoFdsEmDia(diasCiclo = [], hoje = null) {
+  const dias = hoje?.data ? [...diasCiclo, { data: hoje.data, detalhes: { estudo_fds_feito: !!hoje.feito } }] : diasCiclo;
+  const fimDeSemana = dias.filter((d) => {
+    const dia = new Date(`${String(d?.data || '').slice(0, 10)}T12:00:00`).getDay();
+    return dia === 0 || dia === 6;
+  });
+  if (!fimDeSemana.length) return true;
+  const feitos = fimDeSemana.filter((d) => d?.detalhes?.estudo_fds_feito).length;
+  return feitos / fimDeSemana.length >= 0.6;
+}
 
 // 📊 08/09/2026 — dono: "quero o percentual de reunião do time" no painel
 // vivo. Mesma régua que já classifica ícone/peso pelo título em outros
@@ -585,6 +612,9 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const diaZerado = perdeuPorNaoVotar || perdeuPorAtrasoPronto;
   const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
+  // 🎓 09/09/2026 — o estudo de FIM DE SEMANA é uma tarefa à parte (tipo
+  // 'aprendizado_fds', resumo bem maior) — trava o Diamante, não o Ouro.
+  const estudoFdsHoje = comEstado.some((t) => tipoDeValidacao(t) === 'aprendizado_fds' && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
   const token = diaZerado ? 0 : humanToken(mvm, aplic, estudoOk);
@@ -632,6 +662,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     faixa: faixaToken(token),
     estudo_em_dia: estudoOk,
     leitura_feita: leituraHoje,
+    estudo_fds_feito: estudoFdsHoje,
     pontos,
     frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : perdeuPorAtrasoPronto ? 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO' : fraseDoMvm(mvm),
     perdeu_por_nao_votar: perdeuPorNaoVotar,
@@ -813,6 +844,13 @@ export function proximaLiga(token) {
 // Vendas e reuniões nem precisam disso — validam sozinhas pelos dados do
 // sistema (catalog_sales e os registros do CRM).
 
+export const RESUMO_MIN = 400;
+// 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
+// quero um resumo bem detalhado." O estudo de fim de semana ("Estudo do
+// Fim de Semana" no título) exige um resumo bem mais longo que o do dia a
+// dia — 3× o mínimo — porque é o mergulho fundo, não a leitura corrida.
+export const RESUMO_MIN_FDS = 1200;
+
 /** Tipo de validação AUTOMÁTICA deduzido do título (o admin pode trocar).
  *  REGRA DO DONO (05/09): TODA tarefa tem comprovação por padrão — quem não
  *  cai em Instagram nem aprendizado comprova com FOTO/print fazendo a tarefa.
@@ -822,6 +860,11 @@ export function validacaoAutomatica(titulo) {
   // acordar/gratidão comprova com o post do BOM DIA (o exemplo do dono:
   // "como eu provo que acordei 5h? posto o bom dia no Instagram")
   if (/story|post|instagram|conteudo|acordar|gratidao|bom dia/.test(t)) return 'instagram';
+  // 🎓 09/09/2026 — o estudo de FIM DE SEMANA (mergulho fundo, resumo bem
+  // maior) tem que bater ANTES da regra genérica de leitura/estudo — senão
+  // "Estudo do Fim de Semana" cairia no 'aprendizado' comum, com o mínimo
+  // pequeno de dia de semana.
+  if (/(estudo|leitura).*fim de semana|fim de semana.*(estudo|leitura)|estudo profundo|estudo foda/.test(t)) return 'aprendizado_fds';
   if (/leitura|estudo|curso|licao/.test(t)) return 'aprendizado';
   return 'foto';
 }
@@ -830,13 +873,14 @@ export function validacaoAutomatica(titulo) {
 export function tipoDeValidacao(t) {
   const v = String(t?.validacao || '').toLowerCase();
   if (v === 'nenhuma') return null;
-  if (['instagram', 'aprendizado', 'foto'].includes(v)) return v;
+  if (['instagram', 'aprendizado', 'aprendizado_fds', 'foto'].includes(v)) return v;
   return validacaoAutomatica(t?.titulo);
 }
 
 export const ROTULO_VALIDACAO = {
   instagram: '📸 o post do Instagram de hoje',
   aprendizado: '📚 foto do estudo + resumo digitado (sem colar!)',
+  aprendizado_fds: `📚🔥 estudo de fim de semana — foto + resumo BEM detalhado (mín. ${RESUMO_MIN_FDS} caracteres, sem colar!)`,
   foto: '📷 foto ou print fazendo a tarefa',
 };
 
@@ -847,9 +891,10 @@ export function validarComprovacao(tipo, entrega) {
     const ok = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|reels|stories|tv)\/.+/i.test(texto);
     return { valido: ok, motivo: ok ? 'link do Instagram registrado ✔' : 'cole o link do post/story de HOJE (instagram.com/p/… ou /reel/…)' };
   }
-  if (tipo === 'aprendizado') {
-    const ok = texto.length >= RESUMO_MIN;
-    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : `resumo curto demais: escreva pelo menos ${RESUMO_MIN} caracteres COM AS SUAS PALAVRAS (faltam ${Math.max(0, RESUMO_MIN - texto.length)})` };
+  if (tipo === 'aprendizado' || tipo === 'aprendizado_fds') {
+    const minimo = tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN;
+    const ok = texto.length >= minimo;
+    return { valido: ok, motivo: ok ? 'aprendizado registrado ✔' : `resumo curto demais: escreva pelo menos ${minimo} caracteres COM AS SUAS PALAVRAS (faltam ${Math.max(0, minimo - texto.length)})` };
   }
   return { valido: true, motivo: '' };
 }
@@ -886,7 +931,7 @@ export const vibrar = (padrao = VIBRA_TOQUE) => {
   } catch { /* aparelho sem motor de vibração */ }
 };
 
-export const RESUMO_MIN = 400;
+const minimoDoTipo = (tipo) => (tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RESUMO_MIN);
 
 // 🗣️ FALAR A LÍNGUA DE QUEM LÊ (chamado do Paim, 07/09/2026). O contador
 // dizia "18/400 caracteres". Todo mundo lê isso como "18 de um limite de
@@ -895,17 +940,18 @@ export const RESUMO_MIN = 400;
 // ligação caiu no suporte. O número não estava errado; a frase estava.
 // Agora o texto diz quanto FALTA, e diz o tamanho ANTES de a pessoa começar
 // a escrever — não depois de ela falhar.
-export function faltaDoResumo(texto) {
-  return Math.max(0, RESUMO_MIN - String(texto || '').trim().length);
+export function faltaDoResumo(texto, tipo = 'aprendizado') {
+  return Math.max(0, minimoDoTipo(tipo) - String(texto || '').trim().length);
 }
 
 // "faltam 1 caracteres" estraga justamente o que este conserto foi fazer.
 const letras = (n) => `${n} ${n === 1 ? 'caractere' : 'caracteres'}`;
 
-export function textoDoContador(texto) {
+export function textoDoContador(texto, tipo = 'aprendizado') {
+  const minimo = minimoDoTipo(tipo);
   const escrito = String(texto || '').trim().length;
-  if (escrito === 0) return `escreva pelo menos ${RESUMO_MIN} caracteres (umas 6 linhas)`;
-  const falta = faltaDoResumo(texto);
+  if (escrito === 0) return `escreva pelo menos ${minimo} caracteres (umas ${tipo === 'aprendizado_fds' ? '18' : '6'} linhas)`;
+  const falta = faltaDoResumo(texto, tipo);
   if (falta === 0) return '✔ resumo no tamanho';
   return falta === 1 ? 'falta 1 caractere' : `faltam ${letras(falta)}`;
 }
@@ -914,9 +960,9 @@ export function textoDoContador(texto) {
 // intimidade com tela não deduz motivo de botão opaco — fica olhando, tenta
 // de novo e liga pro suporte. Devolve '' quando o botão está liberado.
 export function motivoDoBotaoTravado({ tipo, temFoto, texto }) {
-  if (!temFoto) return tipo === 'aprendizado' ? 'falta a foto do estudo para liberar' : 'falta a foto para liberar';
-  if (tipo !== 'aprendizado') return '';
-  const falta = faltaDoResumo(texto);
+  if (!temFoto) return (tipo === 'aprendizado' || tipo === 'aprendizado_fds') ? 'falta a foto do estudo para liberar' : 'falta a foto para liberar';
+  if (tipo !== 'aprendizado' && tipo !== 'aprendizado_fds') return '';
+  const falta = faltaDoResumo(texto, tipo);
   return falta > 0 ? `escreva mais ${letras(falta)} para liberar` : '';
 }
 

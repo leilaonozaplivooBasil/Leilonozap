@@ -10,6 +10,8 @@ import assert from 'node:assert/strict';
 import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
   janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
+  validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
+  RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, TRAVA_SEM_DIAMANTE,
 } from '../src/lib/xgame.js';
 
 test('horaDeMin: minutos vira "17h" ou "21h30" (sem zero à esquerda, estilo do app)', () => {
@@ -210,4 +212,92 @@ test('resumoDoDia: contagens.reunioes_total/feitas contam só título de reuniã
   const r = resumoDoDia({ tarefas: dia, agoraMin: 11 * 60 });
   assert.equal(r.contagens.reunioes_total, 2);
   assert.equal(r.contagens.reunioes_feitas, 1);
+});
+
+// 🎓 09/09/2026 — dono: "um dia de final de semana com um estudo foda...
+// quero um resumo bem detalhado... pra ser Diamante." O estudo de fim de
+// semana é um tipo de comprovação À PARTE (mínimo bem maior) que trava o
+// Diamante, não o Ouro — igual à trava de estudo de semana, só que um
+// degrau acima.
+test('validacaoAutomatica: "Estudo do Fim de Semana" vira aprendizado_fds, não o aprendizado comum', () => {
+  assert.equal(validacaoAutomatica('Estudo do Fim de Semana'), 'aprendizado_fds');
+  assert.equal(validacaoAutomatica('Leitura de fim de semana'), 'aprendizado_fds');
+  assert.equal(validacaoAutomatica('Estudo profundo'), 'aprendizado_fds');
+  assert.equal(validacaoAutomatica('Leitura do dia'), 'aprendizado', 'leitura comum de semana continua o mínimo de sempre');
+});
+
+test('tipoDeValidacao: aprendizado_fds é um tipo explícito válido (o admin pode escolher na mão)', () => {
+  assert.equal(tipoDeValidacao({ validacao: 'aprendizado_fds', titulo: 'qualquer coisa' }), 'aprendizado_fds');
+});
+
+test('faltaDoResumo/textoDoContador: o mínimo do fim de semana é bem maior que o do dia a dia', () => {
+  assert.equal(RESUMO_MIN_FDS, 1200);
+  assert.ok(RESUMO_MIN_FDS > RESUMO_MIN * 2, 'tem que ser um salto de verdade, não um ajuste fino');
+  assert.equal(faltaDoResumo('a'.repeat(400), 'aprendizado_fds'), RESUMO_MIN_FDS - 400, '400 caracteres bastam pro dia a dia, mas não pro fim de semana');
+  assert.equal(faltaDoResumo('a'.repeat(RESUMO_MIN_FDS), 'aprendizado_fds'), 0);
+  assert.match(textoDoContador('', 'aprendizado_fds'), new RegExp(`pelo menos ${RESUMO_MIN_FDS}`));
+});
+
+test('motivoDoBotaoTravado: aprendizado_fds também trava por foto e por tamanho do resumo', () => {
+  assert.equal(motivoDoBotaoTravado({ tipo: 'aprendizado_fds', temFoto: false, texto: '' }), 'falta a foto do estudo para liberar');
+  assert.match(motivoDoBotaoTravado({ tipo: 'aprendizado_fds', temFoto: true, texto: 'a'.repeat(400) }), /escreva mais/);
+  assert.equal(motivoDoBotaoTravado({ tipo: 'aprendizado_fds', temFoto: true, texto: 'a'.repeat(RESUMO_MIN_FDS) }), '', 'com o tamanho certo, libera');
+});
+
+test('validarComprovacao: aprendizado_fds exige o mínimo de fim de semana, não o de semana', () => {
+  const curto = validarComprovacao('aprendizado_fds', 'a'.repeat(RESUMO_MIN));
+  assert.equal(curto.valido, false, '400 caracteres passaria no dia a dia, mas não é suficiente pro fim de semana');
+  const completo = validarComprovacao('aprendizado_fds', 'a'.repeat(RESUMO_MIN_FDS));
+  assert.equal(completo.valido, true);
+});
+
+test('estudoFdsEmDia: nenhum fim de semana ainda no ciclo — não julga (true)', () => {
+  const soDiaDeSemana = [{ data: '2026-09-08', detalhes: {} }]; // terça
+  assert.equal(estudoFdsEmDia(soDiaDeSemana), true);
+  assert.equal(estudoFdsEmDia([]), true);
+});
+
+test('estudoFdsEmDia: 60%+ dos fins de semana já vividos com o estudo feito → true', () => {
+  const dias = [
+    { data: '2026-09-05', detalhes: { estudo_fds_feito: true } },  // sábado feito
+    { data: '2026-09-06', detalhes: { estudo_fds_feito: false } }, // domingo não feito
+    { data: '2026-09-12', detalhes: { estudo_fds_feito: true } },  // sábado seguinte feito
+  ];
+  assert.equal(estudoFdsEmDia(dias), true, '2 de 3 fins de semana registrados = 66%, passa dos 60%');
+});
+
+test('estudoFdsEmDia: menos de 60% dos fins de semana feitos → false, trava o Diamante', () => {
+  const dias = [
+    { data: '2026-09-05', detalhes: { estudo_fds_feito: false } },
+    { data: '2026-09-06', detalhes: { estudo_fds_feito: false } },
+    { data: '2026-09-12', detalhes: { estudo_fds_feito: true } },
+  ];
+  assert.equal(estudoFdsEmDia(dias), false, '1 de 3 = 33%, não passa dos 60%');
+});
+
+test('estudoFdsEmDia: o "hoje" entra na conta quando ainda não está em diasCiclo (mesmo padrão de estudoEmDia)', () => {
+  const passadoFeito = [{ data: '2026-09-05', detalhes: { estudo_fds_feito: true } }]; // sábado passado, feito
+  assert.equal(estudoFdsEmDia(passadoFeito, { data: '2026-09-06', feito: true }), true, 'passado feito + hoje (domingo) feito = 2/2');
+  assert.equal(estudoFdsEmDia(passadoFeito, { data: '2026-09-06', feito: false }), false, 'passado feito + hoje NÃO feito = 1/2 = 50%, abaixo dos 60% — confirma que hoje entrou na conta');
+  assert.equal(estudoFdsEmDia([], { data: '2026-09-08', feito: false }), true, 'hoje é terça — não é fim de semana, não entra na conta');
+});
+
+// dia perfeito em todos os componentes — sem a trava, bateria no teto (22,22).
+// A trava (igual à TRAVA_SEM_ESTUDO de semana) é aplicada por FORA de
+// tokenDoCiclo, no mesmo Math.min já usado em XGame.jsx/CrmMetodo.jsx —
+// tokenDoCiclo continua puro, sem saber de travas de estudo.
+const DIA_PERFEITO = { prod_total: 1, prod_feitas: 1, bonus_total: 1, bonus_feitas: 1, xpay_ganho: 1, xpay_possivel: 1 };
+
+test('tokenDoCiclo: o ciclo perfeito passa do teto do Diamante — é isso que a trava de fim de semana precisa segurar', () => {
+  const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: 4, perfil: 'estrategico' });
+  assert.ok(r.total > TRAVA_SEM_DIAMANTE, `o ciclo perfeito (${r.total}) tem que passar de ${TRAVA_SEM_DIAMANTE} pra trava fazer sentido`);
+});
+
+test('TRAVA_SEM_DIAMANTE aplicada por fora (padrão dos call-sites): sem o estudo de fim de semana, Ouro continua alcançável mas não vira Diamante', () => {
+  const r = tokenDoCiclo({ diasCiclo: [], hojeResumo: DIA_PERFEITO, mvmVotacao: 10, vendasReais: 4, perfil: 'estrategico' });
+  const totalComTrava = estudoFdsEmDia([]) ? r.total : Math.min(r.total, TRAVA_SEM_DIAMANTE);
+  const semEstudoFds = Math.min(r.total, TRAVA_SEM_DIAMANTE); // simula estudoFdsEmDia(...) === false
+  assert.ok(semEstudoFds <= TRAVA_SEM_DIAMANTE);
+  assert.ok(semEstudoFds >= 17.78, 'a trava é só do Diamante — Ouro continua alcançável');
+  assert.equal(totalComTrava, r.total, 'sem fim de semana ainda vivido no ciclo, estudoFdsEmDia não trava nada');
 });
