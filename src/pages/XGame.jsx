@@ -54,6 +54,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
   const [diasCiclo, setDiasCiclo] = useState([]);
   const [participante, setParticipante] = useState(null);
   const [cicloConfig, setCicloConfig] = useState(null);
+  const [perdaoAte, setPerdaoAte] = useState(null);
   const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
   const [votosDias, setVotosDias] = useState([]);
   const [agora, setAgora] = useState(new Date());
@@ -96,7 +97,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
         const hoje = new Date();
         const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, uReal] = await Promise.all([
           supabase.from('xgame_participantes').select('*').eq('user_id', u.id).maybeSingle(),
-          supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle(),
+          supabase.from('xgame_config').select('ciclo_inicio,perdao_zeragem_ate').eq('id', 'atual').maybeSingle(),
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
           supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true),
           supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', u.id).eq('data', dataISO(hoje)),
@@ -110,6 +111,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
         setParticipante(part || null);
         setMeuAceitaSerVotado(part?.aceita_ser_votado !== false);
         setCicloConfig(cfg?.ciclo_inicio || null);
+        setPerdaoAte(cfg?.perdao_zeragem_ate || null);
         setTarefas(tf || []);
 
         // 🧯 08/09 — os mesmos colegas votáveis (sem Super Admin fechado) e os
@@ -163,9 +165,13 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
     const completos = colegasVotaveis.filter((id) => votosHoje.filter((v) => v.votado_id === id).length >= VIRTUDES.length);
     return votouEmTodosOsColegas(colegasVotaveis, completos);
   }, [colegasVotaveis, votosHoje]);
+  // 🕊️ 09/09/2026 — perdão de um dia excepcional inteiro (xgame_config.
+  // perdao_zeragem_ate), ligado à mão pelo super_admin — não desliga a
+  // régua radical, só perdoa o dia marcado.
+  const perdoado = !!perdaoAte && dataISO(agora) <= perdaoAte;
   const resumo = useMemo(
-    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos }),
-    [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos],
+    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos, perdoado }),
+    [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos, perdoado],
   );
 
   // 🗳️ votar nos colegas — mesma lógica do Compromisso, mesma tabela.

@@ -594,7 +594,7 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 // `votouEmTodos === false`, a régua radical entra. `votouEmTodos` continua
 // opcional (default null) — quem chama sem saber de votação (histórico,
 // testes antigos) se comporta exatamente como antes desta mudança.
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null }) {
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null, perdoado = false }) {
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);
@@ -623,7 +623,13 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const avisosPronto = Number(participante?.avisos_pronto) || 0;
   const perdeuPorAtrasoPronto = tarefaAtrasadaPronto && avisosPronto >= AVISOS_ANTES_DE_ZERAR;
   const emAvisoPronto = tarefaAtrasadaPronto && !perdeuPorAtrasoPronto;
-  const diaZerado = perdeuPorNaoVotar || perdeuPorAtrasoPronto;
+  // 🕊️ 09/09/2026 — dono, ao vivo: "não zera ninguém hoje, a partir de
+  // amanhã a regra é séria." `perdoado` é ligado por fora (xgame_config.
+  // perdao_zeragem_ate) pra um dia excepcional inteiro — a régua radical
+  // (incluindo a graduada dos avisos do pronto, acima) continua de pé pros
+  // próximos dias, só este aqui não pune ninguém, não importa o motivo
+  // (bug, lista de votação mudou no meio do dia...).
+  const diaZerado = !perdoado && (perdeuPorNaoVotar || perdeuPorAtrasoPronto);
   const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   // 🎓 09/09/2026 — o estudo de FIM DE SEMANA é uma tarefa à parte (tipo
@@ -642,7 +648,7 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     xpay.emJogo = 0;
   }
   const pontosBase = diaZerado ? 0 : pontosDoDia(comEstado, cotacao);
-  const pontos = emAvisoPronto ? Math.max(0, pontosBase - PENALIDADE_AVISO_PRONTO) : pontosBase;
+  const pontos = (!perdoado && emAvisoPronto) ? Math.max(0, pontosBase - PENALIDADE_AVISO_PRONTO) : pontosBase;
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
@@ -679,10 +685,12 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     leitura_feita: leituraHoje,
     estudo_fds_feito: estudoFdsHoje,
     pontos,
-    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : perdeuPorAtrasoPronto ? 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO' : fraseDoMvm(mvm),
-    perdeu_por_nao_votar: perdeuPorNaoVotar,
-    perdeu_por_atraso_pronto: perdeuPorAtrasoPronto,
-    em_aviso_pronto: emAvisoPronto,
+    frase_mvm: diaZerado
+      ? (perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO')
+      : fraseDoMvm(mvm),
+    perdeu_por_nao_votar: !perdoado && perdeuPorNaoVotar,
+    perdeu_por_atraso_pronto: !perdoado && perdeuPorAtrasoPronto,
+    em_aviso_pronto: !perdoado && emAvisoPronto,
     avisos_pronto: avisosPronto,
     valores,
     xpay,
