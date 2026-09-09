@@ -12,6 +12,21 @@
 
 ---
 
+## DIR-124 — a fila de Comprovações do ADM X-GAME agora agrupa por dia e tem busca
+
+**Emitida por:** dono (09/09/2026), olhando a fila crescer: *"eu preciso separar por data, né? Data de comprovação, nome das pessoas, pra ficar mais fácil isso, ainda precisa ter uma busca quando eu fizer buscar mais rápido, tanto a data e tanto o dia."*
+
+**O que entra:**
+1. **Busca única** (`XGameAdmin.jsx`, aba Comprovações): uma caixa de texto que acha tanto por NOME (sem acento/maiúscula, ex.: "luciano") quanto por DATA (dd/mm, ex.: "09/09", ou só "09" pro dia) — nunca precisa escolher qual campo buscar.
+2. **Agrupada por dia**: a fila (antes uma lista corrida) agora tem um cabeçalho por data ("09/09 · quarta-feira · N comprovações"), com as comprovações daquele dia embaixo — a data some da linha de cada item (já está no cabeçalho do grupo) e vira só nome + hora + título, mais limpo.
+3. Lógica pura nova em `src/lib/filaComprovacoes.js` (`comprovacaoBateNaBusca`, `agruparComprovacoesPorData`, `rotuloDataComprovacao`) — testável sem montar a tela, em vez de ficar espalhada dentro do componente.
+
+**Fora do escopo:** nenhuma mudança na aprovação/reprovação em si, nem na IA de validação, nem nos filtros de status já existentes (em análise/aprovada/reprovada) — só a organização visual e a busca.
+
+**Prova:** suíte 1891/1891 (9 testes novos em `tests/filaComprovacoes.test.mjs` cobrindo busca por nome, por data completa, por só o dia, agrupamento preservando ordem, e o rótulo do cabeçalho), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-123 — a conta duplicada de "paim" some da lista de "adicionar participante"
 
 **Emitida por:** dono (09/09/2026), depois da unificação da DIR-122: *"mas ele não pode ganhar duas vezes, man??? e eu só escolhi uma conta no painel admin pra participar do game."* Confirmado que não há risco (registro único, zero pagamento em qualquer das duas contas) — mas o login duplicado ("Joao Vitor Paim Pereira", e-mail auto-gerado) continuava existindo, então continuava aparecendo na lista de "adicionar participante" do ADM X-Game, pronto pra ser escolhido de novo por engano. Autorização final: *"sim"*.
