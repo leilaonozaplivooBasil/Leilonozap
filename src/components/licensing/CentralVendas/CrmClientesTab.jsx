@@ -41,6 +41,7 @@ import CrmEsteiraResumoExecutivo from './CrmEsteiraResumoExecutivo';
 import CrmTimeCorporativo from './CrmTimeCorporativo';
 import CrmMetodo from './CrmMetodo';
 import { escopoDoMetodo } from '@/lib/escopoDoMetodo';
+import { ouvirPedidoDeTour } from '@/lib/pedidoDeTour';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
 import { useEscopoDeVisao } from './SeletorEscopo';
 import XGameVisaoExecutiva from './XGameVisaoExecutiva';
@@ -94,6 +95,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
   const [secao, setSecao] = useState(null);
   const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
+  // 🖐️ 09/09/2026 — o botão global "Como Funciona" pede o tour de fora desta
+  // tela (src/lib/pedidoDeTour.js); esta é a única peça que sabe que
+  // 'compromisso' é o Hábito 2 e força a navegação antes de repassar o
+  // pedido pro CrmMetodo (que é quem de fato abre a mãozinha).
+  const [tourPendente, setTourPendente] = useState(null);
+  useEffect(() => ouvirPedidoDeTour((id) => {
+    if (id === 'compromisso') { setSecao('compromisso'); setTourPendente(id); }
+  }), []);
   // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
   const [visaoClientes, setVisaoClientes] = useState('lista');
   const [negotiations, setNegotiations] = useState([]);
@@ -1524,7 +1533,7 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🏆 Navegação pelos 8 Hábitos (DIR-43) — trilho escuro, ícone de
             traço no lugar do emoji e o hábito ativo carregando o gradiente
             da Top College (DIR-56). */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 sm:mb-7">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 sm:mb-7" data-teste="nav-habitos">
           {SECOES.map(({ id, n, nome, Icone }) => {
             const ativo = secaoAtiva === id;
             return (
@@ -1648,6 +1657,8 @@ _Enviado via CRM Leilão NoZap_`;
             onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
+            iniciarTour={tourPendente === 'compromisso'}
+            onTourIniciado={() => setTourPendente(null)}
             onIr={(sec, sub) => { setSecao(sec); if (sub) setSubAcomp(sub); }}
             onCriarOportunidade={criarOportunidadeDoCliente}
           />
