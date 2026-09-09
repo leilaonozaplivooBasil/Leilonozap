@@ -12,6 +12,110 @@
 
 ---
 
+## DIR-102 — Atraso na Fila do Pronto zera o dia (mesma régua radical do MvM); painel do time ganha reuniões e atrasadas; histórico vira relatório
+
+**Emitida por:** dono (08/09/2026), continuação do DIR-101: *"se o cara se
+atrasou, eu tenho que ter uma mensagem pro cara, e isso tirar pontos dele.
+Além de ele perder o dinheiro, isso tem que tirar pontos. E ter uma
+historicidade pra eu até mostrar o relatório da pessoa de todos os
+pontos."* Sobre o mecanismo exato e o "percentual de reunião do time",
+perguntado e respondido: *"como você acha que deve ser"* / *"o melhor
+possível, pense grande, dados é o que manda, quanto mais e melhor visível
+melhor."*
+
+**Data:** 08/09/2026.
+
+**Decisões tomadas (delegadas pelo dono):**
+1. Penalidade de atraso = reaproveitar a régua radical do não-votar, não
+   inventar um desconto novo — atrasar o "pronto até" de uma tarefa da
+   gestão zera o dia inteiro (MvM, Human Token, pontos e X-Pay), a punição
+   mais séria que o jogo já tem.
+2. "Percentual de reunião do time" = tarefas do dia cujo título bate com
+   reunião/apresentação/encontro/call (mesma régua de título que o app já
+   usa em outros lugares pra ícone e peso), feitas ÷ total, hoje.
+
+**O que entra:**
+1. `src/lib/xgame.js` — `ehTarefaDeReuniao(titulo)` (nova); `resumoDoDia()`
+   ganha `perdeuPorAtrasoPronto`: alguma tarefa de gestão (`origem: 'xperf'`,
+   com `prazo_em`) vencida e sem o pronto zera o dia — MESMO efeito do não
+   votar, com campo próprio (`perdeu_por_atraso_pronto`) pra não confundir
+   a causa na tela. Só julga em tempo real (`votouEmTodos !== null`) — um
+   dia histórico não se recalcula.
+2. `CrmMetodo.jsx` e `XGame.jsx` — nova mensagem pro atrasado: "DIA ZERADO
+   — uma tarefa da gestão passou do pronto até", mesmo peso visual do
+   alerta de não-votar.
+3. `XPerformanceGestao.jsx` — o resumo do time ganhou reuniões do dia
+   (feitas/total) e atrasadas na Fila do Pronto (destacado em vermelho
+   quando > 0); a própria Fila do Pronto avisa, item a item, quando o
+   atraso já zerou o dia da pessoa.
+4. `QuadroGeralAbas.jsx` (`AbaHistorico`) — virou o relatório que faltava:
+   conta quantos atrasos zeraram o dia inteiro no ciclo, e marca cada item
+   vencido com o mesmo aviso.
+
+**O que ficou de fora, por decisão consciente de escopo:** o percentual de
+reunião não entrou em `XGameVisaoExecutiva.jsx` (Verificação do Progresso)
+porque a fonte de dados de lá é o retrato já gravado em `xgame_diario`, que
+não guarda título de tarefa — só entrou no ADM X-Game, que lê a tabela ao
+vivo. Trazer pra lá também exigiria uma nova coluna no retrato diário ou
+uma consulta ao vivo adicional — fica pra quando o dono quiser esse
+alcance.
+
+**Prova:** `tests/xgame.test.mjs` — 4 testes novos (`resumoDoDia` com
+tarefa xperf vencida zera; dentro do prazo ou já pronta não pune; tarefa da
+rotina sem `prazo_em` não conta; dia histórico não recalcula). Suíte
+1593/1593, `tests/navegador/performance.spec.mjs` 26/26 em navegador real,
+lint e build limpos.
+
+---
+
+## DIR-101 — ADM X-Game reorganizado: ciclo de cada um no topo, Distribuir Tarefa vira painel, resumo do time e faxina nas dobras genéricas
+
+**Emitida por:** dono (08/09/2026), olhando o painel administrativo ao vivo:
+*"quero trazer o ciclo de vendas de participante pra cima. E embaixo do
+ciclo de vendas de participante, eu quero a distribuição de tarefa, mas
+como um modal de abertura, não esse quadradão que vem de cara. Essa
+diretoria [encontro de segunda + o quadro] pode tirar, foi um começo que a
+gente não fez, não está legal. E a mentalidade está muito genérica, muito
+feia — pode tirar isso também, já tem tudo isso, depois a gente faz um
+negócio melhor. (...) Eu quero também a quantidade de tarefas que nós temos
+do grupo — quantas tarefas, quanto o time concluiu, qual o percentual.
+Isso pode aparecer na verificação do progresso mas também tem que ter
+aqui."*
+
+**Data:** 08/09/2026.
+
+**O que entra:**
+1. `src/components/licensing/CentralVendas/XPerformanceGestao.jsx` — o
+   "Quadro Geral de cada um" (o ciclo financeiro de cada participante:
+   ganho, a conferir, em jogo, perdido) virou a PRIMEIRA coisa da tela.
+   "Distribuir Tarefa" deixou de vir sempre aberta — agora é um botão
+   ("Distribuir tarefa ▾") que abre o painel dela, embaixo do Quadro Geral,
+   e continua acessível mesmo com o painel de alguém aberto.
+2. Novo resumo no topo de tudo: quantas pessoas no time corporativo, quantas
+   tarefas o time tem hoje, quantas concluiu e o percentual — a mesma conta
+   entra em `XGameVisaoExecutiva.jsx` (Verificação do Progresso), como um
+   quinto cartão do Pulso da equipe.
+3. `src/components/licensing/CentralVendas/XPerformance.jsx` — as duas
+   dobras que ficavam abaixo da gestão saíram: "Diretoria: encontro de
+   segunda e o quadro" (um começo que não vingou) e "Sobre: as três
+   mentalidades e o grupo To The Top" (a explicação genérica das
+   mentalidades). O Encontro de Segunda e o Quadro continuam existindo pra
+   quem NÃO é gestão — só saíram do painel do super admin.
+
+**O que fica pra depois, por falta de definição ainda (dono pediu análise,
+não decidiu os números):** mensagem automática + desconto de pontos por
+atraso na Fila do Pronto, arquivar com histórico/relatório da pessoa, e o
+"percentual de reunião do time" — ver a mensagem de acompanhamento desta
+sessão com a análise e as perguntas em aberto.
+
+**Prova:** `tests/navegador/performance.spec.mjs` — `abrir()` agora abre o
+painel de Distribuir antes de usar os campos dela; a FAXINA foi reescrita
+pra confirmar que as duas dobras sumiram; teste novo confirma que o resumo
+do time é a primeira coisa da gestão. Suíte 25/25 em navegador real,
+1588/1588 na suíte principal, lint e build limpos.
+
+---
+
 ## DIR-100 — Jornada: setas de navegar sem expandir, com prévia no mouse e no dedo
 
 **Emitida por:** dono (08/09/2026), sobre a tela do Momento: *"a gente tem um botão de passar pra frente ou pra trás... quando a gente passa esse mouse em cima do botão, tanto no desktop quanto no celular, essa tarefa entra numa prévia, uma expansão da tarefa... e volta quando a gente tirar o mouse. Como isso funcionaria no celular? Colocasse o dedo em cima, abrisse uma prévia."* E, sobre os botões da jornada expandida: *"eu tenho que clicar pra saber o que cada botão é — quando eu passar o mouse em cima, ele já dá uma expandida, bem rápido."*

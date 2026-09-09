@@ -204,6 +204,13 @@ export function estudoEmDia(diasCiclo = [], leituraHoje = false) {
 export const ehTarefaDeEstudo = (titulo) =>
   /leitura|estudo/i.test(String(titulo || ''));
 
+// 📊 08/09/2026 — dono: "quero o percentual de reunião do time" no painel
+// vivo. Mesma régua que já classifica ícone/peso pelo título em outros
+// lugares do app (XGameJornada, REGRAS_PESO) — reunião/apresentação/
+// encontro é ação de negócio; aqui só nomeia pra virar métrica de equipe.
+export const ehTarefaDeReuniao = (titulo) =>
+  /reuni[aã]o|apresenta[cç][aã]o|encontro com|call com/i.test(String(titulo || ''));
+
 // ── 💰 X-PAY (a remuneração) ─────────────────────────────────────────
 // 06/09/2026 — A FÓRMULA MUDOU, por ordem do dono (X-Performance): o fixo do
 // mês ÷ 24 dias de operação vira o valor do dia, e dentro do dia o PESO reparte o
@@ -555,21 +562,34 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const total = comEstado.length;
   const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
   const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
-  const mvm = perdeuPorNaoVotar ? 0 : mvmDoDia(tarefas, agoraMin);
+  // 📉 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
+  // ele perder o dinheiro, isso tem que tirar pontos dele." Em vez de
+  // inventar um desconto novo, reaproveita a MESMA régua radical do não
+  // votar — zera MvM, Human Token, pontos e X-Pay do dia — porque é a
+  // punição mais séria que o jogo já tem, e ela já é sentida de verdade.
+  // Só conta tarefa de GESTÃO (origem 'xperf', com prazo_em) que passou do
+  // prazo sem o pronto; a Master Task da rotina não tem prazo_em. E só
+  // julga em tempo real (`votouEmTodos !== null` é a MESMA régua que o
+  // não-votar já usa pra saber se está olhando hoje ou um dia passado) —
+  // um dia histórico já fechou nos próprios registros, não se recalcula.
+  const perdeuPorAtrasoPronto = votouEmTodos !== null
+    && tarefas.some((t) => t?.origem === 'xperf' && t?.prazo_em && !t?.feito && new Date(t.prazo_em) < hoje);
+  const diaZerado = perdeuPorNaoVotar || perdeuPorAtrasoPronto;
+  const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
   const aplic = aplicabilidadeCiclo(diasCiclo, total ? feitas / total : 0);
   const estudoOk = estudoEmDia(diasCiclo, leituraHoje);
-  const token = perdeuPorNaoVotar ? 0 : humanToken(mvm, aplic, estudoOk);
+  const token = diaZerado ? 0 : humanToken(mvm, aplic, estudoOk);
   const valores = valoresDasTarefas(tarefas, participante || PARTICIPANTE_PADRAO);
   const xpay = { ...xpayDoDia(comEstado, valores), ...reguaDoDia(tarefas, participante || PARTICIPANTE_PADRAO) };
-  if (perdeuPorNaoVotar) {
+  if (diaZerado) {
     // o que seria ganho vira perdido — o dinheiro não some em silêncio,
-    // fica registrado como o que a falta de voto custou de verdade.
+    // fica registrado como o que a falta de voto (ou o atraso) custou de verdade.
     xpay.perdido = Math.round((xpay.ganho + xpay.perdido) * 100) / 100;
     xpay.ganho = 0;
     xpay.emJogo = 0;
   }
-  const pontos = perdeuPorNaoVotar ? 0 : pontosDoDia(comEstado, cotacao);
+  const pontos = diaZerado ? 0 : pontosDoDia(comEstado, cotacao);
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
@@ -597,8 +617,9 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     estudo_em_dia: estudoOk,
     leitura_feita: leituraHoje,
     pontos,
-    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : fraseDoMvm(mvm),
+    frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : perdeuPorAtrasoPronto ? 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO' : fraseDoMvm(mvm),
     perdeu_por_nao_votar: perdeuPorNaoVotar,
+    perdeu_por_atraso_pronto: perdeuPorAtrasoPronto,
     valores,
     xpay,
     contagens,
