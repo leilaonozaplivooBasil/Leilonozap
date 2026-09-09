@@ -100,13 +100,14 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // recomeçando... já me coloca ela no meu contato e pisca." Quem clicou
   // "Contatar" na Lista de Network chega no Hábito 4 já apontado pra ela.
   const [contatoDestacado, setContatoDestacado] = useState(null);
-  // 🖐️ 09/09/2026 — o botão global "Como Funciona" pede o tour de fora desta
-  // tela (src/lib/pedidoDeTour.js); esta é a única peça que sabe que
-  // 'compromisso' é o Hábito 2 e força a navegação antes de repassar o
-  // pedido pro CrmMetodo (que é quem de fato abre a mãozinha).
-  const [tourPendente, setTourPendente] = useState(null);
+  // 🖐️ 09/09/2026 — dono, ao vivo, depois de testar o Compromisso: "pode
+  // seguir pros outros hábitos". O botão global "Como Funciona" pede o tour
+  // de fora desta tela (src/lib/pedidoDeTour.js) sem saber em qual dos 8
+  // Hábitos a pessoa está — só repassa o pedido pro CrmMetodo, que decide
+  // sozinho (PASSOS_POR_PAINEL) se o Hábito atual tem tour, e qual.
+  const [tourPendente, setTourPendente] = useState(false);
   useEffect(() => ouvirPedidoDeTour((id) => {
-    if (id === 'compromisso') { setSecao('compromisso'); setTourPendente(id); }
+    if (id === 'metodo') setTourPendente(true);
   }), []);
   // Lista ou funil kanban na seção Clientes (DIR-24 Fase 5).
   const [visaoClientes, setVisaoClientes] = useState('lista');
@@ -1662,8 +1663,8 @@ _Enviado via CRM Leilão NoZap_`;
             onExcluirRegistro={handleExcluirRegistroMetodo}
             onNovoCliente={() => setShowAddForm(true)}
             onNovoVendedor={vis.gerirVendedores ? () => setShowSellerModal(true) : null}
-            iniciarTour={tourPendente === 'compromisso'}
-            onTourIniciado={() => setTourPendente(null)}
+            iniciarTour={tourPendente}
+            onTourIniciado={() => setTourPendente(false)}
             onIr={(sec, sub, contatoId) => { setSecao(sec); if (sub) setSubAcomp(sub); setContatoDestacado(contatoId || null); }}
             contatoDestacado={contatoDestacado}
             onContatoDestacadoConsumido={() => setContatoDestacado(null)}
