@@ -1822,8 +1822,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {xgame && ciclo && mostrarPainel && (
               <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza">
                 <div>
-                  <p className="text-sm font-extrabold text-nz-tinta">🪙 A Moeda — de onde vem cada ponto do seu Human Token</p>
-                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade na sua moeda de hoje, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                  <p className="text-sm font-extrabold text-nz-tinta">🪙 Seu Human Token — de onde vem cada ponto dele</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token de hoje, até o teto de {fmtToken(TOKEN_MAX)}</p>
                   <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — por isso o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
                 </div>
                 <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />

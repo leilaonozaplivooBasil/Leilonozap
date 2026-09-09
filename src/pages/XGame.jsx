@@ -364,7 +364,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
             <div className="text-sm text-[#C1BECA] mt-1">Boa {new Date().getHours() < 12 ? 'manhã' : new Date().getHours() < 18 ? 'tarde' : 'noite'}, {meuNome} — {FRASES.antecipacao.toLowerCase()} · dia {resumo.dia_util} de {CICLO_DIAS_UTEIS} · cotação {fmt2(resumo.cotacao)}</div>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] px-5 py-3 self-start sm:self-auto">
-            <div className="text-4xl leading-none">{resumo.faixa.medalha}</div>
+            <SeloMoeda medalha={resumo.faixa.medalha} tamanho={44} />
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[#817E8C]">faixa do dia</div>
               <div className="text-sm font-extrabold">{resumo.faixa.label}</div>
@@ -699,5 +699,34 @@ function Card({ titulo, valor, sub, destaque = false, dica }) {
       <div className="text-2xl sm:text-3xl font-extrabold tabular-nums mt-1">{valor}</div>
       <div className={`text-[11px] mt-1 ${destaque ? 'text-red-400 font-bold' : 'text-[#C1BECA]'}`}>{sub}</div>
     </div>
+  );
+}
+
+// 🪙 09/09/2026 — dono, vendo o cabeçalho: "não é medalha, é moeda... moeda,
+// moeda é muito bonita." O emoji de medalha nativo (🥉🥈🥇) saiu — no lugar,
+// o MESMO desenho de moeda (aro dourado + rosto creme) da MoedaPizza, só em
+// miniatura, com o selo da faixa gravado no meio.
+function SeloMoeda({ medalha, tamanho = 40 }) {
+  const uid = React.useId();
+  const c = tamanho / 2;
+  const rBorda = tamanho * 0.46;
+  const rRosto = tamanho * 0.37;
+  return (
+    <svg viewBox={`0 0 ${tamanho} ${tamanho}`} width={tamanho} height={tamanho} className="shrink-0" role="img" aria-label="moeda da faixa do dia">
+      <defs>
+        <linearGradient id={`${uid}-borda`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F4D976" />
+          <stop offset="45%" stopColor="#C99A2E" />
+          <stop offset="100%" stopColor="#8A6413" />
+        </linearGradient>
+        <radialGradient id={`${uid}-rosto`} cx="38%" cy="32%" r="75%">
+          <stop offset="0%" stopColor="#FFFBEF" />
+          <stop offset="100%" stopColor="#F1E3BE" />
+        </radialGradient>
+      </defs>
+      <circle cx={c} cy={c} r={rBorda} fill="none" stroke={`url(#${uid}-borda)`} strokeWidth={tamanho * 0.13} />
+      <circle cx={c} cy={c} r={rRosto} fill={`url(#${uid}-rosto)`} stroke="#B8933A" strokeWidth={1} />
+      <text x={c} y={c} textAnchor="middle" dominantBaseline="central" fontSize={tamanho * 0.4}>{medalha}</text>
+    </svg>
   );
 }
