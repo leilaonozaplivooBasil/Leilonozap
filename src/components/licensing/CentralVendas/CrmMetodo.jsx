@@ -17,6 +17,13 @@ import {
   reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras, horaFinal,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
+// 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
+// o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
+// nova janela de autorização no meio do agendamento (ver src/lib/googleAgenda.js).
+import {
+  tokenDoGoogle, erroDoGoogle, statusDoErro, invalidarTokenSePreciso,
+  contaLembrada, esquecerConta,
+} from '@/lib/googleAgenda';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
@@ -150,7 +157,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [gestaoEmpresaAberta, setGestaoEmpresaAberta] = useState(false);
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
-  const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
+  // qual conta do Google está ligada aqui — mostrada na tela de propósito:
+  // ver o e-mail antes de agendar é o que evita a reunião cair na conta errada.
+  const [googleConta, setGoogleConta] = useState(() => contaLembrada());
+
+  // 🔥 DIR-103 — AQUECIMENTO SILENCIOSO. Quem já autorizou neste aparelho
+  // ganha o token ANTES de precisar dele. É este pedaço que acaba com a
+  // janela do Google aparecendo no meio do agendamento — que era onde a
+  // pessoa clicava na conta errada.
+  useEffect(() => { if (contaLembrada()) tokenDoGoogle({ interativo: false }).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!uid) return;
@@ -1142,54 +1157,38 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     if (ok) setRegistroAberto(null);
   };
 
-  // 🗓️ DIR-47/48 — token da Google Agenda da PRÓPRIA pessoa (leitura +
-  // criação de evento; mesmo GOOGLE_CLIENT_ID do login; o token vive só
-  // nesta sessão do navegador — nunca vai pro servidor).
-  const obterTokenGoogle = async () => {
-    if (googleToken) return googleToken;
-    const r = await plataforma.functions.invoke('getGoogleClientId', {});
-    const clientId = r?.clientId;
-    if (!clientId) throw new Error('login Google não configurado');
-    if (!window.google?.accounts?.oauth2) {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://accounts.google.com/gsi/client';
-        s.onload = res; s.onerror = () => rej(new Error('não carregou o script do Google'));
-        document.head.appendChild(s);
-      });
-    }
-    if (!window.google?.accounts?.oauth2) throw new Error('Google indisponível neste navegador');
-    const token = await new Promise((res, rej) => {
-      const tc = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-        callback: (resp) => (resp?.access_token ? res(resp.access_token) : rej(new Error(resp?.error || 'sem autorização'))),
-        error_callback: (e) => rej(new Error(e?.message || 'janela do Google fechada')),
-      });
-      tc.requestAccessToken();
-    });
-    setGoogleToken(token);
-    return token;
-  };
-
+  // 🗓️ DIR-47/48/103 — a Google Agenda da PRÓPRIA pessoa (leitura + criação
+  // de evento; mesmo GOOGLE_CLIENT_ID do login). O token nunca vai pro
+  // servidor; quem cuida dele é o `src/lib/googleAgenda.js`.
   const conectarGoogleAgenda = async () => {
     setGoogleConectando(true);
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const ini = new Date(); ini.setHours(0, 0, 0, 0);
       const fim = new Date(ini.getTime() + 86400000);
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(ini.toISOString())}&timeMax=${encodeURIComponent(fim.toISOString())}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       setGoogleEventos((j.items || []).map((e) => ({ id: e.id, titulo: e.summary || '(sem título)', inicio: e.start?.dateTime || e.start?.date || '' })));
+      setGoogleConta(contaLembrada());
       toast.success('Google Agenda conectada — eventos de hoje na tela');
     } catch (e) {
       console.warn('Google Agenda:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.error(`Não deu pra conectar a Google Agenda: ${e.message}`);
     } finally { setGoogleConectando(false); }
+  };
+
+  // "Trocar conta": esquecer o e-mail lembrado é o ÚNICO jeito de o Google
+  // voltar a perguntar. Sem este botão, lembrar a conta viraria prisão pra
+  // quem realmente tem duas agendas.
+  const trocarContaGoogle = async () => {
+    esquecerConta();
+    setGoogleConta(null);
+    setGoogleEventos(null);
+    await conectarGoogleAgenda();
   };
 
   // DIR-48 — cria o evento DE VERDADE na agenda da própria pessoa. Falhou?
@@ -1205,20 +1204,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       if (j?.id) registro.google_event_id = j.id; // DIR-50: o id permite editar/apagar depois
       toast.success('Evento criado na sua Google Agenda!');
       return j?.htmlLink || null;
     } catch (e) {
       console.warn('Criar evento Google:', e);
-      setGoogleToken(null);
+      // 🔴 DIR-103 — antes isto era `setGoogleToken(null)` em QUALQUER erro: um
+      // 500 do Google ou a internet oscilando jogava fora um token bom e
+      // obrigava nova janela de autorização — e é na janela que a pessoa erra
+      // a conta. Agora só 401/403 (a autorização acabou de verdade) derruba.
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Não deu pra criar no Google agora (${e.message}) — o agendamento foi salvo e o botão Google Agenda continua na agenda do dia.`);
       return null;
     }
@@ -1240,20 +1243,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       });
       if (!corpo) return registroOriginal.google_event_link || null;
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo),
       });
-      if (!resp.ok) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok) throw erroDoGoogle(resp);
       const j = await resp.json();
       registro.google_event_id = j?.id || eventId;
       toast.success('Evento atualizado na sua Google Agenda!');
       return j?.htmlLink || registroOriginal.google_event_link || null;
     } catch (e) {
       console.warn('Atualizar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`A reunião foi atualizada no método, mas o Google não deixou mexer no evento agora (${e.message}) — ajuste por lá pelo link.`);
       return registroOriginal.google_event_link || null;
     }
@@ -1265,17 +1268,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const eventId = idDoEventoGoogle(registro);
     if (!eventId) return true;
     try {
-      const token = await obterTokenGoogle();
+      const token = await tokenDoGoogle();
       const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw new Error(`Google respondeu ${resp.status}`);
+      if (!resp.ok && resp.status !== 404 && resp.status !== 410) throw erroDoGoogle(resp);
       toast.success('Evento apagado da sua Google Agenda.');
       return true;
     } catch (e) {
       console.warn('Apagar evento Google:', e);
-      setGoogleToken(null);
+      invalidarTokenSePreciso(statusDoErro(e));
       toast.info(`Excluída do método — mas o Google não deixou apagar o evento agora (${e.message}). Apague por lá pelo link, se ainda existir.`);
       return false;
     }
@@ -2435,7 +2438,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     </Button>
                   </div>
                 </div>
-                {minha && googleEventos === null && (
+                {minha && googleConta && (
+                  <p className="text-[11px] text-nz-tinta-fraca">
+                    🗓️ Conectado como <span className="font-semibold text-nz-tinta">{googleConta}</span> —{' '}
+                    <button type="button" onClick={trocarContaGoogle} className="font-semibold text-nz-verde hover:text-nz-verde-claro">trocar conta</button>
+                  </p>
+                )}
+                {minha && googleEventos === null && !googleConta && (
                   <p className="text-[11px] text-nz-tinta-fraca">🗓️ Conecte o Google pra ver os SEUS eventos de hoje aqui no meio (só leitura, direto no seu navegador — ninguém mais vê a sua agenda).</p>
                 )}
                 {!minha && (
