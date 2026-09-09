@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, HelpCircle, BookOpen } from 'lucide-react';
+import { X, HelpCircle, BookOpen, Hand } from 'lucide-react';
 import TiraDuvidas from '@/components/licensing/TiraDuvidas';
 import { useSegurarCamada } from '@/hooks/useCamadaModal';
 
@@ -9,18 +9,19 @@ import { useSegurarCamada } from '@/hooks/useCamadaModal';
 // dominar a plataforma, ficar independente sem depender do TEC nem do
 // fundador... a plataforma tem que ser uma professora dela mesma foda."
 //
-// O Guia do Usuário já existia — mas só dentro da própria aba dele. Fazer a
-// pessoa perdida em ADM X-Game NAVEGAR até achar a aba certa antes de poder
-// perguntar é o oposto de "professora sempre ali". Este modal é a resposta
-// rápida: abre de cima do botão "Como Funciona" (fixo em toda tela da Top
-// College), traz o MESMO Tira Dúvidas de sempre — já sabendo em qual tela a
-// pessoa está perdida, pelo `pagina` — e deixa um link pra quem quiser o guia
-// completo dos 8 Hábitos.
+// 🖐️ CORREÇÃO DO DONO, mesmo dia: "Como Funciona é um TOUR. A pessoa vai
+// clicando e a plataforma vai ensinando, com pergunta, com a visualização."
+// Ele está lembrando de uma peça que já existe — a mãozinha (TourGuiado.jsx),
+// que já ensina a Esteira de Captação apontando pros elementos DE VERDADE da
+// tela. Este modal virou o LANÇADOR dela: quando a tela atual já tem um tour
+// (`onIniciarTour` vem preenchido), ele é a ação principal. Perguntar por
+// texto (Tira Dúvidas) continua abaixo — pra quando a dúvida é mais
+// específica do que um tour genérico cobre.
 //
 // 🪟 useSegurarCamada(): os outros flutuantes (X-Music, Leila) já sabem
 // sumir quando um modal está na frente — este modal se registra do mesmo
 // jeito, pra não competir por atenção com o resto da tela.
-export default function ComoFuncionaModal({ usuario, pagina, onFechar, onAbrirGuia }) {
+export default function ComoFuncionaModal({ usuario, pagina, onFechar, onAbrirGuia, onIniciarTour }) {
   useSegurarCamada();
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={onFechar}>
@@ -35,7 +36,7 @@ export default function ComoFuncionaModal({ usuario, pagina, onFechar, onAbrirGu
               <HelpCircle className="w-3.5 h-3.5" /> Como Funciona
             </p>
             <p className="text-white/60 text-[12px] mt-0.5">
-              {pagina ? `Você está em: ${pagina}` : 'Pergunte do seu jeito — a resposta vem na hora.'}
+              {pagina ? `Você está em: ${pagina}` : 'A plataforma te ensina, na hora.'}
             </p>
           </div>
           <button type="button" onClick={onFechar} className="shrink-0 rounded-full p-1.5 text-white/45 hover:bg-white/10 hover:text-white" data-teste="como-funciona-fechar">
@@ -44,6 +45,25 @@ export default function ComoFuncionaModal({ usuario, pagina, onFechar, onAbrirGu
         </div>
 
         <div className="px-4 sm:px-5 py-4 space-y-3">
+          {onIniciarTour ? (
+            <button
+              type="button"
+              onClick={onIniciarTour}
+              data-teste="como-funciona-iniciar-tour"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-nz-verde hover:bg-nz-verde-claro px-4 py-3 text-sm font-bold text-white"
+            >
+              <Hand className="w-4 h-4" /> Fazer o tour guiado desta tela
+            </button>
+          ) : (
+            <p className="text-[11px] text-white/40 bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2">
+              Essa tela ainda não tem um tour guiado — mas pode perguntar aqui embaixo que a resposta vem na hora.
+            </p>
+          )}
+
+          <div className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest">
+            <span className="h-px flex-1 bg-white/10" /> {onIniciarTour ? 'ou pergunte direto' : 'pergunte direto'} <span className="h-px flex-1 bg-white/10" />
+          </div>
+
           <TiraDuvidas usuario={usuario} pagina={pagina || 'Top College'} />
           <button
             type="button"

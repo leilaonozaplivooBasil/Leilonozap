@@ -61,6 +61,7 @@ import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
 import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
+import { pedirTour, TOURS_DISPONIVEIS } from '@/lib/pedidoDeTour';
 import DiarioDeBolso from '../components/licensing/CentralVendas/DiarioDeBolso';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
@@ -1720,6 +1721,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           pagina={paginaAtual}
           onFechar={() => setComoFuncionaAberto(false)}
           onAbrirGuia={() => { setCatalogSubTab('catalogo-guia'); setComoFuncionaAberto(false); }}
+          onIniciarTour={TOURS_DISPONIVEIS[catalogSubTab] ? () => { pedirTour(TOURS_DISPONIVEIS[catalogSubTab]); setComoFuncionaAberto(false); } : undefined}
         />
       }
 

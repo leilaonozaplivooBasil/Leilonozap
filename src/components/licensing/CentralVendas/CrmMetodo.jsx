@@ -33,6 +33,7 @@ import {
   pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
+import TourGuiado from './TourGuiado';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 import { isVendaReal } from '@/lib/dinheiroReal';
 import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
@@ -91,9 +92,18 @@ Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado }) {
   const uid = currentUser?.id;
   const podeGerir = gestao ?? visaoTotal;
+  // 🖐️ 09/09/2026 — dono, ao vivo: "Como Funciona é um tour... a pessoa vai
+  // clicando e a plataforma vai ensinando." A mesma mãozinha da Esteira de
+  // Captação (TourGuiado.jsx), pedida de fora (o botão global "Como
+  // Funciona") via `iniciarTour` — só abre quando o Hábito 2 (Compromisso)
+  // já está mesmo na tela, senão a mãozinha apontaria pro vazio.
+  const [tourAberto, setTourAberto] = useState(false);
+  useEffect(() => {
+    if (iniciarTour && painel === 'compromisso') { setTourAberto(true); onTourIniciado?.(); }
+  }, [iniciarTour, painel, onTourIniciado]);
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
   const [tarefas, setTarefas] = useState([]);
@@ -1644,7 +1654,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
             {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
                 <div className="rounded-xl border border-nz-borda bg-white p-3" title={'"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo (peso 10) + Produção + Real Time + Bônus/Estudo (12,22 divididos 50/30/20 conforme o perfil) + Vendas REAIS da sua loja, contadas automático (meta 4 no ciclo — pontuam aqui; a remuneração delas é a comissão da plataforma). Faixas: 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, trava em 17,77.'}>
                   <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
                   <p className="text-xl font-bold text-nz-tinta tabular-nums">{(ciclo?.faixa || xgame.faixa).medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
@@ -1822,7 +1832,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {xgame && ehHoje && mostrarPainel && (
               <div className="border-t border-nz-borda/40 pt-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde">
+                  <button type="button" onClick={() => setVotacaoAberta(!votacaoAberta)} className="font-semibold text-nz-tinta hover:text-nz-verde" data-teste="votacao-mvm-toggle">
                     {votacaoAberta ? '▾' : '▸'} 🗳️ Votação MvM das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_FIM_MIN)} · Ranking das Virtudes
                   </button>
                   <span className={`text-[10px] font-bold ${janelaAberta ? (naJanelaIdeal(agoraMinJogo) ? 'text-nz-verde' : 'text-amber-600') : 'text-nz-tinta-fraca'}`}>
@@ -2839,6 +2849,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             <p className="text-xs text-nz-tinta-fraca text-center italic">"A disciplina é a ponte entre objetivos e realização." — Jim Rohn</p>
           </div>
         )}
+    <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_METODO} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }
+
+// 🖐️ os passos do tour do Hábito 2 — Compromisso, a tela que a pessoa vive
+// todo dia. Cada `texto` abre com uma pergunta (método socrático, o mesmo
+// tom pedido pra IA de comprovação hoje) antes de explicar — a plataforma
+// ensinando, não só narrando.
+const PASSOS_TOUR_METODO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Sabe qual você vai usar todo santo dia? O Hábito 2 — Compromisso. Os outros sete entram conforme a etapa do seu negócio, mas é aqui que o jogo acontece.',
+  },
+  {
+    alvo: 'titulo-tarefa',
+    titulo: 'Sua rotina de hoje, tarefa por tarefa',
+    texto: 'Reparou que cada uma tem um horário? É esse horário que decide se ela conta cheia, atrasada ou perdida — não a ordem da lista.',
+  },
+  {
+    alvo: 'acoes-tarefa',
+    titulo: 'Marcar é um toque',
+    texto: 'Fez a tarefa? Marque NA HORA, não no fim do dia — marcar tudo às 22h faz o sistema contar todas como atrasadas, mesmo que você tenha feito na hora certa. Algumas pedem uma foto como prova antes de fechar.',
+  },
+  {
+    alvo: 'placar-do-dia',
+    titulo: 'Seus 4 números do dia',
+    texto: 'Human Token, MvM, Cotação e X-Pay — sempre aqui, sempre atualizados. Toque no ⓘ de qualquer um pra entender de onde ele sai.',
+  },
+  {
+    alvo: 'votacao-mvm-toggle',
+    titulo: 'A votação que ninguém pode esquecer',
+    texto: 'Você sabia que não votar em TODOS os colegas até o fim da janela zera o seu dia inteiro — dinheiro incluído, mesmo com 100% das suas tarefas feitas? Vote aqui, todo dia, sem falta.',
+  },
+];
