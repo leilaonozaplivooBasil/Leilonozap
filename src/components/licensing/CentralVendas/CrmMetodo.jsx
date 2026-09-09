@@ -245,17 +245,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [diasCiclo, setDiasCiclo] = useState([]);
   const [participante, setParticipante] = useState(null); // verbas/cargo (F1); sem cadastro = padrão da planilha
   const [cicloConfig, setCicloConfig] = useState(null); // xgame_config.ciclo_inicio (o INÍCIO X-GAME oficial)
+  const [perdaoAte, setPerdaoAte] = useState(null); // xgame_config.perdao_zeragem_ate — perdão manual de um dia inteiro
   useEffect(() => {
     if (painel !== 'compromisso') return;
     const t = setInterval(() => { const d = new Date(); setAgoraMin(d.getHours() * 60 + d.getMinutes()); }, 60000);
     return () => clearInterval(t);
   }, [painel]);
   useEffect(() => {
-    if (painel !== 'compromisso' || !uid) { setParticipante(null); setCicloConfig(null); return; }
+    if (painel !== 'compromisso' || !uid) { setParticipante(null); setCicloConfig(null); setPerdaoAte(null); return; }
     supabase.from('xgame_participantes').select('*').eq('user_id', uid).maybeSingle()
       .then(({ data }) => setParticipante(data || null));
-    supabase.from('xgame_config').select('ciclo_inicio').eq('id', 'atual').maybeSingle()
-      .then(({ data }) => setCicloConfig(data?.ciclo_inicio || null));
+    supabase.from('xgame_config').select('ciclo_inicio,perdao_zeragem_ate').eq('id', 'atual').maybeSingle()
+      .then(({ data }) => { setCicloConfig(data?.ciclo_inicio || null); setPerdaoAte(data?.perdao_zeragem_ate || null); });
   }, [painel, uid]);
   useEffect(() => {
     if (painel !== 'compromisso' || !uid) { setDiasCiclo([]); return; }
@@ -327,8 +328,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // só julga o dia de HOJE que está sendo jogado agora — um dia passado
       // (histórico) já está fechado nos próprios registros, não se recalcula
       votouEmTodos: ehHoje ? votouEmTodosHoje : null,
+      // 🕊️ 09/09/2026 — perdão de um dia excepcional inteiro, só vale se o
+      // dia sendo jogado agora É o perdoado — histórico não se reescreve.
+      perdoado: ehHoje && !!perdaoAte && hojeStr() <= perdaoAte,
     });
-  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje]);
+  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje, perdaoAte]);
   // 🩹 08/09/2026 — `xgame` já é recalculado pro `dia` que está sendo visto
   // (não só hoje: veja o useMemo acima), então o estado de uma tarefa de um
   // dia passado também sai certo daqui — precisa pra recuperação de fim de
