@@ -6,15 +6,14 @@ import {
   AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS, PAPEIS,
   ENDERECOS, FRASES_DO_RODAPE, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '@/lib/guiaXGame';
-import { vibrar, VIBRA_TOQUE, TOKEN_MAX, ligaDoToken, pesosDoPerfil } from '@/lib/xgame';
+import { vibrar, VIBRA_TOQUE, TOKEN_MAX, ligaDoToken, moedaModelo } from '@/lib/xgame';
 
 // 🪙 09/09/2026 — dono: "a moeda tem que aparecer aqui... como modelo, pra
 // explicar o modelo, pra ensinar as pessoas — ela tem que ter algum lugar."
-// A moeda CHEIA do modelo (perfil padrão), pros 5 pesos no valor MÁXIMO —
-// igual ao print de prova que já foi mandado pro dono, só que agora
-// morando de verdade no Guia, não só num teste local.
-const PESOS_MODELO = pesosDoPerfil('estrategico');
-const MOEDA_MODELO = { mvm: PESOS_MODELO.mvm, producao: PESOS_MODELO.producao, realtime: PESOS_MODELO.realtime, bonus: PESOS_MODELO.bonus, vendas: PESOS_MODELO.ptVenda };
+// A moeda CHEIA do modelo (`moedaModelo`, xgame.js — os 5 pesos no valor
+// MÁXIMO), igual ao print de prova que já foi mandado pro dono, só que
+// agora morando de verdade no Guia, não só num teste local.
+const MOEDA_MODELO = moedaModelo('estrategico');
 
 // 🎓 COMO JOGAR — o guia do X-GAME dentro da plataforma (07/09/2026).
 //

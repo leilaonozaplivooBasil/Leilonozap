@@ -635,6 +635,17 @@ export function pesosDoPerfil(perfil) {
   };
 }
 
+// 🪙 09/09/2026 — dono: "a moeda tem que estar ali, pra ele se inspirar
+// nela cheia, e entender como ela fica cheia, junto com a dele que está
+// sendo preenchida." A moeda-modelo — os 5 pesos no valor MÁXIMO — é o
+// ALVO, nunca o progresso de ninguém. Vive aqui (não em cada tela) pra
+// nunca dessincronizar de `pesosDoPerfil`: o dia em que os pesos mudarem
+// de novo, o modelo muda sozinho em toda tela que o desenha.
+export function moedaModelo(perfil = 'estrategico') {
+  const p = pesosDoPerfil(perfil);
+  return { mvm: p.mvm, producao: p.producao, realtime: p.realtime, bonus: p.bonus, vendas: p.ptVenda };
+}
+
 /** Alvos do EXECUTIVO IDEAL (planilha F18:F21 + vendas 100%). */
 export const EXECUTIVO_IDEAL = { mvm: 0.8, producao: 0.9, realtime: 0.9, bonus: 0.8, vendas: 1 };
 

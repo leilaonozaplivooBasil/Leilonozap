@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
-  janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
+  janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil, moedaModelo,
   validacaoAutomatica, tipoDeValidacao, validarComprovacao, faltaDoResumo, textoDoContador, motivoDoBotaoTravado,
   RESUMO_MIN, RESUMO_MIN_FDS, estudoFdsEmDia, estudoEmDia, TRAVA_SEM_ESTUDO_CICLO, travarTopoPorEstudo, EXECUTIVO_IDEAL, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, formacaoExecutivoIdeal,
   META_VENDAS_CICLO, TICKET_MEDIO_VENDA, PESO_REUNIAO_EQUIVALENTE, TETO_REUNIAO_NA_META, vendasEquivalentesAltoValor, TOKEN_MAX,
@@ -275,6 +275,23 @@ test('pesosDoPerfil: perfil comercial NÃO faz parte da repesagem DIR-115 — ma
   assert.equal(p.mvm, MVM_MAX, 'comercial continua com o MvM no peso cheio — decisão de outra conversa, intocada aqui');
   assert.equal(p.ptVenda, 2.5, 'comercial continua dominado pelas vendas — a trava de venda dele já é isso');
   assert.ok(p.producao < p.bonus, 'mesmo no comercial, real time reduzido não pode pesar mais que o estudo');
+});
+
+// 🪙 09/09/2026 — dono: "a moeda tem que estar ali, pra ele se inspirar
+// nela cheia... junto com a dele que está sendo preenchida." moedaModelo
+// é a mesma fonte usada em toda tela que desenha a moeda-referência (Guia,
+// Compromisso, Visão Executiva) — nunca duplicada à mão em cada arquivo,
+// pra nunca dessincronizar de pesosDoPerfil quando os pesos mudarem de novo.
+test('moedaModelo: os 5 pesos no valor MÁXIMO, na MESMA fonte que pesosDoPerfil — nunca duplicado à mão', () => {
+  const m = moedaModelo('estrategico');
+  const p = pesosDoPerfil('estrategico');
+  assert.deepEqual(m, { mvm: p.mvm, producao: p.producao, realtime: p.realtime, bonus: p.bonus, vendas: p.ptVenda });
+  const total = Object.values(m).reduce((s, v) => s + v, 0);
+  assert.ok(Math.abs(total - TOKEN_MAX) < 0.01, `a moeda-modelo tem que fechar o teto exato (${TOKEN_MAX}), deu ${total}`);
+});
+
+test('moedaModelo: sem perfil informado, usa o padrão \'estrategico\' — a moeda-referência que todo mundo vê', () => {
+  assert.deepEqual(moedaModelo(), moedaModelo('estrategico'));
 });
 
 // 🐛 09/09/2026 — achado na auditoria pré-publicação: essa suíte nunca

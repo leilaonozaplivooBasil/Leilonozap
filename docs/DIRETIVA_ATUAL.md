@@ -12,6 +12,21 @@
 
 ---
 
+## DIR-118 — a moeda-modelo cheia ao lado da moeda real, na tela viva
+
+**Emitida por:** dono (09/09/2026), olhando o próprio radar em 0% no dia 3 de 22: *"não é que ele acumula ponto no MvM, é que o dia de hoje ele está com o MvM de ontem... a moeda ganhou vida... é a cotação... a moeda tem que estar ali, pra ele se inspirar nela cheia, e entender como ela fica cheia, junto com a dele que está sendo preenchida."*
+
+**O que entra:**
+1. Nova função pura `moedaModelo(perfil = 'estrategico')` (`src/lib/xgame.js`): os 5 componentes do Human Token no valor MÁXIMO — `pesosDoPerfil` remapeado (`ptVenda` → `vendas`), nunca duplicado à mão. Já era usada só no Guia (aula de pontuação); virou a fonte única também para as telas ao vivo.
+2. **`CrmMetodo.jsx`** (Compromisso) e **`XGameVisaoExecutiva.jsx`** ("sua posição no ciclo"): logo abaixo do cartão da moeda REAL da pessoa, um segundo cartão — borda tracejada dourada, "🏆 O Modelo — pra onde você está indo" — desenha a MESMA `MoedaPizza`, com `moedaModelo('estrategico')` no lugar dos componentes reais, sempre no teto (`TOKEN_MAX`, Liga Platina). Não recalcula nada da pessoa; é só a referência ao lado.
+3. `GuiaXGame.jsx` refatorado pra importar `moedaModelo` em vez de remontar os pesos à mão (mesmo resultado, uma fonte só).
+
+**Fora do escopo / proibido:** a fórmula de cálculo do MvM/Produção/Real Time/Vendas/Bônus (`tokenDoCiclo`) — o relato do dono sobre "moeda viva" descreve um comportamento que a função já tem (soma cumulativa dos dias do ciclo, nunca reseta no meio); nenhuma conta mudou aqui, só o desenho.
+
+**Prova:** suíte 1881/1881 (2 testes novos em `tests/xgame.test.mjs` pra `moedaModelo`: bate com `pesosDoPerfil` remapeado e fecha o teto exato; default sem perfil = `'estrategico'`), lint limpo, `npm run build` sem erro. Banca nova em navegador (`tests/navegador/moedaLadoALado.*`): print real dos dois cartões juntos — moeda parcial (início de ciclo, "ainda não conquistado" visível) ao lado da moeda-modelo cheia (22,22, Liga Platina, sem sobra).
+
+---
+
 ## DIR-117 — botão "recebe voto" por pessoa + selo "Preview oficial" corrigido
 
 **Emitida por:** dono (09/09/2026): *"tem pessoas que vão receber valor na gamificação, já participaram da mentoria e não vão receber voto... eles podem votar, mas não recebem voto... eu não tenho esse botão... preciso desse botão ali na mentoria."* — e, sobre o link de prévia: *"tá vendo escrito prévia oficial, só trabalho nele."*
