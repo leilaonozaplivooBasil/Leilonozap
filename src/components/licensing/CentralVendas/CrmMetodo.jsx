@@ -98,11 +98,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 🖐️ 09/09/2026 — dono, ao vivo: "Como Funciona é um tour... a pessoa vai
   // clicando e a plataforma vai ensinando." A mesma mãozinha da Esteira de
   // Captação (TourGuiado.jsx), pedida de fora (o botão global "Como
-  // Funciona") via `iniciarTour` — só abre quando o Hábito 2 (Compromisso)
-  // já está mesmo na tela, senão a mãozinha apontaria pro vazio.
+  // Funciona") via `iniciarTour` — abre o tour de QUALQUER Hábito que já
+  // esteja na tela (PASSOS_POR_PAINEL, definido embaixo), nunca um Hábito
+  // diferente do que a pessoa está vendo.
   const [tourAberto, setTourAberto] = useState(false);
   useEffect(() => {
-    if (iniciarTour && painel === 'compromisso') { setTourAberto(true); onTourIniciado?.(); }
+    if (iniciarTour && PASSOS_POR_PAINEL[painel]) { setTourAberto(true); onTourIniciado?.(); }
   }, [iniciarTour, painel, onTourIniciado]);
   const [perfil, setPerfil] = useState(null);
   const [dia, setDia] = useState(hojeStr());
@@ -1427,13 +1428,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               {HORIZONTES_SONHO.map((hz) => {
                 const doHorizonte = grupos[hz.id];
                 return (
-                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4">
+                  <div key={hz.id} className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/30 p-3 sm:p-4" data-teste="sonho-horizonte">
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <p className="text-sm font-bold text-nz-tinta">
                         {hz.emoji} {hz.label}
                         <span className="text-nz-tinta-fraca font-normal"> · {hz.faixa}{doHorizonte.length > 0 ? ` · ${doHorizonte.length} sonho${doHorizonte.length === 1 ? '' : 's'}` : ''}</span>
                       </p>
-                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0">
+                      <Button size="sm" onClick={() => setModalSonho(hz.id)} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 shrink-0" data-teste="sonho-adicionar">
                         <Plus className="w-4 h-4 mr-1" /> Adicionar
                       </Button>
                     </div>
@@ -2321,7 +2322,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   {clientesManuais.length} pessoas {visaoTotal ? 'na lista do TIME' : 'na sua lista'} · {qualificadas} qualificada{qualificadas === 1 ? '' : 's'}
                 </p>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                  <Button size="sm" onClick={onNovoCliente} className="bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="lista-adicionar-pessoa">
                     <UserPlus className="w-4 h-4 mr-1" /> Adicionar pessoa
                   </Button>
                   {/* o cadastro de vendedor mora aqui agora: é na Lista de
@@ -2368,7 +2369,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             </p>
                           </button>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0">
+                          <Button size="sm" variant="outline" onClick={() => setQualificando(c)} className="border-nz-borda text-nz-tinta h-8 shrink-0" data-teste="lista-qualificar">
                             <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
                           </Button>
                         )}
@@ -2445,7 +2446,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </GuiaMovel>
 
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
-              <div>
+              <div data-teste="contato-fila">
                 <p className="text-sm font-bold text-nz-tinta mb-1.5">
                   Quem contatar — {visaoTotal && !minha ? 'os qualificados do TIME' : 'os qualificados da sua lista'}{fila.length > 0 ? ` (${fila.length})` : ''}
                 </p>
@@ -2478,7 +2479,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             🔀 09/09/2026 — DIR-111, dono: "tudo tem que ter uma ordem... quando eu clicar
                             em contatar, me gera WhatsApp." Contatar vem primeiro — é o gesto físico de
                             chamar a pessoa; só depois entram agendar/registrar o desfecho. */}
-                        <div className="flex gap-1.5 shrink-0 flex-wrap">
+                        <div className="flex gap-1.5 shrink-0 flex-wrap" data-teste="contato-acoes">
                           {(() => {
                             const numero = String(c.phone || '').replace(/\D/g, '');
                             const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(`Oi ${(c.full_name || '').split(' ')[0] || ''}, tudo bem?`)}` : null;
@@ -2795,7 +2796,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         {/* ══ 🎤 HÁBITO 5 — APRESENTAÇÃO DE SUCESSO (agenda) ══ */}
         {painel === 'apresentacao' && (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1" data-teste="apresentacao-meta">
               <p className={`text-sm font-bold ${reunioesHoje >= 3 ? 'text-nz-verde' : 'text-nz-tinta'}`}>Hoje: {reunioesHoje} de 3 reuniões (meta do método)</p>
               <button type="button" onClick={() => onIr?.('acompanhamento', 'expansao')} className="text-sm font-semibold text-nz-verde hover:text-nz-verde-claro">+ Agendar reunião (na esteira) →</button>
             </div>
@@ -2821,7 +2822,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 })}
               </div>
             )}
-            <div className="rounded-lg border border-nz-borda p-3 space-y-2">
+            <div className="rounded-lg border border-nz-borda p-3 space-y-2" data-teste="apresentacao-oficial">
               <p className="text-xs font-semibold text-nz-tinta">Apresentação oficial do negócio</p>
               <div className="flex gap-2">
                 <Input value={apresentacaoUrl} onChange={(e) => setApresentacaoUrl(e.target.value)} placeholder="cole aqui o link da apresentação (deck, página, vídeo)..." className="bg-white border-nz-borda text-nz-tinta text-sm" />
@@ -2840,7 +2841,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         {/* ══ 🔁 HÁBITO 8 — DUPLICAÇÃO (local de treinamento) ══ */}
         {painel === 'duplicacao' && (
           <div className="space-y-3">
-            <div className="space-y-2">
+            <div className="space-y-2" data-teste="duplicacao-habitos">
               {HABITOS.map((h) => (
                 <div key={h.n} className="rounded-lg border border-nz-borda p-3">
                   <p className="text-sm font-bold text-nz-tinta"><span className="text-nz-verde">{h.n}. {h.titulo}</span><span className="text-nz-tinta-fraca font-normal"> — {h.sub}</span></p>
@@ -2848,22 +2849,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-dashed border-nz-verde/40 bg-nz-verde-fundo/40 p-4 text-center">
+            <div className="rounded-lg border border-dashed border-nz-verde/40 bg-nz-verde-fundo/40 p-4 text-center" data-teste="duplicacao-treinamento">
               <p className="text-sm font-semibold text-nz-tinta">Local de treinamento do time</p>
               <p className="text-xs text-nz-tinta-fraca mt-1">Aqui entram os materiais oficiais (vídeos, decks, trilha do novo executivo). Estrutura pronta — os conteúdos entram conforme o time for gravando.</p>
             </div>
             <p className="text-xs text-nz-tinta-fraca text-center italic">"A disciplina é a ponte entre objetivos e realização." — Jim Rohn</p>
           </div>
         )}
-    <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_METODO} onFechar={() => setTourAberto(false)} />
+    <TourGuiado ativo={tourAberto} passos={PASSOS_POR_PAINEL[painel] || []} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }
 
-// 🖐️ os passos do tour do Hábito 2 — Compromisso, a tela que a pessoa vive
-// todo dia. Cada `texto` abre com uma pergunta (método socrático, o mesmo
-// tom pedido pra IA de comprovação hoje) antes de explicar — a plataforma
-// ensinando, não só narrando.
+// 🖐️ 09/09/2026 — dono, ao vivo, depois de testar o tour do Compromisso:
+// "pode seguir pros outros hábitos". Cada `texto` abre com uma pergunta
+// (método socrático, o mesmo tom pedido pra IA de comprovação hoje) antes
+// de explicar — a plataforma ensinando, não só narrando.
+
+// Hábito 2 — Compromisso, a tela que a pessoa vive todo dia
 const PASSOS_TOUR_METODO = [
   {
     alvo: 'nav-habitos',
@@ -2891,3 +2894,107 @@ const PASSOS_TOUR_METODO = [
     texto: 'Você sabia que não votar em TODOS os colegas até o fim da janela zera o seu dia inteiro — dinheiro incluído, mesmo com 100% das suas tarefas feitas? Vote aqui, todo dia, sem falta.',
   },
 ];
+
+// Hábito 1 — Quadro dos Sonhos
+const PASSOS_TOUR_SONHO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Estes são os seus 8 Hábitos',
+    texto: 'Você está no Hábito 1 — Sonho. É por aqui que tudo começa: sem saber onde quer chegar, a energia se espalha.',
+  },
+  {
+    alvo: 'sonho-horizonte',
+    titulo: 'Três prazos, não um só',
+    texto: 'Sabe por que curto, médio e longo prazo são caixas separadas? Porque sonho sem prazo vira desejo vago — com prazo, vira meta.',
+  },
+  {
+    alvo: 'sonho-adicionar',
+    titulo: 'Detalhe o sonho, não só a imagem',
+    texto: 'Vai colocar um carro? Escreva ano, cor, banco de couro, roda. Quanto mais detalhe, mais real ele fica pro seu cérebro perseguir — e é essa imagem que flutua no seu Ritual do Amanhecer.',
+  },
+];
+
+// Hábito 3 — Lista de Networking
+const PASSOS_TOUR_LISTA = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 3 — Lista de Networking',
+    texto: 'Sabe quem você já conhece que podia virar cliente ou parceiro? É isso que essa lista organiza — as pessoas da sua agenda, qualificadas de 1 a 5.',
+  },
+  {
+    alvo: 'lista-adicionar-pessoa',
+    titulo: 'Toda pessoa da sua agenda entra aqui',
+    texto: 'Adicione antes de qualificar — a lista cresce primeiro, a nota vem depois.',
+  },
+  {
+    alvo: 'lista-qualificar',
+    titulo: 'Qualificar é o que decide quem vira prioridade',
+    texto: 'Confiança, financeiro e apetite — três notas que juntas dizem o % de chance de fechar. É essa nota que decide quem aparece primeiro no Hábito 4.',
+  },
+];
+
+// Hábito 4 — Contato e Convite
+const PASSOS_TOUR_CONTATO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 4 — Contato e Convite',
+    texto: 'Já qualificou alguém no Hábito 3? Essas pessoas aparecem aqui, na fila de quem contatar — as mais qualificadas primeiro.',
+  },
+  {
+    alvo: 'contato-fila',
+    titulo: 'A fila é ordenada pelo %',
+    texto: 'Quem tem mais chance de fechar aparece no topo — não é a ordem que você cadastrou, é a ordem de prioridade real.',
+  },
+  {
+    alvo: 'contato-acoes',
+    titulo: 'Três botões, uma ordem só',
+    texto: 'Sabe qual vem primeiro? Contatar (chama no WhatsApp) → Agendar ou Registrar o desfecho → Esteira, quando virar negociação de verdade. Sempre nessa ordem.',
+  },
+];
+
+// Hábito 5 — Apresentação de Sucesso
+const PASSOS_TOUR_APRESENTACAO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 5 — Apresentação de Sucesso',
+    texto: 'A reunião marcada no Hábito 4 chega aqui. Sabe a meta do método? 3 apresentações por dia, de 45 a 60 minutos cada.',
+  },
+  {
+    alvo: 'apresentacao-meta',
+    titulo: 'O contador não deixa você esquecer',
+    texto: 'Fica verde quando bate 3 — é o número que o método pede todo dia, nem mais, nem menos.',
+  },
+  {
+    alvo: 'apresentacao-oficial',
+    titulo: 'Uma apresentação, sempre a mesma',
+    texto: 'Cole aqui o link do seu deck ou vídeo oficial — é a mesma apresentação toda vez, pra você não reinventar a roda a cada reunião.',
+  },
+];
+
+// Hábito 8 — Duplicação
+const PASSOS_TOUR_DUPLICACAO = [
+  {
+    alvo: 'nav-habitos',
+    titulo: 'Hábito 8 — Duplicação',
+    texto: 'Sabe o que separa quem cresce sozinho de quem constrói um time? Ensinar os outros 7 Hábitos pra frente — é isso que esse hábito é.',
+  },
+  {
+    alvo: 'duplicacao-habitos',
+    titulo: 'Os 8 Hábitos, resumidos',
+    texto: 'Use esta lista pra treinar alguém do zero — é o mesmo roteiro que você aprendeu, só que contado por você agora.',
+  },
+  {
+    alvo: 'duplicacao-treinamento',
+    titulo: 'O local de treinamento do time',
+    texto: '"A disciplina é a ponte entre objetivos e realização." Os materiais oficiais (vídeos, decks) entram aqui conforme o time for gravando.',
+  },
+];
+
+const PASSOS_POR_PAINEL = {
+  sonho: PASSOS_TOUR_SONHO,
+  compromisso: PASSOS_TOUR_METODO,
+  lista: PASSOS_TOUR_LISTA,
+  contato: PASSOS_TOUR_CONTATO,
+  apresentacao: PASSOS_TOUR_APRESENTACAO,
+  duplicacao: PASSOS_TOUR_DUPLICACAO,
+};
