@@ -12,6 +12,49 @@
 
 ---
 
+## DIR-111 — Hábito 4 mais fluido: botão Contatar (WhatsApp), guia da ordem, dono aparece na Lista
+
+**Emitida por:** dono (09/09/2026), duas mensagens seguidas:
+
+1. *"Tudo tem que ter uma ordem. No quarto hábito... a qualificação da
+lista, depois... quando eu clicar em contatar, me gera WhatsApp... Depois
+disso, atualizar a pós-contato, registrar... Depois disso, vem a
+esteira... Deixar isso tudo mais fluido, está dando noventa por
+cento."*
+
+2. *"No contato, na lista de qualificação, tem que aparecer quem
+qualificou — eu sou super admin, [...] todo mundo está botando a lista
+ali, eu vejo a minha e eu vejo aqui todo mundo. Então tem que botar de
+quem é o nome da pessoa que qualificou a lista, igual você colocou no
+contato."*
+
+**O que entra:**
+1. **Botão "Contatar"** (novo, primeiro da fila de botões, antes de
+   Agendar/Registrar) na fila "Quem contatar" do Hábito 4
+   (`CrmMetodo.jsx`) — abre o WhatsApp da pessoa direto (mesmo padrão
+   `wa.me` já usado em outros cantos do app). A ordem agora é: **Contatar
+   → Agendar/Registrar → Esteira**.
+2. **Guia da ordem** — o `GuiaMovel` "Como fazer o contato" ganhou duas
+   linhas novas: o que o % ao lado do nome significa (vem da qualificação
+   do Hábito 3) e a ordem explícita dos 4 botões.
+3. **Dono aparece na Lista de Network também** (Hábito 3, `painel ===
+   'lista'`) — antes só a fila de "Quem contatar" (Hábito 4) mostrava
+   "👤 Fulano · " na frente do nome pra quem é super admin vendo o time
+   inteiro; a Lista de Network (onde a qualificação acontece) não
+   mostrava, então o dono via "26 pessoas na sua lista" sem saber que era
+   o TIME inteiro, nem de quem era cada uma. Mesmo padrão, mesma fonte de
+   dado (`nomePorUsuarioId`/`created_by_id`), reaproveitado — cabeçalho
+   também corrigido pra "na lista do TIME" quando é visão total.
+
+**Prova:** lint limpo, suíte 1639/1639 (sem teste novo — mudança de UI
+pura, reaproveitando padrões já testados em outras telas), `npm run
+build` sem erro. Verificação em navegador não rodou nesta rodada — não
+existe banca de teste pra esta tela específica (Hábito 4 dentro de
+`CrmMetodo.jsx` exige muitas props pra montar isoladamente); recomendo
+conferir ao vivo o botão Contatar e o nome do dono na Lista.
+
+---
+
 ## DIR-110.1 — correção: venda de alto valor "por fora" também conta (esteira de captação)
 
 **Emitida por:** dono (09/09/2026), explicando o caso real que faltou:
