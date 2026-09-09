@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, inicioCicloOficial, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  resumoDoDia, dataISO, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -1634,6 +1634,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <XGameRitualAmanhecer
                   nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
                   sonhos={sonhos.map(normalizarSonho)}
+                  diaCorridoCiclo={diaCorridoDoCiclo(new Date(), inicioCicloOficial(cicloConfig, new Date()))}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
                 />

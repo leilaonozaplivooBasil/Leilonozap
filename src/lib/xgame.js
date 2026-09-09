@@ -1207,30 +1207,62 @@ const minimoDoTipo = (tipo) => (tipo === 'aprendizado_fds' ? RESUMO_MIN_FDS : RE
 export const GRATIDAO_MIN = 20;
 export const GRATIDAO_AUDIO_MIN_SEG = 15;
 
+// 🙏 09/09/2026 — DIR-121, dono: "ele está pedindo um áudio só de quinze
+// segundos, isso é muito pouco. Ele tem que ter ali pelo menos uns vinte
+// motivos pra agradecer, vamos crescendo isso gradativamente... a ideia é
+// que a gente chegue dentro do mês com cinquenta agradecimentos. Quem
+// começa agradecendo, dorme agradecendo." A régua cresce 1 motivo por dia
+// corrido desde o início do ciclo (não só dia útil — gratidão é todo dia),
+// começando em 20 e parando no teto de 50. Convertido pra segundos porque
+// é isso que o app mede de verdade (nenhuma transcrição conta motivo por
+// motivo) — no ritmo de uma pessoa falando com calma, sem pressa.
+export const GRATIDAO_MOTIVOS_INICIAL = 20;
+export const GRATIDAO_MOTIVOS_TETO = 50;
+export const GRATIDAO_SEG_POR_MOTIVO = 2.5;
+
+/** Quantos motivos a régua pede hoje — sobe 1 por dia corrido, até o teto. */
+export function metaMotivosGratidaoHoje(diaCorridoCiclo = 1) {
+  const dia = Math.max(1, Math.floor(Number(diaCorridoCiclo) || 1));
+  return Math.min(GRATIDAO_MOTIVOS_TETO, GRATIDAO_MOTIVOS_INICIAL + (dia - 1));
+}
+
+/** O piso de segundos de HOJE — derivado da meta de motivos de hoje. */
+export function gratidaoAudioMinSegHoje(diaCorridoCiclo = 1) {
+  return Math.round(metaMotivosGratidaoHoje(diaCorridoCiclo) * GRATIDAO_SEG_POR_MOTIVO);
+}
+
+/** Dias corridos (não só úteis) desde o início do ciclo, 1-indexado. */
+export function diaCorridoDoCiclo(hoje, inicio) {
+  const d0 = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+  const d1 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  return Math.max(1, Math.round((d1 - d0) / 86400000) + 1);
+}
+
 /** Falou tempo suficiente pra valer como entrega? */
-export const audioEntregaValido = (segundos) =>
-  Number.isFinite(Number(segundos)) && Number(segundos) >= GRATIDAO_AUDIO_MIN_SEG;
+export const audioEntregaValido = (segundos, minSeg = GRATIDAO_AUDIO_MIN_SEG) =>
+  Number.isFinite(Number(segundos)) && Number(segundos) >= minSeg;
 
 /**
  * A gratidão foi entregue? Escrever OU falar — um dos dois basta, nunca os
  * dois. Devolve { ok, por, falta } pra tela poder dizer o que ainda falta em
- * vez de só apagar o botão.
+ * vez de só apagar o botão. `minSeg` é o piso de HOJE (GRATIDAO_AUDIO_MIN_SEG
+ * por padrão, pra quem chama sem saber o dia do ciclo).
  */
-export function gratidaoEntregue({ texto = '', audioSeg = 0 } = {}) {
+export function gratidaoEntregue({ texto = '', audioSeg = 0, minSeg = GRATIDAO_AUDIO_MIN_SEG } = {}) {
   const escrito = String(texto || '').trim().length;
-  if (audioEntregaValido(audioSeg)) return { ok: true, por: 'audio', falta: 0 };
+  if (audioEntregaValido(audioSeg, minSeg)) return { ok: true, por: 'audio', falta: 0 };
   if (escrito >= GRATIDAO_MIN) return { ok: true, por: 'texto', falta: 0 };
   // Gravou, mas curto demais: a falta é de SEGUNDOS, não de letras — dizer
   // "faltam 12 caracteres" pra quem acabou de falar é falar grego.
   if (Number(audioSeg) > 0) {
-    return { ok: false, por: 'audio', falta: Math.max(0, GRATIDAO_AUDIO_MIN_SEG - Math.floor(Number(audioSeg))) };
+    return { ok: false, por: 'audio', falta: Math.max(0, minSeg - Math.floor(Number(audioSeg))) };
   }
   return { ok: false, por: 'texto', falta: Math.max(0, GRATIDAO_MIN - escrito) };
 }
 
 /** O que dizer embaixo do botão apagado, na unidade certa. */
-export function faltaDaGratidao({ texto = '', audioSeg = 0 } = {}) {
-  const r = gratidaoEntregue({ texto, audioSeg });
+export function faltaDaGratidao({ texto = '', audioSeg = 0, minSeg = GRATIDAO_AUDIO_MIN_SEG } = {}) {
+  const r = gratidaoEntregue({ texto, audioSeg, minSeg });
   if (r.ok) return '';
   if (r.por === 'audio') return `fale mais ${r.falta}s — ou escreva`;
   return `escreva ${r.falta} caractere${r.falta === 1 ? '' : 's'} a mais — ou grave um áudio`;

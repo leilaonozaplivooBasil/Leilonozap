@@ -3,7 +3,7 @@ import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, Chev
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
-import { gratidaoEntregue, faltaDaGratidao, GRATIDAO_AUDIO_MIN_SEG, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
+import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
 // O que a pessoa salva às 5h toca no expediente, e o que ela salva
@@ -115,7 +115,10 @@ const ACAO_MIN = 10;
 // ler e corrigir (nada sai sem ela ver), os mínimos NÃO caem (20 e 10
 // caracteres continuam valendo), e a origem fica marcada no registro.
 
-export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onConcluir }) {
+export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, onFechar, onConcluir }) {
+  // 🙏 DIR-121 — a régua de HOJE, crescendo dia a dia (ver xgame.js).
+  const metaMotivosHoje = metaMotivosGratidaoHoje(diaCorridoCiclo);
+  const minSegHoje = gratidaoAudioMinSegHoje(diaCorridoCiclo);
   const [passo, setPasso] = useState(0);
   const [gratidao, setGratidao] = useState('');
   const [acao, setAcao] = useState('');
@@ -264,7 +267,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
     return () => URL.revokeObjectURL(url);
   }, [audioGratidao]);
 
-  const entrega = gratidaoEntregue({ texto: gratidao, audioSeg: audioGratidaoSeg });
+  const entrega = gratidaoEntregue({ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje });
 
   // o QUADRO DOS SONHOS: as imagens do Hábito 1 (o campo oficial é imagem_url)
   // — em ordem ALEATÓRIA que muda a cada dia (semente = a data de hoje): a
@@ -410,6 +413,12 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
           <>
             <Halo><HeartHandshake className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pelo que você é grato hoje?</h2>
+            {/* 🙏 DIR-121 — dono: "é importante orientar ele pegar o livro da
+                gratidão, escrever, e falar em voz alta ali." Escrever é no
+                CADERNO de papel, fora do app — o app só grava a FALA (e é
+                ela que vale, DIR-101.1). A instrução vem antes do botão,
+                pra ninguém abrir a tela sem o caderno na mão. */}
+            <p className="text-[13px] text-white/70 -mt-2">📓 Pega o teu caderno da gratidão. Escreve ali, e depois fala em voz alta, com calma.</p>
             {/* 🎙️ DIR-101.1 — FALAR VEM PRIMEIRO, e vale sozinho.
                 Às 6h da manhã, no celular, meio dormindo, falar é o caminho
                 natural. Gravou, parou: acabou. Não lê, não corrige, não
@@ -424,10 +433,15 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
                   rotuloGravando="Pronto, terminei"
                   className="xeos-cru w-full justify-center !py-4 !text-[15px] !font-extrabold border-2 border-white/30 bg-white/10 text-white hover:bg-white/20"
                 />
+                {/* 🙏 DIR-121 — dono: "pelo menos uns vinte motivos... vamos
+                    crescendo isso gradativamente... até chegar em cinquenta
+                    dentro do mês." A régua de HOJE (metaMotivosHoje) sobe 1
+                    motivo por dia corrido do ciclo — nunca mostrada como
+                    número solto de segundos, sempre junto do "motivos". */}
                 <p className="text-[11px] text-white/45">
                   {ditadoGratidao.gravando
                     ? 'fala com o coração — toque de novo quando terminar'
-                    : `fale pelo menos ${GRATIDAO_AUDIO_MIN_SEG} segundos, e pronto: não precisa escrever nada`}
+                    : `fale pelo menos ${metaMotivosHoje} motivos hoje (uns ${minSegHoje}s, sem pressa)`}
                 </p>
               </div>
             )}
@@ -470,7 +484,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
               {/* botão apagado tem que DIZER o que falta, na unidade certa:
                   "faltam 12 caracteres" pra quem acabou de falar é grego */}
               {!entrega.ok && (
-                <p className="text-[11px] text-white/45">{faltaDaGratidao({ texto: gratidao, audioSeg: audioGratidaoSeg })}</p>
+                <p className="text-[11px] text-white/45">{faltaDaGratidao({ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje })}</p>
               )}
             </div>
           </>
@@ -588,7 +602,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             <div>
               <button
                 type="button"
-                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
+                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, metaMotivosHoje, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
                 className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
