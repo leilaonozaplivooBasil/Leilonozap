@@ -173,6 +173,75 @@ export function ordenarPorHora(tarefas = []) {
     .map((x) => x.t);
 }
 
+const AJUSTE_MIN = 15;      // quanto abrir quando solta no topo ou no fim
+const DIA_FIM_MIN = 23 * 60 + 59;
+
+const doisDigitos = (n) => String(n).padStart(2, '0');
+/**
+ * minutos do dia → 'HH:MM'. O GRAMPO DO DIA MORA AQUI, e só aqui.
+ *
+ * ⚠️ Na primeira versão o grampo estava repetido em `horaEntre` também. Ficava
+ * bonito de ler ("defensivo dos dois lados") e era indistinguível na prática:
+ * tirar um dos dois não mudava resultado nenhum, então nenhum teste conseguia
+ * pegar a remoção. Guarda que nenhum teste distingue é guarda que apodrece —
+ * um dia alguém tira as DUAS achando que a outra cobre. Agora é uma só, aqui,
+ * onde minuto vira relógio de parede, e a mutação dela derruba o teste.
+ */
+export const horaDeMinutos = (min) => {
+  const m = Math.max(0, Math.min(DIA_FIM_MIN, Math.round(min)));
+  return `${doisDigitos(Math.floor(m / 60))}:${doisDigitos(m % 60)}`;
+};
+
+/**
+ * 🖐️ ARRASTAR MUDA A HORA — a hora de uma tarefa solta ENTRE duas vizinhas.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * POR QUE ARRASTAR PRECISA MEXER NA HORA (decisão do dono, 09/09/2026)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * O pedido foi "arrastar para cima ou para baixo de forma fluida". A opção
+ * óbvia — arrastar livre, sem mexer na hora — RECRIA o bug consertado no #312:
+ * `estadoDasTarefas` calcula a janela de cada tarefa como "da hora dela até a
+ * hora da PRÓXIMA DA LISTA", então lista fora de ordem cronológica marca como
+ * PERDIDA uma tarefa que está acontecendo agora — e isso mexe em X-Pay e na
+ * zeragem do dia.
+ *
+ * Então arrastar REMARCA: a tarefa recebe a hora do lugar onde foi solta. A
+ * lista fica cronológica por construção e o motor nunca mente.
+ *
+ * ⚠️ A ASSINATURA É DE PROPÓSITO SEM ÍNDICE. A primeira versão recebia
+ * `(lista, de, para)` e fazia conta de posição — e o arrasto cruza períodos
+ * (manhã → tarde), onde essa conta tem que casar índice local de um grupo com
+ * índice global da lista. É precisamente o tipo de conta fiddly que produziu o
+ * bug de hoje. Recebendo só as duas VIZINHAS, não existe índice pra errar: a
+ * tela olha quem ficou acima e quem ficou abaixo, e pergunta a hora.
+ *
+ * AS REGRAS:
+ *  • entre duas       → o meio do caminho, arredondado em 5 min (número
+ *                       redondo é o que a pessoa espera ver);
+ *  • só tem a debaixo → 15 min ANTES dela (piso 00:00);
+ *  • só tem a de cima → 15 min DEPOIS dela (teto 23:59);
+ *  • não coube        → cola na vizinha de cima. Empate de hora é resolvido
+ *                       por `ordem` em ordenarPorHora, então a posição
+ *                       escolhida é respeitada mesmo sem minuto livre.
+ *  • sem vizinha com hora → null.
+ *
+ * ⚠️ DEVOLVE null QUANDO NÃO HÁ O QUE GRAVAR. Quem chama não grava — gravar
+ * por gravar suja o histórico e acorda o `updated_at` de graça.
+ *
+ * @param horaAcima  hora da tarefa que ficou ACIMA (ou null/'' se não há)
+ * @param horaAbaixo hora da tarefa que ficou ABAIXO (ou null/'' se não há)
+ * @returns 'HH:MM' nova, ou null
+ */
+export function horaEntre(horaAcima, horaAbaixo) {
+  const antes = minutos(horaAcima);
+  const depois = minutos(horaAbaixo);
+  if (antes === null && depois === null) return null;
+  if (antes === null) return horaDeMinutos(depois - AJUSTE_MIN);
+  if (depois === null) return horaDeMinutos(antes + AJUSTE_MIN);
+  if (depois - antes < 2) return horaDeMinutos(antes);
+  return horaDeMinutos(Math.round((antes + depois) / 2 / 5) * 5);
+}
+
 export function estadoDasTarefas(tarefas = [], agoraMin) {
   // 🕐 a hora manda (ver ordenarPorHora): a janela de cada tarefa depende de a
   // lista estar em ordem cronológica, senão o estado mente.
