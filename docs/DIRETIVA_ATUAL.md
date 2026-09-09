@@ -12,6 +12,20 @@
 
 ---
 
+## DIR-115 — o pódio da Visão Executiva ganha foto real, emoldurada pela cor da liga
+
+**Emitida por:** dono (09/09/2026), depois de ver o pódio no preview: *"vamos puxar a imagem, a foto da pessoa do perfil dela pra dentro da visão executiva... e melhorar esse ranking com a imagem dele... fazer a imagem dele dentro da moeda que ele está... o pódio está muito feio, dá muito cara de emoji. Pode mais foda mesmo, entendeu? Pra dar mais vontade da pra pessoa."* — pediu explicitamente o design por escrito antes de mexer no código; o plano foi discutido e aprovado ("boooraaaaa") antes desta implementação.
+
+**O que entra:**
+1. A busca de `app_users` na Visão Executiva passa a trazer `avatar_url`/`profile_photo_url` (antes só nome) e resolve a foto com `getFotoPerfil` (`src/lib/selosCargo.js`) — a mesma fonte que o Quadro de Compromisso já usa, nenhuma lógica nova de onde a foto mora.
+2. Componente `Avatar` novo: desenha a foto (ou, sem foto, as iniciais num círculo com gradiente — nunca fica vazio) **emoldurada por um anel na cor da própria liga** da pessoa (a mesma paleta `COR_LIGA` que já existia, sem duplicar) — é isso que faz "a moeda" ser a própria foto, não uma forma solta do lado do nome.
+3. O pódio (2º·1º·3º) troca o círculo de iniciais por esse Avatar — o 1º lugar com a foto maior (80px vs. 56px dos outros dois), continuando no degrau mais alto do palco. "Você" ganha um segundo anel verde por fora do anel de liga, compondo os dois em vez de substituir.
+4. A tabela "Todo mundo" ganha o mesmo Avatar (menor, 22px) ao lado do nome — consistência entre pódio e tabela, sem o pontinho solto de antes.
+
+**Prova:** suíte 1701/1701 (sem teste novo — é troca visual, sem lógica de negócio nova), lint limpo, `npm run build` sem erro. Verificação em navegador nova (`tests/navegador/podio-visao-executiva.*`): banca com 5 pessoas, 4 com foto (SVG de mentira) e 1 sem foto de propósito — screenshot confirma foto real emoldurada pela cor da liga no pódio e na tabela, fallback de iniciais funcionando pra quem não tem foto, e o anel duplo (liga + verde) em "você".
+
+---
+
 ## DIR-114 — a auditoria pré-publicação: 4 críticos, 9 importantes e 7 nice-to-have corrigidos
 
 **Emitida por:** dono (09/09/2026): *"corrigir tudo que tem pra corrigir... faz uma análise de novo pra corrigir e deixar perfeito."* — em resposta ao relatório da auditoria em 3 frentes (Painel Corporativo/PDF/roda, motor do X-Game, Hábito 3/4 + trabalho mesclado) publicado antes desta entrada.

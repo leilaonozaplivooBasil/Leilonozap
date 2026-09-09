@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
 import { LIGAS, ligaDoToken, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarDiamantePorEstudo, TOKEN_MAX } from '@/lib/xgame';
+import { getFotoPerfil } from '@/lib/selosCargo';
 import MoedaPizza from './MoedaPizza';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
@@ -47,6 +48,37 @@ function Pulso({ Icone, rotulo, valor, nota, cor = 'text-nz-tinta' }) {
 // mesma informação (a liga), sem o visual de figurinha. Cor só existe
 // aqui (não mexe em LIGAS, que outras telas do app ainda usam com emoji).
 const COR_LIGA = { diamante: '#67E8F9', ouro: '#FBBF24', prata: '#CBD5E1', bronze: '#D08A56' };
+
+// 🖼️ 09/09/2026 — dono, sobre o pódio: "botar a imagem da pessoa ali, e a
+// imagem dentro da moeda... pra dar mais vontade da pra pessoa." A "moeda"
+// vira a própria foto — emoldurada por um anel na cor da liga (a mesma
+// paleta de COR_LIGA, sem duplicar), em vez do pontinho solto de antes.
+// Duas camadas de sombra criam o anel com um respiro escuro entre a foto e
+// a cor — lê bem sobre o fundo escuro do X-EOS sem precisar de borda dura.
+// `souEu` soma um segundo anel, verde, por fora — o mesmo destaque que a
+// tela já usava, agora compondo com o anel de liga em vez de substituí-lo.
+function anelDaMoeda({ cor, souEu }) {
+  const camadas = [`0 0 0 3px #05060c`, `0 0 0 5px ${cor}`];
+  if (souEu) camadas.push('0 0 0 8px #05060c', '0 0 0 10px #22C55E');
+  return camadas.join(', ');
+}
+
+function Avatar({ url, nome, tamanho = 40, anelCor = null, souEu = false, corFallback = 'from-slate-300 to-slate-400' }) {
+  const estilo = { width: tamanho, height: tamanho, boxShadow: anelCor ? anelDaMoeda({ cor: anelCor, souEu }) : undefined };
+  if (url) {
+    return <img src={url} alt={nome} title={nome} className="shrink-0 rounded-full object-cover" style={estilo} />;
+  }
+  return (
+    <div
+      className={`shrink-0 rounded-full flex items-center justify-center bg-gradient-to-b ${corFallback} text-white font-extrabold`}
+      style={{ ...estilo, fontSize: tamanho * 0.34 }}
+      title={nome}
+    >
+      {iniciais(nome)}
+    </div>
+  );
+}
+
 function SeloLiga({ liga, className = '' }) {
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
@@ -180,10 +212,15 @@ export default function XGameVisaoExecutiva() {
 
         const ids = lista.map((l) => l.user_id);
         if (ids.length) {
-          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname').in('id', ids);
-          const nomes = {};
-          (us || []).forEach((u) => { nomes[u.id] = nomeExibicao(u); });
-          lista.forEach((l) => { l.nome = nomes[l.user_id] || l.user_id.slice(0, 6); });
+          // 🖼️ 09/09/2026 — dono, olhando o pódio: "está muito feio... vamos
+          // puxar a imagem, a foto da pessoa, do perfil dela... e a imagem
+          // dentro da moeda que ele está." A foto real (getFotoPerfil, mesma
+          // fonte que o Quadro de Compromisso já usa) — iniciais continuam
+          // sendo o único fallback, pra nunca ficar vazio.
+          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname,avatar_url,profile_photo_url').in('id', ids);
+          const nomes = {}; const fotos = {};
+          (us || []).forEach((u) => { nomes[u.id] = nomeExibicao(u); fotos[u.id] = getFotoPerfil(u); });
+          lista.forEach((l) => { l.nome = nomes[l.user_id] || l.user_id.slice(0, 6); l.foto = fotos[l.user_id] || null; });
         }
         if (vivo) setLinhas(lista);
       });
@@ -273,8 +310,10 @@ export default function XGameVisaoExecutiva() {
   const palco = [podio[1], podio[0], podio[2]];
   const ALTURA_PALCO = ['h-16 sm:h-20', 'h-24 sm:h-32', 'h-10 sm:h-12'];
   const COR_PALCO = ['from-slate-300 to-slate-400', 'from-amber-300 to-yellow-500', 'from-orange-400 to-amber-700'];
-  const BORDA_PALCO = ['#64748b', '#b45309', '#9a3412'];
   const POSICAO_PALCO = [2, 1, 3];
+  // 🖼️ 09/09/2026 — o 1º lugar também ganha a foto maior — um degrau
+  // acima dos outros dois, igual ao palco em si.
+  const TAMANHO_FOTO_PALCO = [56, 80, 56];
 
   return (
     <div className="border-t border-nz-borda/40 pt-5 space-y-8">
@@ -371,12 +410,11 @@ export default function XGameVisaoExecutiva() {
             return (
               <div key={l.user_id} className="flex-1 max-w-[180px] flex flex-col items-center">
                 {i === 1 && <Crown className="w-5 h-5 text-amber-300 mb-1" />}
-                <div
-                  className={`relative shrink-0 w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-b ${COR_PALCO[i]} text-white font-extrabold text-lg ${souEu ? 'ring-2 ring-nz-verde ring-offset-2 ring-offset-[#05060c]' : ''}`}
-                  style={{ boxShadow: `0 4px 0 0 ${BORDA_PALCO[i]}, inset 0 3px 7px rgba(255,255,255,0.4)` }}
-                >
-                  {iniciais(l.nome)}
-                </div>
+                {/* 🖼️ 09/09/2026 — dono: "botar a imagem da pessoa ali, e a
+                    imagem dentro da moeda... pra dar mais vontade da pra
+                    pessoa." A foto real (Avatar) substitui o círculo só de
+                    iniciais — emoldurada pelo anel da própria liga dela. */}
+                <Avatar url={l.foto} nome={l.nome} tamanho={TAMANHO_FOTO_PALCO[i]} anelCor={COR_LIGA[liga.id] || '#94a3b8'} souEu={souEu} corFallback={COR_PALCO[i]} />
                 <p className="text-sm font-bold text-nz-tinta mt-2 truncate max-w-full text-center">
                   {l.nome}{souEu && <span className="ml-1 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
                 </p>
@@ -456,7 +494,10 @@ export default function XGameVisaoExecutiva() {
                   <tr key={l.user_id} className={`border-t border-nz-borda/30 transition-colors ${souEu ? 'bg-nz-verde/10' : 'hover:bg-white/[0.03]'}`}>
                     <td className="py-2.5 px-3 text-nz-tinta-fraca tabular-nums">{i + 1}</td>
                     <td className="py-2.5 font-semibold text-nz-tinta">
-                      {l.nome}{souEu && <span className="ml-1.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                      <span className="inline-flex items-center gap-2">
+                        <Avatar url={l.foto} nome={l.nome} tamanho={22} anelCor={COR_LIGA[liga.id] || '#94a3b8'} souEu={false} corFallback="from-slate-300 to-slate-400" />
+                        {l.nome}{souEu && <span className="ml-0.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                      </span>
                     </td>
                     <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap"><SeloLiga liga={liga} /></td>
                     <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
