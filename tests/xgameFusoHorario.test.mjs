@@ -17,10 +17,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { dataISO, somarDiasISO } from '../src/lib/xgame.js';
+import { dataISO, somarDiasISO, minutosBrasilia } from '../src/lib/xgame.js';
 
 const CRM_METODO = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url), 'utf8');
 const XGAME_ADMIN = fs.readFileSync(new URL('../src/components/licensing/XGameAdmin.jsx', import.meta.url), 'utf8');
+const XGAME_PAGE = fs.readFileSync(new URL('../src/pages/XGame.jsx', import.meta.url), 'utf8');
 
 for (const [nome, codigo] of [['CrmMetodo.jsx', CRM_METODO], ['XGameAdmin.jsx', XGAME_ADMIN]]) {
   test(`${nome}: hojeStr() usa dataISO() (data local) — não toISOString() (UTC)`, () => {
@@ -65,4 +66,41 @@ test('somarDiasISO(): soma/subtrai dias por calendário puro, sem tocar em fuso'
 test('CrmMetodo.jsx: mudarDia() usa somarDiasISO() (calendário puro) — não toISOString() (fuso do aparelho)', () => {
   assert.match(CRM_METODO, /const mudarDia = \(delta\) => \{\s*setDia\(somarDiasISO\(dia, delta\)\);/, 'mudarDia precisa usar somarDiasISO() em vez de montar Date local e reconverter por toISOString()');
   assert.ok(!/d\.toISOString\(\)\.slice\(0, 10\)\);\s*\};/.test(CRM_METODO), 'mudarDia voltou a depender do fuso do aparelho');
+});
+
+// 🐛 DIR-133 (09/09/2026) — auditoria do Ritual do Amanhecer, dono: "vamos
+// ver se a gente melhora... algumas pessoas reclamaram que não conseguiram."
+// Achado direto no banco: três pessoas reprovadas no ritual de hoje às
+// 05h17–05h25 de Brasília pelo corte de 5h15 — que já tinha sido corrigido
+// pra 5h30 no código minutos antes. A causa raiz: `agoraMin` (o relógio do
+// jogo inteiro — janela do ritual, AGORA/ATRASADO/PERDIDO de toda tarefa, e
+// a janela de votação do MvM em XGame.jsx) vinha de `d.getHours()*60 +
+// d.getMinutes()` — hora LOCAL DO APARELHO, o mesmo erro exato da DIR-129,
+// só que na hora do dia em vez da data.
+test('minutosBrasilia(): força America/Sao_Paulo sempre — não depende do fuso do aparelho', () => {
+  // 21h11 em Brasília (UTC-3) é 00h11 UTC do dia seguinte — um aparelho
+  // rodando em UTC (ou qualquer fuso que não seja Brasília) bateria errado.
+  assert.equal(minutosBrasilia(new Date('2026-09-08T00:11:00.000Z')), 21 * 60 + 11);
+  // a virada exata de Brasília: 00:00 BRT = 03:00 UTC.
+  assert.equal(minutosBrasilia(new Date('2026-09-08T02:59:00.000Z')), 23 * 60 + 59);
+  assert.equal(minutosBrasilia(new Date('2026-09-08T03:00:00.000Z')), 0);
+  // o corte real do ritual, 05h17 de Brasília (uma das três reprovações de hoje).
+  assert.equal(minutosBrasilia(new Date('2026-09-09T08:17:00.000Z')), 5 * 60 + 17);
+});
+
+test('src/lib/xgame.js: minutosBrasilia() usa Intl.DateTimeFormat com America/Sao_Paulo, não getHours/getMinutes', () => {
+  const XGAME = fs.readFileSync(new URL('../src/lib/xgame.js', import.meta.url), 'utf8');
+  const inicio = XGAME.indexOf('export function minutosBrasilia');
+  const fim = XGAME.indexOf('\n}', inicio);
+  const corpo = XGAME.slice(inicio, fim);
+  assert.match(corpo, /Intl\.DateTimeFormat\('en-GB',\s*\{/);
+  assert.match(corpo, /timeZone:\s*'America\/Sao_Paulo'/);
+});
+
+test('CrmMetodo.jsx e XGame.jsx: o relógio do jogo (agoraMin) usa minutosBrasilia() — não getHours()/getMinutes() do aparelho', () => {
+  assert.match(CRM_METODO, /const \[agoraMin, setAgoraMin\] = useState\(\(\) => minutosBrasilia\(\)\);/);
+  assert.match(CRM_METODO, /setAgoraMin\(minutosBrasilia\(\)\)/);
+  assert.ok(!/getHours\(\)\s*\*\s*60\s*\+.*getMinutes\(\)/.test(CRM_METODO), 'CrmMetodo.jsx voltou a depender do fuso do aparelho pro relógio do jogo');
+  assert.match(XGAME_PAGE, /const agoraMin = minutosBrasilia\(agora\);/);
+  assert.ok(!/getHours\(\)\s*\*\s*60\s*\+.*getMinutes\(\)/.test(XGAME_PAGE), 'XGame.jsx voltou a depender do fuso do aparelho pro relógio do jogo (afeta a janela de votação do MvM)');
 });
