@@ -7,7 +7,7 @@ import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
-  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin,
+  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
   estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
 } from '@/lib/xgame';
@@ -207,7 +207,6 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
       perfil: participante?.perfil || 'estrategico',
       vendasReais: vendasCiclo,
     });
-    // 🎓 09/09/2026 — DIR-113, dono revendo o próprio pedido: a falta de
     // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca o
     // OURO — Ouro tem que dar pra chegar via produção/MvM/vendas mesmo sem
     // estudar em casa. `travarTopoPorEstudo` é a MESMA função usada
@@ -496,10 +495,30 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
             {ciclo.formacao.mensagem && (
               <p className="text-[11px] font-semibold text-emerald-400">{ciclo.formacao.mensagem}</p>
             )}
+            {/* ℹ️ 09/09/2026 — DIR-116, dono: "o executivo ideal lá da lista, do
+                quadro, está desatualizado... pegar do que nós fizemos agora e
+                atualizar lá, e o que estava lá que não está constando no novo,
+                atualizar aqui também." Este guia só existia no Compromisso
+                (CrmMetodo.jsx) — duplicado aqui, com a MESMA correção do
+                DIR-113 (Platina, não Ouro, trava por falta de estudo). */}
+            <details className="text-[11px] text-[#817E8C] border-t border-emerald-500/15 pt-2">
+              <summary className="cursor-pointer font-semibold text-white hover:text-emerald-400">ℹ️ O guia: como me formo EXECUTIVO IDEAL em 3 meses?</summary>
+              <div className="pt-1.5 space-y-1">
+                <p>• <strong className="text-white">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
+                <p>• <strong className="text-white">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
+                <p>• <strong className="text-white">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima. "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina. A Platina só abre batendo os dois portões (caráter e 100% da meta de vendas); Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.</p>
+                <p>• <strong className="text-white">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
+                <p>• <strong className="text-white">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
+              </div>
+            </details>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card titulo="Human Token" valor={`${ciclo.liga.emoji} ${fmt2(ciclo.total)}`} sub={`${ciclo.liga.label} do ciclo · teto 22,22${ciclo.estudoEmDiaCompleto ? '' : ' · trava 19,99 pra Platina (estude!)'}`} />
+            <Card
+              titulo="Human Token" valor={`${ciclo.liga.emoji} ${fmt2(ciclo.total)}`}
+              sub={ciclo.estudoEmDiaCompleto ? `${ciclo.liga.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}
+              dica={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze, abaixo de 8 barra a Platina. Ligas: 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima (só abre batendo os dois portões: caráter e 100% da meta de vendas). Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}
+            />
             {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o MVM
                 dele é sete, vai aparecer sete, não sete ponto setenta e
                 cinco e nove em cima" — o número GRANDE virava o automático

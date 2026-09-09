@@ -6,7 +6,7 @@ import { LIGAS } from '@/lib/xgame';
 // olhando o placar do Human Token: "produtividade, peso X% na moeda... se
 // possível deixar até o desenho da moeda, fatia de pizza, o que cada um está
 // pesando... e vai botando a cor de acordo com cada fatia, porque só isso
-// aqui é bronze, fez isso fez isso virou prata, até chegar no diamante."
+// aqui é bronze, fez isso fez isso virou prata, até chegar na platina."
 //
 // 🎨 09/09/2026 — dono, vendo o primeiro desenho: "é uma MOEDA, não é uma
 // MEDALHA, entendeu? A gente tem que desenhar uma moeda legal, bonita ali,

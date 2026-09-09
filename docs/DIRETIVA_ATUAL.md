@@ -12,7 +12,7 @@
 
 ---
 
-## DIR-118 — a moeda-modelo cheia ao lado da moeda real, na tela viva
+## DIR-120 — a moeda-modelo cheia ao lado da moeda real, na tela viva
 
 **Emitida por:** dono (09/09/2026), olhando o próprio radar em 0% no dia 3 de 22: *"não é que ele acumula ponto no MvM, é que o dia de hoje ele está com o MvM de ontem... a moeda ganhou vida... é a cotação... a moeda tem que estar ali, pra ele se inspirar nela cheia, e entender como ela fica cheia, junto com a dele que está sendo preenchida."*
 
@@ -24,6 +24,32 @@
 **Fora do escopo / proibido:** a fórmula de cálculo do MvM/Produção/Real Time/Vendas/Bônus (`tokenDoCiclo`) — o relato do dono sobre "moeda viva" descreve um comportamento que a função já tem (soma cumulativa dos dias do ciclo, nunca reseta no meio); nenhuma conta mudou aqui, só o desenho.
 
 **Prova:** suíte 1881/1881 (2 testes novos em `tests/xgame.test.mjs` pra `moedaModelo`: bate com `pesosDoPerfil` remapeado e fecha o teto exato; default sem perfil = `'estrategico'`), lint limpo, `npm run build` sem erro. Banca nova em navegador (`tests/navegador/moedaLadoALado.*`): print real dos dois cartões juntos — moeda parcial (início de ciclo, "ainda não conquistado" visível) ao lado da moeda-modelo cheia (22,22, Liga Platina, sem sobra).
+
+---
+
+## DIR-119 — a liga do topo vira PLATINA em todo lugar (sincronizada com a repesagem que já tinha renomeado o motor)
+
+**Emitida por:** dono (09/09/2026): *"esqueça a palavra diamante e tudo platina, onde tiver diamante tira, lembra é liga platina em todos os lugares, pra não aparecer múltiplo [nome]."* — pedido em paralelo à repesagem do DIR-115 (abaixo), que já tinha renomeado o motor (`xgame.js`) de Diamante pra Platina por conta própria; esta entrada é a reconciliação das duas pontas.
+
+**O que entra:** ao fazer merge com o trabalho paralelo, `xgame.js` já vinha com a liga renomeada (LIGAS, `travarTopoPorEstudo`, `ligaComPortoesDoCiclo`) — mantido como está, sem duplicar a troca de nome. O que faltava sincronizar: os textos visíveis que ainda citavam os limiares e a trava de ANTES da repesagem (ex.: "prata até 17,77 · ouro de 17,78 · platina de 20") em `XGame.jsx` e `CrmMetodo.jsx`, atualizados pros limiares reais de hoje (prata até 12,21 · ouro até 17,77 · platina de 17,78) e pros dois portões (caráter/MvM e meta de vendas). Concordância de gênero corrigida em todo lugar ("a Platina", não "o Platina"). Não mexe em nada fora do X-Game — o "Plano Diamante" de `PartnerPlanActivation.jsx` e as peças reais de joalheria do catálogo (`LuxuryCollection.jsx`, `insert_products.sql`, etc.) são outro contexto e ficaram intocados.
+
+**Prova:** suíte 1879/1879, lint limpo, `npm run build` sem erro. Varredura (`grep`) confirma zero sobra da palavra "diamante" nos arquivos do X-Game, fora das linhas que documentam a mudança de nome.
+
+---
+
+## DIR-118 — sincronizar o painel "Executivo Ideal" entre o Compromisso e o X-Game, e tirar a crença errada do estudo do ar
+
+**Emitida por:** dono (09/09/2026): *"o executivo ideal lá da lista, do quadro, está desatualizado... eu preciso pegar do que nós fizemos agora e atualizar lá, e o que estava lá que não está constando no novo, atualizar aqui também, fazer essa sincronização, tanto de lá pra cá e daqui pra lá."*
+
+**O problema:** o painel "Onde estou × Executivo Ideal" é duplicado de propósito em `XGame.jsx` e `CrmMetodo.jsx`, mas só `CrmMetodo.jsx` tinha o guia "como me formo Executivo Ideal em 3 meses?" — e esse guia (junto com 2 comentários de código no mesmo arquivo) ainda ensinava a regra de ANTES do DIR-113: *"sem a leitura em dia, o token trava em 17,77"*, sem falar da liga do topo — a crença exata que o dono corrigiu na rodada passada. O guia de onboarding (`guiaXGame.js`, aba "Guia do Usuário") tinha o mesmo risco por outro caminho: ensinava a trava do Human Token DO DIA (17,77, que é real e não mudou) só como "Sem estudo, não tem ouro", sem separar essa conta da conta OFICIAL DO CICLO — quem lesse podia achar que a trava do dia valia pro Ouro do ciclo também. O atendente 24h (`tiraDuvidas.js`) tinha o mesmo buraco: só conhecia a régua do dia, nada da régua do ciclo.
+
+**O que entra:**
+1. `CrmMetodo.jsx` — o guia corrigido (a régua completa: bronze/prata/ouro/liga do topo, com a trava certa) e os 2 comentários de código atualizados.
+2. `XGame.jsx` — ganhou o MESMO guia (não existia lá) e o mesmo tooltip rico do card "Human Token" que só `CrmMetodo.jsx` tinha; texto da trava e legenda da MoedaPizza unificados entre as duas telas.
+3. `guiaXGame.js` — a aula "Entender sua pontuação" agora chama a conta do dia de "Human Token DO DIA" (não só "Human Token"), com uma nota explícita de que a conta OFICIAL DO CICLO é outra, com outra trava; mesma correção na pergunta frequente e no dicionário.
+4. `tiraDuvidas.js` — `fichaDeRegras()` ganhou a régua do ciclo inteira (Executivo Ideal, ligas, meta de vendas, a trava certa) ao lado da régua do dia que já existia, pra o atendente nunca mais ter que adivinhar.
+
+**Prova:** suíte 1701/1701 (nenhum teste quebrou com as strings novas), lint limpo, `npm run build` sem erro.
 
 ---
 
@@ -122,7 +148,7 @@
 
 **O que entra:** `travarDiamantePorEstudo(totalBruto, {estudoSemanaOk, estudoFdsOk})`, nova função única em `xgame.js` — sem qualquer um dos dois estudos (leitura de semana OU fim de semana) em dia, capa em `TRAVA_SEM_DIAMANTE` (19,99), NUNCA em `TRAVA_SEM_ESTUDO`. Aplicada nos 4 lugares que calculam liga de ciclo: `XGame.jsx`, `CrmMetodo.jsx` (painel pessoal + ranking, que ganhou a checagem da leitura de semana que faltava), `XGameVisaoExecutiva.jsx` (ranking) e `PainelCorporativo.jsx` (que não tinha trava NENHUMA — bônus da correção). Achado no caminho: o cartão pessoal de "Human Token" do ciclo usava `faixaToken()` (3 faixas, sem Diamante) em vez de `ligaDoToken()` (4 ligas) — ninguém via "💠 Diamante" na própria tela mesmo batendo o token; corrigido junto.
 
-**Prova:** `tests/xgame.test.mjs` — 5 testes novos pra `travarDiamantePorEstudo` (passa reto com os dois estudos ok; capa em 19,99 faltando qualquer um dos dois, nunca abaixo de 17,78; não mexe em total já abaixo do teto). Suíte completa incluída na prova do DIR-114 acima (a mesma rodada de testes/lint/build cobre as duas entradas).
+**Prova:** `tests/xgame.test.mjs` — 5 testes novos pra `travarDiamantePorEstudo` (passa reto com os dois estudos ok; capa em 19,99 faltando qualquer um dos dois, nunca abaixo de 17,78; não mexe em total já abaixo do teto). Suíte completa incluída na prova do DIR-114 acima (a mesma rodada de testes/lint/build cobre as duas entradas). *(Nota do DIR-117: essa função e essa liga foram renomeadas depois — hoje é `travarPlatinaPorEstudo`/LIGA PLATINA; a regra e os números continuam exatamente os mesmos.)*
 
 ---
 

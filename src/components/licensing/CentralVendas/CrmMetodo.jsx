@@ -289,8 +289,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // ══ 🎮 X-GAME por cima do Master Task (mesma tela, zero mudança de fluxo) ══
   // MvM do Dia começa em 10 e DECAI quando a tarefa passa da hora sem marcar;
-  // Human Token = MvM + constância do ciclo (teto 22,22; trava 17,77 sem a
-  // leitura em dia); cotação cai do dia 1 ao 22 ("antecipação é poder").
+  // Human Token = MvM + constância do ciclo (teto 22,22; trava 19,99 pro
+  // Platina, nunca pro Ouro, sem estudo — DIR-113); cotação cai do dia 1
+  // ao 22 ("antecipação é poder").
   const ehHoje = dia === hojeStr();
   const [agoraMin, setAgoraMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
   // 🕐 RELÓGIO DE TESTE (só super admin): o jogo inteiro obedece o horário
@@ -424,7 +425,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const estadoDaTarefa = (t) => (xgame ? xgame.tarefas.find((x) => x.id === t.id)?.estado : null);
   // 🏆 F4 — o HUMAN TOKEN OFICIAL do ciclo: 5 componentes (MvM da votação +
   // Produção + Real Time + Bônus + Vendas) somados sobre os 22 dias úteis,
-  // com a trava 17,77 quando a leitura do ciclo está em atraso.
+  // com a trava 19,99 (só pra Platina — DIR-113) quando a leitura do ciclo
+  // está em atraso.
   const ciclo = useMemo(() => {
     if (!xgame) return null;
     const r = tokenDoCiclo({
@@ -1824,7 +1826,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               <div className="rounded-2xl border-2 border-nz-borda bg-white p-4 sm:p-5 space-y-3" data-teste="moeda-pizza">
                 <div>
                   <p className="text-sm font-extrabold text-nz-tinta">🪙 Seu Human Token — de onde vem cada ponto dele</p>
-                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token de hoje, até o teto de {fmtToken(TOKEN_MAX)}</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">cada fatia é o quanto aquilo pesou de verdade no seu Human Token deste ciclo, até o teto de {fmtToken(TOKEN_MAX)}</p>
                   <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — por isso o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
                 </div>
                 <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />
@@ -1940,7 +1942,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <div className="pt-1.5 space-y-1">
                     <p>• <strong className="text-nz-tinta">O alvo</strong>: manter, ciclo após ciclo, MvM ≥ 80% (nota ≥ 8 na votação do grupo), Produção ≥ 90%, Real Time ≥ 90% (fazer no horário), Bônus/Estudo ≥ 80% e 100% da meta de vendas ({META_VENDAS_CICLO} no ciclo — as vendas REAIS da sua loja contam automático; elas pontuam aqui e remuneram pela comissão da plataforma).</p>
                     <p>• <strong className="text-nz-tinta">A formação</strong> dura 90 dias (3 meses ≈ 4 ciclos de 22 dias úteis). Aos 33% você está a 2 meses da votação extraordinária; aos 66%, a 1 mês; aos 88%, EM BREVE.</p>
-                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 17,77 · 🥇 ouro de 17,78 pra cima. Sem a leitura em dia, o token trava em 17,77.</p>
+                    <p>• <strong className="text-nz-tinta">A moeda</strong> é o Human Token (0 a 22,22): 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima. "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina. A Platina só abre batendo os dois portões (caráter e 100% da meta de vendas); Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.</p>
                     <p>• <strong className="text-nz-tinta">A votação do MvM</strong> é a ação mais importante do dia, junto com as vendas: das {horaDeMin(VOTACAO_INICIO_MIN)} às {horaDeMin(VOTACAO_IDEAL_FIM_MIN)} é a janela ideal, até {horaDeMin(VOTACAO_FIM_MIN)} ainda dá (última chance, sem desconto) — dê a nota de 1 a 10 nas 10 Virtudes pra cada colega da sua egrégora. Não votar em todos até {horaDeMin(VOTACAO_FIM_MIN)} zera o dia inteiro, dinheiro incluído.</p>
                     <p>• <strong className="text-nz-tinta">O dinheiro</strong> (X-Pay) vem das verbas que o admin definiu pra você, divididas pelas tarefas do dia — tarefa perdida é dinheiro perdido, e cada dia que passa a cotação cai: ANTECIPAÇÃO É PODER.</p>
                   </div>
