@@ -419,22 +419,30 @@ export function mvmManual(votos = []) {
   return { media, ranking, totalVotos: votos.length };
 }
 
-// ── 🏆 HUMAN TOKEN COMPLETO — os 5 componentes da planilha ──────────
-// F2 = MvM (peso 10) + Produção + Real Time + Bônus + Vendas, teto 22,22.
-// Pesos por perfil (planilha A19:A21): base 12,22 (estratégico/operacional)
-// ou 2,22 (comercial) repartida em 50% produção · 30% real time · 20% bônus.
-// Vendas: meta 4/mês; perfil comercial multiplica por PT VENDA 2,5.
-
+// ── 🏆 HUMAN TOKEN COMPLETO — os 5 componentes ──────────────────────
+// F2 = MvM + Produção (real time) + Desempenho + Bônus (estudo) + Vendas,
+// teto 22,22.
+//
+// 🔀 09/09/2026 — REPESAGEM, ordem do dono: "o real time não pode pesar
+// tanto... quero aumentar o peso de quem vende e quem estuda." A "Produção"
+// aqui é o que a planilha chama de "REAL TIME" (tarefa comprovada na hora)
+// — era 50% da base (6,11 pontos), virou peso fixo pequeno (1,5). O que
+// sobrou foi quase todo pro Bônus/Estudo (a leitura/estudo já cai em
+// categoria 'bonus' — ver categoriaDaTarefa) e um pouco pra Vendas.
+// "Desempenho" (nome interno: realtime — eficiência do X-Pay ganho/possível)
+// não mudou. Perfil comercial já é dominado pelo PT VENDA (2,5×) — a
+// trava de venda pra prata/ouro fica só pra quem já tem meta de venda,
+// por pedido do dono ("só pra quem já vende").
 export const META_VENDAS_CICLO = 4;
 
 export function pesosDoPerfil(perfil) {
-  const base = String(perfil || '').toLowerCase() === 'comercial' ? 2.22 : 12.22;
+  const comercial = String(perfil || '').toLowerCase() === 'comercial';
   return {
     mvm: MVM_MAX,
-    producao: base * 0.5,
-    realtime: base * 0.3,
-    bonus: base * 0.2,
-    ptVenda: String(perfil || '').toLowerCase() === 'comercial' ? 2.5 : 1,
+    producao: comercial ? 0.3 : 1.5,   // "real time" — não pode mais pesar 50%
+    realtime: comercial ? 0.666 : 3.67, // desempenho (X-Pay ganho/possível) — intocado
+    bonus: comercial ? 1.25 : 5.55,     // estudo/leitura mora aqui — o grande ganhador
+    ptVenda: comercial ? 2.5 : 1.5,     // sobe um pouco pra quem não é comercial também
   };
 }
 

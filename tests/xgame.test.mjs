@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   podeSerVotado, votouEmTodosOsColegas, resumoDoDia, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, MVM_MAX,
-  janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo,
+  janelaVotacaoAberta, naJanelaIdeal, horaDeMin, tokenDoCiclo, pesosDoPerfil,
 } from '../src/lib/xgame.js';
 
 test('horaDeMin: minutos vira "17h" ou "21h30" (sem zero à esquerda, estilo do app)', () => {
@@ -132,6 +132,28 @@ test('tokenDoCiclo: com voto de verdade, o MVM vem da votação — o mvm_dia au
   });
   assert.equal(comVoto.taxas.mvm, 0.8, 'usa a votação (8/10), ignora o mvm_dia automático');
   assert.equal(comVoto.componentes.mvm, 8, 'peso do MVM é 10, 80% disso é 8 pontos');
+});
+
+// 🔀 09/09/2026 — dono: "o real time não pode pesar tanto... quero aumentar
+// o peso de quem vende e quem estuda." Trava o resultado da repesagem: real
+// time (produção) vira pequeno, o estudo (bônus) vira o grande peso depois
+// do MvM, e vendas sobe um pouco pra quem não é comercial.
+test('pesosDoPerfil: real time pequeno, estudo grande — a repesagem pedida pelo dono', () => {
+  const p = pesosDoPerfil('estrategico');
+  assert.equal(p.mvm, 10, 'MvM continua o maior peso sozinho');
+  assert.equal(p.producao, 1.5, 'real time não pesa mais 50% da base — agora é só 1,5 ponto');
+  assert.equal(p.bonus, 5.55, 'estudo/leitura (categoria bonus) vira o segundo maior peso');
+  assert.ok(p.bonus > p.producao, 'estudo tem que pesar mais que o real time, não menos');
+  assert.equal(p.realtime, 3.67, 'desempenho (X-Pay ganho/possível) não mudou nesta repesagem');
+  assert.equal(p.ptVenda, 1.5, 'vendas sobe um pouco pra quem não é comercial também');
+  const total = p.mvm + p.producao + p.realtime + p.bonus + p.ptVenda;
+  assert.ok(Math.abs(total - 22.22) < 0.01, `soma dos pesos tem que bater com o teto (22,22), deu ${total}`);
+});
+
+test('pesosDoPerfil: perfil comercial mantém vendas como o principal, real time reduzido igual', () => {
+  const p = pesosDoPerfil('comercial');
+  assert.equal(p.ptVenda, 2.5, 'comercial continua dominado pelas vendas — a trava de venda dele já é isso');
+  assert.ok(p.producao < p.bonus, 'mesmo no comercial, real time reduzido não pode pesar mais que o estudo');
 });
 
 // ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
