@@ -76,11 +76,17 @@ const semAcentoArquivo = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ
  * producao    = producaoDaSemana(...) → {total, concluidas, pct, semAgendar, atrasadas}
  * semaforo    = {cor, motivos}
  */
-export function relatorioDoExecutivo({ pessoa, periodo, habitos = [], metas = [], demandas = [], producao = null, semaforo = null, hojeISO, geradoPor = null, mes } = {}) {
+export function relatorioDoExecutivo({ pessoa, periodo, habitos = null, metas = [], demandas = [], producao = null, semaforo = null, hojeISO, geradoPor = null, mes } = {}) {
   const nome = nomeBonito(pessoa?.nome);
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const mesRef = mes || hoje.slice(0, 7);
-  const feitos = habitos.filter((h) => h.fez).length;
+  // 📄 09/09/2026 — DIR-108: `habitos` vira null (não array vazio) quando
+  // quem chamou não tem essa conta feita nesta tela — é o caso do ADM
+  // X-Game, que não computa os 8 Hábitos. Mostrar "0/8" aí seria dizer
+  // que a pessoa não fez NADA, quando é só um dado que não foi lido.
+  const temHabitos = Array.isArray(habitos);
+  const listaHabitos = temHabitos ? habitos : [];
+  const feitos = listaHabitos.filter((h) => h.fez).length;
   const periodoRotulo = !periodo || periodo.tipo === 'hoje' ? `hoje, ${fmtDiaLongo(hoje)}` : `${periodo.rotulo} (${fmtDia(periodo.de)} a ${fmtDia(periodo.ate)})`;
 
   const recebidas = demandas.filter((d) => d.status === 'recebida');
@@ -94,11 +100,11 @@ export function relatorioDoExecutivo({ pessoa, periodo, habitos = [], metas = []
   });
 
   const blocos = [
-    {
+    ...(temHabitos ? [{
       id: 'habitos', titulo: `Os 8 Hábitos do Sucesso · ${periodoRotulo}`,
       resumo: `${feitos} de 8`,
-      linhas: habitos.map((h) => ({ n: h.n, texto: `${h.n}. ${h.nome}`, apoio: h.texto, cor: h.fez ? (h.fraco ? 'amarelo' : 'verde') : 'vermelho', fez: h.fez })),
-    },
+      linhas: listaHabitos.map((h) => ({ n: h.n, texto: `${h.n}. ${h.nome}`, apoio: h.texto, cor: h.fez ? (h.fraco ? 'amarelo' : 'verde') : 'vermelho', fez: h.fez })),
+    }] : []),
     {
       id: 'metas', titulo: `Metas de ${mesRef.slice(5)}/${mesRef.slice(0, 4)}`,
       resumo: metas.length ? `${metas.filter((m) => m.noRitmo).length} de ${metas.length} no ritmo` : 'sem meta definida',
@@ -129,7 +135,7 @@ export function relatorioDoExecutivo({ pessoa, periodo, habitos = [], metas = []
     pessoa: { id: pessoa?.id, nome, posicao: pessoa?.posicao || null, funcao: pessoa?.funcaoCurta || null, fixo: pessoa?.fixo ? fmtReais(pessoa.fixo) : null },
     semaforo: semaforo ? { cor: semaforo.cor, texto: semaforo.motivos?.length ? semaforo.motivos.join(' · ') : 'tudo em dia' } : null,
     numeros: [
-      { rotulo: 'Hábitos', valor: `${feitos}/8`, cor: feitos >= 6 ? 'verde' : feitos >= 3 ? 'amarelo' : 'vermelho' },
+      ...(temHabitos ? [{ rotulo: 'Hábitos', valor: `${feitos}/8`, cor: feitos >= 6 ? 'verde' : feitos >= 3 ? 'amarelo' : 'vermelho' }] : []),
       { rotulo: 'Metas no ritmo', valor: metas.length ? `${metas.filter((m) => m.noRitmo).length}/${metas.length}` : '—', cor: !metas.length ? 'cinza' : metas.every((m) => m.noRitmo) ? 'verde' : 'amarelo' },
       { rotulo: 'Demandas', valor: producao ? `${producao.concluidas}/${producao.total}` : `${concluidas.length}/${demandas.length}`, cor: (producao?.atrasadas || 0) ? 'vermelho' : 'azul' },
       { rotulo: 'Sem agendar', valor: String(recebidas.length), cor: recebidas.length ? 'amarelo' : 'verde' },

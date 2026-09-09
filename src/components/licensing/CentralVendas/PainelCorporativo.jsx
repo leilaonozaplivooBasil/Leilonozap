@@ -144,7 +144,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
   // 📄 o relatório desta pessoa, pronto pro PDF
   const relatorio = useMemo(() => (!pessoa || carregando ? null : relatorioDoExecutivo({
     pessoa: { id: pessoa.id, nome: pessoa.nome, posicao: pessoa.nivel ? getLevel(pessoa.nivel).name : null, funcaoCurta: pessoa.funcaoCurta, fixo: pessoa.fixo },
-    periodo, habitos: habitos || [], metas: progresso,
+    periodo, habitos, metas: progresso,
     demandas: demandas.map((d) => ({ ...d, estado: estadoDaDemanda(d, { tarefas, cards, hojeISO: hoje }) })),
     producao: minhaProducao, semaforo: sem, hojeISO: hoje, mes, geradoPor: currentUser?.full_name || null,
   })), [pessoa, carregando, periodo, habitos, progresso, demandas, tarefas, cards, hoje, minhaProducao, sem, mes, currentUser?.full_name]);

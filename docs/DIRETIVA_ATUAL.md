@@ -12,6 +12,44 @@
 
 ---
 
+## DIR-108 — o PDF compartilhável do Executivo chega no ADM X-Game
+
+**Emitida por:** dono (09/09/2026), mesma mensagem do DIR-107: *"eu tinha
+um compartilhamento de PDF em algum lugar, né, um compartilhamento
+desse, de PDF dos números da pessoa, que eu não estou vendo digital, e
+você tem que ver onde está, e também tem que puxar, duplicar esse
+compartilhamento aqui dentro do painel administrativo da XGame."*
+
+**Onde estava:** `PdfExecutivo.jsx`/`relatorioExecutivo.js` (06/09/2026,
+"quero geração de PDF de cada executivo, pra ser compartilhado") — já
+existia, mas só dentro do X-Performance (`PerformanceEquipe.jsx` /
+`PainelCorporativo.jsx`), nunca no ADM X-Game.
+
+**O que entra:**
+1. O Quadro Geral (`XPerformanceGestao.jsx`) ganhou o botão **PDF** ao
+   lado de "cobrar no WhatsApp", pra qualquer pessoa aberta — reusando o
+   MESMO `PdfExecutivo`/`relatorioDoExecutivo` de sempre, sem duplicar
+   lógica: um `PainelCorporativo` oculto (`embutido`, escondido com
+   `hidden`) computa o relatório da pessoa via `onRelatorio`, exatamente
+   como o X-Performance já fazia.
+2. **Correção de bônus encontrada no caminho**: como o ADM X-Game não
+   calcula os 8 Hábitos, `relatorioDoExecutivo` mostrava "Hábitos 0/8" —
+   dado errado, não "não calculado". `habitos` agora é `null` por padrão
+   (não mais `[]`): `null` omite o bloco/número de Hábitos inteiro;
+   `[]` (quando alguém de fato computou e ninguém fez nada) continua
+   mostrando "0/8" normalmente. Isso também corrigiu o mesmo problema que
+   já existia silenciosamente no PDF "da própria pessoa" dentro do
+   X-Performance (`PainelCorporativo` sem `habitos` passado).
+
+**Prova:** `tests/relatorioExecutivo.test.mjs` — 1 teste novo trava a
+distinção `null` (omite) × `[]` (mostra 0/8); o teste existente de
+"relatório não quebra sem nada" foi ajustado pro novo comportamento
+correto. Suíte 1623/1623, lint limpo, `npm run build` sem erro.
+Verificação em navegador não rodou nesta rodada — recomendado gerar um
+PDF ao vivo do Quadro Geral pra conferir o layout final.
+
+---
+
 ## DIR-107 — o aviso da Fila do Pronto passa a comunicar por dentro (e pede resposta por dentro)
 
 **Emitida por:** dono (09/09/2026), depois de testar o DIR-105 ao vivo:
