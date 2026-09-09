@@ -33,6 +33,7 @@ import {
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
   estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, ligaComPortoesDoCiclo, PISO_CARATER_PLATINA,
   ofensiva, OFENSIVA_META, conquistas, missoesDaSemana, inicioDaSemana, ligaDoToken, proximaLiga,
+  moedaModelo,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
@@ -1829,6 +1830,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <p className="text-[11px] font-semibold text-nz-verde mt-1">"Recrutamos caráter e treinamos habilidade" — por isso o MvM é portão, não só peso: abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina.</p>
                 </div>
                 <MoedaPizza componentes={ciclo.componentes} total={ciclo.total} max={TOKEN_MAX} liga={ciclo.liga} />
+              </div>
+            )}
+
+            {/* 🪙 09/09/2026 — dono: "a moeda tem que estar ali, pra ele se
+                inspirar nela cheia, e entender como ela fica cheia, junto com
+                a dele que está sendo preenchida." A moeda-modelo (`moedaModelo`,
+                xgame.js) ao lado da moeda real de cima — mesmo desenho, sempre
+                no teto, pra servir de referência de "como ela fica cheia". */}
+            {xgame && ciclo && mostrarPainel && (
+              <div className="rounded-2xl border-2 border-dashed border-nz-ouro-claro bg-nz-ouro-fundo p-4 sm:p-5 space-y-3" data-teste="moeda-pizza-modelo">
+                <div>
+                  <p className="text-sm font-extrabold text-nz-tinta">🏆 O Modelo — pra onde você está indo</p>
+                  <p className="text-[11px] text-nz-tinta-fraca mt-0.5">a mesma moeda, cheia — a referência de como ela fica quando cada fatia bate no teto</p>
+                </div>
+                <MoedaPizza componentes={moedaModelo('estrategico')} total={TOKEN_MAX} max={TOKEN_MAX} liga={ligaDoToken(TOKEN_MAX)} />
               </div>
             )}
 
