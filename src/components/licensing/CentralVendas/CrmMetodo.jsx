@@ -38,18 +38,16 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, deveAvisarRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import TourGuiado from './TourGuiado';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
-import { isVendaReal } from '@/lib/dinheiroReal';
-import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
+import { vendasDaPessoa } from '@/lib/vendasDoCiclo';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
-import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import { BarraProgresso } from './VerificacaoUI';
 import EntradaComDestinos from './EntradaComDestinos';
@@ -382,12 +380,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         .gte('fechado_em', `${ini}T00:00:00`),
     ]).then(([{ data: sales, error: e1 }, { data: oportunidades, error: e2 }]) => {
       if (e1 || e2) { setVendasCiclo(null); return; }
-      const pagas = (sales || []).filter(isSalePago);
-      const reais = (sales || []).filter(isVendaReal);
-      const aporteExterno = (oportunidades || [])
-        .filter((o) => ehFechada(o) && aporteExternoValido(o))
-        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
-      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+      // 💰 09/09/2026 — a fórmula saiu daqui pro src/lib/vendasDoCiclo.js. Ela
+      // não mudou: é a MESMA conta, agora num lugar só, porque a Visão
+      // Executiva do time precisa dela também (achado da auditoria noturna — o
+      // ranking via uma fonte de vendas diferente da que a pessoa via no
+      // próprio painel). Fórmula duplicada é como as duas telas se separaram.
+      setVendasCiclo(vendasDaPessoa({ sales, oportunidades }));
     });
   }, [painel, uid, cicloConfig]);
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
@@ -885,7 +883,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
         tempo_tela_s: tempoTelaS || 0,
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
-        motivo_gestor: vereditoAmbiente.motivo,
+        // 🏷️ 09/09/2026 — auditoria noturna: aqui ficava
+        // `motivo_gestor: vereditoAmbiente.motivo`. Nenhum humano decidiu
+        // esta reprovação — foi a IA, sozinha (DIR-125). E `motivo_gestor` é
+        // lido na tela com a etiqueta "gestor:" (XGameAdmin) e "↩"
+        // (Comprovacoes), ou seja: o histórico dizia que uma pessoa julgou o
+        // ambiente de outra quando ninguém julgou. Quem lê isso semanas
+        // depois — a própria pessoa ou a gestão — tira a conclusão errada.
+        //
+        // Nada se perde tirando: o texto da IA já viaja em `veredito_ia.motivo`
+        // e a tela já o mostra rotulado como "IA:" (Comprovacoes.jsx:231).
+        // Antes, aparecia duas vezes — uma delas com o crédito trocado.
         veredito_ia: vereditoAmbiente,
       };
       try {
