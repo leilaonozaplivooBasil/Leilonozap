@@ -30,7 +30,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import { supabase } from '@/api/supabaseClient';
@@ -1538,6 +1538,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
                 <p className="text-sm font-extrabold text-red-700">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
                 <p className="text-[11px] text-red-600 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
+              </div>
+            )}
+
+            {/* 🟡 09/09/2026 — DIR-105: 1º-3º atraso é só aviso/treino (perde
+                pontos, resto do dia intacto) — só o 4º em diante vira o zero
+                radical acima. */}
+            {xgame && ehHoje && xgame.em_aviso_pronto && mostrarPainel && (
+              <div className="rounded-lg border-2 border-amber-500 bg-amber-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-amber-700">⚠️ AVISO {xgame.avisos_pronto + 1} DE {AVISOS_ANTES_DE_ZERAR} — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
+                <p className="text-[11px] text-amber-700/90 mt-0.5">
+                  Você perdeu pontos hoje por isso, mas MvM, Human Token e X-Pay continuam de pé. {xgame.avisos_pronto + 1 >= AVISOS_ANTES_DE_ZERAR
+                    ? 'Da próxima vez o dia INTEIRO zera — sem exceção.'
+                    : `Da próxima vez o aviso sobe pra ${xgame.avisos_pronto + 2} de ${AVISOS_ANTES_DE_ZERAR}. No ${AVISOS_ANTES_DE_ZERAR + 1}º, zera tudo.`}
+                </p>
               </div>
             )}
 

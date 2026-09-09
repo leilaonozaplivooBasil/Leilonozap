@@ -12,6 +12,63 @@
 
 ---
 
+## DIR-105 — Fila do Pronto: régua graduada de avisos (3 chances antes de zerar) + botões avisar/excluir
+
+**Emitida por:** dono (09/09/2026), olhando dois atrasos de "Emannuel Lima"
+na Fila do Pronto: *"tem que me dar a opção de zerar o ponto da pessoa,
+mas antes de zerar o ponto dela, eu dar uma cobrada o primeiro aviso.
+Essa pessoa tem que ter três avisos. Ela pode perder até três pontos. Pra
+treinar ela. A partir do quarto ponto que ela não entregar, ela vai zerar
+a pontuação (...) eu aqui no Admin tenho que ter [um botão], avisar ela
+de mandar um pronto, ela não retornou, e aí eu retorno pra ela e falo:
+olha, você não me deu pronto, estou te avisando a primeira vez. A partir
+do terceiro pronto que eu te pedi você não voltar, ela vai entrar a
+mensagem do CEO pra ela (...) você não me deu nenhum botão aqui no ADM,
+eu já tinha te pedido isso. E também eu tenho que ter o botão de excluir,
+porque eu posso desistir desse pronto."*
+
+**Data:** 09/09/2026.
+
+**O que entra:**
+1. **Banco** — `xgame_participantes.avisos_pronto` (contador, default 0,
+   reset manual pelo admin — o dono foi explícito: *"depois que ela
+   aprendeu, eu não posso mais ficar avisando toda hora"*, ou seja, quem
+   decide quando zerar o contador é o admin, não o sistema sozinho) e
+   `metodo_tarefas.aviso_pronto_em` (marca que ESSE atraso específico já
+   foi avisado, pra não avisar a mesma tarefa duas vezes).
+2. **`src/lib/xgame.js`** — a régua radical do DIR-102 (zerar MvM, Human
+   Token, pontos e X-Pay do dia inteiro) só entra a partir do **4º** aviso
+   (`avisos_pronto >= 3`). Do 1º ao 3º, só desconta até 3 pontos — o resto
+   do dia (MvM, Human Token, X-Pay) fica intacto. Novos campos no retorno:
+   `em_aviso_pronto` (true nos 3 primeiros) e `avisos_pronto` (o contador
+   atual, pra tela mostrar "aviso X de 3").
+3. **A Fila do Pronto** (`XPerformanceGestao.jsx`) ganhou os dois botões
+   que faltavam num item atrasado:
+   - **avisar** — soma 1 no contador da pessoa, marca a tarefa como avisada
+     e abre o WhatsApp com uma mensagem pronta: 1º e 2º aviso é cobrança
+     normal ("estou te avisando..."); do 3º em diante vira a "mensagem do
+     CEO" (tom sério, avisando que o PRÓXIMO atraso zera tudo).
+   - **excluir** — apaga a tarefa (mesmo mecanismo do `desfazer` que já
+     existia pra Distribuir Tarefa) — "desistir desse pronto", sem afetar
+     pontuação.
+   O texto de aviso embaixo de cada item atrasado agora mostra quantos
+   avisos já foram dados e se já é treino ou já zerou o dia.
+4. Banner âmbar novo em `XGame.jsx` e `CrmMetodo.jsx` pro 1º-3º aviso
+   ("AVISO X DE 3" — perdeu pontos, mas MvM/Human Token/X-Pay de pé),
+   distinto do banner vermelho "DIA ZERADO" que continua valendo do 4º
+   aviso em diante.
+
+**Prova:** `tests/xgame.test.mjs` — 2 testes novos travam a régua graduada
+(0/1/2 avisos só descontam pontos, mantendo MvM/Token/X-Pay intactos; 3+
+avisos mantém o zero radical de sempre). Suíte 1612/1612, lint limpo,
+`npm run build` sem erro. Verificação visual dos botões não rodou em
+navegador nesta rodada (JSX segue exatamente o padrão já provado dos
+botões conferir/devolver e do link de WhatsApp já existente em
+`QuadroGeralTopo`) — recomendado revisar ao vivo na próxima janela de
+teste com o time.
+
+---
+
 ## DIR-104 — corrige sincronismo: Human Token e MvM do Dia na XGame.jsx usavam o número errado
 
 **Emitida por:** dono (09/09/2026), olhando o painel da Beatriz Sant'anna

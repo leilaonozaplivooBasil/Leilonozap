@@ -561,6 +561,12 @@ export function inicioCicloOficial(configISO, hoje = new Date()) {
 const PONTOS_TAREFA = 10;
 const BONUS_NO_HORARIO = 5;
 
+// 🟡 09/09/2026 — DIR-105: quantos avisos de atraso na Fila do Pronto a
+// pessoa já tem antes da régua radical (zerar o dia) entrar. Do 1º ao 3º
+// aviso ela só perde pontos (treino); do 4º em diante zera tudo.
+export const AVISOS_ANTES_DE_ZERAR = 3;
+export const PENALIDADE_AVISO_PRONTO = 3;
+
 /**
  * Pontos do dia: 10 por tarefa feita (+5 quando `feito_no_horario` — na v1,
  * feita enquanto o estado ainda era AGORA/futuro é aproximado por `feito`
@@ -598,17 +604,25 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
   const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
   // 📉 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
-  // ele perder o dinheiro, isso tem que tirar pontos dele." Em vez de
-  // inventar um desconto novo, reaproveita a MESMA régua radical do não
-  // votar — zera MvM, Human Token, pontos e X-Pay do dia — porque é a
-  // punição mais séria que o jogo já tem, e ela já é sentida de verdade.
-  // Só conta tarefa de GESTÃO (origem 'xperf', com prazo_em) que passou do
-  // prazo sem o pronto; a Master Task da rotina não tem prazo_em. E só
-  // julga em tempo real (`votouEmTodos !== null` é a MESMA régua que o
-  // não-votar já usa pra saber se está olhando hoje ou um dia passado) —
-  // um dia histórico já fechou nos próprios registros, não se recalcula.
-  const perdeuPorAtrasoPronto = votouEmTodos !== null
+  // ele perder o dinheiro, isso tem que tirar pontos dele." Só conta tarefa
+  // de GESTÃO (origem 'xperf', com prazo_em) que passou do prazo sem o
+  // pronto; a Master Task da rotina não tem prazo_em. E só julga em tempo
+  // real (`votouEmTodos !== null` é a MESMA régua que o não-votar já usa
+  // pra saber se está olhando hoje ou um dia passado) — um dia histórico já
+  // fechou nos próprios registros, não se recalcula.
+  //
+  // 🟡 09/09/2026 — DIR-105, dono amoleceu a régua: "ela pode perder até
+  // três pontos [nos primeiros três atrasos], pra treinar ela. A partir do
+  // quarto ponto que ela não entregar, ela vai zerar a pontuação." Os 3
+  // primeiros avisos (contador `avisos_pronto`, dado manualmente pelo botão
+  // "avisar" do ADM na Fila do Pronto) só descontam PENALIDADE_AVISO_PRONTO
+  // pontos — MvM, Human Token e X-Pay ficam intactos. Só a partir do 4º
+  // aviso a régua radical do DIR-102 volta a valer (zera o dia inteiro).
+  const tarefaAtrasadaPronto = votouEmTodos !== null
     && tarefas.some((t) => t?.origem === 'xperf' && t?.prazo_em && !t?.feito && new Date(t.prazo_em) < hoje);
+  const avisosPronto = Number(participante?.avisos_pronto) || 0;
+  const perdeuPorAtrasoPronto = tarefaAtrasadaPronto && avisosPronto >= AVISOS_ANTES_DE_ZERAR;
+  const emAvisoPronto = tarefaAtrasadaPronto && !perdeuPorAtrasoPronto;
   const diaZerado = perdeuPorNaoVotar || perdeuPorAtrasoPronto;
   const mvm = diaZerado ? 0 : mvmDoDia(tarefas, agoraMin);
   const leituraHoje = comEstado.some((t) => ehTarefaDeEstudo(t.titulo) && t.feito);
@@ -627,7 +641,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     xpay.ganho = 0;
     xpay.emJogo = 0;
   }
-  const pontos = diaZerado ? 0 : pontosDoDia(comEstado, cotacao);
+  const pontosBase = diaZerado ? 0 : pontosDoDia(comEstado, cotacao);
+  const pontos = emAvisoPronto ? Math.max(0, pontosBase - PENALIDADE_AVISO_PRONTO) : pontosBase;
   // Contagens por categoria do dia — é isso que o snapshot grava nos
   // `detalhes` pro tokenDoCiclo somar o ciclo inteiro (F4).
   const cats = comEstado.map((t) => categoriaDaTarefa(t));
@@ -667,6 +682,8 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
     frase_mvm: perdeuPorNaoVotar ? 'ZEROU O DIA POR NÃO VOTAR' : perdeuPorAtrasoPronto ? 'ZEROU O DIA POR ATRASO NA TAREFA DA GESTÃO' : fraseDoMvm(mvm),
     perdeu_por_nao_votar: perdeuPorNaoVotar,
     perdeu_por_atraso_pronto: perdeuPorAtrasoPronto,
+    em_aviso_pronto: emAvisoPronto,
+    avisos_pronto: avisosPronto,
     valores,
     xpay,
     contagens,

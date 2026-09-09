@@ -162,19 +162,51 @@ test('pesosDoPerfil: perfil comercial mantém vendas como o principal, real time
 // ele perder o dinheiro, isso tem que tirar pontos dele." Reaproveita a
 // MESMA régua radical do não-votar: uma tarefa de gestão (origem 'xperf',
 // com "pronto até") vencida sem o pronto zera o dia inteiro.
-test('resumoDoDia: tarefa da gestão (xperf) vencida sem o pronto zera o dia — mesmo radical do não-votar', () => {
+// 🟡 09/09/2026 — DIR-105 amoleceu a régua: "ela pode perder até três
+// pontos [nos 3 primeiros atrasos], pra treinar ela. A partir do quarto
+// ponto que ela não entregar, ela vai zerar a pontuação." Do 1º ao 3º
+// aviso (`avisos_pronto`, dado pelo botão "avisar" do ADM) só desconta
+// pontos; só o 4º aviso em diante zera o dia inteiro (a régua do DIR-102).
+test('resumoDoDia: 1º-3º atraso na Fila do Pronto (poucos avisos) so desconta pontos', () => {
   const agora = new Date('2026-09-08T20:00:00');
   const vencida = [
     ...TAREFAS,
     { id: 'x1', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-08T18:00:00' },
   ];
-  const r = resumoDoDia({ tarefas: vencida, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true });
+  // linha de base: MESMA lista de tarefas, mas dia histórico (votouEmTodos
+  // null) não julga atraso nenhum — dá o mvm/token/pontos sem NENHUMA
+  // punição de atraso, pra comparar contra o modo "aviso/treino".
+  const semPenalidade = resumoDoDia({ tarefas: vencida, agoraMin: 12 * 60, hoje: agora, votouEmTodos: null });
+  for (const avisos of [0, 1, 2]) {
+    const r = resumoDoDia({ tarefas: vencida, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true, participante: { avisos_pronto: avisos } });
+    assert.equal(r.perdeu_por_atraso_pronto, false, `com ${avisos} avisos ainda nao zera`);
+    assert.equal(r.em_aviso_pronto, true, `com ${avisos} avisos esta em modo aviso/treino`);
+    assert.equal(r.avisos_pronto, avisos);
+    assert.equal(r.mvm_dia, semPenalidade.mvm_dia, 'MvM nao pune nos 3 primeiros avisos');
+    assert.equal(r.token_dia, semPenalidade.token_dia, 'Human Token nao pune nos 3 primeiros avisos');
+    assert.equal(r.xpay.perdido, semPenalidade.xpay.perdido, 'X-Pay nao pune nos 3 primeiros avisos');
+    assert.equal(r.pontos, Math.max(0, semPenalidade.pontos - 3), 'perde ate 3 pontos de treino');
+    assert.doesNotMatch(r.frase_mvm, /ZEROU/);
+  }
+});
+
+test('resumoDoDia: 4o aviso em diante na Fila do Pronto zera o dia inteiro — mesmo radical do não-votar', () => {
+  const agora = new Date('2026-09-08T20:00:00');
+  const vencida = [
+    ...TAREFAS,
+    { id: 'x1', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-08T18:00:00' },
+  ];
+  const r = resumoDoDia({ tarefas: vencida, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true, participante: { avisos_pronto: 3 } });
   assert.equal(r.perdeu_por_atraso_pronto, true);
+  assert.equal(r.em_aviso_pronto, false, 'nao e mais so aviso — ja e o zero radical');
   assert.equal(r.perdeu_por_nao_votar, false, 'a causa é o atraso, não o voto — os dois campos não se confundem');
   assert.equal(r.mvm_dia, 0);
   assert.equal(r.token_dia, 0);
   assert.equal(r.pontos, 0);
   assert.match(r.frase_mvm, /ATRASO/);
+
+  const maisAvisos = resumoDoDia({ tarefas: vencida, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true, participante: { avisos_pronto: 7 } });
+  assert.equal(maisAvisos.perdeu_por_atraso_pronto, true, 'acima de 3 avisos continua zerando');
 });
 
 test('resumoDoDia: tarefa xperf ainda dentro do prazo, ou já com o pronto dado, não pune', () => {
@@ -183,6 +215,7 @@ test('resumoDoDia: tarefa xperf ainda dentro do prazo, ou já com o pronto dado,
   const jaPronta = [...TAREFAS, { id: 'x3', titulo: 'Enviar relatório', hora: '10:00', feito: true, origem: 'xperf', prazo_em: '2026-09-08T09:00:00' }];
   assert.equal(resumoDoDia({ tarefas: dentroDoPrazo, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true }).perdeu_por_atraso_pronto, false, 'ainda não venceu');
   assert.equal(resumoDoDia({ tarefas: jaPronta, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true }).perdeu_por_atraso_pronto, false, 'já deu o pronto — feito é feito');
+  assert.equal(resumoDoDia({ tarefas: dentroDoPrazo, agoraMin: 12 * 60, hoje: agora, votouEmTodos: true }).em_aviso_pronto, false, 'sem atraso nao entra nem no modo aviso');
 });
 
 test('resumoDoDia: tarefa da ROTINA (sem origem xperf, sem prazo_em) vencida não conta como atraso da gestão', () => {
@@ -196,6 +229,7 @@ test('resumoDoDia: dia histórico (votouEmTodos null) não recalcula o atraso �
   const vencida = [...TAREFAS, { id: 'x4', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-05T18:00:00' }];
   const r = resumoDoDia({ tarefas: vencida, agoraMin: 24 * 60, hoje: agora, votouEmTodos: null });
   assert.equal(r.perdeu_por_atraso_pronto, false);
+  assert.equal(r.em_aviso_pronto, false);
 });
 
 // 📊 09/09/2026 — dono: "eu quero esse alcance" (o % de reunião também na
