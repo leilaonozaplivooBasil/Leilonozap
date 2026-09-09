@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, Settings2, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -14,7 +14,7 @@ import {
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
   ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
-  reunioesEmpresaDoDia, DIAS_SEMANA, DURACOES_REUNIAO, duracaoEntreHoras, horaFinal,
+  reunioesEmpresaDoDia, DIAS_SEMANA,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
@@ -89,6 +89,13 @@ Estou construindo um negócio de leilões e loja com preço de fábrica que est�
 e queria te mostrar uma possibilidade — não é promessa, é projeto sério, com números abertos.
 Topa uma conversa de 45 minutos essa semana? Tenho agenda {dia} às {hora}."`;
 
+// 📜 DIR-112 (09/09/2026) — "o papel vem pra frente": o {nome} do script vira
+// o primeiro nome de verdade da pessoa sendo contatada, na hora de ligar.
+const personalizarScript = (texto, nomeCompleto) => {
+  const primeiroNome = (nomeCompleto || '').trim().split(' ')[0] || 'essa pessoa';
+  return String(texto || '').replace(/\{\s*nome\s*\}/gi, primeiroNome);
+};
+
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
@@ -124,15 +131,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato, editar:registro} = editar (DIR-50); {contato:null} = agendar livre
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
   const [reunioesEmpresa, setReunioesEmpresa] = useState([]); // 🏛️ DIR-52
-  const [novaEmpresa, setNovaEmpresa] = useState({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
-  // 🏛️ 07/09/2026 — dono: a reunião da empresa já aparece hoje na "Minha
-  // agenda de hoje" (🏛️ destacada); ter a MESMA reunião de novo, sempre
-  // aberta, logo abaixo, lia como duplicado. Fica fechado por padrão —
-  // "cadastra uma vez" não precisa ficar exposto o tempo todo.
-  const [gestaoEmpresaAberta, setGestaoEmpresaAberta] = useState(false);
   const [googleEventos, setGoogleEventos] = useState(null); // null = agenda Google não conectada
   const [googleConectando, setGoogleConectando] = useState(false);
   const [googleToken, setGoogleToken] = useState(null); // token da SESSÃO (nunca vai pro servidor)
+  // 📜 DIR-112 (09/09/2026) — dono, ao vivo: "imagina ele com fone, começando
+  // a fazer a ligação... ele clica, esse papel vem pra frente." O script vira
+  // um cartão que aparece na FRENTE de tudo quando a pessoa vai contatar —
+  // ela lê enquanto liga, em vez de decorar antes.
+  const [chamadaAberta, setChamadaAberta] = useState(null); // {contato, wa} ou null
+  const [dicaScript, setDicaScript] = useState(null); // {pontos_fortes, dica} do treinador de IA
+  const [pedindoDica, setPedindoDica] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -177,6 +185,42 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       toast.error('Erro ao salvar — a migração do Método já foi colada no banco?');
       return false;
     } finally { setSalvando(false); }
+  };
+
+  // 📜 DIR-112 (09/09/2026) — dono, ao vivo: "isso gerar uma pontuação... é
+  // uma vez só." `script_pontuado_em` trava o "uma vez só": a partir da
+  // PRIMEIRA vez que o script deixa de ser vazio/rascunho (20+ caracteres),
+  // salvar de novo só atualiza o texto — não conta ponto de novo. Isto NÃO
+  // mexe no motor de peso/pagamento (xgame.js): é um reconhecimento e um
+  // registro do "quando", não um valor em dinheiro — dado o dinheiro real
+  // envolvido no X-Pay, essa conta pede uma rodada própria, com o dono.
+  const salvarScript = async () => {
+    const primeiraVezDeVerdade = script.trim().length >= 20 && !perfil?.script_pontuado_em;
+    const ok = await salvarPerfil(primeiraVezDeVerdade ? { script, script_pontuado_em: new Date().toISOString() } : { script });
+    if (ok && primeiraVezDeVerdade) {
+      toast.success('🎉 Script registrado! Isso já conta ponto pra você na hora do contato — capriche a cada revisão.');
+    }
+  };
+
+  // 💡 o "validador" pedido pelo dono: ajuda a MELHORAR o script da própria
+  // pessoa — nunca escreve por ela (ver api/functions/scriptContatoCoach.js).
+  const pedirDicaDoScript = async () => {
+    if (script.trim().length < 15) return;
+    setPedindoDica(true); setDicaScript(null);
+    try {
+      const r = await fetch('/api/functions/scriptContatoCoach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!j?.dica) { toast.error(j?.error || 'Não consegui pensar numa dica agora — tenta de novo?'); return; }
+      setDicaScript({ pontos_fortes: j.pontos_fortes || '', dica: j.dica });
+    } catch {
+      toast.error('Deu erro ao pedir a dica — tenta de novo em instantes?');
+    } finally {
+      setPedindoDica(false);
+    }
   };
 
   // 🌟 DIR-44 — o quadro dos sonhos por horizonte
@@ -1336,36 +1380,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       .catch(() => setReunioesEmpresa([])); // tabela ainda sem migração → lista vazia, sem quebrar
   }, [painel]);
 
-  // DIR-54 — "até às" é só uma outra forma de dizer a duração: convertida
-  // ANTES de gravar, o banco guarda sempre `duracao_min` (fonte única).
-  const duracaoEmpresaMin = novaEmpresa.modoFim === 'fim'
-    ? duracaoEntreHoras(novaEmpresa.hora, novaEmpresa.hora_fim)
-    : Number(novaEmpresa.duracao_min) || 60;
-
-  const criarReuniaoEmpresa = async () => {
-    if (!novaEmpresa.titulo.trim() || !novaEmpresa.hora || !duracaoEmpresaMin) return;
-    setSalvando(true);
-    try {
-      const linha = {
-        titulo: novaEmpresa.titulo.trim(),
-        dia_semana: novaEmpresa.recorrencia === 'semana' ? Number(novaEmpresa.dia_semana) : null,
-        data: novaEmpresa.recorrencia === 'data' ? novaEmpresa.data || null : null,
-        hora: novaEmpresa.hora,
-        duracao_min: duracaoEmpresaMin,
-        ativo: true,
-        criado_por_id: uid || null,
-        criado_por_nome: currentUser?.full_name || '',
-      };
-      const criada = await plataforma.entities.ReuniaoEmpresa.create(linha);
-      setReunioesEmpresa((prev) => [...prev, criada?.id ? criada : linha]);
-      setNovaEmpresa({ titulo: '', recorrencia: 'semana', dia_semana: 1, data: '', hora: '09:00', modoFim: 'duracao', duracao_min: 60, hora_fim: '10:00' });
-      toast.success('Reunião da empresa salva — entra na agenda de todo mundo!');
-    } catch (e) {
-      console.error(e);
-      toast.error('Erro ao salvar — a migração da DIR-52 (reunioes_empresa) já foi colada no banco?');
-    } finally { setSalvando(false); }
-  };
-
   // 🏛️ DIR-73 — a agenda escolhida no agendador cai NO MESMO LUGAR que o
   // bloco 🏛️ da gestão já gravava. Uma verdade só: se amanhã a reunião da
   // empresa mudar de tabela, muda num lugar e as duas portas acompanham.
@@ -1381,14 +1395,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       console.error(e);
       toast.error('Erro ao salvar — a migração da DIR-52 (reunioes_empresa) já foi colada no banco?');
     } finally { setSalvando(false); }
-  };
-
-  const excluirReuniaoEmpresa = async (r) => {
-    if (confirmaExcluir !== `emp-${r.id}`) { setConfirmaExcluir(`emp-${r.id}`); return; }
-    setConfirmaExcluir(null);
-    setReunioesEmpresa((prev) => prev.filter((x) => x.id !== r.id));
-    try { await plataforma.entities.ReuniaoEmpresa.delete(r.id); toast.success('Reunião da empresa excluída.'); }
-    catch { toast.error('Erro ao excluir — tente de novo'); }
   };
 
   const habito = HABITOS.find((h) => h.id === painel);
@@ -2458,6 +2464,49 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <p>🔀 A ordem dos botões é a ordem do fluxo: <strong>Contatar</strong> (chama no WhatsApp) → <strong>Agendar</strong> (marcou reunião) ou <strong>Registrar</strong> (anota o desfecho, sem reunião) → <strong>Esteira</strong> (virou negociação de verdade).</p>
               </GuiaMovel>
 
+              {/* 📜 DIR-112 (09/09/2026) — dono, ao vivo: "essa parte de cima
+                  está boa pra caralho... vamos melhorar a apresentação e
+                  obrigar ele fazer o form." O script sobe pro topo da tela,
+                  vira uma ficha chamativa (não obrigatória de travar o resto,
+                  mas impossível de ignorar), e conta ponto uma vez só. */}
+              <div data-teste="contato-script" className={`rounded-xl border p-3.5 space-y-2.5 [color-scheme:light] ${script.trim().length >= 20 ? 'border-nz-verde/30 bg-nz-verde-fundo/20' : 'border-amber-400/50 bg-amber-50/50'}`}>
+                <div className="flex items-start gap-2">
+                  <ScrollText className={`w-5 h-5 mt-0.5 shrink-0 ${script.trim().length >= 20 ? 'text-nz-verde' : 'text-amber-600'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold" style={{ color: '#1A1A1A' }}>
+                      {script.trim().length >= 20 ? 'Seu script de convite' : '⚠️ Escreva seu script antes de sair contatando'}
+                    </p>
+                    <p className="text-xs" style={{ color: '#5C6B62' }}>
+                      {script.trim().length >= 20
+                        ? 'O método ensina, mas a voz é sua — aperfeiçoe a cada conversa. Ele aparece na sua frente sempre que você clicar em Contatar.'
+                        : 'É rápido e já vale ponto: escreva do seu jeito, use {nome} pra personalizar. Ele vai aparecer na sua frente sempre que você clicar em Contatar — pra você ler enquanto liga.'}
+                    </p>
+                  </div>
+                </div>
+                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={6} placeholder={EXEMPLO_SCRIPT} className="bg-white border-nz-borda text-nz-tinta text-sm" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={salvarScript} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
+                    <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
+                  </Button>
+                  {/* 💡 o validador pedido pelo dono: ajuda a MELHORAR — nunca escreve por ela */}
+                  <Button
+                    type="button" variant="outline" disabled={pedindoDica || script.trim().length < 15}
+                    onClick={pedirDicaDoScript}
+                    className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo"
+                    data-teste="contato-script-dica"
+                  >
+                    {pedindoDica ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lightbulb className="w-4 h-4 mr-2" />}
+                    {pedindoDica ? 'Pensando...' : 'Peça uma dica pra melhorar'}
+                  </Button>
+                </div>
+                {dicaScript && (
+                  <div className="rounded-lg border border-nz-verde/25 bg-white p-2.5 space-y-1" data-teste="contato-script-dica-resultado">
+                    {dicaScript.pontos_fortes && <p className="text-xs font-semibold text-nz-verde">👍 {dicaScript.pontos_fortes}</p>}
+                    <p className="text-xs whitespace-pre-line" style={{ color: '#1A1A1A' }}>💡 {dicaScript.dica}</p>
+                  </div>
+                )}
+              </div>
+
               {/* 🎯 fila dos qualificados da lista (DIR-46 alimenta o contato) */}
               <div data-teste="contato-fila">
                 <p className="text-sm font-bold text-nz-tinta mb-1.5">
@@ -2491,17 +2540,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                         {/* DIR-49 — os DOIS caminhos claros: agendar em 1 clique ou registrar o desfecho.
                             🔀 09/09/2026 — DIR-111, dono: "tudo tem que ter uma ordem... quando eu clicar
                             em contatar, me gera WhatsApp." Contatar vem primeiro — é o gesto físico de
-                            chamar a pessoa; só depois entram agendar/registrar o desfecho. */}
+                            chamar a pessoa; só depois entram agendar/registrar o desfecho.
+                            📜 DIR-112 — "imagina ele com fone, começando a fazer a ligação... ele
+                            clica, esse papel vem pra frente." Em vez de ir direto pro WhatsApp, o
+                            clique primeiro traz o SCRIPT da pessoa pra frente (chamadaAberta) — o
+                            WhatsApp abre só depois, do próprio modal. */}
                         <div className="flex gap-1.5 shrink-0 flex-wrap" data-teste="contato-acoes">
                           {(() => {
                             const numero = String(c.phone || '').replace(/\D/g, '');
                             const wa = numero ? `https://wa.me/${numero.length <= 11 ? `55${numero}` : numero}?text=${encodeURIComponent(`Oi ${(c.full_name || '').split(' ')[0] || ''}, tudo bem?`)}` : null;
                             return wa ? (
-                              <a href={wa} target="_blank" rel="noreferrer">
-                                <Button size="sm" variant="outline" className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8">
-                                  <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
-                                </Button>
-                              </a>
+                              <Button size="sm" variant="outline" onClick={() => setChamadaAberta({ contato: c, wa })} className="border-nz-verde/40 text-nz-verde hover:bg-nz-verde-fundo h-8" data-teste="contato-abrir-chamada">
+                                <MessageCircle className="w-3.5 h-3.5 mr-1.5" />Contatar
+                              </Button>
                             ) : null;
                           })()}
                           <Button size="sm" onClick={() => setRegistroAberto({ contato: c, agendar: true })} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8">
@@ -2695,95 +2746,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 )}
               </div>
 
-              {/* 🏛️ DIR-52 — gestão das reuniões da empresa (só a gestão).
-                  Fechada por padrão (ver comentário no estado acima): abre só
-                  quando alguém realmente vai cadastrar ou excluir uma. */}
-              {podeGerir && (
-                <div className="rounded-xl border border-amber-400/40 bg-amber-50/40 p-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setGestaoEmpresaAberta((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 text-left"
-                  >
-                    <span className="text-sm font-bold text-nz-tinta flex items-center gap-1.5">
-                      <Settings2 className="w-4 h-4 text-nz-tinta-fraca" /> Reuniões fixas da empresa
-                      <span className="font-normal text-xs text-nz-tinta-fraca">— cadastra uma vez, entra na agenda de TODO MUNDO</span>
-                    </span>
-                    <ChevronDown className={`w-4 h-4 text-nz-tinta-fraca shrink-0 transition-transform ${gestaoEmpresaAberta ? 'rotate-180' : ''}`} />
-                  </button>
-                  {gestaoEmpresaAberta && (
-                  <>
-                  {reunioesEmpresa.length > 0 && (
-                    <div className="space-y-1">
-                      {reunioesEmpresa.map((r) => (
-                        <div key={r.id || r.titulo} className="flex items-center gap-2 rounded-lg border border-nz-borda bg-white p-2 flex-wrap">
-                          <p className="flex-1 min-w-0 text-xs text-nz-tinta truncate"><span className="font-bold">{r.titulo}</span> · {r.dia_semana !== null && r.dia_semana !== undefined ? `toda ${DIAS_SEMANA[r.dia_semana]}` : (r.data || 'sem data')} · {r.hora} às {horaFinal(r.hora, r.duracao_min || 60) || '?'}</p>
-                          <Button size="sm" variant="outline" onClick={() => excluirReuniaoEmpresa(r)} className={`h-7 px-2 text-xs ${confirmaExcluir === `emp-${r.id}` ? 'border-red-500 text-red-600 bg-red-50 font-bold' : 'border-nz-borda text-nz-tinta-fraca'}`}>
-                            {confirmaExcluir === `emp-${r.id}` ? 'Confirma excluir?' : '🗑️'}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex-1 min-w-[180px]">
-                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Título</p>
-                      <Input value={novaEmpresa.titulo} onChange={(e) => setNovaEmpresa((p) => ({ ...p, titulo: e.target.value }))} placeholder="ex.: Mentalidade do Diretor" className="bg-white border-nz-borda text-nz-tinta text-sm h-9" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Quando</p>
-                      <div className="flex gap-1.5">
-                        <select value={novaEmpresa.recorrencia} onChange={(e) => setNovaEmpresa((p) => ({ ...p, recorrencia: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                          <option value="semana">toda semana</option>
-                          <option value="data">data única</option>
-                        </select>
-                        {novaEmpresa.recorrencia === 'semana' ? (
-                          <select value={novaEmpresa.dia_semana} onChange={(e) => setNovaEmpresa((p) => ({ ...p, dia_semana: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                            {DIAS_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
-                          </select>
-                        ) : (
-                          <Input type="date" value={novaEmpresa.data} onChange={(e) => setNovaEmpresa((p) => ({ ...p, data: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                        )}
-                        <Input type="time" value={novaEmpresa.hora} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                      </div>
-                    </div>
-                    <div>
-                      {/* DIR-54 — duas formas de dizer quando termina: minutos OU o horário final */}
-                      <p className="text-[11px] font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1">Até quando</p>
-                      <div className="flex gap-1.5">
-                        <select value={novaEmpresa.modoFim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, modoFim: e.target.value }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                          <option value="duracao">duração</option>
-                          <option value="fim">até às</option>
-                        </select>
-                        {novaEmpresa.modoFim === 'duracao' ? (
-                          <select value={novaEmpresa.duracao_min} onChange={(e) => setNovaEmpresa((p) => ({ ...p, duracao_min: Number(e.target.value) }))} className="rounded-md border border-nz-borda bg-white text-nz-tinta text-sm h-9 px-2">
-                            {DURACOES_REUNIAO.map((d) => <option key={d} value={d}>{d} min</option>)}
-                          </select>
-                        ) : (
-                          <Input type="time" value={novaEmpresa.hora_fim} onChange={(e) => setNovaEmpresa((p) => ({ ...p, hora_fim: e.target.value }))} className="bg-white border-nz-borda text-nz-tinta text-sm h-9 w-auto" />
-                        )}
-                      </div>
-                      {novaEmpresa.modoFim === 'fim' && (
-                        <p className="text-[11px] text-nz-tinta-fraca mt-1">{duracaoEmpresaMin ? `= ${duracaoEmpresaMin} min` : 'o término precisa ser depois do início'}</p>
-                      )}
-                    </div>
-                    <Button size="sm" onClick={criarReuniaoEmpresa} disabled={salvando || !novaEmpresa.titulo.trim() || !duracaoEmpresaMin} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-9">
-                      <Plus className="w-4 h-4 mr-1" /> Salvar pra todo mundo
-                    </Button>
-                  </div>
-                  </>
-                  )}
-                </div>
-              )}
-
-              {/* o SEU script (mantém) */}
-              <div className="rounded-lg border border-nz-borda p-3 space-y-2">
-                <p className="text-xs text-nz-tinta-fraca">Escreva o SEU script de convite — o método ensina, mas a voz é sua. Aperfeiçoe a cada conversa.</p>
-                <Textarea value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder={EXEMPLO_SCRIPT} className="bg-white border-nz-borda text-nz-tinta text-sm" />
-                <Button onClick={() => salvarPerfil({ script })} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white">
-                  <Save className="w-4 h-4 mr-2" /> {salvando ? 'Salvando...' : 'Salvar meu script'}
-                </Button>
-              </div>
+              {/* 📜 DIR-112 (09/09/2026) — dono, ao vivo: "tu pode sumir com
+                  aquela parte da agenda ali fixa... pode excluir, pra ficar
+                  ainda mais limpo." O painel de gestão de "Reuniões fixas da
+                  empresa" saiu — quem tem visão total ainda agenda reunião da
+                  empresa pelo botão "Agendar reunião" de cima (mesmo destino,
+                  salvarAgendaEmpresa). O script de convite morou aqui; agora
+                  mora lá em cima, logo depois do guia (ver PASSOS_TOUR_CONTATO
+                  mais abaixo — o alvo "contato-script" segue o card). */}
 
               {/* 🏛️ DIR-73 — a porta da agenda da empresa só é ENTREGUE a quem tem
                   visão total: passando null, o modal nem desenha a opção. A
@@ -2802,6 +2772,39 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 visaoTotal={visaoTotal}
                 autor={currentUser}
               />
+
+              {/* 📜 DIR-112 (09/09/2026) — "o papel vem pra frente": dono, ao
+                  vivo — "imagina ele com fone, começando a fazer a ligação...
+                  ele clica, esse papel vem pra frente." Em vez de abrir o
+                  WhatsApp direto, o "Contatar" traz o SCRIPT em primeiro
+                  plano — a pessoa lê enquanto liga, o WhatsApp só abre a
+                  partir daqui. */}
+              {chamadaAberta && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70" role="dialog" aria-modal="true" aria-label="Seu script pra este contato" data-teste="contato-chamada-modal">
+                  <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-4 space-y-3 [color-scheme:light]">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-bold" style={{ color: '#1A1A1A' }}>📞 Ligando pra {chamadaAberta.contato?.full_name || 'esse contato'}</p>
+                      <button type="button" onClick={() => setChamadaAberta(null)} aria-label="Fechar" className="shrink-0 text-nz-tinta-fraca hover:text-nz-tinta"><X className="w-4 h-4" /></button>
+                    </div>
+                    <p className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                      <Headphones className="w-3.5 h-3.5 shrink-0" /> Use fone de ouvido — assim você lê e fala ao mesmo tempo.
+                    </p>
+                    {script.trim() ? (
+                      <div className="rounded-lg border border-nz-borda bg-nz-verde-fundo/20 p-3 max-h-64 overflow-y-auto">
+                        <p className="text-sm whitespace-pre-line" style={{ color: '#1A1A1A' }}>{personalizarScript(script, chamadaAberta.contato?.full_name)}</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-nz-tinta-fraca">Você ainda não escreveu seu script — escreva ali em cima antes de ligar, é rápido e já ajuda nessa e nas próximas ligações.</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button onClick={() => { window.open(chamadaAberta.wa, '_blank', 'noopener'); setChamadaAberta(null); }} className="flex-1 bg-nz-verde hover:bg-nz-verde-claro text-white" data-teste="contato-chamada-whatsapp">
+                        <MessageCircle className="w-4 h-4 mr-2" /> Abrir WhatsApp e ligar
+                      </Button>
+                      <Button variant="outline" onClick={() => setChamadaAberta(null)} className="border-nz-borda text-nz-tinta">Fechar</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -2954,6 +2957,11 @@ const PASSOS_TOUR_CONTATO = [
     texto: 'Já qualificou alguém no Hábito 3? Essas pessoas aparecem aqui, na fila de quem contatar — as mais qualificadas primeiro.',
   },
   {
+    alvo: 'contato-script',
+    titulo: 'Seu script vale ponto — e vem com você pra ligação',
+    texto: 'Já pensou por que escrever o SEU jeito de convidar (não um copiado) muda o resultado da ligação? Escreva com {nome} pra personalizar — ele conta ponto na primeira vez e aparece na sua frente sempre que você clicar em Contatar. Peça uma dica pra IA melhorar: ela te ajuda a pensar, nunca escreve por você.',
+  },
+  {
     alvo: 'contato-fila',
     titulo: 'A fila é ordenada pelo %',
     texto: 'Quem tem mais chance de fechar aparece no topo — não é a ordem que você cadastrou, é a ordem de prioridade real.',
@@ -2961,7 +2969,7 @@ const PASSOS_TOUR_CONTATO = [
   {
     alvo: 'contato-acoes',
     titulo: 'Três botões, uma ordem só',
-    texto: 'Sabe qual vem primeiro? Contatar (chama no WhatsApp) → Agendar ou Registrar o desfecho → Esteira, quando virar negociação de verdade. Sempre nessa ordem.',
+    texto: 'Sabe qual vem primeiro? Contatar traz seu script pra frente (pra você ler enquanto liga, de fone) e leva ao WhatsApp → Agendar ou Registrar o desfecho → Esteira, quando virar negociação de verdade. Sempre nessa ordem.',
   },
 ];
 
