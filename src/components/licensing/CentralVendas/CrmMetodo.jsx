@@ -2134,7 +2134,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
             {visao === 'lista' && (
             <div className="pt-1">
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} />
+              {/* 🌑 09/09/2026 — dono: "fundo branco em mais um campo descoberto".
+                  Este campo nasceu quando a Jornada ainda era painel claro. O painel
+                  virou escuro e ele ficou pra trás: caixa branca no meio do preto,
+                  com a hora sumindo de tão clara. O componente já sabe ser escuro
+                  desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
