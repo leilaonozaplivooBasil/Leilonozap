@@ -138,3 +138,26 @@ test('os 9 vídeos antigos continuam abrindo até serem movidos', () => {
   assert.match(ADMIN, /c\.video_path/, 'o caminho novo');
   assert.match(ADMIN, /c\.video_url/, 'o link legado dos 9 antigos');
 });
+
+test('a mudança de cofre nunca perde a gravação de alguém', () => {
+  // A ordem é: baixa → sobe → atualiza → SÓ ENTÃO apaga o público. Se qualquer
+  // passo falhar, o vídeo continua acessível pelo caminho antigo e a
+  // comprovação segue apontando pra ele. O pior caso é ficar como está hoje.
+  const MOVER = semComentarios(ler('../api/functions/moverVideosDoRitual.js'));
+  const iBaixa = MOVER.indexOf('const baixa = await store');
+  const iSobe = MOVER.indexOf('const sobe = await store');
+  const iPatch = MOVER.indexOf('const patch = await rest');
+  const iApaga = MOVER.indexOf("method: 'DELETE'");
+  assert.ok(iBaixa > 0 && iSobe > iBaixa && iPatch > iSobe && iApaga > iPatch,
+    'a ordem mudou — apagar o público não pode vir antes de confirmar a cópia');
+  // e cada passo aborta o item em vez de seguir em frente
+  assert.equal((MOVER.match(/continue;/g) || []).length >= 4, true, 'algum passo deixou de abortar');
+});
+
+test('só admin move arquivo dos outros, e o papel vem do banco', () => {
+  const MOVER = semComentarios(ler('../api/functions/moverVideosDoRitual.js'));
+  assert.match(MOVER, /app_users\?select=role/);
+  assert.match(MOVER, /só admin/);
+  // e nada acontece sem confirmação explícita: o GET só CONTA
+  assert.match(MOVER, /corpo\.confirmar !== true/);
+});
