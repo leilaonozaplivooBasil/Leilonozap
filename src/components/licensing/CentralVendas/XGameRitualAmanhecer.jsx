@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera } from 'lucide-react';
+import useDitado from '@/hooks/useDitado';
+import BotaoDitado from '@/components/common/BotaoDitado';
+import { juntarTexto } from '@/lib/ditado';
 import { AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
@@ -96,10 +99,37 @@ function BotaoRitual({ onClick, children, disabled }) {
 const GRATIDAO_MIN = 20;
 const ACAO_MIN = 10;
 
+// 🎙️ FALAR EM VEZ DE DIGITAR (DIR-101, 09/09/2026)
+//
+// Ordem do dono: levar o "enviar áudio" do Guia do Usuário pros módulos do
+// X-GAME, começando por aqui. Faz sentido justo neste: são 6h da manhã, a
+// pessoa está meio dormindo, no celular. Digitar gratidão com sentimento nessa
+// hora é o atrito que a voz tira.
+//
+// ⚠️ E A REGRA DE COLAR, QUE ESTA TELA BLOQUEIA DE PROPÓSITO?
+// Continua de pé, e o áudio NÃO fura ela. A regra existe contra copiar as
+// palavras dos OUTROS — falar a própria gratidão é autoria, e ninguém cola uma
+// fala. Digitar era o proxy que a regra usava porque era a única entrada que
+// existia. Decisão do dono em 09/09: áudio conta como "as suas palavras".
+//
+// As três defesas que sustentam isso: o texto ditado cai no CAMPO pra pessoa
+// ler e corrigir (nada sai sem ela ver), os mínimos NÃO caem (20 e 10
+// caracteres continuam valendo), e a origem fica marcada no registro.
+
 export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onConcluir }) {
   const [passo, setPasso] = useState(0);
   const [gratidao, setGratidao] = useState('');
   const [acao, setAcao] = useState('');
+  // 🎙️ o áudio de cada campo, pra virar acervo (o dono pediu pra guardar).
+  // `null` = a pessoa digitou; com blob = ela falou.
+  const [audioGratidao, setAudioGratidao] = useState(null);
+  const [audioAcao, setAudioAcao] = useState(null);
+  const ditadoGratidao = useDitado({
+    onTexto: (t, blob) => { setGratidao((atual) => juntarTexto(atual, t)); setAudioGratidao(blob); },
+  });
+  const ditadoAcao = useDitado({
+    onTexto: (t, blob) => { setAcao((atual) => juntarTexto(atual, t)); setAudioAcao(blob); },
+  });
   const [aviso, setAviso] = useState('');
   const [semVideoLiberado, setSemVideoLiberado] = useState(false);
   // 🎵 a música do amanhecer: a do dia salva → 1ª da playlist dela → prévia
@@ -350,7 +380,18 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
               placeholder="Escreve com o coração — uma linha já muda o dia."
               className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm p-4 min-h-[90px] focus:outline-none focus:border-white/50"
             />
-            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
+            <div className="flex items-center justify-center gap-3">
+              <BotaoDitado
+                ditado={ditadoGratidao}
+                rotulo="falar"
+                rotuloGravando="parar"
+                className="xeos-cru border border-white/25 bg-white/10 text-white hover:bg-white/20"
+              />
+              {ditadoGratidao.disponivel && !ditadoGratidao.gravando && !ditadoGratidao.transcrevendo && (
+                <span className="text-[11px] text-white/45">ou digite — tanto faz</span>
+              )}
+            </div>
+            {(aviso || ditadoGratidao.erro) && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso || ditadoGratidao.erro}</p>}
             <button
               type="button"
               disabled={gratidao.trim().length < GRATIDAO_MIN}
@@ -426,9 +467,17 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
                   placeholder="a ação de hoje..."
                   className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-4 py-3 focus:outline-none focus:border-white/50"
                 />
+                <div className="flex justify-center">
+                  <BotaoDitado
+                    ditado={ditadoAcao}
+                    rotulo="falar"
+                    rotuloGravando="parar"
+                    className="xeos-cru border border-white/25 bg-white/10 text-white hover:bg-white/20"
+                  />
+                </div>
               </>
             )}
-            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso}</p>}
+            {(aviso || ditadoAcao.erro) && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2 text-left">{aviso || ditadoAcao.erro}</p>}
             {(videoBlob || semVideoLiberado) && !gravando && (
               <>
                 <button
@@ -459,7 +508,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], onFechar, onCo
             <div>
               <button
                 type="button"
-                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, gravSeg, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
+                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, gravSeg, audioGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
                 className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
