@@ -21,11 +21,14 @@ export default function SeloPreview() {
     );
   }
 
-  // deploy congelado: aviso forte + volta de um clique pro mesmo caminho
+  // 🐛 09/09/2026 — não é SÓ "deploy congelado" mais: pode ser o alias vivo
+  // de OUTRA branch (também atualiza, só que não é o link que o dono
+  // confere) — por isso o aviso não afirma mais "nunca recebe atualização",
+  // só que ESTE link aqui não é o único oficial.
   const destino = `https://${HOST_PREVIEW_OFICIAL}${typeof window !== 'undefined' ? window.location.pathname + window.location.search : ''}`;
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-amber-500 text-amber-950 px-4 py-2 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold shadow-lg">
-      ⚠️ Esta é uma página ANTIGA (deploy congelado{build ? ` de ${build}` : ''}) — ela nunca recebe atualização.
+      ⚠️ Este NÃO é o link oficial{build ? ` (build ${build})` : ''} — pode ser um deploy congelado ou outra branch. O oficial é sempre este:
       <a href={destino} className="underline font-bold text-amber-950 hover:text-black">
         Ir pro Preview oficial →
       </a>
