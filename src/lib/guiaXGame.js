@@ -84,6 +84,91 @@ export const CORES_DA_TAREFA = [
 //     ter que digitar endereço nunca mais.
 // Viraram um bloco de atalhos no topo, e não uma aula: ninguém precisa "fazer"
 // isso passo a passo.
+// 👥 09/09/2026 — dono, ao vivo: "a gente tem que ter um como funciona foda
+// também com as funções administrativas — o que as pessoas podem fazer, quem
+// é administrativo, quem é executivo... pra ela ficar mais independente, sem
+// depender da equipe de TEC e sem depender da mentalidade do fundador."
+//
+// A régua de verdade mora em src/lib/visibilidadePorPapel.js (a MATRIZ ÚNICA
+// de visão por papel — nada de checagem de permissão duplicada por aí). Este
+// bloco é a MESMA régua contada em português simples, pra quem nunca vai
+// abrir um arquivo de código. Se um papel novo entrar naquele arquivo, este
+// aqui precisa ganhar uma linha nova — são as duas metades da mesma verdade.
+export const PAPEIS = [
+  {
+    id: 'super_admin',
+    rotulo: 'Super Admin',
+    quemE: 'O dono da operação.',
+    capacidades: [
+      'Vê o dinheiro da EMPRESA inteiro: custo, margem, caixa, imposto, ROI.',
+      'Gerencia vendedores e cadastros administrativos.',
+      'Enxerga a plataforma toda, sem limite de rede.',
+    ],
+  },
+  {
+    id: 'admin',
+    rotulo: 'Administrador',
+    quemE: 'Roda a operação no dia a dia.',
+    capacidades: [
+      'Vê o dinheiro da empresa, igual ao Super Admin.',
+      'Gerencia vendedores e cadastros administrativos.',
+      'Enxerga a plataforma toda, sem limite de rede.',
+    ],
+  },
+  {
+    id: 'admin_financeiro',
+    rotulo: 'Admin Financeiro',
+    quemE: 'Cuida só do dinheiro — por segurança, uma pessoa só não acumula tudo.',
+    capacidades: [
+      'Vê o dinheiro da empresa, igual ao Administrador.',
+      'NÃO gerencia vendedores nem cadastros — isso é papel do Administrador, não do Financeiro.',
+    ],
+  },
+  {
+    id: 'diretoria_executiva',
+    rotulo: 'Diretoria Executiva (CEO e diretoria)',
+    quemE: 'Cobrada pelas metas do negócio inteiro.',
+    capacidades: [
+      'Vê VENDA × META da empresa toda: faturamento, ticket médio, conversão, funil, captação.',
+      'NÃO vê a mecânica do dinheiro (custo, margem, caixa) — ninguém cobra meta de quem não vê a venda, mas margem e custo de compra não são o papel da diretoria.',
+    ],
+  },
+  {
+    id: 'diretoria_operacional',
+    rotulo: 'Diretor Operacional',
+    quemE: 'Mesmo nível de visão da Diretoria Executiva, focado em fazer a operação rodar.',
+    capacidades: [
+      'Vê VENDA × META da empresa toda.',
+      'NÃO vê custo, margem nem caixa.',
+    ],
+  },
+  {
+    id: 'socio_executivo',
+    rotulo: 'Sócio Executivo',
+    quemE: 'Gerente da própria carteira ou franquia.',
+    capacidades: [
+      'Vê só a PRÓPRIA rede — não a empresa inteira.',
+    ],
+  },
+  {
+    id: 'licenciado',
+    rotulo: 'Licenciado',
+    quemE: 'Tem uma licença e toca a própria rede.',
+    capacidades: [
+      'Vê só a própria rede, como todo mundo do time.',
+    ],
+  },
+  {
+    id: 'usuario',
+    rotulo: 'Usuário (o time)',
+    quemE: 'Quem faz o Método todo dia — provavelmente você.',
+    capacidades: [
+      'Vê a própria rede e as próprias tarefas, resultado e pontuação.',
+      'Não vê o dinheiro da empresa nem gerencia vendedores — se precisar de algo assim, é o Administrador que resolve.',
+    ],
+  },
+];
+
 export const MAPA_TOP_COLLEGE = [
   { nome: 'O Método', o_que_e: 'seus 8 Hábitos e as tarefas do dia — é onde você vai ficar', destaque: true },
   { nome: 'Mentalidade', o_que_e: 'o encontro de segunda-feira' },
@@ -273,6 +358,21 @@ export const AULAS_BRUTAS = [
         linhas: ['Significa que você não está logado. Volte para a Aula 1 e entre de novo.'],
       },
     ],
+  },
+  // 👥 09/09/2026 — dono: "quero saber quem é administrativo, quem é
+  // executivo, o que cada um pode fazer" — pra ela dominar a plataforma sem
+  // precisar perguntar pro TEC nem pro fundador toda vez que ficar em dúvida
+  // sobre quem decide o quê.
+  {
+    id: 'papeis',
+    titulo: 'Quem é quem aqui dentro',
+    resumo: 'Nem todo mundo vê a mesma coisa, e é de propósito: cada papel enxerga só o que precisa pro próprio trabalho. Saber qual é o seu evita duas coisas: pedir pra alguém algo que não é da função dela, e estranhar quando uma tela não mostra o que você viu no celular de outra pessoa.',
+    papeis: true,
+    caixas: [{
+      tom: 'dica',
+      titulo: 'Não sabe qual é o seu?',
+      linhas: ['Pergunte pro seu gestor direto. Não tem problema nenhum em perguntar — o problema é decidir algo que não é do seu papel.'],
+    }],
   },
   {
     id: 'primeiro-dia',

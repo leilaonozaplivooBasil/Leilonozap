@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ExternalLink, Check, BookOpen, HelpCircle, Type, Compass } from 'lucide-react';
 import TiraDuvidas from '@/components/licensing/TiraDuvidas';
 import {
-  AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS,
+  AULAS, PERGUNTAS, DICIONARIO, HABITOS, CORES_DA_TAREFA, FAIXAS, PAPEIS,
   ENDERECOS, FRASES_DO_RODAPE, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '@/lib/guiaXGame';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
@@ -131,6 +131,27 @@ function Aula({ aula, aberta, onAbrir, lida, onLida }) {
                     <span className="font-bold text-white text-[12px] tracking-wide">{c.rotulo}</span>
                     <span className="block text-white/60 text-[12px]">{c.o_que_e}</span>
                   </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 👥 09/09/2026 — "quem é administrativo, quem é executivo" — a
+              mesma matriz de src/lib/visibilidadePorPapel.js, em português
+              simples, com um cartão por papel. */}
+          {aula.papeis && (
+            <div className="grid gap-2">
+              {PAPEIS.map((p) => (
+                <div key={p.id} className="rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5">
+                  <p className="font-bold text-white text-[13px]">{p.rotulo}</p>
+                  <p className="text-white/50 text-[12px] italic mt-0.5">{p.quemE}</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {p.capacidades.map((c, i) => (
+                      <li key={i} className="flex gap-1.5 text-white/70 text-[12px] leading-relaxed">
+                        <span className="shrink-0 text-white/30">•</span>{c}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
