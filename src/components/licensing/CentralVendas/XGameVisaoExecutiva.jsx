@@ -5,6 +5,7 @@ import { vendasPorPessoa } from '@/lib/vendasDoCiclo';
 import { LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX, moedaModelo } from '@/lib/xgame';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import MoedaPizza from './MoedaPizza';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -121,7 +122,8 @@ export default function XGameVisaoExecutiva() {
       // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
       // (10 menos desconto por tarefa atrasada) — real time disfarçado de
       // MVM. Agora vem só da votação de verdade (xgame_votos_mvm) do ciclo.
-      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+      // 📄 TODOS os votos do ciclo, não os 1.000 primeiros — ver lerTudoDoSupabase.
+      lerTudoDoSupabase(() => supabase.from('xgame_votos_mvm').select('id,votado_id,virtude,nota').gte('data', ini)).then((data) => ({ data })),
       // 🏆 09/09/2026 — dono: "o MVM pesa muito na moeda... mas o real time
       // está pesando mais." Achado: o TOKEN/LIGA desta tabela vinha da média
       // de token_dia (mvm_dia AUTOMÁTICO + aplicabilidade) — um cálculo

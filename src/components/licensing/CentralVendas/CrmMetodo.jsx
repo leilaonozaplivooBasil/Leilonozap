@@ -73,6 +73,7 @@ import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
 import SinoNotificacoes from '@/components/common/SinoNotificacoes';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 // DIR-46 — cor da faixa de probabilidade na lista
 const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
@@ -595,7 +596,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // voto (tokenDoCiclo) do painel pessoal — por isso precisa do perfil.
     Promise.all([
       supabase.from('xgame_diario').select('user_id,data,pontos,detalhes').eq('ciclo_inicio', ini),
-      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+      // 📄 TODOS os votos do ciclo, não os 1.000 primeiros — ver lerTudoDoSupabase.
+      lerTudoDoSupabase(() => supabase.from('xgame_votos_mvm').select('id,votado_id,virtude,nota').gte('data', ini)).then((data) => ({ data })),
       supabase.from('xgame_participantes').select('user_id,perfil'),
     ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
         const votosPor = {};
