@@ -120,7 +120,11 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
   if (carregando) return <p className="text-[11px] text-white/40 py-2"><Loader2 className="w-3.5 h-3.5 animate-spin inline" /> carregando as comprovações…</p>;
   return (
     <TooltipProvider delayDuration={150}>
-    <div className="space-y-2" data-teste={pessoaId ? 'comprovacoes-pessoa' : 'comprovacoes-geral'} data-pendentes={pendentes}>
+    {/* 🌑 `nz-escuro`: este painel é um bloco ESCURO dentro de uma página de
+        tema claro. Sem a marca, a regra global de `body[data-painel-nav] main`
+        pinta a busca e o menu de datas de BRANCO — com print do dono em
+        10/09. A marca é a saída de emergência que a casa já usa (index.css). */}
+    <div className="nz-escuro space-y-2" data-teste={pessoaId ? 'comprovacoes-pessoa' : 'comprovacoes-geral'} data-pendentes={pendentes}>
       <div className="flex items-center gap-2 flex-wrap">
         {!compacto && (
           <>

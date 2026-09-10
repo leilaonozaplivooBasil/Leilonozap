@@ -149,15 +149,17 @@ export function calcularDashboardDiretoria({ sales = [], users = [], products = 
     roi_operacional: roiOperacional === null
       ? { realizado: null, tipo: 'sem_fonte', fonte: 'Nenhuma venda do mês com produto vinculado (custo conhecido) ainda.' }
       : { realizado: roiOperacional, tipo: 'aproximacao', fonte: `(Receita − custo) ÷ custo das vendas reais do mês COM produto vinculado — mesma ligação venda→custo do Painel de Lucro Diário. Cobertura: ${vendasComCusto.length} de ${vendasMercadoriaMes.length} vendas do mês têm custo conhecido.` },
-    // 13) Esteira de Captação (DIR-36) — forecast oficial da esteira: valor
-    // fechado (100%) + pipeline ponderado (Σ valor × probabilidade dos
-    // ativos), contra a meta de R$ 1 mi. Mesma função do kanban (fonte única).
+    // 13) Esteira de Captação (DIR-36) — o que ENTROU, contra a meta de R$ 1 mi.
+    // 🔴 10/09/2026: era `fechado + pipeline ponderado`, ou seja, dinheiro
+    // somado com intenção. Com R$ 200 mil na conta, esta linha marcava 284% da
+    // meta — o real eram 20%. Meta de captação se mede pelo que entrou; a
+    // esteira vira CONTEXTO na fonte, não número do KPI.
     esteira_captacao: (() => {
       const esteira = resumoEsteira(oportunidades);
       return {
-        realizado: esteira.fechado + esteira.pipelinePonderado,
+        realizado: esteira.fechado,
         tipo: 'dado',
-        fonte: `Fechado (100%): R$ ${esteira.fechado.toLocaleString('pt-BR')} + pipeline ponderado (Σ valor × probabilidade de ${esteira.ativas} negociações ativas). Mesma conta do kanban da aba Expansão.`,
+        fonte: `Fechado (100%): R$ ${esteira.fechado.toLocaleString('pt-BR')}. Em esteira, ainda sem entrar: R$ ${esteira.pipelineReal.toLocaleString('pt-BR')} em ${esteira.ativas} negociações ativas (previsão ponderada R$ ${Math.round(esteira.pipelinePonderado).toLocaleString('pt-BR')}). Intenção não soma como dinheiro. Mesma conta do kanban da aba Expansão.`,
       };
     })(),
   };

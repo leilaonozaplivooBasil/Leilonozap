@@ -56,7 +56,12 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
   }, [semPpvLista]);
   const objecoes = useMemo(() => placarObjecoes(oportunidades), [oportunidades]);
 
-  const caminhado = provado.naConta + provado.declarado + resumo.pipelinePonderado;
+  // 🔴 10/09/2026 — a barra continua contando o caminho até a meta, mas cada
+  // pedaço na sua cor e no seu nome. O cinza passa a ser a esteira REAL (o
+  // valor do negócio), não o ponderado: era a ponderação que fazia o time
+  // digitar o dobro pra ver o número certo. A previsão ponderada segue à
+  // vista, escrita como previsão.
+  const caminhado = provado.naConta + provado.declarado + resumo.pipelineReal;
   const pct = Math.min(100, (caminhado / META_CAPTACAO) * 100);
   const pctNaConta = Math.min(100, (provado.naConta / META_CAPTACAO) * 100);
   const pctDeclarado = Math.min(100 - pctNaConta, (provado.declarado / META_CAPTACAO) * 100);
@@ -69,7 +74,7 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
           <p className="text-sm font-semibold text-nz-tinta flex items-center gap-2">
             <GitBranch className="w-4 h-4 text-nz-verde" />
             Esteira de Captação — projeção da meta de {brlCurto(META_CAPTACAO)}
-            <StatInfoTooltip text='Verde = fechado COM dinheiro na conta (venda real casada). Âmbar = fechado declarado, ainda sem o dinheiro provado. Cinza = pipeline ponderado (Σ valor × probabilidade das negociações ativas). Declarado e previsão nunca se somam como dinheiro — cada um na sua cor.' />
+            <StatInfoTooltip text='Verde = fechado COM dinheiro na conta (venda real casada). Âmbar = fechado declarado, ainda sem o dinheiro provado. Cinza = o que está em esteira (soma real das negociações ativas — o estágio é a TEMPERATURA da decisão, não desconto no valor). Declarado e esteira nunca se somam como dinheiro: o % da meta que vale é o da conta.' />
           </p>
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setMetodoAberto(true)} className="text-sm font-semibold text-nz-tinta-fraca hover:text-nz-tinta">
@@ -85,8 +90,8 @@ export default function CrmEsteiraResumoExecutivo({ oportunidades = [], sales = 
           <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 mb-2">
             <p className="text-sm"><span className="text-nz-tinta-fraca">Na conta:</span> <span className="font-bold text-nz-verde">{brl(provado.naConta)}</span></p>
             <p className="text-sm"><span className="text-nz-tinta-fraca">Fechado declarado:</span> <span className="font-bold text-amber-600">{brl(provado.declarado)}</span></p>
-            <p className="text-sm"><span className="text-nz-tinta-fraca">Em esteira (ponderado):</span> <span className="font-bold text-nz-tinta">{brl(resumo.pipelinePonderado)}</span></p>
-            <p className="text-xs text-nz-tinta-fraca">{resumo.ativas} negociações ativas · caminho de {pct.toFixed(1).replace('.', ',')}% da meta</p>
+            <p className="text-sm"><span className="text-nz-tinta-fraca">Em esteira:</span> <span className="font-bold text-nz-tinta">{brl(resumo.pipelineReal)}</span></p>
+            <p className="text-xs text-nz-tinta-fraca">{resumo.ativas} negociações ativas · previsão ponderada {brl(resumo.pipelinePonderado)} · na conta: {((provado.naConta / META_CAPTACAO) * 100).toFixed(1).replace('.', ',')}% da meta</p>
           </div>
           {/* Barra da meta: verde (na conta) + âmbar (declarado) + cinza (ponderado) */}
           <BarraProgressoSegmentada

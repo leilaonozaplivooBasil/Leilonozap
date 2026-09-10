@@ -40,7 +40,7 @@ const FORM_VAZIO = {
   motivo_perda: '', reuniao_em: '', recontato_em: '', anotacoes: '',
 };
 
-export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, onSalvar, onRegistrarAporteExterno, onApagar, podeApagar = false, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr, iniciarTour = false, onTourIniciado }) {
+export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], clientes = [], clientesManuais = [], executivos = [], usuariosApp = [], currentUser, visaoTotal, escopoParcial = false, onVerTudo = null, onSalvar, onRegistrarAporteExterno, onApagar, podeApagar = false, podeRegistrarAporte = false, clientePreenchido, onClientePreenchidoConsumido, oportunidadeParaAbrir, onOportunidadeParaAbrirConsumida, onIr, iniciarTour = false, onTourIniciado }) {
   const [editando, setEditando] = useState(null); // null | 'nova' | oportunidade
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
@@ -252,21 +252,66 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
           </span>
         </div>
 
-        {/* Forecast */}
+        {/* 🔴 10/09/2026 — "A ESTEIRA ZEROU". Print do dono, num computador em
+            que o seletor estava em "Só meu": a Esteira aparecia praticamente
+            vazia, com "R$ 0,00 · 0 negociações ativas", e nada na tela dizia
+            que aquilo era um RECORTE. As negociações estavam todas no banco.
+
+            O seletor mora no localStorage, ou seja, POR APARELHO: a mesma
+            pessoa vê números diferentes em dois computadores, e o padrão de
+            quem nunca clicou é "Só meu". Basta um print pra virar "a esteira
+            zerou" no grupo.
+
+            ⚠️ E tem uma coincidência que piora: nesse modo o card da meta
+            mostra 20,0% — que é, por acaso, o número certo do outro conserto
+            desta mesma data, só que aqui pelo motivo errado (esteira vazia).
+
+            O aviso só aparece pra quem PODE ver tudo — pra vendedor, que
+            nunca vê além da própria carteira, ele seria ruído. */}
+        {escopoParcial && (
+          <div
+            className="mb-3 flex items-center gap-2 flex-wrap rounded-lg border border-amber-400/40 bg-amber-400/[0.07] px-3 py-2"
+            data-teste="esteira-escopo-parcial"
+          >
+            <span className="text-[12px] text-amber-200">
+              Você está vendo <b>só as suas negociações</b> — os números abaixo são parciais.
+            </span>
+            {onVerTudo && (
+              <button
+                type="button"
+                onClick={onVerTudo}
+                className="ml-auto shrink-0 rounded-full border border-amber-400/50 px-2.5 py-0.5 text-[11px] font-bold text-amber-200 hover:bg-amber-400/15"
+                data-teste="esteira-ver-tudo"
+              >
+                ver de todo mundo
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 💰 10/09/2026 — OS TRÊS CARDS, DEPOIS DO ÁUDIO DO ADMIN.
+            "Em esteira" era o valor PONDERADO, e o time passou a digitar o
+            dobro pra ver o número certo (o negócio de R$ 80 mil virou R$ 160
+            mil no banco). Agora "Em esteira" é a SOMA REAL — o valor digitado
+            é o valor do negócio — e a previsão ponderada vira linha de baixo,
+            nomeada.
+            🔴 E a META passa a se medir só pelo que ENTROU: somar intenção com
+            dinheiro fazia a tela dizer "284% da meta" com R$ 200 mil na conta
+            de uma meta de R$ 1 milhão. */}
         <div className="grid grid-cols-3 gap-2 mb-4 mt-2" data-teste="esteira-forecast">
           <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo p-2.5">
-            <p className="text-[11px] text-nz-tinta-fraca">Em esteira (ponderado)</p>
-            <p className="text-base font-bold text-nz-tinta">{fmtBRL(resumo.pipelinePonderado)}</p>
-            <p className="text-[10px] text-nz-tinta-fraca">{resumo.ativas} negociações ativas</p>
+            <p className="text-[11px] text-nz-tinta-fraca">Em esteira</p>
+            <p className="text-base font-bold text-nz-tinta">{fmtBRL(resumo.pipelineReal)}</p>
+            <p className="text-[10px] text-nz-tinta-fraca">{resumo.ativas} negociações ativas · previsão ponderada {fmtBRL(resumo.pipelinePonderado)}</p>
           </div>
           <div className="rounded-lg border border-nz-verde/40 bg-nz-verde-fundo p-2.5">
             <p className="text-[11px] text-nz-tinta-fraca">Fechado (100%)</p>
             <p className="text-base font-bold text-nz-verde">{fmtBRL(resumo.fechado)}</p>
           </div>
           <div className="rounded-lg border border-nz-borda bg-nz-cinza-fundo p-2.5">
-            <p className="text-[11px] text-nz-tinta-fraca">Fechado + esteira vs meta</p>
-            <p className="text-base font-bold text-nz-tinta">{(((resumo.fechado + resumo.pipelinePonderado) / META_CAPTACAO) * 100).toFixed(1).replace('.', ',')}%</p>
-            <p className="text-[10px] text-nz-tinta-fraca">da meta de {fmtBRL(META_CAPTACAO)}</p>
+            <p className="text-[11px] text-nz-tinta-fraca">Fechado vs meta</p>
+            <p className="text-base font-bold text-nz-tinta">{((resumo.fechado / META_CAPTACAO) * 100).toFixed(1).replace('.', ',')}%</p>
+            <p className="text-[10px] text-nz-tinta-fraca">da meta de {fmtBRL(META_CAPTACAO)} · a esteira não entra aqui</p>
           </div>
         </div>
 

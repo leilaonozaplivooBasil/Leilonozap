@@ -235,7 +235,9 @@ body[data-painel-nav] main [class*="text-transparent"] {
 .nz-painel .nz-escuro [class*="text-gray-500"] { color: #6b7280 !important; }
 .nz-painel .nz-escuro [class*="border-gray-700"] { border-color: #374151 !important; }
 .nz-painel .nz-escuro [class*="border-gray-800"] { border-color: #1f2937 !important; }
-.nz-painel .nz-escuro input { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
+.nz-painel .nz-escuro input,
+.nz-painel .nz-escuro textarea,
+.nz-painel .nz-escuro select { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
 
 /* 🌑 BLOCO ESCURO DENTRO DO PAINEL-NAV (08/08/2026)
    Mesma lógica do .nz-painel .nz-escuro acima: o AdminTopNav liga a flag
@@ -271,7 +273,35 @@ body[data-painel-nav] main .nz-escuro [class*="text-gray-400"] { color: #9ca3af 
 body[data-painel-nav] main .nz-escuro [class*="text-gray-500"] { color: #6b7280 !important; }
 body[data-painel-nav] main .nz-escuro [class*="border-gray-700"] { border-color: #374151 !important; }
 body[data-painel-nav] main .nz-escuro [class*="border-gray-800"] { border-color: #1f2937 !important; }
-body[data-painel-nav] main .nz-escuro input { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
+/* 🔴 10/09/2026 — CAMPO BRANCO DENTRO DE BLOCO ESCURO. Dono, com print, na
+   fila de comprovações: "o filtro está com fundo branco".
+
+   A CAUSA é a regra de tema claro lá em cima (`body[data-painel-nav] main
+   input/textarea/select`), que pinta TODO campo de branco dentro da main —
+   inclusive os que moram num bloco escuro. A saída de emergência `.nz-escuro`
+   já existia, mas cobria só `input`: `select` e `textarea` continuavam
+   brancos, com a letra branca por cima em alguns casos.
+
+   ⚠️ E `select` escuro exige as DUAS linhas abaixo, não uma. É a mesma lição
+   que já custou dois consertos (#273 e a lista da votação MvM): a caixinha
+   fica escura, mas a LISTA que abre é desenhada pelo sistema — sem fundo
+   opaco nas <option> ela cai no branco padrão, e o texto branco some.
+   `color-scheme` resolve no Chrome/Edge do Mac; o fundo nas <option> resolve
+   no Windows e no Linux, que ignoram a dica. Só uma das duas conserta em
+   metade das máquinas. */
+body[data-painel-nav] main .nz-escuro input,
+body[data-painel-nav] main .nz-escuro textarea,
+body[data-painel-nav] main .nz-escuro select { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
+.nz-painel .nz-escuro select,
+body[data-painel-nav] main .nz-escuro select { color-scheme: dark; }
+.nz-painel .nz-escuro select option,
+.nz-painel .nz-escuro select optgroup,
+body[data-painel-nav] main .nz-escuro select option,
+body[data-painel-nav] main .nz-escuro select optgroup { background-color: #1F2937 !important; color: #F4F4F4 !important; }
+.nz-painel .nz-escuro input::placeholder,
+.nz-painel .nz-escuro textarea::placeholder,
+body[data-painel-nav] main .nz-escuro input::placeholder,
+body[data-painel-nav] main .nz-escuro textarea::placeholder { color: rgba(255,255,255,0.38) !important; }
 
 /* linhas zebradas discretas nas tabelas densas */
 .nz-painel:not(.nz-escuro) tbody tr:nth-child(even),
