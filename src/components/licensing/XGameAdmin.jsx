@@ -8,6 +8,7 @@ import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAut
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
+import { verVideo } from '@/lib/cofreDeAudio';
 import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
@@ -113,6 +114,41 @@ const DICAS = {
   conferencia: 'Conferência dupla da planilha: a pessoa marca a tarefa (o checkbox dela) e o gestor confirma o SIM aqui. Sem o SIM, a tarefa fica pendente de conferência.',
   validacao: 'Validação automática (F10): a tarefa só conclui com a comprovação — 📸 link do post/story do Instagram DO DIA, ou 📚 escrever o principal aprendizado da leitura. "Automática" deixa o sistema deduzir pelo título; "nenhuma" conclui direto. Vendas e reuniões validam sozinhas pelos dados do sistema.',
 };
+
+// 🎥 VER A VISUALIZAÇÃO DE ALGUÉM (gestor).
+// O cofre é privado: não existe URL fixa, só link assinado de 10 minutos. Por
+// isso o link é pedido no CLIQUE e não fica pendurado na tela — link assinado
+// guardado em componente vence sozinho e vira "não abre" sem explicação.
+//
+// `actorId` é o DONO do vídeo, não o gestor: é o caminho que carrega o dono, e
+// o servidor é quem confere se quem pediu pode ver (o gestor pode; e é ele que
+// a tela do ritual sempre prometeu).
+function BotaoVerVisualizacao({ caminho, segundos, actorId }) {
+  const [url, setUrl] = React.useState(null);
+  const [buscando, setBuscando] = React.useState(false);
+  const [erro, setErro] = React.useState(false);
+
+  const abrir = async () => {
+    if (buscando) return;
+    setBuscando(true); setErro(false);
+    const link = await verVideo({ caminho, actorId });
+    if (link) { setUrl(link); window.open(link, '_blank', 'noreferrer'); } else setErro(true);
+    setBuscando(false);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={abrir}
+      disabled={buscando}
+      data-teste="ver-visualizacao"
+      className="ml-2 font-bold text-emerald-700 hover:underline disabled:opacity-50"
+    >
+      {buscando ? '🎥 abrindo…' : erro ? '🎥 não abriu — tente de novo' : `🎥 ver a visualização (${segundos}s)`}
+      {url ? ' ↗' : ''}
+    </button>
+  );
+}
 
 export default function XGameAdmin({ onVerComo } = {}) {
   const [participantes, setParticipantes] = useState([]);
@@ -518,7 +554,15 @@ export default function XGameAdmin({ onVerComo } = {}) {
                                 {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
                                 {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}
                                 {c.fora_da_janela && <span className="ml-2 text-amber-600 font-semibold">⏰ fora da janela de 2h</span>}
-                                {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
+                                {/* 🎥 09/09 — o vídeo saiu do bucket público pro cofre privado.
+                                    `video_path` é o novo (link assinado no clique);
+                                    `video_url` são os gravados ANTES da mudança, que
+                                    continuam abrindo direto até serem movidos. Os dois
+                                    convivem de propósito: o gestor não pode perder
+                                    acesso ao que já existe. */}
+                                {c.video_path
+                                  ? <BotaoVerVisualizacao caminho={c.video_path} segundos={c.video_seg || 0} actorId={t.user_id} />
+                                  : c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
                                 {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio,
                                     tem que tudo transcrever e mostrar ali." `entrega`
                                     já é o texto — escrito ou falado (transcrito) —
