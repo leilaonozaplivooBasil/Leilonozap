@@ -154,3 +154,69 @@ test('⚠️ as consultas de UMA pessoa seguem sem paginar, de propósito', () =
   const crm = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
   assert.match(crm, /supabase\.from\('xgame_votos_mvm'\)\.select\('virtude,nota'\)\.eq\('votado_id', uid\)/);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🏅 O QUE ISSO CUSTA NA LIGA — o caso do paim (09/09/2026)
+// ═══════════════════════════════════════════════════════════════════════════
+// Relato do dono: "o João paim, mesmo estando nas posições altas, constava
+// como bronze."
+//
+// Ele é o PRIMEIRO em pontos do ciclo (726, contra 532 do segundo). E a MvM
+// tem um PENHASCO: abaixo de 7 a pessoa vai pra Bronze, não importa o resto
+// (ligaComPortoesDoCiclo, o portão de caráter da DIR-115).
+//
+// A MvM real dele é 7.61 — 0,61 acima do penhasco. Mas com o corte de 1.000
+// linhas, o número que a tela calculava dependia de QUAIS linhas voltavam.
+// Medido no banco, no mesmo instante, três ordens de corte plausíveis:
+//
+//   todas as 150 linhas ........ 7.61
+//   corte em ordem física ...... 8.17  (30 votos)
+//   corte em ordem de id ....... 7.33  (73 votos)
+//   corte por created_date ..... 7.33  (60 votos)
+//
+// Uma variação de 0,84 em volta de um penhasco de 7, numa nota que decide
+// liga e remuneração. Os testes abaixo usam as notas REAIS dele por virtude.
+import { mvmManual, ligaComPortoesDoCiclo, PISO_CARATER_LIGA } from '../src/lib/xgame.js';
+
+/** As 10 virtudes do paim no ciclo: [virtude, soma, n] — direto do banco. */
+const PAIM = [
+  ['ESPÍRITO DE EQUIPE', 127, 15], ['RELACIONAMENTO', 127, 15], ['GRATIDÃO', 118, 15],
+  ['PONTUALIDADE', 119, 15], ['COMPROMISSO', 116, 15], ['AUTORRESPONSABILIDADE', 115, 15],
+  ['PROATIVIDADE', 114, 15], ['ORATÓRIA', 107, 15], ['ORGANIZAÇÃO', 104, 15],
+  ['LIDERANÇA', 94, 15],
+];
+const votosDe = (linhas) => linhas.flatMap(([virtude, soma, n]) =>
+  Array.from({ length: n }, () => ({ virtude, nota: soma / n })));
+
+test('🏅 com TODOS os votos, o paim passa do piso de caráter', () => {
+  const { media } = mvmManual(votosDe(PAIM));
+  assert.equal(Number(media.toFixed(2)), 7.61, 'a MvM real dele mudou — reconferir no banco');
+  assert.ok(media >= PISO_CARATER_LIGA, 'a MvM real está acima do piso');
+  // token alto o bastante pra Ouro: com a MvM certa, o portão não derruba
+  assert.equal(ligaComPortoesDoCiclo(13, { mvmVotacao: media, vendasFeitas: 0 }).id, 'ouro');
+});
+
+test('🔴 com o voto CORTADO, o mesmo paim vira BRONZE', () => {
+  // O corte não escolhe: leva as linhas que couberam. Se as virtudes que
+  // sobraram forem as mais fracas dele, a média desaba — e o portão de
+  // caráter derruba tudo pra Bronze, com 726 pontos no ciclo.
+  const sobrou = votosDe(PAIM.filter(([v]) => ['ORGANIZAÇÃO', 'LIDERANÇA'].includes(v)));
+  const { media } = mvmManual(sobrou);
+  assert.ok(media < PISO_CARATER_LIGA, `esperava média abaixo de ${PISO_CARATER_LIGA}, veio ${media}`);
+  assert.equal(
+    ligaComPortoesDoCiclo(13, { mvmVotacao: media, vendasFeitas: 0 }).id,
+    'bronze',
+    'o portão de caráter parou de derrubar — mas o ponto aqui é que ele derruba com voto incompleto',
+  );
+});
+
+test('🔴 e é por isso que a paginação é assunto de DINHEIRO, não de tela', () => {
+  // O mesmo token, a mesma pessoa, o mesmo instante: só muda quanto do voto
+  // chegou. Bronze e Ouro são remunerações diferentes.
+  const completa = mvmManual(votosDe(PAIM)).media;
+  const parcial = mvmManual(votosDe(PAIM.filter(([v]) => ['ORGANIZAÇÃO', 'LIDERANÇA'].includes(v)))).media;
+  assert.notEqual(
+    ligaComPortoesDoCiclo(13, { mvmVotacao: completa, vendasFeitas: 0 }).id,
+    ligaComPortoesDoCiclo(13, { mvmVotacao: parcial, vendasFeitas: 0 }).id,
+  );
+});
