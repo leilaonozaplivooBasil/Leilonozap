@@ -78,6 +78,48 @@ const sb = (caminho, opts = {}) => fetch(`${SUPABASE_URL}/storage/v1/${caminho}`
 export const cofreConfigurado = () => !!(SUPABASE_URL && SR);
 
 /**
+ * 🔴 10/09/2026 — O MIME COM CODEC DERRUBAVA TODO UPLOAD.
+ *
+ * O navegador grava com `audio/webm;codecs=opus` (e `video/webm;codecs=vp8,opus`).
+ * O Supabase compara a string INTEIRA contra a lista de mimes do bucket, que
+ * tem `audio/webm` — e recusa com 415 invalid_mime_type.
+ *
+ * Consequência medida: o cofre de voz subiu em 09/09 e NUNCA guardou um único
+ * arquivo. Ninguém reclamou porque guardar é best-effort e o ritual não cai.
+ * Nos logs de produção do dia 10: `mime type audio/webm;codecs=opus is not
+ * supported`, em toda tentativa.
+ */
+export const mimeLimpo = (mime, reserva = 'application/octet-stream') =>
+  String(mime || '').split(';')[0].trim().toLowerCase() || reserva;
+
+/**
+ * 🔴 10/09/2026 — E O ARQUIVO NÃO PODE PASSAR POR DENTRO DA FUNÇÃO.
+ *
+ * A Vercel corta o corpo da requisição em ~4,5 MB ANTES de chegar aqui: o
+ * `limiteBytes` de 100 MB que a rota do vídeo declarava é um número que a
+ * plataforma nunca honrou. No Ritual de 10/09 foram 11 tentativas e 11
+ * respostas HTTP 413 — nenhuma gravação salva, cinco pessoas tentando de novo.
+ *
+ * A saída é o navegador falar DIRETO com o Storage, com uma autorização de uso
+ * único que só este servidor sabe emitir. A trava de dono não se perde: quem
+ * decide o caminho (com o uid dentro dele) continua sendo esta função, o
+ * navegador nunca vê a chave de serviço, e o bucket segue privado e sem policy.
+ *
+ * Devolve { caminho, token } ou null.
+ */
+async function autorizacaoDeEnvio(bucket, caminho) {
+  const r = await sb(`object/upload/sign/${bucket}/${caminho}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j?.url) return null;
+  const token = new URL(`https://x${j.url}`).searchParams.get('token');
+  return token ? { caminho, token } : null;
+}
+
+/**
  * O handler completo de um cofre. Cada rota só declara QUAL cofre é e o que
  * cabe nele — a regra de quem pode o quê fica aqui, uma vez.
  *
@@ -128,9 +170,47 @@ export function atenderCofre({ bucket, limiteBytes, rota, naoEMeu, naoEMinhaPast
 
     if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Método não permitido' });
 
-    // ── guardar ────────────────────────────────────────────────────────────
+    // ── autorizar o envio DIRETO (JSON, corpo minúsculo) ───────────────────
+    // 🔴 É por aqui que passa arquivo grande. O corpo tem só o caminho — os
+    // bytes vão do navegador pro Storage sem tocar nesta função, que é o que
+    // desarma o 413 da Vercel (ver `autorizacaoDeEnvio`). A conferência de
+    // dono é EXATAMENTE a mesma do caminho antigo: sem crachá que bata com o
+    // uid dentro do caminho, não se assina nada.
+    const tipoDoCorpo = String(req.headers['content-type'] || '');
+    if (tipoDoCorpo.includes('application/json')) {
+      try {
+        let corpo = req.body;
+        if (typeof corpo === 'string') { try { corpo = JSON.parse(corpo); } catch { corpo = {}; } }
+        if (!corpo || typeof corpo !== 'object') {
+          const cru = await corpoBruto(req, 64 * 1024).catch(() => null);
+          try { corpo = JSON.parse(String(cru || '{}')); } catch { corpo = {}; }
+        }
+        const caminho = String(corpo.caminho || '');
+        const actorId = String(corpo.actorId || '');
+        const dono = donoDoCaminho(caminho);
+        if (!dono) return res.status(400).json({ ok: false, error: 'caminho inválido' });
+
+        const ses = exigirSessao(req, actorId, rota, true);
+        const eu = ses.userId || actorId;
+        if (!eu || String(eu) !== String(dono)) {
+          return res.status(403).json({ ok: false, error: naoEMinhaPasta });
+        }
+
+        const auth = await autorizacaoDeEnvio(bucket, caminho);
+        if (!auth) {
+          console.error(`[${rota}] não consegui assinar o envio de ${caminho}`);
+          return res.status(200).json({ ok: false, error: erroAoGuardar });
+        }
+        return res.status(200).json({ ok: true, ...auth, mime_aceito: true });
+      } catch (e) {
+        console.error(`[${rota}] erro ao autorizar envio`, String(e?.message || e));
+        return res.status(200).json({ ok: false, error: erroAoGuardar });
+      }
+    }
+
+    // ── guardar (arquivo pequeno, passando por aqui) ───────────────────────
     try {
-      const tipo = String(req.headers['content-type'] || '');
+      const tipo = tipoDoCorpo;
       if (!tipo.startsWith('multipart/form-data')) {
         return res.status(400).json({ ok: false, error: 'envie multipart/form-data' });
       }
@@ -157,9 +237,12 @@ export function atenderCofre({ bucket, limiteBytes, rota, naoEMeu, naoEMinhaPast
         return res.status(403).json({ ok: false, error: naoEMinhaPasta });
       }
 
+      // ⚠️ `mimeLimpo`: o navegador manda `audio/webm;codecs=opus` e o Storage
+      // compara a string inteira contra a lista do bucket. Sem cortar o codec,
+      // TODO upload volta 415 — foi o que manteve este cofre vazio desde 09/09.
       const r = await sb(`object/${bucket}/${caminho}`, {
         method: 'POST',
-        headers: { 'Content-Type': arquivo.type || 'application/octet-stream', 'x-upsert': 'false' },
+        headers: { 'Content-Type': mimeLimpo(arquivo.type), 'x-upsert': 'false' },
         body: arquivo,
       });
       if (!r.ok) {

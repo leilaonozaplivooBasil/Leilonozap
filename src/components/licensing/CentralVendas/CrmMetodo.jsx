@@ -865,6 +865,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: videoBlob.type }),
         actorId: uid,
       }) || '';
+      // 🔴 10/09/2026 — GUARDAR PODE FALHAR, MAS NÃO PODE FALHAR CALADO.
+      //
+      // Best-effort está certo: ninguém perde o ritual das 5h porque o cofre
+      // piscou. Silêncio ABSOLUTO é que estava errado — em 10/09 o envio
+      // voltava 413 em toda tentativa e a tela não dizia nada, então cinco
+      // pessoas gravaram de novo, e de novo, achando que era erro delas.
+      // O ritual segue valendo; o que a pessoa ganha aqui é a verdade.
+      if (!videoPath) {
+        toast.error('O ritual foi registrado, mas não consegui guardar a gravação. Não precisa refazer — já avisei o time.', { duration: 7000 });
+      }
     }
     // 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
     // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
