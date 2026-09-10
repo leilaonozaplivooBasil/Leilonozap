@@ -82,8 +82,13 @@ export const semCodec = (mime) => String(mime || '').split(';')[0].trim().toLowe
  * a lista de mimes do bucket e recusa com 415 se sobrar o sufixo. Foi isso que
  * manteve o cofre de voz vazio desde que ele nasceu.
  */
-async function guardarDireto({ rota, balde, blob, caminho, actorId }) {
+// ⚠️ `aoFalhar` é OPCIONAL e não muda o que a função devolve (caminho ou
+// null). Existe porque, em 10/09, o envio voltava 413 em toda tentativa e o
+// motivo morria num console.error — quem lê o laudo depois não tinha como
+// saber. Agora quem chama pode registrar a falha junto da comprovação.
+async function guardarDireto({ rota, balde, blob, caminho, actorId, aoFalhar }) {
   if (!blob || !caminho) return null;
+  const falhou = (erro) => { try { aoFalhar?.(String(erro || 'sem detalhe')); } catch { /* avisar nunca derruba guardar */ } return null; };
   try {
     const r = await fetch(rota, {
       method: 'POST',
@@ -93,7 +98,7 @@ async function guardarDireto({ rota, balde, blob, caminho, actorId }) {
     const j = await r.json().catch(() => null);
     if (!j?.ok || !j.token) {
       console.error('[cofre] sem autorização de envio:', j?.error || r.status);
-      return null;
+      return falhou(`autorização negada (HTTP ${r.status})`);
     }
     // 🔴 O `contentType` das opções NÃO BASTA. Conferido no supabase-js
     // instalado: quando o corpo é um Blob, a lib monta um FormData e faz
@@ -112,12 +117,12 @@ async function guardarDireto({ rota, balde, blob, caminho, actorId }) {
       .uploadToSignedUrl(j.caminho, j.token, pronto, { contentType: tipoLimpo });
     if (error) {
       console.error('[cofre] o Storage recusou o envio direto:', error?.message || error);
-      return null;
+      return falhou(`Storage recusou: ${error?.message || error}`);
     }
     return j.caminho;
   } catch (e) {
     console.error('[cofre] falhou o envio direto:', e?.message || e);
-    return null;
+    return falhou(e?.message || e);
   }
 }
 
@@ -127,8 +132,8 @@ async function guardarDireto({ rota, balde, blob, caminho, actorId }) {
 export const guardarAudio = ({ blob, caminho, actorId }) =>
   guardar({ rota: COFRE_AUDIO, blob, caminho, actorId, campo: 'audio' });
 
-export const guardarVideo = ({ blob, caminho, actorId }) =>
-  guardarDireto({ rota: COFRE_VIDEO, balde: 'xgame-videos', blob, caminho, actorId });
+export const guardarVideo = ({ blob, caminho, actorId, aoFalhar }) =>
+  guardarDireto({ rota: COFRE_VIDEO, balde: 'xgame-videos', blob, caminho, actorId, aoFalhar });
 
 /** Link assinado pra abrir (curta validade). `null` quando não dá. */
 async function abrir({ rota, caminho, actorId }) {
