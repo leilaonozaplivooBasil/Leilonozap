@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  ordenarPorHora, horaEntre, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -64,6 +64,7 @@ import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import FaixaVisao from './FaixaVisao';
@@ -104,6 +105,13 @@ const fmtDia = (s) => new Date(`${s}T12:00:00`).toLocaleDateString('pt-BR', { we
 // metodo_tarefas_unique_user_data_hora_titulo); aqui só troca o
 // insert-um-a-um por um upsert em lote que IGNORA a duplicata em vez de
 // tentar criar (ou quebrar tentando) — nunca mais 40 tarefas no lugar de 20.
+// 🕐 mesma convenção do DistribuirTarefa: `ordem` é o minuto do dia, então a
+// lista é cronológica por construção mesmo quando alguém ordena por `ordem`.
+const ordemPelaHoraDoDia = (hhmm) => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm || '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 2000;
+};
+
 const criarTarefasSemDuplicar = (linhas) => supabase.from('metodo_tarefas')
   .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
 
@@ -218,7 +226,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const carregarTarefas = useCallback(() => {
     if (!uid) return;
     plataforma.entities.MetodoTarefa.filter({ user_id: uid, data: dia })
-      .then((rows) => { setTarefas((Array.isArray(rows) ? rows : []).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.hora).localeCompare(String(b.hora)))); setDiaLido(dia); })
+      // 🕐 09/09/2026 — A HORA MANDA. Aqui estava o inverso: ordenava por
+      // `ordem` e só desempatava por `hora`. Como toda tarefa nova nascia com
+      // `ordem` = fim da fila, uma tarefa marcada pras 08:00 entrava depois das
+      // 22h — na Lista E na Jornada, que são a MESMA linha (ver destinos.js).
+      // E lista fora de ordem cronológica faz `estadoDasTarefas` marcar como
+      // PERDIDA uma tarefa que está acontecendo agora (ver ordenarPorHora).
+      .then((rows) => { setTarefas(ordenarPorHora(Array.isArray(rows) ? rows : [])); setDiaLido(dia); })
       .catch(() => { setTarefas([]); setDiaLido(dia); });
   }, [uid, dia]);
   useEffect(() => { setDiaLido(null); }, [dia]);
@@ -1144,6 +1158,49 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(dados.audioResumo ? { entradaResumo: 'audio' } : {}),
       ...(vozResumo ? { audioResumoPath: vozResumo } : {}),
     });
+  };
+
+  // 🖐️ ARRASTAR PARA REORGANIZAR — dono, 09/09/2026: "as tarefas podem também
+  // agora conter um botão de arrastar para que possamos reorganizá-las
+  // arrastando para cima ou para baixo de forma fluida".
+  //
+  // 🔴 ARRASTAR REMARCA A HORA, e isso é decisão, não efeito colateral. Soltar
+  // sem mexer na hora recriaria o bug do #312: a lista fica fora de ordem
+  // cronológica e `estadoDasTarefas` passa a marcar como PERDIDA uma tarefa que
+  // está acontecendo agora — mexendo em X-Pay e na zeragem do dia. Aqui a
+  // tarefa recebe a hora do lugar onde foi solta, e a lista continua sempre em
+  // ordem de relógio.
+  //
+  // ⚠️ SEM CONTA DE ÍNDICE GLOBAL, de propósito. O arrasto cruza períodos
+  // (manhã → tarde), e casar índice local do grupo com índice global da lista é
+  // justamente o tipo de conta que gerou o bug de hoje. Aqui a tela só olha
+  // QUEM FICOU ACIMA e QUEM FICOU ABAIXO no período de destino e pergunta a
+  // hora pra `horaEntre` — duas entradas, nenhum índice pra errar.
+  const aoSoltarTarefa = async ({ source, destination, draggableId }) => {
+    if (!destination) return; // soltou fora
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    const movida = tarefasJogo.find((t) => t.id === draggableId);
+    if (!movida?.hora) return; // sem hora fica fora da Jornada de propósito
+    const doDestino = tarefasJogo.filter((t) => periodoDe(t.hora) === destination.droppableId && t.id !== draggableId);
+    const acima = doDestino[destination.index - 1] || null;
+    const abaixo = doDestino[destination.index] || null;
+    const nova = horaEntre(acima?.hora || null, abaixo?.hora || null);
+    if (!nova || nova === movida.hora) return; // nada a gravar
+    // ⚠️ Quando não coube minuto entre as vizinhas, `horaEntre` devolve a hora
+    // da de cima. Aí quem decide a posição é `ordem` (ordenarPorHora desempata
+    // por ela), então a movida precisa vir logo DEPOIS da de cima.
+    const ordem = (nova === acima?.hora) ? Number(acima.ordem ?? 0) + 1 : ordemPelaHoraDoDia(nova);
+    const antes = tarefas;
+    setTarefas((prev) => ordenarPorHora(prev.map((x) => (x.id === movida.id ? { ...x, hora: nova, ordem } : x))));
+    const { error } = await supabase.from('metodo_tarefas').update({ hora: nova, ordem }).eq('id', movida.id);
+    if (error) {
+      // 🔴 Sem isto a tela mostrava a tarefa no lugar novo e o banco ficava com
+      // o antigo — a pessoa recarrega e "voltou sozinha". Volta e avisa.
+      setTarefas(antes);
+      toast.error('Não deu pra mover a tarefa. Tente de novo.');
+      return;
+    }
+    toast.success(`Movida para as ${nova}`);
   };
 
   const alternarFeito = async (t) => {
@@ -2291,17 +2348,30 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 agoraMin={ehHoje ? agoraMinJogo : null}
               />
             ) : (
-              PERIODOS.map((p) => {
+              /* 🖐️ 09/09/2026 — ARRASTAR PARA REORGANIZAR. Um Droppable por
+                 período, todos do mesmo `type`, pra dar pra mover da manhã pra
+                 tarde. A hora é remarcada no soltar (ver aoSoltarTarefa). */
+              <DragDropContext onDragEnd={aoSoltarTarefa}>
+              {PERIODOS.map((p) => {
                 const doPeriodo = tarefasJogo.filter((t) => periodoDe(t.hora) === p.id);
                 if (doPeriodo.length === 0) return null;
                 return (
                   <div key={p.id}>
                     <p className="text-xs font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1.5">{p.label}</p>
-                    <div className="space-y-1.5">
-                      {doPeriodo.map((t) => {
+                    <Droppable droppableId={p.id} type="tarefa">
+                    {(areaSoltar) => (
+                    <div className="space-y-1.5" ref={areaSoltar.innerRef} {...areaSoltar.droppableProps}>
+                      {doPeriodo.map((t, iNoPeriodo) => {
                         const guia = guiaDaRotina(t.titulo);
                         return (
-                          <div key={t.id} className={`border-b border-nz-borda/35 py-3 ${t.feito ? 'opacity-70' : ''}`}>
+                          <Draggable key={t.id} draggableId={String(t.id)} index={iNoPeriodo} isDragDisabled={!t.hora}>
+                          {(arrasto, estadoArrasto) => (
+                          <div
+                            ref={arrasto.innerRef}
+                            {...arrasto.draggableProps}
+                            style={arrasto.draggableProps.style}
+                            className={`border-b border-nz-borda/35 py-3 ${t.feito ? 'opacity-70' : ''} ${estadoArrasto.isDragging ? 'rounded-lg bg-nz-verde-fundo shadow-lg ring-1 ring-nz-verde/40' : ''}`}
+                          >
                             {/* 📱 DIR-80 — DOIS ANDARES NO CELULAR.
                                 Antes título e ações dividiam a MESMA linha: no
                                 celular sobrava uma coluna estreita pro título,
@@ -2314,6 +2384,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 filhos voltam a ser itens diretos da linha —
                                 exatamente como era. Zero mudança no desktop. */}
                             <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1.5 sm:flex-nowrap sm:items-center">
+                              {/* 🖐️ o punho. Só ele arrasta: com a linha inteira
+                                  arrastável, rolar a lista no celular vira arrasto
+                                  sem querer, e marcar a tarefa fica sofrido.
+                                  Tarefa SEM hora não arrasta (não está na Jornada). */}
+                              <span
+                                {...(t.hora ? arrasto.dragHandleProps : {})}
+                                aria-label={t.hora ? `Arrastar ${t.titulo} para outro horário` : undefined}
+                                title={t.hora ? 'Arrastar para outro horário' : 'Sem horário — defina uma hora para poder mover'}
+                                className={`shrink-0 select-none text-nz-tinta-fraca mt-1 sm:mt-0 ${t.hora ? 'cursor-grab active:cursor-grabbing hover:text-nz-verde' : 'opacity-30 cursor-not-allowed'}`}
+                                data-teste="punho-arrastar"
+                              >
+                                ⠿
+                              </span>
                               <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer mt-1 sm:mt-0" />
                               {/* ⚡ o XP voando no clique — feedback imediato do jogo */}
                               {xpFlash?.id === t.id && (
@@ -2482,12 +2565,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
                             )}
                           </div>
+                          )}
+                          </Draggable>
                         );
                       })}
+                      {areaSoltar.placeholder}
                     </div>
+                    )}
+                    </Droppable>
                   </div>
                 );
-              })
+              })}
+              </DragDropContext>
             )}
 
             {visao === 'lista' && (
