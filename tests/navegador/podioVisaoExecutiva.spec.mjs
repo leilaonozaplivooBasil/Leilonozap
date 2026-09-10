@@ -61,3 +61,35 @@ test('o pódio desenha foto real (com anel de liga) e cai pro fallback de inicia
   await pagina.screenshot({ path: path.join(FOTOS, 'podio-visao-executiva.png'), fullPage: true });
   assert.deepEqual(erros, [], `sem erro de JS na página: ${erros.join(' | ')}`);
 });
+
+// 🔎 10/09/2026 — dono, olhando o pódio em produção, achando um Liga
+// diferente entre o ranking e o painel pessoal: "pode clicar a abrir as
+// informações da moeda de cada um... mais coisas validando." Clicar numa
+// linha da tabela abre o detalhe (a moeda em fatias + os dois portões) de
+// verdade, num navegador de verdade — não só a prova textual do fonte.
+test('clicar numa linha da tabela abre o detalhe da moeda (fatias + os dois portões), num navegador de verdade', { skip: semNavegador }, async () => {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1000, height: 1400 } });
+  const pagina = await ctx.newPage();
+  const erros = [];
+  pagina.on('pageerror', (e) => erros.push(e.message));
+  await pagina.goto(BASE);
+  await pagina.getByText('Todo mundo').waitFor();
+
+  const primeiraLinha = pagina.locator('[data-teste="linha-ranking"]').first();
+  await primeiraLinha.waitFor();
+  await primeiraLinha.click();
+  const detalhe = pagina.locator('[data-teste="detalhe-moeda"]');
+  await detalhe.waitFor();
+  const texto = await detalhe.textContent();
+  assert.match(texto, /De onde vem o token de/);
+  assert.match(texto, /Os dois portões da liga/);
+  assert.match(texto, /Caráter \(MvM\)/);
+  assert.match(texto, /Meta de vendas/);
+  await pagina.screenshot({ path: path.join(FOTOS, 'detalhe-moeda-aberto.png'), fullPage: true });
+
+  // clicar de novo fecha — não empilha detalhe embaixo de detalhe
+  await primeiraLinha.click();
+  await detalhe.waitFor({ state: 'detached' });
+  assert.deepEqual(erros, [], `sem erro de JS na página: ${erros.join(' | ')}`);
+});

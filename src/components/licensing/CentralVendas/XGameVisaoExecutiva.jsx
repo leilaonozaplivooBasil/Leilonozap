@@ -1,9 +1,48 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
-import { LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX, moedaModelo } from '@/lib/xgame';
+import { toast } from 'sonner';
+import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake, Share2, ChevronDown } from 'lucide-react';
+import {
+  LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo,
+  estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX, moedaModelo, participantesVotaveis, resumoTimeHoje,
+  TICKET_MEDIO_VENDA, vendasEquivalentesAltoValor, textoCompartilharRanking, META_VENDAS_CICLO, PISO_CARATER_LIGA, PISO_CARATER_PLATINA,
+} from '@/lib/xgame';
 import { getFotoPerfil } from '@/lib/selosCargo';
+import { isVendaReal } from '@/lib/dinheiroReal';
+import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
+import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import MoedaPizza from './MoedaPizza';
+import { COMPONENTE_INFO } from '@/lib/moedaPizza';
+
+// 💰 10/09/2026 — auditoria noturna: o painel pessoal (CrmMetodo.jsx/
+// XGame.jsx) já busca as vendas REAIS da loja de cada um pro componente de
+// vendas do Human Token; este ranking nunca buscava — caía no proxy manual
+// (contagem de tarefa [VENDA]), podendo mostrar Liga/Token diferente do que
+// a própria pessoa vê no painel dela. Mesma conta do painel pessoal, EM
+// LOTE pro time inteiro (uma query só, não uma por pessoa).
+async function vendasReaisEmLote(ids, ini) {
+  if (!ids.length) return {};
+  const colunas = ['seller_id', 'licensee_id', 'anchor_id', 'owner_id'];
+  const [{ data: sales }, { data: oportunidades }] = await Promise.all([
+    supabase.from('catalog_sales')
+      .select('id,status,kind,created_date,total_amount,seller_id,licensee_id,anchor_id,owner_id')
+      .or(colunas.map((c) => `${c}.in.(${ids.join(',')})`).join(','))
+      .gte('created_date', `${ini}T00:00:00`),
+    supabase.from('captacao_oportunidades').select('responsavel_id,estagio,aporte_externo,fechado_em')
+      .in('responsavel_id', ids).gte('fechado_em', `${ini}T00:00:00`),
+  ]);
+  const porPessoa = {};
+  ids.forEach((uid) => {
+    const salesDe = (sales || []).filter((s) => colunas.some((c) => s[c] === uid));
+    const pagas = salesDe.filter(isSalePago);
+    const reais = salesDe.filter(isVendaReal);
+    const aporteExterno = (oportunidades || [])
+      .filter((o) => o.responsavel_id === uid && ehFechada(o) && aporteExternoValido(o))
+      .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
+    porPessoa[uid] = pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno;
+  });
+  return porPessoa;
+}
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -88,9 +127,78 @@ function SeloLiga({ liga, className = '' }) {
   );
 }
 
+// 🔎 10/09/2026 — dono: "pode clicar a abrir as informações da moeda de cada
+// um... mais coisas validando e mais informações pra gerar melhor
+// entendimento." O detalhe que abre ao clicar numa linha da tabela — a
+// MESMA moeda em fatias de "Sua posição" (nada recalculado aqui) mais os
+// dois portões escritos por extenso, com o número exato que decidiu cada
+// um. Existe pra qualquer divergência entre o ranking e o painel pessoal
+// da própria pessoa ficar auditável na hora, sem precisar confiar cego no
+// resultado final.
+function GateLinha({ ok, titulo, nota }) {
+  return (
+    <li className={`flex items-start gap-2 ${ok ? 'text-nz-verde' : 'text-nz-fogo'}`}>
+      <span className="mt-0.5">{ok ? '✔' : '✘'}</span>
+      <span className="text-nz-tinta"><span className="font-semibold">{titulo}</span> — <span className="text-nz-tinta-fraca">{nota}</span></span>
+    </li>
+  );
+}
+
+function DetalheMoeda({ linha: l, liga }) {
+  const semCarater = l.mvm !== null && l.mvm !== undefined && l.mvm < PISO_CARATER_LIGA;
+  const semCateraterPlatina = l.mvm !== null && l.mvm !== undefined && l.mvm < PISO_CARATER_PLATINA;
+  const semMetaVendas = (Number(l.vendasFeitas) || 0) < META_VENDAS_CICLO;
+  return (
+    <div className="flex flex-col sm:flex-row gap-5 items-start">
+      <div className="shrink-0 mx-auto sm:mx-0">
+        <MoedaPizza componentes={l.componentes} total={l.token} max={TOKEN_MAX} liga={liga} />
+      </div>
+      <div className="flex-1 min-w-0 w-full space-y-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-nz-tinta-fraca mb-1.5">De onde vem o token de {l.nome}</p>
+          <ul className="space-y-1 text-[11px]">
+            {Object.entries(l.componentes || {}).map(([k, v]) => {
+              const info = COMPONENTE_INFO[k];
+              if (!info) return null;
+              return (
+                <li key={k} className="flex items-center justify-between gap-2 text-nz-tinta-fraca">
+                  <span>{info.emoji} {info.rotulo}</span>
+                  <span className="tabular-nums font-semibold text-nz-tinta">{fmt(v)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-nz-tinta-fraca mb-1.5">Os dois portões da liga</p>
+          <ul className="space-y-1.5 text-[11px]">
+            <GateLinha
+              ok={!semCarater}
+              titulo="Caráter (MvM)"
+              nota={l.mvm === null ? 'ninguém votou nela ainda no ciclo — sem MvM' : semCarater ? `MvM ${fmt(l.mvm, 1)} abaixo de ${PISO_CARATER_LIGA} — trava tudo em Bronze` : semCateraterPlatina ? `MvM ${fmt(l.mvm, 1)} abaixo de ${PISO_CARATER_PLATINA} — sem Platina (Ouro liberado)` : `MvM ${fmt(l.mvm, 1)} — libera Platina`}
+            />
+            <GateLinha
+              ok={!semMetaVendas}
+              titulo="Meta de vendas"
+              nota={`${fmt(l.vendasFeitas, 1)} de ${META_VENDAS_CICLO} no ciclo (reunião conta fração) — ${semMetaVendas ? 'sem 100%, sem Platina (Ouro liberado)' : '100% batida, Platina liberada por aqui'}`}
+            />
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function XGameVisaoExecutiva() {
   const [linhas, setLinhas] = useState(null); // null = carregando
   const [ordem, setOrdem] = useState('token');
+  // 🔎 10/09/2026 — dono: "pode clicar a abrir as informações da moeda de
+  // cada um... mais informações pra validar e gerar melhor entendimento."
+  // Clicar numa linha da tabela abre o detalhe: a MESMA moeda em fatias de
+  // "Sua posição", com os dois portões (caráter e vendas) explícitos —
+  // pra qualquer divergência entre o ranking e o painel pessoal ficar óbvia
+  // na hora, sem precisar confiar apenas no número final.
+  const [linhaAberta, setLinhaAberta] = useState(null);
   // 🎯 08/09/2026 — "quero ver onde EU estou" (ordem do dono): a tela
   // sempre foi só do time, sem marcar quem é o dono da sessão. Mesmo jeito
   // de achar o usuário que XGame.jsx já usa — direto do localStorage, sem
@@ -128,13 +236,38 @@ export default function XGameVisaoExecutiva() {
       // repesagem em pesosDoPerfil. Agora o Token oficial do ranking usa a
       // MESMA fórmula com peso de voto (tokenDoCiclo) do painel pessoal —
       // por isso precisa do perfil de cada um (pesos diferentes por perfil).
-      supabase.from('xgame_participantes').select('user_id,perfil'),
-    ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
+      // 🔢 10/09/2026 — auditoria noturna: faltava `.eq('ativo', true)` — sem
+      // isso, gente inativa/removida ainda entrava na conta de "o time".
+      supabase.from('xgame_participantes').select('user_id,perfil,aceita_ser_votado').eq('ativo', true),
+      // pro role (super_admin opt-in) que decide quem é votável, e pra
+      // nome/foto (substitui a query separada que existia mais abaixo).
+      supabase.from('app_users').select('id,full_name,nickname,role,avatar_url,profile_photo_url'),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }, { data: usuarios }]) => {
         if (!vivo) return;
+        const usuariosPorId = new Map((usuarios || []).map((u) => [u.id, u]));
+        // 🔢 10/09/2026 — dono, decidindo a população oficial de "o time" em
+        // toda tela agregada: "todos que estão de fato recebendo voto, esses
+        // de fato estão atuando na operação ativa." Mesma régua de sempre
+        // (podeSerVotado) — nunca mais a hierarquia do painel de controle.
+        const idsVotaveis = participantesVotaveis(participantes, usuariosPorId);
         const votosPor = {};
         (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
         const perfilPor = {};
         (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
+
+        // 📊 10/09/2026 — auditoria noturna: "hoje" vinha da FOTOGRAFIA
+        // diária (xgame_diario), só gravada quando a própria pessoa abre a
+        // tela dela — atrasada por natureza (o mesmo sintoma que fazia os
+        // números da ADM e da Visão Executiva não baterem). Agora tarefas e
+        // vendas de hoje vêm AO VIVO, pra mesma população oficial.
+        const [{ data: tarefasHojeAoVivo }, vendasReaisPor] = await Promise.all([
+          idsVotaveis.length
+            ? supabase.from('metodo_tarefas').select('user_id,data,titulo,feito').eq('data', hoje).in('user_id', idsVotaveis)
+            : Promise.resolve({ data: [] }),
+          vendasReaisEmLote(idsVotaveis, ini),
+        ]);
+        const tarefasHojePorPessoa = {};
+        (tarefasHojeAoVivo || []).forEach((t) => { (tarefasHojePorPessoa[t.user_id] ||= []).push(t); });
 
         const por = {};
         (data || []).forEach((d) => {
@@ -159,24 +292,24 @@ export default function XGameVisaoExecutiva() {
           r.perdido += Math.max(0, (Number(d.detalhes?.xpay_perdido) || 0) - (Number(d.detalhes?.xpay_recuperado) || 0));
           if (fatia >= OFENSIVA_META) r.dias_fechados += 1;
           r.porData[d.data] = fatia;
-          // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião
-          // também aqui. Vem de `detalhes.reunioes_*`, gravado pelo mesmo
-          // `contagens` que resumoDoDia já calcula — sem query nova.
-          if (d.data === hoje) {
-            r.hoje = {
-              fatia, total, feitas,
-              reunioesTotal: Number(d.detalhes?.reunioes_total) || 0,
-              reunioesFeitas: Number(d.detalhes?.reunioes_feitas) || 0,
-            };
-          }
         });
-        // gente com voto recebido mas sem nenhum dia registrado ainda —
-        // sem isso, ela nunca aparece na tabela pra mostrar o MvM dela
-        Object.keys(votosPor).forEach((uid) => {
+        // gente com voto recebido, ou votável sem nenhum dia registrado
+        // ainda — sem isso, ela nunca aparece na tabela pra mostrar o MvM
+        // dela (ou some da contagem "no time", mesmo jogando desde hoje).
+        [...Object.keys(votosPor), ...idsVotaveis].forEach((uid) => {
           if (!por[uid]) por[uid] = { user_id: uid, dias: 0, pontos: 0, xpay: 0, perdido: 0, dias_fechados: 0, hoje: null, porData: {}, diasDatados: [] };
         });
+        // "hoje" (tarefas/reuniões) sempre ao vivo — nunca da fotografia.
+        Object.values(por).forEach((r) => {
+          const tarefas = tarefasHojePorPessoa[r.user_id];
+          if (!tarefas) return; // sem registro hoje — hoje continua null
+          const { total, feitas, reunioesTotal, reunioesFeitas } = resumoTimeHoje(tarefas, hoje);
+          r.hoje = { fatia: total > 0 ? feitas / total : 0, total, feitas, reunioesTotal, reunioesFeitas };
+        });
 
-        const lista = Object.values(por).map((r) => {
+        // 🔢 10/09/2026 — a população final do ranking/pódio/tabela é SÓ
+        // quem é votável hoje — histórico de gente que saiu não aparece mais.
+        const lista = Object.values(por).filter((r) => idsVotaveis.includes(r.user_id)).map((r) => {
           // a ofensiva: dias seguidos fechados, contando de hoje pra trás
           let fogo = 0;
           const d = new Date(`${hoje}T12:00:00`);
@@ -194,6 +327,10 @@ export default function XGameVisaoExecutiva() {
             diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
+            // 💰 10/09/2026 — precisa da MESMA venda real que o painel
+            // pessoal usa, senão a Liga do ranking pode divergir da Liga
+            // que a própria pessoa vê no painel dela.
+            vendasReais: vendasReaisPor[r.user_id],
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
           // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca
@@ -217,18 +354,18 @@ export default function XGameVisaoExecutiva() {
           };
         });
 
-        const ids = lista.map((l) => l.user_id);
-        if (ids.length) {
-          // 🖼️ 09/09/2026 — dono, olhando o pódio: "está muito feio... vamos
-          // puxar a imagem, a foto da pessoa, do perfil dela... e a imagem
-          // dentro da moeda que ele está." A foto real (getFotoPerfil, mesma
-          // fonte que o Quadro de Compromisso já usa) — iniciais continuam
-          // sendo o único fallback, pra nunca ficar vazio.
-          const { data: us } = await supabase.from('app_users').select('id,full_name,nickname,avatar_url,profile_photo_url').in('id', ids);
-          const nomes = {}; const fotos = {};
-          (us || []).forEach((u) => { nomes[u.id] = nomeExibicao(u); fotos[u.id] = getFotoPerfil(u); });
-          lista.forEach((l) => { l.nome = nomes[l.user_id] || l.user_id.slice(0, 6); l.foto = fotos[l.user_id] || null; });
-        }
+        // 🖼️ 09/09/2026 — dono, olhando o pódio: "está muito feio... vamos
+        // puxar a imagem, a foto da pessoa, do perfil dela... e a imagem
+        // dentro da moeda que ele está." A foto real (getFotoPerfil, mesma
+        // fonte que o Quadro de Compromisso já usa) — iniciais continuam
+        // sendo o único fallback, pra nunca ficar vazio.
+        // 🔢 10/09/2026 — reusa `usuariosPorId` (já buscado acima pro role) em
+        // vez de uma segunda query de app_users — o dado é o mesmo.
+        lista.forEach((l) => {
+          const u = usuariosPorId.get(l.user_id);
+          l.nome = u ? nomeExibicao(u) : l.user_id.slice(0, 6);
+          l.foto = u ? getFotoPerfil(u) : null;
+        });
         if (vivo) setLinhas(lista);
       });
     return () => { vivo = false; };
@@ -247,8 +384,9 @@ export default function XGameVisaoExecutiva() {
       fogos: linhas.filter((l) => l.fogo > 0).length,
       // 📊 08/09/2026 — dono: "quero a quantidade de tarefas do grupo — X
       // pessoas, Y tarefas, quantas o time concluiu, qual o percentual."
-      // Mesma conta do ADM X-Game (XPerformanceGestao), só que a partir do
-      // retrato já gravado em xgame_diario, não da tabela ao vivo.
+      // 🔢 10/09/2026 — auditoria noturna: era a partir do retrato de
+      // xgame_diario (atrasado); agora `l.hoje` já vem AO VIVO — a MESMA
+      // conta e a MESMA população do ADM X-Game (XPerformanceGestao).
       tarefasHojeTotal: comHoje.reduce((a, l) => a + (l.hoje.total || 0), 0),
       tarefasHojeFeitas: comHoje.reduce((a, l) => a + (l.hoje.feitas || 0), 0),
       // 📊 09/09/2026 — dono: "eu quero esse alcance" — o % de reunião do
@@ -260,6 +398,30 @@ export default function XGameVisaoExecutiva() {
 
   const rankPorToken = useMemo(() => (linhas ? [...linhas].sort((a, b) => b.token - a.token) : []), [linhas]);
   const podio = useMemo(() => rankPorToken.slice(0, 3), [rankPorToken]);
+
+  // 📣 10/09/2026 — dono: "eu preciso ter um local de compartilhamento do
+  // ranking do dia, junto com o primeiro, o segundo e o terceiro lugar...
+  // com o texto bacana diretamente no WhatsApp com o link." O pódio (moeda
+  // do ciclo, que já premia consistência) vem primeiro; o dia de hoje entra
+  // como uma linha extra — "a informação do dia importa, mas evolução
+  // também precisa ser forte". O link aponta pro Ranking X-GAME, uma tela
+  // dedicada e sempre atualizada (mesmos números desta).
+  const MEDALHAS = ['🥇', '🥈', '🥉'];
+  const compartilharRanking = () => {
+    if (!podio.length) { toast.error('Ainda não tem ranking pra compartilhar.'); return; }
+    const linhasPodio = podio.map((l, i) => {
+      const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
+      return `${MEDALHAS[i] || '🏅'} ${l.nome} — ${fmt(l.token)} · ${liga.label.replace('LIGA ', '').toLowerCase()}`;
+    });
+    const texto = textoCompartilharRanking({
+      linhasPodio,
+      diaHojePct: time?.diaHoje || 0,
+      tarefasHojeTotal: time?.tarefasHojeTotal || 0,
+      tarefasHojeFeitas: time?.tarefasHojeFeitas || 0,
+      link: `${window.location.origin}/RankingXGame`,
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+  };
   // 📍 08/09/2026 — dono, três vezes: "você esqueceu de botar pessoal meu."
   // A tabela já marcava "VOCÊ" (verde, discreto), mas enterrado lá embaixo
   // numa lista de 10+ linhas não é "botar" — é escutar que ele nunca olha
@@ -423,7 +585,20 @@ export default function XGameVisaoExecutiva() {
 
       {/* ── 2. O PÓDIO — um palco de verdade, 2º·1º·3º, com quem é "você" ── */}
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-nz-tinta-fraca mb-4">O pódio do ciclo</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-nz-tinta-fraca">O pódio do ciclo</p>
+          {/* 📣 10/09/2026 — dono: "local de compartilhamento do ranking do
+              dia, com o primeiro, segundo e terceiro lugar... texto bacana
+              diretamente no WhatsApp com o link." */}
+          <button
+            type="button"
+            onClick={compartilharRanking}
+            className="flex items-center gap-1.5 text-[10px] font-semibold text-nz-tinta-fraca hover:text-nz-verde transition-colors"
+            data-teste="compartilhar-ranking"
+          >
+            <Share2 className="w-3.5 h-3.5" /> compartilhar
+          </button>
+        </div>
         <div className="flex items-end justify-center gap-3 sm:gap-5 max-w-xl mx-auto">
           {palco.map((l, i) => {
             if (!l) return <div key={i} className="flex-1 max-w-[180px]" />;
@@ -506,28 +681,47 @@ export default function XGameVisaoExecutiva() {
                 <th className="text-right font-bold py-2.5">Fogo</th>
                 <th className="text-right font-bold py-2.5">Dias</th>
                 <th className="text-right font-bold py-2.5 px-3">X-Pay</th>
+                <th className="py-2.5 px-2" aria-hidden="true" />
               </tr>
             </thead>
             <tbody>
               {ordenadas.map((l, i) => {
                 const liga = ligaComPortoesDoCiclo(l.token, { mvmVotacao: l.mvm, vendasFeitas: l.vendasFeitas });
                 const souEu = l.user_id === meuId;
+                const aberta = linhaAberta === l.user_id;
                 return (
-                  <tr key={l.user_id} className={`border-t border-nz-borda/30 transition-colors ${souEu ? 'bg-nz-verde/10' : 'hover:bg-white/[0.03]'}`}>
-                    <td className="py-2.5 px-3 text-nz-tinta-fraca tabular-nums">{i + 1}</td>
-                    <td className="py-2.5 font-semibold text-nz-tinta">
-                      <span className="inline-flex items-center gap-2">
-                        <Avatar url={l.foto} nome={l.nome} tamanho={22} anelCor={COR_LIGA[liga.id] || '#94a3b8'} souEu={false} corFallback="from-slate-300 to-slate-400" />
-                        {l.nome}{souEu && <span className="ml-0.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap"><SeloLiga liga={liga} /></td>
-                    <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
-                    <td className={`py-2.5 text-right tabular-nums ${l.mvm !== null && l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{mvmTexto(l.mvm)}</td>
-                    <td className={`py-2.5 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
-                    <td className="py-2.5 text-right text-nz-tinta-fraca tabular-nums">{l.dias_fechados}/{l.dias}</td>
-                    <td className="py-2.5 text-right text-nz-verde font-semibold tabular-nums px-3">{brl(l.xpay)}</td>
-                  </tr>
+                  <React.Fragment key={l.user_id}>
+                    <tr
+                      className={`border-t border-nz-borda/30 transition-colors cursor-pointer ${souEu ? 'bg-nz-verde/10' : 'hover:bg-white/[0.03]'}`}
+                      onClick={() => setLinhaAberta(aberta ? null : l.user_id)}
+                      data-teste="linha-ranking"
+                      aria-expanded={aberta}
+                    >
+                      <td className="py-2.5 px-3 text-nz-tinta-fraca tabular-nums">{i + 1}</td>
+                      <td className="py-2.5 font-semibold text-nz-tinta">
+                        <span className="inline-flex items-center gap-2">
+                          <Avatar url={l.foto} nome={l.nome} tamanho={22} anelCor={COR_LIGA[liga.id] || '#94a3b8'} souEu={false} corFallback="from-slate-300 to-slate-400" />
+                          {l.nome}{souEu && <span className="ml-0.5 text-[9px] font-black text-nz-verde align-middle">VOCÊ</span>}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-nz-tinta-fraca whitespace-nowrap"><SeloLiga liga={liga} /></td>
+                      <td className="py-2.5 text-right font-bold text-nz-tinta tabular-nums">{fmt(l.token)}</td>
+                      <td className={`py-2.5 text-right tabular-nums ${l.mvm !== null && l.mvm < 4 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{mvmTexto(l.mvm)}</td>
+                      <td className={`py-2.5 text-right tabular-nums ${l.fogo > 0 ? 'text-nz-fogo font-semibold' : 'text-nz-tinta-fraca'}`}>{l.fogo}</td>
+                      <td className="py-2.5 text-right text-nz-tinta-fraca tabular-nums">{l.dias_fechados}/{l.dias}</td>
+                      <td className="py-2.5 text-right text-nz-verde font-semibold tabular-nums px-3">{brl(l.xpay)}</td>
+                      <td className="py-2.5 px-2 text-nz-tinta-fraca">
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${aberta ? 'rotate-180' : ''}`} />
+                      </td>
+                    </tr>
+                    {aberta && (
+                      <tr className="border-t border-nz-borda/30 bg-white/[0.02]" data-teste="detalhe-moeda">
+                        <td colSpan={9} className="py-4 px-4">
+                          <DetalheMoeda linha={l} liga={liga} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>

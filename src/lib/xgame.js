@@ -498,6 +498,80 @@ export function podeSerVotado({ role, aceita_ser_votado } = {}) {
   return aceita_ser_votado !== false;
 }
 
+// 🔢 10/09/2026 — dono, comparando ADM X-Game e Visão Executiva lado a lado:
+// "os números não batem... eu preciso ter o número perfeito." Achado: cada
+// tela contava um TIME diferente pra "hoje" — a ADM só o time corporativo
+// (hierarquia do painel, ~12 pessoas), a Visão Executiva todo mundo com
+// registro no jogo, sem nem filtrar quem está ativo (~17, incluindo quem
+// já saiu). Dono, decidindo: "todos que estão de fato recebendo voto, esses
+// de fato estão atuando na operação ativa" — a MESMA régua que já decide
+// quem entra na lista de colegas votáveis do MvM (podeSerVotado), agora
+// vira A população oficial de qualquer número agregado ("o time").
+/**
+ * A população oficial de "o time" pra qualquer número agregado (tarefas
+ * hoje, reuniões hoje, ranking): quem está ativo no jogo E é votável no MvM
+ * — nunca a hierarquia do painel de controle (que serve pra GESTÃO, não pra
+ * contar "o time" jogando).
+ * @param {{user_id:string, ativo?:boolean, aceita_ser_votado?:boolean}[]} participantes linhas de xgame_participantes
+ * @param {Map<string,{role?:string}>} usuariosPorId app_users indexados por id, pro role de cada um
+ * @returns {string[]} os user_id que contam como "o time"
+ */
+export function participantesVotaveis(participantes = [], usuariosPorId = new Map()) {
+  return participantes
+    .filter((p) => p?.ativo !== false)
+    .filter((p) => podeSerVotado({ role: usuariosPorId.get?.(p.user_id)?.role, aceita_ser_votado: p.aceita_ser_votado }))
+    .map((p) => p.user_id);
+}
+
+// 📊 10/09/2026 — mesma auditoria: além do time errado, a Visão Executiva
+// lia "hoje" de uma FOTOGRAFIA (xgame_diario, só gravada quando a própria
+// pessoa abre a tela dela) — atrasada por natureza. resumoTimeHoje() lê
+// direto das tarefas (AO VIVO), a mesma conta que a ADM já fazia — extraída
+// aqui pra as duas telas chamarem a MESMA função, não duas cópias que
+// podem desalinhar nesta ou na próxima mudança.
+/**
+ * Tarefas e reuniões de HOJE pra um conjunto de tarefas já filtrado pela
+ * população certa — ao vivo, direto de metodo_tarefas, nunca de uma foto.
+ * @param {{data:string, feito?:boolean, titulo?:string}[]} tarefas as tarefas do time (qualquer período)
+ * @param {string} hojeISO a data de hoje (YYYY-MM-DD), sempre em Brasília — ver dataISO()
+ */
+export function resumoTimeHoje(tarefas = [], hojeISO) {
+  const hoje = tarefas.filter((t) => String(t?.data).slice(0, 10) === hojeISO);
+  const reunioes = hoje.filter((t) => ehTarefaDeReuniao(t?.titulo));
+  return {
+    total: hoje.length,
+    feitas: hoje.filter((t) => t.feito).length,
+    reunioesTotal: reunioes.length,
+    reunioesFeitas: reunioes.filter((t) => t.feito).length,
+  };
+}
+
+// 📣 10/09/2026 — dono: "eu preciso ter um local de compartilhamento do
+// ranking do dia, junto com o primeiro, o segundo e o terceiro lugar...
+// exatamente como é visto hoje no pódio." E, sobre o critério: "a
+// informação do dia importa, mas evolução também precisa ser forte" — por
+// isso o pódio (moeda do CICLO, que já premia consistência) vem primeiro, e
+// o desempenho de hoje entra como uma linha extra, não substitui o pódio.
+/**
+ * Texto pronto pro WhatsApp com o pódio do ciclo + o dia de hoje + um link
+ * pro ranking completo sempre atualizado. As linhas do pódio já vêm
+ * formatadas por quem chama (a tela já tem nome/token/liga prontos) — esta
+ * função só monta o texto, não recalcula nada.
+ * @param {string[]} linhasPodio ex.: ["🥇 Ribeiro — 12,47 · ouro", ...]
+ * @param {number} diaHojePct 0 a 1 — a fatia média do time hoje
+ */
+export function textoCompartilharRanking({ linhasPodio = [], diaHojePct = 0, tarefasHojeTotal = 0, tarefasHojeFeitas = 0, link = '' } = {}) {
+  return [
+    '🏆 *X-GAME — Ranking do Ciclo*',
+    '',
+    ...linhasPodio,
+    '',
+    `📊 Hoje: ${Math.round((Number(diaHojePct) || 0) * 100)}% do time fechou o dia · ${tarefasHojeFeitas}/${tarefasHojeTotal} tarefas`,
+    link ? '' : null,
+    link ? `👉 Ranking completo: ${link}` : null,
+  ].filter((l) => l !== null).join('\n');
+}
+
 // 🧯 08/09/2026 — dono: "a falta de voto dos integrantes uns nos outros zera
 // o dia — isso precisa ser explícito, é uma das coisas principais da
 // gamificação." Votar em ALGUÉM não é o suficiente: precisa fechar os 10

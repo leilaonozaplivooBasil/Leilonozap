@@ -24,12 +24,16 @@ function diaDiario(userId, data, { total = 5, feitas = 5, mvmAuto = 8, xpayGanho
 window.__bancoFalso = {
   tabelas: {
     xgame_config: [{ id: 'atual', ciclo_inicio: INICIO_CICLO }],
+    // 🔢 10/09/2026 — auditoria noturna: "o time" agora é só ativo+votável
+    // (participantesVotaveis) — sem `ativo: true` aqui, a Visão Executiva
+    // não desenha ninguém no pódio (a mesma régua correta, mas o mock
+    // ficaria vazio).
     xgame_participantes: [
-      { user_id: 'u1', perfil: 'comercial' },
-      { user_id: 'u2', perfil: 'estrategico' },
-      { user_id: 'u3', perfil: 'estrategico' },
-      { user_id: 'u4', perfil: 'operacional' },
-      { user_id: 'u5', perfil: 'comercial' },
+      { user_id: 'u1', perfil: 'comercial', ativo: true },
+      { user_id: 'u2', perfil: 'estrategico', ativo: true },
+      { user_id: 'u3', perfil: 'estrategico', ativo: true },
+      { user_id: 'u4', perfil: 'operacional', ativo: true },
+      { user_id: 'u5', perfil: 'comercial', ativo: true },
     ],
     xgame_diario: [
       diaDiario('u1', INICIO_CICLO, { xpayGanho: 210 }),

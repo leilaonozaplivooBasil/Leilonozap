@@ -12,6 +12,28 @@
 
 ---
 
+## DIR-138 — um número real em todo lugar: ADM e Visão Executiva contavam times diferentes, e o ranking não via as vendas reais da pessoa
+
+**Emitida por:** dono (10/09/2026), comparando os prints do ADM X-Game e da Visão Executiva lado a lado: *"os números não batem... eu preciso ter o número perfeito, e ele precisa estar aparecendo em todos os lugares."* Depois, olhando o pódio em produção: *"quem está dando como primeiro no Ranking está aparecendo como ouro, porém no seu pessoal está como [Platina]... isso não pode ter erro, isso precisa ser cirúrgico."*
+
+**Achado 1 — duas populações diferentes chamadas de "o time":** o ADM X-Game (`XPerformanceGestao.jsx`) contava só o time corporativo (hierarquia do painel de controle, Sócio Executivo→Embaixador — 12 pessoas). A Visão Executiva contava todo mundo com registro no jogo, **sem nem filtrar quem está ativo** — podendo incluir gente que já saiu. Nenhuma das duas era "quem vota" — a régua que o dono escolheu: *"todos que estão de fato recebendo voto, esses de fato estão atuando na operação ativa."*
+
+**Achado 2 — "hoje" vinha de uma fotografia atrasada:** a Visão Executiva lia tarefas/reuniões de hoje de `xgame_diario`, um retrato só gravado quando a própria pessoa abre a tela dela — atrasado por natureza. O ADM já lia ao vivo. Resultado: números diferentes pro mesmo "hoje", mesmo quando a população batesse.
+
+**Achado 3 — o bug que o dono viu no pódio:** o ranking (Visão Executiva) nunca buscava as vendas reais da loja de cada pessoa pro cálculo da moeda — caía num substituto manual (contagem de tarefa "[venda]"). O painel pessoal (Compromisso, /XGame) sempre buscou. Resultado: a Liga de alguém no pódio podia divergir da Liga que a própria pessoa via no painel dela — exatamente o que o dono flagrou ao vivo.
+
+**O que entra:**
+1. `participantesVotaveis()` (nova, `xgame.js`) — a população oficial de "o time" em qualquer número agregado: ativo no jogo E votável no MvM (mesma régua de `podeSerVotado`, já usada pra montar a lista de colegas). Usada agora no ADM (resumo do dia) e na Visão Executiva (resumo do dia + ranking/pódio/tabela inteiros).
+2. `resumoTimeHoje()` (nova, `xgame.js`) — tarefas/reuniões de hoje, ao vivo, a mesma função pura chamada pelas duas telas — sem duas cópias que podem desalinhar de novo.
+3. A Visão Executiva agora busca tarefas de hoje **ao vivo** (`metodo_tarefas`) pra população oficial, em vez de só ler `xgame_diario`.
+4. `vendasReaisEmLote()` (nova, `XGameVisaoExecutiva.jsx`) — busca `catalog_sales` + `captacao_oportunidades` em lote pro time inteiro (a mesma conta do painel pessoal, uma query só) e passa `vendasReais` pro `tokenDoCiclo()` do ranking — a Liga do pódio agora bate com a Liga do painel pessoal.
+5. **Ranking do Dia compartilhável** (`/RankingXGame`, nova página) — pódio 1º/2º/3º + a lista do resto, sempre com os números corrigidos e ao vivo (a mesma `XGameVisaoExecutiva`, sem segunda fonte de verdade). Botão "compartilhar" no pódio gera um texto pronto pro WhatsApp (pódio do ciclo + o dia de hoje + o link).
+6. **Clicar numa linha do ranking abre o detalhe da moeda** — a mesma moeda em fatias de "Sua posição" mais os dois portões (caráter/MvM e meta de vendas) escritos por extenso, com o número exato que decidiu cada um — pra qualquer divergência ficar auditável na hora, sem precisar confiar cego no resultado final.
+
+**Prova:** suíte 1986/1986 (12 testes novos: população oficial, resumo ao vivo, texto do WhatsApp, fiação do detalhe da moeda), lint limpo, `npm run build` sem erro, 2 provas em navegador real (Playwright): o pódio renderiza sem erro de JS, e clicar numa linha abre e fecha o detalhe da moeda com os dois portões visíveis.
+
+---
+
 ## DIR-137 — auditoria noturna (parte 3): o X-Pay recuperado no fim de semana não entra mais em dobro contra a pessoa no painel do time
 
 **Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135/136).

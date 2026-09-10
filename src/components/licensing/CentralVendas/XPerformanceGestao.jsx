@@ -12,7 +12,7 @@ import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 import {
   fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
-  ehTarefaDeReuniao, AVISOS_ANTES_DE_ZERAR,
+  AVISOS_ANTES_DE_ZERAR, participantesVotaveis, resumoTimeHoje,
 } from '@/lib/xgame';
 import { distribuirDia, resumoDoCiclo } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
@@ -237,9 +237,19 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     return u ? nomeExibicao(u) : (id ? String(id).slice(0, 6) : '—');
   }, [usuarios]);
 
-  // 🏛️ o time corporativo, do painel de controle — nome e função de lá
+  // 🏛️ o time corporativo, do painel de controle — nome e função de lá.
+  // Usado pra GESTÃO (fixo, quadro geral, distribuir tarefa) — quem o
+  // gestor pode administrar, cadastrado no jogo ou não ainda.
   const equipe = useMemo(() => timeCorporativo(usuarios, nomeExibicao), [usuarios]);
   const funcaoDe = (id) => equipe.find((p) => p.id === id)?.funcao || '—';
+
+  // 🔢 10/09/2026 — auditoria noturna: "os números não batem" entre esta
+  // tela e a Visão Executiva. Achado: "no time corporativo" (equipe, acima)
+  // é a hierarquia do painel — não é "o time" que joga o X-GAME. A
+  // população oficial pro resumo do dia (e pro ranking) é quem está ativo
+  // E é votável no MvM — a mesma régua de sempre, ver participantesVotaveis.
+  const usuariosPorId = useMemo(() => new Map(usuarios.map((u) => [u.id, u])), [usuarios]);
+  const timeVotavel = useMemo(() => participantesVotaveis(participantes, usuariosPorId), [participantes, usuariosPorId]);
 
   // o cadastro do jogo da pessoa (fixo, mínimo) — ou o padrão, até ser definido
   const participanteDe = useCallback((id) => {
@@ -268,18 +278,21 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   useEffect(() => { carregar(); }, [carregar]);
 
   // as tarefas do ciclo de todo mundo — é daqui que sai "a distribuição de
-  // todas as tarefas" e a prévia do dia escolhido
+  // todas as tarefas" e a prévia do dia escolhido. União de equipe (gestão)
+  // e timeVotavel (resumo do dia): um votável pode não estar na hierarquia
+  // do painel, e vice-versa — nenhum dos dois usos pode perder gente.
+  const idsCarregar = useMemo(() => Array.from(new Set([...equipe.map((p) => p.id), ...timeVotavel])), [equipe, timeVotavel]);
   const carregarTarefas = useCallback(async () => {
-    if (!equipe.length || !diasCiclo.length) { setTarefasCiclo([]); return; }
+    if (!idsCarregar.length || !diasCiclo.length) { setTarefasCiclo([]); return; }
     const ate = diasCiclo[diasCiclo.length - 1] > dia ? diasCiclo[diasCiclo.length - 1] : dia;
     const de = diasCiclo[0] < dia ? diasCiclo[0] : dia;
     const { data } = await supabase.from('metodo_tarefas')
       .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem,mentalidade,habito,prazo_em,pronto_em,devolvida_motivo,devolvida_em')
-      .in('user_id', equipe.map((p) => p.id))
+      .in('user_id', idsCarregar)
       .gte('data', de).lte('data', ate)
       .order('data').order('hora');
     setTarefasCiclo(data || []);
-  }, [equipe, diasCiclo, dia]);
+  }, [idsCarregar, diasCiclo, dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
 
   useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
@@ -495,17 +508,16 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // percentual de reunião do time." E depois, sobre o quanto mostrar: "o
   // melhor possível, pense grande, dados é o que manda, quanto mais e
   // melhor visível melhor." O painel vivo que faltava: o time inteiro, num
-  // relance, antes de entrar pessoa por pessoa. Mesma conta em
-  // XGameVisaoExecutiva (Verificação do Progresso).
-  const tarefasHoje = tarefasCiclo.filter((t) => String(t.data).slice(0, 10) === hoje);
-  const reunioesHoje = tarefasHoje.filter((t) => ehTarefaDeReuniao(t.titulo));
-  const filaHoje = filaDoPronto(tarefasCiclo);
-  const resumoTimeHoje = {
-    pessoas: equipe.length,
-    total: tarefasHoje.length,
-    feitas: tarefasHoje.filter((t) => t.feito).length,
-    reunioesTotal: reunioesHoje.length,
-    reunioesFeitas: reunioesHoje.filter((t) => t.feito).length,
+  // relance, antes de entrar pessoa por pessoa.
+  // 🔢 10/09/2026 — auditoria noturna: este resumo contava "equipe"
+  // (hierarquia do painel) — a população oficial agora é timeVotavel
+  // (ativo + votável), a MESMA função (resumoTimeHoje) que a Visão
+  // Executiva chama — sem isso os dois números nunca vão bater de verdade.
+  const tarefasDoTimeVotavel = useMemo(() => tarefasCiclo.filter((t) => timeVotavel.includes(t.user_id)), [tarefasCiclo, timeVotavel]);
+  const filaHoje = filaDoPronto(tarefasDoTimeVotavel);
+  const resumoDoTimeHoje = {
+    pessoas: timeVotavel.length,
+    ...resumoTimeHoje(tarefasDoTimeVotavel, hoje),
     atrasadas: filaHoje.filter((f) => f.estado.id === 'atrasada').length,
   };
 
@@ -522,23 +534,23 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           é o que manda, quanto mais e melhor visível melhor." ── */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" data-teste="resumo-time-hoje">
         <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.pessoas}</p>
-          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">no time corporativo</p>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoDoTimeHoje.pessoas}</p>
+          <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">no time, votando no MvM</p>
         </div>
         <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.feitas} <span className="text-white/35 font-medium">/ {resumoTimeHoje.total}</span></p>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoDoTimeHoje.feitas} <span className="text-white/35 font-medium">/ {resumoDoTimeHoje.total}</span></p>
           <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">tarefas concluídas hoje</p>
         </div>
         <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <p className="text-xl font-extrabold text-nz-verde tabular-nums">{resumoTimeHoje.total ? Math.round((resumoTimeHoje.feitas / resumoTimeHoje.total) * 100) : 0}%</p>
+          <p className="text-xl font-extrabold text-nz-verde tabular-nums">{resumoDoTimeHoje.total ? Math.round((resumoDoTimeHoje.feitas / resumoDoTimeHoje.total) * 100) : 0}%</p>
           <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">do time, hoje</p>
         </div>
         <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <p className="text-xl font-extrabold text-white tabular-nums">{resumoTimeHoje.reunioesFeitas} <span className="text-white/35 font-medium">/ {resumoTimeHoje.reunioesTotal}</span></p>
+          <p className="text-xl font-extrabold text-white tabular-nums">{resumoDoTimeHoje.reunioesFeitas} <span className="text-white/35 font-medium">/ {resumoDoTimeHoje.reunioesTotal}</span></p>
           <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">reuniões do time hoje</p>
         </div>
-        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: resumoTimeHoje.atrasadas > 0 ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.04)' }}>
-          <p className={`text-xl font-extrabold tabular-nums ${resumoTimeHoje.atrasadas > 0 ? 'text-red-300' : 'text-white'}`}>{resumoTimeHoje.atrasadas}</p>
+        <div className="rounded-xl border border-white/15 p-3 text-center" style={{ background: resumoDoTimeHoje.atrasadas > 0 ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.04)' }}>
+          <p className={`text-xl font-extrabold tabular-nums ${resumoDoTimeHoje.atrasadas > 0 ? 'text-red-300' : 'text-white'}`}>{resumoDoTimeHoje.atrasadas}</p>
           <p className="text-[9px] font-bold tracking-[0.18em] text-white/40 uppercase">atrasadas na fila do pronto</p>
         </div>
       </div>
