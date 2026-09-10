@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
-import { estiloBalao } from '@/lib/tourGuiado';
+import { posicaoDoBalao, paineisDoEscuro } from '@/lib/tourGuiado';
 
 // 🖐️ A MÃOZINHA — tour guiado genérico, spotlight na tela DE VERDADE (não
 // uma tela à parte explicando).
@@ -47,45 +47,96 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
     return () => window.removeEventListener('resize', medirAltura);
   }, []);
   const esperaRef = useRef(null);
+  const balaoRef = useRef(null);
+  const focoAnteriorRef = useRef(null);
+  const [alturaBalao, setAlturaBalao] = useState(240);
 
   useEffect(() => { if (ativo) setIndice(0); }, [ativo]);
 
-  const medir = useCallback(() => {
+  // 🔎 ACHAR e MEDIR são coisas separadas de ROLAR — e essa separação é o
+  // conserto principal de 10/09.
+  //
+  // 🔴 Antes, `medir()` chamava `scrollIntoView` DENTRO dela, e `medir()` era
+  // o que o listener de scroll chamava. Resultado: a pessoa rolava a página,
+  // o evento disparava, e o tour puxava a tela de volta pro alvo. Uma briga em
+  // loop, em qualquer rolagem — inclusive nas internas (`capture: true`). Era
+  // o "extremamente bugado" do relato.
+  //
+  // Agora rolar acontece UMA vez, ao entrar no passo. Medir nunca move a tela.
+  const acharAlvo = useCallback(() => {
     const passo = passos[indice];
     if (!passo) return null;
-    const alvo = document.querySelector(`[data-teste="${passo.alvo}"]`);
-    if (!alvo) return null;
-    // 🎯 sem `smooth`: com animação, o retângulo medido no mesmo instante
-    // fica desatualizado assim que o scroll começa a andar (a mãozinha
-    // ficava mirando onde o alvo ESTAVA, não onde ele está) — instantâneo
-    // garante que a medida e a posição real nunca desincronizam.
-    alvo.scrollIntoView({ block: 'center' });
-    const r = alvo.getBoundingClientRect();
-    return { top: r.top, left: r.left, width: r.width, height: r.height };
+    return document.querySelector(`[data-teste="${passo.alvo}"]`);
   }, [passos, indice]);
 
-  // reposiciona ao trocar de passo, rolar ou redimensionar; se o alvo não
-  // existe (ainda não montou, ou nem se aplica hoje), espera um instante e
-  // PULA pro próximo passo sozinho — nunca fica preso apontando pro vazio.
+  const medir = useCallback(() => {
+    const alvo = acharAlvo();
+    if (!alvo) return null;
+    const r = alvo.getBoundingClientRect();
+    return { top: r.top, left: r.left, width: r.width, height: r.height };
+  }, [acharAlvo]);
+
+  // entrar no passo: rola até o alvo (uma vez só) e mede. Se o alvo não existe,
+  // espera um instante e PULA — nunca fica preso apontando pro vazio.
   useEffect(() => {
     if (!ativo) return undefined;
     clearTimeout(esperaRef.current);
-    const tentar = () => {
-      const r = medir();
-      setRetangulo(r);
-      if (!r) {
-        esperaRef.current = setTimeout(() => {
-          if (medir()) { setRetangulo(medir()); return; }
-          setIndice((i) => (i < passos.length - 1 ? i + 1 : -1)); // -1 fecha (último passo também sem alvo)
-        }, ESPERA_ALVO_MS);
+    const entrar = () => {
+      const alvo = acharAlvo();
+      if (alvo) {
+        // sem `smooth`: com animação, o retângulo medido no mesmo instante
+        // fica desatualizado assim que o scroll começa a andar.
+        alvo.scrollIntoView({ block: 'center' });
+        setRetangulo(medir());
+        return true;
       }
+      return false;
     };
-    tentar();
-    const ao = () => setRetangulo(medir());
+    if (!entrar()) {
+      setRetangulo(null);
+      esperaRef.current = setTimeout(() => {
+        if (entrar()) return;
+        setIndice((i) => (i < passos.length - 1 ? i + 1 : -1));
+      }, ESPERA_ALVO_MS);
+    }
+    return () => clearTimeout(esperaRef.current);
+  }, [ativo, indice, acharAlvo, medir, passos.length]);
+
+  // acompanhar: só REMEDE. Nunca rola.
+  useEffect(() => {
+    if (!ativo) return undefined;
+    const ao = () => setRetangulo((antes) => (antes === null ? antes : medir()));
     window.addEventListener('resize', ao);
     window.addEventListener('scroll', ao, true);
-    return () => { clearTimeout(esperaRef.current); window.removeEventListener('resize', ao); window.removeEventListener('scroll', ao, true); };
-  }, [ativo, indice, medir, passos.length]);
+    return () => { window.removeEventListener('resize', ao); window.removeEventListener('scroll', ao, true); };
+  }, [ativo, medir]);
+
+  // 📏 a altura REAL do balão — é ela que decide se ele cabe embaixo do alvo.
+  // Com o 420 fixo de antes, quase todo alvo era considerado "não cabe" e o
+  // balão ia grampeado pro topo da tela, longe do que explicava.
+  useLayoutEffect(() => {
+    const el = balaoRef.current;
+    if (!el) return undefined;
+    const medirBalao = () => setAlturaBalao(el.getBoundingClientRect().height || 240);
+    medirBalao();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const obs = new ResizeObserver(medirBalao);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ativo, indice, retangulo]);
+
+  // ⌨️ Esc fecha, e o foco volta pra onde estava. O `aria-modal` já prometia
+  // isso desde sempre e não cumpria.
+  useEffect(() => {
+    if (!ativo) return undefined;
+    focoAnteriorRef.current = document.activeElement;
+    const aoTeclar = (e) => { if (e.key === 'Escape') { e.stopPropagation(); onFechar?.(false); } };
+    window.addEventListener('keydown', aoTeclar);
+    return () => {
+      window.removeEventListener('keydown', aoTeclar);
+      try { focoAnteriorRef.current?.focus?.(); } catch { /* o elemento pode ter saído da tela */ }
+    };
+  }, [ativo, onFechar]);
 
   useEffect(() => { if (indice === -1) onFechar?.(false); }, [indice, onFechar]);
 
@@ -93,36 +144,45 @@ export default function TourGuiado({ ativo, passos = [], onFechar }) {
   const passo = passos[indice];
   const ultimo = indice === passos.length - 1;
 
+  const vw = typeof window === 'undefined' ? 0 : window.innerWidth;
+  const vh = typeof window === 'undefined' ? 0 : window.innerHeight;
+
   return (
-    <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label={`Tour: ${passo.titulo}`}>
-      {retangulo ? (
+    // 🔴 `pointer-events-none` no container é o conserto do "pouco interativo".
+    // Antes este div cobria a tela inteira SEM isso, e engolia todo clique: o
+    // tour destacava um botão e a pessoa não conseguia apertar esse botão.
+    // Agora o clique passa; quem volta a capturar são os painéis escuros (pra
+    // clique fora do alvo não fazer bagunça) e o próprio balão.
+    <div className="fixed inset-0 z-[100] pointer-events-none" role="dialog" aria-label={`Tour: ${passo.titulo}`}>
+      {/* 🌑 quatro painéis com o BURACO do alvo no meio — o miolo fica livre.
+          O `box-shadow` gigante de antes escurecia igual, mas era um retângulo
+          só, e não tinha como abrir buraco nenhum pro clique. */}
+      {paineisDoEscuro(retangulo, vw, vh, PAD).map((painel, i) => (
+        <div
+          key={i}
+          data-teste="tour-escuro"
+          className="fixed pointer-events-auto transition-all duration-300"
+          style={{ ...painel, background: 'rgba(6,10,20,0.93)' }}
+          onClick={() => onFechar?.(false)}
+          aria-hidden="true"
+        />
+      ))}
+
+      {retangulo && (
         <div
           data-teste="tour-spotlight"
           className="fixed rounded-lg ring-2 ring-nz-verde pointer-events-none transition-all duration-300"
           style={{
             top: retangulo.top - PAD, left: retangulo.left - PAD,
             width: retangulo.width + PAD * 2, height: retangulo.height + PAD * 2,
-            // 🌑 09/09/2026 — dono, revendo o tour do Hábito 4: "ficou
-            // perfeito, só está muito transparente ainda, está confundindo
-            // um pouco... deixar um pouquinho mais escuro, sem perder essa
-            // jogada de eu continuar vendo o fundo." Já tinha ido de 0.72 (o
-            // valor original) pra 0.88 nesta mesma sessão — ainda não bastou.
-            // 0.93 escurece mais, mas continua ABAIXO de opaco: o resto da
-            // tela segue visível como silhueta, só que sem competir de
-            // verdade com o elemento em destaque nem com o balão.
-            boxShadow: '0 0 0 9999px rgba(6,10,20,0.93)',
           }}
         />
-      ) : (
-        <div className="fixed inset-0 bg-[#060a14]/93 transition-opacity duration-300" />
       )}
 
-      {/* 🩹 flex-col + maxHeight: o rodapé (bolinhas + botões) é `shrink-0`,
-          então ele NUNCA fica de fora — quem rola, se o texto for grande
-          demais pro espaço, é só o parágrafo do meio. */}
       <div
-        className="fixed z-[101] w-[92vw] max-w-sm rounded-xl border border-nz-verde/40 bg-white shadow-2xl transition-all duration-300 flex flex-col overflow-hidden"
-        style={{ ...estiloBalao(retangulo, alturaMax), maxHeight: alturaMax }}
+        ref={balaoRef}
+        className="fixed z-[101] w-[92vw] max-w-sm rounded-xl border border-nz-verde/40 bg-white shadow-2xl transition-all duration-300 flex flex-col overflow-hidden pointer-events-auto"
+        style={{ ...posicaoDoBalao(retangulo, alturaBalao, alturaMax), maxHeight: alturaMax }}
       >
         <div className="flex items-start justify-between gap-2 p-4 pb-0 shrink-0">
           <p className="text-sm font-bold text-nz-tinta">🖐️ {passo.titulo}</p>
