@@ -326,7 +326,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // está vendo "só o meu" (como usuário) ou "tudo" (como Super Admin /
   // diretoria). Antes o dono via os dois misturados sem a tela dizer qual.
   // isSuperAdmin (= bypass do escopo de rede) agora só liga quando ele pediu.
-  const [escopo] = useEscopoDeVisao();
+  const [escopo, trocarEscopo] = useEscopoDeVisao();
   const visao = React.useMemo(() => resolverEscopo({ vis, escopo }), [vis, escopo]);
   const isSuperAdmin = visao.crmTudo;
   const networkIds = React.useMemo(
@@ -1909,6 +1909,8 @@ _Enviado via CRM Leilão NoZap_`;
               clientesManuais={metodoEscopo.clientes}
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
+              escopoParcial={visao.podeTudo && !visao.crmTudo}
+              onVerTudo={() => trocarEscopo('tudo')}
               onSalvar={handleSalvarOportunidade}
               onRegistrarAporteExterno={handleRegistrarAporteExterno}
               onApagar={handleApagarOportunidade}
