@@ -62,6 +62,7 @@ import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
 import { frameEmBase64 } from '@/lib/frameEmBase64';
+import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
@@ -824,8 +825,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const tarefaRitualHoje = useMemo(() => tarefas.find((x) => ehTarefaDeGratidao(x.titulo)), [tarefas]);
   const mostrarAvisoRitual = ehHoje && !avisoRitualFechado
     && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito });
+  // 🧾 10/09/2026 — AS FALHAS PRECISAM ATRAVESSAR AS TENTATIVAS.
+  //
+  // Quando a IA está fora do ar, `avaliarComIA` volta cedo e NÃO grava
+  // comprovação nenhuma: a tentativa some sem deixar marca. Quando o envio da
+  // imagem falha, idem. Guardando num ref por tarefa, a falha da 1ª tentativa
+  // ainda está lá pra entrar na comprovação que a 3ª tentativa finalmente
+  // gravar — que é exatamente a história que o laudo precisa contar.
+  //
+  // Ref, e não estado: isto não desenha nada, e re-renderizar a lista inteira
+  // a cada falha técnica seria pior que o problema.
+  const falhasPorTarefa = useRef({});
+  const anotarFalhaDaTarefa = useCallback((tarefaId, o_que, erro) => {
+    if (!tarefaId) return;
+    falhasPorTarefa.current[tarefaId] = comFalha(falhasPorTarefa.current[tarefaId], { o_que, erro });
+  }, []);
+  /** Some com o rastro depois que ele já foi gravado na comprovação. */
+  const limparFalhasDaTarefa = useCallback((tarefaId) => { delete falhasPorTarefa.current[tarefaId]; }, []);
+
   const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
+    // 🧾 10/09/2026 — O RASTRO. Falha técnica durante a entrega vira registro,
+    // não console.error. Sem isto, quem abre o laudo depois vê "reprovada" e
+    // conclui mal uso — foi exatamente o que aconteceria com a Iara hoje, cuja
+    // manhã tinha onze envios de vídeo voltando 413 sem deixar marca nenhuma.
+    const falhasDaEntrega = () => falhasPorTarefa.current[t.id] || [];
+    const anotarFalha = (o_que) => (erro) => anotarFalhaDaTarefa(t.id, o_que, erro);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
       setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: true, comprovacao: { tipo: 'ritual', valido: true, status: 'aprovada_ritual', dev: true, gratidao, acao, entrega: gratidao, quando: new Date().toISOString() } } }));
@@ -843,6 +868,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         tipo: 'ritual', gratidao, acao, entrega: gratidao,
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
         veredito_ia: { veredito: 'reprovada', confianca: 100, o_que_viu: '', motivo: `Ritual perdido — passou do prazo de ${horaDeMin(RITUAL_FIM_MIN)}.` },
+  ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
       };
       try {
         await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPerdida });
@@ -864,6 +890,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         blob: videoBlob,
         caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: videoBlob.type }),
         actorId: uid,
+        aoFalhar: anotarFalha('video'),
       }) || '';
       // 🔴 10/09/2026 — GUARDAR PODE FALHAR, MAS NÃO PODE FALHAR CALADO.
       //
@@ -919,6 +946,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         // ReferenceError na hora de reprovar alguém pelo ambiente.
         ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
         tempo_tela_s: tempoTelaS || 0,
+  ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
         // 🏷️ 09/09/2026 — auditoria noturna: aqui ficava
         // `motivo_gestor: vereditoAmbiente.motivo`. Nenhum humano decidiu
@@ -987,6 +1015,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
       ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
       tempo_tela_s: tempoTelaS || 0,
+      ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ritual',
       veredito_ia: {
@@ -997,6 +1026,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     };
     try {
       await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      limparFalhasDaTarefa(t.id); // já está gravado na comprovação — não repete na próxima
       setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
       if (ehHoje && xgame) {
         const pts = Math.round(15 * (xgame.cotacao || 1));
@@ -1053,6 +1083,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
     if (decisao.acao === 'ia_fora') {
       const det = ia?.details ? ` (${ia.details.status || 'erro'}${ia.details.model ? ` · ${ia.details.model}` : ''})` : '';
+      // 🧾 esta tentativa NÃO grava comprovação — some sem deixar marca. A
+      // falha fica no ref e entra na comprovação que a próxima tentativa
+      // gravar: é o que separa "a pessoa não entregou" de "a IA estava fora".
+      anotarFalhaDaTarefa(t.id, 'ia', `IA fora do ar${det}`);
       setComprovando({ ...comprovando, enviando: false, pergunta: null,
         erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto NÃO foi descartada, tenta de novo em 1 minuto. Sem a IA conferir, a tarefa não conclui.` });
       return;
@@ -1082,6 +1116,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
       ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
+      ...rastroDa({ anterior: t.comprovacao, iaIndisponivel: !!ia?.ia_indisponivel, falhas: falhasPorTarefa.current[t.id] || [] }),
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ia',
       veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
@@ -1093,6 +1128,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setComprovando(null);
     try {
       await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      limparFalhasDaTarefa(t.id); // já está gravado na comprovação — não repete na próxima
       setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
       if (ehHoje && xgame) {
         const est = estadoDaTarefa(t);
@@ -1159,6 +1195,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // 🗣️ o `catch` era vazio: engolia a mensagem do Storage e todo mundo via a
       // mesma frase genérica. Sem o motivo real, ninguém consegue diagnosticar.
       const motivo = e?.message ? ` (${e.message})` : '';
+      anotarFalhaDaTarefa(t.id, 'print', e?.message || 'envio da imagem falhou');
       setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }

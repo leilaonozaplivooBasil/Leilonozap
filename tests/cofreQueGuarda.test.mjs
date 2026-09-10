@@ -105,5 +105,11 @@ test('🔴 falhar em guardar deixou de ser mudo', () => {
 test('⚠️ e o ritual continua valendo quando o cofre falha', () => {
   // A trava que impede o conserto de virar "derruba o ritual se o cofre cair".
   assert.doesNotMatch(CRM, /if \(!videoPath\) \{[^}]*return;/, 'o ritual passou a cair quando a gravação não salva');
-  assert.match(CLIENTE, /async function guardarDireto\(\{[^)]*\) \{\s*if \(!blob \|\| !caminho\) return null;\s*try \{/, 'guardarDireto deixou de blindar com try');
+  // ⚠️ mede a INTENÇÃO (o envio inteiro dentro de try/catch), não a
+  // adjacência das linhas: a primeira versão exigia `try {` colado no
+  // `if (!blob…)` e quebrou quando entrou o `aoFalhar` no meio — sem que nada
+  // da blindagem tivesse mudado.
+  const corpoDireto = CLIENTE.slice(CLIENTE.indexOf('async function guardarDireto'), CLIENTE.indexOf('export const guardarAudio'));
+  assert.match(corpoDireto, /\btry \{/, 'guardarDireto deixou de blindar com try');
+  assert.match(corpoDireto, /\} catch \(e\) \{[\s\S]*?return /, 'guardarDireto deixou de devolver algo no catch — exceção subiria e derrubaria o ritual');
 });
