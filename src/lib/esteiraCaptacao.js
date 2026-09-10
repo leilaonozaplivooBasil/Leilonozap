@@ -44,12 +44,35 @@ export function pendenciasParaEstagio(oportunidade, estagioId) {
 }
 
 /**
- * Resumo da esteira: valores por estágio, pipeline PONDERADO (Σ valor ×
- * probabilidade dos ativos) e fechado real (100%).
+ * 🔴 10/09/2026 — O ESTÁGIO É TEMPERATURA, NÃO DESCONTO NO DINHEIRO.
+ *
+ * Admin, em áudio, sobre a esteira: "quando aparece lá eu boto 50% fechado,
+ * ele tá entendendo que é 50% do VALOR, mas não, é 50% na DECISÃO... a esteira
+ * precisa identificar o teor do fechamento, o estar aquecido o fechamento do
+ * contrato ou não. Ela tá confundindo."
+ *
+ * 🔴 E ISSO JÁ TINHA CORROMPIDO O DADO. Como "Em esteira" só mostrava o valor
+ * PONDERADO, o time começou a digitar o dobro pra ver o número certo na tela:
+ * a negociação do Leandro Seder, de R$ 80.000, estava gravada como R$ 160.000
+ * pra que × 50% desse 80. Ou seja: a tela deixou de mentir e o BANCO passou a
+ * mentir — e todo relatório que lê o valor cru (a tabela "Conversão do time"
+ * logo abaixo, por exemplo) mostrava o dobro.
+ *
+ * Por isso `pipelineReal` passa a ser o número principal: o valor que a pessoa
+ * digita é o valor do negócio, ponto. `pipelinePonderado` continua existindo
+ * como PREVISÃO, mas nomeada e em segundo plano — nunca como manchete.
+ *
+ * ⚠️ E nenhum dos dois entra na conta da META. Ela se mede pelo dinheiro que
+ * ENTROU: somar intenção com dinheiro fazia a tela dizer "284% da meta" com
+ * R$ 200.000 na conta de uma meta de R$ 1 milhão (o real eram 20%).
+ *
+ * Resumo da esteira: valores por estágio, pipeline REAL (Σ valor dos ativos),
+ * pipeline PONDERADO (Σ valor × probabilidade) e fechado (100%).
  */
 export function resumoEsteira(oportunidades = []) {
   const porEstagio = Object.fromEntries(ESTAGIOS_ESTEIRA.map((e) => [e.id, { qtd: 0, valor: 0 }]));
   let ponderado = 0;
+  let real = 0;
   let fechado = 0;
   let ativas = 0;
   for (const o of oportunidades) {
@@ -58,9 +81,9 @@ export function resumoEsteira(oportunidades = []) {
     porEstagio[est.id].qtd += 1;
     porEstagio[est.id].valor += valor;
     if (ehFechada(o)) fechado += valor;
-    else if (ehAtiva(o)) { ponderado += valor * (est.prob / 100); ativas += 1; }
+    else if (ehAtiva(o)) { real += valor; ponderado += valor * (est.prob / 100); ativas += 1; }
   }
-  return { porEstagio, pipelinePonderado: ponderado, fechado, ativas };
+  return { porEstagio, pipelineReal: real, pipelinePonderado: ponderado, fechado, ativas };
 }
 
 /**

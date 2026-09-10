@@ -1510,11 +1510,15 @@ _Enviado via CRM Leilão NoZap_`;
     {
       chave: 'captacao', rotulo: 'Captação (meta R$ 1 mi)',
       valor: brl(captacao.total),
-      // DIR-36: o card mostra também o que está VINDO — forecast da esteira
-      sub: resumoEsteiraGeral.pipelinePonderado > 0
-        ? `faltam ${brl(captacao.faltam)} · ${brl(resumoEsteiraGeral.pipelinePonderado)} em esteira`
+      // DIR-36: o card mostra também o que está VINDO — a esteira.
+      // 🔴 10/09/2026: mostrava o valor PONDERADO com a etiqueta "em esteira",
+      // enquanto a tabela do time mostrava a soma crua com a MESMA etiqueta.
+      // Dois números com o mesmo nome na mesma tela — foi parte do "os números
+      // não estão batendo" do admin. Agora os dois falam a soma real.
+      sub: resumoEsteiraGeral.pipelineReal > 0
+        ? `faltam ${brl(captacao.faltam)} · ${brl(resumoEsteiraGeral.pipelineReal)} em esteira`
         : `faltam ${brl(captacao.faltam)}`,
-      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). "Em esteira" é o forecast ponderado das negociações ativas da Esteira de Captação — detalhe na seção Expansão.',
+      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). "Em esteira" é a soma real das negociações ativas da Esteira de Captação (o estágio é a temperatura da decisão, não desconto no valor) — detalhe na seção Expansão.',
     },
   ];
 
