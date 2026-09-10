@@ -16,13 +16,22 @@
 // em TODA a plataforma pra resolver um botão. A lista é o menor estrago
 // possível, e é reversível numa linha.
 //
-// 🔴 O LIMITE HONESTO DESTA REGRA (medido em 10/09/2026):
-// Ela decide se o BOTÃO aparece. Ela não abre a tela: o painel de
-// comprovações inteiro mora atrás de `gestao` (= super_admin), lá em
-// Licensing.jsx (`gestao={visPapel.superAdmin}`). Ou seja: hoje Ailton
-// continua sem chegar até o botão, mesmo estando nesta lista. Abrir a tela
-// pra ele é decisão à parte — expõe a fila de comprovações de todo mundo,
-// junto dos botões de aprovar e reprovar. Está fora desta fase de propósito.
+// ONDE ESTA REGRA VALE (10/09/2026)
+// Em dois lugares, e eles são diferentes:
+//   • na FILA DO GESTOR (Comprovacoes.jsx) ela decide se o botão do laudo
+//     aparece — mas a fila inteira já mora atrás de `gestao` (= super_admin,
+//     em Licensing.jsx), então lá ela só restringe, nunca libera;
+//   • na TELA SÓ-LAUDO (PainelLaudo.jsx) ela é a única porta. É por ali que
+//     quem está nesta lista chega, sem a fila e sem os botões de aprovar e
+//     reprovar — que mexeriam no dia das pessoas.
+//
+// 🔴 O LIMITE HONESTO, MEDIDO NO BANCO EM 10/09/2026:
+// Isto é uma porta mais estreita, NÃO um cofre. `metodo_tarefas` está com
+// RLS ligada, mas com policy `USING (true)` pra `public` no SELECT, no UPDATE
+// e no DELETE — e todo navegador fala com o Supabase como `anon`. Os dados já
+// estão ao alcance de qualquer sessão logada, com ou sem esta regra. O que
+// esta camada faz é não ENTREGAR o poder de decisão junto com a leitura.
+// Fechar aquilo de verdade é trabalho no servidor, e não cabia nesta fase.
 import { visibilidadeDoUsuario } from './visibilidadePorPapel.js';
 
 /**

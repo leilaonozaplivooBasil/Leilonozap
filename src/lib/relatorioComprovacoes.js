@@ -215,6 +215,26 @@ export function laudosDoDia({ itens = [], data = null, nomeDe = (id) => id } = {
   return ordem.map((id) => laudoDoDia({ itens: porPessoa.get(id), data, pessoaId: id, nome: nomeDe(id) }));
 }
 
+/**
+ * Só os dias que TÊM comprovação, do mais novo pro mais velho.
+ *
+ * O menu de dias sai daqui em vez de um calendário: oferecer 30 dias pra
+ * escolher, sendo que 26 estão vazios, é fazer quem atende a reclamação
+ * caçar. E mora nesta biblioteca, e não na tela, pela mesma razão do resto —
+ * em `.jsx` nenhum teste de node consegue importar.
+ */
+export function diasComComprovacao(itens = []) {
+  const vistos = [];
+  const jaTem = new Set();
+  itens.forEach((t) => {
+    const d = String(t?.data || '').slice(0, 10);
+    if (!d || jaTem.has(d)) return;
+    jaTem.add(d);
+    vistos.push(d);
+  });
+  return vistos.sort().reverse();
+}
+
 /** O nome do arquivo do PDF — sem acento, sem espaço, com a data na frente pra ordenar sozinho. */
 export function nomeDoLaudo({ data, nome }) {
   const limpo = semAcentoFila(nome).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pessoa';

@@ -86,12 +86,16 @@ test('🔴 quem está olhando chega até o painel — nas duas chamadas', () => 
   chamadas.forEach((c) => assert.match(c, /currentUser=\{currentUser\}/, `chamada sem currentUser: ${c}`));
 });
 
-test('⚠️ o limite da regra está escrito no arquivo, não só na minha cabeça', () => {
-  // Hoje o painel inteiro mora atrás de `gestao` (= super_admin), então
-  // Ailton ainda não CHEGA no botão mesmo estando liberado. Enquanto isso for
-  // verdade, tem que estar escrito onde quem mexer vai ler.
+test('🔴 o limite honesto está escrito no arquivo, não só na minha cabeça', () => {
+  // Medido no banco em 10/09: `metodo_tarefas` tem RLS ligada com policy
+  // `USING (true)` pra `public`, e todo navegador é `anon`. Ou seja: esta
+  // regra é uma porta mais estreita, não um cofre — os dados já estão ao
+  // alcance de qualquer sessão logada. Quem mexer aqui amanhã precisa ler
+  // isso ANTES de tratar a permissão como se fosse uma barreira de verdade.
   const fonte = ler('../src/lib/quemVeOLaudo.js');
-  assert.match(fonte, /gestao/, 'sumiu o aviso de que a tela ainda não abre pra quem está na lista');
+  assert.match(fonte, /RLS ligada/, 'sumiu o aviso de que a permissão não é uma barreira de banco');
+  assert.match(fonte, /USING \(true\)/, 'sumiu a medição que sustenta o aviso');
+  // E a premissa da outra metade: a fila do gestor segue fechada por papel.
   const licensing = semComentarios(ler('../src/pages/Licensing.jsx'));
   assert.match(licensing, /gestao=\{visPapel\.superAdmin\}/, 'a premissa do aviso mudou: reveja quemVeOLaudo.js');
 });
