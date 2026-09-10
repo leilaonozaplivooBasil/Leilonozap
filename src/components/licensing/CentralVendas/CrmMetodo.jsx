@@ -859,6 +859,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // passou três horas fora do ar. Print bloqueante + IA fora = ninguém passa
   // do bloco 1 às cinco da manhã.
   const salvarBlocoDoRitual = async (t, bloco, dados, { abertoEm } = {}) => {
+    // 🧪 MODO DEV — SIMULAÇÃO PURA, IGUAL AO RESTO DO JOGO.
+    //
+    // 🔴 Sem esta guarda, testar o ritual com o relógio de teste (a ÚNICA
+    // forma de abrir a tela fora das 04:40–05:30) gravaria de verdade: linha
+    // nova em `metodo_tarefas`, print no bucket, vídeo no cofre e uma chamada
+    // de IA por bloco. `concluirRitual` já simulava; o gravador de bloco
+    // nasceu sem — e é ele que escreve agora, três vezes por ritual.
+    //
+    // O corpo simulado carrega os MESMOS campos do real (inclusive
+    // `video_path`), pra quem está testando ver o selo e as pendências de
+    // verdade em vez de um caminho falso que nunca reprova.
+    if (modoDev) {
+      const baseDev = devMarcas[t.id]?.comprovacao
+        || { tipo: 'ritual', dev: true, aberto_em: abertoEm || new Date().toISOString(), aberto_dia: hojeStr() };
+      const corpoDev = bloco === 'acordei'
+        ? { print_url: 'dev://print-do-bom-dia', hash: 'dev' }
+        : bloco === 'gratidao'
+          ? { texto: dados.texto || '', entrada: dados.audioGratidao ? 'audio' : 'texto', audio_seg: dados.audioGratidaoSeg || 0, ...(dados.audioGratidao ? { audio_path: 'dev://voz' } : {}) }
+          : { ...(dados.videoBlob ? { video_path: 'dev://video' } : {}), video_seg: dados.gravSeg || 0, acao: dados.acao || '' };
+      const novaDev = comBloco(baseDev, bloco, corpoDev);
+      novaDev.status = 'ritual_em_andamento';
+      novaDev.valido = false;
+      novaDev.dev = true;
+      setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: false, comprovacao: novaDev } }));
+      return novaDev;
+    }
     const anotarFalha = (o_que) => (erro) => anotarFalhaDaTarefa(t.id, o_que, erro);
     const base = {
       ...(t.comprovacao?.tipo === 'ritual' ? t.comprovacao : {}),
@@ -973,8 +999,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const anotarFalha = (o_que) => (erro) => anotarFalhaDaTarefa(t.id, o_que, erro);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
-      setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: true, comprovacao: { tipo: 'ritual', valido: true, status: 'aprovada_ritual', dev: true, gratidao, acao, entrega: gratidao, quando: new Date().toISOString() } } }));
-      toast.success('🧪 modo dev: ritual simulado — nada foi salvo');
+      // 🧪 o fechamento simulado calcula o selo pelos MESMOS blocos que a
+      // sessão de teste montou. Antes era `aprovada_ritual` fixo — quem
+      // testasse pulando o vídeo veria "aprovado" e nunca descobriria que a
+      // tela de pendências existe, que é justo o que se quer ver no teste.
+      const bloquinhos = devMarcas[t.id]?.comprovacao || {};
+      const statusDev = statusDoRitual(bloquinhos);
+      setDevMarcas((prev) => ({
+        ...prev,
+        [t.id]: {
+          feito: statusDev === 'aprovada_ritual',
+          comprovacao: {
+            ...bloquinhos, tipo: 'ritual', dev: true, gratidao, acao, entrega: gratidao,
+            valido: statusDev === 'aprovada_ritual', status: statusDev,
+            ...(pendenciasDoRitual(bloquinhos).length ? { pendencias: pendenciasDoRitual(bloquinhos) } : {}),
+            quando: new Date().toISOString(),
+          },
+        },
+      }));
+      toast.success(`🧪 modo dev: ritual simulado (${seloDoRitual(bloquinhos)}) — nada foi salvo`);
       return;
     }
     const agoraM = agoraMinJogo; // obedece o relógio de teste do super admin
@@ -1872,7 +1915,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   /* 🧱 reabrir cai no bloco que falta, não no começo — mas só
                      se for o ritual de HOJE (ritualRetomavel confere o dia em
                      Brasília). O de ontem nunca ressuscita no de hoje. */
-                  comprovacaoAtual={ritualRetomavel(t.comprovacao, hojeStr()) ? t.comprovacao : null}
+                  comprovacaoAtual={(() => {
+                    const c = modoDev ? devMarcas[t.id]?.comprovacao : t.comprovacao;
+                    return ritualRetomavel(c, hojeStr()) ? c : null;
+                  })()}
                   onBloco={(bloco, dados, ctx) => salvarBlocoDoRitual(t, bloco, dados, ctx)}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}

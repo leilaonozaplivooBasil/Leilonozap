@@ -119,7 +119,11 @@ test('R3B-8 · o cronômetro por pessoa substituiu o corte seco no relógio', ()
 });
 
 test('R3B-9 · reabrir cai no bloco que falta — e só no ritual de hoje', () => {
-  assert.match(CRM, /comprovacaoAtual=\{ritualRetomavel\(t\.comprovacao, hojeStr\(\)\) \? t\.comprovacao : null\}/);
+  // 🧪 10/09 — em modo dev a tela lê a comprovação SIMULADA, não a do banco:
+  // senão, testar com o relógio de teste mostraria o ritual real de hoje
+  // dentro da simulação. A régua do dia (`ritualRetomavel`) vale nos dois.
+  assert.match(CRM, /const c = modoDev \? devMarcas\[t\.id\]\?\.comprovacao : t\.comprovacao;/);
+  assert.match(CRM, /return ritualRetomavel\(c, hojeStr\(\)\) \? c : null;/);
   assert.match(RITUAL, /useState\(\(\) => \(feitos\.length \? \(PASSO_DO_BLOCO\[faltando\] \?\? P\.FECHAMENTO\) : P\.ABERTURA\)\)/);
 });
 
@@ -129,4 +133,28 @@ test('R3B-10 · a barra 1·2·3 mostra o que já está em casa', () => {
   assert.match(RITUAL, /data-teste="cronometro-do-ritual"/);
   // as bolinhas mudas de antes não podem voltar
   assert.ok(!/\[0, 1, 2, 3\]\.map/.test(RITUAL), 'voltaram as bolinhas que não diziam nada');
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+test('R3B-11 · 🧪 testar o ritual não pode gravar nada de verdade', () => {
+  // 🔴 O relógio de teste é a ÚNICA forma de abrir o ritual fora das
+  // 04:40–05:30 — ou seja, é assim que ele SEMPRE vai ser testado. Sem guarda
+  // no gravador de bloco, cada teste escreveria linha em `metodo_tarefas`,
+  // print no bucket, vídeo no cofre e três chamadas de IA. `concluirRitual`
+  // já simulava desde sempre; o gravador de bloco nasceu sem.
+  const ini = CRM.indexOf('const salvarBlocoDoRitual');
+  const fim = CRM.indexOf('const julgarBlocoComIA');
+  assert.ok(ini > 0 && fim > ini, 'premissa: o gravador de bloco existe');
+  const gravador = CRM.slice(ini, fim);
+  const guarda = gravador.indexOf('if (modoDev) {');
+  assert.ok(guarda > 0, 'o gravador de bloco voltou a gravar de verdade no modo de teste');
+  // e a guarda vem ANTES de qualquer upload, escrita ou chamada de IA
+  for (const efeito of ['Core.UploadFile', 'guardarVideo(', 'guardarAudio(', 'MetodoTarefa.update', 'julgarBlocoComIA(']) {
+    const pos = gravador.indexOf(efeito);
+    assert.ok(pos > guarda, `"${efeito}" acontece antes da guarda de modo dev — o teste grava de verdade`);
+  }
+  assert.match(gravador, /return novaDev;/, 'a simulação precisa devolver a comprovação pra tela avançar');
+  // o fechamento simulado mostra o selo REAL do que foi montado, não "aprovado" fixo
+  assert.match(CRM, /const statusDev = statusDoRitual\(bloquinhos\);/);
+  assert.ok(!/comprovacao: \{ tipo: 'ritual', valido: true, status: 'aprovada_ritual', dev: true/.test(CRM), 'o modo dev voltou a aprovar sempre — ninguém veria a tela de pendências no teste');
 });

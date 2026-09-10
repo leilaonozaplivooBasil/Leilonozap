@@ -20,8 +20,22 @@ test('statusDaComp devolve o status gravado de verdade, sem reinterpretar — "a
 });
 
 test('🔒 todo status que concluirRitual grava tem rótulo E cor no painel de comprovações', () => {
-  const statusGravados = [...METODO.matchAll(/status:\s*'([a-z_]+)'/g)].map((m) => m[1]);
-  assert.ok(statusGravados.includes('aprovada_ritual'), 'o teste em si perdeu a referência — CrmMetodo.jsx não grava mais aprovada_ritual?');
+  // 🔴 10/09 — DE ONDE VÊM OS STATUS MUDOU, E O TESTE TEVE QUE IR ATRÁS.
+  // O fechamento do ritual passou a gravar `status: statusFinal`, uma
+  // variável — varrer só os literais de CrmMetodo deixaria de enxergar
+  // `aprovada_ritual` e `ritual_parcial`, e a varredura passaria VERDE sobre
+  // um conjunto vazio. Agora lê os dois lugares: os literais que sobraram no
+  // CrmMetodo e os que `statusDoRitual` decide, em ritualEmBlocos.js.
+  const BLOCOS_LIB = readFileSync(new URL('../src/lib/ritualEmBlocos.js', import.meta.url), 'utf8');
+  const doFechamento = BLOCOS_LIB.slice(BLOCOS_LIB.indexOf('export function statusDoRitual'));
+  const statusGravados = [
+    ...[...METODO.matchAll(/status:\s*'([a-z_]+)'/g)].map((m) => m[1]),
+    ...[...doFechamento.matchAll(/return '([a-z_]+)'/g)].map((m) => m[1]),
+    ...[...METODO.matchAll(/\.status = '([a-z_]+)'/g)].map((m) => m[1]),
+  ];
+  assert.ok(statusGravados.includes('aprovada_ritual'), 'o teste em si perdeu a referência — ninguém grava mais aprovada_ritual?');
+  assert.ok(statusGravados.includes('ritual_parcial'), 'o ritual pela metade sumiu do vocabulário');
+  assert.ok(statusGravados.includes('ritual_em_andamento'), 'o ritual em andamento sumiu do vocabulário');
   const rotuloInicio = PAINEL.indexOf('const ROTULO = {');
   const rotuloFim = PAINEL.indexOf('};', rotuloInicio);
   const rotulo = PAINEL.slice(rotuloInicio, rotuloFim);
