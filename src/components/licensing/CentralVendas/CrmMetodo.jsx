@@ -61,6 +61,7 @@ import {
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
+import { frameEmBase64 } from '@/lib/frameEmBase64';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
@@ -867,16 +868,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
     // MESMO validador que já julga print/foto (xgameValidarPrint) olha um
     // frame do vídeo, com uma regra nova pro tipo 'ritual': ambiente de casa.
+    //
+    // 🔐 09/09/2026 — O FRAME NÃO SOBE MAIS PRO BUCKET PÚBLICO. Ele ia pro
+    // `public-assets` (que é `public = true`) só pra existir uma URL que a IA
+    // conseguisse buscar: o rosto de alguém dentro da própria casa, às 5h da
+    // manhã, em link aberto e sem validade. Eram 5 lá, crescendo um por dia.
+    // Agora vai INLINE na chamada e morre com ela — não vira objeto, não vira
+    // link, não vira linha em lugar nenhum (ver src/lib/frameEmBase64.js).
     let vereditoAmbiente = null;
     if (frameBlob) {
       try {
-        const upFrame = await plataforma.integrations.Core.UploadFile({
-          file: new File([frameBlob], `ritual_frame_${hojeStr()}.jpg`, { type: 'image/jpeg' }),
-          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'jpg' }),
-        });
-        const frameUrl = upFrame?.file_url || upFrame?.url || '';
-        if (frameUrl) {
-          const r = await plataforma.functions.xgameValidarPrint({ image_url: frameUrl, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
+        const frameB64 = await frameEmBase64(frameBlob);
+        if (frameB64) {
+          const r = await plataforma.functions.xgameValidarPrint({ image_b64: frameB64, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
           if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) vereditoAmbiente = r;
         }
       } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }

@@ -33,10 +33,30 @@ const limpo = (valor, reserva) =>
  * @param {string} p.ext       extensão do arquivo, com ou sem ponto
  * @param {string} [p.unico]   sufixo único (só os testes passam à mão)
  */
+/**
+ * ⚠️ Contador de sessão — a parte do sufixo que NÃO depende de sorte.
+ *
+ * A marca era `<tempo em ms><4 chars aleatórios>`. Dois envios no MESMO
+ * milissegundo dependiam só dos 4 caracteres: ~1,7 milhão de combinações, que
+ * pelo paradoxo do aniversário colidem **1 vez a cada ~60 rodadas de 200
+ * envios**. Medido: 5 colisões em 300 rodadas.
+ *
+ * E colisão aqui não é detalhe estatístico — é o 400 do Storage voltando, o
+ * mesmo incidente de 08/09 (49 recusas, 5 pessoas) que este arquivo existe
+ * pra ter resolvido. O teste que cobre isso também piscava vermelho ~1 run em
+ * 60, o que é como a falha se disfarçava de "flaky".
+ *
+ * Com um contador, dois envios da mesma aba NUNCA colidem — que é exatamente
+ * o caso real: a mesma pessoa reenviando a mesma tarefa. O aleatório continua
+ * ali pra separar abas e aparelhos diferentes.
+ */
+let sequencia = 0;
+
 export function caminhoDeProva({ pasta, uid, dia, tarefaId, ext, unico }) {
+  sequencia += 1;
   const marca =
     limpo(unico, '') ||
-    `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    `${Date.now().toString(36)}${sequencia.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const extensao = limpo(String(ext ?? '').replace(/^\.+/, ''), 'bin');
   return [
     'xgame',

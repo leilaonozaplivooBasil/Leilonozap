@@ -165,24 +165,19 @@ test('só admin move arquivo dos outros, e o papel vem do banco', () => {
   assert.match(MOVER, /corpo\.confirmar !== true/);
 });
 
-test('⚠️ BURACO CONHECIDO: o FRAME do vídeo ainda vai pro bucket público', () => {
-  // Este teste não protege uma vitória — ele deixa uma DÍVIDA à vista.
+test('🔐 o frame do ritual também não vai mais pro bucket público', () => {
+  // Este teste substitui o '⚠️ BURACO CONHECIDO' que ficava aqui. Aquele
+  // registrava a dívida que este PR deixou aberta: o vídeo foi pro cofre, mas
+  // o FRAME que a IA julga (DIR-125) continuava subindo pelo Core.UploadFile,
+  // ou seja, pro `public-assets`. Ele mandava, por escrito, ser APAGADO quando
+  // alguém consertasse o frame — e não ajustado. Foi o que se fez.
   //
-  // O vídeo do ritual foi pro cofre privado. Mas o main ganhou depois (DIR-125)
-  // uma validação de ambiente por IA que captura um FRAME e o sobe pelo
-  // Core.UploadFile — ou seja, pro `public-assets`. É a mesma exposição que
-  // este PR existe pra fechar, num único quadro: o rosto da pessoa, em casa,
-  // aberto por link.
-  //
-  // Por que não foi consertado junto: `xgameValidarPrint` recebe `image_url` e
-  // a IA precisa BUSCAR essa imagem. Mandar pro cofre exige devolver link
-  // assinado e conferir que o validador aceita — mexer no caminho da IA dentro
-  // de uma resolução de conflito seria alargar o risco em vez de reduzir.
-  //
-  // 🔴 SE ESTE TESTE COMEÇAR A FALHAR, é porque alguém consertou o frame — e aí
-  // ele deve ser APAGADO, não ajustado. Enquanto passar, a dívida existe.
+  // O frame agora vai INLINE (base64) na chamada da IA e não vira arquivo em
+  // lugar nenhum. A cobertura de verdade está em
+  // tests/frameDoRitualNaoVazaPublico.test.mjs; aqui fica só a trava de que a
+  // dívida não volta pelo mesmo caminho.
   const METODO = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
   const doFrame = METODO.slice(METODO.indexOf('let vereditoAmbiente'), METODO.indexOf('vereditoAmbiente?.veredito'));
-  assert.match(doFrame, /Core\.UploadFile/,
-    'o frame saiu do bucket público — ótimo: apague este teste, a dívida acabou');
+  assert.doesNotMatch(doFrame, /Core\.UploadFile/,
+    'o frame voltou a subir pro bucket público — é o rosto da pessoa, em casa, em link aberto');
 });
