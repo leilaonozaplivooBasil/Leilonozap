@@ -40,8 +40,15 @@ test('textoEFonte pega a transcrição quando só houve áudio (a mesma conta qu
 test('🔒 o ÁUDIO da gratidão NUNCA toca pra quem não é dono — só o texto viaja pro painel', () => {
   // a régua de bloqueio já existe no backend, de propósito — este teste só
   // trava que ela continua lá, e que o painel não tenta contornar isso.
-  assert.match(API, /Áudio de gratidão é da pessoa\. Nem gestão ouve por aqui/);
-  assert.match(API, /String\(eu\) !== String\(dono\)/);
+  // 🩹 09/09 — a regra saiu do audioDoDitado (145 → 27 linhas) e virou peça
+  // compartilhada em api/_lib/cofrePrivado.js. Ela não afrouxou: ficou MAIS
+  // forte, porque a porta do gestor virou opção que nasce FECHADA. O que
+  // este teste cobra agora é o valor, não o endereço.
+  const COFRE = readFileSync(new URL('../api/_lib/cofrePrivado.js', import.meta.url), 'utf8');
+  assert.match(COFRE, /gestorPodeVer = false/, 'a porta do gestor tem que nascer fechada');
+  assert.match(COFRE, /String\(eu\) !== String\(dono\)/);
+  assert.ok(!/gestorPodeVer/.test(API),
+    '🔴 o cofre da VOZ abriu a porta do gestor — gratidão é da pessoa, ninguém pediu isso');
   assert.match(PAINEL, /\{ehMeu && gratidaoRecente\.audioPath && \(/, 'o play só pode aparecer quando é a própria pessoa');
 });
 

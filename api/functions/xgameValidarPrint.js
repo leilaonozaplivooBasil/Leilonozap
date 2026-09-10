@@ -178,6 +178,37 @@ TOM: você é um TREINADOR, não um fiscal. Isto vale dinheiro de verdade pra es
 const indisponivel = (res, details, motivo = 'IA indisponível agora — tente de novo em instantes.') =>
   res.status(200).json({ ok: true, ia_indisponivel: true, veredito: 'duvida', confianca: 0, o_que_viu: '', motivo, pergunta_para_pessoa: '', details });
 
+// 🔐 De onde a IA lê a imagem de hoje: link público (print, foto) ou base64
+// inline (o frame do Ritual, que não pode virar arquivo público em lugar
+// nenhum — ver src/lib/frameEmBase64.js).
+const MIMES_DE_IMAGEM = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+// ~5 MB de base64 ≈ 3,7 MB de imagem: acima disso a Vercel já teria cortado o
+// corpo antes de chegar aqui. O teto é pra recusar limpo, não pra ser generoso.
+const TETO_B64 = 5 * 1024 * 1024;
+
+/**
+ * Devolve o `source` do bloco de imagem, ou `null` quando não dá pra usar
+ * nenhuma das duas formas.
+ *
+ * ⚠️ O base64 tem PRECEDÊNCIA sobre a URL de propósito: quem manda a imagem
+ * inline está dizendo "esta imagem não existe em lugar nenhum". Se a URL
+ * ganhasse, um chamador que mandasse os dois acabaria publicando o que quis
+ * manter fora do Storage — o erro exatamente contrário ao que isto conserta.
+ */
+export function fonteDaImagem({ url, b64 }) {
+  const inline = String(b64 || '').trim();
+  if (inline) {
+    const m = /^data:([a-z]+\/[a-z0-9.+-]+);base64,(.+)$/is.exec(inline);
+    const mediaType = (m ? m[1] : 'image/jpeg').toLowerCase();
+    const dados = m ? m[2] : inline;
+    if (!MIMES_DE_IMAGEM.has(mediaType)) return null;
+    if (!dados || dados.length > TETO_B64) return null;
+    return { type: 'base64', media_type: mediaType, data: dados };
+  }
+  const limpa = String(url || '').slice(0, 2000);
+  return /^https?:\/\//.test(limpa) ? { type: 'url', url: limpa } : null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method === 'GET') {
@@ -206,7 +237,16 @@ export default async function handler(req, res) {
       .map((u) => String(u || '').slice(0, 2000)).filter((u) => /^https?:\/\//.test(u)).slice(0, 4);
     const justificativa = String(body?.justificativa || '').slice(0, 800);
     const tentativa = Number(body?.tentativa) === 2 ? 2 : 1;
-    if (!/^https?:\/\//.test(imageUrl)) return res.status(400).json({ ok: false, error: 'image_url obrigatório (http/https)' });
+    // 🔐 09/09/2026 — a imagem de HOJE pode vir por LINK (o caminho de sempre,
+    // usado por print e foto, que já moram num bucket público) ou INLINE em
+    // base64. O inline nasceu pro frame do Ritual: era a única imagem que
+    // subia num bucket público SÓ pra ganhar uma URL que a IA buscasse — o
+    // rosto de alguém, dentro da casa, em link aberto e sem validade. Inline,
+    // ela não vira objeto nem link: existe durante esta chamada e acaba.
+    // As `imagens_anteriores` seguem por URL: são comprovações já publicadas,
+    // e mandar quatro fotos inline estouraria o corpo da requisição.
+    const imagemDeHoje = fonteDaImagem({ url: imageUrl, b64: body?.image_b64 });
+    if (!imagemDeHoje) return res.status(400).json({ ok: false, error: 'image_url (http/https) ou image_b64 obrigatório' });
 
     const ia = await resolverIA();
     if (!ia) return indisponivel(res, { status: 0, tipo: 'sem_chave', mensagem: 'nem ANTHROPIC_API_KEY nem AI_GATEWAY_API_KEY configuradas' }, 'IA não conectada — configure a chave da Anthropic ou do AI Gateway.');
@@ -230,7 +270,7 @@ TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${d
 
     const conteudo = [
       { type: 'text', text: contexto },
-      { type: 'image', source: { type: 'url', url: imageUrl } },
+      { type: 'image', source: imagemDeHoje },
       ...imagensAnteriores.map((u) => ({ type: 'image', source: { type: 'url', url: u } })),
     ];
 

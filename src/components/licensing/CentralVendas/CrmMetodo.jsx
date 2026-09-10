@@ -60,7 +60,8 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
-import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
+import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
+import { frameEmBase64 } from '@/lib/frameEmBase64';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
@@ -851,31 +852,37 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return;
     }
     const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
-    // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
-    let videoUrl = '';
+    // 🎥 o vídeo da visualização é a comprovação — vai pro cofre PRIVADO.
+    //
+    // 🔴 09/09 — antes ia pro `public-assets` via Core.UploadFile, que é
+    // `public = true`: a gravação do rosto de alguém meditando às 6h da manhã
+    // ficava aberta por link, sem login. A tela promete "só você e o gestor
+    // veem"; agora isso é verdade. Voz é íntimo, imagem é identificável.
+    let videoPath = '';
     if (videoBlob) {
-      try {
-        const up = await plataforma.integrations.Core.UploadFile({
-          file: new File([videoBlob], `ritual_${hojeStr()}.webm`, { type: videoBlob.type || 'video/webm' }),
-          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'webm' }),
-        });
-        videoUrl = up?.file_url || up?.url || '';
-      } catch { videoUrl = ''; }
+      videoPath = await guardarVideo({
+        blob: videoBlob,
+        caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: videoBlob.type }),
+        actorId: uid,
+      }) || '';
     }
     // 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
     // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
     // MESMO validador que já julga print/foto (xgameValidarPrint) olha um
     // frame do vídeo, com uma regra nova pro tipo 'ritual': ambiente de casa.
+    //
+    // 🔐 09/09/2026 — O FRAME NÃO SOBE MAIS PRO BUCKET PÚBLICO. Ele ia pro
+    // `public-assets` (que é `public = true`) só pra existir uma URL que a IA
+    // conseguisse buscar: o rosto de alguém dentro da própria casa, às 5h da
+    // manhã, em link aberto e sem validade. Eram 5 lá, crescendo um por dia.
+    // Agora vai INLINE na chamada e morre com ela — não vira objeto, não vira
+    // link, não vira linha em lugar nenhum (ver src/lib/frameEmBase64.js).
     let vereditoAmbiente = null;
     if (frameBlob) {
       try {
-        const upFrame = await plataforma.integrations.Core.UploadFile({
-          file: new File([frameBlob], `ritual_frame_${hojeStr()}.jpg`, { type: 'image/jpeg' }),
-          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'jpg' }),
-        });
-        const frameUrl = upFrame?.file_url || upFrame?.url || '';
-        if (frameUrl) {
-          const r = await plataforma.functions.xgameValidarPrint({ image_url: frameUrl, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
+        const frameB64 = await frameEmBase64(frameBlob);
+        if (frameB64) {
+          const r = await plataforma.functions.xgameValidarPrint({ image_b64: frameB64, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
           if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) vereditoAmbiente = r;
         }
       } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }
@@ -896,7 +903,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       const comprovacaoReprovada = {
         tipo: 'ritual', gratidao, acao,
         entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-        ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+        // ⚠️ 09/09 — este bloco (DIR-125, reprovação por ambiente) nasceu no
+        // main DEPOIS que o cofre foi escrito, então ainda falava `videoUrl`.
+        // O git juntou os dois sem conflito e a variável tinha sumido: dava
+        // ReferenceError na hora de reprovar alguém pelo ambiente.
+        ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
         tempo_tela_s: tempoTelaS || 0,
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
         // 🏷️ 09/09/2026 — auditoria noturna: aqui ficava
@@ -942,7 +953,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como
     // perdido acima; ambiente errado ou em dúvida nem chega aqui — já
     // voltou reprovado automático acima (DIR-125).
-    const aprovadoDireto = naJanela && !!videoUrl;
+    const aprovadoDireto = naJanela && !!videoPath;
     const comprovacao = {
       // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
       // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
@@ -951,7 +962,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
       tipo: 'ritual', gratidao, acao,
       entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-      ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
       // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
       // "as suas palavras", COM a origem registrada. Não é desconfiança: é
       // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
@@ -970,8 +981,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       status: 'aprovada_ritual',
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
-        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
+        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoPath ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
+        motivo: aprovadoDireto ? '' : (!videoPath ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
       },
     };
     try {

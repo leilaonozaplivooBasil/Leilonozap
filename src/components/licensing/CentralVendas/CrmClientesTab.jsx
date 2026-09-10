@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 import { fmtBR, parseValorBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
@@ -1307,6 +1308,34 @@ _Enviado via CRM Leilão NoZap_`;
 
   // 💵 DIR-40 — registrar aporte que entrou POR FORA (Santander/Itaú), com
   // carimbo de quem registrou e quando. Só quem vê dinheiro da empresa.
+  // 🗑️ 09/09/2026 — APAGAR CARD DUPLICADO DA ESTEIRA.
+  //
+  // Relato do admin: ele lançou o fechamento do Luciano pela conta de admin, o
+  // Luciano lançou de novo pela dele, e ficaram dois cards de R$ 200.000 —
+  // somando R$ 400.000 no painel, com o forecast a 304% da meta.
+  //
+  // 🔴 VAI POR ROTA DE SERVIDOR, e não por `entities.delete`, porque
+  // `captacao_oportunidades` tem RLS ligado e NENHUMA política de DELETE.
+  // Conferido no banco: um delete do navegador (que é sempre `anon`) apaga
+  // ZERO linhas e não devolve erro — a tela diria "apagado" e o card
+  // continuaria lá. É o PONTO 130 desta casa.
+  const handleApagarOportunidade = async (alvo) => {
+    if (!alvo?.id) return;
+    try {
+      const resp = await fetch('/api/functions/apagarOportunidade', {
+        method: 'POST',
+        headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ id: alvo.id, motivo: 'duplicado na esteira' }),
+      });
+      const j = await resp.json();
+      if (!j?.success) { toast.error(j?.error || 'Não foi possível apagar.'); return; }
+      toast.success(`Card de ${alvo.cliente_nome} apagado da esteira.`);
+      await loadOportunidades();
+    } catch (e) {
+      toast.error(String(e?.message || e));
+    }
+  };
+
   const handleRegistrarAporteExterno = async (existente, { banco, valor, data }) => {
     try {
       if (!vis.verDinheiroEmpresa) {
@@ -1878,6 +1907,8 @@ _Enviado via CRM Leilão NoZap_`;
               visaoTotal={isSuperAdmin}
               onSalvar={handleSalvarOportunidade}
               onRegistrarAporteExterno={handleRegistrarAporteExterno}
+              onApagar={handleApagarOportunidade}
+              podeApagar={isSuperAdmin}
               podeRegistrarAporte={vis.verDinheiroEmpresa}
               clientePreenchido={clientePreenchido}
               onClientePreenchidoConsumido={() => setClientePreenchido(null)}
