@@ -23,7 +23,13 @@ const ESTEIRA = fs.readFileSync(new URL('../src/components/licensing/CentralVend
 test('TourGuiado: o fundo escureceu de verdade (>= 0.93) mas continua abaixo de opaco', () => {
   const alphas = [...TOUR.matchAll(/rgba\(6,10,20,([\d.]+)\)|bg-\[#060a14\]\/(\d+)/g)]
     .map((m) => (m[1] ? Number(m[1]) : Number(m[2]) / 100));
-  assert.ok(alphas.length >= 2, 'tem que existir o fundo do spotlight E o do fallback sem alvo');
+  // ⚠️ 10/09/2026 — este teste pedia DOIS lugares: o fundo do spotlight e o
+  // fallback de quando não há alvo. Os dois viraram UM só: `paineisDoEscuro`
+  // devolve os quatro painéis em volta do alvo, ou um painel de tela cheia
+  // quando não há alvo — mesma cor, mesmo código. A exigência de 0,93 (decisão
+  // do dono, depois de "ainda está confundindo" no 0,88) continua valendo
+  // inteira; o que mudou foi só o número de lugares onde ela aparece.
+  assert.ok(alphas.length >= 1, 'sumiu o escurecimento do fundo do tour');
   for (const a of alphas) {
     assert.ok(a >= 0.93, `alpha ${a} está transparente demais — o dono reportou "ainda confundindo" no 0.88 anterior`);
     assert.ok(a < 1, `alpha ${a} não pode chegar em opaco — "sem perder a jogada de eu continuar vendo o fundo"`);
