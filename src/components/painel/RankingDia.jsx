@@ -43,10 +43,15 @@ export default function RankingDia({ userId, refreshKey, onSeller, period = 'dia
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl p-5 mb-4 border border-orange-500/30 bg-gradient-to-r from-orange-900/30 to-amber-800/10">
-            <div className="flex items-center gap-2 text-orange-300 font-bold mb-1"><Flame className="w-5 h-5" /> Falta pouco — bora bater a meta!</div>
-            <div className="text-sm text-gray-200">
-              Faltam <strong className="text-orange-300">{money(r.falta)}</strong> ({100 - pct}% restante) pra fechar os {money(r.meta)} de hoje.
+          /* 🔥 10/09/2026 — mesmo defeito do RegiaoCard: `from-orange-900/30` é
+             parada de degradê COLORIDA, e o clareador do .nz-painel só conhece
+             parada cinza. O aviso ficava escuro no meio da tela clara, com
+             letra laranja-300 por cima (contraste ~1,6:1 — ilegível). Agora
+             usa o fogo da marca em token, que não depende de clareador. */
+          <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: 'var(--nz-fogo-fundo)', border: '1px solid var(--nz-fogo)' }}>
+            <div className="flex items-center gap-2 font-bold mb-1" style={{ color: 'var(--nz-fogo-escuro)' }}><Flame className="w-5 h-5" /> Falta pouco — bora bater a meta!</div>
+            <div className="text-sm" style={{ color: 'var(--nz-tinta)' }}>
+              Faltam <strong style={{ color: 'var(--nz-fogo-escuro)' }}>{money(r.falta)}</strong> ({100 - pct}% restante) pra fechar os {money(r.meta)} de hoje.
               {campeaoProduto ? <> O que mais sai hoje é <strong className="text-white">“{campeaoProduto.slice(0, 38)}”</strong> — empurra esse que a meta cai! 💪</> : <> Cada pedido conta — fecha mais um! 💪</>}
             </div>
           </div>

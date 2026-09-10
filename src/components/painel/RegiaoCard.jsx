@@ -6,6 +6,40 @@ import { MapPin, Users2, TrendingUp, Network, Loader2 } from 'lucide-react';
 
 const num = (n) => Number(n || 0).toLocaleString('pt-BR');
 
+// 🎨 10/09/2026 — CORES EM TOKEN DA MARCA, NÃO EM CLASSE DO TAILWIND.
+//
+// Este card nasceu no tema escuro (`from-indigo-900/30 to-gray-900`) e a Visão
+// da Operação virou tema claro em 08/08. O clareamento global do .nz-painel
+// cobre `from-gray-8/9`, `from-slate-9` e `via-gray-9` — mas NÃO cobre parada
+// de degradê colorida. Resultado: enquanto a página inteira clareou, este
+// bloco continuou escuro, sozinho, com a linha da estimativa apagada.
+//
+// A correção NÃO é ensinar mais uma cor ao clareador global (isso repintaria
+// 20+ telas de uma vez). É este componente parar de depender do clareador:
+// as cores vêm dos tokens institucionais (:root do index.css), aplicadas em
+// `style`. Nenhuma classe `bg-*`/`text-*` de cor sobrou aqui, então nenhuma
+// regra global casa com ele — nem pra clarear, nem pra escurecer.
+const CASCA = { backgroundColor: 'var(--nz-verde-fundo)', border: '1px solid var(--nz-borda)' };
+const TINTA = { color: 'var(--nz-tinta)' };
+const FRACA = { color: 'var(--nz-tinta-fraca)' };
+const VERDE = { color: 'var(--nz-verde)' };
+// número grande: `tabular-nums` alinha as casas entre as três colunas
+const VALOR = { fontVariantNumeric: 'tabular-nums' };
+
+// filete à esquerda de cada métrica — verde no dinheiro, neutro no resto
+const filete = (destaque) => ({ borderLeft: `3px solid ${destaque ? 'var(--nz-verde)' : 'var(--nz-borda)'}` });
+
+function Metrica({ icon: Icon, rotulo, sufixo, valor, destaque }) {
+  return (
+    <div className="pl-3" style={filete(destaque)}>
+      <div className="flex items-center gap-1.5 text-xs mb-0.5" style={FRACA}>
+        <Icon className="w-3.5 h-3.5" /> {rotulo}{sufixo ? <span className="text-[10px]">{sufixo}</span> : null}
+      </div>
+      <div className="text-2xl font-black" style={{ ...VALOR, ...(destaque ? VERDE : TINTA) }}>{valor}</div>
+    </div>
+  );
+}
+
 // Inteligência da região do endereço cadastrado (habitantes, potencial, afiliações).
 // Robusto: não quebra se não tiver CEP ou se a API externa falhar.
 export default function RegiaoCard({ user }) {
@@ -33,33 +67,38 @@ export default function RegiaoCard({ user }) {
     return () => { alive = false; };
   }, [cep, cidade, uf]);
 
+  // ⚠️ Os três retornos usam a MESMA casca. Antes, carregando e indisponível
+  // eram escuros também (`bg-gray-800/60`, `bg-gray-800/40`) — o card ficava
+  // piscando escuro antes de aparecer claro.
   if (loading) return (
-    <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-5 mb-6 flex items-center gap-2 text-gray-400 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Carregando inteligência da região…</div>
+    <div className="rounded-2xl p-5 mb-6 flex items-center gap-2 text-sm" style={{ ...CASCA, ...FRACA }}>
+      <Loader2 className="w-4 h-4 animate-spin" /> Carregando inteligência da região…
+    </div>
   );
   if (!data?.available) return (
-    <div className="bg-gray-800/40 border border-dashed border-gray-700 rounded-2xl p-4 mb-6 text-sm text-gray-400 flex items-center gap-2">
+    <div className="rounded-2xl p-4 mb-6 text-sm flex items-center gap-2" style={{ ...CASCA, border: '1px dashed var(--nz-borda)', ...FRACA }}>
       <MapPin className="w-4 h-4" /> {data?.motivo || 'Cadastre seu CEP em Empresa / Perfil pra ver a inteligência da sua região.'}
     </div>
   );
 
   return (
-    <div className="bg-gradient-to-br from-indigo-900/30 to-gray-900 border border-indigo-500/25 rounded-2xl p-5 mb-6">
-      <div className="flex items-center gap-2 text-indigo-300 font-bold mb-3"><MapPin className="w-4 h-4" /> Inteligência da Região — {data.cidade}{data.uf ? `/${data.uf}` : ''}</div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-0.5"><Users2 className="w-3.5 h-3.5" /> Habitantes</div>
-          <div className="text-2xl font-black text-white">{data.habitantes != null ? num(data.habitantes) : '—'}</div>
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-0.5"><TrendingUp className="w-3.5 h-3.5" /> Potencial de venda <span className="text-[10px] text-gray-600">(mês)</span></div>
-          <div className="text-2xl font-black text-green-400">{data.potencial_venda != null ? money(data.potencial_venda) : '—'}</div>
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-0.5"><Network className="w-3.5 h-3.5" /> Afiliações na região</div>
-          <div className="text-2xl font-black text-indigo-300">{num(data.afiliacoes)}</div>
-        </div>
+    <div className="rounded-2xl p-5 mb-6" style={CASCA}>
+      <div className="flex items-center gap-2 text-xs font-bold mb-4">
+        <MapPin className="w-4 h-4" style={VERDE} />
+        <span className="uppercase tracking-wider" style={VERDE}>Inteligência da Região</span>
+        <span style={FRACA}>·</span>
+        <span className="text-sm" style={TINTA}>{data.cidade}{data.uf ? `/${data.uf}` : ''}</span>
       </div>
-      {data.premissas && <div className="text-[11px] text-gray-500 mt-3">Estimativa: {data.premissas.penetracao_pct}% da população × ticket de {money(data.premissas.ticket)}.</div>}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Metrica icon={Users2} rotulo="Habitantes" valor={data.habitantes != null ? num(data.habitantes) : '—'} />
+        <Metrica icon={TrendingUp} rotulo="Potencial de venda" sufixo=" (mês)" valor={data.potencial_venda != null ? money(data.potencial_venda) : '—'} destaque />
+        <Metrica icon={Network} rotulo="Afiliações na região" valor={num(data.afiliacoes)} />
+      </div>
+      {data.premissas && (
+        <div className="text-[11px] mt-4 pt-3" style={{ ...FRACA, borderTop: '1px solid var(--nz-borda)' }}>
+          Estimativa: {data.premissas.penetracao_pct}% da população × ticket de {money(data.premissas.ticket)}.
+        </div>
+      )}
     </div>
   );
 }

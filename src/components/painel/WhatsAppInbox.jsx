@@ -81,7 +81,7 @@ export default function WhatsAppInbox({ user }) {
         <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 mb-4">
           <h3 className="font-semibold mb-2 flex items-center gap-2"><BrainCircuit className="w-4 h-4 text-indigo-300" /> Treinar a IA de atendimento</h3>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={5} placeholder="Ex: Você é o atendimento da Leilão NoZap. Horário de funcionamento, formas de pagamento, política de entrega... Responda cordial e objetivo." className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 resize-none mb-2" />
-          <button onClick={salvarPrompt} disabled={busy === 'train'} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm font-semibold flex items-center gap-2">{busy === 'train' ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />} Salvar treino</button>
+          <button onClick={salvarPrompt} disabled={busy === 'train'} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-2">{busy === 'train' ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />} Salvar treino</button>
         </div>
       )}
 
@@ -139,7 +139,7 @@ export default function WhatsAppInbox({ user }) {
                 </div>
                 <div className="p-3 border-t border-gray-800 flex gap-2">
                   <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder="Escreva (você intervém na conversa)…" className="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
-                  <button onClick={send} disabled={busy === 'send'} className="px-4 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center gap-1">{busy === 'send' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}</button>
+                  <button onClick={send} disabled={busy === 'send'} className="px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-1">{busy === 'send' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}</button>
                 </div>
               </>
             )}

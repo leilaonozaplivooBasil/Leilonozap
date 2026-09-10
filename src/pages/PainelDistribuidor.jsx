@@ -291,7 +291,7 @@ export default function PainelDistribuidor() {
             <span className="font-bold truncate">{currentLabel}</span>
           </button>
         </div>
-        <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
+        <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
       </div>
 
       {/* MENU ESCRITO DO PAINEL — mesmo componente usado em Pedidos & Envio e
@@ -305,7 +305,9 @@ export default function PainelDistribuidor() {
       />
 
       {/* CONTEÚDO */}
-      <main className="flex-1 min-w-0 p-4 md:p-8">
+      {/* 🏷️ 10/09/2026 — era <main>, dentro do <main> que o Layout já abre.
+          Dois <main> na mesma página é HTML inválido e confunde leitor de tela. */}
+      <div className="flex-1 min-w-0 p-4 md:p-8">
         {/* ───────────────────────── RANKING (aba dedicada) ───────────────────────── */}
         {tab === 'ranking' && (
           <div>
@@ -317,20 +319,27 @@ export default function PainelDistribuidor() {
         {/* ───────────── VISÃO GERAL — LOJA (loja_fisica/ponto/parceiro) ───────────── */}
         {tab === 'visao' && isLoja && (
           <div>
+            {/* 🔝 10/09/2026 — ORDEM DA TELA CORRIGIDA.
+                Antes: filtro → meta → Inteligência da Região → título. Ou seja,
+                uma ESTIMATIVA (2% da população × ticket) era o primeiro e maior
+                bloco da tela, acima do próprio título e do faturamento real do
+                dia. Agora o título vem primeiro, depois a meta, depois o número
+                que a pessoa abriu o painel pra ver — e o contexto da região
+                entra em seguida, como contexto. */}
             <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
-            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
-            <RegiaoCard user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão da Operação</h1>
                 <p className="text-gray-400 text-sm">{user.store_name || user.full_name} · {cargoNome}</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
+                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
                 <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-bold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
               </div>
             </div>
+            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
             <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name} />
+            <RegiaoCard user={user} />
             <SectionLabel>📦 Minha loja</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Stat icon={Package} label="Produtos na loja" value={Number(lojaStats?.itens || 0).toLocaleString('pt-BR')} sub={`${lojaStats?.ativos || 0} ativos`} color="text-white" />
@@ -360,25 +369,28 @@ export default function PainelDistribuidor() {
         {/* ───────────────────── VISÃO GERAL — DISTRIBUIDOR ───────────────────── */}
         {tab === 'visao' && !isLoja && (
           <div>
+            {/* 🔝 10/09/2026 — ORDEM DA TELA CORRIGIDA.
+                Antes: filtro → meta → Inteligência da Região → título. Ou seja,
+                uma ESTIMATIVA (2% da população × ticket) era o primeiro e maior
+                bloco da tela, acima do próprio título e do faturamento real do
+                dia. Agora o título vem primeiro, depois a meta, depois o número
+                que a pessoa abriu o painel pra ver — e o contexto da região
+                entra em seguida, como contexto. */}
             <DashFiltro value={dashPeriodo} onChange={setDashPeriodo} />
-            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
-            <RegiaoCard user={user} />
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
               <div>
                 <h1 className="text-2xl font-black mb-1">Visão da Operação</h1>
                 <p className="text-gray-400 text-sm">Retrato da operação do Distribuidor 01 (Bangu).</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
+                <button onClick={() => navigate(ROUTES.pdv)} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Tirar pedido</button>
                 {stats.pedidos_abrir > 0 && (
-                  <button onClick={() => navigate(ROUTES.pedidos)} className="px-4 py-2.5 rounded-lg bg-orange-500/20 border border-orange-500/40 text-orange-300 text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4" /> {stats.pedidos_abrir} a despachar</button>
+                  <button onClick={() => navigate(ROUTES.pedidos)} className="px-4 py-2.5 rounded-lg bg-orange-500/15 border border-orange-500/50 text-orange-700 text-sm font-bold flex items-center gap-2"><Truck className="w-4 h-4" /> {stats.pedidos_abrir} a despachar</button>
                 )}
               </div>
             </div>
 
-            <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name || 'Leilão NoZap'} />
-
-            <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
+            {dashPeriodo === 'dia' && <MetaBanner userId={user.id} />}
 
             {/* destaque: faturamento REAL do período (espelha a planilha + PDV) */}
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
@@ -393,6 +405,12 @@ export default function PainelDistribuidor() {
                 <div className="text-xs text-gray-400 mt-1">por venda no período</div>
               </div>
             </div>
+
+            <LojaLinkCard slug={storeSlug} name={user.store_name || user.full_name || 'Leilão NoZap'} />
+
+            <RankingDia userId={user.id} onSeller={goSellerSales} period={dashPeriodo} />
+
+            <RegiaoCard user={user} />
 
             {/* ESTOQUE */}
             <SectionLabel>📦 Estoque & Produtos</SectionLabel>
@@ -478,7 +496,7 @@ export default function PainelDistribuidor() {
                         {copied === p.can_register_level ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
-                    <button onClick={() => sendWhats(p.can_register_level)} className="w-full py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center justify-center gap-2">
+                    <button onClick={() => sendWhats(p.can_register_level)} className="w-full py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold flex items-center justify-center gap-2">
                       <Send className="w-4 h-4" /> Enviar pelo WhatsApp
                     </button>
                   </div>
@@ -534,8 +552,8 @@ export default function PainelDistribuidor() {
             <div className="flex flex-wrap gap-3">
               <button onClick={() => navigate(createPageUrl('Carteira'))} className="px-4 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4" /> Carteira & KYC</button>
               {isLoja
-                ? <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
-                : <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>}
+                ? <button onClick={() => navigate('/painel/estoque')} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold flex items-center gap-2"><Package className="w-4 h-4" /> Meu Estoque</button>
+                : <button onClick={() => navigate(createPageUrl('CatalogManagement'))} className="px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold flex items-center gap-2"><Store className="w-4 h-4" /> Editar loja</button>}
             </div>
 
             {/* Trocar senha */}
@@ -545,7 +563,7 @@ export default function PainelDistribuidor() {
                 <input type="password" value={pwForm.atual} onChange={(e) => setPwForm({ ...pwForm, atual: e.target.value })} placeholder="Senha atual" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
                 <input type="password" value={pwForm.nova} onChange={(e) => setPwForm({ ...pwForm, nova: e.target.value })} placeholder="Nova senha (mín. 6)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
                 <input type="password" value={pwForm.conf} onChange={(e) => setPwForm({ ...pwForm, conf: e.target.value })} placeholder="Confirmar nova senha" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
-                <button onClick={trocarSenha} disabled={busy === 'senha'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'senha' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Alterar senha</button>
+                <button onClick={trocarSenha} disabled={busy === 'senha'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2">{busy === 'senha' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Alterar senha</button>
               </div>
             </div>
           </div>
@@ -573,15 +591,17 @@ export default function PainelDistribuidor() {
                       <button onClick={salvarWhats} disabled={busy === 'wa'} className="px-4 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold">{busy === 'wa' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}</button>
                     </div>
                     {atend.whatsapp
-                      ? <a href={`https://wa.me/55${atend.whatsapp}`} target="_blank" rel="noreferrer" className="w-full block text-center py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-bold flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" /> Falar com o suporte</a>
+                      ? <a href={`https://wa.me/55${atend.whatsapp}`} target="_blank" rel="noreferrer" className="w-full block text-center py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" /> Falar com o suporte</a>
                       : <p className="text-[11px] text-gray-500">Configure o número pra liberar o botão de suporte.</p>}
                   </div>
 
-                  <div className="bg-gradient-to-br from-indigo-900/30 to-gray-900 border border-indigo-500/25 rounded-xl p-5">
+                  {/* 🤖 10/09/2026 — mesmo degradê escuro do RegiaoCard, mesma correção:
+                      parada de degradê colorida não é clareada pelo tema do painel. */}
+                  <div className="rounded-xl p-5" style={{ backgroundColor: 'var(--nz-cinza-fundo)', border: '1px solid var(--nz-borda)' }}>
                     <h3 className="font-semibold mb-1 flex items-center gap-2"><Bot className="w-4 h-4 text-indigo-300" /> IA de Atendimento & Fiscalização</h3>
                     <p className="text-[11px] text-gray-400 mb-3">A IA observa o painel, responde dúvidas e <b>alerta</b> sobre anomalias de venda. Não executa ações.</p>
                     <textarea value={iaQ} onChange={(e) => setIaQ(e.target.value)} placeholder="Pergunte algo (ex: tem alguma venda fora do padrão hoje?)" rows={2} className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 mb-2 resize-none" />
-                    <button onClick={perguntarIA} disabled={busy === 'ia'} className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2">{busy === 'ia' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Consultar a IA</button>
+                    <button onClick={perguntarIA} disabled={busy === 'ia'} className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2">{busy === 'ia' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Consultar a IA</button>
                     {iaAns && <div className="mt-3 bg-gray-950/60 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 whitespace-pre-wrap">{iaAns}</div>}
                   </div>
                 </div>
@@ -670,7 +690,7 @@ export default function PainelDistribuidor() {
                   <input value={empForm.full_name} onChange={(e) => setEmpForm({ ...empForm, full_name: e.target.value })} placeholder="Nome do funcionário" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
                   <input value={empForm.email} onChange={(e) => setEmpForm({ ...empForm, email: e.target.value })} placeholder="E-mail (login)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
                   <input value={empForm.password} onChange={(e) => setEmpForm({ ...empForm, password: e.target.value })} placeholder="Senha (mín. 6)" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
-                  <button onClick={addEmployee} disabled={busy === 'add-emp'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'add-emp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Criar login</button>
+                  <button onClick={addEmployee} disabled={busy === 'add-emp'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2">{busy === 'add-emp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Criar login</button>
                 </div>
               </div>
               <div>
@@ -715,7 +735,7 @@ export default function PainelDistribuidor() {
                   </div>
                   <input value={supForm.email} onChange={(e) => setSupForm({ ...supForm, email: e.target.value })} placeholder="E-mail" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
                   <input value={supForm.observacao} onChange={(e) => setSupForm({ ...supForm, observacao: e.target.value })} placeholder="Observação" className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-green-500" />
-                  <button onClick={addSupplier} disabled={busy === 'add-sup'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 font-semibold flex items-center justify-center gap-2">{busy === 'add-sup' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Adicionar</button>
+                  <button onClick={addSupplier} disabled={busy === 'add-sup'} className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2">{busy === 'add-sup' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Adicionar</button>
                 </div>
               </div>
               <div>
@@ -742,7 +762,7 @@ export default function PainelDistribuidor() {
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
@@ -803,7 +823,7 @@ function LojaLinkCard({ slug, name }) {
         <div className="flex items-center gap-2 shrink-0">
           <a href={url} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500"><ExternalLink className="w-4 h-4" /> Abrir</a>
           <button onClick={copy} className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500">{copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />} {copied ? 'Copiado' : 'Copiar'}</button>
-          <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Compartilhar</a>
+          <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Compartilhar</a>
         </div>
       </div>
     </div>
