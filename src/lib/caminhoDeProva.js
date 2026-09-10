@@ -23,17 +23,6 @@ const limpo = (valor, reserva) =>
   String(valor ?? '').replace(/[^a-zA-Z0-9._-]/g, '_') || reserva;
 
 /**
- * Monta o caminho de uma prova do X-GAME (print ou vídeo do ritual).
- *
- * @param {object} p
- * @param {string} p.pasta     'prints' | 'rituais'
- * @param {string} p.uid       id do usuário
- * @param {string} p.dia       dia no formato de `hojeStr()`
- * @param {string} p.tarefaId  id da tarefa
- * @param {string} p.ext       extensão do arquivo, com ou sem ponto
- * @param {string} [p.unico]   sufixo único (só os testes passam à mão)
- */
-/**
  * ⚠️ Contador de sessão — a parte do sufixo que NÃO depende de sorte.
  *
  * A marca era `<tempo em ms><4 chars aleatórios>`. Dois envios no MESMO
@@ -52,6 +41,17 @@ const limpo = (valor, reserva) =>
  */
 let sequencia = 0;
 
+/**
+ * Monta o caminho de uma prova do X-GAME (print ou vídeo do ritual).
+ *
+ * @param {object} p
+ * @param {string} p.pasta     'prints' | 'rituais'
+ * @param {string} p.uid       id do usuário
+ * @param {string} p.dia       dia no formato de `hojeStr()`
+ * @param {string} p.tarefaId  id da tarefa
+ * @param {string} p.ext       extensão do arquivo, com ou sem ponto
+ * @param {string} [p.unico]   sufixo único (só os testes passam à mão)
+ */
 export function caminhoDeProva({ pasta, uid, dia, tarefaId, ext, unico }) {
   sequencia += 1;
   const marca =
