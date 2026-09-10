@@ -215,8 +215,90 @@ export function laudosDoDia({ itens = [], data = null, nomeDe = (id) => id } = {
   return ordem.map((id) => laudoDoDia({ itens: porPessoa.get(id), data, pessoaId: id, nome: nomeDe(id) }));
 }
 
+/**
+ * Só os dias que TÊM comprovação, do mais novo pro mais velho.
+ *
+ * O menu de dias sai daqui em vez de um calendário: oferecer 30 dias pra
+ * escolher, sendo que 26 estão vazios, é fazer quem atende a reclamação
+ * caçar. E mora nesta biblioteca, e não na tela, pela mesma razão do resto —
+ * em `.jsx` nenhum teste de node consegue importar.
+ */
+export function diasComComprovacao(itens = []) {
+  const vistos = [];
+  const jaTem = new Set();
+  itens.forEach((t) => {
+    const d = String(t?.data || '').slice(0, 10);
+    if (!d || jaTem.has(d)) return;
+    jaTem.add(d);
+    vistos.push(d);
+  });
+  return vistos.sort().reverse();
+}
+
 /** O nome do arquivo do PDF — sem acento, sem espaço, com a data na frente pra ordenar sozinho. */
 export function nomeDoLaudo({ data, nome }) {
   const limpo = semAcentoFila(nome).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'pessoa';
   return `laudo-${String(data || 'sem-data').slice(0, 10)}-${limpo}.pdf`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// O TEXTO IMPRESSO — a Fase 2 desenha, mas quem escreve é aqui.
+// ═══════════════════════════════════════════════════════════════════════════
+// Todo o risco deste recurso está no que o papel DIZ: o PDF sai da tela, vira
+// print no WhatsApp e sobrevive à conversa que o gerou. Uma frase que soe
+// como veredito de culpa vai ser lida como veredito de culpa.
+//
+// Por isso as frases moram nesta biblioteca pura, onde dá pra provar em teste
+// que nenhuma delas acusa ninguém. O `.jsx` recebe texto pronto e só põe no
+// papel — ele não tem uma decisão de conteúdo pra tomar.
+
+/** O dia em que o rastro técnico começou a ser gravado (Fase 0). */
+export const DATA_DO_RASTRO = '2026-09-10';
+
+/** "3 entregas · 2 aceitas · 1 negada · 3 contam como feitas no placar" */
+export function resumoDoLaudo(laudo = {}) {
+  const partes = [
+    `${laudo.total || 0} entrega(s)`,
+    `${laudo.aprovadas || 0} aceita(s)`,
+    `${laudo.reprovadas || 0} negada(s)`,
+  ];
+  if (laudo.emAnalise) partes.push(`${laudo.emAnalise} em análise`);
+  // O placar é contado por `feito`, não por "aprovada" — e as duas contas
+  // divergem de verdade (caso da Elenice, 10/09). Imprimir só uma esconderia
+  // a divergência justamente de quem abriu o laudo pra entendê-la.
+  partes.push(`${laudo.feitas || 0} conta(m) como feita(s) no placar`);
+  return partes.join(' · ');
+}
+
+/**
+ * A linha técnica de uma entrega — o que responde "foi erro nosso?".
+ *
+ * ⚠️ Sem rastro ela DIZ que não tem rastro. Uma linha técnica em branco seria
+ * lida como "nada de anormal", que é a conclusão que o registro antigo não
+ * autoriza ninguém a tirar.
+ */
+export function linhaTecnica(l = {}) {
+  if (!l.comRastro) return 'sem rastro técnico (registro anterior a 10/09/2026)';
+  const partes = [`${l.tentativas}ª tentativa`];
+  if (Number.isFinite(l.tempoTelaS)) partes.push(`${l.tempoTelaS}s de tela`);
+  else partes.push('tempo de tela não medido');
+  (l.falhas || []).forEach((f) => partes.push(`falha em ${f.o_que}: ${f.erro}`));
+  return partes.join(' · ');
+}
+
+/**
+ * 🔴 O RODAPÉ — a frase que impede o laudo de virar sentença.
+ *
+ * Fica em TODA página de propósito: um PDF é lido em pedaço, fotografado numa
+ * página só e encaminhado sem a primeira folha. Se o aviso morasse só na
+ * capa, a página que chega sozinha ao grupo chegaria sem ele.
+ */
+export const AVISO_DO_LAUDO = 'Este laudo aponta onde olhar — ele não conclui culpa. Comprovações anteriores a 10/09/2026 não têm rastro técnico: nelas, a ausência de sinal não significa que deu tudo certo.';
+
+/** "Gerado em 10/09/2026 14:22 (Brasília) · página 1 de 2" */
+export function rodapeDoLaudo({ agora = new Date(), pagina = 1, paginas = 1 } = {}) {
+  const p = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(agora);
+  return `Gerado em ${p} (Brasília) · página ${pagina} de ${paginas}`;
 }

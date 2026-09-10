@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
+import BotaoLaudoPdf from './PdfComprovacoes';
+import { podeVerLaudo } from '@/lib/quemVeOLaudo';
 
 // 📸 AS COMPROVAÇÕES — a segunda análise do gestor, em cima.
 //
@@ -87,7 +89,11 @@ export function useComprovacoes({ pessoaId = null } = {}) {
   return { lista, carregando, carregar, radar, aprovar, reprovar };
 }
 
-export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => id, compacto = false }) {
+export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => id, compacto = false, currentUser = null }) {
+  // 🔐 Fase 3 — o laudo é do gestor admin e de quem está na lista nominal
+  // (src/lib/quemVeOLaudo.js). Sem `currentUser`, NÃO aparece: o padrão de
+  // uma permissão que não sabe quem está olhando tem que ser o fechado.
+  const laudoLiberado = podeVerLaudo(currentUser);
   const { lista, carregando, radar, aprovar, reprovar } = useComprovacoes({ pessoaId });
   const [filtro, setFiltro] = useState('em_analise');
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
@@ -181,10 +187,24 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
             <div className={pessoaId ? 'space-y-1' : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2'}>
             {(pessoaId ? [[pessoaId, null, itens]] : agruparComprovacoesPorPessoa(itens, nomeDe)).map(([pid, nome, itensDaPessoa]) => (
               <div key={pid} className={pessoaId ? '' : 'space-y-1 rounded-lg border border-white/10 bg-white/[0.015] p-2'} data-teste={pessoaId ? undefined : 'comprovacoes-grupo-pessoa'}>
-                {!pessoaId && (
-                  <p className="text-[10px] font-bold text-white/55 truncate" data-teste="comprovacoes-cabecalho-pessoa">
-                    👤 {nome} <span className="font-normal text-white/25">· {itensDaPessoa.length}</span>
+                {/* 📄 10/09/2026 — o laudo em PDF (Fase 2). Dono: serve pra
+                    "quando o usuário reclamar de algum erro ou problema,
+                    podermos ver na hora se foi mal uso do usuário ou se de
+                    fato é erro". Fica AQUI, colado no nome e no dia, porque é
+                    exatamente este recorte — uma pessoa, um dia — que a
+                    reclamação traz. Sai do que já está na tela: não busca
+                    nada, não grava nada. */}
+                {!pessoaId ? (
+                  <p className="text-[10px] font-bold text-white/55 truncate flex items-center gap-1" data-teste="comprovacoes-cabecalho-pessoa">
+                    <span className="truncate">👤 {nome} <span className="font-normal text-white/25">· {itensDaPessoa.length}</span></span>
+                    {laudoLiberado && <BotaoLaudoPdf itens={itensDaPessoa} data={data} pessoaId={pid} nome={nome} className="ml-auto" />}
                   </p>
+                ) : (
+                  laudoLiberado && (
+                  <div className="flex justify-end">
+                    <BotaoLaudoPdf itens={itensDaPessoa} data={data} pessoaId={pid} nome={nomeDe(pid)} />
+                  </div>
+                  )
                 )}
         <ul className="space-y-1">
           {itensDaPessoa.map((t) => {

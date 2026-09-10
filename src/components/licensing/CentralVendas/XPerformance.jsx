@@ -14,6 +14,7 @@ import { HABITOS } from '@/lib/metodo';
 import { fixoDoParticipante } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
 import MensagemProCeo from '@/components/licensing/CentralVendas/MensagemProCeo';
+import PainelLaudo from '@/components/licensing/CentralVendas/PainelLaudo';
 import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
 import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
 import useTourDaTela from '@/hooks/useTourDaTela';
@@ -406,6 +407,12 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
 
   return (
     <div className="space-y-5">
+      {/* 📄 10/09/2026 — a tela SÓ-LAUDO. Dono, escolhendo entre os caminhos:
+          "3. A". Quem precisa atender a reclamação lê o laudo aqui, sem a fila
+          do gestor e sem os botões de aprovar/reprovar — que mexeriam no dia
+          das pessoas. O próprio painel se esconde de quem não pode
+          (podeVerLaudo devolve null), então não há guarda duplicada aqui. */}
+      <PainelLaudo currentUser={currentUser} hojeISO={hoje} />
       {/* a trilha da pessoa numa linha; as três mentalidades explicadas ficam dobradas */}
       <Dobra id="mentalidades" titulo="Mentalidade" resumo={`a sua trilha hoje: ${trilha.nome} — ${trilha.lema.toLowerCase()} · ver as três`}>{blocoMentalidade}</Dobra>
       {/* 📨 09/09/2026 — DIR-106, dono: "a mensagem pro CEO, a mensagem pra
