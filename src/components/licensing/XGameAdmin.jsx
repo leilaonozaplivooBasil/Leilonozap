@@ -9,6 +9,7 @@ import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 // 🛠️ X-GAME — ADMIN DA GAMIFICAÇÃO (só o super admin chega aqui; o gate é
 // feito pelo painel Admin do Licensing). É AQUI que o dono do jogo decide:
@@ -153,8 +154,9 @@ export default function XGameAdmin({ onVerComo } = {}) {
   // pra todo mundo de uma vez.
   const [votosHojeTodos, setVotosHojeTodos] = useState([]);
   useEffect(() => {
-    supabase.from('xgame_votos_mvm').select('votante_id,votado_id,virtude').eq('data', hojeStr())
-      .then(({ data }) => setVotosHojeTodos(data || []));
+    // 📄 08/09 teve 1.090 votos num único dia — o teto silencioso é 1.000.
+    lerTudoDoSupabase(() => supabase.from('xgame_votos_mvm').select('id,votante_id,votado_id,virtude').eq('data', hojeStr()))
+      .then((data) => setVotosHojeTodos(data || []));
   }, []);
   // 🗳️ 08/09/2026 — dono: "eu também quero ver como as pessoas votaram."
   // O raio-x acima só mostra SE a pessoa votou (✅/⏳) — não mostra a NOTA
@@ -163,8 +165,9 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [votosCicloRecebidos, setVotosCicloRecebidos] = useState([]);
   useEffect(() => {
     if (!cicloInicio) return;
-    supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', cicloInicio)
-      .then(({ data }) => setVotosCicloRecebidos(data || []));
+    // 📄 o ciclo inteiro passa de 2.000 linhas — ver lerTudoDoSupabase.
+    lerTudoDoSupabase(() => supabase.from('xgame_votos_mvm').select('id,votado_id,virtude,nota').gte('data', cicloInicio))
+      .then((data) => setVotosCicloRecebidos(data || []));
   }, [cicloInicio]);
   const mvmCicloDe = useCallback((userId) => {
     const votos = votosCicloRecebidos.filter((v) => v.votado_id === userId);
