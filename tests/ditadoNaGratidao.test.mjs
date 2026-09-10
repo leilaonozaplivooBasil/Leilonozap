@@ -30,9 +30,9 @@ test('🔒 os mínimos NÃO caíram por causa do áudio', () => {
   // e mudou de lugar (a conta agora mora em xgame.js, junto do RESUMO_MIN,
   // pra não haver duas verdades pro mesmo número). O piso continua sendo
   // cobrado, agora pelos dois caminhos, e está testado em gratidaoFalada.
-  assert.match(RITUAL, /disabled=\{!entrega\.ok\}/, 'o botão continua travado até haver entrega');
+  assert.match(RITUAL, /disabled=\{!entrega\.ok \|\| !!salvando\}/, 'o botão continua travado até haver entrega');
   assert.match(RITUAL, /gratidaoEntregue\(\{ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje \}\)/);
-  assert.match(RITUAL, /disabled=\{acao\.trim\(\)\.length < ACAO_MIN\}/, 'a ação do dia NÃO mudou');
+  assert.match(RITUAL, /disabled=\{acao\.trim\(\)\.length < ACAO_MIN \|\| !!salvando\}/, 'a ação do dia NÃO mudou');
   assert.match(RITUAL, /const ACAO_MIN = 10;/);
   assert.ok(!/const GRATIDAO_MIN = 20;/.test(RITUAL), 'a cópia local da régua voltou');
 });
@@ -52,17 +52,33 @@ test('nada é enviado sem a pessoa mandar — nem o áudio', () => {
   // continua protegido por outro caminho: nada sobe sozinho, é a pessoa que
   // aperta Continuar. Na AÇÃO do dia o ditado segue como era.
   assert.match(RITUAL, /setAcao\(\(atual\) => juntarTexto\(atual, t\)\)/, 'a ação do dia não mudou');
-  assert.match(RITUAL, /onClick=\{\(\) => setPasso\(2\)\}/, 'quem avança é a pessoa, no botão');
+  // 10/09 — o botão passou a CHAMAR o gravador do bloco (`salvarGratidao`),
+  // que só então avança. O que esta assertiva protege é o mesmo: nada sai
+  // sozinho, quem manda subir é a pessoa apertando.
+  assert.match(RITUAL, /onClick=\{salvarGratidao\}/, 'quem avança é a pessoa, no botão');
+  assert.match(RITUAL, /const salvarGratidao = async \(\) => \{[\s\S]{0,400}?setPasso\(P\.VISUALIZACAO\)/, 'salvar a gratidão é o que leva pro bloco seguinte');
   assert.match(RITUAL, /data-teste="gratidao-continuar"/);
 });
 
 test('a voz vai pro cofre PRIVADO, não pro bucket público do vídeo', () => {
-  // O vídeo da visualização usa Core.UploadFile (public-assets, público).
-  // A voz não pode seguir o mesmo caminho.
+  // 🔴 10/09 — ESTA ASSERTIVA FICOU MAIS IMPORTANTE, NÃO MENOS.
+  // Antes, a voz era guardada numa função só dela (`guardarVoz`) e o
+  // `Core.UploadFile` estava longe. Agora o print do bom dia e a voz da
+  // gratidão são guardados pela MESMA função (salvarBlocoDoRitual), e o print
+  // usa `Core.UploadFile` de propósito — é imagem de story, pública por
+  // natureza. Um recorte largo aqui passaria verde com a voz vazando.
+  // Por isso o recorte é o RAMO da gratidão, e nada além dele.
   assert.match(METODO, /caminhoDoAudio|guardarAudio/);
-  assert.match(METODO, /caminho: caminhoDoAudio\(\{ pasta, uid, dia: hojeStr\(\)/);
-  const trechoVoz = METODO.slice(METODO.indexOf('const guardarVoz'), METODO.indexOf('const aprovadoDireto'));
-  assert.ok(!/Core\.UploadFile/.test(trechoVoz), 'a voz foi parar no bucket público');
+  const ini = METODO.indexOf("} else if (bloco === 'gratidao') {");
+  const fim = METODO.indexOf("} else if (bloco === 'visualizacao') {", ini);
+  assert.ok(ini > 0 && fim > ini, 'premissa: o ramo da gratidão existe em salvarBlocoDoRitual');
+  const ramoDaVoz = METODO.slice(ini, fim);
+  assert.ok(!/Core\.UploadFile/.test(ramoDaVoz), 'a voz foi parar no bucket público');
+  assert.match(ramoDaVoz, /guardarAudio\(\{ blob: dados\.audioGratidao/, 'a voz precisa ir pelo cofre privado');
+  assert.match(ramoDaVoz, /pasta: 'gratidao'/);
+  // e o print, sim, usa o caminho público — de propósito e só ele
+  const ramoDoPrint = METODO.slice(METODO.indexOf("if (bloco === 'acordei') {"), ini);
+  assert.match(ramoDoPrint, /Core\.UploadFile/, 'premissa: é o print que usa o caminho público');
 });
 
 test('a origem do texto fica registrada', () => {
@@ -70,22 +86,25 @@ test('a origem do texto fica registrada', () => {
   // pra gestão enxergar o que aconteceu sem ter que adivinhar.
   assert.match(METODO, /entrada_gratidao: 'audio'/);
   assert.match(METODO, /entrada_acao: 'audio'/);
-  assert.match(METODO, /audio_gratidao_path: vozGratidao/);
-  assert.match(METODO, /audio_acao_path: vozAcao/);
+  assert.match(METODO, /audio_gratidao_path: bl\.gratidao\.audio_path/);
+  assert.match(METODO, /audio_acao_path: bl\.visualizacao\.audio_acao_path/);
 });
 
 test('guardar a voz é o EXTRA: falhar não derruba o ritual', () => {
   // Quem acabou de ditar a gratidão às 6h não pode perder o dia porque o cofre
   // piscou. `guardarAudio` devolve null em vez de lançar (testado em
   // cofreDeAudio.test.mjs) e o path só entra na comprovação se existir.
-  assert.match(METODO, /\.\.\.\(vozGratidao \? \{ audio_gratidao_path: vozGratidao \} : \{\}\)/);
-  assert.match(METODO, /\.\.\.\(vozAcao \? \{ audio_acao_path: vozAcao \} : \{\}\)/);
+  assert.match(METODO, /\.\.\.\(bl\.gratidao\?\.audio_path \? \{ audio_gratidao_path: bl\.gratidao\.audio_path \} : \{\}\)/);
+  assert.match(METODO, /\.\.\.\(bl\.visualizacao\?\.audio_acao_path \? \{ audio_acao_path: bl\.visualizacao\.audio_acao_path \} : \{\}\)/);
+  // e o cofre continua sendo best-effort: falhar devolve null, não lança
+  assert.match(METODO, /aoFalhar: anotarFalha\('audio'\)/);
 });
 
 test('sem áudio, nada muda — quem digita segue igual', () => {
   // O campo `entrada_*` e o path só aparecem quando houve fala. Cadastro
   // digitado continua com exatamente a mesma comprovação de antes.
-  assert.match(METODO, /\.\.\.\(audioGratidao \? \{ entrada_gratidao: 'audio'/);
+  assert.match(METODO, /\.\.\.\(houveAudio \? \{ entrada_gratidao: 'audio'/);
+  assert.match(METODO, /const houveAudio = bl\.gratidao\?\.entrada === 'audio' \|\| !!audioGratidao;/);
   assert.match(METODO, /audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS/,
     'o ritual precisa entregar áudio, duração e transcrição pra cima');
 });

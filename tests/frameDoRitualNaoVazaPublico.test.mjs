@@ -67,10 +67,20 @@ test('⚠️ frame grande é convertido em pedaços — spread estoura a pilha',
 });
 
 test('🔴 a tela do ritual não sobe mais o frame em lugar nenhum', () => {
-  const bloco = CRM.slice(CRM.indexOf('if (frameBlob)'), CRM.indexOf('if (frameBlob)') + 700);
+  // 10/09 — o julgamento saiu do fim do ritual e virou por bloco
+  // (julgarBlocoComIA), assíncrono. O frame continua sem virar arquivo.
+  const ini = CRM.indexOf('const julgarBlocoComIA');
+  assert.ok(ini > 0, 'premissa: o julgamento por bloco existe');
+  const bloco = CRM.slice(ini, CRM.indexOf('const concluirRitual', ini));
+  assert.ok(bloco.length > 400, 'premissa: o recorte pegou a função inteira');
   assert.doesNotMatch(bloco, /UploadFile/, 'o frame voltou a subir pra bucket — é o rosto da pessoa em link aberto');
-  assert.doesNotMatch(bloco, /image_url/, 'o frame voltou a ser julgado por URL, o que exige publicá-lo antes');
-  assert.match(bloco, /image_b64: frameB64/, 'o frame parou de ir inline pra IA');
+  assert.match(bloco, /const b64 = await frameEmBase64\(dados\.frameBlob\)/, 'o frame parou de ir inline pra IA');
+  assert.match(bloco, /image_b64: b64/);
+  // 🔴 `image_url` existe nesta função — mas SÓ pro print do bom dia, que é
+  // uma imagem de story e já subiu de propósito. O frame do rosto, nunca.
+  const doFrame = bloco.slice(bloco.indexOf("bloco === 'visualizacao' && dados.frameBlob"));
+  assert.ok(doFrame.length > 60, 'premissa: o ramo do frame existe');
+  assert.doesNotMatch(doFrame, /image_url/, 'o frame voltou a ser julgado por URL, o que exige publicá-lo antes');
 });
 
 test('🔴 e o vídeo CONTINUA indo pro cofre — o frame é que é descartável', () => {

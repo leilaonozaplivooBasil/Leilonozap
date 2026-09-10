@@ -84,7 +84,12 @@ test('a transcrição não aparece pra quem gravou', () => {
 test('o Diário de Bolso não fica em branco quando só houve áudio', () => {
   // diarioDeBolso.js lê `comprovacao.entrega`. Com o áudio valendo sozinho,
   // `gratidao` pode vir vazio — e o dia viraria uma linha vazia.
-  assert.match(METODO, /entrega: gratidao \|\| transcricaoGratidao \|\| \(audioGratidao \? '🎙️ gratidão gravada em áudio' : ''\)/);
+  // 10/09 — as três fontes agora saem do BLOCO da gratidão (que é o que está
+  // gravado no banco), com o valor da tela como reserva. A ordem é a mesma:
+  // escrito → falado (transcrito) → frase honesta. O que não pode é vazio.
+  assert.match(METODO, /entrega: gratidaoTexto \|\| transcricao \|\| \(houveAudio \? '🎙️ gratidão gravada em áudio' : ''\)/);
+  assert.match(METODO, /const gratidaoTexto = bl\.gratidao\?\.texto \|\| gratidao \|\| '';/);
+  assert.match(METODO, /const transcricao = bl\.gratidao\?\.transcricao \|\| transcricaoGratidao \|\| '';/);
 });
 
 test('dá pra ouvir a gratidão depois, por link assinado pedido no clique', () => {
@@ -100,7 +105,7 @@ test('dá pra ouvir a gratidão depois, por link assinado pedido no clique', () 
 });
 
 test('a duração falada fica registrada junto', () => {
-  assert.match(METODO, /audio_gratidao_seg: audioGratidaoSeg \|\| 0/);
+  assert.match(METODO, /audio_gratidao_seg: bl\.gratidao\?\.audio_seg \|\| audioGratidaoSeg \|\| 0/);
 });
 
 test('regravar apaga o áudio E a transcrição velha', () => {

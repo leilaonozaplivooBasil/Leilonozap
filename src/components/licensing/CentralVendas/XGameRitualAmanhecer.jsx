@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera } from 'lucide-react';
+import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic } from 'lucide-react';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
-import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao } from '@/lib/xgame';
+import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo } from '@/lib/xgame';
+// 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
+// Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
+// conseguiu importar — não tem terceira.
+import { BLOCOS, ROTULO_DO_BLOCO, segundosRestantes, ritualExpirado, textoDoPrazo, blocosFeitos, proximoBloco, pendenciasDoRitual, seloDoRitual, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
 // O que a pessoa salva às 5h toca no expediente, e o que ela salva
@@ -115,11 +119,66 @@ const ACAO_MIN = 10;
 // ler e corrigir (nada sai sem ela ver), os mínimos NÃO caem (20 e 10
 // caracteres continuam valendo), e a origem fica marcada no registro.
 
-export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, onFechar, onConcluir }) {
+// 🧱 OS PASSOS, COM NOME. O ritual passou de 4 telas soltas pra 3 BLOCOS que
+// gravam sozinhos (Luiz, 10/09: "vamos dividir em três"), e número solto num
+// `passo === 2` espalhado pelo arquivo é como se troca a ordem sem perceber.
+const P = Object.freeze({ ABERTURA: 0, ACORDEI: 1, GRATIDAO: 2, VISUALIZACAO: 3, FECHAMENTO: 4 });
+const PASSO_DO_BLOCO = Object.freeze({ acordei: P.ACORDEI, gratidao: P.GRATIDAO, visualizacao: P.VISUALIZACAO });
+
+/** A barra 1 · 2 · 3 — onde eu estou, e o que já está em casa. */
+function BarraDosBlocos({ feitos, atual }) {
+  return (
+    <div className="flex items-center justify-center gap-2" data-teste="barra-dos-blocos">
+      {BLOCOS.map((nome, i) => {
+        const pronto = feitos.includes(nome);
+        const aqui = atual === nome;
+        return (
+          <span key={nome} className="flex items-center gap-2">
+            <span
+              data-teste={`bloco-${nome}${pronto ? '-pronto' : ''}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ${
+                pronto ? 'bg-emerald-400/20 text-emerald-200 ring-1 ring-emerald-300/40'
+                  : aqui ? 'bg-white/20 text-white ring-1 ring-white/40' : 'text-white/35'}`}
+            >
+              {pronto ? <Check className="w-3 h-3" strokeWidth={3} /> : <span className="font-black">{i + 1}</span>}
+              {ROTULO_DO_BLOCO[nome]}
+            </span>
+            {i < BLOCOS.length - 1 && <span className={pronto ? 'text-emerald-300/50' : 'text-white/20'}>·</span>}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir }) {
   // 🙏 DIR-121 — a régua de HOJE, crescendo dia a dia (ver xgame.js).
   const metaMotivosHoje = metaMotivosGratidaoHoje(diaCorridoCiclo);
   const minSegHoje = gratidaoAudioMinSegHoje(diaCorridoCiclo);
-  const [passo, setPasso] = useState(0);
+  // 🧱 O ESTADO DOS BLOCOS vem do que JÁ ESTÁ GRAVADO, não de zero.
+  // É a promessa do dono: "se o telefone morrer no bloco 3, os blocos 1 e 2
+  // já estão em casa" — reabrir cai no bloco que falta, não no começo.
+  const [comprovacao, setComprovacao] = useState(comprovacaoAtual);
+  const feitos = blocosFeitos(comprovacao);
+  const faltando = proximoBloco(comprovacao);
+  const [passo, setPasso] = useState(() => (feitos.length ? (PASSO_DO_BLOCO[faltando] ?? P.FECHAMENTO) : P.ABERTURA));
+  const [salvando, setSalvando] = useState('');
+  // ⏱️ o cronômetro de 30 minutos — começa quando o primeiro bloco é aberto,
+  // não no relógio da parede (ver ritualEmBlocos.js: as DUAS réguas).
+  const [abertoEm, setAbertoEm] = useState(() => comprovacaoAtual?.aberto_em || null);
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    if (!abertoEm) return undefined;
+    const t = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [abertoEm]);
+  const segRestantes = segundosRestantes({ abertoEm, agora });
+  const expirou = ritualExpirado({ abertoEm, agora });
+  // ✍️ qual das duas opções da gratidão a pessoa escolheu (nenhuma, no começo)
+  const [modoEscrita, setModoEscrita] = useState(false);
+  // 📸 BLOCO 1 — o print do bom dia
+  const [print, setPrint] = useState(null);      // File
+  const [printUrlLocal, setPrintUrlLocal] = useState(null);
   const [gratidao, setGratidao] = useState('');
   const [acao, setAcao] = useState('');
   // 🎙️ o áudio de cada campo, pra virar acervo (o dono pediu pra guardar).
@@ -292,12 +351,86 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   // saindo quando o próximo entra — travessia de 50s, sobreposição suave)
   const [sonhoIdx, setSonhoIdx] = useState(0);
   useEffect(() => {
-    if (passo !== 2 || imagensDosSonhos.length === 0) return undefined;
+    if (passo !== P.VISUALIZACAO || imagensDosSonhos.length === 0) return undefined;
     const t = setInterval(() => setSonhoIdx((i) => i + 1), 40000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passo, imagensDosSonhos.length]);
   const sonhoTitulo = sonhos[0]?.titulo || sonhos[0]?.nome || sonhos[0]?.texto || '';
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 🧱 SALVAR BLOCO — o coração da mudança de 10/09.
+  // ═════════════════════════════════════════════════════════════════════
+  // Antes, o ritual inteiro era UMA gravação no fim: cinco a oito minutos de
+  // trabalho e um veredito só, com três formas de perder tudo (o relógio
+  // virou, o ambiente não convenceu, o vídeo não subiu). Em 09 e 10/09, sete
+  // de dez tentativas terminaram em zero.
+  //
+  // Agora cada bloco vai pro banco quando termina. Falhou o de cima? O de
+  // baixo continua em casa. `onBloco` devolve a comprovação já gravada — é
+  // ela que manda no que a tela mostra, não um espelho local que pode mentir.
+  const salvarBloco = async (bloco, dados) => {
+    if (salvando) return false;
+    setSalvando(bloco);
+    try {
+      const nova = await onBloco?.(bloco, dados, { abertoEm });
+      if (nova) setComprovacao(nova);
+      setSalvando('');
+      return !!nova;
+    } catch {
+      setSalvando('');
+      // 🔴 falhar em silêncio aqui seria repetir o 413 de hoje de manhã, em
+      // que cinco pessoas regravaram achando que o erro era delas.
+      setAviso('Não consegui guardar este bloco agora. Tenta de novo — o que você já entregou está salvo.');
+      setTimeout(() => setAviso(''), 8000);
+      return false;
+    }
+  };
+
+  // 📸 o print escolhido: validado NO APARELHO antes de qualquer rede —
+  // é imagem de verdade? tem tamanho de print? já foi usada antes (hash)?
+  // Isso é instantâneo e não depende de IA nenhuma.
+  const escolherPrint = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = ''; // deixa reescolher o MESMO arquivo depois de um erro
+    if (!f) return;
+    const v = validarPrint(f);
+    if (!v.valido) { setAviso(v.motivo); setTimeout(() => setAviso(''), 7000); return; }
+    setPrint(f);
+    setAviso('');
+  };
+  useEffect(() => {
+    if (!print) { setPrintUrlLocal(null); return undefined; }
+    const url = URL.createObjectURL(print);
+    setPrintUrlLocal(url);
+    return () => URL.revokeObjectURL(url);
+  }, [print]);
+
+  const salvarAcordei = async () => {
+    if (!print) return;
+    const hash = await hashDoArquivo(print).catch(() => '');
+    const ok = await salvarBloco('acordei', { file: print, hash });
+    if (ok) setPasso(P.GRATIDAO);
+  };
+
+  const salvarGratidao = async () => {
+    const ok = await salvarBloco('gratidao', {
+      texto: gratidao.trim(), audioGratidao, audioGratidaoSeg, transcricaoGratidao, metaMotivosHoje,
+    });
+    if (ok) setPasso(P.VISUALIZACAO);
+  };
+
+  // 🧾 o que ficou pendente e qual selo o ritual está valendo AGORA — as duas
+  // coisas saem da comprovação GRAVADA, não do estado da tela: é o que está
+  // no banco que a gestão vai ler depois.
+  const pendencias = pendenciasDoRitual(comprovacao);
+  const selo = seloDoRitual(comprovacao);
+  const faltaVideo = !comprovacao?.blocos?.visualizacao?.video_path;
+
+  const salvarVisualizacao = async () => {
+    const ok = await salvarBloco('visualizacao', { videoBlob, frameBlob, gravSeg, acao: acao.trim(), audioAcao });
+    if (ok) setPasso(P.FECHAMENTO);
+  };
 
   // sair do passo 2: precisa do vídeo — e se não tiver, o sistema EXPLICA
   const continuarDoSonho = () => {
@@ -307,7 +440,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       return;
     }
     pararGravacao();
-    setPasso(3);
+    salvarVisualizacao();
   };
 
   return (
@@ -317,7 +450,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
           como numa meditação — um saindo, o próximo entrando, em ordem que
           muda todo dia */}
       <style>{`@keyframes xgSubir { 0% { transform: translateY(40vh) scale(.94); opacity: 0 } 10% { opacity: .96 } 86% { opacity: .96 } 100% { transform: translateY(-135vh) scale(1.03); opacity: 0 } }`}</style>
-      {passo === 2 && imagensDosSonhos.length > 0 && (
+      {passo === P.VISUALIZACAO && imagensDosSonhos.length > 0 && (
         <div className="pointer-events-none absolute inset-0">
           {[sonhoIdx - 1, sonhoIdx].filter((n) => n >= 0).map((n) => (
             <img
@@ -396,7 +529,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       </div>
 
       <div className="relative z-10 w-full max-w-md text-center text-white space-y-6">
-        {passo === 0 && (
+        {passo === P.ABERTURA && (
           <>
             <Halo><Sunrise className="w-14 h-14 text-white" strokeWidth={1.5} /></Halo>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Bom dia, {nome || 'campeão'}.</h2>
@@ -404,12 +537,76 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
               O dia ainda nem clareou — e você já está aqui.
             </p>
             <p className="text-[11px] font-extrabold tracking-[0.28em] text-amber-200">ANTECIPAÇÃO É PODER</p>
-            <p className="text-white/55 text-[13px]">Respira fundo. São só alguns minutos, com você mesmo.</p>
-            <BotaoRitual onClick={() => setPasso(1)}>Começar o ritual</BotaoRitual>
+            {/* 🧱 O CONTRATO, DITO ANTES — não depois de errar.
+                DIR-134 já tinha achado que a maior parte das reprovações do
+                ritual não é "esqueceu", é "não sabia a regra". Agora a regra
+                inteira cabe em três linhas, e elas vêm antes do primeiro
+                clique: o que são os três blocos, quanto tempo tem, e que
+                nada do que for entregue se perde no meio do caminho. */}
+            <div className="xeos-cru rounded-2xl bg-white/10 ring-1 ring-white/20 p-4 text-left space-y-2">
+              <p className="text-[12px] text-white/85 font-bold text-center tracking-wide">São três blocos, e cada um fica salvo na hora.</p>
+              {BLOCOS.map((nome, i) => (
+                <p key={nome} className="text-[12px] text-white/70 flex gap-2">
+                  <span className="font-black text-amber-200">{i + 1}</span>
+                  <span>
+                    <b className="text-white/90">{ROTULO_DO_BLOCO[nome]}</b>
+                    {nome === 'acordei' && ' — o print do seu bom dia no Instagram.'}
+                    {nome === 'gratidao' && ' — fala ou escreve, você escolhe.'}
+                    {nome === 'visualizacao' && ' — o vídeo olhando o seu sonho, e a ação de hoje.'}
+                  </span>
+                </p>
+              ))}
+              <p className="text-[11px] text-amber-200/90 pt-1 border-t border-white/15">
+                ⏱️ Você tem {RITUAL_MINUTOS_PARA_CONCLUIR} minutos a partir de agora. Se parar no meio, o que já entregou continua valendo.
+              </p>
+            </div>
+            <BotaoRitual onClick={() => { setAbertoEm(new Date().toISOString()); setPasso(P.ACORDEI); }}>Começar o ritual</BotaoRitual>
           </>
         )}
 
-        {passo === 1 && (
+        {/* ═══════ BLOCO 1 — ACORDEI ═══════════════════════════════════════
+            Luiz, 10/09: "o cara acorda, faz um print do Instagram no bom dia
+            e comprova que ele acordou."
+
+            🟢 E o print NÃO BLOQUEIA: ele é validado no aparelho (é imagem
+            de verdade? já foi usado antes?), sobe, o bloco fecha e a pessoa
+            SEGUE. A IA olha depois e o que ela achar aparece no fechamento.
+            Decisão do dono, e ela tem uma razão dura: a IA passou três horas
+            fora do ar hoje. Print bloqueante + IA fora = ninguém passa do
+            bloco 1 às cinco da manhã. */}
+        {passo === P.ACORDEI && (
+          <>
+            <Halo><Instagram className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Posta o teu bom dia.</h2>
+            <p className="text-white/70 text-[13px]">Um story simples — a janela, o café, o horário. Depois manda o print aqui: é ele que prova que você acordou.</p>
+            <a
+              href={LINK_ABRIR_INSTAGRAM}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 text-white font-bold px-6 py-3 hover:opacity-90"
+            ><span className="inline-flex items-center gap-2"><Instagram className="w-4 h-4" strokeWidth={2.2} /> Abrir o Instagram</span></a>
+
+            {printUrlLocal ? (
+              <div className="xeos-cru rounded-2xl border border-emerald-300/40 bg-emerald-400/10 p-3 space-y-2" data-teste="print-escolhido">
+                <img src={printUrlLocal} alt="print do bom dia" className="mx-auto max-h-44 rounded-xl" />
+                <button type="button" onClick={() => { setPrint(null); setPrintUrlLocal(null); }} className="text-[11px] text-white/55 underline hover:text-white/80">trocar o print</button>
+              </div>
+            ) : (
+              <label className="xeos-cru block cursor-pointer rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-4 hover:bg-white/25">
+                <span className="inline-flex items-center gap-2"><Camera className="w-4 h-4" strokeWidth={2} /> Escolher o print do bom dia</span>
+                <input type="file" accept="image/*" className="hidden" data-teste="print-do-bom-dia" onChange={escolherPrint} />
+              </label>
+            )}
+            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
+            <BotaoRitual disabled={!print || !!salvando} onClick={salvarAcordei}>
+              {salvando === 'acordei' ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> guardando…</span> : 'Comprovar que acordei'}
+            </BotaoRitual>
+            <p className="text-white/40 text-[10px]">o print é guardado na hora — a conferência acontece depois, sem te travar aqui</p>
+          </>
+        )}
+
+        {/* ═══════ BLOCO 2 — GRATIDÃO ══════════════════════════════════ */}
+        {passo === P.GRATIDAO && (
           <>
             <Halo><HeartHandshake className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pelo que você é grato hoje?</h2>
@@ -425,7 +622,39 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 confere. A transcrição corre por baixo, calada, só pro
                 registro. Quem prefere escrever continua podendo — o campo
                 está logo abaixo, com o mesmo peso de sempre. */}
-            {ditadoGratidao.disponivel && !audioGratidaoUrl && (
+            {/* 🎙️/✍️ DUAS OPÇÕES DO MESMO TAMANHO — Luiz, 10/09: "só o áudio.
+                O áudio e o digitar. Dá duas opções."
+
+                🔴 Antes não eram duas opções: era um botão grande de gravar e,
+                embaixo, uma caixa de texto com "OU escreve com o coração" —
+                plano B declarado. Quem prefere escrever lia a tela inteira
+                dizendo que estava fazendo o caminho torto. Agora a pessoa
+                ESCOLHE, com os dois lados pesando igual, e a escolha só abre o
+                que ela pediu — uma coisa de cada vez na tela. */}
+            {!audioGratidaoUrl && !modoEscrita && (
+              <div className="grid grid-cols-2 gap-2" data-teste="duas-opcoes-da-gratidao">
+                <button
+                  type="button"
+                  onClick={() => ditadoGratidao.disponivel ? ditadoGratidao.alternar?.() : setModoEscrita(true)}
+                  disabled={!ditadoGratidao.disponivel}
+                  data-teste="opcao-falar"
+                  className="xeos-cru flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-white/30 bg-white/10 text-white px-4 py-5 hover:bg-white/20 disabled:opacity-30"
+                >
+                  <Mic className="w-6 h-6" strokeWidth={1.8} />
+                  <span className="text-[14px] font-extrabold">Falar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoEscrita(true)}
+                  data-teste="opcao-escrever"
+                  className="xeos-cru flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-white/30 bg-white/10 text-white px-4 py-5 hover:bg-white/20"
+                >
+                  <Pencil className="w-6 h-6" strokeWidth={1.8} />
+                  <span className="text-[14px] font-extrabold">Escrever</span>
+                </button>
+              </div>
+            )}
+            {ditadoGratidao.disponivel && !audioGratidaoUrl && ditadoGratidao.gravando && (
               <div className="space-y-1.5">
                 <BotaoDitado
                   ditado={ditadoGratidao}
@@ -461,26 +690,32 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
               </div>
             )}
 
-            <textarea
-              value={gratidao}
-              onChange={(e) => setGratidao(e.target.value)}
-              onPaste={bloquearCola}
-              onDrop={bloquearCola}
-              placeholder={audioGratidaoUrl
-                ? 'quer acrescentar algo escrito? (opcional)'
-                : 'ou escreve com o coração — uma linha já muda o dia.'}
-              className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm p-4 min-h-[90px] focus:outline-none focus:border-white/50"
-            />
+            {(modoEscrita || audioGratidaoUrl) && (
+              <textarea
+                autoFocus={modoEscrita && !audioGratidaoUrl}
+                value={gratidao}
+                onChange={(e) => setGratidao(e.target.value)}
+                onPaste={bloquearCola}
+                onDrop={bloquearCola}
+                placeholder={audioGratidaoUrl
+                  ? 'quer acrescentar algo escrito? (opcional)'
+                  : 'escreve com o coração — uma linha já muda o dia.'}
+                className="xeos-cru w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm p-4 min-h-[90px] focus:outline-none focus:border-white/50"
+              />
+            )}
+            {modoEscrita && !audioGratidaoUrl && ditadoGratidao.disponivel && (
+              <button type="button" onClick={() => setModoEscrita(false)} className="text-[11px] text-white/55 underline hover:text-white/80">prefiro falar</button>
+            )}
             {(aviso || ditadoGratidao.erro) && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso || ditadoGratidao.erro}</p>}
             <div className="space-y-1.5">
               <button
                 type="button"
-                disabled={!entrega.ok}
-                onClick={() => setPasso(2)}
+                disabled={!entrega.ok || !!salvando}
+                onClick={salvarGratidao}
                 data-teste="gratidao-continuar"
                 className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
-              >Continuar</button>
+              >{salvando === 'gratidao' ? 'guardando…' : 'Continuar'}</button>
               {/* botão apagado tem que DIZER o que falta, na unidade certa:
                   "faltam 12 caracteres" pra quem acabou de falar é grego */}
               {!entrega.ok && (
@@ -490,7 +725,8 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
           </>
         )}
 
-        {passo === 2 && (
+        {/* ═══════ BLOCO 3 — VISUALIZAÇÃO ══════════════════════════════ */}
+        {passo === P.VISUALIZACAO && (
           <>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Visualiza o seu sonho.</h2>
             {sonhoTitulo ? (
@@ -576,10 +812,10 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
               <>
                 <button
                   type="button"
-                  disabled={acao.trim().length < ACAO_MIN}
+                  disabled={acao.trim().length < ACAO_MIN || !!salvando}
                   onClick={continuarDoSonho}
                   className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
-                >Continuar</button>
+                >{salvando === 'visualizacao' ? 'guardando…' : 'Continuar'}</button>
                 {!videoBlob && (
                   <p className="text-white/40 text-[10px]">continuar sem o vídeo manda a comprovação pra análise manual</p>
                 )}
@@ -588,22 +824,60 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
           </>
         )}
 
-        {passo === 3 && (
+        {/* ═══════ FECHAMENTO ═════════════════════════════════════════════
+            Luiz, 10/09: "vem o concluir com a informação que ele precisa
+            concluir o vídeo... e se ele fez alguma coisa errada, a plataforma
+            precisa sinalizar."
+
+            🔴 Antes isso era um toast que sumia em quatro segundos. Nenhuma
+            das sete pessoas reprovadas em 09 e 10/09 consegue reler por que
+            foi reprovada. Aqui a lista fica PARADA na tela, e o selo é
+            explicado ANTES de concluir — não depois. */}
+        {passo === P.FECHAMENTO && (
           <>
-            <Halo><Instagram className="w-12 h-12 text-white" strokeWidth={1.6} /></Halo>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Compartilha teu bom dia?</h2>
-            <p className="text-white/70 text-sm">Convite, não obrigação: um story de bom dia inspira o time inteiro — e vale pontos extras no jogo.</p>
-            <a
-              href={LINK_ABRIR_INSTAGRAM}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 text-white font-bold px-6 py-3 hover:opacity-90"
-            ><span className="inline-flex items-center gap-2"><Instagram className="w-4 h-4" strokeWidth={2.2} /> Postar o bom dia</span></a>
+            <Halo><Star className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              {pendencias.length ? 'Quase lá.' : 'Ritual completo.'}
+            </h2>
+
+            {pendencias.length > 0 ? (
+              <div className="xeos-cru rounded-2xl bg-amber-400/12 ring-1 ring-amber-300/40 p-4 text-left space-y-2" data-teste="pendencias-do-ritual">
+                <p className="text-[12px] font-extrabold text-amber-100 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4" strokeWidth={2.4} /> Falta isto pra fechar com selo cheio:
+                </p>
+                {pendencias.map((x, i) => (
+                  <p key={`${x.bloco}-${i}`} className="text-[12px] text-amber-50/90 flex gap-2">
+                    <span className="text-amber-300">•</span><span>{x.o_que}</span>
+                  </p>
+                ))}
+                {faltaVideo && (
+                  <button
+                    type="button"
+                    onClick={() => setPasso(P.VISUALIZACAO)}
+                    data-teste="voltar-pro-video"
+                    className="xeos-cru w-full rounded-xl bg-white/15 border border-white/30 text-white text-[12px] font-bold px-4 py-2.5 hover:bg-white/25"
+                  >Voltar e gravar o vídeo</button>
+                )}
+              </div>
+            ) : (
+              <p className="xeos-cru rounded-2xl bg-emerald-400/12 ring-1 ring-emerald-300/40 p-3 text-[12px] font-bold text-emerald-100">
+                ⭐ Os três blocos entregues, com o vídeo. Isto é o selo BRILHANTE.
+              </p>
+            )}
+
+            <p className="text-white/60 text-[12px]">
+              {selo === 'brilhante' ? 'Concluir agora carimba o seu ritual como BRILHANTE.'
+                : selo === 'completo' ? 'Concluir agora vale o ritual — sem o selo BRILHANTE, que é do vídeo.'
+                  : 'Concluir agora registra o que você entregou. O que faltou fica marcado, e amanhã tem de novo.'}
+            </p>
+
             <div>
               <button
                 type="button"
+                disabled={!!salvando}
+                data-teste="concluir-o-ritual"
                 onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, metaMotivosHoje, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
-                className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 transition-transform active:translate-y-[3px]"
+                className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-40 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
             </div>
@@ -611,11 +885,23 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
           </>
         )}
 
-        <div className="flex items-center justify-center gap-1.5 pt-2">
-          {[0, 1, 2, 3].map((i) => (
-            <span key={i} className={`w-1.5 h-1.5 rounded-full ${i <= passo ? 'bg-white' : 'bg-white/25'}`} />
-          ))}
-        </div>
+        {/* 🧱 a barra dos três blocos + o cronômetro, sempre visíveis depois
+            que o ritual abre. As bolinhas antigas diziam "passo 2 de 4" e
+            nada mais; esta diz O QUE já está em casa — que é a informação
+            que faz a pessoa não desistir no meio. */}
+        {passo !== P.ABERTURA && (
+          <div className="pt-3 space-y-2">
+            <BarraDosBlocos feitos={feitos} atual={proximoBloco(comprovacao)} />
+            {segRestantes !== null && (
+              <p
+                data-teste="cronometro-do-ritual"
+                className={`text-[11px] font-extrabold tracking-wide ${expirou ? 'text-red-300' : segRestantes < 300 ? 'text-amber-200' : 'text-white/40'}`}
+              >
+                ⏱️ {textoDoPrazo(segRestantes)}{expirou ? ' — o que você já entregou continua valendo' : ' pra fechar o ritual'}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

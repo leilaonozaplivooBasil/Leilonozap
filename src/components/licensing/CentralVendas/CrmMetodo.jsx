@@ -62,6 +62,7 @@ import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
 import { frameEmBase64 } from '@/lib/frameEmBase64';
+import { comBloco, statusDoRitual, seloDoRitual, pendenciasDoRitual, ritualRetomavel, ritualExpirado, blocosFeitos, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
 import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
@@ -843,6 +844,125 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   /** Some com o rastro depois que ele já foi gravado na comprovação. */
   const limparFalhasDaTarefa = useCallback((tarefaId) => { delete falhasPorTarefa.current[tarefaId]; }, []);
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🧱 UM BLOCO DO RITUAL, GRAVADO NA HORA — 10/09/2026
+  // ═══════════════════════════════════════════════════════════════════════
+  // Luiz, no áudio: "vamos dividir em três". O que isso significa aqui embaixo
+  // é que cada bloco escreve no banco quando termina, em vez de tudo ir junto
+  // no fim. Em 09 e 10/09, sete de dez tentativas terminaram em ZERO porque o
+  // veredito só existia no fim — e a Iara perdeu por 4 minutos depois de
+  // entregar gratidão, vídeo e ação.
+  //
+  // 🟢 A IA NUNCA TRAVA O AVANÇO. Ela é chamada DEPOIS que o bloco já está
+  // gravado, e o que ela responder entra numa segunda escrita. Decisão do
+  // dono ("salva e a IA julga depois"), e ela tem uma razão dura: hoje a IA
+  // passou três horas fora do ar. Print bloqueante + IA fora = ninguém passa
+  // do bloco 1 às cinco da manhã.
+  const salvarBlocoDoRitual = async (t, bloco, dados, { abertoEm } = {}) => {
+    const anotarFalha = (o_que) => (erro) => anotarFalhaDaTarefa(t.id, o_que, erro);
+    const base = {
+      ...(t.comprovacao?.tipo === 'ritual' ? t.comprovacao : {}),
+      aberto_em: t.comprovacao?.aberto_em || abertoEm || new Date().toISOString(),
+      // 🗓️ o DIA em Brasília, gravado à parte: `aberto_em` é UTC, e fatiar
+      // os 10 primeiros caracteres dele daria a data de Londres.
+      aberto_dia: t.comprovacao?.aberto_dia || hojeStr(),
+    };
+
+    let corpo = {};
+    if (bloco === 'acordei') {
+      // o print sobe pelo MESMO caminho de toda comprovação do método
+      const up = await plataforma.integrations.Core.UploadFile({ file: dados.file }).catch((e) => { anotarFalha('print')(e?.message || 'upload falhou'); return null; });
+      if (!up?.file_url) throw new Error('print não subiu');
+      corpo = { print_url: up.file_url, hash: dados.hash || '' };
+    } else if (bloco === 'gratidao') {
+      const voz = dados.audioGratidao
+        ? await guardarAudio({ blob: dados.audioGratidao, caminho: caminhoDoAudio({ pasta: 'gratidao', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.audioGratidao.type }), actorId: uid, aoFalhar: anotarFalha('audio') })
+        : null;
+      corpo = {
+        texto: dados.texto || '',
+        ...(dados.audioGratidao ? { entrada: 'audio', audio_seg: dados.audioGratidaoSeg || 0 } : { entrada: 'texto' }),
+        ...(voz ? { audio_path: voz } : {}),
+        ...(dados.transcricaoGratidao ? { transcricao: dados.transcricaoGratidao } : {}),
+        meta_motivos: dados.metaMotivosHoje || 0,
+      };
+    } else if (bloco === 'visualizacao') {
+      const videoPath = dados.videoBlob
+        ? await guardarVideo({ blob: dados.videoBlob, caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.videoBlob.type }), actorId: uid, aoFalhar: anotarFalha('video') })
+        : null;
+      const vozAcao = dados.audioAcao
+        ? await guardarAudio({ blob: dados.audioAcao, caminho: caminhoDoAudio({ pasta: 'acao', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.audioAcao.type }), actorId: uid, aoFalhar: anotarFalha('audio') })
+        : null;
+      // 🔴 guardar pode falhar, mas não pode falhar CALADO — foi o 413 de
+      // hoje de manhã, em que cinco pessoas regravaram achando culpa própria.
+      if (dados.videoBlob && !videoPath) toast.error('A visualização foi registrada, mas não consegui guardar a gravação. Não precisa refazer — já avisei o time.', { duration: 7000 });
+      corpo = {
+        ...(videoPath ? { video_path: videoPath } : {}),
+        video_seg: dados.gravSeg || 0,
+        acao: dados.acao || '',
+        ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
+        ...(dados.audioAcao ? { entrada_acao: 'audio' } : {}),
+      };
+    }
+
+    const nova = comBloco(base, bloco, corpo);
+    // status intermediário: o ritual EXISTE e está em andamento. Não é
+    // aprovada (não terminou) nem reprovada (não errou) — e `valido: false`
+    // impede que um ritual pela metade conte como comprovação boa.
+    nova.status = 'ritual_em_andamento';
+    nova.valido = false;
+    // 🧾 O RASTRO TAMBÉM AQUI — e não é detalhe.
+    //
+    // Cada bloco gravado é uma comprovação escrita no banco. Sem `tentativas`,
+    // `temRastro()` devolve false e o laudo trata a linha como "anterior a
+    // 10/09, antes do rastro existir" — sobre um registro criado HOJE. Quem
+    // parar no bloco 2 e nunca concluir deixaria exatamente esse fantasma:
+    // silêncio virando atestado de bom uso, que é a mentira confiante que o
+    // rastro existe pra impedir.
+    Object.assign(nova, rastroDa({ anterior: t.comprovacao, falhas: falhasPorTarefa.current[t.id] || [] }));
+    nova.quando = new Date().toISOString();
+    await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: nova });
+    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: nova } : x)));
+
+    // 🤖 a IA olha DEPOIS, sem segurar ninguém. O que ela responder entra
+    // numa segunda escrita, em cima do que já está gravado.
+    julgarBlocoComIA(t.id, bloco, { ...dados, printUrl: corpo.print_url });
+    return nova;
+  };
+
+  // 🤖 o julgamento assíncrono: nunca lança, nunca trava, e quando responde
+  // grava por cima do que estiver no banco NAQUELE momento (a pessoa pode já
+  // ter salvado o bloco seguinte enquanto a IA pensava).
+  const julgarBlocoComIA = async (tarefaId, bloco, dados) => {
+    try {
+      // 📸 o print do bom dia já ESTÁ numa URL (subiu junto com o bloco) — a IA
+      // busca de lá. O frame da visualização, não: ele nunca vira arquivo, vai
+      // inline e morre com a chamada (ver frameEmBase64.js). São dois caminhos
+      // porque são dois tipos de imagem com dois níveis de intimidade.
+      let corpoDaImagem = null;
+      if (bloco === 'acordei' && dados.printUrl) corpoDaImagem = { image_url: dados.printUrl };
+      else if (bloco === 'visualizacao' && dados.frameBlob) {
+        const b64 = await frameEmBase64(dados.frameBlob);
+        if (b64) corpoDaImagem = { image_b64: b64 };
+      }
+      if (!corpoDaImagem) return;
+      const alvo = tarefas.find((x) => x.id === tarefaId);
+      const r = await plataforma.functions.xgameValidarPrint({
+        ...corpoDaImagem,
+        tipo: bloco === 'acordei' ? 'instagram' : 'ritual',
+        titulo: alvo?.titulo || 'Ritual do Amanhecer',
+        hora: alvo?.hora, data: hojeStr(),
+      });
+      if (!r || !['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) return;
+      setTarefas((prev) => prev.map((x) => {
+        if (x.id !== tarefaId) return x;
+        const atual = x.comprovacao || {};
+        const marcada = comBloco(atual, bloco, { ...(atual.blocos?.[bloco] || {}), veredito_ia: r });
+        plataforma.entities.MetodoTarefa.update(tarefaId, { comprovacao: marcada }).catch(() => {});
+        return { ...x, comprovacao: marcada };
+      }));
+    } catch { /* IA fora não pode travar o ritual — o bloco já está gravado */ }
+  };
+
   const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
     // 🧾 10/09/2026 — O RASTRO. Falha técnica durante a entrega vira registro,
@@ -863,179 +983,112 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // alternarFeito, mas isso cobre quem abriu ANTES do prazo e só terminou
     // depois — com 2min de visualização + gratidão, dá pra passar do corte
     // quem começa em cima da hora.
-    if (agoraM > RITUAL_FIM_MIN) {
+    // 🕐 10/09/2026 — O PRAZO DEIXOU DE SER O RELÓGIO DA PAREDE.
+    //
+    // Era um corte seco às 05:30, igual pra todo mundo. Quem abria 05:25 tinha
+    // cinco minutos; quem abria 04:40 tinha cinquenta. Em 10/09 a Iara
+    // entregou 05:34:12 — gratidão, vídeo e ação feitos — e perdeu tudo por
+    // 4 minutos e 12 segundos. No dia anterior, a Elenice, por 2min25s.
+    //
+    // Agora são DUAS réguas (ver ritualEmBlocos.js): a JANELA protege o
+    // acordar cedo e continua barrando quem ABRE fora dela (alternarFeito);
+    // o CRONÔMETRO de 30 minutos protege quem abriu na hora e demorou.
+    //
+    // E mesmo estourando, os blocos já entregues NÃO se perdem: o que estava
+    // gravado continua gravado, e o registro fica parcial em vez de zero.
+    if (ritualExpirado({ abertoEm: t.comprovacao?.aberto_em })) {
+      const jaEntregue = t.comprovacao?.tipo === 'ritual' ? t.comprovacao : {};
       const comprovacaoPerdida = {
+        ...jaEntregue,
         tipo: 'ritual', gratidao, acao, entrega: gratidao,
-        quando: new Date().toISOString(), valido: false, status: 'reprovada',
-        veredito_ia: { veredito: 'reprovada', confianca: 100, o_que_viu: '', motivo: `Ritual perdido — passou do prazo de ${horaDeMin(RITUAL_FIM_MIN)}.` },
+        quando: new Date().toISOString(), valido: false,
+        status: blocosFeitos(jaEntregue).length ? 'ritual_parcial' : 'reprovada',
+        veredito_ia: { veredito: 'reprovada', confianca: 100, o_que_viu: '', motivo: `Passou dos ${RITUAL_MINUTOS_PARA_CONCLUIR} minutos do ritual.` },
   ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
       };
       try {
         await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPerdida });
         setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoPerdida } : x)));
       } catch { /* o toast abaixo já avisa, mesmo se o registro falhar */ }
-      toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+      toast.error(`Acabaram os ${RITUAL_MINUTOS_PARA_CONCLUIR} minutos. O que você já entregou ficou salvo — amanhã tem de novo.`);
       return;
     }
     const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
-    // 🎥 o vídeo da visualização é a comprovação — vai pro cofre PRIVADO.
-    //
-    // 🔴 09/09 — antes ia pro `public-assets` via Core.UploadFile, que é
-    // `public = true`: a gravação do rosto de alguém meditando às 6h da manhã
-    // ficava aberta por link, sem login. A tela promete "só você e o gestor
-    // veem"; agora isso é verdade. Voz é íntimo, imagem é identificável.
-    let videoPath = '';
-    if (videoBlob) {
-      videoPath = await guardarVideo({
-        blob: videoBlob,
-        caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: videoBlob.type }),
-        actorId: uid,
-        aoFalhar: anotarFalha('video'),
-      }) || '';
-      // 🔴 10/09/2026 — GUARDAR PODE FALHAR, MAS NÃO PODE FALHAR CALADO.
-      //
-      // Best-effort está certo: ninguém perde o ritual das 5h porque o cofre
-      // piscou. Silêncio ABSOLUTO é que estava errado — em 10/09 o envio
-      // voltava 413 em toda tentativa e a tela não dizia nada, então cinco
-      // pessoas gravaram de novo, e de novo, achando que era erro delas.
-      // O ritual segue valendo; o que a pessoa ganha aqui é a verdade.
-      if (!videoPath) {
-        toast.error('O ritual foi registrado, mas não consegui guardar a gravação. Não precisa refazer — já avisei o time.', { duration: 7000 });
-      }
-    }
-    // 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
-    // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
-    // MESMO validador que já julga print/foto (xgameValidarPrint) olha um
-    // frame do vídeo, com uma regra nova pro tipo 'ritual': ambiente de casa.
-    //
-    // 🔐 09/09/2026 — O FRAME NÃO SOBE MAIS PRO BUCKET PÚBLICO. Ele ia pro
-    // `public-assets` (que é `public = true`) só pra existir uma URL que a IA
-    // conseguisse buscar: o rosto de alguém dentro da própria casa, às 5h da
-    // manhã, em link aberto e sem validade. Eram 5 lá, crescendo um por dia.
-    // Agora vai INLINE na chamada e morre com ela — não vira objeto, não vira
-    // link, não vira linha em lugar nenhum (ver src/lib/frameEmBase64.js).
-    let vereditoAmbiente = null;
-    if (frameBlob) {
-      try {
-        const frameB64 = await frameEmBase64(frameBlob);
-        if (frameB64) {
-          const r = await plataforma.functions.xgameValidarPrint({ image_b64: frameB64, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
-          if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) vereditoAmbiente = r;
-        }
-      } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }
-    }
-    // ambiente claramente errado (carro/academia/escritório) OU incerto
-    // (não dá pra cravar que é em casa): reprova direto, sem selo, sem feito.
-    //
-    // 🌊 09/09/2026 — DIR-125, dono, vendo comprovações presas em "em
-    // análise" esperando ele: "ela tem que pegar tudo... vai reprovar
-    // automático, entendeu? Só em casos impossíveis, mas não precisa."
-    // Antes, "duvida" caía pro gestor decidir — a ÚNICA rota do X-GAME
-    // inteiro que ainda tinha isso (toda comprovação normal já resolve
-    // sozinha desde a DIR-89). Agora dúvida de ambiente é reprovação
-    // automática igual ao ambiente claramente errado: intervenção humana
-    // ZERO, a pessoa tenta de novo (o motivo da IA já é pedagógico —
-    // SISTEMA, xgameValidarPrint.js — explica exatamente o que corrigir).
-    if (vereditoAmbiente?.veredito === 'reprovada' || vereditoAmbiente?.veredito === 'duvida') {
-      const comprovacaoReprovada = {
-        tipo: 'ritual', gratidao, acao,
-        entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-        // ⚠️ 09/09 — este bloco (DIR-125, reprovação por ambiente) nasceu no
-        // main DEPOIS que o cofre foi escrito, então ainda falava `videoUrl`.
-        // O git juntou os dois sem conflito e a variável tinha sumido: dava
-        // ReferenceError na hora de reprovar alguém pelo ambiente.
-        ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
-        tempo_tela_s: tempoTelaS || 0,
-  ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
-        quando: new Date().toISOString(), valido: false, status: 'reprovada',
-        // 🏷️ 09/09/2026 — auditoria noturna: aqui ficava
-        // `motivo_gestor: vereditoAmbiente.motivo`. Nenhum humano decidiu
-        // esta reprovação — foi a IA, sozinha (DIR-125). E `motivo_gestor` é
-        // lido na tela com a etiqueta "gestor:" (XGameAdmin) e "↩"
-        // (Comprovacoes), ou seja: o histórico dizia que uma pessoa julgou o
-        // ambiente de outra quando ninguém julgou. Quem lê isso semanas
-        // depois — a própria pessoa ou a gestão — tira a conclusão errada.
-        //
-        // Nada se perde tirando: o texto da IA já viaja em `veredito_ia.motivo`
-        // e a tela já o mostra rotulado como "IA:" (Comprovacoes.jsx:231).
-        // Antes, aparecia duas vezes — uma delas com o crédito trocado.
-        veredito_ia: vereditoAmbiente,
-      };
-      try {
-        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoReprovada });
-        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoReprovada } : x)));
-      } catch { /* o toast abaixo já avisa, mesmo se o registro falhar */ }
-      toast.error(`🏠 Ritual reprovado: ${vereditoAmbiente.motivo || 'o ambiente precisa ser a sua casa, com tranquilidade.'}`);
-      return;
-    }
 
-    // 🎙️ DIR-101 — a VOZ da gratidão vira acervo (o dono pediu pra guardar
-    // desde já). Vai pro cofre PRIVADO `xgame-audios`, não pro bucket público
-    // onde mora o vídeo: é voz, é íntimo, e link público não se desfaz depois
-    // que circulou. Guardar é o EXTRA — se falhar, o ritual segue e o texto,
-    // que é o que vale nota, já está aqui.
-    const guardarVoz = async (blob, pasta) => (blob
-      ? guardarAudio({
-        blob,
-        caminho: caminhoDoAudio({ pasta, uid, dia: hojeStr(), tarefaId: t.id, mime: blob.type }),
-        actorId: uid,
-      })
-      : null);
-    const [vozGratidao, vozAcao] = await Promise.all([
-      guardarVoz(audioGratidao, 'gratidao'),
-      guardarVoz(audioAcao, 'acao'),
-    ]);
+    // ═══════════════════════════════════════════════════════════════════
+    // 🧱 O FECHAMENTO LÊ OS BLOCOS — NÃO SOBE NADA DE NOVO.
+    // ═══════════════════════════════════════════════════════════════════
+    // Vídeo, áudio e print já foram guardados quando cada bloco terminou
+    // (salvarBlocoDoRitual). Subir tudo outra vez aqui duplicaria arquivo no
+    // cofre e faria a pessoa esperar duas vezes pela mesma coisa.
+    //
+    // O que este trecho faz é só CARIMBAR: pega o que está gravado, calcula o
+    // selo e escreve os campos de topo que o resto do app já lê há semanas
+    // (`entrega` no Diário de Bolso, `video_path` no laudo, `gratidao` no
+    // relatório). Os blocos são a verdade; o topo é a vitrine dela.
+    const gravado = t.comprovacao?.tipo === 'ritual' ? t.comprovacao : {};
+    const bl = gravado.blocos || {};
+    const videoPath = bl.visualizacao?.video_path || '';
+    const gratidaoTexto = bl.gratidao?.texto || gratidao || '';
+    const transcricao = bl.gratidao?.transcricao || transcricaoGratidao || '';
+    const acaoFinal = bl.visualizacao?.acao || acao || '';
+    const houveAudio = bl.gratidao?.entrada === 'audio' || !!audioGratidao;
+    const selo = seloDoRitual(gravado);
+    const pendentes = pendenciasDoRitual(gravado);
+    const statusFinal = statusDoRitual(gravado);
+    const aprovadoDireto = naJanela && selo === 'brilhante';
 
-    // 🌊 DIR-89 — ritual dentro do prazo E com o vídeo gravado ganha o selo
-    // completo; sem vídeo (mas ainda dentro do prazo) aprova igual, só sem o
-    // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como
-    // perdido acima; ambiente errado ou em dúvida nem chega aqui — já
-    // voltou reprovado automático acima (DIR-125).
-    const aprovadoDireto = naJanela && !!videoPath;
     const comprovacao = {
+      ...gravado,
       // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
       // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
       // mostraria a gratidão em branco. A ordem: o que ela escreveu, senão o
       // que ela falou (transcrito), senão uma frase honesta com o botão de
       // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
-      tipo: 'ritual', gratidao, acao,
-      entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-      ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
+      tipo: 'ritual', gratidao: gratidaoTexto, acao: acaoFinal,
+      entrega: gratidaoTexto || transcricao || (houveAudio ? '🎙️ gratidão gravada em áudio' : ''),
+      ...(videoPath ? { video_path: videoPath, video_seg: bl.visualizacao?.video_seg || gravSeg || 0 } : {}),
+      ...(bl.acordei?.print_url ? { print_url: bl.acordei.print_url, hash: bl.acordei.hash || '' } : {}),
       // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
       // "as suas palavras", COM a origem registrada. Não é desconfiança: é
       // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
-      ...(audioGratidao ? { entrada_gratidao: 'audio', audio_gratidao_seg: audioGratidaoSeg || 0 } : {}),
+      ...(houveAudio ? { entrada_gratidao: 'audio', audio_gratidao_seg: bl.gratidao?.audio_seg || audioGratidaoSeg || 0 } : {}),
       // 🎙️ DIR-101.1 — a transcrição existe pro REGISTRO, não pra pessoa.
-      // Ela nunca apareceu na tela de quem gravou; está aqui pro Diário de
-      // Bolso ter o que mostrar e pra dar pra buscar depois. Se o Whisper não
-      // respondeu a tempo, fica sem — e o ritual vale do mesmo jeito, porque
-      // a entrega é o áudio.
-      ...(transcricaoGratidao ? { gratidao_transcricao: transcricaoGratidao } : {}),
-      ...(audioAcao ? { entrada_acao: 'audio' } : {}),
-      ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
-      ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
+      ...(transcricao ? { gratidao_transcricao: transcricao } : {}),
+      ...(bl.visualizacao?.entrada_acao ? { entrada_acao: bl.visualizacao.entrada_acao } : {}),
+      ...(bl.gratidao?.audio_path ? { audio_gratidao_path: bl.gratidao.audio_path } : {}),
+      ...(bl.visualizacao?.audio_acao_path ? { audio_acao_path: bl.visualizacao.audio_acao_path } : {}),
       tempo_tela_s: tempoTelaS || 0,
       ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
-      quando: new Date().toISOString(), valido: true,
-      status: 'aprovada_ritual',
+      quando: new Date().toISOString(),
+      // 🔴 `valido` NÃO pode ser sempre true. Um ritual parcial (dois blocos
+      // de três, ou um bloco reprovado pela IA) é registro honesto, não
+      // comprovação boa — e o que lê `valido` decide dinheiro e pontos.
+      valido: statusFinal === 'aprovada_ritual',
+      status: statusFinal,
+      // 🧾 o que faltou fica GRAVADO, não só na tela: Luiz, 10/09 — "se ele
+      // fez alguma coisa errada, a plataforma precisa sinalizar". Um toast
+      // que some não sinaliza nada uma hora depois.
+      ...(pendentes.length ? { pendencias: pendentes } : {}),
       veredito_ia: {
-        veredito: 'aprovada', confianca: 100,
-        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoPath ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoPath ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
+        veredito: statusFinal === 'aprovada_ritual' ? 'aprovada' : 'reprovada', confianca: 100,
+        o_que_viu: `Ritual do Amanhecer — blocos entregues: ${blocosFeitos(gravado).join(', ') || 'nenhum'}${videoPath ? ` (visualização de ${bl.visualizacao?.video_seg || 0}s)` : ''}; ${tempoTelaS || 0}s de tela`,
+        motivo: pendentes.map((x) => x.o_que).join(' · '),
       },
     };
     try {
-      await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      await plataforma.entities.MetodoTarefa.update(t.id, { feito: comprovacao.valido, comprovacao });
       limparFalhasDaTarefa(t.id); // já está gravado na comprovação — não repete na próxima
-      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
-      if (ehHoje && xgame) {
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: comprovacao.valido, comprovacao } : x)));
+      if (ehHoje && xgame && comprovacao.valido) {
         const pts = Math.round(15 * (xgame.cotacao || 1));
         setXpFlash({ id: t.id, pts, valor: xgame.valores?.[t.id] || 0 });
         setTimeout(() => setXpFlash((f) => (f?.id === t.id ? null : f)), 1600);
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo dentro da janela do amanhecer pra ganhar o selo BRILHANTE)');
+      if (selo === 'parcial') toast('🌅 Ritual registrado pela metade — o que faltou está anotado na tarefa.', { icon: '⚠️', duration: 7000 });
+      else toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo pra ganhar o selo BRILHANTE)');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
 
@@ -1816,6 +1869,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   nome={(currentUser?.full_name || currentUser?.nickname || '').split(' ')[0]}
                   sonhos={sonhos.map(normalizarSonho)}
                   diaCorridoCiclo={diaCorridoDoCiclo(new Date(), inicioCicloOficial(cicloConfig, new Date()))}
+                  /* 🧱 reabrir cai no bloco que falta, não no começo — mas só
+                     se for o ritual de HOJE (ritualRetomavel confere o dia em
+                     Brasília). O de ontem nunca ressuscita no de hoje. */
+                  comprovacaoAtual={ritualRetomavel(t.comprovacao, hojeStr()) ? t.comprovacao : null}
+                  onBloco={(bloco, dados, ctx) => salvarBlocoDoRitual(t, bloco, dados, ctx)}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
                 />
