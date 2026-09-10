@@ -1380,12 +1380,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
   const [previaEdicaoAberta, setPreviaEdicaoAberta] = useState(false);
+  // 🔴 10/09/2026 — DAR HORA A UMA TAREFA TEM QUE MOVER ELA DE LUGAR.
+  //
+  // Antes, isto trocava a hora com um `.map()` — que preserva a POSIÇÃO — e
+  // não mexia na `ordem`. No vídeo do dono: a tarefa recebeu 09:15 e continuou
+  // desenhada DEPOIS da de 10:30, no fim da manhã. Só voltava pro lugar
+  // recarregando a página, porque é no carregamento que a lista passa por
+  // `ordenarPorHora`. Daí a impressão de "sou obrigado a arrastar".
+  //
+  // Duas coisas, e as duas importam:
+  //   • reordenar a lista na hora — o `.map()` sozinho não move nada;
+  //   • gravar a `ordem` nova. Sem isso a tarefa carrega pra sempre a `ordem`
+  //     que ganhou quando nasceu sem hora, e todo empate de horário é
+  //     desempatado pelo número errado — inclusive depois de arrastar.
   const salvarEdicao = async (t) => {
     const titulo = String(edicao.titulo || '').trim();
     if (!titulo) { toast.error('O título não pode ficar vazio — pra tirar, use a lixeira.'); return; }
-    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, titulo, hora: edicao.hora || '' } : x)));
+    const hora = edicao.hora || '';
+    const ordem = ordemPelaHoraDoDia(hora);
+    setTarefas((prev) => ordenarPorHora(prev.map((x) => (x.id === t.id ? { ...x, titulo, hora, ordem } : x))));
     setEditandoId(null);
-    try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora: edicao.hora || '' }); }
+    try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora, ordem }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
   };
   // 🔮 DIR-91 — mudou a hora? mostra a prévia da Jornada antes de gravar.

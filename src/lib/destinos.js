@@ -74,6 +74,30 @@ export function fraseVaiEntrar({ origem = 'lista', hora = null, noDia = false, n
 }
 
 /**
+ * 🕐 A ORDEM SAI DA HORA — 10/09/2026.
+ *
+ * 🔴 O #312 consertou isto no DistribuirTarefa e passou reto por DOIS outros
+ * caminhos que criam tarefa: o campo "nova tarefa do dia" da lista
+ * (CrmMetodo) e o card que vira tarefa (QuadroCompromisso). Os dois mandavam
+ * `ordemTarefa: <tamanho da lista>` — o fim da fila, sempre, ignorando a hora
+ * escolhida. Vídeo do dono, 10/09: criou "teste de 9:15 da manhã" e ela foi
+ * parar depois da tarefa das 10:30, obrigando a arrastar.
+ *
+ * Consertar em cada tela deixaria o mesmo buraco aberto pra próxima tela que
+ * criar tarefa. Então a conta mora AQUI, onde a linha é montada: quem chama
+ * já passa a `hora`, e a `ordem` sai dela.
+ *
+ * `ordemTarefa` continua valendo como RESERVA pra tarefa sem hora — assim
+ * elas mantêm entre si a ordem em que foram criadas. Isso é seguro porque
+ * `ordenarPorHora` (xgame.js) nunca compara a `ordem` de uma tarefa sem hora
+ * com a de uma com hora: sem hora vai pro fim do dia por outro caminho.
+ */
+const ordemDaHora = (hora, reserva) => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hora || '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : reserva;
+};
+
+/**
  * As LINHAS que a tela grava, prontas. Devolve { tarefa, cartao } — cada um
  * null quando não é pra criar. Nada aqui grava: a tela grava e depois LIGA os
  * dois (ligarCartaoATarefa) quando tiver o id da tarefa.
@@ -85,7 +109,7 @@ export function planoDeEntrada({ origem = 'lista', titulo, hora = null, horaFim 
   const hf = h && horaValida(horaFim) && emMinutos(horaFim) > emMinutos(h) ? horaFim : null;
   const querDia = origem === 'lista' || !!noDia;
   const querQuadro = origem === 'quadro' || !!noQuadro;
-  const tarefa = querDia && dataISO ? { user_id: userId, data: String(dataISO).slice(0, 10), hora: h, hora_fim: hf, titulo: t, detalhe: detalhe || '', feito: false, ordem: ordemTarefa, habito: habito || null } : null;
+  const tarefa = querDia && dataISO ? { user_id: userId, data: String(dataISO).slice(0, 10), hora: h, hora_fim: hf, titulo: t, detalhe: detalhe || '', feito: false, ordem: ordemDaHora(h, ordemTarefa), habito: habito || null } : null;
   const cartao = querQuadro && listaId ? { user_id: userId, lista_id: listaId, titulo: t, detalhe: detalhe || null, coluna: ESTADO_ABERTO, habito: habito || null, checklist: [], ordem: ordemCard, hora: h, hora_fim: hf } : null;
   return { tarefa, cartao, erro: querQuadro && !listaId ? 'sem lista no quadro' : null };
 }
