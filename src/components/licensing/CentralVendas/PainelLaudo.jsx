@@ -89,8 +89,11 @@ export default function PainelLaudo({ currentUser = null, hojeISO = null }) {
 
   const COR = { erro_do_sistema: 'text-red-300', olhar: 'text-amber-300', sem_rastro: 'text-white/40', normal: 'text-nz-verde' };
 
+  // 🌑 `nz-escuro` pelo mesmo motivo da fila (Comprovacoes.jsx): os dois menus
+  // daqui nasceriam BRANCOS dentro da página de tema claro — a regra global de
+  // `body[data-painel-nav] main` pinta todo campo de branco, com !important.
   return (
-    <div className="rounded-xl border border-white/15 p-3 sm:p-4 space-y-2.5" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="painel-laudo">
+    <div className="nz-escuro rounded-xl border border-white/15 p-3 sm:p-4 space-y-2.5" style={{ background: 'rgba(255,255,255,0.04)' }} data-teste="painel-laudo">
       <div className="flex items-center gap-2 flex-wrap">
         <FileText className="w-4 h-4 text-nz-verde" />
         <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Laudo de comprovações</p>
