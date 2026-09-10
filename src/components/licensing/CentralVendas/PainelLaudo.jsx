@@ -104,7 +104,7 @@ export default function PainelLaudo({ currentUser = null, hojeISO = null }) {
         <select
           value={pessoa}
           onChange={(e) => setPessoa(e.target.value)}
-          className="h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
+          className="lista-escura h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
           data-teste="laudo-pessoa"
         >
           {equipe.map((p) => <option key={p.id} value={p.id}>{nomeDe(p.id)}</option>)}
@@ -113,7 +113,7 @@ export default function PainelLaudo({ currentUser = null, hojeISO = null }) {
           value={dia}
           onChange={(e) => setDia(e.target.value)}
           disabled={!dias.length}
-          className="h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5 disabled:opacity-40"
+          className="lista-escura h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5 disabled:opacity-40"
           data-teste="laudo-dia"
         >
           {dias.length ? dias.map((d) => <option key={d} value={d}>{`${d.slice(8, 10)}/${d.slice(5, 7)}`}</option>) : <option value="">sem comprovação</option>}

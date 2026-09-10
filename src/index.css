@@ -292,12 +292,30 @@ body[data-painel-nav] main .nz-escuro [class*="border-gray-800"] { border-color:
 body[data-painel-nav] main .nz-escuro input,
 body[data-painel-nav] main .nz-escuro textarea,
 body[data-painel-nav] main .nz-escuro select { background-color: #1f2937 !important; color: #ffffff !important; border-color: #374151 !important; }
-.nz-painel .nz-escuro select,
-body[data-painel-nav] main .nz-escuro select { color-scheme: dark; }
-.nz-painel .nz-escuro select option,
-.nz-painel .nz-escuro select optgroup,
-body[data-painel-nav] main .nz-escuro select option,
-body[data-painel-nav] main .nz-escuro select optgroup { background-color: #1F2937 !important; color: #F4F4F4 !important; }
+/* 🔴 10/09/2026, MESMO DIA, SEGUNDA VOLTA — o bug voltou na tela do laudo.
+   Print do dono: o menu de escolher a pessoa abria com a LISTA branca e a
+   letra branca. Branco no branco, de novo.
+
+   🔴 A CAUSA FUI EU. Poucas horas antes, ao consertar o campo branco da fila,
+   eu escrevi neste arquivo que "select escuro exige as DUAS defesas" — e
+   então prendi a regra a dois contextos: `.nz-painel` e
+   `body[data-painel-nav]`. A tela do laudo mora na Licensing, que não monta o
+   AdminTopNav e portanto NÃO TEM nenhum dos dois. Consertei onde tinha sido
+   reclamado e deixei a classe do problema de pé.
+
+   É a terceira volta deste mesmo bug (#273, a lista da votação MvM, e agora
+   o laudo) e a segunda vez que ele sobrevive por "consertou aqui".
+
+   Por isso agora a defesa vale em QUALQUER `.nz-escuro`, sem contexto: todo
+   bloco que se declara escuro já nasce com a lista legível.
+
+   ⚠️ Auditado antes de soltar a regra: dos 7 lugares com `.nz-escuro`, só o
+   laudo e a fila de comprovações têm select — nem eles nem os componentes
+   dentro deles. O pior caso possível é uma lista escura sobre um controle
+   claro: estranho, mas legível. Nunca branco no branco. */
+.nz-escuro select { color-scheme: dark; }
+.nz-escuro select option,
+.nz-escuro select optgroup { background-color: #1F2937 !important; color: #F4F4F4 !important; }
 .nz-painel .nz-escuro input::placeholder,
 .nz-painel .nz-escuro textarea::placeholder,
 body[data-painel-nav] main .nz-escuro input::placeholder,

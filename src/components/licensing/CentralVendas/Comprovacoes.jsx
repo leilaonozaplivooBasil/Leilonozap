@@ -159,7 +159,7 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
           <select
             value={dataEscolhida}
             onChange={(e) => setDataEscolhida(e.target.value)}
-            className="h-7 shrink-0 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
+            className="lista-escura h-7 shrink-0 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
             data-teste="comprovacoes-filtro-data"
           >
             <option value="todas">todas as datas</option>
