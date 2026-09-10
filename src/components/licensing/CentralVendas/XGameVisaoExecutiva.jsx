@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake } from 'lucide-react';
+import { vendasPorPessoa } from '@/lib/vendasDoCiclo';
 import { LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo, estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX, moedaModelo } from '@/lib/xgame';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import MoedaPizza from './MoedaPizza';
@@ -129,12 +130,29 @@ export default function XGameVisaoExecutiva() {
       // MESMA fórmula com peso de voto (tokenDoCiclo) do painel pessoal —
       // por isso precisa do perfil de cada um (pesos diferentes por perfil).
       supabase.from('xgame_participantes').select('user_id,perfil'),
-    ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
+      // 💰 09/09/2026 — auditoria noturna: "o ranking do time não vê as
+      // mesmas vendas que o painel pessoal". Sem `vendasReais`, o
+      // `tokenDoCiclo` caía numa fonte DIFERENTE — as tarefas [VENDA]
+      // anotadas no dia — enquanto o painel de cada pessoa usava a venda
+      // de verdade. Quem vendeu e não anotou aparecia menor aqui do que no
+      // próprio painel; quem anotou sem vender, maior. E o Token decide
+      // liga e Platina, então a mesma pessoa tinha dois lugares no jogo.
+      //
+      // Duas consultas do CICLO INTEIRO, uma vez só, agrupadas depois por
+      // pessoa (vendasPorPessoa) — em vez de uma consulta por participante.
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,seller_id,licensee_id,anchor_id,owner_id')
+        .gte('created_date', `${ini}T00:00:00`),
+      supabase.from('captacao_oportunidades').select('responsavel_id,estagio,aporte_externo,fechado_em')
+        .gte('fechado_em', `${ini}T00:00:00`),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }, { data: vendas }, { data: oportunidades }]) => {
         if (!vivo) return;
         const votosPor = {};
         (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
         const perfilPor = {};
         (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
+        // a MESMA conta do painel pessoal (src/lib/vendasDoCiclo.js), agora
+        // para o time inteiro de uma vez.
+        const vendasPor = vendasPorPessoa({ sales: vendas, oportunidades });
 
         const por = {};
         (data || []).forEach((d) => {
@@ -194,6 +212,10 @@ export default function XGameVisaoExecutiva() {
             diasCiclo: r.diasDatados,
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
+            // ⚠️ `?? 0` e nunca `undefined`: quem não vendeu vendeu ZERO. Passar
+            // undefined reativa o fallback das tarefas [VENDA] lá dentro — que é
+            // exatamente a divergência que esta correção veio acabar.
+            vendasReais: vendasPor[r.user_id] ?? 0,
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
           // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca

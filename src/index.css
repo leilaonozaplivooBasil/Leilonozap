@@ -974,6 +974,38 @@ body.pc-tema .livoo-brilho-forte {
   border-color: var(--nz-borda) !important;
   color: var(--xeos-branco) !important;
 }
+/* 🌑 09/09/2026 — A LISTA DA VOTAÇÃO MvM ABRIA BRANCA COM LETRA BRANCA.
+   Dono, com print, durante a janela de votação: "lista com fundo branco na
+   parte de votação".
+
+   🔴 A CAUSA É A REGRA LOGO ACIMA — não o select da votação. Ela repinta TODO
+   select do palco com fundo `rgba(255,255,255,0.06)` (translúcido, ou seja:
+   fundo NENHUM) e cor branca. A caixinha fica certa; a LISTA que abre é
+   desenhada pelo sistema operacional, que sem fundo real cai no branco padrão
+   — e as <option> herdam o branco do select. Branco no branco.
+
+   É EXATAMENTE o bug do #273 (08 e 09/09), num lugar que aquele conserto não
+   alcançou: lá a correção foi a classe `.lista-escura`, aplicada select a
+   select na marcação. Os selects do palco não a recebem porque quem os escurece
+   é esta regra de CSS, não uma classe no JSX. Consertar por classe de novo
+   deixaria o próximo select do palco nascer quebrado igual.
+
+   Por isso a correção mora AQUI, colada na regra que causa: todo select que
+   esta regra escurecer já sai com a lista legível, hoje e no futuro.
+
+   As duas coisas juntas, porque cada navegador olha pra uma (mesma lição do
+   #273): `color-scheme` resolve no Chrome/Edge do Mac; o fundo opaco nas
+   <option> resolve no Windows e no Linux, que ignoram a dica. Aplicar só uma
+   conserta em metade das máquinas — e "consertou aqui" é como este bug
+   sobreviveu duas vezes. */
+.xeos-palco.xeos-palco select {
+  color-scheme: dark;
+}
+.xeos-palco.xeos-palco select option,
+.xeos-palco.xeos-palco select optgroup {
+  background-color: #1F2937 !important;
+  color: #F4F4F4 !important;
+}
 .xeos-palco.xeos-palco input::placeholder,
 .xeos-palco.xeos-palco textarea::placeholder {
   color: rgba(244, 244, 244, 0.42) !important;

@@ -63,6 +63,29 @@ const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 t
 // vira branca com texto branco — o fundo `bg-white/[0.06]` é translúcido, e
 // o sistema desenha a lista a partir do fundo do próprio campo.
 export const ehProducao = (t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; };
+// 🕐 09/09/2026 — A ORDEM SAI DA HORA, NÃO DO TAMANHO DA LISTA.
+//
+// 🔴 O BUG QUE ISTO CONSERTA, relatado com print: uma tarefa marcada pras 08:00
+// do dia seguinte entrou DEPOIS das 22h. A linha era `ordem: tarefasDoDia.length`
+// — o fim da fila, sempre, ignorando a hora escolhida.
+//
+// E não parava na tela: com a lista fora de ordem cronológica, o motor do jogo
+// marca como PERDIDA uma tarefa que está acontecendo agora (ver ordenarPorHora
+// em src/lib/xgame.js). Medido no banco: 3 a 4 pessoas por dia, quatro dias
+// seguidos, com tarefa no lugar errado.
+//
+// Agora `ordem` é o minuto do dia: 08:00 vira 480, 22:00 vira 1320. Cronológica
+// por construção, sem precisar renumerar as outras tarefas — o que exigiria uma
+// escrita em lote a cada criação, e é onde escritas em lote falham pela metade.
+//
+// ⚠️ SEM HORA vira um número ALTO (2000), não zero: sem hora a tarefa fica fora
+// da Jornada de propósito (destinos.js), e o lugar dela é o fim do dia. Com
+// zero ela pularia pro topo.
+const ordemPelaHora = (hhmm) => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm || '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 2000;
+};
+
 const NOVA_VAZIA = (categoria = 'mentoria', prazoHora = '18:00') => ({ titulo: '', hora: '', peso: 3, pesoManual: false, categoria, categoriaManual: false, mentalidade: '', habito: '', prazoDia: '', prazoHora });
 
 export default function DistribuirTarefa({
@@ -183,7 +206,7 @@ export default function DistribuirTarefa({
     // 🎓 mentoria completa: três blocos encadeados, cada um com o seu ensinamento
     if (blocosMentoria) {
       const linhas = blocosMentoria.map((b, i) => ({
-        user_id: pessoa, data: dia, hora: b.hora, titulo: b.titulo, feito: false, ordem: tarefasDoDia.length + i,
+        user_id: pessoa, data: dia, hora: b.hora, titulo: b.titulo, feito: false, ordem: ordemPelaHora(b.hora),
         categoria: b.categoria, peso: pesoComMentalidade(b.titulo, mentalidadeAtual).peso,
         origem: 'xperf', criado_por_id: currentUser?.id || null,
         mentalidade: mentalidadeAtual, habito: b.habito,
@@ -202,7 +225,7 @@ export default function DistribuirTarefa({
     }
     const linha = {
       user_id: pessoa, data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
-      feito: false, ordem: tarefasDoDia.length, categoria: categoriaAtual, peso: pesoEfetivo,
+      feito: false, ordem: ordemPelaHora(nova.hora), categoria: categoriaAtual, peso: pesoEfetivo,
       origem: 'xperf', criado_por_id: currentUser?.id || null,
       mentalidade: mentalidadeAtual, habito: habitoAtual ? Number(habitoAtual) : null,
       detalhe: ensinamento || null,
