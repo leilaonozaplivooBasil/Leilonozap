@@ -825,7 +825,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               {abaModal === 'semana' && <AbaSemana pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} hoje={hoje} participante={base} />}
               {abaModal === 'quadro' && <AbaQuadro pessoaId={pessoaFixo} hoje={hoje} responsavelNome={nomeDe(currentUser?.id)} />}
               {abaModal === 'historico' && <AbaHistorico pessoaId={pessoaFixo} tarefasCiclo={tarefasCiclo} />}
-              {abaModal === 'comprovacoes' && <ComprovacoesPainel pessoaId={pessoaFixo} nomeDe={nomeDe} compacto />}
+              {abaModal === 'comprovacoes' && <ComprovacoesPainel pessoaId={pessoaFixo} nomeDe={nomeDe} compacto currentUser={currentUser} />}
               <div className="mt-3 flex justify-end">
                 <Button size="sm" onClick={() => { setPessoa(pessoaFixo); setModalAberto(false); }} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]">
                   <Send className="w-3.5 h-3.5 mr-1" /> distribuir tarefa pra {nomeDe(pessoaFixo).split(' ')[0]}
@@ -981,7 +981,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
 
       {/* ── 📸 AS COMPROVAÇÕES, em cima (dono: "têm que subir") ──────────── */}
       <div className="rounded-xl border border-white/15 p-3 sm:p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-        <ComprovacoesPainel nomeDe={nomeDe} />
+        <ComprovacoesPainel nomeDe={nomeDe} currentUser={currentUser} />
       </div>
 
       </div>

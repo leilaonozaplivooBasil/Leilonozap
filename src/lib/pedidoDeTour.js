@@ -32,4 +32,17 @@ export function ouvirPedidoDeTour(fn) {
 // naquele mapa; os que ainda não têm, o CrmMetodo ignora o pedido.
 export const TOURS_DISPONIVEIS = {
   'catalogo-crm': 'metodo',
+  // 🎮 09/09/2026 — dono: "devemos aplicar apenas a parte do X-GAME, não tem
+  // nexo levar para area de vendas, pedidos, produtos e etc." A mãozinha
+  // ensina o MÉTODO; a operação da loja (pedidos, produtos, vendedores,
+  // comissões, clientes indicados) fica de fora de propósito — e o Plano de
+  // Carreira junto, que é rede comercial, não X-GAME.
+  'catalogo-diario': 'diario',
+  // ❌ 'catalogo-guia' NÃO entra: o botão "Como Funciona" é escondido nessa
+  // aba de propósito (Licensing.jsx: `catalogSubTab !== 'catalogo-guia'`) —
+  // o Guia JÁ é o manual, não precisa de um botão que leva ao manual. Sem
+  // botão não há quem peça o tour, então registrar aqui só criaria um par
+  // solto: passos escritos que ninguém alcança.
+  'catalogo-xperformance': 'xperformance',
+  'catalogo-encontro': 'encontro',
 };

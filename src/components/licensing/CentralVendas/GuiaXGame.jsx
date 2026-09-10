@@ -7,6 +7,8 @@ import {
   ENDERECOS, FRASES_DO_RODAPE, MAPA_TOP_COLLEGE, DICA_TELA_INICIAL, progressoDasAulas,
 } from '@/lib/guiaXGame';
 import { vibrar, VIBRA_TOQUE, TOKEN_MAX, ligaDoToken, moedaModelo } from '@/lib/xgame';
+import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
+import useTourDaTela from '@/hooks/useTourDaTela';
 
 // 🪙 09/09/2026 — dono: "a moeda tem que aparecer aqui... como modelo, pra
 // explicar o modelo, pra ensinar as pessoas — ela tem que ter algum lugar."
@@ -237,7 +239,36 @@ function ChecklistDoPrimeiroDia({ itens }) {
   );
 }
 
+const PASSOS_TOUR_GUIA = [
+  {
+    alvo: 'guia-xgame',
+    titulo: 'O manual da casa, sempre aqui',
+    texto: 'Toda dúvida de "como funciona isso?" tem resposta nesta tela. Você não precisa perguntar pra ninguém pra continuar.',
+  },
+  {
+    alvo: 'progresso-aulas',
+    titulo: 'Quantas aulas você já viu',
+    texto: 'Este contador é seu, ninguém mais vê. Ele existe pra você saber de onde parar e continuar — não pra te cobrar.',
+  },
+  {
+    alvo: 'guia-atalhos',
+    titulo: 'Os atalhos que economizam o seu dia',
+    texto: 'As coisas que todo mundo demora pra descobrir sozinho estão listadas aqui. Vale ler uma vez com calma.',
+  },
+  {
+    alvo: 'guia-perguntas',
+    titulo: 'As dúvidas que todo mundo tem',
+    texto: 'Antes de perguntar no grupo, dá uma olhada aqui. Provavelmente alguém já perguntou — e a resposta já está escrita.',
+  },
+  {
+    alvo: 'guia-dicionario',
+    titulo: 'Human Token? MvM? Cotação?',
+    texto: 'O dicionário da casa. Cada palavra que a plataforma usa, explicada em uma linha.',
+  },
+];
+
 export default function GuiaXGame({ currentUser = null }) {
+  const [tourAberto, setTourAberto] = useTourDaTela('guia');
   const [aberta, setAberta] = useState(AULAS[0]?.id || null);
   const [lidas, setLidas] = useState(() => ler(CHAVE_LIDAS, []));
   const [letra, setLetra] = useState(() => ler(CHAVE_LETRA, 'm'));
@@ -361,6 +392,7 @@ export default function GuiaXGame({ currentUser = null }) {
         <a href={`https://${ENDERECOS.placar}`} target="_blank" rel="noreferrer" className="flex-1 min-w-[140px] text-center rounded-xl bg-white/10 hover:bg-white/20 px-3 py-2.5 font-bold text-white">Placar e ranking</a>
       </div>
       <p className="text-center text-[11px] text-white/30 tracking-wide pt-1">{FRASES_DO_RODAPE}</p>
+      <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_GUIA} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }

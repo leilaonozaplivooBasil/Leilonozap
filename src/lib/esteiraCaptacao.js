@@ -44,12 +44,35 @@ export function pendenciasParaEstagio(oportunidade, estagioId) {
 }
 
 /**
- * Resumo da esteira: valores por estágio, pipeline PONDERADO (Σ valor ×
- * probabilidade dos ativos) e fechado real (100%).
+ * 🔴 10/09/2026 — O ESTÁGIO É TEMPERATURA, NÃO DESCONTO NO DINHEIRO.
+ *
+ * Admin, em áudio, sobre a esteira: "quando aparece lá eu boto 50% fechado,
+ * ele tá entendendo que é 50% do VALOR, mas não, é 50% na DECISÃO... a esteira
+ * precisa identificar o teor do fechamento, o estar aquecido o fechamento do
+ * contrato ou não. Ela tá confundindo."
+ *
+ * 🔴 E ISSO JÁ TINHA CORROMPIDO O DADO. Como "Em esteira" só mostrava o valor
+ * PONDERADO, o time começou a digitar o dobro pra ver o número certo na tela:
+ * a negociação do Leandro Seder, de R$ 80.000, estava gravada como R$ 160.000
+ * pra que × 50% desse 80. Ou seja: a tela deixou de mentir e o BANCO passou a
+ * mentir — e todo relatório que lê o valor cru (a tabela "Conversão do time"
+ * logo abaixo, por exemplo) mostrava o dobro.
+ *
+ * Por isso `pipelineReal` passa a ser o número principal: o valor que a pessoa
+ * digita é o valor do negócio, ponto. `pipelinePonderado` continua existindo
+ * como PREVISÃO, mas nomeada e em segundo plano — nunca como manchete.
+ *
+ * ⚠️ E nenhum dos dois entra na conta da META. Ela se mede pelo dinheiro que
+ * ENTROU: somar intenção com dinheiro fazia a tela dizer "284% da meta" com
+ * R$ 200.000 na conta de uma meta de R$ 1 milhão (o real eram 20%).
+ *
+ * Resumo da esteira: valores por estágio, pipeline REAL (Σ valor dos ativos),
+ * pipeline PONDERADO (Σ valor × probabilidade) e fechado (100%).
  */
 export function resumoEsteira(oportunidades = []) {
   const porEstagio = Object.fromEntries(ESTAGIOS_ESTEIRA.map((e) => [e.id, { qtd: 0, valor: 0 }]));
   let ponderado = 0;
+  let real = 0;
   let fechado = 0;
   let ativas = 0;
   for (const o of oportunidades) {
@@ -58,9 +81,9 @@ export function resumoEsteira(oportunidades = []) {
     porEstagio[est.id].qtd += 1;
     porEstagio[est.id].valor += valor;
     if (ehFechada(o)) fechado += valor;
-    else if (ehAtiva(o)) { ponderado += valor * (est.prob / 100); ativas += 1; }
+    else if (ehAtiva(o)) { real += valor; ponderado += valor * (est.prob / 100); ativas += 1; }
   }
-  return { porEstagio, pipelinePonderado: ponderado, fechado, ativas };
+  return { porEstagio, pipelineReal: real, pipelinePonderado: ponderado, fechado, ativas };
 }
 
 /**
@@ -232,4 +255,66 @@ export function fechadoProvado(oportunidades = [], sales = []) {
     else declarado += valor;
   }
   return { naConta, declarado };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔁 DUPLICATA NA ESTEIRA — a mesma oportunidade lançada duas vezes
+// ═══════════════════════════════════════════════════════════════════════════
+// Relato do admin (09/09/2026): "o Luciano fechou 200 mil e não conseguiu
+// colocar no kanban dele. Eu fui lá e coloquei por ele através da minha conta
+// de admin. Mas depois o Luciano foi colocar na verificação do progresso dele,
+// duplicou o card."
+//
+// 🔴 E NÃO É SÓ POLUIÇÃO VISUAL: os dois cards somam. No print, o painel dizia
+// "Fechado (100%) R$ 400.000,00" e "304% da meta" quando o dinheiro real era
+// R$ 200.000. Duplicata na esteira DOBRA o fechado e infla o forecast.
+//
+// A causa é que "Nova oportunidade" sempre CRIA — não existia conferência
+// nenhuma, e a tabela não tem restrição de unicidade.
+//
+// ⚠️ E NÃO PODE TER TRAVA DURA, de propósito. O mesmo cliente aportando duas
+// vezes é receita, não erro; uma restrição no banco mataria isso em silêncio,
+// que é o pior desfecho possível. Por isso aqui a regra APONTA candidatas e
+// quem decide é a pessoa, com o que ela precisa saber na tela.
+
+/** A "impressão digital" do cliente: id > telefone > e-mail > nome. */
+const digitalDoCliente = (o = {}) => {
+  const uid = o.cliente_user_id ? `u:${o.cliente_user_id}` : '';
+  const tel = String(o.cliente_telefone || '').replace(/\D/g, '');
+  const email = String(o.cliente_email || '').trim().toLowerCase();
+  const nome = String(o.cliente_nome || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return { uid, tel: tel.length >= 8 ? tel.slice(-8) : '', email, nome };
+};
+
+/** É a mesma pessoa? Basta UM identificador forte bater. */
+export function mesmoCliente(a, b) {
+  const x = digitalDoCliente(a);
+  const y = digitalDoCliente(b);
+  if (x.uid && y.uid) return x.uid === y.uid;
+  if (x.tel && y.tel && x.tel === y.tel) return true;
+  if (x.email && y.email && x.email === y.email) return true;
+  return !!x.nome && x.nome === y.nome;
+}
+
+/**
+ * As oportunidades que PARECEM ser a mesma que está sendo criada.
+ *
+ * Critério: mesmo cliente + mesmo tipo. O VALOR de propósito NÃO entra —
+ * duplicata digitada à mão raramente tem o mesmo número, e foi assim que o
+ * caso do Renan passou (um card com anotação completa, outro só "fechado").
+ *
+ * ⚠️ `sem_interesse` fica FORA: negociação perdida e retomada depois é ciclo
+ * normal de vendas, não duplicata.
+ *
+ * @param oportunidades a esteira inteira
+ * @param nova o formulário sendo salvo
+ * @param ignorarId id a ignorar (ao EDITAR, a própria não é duplicata de si)
+ */
+export function possiveisDuplicatas(oportunidades = [], nova = {}, ignorarId = null) {
+  const lista = Array.isArray(oportunidades) ? oportunidades : [];
+  return lista.filter((o) => o
+    && o.id !== ignorarId
+    && o.estagio !== 'sem_interesse'
+    && String(o.tipo || '') === String(nova.tipo || '')
+    && mesmoCliente(o, nova));
 }

@@ -171,19 +171,30 @@ describe('DIR-31 — KPIs do Rank Premiado', () => {
 });
 
 describe('DIR-36 — 13º número: esteira de captação', () => {
-  test('fechado + ponderado contra a meta de R$ 1 mi, mesma conta do kanban', () => {
+  // 🔴 PREMISSA CORRIGIDA EM 10/09/2026 — este teste exigia `fechado +
+  // ponderado`, ou seja, dinheiro somado com INTENÇÃO. Com R$ 200 mil na conta
+  // e a esteira de verdade, o painel marcava 284% de uma meta de R$ 1 milhão;
+  // o real eram 20%. O admin apontou por áudio ("os números não estão
+  // batendo") e a decisão do dono foi separar: meta se mede pelo que ENTROU.
+  //
+  // O teste continua existindo e continua exigente — mudou o que ele exige.
+  test('só o que ENTROU conta na meta; a esteira vira contexto na fonte', () => {
     const kpis = calcularDashboardDiretoria({
       ref: REF,
       oportunidades: [
         { estagio: 'fechado_100', valor_previsto: 15000 },
-        { estagio: 'fechado_50', valor_previsto: 10000 },   // 5.000 ponderado
-        { estagio: 'sem_interesse', valor_previsto: 99999 }, // perdida: fora
+        { estagio: 'fechado_50', valor_previsto: 10000 },    // 10.000 em esteira, 5.000 ponderado
+        { estagio: 'sem_interesse', valor_previsto: 99999 }, // perdida: fora das duas contas
       ],
     });
     const kpi = kpis.find((k) => k.id === 'esteira_captacao');
-    assert.equal(kpi.realizado, 15000 + 5000);
+    assert.equal(kpi.realizado, 15000, 'intenção voltou a ser contada como dinheiro na meta');
     assert.equal(kpi.tipo, 'dado');
     assert.equal(kpi.meta, 1000000);
+    // O que está por vir não some — sai da manchete e vai pra fonte, nomeado.
+    assert.match(kpi.fonte, /10\.000/, 'a esteira sumiu do contexto');
+    assert.match(kpi.fonte, /5\.000/, 'a previsão ponderada sumiu do contexto');
+    assert.doesNotMatch(kpi.fonte, /99\.999/, 'a negociação perdida vazou pro contexto');
   });
 
   test('sem oportunidade nenhuma → R$ 0, dado (esteira vazia é fato, não falta de fonte)', () => {

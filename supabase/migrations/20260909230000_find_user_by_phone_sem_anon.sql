@@ -1,0 +1,48 @@
+-- 🔐 find_user_by_phone deixa de ser chamável por quem não fez login (09/09/2026).
+--
+-- Achado da auditoria noturna ("26 funções SECURITY DEFINER chamáveis sem
+-- login"), investigado uma a uma. Esta é a mais grave das 26, e a única que dá
+-- pra fechar HOJE com risco zero de quebrar tela.
+--
+-- O QUE ELA DEVOLVE, hoje, pra qualquer um com a chave `anon` — que vai no
+-- pacote do site e portanto é pública:
+--
+--     id, full_name, email, role, primary_career_level,
+--     referral_code, commission_balance, store_slug
+--
+-- 🔴 A partir de UM TELEFONE. E o casamento é pelos ÚLTIMOS 8 DÍGITOS, o que
+-- torna varredura viável: dá pra descobrir se um número está cadastrado, e daí
+-- tirar nome, e-mail, cargo, código de indicação e SALDO DE COMISSÃO da pessoa.
+-- Não é exposição teórica — é dado pessoal e financeiro por número de telefone.
+--
+-- POR QUE FECHAR AQUI NÃO QUEBRA NADA (conferido antes, não suposto):
+-- o único lugar do projeto que chama esta função é api/functions/waWebhook.js
+-- (o robô do WhatsApp reconhecendo quem está falando), e ele chama com a
+-- SERVICE ROLE KEY — que ignora grants por definição. Nenhuma tela do site
+-- chama. Revogar do `anon` e do `public` não tira nada de ninguém.
+--
+-- ⚠️ AS OUTRAS 25 NÃO ENTRAM AQUI DE PROPÓSITO: 17 delas são chamadas pelo
+-- front como `anon` (painéis de loja e distribuidor) — revogar derruba tela em
+-- produção. Elas precisam de uma decisão de arquitetura (rota de servidor com
+-- crachá, como já foi feito no cofre de áudio), não de um REVOKE. Está tudo
+-- classificado no relatório do dia.
+--
+-- 🔴 E POR QUE `authenticated` TAMBÉM ENTRA (acréscimo de 09/09, antes do merge):
+-- revogar só de `anon` e `public` fecharia DUAS das TRÊS portas. O grant real da
+-- função é:
+--
+--     =X/postgres | postgres=X | anon=X | authenticated=X | service_role=X
+--
+-- O login do site não é Supabase Auth (é localStorage + app_users), então a
+-- primeira leitura é que `authenticated` nunca aparece. Só que o projeto TEM
+-- Supabase Auth ligado — 35 contas em auth.users — e `plataformaAdapter.auth`
+-- ainda expõe `signInWithPassword`. Quem conseguir um token `authenticated`
+-- continuaria chamando a função pelo caminho de trás, e o revoke daria a
+-- impressão de resolvido sem resolver. Deixar assim é pior do que não ter feito.
+--
+-- Fechar as três é seguro pelo MESMO motivo que fechar `anon` é: NENHUMA tela
+-- do site chama esta função, em nenhum papel — só api/functions/waWebhook.js,
+-- com service role, que ignora grant. Tem teste cobrando as duas pontas.
+revoke execute on function public.find_user_by_phone(text) from anon;
+revoke execute on function public.find_user_by_phone(text) from authenticated;
+revoke execute on function public.find_user_by_phone(text) from public;

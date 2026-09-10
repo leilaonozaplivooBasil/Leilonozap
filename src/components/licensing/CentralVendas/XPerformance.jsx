@@ -14,7 +14,10 @@ import { HABITOS } from '@/lib/metodo';
 import { fixoDoParticipante } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
 import MensagemProCeo from '@/components/licensing/CentralVendas/MensagemProCeo';
+import PainelLaudo from '@/components/licensing/CentralVendas/PainelLaudo';
 import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
+import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
+import useTourDaTela from '@/hooks/useTourDaTela';
 
 // 🏛️ X-PERFORMANCE — a visão executiva do planejamento da diretoria.
 //
@@ -118,7 +121,26 @@ function Card({ item, onMover, onExcluir, ehValidador, meuId }) {
   );
 }
 
+const PASSOS_TOUR_XPERFORMANCE = [
+  {
+    alvo: 'grupo',
+    titulo: 'Onde você está, no todo',
+    texto: 'Antes dos seus números: esta é a estrutura da qual você faz parte. Entender o todo é o que faz o seu pedaço parar de parecer aleatório.',
+  },
+  {
+    alvo: 'pilar',
+    titulo: 'Os pilares — e por que eles importam pra você',
+    texto: 'Cada pilar é uma frente do negócio. O seu trabalho encosta em pelo menos um deles; saber qual ajuda a decidir onde investir a sua energia.',
+  },
+  {
+    alvo: 'valores',
+    titulo: 'Os valores não são enfeite de parede',
+    texto: 'Eles são o critério de decisão quando a resposta não é óbvia. Leia uma vez — a próxima decisão difícil fica mais fácil.',
+  },
+];
+
 export default function XPerformance({ currentUser, visaoTotal = false, gestao = false, hojeISO }) {
+  const [tourAberto, setTourAberto] = useTourDaTela('xperformance');
   const hoje = hojeISO || new Date().toISOString().slice(0, 10);
   const uid = currentUser?.id;
   // o cargo e o fixo moram no X-Game; esta tela busca, não guarda cópia — uma
@@ -385,6 +407,12 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
 
   return (
     <div className="space-y-5">
+      {/* 📄 10/09/2026 — a tela SÓ-LAUDO. Dono, escolhendo entre os caminhos:
+          "3. A". Quem precisa atender a reclamação lê o laudo aqui, sem a fila
+          do gestor e sem os botões de aprovar/reprovar — que mexeriam no dia
+          das pessoas. O próprio painel se esconde de quem não pode
+          (podeVerLaudo devolve null), então não há guarda duplicada aqui. */}
+      <PainelLaudo currentUser={currentUser} hojeISO={hoje} />
       {/* a trilha da pessoa numa linha; as três mentalidades explicadas ficam dobradas */}
       <Dobra id="mentalidades" titulo="Mentalidade" resumo={`a sua trilha hoje: ${trilha.nome} — ${trilha.lema.toLowerCase()} · ver as três`}>{blocoMentalidade}</Dobra>
       {/* 📨 09/09/2026 — DIR-106, dono: "a mensagem pro CEO, a mensagem pra
@@ -563,6 +591,7 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
           </p>
         )}
       </div>
+      <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_XPERFORMANCE} onFechar={() => setTourAberto(false)} />
     </div>
   );
 }

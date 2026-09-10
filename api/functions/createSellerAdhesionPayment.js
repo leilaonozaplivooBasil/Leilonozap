@@ -3,6 +3,7 @@
 // o crédito do saldo (seller_credit_balance) é feito pelo mpWebhook quando o pagamento é
 // aprovado — mesmo padrão de api/functions/createAdesaoPayment.js.
 import { oid } from '../_lib/oid.js';
+import { cpfValido, soDigitos } from '../../src/lib/cpf.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -28,6 +29,30 @@ export default async function handler(req, res) {
     if (!amount || amount < VALOR_MINIMO) return res.status(200).json({ success: false, error: `A primeira compra do vendedor é de no mínimo R$ ${VALOR_MINIMO}` });
     if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(200).json({ success: false, error: 'Mercado Pago não configurado' });
 
+    // 🪪 09/09/2026 — CARTÃO SEM CPF NÃO PASSA DAQUI.
+    //
+    // O QUE ACONTECIA: `payer.identification` só era enviado SE houvesse CPF.
+    // Sem CPF, a preferência ia pro Mercado Pago sem identificação do pagador
+    // — e cartão de R$ 1.497 no Brasil exige CPF. A página do MP tentava
+    // arrancar o dado na hora e o botão de pagar nunca habilitava. Do nosso
+    // lado tudo parecia bem: a preferência era criada, a URL era devolvida, a
+    // pessoa era redirecionada. O erro só aparecia pra ela, lá, sem volta.
+    //
+    // Aconteceu de verdade em 09/09: um cliente tentou duas vezes (17h56 e
+    // 18h34), cadastro com `cpf` NULL, as duas paradas em pending_payment.
+    //
+    // ⚠️ A TELA JÁ TRAVA O BOTÃO (VendedorCheckout.jsx), e mesmo assim esta
+    // trava existe: régua de tela é conveniência, não garantia — quem chama a
+    // rota direto passa por cima dela. E a recusa vem ANTES de criar a venda,
+    // pra não deixar `pending_payment` órfã de um checkout que nunca existiu.
+    if (useCard && !cpfValido(buyer_cpf)) {
+      return res.status(200).json({
+        success: false,
+        error: 'Informe um CPF válido para pagar com cartão — o Mercado Pago exige.',
+        campo: 'cpf',
+      });
+    }
+
     // 🔒 Endereço vem junto: a escrita direta do navegador no AppUser é bloqueada por RLS
     // (usuário custom, sem sessão autenticada no Supabase) — persiste aqui com service role.
     if (address) {
@@ -37,6 +62,10 @@ export default async function handler(req, res) {
           address_zip_code: address.zip, address_number: address.number, address_street: address.street,
           address_complement: address.complement, address_neighborhood: address.neighborhood,
           address_city: address.city, address_state: address.state,
+          // 🪪 o CPF conferido fica no cadastro: a próxima compra desta pessoa
+          // já sai com identificação, e a etiqueta da transportadora — que
+          // também depende dele — para de travar.
+          ...(cpfValido(buyer_cpf) ? { cpf: soDigitos(buyer_cpf) } : {}),
         }),
       }).catch(() => {});
     }

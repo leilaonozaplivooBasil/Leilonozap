@@ -2,47 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { Trophy, Flame, TrendingDown, Users, Coins, ArrowUpDown, Crown, ClipboardList, Handshake, Share2, ChevronDown } from 'lucide-react';
+import { vendasPorPessoa } from '@/lib/vendasDoCiclo';
 import {
   LIGAS, ligaDoToken, ligaComPortoesDoCiclo, OFENSIVA_META, inicioCicloOficial, dataISO, nomeExibicao, mvmManual, tokenDoCiclo,
   estudoFdsEmDia, estudoEmDia, travarTopoPorEstudo, TOKEN_MAX, moedaModelo, participantesVotaveis, resumoTimeHoje,
-  TICKET_MEDIO_VENDA, vendasEquivalentesAltoValor, textoCompartilharRanking, META_VENDAS_CICLO, PISO_CARATER_LIGA, PISO_CARATER_PLATINA,
+  textoCompartilharRanking, META_VENDAS_CICLO, PISO_CARATER_LIGA, PISO_CARATER_PLATINA,
 } from '@/lib/xgame';
 import { getFotoPerfil } from '@/lib/selosCargo';
-import { isVendaReal } from '@/lib/dinheiroReal';
-import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
-import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import MoedaPizza from './MoedaPizza';
 import { COMPONENTE_INFO } from '@/lib/moedaPizza';
-
-// 💰 10/09/2026 — auditoria noturna: o painel pessoal (CrmMetodo.jsx/
-// XGame.jsx) já busca as vendas REAIS da loja de cada um pro componente de
-// vendas do Human Token; este ranking nunca buscava — caía no proxy manual
-// (contagem de tarefa [VENDA]), podendo mostrar Liga/Token diferente do que
-// a própria pessoa vê no painel dela. Mesma conta do painel pessoal, EM
-// LOTE pro time inteiro (uma query só, não uma por pessoa).
-async function vendasReaisEmLote(ids, ini) {
-  if (!ids.length) return {};
-  const colunas = ['seller_id', 'licensee_id', 'anchor_id', 'owner_id'];
-  const [{ data: sales }, { data: oportunidades }] = await Promise.all([
-    supabase.from('catalog_sales')
-      .select('id,status,kind,created_date,total_amount,seller_id,licensee_id,anchor_id,owner_id')
-      .or(colunas.map((c) => `${c}.in.(${ids.join(',')})`).join(','))
-      .gte('created_date', `${ini}T00:00:00`),
-    supabase.from('captacao_oportunidades').select('responsavel_id,estagio,aporte_externo,fechado_em')
-      .in('responsavel_id', ids).gte('fechado_em', `${ini}T00:00:00`),
-  ]);
-  const porPessoa = {};
-  ids.forEach((uid) => {
-    const salesDe = (sales || []).filter((s) => colunas.some((c) => s[c] === uid));
-    const pagas = salesDe.filter(isSalePago);
-    const reais = salesDe.filter(isVendaReal);
-    const aporteExterno = (oportunidades || [])
-      .filter((o) => o.responsavel_id === uid && ehFechada(o) && aporteExternoValido(o))
-      .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
-    porPessoa[uid] = pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno;
-  });
-  return porPessoa;
-}
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 /** ANA SOUZA → AS. Pra quando ainda não tem foto — o círculo do pódio/tabela nunca fica vazio. */
 const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
@@ -228,7 +197,8 @@ export default function XGameVisaoExecutiva() {
       // votada com MVM alto." Esta coluna usava a MÉDIA do mvm_dia AUTOMÁTICO
       // (10 menos desconto por tarefa atrasada) — real time disfarçado de
       // MVM. Agora vem só da votação de verdade (xgame_votos_mvm) do ciclo.
-      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+      // 📄 TODOS os votos do ciclo, não os 1.000 primeiros — ver lerTudoDoSupabase.
+      lerTudoDoSupabase(() => supabase.from('xgame_votos_mvm').select('id,votado_id,virtude,nota').gte('data', ini)).then((data) => ({ data })),
       // 🏆 09/09/2026 — dono: "o MVM pesa muito na moeda... mas o real time
       // está pesando mais." Achado: o TOKEN/LIGA desta tabela vinha da média
       // de token_dia (mvm_dia AUTOMÁTICO + aplicabilidade) — um cálculo
@@ -242,7 +212,21 @@ export default function XGameVisaoExecutiva() {
       // pro role (super_admin opt-in) que decide quem é votável, e pra
       // nome/foto (substitui a query separada que existia mais abaixo).
       supabase.from('app_users').select('id,full_name,nickname,role,avatar_url,profile_photo_url'),
-    ]).then(async ([{ data }, { data: votos }, { data: participantes }, { data: usuarios }]) => {
+      // 💰 09/09/2026 — auditoria noturna: "o ranking do time não vê as
+      // mesmas vendas que o painel pessoal". Sem `vendasReais`, o
+      // `tokenDoCiclo` caía numa fonte DIFERENTE — as tarefas [VENDA]
+      // anotadas no dia — enquanto o painel de cada pessoa usava a venda
+      // de verdade. Quem vendeu e não anotou aparecia menor aqui do que no
+      // próprio painel; quem anotou sem vender, maior. E o Token decide
+      // liga e Platina, então a mesma pessoa tinha dois lugares no jogo.
+      //
+      // Duas consultas do CICLO INTEIRO, uma vez só, agrupadas depois por
+      // pessoa (vendasPorPessoa) — em vez de uma consulta por participante.
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,seller_id,licensee_id,anchor_id,owner_id')
+        .gte('created_date', `${ini}T00:00:00`),
+      supabase.from('captacao_oportunidades').select('responsavel_id,estagio,aporte_externo,fechado_em')
+        .gte('fechado_em', `${ini}T00:00:00`),
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }, { data: usuarios }, { data: vendas }, { data: oportunidades }]) => {
         if (!vivo) return;
         const usuariosPorId = new Map((usuarios || []).map((u) => [u.id, u]));
         // 🔢 10/09/2026 — dono, decidindo a população oficial de "o time" em
@@ -254,18 +238,18 @@ export default function XGameVisaoExecutiva() {
         (votos || []).forEach((v) => { (votosPor[v.votado_id] ||= []).push(v); });
         const perfilPor = {};
         (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
+        // a MESMA conta do painel pessoal (src/lib/vendasDoCiclo.js), agora
+        // para o time inteiro de uma vez.
+        const vendasPor = vendasPorPessoa({ sales: vendas, oportunidades });
 
         // 📊 10/09/2026 — auditoria noturna: "hoje" vinha da FOTOGRAFIA
         // diária (xgame_diario), só gravada quando a própria pessoa abre a
         // tela dela — atrasada por natureza (o mesmo sintoma que fazia os
-        // números da ADM e da Visão Executiva não baterem). Agora tarefas e
-        // vendas de hoje vêm AO VIVO, pra mesma população oficial.
-        const [{ data: tarefasHojeAoVivo }, vendasReaisPor] = await Promise.all([
-          idsVotaveis.length
-            ? supabase.from('metodo_tarefas').select('user_id,data,titulo,feito').eq('data', hoje).in('user_id', idsVotaveis)
-            : Promise.resolve({ data: [] }),
-          vendasReaisEmLote(idsVotaveis, ini),
-        ]);
+        // números da ADM e da Visão Executiva não baterem). Agora as
+        // tarefas de hoje vêm AO VIVO, pra mesma população oficial.
+        const { data: tarefasHojeAoVivo } = idsVotaveis.length
+          ? await supabase.from('metodo_tarefas').select('user_id,data,titulo,feito').eq('data', hoje).in('user_id', idsVotaveis)
+          : { data: [] };
         const tarefasHojePorPessoa = {};
         (tarefasHojeAoVivo || []).forEach((t) => { (tarefasHojePorPessoa[t.user_id] ||= []).push(t); });
 
@@ -328,9 +312,12 @@ export default function XGameVisaoExecutiva() {
             mvmVotacao: mvmDoVoto,
             perfil: perfilPor[r.user_id],
             // 💰 10/09/2026 — precisa da MESMA venda real que o painel
-            // pessoal usa, senão a Liga do ranking pode divergir da Liga
-            // que a própria pessoa vê no painel dela.
-            vendasReais: vendasReaisPor[r.user_id],
+            // pessoal usa (vendasDoCiclo.js), senão a Liga do ranking pode
+            // divergir da Liga que a própria pessoa vê no painel dela.
+            // `?? 0` e nunca `undefined`: quem não vendeu vendeu ZERO — passar
+            // undefined reativa o fallback das tarefas [VENDA] lá dentro, que
+            // é exatamente a divergência que esta correção veio acabar.
+            vendasReais: vendasPor[r.user_id] ?? 0,
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
           // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca

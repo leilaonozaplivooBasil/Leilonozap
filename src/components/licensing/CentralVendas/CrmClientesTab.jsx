@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 import { fmtBR, parseValorBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
@@ -325,7 +326,7 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // está vendo "só o meu" (como usuário) ou "tudo" (como Super Admin /
   // diretoria). Antes o dono via os dois misturados sem a tela dizer qual.
   // isSuperAdmin (= bypass do escopo de rede) agora só liga quando ele pediu.
-  const [escopo] = useEscopoDeVisao();
+  const [escopo, trocarEscopo] = useEscopoDeVisao();
   const visao = React.useMemo(() => resolverEscopo({ vis, escopo }), [vis, escopo]);
   const isSuperAdmin = visao.crmTudo;
   const networkIds = React.useMemo(
@@ -1307,6 +1308,34 @@ _Enviado via CRM Leilão NoZap_`;
 
   // 💵 DIR-40 — registrar aporte que entrou POR FORA (Santander/Itaú), com
   // carimbo de quem registrou e quando. Só quem vê dinheiro da empresa.
+  // 🗑️ 09/09/2026 — APAGAR CARD DUPLICADO DA ESTEIRA.
+  //
+  // Relato do admin: ele lançou o fechamento do Luciano pela conta de admin, o
+  // Luciano lançou de novo pela dele, e ficaram dois cards de R$ 200.000 —
+  // somando R$ 400.000 no painel, com o forecast a 304% da meta.
+  //
+  // 🔴 VAI POR ROTA DE SERVIDOR, e não por `entities.delete`, porque
+  // `captacao_oportunidades` tem RLS ligado e NENHUMA política de DELETE.
+  // Conferido no banco: um delete do navegador (que é sempre `anon`) apaga
+  // ZERO linhas e não devolve erro — a tela diria "apagado" e o card
+  // continuaria lá. É o PONTO 130 desta casa.
+  const handleApagarOportunidade = async (alvo) => {
+    if (!alvo?.id) return;
+    try {
+      const resp = await fetch('/api/functions/apagarOportunidade', {
+        method: 'POST',
+        headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ id: alvo.id, motivo: 'duplicado na esteira' }),
+      });
+      const j = await resp.json();
+      if (!j?.success) { toast.error(j?.error || 'Não foi possível apagar.'); return; }
+      toast.success(`Card de ${alvo.cliente_nome} apagado da esteira.`);
+      await loadOportunidades();
+    } catch (e) {
+      toast.error(String(e?.message || e));
+    }
+  };
+
   const handleRegistrarAporteExterno = async (existente, { banco, valor, data }) => {
     try {
       if (!vis.verDinheiroEmpresa) {
@@ -1481,11 +1510,15 @@ _Enviado via CRM Leilão NoZap_`;
     {
       chave: 'captacao', rotulo: 'Captação (meta R$ 1 mi)',
       valor: brl(captacao.total),
-      // DIR-36: o card mostra também o que está VINDO — forecast da esteira
-      sub: resumoEsteiraGeral.pipelinePonderado > 0
-        ? `faltam ${brl(captacao.faltam)} · ${brl(resumoEsteiraGeral.pipelinePonderado)} em esteira`
+      // DIR-36: o card mostra também o que está VINDO — a esteira.
+      // 🔴 10/09/2026: mostrava o valor PONDERADO com a etiqueta "em esteira",
+      // enquanto a tabela do time mostrava a soma crua com a MESMA etiqueta.
+      // Dois números com o mesmo nome na mesma tela — foi parte do "os números
+      // não estão batendo" do admin. Agora os dois falam a soma real.
+      sub: resumoEsteiraGeral.pipelineReal > 0
+        ? `faltam ${brl(captacao.faltam)} · ${brl(resumoEsteiraGeral.pipelineReal)} em esteira`
         : `faltam ${brl(captacao.faltam)}`,
-      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). "Em esteira" é o forecast ponderado das negociações ativas da Esteira de Captação — detalhe na seção Expansão.',
+      info: 'Aportes de parceiro de compra + vendas de adesões de cargo (dinheiro real). "Em esteira" é a soma real das negociações ativas da Esteira de Captação (o estágio é a temperatura da decisão, não desconto no valor) — detalhe na seção Expansão.',
     },
   ];
 
@@ -1876,8 +1909,12 @@ _Enviado via CRM Leilão NoZap_`;
               clientesManuais={metodoEscopo.clientes}
               currentUser={currentUser}
               visaoTotal={isSuperAdmin}
+              escopoParcial={visao.podeTudo && !visao.crmTudo}
+              onVerTudo={() => trocarEscopo('tudo')}
               onSalvar={handleSalvarOportunidade}
               onRegistrarAporteExterno={handleRegistrarAporteExterno}
+              onApagar={handleApagarOportunidade}
+              podeApagar={isSuperAdmin}
               podeRegistrarAporte={vis.verDinheiroEmpresa}
               clientePreenchido={clientePreenchido}
               onClientePreenchidoConsumido={() => setClientePreenchido(null)}

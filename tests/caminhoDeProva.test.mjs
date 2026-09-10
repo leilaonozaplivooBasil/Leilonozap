@@ -70,7 +70,11 @@ test('UploadFile passa TODO caminho pela peneira, não só o automático', () =>
 test('o modal monta os dois caminhos pelo helper, sem template fixo', () => {
   const src = semComentarios(CRM);
   assert.ok(src.includes("caminhoDeProva({ pasta: 'prints'"), 'print voltou ao caminho fixo');
-  assert.ok(src.includes("caminhoDeProva({ pasta: 'rituais'"), 'ritual voltou ao caminho fixo');
+  // 09/09 — o vídeo do ritual passou a ir pro cofre PRIVADO, e o caminho dele
+  // agora vem de `caminhoDoVideo`, que chama o mesmo `caminhoDeProva` por
+  // dentro (cofreDeAudio.js). A garantia é a mesma — não há template fixo —,
+  // mudou só quem monta.
+  assert.ok(src.includes("caminhoDoVideo({ pasta: 'rituais'"), 'ritual voltou ao caminho fixo');
   assert.ok(!src.includes('`xgame/prints/'), 'sobrou template fixo do print');
   assert.ok(!src.includes('`xgame/rituais/'), 'sobrou template fixo do ritual');
 });

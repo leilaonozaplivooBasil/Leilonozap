@@ -322,12 +322,36 @@ async function _routeWrite(table, action, id, payload) {
   //
   // Agora quem não é operador salva O PRÓPRIO cadastro por uma rota de servidor,
   // com lista fechada de campos e identidade tirada do crachá de sessão.
-  if (!op && table === 'app_users' && action === 'update') {
-    let eu = null;
-    try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem cache */ }
-    // Só o próprio cadastro. Editar o de outra pessoa continua sendo coisa de
-    // operador — e o servidor recusa de qualquer jeito, pelo crachá.
-    if (!eu?.id || String(eu.id) !== String(id)) return { _skip: true };
+  // 🔴 09/09/2026 — E QUEM É OPERADOR NÃO CONSEGUIA EDITAR A PRÓPRIA FOTO.
+  //
+  // Relato: a Iara (loja física) tentou trocar a foto do perfil e levou
+  // "Erro ao atualizar perfil: Apenas admin pode editar usuários". Dono: "isso
+  // deve ser padrão para todos, alterar a própria foto é ok."
+  //
+  // A condição era `!op` — ou seja, o desvio para a rota do próprio cadastro só
+  // valia pra quem NÃO é operador. Quem tem cargo de estoque (distribuidor,
+  // loja física, ponto de retirada) ou é admin_financeiro caía no
+  // `adminUpdateUser`, que exige admin/super_admin — e tomava a recusa. Estava
+  // ao contrário: o cliente comum salvava o próprio cadastro, o operador não.
+  // Eram 10 pessoas ativas na mesma situação, não só a Iara.
+  //
+  // A pergunta certa nunca foi "você é operador?", e sim "este cadastro é
+  // SEU?". Editar o próprio perfil é de todo mundo.
+  //
+  // ⚠️ ADMIN CONTINUA PELO CAMINHO ANTIGO, DE PROPÓSITO: `atualizarMeuCadastro`
+  // tem lista fechada de campos (MEUS_CAMPOS: foto, apelido, telefone,
+  // endereço) e NÃO inclui role nem career_levels. Se admin fosse desviado pra
+  // cá, editar o próprio cargo pelo Painel de Controle passaria a sumir em
+  // silêncio — trocaria um bug por outro.
+  // ⚠️ A CONDIÇÃO PRECISA INCLUIR "é o meu cadastro" AQUI EM CIMA, não lá
+  // dentro: operador editando OUTRA pessoa tem que seguir pelo caminho de
+  // baixo, como sempre seguiu. Se entrasse aqui e caísse num `_skip`, a escrita
+  // sumiria calada — que é exatamente o PONTO 130 descrito acima, de volta.
+  const _souAdmin = ['admin', 'super_admin'].includes(op?.role);
+  let _eu = null;
+  try { _eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem cache */ }
+  const _ehMeuCadastro = !!_eu?.id && String(_eu.id) === String(id);
+  if (!_souAdmin && _ehMeuCadastro && table === 'app_users' && action === 'update') {
     try {
       const resp = await fetch('/api/functions/atualizarMeuCadastro', {
         method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),

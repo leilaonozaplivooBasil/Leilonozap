@@ -27,7 +27,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  ordenarPorHora, horaEntre, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -38,18 +38,16 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, deveAvisarRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import TourGuiado from './TourGuiado';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
-import { isVendaReal } from '@/lib/dinheiroReal';
-import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
+import { vendasDaPessoa } from '@/lib/vendasDoCiclo';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
-import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import { BarraProgresso } from './VerificacaoUI';
 import EntradaComDestinos from './EntradaComDestinos';
@@ -62,10 +60,13 @@ import {
 } from '@/lib/rotinaPessoal';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
-import { caminhoDoAudio, guardarAudio } from '@/lib/cofreDeAudio';
+import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
+import { frameEmBase64 } from '@/lib/frameEmBase64';
+import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import FaixaVisao from './FaixaVisao';
@@ -73,6 +74,7 @@ import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
 import SinoNotificacoes from '@/components/common/SinoNotificacoes';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 // DIR-46 — cor da faixa de probabilidade na lista
 const COR_FAIXA = { quente: 'text-nz-verde', morno: 'text-amber-600', frio: 'text-nz-tinta-fraca' };
@@ -106,6 +108,13 @@ const fmtDia = (s) => new Date(`${s}T12:00:00`).toLocaleDateString('pt-BR', { we
 // metodo_tarefas_unique_user_data_hora_titulo); aqui só troca o
 // insert-um-a-um por um upsert em lote que IGNORA a duplicata em vez de
 // tentar criar (ou quebrar tentando) — nunca mais 40 tarefas no lugar de 20.
+// 🕐 mesma convenção do DistribuirTarefa: `ordem` é o minuto do dia, então a
+// lista é cronológica por construção mesmo quando alguém ordena por `ordem`.
+const ordemPelaHoraDoDia = (hhmm) => {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hhmm || '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 2000;
+};
+
 const criarTarefasSemDuplicar = (linhas) => supabase.from('metodo_tarefas')
   .upsert(linhas, { onConflict: 'user_id,data,hora,titulo', ignoreDuplicates: true });
 
@@ -220,7 +229,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const carregarTarefas = useCallback(() => {
     if (!uid) return;
     plataforma.entities.MetodoTarefa.filter({ user_id: uid, data: dia })
-      .then((rows) => { setTarefas((Array.isArray(rows) ? rows : []).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.hora).localeCompare(String(b.hora)))); setDiaLido(dia); })
+      // 🕐 09/09/2026 — A HORA MANDA. Aqui estava o inverso: ordenava por
+      // `ordem` e só desempatava por `hora`. Como toda tarefa nova nascia com
+      // `ordem` = fim da fila, uma tarefa marcada pras 08:00 entrava depois das
+      // 22h — na Lista E na Jornada, que são a MESMA linha (ver destinos.js).
+      // E lista fora de ordem cronológica faz `estadoDasTarefas` marcar como
+      // PERDIDA uma tarefa que está acontecendo agora (ver ordenarPorHora).
+      .then((rows) => { setTarefas(ordenarPorHora(Array.isArray(rows) ? rows : [])); setDiaLido(dia); })
       .catch(() => { setTarefas([]); setDiaLido(dia); });
   }, [uid, dia]);
   useEffect(() => { setDiaLido(null); }, [dia]);
@@ -382,12 +397,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         .gte('fechado_em', `${ini}T00:00:00`),
     ]).then(([{ data: sales, error: e1 }, { data: oportunidades, error: e2 }]) => {
       if (e1 || e2) { setVendasCiclo(null); return; }
-      const pagas = (sales || []).filter(isSalePago);
-      const reais = (sales || []).filter(isVendaReal);
-      const aporteExterno = (oportunidades || [])
-        .filter((o) => ehFechada(o) && aporteExternoValido(o))
-        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
-      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+      // 💰 09/09/2026 — a fórmula saiu daqui pro src/lib/vendasDoCiclo.js. Ela
+      // não mudou: é a MESMA conta, agora num lugar só, porque a Visão
+      // Executiva do time precisa dela também (achado da auditoria noturna — o
+      // ranking via uma fonte de vendas diferente da que a pessoa via no
+      // próprio painel). Fórmula duplicada é como as duas telas se separaram.
+      setVendasCiclo(vendasDaPessoa({ sales, oportunidades }));
     });
   }, [painel, uid, cicloConfig]);
   // 🗳️ F3 — MvM MANUAL: colegas do jogo, meus votos de hoje e o que recebi no ciclo
@@ -582,7 +597,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // voto (tokenDoCiclo) do painel pessoal — por isso precisa do perfil.
     Promise.all([
       supabase.from('xgame_diario').select('user_id,data,pontos,detalhes').eq('ciclo_inicio', ini),
-      supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').gte('data', ini),
+      // 📄 TODOS os votos do ciclo, não os 1.000 primeiros — ver lerTudoDoSupabase.
+      lerTudoDoSupabase(() => supabase.from('xgame_votos_mvm').select('id,votado_id,virtude,nota').gte('data', ini)).then((data) => ({ data })),
       supabase.from('xgame_participantes').select('user_id,perfil'),
     ]).then(async ([{ data }, { data: votos }, { data: participantes }]) => {
         const votosPor = {};
@@ -809,8 +825,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const tarefaRitualHoje = useMemo(() => tarefas.find((x) => ehTarefaDeGratidao(x.titulo)), [tarefas]);
   const mostrarAvisoRitual = ehHoje && !avisoRitualFechado
     && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito });
+  // 🧾 10/09/2026 — AS FALHAS PRECISAM ATRAVESSAR AS TENTATIVAS.
+  //
+  // Quando a IA está fora do ar, `avaliarComIA` volta cedo e NÃO grava
+  // comprovação nenhuma: a tentativa some sem deixar marca. Quando o envio da
+  // imagem falha, idem. Guardando num ref por tarefa, a falha da 1ª tentativa
+  // ainda está lá pra entrar na comprovação que a 3ª tentativa finalmente
+  // gravar — que é exatamente a história que o laudo precisa contar.
+  //
+  // Ref, e não estado: isto não desenha nada, e re-renderizar a lista inteira
+  // a cada falha técnica seria pior que o problema.
+  const falhasPorTarefa = useRef({});
+  const anotarFalhaDaTarefa = useCallback((tarefaId, o_que, erro) => {
+    if (!tarefaId) return;
+    falhasPorTarefa.current[tarefaId] = comFalha(falhasPorTarefa.current[tarefaId], { o_que, erro });
+  }, []);
+  /** Some com o rastro depois que ele já foi gravado na comprovação. */
+  const limparFalhasDaTarefa = useCallback((tarefaId) => { delete falhasPorTarefa.current[tarefaId]; }, []);
+
   const concluirRitual = async (t, { gratidao, acao, videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, transcricaoGratidao, audioAcao, tempoTelaS }) => {
     setRitualId(null);
+    // 🧾 10/09/2026 — O RASTRO. Falha técnica durante a entrega vira registro,
+    // não console.error. Sem isto, quem abre o laudo depois vê "reprovada" e
+    // conclui mal uso — foi exatamente o que aconteceria com a Iara hoje, cuja
+    // manhã tinha onze envios de vídeo voltando 413 sem deixar marca nenhuma.
+    const falhasDaEntrega = () => falhasPorTarefa.current[t.id] || [];
+    const anotarFalha = (o_que) => (erro) => anotarFalhaDaTarefa(t.id, o_que, erro);
     // 🧪 MODO DEV: o ritual roda inteiro, mas nada sobe nem grava
     if (modoDev) {
       setDevMarcas((prev) => ({ ...prev, [t.id]: { feito: true, comprovacao: { tipo: 'ritual', valido: true, status: 'aprovada_ritual', dev: true, gratidao, acao, entrega: gratidao, quando: new Date().toISOString() } } }));
@@ -828,6 +868,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         tipo: 'ritual', gratidao, acao, entrega: gratidao,
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
         veredito_ia: { veredito: 'reprovada', confianca: 100, o_que_viu: '', motivo: `Ritual perdido — passou do prazo de ${horaDeMin(RITUAL_FIM_MIN)}.` },
+  ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
       };
       try {
         await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPerdida });
@@ -837,31 +878,48 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return;
     }
     const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
-    // 🎥 o vídeo da visualização é a comprovação — sobe pro cofre de provas
-    let videoUrl = '';
+    // 🎥 o vídeo da visualização é a comprovação — vai pro cofre PRIVADO.
+    //
+    // 🔴 09/09 — antes ia pro `public-assets` via Core.UploadFile, que é
+    // `public = true`: a gravação do rosto de alguém meditando às 6h da manhã
+    // ficava aberta por link, sem login. A tela promete "só você e o gestor
+    // veem"; agora isso é verdade. Voz é íntimo, imagem é identificável.
+    let videoPath = '';
     if (videoBlob) {
-      try {
-        const up = await plataforma.integrations.Core.UploadFile({
-          file: new File([videoBlob], `ritual_${hojeStr()}.webm`, { type: videoBlob.type || 'video/webm' }),
-          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'webm' }),
-        });
-        videoUrl = up?.file_url || up?.url || '';
-      } catch { videoUrl = ''; }
+      videoPath = await guardarVideo({
+        blob: videoBlob,
+        caminho: caminhoDoVideo({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, mime: videoBlob.type }),
+        actorId: uid,
+        aoFalhar: anotarFalha('video'),
+      }) || '';
+      // 🔴 10/09/2026 — GUARDAR PODE FALHAR, MAS NÃO PODE FALHAR CALADO.
+      //
+      // Best-effort está certo: ninguém perde o ritual das 5h porque o cofre
+      // piscou. Silêncio ABSOLUTO é que estava errado — em 10/09 o envio
+      // voltava 413 em toda tentativa e a tela não dizia nada, então cinco
+      // pessoas gravaram de novo, e de novo, achando que era erro delas.
+      // O ritual segue valendo; o que a pessoa ganha aqui é a verdade.
+      if (!videoPath) {
+        toast.error('O ritual foi registrado, mas não consegui guardar a gravação. Não precisa refazer — já avisei o time.', { duration: 7000 });
+      }
     }
     // 🏠 09/09/2026 — dono: "não pode ser no carro, na academia, no
     // escritório — tem que ser em casa. A IA tem que ser foda nisso." O
     // MESMO validador que já julga print/foto (xgameValidarPrint) olha um
     // frame do vídeo, com uma regra nova pro tipo 'ritual': ambiente de casa.
+    //
+    // 🔐 09/09/2026 — O FRAME NÃO SOBE MAIS PRO BUCKET PÚBLICO. Ele ia pro
+    // `public-assets` (que é `public = true`) só pra existir uma URL que a IA
+    // conseguisse buscar: o rosto de alguém dentro da própria casa, às 5h da
+    // manhã, em link aberto e sem validade. Eram 5 lá, crescendo um por dia.
+    // Agora vai INLINE na chamada e morre com ela — não vira objeto, não vira
+    // link, não vira linha em lugar nenhum (ver src/lib/frameEmBase64.js).
     let vereditoAmbiente = null;
     if (frameBlob) {
       try {
-        const upFrame = await plataforma.integrations.Core.UploadFile({
-          file: new File([frameBlob], `ritual_frame_${hojeStr()}.jpg`, { type: 'image/jpeg' }),
-          path: caminhoDeProva({ pasta: 'rituais', uid, dia: hojeStr(), tarefaId: t.id, ext: 'jpg' }),
-        });
-        const frameUrl = upFrame?.file_url || upFrame?.url || '';
-        if (frameUrl) {
-          const r = await plataforma.functions.xgameValidarPrint({ image_url: frameUrl, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
+        const frameB64 = await frameEmBase64(frameBlob);
+        if (frameB64) {
+          const r = await plataforma.functions.xgameValidarPrint({ image_b64: frameB64, tipo: 'ritual', titulo: t.titulo, hora: t.hora, data: hojeStr() });
           if (r && ['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) vereditoAmbiente = r;
         }
       } catch { /* sem julgamento de ambiente — a IA fora do ar não pode travar o ritual */ }
@@ -882,10 +940,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       const comprovacaoReprovada = {
         tipo: 'ritual', gratidao, acao,
         entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-        ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+        // ⚠️ 09/09 — este bloco (DIR-125, reprovação por ambiente) nasceu no
+        // main DEPOIS que o cofre foi escrito, então ainda falava `videoUrl`.
+        // O git juntou os dois sem conflito e a variável tinha sumido: dava
+        // ReferenceError na hora de reprovar alguém pelo ambiente.
+        ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
         tempo_tela_s: tempoTelaS || 0,
+  ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
         quando: new Date().toISOString(), valido: false, status: 'reprovada',
-        motivo_gestor: vereditoAmbiente.motivo,
+        // 🏷️ 09/09/2026 — auditoria noturna: aqui ficava
+        // `motivo_gestor: vereditoAmbiente.motivo`. Nenhum humano decidiu
+        // esta reprovação — foi a IA, sozinha (DIR-125). E `motivo_gestor` é
+        // lido na tela com a etiqueta "gestor:" (XGameAdmin) e "↩"
+        // (Comprovacoes), ou seja: o histórico dizia que uma pessoa julgou o
+        // ambiente de outra quando ninguém julgou. Quem lê isso semanas
+        // depois — a própria pessoa ou a gestão — tira a conclusão errada.
+        //
+        // Nada se perde tirando: o texto da IA já viaja em `veredito_ia.motivo`
+        // e a tela já o mostra rotulado como "IA:" (Comprovacoes.jsx:231).
+        // Antes, aparecia duas vezes — uma delas com o crédito trocado.
         veredito_ia: vereditoAmbiente,
       };
       try {
@@ -918,7 +991,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // selo "BRILHANTE". Fora do prazo nem chega aqui — já voltou como
     // perdido acima; ambiente errado ou em dúvida nem chega aqui — já
     // voltou reprovado automático acima (DIR-125).
-    const aprovadoDireto = naJanela && !!videoUrl;
+    const aprovadoDireto = naJanela && !!videoPath;
     const comprovacao = {
       // ⚠️ `entrega` é o que o Diário de Bolso lê (diarioDeBolso.js: textoEFonte).
       // Com o áudio valendo sozinho, `gratidao` pode vir VAZIO — e aí o diário
@@ -927,7 +1000,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // ouvir do lado. O que não pode é o dia dela virar uma linha vazia.
       tipo: 'ritual', gratidao, acao,
       entrega: gratidao || transcricaoGratidao || (audioGratidao ? '🎙️ gratidão gravada em áudio' : ''),
-      ...(videoUrl ? { video_url: videoUrl, video_seg: gravSeg || 0 } : {}),
+      ...(videoPath ? { video_path: videoPath, video_seg: gravSeg || 0 } : {}),
       // 🎙️ como o texto entrou — decisão do dono de 09/09: áudio conta como
       // "as suas palavras", COM a origem registrada. Não é desconfiança: é
       // deixar a gestão enxergar o que aconteceu sem ter que adivinhar.
@@ -942,16 +1015,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(vozGratidao ? { audio_gratidao_path: vozGratidao } : {}),
       ...(vozAcao ? { audio_acao_path: vozAcao } : {}),
       tempo_tela_s: tempoTelaS || 0,
+      ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ritual',
       veredito_ia: {
         veredito: 'aprovada', confianca: 100,
-        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoUrl ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
-        motivo: aprovadoDireto ? '' : (!videoUrl ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
+        o_que_viu: `Ritual do Amanhecer completo (gratidão + sonho + ação${videoPath ? ` + visualização gravada de ${gravSeg || 0}s` : ''}; ${tempoTelaS || 0}s de tela)`,
+        motivo: aprovadoDireto ? '' : (!videoPath ? 'ritual sem o vídeo da visualização' : `ritual antes da abertura da janela (${horaDeMin(RITUAL_INICIO_MIN)})`),
       },
     };
     try {
       await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      limparFalhasDaTarefa(t.id); // já está gravado na comprovação — não repete na próxima
       setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
       if (ehHoje && xgame) {
         const pts = Math.round(15 * (xgame.cotacao || 1));
@@ -1008,6 +1083,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
     if (decisao.acao === 'ia_fora') {
       const det = ia?.details ? ` (${ia.details.status || 'erro'}${ia.details.model ? ` · ${ia.details.model}` : ''})` : '';
+      // 🧾 esta tentativa NÃO grava comprovação — some sem deixar marca. A
+      // falha fica no ref e entra na comprovação que a próxima tentativa
+      // gravar: é o que separa "a pessoa não entregou" de "a IA estava fora".
+      anotarFalhaDaTarefa(t.id, 'ia', `IA fora do ar${det}`);
       setComprovando({ ...comprovando, enviando: false, pergunta: null,
         erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto NÃO foi descartada, tenta de novo em 1 minuto. Sem a IA conferir, a tarefa não conclui.` });
       return;
@@ -1037,6 +1116,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
       ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
       entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
+      ...rastroDa({ anterior: t.comprovacao, iaIndisponivel: !!ia?.ia_indisponivel, falhas: falhasPorTarefa.current[t.id] || [] }),
       quando: new Date().toISOString(), valido: true,
       status: 'aprovada_ia',
       veredito_ia: { veredito: ia.veredito, confianca: ia.confianca ?? 0, o_que_viu: ia.o_que_viu || '', motivo: ia.motivo || '' },
@@ -1048,6 +1128,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setComprovando(null);
     try {
       await plataforma.entities.MetodoTarefa.update(t.id, { feito: true, comprovacao });
+      limparFalhasDaTarefa(t.id); // já está gravado na comprovação — não repete na próxima
       setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: true, comprovacao } : x)));
       if (ehHoje && xgame) {
         const est = estadoDaTarefa(t);
@@ -1114,6 +1195,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // 🗣️ o `catch` era vazio: engolia a mensagem do Storage e todo mundo via a
       // mesma frase genérica. Sem o motivo real, ninguém consegue diagnosticar.
       const motivo = e?.message ? ` (${e.message})` : '';
+      anotarFalhaDaTarefa(t.id, 'print', e?.message || 'envio da imagem falhou');
       setComprovando({ ...comprovando, enviando: false, erro: `Erro ao enviar a imagem — tente de novo.${motivo}` });
       return;
     }
@@ -1136,6 +1218,49 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(dados.audioResumo ? { entradaResumo: 'audio' } : {}),
       ...(vozResumo ? { audioResumoPath: vozResumo } : {}),
     });
+  };
+
+  // 🖐️ ARRASTAR PARA REORGANIZAR — dono, 09/09/2026: "as tarefas podem também
+  // agora conter um botão de arrastar para que possamos reorganizá-las
+  // arrastando para cima ou para baixo de forma fluida".
+  //
+  // 🔴 ARRASTAR REMARCA A HORA, e isso é decisão, não efeito colateral. Soltar
+  // sem mexer na hora recriaria o bug do #312: a lista fica fora de ordem
+  // cronológica e `estadoDasTarefas` passa a marcar como PERDIDA uma tarefa que
+  // está acontecendo agora — mexendo em X-Pay e na zeragem do dia. Aqui a
+  // tarefa recebe a hora do lugar onde foi solta, e a lista continua sempre em
+  // ordem de relógio.
+  //
+  // ⚠️ SEM CONTA DE ÍNDICE GLOBAL, de propósito. O arrasto cruza períodos
+  // (manhã → tarde), e casar índice local do grupo com índice global da lista é
+  // justamente o tipo de conta que gerou o bug de hoje. Aqui a tela só olha
+  // QUEM FICOU ACIMA e QUEM FICOU ABAIXO no período de destino e pergunta a
+  // hora pra `horaEntre` — duas entradas, nenhum índice pra errar.
+  const aoSoltarTarefa = async ({ source, destination, draggableId }) => {
+    if (!destination) return; // soltou fora
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    const movida = tarefasJogo.find((t) => t.id === draggableId);
+    if (!movida?.hora) return; // sem hora fica fora da Jornada de propósito
+    const doDestino = tarefasJogo.filter((t) => periodoDe(t.hora) === destination.droppableId && t.id !== draggableId);
+    const acima = doDestino[destination.index - 1] || null;
+    const abaixo = doDestino[destination.index] || null;
+    const nova = horaEntre(acima?.hora || null, abaixo?.hora || null);
+    if (!nova || nova === movida.hora) return; // nada a gravar
+    // ⚠️ Quando não coube minuto entre as vizinhas, `horaEntre` devolve a hora
+    // da de cima. Aí quem decide a posição é `ordem` (ordenarPorHora desempata
+    // por ela), então a movida precisa vir logo DEPOIS da de cima.
+    const ordem = (nova === acima?.hora) ? Number(acima.ordem ?? 0) + 1 : ordemPelaHoraDoDia(nova);
+    const antes = tarefas;
+    setTarefas((prev) => ordenarPorHora(prev.map((x) => (x.id === movida.id ? { ...x, hora: nova, ordem } : x))));
+    const { error } = await supabase.from('metodo_tarefas').update({ hora: nova, ordem }).eq('id', movida.id);
+    if (error) {
+      // 🔴 Sem isto a tela mostrava a tarefa no lugar novo e o banco ficava com
+      // o antigo — a pessoa recarrega e "voltou sozinha". Volta e avisa.
+      setTarefas(antes);
+      toast.error('Não deu pra mover a tarefa. Tente de novo.');
+      return;
+    }
+    toast.success(`Movida para as ${nova}`);
   };
 
   const alternarFeito = async (t) => {
@@ -1302,12 +1427,27 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
   const [previaEdicaoAberta, setPreviaEdicaoAberta] = useState(false);
+  // 🔴 10/09/2026 — DAR HORA A UMA TAREFA TEM QUE MOVER ELA DE LUGAR.
+  //
+  // Antes, isto trocava a hora com um `.map()` — que preserva a POSIÇÃO — e
+  // não mexia na `ordem`. No vídeo do dono: a tarefa recebeu 09:15 e continuou
+  // desenhada DEPOIS da de 10:30, no fim da manhã. Só voltava pro lugar
+  // recarregando a página, porque é no carregamento que a lista passa por
+  // `ordenarPorHora`. Daí a impressão de "sou obrigado a arrastar".
+  //
+  // Duas coisas, e as duas importam:
+  //   • reordenar a lista na hora — o `.map()` sozinho não move nada;
+  //   • gravar a `ordem` nova. Sem isso a tarefa carrega pra sempre a `ordem`
+  //     que ganhou quando nasceu sem hora, e todo empate de horário é
+  //     desempatado pelo número errado — inclusive depois de arrastar.
   const salvarEdicao = async (t) => {
     const titulo = String(edicao.titulo || '').trim();
     if (!titulo) { toast.error('O título não pode ficar vazio — pra tirar, use a lixeira.'); return; }
-    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, titulo, hora: edicao.hora || '' } : x)));
+    const hora = edicao.hora || '';
+    const ordem = ordemPelaHoraDoDia(hora);
+    setTarefas((prev) => ordenarPorHora(prev.map((x) => (x.id === t.id ? { ...x, titulo, hora, ordem } : x))));
     setEditandoId(null);
-    try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora: edicao.hora || '' }); }
+    try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora, ordem }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
   };
   // 🔮 DIR-91 — mudou a hora? mostra a prévia da Jornada antes de gravar.
@@ -2283,17 +2423,30 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 agoraMin={ehHoje ? agoraMinJogo : null}
               />
             ) : (
-              PERIODOS.map((p) => {
+              /* 🖐️ 09/09/2026 — ARRASTAR PARA REORGANIZAR. Um Droppable por
+                 período, todos do mesmo `type`, pra dar pra mover da manhã pra
+                 tarde. A hora é remarcada no soltar (ver aoSoltarTarefa). */
+              <DragDropContext onDragEnd={aoSoltarTarefa}>
+              {PERIODOS.map((p) => {
                 const doPeriodo = tarefasJogo.filter((t) => periodoDe(t.hora) === p.id);
                 if (doPeriodo.length === 0) return null;
                 return (
                   <div key={p.id}>
                     <p className="text-xs font-semibold text-nz-tinta-fraca uppercase tracking-wide mb-1.5">{p.label}</p>
-                    <div className="space-y-1.5">
-                      {doPeriodo.map((t) => {
+                    <Droppable droppableId={p.id} type="tarefa">
+                    {(areaSoltar) => (
+                    <div className="space-y-1.5" ref={areaSoltar.innerRef} {...areaSoltar.droppableProps}>
+                      {doPeriodo.map((t, iNoPeriodo) => {
                         const guia = guiaDaRotina(t.titulo);
                         return (
-                          <div key={t.id} className={`border-b border-nz-borda/35 py-3 ${t.feito ? 'opacity-70' : ''}`}>
+                          <Draggable key={t.id} draggableId={String(t.id)} index={iNoPeriodo} isDragDisabled={!t.hora}>
+                          {(arrasto, estadoArrasto) => (
+                          <div
+                            ref={arrasto.innerRef}
+                            {...arrasto.draggableProps}
+                            style={arrasto.draggableProps.style}
+                            className={`border-b border-nz-borda/35 py-3 ${t.feito ? 'opacity-70' : ''} ${estadoArrasto.isDragging ? 'rounded-lg bg-nz-verde-fundo shadow-lg ring-1 ring-nz-verde/40' : ''}`}
+                          >
                             {/* 📱 DIR-80 — DOIS ANDARES NO CELULAR.
                                 Antes título e ações dividiam a MESMA linha: no
                                 celular sobrava uma coluna estreita pro título,
@@ -2306,6 +2459,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 filhos voltam a ser itens diretos da linha —
                                 exatamente como era. Zero mudança no desktop. */}
                             <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1.5 sm:flex-nowrap sm:items-center">
+                              {/* 🖐️ o punho. Só ele arrasta: com a linha inteira
+                                  arrastável, rolar a lista no celular vira arrasto
+                                  sem querer, e marcar a tarefa fica sofrido.
+                                  Tarefa SEM hora não arrasta (não está na Jornada). */}
+                              <span
+                                {...(t.hora ? arrasto.dragHandleProps : {})}
+                                aria-label={t.hora ? `Arrastar ${t.titulo} para outro horário` : undefined}
+                                title={t.hora ? 'Arrastar para outro horário' : 'Sem horário — defina uma hora para poder mover'}
+                                className={`shrink-0 select-none text-nz-tinta-fraca mt-1 sm:mt-0 ${t.hora ? 'cursor-grab active:cursor-grabbing hover:text-nz-verde' : 'opacity-30 cursor-not-allowed'}`}
+                                data-teste="punho-arrastar"
+                              >
+                                ⠿
+                              </span>
                               <input type="checkbox" checked={!!t.feito} onChange={() => alternarFeito(t)} className="w-4 h-4 accent-green-600 shrink-0 cursor-pointer mt-1 sm:mt-0" />
                               {/* ⚡ o XP voando no clique — feedback imediato do jogo */}
                               {xpFlash?.id === t.id && (
@@ -2474,12 +2640,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <p className="mt-2 ml-6 text-[11px] leading-relaxed text-nz-tinta-fraca border-l-2 border-nz-verde/40 pl-2.5 whitespace-pre-line">{guia}</p>
                             )}
                           </div>
+                          )}
+                          </Draggable>
                         );
                       })}
+                      {areaSoltar.placeholder}
                     </div>
+                    )}
+                    </Droppable>
                   </div>
                 );
-              })
+              })}
+              </DragDropContext>
             )}
 
             {visao === 'lista' && (

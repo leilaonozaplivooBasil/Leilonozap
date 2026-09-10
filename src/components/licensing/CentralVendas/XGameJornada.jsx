@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import {
   Sunrise, BookOpen, Dumbbell, Camera, Store, Utensils, Handshake,
   GraduationCap, FileText, Moon, Sparkles, Car, Star, Trophy, Play, Check, X as XIcon, CalendarDays,
@@ -9,7 +9,7 @@ import XGameCapa from './XGameCapas';
 import ElencoBoneco from './ElencoBoneco';
 import { elencoDaParada } from '@/lib/elencoJornada';
 import {
-  vibrar, VIBRA_TOQUE, VIBRA_ABRIR, minutosBrasilia,
+  vibrar, VIBRA_TOQUE, VIBRA_ABRIR, minutosBrasilia, ordenarPorHora,
 } from '@/lib/xgame';
 import { faixaDeHorario } from '@/lib/quadroCompromisso';
 import { familiaDaTarefa } from '@/lib/capaDaTarefa';
@@ -367,7 +367,18 @@ function BotaoSetaMomento({ lado, alvo, previaAtiva, onPrevia, onEsconder, onIr 
   );
 }
 
-export default function XGameJornada({ tarefas = [], nome, pct = 0, fogo, onTarefa, acaoExtra, agoraMin = null }) {
+export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct = 0, fogo, onTarefa, acaoExtra, agoraMin = null }) {
+  // 🕐 09/09/2026 — A JORNADA ORDENA O QUE RECEBE, sem confiar em quem chamou.
+  //
+  // O agrupamento por período (mais abaixo) PERCORRE a lista e abre um grupo
+  // novo toda vez que o rótulo muda. Com a lista fora de ordem cronológica, o
+  // dia sai com períodos repetidos e tarefa no lugar errado — foi assim que o
+  // "07:59 Café da manhã" apareceu depois do "10:30" no print do dono.
+  //
+  // Quem chama já ordena (CrmMetodo e estadoDasTarefas), mas o agrupamento
+  // depende disso pra estar certo. Uma linha aqui e a tela deixa de ter como
+  // errar, venha a lista de onde vier.
+  const tarefas = useMemo(() => ordenarPorHora(tarefasRecebidas), [tarefasRecebidas]);
   const [expandida, setExpandida] = useState(false);
   const [focoId, setFocoId] = useState(null);
   // ⬅️➡️ 08/09/2026 — dono: "um botão de passar pra frente ou pra trás, bem
