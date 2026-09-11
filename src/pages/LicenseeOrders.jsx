@@ -10,6 +10,7 @@ import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 import { Truck, CreditCard, Search } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from "recharts";
+import { DONOS_DA_VENDA } from "@/lib/vendasDoCiclo";
 
 function currency(v){
   if (v == null || isNaN(v)) return "R$ 0,00";
@@ -54,7 +55,10 @@ export default function LicenseeOrders(){
   const sales = useMemo(() => {
     const email = licensee?.email || null;
     return (allSales || []).filter((s) => {
-      const anchorMatch = [s.licensee_id, s.anchor_id, s.seller_id, s.owner_id].includes(licenseeId);
+      // 🔴 11/09/2026 — licensee_id/anchor_id/owner_id nunca existiram em
+      // catalog_sales (ver src/lib/vendasDoCiclo.js) — trocado por
+      // DONOS_DA_VENDA (seller_id + operator_id, as colunas reais).
+      const anchorMatch = DONOS_DA_VENDA.map((c) => s[c]).includes(licenseeId);
       const refMatch = [s.anchor_referral_code, s.referral_code, s.licensee_referral_code].includes(ref);
       const emailMatch = email && [s.anchor_email, s.licensee_email, s.seller_email].includes(email);
       return anchorMatch || refMatch || emailMatch;

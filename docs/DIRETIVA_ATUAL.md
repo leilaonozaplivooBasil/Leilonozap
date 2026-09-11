@@ -12,6 +12,49 @@
 
 ---
 
+## DIR-139 — as 3 colunas fantasmas: `licensee_id`/`anchor_id`/`owner_id` nunca existiram em `catalog_sales`, e isso zerava vendas de licenciado/PDV em 10 telas
+
+**Emitida por:** auditoria própria (11/09/2026), validando a DIR-138 contra o schema real de produção antes de declarar o "cirúrgico" pronto, e confirmada ao vivo pelo dono reportando `Licensing?tab=catalogo&catalogTab=catalogo-crm` "zerado" pros números da equipe.
+
+**Achado:** o conceito "o dono de uma venda pode estar em 4 colunas" (`seller_id`, `licensee_id`, `anchor_id`, `owner_id`) nunca foi conferido contra o banco. Consulta direta ao schema de produção (`information_schema.columns`) mostra que `catalog_sales` só tem **`seller_id`** (quem vendeu) e **`operator_id`** (quem operou a venda de balcão/PDV, ver `api/_lib/pdvSettle.js`) — as outras 3 colunas nunca existiram. Efeito, dependendo de como cada tela usava a lista:
+- Consultas `.select()`/`.or()` direto no Supabase (`CrmMetodo.jsx`, `XGame.jsx`, `PainelCorporativo.jsx`, `QuadroGeralAbas.jsx`, `XGameVisaoExecutiva.jsx`) **quebravam com erro** ("column does not exist") — o painel pessoal já tratava isso (`setVendasCiclo(null)` → proxy de tarefas), mas o ranking do time **não tratava**: um erro de rede/schema zerava `vendasReais` de TODO MUNDO, não só de quem realmente não vendeu.
+- Filtros client-side sobre dado já carregado (`CrmClientesTab.jsx`, `LicenseeOrders.jsx`, `habitosDoTime.js`) não quebravam, mas as 3 colunas fantasmas eram sempre `undefined` — um no-op silencioso que zerava, sem erro nenhum, os números de quem vende só como `operator_id` (a venda de balcão/PDV): licenciados e vendedores de loja física viam o time deles "sem nenhuma venda", mesmo com venda real no banco.
+
+**O que entra:**
+1. `DONOS_DA_VENDA` (`src/lib/vendasDoCiclo.js`) corrigido para `['seller_id', 'operator_id']` — as colunas reais.
+2. `filtroOrDonoDaVenda(id)` (nova, `vendasDoCiclo.js`) — a cláusula `.or()` num lugar só, pra nunca mais um site novo reinventar a lista de colunas (foi assim que 8 arquivos diferentes acabaram citando 3 colunas que não existem).
+3. Corrigidos os 10 pontos de uso: `XGameVisaoExecutiva.jsx`, `CrmMetodo.jsx`, `XGame.jsx`, `PainelCorporativo.jsx` (2×), `QuadroGeralAbas.jsx`, `PerformanceEquipe.jsx`, `CrmClientesTab.jsx`, `habitosDoTime.js`, `LicenseeOrders.jsx`.
+4. **Fail-safe no ranking:** se a consulta de vendas falhar de verdade (rede, RLS, schema), `vendasReais` agora vira `undefined` pra TODO MUNDO — reativando o proxy de tarefas do `tokenDoCiclo`, igual ao painel pessoal — em vez de `0` (que antes fingia "confirmado, zero vendas" mesmo com a consulta quebrada).
+5. `api/functions/hardDeleteUser.js` — a trava de segurança "existem vendas atribuídas a este cadastro" checava `licensee_id` (nunca disparava); agora checa `seller_id`/`operator_id`.
+
+**Achado à parte, NÃO corrigido nesta rodada** (fora do escopo desta auditoria, mexe em checkout/pagamento — precisa de validação própria antes de tocar): `api/functions/finalizeSellerOrder.js` grava `licensee_id`/`licensee_name` num INSERT direto (`fetch` cru pro PostgREST) em `catalog_sales` — como essas colunas não existem, todo INSERT desse endpoint (finalizar compra de adesão de vendedor usando saldo) deve estar falhando agora mesmo em produção. `src/pages/Cart.jsx` grava os mesmos campos, mas via `plataforma.entities.CatalogSale` (a camada de compatibilidade Base44/Supabase) — não confirmado se essa camada tolera campos desconhecidos ou também falha. Recomendo o dono confirmar se "virar vendedor" está funcionando em produção antes de eu mexer nesse fluxo.
+
+**Prova:** suíte 2198/2198 (3 testes atualizados, 1 novo — `filtroOrDonoDaVenda`), lint limpo nos arquivos tocados, `npm run build` sem erro. Schema real conferido direto em produção via SQL (`information_schema.columns`, projeto `gezvviyegtxytnwjkrjv`).
+
+---
+
+## DIR-138 — um número real em todo lugar: ADM e Visão Executiva contavam times diferentes, e o ranking não via as vendas reais da pessoa
+
+**Emitida por:** dono (10/09/2026), comparando os prints do ADM X-Game e da Visão Executiva lado a lado: *"os números não batem... eu preciso ter o número perfeito, e ele precisa estar aparecendo em todos os lugares."* Depois, olhando o pódio em produção: *"quem está dando como primeiro no Ranking está aparecendo como ouro, porém no seu pessoal está como [Platina]... isso não pode ter erro, isso precisa ser cirúrgico."*
+
+**Achado 1 — duas populações diferentes chamadas de "o time":** o ADM X-Game (`XPerformanceGestao.jsx`) contava só o time corporativo (hierarquia do painel de controle, Sócio Executivo→Embaixador — 12 pessoas). A Visão Executiva contava todo mundo com registro no jogo, **sem nem filtrar quem está ativo** — podendo incluir gente que já saiu. Nenhuma das duas era "quem vota" — a régua que o dono escolheu: *"todos que estão de fato recebendo voto, esses de fato estão atuando na operação ativa."*
+
+**Achado 2 — "hoje" vinha de uma fotografia atrasada:** a Visão Executiva lia tarefas/reuniões de hoje de `xgame_diario`, um retrato só gravado quando a própria pessoa abre a tela dela — atrasado por natureza. O ADM já lia ao vivo. Resultado: números diferentes pro mesmo "hoje", mesmo quando a população batesse.
+
+**Achado 3 — o bug que o dono viu no pódio:** o ranking (Visão Executiva) nunca buscava as vendas reais da loja de cada pessoa pro cálculo da moeda — caía num substituto manual (contagem de tarefa "[venda]"). O painel pessoal (Compromisso, /XGame) sempre buscou. Resultado: a Liga de alguém no pódio podia divergir da Liga que a própria pessoa via no painel dela — exatamente o que o dono flagrou ao vivo.
+
+**O que entra:**
+1. `participantesVotaveis()` (nova, `xgame.js`) — a população oficial de "o time" em qualquer número agregado: ativo no jogo E votável no MvM (mesma régua de `podeSerVotado`, já usada pra montar a lista de colegas). Usada agora no ADM (resumo do dia) e na Visão Executiva (resumo do dia + ranking/pódio/tabela inteiros).
+2. `resumoTimeHoje()` (nova, `xgame.js`) — tarefas/reuniões de hoje, ao vivo, a mesma função pura chamada pelas duas telas — sem duas cópias que podem desalinhar de novo.
+3. A Visão Executiva agora busca tarefas de hoje **ao vivo** (`metodo_tarefas`) pra população oficial, em vez de só ler `xgame_diario`.
+4. `vendasPorPessoa()` (`src/lib/vendasDoCiclo.js`) — busca `catalog_sales` + `captacao_oportunidades` em lote pro time inteiro (a mesma conta do painel pessoal, uma query só) e passa `vendasReais` pro `tokenDoCiclo()` do ranking — a Liga do pódio agora bate com a Liga do painel pessoal.
+5. **Ranking do Dia compartilhável** (`/RankingXGame`, nova página) — pódio 1º/2º/3º + a lista do resto, sempre com os números corrigidos e ao vivo (a mesma `XGameVisaoExecutiva`, sem segunda fonte de verdade). Botão "compartilhar" no pódio gera um texto pronto pro WhatsApp (pódio do ciclo + o dia de hoje + o link).
+6. **Clicar numa linha do ranking abre o detalhe da moeda** — a mesma moeda em fatias de "Sua posição" mais os dois portões (caráter/MvM e meta de vendas) escritos por extenso, com o número exato que decidiu cada um — pra qualquer divergência ficar auditável na hora, sem precisar confiar cego no resultado final.
+
+**Prova:** suíte 1986/1986 (12 testes novos: população oficial, resumo ao vivo, texto do WhatsApp, fiação do detalhe da moeda), lint limpo, `npm run build` sem erro, 2 provas em navegador real (Playwright): o pódio renderiza sem erro de JS, e clicar numa linha abre e fecha o detalhe da moeda com os dois portões visíveis.
+
+---
+
 ## DIR-137 — auditoria noturna (parte 3): o X-Pay recuperado no fim de semana não entra mais em dobro contra a pessoa no painel do time
 
 **Emitida por:** dono (09/09/2026), autorização de auditoria autônoma da madrugada (mesma DIR-135/136).

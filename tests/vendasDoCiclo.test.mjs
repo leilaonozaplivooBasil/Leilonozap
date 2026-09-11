@@ -13,7 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { semComentarios } from './_ajuda.mjs';
-import { donosDaVenda, vendasDaPessoa, vendasPorPessoa, DONOS_DA_VENDA } from '../src/lib/vendasDoCiclo.js';
+import { donosDaVenda, vendasDaPessoa, vendasPorPessoa, DONOS_DA_VENDA, filtroOrDonoDaVenda } from '../src/lib/vendasDoCiclo.js';
 import { TICKET_MEDIO_VENDA } from '../src/lib/xgame.js';
 
 const ler = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
@@ -26,29 +26,36 @@ test('🔴 os dois lados chamam a MESMA peça — fórmula duplicada foi o que o
   assert.match(METODO, /vendasDaPessoa\(\{ sales, oportunidades \}\)/, 'o painel pessoal saiu da peça compartilhada');
   assert.match(RANKING, /vendasPorPessoa\(\{ sales: vendas, oportunidades \}\)/, 'o ranking saiu da peça compartilhada');
   // e o ranking precisa REALMENTE entregar o número pro tokenDoCiclo
-  assert.match(RANKING, /vendasReais: vendasPor\[r\.user_id\] \?\? 0/);
+  assert.match(RANKING, /vendasReais: vendasIndisponivel \? undefined : \(vendasPor\[r\.user_id\] \?\? 0\)/);
 });
 
-test('🔴 ausência de venda é ZERO, nunca `undefined`', () => {
+test('🔴 ausência de venda é ZERO, nunca `undefined` — MAS só quando a consulta funcionou', () => {
   // `undefined` reativa, lá dentro do tokenDoCiclo, o fallback das tarefas —
-  // a divergência inteira de volta, e calada.
+  // a divergência inteira de volta, e calada. Isso só pode acontecer de
+  // propósito (a consulta de vendas falhou pra TODO MUNDO), nunca por
+  // ausência de venda de uma pessoa só.
   assert.ok(!/vendasReais: vendasPor\[r\.user_id\],/.test(RANKING),
     'sem o `?? 0`, quem não vendeu volta a ser julgado pelas tarefas anotadas');
+  assert.match(RANKING, /vendasIndisponivel = !!\(erroVendas \|\| erroOportunidades\)/,
+    'erro na consulta precisa desarmar o `?? 0` pra TODO MUNDO, senão um erro de rede zera o time inteiro');
 });
 
-test('a venda pertence a QUEM ESTIVER em qualquer uma das 4 colunas', () => {
-  // A consulta do painel pessoal usa `or(seller_id.eq.X, licensee_id.eq.X, ...)`.
-  // Se aqui a venda fosse de um dono só, o ranking mostraria MENOS do que a
-  // pessoa vê — o mesmo bug, do outro lado.
-  assert.deepEqual(DONOS_DA_VENDA, ['seller_id', 'licensee_id', 'anchor_id', 'owner_id']);
-  assert.deepEqual(donosDaVenda({ seller_id: 'a', licensee_id: 'b' }), ['a', 'b']);
-  assert.deepEqual(donosDaVenda({ seller_id: 'a', owner_id: 'a' }), ['a'], 'o mesmo id nas duas colunas conta uma vez');
+test('🔴 11/09/2026 — o dono real da venda é seller_id/operator_id, não licensee_id/anchor_id/owner_id', () => {
+  // Auditoria: licensee_id, anchor_id e owner_id NUNCA existiram em
+  // catalog_sales (schema de produção conferido direto). Toda consulta que
+  // citava essas 3 colunas fantasmas quebrava (dono cai no proxy de tarefas
+  // [VENDA]) ou, em filtro client-side, virava um no-op silencioso (o campo é
+  // sempre undefined) — zerando os números de quem vende via operator_id
+  // (venda de balcão/PDV).
+  assert.deepEqual(DONOS_DA_VENDA, ['seller_id', 'operator_id']);
+  assert.deepEqual(donosDaVenda({ seller_id: 'a', operator_id: 'b' }), ['a', 'b']);
+  assert.deepEqual(donosDaVenda({ seller_id: 'a', operator_id: 'a' }), ['a'], 'o mesmo id nas duas colunas conta uma vez');
   assert.deepEqual(donosDaVenda({}), []);
   assert.deepEqual(donosDaVenda(), []);
 });
 
 test('a mesma venda conta pros DOIS donos — e é assim que bate com o painel', () => {
-  const mapa = vendasPorPessoa({ sales: [paga({ seller_id: 'ana', licensee_id: 'bia' })] });
+  const mapa = vendasPorPessoa({ sales: [paga({ seller_id: 'ana', operator_id: 'bia' })] });
   assert.equal(mapa.ana, 1);
   assert.equal(mapa.bia, 1);
 });
@@ -83,6 +90,16 @@ test('a consulta do ranking traz as colunas de dono — senão o agrupamento fic
   // ranking volta a divergir — sem erro nenhum aparecendo.
   const q = RANKING.slice(RANKING.indexOf("from('catalog_sales')"), RANKING.indexOf("from('catalog_sales')") + 260);
   for (const col of DONOS_DA_VENDA) assert.match(q, new RegExp(col), `faltou ${col} no select em lote`);
+});
+
+test('filtroOrDonoDaVenda monta a MESMA cláusula .or() nas colunas reais', () => {
+  assert.equal(filtroOrDonoDaVenda('u1'), 'seller_id.eq.u1,operator_id.eq.u1');
+  // o painel pessoal (CrmMetodo.jsx e XGame.jsx) usa a peça compartilhada, em
+  // vez de montar a lista de colunas de novo — foi assim que 8 arquivos
+  // diferentes acabaram citando 3 colunas que não existem no banco.
+  assert.match(METODO, /\.or\(filtroOrDonoDaVenda\(uid\)\)/, 'CrmMetodo.jsx precisa usar a peça compartilhada');
+  const XGAME_PESSOAL = semComentarios(ler('../src/pages/XGame.jsx'));
+  assert.match(XGAME_PESSOAL, /\.or\(filtroOrDonoDaVenda\(user\.id\)\)/, 'XGame.jsx precisa usar a peça compartilhada');
 });
 
 // ── 🏷️ o crédito da decisão (achado da mesma auditoria) ──────────────────────

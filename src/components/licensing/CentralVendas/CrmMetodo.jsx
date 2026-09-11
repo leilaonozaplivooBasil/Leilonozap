@@ -44,7 +44,7 @@ import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import TourGuiado from './TourGuiado';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
-import { vendasDaPessoa } from '@/lib/vendasDoCiclo';
+import { vendasDaPessoa, filtroOrDonoDaVenda } from '@/lib/vendasDoCiclo';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -391,7 +391,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     Promise.all([
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
-        .or(`seller_id.eq.${uid},licensee_id.eq.${uid},anchor_id.eq.${uid},owner_id.eq.${uid}`)
+        .or(filtroOrDonoDaVenda(uid))
         .gte('created_date', `${ini}T00:00:00`),
       supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
         .eq('responsavel_id', uid)

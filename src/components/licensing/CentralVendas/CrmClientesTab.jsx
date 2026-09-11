@@ -17,6 +17,7 @@ import { Search, Filter, X, Save, Send, CheckCircle, Package,
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
+import { DONOS_DA_VENDA } from '@/lib/vendasDoCiclo';
 import { CAREER_LEVELS } from '@/lib/careerLevels';
 import { visibilidadeDoUsuario, filtrarKpisPorVisao } from '@/lib/visibilidadePorPapel';
 import { calcularCaptacao } from '@/lib/captacaoParceiros';
@@ -62,7 +63,7 @@ import CrmCustomerDetailModal from './CrmCustomerDetailModal';
 // mudou. O controle de acesso (admin/super_admin) passa a vir de fora (prop
 // isAdmin), já que aqui dentro não faz sentido "navegar pra Home".
 // 🔄 Fontes automáticas (18/08/2026): a lista de clientes agora soma indicados
-// (AppUser.referred_by_id) e compradores da Loja Virtual (CatalogSale.licensee_id)
+// (AppUser.referred_by_id) e compradores da Loja Virtual (CatalogSale.buyer_id)
 // junto com o cadastro manual — ver src/lib/crmUnifiedCustomers.js.
 // 🌫️ A MÁSCARA DA COSTURA DO PALCO — o par da que existe na faixa do
 // professor. Lá o enfeite MORRE no pé; aqui ele NASCE no topo. Assim as
@@ -345,13 +346,17 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     () => montarVendedores(sellers, appUsers),
     [sellers, appUsers]
   );
-  // 🔴 DIR-10 — o "dono" de uma venda não vive só em licensee_id: dependendo do
-  // canal (loja própria de licenciado, carrinho do site, PDV), fica gravado em
-  // seller_id/anchor_id/owner_id (mesma constatação já feita em LicenseeOrders.jsx).
-  // Olhar só licensee_id fazia a rede inteira ficar sem nenhuma venda, mesmo real.
+  // 🔴 DIR-10 — o "dono" de uma venda não vive só em seller_id: na venda de
+  // balcão/PDV fica gravado em operator_id (mesma constatação já feita em
+  // LicenseeOrders.jsx). Olhar só seller_id fazia a rede inteira ficar sem
+  // nenhuma venda de PDV, mesmo real.
+  // 🔴 11/09/2026 — auditoria: licensee_id/anchor_id/owner_id nunca existiram
+  // em catalog_sales (ver src/lib/vendasDoCiclo.js) — eram sempre undefined
+  // aqui, então o filtro só batia via seller_id de qualquer forma. Trocado
+  // por DONOS_DA_VENDA (seller_id + operator_id, as colunas reais).
   const networkCatalogSales = React.useMemo(
     () => (isSuperAdmin ? catalogSales : catalogSales.filter((s) =>
-      [s.licensee_id, s.anchor_id, s.seller_id, s.owner_id].some((id) => id === currentUser?.id || networkIds.has(id))
+      DONOS_DA_VENDA.some((c) => s[c] === currentUser?.id || networkIds.has(s[c]))
     )),
     [catalogSales, networkIds, currentUser?.id, isSuperAdmin]
   );

@@ -441,7 +441,10 @@ test('O TIME NUM RELANCE: o resumo de quantidade fica no topo, antes de qualquer
   await resumo.waitFor();
   const primeiroFilho = await pagina.evaluate(() => document.querySelector('[data-teste="gestao"]').firstElementChild.getAttribute('data-teste'));
   assert.equal(primeiroFilho, 'resumo-time-hoje', 'o resumo do time é a primeira coisa da gestão, não escondido lá embaixo');
-  assert.match((await resumo.textContent()).replace(/\s+/g, ' '), /no time corporativo/);
+  // 🔢 10/09/2026 — auditoria noturna: "no time corporativo" (a hierarquia
+  // do painel) virou "no time, votando no MvM" (quem é ativo+votável de
+  // verdade) — a mesma régua da Visão Executiva, pra os números baterem.
+  assert.match((await resumo.textContent()).replace(/\s+/g, ' '), /no time, votando no MvM/);
   await ctx.close();
 });
 

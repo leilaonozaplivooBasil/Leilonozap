@@ -10,11 +10,9 @@ import {
   ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
   TOKEN_MAX, ligaDoToken, moedaModelo,
-  estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal, vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA,
+  estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
 } from '@/lib/xgame';
-import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
-import { isVendaReal } from '@/lib/dinheiroReal';
-import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
+import { filtroOrDonoDaVenda, vendasDaPessoa } from '@/lib/vendasDoCiclo';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
@@ -165,19 +163,17 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
     const ini = dataISO(inicioCicloOficial(cicloConfig, new Date()));
     Promise.all([
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
-        .or(`seller_id.eq.${user.id},licensee_id.eq.${user.id},anchor_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .or(filtroOrDonoDaVenda(user.id))
         .gte('created_date', `${ini}T00:00:00`),
       supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
         .eq('responsavel_id', user.id)
         .gte('fechado_em', `${ini}T00:00:00`),
     ]).then(([{ data: sales, error: e1 }, { data: oportunidades, error: e2 }]) => {
       if (e1 || e2) { setVendasCiclo(null); return; }
-      const pagas = (sales || []).filter(isSalePago);
-      const reais = (sales || []).filter(isVendaReal);
-      const aporteExterno = (oportunidades || [])
-        .filter((o) => ehFechada(o) && aporteExternoValido(o))
-        .reduce((soma, o) => soma + (Number(o.aporte_externo.valor) || 0), 0) / TICKET_MEDIO_VENDA;
-      setVendasCiclo(pagas.filter(isVendaMercadoria).length + vendasEquivalentesAltoValor(reais) + aporteExterno);
+      // 🔴 11/09/2026 — a conta era duplicada aqui, dedo por dedo, da mesma
+      // fórmula em vendasDoCiclo.js — agora chama a função só, um lugar
+      // menos pra desalinhar quando o critério mudar de novo.
+      setVendasCiclo(vendasDaPessoa({ sales, oportunidades }));
     });
   }, [user?.id, cicloConfig]);
 

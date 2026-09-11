@@ -22,6 +22,7 @@ import OuvirGratidao from '@/components/common/OuvirGratidao';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { isVendaReal } from '@/lib/dinheiroReal';
 import { ehFechada, aporteExternoValido } from '@/lib/esteiraCaptacao';
+import { filtroOrDonoDaVenda } from '@/lib/vendasDoCiclo';
 import { relatorioDoExecutivo, nomeBonito, primeiroNome } from '@/lib/relatorioExecutivo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 import { DistribuirTarefaSozinho } from '@/components/licensing/CentralVendas/DistribuirTarefa';
@@ -130,7 +131,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
       supabase.from('xgame_diario').select('detalhes').eq('user_id', pessoaId).eq('ciclo_inicio', ini).lt('data', dataISO(new Date())).order('data'),
       supabase.from('xgame_votos_mvm').select('virtude,nota').eq('votado_id', pessoaId).gte('data', ini),
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount')
-        .or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`)
+        .or(filtroOrDonoDaVenda(pessoaId))
         .gte('created_date', `${ini}T00:00:00`),
       supabase.from('captacao_oportunidades').select('estagio,aporte_externo,fechado_em')
         .eq('responsavel_id', pessoaId)
@@ -161,7 +162,7 @@ export default function PainelCorporativo({ currentUser, hojeISO, gestao = false
       supabase.from('metodo_tarefas').select('id,data,hora,titulo,feito,conferido,pronto_em,prazo_em,devolvida_motivo,habito,origem,demanda_id,categoria,comprovacao').eq('user_id', pessoaId).gte('data', `${mes}-01`),
       supabase.from('metodo_quadro').select('id,coluna,titulo,prazo,demanda_id').eq('user_id', pessoaId),
       supabase.from('xperf_metas').select('*').eq('user_id', pessoaId).eq('mes', mes).order('created_at'),
-      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,product_id,quantity').or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`).gte('created_date', `${mes}-01T00:00:00`),
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,product_id,quantity').or(filtroOrDonoDaVenda(pessoaId)).gte('created_date', `${mes}-01T00:00:00`),
       supabase.from('xperf_demandas').select('*').gte('created_at', `${segunda}T00:00:00`).order('created_at'),
     ]);
     // a pessoa trocou antes desta resposta chegar — descarta em vez de
