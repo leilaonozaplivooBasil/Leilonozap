@@ -175,3 +175,37 @@ test('CAQ-10 · a busca deixou de ser muda nos logs do servidor', () => {
   // e logar nunca pode derrubar a busca
   assert.match(MOTOR, /try \{ console\.log\('\[comparai\]', \.\.\.partes\); \} catch/);
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+test('CAQ-11 · 🖼️ toda fonte de IMAGEM do motor é reconhecida pela tela', () => {
+  // 🔴 O BUG QUE ISTO PRENDE, flagrado em 10/09 no próprio cache:
+  // a caixa PCX 15000 venceu por `serpapi_lens_exato` — identidade provada
+  // pelo Google — e a tela mostrou "não foi possível confirmar por imagem".
+  //
+  // A causa: a lista da tela só conhecia os nomes da SearchAPI. As fontes da
+  // SerpApi nasceram no motor em 20/08 e nunca chegaram lá. E como a SearchAPI
+  // esgotou a cota no MESMO 20/08, `google_lens_exato` não venceu mais uma vez
+  // sequer — ou seja, desde então TODA comparação confirmada por imagem foi
+  // rotulada como "só pelo nome", negando a própria prova pro cliente.
+  const MODAL = ler('src/components/comparai/CompareAquiModal.jsx');
+
+  // as fontes de imagem que o MOTOR pode devolver como vencedoras
+  const doMotor = [...MOTOR.matchAll(/nome: '(\w*lens\w*)'/g)].map((m) => m[1]);
+  assert.ok(doMotor.length >= 4, `premissa: o motor tem fontes de imagem (achei ${doMotor.length})`);
+
+  // as que a TELA sabe rotular
+  const exatas = /export const FONTES_EXATAS_POR_IMAGEM = \[([^\]]+)\]/.exec(MODAL)?.[1] || '';
+  const visuais = /export const FONTES_VISUAIS_POR_IMAGEM = \[([^\]]+)\]/.exec(MODAL)?.[1] || '';
+  const daTela = [...exatas.matchAll(/'([^']+)'/g), ...visuais.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  assert.ok(daTela.length >= 4, `premissa: a tela tem as duas listas (achei ${daTela.length})`);
+
+  for (const fonte of doMotor) {
+    assert.ok(daTela.includes(fonte), `a fonte de imagem "${fonte}" existe no motor e a tela não conhece — ela vai dizer "só pelo nome" sobre algo que o Google confirmou`);
+  }
+  // e a distinção EXATA × visual não pode se perder: são certezas diferentes
+  assert.ok(exatas.includes('serpapi_lens_exato') && exatas.includes('google_lens_exato'), exatas);
+  assert.ok(visuais.includes('serpapi_lens_visual') && visuais.includes('google_lens_similar'), visuais);
+  assert.ok(!exatas.includes('visual') && !exatas.includes('similar'), 'fonte visual entrou na lista das EXATAS — promete certeza que não tem');
+  // o aviso de "só pelo nome" continua existindo pro caso que É só pelo nome
+  assert.match(MODAL, /Comparado só pelo nome/);
+});

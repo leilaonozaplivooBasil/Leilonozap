@@ -32,6 +32,18 @@ function isMercadoLivre(item) {
 // O matchLevel continua existindo no backend e ainda comanda a validação e a
 // ordenação (Mercado Livre primeiro) — só não é mais exibido pro cliente.
 
+// 🖼️ AS FONTES QUE PROVAM IDENTIDADE POR IMAGEM.
+//
+// Precisam bater com os `nome:` das fontes em api/_lib/marketSearch.js — o
+// teste compareaquiSelo prende as duas pontas justamente porque elas já se
+// soltaram uma vez: o motor ganhou a SerpApi e esta tela ficou para trás,
+// chamando de "só pelo nome" o que o Google tinha confirmado.
+export const FONTES_EXATAS_POR_IMAGEM = ['serpapi_lens_exato', 'google_lens_exato'];
+// `ponte_base44_lens` entra aqui: ela devolve `matchLevel: 'visual'` (é o
+// Google Lens, só que pelo runtime do Base44). Só roda quando não há
+// SERPAPI_KEY publicada — mas se vencer, o rótulo tem que dizer a verdade.
+export const FONTES_VISUAIS_POR_IMAGEM = ['serpapi_lens_visual', 'google_lens_similar', 'ponte_base44_lens'];
+
 export default function CompareAquiModal({ auction, isProduct = false, onClose }) {
   const [comparisonData, setComparisonData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -609,12 +621,23 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
                       marketSearch.js). Três níveis de confiança agora, cada um com seu
                       selo — nunca finge a mesma certeza pros três casos. */}
                   {!comparisonData.isFactoryDirect && comparisonData.source && (
-                    comparisonData.source === 'google_lens_exato' ? (
+                    /* 🔴 10/09/2026 — A TELA ESTAVA NEGANDO A PRÓPRIA PROVA.
+                       Esta lista só conhecia os nomes da SearchAPI. As fontes
+                       da SerpApi (`serpapi_lens_*`) nasceram em 20/08 no motor
+                       e nunca chegaram aqui — e como a SearchAPI esgotou a cota
+                       no MESMO 20/08, `google_lens_exato` não venceu mais uma
+                       vez sequer. Resultado: desde então, TODA comparação
+                       confirmada por imagem apareceu pro cliente como
+                       "não foi possível confirmar por imagem".
+                       Flagrado em 10/09 no cache: a caixa PCX 15000 venceu por
+                       `serpapi_lens_exato` — identidade provada pelo Google —
+                       e a tela mostrou o aviso de "só pelo nome". */
+                    FONTES_EXATAS_POR_IMAGEM.includes(comparisonData.source) ? (
                       <div className="flex items-center gap-2 text-[11px] text-emerald-400/90 -mt-2">
                         <ImageIcon className="w-3.5 h-3.5 shrink-0" />
                         Correspondência EXATA por imagem (Google Lens) — mesmo produto, confirmado pelo próprio Google.
                       </div>
-                    ) : comparisonData.source === 'google_lens_similar' ? (
+                    ) : FONTES_VISUAIS_POR_IMAGEM.includes(comparisonData.source) ? (
                       <div className="flex items-center gap-2 text-[11px] text-sky-300/90 -mt-2">
                         <ImageIcon className="w-3.5 h-3.5 shrink-0" />
                         Confirmado por imagem (Google Lens) — visualmente correspondente ao produto.
