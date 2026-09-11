@@ -3,6 +3,7 @@ import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, Chev
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
+import { restricoesDaCamera, opcoesDoGravador, avisoDoVideoGrande } from '@/lib/gravadorDeVideo';
 import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo } from '@/lib/xgame';
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
@@ -283,12 +284,27 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   // o outro lado sem duplicar a lógica de ligar o MediaRecorder.
   const iniciarGravacaoCom = async (lado) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: lado }, width: 480 }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia(restricoesDaCamera(lado));
       camRef.current = stream;
       const pedacos = [];
-      const rec = new MediaRecorder(stream, MediaRecorder.isTypeSupported('video/webm') ? { mimeType: 'video/webm' } : undefined);
+      // 🎥 11/09 — o teto vive em gravadorDeVideo.js, com o porquê escrito lá.
+      // O `catch` de baixo é de tipo diferente do catch geral: se ESTE
+      // navegador recusar o dicionário de opções, o certo é gravar sem teto —
+      // ficar sem vídeo por causa de uma opção seria trocar um problema raro
+      // por um pior.
+      const opcoes = opcoesDoGravador((t) => MediaRecorder.isTypeSupported(t));
+      let rec;
+      try { rec = new MediaRecorder(stream, opcoes); }
+      catch { rec = new MediaRecorder(stream); }
       rec.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
-      rec.onstop = () => setVideoBlob(new Blob(pedacos, { type: rec.mimeType || 'video/webm' }));
+      rec.onstop = () => {
+        const blob = new Blob(pedacos, { type: rec.mimeType || 'video/webm' });
+        setVideoBlob(blob);
+        // 🔴 e se AINDA assim passar do teto, a pessoa fica sabendo AGORA —
+        // antes de apertar concluir e antes de tentar de novo no escuro.
+        const grande = avisoDoVideoGrande(blob.size);
+        if (grande) setAviso(grande);
+      };
       recRef.current = rec;
       rec.start(1000);
       setVideoBlob(null); setGravSeg(0); setGravando(true); setAviso('');
