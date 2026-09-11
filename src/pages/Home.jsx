@@ -38,6 +38,8 @@ import { useSectionTracking } from '@/lib/tracking';
 // Ver src/lib/metaPixel.js: os dois convivem porque o init é por ID e o disparo
 // é `trackSingle`.
 import { medirPagina, PIXEL_LEILOES } from '@/lib/metaPixel';
+// 🔎 D4 — a busca precisa PARECER que buscou (áudio do dono, 11/09 às 14h08)
+import { mostrarBlocosDeDescoberta, recadoDaBusca } from '@/lib/buscaDaVitrine';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -942,19 +944,37 @@ export default function Home() {
         {/* BUSCA — mesma barra da Loja Virtual */}
         <div className="mb-6">
           <AuctionSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+
+          {/* 🔎 D4 — o retorno visual que faltava. A contagem aparece na PRIMEIRA
+              letra, logo abaixo do campo: mesmo com a lista fora da vista, a
+              pessoa lê aqui que a tela reagiu. Era exatamente o "ele pensa que
+              não está buscando" do áudio de 11/09. */}
+          {recadoDaBusca(searchTerm, filteredAuctions.length, isLoading) && (
+            <p aria-live="polite" className="mt-2 px-1 text-sm font-semibold text-emerald-300">
+              {recadoDaBusca(searchTerm, filteredAuctions.length, isLoading)}
+            </p>
+          )}
         </div>
 
-        {/* 🧭 Setores de leilão que saíram do dropdown da navbar — descoberta pós-clique */}
-        <AuctionSectorLinks />
-
-        {/* 🌟 Destaques — até 6 leilões marcados manualmente em Editar Leilão */}
-        <DestaquesLeiloes currentUser={currentUser} />
+        {/* 🧭 Setores, Destaques e Recomendados são VITRINE DE DESCOBERTA — e
+            quem já digitou o que quer não está descobrindo. Com busca ativa eles
+            somem, e o primeiro resultado sobe para debaixo do campo em vez de
+            ficar quatro blocos abaixo. */}
+        {mostrarBlocosDeDescoberta(searchTerm) && (
+          <>
+            <AuctionSectorLinks />
+            <DestaquesLeiloes currentUser={currentUser} />
+          </>
+        )}
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
-            <Suspense fallback={null}>
-              <RecommendedSection currentUser={currentUser} isAdmin={currentUser?.role === 'admin'} partnerStore="nozap" />
-            </Suspense>
+            {/* 🔎 Recomendados é o terceiro bloco de descoberta — sai junto. */}
+            {mostrarBlocosDeDescoberta(searchTerm) && (
+              <Suspense fallback={null}>
+                <RecommendedSection currentUser={currentUser} isAdmin={currentUser?.role === 'admin'} partnerStore="nozap" />
+              </Suspense>
+            )}
 
             <div ref={scrollerRef} className="mb-8 flex gap-2.5 overflow-x-auto pb-2 cursor-grab [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {visibleCategories.map((category) => {
