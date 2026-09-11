@@ -31,6 +31,8 @@ import BarraTempoLeilao from "@/components/auction/BarraTempoLeilao";
 import HeaderPrecoTempo from "@/components/auction/HeaderPrecoTempo";
 import ChipParticipantes from "@/components/auction/ChipParticipantes";
 import FeedUltimosLances from "@/components/auction/FeedUltimosLances";
+// 📜 Descrição que não esconde o "OBS:" do final (era cortada em 60px)
+import DescricaoDoLote from "@/components/auction/DescricaoDoLote";
 import { jaAceitouTermo, registrarAceiteTermo } from "@/lib/termoAdesao";
 import { emChamada } from "@/lib/modoChamada";
 // 🛡️ PONTO 70 — Compre Já só com preço real (valor residual de R$ 1,00 é ignorado)
@@ -1217,7 +1219,7 @@ export default function AuctionRoom() {
                   🏆 Líder: <span className="truncate">{auction.winner_name}</span>
                 </div>
               )}
-              <p className="product-panel__desc">{auction.description}</p>
+              <DescricaoDoLote texto={auction.description} />
               <AuctionDisputePanel
                 auction={auction}
                 messages={messages}
@@ -1407,7 +1409,9 @@ export default function AuctionRoom() {
           <img src={mainImageUrl} alt={auction.title} className="mobile-bottom-sheet__image" />
           <div className="mobile-bottom-sheet__body">
             <h3 className="mobile-bottom-sheet__title">{auction.title}</h3>
-            <p className="mobile-bottom-sheet__desc">{auction.description}</p>
+            {/* 📜 No celular a folha rola inteira, então não há o que encurtar —
+                mas o aviso continua em destaque, pelo mesmo motivo do painel. */}
+            <DescricaoDoLote texto={auction.description} sempreAberta />
             <div className="mobile-bottom-sheet__stats">
               <div className="stat">
                 <span className="stat__label">Lance atual</span>
@@ -1526,10 +1530,14 @@ export default function AuctionRoom() {
       <CompareAquiButton auction={auction} trigger="event" />
 
       {/* 🆕 Modal de Saldo Baixo */}
+      {/* 🚚 freteValor PRECISA ir junto: é ele que a trava do lance soma ao
+          exigir saldo (useBidSubmission.js). Sem passar aqui, o aviso mostra
+          "Faltam" negativo — foi o que o cliente viu em 11/09/2026. */}
       <LowBalanceModal
         isOpen={showLowBalanceModal}
         currentBalance={userWallet?.balance || 0}
         requiredAmount={addMoney(currentPrice, safeIncrement)}
+        freteValor={freteValor}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);
@@ -1685,7 +1693,12 @@ export default function AuctionRoom() {
         .product-panel__meta { display: flex; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
         .product-panel__price { font-weight: bold; color: #10b981; font-size: 16px; }
         .product-panel__timer { font-family: monospace; background: #374151; padding: 4px 8px; border-radius: 6px; color: white; font-size: 12px; }
-        .product-panel__desc { color: #d1d5db; font-size: 14px; line-height: 1.4; max-height: 60px; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; }
+        /* 📜 11/09/2026 — a regra .product-panel__desc saiu daqui.
+           Era "max-height: 60px; overflow: hidden": cortava a descrição em três
+           linhas sem avisar ninguém, e o que ficava de fora era o fim do texto —
+           onde mora o "OBS: SEM O CARREGADOR". Quem foi dar lance na Bike Harley
+           M4 não tinha como saber. Agora quem desenha isso é o componente
+           DescricaoDoLote, que encurta o meio e mantém a ressalva à vista. */
         
         .bid-input-container { flex-shrink: 0; background: rgba(10, 22, 17, 0.96); backdrop-filter: blur(12px); border-top: 1px solid rgba(46, 157, 99, 0.18); padding-bottom: env(safe-area-inset-bottom); }
         
@@ -1700,7 +1713,8 @@ export default function AuctionRoom() {
            imagem inteira, centralizada, em qualquer formato (quadrado ou paisagem). */
         .mobile-bottom-sheet__image { width: 100%; aspect-ratio: 4 / 3; max-height: 220px; object-fit: contain; background: #111827; border-radius: 8px; margin-bottom: 12px; }
         .mobile-bottom-sheet__title { font-size: 18px; font-weight: bold; color: white; margin-bottom: 8px; word-wrap: break-word; overflow-wrap: break-word; }
-        .mobile-bottom-sheet__desc { color: #9ca3af; font-size: 14px; margin-bottom: 16px; word-wrap: break-word; overflow-wrap: break-word; }
+        /* .mobile-bottom-sheet__desc também saiu: a folha do celular usa o mesmo
+           componente DescricaoDoLote, aberto (a folha rola inteira). */
         .mobile-bottom-sheet__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .stat { text-align: center; background: #374151; padding: 12px; border-radius: 8px; }
         .stat__label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
