@@ -20,6 +20,11 @@
 // Nada toca banco, rede, produção ou dado real (REGRA 15).
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+// 🔴 11/09 — o filtro do claim vem do MÓDULO, não de uma string repetida aqui.
+// A lista de status mudou (passou a adotar leilão já fechado pelo pg_cron do
+// banco) e um literal solto faria o dublê de PostgREST parar de reconhecer o
+// claim: testes verdes sobre um caminho que nunca foi exercido.
+import { FILTRO_CLAIM } from '../api/_lib/apuracaoDoLeilao.js';
 
 process.env.SESSAO_SECRET = 'segredo-de-teste';
 process.env.VITE_SUPABASE_URL = 'https://exemplo.supabase.co';
@@ -170,7 +175,7 @@ function roteador(url, opcoes = {}) {
   if (caminho.startsWith('auctions')) {
     if (metodo === 'GET') return resposta(200, [{ ...mundo.leilao }]);
     if (metodo === 'PATCH') {
-      const eClaim = caminho.includes('status=in.(active,processing)');
+      const eClaim = caminho.includes(FILTRO_CLAIM);
       if (eClaim) {
         if (mundo.falharClaimFinalize) return resposta(200, []);   // outro finalizador venceu
         Object.assign(mundo.leilao, corpo);
@@ -391,7 +396,7 @@ describe('ROTA REAL · submitAtomicBuyNow — falha DEPOIS da reserva', () => {
     assert.equal(res.corpo.success, true, JSON.stringify(res.corpo));
     const patchesLeilao = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('auctions?'));
     assert.equal(patchesLeilao.length, 1, `${patchesLeilao.length} PATCHes no leilão — só o claim pode existir`);
-    assert.ok(patchesLeilao[0].url.includes('status=in.(active,processing)'),
+    assert.ok(patchesLeilao[0].url.includes(FILTRO_CLAIM),
       'existe PATCH em auctions SEM trava de status — é o defeito do B13');
     assert.equal(patchesLeilao[0].corpo.frete_reservado_valor, FRETE);
     assert.equal(patchesLeilao[0].corpo.winner_id, USER, 'frete e vencedor têm que sair na MESMA escrita');
@@ -472,14 +477,14 @@ describe('ROTA REAL · finalizeAuction — B13, frete decidido no claim do vence
     const res = fazerRes();
     await finalizar(fazerReq({ auction_id: LEILAO }), res);
 
-    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)')).pop();
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes(FILTRO_CLAIM)).pop();
     assert.ok(claim, 'nenhum claim atômico emitido');
     assert.equal(claim.corpo.winner_id, USER);
     assert.equal(claim.corpo.frete_reservado_valor, 14.9,
       'o vencedor herdou o frete do líder anterior — é o bug AR3BEF1939');
     // e não existe NENHUM outro PATCH mexendo no frete fora do claim
     const soltos = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('auctions?')
-      && !c.url.includes('status=in.(active,processing)')
+      && !c.url.includes(FILTRO_CLAIM)
       && c.corpo && 'frete_reservado_valor' in c.corpo);
     assert.equal(soltos.length, 0, 'existe PATCH de frete SEM trava de status');
   });
@@ -493,7 +498,7 @@ describe('ROTA REAL · finalizeAuction — B13, frete decidido no claim do vence
     const res = fazerRes();
     await finalizar(fazerReq({ auction_id: LEILAO }), res);
 
-    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)')).pop();
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes(FILTRO_CLAIM)).pop();
     assert.ok(claim, 'nenhum claim emitido');
     assert.equal(claim.corpo.frete_reservado_valor, 7.5, 'lance legado virou frete ZERO');
   });
@@ -503,7 +508,7 @@ describe('ROTA REAL · finalizeAuction — B13, frete decidido no claim do vence
     const res = fazerRes();
     await finalizar(fazerReq({ auction_id: LEILAO }), res);
 
-    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)')).pop();
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes(FILTRO_CLAIM)).pop();
     assert.ok(claim);
     assert.equal(claim.corpo.winner_id, null);
     assert.equal('frete_reservado_valor' in claim.corpo, false, 'gravou frete num leilão sem vencedor');
@@ -524,7 +529,7 @@ describe('ROTA REAL · finalizeAuction — B13, frete decidido no claim do vence
     await finalizar(fazerReq({ auction_id: LEILAO }), res);
     globalThis.fetch = roteadorReal;
 
-    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes('status=in.(active,processing)'));
+    const claim = chamadas.filter((c) => c.metodo === 'PATCH' && c.url.includes(FILTRO_CLAIM));
     assert.equal(claim.length, 0, 'ENCERROU o leilão sem conseguir ler os lances');
     assert.equal(res.corpo?.success, false);
   });

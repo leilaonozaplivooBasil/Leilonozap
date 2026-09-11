@@ -14,6 +14,10 @@ import { oid } from './oid.js';
 // usada nas linhas acima. Nunca de api/functions/ pra fora (ver submitAtomicBid.js).
 import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
 import { registrarReceita } from './financialIncome.js';
+// 🔨 11/09 — o filtro do claim virou regra pura, com o porquê inteiro escrito
+// lá: é ele que faz o finalizador ADOTAR o leilão que o pg_cron do banco já
+// fechou como 'sold' sem gravar order_status.
+import { FILTRO_CLAIM } from './apuracaoDoLeilao.js';
 
 // tolerância pra deriva de relógio entre cliente e servidor (nunca encerra
 // um leilão com mais de 2s restantes)
@@ -350,7 +354,7 @@ export async function finalizeOneAuction(auction) {
 
   // 🔒 Claim atômico: só UM finalizador vence esta corrida.
   const claim = await sb(
-    `auctions?id=eq.${enc(auctionId)}&status=in.(active,processing)`,
+    `auctions?id=eq.${enc(auctionId)}&${FILTRO_CLAIM}`,
     {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
