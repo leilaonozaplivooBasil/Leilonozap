@@ -125,7 +125,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
       supabase.from('xperf_demandas').select('*').gte('created_at', `${segunda}T00:00:00`).order('created_at'),
       supabase.from('metodo_perfil').select('user_id,sonhos'),
       supabase.from('customers').select('id,created_by_id,assigned_seller,qualificacao_network,contatos_metodo'),
-      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,seller_id,licensee_id,anchor_id,owner_id').gte('created_date', `${de}T00:00:00`),
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,seller_id,operator_id').gte('created_date', `${de}T00:00:00`),
       supabase.from('captacao_oportunidades').select('id,responsavel_id,estagio,valor_previsto,fechado_em,reuniao_em'),
       supabase.from('xperf_entregaveis').select('id,dono_id,habito,coluna,validado_em'),
     ]);

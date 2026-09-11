@@ -31,7 +31,10 @@ import { classificarAcao } from './catalogoAcoes.js';
 const dia = (v) => String(v || '').slice(0, 10);
 const semAcento = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const dentro = (iso, periodo) => { const d = dia(iso); return !!d && d >= periodo.de && d <= periodo.ate; };
-const donoDaVenda = (s) => s.seller_id || s.licensee_id || s.anchor_id || s.owner_id || null;
+// 🔴 11/09/2026 — licensee_id/anchor_id/owner_id não existem em catalog_sales
+// (ver src/lib/vendasDoCiclo.js). O dono real é seller_id ou, na venda de
+// balcão/PDV, operator_id.
+const donoDaVenda = (s) => s.seller_id || s.operator_id || null;
 const valorDaVenda = (s) => Number(s?.total_amount ?? s?.total ?? s?.amount ?? 0) || 0;
 const fmtReais = (v) => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

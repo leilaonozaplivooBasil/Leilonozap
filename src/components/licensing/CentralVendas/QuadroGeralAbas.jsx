@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { fmtReais, fixoDoParticipante, pesoReferenciaDe, categoriaDaTarefa, PARTICIPANTE_PADRAO } from '@/lib/xgame';
 import { distribuirDia } from '@/lib/distribuicaoFixo';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { filtroOrDonoDaVenda } from '@/lib/vendasDoCiclo';
 import { CHAVES, metasDoModelo, modeloDaFuncao, progressoDasMetas, carteiraDeCapital, mesDe } from '@/lib/metasPessoa';
 import { RituaisSemana } from '@/components/licensing/CentralVendas/PainelOficial';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
@@ -54,7 +55,7 @@ export function useMetasDaPessoa({ pessoaId, mes, hoje, tarefasDoMes }) {
     const [m, v, o, c] = await Promise.all([
       supabase.from('xperf_metas').select('*').eq('user_id', pessoaId).eq('mes', mes).order('created_at'),
       supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,product_title,product_id,quantity')
-        .or(`seller_id.eq.${pessoaId},licensee_id.eq.${pessoaId},anchor_id.eq.${pessoaId},owner_id.eq.${pessoaId}`)
+        .or(filtroOrDonoDaVenda(pessoaId))
         .gte('created_date', `${mes}-01T00:00:00`),
       supabase.from('captacao_oportunidades').select('id,estagio,valor_previsto,fechado_em,responsavel_id,indicacao_user_id').eq('responsavel_id', pessoaId),
       supabase.from('app_users').select('id,primary_career_level,career_levels,recruited_by_id,referred_by_id,created_date').gte('created_date', `${mes}-01T00:00:00`),

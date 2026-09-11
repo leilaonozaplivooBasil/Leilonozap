@@ -222,11 +222,11 @@ export default function XGameVisaoExecutiva() {
       //
       // Duas consultas do CICLO INTEIRO, uma vez só, agrupadas depois por
       // pessoa (vendasPorPessoa) — em vez de uma consulta por participante.
-      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,seller_id,licensee_id,anchor_id,owner_id')
+      supabase.from('catalog_sales').select('id,status,kind,created_date,total_amount,seller_id,operator_id')
         .gte('created_date', `${ini}T00:00:00`),
       supabase.from('captacao_oportunidades').select('responsavel_id,estagio,aporte_externo,fechado_em')
         .gte('fechado_em', `${ini}T00:00:00`),
-    ]).then(async ([{ data }, { data: votos }, { data: participantes }, { data: usuarios }, { data: vendas }, { data: oportunidades }]) => {
+    ]).then(async ([{ data }, { data: votos }, { data: participantes }, { data: usuarios }, { data: vendas, error: erroVendas }, { data: oportunidades, error: erroOportunidades }]) => {
         if (!vivo) return;
         const usuariosPorId = new Map((usuarios || []).map((u) => [u.id, u]));
         // 🔢 10/09/2026 — dono, decidindo a população oficial de "o time" em
@@ -240,7 +240,15 @@ export default function XGameVisaoExecutiva() {
         (participantes || []).forEach((p) => { perfilPor[p.user_id] = p.perfil; });
         // a MESMA conta do painel pessoal (src/lib/vendasDoCiclo.js), agora
         // para o time inteiro de uma vez.
-        const vendasPor = vendasPorPessoa({ sales: vendas, oportunidades });
+        // 🔴 11/09/2026 — auditoria: se a consulta de vendas falhar (schema,
+        // rede, RLS), `vendasPor` tem que ficar indefinido pra CADA pessoa —
+        // nunca "confirmado zero". `vendasPor[r.user_id] ?? 0` mais abaixo
+        // trata ausência como "vendeu zero de verdade" só quando a consulta
+        // realmente funcionou; com erro, ela vira `undefined`, que reativa o
+        // fallback seguro do tokenDoCiclo (as tarefas [VENDA] do dia) — o
+        // mesmo jeito que o painel pessoal já se protegia.
+        const vendasIndisponivel = !!(erroVendas || erroOportunidades);
+        const vendasPor = vendasIndisponivel ? {} : vendasPorPessoa({ sales: vendas, oportunidades });
 
         // 📊 10/09/2026 — auditoria noturna: "hoje" vinha da FOTOGRAFIA
         // diária (xgame_diario), só gravada quando a própria pessoa abre a
@@ -314,10 +322,11 @@ export default function XGameVisaoExecutiva() {
             // 💰 10/09/2026 — precisa da MESMA venda real que o painel
             // pessoal usa (vendasDoCiclo.js), senão a Liga do ranking pode
             // divergir da Liga que a própria pessoa vê no painel dela.
-            // `?? 0` e nunca `undefined`: quem não vendeu vendeu ZERO — passar
-            // undefined reativa o fallback das tarefas [VENDA] lá dentro, que
-            // é exatamente a divergência que esta correção veio acabar.
-            vendasReais: vendasPor[r.user_id] ?? 0,
+            // `?? 0` só quando a consulta funcionou: quem não vendeu vendeu
+            // ZERO de verdade. Se a consulta falhou (vendasIndisponivel),
+            // `undefined` reativa o fallback das tarefas [VENDA] pra
+            // TODO MUNDO — nunca zera o time inteiro por um erro de rede.
+            vendasReais: vendasIndisponivel ? undefined : (vendasPor[r.user_id] ?? 0),
           });
           // 🎓 09/09/2026 — DIR-113: mesma trava do painel pessoal — falta de
           // estudo (semana OU fim de semana) trava só o TOPO (Platina), nunca

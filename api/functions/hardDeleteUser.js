@@ -140,7 +140,10 @@ export default async function handler(req, res) {
     if (await existe(`catalog_sales?select=id&buyer_id=eq.${encodeURIComponent(userId)}&limit=1`)) {
       reasons.push('Existem pedidos da Loja Virtual feitos por este cadastro.');
     }
-    if (await existe(`catalog_sales?select=id&licensee_id=eq.${encodeURIComponent(userId)}&limit=1`)) {
+    // 🔴 11/09/2026 — licensee_id não existe em catalog_sales (ver
+    // src/lib/vendasDoCiclo.js): esta trava nunca disparava, mesmo quando o
+    // cadastro tinha vendas de verdade atribuídas via seller_id/operator_id.
+    if (await existe(`catalog_sales?select=id&or=(seller_id.eq.${encodeURIComponent(userId)},operator_id.eq.${encodeURIComponent(userId)})&limit=1`)) {
       reasons.push('Existem vendas da Loja Virtual atribuídas a este cadastro.');
     }
     if (await existe(`auctions?select=id&winner_id=eq.${encodeURIComponent(userId)}&limit=1`)) {

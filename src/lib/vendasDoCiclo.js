@@ -20,18 +20,38 @@ import { vendasEquivalentesAltoValor, TICKET_MEDIO_VENDA } from './xgame.js';
 // A conta agora mora AQUI, pura e testada, e os dois lados chamam esta função.
 // Duplicar a fórmula é exatamente como as duas telas se separaram na primeira vez.
 
-/** O dono de uma venda pode estar em 4 colunas (legado). */
-export const DONOS_DA_VENDA = ['seller_id', 'licensee_id', 'anchor_id', 'owner_id'];
+// 🔴 11/09/2026 — auditoria: `licensee_id`, `anchor_id` e `owner_id` NUNCA
+// existiram em `catalog_sales` (conferido direto no schema de produção —
+// só `seller_id` e `operator_id`). Toda consulta que citava as 3 colunas
+// fantasmas quebrava com "column does not exist" (dono vê `vendasCiclo: null`
+// — cai no proxy de tarefas [VENDA]) e todo filtro client-side com as mesmas
+// 4 colunas só batia via `seller_id`, porque as outras são sempre undefined —
+// zerando silenciosamente os números de quem vende só como `operator_id`
+// (o dono real da venda de balcão/PDV, ver api/_lib/pdvSettle.js). O nome
+// "4 colunas (legado)" era uma suposição nunca verificada contra o banco.
+/** O dono de uma venda pode estar em 2 colunas: quem vendeu (seller_id) ou
+ * quem operou a venda de balcão/PDV (operator_id). */
+export const DONOS_DA_VENDA = ['seller_id', 'operator_id'];
 
 /**
  * Os ids de pessoas a quem esta venda pertence.
  *
  * ⚠️ Pode ser MAIS DE UM, e isso é de propósito: a consulta do painel pessoal
- * usa `or(seller_id.eq.X, licensee_id.eq.X, ...)`, então a mesma venda aparece
- * pra todo mundo que estiver em qualquer uma das quatro colunas. Atribuir a um
- * dono só faria o ranking mostrar menos do que a própria pessoa vê — que é o
- * bug que estamos consertando, ao contrário.
+ * usa `or(seller_id.eq.X, operator_id.eq.X)`, então a mesma venda aparece pra
+ * todo mundo que estiver em qualquer uma das duas colunas. Atribuir a um dono
+ * só faria o ranking mostrar menos do que a própria pessoa vê — que é o bug
+ * que estamos consertando, ao contrário.
  */
+/**
+ * A cláusula `.or(...)` do Supabase pra achar as vendas de UMA pessoa, nas
+ * mesmas colunas de `DONOS_DA_VENDA` — um lugar só pra montar essa string,
+ * pra nunca mais um site novo inventar a lista de colunas de novo (foi assim
+ * que 8 arquivos diferentes acabaram citando 3 colunas que não existem).
+ */
+export function filtroOrDonoDaVenda(pessoaId) {
+  return DONOS_DA_VENDA.map((c) => `${c}.eq.${pessoaId}`).join(',');
+}
+
 export function donosDaVenda(venda = {}) {
   const ids = DONOS_DA_VENDA.map((c) => venda[c]).filter(Boolean).map(String);
   return [...new Set(ids)];
