@@ -4,7 +4,7 @@
 // R$ 997,00, e a tela dizendo "Faltam: R$ -3,00".
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { contaDoLance, contaNaoExplicaRecusa } from '../src/lib/saldoDoLance.js';
+import { contaDoLance, contaNaoExplicaRecusa, avisoDoTotalTravado } from '../src/lib/saldoDoLance.js';
 
 test('SAL-1 o caso da Bike Harley: o frete é o que faltava na conta da tela', () => {
   // A trava exigia 997 + frete; o aviso mostrava só 997. Com frete de R$ 39,90 o
@@ -56,6 +56,20 @@ test('SAL-7 entrada faltando ou suja não quebra a tela', () => {
   const c = contaDoLance({ saldo: null, lanceMinimo: '997', frete: undefined });
   assert.equal(c.total, 997);
   assert.equal(c.faltam, 997);
+});
+
+test('SAL-9 a barra de lance mostra o TOTAL, não só o frete', () => {
+  // 🔴 É a prevenção do caso: quem lê "997" com 1000 na conta acha que cabe.
+  const frase = avisoDoTotalTravado({ lanceMinimo: 997, frete: 39.9 });
+  assert.match(frase, /R\$ 39,90/);
+  assert.match(frase, /R\$ 1\.036,90/, 'a frase precisa dizer o TOTAL, não só o frete');
+  assert.match(frase, /trava/);
+});
+
+test('SAL-10 sem frete não há o que somar — a frase some', () => {
+  assert.equal(avisoDoTotalTravado({ lanceMinimo: 997, frete: 0 }), null);
+  assert.equal(avisoDoTotalTravado({ lanceMinimo: 997 }), null);
+  assert.equal(avisoDoTotalTravado(), null);
 });
 
 test('SAL-8 quando a conta da tela diz que dá, o aviso admite que não sabe', () => {

@@ -22,7 +22,7 @@
 
 // Import relativo, não o atalho "@/": este arquivo também roda no `npm test`,
 // fora do Vite, onde o atalho não existe.
-import { money, addMoney, gteMoney } from './money.js';
+import { money, addMoney, gteMoney, fmtBR } from './money.js';
 
 /**
  * Monta a conta do lance, item a item.
@@ -64,4 +64,23 @@ export function contaDoLance({ saldo, lanceMinimo, frete } = {}) {
  */
 export function contaNaoExplicaRecusa(conta) {
   return Boolean(conta?.temSaldo);
+}
+
+/**
+ * A frase que a barra de lance mostra ANTES de a pessoa tentar.
+ *
+ * 🔴 É a prevenção do atendimento de 11/09/2026. A barra já dizia "frete R$ X
+ * incluso no débito da carteira", mas nunca SOMAVA: quem lia "lance mínimo
+ * R$ 997,00" com R$ 1.000,00 na conta achava que cabia, e só descobria que não
+ * cabia depois de levar o aviso de saldo insuficiente na cara.
+ *
+ * Dizer o TOTAL é o que muda — é o número que a trava compara.
+ *
+ * @param {{lanceMinimo?:number, frete?:number}} entrada
+ * @returns {string|null} null quando não há frete (não há o que somar)
+ */
+export function avisoDoTotalTravado({ lanceMinimo, frete } = {}) {
+  const conta = contaDoLance({ lanceMinimo, frete });
+  if (conta.frete <= 0) return null;
+  return `com frete de R$ ${fmtBR(conta.frete)}, o lance mínimo trava R$ ${fmtBR(conta.total)} na carteira`;
 }
