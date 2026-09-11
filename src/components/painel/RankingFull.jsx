@@ -88,7 +88,7 @@ export default function RankingFull({ userId, onSeller }) {
         {/* compartilhar o ranking pros grupos */}
         <div className="flex items-center gap-2 ml-auto">
           <button onClick={copiar} className="px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-sm font-semibold flex items-center gap-1.5 hover:border-emerald-500">{copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />} {copied ? 'Copiado' : 'Copiar ranking'}</button>
-          <a href={`https://wa.me/?text=${encodeURIComponent(montarTexto())}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Enviar no grupo</a>
+          <a href={`https://wa.me/?text=${encodeURIComponent(montarTexto())}`} target="_blank" rel="noreferrer" className="px-3 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> Enviar no grupo</a>
         </div>
       </div>
 
