@@ -2,18 +2,36 @@ import React from "react";
 import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Wallet } from "lucide-react";
+import { contaDoLance, contaNaoExplicaRecusa } from '@/lib/saldoDoLance';
 
-export default function LowBalanceModal({ 
-  isOpen, 
-  currentBalance, 
-  requiredAmount, 
+/**
+ * 💰 O aviso de saldo insuficiente.
+ *
+ * 🔴 11/09/2026 — este aviso mostrava só o lance mínimo, mas a trava do lance
+ * exige lance + frete (useBidSubmission.js). Um cliente com R$ 1.000,00 tentando
+ * dar R$ 997,00 levou "Saldo Insuficiente" com "Faltam: R$ -3,00" na tela.
+ * Faltar menos três reais não existe: era a conta do aviso brigando com a conta
+ * da trava. Agora as duas são a mesma, e o frete aparece como linha própria.
+ */
+export default function LowBalanceModal({
+  isOpen,
+  currentBalance,
+  requiredAmount,
+  freteValor = 0,
   onWatchAsSpectator,
   onAddFunds,
-  onClose 
+  onClose
 }) {
   if (!isOpen) return null;
 
-  const deficit = requiredAmount - currentBalance;
+  const conta = contaDoLance({
+    saldo: currentBalance,
+    lanceMinimo: requiredAmount,
+    frete: freteValor,
+  });
+  // O servidor recota o frete na hora de reservar. Se ele recusou e a conta da
+  // tela diz que cabia, não dá para afirmar quanto falta — então não afirma.
+  const semExplicacao = contaNaoExplicaRecusa(conta);
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[2000] p-4">
@@ -27,12 +45,14 @@ export default function LowBalanceModal({
 
         {/* Title */}
         <h3 className="text-2xl font-bold text-white text-center mb-2">
-          Saldo Insuficiente
+          {semExplicacao ? 'Não deu para reservar o saldo' : 'Saldo Insuficiente'}
         </h3>
 
         {/* Message */}
         <p className="text-gray-400 text-center mb-6">
-          Seu saldo não é suficiente para participar deste leilão
+          {semExplicacao
+            ? 'O servidor recusou a reserva do lance. Recarregue a página e tente de novo — se continuar, fale com a gente.'
+            : 'Seu saldo não é suficiente para participar deste leilão'}
         </p>
 
         {/* Balance Info */}
@@ -40,23 +60,49 @@ export default function LowBalanceModal({
           <div className="flex items-center justify-between">
             <span className="text-gray-300">Seu saldo:</span>
             <span className="text-lg font-semibold text-gray-100">
-              R$ {fmtBR(currentBalance)}
+              R$ {fmtBR(conta.saldo)}
             </span>
           </div>
           <div className="h-px bg-gray-600"></div>
           <div className="flex items-center justify-between">
             <span className="text-gray-300">Lance mínimo:</span>
             <span className="text-lg font-semibold text-yellow-400">
-              R$ {fmtBR(requiredAmount)}
+              R$ {fmtBR(conta.lanceMinimo)}
             </span>
           </div>
-          <div className="h-px bg-gray-600"></div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-300">Faltam:</span>
-            <span className="text-lg font-bold text-red-400">
-              R$ {fmtBR(deficit)}
-            </span>
-          </div>
+
+          {/* 🚚 O frete fica travado junto com o lance. Some daqui e o cliente
+              vê "faltam" um número que não bate com nada. */}
+          {conta.frete > 0 && (
+            <>
+              <div className="h-px bg-gray-600"></div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">Frete (fica reservado junto):</span>
+                <span className="text-lg font-semibold text-yellow-400">
+                  R$ {fmtBR(conta.frete)}
+                </span>
+              </div>
+              <div className="h-px bg-gray-600"></div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-200">Total necessário:</span>
+                <span className="text-lg font-bold text-yellow-300">
+                  R$ {fmtBR(conta.total)}
+                </span>
+              </div>
+            </>
+          )}
+
+          {!semExplicacao && (
+            <>
+              <div className="h-px bg-gray-600"></div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">Faltam:</span>
+                <span className="text-lg font-bold text-red-400">
+                  R$ {fmtBR(conta.faltam)}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Buttons */}

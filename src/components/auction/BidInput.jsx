@@ -3,11 +3,18 @@ import { Button } from "@/components/ui/button";
 import { money, addMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 import { toast } from "sonner";
 import BidPopover from "./BidPopover";
+import { avisoDoTotalTravado } from "@/lib/saldoDoLance";
 
 export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0, isFirstBid = false }) {
   // 🩹 Sem lance ainda (isFirstBid): o primeiro lance vale o próprio currentPrice
   // (= starting_price publicado) — o incremento só soma a partir do segundo lance.
   const minBid = isFirstBid ? money(currentPrice) : addMoney(currentPrice, increment);
+
+  // 🔴 11/09/2026 — a linha de baixo dizia só "frete R$ X incluso no débito da
+  // carteira", sem SOMAR. Cliente com R$ 1.000,00 leu "lance mínimo R$ 997,00",
+  // achou que cabia e levou "Saldo Insuficiente". Quem evita isso é o TOTAL —
+  // é ele que a trava do lance compara com o saldo.
+  const avisoDoTotal = avisoDoTotalTravado({ lanceMinimo: minBid, frete: freteValor });
 
   // PONTO 82 — validação IDÊNTICA à anterior (nenhum cálculo alterado);
   // só os alertas nativos viraram toasts elegantes.
@@ -62,7 +69,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
 
       <p className="mt-2 text-center text-[11px] sm:text-xs text-gray-500">
         {isFirstBid ? `Lance inicial: R$ ${fmtBR(money(currentPrice))}` : `Incremento mínimo: + R$ ${fmtBR(increment)}`}
-        {freteValor > 0 && ` · frete R$ ${fmtBR(freteValor)} incluso no débito da carteira`}
+        {avisoDoTotal && ` · ${avisoDoTotal}`}
       </p>
 
       <style>{`
