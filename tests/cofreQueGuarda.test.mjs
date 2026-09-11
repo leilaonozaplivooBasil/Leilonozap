@@ -95,16 +95,23 @@ test('🔴 o caminho antigo (multipart) corta o codec antes de mandar', () => {
 test('🔴 falhar em guardar deixou de ser mudo', () => {
   // Best-effort continua: o ritual não cai. Mas cinco pessoas gravaram de novo
   // três vezes porque a tela não dizia nada.
+  // 10/09 — o aviso mudou de lugar (o vídeo passou a ser guardado no bloco da
+  // visualização, não no fim do ritual) e de sujeito ("A visualização foi
+  // registrada"), porque agora é o BLOCO que fica salvo. O que não pode mudar
+  // é o silêncio voltar.
   assert.match(
     CRM,
-    /if \(!videoPath\) \{\s*toast\.error\('O ritual foi registrado, mas não consegui guardar a gravação/,
+    /if \(dados\.videoBlob && !videoPath\) toast\.error\('A visualização foi registrada, mas não consegui guardar a gravação/,
     'voltou a falhar em silêncio — foi o silêncio que fez as pessoas repetirem',
   );
+  // e o aviso só aparece quando HOUVE vídeo: quem escolheu não gravar não
+  // pode receber um erro sobre uma gravação que ela nunca fez.
+  assert.match(CRM, /if \(dados\.videoBlob && !videoPath\)/);
 });
 
 test('⚠️ e o ritual continua valendo quando o cofre falha', () => {
   // A trava que impede o conserto de virar "derruba o ritual se o cofre cair".
-  assert.doesNotMatch(CRM, /if \(!videoPath\) \{[^}]*return;/, 'o ritual passou a cair quando a gravação não salva');
+  assert.doesNotMatch(CRM, /!videoPath\)[^;]{0,80}return;/, 'o ritual passou a cair quando a gravação não salva');
   // ⚠️ mede a INTENÇÃO (o envio inteiro dentro de try/catch), não a
   // adjacência das linhas: a primeira versão exigia `try {` colado no
   // `if (!blob…)` e quebrou quando entrou o `aoFalhar` no meio — sem que nada

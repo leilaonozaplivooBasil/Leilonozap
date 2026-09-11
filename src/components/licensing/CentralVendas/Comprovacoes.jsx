@@ -25,8 +25,8 @@ export const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 're
 // aqui — faltava o rótulo E a cor (`ROTULO[s] || s` devolvia a chave crua,
 // sem classe nenhuma pra pintar). As outras telas da fila (XGameAdmin.jsx)
 // já tratavam esse status; aqui não.
-const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual aprovado', reprovada: 'reprovada' };
-const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', reprovada: 'border-red-400/40 text-red-200' };
+const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual aprovado', ritual_em_andamento: 'ritual em andamento', ritual_parcial: 'ritual parcial', reprovada: 'reprovada' };
+const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', ritual_em_andamento: 'border-amber-400/40 text-amber-200', ritual_parcial: 'border-amber-400/50 text-amber-200', reprovada: 'border-red-400/40 text-red-200' };
 const fmtDia = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
 
 // 🖱️ 09/09/2026 — dono: "ver uma prévia do print sem clicar e levar pra

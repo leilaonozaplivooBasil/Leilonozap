@@ -38,13 +38,22 @@ export const ROTULO_STATUS = {
   aprovada_ia: 'aprovada pela IA',
   aprovada_manual: 'aprovada pelo gestor',
   aprovada_ritual: 'ritual aprovado',
+  // 🧱 10/09/2026 — o ritual virou TRÊS BLOCOS que gravam sozinhos, e isso
+  // criou dois estados que antes não existiam porque não podiam existir:
+  // um ritual PELA METADE e um ritual AINDA ACONTECENDO.
+  ritual_em_andamento: 'ritual em andamento',
+  ritual_parcial: 'ritual parcial',
   reprovada: 'reprovada',
 };
 
+// 🔴 `ritual_parcial` e `ritual_em_andamento` NÃO entram aqui, de propósito.
+// Este conjunto decide o que conta como entrega boa — e por tabela pontos e
+// dinheiro. Um ritual pela metade é registro honesto do que aconteceu, não
+// comprovação aprovada; contá-lo como aprovada pagaria por trabalho não feito.
 const APROVADOS = new Set(['aprovada_ia', 'aprovada_manual', 'aprovada_ritual']);
 
 /** Aprovada, reprovada ou ainda em análise — o eixo que o dono pediu ("negadas e aceitas"). */
-export const desfechoDoStatus = (s) => (APROVADOS.has(s) ? 'aprovada' : s === 'em_analise' ? 'em_analise' : 'reprovada');
+export const desfechoDoStatus = (s) => (APROVADOS.has(s) ? 'aprovada' : (s === 'em_analise' || s === 'ritual_em_andamento') ? 'em_analise' : 'reprovada');
 
 /**
  * 🔴 ESTE REGISTRO TEM RASTRO TÉCNICO?

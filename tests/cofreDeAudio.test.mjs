@@ -107,12 +107,18 @@ test('o vídeo do ritual saiu do bucket PÚBLICO', () => {
   assert.ok(!/create policy/i.test(MIG_VIDEO), 'apareceu policy — o cofre deixou de ser cofre');
   assert.match(ROTA_VIDEO, /bucket: 'xgame-videos'/);
   const METODO = semComentarios(ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx'));
-  // O upload DO VÍDEO — do `let videoPath` até o fim do bloco `if (videoBlob)`.
-  // O recorte é estreito de propósito: logo abaixo existe outro upload, o do
-  // frame, que é assunto do teste seguinte.
-  const doVideo = METODO.slice(METODO.indexOf('let videoPath'), METODO.indexOf('let vereditoAmbiente'));
+  // 🔴 10/09 — O RECORTE FICOU MAIS CRÍTICO, NÃO MENOS.
+  // O vídeo passou a ser guardado no ramo `visualizacao` de
+  // salvarBlocoDoRitual — a MESMA função onde o print do bom dia usa
+  // `Core.UploadFile` de propósito. Um recorte largo passaria verde com o
+  // rosto de alguém meditando de volta no bucket aberto.
+  const ini = METODO.indexOf("} else if (bloco === 'visualizacao') {");
+  const fim = METODO.indexOf('const nova = comBloco(base, bloco, corpo);', ini);
+  assert.ok(ini > 0 && fim > ini, 'premissa: o ramo da visualização existe em salvarBlocoDoRitual');
+  const doVideo = METODO.slice(ini, fim);
   assert.ok(!/Core\.UploadFile/.test(doVideo), 'o vídeo voltou pro bucket público');
-  assert.match(doVideo, /guardarVideo\(/);
+  assert.match(doVideo, /guardarVideo\(\{ blob: dados\.videoBlob/);
+  assert.match(doVideo, /pasta: 'rituais'/);
 });
 
 test('o gestor VÊ o vídeo — porque a tela sempre prometeu isso', () => {

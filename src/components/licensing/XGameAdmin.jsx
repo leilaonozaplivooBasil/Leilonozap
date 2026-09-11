@@ -553,6 +553,8 @@ export default function XGameAdmin({ onVerComo } = {}) {
                               <p className="text-[10px] text-gray-500">
                                 {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
                                 {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
+                                {s === 'ritual_parcial' && <span className="font-bold text-amber-600">🌅 ritual pela metade — ver pendências</span>}
+                                {s === 'ritual_em_andamento' && <span className="font-bold text-amber-600">🌅 ritual em andamento</span>}
                                 {s === 'aprovada_ia' && <span className="font-bold text-emerald-600">🤖 aprovada pela IA{c.veredito_ia?.confianca ? ` (${c.veredito_ia.confianca}%)` : ''}</span>}
                                 {s === 'aprovada_manual' && <span className="font-bold text-emerald-700">👤 aprovada pelo gestor</span>}
                                 {s === 'reprovada' && <span className="font-bold text-red-600">🚫 reprovada</span>}

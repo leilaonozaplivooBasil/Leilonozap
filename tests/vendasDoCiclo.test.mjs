@@ -94,9 +94,19 @@ test('🏷️ a reprovação automática por ambiente NÃO se passa por decisão
   //
   // Nada se perde: o texto da IA já viaja em `veredito_ia` e a tela já o mostra
   // rotulado como "IA:". Antes aparecia duas vezes, uma com o crédito trocado.
-  const bloco = METODO.slice(METODO.indexOf('const comprovacaoReprovada'), METODO.indexOf('const comprovacaoReprovada') + 700);
+  // 🔴 10/09 — o veredito da IA MUDOU DE LUGAR: a reprovação por ambiente
+  // deixou de acontecer no fim do ritual e passa a entrar no BLOCO, assim que
+  // a IA responde (julgarBlocoComIA). A regra é a mesma: quem julgou foi a
+  // máquina, e o registro tem que dizer isso.
+  const ini = METODO.indexOf('const julgarBlocoComIA');
+  const fim = METODO.indexOf('const concluirRitual', ini);
+  assert.ok(ini > 0 && fim > ini, 'premissa: o julgamento por bloco existe');
+  const bloco = METODO.slice(ini, fim);
   assert.ok(!/motivo_gestor/.test(bloco), 'a IA voltou a assinar como se fosse o gestor');
-  assert.match(bloco, /veredito_ia: vereditoAmbiente/, 'o motivo da IA precisa continuar registrado — só com o nome certo');
+  assert.match(bloco, /veredito_ia: r/, 'o motivo da IA precisa continuar registrado — só com o nome certo');
+  // e o fechamento do ritual também não pode assinar por gestor nenhum
+  const fech = METODO.slice(METODO.indexOf('const gravado = t.comprovacao?.tipo'), METODO.indexOf('const comprovando, setComprovando') > 0 ? METODO.indexOf('const comprovando, setComprovando') : METODO.length);
+  assert.ok(!/motivo_gestor/.test(fech.slice(0, 3000)), 'o fechamento do ritual passou a assinar como gestor');
 });
 
 test('quem escreve motivo_gestor de verdade continua sendo gente', () => {

@@ -133,11 +133,27 @@ test('🔴 as falhas ATRAVESSAM as tentativas — a IA fora do ar deixa marca', 
   assert.match(CRM, /aoFalhar: anotarFalha\('video'\)/, 'a falha do vídeo voltou a morrer no console');
 });
 
-test('🔴 os TRÊS desfechos do ritual gravam rastro — inclusive o "perdido"', () => {
+test('🔴 TODO caminho que grava ritual grava rastro — inclusive o "perdido" e o bloco solto', () => {
   // "Perdeu o prazo" é o desfecho que MAIS parece mal uso e mais esconde falha
   // nossa: foi o da Iara.
-  const n = (CRM.match(/rastroDa\(\{ anterior: t\.comprovacao, tempoTelaS, falhas: falhasDaEntrega\(\) \}\)/g) || []).length;
-  assert.equal(n, 3, `esperava rastro nos 3 desfechos do ritual, achei ${n}`);
+  //
+  // 🔴 10/09 — os desfechos passaram de 3 pra 2 (o de "reprovado por ambiente"
+  // saiu: a IA agora julga por bloco, assíncrona), e NASCEU um terceiro
+  // caminho de escrita que não é desfecho nenhum: cada BLOCO gravado sozinho.
+  // Ele também precisa de rastro — sem `tentativas`, `temRastro()` daria
+  // false e o laudo leria uma linha de HOJE como "anterior ao rastro". Quem
+  // parasse no bloco 2 viraria exatamente esse fantasma.
+  const desfechos = (CRM.match(/rastroDa\(\{ anterior: t\.comprovacao, tempoTelaS, falhas: falhasDaEntrega\(\) \}\)/g) || []).length;
+  assert.equal(desfechos, 2, `esperava rastro nos 2 desfechos do ritual, achei ${desfechos}`);
+  assert.match(
+    CRM,
+    /Object\.assign\(nova, rastroDa\(\{ anterior: t\.comprovacao, falhas: falhasPorTarefa\.current\[t\.id\] \|\| \[\] \}\)\)/,
+    'o bloco gravado sozinho ficou sem rastro — uma linha de hoje passaria por "antes do rastro"',
+  );
+  // premissa: o gravador de bloco existe e é ele que está sendo medido
+  const ini = CRM.indexOf('const salvarBlocoDoRitual');
+  assert.ok(ini > 0, 'premissa: salvarBlocoDoRitual existe');
+  assert.ok(CRM.slice(ini, CRM.indexOf('const julgarBlocoComIA', ini)).includes('rastroDa('), 'o rastro saiu de dentro do gravador de bloco');
   assert.match(CRM, /rastroDa\(\{ anterior: t\.comprovacao, iaIndisponivel/, 'a comprovação comum ficou sem rastro');
 });
 
