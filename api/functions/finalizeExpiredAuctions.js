@@ -11,6 +11,7 @@
 // fora de hora não encerra nada que ainda não venceu (mesma garantia do
 // finalizeAuction, que já é público por design).
 import { hasServerEnv, sb, finalizeOneAuction } from '../_lib/finalizeAuctionCore.js';
+import { consultasDeApuracao } from '../_lib/apuracaoDoLeilao.js';
 
 const BATCH_LIMIT = 25; // leilões por execução — o cron roda de novo em 60s
 
@@ -20,9 +21,24 @@ export default async function handler(req, res) {
     if (!hasServerEnv()) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     const nowISO = new Date().toISOString();
-    const rows = await (await sb(
-      `auctions?select=*&status=in.(active,processing)&end_time=lte.${encodeURIComponent(nowISO)}&order=end_time.asc&limit=${BATCH_LIMIT}`
-    )).json();
+    // 🔴 11/09/2026 — DUAS consultas: a de sempre (leilão ainda aberto) e a de
+    // REPARO, que adota o leilão que o pg_cron do banco já fechou como 'sold'
+    // sem gravar order_status. O porquê inteiro está em finalizeAuctionCore.js,
+    // em cima de ESTADOS_APURAVEIS. Sem a segunda, o vencedor fica com o
+    // dinheiro preso na carteira e a tela dizendo "já pago" — foi o que segurou
+    // seis arremates e R$ 1.098,01 por dezesseis dias.
+    const respostas = await Promise.all(
+      consultasDeApuracao(nowISO, BATCH_LIMIT).map(async (q) => {
+        const r = await sb(q);
+        if (!r.ok) throw new Error(`consulta de apuração falhou (HTTP ${r.status})`);
+        const j = await r.json();
+        return Array.isArray(j) ? j : [];
+      })
+    );
+    // o mesmo leilão nunca aparece nas duas (uma pede order_status nulo com
+    // status já fechado, a outra pede status aberto), mas deduplicar é barato e
+    // garante que uma mudança futura numa das consultas não vire dupla apuração.
+    const rows = [...new Map(respostas.flat().map((a) => [a.id, a])).values()];
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return res.status(200).json({ success: true, finalized: 0, results: [] });
