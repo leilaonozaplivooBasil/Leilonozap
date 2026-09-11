@@ -101,3 +101,40 @@ Claude nesta conversa. **Não impede** que outro chat, outra pessoa ou um merge
 feito direto no GitHub publique fora da janela — quem quiser trancar de verdade
 precisa de proteção de branch ou fila de deploy na Vercel, que é outra
 conversa.
+
+## O preview oficial — qual link é confiável pra sempre
+
+**Decisão do dono (11/09/2026), depois de dias vendo o link de um branch
+específico ficar travado em código de dois dias atrás:** link de preview de
+branch (`https://leilonozap-git-<nome-do-branch>-leilaapp-s-projects.vercel.app`)
+**nunca é permanente.** A Vercel gera um link desses por branch, e ele só
+atualiza quando alguém empurra código **naquele branch exato**. No instante em
+que o trabalho muda de branch (quase sempre, porque cada chat cria o seu), o
+link antigo para no tempo — sem erro nenhum aparecendo, só parece que "não
+atualiza".
+
+**O único link permanente, que qualquer pessoa pode salvar nos favoritos e
+confiar pra sempre, é a produção:**
+
+### 👉 https://leilaonozap.net
+
+Ele atualiza sozinho, sem ninguém precisar lembrar de nada, toda vez que
+qualquer PR de qualquer chat é mesclado no `main` (respeitando a janela de
+deploy acima). Não existe link de preview "oficial" que se mantenha correto
+sem alguém empurrando código nele pra sempre — produção é o único que essa
+garantia se cumpre sozinha, por construção da Vercel.
+
+### Regra pra qualquer Claude neste repositório, a partir de agora
+
+1. **Nunca chame um link `-git-<branch>-` de "o preview oficial" nem sugira
+   que o dono salve esse link nos favoritos.** Ele é válido só enquanto durar
+   a revisão daquele PR específico — depois disso, é lixo.
+2. Quando o dono (ou qualquer pessoa) pedir "manda o link do preview" pra
+   revisar um PR em andamento, gere/confirme o link **daquele PR específico**
+   na hora — nunca reaproveite um link salvo de conversa anterior.
+3. Se você perceber o dono usando um link de preview de um branch antigo
+   (build de dias atrás, branch sem PR aberto), avise na hora e aponte de
+   volta pra `leilaonozap.net` — não deixe ele continuar sem saber.
+4. Depois de mesclar um PR, sempre confirme direto na Vercel que
+   `leilaonozap.net` já está servindo o commit novo antes de dizer "está no
+   ar" — link de alias de branch não é prova de produção.
