@@ -24,7 +24,55 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 // em sequência) ficava presa até a função serverless ser derrubada pelo
 // limite da plataforma — o spinner "Analisando preços..." congelava e só
 // "voltava" quando esse limite batia. Agora cada fonte tem um teto próprio.
-const FONTE_TIMEOUT_MS = 6000;
+// 🔴 10/09/2026 — OS RELÓGIOS ESTAVAM ABAIXO DO TEMPO REAL DAS APIS.
+//
+// Medido no painel da SerpApi (Engine Reports, 03→10/09), com a conta do dono:
+//
+//     google_lens ....... 134 sucessos, 1 erro, 99,26% ... média 7,461s
+//     google_shopping ...  51 sucessos, 5 erros, 91,07% ... média 11,851s
+//     google_images .....  42 sucessos, 0 erros, 100%  ... média 4,896s
+//
+// O teto por fonte era 6s e o teto geral 12s. Ou seja: a chamada de Lens
+// estourava POR PADRÃO (7,5s > 6s) e o Shopping — a única fonte que devolve
+// preço de verdade — nunca cabia nos 12s porque era a ÚLTIMA da fila.
+//
+// E o pior: a SerpApi registra 99% de sucesso. Quem desistia era a gente,
+// depois que o pedido já tinha sido processado e cobrado. Pagávamos por
+// buscas que jogávamos fora.
+const FONTE_TIMEOUT_MS = 14000;
+
+// ⚡ 10/09/2026 — DISJUNTOR DE FONTE ESGOTADA.
+// A SearchApi.io responde "You have used all of the searches for the month"
+// desde 20/08. Enquanto durar o mês dela, chamar é jogar fora o slot da onda.
+// Memória do processo: some quando a lambda recicla, e é o suficiente — o
+// objetivo é não repetir a chamada morta dentro da mesma instância quente.
+const disjuntor = new Map(); // nome da fonte -> quando volta a ser tentada (ms)
+const ESGOTADA_POR_MS = 60 * 60 * 1000; // 1h
+/**
+ * A frase é de "cota do mês acabou"?
+ *
+ * Exportada de propósito: é a régua que decide desligar uma fonte, e régua que
+ * só existe dentro do arquivo vira teste que varre texto em vez de medir
+ * comportamento. A frase real da SearchApi, copiada do diagnóstico de 10/09:
+ * "You have used all of the searches for the month. Please upgrade your plan
+ * on SearchApi.io."
+ */
+export function ehCotaEsgotada(msg) {
+  return /used all of the searches|upgrade your plan|quota exceeded|insufficient_quota|out of credits/i.test(String(msg || ''));
+}
+const fonteAberta = (nome) => {
+  const ate = disjuntor.get(nome);
+  return !ate || Date.now() > ate;
+};
+const registrarFalha = (nome, msg) => {
+  if (ehCotaEsgotada(msg)) disjuntor.set(nome, Date.now() + ESGOTADA_POR_MS);
+};
+
+// 📋 10/09/2026 — LOG. A pilha inteira do CompareAQUI não tinha UM
+// `console.log`: toda falha era capturada num array devolvido só pro
+// navegador. Resultado — o painel de erros da Vercel vivia limpo e ninguém
+// conseguia diagnosticar nada do servidor. Agora a trilha sai nos logs.
+const logar = (...partes) => { try { console.log('[comparai]', ...partes); } catch { /* log nunca derruba busca */ } };
 
 // Limpa o título do catálogo pra virar uma query boa. Desgruda "Pequeno500ml" -> "Pequeno 500ml"
 // (títulos vêm colados e a busca não achava nada), tira ruído e fica com até 5 palavras.
@@ -438,32 +486,57 @@ export async function searchMarket(title, imageUrl) {
     return achados;
   };
 
-  const fontes = [];
-  if (imageUrl) {
-    // 1º — SERPAPI DIRETO (caminho INDEPENDENTE, PONTO 93). Chave do dono
-    // publicada aqui na Vercel: não passa por Base44 nem por SearchAPI.
-    if (SERPAPI_KEY) {
-      fontes.push({ nome: 'serpapi_lens_exato', identidadeVerificada: true, fn: () => fetchSerpApiLensExato(imageUrl) });
-      fontes.push({ nome: 'serpapi_lens_visual', fn: () => fetchSerpApiLensVisual(imageUrl) });
-    }
-    // 2º — SearchAPI (reserva; hoje respondendo "cota do mês esgotada").
-    if (SEARCHAPI_KEY) {
-      fontes.push({ nome: 'google_lens_exato', identidadeVerificada: true, fn: () => fetchGoogleLensExato(imageUrl) });
-      fontes.push({ nome: 'google_lens_similar', fn: () => fetchGoogleLensSimilar(imageUrl) });
-    }
-    // 3º — ponte Base44: MULETA, só enquanto a SERPAPI_KEY não estiver
-    // publicada aqui. Assim que ela for pro painel da Vercel, esta linha para
-    // de ser usada sozinha — sem eu precisar mexer em nada. É de propósito:
-    // o dono quer sair do Base44, e a saída não pode depender de um deploy meu.
-    if (!SERPAPI_KEY) {
-      fontes.push({ nome: 'ponte_base44_lens', fn: () => fetchLensPonteBase44(imageUrl) });
-    }
-  }
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🌊 DUAS ONDAS EM PARALELO — 10/09/2026, ordem do dono: "utilizar o serpapi
+  // como principal fonte do CompareAQUI".
+  // ═══════════════════════════════════════════════════════════════════════
+  // Antes eram SETE fontes em FILA, uma esperando a outra, sob um teto de 12s.
+  // Com o Lens levando 7,5s de média, as duas primeiras comiam o orçamento
+  // inteiro e o SerpApi SHOPPING — a única que devolve preço com regularidade —
+  // era a ÚLTIMA e nunca chegava a ser chamada. Daí o "às vezes funciona":
+  // quando o Lens respondia rápido, sobrava tempo; quando não, "Indisponível".
+  //
+  // Agora as fontes de uma onda saem TODAS juntas: o custo de tempo da onda é
+  // o da mais lenta, não a soma. E a ordem mudou — Shopping primeiro.
+  //
+  // 💸 POR QUE ONDAS, E NÃO TUDO DE UMA VEZ: cada chamada à SerpApi é uma
+  // busca cobrada, e a conta tem 995 restantes com o cartão recusado. Disparar
+  // as sete sempre triplicaria o gasto. A onda 2 só existe quando a 1 não
+  // precificou — na maioria dos casos ela nunca roda.
+  const ondas = [];
+  const onda1 = [];
+  const onda2 = [];
+
   if (cleaned && cleaned.length >= 4) {
-    if (SEARCHAPI_KEY) fontes.push({ nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) });
-    if (SERPAPI_KEY) fontes.push({ nome: 'serpapi', fn: () => fetchSerpApi(cleaned) });
-    fontes.push({ nome: 'zoom', fn: () => fetchZoom(cleaned) });
+    // 🥇 A PRINCIPAL: SerpApi Google Shopping, por texto. É a que traz preço.
+    if (SERPAPI_KEY) onda1.push({ nome: 'serpapi', fn: () => fetchSerpApi(cleaned) });
+    // 🆓 o Zoom não custa busca nenhuma — anda junto sempre, sem pesar
+    onda1.push({ nome: 'zoom', fn: () => fetchZoom(cleaned) });
   }
+  if (imageUrl && SERPAPI_KEY) {
+    // a correspondência EXATA por imagem prova identidade — vale a busca
+    onda1.push({ nome: 'serpapi_lens_exato', identidadeVerificada: true, fn: () => fetchSerpApiLensExato(imageUrl) });
+    // a visual custa outra busca e acerta menos: só se a onda 1 não precificar
+    onda2.push({ nome: 'serpapi_lens_visual', fn: () => fetchSerpApiLensVisual(imageUrl) });
+  }
+  // 🔻 SearchAPI virou RESERVA DA RESERVA: está respondendo "cota do mês
+  // esgotada" desde 20/08. Fica na onda 2 e o disjuntor a tira da roda assim
+  // que ela repetir a frase.
+  if (imageUrl && SEARCHAPI_KEY) {
+    onda2.push({ nome: 'google_lens_exato', identidadeVerificada: true, fn: () => fetchGoogleLensExato(imageUrl) });
+    onda2.push({ nome: 'google_lens_similar', fn: () => fetchGoogleLensSimilar(imageUrl) });
+  }
+  if (cleaned && cleaned.length >= 4 && SEARCHAPI_KEY) {
+    onda2.push({ nome: 'google_shopping', fn: () => fetchSearchApi(cleaned) });
+  }
+  // ponte Base44: MULETA, só enquanto a SERPAPI_KEY não estiver publicada aqui.
+  if (imageUrl && !SERPAPI_KEY) {
+    onda2.push({ nome: 'ponte_base44_lens', fn: () => fetchLensPonteBase44(imageUrl) });
+  }
+
+  if (onda1.length) ondas.push(onda1);
+  if (onda2.length) ondas.push(onda2);
+  const fontes = [...onda1, ...onda2];
   if (!fontes.length) return { found: false, reason: 'sem_titulo_sem_imagem', query: cleaned, results: [], attempts: [] };
 
   // ⏱️ Teto GERAL da cascata (19/08/2026) — cada fonte já tem seu próprio
@@ -472,7 +545,10 @@ export async function searchMarket(title, imageUrl) {
   // tentando fontes quando já se gastou tempo demais — o usuário prefere um
   // "indisponível" rápido a um spinner pendurado por 20+ segundos.
   const inicio = Date.now();
-  const TETO_GERAL_MS = 12000;
+  // ⏱️ Teto GERAL: com as ondas em paralelo, o pior caso deixou de ser a SOMA
+  // das fontes e passou a ser a mais lenta de cada onda. 16s cobre o Shopping
+  // (11,9s de média) com folga e ainda cabe nos 18s que o navegador espera.
+  const TETO_GERAL_MS = 16000;
   const falhas = [];
 
   // 🔦 PONTO 91 — a ausência de chave era SILENCIOSA: a fonte simplesmente não
@@ -491,13 +567,37 @@ export async function searchMarket(title, imageUrl) {
   // conseguir precificar. É o que o dono pediu: "trazer bastante, 1,2,3...8".
   let provaIdentidade = [];
 
-  for (const f of fontes) {
+  for (const onda of ondas) {
     if (Date.now() - inicio > TETO_GERAL_MS) {
-      falhas.push(`${f.nome}: pulada (teto geral de ${TETO_GERAL_MS}ms atingido)`);
+      for (const f of onda) falhas.push(`${f.nome}: pulada (teto geral de ${TETO_GERAL_MS}ms atingido)`);
       continue;
     }
-    try {
-      const raw = await f.fn();
+    // 🌊 as fontes da onda saem TODAS de uma vez. `allSettled` porque uma
+    // fonte que explode não pode levar as irmãs junto — é o motivo de a
+    // SearchApi esgotada não conseguir mais derrubar a busca inteira.
+    const abertas = onda.filter((f) => {
+      if (fonteAberta(f.nome)) return true;
+      falhas.push(`${f.nome}: pulada (disjuntor — respondeu cota esgotada há menos de 1h)`);
+      return false;
+    });
+    if (!abertas.length) continue;
+    logar('onda', abertas.map((f) => f.nome).join('+'), `t=${Date.now() - inicio}ms`);
+    const respostas = await Promise.allSettled(abertas.map((f) => f.fn()));
+
+    // processadas na ORDEM da onda (a principal primeiro) e SEM rede nova:
+    // o que sobrou daqui pra baixo é a mesma régua de sempre.
+    for (let i = 0; i < abertas.length; i += 1) {
+      const f = abertas[i];
+      const resposta = respostas[i];
+      if (resposta.status === 'rejected') {
+        const msg = String(resposta.reason?.message || resposta.reason).slice(0, 110);
+        registrarFalha(f.nome, msg);
+        falhas.push(`${f.nome}: ${msg}`);
+        logar('falhou', f.nome, msg);
+        continue;
+      }
+      try {
+      const raw = resposta.value || [];
       const r = relevantes(raw, f.identidadeVerificada);
       const comPreco = r.filter((c) => isValidPrice(c.price));
       // Três números, não um: distingue "a fonte não achou nada" de "achou e
@@ -547,6 +647,7 @@ export async function searchMarket(title, imageUrl) {
           if (vistos.has(k)) return false; vistos.add(k); return true;
         });
 
+        logar('achou', f.nome, `${precificados.length} preços`, `t=${Date.now() - inicio}ms`);
         return {
           found: true, source: f.nome, query: cleaned,
           avg: Math.round(avg * 100) / 100,
@@ -556,10 +657,12 @@ export async function searchMarket(title, imageUrl) {
           attempts: falhas,
         };
       }
-    } catch (e) {
-      falhas.push(`${f.nome}: ${String(e?.message || e).slice(0, 110)}`);
-    }
-  }
+      } catch (e) {
+        falhas.push(`${f.nome}: ${String(e?.message || e).slice(0, 110)}`);
+        logar('erro ao processar', f.nome, String(e?.message || e).slice(0, 110));
+      }
+    } // ← fecha o processamento das fontes DESTA onda
+  } // ← fecha as ondas
 
   // Nenhuma fonte precificou. Se o Google confirmou a identidade por imagem,
   // isso NÃO é "não encontramos o produto" — é "achamos o produto, nenhuma
@@ -570,5 +673,6 @@ export async function searchMarket(title, imageUrl) {
       results: provaIdentidade.slice(0, 12), attempts: falhas, fontes: falhas,
     };
   }
+  logar('nada encontrado', `q="${cleaned}"`, `t=${Date.now() - inicio}ms`, falhas.join(' | ').slice(0, 400));
   return { found: false, reason: 'sem_resultado', query: cleaned, fontes: falhas, attempts: falhas, results: [] };
 }

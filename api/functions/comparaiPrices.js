@@ -3,6 +3,7 @@
 // Mantém o MESMO formato de resposta da function original do Base44.
 import { searchMarket } from '../_lib/marketSearch.js';
 import { chamarRuntimeBase44 } from '../_lib/base44Runtime.js';
+import { lerCache, gravarCache, chaveDoCache, VALIDADE_DIAS } from '../_lib/comparaiCache.js';
 
 // 🟢 PONTO 93 — quando a SERPAPI_KEY estiver publicada aqui na Vercel, o
 // marketSearch resolve tudo sozinho (SerpAPI Lens direto) e a ponte pro Base44
@@ -50,7 +51,24 @@ export default async function handler(req, res) {
 
     const imgUrl = Array.isArray(entity.image_urls) && entity.image_urls[0] ? entity.image_urls[0]
       : (Array.isArray(entity.images) && entity.images[0] ? entity.images[0] : null);
-    const mk = await searchMarket(searchTitle, imgUrl); // busca por imagem primeiro
+    // 💾 10/09/2026 — CACHE. Antes, TODA abertura do modal disparava a busca
+    // completa: 2 a 3 buscas cobradas da SerpApi por clique, mais 2 a 3 por
+    // cada "tenta de novo" que o erro intermitente provocava. A conta chegou
+    // em 995 restantes com o cartão recusado.
+    //
+    // O que volta do cache é só o MERCADO. O nosso preço e a economia são
+    // recalculados logo abaixo, com o lance de agora — por isso guardar por
+    // dias não mostra número velho pro cliente.
+    const chave = chaveDoCache({ entidade: auctionId ? 'auction' : 'product', id: auctionId || productId, titulo: searchTitle, imagem: imgUrl });
+    const guardado = await lerCache(chave);
+    let mk = guardado?.payload || null;
+    const veioDoCache = !!mk;
+    if (!mk) {
+      mk = await searchMarket(searchTitle, imgUrl); // busca por imagem primeiro
+      // só o que ACHOU é guardado: um "não encontrei" preso por 7 dias deixaria
+      // o item sem comparação mesmo depois de a fonte voltar (ver comparaiCache).
+      await gravarCache(chave, { entidade: auctionId ? 'auction' : 'product', id: auctionId || productId, payload: mk });
+    }
 
     // 🌉 PONTO 92 (20/08/2026) — PONTE DE PREÇO PRO RUNTIME BASE44.
     // Provado pelo diagnóstico na tela do dono: aqui na Vercel a SEARCHAPI_KEY
@@ -142,9 +160,14 @@ export default async function handler(req, res) {
         source: mk.source,
         // Trilha do que cada fonte devolveu — o modal mostra sob demanda, pra
         // nunca mais ficarmos cegos sobre de onde o número veio (PONTO 91).
-        attempts: mk.attempts || [],
+        // 💾 quando veio do cache, a trilha diz isso com todas as letras —
+        // senão o diagnóstico da tela mostraria as tentativas de dias atrás
+        // como se tivessem acabado de acontecer.
+        attempts: veioDoCache
+          ? [`💾 do cache (busca de ${new Date(guardado.criadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}, vale ${VALIDADE_DIAS} dias)`, ...(mk.attempts || [])]
+          : (mk.attempts || []),
       },
-      cached: false,
+      cached: veioDoCache,
     });
   } catch (error) {
     return res.status(200).json({ success: false, error: 'Erro ao processar comparação', details: String(error && error.message || error) });

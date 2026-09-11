@@ -3,6 +3,7 @@
 // Usa o MESMO motor de busca do Comparaí (api/_lib/marketSearch.js). Se não achar mercado, preserva o
 // mercado já existente; só usa markup sobre custo como último recurso (nunca achata lote inteiro).
 import { searchMarket } from '../_lib/marketSearch.js';
+import { lerCache, gravarCache, chaveDoCache } from '../_lib/comparaiCache.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,7 +37,19 @@ export default async function handler(req, res) {
       // REGRA ÚNICA (pilar do negócio): preço SÓ sai da busca de mercado real (média das lojas − 20%).
       // NUNCA custo×2, NUNCA faixa antiga do import. Sem mercado real → não inventa preço, marca p/ revisão.
       const imgUrl = Array.isArray(p.image_urls) && p.image_urls[0] ? p.image_urls[0] : null;
-      const mk = await searchMarket(p.description, imgUrl); // imagem primeiro, texto de fallback
+      // 💾 10/09/2026 — O MESMO CACHE DO COMPAREAQUI, e aqui ele pesa MAIS.
+      // Esta rota roda em LAÇO, um produto por vez: um lote de 50 chegava a
+      // 150 buscas cobradas da SerpApi. Com 995 restantes e o cartão recusado,
+      // duas análises de lote zeravam a conta. Reanalisar o mesmo lote agora
+      // custa zero, e o cache é COMPARTILHADO com o modal do cliente — quem
+      // precificou já deixou o mercado pronto pra quem for comparar.
+      const chave = chaveDoCache({ entidade: 'product', id: p.id, titulo: p.description, imagem: imgUrl });
+      const guardado = await lerCache(chave);
+      let mk = guardado?.payload || null;
+      if (!mk) {
+        mk = await searchMarket(p.description, imgUrl); // imagem primeiro, texto de fallback
+        await gravarCache(chave, { entidade: 'product', id: p.id, payload: mk });
+      }
       if (!mk.found || !(mk.avg > 0)) {
         out.push({
           id: p.id, description: p.description, lot: p.lot,
