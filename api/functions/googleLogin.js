@@ -149,7 +149,20 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           full_name: nomeNovo,
           email,
-          password: crypto.randomUUID(),
+          // 🔐 11/09/2026 — aqui gravava `password: crypto.randomUUID()` EM TEXTO.
+          //
+          // Parecia inofensivo (a pessoa nem conhece esse valor), mas a policy
+          // `public_read` da app_users é SELECT para o papel `anon` com
+          // `qual = true`: a coluna ia junto no alcance da chave publicável que
+          // vai no pacote do site. E o login.js, sem hash na app_users_auth,
+          // compara `stored === password` — string com string. Ou seja: lia o
+          // UUID com a chave pública, digitava como senha e entrava na conta.
+          // Eram 55 contas, e crescia uma a cada login novo pelo Google.
+          //
+          // Quem entra pelo Google não precisa de senha: entra pelo Google. A
+          // coluna fica nula, como nas outras sete rotas de cadastro
+          // (publicRegister, registerSeller, registerNetworkUser, createLicensee…).
+          password: null,
           phone: '',
           referred_by_id,
           referral_code,
