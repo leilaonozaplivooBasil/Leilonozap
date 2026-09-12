@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {
   emReais, quandoEncerra, primeiroNome, escaparHtml, assunto, previa,
   corpoTexto, corpoHtml, corpoSms, montarMensagem, urlDoLeilao, urlDeDescadastro,
-  semAcento, LIMITE_SMS,
+  semAcento, LIMITE_SMS, LIMITE_ASSUNTO,
 } from '../scripts/campanha/modelo.mjs';
 
 // 11/09/2026 às 20h15 de Brasília = 23h15 UTC
@@ -67,8 +67,11 @@ test('MOD-7 nome de gente vira primeiro nome com inicial maiúscula', () => {
 });
 
 test('MOD-8 o assunto cabe na tela do celular', () => {
-  const a = assunto(LOTE);
-  assert.ok(a.length <= 70, `assunto com ${a.length} caracteres: ${a}`);
+  // 🔴 Relógio congelado. Sem passar AGORA, este teste passava no dia 11 e
+  // quebrava sozinho no dia 12: a mesma data vira "hoje" hoje e "sexta-feira,
+  // 11/09" amanhã. Teste que depende do relógio apodrece na virada da meia-noite.
+  const a = assunto(LOTE, AGORA);
+  assert.ok(a.length <= LIMITE_ASSUNTO, `assunto com ${a.length} caracteres: ${a}`);
   assert.match(a, /R\$ 897,00/);
   assert.match(a, /hoje às 20h15/);
   // caixa alta e exclamação repetida são gatilho de spam
@@ -78,9 +81,20 @@ test('MOD-8 o assunto cabe na tela do celular', () => {
 
 test('MOD-9 título comprido é cortado, não estoura o assunto', () => {
   const comprido = { ...LOTE, title: 'Kit Trilho Eletrificado Click 1m + 3 Spots 5w 3000k Branco Quente Bivolt' };
-  const a = assunto(comprido);
-  assert.ok(a.length <= 70, `assunto com ${a.length}: ${a}`);
+  const a = assunto(comprido, AGORA);
+  assert.ok(a.length <= LIMITE_ASSUNTO, `assunto com ${a.length}: ${a}`);
   assert.match(a, /…/);
+});
+
+test('MOD-8b leilão que fecha daqui a dias também cabe no assunto', () => {
+  // A data por extenso come 16 caracteres a mais que "hoje às 20h15". Era por
+  // aqui que o assunto estourava em produção — não só no teste.
+  for (const dias of [2, 3, 5, 9]) {
+    const fim = new Date(new Date(FIM).getTime() + dias * 86400000);
+    const a = assunto({ ...LOTE, end_time: fim.toISOString() }, AGORA);
+    assert.ok(a.length <= LIMITE_ASSUNTO, `${dias} dia(s): assunto com ${a.length}: ${a}`);
+    assert.match(a, /R\$ 897,00/);
+  }
 });
 
 test('MOD-10 o SMS cabe em UMA mensagem', () => {
