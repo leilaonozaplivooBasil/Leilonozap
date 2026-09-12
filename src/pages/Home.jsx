@@ -24,6 +24,7 @@ const RecommendedSection = lazy(() => import('../components/recommendations/Reco
 import HeroBannerLeiloes from '../components/home/HeroBannerLeiloes';
 import { interleaveBanners } from '@/lib/interleaveBanners';
 import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
+import { lerCache, lerCacheDeEmergencia, gravarCache, limparCache, cacheDaSessaoEstaFresco } from '@/lib/cacheDeLeiloes';
 import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
 import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
@@ -152,41 +153,11 @@ export default function Home() {
   const retryTimeoutRef = useRef(null);
   const location = useLocation();
 
-  // 🚀 INICIALIZA COM CACHE — DEDUPLICADO NA ORIGEM
-  const [auctions, setAuctions] = useState(() => {
-    // Helper: deduplica array por id
-    const dedup = (arr) => {
-      if (!Array.isArray(arr) || arr.length === 0) return [];
-      const seen = new Set();
-      return arr.filter(a => {
-        if (!a?.id || seen.has(a.id)) return false;
-        seen.add(a.id);
-        return true;
-      });
-    };
-    // Tenta sessionStorage primeiro
-    try {
-      const cached = sessionStorage.getItem('auctions_cache');
-      const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000) {
-        const parsed = dedup(JSON.parse(cached));
-        if (parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    // Fallback localStorage
-    try {
-      const persisted = localStorage.getItem('auctions_cache_persistent');
-      if (persisted) {
-        const parsed = dedup(JSON.parse(persisted));
-        if (parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return [];
-  });
-  const [isLoading, setIsLoading] = useState(() => {
-    const cached = sessionStorage.getItem('auctions_cache');
-    return !cached;
-  });
+  // 🚀 INICIALIZA COM CACHE — a régua de idade dos dois depósitos mora em cacheDeLeiloes.js.
+  // Antes, o localStorage entrava aqui SEM nenhuma conferência de idade: lista de semanas
+  // atrás pintava a tela. Foi o que fez a página dizer "6 rolando" com 39 no banco.
+  const [auctions, setAuctions] = useState(() => lerCache());
+  const [isLoading, setIsLoading] = useState(() => !cacheDaSessaoEstaFresco());
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
   // 📅 PONTO 88 — filtro por data de encerramento, combinável com os demais filtros
@@ -220,21 +191,12 @@ export default function Home() {
     filters: { status: STATUS_EM_CARTAZ },
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
-        const seen = new Set();
-        const unique = freshAuctions.filter(a => {
-          if (!a?.id || seen.has(a.id)) return false;
-          seen.add(a.id);
-          return true;
-        });
-        const serialized = JSON.stringify(unique);
-        // Só atualiza state se os dados mudaram de verdade
-        const current = sessionStorage.getItem('auctions_cache');
-        if (current !== serialized) {
-          sessionStorage.setItem('auctions_cache', serialized);
-          sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-          localStorage.setItem('auctions_cache_persistent', serialized);
-          setAuctions(unique);
-        }
+        // Grava sempre — inclusive quando a lista não mudou. É a gravação que renova a marca
+        // de hora; sem ela o cache envelhece mesmo com o polling trazendo dado fresco.
+        const unique = gravarCache(freshAuctions);
+        setAuctions((anteriores) => (
+          JSON.stringify(anteriores) === JSON.stringify(unique) ? anteriores : unique
+        ));
         setIsLoading(false);
       }
     },
@@ -622,35 +584,19 @@ export default function Home() {
 
   const deduplicateAndSet = React.useCallback((data) => {
     if (!Array.isArray(data) || data.length === 0) { setAuctions([]); return; }
-    const seen = new Set();
-    const unique = data.filter(a => {
-      if (!a?.id || seen.has(a.id)) return false;
-      seen.add(a.id);
-      return true;
-    });
-    const serialized = JSON.stringify(unique);
-    sessionStorage.setItem('auctions_cache', serialized);
-    sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-    localStorage.setItem('auctions_cache_persistent', serialized);
+    const unique = gravarCache(data);
     setAuctions(unique);
   }, []);
 
   const loadAuctions = React.useCallback(async (isRetry = false) => {
-    const cachedData = sessionStorage.getItem('auctions_cache');
-    const cacheTime = sessionStorage.getItem('auctions_cache_time');
-
-    // CACHE VÁLIDO: Usa diretamente sem nova requisição
-    if (cachedData && cacheTime) {
-      const age = Date.now() - parseInt(cacheTime);
-      if (age < 120000) {
-        try {
-          const parsedData = JSON.parse(cachedData);
-          if (Array.isArray(parsedData) && parsedData.length > 0) {
-            deduplicateAndSet(parsedData);
-            setIsLoading(false);
-            return;
-          }
-        } catch (e) {}
+    // CACHE VÁLIDO: usa direto, sem nova requisição. O prazo é o de cacheDeLeiloes.js —
+    // aqui havia 120000 escrito na mão, e 300000 na montagem do state, para a MESMA chave.
+    if (cacheDaSessaoEstaFresco()) {
+      const doCache = lerCache();
+      if (doCache.length > 0) {
+        setAuctions(doCache);
+        setIsLoading(false);
+        return;
       }
     }
 
@@ -663,9 +609,11 @@ export default function Home() {
       deduplicateAndSet(data);
       setRetryCount(0);
     } catch (error) {
-      const oldCache = sessionStorage.getItem('auctions_cache') || localStorage.getItem('auctions_cache_persistent');
-      if (oldCache) {
-        try { deduplicateAndSet(JSON.parse(oldCache)); } catch (e) { setAuctions([]); }
+      // A busca falhou. Só aqui dado velho vale mais que tela vazia — e o estaEmCartaz na
+      // montagem dos cards derruba o que já venceu.
+      const oldCache = lerCacheDeEmergencia();
+      if (oldCache.length > 0) {
+        setAuctions(oldCache);
       } else {
         setAuctions([]);
       }
@@ -681,45 +629,18 @@ export default function Home() {
   useEffect(() => {
 
     const loadInitialData = async () => {
-      // 🧹 ?fresh=1 — limpa cache para forçar busca fresca (vindo de CreateAuction)
+      // 🧹 ?fresh=1 — limpa cache para forçar busca fresca (vindo de CreateAuction).
+      // Limpava só o sessionStorage: o localStorage sobrevivia e voltava a pintar a lista
+      // velha, então o parâmetro que existe para forçar dado novo não forçava nada.
+      // limparCache apaga os DOIS.
       try {
         if (new URLSearchParams(window.location.search).get('fresh') === '1') {
-          sessionStorage.removeItem('auctions_cache');
-          sessionStorage.removeItem('auctions_cache_time');
+          limparCache();
+          setAuctions([]);
         }
       } catch (e) {}
 
-      // 🧹 LIMPA CACHES CORROMPIDOS: força deduplicação no storage existente
-      try {
-        const existingCache = sessionStorage.getItem('auctions_cache');
-        if (existingCache) {
-          const parsed = JSON.parse(existingCache);
-          if (Array.isArray(parsed)) {
-            const seen = new Set();
-            const clean = parsed.filter(a => {
-              if (!a?.id || seen.has(a.id)) return false;
-              seen.add(a.id);
-              return true;
-            });
-            if (clean.length !== parsed.length) {
-              // Cache estava corrompido com duplicatas — limpa
-              const fixed = JSON.stringify(clean);
-              sessionStorage.setItem('auctions_cache', fixed);
-              localStorage.setItem('auctions_cache_persistent', fixed);
-              setAuctions(clean);
-            }
-          }
-        }
-      } catch (e) {
-        sessionStorage.removeItem('auctions_cache');
-        localStorage.removeItem('auctions_cache_persistent');
-      }
-
-      const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      const cachedData = sessionStorage.getItem('auctions_cache');
-      const hasValidCache = cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 120000;
-
-      if (!hasValidCache) {
+      if (!cacheDaSessaoEstaFresco()) {
         setIsLoading(true);
       }
 
