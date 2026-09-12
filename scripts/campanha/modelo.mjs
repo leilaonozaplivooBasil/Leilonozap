@@ -78,10 +78,20 @@ export function escaparHtml(txt) {
  * Fica abaixo de 60 caracteres sempre que o título do lote permite, porque é
  * onde o Gmail no celular corta.
  */
-export function assunto(destaque) {
+export const LIMITE_ASSUNTO = 70;
+
+export function assunto(destaque, agora = new Date()) {
   const titulo = String(destaque?.title ?? '').trim();
-  const curto = titulo.length > 28 ? `${titulo.slice(0, 27).trimEnd()}…` : titulo;
-  return `${curto} está em ${emReais(destaque?.current_price)} — encerra ${quandoEncerra(destaque?.end_time)}`;
+  const cauda = ` está em ${emReais(destaque?.current_price)} — encerra ${quandoEncerra(destaque?.end_time, agora)}`;
+  // 🔴 O orçamento do título depende do tamanho da data, que varia muito:
+  // "hoje às 20h15" tem 13 caracteres, "segunda-feira, 21/09 às 20h15" tem 29.
+  // Cortar o título sempre em 28 fazia o assunto estourar o limite do celular
+  // em TODO leilão que fechasse em dois dias ou mais — justamente os que mais
+  // precisam de aviso por e-mail.
+  const sobra = LIMITE_ASSUNTO - cauda.length;
+  if (sobra < 4) return cauda.trimStart();
+  const curto = titulo.length > sobra ? `${titulo.slice(0, sobra - 1).trimEnd()}…` : titulo;
+  return `${curto}${cauda}`;
 }
 
 /** Linha de prévia, que aparece na caixa de entrada depois do assunto. */
