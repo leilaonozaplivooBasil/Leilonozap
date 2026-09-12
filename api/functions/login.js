@@ -42,6 +42,26 @@ export default async function handler(req, res) {
         // auto-migra texto plano → bcrypt na tabela isolada
         const hash = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
         await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: user.id, password_hash: hash }) });
+        // 🔐 11/09/2026 — E APAGA O TEXTO.
+        //
+        // Antes desta linha a automigração criava o hash e DEIXAVA o texto
+        // plano onde estava. A app_users é legível pelo papel `anon` (policy
+        // `public_read`, `qual = true`), então a credencial seguia ao alcance da
+        // chave publicável do site — e o próprio login a aceitava de volta, pela
+        // comparação string-com-string logo acima.
+        //
+        // Sem este PATCH, a migração 20260912000000 limparia hoje e o buraco se
+        // refaria no próximo login de quem ainda estivesse em texto.
+        //
+        // Tolerante de propósito: se o PATCH falhar, a pessoa JÁ entrou e já
+        // tem o hash gravado. Bloquear o login aqui seria fechar a porta na cara
+        // de quem acertou a senha, por causa de uma limpeza que pode ser refeita.
+        try {
+          await sb(`app_users?id=eq.${encodeURIComponent(user.id)}`, {
+            method: 'PATCH', headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({ password: null }),
+          });
+        } catch { /* já tem hash; o texto sai na próxima passagem */ }
       }
     }
     if (!valid) return fail();
