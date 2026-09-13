@@ -588,6 +588,79 @@ export function reguaDoDia(tarefas = [], participante = PARTICIPANTE_PADRAO) {
   };
 }
 
+// 🔴 13/09/2026 — achado de auditoria (não pelo dono): `DistribuirTarefa.jsx`,
+// `QuadroGeralAbas.jsx` (AbaSemana) e `XPerformanceGestao.jsx` reimplementavam
+// a régua chamando `distribuirDia`/`simularNovaTarefa`/`resumoDoCiclo` de
+// `distribuicaoFixo.js` DIRETO, com o peso e o fixo cheios — nenhum dos três
+// sabia que o Ritual do Amanhecer virou balde de 20% à parte (ver
+// `valoresDasTarefas`/`reguaDoDia` acima). Resultado: iam mostrar o ritual
+// contando na régua de peso comum, valor errado assim que essa mudança
+// publicasse. As duas funções abaixo são as versões ritual-aware — mesma
+// forma das de `distribuicaoFixo.js`, só que por dentro usam
+// `valoresDasTarefas`/`reguaDoDia` em vez da régua crua, dia a dia.
+
+/**
+ * "Essa tarefa tem peso x, vale x em dinheiro, e as outras caem pra tanto" —
+ * versão ritual-aware de `simularNovaTarefa` (distribuicaoFixo.js), pra
+ * prévia de uma tarefa nova (`DistribuirTarefa.jsx`) saber que o ritual não
+ * disputa a régua de peso comum.
+ */
+export function simularNovaTarefaComRitual({ tarefas = [], participante = PARTICIPANTE_PADRAO, novaTarefa = {} } = {}) {
+  const nova = { id: '__nova__', peso: novaTarefa.peso, titulo: novaTarefa.titulo, categoria: novaTarefa.categoria };
+  const antes = valoresDasTarefas(tarefas, participante);
+  const depois = valoresDasTarefas([...tarefas, nova], participante);
+  const reguaAntes = reguaDoDia(tarefas, participante);
+  const reguaDepois = reguaDoDia([...tarefas, nova], participante);
+  const quedas = tarefas
+    .filter((t) => t && t.id != null)
+    .map((t) => ({ id: t.id, de: antes[t.id] ?? 0, para: depois[t.id] ?? 0 }))
+    // um centavo de diferença é arredondamento, não queda — não vira aviso
+    .filter((q) => Math.abs(q.de - q.para) > 0.011);
+  return {
+    valorNova: depois[nova.id] ?? 0,
+    valorDia: reguaDepois.valorDia,
+    quedas,
+    pagoAntes: Math.round((reguaAntes.valorDia - reguaAntes.emAberto) * 100) / 100,
+    pagoDepois: Math.round((reguaDepois.valorDia - reguaDepois.emAberto) * 100) / 100,
+    pesoFaltava: reguaAntes.pesoFalta,
+    pesoFalta: reguaDepois.pesoFalta,
+    pesoReferencia: reguaDepois.pesoReferencia,
+  };
+}
+
+/**
+ * O ciclo (mês) de uma pessoa, ritual-aware — mesma forma de `resumoDoCiclo`
+ * (distribuicaoFixo.js), mas cada dia passa por `valoresDasTarefas`/
+ * `reguaDoDia` em vez de `distribuirDia` cru. `tarefasPorDia` já deve vir
+ * filtrado por quem chama (ex.: sem bônus/venda, se é isso que a tela quer
+ * contar) — esta função não filtra categoria, só separa o ritual do resto.
+ */
+export function resumoDoCicloComRitual({ participante = PARTICIPANTE_PADRAO, tarefasPorDia = {}, diasDoCiclo = [], hojeISO } = {}) {
+  const hoje = String(hojeISO || '').slice(0, 10);
+  let ganho = 0; let aConferir = 0; let emJogo = 0; let emAberto = 0; let perdido = 0;
+  const diasComTarefa = new Set(Object.keys(tarefasPorDia));
+  const todos = [...new Set([...diasDoCiclo, ...diasComTarefa])].sort();
+  for (const dia of todos) {
+    const tarefas = tarefasPorDia[dia] || [];
+    const valores = valoresDasTarefas(tarefas, participante);
+    const d = reguaDoDia(tarefas, participante);
+    const passou = hoje && dia < hoje;
+    for (const t of tarefas) {
+      const v = valores[t.id] || 0;
+      if (t.feito) { ganho += v; if (t.conferido !== true) aConferir += v; }
+      else if (passou) perdido += v;
+      else emJogo += v;
+    }
+    if (passou) perdido += d.emAberto; else emAberto += d.emAberto;
+  }
+  const r2 = (n) => Math.round(n * 100) / 100;
+  return {
+    fixo: fixoDoParticipante(participante),
+    valorDia: valorDoDia(fixoDoParticipante(participante)),
+    ganho: r2(ganho), aConferir: r2(aConferir), emJogo: r2(emJogo), perdido: r2(perdido), emAberto: r2(emAberto),
+  };
+}
+
 /** X-Pay do dia: ganho (feitas), em jogo (ainda dá tempo) e perdido (janela passou). */
 export function xpayDoDia(tarefasComEstado = [], valores = {}) {
   let ganho = 0; let perdido = 0; let emJogo = 0;
