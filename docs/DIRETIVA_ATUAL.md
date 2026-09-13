@@ -12,6 +12,29 @@
 
 ---
 
+## DIR-142.2 — o ADM X-Game passa a mostrar e mexer na rotina PERMANENTE da pessoa, não só o dia já gerado
+
+**Emitida por:** dono, ao vivo (13/09/2026), olhando a tela de Distribuir Tarefa da Distribuidora Eloá (fora da mentoria, fixo R$2000): *"aqui não está aparecendo as tarefas que ela mesmo organizou... quero que apareça as tarefas automáticas do sistema, as tarefas dela pra eu provar caso ela mude, e que eu possa inserir. Todas as tarefas precisam ter peso e ser distribuídas através do seu peso e o valor fixo acordado."*
+
+**Achado:** o card "Tarefas de [pessoa]" do ADM X-Game (`XGameAdmin.jsx`) sempre leu só `metodo_tarefas` — o retrato de UM DIA já materializado. A rotina PERMANENTE dela (`metodo_perfil.rotina`, o molde que gera todo dia, DIR-80: *"a rotina é dela"*) nunca aparecia nessa tela — só existia dentro do app da própria pessoa. Isso fazia parecer que "as tarefas que ela organizou" tinham sumido, quando na verdade só não tinham VITRINE nenhuma no lado do admin — e não dava pra confirmar/provar o que ela de fato configurou, nem inserir algo que valesse pra sempre (só pro dia escolhido).
+
+**O que entra** (`src/components/licensing/XGameAdmin.jsx`, reaproveitando as funções puras já existentes de `src/lib/rotinaPessoal.js` — DIR-80, nenhuma régua nova):
+1. **Selo de origem do dia** — o cabeçalho do card agora diz de onde veio a lista mostrada: rotina PRÓPRIA dela, rotina padrão da CASA (ela ainda não personalizou), ou avulso/manual (não veio de nenhuma geração automática). Responde direto "os valores só vêm das tarefas automáticas, ou também do que ela organiza?" — SEMPRE contam as duas, porque o motor de pagamento (`valoresDasTarefas`) lê `metodo_tarefas` sem se importar de onde a linha veio; o que faltava era o admin CONSEGUIR VER a origem.
+2. **"📅 Rotina permanente dela"** — bloco novo, dentro do mesmo card: lista os itens do molde (`metodo_perfil.rotina`, ou a da casa se ela ainda não tem a própria), com botão pra incluir (hora + título) e excluir. Isso é o "eu preciso provar caso ela mude" — o admin vê e guarda prova do que está combinado pra sempre, não só do dia de hoje.
+3. **"🔁 tornar recorrente"** — botão em cada tarefa do dia (automática ou criada na hora): um clique grava aquele título na rotina permanente dela, sem redigitar. Recusa duplicar (compara título, sem diferenciar maiúscula/minúscula).
+4. Mudança na rotina permanente **nunca reescreve hoje** — grava só em `metodo_perfil.rotina`; o dia já materializado em `metodo_tarefas` fica como está (mesma regra já provada em `rotinaPessoal.test.mjs`: "editar a rotina vale a partir de amanhã").
+5. Todo item, de onde vier (automático, manual antigo, ou incluído agora na rotina permanente), continua tendo peso e entrando na mesma distribuição pelo fixo (`distribuirDia`/`valoresDasTarefas`) — nenhuma tarefa nova escapa da régua de pagamento.
+
+**Fora do escopo desta rodada:** redesenho visual da tela (cores, layout) além do necessário pra caber o bloco novo; sincronização em tempo real entre o app dela e o ADM (ambos já leem a mesma tabela — não há duas fontes de verdade a reconciliar, só faltava a leitura do molde).
+
+**Regras fixas:** nenhuma além das da DIR-80 (mudança na rotina vale a partir de amanhã; a rotina só é "própria" quando ela — ou agora também o admin — escreveu nela).
+
+**Prova:** suíte 2356/2356 (8 testes novos em `tests/rotinaPermanenteAdmin.test.mjs`, fonte-comparando o componente), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR — código, testes e build passam nesta branch (`claude/rotina-permanente-adm`); falta commitar/subir PR e o dono conferir visualmente em produção depois do deploy.
+
+---
+
 ## DIR-139 — as 3 colunas fantasmas: `licensee_id`/`anchor_id`/`owner_id` nunca existiram em `catalog_sales`, e isso zerava vendas de licenciado/PDV em 10 telas
 
 **Emitida por:** auditoria própria (11/09/2026), validando a DIR-138 contra o schema real de produção antes de declarar o "cirúrgico" pronto, e confirmada ao vivo pelo dono reportando `Licensing?tab=catalogo&catalogTab=catalogo-crm` "zerado" pros números da equipe.
