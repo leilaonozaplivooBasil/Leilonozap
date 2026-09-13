@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-140 — o "hoje" em UTC: das 21h às 23h59 de Brasília, o ADM X-Game mostrava o dia seguinte (0/0), a Visão Executiva mostrava o dia certo (10/173)
+
+**Emitida por:** o dono, ao vivo, comparando o X-office (ADM X-Game) mostrando "0/0 tarefas concluídas hoje" com o `/XGame` (Visão Executiva), no mesmo instante, mostrando "10/173" — mesma população (10 pessoas), dois números de "hoje" completamente diferentes. Pedido: *"essas tarefas de ADM X-GAME precisam estar exatamente como a tarefa da X-GAME que clicamos... preciso de uma auditoria extremamente diligente."*
+
+**Achado:** `XPerformance.jsx` (a tela que hospeda o ADM X-Game) calculava "hoje" com `new Date().toISOString().slice(0, 10)` — a data em **UTC**, não em Brasília. Esta é a MESMA classe de bug já achada e corrigida duas vezes antes (DIR-129, na data; DIR-134, na hora do dia) — só que num arquivo que nunca tinha sido varrido. Das 21h às 23h59 de Brasília, o UTC já virou o dia seguinte: o ADM filtrava "tarefas de hoje" por uma data que ainda não tem nenhuma tarefa gravada no banco — 0/0, sempre, nesse intervalo de quase 3 horas todo santo dia. A Visão Executiva já usava `dataISO()` (o helper certo, força America/Sao_Paulo) — por isso só ela mostrava o número real.
+
+Achado o mesmo padrão, numa varredura em TODA a pasta de telas do Método/X-Game (não só onde o dono via o problema), em mais **10 arquivos**: `PainelCorporativo.jsx`, `QuadroCompromisso.jsx`, `EncontroMentalidade.jsx`, `PainelLaudo.jsx`, `PerformanceEquipe.jsx`, `MentalidadePagina.jsx` (inclusive decidia errado se hoje é segunda-feira), `XGameRitualAmanhecer.jsx` (a música do dia e o embaralhar do quadro dos sonhos), `DiarioDeBolso.jsx` (o início da semana) e `CrmEsteiraCaptacao.jsx` (data padrão de um aporte).
+
+**O que entra:**
+1. Todos os 11 arquivos trocam `new Date().toISOString().slice(0, 10)` (ou o `Date` cru que virava isso) por `dataISO()` (`@/lib/xgame`) — a mesma fonte única já usada em `XGameVisaoExecutiva.jsx`, `CrmMetodo.jsx` e `XGame.jsx`.
+2. Teste novo em `tests/xgameFusoHorario.test.mjs`: varre **toda** a pasta `src/components/licensing/CentralVendas/*.jsx` procurando o padrão `toISOString().slice(0, 10)` usado como "hoje" — não fica mais restrito aos arquivos onde o bug já apareceu uma vez. Este bug já foi achado ao vivo em produção três vezes (DIR-129, DIR-134, esta); a quarta vez tem que ser um teste vermelho antes do merge, não um print do dono.
+
+**Prova:** suíte 2268/2268 (1 teste novo, de varredura ampla, mais 10 testes preexistentes da mesma família continuam verdes), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-139 — as 3 colunas fantasmas: `licensee_id`/`anchor_id`/`owner_id` nunca existiram em `catalog_sales`, e isso zerava vendas de licenciado/PDV em 10 telas
 
 **Emitida por:** auditoria própria (11/09/2026), validando a DIR-138 contra o schema real de produção antes de declarar o "cirúrgico" pronto, e confirmada ao vivo pelo dono reportando `Licensing?tab=catalogo&catalogTab=catalogo-crm` "zerado" pros números da equipe.

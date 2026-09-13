@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, FileText } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
-import { nomeExibicao } from '@/lib/xgame';
+import { nomeExibicao, dataISO } from '@/lib/xgame';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { laudoDoDia, resumoDoLaudo, linhaTecnica, diasComComprovacao } from '@/lib/relatorioComprovacoes';
 import { podeVerLaudo } from '@/lib/quemVeOLaudo';
@@ -61,7 +61,8 @@ export default function PainelLaudo({ currentUser = null, hojeISO = null }) {
     if (!liberado || !pessoa) { setItens([]); return; }
     let cancelado = false;
     setCarregando(true);
-    const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+    // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+    const hoje = hojeISO || dataISO();
     const de = new Date(`${hoje}T12:00:00`);
     de.setDate(de.getDate() - 60);
     supabase.from('metodo_tarefas')

@@ -8,6 +8,7 @@ import { visaoExecutiva } from '@/lib/encontro';
 import { habitosDoTime, periodoDe } from '@/lib/habitosDoTime';
 import { segundaDaSemana } from '@/lib/xperformance';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
+import { dataISO } from '@/lib/xgame';
 import { nomeBonito, primeiroNome, habitosDaPessoa } from '@/lib/relatorioExecutivo';
 import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
@@ -89,7 +90,8 @@ function HabitosDaPessoa({ habitos }) {
 }
 
 export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false, soEu = false }) {
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+  const hoje = hojeISO || dataISO();
   const segunda = segundaDaSemana(hoje);
   const domingo = somaDias(segunda, 6);
   const [periodoTipo, setPeriodoTipo] = useState('hoje');

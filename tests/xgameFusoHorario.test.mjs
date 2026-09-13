@@ -104,3 +104,24 @@ test('CrmMetodo.jsx e XGame.jsx: o relógio do jogo (agoraMin) usa minutosBrasil
   assert.match(XGAME_PAGE, /const agoraMin = minutosBrasilia\(agora\);/);
   assert.ok(!/getHours\(\)\s*\*\s*60\s*\+.*getMinutes\(\)/.test(XGAME_PAGE), 'XGame.jsx voltou a depender do fuso do aparelho pro relógio do jogo (afeta a janela de votação do MvM)');
 });
+
+// 🔴 13/09/2026 — o MESMO bug (toISOString() em vez de dataISO()) apareceu de
+// novo, num lugar novo: XPerformance.jsx nunca tinha sido varrido pelos
+// testes acima. Achado ao vivo pelo dono: das 21h às 23h59 de Brasília, o
+// ADM X-Game (X-office) mostrava "0/0 tarefas hoje" enquanto a Visão
+// Executiva (que já usava dataISO) mostrava o número real (10/173) — a
+// MESMA população, dois "hoje" diferentes. Varredura ampla desta vez: TODO
+// arquivo de tela do X-Game/Método é varrido, não só os que já foram
+// achados uma vez — pra este bug nunca mais precisar ser encontrado ao vivo
+// em produção pela terceira vez.
+const PASTA_TELAS = new URL('../src/components/licensing/CentralVendas/', import.meta.url);
+const ARQUIVOS_TELAS_METODO = fs.readdirSync(PASTA_TELAS).filter((f) => f.endsWith('.jsx'));
+test('nenhuma tela do Método/X-Game usa toISOString() como "hoje" — todas usam dataISO()', () => {
+  for (const nome of ARQUIVOS_TELAS_METODO) {
+    const codigo = fs.readFileSync(new URL(nome, PASTA_TELAS), 'utf8');
+    // o padrão específico do bug: "hoje" (ou variável de data-de-referência)
+    // caindo pra `new Date().toISOString().slice(0, 10)` — UTC, não Brasília.
+    const usaUtcComoHoje = /(?:hoje|semanaInicio|data)\s*[:=][^;]*new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/.test(codigo);
+    assert.ok(!usaUtcComoHoje, `${nome} usa new Date().toISOString() como "hoje" — isso é UTC, vira o dia seguinte das 21h às 23h59 de Brasília. Trocar por dataISO() (@/lib/xgame).`);
+  }
+});

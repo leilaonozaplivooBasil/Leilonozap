@@ -5,6 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaClient';
 import { diarioAgrupado, filtrarDiario, linhaParaGravar, tarefasParaMaterializar } from '@/lib/diarioDeBolso';
 import { semanaDe } from '@/lib/metodo';
+import { dataISO } from '@/lib/xgame';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
@@ -92,7 +93,8 @@ export default function DiarioDeBolso({ currentUser = null }) {
   // gravação de todo mundo sem uso é armazenamento por armazenamento.
   const ditado = useDitado({ onTexto: (t) => setRascunho((atual) => juntarTexto(atual, t)) });
   const [salvando, setSalvando] = useState(false);
-  const [semanaInicio] = useState(() => semanaDe(new Date().toISOString().slice(0, 10))?.inicio || null);
+  // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+  const [semanaInicio] = useState(() => semanaDe(dataISO())?.inicio || null);
   const [resumoSemana, setResumoSemana] = useState(null); // { resumo, gerado_em } | null
   const [gerandoResumo, setGerandoResumo] = useState(false);
 

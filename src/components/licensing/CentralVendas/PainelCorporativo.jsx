@@ -75,7 +75,10 @@ const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de
 // `embutido`: dentro do detalhamento da X-Performance, que já mostra quem é, o
 // seletor, o PDF e a semana de todo mundo — aqui só metas e demandas.
 export default function PainelCorporativo({ currentUser, hojeISO, gestao = false, pessoaInicial = null, onPessoa = null, onMudou = null, onRelatorio = null, habitos = null, periodo = null, embutido = false }) {
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — mesma auditoria de XPerformance.jsx: UTC não é Brasília
+  // das 21h às 23h59 (DIR-129/134). `dataISO()` é o único jeito certo de
+  // saber "hoje" nesta casa.
+  const hoje = hojeISO || dataISO();
   const mes = mesDe(hoje);
   const segunda = segundaDaSemana(hoje);
   const [usuarios, setUsuarios] = useState([]);

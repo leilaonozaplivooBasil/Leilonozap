@@ -11,7 +11,7 @@ import {
   encontroDaSemana, proximaSegunda, resumoDaPessoa, PESO_MAX,
 } from '@/lib/xperformance';
 import { HABITOS } from '@/lib/metodo';
-import { fixoDoParticipante } from '@/lib/xgame';
+import { fixoDoParticipante, dataISO } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
 import MensagemProCeo from '@/components/licensing/CentralVendas/MensagemProCeo';
 import PainelLaudo from '@/components/licensing/CentralVendas/PainelLaudo';
@@ -141,7 +141,15 @@ const PASSOS_TOUR_XPERFORMANCE = [
 
 export default function XPerformance({ currentUser, visaoTotal = false, gestao = false, hojeISO }) {
   const [tourAberto, setTourAberto] = useTourDaTela('xperformance');
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — auditoria: `new Date().toISOString()` é o dia em UTC, não
+  // em Brasília (mesma classe de bug já corrigida em outros lugares nas
+  // DIR-129/134). Das 21h às 23h59 em Brasília, o UTC já virou o dia
+  // seguinte — "hoje" aqui virava amanhã, e o resumo do time (ADM X-Game)
+  // filtrava as tarefas de HOJE por uma data que ainda não existe no banco:
+  // 0/0, enquanto a Visão Executiva (que já usa `dataISO`) mostrava o
+  // número certo. `Licensing.jsx` nunca passa `hojeISO` — este é sempre o
+  // valor que vale.
+  const hoje = hojeISO || dataISO();
   const uid = currentUser?.id;
   // o cargo e o fixo moram no X-Game; esta tela busca, não guarda cópia — uma
   // verdade só, num lugar só

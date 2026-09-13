@@ -13,6 +13,7 @@ import { possiveisDuplicatas,
   semPPV, OBJECOES_METODO,
   DIAS_PARADA_ATENCAO, DIAS_PARADA_CRITICO,
 } from '@/lib/esteiraCaptacao';
+import { dataISO } from '@/lib/xgame';
 import { buscarPessoas } from '@/lib/buscaPessoa';
 import { parseValorBR } from '@/lib/money';
 import { getLevel } from '@/lib/careerLevels';
@@ -750,7 +751,7 @@ export default function CrmEsteiraCaptacao({ oportunidades = [], sales = [], cli
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setAporteForm({ banco: 'santander', valor: form.valor_previsto || '', data: new Date().toISOString().slice(0, 10) })}
+                        onClick={() => setAporteForm({ banco: 'santander', valor: form.valor_previsto || '', data: dataISO() })}
                         className="border-amber-300 text-amber-800 hover:bg-amber-100"
                       >
                         💵 Dinheiro entrou por fora (Santander/Itaú)
