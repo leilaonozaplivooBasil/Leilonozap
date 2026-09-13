@@ -27,6 +27,7 @@ import { semaforo, mesDe, fracoesDoScore } from '@/lib/metasPessoa';
 import { useMetasDaPessoa, AbaMetas, AbaPrograma, AbaSemana, AbaQuadro, AbaHistorico, ABAS } from '@/components/licensing/CentralVendas/QuadroGeralAbas';
 import ComprovacoesPainel from '@/components/licensing/CentralVendas/Comprovacoes';
 import { portoesDaSociedade } from '@/lib/xperformance';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -282,16 +283,23 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // e timeVotavel (resumo do dia): um votável pode não estar na hierarquia
   // do painel, e vice-versa — nenhum dos dois usos pode perder gente.
   const idsCarregar = useMemo(() => Array.from(new Set([...equipe.map((p) => p.id), ...timeVotavel])), [equipe, timeVotavel]);
+  // 🔴 13/09/2026 — auditoria ao vivo, dono: "quantas tarefas o time tem
+  // hoje" batendo 0/0 aqui contra 10/173 na Visão Executiva. Achado: o
+  // MESMO corte silencioso de 1.000 linhas que já pegou o estoque, o CRM e
+  // os votos do MvM (ver lerTudoDoSupabase.js) — só que numa quarta tabela.
+  // O ciclo inteiro (~30 dias) × todo o time corporativo + votável (até 16
+  // pessoas) × ~20 tarefas/dia passa de 1.000 linhas bem antes de chegar no
+  // dia de hoje (ordenado por data crescente) — "hoje" ficava de fora,
+  // calado, sem erro nenhum aparecendo.
   const carregarTarefas = useCallback(async () => {
     if (!idsCarregar.length || !diasCiclo.length) { setTarefasCiclo([]); return; }
     const ate = diasCiclo[diasCiclo.length - 1] > dia ? diasCiclo[diasCiclo.length - 1] : dia;
     const de = diasCiclo[0] < dia ? diasCiclo[0] : dia;
-    const { data } = await supabase.from('metodo_tarefas')
+    const data = await lerTudoDoSupabase(() => supabase.from('metodo_tarefas')
       .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem,mentalidade,habito,prazo_em,pronto_em,devolvida_motivo,devolvida_em')
       .in('user_id', idsCarregar)
-      .gte('data', de).lte('data', ate)
-      .order('data').order('hora');
-    setTarefasCiclo(data || []);
+      .gte('data', de).lte('data', ate));
+    setTarefasCiclo([...data].sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.hora || '').localeCompare(String(b.hora || ''))));
   }, [idsCarregar, diasCiclo, dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
 

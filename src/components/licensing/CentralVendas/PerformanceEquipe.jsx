@@ -9,6 +9,7 @@ import { habitosDoTime, periodoDe } from '@/lib/habitosDoTime';
 import { segundaDaSemana } from '@/lib/xperformance';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { dataISO } from '@/lib/xgame';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 import { nomeBonito, primeiroNome, habitosDaPessoa } from '@/lib/relatorioExecutivo';
 import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
@@ -120,10 +121,14 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
   const ate = periodo.ate > domingo ? periodo.ate : domingo;
 
   const carregar = useCallback(async () => {
-    const [u, p, t, d, pf, cl, v, o, e] = await Promise.all([
+    // 🔴 13/09/2026 — auditoria: `metodo_tarefas` do time inteiro (todo mundo,
+    // sem filtro de pessoa) por semana/mês passa fácil de 1.000 linhas, e o
+    // Supabase corta calado (mesmo defeito já achado no estoque, no CRM, nos
+    // votos do MvM e no ADM X-Game — ver lerTudoDoSupabase.js). Paginado à
+    // parte, fora do Promise.all, porque as outras consultas não precisam.
+    const [u, p, d, pf, cl, v, o, e] = await Promise.all([
       supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level').order('full_name'),
       supabase.from('xgame_participantes').select('user_id,funcao_titulo,cargo').eq('ativo', true),
-      supabase.from('metodo_tarefas').select('id,user_id,data,hora,titulo,habito,feito,conferido,origem,prazo_em,pronto_em,categoria').gte('data', de).lte('data', ate),
       supabase.from('xperf_demandas').select('*').gte('created_at', `${segunda}T00:00:00`).order('created_at'),
       supabase.from('metodo_perfil').select('user_id,sonhos'),
       supabase.from('customers').select('id,created_by_id,assigned_seller,qualificacao_network,contatos_metodo'),
@@ -131,7 +136,10 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
       supabase.from('captacao_oportunidades').select('id,responsavel_id,estagio,valor_previsto,fechado_em,reuniao_em'),
       supabase.from('xperf_entregaveis').select('id,dono_id,habito,coluna,validado_em'),
     ]);
-    setUsuarios(u.data || []); setParticipantes(p.data || []); setTarefas(t.data || []); setDemandas(d.data || []);
+    const tarefasDoPeriodo = await lerTudoDoSupabase(() => supabase.from('metodo_tarefas')
+      .select('id,user_id,data,hora,titulo,habito,feito,conferido,origem,prazo_em,pronto_em,categoria')
+      .gte('data', de).lte('data', ate));
+    setUsuarios(u.data || []); setParticipantes(p.data || []); setTarefas(tarefasDoPeriodo); setDemandas(d.data || []);
     setPerfis(pf.data || []); setClientes(cl.data || []);
     setVendas((v.data || []).filter((s) => isSalePago(s) && isVendaMercadoria(s)));
     setOportunidades(o.data || []); setEntregaveis(e.data || []);

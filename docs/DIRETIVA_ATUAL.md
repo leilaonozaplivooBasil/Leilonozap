@@ -12,6 +12,21 @@
 
 ---
 
+## DIR-141 — a 4ª tabela cortada em 1.000 linhas caladas: `metodo_tarefas` do ciclo inteiro também estourava, e "hoje" sumia do ADM X-Game
+
+**Emitida por:** o dono, ao vivo, testando o preview da correção da DIR-140 — o mesmo "0/0 tarefas hoje" no ADM continuava, mesmo com o fuso já corrigido, enquanto a Visão Executiva seguia mostrando o número real (10/173). *"quantas tarefas o time tem hoje, pelo amor de deus, sem achismo."*
+
+**Achado:** a DIR-140 corrigiu um bug real, mas não era o único. `XPerformanceGestao.jsx` (`carregarTarefas`) carrega o **ciclo inteiro** (~30 dias) de `metodo_tarefas` para **todo o time** (até 16 pessoas × ~20 tarefas/dia) numa única consulta, ordenada por data crescente. Isso passa de 1.000 linhas bem antes de chegar no dia de hoje (dia 7 do ciclo já soma ~2.100 linhas) — e o Supabase **corta em 1.000 por padrão, sem avisar** (HTTP 200, sem erro). É a MESMA falha já corrigida três vezes nesta casa (estoque, CRM de clientes, votos do MvM — `lerTudoDoSupabase.js`), agora numa quarta tabela. `PerformanceEquipe.jsx` tinha o mesmo padrão, pior ainda: nem filtrava por pessoa, o time inteiro da empresa na mesma janela.
+
+**O que entra:**
+1. `XPerformanceGestao.jsx`: a leitura do ciclo inteiro passa a usar `lerTudoDoSupabase` — nunca mais corta calado, não importa quantas linhas o ciclo já tenha.
+2. `PerformanceEquipe.jsx`: mesma correção na leitura do período do time inteiro.
+3. Teste novo (`tests/tarefasDoTimeSemCorte.test.mjs`) trava que as duas telas usam a peça paginada — não um `select()` cru — pra este bug não reaparecer numa quinta tabela sem ser pego antes do merge.
+
+**Prova:** suíte 2346/2346 (2 testes novos), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-140 — o "hoje" em UTC: das 21h às 23h59 de Brasília, o ADM X-Game mostrava o dia seguinte (0/0), a Visão Executiva mostrava o dia certo (10/173)
 
 **Emitida por:** o dono, ao vivo, comparando o X-office (ADM X-Game) mostrando "0/0 tarefas concluídas hoje" com o `/XGame` (Visão Executiva), no mesmo instante, mostrando "10/173" — mesma população (10 pessoas), dois números de "hoje" completamente diferentes. Pedido: *"essas tarefas de ADM X-GAME precisam estar exatamente como a tarefa da X-GAME que clicamos... preciso de uma auditoria extremamente diligente."*
