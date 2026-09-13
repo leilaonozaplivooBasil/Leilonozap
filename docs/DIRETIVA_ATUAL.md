@@ -12,6 +12,29 @@
 
 ---
 
+## DIR-142 — o Ritual do Amanhecer vale sempre 20% do dia (fora do teto de peso 1-6), e ganha janela própria pra quem tem fixo fora da mentoria
+
+**Emitida por:** dono, ao vivo (13/09/2026): *"acordar cedo, fazer esse ritual, pesa muito no negócio... a pessoa não vai ganhar dinheiro só por acordar cedo, mas tem que ganhar um valor razoável porque é um peso bom."* E, sobre quem tem fixo mas está fora da mentoria (a distribuidora, o Flávio, a Luciene, o Amâncio): *"eles ganham no horário que eles definirem, de acordo com o fixo dela... quem já está na mentoria é obrigatório acordar cinco horas da manhã, se não acordar não ganha o valor desse ritual."*
+
+**Achado:** o teto do peso automático (`PESO_MAX = 6`, numa referência de dia completo de 76) nunca chegaria a 20% do dia sozinho — 6/76 é 7,9%. Dar ao ritual "o maior peso possível" (o que já valia, DIR anterior) não é o mesmo que garantir 20% do dinheiro do dia. Além disso, a janela do ritual (4:40-5:30) era global e fixa pra todo mundo — inclusive pra quem tem fixo mas está fora da mentoria (não vota, não é votado) e por regra do dono define o próprio horário de acordar.
+
+**O que entra:**
+1. `PERCENTUAL_RITUAL = 0.20` e `pesoRitualNaRotina()` (`src/lib/xgame.js`) — o ritual (`ehTarefaDeGratidao`) sai do balde comum de peso 1-76 e vira um balde PRÓPRIO, sempre 20% de `valorDoDia(fixoDoParticipante(p))`, igual já acontecia com bônus (`verba_bonus`) — nunca a fatia proporcional de peso. Os outros 80% do dia (produção) continuam repartidos pelo peso de sempre, só que contra uma referência 6 pontos menor (76 − o peso do ritual = 70), já que aquele peso saiu do jogo comum.
+2. `janelaDoRitual({ votavel, horaTarefa })` e `minDeHora("HH:MM")` (`src/lib/xgame.js`) — quem é votável (mesmo `podeSerVotado`/`aceita_ser_votado` que já decide o MvM) usa SEMPRE a janela fixa da casa (4:40-5:30). Quem tem fixo fora da mentoria define o próprio horário; a janela vira em volta dele com a mesma folga de sempre (20min antes, 30min depois). Sem horário definido, mesmo fora da mentoria, cai na régua fixa — nunca fica sem janela nenhuma.
+3. `deveAvisarRitual` (`src/lib/xgame.js`) ganha o parâmetro opcional `janela` (default: a janela fixa, comportamento antigo preservado) — o aviso "como funciona o ritual" dos 10 minutos antes passa a bater com a janela de quem está vendo a tela, não só com a da casa.
+4. `CrmMetodo.jsx` — os 3 pontos que liam `RITUAL_INICIO_MIN`/`RITUAL_FIM_MIN` direto (o corte de abertura em `concluirRitual`, o bloqueio duro em `alternarFeito`, e o banner explicador) agora calculam a janela de cada pessoa via `janelaDoRitual`, usando o mesmo `meuAceitaSerVotado`/`podeSerVotado` que já monta a população votável da MvM — nenhuma régua nova, a mesma aplicada num lugar novo.
+5. O CONTEÚDO do ritual é idêntico pros dois grupos (mentoria e fora dela) — confirmado pelo dono: *"o ritual é o mesmo... a única diferença é que eles não estão na mentoria... e eles definem o horário deles."* Só a janela de horário muda.
+
+**Fora do escopo desta diretiva:** a tela "Distribuir Tarefa" do ADM X-Game (reconciliação entre tarefas automáticas do sistema e tarefas que a própria pessoa fora da mentoria organiza, ex.: Distribuidora Eloá) — investigação em andamento, sem código tocado ainda.
+
+**Regras fixas:** nenhuma além das anteriores. Rounding: somar o balde do ritual (20%, arredondado à parte) com o balde de produção (80%, arredondado à parte) pode variar ~1 centavo do valor cheio do dia — mesmo comportamento que já existe entre produção e bônus (dois arredondamentos, não um só); não é bug, é o preço de dois baldes separados.
+
+**Prova:** suíte 2348/2348 (17 testes tocados/novos: `xpayFixo.test.mjs`, `xpayRateio.test.mjs`, `janelaDoRitual.test.mjs` novo, `ritualTresBlocos.test.mjs` atualizado), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+**Status:** EM VIGOR — código, testes e build passam nesta branch (`claude/ritual-vinte-por-cento`); falta commitar/subir PR e o dono conferir visualmente em produção depois do deploy.
+
+---
+
 ## DIR-139 — as 3 colunas fantasmas: `licensee_id`/`anchor_id`/`owner_id` nunca existiram em `catalog_sales`, e isso zerava vendas de licenciado/PDV em 10 telas
 
 **Emitida por:** auditoria própria (11/09/2026), validando a DIR-138 contra o schema real de produção antes de declarar o "cirúrgico" pronto, e confirmada ao vivo pelo dono reportando `Licensing?tab=catalogo&catalogTab=catalogo-crm` "zerado" pros números da equipe.

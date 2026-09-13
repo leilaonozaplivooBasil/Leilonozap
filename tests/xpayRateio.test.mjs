@@ -9,7 +9,7 @@
 // só 72% do fixo. Por isso no app publicado toda linha mostra o mesmo R$ 2,95.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { pesoAutomatico, reguaDoDia, PESO_DIA_COMPLETO } from '../src/lib/xgame.js';
+import { pesoAutomatico, reguaDoDia, PESO_DIA_COMPLETO, pesoRitualNaRotina } from '../src/lib/xgame.js';
 import { DIAS_FIXO } from '../src/lib/distribuicaoFixo.js';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '../src/lib/metodo.js';
 
@@ -30,16 +30,22 @@ describe('o peso entra na geração do dia', () => {
     assert.ok(reuniao.peso > almoco.peso, 'reunião tem que pesar mais que o almoço');
   });
 
-  // 🔒 O QUE LIGA AS DUAS SESSÕES: a régua do dia completo (peso 75) é
+  // 🔒 O QUE LIGA AS DUAS SESSÕES: a régua do dia completo (peso 76) é
   // calculada com pesoAutomatico — então o dia gerado só bate nela se o
   // gerador aplicar o MESMO pesoAutomatico. Sem isso, dia gerado = peso 54.
-  test('o dia gerado com a régua soma EXATAMENTE o peso do dia completo', () => {
+  // 🌅 13/09/2026 — desde que o ritual passou a valer 20% garantido por
+  // fora (ver PERCENTUAL_RITUAL em xgame.js), `reguaDoDia.somaPesos` mede
+  // só os OUTROS 80% (produção sem o ritual) — o peso do ritual (6) sai da
+  // referência, não fica "faltando".
+  test('o dia gerado com a régua soma EXATAMENTE o peso da produção sem o ritual (76 − o peso do ritual)', () => {
     const linhas = gerarTarefasDaRotina(ROTINA_PADRAO, 'u1', '2026-09-07', pesoAutomatico)
       .map((l, i) => ({ ...l, id: `g${i}` }));
     const r = reguaDoDia(linhas, P);
-    assert.equal(r.somaPesos, PESO_DIA_COMPLETO, `somou ${r.somaPesos}, o dia completo é ${PESO_DIA_COMPLETO}`);
+    const referenciaSemRitual = PESO_DIA_COMPLETO - pesoRitualNaRotina();
+    assert.equal(r.somaPesos, referenciaSemRitual, `somou ${r.somaPesos}, a produção sem o ritual é ${referenciaSemRitual}`);
     assert.equal(r.pesoFalta, 0, 'dia gerado não pode ficar com peso em aberto');
-    // e paga o fixo do dia inteiro
+    // e paga o fixo do dia inteiro (ritual + produção, dois baldes — soma
+    // pode variar 1 centavo do valor cheio por dois arredondamentos)
     assert.ok(Math.abs(r.valorDia - 7000 / DIAS_FIXO) < 0.01, `valor do dia ${r.valorDia}`);
   });
 
