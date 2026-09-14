@@ -1,7 +1,8 @@
 // 🏷️ FONTE ÚNICA do selo de cargo (desktop + mobile).
 // Antes cada menu montava o selo por conta própria e divergia: a Sophia (Loja
 // Física) aparecia como "LICENCIADO" no dropdown e sem selo nenhum no mobile.
-// Regra de prioridade: Admin/Super Admin > cargo de rede real > role genérica.
+// Regra de prioridade: Admin/Super Admin > cargo de rede real > parceiro de
+// compra (capital aportado, eixo separado) > role genérica.
 import {
   Crown,
   Briefcase,
@@ -15,6 +16,7 @@ import {
   ShoppingBag,
   Megaphone,
 } from "lucide-react";
+import { ehParceiroDeCompra } from "@/lib/panelResolver";
 
 // Cargos de rede que têm painel próprio em /painel (ordem = prioridade).
 // ⚠️ "vendedor" e "influenciador" faltavam aqui — por isso o selo do perfil
@@ -55,6 +57,17 @@ export function getRoleBadge(user) {
   if (roleKey === "admin" || roleKey === "super_admin") return ROLE_BADGE[roleKey];
   const rede = getRedeCargo(user);
   if (rede) return { label: REDE_META[rede].label, ...VERDE, icon: REDE_META[rede].icon };
+  // 💰 PARCEIRO DE COMPRA (14/09/2026) — quem aportou capital em /Partners e NÃO
+  // tem cargo de rede caía no selo "CLIENTE", porque esta função só sabia ler
+  // career_levels. O painel dele abria normal (panelResolver.js) e dizia
+  // "PARCEIRO COMERCIAL" lá dentro, enquanto o menu continuava chamando ele de
+  // cliente — o primeiro parceiro de compra puro da base viu isso na cara.
+  //
+  // Vem DEPOIS do cargo de rede de propósito: quem é distribuidor E parceiro de
+  // compra continua sendo mostrado como DISTRIBUIDOR, que é o cargo mais alto.
+  // E NÃO dá cargo nenhum: é só o selo. Comissão de rede continua vindo de
+  // career_levels, onde sempre esteve.
+  if (ehParceiroDeCompra(user)) return { label: "PARCEIRO", ...VERDE, icon: Store };
   // 🛡️ BLINDAGEM (05/08/2026): o campo antigo `role='licensee'` sobrou em contas que
   // NÃO têm cargo de licenciado na árvore (vendedor, influenciador, usuário) e fazia
   // o selo "LICENCIADO" aparecer indevidamente (caso TTT). O selo agora só sai do

@@ -7,6 +7,7 @@
 // A CHAVE é o id de careerLevels.js (fonte única dos cargos). Sempre passe o
 // cargo por normalizeLevel antes de buscar aqui (getSeloCargo já faz isso).
 import { normalizeLevel } from '@/lib/careerLevels';
+import { ehParceiroDeCompra } from '@/lib/panelResolver';
 
 const SELOS = {
   // ── Bloco REDE ────────────────────────────────────────────────
@@ -45,6 +46,20 @@ const SELOS_ROLE = {
  * senão o selo do cargo de carreira. null se não houver nenhum.
  */
 export function getSeloUsuario(user) {
+  // 💰 PARCEIRO DE COMPRA (14/09/2026) — mesma regra do selo de texto
+  // (roleBadge.js): quem aportou capital e NÃO tem cargo de carreira usava a
+  // medalha de "Usuário", porque `primary_career_level` fica em 'usuario' —
+  // parceiro de compra é outro eixo e nunca encosta nesse campo.
+  //
+  // Reaproveita a medalha do cargo `parceiro` de propósito: é a arte que a marca
+  // já usa para dizer "parceiro", e inventar uma segunda imagem para a mesma
+  // palavra confundiria mais do que resolveria.
+  //
+  // Só vale quando NÃO há cargo de carreira de verdade: o distribuidor que
+  // também é parceiro de compra continua com a medalha de Distribuidor.
+  const cargo = normalizeLevel(user?.primary_career_level || 'usuario');
+  if (cargo === 'usuario' && ehParceiroDeCompra(user)) return SELOS.parceiro;
+
   // O CARGO manda: o Super Admin que é CEO usa o selo de CEO. O selo de role
   // só entra quando a pessoa não tem cargo de carreira com selo.
   return getSeloCargo(user?.primary_career_level) || SELOS_ROLE[user?.role] || null;
