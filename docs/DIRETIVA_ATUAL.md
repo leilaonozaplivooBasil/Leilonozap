@@ -12,7 +12,7 @@
 
 ---
 
-## DIR-148 — editar/excluir cliente direto na Lista de Network, e o atalho pra virar oportunidade sem redigitar
+## DIR-149 — editar/excluir cliente direto na Lista de Network, e o atalho pra virar oportunidade sem redigitar
 
 **Emitida por:** dono, ao vivo (14/09/2026): *"Na lista de contato, eu preciso ter um botão de editar o cliente e excluir o cliente porque está tendo cliente duplicado [...] quando eu vou criar uma nova oportunidade no acompanhamento, não está salvando isso [...] faça esse banco de atualização através de atualizações ou pelo acompanhamento ou pelo contato feito ou pela lista."*
 
@@ -31,6 +31,22 @@
 **Prova:** suíte 2402/2402 (3 testes novos, `listaNetworkEditarExcluir.test.mjs`), lint limpo nos arquivos tocados, `npm run build` sem erro.
 
 **Status:** EM VIGOR.
+
+---
+
+## DIR-148 — a pílula do X-Music para de mentir: mostra o que o player está tocando DE VERDADE
+
+**Emitida por:** dono, direto: *"a música está tocando automático e isso é certo, porém está colocando como se estivesse sem tocar, deveria estar verde e sinalizar que a rádio está tocando. Analise e veja o que está acontecendo e corrija."*
+
+**Achado:** `ligado` (o que pinta a pílula verde/cinza e o texto "tocando"/"desligado") era só a INTENÇÃO — o que o botão pediu por último — nunca o que o player fazia de verdade. O embed do YouTube sempre nasce com `autoplay:1`; em qualquer sessão/navegador onde esse autoplay COM SOM é permitido (o caso do dono), ou quando alguém usa os controles NATIVOS do próprio player do YouTube (visíveis na tela, `controls:1`), o som tocava de verdade enquanto a pílula, presa na intenção antiga (o padrão de `lerLigado()` é `false`), seguia cinza dizendo "desligado". A régua nunca escutava o player pra saber se ele estava, de fato, tocando ou pausado.
+
+**O que entra (`XMusic.jsx`):** `PlayerYT` ganha um `onEstadoReal`, avisado pelos eventos DE VERDADE do player do YouTube (`onStateChange`: `PLAYING`→`true`, `PAUSED`→`false`) — a fonte da verdade, não mais só a intenção. Esse aviso vai direto pro mesmo `setLigado` que já pinta a pílula, o botão e o ícone — não é um segundo estado paralelo, é a MESMA variável agora sincronizada nos dois sentidos: toque no botão manda o player tocar/pausar (como já era) E o player avisa de volta o que está de fato fazendo (novo). Cobre os dois jeitos de o estado real divergir da intenção: autoplay que o navegador realmente permite, e alguém pausando/tocando pelos controles nativos do YouTube.
+
+**Fora do escopo:** nenhuma mudança na fila de estações, na playlist, no cronômetro ou em qualquer outra parte do X-Music — só a pílula deixar de mentir sobre o que está saindo do alto-falante.
+
+**Prova:** suíte 2403/2403 (4 testes novos em `tests/xmusicPilulaReflete.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR — mergeado no `main`.
 
 ---
 
