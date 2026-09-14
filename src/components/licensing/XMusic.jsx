@@ -53,7 +53,7 @@ import { ladoDaAbertura } from '@/lib/flutuante';
 //     nome que vai pra playlist da pessoa quando ela salva;
 //   • trocar de estação sem REMONTAR nada (loadVideoById/loadPlaylist), o
 //     que é ainda mais seguro pro som contínuo do que o iframe memoizado.
-const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, onFim }) {
+const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, onFim, onEstadoReal }) {
   const hostRef = useRef(null);
   const playerRef = useRef(null);
   const alvoRef = useRef(alvo);
@@ -61,11 +61,13 @@ const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, 
   const onErroRef = useRef(onErro);
   const onTituloRef = useRef(onTitulo);
   const onFimRef = useRef(onFim);
+  const onEstadoRealRef = useRef(onEstadoReal);
   alvoRef.current = alvo;
   ligadoRef.current = ligado;
   onErroRef.current = onErro;
   onTituloRef.current = onTitulo;
   onFimRef.current = onFim;
+  onEstadoRealRef.current = onEstadoReal;
 
   const carregarAlvo = useCallback(() => {
     const p = playerRef.current;
@@ -92,6 +94,20 @@ const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, 
           onReady: () => carregarAlvo(),
           onError: (e) => onErroRef.current?.(e?.data, alvoRef.current),
           onStateChange: (e) => {
+            // 🩹 dono: "a música está tocando automático... porém está
+            // colocando como se estivesse sem tocar. Deveria estar verde e
+            // sinalizar que a rádio está tocando." Causa: `ligado` era só a
+            // INTENÇÃO (o que o botão pediu), nunca o que o player de fato
+            // fazia — e o embed carrega com `autoplay:1` sempre ligado. Em
+            // navegadores/sessões onde o autoplay com som É permitido (ou
+            // quando a pessoa usa os controles NATIVOS do YouTube, visíveis
+            // no player), o som tocava de verdade enquanto a pílula, presa
+            // na intenção antiga, seguia cinza dizendo "desligado". Agora o
+            // ESTADO REAL do player (a fonte da verdade) sincroniza `ligado`
+            // nos dois sentidos — a pílula nunca mais mente sobre o que está
+            // saindo do alto-falante.
+            if (e?.data === YT.PlayerState?.PLAYING) onEstadoRealRef.current?.(true);
+            if (e?.data === YT.PlayerState?.PAUSED) onEstadoRealRef.current?.(false);
             if (e?.data === YT.PlayerState?.PLAYING) {
               const t = playerRef.current?.getVideoData?.()?.title;
               if (t) onTituloRef.current?.(String(t).slice(0, 70), alvoRef.current);
@@ -440,7 +456,7 @@ export default function XMusic() {
             </button>
           </div>
 
-          <PlayerYT alvo={estacao} ligado={ligado} onErro={aoErrar} onTitulo={aoTocar} onFim={aoTerminar} />
+          <PlayerYT alvo={estacao} ligado={ligado} onErro={aoErrar} onTitulo={aoTocar} onFim={aoTerminar} onEstadoReal={setLigado} />
 
           {/* 🔎 O BUSCADOR — a resposta definitiva pro link que não toca: em
               vez de alguém adivinhar, a pessoa procura. Tudo que aparece
