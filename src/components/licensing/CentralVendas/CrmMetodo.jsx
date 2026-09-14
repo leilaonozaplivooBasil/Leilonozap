@@ -134,7 +134,7 @@ const personalizarScript = (texto, nomeCompleto) => {
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, onEditarCliente, onExcluirCliente, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
   const uid = currentUser?.id;
   // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
   // recomeçando... já me coloca ela no meu contato e pisca." O destaque
@@ -3036,6 +3036,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
                           </Button>
                         )}
+                        {/* ✏️🗑️ dono: "preciso ter um botão de editar o cliente
+                            e excluir o cliente porque está tendo cliente
+                            duplicado" — direto na própria Lista de Network,
+                            sem precisar ir pra aba Acompanhamento → Clientes.
+                            Mesmos handlers de lá (handleEdit/handleDelete),
+                            só ligados aqui também.
+                            🚀 E o mesmo botão "Esteira" do Hábito 4 (Contato):
+                            vira negociação sem redigitar nada — direto da
+                            lista, onde o cadastro já está completo. */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {onCriarOportunidade && (
+                            <Button size="sm" variant="outline" onClick={() => onCriarOportunidade(c)} title="Virou negociação de verdade? Leva pra Esteira de Captação, já com o nome e contato preenchidos." className="border-nz-marrom/40 text-nz-marrom hover:bg-nz-marrom/10 h-8 w-8 p-0">
+                              <GitBranch className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {onEditarCliente && (
+                            <Button size="sm" variant="ghost" onClick={() => onEditarCliente(c)} title="Editar cliente" className="text-nz-tinta-fraca hover:bg-nz-cinza-fundo h-8 w-8 p-0">
+                              <PenLine className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {onExcluirCliente && (
+                            <Button size="sm" variant="ghost" onClick={() => onExcluirCliente(c.id)} title="Excluir cliente" className="text-red-500 hover:bg-red-50 h-8 w-8 p-0">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

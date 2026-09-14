@@ -1816,6 +1816,8 @@ _Enviado via CRM Leilão NoZap_`;
             contatoDestacado={contatoDestacado}
             onContatoDestacadoConsumido={() => setContatoDestacado(null)}
             onCriarOportunidade={criarOportunidadeDoCliente}
+            onEditarCliente={handleEdit}
+            onExcluirCliente={handleDelete}
             onImportarContatos={
               // 📥 Importar só na visão "só o meu": na visão de time a lista na
               // tela é de outras pessoas, e contato importado é carimbado pelo
