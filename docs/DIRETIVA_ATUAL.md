@@ -12,6 +12,37 @@
 
 ---
 
+## DIR-141 — a 4ª tabela cortada em 1.000 linhas caladas: `metodo_tarefas` do ciclo inteiro também estourava, e "hoje" sumia do ADM X-Game
+
+**Emitida por:** o dono, ao vivo, testando o preview da correção da DIR-140 — o mesmo "0/0 tarefas hoje" no ADM continuava, mesmo com o fuso já corrigido, enquanto a Visão Executiva seguia mostrando o número real (10/173). *"quantas tarefas o time tem hoje, pelo amor de deus, sem achismo."*
+
+**Achado:** a DIR-140 corrigiu um bug real, mas não era o único. `XPerformanceGestao.jsx` (`carregarTarefas`) carrega o **ciclo inteiro** (~30 dias) de `metodo_tarefas` para **todo o time** (até 16 pessoas × ~20 tarefas/dia) numa única consulta, ordenada por data crescente. Isso passa de 1.000 linhas bem antes de chegar no dia de hoje (dia 7 do ciclo já soma ~2.100 linhas) — e o Supabase **corta em 1.000 por padrão, sem avisar** (HTTP 200, sem erro). É a MESMA falha já corrigida três vezes nesta casa (estoque, CRM de clientes, votos do MvM — `lerTudoDoSupabase.js`), agora numa quarta tabela. `PerformanceEquipe.jsx` tinha o mesmo padrão, pior ainda: nem filtrava por pessoa, o time inteiro da empresa na mesma janela.
+
+**O que entra:**
+1. `XPerformanceGestao.jsx`: a leitura do ciclo inteiro passa a usar `lerTudoDoSupabase` — nunca mais corta calado, não importa quantas linhas o ciclo já tenha.
+2. `PerformanceEquipe.jsx`: mesma correção na leitura do período do time inteiro.
+3. Teste novo (`tests/tarefasDoTimeSemCorte.test.mjs`) trava que as duas telas usam a peça paginada — não um `select()` cru — pra este bug não reaparecer numa quinta tabela sem ser pego antes do merge.
+
+**Prova:** suíte 2346/2346 (2 testes novos), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-140 — o "hoje" em UTC: das 21h às 23h59 de Brasília, o ADM X-Game mostrava o dia seguinte (0/0), a Visão Executiva mostrava o dia certo (10/173)
+
+**Emitida por:** o dono, ao vivo, comparando o X-office (ADM X-Game) mostrando "0/0 tarefas concluídas hoje" com o `/XGame` (Visão Executiva), no mesmo instante, mostrando "10/173" — mesma população (10 pessoas), dois números de "hoje" completamente diferentes. Pedido: *"essas tarefas de ADM X-GAME precisam estar exatamente como a tarefa da X-GAME que clicamos... preciso de uma auditoria extremamente diligente."*
+
+**Achado:** `XPerformance.jsx` (a tela que hospeda o ADM X-Game) calculava "hoje" com `new Date().toISOString().slice(0, 10)` — a data em **UTC**, não em Brasília. Esta é a MESMA classe de bug já achada e corrigida duas vezes antes (DIR-129, na data; DIR-134, na hora do dia) — só que num arquivo que nunca tinha sido varrido. Das 21h às 23h59 de Brasília, o UTC já virou o dia seguinte: o ADM filtrava "tarefas de hoje" por uma data que ainda não tem nenhuma tarefa gravada no banco — 0/0, sempre, nesse intervalo de quase 3 horas todo santo dia. A Visão Executiva já usava `dataISO()` (o helper certo, força America/Sao_Paulo) — por isso só ela mostrava o número real.
+
+Achado o mesmo padrão, numa varredura em TODA a pasta de telas do Método/X-Game (não só onde o dono via o problema), em mais **10 arquivos**: `PainelCorporativo.jsx`, `QuadroCompromisso.jsx`, `EncontroMentalidade.jsx`, `PainelLaudo.jsx`, `PerformanceEquipe.jsx`, `MentalidadePagina.jsx` (inclusive decidia errado se hoje é segunda-feira), `XGameRitualAmanhecer.jsx` (a música do dia e o embaralhar do quadro dos sonhos), `DiarioDeBolso.jsx` (o início da semana) e `CrmEsteiraCaptacao.jsx` (data padrão de um aporte).
+
+**O que entra:**
+1. Todos os 11 arquivos trocam `new Date().toISOString().slice(0, 10)` (ou o `Date` cru que virava isso) por `dataISO()` (`@/lib/xgame`) — a mesma fonte única já usada em `XGameVisaoExecutiva.jsx`, `CrmMetodo.jsx` e `XGame.jsx`.
+2. Teste novo em `tests/xgameFusoHorario.test.mjs`: varre **toda** a pasta `src/components/licensing/CentralVendas/*.jsx` procurando o padrão `toISOString().slice(0, 10)` usado como "hoje" — não fica mais restrito aos arquivos onde o bug já apareceu uma vez. Este bug já foi achado ao vivo em produção três vezes (DIR-129, DIR-134, esta); a quarta vez tem que ser um teste vermelho antes do merge, não um print do dono.
+
+**Prova:** suíte 2268/2268 (1 teste novo, de varredura ampla, mais 10 testes preexistentes da mesma família continuam verdes), lint limpo, `npm run build` sem erro.
+
+---
+
 ## DIR-142 — o Ritual do Amanhecer vale sempre 20% do dia (fora do teto de peso 1-6), e ganha janela própria pra quem tem fixo fora da mentoria
 
 **Emitida por:** dono, ao vivo (13/09/2026): *"acordar cedo, fazer esse ritual, pesa muito no negócio... a pessoa não vai ganhar dinheiro só por acordar cedo, mas tem que ganhar um valor razoável porque é um peso bom."* E, sobre quem tem fixo mas está fora da mentoria (a distribuidora, o Flávio, a Luciene, o Amâncio): *"eles ganham no horário que eles definirem, de acordo com o fixo dela... quem já está na mentoria é obrigatório acordar cinco horas da manhã, se não acordar não ganha o valor desse ritual."*

@@ -4,7 +4,7 @@ import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
 import { restricoesDaCamera, opcoesDoGravador, avisoDoVideoGrande } from '@/lib/gravadorDeVideo';
-import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo } from '@/lib/xgame';
+import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
 // conseguiu importar — não tem terceira.
@@ -37,11 +37,12 @@ const CHAVE_MUSICA = 'xgame_musica_do_dia';
 const musicaSalva = () => {
   try {
     const j = JSON.parse(localStorage.getItem(CHAVE_MUSICA) || 'null');
-    return j?.id && j?.data === new Date().toISOString().slice(0, 10) ? j : null;
+    // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+    return j?.id && j?.data === dataISO() ? j : null;
   } catch { return null; }
 };
 const salvarMusica = (id, lista = false) => {
-  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, lista, data: new Date().toISOString().slice(0, 10) })); } catch { /* sem storage */ }
+  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, lista, data: dataISO() })); } catch { /* sem storage */ }
 };
 
 // ⭐ A PLAYLIST DO AMANHECER da pessoa (fica no aparelho): cada link que ela
@@ -352,7 +353,8 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     const todas = sonhos
       .map((s) => s?.imagem_url || s?.imagem || s?.foto || (Array.isArray(s?.imagens) ? s.imagens[0] : null))
       .filter(Boolean);
-    const hoje = new Date().toISOString().slice(0, 10);
+    // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+    const hoje = dataISO();
     let seed = 0;
     for (let i = 0; i < hoje.length; i += 1) seed = ((seed * 31) + hoje.charCodeAt(i)) >>> 0;
     const rnd = () => { seed = ((seed * 1664525) + 1013904223) >>> 0; return seed / 4294967296; };

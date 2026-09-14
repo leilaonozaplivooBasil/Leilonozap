@@ -18,6 +18,7 @@ import {
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
 import { mentalidadeDe } from '@/lib/mentalidades';
+import { dataISO } from '@/lib/xgame';
 import { faseDoMes } from '@/lib/documentoOficial';
 import { PROGRAMA_PADRAO, programaJunto, rotuloDoMes } from '@/lib/programaMentoria';
 import { mesDe } from '@/lib/metasPessoa';
@@ -68,7 +69,8 @@ function Anel({ pct, cor, children }) {
 }
 
 export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir = false }) {
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+  const hoje = hojeISO || dataISO();
   // 📅 DIR-79 — a tela abre na segunda QUE VEM (hoje, se hoje for segunda), e
   // não na que já passou. `passoSemana` deixa andar pra trás sem perder o
   // registro da semana anterior — que é o que a troca de âncora, sozinha,
