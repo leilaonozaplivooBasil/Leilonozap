@@ -39,6 +39,26 @@
 
 ---
 
+## DIR-147 — o treinamento do Encontro da Mentalidade fica editável de verdade, e as lâminas ficam conectadas
+
+**Emitida por:** dono, direto e urgente: *"eu não consigo editar as lâminas... as perguntas do treinamento não levam a lugar nenhum, não adianta de nada... está sem conexão, está sem sentido. Precisa ter um sentido, aonde eu coloco treinamento, pra onde o treinamento vai, onde ele aparece, aonde eu edito as lâminas... analise essa porra de forma diligente e me traga uma solução definitiva pra isso aqui ficar perfeito. Fica fluido."*
+
+**Achado na auditoria (a causa real, não sintoma):** existiam DOIS "treinamento" no Encontro da Mentalidade que não se falavam. (1) `encontro.treinamento` — a caixa do cabeçalho "o treinamento (40 min)" — é o ÚNICO que a apresentação de fato usa (DIR-79), mas só podia ser APAGADO e reescrito do zero ("trocar o treinamento"): pra mudar uma palavra, era preciso reescrever tudo. (2) `roteiro.treinamento` — o rascunho da IA/régua, dentro de "O tópico do encontro" — tinha um botão "editar" que parecia funcionar, mas assim que existia um treinamento gravado (1), esse rascunho ficava MUDO: editar ali não tinha efeito nenhum na apresentação — um segundo formulário que não levava a lugar nenhum. Achado também: `roteiro.abertura` (o slide "Abertura", logo depois da Mentalidade) era gravado e usado na apresentação, mas nunca aparecia nem podia ser editado fora dela.
+
+**O que entra:**
+1. `treinamentoDoRoteiro()` (nova, `src/lib/encontro.js`) — a ponte: converte o rascunho da IA/régua pro formato do treinamento gravado.
+2. **Gerar o tópico já grava o treinamento automaticamente**, quando ainda não existe um gravado — a caixa do cabeçalho nunca mais fica dizendo "ainda sem material" logo depois de gerar um treinamento inteiro.
+3. **"trocar o treinamento" (que só apagava) virou "editar"** — os campos (título, material, passos) chegam JÁ PREENCHIDOS com o que existe; "apagar" continua existindo, mas como ação separada e explícita, com confirmação.
+4. **Um só treinamento, em vez de dois que discordavam**: "O tópico do encontro" não tem mais um segundo formulário de treinamento — mostra o mesmo treinamento EFETIVO que a apresentação usa, com um link "editar o treinamento lá no topo ↑".
+5. **A Abertura vira uma lâmina de verdade**: aparece e pode ser editada em "O tópico do encontro" (antes só existia dentro do Apresentar, sem lugar nenhum pra editar fora dele).
+6. **Editar direto de dentro da lâmina**: o modo Apresentar ganha um botão de editar — fecha a apresentação e já abre a edição, sem precisar caçar o botão certo depois.
+
+**Fora do escopo:** nenhuma mudança na geração do roteiro em si (IA/régua local), no cronômetro, em direcionar demandas ou na visão executiva — só a conexão e a edição do treinamento e da abertura.
+
+**Prova:** suíte 2380/2380 (12 testes novos em `tests/encontroTreinamentoConectado.test.mjs`), lint limpo, `npm run build` sem erro, e os 14 testes de navegador (`tests/navegador/encontro.spec.mjs`, Playwright real contra Chromium) continuam passando — incluindo prova visual (screenshots) do fluxo completo: gerar tópico → treinamento já pronto → editar com campos preenchidos → o mesmo conteúdo espelhado no tópico → o botão de editar dentro do Apresentar.
+
+---
+
 ## DIR-141 — a 4ª tabela cortada em 1.000 linhas caladas: `metodo_tarefas` do ciclo inteiro também estourava, e "hoje" sumia do ADM X-Game
 
 **Emitida por:** o dono, ao vivo, testando o preview da correção da DIR-140 — o mesmo "0/0 tarefas hoje" no ADM continuava, mesmo com o fuso já corrigido, enquanto a Visão Executiva seguia mostrando o número real (10/173). *"quantas tarefas o time tem hoje, pelo amor de deus, sem achismo."*

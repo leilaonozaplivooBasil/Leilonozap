@@ -827,6 +827,26 @@ export function materialEhLink(material) {
 }
 
 /**
+ * O rascunho de treinamento que a IA/régua local escreveu (`roteiro.treinamento`
+ * — {tema, objetivo, passos, pratica}) vira o formato do treinamento GRAVADO
+ * ({titulo, material, passos, por}) — DIR-135.
+ *
+ * Antes disso existiam DOIS "treinamento" que não se falavam: o rascunho da
+ * IA (editável na tela, mas invisível na apresentação sempre que já havia um
+ * treinamento gravado) e o gravado (o único que a apresentação de fato usa,
+ * mas só podia ser apagado e reescrito do zero — nunca editado). Esta função
+ * é a ponte: assim que um tópico é gerado, se ainda não existe treinamento
+ * gravado, o rascunho vira o ponto de partida gravado — pronto pra editar de
+ * verdade (não mais apagar-e-recomeçar) e já é o que aparece no Apresentar.
+ */
+export function treinamentoDoRoteiro(roteiroTreinamento, { por = '' } = {}) {
+  const r = roteiroTreinamento || {};
+  const passos = Array.isArray(r.passos) ? r.passos.map((p) => String(p || '').trim()).filter(Boolean) : [];
+  if (r.pratica) passos.push(`Prática: ${String(r.pratica).trim()}`);
+  return normalizarTreinamento({ titulo: String(r.tema || '').trim(), material: String(r.objetivo || '').trim(), passos }, { por });
+}
+
+/**
  * Importar um treinamento de texto colado: a primeira linha vira o título,
  * as demais viram passos. É o "ou fazer um treinamento ali" sem formulário.
  */
