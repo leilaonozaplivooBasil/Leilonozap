@@ -136,9 +136,21 @@ export function ritualCompleto(comprovacao) {
  * exatamente o atrito que este arquivo existe pra desmontar.
  */
 export function blocoReprovado(nome, veredito) {
+  // 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem crédito
+  // (HTTP 402) na madrugada, e o bloco de visualização de quem gravou o
+  // vídeo de verdade virou "reprovado" só porque a IA não respondeu — o
+  // mesmo `duvida` que DIR-125 usa pra ambiente ruim de propósito. IA fora
+  // do ar não é uma opinião sobre a imagem: é a imagem nunca ter sido
+  // vista. Isso não é reprovação em NENHUM bloco.
+  if (veredito?.ia_indisponivel) return false;
   const v = veredito?.veredito;
   if (v === 'reprovada') return true;
   return v === 'duvida' && nome === 'visualizacao';
+}
+
+/** Este bloco foi entregue mas a IA nunca chegou a olhar (estava fora do ar)? */
+export function blocoPendenteIA(veredito) {
+  return !!veredito?.ia_indisponivel;
 }
 
 /**
@@ -162,9 +174,18 @@ export function pendenciasDoRitual(comprovacao) {
   }
   // reprovação da IA em qualquer bloco também é pendência: ela é o "fez
   // alguma coisa errada" do áudio, e precisa aparecer junto do resto.
+  //
+  // 🚨 DIR-146 — IA fora do ar é uma pendência DIFERENTE de reprovação: o
+  // que a pessoa entregou está salvo, ninguém disse que está errado, só
+  // ainda não foi confirmado. A frase tem que dizer exatamente isso — quem
+  // ler não pode concluir "fiz errado" quando o erro foi nosso.
   for (const nome of BLOCOS) {
     const v = b[nome]?.veredito_ia;
-    if (blocoReprovado(nome, v)) faltando.push({ bloco: nome, o_que: `${ROTULO_DO_BLOCO[nome]}: ${v.motivo || 'reprovado pela IA'}` });
+    if (blocoPendenteIA(v)) {
+      faltando.push({ bloco: nome, o_que: `${ROTULO_DO_BLOCO[nome]}: a IA de validação estava fora do ar quando você entregou — o que você mandou FOI SALVO, não foi perdido nem reprovado, só está aguardando confirmação.` });
+    } else if (blocoReprovado(nome, v)) {
+      faltando.push({ bloco: nome, o_que: `${ROTULO_DO_BLOCO[nome]}: ${v.motivo || 'reprovado pela IA'}` });
+    }
   }
   return faltando;
 }
@@ -184,6 +205,14 @@ export function seloDoRitual(comprovacao) {
   if (feitos < BLOCOS.length) return 'parcial';
   const reprovado = BLOCOS.some((n) => blocoReprovado(n, b[n]?.veredito_ia));
   if (reprovado) return 'parcial';
+  // 🚨 DIR-146 — os três blocos vieram, ninguém foi reprovado, mas pelo
+  // menos um só não tem veredito porque a IA estava fora do ar: isto NÃO é
+  // "completo" (ainda não foi confirmado — DIR-84.1 continua valendo, IA
+  // fora não vira aprovação sozinha) nem "parcial" igual a quem não
+  // entregou (o trabalho está todo em casa). É um selo próprio, pra cair
+  // na fila de revisão em vez de virar zero pra sempre.
+  const pendenteIA = BLOCOS.some((n) => blocoPendenteIA(b[n]?.veredito_ia));
+  if (pendenteIA) return 'pendente_ia';
   return b.visualizacao?.video_path ? 'brilhante' : 'completo';
 }
 
@@ -191,6 +220,7 @@ export function seloDoRitual(comprovacao) {
 export function statusDoRitual(comprovacao) {
   const selo = seloDoRitual(comprovacao);
   if (selo === 'brilhante' || selo === 'completo') return 'aprovada_ritual';
+  if (selo === 'pendente_ia') return 'ritual_pendente_ia';
   if (selo === 'parcial') return 'ritual_parcial';
   return 'reprovada';
 }

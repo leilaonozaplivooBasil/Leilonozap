@@ -855,13 +855,14 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
           <>
             <Halo><Star className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {pendencias.length ? 'Quase lá.' : 'Ritual completo.'}
+              {selo === 'pendente_ia' ? 'Entregue — aguardando confirmação.' : pendencias.length ? 'Quase lá.' : 'Ritual completo.'}
             </h2>
 
             {pendencias.length > 0 ? (
               <div className="xeos-cru rounded-2xl bg-amber-400/12 ring-1 ring-amber-300/40 p-4 text-left space-y-2" data-teste="pendencias-do-ritual">
                 <p className="text-[12px] font-extrabold text-amber-100 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" strokeWidth={2.4} /> Falta isto pra fechar com selo cheio:
+                  <AlertTriangle className="w-4 h-4" strokeWidth={2.4} />
+                  {selo === 'pendente_ia' ? 'Você entregou tudo — isto aqui não é sua pendência:' : 'Falta isto pra fechar com selo cheio:'}
                 </p>
                 {pendencias.map((x, i) => (
                   <p key={`${x.bloco}-${i}`} className="text-[12px] text-amber-50/90 flex gap-2">
@@ -886,7 +887,8 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
             <p className="text-white/60 text-[12px]">
               {selo === 'brilhante' ? 'Concluir agora carimba o seu ritual como BRILHANTE.'
                 : selo === 'completo' ? 'Concluir agora vale o ritual — sem o selo BRILHANTE, que é do vídeo.'
-                  : 'Concluir agora registra o que você entregou. O que faltou fica marcado, e amanhã tem de novo.'}
+                  : selo === 'pendente_ia' ? 'A IA estava fora do ar e não confirmou um bloco a tempo — não foi você. Concluir agora manda pra revisão; você não perde o que já fez.'
+                    : 'Concluir agora registra o que você entregou. O que faltou fica marcado, e amanhã tem de novo.'}
             </p>
 
             <div>
