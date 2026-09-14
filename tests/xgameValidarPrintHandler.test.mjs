@@ -38,10 +38,18 @@ const respostaIA = (saida, { model = 'anthropic/claude-opus-5', stop_reason = 'e
 
 let estado; let fetchReal;
 beforeEach(() => {
-  estado = { chamadas: [], responder: null };
+  estado = { chamadas: [], chamadasCreditos: [], responder: null, responderCreditos: null };
   fetchReal = globalThis.fetch;
   globalThis.fetch = async (url, opts = {}) => {
     const u = String(url);
+    // 🚨 DIR-147 — /v1/credits (o saldo do gateway) é uma checagem separada
+    // da chamada ao MODELO: mockada à parte, pra não se misturar com as
+    // chamadas de validação nos testes que já existiam.
+    if (u.includes('/v1/credits')) {
+      estado.chamadasCreditos.push({ url: u, headers: new Headers(opts.headers || {}) });
+      const r = estado.responderCreditos ? estado.responderCreditos() : { status: 200, body: { balance: '95.50', total_used: '4.50' } };
+      return new Response(JSON.stringify(r.body), { status: r.status, headers: { 'content-type': 'application/json' } });
+    }
     const corpo = opts.body ? JSON.parse(opts.body) : null;
     // o SDK manda um objeto Headers, não um objeto simples — normaliza pra ler
     estado.chamadas.push({ url: u, corpo, headers: new Headers(opts.headers || {}) });
@@ -58,7 +66,10 @@ function fazerRes() {
 }
 async function post(body) { const r = fazerRes(); await handler({ method: 'POST', body }, r); return r; }
 async function get(query = {}) { const r = fazerRes(); await handler({ method: 'GET', query }, r); return r; }
-const soIA = () => estado.chamadas.filter((c) => c.url.includes('ai-gateway.vercel.sh'));
+// 🚨 DIR-147 — filtro específico em /v1/messages (chamada ao MODELO), não
+// mais em "qualquer coisa no host do gateway" — /v1/credits é outra rota,
+// no mesmo host, que não deve contar como "chamou o modelo".
+const soIA = () => estado.chamadas.filter((c) => c.url.includes('ai-gateway.vercel.sh/v1/messages'));
 
 // ─── o caminho certo ─────────────────────────────────────────────────────────
 
@@ -255,4 +266,29 @@ test('GET ?ping=1 chama o modelo de verdade: 404 → ia:false com o erro; 200 �
   assert.equal(req.output_config?.effort, 'medium');
   assert.equal(req.output_config?.format?.type, 'json_schema');
   assert.deepEqual(req.system?.[0]?.cache_control, { type: 'ephemeral' });
+});
+
+// 🚨 DIR-147 (14/09/2026) — o GET junto do ping (ou sozinho: é uma checagem
+// separada) também devolve o SALDO do gateway. Dono, depois do incidente do
+// 402: "o crédito quando estiver acabando precisa ter um aviso." Sem isso, a
+// única forma de saber era o dashboard da Vercel — que ninguém abre às 5h.
+test('GET também devolve o saldo do AI Gateway — e avisa quando está baixo', async () => {
+  estado.responderCreditos = () => ({ status: 200, body: { balance: '95.50', total_used: '4.50' } });
+  const alto = await get();
+  assert.equal(alto.corpo.saldo_gateway_usd, 95.5);
+  assert.equal(alto.corpo.saldo_baixo, false);
+  assert.equal(estado.chamadasCreditos.length, 1, 'checou o saldo mesmo sem ?ping=1');
+
+  estado.responderCreditos = () => ({ status: 200, body: { balance: '2.10', total_used: '97.90' } });
+  const baixo = await get();
+  assert.equal(baixo.corpo.saldo_gateway_usd, 2.1);
+  assert.equal(baixo.corpo.saldo_baixo, true, 'abaixo do teto tinha que virar aviso');
+  assert.ok(baixo.corpo.saldo_baixo_teto_usd > 0, 'o teto vai junto, pra tela explicar o número');
+});
+
+test('GET: se a checagem de saldo falhar, não quebra o resto (e não inventa saldo)', async () => {
+  estado.responderCreditos = () => ({ status: 500, body: { error: 'fora do ar' } });
+  const r = await get({ ping: '1' });
+  assert.equal(r.corpo.ok, true, 'a checagem de saldo falhando não pode derrubar o health check inteiro');
+  assert.equal('saldo_gateway_usd' in r.corpo, false, 'sem saldo sabido, o campo nem aparece — não pode inventar um número');
 });

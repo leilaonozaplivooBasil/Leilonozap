@@ -398,6 +398,11 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [dataEscolhidaComp, setDataEscolhidaComp] = useState('todas');
   const [iaLigada, setIaLigada] = useState(null);
   const [iaDetalhe, setIaDetalhe] = useState(''); // modelo, ou o erro real do gateway quando cai
+  // 🚨 DIR-147 (14/09/2026) — dono, depois do incidente do 402: "o crédito
+  // quando estiver acabando precisa ter um aviso, pra não ocorrer mais
+  // isso." `null` = não dá pra saber (fora do gateway, ou a checagem falhou).
+  const [saldoGatewayUsd, setSaldoGatewayUsd] = useState(null);
+  const [saldoBaixo, setSaldoBaixo] = useState(false);
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
   const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 'reprovada');
   const carregarComprovacoes = useCallback(() => {
@@ -410,7 +415,11 @@ export default function XGameAdmin({ onVerComo } = {}) {
     // sozinho mentia "IA ligada" enquanto toda comprovação caía em indisponível.
     fetch('/api/functions/xgameValidarPrint?ping=1')
       .then((r) => r.json())
-      .then((j) => { setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} (${j.via || '?'}) → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 320)}` : ''}` : `${j?.model || ''}${j?.via ? ` · via ${j.via}` : ''}`); })
+      .then((j) => {
+        setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} (${j.via || '?'}) → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 320)}` : ''}` : `${j?.model || ''}${j?.via ? ` · via ${j.via}` : ''}`);
+        setSaldoGatewayUsd(typeof j?.saldo_gateway_usd === 'number' ? j.saldo_gateway_usd : null);
+        setSaldoBaixo(!!j?.saldo_baixo);
+      })
       .catch(() => { setIaLigada(false); setIaDetalhe('a função de validação não respondeu'); });
   }, []);
   useEffect(() => { carregarComprovacoes(); }, [carregarComprovacoes]);
@@ -531,6 +540,19 @@ export default function XGameAdmin({ onVerComo } = {}) {
         <span className={`ml-auto text-[10px] font-bold ${iaLigada === null ? 'text-gray-400' : iaLigada ? 'text-emerald-600' : 'text-red-600'}`} title={iaDetalhe} data-teste="ia-status">
           {iaLigada === null ? '… conferindo a IA (chamada real ao modelo)' : iaLigada ? `🧠 IA de visão RESPONDENDO · ${iaDetalhe}` : `🚨 IA FORA DO AR — comprovações BLOQUEADAS até voltar${iaDetalhe ? ` · ${iaDetalhe}` : ''}`}
         </span>
+        {/* 🚨 DIR-147 — o aviso de crédito baixo que o dono pediu: aparece
+            SEMPRE que o gestor abre esta tela, não só quando já é tarde
+            demais (foi assim que o 402 pegou todo mundo de surpresa). */}
+        {saldoGatewayUsd !== null && (
+          <span
+            className={`text-[10px] font-bold ${saldoBaixo ? 'text-red-600' : 'text-gray-400'}`}
+            title="Saldo do Vercel AI Gateway — some quando chega em zero, a validação para de responder"
+            data-teste="saldo-gateway"
+          >
+            {saldoBaixo ? '🪫' : '🔋'} crédito da IA: ${saldoGatewayUsd.toFixed(2)}
+            {saldoBaixo && ' — ACABANDO, recarregue agora (vercel.com → AI Gateway → Add credits)'}
+          </span>
+        )}
       </div>
 
       {/* ══ 🖼️ A FILA DE COMPROVAÇÕES (segunda análise — humano só na dúvida) ══ */}

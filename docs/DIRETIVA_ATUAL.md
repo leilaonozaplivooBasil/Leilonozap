@@ -12,6 +12,28 @@
 
 ---
 
+## DIR-147 — o vigia do saldo do AI Gateway: aviso ANTES de chegar em zero, não depois
+
+**Emitida por:** dono, ao vivo (14/09/2026), depois de conferir que a DIR-146 restaurou o crédito da Eloá e não achou mais nenhuma outra vítima no histórico: *"o crédito quando estiver acabando precisa ter um aviso, né, pra não ocorrer mais isso. Isso é muito sério, a gente não pode ficar assim."*
+
+**Achado:** a DIR-146 consertou o que o app FAZ quando a IA está fora do ar (nunca mais descarta nem reprova sozinho) — mas não havia NENHUMA forma de saber que o crédito estava acabando ANTES de virar 402 de verdade. A única forma de descobrir era abrir o dashboard da Vercel (`vercel.com/.../ai-gateway`), e ninguém abre isso às 5h da manhã — foi exatamente por isso que o incidente pegou todo mundo de surpresa.
+
+**O que entra:**
+1. `saldoGateway(ia)` e `SALDO_BAIXO_USD` (`api/_lib/ia.js`) — chama `GET https://ai-gateway.vercel.sh/v1/credits` (rota documentada pela Vercel, devolve `{balance, total_used}`) com a MESMA chave que já valida comprovação de verdade. `null` quando não dá pra saber (fora do gateway, ou a própria checagem falhou) — nunca inventa um número. Teto padrão: $10 (configurável por `AI_GATEWAY_SALDO_BAIXO_USD`).
+2. `xgameValidarPrint.js` (GET) — o health-check que o ADM já chamava (`?ping=1`, DIR-84.1) passa a devolver `saldo_gateway_usd`/`saldo_baixo` junto, sem chamada extra ao modelo.
+3. **Aviso visível toda vez que o gestor abre o ADM X-Game** (`XGameAdmin.jsx`) — badge novo ao lado do "IA de visão RESPONDENDO": `🔋 crédito da IA: $X.XX`, virando `🪫 ... ACABANDO, recarregue agora` (com o link direto) quando abaixo do teto.
+4. **Vigia automático** (`api/functions/alertaCreditoGateway.js`, cron a cada 4h em `vercel.json`) — mesmo padrão do vigia de reservas órfãs (`alertaReservasOrfas.js`, 27/08): só AVISA, nunca recarrega sozinho (quem decide comprar crédito é o dono). Grava aviso em `system_logs` quando o saldo está baixo, com o valor exato e o link de onde recarregar. Quando a PRÓPRIA checagem falha, também avisa (`SALDO_DESCONHECIDO`) — silêncio sem contexto foi o que já causou o incidente uma vez, não pode virar hábito.
+
+**Fora do escopo desta diretiva:** notificação push (WhatsApp/Slack) direto pro dono — a checagem de saldo hoje só fica visível no ADM (quando ele abre) e em `system_logs` (quando alguém olha o log). Puxar isso pra um canal que ele efetivamente monitora em tempo real (Zeca/Slack, ou WhatsApp) fica pra diretiva própria, se ele quiser — não fui atrás de escolher um canal e arriscar configurar errado sob a pressão do incidente.
+
+**Regras fixas:** nenhuma além das anteriores. O vigia NUNCA compra crédito sozinho — só avisa; recarregar é decisão humana.
+
+**Prova:** suíte 2387/2387 (9 testes novos: 2 em `xgameValidarPrintHandler.test.mjs`, 7 em `alertaCreditoGateway.test.mjs` novo), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-146 — IA fora do ar deixou de custar crédito de ninguém: comprovação vira `pendente_ia`, nunca some nem reprova sozinha
 
 **Emitida por:** dono, ao vivo (14/09/2026), depois de um incidente real na madrugada — 5 capturas de tela e a mensagem: *"Você me disse ontem que estava funcionando todo o ritual, e hoje nós fomos pego de surpresa, porque o ritual de várias pessoas não salvou. As pessoas concluíram mas não salvou. Aí a de validação não está funcionando. [...] eu preciso de que isso não falhe mais, isso não pode falhar de jeito maneira [...] eu quero que você analise tudo o que deu errado, que você dê o ponto pras pessoas que fizeram, as pessoas fizeram só que não conseguiu salvar [...] você me entregue isso pronto e nunca mais falhar [...] coloque uma prevenção agora pra isso nunca mais acontecer."* E, sobre o planejamento da Distribuidora Eloá que não valeu no dia seguinte: *"a gente tem que ter uma opção também, de quando a pessoa montar o teu planejamento, ter um botão de salvar pros outros dias, e isso ficar claro."*
