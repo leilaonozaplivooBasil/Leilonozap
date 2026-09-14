@@ -101,6 +101,22 @@ export const PANEL_METADATA = {
 };
 
 /**
+ * É Parceiro de Compra? (contratou/ativou um plano em /Partners)
+ *
+ * ⚠️ NÃO confundir com o cargo de rede `parceiro`, que é o degrau 5 da escada
+ * (careerLevels.js) e carrega 15% de venda direta, rebate sobre licenciado e o
+ * direito de cadastrar. São dois eixos separados: este aqui é capital aportado,
+ * aquele é carreira comercial. A mesma pessoa pode ter os dois, um, ou nenhum.
+ *
+ * Mora AQUI, e não em roleBadge.js, porque este arquivo é puro de propósito —
+ * sem React, sem Lucide — e por isso pode ser importado tanto pelo selo quanto
+ * pela medalha sem arrastar a árvore de ícones junto.
+ */
+export function ehParceiroDeCompra(user) {
+  return !!(user?.partner_plan_activated_at || user?.active_partner_plan);
+}
+
+/**
  * Deriva os painéis a partir dos campos legados do AppUser.
  * Usado quando enabled_panels está vazio/undefined (compatibilidade).
  */
@@ -134,7 +150,7 @@ function derivePanelsFromLegacyFields(user) {
   }
 
   // Parceiro de Compra: quem contratou/ativou um plano em /Partners (role continua 'user')
-  if (user.partner_plan_activated_at || user.active_partner_plan) {
+  if (ehParceiroDeCompra(user)) {
     panels.add("parceiro_compra");
   }
 
