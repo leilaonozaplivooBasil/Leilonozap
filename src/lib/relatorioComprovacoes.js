@@ -43,17 +43,25 @@ export const ROTULO_STATUS = {
   // um ritual PELA METADE e um ritual AINDA ACONTECENDO.
   ritual_em_andamento: 'ritual em andamento',
   ritual_parcial: 'ritual parcial',
+  // 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem crédito
+  // (402) e passou a existir um estado que antes não existia: entrega real,
+  // sem reprovação nenhuma, só sem confirmação porque a IA não respondeu.
+  pendente_ia: 'aguardando revisão (IA fora do ar)',
+  ritual_pendente_ia: 'ritual aguardando revisão (IA fora do ar)',
   reprovada: 'reprovada',
 };
 
-// 🔴 `ritual_parcial` e `ritual_em_andamento` NÃO entram aqui, de propósito.
-// Este conjunto decide o que conta como entrega boa — e por tabela pontos e
-// dinheiro. Um ritual pela metade é registro honesto do que aconteceu, não
-// comprovação aprovada; contá-lo como aprovada pagaria por trabalho não feito.
+// 🔴 `ritual_parcial`, `ritual_em_andamento`, `pendente_ia` e
+// `ritual_pendente_ia` NÃO entram aqui, de propósito. Este conjunto decide o
+// que conta como entrega boa — e por tabela pontos e dinheiro. Nenhum deles é
+// comprovação aprovada ainda: contá-los como aprovada pagaria por uma
+// confirmação que não aconteceu (e "IA fora do ar" nem é reprovação — por
+// isso também não pode cair no `reprovada` de desfechoDoStatus).
 const APROVADOS = new Set(['aprovada_ia', 'aprovada_manual', 'aprovada_ritual']);
+const EM_ANALISE = new Set(['em_analise', 'ritual_em_andamento', 'pendente_ia', 'ritual_pendente_ia']);
 
 /** Aprovada, reprovada ou ainda em análise — o eixo que o dono pediu ("negadas e aceitas"). */
-export const desfechoDoStatus = (s) => (APROVADOS.has(s) ? 'aprovada' : (s === 'em_analise' || s === 'ritual_em_andamento') ? 'em_analise' : 'reprovada');
+export const desfechoDoStatus = (s) => (APROVADOS.has(s) ? 'aprovada' : EM_ANALISE.has(s) ? 'em_analise' : 'reprovada');
 
 /**
  * 🔴 ESTE REGISTRO TEM RASTRO TÉCNICO?

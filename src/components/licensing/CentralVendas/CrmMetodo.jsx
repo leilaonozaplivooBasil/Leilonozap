@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -1117,7 +1117,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(bl.gratidao?.audio_path ? { audio_gratidao_path: bl.gratidao.audio_path } : {}),
       ...(bl.visualizacao?.audio_acao_path ? { audio_acao_path: bl.visualizacao.audio_acao_path } : {}),
       tempo_tela_s: tempoTelaS || 0,
-      ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
+      // 🚨 DIR-146 — o laudo (relatorioComprovacoes.js/leituraDoRastro) lê
+      // `ia_indisponivel` no TOPO da comprovação pra dizer "não foi ela" —
+      // sem isto aqui, um ritual pendente_ia ficaria com o mesmo rastro de
+      // um ritual comum, e quem abrisse o laudo não veria o sinal técnico.
+      ...rastroDa({ anterior: t.comprovacao, tempoTelaS, iaIndisponivel: statusFinal === 'ritual_pendente_ia', falhas: falhasDaEntrega() }),
       quando: new Date().toISOString(),
       // 🔴 `valido` NÃO pode ser sempre true. Um ritual parcial (dois blocos
       // de três, ou um bloco reprovado pela IA) é registro honesto, não
@@ -1145,7 +1149,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      if (selo === 'parcial') toast('🌅 Ritual registrado pela metade — o que faltou está anotado na tarefa.', { icon: '⚠️', duration: 7000 });
+      // 🚨 DIR-146 — selo 'pendente_ia' é diferente de 'parcial': a pessoa
+      // entregou os três blocos, ninguém reprovou nada, só a IA não
+      // respondeu pra confirmar. O aviso tem que dizer isso, não "pela
+      // metade" — senão soa como se ela tivesse deixado de fazer algo.
+      if (selo === 'pendente_ia') toast('🌅 Ritual entregue por completo — a IA estava fora do ar pra confirmar um bloco, então ele foi pra revisão. Você não perdeu nada do que fez.', { icon: '🤖', duration: 9000 });
+      else if (selo === 'parcial') toast('🌅 Ritual registrado pela metade — o que faltou está anotado na tarefa.', { icon: '⚠️', duration: 7000 });
       else toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo pra ganhar o selo BRILHANTE)');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
@@ -1160,7 +1169,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   useEffect(() => {
     if (!comprovando || comprovando.tipo === 'aprendizado' || !uid) return;
     supabase.from('metodo_tarefas').select('comprovacao').eq('user_id', uid).not('comprovacao', 'is', null).limit(300)
-      .then(({ data }) => setComprovacoesRecentes((data || []).map((r) => r.comprovacao).filter(Boolean)));
+      // 🚨 DIR-146 — `pendente_ia` é a MESMA foto de um reenvio depois da IA
+      // cair, não uma reciclagem de dia antigo: contá-la no anti-reuso (hash)
+      // ou mandá-la pra IA comparar (anti-reciclagem visual) travaria a
+      // própria pessoa tentando de novo a foto real que ela acabou de tirar.
+      .then(({ data }) => setComprovacoesRecentes((data || []).map((r) => r.comprovacao).filter((c) => c && c.status !== 'pendente_ia')));
   }, [comprovando?.id, uid]);
   // prints já usados (anti-reuso EXATO, por hash) — a comparação VISUAL
   // (reciclagem reprocessada) é responsabilidade da IA, ver imagensParaComparar abaixo
@@ -1194,12 +1207,37 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
     if (decisao.acao === 'ia_fora') {
       const det = ia?.details ? ` (${ia.details.status || 'erro'}${ia.details.model ? ` · ${ia.details.model}` : ''})` : '';
-      // 🧾 esta tentativa NÃO grava comprovação — some sem deixar marca. A
-      // falha fica no ref e entra na comprovação que a próxima tentativa
-      // gravar: é o que separa "a pessoa não entregou" de "a IA estava fora".
       anotarFalhaDaTarefa(t.id, 'ia', `IA fora do ar${det}`);
+      // 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem
+      // crédito (HTTP 402) numa manhã inteira, e esta tentativa "sumia sem
+      // deixar marca" (era só um toast e um item de `falhasPorTarefa`, que
+      // morre se a pessoa não voltar a tentar). Gente que fez a tarefa de
+      // verdade — banho gelado, treino, o que for — ficou sem NENHUM
+      // registro no banco e sem ponto nenhum, só porque a Vercel ficou sem
+      // saldo. A partir de agora o envio é SALVO como `pendente_ia`: não é
+      // aprovado (DIR-84.1 continua de pé — IA fora não vira crédito
+      // sozinha), não é reprovado, e não se perde — cai na fila do gestor
+      // (XGameAdmin) pra revisão manual, ou a própria pessoa tenta de novo
+      // e a tentativa seguinte grava por cima.
+      const comprovacaoPendente = {
+        tipo, print_url: printUrl, hash,
+        ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
+        ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+        ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
+        ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
+        entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
+        ...rastroDa({ anterior: t.comprovacao, iaIndisponivel: true, falhas: falhasPorTarefa.current[t.id] || [] }),
+        quando: new Date().toISOString(), valido: false, status: 'pendente_ia',
+        veredito_ia: { veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: ia?.motivo || 'a IA de validação está fora do ar agora', ia_indisponivel: true },
+        ...(justificativa ? { justificativa_pessoa: justificativa } : {}),
+        ...(foraDaJanela ? { fora_da_janela: true } : {}),
+      };
+      try {
+        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPendente });
+        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoPendente } : x)));
+      } catch { /* se nem isto salvar, o aviso abaixo já manda tentar de novo */ }
       setComprovando({ ...comprovando, enviando: false, pergunta: null,
-        erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto NÃO foi descartada, tenta de novo em 1 minuto. Sem a IA conferir, a tarefa não conclui.` });
+        erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto FOI SALVA (não foi descartada) e está aguardando revisão. Tenta de novo daqui a pouco: se a IA voltar, confirma sozinha; se continuar fora, um gestor confere pra você.` });
       return;
     }
     if (decisao.acao === 'pedir_justificativa') {
@@ -1537,6 +1575,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     if (ok) toast.success(`Rotina salva — vale a partir de ${valeAPartirDe(hojeStr())?.split('-').reverse().slice(0, 2).join('/') || 'amanhã'}.`);
     else toast.error('Erro ao salvar a rotina');
     return ok;
+  };
+  // 🔁 DIR-146 (14/09/2026) — dono, sobre a manhã em que o planejamento da
+  // Eloá não "salvou pro dia seguinte": "a gente tem que ter uma opção
+  // também, de quando a pessoa montar o teu planejamento, ter um botão de
+  // salvar pros outros dias, e isso ficar claro." Até aqui esse botão só
+  // existia no ADM (tornarRecorrente, DIR-142.2) — a pessoa montando o
+  // PRÓPRIO dia não tinha nada além do painel "A minha rotina" escondido,
+  // que exige abrir, digitar hora e título de novo à mão. Mesma função de
+  // incluir, mesmo aviso de duplicidade, só que direto na tarefa do dia.
+  const tornarRecorrente = (t) => {
+    const jaEsta = rotina.some((i) => i.titulo.trim().toLowerCase() === String(t.titulo || '').trim().toLowerCase());
+    if (jaEsta) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
+    gravarRotina(incluirNaRotina(rotina, { hora: t.hora, titulo: t.titulo }));
   };
 
   const [editandoId, setEditandoId] = useState(null);
@@ -2735,6 +2786,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
                                 ><PenLine className="w-3.5 h-3.5" /></button>
                               )}
+                              {/* 🔁 DIR-146 — "salvar pros outros dias", claro e no
+                                  lugar onde a pessoa monta o dia dela, não escondido
+                                  num painel à parte. */}
+                              <button
+                                type="button"
+                                onClick={() => tornarRecorrente(t)}
+                                title="repetir esta tarefa todo dia — entra na sua rotina permanente a partir de amanhã"
+                                data-teste="repetir-todo-dia"
+                                className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
+                              ><Repeat className="w-3.5 h-3.5" /></button>
                               <button type="button" onClick={() => removerTarefa(t)} title="apagar só de hoje — a rotina continua igual" className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                               </div>
                             </div>
