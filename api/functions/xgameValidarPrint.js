@@ -43,7 +43,7 @@
 import * as z from 'zod/v4';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 // o acesso à IA (chave, caminho, erros) é compartilhado com o InvokeLLM — DIR-84.5
-import { resolverIA as resolverIACompartilhada, clienteIA, opcoesDeReserva, detalhesDoErro } from '../_lib/ia.js';
+import { resolverIA as resolverIACompartilhada, clienteIA, opcoesDeReserva, detalhesDoErro, saldoGateway, SALDO_BAIXO_USD } from '../_lib/ia.js';
 
 // modelos: pelo gateway levam o prefixo do provedor; direto na Anthropic, não.
 const MODEL_DIRETO = process.env.AI_MODEL_VISION_ANTHROPIC || 'claude-opus-5';
@@ -214,11 +214,20 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const ia = await resolverIA();
     const querPing = String(req.query?.ping || '') === '1';
-    const ping = ia && querPing ? await pingModelo(ia) : undefined;
+    // 🚨 DIR-147 (14/09/2026) — junto do ping real, checa o SALDO do gateway.
+    // Foi assim que o dono descobriu o 402: só quando a validação já tinha
+    // parado de funcionar de madrugada. `null` quando não dá pra saber (fora
+    // do gateway, ou a checagem falhou) — o ADM tem que distinguir "sem
+    // aviso porque está tudo bem" de "sem aviso porque não consegui checar".
+    const [ping, saldo] = await Promise.all([
+      ia && querPing ? pingModelo(ia) : Promise.resolve(undefined),
+      saldoGateway(ia),
+    ]);
     // `ia` só é true quando o modelo RESPONDEU (se pediu ping); sem ping, é só "tem chave"
     return res.status(200).json({
       ok: true, ia: ping ? ping.ok : Boolean(ia), tem_chave: Boolean(ia),
       model: ia?.model || MODEL_GATEWAY, via: ia?.via || null, ...(ping ? { ping } : {}),
+      ...(saldo !== null ? { saldo_gateway_usd: saldo, saldo_baixo: saldo < SALDO_BAIXO_USD, saldo_baixo_teto_usd: SALDO_BAIXO_USD } : {}),
     });
   }
   try {

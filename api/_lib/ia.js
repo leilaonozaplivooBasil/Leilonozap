@@ -60,6 +60,33 @@ export function opcoesDeReserva(ia) {
   return ia?.via === 'gateway' && ia.reserva ? { providerOptions: { gateway: { models: [ia.reserva] } } } : {};
 }
 
+// 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway ficou em $0,00 de crédito
+// sem NINGUÉM saber até a validação começar a falhar de verdade, de manhã
+// cedo. Dono, ao vivo: "o crédito quando estiver acabando precisa ter um
+// aviso, pra não ocorrer mais isso." Abaixo deste valor (dólares), o ADM
+// mostra aviso — dá tempo de recarregar (vercel.com/.../ai?modal=top-up)
+// antes de virar 402 de verdade pra alguém validando às 5h da manhã.
+export const SALDO_BAIXO_USD = Number(process.env.AI_GATEWAY_SALDO_BAIXO_USD) || 10;
+
+/**
+ * O saldo de crédito do AI Gateway, em dólares — `null` quando não dá pra
+ * saber (fora do gateway, ou a própria checagem de saldo falhou: aí o ADM
+ * mostra "não consegui checar" em vez de inventar um número).
+ * GET /v1/credits documentado pela Vercel: {balance, total_used}.
+ */
+export async function saldoGateway(ia) {
+  if (ia?.via !== 'gateway') return null;
+  try {
+    const r = await fetch(`${GATEWAY}/v1/credits`, { headers: { Authorization: `Bearer ${ia.apiKey}` } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const saldo = Number(j?.balance);
+    return Number.isFinite(saldo) ? saldo : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * O erro do SDK em `details` legível — e o motivo certo: 404 é modelo que não
  * existe (foi o caso do gemini), 401 é chave, 403 é permissão/plano (free
