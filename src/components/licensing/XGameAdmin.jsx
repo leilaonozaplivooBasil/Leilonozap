@@ -8,6 +8,7 @@ import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAut
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
+import { estadoDaRotina, jaGerouHoje, incluirNaRotina, excluirDaRotina } from '@/lib/rotinaPessoal';
 import { verVideo } from '@/lib/cofreDeAudio';
 import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
@@ -172,6 +173,15 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [tarefaDia, setTarefaDia] = useState(hojeStr());
   const [tarefas, setTarefas] = useState([]);
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '', categoria: 'producao', peso: 3 });
+  // 📅 DIR-142.2 — dono, ao vivo, sobre a Eloá (fora da mentoria, fixo
+  // R$2000): "aqui não está aparecendo as tarefas que ela mesmo organizou...
+  // quero que apareça as tarefas automáticas do sistema, as tarefas dela pra
+  // eu provar caso ela mude, e que eu possa inserir." A rotina PERMANENTE
+  // dela (`metodo_perfil.rotina`, DIR-80) é o que falta ver e mexer aqui —
+  // o dia (`metodo_tarefas`) já é só o retrato de UM dia gerado dessa rotina.
+  const [perfilTarefa, setPerfilTarefa] = useState(null);
+  const [rotinaAberta, setRotinaAberta] = useState(false);
+  const [novoItemRotina, setNovoItemRotina] = useState({ hora: '', titulo: '' });
 
   const carregar = useCallback(() => {
     supabase.from('xgame_participantes').select('*').order('created_date')
@@ -297,6 +307,52 @@ export default function XGameAdmin({ onVerComo } = {}) {
     if (error) { toast.error('Erro ao salvar a tarefa.'); return; }
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...patch } : x)));
   };
+
+  // 📅 a rotina PERMANENTE da pessoa (o molde que gera o dia dela todo dia) —
+  // separado do dia em si, porque é o que o dono pediu pra ver e mexer aqui.
+  const carregarPerfilRotina = useCallback(async (userId) => {
+    if (!userId) { setPerfilTarefa(null); return; }
+    const { data } = await supabase.from('metodo_perfil')
+      .select('rotina,rotina_automatica,rotina_gerada_em').eq('user_id', userId).maybeSingle();
+    setPerfilTarefa(data || null);
+  }, []);
+  useEffect(() => { carregarPerfilRotina(tarefaUser); }, [tarefaUser, carregarPerfilRotina]);
+  const estadoRotinaTarefa = useMemo(() => estadoDaRotina(perfilTarefa), [perfilTarefa]);
+  // de onde veio o dia que está na tela: a rotina dela, a da casa, ou nem
+  // isso (tarefa avulsa/manual, sem passar pela geração automática)
+  const origemDoDia = tarefas.length === 0 ? null
+    : !jaGerouHoje(perfilTarefa, tarefaDia)
+      ? 'manual/avulso — não veio da geração automática deste dia'
+      : (estadoRotinaTarefa.propria ? 'rotina PRÓPRIA dela' : 'rotina padrão da casa — ela ainda não personalizou');
+
+  const salvarRotinaPermanente = async (novaLista) => {
+    const { error } = await supabase.from('metodo_perfil').upsert({ user_id: tarefaUser, rotina: novaLista }, { onConflict: 'user_id' });
+    if (error) { toast.error('Não salvou a rotina permanente dela — tenta de novo.'); return false; }
+    setPerfilTarefa((prev) => ({ ...(prev || {}), rotina: novaLista }));
+    return true;
+  };
+  // 🌱 se ela ainda não tem rotina própria, a primeira mudança PARTE da
+  // rotina da casa (não zera o que já valia pra ela) — mesmo princípio do
+  // `rotinaEmVigor` (DIR-80): a dela quando existe, senão a da casa.
+  const rotinaBaseAtual = estadoRotinaTarefa.propria ? perfilTarefa.rotina : ROTINA_PADRAO;
+  const incluirNaRotinaPermanente = async ({ hora, titulo }) => {
+    if (!tarefaUser || !titulo.trim()) { toast.error('Diga o título da tarefa.'); return; }
+    if (rotinaBaseAtual.some((i) => i.titulo.trim().toLowerCase() === titulo.trim().toLowerCase())) {
+      toast.error('Já está na rotina permanente dela.'); return;
+    }
+    const nova = incluirNaRotina(rotinaBaseAtual, { hora, titulo });
+    if (await salvarRotinaPermanente(nova)) {
+      toast.success(`"${titulo}" entra na rotina PERMANENTE dela — vale a partir de amanhã.`);
+      setNovoItemRotina({ hora: '', titulo: '' });
+    }
+  };
+  const excluirDaRotinaPermanente = async (indice) => {
+    const nova = excluirDaRotina(rotinaBaseAtual, indice);
+    if (await salvarRotinaPermanente(nova)) toast.success('Removida da rotina permanente dela — vale a partir de amanhã.');
+  };
+  // 🔁 uma tarefa avulsa de hoje (automática OU criada na mão logo abaixo)
+  // vira parte da rotina dela pra sempre, com um clique — sem redigitar.
+  const tornarRecorrente = (t) => incluirNaRotinaPermanente({ hora: t.hora, titulo: t.titulo });
 
   // 🪄 F6 — aplica o peso automático (regra do dono) em todas as tarefas do dia
   const aplicarPesosAutomaticos = async () => {
@@ -835,6 +891,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-[11px] font-semibold text-gray-900 flex-1 min-w-[160px]" title={DICAS.conferencia}>
                       Tarefas de {nomeDe(p.user_id)} — o que você gerencia aqui aparece na hora no Compromisso dela ⓘ
+                      {origemDoDia && <span className="ml-1.5 font-normal text-gray-500" title="De onde veio o dia mostrado abaixo">· {origemDoDia}</span>}
                     </p>
                     {tarefas.length > 0 && (
                       <Button
@@ -893,6 +950,12 @@ export default function XGameAdmin({ onVerComo } = {}) {
                             >{t.conferido === true ? 'SIM ✔' : 'confirmar SIM'}</button>
                             <button
                               type="button"
+                              onClick={() => tornarRecorrente(t)}
+                              title="Grava esta tarefa na rotina PERMANENTE dela — passa a se repetir todo dia, a partir de amanhã"
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-gray-300 text-gray-400 hover:border-purple-400 hover:text-purple-600"
+                            >🔁</button>
+                            <button
+                              type="button"
                               onClick={() => excluirTarefa(t)}
                               title="Excluir a tarefa do dia dela (2 cliques pra confirmar)"
                               className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${excluindo === t.id ? 'border-red-600 text-white bg-red-600' : 'border-gray-300 text-gray-400 hover:border-red-400 hover:text-red-500'}`}
@@ -916,6 +979,35 @@ export default function XGameAdmin({ onVerComo } = {}) {
                     <Button size="sm" onClick={criarTarefa} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
                       <Plus className="w-4 h-4 mr-1" /> Criar tarefa
                     </Button>
+                  </div>
+
+                  {/* 📅 DIR-142.2 — a rotina PERMANENTE (o molde que gera o dia
+                      dela todo dia, DIR-80): separada do dia acima de propósito
+                      — aqui é o que se repete pra sempre, lá em cima é só hoje. */}
+                  <div className="rounded border border-dashed border-purple-300 bg-purple-50/40 px-2 py-2">
+                    <button type="button" onClick={() => setRotinaAberta((v) => !v)} className="text-[11px] font-semibold text-purple-800 flex items-center gap-1">
+                      {rotinaAberta ? '▾' : '▸'} 📅 Rotina permanente dela {estadoRotinaTarefa.propria ? '(personalizada)' : '(ainda é a da casa)'}
+                      <span className="font-normal text-gray-500">· {rotinaBaseAtual.length} itens · mudanças valem a partir de amanhã</span>
+                    </button>
+                    {rotinaAberta && (
+                      <div className="mt-1.5 space-y-1">
+                        {rotinaBaseAtual.map((item, i) => (
+                          <div key={`${item.hora}-${item.titulo}-${i}`} className="flex items-center justify-between gap-2 rounded border border-purple-100 bg-white px-2 py-1 text-[11px]">
+                            <span className="min-w-0 truncate"><span className="text-gray-400 tabular-nums">{item.hora || '—'}</span> — {item.titulo}</span>
+                            {estadoRotinaTarefa.propria && (
+                              <button type="button" onClick={() => excluirDaRotinaPermanente(i)} title="Remover da rotina permanente dela" className="shrink-0 text-gray-400 hover:text-red-500">✕</button>
+                            )}
+                          </div>
+                        ))}
+                        <div className="flex items-end gap-2 flex-wrap pt-1">
+                          <Input type="time" value={novoItemRotina.hora} onChange={(e) => setNovoItemRotina({ ...novoItemRotina, hora: e.target.value })} className="h-8 bg-white border-gray-300 w-auto" />
+                          <Input placeholder="tarefa permanente — entra todo dia, a partir de amanhã" value={novoItemRotina.titulo} onChange={(e) => setNovoItemRotina({ ...novoItemRotina, titulo: e.target.value })} className="h-8 bg-white border-gray-300 flex-1 min-w-[160px]" />
+                          <Button size="sm" onClick={() => incluirNaRotinaPermanente(novoItemRotina)} className="bg-purple-600 hover:bg-purple-700 text-white h-8">
+                            <Plus className="w-4 h-4 mr-1" /> Incluir na rotina dela
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

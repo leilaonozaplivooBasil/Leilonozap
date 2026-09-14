@@ -114,8 +114,10 @@ test('R3B-8 · o cronômetro por pessoa substituiu o corte seco no relógio', ()
   // e o que já estava entregue NÃO se perde quando o tempo acaba
   assert.match(CRM, /status: blocosFeitos\(jaEntregue\)\.length \? 'ritual_parcial' : 'reprovada',/);
   assert.match(CRM, /\.\.\.jaEntregue,/, 'estourar o tempo voltou a apagar os blocos entregues');
-  // a janela de abertura segue intocada
-  assert.match(CRM, /const naJanela = agoraM >= RITUAL_INICIO_MIN;/);
+  // a janela de abertura segue intocada — só passou a vir de janelaDoRitual
+  // (mentoria: fixa 4:40-5:30; fora da mentoria: em volta do horário dela)
+  // em vez do corte fixo direto na constante global.
+  assert.match(CRM, /const naJanela = agoraM >= janelaDeT\.inicioMin;/);
 });
 
 test('R3B-9 · reabrir cai no bloco que falta — e só no ritual de hoje', () => {

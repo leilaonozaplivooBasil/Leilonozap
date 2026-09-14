@@ -36,7 +36,7 @@ import {
   moedaModelo,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
-  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, deveAvisarRitual, nomeExibicao,
+  ehTarefaDeGratidao, deveAvisarRitual, janelaDoRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
   pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
 } from '@/lib/xgame';
@@ -824,8 +824,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // propósito: "não pode ter certeza que ela viu" (mesmo princípio do sino).
   const [avisoRitualFechado, setAvisoRitualFechado] = useState(false);
   const tarefaRitualHoje = useMemo(() => tarefas.find((x) => ehTarefaDeGratidao(x.titulo)), [tarefas]);
+  // 🌅 13/09/2026 — dono, ao vivo: quem está na mentoria (vota/é votado) não
+  // escolhe horário — é sempre 4:40-5:30. Quem tem fixo fora da mentoria (a
+  // distribuidora, o Flávio) define o próprio horário, e a janela vira em
+  // volta dele — mesma régua, MESMO `podeSerVotado` que já decide o MvM.
+  const minhaJanelaRitual = useMemo(
+    () => janelaDoRitual({
+      votavel: podeSerVotado({ role: currentUser?.role, aceita_ser_votado: meuAceitaSerVotado }),
+      horaTarefa: tarefaRitualHoje?.hora,
+    }),
+    [currentUser?.role, meuAceitaSerVotado, tarefaRitualHoje?.hora],
+  );
   const mostrarAvisoRitual = ehHoje && !avisoRitualFechado
-    && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito });
+    && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito, janela: minhaJanelaRitual });
   // 🧾 10/09/2026 — AS FALHAS PRECISAM ATRAVESSAR AS TENTATIVAS.
   //
   // Quando a IA está fora do ar, `avaliarComIA` volta cedo e NÃO grava
@@ -1056,7 +1067,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       toast.error(`Acabaram os ${RITUAL_MINUTOS_PARA_CONCLUIR} minutos. O que você já entregou ficou salvo — amanhã tem de novo.`);
       return;
     }
-    const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
+    const janelaDeT = janelaDoRitual({
+      votavel: podeSerVotado({ role: currentUser?.role, aceita_ser_votado: meuAceitaSerVotado }),
+      horaTarefa: t.hora,
+    });
+    const naJanela = agoraM >= janelaDeT.inicioMin; // o corte de cima já voltou acima
 
     // ═══════════════════════════════════════════════════════════════════
     // 🧱 O FECHAMENTO LÊ OS BLOCOS — NÃO SOBE NADA DE NOVO.
@@ -1392,8 +1407,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // cinco e quinze. Se ela não fizer até cinco e quinze ela perde o
       // ritual." Passou do prazo: nem abre a experiência — fazer o ritual
       // inteiro só pra descobrir no fim que não conta seria pior.
-      if (ehHoje && agoraMinJogo > RITUAL_FIM_MIN) {
-        toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+      const janelaDeT = janelaDoRitual({
+        votavel: podeSerVotado({ role: currentUser?.role, aceita_ser_votado: meuAceitaSerVotado }),
+        horaTarefa: t.hora,
+      });
+      if (ehHoje && agoraMinJogo > janelaDeT.fimMin) {
+        toast.error(`Ritual perdido — o prazo era até ${horaDeMin(janelaDeT.fimMin)}. Amanhã tem de novo.`);
         return;
       }
       setRitualId(t.id);
@@ -1987,16 +2006,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <span className="text-xl shrink-0" aria-hidden="true">🌅</span>
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <p className="text-sm font-extrabold">
-                      {agoraMinJogo < RITUAL_INICIO_MIN
-                        ? `O Ritual do Amanhecer abre daqui a pouco, às ${horaDeMin(RITUAL_INICIO_MIN)}.`
-                        : `O Ritual do Amanhecer está aberto até ${horaDeMin(RITUAL_FIM_MIN)}.`}
+                      {agoraMinJogo < minhaJanelaRitual.inicioMin
+                        ? `O Ritual do Amanhecer abre daqui a pouco, às ${horaDeMin(minhaJanelaRitual.inicioMin)}.`
+                        : `O Ritual do Amanhecer está aberto até ${horaDeMin(minhaJanelaRitual.fimMin)}.`}
                     </p>
                     <p className="text-[12px] text-nz-tinta-fraca leading-relaxed">
                       Como funciona: <strong>1)</strong> fala (ou escreve) a sua gratidão — pega o caderno antes de abrir.{' '}
                       <strong>2)</strong> grava um vídeo curto se visualizando com o Quadro dos Sonhos — precisa ser{' '}
                       <strong>em casa</strong>, com calma (carro, academia e escritório não valem). <strong>3)</strong> escreve a ação do dia.
                       Sem o vídeo o ritual conclui igual, só não ganha o selo brilhante. Depois de{' '}
-                      <strong>{horaDeMin(RITUAL_FIM_MIN)}</strong> não dá mais pra fazer — o dia fica perdido, sem segunda chance.
+                      <strong>{horaDeMin(minhaJanelaRitual.fimMin)}</strong> não dá mais pra fazer — o dia fica perdido, sem segunda chance.
                     </p>
                     <button
                       type="button"

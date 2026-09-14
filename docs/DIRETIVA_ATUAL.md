@@ -43,6 +43,54 @@ Achado o mesmo padrão, numa varredura em TODA a pasta de telas do Método/X-Gam
 
 ---
 
+## DIR-142 — o Ritual do Amanhecer vale sempre 20% do dia (fora do teto de peso 1-6), e ganha janela própria pra quem tem fixo fora da mentoria
+
+**Emitida por:** dono, ao vivo (13/09/2026): *"acordar cedo, fazer esse ritual, pesa muito no negócio... a pessoa não vai ganhar dinheiro só por acordar cedo, mas tem que ganhar um valor razoável porque é um peso bom."* E, sobre quem tem fixo mas está fora da mentoria (a distribuidora, o Flávio, a Luciene, o Amâncio): *"eles ganham no horário que eles definirem, de acordo com o fixo dela... quem já está na mentoria é obrigatório acordar cinco horas da manhã, se não acordar não ganha o valor desse ritual."*
+
+**Achado:** o teto do peso automático (`PESO_MAX = 6`, numa referência de dia completo de 76) nunca chegaria a 20% do dia sozinho — 6/76 é 7,9%. Dar ao ritual "o maior peso possível" (o que já valia, DIR anterior) não é o mesmo que garantir 20% do dinheiro do dia. Além disso, a janela do ritual (4:40-5:30) era global e fixa pra todo mundo — inclusive pra quem tem fixo mas está fora da mentoria (não vota, não é votado) e por regra do dono define o próprio horário de acordar.
+
+**O que entra:**
+1. `PERCENTUAL_RITUAL = 0.20` e `pesoRitualNaRotina()` (`src/lib/xgame.js`) — o ritual (`ehTarefaDeGratidao`) sai do balde comum de peso 1-76 e vira um balde PRÓPRIO, sempre 20% de `valorDoDia(fixoDoParticipante(p))`, igual já acontecia com bônus (`verba_bonus`) — nunca a fatia proporcional de peso. Os outros 80% do dia (produção) continuam repartidos pelo peso de sempre, só que contra uma referência 6 pontos menor (76 − o peso do ritual = 70), já que aquele peso saiu do jogo comum.
+2. `janelaDoRitual({ votavel, horaTarefa })` e `minDeHora("HH:MM")` (`src/lib/xgame.js`) — quem é votável (mesmo `podeSerVotado`/`aceita_ser_votado` que já decide o MvM) usa SEMPRE a janela fixa da casa (4:40-5:30). Quem tem fixo fora da mentoria define o próprio horário; a janela vira em volta dele com a mesma folga de sempre (20min antes, 30min depois). Sem horário definido, mesmo fora da mentoria, cai na régua fixa — nunca fica sem janela nenhuma.
+3. `deveAvisarRitual` (`src/lib/xgame.js`) ganha o parâmetro opcional `janela` (default: a janela fixa, comportamento antigo preservado) — o aviso "como funciona o ritual" dos 10 minutos antes passa a bater com a janela de quem está vendo a tela, não só com a da casa.
+4. `CrmMetodo.jsx` — os 3 pontos que liam `RITUAL_INICIO_MIN`/`RITUAL_FIM_MIN` direto (o corte de abertura em `concluirRitual`, o bloqueio duro em `alternarFeito`, e o banner explicador) agora calculam a janela de cada pessoa via `janelaDoRitual`, usando o mesmo `meuAceitaSerVotado`/`podeSerVotado` que já monta a população votável da MvM — nenhuma régua nova, a mesma aplicada num lugar novo.
+5. O CONTEÚDO do ritual é idêntico pros dois grupos (mentoria e fora dela) — confirmado pelo dono: *"o ritual é o mesmo... a única diferença é que eles não estão na mentoria... e eles definem o horário deles."* Só a janela de horário muda.
+6. **Correção de auditoria (13/09/2026, depois do PR aberto, antes do dono conferir):** o dono pediu uma auditoria completa da X-Game "pra ter 1000% de certeza" antes de publicar. Achado: `DistribuirTarefa.jsx` (a prévia de tarefa nova), `QuadroGeralAbas.jsx` (aba Semana) e `XPerformanceGestao.jsx` (os 4 cards do ciclo, "hoje" e "próximos dias") chamavam `distribuirDia`/`simularNovaTarefa`/`resumoDoCiclo` (`distribuicaoFixo.js`) DIRETO, com peso e fixo cheios — nenhuma sabia que o ritual virou balde de 20% à parte, e iam mostrar valor ERRADO assim que este PR publicasse (o ritual contando na régua de peso comum). Corrigido com duas funções novas ritual-aware em `xgame.js` (`simularNovaTarefaComRitual`, `resumoDoCicloComRitual`, construídas em cima de `valoresDasTarefas`/`reguaDoDia`) e as 3 telas trocadas pra usá-las — mesma fonte de verdade em todo lugar que mostra dinheiro do X-Game.
+7. **Prova ao vivo do vídeo do ritual (13/09/2026):** o dono pediu prova real, não só de código, de que o vídeo grande (o incidente de 10-11/09, `d01c51e`) não travaria mais o cumprimento da meta. Rodado num Chromium de verdade (câmera falsa do navegador, 90s de gravação real usando `gravadorDeVideo.js` sem mock): bitrate medido 361 Kbps (abaixo do teto de 1 Mbps declarado), extrapolando pros 15 minutos inteiros da rede de segurança do ritual dá ~39 MB — bem dentro do cofre de 200 MB. Upload de verdade contra o Storage de produção não foi possível testar neste ambiente (rede bloqueada pra `supabase.co`, política da organização) — a parte testada foi exatamente a que causou o incidente original (o encoder do navegador).
+
+**Fora do escopo desta diretiva:** a tela "Distribuir Tarefa" do ADM X-Game (reconciliação entre tarefas automáticas do sistema e tarefas que a própria pessoa fora da mentoria organiza, ex.: Distribuidora Eloá) — isso foi pra uma diretiva própria, DIR-142.2, publicada logo abaixo.
+
+**Regras fixas:** nenhuma além das anteriores. Rounding: somar o balde do ritual (20%, arredondado à parte) com o balde de produção (80%, arredondado à parte) pode variar ~1 centavo do valor cheio do dia — mesmo comportamento que já existe entre produção e bônus (dois arredondamentos, não um só); não é bug, é o preço de dois baldes separados.
+
+**Prova:** suíte 2357/2357 (26 testes tocados/novos: `xpayFixo.test.mjs`, `xpayRateio.test.mjs`, `janelaDoRitual.test.mjs` novo, `ritualTresBlocos.test.mjs` atualizado, `consistenciaRitualNasTelas.test.mjs` novo — prova as 3 telas corrigidas e as 2 funções ritual-aware novas), lint limpo nos arquivos tocados, `npm run build` sem erro. Auditoria em 5 frentes paralelas (vídeo do ritual, X-Pay em todas as telas, MvM/moeda, ADM, notificações/fila do pronto) sem outro achado bloqueante.
+
+**Status:** EM VIGOR — mergeado no `main` (PR #336), autorizado pelo dono a publicar fora da janela de deploy padrão.
+
+---
+
+## DIR-142.2 — o ADM X-Game passa a mostrar e mexer na rotina PERMANENTE da pessoa, não só o dia já gerado
+
+**Emitida por:** dono, ao vivo (13/09/2026), olhando a tela de Distribuir Tarefa da Distribuidora Eloá (fora da mentoria, fixo R$2000): *"aqui não está aparecendo as tarefas que ela mesmo organizou... quero que apareça as tarefas automáticas do sistema, as tarefas dela pra eu provar caso ela mude, e que eu possa inserir. Todas as tarefas precisam ter peso e ser distribuídas através do seu peso e o valor fixo acordado."*
+
+**Achado:** o card "Tarefas de [pessoa]" do ADM X-Game (`XGameAdmin.jsx`) sempre leu só `metodo_tarefas` — o retrato de UM DIA já materializado. A rotina PERMANENTE dela (`metodo_perfil.rotina`, o molde que gera todo dia, DIR-80: *"a rotina é dela"*) nunca aparecia nessa tela — só existia dentro do app da própria pessoa. Isso fazia parecer que "as tarefas que ela organizou" tinham sumido, quando na verdade só não tinham VITRINE nenhuma no lado do admin — e não dava pra confirmar/provar o que ela de fato configurou, nem inserir algo que valesse pra sempre (só pro dia escolhido).
+
+**O que entra** (`src/components/licensing/XGameAdmin.jsx`, reaproveitando as funções puras já existentes de `src/lib/rotinaPessoal.js` — DIR-80, nenhuma régua nova):
+1. **Selo de origem do dia** — o cabeçalho do card agora diz de onde veio a lista mostrada: rotina PRÓPRIA dela, rotina padrão da CASA (ela ainda não personalizou), ou avulso/manual (não veio de nenhuma geração automática). Responde direto "os valores só vêm das tarefas automáticas, ou também do que ela organiza?" — SEMPRE contam as duas, porque o motor de pagamento (`valoresDasTarefas`) lê `metodo_tarefas` sem se importar de onde a linha veio; o que faltava era o admin CONSEGUIR VER a origem.
+2. **"📅 Rotina permanente dela"** — bloco novo, dentro do mesmo card: lista os itens do molde (`metodo_perfil.rotina`, ou a da casa se ela ainda não tem a própria), com botão pra incluir (hora + título) e excluir. Isso é o "eu preciso provar caso ela mude" — o admin vê e guarda prova do que está combinado pra sempre, não só do dia de hoje.
+3. **"🔁 tornar recorrente"** — botão em cada tarefa do dia (automática ou criada na hora): um clique grava aquele título na rotina permanente dela, sem redigitar. Recusa duplicar (compara título, sem diferenciar maiúscula/minúscula).
+4. Mudança na rotina permanente **nunca reescreve hoje** — grava só em `metodo_perfil.rotina`; o dia já materializado em `metodo_tarefas` fica como está (mesma regra já provada em `rotinaPessoal.test.mjs`: "editar a rotina vale a partir de amanhã").
+5. Todo item, de onde vier (automático, manual antigo, ou incluído agora na rotina permanente), continua tendo peso e entrando na mesma distribuição pelo fixo (`distribuirDia`/`valoresDasTarefas`) — nenhuma tarefa nova escapa da régua de pagamento.
+
+**Fora do escopo desta rodada:** redesenho visual da tela (cores, layout) além do necessário pra caber o bloco novo; sincronização em tempo real entre o app dela e o ADM (ambos já leem a mesma tabela — não há duas fontes de verdade a reconciliar, só faltava a leitura do molde).
+
+**Regras fixas:** nenhuma além das da DIR-80 (mudança na rotina vale a partir de amanhã; a rotina só é "própria" quando ela — ou agora também o admin — escreveu nela).
+
+**Prova:** suíte 2356/2356 (8 testes novos em `tests/rotinaPermanenteAdmin.test.mjs`, fonte-comparando o componente), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR — mergeado no `main` (PR #337), autorizado pelo dono a publicar fora da janela de deploy padrão.
+
+---
+
 ## DIR-139 — as 3 colunas fantasmas: `licensee_id`/`anchor_id`/`owner_id` nunca existiram em `catalog_sales`, e isso zerava vendas de licenciado/PDV em 10 telas
 
 **Emitida por:** auditoria própria (11/09/2026), validando a DIR-138 contra o schema real de produção antes de declarar o "cirúrgico" pronto, e confirmada ao vivo pelo dono reportando `Licensing?tab=catalogo&catalogTab=catalogo-crm` "zerado" pros números da equipe.
