@@ -12,6 +12,28 @@
 
 ---
 
+## DIR-148 — editar/excluir cliente direto na Lista de Network, e o atalho pra virar oportunidade sem redigitar
+
+**Emitida por:** dono, ao vivo (14/09/2026): *"Na lista de contato, eu preciso ter um botão de editar o cliente e excluir o cliente porque está tendo cliente duplicado [...] quando eu vou criar uma nova oportunidade no acompanhamento, não está salvando isso [...] faça esse banco de atualização através de atualizações ou pelo acompanhamento ou pelo contato feito ou pela lista."*
+
+**Achado:** investigação confirmou que **não é bug de salvar** — é fiação faltando. `customers` é a MESMA tabela por trás da Lista de Network (Hábito 3) e da aba Acompanhamento → Clientes; "Contato feito" (Hábito 4) já grava corretamente na mesma linha (`contatos_metodo[]`). O que faltava:
+1. A Lista de Network (Hábito 3, `CrmMetodo.jsx`) nunca teve botão de editar nem de excluir cliente — só "Qualificar"/"Contatar". Sem excluir, um cadastro duplicado feito ali fica preso, sem jeito de limpar pela própria tela. Os handlers (`handleEdit`/`handleDelete`) e o modal já existiam prontos — só usados hoje pela aba Acompanhamento → Clientes (`CrmCustomersTable.jsx`).
+2. O atalho "🚀 Esteira" (vira oportunidade com nome/contato já preenchidos, sem redigitar) já existia no Hábito 4 — Contato, mas não na Lista de Network. Quem estava direto na lista (onde o cadastro já está completo) e queria criar a negociação tinha que ir pro Hábito 4 primeiro, ou abrir a aba Acompanhamento e digitar tudo nos campos do formulário "+ Nova oportunidade" (que abre em branco).
+
+**O que entra:**
+1. `CrmMetodo.jsx` — duas props novas (`onEditarCliente`, `onExcluirCliente`) e três botões (ícone) na linha de cada pessoa da Lista de Network: 🚀 Esteira (reusa `onCriarOportunidade`, já existente), ✏️ Editar, 🗑️ Excluir — mesmo estilo/confirmação da aba Acompanhamento (excluir pede confirmação antes de apagar).
+2. `CrmClientesTab.jsx` — liga `onEditarCliente={handleEdit}` e `onExcluirCliente={handleDelete}` na chamada de `<CrmMetodo>`. **Zero lógica nova**: são os MESMOS handlers que já existiam e já gravam/apagam em `customers`; o modal de edição já estava montado fora das Tabs (nível certo, confirmado antes de mexer — havia um bug documentado exatamente sobre modal preso dentro de aba escondida, DIR-46).
+
+**Fora do escopo desta diretiva:** o card de oportunidade (`captacao_oportunidades`) guarda uma CÓPIA do nome/e-mail/telefone do cliente no momento da criação, não uma referência viva — se o cliente for editado DEPOIS de já ter uma oportunidade aberta, o card antigo não atualiza sozinho. Isso é uma decisão de arquitetura (histórico da negociação como foto do momento vs. sincronizado ao vivo) que fica pra uma diretiva própria, se o dono quiser mudar — não risquei essa mudança maior sob a pressão do pedido.
+
+**Regras fixas:** nenhuma além das anteriores. Excluir cliente continua pedindo confirmação — não é ação de um clique só.
+
+**Prova:** suíte 2402/2402 (3 testes novos, `listaNetworkEditarExcluir.test.mjs`), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-147 — o vigia do saldo do AI Gateway: aviso ANTES de chegar em zero, não depois
 
 **Emitida por:** dono, ao vivo (14/09/2026), depois de conferir que a DIR-146 restaurou o crédito da Eloá e não achou mais nenhuma outra vítima no histórico: *"o crédito quando estiver acabando precisa ter um aviso, né, pra não ocorrer mais isso. Isso é muito sério, a gente não pode ficar assim."*
