@@ -477,7 +477,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       />
                       <span className="text-xs text-gray-300 leading-relaxed">
                         Declaro que o valor depositado é <strong className="text-white">crédito de consumo</strong> de uso
-                        exclusivo no ecossistema Leilão NoZap, <strong className="text-white">irrestornável</strong> após a
+                        exclusivo no ecossistema Leilão NoZap, <strong className="text-white">não reembolsável</strong> após a
                         confirmação do pagamento, e que as disputas são uma competição de preços promocional (não leilão
                         oficial).{' '}
                         <a href="/passaporte" className="underline font-semibold text-green-300">ler os termos</a>

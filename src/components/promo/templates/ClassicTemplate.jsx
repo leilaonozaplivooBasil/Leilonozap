@@ -1,4 +1,5 @@
 import React from "react";
+import { textoParcelamento } from '@/lib/parcelamento';
 import { fmtBR } from '@/lib/money';
 
 const LOGO_URL = "/brand/icon-3d.webp";
@@ -66,7 +67,7 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
           <span style={{ color: "white", fontSize: 38, fontWeight: 900, lineHeight: 1, textShadow: `0 0 20px ${template.accentGlow}` }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: accent, fontSize: 20, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {fmtBR((price / 12))}</p>}
+        {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou {textoParcelamento(price)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />

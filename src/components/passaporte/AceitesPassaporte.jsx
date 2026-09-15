@@ -2,7 +2,7 @@ import React from 'react';
 
 export const ACEITES_PASSAPORTE = [
   'Li e compreendi os Termos e Condições do Passaporte de Lances.',
-  'Concordo que o valor pago é IRRESTORNÁVEL após a confirmação do pagamento.',
+  'Concordo que o valor pago é NÃO REEMBOLSÁVEL após a confirmação do pagamento.',
   'Compreendo que o saldo é crédito de uso exclusivo dentro do ecossistema Leilão NoZap.',
   'Reconheço que o bônus de 10% é um crédito à parte, exclusivo da Loja Virtual — nunca pode ser usado para dar lance. Ele libera para uso somente se eu não arrematar o leilão disputado; se eu arrematar, o bônus é cancelado automaticamente.',
 ];

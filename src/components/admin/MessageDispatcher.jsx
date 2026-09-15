@@ -746,8 +746,8 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
       : null;
 
     const referralLink = referrer && referrer.referral_code
-      ? `https://leilaonozap.com?ref=${referrer.referral_code}`
-      : 'https://leilaonozap.com';
+      ? `https://leilaonozap.net?ref=${referrer.referral_code}`
+      : 'https://leilaonozap.net';
 
     return {
       subject: customSubject
@@ -808,8 +808,8 @@ export default function MessageDispatcher({ isOpen, onClose, allUsers }) {
             phone: u.phone,
             valora_pay_balance: u.valora_pay_balance || 0,
             referral_link: referrer && referrer.referral_code
-              ? `https://leilaonozap.com?ref=${referrer.referral_code}`
-              : 'https://leilaonozap.com'
+              ? `https://leilaonozap.net?ref=${referrer.referral_code}`
+              : 'https://leilaonozap.net'
           };
         }),
         subject: customSubject,

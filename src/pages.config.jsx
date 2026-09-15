@@ -219,7 +219,12 @@ export const PAGES = {
     "StockPosition": StockPosition,
     "StoreRegistration": StoreRegistration,
     "StressTest": StressTest,
-    "SystemChecklist": SystemChecklist,
+    // 🔒 AUDITORIA 15/09/2026 — checklist interno do sistema, só admin.
+    "SystemChecklist": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <SystemChecklist />
+        </RequireRole>
+    ),
     "SystemDiagnostics": SystemDiagnostics,
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
