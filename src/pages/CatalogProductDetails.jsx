@@ -19,6 +19,7 @@ import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 
 const Product = plataforma.entities.Product;
 
@@ -55,7 +56,7 @@ export default function CatalogProductDetails() {
     })();
     return () => { alive = false; };
   }, []);
-  const DEFAULT_STORE_PHONE = '5521984072064';
+  const DEFAULT_STORE_PHONE = WHATSAPP_OFICIAL;
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');

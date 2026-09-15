@@ -2,8 +2,9 @@ import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import leilaSuporte from '@/assets/leila-suporte.webp';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 
-const SUPORTE_PHONE = '5521984072064';
+const SUPORTE_PHONE = WHATSAPP_OFICIAL;
 
 /**
  * PONTO 87 — CompareAQUI e Leila deixam de flutuar nas laterais da sala e viram

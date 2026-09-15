@@ -11,8 +11,9 @@ import {
   Package, Truck, CheckCircle, Clock, ArrowLeft, Copy, MessageCircle,
   ShoppingBag, CreditCard, MapPin, Star, Loader2, XCircle, ReceiptText,
 } from 'lucide-react';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 
-const SUPORTE_PHONE = '5521984072064';
+const SUPORTE_PHONE = WHATSAPP_OFICIAL;
 
 // 🧭 Acompanhar Pedido — repaginado 25/07 (pedido Gabriel: "acompanhar o pedido
 // corretamente, perfeitamente"). Timeline real com datas, dados completos do pedido,
