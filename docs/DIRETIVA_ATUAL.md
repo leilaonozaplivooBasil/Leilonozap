@@ -12,6 +12,27 @@
 
 ---
 
+## DIR-156 — Passaporte: um alvo só de 10% no arremate, acertos devolvidos e o texto antigo fora do site
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono, ao vivo (15/09/2026), depois da auditoria do Alexandre: *"texto antigo tem que tirar, vai ficar mais limpo, já tem um documento explicando... e corrigir o que tem que corrigir, pra ficar perfeito e o sistema ficar limpo. Vamos fazer o que é certo. Eu deixo você decidir."*
+
+**Achados (recalculados no banco, arremate por arremate, antes de mexer em qualquer valor):**
+1. **Cobrança em dobro pra quem tinha cupom dos dois modelos.** `finalizeAuctionCore.js` rodava os dois motores no arremate, cada um com o alvo CHEIO de 10%: `recolherBonusPorArremate` (modelo A, tira da carteira) e `cancelarCuponsBloqueados` (modelo B, cancela crédito bloqueado). Quem depositou antes E depois de 19/08 pagava 20%.
+2. **Quem tinha a receber** (10% de cada arremate, FIFO, teto do cupom): Rosenberg R$ 18,22 (cancelados a mais nos cupons de 11/09), Gean R$ 10,00 (cupom de 11/09 cancelado sem arremate que o justificasse), Lucas R$ 0,18, Sophia R$ 9,28 (recolhimento integral de R$ 10 em 16/08 por um arremate de R$ 4 + outro de R$ 3,20 depois).
+3. **Quem NÃO tinha a receber**, ao contrário do meu resumo anterior: Luciano (Bike R$ 1.200 em 11/09 consumiria os R$ 70 do modelo A de qualquer jeito) e o dono (cadeira R$ 246 + Tubo R$ 77,64 consomem os R$ 20). O recolhimento integral de 13–16/08 estava errado na hora, mas as vitórias seguintes zerariam o bônus igual.
+
+**Execução:**
+- **Banco (15/09 ~02:20 UTC, tudo com CAS):** Sophia `saldo_disponivel` 85,06 → 94,34 e cupom `251fc588` `bonus_recolhido_valor` 10 → 0,72 (`creditado`); Rosenberg `74f65aae` `valor_cancelado` 15,86 → 0 e `1daf16cb` 10 → 7,64; Gean `ccdf57c5` `valor_cancelado` 10 → 0; Lucas `4cdf7226` `valor_cancelado` 0,18 → 0, `valor_liberado`/`saldo_restante` 9,82 → 10,00 (lance dele na Mesa foi R$ 150 → 10% ≥ teto). Crédito bloqueado devolvido segue a regra normal daqui pra frente (libera na derrota, cancela na vitória).
+- `api/_lib/finalizeAuctionCore.js`: modelo A roda PRIMEIRO com `finalPrice` (cupons dele são sempre os mais antigos — FIFO) e devolve `recolhido`; modelo B recebe esse valor e cancela só o que sobrou do alvo.
+- `api/_lib/passaporteCoupon.js`: `cancelarCuponsBloqueados(userId, valorArrematado, jaCobrado = 0)` — alvo = 10% − jaCobrado. Sem o parâmetro, comportamento antigo (10% inteiros).
+- `CartaoPassaporte.jsx`: sai "Crédito na carteira R$ 110 — os 10% de bônus entram na hora"; entra "Saldo de lance R$ 100 + cupom de R$ 10 pra Loja Virtual — libera conforme os leilões que você disputar terminarem sem vitória". Prop `credito` vira `cupom`.
+- `PassaporteLances.jsx`: título "R$ 100 que valem R$ 110" vira "R$ 100 de saldo + R$ 10 de cupom"; subtítulo e aviso de passaporte ativo reescritos na regra atual.
+- `tests/passaporteAlvoUnicoTextoNovo.test.mjs` — 8 testes.
+
+---
+
 ## DIR-155 — Loja Virtual: buscar vira "modo busca" na hora; WhatsApp oficial em todo o site
 
 **Status:** EM VIGOR.
