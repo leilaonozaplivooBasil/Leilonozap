@@ -12,6 +12,42 @@
 
 ---
 
+## DIR-157 — Auditoria noturna do site inteiro (15→16/09/2026): o que foi achado, o que foi corrigido, o que espera decisão
+
+**Status:** EM VIGOR — correções mergeadas; itens de decisão listados no fim.
+
+**Emitida por:** dono, antes de dormir: *"preciso que você fique rodando uma auditoria em todo site pra achar erros de todas as formas — não quero ser pego de surpresa nem em uma vírgula, tipo descrição faltando, exemplo como esses do telefone, erros bobos e graves também. Quero trabalho sério."*
+
+**Método:** 4 varreduras paralelas independentes (textos/placeholders ao cliente; bugs do servidor `api/`; telas/rotas/navegação; segurança e sessão) + lint do site inteiro + auditoria de dados no banco (SQL somente-leitura). Todos os 227 arquivos de `api/` foram lidos; `src/` foi varrido por scan em 1.027 arquivos e ~70 telas lidas linha a linha. Cada correção entrou por PR com suíte completa, lint e build.
+
+### Corrigido (PRs #353, #354, #355 e este)
+**Lint:** 61 erros → 0 (imports mortos em 34 arquivos).
+**Fatos errados que o cliente via:** WhatsApp `+55 00 0000-0000` no modal "Solicitar cadastro"; "boleto" prometido (não existe); "Lei nº 21.981/2024" (inexistente → Decreto 21.981/1932); regra antiga do Passaporte no Termo de Adesão e no Como Funciona; "12x sem juros" nas artes (juros são repassados → `textoParcelamento`); gateway "Asaas" nos Termos/Privacidade (→ Mercado Pago); links `leilaonozap.com` (→ `.net`); exemplo do Passaporte com conta errada; "irrestornável"; Ponto de Retirada 18% (→ 16%); título/og "NoZap" (→ "Leilão NoZap"); © 2024.
+**Rotas mortas (404):** `/SaiDeBaixo` (LiveShop ×2 e o **link de indicação do parceiro** — todo indicado caía em 404), `/PDV`, `/CreateAuctionSaiDeBaixo`.
+**Tela branca:** `JSON.parse` sem proteção no Layout global, carrinho, cards e modal de produto → `src/lib/storageSeguro.js`.
+**Carteira honesta:** falha na consulta mostra erro + "Tentar de novo" (antes: "Carregando…" eterno ou R$ 0,00 falso); Meus Arremates idem. Dinheiro em formato americano em 7 telas → `money()`.
+**Pedidos/estoque/dinheiro (servidor):** checkout no cartão não gravava os itens (`raw_base44.items`) e `fulfillStoreOrder` só lia `items_json` → carrinho de vários produtos baixava estoque errado (agora grava E lê); depósito no leilão gravava endereço fake no cadastro; PIX/cartão só geram cobrança no MP depois que a venda existe no banco; lance só grava em leilão `active` (não sobrescreve leilão já finalizado); pedido de saque que não grava devolve a reserva; comissão do PDV por RPC atômica; `regerarPixPedido` lia coluna inexistente (`stock`).
+**Segurança (sem mudar comportamento em produção):** `exigirSessao` ligado em 9 rotas de dinheiro/cargo que não tinham; `entityWrite` usa o usuário do crachá quando válido; 11 crons exigem `CRON_SECRET` quando a variável existir; `encodeURIComponent` nos filtros do KYC; links gravados por usuário só abrem se forem http(s); `SystemChecklist` só admin; `console.log` com e-mail/nome removidos.
+**Banco:** popup ativo sem imagem apontando pra leilão encerrado → desativado. `robots.txt` + `sitemap.xml` criados.
+
+### PRIORIDADE 1 pra manhã (precisa de decisão ou de virar chave em produção)
+1. **Escrow "venda" do `commission_ledger`** (migração 20260716, "regra do Diogo"): o gatilho grava **100% do valor de TODA venda com `seller_id`** como "a liberar" pro vendedor — inclusive produto da empresa vendido por indicação. Hoje: **486 linhas, R$ 69.106,56 a liberar, 481 já vencidas**; a Carteira mostra isso como "A liberar" (Ribeiro vê R$ 19.728; Elenice R$ 16.538; Beatriz R$ 10.703). Só não virou saldo sacável porque `liberar_saldos_maturados()` **não está agendada** (cron só tem `expire-auctions`). Decisão: (a) restringir o gatilho a vendas de lojista terceiro (produto próprio) e apagar as linhas indevidas; e (b) parar de mostrar "A liberar" enquanto isso. Não mexi: é regra de negócio.
+2. **Sessão ETAPA 2**: publicar `SESSAO_MODO=bloquear` e `MP_WEBHOOK_MODO=bloquear` na Vercel. Hoje o crachá só loga — quem souber o id de um admin é admin. O log de produção diz se sobrou tela sem crachá.
+3. **`app_users` legível inteira com a chave pública** (policy `public_read`): CPF, telefone, endereço, saldos, PIX de todo mundo. Precisa de view pública com colunas seguras + migrar AdminUsers/UserManagement/AuditoriaCadastros pra rota admin. Também `payment_settings` e `wa_config`.
+4. **Trigger de escrow em depósitos/reposições**: `createOperationDeposit` e `createSupplyOrder` gravam `seller_id` = o próprio comprador como fallback → escrow de 100% pro comprador (mesma bomba do item 1).
+5. Webhook do MP aceita re-flipar venda **cancelada** pra paga (decisão anterior, 21/08) — se o admin já estornou, entrega em dobro. Sugestão: só flipar cancelada se não houve estorno.
+6. `finalizeSellerOrder` aceita o cargo (`role`) do body e zera `seller_credit_balance` sem CAS; `createPdvOrder` aceita preço unitário do body; `createLicensee` aceita qualquer `career_level` (até 'ceo'). Precisam de crachá em modo bloquear + regra no servidor.
+7. **Política de devolução**: produto da loja diz "Devolução em até 7 dias" + "Compra garantida"; Termos/WelcomeModal dizem "sem devolução". Loja Virtual = CDC 7 dias (obrigatório em venda online) e leilão = sem devolução — alinhar os 5 textos.
+8. **Teto de desconto anunciado** varia 60/70/80/85/90% conforme a tela (index.html 60%, banners 70/85, Layout 90). Escolher um número.
+9. **Endereço da sede** em 3 versões (Footer "Av. das Américas 3500, 22640-102" vs contratos "19.005, Torre 1, Sala 1106, 22790-704"); **e-mail de contato** em 3 (relacionamento@…com, contato@…net, no-reply@ como canal de dúvidas). Fixar num lib.
+10. Banner 3 da loja diz "Frete Grátis" na arte e o ícone "Frete Grátis" do rail — a loja cobra frete. Trocar a arte.
+11. 22 produtos ativos com **preço abaixo do custo**; "Ponto de Retirada Bangu" com telefone `11 99999-9999`; 6 leilões de agosto encerrados com lances e sem vencedor (Luciano 3, dono 2, Sophia 1) — nunca cobrados nem entregues; 19 leilões ativos sem preço de mercado (selo "economize" não aparece); 2 produtos sem categoria; sua conta com R$ 178,76 em `saldo_reservado` sem leilão liderando.
+12. Sem rate limit em `sendEmailCode`/`login`/criação de PIX; KYC em bucket público listável; policies `USING (true)` em xgame_*/xperf_*/metodo_*/diario_*/suporte_chamados/contrato_assinaturas/financial_income.
+
+**Testes desta noite:** `auditoriaNoturnaGraves.test.mjs`, `auditoriaNoturnaServidor.test.mjs` (+ os já existentes). Suíte: 2480.
+
+---
+
 ## DIR-156 — Passaporte: um alvo só de 10% no arremate, acertos devolvidos e o texto antigo fora do site
 
 **Status:** EM VIGOR.

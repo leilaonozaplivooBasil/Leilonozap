@@ -135,7 +135,7 @@ export default async function handler(req, res) {
     if (sale.product_id) {
       const prods = await (await sb(`products?select=*&id=eq.${encodeURIComponent(sale.product_id)}&limit=1`)).json();
       const prod = Array.isArray(prods) ? prods[0] : null;
-      const estoque = prod ? Number(prod.stock) : null;
+      const estoque = prod ? Number(prod.quantity) /* 🧾 AUDITORIA 15/09/2026: products não tem coluna stock */ : null;
       if (prod && Number.isFinite(estoque) && estoque <= 0) {
         return res.status(200).json({
           success: false,
