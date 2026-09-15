@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2, Package } from 'lucide-react';
 import CatalogProductCard from '../catalog/CatalogProductCard';
 import RotatingBanner from '../banner/RotatingBanner';
-import { CATALOG_BANNERS } from '../loja/LojaShopeeHeader';
+import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
 
 const Product = plataforma.entities.Product;
 
@@ -13,6 +13,10 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  // 🖼️ 15/09/2026 — esta aba mostrava a lista de banners escrita no código da
+  // Loja Virtual. Essa lista não existe mais: como é a MESMA vitrine, lê o mesmo
+  // contexto do Painel de Mídia ("catalog") que a loja pública lê.
+  const [banners, setBanners] = useState([]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -26,6 +30,11 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
       }
     };
     loadProducts();
+
+    plataforma.entities.BannerImage
+      .filter({ is_active: true, context: 'catalog' })
+      .then((bannerData) => setBanners(prepararBannersDoPainel(bannerData)))
+      .catch(() => {});
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -48,12 +57,14 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
       <CardContent className="space-y-4">
         {/* FASE 3 — o cartão de "compartilhar sua loja" saiu daqui: o dono
             oficial do link da loja é Admin › Minha Loja. Estava repetido. */}
-        <div className="-mt-2">
-          {/* 🖼️ 15/09/2026 — 1200×630 era a proporção das artes antigas. As novas
-              são 16:9, e aqui a moldura já seguia a arte: é só trocar o número.
-              `contain` porque nada pode ser cortado. */}
-          <RotatingBanner banners={CATALOG_BANNERS} fit="contain" ambient heightClass="aspect-[16/9] h-auto max-h-[520px] mx-auto" />
-        </div>
+        {banners.length > 0 && (
+          <div className="-mt-2">
+            {/* 🖼️ 15/09/2026 — 1200×630 era a proporção das artes antigas. As novas
+                são 16:9, e aqui a moldura já seguia a arte: é só trocar o número.
+                `contain` porque nada pode ser cortado. */}
+            <RotatingBanner banners={banners} fit="contain" ambient heightClass="aspect-[16/9] h-auto max-h-[520px] mx-auto" />
+          </div>
+        )}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input

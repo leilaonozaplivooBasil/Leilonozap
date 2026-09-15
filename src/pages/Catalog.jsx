@@ -26,6 +26,7 @@ import { getReferral, saveReferral } from '@/lib/referral';
 import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
 import useTotalProdutosLoja, { textoTotalProdutos } from '@/hooks/useTotalProdutosLoja';
 import { useSectionTracking } from '@/lib/tracking';
+import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -539,26 +540,30 @@ export default function Catalog() {
         const cacheTime = sessionStorage.getItem('catalog_banners_cache_time');
 
         if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 120000) {
-          setBanners(JSON.parse(cachedBanners));
+          setBanners(prepararBannersDoPainel(JSON.parse(cachedBanners)));
           console.log('⚡ Banners do catálogo do cache');
         } else {
-          setTimeout(async () => {
+          // 🖼️ 15/09/2026 — SEM os 1500ms de atraso que havia aqui. O banner deixou
+          // de ser enfeite: agora é o hero da loja, e a lista fixa que preenchia a
+          // moldura enquanto isso não existe mais. Atrasar de propósito seria
+          // entregar uma faixa vazia no primeiro segundo de toda visita.
+          (async () => {
             try {
               const bannerData = await plataforma.entities.BannerImage.filter({ is_active: true, context: 'catalog' });
-              const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
-              setBanners(sortedBanners);
-              sessionStorage.setItem('catalog_banners_cache', JSON.stringify(sortedBanners));
+              const preparados = prepararBannersDoPainel(bannerData);
+              setBanners(preparados);
+              sessionStorage.setItem('catalog_banners_cache', JSON.stringify(preparados));
               sessionStorage.setItem('catalog_banners_cache_time', Date.now().toString());
             } catch (error) {
               console.debug('Erro ao carregar banners:', error.message);
             }
-          }, 1500);
+          })();
         }
       } catch (error) {
         console.error('Erro ao carregar banners:', error);
         const cachedBanners = sessionStorage.getItem('catalog_banners_cache');
         if (cachedBanners) {
-          setBanners(JSON.parse(cachedBanners));
+          setBanners(prepararBannersDoPainel(JSON.parse(cachedBanners)));
         }
       }
     };

@@ -34,7 +34,10 @@ test('no modo busca somem banner, ofertas relâmpago, cartão do licenciado, pí
   assert.match(bloco, /<CartaoLojaVirtual/);
   assert.match(bloco, /<PilulasVitrine/);
   assert.match(catalog, /featuredProducts\.length > 0 && !modoBusca && \(/);
-  assert.match(header, /\{!modoBusca && \(\s*\n\s*<div className="ml-\[calc\(50%-50vw\)\]/, 'o HERO do cabeçalho some no modo busca');
+  // 15/09/2026 — o HERO ganhou uma segunda condição (`banners.length > 0`, porque
+  // as artes passaram a vir do Painel de Mídia). O que este teste garante continua
+  // sendo o mesmo: no modo busca ele some.
+  assert.match(header, /\{!modoBusca && [^)]*\(\s*\n\s*<div className="ml-\[calc\(50%-50vw\)\]/, 'o HERO do cabeçalho some no modo busca');
   assert.match(catalog, /modoBusca=\{modoBusca\}/, 'o cabeçalho precisa receber o modo busca');
 });
 
