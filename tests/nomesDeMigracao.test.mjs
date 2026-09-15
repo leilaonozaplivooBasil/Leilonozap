@@ -14,7 +14,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -96,23 +96,40 @@ describe('nomes das migrações do Supabase', () => {
     assert.deepEqual(repetidas, [], 'duas migrações dividindo a mesma versão');
   });
 
-  test('a lista de herança só cobre arquivos que ainda existem', () => {
-    // Se alguém apagar ou renomear um dos 10 antigos, a entrada correspondente vira
-    // lixo e passa a ser uma exceção aberta pra um nome inválido futuro.
+  test('a lista de herança do script está VAZIA', () => {
+    // 12/09/2026: os 10 arquivos com letra no lugar da hora foram renomeados e o
+    // registro do banco foi reconciliado. A exceção não tem mais motivo pra existir.
+    //
+    // Uma exceção aberta é uma porta: ela existe pra um caso e fica valendo pro
+    // próximo que se parecer com ele. Enquanto a lista estiver vazia, TODO nome
+    // fora do padrão reprova — que é o comportamento que a trava promete.
+    const fonte = readFileSync(SCRIPT, 'utf8');
+    const bloco = fonte.match(/const HERANCA = new Set\(\[([\s\S]*?)\]\)/);
+    assert.ok(bloco, 'não achei a lista de herança no script — o teste precisa ser refeito');
+    const entradas = bloco[1].split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('//'));
+    assert.deepEqual(entradas, [], 'a lista de herança voltou a ter entrada — só com motivo escrito e conferência no banco');
+  });
+
+  test('os 10 renomeados continuam na pasta, já no padrão', () => {
+    // Renomear sem conferir é perder migração. Estes 10 estão aplicados em
+    // produção e registrados em schema_migrations com ESTAS versões — se o nome
+    // mudar de novo, o registro deixa de bater e o CLI tenta reaplicar.
     const naPasta = new Set(readdirSync(DIR));
-    const heranca = [
-      '20260821c_estorno_carteira.sql',
-      '20260821d_reserva_ledger_trava_devolucao.sql',
-      '20260821e_estoque_baixa_atomica.sql',
-      '20260821f_estoque_check_nao_negativo.sql',
-      '20260821g_estoque_reservas.sql',
-      '20260822a_whatsapp_router_idempotencia.sql',
-      '20260822b_ai_conversas.sql',
-      '20260822c_heloim_solicitacoes.sql',
-      '20260827b_financial_income_cost_center.sql',
-      '20260827c_recurring_group_id.sql',
+    const renomeados = [
+      '20260821030000_estorno_carteira.sql',
+      '20260821040000_reserva_ledger_trava_devolucao.sql',
+      '20260821050000_estoque_baixa_atomica.sql',
+      '20260821060000_estoque_check_nao_negativo.sql',
+      '20260821070000_estoque_reservas.sql',
+      '20260822010000_whatsapp_router_idempotencia.sql',
+      '20260822020000_ai_conversas.sql',
+      '20260822030000_heloim_solicitacoes.sql',
+      '20260827020000_financial_income_cost_center.sql',
+      '20260827030000_recurring_group_id.sql',
     ];
-    const orfas = heranca.filter((f) => !naPasta.has(f));
-    assert.deepEqual(orfas, [], 'tire da lista de herança do script o que não existe mais');
+    const sumidas = renomeados.filter((f) => !naPasta.has(f));
+    assert.deepEqual(sumidas, [], 'estes nomes estão gravados em schema_migrations — não mude sem reconciliar o banco');
+    const foraDoPadrao = renomeados.filter((f) => !/^\d+_[^/]*\.sql$/.test(f));
+    assert.deepEqual(foraDoPadrao, [], 'o renomeado tem que passar no mesmo padrão que o CLI aceita');
   });
 });

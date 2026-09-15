@@ -9,7 +9,9 @@ import { readFileSync } from 'node:fs';
 const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 const diag = ler('../api/functions/diagLojaSemEstoque.js');
 const baixa = ler('../api/_lib/baixaEstoque.js');
-const rpc = ler('../supabase/migrations/20260821e_estoque_baixa_atomica.sql');
+// Renomeado de 20260821e_ em 12/09/2026 — data + LETRA é nome que o CLI do
+// Supabase PULA calado. Ver scripts/checar-nomes-migracoes.mjs.
+const rpc = ler('../supabase/migrations/20260821050000_estoque_baixa_atomica.sql');
 const cadastro = ler('../src/pages/AddCatalogProduct.jsx');
 
 test('o relatório é somente leitura', () => {

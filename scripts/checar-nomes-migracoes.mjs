@@ -29,23 +29,30 @@ const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'mig
 // Dígitos puros + underscore + nome. É o que o CLI aceita.
 const PADRAO = /^\d+_[^/]*\.sql$/;
 
-// Os 10 arquivos que já estavam fora do padrão quando esta trava foi criada.
-// Estão TODOS aplicados em produção, na mão, e ficam de fora da checagem de
-// propósito: renomear faria o CLI vê-los como novos e tentar reaplicar — e
-// 20260821c tem `UPDATE ... SET` (correção de dados pontual) que não pode rodar
-// duas vezes. A lista é fechada: nome novo fora do padrão falha, mesmo parecido.
-const HERANCA = new Set([
-  '20260821c_estorno_carteira.sql',
-  '20260821d_reserva_ledger_trava_devolucao.sql',
-  '20260821e_estoque_baixa_atomica.sql',
-  '20260821f_estoque_check_nao_negativo.sql',
-  '20260821g_estoque_reservas.sql',
-  '20260822a_whatsapp_router_idempotencia.sql',
-  '20260822b_ai_conversas.sql',
-  '20260822c_heloim_solicitacoes.sql',
-  '20260827b_financial_income_cost_center.sql',
-  '20260827c_recurring_group_id.sql',
-]);
+// ── A LISTA DE HERANÇA ESTÁ VAZIA (12/09/2026) ───────────────────────────────
+// Eram os 10 arquivos com letra no lugar da hora. Foram renomeados para o padrão
+// e a exceção morreu junto.
+//
+// POR QUE DEU PRA RENOMEAR AGORA: o medo escrito aqui era o CLI enxergá-los como
+// novos e reaplicar. Em 12/09 as 10 versões novas foram gravadas em
+// supabase_migrations.schema_migrations — mas só DEPOIS de conferir no banco,
+// objeto por objeto, que as 10 já estavam inteiramente aplicadas (21 objetos
+// conferidos, 21 encontrados; só faltava um COMMENT do 20260821d, aplicado na
+// hora). Com o registro no lugar, o CLI as reconhece e não toca nelas.
+//
+// E UMA CORREÇÃO DO QUE ESTAVA ESCRITO AQUI: dizia que `20260821c` tinha
+// "UPDATE ... SET que não pode rodar duas vezes". Não tem. Os UPDATEs dele estão
+// todos DENTRO do corpo de `estornar_para_carteira` e `cancelar_venda` — são o
+// código da função, não gravação na hora da migração. O único UPDATE de topo
+// entre os 10 está em `20260827c_recurring_group_id`, e é
+// `where recurring_group_id is null`: reexecutar afeta zero linha.
+//
+// Nenhum dos 10 era perigoso de reaplicar. O perigo era o outro, e continua de
+// pé: arquivo que o CLI PULA sai verde sem ter aplicado nada.
+//
+// Fica como Set vazio de propósito. Caso legítimo futuro entra aqui com o motivo
+// escrito — e o teste de nomesDeMigracao exige que a lista fique vazia.
+const HERANCA = new Set([]);
 
 const arquivos = readdirSync(DIR).filter((f) => f.endsWith('.sql'));
 const invalidos = arquivos.filter((f) => !PADRAO.test(f) && !HERANCA.has(f));
