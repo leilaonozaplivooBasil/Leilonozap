@@ -28,6 +28,16 @@ import { invalidateSiteMediaCache, LOGO_FALLBACK, FAVICON_FALLBACK } from '@/hoo
  * PAINEL DE MÍDIA — central única de imagens do site (pedido Gabriel 26/07).
  * Troca os banners de cada página (já na proporção certa, com recorte guiado),
  * a logo da navbar e o favicon — tudo sem precisar de deploy.
+ *
+ * 🖼️ 15/09/2026 — AS MEDIDAS AQUI SÃO A FONTE DE VERDADE PRO DONO. Elas
+ * passaram de 16:5 (1920×600) para 16:9 (1920×1080), acompanhando as artes
+ * novas: a ordem foi "viabilizar com o tamanho que elas possuem mesmo", então
+ * quem se ajustou foi o site, não a arte.
+ *
+ * Se alguém mudar a moldura de uma página, TEM que mudar aqui junto — senão o
+ * painel aprova uma proporção que a página vai cortar, e o dono descobre pelo
+ * print de um cliente. As três molduras hoje usam `contain`: arte inteira,
+ * sem corte, com o desfaque da própria arte nas bordas.
  */
 
 // Cada local de banner do site, com a proporção REAL da moldura onde ele aparece.
@@ -36,12 +46,12 @@ const BANNER_LOCATIONS = [
     key: 'home',
     label: 'Home / Leilões',
     route: '/leiloes',
-    desc: 'Carrossel principal no topo da página de leilões. A imagem preenche toda a moldura (corte automático nas sobras).',
-    fit: 'cover',
-    aspectClass: 'aspect-[16/5]',
+    desc: 'Carrossel principal no topo da página de leilões. A imagem aparece INTEIRA (sem corte), com as bordas preenchidas pela própria arte desfocada.',
+    fit: 'contain',
+    aspectClass: 'aspect-[16/9]',
     sizes: {
-      desktop: { w: 1920, h: 600, hint: '1920×600 px (16:5)' },
-      mobile: { w: 1200, h: 375, hint: '1200×375 px (16:5)' },
+      desktop: { w: 1920, h: 1080, hint: '1920×1080 px (16:9)' },
+      mobile: { w: 1280, h: 720, hint: '1280×720 px (16:9)' },
     },
   },
   {
@@ -50,22 +60,22 @@ const BANNER_LOCATIONS = [
     route: '/Loja-Virtual',
     desc: 'Carrossel da loja/catálogo. A imagem aparece INTEIRA (sem corte) com as bordas preenchidas pela própria arte desfocada.',
     fit: 'contain',
-    aspectClass: 'aspect-[16/5]',
+    aspectClass: 'aspect-[16/9]',
     sizes: {
-      desktop: { w: 1920, h: 600, hint: '1920×600 px (16:5)' },
-      mobile: { w: 1200, h: 375, hint: '1200×375 px (16:5)' },
+      desktop: { w: 1920, h: 1080, hint: '1920×1080 px (16:9)' },
+      mobile: { w: 1280, h: 720, hint: '1280×720 px (16:9)' },
     },
   },
   {
     key: 'luxurycollection',
     label: 'Coleção Luxo',
     route: '/LuxuryCollection',
-    desc: 'Carrossel da coleção de luxo. Mantenha o conteúdo importante no centro — as laterais podem ser cortadas em telas menores.',
-    fit: 'cover',
-    aspectClass: 'aspect-[16/5]',
+    desc: 'Carrossel da coleção de luxo. A imagem aparece INTEIRA (sem corte), com as bordas preenchidas pela própria arte desfocada.',
+    fit: 'contain',
+    aspectClass: 'aspect-[16/9]',
     sizes: {
-      desktop: { w: 1920, h: 600, hint: '1920×600 px (16:5)' },
-      mobile: { w: 1200, h: 375, hint: '1200×375 px (16:5)' },
+      desktop: { w: 1920, h: 1080, hint: '1920×1080 px (16:9)' },
+      mobile: { w: 1280, h: 720, hint: '1280×720 px (16:9)' },
     },
   },
 ];
