@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { plataforma } from '@/api/plataformaClient';
 
 // 🚀 OTIMIZAÇÃO (fase 1 - 18/08/2026):
 // 1) O efeito antes dependia de `location.pathname` — como o Layout remonta a
@@ -30,29 +29,26 @@ export function useActiveSession(currentUser) {
 
     const updateSession = async () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      // 🛰️ 15/09/2026 — a batida vai pelo SERVIDOR. Antes o navegador inseria
+      // direto em live_sessions com a chave pública, e a RLS só deixa
+      // `authenticated` escrever: eram ~900 respostas 401 por dia e NENHUMA
+      // presença gravada desde 26/05 — o "pessoas navegando agora" da Home
+      // estava morto. A rota grava com a chave de serviço e limita por IP.
       try {
-        const existingSessions = await plataforma.entities.LiveSession.filter({
-          session_id: sessionIdRef.current
+        const r = await fetch('/api/functions/liveHeartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionIdRef.current,
+            user_id: currentUser?.id || null,
+            page: pathRef.current,
+            user_agent: navigator.userAgent,
+          }),
         });
-
-        const sessionData = {
-          session_id: sessionIdRef.current,
-          user_id: currentUser?.id || null,
-          last_heartbeat: new Date().toISOString(),
-          page: pathRef.current,
-          user_agent: navigator.userAgent
-        };
-
-        if (existingSessions.length > 0) {
-          await plataforma.entities.LiveSession.update(existingSessions[0].id, sessionData);
-        } else {
-          await plataforma.entities.LiveSession.create(sessionData);
-        }
-      } catch (error) {
         // Silenciosamente ignora rate limit
-        if (error.status !== 429) {
-          console.debug('Session heartbeat error:', error.message);
-        }
+        if (!r.ok && r.status !== 429) console.debug('Session heartbeat error:', r.status);
+      } catch (error) {
+        console.debug('Session heartbeat error:', error?.message);
       }
     };
 

@@ -521,7 +521,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // entidade — mesmo caminho genérico usado por Customer/Seller/etc.
   const loadNegotiations = async () => {
     try {
-      const data = await plataforma.entities.Negotiation.list('-created_date', 1000);
+      // 15/09/2026 — negotiations só tem created_at (herança Base44); '-created_date' dava 400.
+      const data = await plataforma.entities.Negotiation.list('-created_at', 1000);
       setNegotiations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao carregar negociações:', error);

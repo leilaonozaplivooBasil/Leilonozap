@@ -67,6 +67,9 @@ export default function Cart() {
   const [freteOpcoes, setFreteOpcoes] = useState(null); // null=não calculado, []=sem opções
   const [freteSel, setFreteSel] = useState(null); // transportadora escolhida (obrigatória p/ entrega)
   const [freteMsg, setFreteMsg] = useState('');
+  // 🚚 15/09/2026 — sem transportadora (produto grande/pesado ou rota sem cobertura):
+  // o carrinho oferece Retirada na Loja e frete combinado no WhatsApp, em vez de travar.
+  const [freteSemTransportadora, setFreteSemTransportadora] = useState(false);
   const [calculandoFrete, setCalculandoFrete] = useState(false);
   const [paymentType, setPaymentType] = useState('PIX');
   const [pixData, setPixData] = useState(null);
@@ -433,6 +436,7 @@ export default function Cart() {
         cep,
         items: cartItems.map((it) => ({ id: it.id, quantidade: it.quantity || 1, valor: it.price_catalog || it.selling_price_wholesale || 0 })),
       });
+      setFreteSemTransportadora(['produto_grande', 'sem_transportadora'].includes(r?.motivo));
       if (r?.success && Array.isArray(r.opcoes)) {
         setFreteOpcoes(r.opcoes);
         // a mais barata já vem marcada (o cliente pode trocar)
@@ -1341,6 +1345,9 @@ export default function Cart() {
                       mensagem={freteMsg}
                       retirada={deliveryMethod === 'pickup'}
                       bloqueado={!!pixData || saldoOk}
+                      semTransportadora={freteSemTransportadora}
+                      onRetirada={() => setDeliveryMethod('pickup')}
+                      linkWhatsApp={linkWhatsAppOficial(`Olá! Quero combinar o frete de: ${cartItems.map((i) => i.description || i.title || 'produto').join(', ')} para o CEP ${formData.cep || ''}.`)}
                     />
                     <div className="flex justify-between items-center text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>

@@ -141,7 +141,8 @@ export default function SellersListPanel({ licenseeId, refreshKey, escuro = fals
     setDeleteSalesCount(0);
     setIsCheckingSales(true);
     try {
-      const sales = await plataforma.entities.CatalogSale.filter({ licensee_id: seller.id });
+      // 15/09/2026 — catalog_sales não tem licensee_id (dava 400); a coluna é seller_id.
+      const sales = await plataforma.entities.CatalogSale.filter({ seller_id: seller.id });
       setDeleteSalesCount(Array.isArray(sales) ? sales.length : 0);
     } catch (err) {
       // Em caso de falha, assume 0 (a função backend revalida)
