@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /Admin
+Disallow: /AdminConsignado
+Disallow: /AdminCreditoTeste
+Disallow: /AdminDepositosConfirmados
+Disallow: /AdminFinanceiro
+Disallow: /AdminLancesAutorizados
+Disallow: /CatalogOrdersAdmin
+Disallow: /CuponsAdmin
+Disallow: /SuperAdminPanels
+Disallow: /SentinelNoZap
+Disallow: /AuditoriaCadastros
+Disallow: /PagamentosComissoes
+Disallow: /Carteira
+Disallow: /CarteiraInvestidor
+Disallow: /TransferirSaldo
+Disallow: /painel
+Disallow: /painel-arrematante
+Disallow: /portal
+
+Sitemap: https://leilaonozap.net/sitemap.xml

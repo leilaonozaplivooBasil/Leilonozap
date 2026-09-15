@@ -18,8 +18,8 @@ const ITENS = [
   },
   {
     Icon: ShoppingBag,
-    titulo: 'Até 90% de economia na loja',
-    texto: 'Loja Virtual com até 80% de desconto + os 10% do seu crédito. Ex.: item de R$ 500 pode sair por cerca de R$ 50.',
+    titulo: 'Desconto extra na Loja Virtual',
+    texto: 'O crédito liberado abate direto no checkout, por cima do desconto que o produto já tem. Ex.: um item de R$ 100 na loja sai por R$ 90 com um cupom de R$ 10 liberado.',
   },
   {
     Icon: InfinityIcon,

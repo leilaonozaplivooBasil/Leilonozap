@@ -1,4 +1,5 @@
 import React from "react";
+import { textoParcelamento } from '@/lib/parcelamento';
 import { fmtBR } from '@/lib/money';
 
 const LOGO_URL = "/brand/icon-3d.webp";
@@ -70,7 +71,7 @@ export default function NeonTemplate({ displayTitle, displayImage, displayBadge,
           <span style={{ color: "white", fontSize: 42, fontWeight: 900, lineHeight: 1, textShadow: `0 0 30px ${accent}50, 0 0 60px ${accent}20`, letterSpacing: "-0.02em" }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: accent, fontSize: 22, fontWeight: 800, textShadow: `0 0 15px ${accent}` }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, marginBottom: 10 }}>ou 12x de R$ {fmtBR((price / 12))}</p>}
+        {price > 50 && <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, marginBottom: 10 }}>ou {textoParcelamento(price)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />

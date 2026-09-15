@@ -18,11 +18,11 @@ export default function AvisoLegalPassaporte() {
       </p>
       <p className="mt-3 text-sm text-white/75 leading-relaxed">
         As disputas do Leilão NoZap são uma <b className="text-white">competição de preços de caráter promocional</b>,
-        e <b className="text-white">não</b> um leilão oficial nos termos do Decreto nº 21.981/32. Não há leiloeiro
+        e <b className="text-white">não</b> um leilão oficial nos termos do Decreto nº 21.981/1932. Não há leiloeiro
         público oficial envolvido.
       </p>
       <p className="mt-3 text-sm text-white/75 leading-relaxed">
-        O valor é <b className="text-white">irrestornável</b> após a confirmação do pagamento, salvo falha técnica
+        O valor é <b className="text-white">não reembolsável</b> após a confirmação do pagamento, salvo falha técnica
         comprovada da plataforma (art. 18 do CDC). O uso do crédito é exclusivo dentro do ecossistema.
       </p>
     </div>

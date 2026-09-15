@@ -416,7 +416,6 @@ const DashboardContent = ({ user, isAdmin }) => {
       const referredIds = Array.isArray(referredUsers) ? referredUsers.map((u) => u.id).filter(Boolean) : [];
 
       console.log('📊 Usuários indicados:', referredIds.length);
-      console.log('🔑 Meu código de referral:', user.referral_code);
 
       // Buscar arremates de leilão (ended OU sold) dos indicados ignorando limitador obsoleto de 300 (Memory-safe)
       let wonAuctions = [];

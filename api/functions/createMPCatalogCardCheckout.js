@@ -136,7 +136,12 @@ export default async function handler(req, res) {
       sale_price: totalProdutos, total_amount: totalProdutos, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', payment_method: 'credit_card_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       discount_amount: passaporte_desconto || null,
-      raw_base44: { passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao, ...(roleGrant ? { role_grant: roleGrant } : {}) },
+      // 🧾 AUDITORIA 15/09/2026 — o PIX (createMPPix.js) grava `items` em raw_base44 e o
+      // cartão NÃO gravava. Pedido de vários produtos pago no cartão chegava pro admin
+      // (CatalogOrdersAdmin lê raw_base44.items) só com o produto principal e a quantidade
+      // total — sem saber o que embalar. Medido no banco: 5 vendas pagas sem itens.
+      // Mesmo formato do PIX: { id, title, qty, price }.
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
 
     // Checkout Pro (página hospedada do Mercado Pago) — mesma UX de redirecionamento que a Stripe tinha.

@@ -18,7 +18,7 @@ export default function PassaporteCouponBanner({ status, aplicado, desconto, onU
           <Ticket className="w-5 h-5 text-green-400 mt-0.5 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-green-400 font-bold text-sm">
-              Você tem mais 10% de desconto pela compra do Passaporte do Leilão
+              Você tem crédito do Passaporte de Lances pra usar nesta compra
             </p>
             <p className="text-green-300/80 text-xs mt-1">
               {aplicado
@@ -47,7 +47,7 @@ export default function PassaporteCouponBanner({ status, aplicado, desconto, onU
       <div className="rounded-xl border border-gray-600 bg-gray-800 p-4 flex items-start gap-3">
         <Lock className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
         <div className="min-w-0">
-          <p className="text-white font-semibold text-sm">Seu desconto de 10% está guardado</p>
+          <p className="text-white font-semibold text-sm">Seu crédito do Passaporte está guardado</p>
           <p className="text-gray-400 text-xs mt-1">
             Ele é liberado depois que você disputar um leilão e não arrematar.
           </p>

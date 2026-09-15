@@ -79,7 +79,6 @@ export default function AcessoArrematante() {
             ? '/CRMInvestidores'
             : '/Home';
 
-      console.log('🔑 AcessoArrematante: redirecionando para', dest, 'role:', user.role, 'email:', user.email, 'isAdmin:', isAdmin);
       
       window.location.href = dest;
 

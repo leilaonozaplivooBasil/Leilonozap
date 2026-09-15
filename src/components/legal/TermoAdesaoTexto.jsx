@@ -16,14 +16,14 @@ const CLAUSULAS = [
     n: '1',
     titulo: 'NATUREZA DA COMPETIÇÃO',
     itens: [
-      'Estratégia de marketing e vendas operada pela COMPRAS FULL COMÉRCIO LTDA (CNPJ 51.544.091/0001-67). NÃO é leilão público oficial, não é regida pela Lei nº 21.981/2024 nem por normas de leilões judiciais ou extrajudiciais.',
+      'Estratégia de marketing e vendas operada pela COMPRAS FULL COMÉRCIO LTDA (CNPJ 51.544.091/0001-67). NÃO é leilão público oficial, não é regida pelo Decreto nº 21.981/1932 nem por normas de leilões judiciais ou extrajudiciais.',
     ],
   },
   {
     n: '2',
     titulo: 'CRÉDITO DE PARTICIPAÇÃO',
     itens: [
-      'Depósito antecipado mínimo de R$ 100,00 via PIX ou Cartão, creditado como crédito de consumo na carteira digital. Depósitos de R$ 100 ou mais recebem +10% de bônus na hora.',
+      'Depósito antecipado mínimo de R$ 100,00 via PIX ou Cartão, creditado como crédito de consumo na carteira digital. Depósitos de R$ 100 ou mais geram um cupom Passaporte de 10% do valor depositado, que nasce bloqueado: cada leilão disputado e não arrematado libera, ao terminar, 10% do lance dado naquele leilão (até o limite do cupom) para uso exclusivo na Loja Virtual; o cupom não soma ao saldo de lance, não é sacável e não tem validade após liberado.',
     ],
   },
   {
@@ -42,7 +42,7 @@ const CLAUSULAS = [
     titulo: 'SE VOCÊ ARREMATAR',
     itens: [
       '4.1. O valor já debitado é abatido do preço final do produto.',
-      '4.2. O bônus de 10% é recolhido do saldo, pois o valor pago virou compra.',
+      '4.2. A fatia do cupom Passaporte correspondente a 10% do valor arrematado é cancelada, pois o valor pago virou compra.',
     ],
   },
   {

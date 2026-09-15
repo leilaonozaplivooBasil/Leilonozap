@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { textoParcelamento } from '@/lib/parcelamento';
 import { fmtBR } from '@/lib/money';
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Loader2 } from "lucide-react";
@@ -310,7 +311,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           <span style={{ color: "white", fontSize: 40, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: accent, fontSize: 22, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, marginBottom: 6 }}>12x de R$ {fmtBR((price / 12))}</p>}
+        {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, marginBottom: 6 }}>{textoParcelamento(price)}</p>}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -428,7 +429,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           <span style={{ color: "#1f2937", fontSize: 42, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: "#ef4444", fontSize: 24, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
-        {price > 50 && <p style={{ color: "rgba(0,0,0,0.35)", fontSize: 10, marginTop: 4 }}>12x de R$ {fmtBR((price / 12))}</p>}
+        {price > 50 && <p style={{ color: "rgba(0,0,0,0.35)", fontSize: 10, marginTop: 4 }}>{textoParcelamento(price)}</p>}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

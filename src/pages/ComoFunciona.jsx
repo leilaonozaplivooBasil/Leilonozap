@@ -193,9 +193,9 @@ export default function ComoFunciona() {
 
       {/* LÂMINA 5 — BÔNUS 10% */}
       <Lamina
-        eyebrow="Bônus de quem não arrematou"
-        titulo="Não arrematou? Ganhe 10% a mais."
-        apoio="Ninguém sai perdendo. Se você participou e não levou o produto, o seu saldo volta com 10% de bônus para usar na Loja Virtual."
+        eyebrow="Passaporte de Lances"
+        titulo="Não arrematou? Seu cupom Passaporte libera."
+        apoio="Quem deposita R$ 100 ou mais ganha um cupom de 10% guardado. Cada leilão que você disputa e não leva libera a fatia dele — 10% do seu lance — para usar na Loja Virtual."
         bg="var(--nz-verde-fundo)"
       >
         <div className="mx-auto max-w-2xl rounded-2xl border border-nz-borda bg-white p-6 text-left">
@@ -204,15 +204,16 @@ export default function ComoFunciona() {
             <div>
               <p className="text-[0.98rem] font-semibold text-nz-tinta">Como funciona o bônus</p>
               <p className="mt-1.5 text-[0.93rem] leading-[1.55] text-nz-tinta-fraca">
-                Terminou o leilão e o produto foi para outra pessoa? O valor que estava reservado volta para a sua
-                Carteira Digital e você recebe <strong className="text-nz-verde">mais 10% de bônus</strong> para gastar na Loja
-                Virtual — ou seja, além de receber tudo de volta, você compra com desconto extra.
+                Terminou o leilão e o produto foi para outra pessoa? O valor do seu lance volta inteiro para a sua
+                Carteira Digital e o seu cupom Passaporte libera <strong className="text-nz-verde">10% daquele lance</strong> (até o
+                limite do cupom) para gastar na Loja Virtual. Se você arrematar, essa fatia é cancelada — o valor pago virou a
+                sua compra. O cupom não vale para dar lance e não tem validade depois de liberado.
               </p>
               <Link
                 to="/Loja-Virtual"
                 className="mt-4 inline-flex rounded-full bg-nz-verde px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85"
               >
-                Usar meu bônus na Loja Virtual
+                Usar meu cupom na Loja Virtual
               </Link>
             </div>
           </div>

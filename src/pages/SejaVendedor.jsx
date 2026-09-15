@@ -189,7 +189,7 @@ export default function SejaVendedor() {
           </div>
 
           <p className="text-center text-xs text-nz-tinta-fraca mt-5">
-            A escada continua: Ponto de Retirada 18% · Loja Física 19% · Distribuidor 20% na venda direta.
+            A escada continua: Ponto de Retirada 16% · Loja Física 19% · Distribuidor 20% na venda direta.
             Distribuímos 20% da nossa venda para o nosso programa de parceria.
           </p>
         </div>
