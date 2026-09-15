@@ -18,8 +18,9 @@ import {
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 
-const DEFAULT_STORE_PHONE = '5521984072064';
+const DEFAULT_STORE_PHONE = WHATSAPP_OFICIAL;
 
 // Detalhe do produto DENTRO da própria Loja Virtual (pedido Gabriel 25/07): o clique no
 // card abre este modal por cima do catálogo, com TODAS as informações da página de

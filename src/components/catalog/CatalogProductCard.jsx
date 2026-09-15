@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, memo } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import CompareAquiModal from '../comparai/CompareAquiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
@@ -15,8 +15,9 @@ import { getReferral } from '@/lib/referral';
 import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 
-const DEFAULT_STORE_PHONE = '5521984072064';
+const DEFAULT_STORE_PHONE = WHATSAPP_OFICIAL;
 
 // onOpenDetails: quando presente (Loja Virtual), o clique abre o produto EXPANDIDO na
 // própria página (ProductDetailsModal) em vez de navegar — pedido Gabriel 25/07.

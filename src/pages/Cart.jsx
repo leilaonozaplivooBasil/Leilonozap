@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
+import { linkWhatsAppOficial } from '@/lib/whatsappOficial';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from "@/components/ui/button";
@@ -890,9 +891,10 @@ export default function Cart() {
     }
   };
 
+  // 📞 15/09/2026 — abria conversa com o número de EXEMPLO 21 99999-9999 (print do
+  // cliente: "Você confia nesta empresa?" com foto vazia). Agora é o oficial.
   const openWhatsApp = () => {
-    const message = encodeURIComponent('Olá! Gostaria de negociar sobre meu pedido da loja virtual.');
-    window.open(`https://wa.me/5521999999999?text=${message}`, '_blank');
+    window.open(linkWhatsAppOficial('Olá! Gostaria de negociar sobre meu pedido da loja virtual.'), '_blank');
   };
 
   const states = [

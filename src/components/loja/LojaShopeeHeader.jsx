@@ -6,6 +6,7 @@ import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
 import { interleaveBanners } from '@/lib/interleaveBanners';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 // 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
 // imediata em produção. Artes novas (25/07) em 1376×768 (~16:9) — mostrados com
 // fit=contain + fundo ambiente desfocado, sem cortar nada.
@@ -20,7 +21,7 @@ import banner4Mob from '@/assets/banners/banner4-mobile.webp';
 import banner5Desk from '@/assets/banners/banner5-desktop.webp';
 import banner5Mob from '@/assets/banners/banner5-mobile.webp';
 
-const WHATSAPP = '5521984072064';
+const WHATSAPP = WHATSAPP_OFICIAL;
 const SOCIAL = {
   instagram: 'https://instagram.com/leilaonozap',
   tiktok: 'https://tiktok.com/@leilaonozap',
@@ -39,7 +40,7 @@ async function mostrarCupons() {
 }
 import { getReferral } from '@/lib/referral';
 import {
-  Search, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt, MapPin
+  Search, Ticket, Truck, BadgeCheck, Gavel, ScanSearch, Home, Cpu, ShoppingBasket, Shirt, MapPin, X
 } from 'lucide-react';
 
 // Botão "AO VIVO AGORA" abre o feed da Livoo Live (mesma URL do FAB da loja)
@@ -89,7 +90,9 @@ function RailIcon({ icon: Icon, label, onClick, accent = 'green' }) {
   );
 }
 
-export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories = [], onSelectCategory, banners = [] }) {
+// `modoBusca` (15/09/2026): com texto na busca o HERO some — a página inteira vira
+// "caixa de busca + resultados", pra ninguém achar que a busca não funcionou.
+export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories = [], onSelectCategory, banners = [], modoBusca = false }) {
   const navigate = useNavigate();
   const [q, setQ] = React.useState(searchTerm || '');
   React.useEffect(() => { setQ(searchTerm || ''); }, [searchTerm]);
@@ -173,12 +176,28 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
             <input
-              type="text"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
               value={searchTerm}
               onChange={(e) => setSearchTerm?.(e.target.value)}
+              // Enter/“Buscar” no teclado do celular: fecha o teclado pra mostrar os resultados
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
               placeholder="O que você procura hoje?"
-              className="w-full bg-gray-800/80 border border-gray-700 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none transition-colors"
+              aria-label="Buscar produtos na Loja Virtual"
+              className={`w-full bg-gray-800/80 border rounded-xl pl-11 pr-11 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none transition-colors [&::-webkit-search-cancel-button]:hidden ${modoBusca ? 'border-green-500/70' : 'border-gray-700'}`}
             />
+            {modoBusca && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm?.('')}
+                aria-label="Limpar busca"
+                className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -196,6 +215,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
           Mobile: arte 1344×768, container na mesma proporção → preenche 100% da largura.
           Desktop: arte 1920×600 (16:5), container na mesma proporção → a arte ocupa
           a largura INTEIRA do navegador, sem blur lateral. */}
+      {!modoBusca && (
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
         <div className="relative overflow-hidden bg-[#21222b] aspect-[1344/768] md:aspect-[16/5]">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
@@ -204,6 +224,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
         </div>
       </div>
+      )}
     </div>
   );
 }
