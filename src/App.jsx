@@ -34,7 +34,6 @@ const AdminDepositosConfirmados = React.lazy(() => import('@/pages/AdminDeposito
 const AdminLancesAutorizados = React.lazy(() => import('@/pages/AdminLancesAutorizados'));
 const CatalogOrdersAdmin = React.lazy(() => import('@/pages/CatalogOrdersAdmin'));
 const CuponsAdmin = React.lazy(() => import('@/pages/CuponsAdmin'));
-const AnaliseLoteEstoque = React.lazy(() => import('@/pages/AnaliseLoteEstoque'));
 const EstoqueLotes = React.lazy(() => import('@/pages/EstoqueLotes'));
 const Evoluir = React.lazy(() => import('@/pages/Evoluir'));
 // 🎮 X-GAME — painel da gamificação do Método (Human Token, MvM do Dia, ranking)
@@ -341,7 +340,13 @@ const AuthenticatedApp = () => {
       } />
       <Route path="/CadastroInvestidor" element={<LayoutWrapper currentPageName="CadastroInvestidor"><CadastroInvestidor /></LayoutWrapper>} />
       <Route path="/CadastroLeiloeiro" element={<LayoutWrapper currentPageName="CadastroLeiloeiro"><CadastroLeiloeiro /></LayoutWrapper>} />
-      <Route path="/AnaliseDeLotes" element={<LayoutWrapper currentPageName="AnaliseDeLotes"><AnaliseDeLotes /></LayoutWrapper>} />
+      <Route path="/AnaliseDeLotes" element={
+        <LayoutWrapper currentPageName="AnaliseDeLotes">
+          <RequireRole allowedRoles={['admin', 'leiloeiro']} fallbackRoute="Home" noAuthRoute="Landing">
+            <AnaliseDeLotes />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/SistemaDeArremate" element={
         <LayoutWrapper currentPageName="SistemaDeArremate">
           <SistemaDeArremate />
@@ -483,13 +488,6 @@ const AuthenticatedApp = () => {
         <LayoutWrapper currentPageName="ImageOptimizer">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
             <ImageOptimizer />
-          </RequireRole>
-        </LayoutWrapper>
-      } />
-      <Route path="/AnaliseLoteEstoque" element={
-        <LayoutWrapper currentPageName="AnaliseLoteEstoque">
-          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
-            <AnaliseLoteEstoque />
           </RequireRole>
         </LayoutWrapper>
       } />

@@ -50,6 +50,7 @@ import {
   Target,
   ShieldAlert,
   Landmark,
+  BarChart3,
 } from "lucide-react";
 
 /**
@@ -75,6 +76,8 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Criar Leilão de Luxo", pageName: "CreateLuxuryAuction", icon: Crown },
         { title: "Live Shop", pageName: "LiveShopControlNoZap", icon: Video },
         { title: "Sistema de Arremate", pageName: "SistemaDeArremate", icon: Hammer },
+        // ⭐ 15/09/2026 — o analisador ganha lugar (e destaque) na Visão Geral
+        { title: "Analisador de Lotes", pageName: "AnaliseDeLotes", icon: BarChart3, destaque: true },
       ],
     },
     {

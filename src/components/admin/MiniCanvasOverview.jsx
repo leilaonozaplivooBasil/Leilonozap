@@ -389,7 +389,9 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
                             className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-all ${
                               isCurrent
                                 ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
-                                : "text-gray-300 hover:bg-white/[0.06] hover:text-white"
+                                : item.destaque
+                                  ? "bg-gradient-to-r from-blue-600/25 to-indigo-600/25 text-blue-100 ring-1 ring-blue-500/40 hover:from-blue-600/40 hover:to-indigo-600/40"
+                                  : "text-gray-300 hover:bg-white/[0.06] hover:text-white"
                             }`}
                           >
                             {ItemIcon && <ItemIcon className="w-3 h-3 flex-shrink-0" />}
