@@ -298,6 +298,14 @@ async function _avisaRajada(actorId) {
   } catch { /* best effort: o console já registrou */ }
 }
 
+// 🔐 AUDITORIA 16/09/2026 — app_users NÃO é mais lida com `select('*')` pelo navegador.
+// A policy `public_read` deixava a tabela INTEIRA (senha, tokens de reset/acesso…)
+// ao alcance da chave publicável. No banco, anon/authenticated só enxergam as
+// colunas abaixo (migração auditoria_app_users_colunas_publicas); aqui a lista é
+// a mesma, pra que `select('*')` nunca vire "permission denied" na tela.
+const COLUNAS_PUBLICAS_APP_USERS = 'id,base44_id,active_partner_plan,address_city,address_complement,address_neighborhood,address_number,address_state,address_street,address_zip_code,arrematante_commission_percentage,arrematante_context,arrematante_responsavel_id,avatar_color,avatar_url,career_levels,catalog_commission_balance,catalog_total_commissions_generated,commission_balance,cpf,created_by,created_by_id,created_date,display_first_name,display_last_name,email,enabled_panels,full_name,indicated_clients_count,is_sample,is_seller,licenciado_context,network_bids_count,nickname,partner_plan_activated_at,partner_plan_amount,phone,points,primary_career_level,profile_photo_url,recruited_by_id,referral_code,referred_by_id,role,saldo_alocado,saldo_disponivel,store_name,terms_accepted,total_bids,total_commissions_generated,total_operation_fee_percentage,updated_date,won_auctions,created_at,updated_at,needs_password_reset,kyc_status,is_pdv_operator,employer_id,active,store_slug,livoo_kyc_status,livoo_provisioned_at,saldo_reservado,terms_accepted_at,terms_version,passaporte_terms_accepted_at,passaporte_terms_version,seller_credit_balance,test_wallet_balance,credito_estoque,saldo_operacao,divida_consignado,last_login,pix_key,pix_key_type';
+const colunasDe = (table) => (table === 'app_users' ? COLUNAS_PUBLICAS_APP_USERS : '*');
+
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
 
@@ -458,7 +466,7 @@ function entityProxy(entity) {
 
   return {
     async list(orderBy, limit) {
-      let q = supabase.from(table).select('*');
+      let q = supabase.from(table).select(colunasDe(table));
       q = applyOrderBy(q, orderBy, entity);
       if (limit) q = q.limit(limit);
       const { data, error } = await q;
@@ -467,7 +475,7 @@ function entityProxy(entity) {
     },
 
     async filter(filters, orderBy, limit, offset) {
-      let q = supabase.from(table).select('*');
+      let q = supabase.from(table).select(colunasDe(table));
       q = applyFilters(q, entity, filters);
       q = applyOrderBy(q, orderBy, entity);
       if (offset != null && limit) q = q.range(offset, offset + limit - 1);
@@ -478,7 +486,7 @@ function entityProxy(entity) {
     },
 
     async get(id) {
-      const { data, error } = await supabase.from(table).select('*').eq('id', id).maybeSingle();
+      const { data, error } = await supabase.from(table).select(colunasDe(table)).eq('id', id).maybeSingle();
       if (error) throw error;
       return data ? mapFromDB(entity, data) : null;
     },
