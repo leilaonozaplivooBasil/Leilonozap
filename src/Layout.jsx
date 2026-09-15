@@ -86,7 +86,7 @@ const PAGINAS_TEMA_CLARO = new Set([
   // tinta sólida (regra no index.css).
   'Carteira', 'Evoluir', 'PainelDistribuidor',
   'EstoqueLotes', 'GestaoLotes', 'SellerPanel', 'CuponsAdmin', 'AdminLancesAutorizados',
-  'AnaliseLoteEstoque', 'UserManagement', 'AdminUsers', 'AdminWithdrawals',
+  'UserManagement', 'AdminUsers', 'AdminWithdrawals',
 
 ]);
 

@@ -12,7 +12,7 @@ const CONV_KEY = 'heloimia_conv_id';
 const QUICK_ACTIONS = [
   { emoji: "📦", title: "Lotes Pendentes", message: "Quais lotes estão com status 'recebido' ou 'comprado' em EstoqueLotes e precisam de ação? Resumo operacional." },
   { emoji: "💰", title: "Briefing do Dia", message: "Faça um briefing financeiro do dia de hoje no Leilão NoZap — vendas, comissões e alertas." },
-  { emoji: "🔍", title: "Diagnóstico de Importação", message: "Analise o fluxo atual de importação de planilhas no AnaliseLoteEstoque e EstoqueLotes. Existe algum bug ou campo faltando no payload do LoteRecebido.create?" },
+  { emoji: "🔍", title: "Diagnóstico de Importação", message: "Analise o fluxo atual de importação de planilhas no AnaliseDeLotes e EstoqueLotes. Existe algum bug ou campo faltando no payload do LoteRecebido.create?" },
   { emoji: "🏷️", title: "Precificar Pendentes", message: "Liste os produtos com catalog_active=false e selling_price_retail=0 que precisam de precificação. Quantos são? Qual a prioridade?" },
 ];
 

@@ -103,6 +103,11 @@ async function fetchPriceForItem(item, signal) {
         // 1ª tentativa: termo limpo + match-ratio 30% (igual Comparaí)
         const res = await searchGoogleShopping({ productName: item.desc });
         if (signal?.aborted) return null;
+        // Serviço ausente (sem SERPAPI_KEY na Vercel ou rota inexistente) NÃO é "sem
+        // mercado": não grava cache e avisa a tela, em vez de "DADOS INSUFICIENTES".
+        if (res?.configured === false || res?.error === 'not_implemented' || res?.error === 'network_or_not_implemented') {
+            return { item, cached: false, level: 'sem_servico', motivo: res?.error || 'SERPAPI_KEY não configurada' };
+        }
 
         const products = res?.data?.products || [];
         if (products.length > 0) {
@@ -149,6 +154,8 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         setResults([]);
     }, [itens]);
 
+    const [motivoIndisponivel, setMotivoIndisponivel] = useState('');
+
     const runAudit = async () => {
         if (status === 'auditing') return;
         if (!itens || itens.length === 0) return;
@@ -190,6 +197,13 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
         await Promise.all(workers);
         if (controller.signal.aborted) return;
 
+        const semServico = accumulated.filter(r => r.level === 'sem_servico');
+        if (semServico.length > 0 && semServico.length === accumulated.length - untrackableItems.length) {
+            setMotivoIndisponivel(semServico[0].motivo || 'serviço indisponível');
+            setResults([]);
+            setStatus('indisponivel');
+            return;
+        }
         setResults(accumulated);
         setStatus('done');
     };
@@ -453,6 +467,20 @@ export default function VereditoMLCard({ itens = [], totalPlanilha = 0 }) {
                             <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Cache 24h</span>
                             <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Match-ratio 30%</span>
                         </div>
+                    </div>
+                )}
+
+                {/* INDISPONÍVEL — sem chave/rota não dá pra auditar, e a tela diz isso */}
+                {status === 'indisponivel' && (
+                    <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4 text-sm text-yellow-200">
+                        <p className="font-bold mb-1">Auditoria de mercado indisponível</p>
+                        <p className="text-yellow-100/80">
+                            {motivoIndisponivel === 'not_implemented' || motivoIndisponivel === 'network_or_not_implemented'
+                                ? 'A rota de consulta ao Google Shopping não respondeu.'
+                                : 'Falta a chave SERPAPI_KEY nas variáveis de ambiente da Vercel.'}
+                            {' '}Os valores da planilha continuam válidos; só a comparação com o mercado não pôde ser feita.
+                        </p>
+                        <button onClick={resetAudit} className="mt-3 px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-100 text-xs font-bold">Tentar de novo</button>
                     </div>
                 )}
 

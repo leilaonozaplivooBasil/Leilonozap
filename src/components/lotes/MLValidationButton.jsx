@@ -4,7 +4,7 @@ import { searchMercadoLivre } from '@/functions/searchMercadoLivre';
 import { searchGoogleShopping } from '@/functions/searchGoogleShopping';
 import { cleanProductTitle, cleanProductTitleAggressive, cleanProductTitleMinimal, hashTitle } from '@/lib/cleanProductTitle';
 
-const CACHE_PREFIX = 'ml_valid_v4_'; // v4: mediana dos top 10 da API oficial do ML
+const CACHE_PREFIX = 'ml_valid_v5_'; // v5 (15/09/2026): a rota de Google Shopping passou a existir na Vercel; o cache v4 guardava "Sem ML" por 24h
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MIN_RESULTS = 3; // mínimo de anúncios pra confiar na mediana
 

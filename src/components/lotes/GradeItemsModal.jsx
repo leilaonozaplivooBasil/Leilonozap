@@ -79,14 +79,14 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
                 </div>
 
                 {/* Lista de itens */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-auto">
                     {displayItems.length === 0 ? (
                         <div className="p-12 text-center text-slate-500">
                             <p className="text-base font-semibold mb-1">Nenhum item do Grupo {activeGrade || ''}</p>
                             <p className="text-sm">Não há itens classificados nesta grade neste lote.</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full min-w-[640px] text-left text-sm">
                             <thead className="sticky top-0 bg-[#0d1117] border-b border-[#30363d]">
                                 <tr className="text-slate-400 uppercase tracking-wider text-xs">
                                     <th className="px-5 py-3 font-semibold">Grade</th>

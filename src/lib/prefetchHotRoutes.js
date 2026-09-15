@@ -20,7 +20,6 @@ const HOT_ROUTES = [
   () => import('@/pages/Carteira'),
   () => import('@/pages/CatalogOrdersAdmin'),
   () => import('@/pages/EstoqueLotes'),
-  () => import('@/pages/AnaliseLoteEstoque'),
 ];
 
 // Mapa path → loader para intent prefetch no hover/focus dos links.
@@ -38,7 +37,6 @@ const PATH_LOADERS = {
   '/RegisterBatches': () => import('@/pages/RegisterBatches'),
   '/CatalogOrdersAdmin': () => import('@/pages/CatalogOrdersAdmin'),
   '/EstoqueLotes': () => import('@/pages/EstoqueLotes'),
-  '/AnaliseLoteEstoque': () => import('@/pages/AnaliseLoteEstoque'),
   '/Portal': () => import('@/pages/Portal'),
   '/CatalogProductDetails': () => import('@/pages/CatalogProductDetails'),
   '/CatalogCheckout2': () => import('@/pages/CatalogCheckout2'),

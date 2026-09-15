@@ -1,6 +1,6 @@
 // 📊 Leitor de planilha de lote — versão de CONSULTA (painel do Parceiro).
 //
-// ⚠️ Regra do pedido: o analisador do admin (AnalisadorLoteInline) NÃO pode ser
+// ⚠️ Regra do pedido: o analisador do admin (AnaliseDeLotes) NÃO pode ser
 // alterado. Por isso a leitura da planilha foi isolada aqui em funções puras,
 // espelhando exatamente a mesma metodologia já validada em produção:
 // mesmas colunas, mesmas grades (A/B/C/D/E/U), mesma soma de valor de mercado.

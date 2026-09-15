@@ -12,6 +12,28 @@
 
 ---
 
+## DIR-160 — Analisador de Lotes: um lugar só, com destaque, e a lista completa de itens
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono (15/09/2026): *"Quero que ele tenha um destaque como o analisador de leilão. Na visão geral ele já tem até um lugar, mas está todo branco. Olhe os três lugares que ele está, retire onde está duplicado, retire esse branco. E o analisador tem uma lista de todos os produtos — quando eu analiso, fica logo abaixo — e ela não está aparecendo. Ele não está abrindo cem por cento."*
+
+**O que havia:** três cópias do mesmo analisador (página `/AnaliseDeLotes`; uma cópia inteira montada dentro do Estoque de Lotes, que o tema claro do painel repintava de BRANCO; e a página órfã `/AnaliseLoteEstoque`, sem nenhum link). A "lista de todos os produtos" nunca existiu nessas telas: os itens só apareciam no modal de grade ou na tabela departamental, que dependia de uma aba "Resumo" que 2 das 3 planilhas reais não têm.
+
+**O que muda:**
+1. **Um analisador só**: `/AnaliseDeLotes` (com crachá de cargo admin/leiloeiro) ganha as três ações — Enviar para Estoque, Publicar no Marketplace, Publicar nas Oportunidades do Dia — com try/catch e aviso na tela. A cópia inline e a página órfã foram removidas (rota, tema claro, prefetch).
+2. **Destaque**: cartão `AnalisadorDestaque` (pill "AVALIADOR INTELIGENTE DE LEILÕES" + título em degradê, cores fixas que o tema claro não repinta) no Estoque de Lotes, levando ao analisador; item "Analisador de Lotes" com realce azul na Visão Geral do admin.
+3. **Lista de itens** (`ItensDoLote`): sempre visível abaixo do painel — grade, descrição, quantidade, valor de mercado, busca, filtro por grade, "ver mais/ver todos" e totais. O KPI "Total de Itens" rola até ela.
+4. **Parser corrigido** (medido nas 3 planilhas reais de `public/midia`): a coluna genérica "VALOR" casava com "Valor Unit" antes de "Valor Total" e o lote era somado pelo preço unitário — LOTE132 R$ 13.355 → **R$ 96.406**, LOTE253 R$ 28.945 → **R$ 139.364**, LOTE495 R$ 119.676 → **R$ 221.591**. "Local de Carregamento" agora é lido em qualquer aba (estava só em "Complemento"; nas planilhas reais fica em "Cronograma") — os 3 endereços de retirada saem certos. Sem aba Resumo, a tabela departamental nasce da coluna Categoria. Célula numérica na aba Resumo não derruba mais o processamento; `.csv` sai do nome do lote; escolher o mesmo arquivo de novo funciona; o arremate começa vazio (o score só é calculado depois de digitado; antes vinha R$ 15.639 inventado).
+5. **Veredito de Mercado / Validar**: chamavam `searchGoogleShopping`, que só existia no Base44 — resposta "not_implemented" virava "DADOS INSUFICIENTES" em todo item. A rota agora existe na Vercel (`api/functions/searchGoogleShopping.js`, SerpAPI, 120 consultas por IP a cada 5 min). Sem `SERPAPI_KEY` na Vercel a tela diz "Auditoria de mercado indisponível" em vez de fingir. ⚠️ **Dono: confirmar se `SERPAPI_KEY` está publicada na Vercel** (as funções de imagem já a usam quando existe).
+6. Modal de grade rola no celular; cabeçalho de upload sem `p-12` no celular.
+
+**Não mexido:** o analisador do painel do Parceiro (`ParceiroAnalisador`) é outro público (só consulta, tema próprio) e continua separado.
+
+**Testes:** `tests/analisadorDeLotesUnico.test.mjs` (7). Suíte: 2544; eslint 0 erros; build ok.
+
+---
+
 ## DIR-159 — "Corrige isso tudo de um jeito para funcionar": o que os logs de produção denunciaram
 
 **Status:** EM VIGOR.
