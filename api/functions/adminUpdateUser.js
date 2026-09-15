@@ -31,6 +31,36 @@ const ALLOWED = [
   'referral_code', 'store_slug',
   // 'active' = arquivar/reativar usuário sem apagar histórico (painel da rede)
   'active',
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 15/09/2026 — ADMIN NÃO CONSEGUIA DAR LANCE. O ENDEREÇO FALTAVA AQUI.
+  // ══════════════════════════════════════════════════════════════════════════
+  // Vídeo da Beatriz (admin), 12h13: preenche o endereço na sala do leilão e
+  // recebe "Não foi possível salvar seu endereço. Tente de novo." No log de
+  // produção, no mesmo minuto:
+  //
+  //     POST /api/functions/adminUpdateUser 400   15:12:54 UTC
+  //     POST /api/functions/adminUpdateUser 400   15:13:33 UTC
+  //
+  // Duas tentativas, as duas recusadas. No banco ela tem CEP, mas
+  // address_street e address_number seguiam `null`.
+  //
+  // O caminho: quando quem salva é admin, o plataformaAdapter manda pra CÁ em
+  // vez de `atualizarMeuCadastro` — de propósito, porque esta é a única rota
+  // que deixa admin editar o próprio cargo (ver o comentário do PONTO 130 no
+  // adapter). Só que esta lista nunca teve campo de endereço: os seis eram
+  // descartados, `payload` ficava vazio, e a rota respondia
+  // "Nenhum campo válido para atualizar" — o 400 acima.
+  //
+  // Efeito: sem endereço salvo não sai cotação de frete, e sem frete a sala do
+  // leilão não libera o lance. Cliente comum nunca sentiu, porque passa pela
+  // outra rota, cuja lista (MEUS_CAMPOS) já tinha endereço desde 25/08.
+  // Cinco dos nove admins ativos estavam sem rua/número e, portanto, presos.
+  //
+  // Endereço não decide dinheiro, acesso nem posição na rede — é a mesma
+  // natureza de `phone`, que já estava aqui. E admin já edita nome, e-mail e
+  // telefone de outra pessoa por esta rota; endereço não amplia nada disso.
+  'address_street', 'address_number', 'address_complement',
+  'address_neighborhood', 'address_city', 'address_state', 'address_zip_code',
   // crédito manual de comissão pelo Painel de Controle
   'commission_balance',
   // carteira do Sócio Executivo (1% sobre a própria estrutura de negócio)
