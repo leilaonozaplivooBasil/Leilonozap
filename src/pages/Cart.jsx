@@ -448,6 +448,36 @@ export default function Cart() {
     }
   };
 
+  // 🚚 15/09/2026 — o frete se calcula SOZINHO assim que o CEP fica completo (ou
+  // quando o endereço salvo carrega, ou quando muda item/quantidade). Antes o
+  // cliente tinha que achar um link pequeno "Calcular frete" escondido no resumo,
+  // e o botão grande de baixo ficava MORTO dizendo "CALCULE O FRETE PARA
+  // CONTINUAR" — tocava e nada acontecia. Erro de principiante (dono, 15/09).
+  const calcularFreteRef = useRef(calcularFrete);
+  calcularFreteRef.current = calcularFrete;
+  const cepInputRef = useRef(null);
+  useEffect(() => {
+    if (pixData || saldoOk) return;
+    if (deliveryMethod !== 'delivery' || !cartItems.length) return;
+    const cep = (formData.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    const t = setTimeout(() => { calcularFreteRef.current?.(); }, 350);
+    return () => clearTimeout(t);
+  }, [freteAssinatura, pixData, saldoOk]);
+
+  // O botão grande nunca fica morto: com CEP completo ele calcula na hora; sem
+  // CEP ele leva o cliente até o campo e diz o que falta.
+  const resolverFretePendente = () => {
+    if (calculandoFrete) return;
+    const cep = (formData.cep || '').replace(/\D/g, '');
+    if (cep.length === 8) { calcularFrete(); return; }
+    toast.error('Preencha o CEP de entrega pra calcular o frete.');
+    try {
+      cepInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cepInputRef.current?.focus();
+    } catch { /* sem scroll suave: o toast já disse o que falta */ }
+  };
+
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
@@ -1105,6 +1135,7 @@ export default function Cart() {
                       <div>
                         <Label className="text-gray-300 text-sm">CEP</Label>
                         <Input
+                          ref={cepInputRef}
                           placeholder="00000-000"
                           value={formData.cep}
                           onChange={handleCepChange}
@@ -1562,9 +1593,9 @@ export default function Cart() {
             {!pixData && !saldoOk && cartItems.length > 0 && (
               <div className="space-y-3">
                 <Button
-                  onClick={handleCheckout}
-                  disabled={isProcessing || freteObrigatorioPendente}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
+                  onClick={freteObrigatorioPendente ? resolverFretePendente : handleCheckout}
+                  disabled={isProcessing || calculandoFrete}
+                  className={`w-full text-white h-14 px-6 text-base sm:text-lg font-bold rounded-full whitespace-normal leading-tight disabled:opacity-50 shadow-lg ${freteObrigatorioPendente ? 'bg-gray-700 hover:bg-gray-600 border border-gray-500 shadow-black/20' : 'bg-green-600 hover:bg-green-700 shadow-green-600/30'}`}
                 >
                   {isProcessing ? (
                     <>
@@ -1573,8 +1604,8 @@ export default function Cart() {
                     </>
                   ) : freteObrigatorioPendente ? (
                     <>
-                      <Truck className="w-5 h-5 mr-2" />
-                      CALCULE O FRETE PARA CONTINUAR
+                      {calculandoFrete ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Truck className="w-5 h-5 mr-2" />}
+                      {calculandoFrete ? 'Calculando o frete…' : 'Calcular frete e continuar'}
                     </>
                   ) : (
                     <>
