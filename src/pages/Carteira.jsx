@@ -35,10 +35,19 @@ export default function Carteira() {
   const [uploading, setUploading] = useState('');
   const [enviandoKyc, setEnviandoKyc] = useState(false);
 
+  // 🧯 AUDITORIA 15/09/2026 — se getMyWallet falhava, ficava "Carregando…" pra sempre;
+  // se devolvia success:false, os cartões mostravam R$ 0,00 como se o saldo fosse zero.
+  const [erroCarteira, setErroCarteira] = useState(false);
   const load = async (u) => {
-    const r = await plataforma.functions.invoke('getMyWallet', { user_id: u.id });
-    if (r?.success) { setW(r); setCpf(r.cpf || ''); }
-    setLoading(false);
+    setErroCarteira(false);
+    try {
+      const r = await plataforma.functions.invoke('getMyWallet', { user_id: u.id });
+      if (r?.success) { setW(r); setCpf(r.cpf || ''); } else setErroCarteira(true);
+    } catch {
+      setErroCarteira(true);
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(() => {
     let u = null; try { u = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { u = null; }
@@ -78,6 +87,15 @@ export default function Carteira() {
 
   if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando…</div>;
   if (!user) return <CarteiraDeslogada />;
+  if (erroCarteira && !w) return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
+      <div className="max-w-sm w-full text-center space-y-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
+        <p className="text-white font-semibold">Não foi possível carregar sua carteira agora.</p>
+        <p className="text-sm text-gray-400">Seu saldo está guardado — só a consulta falhou. Tente de novo em instantes.</p>
+        <button type="button" onClick={() => { setLoading(true); load(user); }} className="w-full min-h-[44px] rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold">Tentar de novo</button>
+      </div>
+    </div>
+  );
 
   const kyc = KYC[w?.kyc_status] || KYC.nao_iniciado;
   const aprovado = w?.kyc_status === 'aprovado';

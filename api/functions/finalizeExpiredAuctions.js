@@ -16,6 +16,11 @@ import { consultasDeApuracao } from '../_lib/apuracaoDoLeilao.js';
 const BATCH_LIMIT = 25; // leilões por execução — o cron roda de novo em 60s
 
 export default async function handler(req, res) {
+  // 🔐 AUDITORIA 15/09/2026 — cron: com CRON_SECRET configurado na Vercel, só aceita a chamada
+  // que a própria Vercel manda (Authorization: Bearer). Sem a variável, segue aberto como era.
+  if (process.env.CRON_SECRET && (req.headers?.authorization || '') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ ok: false, error: 'nao_autorizado' });
+  }
   res.setHeader('Content-Type', 'application/json');
   try {
     if (!hasServerEnv()) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });

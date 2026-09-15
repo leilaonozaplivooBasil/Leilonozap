@@ -23,8 +23,8 @@ export default async function handler(req, res) {
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!user_id || !['aprovado', 'reprovado'].includes(decision)) return res.status(400).json({ success: false, error: 'Parâmetros inválidos' });
     if (!await isAdmin(actor_id)) return res.status(403).json({ success: false, error: 'Apenas admin pode revisar KYC' });
-    await sb(`app_users?id=eq.${user_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ kyc_status: decision }) });
-    await sb(`kyc_data?user_id=eq.${user_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ reviewed_at: new Date().toISOString(), reject_reason: decision === 'reprovado' ? (reason || 'Documentos inválidos') : null }) });
+    await sb(`app_users?id=eq.${encodeURIComponent(user_id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ kyc_status: decision }) });
+    await sb(`kyc_data?user_id=eq.${encodeURIComponent(user_id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ reviewed_at: new Date().toISOString(), reject_reason: decision === 'reprovado' ? (reason || 'Documentos inválidos') : null }) });
     return res.status(200).json({ success: true });
   } catch (e) { return res.status(200).json({ success: false, error: String(e?.message || e) }); }
 }

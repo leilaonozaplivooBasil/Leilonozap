@@ -209,7 +209,7 @@ export default function LiveShop() {
                 src="https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/4898f3e09_br-11134210-7r98o-lub0ag42vvxhf2.jpg"
                 alt="Sai de Baixo"
                 className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => navigate(createPageUrl("SaiDeBaixo"))}
+                onClick={() => navigate(createPageUrl("Home"))}
               />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Live Shop</h1>
@@ -226,7 +226,7 @@ export default function LiveShop() {
               </div>
             </div>
             <Button 
-              onClick={() => navigate(createPageUrl("SaiDeBaixo"))}
+              onClick={() => navigate(createPageUrl("Home"))}
               variant="outline"
               className="border-gray-300"
             >

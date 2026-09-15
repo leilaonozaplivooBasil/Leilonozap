@@ -9,6 +9,7 @@
 //
 // ⚠️ SOMENTE LEITURA. Não altera nada.
 import { configurado, buscarRegistro, gerarLinkAssinado, podeVer } from '../_lib/documentoAssinado.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const VALIDADE_SEGUNDOS = 300;
 
@@ -23,6 +24,8 @@ export default async function handler(req, res) {
 
     const assinaturaId = String(body.assinatura_id || '').trim();
     const solicitanteId = String(body.solicitante_id || '').trim();
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    const _ses = exigirSessao(req, solicitanteId, 'getDocumentoAssinadoUrl', true); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!assinaturaId) return responder({ success: false, error: 'assinatura_id é obrigatório' });
     if (!solicitanteId) return responder({ success: false, error: 'solicitante_id é obrigatório' });
     if (!configurado()) return responder({ success: false, error: 'Config do servidor ausente' });

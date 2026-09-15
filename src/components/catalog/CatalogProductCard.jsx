@@ -16,6 +16,7 @@ import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
+import { lerCarrinho } from '@/lib/storageSeguro';
 
 const DEFAULT_STORE_PHONE = WHATSAPP_OFICIAL;
 
@@ -30,9 +31,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     // Verifica se o produto já está no carrinho ao montar e quando o carrinho muda
     useEffect(() => {
       const checkCart = () => {
-        const savedCart = localStorage.getItem('catalogCart');
-        if (savedCart) {
-          const cart = JSON.parse(savedCart);
+        const cart = lerCarrinho();
+        if (cart.length) {
           const item = cart.find(item => item.id === product.id);
           setIsInCart(!!item);
           setCartQuantity(item?.quantity || 0);
@@ -56,8 +56,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
   // openPopup: o ADICIONAR principal abre o popup do carrinho; o botão "+" só soma
   // (permite cliques rápidos em sequência pra levar várias unidades).
   const aplicarUnidade = ({ openPopup = false } = {}) => {
-    const savedCart = localStorage.getItem('catalogCart');
-    let cart = savedCart ? JSON.parse(savedCart) : [];
+    let cart = lerCarrinho();
 
     const existingIndex = cart.findIndex(item => item.id === product.id);
     const currentQty = existingIndex >= 0 ? (Number(cart[existingIndex].quantity) || 0) : 0;
@@ -114,8 +113,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
   // Diminui uma unidade direto do card (0 unidades → sai do carrinho)
   const removeUnit = (e) => {
     e.stopPropagation();
-    const savedCart = localStorage.getItem('catalogCart');
-    let cart = savedCart ? JSON.parse(savedCart) : [];
+    let cart = lerCarrinho();
     const existingIndex = cart.findIndex(item => item.id === product.id);
     if (existingIndex < 0) return;
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Zap, Wallet, Clock, Sparkles, ArrowRightLeft, ChevronRight } from 'lucide-react';
+import { money } from '@/lib/format';
 
 // 💳 Cartão de saldo — estilo Mercado Pago (fundo claro, cards com borda
 // cinza), mantendo o selo digital verde pulsante que já existia.
@@ -31,7 +32,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
             </div>
             <div className="flex items-baseline gap-3 mb-2">
               <span className="text-5xl font-black text-gray-900 tracking-tight">
-                R$ {totalAvailable.toFixed(2)}
+                {money(totalAvailable)}
               </span>
             </div>
             {/* ITEM 1 DA AUDITORIA — este número é COMISSÃO, não é o saldo da
@@ -47,7 +48,7 @@ export default function WalletBalanceCard({ cardRef, totalAvailable, pendingWith
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 max-w-[320px]">
                 <p className="text-sm text-orange-600 font-semibold flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
+                  Saque em Processo: {money(pendingWithdrawalAmount)}
                 </p>
                 <p className="text-xs text-orange-500/80 mt-1">Aguardando aprovação</p>
               </div>

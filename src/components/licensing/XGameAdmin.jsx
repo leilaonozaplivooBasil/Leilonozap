@@ -160,6 +160,9 @@ function BotaoVerVisualizacao({ caminho, segundos, actorId }) {
   );
 }
 
+// 🔐 AUDITORIA 15/09/2026 — link gravado por usuário só abre se for http(s) (nunca javascript:)
+const hrefSeguro = (u) => (/^https?:\/\//i.test(String(u || '')) ? u : undefined);
+
 export default function XGameAdmin({ onVerComo } = {}) {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -632,7 +635,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                         return (
                           <div key={t.id} className="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
                             {c.print_url ? (
-                              <a href={c.print_url} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
+                              <a href={hrefSeguro(c.print_url)} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
                                 <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
                               </a>
                             ) : (
@@ -661,7 +664,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                                     acesso ao que já existe. */}
                                 {c.video_path
                                   ? <BotaoVerVisualizacao caminho={c.video_path} segundos={c.video_seg || 0} actorId={t.user_id} />
-                                  : c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
+                                  : c.video_url && <a href={hrefSeguro(c.video_url)} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
                                 {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio,
                                     tem que tudo transcrever e mostrar ali." `entrega`
                                     já é o texto — escrito ou falado (transcrito) —

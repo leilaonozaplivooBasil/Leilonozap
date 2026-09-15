@@ -1,3 +1,4 @@
+import { exigirSessao } from '../_lib/sessao.js';
 // getPartnerPurchases — lista planos de parceiro ativos (InvestorDashboard + ActivePartners).
 // Antes: função Deno lendo o store interno do Base44 (plataforma.asServiceRole.entities) — nunca
 // via os dados reais do Supabase, e sem rota Vercel dava 404 em produção (front caía sempre no
@@ -18,6 +19,8 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const { mode, user_id, status_filter } = body || {};
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    const _ses = exigirSessao(req, user_id, 'getPartnerPurchases', mode === 'admin'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!SUPABASE_URL || !SR) return res.status(200).json({ success: false, error: 'Config do servidor ausente' });
 
     if (mode === 'admin') {

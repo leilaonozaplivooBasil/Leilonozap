@@ -4,6 +4,7 @@
 // aprovado — mesmo padrão de api/functions/createAdesaoPayment.js.
 import { oid } from '../_lib/oid.js';
 import { cpfValido, soDigitos } from '../../src/lib/cpf.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,6 +25,8 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const { user_id, amount, buyer_name, buyer_email, buyer_cpf, address, gateway } = body || {};
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    const _ses = exigirSessao(req, user_id, 'createSellerAdhesionPayment'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     const useCard = gateway === 'card';
     if (!user_id) return res.status(200).json({ success: false, error: 'user_id é obrigatório' });
     if (!amount || amount < VALOR_MINIMO) return res.status(200).json({ success: false, error: `A primeira compra do vendedor é de no mínimo R$ ${VALOR_MINIMO}` });
