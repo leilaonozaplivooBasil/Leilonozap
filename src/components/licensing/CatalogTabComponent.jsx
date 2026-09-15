@@ -52,7 +52,7 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
           {/* 🖼️ 15/09/2026 — 1200×630 era a proporção das artes antigas. As novas
               são 16:9, e aqui a moldura já seguia a arte: é só trocar o número.
               `contain` porque nada pode ser cortado. */}
-          <RotatingBanner banners={CATALOG_BANNERS} fit="contain" ambient heightClass="aspect-[16/9] h-auto max-h-[520px]" />
+          <RotatingBanner banners={CATALOG_BANNERS} fit="contain" ambient heightClass="aspect-[16/9] h-auto max-h-[520px] mx-auto" />
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

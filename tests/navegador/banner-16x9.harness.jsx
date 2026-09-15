@@ -35,7 +35,7 @@ const BANNERS = [{ id: 'b1', image_url: ARTE, title: 'arte 16:9', link_url: '', 
 
 function Banca() {
   return (
-    <div data-parte="moldura" className="relative overflow-hidden bg-[#21222b] aspect-[16/9] max-h-[520px]">
+    <div data-parte="moldura" className="relative overflow-hidden bg-[#21222b] h-[56.25vw] max-h-[520px]">
       <RotatingBanner banners={BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
     </div>
   );

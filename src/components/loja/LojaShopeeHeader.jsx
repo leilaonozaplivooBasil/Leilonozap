@@ -225,7 +225,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
           nem chega a valer: a 390px o 16:9 dá 219px. */}
       {!modoBusca && (
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
-        <div className="relative overflow-hidden bg-[#21222b] aspect-[16/9] max-h-[520px]" data-teste="moldura-banner-loja">
+        <div className="relative overflow-hidden bg-[#21222b] h-[56.25vw] max-h-[520px]" data-teste="moldura-banner-loja">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}

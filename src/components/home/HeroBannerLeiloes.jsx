@@ -52,10 +52,18 @@ export default function HeroBannerLeiloes({ banners }) {
 
           O teto de 520px é o preço do 16:9 no desktop; sem ele, a 1440px o
           banner teria 810px de altura. É a MESMA receita da Loja Virtual
-          (LojaShopeeHeader.jsx), de propósito: um jeito só de mostrar banner. */}
+          (LojaShopeeHeader.jsx), de propósito: um jeito só de mostrar banner.
+
+          ⚠️ A ALTURA VEM DE `56.25vw`, NÃO DE `aspect-[16/9]`. Parecem a mesma
+          coisa e não são: `aspect-ratio` com `max-height` encolhe também a
+          LARGURA para manter a proporção — a moldura virava 924px encostada à
+          esquerda, com o resto da faixa preto. Isto apareceu na foto do preview,
+          não no teste, porque o teste media a arte e ela estava certa; quem
+          estava errada era a moldura. `56.25vw` é 9/16 da largura da tela: a
+          moldura continua de borda a borda e o `ambient` preenche as laterais. */}
       <RotatingBanner
         banners={banners}
-        heightClass="aspect-[16/9] max-h-[520px]"
+        heightClass="h-[56.25vw] max-h-[520px]"
         fit="contain"
         rounded={false}
         ambient

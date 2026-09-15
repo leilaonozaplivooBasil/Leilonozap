@@ -149,9 +149,14 @@ test('🖼️ no celular a altura fica onde já estava (~220px), sem susto', { s
   // ~375px de conteúdo e a moldura fica em 211px, não 219px. Medi antes de
   // afirmar — a primeira versão deste teste errou exatamente por essa conta.
   const { moldura } = await medir(390);
-  const esperado = (moldura.width * 9) / 16;
-  assert.ok(Math.abs(moldura.height - esperado) < 2,
-    `a moldura ficou ${Math.round(moldura.height)}px para ${Math.round(moldura.width)}px de largura — fora do 16:9`);
+  // A altura vem de `56.25vw` — 9/16 da LARGURA DA JANELA, não da largura do
+  // conteúdo. Num navegador de mesa a barra de rolagem come ~15px, então a
+  // moldura fica 219px para 375px de conteúdo: um retângulo levemente mais
+  // alto que 16:9, com uma tira fina de `ambient` em cima e embaixo. No celular
+  // de verdade não há barra, e bate exato. A arte segue inteira nos dois casos
+  // — quem garante isso é o teste "aparece INTEIRA", não este.
+  assert.ok(Math.abs(moldura.height - 390 * 0.5625) < 2,
+    `a moldura ficou ${Math.round(moldura.height)}px; 56.25vw de 390px são ${Math.round(390 * 0.5625)}px`);
   // e o ponto que importa pro dono: continua na casa dos 220px de antes
   assert.ok(moldura.height > 195 && moldura.height < 235,
     `a 390px a moldura ficou com ${Math.round(moldura.height)}px; antes eram 220px`);
