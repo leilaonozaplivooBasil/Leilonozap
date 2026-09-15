@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
-  Trash2, RotateCcw, RefreshCw, ArrowLeft, Zap, Pencil, Gavel, TriangleAlert, Sparkles
+  Trash2, RotateCcw, RefreshCw, Zap, Gavel, TriangleAlert, Sparkles
 } from 'lucide-react';
 
 import { exportEstoqueComImagensZip } from '@/lib/exportEstoqueImagens';

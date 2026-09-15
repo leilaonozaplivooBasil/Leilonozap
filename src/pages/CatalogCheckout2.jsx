@@ -8,7 +8,6 @@ import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
-import { getReferral } from '@/lib/referral';
 import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 

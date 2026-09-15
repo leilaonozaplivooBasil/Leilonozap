@@ -38,7 +38,7 @@ let scriptCarregado = false;
 // dele, porque aqui ele é chamado uma vez por ID.
 function carregarScript() {
   if (scriptCarregado || typeof window === 'undefined') return;
-  /* eslint-disable */
+   
   !function(f,b,e,v,n,t,s)
   {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
   n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -47,7 +47,7 @@ function carregarScript() {
   t.src=v;s=b.getElementsByTagName(e)[0];
   s.parentNode.insertBefore(t,s)}(window, document,'script',
   'https://connect.facebook.net/en_US/fbevents.js');
-  /* eslint-enable */
+   
   scriptCarregado = true;
 }
 

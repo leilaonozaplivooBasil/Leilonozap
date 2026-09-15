@@ -28,7 +28,7 @@ export default function VendedorFretePagamento({ freteValor = 0, complemento = 0
       window.history.replaceState(null, "", window.location.pathname);
       startPolling(payId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const startPolling = (paymentId) => {

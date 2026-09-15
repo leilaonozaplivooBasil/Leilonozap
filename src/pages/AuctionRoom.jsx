@@ -5,8 +5,7 @@ import { plataforma } from "@/api/plataformaClient";
 const Auction = plataforma.entities.Auction;
 const AuctionMessage = plataforma.entities.AuctionMessage;
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2, Timer, Info, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
-import { format } from 'date-fns';
+import { ArrowLeft, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
 
 import AIMessage from "../components/chat/AIMessage";
 import PlacaLance from "../components/chat/PlacaLance";
@@ -19,7 +18,6 @@ import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
 import ViewTracker from "../components/recommendations/ViewTracker";
-import FavoriteButton from "../components/recommendations/FavoriteButton";
 import WinnerModal from "../components/auction/WinnerModal";
 import LowBalanceModal from "../components/auction/LowBalanceModal";
 import { Wallet } from "lucide-react";

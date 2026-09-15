@@ -181,7 +181,7 @@ export default function PerformanceEquipe({ currentUser, hojeISO, gestao = false
       setPeriodoTipo('semana');
       setAvisoPeriodo('hoje ainda não tem dado — mostrando a semana');
     }
-  }, [carregando, time.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [carregando, time.length]);  
   const escolherPeriodo = (id) => { setPeriodoTipo(id); setAvisoPeriodo(null); };
 
   // 🧹 a tabela: quem tem algo em cima; quem não tem nada vai pro grupo fechado

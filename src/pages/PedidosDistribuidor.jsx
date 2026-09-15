@@ -5,8 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
-import {
-  ArrowLeft, Truck, Package, Loader2, MapPin, Plus, Trash2, Check, Clock,
+import { Truck, Package, Loader2, MapPin, Plus, Trash2, Check, Clock,
   PackageCheck, Send, Box, RefreshCw, ShoppingBag, X
 } from 'lucide-react';
 
