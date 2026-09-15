@@ -1118,7 +1118,16 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const feitas = comEstado.filter((t) => t.feito).length;
   const total = comEstado.length;
   const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
-  const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
+  // 🎓 15/09/2026 — DIR-153, caso da Sophia Sant'anna ao vivo: `ativo` (aparece na
+  // lista votável, pode ser votada) e `em_mentoria` (está na mentoria
+  // oficial) são coisas diferentes (ver migração participante_em_mentoria).
+  // Dono: "você não pode zerar o dia de quem não participa da mentoria...
+  // ela não é obrigada a votar." A régua radical do não-voto só vale pra
+  // quem tem `em_mentoria === true` — sem isso (participante não carregado,
+  // ou fora da mentoria mesmo `ativo`), não há como faltar a uma obrigação
+  // que não existe.
+  const obrigadoAVotar = participante?.em_mentoria === true;
+  const perdeuPorNaoVotar = obrigadoAVotar && votacaoFechada && votouEmTodos === false;
   // 📉 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
   // ele perder o dinheiro, isso tem que tirar pontos dele." Só conta tarefa
   // de GESTÃO (origem 'xperf', com prazo_em) que passou do prazo sem o
