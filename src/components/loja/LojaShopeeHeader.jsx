@@ -209,14 +209,23 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
         </div>
       </div>
 
-      {/* HERO: banner full-bleed (borda a borda) nos dois mundos, SEMPRE na proporção
-          nativa das artes — nada cortado, nada esticado, sem sobras laterais.
-          Mobile: arte 1344×768, container na mesma proporção → preenche 100% da largura.
-          Desktop: arte 1920×600 (16:5), container na mesma proporção → a arte ocupa
-          a largura INTEIRA do navegador, sem blur lateral. */}
+      {/* HERO: banner full-bleed (borda a borda), SEMPRE na proporção nativa das
+          artes — nada cortado, nada esticado. O princípio é de 07/09 e segue
+          valendo; o que mudou em 15/09 foi a proporção das artes.
+
+          🖼️ 15/09/2026 — AS ARTES NOVAS SÃO 16:9 (1920×1080), e a ordem do dono
+          foi "viabilizar com o tamanho que elas possuem mesmo". Então a moldura
+          passa a 16:9, em vez de pedir redesenho das artes.
+
+          O TETO DE 520px é o preço do 16:9 no desktop: sem ele, a 1440px de tela
+          o banner teria 810px de altura e empurraria a loja inteira pra fora da
+          primeira tela. Com o teto, a arte aparece INTEIRA e centralizada
+          (924×520), e as laterais ficam com o desfoque da própria arte
+          (`ambient`) — o mesmo recurso que a loja já usava. No celular o teto
+          nem chega a valer: a 390px o 16:9 dá 219px. */}
       {!modoBusca && (
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
-        <div className="relative overflow-hidden bg-[#21222b] aspect-[1344/768] md:aspect-[16/5]">
+        <div className="relative overflow-hidden bg-[#21222b] aspect-[16/9] max-h-[520px]" data-teste="moldura-banner-loja">
           <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
