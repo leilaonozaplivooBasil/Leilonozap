@@ -12,6 +12,25 @@
 
 ---
 
+## DIR-155 — Loja Virtual: buscar vira "modo busca" na hora; WhatsApp oficial em todo o site
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono, ao vivo (15/09/2026), com dois prints: *"Como eu busco e a busca aparece lá embaixo, abaixo de ofertas relâmpago, não sobe, a página não sobe, parece que não está buscando. Então o cliente fica com a sensação de que não está buscando, quando está. Quando eu buscar, tem que sumir licenciado, tem que subir a oferta relâmpago, que só apareçam os produtos... um cliente mandou o print: o número oficial é o 21 98407-2064, precisa identificar esse número errado do print e atualizar em todo site."*
+
+**Achados:**
+1. **Busca:** o resultado já era em tempo real, mas ficava embaixo de banner + Ofertas Relâmpago + cartão do licenciado + pílulas + destaques; a página não rolava. A tela ficava idêntica depois de digitar — a percepção de "não funciona" era legítima.
+2. **Número:** o print do WhatsApp ("Você confia nesta empresa? +55 21 99999-9999", foto vazia) vinha do botão "negociar pelo WhatsApp" do `Cart.jsx`, que abria `wa.me/5521999999999` — número de EXEMPLO esquecido no código. As outras 15 ocorrências de "99999-9999" no site são só *placeholder* de campo de formulário ("digite seu WhatsApp, ex: (21) 99999-9999") — exemplo do telefone do cliente, não da empresa; ficaram. O número oficial já existia certo em 8 arquivos, cada um escrito na mão.
+
+**Execução:**
+- `src/pages/Catalog.jsx` — `modoBusca` (há texto na busca): somem `OfertasRelampago`, `CartaoLojaVirtual`, `PilulasVitrine` e "Produtos em Destaque"; a página rola pro topo; aparece um cabeçalho de resultados ("Resultados para “x” · N produtos" / "buscando no catálogo…" com spinner) com botão **Limpar busca**. Enquanto o filtro local (300 ms) ou a busca no servidor (350 ms) não responderam, mostra esqueleto — nunca "nenhum produto" antes da hora. Vazio de busca tem texto próprio ("Nada encontrado para “x”") e botão "Limpar busca e ver a loja".
+- `src/components/loja/LojaShopeeHeader.jsx` — prop `modoBusca`: o HERO (banner rotativo) some; a caixa vira `type="search"` com borda verde, botão **X** pra limpar, `enterKeyHint="search"` e Enter fecha o teclado do celular (pra ver os resultados).
+- `src/lib/whatsappOficial.js` — fonte única: `WHATSAPP_OFICIAL = '5521984072064'`, `WHATSAPP_OFICIAL_FORMATADO = '(21) 98407-2064'`, `linkWhatsAppOficial(texto)`.
+- `Cart.jsx` passa a usar `linkWhatsAppOficial(...)`; os 8 arquivos que tinham o número certo escrito na mão (`LojaShopeeHeader`, `ProductDetailsModal`, `CatalogProductCard`, `AcoesSalaHeader`, `CatalogOrderTracking`, `CatalogProductDetails`, `Footer`, `CatalogCheckout2`) agora importam da lib — trocar o número no futuro é mexer em UM lugar.
+- `tests/lojaModoBuscaWhatsappOficial.test.mjs` — 10 testes.
+
+---
+
 ## DIR-154 — checkout da Loja Virtual: o frete se calcula sozinho e o botão nunca fica morto; crédito Passaporte do Alexandre regularizado
 
 **Status:** EM VIGOR.

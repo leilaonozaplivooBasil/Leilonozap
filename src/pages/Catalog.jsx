@@ -10,7 +10,7 @@ const Product = plataforma.entities.Product;
 const User = { me: () => plataforma.auth.me() };
 const AppUser = plataforma.entities.AppUser;
 const Store = plataforma.entities.Store;
-import { Filter, SlidersHorizontal } from "lucide-react";
+import { Filter, SlidersHorizontal, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 
@@ -48,6 +48,21 @@ export default function Catalog() {
     const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(t);
   }, [searchTerm]);
+  // 🔎 15/09/2026 — MODO BUSCA. Antes, ao digitar, os resultados apareciam lá
+  // embaixo — debaixo do banner, das Ofertas Relâmpago, do cartão do licenciado e
+  // das pílulas — e a página não subia. O cliente olhava pra tela igualzinha e
+  // achava que a busca não funcionava (dono, com print: "parece que não está
+  // buscando"). Com texto na busca: banner, ofertas, cartão e pílulas SOMEM, a
+  // página sobe e o que aparece logo abaixo da caixa é "Resultados para …".
+  const modoBusca = (searchTerm || '').trim().length > 0;
+  const [buscandoServidor, setBuscandoServidor] = useState(false);
+  // enquanto o filtro local ainda não alcançou o que foi digitado, ou o servidor
+  // ainda está respondendo, a tela diz "buscando…" em vez de "nenhum produto"
+  const buscando = modoBusca && (buscandoServidor || (searchTerm || '').trim() !== (debouncedSearchTerm || '').trim());
+  useEffect(() => {
+    if (!modoBusca) return;
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* sem scroll suave */ }
+  }, [modoBusca]);
   const [currentUser, setCurrentUser] = useState(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -595,8 +610,9 @@ export default function Catalog() {
   // ilike (%palavra%) — assim "fonte chocolate" acha "Fonte de Chocolate". Debounce de 350ms.
   useEffect(() => {
     const termo = (searchTerm || '').trim();
-    if (!termo) return;
+    if (!termo) { setBuscandoServidor(false); return; }
     let alive = true;
+    setBuscandoServidor(true);
     const t = setTimeout(async () => {
       try {
         // pega a palavra mais longa (mais específica) e busca no servidor com ilike; o refino
@@ -612,6 +628,7 @@ export default function Catalog() {
           });
         }
       } catch (e) { /* mantém local; o filtro por palavras ainda roda no cliente */ }
+      finally { if (alive) setBuscandoServidor(false); }
     }, 350);
     return () => { alive = false; clearTimeout(t); };
   }, [searchTerm]);
@@ -690,36 +707,68 @@ export default function Catalog() {
           categories={categories}
           onSelectCategory={(id) => setSelectedCategory(id)}
           banners={banners}
+          modoBusca={modoBusca}
         />
 
-        {/* OFERTAS RELÂMPAGO */}
-        <OfertasRelampago
-          products={products.filter((p) => produtoNaSecao(p, secaoFiltro))}
-          onOpenDetails={openDetails}
-          totalProdutosTexto={textoTotalProdutos(totalProdutos)}
-        />
+        {/* 🔎 MODO BUSCA: só a caixa de busca + os resultados. Banner, ofertas,
+            cartão do licenciado, pílulas e destaques ficam de fora enquanto há texto. */}
+        {!modoBusca && (
+          <>
+            {/* OFERTAS RELÂMPAGO */}
+            <OfertasRelampago
+              products={products.filter((p) => produtoNaSecao(p, secaoFiltro))}
+              onOpenDetails={openDetails}
+              totalProdutosTexto={textoTotalProdutos(totalProdutos)}
+            />
 
-        {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
-            "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
-        <CartaoLojaVirtual parceiro={licenseeData} />
+            {/* PERFIL DA LOJA (abaixo do carrossel de ofertas) — único lugar com o nome da loja.
+                "Falar Comigo" só a partir de Vendedor oficial e sempre via aviso antifraude. */}
+            <CartaoLojaVirtual parceiro={licenseeData} />
 
-        {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
-            os produtos DESTA loja em vez de levar o cliente para o leilão.
-            ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago: aquele bloco tem
-            `relative z-10 -mt-16`, sobe de propósito para sobrepor o banner (efeito de
-            camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
-            preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
-            elas de fato filtram. */}
-        <PilulasVitrine
-          produtos={products}
-          filtro={secaoFiltro}
-          onFiltroChange={setSecaoFiltro}
-        />
+            {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
+                os produtos DESTA loja em vez de levar o cliente para o leilão.
+                ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago: aquele bloco tem
+                `relative z-10 -mt-16`, sobe de propósito para sobrepor o banner (efeito de
+                camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
+                preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
+                elas de fato filtram. */}
+            <PilulasVitrine
+              produtos={products}
+              filtro={secaoFiltro}
+              onFiltroChange={setSecaoFiltro}
+            />
+          </>
+        )}
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
+          {/* 🔎 Cabeçalho dos resultados — o cliente vê NA HORA que a busca está
+              acontecendo: o termo, quantos apareceram, e "buscando…" enquanto o
+              servidor vasculha o catálogo inteiro. */}
+          {modoBusca && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-green-500/30 bg-green-600/10 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-white font-semibold truncate">
+                  Resultados para <span className="text-green-300">“{searchTerm.trim()}”</span>
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5" aria-live="polite">
+                  {buscando
+                    ? <span className="inline-flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> buscando no catálogo…</span>
+                    : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-600 bg-gray-800 px-3.5 min-h-[40px] text-sm font-medium text-gray-200 hover:border-green-500/60 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" /> Limpar busca
+              </button>
+            </div>
+          )}
+
           {/* Produtos em Destaque */}
-           {featuredProducts.length > 0 && (
+           {featuredProducts.length > 0 && !modoBusca && (
              <div className="mb-8">
                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2 justify-center">
                  ⭐ Produtos em Destaque
@@ -904,7 +953,7 @@ export default function Catalog() {
             </div>
           }
 
-          {isLoading ?
+          {isLoading || (buscando && filteredProducts.length === 0) ?
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {Array(6).fill(0).map((_, i) =>
             <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
@@ -920,17 +969,30 @@ export default function Catalog() {
                   classificou aqueles produtos ainda. Dizer "nenhum produto encontrado /
                   ajuste a busca" nesse caso manda o cliente procurar defeito na busca
                   dele, quando o buraco é do nosso lado. */}
-              <div className="text-6xl mb-4">{secaoFiltro !== "todas" ? "🏷️" : "📦"}</div>
+              <div className="text-6xl mb-4">{modoBusca ? "🔎" : secaoFiltro !== "todas" ? "🏷️" : "📦"}</div>
               <h3 className="text-xl font-semibold mb-2 text-white">
-                {secaoFiltro !== "todas"
+                {modoBusca
+                  ? `Nada encontrado para “${searchTerm.trim()}”`
+                  : secaoFiltro !== "todas"
                   ? "Ainda não temos produtos nesta seção"
                   : "Nenhum produto encontrado"}
               </h3>
               <p className="text-gray-500 mb-6">
-                {secaoFiltro !== "todas"
+                {modoBusca
+                  ? "Tente outra palavra, no singular, ou uma parte do nome do produto."
+                  : secaoFiltro !== "todas"
                   ? "Estamos organizando o acervo por origem. Veja todos os produtos enquanto isso."
                   : "Tente ajustar a busca ou volte mais tarde para novos produtos!"}
               </p>
+              {modoBusca && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="rounded-full border border-emerald-400/60 bg-emerald-500/15 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500/25"
+                >
+                  Limpar busca e ver a loja
+                </button>
+              )}
               {secaoFiltro !== "todas" && (
                 <button
                   type="button"
