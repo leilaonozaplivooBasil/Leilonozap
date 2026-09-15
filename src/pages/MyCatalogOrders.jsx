@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, Package, ArrowLeft, Filter, Trash2 } from 'lucide-react';
+import { Loader2, ShoppingBag, Package, Filter, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';

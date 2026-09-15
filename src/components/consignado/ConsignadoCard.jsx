@@ -21,7 +21,7 @@ export default function ConsignadoCard({ user }) {
     setCarregando(false);
   };
 
-  useEffect(() => { carregar(); }, [user?.id]); // eslint-disable-line
+  useEffect(() => { carregar(); }, [user?.id]);  
 
   const devolver = async (c) => {
     setDevolvendo(c.id);

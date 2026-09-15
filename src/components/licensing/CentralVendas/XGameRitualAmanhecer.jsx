@@ -363,7 +363,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       [todas[i], todas[j]] = [todas[j], todas[i]];
     }
     return todas.slice(0, 12);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sonhos.length]);
   // um sonho de cada vez: a troca acontece a cada 40s (o anterior ainda está
   // saindo quando o próximo entra — travessia de 50s, sobreposição suave)
@@ -372,7 +372,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     if (passo !== P.VISUALIZACAO || imagensDosSonhos.length === 0) return undefined;
     const t = setInterval(() => setSonhoIdx((i) => i + 1), 40000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [passo, imagensDosSonhos.length]);
   const sonhoTitulo = sonhos[0]?.titulo || sonhos[0]?.nome || sonhos[0]?.texto || '';
 

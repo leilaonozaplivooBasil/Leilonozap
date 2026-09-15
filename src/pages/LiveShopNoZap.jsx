@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { plataforma } from "@/api/plataformaClient";
-import { money, addMoney, mulMoney, gteMoney, fmtBR } from "@/lib/money";
-import { Eye, ShoppingBag, ChevronLeft, ChevronRight, Zap, TrendingUp, Gavel } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { money, addMoney, gteMoney, fmtBR } from "@/lib/money";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";

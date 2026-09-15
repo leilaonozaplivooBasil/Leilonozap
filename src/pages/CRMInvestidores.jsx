@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, TrendingUp, Search, Briefcase, DollarSign, Activity, RefreshCw, Eye, UserPlus, ArrowLeft, FolderOpen, FileSpreadsheet, LayoutList, LayoutGrid } from 'lucide-react';
+import { Users, TrendingUp, Search, Briefcase, DollarSign, Activity, RefreshCw, Eye, UserPlus, FolderOpen, FileSpreadsheet, LayoutList, LayoutGrid } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Package, X, ArrowLeft, Plus,
+  Package, X, Plus,
   Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2, PackagePlus,
   Paperclip, Boxes, Inbox, CalendarClock
 } from 'lucide-react';
@@ -15,7 +15,6 @@ import PublicarOportunidadeModal from '@/components/lotes/PublicarOportunidadeMo
 import { gerarProdutosDoLote } from '@/functions/gerarProdutosDoLote';
 import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import PageFullscreen from "@/components/admin/PageFullscreen";
 
 const MARKETPLACES = [

@@ -119,7 +119,7 @@ export default function VendedorCheckout() {
       window.history.replaceState(null, "", window.location.pathname);
       startPolling(payId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // 📮 Autocompleta rua/bairro/cidade/UF quando o CEP fica completo (igual à nossa página de Checkout)

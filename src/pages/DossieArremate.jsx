@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Printer, ArrowLeft, Shield, Zap, Layers, CheckCircle2, AlertTriangle, Lock } from "lucide-react";
+import { Printer, Shield, Zap, Layers, CheckCircle2, AlertTriangle, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function DossieArremate() {

@@ -45,7 +45,7 @@ export default function AcessoParceiroPage() {
     let pendente = false;
     try { pendente = sessionStorage.getItem('pcAceitePendente') === '1'; } catch (_) {}
     if (pendente || temAceiteParceiro(u)) liberar(u);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const acessar = () => {

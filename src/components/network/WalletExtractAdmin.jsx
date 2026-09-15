@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { plataforma } from '@/api/plataformaClient';
-import { Button } from '@/components/ui/button';
 import { Loader2, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 
 const fmt = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

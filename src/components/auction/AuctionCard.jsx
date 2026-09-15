@@ -10,7 +10,7 @@
  * ESTA VERSÃO FOI APROVADA COMO O MOLDE PERFEITO. NÃO ALTERAR SEM ORDEM.
  * ========================================================================
  */
-import React, { useState, useEffect, useRef, memo } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { capOf } from '@/lib/fotoLegenda';
 import { addMoney, gteMoney, fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
@@ -20,7 +20,7 @@ import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share2, Zap } from "lucide-react";
+import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Zap } from "lucide-react";
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido

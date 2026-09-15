@@ -6,7 +6,6 @@ const AppUser = plataforma.entities.AppUser;
 const Auction = plataforma.entities.Auction;
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { toast } from "sonner";
 import { forceSyncStats } from "@/functions/forceSyncStats";
 import { resetTestData } from "@/functions/resetTestData";
@@ -22,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake, HelpCircle } from 'lucide-react';
+import { DollarSign, Loader2, TrendingUp, RefreshCw, Link2, Trash2, AlertCircle, GripVertical, HelpCircle } from 'lucide-react';
 import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
 
@@ -30,7 +29,6 @@ import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrat
 import LoginModal from '../components/common/LoginModal';
 import IndicatedUsersModal from '../components/admin/IndicatedUsersModal';
 import CommissionStatementModal from '../components/admin/CommissionStatementModal';
-import CareerPath from '../components/licensing/CareerPath';
 import AuctionSelectionModal from '../components/licensing/AuctionSelectionModal';
 import UserEditModal from '../components/admin/UserEditModal';
 import UserPasswordModal from '../components/admin/UserPasswordModal';
@@ -38,7 +36,6 @@ import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
-import XGameAdmin from '../components/licensing/XGameAdmin';
 import CommissionsTab from '../components/licensing/CommissionsTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
@@ -55,7 +52,6 @@ import HeroTopCollege from '../components/licensing/HeroTopCollege';
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
 import NavegacaoLateralGlobal from '@/components/common/NavegacaoLateralGlobal';
 import LicensingBanners from '../components/licensing/LicensingBanners';
-import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
@@ -67,8 +63,7 @@ import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/Central
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
-import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
-import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
+import { VALID_LICENSING_TABS, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
 import TabelaComissoesLeilao from '../components/licensing/TabelaComissoesLeilao';

@@ -179,7 +179,7 @@ export default function QuadroGiroRede({ seed, diaAtual = 0, alvo = 0, onGiroDoD
     });
     return lista;
     // hoje/agora fora das deps de propósito: a lista NÃO pode ser regerada a cada tick
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sementeDia, cotaDia, horasReais]);
 
   // Só entram as vendas cujo horário já passou — o resto chega ao longo do dia.
