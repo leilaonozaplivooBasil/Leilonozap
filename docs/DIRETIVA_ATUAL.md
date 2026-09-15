@@ -12,6 +12,32 @@
 
 ---
 
+## DIR-150 — "repetir todo dia" fica claro no momento certo, não escondido num ícone
+
+**Emitida por:** dono, ao vivo (15/09/2026): *"as pessoas estão editando a rotina e elas querem deixar salva do dia seguinte as rotinas do dia a dia, e não está claro na plataforma [...] cada rotina que ela coloque, dê a opção de ela manter recorrente isso com a rotina diária dela que ela já tem padrão. Isso é muito importante deixar bem claro [...] gostaria que você fizesse uma análise e deixasse cada vez mais claro isso e melhor organizado."* Contexto que ele deu junto, pra não confundir com o Ritual: quem está fora da mentoria organiza a própria rotina; quem está na mentoria recebe a rotina padrão com o Ritual do Amanhecer como núcleo — editável, mas perde o valor do ritual se mexer nele.
+
+**Achado:** a DIR-146 (14/09) já tinha resolvido a GRAVAÇÃO (o botão existia e funcionava), mas não a CLAREZA — três furos concretos:
+1. O botão "repetir todo dia" era só um ÍCONE (`<Repeat/>`), com o texto vivendo só no `title` — que não aparece no celular (sem hover) e, mesmo no desktop, exige passar o mouse pra descobrir o que ele faz. Depois de clicar, nada na tela dizia se aquela tarefa JÁ era recorrente — ela tinha que confiar de memória ou abrir "A minha rotina" pra conferir.
+2. A escolha só existia DEPOIS de criar a tarefa, como um segundo passo separado — o pedido de hoje ("cada rotina que ela coloque") pede a opção NO MOMENTO de colocar, não depois.
+3. Editar hora/título de uma tarefa de hoje dava só um AVISO passivo ("isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina") sem nenhuma ação ali — ela tinha que sair, abrir o painel da rotina e digitar tudo de novo à mão.
+4. Achado à parte, checando o código de ontem: o botão "repetir todo dia" (e agora o checkbox de editar) não tinham nenhuma blindagem contra o Ritual do Amanhecer — a mesma tarefa que carrega `ehTarefaDeGratidao(t.titulo)` também passava pela lista genérica de tarefas do dia. Marcar "repetir" nele criaria uma entrada FANTASMA em `metodo_perfil.rotina` com o mesmo título do ritual, brigando todo dia com o ritual de verdade (que é gerado e pesado à parte, 20% do dia, DIR-142) — bug real, corrigido nesta mesma diretiva antes que alguém batesse nele.
+
+**O que entra (`CrmMetodo.jsx`):**
+1. `estaNaRotina(titulo)` — helper único, reusado pelo botão, pelo selo e pelo pré-preenchimento do checkbox de edição.
+2. Cada tarefa do dia mostra ou o botão `🔁 repetir todo dia` (com TEXTO, não só ícone) ou, se já está na rotina, o selo `🔁 já repete todo dia` — nunca os dois, nunca nenhum quando é o Ritual.
+3. Um checkbox `🔁 repetir esta tarefa todos os dias` aparece JUNTO do campo de criar tarefa nova — marcado, a mesma tarefa recém-criada já entra na rotina permanente, no mesmo clique.
+4. O editor inline de hora/título ganha o mesmo checkbox (`🔁 repetir essa mudança todos os dias`), pré-marcado quando a tarefa editada já é da rotina (ela está corrigindo o padrão, não criando uma exceção) — ao salvar, a MESMA mudança é aplicada na rotina (troca o item existente por título original, ou inclui se ainda não era recorrente). Pro Ritual, continua só o aviso — sem checkbox — com o texto trocado pra explicar que o horário dele é definido nele mesmo (janela do ritual, DIR-142), não na rotina genérica.
+
+**Fora do escopo desta diretiva:** qualquer mudança na regra de quem edita o quê (fora/dentro da mentoria) ou no peso/janela do Ritual — isso já está certo (DIR-80, DIR-142) e não foi tocado; esta diretiva é só sobre tornar a opção de recorrência visível e no momento certo.
+
+**Regras fixas:** nenhuma além das anteriores. O Ritual do Amanhecer nunca aparece em `metodo_perfil.rotina` por nenhum caminho novo desta diretiva.
+
+**Prova:** suíte 2427/2427 (6 testes novos em `rotinaClaraRecorrente.test.mjs`, 1 teste ajustado em `rotinaRepetirTodoDia.test.mjs` pro novo helper `estaNaRotina`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-149 — editar/excluir cliente direto na Lista de Network, e o atalho pra virar oportunidade sem redigitar
 
 **Emitida por:** dono, ao vivo (14/09/2026): *"Na lista de contato, eu preciso ter um botão de editar o cliente e excluir o cliente porque está tendo cliente duplicado [...] quando eu vou criar uma nova oportunidade no acompanhamento, não está salvando isso [...] faça esse banco de atualização através de atualizações ou pelo acompanhamento ou pelo contato feito ou pela lista."*

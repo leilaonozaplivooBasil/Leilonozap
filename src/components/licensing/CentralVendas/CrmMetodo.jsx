@@ -181,6 +181,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '', noQuadro: false, listaId: '' });
+  // 🔁 DIR-150 (15/09/2026) — dono, ao vivo: "cada rotina que ela coloque,
+  // dê a opção de ela manter recorrente isso com a rotina diária dela." A
+  // escolha entra JUNTO de criar a tarefa — não depois, como um segundo
+  // passo que ela precisa lembrar de fazer.
+  const [repetirNovaTarefa, setRepetirNovaTarefa] = useState(false);
   const [listasDoQuadro, setListasDoQuadro] = useState([]); // 🔗 pra "também no quadro" da Lista
   const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
@@ -1552,7 +1557,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         if (error) toast.error('Entrou no dia, mas não deu pra pôr no quadro');
       } else if (novaTarefa.noQuadro) toast.error('Entrou no dia, mas o quadro está sem lista');
       toast.success(fraseEntrou(plano, { listaNome }));
+      // 🔁 DIR-150 — a MESMA tarefa que acabou de nascer vira recorrente,
+      // se ela marcou a caixa (toast próprio, de gravarRotina — não cria
+      // duplicata se por acaso já existir uma entrada igual na rotina).
+      if (repetirNovaTarefa && !estaNaRotina(novaTarefa.titulo)) {
+        await gravarRotina(incluirNaRotina(rotina, { hora: novaTarefa.hora || '', titulo: novaTarefa.titulo }));
+      }
       setNovaTarefa({ hora: '', titulo: '', noQuadro: false, listaId: novaTarefa.listaId });
+      setRepetirNovaTarefa(false);
       carregarTarefas();
     } catch { toast.error('Erro ao adicionar'); }
   };
@@ -1584,14 +1596,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // PRÓPRIO dia não tinha nada além do painel "A minha rotina" escondido,
   // que exige abrir, digitar hora e título de novo à mão. Mesma função de
   // incluir, mesmo aviso de duplicidade, só que direto na tarefa do dia.
+  // 🔁 DIR-150 (15/09/2026) — dono, ao vivo: "não está claro que dá pra
+  // deixar a rotina do dia a dia salva pro dia seguinte... dê a opção de
+  // ela manter recorrente isso com a rotina diária dela, bem claro." O
+  // botão de ontem existia, mas era só um ícone sem legenda (fácil de não
+  // ver, principalmente no celular, onde não há hover pra mostrar o
+  // title) e não dizia depois se aquela tarefa JÁ era recorrente ou não —
+  // ela tinha que confiar de memória. `estaNaRotina` normaliza a mesma
+  // comparação usada em toda parte (título, sem diferenciar maiúscula):
+  // uma função só, usada pelo botão E pelo selo que substitui o botão
+  // quando já é recorrente.
+  const estaNaRotina = (titulo) => rotina.some((i) => i.titulo.trim().toLowerCase() === String(titulo || '').trim().toLowerCase());
   const tornarRecorrente = (t) => {
-    const jaEsta = rotina.some((i) => i.titulo.trim().toLowerCase() === String(t.titulo || '').trim().toLowerCase());
-    if (jaEsta) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
+    if (estaNaRotina(t.titulo)) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
     gravarRotina(incluirNaRotina(rotina, { hora: t.hora, titulo: t.titulo }));
   };
 
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
+  // 🔁 DIR-150 — a mesma escolha de "repetir todo dia" também vale pra
+  // quando ela EDITA um horário/título — sem isto, corrigir a rotina
+  // exigia editar hoje e DEPOIS abrir "A minha rotina" pra repetir a
+  // mesma correção lá, à mão.
+  const [repetirEdicao, setRepetirEdicao] = useState(false);
   const [previaEdicaoAberta, setPreviaEdicaoAberta] = useState(false);
   // 🔴 10/09/2026 — DAR HORA A UMA TAREFA TEM QUE MOVER ELA DE LUGAR.
   //
@@ -1615,6 +1642,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setEditandoId(null);
     try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora, ordem }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
+    // 🔁 DIR-150 — quando marcado, a MESMA correção entra na rotina
+    // permanente: acha o item pelo título ORIGINAL (antes da edição) e
+    // troca por hora/título novos; se ele ainda não era recorrente,
+    // inclui como novo — nunca cria duplicata.
+    if (repetirEdicao) {
+      const idx = rotina.findIndex((i) => i.titulo.trim().toLowerCase() === String(t.titulo || '').trim().toLowerCase());
+      const novaRotina = idx >= 0 ? editarNaRotina(rotina, idx, { hora, titulo }) : incluirNaRotina(rotina, { hora, titulo });
+      await gravarRotina(novaRotina);
+      setRepetirEdicao(false);
+    }
   };
   // 🔮 DIR-91 — mudou a hora? mostra a prévia da Jornada antes de gravar.
   const tentarSalvarEdicao = (t) => {
@@ -2780,22 +2817,43 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               {!t.feito && (
                                 <button
                                   type="button"
-                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); }}
+                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); setRepetirEdicao(estaNaRotina(t.titulo)); }}
                                   title="editar esta tarefa de hoje"
                                   data-teste="editar-tarefa"
                                   className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
                                 ><PenLine className="w-3.5 h-3.5" /></button>
                               )}
-                              {/* 🔁 DIR-146 — "salvar pros outros dias", claro e no
-                                  lugar onde a pessoa monta o dia dela, não escondido
-                                  num painel à parte. */}
-                              <button
-                                type="button"
-                                onClick={() => tornarRecorrente(t)}
-                                title="repetir esta tarefa todo dia — entra na sua rotina permanente a partir de amanhã"
-                                data-teste="repetir-todo-dia"
-                                className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
-                              ><Repeat className="w-3.5 h-3.5" /></button>
+                              {/* 🔁 DIR-146/150 — "salvar pros outros dias", claro e
+                                  no lugar onde a pessoa monta o dia dela, não
+                                  escondido num painel à parte. Dono, 15/09: "não
+                                  está claro" — um ícone sem legenda e sem estado
+                                  (nunca dizia se JÁ era recorrente) não bastava,
+                                  principalmente no celular, onde não há hover pra
+                                  ler o title. Agora é texto sempre visível, e o
+                                  próprio texto muda quando a tarefa já é da rotina
+                                  — deixa de ser botão, vira selo (nada pra clicar,
+                                  nada pra confundir com "ainda não").
+                                  🌅 O Ritual NUNCA entra aqui: ele não é um item
+                                  comum de `metodo_perfil.rotina` — é gerado e
+                                  pesado à parte (DIR-142, 20% do dia). Deixar
+                                  "repetir" nele criaria uma entrada de rotina
+                                  fantasma, com o mesmo título, brigando com o
+                                  ritual de verdade todo dia. */}
+                              {!ehTarefaDeGratidao(t.titulo) && (
+                                estaNaRotina(t.titulo) ? (
+                                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-verde" title="Esta tarefa já é da sua rotina — repete todo dia sozinha." data-teste="ja-e-rotina">
+                                    <Repeat className="w-3.5 h-3.5" /> já repete todo dia
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => tornarRecorrente(t)}
+                                    title="Repetir esta tarefa todo dia — entra na sua rotina permanente a partir de amanhã."
+                                    data-teste="repetir-todo-dia"
+                                    className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-tinta-fraca hover:text-nz-verde"
+                                  ><Repeat className="w-3.5 h-3.5" /> repetir todo dia</button>
+                                )
+                              )}
                               <button type="button" onClick={() => removerTarefa(t)} title="apagar só de hoje — a rotina continua igual" className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                               </div>
                             </div>
@@ -2806,7 +2864,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
                                 <Button size="sm" onClick={() => tentarSalvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
                                 <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
-                                <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina.</p>
+                                {/* 🔁 DIR-150 — antes era só um AVISO ("pra mudar todo
+                                    dia, edite a sua rotina"), sem ação nenhuma ali —
+                                    ela tinha que sair, abrir outro painel e digitar
+                                    tudo de novo. Agora é uma escolha, no mesmo clique
+                                    de salvar. Pré-marcado quando a tarefa JÁ é da
+                                    rotina (ela está corrigindo o padrão, não criando
+                                    uma exceção) — e nunca aparece pro Ritual, que não
+                                    é um item comum de rotina. */}
+                                {!ehTarefaDeGratidao(t.titulo) ? (
+                                  <label className="w-full flex items-center gap-1.5 text-[11px] text-nz-tinta-fraca" data-teste="repetir-na-edicao">
+                                    <input type="checkbox" checked={repetirEdicao} onChange={(e) => setRepetirEdicao(e.target.checked)} className="accent-nz-verde" />
+                                    🔁 repetir essa mudança todos os dias (senão, vale só hoje)
+                                  </label>
+                                ) : (
+                                  <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — o horário do Ritual do Amanhecer é definido nele mesmo.</p>
+                                )}
                                 {/* 🔮 DIR-91 — prévia da Jornada antes de gravar um horário mudado */}
                                 {previaEdicaoAberta && (
                                   <PreviaJornadaModal
@@ -2846,6 +2919,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   com a hora sumindo de tão clara. O componente já sabe ser escuro
                   desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
               <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
+              {/* 🔁 DIR-150 — "cada rotina que ela coloque, dê a opção de
+                  manter recorrente" — a escolha mora AQUI, junto de criar a
+                  tarefa, não escondida num painel à parte pra ela achar depois. */}
+              <label className="mt-1.5 flex items-center gap-1.5 text-[11px] text-nz-tinta-fraca" data-teste="repetir-nova-tarefa">
+                <input type="checkbox" checked={repetirNovaTarefa} onChange={(e) => setRepetirNovaTarefa(e.target.checked)} className="accent-nz-verde" />
+                🔁 repetir esta tarefa todos os dias (vira parte da sua rotina, a partir de amanhã)
+              </label>
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══

@@ -25,6 +25,9 @@ test('a tarefa do dia tem um botão claro de "repetir todo dia" — mesma funç�
 });
 
 test('repetir não duplica: já estando na rotina, avisa em vez de gravar de novo', () => {
-  assert.match(CRM, /rotina\.some\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(t\.titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\)/);
-  assert.match(CRM, /toast\.error\('Já está na sua rotina — repete todo dia\.'\)/);
+  // 🔁 DIR-150 — a comparação virou o helper `estaNaRotina` (reusado pelo
+  // selo "já repete todo dia"), mas a régua continua a mesma: título,
+  // sem diferenciar maiúscula.
+  assert.match(CRM, /const estaNaRotina = \(titulo\) => rotina\.some\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
+  assert.match(CRM, /if \(estaNaRotina\(t\.titulo\)\) \{ toast\.error\('Já está na sua rotina — repete todo dia\.'\); return; \}/);
 });
