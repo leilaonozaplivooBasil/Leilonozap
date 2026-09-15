@@ -1,17 +1,33 @@
-// leilaChat (Vercel) — ponte para o runtime Base44/Deno.
-// CAUSA-RAIZ: leilaonozap.net é servido pela Vercel, não pelo Base44. A
-// AGENT_API_KEY vive só no cofre do Base44 (invisível para process.env aqui).
-// Por isso a chamada é repassada, servidor→servidor, para o runtime que já
-// tem a credencial e executa o agente leila_atendente (mesmo padrão usado em
-// api/functions/buscarFotosPorImagem.js — ver api/_lib/base44Runtime.js).
+// leilaChat — a Leila, rodando do NOSSO lado.
 //
-// ⚠️ 15/09/2026 — ESTA PONTE ESTÁ COM OS DIAS CONTADOS. A conta do Base44
-// perdeu o direito de rodar backend functions e a Leila parou inteira, porque
-// aqui ela NÃO TEM RESERVA (o Compare Aqui e a busca por imagem têm: caem pra
-// SerpAPI local). Enquanto o caminho definitivo não sobe — Leila rodando pelo
-// nosso api/_lib/ia.js, sem Base44 —, este arquivo faz duas coisas que faltavam.
-import { chamarRuntimeBase44 } from '../_lib/base44Runtime.js';
-import { respostaDaLeila } from '../_lib/respostaDaLeila.js';
+// ══════════════════════════════════════════════════════════════════════════
+// 🔴 O QUE ESTA ROTA ERA ATÉ 15/09/2026, E POR QUE MUDOU
+// ══════════════════════════════════════════════════════════════════════════
+// Era uma ponte de 29 linhas pro runtime Deno do Base44, que guardava a
+// AGENT_API_KEY. A conta perdeu o direito de rodar backend functions e a
+// Leila parou inteira — respondendo a cliente, numa bolha de chat:
+// "Functions are blocked - app owner lacks backend functions capability".
+//
+// Ela era a única das quatro coisas que usam aquela ponte SEM reserva. Terceira
+// vez que uma dependência do Base44 derruba função nossa. Agora ela roda pelo
+// mesmo caminho de IA do resto do sistema (api/_lib/ia.js) e usa as ferramentas
+// que o Zeca já tem no WhatsApp. Ver api/_lib/leilaAtendente.js.
+//
+// ══════════════════════════════════════════════════════════════════════════
+// 🔐 IDENTIDADE: DO CRACHÁ, NUNCA DO CORPO
+// ══════════════════════════════════════════════════════════════════════════
+// O `user_id` que a tela manda vem do localStorage — qualquer pessoa edita.
+// Usá-lo pra ler saldo e pedidos seria entregar a carteira alheia a quem
+// souber um id. Então a identidade sai de `conferirSessao(req)`, que confere a
+// assinatura HMAC do crachá, e usamos o id de DENTRO dele.
+//
+// `conferirSessao` e não `exigirSessao`: a segunda está em ETAPA 1 (só anota
+// no log) até publicarem SESSAO_MODO=bloquear — seria uma fechadura desligada.
+//
+// Sem crachá válido a conversa continua, só sem dado pessoal.
+import { conferirSessao } from '../_lib/sessao.js';
+import { responderComoLeila } from '../_lib/leilaAtendente.js';
+import { respostaDaLeila, FRASE_INDISPONIVEL } from '../_lib/respostaDaLeila.js';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -19,39 +35,34 @@ export default async function handler(req, res) {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const message = String(body?.message || '').trim();
-    const history = Array.isArray(body?.history) ? body.history : [];
-    // 🔴 O SEGUNDO DEFEITO, achado na mesma investigação: a tela manda
-    // `conversation_id` e `user_id` (LeilaChat.jsx), a function Deno LÊ os dois
-    // (entry.ts, linha 48) — e esta ponte, no meio, jogava os dois fora. Ou
-    // seja: mesmo com o Base44 no ar, a Leila nunca teve memória da conversa
-    // (cada turno abria uma conversa nova) nem soube o nome de quem falava.
-    // São exatamente os dois problemas que a própria entry.ts diz ter corrigido.
-    const conversationId = String(body?.conversation_id || '').trim();
-    const userId = String(body?.user_id || '').trim();
+    if (!message) return res.status(400).json({ error: 'message é obrigatório' });
 
-    if (!message) {
-      return res.status(400).json({ error: 'message é obrigatório' });
+    // 🧵 A tela guarda a conversa no localStorage por este id e só grava quando
+    // ele volta na resposta (LeilaChat.jsx). Devolver o mesmo que veio — ou
+    // abrir um novo — é o que mantém o histórico visual entre trocas de página.
+    const conversationId = String(body?.conversation_id || '').trim()
+      || `leila_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+    const cracha = conferirSessao(req);
+    const userId = cracha.ok ? cracha.userId : null;
+    if (!userId && String(body?.user_id || '').trim()) {
+      // Alguém alegou um id sem crachá que o comprove. Não é recusa — a
+      // conversa segue como visitante —, mas fica no log: é o sinal de tela
+      // que esqueceu de mandar o crachá ou de alguém testando a porta.
+      console.warn(`[leilaChat] user_id no corpo sem crachá válido (${cracha.motivo}) — atendendo como visitante.`);
     }
 
-    const bruta = await chamarRuntimeBase44('leilaChat', {
-      message,
-      history,
-      ...(conversationId ? { conversation_id: conversationId } : {}),
-      ...(userId ? { user_id: userId } : {}),
-    }, 28000);
+    const r = await responderComoLeila({ mensagem: message, userId });
 
-    // 🔴 NUNCA repassar o JSON cru. Ver api/_lib/respostaDaLeila.js: foi assim
-    // que "Functions are blocked - app owner lacks backend functions
-    // capability" apareceu dentro de uma bolha de chat, pra cliente.
-    const resposta = respostaDaLeila(bruta);
-    if (resposta.status !== 'success') {
-      console.error('[leilaChat] runtime indisponível:', resposta.motivo_tecnico || '(sem motivo)');
+    if (!r.ok) {
+      console.error('[leilaChat] não respondeu:', r.motivo_tecnico || '(sem motivo)');
+      return res.status(200).json({ status: 'indisponivel', response: FRASE_INDISPONIVEL, conversation_id: conversationId });
     }
-    return res.status(200).json(resposta);
+    // Passa pela mesma trava do remendo: nada que não seja fala da Leila chega
+    // na tela, mesmo que um dia esta rota volte a falar com algo de fora.
+    return res.status(200).json({ ...respostaDaLeila({ response: r.texto }), conversation_id: conversationId });
   } catch (e) {
-    // A ponte nem respondeu (rede, timeout, 5xx). Mesma frase — quem está do
-    // outro lado não precisa saber a diferença, e o log registra qual foi.
-    console.error('[leilaChat] ponte falhou:', String(e?.message || e));
+    console.error('[leilaChat] falhou:', String(e?.message || e));
     return res.status(200).json(respostaDaLeila(null));
   }
 }

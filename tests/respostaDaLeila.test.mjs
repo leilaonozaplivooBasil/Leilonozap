@@ -93,17 +93,23 @@ describe('a rota está de fato usando a trava', () => {
   test('não existe mais repasse do JSON cru', () => {
     assert.ok(!/res\.status\(200\)\.json\(resultado\)/.test(rota),
       'voltou a repassar a resposta crua do runtime');
-    assert.match(rota, /respostaDaLeila\(bruta\)/);
+    // Toda saída da rota passa pela trava — inclusive agora que a resposta
+    // nasce aqui dentro (api/_lib/leilaAtendente.js) em vez de vir de fora.
+    assert.match(rota, /respostaDaLeila\(/);
   });
 
   test('a falha da ponte também passa pela trava', () => {
     assert.match(rota, /json\(respostaDaLeila\(null\)\)/);
   });
 
-  test('conversation_id e user_id voltaram a ser repassados', () => {
-    // Sem os dois, a Leila não tem memória nem sabe o nome de quem fala —
-    // a tela manda, a function Deno lê, e a ponte jogava fora.
+  test('o conversation_id volta pra tela — é o que segura o histórico', () => {
+    // LeilaChat.jsx só grava a conversa no localStorage quando este campo
+    // volta na resposta. Sem ele, trocar de página apaga o histórico visual.
+    //
+    // 🔴 O `user_id` do corpo NÃO entra mais aqui, e isso é de propósito: a
+    // identidade passou a sair do crachá assinado (ver leilaAtendente.test.mjs).
+    // Enquanto esta rota era ponte pro Base44, repassá-lo era o conserto; agora
+    // que ela mesma lê saldo e pedidos, repassá-lo seria o buraco.
     assert.match(rota, /conversation_id: conversationId/);
-    assert.match(rota, /user_id: userId/);
   });
 });
