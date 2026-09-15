@@ -12,6 +12,26 @@
 
 ---
 
+## DIR-153 — quem não está na mentoria não pode ter o dia zerado por não votar na MvM
+
+**Emitida por:** dono, ao vivo, sobre o caso real da Sophia Sant'anna: *"Você não pode zerar o dia de quem não participa da mentoria, de quem não é obrigado a votar. O caso da Sofia Santana, você zerou o dia dela... Ela não está na mentoria. É só quem está realmente na mentoria... Quem não está, que não recebe voto, não é obrigado a votar."*
+
+**Achado (confirmado via SQL em produção antes de mexer em qualquer código):** Sophia Sant'anna está `ativo: true` em `xgame_participantes` (aparece na lista votável, pode ser votada) mas `em_mentoria: false` (nunca entrou na mentoria oficial). A régua radical do não-voto (`resumoDoDia`, `perdeuPorNaoVotar`) julgava `votouEmTodos` sem olhar pra `em_mentoria` — zerava o dia (MvM, Human Token, pontos e X-Pay) de QUALQUER participante ativo, mentoria ou não, contrariando a própria migração `participante_em_mentoria` (que já registrava `ativo` e `em_mentoria` como coisas diferentes) e a fala do dono.
+
+**O que entra (`src/lib/xgame.js`):**
+1. `resumoDoDia` ganha `obrigadoAVotar = participante?.em_mentoria === true` — a régua radical do não-voto (`perdeuPorNaoVotar`) só se aplica quando isso é verdadeiro.
+2. `CrmMetodo.jsx` e `XGame.jsx` já carregam `participante` inteiro (`select('*')` em `xgame_participantes`) e já passam esse objeto pra `resumoDoDia` — nenhuma mudança nas telas, o fechamento é só na função pura.
+
+**Fora do escopo desta diretiva:** a régua de atraso na Fila do Pronto (`perdeuPorAtrasoPronto`) não muda — ela é sobre tarefa de gestão com prazo, não sobre a obrigação de votar, e continua valendo pra qualquer `ativo` independente de mentoria.
+
+**Regras fixas:** nenhuma além das anteriores — `em_mentoria` continua sendo ligado só pelo ADM X-Game (🎓), e o super_admin continua controlando `aceita_ser_votado` por conta própria.
+
+**Prova:** suíte 2448/2448 (2 testes novos/atualizados em `tests/xgame.test.mjs`, cobrindo tanto quem está na mentoria — continua zerando — quanto quem não está, incluindo o caso sem `participante` carregado), lint limpo (mesmos 63 erros pré-existentes em arquivos não tocados), `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-151 — "repetir o dia inteiro" — um clique, não um por um
 
 **Emitida por:** dono, ao vivo (15/09/2026), testando a DIR-150 na hora: *"apareceu, tá top, só que eu botei lá embaixo que já tá aparecendo pra repetir todo dia, porém as mensagens em cima não atualizaram — eu tive que apertar manualmente ali em cima nas tarefas que já foram feitas... quando eu clicar ali embaixo repetir todo dia, todas as de cima precisa aparecer que foi atualizado. Eu não preciso ficar apertando um por um."*
