@@ -1,5 +1,12 @@
 -- 🎬 VÍDEO NO PRODUTO — 15/09/2026
 --
+-- ⚠️ O NÚMERO DESTE ARQUIVO (20260915132423) É O QUE O BANCO REGISTROU.
+-- A migração foi aplicada pela API de gestão do Supabase, e não pelo workflow
+-- (o SUPABASE_ACCESS_TOKEN está morto). Essa via carimba a versão com a hora da
+-- APLICAÇÃO, não com o nome do arquivo — então o arquivo foi renomeado pra
+-- bater com o registro. Arquivo e registro 1:1 é o que a PR #334 consertou;
+-- deixar os dois com números diferentes recriaria o problema.
+--
 -- Pedido do dono: "pela gestão de estoque, ao criar ou editar um produto,
 -- também ter a função de anexar vídeo ou colocar link de vídeo."
 --

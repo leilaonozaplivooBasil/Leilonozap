@@ -250,7 +250,7 @@ describe('a fiação — sem ela a feature existe só no papel', () => {
   });
 
   test('a migração cria a coluna e o balde com os mesmos limites do código', () => {
-    const sql = ler('../supabase/migrations/20260915120000_video_do_produto.sql');
+    const sql = ler('../supabase/migrations/20260915132423_video_do_produto.sql');
     assert.match(sql, /add column if not exists video_urls jsonb/);
     assert.match(sql, new RegExp(`'${BALDE_VIDEO}'`));
     assert.match(sql, /52428800/, 'o teto do balde mudou sem o código saber');
