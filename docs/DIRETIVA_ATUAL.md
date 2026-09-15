@@ -12,6 +12,27 @@
 
 ---
 
+## DIR-151 — "repetir o dia inteiro" — um clique, não um por um
+
+**Emitida por:** dono, ao vivo (15/09/2026), testando a DIR-150 na hora: *"apareceu, tá top, só que eu botei lá embaixo que já tá aparecendo pra repetir todo dia, porém as mensagens em cima não atualizaram — eu tive que apertar manualmente ali em cima nas tarefas que já foram feitas... quando eu clicar ali embaixo repetir todo dia, todas as de cima precisa aparecer que foi atualizado. Eu não preciso ficar apertando um por um."*
+
+**Achado:** ele marcou a caixa "🔁 repetir esta tarefa todos os dias" que fica junto do campo de criar TAREFA NOVA — só que essa caixa, por estar posicionada embaixo da lista inteira do dia, dá a impressão de ser uma ação sobre o DIA TODO. Na verdade ela só vale pra tarefa nova que for digitada ali (comportamento certo — é o que a DIR-150 pediu). O que faltava de verdade era a ação que ele estava tentando fazer: pegar tudo que já está no dia de hoje e jogar pra rotina permanente, de uma vez só, sem abrir tarefa por tarefa.
+
+**O que entra (`CrmMetodo.jsx`):**
+1. `tarefasParaRepetir` — as tarefas de hoje que AINDA não são da rotina, sem o Ritual (mesma blindagem da DIR-150: o Ritual nunca entra em `metodo_perfil.rotina`).
+2. `repetirDiaInteiro()` — grava a rotina numa TACADA SÓ (`reduce` monta a lista nova inteira, um `gravarRotina` só) — nunca um loop chamando a gravação uma vez por tarefa, que sobrescreveria a coluna repetidas vezes em cima de si mesma.
+3. Botão **"repetir o DIA INTEIRO de hoje todos os dias (N tarefas ainda não são da sua rotina)"** — mesmo lugar/estilo do "regerar o dia" (o caminho inverso: aquele leva a rotina pro dia, este leva o dia pra rotina), só aparece quando sobra alguma tarefa pra repetir — não fala à toa quando já está tudo igual.
+
+**Fora do escopo desta diretiva:** o checkbox da tarefa nova (DIR-150) continua igual — ele está correto, só precisava de companhia pra cobrir o caso "quero tudo de uma vez".
+
+**Regras fixas:** nenhuma além das anteriores.
+
+**Prova:** suíte 2431/2431 (4 testes novos em `rotinaDiaInteiroDeUmaVez.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-150 — "repetir todo dia" fica claro no momento certo, não escondido num ícone
 
 **Emitida por:** dono, ao vivo (15/09/2026): *"as pessoas estão editando a rotina e elas querem deixar salva do dia seguinte as rotinas do dia a dia, e não está claro na plataforma [...] cada rotina que ela coloque, dê a opção de ela manter recorrente isso com a rotina diária dela que ela já tem padrão. Isso é muito importante deixar bem claro [...] gostaria que você fizesse uma análise e deixasse cada vez mais claro isso e melhor organizado."* Contexto que ele deu junto, pra não confundir com o Ritual: quem está fora da mentoria organiza a própria rotina; quem está na mentoria recebe a rotina padrão com o Ritual do Amanhecer como núcleo — editável, mas perde o valor do ritual se mexer nele.

@@ -1611,6 +1611,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     if (estaNaRotina(t.titulo)) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
     gravarRotina(incluirNaRotina(rotina, { hora: t.hora, titulo: t.titulo }));
   };
+  // 🔁 DIR-151 (15/09/2026) — dono, ao vivo, depois de ver o selo por tarefa
+  // funcionando: "eu não preciso ficar apertando um por um... quando eu
+  // clicar ali embaixo repetir todo dia, todas as de cima precisa aparecer
+  // que foi atualizado." Ele tinha marcado a caixa de "repetir" do campo de
+  // TAREFA NOVA (que só vale pra tarefa que ela for criar) esperando que
+  // isso virasse a rotina do DIA INTEIRO de uma vez — não existia essa ação.
+  // Esta função é essa ação: pega tudo que já está no dia (menos o Ritual,
+  // menos o que já é rotina) e grava tudo numa TACADA SÓ (um `gravarRotina`
+  // só, não um por tarefa — evita 20 escritas em cima da mesma coluna).
+  const tarefasParaRepetir = tarefas.filter((t) => !ehTarefaDeGratidao(t.titulo) && !estaNaRotina(t.titulo));
+  const repetirDiaInteiro = async () => {
+    if (!tarefasParaRepetir.length) return;
+    const nova = tarefasParaRepetir.reduce((acc, t) => incluirNaRotina(acc, { hora: t.hora, titulo: t.titulo }), rotina);
+    const ok = await gravarRotina(nova);
+    if (ok) toast.success(`${tarefasParaRepetir.length} tarefa${tarefasParaRepetir.length === 1 ? '' : 's'} de hoje ${tarefasParaRepetir.length === 1 ? 'entrou' : 'entraram'} na sua rotina — todas de uma vez.`);
+  };
 
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
@@ -3004,6 +3020,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   </div>
                 )}
               </div>
+            )}
+
+            {/* 🔁 DIR-151 — o caminho INVERSO do "regerar o dia" logo abaixo:
+                aquele leva a ROTINA pro dia de hoje; este leva o DIA DE HOJE
+                pra rotina, tudo de uma vez. Só aparece quando sobra alguma
+                tarefa de hoje que ainda não é recorrente — nada pra clicar
+                quando já está tudo igual (vigia que fala à toa vira ruído). */}
+            {visao === 'lista' && tarefasParaRepetir.length > 0 && (
+              <button type="button" onClick={repetirDiaInteiro} disabled={salvando} className="text-xs font-semibold text-nz-verde hover:text-nz-verde-claro text-left" data-teste="repetir-dia-inteiro">
+                <Repeat className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                repetir o DIA INTEIRO de hoje todos os dias ({tarefasParaRepetir.length} tarefa{tarefasParaRepetir.length === 1 ? '' : 's'} ainda não {tarefasParaRepetir.length === 1 ? 'é' : 'são'} da sua rotina)
+              </button>
             )}
 
             {visao === 'lista' && tarefas.length > 0 && (
