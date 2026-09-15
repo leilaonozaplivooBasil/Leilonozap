@@ -56,6 +56,8 @@ import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
+import { supabase } from '@/api/supabaseClient';
+import { podeDistribuirTarefa } from '@/lib/xgame';
 import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
 import { pedirTour, TOURS_DISPONIVEIS } from '@/lib/pedidoDeTour';
 import { money } from '@/lib/format';
@@ -124,6 +126,28 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [escopo, setEscopo] = useEscopoDeVisao();
   const visPapel = useMemo(() => visibilidadeDoUsuario(user), [user]);
   const visao = useMemo(() => resolverEscopo({ vis: visPapel, escopo }), [visPapel, escopo]);
+
+  // 🎯 15/09/2026 — QUEM PODE DISTRIBUIR TAREFA deixa de ser "só o dono".
+  // A liberação é por pessoa, em xgame_participantes.pode_distribuir, ligada na
+  // ADM X-Game. Ver podeDistribuirTarefa em src/lib/xgame.js: super_admin passa
+  // sempre; o resto depende do registro.
+  //
+  // Enquanto a leitura não volta, `podeDistribuir` fica no que o crachá já
+  // garante (super_admin). Nunca liberado por otimismo: se a consulta falhar,
+  // a pessoa fica SEM o botão, não com ele.
+  const [liberadoNoJogo, setLiberadoNoJogo] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    if (!user?.id) { setLiberadoNoJogo(false); return undefined; }
+    supabase.from('xgame_participantes').select('pode_distribuir').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => { if (vivo) setLiberadoNoJogo(data?.pode_distribuir === true); })
+      .catch(() => { if (vivo) setLiberadoNoJogo(false); });
+    return () => { vivo = false; };
+  }, [user?.id]);
+  const podeDistribuir = useMemo(
+    () => podeDistribuirTarefa({ role: user?.role, pode_distribuir: liberadoNoJogo }),
+    [user?.role, liberadoNoJogo],
+  );
 
   // 🛡️ FASE 4.6 — Lê ?tab=xxx APENAS na primeira render (links externos ainda
   // funcionam). Sem polling — a sidebar do Licenciado foi removida na FASE 4.6.
@@ -1280,9 +1304,11 @@ const DashboardContent = ({ user, isAdmin }) => {
                   College a página é uma superfície só, e cartão aqui traria de
                   volta o retângulo que o dono mandou tirar. */}
               <TabsContent value="catalogo-xperformance" className={naTopCollege ? 'mt-0' : 'mt-6'}>
-                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo) só pro super admin;
-                    o ESCOPO dos dados (o quadro de todo mundo × só o meu) obedece o seletor */}
-                <XPerformance currentUser={user} visaoTotal={visao.crmTudo} gestao={visPapel.superAdmin} />
+                {/* 🎮 a gestão (o antigo Admin X-GAME + a distribuição do fixo): o dono
+                    sempre, e mais quem estiver liberado em xgame_participantes.pode_distribuir
+                    (ADM X-Game). O ESCOPO dos dados (o quadro de todo mundo × só o meu)
+                    continua obedecendo o seletor, que é outra decisão. */}
+                <XPerformance currentUser={user} visaoTotal={visao.crmTudo} gestao={podeDistribuir} />
               </TabsContent>
 
               {/* 🧠 06/09/2026 — o ENCONTRO DA MENTALIDADE: a segunda-feira num
@@ -1290,7 +1316,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   gestão e a diretoria; o resto vê e acompanha a apresentação. */}
               <TabsContent value="catalogo-encontro" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 {/* 📊 e a PERFORMANCE sem administração: a visão executiva de todo mundo e o painel corporativo de cada um — junto do fluxo, não na gestão */}
-                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={visPapel.superAdmin} soEu={visao.podeTudo && !visao.tudo} />
+                <MentalidadePagina currentUser={user} podeConduzir={visPapel.superAdmin || visPapel.visaoTotal} gestao={podeDistribuir} soEu={visao.podeTudo && !visao.tudo} />
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}

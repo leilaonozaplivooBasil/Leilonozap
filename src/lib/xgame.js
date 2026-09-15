@@ -728,6 +728,33 @@ export function horaDeMin(min) {
 // explicitamente some da lista votável). Ninguém tinha esse campo setado
 // antes desta mudança, então nada muda pra quem já estava votável.
 /** Esta pessoa pode aparecer na lista de colegas votáveis da MvM Manual? */
+/**
+ * 🎯 QUEM PODE DISTRIBUIR TAREFA (15/09/2026).
+ *
+ * Até hoje a tela de distribuir era liberada por `visPapel.superAdmin` — só
+ * `role = 'super_admin'`, ou seja, só o dono. O Emannuel, Diretor Operacional,
+ * não tinha; e o dono pediu que ele e mais dois vendedores tivessem.
+ *
+ * A liberação passa a ser POR PESSOA, gravada em
+ * `xgame_participantes.pode_distribuir` e ligada na ADM X-Game. Não é por
+ * cargo de propósito: cargo da rede é plano de comissão e `cargo` do X-Game é
+ * multa de atraso — usar qualquer um dos dois como permissão mexeria em
+ * dinheiro de quem só devia ganhar um botão. (A migração
+ * 20260915190301_pode_distribuir_tarefa.sql conta a história inteira.)
+ *
+ * 🔴 DISTRIBUIR TAREFA DEFINE QUANTO O DIA DO OUTRO VALE — a própria tela
+ * mostra "esta tarefa (peso 4) vale R$ 19,05". Por isso a coluna nasce
+ * `false`: ninguém ganha isso por acidente, só por decisão registrada.
+ *
+ * `super_admin` continua podendo sem depender da coluna: é o dono, e tirar
+ * isso dele por causa de um registro ausente no X-Game seria trancá-lo fora
+ * da própria ferramenta.
+ */
+export function podeDistribuirTarefa({ role, pode_distribuir } = {}) {
+  if (role === 'super_admin') return true;
+  return pode_distribuir === true;
+}
+
 export function podeSerVotado({ role, aceita_ser_votado } = {}) {
   if (role === 'super_admin') return aceita_ser_votado === true;
   return aceita_ser_votado !== false;

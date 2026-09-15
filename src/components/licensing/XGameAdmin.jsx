@@ -118,6 +118,7 @@ const DICAS = {
   perfil: 'O perfil muda os pesos do Human Token (teto 22,22 pros dois): estratégico/operacional — MvM 6,67 (30%, PORTÃO de caráter) + produção 6,67 + real time 3,33 + bônus/estudo 2,22 + PT VENDA 3,33; comercial — MvM 10 + produção 1,36 + real time 3,33 + bônus/estudo 5,03 + PT VENDA 2,5 (vendas valem bem mais). "Recrutamos caráter e treinamos habilidade": MvM da votação abaixo de 7 trava tudo em Bronze; abaixo de 8, sem Platina — mesmo com pontuação de sobra. Vendas só abre a Platina batendo 100% da meta do ciclo. Sem estudo em dia (semana ou fim de semana), o ciclo trava em 19,99 — só o topo (Platina), Ouro continua alcançável via produção/MvM/vendas.',
   cargo: 'O cargo define a multa de atraso do FAQ: Trainee R$50, Executivo R$200, Diretor R$500.',
   mentoria: 'Está participando do Programa da Mentoria (8 Hábitos, set/2026 a mar/2027)? Independente de estar ATIVO no MvM — dá pra votar sem estar na mentoria, e vice-versa.',
+  distribui: 'Libera a tela DISTRIBUIR TAREFA para esta pessoa — ela passa a poder criar tarefa para qualquer um do time, com peso e valor. Distribuir tarefa define quanto o dia do outro vale, então isto nasce desligado e só liga por decisão. O super admin distribui sempre, independente deste botão.',
   recebeVoto: 'Ela aparece na lista de colegas votáveis da MvM? Desligado só tira ela de RECEBER voto — ela continua podendo VOTAR nos outros se quiser, continua ATIVA no jogo e continua recebendo o fixo gamificado normalmente. Pra quem já passou pela mentoria mas não deve receber avaliação dos colegas.',
   peso: 'Peso 1 a 6 da tarefa (padrão 3). Tarefa mais pesada vale mais dinheiro no X-Pay do dia.',
   categoria: 'A categoria decide de qual verba a tarefa paga: [PRODUÇÃO] e [MENTORIA]/[VISÃO] saem da verba de produção; [BÔNUS] da verba de bônus. Venda NÃO entra aqui — a venda da loja já remunera pelas comissões da plataforma.',
@@ -899,6 +900,12 @@ export default function XGameAdmin({ onVerComo } = {}) {
                       className={`text-[11px] font-bold ${recebeVoto ? 'text-blue-600' : 'text-gray-300 hover:text-blue-500'}`}
                     >🗳️ {recebeVoto ? 'recebe voto' : 'sem voto'}</button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => salvarParticipante(p, { pode_distribuir: !p.pode_distribuir })}
+                    title={DICAS.distribui}
+                    className={`text-[11px] font-bold ${p.pode_distribuir ? 'text-amber-600' : 'text-gray-300 hover:text-amber-500'}`}
+                  >🎯 {p.pode_distribuir ? 'distribui tarefa' : 'não distribui'}</button>
                   <button type="button" onClick={() => salvarParticipante(p, { ativo: !p.ativo })} className={`text-[11px] font-bold ${p.ativo ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {p.ativo ? '● ATIVO' : '○ inativo'}
                   </button>
