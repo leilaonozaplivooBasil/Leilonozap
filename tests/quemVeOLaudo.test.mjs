@@ -95,7 +95,16 @@ test('🔴 o limite honesto está escrito no arquivo, não só na minha cabeça'
   const fonte = ler('../src/lib/quemVeOLaudo.js');
   assert.match(fonte, /RLS ligada/, 'sumiu o aviso de que a permissão não é uma barreira de banco');
   assert.match(fonte, /USING \(true\)/, 'sumiu a medição que sustenta o aviso');
-  // E a premissa da outra metade: a fila do gestor segue fechada por papel.
+  // E a premissa da outra metade: a fila do gestor segue FECHADA.
+  //
+  // ✏️ 15/09/2026 — o que fecha mudou, a premissa não. Até aqui a fila era
+  // `gestao={visPapel.superAdmin}` (só o dono). Por decisão do dono, a
+  // distribuição passou a ser liberada POR PESSOA, em
+  // `xgame_participantes.pode_distribuir`, que nasce FALSA
+  // (ver tests/podeDistribuirTarefa.test.mjs). Continua fechada por padrão —
+  // o que este teste sempre guardou — só que agora a chave é uma permissão
+  // explícita em vez do crachá de super admin.
   const licensing = semComentarios(ler('../src/pages/Licensing.jsx'));
-  assert.match(licensing, /gestao=\{visPapel\.superAdmin\}/, 'a premissa do aviso mudou: reveja quemVeOLaudo.js');
+  assert.match(licensing, /gestao=\{podeDistribuir\}/, 'a premissa do aviso mudou: reveja quemVeOLaudo.js');
+  assert.match(licensing, /useState\(false\)/, 'a fila do gestor deixou de nascer fechada');
 });
