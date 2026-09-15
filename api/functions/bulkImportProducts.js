@@ -8,6 +8,10 @@ import { oid } from '../_lib/oid.js';
 // PONTO 77 — faxina de título na entrada (remove lixo de marketplace, arruma CAIXA ALTA).
 import { limparTitulo, cortarNaPalavra } from '../_lib/limparTitulo.js';
 import { exigirSessao } from '../_lib/sessao.js';
+// 🎬 A MESMA lista branca da tela de produto. Planilha é entrada de dados como
+// qualquer outra: endereço de vídeo que não passaria no cadastro manual também
+// não pode entrar por aqui — senão a importação vira a porta dos fundos.
+import { videosValidos } from '../../src/lib/videoDoProduto.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const num = (v) => {
@@ -60,6 +64,10 @@ export default async function handler(req, res) {
       const compare = num(it.compare);
       const qty = num(it.quantity);
       const images = Array.isArray(it.images) ? it.images : (it.images ? String(it.images).split(/[;\n,]/).map((s) => s.trim()).filter(Boolean) : []);
+      // Mesma quebra da imagem (;, vírgula ou linha), depois a lista branca: o
+      // que não for YouTube/Vimeo/arquivo nosso é DESCARTADO, não gravado torto.
+      const brutosVideo = Array.isArray(it.videos) ? it.videos : (it.videos ? String(it.videos).split(/[;\n,]/).map((s) => s.trim()).filter(Boolean) : []);
+      const videos = videosValidos(brutosVideo);
       const id = oid();
       rows.push({
         id, base44_id: id,
@@ -72,6 +80,7 @@ export default async function handler(req, res) {
         quantity: qty != null ? qty : 1,
         lot: it.sku ? String(it.sku) : null,
         image_urls: images,
+        video_urls: videos,
         notes: it.notes ? String(it.notes).slice(0, 2000) : null,
         catalog_active: false,          // NUNCA publica direto — validar antes de aparecer na loja
         status: 'A_PRECIFICAR',

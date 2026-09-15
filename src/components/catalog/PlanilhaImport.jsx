@@ -14,6 +14,10 @@ const HEADER_MAP = {
   compare: ['de', 'preco de', 'preço de', 'valor de mercado', 'comparar', 'compare', 'preco cheio'],
   quantity: ['estoque', 'quantidade', 'qtd', 'qty', 'stock', 'quant'],
   sku: ['sku', 'codigo', 'código', 'cod', 'lote', 'ref', 'referencia', 'referência'],
+  // ⚠️ `videos` vem ANTES de `images` de propósito: `detectField` casa por
+  // SUBSTRING e 'url' é alias de imagem, então "URL do vídeo" seria lido como
+  // coluna de foto se a ordem fosse a contrária.
+  videos: ['video', 'vídeo', 'videos', 'vídeos', 'link do video', 'link do vídeo', 'url do video', 'url do vídeo', 'youtube'],
   images: ['imagem', 'imagens', 'foto', 'fotos', 'image', 'images', 'url', 'url da imagem', 'link da imagem'],
   notes: ['observacao', 'observação', 'detalhes', 'descricao longa', 'descrição longa', 'notes', 'obs'],
 };
@@ -65,6 +69,7 @@ export default function PlanilhaImport({ onDone }) {
     quantity: r[mapping.quantity] || '',
     sku: r[mapping.sku] || '',
     images: r[mapping.images] || '',
+    videos: r[mapping.videos] || '',
   }));
 
   const validCount = rows.filter((r) => String(r[mapping.name] || '').trim()).length;
@@ -83,6 +88,7 @@ export default function PlanilhaImport({ onDone }) {
         quantity: mapping.quantity ? r[mapping.quantity] : null,
         sku: mapping.sku ? r[mapping.sku] : null,
         images: mapping.images ? r[mapping.images] : null,
+        videos: mapping.videos ? r[mapping.videos] : null,
         notes: mapping.notes ? r[mapping.notes] : null,
       })).filter((it) => String(it.name || '').trim());
       const res = await plataforma.functions.invoke('bulkImportProducts', { actorId: user.id, items, publish: true });
@@ -95,8 +101,8 @@ export default function PlanilhaImport({ onDone }) {
 
   const downloadModel = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['Nome', 'Preço', 'Custo', 'De', 'Estoque', 'SKU', 'Imagem', 'Observação'],
-      ['Fone Bluetooth XYZ', '89,90', '40,00', '149,90', '50', 'FONE-001', 'https://exemplo.com/foto.jpg', 'Bivolt'],
+      ['Nome', 'Preço', 'Custo', 'De', 'Estoque', 'SKU', 'Imagem', 'Vídeo', 'Observação'],
+      ['Fone Bluetooth XYZ', '89,90', '40,00', '149,90', '50', 'FONE-001', 'https://exemplo.com/foto.jpg', 'https://youtu.be/dQw4w9WgXcQ', 'Bivolt'],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
@@ -122,7 +128,7 @@ export default function PlanilhaImport({ onDone }) {
       >
         <FileSpreadsheet className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
         <p className="text-white font-semibold">{fileName || 'Clique para escolher a planilha (.xlsx ou .csv)'}</p>
-        <p className="text-gray-500 text-sm mt-1">Cabeçalhos aceitos: Nome, Preço, Custo, De, Estoque, SKU, Imagem, Observação</p>
+        <p className="text-gray-500 text-sm mt-1">Cabeçalhos aceitos: Nome, Preço, Custo, De, Estoque, SKU, Imagem, Vídeo, Observação</p>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={onFile} className="hidden" />
       </div>
 
@@ -132,7 +138,7 @@ export default function PlanilhaImport({ onDone }) {
           <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 mb-4">
             <h3 className="font-semibold text-white mb-3">Mapeamento das colunas</h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              {Object.entries({ name: 'Nome do produto *', price: 'Preço de venda', cost: 'Custo', compare: 'Preço "De"', quantity: 'Estoque', sku: 'SKU/Lote', images: 'Imagem (URL)', notes: 'Observação' }).map(([field, label]) => (
+              {Object.entries({ name: 'Nome do produto *', price: 'Preço de venda', cost: 'Custo', compare: 'Preço "De"', quantity: 'Estoque', sku: 'SKU/Lote', images: 'Imagem (URL)', videos: 'Vídeo (link)', notes: 'Observação' }).map(([field, label]) => (
                 <div key={field} className="flex items-center gap-2">
                   <label className="text-sm text-gray-400 w-32 flex-shrink-0">{label}</label>
                   <select

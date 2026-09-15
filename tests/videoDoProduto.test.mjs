@@ -259,3 +259,39 @@ describe('a fiação — sem ela a feature existe só no papel', () => {
     }
   });
 });
+
+describe('a importação por planilha também traz vídeo', () => {
+  const rota = semComentarios(ler('../api/functions/bulkImportProducts.js'));
+  const tela = ler('../src/components/catalog/PlanilhaImport.jsx');
+
+  test('a coluna de vídeo chega no banco', () => {
+    assert.match(rota, /video_urls: videos/);
+  });
+
+  test('🔴 e passa pela MESMA lista branca do cadastro manual', () => {
+    // Sem isto a planilha vira a porta dos fundos: o que a tela recusa
+    // entraria em lote, sem ninguém olhar linha por linha.
+    assert.match(rota, /videosValidos\(brutosVideo\)/);
+    assert.match(rota, /from '\.\.\/\.\.\/src\/lib\/videoDoProduto\.js'/);
+  });
+
+  test('a planilha aceita vários endereços na mesma célula, como já faz com foto', () => {
+    assert.match(rota, /String\(it\.videos\)\.split/);
+  });
+
+  test('🔴 a coluna de vídeo é detectada ANTES da de imagem', () => {
+    // `detectField` casa por SUBSTRING e 'url' é alias de imagem. Se `images`
+    // viesse primeiro, o cabeçalho "URL do vídeo" seria lido como coluna de
+    // foto — e o vídeo apareceria quebrado na galeria em vez de tocar.
+    const iVideo = tela.indexOf('  videos: [');
+    const iImagem = tela.indexOf('  images: [');
+    assert.ok(iVideo > 0 && iImagem > 0, 'sumiu um dos dois dicionários');
+    assert.ok(iVideo < iImagem, 'images voltou a ser detectada antes de videos');
+  });
+
+  test('a tela manda a coluna, oferece o mapeamento e o modelo tem a coluna', () => {
+    assert.match(tela, /videos: mapping\.videos \? r\[mapping\.videos\] : null/);
+    assert.match(tela, /videos: 'Vídeo \(link\)'/);
+    assert.match(tela, /'Imagem', 'Vídeo', 'Observação'/);
+  });
+});
