@@ -40,12 +40,34 @@ export default function ParceiroAbertura({ onSolicitarAcesso }) {
           Solicitar acesso às condições
         </button>
 
-        <div className="mt-16 border-t border-pc-borda pt-6 sm:flex sm:items-end sm:justify-between">
+        {/* ⚖️ 15/09/2026 — O AVISO LEGAL DESCEU PARA UMA LINHA SÓ DELE.
+            Print do dono: "NÃO É OFERTA PÚBLICA" encostado no fim do endereço,
+            parecendo texto sobreposto por erro em vez de nota de rodapé.
+
+            A causa eram três coisas na MESMA linha flex: sem `gap`, o endereço
+            sem largura máxima (é a linha mais longa da página) e o aviso sem
+            `shrink-0`. Espremido, ele quebrava em duas linhas e ficava ombro a
+            ombro com o fim do endereço.
+
+            ⚠️ Medido, não deduzido (tests/navegador/avisoLegal.spec.mjs): as
+            caixas NÃO chegavam a se sobrepor — ficavam encostadas, sem folga
+            nenhuma. Ler como sobreposição é efeito de duas linhas de tamanhos
+            diferentes se tocando, e é o que fazia parecer defeito de
+            renderização em vez de nota de rodapé.
+
+            Dava pra remendar com gap + shrink-0 + max-w, mas aí o conserto
+            dependeria da largura dar sorte: em tela estreita os dois voltam a
+            ficar ombro a ombro. Em linha própria não há disputa em largura
+            nenhuma — e é onde aviso legal mora em documento sério. */}
+        <div className="mt-16 border-t border-pc-borda pt-6">
           <div className="text-xs leading-relaxed text-pc-tinta-fraca sm:text-sm">
             <p className="font-semibold text-pc-tinta">COMPRAS FULL COMÉRCIO LTDA · CNPJ 51.544.091/0001-67</p>
             <p>Av. das Américas, 19.005, Torre 1, Sala 1106, Recreio dos Bandeirantes, Rio de Janeiro/RJ</p>
           </div>
-          <p className="mt-4 text-[10px] uppercase tracking-[0.25em] text-pc-tinta-fraca sm:mt-0 sm:text-xs">
+          <p
+            data-teste="aviso-oferta-publica"
+            className="mt-6 text-[10px] uppercase tracking-[0.25em] text-pc-tinta-fraca sm:text-xs sm:text-right"
+          >
             Não é oferta pública
           </p>
         </div>
