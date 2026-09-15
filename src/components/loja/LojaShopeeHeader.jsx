@@ -5,19 +5,7 @@ import { createPageUrl } from '@/utils';
 import { supabase } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import RotatingBanner from '@/components/banner/RotatingBanner';
-import { interleaveBanners } from '@/lib/interleaveBanners';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
-// 🖼️ Banners oficiais da loja (rotativos). Empacotados no app para garantir exibição
-// imediata em produção. Artes novas (25/07) em 1376×768 (~16:9) — mostrados com
-// fit=contain + fundo ambiente desfocado, sem cortar nada.
-import banner1Desk from '@/assets/banners/banner1-desktop.webp';
-import banner1Mob from '@/assets/banners/banner1-mobile.webp';
-import banner2Desk from '@/assets/banners/banner2-desktop.webp';
-import banner2Mob from '@/assets/banners/banner2-mobile.webp';
-import banner4Desk from '@/assets/banners/banner4-desktop.webp';
-import banner4Mob from '@/assets/banners/banner4-mobile.webp';
-import banner5Desk from '@/assets/banners/banner5-desktop.webp';
-import banner5Mob from '@/assets/banners/banner5-mobile.webp';
 
 const WHATSAPP = WHATSAPP_OFICIAL;
 const SOCIAL = {
@@ -46,32 +34,13 @@ const LIVOO_FEED = 'https://livoolive.com.br/app';
 
 const LOGO = '/brand/icon-3d.webp';
 
-// Banners oficiais da loja (rotativos), na paleta oficial da logo (#4d724b/#99c198/
-// #dabb98/#21222b/#9da7b5). Arte dedicada por dispositivo: desktop 1920×600 (16:5,
-// largura total do navegador) e mobile 1344×768. Licenciado (4 e 5) → /Licensing.
-const IMAGE_CATALOG_BANNERS = [
-  { desktop: banner1Desk, mobile: banner1Mob, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
-  { desktop: banner2Desk, mobile: banner2Mob, title: 'Ferramentas Entrega Full — até 85% de desconto' },
-  // 🧾 AUDITORIA 15/09/2026 — banner 3 ("+500 produtos… + FRETE GRÁTIS") saiu da rotação:
-  // a ARTE promete frete grátis e a loja cobra frete real. Volta quando a arte for refeita.
-  { desktop: banner4Desk, mobile: banner4Mob, title: 'Torne-se um Licenciado — receba até 20% de comissão', link_url: createPageUrl('Licensing') },
-  { desktop: banner5Desk, mobile: banner5Mob, title: 'Seja um Licenciado — venda na Loja Virtual e ganhe de casa', link_url: createPageUrl('Licensing') },
-].flatMap(({ desktop, mobile, ...b }, i) => [
-  { ...b, image_url: desktop, id: `nz-banner-${i}-d`, device_type: 'desktop' },
-  { ...b, image_url: mobile, id: `nz-banner-${i}-m`, device_type: 'mobile' },
-]);
-
-// 🎬 3 vídeos institucionais (Influenciador, Vendedor, Licenciado) entram no
-// carrossel da Loja Virtual, junto com os banners de imagem acima.
-const VIDEO_CATALOG_BANNERS = [
-  { titulo: 'Seja um Influenciador', legenda: 'Seja um Influenciador Leilão NoZap', sub: 'Grave, indique, ganhe 5% em dinheiro real por cada arremate e venda na Loja Virtual', url: '/midia/af86d374c_Vdeo_Influenciador.mp4', link_url: createPageUrl('Licensing') },
-  { titulo: 'Seja um Vendedor', legenda: 'Seja um Vendedor Leilão NoZap', sub: 'Divulgue, venda e ganhe 10% em dinheiro real', url: '/midia/1e5cd0bf9_Vdeo_Vendedor.mp4', link_url: createPageUrl('SejaVendedor') },
-  { titulo: 'Seja um Licenciado', legenda: 'Seja um Licenciado Leilão NoZap', sub: 'Coordene sua equipe e ganhe 13% em dinheiro real', url: '/midia/31a58a982_Vdeo_Licenciado.mp4', link_url: createPageUrl('SejaLicenciado') },
-].flatMap(({ titulo, legenda, sub, url, link_url }, i) => [
-  { title: titulo, caption_title: legenda, caption_subtitle: sub, video_url: url, link_url, id: `nz-video-${i}-d`, device_type: 'desktop' },
-  { title: titulo, caption_title: legenda, caption_subtitle: sub, video_url: url, link_url, id: `nz-video-${i}-m`, device_type: 'mobile' },
-]);
-export const CATALOG_BANNERS = interleaveBanners(IMAGE_CATALOG_BANNERS, VIDEO_CATALOG_BANNERS);
+// 🖼️ 15/09/2026 — A LOJA NÃO TEM MAIS BANNER FIXO NO CÓDIGO.
+// Antes daqui saíam 4 artes empacotadas no app + 3 vídeos institucionais
+// intercalados. O dono subiu artes novas pelo Painel de Mídia e a loja continuava
+// mostrando as velhas, porque a lista fixa ganhava da prop `banners` que a página
+// já entregava. Ordem do dono: "apenas eles como banners".
+// Quem manda agora é Admin › Painel de Mídia (seção "Loja Virtual"): ordem,
+// arte, link e dispositivo. Para trocar banner NÃO se mexe mais em código.
 
 // Ícone redondo do rail de categorias (estilo Shopee, cores Leila)
 function RailIcon({ icon: Icon, label, onClick, accent = 'green' }) {
@@ -223,10 +192,13 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
           (924×520), e as laterais ficam com o desfoque da própria arte
           (`ambient`) — o mesmo recurso que a loja já usava. No celular o teto
           nem chega a valer: a 390px o 16:9 dá 219px. */}
-      {!modoBusca && (
+      {!modoBusca && banners.length > 0 && (
       <div className="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
         <div className="relative overflow-hidden bg-[#21222b] h-[56.25vw] max-h-[520px]" data-teste="moldura-banner-loja">
-          <RotatingBanner banners={CATALOG_BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
+          {/* `banners` vem do Painel de Mídia (seção "Loja Virtual"), já ordenado
+              e normalizado por Catalog.jsx. Sem banner cadastrado, a moldura nem
+              aparece — é melhor a loja começar na vitrine do que numa faixa preta. */}
+          <RotatingBanner banners={banners} heightClass="h-full" rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />

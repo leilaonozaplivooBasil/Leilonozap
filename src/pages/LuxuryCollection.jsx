@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Crown, Sparkles, Search, Gem, Lock, Key } from "lucide-react";
 import LuxuryCard from "../components/luxury/LuxuryCard";
 import RotatingBanner from "../components/banner/RotatingBanner";
+import { prepararBannersDoPainel } from "@/lib/bannersDoPainel";
 import GoldDiamondRain from "../components/luxury/GoldDiamondRain";
 import { useSectionTracking } from '@/lib/tracking';
 
@@ -96,10 +97,10 @@ const [banners, setBanners] = useState([]);
   useEffect(() => {
   if (!isAuthorized) return;
   plataforma.entities.BannerImage.filter({ context: 'luxurycollection' }).then((bannerData) => {
-    const sortedBanners = (bannerData || [])
-      .filter((b) => b.is_active)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    setBanners(sortedBanners);
+    // `prepararBannersDoPainel` ordena pelo painel e, se a coluna Mobile estiver
+    // vazia, deixa a arte de desktop servir também o celular (senão o carrossel
+    // filtra tudo e o celular fica sem banner).
+    setBanners(prepararBannersDoPainel((bannerData || []).filter((b) => b.is_active)));
   }).catch(() => {});
 }, [isAuthorized]);
 

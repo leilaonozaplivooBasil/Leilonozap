@@ -22,7 +22,7 @@ const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import HeroBannerLeiloes from '../components/home/HeroBannerLeiloes';
-import { interleaveBanners } from '@/lib/interleaveBanners';
+import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
 import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
 import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
@@ -43,16 +43,10 @@ import { mostrarBlocosDeDescoberta, recadoDaBusca } from '@/lib/buscaDaVitrine';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
-// 🎬 3 vídeos institucionais (Influenciador, Vendedor, Licenciado) entram no
-// carrossel de banners do topo, junto com os banners de imagem cadastrados no admin.
-const VIDEO_BANNERS = [
-  { id: 'video-influenciador', video_url: '/midia/af86d374c_Vdeo_Influenciador.mp4', title: 'Seja um Influenciador', caption_title: 'Seja um Influenciador Leilão NoZap', caption_subtitle: 'Grave, indique, ganhe 5% em dinheiro real por cada arremate e venda na Loja Virtual', link_url: createPageUrl('Licensing'), device_type: 'desktop' },
-  { id: 'video-influenciador-m', video_url: '/midia/af86d374c_Vdeo_Influenciador.mp4', title: 'Seja um Influenciador', caption_title: 'Seja um Influenciador Leilão NoZap', caption_subtitle: 'Grave, indique, ganhe 5% em dinheiro real por cada arremate e venda na Loja Virtual', link_url: createPageUrl('Licensing'), device_type: 'mobile' },
-  { id: 'video-vendedor', video_url: '/midia/1e5cd0bf9_Vdeo_Vendedor.mp4', title: 'Seja um Vendedor', caption_title: 'Seja um Vendedor Leilão NoZap', caption_subtitle: 'Divulgue, venda e ganhe 10% em dinheiro real', link_url: createPageUrl('SejaVendedor'), device_type: 'desktop' },
-  { id: 'video-vendedor-m', video_url: '/midia/1e5cd0bf9_Vdeo_Vendedor.mp4', title: 'Seja um Vendedor', caption_title: 'Seja um Vendedor Leilão NoZap', caption_subtitle: 'Divulgue, venda e ganhe 10% em dinheiro real', link_url: createPageUrl('SejaVendedor'), device_type: 'mobile' },
-  { id: 'video-licenciado', video_url: '/midia/31a58a982_Vdeo_Licenciado.mp4', title: 'Seja um Licenciado', caption_title: 'Seja um Licenciado Leilão NoZap', caption_subtitle: 'Coordene sua equipe e ganhe 13% em dinheiro real', link_url: createPageUrl('SejaLicenciado'), device_type: 'desktop' },
-  { id: 'video-licenciado-m', video_url: '/midia/31a58a982_Vdeo_Licenciado.mp4', title: 'Seja um Licenciado', caption_title: 'Seja um Licenciado Leilão NoZap', caption_subtitle: 'Coordene sua equipe e ganhe 13% em dinheiro real', link_url: createPageUrl('SejaLicenciado'), device_type: 'mobile' },
-];
+// 🖼️ 15/09/2026 — OS 3 VÍDEOS INSTITUCIONAIS SAÍRAM DO CARROSSEL DO TOPO.
+// Ficavam aqui (Influenciador, Vendedor, Licenciado) intercalados com as artes
+// do painel. Ordem do dono, ao pé da letra: as artes novas "devem ser os únicos
+// banners". Os vídeos continuam existindo em /midia e nas páginas Seja*.
 
 // Botão de ação do hero — mesmo visual no mobile e no desktop
 function HeroAction({ icon: Icon, label, sublabel, accent = "green" }) {
@@ -763,8 +757,7 @@ export default function Home() {
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
 
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
-        // .slice(0,1): cache de sessões antigas ainda pode ter 2 artes de imagem
-        setBanners(interleaveBanners(JSON.parse(cachedBanners).slice(0, 1), VIDEO_BANNERS));
+        setBanners(prepararBannersDoPainel(JSON.parse(cachedBanners)));
       } else {
         // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
         // PONTO 90 — os banners bonitos da Home estão cadastrados como device_type
@@ -772,13 +765,12 @@ export default function Home() {
         // Marcamos como "any": a MESMA arte serve os dois tamanhos (padrão da Loja
         // Virtual). Os banners velhos (sem context) continuam de fora.
         plataforma.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
-        // Só o PRIMEIRO banner de imagem entra no carrossel: a segunda arte
-        // não enquadra em nenhuma proporção (fica sempre cortada nas laterais).
-        const imageBanners = (bannerData || [])
-          .sort((a, b) => (a.order || 0) - (b.order || 0))
-          .slice(0, 1)
-          .map((b) => ({ ...b, device_type: 'any' }));
-        const sortedBanners = interleaveBanners(imageBanners, VIDEO_BANNERS);
+        // 🖼️ 15/09/2026 — SAIU o `.slice(0, 1)`. Ele existia porque a segunda arte
+        // antiga não enquadrava em proporção nenhuma; com a moldura 16:9 e
+        // `fit=contain` isso deixou de ser verdade, e cortar a lista fazia o dono
+        // subir 3 banners pelo painel e ver só 1 no ar.
+        // A ordem é a do painel (campo `order`) — quem é o principal é ele quem diz.
+        const sortedBanners = prepararBannersDoPainel(bannerData);
           // Salva a URL da primeira imagem pra preload na próxima visita
           if (sortedBanners[0]?.image_url) {
             localStorage.setItem('home_banner_first_url', sortedBanners[0].image_url);
@@ -794,11 +786,11 @@ export default function Home() {
             }
           }
           setBanners(sortedBanners);
-          sessionStorage.setItem('home_banners_cache', JSON.stringify(imageBanners));
+          sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
           sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
         }).catch(() => {
           const oldBanners = sessionStorage.getItem('home_banners_cache');
-          if (oldBanners) setBanners(JSON.parse(oldBanners));
+          if (oldBanners) setBanners(prepararBannersDoPainel(JSON.parse(oldBanners)));
         });
       }
     };
