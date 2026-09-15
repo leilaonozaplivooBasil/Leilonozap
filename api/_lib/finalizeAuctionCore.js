@@ -690,7 +690,8 @@ export async function finalizeOneAuction(auction) {
         step: 'AUCTION_FINALIZED',
         status: 'success',
         message: `Encerrado no servidor. Vencedor: ${winnerName || 'sem lances'} — R$ ${finalPrice.toFixed(2)}`,
-        created_date: new Date().toISOString(),
+        // 15/09/2026 — system_logs não tem created_date (o insert voltava 400 e o log sumia calado)
+        created_at: new Date().toISOString(),
       }),
     });
   } catch (_) { /* log é opcional */ }

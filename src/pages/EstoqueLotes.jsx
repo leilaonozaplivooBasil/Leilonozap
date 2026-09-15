@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import PublicarOportunidadeModal from '@/components/lotes/PublicarOportunidadeModal';
 import { gerarProdutosDoLote } from '@/functions/gerarProdutosDoLote';
-import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
+import AnalisadorDestaque from '@/components/lotes/AnalisadorDestaque';
 import { useNavigate } from 'react-router-dom';
 import PageFullscreen from "@/components/admin/PageFullscreen";
 
@@ -260,8 +260,10 @@ export default function EstoqueLotes() {
           </Button>
         </div>
 
-        {/* ANALISADOR INLINE */}
-        <AnalisadorLoteInline onEnviado={loadLotes} />
+        {/* ⭐ 15/09/2026 — a cópia inteira do analisador que ficava aqui (e virava
+            um bloco BRANCO no tema claro do painel) saiu: agora é um cartão-destaque
+            que leva para o único analisador, /AnaliseDeLotes. */}
+        <AnalisadorDestaque className="mb-6" />
 
         {/* CARDS DE STATUS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

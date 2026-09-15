@@ -127,7 +127,7 @@ export default function ArquitetoIA() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
       const [errors, auctions] = await Promise.all([
-        SystemLog.filter({ status: 'error' }, '-created_date', 100),
+        SystemLog.filter({ status: 'error' }, '-created_at', 100), // system_logs não tem created_date
         Auction.filter({ status: 'active' }, '-created_date', 100)
       ]);
       

@@ -140,7 +140,7 @@ export default async function handler(req, res) {
     // ── CAMINHO DA LOJA: como sempre foi, e sem selo ──────────────────────
     const r = await cotarOpcoes({ cep: body.cep, items: body.items });
     if (!r.ok) {
-      return res.status(200).json({ success: false, configured: true, error: r.error });
+      return res.status(200).json({ success: false, configured: true, error: r.error, motivo: r.motivo || null });
     }
     return res.status(200).json({ success: true, configured: true, opcoes: r.opcoes });
   } catch (e) {

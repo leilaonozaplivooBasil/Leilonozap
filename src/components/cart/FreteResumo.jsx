@@ -2,9 +2,9 @@
 // uma transportadora. O valor escolhido entra no total; o servidor recota na hora de pagar.
 import React from 'react';
 import { money } from '@/lib/format';
-import { Truck, Check, Loader2 } from 'lucide-react';
+import { Truck, Check, Loader2, Store, MessageCircle } from 'lucide-react';
 
-export default function FreteResumo({ opcoes, selecionada, onSelecionar, onCalcular, calculando, mensagem, retirada, bloqueado }) {
+export default function FreteResumo({ opcoes, selecionada, onSelecionar, onCalcular, calculando, mensagem, retirada, bloqueado, semTransportadora, onRetirada, linkWhatsApp }) {
   if (retirada) {
     return (
       <div className="flex justify-between items-center text-base">
@@ -43,6 +43,29 @@ export default function FreteResumo({ opcoes, selecionada, onSelecionar, onCalcu
       )}
 
       {mensagem && <p className="text-yellow-400/90 text-xs">{mensagem}</p>}
+
+      {/* 🚚 15/09/2026 — sem transportadora não é beco sem saída: retirada ou frete combinado. */}
+      {semTransportadora && !bloqueado && !calculando && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onRetirada}
+            className="inline-flex items-center gap-1.5 rounded-lg border-2 border-green-500 bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/20 min-h-[44px]"
+          >
+            <Store className="w-4 h-4" /> Retirar na loja (grátis)
+          </button>
+          {linkWhatsApp && (
+            <a
+              href={linkWhatsApp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border-2 border-gray-600 px-3 py-2 text-xs font-semibold text-white hover:border-green-500/50 min-h-[44px]"
+            >
+              <MessageCircle className="w-4 h-4" /> Combinar frete no WhatsApp
+            </a>
+          )}
+        </div>
+      )}
 
       {temOpcoes && (
         <div className="space-y-1.5 pt-1">

@@ -1,12 +1,15 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { toast } from 'sonner';
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
 
 const Auction = plataforma.entities.Auction;
-import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, Eye } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, Eye, Warehouse, MapPin, Sparkles } from 'lucide-react';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
+import PublicarOportunidadeModal from '../components/lotes/PublicarOportunidadeModal';
+import ItensDoLote from '../components/lotes/ItensDoLote';
 import VereditoMLCard from '../components/lotes/VereditoMLCard';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -16,10 +19,17 @@ function AnaliseDeLotes() {
     const [lotesImportados, setLotesImportados] = useState([]);
     const [loteAtual, setLoteAtual] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isPublishing, setIsPublishing] = useState(null);
+    // 15/09/2026 — este é o ÚNICO analisador: as ações de estoque e de Oportunidades
+    // do Dia (antes só na cópia dentro do Estoque de Lotes) moram aqui também.
+    const [isSaving, setIsSaving] = useState(false);
+    const [oportunidadeModal, setOportunidadeModal] = useState(false);
+    const [publicandoOportunidade, setPublicandoOportunidade] = useState(false);
     const [error, setError] = useState('');
     const [expandedCategories, setExpandedCategories] = useState(new Set());
     const [gradeModal, setGradeModal] = useState(null);
+
+    // Trocou de lote → categorias fecham (senão as abertas de um lote seguiam "abertas" no outro)
+    useEffect(() => { setExpandedCategories(new Set()); }, [loteAtual?.id]);
 
     const toggleCategory = (nome) => {
         setExpandedCategories(prev => {
@@ -37,7 +47,9 @@ function AnaliseDeLotes() {
     const [horarioLeilao, setHorarioLeilao] = useState('');
 
     // Editable Financials
-    const [arremateInputValue, setArremateInputValue] = useState('15639.00');
+    // Começa VAZIO: com R$ 15.639,00 fixo o score saía calculado sobre um arremate
+    // inventado antes de o operador digitar qualquer coisa.
+    const [arremateInputValue, setArremateInputValue] = useState('');
     const [taxaPct, setTaxaPct] = useState(7);
     const [frete, setFrete] = useState(1000.00);
     const [outros, setOutros] = useState(0);
@@ -137,6 +149,8 @@ function AnaliseDeLotes() {
             nomePlanilha: filename,
             nomeLote: filename.replace(/\.xlsx?$|\.csv$/i, ''),
             localColeta: 'Será informado após Arremate',
+            origem: 'Casa e Vídeo',
+            resumoOrigem: 'itens',
             resumoCategorias: Object.values(resumoCategorias),
             subItemsByCategory,
             quantidadeTotal: totalItemsQtd,
@@ -153,6 +167,8 @@ function AnaliseDeLotes() {
     const handleFileUpload = useCallback((e) => {
         const file = e.target.files[0];
         if (!file) return;
+        // Sem isto, escolher o MESMO arquivo de novo não dispara onChange (nada acontece).
+        e.target.value = '';
 
         setIsProcessing(true);
         setError('');
@@ -186,13 +202,22 @@ function AnaliseDeLotes() {
         const resumoCategorias = [];
         let referenceMarketValue = null;
 
-        // Tentar ler aba COMPLEMENTO (para capturar o endereço)
-        if (rawWorkbookData.Sheets['Complemento']) {
-            const compData = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets['Complemento'], { header: 1 });
-            const localRow = compData.find(row => row && row[0] && typeof row[0] === 'string' && row[0].includes('Local de Carregamento'));
-            if (localRow && localRow[1]) {
-                localColeta = String(localRow[1]).trim();
+        // Local de retirada: procura "Local de Carregamento" em QUALQUER aba e em
+        // qualquer coluna. Só a aba "Complemento" era lida, mas nas planilhas reais
+        // do Mercado Livre a célula está na aba "Cronograma" — o campo saía sempre
+        // "Será informado após Arremate".
+        for (const nomeAba of rawWorkbookData.SheetNames) {
+            const linhas = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[nomeAba], { header: 1 });
+            for (const linha of linhas.slice(0, 40)) {
+                if (!Array.isArray(linha)) continue;
+                const idx = linha.findIndex((c) => typeof c === 'string' && /local de carregamento/i.test(c));
+                if (idx < 0) continue;
+                const naMesmaCelula = String(linha[idx]).split(':').slice(1).join(':').trim();
+                const aoLado = linha.slice(idx + 1).find((c) => c != null && String(c).trim() !== '');
+                const achado = (aoLado != null ? String(aoLado) : naMesmaCelula).trim();
+                if (achado) { localColeta = achado; break; }
             }
+            if (localColeta !== 'Será informado após Arremate') break;
         }
 
         // Tentar ler aba RESUMO (para montar uma tabela de categorias)
@@ -204,7 +229,7 @@ function AnaliseDeLotes() {
                 for (let i = startRow; i < resData.length; i++) {
                     const r = resData[i];
                     if (!r || !r[0]) continue;
-                    if (r[0].includes('Total Geral')) {
+                    if (String(r[0]).includes('Total Geral')) {
                         const rawVal = r[2];
                         if (typeof rawVal === 'number') referenceMarketValue = rawVal;
                         else if (rawVal) referenceMarketValue = parseFloat(String(rawVal).replace(/[R$\s]/g, '').replace(',', '.'));
@@ -275,7 +300,11 @@ function AnaliseDeLotes() {
         const getColumnIndex = (keywords) => normalizedHeaders.findIndex(header => keywords.some(kw => header.includes(kw)));
 
         const colClass = getColumnIndex(['CLASSE', 'CLASSIFICA', 'CLASS', 'CONDIÇÃO', 'GRADE']);
-        const colValue = getColumnIndex(['VALOR TOTAL', 'VALOR DE MERCADO', 'VALOR']);
+        // 15/09/2026 — "Valor Unit" vem ANTES de "Valor Total" nas planilhas do
+        // Mercado Livre; o `'VALOR'` genérico casava primeiro e o lote inteiro era
+        // somado pelo preço unitário (LOTE132: R$ 13.355 no lugar de R$ 96.406).
+        const colValueTotal = getColumnIndex(['VALOR TOTAL', 'VALOR DE MERCADO']);
+        const colValue = colValueTotal >= 0 ? colValueTotal : normalizedHeaders.findIndex(h => h.includes('VALOR') && !h.includes('UNIT'));
         const colQtd = getColumnIndex(['QUANTIDADE', 'QTD']);
 
         // Pré-calcula coluna de descrição uma vez fora do loop
@@ -407,11 +436,28 @@ function AnaliseDeLotes() {
             }
         }
 
+        // Sem aba "Resumo" (2 de 3 planilhas reais não têm), a tabela departamental
+        // nasce da própria coluna Categoria dos itens — antes simplesmente sumia.
+        let resumoOrigem = 'aba';
+        if (resumoCategorias.length === 0 && Object.keys(subItemsByCategory).length > 0) {
+            resumoOrigem = 'itens';
+            for (const [nome, subs] of Object.entries(subItemsByCategory)) {
+                resumoCategorias.push({
+                    nome,
+                    qtd: subs.reduce((a, s) => a + (Number(s.qtd) || 0), 0),
+                    valor: subs.reduce((a, s) => a + (Number(s.valor) || 0), 0),
+                });
+            }
+            resumoCategorias.sort((a, b) => b.valor - a.valor);
+        }
+
         const novoLote = {
             id: Date.now(),
             nomePlanilha: filename,
-            nomeLote: filename.replace(/\.xlsx?$/, ''),
+            nomeLote: filename.replace(/\.xlsx?$|\.csv$/i, ''),
             localColeta,
+            origem: 'Mercado Livre',
+            resumoOrigem,
             resumoCategorias,
             subItemsByCategory,
             quantidadeTotal: totalItemsQtd,
@@ -444,8 +490,9 @@ function AnaliseDeLotes() {
         const lucroEstimado = projMedio - custoTotal;
         const rentabilidade = custoTotal > 0 ? (lucroEstimado / custoTotal) * 100 : 0;
 
-        let score = { label: 'INDEFINIDO', color: 'bg-slate-600', text: 'text-slate-400' };
-        if (custoTotal > 0) {
+        let score = { label: 'INDEFINIDO', color: 'bg-slate-800/40', border: 'border-slate-600', text: 'text-slate-300', icon: <AlertCircle className="text-slate-400" /> };
+        const semArremate = valorArrematado <= 0;
+        if (!semArremate && custoTotal > 0) {
             if (rentabilidade >= 200) score = { label: 'EXCELENTE', color: 'bg-emerald-500/20', border: 'border-emerald-500', text: 'text-emerald-400', icon: <TrendingUp className="text-emerald-400" /> };
             else if (rentabilidade >= 120) score = { label: 'BOM', color: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: <Activity className="text-blue-400" /> };
             else if (rentabilidade >= 80) score = { label: 'MÉDIO', color: 'bg-yellow-500/20', border: 'border-yellow-500', text: 'text-yellow-400', icon: <AlertCircle className="text-yellow-400" /> };
@@ -487,7 +534,7 @@ function AnaliseDeLotes() {
         return {
             valorArrematado, taxaValor, custoTotal,
             projCurto, projMedio, projLongo,
-            lucroEstimado, rentabilidade, score,
+            lucroEstimado, rentabilidade, score, semArremate,
             chartData, COLORS,
             tmA, tmAB, tmABC, tmABCD, tmALL,
             valA, valAB, valABC, valABCD, valALL,
@@ -496,11 +543,136 @@ function AnaliseDeLotes() {
     }, [loteAtual, arremateInputValue, taxaPct, frete, outros]);
 
 
+    const removerLoteAtual = () => {
+        const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
+        setLotesImportados(newLotes);
+        setLoteAtual(newLotes[0] || null);
+        setDataLeilao('');
+        setHorarioLeilao('');
+    };
+
+    const handlePublicarMarketplace = async () => {
+        if (!loteAtual || !calculations) return;
+        if (calculations.semArremate) { toast.error('Informe o valor do arremate antes de publicar.'); return; }
+        setIsSaving(true);
+        try {
+            let endTime;
+            if (dataLeilao && horarioLeilao) endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
+            else if (dataLeilao) endTime = new Date(`${dataLeilao}T12:00:00`);
+            else { endTime = new Date(); endTime.setDate(endTime.getDate() + 30); }
+            await Auction.create({
+                title: loteAtual.nomeLote,
+                description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)}`,
+                starting_price: calculations.custoTotal,
+                current_price: calculations.custoTotal,
+                increment: 100,
+                end_time: endTime.toISOString(),
+                status: 'active',
+                is_investment_plan: true,
+                market_price: loteAtual.valorMercadoTotal,
+                manual_market_price: loteAtual.valorMercadoTotal,
+                lot_categories_json: loteAtual.resumoCategorias?.length > 0 ? JSON.stringify(loteAtual.resumoCategorias) : null,
+                lot_items_json: loteAtual.subItemsByCategory && Object.keys(loteAtual.subItemsByCategory).length > 0 ? JSON.stringify(loteAtual.subItemsByCategory) : null,
+                lot_grades_json: loteAtual.gradesData ? JSON.stringify(loteAtual.gradesData) : null,
+                lot_raw_items_json: loteAtual.rawItemsByGrade?.length > 0 ? JSON.stringify(loteAtual.rawItemsByGrade) : null,
+            });
+            removerLoteAtual();
+            toast.success('Lote publicado no Marketplace.');
+            navigate(createPageUrl('GestaoLotes'));
+        } catch (e) {
+            // Antes não havia try/catch: falha de rede/RLS deixava "Publicando..." para sempre.
+            toast.error('Erro ao publicar: ' + (e?.message || e));
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // 📦 Manda o lote analisado para o Estoque de Lotes Recebidos (itens agrupados por descrição + grade).
+    const handleEnviarParaEstoque = async () => {
+        if (!loteAtual) return;
+        setIsSaving(true);
+        try {
+            const mapa = new Map();
+            for (const item of (loteAtual.rawItemsByGrade || [])) {
+                const grade = String(item.grade || 'A').toUpperCase();
+                const chave = `${String(item.desc || '').trim().toLowerCase()}|${grade}`;
+                const ex = mapa.get(chave);
+                if (ex) { ex.qtd += (item.qtd || 1); ex.valor_mercado += (item.valor || 0); }
+                else mapa.set(chave, { desc: String(item.desc || '').trim(), grade, qtd: item.qtd || 1, valor_mercado: item.valor || 0 });
+            }
+            await plataforma.entities.LoteRecebido.create({
+                nome_lote: loteAtual.nomeLote,
+                marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
+                valor_lote: calculations?.custoTotal || 0,
+                observacoes: `Origem: ${loteAtual.origem} | Valor Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)} | Qtd: ${loteAtual.quantidadeTotal} | Arremate: R$ ${fmtBR(calculations?.valorArrematado || 0)} | Taxa: ${taxaPct}% | Frete: R$ ${frete} | Local: ${loteAtual.localColeta}`,
+                data_recebimento: new Date().toISOString(),
+                status: 'recebido',
+                itens_json: JSON.stringify(Array.from(mapa.values())),
+                quantidade_total: loteAtual.quantidadeTotal || 0,
+                valor_mercado_total: loteAtual.valorMercadoTotal || 0,
+                produtos_gerados: false,
+                deposito_destino: 'Bangu',
+            });
+            removerLoteAtual();
+            setArremateInputValue('');
+            toast.success('Lote enviado para o Estoque de Lotes.');
+            navigate(createPageUrl('EstoqueLotes'));
+        } catch (e) {
+            toast.error('Erro ao enviar para estoque: ' + (e?.message || e));
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // 🌟 Publica nas Oportunidades do Dia do painel do Parceiro (mesma rota de escrita do estoque).
+    const handlePublicarOportunidade = async (dadosOportunidade) => {
+        if (!loteAtual) return;
+        setPublicandoOportunidade(true);
+        try {
+            const caller_email = JSON.parse(localStorage.getItem('currentUser') || '{}')?.email;
+            const itens = (loteAtual.rawItemsByGrade || []).map((i) => ({
+                desc: String(i.desc || '').trim(), grade: String(i.grade || 'A').toUpperCase(), qtd: i.qtd || 1, valor_mercado: i.valor || 0,
+            }));
+            const resp = await plataforma.functions.invoke('loteRecebidoWrite', {
+                method: 'create',
+                caller_email,
+                data: {
+                    nome_lote: loteAtual.nomeLote,
+                    marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
+                    origem: loteAtual.origem,
+                    status: 'em_analise',
+                    valor_lote: calculations?.custoTotal || 0,
+                    custo_total: calculations?.custoTotal || 0,
+                    valor_arremate: calculations?.valorArrematado || 0,
+                    taxa_pct: taxaPct,
+                    frete,
+                    outros,
+                    local_coleta: loteAtual.localColeta || null,
+                    quantidade_total: loteAtual.quantidadeTotal || 0,
+                    valor_mercado_total: loteAtual.valorMercadoTotal || 0,
+                    itens_json: JSON.stringify(itens),
+                    categorias_json: loteAtual.resumoCategorias?.length > 0 ? JSON.stringify(loteAtual.resumoCategorias) : null,
+                    grades_json: loteAtual.gradesData ? JSON.stringify(loteAtual.gradesData) : null,
+                    data_recebimento: new Date().toISOString(),
+                    produtos_gerados: false,
+                    publicado_parceiro: true,
+                    ...dadosOportunidade,
+                },
+            });
+            if (resp?.error || resp?.data?.error) throw new Error(resp?.error || resp?.data?.error);
+            setOportunidadeModal(false);
+            toast.success('Oportunidade publicada no painel do Parceiro.');
+        } catch (e) {
+            toast.error('Erro ao publicar oportunidade: ' + (e?.message || e));
+        } finally {
+            setPublicandoOportunidade(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#0d1117] text-slate-200 p-4 font-sans selection:bg-blue-500/30">
             <div className="max-w-7xl mx-auto">
                 <header className="mb-10 text-center flex flex-col items-center">
-                    {/* ↩️ Voltar removido: navegação pela lateral de ícones */}
                     <div className="inline-flex items-center gap-3 mb-3 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 shadow-sm">
                         <BarChart3 size={18} className="text-blue-400" />
                         <span className="text-sm font-semibold tracking-wide text-slate-300">AVALIADOR INTELIGENTE DE LEILÕES</span>
@@ -512,7 +684,7 @@ function AnaliseDeLotes() {
 
                 <div className="space-y-6">
                     {/* UPLOAD SECTION */}
-                    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-12 text-center shadow-2xl relative overflow-hidden group">
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 sm:p-12 text-center shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 left-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none group-hover:bg-blue-500/20 transition-all duration-700"></div>
 
                         <div className="max-w-md mx-auto relative z-10">
@@ -625,11 +797,16 @@ function AnaliseDeLotes() {
                                 <p className="text-slate-400 text-sm flex items-center gap-2 mb-2">
                                     <CheckCircle2 size={14} className="text-emerald-500" /> Planilha importada e processada com sucesso
                                 </p>
-                                {loteAtual.localColeta && (
-                                    <div className="inline-block mt-1 px-3 py-1 bg-blue-900/30 border border-blue-800/50 rounded-md text-xs text-blue-300 font-medium">
-                                        📍 Retirada: {loteAtual.localColeta}
-                                    </div>
-                                )}
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                    <span className="px-2 py-0.5 bg-emerald-900/40 border border-emerald-700/50 rounded text-xs text-emerald-300 font-bold">
+                                        {loteAtual.origem === 'Casa e Vídeo' ? '🏪 Casa & Vídeo' : '🛒 Mercado Livre'}
+                                    </span>
+                                    {loteAtual.localColeta && (
+                                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-900/30 border border-blue-800/50 rounded-md text-xs text-blue-300 font-medium">
+                                            <MapPin size={11} /> Retirada: {loteAtual.localColeta}
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex flex-wrap gap-3 mt-3">
                                     <div className="flex flex-col gap-1">
                                         <label className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Data do Leilão</label>
@@ -641,56 +818,19 @@ function AnaliseDeLotes() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex gap-2 flex-wrap">
-                                <button
-                                    disabled={isPublishing === loteAtual.id}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
-                                    onClick={async () => {
-                                        if (!loteAtual || !calculations) return;
-                                        setIsPublishing(loteAtual.id);
-                                        let endTime;
-                                        if (dataLeilao && horarioLeilao) {
-                                            endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
-                                        } else if (dataLeilao) {
-                                            endTime = new Date(`${dataLeilao}T12:00:00`);
-                                        } else {
-                                            endTime = new Date();
-                                            endTime.setDate(endTime.getDate() + 30);
-                                        }
-                                        await Auction.create({
-                                            title: loteAtual.nomeLote,
-                                            description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${fmtBR(loteAtual.valorMercadoTotal)}`,
-                                            starting_price: calculations.custoTotal,
-                                            current_price: calculations.custoTotal,
-                                            increment: 100,
-                                            end_time: endTime.toISOString(),
-                                            status: 'active',
-                                            is_investment_plan: true,
-                                            market_price: loteAtual.valorMercadoTotal,
-                                            manual_market_price: loteAtual.valorMercadoTotal,
-                                            lot_categories_json: loteAtual.resumoCategorias && loteAtual.resumoCategorias.length > 0
-                                                ? JSON.stringify(loteAtual.resumoCategorias)
-                                                : null,
-                                            lot_items_json: loteAtual.subItemsByCategory && Object.keys(loteAtual.subItemsByCategory).length > 0
-                                                ? JSON.stringify(loteAtual.subItemsByCategory)
-                                                : null,
-                                            lot_grades_json: loteAtual.gradesData
-                                                ? JSON.stringify(loteAtual.gradesData)
-                                                : null,
-                                            lot_raw_items_json: loteAtual.rawItemsByGrade && loteAtual.rawItemsByGrade.length > 0
-                                                ? JSON.stringify(loteAtual.rawItemsByGrade)
-                                                : null,
-                                        });
-                                        const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
-                                        setLotesImportados(newLotes);
-                                        setLoteAtual(newLotes[0] || null);
-                                        setDataLeilao('');
-                                        setHorarioLeilao('');
-                                        setIsPublishing(null);
-                                        navigate(createPageUrl('GestaoLotes'));
-                                    }}
-                                >
-                                    <ShoppingBag size={15} /> {isPublishing === loteAtual.id ? 'Publicando...' : 'Publicar no Marketplace'}
+                            {/* 📱 No celular: botões em coluna, 100% de largura, alvo >= 44px */}
+                            <div className="flex w-full flex-col gap-2 md:w-auto sm:flex-row sm:flex-wrap">
+                                <button disabled={isSaving} onClick={handleEnviarParaEstoque}
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow sm:w-auto">
+                                    <Warehouse size={15} />{isSaving ? 'Enviando...' : 'Enviar para Estoque'}
+                                </button>
+                                <button disabled={isSaving} onClick={handlePublicarMarketplace}
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow sm:w-auto">
+                                    <ShoppingBag size={15} />{isSaving ? 'Publicando...' : 'Publicar no Marketplace'}
+                                </button>
+                                <button disabled={isSaving} onClick={() => setOportunidadeModal(true)}
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow sm:w-auto">
+                                    <Sparkles size={15} /><span className="text-center">Publicar nas Oportunidades do Dia</span>
                                 </button>
                             </div>
                         </div>
@@ -702,14 +842,18 @@ function AnaliseDeLotes() {
                             </div>
                             <div>
                                 <h4 className={`font-bold tracking-tight text-lg ${calculations.score.text}`}>SCORE: {calculations.score.label}</h4>
-                                <p className="text-slate-300 text-sm">Rentabilidade projetada em cenário médio (60%): <span className="font-bold text-white">{calculations.rentabilidade.toFixed(1)}%</span></p>
+                                {calculations.semArremate ? (
+                                    <p className="text-slate-300 text-sm">Informe o <span className="font-bold text-white">valor do arremate</span> em "Cenário Financeiro" para calcular o score e o custo por unidade.</p>
+                                ) : (
+                                    <p className="text-slate-300 text-sm">Rentabilidade projetada em cenário médio (60%): <span className="font-bold text-white">{calculations.rentabilidade.toFixed(1)}%</span></p>
+                                )}
                             </div>
                         </div>
 
                         {/* MAIN KPIs */}
                         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                             {[
-                                { label: "Total de Itens (Qtd)", val: loteAtual.quantidadeTotal, prefix: "", color: "border-l-blue-500", anchor: "distribuicao-departamental" },
+                                { label: "Total de Itens (Qtd)", val: loteAtual.quantidadeTotal, prefix: "", color: "border-l-blue-500", anchor: "itens-do-lote" },
                                 { label: "Valor de Mercado Total", val: formatCurrency(loteAtual.valorMercadoTotal), color: "border-l-emerald-500" },
                                 { label: "Ticket Avaliado (Mercado)", val: formatCurrency(loteAtual.quantidadeTotal ? loteAtual.valorMercadoTotal / loteAtual.quantidadeTotal : 0), color: "border-l-indigo-500" },
                                 { label: "Custo Total Lote", val: formatCurrency(calculations.custoTotal), color: "border-l-amber-500" },
@@ -931,7 +1075,7 @@ function AnaliseDeLotes() {
                                     <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
                                         <div className="p-5 border-b border-[#30363d] bg-slate-800/20">
                                             <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
-                                            <p className="text-xs text-slate-400 mt-1">Visão macrostática informada pela aba raiz do leilão.</p>
+                                            <p className="text-xs text-slate-400 mt-1">{loteAtual.resumoOrigem === 'itens' ? 'Montada a partir da coluna Categoria dos itens (a planilha não tem aba Resumo).' : 'Visão macro informada pela aba Resumo da planilha.'}</p>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left border-collapse text-sm">
@@ -980,11 +1124,27 @@ function AnaliseDeLotes() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* 📋 ITENS DO LOTE — a lista completa, sempre visível (dono, 15/09/2026) */}
+                            <div className="xl:col-span-3" id="itens-do-lote">
+                                <ItensDoLote itens={loteAtual.rawItemsByGrade || []} />
+                            </div>
                         </div>
                     </div>
                     )}
                 </div>
             </div>
+            {oportunidadeModal && loteAtual && calculations && (
+                <PublicarOportunidadeModal
+                    lote={loteAtual}
+                    custoTotal={calculations.custoTotal}
+                    freteSugerido={frete}
+                    economiaPct={loteAtual.valorMercadoTotal > 0 && calculations.custoTotal > 0 ? (1 - calculations.custoTotal / loteAtual.valorMercadoTotal) * 100 : null}
+                    salvando={publicandoOportunidade}
+                    onConfirmar={handlePublicarOportunidade}
+                    onFechar={() => setOportunidadeModal(false)}
+                />
+            )}
             {gradeModal && loteAtual && (
                 <GradeItemsModal
                     isOpen={true}

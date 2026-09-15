@@ -13,6 +13,12 @@ function sb(path, opts = {}) {
   });
 }
 
+// Devolve sempre uma LISTA, com os campos do JSON no primeiro nível (como a tela espera).
+function desdobrar(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((p) => ({ ...(p?.raw_base44 && typeof p.raw_base44 === 'object' ? p.raw_base44 : {}), ...p }));
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
@@ -24,15 +30,18 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(200).json({ success: false, error: 'Config do servidor ausente' });
 
     if (mode === 'admin') {
-      const q = `partner_plan_purchases?select=*&status=eq.${encodeURIComponent(status_filter || 'active')}&order=activated_at.desc&limit=500`;
-      const purchases = await (await sb(q)).json();
+      // 15/09/2026 — a tabela só tem id/base44_id/raw_base44/created_at (herança do
+      // Base44); `status` e `activated_at` moram dentro do JSON. Filtrar pela coluna
+      // dava 400 e a tela recebia um objeto de erro no lugar da lista.
+      const q = `partner_plan_purchases?select=*&raw_base44->>status=eq.${encodeURIComponent(status_filter || 'active')}&order=created_at.desc&limit=500`;
+      const purchases = desdobrar(await (await sb(q)).json());
       return res.status(200).json({ success: true, purchases, data: { success: true, purchases } });
     }
 
     if (mode === 'user' && user_id) {
-      let q = `partner_plan_purchases?select=*&user_id=eq.${encodeURIComponent(user_id)}&order=activated_at.desc&limit=100`;
-      if (status_filter) q += `&status=eq.${encodeURIComponent(status_filter)}`;
-      const purchases = await (await sb(q)).json();
+      let q = `partner_plan_purchases?select=*&raw_base44->>user_id=eq.${encodeURIComponent(user_id)}&order=created_at.desc&limit=100`;
+      if (status_filter) q += `&raw_base44->>status=eq.${encodeURIComponent(status_filter)}`;
+      const purchases = desdobrar(await (await sb(q)).json());
       return res.status(200).json({ success: true, purchases, data: { success: true, purchases } });
     }
 

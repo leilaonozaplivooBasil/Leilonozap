@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter } from 'lucide-react';
-import { plataforma } from '@/api/plataformaClient';
 import { WHATSAPP_OFICIAL_FORMATADO } from '@/lib/whatsappOficial';
 import { EMAIL_CONTATO, ENDERECO_SEDE } from '@/lib/contatoOficial';
 
@@ -31,18 +30,12 @@ export default function Footer() {
     loadFooterSettings();
   }, []);
 
-  const loadFooterSettings = async () => {
-    try {
-      const settings = await plataforma.entities.FooterSettings.list("-created_date", 1);
-      const data = settings && settings.length > 0 ? settings[0] : defaultFooter;
-      setFooterSettings(data);
-      sessionStorage.setItem('footer_settings_cache', JSON.stringify(data));
-      sessionStorage.setItem('footer_settings_cache_time', Date.now().toString());
-    } catch (error) {
-      setFooterSettings(defaultFooter);
-    } finally {
-      setIsLoading(false);
-    }
+  // 15/09/2026 — footer_settings é herança do Base44: está VAZIA e nenhuma tela a
+  // edita. A consulta ordenava por created_date (coluna que ela não tem) e virava
+  // 400 em toda visita — 770 por dia nos logs do Supabase. O rodapé é o padrão daqui.
+  const loadFooterSettings = () => {
+    setFooterSettings(defaultFooter);
+    setIsLoading(false);
   };
 
   if (isLoading || !footerSettings) {

@@ -26,26 +26,30 @@ export default function LiveMetrics() {
       const todayISO = today.toISOString();
 
       // 1. Lances do dia
-      const bids = await plataforma.entities.Bid.list('-timestamp', 1000);
-      const todayBids = bids.filter(bid => {
-        const bidDate = new Date(bid.timestamp);
+      // 15/09/2026 — lances reais: auction_messages (message_type 'bid'). A
+      // tabela `bids` é herança vazia do Base44 (400 por coluna inexistente).
+      const bids = await plataforma.entities.AuctionMessage.filter({ message_type: 'bid' }, '-created_date', 1000);
+      const todayBids = (Array.isArray(bids) ? bids : []).filter(bid => {
+        const bidDate = new Date(bid.created_date || bid.timestamp);
         return bidDate >= today;
       });
-      const totalBidsValue = todayBids.reduce((sum, bid) => sum + (bid.amount || 0), 0);
+      const totalBidsValue = todayBids.reduce((sum, bid) => sum + (Number(bid.bid_amount) || 0), 0);
 
-      // 2. Visualizações recentes (últimos 5 minutos)
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const recentViews = await plataforma.entities.AuctionView.filter({});
-      const activeViewers = recentViews.filter(view => {
-        const lastViewed = new Date(view.last_viewed || view.updated_date);
-        return lastViewed >= new Date(fiveMinutesAgo);
-      });
+      // 2. Presença real (15/09/2026): auction_views é herança vazia do Base44
+      // (dava 400). A presença agora vive em live_sessions, gravada pela rota
+      // liveHeartbeat: quem bateu nos últimos 5 min está online; quem está numa
+      // página de sala de leilão está "vendo leilão".
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      const sessions = await plataforma.entities.LiveSession.list('-last_heartbeat', 300);
+      const activeViewers = (Array.isArray(sessions) ? sessions : []).filter(s => s.last_heartbeat && new Date(s.last_heartbeat).getTime() >= fiveMinutesAgo);
 
-      // 3. Usuários únicos visualizando leilões (últimos 5 min)
-      const uniqueActiveUsers = new Set(activeViewers.map(v => v.user_id)).size;
+      // 3. Pessoas online (últimos 5 min) — por usuário logado, ou por sessão anônima
+      const uniqueActiveUsers = new Set(activeViewers.map(v => v.user_id || v.session_id)).size;
 
-      // 4. Leilões sendo visualizados (últimos 5 min)
-      const uniqueAuctions = new Set(activeViewers.map(v => v.auction_id)).size;
+      // 4. Sessões dentro de uma sala de leilão (últimos 5 min)
+      const uniqueAuctions = new Set(
+        activeViewers.filter(v => /AuctionRoom|VisualizarLote|AuctionDetails/i.test(String(v.page || ''))).map(v => `${v.page}`)
+      ).size;
 
       setMetrics({
         totalBidsToday: todayBids.length,

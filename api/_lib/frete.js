@@ -107,7 +107,15 @@ export async function cotarOpcoes({ cep, items }) {
       '| enviado:', JSON.stringify(enviado),
       '| resposta:', JSON.stringify(cot).slice(0, 800)
     );
-    return { ok: false, error: 'Nenhuma transportadora atende esse CEP.' };
+    // 15/09/2026 — um scooter de 65×110×170 cm e 45 kg voltava só "Dimensões do
+    // objeto ultrapassam o limite" de todas as transportadoras, e o cliente lia
+    // "nenhuma transportadora atende esse CEP" — mentira, o CEP era normal. Agora o
+    // motivo vai junto e o carrinho oferece Retirada na Loja ou frete combinado.
+    const motivos = cot.map((o) => String(o?.error || '')).join(' | ');
+    const grandeDemais = /dimens|peso|limite/i.test(motivos);
+    return grandeDemais
+      ? { ok: false, motivo: 'produto_grande', error: 'Este produto é grande ou pesado demais para Correios e Jadlog. Escolha "Retirada na Loja" ou combine o frete com a gente pelo WhatsApp.' }
+      : { ok: false, motivo: 'sem_transportadora', error: 'Nenhuma transportadora atende esse CEP. Escolha "Retirada na Loja" ou combine o frete pelo WhatsApp.' };
   }
   return { ok: true, opcoes };
 }

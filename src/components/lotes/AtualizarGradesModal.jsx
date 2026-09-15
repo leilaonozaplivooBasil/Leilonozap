@@ -64,7 +64,9 @@ export default function AtualizarGradesModal({ isOpen, onClose, lote, onSuccess 
                 const getColumnIndex = (keywords) => normalizedHeaders.findIndex(header => keywords.some(kw => header.includes(kw)));
 
                 const colClass = getColumnIndex(['CLASSE', 'CLASSIFICA', 'CLASS', 'CONDIÇÃO', 'GRADE']);
-                const colValue = getColumnIndex(['VALOR TOTAL', 'VALOR DE MERCADO', 'VALOR']);
+                // 15/09/2026 — 'VALOR' genérico casava com "Valor Unit" antes de "Valor Total" (lote somado pelo unitário)
+                const colValueTotal = getColumnIndex(['VALOR TOTAL', 'VALOR DE MERCADO']);
+                const colValue = colValueTotal >= 0 ? colValueTotal : normalizedHeaders.findIndex(h => h.includes('VALOR') && !h.includes('UNIT'));
                 const colQtd = getColumnIndex(['QUANTIDADE', 'QTD']);
                 const colDesc = normalizedHeaders.findIndex(h => h.includes('DESCRI') || h === 'ITEM' || h === 'PRODUTO' || h.includes('NOME DO PRODUTO'));
 

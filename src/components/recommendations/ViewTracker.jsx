@@ -1,57 +1,13 @@
-import { useEffect, useRef } from 'react';
-import { plataforma } from '@/api/plataformaClient';
-
-const AuctionView = plataforma.entities.AuctionView;
-
 /**
- * Componente invisível que rastreia visualizações de leilões
- * Usar dentro de páginas de detalhe ou sala de leilão
+ * Componente invisível que rastreava visualizações de leilões.
+ *
+ * 15/09/2026 — DESLIGADO de propósito: a tabela auction_views é herança do
+ * Base44 (só id/raw_base44, ZERO linhas desde a migração). Cada abertura de
+ * sala fazia uma consulta e uma escrita que voltavam 400, e nada era gravado.
+ * O componente fica (as telas o importam) e não toca mais no banco. Se um dia
+ * a recomendação por visualização voltar, precisa de tabela com colunas reais
+ * e de escrita por rota de servidor.
  */
-export default function ViewTracker({ auctionId, userId, category }) {
-  const hasTracked = useRef(false);
-
-  useEffect(() => {
-    if (!auctionId || !userId || hasTracked.current) return;
-
-    const trackView = async () => {
-      try {
-        // Verificar se já existe registro
-        const existing = await AuctionView.filter({
-          user_id: userId,
-          auction_id: auctionId
-        });
-
-        if (existing.length > 0) {
-          // Incrementar contador
-          await AuctionView.update(existing[0].id, {
-            view_count: (existing[0].view_count || 1) + 1,
-            last_viewed: new Date().toISOString()
-          });
-        } else {
-          // Criar novo registro
-          await AuctionView.create({
-            user_id: userId,
-            auction_id: auctionId,
-            category: category || 'outros',
-            view_count: 1,
-            last_viewed: new Date().toISOString(),
-            interacted: false
-          });
-        }
-
-        hasTracked.current = true;
-        console.log('📊 View tracked:', auctionId);
-      } catch (error) {
-        console.error('Erro ao rastrear view:', error);
-      }
-    };
-
-    // Delay para garantir que não é um bounce
-    const timer = setTimeout(trackView, 3000);
-
-    return () => clearTimeout(timer);
-  }, [auctionId, userId, category]);
-
-  // Componente invisível
+export default function ViewTracker() {
   return null;
 }
