@@ -133,7 +133,7 @@ export default async function handler(req, res) {
       });
     }
 
-    await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    const insVenda = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: totalProdutos, total_amount: totalProdutos, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
@@ -146,6 +146,12 @@ export default async function handler(req, res) {
       // Mesmo formato do PIX: { id, title, qty, price }.
       raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
+    if (!insVenda.ok) {
+      // 🧾 AUDITORIA 15/09/2026 — mesma proteção do PIX: sem venda gravada, não gera checkout no MP.
+      const detalhe = await insVenda.text().catch(() => '');
+      console.error(`[CARTAO] venda ${saleId} NÃO gravada (HTTP ${insVenda.status}) — checkout não gerado:`, detalhe.slice(0, 300));
+      return res.status(500).json({ success: false, error: 'Não foi possível registrar seu pedido agora. Nada foi cobrado — tente de novo em instantes.' });
+    }
 
     // Checkout Pro (página hospedada do Mercado Pago) — mesma UX de redirecionamento que a Stripe tinha.
     const [first, ...rest] = String(buyer.name || 'Cliente').trim().split(/\s+/);

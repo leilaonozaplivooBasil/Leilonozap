@@ -166,7 +166,7 @@ export default async function handler(req, res) {
       });
     }
 
-    await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    const insVenda = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: total, total_amount: total, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
@@ -175,6 +175,13 @@ export default async function handler(req, res) {
       coupon_code, discount_amount: round2(discount_amount + passaporte_desconto) || null,
       raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
+    if (!insVenda.ok) {
+      // 🧾 AUDITORIA 15/09/2026 — o insert não era conferido: o PIX nascia no Mercado Pago
+      // sem venda no banco; o cliente pagava e o webhook respondia "sale_notfound".
+      const detalhe = await insVenda.text().catch(() => '');
+      console.error(`[PIX] venda ${saleId} NÃO gravada (HTTP ${insVenda.status}) — cobrança não gerada:`, detalhe.slice(0, 300));
+      return res.status(500).json({ success: false, error: 'Não foi possível registrar seu pedido agora. Nada foi cobrado — tente de novo em instantes.' });
+    }
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 
     // cria o PIX no Mercado Pago
