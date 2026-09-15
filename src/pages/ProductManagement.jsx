@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
+import { entenderVideo, recadoDoErro, conferirArquivo, videosValidos, BALDE_VIDEO } from '@/lib/videoDoProduto';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,6 +123,11 @@ export default function ProductManagement() {
   // 🖼️ Upload de imagens do produto — mesmo caminho já usado em EditCatalogProduct.
   const [enviandoImagens, setEnviandoImagens] = useState(false);
   const inputImagensRef = React.useRef(null);
+  // 🎬 vídeo do produto (15/09/2026) — link colado ou arquivo anexado.
+  const [enviandoVideo, setEnviandoVideo] = useState(false);
+  const [linkVideo, setLinkVideo] = useState('');
+  const [erroVideo, setErroVideo] = useState('');
+  const inputVideoRef = React.useRef(null);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -330,7 +336,8 @@ export default function ProductManagement() {
     condicao: '',
     estado_conservacao: '',
     product_source: '',
-    image_urls: []
+    image_urls: [],
+    video_urls: []
   });
 
   const navigate = useNavigate();
@@ -380,6 +387,46 @@ export default function ProductManagement() {
     setEnviandoImagens(false);
     if (inputImagensRef.current) inputImagensRef.current.value = '';
   };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🎬 VÍDEO DO PRODUTO (15/09/2026)
+  // ══════════════════════════════════════════════════════════════════════════
+  // Dois caminhos, uma coluna: link de host conhecido (YouTube/Vimeo) ou
+  // arquivo nosso no balde `videos-produtos`. Quem decide o que entra é
+  // src/lib/videoDoProduto.js — aqui só se liga a tela nele.
+  //
+  // Hoje a tela aceita UM vídeo. `video_urls` já é lista pra não precisar de
+  // migração de tipo quando isso mudar.
+
+  /** Cola um link. Recusa na hora, com recado em português, em vez de gravar lixo. */
+  const usarLinkDeVideo = () => {
+    const r = entenderVideo(linkVideo);
+    if (!r.ok) { setErroVideo(recadoDoErro(r.motivo)); return; }
+    setFormData((f) => ({ ...f, video_urls: [r.url] }));
+    setLinkVideo(''); setErroVideo('');
+  };
+
+  /** Anexa um arquivo. Confere tipo e tamanho ANTES de subir — subir pra ser
+   *  recusado no fim gasta a paciência e a banda de quem cadastra. */
+  const anexarVideo = async (evento) => {
+    const file = evento.target.files?.[0];
+    if (inputVideoRef.current) inputVideoRef.current.value = '';
+    if (!file) return;
+    const conf = conferirArquivo(file);
+    if (!conf.ok) { setErroVideo(conf.recado); return; }
+    setErroVideo(''); setEnviandoVideo(true);
+    try {
+      const r = await plataforma.integrations.Core.UploadFile({ file, bucket: BALDE_VIDEO });
+      if (r?.file_url) setFormData((f) => ({ ...f, video_urls: [r.file_url] }));
+      else setErroVideo('O envio terminou sem endereço de arquivo. Tente de novo.');
+    } catch (e) {
+      console.error('Falha ao enviar vídeo:', e);
+      setErroVideo('Não consegui enviar o vídeo. Confira a conexão e tente de novo.');
+    }
+    setEnviandoVideo(false);
+  };
+
+  const removerVideo = () => { setFormData((f) => ({ ...f, video_urls: [] })); setErroVideo(''); };
 
   const removerImagem = (i) => {
     setFormData((f) => ({ ...f, image_urls: (f.image_urls || []).filter((_, idx) => idx !== i) }));
@@ -677,7 +724,9 @@ export default function ProductManagement() {
       condicao: product.condicao || '',
       estado_conservacao: product.estado_conservacao || '',
       product_source: product.product_source || '',
-      image_urls: Array.isArray(product.image_urls) ? product.image_urls : []
+      image_urls: Array.isArray(product.image_urls) ? product.image_urls : [],
+      // 🎬 mesma armadilha das fotos: sem carregar, salvar apagaria o vídeo.
+      video_urls: Array.isArray(product.video_urls) ? product.video_urls : []
     });
     setShowAddForm(true);
   };
@@ -761,7 +810,11 @@ export default function ProductManagement() {
         condicao: formData.condicao || null,
         estado_conservacao: (formData.estado_conservacao || '').trim() || null,
         product_source: formData.product_source || null,
-        image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : []
+        image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : [],
+        // 🎬 a tela NUNCA manda direto o que a pessoa digitou: `videosValidos`
+        // recusa host desconhecido e tira repetido. Endereço ruim gravado é
+        // <iframe> que some calado no navegador de quem compra.
+        video_urls: videosValidos(formData.video_urls)
       };
 
       if (editingProduct) {
@@ -794,8 +847,10 @@ export default function ProductManagement() {
     condicao: '',
     estado_conservacao: '',
     product_source: '',
-        image_urls: []
+        image_urls: [],
+    video_urls: []
       });
+      setLinkVideo(''); setErroVideo('');
       setShowAddForm(false);
       setEditingProduct(null);
 
@@ -1949,6 +2004,73 @@ export default function ProductManagement() {
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+
+                    {/* 🎬 VÍDEO DO PRODUTO (15/09/2026) — pedido do dono: "ao criar
+                        ou editar um produto, também ter a função de anexar vídeo ou
+                        colocar link de vídeo". Fica logo depois das fotos porque é a
+                        mesma ideia: mídia que o cliente vê na página de venda. */}
+                    <div className="col-span-full">
+                      <Label className="text-gray-300">
+                        Vídeo do produto
+                        <span className="text-gray-400 font-normal"> — opcional</span>
+                      </Label>
+
+                      {(formData.video_urls || []).length > 0 ? (
+                        <div className="mt-2 flex items-center gap-3 rounded-lg border border-gray-600 bg-gray-900 p-3" data-teste="video-do-produto">
+                          <span className="text-2xl">🎬</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-white">
+                              {{ youtube: 'Link do YouTube', vimeo: 'Link do Vimeo', arquivo: 'Vídeo enviado por você' }[entenderVideo(formData.video_urls[0]).tipo] || 'Vídeo'}
+                            </p>
+                            <a
+                              href={formData.video_urls[0]} target="_blank" rel="noreferrer"
+                              className="block truncate text-xs text-blue-300 hover:underline"
+                              title={formData.video_urls[0]}
+                            >
+                              {formData.video_urls[0]}
+                            </a>
+                          </div>
+                          <button type="button" onClick={removerVideo} className="shrink-0 text-xs px-2 py-1 text-red-400 hover:text-red-300">
+                            remover
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            <Input
+                              value={linkVideo}
+                              onChange={(e) => { setLinkVideo(e.target.value); setErroVideo(''); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); usarLinkDeVideo(); } }}
+                              className="bg-gray-700 text-white flex-1 min-w-[220px]"
+                              placeholder="Cole o link do YouTube ou Vimeo"
+                            />
+                            <button
+                              type="button" onClick={usarLinkDeVideo} disabled={!linkVideo.trim()}
+                              className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Usar link
+                            </button>
+                            <button
+                              type="button" onClick={() => inputVideoRef.current?.click()} disabled={enviandoVideo}
+                              className="text-xs px-3 py-2 rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700 disabled:opacity-50"
+                            >
+                              {enviandoVideo ? 'Enviando…' : 'Anexar arquivo'}
+                            </button>
+                            <input
+                              ref={inputVideoRef} type="file" accept="video/mp4,video/webm,video/quicktime"
+                              onChange={anexarVideo} className="hidden"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Link do YouTube ou Vimeo, ou um arquivo MP4/WebM/MOV de até 45 MB.
+                          </p>
+                        </div>
+                      )}
+
+                      {erroVideo && (
+                        <p className="mt-2 text-xs text-red-400" data-teste="erro-do-video">{erroVideo}</p>
                       )}
                     </div>
 

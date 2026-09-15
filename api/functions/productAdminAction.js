@@ -23,7 +23,13 @@ const ALLOWED = ['description', 'quantity', 'cost_price', 'selling_price_retail'
   'condicao', 'estado_conservacao',
   // 02/09/2026 — origem do produto (factory_new | return_resale), o que permite à
   // Loja Virtual ter as mesmas pílulas de filtro da área de leilão.
-  'product_source'];
+  'product_source',
+  // 🎬 15/09/2026 — vídeo do produto (link do YouTube/Vimeo ou arquivo nosso).
+  // Sem estar NESTA lista o campo é descartado aqui em SILÊNCIO: a tela diz
+  // "Produto atualizado!", o banco não recebe nada, e o sintoma é idêntico ao
+  // de a coluna não existir. Já aconteceu três vezes documentadas neste mesmo
+  // arquivo — category_id, condicao e estado_conservacao.
+  'video_urls'];
 
 /** Vazio de verdade: null, undefined e '' são a mesma coisa pro nosso uso. */
 const vazio = (v) => v === null || v === undefined || v === '';
