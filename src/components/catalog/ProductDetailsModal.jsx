@@ -106,9 +106,11 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
     irParaCheckout();
   };
 
+  // 🧾 AUDITORIA 15/09/2026 — "Comprar agora" ia pro CatalogCheckout2 (frete "a combinar",
+  // só PIX). O carrinho é o checkout de verdade (frete real, PIX ou cartão). Um caminho só.
   const irParaCheckout = () => {
-    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
-    navigate(createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`);
+    adicionarAoCarrinho();
+    navigate(createPageUrl("Cart"));
   };
 
   // 📜 PONTO 70 — adicionar ao carrinho é a intenção de compra na Loja Virtual

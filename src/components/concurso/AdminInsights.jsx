@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { BarChart3, Users, MousePointerClick, CalendarDays, RefreshCw, Zap, Lock, Search } from 'lucide-react';
+import { linkWhatsAppNumero } from '@/lib/whatsappOficial';
 
 // Inteligência das Indicações — dashboard do admin (v1).
 // Mostra tudo que o schema atual permite: impactados (cliques no link) por participante
@@ -14,7 +15,7 @@ const fmtD = (iso) => {
   if (!iso) return '—';
   try { return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }); } catch { return '—'; }
 };
-const zapLink = (w) => (w ? `https://wa.me/55${String(w).replace(/\D/g, '')}` : null);
+const zapLink = (w) => (w ? linkWhatsAppNumero(w) || null : null);
 const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function Stat({ icon: Ic, label, value, tint = '#f5c451' }) {

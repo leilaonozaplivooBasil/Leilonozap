@@ -5,6 +5,7 @@ import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
+import { linkWhatsAppNumero } from '@/lib/whatsappOficial';
 import { Truck, Package, Loader2, MapPin, Plus, Trash2, Check, Clock,
   PackageCheck, Send, Box, RefreshCw, ShoppingBag, X
 } from 'lucide-react';
@@ -178,7 +179,7 @@ export default function PedidosDistribuidor() {
                           <div className="text-[11px] text-gray-500 mt-0.5">{(o.created_at || o.created_date) ? new Date(o.created_at || o.created_date).toLocaleString('pt-BR') : ''} {o.carrier ? `· ${o.carrier}` : ''} {o.tracking_code ? `· ${o.tracking_code}` : ''}</div>
                           {(o.buyer_address || o.buyer_cep || o.buyer_phone) && (
                             <div className="text-[12px] text-gray-300 mt-2 bg-gray-900/60 rounded-lg px-3 py-2 space-y-0.5">
-                              {o.buyer_phone && <div className="flex items-center gap-1.5"><Send className="w-3 h-3 text-emerald-400" /> <a href={`https://wa.me/55${String(o.buyer_phone).replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">{o.buyer_phone}</a></div>}
+                              {o.buyer_phone && <div className="flex items-center gap-1.5"><Send className="w-3 h-3 text-emerald-400" /> <a href={linkWhatsAppNumero(o.buyer_phone)} target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">{o.buyer_phone}</a></div>}
                               {(o.buyer_address || o.buyer_cep) && <div className="flex items-start gap-1.5"><MapPin className="w-3 h-3 text-emerald-400 mt-0.5" /> <span>{o.buyer_address || ''}{o.buyer_cep ? ` — CEP ${o.buyer_cep}` : ''}</span></div>}
                             </div>
                           )}

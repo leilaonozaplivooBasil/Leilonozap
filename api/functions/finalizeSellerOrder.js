@@ -25,7 +25,6 @@ export default async function handler(req, res) {
     const { user_id, items, delivery_method, carrier, address, role } = body || {};
     // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
     const _ses = exigirSessao(req, user_id, 'finalizeSellerOrder'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
-    const cargo = role === 'licenciado' ? 'licenciado' : 'vendedor';
     if (!SUPABASE_URL || !SR) return res.status(200).json({ success: false, error: 'Banco não configurado' });
     if (!user_id) return res.status(200).json({ success: false, error: 'user_id é obrigatório' });
     if (!Array.isArray(items) || !items.length) return res.status(200).json({ success: false, error: 'Carrinho vazio' });
@@ -35,6 +34,14 @@ export default async function handler(req, res) {
     if (!user) return res.status(200).json({ success: false, error: 'Usuário não encontrado' });
     const balance = Number(user.seller_credit_balance || 0);
     if (!(balance > 0)) return res.status(200).json({ success: false, error: 'Você não tem saldo de adesão disponível' });
+
+    // 🧾 AUDITORIA 15/09/2026 — o CARGO não vem mais do body (qualquer um mandava
+    // role='licenciado' tendo pago adesão de vendedor). Sai da adesão PAGA do próprio usuário.
+    const adesoes = await (await sb(`catalog_sales?select=adesao_level,total_amount,raw_base44&buyer_id=eq.${encodeURIComponent(user_id)}&kind=eq.seller_adhesion&status=in.(paid,pago,entregue)&order=created_at.desc&limit=1`)).json().catch(() => []);
+    const adesao = Array.isArray(adesoes) ? adesoes[0] : null;
+    const nivelAdesao = String(adesao?.adesao_level || adesao?.raw_base44?.role || adesao?.raw_base44?.role_grant || '').toLowerCase();
+    const cargo = (nivelAdesao === 'licenciado' || Number(adesao?.total_amount) >= 5000 || (!adesao && balance >= 5000)) ? 'licenciado' : 'vendedor';
+    if (role && role !== cargo) console.warn(`[finalizeSellerOrder] body pediu '${role}', a adesão paga dá '${cargo}' — vale a adesão (user ${user_id}).`);
 
     // 🔒 Recalcula o total no servidor a partir do preço real do produto — não confia no total do cliente.
     const ids = items.map((it) => String(it.product_id)).filter(Boolean);
@@ -83,6 +90,16 @@ export default async function handler(req, res) {
       });
     }
 
+    // 🔒 AUDITORIA 15/09/2026 — consome o saldo de adesão com CAS ANTES de criar as vendas:
+    // duas chamadas concorrentes não geram dois pedidos com o mesmo crédito.
+    const consumo = await sb(`app_users?id=eq.${encodeURIComponent(user_id)}&seller_credit_balance=eq.${balance}`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ seller_credit_balance: 0 }),
+    });
+    const consumido = await consumo.json().catch(() => []);
+    if (!Array.isArray(consumido) || !consumido.length) {
+      return res.status(200).json({ success: false, error: 'Seu saldo de adesão mudou enquanto o pedido era fechado. Recarregue a página e tente de novo.' });
+    }
+
     const isDelivery = delivery_method === 'delivery';
     const addressFields = isDelivery ? {
       buyer_address: [user.address_street, user.address_number, user.address_complement, user.address_neighborhood, user.address_city, user.address_state].filter(Boolean).join(', '),
@@ -120,7 +137,7 @@ export default async function handler(req, res) {
       careerLevels = Array.from(new Set([...(user.career_levels || []), cargo]));
       await sb(`app_users?id=eq.${encodeURIComponent(user_id)}`, {
         method: 'PATCH', headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({ seller_credit_balance: 0, is_seller: true, career_levels: careerLevels }),
+        body: JSON.stringify({ is_seller: true, career_levels: careerLevels }),
       });
     } catch (e) {
       // 🔴 venda/saldo falharam depois da reserva — devolve a peça, senão fica presa

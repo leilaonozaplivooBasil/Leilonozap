@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useSectionTracking, trackBeginCheckout } from "@/lib/tracking";
+import { toast } from 'sonner';
 
 export default function AddFunds() {
   const navigate = useNavigate();
@@ -69,6 +70,8 @@ export default function AddFunds() {
 
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+      // 🧾 AUDITORIA 15/09/2026 — sem isso a tela ficava sem pacotes e sem explicação
+      toast.error("Não foi possível carregar os pacotes de depósito. Atualize a página ou tente de novo.");
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import RegiaoCard from '@/components/painel/RegiaoCard';
 import MinhaArvoreRede from '@/components/painel/MinhaArvoreRede';
 import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
+import { linkWhatsAppNumero } from '@/lib/whatsappOficial';
 import {
   LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
@@ -591,7 +592,7 @@ export default function PainelDistribuidor() {
                       <button onClick={salvarWhats} disabled={busy === 'wa'} className="px-4 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold">{busy === 'wa' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}</button>
                     </div>
                     {atend.whatsapp
-                      ? <a href={`https://wa.me/55${atend.whatsapp}`} target="_blank" rel="noreferrer" className="w-full block text-center py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" /> Falar com o suporte</a>
+                      ? <a href={linkWhatsAppNumero(atend.whatsapp)} target="_blank" rel="noreferrer" className="w-full block text-center py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" /> Falar com o suporte</a>
                       : <p className="text-[11px] text-gray-500">Configure o número pra liberar o botão de suporte.</p>}
                   </div>
 

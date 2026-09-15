@@ -33,7 +33,7 @@ export default function HeroRecepcao({ stats, produtos = [], q, setQ, onBuscar }
             className="mx-auto mt-4 max-w-[560px] leading-[1.4] text-nz-tinta-fraca"
             style={{ fontSize: 'clamp(1.05rem, 2.2vw, 1.4rem)' }}
           >
-            Leilões ao vivo e loja virtual com até 60% de desconto. Dê seu lance, arremate e receba em casa.
+            Leilões ao vivo e loja virtual com até 80% de desconto. Dê seu lance, arremate e receba em casa.
           </p>
 
           {/* Transparência: exigência de comunicação — visível logo de cara. */}

@@ -60,11 +60,10 @@ export default async function handler(req, res) {
     const existing = await (await sb(`app_users?select=id,email,phone,cpf&or=(${dupOr.join(',')})&limit=5`)).json();
     if (Array.isArray(existing) && existing.length) {
       const hit = existing[0];
-      let why = 'USUÁRIO JÁ CADASTRADO.';
-      if (hit.email === email) why = 'E-mail já cadastrado.';
-      else if (phone && hit.phone === phone) why = 'Telefone já cadastrado.';
-      else if (cpf && hit.cpf === cpf) why = 'CPF já cadastrado.';
-      return res.status(200).json({ success: false, error: why });
+      // 🧾 AUDITORIA 15/09/2026 — a mensagem dizia QUAL dado bateu (e-mail/telefone/CPF): dava
+      // pra descobrir se um CPF ou telefone é cliente. Agora é genérica.
+      void hit;
+      return res.status(200).json({ success: false, error: 'Já existe um cadastro com esses dados (e-mail, telefone ou CPF). Tente entrar ou recuperar a senha.' });
     }
 
     // resolve indicador pelo ref_code do link

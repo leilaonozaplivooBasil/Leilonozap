@@ -103,7 +103,7 @@ export default function CatalogProductDetails() {
 
     const ogTitle = product
       ? `${product.description} | Loja Virtual NoZap`
-      : 'Loja Virtual NoZap - Produtos com até 60% de desconto';
+      : 'Loja Virtual Leilão NoZap - Produtos com até 80% de desconto';
     const ogDesc = product
       ? `${product.description} por R$ ${fmtBR(product.price_catalog)}. Produtos direto de fábrica e devolvidos em até 7 dias. Compre agora!`
       : 'Produtos direto de fábrica e devolvidos em até 7 dias. Eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
@@ -120,8 +120,8 @@ export default function CatalogProductDetails() {
 
     return () => {
       // Restaura padrão ao sair da página
-      const defaultTitle = 'NoZap - Loja Virtual e Leilões Online | Até 60% de Desconto';
-      const defaultDesc = 'Produtos direto de fábrica e devolvidos em até 7 dias com até 60% de desconto! Loja Virtual e Leilões Online de eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
+      const defaultTitle = 'Leilão NoZap - Loja Virtual e Leilões Online | Até 80% de Desconto';
+      const defaultDesc = 'Produtos direto de fábrica e devolvidos em até 7 dias com até 80% de desconto! Loja Virtual e Leilões Online de eletrônicos, eletrodomésticos, móveis e muito mais. Compre agora!';
       const defaultImg = 'https://leilaonozap.net/brand/logo-horizontal-og.jpg';
       document.title = defaultTitle;
       setMeta('property', 'og:title', defaultTitle);
@@ -183,12 +183,11 @@ export default function CatalogProductDetails() {
     irParaCheckout();
   };
 
+  // 🧾 AUDITORIA 15/09/2026 — "Comprar agora" ia pro CatalogCheckout2 (frete "a combinar",
+  // só PIX). O carrinho é o checkout de verdade (frete real, PIX ou cartão). Um caminho só.
   const irParaCheckout = () => {
-    const checkoutUrl = createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`;
-    console.log('🔗 Navegando para:', checkoutUrl);
-
-    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
-    navigate(checkoutUrl);
+    adicionarAoCarrinho();
+    navigate(createPageUrl("Cart"));
   };
 
   const getCanonicalProductUrl = () => {

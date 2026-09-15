@@ -93,7 +93,7 @@ export default function DiretoDeFabrica() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">✨ Direto de Fábrica</h1>
-          <p className="text-gray-300 mt-1">Produtos novos, lacrados e com garantia.</p>
+          <p className="text-gray-300 mt-1">Produtos novos, lacrados, com garantia legal do CDC.</p>
         </div>
 
         {isLoading ? (

@@ -12,6 +12,31 @@
 
 ---
 
+## DIR-158 — "Resolve tudo que precisa resolver": os 12 itens da DIR-157 decididos com evidência
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono (16/09/2026): *"RESOLVE TUDO QUE PRECISA RESOLVER DE MANEIRA DILIGENTE."* Regra desta rodada: onde havia decisão de negócio, escolhi a opção sustentada por evidência (banco, contrato assinado, código) e deixei o porquê registrado; onde só o dono pode virar a chave (variável de ambiente na Vercel), fica o passo exato.
+
+**Resolvido:**
+1. **Escrow "venda" do `commission_ledger`** — o gatilho `trg_sale_to_ledger` agora ignora depósito de carteira/operação, adesão, passaporte, frete de vendedor e reposição, e ignora venda em que o vendedor é o próprio comprador (migração `auditoria_escrow_so_venda_de_verdade`). As 15 linhas em que o "vendedor" era o comprador (R$ 1.632,07) foram marcadas `cancelado`. **Ficam 471 linhas / R$ 67.474,49 a liberar**, 389 delas de vendas `nexus` (planilha do showroom) — se são de lojista terceiro com direito a repasse, é regra do Diogo (16/07) e está certa; o cron `liberar_saldos_maturados()` segue **não agendado** de propósito até o dono confirmar. `createOperationDeposit`/`createSupplyOrder` não usam mais o comprador como `seller_id` de fallback (usam a conta da empresa, `referral_code = leilaonozap`).
+2. **Sessão ETAPA 2** — não dá pra ligar daqui (é variável na Vercel). Passo: em Vercel → leilonozap → Settings → Environment Variables → `SESSAO_MODO=bloquear` e `MP_WEBHOOK_MODO=bloquear` → redeploy. Tentei ler os logs `[SESSAO]` pela API da Vercel pra medir quantas telas ainda chamam sem crachá; a consulta estourou o tempo 3 vezes. Antes de virar, olhar em Vercel → Logs por "SEM crachá válido" nas últimas 24h.
+3. **`app_users` pública** — segue pendente: exige migrar 3 telas admin pra rota com crachá e testar no navegador com o dono. Mitigação verificada: 0 senhas em texto, 0 tokens de reset/acesso preenchidos.
+4. **Devolução** — escopo escrito: leilão sem devolução (salvo defeito não descrito, 48 h); Loja Virtual com arrependimento de 7 dias (CDC art. 49); garantia legal do CDC (art. 26), não a de fábrica. Termos, WelcomeModal, TermsModal, Como Funciona e Direto de Fábrica alinhados.
+5. **Teto de desconto = 80%** em todo lugar (index.html, vite.config, Layout, HeroRecepcao, PortalArrematante, CatalogProductDetails, LicenseeShareModal). Evidência: maior desconto real do catálogo ativo hoje é 80,6% (p95 = 69%). Banner 2 (arte "até 85%") ficou — é arte; regravar quando possível.
+6. **Banner 3** ("+500 produtos… + FRETE GRÁTIS") **saiu da rotação** — a arte promete frete grátis e a loja cobra frete. O ícone "Frete Grátis" do rail virou "Frete" → "calculado no carrinho pelo seu CEP".
+7. **Contato oficial** em `src/lib/contatoOficial.js`: `contato@leilaonozap.net` (domínio do site) e o endereço dos contratos assinados (Av. das Américas, 19.005, Torre 1, Sala 1106, Recreio, 22790-704). Rodapé, Termos, Privacidade e rastreio usam a lib. ⚠️ **Confirmar que a caixa `contato@leilaonozap.net` existe.** O "no-reply@" saiu de todo canal de dúvidas.
+8. **"Comprar agora"** deixa de ir pro `CatalogCheckout2` (frete "a combinar", só PIX): adiciona ao carrinho e vai pro checkout único (frete real, PIX ou cartão).
+9. **Servidor**: webhook não reprocessa venda cancelada já estornada; `finalizeSellerOrder` tira o cargo da adesão PAGA (não do body) e consome o saldo de adesão com CAS antes de criar as vendas; `createLicensee` recusa cargo de governança e, sem operador, só cargos de entrada; **rate limit** (tabela `rate_limits` + RPC `rate_limit_hit`, migração `auditoria_rate_limit`): 5 códigos por e-mail / 30 por IP a cada 15 min, 12 logins por e-mail / 60 por IP; `publicRegister` não revela mais qual dado (e-mail/telefone/CPF) já existe.
+10. **Telas**: Home mostra "não foi possível carregar" com botão em vez de "nenhum leilão"; AddFunds avisa quando os pacotes não carregam; OrderTracking sem `auction_id` não fica "Carregando…" pra sempre; tabela de pedidos do licenciado rola no celular; `linkWhatsAppNumero()` normaliza DDI em 6 telas que montavam `wa.me/55…` na mão.
+11. **Banco**: reserva órfã do dono (R$ 178,76, sem leilão liderando) devolvida ao saldo disponível com linha no `reserva_ledger`.
+
+**Continua pendente (precisa do dono ou de arte):** `app_users` pública (item 3); `SESSAO_MODO`/`MP_WEBHOOK_MODO`/`CRON_SECRET` na Vercel; 22 produtos com preço abaixo do custo (decisão de preço); telefone do "Ponto de Retirada Bangu"; 6 leilões de agosto sem vencedor; arte do banner 2 (85%); KYC em bucket público; policies `USING (true)` das tabelas internas (X-Game/X-Perf/método) — mudar exige reescrever as telas pra escrever via rota.
+
+**Testes:** `tests/auditoriaNoturnaDecisoes.test.mjs` (10). Suíte: 2524.
+
+---
+
 ## DIR-157 — Auditoria noturna do site inteiro (15→16/09/2026): o que foi achado, o que foi corrigido, o que espera decisão
 
 **Status:** EM VIGOR — correções mergeadas; itens de decisão listados no fim.

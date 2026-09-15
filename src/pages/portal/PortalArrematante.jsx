@@ -19,7 +19,7 @@ export default function PortalArrematante() {
         iconColor="bg-gradient-to-br from-emerald-500 to-emerald-700"
         badge="Acesso Imediato"
         title="Seja um Arrematante"
-        subtitle="Lances em tempo real. Descontos de até 90%."
+        subtitle="Lances em tempo real. Descontos de até 80%."
         description="Participe de leilões diários online e arremate eletrônicos, eletrodomésticos, móveis e muito mais. Tudo com sistema seguro, transparente e em tempo real."
       />
 
@@ -27,7 +27,7 @@ export default function PortalArrematante() {
         title="Por que ser Arrematante?"
         accentColor="text-emerald-400"
         items={[
-          { title: "Até 90% de desconto", description: "Arremate produtos abaixo do valor de mercado todos os dias." },
+          { title: "Até 80% de desconto", description: "Arremate produtos abaixo do valor de mercado todos os dias." },
           { title: "Lances em tempo real", description: "Disputa ao vivo, com chat integrado e martelo automático." },
           { title: "Cadastro grátis", description: "Crie sua conta em 1 minuto e comece a dar lances imediatamente." },
           { title: "Pagamento seguro", description: "PIX via ASAAS com confirmação automática e nota fiscal." },

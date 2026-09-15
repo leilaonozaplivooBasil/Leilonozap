@@ -26,7 +26,7 @@ export default function TermsModal({ onAccept }) {
               <span className="font-bold">Sem Garantia de Fábrica:</span> Por serem produtos de repasse, eles <span className="underline">não possuem garantia</span> do fabricante. A oportunidade está no preço significativamente abaixo do mercado.
             </li>
             <li>
-              <span className="font-bold">Sem Devolução:</span> Uma vez arrematado e pago, o produto é seu. <span className="underline">Não há direito a devolução ou troca</span>, exceto por defeito de funcionamento não descrito.
+              <span className="font-bold">Sem Devolução nos leilões:</span> Uma vez arrematado e pago, o produto é seu. <span className="underline">Não há direito a devolução ou troca</span>, exceto por defeito de funcionamento não descrito.
             </li>
             <li>
               <span className="font-bold">Consumo Inteligente:</span> Nossa proposta é clara: você compra muito mais barato porque a loja não pode vender como novo — e a gente pode.

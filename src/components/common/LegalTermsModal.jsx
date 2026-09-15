@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, FileText } from 'lucide-react';
+import { EMAIL_CONTATO } from '@/lib/contatoOficial';
 
 export default function LegalTermsModal({ onClose }) {
   return (
@@ -149,8 +150,8 @@ export default function LegalTermsModal({ onClose }) {
 
           <p className="text-gray-500 text-xs pt-2">
             Dúvidas? Entre em contato:{' '}
-            <a href="mailto:no-reply@leilaonozap.com" className="text-emerald-400 hover:underline">
-              no-reply@leilaonozap.com
+            <a href={`mailto:${EMAIL_CONTATO}`} className="text-emerald-400 hover:underline">
+              {EMAIL_CONTATO}
             </a>
           </p>
         </div>

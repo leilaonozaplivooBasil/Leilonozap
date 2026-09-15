@@ -86,7 +86,7 @@ export default function WelcomeModal({ onAccept }) {
               <li>🎯 <strong>Estratégia de Venda:</strong> Leilão NoZap é nossa estratégia comercial, não um leilão oficial</li>
               <li>📦 <strong>Produtos de Oportunidade:</strong> Trabalhamos com arrematos, devoluções e mostruário - todos testados!</li>
               <li>⚠️ <strong>Sem Garantia:</strong> Produtos não têm garantia de fábrica, mas o preço compensa</li>
-              <li>🚫 <strong>Sem Devolução:</strong> Arrematou, é seu! Por isso os preços são imbatíveis</li>
+              <li>🚫 <strong>Sem Devolução nos leilões:</strong> Arrematou, é seu! Por isso os preços são imbatíveis (na Loja Virtual vale o arrependimento de 7 dias)</li>
               <li>💡 <strong>Consumo Inteligente:</strong> Você paga barato porque a loja não pode vender como novo</li>
             </ul>
           </div>

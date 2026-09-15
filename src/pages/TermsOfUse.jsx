@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FileText, ArrowLeft } from "lucide-react";
+import { EMAIL_CONTATO } from '@/lib/contatoOficial';
 
 export default function TermsOfUse() {
   return (
@@ -64,16 +65,16 @@ export default function TermsOfUse() {
           </div>
 
           <div>
-            <h2 className="text-white font-semibold mb-2 text-base">5. Política de Não Devolução</h2>
+            <h2 className="text-white font-semibold mb-2 text-base">5. Devolução e arrependimento</h2>
             <p>
-              Por se tratar de produtos de repasse, <strong className="text-white">não há direito a devolução ou troca</strong> após o arremate e pagamento, salvo nos casos de defeito de funcionamento não descrito no anúncio. Neste caso, o usuário deverá acionar o suporte em até <strong className="text-white">48 horas</strong> após o recebimento.
+              <strong className="text-white">Nos leilões</strong>, por se tratar de produtos de repasse, <strong className="text-white">não há direito a devolução ou troca</strong> após o arremate e pagamento, salvo nos casos de defeito de funcionamento não descrito no anúncio. Neste caso, o usuário deverá acionar o suporte em até <strong className="text-white">48 horas</strong> após o recebimento. <strong className="text-white">Nas compras da Loja Virtual</strong> vale o direito de arrependimento do art. 49 do Código de Defesa do Consumidor: até <strong className="text-white">7 dias</strong> após o recebimento, sem necessidade de justificativa.
             </p>
           </div>
 
           <div>
             <h2 className="text-white font-semibold mb-2 text-base">6. Garantia dos Produtos</h2>
             <p>
-              Os produtos <strong className="text-white">não possuem garantia do fabricante</strong>, pois se trata de mercadoria de repasse. O Leilão NoZap garante que os itens foram testados e estão funcionais conforme descrito no anúncio.
+              Os produtos <strong className="text-white">não possuem garantia do fabricante</strong>, pois se trata de mercadoria de repasse. O Leilão NoZap garante que os itens foram testados e estão funcionais conforme descrito no anúncio, e responde pela garantia legal do Código de Defesa do Consumidor (art. 26) contra defeito não informado.
             </p>
           </div>
 
@@ -110,7 +111,7 @@ export default function TermsOfUse() {
           </div>
 
           <p className="text-gray-500 text-xs pt-4 border-t border-gray-800">
-            Dúvidas? Entre em contato: <a href="mailto:no-reply@leilaonozap.com" className="text-emerald-400 hover:underline">no-reply@leilaonozap.com</a>
+            Dúvidas? Entre em contato: <a href={`mailto:${EMAIL_CONTATO}`} className="text-emerald-400 hover:underline">{EMAIL_CONTATO}</a>
           </p>
 
           <p className="text-gray-500 text-xs">

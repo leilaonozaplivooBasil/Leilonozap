@@ -8,6 +8,7 @@
 // Qualquer tela que mostre "Falar Comigo" deve usar podeFalarComigo() daqui —
 // nunca reimplementar a checagem, nunca olhar o campo `role` solto.
 import { CAREER_LEVELS, normalizeLevels } from '@/lib/careerLevels';
+import { linkWhatsAppNumero } from './whatsappOficial';
 
 const ORDEM = CAREER_LEVELS.reduce((m, l) => { m[l.id] = l.ordem; return m; }, {});
 
@@ -44,5 +45,5 @@ export function linkWhatsParceiro(parceiro) {
   if (!podeFalarComigo(parceiro)) return null;
   const nome = parceiro?.name || parceiro?.full_name || '';
   const texto = `Olá ${nome}! Estou vendo sua Loja Virtual no Leilão NoZap.`;
-  return `https://wa.me/55${telefoneParceiro(parceiro)}?text=${encodeURIComponent(texto)}`;
+  return linkWhatsAppNumero(telefoneParceiro(parceiro), texto);
 }

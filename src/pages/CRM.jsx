@@ -17,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { linkWhatsAppNumero } from '@/lib/whatsappOficial';
 
 export default function CRM() {
   const [customers, setCustomers] = useState([]);
@@ -451,7 +452,7 @@ _Entre em contato o mais rápido possível!_
 
 _Enviado via CRM Leilão NoZap_`;
 
-    const whatsappUrl = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = linkWhatsAppNumero(seller.phone, message);
     window.open(whatsappUrl, '_blank');
     
     setShowForwardModal(false);

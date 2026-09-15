@@ -501,7 +501,18 @@ export default async function handler(req, res) {
     // Agora 'canceled'/'cancelado' também podem ser flipados: o pagamento é real e
     // o cliente tem direito ao que comprou. A barreira do `status === 'paid'` lá em
     // cima continua garantindo execução única.
-    const flip = await sb(`catalog_sales?id=eq.${sale.id}&status=in.(pending_payment,canceled,cancelado,cancelled)`, {
+    // 🧾 AUDITORIA 15/09/2026 — venda cancelada CUJO ESTORNO já foi feito (cancelar_venda /
+    // estornar_para_carteira marcam o ledger como cancelado/estornado) não pode virar paga
+    // de novo: entregaria em dobro. Fica em log pra conciliação manual.
+    if (['canceled', 'cancelado', 'cancelled'].includes(String(sale.status))) {
+      const est = await (await sb(`commission_ledger?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&status=in.(cancelado,estornado)&limit=1`)).json().catch(() => []);
+      const wl = await (await sb(`wallet_ledger?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&tipo=ilike.*estorno*&limit=1`)).json().catch(() => []);
+      if ((Array.isArray(est) && est.length) || (Array.isArray(wl) && wl.length)) {
+        console.error(`[MP] venda ${sale.id} cancelada e JÁ ESTORNADA — pagamento ${pay.id} aprovado NÃO reprocessado; conciliar manualmente.`);
+        return res.status(200).json({ ok: true, cancelada_com_estorno: true, sale_id: sale.id, payment_id: String(pay.id) });
+      }
+    }
+    const flip = await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}&status=in.(pending_payment,canceled,cancelado,cancelled)`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
     });
