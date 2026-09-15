@@ -14,6 +14,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import { X, Loader2, ShieldCheck, MessageCircle, Copy, CheckCircle2, Truck, Store as StoreIcon } from 'lucide-react';
+import { linkWhatsAppNumero } from '@/lib/whatsappOficial';
 
 function Field({ label, ...props }) {
   return (
@@ -171,7 +172,7 @@ export default function LojaCheckout({ slug, store, cartItems, total, onClose, o
               {pixCopiado ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {pixCopiado ? 'Código PIX copiado!' : 'Copiar código PIX'}
             </button>
             <p className="text-[12px] text-gray-400">Pedido <b className="text-emerald-300">{pix.tracking}</b>. Assim que o pagamento cair, a loja recebe e prepara o envio. Você pode fechar esta tela.</p>
-            <a href={`https://wa.me/55${(store.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Acabei de fazer o pedido ' + pix.tracking + ' na sua loja.')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-emerald-300"><MessageCircle className="w-4 h-4" /> Falar com a loja</a>
+            <a href={linkWhatsAppNumero(store.phone, 'Olá! Acabei de fazer o pedido ' + pix.tracking + ' na sua loja.')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-emerald-300"><MessageCircle className="w-4 h-4" /> Falar com a loja</a>
             <button onClick={onPaid} className="w-full min-h-[44px] py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm">Concluir</button>
           </div>
         )}

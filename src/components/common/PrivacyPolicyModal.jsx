@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Shield } from 'lucide-react';
+import { EMAIL_CONTATO } from '@/lib/contatoOficial';
 
 export default function PrivacyPolicyModal({ onClose }) {
   return (
@@ -130,10 +131,10 @@ export default function PrivacyPolicyModal({ onClose }) {
             <p className="mt-2">
               📧{' '}
               <a
-                href="mailto:no-reply@leilaonozap.com"
+                href={`mailto:${EMAIL_CONTATO}`}
                 className="text-emerald-400 hover:underline"
               >
-                no-reply@leilaonozap.com
+                {EMAIL_CONTATO}
               </a>
             </p>
           </div>

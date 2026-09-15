@@ -4,6 +4,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { EMAIL_CONTATO } from '@/lib/contatoOficial';
 import { 
   Package, 
   TruckIcon, 
@@ -49,6 +50,8 @@ export default function OrderTracking() {
 
     if (auctionId) {
       loadOrderData();
+    } else {
+      setIsLoading(false); // 🧾 AUDITORIA 15/09/2026 — sem auction_id ficava "Carregando…" pra sempre
     }
   }, [auctionId]);
 
@@ -265,7 +268,7 @@ export default function OrderTracking() {
             </p>
             <div className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
               <Mail className="w-4 h-4" />
-              <span className="font-medium">relacionamento@leilaonozap.com</span>
+              <span className="font-medium">{EMAIL_CONTATO}</span>
             </div>
           </CardContent>
         </Card>

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 
 import { emitirSessao } from '../_lib/sessao.js';
 import { contaNaLixeira, AVISO_CONTA_NA_LIXEIRA } from '../_lib/contaAtiva.js';
+import { estourouLimite, ipDoRequest } from '../_lib/rateLimit.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -23,6 +24,10 @@ export default async function handler(req, res) {
     const password = String(body?.password || '');
     if (!email || !password) return res.status(400).json({ success: false, error: 'E-mail e senha são obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
+    // 🚦 AUDITORIA 15/09/2026 — força bruta: 12 tentativas por e-mail e 60 por IP a cada 15 min
+    if (await estourouLimite(`login:${email}`, 12, 900) || await estourouLimite(`login-ip:${ipDoRequest(req)}`, 60, 900)) {
+      return res.status(429).json({ success: false, error: 'Muitas tentativas de login. Aguarde alguns minutos e tente de novo.' });
+    }
 
     const users = await (await sb(`app_users?select=*&email=eq.${encodeURIComponent(email)}&limit=1`)).json();
     const user = Array.isArray(users) ? users[0] : null;

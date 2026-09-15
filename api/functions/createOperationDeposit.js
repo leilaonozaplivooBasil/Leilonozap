@@ -60,7 +60,12 @@ export default async function handler(req, res) {
     if (!ins.ok) {
       // instalações que exigem seller_id: depósito não gera comissão nenhuma (o webhook
       // desvia por kind antes de qualquer motor), então usar o próprio id é seguro.
-      ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...pedido, seller_id: u.id }) });
+      // 🧾 AUDITORIA 15/09/2026 — o fallback era o PRÓPRIO comprador: o gatilho de escrow
+      // gravava 100% do depósito "a liberar" pra ele. Agora é a conta da empresa.
+      const emp = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json().catch(() => []);
+      const empresaId = Array.isArray(emp) && emp[0] ? emp[0].id : null;
+      if (!empresaId) return res.status(200).json({ success: false, error: 'Conta da empresa não encontrada para registrar o depósito' });
+      ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...pedido, seller_id: empresaId }) });
       if (!ins.ok) { const t = await ins.text(); return res.status(200).json({ success: false, error: 'Falha ao abrir o depósito', details: t.slice(0, 200) }); }
     }
 

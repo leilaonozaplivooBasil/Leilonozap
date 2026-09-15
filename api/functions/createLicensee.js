@@ -42,6 +42,12 @@ export default async function handler(req, res) {
     const cpf = body?.cpf ? String(body.cpf).replace(/\D/g, '') : null;
     const level = String(body?.career_level || 'licenciado_aplicativo').trim() || 'licenciado_aplicativo';
     const actor_id = String(body?.actor_id || '').trim();     // admin logado (fluxo painel)
+    // 🧾 AUDITORIA 15/09/2026 — cargo de governança (pools do topo) nunca nasce por cadastro;
+    // sem operador, só os cargos de entrada.
+    const NIVEIS_GOVERNANCA = ['ceo', 'livoo_live', 'embaixador', 'conselheiro', 'fundador', 'diretoria_executiva', 'diretoria_operacao', 'executivo', 'admin', 'super_admin'];
+    const NIVEIS_AUTO_CADASTRO = ['licenciado_aplicativo', 'licenciado', 'licenciado_catalogo', 'vendedor', 'influenciador', 'influencer'];
+    if (NIVEIS_GOVERNANCA.includes(level)) return res.status(200).json({ success: false, error: 'Cargo de governança não pode ser criado por cadastro.' });
+    if (!actor_id && !NIVEIS_AUTO_CADASTRO.includes(level)) return res.status(200).json({ success: false, error: 'Cargo inválido para cadastro sem operador.' });
     // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
     // Enquanto SESSAO_MODO não for 'bloquear', isto NUNCA recusa ninguém:
     // serve pra mostrar, com tráfego real, se sobrou tela sem mandar o crachá.

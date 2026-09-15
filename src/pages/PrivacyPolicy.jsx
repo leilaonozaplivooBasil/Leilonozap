@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Shield, ArrowLeft } from "lucide-react";
+import { EMAIL_CONTATO } from '@/lib/contatoOficial';
 
 export default function PrivacyPolicy() {
   return (
@@ -90,7 +91,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-semibold mb-2 text-base">7. Contato — Encarregado de Dados (DPO)</h2>
             <p>Para exercer seus direitos ou tirar dúvidas sobre o tratamento dos seus dados, entre em contato:</p>
             <p className="mt-2">
-              📧 <a href="mailto:no-reply@leilaonozap.com" className="text-emerald-400 hover:underline">no-reply@leilaonozap.com</a>
+              📧 <a href={`mailto:${EMAIL_CONTATO}`} className="text-emerald-400 hover:underline">{EMAIL_CONTATO}</a>
             </p>
           </div>
 

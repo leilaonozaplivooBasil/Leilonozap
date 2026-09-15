@@ -14,8 +14,6 @@ import banner1Desk from '@/assets/banners/banner1-desktop.webp';
 import banner1Mob from '@/assets/banners/banner1-mobile.webp';
 import banner2Desk from '@/assets/banners/banner2-desktop.webp';
 import banner2Mob from '@/assets/banners/banner2-mobile.webp';
-import banner3Desk from '@/assets/banners/banner3-desktop.webp';
-import banner3Mob from '@/assets/banners/banner3-mobile.webp';
 import banner4Desk from '@/assets/banners/banner4-desktop.webp';
 import banner4Mob from '@/assets/banners/banner4-mobile.webp';
 import banner5Desk from '@/assets/banners/banner5-desktop.webp';
@@ -54,7 +52,8 @@ const LOGO = '/brand/icon-3d.webp';
 const IMAGE_CATALOG_BANNERS = [
   { desktop: banner1Desk, mobile: banner1Mob, title: 'Loja Virtual NoZap — até 70% OFF · Entrega Full' },
   { desktop: banner2Desk, mobile: banner2Mob, title: 'Ferramentas Entrega Full — até 85% de desconto' },
-  { desktop: banner3Desk, mobile: banner3Mob, title: '+500 produtos testados — 85% OFF + Frete Grátis' },
+  // 🧾 AUDITORIA 15/09/2026 — banner 3 ("+500 produtos… + FRETE GRÁTIS") saiu da rotação:
+  // a ARTE promete frete grátis e a loja cobra frete real. Volta quando a arte for refeita.
   { desktop: banner4Desk, mobile: banner4Mob, title: 'Torne-se um Licenciado — receba até 20% de comissão', link_url: createPageUrl('Licensing') },
   { desktop: banner5Desk, mobile: banner5Mob, title: 'Seja um Licenciado — venda na Loja Virtual e ganhe de casa', link_url: createPageUrl('Licensing') },
 ].flatMap(({ desktop, mobile, ...b }, i) => [
@@ -150,7 +149,7 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
     { icon: ScanSearch, label: 'CompareAQUI', accent: 'gold', onClick: () => window.dispatchEvent(new Event('openComparai')) },
     { icon: Gavel, label: 'Leilões ao vivo', onClick: () => navigate(createPageUrl('Home')) },
     { icon: Ticket, label: 'Cupons', accent: 'gold', onClick: mostrarCupons },
-    { icon: Truck, label: 'Frete Grátis', onClick: () => toast('🚚 Frete combinado direto no WhatsApp da loja.') },
+    { icon: Truck, label: 'Frete', onClick: () => toast('🚚 O frete é calculado no carrinho pelo seu CEP.') },
     { icon: BadgeCheck, label: 'Lojas Oficiais', onClick: () => navigate(createPageUrl('Catalog')) },
   ];
   const catIconByName = (name) => {

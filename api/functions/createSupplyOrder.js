@@ -134,9 +134,13 @@ export default async function handler(req, res) {
       // Algumas instalações exigem seller_id preenchido. A reposição é uma compra da
       // própria loja com a casa — usar o id dela aqui não gera comissão nenhuma,
       // porque o caminho 'reposicao' desvia antes de qualquer motor de comissão.
-      ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...pedido, seller_id: loja.id }) });
+      // 🧾 AUDITORIA 15/09/2026 — fallback era a PRÓPRIA loja compradora (escrow de 100% pra ela).
+      const emp = await (await sb('app_users?select=id&referral_code=eq.leilaonozap&limit=1')).json().catch(() => []);
+      const empresaId = Array.isArray(emp) && emp[0] ? emp[0].id : null;
+      if (!empresaId) return res.status(200).json({ success: false, error: 'Conta da empresa não encontrada para registrar a reposição' });
+      ins = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...pedido, seller_id: empresaId }) });
       if (!ins.ok) { const t = await ins.text(); return res.status(200).json({ success: false, error: 'Falha ao criar pedido', details: t.slice(0, 200) }); }
-      pedido.seller_id = loja.id;
+      pedido.seller_id = empresaId;
     }
 
     const resumo = {

@@ -667,9 +667,11 @@ export default function Home() {
     } catch (error) {
       const oldCache = sessionStorage.getItem('auctions_cache') || localStorage.getItem('auctions_cache_persistent');
       if (oldCache) {
-        try { deduplicateAndSet(JSON.parse(oldCache)); } catch (e) { setAuctions([]); }
+        try { deduplicateAndSet(JSON.parse(oldCache)); } catch (e) { setAuctions([]); setLoadError('Não foi possível carregar os leilões agora.'); }
       } else {
+        // 🧾 AUDITORIA 15/09/2026 — antes ficava "Nenhum leilão ativo" como se fosse normal
         setAuctions([]);
+        setLoadError('Não foi possível carregar os leilões agora.');
       }
     } finally {
       setIsLoading(false);
@@ -1016,7 +1018,7 @@ export default function Home() {
             {/* Glow separator */}
             <div className="glow-line mb-8 mx-4 opacity-50" />
 
-            {loadError && retryCount >= 3 &&
+            {loadError && auctions.length === 0 &&
           <div className="mb-8 glass-card rounded-2xl p-6" style={{ borderColor: 'rgba(234, 179, 8, 0.2)' }}>
                 <div className="flex items-start gap-4">
                   <div className="text-5xl">⚠️</div>

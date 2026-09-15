@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
 import { WHATSAPP_OFICIAL_FORMATADO } from '@/lib/whatsappOficial';
+import { EMAIL_CONTATO, ENDERECO_SEDE } from '@/lib/contatoOficial';
 
 export default function Footer() {
   const [footerSettings, setFooterSettings] = useState(null);
@@ -9,8 +10,8 @@ export default function Footer() {
   const [isLoading, setIsLoading] = useState(true);
 
   const defaultFooter = {
-    address: 'Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102',
-    email: 'relacionamento@leilaonozap.com',
+    address: ENDERECO_SEDE,
+    email: EMAIL_CONTATO,
     phone: WHATSAPP_OFICIAL_FORMATADO,
     // Link de convite do WhatsApp Business (wa.me/message/...). O rodapé aceita
     // tanto link completo quanto número puro — ver montagem do href abaixo.

@@ -217,8 +217,8 @@ export default function LicenseeOrders(){
         </Card>
 
         {/* Tabela */}
-        <div className="overflow-hidden rounded-lg border border-gray-700">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border border-gray-700">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-gray-800 text-gray-300">
               <tr>
                 <th className="text-left px-4 py-3">Data e hora</th>

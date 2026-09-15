@@ -1,6 +1,7 @@
 // sendEmailCode — gera um código de 6 dígitos, guarda só o HASH no banco e envia por e-mail (Brevo).
 // Usado no cadastro (purpose:'signup') e no esqueci-a-senha (purpose:'reset'). SEM link mágico.
 import crypto from 'crypto';
+import { estourouLimite, ipDoRequest } from '../_lib/rateLimit.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -43,6 +44,10 @@ export default async function handler(req, res) {
     const purpose = body?.purpose === 'reset' ? 'reset' : 'signup';
     if (!email || !email.includes('@')) return res.status(400).json({ success: false, error: 'E-mail inválido' });
     if (!SUPABASE_URL || !SR || !BREVO_KEY) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
+    // 🚦 AUDITORIA 15/09/2026 — 5 códigos por e-mail e 30 por IP a cada 15 min (custo Brevo + spam)
+    if (await estourouLimite(`codigo:${email}`, 5, 900) || await estourouLimite(`codigo-ip:${ipDoRequest(req)}`, 30, 900)) {
+      return res.status(429).json({ success: false, error: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' });
+    }
 
     // No reset, só envia se o usuário existir (mas responde sucesso sempre, p/ não vazar quem tem conta)
     if (purpose === 'reset') {

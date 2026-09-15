@@ -63,7 +63,7 @@ export default defineConfig(({ command }) => ({
       manifest: {
         name: 'Leilão NoZap — Loja Virtual & Leilões',
         short_name: 'Leilão NoZap',
-        description: 'Loja virtual e leilões online com até 60% de desconto. Dê seu lance, arremate e receba em casa.',
+        description: 'Loja virtual e leilões online com até 80% de desconto. Dê seu lance, arremate e receba em casa.',
         lang: 'pt-BR',
         start_url: '/Loja-Virtual',
         scope: '/',

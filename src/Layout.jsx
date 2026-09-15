@@ -365,11 +365,11 @@ export default function Layout({ children, currentPageName }) {
       meta.content = content;
     };
 
-    updateOrCreateMeta('name', 'description', 'Participe de leilões online no Leilão NoZap! Dê lances em tempo real, arremate produtos com até 90% de desconto. Eletrônicos, eletrodomésticos, móveis e muito mais. Sistema 100% seguro e transparente.');
+    updateOrCreateMeta('name', 'description', 'Participe de leilões online no Leilão NoZap! Dê lances em tempo real, arremate produtos com até 80% de desconto. Eletrônicos, eletrodomésticos, móveis e muito mais. Sistema 100% seguro e transparente.');
 
     // Open Graph Tags
     updateOrCreateMeta('property', 'og:title', 'Leilão NoZap - Leilões Online com Lances em Tempo Real');
-    updateOrCreateMeta('property', 'og:description', 'Arremate produtos incríveis com até 90% de desconto! Leilões diários de eletrônicos, eletrodomésticos, móveis e muito mais. Entre e dê seu lance agora!');
+    updateOrCreateMeta('property', 'og:description', 'Arremate produtos incríveis com até 80% de desconto! Leilões diários de eletrônicos, eletrodomésticos, móveis e muito mais. Entre e dê seu lance agora!');
     updateOrCreateMeta('property', 'og:image', 'https://leilaonozap.net/brand/logo-horizontal-og.jpg');
     updateOrCreateMeta('property', 'og:type', 'website');
     updateOrCreateMeta('property', 'og:url', 'https://leilaonozap.net');
@@ -377,7 +377,7 @@ export default function Layout({ children, currentPageName }) {
     // Twitter Card Tags
     updateOrCreateMeta('name', 'twitter:card', 'summary_large_image');
     updateOrCreateMeta('name', 'twitter:title', 'Leilão NoZap - Leilões Online com Lances em Tempo Real');
-    updateOrCreateMeta('name', 'twitter:description', 'Arremate produtos com até 90% de desconto! Leilões diários online com sistema seguro e transparente.');
+    updateOrCreateMeta('name', 'twitter:description', 'Arremate produtos com até 80% de desconto! Leilões diários online com sistema seguro e transparente.');
     updateOrCreateMeta('name', 'twitter:image', 'https://leilaonozap.net/brand/logo-horizontal-og.jpg');
   }, []);
 

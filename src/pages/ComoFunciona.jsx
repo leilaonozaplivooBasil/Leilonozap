@@ -71,7 +71,8 @@ export default function ComoFunciona() {
                 livre iniciativa garantida pelo <strong className="text-nz-tinta">art. 170 da Constituição
                 Federal</strong>. A venda segue integralmente o
                 <strong className="text-nz-tinta"> Código de Defesa do Consumidor (Lei nº 8.078/1990)</strong>, com
-                nota fiscal, garantia e direito de arrependimento.
+                nota fiscal e garantia legal (não a de fábrica — são produtos de repasse). Na Loja Virtual vale ainda o
+                direito de arrependimento de 7 dias; no leilão, arrematou e pagou, é seu.
               </p>
             </div>
           </div>
