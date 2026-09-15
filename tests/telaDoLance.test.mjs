@@ -3,23 +3,20 @@
 // Relato da Beatriz, com print: a folha "Escolha seu lance" abria espremida e
 // cortada na borda, e o rodapé do lance não cabia na tela.
 //
-// Eram DUAS causas somadas, as duas de layout:
+// A CAUSA, UMA SÓ: a folha de lance mora dentro do rodapé
+// `.bid-input-container`, que tem `backdrop-filter: blur(12px)`. Elemento com
+// backdrop-filter vira o BLOCO DE REFERÊNCIA de todo `position: fixed` dentro
+// dele — então `fixed inset-0` deixava de significar "a tela inteira" e passava
+// a significar "a caixa do rodapé", poucas dezenas de pixels de altura. A folha
+// nunca teve chance de cobrir a tela.
 //
-// 1. A folha de lance mora dentro do rodapé `.bid-input-container`, que tem
-//    `backdrop-filter: blur(12px)`. Elemento com backdrop-filter vira o BLOCO DE
-//    REFERÊNCIA de todo `position: fixed` dentro dele — então `fixed inset-0`
-//    deixava de significar "a tela inteira" e passava a significar "a caixa do
-//    rodapé". A folha nunca teve chance de cobrir a tela.
-//
-// 2. No celular, `.main-content` não tinha `min-height: 0`. O padrão de um item
-//    flex é `min-height: auto`, ou seja, ele se recusa a encolher abaixo do
-//    próprio conteúdo. Quando o rodapé crescia (caixa de endereço aberta), ele
-//    era empurrado para fora e o `overflow: hidden` da página cortava — e a
-//    página é travada de propósito, então não havia como rolar até lá.
-//
-// A prova de que a causa 2 é conhecida da casa: o layout de COMPUTADOR já
-// resolvia o mesmo problema com `grid-template-rows: minmax(0,1fr)`, com
-// comentário explicando. O bloco do celular ficou sem.
+// ⚠️ EU ERREI ANTES, E FICA REGISTRADO: cheguei a propor um segundo conserto,
+// `min-height: 0` no `.main-content` do celular, com a teoria de que o rodapé
+// era empurrado para fora. MEDI num Chromium de verdade (tests/navegador/
+// folhaDoLance.spec.mjs) e era NO-OP: aquele bloco já tem `overflow: hidden`, e
+// isso por si só faz o tamanho mínimo automático do item flex valer zero. Tirar
+// o `overflow: hidden` é que quebra — e aí o teste de navegador reprova.
+// Por isso a regra abaixo guarda o `overflow: hidden`, não um min-height.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -74,13 +71,18 @@ describe('a folha "Escolha seu lance"', () => {
 describe('a sala do leilão no celular', () => {
   const sala = ler('../src/pages/AuctionRoom.jsx');
 
-  test('🔴 o bloco do meio pode encolher, para o rodapé do lance caber', () => {
+  test('🔴 o bloco do meio mantém `overflow: hidden` — é o que deixa ele encolher', () => {
+    // Medido em navegador: com `overflow: hidden` o tamanho mínimo automático do
+    // item flex vale ZERO, então o bloco encolhe e o rodapé do lance cabe. Se
+    // alguém tirar esse `overflow` achando que é enfeite, o rodapé é empurrado
+    // para fora da tela travada e não há como rolar até ele.
     const mobile = /@media \(max-width: 1023px\) \{([\s\S]*?)\n        \}/.exec(sala);
     assert.ok(mobile, 'não achei o bloco de celular');
     const regra = /\.main-content \{[^}]*\}/.exec(mobile[1]);
     assert.ok(regra, 'não achei a regra .main-content do celular');
-    assert.match(regra[0], /min-height:\s*0/,
-      'sem min-height: 0 o rodapé do lance é empurrado para fora da tela');
+    assert.match(regra[0], /overflow:\s*hidden/,
+      'sem overflow: hidden o rodapé do lance é empurrado para fora da tela');
+    assert.match(regra[0], /flex-grow:\s*1/);
   });
 
   test('a página continua travada de propósito — o conserto não soltou a rolagem', () => {
