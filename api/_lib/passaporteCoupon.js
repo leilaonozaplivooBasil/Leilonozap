@@ -168,13 +168,18 @@ export async function liberarCupomPassaporte(userId, auctionId = null, valorLanc
  * Cancela a FATIA do cupom correspondente ao lance que GANHOU o leilão: 10% do
  * valor arrematado (não do depósito inteiro) — o valor pago virou compra.
  */
-export async function cancelarCuponsBloqueados(userId, valorArrematado = null) {
+export async function cancelarCuponsBloqueados(userId, valorArrematado = null, jaCobrado = 0) {
   try {
     if (!ok()) return { canceled: 0 };
-    const alvo = money((money(valorArrematado) * PCT_PASSAPORTE) / 100);
-    if (alvo <= 0) return { canceled: 0, reason: 'valor_arremate_invalido' };
+    const alvoCheio = money((money(valorArrematado) * PCT_PASSAPORTE) / 100);
+    if (alvoCheio <= 0) return { canceled: 0, reason: 'valor_arremate_invalido' };
+    // 15/09/2026 — `jaCobrado` é o que o modelo A já recolheu da carteira pelo MESMO
+    // arremate (ver finalizeAuctionCore.js). Os 10% são um alvo só: aqui cancela
+    // apenas o que sobrou dele. Sem o parâmetro (chamadas antigas), cobra os 10% inteiros.
+    const alvo = money(Math.max(0, alvoCheio - money(jaCobrado)));
+    if (alvo <= 0) return { canceled: 0, alvo: 0, alvo_cheio: alvoCheio, ja_cobrado: money(jaCobrado) };
     const { consumido } = await consumirBloqueado(userId, alvo, 'valor_cancelado');
-    return { canceled: consumido, alvo };
+    return { canceled: consumido, alvo, alvo_cheio: alvoCheio, ja_cobrado: money(jaCobrado) };
   } catch (e) {
     return { canceled: 0, reason: String(e?.message || e) };
   }
