@@ -92,11 +92,13 @@ export default function VendedorCheckout() {
           state: freshUser.address_state || "",
         });
 
-        // Já pagou e tem saldo esperando? Vai direto escolher os produtos.
-        if ((freshUser.seller_credit_balance || 0) > 0) {
-          navigate(createPageUrl("VendedorEscolherProdutos"), { replace: true });
-          return;
-        }
+        // 🎓 DIR — pagar ANTES de escolher os produtos era o erro que causou esta
+        // correção: comissão de topo institucional nunca era paga (motor à parte,
+        // sem o de 30% da loja) e o cliente descobria o saldo sem saber pra onde ir.
+        // Agora ninguém mais paga aqui primeiro — inclusive quem já tem saldo de uma
+        // adesão paga antes desta correção, que continua sendo atendido do outro lado.
+        navigate(createPageUrl("VendedorEscolherProdutos") + `?tipo=${tipo}`, { replace: true });
+        return;
       } catch (e) {
         console.debug("Erro ao carregar checkout de vendedor:", e.message);
       } finally {

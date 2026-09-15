@@ -4,15 +4,26 @@ import { toast } from "sonner";
 import { plataforma } from "@/api/plataformaClient";
 import { createPageUrl } from "@/utils";
 import { fmtBR } from "@/lib/money";
-import { Loader2, CheckCircle2, Truck, Store } from "lucide-react";
+import { Loader2, CheckCircle2, Truck, Store, AlertTriangle, RotateCcw } from "lucide-react";
 import VendedorProductPicker from "@/components/vendedor/VendedorProductPicker";
 import VendedorCartBar from "@/components/vendedor/VendedorCartBar";
 import CalculadoraFrete from "@/components/frete/CalculadoraFrete";
 import VendedorFretePagamento from "@/components/vendedor/VendedorFretePagamento";
 
-// 🛍️ ETAPA 2 do fluxo "Seja Vendedor" — usa o saldo da adesão (já pago) para
-// escolher QUALQUER produto da Loja Virtual. Fecha o pedido só quando o total
-// escolhido atinge o saldo disponível.
+// 🎓 DIR — a primeira compra de Vendedor/Licenciado agora é ESCOLHER OS PRODUTOS
+// PRIMEIRO e pagar depois (correção autorizada pelo dono: "o vendedor deveria
+// escolher os produtos e pagar... por isso que a gente colocou a loja"). O
+// carrinho vai pra /Cart como uma compra NORMAL da Loja Virtual (com frete
+// calculado no mesmo checkout) — a comissão sai pelo motor OFICIAL de 30%
+// (fulfillStoreOrder → arvoreOficial.js) que qualquer venda da Loja Virtual já
+// usa, em vez de um motor de adesão à parte que nunca pagava o topo institucional.
+//
+// Quem JÁ PAGOU pelo caminho antigo (tem `seller_credit_balance` de uma adesão
+// paga antes desta correção) continua no modo de baixo — saldo já concedido,
+// escolhe produtos até bater o saldo, frete cobrado à parte — pra não perder o
+// que já foi pago. Ninguém mais entra nesse modo a partir desta correção.
+const CARGO_MINIMO = { vendedor: 1497, licenciado: 5000 };
+
 export default function VendedorEscolherProdutos() {
   const navigate = useNavigate();
   // 🆕 Mesma tela serve Vendedor e Licenciado — o tipo vem do checkout (sessionStorage).
@@ -38,9 +49,16 @@ export default function VendedorEscolherProdutos() {
   const [deliveryMethod, setDeliveryMethod] = useState("pickup");
   const [freteSel, setFreteSel] = useState(null);
   const [extraPaid, setExtraPaid] = useState(false);
+  // 🔴 antes um erro aqui virava só `console.debug` e a tela ficava com a grade de
+  // produtos vazia — indistinguível de "não tem produto nenhum" pra quem está
+  // olhando. Agora avisa e oferece tentar de novo.
+  const [loadError, setLoadError] = useState(false);
+  const carregar = useRef(() => {});
 
   useEffect(() => {
-    (async () => {
+    carregar.current = async () => {
+      setLoadError(false);
+      setLoading(true);
       try {
         const saved = localStorage.getItem("currentUser");
         if (!saved) {
@@ -50,11 +68,6 @@ export default function VendedorEscolherProdutos() {
         const localUser = JSON.parse(saved);
         const fresh = await plataforma.entities.AppUser.filter({ id: localUser.id });
         const freshUser = fresh?.[0] || localUser;
-
-        if (!(freshUser.seller_credit_balance > 0)) {
-          navigate(createPageUrl("VendedorCheckout"), { replace: true });
-          return;
-        }
         setUser(freshUser);
 
         const prods = await plataforma.entities.Product.filter({ catalog_active: true }, "-created_date", 240);
@@ -76,12 +89,21 @@ export default function VendedorEscolherProdutos() {
           }
         } catch (_) { /* estado salvo inválido, ignora */ }
       } catch (e) {
-        console.debug("Erro ao carregar escolha de produtos:", e.message);
+        console.error("Erro ao carregar escolha de produtos:", e.message);
+        setLoadError(true);
+        toast.error("Não foi possível carregar os produtos da loja agora.");
       } finally {
         setLoading(false);
       }
-    })();
-  }, [navigate]);
+    };
+    carregar.current();
+  }, [navigate, tipo]);
+
+  // 💾 Quem já pagou pelo caminho antigo (seller_credit_balance) continua no modo de
+  // saldo; a partir desta correção, ninguém mais chega até esta tela sem ter escolhido
+  // produto nenhum — mas gente que pagou ANTES da correção precisa continuar funcionando.
+  const temSaldo = (user?.seller_credit_balance || 0) > 0;
+  const minimoDaCompra = CARGO_MINIMO[tipo] || CARGO_MINIMO.vendedor;
 
   const total = useMemo(
     () => Object.values(cart).reduce((sum, it) => sum + it.qty * (it.product.price_catalog || 0), 0),
@@ -92,8 +114,10 @@ export default function VendedorEscolherProdutos() {
     () => Object.values(cart).map((it) => ({ id: it.product.id, quantidade: it.qty, valor: it.product.price_catalog || 0 })),
     [cart]
   );
-  // 🚚 A seção de entrega aparece assim que o carrinho bate o saldo da adesão.
-  const showEntrega = !!user && total >= user.seller_credit_balance && total > 0;
+  // 🚚 A seção de entrega (frete cobrado à parte) só existe no modo antigo, de quem
+  // já pagou e está gastando o saldo — no modo novo o frete é calculado no /Cart,
+  // junto do pagamento único.
+  const showEntrega = temSaldo && !!user && total >= user.seller_credit_balance && total > 0;
   // 💸 O saldo da adesão cobre até o valor da adesão; o que passar disso (complemento) e o
   // frete de entrega não são cobertos por ele — os dois são cobrados JUNTOS, num só pagamento.
   const freteValor = deliveryMethod === "delivery" ? (freteSel?.preco || 0) : 0;
@@ -192,6 +216,21 @@ export default function VendedorEscolherProdutos() {
     }
   };
 
+  // 🛒 Modo NOVO (ninguém pagou ainda): manda o carrinho pro checkout normal da Loja
+  // Virtual — /Cart calcula o frete, cobra tudo num pagamento só e, ao confirmar,
+  // o próprio mpWebhook concede o cargo (ver createMPPix.js / mpWebhook.js).
+  const irParaCarrinho = () => {
+    if (total < minimoDaCompra) return;
+    const itensCarrinho = Object.values(cart).map((it) => ({ ...it.product, quantity: it.qty }));
+    try {
+      localStorage.setItem("catalogCart", JSON.stringify(itensCarrinho));
+      window.dispatchEvent(new Event("cartUpdated"));
+      sessionStorage.setItem("pendingRoleGrant", JSON.stringify({ role: tipo, minAmount: minimoDaCompra, label: cargoLabel }));
+      sessionStorage.removeItem("vendedorEscolherState");
+    } catch (_) { /* storage indisponível — segue mesmo assim, o carrinho fica só na memória desta aba */ }
+    navigate(createPageUrl("Cart"));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -217,13 +256,35 @@ export default function VendedorEscolherProdutos() {
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-black">Escolha os produtos da sua primeira compra</h1>
-          <p className="text-nz-tinta-fraca text-sm mt-1">
-            Seu saldo: <strong className="text-nz-verde">R$ {fmtBR(user?.seller_credit_balance || 0)}</strong> — escolha
-            à vontade em qualquer produto da Loja Virtual.
-          </p>
+          {temSaldo ? (
+            <p className="text-nz-tinta-fraca text-sm mt-1">
+              Seu saldo: <strong className="text-nz-verde">R$ {fmtBR(user?.seller_credit_balance || 0)}</strong> — escolha
+              à vontade em qualquer produto da Loja Virtual.
+            </p>
+          ) : (
+            <p className="text-nz-tinta-fraca text-sm mt-1">
+              Sua primeira compra como {cargoLabel} precisa somar pelo menos{' '}
+              <strong className="text-nz-verde">R$ {fmtBR(minimoDaCompra)}</strong> — escolha à vontade em qualquer
+              produto da Loja Virtual e pague tudo de uma vez, com frete incluso, no próximo passo.
+            </p>
+          )}
         </div>
 
-        <VendedorProductPicker products={products} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
+        {loadError ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+            <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+            <p className="font-bold text-nz-tinta">Não deu pra carregar os produtos da loja agora.</p>
+            <p className="text-sm text-nz-tinta-fraca mt-1">Isso não significa que a loja está vazia — pode ter sido uma falha passageira.</p>
+            <button
+              onClick={() => carregar.current()}
+              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-nz-verde hover:bg-nz-verde/90"
+            >
+              <RotateCcw className="w-4 h-4" /> Tentar de novo
+            </button>
+          </div>
+        ) : (
+          <VendedorProductPicker products={products} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
+        )}
 
         {/* 🚚 Entrega — aparece quando o carrinho já bateu o valor da adesão, pronto pra fechar */}
         {showEntrega && (
@@ -276,13 +337,26 @@ export default function VendedorEscolherProdutos() {
         )}
       </div>
 
-      <VendedorCartBar
-        total={total}
-        balance={user?.seller_credit_balance || 1497}
-        onClose={handleFecharPedido}
-        closing={closing}
-        blocked={showEntrega && !canClose}
-      />
+      {temSaldo ? (
+        <VendedorCartBar
+          total={total}
+          balance={user?.seller_credit_balance || 1497}
+          onClose={handleFecharPedido}
+          closing={closing}
+          blocked={showEntrega && !canClose}
+        />
+      ) : (
+        <VendedorCartBar
+          total={total}
+          balance={minimoDaCompra}
+          onClose={irParaCarrinho}
+          closing={false}
+          blocked={loadError}
+          saldoLabel="Total escolhido"
+          actionLabel="Ir para o carrinho"
+          pendenteLabel="Escolha produtos até atingir o valor mínimo da primeira compra."
+        />
+      )}
     </div>
   );
 }

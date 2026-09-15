@@ -105,8 +105,9 @@ export default function SejaLicenciado() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-3 text-nz-tinta">Como começar</h2>
           <p className="text-nz-tinta-fraca text-center mb-8">
-            Você paga <strong className="text-nz-tinta">R$ 5.000</strong> pelo Mercado Pago e escolhe os produtos da
-            sua <strong className="text-nz-tinta">primeira compra</strong> direto na nossa Loja Virtual.
+            Você escolhe os produtos da sua <strong className="text-nz-tinta">primeira compra</strong> direto na
+            nossa Loja Virtual — soma pelo menos <strong className="text-nz-tinta">R$ 5.000</strong> — e paga tudo de
+            uma vez pelo Mercado Pago, com o frete incluso.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -155,7 +156,7 @@ export default function SejaLicenciado() {
               direto na sua carteira.
             </p>
             <button onClick={irParaCheckout} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
-              <ShoppingBag className="w-4 h-4" /> Pagar agora e escolher meus produtos
+              <ShoppingBag className="w-4 h-4" /> Escolher meus produtos e pagar
             </button>
           </div>
         </div>
@@ -200,8 +201,8 @@ export default function SejaLicenciado() {
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-8 text-nz-tinta">Como funciona na prática</h2>
           <div className="space-y-3">
             {[
-              'Você se cadastra e paga R$ 5.000 pelo Mercado Pago (PIX ou cartão).',
-              'Escolhe os produtos da sua primeira compra na Loja Virtual e recebe em casa ou retira na loja.',
+              'Você se cadastra e escolhe os produtos da sua primeira compra na Loja Virtual (mínimo R$ 5.000).',
+              'Paga tudo de uma vez pelo Mercado Pago (PIX ou cartão) e recebe em casa ou retira na loja.',
               'Já começa a vender na sua Loja Virtual — e ganha 13% em dinheiro real imediatamente, em cada venda.',
               'Cadastra Vendedores e Financiadores para a sua equipe e ganha de rebate também em cada venda deles.',
             ].map((t, i) => (
