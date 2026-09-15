@@ -6,6 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, ShoppingBag, Eye, Loader2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { podeVerOperacao } from '@/lib/licensingTabs';
+import { money } from '@/lib/format';
 
 // 🔴 Contagem "zerada" a partir daqui: vendas/comissões antigas (antes de julho/2026)
 // eram de teste. O relatório só considera pedidos criados a partir deste corte
@@ -113,7 +114,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Faturamento</p>
-                <p className="text-2xl font-bold text-nz-verde mt-2">R$ {stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-nz-verde mt-2">{money(stats.totalRevenue)}</p>
               </div>
               <TrendingUp className="w-10 h-10 text-nz-verde" />
             </div>
@@ -167,7 +168,7 @@ export default function CatalogHome({ currentStore, catalogSales = [], user, onG
                     <p className="text-gray-900 font-medium text-sm">{order.product_title || 'Produto'}</p>
                     <p className="text-gray-500 text-xs mt-1">{new Date(order.created_date).toLocaleDateString('pt-BR')}</p>
                   </div>
-                  <Badge className="bg-nz-verde-fundo text-nz-verde border border-nz-verde/30">R$ {order.total_amount?.toFixed(2)}</Badge>
+                  <Badge className="bg-nz-verde-fundo text-nz-verde border border-nz-verde/30">{money(order.total_amount)}</Badge>
                 </div>
               ))
             ) : (

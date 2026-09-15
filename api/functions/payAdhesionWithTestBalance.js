@@ -1,3 +1,4 @@
+import { exigirSessao } from '../_lib/sessao.js';
 // payAdhesionWithTestBalance — paga a adesão de Vendedor (R$1.497) usando o saldo de TESTE
 // (test_wallet_balance) creditado pelo admin. Debita o saldo de teste e credita
 // seller_credit_balance, exatamente como o webhook faz num pagamento real — mas SEM
@@ -19,6 +20,8 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const { user_id, amount } = body || {};
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    const _ses = exigirSessao(req, user_id, 'payAdhesionWithTestBalance'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
     if (!SUPABASE_URL || !SR) return res.status(200).json({ success: false, error: 'Banco não configurado' });
     if (!user_id) return res.status(200).json({ success: false, error: 'user_id é obrigatório' });
     const value = Number(amount) || VALOR_MINIMO;

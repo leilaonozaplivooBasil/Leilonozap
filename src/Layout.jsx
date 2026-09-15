@@ -37,6 +37,7 @@ import FloatingDock from "@/components/common/FloatingDock";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 // 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
 import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
+import { lerCarrinho } from '@/lib/storageSeguro';
 
 const AppUser = plataforma.entities.AppUser;
 const User = { me: () => plataforma.auth.me() };
@@ -183,9 +184,9 @@ export default function Layout({ children, currentPageName }) {
   // Atualiza contador do carrinho
   useEffect(() => {
     const updateCartCount = () => {
-      const savedCart = localStorage.getItem('catalogCart');
-      if (savedCart) {
-        const cart = JSON.parse(savedCart);
+      // 🧯 AUDITORIA 15/09/2026 — JSON.parse sem proteção aqui derrubava o site inteiro
+      const cart = lerCarrinho();
+      if (cart.length) {
         const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
         setCartCount(totalItems);
       } else {

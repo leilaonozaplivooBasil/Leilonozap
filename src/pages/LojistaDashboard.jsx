@@ -328,7 +328,7 @@ export default function LojistaDashboard() {
             catalogSales={catalogSales}
             onLogout={handleLogout}
             onNewAuction={(currentStore.can_create_direto_fabrica || currentStore.can_create_arremate_devolucoes) ? () => navigate(createPageUrl("CreateAuction")) : null}
-            onNewAuctionSDB={currentStore.can_create_sai_de_baixo ? () => navigate(createPageUrl("CreateAuctionSaiDeBaixo")) : null}
+            onNewAuctionSDB={currentStore.can_create_sai_de_baixo ? () => navigate(createPageUrl("CreateAuction")) : null}
             onRefresh={() => loadDashboardData(currentStore.id)}
           />
 

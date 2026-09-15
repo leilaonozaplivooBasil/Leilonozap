@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
-import { emitirSessao } from '../_lib/sessao.js';
+import { emitirSessao, exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
@@ -60,6 +60,8 @@ export default async function handler(req, res) {
     const ref_code = String(body?.ref_code || '').trim();   // código do indicador (link)
     const as_level = String(body?.as_level || '').trim();   // categoria alvo (quando cadastrado por alguém acima)
     const actor_id = String(body?.actor_id || '').trim();   // quem está cadastrando (logado)
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    if (actor_id) { const _ses = exigirSessao(req, actor_id, 'registerNetworkUser'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' }); }
     // campos extras opcionais (cadastro completo)
     const extra = {
       display_first_name: body?.display_first_name || null,

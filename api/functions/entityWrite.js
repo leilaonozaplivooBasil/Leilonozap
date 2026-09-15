@@ -194,7 +194,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-    const actorId = String(body?.actorId || '').trim();
+    let actorId = String(body?.actorId || '').trim();
     const table = String(body?.table || '').trim();
     const action = String(body?.action || '');
     const id = body?.id != null ? String(body.id) : null;
@@ -215,6 +215,9 @@ export default async function handler(req, res) {
     // chamada — é só isso que faltava.
     const _ses = exigirSessao(req, actorId, `entityWrite:${table}/${action}`, true);
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
+    // 🔐 AUDITORIA 15/09/2026 — com crachá VÁLIDO, quem escreve é quem está logado, não o
+    // actorId do body (senão bastava mandar o id de um admin). Sem crachá, segue como antes.
+    if (_ses.motivo === 'ok' && _ses.userId) actorId = _ses.userId;
     if (!actorId || !CONTENT_TABLES.has(table) || !['create', 'update', 'delete', 'bulkCreate'].includes(action)) {
       return res.status(400).json({ success: false, error: 'Parâmetros inválidos ou tabela não permitida' });
     }

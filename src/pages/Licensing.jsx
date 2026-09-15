@@ -58,6 +58,7 @@ import MentalidadePagina from '../components/licensing/CentralVendas/Mentalidade
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
 import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
 import { pedirTour, TOURS_DISPONIVEIS } from '@/lib/pedidoDeTour';
+import { money } from '@/lib/format';
 import DiarioDeBolso from '../components/licensing/CentralVendas/DiarioDeBolso';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
@@ -235,7 +236,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   const referralLink = isSaiDeBaixo ?
-    `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
+    `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}` /* 🔗 AUDITORIA 15/09/2026: /SaiDeBaixo não existe — dava 404 pra todo indicado */ :
     `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   // 🩹 Normaliza ids legados (ex: 'licenciado_catalogo' → 'licenciado') pra bater
@@ -673,7 +674,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             text-shadow: 0 0 20px #1DB24A, 0 2px 8px rgba(0,0,0,0.8);
             letter-spacing: 1px;
           ">
-            R$ ${totalAvailable.toFixed(2)}
+            ${money(totalAvailable)}
           </span>
         </div>
       `;
@@ -805,7 +806,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         }
       });
 
-      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`${money(amount)} creditados!`);
       setSelectedLicenseeId('');
       setCommissionAmount('');
       await delay(2000);
@@ -1404,8 +1405,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                                         <TableRow key={sale.id} className={'border-gray-200'}>
                                           <TableCell className={'text-gray-900 text-sm'}>{sale.product_title}</TableCell>
                                           <TableCell className={'text-gray-700 text-sm'}>{sale.buyer_name}</TableCell>
-                                          <TableCell className={'text-gray-900 font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
-                                          <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                                          <TableCell className={'text-gray-900 font-semibold'}>{money(sale.sale_price)}</TableCell>
+                                          <TableCell className="text-green-400 font-semibold">{money(sale.commission_licensee_amount)}</TableCell>
                                           <TableCell className={'text-gray-500 text-sm'}>
                                             {new Date(sale.created_date).toLocaleDateString('pt-BR')}
                                           </TableCell>
@@ -1422,7 +1423,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                                 <div className={`text-center py-12 ${'text-gray-500'}`}>
                                   <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
                                   <p>Seu sistema de alavancagem está crescendo!</p>
-                                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `${money(user.total_commissions_generated)}` : 'R$ 0.00'}</p>
                                 </div>
                               </TabsContent>
                             }
@@ -1517,7 +1518,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                             const licTotal = (lic.commission_balance || 0);
                             return (
                               <SelectItem key={lic.id} value={lic.id}>
-                                {lic.full_name} - R$ {licTotal.toFixed(2)}
+                                {lic.full_name} - {money(licTotal)}
                               </SelectItem>
                             );
                           })}

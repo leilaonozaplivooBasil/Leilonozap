@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Wallet, Gavel, ShoppingBag, Loader2, CheckCircle2 } from 'lucide-react';
+import { money } from '@/lib/format';
 
 // 🎨 Tema único "fintech" claro — verde (leilão) + marrom da marca (loja virtual),
 // sem fundos escuros e sem emojis. isSaiDeBaixo não altera mais o tema visual.
@@ -25,7 +26,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
             <div>
               <p className="text-sm font-medium text-gray-600">Saldo Disponível para Saque</p>
               <p className="text-3xl font-bold text-nz-verde">
-                R$ {(user.commission_balance || 0).toFixed(2)}
+                {money((user.commission_balance || 0))}
               </p>
             </div>
             <Wallet className="w-10 h-10 text-nz-verde" />
@@ -69,7 +70,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
               </div>
             </div>
             <p className="text-3xl font-bold text-nz-verde">
-              R$ {Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)).toFixed(2)}
+              {money(Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)))}
             </p>
             <p className="text-xs mt-1 text-gray-500">Total histórico gerado</p>
             <div className="mt-3 pt-3 border-t border-nz-verde/20">
@@ -90,7 +91,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
               </div>
             </div>
             <p className="text-3xl font-bold text-nz-verde">
-              R$ {(user.catalog_commission_balance || 0).toFixed(2)}
+              {money((user.catalog_commission_balance || 0))}
             </p>
             <p className="text-xs mt-1 text-gray-500">Total histórico gerado</p>
             <div className="mt-3 pt-3 border-t border-nz-verde/20">
@@ -141,7 +142,7 @@ export default function CommissionsTab({ user, isLoadingCommissions, myCommissio
                       <TableCell className="text-gray-700 text-sm">{rec.role}</TableCell>
                       <TableCell className="text-gray-700 text-sm">{rec.product_title || '-'}</TableCell>
                       <TableCell className="text-gray-700 text-right text-sm">{(rec.percent || 0).toFixed(2)}%</TableCell>
-                      <TableCell className="text-nz-verde text-right font-semibold">R$ {(rec.amount || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-nz-verde text-right font-semibold">{money((rec.amount || 0))}</TableCell>
                       <TableCell className="text-gray-700 text-sm">{rec.status || '-'}</TableCell>
                     </TableRow>
                   ))}

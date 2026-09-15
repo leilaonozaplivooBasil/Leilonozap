@@ -87,7 +87,7 @@ export default function MyWinningsPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [debugLogs, setDebugLogs] = useState([]);
     const [showDebug, setShowDebug] = useState(false);
-    const [walletBalance, setWalletBalance] = useState(0);
+    const [walletBalance, setWalletBalance] = useState(null);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -115,9 +115,10 @@ export default function MyWinningsPage() {
                 try {
                     const wRes = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
                     const wData = wRes?.data || wRes;
-                    setWalletBalance(wData?.balance || 0);
+                    setWalletBalance(wData?.balance ?? null);
                 } catch (_) {
-                    setWalletBalance(0);
+                    // 🧯 AUDITORIA 15/09/2026 — falha na consulta NÃO é saldo zero
+                    setWalletBalance(null);
                 }
 
                 // Busca DIRETO por winner_id no servidor. Antes usava Auction.list(500) + filtro
@@ -224,7 +225,7 @@ export default function MyWinningsPage() {
                                         <p className="text-gray-400 text-xs uppercase tracking-widest font-medium">Carteira Digital</p>
                                     </div>
                                     <p className="text-green-400 text-4xl font-black tracking-tight mb-1">
-                                        R$ {fmtBR(walletBalance)}
+                                        {walletBalance == null ? 'saldo indisponível' : `R$ ${fmtBR(walletBalance)}`}
                                     </p>
                                     <p className="text-gray-500 text-sm">Saldo disponível para leilões</p>
                                 </div>

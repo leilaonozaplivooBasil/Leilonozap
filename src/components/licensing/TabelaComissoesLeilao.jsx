@@ -1,5 +1,6 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { money } from '@/lib/format';
 
 // 🧾 ITEM 2 DA AUDITORIA — a comissão de leilão NÃO é mais calculada na tela.
 // Antes esta coluna multiplicava o arremate por 5% escrito no código, o que podia
@@ -40,7 +41,7 @@ export default function TabelaComissoesLeilao({ arremates = [], registrosComissa
               <TableRow key={auction.id} className="border-gray-200">
                 <TableCell className="text-gray-900 text-sm">{auction.title}</TableCell>
                 <TableCell className="text-gray-700 text-sm">{auction.winner_name}</TableCell>
-                <TableCell className="text-gray-900 font-semibold">R$ {(auction.current_price || 0).toFixed(2)}</TableCell>
+                <TableCell className="text-gray-900 font-semibold">{money((auction.current_price || 0))}</TableCell>
                 <TableCell>
                   {comissao === null ? (
                     <span className="text-gray-400">
@@ -48,7 +49,7 @@ export default function TabelaComissoesLeilao({ arremates = [], registrosComissa
                       <span className="block text-[11px] text-gray-400">ainda não apurada</span>
                     </span>
                   ) : (
-                    <span className="text-green-600 font-semibold">R$ {comissao.toFixed(2)}</span>
+                    <span className="text-green-600 font-semibold">{money(comissao)}</span>
                   )}
                 </TableCell>
                 <TableCell className="text-gray-500 text-sm">

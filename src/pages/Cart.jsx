@@ -43,6 +43,7 @@ import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 import FreteResumo from '@/components/cart/FreteResumo';
 import { useSectionTracking } from '@/lib/tracking';
+import { lerCarrinho, lerJSON } from '@/lib/storageSeguro';
 
 export default function Cart() {
   useSectionTracking('carrinho', 'Carrinho');
@@ -150,14 +151,14 @@ export default function Cart() {
 
   useEffect(() => {
     const loadUserData = async () => {
-      const savedCart = localStorage.getItem('catalogCart');
-      if (savedCart) {
-        setCartItems(JSON.parse(savedCart));
+      // 🧯 AUDITORIA 15/09/2026 — carrinho/usuário corrompidos viravam crash; agora viram vazio
+      const savedCart = lerCarrinho();
+      if (savedCart.length) {
+        setCartItems(savedCart);
       }
 
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
+      const user = lerJSON('currentUser', null);
+      if (user) {
         setCurrentUser(user);
 
         // Tenta buscar dados mais completos do AppUser

@@ -882,7 +882,7 @@ export default function ProductManagement() {
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("RegisterBatches"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <PackagePlus className="w-4 h-4 mr-2 text-emerald-400" /> Registrar Lotes
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(createPageUrl("PDV"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                <DropdownMenuItem onClick={() => navigate('/painel/pdv')} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
                   <DollarSign className="w-4 h-4 mr-2 text-green-400" /> PDV
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(createPageUrl("CatalogOrdersAdmin"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">

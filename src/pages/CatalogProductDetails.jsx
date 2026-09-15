@@ -20,6 +20,7 @@ import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProd
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
+import { lerCarrinho } from '@/lib/storageSeguro';
 
 const Product = plataforma.entities.Product;
 
@@ -322,8 +323,7 @@ export default function CatalogProductDetails() {
   };
 
   const adicionarAoCarrinho = () => {
-    const savedCart = localStorage.getItem('catalogCart');
-    let cart = savedCart ? JSON.parse(savedCart) : [];
+    let cart = lerCarrinho();
 
     const existingIndex = cart.findIndex(item => item.id === product.id);
 
