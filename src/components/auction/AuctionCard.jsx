@@ -109,11 +109,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     try {
       const user = JSON.parse(savedUser);
 
-      // 🆕 Carrega saldo da CARTEIRA DIGITAL
-      const digitalWallets = await plataforma.entities.DigitalWallet.filter({ user_id: user.id });
-      const digitalWallet = digitalWallets && digitalWallets.length > 0 ? digitalWallets[0] : null;
-
-      const currentBalance = digitalWallet?.balance || 0;
+      // 💰 Saldo pela função canônica (15/09/2026): a tabela digital_wallets é
+      // herança vazia do Base44 — a consulta por user_id dava 400 em TODO clique
+      // no cartão e o cliente só entrava na sala porque o catch deixava passar.
+      const wRes = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+      const wData = wRes?.data || wRes;
+      if (wData?.balance == null) throw new Error('saldo indisponível');
+      const currentBalance = Number(wData.balance) || 0;
       const minBid = addMoney(auction.current_price, auction.increment);
 
       // 🐛 FIX: Se saldo insuficiente → Alerta e opção de recarga
