@@ -8,6 +8,27 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STOCK = ['distribuidor', 'loja_fisica', 'ponto_retirada'];
 
+// 🧹 15/09/2026 — COLUNAS QUE A TABELA NÃO TEM, LEMBRADAS DE UMA VEZ.
+// Toda escrita ganhava carimbo created_date/updated_date/base44_id e ia pro
+// PostgREST; em tabela sem essas colunas (system_logs, metodo_tarefas…) a primeira
+// tentativa voltava 400 e o writeResilient tirava a coluna e repetia. Funcionava,
+// mas eram ~1.400 respostas 400 por dia nos logs do Supabase e uma ida a mais ao
+// banco em cada edição de tarefa do Método. Agora a coluna ausente é tirada ANTES
+// de mandar: as conhecidas já nascem aqui, e qualquer outra que o banco recusar
+// entra na lista enquanto esta instância viver.
+const COLUNAS_AUSENTES = {
+  system_logs: new Set(['created_date', 'updated_date']),
+  metodo_tarefas: new Set(['base44_id', 'updated_date']),
+};
+function lembrarColunaAusente(table, col) { (COLUNAS_AUSENTES[table] ||= new Set()).add(col); }
+function semColunasAusentes(table, obj) {
+  const s = COLUNAS_AUSENTES[table];
+  if (!s || !s.size || !obj || typeof obj !== 'object') return obj;
+  const c = { ...obj };
+  for (const k of s) delete c[k];
+  return c;
+}
+
 const CONTENT_TABLES = new Set([
   'products', 'categories', 'stores', 'sellers', 'auctions', 'auction_messages', 'auction_views',
   'banner_images', 'catalog_settings', 'featured_products', 'footer_settings', 'frete_settings',
@@ -44,6 +65,7 @@ async function writeResilient(method, table, id, payload, depth = 0) {
   const m = msg.match(/'([a-zA-Z0-9_]+)' column/) || msg.match(/column "([a-zA-Z0-9_]+)"/);
   if (m && depth < 12) {
     const bad = m[1];
+    lembrarColunaAusente(table, bad);
     const strip = (o) => { const c = { ...o }; delete c[bad]; return c; };
     const np = isArr ? payload.map(strip) : strip(payload);
     const next = await writeResilient(method, table, id, np, depth + 1);
@@ -396,7 +418,7 @@ export default async function handler(req, res) {
         ? (Array.isArray(body?.payload) ? body.payload.map(stamp) : [])
         : stamp(body?.payload || {});
       const norm = (x) => { if (x.base44_id === undefined) x.base44_id = x.id; return x; };
-      const finalPayload = Array.isArray(payload) ? payload.map(norm) : norm(payload);
+      const finalPayload = Array.isArray(payload) ? payload.map(norm).map((x) => semColunasAusentes(table, x)) : semColunasAusentes(table, norm(payload));
       const cr = await writeResilient('POST', table, null, finalPayload);
       if (!cr.ok) return res.status(200).json({ success: false, error: 'Falha ao criar', details: cr.details });
       return res.status(200).json({ success: true, rows: cr.rows, removidos: cr.removed });
@@ -404,7 +426,7 @@ export default async function handler(req, res) {
 
     // update
     if (!id) return res.status(400).json({ success: false, error: 'id obrigatório' });
-    const patch = { ...(body?.payload || {}), updated_date: now };
+    const patch = semColunasAusentes(table, { ...(body?.payload || {}), updated_date: now });
     const ur = await writeResilient('PATCH', table, id, patch);
     if (!ur.ok) return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: ur.details });
 

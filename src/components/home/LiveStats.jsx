@@ -55,10 +55,13 @@ export default function LiveStats() {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const bids = await plataforma.entities.Bid.list('-timestamp', 200);
-      const totalBidsValue = bids
-        .filter(bid => new Date(bid.timestamp) >= today)
-        .reduce((sum, bid) => sum + (bid.amount || 0), 0);
+      // 15/09/2026 — os lances moram em auction_messages (message_type 'bid');
+      // a tabela `bids` é herança vazia do Base44 e a consulta dava 400 (sem
+      // coluna timestamp) em toda carga da Home.
+      const bids = await plataforma.entities.AuctionMessage.filter({ message_type: 'bid' }, '-created_date', 200);
+      const totalBidsValue = (Array.isArray(bids) ? bids : [])
+        .filter(bid => new Date(bid.created_date || bid.timestamp) >= today)
+        .reduce((sum, bid) => sum + (Number(bid.bid_amount) || 0), 0);
 
       const newStats = { onlineUsers: uniqueOnlineUsers, totalBidsToday: totalBidsValue };
       if (mountedRef.current) {

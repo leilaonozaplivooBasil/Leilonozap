@@ -47,7 +47,8 @@ export default function LicenseeDetailsPanel({ selected, onEdit, onRefresh }) {
   const { data: sales = [] } = useQuery({
     queryKey: ["licensee-sales", selected?.id],
     enabled: !!selected?.id,
-    queryFn: () => plataforma.entities.CatalogSale.filter({ licensee_id: selected.id }, "-created_date", 500),
+    // 15/09/2026 — catalog_sales não tem licensee_id (dava 400): a venda do licenciado é a que tem ele como seller_id.
+    queryFn: () => plataforma.entities.CatalogSale.filter({ seller_id: selected.id }, "-created_date", 500),
   });
 
   const now = new Date();

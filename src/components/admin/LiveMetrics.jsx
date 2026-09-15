@@ -26,12 +26,14 @@ export default function LiveMetrics() {
       const todayISO = today.toISOString();
 
       // 1. Lances do dia
-      const bids = await plataforma.entities.Bid.list('-timestamp', 1000);
-      const todayBids = bids.filter(bid => {
-        const bidDate = new Date(bid.timestamp);
+      // 15/09/2026 — lances reais: auction_messages (message_type 'bid'). A
+      // tabela `bids` é herança vazia do Base44 (400 por coluna inexistente).
+      const bids = await plataforma.entities.AuctionMessage.filter({ message_type: 'bid' }, '-created_date', 1000);
+      const todayBids = (Array.isArray(bids) ? bids : []).filter(bid => {
+        const bidDate = new Date(bid.created_date || bid.timestamp);
         return bidDate >= today;
       });
-      const totalBidsValue = todayBids.reduce((sum, bid) => sum + (bid.amount || 0), 0);
+      const totalBidsValue = todayBids.reduce((sum, bid) => sum + (Number(bid.bid_amount) || 0), 0);
 
       // 2. Visualizações recentes (últimos 5 minutos)
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

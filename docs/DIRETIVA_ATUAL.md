@@ -12,6 +12,29 @@
 
 ---
 
+## DIR-159 — "Corrige isso tudo de um jeito para funcionar": o que os logs de produção denunciaram
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono (15/09/2026), depois de perguntar "tudo funcionando e perfeito?" e ouvir a resposta honesta: *"CORRIGE ISSO TUDO DE UM JEITO PARA FUNCIONAR."*
+
+**O que os logs (Supabase edge/postgres + Vercel runtime) mostraram, e o que foi feito:**
+1. **`app_users` 401 desde a migração de 12:58 UTC** — só abas abertas ANTES do deploy 12:51 (código antigo pedindo `select=*`) e o **preview da branch `claude/project-structure-analysis-r1prad`**, que estava parada em código velho. Preview: branch avançada por fast-forward até a main (deploy novo). Abas velhas: o banner "Atualização disponível" já aparece em até 1 min; fechar e abrir resolve. A pessoa do Android que apareceu com falha entrou normalmente às 13:02.
+2. **`system_logs` POST 400 ×1.394/dia e `metodo_tarefas` 400** — `entityWrite` carimbava `created_date`/`updated_date`/`base44_id` em toda escrita; em tabela sem a coluna o PostgREST recusava, o `writeResilient` tirava a coluna e repetia (funcionava, mas com uma ida a mais ao banco por edição de tarefa do Método). Agora a coluna ausente é tirada ANTES (`COLUNAS_AUSENTES`, com aprendizado por instância).
+3. **`live_sessions` POST 401 ×890/dia** — o navegador inseria com a chave pública e a RLS só deixa `authenticated`; **nenhuma presença gravada desde 26/05** (o "pessoas navegando agora" da Home vivia de cache). Nova rota `api/functions/liveHeartbeat.js` (chave de serviço, 60 batidas por IP a cada 5 min, formato do `session_id` validado); `useActiveSession` chama a rota.
+4. **`footer_settings`, `bids`, `negotiations`, `partner_plan_purchases` 400** — tabelas herdadas do Base44, VAZIAS, só com `raw_base44`; as telas ordenavam por coluna que não existe. Rodapé usa o padrão sem consultar; "lances do dia" (Home/LiveMetrics) leem `auction_messages` (onde os lances moram, `message_type='bid'`, `bid_amount`); CRM negociações ordena por `created_at`; `getPartnerPurchases` filtra por `raw_base44->>status/user_id` e devolve sempre lista.
+5. **`catalog_sales?licensee_id=eq.` 400** (painel do licenciado e exclusão de vendedor) — a coluna é `seller_id`.
+6. **Produto sem frete** (scooter Harley 117: 65×110×170 cm, 45 kg) — Melhor Envio recusava por dimensão e o cliente lia "nenhuma transportadora atende esse CEP". Agora `cotarOpcoes` devolve `motivo` (`produto_grande` / `sem_transportadora`) com texto honesto, e o carrinho mostra **"Retirar na loja (grátis)"** e **"Combinar frete no WhatsApp"** em vez de travar.
+7. **`finalizeAuctionCore`** gravava o log de encerramento com `created_date` (coluna inexistente → 400 calado). Corrigido para `created_at`.
+
+**Não mexido (e por quê):** aviso `DEP0169 url.parse` em `/api/concurso` vem de dependência, não do nosso código; "Warp server error: Thread killed by timeout manager" no PostgREST são consultas longas (`limit=1000`) — ficam para uma rodada de paginação.
+
+**Continua só com o dono:** `SESSAO_MODO` / `MP_WEBHOOK_MODO` / `CRON_SECRET` na Vercel; caixa `contato@leilaonozap.net`; escrow `nexus` (R$ 67 mil); 22 produtos abaixo do custo; telefone do Ponto de Retirada Bangu; 6 leilões de agosto sem vencedor; arte do banner 2.
+
+**Testes:** `tests/auditoriaLogsLimpos.test.mjs` (5). Suíte: 2532; eslint 0 erros; build ok.
+
+---
+
 ## DIR-158 — "Resolve tudo que precisa resolver": os 12 itens da DIR-157 decididos com evidência
 
 **Status:** EM VIGOR.
