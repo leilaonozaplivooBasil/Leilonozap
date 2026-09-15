@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Gavel, X, Zap } from "lucide-react";
 import { addMoney, mulMoney, fmtBR, money } from "@/lib/money";
 
@@ -8,6 +9,23 @@ import { addMoney, mulMoney, fmtBR, money } from "@/lib/money";
  * derivadas MATEMATICAMENTE do incremento vindo do banco + campo livre.
  * Não valida nem calcula nada além de somar o incremento — quem valida e
  * envia continua sendo o BidInput/useBidSubmission (motor intacto).
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔴 POR QUE A FOLHA SAI POR PORTAL (15/09/2026)
+ * ══════════════════════════════════════════════════════════════════════════
+ * Relato da Beatriz, com print: "não consigo ver a tela completa para dar o
+ * lance". A folha abria espremida, cortada na borda.
+ *
+ * A causa não está aqui: este componente mora dentro do rodapé
+ * `.bid-input-container`, que tem `backdrop-filter: blur(12px)`. Elemento com
+ * backdrop-filter vira o BLOCO DE REFERÊNCIA de todo `position: fixed` que
+ * estiver dentro dele. Ou seja, `fixed inset-0` deixava de significar "a tela
+ * inteira" e passava a significar "a caixa do rodapé" — poucas dezenas de
+ * pixels de altura. A folha nunca teve chance de cobrir a tela.
+ *
+ * `createPortal` pendura a folha direto no <body>, fora do alcance do
+ * backdrop-filter. Nenhum estilo do rodapé mudou — o visual dele continua o
+ * mesmo, e o motor do lance não foi tocado.
  */
 export default function BidPopover({
   minBid,
@@ -70,14 +88,24 @@ export default function BidPopover({
         )}
       </button>
 
-      {aberto && (
+      {aberto && createPortal(
         <div
           className="fixed inset-0 z-[2100] flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4"
           onClick={() => setAberto(false)}
         >
           <div
-            className="w-full max-w-md rounded-t-3xl border p-4 sm:rounded-3xl"
-            style={{ background: '#111a11', borderColor: 'rgba(16,185,129,0.25)', boxShadow: '0 -10px 40px rgba(0,0,0,0.6)' }}
+            className="w-full max-w-md overflow-y-auto rounded-t-3xl border p-4 sm:rounded-3xl"
+            style={{
+              background: '#111a11',
+              borderColor: 'rgba(16,185,129,0.25)',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.6)',
+              // 🔴 Teto de altura + rolagem: sem isto, a lista de opções continua
+              // ABAIXO da borda da tela e não há como alcançar as últimas — foi o
+              // corte que apareceu no print de 15/09 no computador.
+              maxHeight: '85dvh',
+              // no celular a folha encosta na barra de gestos; o respiro é dela
+              paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -149,7 +177,8 @@ export default function BidPopover({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
