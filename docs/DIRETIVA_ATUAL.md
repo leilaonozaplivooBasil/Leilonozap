@@ -12,6 +12,29 @@
 
 ---
 
+## DIR-154 — checkout da Loja Virtual: o frete se calcula sozinho e o botão nunca fica morto; crédito Passaporte do Alexandre regularizado
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono, ao vivo (15/09/2026), com print do carrinho no celular, depois da auditoria do Passaporte do cliente Alexandre Walenkamp: *"Eu acho que o problema dele é aqui na hora de comprar na loja não está liberado, precisa olhar isso e fazer essa análise no site e melhorar esse cartão aí do calcular frete que está muito feio, tá muito próximo da borda... fazer essa análise em toda essa parte de checkout para não acontecer esses erros principiantes... tem que ter liberado para ele comprar."*
+
+**Achados da auditoria (dados de produção, via SQL):**
+1. **O dinheiro do lance dele voltou certinho** — R$ 133,66 (lance R$ 117 + frete R$ 16,66 da Caixa de Som Mondial) devolvidos em 11/09 12:27, no `reserva_ledger`; `saldo_reservado = 0`. Nada travado. O lance de 04/08 foi num leilão apagado depois (id não existe mais) e a reserva órfã só voltou em 27/08 pela `faxinaReservasOrfas`.
+2. **O crédito Passaporte é que não existia pra ele gastar**: o cupom dele foi criado pelo backfill de 18/08 no modelo A (`bonus_creditado_em` preenchido, `saldo_restante = 0`). `statusCupons` só considera gastável `saldo_restante > 0`, e `consumirBloqueado` ignora cupom do modelo A — então nenhuma derrota dele liberava nada, o banner "Usar meu desconto" nunca aparecia no carrinho e o `PassaporteCard` da Carteira não renderizava. O cliente estava certo em reclamar da loja.
+3. O checkout em si está coerente ponta a ponta (`passaporteCoupon` → `PassaporteCouponBanner` → `use_passaporte` no payload → `calcularDesconto` no servidor → `raw_base44.passaporte_desconto` → `debitarCupomDaVenda` no webhook). O que falhava era o **frete**: o único jeito de cotar era um link pequeno sublinhado dentro do resumo, e o botão grande ficava DESABILITADO gritando "CALCULE O FRETE PARA CONTINUAR" — tocava e não fazia nada. No celular o texto em `text-lg` + ícone estourava a pílula (o print do dono).
+
+**Decisão do dono e execução:**
+- **Crédito do Alexandre liberado no banco em 15/09 01:57 UTC** (cupom `62830fdf…`): `valor_liberado = 10,00`, `saldo_restante = 10,00`, `status = liberado`, `auction_id_disputado` = Caixa de Som. Valor = teto do cupom (10% do lance de R$ 117 daria R$ 11,70; a regra limita ao cupom de R$ 10 do depósito de R$ 100). `bonus_creditado_em` foi mantido de propósito: continua marcando o cupom como modelo A, então `consumirBloqueado` nunca vai liberar/cancelar nada nele de novo — sem risco de pagar em dobro pra frente. O documento entregue ao cliente (PDF "Relatório de Conta") descreve exatamente isso.
+- `src/pages/Cart.jsx`:
+  - o frete é cotado **sozinho** (debounce 350 ms) toda vez que a assinatura muda (CEP completo, entrega, itens, quantidade) — inclusive quando o endereço salvo carrega. Não recota depois do PIX gerado nem da compra com saldo.
+  - o botão grande **nunca fica desabilitado por frete pendente**: com CEP completo ele cota na hora; sem CEP mostra toast "Preencha o CEP de entrega pra calcular o frete." e rola/foca o campo (`cepInputRef`). Só desabilita enquanto está cotando ou processando.
+  - visual: `text-base sm:text-lg`, `px-6`, `whitespace-normal leading-tight`; enquanto o frete está pendente o botão é cinza ("Calcular frete e continuar" / "Calculando o frete…"), e só fica verde quando vira "PAGAR R$ X".
+- `tests/checkoutFreteAutomatico.test.mjs` — 7 testes cobrindo a cotação automática, o botão vivo, o visual e o caminho inteiro do Passaporte no checkout.
+
+**Fora do escopo (ainda pendente de decisão do dono):** textos desatualizados do modelo A em `CartaoPassaporte.jsx` ("os 10% entram na hora") e `PassaporteLances.jsx` ("R$ 100 que valem R$ 110"); Rosenberg cobrado em dobro (R$ 19,80); recolhimentos integrais pré-18/08 (Luciano, Sophia, dono); linha "+bônus Passaporte" no extrato pros cupons do modelo A.
+
+---
+
 ## DIR-153 — quem não está na mentoria não pode ter o dia zerado por não votar na MvM
 
 **Emitida por:** dono, ao vivo, sobre o caso real da Sophia Sant'anna: *"Você não pode zerar o dia de quem não participa da mentoria, de quem não é obrigado a votar. O caso da Sofia Santana, você zerou o dia dela... Ela não está na mentoria. É só quem está realmente na mentoria... Quem não está, que não recebe voto, não é obrigado a votar."*
