@@ -7,8 +7,9 @@
 // "permission denied" e derrubaria as telas.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 const adapter = ler('../src/api/plataformaAdapter.js');
@@ -31,6 +32,16 @@ test('list/filter/get nunca usam select(*) em app_users', () => {
 });
 
 test('nenhuma tela lê app_users com select(*) direto', () => {
-  const out = execSync("grep -rn \"from('app_users')\" src --include=*.jsx --include=*.js -A2 | grep -c \"select('\\*')\" || true", { cwd: new URL('..', import.meta.url), encoding: 'utf8' }).trim();
-  assert.equal(out, '0');
+  const raiz = fileURLToPath(new URL('../src', import.meta.url));
+  const arquivos = [];
+  const andar = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const c = join(d, e.name); if (e.isDirectory()) andar(c); else if (/\.(jsx?|mjs)$/.test(e.name)) arquivos.push(c); } };
+  andar(raiz);
+  const culpados = [];
+  for (const f of arquivos) {
+    const t = readFileSync(f, 'utf8');
+    if (!t.includes("from('app_users')")) continue;
+    // a leitura direta pode quebrar linha entre .from(...) e .select(...)
+    if (/from\('app_users'\)\s*\.select\('\*'\)/.test(t)) culpados.push(f);
+  }
+  assert.deepEqual(culpados, []);
 });
