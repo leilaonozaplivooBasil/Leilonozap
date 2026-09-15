@@ -999,8 +999,43 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         if (x.id !== tarefaId) return x;
         const atual = x.comprovacao || {};
         const marcada = comBloco(atual, bloco, { ...(atual.blocos?.[bloco] || {}), veredito_ia: r });
-        plataforma.entities.MetodoTarefa.update(tarefaId, { comprovacao: marcada }).catch(() => {});
-        return { ...x, comprovacao: marcada };
+
+        // ══════════════════════════════════════════════════════════════════
+        // 🔴 A CORRIDA (15/09/2026) — o veredito que chega depois do lacre
+        // ══════════════════════════════════════════════════════════════════
+        // A IA olha DEPOIS, de propósito: ninguém espera às 5h da manhã. Mas
+        // `concluirRitual` congelava o selo com o que POR ACASO já tinha
+        // chegado, e nada recalculava quando a resposta vinha em seguida.
+        // O resultado era o veredito depender da velocidade do telefone:
+        //
+        //   Beatriz  esperou 35,4s → a dúvida chegou a tempo → parcial
+        //   paim     esperou  1,0s → a MESMA dúvida chegou depois → aprovado
+        //
+        // Quatro pessoas receberam a mesma dúvida no mesmo dia e passaram só
+        // por terem fechado a tela antes. Dinheiro não pode depender disso
+        // (o ritual vale 20% do dia — DIR-142).
+        //
+        // Agora, se o ritual JÁ foi fechado, o veredito atrasado refaz a
+        // conta. Só para ritual encerrado: um em andamento ainda vai ser
+        // fechado por concluirRitual, que já calcula tudo.
+        const jaFechado = ['aprovada_ritual', 'ritual_parcial', 'ritual_pendente_ia'].includes(atual.status);
+        const refeita = jaFechado
+          ? (() => {
+              const status = statusDoRitual(marcada);
+              return {
+                ...marcada,
+                status,
+                valido: status === 'aprovada_ritual',
+                pendencias: pendenciasDoRitual(marcada),
+              };
+            })()
+          : marcada;
+
+        const campos = jaFechado
+          ? { feito: refeita.valido, comprovacao: refeita }
+          : { comprovacao: refeita };
+        plataforma.entities.MetodoTarefa.update(tarefaId, campos).catch(() => {});
+        return { ...x, ...(jaFechado ? { feito: refeita.valido } : {}), comprovacao: refeita };
       }));
     } catch { /* IA fora não pode travar o ritual — o bloco já está gravado */ }
   };
@@ -1028,7 +1063,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
           comprovacao: {
             ...bloquinhos, tipo: 'ritual', dev: true, gratidao, acao, entrega: gratidao,
             valido: statusDev === 'aprovada_ritual', status: statusDev,
-            ...(pendenciasDoRitual(bloquinhos).length ? { pendencias: pendenciasDoRitual(bloquinhos) } : {}),
+            // 🔴 15/09 — sempre grava, inclusive vazia: `...bloquinhos` acima
+            // carrega a pendência da rodada anterior, e o espalhamento condicional
+            // a deixava sobreviver. Modo dev é onde se TESTA esta tela.
+            pendencias: pendenciasDoRitual(bloquinhos),
             quando: new Date().toISOString(),
           },
         },
@@ -1136,7 +1174,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // 🧾 o que faltou fica GRAVADO, não só na tela: Luiz, 10/09 — "se ele
       // fez alguma coisa errada, a plataforma precisa sinalizar". Um toast
       // que some não sinaliza nada uma hora depois.
-      ...(pendentes.length ? { pendencias: pendentes } : {}),
+      //
+      // 🔴 15/09 — SEMPRE grava, inclusive lista VAZIA. Antes era espalhamento
+      // condicional, e como o objeto começa com `...gravado`, não gravar
+      // deixava a pendência ANTERIOR sobreviver: o Ribeiro fechou o ritual
+      // aprovado carregando uma pendência de um salvamento intermediário, que
+      // já não valia mais. Chave ausente e chave vazia não são a mesma coisa.
+      pendencias: pendentes,
       veredito_ia: {
         veredito: statusFinal === 'aprovada_ritual' ? 'aprovada' : 'reprovada', confianca: 100,
         o_que_viu: `Ritual do Amanhecer — blocos entregues: ${blocosFeitos(gravado).join(', ') || 'nenhum'}${videoPath ? ` (visualização de ${bl.visualizacao?.video_seg || 0}s)` : ''}; ${tempoTelaS || 0}s de tela`,
@@ -2760,6 +2804,30 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 ) : (
                                   <span className="shrink-0 text-[10px] font-bold text-nz-verde" title={`Comprovação: ${t.comprovacao.entrega}`}>{t.comprovacao.tipo === 'ritual' ? '🌅 ritual completo' : '📚 comprovada'}</span>
                                 )
+                              )}
+                              {/* 🟡 15/09/2026 — O QUE FALTOU, NA PRÓPRIA TAREFA.
+                                  O toast do ritual promete "o que faltou está
+                                  anotado na tarefa" desde 10/09 — e a tarefa não
+                                  mostrava NADA. Tudo o que esta linha desenha está
+                                  atrás de `t.feito && t.comprovacao?.valido`, e um
+                                  ritual parcial tem os dois FALSOS: some inteiro,
+                                  virando uma caixinha vazia.
+                                  Beatriz, 15/09: "disse que tinha algo pendente que
+                                  ficaria na tarefa, mas não aparece nada". Estava
+                                  certa. Este é o primeiro lugar do sistema que LÊ
+                                  `comprovacao.pendencias` — até hoje ela só era
+                                  escrita. */}
+                              {(t.comprovacao?.pendencias?.length > 0) && (
+                                <span
+                                  className="shrink-0 text-[10px] font-bold text-amber-600"
+                                  title={t.comprovacao.pendencias.map((x) => x.o_que).join('\n\n')}
+                                  data-teste="pendencia-na-tarefa"
+                                >
+                                  {/* Só DICA é um recado; o resto é coisa que faltou. */}
+                                  {t.comprovacao.pendencias.every((x) => x.tipo === 'dica')
+                                    ? `💡 ${t.comprovacao.pendencias.length === 1 ? 'uma dica' : `${t.comprovacao.pendencias.length} dicas`} pra próxima`
+                                    : `⚠️ ${t.comprovacao.pendencias.length === 1 ? 'ficou 1 pendência' : `ficaram ${t.comprovacao.pendencias.length} pendências`}`}
+                                </span>
                               )}
                               {/* 🎙️ DIR-101.1 — "posteriormente pode ouvir o áudio".
                                   A gratidão falada não some depois de gravada: ela

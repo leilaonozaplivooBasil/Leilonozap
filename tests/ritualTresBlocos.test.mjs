@@ -77,8 +77,16 @@ test('R3B-5 · o que ficou errado fica PARADO na tela, não num toast', () => {
   assert.match(RITUAL, /data-teste="pendencias-do-ritual"/);
   assert.match(RITUAL, /const pendencias = pendenciasDoRitual\(comprovacao\);/);
   assert.match(RITUAL, /\{pendencias\.map\(\(x, i\) =>/, 'as pendências pararam de ser listadas uma a uma');
-  // e ficam GRAVADAS, não só desenhadas
-  assert.match(CRM, /\.\.\.\(pendentes\.length \? \{ pendencias: pendentes \} : \{\}\)/, 'o que faltou parou de ir pro registro');
+  // e ficam GRAVADAS, não só desenhadas.
+  //
+  // 🔴 15/09 — grava SEMPRE, inclusive lista vazia. Era espalhamento
+  // condicional, e como o objeto começa com `...gravado`, não gravar deixava a
+  // pendência ANTERIOR sobreviver: o Ribeiro fechou o ritual APROVADO
+  // carregando uma pendência de um salvamento intermediário. Chave ausente e
+  // chave vazia não são a mesma coisa — e agora alguém LÊ esta chave.
+  assert.match(CRM, /^\s*pendencias: pendentes,$/m, 'o que faltou parou de ir pro registro');
+  assert.doesNotMatch(CRM, /\.\.\.\(pendentes\.length \? \{ pendencias: pendentes \} : \{\}\)/,
+    'voltou o espalhamento condicional que deixa pendência fantasma');
   // o selo é explicado ANTES de concluir, não depois
   assert.match(RITUAL, /Concluir agora carimba o seu ritual como BRILHANTE/);
   assert.match(RITUAL, /data-teste="voltar-pro-video"/, 'sumiu o caminho de voltar e gravar o vídeo que falta');

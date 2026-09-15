@@ -17,23 +17,29 @@ const METODO = fs.readFileSync(new URL('../src/components/licensing/CentralVenda
 // casos impossíveis." O Ritual do Amanhecer era a ÚLTIMA rota do X-GAME que
 // ainda caía pro gestor decidir na dúvida — todo o resto já resolve sozinho
 // desde a DIR-89. Trava fonte-a-fonte pra nunca mais regredir.
-test('DIR-125: o Ritual do Amanhecer NUNCA mais grava status "em_analise" — dúvida de ambiente vira reprova automática', () => {
+test('DIR-125 revisada: o ritual não cai pra humano, E dúvida não reprova mais', () => {
+  // A metade que NÃO mudou: nada do ritual nasce esperando gestor. A DIR-125
+  // criou isso pra acabar com comprovação presa em fila, e continua valendo.
   assert.doesNotMatch(METODO, /emDuvida/, 'a variável emDuvida (o gate que caía pro gestor) foi removida — não pode voltar');
   assert.doesNotMatch(METODO, /status:\s*['"]em_analise['"]/, 'nenhum status do ritual pode nascer como em_analise — intervenção humana zero, igual toda outra comprovação');
-  // 🔴 10/09 — a régua MUDOU DE CASA, não de valor. Era um `if` solto no fim
-  // do ritual; virou `blocoReprovado`, em ritualEmBlocos.js, porque a IA
-  // passou a julgar cada bloco assim que ele é gravado. O que a DIR-125
-  // decidiu continua idêntico: dúvida de AMBIENTE reprova automático, sem
-  // fila de espera e sem humano nenhum no meio.
+
+  // 🔴 A metade que MUDOU (15/09/2026, decisão do dono). Dúvida deixou de
+  // reprovar. Medido em 7 dias contra o banco de produção, na visualização:
+  //     dúvida 19 (confiança média 61) · aprovada 5 (77) · reprovada 3 (76)
+  // Uma régua que recusa 7 de cada 10 não está separando quem fez de quem não
+  // fez — está dizendo "não sei". E só não virou desastre porque o veredito
+  // chega DEPOIS do fechamento: quem fechava rápido escapava, quem esperava
+  // era reprovado. Dinheiro não pode depender da velocidade do telefone.
   const BLOCOS_LIB = fs.readFileSync(new URL('../src/lib/ritualEmBlocos.js', import.meta.url), 'utf8');
-  assert.match(
+  assert.doesNotMatch(
     BLOCOS_LIB,
-    /return v === 'duvida' && nome === 'visualizacao';/,
-    'ambiente em dúvida deixou de cair na rota automática de reprovação',
+    /v === 'duvida' && nome === 'visualizacao'/,
+    'a dúvida de ambiente voltou a reprovar automático',
   );
-  assert.match(BLOCOS_LIB, /if \(v === 'reprovada'\) return true;/, 'ambiente claramente errado deixou de reprovar');
-  // e a dúvida do PRINT do bom dia NÃO reprova — é outro bloco, outra régua
-  assert.doesNotMatch(BLOCOS_LIB, /v === 'duvida' && nome === 'acordei'/);
+  assert.match(BLOCOS_LIB, /return veredito\?\.veredito === 'reprovada';/, 'só reprovada pode reprovar');
+  // dúvida não sumiu do sistema — virou pendência visível, com nome próprio
+  assert.match(BLOCOS_LIB, /export function blocoEmDuvida/);
+  assert.match(BLOCOS_LIB, /tipo: 'dica'/, 'a dúvida precisa entrar na lista de pendências como DICA');
   // premissa: quem decide o selo passa por essa régua, senão isto não mede nada
   assert.match(BLOCOS_LIB, /const reprovado = BLOCOS\.some\(\(n\) => blocoReprovado\(n, b\[n\]\?\.veredito_ia\)\);/);
 });
