@@ -1561,7 +1561,17 @@ export default function AuctionRoom() {
         @media (min-width: 640px) { .auction-page-container { height: calc(100dvh - 64px); } }
         
         @media (max-width: 1023px) {
-          .main-content { flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+          /* 🔴 min-height: 0 (15/09/2026) — sem isto o bloco do meio se recusa a
+             encolher abaixo do conteúdo dele (o padrão de um item flex é
+             min-height: auto). Quando o rodapé cresce — e ele cresce justamente
+             quando a caixa de endereço abre — não sobra espaço, o rodapé é
+             empurrado para fora e o "overflow: hidden" do container corta. A
+             pessoa não tem como rolar até lá: a página é travada de propósito.
+             O layout de computador já resolvia o mesmo problema com
+             "grid-template-rows: minmax(0,1fr)"; o do celular ficou sem.
+             (Sem crase neste comentário: ele mora dentro de um template
+             literal de JS, e uma crase fecharia a string.) */
+          .main-content { flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
           .auction-sidebar { display: none; }
           .chat-wrapper { flex-grow: 1; }
         }
