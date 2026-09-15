@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, Trash2, GripVertical, Loader2, Save, Image, Edit, Package, Search } from 'lucide-react';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador do leilão (foto via Google Lens + nome).
+import CampoDeVideo from '@/components/catalog/CampoDeVideo';
+import { videosValidos } from '@/lib/videoDoProduto';
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
 
 const reorder = (list, startIndex, endIndex) => {
@@ -42,6 +44,9 @@ export default function EditCatalogProduct() {
       catalog_active: false
     });
     const [imageUrls, setImageUrls] = useState([]);
+    // 🎬 15/09/2026 — vídeo do produto. Mesma armadilha das fotos: sem carregar
+    // o que já está gravado, editar o produto aqui apagaria o vídeo.
+    const [videoUrls, setVideoUrls] = useState([]);
     const [linkedAuctions, setLinkedAuctions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -85,6 +90,7 @@ export default function EditCatalogProduct() {
             const currentProduct = products[0];
             setProduct(currentProduct);
             setImageUrls(currentProduct.image_urls || []);
+            setVideoUrls(Array.isArray(currentProduct.video_urls) ? currentProduct.video_urls : []);
             
             setFormData({
               description: currentProduct.description || "",
@@ -171,7 +177,10 @@ export default function EditCatalogProduct() {
                 quantity: parseInt(formData.quantity) || 1,
                 status: formData.status,
                 catalog_active: formData.catalog_active,
-                image_urls: imageUrls
+                image_urls: imageUrls,
+                // A tela nunca manda direto o que a pessoa digitou: `videosValidos`
+                // recusa host desconhecido e tira repetido.
+                video_urls: videosValidos(videoUrls)
             };
 
             await Product.update(productId, updatePayload);
@@ -320,6 +329,12 @@ export default function EditCatalogProduct() {
                                 />
                             </div>
                         )}
+
+                        {/* 🎬 O MESMO campo de vídeo da Gestão de Estoque. Fica junto
+                            das fotos porque é a mesma ideia: mídia da página de venda. */}
+                        <div className="mb-6 border-t border-gray-200 pt-5">
+                            <CampoDeVideo valor={videoUrls} aoMudar={setVideoUrls} claro />
+                        </div>
 
                         <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
                             <input

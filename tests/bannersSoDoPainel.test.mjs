@@ -140,10 +140,13 @@ test('preparar não muda a lista original (o cache da sessão é reaproveitado)'
 
 // ——— vídeo cadastrado no painel ———
 //
-// 15/09/2026 — depois de tirar os vídeos do código, /leiloes CONTINUOU mostrando
-// os 3. Não era cache: o bundle novo já estava no ar (a Loja Virtual tinha
-// corrigido no mesmo deploy). São linhas de vídeo cadastradas no próprio Painel
-// de Mídia. O corte passou a ser no código, e não depender de desativar registro.
+// 15/09/2026 — o dono relatou que /leiloes CONTINUAVA mostrando os 3 vídeos.
+// O diagnóstico escrito aqui na primeira versão ("são linhas cadastradas no
+// painel") estava ERRADO: `banner_images` não tem coluna de vídeo. Era o bundle
+// antigo em cache no navegador dele.
+// Os casos abaixo ficam porque a regra continua valendo: `RotatingBanner` toca
+// `video_url` em qualquer banner que tenha o campo, e foi assim que os vídeos
+// entravam pelas listas fixas. É o cinto contra a lista fixa voltar por outra porta.
 
 test('linha de vídeo cadastrada no painel não entra no carrossel', () => {
   const saida = prepararBannersDoPainel([

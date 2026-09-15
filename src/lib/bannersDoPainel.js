@@ -22,14 +22,18 @@ export function normalizarBannersPorDispositivo(lista) {
 }
 
 // 🎬 15/09/2026 — O CARROSSEL DE BANNERS NÃO TOCA VÍDEO.
-// Os 3 vídeos institucionais saíram do código na mesma data, mas continuavam
-// aparecendo em /leiloes: existem linhas de vídeo cadastradas no próprio Painel
-// de Mídia (contexto `home`). Ordem do dono, ao pé da letra: as artes novas
-// "devem ser os únicos banners".
-// Filtrar aqui e não lá no banco é de propósito: vale para QUALQUER linha de
-// vídeo, inclusive as antigas sem contexto, e não depende de ninguém lembrar de
-// desativar registro. Se um dia o dono quiser vídeo no carrossel, é apagar esta
-// função — os vídeos continuam existindo em /midia e nas páginas Seja*.
+//
+// ⚠️ CORREÇÃO DO COMENTÁRIO ANTERIOR (mesmo dia). Quando isto foi escrito, a
+// explicação dada era que existiam linhas de vídeo cadastradas no Painel de
+// Mídia. ESTAVA ERRADO: `banner_images` não tem coluna de vídeo — conferido no
+// banco. Os vídeos que o dono via em /leiloes vinham do bundle antigo em cache
+// no navegador dele, e sumiram sozinhos no recarregamento.
+//
+// A função fica porque a regra continua valendo e custa uma linha: `RotatingBanner`
+// toca `video_url` em qualquer banner que tenha o campo, venha de onde vier — foi
+// assim que os 3 vídeos institucionais entravam, pelas listas fixas que saíram do
+// código. Isto é o cinto que impede a lista fixa de voltar por outro caminho.
+// Ordem do dono, ao pé da letra: as artes novas "devem ser os únicos banners".
 export function semVideos(lista) {
   return (Array.isArray(lista) ? lista : []).filter((b) => b && !b.video_url);
 }

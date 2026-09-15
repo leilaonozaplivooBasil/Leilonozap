@@ -220,13 +220,56 @@ describe('a fiação — sem ela a feature existe só no papel', () => {
     assert.match(ad, /UploadFile\(\{ file, path, bucket: baldePedido \}\)/);
   });
 
-  test('a tela grava pelo filtro, e não o que a pessoa digitou', () => {
-    const tela = semComentarios(ler('../src/pages/ProductManagement.jsx'));
-    assert.match(tela, /video_urls: videosValidos\(formData\.video_urls\)/);
-    // e carrega o que já estava gravado ao editar
-    assert.match(tela, /video_urls: Array\.isArray\(product\.video_urls\)/);
-    // e sobe pro balde do vídeo, não pro de imagem
-    assert.match(tela, /UploadFile\(\{ file, bucket: BALDE_VIDEO \}\)/);
+  // 15/09/2026 — o campo saiu de dentro da Gestão de Estoque e virou componente
+  // quando as telas de catálogo passaram a precisar dele. São TRÊS telas que
+  // gravam na mesma coluna: se a regra do que é vídeo válido morar em três
+  // lugares, ela diverge, e a que divergir grava endereço que some calado no
+  // navegador de quem compra.
+  const TELAS_QUE_CADASTRAM = [
+    ['Gestão de Estoque',        '../src/pages/ProductManagement.jsx',  'formData.video_urls'],
+    ['Adicionar ao catálogo',    '../src/pages/AddCatalogProduct.jsx',  'formData.video_urls'],
+    ['Editar produto do catálogo','../src/pages/EditCatalogProduct.jsx', 'videoUrls'],
+  ];
+
+  test('o campo de vídeo é UM só, e é ele que sobe pro balde do vídeo', () => {
+    const campo = semComentarios(ler('../src/components/catalog/CampoDeVideo.jsx'));
+    // sobe pro balde do vídeo, não pro de imagem
+    assert.match(campo, /UploadFile\(\{ file, bucket: BALDE_VIDEO \}\)/);
+    // confere tipo e tamanho ANTES de subir
+    assert.match(campo, /conferirArquivo\(file\)/);
+    const posConferencia = campo.indexOf('conferirArquivo(file)');
+    assert.ok(posConferencia > 0 && posConferencia < campo.indexOf('UploadFile('),
+      'a conferência precisa vir ANTES do envio, senão sobe 40 MB pra ser recusado no fim');
+    // e quem decide o que é link válido continua sendo a lista branca
+    assert.match(campo, /entenderVideo\(link\)/);
+  });
+
+  for (const [nome, caminho, origem] of TELAS_QUE_CADASTRAM) {
+    test(`${nome}: usa o campo único e grava pelo filtro`, () => {
+      const tela = semComentarios(ler(caminho));
+      // `\s` no fim de propósito: sem ele, `<CampoDeVideoQualquerCoisa` passaria.
+      assert.match(tela, /<CampoDeVideo\s/, 'a tela não mostra o campo de vídeo');
+      assert.match(tela, /import CampoDeVideo from '@\/components\/catalog\/CampoDeVideo'/,
+        'a tela não importa o campo único');
+      assert.match(tela, new RegExp(`video_urls: videosValidos\\(${origem.replace('.', '\\.')}\\)`),
+        'a tela grava o que a pessoa digitou sem passar pelo filtro');
+      // não reimplementa o envio por fora do componente
+      assert.ok(!/UploadFile\(\{ file, bucket/.test(tela),
+        'a tela voltou a subir vídeo por conta própria, fora do campo único');
+    });
+  }
+
+  test('editar carrega o vídeo já gravado — senão salvar apagaria', () => {
+    // as três telas gravam o pacote inteiro; se não carregarem o que já existe,
+    // abrir o produto e salvar qualquer outro campo esvazia a coluna.
+    const casos = [
+      ['../src/pages/ProductManagement.jsx',   /video_urls: Array\.isArray\(product\.video_urls\)/],
+      ['../src/pages/AddCatalogProduct.jsx',   /video_urls: Array\.isArray\(product\.video_urls\)/],
+      ['../src/pages/EditCatalogProduct.jsx',  /setVideoUrls\(Array\.isArray\(currentProduct\.video_urls\)/],
+    ];
+    for (const [caminho, padrao] of casos) {
+      assert.match(semComentarios(ler(caminho)), padrao, caminho);
+    }
   });
 
   test('🔇 o player não toca sozinho nem faz barulho na vitrine', () => {

@@ -27,7 +27,7 @@
 /** Onde o nosso Storage mora. Espelha src/lib/imagemExterna.js. */
 const NOSSO_HOST = 'supabase.co';
 
-/** O balde criado em 20260915120000_video_do_produto.sql. */
+/** O balde criado em 20260915132423_video_do_produto.sql. */
 export const BALDE_VIDEO = 'videos-produtos';
 
 /**

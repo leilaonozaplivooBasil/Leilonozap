@@ -17,6 +17,8 @@ import { separarFotos } from '@/lib/imagemExterna';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
+import CampoDeVideo from '@/components/catalog/CampoDeVideo';
+import { videosValidos } from '@/lib/videoDoProduto';
 // 📸 Grade de fotos com botões "Principal" e excluir sempre visíveis
 import GradeFotosProduto from '@/components/admin/GradeFotosProduto';
 
@@ -86,6 +88,8 @@ export default function AddCatalogProduct() {
     
     // Fotos
     image_urls: [],
+    // 🎬 15/09/2026 — vídeo do produto (link do YouTube/Vimeo ou arquivo nosso).
+    video_urls: [],
     
     // Preço
     price: '',
@@ -126,6 +130,8 @@ export default function AddCatalogProduct() {
         title: product.description || '',
         description: '',
         image_urls: existingImages,
+        // sem carregar o que já está gravado, salvar aqui apagaria o vídeo
+        video_urls: Array.isArray(product.video_urls) ? product.video_urls : [],
         price: product.price_catalog || product.selling_price_retail || '',
         cost_price: product.cost_price || '',
         compare_price: product.market_value || '',
@@ -674,6 +680,9 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         description: formData.title,
         notes: formData.description,
         image_urls: formData.image_urls,
+        // 🎬 a tela nunca manda direto o que a pessoa digitou: `videosValidos`
+        // recusa host desconhecido e tira repetido.
+        video_urls: videosValidos(formData.video_urls),
         price_catalog: parseFloat(formData.price) || 0,
         cost_price: parseFloat(formData.cost_price) || 0,
         market_value: parseFloat(formData.compare_price) || 0,
@@ -1557,6 +1566,17 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                         </div>
                       </div>
                     )}
+                  </div>
+                  {/* 🎬 15/09/2026 — VÍDEO DO PRODUTO. Fica na aba Fotos, e não numa
+                      aba nova: é mídia da página de venda, a mesma ideia das fotos.
+                      O campo é o MESMO da Gestão de Estoque e do Editar Produto —
+                      a regra do que é vídeo válido não pode divergir entre telas. */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <CampoDeVideo
+                      valor={formData.video_urls}
+                      aoMudar={(v) => setFormData((prev) => ({ ...prev, video_urls: v }))}
+                      claro
+                    />
                   </div>
                 </div>
               )}
