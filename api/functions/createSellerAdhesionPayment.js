@@ -70,6 +70,15 @@ export default async function handler(req, res) {
       }).catch(() => {});
     }
 
+    // 🔴 cada clique em pagar criava uma linha NOVA em catalog_sales, mesmo com uma
+    // pendência anterior do mesmo usuário ainda em aberto — um cliente real chegou a
+    // acumular 15 linhas de "Adesão Vendedor" numa única tentativa de compra (CPF sem
+    // dígito, cartão recusado, nova tentativa...). Cancela a pendência anterior ANTES
+    // de abrir uma nova: só sobra rastro de verdade (a que pagou, ou a última tentativa).
+    await sb(`catalog_sales?buyer_id=eq.${encodeURIComponent(user_id)}&kind=eq.seller_adhesion&status=eq.pending_payment`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'cancelado' }),
+    }).catch(() => {});
+
     const saleId = oid();
     await sb('catalog_sales', {
       method: 'POST', headers: { Prefer: 'return=minimal' },

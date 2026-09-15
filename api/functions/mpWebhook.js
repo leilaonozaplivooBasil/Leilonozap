@@ -122,6 +122,34 @@ async function activatePartnerPlan(sale) {
   return { partner_plan_activated: true, plan_name: sale.product_title, plan_amount: sale.total_amount };
 }
 
+// 🎓 A "primeira compra" de Vendedor/Licenciado agora É uma venda de loja normal
+// (kind='loja', criada por createMPPix/createMPCatalogCardCheckout com role_grant marcado)
+// — escolhe os produtos, calcula o frete, paga, nesta ordem, e a comissão sai pelo MESMO
+// motor oficial de 30% de qualquer venda da Loja Virtual (fulfillStoreOrder acima já pagou).
+// Esta função só falta conceder o CARGO a quem comprou, depois que o pagamento confirmou.
+//
+// Raiz do problema que isto substitui: o caminho antigo (kind='seller_adhesion',
+// creditSellerAdhesion acima) pagava só a cadeia de 20% (payDirectCommissions,
+// api/_lib/commissions.js) e NUNCA pagava o "topo institucional" de 10% que toda venda
+// de loja paga — deixando a comissão de CEO/Livoo Live/Embaixador/Conselheiros/
+// Fundadores/Diretoria Executiva/Diretoria de Operação/Executivo de Conta zerada em
+// TODA adesão de Vendedor ou de cargo (kind='adesao') já paga na plataforma.
+async function concederCargoDaPrimeiraCompra(sale) {
+  const cargo = sale?.raw_base44?.role_grant;
+  if (!cargo || !sale.buyer_id) return null;
+  const rows = await (await sb(`app_users?select=career_levels&id=eq.${encodeURIComponent(sale.buyer_id)}&limit=1`)).json();
+  const user = Array.isArray(rows) ? rows[0] : null;
+  if (!user) return null;
+  const levels = Array.isArray(user.career_levels) ? user.career_levels.slice() : [];
+  if (levels.includes(cargo)) return { cargo, ja_tinha: true };
+  levels.push(cargo);
+  await sb(`app_users?id=eq.${encodeURIComponent(sale.buyer_id)}`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ career_levels: levels, primary_career_level: cargo, ...(cargo === 'vendedor' ? { is_seller: true } : {}) }),
+  });
+  return { cargo, concedido: true };
+}
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -604,7 +632,9 @@ export default async function handler(req, res) {
       const envio = await gerarEnvioAutomatico(sale);
       // 💰 DIR-7 — só a COMISSÃO é receita da empresa (o resto vai pro vendedor terceiro).
       await registrarReceita({ description: `Comissão — venda Loja Virtual #${sale.id}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: r?.commission, source: 'venda', saleId: sale.id });
-      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom, envio });
+      // 🎓 "primeira compra" de Vendedor/Licenciado (ver concederCargoDaPrimeiraCompra acima)
+      const cargo = await concederCargoDaPrimeiraCompra(sale);
+      return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom, envio, cargo });
     }
     // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não
     // pagava NADA ao bloco diretor). fulfillStoreOrder aplica a mesma regra de 26%.

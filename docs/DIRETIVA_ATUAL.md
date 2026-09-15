@@ -33,6 +33,33 @@
 
 ---
 
+## DIR-152 — a primeira compra de Vendedor/Licenciado escolhe os produtos ANTES de pagar, e a comissão sai pelo motor oficial de 30%
+
+**Emitida por:** dono, sobre a compra real do Luiz Henrique (indicado pelo Ribeiro): *"a gente tinha uma organização de que ele comprava, escolhia os produtos e pagava a primeira compra... Não foi distribuído comissão... o vendedor deveria escolher os produtos e pagar. Isso é um erro... eu quero que o cliente vá lá, escolha os produtos e pague."*
+
+**Achado (análise diligente, confirmada com dados reais de produção via SQL, antes de qualquer correção):**
+1. A Adesão de Vendedor pagava PRIMEIRO (`createSellerAdhesionPayment.js`, `kind='seller_adhesion'`) e só DEPOIS liberava saldo pra escolher produtos — ordem contrária à pedida. Sem dedup: um cliente real acumulou **15 linhas** de "Adesão Vendedor" em `catalog_sales` numa única compra (CPF sem dígito, cartão recusado, novas tentativas), das quais só 1 pagou de verdade.
+2. **Causa raiz da comissão zerada:** essa venda usava um motor ANTIGO (`payDirectCommissions`, `api/_lib/commissions.js`) que só paga os 20% da cadeia telescópica — nunca os 10% do "topo institucional" (CEO/Livoo Live/Embaixador/Conselheiros/Fundadores/Diretoria Executiva/Diretoria de Operação/Executivo de Conta) que toda venda de loja paga pelo motor oficial (`api/_lib/arvoreOficial.js`, `calcularComissao`). O referrer real (Ribeiro, cargo `diretoria_operacao`) tem 0% de venda direta — **correto**, ele ganha pelo topo institucional — só que esse motor nunca era chamado no caminho da adesão. Não foi erro de conta: foi a venda nunca ter passado pelo motor certo. Rodando `calcularComissao` de verdade contra os dados reais da venda (R$ 1.497), o valor devido era R$ 449,11 (30%, batendo a régua oficial), sendo R$ 240,59 do Ribeiro (parceiro 15% venda direta + executivo 1% + pool diretoria_operação 0,5%) e o resto entre CEO/Livoo Live/Embaixador/Conselheiros/Fundadores/Diretoria Executiva/Ponto de Retirada Bangu/Loja Física/Distribuidor Bangu, todos na cadeia real dessa venda.
+3. **Correção retroativa já aplicada** (fora do código, direto no banco, com o mesmo motor oficial e a mesma auditoria de idempotência que `storeFulfill.js` usa): os 35 lançamentos de `commission_records` da venda `4166dc0afbe06c3fc0074fe2` foram gravados e os saldos de comissão dos 16 beneficiários, creditados — conferido depois, bate exatamente com o calculado.
+
+**O que entra (correção estrutural, pra nunca mais acontecer):**
+1. `createMPPix.js` / `createMPCatalogCardCheckout.js` — aceitam `role_grant` (`'vendedor'` ou `'licenciado'`), conferem o valor mínimo (R$ 1.497 / R$ 5.000) **no servidor** (nunca só na tela) e criam a venda como `kind: 'loja'` normal, com `role_grant` marcado em `raw_base44` — a mesmíssima venda de loja que qualquer cliente faz, com o mesmíssimo frete calculado no checkout.
+2. `mpWebhook.js` — `concederCargoDaPrimeiraCompra(sale)`: depois que `fulfillStoreOrder` já pagou a comissão pelo motor oficial de 30%, concede o cargo ao comprador (`career_levels`, `primary_career_level`, `is_seller` se vendedor) — idempotente, nunca reconcede.
+3. `VendedorEscolherProdutos.jsx` vira a ETAPA 1: escolhe produtos até bater o mínimo, manda pro `/Cart` normal da loja (carrinho + frete + pagamento único). Quem **já pagou** pelo caminho antigo (tem `seller_credit_balance` de antes desta correção — o próprio Luiz Henrique) continua no modo de saldo existente, sem tocar no que já foi pago, exatamente como o dono pediu ("adicionar um saldo... pra ele poder escolher... pra gente poder enviar" — ele já tem os R$ 1.497 de saldo, intactos).
+4. `Cart.jsx` — lê o `pendingRoleGrant` da tela anterior, barra o checkout abaixo do mínimo (em produtos, frete à parte), nunca permite pagar a primeira compra com saldo (ninguém novo tem saldo ainda), e manda `role_grant` pro PIX/cartão.
+5. `VendedorCheckout.jsx` (a tela de pagar-primeiro) e `createSellerAdhesionPayment.js` ficam no código, mas ninguém mais chega neles por navegação normal — `VendedorCheckout.jsx` redireciona direto pra escolher produtos; `createSellerAdhesionPayment.js` ganhou uma correção de higiene à parte (cancela pendência anterior do mesmo usuário antes de abrir uma nova), pra quem ainda cair nele por link salvo não empilhar pedido de novo.
+6. `SejaVendedor.jsx`/`SejaLicenciado.jsx` — copy e botões corrigidos pra descrever a ordem certa ("escolha os produtos... e pague", não mais "pague... e escolha").
+
+**Fora do escopo desta diretiva:** nenhum motor de comissão novo foi criado — a correção foi parar de reinventar um motor à parte e usar o mesmo que a Loja Virtual já usa. `kind='adesao'` (adesão de Licenciado/Parceiro/etc. fora do fluxo de Vendedor) tem o mesmo desenho antigo (`activateAdesao`) e o mesmo risco de faltar o topo institucional, mas **zero vendas pagas até agora** (conferido no banco) — fica pra decisão própria do dono se esse caminho também deve migrar pro mesmo modelo de `kind='loja'`, não risquei essa mudança maior sob a urgência deste pedido. Pagamento da primeira compra com saldo de comissão (`payWithBalance`) não foi ligado ao `role_grant` — caso de borda irreal pra quem está se cadastrando agora (ninguém tem saldo ainda); por isso o Cart.jsx bloqueia essa combinação explicitamente, em vez de fingir suportar.
+
+**Regras fixas:** nenhuma além das anteriores. A comissão de qualquer venda de loja (inclusive a primeira compra de Vendedor/Licenciado) continua sendo SEMPRE `calcularComissao`/`arvoreOficial.js` — nenhum caminho novo cria um motor de comissão próprio.
+
+**Prova:** suíte 2443/2443 (16 testes novos em `tests/primeiraCompraVendedorEscolhePrimeiro.test.mjs`), lint limpo nos arquivos tocados, `npm run build` sem erro. Correção retroativa da venda real conferida direto no banco (saldos antes/depois batendo com os 35 lançamentos).
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-150 — "repetir todo dia" fica claro no momento certo, não escondido num ícone
 
 **Emitida por:** dono, ao vivo (15/09/2026): *"as pessoas estão editando a rotina e elas querem deixar salva do dia seguinte as rotinas do dia a dia, e não está claro na plataforma [...] cada rotina que ela coloque, dê a opção de ela manter recorrente isso com a rotina diária dela que ela já tem padrão. Isso é muito importante deixar bem claro [...] gostaria que você fizesse uma análise e deixasse cada vez mais claro isso e melhor organizado."* Contexto que ele deu junto, pra não confundir com o Ritual: quem está fora da mentoria organiza a própria rotina; quem está na mentoria recebe a rotina padrão com o Ritual do Amanhecer como núcleo — editável, mas perde o valor do ritual se mexer nele.

@@ -81,6 +81,18 @@ export default function Cart() {
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
   const pollingIntervalRef = useRef(null); // Ref para gerenciar o intervalo de polling
+  // 🎓 Primeira compra de Vendedor/Licenciado (vinda de VendedorEscolherProdutos): o
+  // carrinho vira uma compra normal da loja, só que com um valor mínimo obrigatório e,
+  // ao confirmar o pagamento, o comprador ganha o cargo (ver mpWebhook.js). `role_grant`
+  // é a MESMA régua que o servidor confere de novo em createMPPix.js/createMPCatalogCardCheckout.js
+  // — este estado é só pra guiar a tela; quem manda é sempre o servidor.
+  const [roleGrant, setRoleGrant] = useState(null);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('pendingRoleGrant');
+      if (raw) setRoleGrant(JSON.parse(raw));
+    } catch { /* ignora */ }
+  }, []);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -540,6 +552,17 @@ export default function Cart() {
       }
     }
 
+    // 🎓 primeira compra de Vendedor/Licenciado — mínimo obrigatório em PRODUTOS (o frete
+    // não conta pro mínimo). O servidor confere de novo (createMPPix.js/createMPCatalogCardCheckout.js).
+    if (roleGrant && calcularTotalProdutos() < roleGrant.minAmount) {
+      toast.error(`Sua primeira compra como ${roleGrant.label || 'Vendedor'} precisa somar pelo menos ${money(roleGrant.minAmount)} em produtos.`);
+      return;
+    }
+    if (roleGrant && paymentType === 'SALDO') {
+      toast.error('A primeira compra não pode ser paga com saldo — escolha PIX ou cartão.');
+      return;
+    }
+
     // Cartão é coletado na página segura do Mercado Pago — sem validação de cartão inline.
 
     const totalAmount = calcularTotalFinal();
@@ -672,9 +695,11 @@ export default function Cart() {
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
+          ...(roleGrant ? { role_grant: roleGrant.role } : {}),
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
+        if (roleGrant) { try { sessionStorage.removeItem('pendingRoleGrant'); } catch { /* ignora */ } }
         window.location.href = st.url; // checkout hospedado do Mercado Pago
         return;
       }
@@ -690,9 +715,11 @@ export default function Cart() {
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
+          ...(roleGrant ? { role_grant: roleGrant.role } : {}),
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
+        if (roleGrant) { try { sessionStorage.removeItem('pendingRoleGrant'); } catch { /* ignora */ } }
         setCheckoutItems([...cartItems]); // snapshot para o resumo enquanto o PIX está pendente
         setCreatedSales([{ id: mp.sale_id }]);
         setPixData({
@@ -913,6 +940,17 @@ export default function Cart() {
         <div className={`grid grid-cols-1 gap-6 ${(pixData || saldoOk) ? 'max-w-xl mx-auto' : 'lg:grid-cols-2'}`}>
           {/* Coluna Esquerda - Formulários (some após gerar o pagamento) */}
           <div className={`space-y-4 ${(pixData || saldoOk) ? 'hidden' : ''}`}>
+
+            {/* 🎓 Primeira compra de Vendedor/Licenciado — mínimo obrigatório em produtos */}
+            {roleGrant && (
+              <Card className="bg-green-600/10 border-green-500/30 p-4">
+                <p className="text-green-400 font-bold text-sm">Primeira compra como {roleGrant.label || 'Vendedor'}</p>
+                <p className="text-green-300/90 text-xs mt-1">
+                  Escolha produtos que somem pelo menos {money(roleGrant.minAmount)} — o frete entra à parte, no mesmo pagamento.
+                  Ao confirmar, você já vira {roleGrant.label || 'Vendedor'}.
+                </p>
+              </Card>
+            )}
 
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-5">
@@ -1372,8 +1410,8 @@ export default function Cart() {
                   </span>
                 </button>
 
-                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
-                {saldo > 0 && (
+                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo, e nunca na primeira compra de Vendedor/Licenciado */}
+                {saldo > 0 && !roleGrant && (
                   <button type="button" onClick={() => { setPaymentType('SALDO'); setUsarPassaporte(false); }}
                     className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
                     <div>

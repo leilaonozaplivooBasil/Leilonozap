@@ -13,6 +13,10 @@ const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// 🎓 mesma régua de createMPPix.js — primeira compra de Vendedor/Licenciado vira
+// venda de loja normal (kind='loja'), com o valor mínimo conferido no servidor.
+const VALOR_MINIMO_CARGO = { vendedor: 1497, licenciado: 5000 };
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -39,6 +43,12 @@ export default async function handler(req, res) {
     total = round2(total);
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
+
+    // 🎓 primeira compra de Vendedor/Licenciado: valor mínimo conferido no servidor.
+    const roleGrant = ['vendedor', 'licenciado'].includes(String(body?.role_grant || '')) ? String(body.role_grant) : null;
+    if (roleGrant && total < VALOR_MINIMO_CARGO[roleGrant]) {
+      return res.status(200).json({ success: false, error: `Sua primeira compra como ${roleGrant === 'licenciado' ? 'Licenciado' : 'Vendedor'} precisa somar pelo menos R$ ${VALOR_MINIMO_CARGO[roleGrant]}` });
+    }
 
     // 🥇 REGRA DE VENDA PESSOAL (absoluta, Santana 04/08/2026): quem tem cargo de rede é
     // SEMPRE o vendedor da própria compra — logado, deslogado, ou comprando pelo link de
@@ -126,7 +136,7 @@ export default async function handler(req, res) {
       sale_price: totalProdutos, total_amount: totalProdutos, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', payment_method: 'credit_card_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       discount_amount: passaporte_desconto || null,
-      raw_base44: { passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao },
+      raw_base44: { passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
 
     // Checkout Pro (página hospedada do Mercado Pago) — mesma UX de redirecionamento que a Stripe tinha.

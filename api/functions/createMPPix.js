@@ -13,6 +13,15 @@ const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// 🎓 DIR — "primeira compra" de Vendedor/Licenciado vira uma venda de loja normal
+// (escolhe os produtos, calcula frete, paga — nesta ordem), em vez do antigo
+// pagamento avulso que só depois liberava saldo pra escolher. Isso já entrega a
+// comissão pelo motor OFICIAL de 30% (fulfillStoreOrder → arvoreOficial.js), sem
+// precisar de um motor de comissão à parte pra adesão. `role_grant` só marca o
+// cargo a conceder quando o pagamento confirmar (ver mpWebhook.js) — o valor
+// mínimo é conferido AQUI, no servidor, pra ninguém contornar a régua pelo client.
+const VALOR_MINIMO_CARGO = { vendedor: 1497, licenciado: 5000 };
+
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
@@ -48,6 +57,13 @@ export default async function handler(req, res) {
     total = round2(total);
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
+
+    // 🎓 primeira compra de Vendedor/Licenciado: valor mínimo conferido no servidor,
+    // nunca só na tela — quem chama a rota direto não passa por cima da régua.
+    const roleGrant = ['vendedor', 'licenciado'].includes(String(body?.role_grant || '')) ? String(body.role_grant) : null;
+    if (roleGrant && total < VALOR_MINIMO_CARGO[roleGrant]) {
+      return res.status(200).json({ success: false, error: `Sua primeira compra como ${roleGrant === 'licenciado' ? 'Licenciado' : 'Vendedor'} precisa somar pelo menos R$ ${VALOR_MINIMO_CARGO[roleGrant]}` });
+    }
 
     // resolve seller p/ atribuição de comissão.
     // 🥇 REGRA DE VENDA PESSOAL (absoluta, Santana 04/08/2026): quem tem cargo de rede é
@@ -154,7 +170,7 @@ export default async function handler(req, res) {
       kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       coupon_code, discount_amount: round2(discount_amount + passaporte_desconto) || null,
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado },
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 
