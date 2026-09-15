@@ -21,13 +21,27 @@ export function normalizarBannersPorDispositivo(lista) {
   return banners.map((b) => ({ ...b, device_type: 'any' }));
 }
 
-// Ordena pelo campo `order` do painel (o dono decide quem é o principal) e
-// normaliza o dispositivo. É o que toda página deve chamar depois do fetch.
+// 🎬 15/09/2026 — O CARROSSEL DE BANNERS NÃO TOCA VÍDEO.
+// Os 3 vídeos institucionais saíram do código na mesma data, mas continuavam
+// aparecendo em /leiloes: existem linhas de vídeo cadastradas no próprio Painel
+// de Mídia (contexto `home`). Ordem do dono, ao pé da letra: as artes novas
+// "devem ser os únicos banners".
+// Filtrar aqui e não lá no banco é de propósito: vale para QUALQUER linha de
+// vídeo, inclusive as antigas sem contexto, e não depende de ninguém lembrar de
+// desativar registro. Se um dia o dono quiser vídeo no carrossel, é apagar esta
+// função — os vídeos continuam existindo em /midia e nas páginas Seja*.
+export function semVideos(lista) {
+  return (Array.isArray(lista) ? lista : []).filter((b) => b && !b.video_url);
+}
+
+// Ordena pelo campo `order` do painel (o dono decide quem é o principal),
+// descarta vídeo e normaliza o dispositivo. É o que toda página deve chamar
+// depois do fetch.
 export function prepararBannersDoPainel(lista) {
   // `filter` já devolve array NOVO — é o que permite o `sort` abaixo ser in-place
   // sem tocar na lista de quem chamou. Importa porque as páginas guardam essa
   // lista no sessionStorage e reaproveitam o mesmo objeto.
-  const ordenados = (Array.isArray(lista) ? lista.filter(Boolean) : [])
+  const ordenados = semVideos(Array.isArray(lista) ? lista.filter(Boolean) : [])
     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
   return normalizarBannersPorDispositivo(ordenados);
 }

@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { normalizarBannersPorDispositivo, prepararBannersDoPainel } from '../src/lib/bannersDoPainel.js';
+import { normalizarBannersPorDispositivo, prepararBannersDoPainel, semVideos } from '../src/lib/bannersDoPainel.js';
 
 // Só o CÓDIGO conta. Os comentários destes arquivos citam de propósito o que foi
 // removido (`.slice(0, 1)`, `interleaveBanners`, os vídeos) para explicar o porquê —
@@ -136,4 +136,52 @@ test('preparar não muda a lista original (o cache da sessão é reaproveitado)'
   const copia = JSON.parse(JSON.stringify(original));
   prepararBannersDoPainel(original);
   assert.deepEqual(original, copia);
+});
+
+// ——— vídeo cadastrado no painel ———
+//
+// 15/09/2026 — depois de tirar os vídeos do código, /leiloes CONTINUOU mostrando
+// os 3. Não era cache: o bundle novo já estava no ar (a Loja Virtual tinha
+// corrigido no mesmo deploy). São linhas de vídeo cadastradas no próprio Painel
+// de Mídia. O corte passou a ser no código, e não depender de desativar registro.
+
+test('linha de vídeo cadastrada no painel não entra no carrossel', () => {
+  const saida = prepararBannersDoPainel([
+    { id: 'ps5', order: 1, device_type: 'desktop', image_url: '/ps5.webp' },
+    { id: 'influenciador', order: 2, device_type: 'desktop', video_url: '/midia/af86d374c_Vdeo_Influenciador.mp4' },
+    { id: 'vendedor', order: 3, device_type: 'desktop', video_url: '/midia/1e5cd0bf9_Vdeo_Vendedor.mp4' },
+    { id: 'licenciado', order: 4, device_type: 'desktop', video_url: '/midia/31a58a982_Vdeo_Licenciado.mp4' },
+  ]);
+  assert.deepEqual(saida.map((b) => b.id), ['ps5']);
+});
+
+test('as 3 artes ficam e só os vídeos saem — não é "some tudo menos o primeiro"', () => {
+  const saida = prepararBannersDoPainel([
+    { id: 'ps5', order: 1, device_type: 'desktop', image_url: '/a.webp' },
+    { id: 'video', order: 2, device_type: 'desktop', video_url: '/v.mp4' },
+    { id: 'arte2', order: 3, device_type: 'desktop', image_url: '/b.webp' },
+    { id: 'arte3', order: 4, device_type: 'desktop', image_url: '/c.webp' },
+  ]);
+  assert.deepEqual(saida.map((b) => b.id), ['ps5', 'arte2', 'arte3']);
+});
+
+test('só vídeo cadastrado: o carrossel fica vazio, e a moldura some', () => {
+  assert.deepEqual(prepararBannersDoPainel([{ id: 'v', video_url: '/v.mp4', device_type: 'desktop' }]), []);
+});
+
+test('o corte de vídeo vale para linha antiga sem contexto e sem device_type', () => {
+  assert.deepEqual(semVideos([{ id: 'legado', video_url: '/midia/velho.mp4' }]), []);
+});
+
+test('video_url vazio ou nulo não é vídeo — é arte com campo em branco no banco', () => {
+  const entrada = [
+    { id: 'a', image_url: '/a.webp', video_url: null },
+    { id: 'b', image_url: '/b.webp', video_url: '' },
+  ];
+  assert.deepEqual(semVideos(entrada).map((b) => b.id), ['a', 'b']);
+});
+
+test('semVideos aguenta lista nula', () => {
+  assert.deepEqual(semVideos(null), []);
+  assert.deepEqual(semVideos(undefined), []);
 });
