@@ -107,7 +107,7 @@ function Chamado({ c, time, currentUser, onMudou }) {
           </div>
 
           {c.imagem_url && (
-            <a href={c.imagem_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[12px] text-sky-300 hover:text-sky-200">
+            <a href={hrefSeguro(c.imagem_url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[12px] text-sky-300 hover:text-sky-200">
               ver o print <ExternalLink className="w-3 h-3" />
             </a>
           )}
@@ -172,6 +172,9 @@ function Chamado({ c, time, currentUser, onMudou }) {
     </div>
   );
 }
+
+// 🔐 AUDITORIA 15/09/2026 — link gravado por usuário só abre se for http(s) (nunca javascript:)
+const hrefSeguro = (u) => (/^https?:\/\//i.test(String(u || '')) ? u : undefined);
 
 export default function Demandas() {
   const [chamados, setChamados] = useState([]);

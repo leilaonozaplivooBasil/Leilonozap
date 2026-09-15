@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const cpf = onlyDigits(u.cpf) || onlyDigits(body?.cpf);
     if (!cpf || cpf.length !== 11) return res.status(200).json({ success: false, error: 'Informe um CPF válido (11 dígitos).' });
     // grava o CPF no perfil se ainda não tinha
-    if (!onlyDigits(u.cpf)) await sb(`app_users?id=eq.${userId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ cpf }) });
+    if (!onlyDigits(u.cpf)) await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ cpf }) });
     // trava: a chave de saque precisa ser o CPF do titular
     const pixKey = onlyDigits(body?.pix_key);
     if (pixTipo !== 'cpf' || pixKey !== cpf) {
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       user_id: userId, doc_front, doc_back: doc_back || null, selfie, address_proof: address_proof || null,
       pix_key: cpf, pix_tipo: 'cpf', cpf, submitted_at: new Date().toISOString(), reject_reason: null, reviewed_at: null,
     }) });
-    await sb(`app_users?id=eq.${userId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ kyc_status: 'em_analise' }) });
+    await sb(`app_users?id=eq.${encodeURIComponent(userId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ kyc_status: 'em_analise' }) });
     return res.status(200).json({ success: true, message: 'Documentos enviados! Sua validação está em análise.' });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao enviar KYC', details: String(e?.message || e) });

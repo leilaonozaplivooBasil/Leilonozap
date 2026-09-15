@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { plataforma } from '@/api/plataformaClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Search, ArrowRightLeft, User, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from "sonner";
+import { money } from '@/lib/format';
 
 const AppUser = plataforma.entities.AppUser;
 
@@ -118,7 +119,7 @@ export default function TransferirSaldo() {
           <Card className="bg-white border-gray-200">
             <CardHeader>
               <CardTitle className="text-base text-gray-900">Transferir para</CardTitle>
-              <CardDescription>Saldo disponível: <strong className="text-emerald-600">R$ {totalAvailable.toFixed(2)}</strong></CardDescription>
+              <CardDescription>Saldo disponível: <strong className="text-emerald-600">{money(totalAvailable)}</strong></CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative">
@@ -167,7 +168,7 @@ export default function TransferirSaldo() {
           <Card className="bg-white border-gray-200">
             <CardHeader>
               <CardTitle className="text-base text-gray-900">Transferir para {recipient.full_name}</CardTitle>
-              <CardDescription>Saldo disponível: R$ {totalAvailable.toFixed(2)}</CardDescription>
+              <CardDescription>Saldo disponível: {money(totalAvailable)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -221,7 +222,7 @@ export default function TransferirSaldo() {
                 <div className="h-px bg-gray-200 my-1" />
                 <div className="flex justify-between">
                   <span className="text-gray-500">Valor</span>
-                  <span className="font-bold text-emerald-600 text-lg">R$ {parseFloat(amount).toFixed(2)}</span>
+                  <span className="font-bold text-emerald-600 text-lg">{money(parseFloat(amount))}</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -240,7 +241,7 @@ export default function TransferirSaldo() {
             <CardContent className="py-10">
               <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
               <p className="text-lg font-bold text-gray-900">Transferência concluída!</p>
-              <p className="text-sm text-gray-500 mt-1">R$ {parseFloat(amount).toFixed(2)} enviados para {recipient?.full_name}.</p>
+              <p className="text-sm text-gray-500 mt-1">{money(parseFloat(amount))} enviados para {recipient?.full_name}.</p>
               <Button className="mt-6 bg-emerald-600 hover:bg-emerald-700" onClick={() => navigate('/Licensing')}>
                 Voltar ao Painel
               </Button>

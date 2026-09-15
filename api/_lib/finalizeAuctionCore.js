@@ -404,14 +404,25 @@ export async function finalizeOneAuction(auction) {
         });
       } catch (e) { console.warn('[FINALIZE] stats vencedor:', e?.message); }
 
-      // 🎟️ Arrematou = a FATIA do lance vencedor vira compra → cancela só 10% do
-      // valor arrematado (não o bônus inteiro). Cupom já LIBERADO (de uma derrota
-      // em outro leilão) permanece intacto.
-      try { await cancelarCuponsBloqueados(winnerId, finalPrice); } catch (e) { console.warn('[FINALIZE] cupom passaporte:', e?.message); }
-
-      // 🎟️ Modelo A: o bônus de 10% já está na carteira. Quem ARREMATOU tem o bônus
-      // recolhido (o valor pago virou compra). Nunca deixa saldo negativo.
-      try { await recolherBonusPorArremate(winnerId, auctionId); } catch (e) { console.warn('[FINALIZE] bônus passaporte:', e?.message); }
+      // 🎟️ Arrematou = a FATIA do lance vencedor vira compra → o Passaporte cobra
+      // 10% do valor arrematado. UM alvo só, cobrado em FIFO pelos cupons:
+      //
+      // 🔴 CORRIGIDO EM 15/09/2026 — COBRANÇA EM DOBRO PRA QUEM TINHA OS DOIS MODELOS.
+      // Os dois motores rodavam um atrás do outro, cada um com o alvo CHEIO de 10%:
+      // o modelo A recolhia 10% da carteira (cupons de antes de 19/08) E o modelo B
+      // cancelava OUTROS 10% do crédito bloqueado (cupons novos). Quem depositou nas
+      // duas épocas pagava 20%. Medido no banco em 15/09: Rosenberg R$ 18,22 e Gean
+      // R$ 10,00 cancelados a mais (devolvidos na mão, DIR-156).
+      //
+      // Ordem: modelo A primeiro — os cupons dele são sempre os mais antigos (FIFO
+      // de verdade) — e o modelo B só cobra o que SOBROU do alvo. Cupom já LIBERADO
+      // (de uma derrota em outro leilão) permanece intacto nos dois.
+      let jaRecolhidoDaCarteira = 0;
+      try {
+        const r = await recolherBonusPorArremate(winnerId, auctionId, finalPrice);
+        jaRecolhidoDaCarteira = Number(r?.recolhido) || 0;
+      } catch (e) { console.warn('[FINALIZE] bônus passaporte:', e?.message); }
+      try { await cancelarCuponsBloqueados(winnerId, finalPrice, jaRecolhidoDaCarteira); } catch (e) { console.warn('[FINALIZE] cupom passaporte:', e?.message); }
 
       // 💰 COMISSÃO DE LEILÃO — REGRA OFICIAL (04/08/2026, confirmada pelo dono):
       //   • 5% do valor do arremate (era 3%)

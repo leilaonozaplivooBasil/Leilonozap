@@ -23,7 +23,7 @@
 
 // 💰 06/09/2026 — a conta do fixo distribuído pelo peso (caminho relativo:
 // este arquivo também roda na suíte do node, que não resolve o '@/').
-import { distribuirDia, MINIMO_DIA_PADRAO } from './distribuicaoFixo.js';
+import { distribuirDia, valorDoDia, MINIMO_DIA_PADRAO } from './distribuicaoFixo.js';
 import { ROTINA_PADRAO } from './metodo.js';
 
 export const TOKEN_MAX = 22.22;
@@ -508,33 +508,157 @@ export const PESO_DIA_COMPLETO = pesoDaRotina(ROTINA_PADRAO);
 /** A referência de peso da pessoa: a dela, se o admin definiu; senão a Rotina do Método. */
 export const pesoReferenciaDe = (p) => (Number(p?.peso_referencia) > 0 ? Number(p.peso_referencia) : PESO_DIA_COMPLETO);
 
+// 🌅 13/09/2026 — dono, ao vivo: "quanto isso pesa no percentual? [...] a
+// pessoa não vai ganhar dinheiro só por acordar cedo, mas tem que ganhar um
+// valor razoável porque é um peso bom." O Ritual do Amanhecer (a tarefa da
+// gratidão) sai da régua comum de peso 1-6 — nesse teto nunca chegaria a
+// valer 20% sozinho — e passa a valer, sempre, 1/5 do dia INTEIRO (o
+// `valorDoDia` cheio, não a fatia reduzida de um dia incompleto): quem fez
+// o ritual já garantiu 20%, façam as outras tarefas o que fizerem. Os
+// outros 80% continuam repartidos por peso entre o resto da produção, como
+// sempre — só tirando o peso do ritual da conta, pra não contar em dobro.
+export const PERCENTUAL_RITUAL = 0.20;
+/** O peso que o ritual ocupava na régua antiga (hoje só usado pra tirar da referência dos outros 80%). */
+export const pesoRitualNaRotina = () => pesoDaRotina(ROTINA_PADRAO.filter((r) => ehTarefaDeGratidao(r.titulo)));
+
 /**
- * Valor em R$ de cada tarefa do dia (mapa id → valor). Produção, Mentoria e
- * Visão Estratégica repartem o FIXO do dia pelo peso (com o mínimo diário);
- * Bônus reparte a verba de bônus do dia pelo peso; Venda vale o valor cheio.
+ * Valor em R$ de cada tarefa do dia (mapa id → valor). O Ritual do
+ * Amanhecer vale sempre 20% do dia (ver PERCENTUAL_RITUAL); Produção,
+ * Mentoria e Visão Estratégica repartem os outros 80% pelo peso (com o
+ * mínimo diário); Bônus reparte a verba de bônus do dia pelo peso; Venda
+ * vale o valor cheio.
  */
 export function valoresDasTarefas(tarefas = [], participante = PARTICIPANTE_PADRAO) {
   const p = { ...PARTICIPANTE_PADRAO, ...(participante || {}) };
   const cats = tarefas.map((t) => categoriaDaTarefa(t));
-  const producao = tarefas.filter((t, i) => cats[i] !== 'bonus' && cats[i] !== 'venda');
+  const ehRitual = tarefas.map((t, i) => cats[i] !== 'bonus' && cats[i] !== 'venda' && ehTarefaDeGratidao(t?.titulo));
+  const producao = tarefas.filter((t, i) => cats[i] !== 'bonus' && cats[i] !== 'venda' && !ehRitual[i]);
   const bonus = tarefas.filter((t, i) => cats[i] === 'bonus');
-  const fixo = distribuirDia({ fixoMes: fixoDoParticipante(p), pesoReferencia: pesoReferenciaDe(p), tarefas: producao });
+  const valorRitualDia = Math.round(valorDoDia(fixoDoParticipante(p)) * PERCENTUAL_RITUAL * 100) / 100;
+  const referenciaSemRitual = Math.max(0, pesoReferenciaDe(p) - pesoRitualNaRotina()) || null;
+  const fixo = distribuirDia({
+    fixoMes: fixoDoParticipante(p) * (1 - PERCENTUAL_RITUAL),
+    pesoReferencia: referenciaSemRitual,
+    tarefas: producao,
+  });
   const extra = distribuirDia({ fixoMes: Number(p.verba_bonus) || 0, minimoDia: 1, tarefas: bonus });
   const valores = {};
   tarefas.forEach((t, i) => {
-    if (cats[i] === 'venda') valores[t.id] = Number(p.valor_venda) || 0;
+    if (ehRitual[i]) valores[t.id] = valorRitualDia;
+    else if (cats[i] === 'venda') valores[t.id] = Number(p.valor_venda) || 0;
     else if (cats[i] === 'bonus') valores[t.id] = extra.valores[t.id] || 0;
     else valores[t.id] = fixo.valores[t.id] || 0;
   });
   return valores;
 }
 
-/** A régua do dia inteiro (valor do dia, quantas tarefas faltam pro mínimo, o que ficou em aberto). */
+/**
+ * A régua do dia inteiro (valor do dia, quantas tarefas faltam pro mínimo,
+ * o que ficou em aberto).
+ *
+ * 🌅 13/09/2026 — precisa bater com `valoresDasTarefas`: o ritual já
+ * garante 20% do dia por fora, então "o que falta" é medido só nos outros
+ * 80% + produção — senão a barra de progresso mostraria peso 76 faltando
+ * pra um dia que já garantiu 1/5 do valor com uma tarefa só.
+ */
 export function reguaDoDia(tarefas = [], participante = PARTICIPANTE_PADRAO) {
   const p = { ...PARTICIPANTE_PADRAO, ...(participante || {}) };
-  const producao = tarefas.filter((t) => { const c = categoriaDaTarefa(t); return c !== 'bonus' && c !== 'venda'; });
-  const d = distribuirDia({ fixoMes: fixoDoParticipante(p), pesoReferencia: pesoReferenciaDe(p), tarefas: producao });
-  return { valorDia: d.valorDia, faltam: d.faltam, pesoFalta: d.pesoFalta, pesoReferencia: d.pesoReferencia, somaPesos: d.somaPesos, emAberto: d.emAberto, minimoDia: d.minimoDia, fixo: fixoDoParticipante(p) };
+  const temRitualPlanejado = tarefas.some((t) => {
+    const c = categoriaDaTarefa(t);
+    return c !== 'bonus' && c !== 'venda' && ehTarefaDeGratidao(t?.titulo);
+  });
+  const producao = tarefas.filter((t) => {
+    const c = categoriaDaTarefa(t);
+    return c !== 'bonus' && c !== 'venda' && !ehTarefaDeGratidao(t?.titulo);
+  });
+  const referenciaSemRitual = Math.max(0, pesoReferenciaDe(p) - pesoRitualNaRotina()) || null;
+  const d = distribuirDia({ fixoMes: fixoDoParticipante(p) * (1 - PERCENTUAL_RITUAL), pesoReferencia: referenciaSemRitual, tarefas: producao });
+  const valorDia = valorDoDia(fixoDoParticipante(p));
+  const valorRitualDia = Math.round(valorDia * PERCENTUAL_RITUAL * 100) / 100;
+  const ritualAlocado = temRitualPlanejado ? valorRitualDia : 0;
+  return {
+    valorDia,
+    faltam: d.faltam,
+    pesoFalta: d.pesoFalta,
+    pesoReferencia: d.pesoReferencia,
+    somaPesos: d.somaPesos,
+    emAberto: Math.round((valorDia - d.pago - ritualAlocado) * 100) / 100,
+    minimoDia: d.minimoDia,
+    fixo: fixoDoParticipante(p),
+  };
+}
+
+// 🔴 13/09/2026 — achado de auditoria (não pelo dono): `DistribuirTarefa.jsx`,
+// `QuadroGeralAbas.jsx` (AbaSemana) e `XPerformanceGestao.jsx` reimplementavam
+// a régua chamando `distribuirDia`/`simularNovaTarefa`/`resumoDoCiclo` de
+// `distribuicaoFixo.js` DIRETO, com o peso e o fixo cheios — nenhum dos três
+// sabia que o Ritual do Amanhecer virou balde de 20% à parte (ver
+// `valoresDasTarefas`/`reguaDoDia` acima). Resultado: iam mostrar o ritual
+// contando na régua de peso comum, valor errado assim que essa mudança
+// publicasse. As duas funções abaixo são as versões ritual-aware — mesma
+// forma das de `distribuicaoFixo.js`, só que por dentro usam
+// `valoresDasTarefas`/`reguaDoDia` em vez da régua crua, dia a dia.
+
+/**
+ * "Essa tarefa tem peso x, vale x em dinheiro, e as outras caem pra tanto" —
+ * versão ritual-aware de `simularNovaTarefa` (distribuicaoFixo.js), pra
+ * prévia de uma tarefa nova (`DistribuirTarefa.jsx`) saber que o ritual não
+ * disputa a régua de peso comum.
+ */
+export function simularNovaTarefaComRitual({ tarefas = [], participante = PARTICIPANTE_PADRAO, novaTarefa = {} } = {}) {
+  const nova = { id: '__nova__', peso: novaTarefa.peso, titulo: novaTarefa.titulo, categoria: novaTarefa.categoria };
+  const antes = valoresDasTarefas(tarefas, participante);
+  const depois = valoresDasTarefas([...tarefas, nova], participante);
+  const reguaAntes = reguaDoDia(tarefas, participante);
+  const reguaDepois = reguaDoDia([...tarefas, nova], participante);
+  const quedas = tarefas
+    .filter((t) => t && t.id != null)
+    .map((t) => ({ id: t.id, de: antes[t.id] ?? 0, para: depois[t.id] ?? 0 }))
+    // um centavo de diferença é arredondamento, não queda — não vira aviso
+    .filter((q) => Math.abs(q.de - q.para) > 0.011);
+  return {
+    valorNova: depois[nova.id] ?? 0,
+    valorDia: reguaDepois.valorDia,
+    quedas,
+    pagoAntes: Math.round((reguaAntes.valorDia - reguaAntes.emAberto) * 100) / 100,
+    pagoDepois: Math.round((reguaDepois.valorDia - reguaDepois.emAberto) * 100) / 100,
+    pesoFaltava: reguaAntes.pesoFalta,
+    pesoFalta: reguaDepois.pesoFalta,
+    pesoReferencia: reguaDepois.pesoReferencia,
+  };
+}
+
+/**
+ * O ciclo (mês) de uma pessoa, ritual-aware — mesma forma de `resumoDoCiclo`
+ * (distribuicaoFixo.js), mas cada dia passa por `valoresDasTarefas`/
+ * `reguaDoDia` em vez de `distribuirDia` cru. `tarefasPorDia` já deve vir
+ * filtrado por quem chama (ex.: sem bônus/venda, se é isso que a tela quer
+ * contar) — esta função não filtra categoria, só separa o ritual do resto.
+ */
+export function resumoDoCicloComRitual({ participante = PARTICIPANTE_PADRAO, tarefasPorDia = {}, diasDoCiclo = [], hojeISO } = {}) {
+  const hoje = String(hojeISO || '').slice(0, 10);
+  let ganho = 0; let aConferir = 0; let emJogo = 0; let emAberto = 0; let perdido = 0;
+  const diasComTarefa = new Set(Object.keys(tarefasPorDia));
+  const todos = [...new Set([...diasDoCiclo, ...diasComTarefa])].sort();
+  for (const dia of todos) {
+    const tarefas = tarefasPorDia[dia] || [];
+    const valores = valoresDasTarefas(tarefas, participante);
+    const d = reguaDoDia(tarefas, participante);
+    const passou = hoje && dia < hoje;
+    for (const t of tarefas) {
+      const v = valores[t.id] || 0;
+      if (t.feito) { ganho += v; if (t.conferido !== true) aConferir += v; }
+      else if (passou) perdido += v;
+      else emJogo += v;
+    }
+    if (passou) perdido += d.emAberto; else emAberto += d.emAberto;
+  }
+  const r2 = (n) => Math.round(n * 100) / 100;
+  return {
+    fixo: fixoDoParticipante(participante),
+    valorDia: valorDoDia(fixoDoParticipante(participante)),
+    ganho: r2(ganho), aConferir: r2(aConferir), emJogo: r2(emJogo), perdido: r2(perdido), emAberto: r2(emAberto),
+  };
 }
 
 /** X-Pay do dia: ganho (feitas), em jogo (ainda dá tempo) e perdido (janela passou). */
@@ -994,7 +1118,16 @@ export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new
   const feitas = comEstado.filter((t) => t.feito).length;
   const total = comEstado.length;
   const votacaoFechada = Number(agoraMin) >= VOTACAO_FIM_MIN;
-  const perdeuPorNaoVotar = votacaoFechada && votouEmTodos === false;
+  // 🎓 15/09/2026 — DIR-153, caso da Sophia Sant'anna ao vivo: `ativo` (aparece na
+  // lista votável, pode ser votada) e `em_mentoria` (está na mentoria
+  // oficial) são coisas diferentes (ver migração participante_em_mentoria).
+  // Dono: "você não pode zerar o dia de quem não participa da mentoria...
+  // ela não é obrigada a votar." A régua radical do não-voto só vale pra
+  // quem tem `em_mentoria === true` — sem isso (participante não carregado,
+  // ou fora da mentoria mesmo `ativo`), não há como faltar a uma obrigação
+  // que não existe.
+  const obrigadoAVotar = participante?.em_mentoria === true;
+  const perdeuPorNaoVotar = obrigadoAVotar && votacaoFechada && votouEmTodos === false;
   // 📉 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto], além de
   // ele perder o dinheiro, isso tem que tirar pontos dele." Só conta tarefa
   // de GESTÃO (origem 'xperf', com prazo_em) que passou do prazo sem o
@@ -1608,6 +1741,43 @@ export const RITUAL_INICIO_MIN = 4 * 60 + 40;
 export const RITUAL_FIM_MIN = 5 * 60 + 30;
 export const AVISO_COLAR = '🚫 Colar é bloqueado aqui — digita com as SUAS palavras. Copiar e colar baixa o seu MvM, os pontos e o dinheiro do dia: o treino é digitar o que você entendeu.';
 
+// 🌅 13/09/2026 — dono, ao vivo: "quem está participando de fato na
+// votação... não tem o direito de mudar o horário do ritual. Mas quem está
+// fora da mentoria pode botar o horário que vai acordar — ela ganha no
+// horário que ela definir." Duas populações, o MESMO ritual:
+//   · vota/é votado no MvM (está na mentoria) → janela fixa da casa
+//     (RITUAL_INICIO_MIN–RITUAL_FIM_MIN, 04:40–05:30);
+//   · fixo sem votação (a distribuidora, o Flávio — `aceita_ser_votado:
+//     false`) → a janela vira o horário QUE ELA MESMA escolheu na rotina
+//     dela, com a mesma folga de sempre (20min antes, 30min depois).
+// `votavel` aqui é o mesmo `podeSerVotado` já usado em toda a casa — nunca
+// uma régua nova.
+
+/** Minutos desde 00:00, a partir de "HH:MM" (o formato de `hora` de metodo_tarefas). */
+export function minDeHora(hora) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hora || '').trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+  return h * 60 + min;
+}
+
+/**
+ * A janela do Ritual do Amanhecer — fixa pra quem vota/é votado, pessoal
+ * pra quem tem fixo mas está fora da votação (ela define o horário dela,
+ * na PRÓPRIA rotina, e joga com a mesma folga de sempre ao redor dele).
+ * `votavel` ausente/true = régua de sempre (nunca afrouxa por engano).
+ */
+export function janelaDoRitual({ votavel = true, horaTarefa } = {}) {
+  if (votavel !== false) return { inicioMin: RITUAL_INICIO_MIN, fimMin: RITUAL_FIM_MIN };
+  const ancoraMin = minDeHora(horaTarefa);
+  if (ancoraMin === null) return { inicioMin: RITUAL_INICIO_MIN, fimMin: RITUAL_FIM_MIN };
+  const antes = RITUAL_INICIO_MIN - (5 * 60); // 20min de folga antes (5h - 4h40)
+  const depois = RITUAL_FIM_MIN - (5 * 60);   // 30min de folga depois (5h30 - 5h)
+  return { inicioMin: Math.max(0, ancoraMin + antes), fimMin: Math.min(24 * 60 - 1, ancoraMin + depois) };
+}
+
 // 🌅 DIR-134 (09/09/2026) — auditoria noturna do Ritual do Amanhecer, dono:
 // "algumas pessoas reclamaram, falaram que não conseguiram... vê se a gente
 // melhora a comunicação no ritual, pras pessoas lerem... vê se a gente cria
@@ -1621,11 +1791,15 @@ export const RITUAL_AVISO_ANTES_MIN = 10;
 /**
  * Mostra o aviso "como funciona o ritual" — dos dez minutos antes da
  * abertura até o fechamento da janela, só pra quem ainda não fez hoje.
+ * `janela` é opcional (default a janela fixa da casa) — quem tem horário
+ * próprio (ver janelaDoRitual) passa a janela dela pro aviso bater com a
+ * hora que ela mesma escolheu, não com as 4:40-5:30 de sempre.
  */
-export function deveAvisarRitual({ agoraMin, ritualFeitoHoje } = {}) {
+export function deveAvisarRitual({ agoraMin, ritualFeitoHoje, janela } = {}) {
   if (ritualFeitoHoje) return false;
   if (typeof agoraMin !== 'number') return false;
-  return agoraMin >= RITUAL_INICIO_MIN - RITUAL_AVISO_ANTES_MIN && agoraMin <= RITUAL_FIM_MIN;
+  const { inicioMin, fimMin } = janela || { inicioMin: RITUAL_INICIO_MIN, fimMin: RITUAL_FIM_MIN };
+  return agoraMin >= inicioMin - RITUAL_AVISO_ANTES_MIN && agoraMin <= fimMin;
 }
 
 // ── 📸 O PRINT COMO PROVA (F10.1) ───────────────────────────────────

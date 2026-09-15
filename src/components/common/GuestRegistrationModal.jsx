@@ -75,7 +75,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
     }
 
     if (phone.length < 10) {
-      setErrorMessage("❌ Telefone inválido. Use (11) 99999-9999");
+      setErrorMessage("❌ Telefone inválido. Use DDD + número, ex.: (21) 99999-9999");
       return;
     }
 

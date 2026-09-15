@@ -28,7 +28,7 @@ export default function useFrete({ items = [], autoCalcular = false, cepInicial 
     } catch (_) {
       if (cepInicial) setCep(formatarCep(cepInicial));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [cepInicial]);
 
   const calcular = useCallback(async (cepAlvo) => {

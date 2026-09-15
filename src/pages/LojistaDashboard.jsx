@@ -291,7 +291,7 @@ export default function LojistaDashboard() {
             </div>
 
             <div className="border-t border-white/5 bg-white/[0.02] px-8 py-4 text-center">
-              <p className="text-gray-600 text-xs">© 2024 Leilão NoZap - Portal do Lojista</p>
+              <p className="text-gray-600 text-xs">© {new Date().getFullYear()} Leilão NoZap - Portal do Lojista</p>
             </div>
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function LojistaDashboard() {
             catalogSales={catalogSales}
             onLogout={handleLogout}
             onNewAuction={(currentStore.can_create_direto_fabrica || currentStore.can_create_arremate_devolucoes) ? () => navigate(createPageUrl("CreateAuction")) : null}
-            onNewAuctionSDB={currentStore.can_create_sai_de_baixo ? () => navigate(createPageUrl("CreateAuctionSaiDeBaixo")) : null}
+            onNewAuctionSDB={currentStore.can_create_sai_de_baixo ? () => navigate(createPageUrl("CreateAuction")) : null}
             onRefresh={() => loadDashboardData(currentStore.id)}
           />
 

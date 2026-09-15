@@ -1,4 +1,5 @@
 import React from "react";
+import { textoParcelamento } from '@/lib/parcelamento';
 import { fmtBR } from '@/lib/money';
 
 const LOGO_URL = "/brand/icon-3d.webp";
@@ -64,7 +65,7 @@ export default function DiagonalTemplate({ displayTitle, displayImage, displayBa
             <span style={{ color: "white", fontSize: 44, fontWeight: 900, lineHeight: 1 }}>{price.toFixed(2).split('.')[0]}</span>
             <span style={{ color: accent, fontSize: 24, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
           </div>
-          {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 4 }}>ou 12x de R$ {fmtBR((price / 12))} sem juros</p>}
+          {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 4 }}>ou {textoParcelamento(price)}</p>}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

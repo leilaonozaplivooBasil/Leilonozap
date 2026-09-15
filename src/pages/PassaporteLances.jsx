@@ -10,7 +10,9 @@ import { registrarAceitePassaporte } from '@/lib/passaporteTermo';
 import { obterOrigemDeposito } from '@/lib/origemDeposito';
 
 const VALOR = 100;
-const CREDITO = 110;
+// 15/09/2026 — era `CREDITO = 110` ("R$ 100 que valem R$ 110"): regra antiga, de
+// antes de 19/08. Hoje são R$ 100 de saldo + um cupom de R$ 10 bloqueado.
+const CUPOM = 10;
 
 export default function PassaporteLances() {
   const navigate = useNavigate();
@@ -48,24 +50,24 @@ export default function PassaporteLances() {
         <header className="text-center mb-8">
           <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/40">Passaporte de Lances</p>
           <h1 className="mt-3 font-semibold text-white" style={{ fontSize: 'clamp(1.7rem,7vw,2.3rem)', lineHeight: 1.1 }}>
-            R$ 100 que valem <span className="text-emerald-300">R$ 110</span>
+            R$ 100 de saldo <span className="text-emerald-300">+ R$ 10 de cupom</span>
           </h1>
           <p className="mt-3 text-sm text-white/55 leading-relaxed">
-            Não é aposta. É crédito de consumo na sua carteira — para disputar ou comprar na Loja Virtual.
+            Não é aposta. R$ 100 viram saldo de lance na hora; o cupom de 10% fica guardado e libera pra Loja Virtual conforme os leilões que você disputar terminarem sem vitória.
           </p>
         </header>
 
         <CartaoPassaporte
           titular={currentUser?.full_name}
           valorPago={VALOR}
-          credito={CREDITO}
+          cupom={CUPOM}
           ativo={Boolean(meuPassaporte)}
         />
 
         {meuPassaporte && (
           <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-400/[0.07] px-4 py-3 text-center">
             <p className="text-sm font-medium text-emerald-200">Você já tem um Passaporte ativo</p>
-            <p className="text-xs text-white/55 mt-0.5">Seu crédito está na carteira, sem prazo para usar.</p>
+            <p className="text-xs text-white/55 mt-0.5">Seu cupom está guardado na Carteira, sem prazo para usar depois de liberado.</p>
           </div>
         )}
 

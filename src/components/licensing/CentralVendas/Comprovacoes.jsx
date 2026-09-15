@@ -25,8 +25,12 @@ export const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 're
 // aqui — faltava o rótulo E a cor (`ROTULO[s] || s` devolvia a chave crua,
 // sem classe nenhuma pra pintar). As outras telas da fila (XGameAdmin.jsx)
 // já tratavam esse status; aqui não.
-const ROTULO = { em_analise: 'em análise', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual aprovado', ritual_em_andamento: 'ritual em andamento', ritual_parcial: 'ritual parcial', reprovada: 'reprovada' };
-const COR = { em_analise: 'border-amber-400/40 text-amber-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', ritual_em_andamento: 'border-amber-400/40 text-amber-200', ritual_parcial: 'border-amber-400/50 text-amber-200', reprovada: 'border-red-400/40 text-red-200' };
+// 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem crédito
+// (402) e comprovações reais passaram a ser SALVAS como
+// `pendente_ia`/`ritual_pendente_ia` em vez de sumirem sem deixar marca.
+const PENDENTES_IA = ['pendente_ia', 'ritual_pendente_ia'];
+const ROTULO = { em_analise: 'em análise', pendente_ia: 'IA fora do ar — confirme você', ritual_pendente_ia: 'ritual completo, IA fora do ar — confirme você', aprovada_ia: 'aprovada pela IA', aprovada_manual: 'aprovada por você', aprovada_ritual: 'ritual aprovado', ritual_em_andamento: 'ritual em andamento', ritual_parcial: 'ritual parcial', reprovada: 'reprovada' };
+const COR = { em_analise: 'border-amber-400/40 text-amber-200', pendente_ia: 'border-red-400/50 text-red-200', ritual_pendente_ia: 'border-red-400/50 text-red-200', aprovada_ia: 'border-nz-verde/40 text-nz-verde', aprovada_manual: 'border-nz-verde/50 text-nz-verde', aprovada_ritual: 'border-nz-verde/40 text-nz-verde', ritual_em_andamento: 'border-amber-400/40 text-amber-200', ritual_parcial: 'border-amber-400/50 text-amber-200', reprovada: 'border-red-400/40 text-red-200' };
 const fmtDia = (iso) => { const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
 
 // 🖱️ 09/09/2026 — dono: "ver uma prévia do print sem clicar e levar pra
@@ -68,7 +72,7 @@ export function useComprovacoes({ pessoaId = null } = {}) {
     for (const t of lista) {
       const r = por[t.user_id] || (por[t.user_id] = { reprovadas: 0, analise: 0, aprovadas: 0 });
       const s = statusDaComp(t.comprovacao);
-      if (s === 'reprovada') r.reprovadas += 1; else if (s === 'em_analise') r.analise += 1; else r.aprovadas += 1;
+      if (s === 'reprovada') r.reprovadas += 1; else if (s === 'em_analise' || PENDENTES_IA.includes(s)) r.analise += 1; else r.aprovadas += 1;
     }
     return por;
   }, [lista]);
@@ -95,7 +99,10 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
   // uma permissão que não sabe quem está olhando tem que ser o fechado.
   const laudoLiberado = podeVerLaudo(currentUser);
   const { lista, carregando, radar, aprovar, reprovar } = useComprovacoes({ pessoaId });
-  const [filtro, setFiltro] = useState('em_analise');
+  // 🚨 DIR-146 — desde a DIR-89, 'em_analise' quase não nasce mais sozinho
+  // (a régua aprova/reprova automático); a fila que passou a nascer de
+  // verdade é a de IA fora do ar, e é nela que quem abre precisa cair primeiro.
+  const [filtro, setFiltro] = useState('pendente_ia');
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
   // 🔎 09/09/2026 — DIR-126, dono, mesma régua do ADM X-Game (DIR-124):
   // "eu preciso separar por data... busca... tanto a data e tanto o dia."
@@ -107,8 +114,11 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
   // (nunca substitui): "todas" mostra tudo agrupado, como hoje.
   const [dataEscolhida, setDataEscolhida] = useState('todas');
   const pendentes = lista.filter((t) => statusDaComp(t.comprovacao) === 'em_analise').length;
+  const pendentesIA = lista.filter((t) => PENDENTES_IA.includes(statusDaComp(t.comprovacao))).length;
   const visiveis = useMemo(() => lista.filter((t) => {
-    if (filtro !== 'todas' && statusDaComp(t.comprovacao) !== filtro) return false;
+    const s = statusDaComp(t.comprovacao);
+    if (filtro === 'pendente_ia') { if (!PENDENTES_IA.includes(s)) return false; }
+    else if (filtro !== 'todas' && s !== filtro) return false;
     return comprovacaoBateNaBusca(t, nomeDe(t.user_id), busca);
   }), [lista, filtro, busca, nomeDe]);
   const visiveisPorData = useMemo(() => agruparComprovacoesPorData(visiveis), [visiveis]);
@@ -140,9 +150,14 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
         <span className={`text-[10px] ${pendentes ? 'text-amber-300 font-bold' : 'text-white/35'}`} data-teste="comprovacoes-pendentes">
           {pendentes ? `${pendentes} em análise — casos raros que a IA não decidiu sozinha` : 'nada em análise — a IA decide tudo sozinha'}
         </span>
+        {pendentesIA > 0 && (
+          <span className="text-[10px] text-red-300 font-bold" data-teste="comprovacoes-pendentes-ia">
+            🤖🚨 {pendentesIA} com a IA fora do ar — confirme você
+          </span>
+        )}
         {r && <span className="text-[10px] text-white/35" data-teste="comprovacoes-radar">· radar: {r.aprovadas} aprovada{r.aprovadas === 1 ? '' : 's'} · {r.analise} em análise · {r.reprovadas} reprovada{r.reprovadas === 1 ? '' : 's'}</span>}
         <span className="ml-auto flex gap-1">
-          {[['em_analise', 'em análise'], ['todas', 'todas']].map(([v, rot]) => (
+          {[['pendente_ia', `IA fora do ar${pendentesIA > 0 ? ` (${pendentesIA})` : ''}`], ['em_analise', 'em análise'], ['todas', 'todas']].map(([v, rot]) => (
             <button key={v} type="button" onClick={() => setFiltro(v)} className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${filtro === v ? 'border-white/40 text-white bg-white/10' : 'border-white/10 text-white/45 hover:text-white'}`}>{rot}</button>
           ))}
         </span>
@@ -170,7 +185,7 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
         </div>
       )}
       {visiveis.length === 0 ? (
-        <p className="text-[11px] text-white/35">{busca ? 'Nada encontrado nessa busca.' : filtro === 'em_analise' ? 'Nenhuma comprovação esperando a sua análise.' : 'Nenhuma comprovação.'}</p>
+        <p className="text-[11px] text-white/35">{busca ? 'Nada encontrado nessa busca.' : filtro === 'pendente_ia' ? 'Nada esperando confirmação — a IA está respondendo normal.' : filtro === 'em_analise' ? 'Nenhuma comprovação esperando a sua análise.' : 'Nenhuma comprovação.'}</p>
       ) : gruposExibidos.length === 0 ? (
         <p className="text-[11px] text-white/35">Nada nessa data.</p>
       ) : (
@@ -254,7 +269,7 @@ export default function ComprovacoesPainel({ pessoaId = null, nomeDe = (id) => i
                   )}
                   {c.veredito_ia?.motivo && <span className="text-white/35 truncate" title={c.veredito_ia.o_que_viu || ''}>IA: {c.veredito_ia.motivo}</span>}
                   {s === 'reprovada' && c.motivo_gestor && <span className="text-red-200/70 truncate">↩ {c.motivo_gestor}</span>}
-                  {s === 'em_analise' && (
+                  {(s === 'em_analise' || PENDENTES_IA.includes(s)) && (
                     <span className="ml-auto flex items-center gap-1 shrink-0">
                       <button type="button" onClick={() => aprovar(t)} className="inline-flex items-center gap-1 rounded-full bg-nz-verde/20 hover:bg-nz-verde/35 px-2 py-0.5 text-nz-verde font-bold" data-teste="comp-aprovar"><Check className="w-3 h-3" /> aprovar</button>
                       <button type="button" onClick={() => setReprovando({ id: t.id, motivo: '' })} className="inline-flex items-center gap-1 rounded-full bg-red-400/15 hover:bg-red-400/30 px-2 py-0.5 text-red-200 font-bold" data-teste="comp-reprovar"><X className="w-3 h-3" /> reprovar</button>

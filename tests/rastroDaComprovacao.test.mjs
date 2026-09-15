@@ -143,8 +143,14 @@ test('🔴 TODO caminho que grava ritual grava rastro — inclusive o "perdido" 
   // Ele também precisa de rastro — sem `tentativas`, `temRastro()` daria
   // false e o laudo leria uma linha de HOJE como "anterior ao rastro". Quem
   // parasse no bloco 2 viraria exatamente esse fantasma.
-  const desfechos = (CRM.match(/rastroDa\(\{ anterior: t\.comprovacao, tempoTelaS, falhas: falhasDaEntrega\(\) \}\)/g) || []).length;
-  assert.equal(desfechos, 2, `esperava rastro nos 2 desfechos do ritual, achei ${desfechos}`);
+  // 🚨 DIR-146 (14/09/2026) — o desfecho do FECHAMENTO ganhou um terceiro
+  // parâmetro (`iaIndisponivel`): o laudo (relatorioComprovacoes.js) lê
+  // `ia_indisponivel` no TOPO da comprovação pra dizer "não foi ela", e sem
+  // isto um ritual pendente_ia (IA fora do ar, ninguém reprovou nada) ficaria
+  // com o mesmo rastro de um ritual comum. O desfecho de "perdeu o prazo"
+  // continua com a assinatura simples — estourar o tempo não é sobre a IA.
+  assert.match(CRM, /rastroDa\(\{ anterior: t\.comprovacao, tempoTelaS, falhas: falhasDaEntrega\(\) \}\)/, 'o desfecho de "perdeu o prazo" ficou sem rastro');
+  assert.match(CRM, /rastroDa\(\{ anterior: t\.comprovacao, tempoTelaS, iaIndisponivel: statusFinal === 'ritual_pendente_ia', falhas: falhasDaEntrega\(\) \}\)/, 'o fechamento do ritual ficou sem marcar ia_indisponivel pro laudo');
   assert.match(
     CRM,
     /Object\.assign\(nova, rastroDa\(\{ anterior: t\.comprovacao, falhas: falhasPorTarefa\.current\[t\.id\] \|\| \[\] \}\)\)/,

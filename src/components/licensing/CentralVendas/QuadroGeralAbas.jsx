@@ -4,8 +4,7 @@ import { Loader2, Plus, Trash2, Send, Target, CalendarDays, LayoutGrid, History,
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { fmtReais, fixoDoParticipante, pesoReferenciaDe, categoriaDaTarefa, PARTICIPANTE_PADRAO } from '@/lib/xgame';
-import { distribuirDia } from '@/lib/distribuicaoFixo';
+import { fmtReais, categoriaDaTarefa, PARTICIPANTE_PADRAO, reguaDoDia } from '@/lib/xgame';
 import { isSalePago, isVendaMercadoria } from '@/lib/crmUnifiedCustomers';
 import { filtroOrDonoDaVenda } from '@/lib/vendasDoCiclo';
 import { CHAVES, metasDoModelo, modeloDaFuncao, progressoDasMetas, carteiraDeCapital, mesDe } from '@/lib/metasPessoa';
@@ -304,7 +303,11 @@ export function AbaSemana({ pessoaId, tarefasCiclo, hoje, participante }) {
       {dias.map((dia) => {
         const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaId && String(t.data).slice(0, 10) === dia);
         const plano = planejamentoDoDia(doDia);
-        const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: doDia.filter(ehProd) });
+        // 🔴 13/09/2026 — achado de auditoria: `distribuirDia` cru contava o
+        // Ritual do Amanhecer na régua de peso comum. `reguaDoDia` já sabe
+        // separar o ritual (20% garantido, DIR-142) do resto da produção.
+        const dist = reguaDoDia(doDia.filter(ehProd), base);
+        const pago = Math.round((dist.valorDia - dist.emAberto) * 100) / 100;
         const feitas = doDia.filter((t) => t.feito).length;
         const ehHoje = dia === hoje;
         return (
@@ -316,7 +319,7 @@ export function AbaSemana({ pessoaId, tarefasCiclo, hoje, participante }) {
               <>
                 <p className="mt-1 text-[11px] text-white/80">{feitas}/{doDia.length} feitas</p>
                 <p className={`text-[10px] ${plano.gerado ? 'text-white/40' : 'text-amber-300/80'}`}>{plano.gerado ? 'planejado' : 'só distribuídas'}</p>
-                <p className="text-[10px] text-white/50 tabular-nums">{fmtReais(dist.pago)}{dist.pesoFalta ? ` · falta peso ${dist.pesoFalta}` : ''}</p>
+                <p className="text-[10px] text-white/50 tabular-nums">{fmtReais(pago)}{dist.pesoFalta ? ` · falta peso ${dist.pesoFalta}` : ''}</p>
               </>
             )}
           </div>

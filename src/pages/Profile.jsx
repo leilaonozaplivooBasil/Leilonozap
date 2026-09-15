@@ -33,7 +33,6 @@ import {
   ShoppingBag,
   CheckCircle,
   Clock,
-  ArrowLeft,
   Mail,
   Phone,
   BadgeCheck,

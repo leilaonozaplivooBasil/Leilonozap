@@ -22,6 +22,7 @@ import { assistenteDaLista, faltaResponder, gerarDaEntrevista, resumoDaFicha } f
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { getFotoPerfil } from '@/lib/selosCargo';
 import { HABITOS } from '@/lib/metodo';
+import { dataISO } from '@/lib/xgame';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou, ondeEsta, pilulasOndeEsta } from '@/lib/destinos';
 import EntradaComDestinos from './EntradaComDestinos';
 
@@ -794,7 +795,8 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
  */
 export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, tarefasDoDia = [] }) {
   const uid = currentUser?.id || null;
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+  const hoje = hojeISO || dataISO();
   const [listas, setListas] = useState([]);
   const [cartoes, setCartoes] = useState([]);
   const [carregando, setCarregando] = useState(true);

@@ -1,4 +1,5 @@
 import React from "react";
+import { linkWhatsAppOficial } from '@/lib/whatsappOficial';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, Mail, Phone } from "lucide-react";
 
@@ -52,7 +53,7 @@ export default function SolicitarCadastroModal({ isOpen, onClose, perfilNome }) 
               <a href="mailto:contato@leilaonozap.net" className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5" /> contato@leilaonozap.net
               </a>
-              <a href="https://wa.me/5500000000000" target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5">
+              <a href={linkWhatsAppOficial('Olá! Quero solicitar meu cadastro no Leilão NoZap.')} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5" /> WhatsApp comercial
               </a>
             </div>

@@ -101,10 +101,25 @@ export default async function handler(req, res) {
     }
 
     // Reserva pegou → agora sim o pedido entra na fila do admin.
-    await sb('withdrawal_requests', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    const ins = await sb('withdrawal_requests', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id, base44_id: id, user_id: userId, user_name: user.full_name, user_email: user.email,
       valor, pix_key: cpf, pix_tipo: 'cpf', status: 'pending', requested_at: new Date().toISOString(),
     }) });
+    if (!ins.ok) {
+      // 🧾 AUDITORIA 15/09/2026 — antes o insert não era conferido: reserva feita, pedido
+      // inexistente, dinheiro preso em saldo_alocado sem ninguém na fila. Agora desfaz a reserva.
+      const detalhe = await ins.text().catch(() => '');
+      console.error(`[SAQUE] pedido ${id} de ${userId} NÃO gravado (HTTP ${ins.status}) — devolvendo a reserva:`, detalhe.slice(0, 300));
+      await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: userId, _amount: valor }) }).catch(() => {});
+      for (let t = 0; t < 3; t += 1) {
+        const cur = (await (await sb(`app_users?select=saldo_alocado&id=eq.${encodeURIComponent(userId)}&limit=1`)).json().catch(() => []))[0];
+        const aloc = round2(Number(cur?.saldo_alocado) || 0);
+        const r = await sb(`app_users?id=eq.${encodeURIComponent(userId)}&saldo_alocado=eq.${aloc}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_alocado: round2(Math.max(0, aloc - valor)) }) });
+        const ok = await r.json().catch(() => []);
+        if (Array.isArray(ok) && ok.length) break;
+      }
+      return res.status(200).json({ success: false, error: 'Não foi possível registrar o pedido de saque agora. Seu saldo foi mantido — tente de novo em instantes.' });
+    }
 
     return res.status(200).json({ success: true, withdrawal_id: id, valor, message: 'Pedido de saque enviado. Será pago no PIX do seu CPF após aprovação.' });
   } catch (e) {

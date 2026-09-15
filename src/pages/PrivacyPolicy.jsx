@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
             <ul className="space-y-1.5 pl-4">
               <li>• <span className="text-white font-medium">Dados de identificação:</span> nome completo, e-mail, CPF ou CNPJ.</li>
               <li>• <span className="text-white font-medium">Dados de contato:</span> número de telefone / WhatsApp, endereço de entrega.</li>
-              <li>• <span className="text-white font-medium">Dados financeiros:</span> histórico de compras, lances e transações realizadas na plataforma. As informações de pagamento (cartão, boleto) são processadas diretamente pelo gateway <strong className="text-white">Asaas</strong> e não são armazenadas em nossos servidores.</li>
+              <li>• <span className="text-white font-medium">Dados financeiros:</span> histórico de compras, lances e transações realizadas na plataforma. As informações de pagamento (cartão, boleto) são processadas diretamente pelo gateway <strong className="text-white">Mercado Pago</strong> e não são armazenadas em nossos servidores.</li>
               <li>• <span className="text-white font-medium">Dados de uso:</span> endereço IP, tipo de dispositivo e registros de acesso à plataforma.</li>
             </ul>
           </div>
@@ -53,7 +53,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-semibold mb-2 text-base">3. Compartilhamento de Dados</h2>
             <p>Não vendemos nem compartilhamos seus dados com terceiros para fins comerciais. O compartilhamento ocorre somente:</p>
             <ul className="space-y-1.5 pl-4 mt-2">
-              <li>• Com o gateway de pagamento <strong className="text-white">Asaas</strong>, para processamento de cobranças.</li>
+              <li>• Com o gateway de pagamento <strong className="text-white">Mercado Pago</strong>, para processamento de cobranças.</li>
               <li>• Com transportadoras, para viabilizar entrega de produtos adquiridos.</li>
               <li>• Quando exigido por lei, ordem judicial ou autoridade competente.</li>
             </ul>

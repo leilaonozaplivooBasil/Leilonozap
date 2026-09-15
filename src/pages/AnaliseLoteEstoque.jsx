@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
-import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, ArrowLeft, Eye, Warehouse } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse } from 'lucide-react';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';

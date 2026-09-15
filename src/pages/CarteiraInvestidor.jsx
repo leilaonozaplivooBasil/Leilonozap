@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, CheckCircle2, DollarSign, History, ShieldCheck, AlertCircle, TrendingUp, ArrowLeft, User } from 'lucide-react';
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, CheckCircle2, DollarSign, History, ShieldCheck, AlertCircle, TrendingUp, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';

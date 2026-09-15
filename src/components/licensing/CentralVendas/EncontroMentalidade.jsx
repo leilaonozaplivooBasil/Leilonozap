@@ -13,11 +13,12 @@ import {
   conversaInicial, responderConversa, perguntaAtual, contextoDaConversa, PERGUNTAS_CONVERSA,
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
   ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
-  normalizarTreinamento, temTreinamento, materialEhLink, treinamentoDoTexto, TREINAMENTO_VAZIO,
+  normalizarTreinamento, temTreinamento, materialEhLink, treinamentoDoTexto, treinamentoDoRoteiro, TREINAMENTO_VAZIO,
 } from '@/lib/encontro';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
 import { mentalidadeDe } from '@/lib/mentalidades';
+import { dataISO } from '@/lib/xgame';
 import { faseDoMes } from '@/lib/documentoOficial';
 import { PROGRAMA_PADRAO, programaJunto, rotuloDoMes } from '@/lib/programaMentoria';
 import { mesDe } from '@/lib/metasPessoa';
@@ -68,7 +69,8 @@ function Anel({ pct, cor, children }) {
 }
 
 export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir = false }) {
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+  const hoje = hojeISO || dataISO();
   // 📅 DIR-79 — a tela abre na segunda QUE VEM (hoje, se hoje for segunda), e
   // não na que já passou. `passoSemana` deixa andar pra trás sem perder o
   // registro da semana anterior — que é o que a troca de âncora, sozinha,
@@ -144,7 +146,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     setCarregando(false);
   }, [dataEncontro]);
   useEffect(() => { carregar(); }, [carregar]);
-  useEffect(() => { setPautasAbertas(!encontro?.roteiro); setEditando(false); }, [encontro?.id]);
+  useEffect(() => { setPautasAbertas(!encontro?.roteiro); setEditando(false); setEditandoTreinamento(false); }, [encontro?.id]);
 
   // 👥 o time com a função de cada um (posição do painel + função escolhida/sugerida)
   const time = useMemo(() => timeCorporativo(usuarios).map((p) => {
@@ -173,6 +175,18 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   // 🎓 DIR-79 — o treinamento como conteúdo do encontro (não só o nome de quem treina)
   const treinamento = useMemo(() => normalizarTreinamento(encontro?.treinamento, { por: treinamentoPor }), [encontro?.treinamento, treinamentoPor]);
   const [importando, setImportando] = useState('');
+  // ✏️ DIR-135 — "trocar o treinamento" só apagava e mandava recomeçar do
+  // zero (dono: "eu não consigo editar as lâminas"). Agora tem edição de
+  // verdade, com os campos já preenchidos com o que existe.
+  const [editandoTreinamento, setEditandoTreinamento] = useState(false);
+  // 🔗 DIR-135 — o treinamento EFETIVO: o mesmo que `slidesDoEncontro` usa na
+  // apresentação (o gravado, se existir; senão o rascunho da IA/régua). Antes
+  // a caixa "3 · Treinamento" do tópico mostrava e deixava editar SÓ o
+  // rascunho — que ficava mudo assim que existia um treinamento gravado, sem
+  // avisar. Agora as duas telas sempre mostram a mesma coisa.
+  const treinamentoEfetivo = useMemo(() => (
+    temTreinamento(treinamento) ? treinamento : treinamentoDoRoteiro(roteiro?.treinamento, { por: treinamentoPor })
+  ), [treinamento, roteiro?.treinamento, treinamentoPor]);
 
   // 💾 gravar o encontro (uma linha por segunda; a primeira gravação cria)
   const salvarEncontro = async (patch) => {
@@ -227,7 +241,14 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     } catch { toast.message('A IA não respondeu — o tópico saiu pela régua da casa.'); }
     if (!novo) novo = { ...roteiroLocal(contexto), origem: 'local' };
     const pautasTexto = daConversa ? lista.join('\n') : pautas;
-    await salvarEncontro({ pautas: pautasTexto, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor });
+    // 🎓 DIR-135 — a PONTE entre os dois "treinamento" que não se falavam: se
+    // ainda não existe treinamento GRAVADO (o que a apresentação de fato usa),
+    // o rascunho que acabou de nascer já entra gravado — pronto pra editar de
+    // verdade, em vez de a caixa do cabeçalho continuar dizendo "sem material"
+    // logo depois de gerar um treinamento inteiro. Se já existe um gravado
+    // (importado ou editado antes), ele é o registro real e não é pisado.
+    const seedTreinamento = temTreinamento(encontro?.treinamento) ? {} : { treinamento: treinamentoDoRoteiro(novo.treinamento, { por: treinamentoPor }) };
+    await salvarEncontro({ pautas: pautasTexto, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor, ...seedTreinamento });
     if (daConversa) setPautas(pautasTexto);
     setGerando(false);
     setPautasAbertas(false);
@@ -259,8 +280,11 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   // ✏️ 07/09 — "precisa ter botão de edição, depois que for gerado": o
   // rascunho (IA ou régua) é só o ponto de partida — a palavra final é
   // sempre da pessoa, sem precisar regenerar tudo de novo.
+  // 🎞️ DIR-135 — a abertura (o texto que a IA/régua escreve pro slide
+  // "Abertura") era gravada e usada na apresentação, mas nunca aparecia nem
+  // podia ser editada fora dela — uma lâmina real, sem lugar pra editar.
+  const mudarAbertura = (valor) => salvarEncontro({ roteiro: { ...roteiro, abertura: valor } });
   const mudarLeitura = (campo, valor) => salvarEncontro({ roteiro: { ...roteiro, leitura: { ...roteiro.leitura, [campo]: valor } } });
-  const mudarTreinamento = (campo, valor) => salvarEncontro({ roteiro: { ...roteiro, treinamento: { ...roteiro.treinamento, [campo]: valor } } });
   const mudarTopicoReuniao = (i, campo, valor) => {
     const topicos = (roteiro.reuniao?.topicos || []).map((t, idx) => (idx === i ? { ...t, [campo]: valor } : t));
     salvarEncontro({ roteiro: { ...roteiro, reuniao: { ...roteiro.reuniao, topicos } } });
@@ -287,6 +311,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     setPautas('');
     setDescartes(null);
     setEditando(false);
+    setEditandoTreinamento(false);
     setPautasAbertas(true);
     reiniciarConversa();
     setImportando('');
@@ -382,25 +407,41 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
           <div className="mt-2 rounded-lg border border-white/10 p-2.5" data-teste="treinamento-caixa">
             <div className="flex items-baseline gap-2 flex-wrap">
               <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento ({blocoTreinamento.minutos} min)</p>
-              {temTreinamento(treinamento)
-                ? <span className="text-[10px] font-bold text-nz-verde" data-teste="treinamento-pronto">pronto · {treinamento.passos.length} passo{treinamento.passos.length === 1 ? '' : 's'}</span>
+              {temTreinamento(treinamentoEfetivo)
+                ? <span className="text-[10px] font-bold text-nz-verde" data-teste="treinamento-pronto">pronto · {treinamentoEfetivo.passos.length} passo{treinamentoEfetivo.passos.length === 1 ? '' : 's'}</span>
                 : <span className="text-[10px] text-amber-300/80" data-teste="treinamento-vazio">ainda sem material</span>}
             </div>
-            {temTreinamento(treinamento) ? (
+            {editandoTreinamento ? (
+              // ✏️ DIR-135 — edição de verdade: os campos já chegam preenchidos
+              // com o que existe (o gravado; ou, em encontros antigos que nunca
+              // tiveram um gravado, o rascunho da IA/régua — editar aqui já
+              // grava de vez). Antes, "trocar o treinamento" só apagava tudo
+              // (dono: "eu não consigo editar as lâminas") — pra mudar UMA
+              // palavra era preciso reescrever o treinamento inteiro do zero.
+              <div className="mt-1.5 space-y-1.5">
+                <Input defaultValue={treinamentoEfetivo.titulo} onBlur={(ev) => salvarEncontro({ treinamento: { ...treinamentoEfetivo, titulo: ev.target.value } })} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-treinamento-titulo" placeholder="título do treinamento" />
+                <Textarea defaultValue={treinamentoEfetivo.material} onBlur={(ev) => salvarEncontro({ treinamento: { ...treinamentoEfetivo, material: ev.target.value } })} rows={2} placeholder="o material — um link ou um texto" className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-treinamento-material" />
+                <Textarea defaultValue={treinamentoEfetivo.passos.join('\n')} onBlur={(ev) => salvarEncontro({ treinamento: { ...treinamentoEfetivo, passos: ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean) } })} rows={4} placeholder="um passo por linha" className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-treinamento-passos" />
+                <Button size="sm" onClick={() => setEditandoTreinamento(false)} className="h-7 bg-white text-black hover:bg-white/90 text-[11px] font-bold" data-teste="treinamento-editar-fechar">concluir edição</Button>
+              </div>
+            ) : temTreinamento(treinamentoEfetivo) ? (
               <div className="mt-1.5">
-                <p className="text-[12px] font-bold text-white">{treinamento.titulo || 'Treinamento'}</p>
-                {treinamento.material && (materialEhLink(treinamento.material)
-                  ? <a href={treinamento.material} target="_blank" rel="noreferrer" className="text-[11px] text-sky-300 underline break-all" data-teste="treinamento-link">{treinamento.material}</a>
-                  : <p className="text-[11px] text-white/60 whitespace-pre-line">{treinamento.material}</p>)}
-                {treinamento.passos.length > 0 && (
+                <p className="text-[12px] font-bold text-white">{treinamentoEfetivo.titulo || 'Treinamento'}</p>
+                {treinamentoEfetivo.material && (materialEhLink(treinamentoEfetivo.material)
+                  ? <a href={treinamentoEfetivo.material} target="_blank" rel="noreferrer" className="text-[11px] text-sky-300 underline break-all" data-teste="treinamento-link">{treinamentoEfetivo.material}</a>
+                  : <p className="text-[11px] text-white/60 whitespace-pre-line">{treinamentoEfetivo.material}</p>)}
+                {treinamentoEfetivo.passos.length > 0 && (
                   <ol className="mt-1 space-y-0.5">
-                    {treinamento.passos.map((passo, i) => (
+                    {treinamentoEfetivo.passos.map((passo, i) => (
                       <li key={`${passo}-${i}`} className="text-[11px] text-white/70">{i + 1}. {passo}</li>
                     ))}
                   </ol>
                 )}
                 {podeConduzir && (
-                  <button type="button" onClick={() => salvarEncontro({ treinamento: TREINAMENTO_VAZIO })} className="mt-1.5 text-[10px] text-white/35 hover:text-white" data-teste="treinamento-limpar">trocar o treinamento</button>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <button type="button" onClick={() => setEditandoTreinamento(true)} className="text-[10px] text-white/50 hover:text-white underline" data-teste="treinamento-editar">editar</button>
+                    <button type="button" onClick={() => { if (window.confirm('Apagar este treinamento e começar outro do zero?')) salvarEncontro({ treinamento: TREINAMENTO_VAZIO }); }} className="text-[10px] text-white/35 hover:text-red-300" data-teste="treinamento-apagar">apagar</button>
+                  </div>
                 )}
               </div>
             ) : podeConduzir ? (
@@ -557,8 +598,20 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                 {aberturaMentalidade.corpo.map((linha) => <p key={linha} className="text-[11px] text-white/60 mt-0.5">{linha}</p>)}
                 <p className="text-[10px] text-white/30 mt-1">conteúdo fixo da casa — não muda de encontro pra encontro</p>
               </div>
+              {/* 🎞️ DIR-135 — a abertura é uma lâmina de verdade da apresentação
+                  (o slide "Abertura", logo depois da Mentalidade), mas até aqui
+                  só existia gravada — nunca aparecia nem podia ser editada fora
+                  do modo Apresentar. */}
+              <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: '3px solid rgba(255,255,255,0.25)' }} data-teste="topico-abertura">
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">2 · Abertura</p>
+                {editando ? (
+                  <Textarea defaultValue={roteiro.abertura} onBlur={(ev) => mudarAbertura(ev.target.value)} rows={2} className="mt-1 border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-abertura" />
+                ) : (
+                  <p className="text-[11px] text-white/60 mt-0.5">{roteiro.abertura}</p>
+                )}
+              </div>
               <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoLeitura.cor}` }} data-teste="topico-leitura">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">2 · Leitura · {blocoLeitura.minutos} min</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">3 · Leitura · {blocoLeitura.minutos} min</p>
                 {editando ? (
                   <div className="mt-1 space-y-1.5">
                     <Input defaultValue={roteiro.leitura?.titulo} onBlur={(ev) => mudarLeitura('titulo', ev.target.value)} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-leitura-titulo" />
@@ -575,25 +628,24 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                   </>
                 )}
               </div>
+              {/* 🔗 DIR-135 — antes este bloco mostrava e deixava "editar" o
+                  RASCUNHO (roteiro.treinamento) — que ficava mudo, sem avisar,
+                  assim que existia um treinamento gravado (dono: "as perguntas
+                  do treinamento não levam a lugar nenhum, não adianta de
+                  nada"). Agora mostra sempre o mesmo treinamento EFETIVO que a
+                  apresentação usa, e aponta pra onde editar de verdade — sem
+                  segundo formulário que não leva a lugar nenhum. */}
               <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoTreinamento.cor}` }} data-teste="topico-treinamento">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">3 · Treinamento · {blocoTreinamento.minutos} min{treinamentoPor ? ` · ${treinamentoPor}` : ''}</p>
-                {editando ? (
-                  <div className="mt-1 space-y-1.5">
-                    <Input defaultValue={roteiro.treinamento?.tema} onBlur={(ev) => mudarTreinamento('tema', ev.target.value)} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold" data-teste="editar-treinamento-tema" />
-                    <Textarea defaultValue={roteiro.treinamento?.objetivo} onBlur={(ev) => mudarTreinamento('objetivo', ev.target.value)} rows={2} className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-treinamento-objetivo" />
-                    <Textarea defaultValue={(roteiro.treinamento?.passos || []).join('\n')} onBlur={(ev) => mudarTreinamento('passos', ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean))} rows={3} placeholder="um passo por linha" className="border-white/15 bg-white/[0.06] text-white text-[11px]" data-teste="editar-treinamento-passos" />
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-[12px] font-bold text-white">{roteiro.treinamento?.tema}</p>
-                    <p className="text-[11px] text-white/60">{roteiro.treinamento?.objetivo}</p>
-                    <ol className="mt-1 text-[11px] text-white/60">{(roteiro.treinamento?.passos || []).map((q, i) => <li key={q}>{i + 1}. {q}</li>)}</ol>
-                    {roteiro.treinamento?.pratica && <p className="text-[11px] text-white/50 mt-0.5">prática: {roteiro.treinamento.pratica}</p>}
-                  </>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">4 · Treinamento · {blocoTreinamento.minutos} min{treinamentoPor ? ` · ${treinamentoPor}` : ''}</p>
+                <p className="text-[12px] font-bold text-white">{treinamentoEfetivo.titulo}</p>
+                {treinamentoEfetivo.material && <p className="text-[11px] text-white/60 whitespace-pre-line">{treinamentoEfetivo.material}</p>}
+                <ol className="mt-1 text-[11px] text-white/60">{treinamentoEfetivo.passos.map((q, i) => <li key={`${q}-${i}`}>{i + 1}. {q}</li>)}</ol>
+                {podeConduzir && (
+                  <button type="button" onClick={() => { setEditandoTreinamento(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="mt-1 text-[10px] text-white/40 hover:text-white underline" data-teste="topico-treinamento-editar-no-topo">editar o treinamento lá no topo ↑</button>
                 )}
               </div>
               <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoReuniao.cor}` }} data-teste="topico-reuniao">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">4 · Reunião estratégica · {blocoReuniao.minutos} min · {roteiro.reuniao?.topicos?.length || 0} tópicos</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">5 · Reunião estratégica · {blocoReuniao.minutos} min · {roteiro.reuniao?.topicos?.length || 0} tópicos</p>
                 <ol className="mt-1 space-y-1.5">
                   {(roteiro.reuniao?.topicos || []).map((t, i) => (
                     <li key={`${t.titulo}-${i}`} className="text-[11px]" data-teste="topico-item">
@@ -703,6 +755,13 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                 ? <button type="button" onClick={pausarAgora} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="pausar"><Pause className="w-4 h-4" /></button>
                 : <button type="button" onClick={comecar} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="começar"><Play className="w-4 h-4" /></button>)}
               {podeConduzir && estado.comecou && !estado.terminado && <button type="button" onClick={proximoBloco} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="próximo bloco"><SkipForward className="w-4 h-4" /></button>}
+              {/* ✏️ DIR-135 — dono: "aonde eu edito as lâminas?" — direto da
+                  lâmina, sem precisar primeiro achar o botão certo lá embaixo
+                  na tela normal. Fecha a apresentação e já abre a edição do
+                  tópico inteiro (leitura/abertura/treinamento/tópicos). */}
+              {podeConduzir && (
+                <button type="button" onClick={() => { setApresentando(false); setEditando(true); setEditandoTreinamento(true); window.scrollTo({ top: 0 }); }} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="fechar e editar esta lâmina" title="fechar e editar" data-teste="apresentacao-editar"><PencilLine className="w-4 h-4" /></button>
+              )}
               <button type="button" onClick={() => setApresentando(false)} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="fechar apresentação" data-teste="apresentacao-fechar"><X className="w-4 h-4" /></button>
             </div>
           </div>

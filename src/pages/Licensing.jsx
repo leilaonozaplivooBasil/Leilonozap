@@ -6,7 +6,6 @@ const AppUser = plataforma.entities.AppUser;
 const Auction = plataforma.entities.Auction;
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { toast } from "sonner";
 import { forceSyncStats } from "@/functions/forceSyncStats";
 import { resetTestData } from "@/functions/resetTestData";
@@ -22,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, BarChart3, DollarSign, Zap, Loader2, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, MessageCircle, Wallet, Clock, GripVertical, Store, Package, Handshake, HelpCircle } from 'lucide-react';
+import { DollarSign, Loader2, TrendingUp, RefreshCw, Link2, Trash2, AlertCircle, GripVertical, HelpCircle } from 'lucide-react';
 import { visibilidadeDoUsuario } from '@/lib/visibilidadePorPapel';
 import { resolverEscopo } from '@/lib/escopoDeVisao';
 
@@ -30,7 +29,6 @@ import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrat
 import LoginModal from '../components/common/LoginModal';
 import IndicatedUsersModal from '../components/admin/IndicatedUsersModal';
 import CommissionStatementModal from '../components/admin/CommissionStatementModal';
-import CareerPath from '../components/licensing/CareerPath';
 import AuctionSelectionModal from '../components/licensing/AuctionSelectionModal';
 import UserEditModal from '../components/admin/UserEditModal';
 import UserPasswordModal from '../components/admin/UserPasswordModal';
@@ -38,7 +36,6 @@ import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
-import XGameAdmin from '../components/licensing/XGameAdmin';
 import CommissionsTab from '../components/licensing/CommissionsTab';
 import LandingContent from '../components/licensing/LandingContent';
 import LandingErrorBoundary from '../components/licensing/LandingErrorBoundary';
@@ -55,20 +52,19 @@ import HeroTopCollege from '../components/licensing/HeroTopCollege';
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
 import NavegacaoLateralGlobal from '@/components/common/NavegacaoLateralGlobal';
 import LicensingBanners from '../components/licensing/LicensingBanners';
-import MyStoreTab from '../components/licensing/MyStoreTab';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
 import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
 import { pedirTour, TOURS_DISPONIVEIS } from '@/lib/pedidoDeTour';
+import { money } from '@/lib/format';
 import DiarioDeBolso from '../components/licensing/CentralVendas/DiarioDeBolso';
 import SeletorEscopo, { useEscopoDeVisao } from '../components/licensing/CentralVendas/SeletorEscopo';
 import CarreiraSecao from '../components/licensing/CarreiraSecao';
 // 🏪 PONTO 85 — "Admin" do usuário comum = administração da própria loja
 import MinhaLojaAdmin from '../components/licensing/MinhaLojaAdmin';
-import { VALID_LICENSING_TABS, podeVerOperacao, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
-import StoreShareLinkCard from '../components/licensing/StoreShareLinkCard';
+import { VALID_LICENSING_TABS, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 import RoleLinksGrid from '../components/licensing/RoleLinksGrid';
 import WalletBalanceCard from '../components/licensing/WalletBalanceCard';
 import TabelaComissoesLeilao from '../components/licensing/TabelaComissoesLeilao';
@@ -240,7 +236,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   const referralLink = isSaiDeBaixo ?
-    `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
+    `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}` /* 🔗 AUDITORIA 15/09/2026: /SaiDeBaixo não existe — dava 404 pra todo indicado */ :
     `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   // 🩹 Normaliza ids legados (ex: 'licenciado_catalogo' → 'licenciado') pra bater
@@ -421,7 +417,6 @@ const DashboardContent = ({ user, isAdmin }) => {
       const referredIds = Array.isArray(referredUsers) ? referredUsers.map((u) => u.id).filter(Boolean) : [];
 
       console.log('📊 Usuários indicados:', referredIds.length);
-      console.log('🔑 Meu código de referral:', user.referral_code);
 
       // Buscar arremates de leilão (ended OU sold) dos indicados ignorando limitador obsoleto de 300 (Memory-safe)
       let wonAuctions = [];
@@ -679,7 +674,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             text-shadow: 0 0 20px #1DB24A, 0 2px 8px rgba(0,0,0,0.8);
             letter-spacing: 1px;
           ">
-            R$ ${totalAvailable.toFixed(2)}
+            ${money(totalAvailable)}
           </span>
         </div>
       `;
@@ -811,7 +806,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         }
       });
 
-      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`${money(amount)} creditados!`);
       setSelectedLicenseeId('');
       setCommissionAmount('');
       await delay(2000);
@@ -1410,8 +1405,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                                         <TableRow key={sale.id} className={'border-gray-200'}>
                                           <TableCell className={'text-gray-900 text-sm'}>{sale.product_title}</TableCell>
                                           <TableCell className={'text-gray-700 text-sm'}>{sale.buyer_name}</TableCell>
-                                          <TableCell className={'text-gray-900 font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
-                                          <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                                          <TableCell className={'text-gray-900 font-semibold'}>{money(sale.sale_price)}</TableCell>
+                                          <TableCell className="text-green-400 font-semibold">{money(sale.commission_licensee_amount)}</TableCell>
                                           <TableCell className={'text-gray-500 text-sm'}>
                                             {new Date(sale.created_date).toLocaleDateString('pt-BR')}
                                           </TableCell>
@@ -1428,7 +1423,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                                 <div className={`text-center py-12 ${'text-gray-500'}`}>
                                   <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
                                   <p>Seu sistema de alavancagem está crescendo!</p>
-                                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `${money(user.total_commissions_generated)}` : 'R$ 0.00'}</p>
                                 </div>
                               </TabsContent>
                             }
@@ -1523,7 +1518,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                             const licTotal = (lic.commission_balance || 0);
                             return (
                               <SelectItem key={lic.id} value={lic.id}>
-                                {lic.full_name} - R$ {licTotal.toFixed(2)}
+                                {lic.full_name} - {money(licTotal)}
                               </SelectItem>
                             );
                           })}

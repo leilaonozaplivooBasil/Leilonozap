@@ -89,9 +89,9 @@ export default function LegalTermsModal({ onClose }) {
           <div>
             <h3 className="text-white font-semibold mb-2 text-base">4. Pagamento</h3>
             <ul className="space-y-1.5 pl-4">
-              <li>• O pagamento deve ser realizado dentro do prazo informado após o arremate, utilizando os métodos disponíveis na plataforma (Pix, boleto, cartão — via Asaas).</li>
+              <li>• O pagamento deve ser realizado dentro do prazo informado após o arremate, utilizando os métodos disponíveis na plataforma (PIX ou cartão de crédito — via Mercado Pago).</li>
               <li>• O não pagamento no prazo poderá resultar na suspensão ou cancelamento da conta do usuário.</li>
-              <li>• Os dados de pagamento são tratados exclusivamente pelo gateway Asaas e sujeitos à política de privacidade deste.</li>
+              <li>• Os dados de pagamento são tratados exclusivamente pelo gateway Mercado Pago e sujeitos à política de privacidade deste.</li>
             </ul>
           </div>
 

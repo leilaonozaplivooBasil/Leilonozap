@@ -5,9 +5,10 @@ import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  fmtReais, nomeExibicao, categoriaDaTarefa, fixoDoParticipante, pesoReferenciaDe, dataISO, PARTICIPANTE_PADRAO,
+  fmtReais, nomeExibicao, categoriaDaTarefa, fixoDoParticipante, dataISO, PARTICIPANTE_PADRAO,
+  reguaDoDia, valoresDasTarefas, simularNovaTarefaComRitual,
 } from '@/lib/xgame';
-import { distribuirDia, simularNovaTarefa, DIAS_FIXO, PESO_MIN, PESO_MAX } from '@/lib/distribuicaoFixo';
+import { DIAS_FIXO, PESO_MIN, PESO_MAX } from '@/lib/distribuicaoFixo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, habitoDe } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo } from '@/lib/pronto';
@@ -145,18 +146,25 @@ export default function DistribuirTarefa({
   };
   const temasTexto = lida.temas.length ? `Temas: ${lida.temas.map((id) => TEMAS.find((t) => t.id === id)?.rotulo || id).join(', ')}.` : '';
   const ensinamento = ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: habitoAtual, detalhe: temasTexto });
-  // 🔮 A PRÉVIA: quanto vale a tarefa que está sendo digitada, e o que as outras do dia perdem
+  // 🔮 A PRÉVIA: quanto vale a tarefa que está sendo digitada, e o que as
+  // outras do dia perdem.
+  // 🔴 13/09/2026 — achado de auditoria: isto chamava `distribuirDia`/
+  // `simularNovaTarefa` (distribuicaoFixo.js) direto, com peso e fixo
+  // cheios — não sabia que o Ritual do Amanhecer virou balde de 20% à
+  // parte (ver `valoresDasTarefas`/`reguaDoDia`/DIR-142 em xgame.js). Uma
+  // tarefa de ritual aqui mostraria a fatia de peso comum, não os 20%
+  // garantidos. Trocado pelas versões ritual-aware.
   const previa = useMemo(() => {
     if (!participante) return null;
-    const producao = tarefasDoDia.filter(ehProducao);
-    const dist = distribuirDia({ fixoMes: fixoDoParticipante(participante), pesoReferencia: pesoReferenciaDe(participante), tarefas: producao });
+    const dist = reguaDoDia(tarefasDoDia, participante);
+    const valoresDia = valoresDasTarefas(tarefasDoDia, participante);
     const entraNoFixo = categoriaAtual !== 'bonus' && categoriaAtual !== 'venda';
     const sim = entraNoFixo
-      ? simularNovaTarefa({ fixoMes: fixoDoParticipante(participante), pesoReferencia: pesoReferenciaDe(participante), tarefas: producao, novaPeso: pesoEfetivo })
+      ? simularNovaTarefaComRitual({ tarefas: tarefasDoDia, participante, novaTarefa: { peso: pesoEfetivo, titulo: nova.titulo, categoria: categoriaAtual } })
       : null;
-    return { dist, sim, entraNoFixo, fixo: fixoDoParticipante(participante) };
-  }, [participante, tarefasDoDia, categoriaAtual, pesoEfetivo]);
-  const valoresDoDia = previa?.dist.valores || {};
+    return { dist, valoresDia, sim, entraNoFixo, fixo: fixoDoParticipante(participante) };
+  }, [participante, tarefasDoDia, categoriaAtual, pesoEfetivo, nova.titulo]);
+  const valoresDoDia = previa?.valoresDia || {};
 
   // 🗂️ o card do quadro pessoal (DIR-75/76) que a demanda vira, ligado ou não à tarefa
   const cardDaDemanda = (tarefaId) => ({

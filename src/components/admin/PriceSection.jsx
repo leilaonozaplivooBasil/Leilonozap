@@ -161,6 +161,10 @@ export default function PriceSection({ formData, onInputChange }) {
               <SelectItem value="172800">2 dias (48h)</SelectItem>
               <SelectItem value="259200">3 dias (72h)</SelectItem>
               <SelectItem value="604800">1 semana</SelectItem>
+              {/* 15 dias (14/09/2026). Não havia trava nenhuma de 7 dias: a lista
+                  aqui era o único teto. end_time é timestamptz sem CHECK, e o cron
+                  finalizeExpiredAuctions só olha se venceu — não há limite de janela. */}
+              <SelectItem value="1296000">15 dias</SelectItem>
             </SelectContent>
           </Select>
         </div>

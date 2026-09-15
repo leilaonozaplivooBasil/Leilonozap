@@ -4,7 +4,7 @@ import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
 import { restricoesDaCamera, opcoesDoGravador, avisoDoVideoGrande } from '@/lib/gravadorDeVideo';
-import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo } from '@/lib/xgame';
+import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
 // conseguiu importar — não tem terceira.
@@ -37,11 +37,12 @@ const CHAVE_MUSICA = 'xgame_musica_do_dia';
 const musicaSalva = () => {
   try {
     const j = JSON.parse(localStorage.getItem(CHAVE_MUSICA) || 'null');
-    return j?.id && j?.data === new Date().toISOString().slice(0, 10) ? j : null;
+    // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+    return j?.id && j?.data === dataISO() ? j : null;
   } catch { return null; }
 };
 const salvarMusica = (id, lista = false) => {
-  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, lista, data: new Date().toISOString().slice(0, 10) })); } catch { /* sem storage */ }
+  try { localStorage.setItem(CHAVE_MUSICA, JSON.stringify({ id, lista, data: dataISO() })); } catch { /* sem storage */ }
 };
 
 // ⭐ A PLAYLIST DO AMANHECER da pessoa (fica no aparelho): cada link que ela
@@ -352,7 +353,8 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     const todas = sonhos
       .map((s) => s?.imagem_url || s?.imagem || s?.foto || (Array.isArray(s?.imagens) ? s.imagens[0] : null))
       .filter(Boolean);
-    const hoje = new Date().toISOString().slice(0, 10);
+    // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
+    const hoje = dataISO();
     let seed = 0;
     for (let i = 0; i < hoje.length; i += 1) seed = ((seed * 31) + hoje.charCodeAt(i)) >>> 0;
     const rnd = () => { seed = ((seed * 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -361,7 +363,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       [todas[i], todas[j]] = [todas[j], todas[i]];
     }
     return todas.slice(0, 12);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sonhos.length]);
   // um sonho de cada vez: a troca acontece a cada 40s (o anterior ainda está
   // saindo quando o próximo entra — travessia de 50s, sobreposição suave)
@@ -370,7 +372,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     if (passo !== P.VISUALIZACAO || imagensDosSonhos.length === 0) return undefined;
     const t = setInterval(() => setSonhoIdx((i) => i + 1), 40000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [passo, imagensDosSonhos.length]);
   const sonhoTitulo = sonhos[0]?.titulo || sonhos[0]?.nome || sonhos[0]?.texto || '';
 
@@ -853,13 +855,14 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
           <>
             <Halo><Star className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {pendencias.length ? 'Quase lá.' : 'Ritual completo.'}
+              {selo === 'pendente_ia' ? 'Entregue — aguardando confirmação.' : pendencias.length ? 'Quase lá.' : 'Ritual completo.'}
             </h2>
 
             {pendencias.length > 0 ? (
               <div className="xeos-cru rounded-2xl bg-amber-400/12 ring-1 ring-amber-300/40 p-4 text-left space-y-2" data-teste="pendencias-do-ritual">
                 <p className="text-[12px] font-extrabold text-amber-100 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" strokeWidth={2.4} /> Falta isto pra fechar com selo cheio:
+                  <AlertTriangle className="w-4 h-4" strokeWidth={2.4} />
+                  {selo === 'pendente_ia' ? 'Você entregou tudo — isto aqui não é sua pendência:' : 'Falta isto pra fechar com selo cheio:'}
                 </p>
                 {pendencias.map((x, i) => (
                   <p key={`${x.bloco}-${i}`} className="text-[12px] text-amber-50/90 flex gap-2">
@@ -884,7 +887,8 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
             <p className="text-white/60 text-[12px]">
               {selo === 'brilhante' ? 'Concluir agora carimba o seu ritual como BRILHANTE.'
                 : selo === 'completo' ? 'Concluir agora vale o ritual — sem o selo BRILHANTE, que é do vídeo.'
-                  : 'Concluir agora registra o que você entregou. O que faltou fica marcado, e amanhã tem de novo.'}
+                  : selo === 'pendente_ia' ? 'A IA estava fora do ar e não confirmou um bloco a tempo — não foi você. Concluir agora manda pra revisão; você não perde o que já fez.'
+                    : 'Concluir agora registra o que você entregou. O que faltou fica marcado, e amanhã tem de novo.'}
             </p>
 
             <div>

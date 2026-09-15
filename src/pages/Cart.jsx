@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
+import { linkWhatsAppOficial } from '@/lib/whatsappOficial';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 import FreteResumo from '@/components/cart/FreteResumo';
 import { useSectionTracking } from '@/lib/tracking';
+import { lerCarrinho, lerJSON } from '@/lib/storageSeguro';
 
 export default function Cart() {
   useSectionTracking('carrinho', 'Carrinho');
@@ -81,6 +83,18 @@ export default function Cart() {
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
   const pollingIntervalRef = useRef(null); // Ref para gerenciar o intervalo de polling
+  // 🎓 Primeira compra de Vendedor/Licenciado (vinda de VendedorEscolherProdutos): o
+  // carrinho vira uma compra normal da loja, só que com um valor mínimo obrigatório e,
+  // ao confirmar o pagamento, o comprador ganha o cargo (ver mpWebhook.js). `role_grant`
+  // é a MESMA régua que o servidor confere de novo em createMPPix.js/createMPCatalogCardCheckout.js
+  // — este estado é só pra guiar a tela; quem manda é sempre o servidor.
+  const [roleGrant, setRoleGrant] = useState(null);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('pendingRoleGrant');
+      if (raw) setRoleGrant(JSON.parse(raw));
+    } catch { /* ignora */ }
+  }, []);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -137,14 +151,14 @@ export default function Cart() {
 
   useEffect(() => {
     const loadUserData = async () => {
-      const savedCart = localStorage.getItem('catalogCart');
-      if (savedCart) {
-        setCartItems(JSON.parse(savedCart));
+      // 🧯 AUDITORIA 15/09/2026 — carrinho/usuário corrompidos viravam crash; agora viram vazio
+      const savedCart = lerCarrinho();
+      if (savedCart.length) {
+        setCartItems(savedCart);
       }
 
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
+      const user = lerJSON('currentUser', null);
+      if (user) {
         setCurrentUser(user);
 
         // Tenta buscar dados mais completos do AppUser
@@ -436,6 +450,36 @@ export default function Cart() {
     }
   };
 
+  // 🚚 15/09/2026 — o frete se calcula SOZINHO assim que o CEP fica completo (ou
+  // quando o endereço salvo carrega, ou quando muda item/quantidade). Antes o
+  // cliente tinha que achar um link pequeno "Calcular frete" escondido no resumo,
+  // e o botão grande de baixo ficava MORTO dizendo "CALCULE O FRETE PARA
+  // CONTINUAR" — tocava e nada acontecia. Erro de principiante (dono, 15/09).
+  const calcularFreteRef = useRef(calcularFrete);
+  calcularFreteRef.current = calcularFrete;
+  const cepInputRef = useRef(null);
+  useEffect(() => {
+    if (pixData || saldoOk) return;
+    if (deliveryMethod !== 'delivery' || !cartItems.length) return;
+    const cep = (formData.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    const t = setTimeout(() => { calcularFreteRef.current?.(); }, 350);
+    return () => clearTimeout(t);
+  }, [freteAssinatura, pixData, saldoOk]);
+
+  // O botão grande nunca fica morto: com CEP completo ele calcula na hora; sem
+  // CEP ele leva o cliente até o campo e diz o que falta.
+  const resolverFretePendente = () => {
+    if (calculandoFrete) return;
+    const cep = (formData.cep || '').replace(/\D/g, '');
+    if (cep.length === 8) { calcularFrete(); return; }
+    toast.error('Preencha o CEP de entrega pra calcular o frete.');
+    try {
+      cepInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cepInputRef.current?.focus();
+    } catch { /* sem scroll suave: o toast já disse o que falta */ }
+  };
+
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
@@ -538,6 +582,17 @@ export default function Cart() {
         toast.error('Calcule o frete e escolha a transportadora para continuar.');
         return;
       }
+    }
+
+    // 🎓 primeira compra de Vendedor/Licenciado — mínimo obrigatório em PRODUTOS (o frete
+    // não conta pro mínimo). O servidor confere de novo (createMPPix.js/createMPCatalogCardCheckout.js).
+    if (roleGrant && calcularTotalProdutos() < roleGrant.minAmount) {
+      toast.error(`Sua primeira compra como ${roleGrant.label || 'Vendedor'} precisa somar pelo menos ${money(roleGrant.minAmount)} em produtos.`);
+      return;
+    }
+    if (roleGrant && paymentType === 'SALDO') {
+      toast.error('A primeira compra não pode ser paga com saldo — escolha PIX ou cartão.');
+      return;
     }
 
     // Cartão é coletado na página segura do Mercado Pago — sem validação de cartão inline.
@@ -672,9 +727,11 @@ export default function Cart() {
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
+          ...(roleGrant ? { role_grant: roleGrant.role } : {}),
         });
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
+        if (roleGrant) { try { sessionStorage.removeItem('pendingRoleGrant'); } catch { /* ignora */ } }
         window.location.href = st.url; // checkout hospedado do Mercado Pago
         return;
       }
@@ -690,9 +747,11 @@ export default function Cart() {
           coupon_code: appliedCoupon?.code || null,
           use_passaporte: usarPassaporte,
           frete_id: deliveryMethod === 'delivery' ? freteSel?.id : null,
+          ...(roleGrant ? { role_grant: roleGrant.role } : {}),
         });
         toast.dismiss('checkout-loading');
         if (!mp?.success) { toast.error('Erro ao gerar PIX: ' + (mp?.error || 'tente novamente')); return; }
+        if (roleGrant) { try { sessionStorage.removeItem('pendingRoleGrant'); } catch { /* ignora */ } }
         setCheckoutItems([...cartItems]); // snapshot para o resumo enquanto o PIX está pendente
         setCreatedSales([{ id: mp.sale_id }]);
         setPixData({
@@ -833,9 +892,10 @@ export default function Cart() {
     }
   };
 
+  // 📞 15/09/2026 — abria conversa com o número de EXEMPLO 21 99999-9999 (print do
+  // cliente: "Você confia nesta empresa?" com foto vazia). Agora é o oficial.
   const openWhatsApp = () => {
-    const message = encodeURIComponent('Olá! Gostaria de negociar sobre meu pedido da loja virtual.');
-    window.open(`https://wa.me/5521999999999?text=${message}`, '_blank');
+    window.open(linkWhatsAppOficial('Olá! Gostaria de negociar sobre meu pedido da loja virtual.'), '_blank');
   };
 
   const states = [
@@ -913,6 +973,17 @@ export default function Cart() {
         <div className={`grid grid-cols-1 gap-6 ${(pixData || saldoOk) ? 'max-w-xl mx-auto' : 'lg:grid-cols-2'}`}>
           {/* Coluna Esquerda - Formulários (some após gerar o pagamento) */}
           <div className={`space-y-4 ${(pixData || saldoOk) ? 'hidden' : ''}`}>
+
+            {/* 🎓 Primeira compra de Vendedor/Licenciado — mínimo obrigatório em produtos */}
+            {roleGrant && (
+              <Card className="bg-green-600/10 border-green-500/30 p-4">
+                <p className="text-green-400 font-bold text-sm">Primeira compra como {roleGrant.label || 'Vendedor'}</p>
+                <p className="text-green-300/90 text-xs mt-1">
+                  Escolha produtos que somem pelo menos {money(roleGrant.minAmount)} — o frete entra à parte, no mesmo pagamento.
+                  Ao confirmar, você já vira {roleGrant.label || 'Vendedor'}.
+                </p>
+              </Card>
+            )}
 
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-5">
@@ -1067,6 +1138,7 @@ export default function Cart() {
                       <div>
                         <Label className="text-gray-300 text-sm">CEP</Label>
                         <Input
+                          ref={cepInputRef}
                           placeholder="00000-000"
                           value={formData.cep}
                           onChange={handleCepChange}
@@ -1372,8 +1444,8 @@ export default function Cart() {
                   </span>
                 </button>
 
-                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo */}
-                {saldo > 0 && (
+                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo, e nunca na primeira compra de Vendedor/Licenciado */}
+                {saldo > 0 && !roleGrant && (
                   <button type="button" onClick={() => { setPaymentType('SALDO'); setUsarPassaporte(false); }}
                     className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
                     <div>
@@ -1524,9 +1596,9 @@ export default function Cart() {
             {!pixData && !saldoOk && cartItems.length > 0 && (
               <div className="space-y-3">
                 <Button
-                  onClick={handleCheckout}
-                  disabled={isProcessing || freteObrigatorioPendente}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
+                  onClick={freteObrigatorioPendente ? resolverFretePendente : handleCheckout}
+                  disabled={isProcessing || calculandoFrete}
+                  className={`w-full text-white h-14 px-6 text-base sm:text-lg font-bold rounded-full whitespace-normal leading-tight disabled:opacity-50 shadow-lg ${freteObrigatorioPendente ? 'bg-gray-700 hover:bg-gray-600 border border-gray-500 shadow-black/20' : 'bg-green-600 hover:bg-green-700 shadow-green-600/30'}`}
                 >
                   {isProcessing ? (
                     <>
@@ -1535,8 +1607,8 @@ export default function Cart() {
                     </>
                   ) : freteObrigatorioPendente ? (
                     <>
-                      <Truck className="w-5 h-5 mr-2" />
-                      CALCULE O FRETE PARA CONTINUAR
+                      {calculandoFrete ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Truck className="w-5 h-5 mr-2" />}
+                      {calculandoFrete ? 'Calculando o frete…' : 'Calcular frete e continuar'}
                     </>
                   ) : (
                     <>

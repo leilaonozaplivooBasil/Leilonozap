@@ -174,7 +174,6 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
 
-      console.log(`[LOGIN] Login bem-sucedido para: ${user.full_name}, Role: ${user.role}`);
 
       // 🆕 LOGGING NO SYSTEMLOG
       try {

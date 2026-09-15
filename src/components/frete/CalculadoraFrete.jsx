@@ -26,7 +26,7 @@ export default function CalculadoraFrete({
   // avisa o pai sempre que a cotação traz uma nova opção padrão (a mais barata)
   React.useEffect(() => {
     if (frete.selecionada && onSelecionar) onSelecionar(comCep(frete.selecionada));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [frete.selecionada?.id]);
 
   return (

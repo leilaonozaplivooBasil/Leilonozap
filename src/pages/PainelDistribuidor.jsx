@@ -16,10 +16,10 @@ import MinhaArvoreRede from '@/components/painel/MinhaArvoreRede';
 import WhatsAppInbox from '@/components/painel/WhatsAppInbox';
 import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
 import {
-  LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet, Building2,
+  LayoutDashboard, Package, Store, Link2, Network, Truck, Wallet,
   Loader2, Copy, Check, ExternalLink, TrendingUp, Users, DollarSign, ShoppingCart,
   ArrowRight, MousePointerClick, UserPlus, Megaphone, Send, MapPin, Hash, Mail, Phone,
-  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, X, ArrowLeft
+  UserCog, Factory, Plus, Trash2, KeyRound, Box, Receipt, Target, MessageCircle, Bot, Sparkles, Trophy, Menu, ArrowLeft
 } from 'lucide-react';
 
 const ORIGIN = (typeof window !== 'undefined' ? window.location.origin : 'https://leilaonozap.net');

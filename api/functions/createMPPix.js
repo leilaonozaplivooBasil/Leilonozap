@@ -6,12 +6,22 @@ import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
 import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilonozap.vercel.app';
 const round2 = (n) => Math.round(n * 100) / 100;
+
+// 🎓 DIR — "primeira compra" de Vendedor/Licenciado vira uma venda de loja normal
+// (escolhe os produtos, calcula frete, paga — nesta ordem), em vez do antigo
+// pagamento avulso que só depois liberava saldo pra escolher. Isso já entrega a
+// comissão pelo motor OFICIAL de 30% (fulfillStoreOrder → arvoreOficial.js), sem
+// precisar de um motor de comissão à parte pra adesão. `role_grant` só marca o
+// cargo a conceder quando o pagamento confirmar (ver mpWebhook.js) — o valor
+// mínimo é conferido AQUI, no servidor, pra ninguém contornar a régua pelo client.
+const VALOR_MINIMO_CARGO = { vendedor: 1497, licenciado: 5000 };
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -26,6 +36,8 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const buyer = body?.buyer || {};
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    if (buyer?.id) { const _ses = exigirSessao(req, buyer.id, 'createMPPix'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' }); }
     const items = Array.isArray(body?.items) && body.items.length ? body.items
       : (body?.product_id ? [{ product_id: body.product_id, quantity: body.quantity || 1 }] : []);
     if (!buyer?.email || !items.length) return res.status(400).json({ success: false, error: 'Comprador e itens são obrigatórios' });
@@ -48,6 +60,13 @@ export default async function handler(req, res) {
     total = round2(total);
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
+
+    // 🎓 primeira compra de Vendedor/Licenciado: valor mínimo conferido no servidor,
+    // nunca só na tela — quem chama a rota direto não passa por cima da régua.
+    const roleGrant = ['vendedor', 'licenciado'].includes(String(body?.role_grant || '')) ? String(body.role_grant) : null;
+    if (roleGrant && total < VALOR_MINIMO_CARGO[roleGrant]) {
+      return res.status(200).json({ success: false, error: `Sua primeira compra como ${roleGrant === 'licenciado' ? 'Licenciado' : 'Vendedor'} precisa somar pelo menos R$ ${VALOR_MINIMO_CARGO[roleGrant]}` });
+    }
 
     // resolve seller p/ atribuição de comissão.
     // 🥇 REGRA DE VENDA PESSOAL (absoluta, Santana 04/08/2026): quem tem cargo de rede é
@@ -147,15 +166,22 @@ export default async function handler(req, res) {
       });
     }
 
-    await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    const insVenda = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: total, total_amount: total, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', // venda de catálogo → comissão pro DONO da loja (modelo marketplace) via fulfillStoreOrder
       payment_method: 'pix_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       coupon_code, discount_amount: round2(discount_amount + passaporte_desconto) || null,
-      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado },
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), delivery_type: body?.delivery_type || null, address: addr, ref_code: refCode || null, coupon_id, passaporte_desconto, frete, amount_charged: totalCobrado, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
+    if (!insVenda.ok) {
+      // 🧾 AUDITORIA 15/09/2026 — o insert não era conferido: o PIX nascia no Mercado Pago
+      // sem venda no banco; o cliente pagava e o webhook respondia "sale_notfound".
+      const detalhe = await insVenda.text().catch(() => '');
+      console.error(`[PIX] venda ${saleId} NÃO gravada (HTTP ${insVenda.status}) — cobrança não gerada:`, detalhe.slice(0, 300));
+      return res.status(500).json({ success: false, error: 'Não foi possível registrar seu pedido agora. Nada foi cobrado — tente de novo em instantes.' });
+    }
     if (coupon_id) { try { await sb(`rpc/increment_coupon`, { method: 'POST', body: JSON.stringify({ _id: coupon_id }) }); } catch (_) {} }
 
     // cria o PIX no Mercado Pago

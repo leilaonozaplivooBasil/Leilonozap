@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X } from 'lucide-react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, Star, CalendarPlus, ExternalLink, UserPlus, Upload, PenLine, LayoutGrid, Link2, GitBranch, MessageCircle, Headphones, Lightbulb, Loader2, ScrollText, X, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import {
@@ -36,7 +36,7 @@ import {
   moedaModelo,
   tipoDeValidacao, validarComprovacao,
   hashDoArquivo, validarPrint,
-  ehTarefaDeGratidao, RITUAL_INICIO_MIN, RITUAL_FIM_MIN, deveAvisarRitual, nomeExibicao,
+  ehTarefaDeGratidao, deveAvisarRitual, janelaDoRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
   pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
 } from '@/lib/xgame';
@@ -134,7 +134,7 @@ const personalizarScript = (texto, nomeCompleto) => {
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
 // o super admin as tem mesmo quando escolheu ver "só o meu" (06/09).
-export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
+export default function CrmMetodo({ painel, currentUser, visaoTotal = false, gestao = null, nomePorUsuarioId = {}, clientesManuais = [], oportunidades = [], onQualificar, onRegistrarContato, onEditarRegistro, onExcluirRegistro, onNovoCliente, onNovoVendedor, onImportarContatos, onIr, onCriarOportunidade, onEditarCliente, onExcluirCliente, iniciarTour = false, onTourIniciado, contatoDestacado = null, onContatoDestacadoConsumido }) {
   const uid = currentUser?.id;
   // 🔦 09/09/2026 — DIR-111.2, dono: "não posso ter a sensação que estou
   // recomeçando... já me coloca ela no meu contato e pisca." O destaque
@@ -181,6 +181,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [script, setScript] = useState('');
   const [apresentacaoUrl, setApresentacaoUrl] = useState('');
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '', noQuadro: false, listaId: '' });
+  // 🔁 DIR-150 (15/09/2026) — dono, ao vivo: "cada rotina que ela coloque,
+  // dê a opção de ela manter recorrente isso com a rotina diária dela." A
+  // escolha entra JUNTO de criar a tarefa — não depois, como um segundo
+  // passo que ela precisa lembrar de fazer.
+  const [repetirNovaTarefa, setRepetirNovaTarefa] = useState(false);
   const [listasDoQuadro, setListasDoQuadro] = useState([]); // 🔗 pra "também no quadro" da Lista
   const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
@@ -824,8 +829,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // propósito: "não pode ter certeza que ela viu" (mesmo princípio do sino).
   const [avisoRitualFechado, setAvisoRitualFechado] = useState(false);
   const tarefaRitualHoje = useMemo(() => tarefas.find((x) => ehTarefaDeGratidao(x.titulo)), [tarefas]);
+  // 🌅 13/09/2026 — dono, ao vivo: quem está na mentoria (vota/é votado) não
+  // escolhe horário — é sempre 4:40-5:30. Quem tem fixo fora da mentoria (a
+  // distribuidora, o Flávio) define o próprio horário, e a janela vira em
+  // volta dele — mesma régua, MESMO `podeSerVotado` que já decide o MvM.
+  const minhaJanelaRitual = useMemo(
+    () => janelaDoRitual({
+      votavel: podeSerVotado({ role: currentUser?.role, aceita_ser_votado: meuAceitaSerVotado }),
+      horaTarefa: tarefaRitualHoje?.hora,
+    }),
+    [currentUser?.role, meuAceitaSerVotado, tarefaRitualHoje?.hora],
+  );
   const mostrarAvisoRitual = ehHoje && !avisoRitualFechado
-    && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito });
+    && deveAvisarRitual({ agoraMin: agoraMinJogo, ritualFeitoHoje: !!tarefaRitualHoje?.feito, janela: minhaJanelaRitual });
   // 🧾 10/09/2026 — AS FALHAS PRECISAM ATRAVESSAR AS TENTATIVAS.
   //
   // Quando a IA está fora do ar, `avaliarComIA` volta cedo e NÃO grava
@@ -1056,7 +1072,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       toast.error(`Acabaram os ${RITUAL_MINUTOS_PARA_CONCLUIR} minutos. O que você já entregou ficou salvo — amanhã tem de novo.`);
       return;
     }
-    const naJanela = agoraM >= RITUAL_INICIO_MIN; // o corte de cima já voltou acima
+    const janelaDeT = janelaDoRitual({
+      votavel: podeSerVotado({ role: currentUser?.role, aceita_ser_votado: meuAceitaSerVotado }),
+      horaTarefa: t.hora,
+    });
+    const naJanela = agoraM >= janelaDeT.inicioMin; // o corte de cima já voltou acima
 
     // ═══════════════════════════════════════════════════════════════════
     // 🧱 O FECHAMENTO LÊ OS BLOCOS — NÃO SOBE NADA DE NOVO.
@@ -1102,7 +1122,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       ...(bl.gratidao?.audio_path ? { audio_gratidao_path: bl.gratidao.audio_path } : {}),
       ...(bl.visualizacao?.audio_acao_path ? { audio_acao_path: bl.visualizacao.audio_acao_path } : {}),
       tempo_tela_s: tempoTelaS || 0,
-      ...rastroDa({ anterior: t.comprovacao, tempoTelaS, falhas: falhasDaEntrega() }),
+      // 🚨 DIR-146 — o laudo (relatorioComprovacoes.js/leituraDoRastro) lê
+      // `ia_indisponivel` no TOPO da comprovação pra dizer "não foi ela" —
+      // sem isto aqui, um ritual pendente_ia ficaria com o mesmo rastro de
+      // um ritual comum, e quem abrisse o laudo não veria o sinal técnico.
+      ...rastroDa({ anterior: t.comprovacao, tempoTelaS, iaIndisponivel: statusFinal === 'ritual_pendente_ia', falhas: falhasDaEntrega() }),
       quando: new Date().toISOString(),
       // 🔴 `valido` NÃO pode ser sempre true. Um ritual parcial (dois blocos
       // de três, ou um bloco reprovado pela IA) é registro honesto, não
@@ -1130,7 +1154,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       }
       // 📳 o ritual do amanhecer é conquista: a vibração é mais longa
       vibrar(VIBRA_CONQUISTA);
-      if (selo === 'parcial') toast('🌅 Ritual registrado pela metade — o que faltou está anotado na tarefa.', { icon: '⚠️', duration: 7000 });
+      // 🚨 DIR-146 — selo 'pendente_ia' é diferente de 'parcial': a pessoa
+      // entregou os três blocos, ninguém reprovou nada, só a IA não
+      // respondeu pra confirmar. O aviso tem que dizer isso, não "pela
+      // metade" — senão soa como se ela tivesse deixado de fazer algo.
+      if (selo === 'pendente_ia') toast('🌅 Ritual entregue por completo — a IA estava fora do ar pra confirmar um bloco, então ele foi pra revisão. Você não perdeu nada do que fez.', { icon: '🤖', duration: 9000 });
+      else if (selo === 'parcial') toast('🌅 Ritual registrado pela metade — o que faltou está anotado na tarefa.', { icon: '⚠️', duration: 7000 });
       else toast.success(aprovadoDireto ? '🌅 BRILHANTE! O dia começou do jeito certo.' : '🌅 Ritual completo! (dica: grave o vídeo pra ganhar o selo BRILHANTE)');
     } catch { toast.error('Erro ao salvar'); carregarTarefas(); }
   };
@@ -1145,7 +1174,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   useEffect(() => {
     if (!comprovando || comprovando.tipo === 'aprendizado' || !uid) return;
     supabase.from('metodo_tarefas').select('comprovacao').eq('user_id', uid).not('comprovacao', 'is', null).limit(300)
-      .then(({ data }) => setComprovacoesRecentes((data || []).map((r) => r.comprovacao).filter(Boolean)));
+      // 🚨 DIR-146 — `pendente_ia` é a MESMA foto de um reenvio depois da IA
+      // cair, não uma reciclagem de dia antigo: contá-la no anti-reuso (hash)
+      // ou mandá-la pra IA comparar (anti-reciclagem visual) travaria a
+      // própria pessoa tentando de novo a foto real que ela acabou de tirar.
+      .then(({ data }) => setComprovacoesRecentes((data || []).map((r) => r.comprovacao).filter((c) => c && c.status !== 'pendente_ia')));
   }, [comprovando?.id, uid]);
   // prints já usados (anti-reuso EXATO, por hash) — a comparação VISUAL
   // (reciclagem reprocessada) é responsabilidade da IA, ver imagensParaComparar abaixo
@@ -1179,12 +1212,37 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
     if (decisao.acao === 'ia_fora') {
       const det = ia?.details ? ` (${ia.details.status || 'erro'}${ia.details.model ? ` · ${ia.details.model}` : ''})` : '';
-      // 🧾 esta tentativa NÃO grava comprovação — some sem deixar marca. A
-      // falha fica no ref e entra na comprovação que a próxima tentativa
-      // gravar: é o que separa "a pessoa não entregou" de "a IA estava fora".
       anotarFalhaDaTarefa(t.id, 'ia', `IA fora do ar${det}`);
+      // 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem
+      // crédito (HTTP 402) numa manhã inteira, e esta tentativa "sumia sem
+      // deixar marca" (era só um toast e um item de `falhasPorTarefa`, que
+      // morre se a pessoa não voltar a tentar). Gente que fez a tarefa de
+      // verdade — banho gelado, treino, o que for — ficou sem NENHUM
+      // registro no banco e sem ponto nenhum, só porque a Vercel ficou sem
+      // saldo. A partir de agora o envio é SALVO como `pendente_ia`: não é
+      // aprovado (DIR-84.1 continua de pé — IA fora não vira crédito
+      // sozinha), não é reprovado, e não se perde — cai na fila do gestor
+      // (XGameAdmin) pra revisão manual, ou a própria pessoa tenta de novo
+      // e a tentativa seguinte grava por cima.
+      const comprovacaoPendente = {
+        tipo, print_url: printUrl, hash,
+        ...(tipo === 'instagram' ? { link: (dadosOriginais.texto || '').trim() || null } : {}),
+        ...(tipo === 'aprendizado' ? { resumo: (dadosOriginais.texto || '').trim() } : {}),
+        ...(entradaResumo ? { entrada_resumo: entradaResumo } : {}),
+        ...(audioResumoPath ? { audio_resumo_path: audioResumoPath } : {}),
+        entrega: tipo === 'aprendizado' ? (dadosOriginais.texto || '').trim() : printUrl,
+        ...rastroDa({ anterior: t.comprovacao, iaIndisponivel: true, falhas: falhasPorTarefa.current[t.id] || [] }),
+        quando: new Date().toISOString(), valido: false, status: 'pendente_ia',
+        veredito_ia: { veredito: 'duvida', confianca: 0, o_que_viu: '', motivo: ia?.motivo || 'a IA de validação está fora do ar agora', ia_indisponivel: true },
+        ...(justificativa ? { justificativa_pessoa: justificativa } : {}),
+        ...(foraDaJanela ? { fora_da_janela: true } : {}),
+      };
+      try {
+        await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: comprovacaoPendente });
+        setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: comprovacaoPendente } : x)));
+      } catch { /* se nem isto salvar, o aviso abaixo já manda tentar de novo */ }
       setComprovando({ ...comprovando, enviando: false, pergunta: null,
-        erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto NÃO foi descartada, tenta de novo em 1 minuto. Sem a IA conferir, a tarefa não conclui.` });
+        erro: `🤖 A IA de validação está fora do ar agora${det} — sua foto FOI SALVA (não foi descartada) e está aguardando revisão. Tenta de novo daqui a pouco: se a IA voltar, confirma sozinha; se continuar fora, um gestor confere pra você.` });
       return;
     }
     if (decisao.acao === 'pedir_justificativa') {
@@ -1392,8 +1450,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // cinco e quinze. Se ela não fizer até cinco e quinze ela perde o
       // ritual." Passou do prazo: nem abre a experiência — fazer o ritual
       // inteiro só pra descobrir no fim que não conta seria pior.
-      if (ehHoje && agoraMinJogo > RITUAL_FIM_MIN) {
-        toast.error(`Ritual perdido — o prazo era até ${horaDeMin(RITUAL_FIM_MIN)}. Amanhã tem de novo.`);
+      const janelaDeT = janelaDoRitual({
+        votavel: podeSerVotado({ role: currentUser?.role, aceita_ser_votado: meuAceitaSerVotado }),
+        horaTarefa: t.hora,
+      });
+      if (ehHoje && agoraMinJogo > janelaDeT.fimMin) {
+        toast.error(`Ritual perdido — o prazo era até ${horaDeMin(janelaDeT.fimMin)}. Amanhã tem de novo.`);
         return;
       }
       setRitualId(t.id);
@@ -1495,7 +1557,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         if (error) toast.error('Entrou no dia, mas não deu pra pôr no quadro');
       } else if (novaTarefa.noQuadro) toast.error('Entrou no dia, mas o quadro está sem lista');
       toast.success(fraseEntrou(plano, { listaNome }));
+      // 🔁 DIR-150 — a MESMA tarefa que acabou de nascer vira recorrente,
+      // se ela marcou a caixa (toast próprio, de gravarRotina — não cria
+      // duplicata se por acaso já existir uma entrada igual na rotina).
+      if (repetirNovaTarefa && !estaNaRotina(novaTarefa.titulo)) {
+        await gravarRotina(incluirNaRotina(rotina, { hora: novaTarefa.hora || '', titulo: novaTarefa.titulo }));
+      }
       setNovaTarefa({ hora: '', titulo: '', noQuadro: false, listaId: novaTarefa.listaId });
+      setRepetirNovaTarefa(false);
       carregarTarefas();
     } catch { toast.error('Erro ao adicionar'); }
   };
@@ -1519,9 +1588,53 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     else toast.error('Erro ao salvar a rotina');
     return ok;
   };
+  // 🔁 DIR-146 (14/09/2026) — dono, sobre a manhã em que o planejamento da
+  // Eloá não "salvou pro dia seguinte": "a gente tem que ter uma opção
+  // também, de quando a pessoa montar o teu planejamento, ter um botão de
+  // salvar pros outros dias, e isso ficar claro." Até aqui esse botão só
+  // existia no ADM (tornarRecorrente, DIR-142.2) — a pessoa montando o
+  // PRÓPRIO dia não tinha nada além do painel "A minha rotina" escondido,
+  // que exige abrir, digitar hora e título de novo à mão. Mesma função de
+  // incluir, mesmo aviso de duplicidade, só que direto na tarefa do dia.
+  // 🔁 DIR-150 (15/09/2026) — dono, ao vivo: "não está claro que dá pra
+  // deixar a rotina do dia a dia salva pro dia seguinte... dê a opção de
+  // ela manter recorrente isso com a rotina diária dela, bem claro." O
+  // botão de ontem existia, mas era só um ícone sem legenda (fácil de não
+  // ver, principalmente no celular, onde não há hover pra mostrar o
+  // title) e não dizia depois se aquela tarefa JÁ era recorrente ou não —
+  // ela tinha que confiar de memória. `estaNaRotina` normaliza a mesma
+  // comparação usada em toda parte (título, sem diferenciar maiúscula):
+  // uma função só, usada pelo botão E pelo selo que substitui o botão
+  // quando já é recorrente.
+  const estaNaRotina = (titulo) => rotina.some((i) => i.titulo.trim().toLowerCase() === String(titulo || '').trim().toLowerCase());
+  const tornarRecorrente = (t) => {
+    if (estaNaRotina(t.titulo)) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
+    gravarRotina(incluirNaRotina(rotina, { hora: t.hora, titulo: t.titulo }));
+  };
+  // 🔁 DIR-151 (15/09/2026) — dono, ao vivo, depois de ver o selo por tarefa
+  // funcionando: "eu não preciso ficar apertando um por um... quando eu
+  // clicar ali embaixo repetir todo dia, todas as de cima precisa aparecer
+  // que foi atualizado." Ele tinha marcado a caixa de "repetir" do campo de
+  // TAREFA NOVA (que só vale pra tarefa que ela for criar) esperando que
+  // isso virasse a rotina do DIA INTEIRO de uma vez — não existia essa ação.
+  // Esta função é essa ação: pega tudo que já está no dia (menos o Ritual,
+  // menos o que já é rotina) e grava tudo numa TACADA SÓ (um `gravarRotina`
+  // só, não um por tarefa — evita 20 escritas em cima da mesma coluna).
+  const tarefasParaRepetir = tarefas.filter((t) => !ehTarefaDeGratidao(t.titulo) && !estaNaRotina(t.titulo));
+  const repetirDiaInteiro = async () => {
+    if (!tarefasParaRepetir.length) return;
+    const nova = tarefasParaRepetir.reduce((acc, t) => incluirNaRotina(acc, { hora: t.hora, titulo: t.titulo }), rotina);
+    const ok = await gravarRotina(nova);
+    if (ok) toast.success(`${tarefasParaRepetir.length} tarefa${tarefasParaRepetir.length === 1 ? '' : 's'} de hoje ${tarefasParaRepetir.length === 1 ? 'entrou' : 'entraram'} na sua rotina — todas de uma vez.`);
+  };
 
   const [editandoId, setEditandoId] = useState(null);
   const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
+  // 🔁 DIR-150 — a mesma escolha de "repetir todo dia" também vale pra
+  // quando ela EDITA um horário/título — sem isto, corrigir a rotina
+  // exigia editar hoje e DEPOIS abrir "A minha rotina" pra repetir a
+  // mesma correção lá, à mão.
+  const [repetirEdicao, setRepetirEdicao] = useState(false);
   const [previaEdicaoAberta, setPreviaEdicaoAberta] = useState(false);
   // 🔴 10/09/2026 — DAR HORA A UMA TAREFA TEM QUE MOVER ELA DE LUGAR.
   //
@@ -1545,6 +1658,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setEditandoId(null);
     try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora, ordem }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
+    // 🔁 DIR-150 — quando marcado, a MESMA correção entra na rotina
+    // permanente: acha o item pelo título ORIGINAL (antes da edição) e
+    // troca por hora/título novos; se ele ainda não era recorrente,
+    // inclui como novo — nunca cria duplicata.
+    if (repetirEdicao) {
+      const idx = rotina.findIndex((i) => i.titulo.trim().toLowerCase() === String(t.titulo || '').trim().toLowerCase());
+      const novaRotina = idx >= 0 ? editarNaRotina(rotina, idx, { hora, titulo }) : incluirNaRotina(rotina, { hora, titulo });
+      await gravarRotina(novaRotina);
+      setRepetirEdicao(false);
+    }
   };
   // 🔮 DIR-91 — mudou a hora? mostra a prévia da Jornada antes de gravar.
   const tentarSalvarEdicao = (t) => {
@@ -1987,16 +2110,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   <span className="text-xl shrink-0" aria-hidden="true">🌅</span>
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <p className="text-sm font-extrabold">
-                      {agoraMinJogo < RITUAL_INICIO_MIN
-                        ? `O Ritual do Amanhecer abre daqui a pouco, às ${horaDeMin(RITUAL_INICIO_MIN)}.`
-                        : `O Ritual do Amanhecer está aberto até ${horaDeMin(RITUAL_FIM_MIN)}.`}
+                      {agoraMinJogo < minhaJanelaRitual.inicioMin
+                        ? `O Ritual do Amanhecer abre daqui a pouco, às ${horaDeMin(minhaJanelaRitual.inicioMin)}.`
+                        : `O Ritual do Amanhecer está aberto até ${horaDeMin(minhaJanelaRitual.fimMin)}.`}
                     </p>
                     <p className="text-[12px] text-nz-tinta-fraca leading-relaxed">
                       Como funciona: <strong>1)</strong> fala (ou escreve) a sua gratidão — pega o caderno antes de abrir.{' '}
                       <strong>2)</strong> grava um vídeo curto se visualizando com o Quadro dos Sonhos — precisa ser{' '}
                       <strong>em casa</strong>, com calma (carro, academia e escritório não valem). <strong>3)</strong> escreve a ação do dia.
                       Sem o vídeo o ritual conclui igual, só não ganha o selo brilhante. Depois de{' '}
-                      <strong>{horaDeMin(RITUAL_FIM_MIN)}</strong> não dá mais pra fazer — o dia fica perdido, sem segunda chance.
+                      <strong>{horaDeMin(minhaJanelaRitual.fimMin)}</strong> não dá mais pra fazer — o dia fica perdido, sem segunda chance.
                     </p>
                     <button
                       type="button"
@@ -2710,11 +2833,42 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               {!t.feito && (
                                 <button
                                   type="button"
-                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); }}
+                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); setRepetirEdicao(estaNaRotina(t.titulo)); }}
                                   title="editar esta tarefa de hoje"
                                   data-teste="editar-tarefa"
                                   className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
                                 ><PenLine className="w-3.5 h-3.5" /></button>
+                              )}
+                              {/* 🔁 DIR-146/150 — "salvar pros outros dias", claro e
+                                  no lugar onde a pessoa monta o dia dela, não
+                                  escondido num painel à parte. Dono, 15/09: "não
+                                  está claro" — um ícone sem legenda e sem estado
+                                  (nunca dizia se JÁ era recorrente) não bastava,
+                                  principalmente no celular, onde não há hover pra
+                                  ler o title. Agora é texto sempre visível, e o
+                                  próprio texto muda quando a tarefa já é da rotina
+                                  — deixa de ser botão, vira selo (nada pra clicar,
+                                  nada pra confundir com "ainda não").
+                                  🌅 O Ritual NUNCA entra aqui: ele não é um item
+                                  comum de `metodo_perfil.rotina` — é gerado e
+                                  pesado à parte (DIR-142, 20% do dia). Deixar
+                                  "repetir" nele criaria uma entrada de rotina
+                                  fantasma, com o mesmo título, brigando com o
+                                  ritual de verdade todo dia. */}
+                              {!ehTarefaDeGratidao(t.titulo) && (
+                                estaNaRotina(t.titulo) ? (
+                                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-verde" title="Esta tarefa já é da sua rotina — repete todo dia sozinha." data-teste="ja-e-rotina">
+                                    <Repeat className="w-3.5 h-3.5" /> já repete todo dia
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => tornarRecorrente(t)}
+                                    title="Repetir esta tarefa todo dia — entra na sua rotina permanente a partir de amanhã."
+                                    data-teste="repetir-todo-dia"
+                                    className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-tinta-fraca hover:text-nz-verde"
+                                  ><Repeat className="w-3.5 h-3.5" /> repetir todo dia</button>
+                                )
                               )}
                               <button type="button" onClick={() => removerTarefa(t)} title="apagar só de hoje — a rotina continua igual" className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                               </div>
@@ -2726,7 +2880,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                 <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
                                 <Button size="sm" onClick={() => tentarSalvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
                                 <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
-                                <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina.</p>
+                                {/* 🔁 DIR-150 — antes era só um AVISO ("pra mudar todo
+                                    dia, edite a sua rotina"), sem ação nenhuma ali —
+                                    ela tinha que sair, abrir outro painel e digitar
+                                    tudo de novo. Agora é uma escolha, no mesmo clique
+                                    de salvar. Pré-marcado quando a tarefa JÁ é da
+                                    rotina (ela está corrigindo o padrão, não criando
+                                    uma exceção) — e nunca aparece pro Ritual, que não
+                                    é um item comum de rotina. */}
+                                {!ehTarefaDeGratidao(t.titulo) ? (
+                                  <label className="w-full flex items-center gap-1.5 text-[11px] text-nz-tinta-fraca" data-teste="repetir-na-edicao">
+                                    <input type="checkbox" checked={repetirEdicao} onChange={(e) => setRepetirEdicao(e.target.checked)} className="accent-nz-verde" />
+                                    🔁 repetir essa mudança todos os dias (senão, vale só hoje)
+                                  </label>
+                                ) : (
+                                  <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — o horário do Ritual do Amanhecer é definido nele mesmo.</p>
+                                )}
                                 {/* 🔮 DIR-91 — prévia da Jornada antes de gravar um horário mudado */}
                                 {previaEdicaoAberta && (
                                   <PreviaJornadaModal
@@ -2766,6 +2935,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   com a hora sumindo de tão clara. O componente já sabe ser escuro
                   desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
               <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
+              {/* 🔁 DIR-150 — "cada rotina que ela coloque, dê a opção de
+                  manter recorrente" — a escolha mora AQUI, junto de criar a
+                  tarefa, não escondida num painel à parte pra ela achar depois. */}
+              <label className="mt-1.5 flex items-center gap-1.5 text-[11px] text-nz-tinta-fraca" data-teste="repetir-nova-tarefa">
+                <input type="checkbox" checked={repetirNovaTarefa} onChange={(e) => setRepetirNovaTarefa(e.target.checked)} className="accent-nz-verde" />
+                🔁 repetir esta tarefa todos os dias (vira parte da sua rotina, a partir de amanhã)
+              </label>
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══
@@ -2844,6 +3020,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   </div>
                 )}
               </div>
+            )}
+
+            {/* 🔁 DIR-151 — o caminho INVERSO do "regerar o dia" logo abaixo:
+                aquele leva a ROTINA pro dia de hoje; este leva o DIA DE HOJE
+                pra rotina, tudo de uma vez. Só aparece quando sobra alguma
+                tarefa de hoje que ainda não é recorrente — nada pra clicar
+                quando já está tudo igual (vigia que fala à toa vira ruído). */}
+            {visao === 'lista' && tarefasParaRepetir.length > 0 && (
+              <button type="button" onClick={repetirDiaInteiro} disabled={salvando} className="text-xs font-semibold text-nz-verde hover:text-nz-verde-claro text-left" data-teste="repetir-dia-inteiro">
+                <Repeat className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                repetir o DIA INTEIRO de hoje todos os dias ({tarefasParaRepetir.length} tarefa{tarefasParaRepetir.length === 1 ? '' : 's'} ainda não {tarefasParaRepetir.length === 1 ? 'é' : 'são'} da sua rotina)
+              </button>
             )}
 
             {visao === 'lista' && tarefas.length > 0 && (
@@ -2956,6 +3144,32 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             <Star className="w-4 h-4 mr-1 text-amber-500" /> Qualificar
                           </Button>
                         )}
+                        {/* ✏️🗑️ dono: "preciso ter um botão de editar o cliente
+                            e excluir o cliente porque está tendo cliente
+                            duplicado" — direto na própria Lista de Network,
+                            sem precisar ir pra aba Acompanhamento → Clientes.
+                            Mesmos handlers de lá (handleEdit/handleDelete),
+                            só ligados aqui também.
+                            🚀 E o mesmo botão "Esteira" do Hábito 4 (Contato):
+                            vira negociação sem redigitar nada — direto da
+                            lista, onde o cadastro já está completo. */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {onCriarOportunidade && (
+                            <Button size="sm" variant="outline" onClick={() => onCriarOportunidade(c)} title="Virou negociação de verdade? Leva pra Esteira de Captação, já com o nome e contato preenchidos." className="border-nz-marrom/40 text-nz-marrom hover:bg-nz-marrom/10 h-8 w-8 p-0">
+                              <GitBranch className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {onEditarCliente && (
+                            <Button size="sm" variant="ghost" onClick={() => onEditarCliente(c)} title="Editar cliente" className="text-nz-tinta-fraca hover:bg-nz-cinza-fundo h-8 w-8 p-0">
+                              <PenLine className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {onExcluirCliente && (
+                            <Button size="sm" variant="ghost" onClick={() => onExcluirCliente(c.id)} title="Excluir cliente" className="text-red-500 hover:bg-red-50 h-8 w-8 p-0">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

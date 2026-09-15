@@ -18,8 +18,10 @@ import {
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
+import { lerCarrinho } from '@/lib/storageSeguro';
 
-const DEFAULT_STORE_PHONE = '5521984072064';
+const DEFAULT_STORE_PHONE = WHATSAPP_OFICIAL;
 
 // Detalhe do produto DENTRO da própria Loja Virtual (pedido Gabriel 25/07): o clique no
 // card abre este modal por cima do catálogo, com TODAS as informações da página de
@@ -119,8 +121,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
   };
 
   const adicionarAoCarrinho = () => {
-    const savedCart = localStorage.getItem('catalogCart');
-    let cart = savedCart ? JSON.parse(savedCart) : [];
+    let cart = lerCarrinho();
     const existingIndex = cart.findIndex((item) => item.id === product.id);
     if (existingIndex >= 0) {
       cart[existingIndex].quantity += quantity;
@@ -355,7 +356,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                   <div className="flex items-start gap-2.5"><Truck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Entrega para todo o Brasil</b> — calcule o frete e o prazo abaixo.</span></div>
                   <div className="flex items-start gap-2.5"><RotateCcw className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Devolução em até 7 dias</b> após o recebimento.</span></div>
                   <div className="flex items-start gap-2.5"><ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Compra garantida</b> — receba o produto ou seu dinheiro de volta.</span></div>
-                  <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX, cartão parcelado ou boleto.</span></div>
+                  <div className="flex items-start gap-2.5"><Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" /><span className="text-gray-300"><b className="text-white">Pagamento seguro</b> — PIX ou cartão em até 12x.</span></div>
                 </div>
               </div>
 
@@ -383,10 +384,6 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                   <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">Cartão de crédito</p>
                   <p className="text-sm text-gray-200"><b>{parc}</b></p>
                   <p className="text-xs text-gray-500 mt-1">Juros e taxas do cartão já inclusos na parcela.</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">Boleto bancário</p>
-                  <p className="text-sm text-gray-200">Compensação em 1–2 dias úteis</p>
                 </div>
                 <div className="pt-1 flex items-center gap-2 text-xs text-gray-400"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Ambiente 100% seguro</div>
               </div>

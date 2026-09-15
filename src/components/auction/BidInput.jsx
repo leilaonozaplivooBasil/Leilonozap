@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { money, addMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 import { toast } from "sonner";

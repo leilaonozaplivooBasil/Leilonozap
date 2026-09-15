@@ -10,11 +10,10 @@ import CaixaDeMensagensAdmin from '@/components/licensing/CentralVendas/CaixaDeM
 import PainelCorporativo from '@/components/licensing/CentralVendas/PainelCorporativo';
 import PdfExecutivo from '@/components/licensing/CentralVendas/PdfExecutivo';
 import {
-  fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas,
+  fmtReais, nomeExibicao, pesoAutomatico, categoriaDaTarefa, valoresDasTarefas, reguaDoDia, resumoDoCicloComRitual,
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
   AVISOS_ANTES_DE_ZERAR, participantesVotaveis, resumoTimeHoje,
 } from '@/lib/xgame';
-import { distribuirDia, resumoDoCiclo } from '@/lib/distribuicaoFixo';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, planejamentoDoDia, resumoPorMentalidade } from '@/lib/mentalidades';
@@ -27,6 +26,7 @@ import { semaforo, mesDe, fracoesDoScore } from '@/lib/metasPessoa';
 import { useMetasDaPessoa, AbaMetas, AbaPrograma, AbaSemana, AbaQuadro, AbaHistorico, ABAS } from '@/components/licensing/CentralVendas/QuadroGeralAbas';
 import ComprovacoesPainel from '@/components/licensing/CentralVendas/Comprovacoes';
 import { portoesDaSociedade } from '@/lib/xperformance';
+import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
 
 // 🎯 A GESTÃO DENTRO DO X-PERFORMANCE — o antigo Admin X-GAME mais a
 // distribuição do fixo, num lugar só. Só o super admin chega aqui.
@@ -282,16 +282,23 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   // e timeVotavel (resumo do dia): um votável pode não estar na hierarquia
   // do painel, e vice-versa — nenhum dos dois usos pode perder gente.
   const idsCarregar = useMemo(() => Array.from(new Set([...equipe.map((p) => p.id), ...timeVotavel])), [equipe, timeVotavel]);
+  // 🔴 13/09/2026 — auditoria ao vivo, dono: "quantas tarefas o time tem
+  // hoje" batendo 0/0 aqui contra 10/173 na Visão Executiva. Achado: o
+  // MESMO corte silencioso de 1.000 linhas que já pegou o estoque, o CRM e
+  // os votos do MvM (ver lerTudoDoSupabase.js) — só que numa quarta tabela.
+  // O ciclo inteiro (~30 dias) × todo o time corporativo + votável (até 16
+  // pessoas) × ~20 tarefas/dia passa de 1.000 linhas bem antes de chegar no
+  // dia de hoje (ordenado por data crescente) — "hoje" ficava de fora,
+  // calado, sem erro nenhum aparecendo.
   const carregarTarefas = useCallback(async () => {
     if (!idsCarregar.length || !diasCiclo.length) { setTarefasCiclo([]); return; }
     const ate = diasCiclo[diasCiclo.length - 1] > dia ? diasCiclo[diasCiclo.length - 1] : dia;
     const de = diasCiclo[0] < dia ? diasCiclo[0] : dia;
-    const { data } = await supabase.from('metodo_tarefas')
+    const data = await lerTudoDoSupabase(() => supabase.from('metodo_tarefas')
       .select('id,user_id,data,hora,titulo,peso,categoria,feito,conferido,origem,mentalidade,habito,prazo_em,pronto_em,devolvida_motivo,devolvida_em')
       .in('user_id', idsCarregar)
-      .gte('data', de).lte('data', ate)
-      .order('data').order('hora');
-    setTarefasCiclo(data || []);
+      .gte('data', de).lte('data', ate));
+    setTarefasCiclo([...data].sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.hora || '').localeCompare(String(b.hora || ''))));
   }, [idsCarregar, diasCiclo, dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
 
@@ -492,6 +499,11 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
   };
 
   // 💰 o ciclo de cada pessoa
+  // 🔴 13/09/2026 — achado de auditoria: `resumoDoCiclo` (distribuicaoFixo.js)
+  // cru contava o Ritual do Amanhecer na régua de peso comum de cada dia.
+  // `resumoDoCicloComRitual` (xgame.js) já separa o ritual (20% garantido,
+  // DIR-142) — os quatro cards (ganho/a conferir/em jogo/perdido) ficariam
+  // errados em qualquer ciclo com ritual feito, sem essa troca.
   const resumoDe = (userId) => {
     const base = participanteDe(userId);
     const porDia = {};
@@ -500,7 +512,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
       const d = String(t.data).slice(0, 10);
       (porDia[d] ||= []).push(t);
     }
-    return resumoDoCiclo({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefasPorDia: porDia, diasDoCiclo: diasCiclo, hojeISO: hoje });
+    return resumoDoCicloComRitual({ participante: base, tarefasPorDia: porDia, diasDoCiclo: diasCiclo, hojeISO: hoje });
   };
 
   // 📊 08/09/2026 — dono: "quero ver a quantidade de tarefas que nós temos
@@ -589,7 +601,10 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
         const base = participanteDe(pessoaFixo);
         const r = resumoDe(pessoaFixo);
         const hojeDele = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && ehProducao(t) && String(t.data).slice(0, 10) === hoje);
-        const reguaHoje = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: hojeDele });
+        // 🔴 13/09/2026 — `reguaDoDia` (xgame.js) troca o `distribuirDia` cru:
+        // sem isso, o ritual contava na régua de peso comum e "falta peso"
+        // ficaria errado num dia em que ela já tinha feito o ritual.
+        const reguaHoje = reguaDoDia(hojeDele, base);
         // os dias do ciclo com tarefa, de hoje em diante — o que está distribuído
         const proximos = [...new Set(tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) >= hoje).map((t) => String(t.data).slice(0, 10)))].sort().slice(0, 8);
         return (
@@ -699,7 +714,12 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                     data-teste="fixo-mes"
                   />
                 </label>
-                <span className="normal-case text-white/40" title="o peso somado das tarefas de produção da Rotina do Método — é o que o fixo do dia paga inteiro">dia completo = peso {pesoReferenciaDe(base)} <span className="text-white/25">(Rotina Perfeita{pesoReferenciaDe(base) === PESO_DIA_COMPLETO ? '' : ' desta pessoa'})</span></span>
+                {/* 🔴 13/09/2026 — o número mostrado é o de `reguaHoje.pesoReferencia`
+                    (já sem o peso do ritual, DIR-142) pra bater com "falta peso X"
+                    logo abaixo; a comparação com PESO_DIA_COMPLETO continua na
+                    referência crua — é sobre "ela tem peso_referencia próprio
+                    configurado", não sobre a conta do ritual. */}
+                <span className="normal-case text-white/40" title="o peso somado das tarefas de produção da Rotina do Método (sem o ritual, que já garante os 20% dele à parte) — é o que o fixo do dia paga inteiro">dia completo = peso {reguaHoje.pesoReferencia} <span className="text-white/25">(Rotina Perfeita{pesoReferenciaDe(base) === PESO_DIA_COMPLETO ? '' : ' desta pessoa'})</span></span>
               </div>
 
               <div className="mt-3 grid grid-cols-4 gap-1 text-center">
@@ -802,12 +822,15 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
                   <ul className="mt-1 space-y-0.5 text-[11px]" data-teste="proximos">
                     {proximos.map((d) => {
                       const doDia = tarefasCiclo.filter((t) => t.user_id === pessoaFixo && String(t.data).slice(0, 10) === d);
-                      const dist = distribuirDia({ fixoMes: fixoDoParticipante(base), pesoReferencia: pesoReferenciaDe(base), tarefas: doDia.filter(ehProducao) });
+                      // 🔴 13/09/2026 — mesma troca: `reguaDoDia` sabe separar o
+                      // ritual (20% garantido) do resto, `distribuirDia` cru não.
+                      const dist = reguaDoDia(doDia.filter(ehProducao), base);
+                      const pago = Math.round((dist.valorDia - dist.emAberto) * 100) / 100;
                       return (
                         <li key={d} className="flex items-center gap-2 text-white/60">
                           <span className="w-24 shrink-0">{fmtDia(d)}</span>
                           <span className="truncate">{doDia.length} tarefa{doDia.length === 1 ? '' : 's'}{dist.pesoFalta ? ` · falta peso ${dist.pesoFalta}` : ''}</span>
-                          <span className="ml-auto tabular-nums text-white/80">{fmtReais(dist.pago)}</span>
+                          <span className="ml-auto tabular-nums text-white/80">{fmtReais(pago)}</span>
                         </li>
                       );
                     })}

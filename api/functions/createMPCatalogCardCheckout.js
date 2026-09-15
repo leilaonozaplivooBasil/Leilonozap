@@ -6,12 +6,17 @@ import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
 import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
+import { exigirSessao } from '../_lib/sessao.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
 const round2 = (n) => Math.round(n * 100) / 100;
+
+// 🎓 mesma régua de createMPPix.js — primeira compra de Vendedor/Licenciado vira
+// venda de loja normal (kind='loja'), com o valor mínimo conferido no servidor.
+const VALOR_MINIMO_CARGO = { vendedor: 1497, licenciado: 5000 };
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -26,6 +31,8 @@ export default async function handler(req, res) {
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const buyer = body?.buyer || {};
+    // 🔐 AUDITORIA 15/09/2026 — crachá de sessão (ETAPA 1: só loga; ver api/_lib/sessao.js)
+    if (buyer?.id) { const _ses = exigirSessao(req, buyer.id, 'createMPCatalogCardCheckout'); if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' }); }
     const items = Array.isArray(body?.items) && body.items.length ? body.items : (body?.product_id ? [{ product_id: body.product_id, quantity: body.quantity || 1 }] : []);
     if (!buyer?.email || !items.length) return res.status(400).json({ success: false, error: 'Comprador e itens são obrigatórios' });
     if (!SUPABASE_URL || !SR || !MP_TOKEN) return res.status(500).json({ success: false, error: 'Config do servidor ausente (Mercado Pago/Supabase)' });
@@ -39,6 +46,12 @@ export default async function handler(req, res) {
     total = round2(total);
     if (total <= 0) return res.status(400).json({ success: false, error: 'Itens inválidos' });
     const main = lines[0].p;
+
+    // 🎓 primeira compra de Vendedor/Licenciado: valor mínimo conferido no servidor.
+    const roleGrant = ['vendedor', 'licenciado'].includes(String(body?.role_grant || '')) ? String(body.role_grant) : null;
+    if (roleGrant && total < VALOR_MINIMO_CARGO[roleGrant]) {
+      return res.status(200).json({ success: false, error: `Sua primeira compra como ${roleGrant === 'licenciado' ? 'Licenciado' : 'Vendedor'} precisa somar pelo menos R$ ${VALOR_MINIMO_CARGO[roleGrant]}` });
+    }
 
     // 🥇 REGRA DE VENDA PESSOAL (absoluta, Santana 04/08/2026): quem tem cargo de rede é
     // SEMPRE o vendedor da própria compra — logado, deslogado, ou comprando pelo link de
@@ -120,14 +133,25 @@ export default async function handler(req, res) {
       });
     }
 
-    await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    const insVenda = await sb('catalog_sales', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
       id: saleId, base44_id: saleId, buyer_id: buyer.id || null, buyer_email: buyer.email, buyer_name: buyer.name || null,
       seller_id, product_id: main.id, product_title: main.description, product_image: (main.image_urls && main.image_urls[0]) || null,
       sale_price: totalProdutos, total_amount: totalProdutos, quantity: lines.reduce((s, l) => s + l.q, 0), status: 'pending_payment',
       kind: 'loja', payment_method: 'credit_card_mp', tracking_code: 'LZ' + saleId.slice(0, 8).toUpperCase(), created_date: new Date().toISOString(),
       discount_amount: passaporte_desconto || null,
-      raw_base44: { passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao },
+      // 🧾 AUDITORIA 15/09/2026 — o PIX (createMPPix.js) grava `items` em raw_base44 e o
+      // cartão NÃO gravava. Pedido de vários produtos pago no cartão chegava pro admin
+      // (CatalogOrdersAdmin lê raw_base44.items) só com o produto principal e a quantidade
+      // total — sem saber o que embalar. Medido no banco: 5 vendas pagas sem itens.
+      // Mesmo formato do PIX: { id, title, qty, price }.
+      raw_base44: { items: lines.map((l) => ({ id: l.p.id, title: l.p.description, qty: l.q, price: unitPrice(l.p) })), passaporte_desconto, delivery_type: body?.delivery_type || null, address: addrS, frete, amount_charged: totalCobrado, taxa_cartao: taxaCartao, ...(roleGrant ? { role_grant: roleGrant } : {}) },
     }) });
+    if (!insVenda.ok) {
+      // 🧾 AUDITORIA 15/09/2026 — mesma proteção do PIX: sem venda gravada, não gera checkout no MP.
+      const detalhe = await insVenda.text().catch(() => '');
+      console.error(`[CARTAO] venda ${saleId} NÃO gravada (HTTP ${insVenda.status}) — checkout não gerado:`, detalhe.slice(0, 300));
+      return res.status(500).json({ success: false, error: 'Não foi possível registrar seu pedido agora. Nada foi cobrado — tente de novo em instantes.' });
+    }
 
     // Checkout Pro (página hospedada do Mercado Pago) — mesma UX de redirecionamento que a Stripe tinha.
     const [first, ...rest] = String(buyer.name || 'Cliente').trim().split(/\s+/);

@@ -8,8 +8,8 @@ import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
-import { getReferral } from '@/lib/referral';
 import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
+import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
 
 const Product = plataforma.entities.Product;
 const Auction = plataforma.entities.Auction;
@@ -698,7 +698,7 @@ export default function CatalogCheckout2() {
                                             Quer pagar no <strong className="text-white">cartão de crédito</strong>?
                                         </p>
                                         <a
-                                            href="https://wa.me/5521984072064?text=Ol%C3%A1!%20Quero%20pagar%20com%20cart%C3%A3o%20de%20cr%C3%A9dito.%20Pode%20me%20ajudar%3F"
+                                            href={`https://wa.me/${WHATSAPP_OFICIAL}?text=Ol%C3%A1!%20Quero%20pagar%20com%20cart%C3%A3o%20de%20cr%C3%A9dito.%20Pode%20me%20ajudar%3F`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors text-sm"

@@ -57,7 +57,7 @@ export default function BrutalistTemplate({ displayTitle, displayImage, displayB
       <div style={{ position: "absolute", bottom: "15%", left: 0, right: 0, padding: "0 24px", zIndex: 10 }}>
         <p style={{ color: "white", fontSize: 18, fontWeight: 900, lineHeight: 1.1, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.03em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{displayTitle}</p>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 16, textDecoration: "line-through", fontWeight: 700 }}>R${marketPrice.toFixed(0)}</span>}
+          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 16, textDecoration: "line-through", fontWeight: 700 }}>R$ {Number(marketPrice).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>}
           <span style={{ color: accent, fontSize: 14, fontWeight: 900 }}>R$</span>
           <span style={{ color: "white", fontSize: 52, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.03em" }}>{price.toFixed(2).split('.')[0]}</span>
           <span style={{ color: accent, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>,{price.toFixed(2).split('.')[1]}</span>

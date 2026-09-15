@@ -104,8 +104,9 @@ export default function SejaVendedor() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-3 text-nz-tinta">Como começar</h2>
           <p className="text-nz-tinta-fraca text-center mb-8">
-            Você paga <strong className="text-nz-tinta">R$ 1.497</strong> pelo Mercado Pago e escolhe os produtos da
-            sua <strong className="text-nz-tinta">primeira compra</strong> direto na nossa Loja Virtual.
+            Você escolhe os produtos da sua <strong className="text-nz-tinta">primeira compra</strong> direto na
+            nossa Loja Virtual — soma pelo menos <strong className="text-nz-tinta">R$ 1.497</strong> — e paga tudo de
+            uma vez pelo Mercado Pago, com o frete incluso.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -154,7 +155,7 @@ export default function SejaVendedor() {
               direto na sua carteira.
             </p>
             <button onClick={() => navigate(createPageUrl('VendedorCheckout'))} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-nz-verde border-2 border-nz-verde/40 hover:bg-white transition-colors">
-              <ShoppingBag className="w-4 h-4" /> Pagar agora e escolher meus produtos
+              <ShoppingBag className="w-4 h-4" /> Escolher meus produtos e pagar
             </button>
           </div>
         </div>
@@ -188,7 +189,7 @@ export default function SejaVendedor() {
           </div>
 
           <p className="text-center text-xs text-nz-tinta-fraca mt-5">
-            A escada continua: Ponto de Retirada 18% · Loja Física 19% · Distribuidor 20% na venda direta.
+            A escada continua: Ponto de Retirada 16% · Loja Física 19% · Distribuidor 20% na venda direta.
             Distribuímos 20% da nossa venda para o nosso programa de parceria.
           </p>
         </div>
@@ -200,8 +201,8 @@ export default function SejaVendedor() {
           <h2 className="text-2xl sm:text-3xl font-black text-center mb-8 text-nz-tinta">Como funciona na prática</h2>
           <div className="space-y-3">
             {[
-              'Você se cadastra e paga R$ 1.497 pelo Mercado Pago (PIX ou cartão).',
-              'Escolhe os produtos da sua primeira compra na Loja Virtual e recebe em casa ou retira na loja.',
+              'Você se cadastra e escolhe os produtos da sua primeira compra na Loja Virtual (mínimo R$ 1.497).',
+              'Paga tudo de uma vez pelo Mercado Pago (PIX ou cartão) e recebe em casa ou retira na loja.',
               'Já começa a vender na sua Loja Virtual — e ganha 10% em dinheiro real imediatamente, em cada venda.',
               'Vendendo os produtos que você recebeu, você recupera o valor investido.',
             ].map((t, i) => (

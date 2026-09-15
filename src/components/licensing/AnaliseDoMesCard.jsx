@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { money } from '@/lib/format';
 
 // 📊 "Análise do mês" — equivalente ao card "Empréstimos" do Mercado Pago:
 // mostra Entradas (comissões recebidas) x Saídas (saques) do mês atual.
@@ -20,7 +21,7 @@ export default function AnaliseDoMesCard({ entradas, saidas, isSaiDeBaixo }) {
             <span className="text-sm text-gray-600">Entradas</span>
           </div>
           <span className={`font-bold ${isSaiDeBaixo ? 'text-red-600' : 'text-emerald-600'}`}>
-            + R$ {entradas.toFixed(2)}
+            + {money(entradas)}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -31,7 +32,7 @@ export default function AnaliseDoMesCard({ entradas, saidas, isSaiDeBaixo }) {
             <span className="text-sm text-gray-600">Saídas</span>
           </div>
           <span className="font-bold text-gray-700">
-            - R$ {saidas.toFixed(2)}
+            - {money(saidas)}
           </span>
         </div>
         <div className="h-px bg-gray-100" />

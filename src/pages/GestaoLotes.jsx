@@ -5,7 +5,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import {
     Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users,
-    DollarSign, Gavel, ArrowLeft, Trash2, Copy,
+    DollarSign, Gavel, Trash2, Copy,
     TrendingUp, Calendar, ArrowUpDown, Pencil, X, ZoomIn
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';

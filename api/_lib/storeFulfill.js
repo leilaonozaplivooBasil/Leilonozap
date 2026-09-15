@@ -190,6 +190,18 @@ export async function fulfillStoreOrder(sale) {
   let items = sale.items_json;
   if (typeof items === 'string') { try { items = JSON.parse(items); } catch { items = []; } }
   items = Array.isArray(items) ? items : [];
+  // 🧾 AUDITORIA 15/09/2026 — createMPPix.js e createMPCatalogCardCheckout.js gravam os
+  // itens em raw_base44.items ({ id, title, qty, price }), NÃO em items_json. Sem este
+  // fallback, um carrinho de vários produtos baixava só o product_id principal com a
+  // quantidade TOTAL da venda e o valor total como unitário — estoque e repasse errados.
+  if (!items.length) {
+    const rb = sale.raw_base44 && typeof sale.raw_base44 === 'object' ? sale.raw_base44.items : null;
+    if (Array.isArray(rb) && rb.length) {
+      items = rb
+        .filter((it) => it && (it.id || it.product_id))
+        .map((it) => ({ product_id: it.product_id || it.id, qty: Math.max(1, Number(it.qty) || 1), unit: round2(Number(it.price) || 0), title: it.title }));
+    }
+  }
   // venda de item único (checkout direto / arremate) não tem items_json — usa o product_id da venda
   // ⚠️ o `unit` precisa vir junto: sem ele o repasse calcularia margem sobre zero
   // e o lojista receberia só o custo de volta, sem o lucro dele.

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   BLOCOS, RITUAL_MINUTOS_PARA_CONCLUIR, prazoDoRitual, segundosRestantes, ritualExpirado,
   textoDoPrazo, blocosFeitos, proximoBloco, ritualCompleto, pendenciasDoRitual,
-  seloDoRitual, statusDoRitual, comBloco, ritualRetomavel, blocoReprovado,
+  seloDoRitual, statusDoRitual, comBloco, ritualRetomavel, blocoReprovado, blocoPendenteIA,
 } from '../src/lib/ritualEmBlocos.js';
 
 const T0 = Date.parse('2026-09-11T08:00:00Z'); // 05:00 em Brasília
@@ -144,6 +144,40 @@ test('REB-9 · o status que vai pro registro sai do selo', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem crédito
+// (HTTP 402) numa madrugada inteira, e o bloco de visualização de quem
+// gravou o vídeo de verdade virou "reprovado" só porque a IA não respondeu
+// — o mesmo `duvida` que DIR-125 usa de propósito pra ambiente ruim. A régua
+// tinha que aprender a diferença: IA fora do ar não é uma opinião sobre a
+// imagem, é a imagem nunca ter sido vista.
+test('REB-11 · IA fora do ar NUNCA é reprovação, em bloco nenhum (DIR-146)', () => {
+  assert.equal(blocoPendenteIA({ ia_indisponivel: true }), true);
+  assert.equal(blocoPendenteIA({ veredito: 'duvida' }), false);
+  assert.equal(blocoPendenteIA(undefined), false);
+  // mesmo na visualização — onde DIR-125 reprova dúvida de ambiente — a IA
+  // fora do ar não pode virar reprovação
+  assert.equal(blocoReprovado('visualizacao', { veredito: 'duvida', ia_indisponivel: true }), false);
+  assert.equal(blocoReprovado('acordei', { veredito: 'reprovada', ia_indisponivel: true }), false, 'ia_indisponivel blinda até reprovação franca — não deveria vir junto, mas se vier, IA fora manda');
+});
+
+test('REB-12 · três blocos entregues, um pendente de IA: selo próprio, não é "parcial" nem "completo"', () => {
+  const tres = (viz) => comBloco(comBloco(comBloco(null, 'acordei', {}), 'gratidao', {}), 'visualizacao', viz);
+  const pendente = comBloco(tres({ video_path: 'v', video_seg: 130 }), 'visualizacao', { video_path: 'v', video_seg: 130, veredito_ia: { veredito: 'duvida', ia_indisponivel: true, motivo: 'a IA de validação está fora do ar agora' } });
+  assert.equal(seloDoRitual(pendente), 'pendente_ia');
+  assert.equal(statusDoRitual(pendente), 'ritual_pendente_ia');
+  // a pendência é dita com todas as letras, e NÃO como se fosse culpa dela
+  const p = pendenciasDoRitual(pendente).map((x) => x.o_que);
+  assert.equal(p.length, 1, p.join(' | '));
+  assert.ok(/FOI SALVO/.test(p[0]) && /fora do ar/.test(p[0]), p[0]);
+  assert.ok(!/reprovado pela IA/.test(p[0]), 'a mensagem de IA fora do ar não pode ser a genérica de reprovação');
+
+  // com um bloco DE VERDADE reprovado (não por IA fora), o pendente_ia some:
+  // a reprovação franca continua tendo prioridade sobre o selo
+  const reprovadoDeVerdade = comBloco(tres({ video_path: 'v' }), 'acordei', { veredito_ia: { veredito: 'reprovada', motivo: 'print de outro dia' } });
+  assert.equal(seloDoRitual(reprovadoDeVerdade), 'parcial');
+});
+
 test('REB-10 · retomar só o ritual de HOJE, e só se sobrou bloco', () => {
   const meio = { ...comBloco(null, 'acordei', {}), aberto_dia: '2026-09-11' };
   assert.equal(ritualRetomavel(meio, '2026-09-11'), true);

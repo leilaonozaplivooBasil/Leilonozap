@@ -109,21 +109,46 @@ const TAREFAS = [
   { id: 't2', titulo: 'Organização', hora: '09:00', feito: true },
 ];
 
+// 🎓 15/09/2026 — DIR-153, caso da Sophia Sant'anna ao vivo: ela é `ativo`
+// (aparece na lista votável) mas `em_mentoria: false` (nunca entrou na
+// mentoria oficial) — os testes abaixo que EXERCITAM a régua radical do
+// não-voto agora precisam declarar `participante: { em_mentoria: true }`
+// pra representar quem de fato está na mentoria e é obrigado a votar.
+const NA_MENTORIA = { em_mentoria: true };
+
 test('resumoDoDia: janela ainda aberta (antes das 21h30) — não julga, mesmo sem ter votado ainda', () => {
   const antesDoFim = VOTACAO_FIM_MIN - 1; // 21:29
-  const r = resumoDoDia({ tarefas: TAREFAS, agoraMin: antesDoFim, votouEmTodos: false });
+  const r = resumoDoDia({ tarefas: TAREFAS, agoraMin: antesDoFim, votouEmTodos: false, participante: NA_MENTORIA });
   assert.equal(r.perdeu_por_nao_votar, false, 'a janela ainda não fechou — cedo demais pra punir');
   assert.equal(r.mvm_dia, MVM_MAX, 'as duas tarefas feitas dão nota cheia, intocada');
 });
 
 test('resumoDoDia: janela fechada (21h30+) e NÃO votou em todos → MvM do Dia ZERA, mesmo com o dia impecável', () => {
   const depoisDoFim = VOTACAO_FIM_MIN + 30; // 22:00
-  const semVotar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false });
-  const votando = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: true });
+  const semVotar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, participante: NA_MENTORIA });
+  const votando = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: true, participante: NA_MENTORIA });
   assert.equal(semVotar.perdeu_por_nao_votar, true);
   assert.equal(semVotar.mvm_dia, 0, 'zerou de verdade, não só avisou');
   assert.ok(semVotar.token_dia < votando.token_dia, 'o Human Token sente o zero junto — a punição precisa ser SENTIDA, não só cosmética na MvM');
   assert.match(semVotar.frase_mvm, /NÃO VOTAR/);
+});
+
+// 🎓 15/09/2026 — DIR-153, dono ao vivo (Sophia Sant'anna): "você não pode
+// zerar o dia de quem não participa da mentoria... ela não é obrigada a
+// votar." Fora da mentoria (participante null, ou `em_mentoria: false`
+// mesmo sendo `ativo` no time votável), a régua radical do não-voto nunca
+// se aplica — janela fechada e sem votar em ninguém não muda nada pra ela.
+test('resumoDoDia: quem NÃO está na mentoria nunca zera por não votar — não é obrigada, mesmo depois das 21h30', () => {
+  const depoisDoFim = VOTACAO_FIM_MIN + 30; // 22:00
+  const semParticipante = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false });
+  const foraDaMentoria = resumoDoDia({
+    tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, participante: { em_mentoria: false, ativo: true },
+  });
+  for (const r of [semParticipante, foraDaMentoria]) {
+    assert.equal(r.perdeu_por_nao_votar, false, 'fora da mentoria não tem a obrigação de votar — não há como faltar a ela');
+    assert.equal(r.mvm_dia, MVM_MAX, 'dia impecável continua valendo nota cheia — nada zera');
+    assert.doesNotMatch(r.frase_mvm, /ZEROU/);
+  }
 });
 
 // 🔥 08/09/2026 — dono: "não vou, perde o dinheiro, perde a MvM, perde tudo
@@ -132,8 +157,8 @@ test('resumoDoDia: janela fechada (21h30+) e NÃO votou em todos → MvM do Dia 
 // juntos, e o que seria ganho vira PERDIDO, registrado, não some em silêncio.
 test('resumoDoDia: o radical é radical de verdade — token, pontos e X-Pay TAMBÉM zeram, não só a MvM', () => {
   const depoisDoFim = VOTACAO_FIM_MIN + 30;
-  const semVotar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false });
-  const votando = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: true });
+  const semVotar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, participante: NA_MENTORIA });
+  const votando = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: true, participante: NA_MENTORIA });
   assert.ok(votando.token_dia > 0 && votando.pontos > 0 && votando.xpay.ganho > 0, 'confirma que quem votou tem números de verdade — senão a comparação abaixo não prova nada');
   assert.equal(semVotar.token_dia, 0, 'o Human Token do dia zera de vez, não só cai');
   assert.equal(semVotar.pontos, 0, 'os pontos do dia zeram');
@@ -151,8 +176,8 @@ test('resumoDoDia: o radical é radical de verdade — token, pontos e X-Pay TAM
 test('resumoDoDia: diaZerado com tarefa ainda "em jogo" pendente — o valor não pode sumir, tem que dobrar no perdido igual o ganho', () => {
   const depoisDoFim = VOTACAO_FIM_MIN + 30; // 22:00
   const tarefasComPendente = [...TAREFAS, { id: 't3', titulo: 'Reunião 1 (45-60 min)', hora: '23:00', feito: false }];
-  const semVotar = resumoDoDia({ tarefas: tarefasComPendente, agoraMin: depoisDoFim, votouEmTodos: false });
-  const votando = resumoDoDia({ tarefas: tarefasComPendente, agoraMin: depoisDoFim, votouEmTodos: true });
+  const semVotar = resumoDoDia({ tarefas: tarefasComPendente, agoraMin: depoisDoFim, votouEmTodos: false, participante: NA_MENTORIA });
+  const votando = resumoDoDia({ tarefas: tarefasComPendente, agoraMin: depoisDoFim, votouEmTodos: true, participante: NA_MENTORIA });
   assert.ok(votando.xpay.emJogo > 0, 'confirma que a tarefa pendente realmente tinha valor em jogo — senão o teste abaixo não prova nada');
   assert.equal(semVotar.xpay.emJogo, 0, 'nada fica "em jogo" depois que o dia zerou — foi resolvido, não apagado');
   assert.equal(semVotar.xpay.ganho, 0);
@@ -171,7 +196,7 @@ test('resumoDoDia: diaZerado com tarefa ainda "em jogo" pendente — o valor nã
 // mudou. `perdoado` perdoa o dia INTEIRO, não importa o motivo.
 test('resumoDoDia: perdoado=true NUNCA zera, nem por não-votar nem por atraso do pronto — o dia inteiro é perdoado, não importa o motivo', () => {
   const depoisDoFim = VOTACAO_FIM_MIN + 30;
-  const semVotarPerdoado = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, perdoado: true });
+  const semVotarPerdoado = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, perdoado: true, participante: NA_MENTORIA });
   assert.equal(semVotarPerdoado.perdeu_por_nao_votar, false, 'perdoado esconde até o CAMPO que registra o motivo — outras telas não podem ver isso como zerado');
   assert.equal(semVotarPerdoado.mvm_dia, MVM_MAX, 'sem o perdão zeraria — com o perdão, a nota é a de sempre (dia impecável)');
   assert.ok(!/ZEROU/.test(semVotarPerdoado.frase_mvm), 'a frase não pode dizer que zerou um dia que foi perdoado');
@@ -187,8 +212,8 @@ test('resumoDoDia: perdoado=true NUNCA zera, nem por não-votar nem por atraso d
 
 test('resumoDoDia: perdoado=false (padrão) — comportamento de sempre, sem mudar nada pra quem não usa o perdão', () => {
   const depoisDoFim = VOTACAO_FIM_MIN + 30;
-  const semInformar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false });
-  const explicitoFalse = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, perdoado: false });
+  const semInformar = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, participante: NA_MENTORIA });
+  const explicitoFalse = resumoDoDia({ tarefas: TAREFAS, agoraMin: depoisDoFim, votouEmTodos: false, perdoado: false, participante: NA_MENTORIA });
   assert.equal(semInformar.mvm_dia, 0);
   assert.deepEqual(semInformar, explicitoFalse, 'omitir perdoado é idêntico a passar false — nunca perdoa por engano');
 });
@@ -394,7 +419,7 @@ test('resumoDoDia: zerado por não votar SUPRIME o aviso graduado do pronto — 
     ...TAREFAS,
     { id: 'x1', titulo: 'Pegar as pautas', hora: '10:00', feito: false, origem: 'xperf', prazo_em: '2026-09-08T18:00:00' },
   ];
-  const r = resumoDoDia({ tarefas: vencida, agoraMin: 22 * 60, hoje: agora, votouEmTodos: false, participante: { avisos_pronto: 1 } });
+  const r = resumoDoDia({ tarefas: vencida, agoraMin: 22 * 60, hoje: agora, votouEmTodos: false, participante: { avisos_pronto: 1, em_mentoria: true } });
   assert.equal(r.perdeu_por_nao_votar, true, 'o não-voto já zerou o dia');
   assert.equal(r.perdeu_por_atraso_pronto, false, 'só 1 aviso — o atraso sozinho não zeraria');
   assert.equal(r.em_aviso_pronto, false, 'mas o dia JÁ zerou por outro motivo — não é "só perdeu pontos"');

@@ -4,6 +4,7 @@ import EncontroMentalidade from '@/components/licensing/CentralVendas/EncontroMe
 import PerformanceEquipe from '@/components/licensing/CentralVendas/PerformanceEquipe';
 import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
 import useTourDaTela from '@/hooks/useTourDaTela';
+import { dataISO } from '@/lib/xgame';
 
 // 🧠📊 MENTALIDADE — o espaço da segunda e do fluxo, junto d'O Método (dono, 06/09/2026).
 // Duas abas, sem nada administrativo:
@@ -39,7 +40,9 @@ const PASSOS_TOUR_ENCONTRO = [
 
 export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir = false, gestao = false, abaInicial = null, soEu = false }) {
   const [tourAberto, setTourAberto] = useTourDaTela('encontro');
-  const hoje = hojeISO || new Date().toISOString().slice(0, 10);
+  // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134); isso
+  // também decidia errado se hoje é segunda (a aba padrão).
+  const hoje = hojeISO || dataISO();
   const ehSegunda = new Date(`${hoje}T12:00:00`).getDay() === 1;
   const [aba, setAba] = useState(abaInicial || (ehSegunda ? 'encontro' : 'performance'));
   return (

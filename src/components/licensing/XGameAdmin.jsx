@@ -8,6 +8,7 @@ import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAut
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
+import { estadoDaRotina, jaGerouHoje, incluirNaRotina, excluirDaRotina } from '@/lib/rotinaPessoal';
 import { verVideo } from '@/lib/cofreDeAudio';
 import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
@@ -40,6 +41,14 @@ const CATEGORIAS = [
 // ainda aparecia como candidato pra "adicionar participante", pronto pra
 // alguém recriar a mesma confusão sem querer. Nunca mais aparece na lista.
 const IDS_DUPLICADOS_FORA_DO_XGAME = new Set(['e90ed56209c71d4bf4dd3bc3']);
+
+// 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem crédito
+// (402) e comprovações reais (foto, ritual) passaram a ser SALVAS como
+// `pendente_ia`/`ritual_pendente_ia` em vez de sumirem sem deixar marca ou
+// virarem "reprovada" à toa. É aqui que o gestor as encontra — os dois
+// status contam juntos porque, pra quem está revisando, é a mesma fila:
+// "a IA não confirmou, alguém confirma".
+const PENDENTES_IA = ['pendente_ia', 'ritual_pendente_ia'];
 
 // 🐛 09/09/2026 — mesmo bug de fuso do CrmMetodo.jsx: toISOString() usa UTC,
 // e no Brasil (UTC-3) o dia vira 3h antes da meia-noite local (a partir das
@@ -151,6 +160,9 @@ function BotaoVerVisualizacao({ caminho, segundos, actorId }) {
   );
 }
 
+// 🔐 AUDITORIA 15/09/2026 — link gravado por usuário só abre se for http(s) (nunca javascript:)
+const hrefSeguro = (u) => (/^https?:\/\//i.test(String(u || '')) ? u : undefined);
+
 export default function XGameAdmin({ onVerComo } = {}) {
   const [participantes, setParticipantes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -172,6 +184,15 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [tarefaDia, setTarefaDia] = useState(hojeStr());
   const [tarefas, setTarefas] = useState([]);
   const [novaTarefa, setNovaTarefa] = useState({ hora: '', titulo: '', categoria: 'producao', peso: 3 });
+  // 📅 DIR-142.2 — dono, ao vivo, sobre a Eloá (fora da mentoria, fixo
+  // R$2000): "aqui não está aparecendo as tarefas que ela mesmo organizou...
+  // quero que apareça as tarefas automáticas do sistema, as tarefas dela pra
+  // eu provar caso ela mude, e que eu possa inserir." A rotina PERMANENTE
+  // dela (`metodo_perfil.rotina`, DIR-80) é o que falta ver e mexer aqui —
+  // o dia (`metodo_tarefas`) já é só o retrato de UM dia gerado dessa rotina.
+  const [perfilTarefa, setPerfilTarefa] = useState(null);
+  const [rotinaAberta, setRotinaAberta] = useState(false);
+  const [novoItemRotina, setNovoItemRotina] = useState({ hora: '', titulo: '' });
 
   const carregar = useCallback(() => {
     supabase.from('xgame_participantes').select('*').order('created_date')
@@ -298,6 +319,52 @@ export default function XGameAdmin({ onVerComo } = {}) {
     setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...patch } : x)));
   };
 
+  // 📅 a rotina PERMANENTE da pessoa (o molde que gera o dia dela todo dia) —
+  // separado do dia em si, porque é o que o dono pediu pra ver e mexer aqui.
+  const carregarPerfilRotina = useCallback(async (userId) => {
+    if (!userId) { setPerfilTarefa(null); return; }
+    const { data } = await supabase.from('metodo_perfil')
+      .select('rotina,rotina_automatica,rotina_gerada_em').eq('user_id', userId).maybeSingle();
+    setPerfilTarefa(data || null);
+  }, []);
+  useEffect(() => { carregarPerfilRotina(tarefaUser); }, [tarefaUser, carregarPerfilRotina]);
+  const estadoRotinaTarefa = useMemo(() => estadoDaRotina(perfilTarefa), [perfilTarefa]);
+  // de onde veio o dia que está na tela: a rotina dela, a da casa, ou nem
+  // isso (tarefa avulsa/manual, sem passar pela geração automática)
+  const origemDoDia = tarefas.length === 0 ? null
+    : !jaGerouHoje(perfilTarefa, tarefaDia)
+      ? 'manual/avulso — não veio da geração automática deste dia'
+      : (estadoRotinaTarefa.propria ? 'rotina PRÓPRIA dela' : 'rotina padrão da casa — ela ainda não personalizou');
+
+  const salvarRotinaPermanente = async (novaLista) => {
+    const { error } = await supabase.from('metodo_perfil').upsert({ user_id: tarefaUser, rotina: novaLista }, { onConflict: 'user_id' });
+    if (error) { toast.error('Não salvou a rotina permanente dela — tenta de novo.'); return false; }
+    setPerfilTarefa((prev) => ({ ...(prev || {}), rotina: novaLista }));
+    return true;
+  };
+  // 🌱 se ela ainda não tem rotina própria, a primeira mudança PARTE da
+  // rotina da casa (não zera o que já valia pra ela) — mesmo princípio do
+  // `rotinaEmVigor` (DIR-80): a dela quando existe, senão a da casa.
+  const rotinaBaseAtual = estadoRotinaTarefa.propria ? perfilTarefa.rotina : ROTINA_PADRAO;
+  const incluirNaRotinaPermanente = async ({ hora, titulo }) => {
+    if (!tarefaUser || !titulo.trim()) { toast.error('Diga o título da tarefa.'); return; }
+    if (rotinaBaseAtual.some((i) => i.titulo.trim().toLowerCase() === titulo.trim().toLowerCase())) {
+      toast.error('Já está na rotina permanente dela.'); return;
+    }
+    const nova = incluirNaRotina(rotinaBaseAtual, { hora, titulo });
+    if (await salvarRotinaPermanente(nova)) {
+      toast.success(`"${titulo}" entra na rotina PERMANENTE dela — vale a partir de amanhã.`);
+      setNovoItemRotina({ hora: '', titulo: '' });
+    }
+  };
+  const excluirDaRotinaPermanente = async (indice) => {
+    const nova = excluirDaRotina(rotinaBaseAtual, indice);
+    if (await salvarRotinaPermanente(nova)) toast.success('Removida da rotina permanente dela — vale a partir de amanhã.');
+  };
+  // 🔁 uma tarefa avulsa de hoje (automática OU criada na mão logo abaixo)
+  // vira parte da rotina dela pra sempre, com um clique — sem redigitar.
+  const tornarRecorrente = (t) => incluirNaRotinaPermanente({ hora: t.hora, titulo: t.titulo });
+
   // 🪄 F6 — aplica o peso automático (regra do dono) em todas as tarefas do dia
   const aplicarPesosAutomaticos = async () => {
     const mudar = tarefas.filter((t) => (t.peso ?? 3) !== pesoAutomatico(t.titulo));
@@ -317,7 +384,10 @@ export default function XGameAdmin({ onVerComo } = {}) {
   // o que desfaz o feito e derruba os pontos.
   const [abaAdmin, setAbaAdmin] = useState('participantes');
   const [comprovacoes, setComprovacoes] = useState([]);
-  const [filtroComp, setFiltroComp] = useState('em_analise');
+  // 🚨 DIR-146 — 'em_analise' não nasce mais sozinho desde a DIR-89 (a régua
+  // aprova ou reprova automático); a fila que passou a nascer de verdade é a
+  // de IA fora do ar, e é nela que o gestor precisa cair primeiro.
+  const [filtroComp, setFiltroComp] = useState('pendente_ia');
   // 🔎 09/09/2026 — dono, olhando a fila crescer: "eu preciso separar por
   // data... data de comprovação, nome das pessoas, pra ficar mais fácil...
   // ainda precisa ter uma busca, quando eu fizer buscar mais rápido, tanto
@@ -331,6 +401,11 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [dataEscolhidaComp, setDataEscolhidaComp] = useState('todas');
   const [iaLigada, setIaLigada] = useState(null);
   const [iaDetalhe, setIaDetalhe] = useState(''); // modelo, ou o erro real do gateway quando cai
+  // 🚨 DIR-147 (14/09/2026) — dono, depois do incidente do 402: "o crédito
+  // quando estiver acabando precisa ter um aviso, pra não ocorrer mais
+  // isso." `null` = não dá pra saber (fora do gateway, ou a checagem falhou).
+  const [saldoGatewayUsd, setSaldoGatewayUsd] = useState(null);
+  const [saldoBaixo, setSaldoBaixo] = useState(false);
   const [reprovando, setReprovando] = useState(null); // { id, motivo }
   const statusDaComp = (c) => c?.status || (c?.valido ? 'aprovada_ia' : 'reprovada');
   const carregarComprovacoes = useCallback(() => {
@@ -343,7 +418,11 @@ export default function XGameAdmin({ onVerComo } = {}) {
     // sozinho mentia "IA ligada" enquanto toda comprovação caía em indisponível.
     fetch('/api/functions/xgameValidarPrint?ping=1')
       .then((r) => r.json())
-      .then((j) => { setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} (${j.via || '?'}) → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 320)}` : ''}` : `${j?.model || ''}${j?.via ? ` · via ${j.via}` : ''}`); })
+      .then((j) => {
+        setIaLigada(!!j?.ia); setIaDetalhe(j?.ping && !j.ping.ok ? `${j.model} (${j.via || '?'}) → HTTP ${j.ping.status}${j.ping.corpo ? `: ${String(j.ping.corpo).slice(0, 320)}` : ''}` : `${j?.model || ''}${j?.via ? ` · via ${j.via}` : ''}`);
+        setSaldoGatewayUsd(typeof j?.saldo_gateway_usd === 'number' ? j.saldo_gateway_usd : null);
+        setSaldoBaixo(!!j?.saldo_baixo);
+      })
       .catch(() => { setIaLigada(false); setIaDetalhe('a função de validação não respondeu'); });
   }, []);
   useEffect(() => { carregarComprovacoes(); }, [carregarComprovacoes]);
@@ -372,7 +451,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
       const r = por[t.user_id] || (por[t.user_id] = { reprovadas: 0, analise: 0, aprovadas: 0 });
       const s = statusDaComp(t.comprovacao);
       if (s === 'reprovada') r.reprovadas += 1;
-      else if (s === 'em_analise') r.analise += 1;
+      else if (s === 'em_analise' || PENDENTES_IA.includes(s)) r.analise += 1;
       else r.aprovadas += 1;
     });
     return por;
@@ -433,8 +512,11 @@ export default function XGameAdmin({ onVerComo } = {}) {
   };
 
   const pendentesAnalise = comprovacoes.filter((t) => statusDaComp(t.comprovacao) === 'em_analise').length;
+  const pendentesIA = comprovacoes.filter((t) => PENDENTES_IA.includes(statusDaComp(t.comprovacao))).length;
   const compFiltradas = useMemo(() => comprovacoes.filter((t) => {
-    if (filtroComp !== 'todas' && statusDaComp(t.comprovacao) !== filtroComp) return false;
+    const s = statusDaComp(t.comprovacao);
+    if (filtroComp === 'pendente_ia') { if (!PENDENTES_IA.includes(s)) return false; }
+    else if (filtroComp !== 'todas' && s !== filtroComp) return false;
     return comprovacaoBateNaBusca(t, nomeDe(t.user_id), buscaComp);
   }), [comprovacoes, filtroComp, buscaComp, usuarios]);
   // 📅 agrupada por dia — a fila vem do banco já em ORDER BY data DESC
@@ -450,7 +532,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
     <div className="space-y-4 text-sm">
       {/* abas do admin: participantes × a fila de comprovações */}
       <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-        {[['participantes', '👥 Participantes'], ['comprovacoes', `🖼️ Comprovações${pendentesAnalise > 0 ? ` (${pendentesAnalise} em análise)` : ''}`]].map(([v, rotulo]) => (
+        {[['participantes', '👥 Participantes'], ['comprovacoes', `🖼️ Comprovações${pendentesAnalise + pendentesIA > 0 ? ` (${pendentesAnalise + pendentesIA} pendente${pendentesAnalise + pendentesIA === 1 ? '' : 's'})` : ''}`]].map(([v, rotulo]) => (
           <button
             key={v}
             type="button"
@@ -461,13 +543,26 @@ export default function XGameAdmin({ onVerComo } = {}) {
         <span className={`ml-auto text-[10px] font-bold ${iaLigada === null ? 'text-gray-400' : iaLigada ? 'text-emerald-600' : 'text-red-600'}`} title={iaDetalhe} data-teste="ia-status">
           {iaLigada === null ? '… conferindo a IA (chamada real ao modelo)' : iaLigada ? `🧠 IA de visão RESPONDENDO · ${iaDetalhe}` : `🚨 IA FORA DO AR — comprovações BLOQUEADAS até voltar${iaDetalhe ? ` · ${iaDetalhe}` : ''}`}
         </span>
+        {/* 🚨 DIR-147 — o aviso de crédito baixo que o dono pediu: aparece
+            SEMPRE que o gestor abre esta tela, não só quando já é tarde
+            demais (foi assim que o 402 pegou todo mundo de surpresa). */}
+        {saldoGatewayUsd !== null && (
+          <span
+            className={`text-[10px] font-bold ${saldoBaixo ? 'text-red-600' : 'text-gray-400'}`}
+            title="Saldo do Vercel AI Gateway — some quando chega em zero, a validação para de responder"
+            data-teste="saldo-gateway"
+          >
+            {saldoBaixo ? '🪫' : '🔋'} crédito da IA: ${saldoGatewayUsd.toFixed(2)}
+            {saldoBaixo && ' — ACABANDO, recarregue agora (vercel.com → AI Gateway → Add credits)'}
+          </span>
+        )}
       </div>
 
       {/* ══ 🖼️ A FILA DE COMPROVAÇÕES (segunda análise — humano só na dúvida) ══ */}
       {abaAdmin === 'comprovacoes' && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {[['em_analise', '⏳ em análise'], ['aprovada_ia', '🤖 aprovadas pela IA'], ['aprovada_manual', '👤 aprovadas pelo gestor'], ['reprovada', '🚫 reprovadas'], ['todas', 'todas']].map(([v, rotulo]) => (
+            {[['pendente_ia', `🤖🚨 IA fora do ar${pendentesIA > 0 ? ` (${pendentesIA})` : ''}`], ['em_analise', '⏳ em análise'], ['aprovada_ia', '🤖 aprovadas pela IA'], ['aprovada_manual', '👤 aprovadas pelo gestor'], ['reprovada', '🚫 reprovadas'], ['todas', 'todas']].map(([v, rotulo]) => (
               <button key={v} type="button" onClick={() => setFiltroComp(v)} className={`px-2 py-1 rounded border text-[11px] font-medium ${filtroComp === v ? 'border-emerald-600 text-emerald-700 bg-emerald-50' : 'border-gray-300 text-gray-500 hover:border-emerald-400'}`}>
                 {rotulo}
               </button>
@@ -540,7 +635,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                         return (
                           <div key={t.id} className="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
                             {c.print_url ? (
-                              <a href={c.print_url} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
+                              <a href={hrefSeguro(c.print_url)} target="_blank" rel="noreferrer" title="Abrir a imagem inteira">
                                 <img src={c.print_url} alt="comprovação" className="w-14 h-14 rounded object-cover border border-gray-200" loading="lazy" />
                               </a>
                             ) : (
@@ -552,6 +647,8 @@ export default function XGameAdmin({ onVerComo } = {}) {
                               </p>
                               <p className="text-[10px] text-gray-500">
                                 {s === 'em_analise' && <span className="font-bold text-amber-600">⏳ EM ANÁLISE</span>}
+                                {s === 'pendente_ia' && <span className="font-bold text-red-600">🤖🚨 IA estava fora do ar — a pessoa entregou, confirme você</span>}
+                                {s === 'ritual_pendente_ia' && <span className="font-bold text-red-600">🌅🤖🚨 ritual completo, mas a IA estava fora do ar — confirme você</span>}
                                 {s === 'aprovada_ritual' && <span className="font-bold text-emerald-600">🌅 ritual do amanhecer completo</span>}
                                 {s === 'ritual_parcial' && <span className="font-bold text-amber-600">🌅 ritual pela metade — ver pendências</span>}
                                 {s === 'ritual_em_andamento' && <span className="font-bold text-amber-600">🌅 ritual em andamento</span>}
@@ -567,7 +664,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                                     acesso ao que já existe. */}
                                 {c.video_path
                                   ? <BotaoVerVisualizacao caminho={c.video_path} segundos={c.video_seg || 0} actorId={t.user_id} />
-                                  : c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
+                                  : c.video_url && <a href={hrefSeguro(c.video_url)} target="_blank" rel="noreferrer" className="ml-2 font-bold text-emerald-700 hover:underline">🎥 ver a visualização ({c.video_seg || 0}s)</a>}
                                 {/* 📝 09/09/2026 — dono: "se for vídeo, se for áudio,
                                     tem que tudo transcrever e mostrar ali." `entrega`
                                     já é o texto — escrito ou falado (transcrito) —
@@ -596,7 +693,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                             </div>
                             {s !== 'reprovada' && reprovando?.id !== t.id && (
                               <span className="flex items-center gap-1.5 shrink-0">
-                                {s === 'em_analise' && (
+                                {(s === 'em_analise' || PENDENTES_IA.includes(s)) && (
                                   <Button size="sm" onClick={() => aprovarComp(t)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-[11px]">Aprovar ✔</Button>
                                 )}
                                 <button type="button" onClick={() => setReprovando({ id: t.id, motivo: '' })} className="text-[11px] font-bold text-gray-400 hover:text-red-600">reprovar</button>
@@ -835,6 +932,7 @@ export default function XGameAdmin({ onVerComo } = {}) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-[11px] font-semibold text-gray-900 flex-1 min-w-[160px]" title={DICAS.conferencia}>
                       Tarefas de {nomeDe(p.user_id)} — o que você gerencia aqui aparece na hora no Compromisso dela ⓘ
+                      {origemDoDia && <span className="ml-1.5 font-normal text-gray-500" title="De onde veio o dia mostrado abaixo">· {origemDoDia}</span>}
                     </p>
                     {tarefas.length > 0 && (
                       <Button
@@ -893,6 +991,12 @@ export default function XGameAdmin({ onVerComo } = {}) {
                             >{t.conferido === true ? 'SIM ✔' : 'confirmar SIM'}</button>
                             <button
                               type="button"
+                              onClick={() => tornarRecorrente(t)}
+                              title="Grava esta tarefa na rotina PERMANENTE dela — passa a se repetir todo dia, a partir de amanhã"
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-gray-300 text-gray-400 hover:border-purple-400 hover:text-purple-600"
+                            >🔁</button>
+                            <button
+                              type="button"
                               onClick={() => excluirTarefa(t)}
                               title="Excluir a tarefa do dia dela (2 cliques pra confirmar)"
                               className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${excluindo === t.id ? 'border-red-600 text-white bg-red-600' : 'border-gray-300 text-gray-400 hover:border-red-400 hover:text-red-500'}`}
@@ -916,6 +1020,35 @@ export default function XGameAdmin({ onVerComo } = {}) {
                     <Button size="sm" onClick={criarTarefa} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8">
                       <Plus className="w-4 h-4 mr-1" /> Criar tarefa
                     </Button>
+                  </div>
+
+                  {/* 📅 DIR-142.2 — a rotina PERMANENTE (o molde que gera o dia
+                      dela todo dia, DIR-80): separada do dia acima de propósito
+                      — aqui é o que se repete pra sempre, lá em cima é só hoje. */}
+                  <div className="rounded border border-dashed border-purple-300 bg-purple-50/40 px-2 py-2">
+                    <button type="button" onClick={() => setRotinaAberta((v) => !v)} className="text-[11px] font-semibold text-purple-800 flex items-center gap-1">
+                      {rotinaAberta ? '▾' : '▸'} 📅 Rotina permanente dela {estadoRotinaTarefa.propria ? '(personalizada)' : '(ainda é a da casa)'}
+                      <span className="font-normal text-gray-500">· {rotinaBaseAtual.length} itens · mudanças valem a partir de amanhã</span>
+                    </button>
+                    {rotinaAberta && (
+                      <div className="mt-1.5 space-y-1">
+                        {rotinaBaseAtual.map((item, i) => (
+                          <div key={`${item.hora}-${item.titulo}-${i}`} className="flex items-center justify-between gap-2 rounded border border-purple-100 bg-white px-2 py-1 text-[11px]">
+                            <span className="min-w-0 truncate"><span className="text-gray-400 tabular-nums">{item.hora || '—'}</span> — {item.titulo}</span>
+                            {estadoRotinaTarefa.propria && (
+                              <button type="button" onClick={() => excluirDaRotinaPermanente(i)} title="Remover da rotina permanente dela" className="shrink-0 text-gray-400 hover:text-red-500">✕</button>
+                            )}
+                          </div>
+                        ))}
+                        <div className="flex items-end gap-2 flex-wrap pt-1">
+                          <Input type="time" value={novoItemRotina.hora} onChange={(e) => setNovoItemRotina({ ...novoItemRotina, hora: e.target.value })} className="h-8 bg-white border-gray-300 w-auto" />
+                          <Input placeholder="tarefa permanente — entra todo dia, a partir de amanhã" value={novoItemRotina.titulo} onChange={(e) => setNovoItemRotina({ ...novoItemRotina, titulo: e.target.value })} className="h-8 bg-white border-gray-300 flex-1 min-w-[160px]" />
+                          <Button size="sm" onClick={() => incluirNaRotinaPermanente(novoItemRotina)} className="bg-purple-600 hover:bg-purple-700 text-white h-8">
+                            <Plus className="w-4 h-4 mr-1" /> Incluir na rotina dela
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Printer, CheckCircle, AlertCircle, DollarSign, Users, TrendingUp, Wallet } from 'lucide-react';
+import { Printer, CheckCircle, AlertCircle, DollarSign, Users, TrendingUp, Wallet } from 'lucide-react';
 
 const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

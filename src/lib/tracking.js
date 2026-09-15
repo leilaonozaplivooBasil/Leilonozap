@@ -22,7 +22,6 @@ export function useSectionTracking(sectionName, pageTitle) {
       const time_spent_seconds = Math.round((Date.now() - startRef.current) / 1000);
       push({ event: 'section_time', page_section: sectionName, time_spent_seconds });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionName]);
 }
 

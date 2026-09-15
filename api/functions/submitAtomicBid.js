@@ -534,7 +534,9 @@ export default async function handler(req, res) {
 
     // PATCH atômico: só aplica se a version ainda for a mesma lida agora (CAS).
     const patchResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&${versionFilter}`,
+      // 🧾 AUDITORIA 15/09/2026 — `status=eq.active`: um lance que leu a versão antes do
+      // finalizador fechar o leilão NÃO pode mais sobrescrever winner_id/current_price.
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&status=eq.active&${versionFilter}`,
       'PATCH',
       {
         current_price: bidAmount,

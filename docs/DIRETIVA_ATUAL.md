@@ -12,6 +12,385 @@
 
 ---
 
+## DIR-157 — Auditoria noturna do site inteiro (15→16/09/2026): o que foi achado, o que foi corrigido, o que espera decisão
+
+**Status:** EM VIGOR — correções mergeadas; itens de decisão listados no fim.
+
+**Emitida por:** dono, antes de dormir: *"preciso que você fique rodando uma auditoria em todo site pra achar erros de todas as formas — não quero ser pego de surpresa nem em uma vírgula, tipo descrição faltando, exemplo como esses do telefone, erros bobos e graves também. Quero trabalho sério."*
+
+**Método:** 4 varreduras paralelas independentes (textos/placeholders ao cliente; bugs do servidor `api/`; telas/rotas/navegação; segurança e sessão) + lint do site inteiro + auditoria de dados no banco (SQL somente-leitura). Todos os 227 arquivos de `api/` foram lidos; `src/` foi varrido por scan em 1.027 arquivos e ~70 telas lidas linha a linha. Cada correção entrou por PR com suíte completa, lint e build.
+
+### Corrigido (PRs #353, #354, #355 e este)
+**Lint:** 61 erros → 0 (imports mortos em 34 arquivos).
+**Fatos errados que o cliente via:** WhatsApp `+55 00 0000-0000` no modal "Solicitar cadastro"; "boleto" prometido (não existe); "Lei nº 21.981/2024" (inexistente → Decreto 21.981/1932); regra antiga do Passaporte no Termo de Adesão e no Como Funciona; "12x sem juros" nas artes (juros são repassados → `textoParcelamento`); gateway "Asaas" nos Termos/Privacidade (→ Mercado Pago); links `leilaonozap.com` (→ `.net`); exemplo do Passaporte com conta errada; "irrestornável"; Ponto de Retirada 18% (→ 16%); título/og "NoZap" (→ "Leilão NoZap"); © 2024.
+**Rotas mortas (404):** `/SaiDeBaixo` (LiveShop ×2 e o **link de indicação do parceiro** — todo indicado caía em 404), `/PDV`, `/CreateAuctionSaiDeBaixo`.
+**Tela branca:** `JSON.parse` sem proteção no Layout global, carrinho, cards e modal de produto → `src/lib/storageSeguro.js`.
+**Carteira honesta:** falha na consulta mostra erro + "Tentar de novo" (antes: "Carregando…" eterno ou R$ 0,00 falso); Meus Arremates idem. Dinheiro em formato americano em 7 telas → `money()`.
+**Pedidos/estoque/dinheiro (servidor):** checkout no cartão não gravava os itens (`raw_base44.items`) e `fulfillStoreOrder` só lia `items_json` → carrinho de vários produtos baixava estoque errado (agora grava E lê); depósito no leilão gravava endereço fake no cadastro; PIX/cartão só geram cobrança no MP depois que a venda existe no banco; lance só grava em leilão `active` (não sobrescreve leilão já finalizado); pedido de saque que não grava devolve a reserva; comissão do PDV por RPC atômica; `regerarPixPedido` lia coluna inexistente (`stock`).
+**Segurança (sem mudar comportamento em produção):** `exigirSessao` ligado em 9 rotas de dinheiro/cargo que não tinham; `entityWrite` usa o usuário do crachá quando válido; 11 crons exigem `CRON_SECRET` quando a variável existir; `encodeURIComponent` nos filtros do KYC; links gravados por usuário só abrem se forem http(s); `SystemChecklist` só admin; `console.log` com e-mail/nome removidos.
+**Banco:** popup ativo sem imagem apontando pra leilão encerrado → desativado. `robots.txt` + `sitemap.xml` criados.
+
+### PRIORIDADE 1 pra manhã (precisa de decisão ou de virar chave em produção)
+1. **Escrow "venda" do `commission_ledger`** (migração 20260716, "regra do Diogo"): o gatilho grava **100% do valor de TODA venda com `seller_id`** como "a liberar" pro vendedor — inclusive produto da empresa vendido por indicação. Hoje: **486 linhas, R$ 69.106,56 a liberar, 481 já vencidas**; a Carteira mostra isso como "A liberar" (Ribeiro vê R$ 19.728; Elenice R$ 16.538; Beatriz R$ 10.703). Só não virou saldo sacável porque `liberar_saldos_maturados()` **não está agendada** (cron só tem `expire-auctions`). Decisão: (a) restringir o gatilho a vendas de lojista terceiro (produto próprio) e apagar as linhas indevidas; e (b) parar de mostrar "A liberar" enquanto isso. Não mexi: é regra de negócio.
+2. **Sessão ETAPA 2**: publicar `SESSAO_MODO=bloquear` e `MP_WEBHOOK_MODO=bloquear` na Vercel. Hoje o crachá só loga — quem souber o id de um admin é admin. O log de produção diz se sobrou tela sem crachá.
+3. **`app_users` legível inteira com a chave pública** (policy `public_read`): CPF, telefone, endereço, saldos, PIX de todo mundo. Precisa de view pública com colunas seguras + migrar AdminUsers/UserManagement/AuditoriaCadastros pra rota admin. Também `payment_settings` e `wa_config`.
+4. **Trigger de escrow em depósitos/reposições**: `createOperationDeposit` e `createSupplyOrder` gravam `seller_id` = o próprio comprador como fallback → escrow de 100% pro comprador (mesma bomba do item 1).
+5. Webhook do MP aceita re-flipar venda **cancelada** pra paga (decisão anterior, 21/08) — se o admin já estornou, entrega em dobro. Sugestão: só flipar cancelada se não houve estorno.
+6. `finalizeSellerOrder` aceita o cargo (`role`) do body e zera `seller_credit_balance` sem CAS; `createPdvOrder` aceita preço unitário do body; `createLicensee` aceita qualquer `career_level` (até 'ceo'). Precisam de crachá em modo bloquear + regra no servidor.
+7. **Política de devolução**: produto da loja diz "Devolução em até 7 dias" + "Compra garantida"; Termos/WelcomeModal dizem "sem devolução". Loja Virtual = CDC 7 dias (obrigatório em venda online) e leilão = sem devolução — alinhar os 5 textos.
+8. **Teto de desconto anunciado** varia 60/70/80/85/90% conforme a tela (index.html 60%, banners 70/85, Layout 90). Escolher um número.
+9. **Endereço da sede** em 3 versões (Footer "Av. das Américas 3500, 22640-102" vs contratos "19.005, Torre 1, Sala 1106, 22790-704"); **e-mail de contato** em 3 (relacionamento@…com, contato@…net, no-reply@ como canal de dúvidas). Fixar num lib.
+10. Banner 3 da loja diz "Frete Grátis" na arte e o ícone "Frete Grátis" do rail — a loja cobra frete. Trocar a arte.
+11. 22 produtos ativos com **preço abaixo do custo**; "Ponto de Retirada Bangu" com telefone `11 99999-9999`; 6 leilões de agosto encerrados com lances e sem vencedor (Luciano 3, dono 2, Sophia 1) — nunca cobrados nem entregues; 19 leilões ativos sem preço de mercado (selo "economize" não aparece); 2 produtos sem categoria; sua conta com R$ 178,76 em `saldo_reservado` sem leilão liderando.
+12. Sem rate limit em `sendEmailCode`/`login`/criação de PIX; KYC em bucket público listável; policies `USING (true)` em xgame_*/xperf_*/metodo_*/diario_*/suporte_chamados/contrato_assinaturas/financial_income.
+
+**Testes desta noite:** `auditoriaNoturnaGraves.test.mjs`, `auditoriaNoturnaServidor.test.mjs` (+ os já existentes). Suíte: 2480.
+
+---
+
+## DIR-156 — Passaporte: um alvo só de 10% no arremate, acertos devolvidos e o texto antigo fora do site
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono, ao vivo (15/09/2026), depois da auditoria do Alexandre: *"texto antigo tem que tirar, vai ficar mais limpo, já tem um documento explicando... e corrigir o que tem que corrigir, pra ficar perfeito e o sistema ficar limpo. Vamos fazer o que é certo. Eu deixo você decidir."*
+
+**Achados (recalculados no banco, arremate por arremate, antes de mexer em qualquer valor):**
+1. **Cobrança em dobro pra quem tinha cupom dos dois modelos.** `finalizeAuctionCore.js` rodava os dois motores no arremate, cada um com o alvo CHEIO de 10%: `recolherBonusPorArremate` (modelo A, tira da carteira) e `cancelarCuponsBloqueados` (modelo B, cancela crédito bloqueado). Quem depositou antes E depois de 19/08 pagava 20%.
+2. **Quem tinha a receber** (10% de cada arremate, FIFO, teto do cupom): Rosenberg R$ 18,22 (cancelados a mais nos cupons de 11/09), Gean R$ 10,00 (cupom de 11/09 cancelado sem arremate que o justificasse), Lucas R$ 0,18, Sophia R$ 9,28 (recolhimento integral de R$ 10 em 16/08 por um arremate de R$ 4 + outro de R$ 3,20 depois).
+3. **Quem NÃO tinha a receber**, ao contrário do meu resumo anterior: Luciano (Bike R$ 1.200 em 11/09 consumiria os R$ 70 do modelo A de qualquer jeito) e o dono (cadeira R$ 246 + Tubo R$ 77,64 consomem os R$ 20). O recolhimento integral de 13–16/08 estava errado na hora, mas as vitórias seguintes zerariam o bônus igual.
+
+**Execução:**
+- **Banco (15/09 ~02:20 UTC, tudo com CAS):** Sophia `saldo_disponivel` 85,06 → 94,34 e cupom `251fc588` `bonus_recolhido_valor` 10 → 0,72 (`creditado`); Rosenberg `74f65aae` `valor_cancelado` 15,86 → 0 e `1daf16cb` 10 → 7,64; Gean `ccdf57c5` `valor_cancelado` 10 → 0; Lucas `4cdf7226` `valor_cancelado` 0,18 → 0, `valor_liberado`/`saldo_restante` 9,82 → 10,00 (lance dele na Mesa foi R$ 150 → 10% ≥ teto). Crédito bloqueado devolvido segue a regra normal daqui pra frente (libera na derrota, cancela na vitória).
+- `api/_lib/finalizeAuctionCore.js`: modelo A roda PRIMEIRO com `finalPrice` (cupons dele são sempre os mais antigos — FIFO) e devolve `recolhido`; modelo B recebe esse valor e cancela só o que sobrou do alvo.
+- `api/_lib/passaporteCoupon.js`: `cancelarCuponsBloqueados(userId, valorArrematado, jaCobrado = 0)` — alvo = 10% − jaCobrado. Sem o parâmetro, comportamento antigo (10% inteiros).
+- `CartaoPassaporte.jsx`: sai "Crédito na carteira R$ 110 — os 10% de bônus entram na hora"; entra "Saldo de lance R$ 100 + cupom de R$ 10 pra Loja Virtual — libera conforme os leilões que você disputar terminarem sem vitória". Prop `credito` vira `cupom`.
+- `PassaporteLances.jsx`: título "R$ 100 que valem R$ 110" vira "R$ 100 de saldo + R$ 10 de cupom"; subtítulo e aviso de passaporte ativo reescritos na regra atual.
+- `tests/passaporteAlvoUnicoTextoNovo.test.mjs` — 8 testes.
+
+---
+
+## DIR-155 — Loja Virtual: buscar vira "modo busca" na hora; WhatsApp oficial em todo o site
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono, ao vivo (15/09/2026), com dois prints: *"Como eu busco e a busca aparece lá embaixo, abaixo de ofertas relâmpago, não sobe, a página não sobe, parece que não está buscando. Então o cliente fica com a sensação de que não está buscando, quando está. Quando eu buscar, tem que sumir licenciado, tem que subir a oferta relâmpago, que só apareçam os produtos... um cliente mandou o print: o número oficial é o 21 98407-2064, precisa identificar esse número errado do print e atualizar em todo site."*
+
+**Achados:**
+1. **Busca:** o resultado já era em tempo real, mas ficava embaixo de banner + Ofertas Relâmpago + cartão do licenciado + pílulas + destaques; a página não rolava. A tela ficava idêntica depois de digitar — a percepção de "não funciona" era legítima.
+2. **Número:** o print do WhatsApp ("Você confia nesta empresa? +55 21 99999-9999", foto vazia) vinha do botão "negociar pelo WhatsApp" do `Cart.jsx`, que abria `wa.me/5521999999999` — número de EXEMPLO esquecido no código. As outras 15 ocorrências de "99999-9999" no site são só *placeholder* de campo de formulário ("digite seu WhatsApp, ex: (21) 99999-9999") — exemplo do telefone do cliente, não da empresa; ficaram. O número oficial já existia certo em 8 arquivos, cada um escrito na mão.
+
+**Execução:**
+- `src/pages/Catalog.jsx` — `modoBusca` (há texto na busca): somem `OfertasRelampago`, `CartaoLojaVirtual`, `PilulasVitrine` e "Produtos em Destaque"; a página rola pro topo; aparece um cabeçalho de resultados ("Resultados para “x” · N produtos" / "buscando no catálogo…" com spinner) com botão **Limpar busca**. Enquanto o filtro local (300 ms) ou a busca no servidor (350 ms) não responderam, mostra esqueleto — nunca "nenhum produto" antes da hora. Vazio de busca tem texto próprio ("Nada encontrado para “x”") e botão "Limpar busca e ver a loja".
+- `src/components/loja/LojaShopeeHeader.jsx` — prop `modoBusca`: o HERO (banner rotativo) some; a caixa vira `type="search"` com borda verde, botão **X** pra limpar, `enterKeyHint="search"` e Enter fecha o teclado do celular (pra ver os resultados).
+- `src/lib/whatsappOficial.js` — fonte única: `WHATSAPP_OFICIAL = '5521984072064'`, `WHATSAPP_OFICIAL_FORMATADO = '(21) 98407-2064'`, `linkWhatsAppOficial(texto)`.
+- `Cart.jsx` passa a usar `linkWhatsAppOficial(...)`; os 8 arquivos que tinham o número certo escrito na mão (`LojaShopeeHeader`, `ProductDetailsModal`, `CatalogProductCard`, `AcoesSalaHeader`, `CatalogOrderTracking`, `CatalogProductDetails`, `Footer`, `CatalogCheckout2`) agora importam da lib — trocar o número no futuro é mexer em UM lugar.
+- `tests/lojaModoBuscaWhatsappOficial.test.mjs` — 10 testes.
+
+---
+
+## DIR-154 — checkout da Loja Virtual: o frete se calcula sozinho e o botão nunca fica morto; crédito Passaporte do Alexandre regularizado
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono, ao vivo (15/09/2026), com print do carrinho no celular, depois da auditoria do Passaporte do cliente Alexandre Walenkamp: *"Eu acho que o problema dele é aqui na hora de comprar na loja não está liberado, precisa olhar isso e fazer essa análise no site e melhorar esse cartão aí do calcular frete que está muito feio, tá muito próximo da borda... fazer essa análise em toda essa parte de checkout para não acontecer esses erros principiantes... tem que ter liberado para ele comprar."*
+
+**Achados da auditoria (dados de produção, via SQL):**
+1. **O dinheiro do lance dele voltou certinho** — R$ 133,66 (lance R$ 117 + frete R$ 16,66 da Caixa de Som Mondial) devolvidos em 11/09 12:27, no `reserva_ledger`; `saldo_reservado = 0`. Nada travado. O lance de 04/08 foi num leilão apagado depois (id não existe mais) e a reserva órfã só voltou em 27/08 pela `faxinaReservasOrfas`.
+2. **O crédito Passaporte é que não existia pra ele gastar**: o cupom dele foi criado pelo backfill de 18/08 no modelo A (`bonus_creditado_em` preenchido, `saldo_restante = 0`). `statusCupons` só considera gastável `saldo_restante > 0`, e `consumirBloqueado` ignora cupom do modelo A — então nenhuma derrota dele liberava nada, o banner "Usar meu desconto" nunca aparecia no carrinho e o `PassaporteCard` da Carteira não renderizava. O cliente estava certo em reclamar da loja.
+3. O checkout em si está coerente ponta a ponta (`passaporteCoupon` → `PassaporteCouponBanner` → `use_passaporte` no payload → `calcularDesconto` no servidor → `raw_base44.passaporte_desconto` → `debitarCupomDaVenda` no webhook). O que falhava era o **frete**: o único jeito de cotar era um link pequeno sublinhado dentro do resumo, e o botão grande ficava DESABILITADO gritando "CALCULE O FRETE PARA CONTINUAR" — tocava e não fazia nada. No celular o texto em `text-lg` + ícone estourava a pílula (o print do dono).
+
+**Decisão do dono e execução:**
+- **Crédito do Alexandre liberado no banco em 15/09 01:57 UTC** (cupom `62830fdf…`): `valor_liberado = 10,00`, `saldo_restante = 10,00`, `status = liberado`, `auction_id_disputado` = Caixa de Som. Valor = teto do cupom (10% do lance de R$ 117 daria R$ 11,70; a regra limita ao cupom de R$ 10 do depósito de R$ 100). `bonus_creditado_em` foi mantido de propósito: continua marcando o cupom como modelo A, então `consumirBloqueado` nunca vai liberar/cancelar nada nele de novo — sem risco de pagar em dobro pra frente. O documento entregue ao cliente (PDF "Relatório de Conta") descreve exatamente isso.
+- `src/pages/Cart.jsx`:
+  - o frete é cotado **sozinho** (debounce 350 ms) toda vez que a assinatura muda (CEP completo, entrega, itens, quantidade) — inclusive quando o endereço salvo carrega. Não recota depois do PIX gerado nem da compra com saldo.
+  - o botão grande **nunca fica desabilitado por frete pendente**: com CEP completo ele cota na hora; sem CEP mostra toast "Preencha o CEP de entrega pra calcular o frete." e rola/foca o campo (`cepInputRef`). Só desabilita enquanto está cotando ou processando.
+  - visual: `text-base sm:text-lg`, `px-6`, `whitespace-normal leading-tight`; enquanto o frete está pendente o botão é cinza ("Calcular frete e continuar" / "Calculando o frete…"), e só fica verde quando vira "PAGAR R$ X".
+- `tests/checkoutFreteAutomatico.test.mjs` — 7 testes cobrindo a cotação automática, o botão vivo, o visual e o caminho inteiro do Passaporte no checkout.
+
+**Fora do escopo (ainda pendente de decisão do dono):** textos desatualizados do modelo A em `CartaoPassaporte.jsx` ("os 10% entram na hora") e `PassaporteLances.jsx` ("R$ 100 que valem R$ 110"); Rosenberg cobrado em dobro (R$ 19,80); recolhimentos integrais pré-18/08 (Luciano, Sophia, dono); linha "+bônus Passaporte" no extrato pros cupons do modelo A.
+
+---
+
+## DIR-153 — quem não está na mentoria não pode ter o dia zerado por não votar na MvM
+
+**Emitida por:** dono, ao vivo, sobre o caso real da Sophia Sant'anna: *"Você não pode zerar o dia de quem não participa da mentoria, de quem não é obrigado a votar. O caso da Sofia Santana, você zerou o dia dela... Ela não está na mentoria. É só quem está realmente na mentoria... Quem não está, que não recebe voto, não é obrigado a votar."*
+
+**Achado (confirmado via SQL em produção antes de mexer em qualquer código):** Sophia Sant'anna está `ativo: true` em `xgame_participantes` (aparece na lista votável, pode ser votada) mas `em_mentoria: false` (nunca entrou na mentoria oficial). A régua radical do não-voto (`resumoDoDia`, `perdeuPorNaoVotar`) julgava `votouEmTodos` sem olhar pra `em_mentoria` — zerava o dia (MvM, Human Token, pontos e X-Pay) de QUALQUER participante ativo, mentoria ou não, contrariando a própria migração `participante_em_mentoria` (que já registrava `ativo` e `em_mentoria` como coisas diferentes) e a fala do dono.
+
+**O que entra (`src/lib/xgame.js`):**
+1. `resumoDoDia` ganha `obrigadoAVotar = participante?.em_mentoria === true` — a régua radical do não-voto (`perdeuPorNaoVotar`) só se aplica quando isso é verdadeiro.
+2. `CrmMetodo.jsx` e `XGame.jsx` já carregam `participante` inteiro (`select('*')` em `xgame_participantes`) e já passam esse objeto pra `resumoDoDia` — nenhuma mudança nas telas, o fechamento é só na função pura.
+
+**Fora do escopo desta diretiva:** a régua de atraso na Fila do Pronto (`perdeuPorAtrasoPronto`) não muda — ela é sobre tarefa de gestão com prazo, não sobre a obrigação de votar, e continua valendo pra qualquer `ativo` independente de mentoria.
+
+**Regras fixas:** nenhuma além das anteriores — `em_mentoria` continua sendo ligado só pelo ADM X-Game (🎓), e o super_admin continua controlando `aceita_ser_votado` por conta própria.
+
+**Prova:** suíte 2448/2448 (2 testes novos/atualizados em `tests/xgame.test.mjs`, cobrindo tanto quem está na mentoria — continua zerando — quanto quem não está, incluindo o caso sem `participante` carregado), lint limpo (mesmos 63 erros pré-existentes em arquivos não tocados), `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
+## DIR-151 — "repetir o dia inteiro" — um clique, não um por um
+
+**Emitida por:** dono, ao vivo (15/09/2026), testando a DIR-150 na hora: *"apareceu, tá top, só que eu botei lá embaixo que já tá aparecendo pra repetir todo dia, porém as mensagens em cima não atualizaram — eu tive que apertar manualmente ali em cima nas tarefas que já foram feitas... quando eu clicar ali embaixo repetir todo dia, todas as de cima precisa aparecer que foi atualizado. Eu não preciso ficar apertando um por um."*
+
+**Achado:** ele marcou a caixa "🔁 repetir esta tarefa todos os dias" que fica junto do campo de criar TAREFA NOVA — só que essa caixa, por estar posicionada embaixo da lista inteira do dia, dá a impressão de ser uma ação sobre o DIA TODO. Na verdade ela só vale pra tarefa nova que for digitada ali (comportamento certo — é o que a DIR-150 pediu). O que faltava de verdade era a ação que ele estava tentando fazer: pegar tudo que já está no dia de hoje e jogar pra rotina permanente, de uma vez só, sem abrir tarefa por tarefa.
+
+**O que entra (`CrmMetodo.jsx`):**
+1. `tarefasParaRepetir` — as tarefas de hoje que AINDA não são da rotina, sem o Ritual (mesma blindagem da DIR-150: o Ritual nunca entra em `metodo_perfil.rotina`).
+2. `repetirDiaInteiro()` — grava a rotina numa TACADA SÓ (`reduce` monta a lista nova inteira, um `gravarRotina` só) — nunca um loop chamando a gravação uma vez por tarefa, que sobrescreveria a coluna repetidas vezes em cima de si mesma.
+3. Botão **"repetir o DIA INTEIRO de hoje todos os dias (N tarefas ainda não são da sua rotina)"** — mesmo lugar/estilo do "regerar o dia" (o caminho inverso: aquele leva a rotina pro dia, este leva o dia pra rotina), só aparece quando sobra alguma tarefa pra repetir — não fala à toa quando já está tudo igual.
+
+**Fora do escopo desta diretiva:** o checkbox da tarefa nova (DIR-150) continua igual — ele está correto, só precisava de companhia pra cobrir o caso "quero tudo de uma vez".
+
+**Regras fixas:** nenhuma além das anteriores.
+
+**Prova:** suíte 2431/2431 (4 testes novos em `rotinaDiaInteiroDeUmaVez.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
+## DIR-152 — a primeira compra de Vendedor/Licenciado escolhe os produtos ANTES de pagar, e a comissão sai pelo motor oficial de 30%
+
+**Emitida por:** dono, sobre a compra real do Luiz Henrique (indicado pelo Ribeiro): *"a gente tinha uma organização de que ele comprava, escolhia os produtos e pagava a primeira compra... Não foi distribuído comissão... o vendedor deveria escolher os produtos e pagar. Isso é um erro... eu quero que o cliente vá lá, escolha os produtos e pague."*
+
+**Achado (análise diligente, confirmada com dados reais de produção via SQL, antes de qualquer correção):**
+1. A Adesão de Vendedor pagava PRIMEIRO (`createSellerAdhesionPayment.js`, `kind='seller_adhesion'`) e só DEPOIS liberava saldo pra escolher produtos — ordem contrária à pedida. Sem dedup: um cliente real acumulou **15 linhas** de "Adesão Vendedor" em `catalog_sales` numa única compra (CPF sem dígito, cartão recusado, novas tentativas), das quais só 1 pagou de verdade.
+2. **Causa raiz da comissão zerada:** essa venda usava um motor ANTIGO (`payDirectCommissions`, `api/_lib/commissions.js`) que só paga os 20% da cadeia telescópica — nunca os 10% do "topo institucional" (CEO/Livoo Live/Embaixador/Conselheiros/Fundadores/Diretoria Executiva/Diretoria de Operação/Executivo de Conta) que toda venda de loja paga pelo motor oficial (`api/_lib/arvoreOficial.js`, `calcularComissao`). O referrer real (Ribeiro, cargo `diretoria_operacao`) tem 0% de venda direta — **correto**, ele ganha pelo topo institucional — só que esse motor nunca era chamado no caminho da adesão. Não foi erro de conta: foi a venda nunca ter passado pelo motor certo. Rodando `calcularComissao` de verdade contra os dados reais da venda (R$ 1.497), o valor devido era R$ 449,11 (30%, batendo a régua oficial), sendo R$ 240,59 do Ribeiro (parceiro 15% venda direta + executivo 1% + pool diretoria_operação 0,5%) e o resto entre CEO/Livoo Live/Embaixador/Conselheiros/Fundadores/Diretoria Executiva/Ponto de Retirada Bangu/Loja Física/Distribuidor Bangu, todos na cadeia real dessa venda.
+3. **Correção retroativa já aplicada** (fora do código, direto no banco, com o mesmo motor oficial e a mesma auditoria de idempotência que `storeFulfill.js` usa): os 35 lançamentos de `commission_records` da venda `4166dc0afbe06c3fc0074fe2` foram gravados e os saldos de comissão dos 16 beneficiários, creditados — conferido depois, bate exatamente com o calculado.
+
+**O que entra (correção estrutural, pra nunca mais acontecer):**
+1. `createMPPix.js` / `createMPCatalogCardCheckout.js` — aceitam `role_grant` (`'vendedor'` ou `'licenciado'`), conferem o valor mínimo (R$ 1.497 / R$ 5.000) **no servidor** (nunca só na tela) e criam a venda como `kind: 'loja'` normal, com `role_grant` marcado em `raw_base44` — a mesmíssima venda de loja que qualquer cliente faz, com o mesmíssimo frete calculado no checkout.
+2. `mpWebhook.js` — `concederCargoDaPrimeiraCompra(sale)`: depois que `fulfillStoreOrder` já pagou a comissão pelo motor oficial de 30%, concede o cargo ao comprador (`career_levels`, `primary_career_level`, `is_seller` se vendedor) — idempotente, nunca reconcede.
+3. `VendedorEscolherProdutos.jsx` vira a ETAPA 1: escolhe produtos até bater o mínimo, manda pro `/Cart` normal da loja (carrinho + frete + pagamento único). Quem **já pagou** pelo caminho antigo (tem `seller_credit_balance` de antes desta correção — o próprio Luiz Henrique) continua no modo de saldo existente, sem tocar no que já foi pago, exatamente como o dono pediu ("adicionar um saldo... pra ele poder escolher... pra gente poder enviar" — ele já tem os R$ 1.497 de saldo, intactos).
+4. `Cart.jsx` — lê o `pendingRoleGrant` da tela anterior, barra o checkout abaixo do mínimo (em produtos, frete à parte), nunca permite pagar a primeira compra com saldo (ninguém novo tem saldo ainda), e manda `role_grant` pro PIX/cartão.
+5. `VendedorCheckout.jsx` (a tela de pagar-primeiro) e `createSellerAdhesionPayment.js` ficam no código, mas ninguém mais chega neles por navegação normal — `VendedorCheckout.jsx` redireciona direto pra escolher produtos; `createSellerAdhesionPayment.js` ganhou uma correção de higiene à parte (cancela pendência anterior do mesmo usuário antes de abrir uma nova), pra quem ainda cair nele por link salvo não empilhar pedido de novo.
+6. `SejaVendedor.jsx`/`SejaLicenciado.jsx` — copy e botões corrigidos pra descrever a ordem certa ("escolha os produtos... e pague", não mais "pague... e escolha").
+
+**Fora do escopo desta diretiva:** nenhum motor de comissão novo foi criado — a correção foi parar de reinventar um motor à parte e usar o mesmo que a Loja Virtual já usa. `kind='adesao'` (adesão de Licenciado/Parceiro/etc. fora do fluxo de Vendedor) tem o mesmo desenho antigo (`activateAdesao`) e o mesmo risco de faltar o topo institucional, mas **zero vendas pagas até agora** (conferido no banco) — fica pra decisão própria do dono se esse caminho também deve migrar pro mesmo modelo de `kind='loja'`, não risquei essa mudança maior sob a urgência deste pedido. Pagamento da primeira compra com saldo de comissão (`payWithBalance`) não foi ligado ao `role_grant` — caso de borda irreal pra quem está se cadastrando agora (ninguém tem saldo ainda); por isso o Cart.jsx bloqueia essa combinação explicitamente, em vez de fingir suportar.
+
+**Regras fixas:** nenhuma além das anteriores. A comissão de qualquer venda de loja (inclusive a primeira compra de Vendedor/Licenciado) continua sendo SEMPRE `calcularComissao`/`arvoreOficial.js` — nenhum caminho novo cria um motor de comissão próprio.
+
+**Prova:** suíte 2443/2443 (16 testes novos em `tests/primeiraCompraVendedorEscolhePrimeiro.test.mjs`), lint limpo nos arquivos tocados, `npm run build` sem erro. Correção retroativa da venda real conferida direto no banco (saldos antes/depois batendo com os 35 lançamentos).
+
+**Status:** EM VIGOR.
+
+---
+
+## DIR-150 — "repetir todo dia" fica claro no momento certo, não escondido num ícone
+
+**Emitida por:** dono, ao vivo (15/09/2026): *"as pessoas estão editando a rotina e elas querem deixar salva do dia seguinte as rotinas do dia a dia, e não está claro na plataforma [...] cada rotina que ela coloque, dê a opção de ela manter recorrente isso com a rotina diária dela que ela já tem padrão. Isso é muito importante deixar bem claro [...] gostaria que você fizesse uma análise e deixasse cada vez mais claro isso e melhor organizado."* Contexto que ele deu junto, pra não confundir com o Ritual: quem está fora da mentoria organiza a própria rotina; quem está na mentoria recebe a rotina padrão com o Ritual do Amanhecer como núcleo — editável, mas perde o valor do ritual se mexer nele.
+
+**Achado:** a DIR-146 (14/09) já tinha resolvido a GRAVAÇÃO (o botão existia e funcionava), mas não a CLAREZA — três furos concretos:
+1. O botão "repetir todo dia" era só um ÍCONE (`<Repeat/>`), com o texto vivendo só no `title` — que não aparece no celular (sem hover) e, mesmo no desktop, exige passar o mouse pra descobrir o que ele faz. Depois de clicar, nada na tela dizia se aquela tarefa JÁ era recorrente — ela tinha que confiar de memória ou abrir "A minha rotina" pra conferir.
+2. A escolha só existia DEPOIS de criar a tarefa, como um segundo passo separado — o pedido de hoje ("cada rotina que ela coloque") pede a opção NO MOMENTO de colocar, não depois.
+3. Editar hora/título de uma tarefa de hoje dava só um AVISO passivo ("isto muda só o dia de hoje — pra mudar todo dia, edite a sua rotina") sem nenhuma ação ali — ela tinha que sair, abrir o painel da rotina e digitar tudo de novo à mão.
+4. Achado à parte, checando o código de ontem: o botão "repetir todo dia" (e agora o checkbox de editar) não tinham nenhuma blindagem contra o Ritual do Amanhecer — a mesma tarefa que carrega `ehTarefaDeGratidao(t.titulo)` também passava pela lista genérica de tarefas do dia. Marcar "repetir" nele criaria uma entrada FANTASMA em `metodo_perfil.rotina` com o mesmo título do ritual, brigando todo dia com o ritual de verdade (que é gerado e pesado à parte, 20% do dia, DIR-142) — bug real, corrigido nesta mesma diretiva antes que alguém batesse nele.
+
+**O que entra (`CrmMetodo.jsx`):**
+1. `estaNaRotina(titulo)` — helper único, reusado pelo botão, pelo selo e pelo pré-preenchimento do checkbox de edição.
+2. Cada tarefa do dia mostra ou o botão `🔁 repetir todo dia` (com TEXTO, não só ícone) ou, se já está na rotina, o selo `🔁 já repete todo dia` — nunca os dois, nunca nenhum quando é o Ritual.
+3. Um checkbox `🔁 repetir esta tarefa todos os dias` aparece JUNTO do campo de criar tarefa nova — marcado, a mesma tarefa recém-criada já entra na rotina permanente, no mesmo clique.
+4. O editor inline de hora/título ganha o mesmo checkbox (`🔁 repetir essa mudança todos os dias`), pré-marcado quando a tarefa editada já é da rotina (ela está corrigindo o padrão, não criando uma exceção) — ao salvar, a MESMA mudança é aplicada na rotina (troca o item existente por título original, ou inclui se ainda não era recorrente). Pro Ritual, continua só o aviso — sem checkbox — com o texto trocado pra explicar que o horário dele é definido nele mesmo (janela do ritual, DIR-142), não na rotina genérica.
+
+**Fora do escopo desta diretiva:** qualquer mudança na regra de quem edita o quê (fora/dentro da mentoria) ou no peso/janela do Ritual — isso já está certo (DIR-80, DIR-142) e não foi tocado; esta diretiva é só sobre tornar a opção de recorrência visível e no momento certo.
+
+**Regras fixas:** nenhuma além das anteriores. O Ritual do Amanhecer nunca aparece em `metodo_perfil.rotina` por nenhum caminho novo desta diretiva.
+
+**Prova:** suíte 2427/2427 (6 testes novos em `rotinaClaraRecorrente.test.mjs`, 1 teste ajustado em `rotinaRepetirTodoDia.test.mjs` pro novo helper `estaNaRotina`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
+## DIR-149 — editar/excluir cliente direto na Lista de Network, e o atalho pra virar oportunidade sem redigitar
+
+**Emitida por:** dono, ao vivo (14/09/2026): *"Na lista de contato, eu preciso ter um botão de editar o cliente e excluir o cliente porque está tendo cliente duplicado [...] quando eu vou criar uma nova oportunidade no acompanhamento, não está salvando isso [...] faça esse banco de atualização através de atualizações ou pelo acompanhamento ou pelo contato feito ou pela lista."*
+
+**Achado:** investigação confirmou que **não é bug de salvar** — é fiação faltando. `customers` é a MESMA tabela por trás da Lista de Network (Hábito 3) e da aba Acompanhamento → Clientes; "Contato feito" (Hábito 4) já grava corretamente na mesma linha (`contatos_metodo[]`). O que faltava:
+1. A Lista de Network (Hábito 3, `CrmMetodo.jsx`) nunca teve botão de editar nem de excluir cliente — só "Qualificar"/"Contatar". Sem excluir, um cadastro duplicado feito ali fica preso, sem jeito de limpar pela própria tela. Os handlers (`handleEdit`/`handleDelete`) e o modal já existiam prontos — só usados hoje pela aba Acompanhamento → Clientes (`CrmCustomersTable.jsx`).
+2. O atalho "🚀 Esteira" (vira oportunidade com nome/contato já preenchidos, sem redigitar) já existia no Hábito 4 — Contato, mas não na Lista de Network. Quem estava direto na lista (onde o cadastro já está completo) e queria criar a negociação tinha que ir pro Hábito 4 primeiro, ou abrir a aba Acompanhamento e digitar tudo nos campos do formulário "+ Nova oportunidade" (que abre em branco).
+
+**O que entra:**
+1. `CrmMetodo.jsx` — duas props novas (`onEditarCliente`, `onExcluirCliente`) e três botões (ícone) na linha de cada pessoa da Lista de Network: 🚀 Esteira (reusa `onCriarOportunidade`, já existente), ✏️ Editar, 🗑️ Excluir — mesmo estilo/confirmação da aba Acompanhamento (excluir pede confirmação antes de apagar).
+2. `CrmClientesTab.jsx` — liga `onEditarCliente={handleEdit}` e `onExcluirCliente={handleDelete}` na chamada de `<CrmMetodo>`. **Zero lógica nova**: são os MESMOS handlers que já existiam e já gravam/apagam em `customers`; o modal de edição já estava montado fora das Tabs (nível certo, confirmado antes de mexer — havia um bug documentado exatamente sobre modal preso dentro de aba escondida, DIR-46).
+
+**Fora do escopo desta diretiva:** o card de oportunidade (`captacao_oportunidades`) guarda uma CÓPIA do nome/e-mail/telefone do cliente no momento da criação, não uma referência viva — se o cliente for editado DEPOIS de já ter uma oportunidade aberta, o card antigo não atualiza sozinho. Isso é uma decisão de arquitetura (histórico da negociação como foto do momento vs. sincronizado ao vivo) que fica pra uma diretiva própria, se o dono quiser mudar — não risquei essa mudança maior sob a pressão do pedido.
+
+**Regras fixas:** nenhuma além das anteriores. Excluir cliente continua pedindo confirmação — não é ação de um clique só.
+
+**Prova:** suíte 2402/2402 (3 testes novos, `listaNetworkEditarExcluir.test.mjs`), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
+## DIR-148 — a pílula do X-Music para de mentir: mostra o que o player está tocando DE VERDADE
+
+**Emitida por:** dono, direto: *"a música está tocando automático e isso é certo, porém está colocando como se estivesse sem tocar, deveria estar verde e sinalizar que a rádio está tocando. Analise e veja o que está acontecendo e corrija."*
+
+**Achado:** `ligado` (o que pinta a pílula verde/cinza e o texto "tocando"/"desligado") era só a INTENÇÃO — o que o botão pediu por último — nunca o que o player fazia de verdade. O embed do YouTube sempre nasce com `autoplay:1`; em qualquer sessão/navegador onde esse autoplay COM SOM é permitido (o caso do dono), ou quando alguém usa os controles NATIVOS do próprio player do YouTube (visíveis na tela, `controls:1`), o som tocava de verdade enquanto a pílula, presa na intenção antiga (o padrão de `lerLigado()` é `false`), seguia cinza dizendo "desligado". A régua nunca escutava o player pra saber se ele estava, de fato, tocando ou pausado.
+
+**O que entra (`XMusic.jsx`):** `PlayerYT` ganha um `onEstadoReal`, avisado pelos eventos DE VERDADE do player do YouTube (`onStateChange`: `PLAYING`→`true`, `PAUSED`→`false`) — a fonte da verdade, não mais só a intenção. Esse aviso vai direto pro mesmo `setLigado` que já pinta a pílula, o botão e o ícone — não é um segundo estado paralelo, é a MESMA variável agora sincronizada nos dois sentidos: toque no botão manda o player tocar/pausar (como já era) E o player avisa de volta o que está de fato fazendo (novo). Cobre os dois jeitos de o estado real divergir da intenção: autoplay que o navegador realmente permite, e alguém pausando/tocando pelos controles nativos do YouTube.
+
+**Fora do escopo:** nenhuma mudança na fila de estações, na playlist, no cronômetro ou em qualquer outra parte do X-Music — só a pílula deixar de mentir sobre o que está saindo do alto-falante.
+
+**Prova:** suíte 2403/2403 (4 testes novos em `tests/xmusicPilulaReflete.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR — mergeado no `main`.
+
+---
+
+## DIR-147 — o vigia do saldo do AI Gateway: aviso ANTES de chegar em zero, não depois
+
+**Emitida por:** dono, ao vivo (14/09/2026), depois de conferir que a DIR-146 restaurou o crédito da Eloá e não achou mais nenhuma outra vítima no histórico: *"o crédito quando estiver acabando precisa ter um aviso, né, pra não ocorrer mais isso. Isso é muito sério, a gente não pode ficar assim."*
+
+**Achado:** a DIR-146 consertou o que o app FAZ quando a IA está fora do ar (nunca mais descarta nem reprova sozinho) — mas não havia NENHUMA forma de saber que o crédito estava acabando ANTES de virar 402 de verdade. A única forma de descobrir era abrir o dashboard da Vercel (`vercel.com/.../ai-gateway`), e ninguém abre isso às 5h da manhã — foi exatamente por isso que o incidente pegou todo mundo de surpresa.
+
+**O que entra:**
+1. `saldoGateway(ia)` e `SALDO_BAIXO_USD` (`api/_lib/ia.js`) — chama `GET https://ai-gateway.vercel.sh/v1/credits` (rota documentada pela Vercel, devolve `{balance, total_used}`) com a MESMA chave que já valida comprovação de verdade. `null` quando não dá pra saber (fora do gateway, ou a própria checagem falhou) — nunca inventa um número. Teto padrão: $10 (configurável por `AI_GATEWAY_SALDO_BAIXO_USD`).
+2. `xgameValidarPrint.js` (GET) — o health-check que o ADM já chamava (`?ping=1`, DIR-84.1) passa a devolver `saldo_gateway_usd`/`saldo_baixo` junto, sem chamada extra ao modelo.
+3. **Aviso visível toda vez que o gestor abre o ADM X-Game** (`XGameAdmin.jsx`) — badge novo ao lado do "IA de visão RESPONDENDO": `🔋 crédito da IA: $X.XX`, virando `🪫 ... ACABANDO, recarregue agora` (com o link direto) quando abaixo do teto.
+4. **Vigia automático** (`api/functions/alertaCreditoGateway.js`, cron a cada 4h em `vercel.json`) — mesmo padrão do vigia de reservas órfãs (`alertaReservasOrfas.js`, 27/08): só AVISA, nunca recarrega sozinho (quem decide comprar crédito é o dono). Grava aviso em `system_logs` quando o saldo está baixo, com o valor exato e o link de onde recarregar. Quando a PRÓPRIA checagem falha, também avisa (`SALDO_DESCONHECIDO`) — silêncio sem contexto foi o que já causou o incidente uma vez, não pode virar hábito.
+
+**Fora do escopo desta diretiva:** notificação push (WhatsApp/Slack) direto pro dono — a checagem de saldo hoje só fica visível no ADM (quando ele abre) e em `system_logs` (quando alguém olha o log). Puxar isso pra um canal que ele efetivamente monitora em tempo real (Zeca/Slack, ou WhatsApp) fica pra diretiva própria, se ele quiser — não fui atrás de escolher um canal e arriscar configurar errado sob a pressão do incidente.
+
+**Regras fixas:** nenhuma além das anteriores. O vigia NUNCA compra crédito sozinho — só avisa; recarregar é decisão humana.
+
+**Prova:** suíte 2387/2387 (9 testes novos: 2 em `xgameValidarPrintHandler.test.mjs`, 7 em `alertaCreditoGateway.test.mjs` novo), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
+## DIR-146 — IA fora do ar deixou de custar crédito de ninguém: comprovação vira `pendente_ia`, nunca some nem reprova sozinha
+
+**Emitida por:** dono, ao vivo (14/09/2026), depois de um incidente real na madrugada — 5 capturas de tela e a mensagem: *"Você me disse ontem que estava funcionando todo o ritual, e hoje nós fomos pego de surpresa, porque o ritual de várias pessoas não salvou. As pessoas concluíram mas não salvou. Aí a de validação não está funcionando. [...] eu preciso de que isso não falhe mais, isso não pode falhar de jeito maneira [...] eu quero que você analise tudo o que deu errado, que você dê o ponto pras pessoas que fizeram, as pessoas fizeram só que não conseguiu salvar [...] você me entregue isso pronto e nunca mais falhar [...] coloque uma prevenção agora pra isso nunca mais acontecer."* E, sobre o planejamento da Distribuidora Eloá que não valeu no dia seguinte: *"a gente tem que ter uma opção também, de quando a pessoa montar o teu planejamento, ter um botão de salvar pros outros dias, e isso ficar claro."*
+
+**Achado (causa raiz confirmada, não suposição):** o Vercel AI Gateway ficou sem crédito (`HTTP 402 insufficient_funds`) entre ~06:00 e ~06:06 BRT de 14/09 — `api/functions/xgameValidarPrint.js` já tratava isso corretamente (devolve `{ia_indisponivel:true}`, nunca finge veredito), mas o que a TELA fazia com essa resposta é que causava o prejuízo, em dois lugares diferentes:
+1. **Tarefa normal (foto/print), `CrmMetodo.jsx`:** o ramo `decisao.acao === 'ia_fora'` **não gravava nada** — a tentativa "sumia sem deixar marca" (só um toast e uma entrada de `falhasPorTarefa`, que morre se a pessoa não voltar a tentar). Foi exatamente o caso da Eloá com "Banho gelado": ela mandou a foto de verdade, a IA não respondeu, e não sobrou NENHUM registro em `metodo_tarefas.comprovacao` — zero prova, zero ponto.
+2. **Ritual do Amanhecer, `src/lib/ritualEmBlocos.js`:** `blocoReprovado()` tratava `duvida` no bloco de visualização como reprovação automática (regra certa da DIR-125, pra ambiente ruim — carro/academia/escritório). O problema: a MESMA função de `blocoReprovado` era chamada com o veredito `{veredito:'duvida', ia_indisponivel:true}` que a IA devolve quando está fora do ar — e a régua não distinguia "a IA viu e duvidou do ambiente" de "a IA nunca chegou a ver". Um ritual completo de verdade (print, 20s de áudio de gratidão, 121s de vídeo de visualização — caso real da Eloá, `d8b4c675-fce3-49af-9dca-5efd54c78d7a`) virou `status:'ritual_parcial'`, `valido:false`, `feito:false` — crédito zero por um trabalho genuíno, só porque a Vercel ficou sem saldo.
+3. **A rotina da Eloá não "salvou pro dia seguinte":** ela organizou o dia 13/09 inteiro na tela dela (22 tarefas próprias, com hora e título dela) usando o campo de adicionar tarefa do dia — isso grava só em `metodo_tarefas` (o retrato de UM dia). O molde permanente (`metodo_perfil.rotina`, DIR-80) continuou `null`, então 14/09 nasceu com a `ROTINA_PADRAO` genérica da casa. Não é bug de sincronismo: a pessoa nunca tinha um botão, no lugar onde ela monta o dia, pra dizer "isso vale todo dia" — só existia (DIR-142.2) dentro do ADM, pro gestor fazer por ela.
+
+**O que entra:**
+1. `src/lib/ritualEmBlocos.js` — `blocoReprovado()` ganha uma guarda no topo: `if (veredito?.ia_indisponivel) return false` — IA fora do ar NUNCA é reprovação, em bloco nenhum (nem visualização). Nova função pura `blocoPendenteIA()`. `seloDoRitual()` ganha um quarto selo, `'pendente_ia'`, distinto de `'parcial'` (que continua sendo "faltou alguém entregar algo") — os três blocos vieram, ninguém foi reprovado, só falta confirmação. `statusDoRitual()` mapeia pra `'ritual_pendente_ia'`. `pendenciasDoRitual()` escreve a mensagem certa: "FOI SALVO, não foi perdido nem reprovado, só está aguardando confirmação" — nunca a frase de reprovação genérica.
+2. `CrmMetodo.jsx` — o ramo `ia_fora` (tarefa normal) passa a **gravar** a comprovação como `status:'pendente_ia', valido:false` (nunca `true`: IA fora do ar continua não virando aprovação sozinha — a régua de "intervenção humana zero" da DIR-89 não voltou atrás, só ganhou uma saída pra falha de infra) em vez de descartar. O anti-reuso por hash e o anti-reciclagem visual (fotos anteriores mandadas pra IA comparar) passam a EXCLUIR comprovações `pendente_ia` — sem isso, a própria pessoa reenviando a mesma foto real seria barrada como "imagem já usada". O fechamento do ritual (`concluirRitual`) grava `ia_indisponivel` no rastro de topo quando o status final é `ritual_pendente_ia`, pro laudo (`leituraDoRastro`) mostrar "não foi ela" também nesse caso. Toast e telas do Ritual (`XGameRitualAmanhecer.jsx`) ganham texto próprio pro estado pendente — nunca soa como "você fez menos".
+3. **A fila do gestor enxerga os dois `pendente_ia`** (`XGameAdmin.jsx` e `Comprovacoes.jsx`, as duas cópias independentes da mesma fila) — nova aba "IA fora do ar", contador visível, e o botão "Aprovar ✔" (já existente, `aprovarComp`/`aprovar`) passa a valer pra esses status: mesmo clique que já aprovava manualmente um `em_analise`, sem função nova. A aba padrão ao abrir a fila virou `pendente_ia` em vez de `em_analise` (que, desde a DIR-89, quase nunca nasce mais sozinho). `relatorioComprovacoes.js` (o laudo — a defesa de quem reclama) ganha os rótulos e classifica os dois status como "em análise", nunca como "reprovada".
+4. **Botão "repetir todo dia" na própria tarefa** (`CrmMetodo.jsx`, ícone 🔁 ao lado de editar/apagar) — mesma função `incluirNaRotina`/`gravarRotina` que já existia dentro do painel escondido "A minha rotina", só que direto na tarefa do dia, onde a pessoa está montando o planejamento. Recusa duplicar título (mesmo aviso do ADM). Claro, visível, sem precisar abrir painel nenhum nem redigitar hora/título.
+5. **Backfill de produção (dado real, não migração):** o ritual da Eloá (`d8b4c675-fce3-49af-9dca-5efd54c78d7a`) foi aprovado manualmente via SQL direto — mesma transformação de campos que `aprovarComp` faz (`status:'aprovada_manual', valido:true, feito:true`), com `motivo_gestor` documentando a causa (402, blocos entregues de verdade entre 06:00 e 06:06). A rotina PERMANENTE dela (`metodo_perfil.rotina`) foi materializada com as 22 tarefas reais do dia 13/09 (hora + título dela, extraídas de `metodo_tarefas`), pra 15/09 em diante nascer com a rotina dela, não a padrão da casa.
+6. **Auditoria de escopo:** varredura em `metodo_tarefas` de 13 e 14/09 inteiros (toda linha com sinal de `ia_indisponivel`/`insufficient_funds`/`402`, mais toda linha com `comprovacao` no dia 14/09, ordenada por horário) confirmou que **só a Eloá** foi vítima real do 402 — os dois outros casos que pareciam suspeitos (Elenice Lima e Iara Figueiredo, ambas com `ritual_em_andamento`) têm veredito REAL da IA nos dois blocos (dúvida legítima sobre o enquadramento da foto, sem nenhum sinal de 402) — não mexidos. O caso do Ribeiro (reprovado por foto praticamente preta) é reprovação legítima, confiança 100%, motivo real — não mexido.
+
+**Fora do escopo desta diretiva:** adicionar crédito no Vercel AI Gateway — isso é billing, só o dono resolve, em `https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dtop-up`. Retentativa automática em segundo plano quando a IA volta (hoje depende da pessoa reabrir e reenviar, ou do gestor aprovar pela fila) fica pra uma diretiva própria, se o dono quiser.
+
+**Regras fixas:** nenhuma além das anteriores. `pendente_ia` nunca é `valido:true` sozinho — só um clique humano (gestor) ou uma nova resposta real da IA muda isso; a régua de "zero intervenção humana" da DIR-89 segue valendo pro caminho feliz, IA fora do ar é a única exceção que sempre existiu (DIR-84.1) e continua sendo.
+
+**Prova:** suíte 2378/2378 (12 testes novos: `REB-11`/`REB-12` em `ritualEmBlocos.test.mjs`, `iaForaDoArNaoDescarta.test.mjs` novo com 6 casos cobrindo CRM/XGameAdmin/Comprovacoes/laudo, `rotinaRepetirTodoDia.test.mjs` novo, `rastroDaComprovacao.test.mjs` ajustado pro novo parâmetro do rastro), lint limpo nos arquivos tocados, `npm run build` sem erro.
+
+**Status:** EM VIGOR — código pronto, backfill de produção já aplicado (crédito da Eloá restaurado, rotina dela materializada), aguardando merge do PR.
+
+---
+
+## DIR-147 — o treinamento do Encontro da Mentalidade fica editável de verdade, e as lâminas ficam conectadas
+
+**Emitida por:** dono, direto e urgente: *"eu não consigo editar as lâminas... as perguntas do treinamento não levam a lugar nenhum, não adianta de nada... está sem conexão, está sem sentido. Precisa ter um sentido, aonde eu coloco treinamento, pra onde o treinamento vai, onde ele aparece, aonde eu edito as lâminas... analise essa porra de forma diligente e me traga uma solução definitiva pra isso aqui ficar perfeito. Fica fluido."*
+
+**Achado na auditoria (a causa real, não sintoma):** existiam DOIS "treinamento" no Encontro da Mentalidade que não se falavam. (1) `encontro.treinamento` — a caixa do cabeçalho "o treinamento (40 min)" — é o ÚNICO que a apresentação de fato usa (DIR-79), mas só podia ser APAGADO e reescrito do zero ("trocar o treinamento"): pra mudar uma palavra, era preciso reescrever tudo. (2) `roteiro.treinamento` — o rascunho da IA/régua, dentro de "O tópico do encontro" — tinha um botão "editar" que parecia funcionar, mas assim que existia um treinamento gravado (1), esse rascunho ficava MUDO: editar ali não tinha efeito nenhum na apresentação — um segundo formulário que não levava a lugar nenhum. Achado também: `roteiro.abertura` (o slide "Abertura", logo depois da Mentalidade) era gravado e usado na apresentação, mas nunca aparecia nem podia ser editado fora dela.
+
+**O que entra:**
+1. `treinamentoDoRoteiro()` (nova, `src/lib/encontro.js`) — a ponte: converte o rascunho da IA/régua pro formato do treinamento gravado.
+2. **Gerar o tópico já grava o treinamento automaticamente**, quando ainda não existe um gravado — a caixa do cabeçalho nunca mais fica dizendo "ainda sem material" logo depois de gerar um treinamento inteiro.
+3. **"trocar o treinamento" (que só apagava) virou "editar"** — os campos (título, material, passos) chegam JÁ PREENCHIDOS com o que existe; "apagar" continua existindo, mas como ação separada e explícita, com confirmação.
+4. **Um só treinamento, em vez de dois que discordavam**: "O tópico do encontro" não tem mais um segundo formulário de treinamento — mostra o mesmo treinamento EFETIVO que a apresentação usa, com um link "editar o treinamento lá no topo ↑".
+5. **A Abertura vira uma lâmina de verdade**: aparece e pode ser editada em "O tópico do encontro" (antes só existia dentro do Apresentar, sem lugar nenhum pra editar fora dele).
+6. **Editar direto de dentro da lâmina**: o modo Apresentar ganha um botão de editar — fecha a apresentação e já abre a edição, sem precisar caçar o botão certo depois.
+
+**Fora do escopo:** nenhuma mudança na geração do roteiro em si (IA/régua local), no cronômetro, em direcionar demandas ou na visão executiva — só a conexão e a edição do treinamento e da abertura.
+
+**Prova:** suíte 2380/2380 (12 testes novos em `tests/encontroTreinamentoConectado.test.mjs`), lint limpo, `npm run build` sem erro, e os 14 testes de navegador (`tests/navegador/encontro.spec.mjs`, Playwright real contra Chromium) continuam passando — incluindo prova visual (screenshots) do fluxo completo: gerar tópico → treinamento já pronto → editar com campos preenchidos → o mesmo conteúdo espelhado no tópico → o botão de editar dentro do Apresentar.
+
+---
+
+## DIR-141 — a 4ª tabela cortada em 1.000 linhas caladas: `metodo_tarefas` do ciclo inteiro também estourava, e "hoje" sumia do ADM X-Game
+
+**Emitida por:** o dono, ao vivo, testando o preview da correção da DIR-140 — o mesmo "0/0 tarefas hoje" no ADM continuava, mesmo com o fuso já corrigido, enquanto a Visão Executiva seguia mostrando o número real (10/173). *"quantas tarefas o time tem hoje, pelo amor de deus, sem achismo."*
+
+**Achado:** a DIR-140 corrigiu um bug real, mas não era o único. `XPerformanceGestao.jsx` (`carregarTarefas`) carrega o **ciclo inteiro** (~30 dias) de `metodo_tarefas` para **todo o time** (até 16 pessoas × ~20 tarefas/dia) numa única consulta, ordenada por data crescente. Isso passa de 1.000 linhas bem antes de chegar no dia de hoje (dia 7 do ciclo já soma ~2.100 linhas) — e o Supabase **corta em 1.000 por padrão, sem avisar** (HTTP 200, sem erro). É a MESMA falha já corrigida três vezes nesta casa (estoque, CRM de clientes, votos do MvM — `lerTudoDoSupabase.js`), agora numa quarta tabela. `PerformanceEquipe.jsx` tinha o mesmo padrão, pior ainda: nem filtrava por pessoa, o time inteiro da empresa na mesma janela.
+
+**O que entra:**
+1. `XPerformanceGestao.jsx`: a leitura do ciclo inteiro passa a usar `lerTudoDoSupabase` — nunca mais corta calado, não importa quantas linhas o ciclo já tenha.
+2. `PerformanceEquipe.jsx`: mesma correção na leitura do período do time inteiro.
+3. Teste novo (`tests/tarefasDoTimeSemCorte.test.mjs`) trava que as duas telas usam a peça paginada — não um `select()` cru — pra este bug não reaparecer numa quinta tabela sem ser pego antes do merge.
+
+**Prova:** suíte 2346/2346 (2 testes novos), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-140 — o "hoje" em UTC: das 21h às 23h59 de Brasília, o ADM X-Game mostrava o dia seguinte (0/0), a Visão Executiva mostrava o dia certo (10/173)
+
+**Emitida por:** o dono, ao vivo, comparando o X-office (ADM X-Game) mostrando "0/0 tarefas concluídas hoje" com o `/XGame` (Visão Executiva), no mesmo instante, mostrando "10/173" — mesma população (10 pessoas), dois números de "hoje" completamente diferentes. Pedido: *"essas tarefas de ADM X-GAME precisam estar exatamente como a tarefa da X-GAME que clicamos... preciso de uma auditoria extremamente diligente."*
+
+**Achado:** `XPerformance.jsx` (a tela que hospeda o ADM X-Game) calculava "hoje" com `new Date().toISOString().slice(0, 10)` — a data em **UTC**, não em Brasília. Esta é a MESMA classe de bug já achada e corrigida duas vezes antes (DIR-129, na data; DIR-134, na hora do dia) — só que num arquivo que nunca tinha sido varrido. Das 21h às 23h59 de Brasília, o UTC já virou o dia seguinte: o ADM filtrava "tarefas de hoje" por uma data que ainda não tem nenhuma tarefa gravada no banco — 0/0, sempre, nesse intervalo de quase 3 horas todo santo dia. A Visão Executiva já usava `dataISO()` (o helper certo, força America/Sao_Paulo) — por isso só ela mostrava o número real.
+
+Achado o mesmo padrão, numa varredura em TODA a pasta de telas do Método/X-Game (não só onde o dono via o problema), em mais **10 arquivos**: `PainelCorporativo.jsx`, `QuadroCompromisso.jsx`, `EncontroMentalidade.jsx`, `PainelLaudo.jsx`, `PerformanceEquipe.jsx`, `MentalidadePagina.jsx` (inclusive decidia errado se hoje é segunda-feira), `XGameRitualAmanhecer.jsx` (a música do dia e o embaralhar do quadro dos sonhos), `DiarioDeBolso.jsx` (o início da semana) e `CrmEsteiraCaptacao.jsx` (data padrão de um aporte).
+
+**O que entra:**
+1. Todos os 11 arquivos trocam `new Date().toISOString().slice(0, 10)` (ou o `Date` cru que virava isso) por `dataISO()` (`@/lib/xgame`) — a mesma fonte única já usada em `XGameVisaoExecutiva.jsx`, `CrmMetodo.jsx` e `XGame.jsx`.
+2. Teste novo em `tests/xgameFusoHorario.test.mjs`: varre **toda** a pasta `src/components/licensing/CentralVendas/*.jsx` procurando o padrão `toISOString().slice(0, 10)` usado como "hoje" — não fica mais restrito aos arquivos onde o bug já apareceu uma vez. Este bug já foi achado ao vivo em produção três vezes (DIR-129, DIR-134, esta); a quarta vez tem que ser um teste vermelho antes do merge, não um print do dono.
+
+**Prova:** suíte 2268/2268 (1 teste novo, de varredura ampla, mais 10 testes preexistentes da mesma família continuam verdes), lint limpo, `npm run build` sem erro.
+
+---
+
+## DIR-142 — o Ritual do Amanhecer vale sempre 20% do dia (fora do teto de peso 1-6), e ganha janela própria pra quem tem fixo fora da mentoria
+
+**Emitida por:** dono, ao vivo (13/09/2026): *"acordar cedo, fazer esse ritual, pesa muito no negócio... a pessoa não vai ganhar dinheiro só por acordar cedo, mas tem que ganhar um valor razoável porque é um peso bom."* E, sobre quem tem fixo mas está fora da mentoria (a distribuidora, o Flávio, a Luciene, o Amâncio): *"eles ganham no horário que eles definirem, de acordo com o fixo dela... quem já está na mentoria é obrigatório acordar cinco horas da manhã, se não acordar não ganha o valor desse ritual."*
+
+**Achado:** o teto do peso automático (`PESO_MAX = 6`, numa referência de dia completo de 76) nunca chegaria a 20% do dia sozinho — 6/76 é 7,9%. Dar ao ritual "o maior peso possível" (o que já valia, DIR anterior) não é o mesmo que garantir 20% do dinheiro do dia. Além disso, a janela do ritual (4:40-5:30) era global e fixa pra todo mundo — inclusive pra quem tem fixo mas está fora da mentoria (não vota, não é votado) e por regra do dono define o próprio horário de acordar.
+
+**O que entra:**
+1. `PERCENTUAL_RITUAL = 0.20` e `pesoRitualNaRotina()` (`src/lib/xgame.js`) — o ritual (`ehTarefaDeGratidao`) sai do balde comum de peso 1-76 e vira um balde PRÓPRIO, sempre 20% de `valorDoDia(fixoDoParticipante(p))`, igual já acontecia com bônus (`verba_bonus`) — nunca a fatia proporcional de peso. Os outros 80% do dia (produção) continuam repartidos pelo peso de sempre, só que contra uma referência 6 pontos menor (76 − o peso do ritual = 70), já que aquele peso saiu do jogo comum.
+2. `janelaDoRitual({ votavel, horaTarefa })` e `minDeHora("HH:MM")` (`src/lib/xgame.js`) — quem é votável (mesmo `podeSerVotado`/`aceita_ser_votado` que já decide o MvM) usa SEMPRE a janela fixa da casa (4:40-5:30). Quem tem fixo fora da mentoria define o próprio horário; a janela vira em volta dele com a mesma folga de sempre (20min antes, 30min depois). Sem horário definido, mesmo fora da mentoria, cai na régua fixa — nunca fica sem janela nenhuma.
+3. `deveAvisarRitual` (`src/lib/xgame.js`) ganha o parâmetro opcional `janela` (default: a janela fixa, comportamento antigo preservado) — o aviso "como funciona o ritual" dos 10 minutos antes passa a bater com a janela de quem está vendo a tela, não só com a da casa.
+4. `CrmMetodo.jsx` — os 3 pontos que liam `RITUAL_INICIO_MIN`/`RITUAL_FIM_MIN` direto (o corte de abertura em `concluirRitual`, o bloqueio duro em `alternarFeito`, e o banner explicador) agora calculam a janela de cada pessoa via `janelaDoRitual`, usando o mesmo `meuAceitaSerVotado`/`podeSerVotado` que já monta a população votável da MvM — nenhuma régua nova, a mesma aplicada num lugar novo.
+5. O CONTEÚDO do ritual é idêntico pros dois grupos (mentoria e fora dela) — confirmado pelo dono: *"o ritual é o mesmo... a única diferença é que eles não estão na mentoria... e eles definem o horário deles."* Só a janela de horário muda.
+6. **Correção de auditoria (13/09/2026, depois do PR aberto, antes do dono conferir):** o dono pediu uma auditoria completa da X-Game "pra ter 1000% de certeza" antes de publicar. Achado: `DistribuirTarefa.jsx` (a prévia de tarefa nova), `QuadroGeralAbas.jsx` (aba Semana) e `XPerformanceGestao.jsx` (os 4 cards do ciclo, "hoje" e "próximos dias") chamavam `distribuirDia`/`simularNovaTarefa`/`resumoDoCiclo` (`distribuicaoFixo.js`) DIRETO, com peso e fixo cheios — nenhuma sabia que o ritual virou balde de 20% à parte, e iam mostrar valor ERRADO assim que este PR publicasse (o ritual contando na régua de peso comum). Corrigido com duas funções novas ritual-aware em `xgame.js` (`simularNovaTarefaComRitual`, `resumoDoCicloComRitual`, construídas em cima de `valoresDasTarefas`/`reguaDoDia`) e as 3 telas trocadas pra usá-las — mesma fonte de verdade em todo lugar que mostra dinheiro do X-Game.
+7. **Prova ao vivo do vídeo do ritual (13/09/2026):** o dono pediu prova real, não só de código, de que o vídeo grande (o incidente de 10-11/09, `d01c51e`) não travaria mais o cumprimento da meta. Rodado num Chromium de verdade (câmera falsa do navegador, 90s de gravação real usando `gravadorDeVideo.js` sem mock): bitrate medido 361 Kbps (abaixo do teto de 1 Mbps declarado), extrapolando pros 15 minutos inteiros da rede de segurança do ritual dá ~39 MB — bem dentro do cofre de 200 MB. Upload de verdade contra o Storage de produção não foi possível testar neste ambiente (rede bloqueada pra `supabase.co`, política da organização) — a parte testada foi exatamente a que causou o incidente original (o encoder do navegador).
+
+**Fora do escopo desta diretiva:** a tela "Distribuir Tarefa" do ADM X-Game (reconciliação entre tarefas automáticas do sistema e tarefas que a própria pessoa fora da mentoria organiza, ex.: Distribuidora Eloá) — isso foi pra uma diretiva própria, DIR-142.2, publicada logo abaixo.
+
+**Regras fixas:** nenhuma além das anteriores. Rounding: somar o balde do ritual (20%, arredondado à parte) com o balde de produção (80%, arredondado à parte) pode variar ~1 centavo do valor cheio do dia — mesmo comportamento que já existe entre produção e bônus (dois arredondamentos, não um só); não é bug, é o preço de dois baldes separados.
+
+**Prova:** suíte 2357/2357 (26 testes tocados/novos: `xpayFixo.test.mjs`, `xpayRateio.test.mjs`, `janelaDoRitual.test.mjs` novo, `ritualTresBlocos.test.mjs` atualizado, `consistenciaRitualNasTelas.test.mjs` novo — prova as 3 telas corrigidas e as 2 funções ritual-aware novas), lint limpo nos arquivos tocados, `npm run build` sem erro. Auditoria em 5 frentes paralelas (vídeo do ritual, X-Pay em todas as telas, MvM/moeda, ADM, notificações/fila do pronto) sem outro achado bloqueante.
+
+**Status:** EM VIGOR — mergeado no `main` (PR #336), autorizado pelo dono a publicar fora da janela de deploy padrão.
+
+---
+
+## DIR-142.2 — o ADM X-Game passa a mostrar e mexer na rotina PERMANENTE da pessoa, não só o dia já gerado
+
+**Emitida por:** dono, ao vivo (13/09/2026), olhando a tela de Distribuir Tarefa da Distribuidora Eloá (fora da mentoria, fixo R$2000): *"aqui não está aparecendo as tarefas que ela mesmo organizou... quero que apareça as tarefas automáticas do sistema, as tarefas dela pra eu provar caso ela mude, e que eu possa inserir. Todas as tarefas precisam ter peso e ser distribuídas através do seu peso e o valor fixo acordado."*
+
+**Achado:** o card "Tarefas de [pessoa]" do ADM X-Game (`XGameAdmin.jsx`) sempre leu só `metodo_tarefas` — o retrato de UM DIA já materializado. A rotina PERMANENTE dela (`metodo_perfil.rotina`, o molde que gera todo dia, DIR-80: *"a rotina é dela"*) nunca aparecia nessa tela — só existia dentro do app da própria pessoa. Isso fazia parecer que "as tarefas que ela organizou" tinham sumido, quando na verdade só não tinham VITRINE nenhuma no lado do admin — e não dava pra confirmar/provar o que ela de fato configurou, nem inserir algo que valesse pra sempre (só pro dia escolhido).
+
+**O que entra** (`src/components/licensing/XGameAdmin.jsx`, reaproveitando as funções puras já existentes de `src/lib/rotinaPessoal.js` — DIR-80, nenhuma régua nova):
+1. **Selo de origem do dia** — o cabeçalho do card agora diz de onde veio a lista mostrada: rotina PRÓPRIA dela, rotina padrão da CASA (ela ainda não personalizou), ou avulso/manual (não veio de nenhuma geração automática). Responde direto "os valores só vêm das tarefas automáticas, ou também do que ela organiza?" — SEMPRE contam as duas, porque o motor de pagamento (`valoresDasTarefas`) lê `metodo_tarefas` sem se importar de onde a linha veio; o que faltava era o admin CONSEGUIR VER a origem.
+2. **"📅 Rotina permanente dela"** — bloco novo, dentro do mesmo card: lista os itens do molde (`metodo_perfil.rotina`, ou a da casa se ela ainda não tem a própria), com botão pra incluir (hora + título) e excluir. Isso é o "eu preciso provar caso ela mude" — o admin vê e guarda prova do que está combinado pra sempre, não só do dia de hoje.
+3. **"🔁 tornar recorrente"** — botão em cada tarefa do dia (automática ou criada na hora): um clique grava aquele título na rotina permanente dela, sem redigitar. Recusa duplicar (compara título, sem diferenciar maiúscula/minúscula).
+4. Mudança na rotina permanente **nunca reescreve hoje** — grava só em `metodo_perfil.rotina`; o dia já materializado em `metodo_tarefas` fica como está (mesma regra já provada em `rotinaPessoal.test.mjs`: "editar a rotina vale a partir de amanhã").
+5. Todo item, de onde vier (automático, manual antigo, ou incluído agora na rotina permanente), continua tendo peso e entrando na mesma distribuição pelo fixo (`distribuirDia`/`valoresDasTarefas`) — nenhuma tarefa nova escapa da régua de pagamento.
+
+**Fora do escopo desta rodada:** redesenho visual da tela (cores, layout) além do necessário pra caber o bloco novo; sincronização em tempo real entre o app dela e o ADM (ambos já leem a mesma tabela — não há duas fontes de verdade a reconciliar, só faltava a leitura do molde).
+
+**Regras fixas:** nenhuma além das da DIR-80 (mudança na rotina vale a partir de amanhã; a rotina só é "própria" quando ela — ou agora também o admin — escreveu nela).
+
+**Prova:** suíte 2356/2356 (8 testes novos em `tests/rotinaPermanenteAdmin.test.mjs`, fonte-comparando o componente), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR — mergeado no `main` (PR #337), autorizado pelo dono a publicar fora da janela de deploy padrão.
+
+---
+
 ## DIR-139 — as 3 colunas fantasmas: `licensee_id`/`anchor_id`/`owner_id` nunca existiram em `catalog_sales`, e isso zerava vendas de licenciado/PDV em 10 telas
 
 **Emitida por:** auditoria própria (11/09/2026), validando a DIR-138 contra o schema real de produção antes de declarar o "cirúrgico" pronto, e confirmada ao vivo pelo dono reportando `Licensing?tab=catalogo&catalogTab=catalogo-crm` "zerado" pros números da equipe.
