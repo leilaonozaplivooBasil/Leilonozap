@@ -8,6 +8,29 @@
 - Prefira frases curtas e diretas: o que foi feito, o que funciona e o que ainda falta.
 - Pode citar o nome de arquivos e telas quando isso ajudar a localizar as coisas — mas diga também para que servem.
 
+## Antes de mesclar, publicar ramo ou rodar SQL — conferência obrigatória
+
+**Rode a skill `antes-de-mesclar`.** Ela está em
+`.claude/skills/antes-de-mesclar/SKILL.md` e vale para TODO chat que trabalha
+neste repositório, não só para um.
+
+Em 15/09/2026 três migrações foram aplicadas na produção por outro chat, sem
+arquivo aqui. Uma delas revogou o acesso da chave publicável a `app_users` e
+**derrubou o login por e-mail**, porque o `plataformaAdapter` lê com
+`select('*')` e `select *` não passa em tabela com privilégio por coluna.
+
+O resumo, quando não der para abrir a skill:
+
+1. `npm run colisao` — quem mais mexe nos meus arquivos
+2. Comparar as migrações registradas no banco com os arquivos de
+   `supabase/migrations/`
+3. Mexeu em privilégio ou política? Conferir quem lê a tabela pelo navegador
+4. **Avisar o outro chat** — ramo e arquivos em comum
+5. Aplicou SQL pela API de gestão? Renomear o arquivo para a versão registrada
+6. Depois de mesclar, avisar de novo
+
+**Nunca** aplicar SQL na produção sem o arquivo correspondente no repositório.
+
 ## Merge de Pull Requests
 
 - **Autorização permanente (19/08/2026):** pode mesclar um Pull Request sozinho, sem
