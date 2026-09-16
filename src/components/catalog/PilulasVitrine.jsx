@@ -6,9 +6,10 @@ import { SECOES, contarPorSecao } from '@/lib/secoesVitrine';
 // (e por que os nomes não descrevem o campo) está em @/lib/secoesVitrine —
 // leia antes de mexer.
 //
-// ⚠️ NÃO mover para cima do OfertasRelampago: aquele bloco tem `relative z-10
-// -mt-16` e sobe de propósito para sobrepor o banner. As pílulas ficaram atrás
-// dele e sumiram da tela (relatado no preview da #158).
+// ⚠️ NÃO mover para cima do OfertasRelampago. O motivo original era o
+// `-mt-16` daquele bloco, que subia para sobrepor o banner e deixava estas
+// pílulas atrás dele. Em 16/09/2026 o `-mt-16` saiu (o banner não pode ter nada
+// por cima), mas a ordem continua: o lugar delas é logo acima do que filtram.
 
 const ICONES = { Sparkles, Flame, Crown };
 

@@ -732,11 +732,12 @@ export default function Catalog() {
 
             {/* 🏭 Filtros de origem — as mesmas pílulas da área de leilão, mas filtrando
                 os produtos DESTA loja em vez de levar o cliente para o leilão.
-                ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago: aquele bloco tem
-                `relative z-10 -mt-16`, sobe de propósito para sobrepor o banner (efeito de
-                camadas). As pílulas ficaram atrás dele e sumiram da tela — relatado no
-                preview da #158. Aqui ficam em fluxo normal, logo acima do conteúdo que
-                elas de fato filtram. */}
+                ⚠️ 02/09/2026 — NÃO mover para cima do OfertasRelampago. Na época o
+                motivo era o `-mt-16` daquele bloco, que subia para sobrepor o banner:
+                as pílulas ficavam atrás dele e sumiam da tela (preview da #158).
+                16/09/2026: o `-mt-16` SAIU — o banner não pode ter nada por cima —,
+                mas a ordem continua. Aqui elas ficam em fluxo normal, logo acima do
+                conteúdo que de fato filtram, que é onde fazem sentido. */}
             <PilulasVitrine
               produtos={products}
               filtro={secaoFiltro}

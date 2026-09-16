@@ -862,12 +862,20 @@ export default function Home() {
               Loja Virtual no mobile: altura fixa de 220px preenchida (cover).
               Do md+ pra cima nada muda: aspect 16/5 com contain e ambiente. */}
           <HeroBannerLeiloes banners={banners} />
-          {/* fade na base pro card AO VIVO sobrepor fundindo com o fundo */}
-          <div className="absolute inset-x-0 bottom-0 h-24 md:h-44 bg-gradient-to-t from-gray-900 via-gray-900/55 to-transparent pointer-events-none" />
+          {/* 🖼️ 16/09/2026 — NADA POR CIMA DA ARTE.
+              Aqui havia um degradê de 176px (96 no celular) escurecendo a base do
+              banner, para o card "Leilões Ativos" subir e fundir com o fundo. O
+              `contain` nunca cortou nada — mas esse degradê escondia o terço de
+              baixo da arte, e no banner do PS5 isso engolia a faixa "ENTREGA
+              RÁPIDA · SITE SEGURO · COMPRE EM TODO BRASIL".
+              Ordem do dono (16/09): o banner tem que ser visto completo onde
+              estiver. O efeito de camadas sai; a arte inteira fica. */}
         </div>
       }
 
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 ${banners.length > 0 ? '-mt-6 md:-mt-10' : ''}`}>
+      {/* o bloco começa DEPOIS do banner: o `-mt-6 md:-mt-10` subia até 40px e
+          sentava em cima do que o degradê ainda não tinha escondido. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
         {/* Hero Section - Glass */}
         <div className="mb-6">
           {/* 🎯 PONTO 83 — DE VOLTA À COR DO SITE, EM VERSÃO CLEAN.
