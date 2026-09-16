@@ -169,7 +169,25 @@ export default function Cart() {
           const appUsers = await plataforma.entities.AppUser.filter({ id: user.id });
           if (appUsers && appUsers.length > 0) {
             const fullUser = appUsers[0];
-            setSaldo(Number(fullUser.commission_balance) || 0);
+            // 💳 16/09/2026 — O SALDO DO BOTÃO SÃO AS DUAS CARTEIRAS.
+            // Antes era só `commission_balance`, a comissão de vendedor. Quem
+            // depositou para dar lance tem o dinheiro em `saldo_disponivel` e via
+            // o botão nem aparecer (ele está dentro de `saldo > 0`) — embora a
+            // cláusula 5 do Termo de Adesão prometa justamente esse uso na Loja.
+            //
+            // 🔴 QUEM MANDA É O `saldo_livre_loja` DO SERVIDOR, não a coluna crua:
+            // ele já vem com o dinheiro que está disputando leilão vivo descontado
+            // (regra dos três estados). Ler `saldo_disponivel` direto aqui deixaria
+            // a pessoa tentar comprar com dinheiro que está num lance — a compra
+            // seria recusada no banco, mas só depois de ela escolher e clicar.
+            setSaldo(Number(fullUser.commission_balance) || 0); // valor de partida; o do servidor manda
+            try {
+              const w = await plataforma.functions.invoke('getMyWallet', { user_id: user.id });
+              if (w?.success) {
+                const soma = (Number(w.saldo_livre_loja) || 0) + (Number(w.commission_balance) || 0);
+                setSaldo(Math.round(soma * 100) / 100);
+              }
+            } catch { /* carteira fora do ar → segue com a comissão, como era antes */ }
             setFormData(prev => ({
               ...prev,
               name: fullUser.full_name || user.full_name || '',
@@ -1451,13 +1469,14 @@ export default function Cart() {
                   </span>
                 </button>
 
-                {/* Saldo da carteira (comissões) — só aparece pra quem tem saldo, e nunca na primeira compra de Vendedor/Licenciado */}
+                {/* Saldo da carteira (crédito do leilão + comissões) — só aparece pra quem
+                    tem saldo, e nunca na primeira compra de Vendedor/Licenciado */}
                 {saldo > 0 && !roleGrant && (
                   <button type="button" onClick={() => { setPaymentType('SALDO'); setUsarPassaporte(false); }}
                     className={`w-full text-left p-3 rounded-lg border-2 mt-3 transition-colors flex items-center justify-between gap-3 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500/10' : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'} ${calcularTotalFinal() > saldo ? 'opacity-60' : ''}`}>
                     <div>
                       <p className="text-white font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-green-400" /> Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
-                      <p className="text-gray-400 text-xs mt-0.5">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use suas comissões — aprovação na hora'}</p>
+                      <p className="text-gray-400 text-xs mt-0.5">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use seu crédito do leilão e suas comissões — aprovação na hora'}</p>
                     </div>
                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
                       {paymentType === 'SALDO' && <Check className="w-3 h-3 text-white" />}
