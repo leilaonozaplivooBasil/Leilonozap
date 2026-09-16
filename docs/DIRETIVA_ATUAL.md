@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-162 — o rótulo da gaveta que escondia a liberação de evento
+
+**Emitida por:** dono, direto depois de publicada a DIR-161: *"onde está isso, eu não estou enxergando."*
+
+**Achado:** as duas abas novas (🚀 Liberação de evento, 📅 Eventos da empresa) foram publicadas dentro do `XGameAdmin`, que já vivia dentro de uma gaveta recolhida por padrão em `XPerformanceGestao.jsx` ("o admin do X-GAME de sempre"). O rótulo dessa gaveta — "Ciclo, verbas e participantes" — não menciona liberação nem evento em lugar nenhum, então mesmo abrindo a página certa (ADM X-Game) não tinha como adivinhar que o botão estava ali dentro.
+
+**O que entra (`XPerformanceGestao.jsx`):** o rótulo da gaveta passa a dizer **"Ciclo, verbas, participantes, liberação de evento e eventos da empresa"** — só o texto, a gaveta continua recolhida por padrão (não é a única coisa que mora ali, e abrir tudo sempre poluiria a tela do dia a dia).
+
+**Fora do escopo:** não mexe no comportamento de `XGameAdmin` nem nas duas ferramentas em si (DIR-161) — só a etiqueta de fora, pra achar o caminho.
+
+**Prova:** `npm run build` sem erro, lint limpo — mudança de texto only, sem lógica nova pra testar.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-161 — liberação pontual de evento + eventos recorrentes com rotina própria
 
 **Emitida por:** dono, ao vivo, sobre a corrida da empresa às 4h de hoje: *"muitas pessoas perderam o ritual. Então eu tenho que ter um botão pra apertar e liberar as tarefas das pessoas até tal hora pra eles ganharem, quando eu fizer um evento desse."* + *"eu preciso ter um botão de organizar a gamificação das pessoas de acordo com alguns eventos da empresa. Exemplo, segunda-feira, nós temos mentalidade do CEO que é de 9 até uma hora da tarde — as pessoas que eu selecionar, a rotina dele de 9 até 11 horas é uma rotina diferente: postar a sala do treinamento, ter o resumo do livro, o resumo da mentoria que ele pode botar até o final do dia."*
