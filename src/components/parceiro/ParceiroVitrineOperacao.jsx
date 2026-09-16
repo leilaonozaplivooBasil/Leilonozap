@@ -13,10 +13,24 @@ export default function ParceiroVitrineOperacao() {
 
   useEffect(() => {
     let ativo = true;
-    plataforma.entities.Product.list('-created_date', 24)
+    // 🔴 16/09/2026 — ISTO É "PROVA DE OPERAÇÃO" NUM MEMORANDO DE CAPTAÇÃO,
+    // e vinha mostrando os ÚLTIMOS PRODUTOS CADASTRADOS, sem filtro nenhum.
+    // Resultado no PDF de 15/09: o primeiro card era um bebedouro suíno, ao
+    // lado de um PlayStation 5. O parceiro lê isso como amostra do que a
+    // operação gira — e a amostra era só "o que alguém digitou por último".
+    //
+    // Duas peneiras, e nenhuma inventa nada: só entra o que está DE FATO na
+    // vitrine (`catalog_active`), e entre esses vêm os de maior valor, que é o
+    // que sustenta a leitura de "operação de alto giro". Continua sendo o
+    // estoque real — a curadoria é de exibição, não de conteúdo.
+    plataforma.entities.Product.list('-created_date', 60)
       .then((lista) => {
         if (!ativo) return;
-        const comFoto = (lista || []).filter((p) => p?.image_urls?.[0]).slice(0, 6);
+        const valor = (p) => Number(p?.price_catalog) || Number(p?.selling_price_retail) || 0;
+        const comFoto = (lista || [])
+          .filter((p) => p?.image_urls?.[0] && p?.catalog_active)
+          .sort((a, b) => valor(b) - valor(a))
+          .slice(0, 6);
         setItens(comFoto);
       })
       .catch(() => { if (ativo) setItens([]); });

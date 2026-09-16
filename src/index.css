@@ -964,9 +964,36 @@ body.pc-tema .livoo-brilho-forte {
     display: none !important;
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+     🔴 MARGEM ZERO EM CIMA E EMBAIXO — É O QUE TIRA O CABEÇALHO DO NAVEGADOR
+     ══════════════════════════════════════════════════════════════════════
+     O PDF que o parceiro recebe vinha com "Leilão NoZap - Leilões Online com
+     Lances em Tempo ..." e "https://leilaonozap.net/Partners" no topo de TODAS
+     as 9 páginas, e "1 of 9 · 15/09/2026, 15:14" no rodapé. Isso não está no
+     documento: é o cabeçalho/rodapé que o Chrome imprime, e ele é desenhado
+     DENTRO da margem da página. Sem margem em cima e embaixo, ele não tem onde
+     caber e não é desenhado.
+     As laterais continuam com 13mm — o texto não pode encostar na borda do
+     papel. O respiro vertical passa a ser do conteúdo (`padding-block` abaixo),
+     e não da margem da folha.
+     ⚠️ Isto vale para quem exporta pelo botão E para quem dá Ctrl+P direto;
+     antes, dependia da pessoa lembrar de desmarcar "Cabeçalhos e rodapés". */
   @page {
     size: A4 portrait;
-    margin: 14mm 13mm;
+    margin: 0 13mm;
+  }
+  body.pc-papel {
+    padding-block: 14mm !important;
+  }
+
+  /* 📄 NO PAPEL NÃO EXISTE PASSAR O MOUSE EM CIMA. O título do produto é
+     cortado com "…" na tela (line-clamp-2), o que é certo num card clicável e
+     é ruído puro impresso: "Receptor de TV Via Internet Full HD…" não diz o
+     que a pessoa está comprando. Impresso, o título sai inteiro. */
+  body.pc-papel [class*="line-clamp"] {
+    -webkit-line-clamp: unset !important;
+    display: block !important;
+    overflow: visible !important;
   }
 }
 
