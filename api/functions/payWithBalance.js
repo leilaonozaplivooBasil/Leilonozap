@@ -1,30 +1,68 @@
-// payWithBalance — compra paga com o saldo de comissão (commission_balance) do próprio usuário.
-// Para vendedores/lojistas redimirem comissão em produtos da plataforma.
-// Toda a validação (preço, estoque, saldo) e a baixa acontecem ATÔMICAS na função SQL comprar_com_saldo.
+// payWithBalance — compra paga com o saldo da carteira do próprio usuário.
+//
+// 💳 16/09/2026 — DUAS CARTEIRAS, NÃO UMA. Antes só gastava `commission_balance`
+// (comissão de vendedor). Agora gasta também `saldo_disponivel`, o crédito de
+// participação do leilão — que é o que o Termo de Adesão, cláusula 5, promete:
+// "o saldo permanece integralmente na carteira ... e pode ser usado na Loja
+// Virtual". Ordem de consumo: DEPÓSITO primeiro, comissão depois (a comissão é
+// sacável em dinheiro, o depósito não é — ver a migração 20260916160000).
+//
+// Toda a validação (preço, estoque, saldo) e a baixa acontecem ATÔMICAS na função
+// SQL comprar_com_saldo. Aqui só o frete é reservado antes, porque ele é cotado
+// fora do banco.
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
 import { registrarReceita } from '../_lib/financialIncome.js';
+// 🔴 a trava dos três estados: dinheiro disputando leilão vivo não compra na loja
+import { compromissoEmLeiloes } from '../_lib/compromissoLeilao.js';
 
 import { exigirSessao } from '../_lib/sessao.js';
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
-// Ajuste ATÔMICO do saldo de comissão (CAS: só grava se o saldo não mudou no meio).
-// Usado pra reservar/devolver o frete sem risco de perder depósito concorrente.
-async function ajustarSaldoCAS(userId, delta) {
+// Coluna nunca inicializada fica NULL, e `eq.0` nunca casa com NULL no Postgres —
+// mesmo tratamento de api/functions/requestWithdrawal.js e api/_lib/bidHold.js.
+const filtroCAS = (coluna, valor) => (valor === 0
+  ? `or(${coluna}.eq.0,${coluna}.is.null)`
+  : `${coluna}.eq.${valor}`);
+
+// Move as DUAS carteiras de uma vez, com CAS nas duas colunas: o PATCH só aplica
+// se nenhuma delas mudou desde a leitura. Se alguém mexeu no meio, relê e tenta.
+async function moverCarteirasCAS(userId, deltaDeposito, deltaComissao) {
   for (let i = 0; i < 6; i++) {
-    const rows = await (await sb(`app_users?select=commission_balance&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+    const rows = await (await sb(`app_users?select=saldo_disponivel,commission_balance&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
     const u = Array.isArray(rows) ? rows[0] : null;
     if (!u) return { ok: false, error: 'usuario_nao_encontrado' };
-    const atual = round2(u.commission_balance);
-    const novo = round2(atual + delta);
-    if (novo < 0) return { ok: false, error: 'saldo_insuficiente', saldo: atual };
-    const patch = await sb(`app_users?id=eq.${encodeURIComponent(userId)}&commission_balance=eq.${atual}`, {
-      method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ commission_balance: novo }),
-    });
+    const dep = round2(u.saldo_disponivel);
+    const com = round2(u.commission_balance);
+    const novoDep = round2(dep + deltaDeposito);
+    const novoCom = round2(com + deltaComissao);
+    if (novoDep < 0 || novoCom < 0) return { ok: false, error: 'saldo_insuficiente', saldo: round2(dep + com) };
+    const patch = await sb(
+      `app_users?id=eq.${encodeURIComponent(userId)}&and=(${filtroCAS('saldo_disponivel', dep)},${filtroCAS('commission_balance', com)})`,
+      { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ saldo_disponivel: novoDep, commission_balance: novoCom }) },
+    );
     const upd = await patch.json().catch(() => []);
-    if (Array.isArray(upd) && upd.length) return { ok: true, saldo: novo };
+    if (Array.isArray(upd) && upd.length) return { ok: true, deposito: novoDep, comissao: novoCom };
   }
   return { ok: false, error: 'conflito_de_saldo' };
+}
+
+/**
+ * Reserva o frete gastando DEPÓSITO primeiro e comissão só no que sobrar —
+ * a mesma ordem da compra, senão o frete queimaria o dinheiro sacável.
+ * Devolve a repartição para que o estorno, se precisar, seja exato.
+ */
+async function reservarFrete(userId, valor, comprometido) {
+  const rows = await (await sb(`app_users?select=saldo_disponivel,commission_balance&id=eq.${encodeURIComponent(userId)}&limit=1`)).json();
+  const u = Array.isArray(rows) ? rows[0] : null;
+  if (!u) return { ok: false, error: 'usuario_nao_encontrado' };
+  // 🔴 o que está disputando leilão vivo não paga frete de compra na loja
+  const livreDeposito = Math.max(0, round2(round2(u.saldo_disponivel) - round2(comprometido)));
+  const doDeposito = round2(Math.min(livreDeposito, valor));
+  const daComissao = round2(valor - doDeposito);
+  if (daComissao > round2(u.commission_balance)) return { ok: false, error: 'saldo_insuficiente', saldo: round2(livreDeposito + round2(u.commission_balance)) };
+  const r = await moverCarteirasCAS(userId, -doDeposito, -daComissao);
+  return r.ok ? { ok: true, doDeposito, daComissao } : r;
 }
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -83,8 +121,15 @@ export default async function handler(req, res) {
     });
     if (!fr.ok) return res.status(200).json({ success: false, error: fr.error });
     const frete = fr.frete;
+    // 🔴 calculado UMA vez e usado no frete; a compra recalcula por dentro do
+    // `for update` (ver a migração), que é onde não pode haver janela.
+    let comprometido = 0;
+    try { comprometido = await compromissoEmLeiloes(buyerId); } catch (_) { comprometido = 0; }
+
+    let freteDoDeposito = 0; let freteDaComissao = 0;
     if (frete.valor > 0) {
-      const rv = await ajustarSaldoCAS(buyerId, -frete.valor);
+      const rv = await reservarFrete(buyerId, frete.valor, comprometido);
+      if (rv.ok) { freteDoDeposito = rv.doDeposito; freteDaComissao = rv.daComissao; }
       if (!rv.ok) {
         return res.status(200).json({
           success: false,
@@ -108,8 +153,8 @@ export default async function handler(req, res) {
     const data = Array.isArray(out) ? out[0] : out; // rpc retorna o json direto
 
     if (!data || data.ok !== true) {
-      // compra não passou → devolve o frete que havia sido reservado
-      if (frete.valor > 0) await ajustarSaldoCAS(buyerId, frete.valor);
+      // compra não passou → devolve o frete EXATAMENTE de onde ele saiu
+      if (frete.valor > 0) await moverCarteirasCAS(buyerId, freteDoDeposito, freteDaComissao);
       return res.status(200).json({ success: false, error: data?.error || 'Não foi possível concluir', saldo: data?.saldo, total: data?.total });
     }
 
@@ -120,7 +165,7 @@ export default async function handler(req, res) {
         const base = (Array.isArray(cur) && cur[0]?.raw_base44) || {};
         await sb(`catalog_sales?id=eq.${encodeURIComponent(data.sale_id)}`, {
           method: 'PATCH', headers: { Prefer: 'return=minimal' },
-          body: JSON.stringify({ raw_base44: { ...base, frete, amount_charged: round2(Number(cur?.[0]?.total_amount || data.total) + frete.valor) } }),
+          body: JSON.stringify({ raw_base44: { ...base, frete, amount_charged: round2(Number(cur?.[0]?.total_amount || data.total) + frete.valor), frete_pago_com: { deposito: freteDoDeposito, comissao: freteDaComissao } } }),
         });
       } catch (_) { /* frete já debitado; registro é secundário */ }
     }
@@ -143,7 +188,15 @@ export default async function handler(req, res) {
     }
 
     // novo_saldo já vem descontado do frete (a reserva aconteceu ANTES do RPC)
-    return res.status(200).json({ success: true, sale_id: data.sale_id, total: data.total, shipping: frete.valor, total_cobrado: round2(Number(data.total || 0) + frete.valor), novo_saldo: data.novo_saldo, tracking: data.tracking, commission });
+    return res.status(200).json({
+      success: true, sale_id: data.sale_id, total: data.total, shipping: frete.valor,
+      total_cobrado: round2(Number(data.total || 0) + frete.valor),
+      novo_saldo: data.novo_saldo, tracking: data.tracking, commission,
+      // 💳 de onde saiu o dinheiro — a tela mostra, e o suporte confere depois
+      pago_com_deposito: round2(Number(data.pago_com_deposito || 0) + freteDoDeposito),
+      pago_com_comissao: round2(Number(data.pago_com_comissao || 0) + freteDaComissao),
+      saldo_deposito: data.saldo_deposito, saldo_comissao: data.saldo_comissao,
+    });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });
   }
