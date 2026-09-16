@@ -81,6 +81,18 @@ test('🔴 a tela de Arremates não liquida sozinha um lote com retirada', () =>
   assert.match(ARREMATES, /order_status === 'awaiting_payment' && !a\.permite_retirada/);
 });
 
+test('🔴 …mas a tela de Arremates OFERECE a escolha, senão o arremate fica preso', () => {
+  // tirar do laço automático sem dar a escolha aqui deixaria quem fechou o modal
+  // de vitória com um arremate pendente e nenhum caminho para resolver
+  assert.match(ARREMATES, /data-teste="arremate-escolher-retirada"/);
+  assert.match(ARREMATES, /data-teste="arremate-escolher-entrega"/);
+  assert.match(ARREMATES, /order_status === 'awaiting_payment' && auction\.permite_retirada/);
+  // e manda o tipo escolhido, não um valor fixo
+  assert.match(ARREMATES, /entrega_tipo: tipo,/);
+  assert.match(ARREMATES, /onEscolherEntrega\(auction, 'retirada'\)/);
+  assert.match(ARREMATES, /onEscolherEntrega\(auction, 'entrega'\)/);
+});
+
 // ───────── o dinheiro ─────────
 
 test('🔴 quem autoriza a retirada é o BANCO, não o corpo da requisição', () => {
