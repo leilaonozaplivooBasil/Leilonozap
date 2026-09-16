@@ -37,6 +37,7 @@ import { gerarTarefasDaRotina, ROTINA_PADRAO } from '../../src/lib/metodo.js';
 import { contaNaLixeira } from '../_lib/contaAtiva.js';
 import { pesoAutomatico } from '../../src/lib/xgame.js';
 import { rotinaEmVigor, devePreAbrirAutomatico, jaGerouHoje } from '../../src/lib/rotinaPessoal.js';
+import { rotinaComEventos } from '../../src/lib/eventosGamificacao.js';
 import { temDireitoAoXGame } from '../../src/lib/careerLevels.js';
 import { LISTAS_MODELO, CARD_EXEMPLO, ESTADO_ABERTO } from '../../src/lib/quadroCompromisso.js';
 
@@ -125,9 +126,18 @@ export default async function handler(req, res) {
       const p = perfilPor.get(id);
       return p?.rotina_automatica && !jaGerouHoje(p, hoje);
     });
+    // 🚀 DIR-161 — eventos da empresa (ex.: Mentalidade do CEO, segunda
+    // 9h-13h) trocam a rotina de quem está marcado neles, só na janela do
+    // evento — busca uma vez só, fora do laço por pessoa (mesma disciplina
+    // de performance do resto deste cron).
+    const eventosAtivos = arr(await j(await sb('xgame_eventos?ativo=eq.true&select=*')));
+    const diaSemanaHoje = new Date(`${hoje}T12:00:00`).getDay();
     const linhasNovas = [];
     for (const id of paraGerar) {
-      const rotina = rotinaEmVigor(perfilPor.get(id), ROTINA_PADRAO);
+      const rotinaBase = rotinaEmVigor(perfilPor.get(id), ROTINA_PADRAO);
+      const rotina = eventosAtivos.length
+        ? rotinaComEventos(rotinaBase, eventosAtivos, { diaSemana: diaSemanaHoje, dataISO: hoje, userId: id })
+        : rotinaBase;
       linhasNovas.push(...gerarTarefasDaRotina(rotina, id, hoje, pesoAutomatico));
     }
     // 🐛 09/09/2026 — DIR-127, dono, direto: "isso é muito sério... coloca

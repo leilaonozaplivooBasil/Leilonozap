@@ -12,6 +12,32 @@
 
 ---
 
+## DIR-161 — liberação pontual de evento + eventos recorrentes com rotina própria
+
+**Emitida por:** dono, ao vivo, sobre a corrida da empresa às 4h de hoje: *"muitas pessoas perderam o ritual. Então eu tenho que ter um botão pra apertar e liberar as tarefas das pessoas até tal hora pra eles ganharem, quando eu fizer um evento desse."* + *"eu preciso ter um botão de organizar a gamificação das pessoas de acordo com alguns eventos da empresa. Exemplo, segunda-feira, nós temos mentalidade do CEO que é de 9 até uma hora da tarde — as pessoas que eu selecionar, a rotina dele de 9 até 11 horas é uma rotina diferente: postar a sala do treinamento, ter o resumo do livro, o resumo da mentoria que ele pode botar até o final do dia."*
+
+**Duas ferramentas novas no ADM X-Game, independentes uma da outra:**
+
+**1. 🚀 Liberação pontual de evento** (`xgame_liberacoes`) — pra um dia excepcional (corrida, viagem): o dono escolhe o dia, um horário e quem participou; as tarefas dessas pessoas com horário ANTES daquele horário passam a valer como se fossem ÀQUELA hora — não perdem MvM, pontos nem X-Pay por atraso durante a janela do evento. Depois do horário liberado, a régua de sempre volta a valer (é um adiamento, não um perdão sem fim). Implementado em `aplicarLiberacao`/`resumoDoDia` (`src/lib/xgame.js`) — um único ponto de verdade, sem repetir a régua em cada tela.
+
+**2. 📅 Eventos da empresa** (`xgame_eventos`) — evento recorrente por dia da semana (ex.: Mentalidade do CEO, toda segunda 9h-13h), com sua própria lista de tarefas. Decidido com o dono: a rotina do evento **SUBSTITUI** a normal na janela de horário (não soma), e uma vez que a pessoa é marcada no evento, ele **aplica sozinho toda semana** — sem precisar reativar. Implementado em `src/lib/eventosGamificacao.js` (`eventoAplicavelHoje`, `substituirJanelaDoEvento`, `rotinaComEventos`), plugado no cron `gerarJornadaDoDia.js` e nos três lugares que geram o dia sob demanda (ADM X-Game e o próprio Compromisso da pessoa).
+
+**O que entra:**
+1. `xgame_liberacoes` (data, user_id, ate_hora, motivo) + `xgame_eventos` (nome, dia_semana, hora_inicio, hora_fim, tarefas, participantes, ativo) — migração `20260916120000_gamificacao_liberacao_e_eventos.sql`.
+2. `resumoDoDia` ganha `liberadoAteMin` — aplicado ANTES de qualquer outro cálculo do dia (estado, MvM, X-Pay, pontos, atraso do pronto já enxergam a hora adiada).
+3. ADM X-Game ganha duas abas novas: **🚀 Liberação de evento** (data + horário + seleção múltipla de quem foi liberado, com histórico do dia) e **📅 Eventos da empresa** (criar/editar/ativar/excluir evento, com editor de tarefas e seleção múltipla de participantes).
+4. `CrmMetodo.jsx`/`XGame.jsx` buscam a liberação de hoje da própria pessoa e já geram/mostram o dia com o evento sobreposto (mesma fonte, sem tela nova pra ela ver).
+
+**Fora do escopo:** a régua de atraso na Fila do Pronto não muda — é sobre entrega de tarefa de gestão, não sobre horário de rotina. As duas réguas catastróficas (não-votar/atraso do pronto, DIR-96/97) continuam intocadas — isso já é o `perdao_zeragem_ate`.
+
+**Regras fixas:** liberação e evento nunca mexem em `metodo_perfil.rotina` (a rotina permanente da pessoa) — só no que é gerado pro dia; o Ritual do Amanhecer continua fora da conta de substituição de evento (segue a régua própria do DIR-142).
+
+**Prova:** suíte 2674/2674 (14 testes novos em `tests/liberacaoDeEvento.test.mjs` e `tests/eventosGamificacao.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-160 — Analisador de Lotes: um lugar só, com destaque, e a lista completa de itens
 
 **Status:** EM VIGOR.

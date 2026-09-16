@@ -242,6 +242,11 @@ export function horaEntre(horaAcima, horaAbaixo) {
   return horaDeMinutos(Math.round((antes + depois) / 2 / 5) * 5);
 }
 
+/** 'HH:MM' → minutos desde 00:00, ou null se inválido. Versão exportada da
+ *  conversão interna, pra quem precisa converter um horário vindo do banco
+ *  (ex.: `xgame_liberacoes.ate_hora`) antes de chamar `resumoDoDia`. */
+export const minutosDeHora = (hhmm) => minutos(hhmm);
+
 export function estadoDasTarefas(tarefas = [], agoraMin) {
   // 🕐 a hora manda (ver ordenarPorHora): a janela de cada tarefa depende de a
   // lista estar em ordem cronológica, senão o estado mente.
@@ -256,6 +261,28 @@ export function estadoDasTarefas(tarefas = [], agoraMin) {
     if (agoraMin < fim) return { ...t, estado: ESTADOS.AGORA };
     if (agoraMin < fim + 90) return { ...t, estado: ESTADOS.ATRASADO };
     return { ...t, estado: ESTADOS.PERDIDO };
+  });
+}
+
+// 🚀 16/09/2026 — DIR-161, dono, sobre a corrida da empresa às 4h que fez
+// muita gente perder o Ritual do Amanhecer: "eu tenho que ter um botão pra
+// apertar e liberar as tarefas das pessoas até tal hora pra eles ganharem."
+/**
+ * Liberação pontual de evento: toda tarefa cujo horário normal é ANTES de
+ * `ateMin` passa a valer como se fosse ÀS `ateMin` — não perde MvM/pontos/
+ * X-Pay por atraso enquanto durou o evento. Depois de `ateMin` a régua de
+ * sempre volta a valer normalmente: é um ADIAMENTO, não um perdão sem fim.
+ * Tarefa já feita, ou já agendada depois de `ateMin`, nunca é tocada — a
+ * liberação só empurra pra frente, nunca pra trás.
+ * @param tarefas linhas do dia (com `hora`)
+ * @param ateMin minutos desde 00:00 até onde libera, ou null pra não mexer em nada
+ */
+export function aplicarLiberacao(tarefas = [], ateMin = null) {
+  if (!Number.isFinite(ateMin)) return tarefas;
+  return tarefas.map((t) => {
+    const ini = minutos(t?.hora);
+    if (ini === null || ini >= ateMin) return t;
+    return { ...t, hora: horaDeMinutos(ateMin) };
   });
 }
 
@@ -1137,7 +1164,12 @@ export function pontosDoDia(tarefasComEstado = [], cotacao = 1) {
 // `votouEmTodos === false`, a régua radical entra. `votouEmTodos` continua
 // opcional (default null) — quem chama sem saber de votação (histórico,
 // testes antigos) se comporta exatamente como antes desta mudança.
-export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null, perdoado = false }) {
+export function resumoDoDia({ tarefas = [], agoraMin, diasCiclo = [], hoje = new Date(), participante = null, cicloConfigISO = null, votouEmTodos = null, perdoado = false, liberadoAteMin = null }) {
+  // 🚀 DIR-161 — liberação pontual de evento (ver `aplicarLiberacao`, acima):
+  // troca a `hora` das tarefas liberadas ANTES de tudo, pra cada cálculo
+  // deste corpo (estado, MvM, X-Pay, pontos, atraso do pronto) já enxergar a
+  // hora adiada — um único ponto de verdade, sem repetir a régua em cada um.
+  tarefas = aplicarLiberacao(tarefas, liberadoAteMin);
   const inicio = inicioCicloOficial(cicloConfigISO, hoje);
   const diaUtil = diaUtilDoCiclo(hoje, inicio);
   const cotacao = cotacaoDoDia(diaUtil);

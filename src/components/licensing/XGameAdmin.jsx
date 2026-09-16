@@ -9,6 +9,7 @@ import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { estadoDaRotina, jaGerouHoje, incluirNaRotina, excluirDaRotina } from '@/lib/rotinaPessoal';
+import { rotinaComEventos } from '@/lib/eventosGamificacao';
 import { verVideo } from '@/lib/cofreDeAudio';
 import { comprovacaoBateNaBusca, agruparComprovacoesPorData, agruparComprovacoesPorPessoa, rotuloDataComprovacao, rotuloDataAmigavel } from '@/lib/filaComprovacoes';
 import { lerTudoDoSupabase } from '@/lib/lerTudoDoSupabase';
@@ -195,6 +196,21 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const [rotinaAberta, setRotinaAberta] = useState(false);
   const [novoItemRotina, setNovoItemRotina] = useState({ hora: '', titulo: '' });
 
+  // 🚀 DIR-161 — dono, sobre a corrida da empresa às 4h: "eu tenho que ter
+  // um botão pra apertar e liberar as tarefas das pessoas até tal hora pra
+  // eles ganharem." + "eu preciso ter um botão de organizar a gamificação
+  // das pessoas de acordo com alguns eventos da empresa."
+  const [libData, setLibData] = useState(hojeStr());
+  const [libAteHora, setLibAteHora] = useState('08:00');
+  const [libMotivo, setLibMotivo] = useState('');
+  const [libSelecionados, setLibSelecionados] = useState([]);
+  const [libSalvando, setLibSalvando] = useState(false);
+  const [liberacoesDoDia, setLiberacoesDoDia] = useState([]);
+
+  const [eventos, setEventos] = useState([]);
+  const [eventoEditando, setEventoEditando] = useState(null); // null = fechado; {} = novo; objeto = editando
+  const [eventoSalvando, setEventoSalvando] = useState(false);
+
   const carregar = useCallback(() => {
     supabase.from('xgame_participantes').select('*').order('created_date')
       .then(({ data }) => setParticipantes(data || []));
@@ -204,6 +220,20 @@ export default function XGameAdmin({ onVerComo } = {}) {
       .then(({ data }) => setCicloInicio(data?.ciclo_inicio ? String(data.ciclo_inicio).slice(0, 10) : ''));
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
+
+  // 🚀 DIR-161 — quem já está liberado no dia escolhido (pra não repetir a
+  // seleção à toa e pra dar transparência do que já está valendo).
+  const carregarLiberacoesDoDia = useCallback(() => {
+    supabase.from('xgame_liberacoes').select('*').eq('data', libData).order('created_date')
+      .then(({ data }) => setLiberacoesDoDia(data || []));
+  }, [libData]);
+  useEffect(() => { carregarLiberacoesDoDia(); }, [carregarLiberacoesDoDia]);
+
+  const carregarEventos = useCallback(() => {
+    supabase.from('xgame_eventos').select('*').order('created_date')
+      .then(({ data }) => setEventos(data || []));
+  }, []);
+  useEffect(() => { carregarEventos(); }, [carregarEventos]);
 
   // 🗳️ 08/09/2026 — dono: "quero ver se todo mundo votou... eu estou às
   // cegas." Um raio-x de quem já fechou a MvM de hoje em TODOS os colegas
@@ -245,6 +275,96 @@ export default function XGameAdmin({ onVerComo } = {}) {
   const nomeDe = (id) => {
     const u = usuarios.find((x) => x.id === id);
     return u ? nomeExibicao(u) : (id ? id.slice(0, 6) : '—');
+  };
+
+  // 🚀 DIR-161 — o time ativo, com nome, pra escolher quem entra na
+  // liberação de hoje ou no evento — a MESMA população dos outros painéis
+  // (`xgame_participantes.ativo`), ordenada por nome.
+  const pessoasAtivas = useMemo(
+    () => participantes.filter((p) => p.ativo).map((p) => ({ id: p.user_id, nome: nomeDe(p.user_id) })).sort((a, b) => a.nome.localeCompare(b.nome)),
+    [participantes, usuarios],
+  );
+
+  // ── 🚀 Liberação pontual de evento (DIR-161) ──────────────────────────
+  const alternarLibSelecionado = (id) => {
+    setLibSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+  const liberarSelecionados = async () => {
+    if (!libSelecionados.length) { toast.error('Selecione ao menos uma pessoa.'); return; }
+    if (!/^\d{2}:\d{2}$/.test(libAteHora)) { toast.error('Informe um horário válido (HH:MM).'); return; }
+    setLibSalvando(true);
+    try {
+      const linhas = libSelecionados.map((user_id) => ({
+        data: libData, user_id, ate_hora: libAteHora, motivo: libMotivo.trim() || null,
+      }));
+      const { error } = await supabase.from('xgame_liberacoes').upsert(linhas, { onConflict: 'data,user_id' });
+      if (error) throw error;
+      toast.success(`${libSelecionados.length} pessoa${libSelecionados.length === 1 ? '' : 's'} liberada${libSelecionados.length === 1 ? '' : 's'} até ${libAteHora} em ${libData.split('-').reverse().join('/')} — tarefas antes disso não perdem MvM/pontos/X-Pay por atraso.`);
+      setLibSelecionados([]);
+      setLibMotivo('');
+      carregarLiberacoesDoDia();
+    } catch (e) {
+      console.error('[X-GAME] liberar evento:', e);
+      toast.error('Erro ao liberar — tente de novo.');
+    } finally { setLibSalvando(false); }
+  };
+  const removerLiberacao = async (id) => {
+    const { error } = await supabase.from('xgame_liberacoes').delete().eq('id', id);
+    if (error) { toast.error('Erro ao remover a liberação.'); return; }
+    toast.success('Liberação removida.');
+    carregarLiberacoesDoDia();
+  };
+
+  // ── 📅 Eventos da empresa (DIR-161) ───────────────────────────────────
+  const DIAS_DA_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const novoEventoEmBranco = () => ({
+    nome: '', dia_semana: 1, hora_inicio: '09:00', hora_fim: '11:00', tarefas: [{ hora: '09:00', titulo: '', detalhe: '' }], participantes: [], ativo: true,
+  });
+  const alternarParticipanteEvento = (id) => {
+    setEventoEditando((prev) => ({ ...prev, participantes: prev.participantes.includes(id) ? prev.participantes.filter((x) => x !== id) : [...prev.participantes, id] }));
+  };
+  const mudarTarefaEvento = (i, patch) => {
+    setEventoEditando((prev) => ({ ...prev, tarefas: prev.tarefas.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) }));
+  };
+  const addTarefaEvento = () => setEventoEditando((prev) => ({ ...prev, tarefas: [...prev.tarefas, { hora: '', titulo: '', detalhe: '' }] }));
+  const removerTarefaEvento = (i) => setEventoEditando((prev) => ({ ...prev, tarefas: prev.tarefas.filter((_, idx) => idx !== i) }));
+  const salvarEvento = async () => {
+    const ev = eventoEditando;
+    if (!ev?.nome?.trim()) { toast.error('Dê um nome pro evento.'); return; }
+    if (!/^\d{2}:\d{2}$/.test(ev.hora_inicio) || !/^\d{2}:\d{2}$/.test(ev.hora_fim)) { toast.error('Hora de início e fim precisam estar no formato HH:MM.'); return; }
+    const tarefas = (ev.tarefas || []).filter((t) => t.titulo?.trim());
+    if (!tarefas.length) { toast.error('Adicione ao menos uma tarefa do evento.'); return; }
+    setEventoSalvando(true);
+    try {
+      const linha = {
+        nome: ev.nome.trim(), dia_semana: ev.dia_semana, hora_inicio: ev.hora_inicio, hora_fim: ev.hora_fim,
+        tarefas, participantes: ev.participantes || [], ativo: ev.ativo !== false,
+      };
+      const { error } = ev.id
+        ? await supabase.from('xgame_eventos').update(linha).eq('id', ev.id)
+        : await supabase.from('xgame_eventos').insert(linha);
+      if (error) throw error;
+      toast.success(`Evento "${linha.nome}" salvo — ${DIAS_DA_SEMANA[linha.dia_semana]}, ${linha.hora_inicio}–${linha.hora_fim}, ${linha.participantes.length} pessoa${linha.participantes.length === 1 ? '' : 's'}.`);
+      setEventoEditando(null);
+      carregarEventos();
+    } catch (e) {
+      console.error('[X-GAME] salvar evento:', e);
+      toast.error('Erro ao salvar o evento — tente de novo.');
+    } finally { setEventoSalvando(false); }
+  };
+  const [excluindoEvento, setExcluindoEvento] = useState(null);
+  const excluirEvento = async (id) => {
+    if (excluindoEvento !== id) { setExcluindoEvento(id); return; }
+    setExcluindoEvento(null);
+    const { error } = await supabase.from('xgame_eventos').delete().eq('id', id);
+    if (error) { toast.error('Erro ao excluir o evento.'); return; }
+    toast.success('Evento excluído.');
+    carregarEventos();
+  };
+  const alternarEventoAtivo = async (ev) => {
+    const { error } = await supabase.from('xgame_eventos').update({ ativo: !ev.ativo }).eq('id', ev.id);
+    if (error) { toast.error('Erro ao mudar o evento.'); return; }
+    carregarEventos();
   };
 
   // candidatos livres (corporativo OU usuário comum, junto) + filtro do nome
@@ -477,7 +597,15 @@ export default function XGameAdmin({ onVerComo } = {}) {
     try {
       const { data: perfil } = await supabase.from('metodo_perfil')
         .select('rotina').eq('user_id', tarefaUser).maybeSingle();
-      const rotina = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
+      const rotinaBase = Array.isArray(perfil?.rotina) && perfil.rotina.length ? perfil.rotina : ROTINA_PADRAO;
+      // 🚀 DIR-161 — mesma sobreposição de evento do cron: se esta pessoa
+      // está marcada num evento que cai no dia da semana do `tarefaDia`, a
+      // rotina gerada aqui já sai com a janela do evento trocada.
+      const { data: eventosAtivos } = await supabase.from('xgame_eventos').select('*').eq('ativo', true);
+      const diaSemanaAlvo = new Date(`${tarefaDia}T12:00:00`).getDay();
+      const rotina = (eventosAtivos || []).length
+        ? rotinaComEventos(rotinaBase, eventosAtivos, { diaSemana: diaSemanaAlvo, dataISO: tarefaDia, userId: tarefaUser })
+        : rotinaBase;
       // já nasce com peso automático (regra do dono) e categoria deduzida
       const linhas = gerarTarefasDaRotina(rotina, tarefaUser, tarefaDia).map((l) => ({
         ...l, peso: pesoAutomatico(l.titulo), categoria: categoriaDaTarefa({ titulo: l.titulo }),
@@ -533,7 +661,12 @@ export default function XGameAdmin({ onVerComo } = {}) {
     <div className="space-y-4 text-sm">
       {/* abas do admin: participantes × a fila de comprovações */}
       <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-        {[['participantes', '👥 Participantes'], ['comprovacoes', `🖼️ Comprovações${pendentesAnalise + pendentesIA > 0 ? ` (${pendentesAnalise + pendentesIA} pendente${pendentesAnalise + pendentesIA === 1 ? '' : 's'})` : ''}`]].map(([v, rotulo]) => (
+        {[
+          ['participantes', '👥 Participantes'],
+          ['comprovacoes', `🖼️ Comprovações${pendentesAnalise + pendentesIA > 0 ? ` (${pendentesAnalise + pendentesIA} pendente${pendentesAnalise + pendentesIA === 1 ? '' : 's'})` : ''}`],
+          ['liberacao', '🚀 Liberação de evento'],
+          ['eventos', '📅 Eventos da empresa'],
+        ].map(([v, rotulo]) => (
           <button
             key={v}
             type="button"
@@ -710,6 +843,197 @@ export default function XGameAdmin({ onVerComo } = {}) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 🚀 DIR-161 — LIBERAÇÃO PONTUAL DE EVENTO: dono, sobre a corrida da
+          empresa às 4h: "eu tenho que ter um botão pra apertar e liberar as
+          tarefas das pessoas até tal hora pra eles ganharem." */}
+      {abaAdmin === 'liberacao' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-600">
+            Pra um dia de evento (corrida, viagem, treinamento fora do horário normal): as tarefas de quem você
+            selecionar, com horário ANTES do que você marcar abaixo, deixam de perder MvM, pontos e X-Pay por atraso —
+            elas passam a valer como se fossem àquele horário. Depois dele, a régua de sempre volta a valer.
+          </p>
+          <div className="flex items-end gap-2 flex-wrap border border-gray-200 rounded-md p-3 bg-gray-50">
+            <label className="text-xs text-gray-700">
+              Dia do evento
+              <Input type="date" value={libData} onChange={(e) => setLibData(e.target.value)} className="h-9 mt-1 bg-white border-gray-300" />
+            </label>
+            <label className="text-xs text-gray-700">
+              Liberar até
+              <Input type="time" value={libAteHora} onChange={(e) => setLibAteHora(e.target.value)} className="h-9 mt-1 bg-white border-gray-300" />
+            </label>
+            <label className="text-xs text-gray-700 flex-1 min-w-[200px]">
+              Motivo (opcional)
+              <Input placeholder="ex.: corrida da empresa às 4h" value={libMotivo} onChange={(e) => setLibMotivo(e.target.value)} className="h-9 mt-1 bg-white border-gray-300" />
+            </label>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-gray-900">Quem foi liberado ({libSelecionados.length} selecionado{libSelecionados.length === 1 ? '' : 's'}):</p>
+            {pessoasAtivas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setLibSelecionados((prev) => (prev.length === pessoasAtivas.length ? [] : pessoasAtivas.map((p) => p.id)))}
+                className="ml-auto text-[11px] font-semibold text-emerald-700 hover:underline"
+              >
+                {libSelecionados.length === pessoasAtivas.length ? '✔ desmarcar todos' : '☐ marcar todos'}
+              </button>
+            )}
+          </div>
+          <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white divide-y divide-gray-100">
+            {pessoasAtivas.map((p) => {
+              const marcado = libSelecionados.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => alternarLibSelecionado(p.id)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs ${marcado ? 'bg-emerald-50 font-semibold text-emerald-900' : 'hover:bg-gray-50 text-gray-700'}`}
+                >
+                  {marcado ? '✔ ' : ''}{p.nome}
+                </button>
+              );
+            })}
+          </div>
+          <Button size="sm" onClick={liberarSelecionados} disabled={libSalvando || !libSelecionados.length} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            🚀 Liberar {libSelecionados.length || ''} até {libAteHora}
+          </Button>
+
+          {liberacoesDoDia.length > 0 && (
+            <div className="border-t border-gray-200 pt-3 space-y-1.5">
+              <p className="text-xs font-semibold text-gray-900">Já liberados em {libData.split('-').reverse().join('/')}:</p>
+              {liberacoesDoDia.map((l) => (
+                <div key={l.id} className="flex items-center gap-2 text-xs bg-emerald-50 rounded-md px-2.5 py-1.5">
+                  <span className="font-medium text-gray-900">{nomeDe(l.user_id)}</span>
+                  <span className="text-gray-500">até {l.ate_hora}{l.motivo ? ` — ${l.motivo}` : ''}</span>
+                  <button type="button" onClick={() => removerLiberacao(l.id)} className="ml-auto text-red-500 hover:text-red-700 font-semibold">remover</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 📅 DIR-161 — EVENTOS DA EMPRESA: dono: "eu preciso ter um botão de
+          organizar a gamificação das pessoas de acordo com alguns eventos da
+          empresa. Exemplo, segunda-feira, mentalidade do CEO, 9 até 13h —
+          as pessoas que eu selecionar, a rotina delas nesse horário é
+          diferente." Recorrente: uma vez marcada, aplica toda semana sozinho. */}
+      {abaAdmin === 'eventos' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-600">
+            Um evento tem hora própria e tarefas próprias — quem você marcar como participante tem a rotina dela
+            SUBSTITUÍDA pelas tarefas do evento, só naquele horário, toda vez que o dia da semana bater. Fora do
+            horário, a rotina normal continua igual.
+          </p>
+          {!eventoEditando && (
+            <Button size="sm" onClick={() => setEventoEditando(novoEventoEmBranco())} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="w-4 h-4 mr-1" /> Novo evento
+            </Button>
+          )}
+
+          {eventoEditando && (
+            <div className="border border-emerald-200 rounded-md p-3 bg-emerald-50/50 space-y-3">
+              <p className="text-xs font-bold text-gray-900">{eventoEditando.id ? 'Editar evento' : 'Novo evento'}</p>
+              <div className="flex items-end gap-2 flex-wrap">
+                <label className="text-xs text-gray-700 flex-1 min-w-[180px]">
+                  Nome
+                  <Input placeholder="ex.: Mentalidade do CEO" value={eventoEditando.nome} onChange={(e) => setEventoEditando((p) => ({ ...p, nome: e.target.value }))} className="h-9 mt-1 bg-white border-gray-300" />
+                </label>
+                <label className="text-xs text-gray-700">
+                  Dia da semana
+                  <select
+                    value={eventoEditando.dia_semana}
+                    onChange={(e) => setEventoEditando((p) => ({ ...p, dia_semana: Number(e.target.value) }))}
+                    className="h-9 mt-1 bg-white border border-gray-300 rounded-md px-2 text-xs block"
+                  >
+                    {DIAS_DA_SEMANA.map((d, i) => <option key={d} value={i}>{d}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs text-gray-700">
+                  Início
+                  <Input type="time" value={eventoEditando.hora_inicio} onChange={(e) => setEventoEditando((p) => ({ ...p, hora_inicio: e.target.value }))} className="h-9 mt-1 bg-white border-gray-300" />
+                </label>
+                <label className="text-xs text-gray-700">
+                  Fim
+                  <Input type="time" value={eventoEditando.hora_fim} onChange={(e) => setEventoEditando((p) => ({ ...p, hora_fim: e.target.value }))} className="h-9 mt-1 bg-white border-gray-300" />
+                </label>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-gray-900">Tarefas do evento (substituem a rotina normal nessa janela):</p>
+                {eventoEditando.tarefas.map((t, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <Input type="time" value={t.hora} onChange={(e) => mudarTarefaEvento(i, { hora: e.target.value })} className="h-8 w-24 bg-white border-gray-300 text-xs" />
+                    <Input placeholder="título — ex.: Postar sala do treinamento" value={t.titulo} onChange={(e) => mudarTarefaEvento(i, { titulo: e.target.value })} className="h-8 flex-1 bg-white border-gray-300 text-xs" />
+                    <button type="button" onClick={() => removerTarefaEvento(i)} className="text-red-500 hover:text-red-700 text-xs font-bold px-1">✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addTarefaEvento} className="text-[11px] font-semibold text-emerald-700 hover:underline">+ adicionar tarefa</button>
+                <p className="text-[10px] text-gray-500">Dica: pra uma tarefa tipo "resumo da mentoria" que vale até o fim do dia, ponha o horário perto do fim do expediente — não precisa ser exato.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-gray-900">Participantes ({eventoEditando.participantes.length}):</p>
+                  {pessoasAtivas.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setEventoEditando((p) => ({ ...p, participantes: p.participantes.length === pessoasAtivas.length ? [] : pessoasAtivas.map((x) => x.id) }))}
+                      className="ml-auto text-[11px] font-semibold text-emerald-700 hover:underline"
+                    >
+                      {eventoEditando.participantes.length === pessoasAtivas.length ? '✔ desmarcar todos' : '☐ marcar todos'}
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white divide-y divide-gray-100">
+                  {pessoasAtivas.map((p) => {
+                    const marcado = eventoEditando.participantes.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => alternarParticipanteEvento(p.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs ${marcado ? 'bg-emerald-50 font-semibold text-emerald-900' : 'hover:bg-gray-50 text-gray-700'}`}
+                      >
+                        {marcado ? '✔ ' : ''}{p.nome}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={salvarEvento} disabled={eventoSalvando} className="bg-emerald-600 hover:bg-emerald-700 text-white">Salvar evento</Button>
+                <Button size="sm" variant="outline" onClick={() => setEventoEditando(null)} disabled={eventoSalvando}>Cancelar</Button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5 border-t border-gray-200 pt-3">
+            {eventos.length === 0 && <p className="text-[11px] text-gray-500">Nenhum evento cadastrado ainda.</p>}
+            {eventos.map((ev) => (
+              <div key={ev.id} className={`rounded-md border px-3 py-2 ${ev.ativo ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-100 opacity-60'}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-gray-900">{ev.nome}</span>
+                  <span className="text-[11px] text-gray-500">{DIAS_DA_SEMANA[ev.dia_semana]}, {ev.hora_inicio}–{ev.hora_fim}</span>
+                  <span className="text-[11px] text-gray-500">· {(ev.tarefas || []).length} tarefa{(ev.tarefas || []).length === 1 ? '' : 's'} · {(ev.participantes || []).length} pessoa{(ev.participantes || []).length === 1 ? '' : 's'}</span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button type="button" onClick={() => alternarEventoAtivo(ev)} className={`text-[11px] font-semibold ${ev.ativo ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {ev.ativo ? 'ativo' : 'inativo'}
+                    </button>
+                    <button type="button" onClick={() => setEventoEditando(ev)} className="text-[11px] font-semibold text-gray-600 hover:underline">editar</button>
+                    <button type="button" onClick={() => excluirEvento(ev.id)} className="text-[11px] font-semibold text-red-500 hover:text-red-700">
+                      {excluindoEvento === ev.id ? 'confirmar exclusão' : 'excluir'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

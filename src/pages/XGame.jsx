@@ -11,6 +11,7 @@ import {
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
   TOKEN_MAX, ligaDoToken, moedaModelo,
   estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
+  minutosDeHora,
 } from '@/lib/xgame';
 import { filtroOrDonoDaVenda, vendasDaPessoa } from '@/lib/vendasDoCiclo';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
@@ -58,6 +59,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
   const [participante, setParticipante] = useState(null);
   const [cicloConfig, setCicloConfig] = useState(null);
   const [perdaoAte, setPerdaoAte] = useState(null);
+  const [liberacaoAteMin, setLiberacaoAteMin] = useState(null); // DIR-161
   const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
   const [votosDias, setVotosDias] = useState([]);
   const [agora, setAgora] = useState(new Date());
@@ -98,12 +100,15 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
     (async () => {
       try {
         const hoje = new Date();
-        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, uReal] = await Promise.all([
+        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, { data: liberacao }, uReal] = await Promise.all([
           supabase.from('xgame_participantes').select('*').eq('user_id', u.id).maybeSingle(),
           supabase.from('xgame_config').select('ciclo_inicio,perdao_zeragem_ate').eq('id', 'atual').maybeSingle(),
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
           supabase.from('xgame_participantes').select('user_id,aceita_ser_votado').eq('ativo', true),
           supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', u.id).eq('data', dataISO(hoje)),
+          // 🚀 DIR-161 — liberação pontual de evento (ex.: corrida da empresa
+          // às 4h): tarefas antes de `ate_hora` não perdem MvM/pontos/X-Pay.
+          supabase.from('xgame_liberacoes').select('ate_hora').eq('user_id', u.id).eq('data', dataISO(hoje)).maybeSingle(),
           // 🔍 no modo "ver como ele vê" o localStorage não tem o cargo real
           // dela — busca pra o gate do "Aceito ser votado" (só super_admin) valer certo
           userIdForcado
@@ -115,6 +120,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
         setMeuAceitaSerVotado(part?.aceita_ser_votado !== false);
         setCicloConfig(cfg?.ciclo_inicio || null);
         setPerdaoAte(cfg?.perdao_zeragem_ate || null);
+        setLiberacaoAteMin(liberacao?.ate_hora ? minutosDeHora(liberacao.ate_hora) : null);
         setTarefas(tf || []);
 
         // 🧯 08/09 — os mesmos colegas votáveis (sem Super Admin fechado) e os
@@ -187,8 +193,8 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
   // régua radical, só perdoa o dia marcado.
   const perdoado = !!perdaoAte && dataISO(agora) <= perdaoAte;
   const resumo = useMemo(
-    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos, perdoado }),
-    [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos, perdoado],
+    () => resumoDoDia({ tarefas, agoraMin, diasCiclo, hoje: agora, participante, cicloConfigISO: cicloConfig, votouEmTodos, perdoado, liberadoAteMin: liberacaoAteMin }),
+    [tarefas, agoraMin, diasCiclo, agora, participante, cicloConfig, votouEmTodos, perdoado, liberacaoAteMin],
   );
 
   // 🗳️ votar nos colegas — mesma lógica do Compromisso, mesma tabela.

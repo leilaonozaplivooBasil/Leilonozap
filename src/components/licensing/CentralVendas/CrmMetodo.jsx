@@ -39,6 +39,7 @@ import {
   ehTarefaDeGratidao, deveAvisarRitual, janelaDoRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
   pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
+  minutosDeHora,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
 import TourGuiado from './TourGuiado';
@@ -58,6 +59,7 @@ import {
   rotinaEmVigor, estadoDaRotina, deveGerarSozinha, valeAPartirDe,
   incluirNaRotina, editarNaRotina, excluirDaRotina,
 } from '@/lib/rotinaPessoal';
+import { rotinaComEventos } from '@/lib/eventosGamificacao';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
@@ -227,6 +229,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       .catch(() => setPerfil(null));
   }, [uid]);
 
+  // 🚀 DIR-161 — eventos da empresa (ex.: Mentalidade do CEO, segunda
+  // 9h-13h): enquanto esta pessoa estiver marcada num evento ativo, a
+  // geração da rotina (manual ou automática, abaixo) já nasce com a janela
+  // do evento trocada — mesma régua do cron `gerarJornadaDoDia`.
+  const [eventosAtivos, setEventosAtivos] = useState([]);
+  useEffect(() => {
+    if (!uid) return;
+    supabase.from('xgame_eventos').select('*').eq('ativo', true)
+      .then(({ data }) => setEventosAtivos(data || []))
+      .catch(() => setEventosAtivos([]));
+  }, [uid]);
+
   // 🔁 DIR-80 — `diaLido` guarda QUAL dia já terminou de carregar. Sem isso, a
   // geração automática dispararia contra a lista vazia do primeiro render (antes
   // da resposta do banco chegar) e duplicaria o dia inteiro. É a trava de
@@ -361,6 +375,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 📅 DIR-80 — a rotina DELA quando ela editou; a da casa enquanto não editou.
   // (a coluna metodo_perfil.rotina existia e ninguém nunca escrevia nela)
   const rotina = useMemo(() => rotinaEmVigor(perfil, ROTINA_PADRAO), [perfil]);
+  // 🚀 DIR-161 — a rotina que de fato GERA o dia já leva em conta o evento
+  // da empresa, quando há um marcado pra esta pessoa neste dia da semana.
+  const rotinaDoDia = useMemo(
+    () => rotinaComEventos(rotina, eventosAtivos, { diaSemana: new Date(`${dia}T12:00:00`).getDay(), dataISO: dia, userId: uid }),
+    [rotina, eventosAtivos, dia, uid],
+  );
   const estadoRotina = useMemo(() => estadoDaRotina(perfil), [perfil]);
   const progresso = progressoDia(tarefas);
 
@@ -478,6 +498,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     () => votouEmTodosOsColegas(colegas, colegas.filter((id) => jaVoteiEm(id))),
     [colegas, votosDadosHoje],
   );
+  // 🚀 DIR-161 — liberação pontual de evento: se o dono liberou as tarefas
+  // desta pessoa HOJE até uma hora (ex.: corrida da empresa às 4h), busca
+  // esse horário — só vale pro dia sendo jogado AGORA, mesma régua do
+  // `perdoado` logo abaixo (histórico não se recalcula).
+  const [liberacaoAteMin, setLiberacaoAteMin] = useState(null);
+  useEffect(() => {
+    if (painel !== 'compromisso' || !uid || !ehHoje) { setLiberacaoAteMin(null); return; }
+    supabase.from('xgame_liberacoes').select('ate_hora').eq('user_id', uid).eq('data', dia).maybeSingle()
+      .then(({ data }) => setLiberacaoAteMin(data?.ate_hora ? minutosDeHora(data.ate_hora) : null))
+      .catch(() => setLiberacaoAteMin(null));
+  }, [painel, uid, dia, ehHoje]);
   const xgame = useMemo(() => {
     if (painel !== 'compromisso' || tarefasJogo.length === 0) return null;
     return resumoDoDia({
@@ -493,8 +524,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // 🕊️ 09/09/2026 — perdão de um dia excepcional inteiro, só vale se o
       // dia sendo jogado agora É o perdoado — histórico não se reescreve.
       perdoado: ehHoje && !!perdaoAte && hojeStr() <= perdaoAte,
+      liberadoAteMin: ehHoje ? liberacaoAteMin : null,
     });
-  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje, perdaoAte]);
+  }, [painel, tarefasJogo, agoraMinJogo, diasCiclo, dia, ehHoje, participante, cicloConfig, votouEmTodosHoje, perdaoAte, liberacaoAteMin]);
   // 🩹 08/09/2026 — `xgame` já é recalculado pro `dia` que está sendo visto
   // (não só hoje: veja o useMemo acima), então o estado de uma tarefa de um
   // dia passado também sai certo daqui — precisa pra recuperação de fim de
@@ -738,7 +770,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setSalvando(true);
     try {
       diasGerados.current.add(dia); // o automático não repete o que a mão acabou de fazer
-      const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
+      const linhas = gerarTarefasDaRotina(rotinaDoDia, uid, dia, pesoAutomatico);
       await criarTarefasSemDuplicar(linhas);
       // 🔁 DIR-80 — gerar uma vez LIGA a repetição. "Só se a pessoa pedir pra
       // parar" — então o liga é aqui, e o desliga é um botão dela.
@@ -770,7 +802,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     diasGerados.current.add(dia);
     (async () => {
       try {
-        const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
+        const linhas = gerarTarefasDaRotina(rotinaDoDia, uid, dia, pesoAutomatico);
         await criarTarefasSemDuplicar(linhas);
         // DIR-81.1 — grava direto (sem salvarPerfil) pra não estourar o toast
         // "Salvo!" por cima do aviso de baixo, que é o que importa aqui.
@@ -780,7 +812,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       } catch (e) { console.error(e); }
       finally { gerandoAuto.current = false; }
     })();
-  }, [uid, dia, diaLido, tarefas, perfil, rotina, pesoAutomatico, carregarTarefas]);
+  }, [uid, dia, diaLido, tarefas, perfil, rotinaDoDia, pesoAutomatico, carregarTarefas]);
 
   // DIR-45.2 — dia gerado com a rotina antiga continua salvo no banco; este
   // botão apaga as tarefas do DIA ESCOLHIDO e recria com a Rotina Perfeita.
@@ -788,7 +820,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setSalvando(true);
     try {
       for (const t of tarefas) await plataforma.entities.MetodoTarefa.delete(t.id);
-      const linhas = gerarTarefasDaRotina(rotina, uid, dia, pesoAutomatico);
+      const linhas = gerarTarefasDaRotina(rotinaDoDia, uid, dia, pesoAutomatico);
       await criarTarefasSemDuplicar(linhas);
       if (perfil?.id) await plataforma.entities.MetodoPerfil.update(perfil.id, { rotina_gerada_em: dia });
       toast.success(`Dia regenerado com as ${linhas.length} tarefas da Rotina Perfeita!`);
