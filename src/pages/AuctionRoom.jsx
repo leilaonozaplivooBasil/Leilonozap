@@ -10,6 +10,8 @@ import { ArrowLeft, X, MessageSquare, Building2, Loader2, ChevronDown } from "lu
 import AIMessage from "../components/chat/AIMessage";
 import PlacaLance from "../components/chat/PlacaLance";
 import BidInput from "../components/auction/BidInput";
+import MidiaDoLote from '../components/auction/MidiaDoLote';
+import useVideoDoLote from '@/hooks/useVideoDoLote';
 import GuestRegistrationModal from "../components/common/GuestRegistrationModal";
 import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
@@ -63,6 +65,10 @@ export default function AuctionRoom() {
   const spectatorModeParam = searchParams.get("spectator") === "true";
 
   const [auction, setAuction] = useState(null);
+  // 🎬 o vídeo do lote vem do PRODUTO ligado (ver useVideoDoLote). Fica AQUI,
+  // com os outros hooks e ANTES de qualquer `return`: hook depois de um return
+  // sai da ordem entre renders e o React quebra.
+  const videoDoLote = useVideoDoLote(auction);
   const [messages, setMessages] = useState([]);
 
   // 🐢 PONTO 86 (19/08/2026) — o chat recalculava a lista invertida (e escaneava
@@ -1204,7 +1210,10 @@ export default function AuctionRoom() {
       <main className="main-content">
         <aside className="auction-sidebar">
           <div className="product-panel">
-            <img src={mainImageUrl} alt={auction.title} className="product-panel__image" />
+            {/* 🎬 16/09/2026 — o vídeo do lote mora AQUI, na mesma caixa da foto.
+                Empilhar um player embaixo empurraria preço, cronômetro e o botão
+                de lance na tela em que a pessoa está disputando. Ver MidiaDoLote. */}
+            <MidiaDoLote imagemUrl={mainImageUrl} titulo={auction.title} video={videoDoLote} className="product-panel__image" />
             <div className="product-panel__body">
               <h2 className="product-panel__title">{auction.title}</h2>
               <div className="product-panel__meta">
@@ -1404,7 +1413,7 @@ export default function AuctionRoom() {
           </Button>
         </div>
         <div className="mobile-bottom-sheet__content">
-          <img src={mainImageUrl} alt={auction.title} className="mobile-bottom-sheet__image" />
+          <MidiaDoLote imagemUrl={mainImageUrl} titulo={auction.title} video={videoDoLote} className="mobile-bottom-sheet__image" />
           <div className="mobile-bottom-sheet__body">
             <h3 className="mobile-bottom-sheet__title">{auction.title}</h3>
             {/* 📜 No celular a folha rola inteira, então não há o que encurtar —
@@ -1473,6 +1482,8 @@ export default function AuctionRoom() {
             <h3 className="text-2xl font-bold text-white mb-4 text-center">🔥 Confirmar Arremate</h3>
 
             <div className="bg-gray-700 rounded-lg p-4 mb-6">
+              {/* 🔴 SEM VÍDEO AQUI, de propósito: este é o modal de CONFIRMAR
+                  ARREMATE. A pessoa está decidindo pagar, não navegando mídia. */}
               <img src={mainImageUrl} alt={auction.title} className="w-full h-40 object-cover rounded-lg mb-3" />
               <h4 className="text-lg font-semibold text-white mb-2">{auction.title}</h4>
               <div className="space-y-2">
