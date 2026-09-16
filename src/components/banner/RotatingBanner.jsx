@@ -38,6 +38,10 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
   }, [banners, isMobile]);
 
   const videoRefs = useRef({});
+  // 👆 refs do gesto de deslizar (ver aoTocar/aoSoltar mais abaixo). Ficam AQUI,
+  // com os outros hooks: o componente tem `return null` no meio, e hook depois de
+  // um return sai da ordem entre renders — o React quebra. O lint pegou.
+  const toque = useRef(null);
 
   // ⏱️ Banners de imagem trocam no intervalo fixo de 10s. Banners de vídeo
   // avançam exatamente quando o próprio vídeo termina — sem loop reiniciando
@@ -80,13 +84,66 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
     setCurrentIndex(index);
   };
 
+  // ══════════════════════════════════════════════════════════════════════
+  // 👆 DESLIZAR O DEDO TROCA O BANNER (16/09/2026, pedido do dono)
+  // ══════════════════════════════════════════════════════════════════════
+  // No celular não existe passar o mouse, então as setas ficavam presas na
+  // tela (feias e grandes) OU invisíveis — e não havia como trocar de banner
+  // a não ser acertando um pontinho. O gesto natural do celular é arrastar.
+  //
+  // 🔴 NÃO chamamos preventDefault. O banner ocupa a largura inteira da tela:
+  // bloquear o gesto aqui prenderia a ROLAGEM VERTICAL da página inteira no
+  // dedo de quem só queria descer. A decisão fica pro touchend, comparando o
+  // movimento horizontal com o vertical — só é "deslizar de banner" quando o
+  // dedo andou mais pro lado do que pra baixo.
+  //
+  // 📏 MEDIDO (16/09, Chromium): o React registra touchstart/touchmove como
+  // listeners PASSIVOS na raiz, então ali `e.cancelable` é false e um
+  // preventDefault nem chega a valer — o navegador loga "Unable to
+  // preventDefault inside passive event listener invocation" e a página rola
+  // do mesmo jeito. Não dá pra travar a rolagem daqui nem por acidente.
+  const DESLIZE_MINIMO = 40; // px — abaixo disso é toque trêmulo, não gesto
+
+  const aoTocar = (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    toque.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const aoSoltar = (e) => {
+    const ini = toque.current;
+    toque.current = null;
+    if (!ini || filteredBanners.length < 2) return;
+    const t = e.changedTouches?.[0];
+    if (!t) return;
+    const dx = t.clientX - ini.x;
+    const dy = t.clientY - ini.y;
+    // rolagem vertical não é deslize de banner
+    if (Math.abs(dx) < DESLIZE_MINIMO || Math.abs(dx) <= Math.abs(dy)) return;
+    if (dx < 0) goToNext(); else goToPrevious();
+  };
+
+  // 🔗 E O LINK DO BANNER? Ele é um <a href target="_blank">, então a primeira
+  // versão disto tinha uma trava barrando o clique na fase de captura depois de
+  // um deslize. MEDIDO no Chromium, com entrada de toque real (CDP): o navegador
+  // NÃO sintetiza clique quando o dedo anda além do limiar de toque — arrastar
+  // nunca abriu o link, com ou sem trava. Defesa que a medição não sustenta é
+  // código morto, e código morto no caminho do clique esconde o próximo defeito.
+  // Os dois casos ficam guardados em tests/navegador/bannerDeslizar.spec.mjs:
+  // deslizar não abre, tocar abre.
+
   if (filteredBanners.length === 0) return null;
 
   // encaixe efetivo: no celular respeita mobileFit quando informado
   const fitAtual = isMobile && mobileFit ? mobileFit : fit;
 
   return (
-    <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
+    <div
+      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}
+      onTouchStart={aoTocar}
+      onTouchEnd={aoSoltar}
+      data-teste="carrossel-de-banner"
+    >
       <style>{`
         @keyframes nzCaptionFade { 0%, 100% { opacity: 0; } 15%, 85% { opacity: 1; } }
         .nz-video-caption { animation: nzCaptionFade 5s ease-in-out infinite; }
@@ -235,7 +292,13 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            // 📱 `hidden md:block`: no celular a seta SOME. Ela é desenhada pra
+            // aparecer no hover, e no toque não existe hover — ou some sozinha, ou
+            // fica grudada na tela depois de um toque, grande e no meio da arte.
+            // Quem troca de banner no celular é o dedo (ver aoSoltar). 768px é o
+            // mesmo corte do `isMobile` logo acima, pra não haver faixa em que a
+            // seta suma e o gesto não valha.
+            className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             aria-label="Banner anterior"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -243,7 +306,7 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
 
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             aria-label="Próximo banner"
           >
             <ChevronRight className="w-6 h-6" />
