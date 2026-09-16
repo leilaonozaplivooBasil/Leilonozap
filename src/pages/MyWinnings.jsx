@@ -30,7 +30,7 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
+const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo, onEscolherEntrega, liquidando }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
     const config = statusConfig[auction.order_status] || statusConfig.paid;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
@@ -65,6 +65,38 @@ const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
                     <p className="text-green-400 text-xl font-black">R$ {fmtBR(auction.current_price)}</p>
                 </div>
 
+                {/* 🤝 16/09/2026 — A ESCOLHA DA ENTREGA TAMBÉM VIVE AQUI.
+                    Esta tela liquida os pendentes sozinha ao abrir; os lotes com
+                    retirada ficam de fora daquele laço, senão o frete seria
+                    cobrado antes de o vencedor escolher. Sem a escolha AQUI,
+                    quem fechasse o modal de vitória sem escolher ficaria com o
+                    arremate pendente e nenhum caminho para resolver. */}
+                {auction.order_status === 'awaiting_payment' && auction.permite_retirada && (
+                    <div className="space-y-2" data-teste="escolha-de-entrega-arremate">
+                        <p className="text-white text-xs font-bold text-center">Como você quer receber?</p>
+                        <Button
+                            onClick={() => onEscolherEntrega(auction, 'entrega')}
+                            disabled={liquidando}
+                            size="sm"
+                            data-teste="arremate-escolher-entrega"
+                            className="w-full bg-white/10 hover:bg-white/15 border border-white/15 text-white font-semibold"
+                        >
+                            {liquidando ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+                            Receber em casa{Number(auction.frete_reservado_valor) > 0 ? ` — frete R$ ${fmtBR(auction.frete_reservado_valor)}` : ''}
+                        </Button>
+                        <Button
+                            onClick={() => onEscolherEntrega(auction, 'retirada')}
+                            disabled={liquidando}
+                            size="sm"
+                            data-teste="arremate-escolher-retirada"
+                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold border-0"
+                        >
+                            {liquidando ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+                            Retirar em mãos — sem frete
+                        </Button>
+                    </div>
+                )}
+
                 {/* Botão de Ação - Apenas Acompanhar */}
                 <Button 
                     onClick={() => onTrackClick(auction)}
@@ -88,10 +120,35 @@ export default function MyWinningsPage() {
     const [debugLogs, setDebugLogs] = useState([]);
     const [showDebug, setShowDebug] = useState(false);
     const [walletBalance, setWalletBalance] = useState(null);
+    // 🤝 qual arremate está sendo liquidado agora (trava os dois botões do card)
+    const [liquidandoId, setLiquidandoId] = useState(null);
 
     const location = useLocation();
     const navigate = useNavigate();
     
+    // 🤝 liquida o arremate com a entrega escolhida pelo vencedor.
+    // Quem retira não paga frete e recebe de volta o que foi reservado — quem
+    // decide isso é o servidor, conferindo `permite_retirada` no banco.
+    const handleEscolherEntrega = async (auction, tipo) => {
+        if (!currentUser?.id || liquidandoId) return;
+        setLiquidandoId(auction.id);
+        try {
+            const r = await plataforma.functions.invoke('settleAuctionWithBalance', {
+                auction_id: auction.id, user_id: currentUser.id, entrega_tipo: tipo,
+            });
+            const d = r?.data || r;
+            if (d?.success) {
+                setWinnings(prev => prev.map(w => (w.id === auction.id ? { ...w, order_status: 'paid' } : w)));
+            } else {
+                alert(d?.error || 'Não foi possível concluir agora. Tente de novo em instantes.');
+            }
+        } catch {
+            alert('Não foi possível concluir agora. Tente de novo em instantes.');
+        } finally {
+            setLiquidandoId(null);
+        }
+    };
+
     const addDebugLog = (message, type = 'info') => {
         const log = { message, type, time: new Date().toLocaleTimeString() };
         setDebugLogs(prev => [...prev, log]);
@@ -138,7 +195,14 @@ export default function MyWinningsPage() {
                 // liquidava — o arremate nunca virava pedido na Gestão de Pedidos. Aqui, ao
                 // abrir esta página, tenta liquidar (best-effort, idempotente no servidor)
                 // qualquer arremate ainda "awaiting_payment" — mesma chamada do WinnerModal.
-                const pendentes = wonAuctions.filter(a => a.order_status === 'awaiting_payment');
+                // 🤝 16/09/2026 — LOTE COM RETIRADA LIBERADA FICA DE FORA DESTE LAÇO.
+                // Aqui a liquidação roda SOZINHA, em silêncio, ao abrir a página.
+                // Num lote com retirada, isso cobraria o frete antes de o vencedor
+                // escolher — e a escolha, por regra do dono, só existe para ele.
+                // Fica pendente até ele escolher no modal de vitória.
+                // A escolha aparece no próprio card (ver WonAuctionCard), então quem
+                // fechou o modal de vitória sem escolher resolve por aqui.
+                const pendentes = wonAuctions.filter(a => a.order_status === 'awaiting_payment' && !a.permite_retirada);
                 for (const a of pendentes) {
                     try {
                         const r = await plataforma.functions.invoke('settleAuctionWithBalance', { auction_id: a.id, user_id: user.id });
@@ -267,6 +331,8 @@ export default function MyWinningsPage() {
                                 auction={auction} 
                                 onTrackClick={handleTrackClick}
                                 isSaiDeBaixo={false}
+                                onEscolherEntrega={handleEscolherEntrega}
+                                liquidando={liquidandoId === auction.id}
                             />
                         ))}
                     </div>

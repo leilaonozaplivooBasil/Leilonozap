@@ -19,9 +19,30 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
 
   const isWinnerNow = Boolean(isOpen && auction && currentUser && auction.winner_id === currentUser.id);
 
-  // 💳 Liquidação automática: ao abrir como vencedor, o lance é debitado do saldo na hora
+  // 🤝 16/09/2026 — A ESCOLHA DA ENTREGA, E SÓ PARA O VENCEDOR.
+  // Regra do dono: "a escolha de receber em casa ou retirar em mãos deve vir só
+  // se ele for o vencedor do leilão ou arremate já".
+  //
+  // 🔴 ISTO SEGURA A LIQUIDAÇÃO AUTOMÁTICA. Hoje o modal abre e já debita
+  // produto + frete sem perguntar nada. Num lote com retirada liberada, debitar
+  // antes de perguntar cobraria um frete que a pessoa talvez não queira — e
+  // devolver depois é a classe de defeito que já custou caro aqui.
+  //
+  // Fora dos lotes liberados nada muda: `precisaEscolher` é falso e a
+  // liquidação dispara sozinha, exatamente como sempre foi.
+  const precisaEscolher = Boolean(isWinnerNow && auction?.permite_retirada);
+  const [entregaEscolhida, setEntregaEscolhida] = useState(null); // null | 'entrega' | 'retirada'
+  const freteDoArremate = Number(auction?.frete_reservado_valor) || 0;
+
+  useEffect(() => {
+    if (!isOpen) { settleTriggered.current = false; setEntregaEscolhida(null); }
+  }, [isOpen]);
+
+  // 💳 Liquidação: automática quando não há o que escolher; depois da escolha
+  // quando o lote permite retirada.
   useEffect(() => {
     if (!isWinnerNow || settleTriggered.current) return;
+    if (precisaEscolher && !entregaEscolhida) return;
     settleTriggered.current = true;
     setSettle({ state: 'processing', balance: null, needed: null });
     (async () => {
@@ -29,6 +50,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
         const result = await plataforma.functions.invoke('settleAuctionWithBalance', {
           auction_id: auction.id,
           user_id: currentUser.id,
+          entrega_tipo: entregaEscolhida || 'entrega',
         });
         const data = result?.data || result;
         if (data?.success) {
@@ -44,7 +66,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
         setSettle({ state: 'error', balance: null, needed: null });
       }
     })();
-  }, [isWinnerNow, auction?.id, currentUser?.id, onSettled]);
+  }, [isWinnerNow, auction?.id, currentUser?.id, onSettled, precisaEscolher, entregaEscolhida]);
 
   // Histórico de lances (mais recentes primeiro)
   const bidHistory = React.useMemo(() => {
@@ -186,6 +208,35 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
         {/* CTA */}
         {hasWinner ? (
           <>
+            {/* 🤝 A ESCOLHA DA ENTREGA — só para o vencedor, só no lote liberado,
+                e ANTES de qualquer débito. Enquanto ela estiver na tela, a
+                liquidação não disparou: nada foi cobrado ainda. */}
+            {precisaEscolher && !entregaEscolhida && (
+              <div className="w-full space-y-2" data-teste="escolha-de-entrega">
+                <p className="text-sm font-bold text-white text-center">Como você quer receber?</p>
+                <button
+                  type="button"
+                  onClick={() => setEntregaEscolhida('entrega')}
+                  data-teste="escolher-entrega"
+                  className="w-full min-h-[48px] rounded-xl font-bold text-sm border border-white/15 bg-white/10 text-white hover:bg-white/15 transition-colors"
+                >
+                  Receber em casa{freteDoArremate > 0 ? ` — frete R$ ${fmtBR(freteDoArremate)}` : ''}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEntregaEscolhida('retirada')}
+                  data-teste="escolher-retirada"
+                  className="w-full min-h-[48px] rounded-xl font-bold text-sm border-0 bg-emerald-500 text-gray-900 hover:bg-emerald-400 transition-colors"
+                >
+                  Retirar em mãos — sem frete
+                </button>
+                {freteDoArremate > 0 && (
+                  <p className="text-[11px] text-emerald-300 text-center">
+                    Escolhendo a retirada, os R$ {fmtBR(freteDoArremate)} do frete voltam para a sua carteira.
+                  </p>
+                )}
+              </div>
+            )}
             {isWinner && settle.state === 'processing' && (
               <div className="w-full rounded-xl py-3 text-sm font-bold text-white border border-white/15 bg-white/10 flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-emerald-300" />
@@ -226,7 +277,10 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
                 </button>
               </>
             )}
-            {isWinner && (settle.state === 'idle' || settle.state === 'error') && (
+            {/* enquanto a escolha está na tela o estado é 'idle' — mostrar aqui o
+                botão de pagar daria DOIS chamados à ação na mesma tela, e um
+                deles levaria embora sem escolher nada. */}
+            {isWinner && !(precisaEscolher && !entregaEscolhida) && (settle.state === 'idle' || settle.state === 'error') && (
               <button
                 onClick={handleGoToWinnings}
                 className="w-full rounded-xl py-3 text-sm font-bold text-emerald-950 shadow-lg transition-transform hover:scale-[1.03]"
