@@ -17,6 +17,7 @@ import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
+import PlayerDeVideo from '@/components/catalog/PlayerDeVideo';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
@@ -483,6 +484,10 @@ export default function CatalogProductDetails() {
                 <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
               </div>
             </div>
+            {/* 🎬 Vídeo do produto, quando houver. Fica ABAIXO da foto e nunca no
+                lugar dela: a foto é o que carrega rápido e o que aparece na
+                busca; o vídeo é o detalhe de quem já parou pra olhar. */}
+            <PlayerDeVideo produto={product} />
           </div>
 
           {/* BUY BOX */}

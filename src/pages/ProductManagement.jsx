@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
+import { videosValidos } from '@/lib/videoDoProduto';
+import CampoDeVideo from '@/components/catalog/CampoDeVideo';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -330,7 +332,8 @@ export default function ProductManagement() {
     condicao: '',
     estado_conservacao: '',
     product_source: '',
-    image_urls: []
+    image_urls: [],
+    video_urls: []
   });
 
   const navigate = useNavigate();
@@ -380,6 +383,7 @@ export default function ProductManagement() {
     setEnviandoImagens(false);
     if (inputImagensRef.current) inputImagensRef.current.value = '';
   };
+
 
   const removerImagem = (i) => {
     setFormData((f) => ({ ...f, image_urls: (f.image_urls || []).filter((_, idx) => idx !== i) }));
@@ -677,7 +681,9 @@ export default function ProductManagement() {
       condicao: product.condicao || '',
       estado_conservacao: product.estado_conservacao || '',
       product_source: product.product_source || '',
-      image_urls: Array.isArray(product.image_urls) ? product.image_urls : []
+      image_urls: Array.isArray(product.image_urls) ? product.image_urls : [],
+      // 🎬 mesma armadilha das fotos: sem carregar, salvar apagaria o vídeo.
+      video_urls: Array.isArray(product.video_urls) ? product.video_urls : []
     });
     setShowAddForm(true);
   };
@@ -761,7 +767,11 @@ export default function ProductManagement() {
         condicao: formData.condicao || null,
         estado_conservacao: (formData.estado_conservacao || '').trim() || null,
         product_source: formData.product_source || null,
-        image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : []
+        image_urls: Array.isArray(formData.image_urls) ? formData.image_urls.filter(Boolean) : [],
+        // 🎬 a tela NUNCA manda direto o que a pessoa digitou: `videosValidos`
+        // recusa host desconhecido e tira repetido. Endereço ruim gravado é
+        // <iframe> que some calado no navegador de quem compra.
+        video_urls: videosValidos(formData.video_urls)
       };
 
       if (editingProduct) {
@@ -794,7 +804,8 @@ export default function ProductManagement() {
     condicao: '',
     estado_conservacao: '',
     product_source: '',
-        image_urls: []
+        image_urls: [],
+    video_urls: []
       });
       setShowAddForm(false);
       setEditingProduct(null);
@@ -1950,6 +1961,19 @@ export default function ProductManagement() {
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    {/* 🎬 VÍDEO DO PRODUTO (15/09/2026) — pedido do dono: "ao criar
+                        ou editar um produto, também ter a função de anexar vídeo ou
+                        colocar link de vídeo". Fica logo depois das fotos porque é a
+                        mesma ideia: mídia que o cliente vê na página de venda.
+                        O campo é o MESMO das telas de catálogo — a regra do que é
+                        vídeo válido não pode divergir entre as três. */}
+                    <div className="col-span-full">
+                      <CampoDeVideo
+                        valor={formData.video_urls}
+                        aoMudar={(v) => setFormData((f) => ({ ...f, video_urls: v }))}
+                      />
                     </div>
 
                     <div className="col-span-full">

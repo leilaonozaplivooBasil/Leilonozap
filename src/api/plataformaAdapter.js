@@ -771,8 +771,15 @@ async function invokeIntegration(name, body) {
 }
 
 const CoreImpl = {
-  async UploadFile({ file, path }) {
-    const bucket = 'public-assets';
+  async UploadFile({ file, path, bucket: baldePedido }) {
+    // 🎬 15/09/2026 — o balde deixou de ser literal. Era `public-assets` fixo em
+    // código, então NÃO HAVIA como subir arquivo pra outro lugar: o vídeo de
+    // produto, que precisa do balde próprio com teto e tipos travados
+    // (videos-produtos, 50 MB, só mp4/webm/mov), não tinha por onde entrar.
+    //
+    // O padrão continua `public-assets`: toda chamada que existe hoje passa sem
+    // saber que este parâmetro nasceu. Quem quer outro balde, pede pelo nome.
+    const bucket = String(baldePedido || '').trim() || 'public-assets';
     // 🧼 a limpeza de caracteres valia SÓ pro caminho automático — caminho vindo
     // de fora ia cru pro Storage. Agora os dois passam pela mesma peneira.
     const finalPath =
