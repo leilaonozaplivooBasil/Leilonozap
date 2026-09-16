@@ -30,6 +30,9 @@ export default function useBidSubmission({
   setUserWallet,
   freteValor = 0,
   freteSelo = null,
+  // 🤝 retirada em mãos: PEDIDO do navegador. Quem autoriza é
+  // `auctions.permite_retirada`, conferido no servidor (freteLeilao.js).
+  retirada = false,
 }) {
   const [isSubmittingBid, setIsSubmittingBid] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -234,7 +237,8 @@ export default function useBidSubmission({
         // 🔏 O selo é o que vale. `frete_valor` fica só para a etapa 1 do rollout,
         // para não zerar o frete de quem ainda está com a aba antiga aberta.
         frete_selo: freteSelo,
-        frete_valor: freteValor
+        frete_valor: freteValor,
+        retirada
       });
       const atomicData = atomicResult?.data || atomicResult;
 
@@ -368,7 +372,7 @@ export default function useBidSubmission({
         setIsSubmittingBid(false);
       }, 400);
     }
-  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet, freteValor, freteSelo]);
+  }, [auction, currentUser, playSound, auctionId, isSubmittingBid, getServerSyncedTime, calibrateServerOffset, setAuction, setMessages, lastMessageCountRef, chatRef, setShowLogin, setShowGuestModal, setShowLowBalanceModal, setUserWallet, freteValor, freteSelo, retirada]);
 
   return {
     submitBid,

@@ -303,23 +303,37 @@ export async function finalizeOneAuction(auction) {
   // ganha a corrida do claim define vencedor E frete na mesma escrita — não há
   // janela entre uma coisa e outra.
   const COLUNAS_BID = 'sender_id,sender_name,bid_amount,created_date';
-  let respBids = await sb(
-    `auction_messages?select=${COLUNAS_BID},frete_amount&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
+  const lerLances = (extras) => sb(
+    `auction_messages?select=${COLUNAS_BID}${extras}&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
   );
-  let temColunaFrete = true;
-  if (!respBids.ok) {
+  const colunaInexistente = async (resp) => {
+    const detalhe = await resp.text().catch(() => '');
     // ⚠️ Volta segura SÓ para coluna inexistente (42703). Qualquer outro erro
     // (rede, permissão, PostgREST) NÃO pode virar "encerra sem frete" — aí o
     // certo é deixar estourar e o leilão não encerrar, e não encerrar errado.
-    const detalhe = await respBids.text().catch(() => '');
     if (!/42703|does not exist|column .* does not exist/i.test(detalhe)) {
-      throw new Error(`[FINALIZE] leitura dos lances falhou (HTTP ${respBids.status}): ${detalhe.slice(0, 200)}`);
+      throw new Error(`[FINALIZE] leitura dos lances falhou (HTTP ${resp.status}): ${detalhe.slice(0, 200)}`);
     }
-    console.warn('[FINALIZE] auction_messages sem coluna frete_amount — relendo sem ela.');
-    temColunaFrete = false;
-    respBids = await sb(
-      `auction_messages?select=${COLUNAS_BID}&auction_id=eq.${enc(auctionId)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=500`
-    );
+    return true;
+  };
+
+  // 🪜 ESCADA DE TRÊS DEGRAUS, e a ordem importa.
+  // `entrega_tipo` (16/09) é mais nova que `frete_amount` (04/08). Pedir as duas
+  // de uma vez e cair direto para "nenhuma" perderia o FRETE só porque a coluna
+  // da entrega ainda não existe — encerrando o leilão com frete zero, que é
+  // exatamente o defeito que o B13 consertou. Então desce um degrau por vez.
+  let respBids = await lerLances(',frete_amount,entrega_tipo');
+  let temColunaFrete = true;
+  let temColunaEntrega = true;
+  if (!respBids.ok && await colunaInexistente(respBids)) {
+    console.warn('[FINALIZE] auction_messages sem coluna entrega_tipo — relendo só com frete_amount.');
+    temColunaEntrega = false;
+    respBids = await lerLances(',frete_amount');
+    if (!respBids.ok && await colunaInexistente(respBids)) {
+      console.warn('[FINALIZE] auction_messages sem coluna frete_amount — relendo sem ela.');
+      temColunaFrete = false;
+      respBids = await lerLances('');
+    }
   }
   const allBids = await respBids.json();
   const bidsList = Array.isArray(allBids) ? allBids : [];
@@ -342,6 +356,14 @@ export async function finalizeOneAuction(auction) {
   if (winnerId && freteDoTopBid == null) {
     console.warn(`[FINALIZE] leilão ${auctionId}: lance vencedor sem frete_amount — mantendo o frete atual do leilão (R$ ${freteVencedor}). Lance legado.`);
   }
+
+  // 🤝 16/09/2026 — A ENTREGA DO VENCEDOR, pela mesma regra do frete.
+  // A escolha (entrega ou retirada em mãos) vive no LANCE, não no leilão: num
+  // leilão o líder troca, e se morasse no leilão o último a dar lance
+  // sobrescreveria a escolha de quem ainda pode voltar a liderar. Aqui, no
+  // martelo, a do lance VENCEDOR vira a do leilão — na mesma escrita atômica.
+  // Lance legado (anterior à coluna) é 'entrega', que é como sempre foi.
+  const entregaVencedor = (temColunaEntrega && topBid?.entrega_tipo === 'retirada') ? 'retirada' : 'entrega';
 
   // maior lance de CADA participante neste leilão (bidsList já vem ordenado
   // desc por valor, então o primeiro encontrado de cada sender_id é o maior dele)
@@ -366,6 +388,7 @@ export async function finalizeOneAuction(auction) {
         order_status: winnerId ? 'awaiting_payment' : null,
         // 🚚 B13 — o frete do vencedor entra AQUI, na mesma escrita atômica.
         ...(winnerId ? { frete_reservado_valor: freteVencedor } : {}),
+        ...(winnerId && temColunaEntrega ? { entrega_tipo: entregaVencedor } : {}),
       }),
     }
   );

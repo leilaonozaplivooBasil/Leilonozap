@@ -110,6 +110,8 @@ async function releaseHold(userId, valor, auctionId = null) {
 // no log quem chamou sem crachá, pra a gente ver com tráfego real se sobrou
 // alguma tela do site que ainda não manda.
 import crypto from 'crypto';
+// 🤝 retirada em mãos: a autorização vem do banco, nunca do corpo da requisição
+import { cotarFreteDoLeilao } from '../_lib/freteLeilao.js';
 
 function _conferirCracha(req, idDoCorpo, rota) {
   const bloqueia = String(process.env.SESSAO_MODO || '').toLowerCase() === 'bloquear';
@@ -340,9 +342,36 @@ export default async function handler(req, res) {
     }
     // O valor financeiro é o do SELO. `body.frete_valor` fica só como reserva da
     // etapa 1, para não zerar o frete de quem ainda está com a aba antiga.
-    const freteValor = _freteOk
+    let freteValor = _freteOk
       ? _frete.valor
       : Math.max(0, parseFloat(body?.frete_valor) || 0);
+
+    // ══════════════════════════════════════════════════════════════════════
+    // 🤝 RETIRADA EM MÃOS (16/09/2026) — o único frete zero legítimo.
+    // ══════════════════════════════════════════════════════════════════════
+    // `retirada: true` chega no corpo e é um PEDIDO, não uma autorização:
+    // qualquer um manda esse campo num `curl`. Quem decide é
+    // `auctions.permite_retirada`, que `cotarFreteDoLeilao` lê DO BANCO — e o
+    // CHECK `auctions_retirada_so_se_permitida` ainda segura por baixo, caso
+    // algum canal futuro grave direto na tabela.
+    //
+    // Aqui não há selo a conferir: o selo assina um PREÇO de frete calculado
+    // para um CEP, e na retirada não existe preço nem CEP. A autoridade é a
+    // linha do leilão no banco.
+    let entregaTipo = 'entrega';
+    if (body?.retirada === true) {
+      const ret = await cotarFreteDoLeilao({ auctionId, userId, auction, retirada: true });
+      if (!ret.ok) {
+        return res.status(400).json({
+          success: false, sem_frete: true, motivo: ret.motivo,
+          message: ret.motivo === 'retirada_nao_permitida'
+            ? 'Este leilão não está liberado para retirada em mãos. Escolha a entrega.'
+            : 'Não foi possível confirmar a retirada deste lance. Recarregue a página e tente de novo.',
+        });
+      }
+      entregaTipo = 'retirada';
+      freteValor = 0;
+    }
 
     // ══════════════════════════════════════════════════════════════════════
     // 🔴 FRETE ZERO NUNCA PASSA — nem na etapa 1 de observação.
@@ -354,11 +383,13 @@ export default async function handler(req, res) {
     // isto (ARD5856D19) e a decisão do dono em 21/08: "não podemos de maneira
     // nenhuma aceitar lances ou arrematar sem frete".
     //
-    // Leilão não tem retirada no balcão: toda venda de leilão é entrega. Não
-    // existe caso legítimo de lance com frete zero, então recusar aqui não
-    // derruba ninguém honesto — só fecha a chamada direta de API que manda
-    // `frete_valor: 0` e ficaria esperando o FRETE_MODO ser ligado.
-    if (!(freteValor > 0)) {
+    // 🔄 16/09/2026 — ATUALIZAÇÃO DESTA REGRA. Quando ela foi escrita, "leilão
+    // não tem retirada no balcão" era verdade e por isso frete zero nunca era
+    // legítimo. O dono liberou a retirada em mãos, POR LOTE, nesta data. A trava
+    // continua valendo com a mesma força para todo o resto: só passa com zero
+    // quem foi autorizado pelo banco logo acima (`entregaTipo === 'retirada'`),
+    // e a autorização é da coluna `permite_retirada`, não do navegador.
+    if (entregaTipo !== 'retirada' && !(freteValor > 0)) {
       console.error(`[FRETE] submitAtomicBid: RECUSADO lance com frete ZERO no leilão ${auctionId} (selo: ${_freteMotivo}).`);
       return res.status(400).json({
         success: false, sem_frete: true, motivo: 'frete_zero',
@@ -516,6 +547,7 @@ export default async function handler(req, res) {
       // Nunca reintroduzir um campo aqui sem antes provar a coluna no banco.
       // O bid_amount continua sendo SÓ o produto; o frete é registro paralelo.
       frete_amount: freteValor,
+      entrega_tipo: entregaTipo,
       content: `Lance de R$ ${bidAmount.toFixed(2).replace('.', ',')}`,
       is_system_message: false,
     });

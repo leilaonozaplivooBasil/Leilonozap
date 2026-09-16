@@ -121,6 +121,7 @@ export default function EditAuction() {
       comparai_mode: "google_shopping", // 🆕 Modo padrão: Google Shopping
       manual_market_price: "", // 🆕 Preço manual quando o CompareAQUI não acha
       buy_now_price: "", // Arremate imediato — aparece como Compre Já na sala
+      permite_retirada: false, // 🤝 retirada em mãos liberada NESTE lote (padrão: não)
       modo_chamada: false, // 📣 PONTO 69 — pré-lançamento
       data_abertura_lances: "" // 📣 PONTO 69 — abertura dos lances (BRT no input)
     });
@@ -314,6 +315,7 @@ export default function EditAuction() {
                 comparai_mode: formData.comparai_mode || 'google_shopping',
                 manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null,
                 buy_now_price: normalizarArremateAgora(formData.buy_now_price, formData.starting_price),
+                permite_retirada: formData.permite_retirada === true,
             });
             notify.ok('Leilão duplicado', 'Você está na cópia — agende ou reative quando quiser.');
             navigate(createPageUrl('EditAuction') + `?id=${novo.id}`, { replace: false });
@@ -540,6 +542,7 @@ export default function EditAuction() {
               // 🛡️ PONTO 70 — valor residual (R$ 1,00 / <= lance inicial) entra como vazio:
               // é "sem arremate imediato", e não um preço real a ser mantido no save.
               buy_now_price: precoArremateAgora(currentAuction) ?? "",
+              permite_retirada: currentAuction.permite_retirada === true,
               // 📣 PONTO 69 — Modo Chamada
               modo_chamada: currentAuction.modo_chamada === true,
               data_abertura_lances: currentAuction.data_abertura_lances
@@ -831,6 +834,7 @@ export default function EditAuction() {
                 manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null, // 🆕 SALVA PREÇO MANUAL
                 // 🛡️ PONTO 70 — vazio ou valor residual (<= lance inicial) grava NULL
                 buy_now_price: normalizarArremateAgora(formData.buy_now_price, formData.starting_price),
+                permite_retirada: formData.permite_retirada === true,
                 // 📣 PONTO 69 — MODO CHAMADA (data gravada em UTC)
                 modo_chamada: !!formData.modo_chamada,
                 data_abertura_lances: formData.modo_chamada ? aberturaISO : null
@@ -1444,6 +1448,29 @@ export default function EditAuction() {
                         <Input id="buy_now_price" type="number" step="0.01" value={formData.buy_now_price} onChange={(e) => handleInputChange('buy_now_price', e.target.value)} placeholder="Deixe vazio para desativar" className={`pl-10 ${INPUT_CLS}`} />
                       </div>
                       <p className="text-[10px] text-slate-500 mt-2">Com um valor definido, a sala do leilão mostra o botão Compre Já — quem pagar esse preço leva na hora.</p>
+                    </div>
+
+                    {/* 🤝 16/09/2026 — RETIRADA EM MÃOS, LOTE A LOTE.
+                        Fica desligado por padrão de propósito: com a retirada
+                        aberta em todo leilão, alguém de outro estado escolhe
+                        "retirar", o frete zera e o produto nunca chega nele.
+                        Quem liga é a casa, no lote em que a retirada faz sentido. */}
+                    <div className="rounded-xl bg-sky-500/[0.04] border border-sky-500/20 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <Label htmlFor="permite_retirada" className={`${LABEL_CLS} flex items-center gap-1.5 text-sky-400`}>
+                            <ShoppingBag className="w-3.5 h-3.5" /> Permitir retirada em mãos
+                          </Label>
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            O arrematante escolhe entre receber em casa ou retirar no galpão. Quem retira não paga frete.
+                          </p>
+                        </div>
+                        <Switch
+                          id="permite_retirada"
+                          checked={!!formData.permite_retirada}
+                          onCheckedChange={(v) => handleInputChange('permite_retirada', v === true)}
+                        />
+                      </div>
                     </div>
 
                     {/* 📣 PONTO 69 — MODO CHAMADA (PRÉ-LANÇAMENTO) */}

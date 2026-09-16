@@ -244,16 +244,27 @@ export default async function handler(req, res) {
     // cadastro do vencedor, reserva produto + frete, grava o frete no lance e
     // SOBRESCREVE o frete no lance. Desde o B13, o `frete_reservado_valor` do
     // leilão é gravado pela finalização, dentro do claim do vencedor.
-    const cot = await cotarFreteDoLeilao({ auctionId, userId, auction, freteId: body?.frete_id || null });
+    // 🤝 `retirada: true` é PEDIDO do navegador; quem autoriza é
+    // `auctions.permite_retirada`, lido do banco dentro de cotarFreteDoLeilao.
+    const cot = await cotarFreteDoLeilao({
+      auctionId, userId, auction,
+      freteId: body?.frete_id || null,
+      retirada: body?.retirada === true,
+    });
     if (!cot.ok) {
       // Sem frete não passa. Decisão do dono em 21/08: "não podemos de maneira
       // nenhuma aceitar lances ou arrematar sem frete". Cada motivo vira uma
       // instrução, porque erro seco no meio do leilão faz a pessoa desistir.
+      //
+      // 🔄 16/09/2026 — a regra ganhou UMA exceção, também por decisão do dono:
+      // lote com `permite_retirada` aceita retirada em mãos, e aí o frete é zero
+      // por não existir entrega. Fora desses lotes, nada mudou.
       const explica = {
         sem_cep: 'Cadastre seu CEP no perfil para arrematar — o frete precisa ser calculado.',
         produto_nao_vinculado: 'Este leilão está sem produto vinculado, então não dá pra calcular o frete. Avise o suporte.',
         cotacao_indisponivel: 'Não conseguimos calcular o frete para o seu CEP agora. Tente novamente em instantes.',
         opcao_invalida: 'A opção de frete escolhida não está mais disponível. Recarregue a página.',
+        retirada_nao_permitida: 'Este leilão não está liberado para retirada em mãos. Escolha a entrega.',
       }[cot.motivo] || 'Não foi possível calcular o frete deste arremate.';
       return res.status(200).json({ success: false, sem_frete: true, motivo: cot.motivo, message: explica });
     }
@@ -351,6 +362,7 @@ export default async function handler(req, res) {
           created_date: new Date().toISOString(),
           timestamp: new Date().toISOString(),
           frete_amount: frete.valor,
+          entrega_tipo: cot.entregaTipo || 'entrega',
           content: `🔥 ARREMATE RÁPIDO! R$ ${buyNowPrice.toFixed(2).replace('.', ',')}`,
           is_system_message: false,
         }),

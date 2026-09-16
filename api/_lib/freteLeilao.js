@@ -89,15 +89,47 @@ export async function salvarCepSeVazio(userId, cepDigitado) {
   }
 }
 
-export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, auction = null, cep = null }) {
+export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, auction = null, cep = null, retirada = false }) {
   if (!SUPABASE_URL || !SR) return { ok: false, motivo: 'config_ausente', frete: null, opcoes: [] };
 
   let leilao = auction;
-  if (!leilao) {
-    const rows = await (await sb(`auctions?select=id,product_id,current_price,starting_price&id=eq.${enc(auctionId)}&limit=1`)).json();
+  if (!leilao || leilao.permite_retirada === undefined) {
+    const rows = await (await sb(`auctions?select=id,product_id,current_price,starting_price,permite_retirada&id=eq.${enc(auctionId)}&limit=1`)).json();
     leilao = Array.isArray(rows) ? rows[0] : null;
   }
   if (!leilao) return { ok: false, motivo: 'leilao_nao_encontrado', frete: null, opcoes: [] };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🤝 RETIRADA EM MÃOS (16/09/2026)
+  // ══════════════════════════════════════════════════════════════════════════
+  // Quem pediu retirada não tem frete para cotar: o produto sai do galpão na
+  // mão da pessoa. Sai ANTES de tudo — antes do CEP, antes do produto ligado,
+  // antes dos Correios —, porque nada disso é necessário para retirar.
+  //
+  // 🔴 A AUTORIZAÇÃO É DO BANCO, NÃO DO NAVEGADOR. `retirada: true` é um PEDIDO
+  // que chega no corpo da requisição, e qualquer pessoa consegue mandar. Quem
+  // decide é `auctions.permite_retirada`, lido aqui do banco. Sem esta linha,
+  // zerar o frete de qualquer leilão seria um `curl`.
+  if (retirada) {
+    if (!leilao.permite_retirada) {
+      return { ok: false, motivo: 'retirada_nao_permitida', frete: null, opcoes: [] };
+    }
+    return {
+      ok: true, motivo: 'ok', opcoes: [],
+      productId: leilao.product_id ? String(leilao.product_id) : null,
+      cep: null,
+      // não precisa de endereço de entrega: ninguém vai entregar
+      enderecoCompleto: true,
+      enderecoAtual: null,
+      entregaTipo: 'retirada',
+      frete: {
+        id: 'retirada', valor: 0,
+        empresa: null, servico: 'Retirada em mãos',
+        prazo: null, cep: null,
+        productId: leilao.product_id ? String(leilao.product_id) : null,
+      },
+    };
+  }
 
   // 📮 ENDEREÇO COMPLETO (21/08/2026) — junto com o CEP, já busca se falta rua.
   // Motivo do dono: "eu não posso ficar com pedido preso por conta de coisas
@@ -142,6 +174,7 @@ export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, au
 
   return {
     ok: true, motivo: 'ok', opcoes: r.opcoes,
+    entregaTipo: 'entrega',
     // productId sobe junto porque o selo do frete precisa dele (BLOQUEADOR 3):
     // quem assina tem de dizer PARA QUE PRODUTO aquele preço foi calculado.
     productId: String(leilao.product_id),

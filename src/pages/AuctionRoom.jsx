@@ -41,6 +41,7 @@ import SeloChamada from "@/components/auction/SeloChamada";
 import useChamada from "@/hooks/useChamada";
 // 🚚 Frete calculado uma única vez na sala, junto com o lance
 import FreteLanceBanner from "@/components/auction/FreteLanceBanner";
+import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from "@/lib/pickupAddress";
 
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
@@ -107,6 +108,10 @@ export default function AuctionRoom() {
   const [salvandoEndereco, setSalvandoEndereco] = useState(false);
   const [freteStatus, setFreteStatus] = useState('idle'); // idle|loading|ok|error|needs_cep|needs_login|needs_address
   const [freteCep, setFreteCep] = useState('');
+  // 🤝 16/09/2026 — RETIRADA EM MÃOS, só nos lotes que a casa liberou.
+  // O padrão é sempre entrega: quem não mexer em nada continua como antes.
+  const [retirarEmMaos, setRetirarEmMaos] = useState(false);
+  const [enderecoRetirada, setEnderecoRetirada] = useState(DEFAULT_PICKUP_ADDRESS);
   const freteCalcRef = useRef(false);
 
   const isAndroid = /Android/i.test(navigator.userAgent);
@@ -475,7 +480,19 @@ export default function AuctionRoom() {
     setUserWallet,
     freteValor,
     freteSelo,
+    retirada: retirarEmMaos,
   });
+
+  // 🤝 endereço de retirada — mesma fonte da Loja Virtual (cadastro do
+  // distribuidor). Só busca quando o lote permite; senão é rede à toa.
+  useEffect(() => {
+    if (!auction?.permite_retirada) return undefined;
+    let vivo = true;
+    fetchPickupAddress()
+      .then((e) => { if (vivo && e) setEnderecoRetirada(e); })
+      .catch(() => { /* fica o endereço padrão */ });
+    return () => { vivo = false; };
+  }, [auction?.permite_retirada]);
 
   // 🚚 Cota o frete UMA VEZ (CEP do perfil + dimensões do produto do leilão via
   // Product vinculado). Nunca recalcula por clique de lance — o frete não
@@ -627,6 +644,10 @@ export default function AuctionRoom() {
   // fazer em cada caso, porque "erro" no meio de um leilão ao vivo sem instrução
   // faz a pessoa desistir.
   const freteBloqueia = useCallback(() => {
+    // 🤝 quem retira em mãos não tem frete para calcular nem selo para conferir:
+    // não existe entrega. A autorização do lote é conferida NO SERVIDOR — aqui
+    // só se destrava a tela para quem escolheu retirar num lote liberado.
+    if (retirarEmMaos) return null;
     if (freteStatus === 'ok' && freteValor > 0 && freteSelo) return null;
     // selo ausente com cotação "ok" só acontece se a rota antiga responder — e aí
     // o lance seria recusado no servidor assim que FRETE_MODO=bloquear subir.
@@ -639,7 +660,7 @@ export default function AuctionRoom() {
     if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
     if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
     return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
-  }, [freteStatus, freteValor, freteCep, freteSelo]);
+  }, [freteStatus, freteValor, freteCep, freteSelo, retirarEmMaos]);
 
   // 📮 Salva rua/número (e o resto que o CEP já trouxe) e libera o lance na
   // hora — sem recotar frete de novo, o valor já é o mesmo.
@@ -878,6 +899,7 @@ export default function AuctionRoom() {
       const result = await plataforma.functions.invoke('submitAtomicBuyNow', {
         auction_id: auction.id,
         user_id: currentUser.id,
+        retirada: retirarEmMaos,
       });
       const data = result?.data || result;
 
@@ -931,7 +953,7 @@ export default function AuctionRoom() {
     } finally {
       setIsBuyingNow(false);
     }
-  }, [auction, currentUser, playSound]);
+  }, [auction, currentUser, playSound, retirarEmMaos]);
 
   const handleShare = async (packageName = null) => {
     if (!auction) return;
@@ -1356,7 +1378,42 @@ export default function AuctionRoom() {
 
       {isAuctionActive && !chamada.emChamada && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          {currentUser && (
+          {/* 🤝 16/09/2026 — RETIRAR EM MÃOS OU RECEBER EM CASA.
+              Só aparece quando a casa liberou a retirada NESTE lote
+              (`auctions.permite_retirada`). Nos outros, a tela é a de sempre e
+              o frete continua obrigatório.
+              Escolher retirada esconde o bloco de frete de propósito: não há
+              CEP a informar nem prazo a mostrar quando ninguém vai entregar. */}
+          {currentUser && auction?.permite_retirada && (
+            <div className="px-3 pt-2 pb-1" data-teste="escolha-de-entrega">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRetirarEmMaos(false)}
+                  aria-pressed={!retirarEmMaos}
+                  data-teste="quero-receber"
+                  className={`flex-1 min-h-[44px] rounded-xl text-sm font-bold border transition-colors ${!retirarEmMaos ? 'bg-emerald-500 text-gray-900 border-emerald-400' : 'bg-white/5 text-gray-300 border-white/15 hover:bg-white/10'}`}
+                >
+                  Receber em casa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRetirarEmMaos(true)}
+                  aria-pressed={retirarEmMaos}
+                  data-teste="quero-retirar"
+                  className={`flex-1 min-h-[44px] rounded-xl text-sm font-bold border transition-colors ${retirarEmMaos ? 'bg-emerald-500 text-gray-900 border-emerald-400' : 'bg-white/5 text-gray-300 border-white/15 hover:bg-white/10'}`}
+                >
+                  Retirar em mãos · sem frete
+                </button>
+              </div>
+              {retirarEmMaos && (
+                <p className="mt-2 text-[12px] leading-snug text-emerald-300" data-teste="endereco-de-retirada">
+                  Você retira em: {enderecoRetirada}
+                </p>
+              )}
+            </div>
+          )}
+          {currentUser && !retirarEmMaos && (
             <FreteLanceBanner
               status={freteStatus}
               freteValor={freteValor}
