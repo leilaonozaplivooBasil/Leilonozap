@@ -13,6 +13,8 @@ import { textoDeTermino } from '@/lib/relogioLeilao';
 import FixedAuctionPanel from "../components/auction/FixedAuctionPanel";
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
+import useVideoDoLote from '@/hooks/useVideoDoLote';
+import { Play } from 'lucide-react';
 
 export default function AuctionDetails() {
   const location = useLocation();
@@ -22,6 +24,8 @@ export default function AuctionDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [bidCount, setBidCount] = useState(null);
   const intervalRef = useRef(null);
+  // 🎬 o vídeo do lote vem do PRODUTO ligado — zero coluna nova (ver useVideoDoLote)
+  const videoDoLote = useVideoDoLote(auction);
 
   useEffect(() => {
     const loadAuction = async () => {
@@ -61,20 +65,29 @@ export default function AuctionDetails() {
   }, [auctionId]);
 
   // Carrossel automático
+  //
+  // 🔴 16/09/2026 — O RELÓGIO PARA NO SLIDE DE VÍDEO. Ele troca a cada 4
+  // segundos; sem esta trava, o vídeo do lote seria cortado no quarto segundo,
+  // TODA vez. É a mesma decisão que o RotatingBanner já tinha tomado (vídeo
+  // avança quando termina, não no relógio). Quem quiser seguir, usa as
+  // bolinhas — o autoavanço volta assim que sair do vídeo.
+  //
+  // A contagem também passou a ser das MÍDIAS, não das fotos: com o vídeo na
+  // fileira, `image_urls.length` giraria a menos e o último slide nunca
+  // apareceria sozinho.
+  const totalDeMidias = (auction?.image_urls?.length || 0) + (videoDoLote ? 1 : 0);
+  const noVideo = !!videoDoLote && currentImageIndex === totalDeMidias - 1;
   useEffect(() => {
-    if (!auction?.image_urls || auction.image_urls.length <= 1) return;
+    if (totalDeMidias <= 1 || noVideo) return undefined;
 
-    const startCarousel = () => {
-      intervalRef.current = setInterval(() => {
-        setCurrentImageIndex(prev => (prev + 1) % auction.image_urls.length);
-      }, 4000);
-    };
+    intervalRef.current = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % totalDeMidias);
+    }, 4000);
 
-    startCarousel();
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [auction?.image_urls]);
+  }, [totalDeMidias, noVideo]);
 
   if (isLoading) {
     return (
@@ -113,6 +126,19 @@ export default function AuctionDetails() {
   }
 
   const images = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls : [];
+  // 🎬 16/09/2026 — O VÍDEO ENTRA COMO MAIS UM SLIDE, depois das fotos.
+  // Padrão Mercado Livre/Amazon: o vídeo não substitui a capa (é a foto que
+  // carrega rápido e aparece na busca), ele entra no fim da fileira.
+  // O dono grava em 1:1, que é o que encaixa perfeito na moldura quadrada
+  // desta galeria — medido: 100% x 100%, zero sobra.
+  const midias = [
+    ...images.map((url) => ({ tipo: 'foto', url })),
+    // 🔴 O ESPALHAMENTO VEM ANTES do `tipo`. `videoDoProduto` devolve
+    // {tipo:'youtube'|'vimeo'|'arquivo'} — espalhar DEPOIS sobrescrevia o
+    // discriminador e o slide de vídeo nunca renderizava. O que era `tipo` lá
+    // vira `origem` aqui, que é o que decide <video> ou <iframe>.
+    ...(videoDoLote ? [{ ...videoDoLote, origem: videoDoLote.tipo, tipo: 'video' }] : []),
+  ];
   const currentPrice = auction.current_price || auction.starting_price;
   // data de término por extenso; vazia quando o end_time não é confiável
   const fimEmTexto = textoDeTermino(auction?.end_time);
@@ -184,35 +210,78 @@ export default function AuctionDetails() {
                 border: '1px solid rgba(16,185,129,0.12)',
                 boxShadow: '0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
               }}>
-              {images.length > 0 ? (
+              {midias.length > 0 ? (
                 <>
-                  {images.map((img, index) => (
-                    <img
-                      key={index}
-                      src={img}
-                      alt={`${auction.title} - foto ${index + 1}`}
-                      className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-700 ${
-                        index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                      }`}
-                      onError={(e) => {
-                        e.target.src = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
-                      }}
-                    />
+                  {midias.map((m, index) => (
+                    m.tipo === 'video' ? (
+                      // 🎬 o vídeo só é MONTADO quando é o slide corrente. Deixar
+                      // um <iframe> do YouTube vivo atrás da foto carrega o player
+                      // inteiro em toda visita, mesmo de quem nunca chega nele.
+                      index === currentImageIndex ? (
+                        <div key="video" className="absolute inset-0" data-teste="video-do-lote">
+                          {m.embed && (
+                            m.tipo === 'video' && m.origem === 'arquivo' ? (
+                              <video
+                                src={m.embed}
+                                controls
+                                preload="metadata"
+                                playsInline
+                                className="absolute inset-0 w-full h-full object-contain bg-black"
+                              />
+                            ) : (
+                              <iframe
+                                src={m.embed}
+                                title={`Vídeo — ${auction.title}`}
+                                className="absolute inset-0 w-full h-full"
+                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                allowFullScreen
+                              />
+                            )
+                          )}
+                        </div>
+                      ) : null
+                    ) : (
+                      <img
+                        key={index}
+                        src={m.url}
+                        alt={`${auction.title} - foto ${index + 1}`}
+                        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-700 ${
+                          index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        onError={(e) => {
+                          // 🔴 só a FOTO tem este resgate. Num <video> trocar o
+                          // `src` por uma imagem é caminho torto que ninguém testou.
+                          e.target.src = "https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/public-assets/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+                        }}
+                      />
+                    )
                   ))}
-                  
-                  {/* Indicadores do carrossel */}
-                  {images.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-                      {images.map((_, index) => (
+
+                  {/* Indicadores do carrossel — a bolinha do vídeo leva um ▶,
+                      senão ninguém descobre que existe vídeo antes de o carrossel
+                      girar até lá (esta galeria não tem tirinha de miniatura). */}
+                  {midias.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-10">
+                      {midias.map((m, index) => (
                         <button
                           key={index}
                           onClick={() => setCurrentImageIndex(index)}
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            index === currentImageIndex 
-                              ? 'bg-emerald-400 w-8 shadow-lg shadow-emerald-400/40' 
-                              : 'bg-white/40 w-2 hover:bg-white/60'
-                          }`}
-                        />
+                          aria-label={m.tipo === 'video' ? 'Ver o vídeo do lote' : `Ver a foto ${index + 1}`}
+                          data-teste={m.tipo === 'video' ? 'bolinha-do-video' : `bolinha-foto-${index}`}
+                          className={m.tipo === 'video'
+                            ? `inline-flex items-center gap-1 rounded-full px-2 h-5 text-[10px] font-bold transition-all duration-300 ${
+                                index === currentImageIndex
+                                  ? 'bg-emerald-400 text-gray-900 shadow-lg shadow-emerald-400/40'
+                                  : 'bg-white/40 text-gray-900 hover:bg-white/60'
+                              }`
+                            : `h-2 rounded-full transition-all duration-300 ${
+                                index === currentImageIndex
+                                  ? 'bg-emerald-400 w-8 shadow-lg shadow-emerald-400/40'
+                                  : 'bg-white/40 w-2 hover:bg-white/60'
+                              }`}
+                        >
+                          {m.tipo === 'video' && (<><Play className="w-3 h-3" strokeWidth={3} />vídeo</>)}
+                        </button>
                       ))}
                     </div>
                   )}
