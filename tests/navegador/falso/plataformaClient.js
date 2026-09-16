@@ -7,6 +7,12 @@ const estado = { chamadas: [], respostas: {} };
 const TABELA_DA_ENTIDADE = { MetodoTarefa: 'metodo_tarefas', MetodoPerfil: 'metodo_perfil', Customer: 'customers', CaptacaoOportunidade: 'captacao_oportunidades', ReuniaoEmpresa: 'reunioes_empresa' };
 if (typeof window !== 'undefined') window.__plataformaFalsa = estado;
 
+// 🎬 LINHAS DE MENTIRA PRA BANCA: window.__entidadesFalsas = { Auction: [...], Product: [...] }
+// Lido a cada chamada (não na importação), porque a banca semeia DEPOIS do import.
+// Sem semente, continua devolvendo lista vazia — como sempre devolveu.
+const semeadas = (entidade) => (typeof window === 'undefined' ? [] : (window.__entidadesFalsas?.[entidade] || []));
+const casa = (linha, onde) => Object.entries(onde || {}).every(([c, v]) => String(linha[c]) === String(v));
+
 const responder = (nome, corpo) => {
   const r = estado.respostas[nome];
   return typeof r === 'function' ? r(corpo) : (r ?? { success: false, images: [], motivo: 'sem_resultado' });
@@ -35,8 +41,8 @@ export const plataforma = {
   // tarefa do dia pela entidade, e a prova precisa enxergar a linha em
   // `escritas`); o resto continua vazio/eco, como sempre foi.
   entities: new Proxy({}, { get: (_, entidade) => ({
-    list: async () => [],
-    filter: async () => [],
+    list: async () => semeadas(entidade),
+    filter: async (onde) => semeadas(entidade).filter((l) => casa(l, onde)),
     create: async (d) => {
       const tabela = TABELA_DA_ENTIDADE[entidade];
       const b = typeof window !== 'undefined' ? (window.__bancoFalso ||= { tabelas: {}, escritas: [] }) : null;
