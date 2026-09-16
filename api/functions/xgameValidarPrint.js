@@ -101,7 +101,8 @@ const REGRAS_POR_TIPO = {
 2. PRINT de uma conversa/grupo (WhatsApp) com a mensagem coerente com a tarefa e a DATA DE HOJE visível;
 3. FOTO REAL da pessoa executando a tarefa (ex.: acordada, fora da cama, treinando, no ambiente de trabalho) — foto nítida, ambiente real.
 REPROVE: imagem aleatória, meme, foto de banco de imagens, tela apagada/preta, print ilegível, print claramente de outro dia (data antiga visível), foto de pessoa dormindo/na cama pra tarefa de acordar.
-Se a imagem é plausível mas não dá pra cravar (sem data visível, qualidade baixa), responda "duvida".`,
+Se a imagem é plausível mas não dá pra cravar (sem data visível, qualidade baixa), responda "duvida".
+REPROVE se a foto for claramente de OUTRA PESSOA no lugar de quem fez a tarefa (ex.: foto do filho acordando em vez da própria pessoa): peça pra refazer com ela na imagem.`,
   aprendizado: `A comprovação esperada tem DUAS partes: (1) foto/print relacionado a leitura ou estudo (página do livro, anotação, tela do curso) e (2) o RESUMO que a pessoa digitou. Reprove imagem sem nenhuma relação com estudo. Se o resumo digitado for claramente incoerente com a imagem, genérico demais (ex.: "aprendi muito hoje") ou parecer texto copiado de sinopse/internet em vez das palavras da própria pessoa, responda "duvida" e explique. Na incerteza, "duvida".`,
   foto: `A comprovação esperada é uma FOTO REAL da pessoa/do ambiente executando a tarefa AGORA (ex.: treinando, organizando a sala, na reunião, na sala de treinamento, no caminho) OU um print claramente coerente com a tarefa.
 REPROVE: imagem aleatória, meme, foto de banco de imagens, tela preta/apagada, imagem sem NENHUMA relação com a tarefa descrita.
@@ -114,7 +115,8 @@ Se o link abre mas o conteúdo é ambíguo, responda "duvida".`,
   // tranquilidade." Um frame do vídeo da visualização, não um print.
   ritual: `A imagem é um FRAME do vídeo da visualização do Ritual do Amanhecer — a pessoa meditando/refletindo, olhando o Quadro dos Sonhos, bem cedo. O AMBIENTE tem que ser a CASA da pessoa, num momento de tranquilidade (quarto, sala, varanda, qualquer cômodo doméstico calmo).
 REPROVE diretamente (sem perguntar) se o ambiente for CLARAMENTE: o interior de um carro (parado ou em movimento — volante, painel, banco, cinto, vidro/estrada visível), uma ACADEMIA (aparelhos, pesos, espelho de parede tipo academia, esteira), ou um ESCRITÓRIO/local de trabalho (mesa corporativa, outras estações de trabalho, ambiente de empresa). Esses três NUNCA valem para o ritual, mesmo que a pessoa esteja quieta e concentrada.
-Se o ambiente for plausivelmente doméstico mas a imagem não deixar claro (enquadramento fechado no rosto, pouca luz, não dá pra ver o cômodo), responda "duvida" — não puna a falta de contexto visual como se fosse má-fé.`,
+Se o ambiente for plausivelmente doméstico mas a imagem não deixar claro (enquadramento fechado no rosto, pouca luz, não dá pra ver o cômodo), responda "duvida" — não puna a falta de contexto visual como se fosse má-fé.
+REPROVE também, sem perguntar, se quem aparece no frame CLARAMENTE não é a pessoa da tarefa (uma criança, outro adulto): o ritual é dela, e a comprovação tem que mostrar ela. Peça pra refazer com ela na imagem.`,
 };
 
 // 🎯 REGRA ESPECIAL — organização/planejamento do NEGÓCIO (não confundir com
@@ -159,6 +161,17 @@ absoluta de má-fé, NÃO reprove de cara — responda "duvida" e preencha
 pra ela explicar a foto (cite o que você viu). Só reprove sem perguntar
 quando a incoerência for GRITANTE e óbvia (imagem aleatória, meme, nada a
 ver mesmo perguntando).
+
+🔴 PESSOA ERRADA NA FOTO É REPROVAÇÃO, NÃO DÚVIDA (16/09/2026). Se a imagem
+mostra CLARAMENTE outra pessoa no lugar de quem fez a tarefa — uma criança, um
+familiar, um terceiro — REPROVE, e diga no "motivo" que a comprovação é dela e
+precisa mostrar ELA, pedindo pra refazer. Isso NÃO é falta de contexto visual:
+a régua de 16/09 que manda não punir enquadramento fechado, luz ruim ou cômodo
+indefinido vale pra IMAGEM RUIM, não pra PESSOA ERRADA. Sophia, 15/09: a foto
+do "acordei" e a da visualização eram de uma criança, você respondeu "duvida"
+nas duas, e dúvida deixou de reprovar — a comprovação de outra pessoa passaria.
+Só marque "duvida" aqui quando REALMENTE não der pra dizer quem está na imagem
+(rosto cortado, muito escuro, de costas); aí pergunte quem é.
 
 ANTI-RECICLAGEM: se vieram FOTOS ANTERIORES da mesma pessoa pra comparar,
 olhe se a foto NOVA é a MESMA cena/imagem reaproveitada (mesmo que

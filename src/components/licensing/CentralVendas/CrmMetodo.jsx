@@ -62,7 +62,7 @@ import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
 import { frameEmBase64 } from '@/lib/frameEmBase64';
-import { comBloco, statusDoRitual, seloDoRitual, pendenciasDoRitual, ritualRetomavel, ritualExpirado, blocosFeitos, ritualEsperandoFechamento, fechamentoDoRitual, fimDaEntrega, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
+import { comBloco, statusDoRitual, seloDoRitual, pendenciasDoRitual, ritualRetomavel, ritualExpirado, blocosFeitos, ritualEsperandoFechamento, fechamentoDoRitual, fimDaEntrega, semBloco, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
 import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
@@ -1028,6 +1028,84 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // 🤖 a IA olha DEPOIS, sem segurar ninguém. O que ela responder entra
     // numa segunda escrita, em cima do que já está gravado.
     julgarBlocoComIA(t.id, bloco, { ...dados, printUrl: corpo.print_url });
+    return nova;
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🗣️ A SEGUNDA ANÁLISE, COM A EXPLICAÇÃO DA PESSOA (16/09/2026)
+  // ═══════════════════════════════════════════════════════════════════════
+  // Ordem do dono: reprovou ou ficou parcial → pede contexto NA HORA; se a
+  // dúvida sobreviver, avisa e pede pra refazer.
+  //
+  // A máquina já existia pro resto do sistema (`xgameValidarPrint` aceita
+  // `justificativa`/`tentativa: 2` desde a DIR-84) — o ritual é que nunca a
+  // usou: `julgarBlocoComIA` julgava e sumia, sem segunda chance.
+  //
+  // 🔴 A IMAGEM DA SEGUNDA RODADA. O print do "acordei" está numa URL, então
+  // basta apontar. O frame da visualização NUNCA vira arquivo (frameEmBase64:
+  // vai inline e morre com a chamada), então ele vem da MEMÓRIA da tela do
+  // ritual. Sem frame não há o que reanalisar — e aí a resposta honesta é
+  // pedir pra refazer, não inventar uma imagem.
+  const explicarBlocoDoRitual = async (t, bloco, justificativa, { frameBlob } = {}) => {
+    const atual = t.comprovacao || {};
+    const doBloco = atual.blocos?.[bloco] || {};
+    let corpoDaImagem = null;
+    if (bloco === 'acordei' && doBloco.print_url) corpoDaImagem = { image_url: doBloco.print_url };
+    else if (bloco === 'visualizacao' && frameBlob) {
+      const b64 = await frameEmBase64(frameBlob);
+      if (b64) corpoDaImagem = { image_b64: b64 };
+    }
+
+    const marcar = (veredito) => {
+      const nova = comBloco(atual, bloco, { ...doBloco, veredito_ia: { ...veredito, explicou: true, justificativa } });
+      plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: nova }).catch(() => {});
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: nova } : x)));
+      return nova;
+    };
+
+    // sem imagem pra reanalisar: `explicou: true` faz a régua cair em REFAZER,
+    // que é exatamente o que o dono pediu pra dúvida que não se resolve.
+    if (!corpoDaImagem) {
+      return marcar({ ...(doBloco.veredito_ia || { veredito: 'duvida' }), motivo: 'Não consegui rever a imagem desta etapa (ela não fica guardada). Refaz só ela — é rapidinho.' });
+    }
+
+    try {
+      const r = await plataforma.functions.xgameValidarPrint({
+        ...corpoDaImagem,
+        tipo: bloco === 'acordei' ? 'instagram' : 'ritual',
+        titulo: t.titulo || 'Ritual do Amanhecer',
+        hora: t.hora, data: hojeStr(),
+        justificativa, tentativa: 2,
+      });
+      if (!r || !['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) {
+        return marcar({ ...(doBloco.veredito_ia || {}), veredito: 'duvida', motivo: 'A IA não respondeu a tempo pra rever a sua explicação. Refaz só esta etapa.' });
+      }
+      return marcar(r);
+    } catch {
+      return marcar({ ...(doBloco.veredito_ia || {}), veredito: 'duvida', motivo: 'Não consegui falar com a IA pra rever a sua explicação. Refaz só esta etapa.' });
+    }
+  };
+
+  // 🔁 REFAZER UM BLOCO — tira o bloco do registro, o que faz `proximoBloco`
+  // apontar pra ele de novo e a tela voltar. O ritual sai de qualquer status
+  // fechado e volta a "em andamento": ele REALMENTE não terminou.
+  //
+  // O arquivo já gravado no cofre não é apagado: a regravação sobrescreve o
+  // campo, e o antigo fica pro laudo. `refeitos` guarda quantas vezes — quem
+  // abrir o laudo depois precisa ver que houve uma segunda entrega, e por quê.
+  const refazerBlocoDoRitual = async (t, bloco) => {
+    const atual = t.comprovacao || {};
+    const nova = {
+      ...semBloco(atual, bloco),
+      status: 'ritual_em_andamento',
+      valido: false,
+      refeitos: { ...(atual.refeitos || {}), [bloco]: (atual.refeitos?.[bloco] || 0) + 1 },
+      refazer_pedido_em: new Date().toISOString(),
+    };
+    try {
+      await plataforma.entities.MetodoTarefa.update(t.id, { feito: false, comprovacao: nova });
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: false, comprovacao: nova } : x)));
+    } catch { /* a tela já devolveu a pessoa pro bloco; a regravação grava de novo */ }
     return nova;
   };
 
@@ -2149,6 +2227,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   onBloco={(bloco, dados, ctx) => salvarBlocoDoRitual(t, bloco, dados, ctx)}
                   onFechar={() => setRitualId(null)}
                   onConcluir={(dados) => concluirRitual(t, dados)}
+                  onExplicar={(bloco, texto, extra) => explicarBlocoDoRitual(t, bloco, texto, extra)}
+                  onRefazer={(bloco) => refazerBlocoDoRitual(t, bloco)}
                 />
               );
             })()}

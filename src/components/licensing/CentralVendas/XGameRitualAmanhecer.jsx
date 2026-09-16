@@ -8,7 +8,7 @@ import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivos
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
 // conseguiu importar — não tem terceira.
-import { BLOCOS, ROTULO_DO_BLOCO, segundosRestantes, ritualExpirado, textoDoPrazo, blocosFeitos, proximoBloco, pendenciasDoRitual, seloDoRitual, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
+import { BLOCOS, ROTULO_DO_BLOCO, segundosRestantes, ritualExpirado, textoDoPrazo, blocosFeitos, proximoBloco, pendenciasDoRitual, seloDoRitual, blocosQuePedemAtencao, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
 // O que a pessoa salva às 5h toca no expediente, e o que ela salva
@@ -153,7 +153,7 @@ function BarraDosBlocos({ feitos, atual }) {
   );
 }
 
-export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir }) {
+export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir, onExplicar, onRefazer }) {
   // 🙏 DIR-121 — a régua de HOJE, crescendo dia a dia (ver xgame.js).
   const metaMotivosHoje = metaMotivosGratidaoHoje(diaCorridoCiclo);
   const minSegHoje = gratidaoAudioMinSegHoje(diaCorridoCiclo);
@@ -203,6 +203,19 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     onTexto: (t, blob) => { setAcao((atual) => juntarTexto(atual, t)); setAudioAcao(blob); },
   });
   const [aviso, setAviso] = useState('');
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🗣️ EXPLICAR OU REFAZER (16/09/2026)
+  // ═══════════════════════════════════════════════════════════════════════
+  // Ordem do dono: "sempre que reprovar ou for parcial, deve vir NA HORA um
+  // texto pedindo pra contextualizar; se seguir em dúvida, avisa e pede pra
+  // refazer, garantindo que a pessoa consiga refazer a etapa da dúvida".
+  //
+  // O veredito da IA chega DEPOIS da gravação do bloco (é de propósito:
+  // ninguém espera às 5h). Quando ele chega, este painel aparece sozinho —
+  // em qualquer passo, não só no fechamento.
+  const [explicando, setExplicando] = useState('');
+  const [textoExplicacao, setTextoExplicacao] = useState('');
+  const [enviandoExplicacao, setEnviandoExplicacao] = useState(false);
   const [semVideoLiberado, setSemVideoLiberado] = useState(false);
   // 🎵 a música do amanhecer: a do dia salva → 1ª da playlist dela → prévia
   const [playlist, setPlaylist] = useState(lerPlaylist);
@@ -424,6 +437,40 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     return () => URL.revokeObjectURL(url);
   }, [print]);
 
+  // 🔴 O FRAME DA VISUALIZAÇÃO NUNCA VIRA ARQUIVO (ver frameEmBase64.js): ele
+  // vai inline pra IA e morre com a chamada. Pra reavaliar com a explicação,
+  // reaproveitamos o frame que AINDA ESTÁ NA MEMÓRIA desta tela — nada novo é
+  // guardado, e a intimidade do cofre não muda. Se a pessoa fechou e voltou, o
+  // frame se perdeu: aí a saída honesta é refazer, não inventar uma imagem.
+  const enviarExplicacao = async (bloco) => {
+    const texto = textoExplicacao.trim();
+    if (!texto || enviandoExplicacao) return;
+    setEnviandoExplicacao(true);
+    try {
+      const nova = await onExplicar?.(bloco, texto, { frameBlob });
+      if (nova) setComprovacao(nova);
+      setExplicando(''); setTextoExplicacao('');
+    } catch {
+      setAviso('Não consegui enviar sua explicação agora. Tenta de novo — nada do que você entregou se perdeu.');
+      setTimeout(() => setAviso(''), 8000);
+    }
+    setEnviandoExplicacao(false);
+  };
+
+  // Refazer DEVOLVE a pessoa pro bloco: tira o bloco do registro (é o que faz
+  // `proximoBloco` apontar pra ele de novo), limpa o que estava na tela e
+  // muda o passo. O cronômetro NÃO barra: quem está refazendo por pedido
+  // nosso não pode perder por um prazo que correu enquanto a IA pensava.
+  const refazerBloco = async (bloco) => {
+    const nova = await onRefazer?.(bloco);
+    if (nova) setComprovacao(nova);
+    if (bloco === 'acordei') { setPrint(null); }
+    if (bloco === 'gratidao') { setAudioGratidao(null); setAudioGratidaoSeg(0); setGratidao(''); }
+    if (bloco === 'visualizacao') { setVideoBlob(null); setFrameBlob(null); setGravSeg(0); setAcao(''); setAudioAcao(null); }
+    setExplicando(''); setTextoExplicacao('');
+    setPasso(PASSO_DO_BLOCO[bloco]);
+  };
+
   const salvarAcordei = async () => {
     if (!print) return;
     const hash = await hashDoArquivo(print).catch(() => '');
@@ -547,6 +594,82 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       </div>
 
       <div className="relative z-10 w-full max-w-md text-center text-white space-y-6">
+        {/* ═══════════════════════════════════════════════════════════════
+            🗣️ O QUE A IA PEDIU — NA HORA, EM QUALQUER PASSO (16/09/2026)
+            ═══════════════════════════════════════════════════════════════
+            O veredito chega depois da gravação do bloco, então este painel
+            nasce sozinho quando ele chega — não espera o fechamento. Antes,
+            a pessoa só descobria que algo não passou no fim (ou nem lá).
+
+            Dúvida → a pessoa CONTEXTUALIZA e a IA reavalia com a explicação.
+            Reprovado, ou dúvida que sobreviveu à explicação → REFAZER só
+            aquela etapa, com o resto do ritual intacto. */}
+        {blocosQuePedemAtencao(comprovacao).map((r) => (
+          <div
+            key={r.bloco}
+            data-teste={`atencao-${r.bloco}-${r.passo}`}
+            className={`xeos-cru rounded-2xl p-4 text-left space-y-2.5 ring-1 ${r.passo === 'refazer' ? 'bg-red-400/12 ring-red-300/40' : 'bg-amber-400/12 ring-amber-300/40'}`}
+          >
+            <p className={`text-[12px] font-extrabold flex items-center gap-1.5 ${r.passo === 'refazer' ? 'text-red-100' : 'text-amber-100'}`}>
+              <AlertTriangle className="w-4 h-4" strokeWidth={2.4} />{r.titulo}
+            </p>
+            {r.motivo && <p className="text-[12px] leading-relaxed text-white/85">{r.motivo}</p>}
+            <p className="text-[12px] font-bold text-white">{r.texto}</p>
+
+            {r.passo === 'explicar' ? (
+              explicando === r.bloco ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={textoExplicacao}
+                    onChange={(e) => setTextoExplicacao(e.target.value)}
+                    rows={3}
+                    autoFocus
+                    placeholder="Escreve aqui, com as suas palavras…"
+                    className="w-full rounded-xl bg-black/25 border border-white/25 text-white text-[13px] p-3 placeholder:text-white/40"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!textoExplicacao.trim() || enviandoExplicacao}
+                      onClick={() => enviarExplicacao(r.bloco)}
+                      data-teste={`enviar-explicacao-${r.bloco}`}
+                      className="xeos-cru flex-1 rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 disabled:opacity-40"
+                    >{enviandoExplicacao ? 'mandando…' : 'Mandar minha explicação'}</button>
+                    <button
+                      type="button"
+                      onClick={() => { setExplicando(''); setTextoExplicacao(''); }}
+                      className="rounded-xl border border-white/30 text-white/80 text-[12px] font-bold px-3 py-2.5 hover:bg-white/10"
+                    >agora não</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setExplicando(r.bloco); setTextoExplicacao(''); }}
+                    data-teste={`explicar-${r.bloco}`}
+                    className="xeos-cru flex-1 rounded-xl bg-white/15 border border-white/30 text-white text-[12px] font-bold px-4 py-2.5 hover:bg-white/25"
+                  >Explicar</button>
+                  {/* quem prefere refazer direto não é obrigado a se justificar */}
+                  <button
+                    type="button"
+                    onClick={() => refazerBloco(r.bloco)}
+                    data-teste={`refazer-direto-${r.bloco}`}
+                    className="rounded-xl border border-white/30 text-white/80 text-[12px] font-bold px-3 py-2.5 hover:bg-white/10"
+                  >refazer</button>
+                </div>
+              )
+            ) : (
+              <button
+                type="button"
+                onClick={() => refazerBloco(r.bloco)}
+                data-teste={`refazer-${r.bloco}`}
+                className="xeos-cru w-full rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 hover:bg-amber-50"
+              >Refazer {ROTULO_DO_BLOCO[r.bloco]}</button>
+            )}
+          </div>
+        ))}
+
         {passo === P.ABERTURA && (
           <>
             <Halo><Sunrise className="w-14 h-14 text-white" strokeWidth={1.5} /></Halo>

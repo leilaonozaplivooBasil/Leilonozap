@@ -262,6 +262,96 @@ export function statusDoRitual(comprovacao) {
 }
 
 /**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🗣️ EXPLICAR OU REFAZER — o que acontece quando um bloco não passa
+ * ══════════════════════════════════════════════════════════════════════════
+ * Ordem do dono (16/09/2026): "sempre que reprovar ou for parcial, deve vir NA
+ * HORA um texto pedindo pra contextualizar; e se seguir em dúvida, avisa e
+ * pede pra refazer, garantindo que a pessoa consiga refazer a etapa da dúvida".
+ *
+ * ⚠️ ISTO REVERTE A DIR-89 DENTRO DO RITUAL. Lá, dúvida que sobra depois da
+ * explicação virava aprovação ("benefício da dúvida"). Aqui vira PEDIDO DE
+ * REFAZER — a pessoa não perde nada, ela reentrega o bloco. Fora do ritual,
+ * `decisaoAposIA` (xgameValidacao.js) continua com a régua antiga.
+ *
+ * Os quatro estados possíveis de um bloco julgado:
+ *   'nada'     — aprovado, ou a IA nem olhou (aí não é opinião sobre nada)
+ *   'explicar' — primeira hesitação: a pessoa conta o contexto e a IA reavalia
+ *   'refazer'  — reprovado, OU a dúvida sobreviveu à explicação
+ */
+export function passoDoBlocoJulgado(veredito) {
+  // IA fora do ar não é uma opinião sobre a imagem — ela nunca foi vista.
+  if (!veredito || veredito.ia_indisponivel) return 'nada';
+  const v = veredito.veredito;
+  if (v === 'aprovada') return 'nada';
+  if (v === 'reprovada') return 'refazer';
+  if (v !== 'duvida') return 'nada';
+  // dúvida: primeira vez a pessoa explica; se já explicou e ainda há dúvida,
+  // refaz. `explicou` é gravado por quem manda a justificativa.
+  return veredito.explicou ? 'refazer' : 'explicar';
+}
+
+/** O texto que a pessoa lê na hora. Sem jargão, e sempre dizendo o que fazer. */
+export function recadoDoBloco(nome, veredito) {
+  const passo = passoDoBlocoJulgado(veredito);
+  if (passo === 'nada') return null;
+  const rotulo = ROTULO_DO_BLOCO[nome] || nome;
+  const motivo = String(veredito?.motivo || '').trim();
+  const pergunta = String(veredito?.pergunta_para_pessoa || '').trim();
+  if (passo === 'explicar') {
+    return {
+      bloco: nome, passo,
+      titulo: `${rotulo}: me conta o contexto`,
+      // a pergunta da IA quando existe; senão um pedido genérico — o dono
+      // pediu que o texto venha SEMPRE, não só quando a IA soube o que perguntar
+      texto: pergunta || 'Antes de eu decidir, me explica em uma frase o que essa entrega mostra e onde você estava.',
+      motivo,
+    };
+  }
+  return {
+    bloco: nome, passo,
+    titulo: `${rotulo}: precisa refazer`,
+    texto: 'Não deu pra confirmar essa etapa. Refaz só ela — o resto do seu ritual continua salvo.',
+    motivo,
+  };
+}
+
+/** Os blocos que pedem alguma coisa da pessoa, na ordem do ritual. */
+export function blocosQuePedemAtencao(comprovacao) {
+  const b = blocosDaComprovacao(comprovacao);
+  return BLOCOS.map((nome) => recadoDoBloco(nome, b[nome]?.veredito_ia)).filter(Boolean);
+}
+
+/**
+ * A comprovação SEM um bloco — é o que devolve a pessoa pra etapa que falhou.
+ *
+ * Sem isto o "refazer" não existe: `proximoBloco` só devolve bloco ausente, e
+ * um bloco reprovado continua presente. Tirar é o que faz a tela voltar pra
+ * ele. O que já foi gravado no Storage não é apagado aqui — a regravação
+ * sobrescreve o campo, e o arquivo velho fica no cofre pro laudo.
+ */
+export function semBloco(comprovacao, nome) {
+  const b = { ...blocosDaComprovacao(comprovacao) };
+  delete b[nome];
+  return { ...(comprovacao || {}), blocos: b };
+}
+
+/**
+ * O cronômetro pode barrar uma REGRAVAÇÃO que o próprio sistema pediu?
+ *
+ * Não. "Garantindo que a pessoa consiga refazer a etapa da dúvida COM CERTEZA"
+ * (dono, 16/09) não sobrevive a um prazo que corre enquanto a IA pensa: o
+ * veredito chega depois da entrega, e o relógio não para pra esperar. Quem
+ * está refazendo por pedido nosso não é barrado pelos 30 minutos.
+ *
+ * O dia continua valendo: refazer é sempre no ritual de HOJE.
+ */
+export function podeRefazerBloco(comprovacao, nome) {
+  const v = blocosDaComprovacao(comprovacao)[nome]?.veredito_ia;
+  return passoDoBlocoJulgado(v) === 'refazer';
+}
+
+/**
  * O FECHAMENTO, como regra pura — os campos que carimbam um ritual entregue.
  *
  * Existe em dois lugares hoje: o botão do fim (concluirRitual) e o fechamento
