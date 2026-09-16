@@ -265,7 +265,7 @@ const filtered = useMemo(() => {
           {/* 🖼️ 15/09/2026 — mesma receita da Loja e da Home: moldura 16:9 (a
               proporção das artes novas), `contain` para não cortar nada e teto
               de 520px para o desktop não virar banner de tela inteira. */}
-          <RotatingBanner banners={banners} heightClass="aspect-[16/9] max-h-[520px] mx-auto" fit="contain" ambient />
+          <RotatingBanner banners={banners} heightClass="h-[56.25vw] max-h-[520px]" fit="contain" ambient />
         </div>
       )}
       {/* Barra de busca */}

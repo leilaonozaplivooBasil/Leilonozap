@@ -221,7 +221,7 @@ export default function OfertasRelampago({ products = [], onOpenDetails, totalPr
   // da caixa e ganha respiro no fim (spacer) + fade à direita sinalizando que continua —
   // assim o último card entra INTEIRO ao deslizar e nada fica cortado.
   return (
-    <div className="relative z-10 -mt-4 sm:-mt-16 rounded-2xl pt-2.5 pb-2.5 sm:pt-4 sm:pb-4 mb-6 sm:mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150">
+    <div className="relative z-10 rounded-2xl pt-2.5 pb-2.5 sm:pt-4 sm:pb-4 mb-6 sm:mb-8 overflow-hidden border border-white/15 shadow-2xl shadow-black/50 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150">
       {/* liquid glass mais transparente: brilho superior + borda interna sutil (banner aparece mais nítido atrás) */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" aria-hidden />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/10 to-transparent" aria-hidden />
