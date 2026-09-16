@@ -123,14 +123,20 @@ test('REB-8 · o selo: BRILHANTE ainda exige o vídeo (DIR-89 não mudou)', () =
   // um bloco reprovado pela IA derruba o ritual inteiro pra parcial
   const comReprova = comBloco(tres({ video_path: 'v' }), 'acordei', { veredito_ia: { veredito: 'reprovada', motivo: 'x' } });
   assert.equal(seloDoRitual(comReprova), 'parcial');
-  // 🔴 DIR-125 vale SÓ pra visualização: dúvida sobre o AMBIENTE reprova
-  // automático (decisão do dono), dúvida sobre o PRINT não.
+  // 🔴 DIR-125 REVISADA (15/09/2026) — dúvida NÃO reprova mais, em bloco NENHUM.
+  // Medido em 7 dias de produção: 19 dúvidas contra 5 aprovações e 3 reprovações
+  // na visualização, confiança média 61. Uma régua que recusa 7 de cada 10 não
+  // separa quem fez de quem não fez. E, pior, só não virou desastre porque o
+  // veredito chega depois do fechamento: quem fechava rápido escapava.
+  // Agora a dúvida vira DICA visível na tarefa, e o ritual conta.
   const duvidaNoPrint = comBloco(tres({ video_path: 'v' }), 'acordei', { veredito_ia: { veredito: 'duvida', motivo: 'sem data visível' } });
-  assert.equal(seloDoRitual(duvidaNoPrint), 'brilhante', 'dúvida no print do bom dia não pode reprovar');
+  assert.equal(seloDoRitual(duvidaNoPrint), 'brilhante', 'dúvida no print não pode reprovar');
   const duvidaNoAmbiente = comBloco(tres({ video_path: 'v' }), 'visualizacao', { video_path: 'v', veredito_ia: { veredito: 'duvida', motivo: 'não dá pra ver o cômodo' } });
-  assert.equal(seloDoRitual(duvidaNoAmbiente), 'parcial', 'DIR-125: dúvida de ambiente reprova automático');
-  assert.equal(blocoReprovado('visualizacao', { veredito: 'duvida' }), true);
+  assert.equal(seloDoRitual(duvidaNoAmbiente), 'brilhante', 'dúvida de ambiente também não reprova mais');
+  assert.equal(blocoReprovado('visualizacao', { veredito: 'duvida' }), false);
   assert.equal(blocoReprovado('acordei', { veredito: 'duvida' }), false);
+  // e `reprovada` continua reprovando em qualquer bloco — a trava não sumiu
+  assert.equal(blocoReprovado('visualizacao', { veredito: 'reprovada' }), true);
   assert.equal(blocoReprovado('acordei', { veredito: 'aprovada' }), false);
   assert.equal(blocoReprovado('visualizacao', undefined), false);
 });

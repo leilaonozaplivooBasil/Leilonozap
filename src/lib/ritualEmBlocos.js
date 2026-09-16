@@ -124,16 +124,32 @@ export function ritualCompleto(comprovacao) {
 /**
  * Este bloco foi recusado pela IA?
  *
- * 🔴 DIR-125 (decisão do dono, 09/09) vale SÓ pra visualização: "vai reprovar
- * automático... só em casos impossíveis, mas não precisa" — dúvida sobre o
- * AMBIENTE (é a casa dela?) conta como reprovação, pra nenhuma comprovação
- * ficar presa esperando um humano decidir.
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🔴 DIR-125 REVISADA (15/09/2026) — DÚVIDA DEIXOU DE REPROVAR
+ * ══════════════════════════════════════════════════════════════════════════
+ * A regra anterior valia só pra visualização: dúvida sobre o AMBIENTE contava
+ * como reprovação, pra nenhuma comprovação ficar presa esperando um humano.
+ * A intenção era boa — o efeito, não.
  *
- * No print do bom dia é o contrário: dúvida ali é falta de contexto visual
- * (sem data na tela, foto de baixa qualidade), e o fluxo normal de print desta
- * casa PERGUNTA antes de reprovar. Tratar as duas dúvidas igual reprovaria
- * gente por má sorte de câmera logo no primeiro bloco, às 5h da manhã — que é
- * exatamente o atrito que este arquivo existe pra desmontar.
+ * MEDIDO no banco de produção, 7 dias, os vereditos da visualização:
+ *
+ *     dúvida ..... 19   (confiança média 61)
+ *     aprovada ....  5   (confiança média 77)
+ *     reprovada ...  3   (confiança média 76)
+ *
+ * 70% de dúvida. Uma régua que recusa sete de cada dez não separa quem fez de
+ * quem não fez: ela está dizendo "não sei" quase sempre, e a confiança 61
+ * confirma. Os três "reprovada", com confiança 76, é que são julgamento.
+ *
+ * Isso só não virou desastre por acidente: o veredito da IA chega DEPOIS do
+ * fechamento (julgarBlocoComIA não segura ninguém), então quem fechava a tela
+ * rápido escapava da dúvida e quem esperava era reprovado. Em 15/09 a Beatriz
+ * esperou 35s e perdeu o ritual; quatro pessoas receberam a MESMA dúvida no
+ * mesmo dia e passaram, porque fecharam em menos de 8s.
+ *
+ * Régua nova (decisão do dono, 15/09): dúvida NÃO reprova. Vira PENDÊNCIA
+ * VISÍVEL — fica escrita na tarefa, a pessoa lê o que melhorar, e o ritual
+ * conta. Só `reprovada` reprova, em qualquer bloco.
  */
 export function blocoReprovado(nome, veredito) {
   // 🚨 DIR-146 (14/09/2026) — INCIDENTE: o gateway de IA ficou sem crédito
@@ -143,9 +159,20 @@ export function blocoReprovado(nome, veredito) {
   // do ar não é uma opinião sobre a imagem: é a imagem nunca ter sido
   // vista. Isso não é reprovação em NENHUM bloco.
   if (veredito?.ia_indisponivel) return false;
-  const v = veredito?.veredito;
-  if (v === 'reprovada') return true;
-  return v === 'duvida' && nome === 'visualizacao';
+  return veredito?.veredito === 'reprovada';
+}
+
+/**
+ * A IA olhou e ficou em dúvida?
+ *
+ * Não é reprovação (ver DIR-125 revisada acima) e não é "IA fora do ar" (aí
+ * ela nem olhou). É um terceiro estado: alguém viu, achou que dava pra ficar
+ * melhor, e disse o quê. Isso tem que APARECER pra pessoa — mas não pode
+ * custar o ritual dela.
+ */
+export function blocoEmDuvida(veredito) {
+  if (veredito?.ia_indisponivel) return false;
+  return veredito?.veredito === 'duvida';
 }
 
 /** Este bloco foi entregue mas a IA nunca chegou a olhar (estava fora do ar)? */
@@ -185,6 +212,15 @@ export function pendenciasDoRitual(comprovacao) {
       faltando.push({ bloco: nome, o_que: `${ROTULO_DO_BLOCO[nome]}: a IA de validação estava fora do ar quando você entregou — o que você mandou FOI SALVO, não foi perdido nem reprovado, só está aguardando confirmação.` });
     } else if (blocoReprovado(nome, v)) {
       faltando.push({ bloco: nome, o_que: `${ROTULO_DO_BLOCO[nome]}: ${v.motivo || 'reprovado pela IA'}` });
+    } else if (blocoEmDuvida(v)) {
+      // 🟡 DIR-125 revisada — a dúvida vira DICA, não punição. O texto precisa
+      // deixar claro que o ritual CONTOU, senão quem ler vai achar que perdeu
+      // o dia: foi exatamente essa leitura que a Beatriz fez em 15/09.
+      faltando.push({
+        bloco: nome,
+        o_que: `${ROTULO_DO_BLOCO[nome]}: seu ritual contou normalmente — a IA só deixou uma dica pra próxima. ${v.motivo || ''}`.trim(),
+        tipo: 'dica',
+      });
     }
   }
   return faltando;
