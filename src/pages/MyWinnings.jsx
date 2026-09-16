@@ -138,7 +138,14 @@ export default function MyWinningsPage() {
                 // liquidava — o arremate nunca virava pedido na Gestão de Pedidos. Aqui, ao
                 // abrir esta página, tenta liquidar (best-effort, idempotente no servidor)
                 // qualquer arremate ainda "awaiting_payment" — mesma chamada do WinnerModal.
-                const pendentes = wonAuctions.filter(a => a.order_status === 'awaiting_payment');
+                // 🤝 16/09/2026 — LOTE COM RETIRADA LIBERADA FICA DE FORA DESTE LAÇO.
+                // Aqui a liquidação roda SOZINHA, em silêncio, ao abrir a página.
+                // Num lote com retirada, isso cobraria o frete antes de o vencedor
+                // escolher — e a escolha, por regra do dono, só existe para ele.
+                // Fica pendente até ele escolher no modal de vitória.
+                // ⚠️ PENDÊNCIA CONHECIDA: esta tela ainda não oferece a escolha.
+                // Quem fechar o modal sem escolher precisa reabri-lo.
+                const pendentes = wonAuctions.filter(a => a.order_status === 'awaiting_payment' && !a.permite_retirada);
                 for (const a of pendentes) {
                     try {
                         const r = await plataforma.functions.invoke('settleAuctionWithBalance', { auction_id: a.id, user_id: user.id });

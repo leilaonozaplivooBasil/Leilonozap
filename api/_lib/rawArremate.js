@@ -47,7 +47,7 @@
 // o id/empresa/serviço da etiqueta. Se ela falhar, o pedido nasce com o valor
 // certo e sem id — vira etiqueta pendente, que é um problema de logística, não
 // de dinheiro.
-export async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auction, origem = 'arremate' }) {
+export async function montarRawArremate({ user, freteAmount, amount, produtoAmount, auction, origem = 'arremate', retirada = false }) {
   const cep = String(user?.address_zip_code || '').replace(/\D/g, '');
   const endereco = {
     street: user?.address_street || null,
@@ -65,9 +65,17 @@ export async function montarRawArremate({ user, freteAmount, amount, produtoAmou
   // cobrado. Isso é apagar um problema com outro: o cliente pagou frete, então
   // aquilo é entrega. Sem endereço vira 'delivery_pendente' — pendência
   // operacional visível, que a logística resolve pedindo o endereço.
-  const situacao = freteAmount > 0
-    ? (temEndereco ? 'delivery' : 'delivery_pendente')
-    : (temEndereco ? 'delivery' : 'pickup');
+  // 🤝 16/09/2026 — RETIRADA ESCOLHIDA PELO VENCEDOR vem de fora, explícita.
+  // Não dá para deduzir de `freteAmount === 0`: quem retira TEM endereço no
+  // cadastro (o CEP é obrigatório para dar lance), então a regra de baixo
+  // classificaria como 'delivery' e a logística tentaria despachar um produto
+  // que a pessoa vem buscar. O contrário também vale, e é o F9 logo acima:
+  // frete pago nunca vira retirada.
+  const situacao = retirada
+    ? 'pickup'
+    : (freteAmount > 0
+      ? (temEndereco ? 'delivery' : 'delivery_pendente')
+      : (temEndereco ? 'delivery' : 'pickup'));
 
   const raw = {
     delivery_type: situacao,

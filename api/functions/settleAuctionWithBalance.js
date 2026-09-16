@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     if (!auctionId || !userId) return res.status(400).json({ success: false, error: 'Dados obrigatórios ausentes' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const aRows = await (await sb(`auctions?select=id,title,current_price,winner_id,winner_name,status,order_status,image_urls,frete_reservado_valor,product_id&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
+    const aRows = await (await sb(`auctions?select=id,title,current_price,winner_id,winner_name,status,order_status,image_urls,frete_reservado_valor,product_id,permite_retirada&id=eq.${encodeURIComponent(auctionId)}&limit=1`)).json();
     const auction = Array.isArray(aRows) ? aRows[0] : null;
     if (!auction) return res.status(200).json({ success: false, error: 'Leilão não encontrado' });
     if (auction.winner_id !== userId) return res.status(200).json({ success: false, error: 'Usuário não é o vencedor' });
@@ -52,7 +52,29 @@ export default async function handler(req, res) {
     // 🚚 Frete calculado na sala é cobrado junto do produto — mas NUNCA entra na
     // base de comissão (total_amount da venda continua só o valor do produto).
     const produtoCents = cents(auction.current_price);
-    const freteCents = cents(auction.frete_reservado_valor || 0);
+    const freteReservadoCents = cents(auction.frete_reservado_valor || 0);
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🤝 RETIRADA EM MÃOS (16/09/2026) — A ESCOLHA É DO VENCEDOR, E É AQUI.
+    // ══════════════════════════════════════════════════════════════════════════
+    // Regra do dono: "a escolha de receber em casa ou retirar em mãos deve vir só
+    // se ele for o vencedor do leilão ou arremate já". Durante a disputa NADA
+    // muda — CEP obrigatório, frete cotado, mostrado e RESERVADO como sempre.
+    // A regra do frete reservado se mantém inteira; ela só deixa de ser COBRADA
+    // de quem escolhe retirar.
+    //
+    // 🔴 A AUTORIZAÇÃO É DO BANCO. `entrega_tipo: 'retirada'` chega no corpo e é
+    // pedido, não permissão: quem decide é `auctions.permite_retirada`, lido
+    // aqui. Fora dos lotes liberados, este endpoint se comporta como sempre.
+    const pediuRetirada = String(body?.entrega_tipo || '') === 'retirada';
+    const retirada = pediuRetirada && auction.permite_retirada === true;
+    if (pediuRetirada && !retirada) {
+      return res.status(200).json({ success: false, error: 'Este leilão não está liberado para retirada em mãos.' });
+    }
+
+    // quem retira não paga frete; o que foi reservado para ele volta pro saldo
+    const freteCents = retirada ? 0 : freteReservadoCents;
+    const freteADevolverCents = retirada ? freteReservadoCents : 0;
     const amountCents = produtoCents + freteCents;
     if (amountCents <= 0) return res.status(200).json({ success: false, error: 'Valor inválido' });
     const amount = fromCents(amountCents);
@@ -89,7 +111,10 @@ export default async function handler(req, res) {
     // 🔒 flip atômico: só quem pegar a auction AINDA em awaiting_payment liquida.
     const flip = await sb(`auctions?id=eq.${encodeURIComponent(auctionId)}&order_status=eq.awaiting_payment`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ order_status: 'paid' }),
+      // 🤝 a escolha do vencedor entra no MESMO flip atômico do pagamento.
+      // Gravar depois abriria uma janela em que o pedido já está pago e a
+      // logística ainda lê 'entrega' — e despacharia o que é para retirar.
+      body: JSON.stringify({ order_status: 'paid', ...(retirada ? { entrega_tipo: 'retirada' } : {}) }),
     });
     const flipped = await flip.json().catch(() => []);
     if (!Array.isArray(flipped) || !flipped.length) {
@@ -120,8 +145,16 @@ export default async function handler(req, res) {
       // consome a reserva primeiro; o que faltar sai do disponível
       const tirarDaReserva = Math.min(curRes, amountCents);
       const tirarDoDisponivel = amountCents - tirarDaReserva;
-      const novoDisp = fromCents(curDisp - tirarDoDisponivel);
-      const novoRes = fromCents(curRes - tirarDaReserva);
+      // 🤝 QUEM RETIRA TEM O FRETE DE VOLTA, NA MESMA ESCRITA.
+      // Sem isto o frete reservado ficaria preso em `saldo_reservado` para
+      // sempre: a cobrança encolhe (só o produto), o `tirarDaReserva` encolhe
+      // junto e a sobra não tem quem a solte. É a mesma família de defeito da
+      // cobrança dupla de 18/08 — dinheiro do cliente parado numa coluna.
+      // O `min` evita soltar mais do que ainda está reservado (lance legado
+      // pode ter reserva menor que o frete gravado no leilão).
+      const devolverFrete = Math.max(0, Math.min(freteADevolverCents, curRes - tirarDaReserva));
+      const novoDisp = fromCents(curDisp - tirarDoDisponivel + devolverFrete);
+      const novoRes = fromCents(curRes - tirarDaReserva - devolverFrete);
       // coluna nunca inicializada fica NULL, e "eq.0" nunca casa com NULL
       const fDisp = curDisp === 0 ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)' : `saldo_disponivel.eq.${fromCents(curDisp)}`;
       const fRes = curRes === 0 ? 'or(saldo_reservado.eq.0,saldo_reservado.is.null)' : `saldo_reservado.eq.${fromCents(curRes)}`;
@@ -170,7 +203,7 @@ export default async function handler(req, res) {
     }
 
     // venda já paga (mesma rota do arremate via PIX, sem gateway)
-    const rawArremate = await montarRawArremate({ user: { ...user, id: userId }, freteAmount, amount, produtoAmount, auction, origem: 'settleAuctionWithBalance' });
+    const rawArremate = await montarRawArremate({ user: { ...user, id: userId }, freteAmount, amount, produtoAmount, auction, origem: 'settleAuctionWithBalance', retirada });
     const saleId = oid();
     const sale = {
       id: saleId, base44_id: saleId, kind: 'arremate',
