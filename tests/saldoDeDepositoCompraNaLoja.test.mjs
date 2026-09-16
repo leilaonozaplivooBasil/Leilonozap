@@ -26,7 +26,7 @@ const leia = (p) => readFileSync(path.join(RAIZ, p), 'utf8');
 // SQL comenta com `--`, não com `//` — o ajudante de JS não serve aqui.
 const semComentariosSQL = (txt) => String(txt ?? '').replace(/^\s*--.*$/gm, '');
 
-const MIGRACAO = 'supabase/migrations/20260916160000_saldo_de_deposito_compra_na_loja.sql';
+const MIGRACAO = 'supabase/migrations/20260916173052_saldo_de_deposito_compra_na_loja.sql';
 const SQL = semComentariosSQL(leia(MIGRACAO));
 const PAGAR = semComentarios(leia('api/functions/payWithBalance.js'));
 const CARRINHO = semComentarios(leia('src/pages/Cart.jsx'));

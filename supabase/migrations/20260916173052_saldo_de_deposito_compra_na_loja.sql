@@ -1,5 +1,12 @@
 -- 💳 O CRÉDITO DE PARTICIPAÇÃO PASSA A COMPRAR NA LOJA VIRTUAL — 16/09/2026
 --
+-- ⚠️ O NÚMERO DESTE ARQUIVO (20260916173052) É O QUE O BANCO REGISTROU.
+-- Aplicada pela API de gestão do Supabase, não pelo workflow (o
+-- SUPABASE_ACCESS_TOKEN está morto). Essa via carimba a versão com a hora da
+-- APLICAÇÃO, não com o nome do arquivo — então o arquivo foi renomeado pra
+-- bater com o registro. Arquivo e registro 1:1 é o que a PR #334 consertou;
+-- deixar os dois com números diferentes recriaria o problema.
+--
 -- ═══════════════════════════════════════════════════════════════════════════
 -- POR QUE ISTO EXISTE
 -- ═══════════════════════════════════════════════════════════════════════════
