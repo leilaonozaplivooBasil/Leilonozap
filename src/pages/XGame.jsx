@@ -59,7 +59,11 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
   const [participante, setParticipante] = useState(null);
   const [cicloConfig, setCicloConfig] = useState(null);
   const [perdaoAte, setPerdaoAte] = useState(null);
-  const [liberacaoAteMin, setLiberacaoAteMin] = useState(null); // DIR-161
+  // 🚀 DIR-161/162.1 — { ate_hora, motivo } cru, pra mostrar o AVISO (quem
+  // liberou, até quando, por quê) — `liberacaoAteMin` (minutos) é só o que
+  // `resumoDoDia` usa pra calcular; o texto usa o objeto inteiro.
+  const [liberacao, setLiberacao] = useState(null);
+  const liberacaoAteMin = liberacao?.ate_hora ? minutosDeHora(liberacao.ate_hora) : null;
   const [historicoOfensiva, setHistoricoOfensiva] = useState([]);
   const [votosDias, setVotosDias] = useState([]);
   const [agora, setAgora] = useState(new Date());
@@ -100,7 +104,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
     (async () => {
       try {
         const hoje = new Date();
-        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, { data: liberacao }, uReal] = await Promise.all([
+        const [{ data: part }, { data: cfg }, { data: tf }, { data: parts }, { data: vh }, { data: liberacaoRow }, uReal] = await Promise.all([
           supabase.from('xgame_participantes').select('*').eq('user_id', u.id).maybeSingle(),
           supabase.from('xgame_config').select('ciclo_inicio,perdao_zeragem_ate').eq('id', 'atual').maybeSingle(),
           supabase.from('metodo_tarefas').select('*').eq('user_id', u.id).eq('data', dataISO(hoje)).order('ordem'),
@@ -108,7 +112,8 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
           supabase.from('xgame_votos_mvm').select('votado_id,virtude,nota').eq('votante_id', u.id).eq('data', dataISO(hoje)),
           // 🚀 DIR-161 — liberação pontual de evento (ex.: corrida da empresa
           // às 4h): tarefas antes de `ate_hora` não perdem MvM/pontos/X-Pay.
-          supabase.from('xgame_liberacoes').select('ate_hora').eq('user_id', u.id).eq('data', dataISO(hoje)).maybeSingle(),
+          // `motivo` vem junto só pro aviso na tela (DIR-162.1).
+          supabase.from('xgame_liberacoes').select('ate_hora,motivo').eq('user_id', u.id).eq('data', dataISO(hoje)).maybeSingle(),
           // 🔍 no modo "ver como ele vê" o localStorage não tem o cargo real
           // dela — busca pra o gate do "Aceito ser votado" (só super_admin) valer certo
           userIdForcado
@@ -120,7 +125,7 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
         setMeuAceitaSerVotado(part?.aceita_ser_votado !== false);
         setCicloConfig(cfg?.ciclo_inicio || null);
         setPerdaoAte(cfg?.perdao_zeragem_ate || null);
-        setLiberacaoAteMin(liberacao?.ate_hora ? minutosDeHora(liberacao.ate_hora) : null);
+        setLiberacao(liberacaoRow || null);
         setTarefas(tf || []);
 
         // 🧯 08/09 — os mesmos colegas votáveis (sem Super Admin fechado) e os
@@ -374,6 +379,16 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
             </div>
           </div>
         </header>
+
+        {/* 🚀 16/09/2026 — dono, ao vivo: "tem que ter essa comunicação
+            melhor... na aba deles." Mesmo aviso do Compromisso, aqui na
+            versão escura desta página. */}
+        {liberacao?.ate_hora && (
+          <div className="rounded-xl border-2 border-emerald-500 bg-emerald-950/30 px-4 py-3 text-center">
+            <p className="text-sm font-extrabold text-emerald-400">🚀 LIBERADO PELO ADMINISTRADOR até as {liberacao.ate_hora}{liberacao.motivo ? ` — ${liberacao.motivo}` : ''}</p>
+            <p className="text-[11px] text-emerald-300 mt-0.5">Suas tarefas de hoje com horário antes desse não perdem MvM, pontos nem X-Pay por atraso — a empresa liberou pra você por causa do evento. Depois das {liberacao.ate_hora}, a régua normal volta a valer.</p>
+          </div>
+        )}
 
         {/* 🔥 08/09/2026 — mesma regra explícita do Compromisso, radical: não
             votar em todo mundo até a última chance zera o dia inteiro,
@@ -680,13 +695,29 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
                 </div>
               )}
               <div className="grid sm:grid-cols-2 gap-2">
-                {resumo.tarefas.map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 border border-[#1c1f28] rounded-lg px-3 py-2">
-                    <span className="w-12 text-xs text-[#817E8C] tabular-nums shrink-0">{t.hora || '—'}</span>
-                    <span className={`flex-1 min-w-0 truncate text-sm ${t.feito ? 'line-through text-[#817E8C]' : ''}`}>{t.titulo}</span>
-                    <span className={`text-[11px] font-bold shrink-0 ${t.estado.cor}`}>{t.estado.id === 'PERDIDO' ? 'PERDIDO' : t.estado.label}</span>
-                  </div>
-                ))}
+                {resumo.tarefas.map((t) => {
+                  // 🚀 16/09/2026 — dono: "tem que mudar o horário... mas ter
+                  // uma observação que foi pelo administrador." `t.hora` já
+                  // vem EFETIVO (liberado) de `resumoDoDia` — compara com o
+                  // original (`tarefas`, o que veio direto do banco) pra
+                  // saber se esta tarefa específica foi empurrada.
+                  const original = tarefas.find((x) => x.id === t.id)?.hora;
+                  const foiLiberada = !!(liberacao?.ate_hora && original && t.hora !== original);
+                  return (
+                    <div key={t.id} className="flex items-center gap-3 border border-[#1c1f28] rounded-lg px-3 py-2">
+                      <span className="w-12 text-xs text-[#817E8C] tabular-nums shrink-0">{t.hora || '—'}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`block truncate text-sm ${t.feito ? 'line-through text-[#817E8C]' : ''}`}>{t.titulo}</span>
+                        {foiLiberada && (
+                          <span className="block text-[10px] font-bold text-emerald-400" title={`Horário original: ${original}.`} data-teste="liberado-pelo-administrador-xgame">
+                            🚀 liberado pelo administrador (evento){liberacao.motivo ? ` — ${liberacao.motivo}` : ''}
+                          </span>
+                        )}
+                      </span>
+                      <span className={`text-[11px] font-bold shrink-0 ${t.estado.cor}`}>{t.estado.id === 'PERDIDO' ? 'PERDIDO' : t.estado.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

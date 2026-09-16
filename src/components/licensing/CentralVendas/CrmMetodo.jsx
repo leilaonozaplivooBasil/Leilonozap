@@ -502,12 +502,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // desta pessoa HOJE até uma hora (ex.: corrida da empresa às 4h), busca
   // esse horário — só vale pro dia sendo jogado AGORA, mesma régua do
   // `perdoado` logo abaixo (histórico não se recalcula).
-  const [liberacaoAteMin, setLiberacaoAteMin] = useState(null);
+  // 🖼️ 16/09/2026 — dono, ao vivo, testando: "eu preciso que apareça na
+  // história dele que foi liberado pelo administrador pelo evento... só
+  // essa comunicação que tem que melhorar." O `motivo`/`ate_hora` crus
+  // ficam guardados à parte de `liberacaoAteMin` (minutos, o que o motor
+  // usa) só pra virar o aviso na tela — texto, não cálculo.
+  const [liberacao, setLiberacao] = useState(null); // { ate_hora, motivo } ou null
+  const liberacaoAteMin = liberacao?.ate_hora ? minutosDeHora(liberacao.ate_hora) : null;
   useEffect(() => {
-    if (painel !== 'compromisso' || !uid || !ehHoje) { setLiberacaoAteMin(null); return; }
-    supabase.from('xgame_liberacoes').select('ate_hora').eq('user_id', uid).eq('data', dia).maybeSingle()
-      .then(({ data }) => setLiberacaoAteMin(data?.ate_hora ? minutosDeHora(data.ate_hora) : null))
-      .catch(() => setLiberacaoAteMin(null));
+    if (painel !== 'compromisso' || !uid || !ehHoje) { setLiberacao(null); return; }
+    supabase.from('xgame_liberacoes').select('ate_hora,motivo').eq('user_id', uid).eq('data', dia).maybeSingle()
+      .then(({ data }) => setLiberacao(data || null))
+      .catch(() => setLiberacao(null));
   }, [painel, uid, dia, ehHoje]);
   const xgame = useMemo(() => {
     if (painel !== 'compromisso' || tarefasJogo.length === 0) return null;
@@ -2309,6 +2315,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
+            {/* 🚀 16/09/2026 — dono, ao vivo, testando a liberação de evento
+                (corrida da empresa às 4h): "eu preciso que apareça na história
+                dele que foi liberado pelo administrador pelo evento... só essa
+                comunicação que tem que melhorar." Sem isto, a pessoa via os
+                números mudarem mas não sabia POR QUÊ — a régua ficou clara
+                pro dono no ADM, mas muda pro jogador sem explicação nenhuma. */}
+            {xgame && ehHoje && liberacao?.ate_hora && mostrarPainel && (
+              <div className="rounded-lg border-2 border-nz-verde bg-emerald-50 px-3 py-2.5 text-center">
+                <p className="text-sm font-extrabold text-emerald-700">🚀 LIBERADO PELO ADMINISTRADOR até as {liberacao.ate_hora}{liberacao.motivo ? ` — ${liberacao.motivo}` : ''}</p>
+                <p className="text-[11px] text-emerald-600 mt-0.5">
+                  Suas tarefas de hoje com horário antes desse não perdem MvM, pontos nem X-Pay por atraso — a empresa liberou pra você por causa do evento. Depois das {liberacao.ate_hora}, a régua normal volta a valer.
+                </p>
+              </div>
+            )}
+
             {/* 🔥 08/09/2026 — dono: "não vou, perde o dinheiro, perde a MvM,
                 perde tudo do dia... precisa ser radical." Não é um detalhe
                 dentro do bloco de votação (que pode estar recolhido) — é um
@@ -2850,9 +2871,33 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                     tarefa renderizada (não necessariamente a primeira da
                                     lista). Marcado só na tarefa que É a primeira de
                                     `tarefasJogo` — o que o passo do tour de fato descreve. */}
-                                <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste={t.id === tarefasJogo[0]?.id ? 'titulo-tarefa' : undefined}>
-                                  {t.hora && <span className="font-bold">{t.hora_fim ? `${t.hora}–${t.hora_fim}` : t.hora} · </span>}{t.titulo}
-                                </p>
+                                {/* 🚀 16/09/2026 — dono, ao vivo: "tem que mudar o horário...
+                                    mas ter uma observação que foi pelo administrador, porque
+                                    ele estava no evento." A liberação empurra o horário lá
+                                    dentro de `resumoDoDia` (`xgame.tarefas`) — aqui só MOSTRA
+                                    esse horário efetivo na própria tarefa, com o selo de
+                                    quem liberou e por quê, em vez de deixar o número mudar
+                                    sem explicação nenhuma. */}
+                                {(() => {
+                                  const horaEfetiva = xgame?.tarefas.find((x) => x.id === t.id)?.hora || t.hora;
+                                  const foiLiberada = !!(liberacao?.ate_hora && t.hora && horaEfetiva !== t.hora);
+                                  return (
+                                    <>
+                                      <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste={t.id === tarefasJogo[0]?.id ? 'titulo-tarefa' : undefined}>
+                                        {horaEfetiva && <span className="font-bold">{t.hora_fim ? `${horaEfetiva}–${t.hora_fim}` : horaEfetiva} · </span>}{t.titulo}
+                                      </p>
+                                      {foiLiberada && (
+                                        <p
+                                          className="text-[10px] font-bold text-emerald-600"
+                                          title={`Horário original: ${t.hora}.`}
+                                          data-teste="liberado-pelo-administrador"
+                                        >
+                                          🚀 liberado pelo administrador (evento){liberacao.motivo ? ` — ${liberacao.motivo}` : ''}
+                                        </p>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                                 {/* ⏰ o pronto: "pronto até", e o recado quando a tarefa voltou.
                                     🎓 09/09/2026 — DIR-107, dono: "tem gente que confunde o que
                                     é o pronto... acha que é só quando termina. Se estiver no

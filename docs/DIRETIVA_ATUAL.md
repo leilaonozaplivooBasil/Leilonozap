@@ -12,6 +12,26 @@
 
 ---
 
+## DIR-163 — a tarefa liberada diz QUEM liberou e POR QUÊ, não só muda de número
+
+**Emitida por:** dono, ao vivo, depois de testar e confirmar que a liberação de evento (DIR-161) funciona por trás: *"agora eu preciso que apareça na história dele que foi liberado pelo administrador pelo evento, uma mensagem pra ele ver que a empresa liberou. Só essa comunicação que tem que melhorar."* Seguido de: *"tem que mudar o horário, tem que deixar o horário, ter como feito, mas ter uma observação que foi pelo administrador, porque ele estava no evento... na aba deles, por dentro, quando a gente vê, e quando eles vêm."*
+
+**Achado:** a régua (MvM/pontos/X-Pay não descontam) já funcionava, mas era invisível — a pessoa via os números mudarem sem entender por quê, e a própria tarefa continuava mostrando o horário ORIGINAL (ex.: 04:40), não o horário efetivo já liberado. `resumoDoDia` empurra a hora internamente (`aplicarLiberacao`) só pro cálculo — a tela nunca lia esse valor de volta pra mostrar.
+
+**O que entra:**
+1. **`/XGame`** (a tela que o dono estava olhando ao vivo) e **Compromisso** (`CrmMetodo.jsx`) — banner no topo do dia ("🚀 LIBERADO PELO ADMINISTRADOR até as HH:MM — motivo") quando há liberação hoje, MAIS um selo na própria tarefa afetada ("🚀 liberado pelo administrador (evento) — motivo"), comparando o horário EFETIVO (o que `resumoDoDia` calculou, já liberado) com o horário ORIGINAL (o que está gravado no banco) — só mostra o selo nas tarefas que de fato mudaram.
+2. **ADM X-Game** (`XGameAdmin.jsx`) — o mesmo selo "🚀 liberada" aparece na lista de tarefas do dia da pessoa, pro admin ver, sem precisar abrir a aba de Liberação separada, que ela já foi liberada.
+
+**Fora do escopo:** não muda a régua de cálculo (DIR-161) — só torna visível o que já acontecia.
+
+**Regras fixas:** o selo só aparece na tarefa cujo horário de fato mudou (comparação exata original × efetivo) — não pinta o dia inteiro, só o que foi tocado pela liberação.
+
+**Prova:** suíte 2684/2684 (10 testes novos em `tests/liberacaoComunicacao.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-162 — o rótulo da gaveta que escondia a liberação de evento
 
 **Emitida por:** dono, direto depois de publicada a DIR-161: *"onde está isso, eu não estou enxergando."*

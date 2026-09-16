@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Plus, GraduationCap, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
-import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, VIRTUDES, podeSerVotado, votouEmTodosOsColegas, mvmManual, dataISO } from '@/lib/xgame';
+import { fmtReais, pesoAutomatico, porqueDoPeso, categoriaDaTarefa, validacaoAutomatica, nomeExibicao, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN, horaDeMin, VIRTUDES, podeSerVotado, votouEmTodosOsColegas, mvmManual, dataISO, minutosDeHora } from '@/lib/xgame';
 import { normalizeLevels, getLevel } from '@/lib/careerLevels';
 import { isAdminRole } from '@/lib/roles';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
@@ -433,6 +433,18 @@ export default function XGameAdmin({ onVerComo } = {}) {
     setTarefas(data || []);
   }, []);
   useEffect(() => { carregarTarefas(tarefaUser, tarefaDia); }, [tarefaUser, tarefaDia, carregarTarefas]);
+
+  // 🚀 16/09/2026 — dono, ao vivo: "essa comunicação tem que melhorar...
+  // quando a gente vê, e quando eles vêm." O admin também precisa ver, no
+  // próprio dia da pessoa, quem já foi liberada — não só na aba de
+  // Liberação de evento.
+  const [liberacaoTarefaUser, setLiberacaoTarefaUser] = useState(null);
+  useEffect(() => {
+    if (!tarefaUser || !tarefaDia) { setLiberacaoTarefaUser(null); return; }
+    supabase.from('xgame_liberacoes').select('ate_hora,motivo').eq('user_id', tarefaUser).eq('data', tarefaDia).maybeSingle()
+      .then(({ data }) => setLiberacaoTarefaUser(data || null))
+      .catch(() => setLiberacaoTarefaUser(null));
+  }, [tarefaUser, tarefaDia]);
 
   const salvarTarefa = async (t, patch) => {
     const { error } = await supabase.from('metodo_tarefas').update(patch).eq('id', t.id);
@@ -1286,10 +1298,22 @@ export default function XGameAdmin({ onVerComo } = {}) {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {tarefas.map((t) => (
+                      {tarefas.map((t) => {
+                        // 🚀 16/09/2026 — dono: "tem que ter essa comunicação melhor...
+                        // quando a gente vê." O admin também enxerga, na própria linha
+                        // da tarefa, quem já foi liberada pelo evento.
+                        const ateMin = liberacaoTarefaUser?.ate_hora ? minutosDeHora(liberacaoTarefaUser.ate_hora) : null;
+                        const horaMin = minutosDeHora(t.hora);
+                        const foiLiberada = ateMin !== null && horaMin !== null && horaMin < ateMin;
+                        return (
                         <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 flex-wrap">
                           <span className={`text-[11px] min-w-0 truncate ${t.feito ? 'text-gray-900' : 'text-gray-400'}`}>
                             {t.hora} — {t.titulo} {t.feito ? '✔ feita' : '(não marcada)'}
+                            {foiLiberada && (
+                              <span className="ml-1.5 font-bold text-emerald-600" title={`Liberada até ${liberacaoTarefaUser.ate_hora}${liberacaoTarefaUser.motivo ? ` — ${liberacaoTarefaUser.motivo}` : ''}`} data-teste="liberada-badge-admin">
+                                🚀 liberada
+                              </span>
+                            )}
                             {t.comprovacao?.valido && (t.comprovacao.tipo === 'instagram'
                               ? <a href={t.comprovacao.entrega} target="_blank" rel="noreferrer" className="ml-1.5 font-bold text-emerald-600 hover:underline" title="Comprovação: post do Instagram">📸</a>
                               : <span className="ml-1.5 font-bold text-emerald-600" title={`Comprovação: ${t.comprovacao.entrega}`}>📚</span>)}
@@ -1334,7 +1358,8 @@ export default function XGameAdmin({ onVerComo } = {}) {
                             >{excluindo === t.id ? 'confirma?' : '✕'}</button>
                           </span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
