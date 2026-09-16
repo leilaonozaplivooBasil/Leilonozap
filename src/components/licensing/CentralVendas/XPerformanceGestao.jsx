@@ -1018,7 +1018,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
           data-teste="abrir-admin"
         >
           <Wrench className="w-4 h-4 text-nz-verde" />
-          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Ciclo, verbas e participantes</span>
+          <span className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Ciclo, verbas, participantes, liberação de evento e eventos da empresa</span>
           {/* 🖼️ dono: "não está claro" — quem vota no MvM aparece aqui MESMO
               fechado, sem precisar abrir pra descobrir */}
           {participantes.length > 0 && (
