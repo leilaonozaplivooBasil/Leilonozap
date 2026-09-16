@@ -62,7 +62,7 @@ import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
 import { caminhoDeProva } from '@/lib/caminhoDeProva';
 import { caminhoDoAudio, guardarAudio, caminhoDoVideo, guardarVideo } from '@/lib/cofreDeAudio';
 import { frameEmBase64 } from '@/lib/frameEmBase64';
-import { comBloco, statusDoRitual, seloDoRitual, pendenciasDoRitual, ritualRetomavel, ritualExpirado, blocosFeitos, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
+import { comBloco, statusDoRitual, seloDoRitual, pendenciasDoRitual, ritualRetomavel, ritualExpirado, blocosFeitos, ritualEsperandoFechamento, fechamentoDoRitual, fimDaEntrega, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
 import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
@@ -246,6 +246,48 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   }, [uid, dia]);
   useEffect(() => { setDiaLido(null); }, [dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🌅 FECHAMENTO AUTOMÁTICO DO RITUAL ENTREGUE (16/09/2026)
+  // ═══════════════════════════════════════════════════════════════════════
+  // Não existia NADA que fechasse um ritual com os três blocos entregues: sem
+  // prazo, sem varredura, sem reconciliação. Quem entregava tudo e não
+  // apertava o botão do fim ficava em `ritual_em_andamento` para sempre, com
+  // `valido: false` — e `valido` decide ponto e dinheiro. 5 de 36 rituais
+  // entregues desde 10/09 (14%) terminaram assim.
+  //
+  // 🕐 O PRAZO É JULGADO PELO FIM DA ENTREGA, NÃO PELO RELÓGIO DE AGORA.
+  // A pessoa terminou o trabalho dentro da janela; o que faltou foi o clique.
+  // Cobrar dela o tempo que o registro passou parado seria cobrar um defeito
+  // nosso — e o registro pode ficar parado por dias.
+  //
+  // Roda só sobre as tarefas DA PRÓPRIA PESSOA (carregarTarefas filtra por
+  // user_id) e uma vez por tarefa, pela trava do ref.
+  const ritualJaFechadoSozinho = useRef(new Set());
+  useEffect(() => {
+    if (!uid || diaLido !== dia) return;
+    const presos = tarefas.filter((t) => ritualEsperandoFechamento(t.comprovacao) && !ritualJaFechadoSozinho.current.has(t.id));
+    if (!presos.length) return;
+    for (const t of presos) {
+      ritualJaFechadoSozinho.current.add(t.id);
+      const fimEntrega = fimDaEntrega(t.comprovacao);
+      const estourou = ritualExpirado({ abertoEm: t.comprovacao?.aberto_em, agora: fimEntrega ? Date.parse(fimEntrega) : Date.now() });
+      const fechada = {
+        ...t.comprovacao,
+        ...(estourou
+          // estourou o cronômetro DURANTE a entrega: o registro fica parcial,
+          // que é a mesma régua do fechamento pelo botão (DIR de 10/09).
+          ? { status: 'ritual_parcial', valido: false, pendencias: [...pendenciasDoRitual(t.comprovacao), { bloco: 'visualizacao', o_que: `Passou dos ${RITUAL_MINUTOS_PARA_CONCLUIR} minutos do ritual.` }] }
+          : fechamentoDoRitual(t.comprovacao, { automatico: true })),
+        quando: new Date().toISOString(),
+      };
+      plataforma.entities.MetodoTarefa.update(t.id, { feito: !!fechada.valido, comprovacao: fechada })
+        .then(() => setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !!fechada.valido, comprovacao: fechada } : x))))
+        // falhar aqui não pode atrapalhar ninguém: a tarefa segue como está e
+        // a próxima carga tenta de novo (o ref morre com a montagem da tela).
+        .catch(() => ritualJaFechadoSozinho.current.delete(t.id));
+    }
+  }, [tarefas, uid, dia, diaLido]);
 
   const salvarPerfil = async (patch) => {
     setSalvando(true);
@@ -947,11 +989,26 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     }
 
     const nova = comBloco(base, bloco, corpo);
+    // ═══════════════════════════════════════════════════════════════════
+    // 🔴 16/09/2026 — GRAVAR BLOCO NÃO REBAIXA MAIS UM RITUAL JÁ FECHADO
+    // ═══════════════════════════════════════════════════════════════════
+    // Estas duas linhas eram incondicionais. Quem reabria um ritual já
+    // APROVADO e regravava um bloco via o registro cair pra "em andamento"
+    // com `valido: false` — e `valido` é o que decide ponto e dinheiro.
+    // Sophia, 15/09: bloco 1 gravado às 10:35:17, bloco 3 às 10:30:00.
+    //
+    // Agora: ritual já fechado RECALCULA pela regra; ritual em construção
+    // continua "em andamento", que é o estado honesto de quem não terminou.
+    const jaFechado = ['aprovada_ritual', 'ritual_parcial', 'ritual_pendente_ia'].includes(base.status);
+    if (jaFechado) {
+      Object.assign(nova, fechamentoDoRitual(nova));
+    } else {
     // status intermediário: o ritual EXISTE e está em andamento. Não é
     // aprovada (não terminou) nem reprovada (não errou) — e `valido: false`
     // impede que um ritual pela metade conte como comprovação boa.
     nova.status = 'ritual_em_andamento';
     nova.valido = false;
+    }
     // 🧾 O RASTRO TAMBÉM AQUI — e não é detalhe.
     //
     // Cada bloco gravado é uma comprovação escrita no banco. Sem `tentativas`,
@@ -962,8 +1019,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // rastro existe pra impedir.
     Object.assign(nova, rastroDa({ anterior: t.comprovacao, falhas: falhasPorTarefa.current[t.id] || [] }));
     nova.quando = new Date().toISOString();
-    await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: nova });
-    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: nova } : x)));
+    // 🔴 16/09 — `feito` do ritual sai de `valido`, SEMPRE. Os dois eram
+    // escritos por caminhos diferentes e ninguém reconciliava: em 3 dos 5
+    // registros presos, a tarefa mostrava ✓ e o registro dizia "pela metade".
+    await plataforma.entities.MetodoTarefa.update(t.id, { feito: !!nova.valido, comprovacao: nova });
+    setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, feito: !!nova.valido, comprovacao: nova } : x)));
 
     // 🤖 a IA olha DEPOIS, sem segurar ninguém. O que ela responder entra
     // numa segunda escrita, em cima do que já está gravado.

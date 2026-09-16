@@ -262,6 +262,38 @@ export function statusDoRitual(comprovacao) {
 }
 
 /**
+ * O FECHAMENTO, como regra pura — os campos que carimbam um ritual entregue.
+ *
+ * Existe em dois lugares hoje: o botão do fim (concluirRitual) e o fechamento
+ * automático de quem entregou e não apertou. As duas portas TÊM que dar o
+ * mesmo veredito, senão o registro depende de por onde a pessoa passou — que
+ * é o mesmo tipo de defeito que fez a dúvida valer pra uns e não pra outros.
+ *
+ * `automatico: true` fica gravado de propósito: quem abrir o laudo depois
+ * precisa saber que ninguém apertou o botão, e que o sistema fechou.
+ */
+export function fechamentoDoRitual(comprovacao, { automatico = false } = {}) {
+  const status = statusDoRitual(comprovacao);
+  const pendencias = pendenciasDoRitual(comprovacao);
+  const feitos = blocosFeitos(comprovacao);
+  const temVideo = !!blocosDaComprovacao(comprovacao).visualizacao?.video_path;
+  return {
+    status,
+    valido: status === 'aprovada_ritual',
+    pendencias,
+    veredito_ia: {
+      veredito: status === 'aprovada_ritual' ? 'aprovada' : 'reprovada',
+      confianca: 100,
+      o_que_viu: `Ritual do Amanhecer — blocos entregues: ${feitos.join(', ') || 'nenhum'}${temVideo ? ' (com vídeo)' : ''}`,
+      motivo: pendencias.map((x) => x.o_que).join(' · '),
+    },
+    ...(automatico
+      ? { fechamento_automatico: { quando: new Date().toISOString(), fim_da_entrega: fimDaEntrega(comprovacao) } }
+      : {}),
+  };
+}
+
+/**
  * A comprovação com um bloco a mais — sem apagar o que já estava lá.
  *
  * 🔴 Merge, nunca substituição: o bloco 3 chegando não pode levar embora os
@@ -294,7 +326,50 @@ export function comBloco(comprovacao, nome, dados = {}) {
 export function ritualRetomavel(comprovacao, hojeStr) {
   if (!comprovacao || comprovacao.tipo !== 'ritual') return false;
   if (!blocosFeitos(comprovacao).length) return false;
-  if (ritualCompleto(comprovacao)) return false;
+  // 🔴 16/09/2026 — AQUI HAVIA `if (ritualCompleto(...)) return false;`
+  //
+  // Quem tinha os TRÊS blocos entregues recebia `null` e a tela abria DO ZERO,
+  // no bloco 1. Regravar o bloco 1 rebaixava o registro pra "em andamento" e
+  // derrubava o `valido` — Sophia, 15/09: o bloco 1 dela está gravado às
+  // 10:35:17 e o bloco 3 às 10:30:00. Bloco 1 depois do bloco 3 só acontece
+  // assim. Ela tinha fechado, recebeu "parcial", tentou de novo e o registro
+  // caiu pra em-andamento.
+  //
+  // Ritual completo agora RETOMA: a tela abre no fechamento (a conta de
+  // `passo` em XGameRitualAmanhecer já cai em P.FECHAMENTO quando
+  // `proximoBloco` é null), em vez de mandar refazer o que já está em casa.
   const dia = String(comprovacao.aberto_dia || '');
   return !!dia && !!hojeStr && dia === String(hojeStr);
+}
+
+/**
+ * Entregou os três blocos e o registro nunca foi fechado?
+ *
+ * 🔴 16/09/2026 — O SEGUNDO BURACO DO CICLO DE VIDA. Não existia NADA que
+ * fechasse um ritual entregue: sem prazo, sem varredura, sem reconciliação.
+ * Quem entregava os três blocos e não apertava o botão do fim ficava em
+ * `ritual_em_andamento` PARA SEMPRE, com `valido: false` — e `valido` é o que
+ * decide ponto e dinheiro. Elenice (14/09), Iara (14/09) e a ELOHA (16/09)
+ * estão assim: três blocos, vídeo gravado, nenhum fechamento jamais.
+ *
+ * 5 de 36 rituais entregues desde 10/09 (14%) terminaram presos.
+ */
+export function ritualEsperandoFechamento(comprovacao) {
+  if (!comprovacao || comprovacao.tipo !== 'ritual') return false;
+  if (!ritualCompleto(comprovacao)) return false;
+  return comprovacao.status === 'ritual_em_andamento';
+}
+
+/**
+ * O instante em que o ÚLTIMO bloco foi gravado.
+ *
+ * É esta a hora que vale pra julgar o prazo de um fechamento automático, e
+ * não o relógio de agora: a pessoa terminou o trabalho dentro da janela; o
+ * que faltou foi o clique. Cobrar dela o tempo que o registro passou parado
+ * seria punir por um defeito nosso.
+ */
+export function fimDaEntrega(comprovacao) {
+  const b = blocosDaComprovacao(comprovacao);
+  const marcas = BLOCOS.map((nome) => b[nome]?.quando).filter(Boolean).map(ms).filter((n) => Number.isFinite(n));
+  return marcas.length ? new Date(Math.max(...marcas)).toISOString() : null;
 }

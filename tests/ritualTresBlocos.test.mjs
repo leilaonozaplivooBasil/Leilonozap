@@ -46,7 +46,9 @@ test('R3B-3 · a IA NUNCA trava o avanço — julga depois da gravação', () =>
   const fim = CRM.indexOf('const julgarBlocoComIA');
   assert.ok(ini > 0 && fim > ini, 'premissa: o gravador de bloco existe');
   const gravador = CRM.slice(ini, fim);
-  const posGravou = gravador.indexOf('await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: nova })');
+  // 16/09 — a gravação passou a reconciliar o `feito` junto (`{ feito: ..., comprovacao: nova }`).
+  // O que este teste protege é a ORDEM, não a forma do objeto: casa pelo começo da chamada.
+  const posGravou = gravador.indexOf('await plataforma.entities.MetodoTarefa.update(t.id, {');
   const posIA = gravador.indexOf('julgarBlocoComIA(t.id, bloco,');
   assert.ok(posGravou > 0 && posIA > 0, 'premissa: grava e chama a IA');
   assert.ok(posGravou < posIA, 'a IA é chamada ANTES de gravar — se ela cair, o bloco se perde');

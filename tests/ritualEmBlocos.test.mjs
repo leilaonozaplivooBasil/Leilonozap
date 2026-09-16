@@ -188,9 +188,14 @@ test('REB-10 · retomar só o ritual de HOJE, e só se sobrou bloco', () => {
   const meio = { ...comBloco(null, 'acordei', {}), aberto_dia: '2026-09-11' };
   assert.equal(ritualRetomavel(meio, '2026-09-11'), true);
   assert.equal(ritualRetomavel(meio, '2026-09-12'), false, 'o ritual de ontem ressuscitou');
-  // completo não se retoma
+  // 🔴 16/09/2026 — AQUI SE AFIRMAVA `ritualRetomavel(cheio) === false`.
+  // Era o gatilho do rebaixamento: ritual completo recebia `null`, a tela abria
+  // DO ZERO e regravar o bloco 1 zerava o `valido` de um ritual já aprovado
+  // (Sophia, 15/09 — bloco 1 às 10:35:17, bloco 3 às 10:30:00). Completo agora
+  // RETOMA, e a tela cai no fechamento. O resto da régua deste teste não mudou.
   const cheio = { ...comBloco(comBloco(meio, 'gratidao', {}), 'visualizacao', {}), aberto_dia: '2026-09-11' };
-  assert.equal(ritualRetomavel(cheio, '2026-09-11'), false);
+  assert.equal(ritualRetomavel(cheio, '2026-09-11'), true);
+  assert.equal(ritualRetomavel(cheio, '2026-09-12'), false, 'o ritual completo de ontem ressuscitou');
   // sem bloco nenhum não há o que retomar
   assert.equal(ritualRetomavel({ tipo: 'ritual', aberto_dia: '2026-09-11' }, '2026-09-11'), false);
   // outro tipo de comprovação nunca é ritual retomável
