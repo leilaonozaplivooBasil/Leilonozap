@@ -13,6 +13,11 @@
  *
  * `?encerrado=1` repete um leilão já terminado — que NÃO pode mostrar a linha.
  * `?semdata=1` repete um leilão sem end_time — que também não pode.
+ *
+ * 🎬 17/09/2026 — a mesma banca serve o VÍDEO NO DESTAQUE:
+ * `?video=1`    card com vídeo de arquivo (o caso do PS5)
+ * `?video=quebrado` vídeo cujo endereço não existe — não pode deixar buraco
+ * `?youtube=1`  vídeo de embed (iframe), que NÃO toca sozinho
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -42,10 +47,18 @@ const leilao = {
   end_time: params.get('semdata') === '1' ? null : (params.get('encerrado') === '1' ? ONTEM : DOZE_DIAS),
 };
 
+// o `video` chega no card como prop pronta (quem monta é DestaquesLeiloes,
+// usando a MESMA régua videoDoProduto da loja e da sala)
+const video = params.get('youtube') === '1'
+  ? { tipo: 'youtube', embed: 'https://www.youtube.com/embed/abc123' }
+  : params.get('video')
+    ? { tipo: 'arquivo', embed: params.get('video') === 'quebrado' ? '/nao-existe.mp4' : '/ps5-de-mentira.mp4' }
+    : null;
+
 createRoot(document.getElementById('raiz')).render(
   <MemoryRouter>
     <div style={{ padding: 24, maxWidth: 420 }}>
-      <AuctionCard auction={leilao} />
+      <AuctionCard auction={leilao} video={video} />
     </div>
   </MemoryRouter>
 );

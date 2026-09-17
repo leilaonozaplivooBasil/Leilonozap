@@ -40,7 +40,7 @@ import { textoDeTermino } from '@/lib/relogioLeilao';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
-function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null }) {
+function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null }) {
   // 🎞️ PONTO 91 — as fotos passam sozinhas em qualquer aparelho, pausam no
   // toque/hover e podem ser arrastadas pros lados (hook único reutilizável).
 
@@ -69,7 +69,36 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     ? auction.image_urls
     : []; // Alterado para array vazio se não houver imagens
 
-  const { index: currentImageIndex, paused: isPaused, carouselProps } = useAutoCarousel(images.length);
+  // 🎬 17/09/2026 — O VÍDEO ABRE O CARD, quando existe.
+  //
+  // Pedido do dono, sobre o PS5 nos Destaques: "como primeira foto deve ser o
+  // vídeo". Isso INVERTE, SÓ AQUI, a regra escrita em midiasDoProduto.js
+  // ("o vídeo vai no fim, nunca na capa"). A inversão é deliberada e o dono
+  // confirmou: aquela regra vale para a PÁGINA DE VENDA, onde a capa é o que
+  // carrega rápido e o que vai pra busca e pro compartilhamento. Destaque é
+  // vitrine, e são no máximo seis cards escolhidos a dedo.
+  //
+  // `video` é prop OPCIONAL, e só os Destaques passam (DestaquesLeiloes.jsx).
+  // Sem ela o card é o que sempre foi — a listagem de 80 leilões segue sem
+  // vídeo nenhum, de propósito ("só no destaques", 17/09).
+  const temVideo = Boolean(video?.embed);
+  const totalSlides = images.length + (temVideo ? 1 : 0);
+
+  // 🔇 MUDO e sozinho, e o rodízio ESPERA o vídeo acabar: o carrossel troca de
+  // slide a cada 2,5s, e vídeo cortado aos 2,5 segundos é pior do que vídeo
+  // nenhum. Sem `loop` de propósito — acabou, as fotos voltam a girar.
+  const [videoTocando, setVideoTocando] = useState(false);
+
+  const { index: slideAtual, paused: isPaused, carouselProps } = useAutoCarousel(
+    totalSlides,
+    { segurar: videoTocando },
+  );
+
+  // O vídeo, quando existe, é o slide 0. `currentImageIndex` continua sendo o
+  // índice DA FOTO: vira -1 enquanto o vídeo está na tela, e aí nenhuma foto
+  // fica opaca e nenhuma legenda aparece — sem precisar tocar no resto do JSX.
+  const mostrandoVideo = temVideo && slideAtual === 0;
+  const currentImageIndex = temVideo ? slideAtual - 1 : slideAtual;
 
   // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA COM VERIFICAÇÃO DE SALDO
   const handleCardClick = (e) => {
@@ -387,6 +416,39 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           style={{ aspectRatio: '1/1', contain: 'layout', ...carouselProps.style }}
         >
           <div className="w-full h-full relative">
+            {temVideo && (
+              video.tipo === 'arquivo' ? (
+                <video
+                  src={video.embed}
+                  data-teste="video-do-destaque"
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="metadata"
+                  // a primeira foto como cartaz: o card nunca nasce preto, e
+                  // quem está com dados curtos vê a foto de sempre
+                  poster={images[0] || undefined}
+                  onPlay={() => setVideoTocando(true)}
+                  onEnded={() => setVideoTocando(false)}
+                  onPause={() => setVideoTocando(false)}
+                  // vídeo que não carrega não pode deixar buraco: solta a rédea
+                  // e o rodízio segue pras fotos
+                  onError={() => setVideoTocando(false)}
+                  className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${mostrandoVideo ? 'opacity-100' : 'opacity-0'}`}
+                />
+              ) : (
+                // YouTube/Vimeo entram como o slide 1 também, mas SEM autoplay:
+                // som e rede de terceiro numa vitrine não se ligam sozinhos.
+                // Aqui o rodízio não segura — não há como saber se está tocando.
+                <iframe
+                  src={video.embed}
+                  title={`Vídeo — ${auction.title}`}
+                  data-teste="video-do-destaque"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full transition-opacity duration-300 ease-in-out ${mostrandoVideo ? 'opacity-100' : 'opacity-0'}`}
+                />
+              )
+            )}
             {images.map((img, index) => (
               <img
                 key={index}
@@ -411,7 +473,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
 
             <div
-              className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${images.length > 0 ? 'opacity-0' : 'opacity-100'
+              className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${totalSlides > 0 ? 'opacity-0' : 'opacity-100'
                 }`}
             >
               <div className="text-center text-gray-500">
@@ -422,7 +484,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           </div>
 
           {/* Selo de pausa — aparece só enquanto o dedo/mouse segura a foto */}
-          {isPaused && images.length > 1 && (
+          {isPaused && totalSlides > 1 && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
               <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white/90 fill-white/90" />
             </div>
