@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Share2 } from 'lucide-react';
+import { MessageCircle, Share2, Truck } from 'lucide-react';
 import CarrinhoEntrega from '@/components/catalog/CarrinhoEntrega';
 import { toast } from 'sonner';
 import { copyLink } from '@/lib/clipboard';
@@ -25,6 +25,22 @@ export default function CartaoLojaVirtual({ parceiro }) {
   const cartaoRef = React.useRef(null);
   const inicioRef = React.useRef(null);
   const compartilharRef = React.useRef(null);
+  // 📱 17/09/2026 — no celular o carrinho tem uma PISTA própria embaixo do nome.
+  // Dono: "o caminhão andando no celular fica feio; equalizar, botar um embaixo
+  // do outro". Antes o texto "Envio para todo Brasil" nascia centralizado POR
+  // CIMA do nome e o carrinho cruzava a linha do nome até o botão compartilhar
+  // — num cartão de 360px isso vira sobreposição. Agora: nome em cima, faixa de
+  // entrega embaixo, e o carrinho anda só dentro dessa faixa. No desktop segue
+  // como estava (nome largo, carrinho do selo ao compartilhar).
+  const pistaInicioRef = React.useRef(null);
+  const pistaFimRef = React.useRef(null);
+  const [desktop, setDesktop] = React.useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches);
+  React.useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)');
+    const aoMudar = (e) => setDesktop(e.matches);
+    mq.addEventListener('change', aoMudar);
+    return () => mq.removeEventListener('change', aoMudar);
+  }, []);
 
   const compartilhar = async () => {
     const url = `${window.location.origin}/Loja-Virtual${ref ? `?ref=${ref}` : ''}`;
@@ -42,11 +58,19 @@ export default function CartaoLojaVirtual({ parceiro }) {
   return (
     <section
       ref={cartaoRef}
-      className="relative mb-6 flex items-center gap-3 rounded-2xl border border-gray-700 bg-gray-800/50 p-2.5 sm:p-3"
+      className="relative mb-6 rounded-2xl border border-gray-700 bg-gray-800/50 p-2.5 sm:p-3"
       aria-label="Loja virtual"
     >
-      {/* 🛒 carrinho de entrega atravessando o cartão (decorativo) */}
-      <CarrinhoEntrega containerRef={cartaoRef} inicioRef={inicioRef} fimRef={compartilharRef} />
+      {/* 🛒 carrinho de entrega (decorativo): no desktop cruza do selo ao
+          compartilhar; no celular anda na faixa de entrega embaixo do nome */}
+      <CarrinhoEntrega
+        containerRef={cartaoRef}
+        inicioRef={desktop ? inicioRef : pistaInicioRef}
+        fimRef={desktop ? compartilharRef : pistaFimRef}
+        textoNoMeio={desktop}
+        entradaY={desktop ? -34 : -12}
+      />
+      <div className="flex items-center gap-3">
       {/* Foto */}
       {parceiro?.photo ? (
         <img
@@ -68,7 +92,7 @@ export default function CartaoLojaVirtual({ parceiro }) {
         <div className="mt-1 flex items-center gap-2.5 min-w-0">
           <h3
             ref={cargo ? null : inicioRef}
-            className="text-white font-bold text-sm sm:text-base truncate leading-tight"
+            className="text-white font-bold text-sm sm:text-base leading-tight break-words line-clamp-2 sm:line-clamp-none sm:truncate"
           >
             {nome || 'Especial'}
           </h3>
@@ -105,6 +129,16 @@ export default function CartaoLojaVirtual({ parceiro }) {
             <span className="hidden sm:inline">Falar Comigo</span>
           </Link>
         )}
+      </div>
+      </div>
+
+      {/* 📱 faixa de entrega (só celular): o texto fica fixo à esquerda e o
+          carrinho percorre o resto da linha, sem passar por cima do nome */}
+      <div className="sm:hidden mt-2 pt-2 border-t border-gray-700/60 flex items-center gap-1.5 text-[11px] text-gray-400">
+        <Truck className="w-3.5 h-3.5 text-green-400 shrink-0" />
+        <span ref={pistaInicioRef}>Envio para todo Brasil</span>
+        <span className="flex-1" />
+        <span ref={pistaFimRef} className="h-5 w-5 shrink-0" aria-hidden />
       </div>
     </section>
   );

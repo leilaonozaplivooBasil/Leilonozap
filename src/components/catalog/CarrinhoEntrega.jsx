@@ -18,7 +18,10 @@ const ATRASO_ENTRADA = 2500; // tempo de a loja abrir antes do 1º ciclo
 const PAUSA_ENTRE_CICLOS = 9000;
 const DURACAO = 3.2; // travessia pausada (s)
 
-export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef }) {
+// textoNoMeio: mostra o "Envio para todo Brasil" centralizado (desktop). No
+// celular o cartão já tem a faixa fixa com esse texto, então fica false.
+// entradaY: de quantos px acima o carrinho "desce" antes de andar.
+export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef, textoNoMeio = true, entradaY = -34 }) {
   const semMovimento = useReducedMotion();
   const [rota, setRota] = useState(null); // { x, y, dist }
   const [ciclo, setCiclo] = useState(0);
@@ -83,17 +86,19 @@ export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef }) {
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl" aria-hidden>
       {/* 🚚 "Envio para todo Brasil" — aparece no meio do cartão junto com o
           carrinho e some junto com ele (mesma duração/curva do ciclo) */}
-      <motion.div
-        key={`envio-${ciclo}`}
-        className="absolute inset-0 flex items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 1, 0] }}
-        transition={{ duration: DURACAO + 0.4, times: [0, 0.22, 0.88, 1], ease: 'easeInOut' }}
-      >
-        <span className="inline-flex items-center gap-1 text-[10.5px] text-gray-400">
-          <Truck className="w-3 h-3 text-green-400 shrink-0" />Envio para todo Brasil
-        </span>
-      </motion.div>
+      {textoNoMeio && (
+        <motion.div
+          key={`envio-${ciclo}`}
+          className="absolute inset-0 flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 1, 0] }}
+          transition={{ duration: DURACAO + 0.4, times: [0, 0.22, 0.88, 1], ease: 'easeInOut' }}
+        >
+          <span className="inline-flex items-center gap-1 text-[10.5px] text-gray-400">
+            <Truck className="w-3 h-3 text-green-400 shrink-0" />Envio para todo Brasil
+          </span>
+        </motion.div>
+      )}
 
       {/* rastro: linha verde que segue o carrinho e se apaga por trás */}
       <motion.div
@@ -115,8 +120,8 @@ export default function CarrinhoEntrega({ containerRef, inicioRef, fimRef }) {
         key={`carrinho-${ciclo}`}
         className="absolute"
         style={{ left: rota.x, top: rota.y - 10 }}
-        initial={{ x: 0, y: -34, opacity: 0 }}
-        animate={{ x: [0, 0, rota.dist, rota.dist], y: [-34, 0, 0, 0], opacity: [0, 1, 1, 0] }}
+        initial={{ x: 0, y: entradaY, opacity: 0 }}
+        animate={{ x: [0, 0, rota.dist, rota.dist], y: [entradaY, 0, 0, 0], opacity: [0, 1, 1, 0] }}
         transition={{ duration: DURACAO + 0.4, times: [0, 0.22, 0.88, 1], ease: 'easeInOut' }}
         onAnimationComplete={() => {
           setRodando(false);
