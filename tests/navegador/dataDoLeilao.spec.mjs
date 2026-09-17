@@ -330,3 +330,31 @@ test('🟢 sem vídeo não existe botão de som', { skip: semNavegador }, async 
     assert.equal(await pagina.locator('[data-teste="som-do-destaque"]').count(), 0);
   } finally { await ctx.close(); }
 });
+
+// ─────────────── 🔇 SÓ UM VÍDEO TOCA POR VEZ (17/09/2026) ───────────────
+//
+// Dono: "sempre apenas o vídeo do primeiro destaque fica ativo, para evitar
+// dois sons de vídeo ao mesmo tempo". Com o som ligando no primeiro toque da
+// página, seis cards com vídeo dariam seis áudios juntos — e ~30 a 48 MB de
+// download só pra desenhar a Home.
+
+test('🔇 card com vídeo que NÃO é o primeiro destaque não toca nada', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1&inativo=1');
+  try {
+    assert.equal(await pagina.locator('[data-teste="video-do-destaque"]').count(), 0,
+      'o vídeo foi montado num card que não é o primeiro — som duplo e MBs à toa');
+    assert.equal(await pagina.locator('[data-teste="som-do-destaque"]').count(), 0,
+      'sem vídeo tocando não pode haver botão de som');
+    // e o card continua inteiro: as fotos abrem normalmente
+    assert.equal(await slideVisivel(pagina), 0, 'a primeira foto tem que abrir o card');
+  } finally { await ctx.close(); }
+});
+
+test('🔊 nenhum áudio é carregado no card inativo — nem mudo', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1&inativo=1');
+  try {
+    // qualquer <video> na página, não só o do destaque: o ganho é NÃO baixar
+    const videos = await pagina.evaluate(() => document.querySelectorAll('video').length);
+    assert.equal(videos, 0, `sobraram ${videos} elementos de vídeo — os MB seriam baixados igual`);
+  } finally { await ctx.close(); }
+});

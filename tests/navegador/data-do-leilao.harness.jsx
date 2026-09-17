@@ -18,6 +18,7 @@
  * `?video=1`    card com vídeo de arquivo (o caso do PS5)
  * `?video=quebrado` vídeo cujo endereço não existe — não pode deixar buraco
  * `?youtube=1`  vídeo de embed (iframe), que NÃO toca sozinho
+ * `?inativo=1`  card que TEM vídeo mas não é o primeiro destaque: não toca
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -58,7 +59,7 @@ const video = params.get('youtube') === '1'
 createRoot(document.getElementById('raiz')).render(
   <MemoryRouter>
     <div style={{ padding: 24, maxWidth: 420 }}>
-      <AuctionCard auction={leilao} video={video} />
+      <AuctionCard auction={leilao} video={video} videoAtivo={params.get('inativo') !== '1'} />
     </div>
   </MemoryRouter>
 );

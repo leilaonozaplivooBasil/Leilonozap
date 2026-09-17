@@ -41,7 +41,7 @@ import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
-function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null }) {
+function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null, videoAtivo = false }) {
   // 🎞️ PONTO 91 — as fotos passam sozinhas em qualquer aparelho, pausam no
   // toque/hover e podem ser arrastadas pros lados (hook único reutilizável).
 
@@ -82,7 +82,20 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // `video` é prop OPCIONAL, e só os Destaques passam (DestaquesLeiloes.jsx).
   // Sem ela o card é o que sempre foi — a listagem de 80 leilões segue sem
   // vídeo nenhum, de propósito ("só no destaques", 17/09).
-  const temVideo = Boolean(video?.embed);
+  // 🔇 17/09/2026 — SÓ UM VÍDEO TOCA POR VEZ.
+  //
+  // Dono: "sempre apenas o vídeo do primeiro destaque fica ativo, para evitar
+  // dois sons de vídeo ao mesmo tempo". Com o som ligando no primeiro toque da
+  // página, seis cards com vídeo dariam seis áudios juntos.
+  //
+  // E tem o peso: cada vídeo tem de 5 a 8 MB. Seis destaques com vídeo
+  // baixariam ~30 a 48 MB só pra desenhar a Home — no celular, com dados
+  // móveis, isso é a página inteira travada antes de mostrar um leilão.
+  //
+  // 🔴 `videoAtivo` trava SÓ O CARROSSEL. O botão de compartilhar continua
+  // mandando o vídeo em TODOS os cards que têm um: compartilhar é ação
+  // deliberada, uma de cada vez, e não disputa som com ninguém.
+  const temVideo = Boolean(video?.embed) && videoAtivo;
   const totalSlides = images.length + (temVideo ? 1 : 0);
 
   // 🔇 MUDO e sozinho, e o rodízio ESPERA o vídeo acabar: o carrossel troca de
