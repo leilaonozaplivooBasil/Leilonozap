@@ -16,6 +16,7 @@ import GuestRegistrationModal from "../components/common/GuestRegistrationModal"
 import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, fmtBR } from '@/lib/money';
+import { textoDeTermino } from '@/lib/relogioLeilao';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
@@ -1073,6 +1074,14 @@ export default function AuctionRoom() {
   }
 
   const displayTime = getDisplayTime();
+  // 📅 17/09/2026 — A DATA TAMBÉM NO DESKTOP.
+  // `HeaderPrecoTempo` já mostrava a data embaixo do cronômetro desde 03/09 —
+  // mas o cabeçalho que o contém é `.mobile-header`, e acima de 1024px ele é
+  // `display:none`. Resultado: no computador a sala mostrava só "12 dias", sem
+  // data nenhuma, que é exatamente o rótulo de resolução de semana que gerou o
+  // chamado da Caixa de Som Mondial. A barra lateral (que só existe no desktop)
+  // passa a carregar a mesma frase, vinda da MESMA régua.
+  const fimEmTexto = textoDeTermino(auction?.end_time);
   const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
   const currentPrice = money(auction.current_price || auction.starting_price);
   // Leilão pode vir sem incremento definido (ex.: reativado/legado) — nunca deixar null quebrar o render nem gerar NaN no lance
@@ -1219,6 +1228,11 @@ export default function AuctionRoom() {
               <div className="product-panel__meta">
                 <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
                 <span className="product-panel__timer">{displayTime}</span>
+                {fimEmTexto && (
+                  <span data-teste="data-de-termino-sala" className="product-panel__fim">
+                    Termina {fimEmTexto}
+                  </span>
+                )}
               </div>
               {/* 🏆 PONTO 85 — quem está liderando o lance, visível pra todo mundo na sala */}
               {auction?.winner_name && (
@@ -1702,6 +1716,9 @@ export default function AuctionRoom() {
         .product-panel__meta { display: flex; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
         .product-panel__price { font-weight: bold; color: #10b981; font-size: 16px; }
         .product-panel__timer { font-family: monospace; background: #374151; padding: 4px 8px; border-radius: 6px; color: white; font-size: 12px; }
+        /* a data por extenso, embaixo do relógio da barra lateral. Ocupa a
+           linha inteira (flex-basis 100%) pra não espremer preço e cronômetro. */
+        .product-panel__fim { flex-basis: 100%; font-size: 11px; font-weight: 600; color: #9ca3af; font-variant-numeric: tabular-nums; }
         /* 📜 11/09/2026 — a regra .product-panel__desc saiu daqui.
            Era "max-height: 60px; overflow: hidden": cortava a descrição em três
            linhas sem avisar ninguém, e o que ficava de fora era o fim do texto —

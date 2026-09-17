@@ -36,6 +36,7 @@ import useChamada from '@/hooks/useChamada';
 // 🛡️ PONTO 70 — Compre Já só aparece com preço real (nunca valor residual de R$ 1,00)
 import { precoArremateAgora } from '@/lib/arremateAgora';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
+import { textoDeTermino } from '@/lib/relogioLeilao';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
@@ -352,6 +353,15 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   const textColor = variant === "sai_de_baixo" ? "text-gray-900" : "text-gray-100";
   const secondaryTextColor = variant === "sai_de_baixo" ? "text-gray-600" : "text-gray-400";
 
+  // 📅 17/09/2026 — A DATA, embaixo da contagem.
+  // A régua já existia (03/09, depois do chamado da Caixa de Som Mondial: o
+  // cliente viu "1 semana" duas semanas seguidas e achou o leilão travado) e já
+  // estava na sala, nos detalhes e no painel fixo. O CARD, que é onde quase
+  // todo mundo olha primeiro, tinha ficado de fora — e é resolução de SEMANA:
+  // "1 semana" cobre de 7,00 a 13,99 dias e fica parado sete dias seguidos.
+  // Vazio quando não há data confiável — aí a linha não desenha.
+  const fimEmTexto = textoDeTermino(auction.end_time);
+
   return (
     <>
       <Card
@@ -531,6 +541,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <div className={`font-mono text-sm sm:text-lg md:text-xl font-bold ${timeRemaining.isUrgent ? 'text-red-600 animate-pulse' : variant === 'sai_de_baixo' ? 'text-gray-900' : 'text-gray-200'}`}>
                   {timeRemaining.text}
                 </div>
+                {fimEmTexto && (
+                  <div data-teste="data-de-termino" className={`mt-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap ${secondaryTextColor}`}>
+                    {fimEmTexto}
+                  </div>
+                )}
               </div>
             )}
 
