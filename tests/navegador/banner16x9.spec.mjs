@@ -9,7 +9,7 @@
  * Aqui se mede o que o navegador desenhou, em seis larguras:
  *   • a imagem cabe INTEIRA dentro da moldura (nada estourando pra fora);
  *   • a proporção desenhada continua 16:9 (não esticou);
- *   • a moldura respeita o teto de 520px no desktop;
+ *   • a moldura ENCOSTA NAS DUAS BORDAS — sem teto de altura (17/09, 2ª rodada);
  *   • e no celular a altura fica onde já estava (~219px), sem surpresa.
  *
  * Um teste de classe CSS não serviria: `object-fit` é decidido no desenho.
@@ -63,7 +63,7 @@ test.after(async () => {
 });
 
 const LARGURAS = [360, 390, 768, 1024, 1440, 1920];
-const TETO = 520;
+// o teto de 520px foi removido em 17/09 (2ª rodada) — ver os testes abaixo
 
 async function medir(width) {
   const nav = await garantirNavegador();
@@ -103,8 +103,16 @@ async function medir(width) {
     return { w, h, caixaW: r.width, caixaH: r.height, encaixe };
   });
   const moldura = await pagina.locator('[data-parte="moldura"]').boundingBox();
+  // 🔴 A LARGURA ÚTIL, não a da janela. Com o banner alto aparece barra de
+  // rolagem, que come ~15px. Comparar a moldura com `viewport.width` acusaria
+  // faixa lateral onde só há a barra.
+  //
+  // E é o `body`, não o `documentElement`: medido nesta banca a 1440px, o
+  // `documentElement.clientWidth` devolveu 1440 enquanto o body tinha 1425 —
+  // 15px de barra que a primeira versão desta medição culpou o banner por.
+  const tela = await pagina.evaluate(() => document.body.clientWidth);
   await ctx.close();
-  return { pintado, moldura, erros };
+  return { pintado, moldura, tela, erros };
 }
 
 for (const w of LARGURAS) {
@@ -125,10 +133,22 @@ for (const w of LARGURAS) {
       `a arte foi desenhada em ${proporcao.toFixed(3)} em vez de ${(16 / 9).toFixed(3)}`);
   });
 
-  test(`🖼️ ${w}px — a moldura respeita o teto de ${TETO}px`, { skip: semNavegador }, async () => {
-    const { moldura } = await medir(w);
-    assert.ok(moldura.height <= TETO + 1,
-      `a moldura ficou com ${Math.round(moldura.height)}px — passou do teto e empurra a página`);
+  test(`🖼️ ${w}px — a moldura ENCOSTA nas duas bordas`, { skip: semNavegador }, async () => {
+    // 🔄 17/09/2026, SEGUNDA RODADA — ESTE TESTE MUDOU DE LADO, e de propósito.
+    //
+    // Ele exigia `moldura.height <= 520`. Esse teto era exatamente o que
+    // deixava a arte 16:9 com 924px numa tela de 1354px, e o dono voltou com
+    // print: "no desktop os banners ainda não preenchem toda tela".
+    //
+    // Entre encher cortando e encher esticando, ele escolheu NÃO CORTAR NADA.
+    // Então o teto caiu, e o que se exige agora é o oposto: a moldura ocupa a
+    // largura inteira e a altura sai da proporção da arte.
+    const { moldura, tela } = await medir(w);
+    assert.ok(moldura.width >= tela - 2,
+      `sobrou ${Math.round((tela - moldura.width) / 2)}px de faixa de cada lado — o teto voltou`);
+    const esperada = moldura.width * 9 / 16;
+    assert.ok(Math.abs(moldura.height - esperada) < 2,
+      `altura ${Math.round(moldura.height)}px para ${Math.round(moldura.width)}px de largura; 16:9 pede ${Math.round(esperada)}px`);
   });
 }
 
@@ -170,9 +190,18 @@ test('🖼️ no celular a moldura é 16:9 EXATO, sem tira sobrando', { skip: se
     `a 390px a moldura ficou com ${Math.round(moldura.height)}px; antes eram 219px`);
 });
 
-test('🖼️ no desktop largo a arte usa o teto inteiro — não fica minúscula', { skip: semNavegador }, async () => {
-  const { pintado, moldura } = await medir(1440);
-  assert.ok(Math.abs(moldura.height - TETO) < 2, `a moldura deveria encostar no teto, veio ${Math.round(moldura.height)}px`);
-  assert.ok(pintado.h >= TETO - 2, `a arte só usou ${Math.round(pintado.h)}px dos ${TETO}px disponíveis`);
-  assert.ok(pintado.w > 900, `a arte ficou com ${Math.round(pintado.w)}px de largura — pequena demais`);
+test('🖼️ no desktop largo a arte usa a TELA inteira — nada de 924px no meio', { skip: semNavegador }, async () => {
+  // O número 924 não é aleatório: era 520 (o teto antigo) × 16/9. Ele aparecia
+  // igual em 1354px, 1440px e 1920px de tela, sempre com faixa dos dois lados.
+  // É o defeito do print, e é isto que este teste impede de voltar.
+  const { pintado, moldura, tela } = await medir(1440);
+  assert.ok(moldura.width >= tela - 2,
+    `a moldura parou em ${Math.round(moldura.width)}px numa tela de ${tela}px`);
+  assert.ok(Math.abs(pintado.w - moldura.width) <= 2,
+    `a arte parou ${Math.round((moldura.width - pintado.w) / 2)}px antes da borda`);
+  assert.ok(pintado.w > 1200,
+    `a arte ficou com ${Math.round(pintado.w)}px — perto demais dos 924px do teto antigo`);
+  // e cresceu em altura, que é o preço combinado de não cortar nada
+  assert.ok(pintado.h > 600,
+    `altura ${Math.round(pintado.h)}px — o teto de 520px ainda está agindo`);
 });

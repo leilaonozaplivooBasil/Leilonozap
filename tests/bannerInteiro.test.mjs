@@ -122,3 +122,27 @@ test('as quatro telas usam a MESMA receita', () => {
     assert.match(fonte, /molduraSegueArte/, `${onde} não pede a moldura que segue a arte`);
   }
 });
+
+// ────────── 17/09, SEGUNDA RODADA: o teto de altura não pode voltar ──────────
+
+test('🔴 a moldura NÃO tem teto de altura nem de largura', () => {
+  // O dono, com print: "no desktop os banners ainda não preenchem toda tela".
+  // Escolhendo entre encher cortando ou encher esticando: NÃO CORTAR NADA.
+  //
+  // Um `maxHeight` aqui trava a altura enquanto a largura segue em 100%: a
+  // proporção quebra, a arte encolhe para caber, e a faixa lateral que ele está
+  // reclamando volta. Um `maxWidth` faz o mesmo direto.
+  //
+  // 🔎 ESTE TESTE EXISTE PORQUE O OUTRO NÃO BASTAVA. O guard `max-h-[Npx]` acima
+  // olha as TELAS. Devolver o teto DENTRO do componente deixava a rodada de
+  // código verde — medido, com o teto de 520px recolocado à mão.
+  const fonte = leia('src/components/banner/RotatingBanner.jsx');
+  const receita = fonte.slice(fonte.indexOf('molduraSegueArte ? (() =>'));
+  const bloco = receita.slice(0, receita.indexOf('})()'));
+  assert.ok(!/maxHeight/.test(bloco),
+    'voltou um teto de ALTURA na moldura — a arte para de encostar nas bordas');
+  assert.ok(!/maxWidth/.test(bloco),
+    'voltou um teto de LARGURA na moldura — é o que deixava a arte 16:9 em 924px numa tela de 1354px');
+  assert.match(bloco, /aspectRatio: String\(r\)/,
+    'a altura tem que sair da proporção da arte, não de um número fixo');
+});

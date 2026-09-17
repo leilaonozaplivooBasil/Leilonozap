@@ -12,9 +12,30 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 // exato) — em foto de gente, isso corta cabeça em cima e perna embaixo em
 // proporções iguais quando o container fica bem baixo e largo (desktop). Só
 // afeta quem passar a prop; sem ela, nada muda no comportamento de hoje.
-// Teto de altura do banner no desktop. Sem ele, a 1920px uma arte 16:9 daria
-// 1080px de altura e empurraria a página inteira para fora da primeira tela.
-const TETO_DE_ALTURA = 520;
+// 🔴 17/09/2026, SEGUNDA RODADA — O TETO DE ALTURA CAIU.
+//
+// Havia aqui um `TETO_DE_ALTURA = 520`, e dele saía um teto de LARGURA
+// (520 × proporção). Era ele que deixava a arte 16:9 com 924px numa tela de
+// 1354px — a moldura encostava na arte, mas a arte não encostava na tela.
+//
+// O dono, com print: "no desktop os banners ainda não preenchem toda tela".
+// E, escolhendo entre encher cortando ou encher esticando: NÃO CORTAR NADA.
+//
+// A geometria não deixa ter as duas coisas. Numa tela mais larga que a arte,
+// ou a arte é cortada, ou o banner fica alto, ou sobra faixa. Medido com as
+// artes reais (home 16:9, Loja ≈2,8:1):
+//
+//     tela 1354px → home 761px de altura · Loja 484px
+//     tela 1440px → home 810px           · Loja 514px
+//     tela 1920px → home 1080px          · Loja 686px
+//
+// A arte larga da Loja preenche sem crescer muito; a 16:9 do home cresce. Isso
+// é da ARTE, não do código: arte desktop larga (≈2,6:1) resolve sozinha, e é
+// por isso que a Loja nunca teve este problema.
+//
+// Sem teto nenhum, de propósito: qualquer `maxHeight` aqui faz a altura travar
+// enquanto a largura segue em 100%, a proporção quebra, e a faixa lateral que
+// o dono está reclamando VOLTA. Foi essa a escolha dele.
 
 export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition, molduraSegueArte = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -161,19 +182,17 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
 
   return (
     <div
-      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group ${molduraSegueArte ? 'mx-auto' : ''}`}
+      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group `}
       style={molduraSegueArte ? (() => {
         // 🔴 PROPORÇÃO DE PARTIDA, senão a moldura nasce com ALTURA ZERO e nada
         // carrega: sem altura a arte não ocupa espaço, e sem a arte não há
         // proporção para dar altura. Medido: moldura 1339x0 em todas as telas.
         // 16:9 é o palpite inicial; assim que a arte carrega, ela corrige.
         const r = proporcaoDaArte || 16 / 9;
-        return {
-          aspectRatio: String(r),
-          maxHeight: `${TETO_DE_ALTURA}px`,
-          // o teto de LARGURA vem do de altura — é ele que mata a faixa lateral
-          maxWidth: `${Math.round(TETO_DE_ALTURA * r)}px`,
-        };
+        // largura 100% (vem da classe) + proporção da arte = altura calculada.
+        // Sem maxWidth e sem maxHeight: é o que faz a arte encostar nas duas
+        // bordas da tela, inteira, em qualquer largura.
+        return { aspectRatio: String(r) };
       })() : undefined}
       onTouchStart={aoTocar}
       onTouchEnd={aoSoltar}
