@@ -90,3 +90,45 @@ test('a régua da PÁGINA DE VENDA continua com o vídeo NO FIM', () => {
   const posVideo = corpo.indexOf("tipo: 'video'");
   assert.ok(posFoto > 0 && posVideo > posFoto, 'o vídeo passou na frente das fotos na régua da loja');
 });
+
+// ─────────────── 🔇 só um vídeo toca por vez (17/09/2026) ───────────────
+
+test('só o PRIMEIRO destaque recebe o vídeo ativo', () => {
+  const tela = ler('src/components/home/DestaquesLeiloes.jsx');
+  assert.match(tela, /destaques\.map\(\(auction, posicao\) =>/,
+    'sem o índice não há como saber quem é o primeiro');
+  assert.match(tela, /videoAtivo=\{posicao === 0\}/,
+    'todos os cards tocariam juntos — seis áudios e ~30 a 48 MB de download');
+});
+
+test('🔴 é a posição na lista JÁ FILTRADA, não a posição salva', () => {
+  const tela = ler('src/components/home/DestaquesLeiloes.jsx');
+  // `emCartaz` já tirou os encerrados. Se a trava usasse `sort_order`, um
+  // destaque 1 encerrado deixaria a vitrine inteira MUDA — ninguém tocaria.
+  const mapa = tela.slice(tela.indexOf('destaques.map('));
+  assert.ok(!/sort_order/.test(mapa.slice(0, 900)),
+    'a escolha de quem toca não pode vir do sort_order salvo');
+  const filtro = tela.indexOf('setDestaques(emCartaz)');
+  assert.ok(filtro > 0 && filtro < tela.indexOf('destaques.map('),
+    'a lista tem que estar filtrada antes de escolher quem toca');
+});
+
+test('🔴 o compartilhar NÃO é travado por videoAtivo', () => {
+  const card = ler('src/components/auction/AuctionCard.jsx');
+  // compartilhar é ação deliberada, uma de cada vez: não disputa som com
+  // ninguém. Travar junto tiraria o vídeo do WhatsApp em 5 dos 6 destaques.
+  assert.match(card, /const temVideo = Boolean\(video\?\.embed\) && videoAtivo;/,
+    'a trava tem que valer só para o carrossel');
+  const share = card.slice(card.indexOf('const handleShare'));
+  const corpo = share.slice(0, share.indexOf('\n  };'));
+  assert.match(corpo, /video\?\.tipo === 'arquivo' && video\.embed/,
+    'o compartilhar parou de olhar o vídeo');
+  assert.ok(!/videoAtivo/.test(corpo),
+    '🔴 o compartilhar foi travado junto — 5 dos 6 destaques perderiam o vídeo no WhatsApp');
+});
+
+test('o padrão de videoAtivo é false — nenhuma outra tela toca sem pedir', () => {
+  const card = ler('src/components/auction/AuctionCard.jsx');
+  assert.match(card, /videoAtivo = false \}\)/,
+    'com padrão true, a listagem de 80 leilões voltaria a montar vídeo');
+});
