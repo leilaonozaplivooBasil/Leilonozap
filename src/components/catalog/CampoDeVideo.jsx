@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { plataforma } from '@/api/plataformaClient';
 import { entenderVideo, recadoDoErro, conferirArquivo, BALDE_VIDEO } from '@/lib/videoDoProduto';
+import { recadoDaCapa } from '@/lib/capaDoVideo';
+import { olharOComeco } from '@/lib/olharOVideo';
 
 /**
  * CampoDeVideo — anexar arquivo OU colar link, no cadastro do produto.
@@ -23,6 +25,13 @@ export default function CampoDeVideo({ valor, aoMudar, claro = false }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const inputRef = useRef(null);
+  // 🎬 17/09/2026 — a CAPA do vídeo no WhatsApp é o primeiro quadro do arquivo,
+  // e não há como mandar outra (ver src/lib/capaDoVideo.js). Quando o começo
+  // está preto, o aviso aparece aqui com o segundo exato para cortar — e o
+  // arquivo fica de lado esperando a pessoa decidir.
+  const [aviso, setAviso] = useState('');
+  const [aguardando, setAguardando] = useState(null);   // File esperando o "subir assim mesmo"
+  const [olhando, setOlhando] = useState(false);
 
   const lista = Array.isArray(valor) ? valor.filter(Boolean) : [];
 
@@ -35,13 +44,8 @@ export default function CampoDeVideo({ valor, aoMudar, claro = false }) {
 
   // Confere tipo e tamanho ANTES de subir: subir 40 MB pra ser recusado no fim
   // gasta a paciência e a franquia de quem cadastra.
-  const anexar = async (evento) => {
-    const file = evento.target.files?.[0];
-    if (inputRef.current) inputRef.current.value = '';
-    if (!file) return;
-    const conf = conferirArquivo(file);
-    if (!conf.ok) { setErro(conf.recado); return; }
-    setErro(''); setEnviando(true);
+  const subir = async (file) => {
+    setErro(''); setAviso(''); setAguardando(null); setEnviando(true);
     try {
       const r = await plataforma.integrations.Core.UploadFile({ file, bucket: BALDE_VIDEO });
       if (r?.file_url) aoMudar([r.file_url]);
@@ -51,6 +55,30 @@ export default function CampoDeVideo({ valor, aoMudar, claro = false }) {
       setErro('Não consegui enviar o vídeo. Confira a conexão e tente de novo.');
     }
     setEnviando(false);
+  };
+
+  const anexar = async (evento) => {
+    const file = evento.target.files?.[0];
+    if (inputRef.current) inputRef.current.value = '';
+    if (!file) return;
+    const conf = conferirArquivo(file);
+    if (!conf.ok) { setErro(conf.recado); setAviso(''); setAguardando(null); return; }
+    setErro(''); setAviso(''); setAguardando(null);
+
+    // 🎬 OLHA ANTES DE SUBIR. Depois do envio o aviso chegaria tarde: o arquivo
+    // já estaria no cofre e a pessoa teria gasto a franquia à toa.
+    //
+    // 🔴 E NUNCA BLOQUEIA: se a análise falhar (codec desconhecido, arquivo
+    // estranho, aba sem foco), `olhou` volta `false` e o envio segue como
+    // sempre seguiu. Um aviso que impede de trabalhar quando ele próprio falha
+    // é pior do que não existir.
+    setOlhando(true);
+    const capa = await olharOComeco(file);
+    setOlhando(false);
+    const recado = capa.olhou ? recadoDaCapa(capa) : '';
+    if (recado) { setAviso(recado); setAguardando(file); return; }
+
+    await subir(file);
   };
 
   const cor = claro
@@ -103,10 +131,10 @@ export default function CampoDeVideo({ valor, aoMudar, claro = false }) {
               Usar link
             </button>
             <button
-              type="button" onClick={() => inputRef.current?.click()} disabled={enviando}
+              type="button" onClick={() => inputRef.current?.click()} disabled={enviando || olhando}
               className={`rounded-lg border px-3 py-2 text-xs disabled:opacity-50 ${cor.anexar}`}
             >
-              {enviando ? 'Enviando…' : 'Anexar arquivo'}
+              {olhando ? 'Conferindo o vídeo…' : enviando ? 'Enviando…' : 'Anexar arquivo'}
             </button>
             <input
               ref={inputRef} type="file" accept="video/mp4,video/webm,video/quicktime"
@@ -120,6 +148,36 @@ export default function CampoDeVideo({ valor, aoMudar, claro = false }) {
       )}
 
       {erro && <p className="mt-2 text-xs text-red-400" data-teste="erro-do-video">{erro}</p>}
+
+      {/* 🎬 O aviso da capa preta. NÃO é erro: o vídeo é válido, só vai ficar
+          com miniatura ruim no WhatsApp. Por isso amarelo, e por isso os DOIS
+          caminhos ficam abertos — trocar o arquivo ou subir assim mesmo. */}
+      {aviso && (
+        <div
+          data-teste="aviso-da-capa"
+          className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3"
+        >
+          <p className="text-xs text-amber-300">🎬 {aviso}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => { setAviso(''); setAguardando(null); inputRef.current?.click(); }}
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+            >
+              Escolher outro arquivo
+            </button>
+            <button
+              type="button"
+              data-teste="subir-assim-mesmo"
+              onClick={() => aguardando && subir(aguardando)}
+              disabled={enviando}
+              className={`rounded-lg border px-3 py-1.5 text-xs disabled:opacity-50 ${cor.anexar}`}
+            >
+              {enviando ? 'Enviando…' : 'Subir assim mesmo'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
