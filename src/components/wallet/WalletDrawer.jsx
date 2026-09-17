@@ -74,6 +74,29 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const [filterTab, setFilterTab] = useState('all');
   // 🔒 PONTO 68: o 1º depósito só é liberado depois do aceite dos termos do crédito.
   const [aceiteTermos, setAceiteTermos] = useState(false);
+  // 🔴 17/09/2026 — BOTÃO MORTO E MUDO.
+  //
+  // Os dois botões de depósito nasciam `disabled` enquanto esta caixa estivesse
+  // desmarcada. A caixa fica ACIMA dos valores; a pessoa rola, escolhe o valor,
+  // escolhe o meio, aperta — e o botão não responde. Pior: o aviso certo
+  // ("Aceite os termos do crédito") já existia DENTRO do onClick, e botão
+  // desligado não dispara onClick. O aviso nunca aparecia.
+  //
+  // Medido na base em 17/09: 742 das 776 contas ainda não aceitaram esta versão
+  // do termo — ou seja, quase todo mundo batia nessa parede, no cartão e no PIX.
+  //
+  // A exigência continua inteira: sem aceite não há depósito, e quem barra são
+  // os `return` dentro dos handlers. O que muda é que agora o botão RESPONDE e
+  // diz o que falta, em vez de fingir que não foi apertado.
+  const caixaDeAceiteRef = useRef(null);
+  const [destacarAceite, setDestacarAceite] = useState(false);
+
+  const pedirAceite = () => {
+    toast.error('Marque o aceite do crédito para continuar.');
+    try { caixaDeAceiteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { /* sem suporte */ }
+    setDestacarAceite(true);
+    window.setTimeout(() => setDestacarAceite(false), 2600);
+  };
   const precisaAceite = !jaAceitouPassaporte(currentUser);
   const pollRef = useRef(null);
 
@@ -156,7 +179,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   // QR dentro da gaveta). Quem testa PIX não vê o problema nunca.
   const handlePayWithCard = () => {
     if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
-    if (precisaAceite && !aceiteTermos) { toast.error('Aceite os termos do crédito para continuar.'); return; }
+    if (precisaAceite && !aceiteTermos) { pedirAceite(); return; }
     if (precisaAceite) { registrarAceitePassaporte(currentUser).catch(() => { /* segue */ }); }
     onClose();
     navigate(createPageUrl('AuctionCheckoutModern'), {
@@ -166,7 +189,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
 
   const handleGeneratePix = async () => {
     if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
-    if (precisaAceite && !aceiteTermos) { toast.error('Aceite os termos do crédito para continuar.'); return; }
+    if (precisaAceite && !aceiteTermos) { pedirAceite(); return; }
     setGenerating(true);
     // registra o aceite antes de qualquer cobrança (trilha de auditoria no servidor)
     if (precisaAceite) { try { await registrarAceitePassaporte(currentUser); } catch { /* segue */ } }
@@ -477,7 +500,15 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   </div>
 
                   {precisaAceite && (
-                    <label className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/[0.04] p-3.5 cursor-pointer min-h-[44px]">
+                    <label
+                      ref={caixaDeAceiteRef}
+                      data-teste="caixa-de-aceite"
+                      className={`flex items-start gap-3 rounded-xl border p-3.5 cursor-pointer min-h-[44px] transition-colors duration-300 ${
+                        destacarAceite
+                          ? 'border-amber-400 bg-amber-400/15 ring-2 ring-amber-400/60'
+                          : 'border-white/15 bg-white/[0.04]'
+                      }`}
+                    >
                       <input
                         type="checkbox"
                         checked={aceiteTermos}
@@ -560,7 +591,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   {paymentMethod === 'PIX' ? (
                     <Button
                       onClick={handleGeneratePix}
-                      disabled={generating || effectiveAmount < 100 || (precisaAceite && !aceiteTermos)}
+                      disabled={generating || effectiveAmount < 100}
                       className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                     >
                       {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
@@ -569,7 +600,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   ) : (
                     <Button
                       onClick={handlePayWithCard}
-                      disabled={effectiveAmount < 100 || (precisaAceite && !aceiteTermos)}
+                      disabled={effectiveAmount < 100}
                       className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                     >
                       <CreditCard className="w-5 h-5 mr-2" />
