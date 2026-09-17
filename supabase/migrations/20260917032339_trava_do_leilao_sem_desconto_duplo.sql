@@ -1,9 +1,14 @@
 -- 🔧 A TRAVA DO LEILÃO PARA DE DESCONTAR A MESMA QUANTIA DUAS VEZES — 17/09/2026
 --
--- ⚠️ RENOMEAR ESTE ARQUIVO PARA O CARIMBO QUE O BANCO REGISTRAR.
--- A aplicação vai pela API de gestão (o SUPABASE_ACCESS_TOKEN está morto), e essa
--- via carimba a versão com a hora da APLICAÇÃO, não com o nome do arquivo. Arquivo
--- e registro 1:1 é o que a PR #334 consertou — deixar diferente recria o problema.
+-- ⚠️ O NÚMERO DESTE ARQUIVO (20260917032339) É O QUE O BANCO REGISTROU.
+-- Aplicada pela API de gestão (o SUPABASE_ACCESS_TOKEN está morto), e essa via
+-- carimba a versão com a hora da APLICAÇÃO, não com o nome do arquivo — então o
+-- arquivo foi renomeado pra bater com o registro. Arquivo e registro 1:1 é o que
+-- a PR #334 consertou; deixar diferente recria o problema.
+--
+-- ✅ JÁ APLICADA EM PRODUÇÃO em 17/09/2026 03:23:39 UTC, ANTES do merge — a RPC
+-- vive no banco e não sobe pela Vercel. Na ordem inversa, a tela mostraria saldo
+-- que o servidor recusaria.
 --
 -- ═══════════════════════════════════════════════════════════════════════════
 -- O DEFEITO
