@@ -30,7 +30,12 @@ test('R3B-2 · cada bloco grava sozinho, e nenhum deles avança sem ter gravado'
   // já estão em casa". Se `setPasso` for chamado fora do `if (ok)`, a pessoa
   // avança achando que salvou — e não salvou.
   for (const [nome, passoSeguinte] of [['acordei', 'P.GRATIDAO'], ['gratidao', 'P.VISUALIZACAO'], ['visualizacao', 'P.FECHAMENTO']]) {
-    const re = new RegExp(`const salvar\\w+ = async \\(\\) => \\{[\\s\\S]{0,600}?salvarBloco\\('${nome}'[\\s\\S]{0,300}?if \\(ok\\) setPasso\\(${passoSeguinte.replace('.', '\\.')}\\)`);
+    // 17/09 — o avanço ganhou o som (`if (ok) { som('passo'); setPasso(...) }`).
+    // O que este teste protege NÃO é o texto, é a POSIÇÃO: `setPasso` tem que
+    // estar DENTRO do `if (ok)`. Por isso a chave e o `som` são opcionais, mas
+    // o `if (ok)` colado antes continua obrigatório — tirar o `if (ok)` ou
+    // mover o `setPasso` para fora derruba este teste do mesmo jeito.
+    const re = new RegExp(`const salvar\\w+ = async \\(\\) => \\{[\\s\\S]{0,600}?salvarBloco\\('${nome}'[\\s\\S]{0,300}?if \\(ok\\) \\{?\\s*(som\\('passo'\\);\\s*)?setPasso\\(${passoSeguinte.replace('.', '\\.')}\\)`);
     assert.match(RITUAL, re, `o bloco "${nome}" avança sem confirmar que gravou`);
   }
   // e salvarBloco só devolve true quando o gravador devolveu comprovação
