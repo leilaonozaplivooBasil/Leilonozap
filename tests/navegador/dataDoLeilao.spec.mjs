@@ -124,3 +124,128 @@ test('leilão encerrado não mostra a linha do contador', { skip: semNavegador }
       'a data mora dentro do bloco do contador, que só existe em leilão ativo');
   } finally { await ctx.close(); }
 });
+
+// ─────────────── 🎬 O VÍDEO ABRE O CARD DO DESTAQUE (17/09/2026) ───────────────
+//
+// Pedido do dono: "como primeira foto do PS em destaque na página do leilão,
+// deve ser o vídeo" — e "só no destaques".
+//
+// 🔎 O QUE ESTES TESTES PROVAM, E O QUE NÃO PROVAM.
+// Não há ffmpeg nem arquivo de vídeo nesta máquina, então NÃO se prova aqui
+// que o Chromium decodifica um mp4 — isso é do navegador, não é o que mudou.
+// O que mudou, e é o que se prova: que o vídeo entra como SLIDE 1, que os
+// atributos que o fazem tocar mudo estão lá, e que o rodízio SEGURA enquanto
+// ele toca e SOLTA quando acaba. O evento `play`/`ended` é disparado no
+// elemento de verdade, e quem reage é o React de verdade.
+
+const atributosDoVideo = (pagina) => pagina.evaluate(() => {
+  const v = document.querySelector('[data-teste="video-do-destaque"]');
+  if (!v) return null;
+  return {
+    tag: v.tagName.toLowerCase(),
+    autoplay: v.hasAttribute('autoplay'),
+    muted: v.muted === true || v.hasAttribute('muted'),
+    playsInline: v.hasAttribute('playsinline'),
+    loop: v.hasAttribute('loop'),
+    poster: v.getAttribute('poster') || '',
+    visivel: getComputedStyle(v).opacity === '1',
+  };
+});
+
+// qual slide está aparecendo: 'video' ou o índice da foto
+//
+// 🔴 MEDIDO DEPOIS DO CROSSFADE, sempre. Os slides trocam com
+// `transition-opacity duration-300`: durante esses 300ms a opacidade computada
+// é uma fração ("0.42"), e NADA está em 1. Ler ali devolve -1 e acusa buraco
+// onde não há — foi o que aconteceu na primeira versão deste teste.
+const assentar = (pagina) => pagina.waitForTimeout(500);
+
+const slideVisivelAgora = (pagina) => pagina.evaluate(() => {
+  const v = document.querySelector('[data-teste="video-do-destaque"]');
+  if (v && getComputedStyle(v).opacity === '1') return 'video';
+  const fotos = [...document.querySelectorAll('img[alt*="imagem"]')];
+  const i = fotos.findIndex((f) => getComputedStyle(f).opacity === '1');
+  return i;
+});
+
+const slideVisivel = async (pagina) => { await assentar(pagina); return slideVisivelAgora(pagina); };
+
+test('🎬 com vídeo, ele é o SLIDE 1 — as fotos vêm depois', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    const v = await atributosDoVideo(pagina);
+    assert.ok(v, 'o vídeo não entrou no card');
+    assert.equal(v.tag, 'video', 'arquivo nosso tem que tocar em <video>, nunca em iframe');
+    assert.equal(await slideVisivel(pagina), 'video', 'o vídeo não abriu o card');
+  } finally { await ctx.close(); }
+});
+
+test('🔇 o vídeo toca mudo, sozinho, sem loop, e com a foto de cartaz', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    const v = await atributosDoVideo(pagina);
+    assert.ok(v.autoplay, 'sem autoplay o vídeo vira uma foto preta parada');
+    assert.ok(v.muted, '🔴 som ligado sozinho numa vitrine é inaceitável');
+    assert.ok(v.playsInline, 'sem playsInline o iPhone abre o vídeo em tela cheia');
+    assert.ok(!v.loop, 'com loop o rodízio nunca solta e as fotos nunca aparecem');
+    assert.ok(v.poster.length > 0, 'sem cartaz o card nasce preto enquanto o vídeo carrega');
+  } finally { await ctx.close(); }
+});
+
+test('⏸️ o rodízio SEGURA enquanto o vídeo toca, e SOLTA quando acaba', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    // o evento é disparado no elemento real; quem reage é o React real
+    await pagina.evaluate(() => {
+      document.querySelector('[data-teste="video-do-destaque"]')
+        .dispatchEvent(new Event('play'));
+    });
+    // o carrossel troca a cada 2,5s — três segundos parado prova que segurou
+    await pagina.waitForTimeout(3200);
+    assert.equal(await slideVisivel(pagina), 'video',
+      'o rodízio passou por cima do vídeo — ele seria cortado aos 2,5 segundos');
+
+    await pagina.evaluate(() => {
+      document.querySelector('[data-teste="video-do-destaque"]')
+        .dispatchEvent(new Event('ended'));
+    });
+    await pagina.waitForFunction(() => {
+      const v = document.querySelector('[data-teste="video-do-destaque"]');
+      return v && getComputedStyle(v).opacity !== '1';
+    }, null, { timeout: 8000 });
+    assert.notEqual(await slideVisivel(pagina), 'video',
+      'acabou o vídeo e as fotos não voltaram a girar');
+  } finally { await ctx.close(); }
+});
+
+test('🕳️ vídeo que não carrega não deixa buraco — as fotos assumem', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=quebrado');
+  try {
+    // com o endereço quebrado o <video> dispara `error`; o card não pode travar
+    await pagina.waitForFunction(() => {
+      const v = document.querySelector('[data-teste="video-do-destaque"]');
+      return v && getComputedStyle(v).opacity !== '1';
+    }, null, { timeout: 10000 });
+    const slide = await slideVisivel(pagina);
+    assert.ok(typeof slide === 'number' && slide >= 0,
+      `o rodízio não chegou nas fotos depois do vídeo falhar: ${slide}`);
+  } finally { await ctx.close(); }
+});
+
+test('▶️ vídeo de embed entra como iframe e NÃO toca sozinho', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?youtube=1');
+  try {
+    const v = await atributosDoVideo(pagina);
+    assert.equal(v.tag, 'iframe', 'YouTube/Vimeo têm que ir por iframe');
+    assert.ok(!v.autoplay, 'rede e som de terceiro não se ligam sozinhos numa vitrine');
+  } finally { await ctx.close(); }
+});
+
+test('🟢 SEM vídeo o card é o de sempre — nada de elemento sobrando', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    assert.equal(await pagina.locator('[data-teste="video-do-destaque"]').count(), 0,
+      'card sem vídeo não pode carregar elemento de vídeo — a listagem de 80 leilões passa por aqui');
+    assert.equal(await slideVisivel(pagina), 0, 'a primeira foto tem que abrir o card');
+  } finally { await ctx.close(); }
+});

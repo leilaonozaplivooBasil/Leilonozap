@@ -3,6 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { Sparkles } from 'lucide-react';
 import AuctionCard from '@/components/auction/AuctionCard';
 import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
+import { videoDoProduto } from '@/lib/videoDoProduto';
 
 // 🌟 Seção "Destaques" — até 6 leilões marcados manualmente em Editar Leilão,
 // mostrados na ordem escolhida. Some silenciosamente se nenhum leilão estiver marcado.
@@ -14,6 +15,10 @@ import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
 // DIRETO no banco pelo id, então qualquer leilão marcado aparece.
 export default function DestaquesLeiloes({ currentUser }) {
   const [destaques, setDestaques] = useState([]);
+  // 🎬 17/09/2026 — o vídeo de cada destaque, por id de leilão.
+  // Herdado do PRODUTO ligado (products.video_urls), igual à sala faz desde
+  // 16/09 — o leilão não tem coluna própria de vídeo, e não precisa.
+  const [videos, setVideos] = useState({});
 
   useEffect(() => {
     let alive = true;
@@ -38,7 +43,37 @@ export default function DestaquesLeiloes({ currentUser }) {
       // foi assim que um Air Fryer arrematado em 26/08 seguiu em cartaz. O
       // destaque encerrado simplesmente não entra; os outros sobem de posição.
       const byId = Object.fromEntries((auctionsData || []).map((a) => [a.id, a]));
-      setDestaques(ids.map((id) => byId[id]).filter((a) => a && estaEmCartaz(a)));
+      const emCartaz = ids.map((id) => byId[id]).filter((a) => a && estaEmCartaz(a));
+      setDestaques(emCartaz);
+
+      // 🎬 UMA consulta para TODOS os destaques, nunca uma por card.
+      // Seis destaques dariam seis idas ao banco se cada card buscasse o seu
+      // (é o que `useVideoDoLote` faz na sala, onde há um leilão só). Aqui a
+      // lista já existe, então os produtos vêm juntos: 3 consultas no total.
+      //
+      // 🔴 NUNCA SEGURA A TELA: os destaques já foram para o estado acima. Se
+      // esta busca falhar ou demorar, os cards aparecem com as fotos de sempre
+      // e o vídeo simplesmente não entra — mesma regra do `useVideoDoLote`.
+      const produtoIds = [...new Set(emCartaz.map((a) => a.product_id).filter(Boolean))];
+      if (produtoIds.length === 0) return;
+      try {
+        const { data: produtos } = await supabase
+          .from('products')
+          .select('id,video_urls')
+          .in('id', produtoIds);
+        if (!alive) return;
+        const videoPorProduto = Object.fromEntries(
+          (produtos || []).map((p) => [p.id, videoDoProduto(p)]),
+        );
+        // `videoDoProduto` é a MESMA régua da loja e da sala: host conhecido ou
+        // arquivo nosso. Endereço fora da lista branca devolve null e não vira
+        // <iframe> em lugar nenhum.
+        setVideos(Object.fromEntries(
+          emCartaz
+            .map((a) => [a.id, videoPorProduto[a.product_id] || null])
+            .filter(([, v]) => v),
+        ));
+      } catch { /* sem vídeo, os cards seguem com as fotos */ }
     })();
     return () => { alive = false; };
   }, []);
@@ -60,6 +95,7 @@ export default function DestaquesLeiloes({ currentUser }) {
             showFavoriteButton={true}
             userId={currentUser?.id}
             favoriteContext="nozap"
+            video={videos[auction.id] || null}
           />
         ))}
       </div>

@@ -15,7 +15,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  *   const { index, paused, carouselProps } = useAutoCarousel(images.length);
  *   <div {...carouselProps}> ... </div>
  */
-export default function useAutoCarousel(count, { interval = 2500, threshold = 40 } = {}) {
+export default function useAutoCarousel(count, { interval = 2500, threshold = 40, segurar = false } = {}) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [visivel, setVisivel] = useState(false);
@@ -49,11 +49,17 @@ export default function useAutoCarousel(count, { interval = 2500, threshold = 40
   }, []);
 
   // Autoplay — timer só existe quando realmente precisa
+  //
+  // 🎬 17/09/2026 — `segurar` é a rédea de quem chama. Nasceu do vídeo no card
+  // dos Destaques: o rodízio troca de slide a cada 2,5s, e um vídeo cortado aos
+  // 2,5 segundos é pior do que não ter vídeo. Enquanto o vídeo toca, quem chama
+  // segura; quando ele acaba, solta e as fotos voltam a girar. Padrão `false`,
+  // então nenhum carrossel que já existia muda de comportamento.
   useEffect(() => {
-    if (count <= 1 || paused || !visivel || !abaAtiva) return;
+    if (count <= 1 || paused || segurar || !visivel || !abaAtiva) return;
     const t = setInterval(() => setIndex((i) => (i + 1) % count), interval);
     return () => clearInterval(t);
-  }, [count, paused, visivel, abaAtiva, interval]);
+  }, [count, paused, segurar, visivel, abaAtiva, interval]);
 
   // Lista de fotos mudou (troca de produto) → volta pra primeira
   useEffect(() => {
