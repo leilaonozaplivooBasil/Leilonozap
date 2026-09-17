@@ -27,7 +27,13 @@ test('🔒 todo status que concluirRitual grava tem rótulo E cor no painel de c
   // um conjunto vazio. Agora lê os dois lugares: os literais que sobraram no
   // CrmMetodo e os que `statusDoRitual` decide, em ritualEmBlocos.js.
   const BLOCOS_LIB = readFileSync(new URL('../src/lib/ritualEmBlocos.js', import.meta.url), 'utf8');
-  const doFechamento = BLOCOS_LIB.slice(BLOCOS_LIB.indexOf('export function statusDoRitual'));
+  // 🔴 16/09 — A VARREDURA ERA DO ARQUIVO INTEIRO A PARTIR DE `statusDoRitual`,
+  // e por isso passou a recolher os retornos de `passoDoBlocoJulgado`
+  // ('nada' / 'explicar' / 'refazer'), que NÃO são status de comprovação —
+  // a pastilha "nada" nunca existiu. Agora lê só o corpo da função que
+  // decide status, que é o que este teste sempre quis olhar.
+  const iStatus = BLOCOS_LIB.indexOf('export function statusDoRitual');
+  const doFechamento = BLOCOS_LIB.slice(iStatus, BLOCOS_LIB.indexOf('\n}', iStatus));
   const statusGravados = [
     ...[...METODO.matchAll(/status:\s*'([a-z_]+)'/g)].map((m) => m[1]),
     ...[...doFechamento.matchAll(/return '([a-z_]+)'/g)].map((m) => m[1]),
