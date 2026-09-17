@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic } from 'lucide-react';
+import { X, Volume2, VolumeX, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic } from 'lucide-react';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import { juntarTexto } from '@/lib/ditado';
@@ -8,6 +8,7 @@ import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivos
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
 // conseguiu importar — não tem terceira.
+import { som, somDesligado, silenciarSom } from '@/lib/somDaInterface';
 import { BLOCOS, ROTULO_DO_BLOCO, segundosRestantes, ritualExpirado, textoDoPrazo, blocosFeitos, proximoBloco, pendenciasDoRitual, seloDoRitual, blocosQuePedemAtencao, RITUAL_MINUTOS_PARA_CONCLUIR } from '@/lib/ritualEmBlocos';
 // 🎧 o Ritual e o X-Music compartilham o MESMO motor de música: mesma
 // leitura de link, mesma fonte de player e a MESMA playlist no aparelho.
@@ -163,6 +164,10 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   const [comprovacao, setComprovacao] = useState(comprovacaoAtual);
   const feitos = blocosFeitos(comprovacao);
   const faltando = proximoBloco(comprovacao);
+  // 🔇 quem faz o ritual às 4:40 pode estar do lado de quem dorme. A
+  // preferência é DO APARELHO (localStorage), não da conta: a mesma pessoa
+  // pode querer som no computador e silêncio no celular da cabeceira.
+  const [mudo, setMudo] = useState(() => somDesligado());
   const [passo, setPasso] = useState(() => (feitos.length ? (PASSO_DO_BLOCO[faltando] ?? P.FECHAMENTO) : P.ABERTURA));
   const [salvando, setSalvando] = useState('');
   // ⏱️ o cronômetro de 30 minutos — começa quando o primeiro bloco é aberto,
@@ -475,14 +480,16 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     if (!print) return;
     const hash = await hashDoArquivo(print).catch(() => '');
     const ok = await salvarBloco('acordei', { file: print, hash });
-    if (ok) setPasso(P.GRATIDAO);
+    // 🔊 o som marca ETAPA VENCIDA, não clique. Clique que não salvou fica
+    // mudo de propósito: um "ok" sonoro em cima de uma recusa mente pra pessoa.
+    if (ok) { som('passo'); setPasso(P.GRATIDAO); }
   };
 
   const salvarGratidao = async () => {
     const ok = await salvarBloco('gratidao', {
       texto: gratidao.trim(), audioGratidao, audioGratidaoSeg, transcricaoGratidao, metaMotivosHoje,
     });
-    if (ok) setPasso(P.VISUALIZACAO);
+    if (ok) { som('passo'); setPasso(P.VISUALIZACAO); }
   };
 
   // 🧾 o que ficou pendente e qual selo o ritual está valendo AGORA — as duas
@@ -494,7 +501,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
   const salvarVisualizacao = async () => {
     const ok = await salvarBloco('visualizacao', { videoBlob, frameBlob, gravSeg, acao: acao.trim(), audioAcao });
-    if (ok) setPasso(P.FECHAMENTO);
+    if (ok) { som('passo'); setPasso(P.FECHAMENTO); }
   };
 
   // sair do passo 2: precisa do vídeo — e se não tiver, o sistema EXPLICA
@@ -534,9 +541,21 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       )}
 
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-72 h-36 rounded-t-full bg-gradient-to-t from-amber-300/70 to-transparent blur-2xl" />
-      <button type="button" onClick={onFechar} className="xeos-cru absolute top-4 right-4 rounded-full p-2 text-white/60 hover:text-white hover:bg-white/10 z-20">
-        <X className="w-5 h-5" />
-      </button>
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
+        <button
+          type="button"
+          data-teste="interruptor-de-som"
+          aria-pressed={!mudo}
+          title={mudo ? 'som desligado neste aparelho' : 'som ligado'}
+          onClick={() => { const novo = !mudo; setMudo(novo); silenciarSom(novo); if (!novo) som('passo'); }}
+          className="xeos-cru rounded-full p-2 text-white/60 hover:text-white hover:bg-white/10"
+        >
+          {mudo ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        </button>
+        <button type="button" onClick={onFechar} className="xeos-cru rounded-full p-2 text-white/60 hover:text-white hover:bg-white/10">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
       {/* 🎵 A MÚSICA DO AMANHECER — YouTube tocando automático; a pessoa
           escolhe a prévia ou cola a música do dia dela (fica salva) */}
       <div className="absolute top-4 left-4 z-20 space-y-1.5">
@@ -701,7 +720,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 ⏱️ Você tem {RITUAL_MINUTOS_PARA_CONCLUIR} minutos a partir de agora. Se parar no meio, o que já entregou continua valendo.
               </p>
             </div>
-            <BotaoRitual onClick={() => { setAbertoEm(new Date().toISOString()); setPasso(P.ACORDEI); }}>Começar o ritual</BotaoRitual>
+            <BotaoRitual onClick={() => { som('passo'); setAbertoEm(new Date().toISOString()); setPasso(P.ACORDEI); }}>Começar o ritual</BotaoRitual>
           </>
         )}
 
@@ -1019,7 +1038,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 type="button"
                 disabled={!!salvando}
                 data-teste="concluir-o-ritual"
-                onClick={() => { pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, metaMotivosHoje, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
+                onClick={() => { som('conclusao'); pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, metaMotivosHoje, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
                 className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-40 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
