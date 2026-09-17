@@ -126,6 +126,11 @@ test('as telas usam a régua única, sem calcular data por conta própria', () =
   for (const arq of [
     '../src/pages/AuctionDetails.jsx',
     '../src/components/auction/FixedAuctionPanel.jsx',
+    // 17/09/2026 — as duas que faltavam. O CARD é a primeira tela que quase
+    // todo mundo vê, e a BARRA LATERAL da sala é a única que sobra no desktop
+    // (acima de 1024px o `.mobile-header`, que já tinha a data, some).
+    '../src/components/auction/AuctionCard.jsx',
+    '../src/pages/AuctionRoom.jsx',
   ]) {
     const tela = ler(arq);
     assert.match(tela, /from '@\/lib\/relogioLeilao'/, `${arq} não importa a régua`);
@@ -142,6 +147,7 @@ test('a tela só desenha a data quando existe data', () => {
   for (const arq of [
     '../src/components/auction/FixedAuctionPanel.jsx',
     '../src/pages/AuctionDetails.jsx',
+    '../src/pages/AuctionRoom.jsx',
   ]) {
     const tela = ler(arq);
     assert.match(tela, /fimEmTexto\s*&&/, `${arq} desenha o rótulo mesmo sem data`);
@@ -149,4 +155,37 @@ test('a tela só desenha a data quando existe data', () => {
     const dentro = tela.split(/fimEmTexto\s*&&/)[1] || '';
     assert.match(dentro.slice(0, 400), /Termina/, `${arq}: a palavra ficou fora da guarda`);
   }
+});
+
+// ─────────────── 17/09/2026 — o card e o desktop da sala ───────────────
+
+test('o card da lista de leilões mostra a data, não só "1 semana"', () => {
+  const card = ler('../src/components/auction/AuctionCard.jsx');
+  // a contagem por semana continua — a data é ADITIVA, igual à Fase 1
+  assert.match(card, /const weeks = Math\.floor/, 'a contagem do card foi alterada');
+  assert.match(card, /const fimEmTexto = textoDeTermino\(auction\.end_time\)/,
+    'o card precisa tirar a data do end_time do próprio leilão');
+  assert.match(card, /data-teste="data-de-termino"/, 'sem âncora não dá pra provar no navegador');
+  // 🔎 A GUARDA VIVE AQUI, e só aqui. No navegador ela é INALCANÇÁVEL: com
+  // `end_time` nulo o contador já devolve "Encerrado" e o bloco todo some, de
+  // modo que apagar a guarda deixa a banca verde — medido em 17/09. Ela
+  // continua valendo como defesa (uma data anterior a 2000 é recusada pela
+  // régua e ainda assim poderia chegar aqui se o contador mudar de critério),
+  // e é esta linha que impede alguém de removê-la achando que não faz nada.
+  assert.match(card, /\{fimEmTexto && \(/, 'o card perdeu a guarda de data vazia');
+  // a data tem de morar DENTRO do bloco do contador, senão aparece em card encerrado
+  const depois = card.split(/\{timeRemaining\.text\}/)[1] || '';
+  assert.match(depois.slice(0, 500), /fimEmTexto &&/,
+    'a data ficou fora do bloco do contador');
+});
+
+test('a barra lateral da sala carrega a data — é o que sobra no desktop', () => {
+  const sala = ler('../src/pages/AuctionRoom.jsx');
+  // a prova de que o buraco existia: o cabeçalho que já tinha a data some no desktop
+  assert.match(sala, /@media \(min-width: 1024px\)[\s\S]{0,200}\.mobile-header \{ display: none; \}/,
+    'se o cabeçalho voltar a aparecer no desktop, revisar se a barra lateral ainda precisa da data');
+  assert.match(sala, /data-teste="data-de-termino-sala"/, 'sem âncora não dá pra provar no navegador');
+  const meta = sala.split('product-panel__timer">{displayTime}</span>')[1] || '';
+  assert.match(meta.slice(0, 400), /fimEmTexto &&/,
+    'a data tem de ficar colada no relógio da barra lateral');
 });
