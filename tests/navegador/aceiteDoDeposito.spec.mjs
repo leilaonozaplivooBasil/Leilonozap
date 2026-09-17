@@ -158,3 +158,17 @@ test('🔴 valor abaixo do mínimo SEGUE desligando o botão', { skip: semNavega
     if (b) assert.equal(b.desligado, true, 'abaixo de R$ 100 o botão tem que continuar desligado');
   } finally { await ctx.close(); }
 });
+
+// ⚠️ A GAVETA PRESA NÃO TEM TESTE AUTOMÁTICO AQUI, E ISSO É UMA ESCOLHA.
+//
+// O outro defeito de 17/09 — a gaveta ficando POR CIMA da tela seguinte — foi
+// medido e corrigido, mas NÃO conseguiu ser reproduzido em banca. Tentei com a
+// troca de `open` sozinha, com rotas de verdade e com rota lazy + Suspense: nos
+// três casos o AnimatePresence desmontava normal, e a mutação que devolvia o
+// defeito passava VERDE.
+//
+// Teste que passa com e sem o defeito é pior que teste nenhum: dá segurança
+// falsa. Então ele não entra. A prova daquele conserto é a medição contra o
+// pacote de produção, e o medidor está versionado em
+// `scripts/medir-gaveta-presa.mjs` — roda, clica e imprime quantas camadas
+// sobraram por cima.
