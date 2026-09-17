@@ -287,9 +287,29 @@ describe('a fiação — sem ela a feature existe só no papel', () => {
     assert.ok(!/src=\{video\.url\}/.test(player), 'o player voltou a usar a url crua');
   });
 
-  test('a página de venda mostra o player', () => {
-    const pagina = semComentarios(ler('../src/pages/CatalogProductDetails.jsx'));
-    assert.match(pagina, /<PlayerDeVideo produto=\{product\} \/>/);
+  test('as DUAS portas da loja mostram o vídeo do produto', () => {
+    // 🔄 17/09/2026 — ESTE TESTE CASAVA COM O TEXTO, NÃO COM A REGRA.
+    //
+    // Ele exigia literalmente `<PlayerDeVideo produto={product} />`. A #386-b
+    // moveu o vídeo do bloco solto embaixo da foto para DENTRO da fileira de
+    // mídias do carrossel (pedido do dono), e o casamento caiu — embora a
+    // propriedade protegida seguisse inteira.
+    //
+    // A propriedade é: QUEM ABRE O PRODUTO CONSEGUE VER O VÍDEO. Agora ela vale
+    // para as duas portas da Loja: a página de link compartilhado E o modal que
+    // o card de destaque abre (que antes não tinha vídeo nenhum). Casar com a
+    // fiação — fileira montada e fileira desenhada — protege a regra sem
+    // depender de como a tag se chama.
+    for (const arq of ['../src/pages/CatalogProductDetails.jsx',
+                       '../src/components/catalog/ProductDetailsModal.jsx']) {
+      const tela = semComentarios(ler(arq));
+      // 🔴 `const midias =`, não só a menção ao nome. Sem amarrar na ATRIBUIÇÃO,
+      // uma outra linha do arquivo que chame `midiasDoProduto` (a contagem das
+      // setas, por exemplo) já faz o casamento passar enquanto a galeria
+      // desenhada volta a ser só de fotos. Medido: a mutação passou VERDE assim.
+      assert.match(tela, /const midias = midiasDoProduto\(product\)/, `${arq} não monta a fileira de mídias`);
+      assert.match(tela, /<QuadroDeMidia\s+midia=\{midiaAtual\}/, `${arq} não desenha a mídia da vez`);
+    }
   });
 
   test('a migração cria a coluna e o balde com os mesmos limites do código', () => {
