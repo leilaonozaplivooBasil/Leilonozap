@@ -338,23 +338,31 @@ test('🟢 sem vídeo não existe botão de som', { skip: semNavegador }, async 
 // página, seis cards com vídeo dariam seis áudios juntos — e ~30 a 48 MB de
 // download só pra desenhar a Home.
 
-test('🔇 card com vídeo que NÃO é o primeiro destaque não toca nada', { skip: semNavegador }, async () => {
+test('🎬 card que NÃO é o primeiro TAMBÉM abre com o vídeo', { skip: semNavegador }, async () => {
+  // 🔄 ESTE TESTE MUDOU DE LADO na mesma noite, e de propósito.
+  //
+  // A primeira rodada travava o vídeo INTEIRO fora do primeiro destaque — e o
+  // dono voltou: "não ficaram legal o patinete e a harley, seus respectivos
+  // precisam ser primeira posição também, mas sem tocar o som". O que não pode
+  // duplicar é o SOM, não o vídeo.
   const { ctx, pagina } = await abrir('?video=1&inativo=1');
   try {
-    assert.equal(await pagina.locator('[data-teste="video-do-destaque"]').count(), 0,
-      'o vídeo foi montado num card que não é o primeiro — som duplo e MBs à toa');
-    assert.equal(await pagina.locator('[data-teste="som-do-destaque"]').count(), 0,
-      'sem vídeo tocando não pode haver botão de som');
-    // e o card continua inteiro: as fotos abrem normalmente
-    assert.equal(await slideVisivel(pagina), 0, 'a primeira foto tem que abrir o card');
+    assert.equal(await pagina.locator('[data-teste="video-do-destaque"]').count(), 1,
+      'o card perdeu o vídeo — é justamente o que o dono mandou desfazer');
+    assert.equal(await slideVisivel(pagina), 'video', 'o vídeo tem que abrir o card, como no primeiro');
   } finally { await ctx.close(); }
 });
 
-test('🔊 nenhum áudio é carregado no card inativo — nem mudo', { skip: semNavegador }, async () => {
+test('🔇 mas SEM som: nem botão, nem áudio no primeiro clique', { skip: semNavegador }, async () => {
   const { ctx, pagina } = await abrir('?video=1&inativo=1');
   try {
-    // qualquer <video> na página, não só o do destaque: o ganho é NÃO baixar
-    const videos = await pagina.evaluate(() => document.querySelectorAll('video').length);
-    assert.equal(videos, 0, `sobraram ${videos} elementos de vídeo — os MB seriam baixados igual`);
+    assert.equal(await pagina.locator('[data-teste="som-do-destaque"]').count(), 0,
+      'card sem som não pode oferecer botão de som');
+    // o teste que importa: o gesto que liga o som no PRIMEIRO card não pode
+    // ligar neste — senão voltam os dois áudios juntos
+    await pagina.mouse.click(5, 5);
+    await pagina.waitForTimeout(800);
+    assert.equal(await estaMudo(pagina), true,
+      '🔴 o clique ligou o som num card que não é o primeiro — dois áudios ao mesmo tempo');
   } finally { await ctx.close(); }
 });

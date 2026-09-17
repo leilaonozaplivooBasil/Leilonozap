@@ -96,7 +96,9 @@ test('a escolha da pessoa manda sobre o gesto', () => {
   // qualquer jeito. A guarda de dentro cobre a janela estreita entre montar o
   // ouvinte e o primeiro gesto, e é esta linha que impede alguém de removê-la
   // achando que não faz nada.
-  const efeito = card.slice(card.indexOf('if (!temVideo || !querSom()) return undefined'));
+  // âncora atualizada em 17/09 (noite): `videoAtivo` entrou na guarda quando o
+  // dono mandou o vídeo abrir TODOS os cards, com som só no primeiro.
+  const efeito = card.slice(card.indexOf('if (!temVideo || !videoAtivo || !querSom()) return undefined'));
   assert.match(efeito.slice(0, 600), /if \(!v \|\| !querSom\(\)\) return;/,
     'a preferência precisa ser conferida também na hora de ligar o som');
 });
@@ -113,8 +115,8 @@ test('🔴 play() recusado não pode virar erro solto no console', () => {
 test('o botão de som existe e é só do vídeo de ARQUIVO', () => {
   const card = ler('src/components/auction/AuctionCard.jsx');
   assert.match(card, /data-teste="som-do-destaque"/);
-  assert.match(card, /temVideo && video\.tipo === 'arquivo' && mostrandoVideo &&/,
-    'iframe de terceiro tem controle próprio e não aceita mudo de fora');
+  assert.match(card, /temVideo && videoAtivo && video\.tipo === 'arquivo' && mostrandoVideo &&/,
+    'iframe de terceiro tem controle próprio e não aceita mudo de fora; e card sem som não mostra botão');
   assert.match(card, /aria-label=\{mudo \? 'Ligar o som do vídeo' : 'Pausar o som do vídeo'\}/,
     'o botão precisa dizer o que faz para quem usa leitor de tela');
 });

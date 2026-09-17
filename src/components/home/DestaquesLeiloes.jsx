@@ -96,11 +96,12 @@ export default function DestaquesLeiloes({ currentUser }) {
             userId={currentUser?.id}
             favoriteContext="nozap"
             video={videos[auction.id] || null}
-            /* 🔇 só o PRIMEIRO toca. Dois vídeos com som ao mesmo tempo é o que
-               o dono pediu pra evitar — e seis vídeos de 5 a 8 MB cada
-               derrubariam a Home no celular antes de mostrar um leilão.
+            /* 🔇 TODOS abrem com o vídeo; só o PRIMEIRO tem SOM. Dois áudios
+               ao mesmo tempo é o que o dono pediu pra evitar — o vídeo em si
+               ele quis em todos ("o patinete e a harley também em primeira
+               posição, mas sem tocar o som").
                É a posição na LISTA JÁ FILTRADA: se o destaque 1 encerrou, ele
-               nem chega aqui, e quem assume a vitrine é quem toca. */
+               nem chega aqui, e quem assume a vitrine é quem tem o som. */
             videoAtivo={posicao === 0}
           />
         ))}
