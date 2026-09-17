@@ -37,12 +37,12 @@ function sb(path) {
 }
 
 /**
- * Quanto do saldo desta pessoa está comprometido em leilões AINDA EM ANDAMENTO
- * nos quais ela já não é a líder (ou seja: foi coberta e o dinheiro voltou).
+ * Quanto do saldo desta pessoa está comprometido em leilões AINDA EM ANDAMENTO.
  * Esse valor está DENTRO de saldo_disponivel — serve para lance, não para a loja.
  *
- * O lance em que ela É a líder não entra: aquele dinheiro está em saldo_reservado,
- * fora do disponível, e contá-lo aqui descontaria a mesma quantia duas vezes.
+ * Soma TODO lance vivo (liderando ou não) e desconta o que já está em
+ * saldo_reservado. Não se pergunta quem lidera: pergunta-se quanto desse dinheiro
+ * ainda está dentro do disponível. Ver a explicação longa no corpo da função.
  */
 export async function compromissoEmLeiloes(userId) {
   const uid = String(userId || '').trim();
@@ -61,8 +61,25 @@ export async function compromissoEmLeiloes(userId) {
 
   const vivos = {};
   for (const a of (Array.isArray(leiloes) ? leiloes : [])) {
-    // só leilão rolando prende dinheiro; e se ela é a líder, o valor está reservado
-    if (a.status === 'active' && a.winner_id !== uid) vivos[a.id] = true;
+    // 🔧 17/09/2026 — TODO leilão rolando entra, liderando ou não.
+    //
+    // O QUE ESTAVA ERRADO: aqui se pulava o leilão quando `winner_id === uid`,
+    // supondo "é a líder ⇒ o dinheiro já está em saldo_reservado, fora do
+    // disponível". A suposição cai de duas formas, e as duas apareceram na base:
+    //
+    //   • `winner_id` NULL em leilão com lance (61 dos 63 ativos em 17/09): a
+    //     pessoa lidera, o dinheiro JÁ saiu para saldo_reservado, mas a linha
+    //     acima não a reconhecia como líder e descontava os mesmos centavos DE
+    //     NOVO do saldo_disponivel. Uma conta real ficou com R$ 426,78 livres
+    //     aparecendo como R$ 0,00 — o oposto exato do que a #379 existe pra fazer.
+    //   • `winner_id` preenchido com saldo_reservado ZERADO: aqui o antigo pulava
+    //     o leilão e liberava para a loja um dinheiro que não estava preso em
+    //     lugar nenhum. Esse é o lado perigoso: gastar na loja e ganhar o leilão.
+    //
+    // A regra que vale não é "quem lidera", é O MESMO DINHEIRO NÃO CONTA DUAS
+    // VEZES. Somamos todo lance vivo e descontamos o que já está em
+    // saldo_reservado — que é, por definição, o que já saiu do disponível.
+    if (a.status === 'active') vivos[a.id] = true;
   }
 
   // por leilão vale o MAIOR lance dela (o anterior já tinha sido devolvido antes)
@@ -72,7 +89,14 @@ export async function compromissoEmLeiloes(userId) {
     const total = money((Number(l.bid_amount) || 0) + (Number(l.frete_amount) || 0));
     if (!porLeilao[l.auction_id] || total > porLeilao[l.auction_id]) porLeilao[l.auction_id] = total;
   }
-  return money(Object.values(porLeilao).reduce((s, v) => s + v, 0));
+  const emLances = money(Object.values(porLeilao).reduce((s, v) => s + v, 0));
+
+  // o que já está em saldo_reservado saiu do disponível — descontar aqui de novo
+  // seria cobrar a mesma quantia duas vezes da mesma pessoa
+  const uRows = await (await sb(`app_users?select=saldo_reservado&id=eq.${encodeURIComponent(uid)}&limit=1`)).json();
+  const reservado = money(Array.isArray(uRows) ? uRows[0]?.saldo_reservado : 0);
+
+  return money(Math.max(0, emLances - reservado));
 }
 
 /**
