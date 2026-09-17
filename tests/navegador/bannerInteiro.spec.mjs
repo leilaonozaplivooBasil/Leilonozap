@@ -99,11 +99,11 @@ test.after(async () => {
   if (servidor) servidor.close();
 });
 
-async function abrir(largura) {
+async function abrir(largura, { larga = false } = {}) {
   const nav = await garantirNavegador();
   const ctx = await nav.newContext({ viewport: { width: largura, height: 900 } });
   const pagina = await ctx.newPage();
-  await pagina.goto(BASE, { waitUntil: 'networkidle' });
+  await pagina.goto(BASE + (larga ? '?larga=1' : ''), { waitUntil: 'networkidle' });
   await pagina.waitForSelector('[data-teste="embrulho-do-banner"] img');
   return { ctx, pagina };
 }
@@ -275,3 +275,32 @@ test('🔴 o bloco de baixo começa DEPOIS do banner, não em cima', { skip: sem
       `o bloco começa em ${topoDoBloco} e o banner termina em ${baseDoBanner} — subiu ${baseDoBanner - topoDoBloco}px por cima`);
   } finally { await ctx.close(); }
 });
+
+// ────────── a outra proporção: a arte larga da Loja (≈2,8:1) ──────────
+
+for (const largura of [390, 1354, 1920]) {
+  test(`📐 ${largura}px — arte LARGA (2,8:1) também sem faixa nenhuma`, { skip: semNavegador }, async () => {
+    // 🔴 ESTE É O TESTE QUE PEGA A PROPORÇÃO FIXA.
+    //
+    // A primeira versão desta PR fixou 16:9. Com a arte dos leilões (16:9) tudo
+    // passava — inclusive a mutação que devolvia o defeito, porque a banca só
+    // tinha arte 16:9. Só a arte LARGA revela: numa moldura 16:9 ela encolhe de
+    // 1355 para 924px de largura e ganha 95px de faixa em cima e embaixo.
+    //
+    // As duas proporções existem de verdade: a da Loja é ~2,8:1 e a dos leilões
+    // 16:9 (medido nos prints do dono em 17/09).
+    const { ctx, pagina } = await abrir(largura, { larga: true });
+    try {
+      const m = await medir(pagina);
+      assert.ok(Math.abs(m.moldura.w - m.arte.w) <= 2,
+        `sobrou ${Math.round((m.moldura.w - m.arte.w) / 2)}px de faixa lateral com a arte larga`);
+      assert.ok(Math.abs(m.moldura.h - m.arte.h) <= 2,
+        `sobrou ${Math.round((m.moldura.h - m.arte.h) / 2)}px de faixa em cima e embaixo — é a proporção fixa de volta`);
+      // e a arte larga TEM que usar a tela toda onde couber
+      if (largura <= 1456) {
+        assert.ok(m.moldura.w >= m.tela - 2,
+          `a arte larga cabia de borda a borda e ficou com ${m.moldura.w}px numa tela de ${m.tela}px`);
+      }
+    } finally { await ctx.close(); }
+  });
+}

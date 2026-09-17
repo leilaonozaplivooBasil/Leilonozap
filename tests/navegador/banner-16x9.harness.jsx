@@ -34,15 +34,19 @@ const ARTE = `data:image/svg+xml;utf8,${encodeURIComponent(`
 const BANNERS = [{ id: 'b1', image_url: ARTE, title: 'arte 16:9', link_url: '', device_type: 'any' }];
 
 // 🔴 ESTA MOLDURA COPIA A DA LOJA (LojaShopeeHeader) — e tem que copiar a ATUAL.
-// Quando a produção trocou `h-[56.25vw] max-h-[520px]` pela moldura de 924px,
-// esta banca continuou pedindo a classe antiga e a moldura ficou com ALTURA
-// ZERO: o Tailwind só varre `src/**`, então uma classe que não existe mais na
-// produção deixa de ser gerada no CSS. A banca acusou "arte cortada" quando o
-// cortado era o CSS dela mesma. Ao mexer na moldura de verdade, mexa aqui junto.
+// Já mordeu duas vezes no mesmo dia:
+//   1) a produção trocou `h-[56.25vw] max-h-[520px]` e esta banca ficou pedindo
+//      a classe antiga — que o Tailwind deixou de gerar (só varre `src/**`) e a
+//      moldura ganhou ALTURA ZERO. A banca acusou "arte cortada" quando o
+//      cortado era o CSS dela mesma;
+//   2) a produção passou a deixar o RotatingBanner mandar no tamanho
+//      (`molduraSegueArte`) e a banca seguiu impondo `max-w-[924px] aspect-16/9`
+//      por fora — medindo a própria moldura dela, não a do app.
+// Ao mexer na moldura de verdade, mexa aqui junto.
 function Banca() {
   return (
-    <div data-parte="moldura" className="relative mx-auto w-full max-w-[924px] overflow-hidden bg-[#21222b] aspect-[16/9]">
-      <RotatingBanner banners={BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
+    <div data-parte="moldura" className="relative w-full">
+      <RotatingBanner banners={BANNERS} heightClass="" molduraSegueArte rounded={false} fit="contain" ambient />
     </div>
   );
 }

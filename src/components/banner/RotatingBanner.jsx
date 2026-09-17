@@ -12,7 +12,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 // exato) — em foto de gente, isso corta cabeça em cima e perna embaixo em
 // proporções iguais quando o container fica bem baixo e largo (desktop). Só
 // afeta quem passar a prop; sem ela, nada muda no comportamento de hoje.
-export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition }) {
+// Teto de altura do banner no desktop. Sem ele, a 1920px uma arte 16:9 daria
+// 1080px de altura e empurraria a página inteira para fora da primeira tela.
+const TETO_DE_ALTURA = 520;
+
+export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition, molduraSegueArte = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -38,6 +42,39 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
   }, [banners, isMobile]);
 
   const videoRefs = useRef({});
+
+  // 📐 17/09/2026 — A MOLDURA PERGUNTA A PROPORÇÃO À PRÓPRIA ARTE.
+  //
+  // O dono: "o banner ainda está em tamanhos diferentes nas páginas". Estava —
+  // e a causa não era o código: as artes têm proporções DIFERENTES. Medido nos
+  // prints dele: a da Loja é ~2,8:1 e a dos leilões (trocada em 17/09) é 16:9.
+  //
+  // 🔴 POR QUE O 16:9 FIXO SAIU (era a primeira versão desta mesma PR):
+  // ele consertava os leilões e ESTRAGAVA a Loja. A arte de 2,8:1 numa moldura
+  // 16:9 encolheria de 1355 para 924px de largura E ganharia faixa em cima e
+  // embaixo. Proporção fixa só serve se TODAS as artes forem daquela proporção,
+  // e o Painel de Mídia não exige isso de ninguém.
+  //
+  // Agora: `naturalWidth/naturalHeight` da arte ativa no `onLoad`. A largura
+  // máxima cai do teto de altura (teto × proporção). A moldura termina onde a
+  // arte termina, qualquer que seja a arte — e continua de borda a borda quando
+  // a arte é larga o bastante para isso.
+  const [proporcaoDaArte, setProporcaoDaArte] = useState(null);
+
+  const medirArte = (el) => {
+    if (!el?.naturalWidth || !el?.naturalHeight) return;
+    const r = el.naturalWidth / el.naturalHeight;
+    if (Number.isFinite(r) && r > 0) setProporcaoDaArte((atual) => (atual === r ? atual : r));
+  };
+
+  const anotarProporcao = (e) => medirArte(e?.target);
+
+  // 🔴 `onLoad` SOZINHO NÃO BASTA. Imagem que já está no cache (ou um `data:`,
+  // como nas bancas) termina de decodificar ANTES do React ligar o ouvinte — o
+  // evento nunca chega e a moldura fica na proporção de partida para sempre.
+  // Medido: a arte 2,8:1 ficava enquadrada em 16:9, com 95px de faixa em cima e
+  // embaixo. O `ref` pega justamente esse caso, lendo `complete` na montagem.
+  const medirSeJaPronta = (el) => { if (el?.complete) medirArte(el); };
 
   // 👆 17/09/2026 — O BANNER DESLIZA COM O DEDO.
   //
@@ -124,7 +161,20 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
 
   return (
     <div
-      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}
+      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group ${molduraSegueArte ? 'mx-auto' : ''}`}
+      style={molduraSegueArte ? (() => {
+        // 🔴 PROPORÇÃO DE PARTIDA, senão a moldura nasce com ALTURA ZERO e nada
+        // carrega: sem altura a arte não ocupa espaço, e sem a arte não há
+        // proporção para dar altura. Medido: moldura 1339x0 em todas as telas.
+        // 16:9 é o palpite inicial; assim que a arte carrega, ela corrige.
+        const r = proporcaoDaArte || 16 / 9;
+        return {
+          aspectRatio: String(r),
+          maxHeight: `${TETO_DE_ALTURA}px`,
+          // o teto de LARGURA vem do de altura — é ele que mata a faixa lateral
+          maxWidth: `${Math.round(TETO_DE_ALTURA * r)}px`,
+        };
+      })() : undefined}
       onTouchStart={aoTocar}
       onTouchEnd={aoSoltar}
       data-teste="moldura-do-carrossel"
@@ -235,6 +285,8 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
+                  onLoad={isActive ? anotarProporcao : undefined}
+                  ref={isActive ? medirSeJaPronta : undefined}
                   style={{
                     objectFit: fitAtual,
                     objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
@@ -255,6 +307,8 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
+                  onLoad={isActive ? anotarProporcao : undefined}
+                  ref={isActive ? medirSeJaPronta : undefined}
                   style={{
                     objectFit: fitAtual,
                     objectPosition: fitAtual === 'cover' ? objectPosition : undefined,

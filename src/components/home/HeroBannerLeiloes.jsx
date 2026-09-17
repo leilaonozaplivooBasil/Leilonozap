@@ -81,15 +81,13 @@ export default function HeroBannerLeiloes({ banners }) {
 
           924px = 520 × 16/9. Abaixo disso (todo celular e tablet) o `max-w`
           não morde e nada muda: a moldura segue de borda a borda. */}
-      <div className="mx-auto w-full max-w-[924px]">
-        <RotatingBanner
-          banners={banners}
-          heightClass="aspect-[16/9]"
-          fit="contain"
-          rounded={false}
-          ambient
-        />
-      </div>
+      {/* 📐 17/09/2026 — A MOLDURA SEGUE A PROPORÇÃO DA ARTE.
+              A primeira versão desta PR fixou 16:9 e 924px. Consertava os
+              leilões e ESTRAGAVA a Loja, cuja arte é ~2,8:1: ela encolheria de
+              1355 para 924px e ganharia faixa em cima e embaixo. Agora quem
+              decide é a arte (`molduraSegueArte`): a moldura termina onde ela
+              termina, seja 16:9, 2,8:1 ou o que o Painel de Mídia receber. */}
+      <RotatingBanner banners={banners} heightClass="" molduraSegueArte fit="contain" rounded={false} ambient />
     </section>
   );
 }

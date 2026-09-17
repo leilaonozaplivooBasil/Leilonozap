@@ -199,11 +199,11 @@ export default function LojaShopeeHeader({ searchTerm, setSearchTerm, categories
             laterais. Numa tela de 1920px a faixa lateral era 491px de CADA
             lado — mais da metade do banner era desfoque. 924 = 520 × 16/9;
             abaixo disso o `max-w` não morde e o celular fica igual. */}
-        <div className="relative mx-auto w-full max-w-[924px] overflow-hidden bg-[#21222b] aspect-[16/9]" data-teste="moldura-banner-loja">
+        <div className="relative w-full" data-teste="moldura-banner-loja">
           {/* `banners` vem do Painel de Mídia (seção "Loja Virtual"), já ordenado
               e normalizado por Catalog.jsx. Sem banner cadastrado, a moldura nem
               aparece — é melhor a loja começar na vitrine do que numa faixa preta. */}
-          <RotatingBanner banners={banners} heightClass="h-full" rounded={false} fit="contain" ambient />
+          <RotatingBanner banners={banners} heightClass="" molduraSegueArte rounded={false} fit="contain" ambient />
           {/* degradê (estilo Mercado Livre): a base funde no fundo escuro da loja pra a caixa
               de ofertas subir e sobrepor com opacidade, criando o efeito de camadas do ML. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 sm:h-24 bg-gradient-to-t from-gray-900 to-transparent" aria-hidden />
