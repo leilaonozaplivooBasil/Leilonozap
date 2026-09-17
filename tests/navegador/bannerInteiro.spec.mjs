@@ -304,3 +304,53 @@ for (const largura of [390, 1354, 1920]) {
     } finally { await ctx.close(); }
   });
 }
+
+// ────────── 17/09, SEGUNDA RODADA: a arte tem que ENCOSTAR NAS DUAS BORDAS ──────────
+//
+// 🔴 ESTE É O TESTE QUE PEGA O TETO DE ALTURA.
+//
+// Dono, com print: "no desktop os banners ainda não preenchem toda tela". E,
+// escolhendo entre encher cortando ou encher esticando: NÃO CORTAR NADA.
+//
+// A rodada anterior desta PR passava inteira com a arte 16:9 presa em 924px
+// numa tela de 1354px — porque NENHUM teste daqui exigia que ela encostasse nas
+// laterais. Os testes da arte larga exigiam, e a arte larga passava sozinha
+// (2,8 × 520 = 1456px, mais que a tela). O 16:9 escapava pelo vão.
+//
+// Aqui as duas coisas são exigidas ao mesmo tempo, que é o pedido inteiro:
+// a arte ENCOSTA nas duas bordas E não perde um pixel.
+for (const largura of [1354, 1920]) {
+  test(`📏 ${largura}px — a arte 16:9 ENCOSTA nas duas bordas, sem perder pixel`, { skip: semNavegador }, async () => {
+    const { ctx, pagina } = await abrir(largura);
+    try {
+      const m = await medir(pagina);
+
+      // 1) a moldura ocupa a tela inteira — era o teto de largura que impedia
+      assert.ok(m.moldura.w >= m.tela - 2,
+        `sobrou ${Math.round((m.tela - m.moldura.w) / 2)}px de faixa de cada lado — o teto de altura está de volta`);
+
+      // 2) e a ARTE preenche a moldura, não é a moldura que encolheu
+      assert.ok(Math.abs(m.moldura.w - m.arte.w) <= 2,
+        `a arte parou ${Math.round((m.moldura.w - m.arte.w) / 2)}px antes da borda`);
+      assert.ok(Math.abs(m.moldura.h - m.arte.h) <= 2,
+        `sobrou ${Math.round((m.moldura.h - m.arte.h) / 2)}px em cima e embaixo`);
+
+      // 3) NADA cortado: a escolha do dono foi esticar, nunca recortar
+      assert.equal(m.encaixe, 'contain',
+        'trocaram para cover — isso corta a arte, e o dono escolheu não cortar nada');
+
+      // 4) a altura é a que a proporção manda — 16:9 da largura REAL da moldura.
+      //    🔴 Medida da moldura, nunca da janela: com o banner alto aparece
+      //    barra de rolagem, que come ~15px da largura útil. Calcular pela
+      //    janela dava 762px de esperado contra 753px reais e acusava defeito
+      //    onde só havia a barra. Medido.
+      const esperada = m.moldura.w / (16 / 9);
+      assert.ok(Math.abs(m.arte.h - esperada) <= 3,
+        `altura ${Math.round(m.arte.h)}px, esperada ${Math.round(esperada)}px pela proporção 16:9 sobre ${m.moldura.w}px de moldura`);
+      // e ela tem que ser MUITO maior que o antigo teto de 520px — é o que
+      // significa "não cortar nada": o banner cresceu em vez de encolher
+      assert.ok(m.arte.h > 600,
+        `altura ${Math.round(m.arte.h)}px — o teto de 520px ainda está agindo`);
+    } finally { await ctx.close(); }
+  });
+}
