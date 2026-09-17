@@ -5,7 +5,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { plataforma } from "@/api/plataformaClient";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2, Truck, ShieldCheck, RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Gavel, Lock } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShoppingCart, MessageCircle, Maximize2, Share2, Truck, ShieldCheck, RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Gavel, Lock, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import CompareAquiButton from "../components/comparai/CompareAquiButton";
 import { createPageUrl } from "@/utils";
@@ -17,7 +17,8 @@ import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
-import PlayerDeVideo from '@/components/catalog/PlayerDeVideo';
+import QuadroDeMidia from '@/components/catalog/QuadroDeMidia';
+import { midiasDoProduto } from '@/lib/midiasDoProduto';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
@@ -153,18 +154,39 @@ export default function CatalogProductDetails() {
     })();
   }, []);
 
+  // 🎬 A MESMA FILEIRA DO MODAL. Antes esta página tinha o vídeo num bloco solto
+  // embaixo da foto, e o modal que abre do card não tinha vídeo nenhum — a mesma
+  // loja se comportando de dois jeitos, por duas portas. Agora as duas montam a
+  // fileira com `midiasDoProduto`: foto, foto, …, vídeo por último.
+  //
+  // 🔴 A FILEIRA É MONTADA AQUI EM CIMA, ANTES DOS HOOKS, DE PROPÓSITO. Mais
+  // abaixo esta página tem dois `return` adiantados (carregando / produto não
+  // encontrado); um hook declarado depois deles quebraria a ordem dos hooks, e
+  // um hook ANTES que leia uma `const` de depois estoura em zona morta temporal.
+  // `product` ainda pode ser null aqui — `midiasDoProduto(null)` devolve [].
+  const midias = midiasDoProduto(product);
+  const midiaAtual = midias.length > 0 ? midias[Math.min(currentImageIndex, midias.length - 1)] : null;
+  // o "ampliar" é de FOTO: em vídeo, tela cheia é o botão do próprio player
+  const currentImage = midiaAtual && midiaAtual.tipo === 'foto' ? midiaAtual.url : null;
+  // as setas giram pelas MÍDIAS: contar fotos deixaria o último slide inalcançável
+  const totalDeMidias = midias.length;
+
+  // 🔴 A TELA CHEIA É DE FOTO — e as setas de dentro dela agora alcançam o vídeo.
+  // Sem isto: a pessoa abre a foto ampliada, avança até o vídeo, a camada some
+  // (não há foto para ampliar) mas `showFullscreen` fica TRUE — e ao voltar para
+  // qualquer foto a tela cheia REAPARECE sozinha, sem ninguém ter pedido.
+  useEffect(() => {
+    if (!currentImage) setShowFullscreen(false);
+  }, [currentImage]);
+
   const handlePrevImage = () => {
-    if (!product?.image_urls || product.image_urls.length === 0) return;
-    setCurrentImageIndex((prev) =>
-      prev === 0 ? product.image_urls.length - 1 : prev - 1
-    );
+    if (totalDeMidias === 0) return;
+    setCurrentImageIndex((prev) => (prev === 0 ? totalDeMidias - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
-    if (!product?.image_urls || product.image_urls.length === 0) return;
-    setCurrentImageIndex((prev) =>
-      prev === product.image_urls.length - 1 ? 0 : prev + 1
-    );
+    if (totalDeMidias === 0) return;
+    setCurrentImageIndex((prev) => (prev === totalDeMidias - 1 ? 0 : prev + 1));
   };
 
   const handleBuyNow = () => {
@@ -309,8 +331,9 @@ export default function CatalogProductDetails() {
     );
   }
 
+  // o compartilhar manda só as FOTOS, e é isso mesmo: o destinatário recebe
+  // imagem, não vídeo
   const images = product.image_urls && Array.isArray(product.image_urls) ? product.image_urls : [];
-  const currentImage = images.length > 0 ? images[currentImageIndex] : null;
 
   // 📜 PONTO 70 — adicionar ao carrinho é a intenção de compra na Loja Virtual:
   // é aqui que o Termo de Adesão entra (uma única vez), nunca na navegação.
@@ -453,20 +476,28 @@ export default function CatalogProductDetails() {
           <div className={`${CARD} p-3 sm:p-4 lg:sticky lg:top-20`}>
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               {/* thumbnails verticais no desktop */}
-              {images.length > 1 && (
+              {midias.length > 1 && (
                 <div className="flex sm:flex-col gap-2 overflow-auto no-scrollbar sm:max-h-[460px]">
-                  {images.map((img, idx) => (
+                  {midias.map((m, idx) => (
                     <button key={idx} onClick={() => setCurrentImageIndex(idx)}
-                      className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all bg-white ${idx === currentImageIndex ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}>
-                      <img src={img} alt="" className="w-full h-full object-contain" />
+                      data-teste={m.tipo === 'video' ? 'miniatura-do-video' : 'miniatura-da-foto'}
+                      aria-label={m.tipo === 'video' ? 'Ver o vídeo do produto' : `Ver foto ${idx + 1}`}
+                      className={`relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all bg-white ${idx === currentImageIndex ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}>
+                      {m.tipo === 'foto' ? (
+                        <img src={m.url} alt="" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="grid h-full w-full place-items-center bg-black">
+                          <PlayCircle className="w-6 h-6 text-white" />
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
               {/* imagem principal */}
               <div className="relative flex-1 bg-white rounded-xl overflow-hidden aspect-square">
-                {currentImage ? (
-                  <img src={currentImage} alt={product.description} className="w-full h-full object-contain" />
+                {midiaAtual ? (
+                  <QuadroDeMidia midia={midiaAtual} titulo={product.description} />
                 ) : (
                   <div className="w-full h-full grid place-items-center bg-gray-100"><span className="text-gray-400">Sem imagem</span></div>
                 )}
@@ -475,19 +506,17 @@ export default function CatalogProductDetails() {
                     <Tag className="w-3.5 h-3.5" /> -{discountPct}%
                   </span>
                 )}
-                {images.length > 1 && (
+                {midias.length > 1 && (
                   <>
                     <button onClick={handlePrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white p-2 rounded-full shadow-md z-10"><ChevronLeft className="w-5 h-5 text-gray-700" /></button>
                     <button onClick={handleNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white p-2 rounded-full shadow-md z-10"><ChevronRight className="w-5 h-5 text-gray-700" /></button>
                   </>
                 )}
-                <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
+                {currentImage && (
+                  <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
+                )}
               </div>
             </div>
-            {/* 🎬 Vídeo do produto, quando houver. Fica ABAIXO da foto e nunca no
-                lugar dela: a foto é o que carrega rápido e o que aparece na
-                busca; o vídeo é o detalhe de quem já parou pra olhar. */}
-            <PlayerDeVideo produto={product} />
           </div>
 
           {/* BUY BOX */}
@@ -657,7 +686,7 @@ export default function CatalogProductDetails() {
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          {images.length > 1 && (
+          {midias.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}

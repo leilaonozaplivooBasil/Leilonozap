@@ -13,9 +13,11 @@ import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import {
   X, ChevronLeft, ChevronRight, ShoppingCart, MessageCircle, Truck, ShieldCheck,
-  RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Lock, Maximize2, ExternalLink
+  RotateCcw, CreditCard, Check, Store, Zap, BadgeCheck, Minus, Plus, Tag, Lock, Maximize2, ExternalLink, PlayCircle
 } from "lucide-react";
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
+import QuadroDeMidia from '@/components/catalog/QuadroDeMidia';
+import { midiasDoProduto } from '@/lib/midiasDoProduto';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
@@ -81,11 +83,28 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
     return () => { alive = false; };
   }, [product.id]);
 
-  const images = Array.isArray(product.image_urls) ? product.image_urls : [];
-  const currentImage = images.length > 0 ? images[currentImageIndex] : null;
+  // 🎬 17/09/2026 — A FILEIRA É DE MÍDIAS, NÃO DE FOTOS.
+  // O vídeo entra como último item, e por isso TUDO que girava por
+  // `images.length` passa a girar por `midias.length`: contando as fotos, a
+  // última mídia nunca seria alcançada pelas setas nem pela miniatura.
+  // Sem vídeo cadastrado, `midias` é exatamente a lista de fotos de antes.
+  const midias = midiasDoProduto(product);
+  const midiaAtual = midias.length > 0 ? midias[Math.min(currentImageIndex, midias.length - 1)] : null;
+  // 🔎 O "ampliar" é de FOTO. Vídeo em tela cheia é o botão do próprio player
+  // (YouTube, Vimeo ou o nativo do navegador) — abrir nossa camada por cima
+  // esconderia os controles dele e deixaria a pessoa sem como sair do vídeo.
+  const currentImage = midiaAtual && midiaAtual.tipo === 'foto' ? midiaAtual.url : null;
 
-  const handlePrevImage = () => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  const handleNextImage = () => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  // 🔴 A TELA CHEIA É DE FOTO — e as setas de dentro dela agora alcançam o vídeo.
+  // Sem isto: a pessoa abre a foto ampliada, avança até o vídeo, a camada some
+  // (não há foto para ampliar) mas `showFullscreen` fica TRUE — e ao voltar para
+  // qualquer foto a tela cheia REAPARECE sozinha, sem ninguém ter pedido.
+  useEffect(() => {
+    if (!currentImage) setShowFullscreen(false);
+  }, [currentImage]);
+
+  const handlePrevImage = () => setCurrentImageIndex((prev) => (prev === 0 ? midias.length - 1 : prev - 1));
+  const handleNextImage = () => setCurrentImageIndex((prev) => (prev === midias.length - 1 ? 0 : prev + 1));
 
   const getProductUrl = () => {
     const ref = new URLSearchParams(window.location.search).get('ref') || getReferral();
@@ -213,19 +232,30 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
             <div className="space-y-5 min-w-0">
             <div className={`${CARD} p-3 sm:p-4`}>
               <div className="flex flex-col-reverse sm:flex-row gap-3">
-                {images.length > 1 && (
+                {midias.length > 1 && (
                   <div className="flex sm:flex-col gap-2 overflow-auto no-scrollbar sm:max-h-[420px]">
-                    {images.map((img, idx) => (
+                    {midias.map((m, idx) => (
                       <button key={idx} onClick={() => setCurrentImageIndex(idx)}
-                        className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all bg-white ${idx === currentImageIndex ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}>
-                        <img src={img} alt="" className="w-full h-full object-contain" />
+                        data-teste={m.tipo === 'video' ? 'miniatura-do-video' : 'miniatura-da-foto'}
+                        aria-label={m.tipo === 'video' ? 'Ver o vídeo do produto' : `Ver foto ${idx + 1}`}
+                        className={`relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all bg-white ${idx === currentImageIndex ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}>
+                        {m.tipo === 'foto' ? (
+                          <img src={m.url} alt="" className="w-full h-full object-contain" />
+                        ) : (
+                          // A miniatura do vídeo não é um quadro do vídeo: buscar o
+                          // primeiro quadro custaria baixar o arquivo só pra desenhar
+                          // 56px. Um alvo preto com o ▶ diz a mesma coisa de graça.
+                          <span className="grid h-full w-full place-items-center bg-black">
+                            <PlayCircle className="w-6 h-6 text-white" />
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
                 )}
                 <div className="relative flex-1 bg-white rounded-xl overflow-hidden aspect-square">
-                  {currentImage ? (
-                    <img src={currentImage} alt={product.description} className="w-full h-full object-contain" />
+                  {midiaAtual ? (
+                    <QuadroDeMidia midia={midiaAtual} titulo={product.description} />
                   ) : (
                     <div className="w-full h-full grid place-items-center bg-gray-100"><span className="text-gray-400">Sem imagem</span></div>
                   )}
@@ -234,13 +264,15 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
                       <Tag className="w-3.5 h-3.5" /> -{discountPct}%
                     </span>
                   )}
-                  {images.length > 1 && (
+                  {midias.length > 1 && (
                     <>
                       <button onClick={handlePrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white p-2 rounded-full shadow-md z-10"><ChevronLeft className="w-5 h-5 text-gray-700" /></button>
                       <button onClick={handleNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white p-2 rounded-full shadow-md z-10"><ChevronRight className="w-5 h-5 text-gray-700" /></button>
                     </>
                   )}
-                  <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
+                  {currentImage && (
+                    <button onClick={() => setShowFullscreen(true)} className="absolute bottom-3 right-3 bg-white/85 hover:bg-white p-2 rounded-md shadow-md z-10" title="Ampliar"><Maximize2 className="w-4 h-4 text-gray-700" /></button>
+                  )}
                 </div>
               </div>
             </div>
@@ -427,7 +459,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          {images.length > 1 && (
+          {midias.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
