@@ -237,9 +237,25 @@ describe('a fiação — sem ela a feature existe só no papel', () => {
     assert.match(campo, /UploadFile\(\{ file, bucket: BALDE_VIDEO \}\)/);
     // confere tipo e tamanho ANTES de subir
     assert.match(campo, /conferirArquivo\(file\)/);
-    const posConferencia = campo.indexOf('conferirArquivo(file)');
-    assert.ok(posConferencia > 0 && posConferencia < campo.indexOf('UploadFile('),
+    // 🔎 17/09/2026 — ESTE TESTE MEDIA A POSIÇÃO NO ARQUIVO, e passou a acusar
+    // defeito onde não havia. O envio virou a função `subir()`, declarada ACIMA
+    // de `anexar()`: no texto, `UploadFile(` passou a aparecer primeiro, mesmo
+    // com a ordem de EXECUÇÃO intacta. Posição de texto só servia enquanto tudo
+    // morava numa função só.
+    //
+    // Agora a ordem é conferida DENTRO de `anexar`, que é onde ela vale: a
+    // conferência tem de vir antes da chamada que envia.
+    const anexar = campo.slice(campo.indexOf('const anexar = async'));
+    const corpoAnexar = anexar.slice(0, anexar.indexOf('\n  };'));
+    const posConferencia = corpoAnexar.indexOf('conferirArquivo(file)');
+    const posEnvio = corpoAnexar.indexOf('subir(file)');
+    assert.ok(posConferencia > 0, 'anexar não confere o arquivo');
+    assert.ok(posEnvio > posConferencia,
       'a conferência precisa vir ANTES do envio, senão sobe 40 MB pra ser recusado no fim');
+    // e quem envia de fato é `subir`, que usa o balde do vídeo
+    const subir = campo.slice(campo.indexOf('const subir = async'));
+    assert.match(subir.slice(0, subir.indexOf('\n  };')), /UploadFile\(/,
+      'quem envia deixou de ser `subir` — a prova acima perdeu o sentido');
     // e quem decide o que é link válido continua sendo a lista branca
     assert.match(campo, /entenderVideo\(link\)/);
   });
