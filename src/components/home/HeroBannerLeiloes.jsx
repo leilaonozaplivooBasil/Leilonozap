@@ -21,13 +21,31 @@ export default function HeroBannerLeiloes({ banners }) {
   return (
     <section aria-label="Destaques dos Leilões" className="w-full leiloes-hero-wrapper">
       <style>{`
+        /* 👆 17/09/2026 — NO CELULAR NÃO EXISTEM SETAS.
+           O dono pediu duas vezes: os botões brancos ficaram grandes e tapam a
+           arte. No lugar deles, o dedo desliza (onTouchStart/End no
+           RotatingBanner). Esta regra é cinto e suspensório: o botão já nasce
+           com \`hidden md:block\`, mas este wrapper manda \`!important\` na
+           opacidade e, sem o display aqui, uma mudança futura lá poderia
+           trazê-los de volta sem ninguém perceber. */
+        @media (max-width: 767px) {
+          .leiloes-hero-wrapper button[aria-label="Banner anterior"],
+          .leiloes-hero-wrapper button[aria-label="Próximo banner"] {
+            display: none !important;
+          }
+        }
+        /* 🖥️ No desktop as setas ficam, porque não há dedo para deslizar — mas
+           discretas: 8px de folga em vez de 12, fundo menos opaco e sombra mais
+           leve. Elas passaram a ficar POR CIMA da arte quando a moldura deixou
+           de ter faixa lateral, então o que era "sempre visível e forte" virou
+           "sempre visível e discreto". */
         .leiloes-hero-wrapper button[aria-label="Banner anterior"],
         .leiloes-hero-wrapper button[aria-label="Próximo banner"] {
           opacity: 1 !important;
-          background-color: rgba(255, 255, 255, 0.92) !important;
+          background-color: rgba(255, 255, 255, 0.72) !important;
           color: #0f172a !important;
-          padding: 12px !important;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+          padding: 8px !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
           transition: transform 0.2s ease, background-color 0.2s ease !important;
         }
         .leiloes-hero-wrapper button[aria-label="Banner anterior"]:hover,
@@ -37,37 +55,39 @@ export default function HeroBannerLeiloes({ banners }) {
         }
       `}</style>
 
-      {/* 🖼️ 15/09/2026 — A MOLDURA PASSA A SEGUIR A ARTE, E NÃO O CONTRÁRIO.
-          Antes: altura fixa (220→460px) + "cover" ancorado no topo. Aquilo era o
-          melhor possível enquanto a arte não cabia na moldura — nunca cortava
-          cabeça (o problema de 07/09), mas cortava TUDO que estivesse embaixo.
-          No banner novo do PS5 isso custaria o botão "Ver leilão" e a linha
-          "Lances reais · Transparente · Seguro".
+      {/* 🖼️ 17/09/2026 — A MOLDURA TERMINA ONDE A ARTE TERMINA.
+          Medido num Chromium, com a moldura de borda a borda e teto de 520px:
 
-          As artes novas são 16:9 (1920×1080) e a ordem do dono foi "viabilizar
-          com o tamanho que elas possuem mesmo". Com a moldura em 16:9 e
-          `contain`, não existe corte nenhum: a arte aparece inteira, sempre —
-          e a ancoragem no topo deixa de ser necessária, porque não há o que
-          ancorar quando nada é cortado.
+            1354px → arte 924×520, 208px de desfoque de cada lado
+            1440px → arte 924×520, 251px de cada lado
+            1920px → arte 924×520, 491px de cada lado — 52% da faixa
 
-          O teto de 520px é o preço do 16:9 no desktop; sem ele, a 1440px o
-          banner teria 810px de altura. É a MESMA receita da Loja Virtual
-          (LojaShopeeHeader.jsx), de propósito: um jeito só de mostrar banner.
+          A arte nunca esteve cortada; o que sobrava era o `ambient` (desfoque
+          da própria arte) preenchendo o que a tela tem A MAIS que 16:9. No
+          celular isso nunca apareceu porque a tela é mais ESTREITA que 16:9 —
+          é geometria, não configuração.
 
-          ⚠️ A ALTURA VEM DE `56.25vw`, NÃO DE `aspect-[16/9]`. Parecem a mesma
-          coisa e não são: `aspect-ratio` com `max-height` encolhe também a
-          LARGURA para manter a proporção — a moldura virava 924px encostada à
-          esquerda, com o resto da faixa preto. Isto apareceu na foto do preview,
-          não no teste, porque o teste media a arte e ela estava certa; quem
-          estava errada era a moldura. `56.25vw` é 9/16 da largura da tela: a
-          moldura continua de borda a borda e o `ambient` preenche as laterais. */}
-      <RotatingBanner
-        banners={banners}
-        heightClass="h-[56.25vw] max-h-[520px]"
-        fit="contain"
-        rounded={false}
-        ambient
-      />
+          Numa tela mais larga que 16:9 dá pra ter a arte completa OU a faixa
+          de borda a borda; as duas juntas só com o banner altíssimo (761px a
+          1354px, 1080px a 1920px). O dono escolheu a arte completa: a moldura
+          passa a ter o tamanho dela, centralizada, com o fundo da página em
+          volta em vez de desfoque.
+
+          ⚠️ ISTO NÃO É O BUG DE 15/09. Lá o `aspect-ratio` com `max-height`
+          encolhia a largura SEM QUERER e a moldura ficava encostada à
+          ESQUERDA, com uma faixa preta à direita. Aqui a largura é limitada de
+          propósito e o `mx-auto` centraliza — a diferença entre um acidente e
+          uma decisão está no `mx-auto`, e há teste medindo as duas margens.
+
+          924px = 520 × 16/9. Abaixo disso (todo celular e tablet) o `max-w`
+          não morde e nada muda: a moldura segue de borda a borda. */}
+      {/* 📐 17/09/2026 — A MOLDURA SEGUE A PROPORÇÃO DA ARTE.
+              A primeira versão desta PR fixou 16:9 e 924px. Consertava os
+              leilões e ESTRAGAVA a Loja, cuja arte é ~2,8:1: ela encolheria de
+              1355 para 924px e ganharia faixa em cima e embaixo. Agora quem
+              decide é a arte (`molduraSegueArte`): a moldura termina onde ela
+              termina, seja 16:9, 2,8:1 ou o que o Painel de Mídia receber. */}
+      <RotatingBanner banners={banners} heightClass="" molduraSegueArte fit="contain" rounded={false} ambient />
     </section>
   );
 }

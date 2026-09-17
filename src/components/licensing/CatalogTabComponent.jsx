@@ -59,10 +59,22 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
             oficial do link da loja é Admin › Minha Loja. Estava repetido. */}
         {banners.length > 0 && (
           <div className="-mt-2">
-            {/* 🖼️ 15/09/2026 — 1200×630 era a proporção das artes antigas. As novas
-                são 16:9, e aqui a moldura já seguia a arte: é só trocar o número.
-                `contain` porque nada pode ser cortado. */}
-            <RotatingBanner banners={banners} fit="contain" ambient heightClass="h-[56.25vw] max-h-[520px]" />
+            {/* 🖼️ 17/09/2026 — A MOLDURA TEM O TAMANHO DA ARTE, CENTRALIZADA.
+              Medido num Chromium: com a moldura de borda a borda e teto de
+              520px, o desfoque lateral era 208px de cada lado a 1354px e 491px
+              a 1920px — mais da metade da faixa. A arte nunca esteve cortada;
+              sobrava moldura. 924 = 520 × 16/9; abaixo disso o `max-w` não
+              morde e o celular continua de borda a borda.
+              ⚠️ `aspect` com `max-WIDTH` e `mx-auto` — não com `max-height`,
+              que foi o acidente de 15/09 (encolhia a largura e deixava a
+              moldura encostada à esquerda). */}
+            {/* 📐 17/09/2026 — A MOLDURA SEGUE A PROPORÇÃO DA ARTE.
+              A primeira versão desta PR fixou 16:9 e 924px. Consertava os
+              leilões e ESTRAGAVA a Loja, cuja arte é ~2,8:1: ela encolheria de
+              1355 para 924px e ganharia faixa em cima e embaixo. Agora quem
+              decide é a arte (`molduraSegueArte`): a moldura termina onde ela
+              termina, seja 16:9, 2,8:1 ou o que o Painel de Mídia receber. */}
+            <RotatingBanner banners={banners} fit="contain" ambient heightClass="" molduraSegueArte />
           </div>
         )}
         <div className="relative">

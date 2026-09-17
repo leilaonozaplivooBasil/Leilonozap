@@ -18,10 +18,16 @@ import HeroBannerLeiloes from '@/components/home/HeroBannerLeiloes';
 
 // arte 16:9 (1920×1080) com faixa vermelha nos últimos 15% da altura:
 // é o rodapé do banner, a parte que sumia.
+// 🔴 DUAS PROPORÇÕES, porque as artes de verdade têm duas: a dos leilões é
+// 16:9 e a da Loja é ~2,8:1. Uma moldura que só funciona numa delas não serve.
+// `?larga=1` troca para a proporção da Loja.
+const LARGA = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('larga') === '1';
+const L = LARGA ? 2688 : 1920;   // 2688/960 = 2,8:1
+const A = LARGA ? 960 : 1080;
 const ARTE = `data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
-     <rect width="1920" height="1080" fill="#0b3d2e"/>
-     <rect y="918" width="1920" height="162" fill="#e0533f"/>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${L}" height="${A}">
+     <rect width="${L}" height="${A}" fill="#0b3d2e"/>
+     <rect y="${Math.round(A * 0.85)}" width="${L}" height="${Math.round(A * 0.15)}" fill="#e0533f"/>
    </svg>`
 )}`;
 

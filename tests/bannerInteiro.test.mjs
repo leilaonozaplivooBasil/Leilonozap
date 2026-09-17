@@ -43,15 +43,50 @@ test('🔴 nada escurece a base do banner na Home', () => {
     'o degradê que escondia o terço de baixo da arte voltou');
 });
 
-test('🔴 nenhum bloco sobe para sentar em cima do banner', () => {
-  assert.ok(!/-mt-6 md:-mt-10/.test(HOME), 'o card da Home voltou a subir sobre o banner');
-  assert.ok(!/-mt-4 sm:-mt-16/.test(OFERTAS), 'as Ofertas Relâmpago voltaram a subir sobre o banner');
+test('🔴 o que sobe sobre o banner tem que ser TRANSPARENTE', () => {
+  // 🔄 17/09/2026 — ESTE TESTE MUDOU DE PROPRIEDADE, E PRECISAVA MUDAR.
+  //
+  // Ele exigia que NADA subisse sobre o banner, procurando as strings `-mt-6
+  // md:-mt-10` e `-mt-4 sm:-mt-16`. O dono pediu o contrário: "o destaque dos
+  // leilões ficar em cima, mas com aquela transparência, igual tá na loja".
+  //
+  // 🔴 E ELE PASSARIA POR TECNICALIDADE: o bloco novo usa `-mt-8 sm:-mt-14`,
+  // que não casa com nenhuma das duas strings antigas. Verde, com o bloco
+  // subindo. Deixar assim seria pior que não ter teste.
+  //
+  // A propriedade que importa nunca foi "não subir": era "não ESCONDER a arte".
+  // O que a #380 tirou foi um degradê OPACO de 176px. Vidro translúcido deixa a
+  // arte aparecer através — por isso a regra agora é sobre a TRANSPARÊNCIA de
+  // quem sobe, não sobre subir.
+  const sobe = /-mt-\d/.test(HOME);
+  if (sobe) {
+    assert.match(HOME, /bg-white\/\[0\.02\]/, 'o bloco sobe sobre o banner sem ser translúcido');
+    assert.match(HOME, /backdrop-blur/, 'sem desfoque de fundo não é vidro, é placa');
+    assert.ok(!/backgroundColor: '#182028'/.test(HOME),
+      'a cor chapada voltou: ela tapa o banner por trás, que é o defeito da #380 de novo');
+  }
+  // o degradê opaco que escondia o terço de baixo da arte continua proibido
+  assert.ok(!/bg-gradient-to-t from-gray-900/.test(HOME),
+    'o degradê que escondia o terço de baixo da arte voltou');
 });
 
 for (const [onde, fonte] of AS_QUATRO) {
-  test(`${onde}: a moldura usa 56.25vw (largura cheia), com teto de 520px`, () => {
-    assert.match(fonte, /h-\[56\.25vw\]/, 'sem 56.25vw a moldura não é 16:9 de borda a borda');
-    assert.match(fonte, /max-h-\[520px\]/, 'sem o teto, a 1440px o banner teria 810px de altura');
+  test(`${onde}: a moldura SEGUE A PROPORÇÃO DA ARTE`, () => {
+    // 🔄 17/09/2026, segunda revisão do MESMO dia — e a primeira estava errada.
+    //
+    // De manhã esta regra virou "16:9 limitado a 924px". Consertava os leilões
+    // e ESTRAGARIA a Loja: as artes têm proporções diferentes (a dos leilões é
+    // 16:9, a da Loja ~2,8:1) e a de 2,8:1 numa moldura 16:9 encolheria de 1355
+    // para 924px E ganharia faixa em cima e embaixo. Proporção fixa só serve se
+    // todas as artes forem daquela proporção — e o Painel de Mídia não exige
+    // isso de ninguém.
+    //
+    // Agora quem decide é a arte: `molduraSegueArte` lê naturalWidth/Height e a
+    // moldura termina onde a arte termina. Medido nas duas proporções reais,
+    // em 390/1354/1920px: faixa zero em todos os seis casos.
+    assert.match(fonte, /molduraSegueArte/, 'a moldura voltou a impor tamanho à arte');
+    assert.doesNotMatch(fonte, /aspect-\[16\/9\]/, 'voltou proporção fixa');
+    assert.doesNotMatch(fonte, /max-w-\[924px\]/, 'voltou largura fixa');
   });
 
   test(`${onde}: encaixe é contain — cover recorta a arte`, () => {
@@ -59,20 +94,31 @@ for (const [onde, fonte] of AS_QUATRO) {
     assert.ok(!/fit="cover"/.test(fonte), 'cover recorta para preencher a moldura');
   });
 
-  test(`${onde}: 🔴 NÃO usa aspect-ratio junto de max-height`, () => {
-    // `aspect-[16/9]` + `max-h` encolhe a LARGURA também: a moldura vira uma
-    // caixa estreita centralizada, com vazio em volta. Já documentado no
-    // HeroBannerLeiloes; estava em duas telas ainda.
-    assert.ok(!/aspect-\[16\/9\]/.test(fonte),
-      'aspect-ratio com max-height encolhe a largura — use 56.25vw');
+  test(`${onde}: 🔴 aspect-ratio NUNCA junto de max-height`, () => {
+    // 🔴 A ARMADILHA CONTINUA REAL, e agora é mais fácil cair nela: a receita
+    // nova USA `aspect-[16/9]`, então basta alguém acrescentar um `max-h` "pra
+    // garantir" e a largura encolhe sozinha, deixando a moldura encostada à
+    // esquerda com faixa preta à direita — o defeito de 15/09, que o dono
+    // fotografou. O limite tem que ser de LARGURA (`max-w`), nunca de altura.
+    const temAltura = /max-h-\[\d+px\]/.test(fonte);
+    assert.ok(!temAltura,
+      'voltou um max-height junto do aspect-ratio — isso encolhe a LARGURA e desalinha a moldura');
   });
 }
 
 test('as quatro telas usam a MESMA receita', () => {
+  // 🔴 `[^"]*`, NÃO `[^"]+`. Com o `+` o casamento exige ao menos um caractere,
+  // e `heightClass=""` devolvia `null` nas quatro — o teste comparava nada com
+  // nada e passava de qualquer jeito. Um teste que só sabe dizer "iguais"
+  // porque não leu ninguém não é teste.
   const receitas = AS_QUATRO.map(([, fonte]) => {
-    const m = fonte.match(/heightClass="([^"]+)"/);
-    return m ? m[1].replace(/\s+/g, ' ').trim() : null;
+    const m = fonte.match(/heightClass="([^"]*)"/);
+    return m ? m[1].replace(/\s+/g, ' ').trim() : '(não passa heightClass)';
   });
   assert.deepEqual(new Set(receitas).size, 1, `receitas diferentes entre as telas: ${JSON.stringify(receitas)}`);
-  assert.equal(receitas[0], 'h-[56.25vw] max-h-[520px]');
+  // vazio de propósito: quem dá o tamanho é `molduraSegueArte`, não uma classe
+  assert.equal(receitas[0], '');
+  for (const [onde, fonte] of AS_QUATRO) {
+    assert.match(fonte, /molduraSegueArte/, `${onde} não pede a moldura que segue a arte`);
+  }
 });

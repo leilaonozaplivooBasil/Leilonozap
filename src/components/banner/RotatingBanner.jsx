@@ -12,7 +12,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 // exato) — em foto de gente, isso corta cabeça em cima e perna embaixo em
 // proporções iguais quando o container fica bem baixo e largo (desktop). Só
 // afeta quem passar a prop; sem ela, nada muda no comportamento de hoje.
-export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition }) {
+// Teto de altura do banner no desktop. Sem ele, a 1920px uma arte 16:9 daria
+// 1080px de altura e empurraria a página inteira para fora da primeira tela.
+const TETO_DE_ALTURA = 520;
+
+export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition, molduraSegueArte = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -38,6 +42,76 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
   }, [banners, isMobile]);
 
   const videoRefs = useRef({});
+
+  // 📐 17/09/2026 — A MOLDURA PERGUNTA A PROPORÇÃO À PRÓPRIA ARTE.
+  //
+  // O dono: "o banner ainda está em tamanhos diferentes nas páginas". Estava —
+  // e a causa não era o código: as artes têm proporções DIFERENTES. Medido nos
+  // prints dele: a da Loja é ~2,8:1 e a dos leilões (trocada em 17/09) é 16:9.
+  //
+  // 🔴 POR QUE O 16:9 FIXO SAIU (era a primeira versão desta mesma PR):
+  // ele consertava os leilões e ESTRAGAVA a Loja. A arte de 2,8:1 numa moldura
+  // 16:9 encolheria de 1355 para 924px de largura E ganharia faixa em cima e
+  // embaixo. Proporção fixa só serve se TODAS as artes forem daquela proporção,
+  // e o Painel de Mídia não exige isso de ninguém.
+  //
+  // Agora: `naturalWidth/naturalHeight` da arte ativa no `onLoad`. A largura
+  // máxima cai do teto de altura (teto × proporção). A moldura termina onde a
+  // arte termina, qualquer que seja a arte — e continua de borda a borda quando
+  // a arte é larga o bastante para isso.
+  const [proporcaoDaArte, setProporcaoDaArte] = useState(null);
+
+  const medirArte = (el) => {
+    if (!el?.naturalWidth || !el?.naturalHeight) return;
+    const r = el.naturalWidth / el.naturalHeight;
+    if (Number.isFinite(r) && r > 0) setProporcaoDaArte((atual) => (atual === r ? atual : r));
+  };
+
+  const anotarProporcao = (e) => medirArte(e?.target);
+
+  // 🔴 `onLoad` SOZINHO NÃO BASTA. Imagem que já está no cache (ou um `data:`,
+  // como nas bancas) termina de decodificar ANTES do React ligar o ouvinte — o
+  // evento nunca chega e a moldura fica na proporção de partida para sempre.
+  // Medido: a arte 2,8:1 ficava enquadrada em 16:9, com 95px de faixa em cima e
+  // embaixo. O `ref` pega justamente esse caso, lendo `complete` na montagem.
+  const medirSeJaPronta = (el) => { if (el?.complete) medirArte(el); };
+
+  // 👆 17/09/2026 — O BANNER DESLIZA COM O DEDO.
+  //
+  // Pedido do dono, duas vezes: no celular as setas brancas ficaram grandes e
+  // atrapalham a arte, e o carrossel tem que andar com o dedo como em qualquer
+  // app. As setas somem no celular (regra de CSS nos wrappers) e o arrasto toma
+  // o lugar delas — sem arrasto, o celular ficaria SEM nenhuma forma de passar
+  // o banner a não ser esperar os 10 segundos.
+  //
+  // 🔴 Só conta como deslize o gesto HORIZONTAL. Sem essa conferência, rolar a
+  // página com o dedo em cima do banner trocaria o slide sem querer — o gesto
+  // de rolar começa igual ao de deslizar, e quem decide é a direção.
+  const toqueRef = useRef(null);
+
+  const aoTocar = (e) => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    toqueRef.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const aoSoltar = (e) => {
+    const inicio = toqueRef.current;
+    toqueRef.current = null;
+    if (!inicio) return;
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - inicio.x;
+    const dy = t.clientY - inicio.y;
+    // 40px de corrida mínima: abaixo disso é toque trêmulo, não deslize.
+    // E o movimento tem que ser mais horizontal que vertical, senão é rolagem.
+    if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    setCurrentIndex((prev) => {
+      const total = filteredBanners.length;
+      if (total <= 1) return prev;
+      return dx < 0 ? (prev + 1) % total : (prev - 1 + total) % total;
+    });
+  };
 
   // ⏱️ Banners de imagem trocam no intervalo fixo de 10s. Banners de vídeo
   // avançam exatamente quando o próprio vídeo termina — sem loop reiniciando
@@ -86,7 +160,25 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
   const fitAtual = isMobile && mobileFit ? mobileFit : fit;
 
   return (
-    <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
+    <div
+      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group ${molduraSegueArte ? 'mx-auto' : ''}`}
+      style={molduraSegueArte ? (() => {
+        // 🔴 PROPORÇÃO DE PARTIDA, senão a moldura nasce com ALTURA ZERO e nada
+        // carrega: sem altura a arte não ocupa espaço, e sem a arte não há
+        // proporção para dar altura. Medido: moldura 1339x0 em todas as telas.
+        // 16:9 é o palpite inicial; assim que a arte carrega, ela corrige.
+        const r = proporcaoDaArte || 16 / 9;
+        return {
+          aspectRatio: String(r),
+          maxHeight: `${TETO_DE_ALTURA}px`,
+          // o teto de LARGURA vem do de altura — é ele que mata a faixa lateral
+          maxWidth: `${Math.round(TETO_DE_ALTURA * r)}px`,
+        };
+      })() : undefined}
+      onTouchStart={aoTocar}
+      onTouchEnd={aoSoltar}
+      data-teste="moldura-do-carrossel"
+    >
       <style>{`
         @keyframes nzCaptionFade { 0%, 100% { opacity: 0; } 15%, 85% { opacity: 1; } }
         .nz-video-caption { animation: nzCaptionFade 5s ease-in-out infinite; }
@@ -193,6 +285,8 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
+                  onLoad={isActive ? anotarProporcao : undefined}
+                  ref={isActive ? medirSeJaPronta : undefined}
                   style={{
                     objectFit: fitAtual,
                     objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
@@ -213,6 +307,8 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                   loading={shouldEagerLoad ? "eager" : "lazy"}
                   fetchPriority={isActive ? "high" : "low"}
                   decoding={shouldEagerLoad ? "sync" : "async"}
+                  onLoad={isActive ? anotarProporcao : undefined}
+                  ref={isActive ? medirSeJaPronta : undefined}
                   style={{
                     objectFit: fitAtual,
                     objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
@@ -235,18 +331,18 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             aria-label="Banner anterior"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
 
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             aria-label="Próximo banner"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </>
       )}

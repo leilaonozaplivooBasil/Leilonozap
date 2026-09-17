@@ -873,9 +873,17 @@ export default function Home() {
         </div>
       }
 
-      {/* o bloco começa DEPOIS do banner: o `-mt-6 md:-mt-10` subia até 40px e
-          sentava em cima do que o degradê ainda não tinha escondido. */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
+      {/* 🪟 17/09/2026 — LIQUID GLASS, IGUAL À LOJA VIRTUAL.
+          Pedido do dono: "o destaque dos leilões ficar em cima, mas com aquela
+          transparência, igual tá na loja virtual — eu esqueci o nome disso".
+          O nome está escrito no código da Loja: liquid glass.
+
+          ⚠️ ISTO NÃO DESFAZ A #380. Lá o que saiu foi um degradê OPACO de 176px
+          que escondia o terço de baixo da arte — e a ordem era "o banner tem que
+          ser visto completo". Aqui o bloco sobe sobre a BASE do banner sendo
+          translúcido: a arte continua aparecendo através dele, que é exatamente
+          o "por cima, mas transparente" que o dono pediu. Vidro não é cortina. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 -mt-8 sm:-mt-14">
         {/* Hero Section - Glass */}
         <div className="mb-6">
           {/* 🎯 PONTO 83 — DE VOLTA À COR DO SITE, EM VERSÃO CLEAN.
@@ -884,16 +892,23 @@ export default function Home() {
               "acende" sem se desconectar. Fio esmeralda de baixa opacidade em vez de
               borda marcada, sombra suave, e SEM os orbes verdes. Padding enxuto e
               tipografia leve do PONTO 82 preservados. */}
+          {/* 🪟 O MESMO VIDRO DA LOJA: `bg-white/[0.02] backdrop-blur-sm
+              backdrop-saturate-150` com borda clara e brilho no topo. O que
+              mudou da versão anterior foi o `backgroundColor: '#182028'` —
+              uma cor CHAPADA, que tapava tudo por trás. Sem ela o desfoque tem
+              o que desfocar, e o banner aparece através do bloco. O fio
+              esmeralda fica: é a identidade da página de leilões. */}
           <div
             id="hero-leiloes"
-            className="relative overflow-hidden rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4"
+            className="relative overflow-hidden rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4 bg-white/[0.02] backdrop-blur-sm backdrop-saturate-150"
             style={{
-              background: 'linear-gradient(160deg, rgba(16,185,129,0.07), rgba(255,255,255,0.03))',
-              backgroundColor: '#182028',
-              border: '1px solid rgba(16,185,129,0.16)',
-              boxShadow: '0 4px 22px rgba(0,0,0,0.22)'
+              border: '1px solid rgba(16,185,129,0.22)',
+              boxShadow: '0 8px 28px rgba(0,0,0,0.38)'
             }}
           >
+            {/* brilho superior e borda interna — os mesmos da Ofertas Relâmpago */}
+            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/10 to-transparent" aria-hidden />
 
             <div className="relative">
               {/* 🎯 PONTO 81 — CABEÇALHO EM 1 LINHA.
