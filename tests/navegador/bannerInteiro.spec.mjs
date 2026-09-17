@@ -209,12 +209,38 @@ for (const largura of [1280, 768, 400]) {
     } finally { await ctx.close(); }
   });
 
-  test(`📐 ${largura}px — a moldura vai de BORDA A BORDA`, { skip: semNavegador }, async () => {
+  test(`📐 ${largura}px — a moldura TERMINA ONDE A ARTE TERMINA, e centralizada`, { skip: semNavegador }, async () => {
+    // 🔄 17/09/2026 — ESTE TESTE MUDOU DE PROPRIEDADE, DE PROPÓSITO.
+    //
+    // Antes ele exigia moldura de borda a borda, para pegar o acidente de
+    // 15/09: `aspect-ratio` com `max-height` encolhia a largura SEM QUERER e a
+    // moldura ficava encostada à ESQUERDA, com faixa preta só do lado direito.
+    //
+    // Agora a moldura encolhe DE PROPÓSITO no desktop — medido, com ela de
+    // borda a borda o desfoque lateral era 208px de cada lado a 1354px e 491px
+    // a 1920px, mais da metade da faixa. O dono escolheu a arte completa.
+    //
+    // O que separa a decisão do acidente é o CENTRO. Por isso a prova agora
+    // mede duas coisas que o acidente reprovaria na hora:
+    //   1) dentro da moldura não sobra faixa nenhuma (moldura == arte);
+    //   2) se a moldura é menor que a tela, as margens dos dois lados são
+    //      IGUAIS — encostar num lado é o defeito de 15/09 voltando.
     const { ctx, pagina } = await abrir(largura);
     try {
       const m = await medir(pagina);
-      assert.ok(m.moldura.w >= m.tela - 2,
-        `a moldura tem ${m.moldura.w}px numa tela de ${m.tela}px — descolou das bordas (aspect-ratio com max-height?)`);
+      assert.ok(m.moldura.w <= m.tela + 2,
+        `a moldura tem ${m.moldura.w}px numa tela de ${m.tela}px — transbordou`);
+      assert.ok(Math.abs(m.moldura.w - m.arte.w) <= 2,
+        `sobrou ${Math.round((m.moldura.w - m.arte.w) / 2)}px de faixa de cada lado dentro da moldura`);
+
+      const margens = await pagina.evaluate(() => {
+        const img = document.querySelector('[data-teste="embrulho-do-banner"] img:not([aria-hidden])');
+        const r = img.closest('.overflow-hidden').getBoundingClientRect();
+        const corpo = document.body.clientWidth;
+        return { esq: Math.round(r.left), dir: Math.round(corpo - r.right) };
+      });
+      assert.ok(Math.abs(margens.esq - margens.dir) <= 2,
+        `a moldura ficou torta: ${margens.esq}px à esquerda e ${margens.dir}px à direita — é o defeito de 15/09 voltando`);
     } finally { await ctx.close(); }
   });
 

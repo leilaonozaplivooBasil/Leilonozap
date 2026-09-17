@@ -143,23 +143,31 @@ test('🖼️ o encaixe aplicado é `contain` — é ele que garante o "sem cort
   }
 });
 
-test('🖼️ no celular a altura fica onde já estava (~220px), sem susto', { skip: semNavegador }, async () => {
-  // ✏️ A conta certa é sobre a LARGURA DESENHADA, não sobre a do viewport: o
-  // Chromium reserva ~15px pra barra de rolagem, então 390px de tela viram
-  // ~375px de conteúdo e a moldura fica em 211px, não 219px. Medi antes de
-  // afirmar — a primeira versão deste teste errou exatamente por essa conta.
-  const { moldura } = await medir(390);
-  // A altura vem de `56.25vw` — 9/16 da LARGURA DA JANELA, não da largura do
-  // conteúdo. Num navegador de mesa a barra de rolagem come ~15px, então a
-  // moldura fica 219px para 375px de conteúdo: um retângulo levemente mais
-  // alto que 16:9, com uma tira fina de `ambient` em cima e embaixo. No celular
-  // de verdade não há barra, e bate exato. A arte segue inteira nos dois casos
-  // — quem garante isso é o teste "aparece INTEIRA", não este.
-  assert.ok(Math.abs(moldura.height - 390 * 0.5625) < 2,
-    `a moldura ficou ${Math.round(moldura.height)}px; 56.25vw de 390px são ${Math.round(390 * 0.5625)}px`);
+test('🖼️ no celular a moldura é 16:9 EXATO, sem tira sobrando', { skip: semNavegador }, async () => {
+  // 🔄 17/09/2026 — ESTE TESTE FICOU MAIS EXIGENTE, e de propósito.
+  //
+  // Ele exigia altura = `56.25vw` = 9/16 da LARGURA DA JANELA. Só que `vw`
+  // conta a barra de rolagem: a 390px de janela dava 219px de altura para
+  // 375px de conteúdo — um retângulo levemente MAIS ALTO que 16:9, com uma
+  // tira fina de `ambient` em cima e embaixo. O próprio comentário antigo
+  // admitia isso.
+  //
+  // Com `aspect-[16/9]` a altura vem da largura REAL do conteúdo: 375 → 211px,
+  // 16:9 exato, sem tira nenhuma. São 8px a menos e nenhuma sobra. Travar os
+  // 219px seria travar a imperfeição.
+  const { moldura, pintado } = await medir(390);
+  const esperado = moldura.width * 9 / 16;
+  assert.ok(Math.abs(moldura.height - esperado) < 2,
+    `a moldura ficou ${Math.round(moldura.height)}px para ${Math.round(moldura.width)}px de largura; 16:9 pede ${Math.round(esperado)}px`);
+  // e a arte preenche a moldura inteira — é isto que a tira de `ambient`
+  // impedia antes, e é a prova de que não sobra faixa em lugar nenhum
+  assert.ok(Math.abs(pintado.h - moldura.height) <= 2,
+    `sobrou ${Math.round((moldura.height - pintado.h) / 2)}px de tira em cima e embaixo`);
+  assert.ok(Math.abs(pintado.w - moldura.width) <= 2,
+    `sobrou ${Math.round((moldura.width - pintado.w) / 2)}px de faixa nas laterais`);
   // e o ponto que importa pro dono: continua na casa dos 220px de antes
   assert.ok(moldura.height > 195 && moldura.height < 235,
-    `a 390px a moldura ficou com ${Math.round(moldura.height)}px; antes eram 220px`);
+    `a 390px a moldura ficou com ${Math.round(moldura.height)}px; antes eram 219px`);
 });
 
 test('🖼️ no desktop largo a arte usa o teto inteiro — não fica minúscula', { skip: semNavegador }, async () => {

@@ -33,9 +33,15 @@ const ARTE = `data:image/svg+xml;utf8,${encodeURIComponent(`
 // para os dois: é exatamente o caso de uso do 'any'.
 const BANNERS = [{ id: 'b1', image_url: ARTE, title: 'arte 16:9', link_url: '', device_type: 'any' }];
 
+// 🔴 ESTA MOLDURA COPIA A DA LOJA (LojaShopeeHeader) — e tem que copiar a ATUAL.
+// Quando a produção trocou `h-[56.25vw] max-h-[520px]` pela moldura de 924px,
+// esta banca continuou pedindo a classe antiga e a moldura ficou com ALTURA
+// ZERO: o Tailwind só varre `src/**`, então uma classe que não existe mais na
+// produção deixa de ser gerada no CSS. A banca acusou "arte cortada" quando o
+// cortado era o CSS dela mesma. Ao mexer na moldura de verdade, mexa aqui junto.
 function Banca() {
   return (
-    <div data-parte="moldura" className="relative overflow-hidden bg-[#21222b] h-[56.25vw] max-h-[520px]">
+    <div data-parte="moldura" className="relative mx-auto w-full max-w-[924px] overflow-hidden bg-[#21222b] aspect-[16/9]">
       <RotatingBanner banners={BANNERS} heightClass="h-full" rounded={false} fit="contain" ambient />
     </div>
   );

@@ -39,6 +39,43 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
 
   const videoRefs = useRef({});
 
+  // 👆 17/09/2026 — O BANNER DESLIZA COM O DEDO.
+  //
+  // Pedido do dono, duas vezes: no celular as setas brancas ficaram grandes e
+  // atrapalham a arte, e o carrossel tem que andar com o dedo como em qualquer
+  // app. As setas somem no celular (regra de CSS nos wrappers) e o arrasto toma
+  // o lugar delas — sem arrasto, o celular ficaria SEM nenhuma forma de passar
+  // o banner a não ser esperar os 10 segundos.
+  //
+  // 🔴 Só conta como deslize o gesto HORIZONTAL. Sem essa conferência, rolar a
+  // página com o dedo em cima do banner trocaria o slide sem querer — o gesto
+  // de rolar começa igual ao de deslizar, e quem decide é a direção.
+  const toqueRef = useRef(null);
+
+  const aoTocar = (e) => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    toqueRef.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const aoSoltar = (e) => {
+    const inicio = toqueRef.current;
+    toqueRef.current = null;
+    if (!inicio) return;
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - inicio.x;
+    const dy = t.clientY - inicio.y;
+    // 40px de corrida mínima: abaixo disso é toque trêmulo, não deslize.
+    // E o movimento tem que ser mais horizontal que vertical, senão é rolagem.
+    if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    setCurrentIndex((prev) => {
+      const total = filteredBanners.length;
+      if (total <= 1) return prev;
+      return dx < 0 ? (prev + 1) % total : (prev - 1 + total) % total;
+    });
+  };
+
   // ⏱️ Banners de imagem trocam no intervalo fixo de 10s. Banners de vídeo
   // avançam exatamente quando o próprio vídeo termina — sem loop reiniciando
   // sozinho no meio da exibição (sensação de "travada"/duplicado).
@@ -86,7 +123,12 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
   const fitAtual = isMobile && mobileFit ? mobileFit : fit;
 
   return (
-    <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
+    <div
+      className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}
+      onTouchStart={aoTocar}
+      onTouchEnd={aoSoltar}
+      data-teste="moldura-do-carrossel"
+    >
       <style>{`
         @keyframes nzCaptionFade { 0%, 100% { opacity: 0; } 15%, 85% { opacity: 1; } }
         .nz-video-caption { animation: nzCaptionFade 5s ease-in-out infinite; }
@@ -235,18 +277,18 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             aria-label="Banner anterior"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
 
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             aria-label="Próximo banner"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </>
       )}

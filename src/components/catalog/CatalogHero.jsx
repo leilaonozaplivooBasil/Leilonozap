@@ -44,13 +44,24 @@ export default function CatalogHero({ banners }) {
           teto de 520px para o desktop não virar banner de tela inteira.
           ⚠️ `56.25vw`, NÃO `aspect-[16/9]`: com `max-height` junto, o
           `aspect-ratio` encolhe a LARGURA também e a moldura descola das bordas. */}
-      <RotatingBanner
-        banners={banners}
-        heightClass="h-[56.25vw] max-h-[520px]"
-        fit="contain"
-        ambient
-        rounded
-      />
+      {/* 🖼️ 17/09/2026 — A MOLDURA TEM O TAMANHO DA ARTE, CENTRALIZADA.
+              Medido num Chromium: com a moldura de borda a borda e teto de
+              520px, o desfoque lateral era 208px de cada lado a 1354px e 491px
+              a 1920px — mais da metade da faixa. A arte nunca esteve cortada;
+              sobrava moldura. 924 = 520 × 16/9; abaixo disso o `max-w` não
+              morde e o celular continua de borda a borda.
+              ⚠️ `aspect` com `max-WIDTH` e `mx-auto` — não com `max-height`,
+              que foi o acidente de 15/09 (encolhia a largura e deixava a
+              moldura encostada à esquerda). */}
+      <div className="mx-auto w-full max-w-[924px]">
+        <RotatingBanner
+          banners={banners}
+          heightClass="aspect-[16/9]"
+          fit="contain"
+          ambient
+          rounded
+        />
+      </div>
     </section>
   );
 }

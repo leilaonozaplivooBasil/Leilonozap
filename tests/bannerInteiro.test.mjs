@@ -49,9 +49,21 @@ test('🔴 nenhum bloco sobe para sentar em cima do banner', () => {
 });
 
 for (const [onde, fonte] of AS_QUATRO) {
-  test(`${onde}: a moldura usa 56.25vw (largura cheia), com teto de 520px`, () => {
-    assert.match(fonte, /h-\[56\.25vw\]/, 'sem 56.25vw a moldura não é 16:9 de borda a borda');
-    assert.match(fonte, /max-h-\[520px\]/, 'sem o teto, a 1440px o banner teria 810px de altura');
+  test(`${onde}: a moldura é 16:9 limitada a 924px e CENTRALIZADA`, () => {
+    // 🔄 17/09/2026 — ESTA REGRA MUDOU, DE PROPÓSITO.
+    //
+    // Antes: `h-[56.25vw] max-h-[520px]`, moldura de borda a borda. A arte
+    // ficava inteira, mas numa tela mais larga que 16:9 o que sobrava era
+    // desfoque da própria arte — medido em Chromium, 208px de cada lado a
+    // 1354px e 491px a 1920px, mais da metade da faixa. O dono viu no print e
+    // pediu o encaixe. Escolheu a arte completa em vez da faixa cheia.
+    //
+    // 924 = 520 × 16/9: a mesma altura de antes no desktop, agora com a
+    // moldura terminando onde a arte termina.
+    assert.match(fonte, /aspect-\[16\/9\]/, 'a moldura deixou de ser 16:9');
+    assert.match(fonte, /max-w-\[924px\]/, 'sem o limite de largura a faixa de desfoque volta');
+    assert.match(fonte, /mx-auto w-full max-w-\[924px\]/,
+      'sem `mx-auto` a moldura encosta num lado só — é o acidente de 15/09 voltando');
   });
 
   test(`${onde}: encaixe é contain — cover recorta a arte`, () => {
@@ -59,12 +71,15 @@ for (const [onde, fonte] of AS_QUATRO) {
     assert.ok(!/fit="cover"/.test(fonte), 'cover recorta para preencher a moldura');
   });
 
-  test(`${onde}: 🔴 NÃO usa aspect-ratio junto de max-height`, () => {
-    // `aspect-[16/9]` + `max-h` encolhe a LARGURA também: a moldura vira uma
-    // caixa estreita centralizada, com vazio em volta. Já documentado no
-    // HeroBannerLeiloes; estava em duas telas ainda.
-    assert.ok(!/aspect-\[16\/9\]/.test(fonte),
-      'aspect-ratio com max-height encolhe a largura — use 56.25vw');
+  test(`${onde}: 🔴 aspect-ratio NUNCA junto de max-height`, () => {
+    // 🔴 A ARMADILHA CONTINUA REAL, e agora é mais fácil cair nela: a receita
+    // nova USA `aspect-[16/9]`, então basta alguém acrescentar um `max-h` "pra
+    // garantir" e a largura encolhe sozinha, deixando a moldura encostada à
+    // esquerda com faixa preta à direita — o defeito de 15/09, que o dono
+    // fotografou. O limite tem que ser de LARGURA (`max-w`), nunca de altura.
+    const temAltura = /max-h-\[\d+px\]/.test(fonte);
+    assert.ok(!temAltura,
+      'voltou um max-height junto do aspect-ratio — isso encolhe a LARGURA e desalinha a moldura');
   });
 }
 
@@ -74,5 +89,5 @@ test('as quatro telas usam a MESMA receita', () => {
     return m ? m[1].replace(/\s+/g, ' ').trim() : null;
   });
   assert.deepEqual(new Set(receitas).size, 1, `receitas diferentes entre as telas: ${JSON.stringify(receitas)}`);
-  assert.equal(receitas[0], 'h-[56.25vw] max-h-[520px]');
+  assert.equal(receitas[0], 'aspect-[16/9]');
 });
