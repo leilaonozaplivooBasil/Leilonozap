@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fmtBR } from '@/lib/money';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
@@ -260,14 +260,32 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   }, [transactions]);
 
   return (
-    <AnimatePresence>
+    // 🔴 17/09/2026 — SEM AnimatePresence, DE PROPÓSITO.
+    //
+    // "A tela seguinte não abriu e todos os botões ficaram intocáveis; ao
+    // recarregar, caí na tela de finalizar compra."
+    //
+    // O botão do cartão fecha a gaveta e navega. A navegação acontecia e o
+    // checkout até renderizava — mas as duas camadas da gaveta (fundo z-90 e
+    // painel z-95) ficavam por cima, engolindo todo clique.
+    //
+    // Medido num Chromium, com o estado exposto no DOM: 2,5s depois do clique o
+    // nó ainda dizia `open="true"`, com opacidade 1 e a rota já trocada. Ou
+    // seja: o AnimatePresence CONGELOU o filho na saída — não animou, não
+    // desmontou, e parou de repassar o estado novo. Por isso nem `onClose()`
+    // nem fechar pela rota surtiam efeito: os dois rodavam, e o nó preso
+    // ignorava os dois.
+    //
+    // A animação de ENTRADA fica (initial/animate do framer). O que sai é a de
+    // SAÍDA, que era o preço da gaveta poder travar a tela inteira. Gaveta que
+    // some na hora é melhor que gaveta que não some.
+    <>
       {open && (
-        <>
+        <React.Fragment key="gaveta-da-carteira">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
           />
@@ -276,7 +294,6 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 18 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', damping: 24, stiffness: 320 }}
             className="wallet-modal pointer-events-auto w-full max-w-md max-h-[88vh] flex flex-col overflow-hidden"
           >
@@ -689,8 +706,8 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
             `}</style>
           </motion.div>
           </div>
-        </>
+        </React.Fragment>
       )}
-    </AnimatePresence>
+    </>
   );
 }
