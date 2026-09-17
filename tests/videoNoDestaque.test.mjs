@@ -93,12 +93,12 @@ test('a régua da PÁGINA DE VENDA continua com o vídeo NO FIM', () => {
 
 // ─────────────── 🔇 só um vídeo toca por vez (17/09/2026) ───────────────
 
-test('só o PRIMEIRO destaque recebe o vídeo ativo', () => {
+test('só o PRIMEIRO destaque recebe o SOM', () => {
   const tela = ler('src/components/home/DestaquesLeiloes.jsx');
   assert.match(tela, /destaques\.map\(\(auction, posicao\) =>/,
     'sem o índice não há como saber quem é o primeiro');
   assert.match(tela, /videoAtivo=\{posicao === 0\}/,
-    'todos os cards tocariam juntos — seis áudios e ~30 a 48 MB de download');
+    'sem isso, todos os cards ganhariam áudio e tocariam juntos');
 });
 
 test('🔴 é a posição na lista JÁ FILTRADA, não a posição salva', () => {
@@ -113,12 +113,17 @@ test('🔴 é a posição na lista JÁ FILTRADA, não a posição salva', () => 
     'a lista tem que estar filtrada antes de escolher quem toca');
 });
 
-test('🔴 o compartilhar NÃO é travado por videoAtivo', () => {
+test('🔴 videoAtivo trava o SOM, nunca o vídeo nem o compartilhar', () => {
   const card = ler('src/components/auction/AuctionCard.jsx');
-  // compartilhar é ação deliberada, uma de cada vez: não disputa som com
-  // ninguém. Travar junto tiraria o vídeo do WhatsApp em 5 dos 6 destaques.
-  assert.match(card, /const temVideo = Boolean\(video\?\.embed\) && videoAtivo;/,
-    'a trava tem que valer só para o carrossel');
+  // 🔄 Virou na mesma noite: a primeira rodada travava o vídeo inteiro, e o
+  // dono mandou desfazer ("o patinete e a harley também em primeira posição,
+  // mas sem tocar o som"). O que não pode duplicar é o SOM.
+  assert.match(card, /const temVideo = Boolean\(video\?\.embed\);/,
+    '🔴 o vídeo voltou a ser travado — Patinete e Harley abririam com foto de novo');
+  assert.match(card, /if \(!temVideo \|\| !videoAtivo \|\| !querSom\(\)\) return undefined;/,
+    'sem videoAtivo aqui, o clique ligaria o som de TODOS os cards ao mesmo tempo');
+  assert.match(card, /\{temVideo && videoAtivo && video\.tipo === 'arquivo' && mostrandoVideo &&/,
+    'o botão de som apareceria em card que não tem som');
   const share = card.slice(card.indexOf('const handleShare'));
   const corpo = share.slice(0, share.indexOf('\n  };'));
   assert.match(corpo, /video\?\.tipo === 'arquivo' && video\.embed/,
@@ -127,8 +132,17 @@ test('🔴 o compartilhar NÃO é travado por videoAtivo', () => {
     '🔴 o compartilhar foi travado junto — 5 dos 6 destaques perderiam o vídeo no WhatsApp');
 });
 
-test('o padrão de videoAtivo é false — nenhuma outra tela toca sem pedir', () => {
+test('o padrão de videoAtivo é false — ninguém ganha som sem pedir', () => {
   const card = ler('src/components/auction/AuctionCard.jsx');
   assert.match(card, /videoAtivo = false \}\)/,
-    'com padrão true, a listagem de 80 leilões voltaria a montar vídeo');
+    'com padrão true, qualquer tela que passasse vídeo ganharia áudio junto');
+});
+
+test('⚖️ o peso do vídeo mudo está escrito no código, não só no PR', () => {
+  // Vídeo mudo baixa igual. Seis destaques equipados são ~30 a 48 MB na Home.
+  // Foi medido e informado ao dono; quem mexer aqui depois precisa saber disso
+  // sem ter que achar o PR.
+  const card = ler('src/components/auction/AuctionCard.jsx');
+  assert.match(card, /vídeo mudo baixa igual/i,
+    'o custo tem que estar dito onde a decisão mora');
 });

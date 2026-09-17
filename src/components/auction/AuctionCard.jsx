@@ -82,20 +82,23 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // `video` é prop OPCIONAL, e só os Destaques passam (DestaquesLeiloes.jsx).
   // Sem ela o card é o que sempre foi — a listagem de 80 leilões segue sem
   // vídeo nenhum, de propósito ("só no destaques", 17/09).
-  // 🔇 17/09/2026 — SÓ UM VÍDEO TOCA POR VEZ.
+  // 🔇 17/09/2026 — TODO CARD COM VÍDEO ABRE COM ELE; SÓ UM TEM SOM.
   //
-  // Dono: "sempre apenas o vídeo do primeiro destaque fica ativo, para evitar
-  // dois sons de vídeo ao mesmo tempo". Com o som ligando no primeiro toque da
-  // página, seis cards com vídeo dariam seis áudios juntos.
+  // Duas ordens do dono, na mesma noite e nesta ordem:
+  //   1. "sempre apenas o vídeo do primeiro destaque fica ativo, para evitar
+  //      dois sons de vídeo ao mesmo tempo"
+  //   2. "não ficaram legal o patinete e a harley, seus respectivos precisam
+  //      ser primeira posição também, mas sem tocar o som"
   //
-  // E tem o peso: cada vídeo tem de 5 a 8 MB. Seis destaques com vídeo
-  // baixariam ~30 a 48 MB só pra desenhar a Home — no celular, com dados
-  // móveis, isso é a página inteira travada antes de mostrar um leilão.
+  // A primeira rodada travou o vídeo INTEIRO fora do primeiro destaque, e aí o
+  // Patinete e a Harley voltaram a abrir com foto. A segunda corrige a mira: o
+  // que não pode duplicar é o SOM, não o vídeo. Então todo card com vídeo abre
+  // com ele, mudo; `videoAtivo` decide só quem ganha áudio.
   //
-  // 🔴 `videoAtivo` trava SÓ O CARROSSEL. O botão de compartilhar continua
-  // mandando o vídeo em TODOS os cards que têm um: compartilhar é ação
-  // deliberada, uma de cada vez, e não disputa som com ninguém.
-  const temVideo = Boolean(video?.embed) && videoAtivo;
+  // ⚠️ O PREÇO, DITO SEM ENFEITE: vídeo mudo baixa igual. Cada um tem de 5 a
+  // 8 MB (PS5 7,92; Patinete 4,90), então seis destaques equipados são ~30 a
+  // 48 MB na Home. Medido e informado ao dono.
+  const temVideo = Boolean(video?.embed);
   const totalSlides = images.length + (temVideo ? 1 : 0);
 
   // 🔇 MUDO e sozinho, e o rodízio ESPERA o vídeo acabar: o carrossel troca de
@@ -114,7 +117,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   const [preparandoVideo, setPreparandoVideo] = useState(false);
 
   useEffect(() => {
-    if (!temVideo || !querSom()) return undefined;
+    // 🔇 `videoAtivo` entra AQUI, e só aqui: é o som que não pode duplicar.
+    if (!temVideo || !videoAtivo || !querSom()) return undefined;
     // `once: true` nos três: basta o primeiro gesto, e o ouvinte se remove
     // sozinho. `capture` para pegar o gesto mesmo que algo pare a propagação.
     const ligarSom = () => {
@@ -137,7 +141,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       window.removeEventListener('touchstart', ligarSom, opcoes);
       window.removeEventListener('keydown', ligarSom, opcoes);
     };
-  }, [temVideo]);
+  }, [temVideo, videoAtivo]);
 
   const trocarSom = (e) => {
     e.preventDefault();
@@ -557,7 +561,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             {/* 🔊 o botão só existe no slide do vídeo de ARQUIVO — iframe de
                 terceiro tem controle próprio e não aceita mudo de fora.
                 `z-20` porque o degradê da legenda sobe em z-10. */}
-            {temVideo && video.tipo === 'arquivo' && mostrandoVideo && (
+            {temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo && (
               <button
                 type="button"
                 onClick={trocarSom}
