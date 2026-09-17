@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { fmtBR } from '@/lib/money';
+import { textoDoFim } from '@/lib/fimDoLeilao';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, CheckCircle, ChartColumn, Store, Gavel, Lightbulb } from "lucide-react";
+import { DollarSign, CheckCircle, ChartColumn, Store, Gavel, Lightbulb, CalendarClock } from "lucide-react";
 
 // Sugere incremento proporcional ao lance inicial do leilão
 function suggestIncrement(lanceInicio) {
@@ -39,6 +40,22 @@ export default function PriceSection({ formData, onInputChange }) {
       onInputChange("increment", suggestion.value);
     }
   }, [sp]);
+
+  // 🗓️ 17/09/2026 — QUANDO ESTE LEILÃO ENCERRA, dito antes de publicar.
+  // Quatro relógios saíram com 72h no lugar de 48h porque "3 dias (72h)" e
+  // "2 dias (48h)" são linhas vizinhas numa lista e ninguém faz essa conta de
+  // cabeça no meio do cadastro. `end_time` é `agora + duration`
+  // (CreateAuction.jsx), então a data exata já é sabida aqui.
+  //
+  // O relógio anda: o formulário fica aberto por minutos, e uma frase parada
+  // em "às 14:15" enquanto já são 14:32 mente igual. 20s dá precisão de minuto
+  // sem pesar, e o intervalo morre junto com a tela.
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    const relogio = setInterval(() => setAgora(new Date()), 20_000);
+    return () => clearInterval(relogio);
+  }, []);
+  const fimPrevisto = textoDoFim(formData.duration, agora);
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -167,6 +184,18 @@ export default function PriceSection({ formData, onInputChange }) {
               <SelectItem value="1296000">15 dias</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* A data por extenso — "sábado, 19/09/2026 às 14:15" não se confunde
+              com sexta; "72h" se confunde com 48h. Fuso fixo de Brasília: o
+              leilão encerra na hora do Brasil, não na do navegador do admin. */}
+          {fimPrevisto && (
+            <p data-teste="fim-previsto" className="mt-1.5 text-xs text-gray-400">
+              <CalendarClock className="w-3 h-3 inline mr-1 -mt-0.5" />
+              Publicando agora, encerra{' '}
+              <strong className="text-gray-200">{fimPrevisto}</strong>
+              <span className="text-gray-500"> (horário de Brasília)</span>
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
