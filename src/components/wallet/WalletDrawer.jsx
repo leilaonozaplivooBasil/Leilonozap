@@ -145,13 +145,22 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
 
   // 💳 Cartão: fecha a carteira e leva pro checkout completo (mesmo formulário de cartão
   // já usado nos leilões), que credita exatamente o valor escolhido — a taxa fica só na cobrança.
+  //
+  // 🔴 17/09/2026 — A ESCOLHA DO CARTÃO PRECISA VIAJAR JUNTO.
+  // Numa demonstração: a pessoa marcou Cartão, apertou o botão, o checkout
+  // carregou… em PIX. A escolha ficava para trás porque este `state` não a
+  // mandava e o checkout abre em `useState('PIX')`. Quem apertou "cartão"
+  // chegava numa tela de PIX e achava que o botão não tinha funcionado.
+  //
+  // Passa despercebido porque o botão do PIX, ao lado, COBRA ALI MESMO (gera o
+  // QR dentro da gaveta). Quem testa PIX não vê o problema nunca.
   const handlePayWithCard = () => {
     if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
     if (precisaAceite && !aceiteTermos) { toast.error('Aceite os termos do crédito para continuar.'); return; }
     if (precisaAceite) { registrarAceitePassaporte(currentUser).catch(() => { /* segue */ }); }
     onClose();
     navigate(createPageUrl('AuctionCheckoutModern'), {
-      state: { amount: effectiveAmount, depositType: 'digital_wallet', returnTo: null },
+      state: { amount: effectiveAmount, depositType: 'digital_wallet', returnTo: null, paymentType: 'CREDIT_CARD' },
     });
   };
 
@@ -564,7 +573,11 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                     >
                       <CreditCard className="w-5 h-5 mr-2" />
-                      {effectiveAmount >= 100 ? `Pagar R$ ${fmtBR(cardChargeAmount)} no Cartão` : 'Pagar no Cartão'}
+                      {/* 🏷️ "Continuar", não "Pagar": este botão NÃO cobra — ele leva pro
+                          formulário do cartão. Prometer pagamento com valor exato e
+                          entregar um formulário é o que fez a demonstração parecer
+                          defeito. O valor cobrado já está detalhado logo acima. */}
+                      Continuar no Cartão
                     </Button>
                   )}
                   <p className="text-xs text-gray-500 text-center">Valor mínimo R$ 100,00 · Pagamento seguro</p>

@@ -60,7 +60,10 @@ export default function AuctionCheckoutModern() {
   const [addressState, setAddressState] = useState('');
   const [addressZip, setAddressZip] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
-  const [paymentType, setPaymentType] = useState('PIX');
+  // 💳 Abre no meio que a tela anterior escolheu. Sem isto, quem apertou
+  // "Cartão" na carteira chegava aqui em PIX e achava que o botão falhou.
+  // PIX segue sendo o padrão de quem chega sem escolha feita.
+  const [paymentType, setPaymentType] = useState(location.state?.paymentType || 'PIX');
   const isInvestidor = currentUser?.role === 'investidor';
 
   // Garante que investidor só pague com PIX
