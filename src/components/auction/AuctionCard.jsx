@@ -10,7 +10,7 @@
  * ESTA VERSÃO FOI APROVADA COMO O MOLDE PERFEITO. NÃO ALTERAR SEM ORDEM.
  * ========================================================================
  */
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import { capOf } from '@/lib/fotoLegenda';
 import { addMoney, gteMoney, fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
@@ -20,7 +20,7 @@ import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Zap } from "lucide-react";
+import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Zap, Volume2, VolumeX } from "lucide-react";
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
@@ -37,6 +37,7 @@ import useChamada from '@/hooks/useChamada';
 import { precoArremateAgora } from '@/lib/arremateAgora';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
@@ -88,6 +89,53 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // slide a cada 2,5s, e vídeo cortado aos 2,5 segundos é pior do que vídeo
   // nenhum. Sem `loop` de propósito — acabou, as fotos voltam a girar.
   const [videoTocando, setVideoTocando] = useState(false);
+
+  // 🔊 17/09/2026 — O SOM DO VÍDEO. Ver src/lib/somDoDestaque.js para a regra
+  // de navegador que impede "sempre ligado" na partida. Resumo: nasce mudo
+  // (senão não toca), e o primeiro toque da pessoa em QUALQUER lugar da página
+  // tira o mudo. 🔇 desliga e a escolha fica guardada.
+  const videoRef = useRef(null);
+  const [mudo, setMudo] = useState(true);
+  // o vídeo do PS5 tem 7,9 MB: sem aviso, a pessoa aperta compartilhar, não
+  // acontece nada por alguns segundos e ela aperta de novo
+  const [preparandoVideo, setPreparandoVideo] = useState(false);
+
+  useEffect(() => {
+    if (!temVideo || !querSom()) return undefined;
+    // `once: true` nos três: basta o primeiro gesto, e o ouvinte se remove
+    // sozinho. `capture` para pegar o gesto mesmo que algo pare a propagação.
+    const ligarSom = () => {
+      const v = videoRef.current;
+      if (!v || !querSom()) return;
+      v.muted = false;
+      setMudo(false);
+      calarARadio();
+      // 🔴 `play()` pode ser recusado mesmo aqui (aba em segundo plano, por
+      // exemplo). Sem este catch, vira "Unhandled promise rejection" no console
+      // de quem está comprando.
+      v.play?.().catch(() => {});
+    };
+    const opcoes = { once: true, capture: true, passive: true };
+    window.addEventListener('pointerdown', ligarSom, opcoes);
+    window.addEventListener('touchstart', ligarSom, opcoes);
+    window.addEventListener('keydown', ligarSom, opcoes);
+    return () => {
+      window.removeEventListener('pointerdown', ligarSom, opcoes);
+      window.removeEventListener('touchstart', ligarSom, opcoes);
+      window.removeEventListener('keydown', ligarSom, opcoes);
+    };
+  }, [temVideo]);
+
+  const trocarSom = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const v = videoRef.current;
+    const querMudo = !mudo;
+    setMudo(querMudo);
+    gravarQuerSom(!querMudo);
+    if (v) v.muted = querMudo;
+    if (!querMudo) { calarARadio(); v?.play?.().catch(() => {}); }
+  };
 
   const { index: slideAtual, paused: isPaused, carouselProps } = useAutoCarousel(
     totalSlides,
@@ -225,6 +273,48 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     const imageUrl = auction.image_urls?.[0];
+
+    // 🎬 NÍVEL 0 — O VÍDEO, quando o card tem um.
+    //
+    // Dono (17/09): "a opção de compartilhar na página dos leilões compartilhe
+    // com o vídeo no whatsapp".
+    //
+    // 🔴 O QUE NÃO DÁ, E PRECISA ESTAR ESCRITO AQUI: autoplay no WhatsApp não
+    // existe por API. Vídeo enviado como arquivo chega com miniatura e botão de
+    // play; a única coisa que roda sozinha lá é GIF, e esse rótulo só o próprio
+    // WhatsApp aplica quando a pessoa escolhe da galeria. Não há parâmetro,
+    // mime nem meta tag que force isso de fora. O que ganhamos é o vídeo chegar
+    // como VÍDEO (miniatura animada em vários aparelhos) em vez de foto parada.
+    //
+    // Só vídeo de ARQUIVO nosso: YouTube/Vimeo são embed, não há arquivo para
+    // anexar — nesses o link já leva o preview.
+    //
+    // Se qualquer coisa falhar (rede, tamanho, aparelho sem suporte a anexo),
+    // cai na foto logo abaixo. O compartilhamento NUNCA fica sem acontecer.
+    if (video?.tipo === 'arquivo' && video.embed && navigator.share && navigator.canShare) {
+      try {
+        setPreparandoVideo(true);
+        const resposta = await fetch(video.embed, { mode: 'cors' });
+        if (resposta.ok) {
+          const blob = await resposta.blob();
+          // teto do WhatsApp para vídeo é 16 MB; acima disso o anexo é recusado
+          // no aparelho e a pessoa só veria o compartilhamento falhar
+          if (blob.size <= 16 * 1024 * 1024) {
+            const nome = `${(displayTitle || 'leilao').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}.mp4`;
+            const arquivo = new File([blob], nome, { type: blob.type || 'video/mp4' });
+            if (navigator.canShare({ files: [arquivo] })) {
+              await navigator.share({ title: `🔨📦 ${displayTitle}`, text: shareMessage, url: productUrl, files: [arquivo] });
+              return;
+            }
+          }
+        }
+      } catch (erroVideo) {
+        if (erroVideo.name === 'AbortError') return;   // a pessoa fechou a folha
+        console.debug('Share com vídeo falhou, caindo na foto:', erroVideo.message);
+      } finally {
+        setPreparandoVideo(false);
+      }
+    }
 
     // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
@@ -419,10 +509,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             {temVideo && (
               video.tipo === 'arquivo' ? (
                 <video
+                  ref={videoRef}
                   src={video.embed}
                   data-teste="video-do-destaque"
                   autoPlay
-                  muted
+                  muted={mudo}
                   playsInline
                   preload="metadata"
                   // a primeira foto como cartaz: o card nunca nasce preto, e
@@ -448,6 +539,21 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full transition-opacity duration-300 ease-in-out ${mostrandoVideo ? 'opacity-100' : 'opacity-0'}`}
                 />
               )
+            )}
+
+            {/* 🔊 o botão só existe no slide do vídeo de ARQUIVO — iframe de
+                terceiro tem controle próprio e não aceita mudo de fora.
+                `z-20` porque o degradê da legenda sobe em z-10. */}
+            {temVideo && video.tipo === 'arquivo' && mostrandoVideo && (
+              <button
+                type="button"
+                onClick={trocarSom}
+                data-teste="som-do-destaque"
+                aria-label={mudo ? 'Ligar o som do vídeo' : 'Pausar o som do vídeo'}
+                className="absolute bottom-2 left-2 z-20 inline-flex items-center justify-center rounded-full bg-black/70 p-2 text-white backdrop-blur-sm hover:bg-black/85"
+              >
+                {mudo ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
             )}
             {images.map((img, index) => (
               <img
@@ -518,6 +624,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             {/* Botão COMPARTILHAR - MESMO TAMANHO DO FAVORITO */}
             <button
               onClick={handleShare}
+              disabled={preparandoVideo}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               className="w-10 h-10 shadow-lg text-white rounded-full transition-all duration-300 flex items-center justify-center cursor-pointer active:scale-95"
@@ -526,7 +633,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 border: '1px solid rgba(59,130,246,0.3)',
               }}
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className={`w-5 h-5 ${preparandoVideo ? 'animate-pulse' : ''}`} />
             </button>
 
             {/* 🆕 BOTÃO FAVORITAR */}

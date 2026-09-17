@@ -12,6 +12,7 @@ import useCamadaAberta from '@/hooks/useCamadaModal';
 import useArrastavel, { dentroDaTela } from '@/hooks/useArrastavel';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
 import { ladoDaAbertura } from '@/lib/flutuante';
+import { PEDIDO_DE_SILENCIO } from '@/lib/somDoDestaque';
 
 // 🎧 X-MUSIC — o som de trabalho da Top College / X-EOS.
 //
@@ -143,6 +144,18 @@ const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, 
 export default function XMusic() {
   const [aberto, setAberto] = useState(false);
   const [ligado, setLigado] = useState(lerLigado);
+
+  // 🔇 17/09/2026 — A RÁDIO CALA QUANDO O VÍDEO DO DESTAQUE GANHA SOM.
+  // O dono pediu som no vídeo do card. Sem isto, os dois tocariam juntos e a
+  // pessoa ouviria uma mistura — pior que não ter som. Quem pede é o card, por
+  // evento (src/lib/somDoDestaque.js): ele não conhece este player, e não deve.
+  // Só PAUSA; não apaga estação, playlist nem preferência. Um toque na pílula
+  // devolve a rádio de onde parou.
+  useEffect(() => {
+    const calar = () => setLigado(false);
+    window.addEventListener(PEDIDO_DE_SILENCIO, calar);
+    return () => window.removeEventListener(PEDIDO_DE_SILENCIO, calar);
+  }, []);
   const [estacoes, setEstacoes] = useState(lerEstacoes);
   const [falhou, setFalhou] = useState({});           // vagas que esgotaram a fila
   const [vagaAlvo, setVagaAlvo] = useState(null);     // vaga esperando um link

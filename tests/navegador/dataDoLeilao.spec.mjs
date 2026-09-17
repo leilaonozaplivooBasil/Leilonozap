@@ -249,3 +249,84 @@ test('🟢 SEM vídeo o card é o de sempre — nada de elemento sobrando', { sk
     assert.equal(await slideVisivel(pagina), 0, 'a primeira foto tem que abrir o card');
   } finally { await ctx.close(); }
 });
+
+// ─────────────── 🔊 O SOM DO VÍDEO (17/09/2026) ───────────────
+//
+// Dono: "deixa o som do vídeo sempre on com a opção de pause o som".
+//
+// 🔴 "Sempre on" na partida NÃO EXISTE: o navegador recusa `play()` com som
+// antes de qualquer gesto, e o vídeo fica parado no primeiro quadro. O que se
+// prova aqui é o que foi combinado no lugar disso, e é comportamento de
+// verdade num Chromium: nasce mudo, e o PRIMEIRO clique da pessoa em qualquer
+// lugar da página tira o mudo.
+
+const estaMudo = (pagina) => pagina.evaluate(() => {
+  const v = document.querySelector('[data-teste="video-do-destaque"]');
+  return v ? v.muted : null;
+});
+
+test('🔇 o vídeo nasce MUDO — se nascesse com som, não tocaria', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    assert.equal(await estaMudo(pagina), true);
+  } finally { await ctx.close(); }
+});
+
+test('🔊 o PRIMEIRO clique em qualquer lugar da página liga o som', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    assert.equal(await estaMudo(pagina), true, 'partiu com som — isso impediria o autoplay');
+    // um clique longe do vídeo: é "qualquer lugar da página", como foi pedido
+    await pagina.mouse.click(5, 5);
+    await pagina.waitForFunction(
+      () => document.querySelector('[data-teste="video-do-destaque"]')?.muted === false,
+      null, { timeout: 5000 },
+    );
+    assert.equal(await estaMudo(pagina), false);
+  } finally { await ctx.close(); }
+});
+
+test('🔇 o botão pausa o som, e a escolha sobrevive ao recarregar', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    await pagina.click('[data-teste="som-do-destaque"]');   // 1º: liga (é o gesto)
+    await pagina.waitForFunction(
+      () => document.querySelector('[data-teste="video-do-destaque"]')?.muted === false,
+      null, { timeout: 5000 },
+    );
+    await pagina.click('[data-teste="som-do-destaque"]');   // 2º: pausa o som
+    await pagina.waitForFunction(
+      () => document.querySelector('[data-teste="video-do-destaque"]')?.muted === true,
+      null, { timeout: 5000 },
+    );
+
+    // e agora o que importa: recarregar e clicar NÃO pode devolver o som
+    await pagina.reload({ waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]');
+    await pagina.mouse.click(5, 5);
+    await pagina.waitForTimeout(600);
+    assert.equal(await estaMudo(pagina), true,
+      '🔴 a escolha da pessoa foi ignorada — ela pediu silêncio e o gesto devolveu o som');
+  } finally { await ctx.close(); }
+});
+
+test('📻 ligar o som pede à rádio que cale', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=1');
+  try {
+    await pagina.evaluate(() => {
+      window.__calou = 0;
+      window.addEventListener('nz:silenciar-musica', () => { window.__calou += 1; });
+    });
+    await pagina.mouse.click(5, 5);
+    await pagina.waitForFunction(() => window.__calou > 0, null, { timeout: 5000 });
+    assert.ok(await pagina.evaluate(() => window.__calou) > 0,
+      'sem este aviso, o X-MUSIC tocaria junto com o vídeo');
+  } finally { await ctx.close(); }
+});
+
+test('🟢 sem vídeo não existe botão de som', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    assert.equal(await pagina.locator('[data-teste="som-do-destaque"]').count(), 0);
+  } finally { await ctx.close(); }
+});
