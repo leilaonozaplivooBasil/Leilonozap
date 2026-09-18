@@ -28,19 +28,22 @@ const placa = (texto, fundo = '#16241D') =>
   )}`;
 
 // ── Retrato do banco (18/09/2026) ───────────────────────────────────────────
+// [id, título, lance atual, fim, preço na NOSSA loja]
 const LEILOES_REAIS = [
-  ['0b80158c6c6671595a263abe', 'Relógio Masculino Cronógrafo Fundo Azul Subdials Vermelhos Caixa Preta Couro Caramelo', 53.6, '2026-09-18T20:00:00Z'],
-  ['f17539592fddbb672e7677d5', 'Camiseta AR3 - Branca', 24, '2026-09-18T20:00:00Z'],
-  ['31b4742128408a4155ac2ceb', 'Relógios Masculinos De Quartzo Com Cronógrafo Quadrado ZXL', 53.6, '2026-09-18T20:00:00Z'],
-  ['28ba4020ac69303dab9509bc', 'Chinelo Papete Moleca', 15.98, '2026-09-18T20:00:00Z'],
-  ['e72311712bcd173faf1ad5b7', 'Relógio Masculino Automático Skeleton Transparente Pulseira Couro Caramelo', 53.6, '2026-09-18T20:00:00Z'],
-  ['d8c11b27e57fb7d3fbf4aa4b', 'Relógio Masculino Couro Impermeável Luxo', 53.6, '2026-09-18T20:00:00Z'],
-  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, '2026-09-19T17:00:00Z'],
-  ['624b1eaa212bd96e39c6e837', 'Sandália Flatform Feminina Donna Santa Papete 2026', 8.8, '2026-09-19T17:30:00Z'],
-  ['78b615db73452b8149bf52ab', 'Cabo Hdmi 2.0 4k Blindado 5m Ponta Gold 60hz Aquário', 8, '2026-09-19T18:00:00Z'],
-  ['efad72c84c3fd8dc71ffe0f9', 'Dermaroller System Rolinho 540 Microagulha Pele Barba', 6, '2026-09-19T18:30:00Z'],
-  ['f5391152df7af51a9c1088a0', 'Capacitor duplo', 4, '2026-09-19T19:00:00Z'],
-  ['4848b96ea96c8fa86eb5557a', '4 Suportes Para Vasos De Planta Jardins Verticais Samambaia Preto', 1.6, '2026-09-19T19:30:00Z'],
+  ['harley-117', 'Harley 117 - Scooter Elétrico SEM CNH', 477.6, '2026-09-21T21:00:00Z', 3300],
+  ['patinete-dewen', 'Patinete elétrico DeWEN', 237.6, '2026-09-22T21:00:00Z', 997],
+  ['0b80158c6c6671595a263abe', 'Relógio Masculino Cronógrafo Fundo Azul Subdials Vermelhos Caixa Preta Couro Caramelo', 53.6, '2026-09-18T20:00:00Z', 118],
+  ['f17539592fddbb672e7677d5', 'Camiseta AR3 - Branca', 24, '2026-09-18T20:00:00Z', 49],
+  ['31b4742128408a4155ac2ceb', 'Relógios Masculinos De Quartzo Com Cronógrafo Quadrado ZXL', 53.6, '2026-09-18T20:00:00Z', 118],
+  ['28ba4020ac69303dab9509bc', 'Chinelo Papete Moleca', 15.98, '2026-09-18T20:00:00Z', 39],
+  ['e72311712bcd173faf1ad5b7', 'Relógio Masculino Automático Skeleton Transparente Pulseira Couro Caramelo', 53.6, '2026-09-18T20:00:00Z', 118],
+  ['d8c11b27e57fb7d3fbf4aa4b', 'Relógio Masculino Couro Impermeável Luxo', 53.6, '2026-09-18T20:00:00Z', 118],
+  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, '2026-09-19T17:00:00Z', 32],
+  ['624b1eaa212bd96e39c6e837', 'Sandália Flatform Feminina Donna Santa Papete 2026', 8.8, '2026-09-19T17:30:00Z', 26],
+  ['78b615db73452b8149bf52ab', 'Cabo Hdmi 2.0 4k Blindado 5m Ponta Gold 60hz Aquário', 8, '2026-09-19T18:00:00Z', 24],
+  ['efad72c84c3fd8dc71ffe0f9', 'Dermaroller System Rolinho 540 Microagulha Pele Barba', 6, '2026-09-19T18:30:00Z', 18],
+  ['f5391152df7af51a9c1088a0', 'Capacitor duplo', 4, '2026-09-19T19:00:00Z', 12],
+  ['4848b96ea96c8fa86eb5557a', '4 Suportes Para Vasos De Planta Jardins Verticais Samambaia Preto', 1.6, '2026-09-19T19:30:00Z', 152.96],
 ];
 
 // O PS5 é o leilão que hoje ocupa o primeiro destaque — vira o herói do hero.
@@ -58,7 +61,8 @@ const auctions = [
   })),
   // enchimento até os 56 ativos que a base tem, com término fora da semana
   // para não poluir o carrossel — eles existem só para a contagem bater.
-  ...Array.from({ length: 43 }, (_, i) => ({
+  // (1 herói + LEILOES_REAIS + enchimento = 56)
+  ...Array.from({ length: 56 - 1 - LEILOES_REAIS.length }, (_, i) => ({
     id: `enchimento-${i}`, title: `Leilão ${i + 1}`, current_price: 10, starting_price: 10,
     status: 'active', end_time: '2026-10-30T21:00:00Z', product_id: `p-enchimento-${i}`,
     image_urls: [placa('Item')],
@@ -66,9 +70,15 @@ const auctions = [
 ];
 
 // 2.853 produtos no acervo, 235 publicados na loja — os números reais.
-const products = Array.from({ length: 2853 }, (_, i) => ({
-  id: `prod-${i}`, catalog_active: i < 235,
-}));
+// Os produtos LIGADOS aos leilões vêm à parte, com o preço da nossa loja: é ele
+// que ordena o "Em destaque" e que o card mostra ao lado do lance.
+const products = [
+  { id: 'p-ps5', catalog_active: true, price_catalog: 6000 },
+  ...LEILOES_REAIS.map(([id, , , , naLoja]) => ({ id: `p-${id}`, catalog_active: true, price_catalog: naLoja })),
+  ...Array.from({ length: 2853 - 1 - LEILOES_REAIS.length }, (_, i) => ({
+    id: `prod-${i}`, catalog_active: i < 235 - 1 - LEILOES_REAIS.length,
+  })),
+];
 
 const featured_products = [PS5.id, ...LEILOES_REAIS.slice(0, 5).map(([id]) => id)]
   .map((auction_id, i) => ({ id: `f${i}`, sort_order: i, is_active: true, raw_base44: { auction_id } }));

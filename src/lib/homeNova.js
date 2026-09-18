@@ -61,6 +61,49 @@ export function recadoDaCategoria(categoria) {
   return partes.join(' · ');
 }
 
+/**
+ * Quanto o item vale, para o carrossel "Em destaque" ordenar sozinho.
+ *
+ * 🔴 NÃO É `market_price` NEM `manual_market_price`. Medido em 18/09/2026: os
+ * dois estão vazios em 100% dos 49 leilões ativos — ordenar por eles daria
+ * ordem aleatória. O que existe é o preço do MESMO produto na nossa loja
+ * (`products.price_catalog`), que é preço nosso, não estimativa de terceiro.
+ *
+ * Isso muda a cara da home sem mexer no acervo: ordenando assim, sobem o PS5
+ * (R$ 6.000 na loja), a Harley (R$ 3.300) e o patinete (R$ 997) — que já
+ * estavam lá embaixo, atrás de relógio de R$ 53,60.
+ */
+export function valorDoItem(leilao, precoPorProduto = {}) {
+  const daLoja = Number(precoPorProduto[leilao?.product_id]);
+  return Number.isFinite(daLoja) && daLoja > 0 ? daLoja : 0;
+}
+
+export const TETO_DE_DESTAQUES = 6;
+
+/**
+ * Quantos cabem no "Em destaque" sem deixar a semana vazia.
+ *
+ * 🔴 ISTO É CORREÇÃO DE UM DEFEITO REAL, pego na banca em 18/09/2026: com 8
+ * fixos, o "Em destaque" levou TODOS os leilões que tinham preço de loja e o
+ * carrossel "Leilões da semana" ficou sem nenhum — a seção inteira sumiu da
+ * página. O destaque nunca pode consumir mais que metade do que existe.
+ */
+export function quantosDestaques(disponiveis, teto = TETO_DE_DESTAQUES) {
+  const n = Number(disponiveis) || 0;
+  if (n <= 1) return 0;
+  return Math.max(1, Math.min(teto, Math.floor(n / 2)));
+}
+
+/** Os mais valiosos primeiro. Sem preço conhecido vai pro fim, nunca some. */
+export function maisValiosos(leiloes, precoPorProduto = {}, quantos = TETO_DE_DESTAQUES) {
+  return (leiloes || [])
+    .filter((a) => a && a.status === 'active')
+    .map((a) => ({ a, valor: valorDoItem(a, precoPorProduto) }))
+    .sort((x, y) => y.valor - x.valor || String(x.a.title || '').localeCompare(String(y.a.title || ''), 'pt-BR'))
+    .slice(0, quantos)
+    .map(({ a }) => a);
+}
+
 export const DIAS_DA_SEMANA = 7;
 
 /**

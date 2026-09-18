@@ -11,9 +11,13 @@ import { precoDoLeilao, emReais } from '@/lib/homeNova';
 // as setas no desktop. O cronômetro fica no card de propósito — num leilão, o
 // tempo que falta é o que faz a pessoa clicar.
 
-function CartaoDeLeilao({ leilao, rotuloDoBotao }) {
+function CartaoDeLeilao({ leilao, rotuloDoBotao, naLoja = 0 }) {
   const foto = leilao.image_urls?.[0] || null;
   const fim = textoDeTermino(leilao.end_time);
+  const lance = precoDoLeilao(leilao);
+  // 💰 Só compara quando a loja é REALMENTE mais cara — senão a comparação
+  // depõe contra o leilão. E o preço é NOSSO, da nossa loja, não estimativa.
+  const compara = naLoja > 0 && naLoja > lance;
 
   return (
     <article
@@ -36,8 +40,13 @@ function CartaoDeLeilao({ leilao, rotuloDoBotao }) {
         )}
         <div className="mt-2 text-[11px] uppercase tracking-[0.08em] text-white/40">Lance atual</div>
         <div className="text-[17px] font-semibold leading-tight text-nz-verde-claro" data-teste="preco-do-cartao">
-          {emReais(precoDoLeilao(leilao))}
+          {emReais(lance)}
         </div>
+        {compara && (
+          <div className="mt-0.5 text-[11px] text-white/40" data-teste="preco-na-loja">
+            na loja <span className="line-through">{emReais(naLoja)}</span>
+          </div>
+        )}
         <Link
           to={`/AuctionRoom?id=${encodeURIComponent(leilao.id)}`}
           className="mt-3 flex min-h-[40px] items-center justify-center rounded-full bg-nz-verde-claro px-3 text-[13px] font-semibold text-white transition-colors hover:bg-nz-verde"
@@ -53,6 +62,7 @@ export default function CarrosselDeLeiloes({
   titulo,
   subtitulo,
   leiloes = [],
+  precoNaLoja = {},
   rotuloDoBotao = 'Dar lance',
   verTudo = { rotulo: 'Ver todos os leilões', para: '/leiloes' },
   teste = 'carrossel-de-leiloes',
@@ -92,7 +102,7 @@ export default function CarrosselDeLeiloes({
         <div ref={trilho} className="nz-no-scrollbar mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
           {leiloes.map((a) => (
             <div key={a.id} className="snap-start">
-              <CartaoDeLeilao leilao={a} rotuloDoBotao={rotuloDoBotao} />
+              <CartaoDeLeilao leilao={a} rotuloDoBotao={rotuloDoBotao} naLoja={Number(precoNaLoja[a.product_id]) || 0} />
             </div>
           ))}
         </div>

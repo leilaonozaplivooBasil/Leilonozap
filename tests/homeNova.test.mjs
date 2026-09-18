@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { semComentarios } from './_ajuda.mjs';
 import {
-  categoriasDaVitrine, recadoDaCategoria, leiloesDaSemana,
+  categoriasDaVitrine, recadoDaCategoria, leiloesDaSemana, maisValiosos, valorDoItem, quantosDestaques, TETO_DE_DESTAQUES,
   numerosDaCasa, precoDoLeilao, emReais, AVISO_NAO_OFICIAL,
 } from '../src/lib/homeNova.js';
 
@@ -132,4 +132,61 @@ test('o rodapé não escreve contato na mão — importa da fonte única', () =>
   assert.ok(!/\(\d{2}\)\s?\d{4,5}-\d{4}/.test(rodape), 'telefone digitado no rodapé');
   assert.ok(!/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.test(rodape), 'CNPJ digitado no rodapé');
   assert.ok(!/@[a-z0-9.-]+\.(com|net|br)/i.test(rodape), 'e-mail digitado no rodapé');
+});
+
+// ── 💎 "EM DESTAQUE" SE ORDENA SOZINHO ───────────────────────────────────────
+
+test('o "Em destaque" põe na frente o que vale mais na nossa loja', () => {
+  const leiloes = [
+    { id: 'relogio', status: 'active', title: 'Relógio', product_id: 'p1' },
+    { id: 'ps5', status: 'active', title: 'Playstation 5', product_id: 'p2' },
+    { id: 'harley', status: 'active', title: 'Harley 117', product_id: 'p3' },
+  ];
+  const preco = { p1: 118, p2: 6000, p3: 3300 };
+  assert.deepEqual(maisValiosos(leiloes, preco).map((a) => a.id), ['ps5', 'harley', 'relogio']);
+});
+
+test('leilão sem preço conhecido vai pro fim, mas não some', () => {
+  const leiloes = [
+    { id: 'sem_preco', status: 'active', title: 'A', product_id: 'px' },
+    { id: 'com_preco', status: 'active', title: 'B', product_id: 'p1' },
+  ];
+  const ordem = maisValiosos(leiloes, { p1: 100 }).map((a) => a.id);
+  assert.deepEqual(ordem, ['com_preco', 'sem_preco']);
+});
+
+test('🔴 o valor NÃO sai de market_price: os dois campos estão vazios na base inteira', () => {
+  // Medido em 18/09/2026: 0 de 49 leilões ativos têm market_price ou
+  // manual_market_price. Se a régua lesse de lá, a ordem seria aleatória.
+  const comMarketPrice = { id: 'x', status: 'active', title: 'X', product_id: 'p1', market_price: 9999, manual_market_price: 9999 };
+  assert.equal(valorDoItem(comMarketPrice, {}), 0, 'market_price não pode valer nada aqui');
+  assert.equal(valorDoItem(comMarketPrice, { p1: 250 }), 250, 'o valor sai do preço de loja do produto');
+});
+
+test('o carrossel mostra "na loja" só quando a loja é mais cara que o lance', () => {
+  const tela = semComentarios(readFileSync(path.join(RAIZ, 'src/components/homenova/CarrosselDeLeiloes.jsx'), 'utf8'));
+  assert.match(tela, /naLoja > 0 && naLoja > lance/, 'a comparação precisa exigir que a loja seja mais cara');
+});
+
+test('🔴 o "Em destaque" não pode engolir a semana inteira', () => {
+  // Pego na banca (18/09/2026): com 8 fixos, o destaque levou TODOS os leilões
+  // com preço e "Leilões da semana" sumiu da página.
+  assert.equal(quantosDestaques(8), 4, 'com 8 disponíveis, no máximo 4 no destaque');
+  assert.equal(quantosDestaques(2), 1);
+  assert.equal(quantosDestaques(40), TETO_DE_DESTAQUES, 'com folga, respeita o teto');
+  assert.equal(quantosDestaques(1), 0, 'com um só, ele é o hero — destaque vazio');
+  assert.equal(quantosDestaques(0), 0);
+});
+
+test('com o limite, sempre sobra leilão para a semana', () => {
+  const pool = Array.from({ length: 9 }, (_, i) => ({
+    id: `a${i}`, status: 'active', title: `L${i}`, product_id: `p${i}`,
+    end_time: new Date(AGORA.getTime() + (i + 1) * 3600 * 1000).toISOString(),
+  }));
+  const preco = Object.fromEntries(pool.map((a, i) => [`p${i}`, (i + 1) * 100]));
+  const destaque = maisValiosos(pool, preco, quantosDestaques(pool.length));
+  const semana = leiloesDaSemana(pool, { agora: AGORA, jaEstaoEmCartaz: destaque });
+  assert.ok(destaque.length > 0, 'destaque vazio');
+  assert.ok(semana.length > 0, 'a semana ficou sem nada — foi exatamente o defeito');
+  assert.equal(destaque.length + semana.length, pool.length, 'nenhum leilão pode se perder entre os dois');
 });

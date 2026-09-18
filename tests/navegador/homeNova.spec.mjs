@@ -158,3 +158,28 @@ test('no celular a home não vaza pro lado', { skip: semNavegador }, async () =>
   assert.ok(vazou <= 1, `a página rola ${vazou}px pro lado no celular`);
   await pagina.close();
 });
+
+test('na tela, o "Em destaque" começa pelos itens âncora — e mostra o preço da loja', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+
+  const titulos = await pagina.$$eval(
+    '[data-teste="carrossel-destaque"] [data-teste="cartao-de-leilao"] h3',
+    (ns) => ns.map((n) => n.textContent.trim()),
+  );
+  assert.ok(titulos.length >= 2, 'destaque com menos de dois cards');
+  // Harley (R$ 3.300 na loja) e patinete (R$ 997) têm que vir antes dos
+  // relógios de R$ 118 — o herói (PS5) sai da lista pra não repetir.
+  assert.match(titulos[0], /Harley/i, `o primeiro devia ser a Harley, veio: ${titulos[0]}`);
+  assert.match(titulos[1], /Patinete/i, `o segundo devia ser o patinete, veio: ${titulos[1]}`);
+
+  const naLoja = await pagina.$$eval(
+    '[data-teste="carrossel-destaque"] [data-teste="preco-na-loja"]',
+    (ns) => ns.map((n) => n.textContent.trim()),
+  );
+  assert.ok(naLoja.some((t) => /3\.300,00/.test(t)), `faltou o preço de loja da Harley: ${naLoja.join(' | ')}`);
+
+  // 🔴 e o herói não pode aparecer também no carrossel
+  assert.ok(!titulos.some((t) => /Playstation/i.test(t)), 'o leilão do hero repetiu no carrossel');
+
+  await pagina.close();
+});
