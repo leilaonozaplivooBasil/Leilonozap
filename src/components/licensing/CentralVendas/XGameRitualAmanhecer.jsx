@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, Volume2, VolumeX, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic } from 'lucide-react';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
+import DicaDaEtapa from './DicaDaEtapa';
 import { juntarTexto } from '@/lib/ditado';
 import { restricoesDaCamera, opcoesDoGravador, avisoDoVideoGrande } from '@/lib/gravadorDeVideo';
-import { gratidaoEntregue, faltaDaGratidao, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
+import { gratidaoEntregue, GRATIDAO_MIN, VISUALIZACAO_MIN_SEG, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
 // conseguiu importar — não tem terceira.
@@ -876,10 +877,15 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               >{salvando === 'gratidao' ? 'guardando…' : 'Continuar'}</button>
-              {/* botão apagado tem que DIZER o que falta, na unidade certa:
-                  "faltam 12 caracteres" pra quem acabou de falar é grego */}
+              {/* 📣 ESTE É O TEXTO QUE O DONO CIRCULOU DE VERMELHO (18/09).
+                  A redação já estava certa — diz a falta na unidade certa,
+                  conserto do chamado do Paim em 07/09. O que faltava era ser
+                  VISTO, e contar o que já foi feito em vez do que falta.
+                  Quem gravou 61 de 70s andou 87%; a barra mostra isso. */}
               {!entrega.ok && (
-                <p className="text-[11px] text-white/45">{faltaDaGratidao({ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje })}</p>
+                audioGratidaoSeg > 0
+                  ? <DicaDaEtapa feito={audioGratidaoSeg} meta={minSegHoje} unidade="s" complemento="ou escreve, se preferir" teste="dica-gratidao" />
+                  : <DicaDaEtapa feito={String(gratidao || '').trim().length} meta={GRATIDAO_MIN} unidade="letras" complemento="ou grava um áudio" teste="dica-gratidao" />
               )}
             </div>
           </>
@@ -914,7 +920,22 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   {textoDoCronometroVisualizacao(gravSeg)}
                 </p>
-                <p className="text-white/60 text-[11px]">Olha os sonhos subindo. Respira. Visualiza você chegando lá.</p>
+                {/* 📣 18/09 — a MESMA dor do "fale mais 9s": o quanto falta pra
+                    liberar só existia no `title` (que no celular ninguém vê) e
+                    dentro do rótulo do botão apagado. Agora a barra enche na
+                    frente da pessoa enquanto ela visualiza. */}
+                {faltaDaVisualizacao(gravSeg) > 0 && (
+                  <DicaDaEtapa
+                    feito={gravSeg}
+                    meta={VISUALIZACAO_MIN_SEG}
+                    unidade="s"
+                    complemento="Olha os sonhos subindo. Respira. Visualiza você chegando lá."
+                    teste="dica-visualizacao"
+                  />
+                )}
+                {faltaDaVisualizacao(gravSeg) === 0 && (
+                  <p className="text-white/60 text-[11px]">Olha os sonhos subindo. Respira. Visualiza você chegando lá.</p>
+                )}
                 <div className="flex items-center justify-center gap-2">
                   <button
                     type="button"
