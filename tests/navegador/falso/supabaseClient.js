@@ -17,7 +17,9 @@ const tabela = (nome) => (banco().tabelas[nome] ||= []);
 
 class Consulta {
   constructor(nome) { this.nome = nome; this.filtros = []; this.ordens = []; this.lim = null; this.modo = 'select'; this.unico = null; }
-  select() { if (this.modo === 'select') this.modo = 'select'; return this; }
+  // `select('id', { count: 'exact', head: true })` — a home conta leilão e produto
+  // assim; sem isto a banca devolvia count undefined e a faixa de números sumia.
+  select(_cols, opts) { if (this.modo === 'select') this.modo = 'select'; this.contar = opts?.count || null; this.soCabeca = opts?.head === true; return this; }
   eq(c, v) { this.filtros.push((r) => String(r[c]) === String(v)); return this; }
   neq(c, v) { this.filtros.push((r) => String(r[c]) !== String(v)); return this; }
   in(c, lista) { const s = new Set((lista || []).map(String)); this.filtros.push((r) => s.has(String(r[c]))); return this; }
@@ -76,7 +78,9 @@ class Consulta {
     }
     const ls = this._linhas();
     if (this.unico) return { data: ls[0] ?? null, error: this.unico === 'single' && !ls.length ? { message: 'sem linha' } : null };
-    return { data: ls, error: null };
+    // a contagem ignora o `limit` — é o total que casa com o `{ count: 'exact' }`
+    const total = this.contar ? tabela(this.nome).filter((r) => this.filtros.every((f) => f(r))).length : undefined;
+    return { data: this.soCabeca ? null : ls, count: total, error: null };
   }
 
   then(ok, erro) { return Promise.resolve().then(() => this._executar()).then(ok, erro); }
