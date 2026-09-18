@@ -61,7 +61,16 @@ test('a tela do ritual usa a meta de HOJE, não o piso fixo de 15s', () => {
   assert.match(RITUAL, /metaMotivosGratidaoHoje\(diaCorridoCiclo\)/);
   assert.match(RITUAL, /gratidaoAudioMinSegHoje\(diaCorridoCiclo\)/);
   assert.match(RITUAL, /gratidaoEntregue\(\{ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje \}\)/);
-  assert.match(RITUAL, /faltaDaGratidao\(\{ texto: gratidao, audioSeg: audioGratidaoSeg, minSeg: minSegHoje \}\)/);
+  // 🔄 18/09/2026 — a ÂNCORA MUDOU, a regra NÃO.
+  // O aviso embaixo do botão deixou de ser um `<p>` com `faltaDaGratidao(...)`
+  // e virou a pílula com barra (DicaDaEtapa) — o dono circulou aquele texto no
+  // print e pediu mais visibilidade. O que este teste guarda continua sendo o
+  // mesmo, e é o que importa: a meta que a tela usa é a de HOJE, que cresce ao
+  // longo do ciclo, e nunca o piso fixo.
+  assert.match(RITUAL, /<DicaDaEtapa feito=\{audioGratidaoSeg\} meta=\{minSegHoje\}/,
+    'o aviso da gratidão falada precisa medir contra a meta de hoje');
+  assert.match(RITUAL, /<DicaDaEtapa feito=\{String\(gratidao \|\| ''\)\.trim\(\)\.length\} meta=\{GRATIDAO_MIN\}/,
+    'quem escreve mede contra o mínimo de letras, não contra segundos');
   assert.match(RITUAL, /fale pelo menos \$\{metaMotivosHoje\} motivos hoje/, 'a instrução fala em MOTIVOS, não em segundos soltos');
   assert.ok(!/GRATIDAO_AUDIO_MIN_SEG/.test(RITUAL), 'a tela não volta a usar o piso fixo — sempre o de hoje');
 });
