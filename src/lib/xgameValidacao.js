@@ -69,6 +69,20 @@ export function decisaoAposIA(ia, { foraDaJanela = false, tentativa = 1 } = {}) 
   if (ia?.ia_indisponivel) {
     return { acao: 'ia_fora', motivo: ia?.motivo || 'a IA de validação está fora do ar agora' };
   }
+  // 🖼️ IMAGEM RECUSADA ≠ DÚVIDA, e ≠ IA fora.
+  //
+  // 17/09/2026: foto de 5,85 MB, acima do teto de 5 MB da Anthropic. Nenhuma
+  // análise aconteceu — logo não cabe "benefício da dúvida" (aprovaria sem
+  // ninguém ter olhado) nem "IA fora do ar" (a IA está no ar; o problema é a
+  // foto, e a pessoa consegue resolver em dez segundos).
+  //
+  // ⚠️ ESTA CHECAGEM VEM ANTES DE LER O VEREDITO de propósito: o servidor
+  // devolve `veredito: 'duvida'` junto com `imagem_recusada`, e é justamente
+  // essa dúvida que cairia no "aprova com o benefício da dúvida" lá embaixo.
+  if (ia?.imagem_recusada) {
+    return { acao: 'trocar_imagem', motivo: ia?.motivo || 'não consegui usar essa imagem — envie outra' };
+  }
+
   const veredito = ia?.veredito;
   const pergunta = String(ia?.pergunta_para_pessoa || '').trim();
 
