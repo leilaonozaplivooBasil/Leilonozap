@@ -114,7 +114,18 @@ export default function ExplorePorCategoria({ categorias = [] }) {
                     style={{ background: 'linear-gradient(to top, rgba(7,16,12,0.94) 0%, rgba(7,16,12,0.72) 26%, rgba(7,16,12,0.12) 58%, rgba(7,16,12,0.06) 100%)' }}
                   />
 
-                  <div className="absolute inset-x-0 bottom-0 p-3">
+                  {/* 🖱️ 19/09/2026 — o card inteiro era clicável e nada dizia isso.
+                      A pílula surge de baixo no hover: é a resposta do card ao
+                      mouse, e de quebra nomeia a ação em vez de deixar a pessoa
+                      adivinhar que clicar leva à lista da categoria. */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-3 right-3 z-10 inline-flex translate-y-2 items-center gap-1 rounded-full bg-nz-verde-neon px-2.5 py-1 text-[11px] font-bold text-nz-noite opacity-0 shadow-[0_8px_20px_-8px_rgba(63,208,126,0.9)] transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0"
+                  >
+                    Ver <ArrowRight size={12} />
+                  </span>
+
+                  <div className="absolute inset-x-0 bottom-0 p-3 pr-16">
                     <div className="text-[14px] font-semibold leading-tight text-white transition-colors group-hover:text-nz-verde-neon">{c.nome}</div>
                     <div className="mt-1 text-[12px] text-white/70" data-teste="recado-categoria">
                       {recadoDaCategoria(c)}

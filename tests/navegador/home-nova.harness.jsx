@@ -62,7 +62,7 @@ const LEILOES_REAIS = [
   ['28ba4020ac69303dab9509bc', 'Chinelo Papete Moleca', 15.98, daquiAHoras(26), 39],
   ['e72311712bcd173faf1ad5b7', 'Relógio Masculino Automático Skeleton Transparente Pulseira Couro Caramelo', 53.6, daquiAHoras(26), 118],
   ['d8c11b27e57fb7d3fbf4aa4b', 'Relógio Masculino Couro Impermeável Luxo', 53.6, daquiAHoras(26), 118],
-  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, daquiAHoras(5), 32],
+  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, daquiAHoras(0.1), 32],
   ['624b1eaa212bd96e39c6e837', 'Sandália Flatform Feminina Donna Santa Papete 2026', 8.8, daquiAHoras(6), 26],
   ['78b615db73452b8149bf52ab', 'Cabo Hdmi 2.0 4k Blindado 5m Ponta Gold 60hz Aquário', 8, daquiAHoras(8), 24],
   ['efad72c84c3fd8dc71ffe0f9', 'Dermaroller System Rolinho 540 Microagulha Pele Barba', 6, daquiAHoras(10), 18],

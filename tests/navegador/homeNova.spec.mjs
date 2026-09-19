@@ -222,3 +222,121 @@ test('🔴 com prefers-reduced-motion, NENHUMA seção nasce invisível', { skip
   }
   await pagina.close();
 });
+
+// ── O que o dono pediu em 19/09: "mais interativo" ──────────────────────────
+//
+// Três interações que faltavam, e que só o navegador prova: a seta que sabe que
+// chegou ao fim, o arrasto com o mouse, e o relógio que esquenta quando falta
+// pouco. As duas primeiras são de comportamento; a terceira é de informação.
+
+test('🔴 a seta "anterior" nasce desligada, e a "próximo" desliga no fim do trilho', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const anterior = pagina.locator('[data-teste="carrossel-destaque"] [data-teste="seta-anterior"]');
+  const proximo = pagina.locator('[data-teste="carrossel-destaque"] [data-teste="seta-proximo"]');
+
+  assert.equal(await anterior.isDisabled(), true, 'no começo não há para onde voltar');
+  assert.equal(await proximo.isDisabled(), false, 'e há para onde ir');
+
+  // vai até o fim do trilho pelo próprio botão, como a pessoa faria
+  for (let i = 0; i < 12; i += 1) {
+    if (await proximo.isDisabled()) break;
+    await proximo.click();
+    await pagina.waitForTimeout(420);
+  }
+
+  assert.equal(await proximo.isDisabled(), true, 'no fim, o "próximo" não pode continuar aceso');
+  assert.equal(await anterior.isDisabled(), false, 'e o "anterior" acende');
+  await pagina.close();
+});
+
+test('🖱️ arrastar com o mouse move o trilho, e o clique parado continua chegando no card', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const trilho = pagina.locator('[data-teste="carrossel-destaque"] [role="group"]');
+  await trilho.scrollIntoViewIfNeeded();
+
+  // 🔴 A BANCA MONTA A HOME SOLTA, sem <Routes>: clicar num <Link> aqui NÃO muda
+  // a URL nem troca de tela. Conferir `pagina.url()` seria prova decorativa —
+  // passa igual com a proteção removida (medido: a mutação não derrubou nada).
+  // Então a prova conta os cliques que CHEGAM no link do card.
+  await pagina.evaluate(() => {
+    window.__cliquesNoCard = 0;
+    document.querySelectorAll('[data-teste="cartao-de-leilao"] a').forEach((a) => {
+      a.addEventListener('click', (e) => { window.__cliquesNoCard += 1; e.preventDefault(); });
+    });
+  });
+
+  // A ORDEM IMPORTA: os passos com o card vêm ANTES do arrasto longo. Depois de
+  // rolar, a primeira carta sai de vista e o clique naquela coordenada cai fora
+  // dela — foi o que derrubou a primeira versão desta prova.
+
+  // 1) CONTROLE: um clique parado PRECISA chegar no card. Sem isto, o passo 2
+  //    passaria por não existir clique nenhum, e não por haver proteção.
+  const cartao = pagina.locator('[data-teste="cartao-de-leilao"]').first();
+  const c1 = await cartao.boundingBox();
+  await pagina.mouse.move(c1.x + c1.width / 2, c1.y + 30);
+  await pagina.mouse.down();
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(150);
+  assert.equal(
+    await pagina.evaluate(() => window.__cliquesNoCard), 1,
+    'clique parado tem que chegar no card — senão esta prova não sabe medir nada',
+  );
+
+  // 2) 🚫 A ASSERÇÃO "arrastar não abre o leilão" NÃO MORA AQUI, e isso é uma
+  //    decisão, não um esquecimento.
+  //
+  //    Eu escrevi essa prova, ela ficou verde, e aí ela passou também com as
+  //    DUAS proteções removidas — sinal de que media o próprio silêncio.
+  //    Medido no Chromium da banca, com o DOM parado (trilho em scrollLeft 0,
+  //    arrasto para o lado que não rola):
+  //
+  //      clique parado ......... dispara click no <img> dentro do <a>
+  //      arrasto de 56px ....... NENHUM evento de clique
+  //      arrasto de 6px ........ NENHUM evento de clique
+  //
+  //    O próprio navegador já não transforma arrasto em clique. A trava
+  //    `engolirCliqueDeArrasto` continua no componente como cinto e suspensório
+  //    (outros navegadores não prometem o mesmo), mas AQUI ela é inverificável:
+  //    uma asserção que não pode falhar é ruído verde, e ruído verde é pior que
+  //    ausência — ensina a confiar no que não foi medido.
+  //
+  //    O passo 1 acima, esse sim, prova algo real: foi ele que pegou o
+  //    `setPointerCapture` que eu havia colocado no trilho e que redirecionava
+  //    TODO clique para ele, deixando os cards não-clicáveis.
+
+  // 3) arrasto longo: o trilho tem que andar de verdade
+  const caixa = await trilho.boundingBox();
+  const y = caixa.y + caixa.height / 2;
+  const antes = await trilho.evaluate((el) => el.scrollLeft);
+  await pagina.mouse.move(caixa.x + caixa.width - 60, y);
+  await pagina.mouse.down();
+  for (let x = 40; x <= 320; x += 40) await pagina.mouse.move(caixa.x + caixa.width - 60 - x, y);
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(250);
+  const depois = await trilho.evaluate((el) => el.scrollLeft);
+  assert.ok(depois > antes + 40, `o trilho tinha que ter andado — foi de ${antes} para ${depois}`);
+
+  await pagina.close();
+});
+
+test('⏳ o leilão que fecha em minutos vem marcado como crítico; o de dias, não', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const pilulas = pagina.locator('[data-teste="contagem-do-cartao"]');
+  const total = await pilulas.count();
+  assert.ok(total > 0, 'nenhuma pílula de contagem na tela');
+
+  const faixas = [];
+  for (let i = 0; i < total; i += 1) faixas.push(await pilulas.nth(i).getAttribute('data-urgencia'));
+
+  assert.ok(faixas.includes('critico'), `o banco tem um leilão de 6 minutos e nenhuma pílula ficou crítica: ${faixas.join(', ')}`);
+  assert.ok(faixas.includes('normal'), 'nenhuma pílula normal — se tudo fica crítico, nada chama atenção');
+
+  // o crítico pulsa; o normal não
+  const critica = pilulas.filter({ has: pagina.locator('xpath=.') }).first();
+  const classesCritica = await pagina.locator('[data-urgencia="critico"]').first().getAttribute('class');
+  const classesNormal = await pagina.locator('[data-urgencia="normal"]').first().getAttribute('class');
+  assert.match(classesCritica, /animate-pulse/, 'o crítico tinha que pulsar');
+  assert.doesNotMatch(classesNormal, /animate-pulse/, 'o normal não pode pulsar');
+  assert.ok(critica);
+  await pagina.close();
+});
