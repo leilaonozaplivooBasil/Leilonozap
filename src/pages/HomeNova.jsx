@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
-import { categoriasDaVitrine, leiloesDaSemana, maisValiosos, quantosDestaques, numerosDaCasa } from '@/lib/homeNova';
+import { categoriasDaVitrine, leiloesDaSemana, maisValiosos, quantosDestaques, numerosDaCasa, valorDoItem } from '@/lib/homeNova';
 import TopoHomeNova from '@/components/homenova/TopoHomeNova';
 import HeroDoDia from '@/components/homenova/HeroDoDia';
 import ExplorePorCategoria from '@/components/homenova/ExplorePorCategoria';
@@ -129,7 +129,7 @@ export default function HomeNova() {
   return (
     <div className="min-h-screen bg-nz-noite">
       <TopoHomeNova leiloesAgora={leiloesAgora} onBuscar={buscar} />
-      <HeroDoDia leilao={heroi} />
+      <HeroDoDia leilao={heroi} naLoja={valorDoItem(heroi, precoNaLoja)} />
       <ExplorePorCategoria categorias={categorias} />
       <FaixaDeNumeros itens={numeros} />
       <CarrosselDeLeiloes

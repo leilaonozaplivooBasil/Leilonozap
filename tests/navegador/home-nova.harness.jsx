@@ -15,6 +15,15 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/index.css';
 import HomeNova from '@/pages/HomeNova';
 
+// 🖼️ As artes de categoria são NOSSAS e moram no repositório (public/categorias),
+// então aqui entram de verdade — não como tarja. É o que faz esta banca provar
+// que a foto do dono cabe no card, em vez de provar que um retângulo cabe.
+import arteCasaCozinha from '../../public/categorias/casa-e-cozinha.webp';
+import arteEletronicos from '../../public/categorias/eletronicos.webp';
+import arteFerramentas from '../../public/categorias/ferramentas.webp';
+import arteGames from '../../public/categorias/games.webp';
+import arteModa from '../../public/categorias/moda.webp';
+
 // `&` cru quebra o XML do SVG — vira imagem quebrada em "Beleza & Saúde".
 const escapar = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -27,29 +36,44 @@ const placa = (texto, fundo = '#16241D') =>
      </svg>`,
   )}`;
 
+// ⏰ 19/09/2026 — O PRAZO É RELATIVO, NÃO UMA DATA ESCRITA.
+//
+// 🔴 POR QUE ISTO MUDOU. As datas de término estavam cravadas (daquiAHoras(26)).
+// A banca passou no dia em que foi escrita e QUEBROU NO DIA SEGUINTE, sozinha:
+// com tudo vencido, `leiloesDaSemana` devolve vazio, a seção "Leilões da semana"
+// não renderiza e a prova fica esperando `[data-teste="carrossel-semana"]` até
+// estourar. Quatro provas da home caíram por isso — nenhuma linha de código de
+// produção tinha mudado.
+//
+// Teste que apodrece pelo calendário não prova nada: ele vira ruído vermelho que
+// todo mundo aprende a ignorar. Agora o prazo é DISTÂNCIA a partir de agora, em
+// horas — os valores do retrato (títulos, lances, preços de loja) continuam os
+// mesmos, que é o que o retrato existe para guardar.
+const daquiAHoras = (h) => new Date(Date.now() + h * 3600 * 1000).toISOString();
+
 // ── Retrato do banco (18/09/2026) ───────────────────────────────────────────
 // [id, título, lance atual, fim, preço na NOSSA loja]
 const LEILOES_REAIS = [
-  ['harley-117', 'Harley 117 - Scooter Elétrico SEM CNH', 477.6, '2026-09-21T21:00:00Z', 3300],
-  ['patinete-dewen', 'Patinete elétrico DeWEN', 237.6, '2026-09-22T21:00:00Z', 997],
-  ['0b80158c6c6671595a263abe', 'Relógio Masculino Cronógrafo Fundo Azul Subdials Vermelhos Caixa Preta Couro Caramelo', 53.6, '2026-09-18T20:00:00Z', 118],
-  ['f17539592fddbb672e7677d5', 'Camiseta AR3 - Branca', 24, '2026-09-18T20:00:00Z', 49],
-  ['31b4742128408a4155ac2ceb', 'Relógios Masculinos De Quartzo Com Cronógrafo Quadrado ZXL', 53.6, '2026-09-18T20:00:00Z', 118],
-  ['28ba4020ac69303dab9509bc', 'Chinelo Papete Moleca', 15.98, '2026-09-18T20:00:00Z', 39],
-  ['e72311712bcd173faf1ad5b7', 'Relógio Masculino Automático Skeleton Transparente Pulseira Couro Caramelo', 53.6, '2026-09-18T20:00:00Z', 118],
-  ['d8c11b27e57fb7d3fbf4aa4b', 'Relógio Masculino Couro Impermeável Luxo', 53.6, '2026-09-18T20:00:00Z', 118],
-  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, '2026-09-19T17:00:00Z', 32],
-  ['624b1eaa212bd96e39c6e837', 'Sandália Flatform Feminina Donna Santa Papete 2026', 8.8, '2026-09-19T17:30:00Z', 26],
-  ['78b615db73452b8149bf52ab', 'Cabo Hdmi 2.0 4k Blindado 5m Ponta Gold 60hz Aquário', 8, '2026-09-19T18:00:00Z', 24],
-  ['efad72c84c3fd8dc71ffe0f9', 'Dermaroller System Rolinho 540 Microagulha Pele Barba', 6, '2026-09-19T18:30:00Z', 18],
-  ['f5391152df7af51a9c1088a0', 'Capacitor duplo', 4, '2026-09-19T19:00:00Z', 12],
-  ['4848b96ea96c8fa86eb5557a', '4 Suportes Para Vasos De Planta Jardins Verticais Samambaia Preto', 1.6, '2026-09-19T19:30:00Z', 152.96],
+  ['harley-117', 'Harley 117 - Scooter Elétrico SEM CNH', 477.6, daquiAHoras(50), 3300],
+  ['patinete-dewen', 'Patinete elétrico DeWEN', 237.6, daquiAHoras(74), 997],
+  ['0b80158c6c6671595a263abe', 'Relógio Masculino Cronógrafo Fundo Azul Subdials Vermelhos Caixa Preta Couro Caramelo', 53.6, daquiAHoras(26), 118],
+  ['f17539592fddbb672e7677d5', 'Camiseta AR3 - Branca', 24, daquiAHoras(26), 49],
+  ['31b4742128408a4155ac2ceb', 'Relógios Masculinos De Quartzo Com Cronógrafo Quadrado ZXL', 53.6, daquiAHoras(26), 118],
+  ['28ba4020ac69303dab9509bc', 'Chinelo Papete Moleca', 15.98, daquiAHoras(26), 39],
+  ['e72311712bcd173faf1ad5b7', 'Relógio Masculino Automático Skeleton Transparente Pulseira Couro Caramelo', 53.6, daquiAHoras(26), 118],
+  ['d8c11b27e57fb7d3fbf4aa4b', 'Relógio Masculino Couro Impermeável Luxo', 53.6, daquiAHoras(26), 118],
+  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, daquiAHoras(5), 32],
+  ['624b1eaa212bd96e39c6e837', 'Sandália Flatform Feminina Donna Santa Papete 2026', 8.8, daquiAHoras(6), 26],
+  ['78b615db73452b8149bf52ab', 'Cabo Hdmi 2.0 4k Blindado 5m Ponta Gold 60hz Aquário', 8, daquiAHoras(8), 24],
+  ['efad72c84c3fd8dc71ffe0f9', 'Dermaroller System Rolinho 540 Microagulha Pele Barba', 6, daquiAHoras(10), 18],
+  ['f5391152df7af51a9c1088a0', 'Capacitor duplo', 4, daquiAHoras(12), 12],
+  ['4848b96ea96c8fa86eb5557a', '4 Suportes Para Vasos De Planta Jardins Verticais Samambaia Preto', 1.6, daquiAHoras(30), 152.96],
 ];
 
 // O PS5 é o leilão que hoje ocupa o primeiro destaque — vira o herói do hero.
 const PS5 = {
   id: 'ps5-real', title: 'Playstation 5', current_price: 597, starting_price: 497,
-  status: 'active', end_time: '2026-09-20T21:00:00Z', product_id: 'p-ps5',
+  status: 'active', end_time: daquiAHoras(28), product_id: 'p-ps5',
   image_urls: [placa('PlayStation 5', '#0F2D20')],
 };
 
@@ -83,14 +107,19 @@ const products = [
 const featured_products = [PS5.id, ...LEILOES_REAIS.slice(0, 5).map(([id]) => id)]
   .map((auction_id, i) => ({ id: `f${i}`, sort_order: i, is_active: true, raw_base44: { auction_id } }));
 
+// 📊 Retrato de 19/09/2026 (contagem real do banco) e a régua nova: as CINCO
+// categorias que o dono fotografou vão na frente, mesmo não sendo as mais
+// movimentadas. A sexta vaga fica pra maior sem foto — aqui, Casa & Construção.
 const vw_home_categorias = [
-  { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', leiloes_ativos: 12, produtos_na_loja: 23, imagem: placa('Beleza & Saúde') },
-  { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 51, imagem: placa('Casa & Construção') },
-  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', leiloes_ativos: 9, produtos_na_loja: 23, imagem: placa('Moda') },
-  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', leiloes_ativos: 6, produtos_na_loja: 21, imagem: placa('Eletrônicos') },
-  { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', leiloes_ativos: 4, produtos_na_loja: 33, imagem: placa('Decoração') },
-  { id: '452df51b6fd1576e7c800543', nome: 'Automotivo', leiloes_ativos: 3, produtos_na_loja: 14, imagem: placa('Automotivo') },
-  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, imagem: null },
+  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', leiloes_ativos: 2, produtos_na_loja: 22, imagem: arteModa },
+  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', leiloes_ativos: 5, produtos_na_loja: 21, imagem: arteEletronicos },
+  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', leiloes_ativos: 2, produtos_na_loja: 6, imagem: arteCasaCozinha },
+  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, imagem: arteFerramentas },
+  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, imagem: arteGames },
+  { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50, imagem: null },
+  { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', leiloes_ativos: 11, produtos_na_loja: 23, imagem: null },
+  { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', leiloes_ativos: 4, produtos_na_loja: 31, imagem: null },
+  { id: '452df51b6fd1576e7c800543', nome: 'Automotivo', leiloes_ativos: 3, produtos_na_loja: 14, imagem: null },
 ];
 
 window.__bancoFalso = { tabelas: { auctions, products, featured_products, vw_home_categorias }, escritas: [] };

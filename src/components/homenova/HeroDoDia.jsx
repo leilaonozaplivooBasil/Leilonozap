@@ -15,11 +15,19 @@ import { precoDoLeilao, emReais, AVISO_NAO_OFICIAL } from '@/lib/homeNova';
 // símbolo, verde quase preto do fundo e o CARAMELO do martelo (nz-ouro/marrom)
 // como acento — é o único tom quente da marca, e é o que separa a página de
 // "mais um site escuro com verde".
-export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do dia' }) {
+export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do dia', naLoja = 0 }) {
   if (!leilao?.id) return null;
 
   const foto = arte || leilao.image_urls?.[0] || null;
   const preco = precoDoLeilao(leilao);
+  // 💰 19/09/2026 — A ÂNCORA FALTAVA JUSTO NO ITEM MAIS CARO.
+  //
+  // Todo cartão do carrossel mostra "na loja R$ X" riscado embaixo do lance. O
+  // hero, que carrega o produto de maior valor da casa, mostrava só "R$ 597,00"
+  // solto — sem nada que dissesse de quanto ele partiu. A mesma régua do
+  // carrossel vale aqui, incluindo a recusa ao selo de "-99%": dois fatos lado
+  // a lado, sem prometer desconto que o martelo ainda não confirmou.
+  const compara = naLoja > 0 && naLoja > preco;
   // `textoDeTermino` e não `dataDeTermino`: é ela que decide sozinha se
   // precisa do ano (a própria lib manda usar esta nas telas).
   const quando = textoDeTermino(leilao.end_time);
@@ -69,6 +77,11 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
               >
                 {emReais(preco)}
               </div>
+              {compara && (
+                <div className="mt-1.5 text-[13px] text-white/40" data-teste="hero-na-loja">
+                  na loja <span className="line-through">{emReais(naLoja)}</span>
+                </div>
+              )}
             </div>
 
             {/* ⏱️ Relógio VIVO, contando. A versão anterior escrevia "Termina
