@@ -39,45 +39,71 @@ function CartaoDeLeilao({ leilao, rotuloDoBotao, naLoja = 0 }) {
 
   return (
     <article
-      className="group relative flex w-[176px] flex-none flex-col overflow-hidden rounded-2xl border border-white/10 bg-nz-noite-3 transition-all duration-300 hover:-translate-y-1 hover:border-nz-verde-claro/60 hover:shadow-[0_18px_40px_-18px_rgba(46,157,99,0.65)] sm:w-[212px]"
+      className="group relative flex w-[176px] flex-none flex-col overflow-hidden rounded-2xl border border-nz-verde-claro/25 bg-nz-noite-3 shadow-[0_10px_26px_-20px_rgba(46,157,99,0.6)] transition-all duration-300 hover:-translate-y-1.5 hover:border-nz-verde-neon/70 hover:shadow-[0_24px_50px_-18px_rgba(63,208,126,0.8)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-[212px]"
       data-teste="cartao-de-leilao"
     >
+      {/* ✨ O BRILHO QUE ATRAVESSA. Pedido do dono (19/09): "ter interação quando
+          passar o mouse". Cor que troca é aviso; luz que ANDA é interação — e é o
+          que um leilão pede, porque o card está disputando o olho com outros seis.
+          Some inteiro para quem pediu menos movimento no sistema. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-full top-0 z-20 h-full w-1/2 -skew-x-12 opacity-0 transition-all duration-700 ease-out group-hover:left-[150%] group-hover:opacity-100 motion-reduce:hidden"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)' }}
+      />
+
       <Link to={sala} className="relative block">
-        <div className="h-[150px] overflow-hidden bg-white/[0.03] sm:h-[172px]">
+        {/* A foto deixa de flutuar sobre cinza chapado: nasce sobre uma luz da
+            marca, que é o que dá o "bonito em repouso" que o dono pediu. */}
+        <div
+          className="relative h-[150px] overflow-hidden sm:h-[172px]"
+          style={{ background: 'radial-gradient(120% 100% at 50% 0%, rgba(46,157,99,0.20) 0%, rgba(15,28,22,0) 70%)' }}
+        >
           {foto && (
             <img
               src={foto}
               alt={leilao.title}
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.07]"
+              className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.09] motion-reduce:transform-none"
             />
           )}
+          {/* fio de luz no pé da foto: costura a imagem ao corpo do card */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-px opacity-60 transition-opacity duration-300 group-hover:opacity-100"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(63,208,126,0.7), transparent)' }}
+          />
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col p-3">
-        <h3 className="line-clamp-2 min-h-[36px] text-[13px] font-medium leading-[1.3] text-white">{leilao.title}</h3>
+      <div className="relative flex flex-1 flex-col p-3">
+        <h3 className="line-clamp-2 min-h-[36px] text-[13px] font-medium leading-[1.3] text-white transition-colors duration-200 group-hover:text-nz-verde-menta">{leilao.title}</h3>
 
-        <div className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-nz-verde-menta" data-teste="contagem-do-cartao">
+        <div className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-nz-verde-claro/30 bg-nz-verde-claro/10 px-2.5 py-1 text-[11px] font-semibold text-nz-verde-menta transition-colors duration-200 group-hover:border-nz-verde-neon/60 group-hover:text-nz-verde-neon" data-teste="contagem-do-cartao">
           <Clock size={11} /> <CountdownTimer endTime={leilao.end_time} />
         </div>
 
-        <div className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">Lance atual</div>
+        <div className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Lance atual</div>
         <div className="font-slab text-[19px] font-extrabold leading-tight text-nz-verde-neon" data-teste="preco-do-cartao">
           {emReais(lance)}
         </div>
         {compara && (
-          <div className="mt-0.5 text-[11px] text-white/35" data-teste="preco-na-loja">
+          <div className="mt-0.5 text-[11px] text-white/45" data-teste="preco-na-loja">
             na loja <span className="line-through">{emReais(naLoja)}</span>
           </div>
         )}
 
+        {/* 🟢 O BOTÃO JÁ NASCE VERDE. Antes era um vulto cinza que só virava botão
+            quando o mouse passava — o print do dono mostrava os seis cards
+            apagados e UM bonito, o que estava sob o cursor. No celular não existe
+            "passar o mouse": para metade das pessoas o botão nunca ficava pronto. */}
         <Link
           to={sala}
-          className="mt-3 flex min-h-[42px] items-center justify-center rounded-full bg-white/[0.07] px-3 text-[13px] font-bold text-white transition-colors duration-200 group-hover:bg-nz-verde-claro hover:bg-nz-verde-claro"
+          className="mt-3 flex min-h-[42px] items-center justify-center gap-1.5 rounded-full bg-nz-verde-claro px-3 text-[13px] font-bold text-white shadow-[0_6px_18px_-8px_rgba(46,157,99,0.9)] transition-all duration-200 group-hover:bg-nz-verde-neon group-hover:shadow-[0_10px_24px_-8px_rgba(63,208,126,0.95)] hover:bg-nz-verde-neon motion-reduce:transition-none"
         >
           {rotuloDoBotao}
+          <ArrowRight size={14} className="transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" />
         </Link>
       </div>
     </article>
