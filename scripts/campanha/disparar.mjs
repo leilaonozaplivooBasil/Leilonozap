@@ -26,6 +26,8 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { montarMensagem, urlDeDescadastro } from './modelo.mjs';
+// 📧 o mesmo registro que as rotas de e-mail do servidor usam
+import { registrarEmail } from '../../api/_lib/registroDeEmail.js';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const SAIDA = path.join(AQUI, 'saida');
@@ -87,11 +89,27 @@ function jaRecebeu() {
     .filter(Boolean));
 }
 
-function anotar(canal, alvo, ok, detalhe) {
+async function anotar(canal, alvo, ok, detalhe) {
   fs.mkdirSync(SAIDA, { recursive: true });
   fs.appendFileSync(JA_FOI, `${JSON.stringify({
     quando: new Date().toISOString(), canal, alvo, ok, detalhe: detalhe || '',
   })}\n`);
+
+  // 🔴 O ARQUIVO LOCAL NÃO É REGISTRO DA EMPRESA. `enviados.jsonl` fica na
+  // máquina de quem rodou o comando: serve para o próprio script não mandar
+  // duas vezes, e some junto com a pasta. O registro que vale para conferir
+  // depois — e para responder a uma reclamação — é o do banco.
+  // SMS não entra: esta tabela é de e-mail.
+  if (canal !== 'email') return;
+  await registrarEmail({
+    para: alvo,
+    assunto: 'Campanha — leilão fechando',
+    tipo: 'campanha',
+    ok,
+    messageId: ok ? detalhe : null,
+    erro: ok ? null : detalhe,
+    provedor: 'brevo',
+  });
 }
 
 async function mandarEmail(contato, msg, linkSaida) {
@@ -213,10 +231,10 @@ async function principal() {
     const msg = montarMensagem({ contato: c, destaque, outros, linkSaida });
     try {
       const id = await mandarEmail(c, msg, linkSaida);
-      if (!TESTE) anotar('email', c.email, true, id);
+      if (!TESTE) await anotar('email', c.email, true, id);
       ok++;
     } catch (e) {
-      if (!TESTE) anotar('email', c.email, false, e.message);
+      if (!TESTE) await anotar('email', c.email, false, e.message);
       erro++;
       console.error(`  ✖ ${c.email}: ${e.message}`);
     }
@@ -228,10 +246,10 @@ async function principal() {
     const msg = montarMensagem({ contato: c, destaque, outros, linkSaida: '' });
     try {
       const id = await mandarSms(c, msg.sms);
-      anotar('sms', c.telefone, true, id);
+      await anotar('sms', c.telefone, true, id);
       ok++;
     } catch (e) {
-      anotar('sms', c.telefone, false, e.message);
+      await anotar('sms', c.telefone, false, e.message);
       erro++;
       console.error(`  ✖ ${c.telefone}: ${e.message}`);
     }

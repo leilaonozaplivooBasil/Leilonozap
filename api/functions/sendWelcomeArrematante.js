@@ -23,6 +23,7 @@
 //    fora do nosso site.
 import { exigirSessao } from '../_lib/sessao.js';
 import { estourouLimite, ipDoRequest } from '../_lib/rateLimit.js';
+import { registrarEmail, idDaBrevo } from '../_lib/registroDeEmail.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -138,14 +139,18 @@ export default async function handler(req, res) {
       }),
     });
 
+    const assunto = `Acesso de ${cfg.rotulo}`;
     if (!r.ok) {
       const t = await r.text().catch(() => '');
       console.error('[sendWelcomeArrematante] Brevo recusou', r.status, t.slice(0, 200));
+      await registrarEmail({ para: email, assunto, tipo: 'boas_vindas', ok: false, erro: t.slice(0, 200), atorId: actorId });
       // 🔴 200 com success:false — a tela PRECISA conseguir ler isto e contar a
       // verdade. Era justamente o "deu erro mas a tela diz que enviou" que
       // levou a pessoa a ficar sem acesso.
       return res.status(200).json({ success: false, error: 'Falha ao enviar e-mail', details: t.slice(0, 200) });
     }
+    const corpo = await r.json().catch(() => null);
+    await registrarEmail({ para: email, assunto, tipo: 'boas_vindas', ok: true, messageId: idDaBrevo(corpo), atorId: actorId });
     return res.status(200).json({ success: true });
   } catch (e) {
     console.error('[sendWelcomeArrematante] erro', String(e?.message || e));

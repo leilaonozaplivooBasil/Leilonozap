@@ -2,6 +2,7 @@
 // Uso ADMIN: o ator (actorId) precisa ser admin/super_admin. Grava o hash na tabela isolada app_users_auth.
 import bcrypt from 'bcryptjs';
 import { exigirSessao } from '../_lib/sessao.js';
+import { registrarEmail, idDaBrevo } from '../_lib/registroDeEmail.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -54,7 +55,7 @@ function emailSenhaDefinida({ nome, email, senha }) {
 </table>`;
 }
 
-async function avisarPorEmail({ nome, email, senha }) {
+async function avisarPorEmail({ nome, email, senha, atorId }) {
   const BREVO_KEY = process.env.BREVO_API_KEY;
   if (!BREVO_KEY || !email) return false;
   try {
@@ -70,9 +71,18 @@ async function avisarPorEmail({ nome, email, senha }) {
         textContent: `Sua senha de acesso ao Leilão NoZap\n\nE-mail: ${email}\nSenha: ${senha}\n\nEntrar: ${SITE}/Loja-Virtual\nTrocar a senha: ${SITE}/Profile#senha`,
       }),
     });
+    // 📧 REGISTRO — o assunto aqui é fixo e não tem segredo dentro; a senha
+    // viaja só no corpo, que nunca é gravado.
+    const corpo = r.ok ? await r.json().catch(() => null) : null;
+    await registrarEmail({
+      para: email, assunto: 'Sua senha de acesso', tipo: 'senha_definida',
+      ok: r.ok, messageId: idDaBrevo(corpo), atorId,
+      erro: r.ok ? null : `HTTP ${r.status}`,
+    });
     return r.ok;
   } catch (e) {
     console.warn('[adminSetPassword] e-mail não enviado:', e?.message || e);
+    await registrarEmail({ para: email, assunto: 'Sua senha de acesso', tipo: 'senha_definida', ok: false, erro: String(e?.message || e), atorId });
     return false;
   }
 }
@@ -118,7 +128,7 @@ export default async function handler(req, res) {
     // NUNCA derruba a operação — a senha já está definida acima.
     let emailed = false;
     if (body.notify === true) {
-      emailed = await avisarPorEmail({ nome: u.full_name || '', email: u.email, senha: newPassword });
+      emailed = await avisarPorEmail({ nome: u.full_name || '', email: u.email, senha: newPassword, atorId });
     }
     return res.status(200).json({ success: true, user_id: u.id, email: u.email, emailed });
   } catch (e) {
