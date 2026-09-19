@@ -123,9 +123,12 @@ export default function HomeNova() {
     navigate('/Loja-Virtual' + (termo ? `?search=${encodeURIComponent(termo)}` : ''));
   };
 
+  // o selo "ao vivo" do topo usa a MESMA contagem da faixa — um número só
+  const leiloesAgora = Number(String(numeros.find((n) => n.chave === 'leiloes')?.valor || '').replace(/\./g, '')) || 0;
+
   return (
-    <div className="min-h-screen bg-[#0A1410]">
-      <TopoHomeNova onBuscar={buscar} />
+    <div className="min-h-screen bg-nz-noite">
+      <TopoHomeNova leiloesAgora={leiloesAgora} onBuscar={buscar} />
       <HeroDoDia leilao={heroi} />
       <ExplorePorCategoria categorias={categorias} />
       <FaixaDeNumeros itens={numeros} />

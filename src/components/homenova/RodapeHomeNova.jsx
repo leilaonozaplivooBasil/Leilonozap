@@ -54,7 +54,7 @@ export default function RodapeHomeNova() {
   const ano = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#07100C] px-5 pb-8 pt-[clamp(40px,6vw,72px)] text-white/70" data-teste="rodape-home-nova">
+    <footer className="bg-nz-noite-2 px-5 pb-8 pt-[clamp(40px,6vw,72px)] text-white/70" data-teste="rodape-home-nova">
       <div className="mx-auto max-w-[1200px]">
         <div className="grid gap-9 md:grid-cols-[1.3fr_repeat(3,1fr)]">
           <div>
@@ -66,11 +66,11 @@ export default function RodapeHomeNova() {
 
           {COLUNAS.map((col) => (
             <div key={col.titulo}>
-              <div className="text-[13px] font-semibold uppercase tracking-[0.12em] text-white">{col.titulo}</div>
+              <div className="font-slab text-[13px] font-extrabold uppercase tracking-[0.14em] text-white">{col.titulo}</div>
               <ul className="mt-4 space-y-2.5">
                 {col.itens.map((i) => (
                   <li key={i.rotulo}>
-                    <Link to={i.para} className="text-[14px] text-white/60 transition-colors hover:text-nz-verde-claro">
+                    <Link to={i.para} className="text-[14px] text-white/55 transition-colors hover:text-nz-verde-neon">
                       {i.rotulo}
                     </Link>
                   </li>
@@ -81,16 +81,16 @@ export default function RodapeHomeNova() {
         </div>
 
         <div className="mt-10 grid gap-3 border-t border-white/10 pt-8 text-[14px] sm:grid-cols-3">
-          <a href={linkWhatsAppOficial()} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2.5 text-white/60 transition-colors hover:text-nz-verde-claro">
-            <MessageCircle size={16} className="mt-0.5 flex-none text-nz-verde-claro" />
+          <a href={linkWhatsAppOficial()} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2.5 text-white/60 transition-colors hover:text-nz-verde-neon">
+            <MessageCircle size={16} className="mt-0.5 flex-none text-nz-verde-neon" />
             <span data-teste="rodape-whatsapp">{WHATSAPP_OFICIAL_FORMATADO}</span>
           </a>
-          <a href={`mailto:${EMAIL_CONTATO}`} className="flex items-start gap-2.5 text-white/60 transition-colors hover:text-nz-verde-claro">
-            <Mail size={16} className="mt-0.5 flex-none text-nz-verde-claro" />
+          <a href={`mailto:${EMAIL_CONTATO}`} className="flex items-start gap-2.5 text-white/60 transition-colors hover:text-nz-verde-neon">
+            <Mail size={16} className="mt-0.5 flex-none text-nz-verde-neon" />
             <span data-teste="rodape-email">{EMAIL_CONTATO}</span>
           </a>
           <div className="flex items-start gap-2.5 text-white/60">
-            <MapPin size={16} className="mt-0.5 flex-none text-nz-verde-claro" />
+            <MapPin size={16} className="mt-0.5 flex-none text-nz-verde-neon" />
             <span className="leading-snug">{ENDERECO_SEDE}</span>
           </div>
         </div>

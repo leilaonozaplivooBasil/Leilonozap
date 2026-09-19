@@ -190,3 +190,16 @@ test('com o limite, sempre sobra leilão para a semana', () => {
   assert.ok(semana.length > 0, 'a semana ficou sem nada — foi exatamente o defeito');
   assert.equal(destaque.length + semana.length, pool.length, 'nenhum leilão pode se perder entre os dois');
 });
+
+test('🔴 o card NÃO carimba porcentagem de desconto num leilão aberto', () => {
+  // Chegou a existir um selo "-99%" (lance atual contra preço de loja). O
+  // número fechava; a promessa não: num leilão em andamento o lance existe
+  // para subir, então o abatimento anunciado quase certamente não sobrevive
+  // ao martelo. A comparação "na loja R$ X" fica — ela afirma dois fatos, não
+  // promete resultado.
+  const tela = semComentarios(readFileSync(path.join(RAIZ, 'src/components/homenova/CarrosselDeLeiloes.jsx'), 'utf8'));
+  assert.ok(!/1\s*-\s*lance\s*\/\s*naLoja/.test(tela), 'voltou a calcular porcentagem de desconto no card');
+  assert.ok(!/-\{\s*\w+\s*\}%/.test(tela), 'voltou a renderizar selo de porcentagem');
+  // e a comparação honesta continua lá
+  assert.match(tela, /data-teste="preco-na-loja"/);
+});

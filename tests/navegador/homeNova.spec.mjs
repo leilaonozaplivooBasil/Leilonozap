@@ -183,3 +183,42 @@ test('na tela, o "Em destaque" começa pelos itens âncora — e mostra o preço
 
   await pagina.close();
 });
+
+test('🔴 com prefers-reduced-motion, NENHUMA seção nasce invisível', { skip: semNavegador }, async () => {
+  // O print de página inteira acusou o defeito: as seções animadas com
+  // `initial={{ opacity: 0 }}` + `whileInView` ficam em opacidade ZERO até o
+  // observer disparar. Quem pede menos movimento no sistema — ou qualquer
+  // navegador em que o observer não dispare — ficava olhando bloco preto.
+  await garantirNavegador();
+  const pagina = await navegador.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: 'reduce',
+  });
+  await pagina.goto(BASE, { waitUntil: 'networkidle' });
+  await pagina.waitForSelector('[data-teste="carrossel-semana"]', { timeout: 15000 });
+  await pagina.waitForTimeout(400);
+
+  // ⚠️ MEDIR A <section> NÃO SERVE, e a primeira versão deste teste caiu nessa:
+  // o nó animado é a <motion.div> DENTRO da seção, então a opacidade da seção é
+  // sempre 1 e o teste passava até com a proteção removida. A medição começa de
+  // um elemento de CONTEÚDO e sobe até o body — esse caminho passa pela div
+  // animada.
+  const secoes = [
+    ['explore-categoria', '[data-teste="card-categoria"]'],
+    ['faixa-numeros', '[data-teste="numero-da-casa"]'],
+    ['carrossel-destaque', '[data-teste="cartao-de-leilao"]'],
+    ['carrossel-semana', '[data-teste="cartao-de-leilao"]'],
+  ];
+  for (const [secao, dentro] of secoes) {
+    const opacidade = await pagina.$eval(`[data-teste="${secao}"] ${dentro}`, (n) => {
+      let atual = n; let total = 1;
+      while (atual && atual !== document.body) {
+        total *= Number(getComputedStyle(atual).opacity);
+        atual = atual.parentElement;
+      }
+      return total;
+    });
+    assert.ok(opacidade > 0.9, `"${secao}" nasceu com opacidade ${opacidade.toFixed(2)} — some da tela`);
+  }
+  await pagina.close();
+});

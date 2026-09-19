@@ -12,11 +12,11 @@ const SELOS = [
 
 export default function SelosDeConfianca() {
   return (
-    <section className="border-y border-white/10 bg-[#07100C] px-5 py-8" data-teste="selos-de-confianca">
+    <section className="border-y border-white/10 bg-nz-noite-2 px-5 py-8" data-teste="selos-de-confianca">
       <div className="mx-auto grid max-w-[1200px] gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {SELOS.map((s) => (
           <div key={s.titulo} className="flex items-start gap-3">
-            <s.icone size={20} className="mt-0.5 flex-none text-nz-verde-claro" />
+            <s.icone size={20} className="mt-0.5 flex-none text-nz-verde-neon" />
             <div>
               <div className="text-[14px] font-medium text-white">{s.titulo}</div>
               <div className="mt-0.5 text-[12px] leading-snug text-white/50">{s.linha}</div>
