@@ -19,6 +19,14 @@
  * `?video=quebrado` vídeo cujo endereço não existe — não pode deixar buraco
  * `?youtube=1`  vídeo de embed (iframe), que NÃO toca sozinho
  * `?inativo=1`  card que TEM vídeo mas não é o primeiro destaque: não toca
+ *
+ * 🏷️ 19/09/2026 — e o SELO "NOVO - Com Garantia":
+ * `?garantia=1`   card de fábrica, que mostra o selo
+ * `?largura=NNN`  largura do card, para medir o selo no card estreito
+ * `?favorito=1`   liga o botão de coração — ele só aparece com usuário logado,
+ *                 e SEM ele a banca media a colisão do selo contra um botão só,
+ *                 quando na tela real são dois (foi assim que a primeira versão
+ *                 desta medição quase aprovou uma sobreposição)
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -46,6 +54,8 @@ const leilao = {
   category: 'eletronicos',
   status: params.get('encerrado') === '1' ? 'ended' : 'active',
   end_time: params.get('semdata') === '1' ? null : (params.get('encerrado') === '1' ? ONTEM : DOZE_DIAS),
+  // 🏷️ só produto de fábrica mostra o selo "NOVO - Com Garantia"
+  ...(params.get('garantia') === '1' ? { product_source: 'factory_new' } : {}),
 };
 
 // o `video` chega no card como prop pronta (quem monta é DestaquesLeiloes,
@@ -58,8 +68,14 @@ const video = params.get('youtube') === '1'
 
 createRoot(document.getElementById('raiz')).render(
   <MemoryRouter>
-    <div style={{ padding: 24, maxWidth: 420 }}>
-      <AuctionCard auction={leilao} video={video} videoAtivo={params.get('inativo') !== '1'} />
+    <div style={{ padding: 24, maxWidth: Number(params.get('largura')) || 420 }}>
+      <AuctionCard
+        auction={leilao}
+        video={video}
+        videoAtivo={params.get('inativo') !== '1'}
+        showFavoriteButton={params.get('favorito') === '1'}
+        userId={params.get('favorito') === '1' ? 'banca-usuario' : null}
+      />
     </div>
   </MemoryRouter>
 );
