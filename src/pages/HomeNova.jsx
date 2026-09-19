@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
+import { videoDoProduto } from '@/lib/videoDoProduto';
 import { categoriasDaVitrine, leiloesDaSemana, maisValiosos, quantosDestaques, numerosDaCasa, valorDoItem } from '@/lib/homeNova';
 import TopoHomeNova from '@/components/homenova/TopoHomeNova';
 import HeroDoDia from '@/components/homenova/HeroDoDia';
@@ -25,6 +26,8 @@ export default function HomeNova() {
   const [destaques, setDestaques] = useState([]);
   const [daSemana, setDaSemana] = useState([]);
   const [precoNaLoja, setPrecoNaLoja] = useState({});
+  // o vídeo passa pela MESMA régua da loja e da sala (host conhecido ou arquivo nosso)
+  const [videoNaLoja, setVideoNaLoja] = useState({});
   const [categorias, setCategorias] = useState([]);
   const [numeros, setNumeros] = useState([]);
 
@@ -71,8 +74,13 @@ export default function HomeNova() {
       try {
         const ids = [...new Set(ativos.map((a) => a.product_id).filter(Boolean))];
         if (ids.length) {
-          const { data } = await supabase.from('products').select('id,price_catalog').in('id', ids);
-          if (vivo) setPrecoNaLoja(Object.fromEntries((data || []).map((p) => [p.id, Number(p.price_catalog) || 0])));
+          const { data } = await supabase.from('products').select('id,price_catalog,video_urls').in('id', ids);
+          if (vivo) {
+            setPrecoNaLoja(Object.fromEntries((data || []).map((p) => [p.id, Number(p.price_catalog) || 0])));
+            setVideoNaLoja(Object.fromEntries(
+              (data || []).map((p) => [p.id, videoDoProduto(p)]).filter(([, v]) => v),
+            ));
+          }
         }
       } catch { /* o card só não mostra a comparação */ }
 
@@ -129,7 +137,7 @@ export default function HomeNova() {
   return (
     <div className="min-h-screen bg-nz-noite">
       <TopoHomeNova leiloesAgora={leiloesAgora} onBuscar={buscar} />
-      <HeroDoDia leilao={heroi} naLoja={valorDoItem(heroi, precoNaLoja)} />
+      <HeroDoDia leilao={heroi} naLoja={valorDoItem(heroi, precoNaLoja)} video={videoNaLoja[heroi?.product_id] || null} />
       <ExplorePorCategoria categorias={categorias} />
       <FaixaDeNumeros itens={numeros} />
       <CarrosselDeLeiloes

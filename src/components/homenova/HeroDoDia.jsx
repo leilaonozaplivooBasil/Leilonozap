@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Gavel, Gem } from 'lucide-react';
+import { Gavel, Gem, Volume2, VolumeX } from 'lucide-react';
+import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
 import CountdownTimer from '@/components/common/CountdownTimer';
 import { textoDeTermino } from '@/lib/relogioLeilao';
 import { precoDoLeilao, emReais, AVISO_NAO_OFICIAL } from '@/lib/homeNova';
@@ -15,7 +16,60 @@ import { precoDoLeilao, emReais, AVISO_NAO_OFICIAL } from '@/lib/homeNova';
 // símbolo, verde quase preto do fundo e o CARAMELO do martelo (nz-ouro/marrom)
 // como acento — é o único tom quente da marca, e é o que separa a página de
 // "mais um site escuro com verde".
-export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do dia', naLoja = 0 }) {
+export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do dia', naLoja = 0, video = null }) {
+  // 🎬 19/09/2026 — O VÍDEO NO LUGAR DA FOTO, "sempre ativo e com som tocando".
+  //
+  // 🔴 "COM SOM TOCANDO" NÃO EXISTE NA PARTIDA, e isto já foi descoberto aqui em
+  // 17/09: Chrome, Safari, Firefox e Edge recusam `play()` com áudio antes de um
+  // gesto da pessoa. Vídeo que nasce com som não é vídeo com som — é vídeo que
+  // não toca, parado no primeiro quadro.
+  //
+  // A regra da casa para isso já existe e mora em `lib/somDoDestaque.js`: nasce
+  // MUDO (aí toca sozinho), e o PRIMEIRO toque ou clique em qualquer lugar da
+  // página tira o mudo. Na prática o som entra em segundos, sem bloqueio. Não
+  // escrevi regra nova: seria um segundo vocabulário para a mesma decisão.
+  //
+  // Diferença do card: aqui o vídeo tem `loop`. No card ele acaba e as fotos
+  // voltam a girar; no hero "sempre ativo" quer dizer sempre, e não há rodízio
+  // para o qual voltar.
+  const videoRef = useRef(null);
+  const [mudo, setMudo] = useState(true);
+  const temVideo = video?.tipo === 'arquivo' && Boolean(video?.embed);
+
+  useEffect(() => {
+    if (!temVideo || !querSom()) return undefined;
+    const ligarSom = () => {
+      const v = videoRef.current;
+      if (!v || !querSom()) return;
+      v.muted = false;
+      setMudo(false);
+      calarARadio();
+      // `play()` pode ser recusado mesmo aqui (aba em segundo plano). Sem o
+      // catch vira "Unhandled promise rejection" no console de quem está comprando.
+      v.play?.().catch(() => {});
+    };
+    const opcoes = { once: true, capture: true, passive: true };
+    window.addEventListener('pointerdown', ligarSom, opcoes);
+    window.addEventListener('touchstart', ligarSom, opcoes);
+    window.addEventListener('keydown', ligarSom, opcoes);
+    return () => {
+      window.removeEventListener('pointerdown', ligarSom, opcoes);
+      window.removeEventListener('touchstart', ligarSom, opcoes);
+      window.removeEventListener('keydown', ligarSom, opcoes);
+    };
+  }, [temVideo]);
+
+  const trocarSom = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const v = videoRef.current;
+    const querMudo = !mudo;
+    setMudo(querMudo);
+    gravarQuerSom(!querMudo);
+    if (v) v.muted = querMudo;
+    if (!querMudo) { calarARadio(); v?.play?.().catch(() => {}); }
+  };
+
   if (!leilao?.id) return null;
 
   const foto = arte || leilao.image_urls?.[0] || null;
@@ -113,16 +167,45 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
           </p>
         </div>
 
-        {foto && (
+        {(temVideo || foto) && (
           <div className="relative flex items-center justify-center">
-            <img
-              src={foto}
-              alt={leilao.title}
-              loading="eager"
-              decoding="async"
-              className="relative w-full max-w-[460px] object-contain drop-shadow-[0_30px_50px_rgba(0,0,0,0.6)]"
-              style={{ height: 'clamp(230px, 32vw, 400px)' }}
-            />
+            {temVideo ? (
+              <div className="relative w-full max-w-[460px]" data-teste="hero-com-video">
+                <video
+                  ref={videoRef}
+                  src={video.embed}
+                  data-teste="video-do-hero"
+                  autoPlay
+                  loop
+                  muted={mudo}
+                  playsInline
+                  preload="metadata"
+                  // a foto do produto como cartaz: o hero nunca nasce preto, e
+                  // quem está com dados curtos vê a imagem de sempre
+                  poster={foto || undefined}
+                  className="w-full rounded-2xl object-contain drop-shadow-[0_30px_50px_rgba(0,0,0,0.6)]"
+                  style={{ height: 'clamp(230px, 32vw, 400px)' }}
+                />
+                <button
+                  type="button"
+                  onClick={trocarSom}
+                  data-teste="som-do-hero"
+                  aria-label={mudo ? 'Ligar o som do vídeo' : 'Tirar o som do vídeo'}
+                  className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur-sm transition-all duration-200 hover:border-nz-verde-neon hover:text-nz-verde-neon motion-reduce:transition-none"
+                >
+                  {mudo ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+              </div>
+            ) : (
+              <img
+                src={foto}
+                alt={leilao.title}
+                loading="eager"
+                decoding="async"
+                className="relative w-full max-w-[460px] object-contain drop-shadow-[0_30px_50px_rgba(0,0,0,0.6)]"
+                style={{ height: 'clamp(230px, 32vw, 400px)' }}
+              />
+            )}
           </div>
         )}
       </div>

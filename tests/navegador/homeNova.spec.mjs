@@ -340,3 +340,68 @@ test('⏳ o leilão que fecha em minutos vem marcado como crítico; o de dias, n
   assert.ok(critica);
   await pagina.close();
 });
+
+// ── O vídeo do herói (19/09): "sempre ativo e com som tocando" ─────────────
+//
+// O "com som" esbarra na regra de navegador que a casa já documentou em
+// `lib/somDoDestaque.js`: áudio antes de gesto é recusado, e o vídeo fica
+// parado. Então a promessa que dá para cumprir — e que estas provas medem — é:
+// nasce MUDO e tocando, e o primeiro gesto em qualquer lugar liga o som.
+
+test('🎬 o herói abre com o VÍDEO do produto, não com a foto', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+  assert.equal(await video.count(), 1, 'o herói tinha que trazer o vídeo do PS5');
+
+  const atributos = await video.evaluate((v) => ({
+    src: v.getAttribute('src'), autoplay: v.autoplay, loop: v.loop,
+    playsInline: v.playsInline, poster: v.getAttribute('poster'),
+  }));
+  assert.match(atributos.src, /ps5\.mp4$/, `src inesperado: ${atributos.src}`);
+  assert.equal(atributos.autoplay, true, 'sem autoplay o vídeo não é "sempre ativo"');
+  assert.equal(atributos.loop, true, '"sempre ativo" quer dizer que ele recomeça');
+  assert.equal(atributos.playsInline, true, 'sem playsInline o iPhone abre em tela cheia sozinho');
+  assert.ok(atributos.poster, 'sem cartaz o herói nasce preto enquanto o vídeo não chega');
+
+  // a foto do herói sai de cena quando há vídeo — as duas juntas seria ruído
+  assert.equal(await pagina.locator('[data-teste="hero-com-video"] img').count(), 0);
+  await pagina.close();
+});
+
+test('🔇 o vídeo do herói NASCE MUDO — é a única forma de ele tocar sozinho', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const mudoNoInicio = await pagina.locator('[data-teste="video-do-hero"]').evaluate((v) => v.muted);
+  assert.equal(mudoNoInicio, true, 'nascendo com som, o navegador recusa o play e o vídeo fica parado');
+  await pagina.close();
+});
+
+test('🔊 o PRIMEIRO clique em qualquer lugar da página liga o som', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+  assert.equal(await video.evaluate((v) => v.muted), true);
+
+  // um clique longe do vídeo: o ouvinte é da JANELA, não do player
+  await pagina.locator('[data-teste="faixa-numeros"]').click({ position: { x: 5, y: 5 } });
+  await pagina.waitForTimeout(300);
+
+  assert.equal(await video.evaluate((v) => v.muted), false, 'o gesto da pessoa tinha que ter tirado o mudo');
+  await pagina.close();
+});
+
+test('🔘 o botão de som existe e volta a mudar o estado', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+  const botao = pagina.locator('[data-teste="som-do-hero"]');
+  assert.equal(await botao.count(), 1, 'sem botão, quem está no trabalho não tem como calar');
+
+  await botao.click();                       // este clique já é um gesto: liga o som
+  await pagina.waitForTimeout(250);
+  const depoisDoPrimeiro = await video.evaluate((v) => v.muted);
+
+  await botao.click();
+  await pagina.waitForTimeout(250);
+  const depoisDoSegundo = await video.evaluate((v) => v.muted);
+
+  assert.notEqual(depoisDoPrimeiro, depoisDoSegundo, 'o botão tem que alternar o som, não travar num estado');
+  await pagina.close();
+});

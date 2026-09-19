@@ -97,7 +97,13 @@ const auctions = [
 // Os produtos LIGADOS aos leilões vêm à parte, com o preço da nossa loja: é ele
 // que ordena o "Em destaque" e que o card mostra ao lado do lance.
 const products = [
-  { id: 'p-ps5', catalog_active: true, price_catalog: 6000 },
+  // 🎬 O vídeo do PS5 é o de produção. O contêiner não alcança `supabase.co`,
+  // então o arquivo não baixa aqui — mas o que esta banca prova é a REGRA (o
+  // <video> existe, nasce mudo, e o primeiro clique tira o mudo), não o pixel.
+  {
+    id: 'p-ps5', catalog_active: true, price_catalog: 6000,
+    video_urls: ['https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/videos-produtos/uploads/1789569726600_ps5.mp4'],
+  },
   ...LEILOES_REAIS.map(([id, , , , naLoja]) => ({ id: `p-${id}`, catalog_active: true, price_catalog: naLoja })),
   ...Array.from({ length: 2853 - 1 - LEILOES_REAIS.length }, (_, i) => ({
     id: `prod-${i}`, catalog_active: i < 235 - 1 - LEILOES_REAIS.length,
