@@ -379,31 +379,81 @@ TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${d
       ...imagensAnteriores.map((u) => ({ type: 'image', source: { type: 'url', url: u } })),
     ];
 
+    // 📐 O RETRATO DO PEDIDO, no log, ANTES de mandar. Sem isto, um 400 do
+    // provedor vira adivinhação: não dá para saber quantas imagens foram, nem
+    // qual modelo serviu. (19/09/2026 — três dias investigando um 400 sem
+    // conseguir dizer o que tinha dentro da requisição.)
+    const retratoDoPedido = {
+      via: ia.via,
+      model: ia.model,
+      reserva: ia.reserva || null,
+      imagens: 1 + imagensAnteriores.length,
+      imagem_de_hoje: imagemDeHoje.type,
+      tem_justificativa: Boolean(justificativa),
+      tentativa,
+    };
+
+    /** Uma ida à IA. `comAnteriores=false` manda só a foto de hoje. */
+    const pedirVeredito = (comAnteriores) => clienteIA(ia).messages.parse({
+      model: ia.model,
+      max_tokens: 2000,
+      system: sistema,
+      messages: [{
+        role: 'user',
+        // ⚠️ `slice(0, 2)` e não um filtro por tipo: o conteúdo é
+        // [texto do contexto, foto de HOJE, ...anteriores] — um filtro
+        // ingênuo por `type !== 'image'` derrubava justamente a foto de hoje,
+        // que é a única que precisa sobrar. (Pego antes de subir.)
+        content: comAnteriores ? conteudo : conteudo.slice(0, 2),
+      }],
+      // effort medium: julgar uma foto contra uma regra não precisa do
+      // raciocínio máximo — corta tokens de pensamento sem perder rigor.
+      output_config: { format: zodOutputFormat(Veredito), effort: 'medium' },
+      ...opcoesDeReserva(ia),
+    });
+
     let resposta;
+    let semAnteriores = false;
     try {
-      resposta = await clienteIA(ia).messages.parse({
-        model: ia.model,
-        max_tokens: 2000,
-        system: sistema,
-        messages: [{ role: 'user', content: conteudo }],
-        // effort medium: julgar uma foto contra uma regra não precisa do
-        // raciocínio máximo — corta tokens de pensamento sem perder rigor.
-        // (o thinking adaptativo do Opus 5 segue ligado por padrão)
-        output_config: { format: zodOutputFormat(Veredito), effort: 'medium' },
-        // extensão do AI Gateway: se o modelo principal falhar, ele tenta o reserva
-        ...opcoesDeReserva(ia),
-      });
+      resposta = await pedirVeredito(true);
     } catch (e) {
       const d = detalhesDoErro(e);
-      // 🔴 Imagem ruim NÃO é IA fora do ar. Ver `problemaDaImagem`.
       const daImagem = problemaDaImagem(d);
       if (daImagem) {
-        console.warn('[xgameValidarPrint] a IA recusou a imagem', { via: ia.via, model: ia.model, ...d });
+        console.warn('[xgameValidarPrint] a IA recusou a imagem', { ...retratoDoPedido, ...d });
         return imagemRuim(res, daImagem);
       }
-      console.error('[xgameValidarPrint] IA falhou', { via: ia.via, model: ia.model, ...d });
-      return indisponivel(res, { via: ia.via, model: ia.model, ...d });
+
+      // 🔁 SEGUNDA CHANCE SEM AS IMAGENS ANTERIORES.
+      //
+      // Elas existem só para o cruzamento anti-reciclagem; o julgamento da
+      // tarefa de hoje não depende delas. Se o 400 vier do conjunto (quantidade,
+      // soma dos bytes, uma URL que o provedor não conseguiu buscar), mandar só
+      // a foto de hoje passa — e a pessoa não fica travada.
+      //
+      // 🔴 A TRAVA DE REUSO NÃO CAI JUNTO: o hash SHA-256 do arquivo é conferido
+      // no navegador, antes de subir, e é ele que barra print repetido. O que se
+      // perde aqui é só a comparação VISUAL de foto reprocessada.
+      //
+      // Serve de diagnóstico também: se esta passa, a causa eram as anteriores;
+      // se falha igual, não eram. O log diz qual dos dois aconteceu.
+      if (Number(d.status) === 400 && imagensAnteriores.length > 0) {
+        console.warn('[xgameValidarPrint] 400 com anteriores — tentando só com a foto de hoje', { ...retratoDoPedido, ...d });
+        try {
+          resposta = await pedirVeredito(false);
+          semAnteriores = true;
+          console.warn('[xgameValidarPrint] passou SEM as anteriores — a causa eram elas', retratoDoPedido);
+        } catch (e2) {
+          const d2 = detalhesDoErro(e2);
+          console.error('[xgameValidarPrint] falhou também sem as anteriores', { ...retratoDoPedido, ...d2 });
+          return indisponivel(res, { ...retratoDoPedido, ...d2 });
+        }
+      } else {
+        console.error('[xgameValidarPrint] IA falhou', { ...retratoDoPedido, ...d });
+        return indisponivel(res, { ...retratoDoPedido, ...d });
+      }
     }
+
 
     if (resposta.stop_reason === 'refusal') {
       // o modelo se recusou a analisar (raro numa foto de comprovação): não é
@@ -420,6 +470,10 @@ TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${d
       ok: true,
       model: resposta.model,
       via: ia.via,
+      // 🔎 quando true, o julgamento saiu SEM o cruzamento anti-reciclagem
+      // visual (ver a segunda chance acima). Fica na resposta para o gestor
+      // saber, na auditoria, que aquela aprovação viu só a foto do dia.
+      ...(semAnteriores ? { sem_cruzamento: true } : {}),
       veredito: out.veredito,
       confianca: Math.max(0, Math.min(100, Math.round(Number(out.confianca) || 0))),
       o_que_viu: String(out.o_que_viu || '').slice(0, 300),
