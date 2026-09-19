@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 
-export default function CountdownTimer({ endTime, serverTimeOffset = 0 }) {
+// `className` existe para a home nova usar a fonte da marca no cronômetro do
+// hero: `font-mono` num "1 dia" tem cara de código. Sem className, nada muda.
+export default function CountdownTimer({ endTime, serverTimeOffset = 0, className = 'font-mono' }) {
   const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function CountdownTimer({ endTime, serverTimeOffset = 0 }) {
                    parseInt(timeLeft.split(':')[0]) === 0;
 
   return (
-    <span className={`font-mono ${isUrgent ? 'text-red-500 animate-pulse' : ''}`}>
+    <span className={`${className} ${isUrgent ? 'text-red-500 animate-pulse' : ''}`}>
       {timeLeft}
     </span>
   );

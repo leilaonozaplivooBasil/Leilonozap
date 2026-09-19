@@ -72,6 +72,9 @@ const VendedorCheckout = React.lazy(() => import('@/pages/VendedorCheckout'));
 const VendedorEscolherProdutos = React.lazy(() => import('@/pages/VendedorEscolherProdutos'));
 const SejaLicenciado = React.lazy(() => import('@/pages/SejaLicenciado'));
 const AdminCreditoTeste = React.lazy(() => import('@/pages/AdminCreditoTeste'));
+// 🏠 HOME NOVA — a página de entrada repaginada, em preview (rota própria,
+// sem Layout: ela traz o próprio topo e o próprio rodapé). Não é a "/" ainda.
+const HomeNova = React.lazy(() => import('@/pages/HomeNova'));
 const Portal = React.lazy(() => import('@/pages/Portal'));
 const SuperAdminPanels = React.lazy(() => import('@/pages/SuperAdminPanels'));
 const PortalArrematante = React.lazy(() => import('@/pages/portal/PortalArrematante'));
@@ -210,6 +213,9 @@ const AuthenticatedApp = () => {
       </HomeGate>
     } />
     {/* Portal de painéis movido pra /portal */}
+    {/* 🏠 PREVIEW da home nova — rota isolada para aprovação. A raiz "/" segue
+        na Recepção; a troca é passo separado. */}
+    <Route path="/HomeNova" element={<HomeNova />} />
     <Route path="/portal" element={
       <LayoutWrapper currentPageName="Portal">
         <Portal />

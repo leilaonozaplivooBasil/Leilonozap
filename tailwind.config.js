@@ -14,6 +14,16 @@ module.exports = {
   		},
   		colors: {
   			nz: {
+  				// 🌘 Tons da home nova (fundo escuro). Vieram do próprio logo:
+  				// o verde quase preto do fundo e o verde vivo do símbolo.
+  				noite: '#0A1410',
+  				'noite-2': '#07100C',
+  				'noite-3': '#0F1C16',
+  				// verde vivo o bastante para texto pequeno sobre o escuro
+  				// (o nz-verde-claro fica em 5,3:1 — bom para título, apertado
+  				// para legenda de 11px)
+  				'verde-neon': '#3FD07E',
+  				'verde-menta': '#7FD6A6',
   				verde: '#1B7A48',
   				'verde-claro': '#2E9D63',
   				'verde-fundo': '#F1F7F3',

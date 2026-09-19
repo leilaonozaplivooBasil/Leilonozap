@@ -1,0 +1,124 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  ArrowRight, ShoppingBag, Sparkles, Home, Shirt, Cpu, Sofa, Car,
+  Wrench, Dog, Dumbbell, Baby, Gamepad2, PawPrint,
+} from 'lucide-react';
+import { recadoDaCategoria } from '@/lib/homeNova';
+import { aoEntrar } from './aoEntrar';
+
+// 🗂️ EXPLORE POR CATEGORIA.
+//
+// A contagem vem da view `vw_home_categorias`, que amarra o leilão à categoria
+// DO PRODUTO. O campo `auctions.category` não é usado: 52% dos leilões estão
+// nele como "outros", o que daria um card "Outros — 29" no lugar de vitrine.
+//
+// 🎨 Sem foto cadastrada, o card NÃO fica feio nem some: ganha o ícone da
+// categoria sobre um degradê da marca. Foto é melhoria, não requisito.
+
+// Casa o nome da categoria com um ícone. Chave em minúsculo e sem acento.
+const ICONES = [
+  [/beleza|saúde|saude/, Sparkles],
+  [/casa|constru/, Home],
+  [/moda|roupa|calçad|calcad/, Shirt],
+  [/eletr[oô]nico|inform|notebook/, Cpu],
+  [/decora|cama|banho/, Sofa],
+  [/autom|veic|ve[íi]cul/, Car],
+  [/ferrament|constru/, Wrench],
+  [/pet/, PawPrint],
+  [/esporte|lazer/, Dumbbell],
+  [/beb[eê]|infantil/, Baby],
+  [/game|vídeo game|video game|brinquedo/, Gamepad2],
+  [/eletrodom/, Home],
+  [/cozinha/, Home],
+  [/papelaria|escrit/, ShoppingBag],
+  [/organiza/, ShoppingBag],
+  [/costura/, Shirt],
+  [/m[uú]sica|instrument/, Sparkles],
+  [/jardim|planta/, Dog],
+];
+
+export function iconeDaCategoria(nome) {
+  const limpo = String(nome || '').toLowerCase();
+  const achou = ICONES.find(([regra]) => regra.test(limpo));
+  return achou ? achou[1] : ShoppingBag;
+}
+
+export default function ExplorePorCategoria({ categorias = [] }) {
+  const semMovimento = useReducedMotion();
+  if (categorias.length === 0) return null;
+
+  return (
+    <section className="bg-nz-noite px-5 py-[clamp(36px,5.5vw,68px)]" data-teste="explore-categoria">
+      <motion.div
+        {...aoEntrar({ semMovimento })}
+        className="mx-auto max-w-[1200px]"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-nz-ouro-claro">Categorias</span>
+            <h2 className="font-slab mt-1.5 font-extrabold leading-[1.1] tracking-[-0.02em] text-white" style={{ fontSize: 'clamp(1.6rem, 3.4vw, 2.4rem)' }}>
+              Explore por categoria
+            </h2>
+            <p className="mt-2 text-[15px] text-white/50">Os leilões abertos agora, organizados por setor.</p>
+          </div>
+          <Link
+            to="/Loja-Virtual"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/15 px-5 text-[14px] font-semibold text-white/80 transition-colors hover:border-nz-verde-neon hover:text-nz-verde-neon"
+          >
+            Ver todas <ArrowRight size={15} />
+          </Link>
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          {categorias.map((c, i) => {
+            const Icone = iconeDaCategoria(c.nome);
+            return (
+              <motion.div
+                key={c.id || c.nome}
+                {...aoEntrar({ semMovimento, atraso: i * 0.05, distancia: 14 })}
+              >
+                <Link
+                  to={`/Loja-Virtual?categoria=${encodeURIComponent(c.id || c.nome)}`}
+                  className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-nz-noite-3 transition-all duration-300 hover:-translate-y-1 hover:border-nz-verde-claro/60 hover:shadow-[0_16px_34px_-18px_rgba(46,157,99,0.7)]"
+                  data-teste="card-categoria"
+                >
+                  <div className="relative h-[112px] overflow-hidden sm:h-[128px]">
+                    {c.imagem ? (
+                      <img
+                        src={c.imagem}
+                        alt={c.nome}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-full w-full items-center justify-center"
+                        style={{ background: 'radial-gradient(120% 110% at 50% 0%, rgba(46,157,99,0.32) 0%, rgba(10,20,16,0) 72%)' }}
+                      >
+                        <Icone
+                          size={34}
+                          strokeWidth={1.5}
+                          className="text-nz-verde-menta/60 transition-all duration-300 group-hover:scale-110 group-hover:text-nz-verde-neon"
+                        />
+                      </div>
+                    )}
+                    <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-12" style={{ background: 'linear-gradient(to top, rgba(15,28,22,1), transparent)' }} />
+                  </div>
+                  <div className="px-3 pb-3.5 pt-1">
+                    <div className="text-[14px] font-semibold leading-tight text-white transition-colors group-hover:text-nz-verde-neon">{c.nome}</div>
+                    <div className="mt-1 text-[12px] text-white/45" data-teste="recado-categoria">
+                      {recadoDaCategoria(c)}
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    </section>
+  );
+}
