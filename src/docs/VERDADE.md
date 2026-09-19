@@ -28,6 +28,7 @@ divergência ao dono ANTES de agir.**
 |---|---|---|
 | **1º** | **`docs/VERDADE.md`** (este arquivo) | 👑 **SOBERANO.** Vence TODOS, sem exceção |
 | 2º | `docs/DOCUMENTO-OFICIAL-PLANO-CARREIRA.md` | Autoridade **exclusiva** em comissão, percentual e hierarquia de cargos |
+| 2º | `docs/DOCUMENTO-OFICIAL-PASSAPORTE.md` | Autoridade **exclusiva** em carteira digital, Passaporte de Lances e o que a Loja Virtual aceita |
 | 3º | `CONTRATO.md` | Mapa técnico: onde ficam os dados, como o front chama o backend, índice de funções |
 | 4º | `MUDANCAS.md` | 📖 **Diário histórico. NÃO É REGRA.** Registra o que foi feito, não o que vale hoje |
 | 5º | Qualquer outro `.md`, comentário, print ou conversa | 🗄️ **HISTÓRICO.** Não vale como regra |
