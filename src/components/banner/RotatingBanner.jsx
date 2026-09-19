@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { destinoDoBanner } from '@/lib/linkDoBanner';
 
 // ambient: preenche as laterais/sobras do container com a própria arte desfocada
 // (em vez de barras chapadas) quando fit="contain" e o banner não cobre tudo.
@@ -36,6 +38,35 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 // Sem teto nenhum, de propósito: qualquer `maxHeight` aqui faz a altura travar
 // enquanto a largura segue em 100%, a proporção quebra, e a faixa lateral que
 // o dono está reclamando VOLTA. Foi essa a escolha dele.
+
+/**
+ * 🔗 O CLIQUE DO BANNER — um lugar só para os dois ramos (imagem e vídeo).
+ *
+ * 🔴 19/09/2026. Antes: o ramo da imagem tinha `target="_blank"` cravado e o do
+ * vídeo não tinha nenhum. Mesmo clique, dois comportamentos — e o da imagem
+ * abria ABA NOVA para ir de uma página nossa a outra página nossa.
+ *
+ * Agora quem decide é `destinoDoBanner`: caminho nosso navega DENTRO da
+ * aplicação (sem recarregar, mesma aba); site de fora abre em aba nova com
+ * `rel` de segurança; sem link, nada de <a> — porque um <a> sem destino é um
+ * cursor de mãozinha que não leva a lugar nenhum.
+ */
+function CliqueDoBanner({ linkUrl, className, children }) {
+  const destino = destinoDoBanner(linkUrl);
+  if (!destino) return <div className={className}>{children}</div>;
+  if (destino.tipo === 'interno') {
+    return <Link to={destino.para} className={className}>{children}</Link>;
+  }
+  return (
+    <a
+      href={destino.href}
+      {...(destino.novaAba ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      className={className}
+    >
+      {children}
+    </a>
+  );
+}
 
 export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heightClass = 'h-64 md:h-80 lg:h-96', rounded = true, ambient = false, objectPosition, molduraSegueArte = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -241,7 +272,7 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                         muted
                         playsInline
                         preload={shouldEagerLoad ? 'auto' : 'metadata'}
-                        className={`relative w-full h-full ${videoFitClass} ${banner.link_url ? 'cursor-pointer' : ''}`}
+                        className={`relative w-full h-full ${videoFitClass} ${destinoDoBanner(banner.link_url) ? 'cursor-pointer' : ''}`}
                         style={{ objectPosition: videoObjectPosition, backgroundColor: isContain ? '#0f172a' : undefined }}
                       />
                     </>
@@ -263,16 +294,11 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                       )}
                     </div>
                   );
-                  return banner.link_url ? (
-                    <a href={banner.link_url} className="relative block w-full h-full">
+                  return (
+                    <CliqueDoBanner linkUrl={banner.link_url} className="relative block w-full h-full">
                       {videoContent}
                       {caption}
-                    </a>
-                  ) : (
-                    <div className="relative w-full h-full">
-                      {videoContent}
-                      {caption}
-                    </div>
+                    </CliqueDoBanner>
                   );
                 })()}
               </div>
@@ -295,51 +321,30 @@ export default function RotatingBanner({ banners, fit = 'cover', mobileFit, heig
                 decoding="async"
               />
             )}
-            {banner.link_url ? (
-              <a href={banner.link_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full overflow-hidden">
-                <img
-                  src={banner.image_url}
-                  alt={banner.title || 'Banner'}
-                  className={`w-full h-full cursor-pointer relative ${fitAtual === 'contain' ? 'object-contain' : ''} ${fitAtual === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
-                  loading={shouldEagerLoad ? "eager" : "lazy"}
-                  fetchPriority={isActive ? "high" : "low"}
-                  decoding={shouldEagerLoad ? "sync" : "async"}
-                  onLoad={isActive ? anotarProporcao : undefined}
-                  ref={isActive ? medirSeJaPronta : undefined}
-                  style={{
-                    objectFit: fitAtual,
-                    objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
-                    backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
-                    ...(banner.image_adjustments ? {
-                      objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
-                      transform: `scale(${banner.image_adjustments.scale || 1})`
-                    } : {})
-                  }}
-                />
-              </a>
-            ) : (
-              <div className="w-full h-full overflow-hidden">
-                <img
-                  src={banner.image_url}
-                  alt={banner.title || 'Banner'}
-                  className={`w-full h-full relative ${fitAtual === 'contain' ? 'object-contain' : ''} ${fitAtual === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
-                  loading={shouldEagerLoad ? "eager" : "lazy"}
-                  fetchPriority={isActive ? "high" : "low"}
-                  decoding={shouldEagerLoad ? "sync" : "async"}
-                  onLoad={isActive ? anotarProporcao : undefined}
-                  ref={isActive ? medirSeJaPronta : undefined}
-                  style={{
-                    objectFit: fitAtual,
-                    objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
-                    backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
-                    ...(banner.image_adjustments ? {
-                      objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
-                      transform: `scale(${banner.image_adjustments.scale || 1})`
-                    } : {})
-                  }}
-                />
-              </div>
-            )}
+            {/* A imagem é escrita UMA vez: antes ela aparecia em dois ramos
+                quase idênticos, e qualquer ajuste de encaixe tinha que ser feito
+                nos dois — foi assim que o `target="_blank"` ficou só num deles. */}
+            <CliqueDoBanner linkUrl={banner.link_url} className="block w-full h-full overflow-hidden">
+              <img
+                src={banner.image_url}
+                alt={banner.title || 'Banner'}
+                className={`w-full h-full relative ${destinoDoBanner(banner.link_url) ? 'cursor-pointer' : ''} ${fitAtual === 'contain' ? 'object-contain' : ''} ${fitAtual === 'contain' && !ambient ? 'bg-gray-900' : ''}`}
+                loading={shouldEagerLoad ? "eager" : "lazy"}
+                fetchPriority={isActive ? "high" : "low"}
+                decoding={shouldEagerLoad ? "sync" : "async"}
+                onLoad={isActive ? anotarProporcao : undefined}
+                ref={isActive ? medirSeJaPronta : undefined}
+                style={{
+                  objectFit: fitAtual,
+                  objectPosition: fitAtual === 'cover' ? objectPosition : undefined,
+                  backgroundColor: fitAtual === 'contain' && !ambient ? '#0f172a' : undefined,
+                  ...(banner.image_adjustments ? {
+                    objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
+                    transform: `scale(${banner.image_adjustments.scale || 1})`
+                  } : {})
+                }}
+              />
+            </CliqueDoBanner>
           </div>
           );
         })}
