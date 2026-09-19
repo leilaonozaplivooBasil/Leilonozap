@@ -15,6 +15,15 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/index.css';
 import HomeNova from '@/pages/HomeNova';
 
+// 🖼️ As artes de categoria são NOSSAS e moram no repositório (public/categorias),
+// então aqui entram de verdade — não como tarja. É o que faz esta banca provar
+// que a foto do dono cabe no card, em vez de provar que um retângulo cabe.
+import arteCasaCozinha from '../../public/categorias/casa-e-cozinha.webp';
+import arteEletronicos from '../../public/categorias/eletronicos.webp';
+import arteFerramentas from '../../public/categorias/ferramentas.webp';
+import arteGames from '../../public/categorias/games.webp';
+import arteModa from '../../public/categorias/moda.webp';
+
 // `&` cru quebra o XML do SVG — vira imagem quebrada em "Beleza & Saúde".
 const escapar = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -102,11 +111,11 @@ const featured_products = [PS5.id, ...LEILOES_REAIS.slice(0, 5).map(([id]) => id
 // categorias que o dono fotografou vão na frente, mesmo não sendo as mais
 // movimentadas. A sexta vaga fica pra maior sem foto — aqui, Casa & Construção.
 const vw_home_categorias = [
-  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', leiloes_ativos: 2, produtos_na_loja: 22, imagem: placa('MODA', '#1B1410') },
-  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', leiloes_ativos: 5, produtos_na_loja: 21, imagem: placa('ELETRÔNICOS', '#0E1A22') },
-  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', leiloes_ativos: 2, produtos_na_loja: 6, imagem: placa('CASA E COZINHA', '#1E1A12') },
-  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, imagem: placa('FERRAMENTAS', '#221B08') },
-  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, imagem: placa('GAMES', '#0B1A14') },
+  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', leiloes_ativos: 2, produtos_na_loja: 22, imagem: arteModa },
+  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', leiloes_ativos: 5, produtos_na_loja: 21, imagem: arteEletronicos },
+  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', leiloes_ativos: 2, produtos_na_loja: 6, imagem: arteCasaCozinha },
+  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, imagem: arteFerramentas },
+  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, imagem: arteGames },
   { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50, imagem: null },
   { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', leiloes_ativos: 11, produtos_na_loja: 23, imagem: null },
   { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', leiloes_ativos: 4, produtos_na_loja: 31, imagem: null },
