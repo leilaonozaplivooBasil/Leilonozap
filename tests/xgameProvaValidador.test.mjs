@@ -16,6 +16,12 @@ beforeEach(() => {
   fetchReal = globalThis.fetch;
   globalThis.fetch = async (url, opts = {}) => {
     const u = String(url);
+    // 🖼️ 18/09/2026 — o validador dá um HEAD na imagem antes de chamar a IA
+    // (validação do ramo da URL). Responde como servidor de imagem e fica FORA
+    // de `chamadas`: não é chamada ao modelo.
+    if (String(opts.method || 'GET').toUpperCase() === 'HEAD') {
+      return new Response(null, { status: 200, headers: { 'content-type': 'image/jpeg', 'content-length': '180000' } });
+    }
     chamadas.push({ url: u, corpo: opts.body ? JSON.parse(opts.body) : null });
     if (u.includes('supabase.co/rest/v1/app_segredos')) {
       return new Response(JSON.stringify([{ valor: TOKEN }]), { status: 200, headers: { 'content-type': 'application/json' } });

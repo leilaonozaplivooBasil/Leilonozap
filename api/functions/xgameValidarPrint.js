@@ -222,6 +222,79 @@ export function fonteDaImagem({ url, b64 }) {
   return /^https?:\/\//.test(limpa) ? { type: 'url', url: limpa } : null;
 }
 
+// 🖼️ O TETO DA ANTHROPIC POR IMAGEM. Acima disto ela recusa com 400 — e era
+// esse 400 que a tela mostrava como "IA indisponível" (17/09/2026: foto de
+// 5,85 MB, IA no ar, saldo em dia).
+export const TETO_DA_IA = 5 * 1024 * 1024;
+
+/**
+ * Confere a imagem que vem por URL — o ramo que não validava NADA.
+ *
+ * O ramo do base64 já conferia tipo e tamanho; o da URL só olhava se começava
+ * com http. Resultado: a imagem grande passava daqui, a Anthropic recusava, e
+ * a culpa caía na IA. Um HEAD responde as duas perguntas (tipo e tamanho) sem
+ * baixar a imagem.
+ *
+ * 🔴 NA DÚVIDA, DEIXA PASSAR. Servidor que não responde HEAD, que não manda
+ * content-length, ou que demora — a validação segue como antes. Este teto
+ * existe pra dar mensagem certa em caso conhecido, não pra inventar recusa.
+ */
+export async function conferirImagemPorUrl(url, { buscar = fetch, timeoutMs = 4000 } = {}) {
+  const parar = AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined;
+  let resposta;
+  try {
+    resposta = await buscar(url, { method: 'HEAD', signal: parar });
+  } catch {
+    return { ok: true, conferido: false };
+  }
+  if (!resposta?.ok) return { ok: true, conferido: false };
+
+  const tipo = String(resposta.headers?.get?.('content-type') || '').split(';')[0].trim().toLowerCase();
+  if (tipo && !MIMES_DE_IMAGEM.has(tipo)) {
+    return { ok: false, conferido: true, motivo: `esse link não é uma imagem (${tipo}) — envie o print em JPG, PNG ou WEBP.` };
+  }
+
+  const tamanho = Number(resposta.headers?.get?.('content-length'));
+  if (Number.isFinite(tamanho) && tamanho > TETO_DA_IA) {
+    return {
+      ok: false, conferido: true, bytes: tamanho,
+      motivo: `a imagem tem ${(tamanho / 1024 / 1024).toFixed(1)} MB e o limite da análise é 5 MB — tire o print de novo ou envie uma foto menor.`,
+    };
+  }
+  return { ok: true, conferido: true, bytes: Number.isFinite(tamanho) ? tamanho : null };
+}
+
+/**
+ * O erro da IA é culpa da IMAGEM ou é a IA fora do ar?
+ *
+ * 🔴 ESTA É A CORREÇÃO QUE MAIS IMPORTA PRO USUÁRIO. Antes, TODO erro virava
+ * "IA indisponível agora" — inclusive o 400 de imagem grande demais. A pessoa
+ * tentava de novo com a MESMA foto, dava o mesmo erro, e o dono foi olhar se a
+ * IA tinha caído. Não tinha.
+ *
+ * Só classifica como problema de imagem o que é 400 E fala de imagem: um 400
+ * por outro motivo continua sendo erro nosso, não culpa da foto da pessoa.
+ */
+export function problemaDaImagem(detalhes) {
+  if (!detalhes || Number(detalhes.status) !== 400) return null;
+  const texto = String(detalhes.mensagem || '').toLowerCase();
+  if (!/image|imagem|media|picture/.test(texto)) return null;
+  if (/exceed|too large|maximum|limit|size|larger than|5 mb|megabyte/.test(texto)) {
+    return 'A imagem é grande demais para a análise (o limite é 5 MB). Tire o print de novo ou envie uma foto menor.';
+  }
+  if (/format|unsupported|invalid|could not process|decode|fetch/.test(texto)) {
+    return 'Não consegui ler essa imagem. Envie o print em JPG, PNG ou WEBP.';
+  }
+  return 'Não consegui usar essa imagem na análise. Tente enviar outro print.';
+}
+
+/** Resposta de "o problema é a imagem" — NÃO é `ia_indisponivel`. */
+const imagemRuim = (res, motivo) =>
+  res.status(200).json({
+    ok: true, imagem_recusada: true, veredito: 'duvida', confianca: 0,
+    o_que_viu: '', motivo, pergunta_para_pessoa: '',
+  });
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method === 'GET') {
@@ -270,6 +343,16 @@ export default async function handler(req, res) {
     const imagemDeHoje = fonteDaImagem({ url: imageUrl, b64: body?.image_b64 });
     if (!imagemDeHoje) return res.status(400).json({ ok: false, error: 'image_url (http/https) ou image_b64 obrigatório' });
 
+    // 🖼️ O ramo da URL não validava nada — agora um HEAD confere tipo e tamanho
+    // ANTES de gastar chamada de IA e devolver 400 disfarçado de "IA fora".
+    if (imagemDeHoje.type === 'url') {
+      const conferida = await conferirImagemPorUrl(imagemDeHoje.url);
+      if (!conferida.ok) {
+        console.warn('[xgameValidarPrint] imagem recusada antes da IA', { bytes: conferida.bytes, motivo: conferida.motivo });
+        return imagemRuim(res, conferida.motivo);
+      }
+    }
+
     const ia = await resolverIA();
     if (!ia) return indisponivel(res, { status: 0, tipo: 'sem_chave', mensagem: 'nem ANTHROPIC_API_KEY nem AI_GATEWAY_API_KEY configuradas' }, 'IA não conectada — configure a chave da Anthropic ou do AI Gateway.');
 
@@ -312,6 +395,12 @@ TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${d
       });
     } catch (e) {
       const d = detalhesDoErro(e);
+      // 🔴 Imagem ruim NÃO é IA fora do ar. Ver `problemaDaImagem`.
+      const daImagem = problemaDaImagem(d);
+      if (daImagem) {
+        console.warn('[xgameValidarPrint] a IA recusou a imagem', { via: ia.via, model: ia.model, ...d });
+        return imagemRuim(res, daImagem);
+      }
       console.error('[xgameValidarPrint] IA falhou', { via: ia.via, model: ia.model, ...d });
       return indisponivel(res, { via: ia.via, model: ia.model, ...d });
     }

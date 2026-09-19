@@ -50,6 +50,14 @@ beforeEach(() => {
       const r = estado.responderCreditos ? estado.responderCreditos() : { status: 200, body: { balance: '95.50', total_used: '4.50' } };
       return new Response(JSON.stringify(r.body), { status: r.status, headers: { 'content-type': 'application/json' } });
     }
+    // 🖼️ 18/09/2026 — o handler agora dá um HEAD na imagem antes de chamar a IA
+    // (é a validação do ramo da URL, que não validava nada e deixava a foto de
+    // 5,85 MB morrer num 400 disfarçado de "IA fora do ar"). O duble responde
+    // como um servidor de imagem de verdade responderia, e esse HEAD NÃO entra
+    // em `estado.chamadas`: ele não é chamada ao modelo.
+    if (String(opts.method || 'GET').toUpperCase() === 'HEAD') {
+      return new Response(null, { status: 200, headers: { 'content-type': 'image/jpeg', 'content-length': '240000' } });
+    }
     const corpo = opts.body ? JSON.parse(opts.body) : null;
     // o SDK manda um objeto Headers, não um objeto simples — normaliza pra ler
     estado.chamadas.push({ url: u, corpo, headers: new Headers(opts.headers || {}) });
