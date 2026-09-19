@@ -42,6 +42,10 @@ import {
   minutosDeHora,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
+// 📷 A foto do celular chega com 4000×3000 e passa dos 5 MB que a análise
+// aceita. Encolhe ANTES de subir — a impressão digital continua sendo a do
+// arquivo original (ver o cabeçalho de lib/encolherImagem.js).
+import { encolherSePreciso } from '@/lib/encolherImagem';
 import TourGuiado from './TourGuiado';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
 import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
@@ -993,7 +997,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     let corpo = {};
     if (bloco === 'acordei') {
       // o print sobe pelo MESMO caminho de toda comprovação do método
-      const up = await plataforma.integrations.Core.UploadFile({ file: dados.file }).catch((e) => { anotarFalha('print')(e?.message || 'upload falhou'); return null; });
+      const menor = await encolherSePreciso(dados.file);
+      const up = await plataforma.integrations.Core.UploadFile({ file: menor }).catch((e) => { anotarFalha('print')(e?.message || 'upload falhou'); return null; });
       if (!up?.file_url) throw new Error('print não subiu');
       corpo = { print_url: up.file_url, hash: dados.hash || '' };
     } else if (bloco === 'gratidao') {
@@ -1474,6 +1479,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       });
       return;
     }
+    if (decisao.acao === 'trocar_imagem') {
+      // 🖼️ A imagem não pôde ser analisada (grande demais, formato estranho).
+      // Não gasta tentativa, não grava nada, não reprova: diz o que houve e
+      // deixa a pessoa mandar outra na hora. O texto vem do servidor porque é
+      // ele que sabe se o problema foi tamanho ou formato.
+      anotarFalhaDaTarefa(t.id, 'print', decisao.motivo);
+      setComprovando({ ...comprovando, enviando: false, erro: `📷 ${decisao.motivo}`, pergunta: null });
+      return;
+    }
     if (decisao.acao === 'reprovar') {
       setComprovando({ ...comprovando, enviando: false, erro: `🤖 A IA reprovou: ${decisao.motivo}`, pergunta: null });
       return;
@@ -1559,9 +1573,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setComprovando({ ...comprovando, enviando: true, erro: '' });
     let printUrl = '';
     try {
-      const ext = (dados.file.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
+      // ⚠️ O `hash` acima já foi tirado do arquivo ORIGINAL — é ele que barra
+      // print reaproveitado. O que sobe é a versão encolhida.
+      const menor = await encolherSePreciso(dados.file);
+      const ext = (menor.name || 'print.png').split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'png';
       const up = await plataforma.integrations.Core.UploadFile({
-        file: dados.file,
+        file: menor,
         path: caminhoDeProva({ pasta: 'prints', uid, dia: hojeStr(), tarefaId: t.id, ext }),
       });
       printUrl = up?.file_url || up?.url || '';
