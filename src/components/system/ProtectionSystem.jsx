@@ -78,7 +78,6 @@ const PROTECTED_FILES = {
     { path: 'components/admin/UserPasswordModal.jsx', critical: true, description: 'Alteração de senha' },
     { path: 'components/admin/IndicatedUsersModal.jsx', critical: false, description: 'Usuários indicados' },
     { path: 'components/admin/CommissionStatementModal.jsx', critical: true, description: 'Extrato de comissões' },
-    { path: 'components/admin/MessageDispatcher.jsx', critical: false, description: 'Envio de mensagens em massa' },
     
     // Comparai Components
     { path: 'components/comparai/ComparaiButton.jsx', critical: true, description: 'Botão CompareAQUI' },
@@ -123,7 +122,6 @@ const PROTECTED_FILES = {
     { path: 'functions/transcribeAudio.js', critical: false, description: 'Transcrição de áudio' },
     { path: 'functions/comparaiPrices.js', critical: true, description: 'Comparação de preços' },
     { path: 'functions/linkOrphanUsers.js', critical: false, description: 'Vinculação de usuários órfãos' },
-    { path: 'functions/sendBulkMessages.js', critical: false, description: 'Envio de mensagens em massa' },
     { path: 'functions/deleteTestAuctions.js', critical: false, description: 'Deleção de leilões de teste' },
     { path: 'functions/emergencyReactivate.js', critical: true, description: 'Reativação de emergência' },
     { path: 'functions/createTestAuction.js', critical: false, description: 'Criação de leilão de teste' },
