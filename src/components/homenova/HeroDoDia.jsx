@@ -170,7 +170,18 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
         {(temVideo || foto) && (
           <div className="relative flex items-center justify-center">
             {temVideo ? (
-              <div className="relative w-full max-w-[460px]" data-teste="hero-com-video">
+              /* 🖼️ 19/09/2026 — A MOLDURA, DEPOIS DO PRINT DO DONO.
+                 A primeira versão punha o <video> numa caixa de altura fixa
+                 (400px) com `object-contain`. O quadro do vídeo é 16:9: ele
+                 ficava no meio e sobravam ~70px de CAIXA VAZIA em cima e
+                 embaixo — invisíveis, mas ocupando espaço. O botão de som,
+                 ancorado no fundo dessa caixa, aparecia boiando no preto, longe
+                 do vídeo. Agora a moldura TEM a proporção do vídeo: nada sobra,
+                 e o que é âncora fica onde se espera. */
+              <div
+                className="group/video relative aspect-video w-full max-w-[520px] overflow-hidden rounded-2xl border border-nz-verde-claro/25 bg-nz-noite-3 shadow-[0_28px_60px_-24px_rgba(46,157,99,0.75)]"
+                data-teste="hero-com-video"
+              >
                 <video
                   ref={videoRef}
                   src={video.embed}
@@ -180,21 +191,42 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
                   muted={mudo}
                   playsInline
                   preload="metadata"
-                  // a foto do produto como cartaz: o hero nunca nasce preto, e
-                  // quem está com dados curtos vê a imagem de sempre
+                  // a foto do produto como cartaz: o herói nunca nasce preto, e
+                  // quem está com dados curtos vê a imagem de sempre. `contain`
+                  // serve aos dois — o vídeo 16:9 preenche a moldura inteira, e
+                  // a foto, que é quadrada, fica centrada sem ser decepada.
                   poster={foto || undefined}
-                  className="w-full rounded-2xl object-contain drop-shadow-[0_30px_50px_rgba(0,0,0,0.6)]"
-                  style={{ height: 'clamp(230px, 32vw, 400px)' }}
+                  className="h-full w-full object-contain"
                 />
+
+                {/* véu no pé: o botão precisa ser legível também quando a cena
+                    do vídeo está clara, e uma cena clara acontece o tempo todo */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-24"
+                  style={{ background: 'linear-gradient(to top, rgba(7,16,12,0.75), transparent)' }}
+                />
+
                 <button
                   type="button"
                   onClick={trocarSom}
                   data-teste="som-do-hero"
                   aria-label={mudo ? 'Ligar o som do vídeo' : 'Tirar o som do vídeo'}
-                  className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur-sm transition-all duration-200 hover:border-nz-verde-neon hover:text-nz-verde-neon motion-reduce:transition-none"
+                  className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/55 text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-nz-verde-neon hover:text-nz-verde-neon motion-reduce:transition-none motion-reduce:hover:scale-100"
                 >
                   {mudo ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
+
+                {/* 🔇 enquanto está mudo, o convite fica escrito: sem isto a
+                    pessoa não tem como saber que existe som para ligar */}
+                {mudo && (
+                  <span
+                    className="pointer-events-none absolute bottom-[22px] right-[68px] whitespace-nowrap rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm"
+                    data-teste="convite-do-som"
+                  >
+                    Toque para ouvir
+                  </span>
+                )}
               </div>
             ) : (
               <img

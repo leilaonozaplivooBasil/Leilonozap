@@ -405,3 +405,33 @@ test('🔘 o botão de som existe e volta a mudar o estado', { skip: semNavegado
   assert.notEqual(depoisDoPrimeiro, depoisDoSegundo, 'o botão tem que alternar o som, não travar num estado');
   await pagina.close();
 });
+
+test('🖼️ o botão de som fica DENTRO do vídeo, e a moldura não sobra caixa vazia', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const moldura = await pagina.locator('[data-teste="hero-com-video"]').boundingBox();
+  const video = await pagina.locator('[data-teste="video-do-hero"]').boundingBox();
+  const botao = await pagina.locator('[data-teste="som-do-hero"]').boundingBox();
+
+  // 🔴 O DEFEITO QUE ISTO GUARDA (print do dono, 19/09): a caixa do <video>
+  // tinha altura fixa de 400px e o quadro 16:9 ficava no meio dela, deixando
+  // ~70px de vazio em cima e embaixo. O botão, ancorado no fundo da caixa,
+  // aparecia boiando no preto, longe do vídeo.
+  const proporcao = moldura.width / moldura.height;
+  assert.ok(
+    Math.abs(proporcao - 16 / 9) < 0.06,
+    `a moldura tinha que ter a proporção do vídeo (16:9 = 1.78) e tem ${proporcao.toFixed(2)}`,
+  );
+
+  // a moldura é do tamanho do vídeo: nada de caixa maior que o conteúdo.
+  // A folga de 3px é a BORDA (1px em cima, 1px embaixo) — medido: 292,5 contra
+  // 290,5. O defeito original deixava ~140px de diferença, então a régua pega.
+  assert.ok(Math.abs(moldura.height - video.height) < 3, `moldura ${moldura.height}px vs vídeo ${video.height}px`);
+
+  // e o botão cabe inteiro dentro dela
+  const dentro = botao.x >= moldura.x
+    && botao.y >= moldura.y
+    && botao.x + botao.width <= moldura.x + moldura.width + 1
+    && botao.y + botao.height <= moldura.y + moldura.height + 1;
+  assert.ok(dentro, `o botão de som saiu da moldura: botão ${JSON.stringify(botao)} · moldura ${JSON.stringify(moldura)}`);
+  await pagina.close();
+});
