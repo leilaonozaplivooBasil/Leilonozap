@@ -130,16 +130,29 @@ const featured_products = [PS5.id, ...LEILOES_REAIS.slice(0, 5).map(([id]) => id
 // 📊 Retrato de 19/09/2026 (contagem real do banco) e a régua nova: as CINCO
 // categorias que o dono fotografou vão na frente, mesmo não sendo as mais
 // movimentadas. A sexta vaga fica pra maior sem foto — aqui, Casa & Construção.
+// 📊 Retrato de 20/09/2026, com as CATORZE categorias que têm arte. A vitrine
+// passou a mostrar doze: a banca precisa de mais de doze para provar que o corte
+// acontece, e de `ordem` preenchida em algumas para provar que ela manda.
 const vw_home_categorias = [
-  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', leiloes_ativos: 2, produtos_na_loja: 22, imagem: arteModa },
-  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', leiloes_ativos: 5, produtos_na_loja: 21, imagem: arteEletronicos },
-  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', leiloes_ativos: 2, produtos_na_loja: 6, imagem: arteCasaCozinha },
-  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, imagem: arteFerramentas },
-  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, imagem: arteGames },
-  { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50, imagem: null },
-  { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', leiloes_ativos: 11, produtos_na_loja: 23, imagem: null },
-  { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', leiloes_ativos: 4, produtos_na_loja: 31, imagem: null },
-  { id: '452df51b6fd1576e7c800543', nome: 'Automotivo', leiloes_ativos: 3, produtos_na_loja: 14, imagem: null },
+  // as cinco que o dono escolheu a dedo ganham ordem explícita
+  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', ordem: 1, leiloes_ativos: 2, produtos_na_loja: 22, imagem: arteModa },
+  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', ordem: 2, leiloes_ativos: 5, produtos_na_loja: 21, imagem: arteEletronicos },
+  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', ordem: 3, leiloes_ativos: 2, produtos_na_loja: 6, imagem: arteCasaCozinha },
+  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', ordem: 4, leiloes_ativos: 1, produtos_na_loja: 9, imagem: arteFerramentas },
+  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', ordem: 5, leiloes_ativos: 1, produtos_na_loja: 1, imagem: arteGames },
+  // as nove novas entram sem ordem: quem manda entre elas é o volume
+  { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', ordem: null, leiloes_ativos: 11, produtos_na_loja: 51, imagem: placa('CASA & CONSTRUÇÃO', '#1A1410') },
+  { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', ordem: null, leiloes_ativos: 10, produtos_na_loja: 23, imagem: placa('BELEZA & SAÚDE', '#1B1018') },
+  { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', ordem: null, leiloes_ativos: 3, produtos_na_loja: 33, imagem: placa('DECORAÇÃO', '#1A1608') },
+  { id: '452df51b6fd1576e7c800543', nome: 'Automotivo', ordem: null, leiloes_ativos: 3, produtos_na_loja: 14, imagem: placa('AUTOMOTIVO', '#0E1216') },
+  { id: 'd452e4ca83593ebcc8b681cb', nome: 'Esporte & Lazer', ordem: null, leiloes_ativos: 3, produtos_na_loja: 6, imagem: placa('ESPORTE & LAZER', '#101A12') },
+  { id: '69e7ad54cd426dd916b3f37f', nome: 'Pets', ordem: null, leiloes_ativos: 2, produtos_na_loja: 7, imagem: placa('PETS', '#1A1512') },
+  { id: 'd86b0f972f7c6629aed01b26', nome: 'Cama & Banho', ordem: null, leiloes_ativos: 1, produtos_na_loja: 3, imagem: placa('CAMA & BANHO', '#14181C') },
+  { id: '054058f1e8f9bde2073655d4', nome: 'Papelaria', ordem: null, leiloes_ativos: 0, produtos_na_loja: 12, imagem: placa('PAPELARIA', '#101418') },
+  { id: '69f2dee24631a895b2da09cd', nome: 'Cozinha', ordem: null, leiloes_ativos: 0, produtos_na_loja: 10, imagem: placa('COZINHA', '#181410') },
+  // sem arte: só entram se sobrar vaga — e não sobra
+  { id: 'sem-arte-1', nome: 'Organização', ordem: null, leiloes_ativos: 1, produtos_na_loja: 5, imagem: null },
+  { id: 'sem-arte-2', nome: 'Notebooks', ordem: null, leiloes_ativos: 0, produtos_na_loja: 4, imagem: null },
 ];
 
 window.__bancoFalso = { tabelas: { auctions, products, featured_products, vw_home_categorias }, escritas: [] };

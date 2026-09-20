@@ -88,7 +88,7 @@ export default function HomeNova() {
       try {
         const { data } = await supabase
           .from('vw_home_categorias')
-          .select('id,nome,leiloes_ativos,produtos_na_loja,imagem')
+          .select('id,nome,leiloes_ativos,produtos_na_loja,imagem,ordem')
           .limit(40);
         if (vivo) setCategorias(categoriasDaVitrine(data));
       } catch { /* seção some */ }

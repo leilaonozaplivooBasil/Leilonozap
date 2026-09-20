@@ -71,13 +71,21 @@ export default function ExplorePorCategoria({ categorias = [] }) {
           </Link>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {/* 📱 20/09/2026 — NO CELULAR ISTO NÃO PODE SER GRADE.
+            Com doze cards em duas colunas viram SEIS fileiras: uma parede de
+            ~1.400px que ninguém rola até o fim, logo na segunda dobra da home.
+            No telefone vira trilho que desliza — o mesmo gesto dos carrosséis
+            de leilão, que a pessoa já aprendeu duas seções abaixo. Do `sm` para
+            cima volta a ser grade, onde as duas fileiras cabem sem empurrar
+            nada. */}
+        <div className="nz-no-scrollbar -mx-5 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-6">
           {categorias.map((c, i) => {
             const Icone = iconeDaCategoria(c.nome);
             return (
               <motion.div
                 key={c.id || c.nome}
-                {...aoEntrar({ semMovimento, atraso: i * 0.05, distancia: 14 })}
+                className="w-[46vw] max-w-[190px] flex-none snap-start sm:w-auto sm:max-w-none"
+                {...aoEntrar({ semMovimento, atraso: Math.min(i, 5) * 0.05, distancia: 14 })}
               >
                 <Link
                   to={`/Loja-Virtual?categoria=${encodeURIComponent(c.id || c.nome)}`}
@@ -120,14 +128,19 @@ export default function ExplorePorCategoria({ categorias = [] }) {
                       adivinhar que clicar leva à lista da categoria. */}
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute bottom-3 right-3 z-10 inline-flex translate-y-2 items-center gap-1 rounded-full bg-nz-verde-neon px-2.5 py-1 text-[11px] font-bold text-nz-noite opacity-0 shadow-[0_8px_20px_-8px_rgba(63,208,126,0.9)] transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0"
+                    /* 🔠 20/09/2026 — a pílula saiu do RODAPÉ do card.
+                       Lá embaixo ela comia 64px de largura e "Casa & Construção"
+                       quebrava em duas linhas, empurrando a contagem para uma
+                       terceira. Com doze cards, metade tinha nome longo. No topo
+                       ela não disputa espaço com texto nenhum. */
+                    className="pointer-events-none absolute right-2.5 top-2.5 z-10 inline-flex -translate-y-1.5 items-center gap-1 rounded-full bg-nz-verde-neon px-2.5 py-1 text-[11px] font-bold text-nz-noite opacity-0 shadow-[0_8px_20px_-8px_rgba(63,208,126,0.9)] transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0"
                   >
                     Ver <ArrowRight size={12} />
                   </span>
 
-                  <div className="absolute inset-x-0 bottom-0 p-3 pr-16">
-                    <div className="text-[14px] font-semibold leading-tight text-white transition-colors group-hover:text-nz-verde-neon">{c.nome}</div>
-                    <div className="mt-1 text-[12px] text-white/70" data-teste="recado-categoria">
+                  <div className="absolute inset-x-0 bottom-0 p-3">
+                    <div className="line-clamp-2 text-[13.5px] font-semibold leading-[1.2] text-white transition-colors group-hover:text-nz-verde-neon">{c.nome}</div>
+                    <div className="mt-1 whitespace-nowrap text-[11.5px] text-white/70" data-teste="recado-categoria">
                       {recadoDaCategoria(c)}
                     </div>
                   </div>
