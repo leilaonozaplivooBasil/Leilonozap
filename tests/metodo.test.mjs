@@ -108,7 +108,10 @@ describe('Master Task', () => {
   test('SETORES_EMPRESA + tituloReuniaoComSetor: atalho de digitação pra reunião com um setor', () => {
     assert.ok(SETORES_EMPRESA.includes('Marketing'));
     assert.ok(SETORES_EMPRESA.length >= 5);
-    assert.equal(tituloReuniaoComSetor('Marketing'), 'Reunião com o setor de Marketing');
+    // 🔠 20/09/2026 — dono: "eu gosto de botar as coisas em caixa alta...
+    // seguir o padrão" — a frase pronta segue o mesmo padrão maiúsculo das
+    // tarefas dele, não a capitalização normal do português.
+    assert.equal(tituloReuniaoComSetor('Marketing'), 'REUNIÃO COM O SETOR DE MARKETING');
     assert.equal(tituloReuniaoComSetor(''), '');
     assert.equal(tituloReuniaoComSetor(), '');
   });

@@ -282,10 +282,14 @@ export const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 
 // depois); a lista só monta a frase pronta.
 export const SETORES_EMPRESA = ['Marketing', 'Tecnologia', 'Financeiro', 'Comercial', 'RH', 'Operações', 'Jurídico', 'Diretoria'];
 
-/** A frase pronta de "reunião com o setor de X", pro atalho de digitação. */
+/** A frase pronta de "reunião com o setor de X", pro atalho de digitação.
+ * 🔠 20/09/2026 — dono: "eu gosto de botar as coisas em caixa alta e quando
+ * eu clico tá ficando em caixa baixa... seguir o padrão." As tarefas dele
+ * são todas digitadas em maiúsculas — o atalho tem que manter esse padrão,
+ * não devolver a frase em minúsculas por baixo. */
 export function tituloReuniaoComSetor(setor) {
   const s = String(setor || '').trim();
-  return s ? `Reunião com o setor de ${s}` : '';
+  return s ? `REUNIÃO COM O SETOR DE ${s.toUpperCase()}` : '';
 }
 
 /**
