@@ -1,0 +1,100 @@
+# Deploy das Edge Functions do Supabase — Leilão NoZap
+#
+# POR QUE ISTO EXISTE (20/09/2026)
+#
+# `supabase/functions/whatsapp-router` é o Zeca, que atende cliente no WhatsApp.
+# Ele NÃO sobe com o deploy da Vercel: Vercel publica o site, não as funções do
+# Supabase. Até hoje a única forma de publicar era alguém rodar
+# `supabase functions deploy` de uma máquina com a pasta do projeto e login
+# feito — e o resultado é o previsível: a versão no ar ficou parada em 06/09
+# enquanto o repositório andava.
+#
+# O caso que motivou: em 20/09 o Zeca respondeu a um cliente que ele "pode sacar
+# normalmente" o dinheiro depositado. Não pode — saque não alcança o saldo de
+# lances. A correção foi mergeada na hora e ficou PARADA no repositório, porque
+# publicar dependia de um terminal com credencial.
+#
+# O QUE ELA FAZ
+#   • roda quando algo em supabase/functions/** chega no main (só via PR, o
+#     main tem ruleset desde 21/08);
+#   • pode ser disparada na mão (workflow_dispatch), inclusive escolhendo a
+#     função — útil pra republicar sem precisar de commit novo.
+#
+# 🔴 --no-verify-jwt NÃO É OPCIONAL PARA O whatsapp-router
+# O Z-API não manda cabeçalho `Authorization`. Com a verificação de JWT ligada
+# (o padrão do Supabase), TODA mensagem de cliente leva 401 antes de o código
+# rodar, e o Zeca fica mudo. A função está hoje com verify_jwt=false e precisa
+# continuar assim. Quem autentica é o `?secret=` da URL, conferido no código.
+#
+# SEGREDO NECESSÁRIO (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN → o MESMO já usado por deploy-migrations.yml.
+#   ⚠️ Em 20/09/2026 esse token estava INVÁLIDO: as 5 últimas execuções do
+#   deploy de migração falharam no passo de `link`, todas em ~13s. Renovar o
+#   token conserta os dois workflows de uma vez.
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:
+    inputs:
+      funcao:
+        description: 'Qual função publicar'
+        required: true
+        default: whatsapp-router
+        type: choice
+        options:
+          - whatsapp-router
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    name: supabase functions deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Versão FIXA, não `latest` — mesma razão documentada em
+      # deploy-migrations.yml: com `latest` a action consulta a API do GitHub
+      # sem autenticação e morre no limite de 60 req/hora por IP do runner.
+      # Foi o que manteve o deploy de migração quebrado de 21/08 a 28/08.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: publicar a função
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FUNCAO: ${{ github.event.inputs.funcao || 'whatsapp-router' }}
+        run: |
+          supabase functions deploy "$FUNCAO" \
+            --project-ref gezvviyegtxytnwjkrjv \
+            --no-verify-jwt
+
+      # Rede de baixo: o deploy acima pode sair 0 e a função continuar na versão
+      # velha se algo for engolido. Aqui a gente LÊ de volta o que está no ar e
+      # falha se o verify_jwt tiver voltado pra true — que é o estado em que o
+      # Zeca fica mudo pra todo cliente, sem erro nenhum aparecer.
+      - name: conferir o que ficou no ar
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FUNCAO: ${{ github.event.inputs.funcao || 'whatsapp-router' }}
+        run: |
+          resposta=$(curl -sS \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/gezvviyegtxytnwjkrjv/functions/$FUNCAO")
+          echo "$resposta"
+          versao=$(echo "$resposta" | grep -o '"version":[0-9]*' | head -1 | cut -d: -f2)
+          jwt=$(echo "$resposta" | grep -o '"verify_jwt":[a-z]*' | head -1 | cut -d: -f2)
+          echo "versão no ar: $versao · verify_jwt: $jwt"
+          if [ "$jwt" != "false" ]; then
+            echo "::error::A função subiu com verify_jwt=$jwt. O Z-API não manda Authorization: toda mensagem de cliente vai tomar 401 e o Zeca fica mudo."
+            exit 1
+          fi
