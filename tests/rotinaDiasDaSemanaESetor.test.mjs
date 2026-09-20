@@ -83,18 +83,32 @@ test('a lista mostra os dias do item só quando ele é restrito — item de todo
   assert.match(CRM, /data-teste="rotina-dias-badge"/);
 });
 
-test('o atalho de setor existe nos dois campos de título (editar e incluir na rotina) e monta a frase pronta', () => {
+test('o atalho de setor existe nos quatro campos de título (editar rotina, incluir na rotina, editar tarefa de hoje, nova tarefa de hoje) e monta a frase pronta', () => {
+  // 🏢 20/09/2026 — DIR-166.4: dono, achando que o atalho tinha sido
+  // removido — só existia "na parte de baixo" (A minha rotina). Agora
+  // também nos dois lugares da tarefa de HOJE (lápis e "nova tarefa do
+  // dia"), sem mexer no `EntradaComDestinos` compartilhado — o select
+  // escreve no mesmo estado que o campo de título já lê.
   const ocorrencias = (CRM.match(/tituloReuniaoComSetor\(e\.target\.value\)/g) || []).length;
-  assert.equal(ocorrencias, 2, 'esperava 2 usos — no editor da rotina e no "incluir na minha rotina"');
+  assert.equal(ocorrencias, 4, 'esperava 4 usos — editor da rotina, "incluir na minha rotina", editar tarefa de hoje, nova tarefa de hoje');
   assert.match(CRM, /data-teste="rotina-setor"/);
   assert.match(CRM, /data-teste="rotina-nova-setor"/);
-  assert.match(CRM, /\{SETORES_EMPRESA\.map\(\(s\) => <option key=\{s\} value=\{s\}>\{s\}<\/option>\)\}/);
+  assert.match(CRM, /data-teste="editar-setor"/);
+  assert.match(CRM, /data-teste="nova-tarefa-setor"/);
+  const ocorrenciasOptions = (CRM.match(/\{SETORES_EMPRESA\.map\(\(s\) => <option key=\{s\} value=\{s\}>\{s\}<\/option>\)\}/g) || []).length;
+  assert.equal(ocorrenciasOptions, 4);
 });
 
 test('o atalho de setor não trava nada — o campo de título continua livre pra editar depois', () => {
   // o select só ESCREVE no título quando algo é escolhido; nunca desabilita o Input de título
   assert.doesNotMatch(CRM, /data-teste="rotina-titulo"[^>]*disabled/);
   assert.doesNotMatch(CRM, /data-teste="rotina-nova-titulo"[^>]*disabled/);
+  assert.doesNotMatch(CRM, /data-teste="editar-titulo"[^>]*disabled/);
+});
+
+test('o setor da tarefa de hoje escreve no MESMO estado que o EntradaComDestinos/editor já leem — não mexe no componente compartilhado', () => {
+  assert.match(CRM, /setEdicao\(\{ \.\.\.edicao, titulo: tituloReuniaoComSetor\(e\.target\.value\) \}\)/);
+  assert.match(CRM, /setNovaTarefa\(\(n\) => \(\{ \.\.\.n, titulo: tituloReuniaoComSetor\(e\.target\.value\) \}\)\)/);
 });
 
 // 🗓️ 20/09/2026 — DIR-166.3: dono, olhando a lista do dia com várias

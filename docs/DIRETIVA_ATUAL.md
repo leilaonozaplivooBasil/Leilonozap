@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-166.4 — o atalho de setor chega na tarefa de hoje (lápis e "nova tarefa do dia")
+
+**Emitida por:** dono, olhando a tela e achando que o botão de setor tinha sumido: *"tu tirou o botão seletor do setor, cara... o setor marketing, tecnologia, financeiro, pra eu selecionar e colocar ali."* Depois, esclarecendo qual parte faltava: *"na verdade você não tirou, só a parte de baixo que está. A parte de cima também tem que ter. E já aproveita e vê se tanto na parte de baixo e a de cima que tu vai adicionar, quando adicionar, vai ficar aparecendo ali na frente, na página."*
+
+**Achado.** O atalho de setor (`SETORES_EMPRESA`/`tituloReuniaoComSetor`, DIR-166) sempre existiu só dentro de "A minha rotina" (editar item e "incluir na minha rotina") — nunca tinha sido tirado. Faltava nos dois lugares da tarefa de HOJE: o editor do lápis (DIR-80) e a "nova tarefa do dia" (topo). A DIR-166.1 tinha deixado esse último de fora de propósito, achando que precisava mexer no `EntradaComDestinos` compartilhado — não precisa: o atalho só ESCREVE no mesmo estado (`edicao.titulo` / `novaTarefa.titulo`) que o campo de título já lê, igual o seletor de dias (DIR-166.2) já fazia sem tocar no componente.
+
+**O que entra (`CrmMetodo.jsx`):** o mesmo `<select>` de setores (`data-teste="editar-setor"` e `data-teste="nova-tarefa-setor"`) nos dois lugares da tarefa de hoje, escrevendo a frase pronta no título via `tituloReuniaoComSetor`. Confirmado (sem mudança de código, comportamento já existente desde a DIR-146): os dois pontos de entrada — "nova tarefa do dia" e "incluir na minha rotina" — já atualizam a tela na hora ao salvar (`addTarefa` chama `carregarTarefas()`; `gravarRotina`/`salvarPerfil` atualiza o `perfil` local), sem precisar recarregar a página.
+
+**Fora do escopo:** não mexe no `EntradaComDestinos` nem cria um quinto lugar — são os mesmos quatro pontos de edição já cobertos pela DIR-166/166.1/166.2, agora todos com o mesmo conjunto de atalhos (dias da semana + setor).
+
+**Prova:** suíte completa (3026/3026, teste atualizado em `tests/rotinaDiasDaSemanaESetor.test.mjs` — de 2 pra 4 ocorrências do atalho de setor, mais teste novo confirmando que ele escreve no mesmo estado do editor/campo de título), lint limpo, `npm run build` sem erro. Mutação: removi o `<select>` de cada um dos dois lugares novos, um de cada vez → os testes correspondentes quebraram nas duas vezes; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-166.3 — os dias da semana aparecem na lista do dia, não só dentro do editor
 
 **Emitida por:** dono, testando a versão da DIR-166.2 já no ar, com print da lista do dia mostrando várias tarefas com o selo "já repete todo dia" mas nenhuma indicação de QUAIS dias: *"tá quase perfeito... tem que aparecer ali também na visualização, só tá aparecendo por dentro. Os dias selecionados dessa tarefa... exemplo, 9 horas da manhã, mentalidade do CEO, segunda — aí tem que aparecer lá, toda segunda; leitura diária, terça, quarta e quinta... pra não confundir que tem duas tarefas no mesmo horário no dia."*
