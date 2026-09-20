@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   itemDaRotina, ordenarRotina, incluirNaRotina, editarNaRotina, excluirDaRotina,
   estadoDaRotina, deveGerarSozinha, rotinaEmVigor, valeAPartirDe, devePreAbrirAutomatico, jaGerouHoje,
+  normalizarDiasSemana, itemValeNoDia,
 } from '../src/lib/rotinaPessoal.js';
 
 const CASA = [{ hora: '05:00', titulo: 'Acordar' }, { hora: '08:00', titulo: 'Caminho pra empresa' }];
@@ -151,6 +152,31 @@ test('um compromisso avulso em metodo_tarefas não é rotina_gerada_em — a ré
   // o cenário real: o perfil nunca gerou nada, mas o dia já tem uma reunião
   // sincronizada do Contato & Convite — jaGerouHoje nem olha pra isso.
   assert.equal(jaGerouHoje({ rotina_automatica: true }, '2026-09-07'), false);
+});
+
+// ─── DIR-166 — o dia da semana por item, "igual um despertador" ─────────────
+
+test('normalizarDiasSemana: únicos, ordenados, só 0-6 — vazio ou inválido vira null (todo dia)', () => {
+  assert.deepEqual(normalizarDiasSemana([1, 3, 1, 2]), [1, 2, 3]);
+  assert.equal(normalizarDiasSemana([]), null);
+  assert.equal(normalizarDiasSemana(null), null);
+  assert.equal(normalizarDiasSemana(undefined), null);
+  assert.equal(normalizarDiasSemana('segunda'), null, 'não é array — não inventa dia');
+  assert.deepEqual(normalizarDiasSemana([1, 9, -1, 3.5, 2]), [1, 2], '9, -1 e 3.5 não são dia de semana válido');
+});
+
+test('itemDaRotina: dias_semana entra normalizado, e todo item ganha o campo (mesma forma sempre)', () => {
+  assert.deepEqual(itemDaRotina({ hora: '09:00', titulo: 'Mentalidade do CEO', dias_semana: [1] }).dias_semana, [1]);
+  assert.equal(itemDaRotina({ hora: '05:00', titulo: 'Acordar' }).dias_semana, null, 'sem o campo, continua valendo todo dia');
+});
+
+test('itemValeNoDia: sem dias_semana vale todo dia; com, só nos dias marcados', () => {
+  assert.equal(itemValeNoDia({ titulo: 'Acordar' }, 1), true);
+  assert.equal(itemValeNoDia({ titulo: 'Acordar' }, 6), true);
+  const soSegunda = { titulo: 'Mentalidade do CEO', dias_semana: [1] };
+  assert.equal(itemValeNoDia(soSegunda, 1), true);
+  assert.equal(itemValeNoDia(soSegunda, 2), false);
+  assert.equal(itemValeNoDia({ titulo: 'x', dias_semana: [] }, 3), true, 'lista vazia é todo dia, não nenhum dia');
 });
 
 test('editar a rotina vale a partir de AMANHÃ — o dia de hoje fica como está', () => {

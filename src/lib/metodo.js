@@ -4,6 +4,8 @@
 // períodos do dia, geração do dia a partir da rotina, progresso e o link de
 // agenda do Google (URL de template oficial — sem OAuth).
 
+import { itemValeNoDia } from './rotinaPessoal.js';
+
 export const HABITOS = [
   { n: 1, id: 'sonho', curto: 'Sonho', completo: 'Sonho', titulo: 'SONHO', sub: 'Clareza de destino', texto: 'Sem clareza de destino, toda energia se dispersa. O sonho dá direção, foco e propósito — é o combustível do compromisso nos momentos difíceis.' },
   { n: 2, id: 'compromisso', curto: 'Compromisso', completo: 'Compromisso', titulo: 'COMPROMISSO', sub: 'Decisão diária', texto: 'Talento faz você começar na frente; disciplina faz você continuar. Todos os dias. Sem exceção. Sem negociação.' },
@@ -273,6 +275,19 @@ export function reuniaoIminente(clientes = [], uid, agoraISO, janelaMin = 15) {
 /** Rótulos dos dias pro cadastro da reunião recorrente (índice = getDay()). */
 export const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 
+// 🏢 20/09/2026 — dono: "até pra eu adicionar também, qual o setor da
+// empresa que eu vou fazer reunião... ter as seleções... pra não precisar
+// ficar toda hora refazendo." Atalho de digitação pra tarefa de reunião —
+// não é um campo novo no banco (o título continua texto livre, editável
+// depois); a lista só monta a frase pronta.
+export const SETORES_EMPRESA = ['Marketing', 'Tecnologia', 'Financeiro', 'Comercial', 'RH', 'Operações', 'Jurídico', 'Diretoria'];
+
+/** A frase pronta de "reunião com o setor de X", pro atalho de digitação. */
+export function tituloReuniaoComSetor(setor) {
+  const s = String(setor || '').trim();
+  return s ? `Reunião com o setor de ${s}` : '';
+}
+
 /**
  * DIR-54.1 — o horário de TÉRMINO a partir de "HH:mm" de início + minutos de
  * duração (o inverso de duracaoEntreHoras — pra exibir "09:00 às 13:00" em
@@ -413,8 +428,18 @@ export function gerarTarefasDaRotina(rotina = [], userId, dataStr, pesoDe = null
   // O peso entra por PARÂMETRO, e não por import: metodo.js é a base e não
   // conhece o X-Game. Quem chama sabe dos dois e passa a régua. Sem o
   // parâmetro, o comportamento é exatamente o de antes.
+  //
+  // 🗓️ 20/09/2026 — dono: "igual um despertador que dá a opção de fazer
+  // segunda, terça, quarta... senão você sempre tem que parar pra fazer
+  // aqui [de novo]." Item com `dias_semana` só gera nos dias marcados —
+  // aqui é o ÚNICO funil de geração (chamado pelo botão "gerar", a
+  // repetição automática, "regerar o dia" E o cron `gerarJornadaDoDia`),
+  // então filtrar aqui vale pra todos os quatro caminhos de uma vez, sem
+  // duplicar a régua em cada um. `dataStr` já vem sempre — é dele que sai
+  // o dia da semana, não de `new Date()` (nunca a hora do servidor).
+  const diaSemana = new Date(`${String(dataStr).slice(0, 10)}T12:00:00`).getDay();
   return (Array.isArray(rotina) ? rotina : [])
-    .filter((r) => r && r.titulo)
+    .filter((r) => r && r.titulo && itemValeNoDia(r, diaSemana))
     .map((r, i) => {
       const linha = {
         user_id: userId,
