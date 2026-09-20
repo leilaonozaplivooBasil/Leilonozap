@@ -55,6 +55,43 @@ function sb(path, opts = {}) {
   });
 }
 
+// 🩹 20/09/2026 — DEVOLUÇÃO AUTOMÁTICA DA RESERVA 100% ÓRFÃ.
+// O vigia avisou 4 dias seguidos "Alberto: R$ 573,22 travados" num system_logs que
+// ninguém lê, enquanto o cliente via o dinheiro sumido. Regra do dono: "se ele for
+// superado, o dinheiro tem que voltar". Então, quando a pessoa NÃO lidera leilão
+// nenhum (em disputa ou por liquidar) e a última reserva dela tem mais de 2 horas
+// (nenhum lance em andamento), a reserva inteira volta pro disponível, com trava
+// CAS e linha no livro-caixa. Reserva parcial (lidera algo) continua só avisando.
+async function devolverReservaOrfa(uid, reservadoLido) {
+  for (let t = 0; t < 3; t++) {
+    const rows = await (await sb(`app_users?select=saldo_disponivel,saldo_reservado&id=eq.${enc(uid)}&limit=1`)).json().catch(() => []);
+    const u = Array.isArray(rows) ? rows[0] : null;
+    if (!u) return 0;
+    const disponivel = money(u.saldo_disponivel);
+    const reservado = money(u.saldo_reservado);
+    if (reservado <= 0 || reservado !== money(reservadoLido)) return 0; // mudou desde a leitura: não mexe
+    const fDisp = disponivel === 0 ? 'or(saldo_disponivel.eq.0,saldo_disponivel.is.null)' : `saldo_disponivel.eq.${disponivel}`;
+    const r = await sb(`app_users?id=eq.${enc(uid)}&and=(${fDisp},saldo_reservado.eq.${reservado})`, {
+      method: 'PATCH', headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ saldo_disponivel: money(disponivel + reservado), saldo_reservado: 0 }),
+    });
+    const upd = await r.json().catch(() => []);
+    if (!Array.isArray(upd) || !upd.length) continue; // corrida: relê
+    try {
+      await sb('reserva_ledger', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          user_id: uid, auction_id: null, tipo: 'devolucao_reserva_orfa', direcao: 'saida_reserva',
+          valor: reservado, saldo_antes: reservado, saldo_depois: 0, origem: 'alertaReservasOrfas(auto)',
+          observacao: 'Reserva sem nenhum leilão em disputa ou por liquidar, quieta há mais de 2h: devolvida automaticamente pelo vigia diário.',
+        }),
+      });
+    } catch (_) { /* extrato secundário */ }
+    return reservado;
+  }
+  return 0;
+}
+
 export default async function handler(req, res) {
   // 🔐 AUDITORIA 15/09/2026 — cron: com CRON_SECRET configurado na Vercel, só aceita a chamada
   // que a própria Vercel manda (Authorization: Bearer). Sem a variável, segue aberto como era.
@@ -77,6 +114,7 @@ export default async function handler(req, res) {
 
     const achados = [];
     let total = 0;
+    let totalDevolvido = 0;
 
     for (const conta of contas) {
       const uid = String(conta.id);
@@ -93,13 +131,29 @@ export default async function handler(req, res) {
       const orfao = money(reservado - legitimo);
       if (orfao <= 0) continue;   // reserva toda legítima
 
+      // 🩹 devolução automática: só quando a reserva INTEIRA é órfã, a pessoa não é
+      // vencedora de nada por liquidar (leilão encerrado e ainda não pago) e a
+      // última reserva dela tem mais de 2h (nenhum lance no meio do caminho).
+      let devolvido = 0;
+      if (vivos.length === 0 && orfao === reservado) {
+        const porLiquidar = await (await sb(
+          `auctions?select=id&winner_id=eq.${enc(uid)}&order_status=not.eq.paid&updated_at=gte.${enc(new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString())}&limit=1`
+        )).json().catch(() => [null]);
+        const ult = await (await sb(`reserva_ledger?select=created_at&user_id=eq.${enc(uid)}&direcao=eq.entrada_reserva&order=created_at.desc&limit=1`)).json().catch(() => []);
+        const ultimaEntrada = Array.isArray(ult) && ult[0]?.created_at ? new Date(ult[0].created_at).getTime() : 0;
+        const quieta = Date.now() - ultimaEntrada > 2 * 60 * 60 * 1000;
+        if (Array.isArray(porLiquidar) && porLiquidar.length === 0 && quieta) devolvido = await devolverReservaOrfa(uid, reservado);
+      }
+
       total = money(total + orfao);
+      totalDevolvido = money(totalDevolvido + devolvido);
       achados.push({
         user_id: uid,
         nome: conta.full_name || conta.email || uid,
         travado: reservado,
         reserva_legitima: legitimo,
         orfao,
+        devolvido,
         leiloes_em_disputa: vivos.length,
       });
     }
@@ -108,7 +162,7 @@ export default async function handler(req, res) {
     if (achados.length) {
       const resumo = achados
         .slice(0, 10)
-        .map((a) => `${a.nome}: R$ ${a.orfao.toFixed(2)}`)
+        .map((a) => `${a.nome}: R$ ${a.orfao.toFixed(2)}${a.devolvido > 0 ? ' (DEVOLVIDO automaticamente)' : ''}`)
         .join(' | ');
       try {
         await sb('system_logs', {
@@ -118,8 +172,9 @@ export default async function handler(req, res) {
             step: 'RESERVA_ORFA',
             status: 'warning',
             message:
-              `${achados.length} conta(s) com R$ ${total.toFixed(2)} travados sem leilão em disputa. ` +
-              `Para devolver: faxinaReservasOrfas com confirmar='APLICAR'. Contas: ${resumo}`,
+              `${achados.length} conta(s) com R$ ${total.toFixed(2)} travados sem leilão em disputa` +
+              (totalDevolvido > 0 ? ` — R$ ${totalDevolvido.toFixed(2)} devolvidos automaticamente` : '') +
+              `. Restante: faxinaReservasOrfas com confirmar='APLICAR'. Contas: ${resumo}`,
             created_at: new Date().toISOString(),
           }),
         });
@@ -132,6 +187,7 @@ export default async function handler(req, res) {
       contas_analisadas: contas.length,
       contas_com_orfao: achados.length,
       total_travado_sem_motivo: total,
+      total_devolvido_automaticamente: totalDevolvido,
       ...(achados.length
         ? { o_que_fazer: "Rodar faxinaReservasOrfas com confirmar='APLICAR' para devolver." }
         : {}),

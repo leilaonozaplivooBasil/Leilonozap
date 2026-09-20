@@ -18,16 +18,25 @@ test('o vigia roda sozinho, uma vez por dia', () => {
   assert.match(cron.schedule, /^\d+ \d+ \* \* \*$/, 'passou a rodar mais de uma vez por dia');
 });
 
-test('o vigia NAO move dinheiro — nenhuma escrita em app_users', () => {
-  // Esta e a trava mais importante do arquivo. Devolver reserva e decisao de
-  // gente; o vigia so avisa.
-  assert.ok(!/app_users[^`'"]*`?,\s*\{\s*\n?\s*method: '(PATCH|PUT|DELETE)'/.test(vigia));
-  assert.ok(!/method: 'PATCH'/.test(vigia), 'apareceu PATCH no vigia');
+test('o vigia so move dinheiro num caso: reserva 100% orfa, sem nada por liquidar, quieta ha 2h — com CAS e livro-caixa', () => {
+  // 20/09/2026 (DIR-167): ate aqui o vigia so avisava — e avisou 4 dias seguidos
+  // "Alberto: R$ 573,22 travados" num system_logs que ninguem le. Regra do dono:
+  // "se ele for superado, o dinheiro tem que voltar". A devolucao automatica existe,
+  // mas so nesse caso fechado; reserva parcial (a pessoa lidera algo) continua so aviso.
   assert.ok(!/method: 'PUT'/.test(vigia), 'apareceu PUT no vigia');
   assert.ok(!/method: 'DELETE'/.test(vigia), 'apareceu DELETE no vigia');
-  // O unico POST permitido e o do aviso em system_logs.
-  const posts = [...vigia.matchAll(/sb\('([^']+)',\s*\{\s*\n?\s*method: 'POST'/g)].map((m) => m[1]);
-  assert.deepEqual(posts, ['system_logs'], 'o vigia passou a escrever em outro lugar');
+  // O unico PATCH e o da devolucao, dentro de devolverReservaOrfa, com trava CAS nos dois saldos.
+  const patches = [...vigia.matchAll(/method: 'PATCH'/g)];
+  assert.equal(patches.length, 1, 'mais de um PATCH no vigia');
+  assert.match(vigia, /app_users\?id=eq\.\$\{enc\(uid\)\}&and=\(\$\{fDisp\},saldo_reservado\.eq\.\$\{reservado\}\)/);
+  // Os POSTs sao o aviso em system_logs e a linha do livro-caixa.
+  const posts = [...vigia.matchAll(/sb\('([^']+)',\s*\{\s*\n?\s*method: 'POST'/g)].map((m) => m[1]).sort();
+  assert.deepEqual(posts, ['reserva_ledger', 'system_logs'], 'o vigia passou a escrever em outro lugar');
+  // As tres condicoes da devolucao automatica, todas obrigatorias.
+  assert.match(vigia, /if \(vivos\.length === 0 && orfao === reservado\) \{/);
+  assert.match(vigia, /order_status=not\.eq\.paid&updated_at=gte\./);
+  assert.match(vigia, /Date\.now\(\) - ultimaEntrada > 2 \* 60 \* 60 \* 1000/);
+  assert.match(vigia, /porLiquidar\.length === 0 && quieta\) devolvido = await devolverReservaOrfa\(uid, reservado\)/);
 });
 
 test('a conta do orfao e a MESMA da faxina', () => {
