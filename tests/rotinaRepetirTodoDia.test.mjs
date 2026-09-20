@@ -28,6 +28,8 @@ test('repetir não duplica: já estando na rotina, avisa em vez de gravar de nov
   // 🔁 DIR-150 — a comparação virou o helper `estaNaRotina` (reusado pelo
   // selo "já repete todo dia"), mas a régua continua a mesma: título,
   // sem diferenciar maiúscula.
-  assert.match(CRM, /const estaNaRotina = \(titulo\) => rotina\.some\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
-  assert.match(CRM, /if \(estaNaRotina\(t\.titulo\)\) \{ toast\.error\('Já está na sua rotina — repete todo dia\.'\); return; \}/);
+  // 🐛 20/09/2026 — DIR-164.1: virou hora + título (não só título), pra não
+  // confundir duas tarefas de mesmo nome em horários diferentes.
+  assert.match(CRM, /const estaNaRotina = \(hora, titulo\) => rotina\.some\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\) && \(i\.hora \|\| ''\) === \(hora \|\| ''\)\);/);
+  assert.match(CRM, /if \(estaNaRotina\(t\.hora, t\.titulo\)\) \{ toast\.error\('Já está na sua rotina — repete todo dia\.'\); return; \}/);
 });

@@ -12,6 +12,26 @@
 
 ---
 
+## DIR-165 — a rotina permanente parava de sincronizar sozinha, e a pessoa perdia dinheiro
+
+**Emitida por:** dono, olhando a rotina da Sophia ao vivo: *"quando eu edito lá em cima, automaticamente tem que editar ali embaixo... sincronizar uma com a outra... tá tendo esse erro. Aí lá em cima tá escrito já repete todo dia, mas ali embaixo não tá salvando... a pessoa escolhe repetir essas tarefas todos os dias, o sistema não gera automático pra ele... tem que deixar isso muito bem organizado, porque está tendo falha e a pessoa está perdendo dinheiro."*
+
+**Achado 1 — o selo mentia.** `estaNaRotina` (o texto "já repete todo dia" vs. o botão "repetir todo dia", em `CrmMetodo.jsx`) comparava só o TÍTULO da tarefa. Duas tarefas com o mesmo nome em horários diferentes — ex.: "Almoço" às 12:00, já salvo na rotina, e um "ALMOÇO" digitado de novo às 13:30 depois que ela mudou o horário — mostravam **"já repete todo dia" pras duas**, mesmo a segunda nunca tendo sido salva em lugar nenhum. Ela confiava no selo, nunca clicava pra repetir de verdade, e o dia seguinte nascia sem aquela tarefa — dinheiro (X-Pay) que devia ter sido gerado e não foi.
+
+**Achado 2 — cliques em sequência se apagavam.** Toda gravação da rotina (`gravarRotina`) escreve o **array inteiro** de volta no banco — não é um patch por item. O botão "repetir todo dia" por tarefa, o editor "A minha rotina" (salvar/editar/excluir/incluir) e o campo "nova tarefa do dia" (quando marcado "repetir") não travavam durante uma gravação em andamento. Clicar em "repetir" numa tarefa e, ANTES da gravação anterior voltar do banco, clicar em outra — natural quando ela está recuperando várias tarefas do dia de uma vez — fazia a segunda gravação partir do `rotina` **ainda sem a primeira adição**, e sobrescrever por cima dela. Cada clique isolado mostrava "Salvo!", mas juntos um apagava o outro. Achado confirmado direto no banco: a rotina salva da Sophia ganhava e perdia itens dia após dia (09-13 a 09-20), enquanto ela reescrevia manualmente as mesmas ~8 tarefas todo santo dia.
+
+**O que entra (`CrmMetodo.jsx`):**
+1. `estaNaRotina` agora casa **hora + título**, não só título — o selo só afirma "já repete" quando aquele horário específico está mesmo salvo.
+2. Todo botão que lê/escreve `rotina` (repetir por tarefa, salvar/editar/excluir/incluir na "A minha rotina", salvar edição de tarefa, e o campo "nova tarefa do dia" via `EntradaComDestinos`, que já sabia desabilitar mas não recebia a prop) trava enquanto `salvando` está `true` — o mesmo trava que já protegia "repetir o dia inteiro" (DIR-151), agora em todo o resto. Sequência de cliques passa a esperar cada gravação voltar antes da próxima poder partir dela — sem corrida, sem apagar o que acabou de ser salvo.
+
+**Fora do escopo:** não mexe na régua de "vale a partir de amanhã" (DIR-80) nem em `metodo_perfil.rotina` da Sophia diretamente — a rotina dela continua com a versão salva mais recente; a correção evita que ela perca itens NOVOS a partir de agora. Consolidar o que ela já digitou manualmente nos últimos dias é uma ação dela (ou um pedido à parte): abrir o Compromisso e usar "repetir o DIA INTEIRO de hoje" uma vez, que agora funciona sem corrida.
+
+**Prova:** suíte completa (3006/3006). Nos testes de rotina: 5 asserções atualizadas pra nova assinatura de `estaNaRotina` (nos arquivos de DIR-146/150/151 — `rotinaRepetirTodoDia.test.mjs`, `rotinaClaraRecorrente.test.mjs`, `rotinaDiaInteiroDeUmaVez.test.mjs`) + 3 testes novos em `tests/rotinaSincroniaSemPerder.test.mjs` — os 15 testes desses 4 arquivos passando. Lint limpo, `npm run build` sem erro. As duas mutações (voltar `estaNaRotina` a só-título; tirar um `disabled={salvando}`) foram testadas — cada uma quebra o teste correspondente — e revertidas.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-164 — quem recebe aparece no Quadro Geral + histórico de ganhos da semana no /XGame
 
 **Emitida por:** dono, direto: *"AQUI PRECISO QUE TODS QUE ESTAO RECEBENDIO APARECEA AQUI EXEMPLO SOPHIA SANT'ANNA NAO ESTÁ APARECENDO"* (print do "escolha a pessoa…" do Quadro Geral). Em seguida, com o PDF do `/XGame` de Sophia na mão: *"também preciso de uma atualização que tenha o histórico de ganhos, né? Da semana. Que não está aparecendo quanto, quanto ela ganhou, a pessoa ganhou até agora. Tem que ter essa atualização aí."*
