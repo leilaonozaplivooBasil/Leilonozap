@@ -131,3 +131,40 @@ test('🔴 no checkout o pop-up NÃO aparece — pior hora para interromper', { 
   assert.equal(await popup(pagina).count(), 0, 'cobriu a tela de quem está pagando');
   await ctx.close();
 });
+
+test('🔴 a contagem ANDA na tela — não é um carimbo', { skip: semNavegador }, async () => {
+  // A função `contagemRegressiva` já tem prova no Node. Esta é outra coisa: que
+  // o componente REPINTA a cada segundo. Um `setInterval` esquecido, uma
+  // dependência errada no useEffect, e o texto fica congelado no primeiro valor
+  // — certo, bonito, e parado. Ler o arquivo não pega isso.
+  const { ctx, pagina } = await abrir();
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+
+  const relogio = pagina.locator('[data-teste="contagem"]');
+  const antes = (await relogio.innerText()).trim();
+  assert.match(antes, /\d{2}:\d{2}:\d{2}/, `a contagem não parece um relógio: ${antes}`);
+
+  await pagina.waitForTimeout(2200);
+  const depois = (await relogio.innerText()).trim();
+  assert.notEqual(depois, antes, `a contagem congelou em ${antes}`);
+
+  await ctx.close();
+});
+
+test('a identidade da marca está no pop-up, não um verde qualquer', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+
+  // O verde do botão tem que ser o nz-verde-neon (#3FD07E), o verde do símbolo
+  // do logo — não o green-500 do Tailwind (#22C55E), que foi o que estava lá.
+  const fundo = await pagina
+    .locator('[role="dialog"] a[href*="AuctionRoom"]')
+    .first()
+    .evaluate((n) => getComputedStyle(n).backgroundColor);
+  assert.equal(fundo, 'rgb(63, 208, 126)', `o botão não usa o verde da marca: ${fundo}`);
+
+  // E a casa assina o pop-up.
+  await pagina.locator('[role="dialog"]').getByText('Leilão NoZap').waitFor({ timeout: 5000 });
+
+  await ctx.close();
+});

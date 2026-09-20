@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import {
   podeMostrar, configValida, leilaoAindaAberto, idDoLeilao, dadosDoPopup,
   paginaOndeFechou, marcarVisto, fotoDoLeilao, PAGINAS_PROIBIDAS, Z_INDEX, CHAVE_SESSAO,
+  contagemRegressiva,
 } from '../src/lib/popupLeilaoDestaque.js';
 
 const AGORA = new Date('2026-09-02T18:00:00Z').getTime();
@@ -222,4 +223,35 @@ test('o preço aparece, e zero não vira "R$ 0,00"', () => {
   assert.equal(dadosDoPopup(CONFIG, { ...ABERTO, current_price: 0 }).preco, null);
   assert.equal(dadosDoPopup(CONFIG, { ...ABERTO, current_price: null }).preco, null);
   assert.equal(dadosDoPopup(CONFIG, ABERTO).preco, null);
+});
+
+// ───────────────── a contagem viva (20/09) ─────────────────
+
+test('a contagem vira relógio quando falta menos de um dia', () => {
+  const fim = new Date(AGORA + (6 * 3600 + 58 * 60 + 12) * 1000).toISOString();
+  assert.equal(contagemRegressiva(fim, AGORA), '06:58:12');
+});
+
+test('a contagem usa dias quando falta mais de um dia', () => {
+  const fim = new Date(AGORA + (2 * 86400 + 6 * 3600) * 1000).toISOString();
+  assert.equal(contagemRegressiva(fim, AGORA), '2d 06h');
+});
+
+test('cada casa é preenchida com zero — 09:05:03, nunca 9:5:3', () => {
+  const fim = new Date(AGORA + (9 * 3600 + 5 * 60 + 3) * 1000).toISOString();
+  assert.equal(contagemRegressiva(fim, AGORA), '09:05:03');
+});
+
+test('🔴 a contagem ANDA — um segundo depois, um segundo a menos', () => {
+  // Sem esta prova, uma contagem congelada passaria: ela mostra um texto certo
+  // e nunca muda. O pedido era um relógio, não um carimbo.
+  const fim = new Date(AGORA + 3600 * 1000).toISOString();
+  assert.equal(contagemRegressiva(fim, AGORA), '01:00:00');
+  assert.equal(contagemRegressiva(fim, AGORA + 1000), '00:59:59');
+});
+
+test('sem prazo legível ou já encerrado, não promete contagem nenhuma', () => {
+  for (const v of [null, undefined, '', 'ontem', new Date(AGORA - 1000).toISOString()]) {
+    assert.equal(contagemRegressiva(v, AGORA), '', `inventou contagem para ${String(v)}`);
+  }
 });

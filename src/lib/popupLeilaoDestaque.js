@@ -180,3 +180,40 @@ export function dadosDoPopup(config, leilao) {
     preco: Number(leilao?.current_price) > 0 ? Number(leilao.current_price) : null,
   };
 }
+
+/**
+ * ⏱ A CONTAGEM VIVA — quanto falta, em texto de relógio.
+ *
+ * 🔴 POR QUE (20/09/2026, dono: "chamar muito atenção de forma positiva").
+ *
+ * O pop-up dizia só o preço. Preço parado não cria urgência: "R$ 797" é igual
+ * às 8h e às 17h59. O que decide se a pessoa dá o lance AGORA ou deixa pra
+ * depois é quanto falta — e esse era o único dado que o pop-up tinha na mão
+ * (vem no mesmo `end_time` que já consultamos) e não mostrava.
+ *
+ * É a diferença entre chamar atenção com barulho e chamar atenção com
+ * informação. Um relógio que anda é honesto: ele para de assustar sozinho
+ * quando sobram três dias, e aperta sozinho na última hora.
+ *
+ * FORMATO
+ *   mais de 24h → '2d 06h'   (segundo a segundo não ajuda ninguém a essa altura)
+ *   menos de 24h → '06:58:12' (aí sim, cada segundo conta)
+ *   acabou/ilegível → '' (a tela não promete contagem que não tem)
+ *
+ * @returns {string}
+ */
+export function contagemRegressiva(endTime, agora = Date.now()) {
+  const fim = new Date(endTime ?? NaN).getTime();
+  if (!Number.isFinite(fim)) return '';
+  const falta = Math.floor((fim - agora) / 1000);
+  if (falta <= 0) return '';
+
+  const dias = Math.floor(falta / 86400);
+  const horas = Math.floor((falta % 86400) / 3600);
+  if (dias >= 1) return `${dias}d ${String(horas).padStart(2, '0')}h`;
+
+  const min = Math.floor((falta % 3600) / 60);
+  const seg = falta % 60;
+  const dd = (n) => String(n).padStart(2, '0');
+  return `${dd(horas)}:${dd(min)}:${dd(seg)}`;
+}

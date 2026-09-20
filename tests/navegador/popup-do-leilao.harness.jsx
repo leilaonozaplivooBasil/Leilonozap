@@ -24,6 +24,7 @@ import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '@/index.css';
 import PopupLeilaoDestaque from '@/components/common/PopupLeilaoDestaque';
+import fotoPS5 from './ps5-de-prova.png';
 import { CHAVE_CONSENTIMENTO } from '@/lib/popupLeilaoDestaque';
 
 const params = new URLSearchParams(window.location.search);
@@ -39,13 +40,13 @@ window.__entidadesFalsas = {
   BannerImage: [{
     id: 'popup-1', context: 'popup_leilao', is_active: true,
     title: 'Playstation 5',
-    image_url: 'https://exemplo.invalido/ps5.jpg',
+    image_url: params.get('semfoto') ? 'https://exemplo.invalido/x.jpg' : fotoPS5,
     link_url: '/AuctionRoom?id=ps5-de-mentira',
   }],
   Auction: [{
     id: 'ps5-de-mentira', title: 'Playstation 5', status: 'active',
     end_time: FIM, current_price: 797,
-    image_urls: ['https://exemplo.invalido/ps5.jpg'],
+    image_urls: [fotoPS5],
   }],
 };
 
