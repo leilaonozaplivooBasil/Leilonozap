@@ -57,6 +57,19 @@ export function numeroBonito(valor) {
 export const CATEGORIAS_NA_VITRINE = 12;
 
 /**
+ * O número que alguém escolheu para esta categoria, ou null.
+ *
+ * `null`, texto ilegível e **zero** devolvem null — ver o comentário longo em
+ * `categoriasDaVitrine`: zero é o valor padrão da coluna, não uma escolha.
+ */
+export function ordemEscolhida(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const n = Number(valor);
+  if (!Number.isFinite(n)) return null;
+  return n > 0 ? n : null;
+}
+
+/**
  * 🔢 20/09/2026 — DE SEIS PARA DOZE, E A ORDEM GANHA DONO.
  *
  * Com as nove artes novas, catorze categorias passaram a ter foto e a vitrine
@@ -93,9 +106,23 @@ export function categoriasDaVitrine(linhas, quantas = CATEGORIAS_NA_VITRINE) {
       leiloes: Number(c.leiloes_ativos) || 0,
       naLoja: Number(c.produtos_na_loja) || 0,
       imagem: c.imagem ?? c.image_url ?? null,
-      ordem: Number.isFinite(Number(c.ordem ?? c.sort_order)) && (c.ordem ?? c.sort_order) !== null
-        ? Number(c.ordem ?? c.sort_order)
-        : null,
+      // 🔴 20/09/2026 — ZERO NÃO É ESCOLHA, É O CAMPO EM BRANCO.
+      //
+      // Quando liguei a coluna `ordem` em produção, medi: das 19 categorias-raiz
+      // ativas, ONZE estão com sort_order = 0 e oito têm números de 11 a 20
+      // (mais duas em null). Zero é o valor que a coluna nasce, não uma decisão
+      // de alguém — e tratá-lo como ordem válida jogava as onze não-numeradas
+      // na frente das oito escolhidas a dedo.
+      //
+      // O efeito era visível: Casa & Construção, a categoria com MAIS leilão
+      // ativo (11) e numerada 18, caía para o último slot visível da vitrine,
+      // atrás de sete categorias que ninguém ordenou.
+      //
+      // Então 0 entra junto de null e de texto ilegível: "sem ordem escolhida",
+      // e aí o volume manda — que é o comportamento que a vitrine já tinha e
+      // que funcionava. Quem quiser uma categoria na frente escreve um número
+      // a partir de 1, no PainelMídia.
+      ordem: ordemEscolhida(c.ordem ?? c.sort_order),
     }))
     .filter((c) => c.nome && (c.leiloes > 0 || c.naLoja > 0));
 
