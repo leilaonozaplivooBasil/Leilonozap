@@ -102,3 +102,33 @@ export function timeCorporativo(usuarios, nomeDe = (u) => u.full_name || u.nickn
     .map(({ u, nivel }) => ({ id: u.id, nome: nomeDe(u), nivel, funcao: getLevel(nivel).name, cargo: cargoDoNivel(nivel) }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
+
+// 🎯 20/09/2026 — dono, no "escolha a pessoa…" do Quadro Geral (X-Performance):
+// "aqui preciso que todos que estão recebendo apareça aqui, exemplo Sophia
+// Sant'Anna não está aparecendo." Achado: Sophia tem cadastro ativo em
+// xgame_participantes (recebe verba de produção) mas não é do time
+// corporativo (não é Sócio Executivo pra cima) — timeCorporativo() não a
+// lista, porque essa função responde "quem o gestor administra na
+// hierarquia", uma pergunta diferente de "quem recebe dinheiro no jogo".
+// A resposta certa pro Quadro Geral é a união: o time corporativo (que
+// continua a base, com a função do painel) + quem tem cadastro ativo no
+// jogo e ainda não está nela, com a função que dá pra saber sobre ele.
+/**
+ * @param {{id:string, nome:string}[]} equipe o time corporativo já calculado (timeCorporativo())
+ * @param {{user_id:string, ativo?:boolean, cargo?:string}[]} participantes linhas de xgame_participantes
+ * @param {Map<string,object>} usuariosPorId app_users indexados por id
+ * @param {(u:object)=>string} nomeDe como extrair o nome de exibição de um app_user (mesma função passada pra timeCorporativo)
+ * @param {(id:string)=>string} nomeFallback nome de fallback quando o usuário não está no mapa
+ */
+export function equipeQuadroGeral(equipe = [], participantes = [], usuariosPorId = new Map(), nomeDe = (u) => u.full_name || u.nickname || u.email || u.id, nomeFallback = (id) => id) {
+  const extras = (Array.isArray(participantes) ? participantes : [])
+    .filter((p) => p?.ativo !== false && !equipe.some((m) => m.id === p.user_id))
+    .map((p) => {
+      const u = usuariosPorId.get?.(p.user_id);
+      const nivelPainel = normalizeLevels(u?.primary_career_level ? [u.primary_career_level] : [])[0] || null;
+      const funcao = (nivelPainel && getLevel(nivelPainel)?.name)
+        || (p.cargo ? p.cargo.charAt(0).toUpperCase() + p.cargo.slice(1) : 'Sem função no painel');
+      return { id: p.user_id, nome: u ? nomeDe(u) : nomeFallback(p.user_id), nivel: null, funcao, cargo: p.cargo || 'executivo' };
+    });
+  return [...equipe, ...extras].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}

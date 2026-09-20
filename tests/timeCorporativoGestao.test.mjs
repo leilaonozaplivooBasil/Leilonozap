@@ -3,7 +3,7 @@
 // Recorte do topo (timeCorporativo.test.mjs cobre o topo inteiro).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NIVEIS_TIME, nivelNoTime, funcaoNoTime, cargoDoNivel, timeCorporativo, CARGOS_TOPO } from '../src/lib/timeCorporativo.js';
+import { NIVEIS_TIME, nivelNoTime, funcaoNoTime, cargoDoNivel, timeCorporativo, CARGOS_TOPO, equipeQuadroGeral } from '../src/lib/timeCorporativo.js';
 
 test('a faixa é do Sócio Executivo ao Embaixador, na ordem do plano — um recorte do topo', () => {
   assert.deepEqual(NIVEIS_TIME, ['executivo_conta', 'diretoria_operacao', 'diretoria_executiva', 'ceo', 'livoo_live', 'embaixador']);
@@ -36,4 +36,39 @@ test('timeCorporativo: só o time, em ordem alfabética, com a função do paine
     { id: 'c', full_name: 'Caio', career_levels: ['trainee_diretor'] },
   ]);
   assert.deepEqual(lista.map((p) => [p.id, p.funcao, p.cargo]), [['b', 'Diretoria Executiva', 'diretor'], ['z', 'Embaixador', 'diretor']]);
+});
+
+// 🎯 20/09/2026 — dono, no Quadro Geral: "aqui preciso que todos que estão
+// recebendo apareça aqui, exemplo Sophia Sant'Anna não está aparecendo."
+// Sophia: career_levels ['usuario', 'loja_fisica'], primary_career_level
+// 'loja_fisica' (bloco 'rede', não 'diretor') — timeCorporativo não a lista,
+// mas ela tem um xgame_participantes ativo (cargo 'executivo').
+test('equipeQuadroGeral: quem tem cadastro ativo no jogo mas não é do time corporativo entra também, com a função do painel dela', () => {
+  const equipe = timeCorporativo([{ id: 'ceo1', full_name: 'Zeca', career_levels: ['ceo'] }]);
+  const participantes = [
+    { user_id: 'ceo1', ativo: true }, // já está em equipe — não deve duplicar
+    { user_id: 'sophia', ativo: true, cargo: 'executivo' },
+    { user_id: 'saiu', ativo: false, cargo: 'executivo' }, // inativa — fora
+  ];
+  const usuariosPorId = new Map([
+    ['ceo1', { id: 'ceo1', full_name: 'Zeca', career_levels: ['ceo'] }],
+    ['sophia', { id: 'sophia', full_name: "Sophia Sant'anna", career_levels: ['usuario', 'loja_fisica'], primary_career_level: 'loja_fisica' }],
+  ]);
+  const lista = equipeQuadroGeral(equipe, participantes, usuariosPorId, (u) => u.full_name);
+  assert.deepEqual(lista.map((p) => p.id), ['sophia', 'ceo1'], 'Sophia entra (ordem alfabética), inativa não; ninguém duplica');
+  const sophia = lista.find((p) => p.id === 'sophia');
+  assert.equal(sophia.nome, "Sophia Sant'anna");
+  assert.equal(sophia.funcao, 'Loja Física', 'a função vem do nível dela no painel, mesmo não sendo do time corporativo');
+  assert.equal(sophia.nivel, null, 'ela não tem posição na hierarquia do painel — não inventa uma');
+});
+
+test('equipeQuadroGeral: sem cadastro no painel, a função cai pro cargo do jogo capitalizado', () => {
+  const lista = equipeQuadroGeral([], [{ user_id: 'x', ativo: true, cargo: 'executivo' }], new Map(), (u) => u.full_name, (id) => id);
+  assert.equal(lista[0].funcao, 'Executivo');
+});
+
+test('equipeQuadroGeral: sem participantes extras, devolve só a equipe (nada some, nada quebra)', () => {
+  const equipe = timeCorporativo([{ id: 'z', full_name: 'Zeca', career_levels: ['ceo'] }]);
+  assert.deepEqual(equipeQuadroGeral(equipe, [], new Map()), equipe);
+  assert.deepEqual(equipeQuadroGeral(), []);
 });

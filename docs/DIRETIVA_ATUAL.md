@@ -12,6 +12,24 @@
 
 ---
 
+## DIR-164 — quem recebe aparece no Quadro Geral + histórico de ganhos da semana no /XGame
+
+**Emitida por:** dono, direto: *"AQUI PRECISO QUE TODS QUE ESTAO RECEBENDIO APARECEA AQUI EXEMPLO SOPHIA SANT'ANNA NAO ESTÁ APARECENDO"* (print do "escolha a pessoa…" do Quadro Geral). Em seguida, com o PDF do `/XGame` de Sophia na mão: *"também preciso de uma atualização que tenha o histórico de ganhos, né? Da semana. Que não está aparecendo quanto, quanto ela ganhou, a pessoa ganhou até agora. Tem que ter essa atualização aí."*
+
+**Duas peças, independentes uma da outra:**
+
+**1. Quadro Geral lista quem recebe, não só o time corporativo** (`XPerformanceGestao.jsx`) — achado: o "escolha a pessoa…" vinha só de `timeCorporativo` (a hierarquia do painel, do Sócio Executivo ao Embaixador), uma régua pensada pra GESTÃO/Distribuir Tarefa. Sophia tem cadastro ativo em `xgame_participantes` (recebe verba de produção) mas está no nível `loja_fisica` (bloco `rede`) — fora da hierarquia — então sumia do dropdown, mesmo recebendo dinheiro todo dia. Nova função pura `equipeQuadroGeral` (`src/lib/timeCorporativo.js`): a equipe (hierarquia, base) união com quem tem cadastro ativo no jogo e ainda não está nela, com a função derivada do nível dela no painel (ou do cargo do jogo, capitalizado, se não tiver nível). O dropdown e a contagem ("N recebendo · N com fixo definido") passam a usar essa lista.
+
+**2. Histórico de ganhos da semana no `/XGame`** — achado: `xgame_diario.detalhes.xpay_ganho/xpay_perdido` já era gravado todo dia (o mesmo placar que alimenta "X-Pay de hoje" e Missões da semana), mas nenhuma tela somava a semana. Nova função pura `historicoGanhosDaSemana` (`src/lib/xgame.js`) soma ganho/perdido de uma lista de dias; novo card "Ganhos da semana" em `XGame.jsx`, ao lado de Missões da semana, com o total no topo e a lista dia a dia (segunda até hoje, com o valor vivo de hoje já somado).
+
+**Fora do escopo:** não muda a régua de cálculo do X-Pay (DIR-142/161) nem a hierarquia de `timeCorporativo` (ainda decide quem entra em Distribuir Tarefa e metas de licença) — só quem aparece no Quadro Geral e a soma da semana. `CrmMetodo.jsx` (Compromisso) não ganhou o mesmo card nesta rodada — o pedido foi especificamente sobre o `/XGame`.
+
+**Prova:** suíte completa (3003/3003, 9 testes novos entre `tests/timeCorporativoGestao.test.mjs`, `tests/populacaoOficialDoTime.test.mjs` e `tests/historicoGanhosSemana.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-163 — a tarefa liberada diz QUEM liberou e POR QUÊ, não só muda de número
 
 **Emitida por:** dono, ao vivo, depois de testar e confirmar que a liberação de evento (DIR-161) funciona por trás: *"agora eu preciso que apareça na história dele que foi liberado pelo administrador pelo evento, uma mensagem pra ele ver que a empresa liberou. Só essa comunicação que tem que melhorar."* Seguido de: *"tem que mudar o horário, tem que deixar o horário, ter como feito, mas ter uma observação que foi pelo administrador, porque ele estava no evento... na aba deles, por dentro, quando a gente vê, e quando eles vêm."*
