@@ -4,7 +4,7 @@ import { X, Gavel, ArrowRight } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import {
-  podeMostrar, dadosDoPopup, idDoLeilao, marcarVisto,
+  podeMostrar, dadosDoPopup, idDoLeilao, marcarVisto, paginaOndeFechou,
   Z_INDEX, CHAVE_CONSENTIMENTO,
 } from '@/lib/popupLeilaoDestaque';
 
@@ -31,19 +31,43 @@ import {
 export default function PopupLeilaoDestaque({ currentPageName }) {
   const [dados, setDados] = useState(null);   // null = não desenha nada
   const [entrou, setEntrou] = useState(false);
-  const jaTentou = useRef(false);
+  /** Última página em que a consulta rodou. Muda de página, tenta de novo. */
+  const ultimaPaginaTentada = useRef(null);
+  /**
+   * Espelho em RAM da página onde foi fechado.
+   *
+   * 🔴 Existe por causa do modo privativo. Com o sessionStorage bloqueado,
+   * `paginaOndeFechou` devolve '' para sempre — e aí fechar o pop-up não
+   * gravaria nada, a página se redesenharia e ele voltaria na cara de quem
+   * acabou de fechar. Pop-up que não fecha é armadilha. Este ref não depende
+   * de storage nenhum e segura esse caso.
+   */
+  const fechadoEm = useRef('');
 
   const fechar = useCallback(() => {
     setEntrou(false);
-    marcarVisto(typeof window !== 'undefined' ? window.sessionStorage : null);
+    const onde = String(currentPageName || '');
+    fechadoEm.current = onde;
+    marcarVisto(typeof window !== 'undefined' ? window.sessionStorage : null, onde);
     // some depois da animação; se o timer não rodar, o estado já saiu do ar
     setTimeout(() => setDados(null), 180);
+  }, [currentPageName]);
+
+  /** A página onde foi fechado, com o storage e a RAM concordando. */
+  const ondeFoiFechado = useCallback(() => {
+    const doStorage = paginaOndeFechou(typeof window !== 'undefined' ? window.sessionStorage : null);
+    return doStorage || fechadoEm.current || '';
   }, []);
 
   useEffect(() => {
-    // Uma tentativa por montagem. Navegar entre páginas não refaz a consulta.
-    if (jaTentou.current) return;
-    jaTentou.current = true;
+    // Uma tentativa por PÁGINA. Entrar em outra página refaz a consulta — que é
+    // o pedido. Redesenhos da mesma página não refazem: sem esta guarda, uma
+    // troca de estado qualquer reabriria o pop-up em cima de quem já fechou.
+    const pagina = String(currentPageName || '');
+    if (ultimaPaginaTentada.current === pagina) return;
+    ultimaPaginaTentada.current = pagina;
+    setDados(null);
+    setEntrou(false);
     let vivo = true;
 
     (async () => {
@@ -58,7 +82,7 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
           config: { is_active: true, link_url: 'x' },  // só para passar do 1º portão
           leilao: { status: 'active', end_time: new Date(Date.now() + 60000).toISOString() },
           paginaAtual: currentPageName, consentimentoPendente,
-          sessionStorage: window.sessionStorage,
+          paginaJaVista: ondeFoiFechado(),
         });
         if (!previa.mostrar) return;
 
@@ -76,7 +100,7 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
 
         const veredito = podeMostrar({
           config, leilao, paginaAtual: currentPageName, consentimentoPendente,
-          sessionStorage: window.sessionStorage,
+          paginaJaVista: ondeFoiFechado(),
         });
         if (!vivo || !veredito.mostrar) return;
 
@@ -89,7 +113,7 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
     })();
 
     return () => { vivo = false; };
-  }, [currentPageName]);
+  }, [currentPageName, ondeFoiFechado]);
 
   // Esc fecha. Registrado só enquanto há pop-up — sem ouvinte pendurado.
   useEffect(() => {
@@ -168,7 +192,11 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
             onClick={fechar}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-4 py-3 font-bold text-black transition-colors hover:bg-green-400"
           >
-            Ir para o leilão
+            {/* 20/09/2026 — o dono pediu "botão para dar lance". "Ir para o
+                leilão" descrevia a navegação; "Dar meu lance" diz o que a
+                pessoa vai FAZER, que é o que o pedido quer. O destino é o
+                mesmo: a sala, onde o lance acontece. */}
+            Dar meu lance
             <ArrowRight className="h-4 w-4" />
           </a>
           <button

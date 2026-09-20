@@ -30,7 +30,24 @@
 /** Camada do pop-up. Abaixo do consentimento (2990) e do pagamento (9999). */
 export const Z_INDEX = 1500;
 
-/** Marca de "já vi nesta sessão". sessionStorage: some ao fechar o navegador. */
+/**
+ * Marca de onde o pop-up foi fechado pela última vez. sessionStorage: some ao
+ * fechar o navegador.
+ *
+ * 🔴 20/09/2026 — MUDOU DE SIGNIFICADO, E É A MUDANÇA DESTA DEMANDA.
+ * Antes guardava "já vi" (um booleano) e o pop-up aparecia UMA vez por sessão.
+ * O dono pediu: "cada vez que o usuário entrar em uma página é necessário que
+ * estoure o pop-up". Então agora guarda o NOME DA PÁGINA onde foi fechado.
+ *
+ * Fechou na Home → guarda 'Home'. Foi para a Loja → 'Loja' ≠ 'Home', aparece de
+ * novo. Voltou para a Home → aparece de novo.
+ *
+ * Por que guardar a página e não simplesmente esquecer: se não guardasse nada,
+ * fechar o pop-up e a página se redesenhar (uma troca de estado qualquer) faria
+ * ele voltar na cara de quem acabou de fechar — pop-up que não fecha é
+ * armadilha, não propaganda. Guardando a página, fechar vale enquanto a pessoa
+ * estiver ali; entrar em outra página é o que traz de volta, que é o pedido.
+ */
 export const CHAVE_SESSAO = 'popupLeilaoVisto';
 
 /** Chave que o ConsentBanner grava ao ser aceito (ConsentBanner.jsx:6). */
@@ -84,14 +101,18 @@ export function leilaoAindaAberto(leilao, agora = Date.now()) {
   return fim > agora;
 }
 
-/** Já foi visto nesta sessão? Storage bloqueado conta como "já viu" (não insiste). */
-export function jaViuNestaSessao(storage) {
-  try { return !!storage?.getItem(CHAVE_SESSAO); } catch { return true; }
+/**
+ * Em que página o pop-up foi fechado por último? '' quando nunca foi fechado.
+ * Storage bloqueado (modo privativo) devolve '' — quem cuida de não insistir
+ * nesse caso é a memória em RAM do componente, não o storage.
+ */
+export function paginaOndeFechou(storage) {
+  try { return String(storage?.getItem(CHAVE_SESSAO) || ''); } catch { return ''; }
 }
 
-/** Marca como visto. Falha de storage nunca pode quebrar o fechamento. */
-export function marcarVisto(storage) {
-  try { storage?.setItem(CHAVE_SESSAO, '1'); } catch { /* modo privativo: segue */ }
+/** Marca a página onde foi fechado. Falha de storage nunca quebra o fechamento. */
+export function marcarVisto(storage, pagina) {
+  try { storage?.setItem(CHAVE_SESSAO, String(pagina || '')); } catch { /* modo privativo: segue */ }
 }
 
 /**
@@ -105,7 +126,13 @@ export function podeMostrar({
   leilao,
   paginaAtual,
   consentimentoPendente = false,
-  sessionStorage: ss,
+  /**
+   * Nome da página onde o pop-up foi fechado por último ('' se nunca).
+   * Vem de fora de propósito: assim esta regra não conhece storage nenhum e o
+   * teste roda no Node sem navegador. Quem lê o sessionStorage (e quem segura a
+   * memória em RAM quando o storage está bloqueado) é o componente.
+   */
+  paginaJaVista = '',
   agora = Date.now(),
 } = {}) {
   if (!configValida(config)) return { mostrar: false, motivo: 'sem_config' };
@@ -124,7 +151,11 @@ export function podeMostrar({
   }
   // Espera o banner de LGPD sair de cena — os dois disputam a primeira visita.
   if (consentimentoPendente) return { mostrar: false, motivo: 'consentimento_pendente' };
-  if (jaViuNestaSessao(ss)) return { mostrar: false, motivo: 'ja_viu' };
+  // Fechado NESTA página continua fechado. Entrar em outra página traz de volta
+  // — é exatamente o pedido de 20/09 ("toda vez que entrar em uma página").
+  if (paginaJaVista && String(paginaJaVista) === String(paginaAtual || '')) {
+    return { mostrar: false, motivo: 'ja_viu_nesta_pagina' };
+  }
   if (!leilaoAindaAberto(leilao, agora)) return { mostrar: false, motivo: 'leilao_encerrado' };
   return { mostrar: true, motivo: 'ok' };
 }
