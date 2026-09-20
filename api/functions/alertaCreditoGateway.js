@@ -18,9 +18,20 @@
 // credits). Mesmo padrão do vigia de reservas órfãs
 // (alertaReservasOrfas.js): só avisa quando acha algo, nunca grita à toa.
 //
+// 📣 20/09/2026 — O AVISO PASSOU A TER ONDE TOCAR.
+// Até hoje este vigia terminava em `system_logs` e parava ali. Era o mesmo
+// defeito do vigia de reservas órfãs: detectava certo e não falava com
+// ninguém. O incidente da DIR-146 se repetiria igual, porque o dono continuava
+// sem saber — só que agora COM um registro provando que a plataforma sabia.
+//
+// Ele roda a cada 4 HORAS, então o aviso passa por `avisarAdminUmaVezPorDia`:
+// seis mensagens por dia sobre o mesmo saldo fariam a pessoa silenciar o
+// contato, e aí o alarme morre de cansaço em vez de morrer de mudez.
+//
 // Este arquivo NÃO TEM NENHUMA ESCRITA além do aviso em `system_logs`.
 
 import { resolverIA, saldoGateway, SALDO_BAIXO_USD } from '../_lib/ia.js';
+import { avisarAdminUmaVezPorDia } from '../_lib/avisarAdmin.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -72,6 +83,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, checado: false, motivo: 'checagem de saldo falhou' });
     }
 
+    let avisoWhatsapp = { enviado: false, motivo: 'saldo_ok' };
     const baixo = saldo < SALDO_BAIXO_USD;
     // 📒 Só grava aviso quando o saldo está baixo. Vigia que fala toda hora
     // vira ruído e ninguém lê — mesma regra do vigia de reservas órfãs.
@@ -84,9 +96,19 @@ export default async function handler(req, res) {
           created_at: new Date().toISOString(),
         }),
       }).catch(() => {});
+
+      avisoWhatsapp = await avisarAdminUmaVezPorDia(
+        'credito_gateway',
+        `🟡 *Crédito de IA acabando*\n\n` +
+        `Saldo do Vercel AI Gateway: *$${saldo.toFixed(2)}* (o aviso dispara abaixo de $${SALDO_BAIXO_USD}).\n\n` +
+        `Quando chegar em zero, a validação por IA de ritual e de tarefa com foto ` +
+        `PARA de funcionar — foi o que aconteceu em 14/09, numa manhã inteira.\n\n` +
+        `Recarregar: vercel.com → AI Gateway → Add credits`,
+        { sb },
+      );
     }
 
-    return res.status(200).json({ success: true, checado: true, saldo_usd: saldo, saldo_baixo: baixo, teto_usd: SALDO_BAIXO_USD });
+    return res.status(200).json({ success: true, checado: true, saldo_usd: saldo, saldo_baixo: baixo, teto_usd: SALDO_BAIXO_USD, aviso_whatsapp: avisoWhatsapp });
   } catch (e) {
     return res.status(500).json({ success: false, error: String(e?.message || e) });
   }

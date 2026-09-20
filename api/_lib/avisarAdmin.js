@@ -106,3 +106,67 @@ export async function avisarAdmin(texto, opcoes = {}) {
     ? { enviado: true, destinos: entregues }
     : { enviado: false, motivo: ultimoErro || 'falha_no_envio' };
 }
+
+/**
+ * ⏱ avisarAdminUmaVezPorDia — o mesmo aviso, sem virar enxame.
+ *
+ * 🔴 POR QUE (20/09/2026)
+ *
+ * O vigia do crédito de IA roda a cada 4 HORAS. Enquanto o saldo estiver
+ * baixo, ele acha "algo" em toda rodada — e mandar seis mensagens por dia
+ * sobre o mesmo saldo é o caminho mais curto pra pessoa silenciar o contato.
+ * Aí o alarme morre exatamente como morreu o log que ninguém lia: não por
+ * estar errado, mas por cansar.
+ *
+ * Então o segundo aviso do mesmo assunto só sai no dia seguinte. A marca
+ * fica em `system_logs`, que já existe e já é a memória destes vigias —
+ * sem tabela nova, sem migração.
+ *
+ * ⚠️ Isto NÃO silencia a detecção: o vigia continua rodando e registrando
+ * toda vez. O que a trava limita é a MENSAGEM.
+ *
+ * @param {string} assunto  chave do tema ('credito_gateway', 'reservas_orfas')
+ * @param {string} texto    o que dizer
+ * @param {object} [opcoes] { horas, sb, env, enviar } — `sb` fala com o banco
+ * @returns {Promise<{enviado: boolean, motivo?: string, destinos?: number}>}
+ */
+export async function avisarAdminUmaVezPorDia(assunto, texto, opcoes = {}) {
+  const horas = Number(opcoes.horas) > 0 ? Number(opcoes.horas) : 20;
+  const sb = opcoes.sb;
+  const passo = `AVISO_ZAP_${String(assunto || 'geral').toUpperCase()}`;
+
+  // Sem acesso ao banco não dá pra saber se já avisou. Nesse caso AVISA — é
+  // melhor uma mensagem repetida que um alarme perdido.
+  if (typeof sb === 'function') {
+    try {
+      const desde = new Date(Date.now() - horas * 3600 * 1000).toISOString();
+      const r = await sb(
+        `system_logs?select=id&step=eq.${encodeURIComponent(passo)}` +
+        `&created_at=gte.${encodeURIComponent(desde)}&limit=1`,
+      );
+      const linhas = await r.json().catch(() => []);
+      if (Array.isArray(linhas) && linhas.length) {
+        return { enviado: false, motivo: 'ja_avisei_hoje' };
+      }
+    } catch { /* não conseguiu conferir: segue e avisa */ }
+  }
+
+  const r = await avisarAdmin(texto, opcoes);
+
+  // Só marca quando SAIU. Marcar um envio que falhou seguraria o próximo
+  // aviso por 20h sem ninguém nunca ter recebido o primeiro.
+  if (r.enviado && typeof sb === 'function') {
+    try {
+      await sb('system_logs', {
+        method: 'POST',
+        body: JSON.stringify({
+          component_name: 'avisarAdmin', step: passo, status: 'info',
+          message: `Aviso de "${assunto}" entregue no WhatsApp (${r.destinos} destino(s)).`,
+          created_at: new Date().toISOString(),
+        }),
+      });
+    } catch { /* a marca é conforto, não pode derrubar o aviso */ }
+  }
+
+  return r;
+}
