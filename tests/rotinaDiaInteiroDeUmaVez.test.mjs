@@ -17,7 +17,7 @@ import { semComentarios } from './_ajuda.mjs';
 const CRM = semComentarios(readFileSync(new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url), 'utf8'));
 
 test('existe uma ação de "repetir o dia inteiro" — não só tarefa por tarefa', () => {
-  assert.match(CRM, /const tarefasParaRepetir = tarefas\.filter\(\(t\) => !ehTarefaDeGratidao\(t\.titulo\) && !estaNaRotina\(t\.titulo\)\);/);
+  assert.match(CRM, /const tarefasParaRepetir = tarefas\.filter\(\(t\) => !ehTarefaDeGratidao\(t\.titulo\) && !estaNaRotina\(t\.hora, t\.titulo\)\);/);
   assert.match(CRM, /const repetirDiaInteiro = async \(\) => \{/);
   assert.match(CRM, /data-teste="repetir-dia-inteiro"/);
 });

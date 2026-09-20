@@ -1797,7 +1797,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // 🔁 DIR-150 — a MESMA tarefa que acabou de nascer vira recorrente,
       // se ela marcou a caixa (toast próprio, de gravarRotina — não cria
       // duplicata se por acaso já existir uma entrada igual na rotina).
-      if (repetirNovaTarefa && !estaNaRotina(novaTarefa.titulo)) {
+      if (repetirNovaTarefa && !estaNaRotina(novaTarefa.hora || '', novaTarefa.titulo)) {
         await gravarRotina(incluirNaRotina(rotina, { hora: novaTarefa.hora || '', titulo: novaTarefa.titulo }));
       }
       setNovaTarefa({ hora: '', titulo: '', noQuadro: false, listaId: novaTarefa.listaId });
@@ -1819,6 +1819,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [editandoRotina, setEditandoRotina] = useState(null);
   const [rascunho, setRascunho] = useState({ hora: '', titulo: '' });
   const [novoDaRotina, setNovoDaRotina] = useState({ hora: '', titulo: '' });
+  // 🐛 20/09/2026 — dono, sobre a rotina da Sophia: "quando eu edito lá em
+  // cima, automaticamente tem que editar ali embaixo... está tendo falha e a
+  // pessoa está perdendo dinheiro." Achado: TODO botão que grava a rotina
+  // parte do `rotina` já em memória (`incluirNaRotina(rotina, ...)`,
+  // `editarNaRotina(rotina, ...)`) e escreve o ARRAY INTEIRO de volta — não
+  // é um PATCH por item. Clicar em "repetir todo dia" numa tarefa e, ANTES
+  // da gravação anterior voltar do banco, clicar em outra (ou digitar em "A
+  // minha rotina" e mandar salvar), faz a segunda gravação partir do
+  // `rotina` ANTIGO — sem a primeira adição — e o `setPerfil` dela
+  // sobrescreve a primeira, que nunca existiu pro banco. Cada clique
+  // isolado "funciona" (o toast de sucesso aparece), mas junto os dois
+  // apagam um ao outro — exatamente o "editei mas não ficou salvo" que ela
+  // via todo dia. `salvando` (que já trava "repetir o dia inteiro",
+  // DIR-151) agora trava TODOS os botões que leem `rotina` — cada clique
+  // espera o anterior voltar do banco antes de poder partir dele.
   const gravarRotina = async (nova) => {
     const ok = await salvarPerfil({ rotina: nova });
     if (ok) toast.success(`Rotina salva — vale a partir de ${valeAPartirDe(hojeStr())?.split('-').reverse().slice(0, 2).join('/') || 'amanhã'}.`);
@@ -1843,9 +1858,19 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // comparação usada em toda parte (título, sem diferenciar maiúscula):
   // uma função só, usada pelo botão E pelo selo que substitui o botão
   // quando já é recorrente.
-  const estaNaRotina = (titulo) => rotina.some((i) => i.titulo.trim().toLowerCase() === String(titulo || '').trim().toLowerCase());
+  // 🐛 20/09/2026 — dono, sobre a rotina da Sophia: "lá em cima tá escrito
+  // já repete todo dia, mas embaixo não tá salvando... a pessoa está
+  // perdendo dinheiro." Achado: a comparação era só pelo TÍTULO — duas
+  // tarefas com o mesmo nome em horários DIFERENTES (ex.: "Almoço" às
+  // 12:00 já na rotina, e um "ALMOÇO" digitado de novo às 13:30 depois
+  // que ela mudou o horário) mostravam o selo "já repete todo dia" pro
+  // segundo também, mesmo ele não estando salvo em lugar nenhum — ela
+  // confiava no selo e nunca clicava pra repetir de verdade, e o dia
+  // seguinte nascia sem aquela tarefa. Agora casa hora E título — o
+  // mesmo item da rotina, não só um título parecido.
+  const estaNaRotina = (hora, titulo) => rotina.some((i) => i.titulo.trim().toLowerCase() === String(titulo || '').trim().toLowerCase() && (i.hora || '') === (hora || ''));
   const tornarRecorrente = (t) => {
-    if (estaNaRotina(t.titulo)) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
+    if (estaNaRotina(t.hora, t.titulo)) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
     gravarRotina(incluirNaRotina(rotina, { hora: t.hora, titulo: t.titulo }));
   };
   // 🔁 DIR-151 (15/09/2026) — dono, ao vivo, depois de ver o selo por tarefa
@@ -1857,7 +1882,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // Esta função é essa ação: pega tudo que já está no dia (menos o Ritual,
   // menos o que já é rotina) e grava tudo numa TACADA SÓ (um `gravarRotina`
   // só, não um por tarefa — evita 20 escritas em cima da mesma coluna).
-  const tarefasParaRepetir = tarefas.filter((t) => !ehTarefaDeGratidao(t.titulo) && !estaNaRotina(t.titulo));
+  const tarefasParaRepetir = tarefas.filter((t) => !ehTarefaDeGratidao(t.titulo) && !estaNaRotina(t.hora, t.titulo));
   const repetirDiaInteiro = async () => {
     if (!tarefasParaRepetir.length) return;
     const nova = tarefasParaRepetir.reduce((acc, t) => incluirNaRotina(acc, { hora: t.hora, titulo: t.titulo }), rotina);
@@ -3135,7 +3160,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               {!t.feito && (
                                 <button
                                   type="button"
-                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); setRepetirEdicao(estaNaRotina(t.titulo)); }}
+                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); setRepetirEdicao(estaNaRotina(t.hora, t.titulo)); }}
                                   title="editar esta tarefa de hoje"
                                   data-teste="editar-tarefa"
                                   className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
@@ -3158,7 +3183,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   fantasma, com o mesmo título, brigando com o
                                   ritual de verdade todo dia. */}
                               {!ehTarefaDeGratidao(t.titulo) && (
-                                estaNaRotina(t.titulo) ? (
+                                estaNaRotina(t.hora, t.titulo) ? (
                                   <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-verde" title="Esta tarefa já é da sua rotina — repete todo dia sozinha." data-teste="ja-e-rotina">
                                     <Repeat className="w-3.5 h-3.5" /> já repete todo dia
                                   </span>
@@ -3166,9 +3191,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                   <button
                                     type="button"
                                     onClick={() => tornarRecorrente(t)}
+                                    disabled={salvando}
                                     title="Repetir esta tarefa todo dia — entra na sua rotina permanente a partir de amanhã."
                                     data-teste="repetir-todo-dia"
-                                    className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-tinta-fraca hover:text-nz-verde"
+                                    className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-nz-tinta-fraca hover:text-nz-verde disabled:opacity-50"
                                   ><Repeat className="w-3.5 h-3.5" /> repetir todo dia</button>
                                 )
                               )}
@@ -3180,7 +3206,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <div className="mt-2 flex flex-wrap items-center gap-2" data-teste="editor-tarefa">
                                 <Input type="time" value={edicao.hora} onChange={(e) => setEdicao({ ...edicao, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="editar-hora" />
                                 <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
-                                <Button size="sm" onClick={() => tentarSalvarEdicao(t)} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
+                                <Button size="sm" onClick={() => tentarSalvarEdicao(t)} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
                                 <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
                                 {/* 🔁 DIR-150 — antes era só um AVISO ("pra mudar todo
                                     dia, edite a sua rotina"), sem ação nenhuma ali —
@@ -3236,7 +3262,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   virou escuro e ele ficou pra trás: caixa branca no meio do preto,
                   com a hora sumindo de tão clara. O componente já sabe ser escuro
                   desde a DIR-90 — só ninguém tinha avisado ele aqui. */}
-              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} escuro />
+              <EntradaComDestinos origem="lista" valor={novaTarefa} onChange={setNovaTarefa} onCriar={addTarefa} listas={listasDoQuadro} testeCampo="campo-nova-tarefa" altura={40} itensDoDia={tarefas} salvando={salvando} escuro />
               {/* 🔁 DIR-150 — "cada rotina que ela coloque, dê a opção de
                   manter recorrente" — a escolha mora AQUI, junto de criar a
                   tarefa, não escondida num painel à parte pra ela achar depois. */}
@@ -3288,7 +3314,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             <>
                               <Input type="time" value={rascunho.hora} onChange={(e) => setRascunho({ ...rascunho, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="rotina-hora" />
                               <Input value={rascunho.titulo} onChange={(e) => setRascunho({ ...rascunho, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[150px]" data-teste="rotina-titulo" />
-                              <Button size="sm" className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-salvar"
+                              <Button size="sm" disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-salvar"
                                 onClick={async () => { const ok = await gravarRotina(editarNaRotina(rotina, i, rascunho)); if (ok) setEditandoRotina(null); }}
                               >salvar</Button>
                               <button type="button" onClick={() => setEditandoRotina(null)} className="text-[11px] text-nz-tinta-fraca shrink-0">cancelar</button>
@@ -3297,12 +3323,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             <>
                               <span className="text-[12px] font-bold tabular-nums text-nz-tinta w-12 shrink-0">{item.hora || '—'}</span>
                               <span className="text-[12px] text-nz-tinta flex-1 min-w-0 break-words">{item.titulo}</span>
-                              <button type="button" title="editar na rotina — vale todo dia" data-teste="rotina-editar"
+                              <button type="button" title="editar na rotina — vale todo dia" data-teste="rotina-editar" disabled={salvando}
                                 onClick={() => { setEditandoRotina(i); setRascunho({ hora: item.hora || '', titulo: item.titulo }); }}
-                                className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"><PenLine className="w-3.5 h-3.5" /></button>
-                              <button type="button" title="tirar da rotina — some de todo dia, não só de hoje" data-teste="rotina-excluir"
+                                className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0 disabled:opacity-50"><PenLine className="w-3.5 h-3.5" /></button>
+                              <button type="button" title="tirar da rotina — some de todo dia, não só de hoje" data-teste="rotina-excluir" disabled={salvando}
                                 onClick={() => gravarRotina(excluirDaRotina(rotina, i))}
-                                className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                                className="text-nz-tinta-fraca/50 hover:text-red-600 shrink-0 disabled:opacity-50"><Trash2 className="w-3.5 h-3.5" /></button>
                             </>
                           )}
                         </div>
@@ -3311,7 +3337,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Input type="time" value={novoDaRotina.hora} onChange={(e) => setNovoDaRotina({ ...novoDaRotina, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="rotina-nova-hora" />
                       <Input value={novoDaRotina.titulo} onChange={(e) => setNovoDaRotina({ ...novoDaRotina, titulo: e.target.value })} placeholder="incluir na minha rotina..." className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[150px]" data-teste="rotina-nova-titulo" />
-                      <Button disabled={!novoDaRotina.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-incluir"
+                      <Button disabled={!novoDaRotina.titulo.trim() || salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-incluir"
                         onClick={async () => { const ok = await gravarRotina(incluirNaRotina(rotina, novoDaRotina)); if (ok) setNovoDaRotina({ hora: '', titulo: '' }); }}
                       ><Plus className="w-4 h-4" /></Button>
                     </div>

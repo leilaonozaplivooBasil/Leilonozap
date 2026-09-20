@@ -27,7 +27,7 @@ import { semComentarios } from './_ajuda.mjs';
 const CRM = semComentarios(readFileSync(new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url), 'utf8'));
 
 test('a tarefa do dia mostra um SELO quando já é recorrente — não fica só o botão mudo', () => {
-  assert.match(CRM, /estaNaRotina\(t\.titulo\) \? \(/);
+  assert.match(CRM, /estaNaRotina\(t\.hora, t\.titulo\) \? \(/);
   assert.match(CRM, /data-teste="ja-e-rotina"/);
   assert.match(CRM, /já repete todo dia/);
 });
@@ -49,7 +49,7 @@ test('o Ritual do Amanhecer NUNCA ganha botão/selo de repetir — não é item 
 test('a escolha de repetir entra JUNTO de criar a tarefa nova — não só depois', () => {
   assert.match(CRM, /const \[repetirNovaTarefa, setRepetirNovaTarefa\] = useState\(false\);/);
   assert.match(CRM, /data-teste="repetir-nova-tarefa"/);
-  assert.match(CRM, /if \(repetirNovaTarefa && !estaNaRotina\(novaTarefa\.titulo\)\) \{/);
+  assert.match(CRM, /if \(repetirNovaTarefa && !estaNaRotina\(novaTarefa\.hora \|\| '', novaTarefa\.titulo\)\) \{/);
   assert.match(CRM, /await gravarRotina\(incluirNaRotina\(rotina, \{ hora: novaTarefa\.hora \|\| '', titulo: novaTarefa\.titulo \}\)\);/);
 });
 
@@ -58,7 +58,7 @@ test('editar hora/título de hoje ganha a MESMA escolha, não só um aviso passi
   assert.match(CRM, /data-teste="repetir-na-edicao"/);
   // pré-marcado quando a tarefa já é da rotina — ela está corrigindo o
   // padrão, não criando uma exceção pontual
-  assert.match(CRM, /setRepetirEdicao\(estaNaRotina\(t\.titulo\)\)/);
+  assert.match(CRM, /setRepetirEdicao\(estaNaRotina\(t\.hora, t\.titulo\)\)/);
   // salvarEdicao aplica a MESMA correção na rotina, achando pelo título
   // ORIGINAL (antes da edição) — nunca cria duplicata
   assert.match(CRM, /const idx = rotina\.findIndex\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(t\.titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
