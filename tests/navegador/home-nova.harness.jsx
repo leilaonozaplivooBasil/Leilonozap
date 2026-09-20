@@ -24,6 +24,20 @@ import arteFerramentas from '../../public/categorias/ferramentas.webp';
 import arteGames from '../../public/categorias/games.webp';
 import arteModa from '../../public/categorias/moda.webp';
 
+// 🎬 VÍDEO DE VERDADE NA BANCA (20/09/2026).
+//
+// O vídeo do PS5 mora no Supabase e o contêiner não alcança `supabase.co`: com
+// o endereço de produção aqui, o <video> nunca carregava e a banca não tinha
+// como provar a única coisa que o dono reclamou — "parece uma imagem até passar
+// o mouse". Provar atributo não basta: `autoplay` é um PEDIDO, e o defeito era
+// justamente o pedido não virar reprodução.
+//
+// Então entra um arquivo nosso, 8 KB, 4 segundos, 320x180 (16:9 como o real),
+// gerado com ffmpeg em VP9/WebM — o Chromium de código aberto da banca NÃO
+// decodifica H.264, e um .mp4 aqui morre com DEMUXER_ERROR_NO_SUPPORTED_STREAMS. Ele é servido pela própria banca, toca de verdade, e a
+// prova pode olhar `paused` e `currentTime` em vez de olhar HTML.
+import videoDeProva from './falso/video-de-prova.webm';
+
 // `&` cru quebra o XML do SVG — vira imagem quebrada em "Beleza & Saúde".
 const escapar = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -102,7 +116,7 @@ const products = [
   // <video> existe, nasce mudo, e o primeiro clique tira o mudo), não o pixel.
   {
     id: 'p-ps5', catalog_active: true, price_catalog: 6000,
-    video_urls: ['https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public/videos-produtos/uploads/1789569726600_ps5.mp4'],
+    video_urls: [videoDeProva],
   },
   ...LEILOES_REAIS.map(([id, , , , naLoja]) => ({ id: `p-${id}`, catalog_active: true, price_catalog: naLoja })),
   ...Array.from({ length: 2853 - 1 - LEILOES_REAIS.length }, (_, i) => ({

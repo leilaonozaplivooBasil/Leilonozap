@@ -34,6 +34,10 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
   // para o qual voltar.
   const videoRef = useRef(null);
   const [mudo, setMudo] = useState(true);
+  // 📊 Quanto do vídeo já passou, de 0 a 1. Alimenta a barra no pé da moldura —
+  // que é, ao mesmo tempo, o sinal de "isto é um vídeo" e o diagnóstico de
+  // "ele está mesmo tocando?".
+  const [andamento, setAndamento] = useState(0);
   const temVideo = video?.tipo === 'arquivo' && Boolean(video?.embed);
 
   useEffect(() => {
@@ -58,6 +62,29 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
       window.removeEventListener('keydown', ligarSom, opcoes);
     };
   }, [temVideo]);
+
+  // ▶️ 20/09/2026 — O VÍDEO PARECIA UMA FOTO ATÉ A PESSOA MEXER O MOUSE.
+  //
+  // Duas causas, as duas aqui:
+  //
+  // 1. `preload="metadata"` mandava o navegador baixar SÓ o cabeçalho. Com 7,9
+  //    MB e `autoplay`, o Chrome fica no cartaz até juntar quadro suficiente —
+  //    e cartaz parado é exatamente uma foto. Virou `preload="auto"`.
+  //
+  // 2. O atributo `autoplay` sozinho é um PEDIDO, não uma garantia: aba que
+  //    nasceu em segundo plano, economia de bateria, política do navegador —
+  //    qualquer um deles engole a partida em silêncio, sem erro no console.
+  //    Agora o play é pedido na mão quando o vídeo avisa que tem dados, e o
+  //    `catch` existe porque a recusa é normal e não pode virar erro vermelho
+  //    na tela de quem está comprando.
+  //
+  // ⚠️ O QUE A BANCA PROVA E O QUE NÃO PROVA: tirar o `preload="auto"` ou o
+  // `autoPlay` derruba a prova "o vídeo está tocando sozinho". Tirar ESTE
+  // `play()` não derruba nada — na banca a aba está sempre visível e em
+  // primeiro plano, que é justamente o caso em que o `autoplay` não falha. Ele
+  // fica como cinto e suspensório para o caso que a banca não sabe criar, e
+  // fica dito aqui para ninguém confundir o verde com prova.
+  const tentarTocar = () => { videoRef.current?.play?.().catch(() => {}); };
 
   const trocarSom = (e) => {
     e.preventDefault();
@@ -190,14 +217,36 @@ export default function HeroDoDia({ leilao, arte = null, chamada = 'Leilão do d
                   loop
                   muted={mudo}
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                   // a foto do produto como cartaz: o herói nunca nasce preto, e
                   // quem está com dados curtos vê a imagem de sempre. `contain`
                   // serve aos dois — o vídeo 16:9 preenche a moldura inteira, e
                   // a foto, que é quadrada, fica centrada sem ser decepada.
                   poster={foto || undefined}
+                  onLoadedData={tentarTocar}
+                  onCanPlay={tentarTocar}
+                  onTimeUpdate={(e) => {
+                    const v = e.currentTarget;
+                    if (v.duration > 0) setAndamento(v.currentTime / v.duration);
+                  }}
                   className="h-full w-full object-contain"
                 />
+
+                {/* ▶️ A LINHA QUE ANDA. Um vídeo de produto pode ter cena quase
+                    parada e aí ele LÊ como foto, por mais que esteja tocando —
+                    foi o que o dono viu. Esta linha se move sempre, então diz
+                    "isto é vídeo" sem precisar de ícone de play por cima da
+                    arte. E serve de diagnóstico: linha parada é vídeo parado. */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[3px] bg-white/15"
+                  data-teste="andamento-do-video"
+                >
+                  <div
+                    className="h-full bg-nz-verde-neon"
+                    style={{ width: `${Math.min(100, Math.max(0, andamento * 100))}%` }}
+                  />
+                </div>
 
                 {/* véu no pé: o botão precisa ser legível também quando a cena
                     do vídeo está clara, e uma cena clara acontece o tempo todo */}

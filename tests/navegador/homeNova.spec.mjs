@@ -33,7 +33,7 @@ try { ({ chromium } = await import('playwright')); } catch { /* opcional */ }
 const semNavegador = chromium ? false : 'playwright não instalado — rode: npm i -D playwright';
 
 let navegador; let BASE; let servidor;
-const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png' };
+const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.mp4': 'video/mp4', '.webm': 'video/webm', '.jpg': 'image/jpeg' };
 
 async function garantirNavegador() {
   if (navegador) return navegador;
@@ -354,14 +354,17 @@ test('🎬 o herói abre com o VÍDEO do produto, não com a foto', { skip: semN
   assert.equal(await video.count(), 1, 'o herói tinha que trazer o vídeo do PS5');
 
   const atributos = await video.evaluate((v) => ({
-    src: v.getAttribute('src'), autoplay: v.autoplay, loop: v.loop,
+    src: v.getAttribute('src'), autoplay: v.autoplay, loop: v.loop, preload: v.preload,
     playsInline: v.playsInline, poster: v.getAttribute('poster'),
   }));
-  assert.match(atributos.src, /ps5\.mp4$/, `src inesperado: ${atributos.src}`);
+  // o NOME do arquivo é assunto da banca (aqui roda o vídeo local de 8 KB, em
+  // produção o do PS5); o que importa provar é que o herói montou um vídeo
+  assert.match(atributos.src, /\.(mp4|webm)$/, `src inesperado: ${atributos.src}`);
   assert.equal(atributos.autoplay, true, 'sem autoplay o vídeo não é "sempre ativo"');
   assert.equal(atributos.loop, true, '"sempre ativo" quer dizer que ele recomeça');
   assert.equal(atributos.playsInline, true, 'sem playsInline o iPhone abre em tela cheia sozinho');
   assert.ok(atributos.poster, 'sem cartaz o herói nasce preto enquanto o vídeo não chega');
+  assert.equal(atributos.preload, 'auto', 'com preload "metadata" o navegador fica no cartaz — foi o que fez o vídeo parecer foto');
 
   // a foto do herói sai de cena quando há vídeo — as duas juntas seria ruído
   assert.equal(await pagina.locator('[data-teste="hero-com-video"] img').count(), 0);
@@ -433,5 +436,36 @@ test('🖼️ o botão de som fica DENTRO do vídeo, e a moldura não sobra caix
     && botao.x + botao.width <= moldura.x + moldura.width + 1
     && botao.y + botao.height <= moldura.y + moldura.height + 1;
   assert.ok(dentro, `o botão de som saiu da moldura: botão ${JSON.stringify(botao)} · moldura ${JSON.stringify(moldura)}`);
+  await pagina.close();
+});
+
+test('▶️ o vídeo do herói ESTÁ TOCANDO sozinho — sem clique, sem mouse, sem nada', { skip: semNavegador }, async () => {
+  // 🔴 O DEFEITO (dono, 20/09): "o vídeo preenche a moldura, mas até que passe
+  // o mouse por cima, ele parece ser uma imagem."
+  //
+  // Era cartaz parado: `preload="metadata"` segurava o download e o atributo
+  // `autoplay`, sozinho, é um PEDIDO que o navegador pode engolir calado.
+  //
+  // Esta prova NÃO olha atributo — olha o relógio do vídeo andando. É a única
+  // pergunta que importa: ele está tocando sem ninguém encostar?
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+
+  await pagina.waitForFunction(
+    () => {
+      const v = document.querySelector('[data-teste="video-do-hero"]');
+      return v && !v.paused && v.currentTime > 0.05;
+    },
+    { timeout: 12000 },
+  );
+
+  const t1 = await video.evaluate((v) => v.currentTime);
+  await pagina.waitForTimeout(900);
+  const t2 = await video.evaluate((v) => v.currentTime);
+  assert.ok(t2 > t1, `o vídeo travou: ${t1}s -> ${t2}s`);
+
+  // e a barra de andamento acompanha — é o que diz para o olho "isto é vídeo"
+  const largura = await pagina.locator('[data-teste="andamento-do-video"] > div').evaluate((d) => d.getBoundingClientRect().width);
+  assert.ok(largura > 0, 'a barra de andamento ficou em zero com o vídeo tocando');
   await pagina.close();
 });
