@@ -12,6 +12,26 @@
 
 ---
 
+## DIR-167 — Dinheiro do lance nunca mais fica preso: devolução ao tirar o líder, cura no lance seguinte e vigia que devolve sozinho
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono (20/09/2026, urgente): *"O cliente depositou mil, está dizendo que o dinheiro voltou e ele não consegue dar o lance. Se ele for superado, o dinheiro tem que voltar e continuar na carteira para ele dar lance."*
+
+**O caso (Alberto Maroun Filho):** depósito de R$ 1.000 em 11/09. Lance de R$ 497 no "Playstation 5" em 14/09 18:04 (BRT) reservou R$ 573,22 (lance + frete R$ 76,22) — lance legítimo, o primeiro do leilão. Em 16/09 08:51 (BRT) outro chat removeu esse vencedor à mão (`raw_base44.limpeza_vencedor`), com o diagnóstico "leilão ativo com vencedor sem nenhum lance": consultou a tabela `bids`, que é herança VAZIA do Base44 — os lances moram em `auction_messages`. A remoção não devolveu a reserva. Em 17/09 outro cliente deu R$ 497 de novo (o leilão voltou a aceitar o lance inicial), e a devolução ao "líder anterior" nunca alcançou o Alberto, porque ele já não constava como líder. O vigia diário `alertaReservasOrfas` apontou "Alberto: R$ 573,22 travados" em 17, 18, 19 e 20/09 — num `system_logs` que ninguém lê.
+
+**Feito agora (banco):** R$ 573,22 devolvidos ao disponível (R$ 426,78 → R$ 1.000,00; reservado R$ 0,00), linha em `reserva_ledger` (`auditoria_manual_20260920`). Nenhuma outra conta com reserva sem leilão em disputa. ⚠️ Com R$ 1.000 ele ainda **não cobre o lance mínimo atual** desse leilão (R$ 1.097 + R$ 76,22 de frete = R$ 1.173,22): faltam R$ 173,22 — isso é o leilão que subiu, não dinheiro preso.
+
+**Feito agora (código, 3 camadas):**
+1. `entityWrite`: qualquer atualização de `auctions` que zere `winner_id` (reativar, agendar, reiniciar, limpeza) devolve a reserva do líder ANTES do PATCH (`devolucao_lider_removido`).
+2. `submitAtomicBid`: depois de um lance vencer, além do líder anterior, devolve a quem ainda tiver reserva viva neste leilão pelo livro-caixa (entradas − saídas por pessoa) e não for o líder novo. O dinheiro preso por fora do fluxo volta no lance seguinte, sem humano.
+3. `alertaReservasOrfas` (cron diário): reserva 100% órfã — pessoa não lidera nada em disputa, não é vencedora de nada por liquidar nos últimos 7 dias, e última reserva com mais de 2h — volta sozinha (`devolucao_reserva_orfa`, com CAS e livro-caixa). Reserva parcial continua só avisando.
+4. `CLAUDE.md`: seção "Onde moram os lances" — nunca diagnosticar lance pela tabela `bids`; nunca zerar `winner_id` por SQL.
+
+**Testes:** `tests/reservaLiderRemovido.test.mjs` (4) + `tests/alertaReservasOrfas.test.mjs` atualizado. Suíte: 3045; eslint 0 erros; build ok.
+
+---
+
 ## DIR-166.6 — "nova tarefa do dia" não nasce mais num dia que ela mesma exclui
 
 **Emitida por:** dono, testando num domingo (20/09/2026), escolhendo "segunda, terça, quarta e quinta" pra uma tarefa nova, e vendo ela aparecer na Jornada de hoje mesmo assim: *"hoje é domingo e ele está colocando uma tarefa que eu só falei que era terça, quarta e quinta... ele não está pegando o dia. Então, se hoje é domingo, ele tem que botar hoje é domingo... tem que chegar todo dia e falar bom dia, hoje é segunda, hoje é terça, hoje é quarta, hoje é quinta, ele tem que puxar, pra ficar sincronizado com o horário de Brasília."*

@@ -426,6 +426,16 @@ export default async function handler(req, res) {
 
     // update
     if (!id) return res.status(400).json({ success: false, error: 'id obrigatório' });
+    // 🔴 20/09/2026 — TIRAR O LÍDER DE UM LEILÃO DEVOLVE O DINHEIRO DELE ANTES.
+    // Caso Alberto (PS5): o vencedor foi removido à mão em 16/09 e os R$ 573,22 do
+    // lance + frete ficaram presos 4 dias — a devolução só existia no lance seguinte
+    // (líder anterior), no cancelar e no apagar. Agora QUALQUER caminho que zere
+    // winner_id por aqui (reativar, agendar, reiniciar, limpeza) devolve primeiro.
+    // Roda ANTES do PATCH de propósito: a devolução lê o líder ATUAL do leilão.
+    const zeraLider = table === 'auctions' && body?.payload && typeof body.payload === 'object'
+      && Object.prototype.hasOwnProperty.call(body.payload, 'winner_id') && !body.payload.winner_id;
+    const reservaDevolvidaLider = zeraLider ? await devolverReservaDoLeilao(id, 'devolucao_lider_removido') : null;
+
     const patch = semColunasAusentes(table, { ...(body?.payload || {}), updated_date: now });
     const ur = await writeResilient('PATCH', table, id, patch);
     if (!ur.ok) return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: ur.details });
@@ -439,7 +449,7 @@ export default async function handler(req, res) {
       ? await devolverReservaDoLeilao(id, 'devolucao_leilao_cancelado')
       : null;
 
-    return res.status(200).json({ success: true, rows: ur.rows, removidos: ur.removed, reserva_devolvida: reservaDevolvidaCancel });
+    return res.status(200).json({ success: true, rows: ur.rows, removidos: ur.removed, reserva_devolvida: reservaDevolvidaCancel || reservaDevolvidaLider });
   } catch (e) {
     // 🩹 Antes disto o campo `error` vinha sempre com a palavra fixa "Erro" — a
     // causa real ficava só em `details`, que o adapter do front nunca lê (prioriza

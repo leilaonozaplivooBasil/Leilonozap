@@ -581,10 +581,35 @@ export default async function handler(req, res) {
       if (devolvido > 0) releasedPrevious = { user_id: auction.winner_id, valor: devolvido };
     }
 
+    // 🧹 20/09/2026 — RESERVA ÓRFÃ NESTE LEILÃO VOLTA NO LANCE SEGUINTE.
+    // A devolução acima só alcança auction.winner_id. Se alguém perdeu a liderança
+    // por fora do lance (winner_id apagado à mão, corrida, falha antiga), o dinheiro
+    // ficava preso até um humano rodar a faxina — foi o caso Alberto (PS5, 4 dias).
+    // O livro-caixa por (leilão, pessoa) diz quem ainda tem reserva viva aqui:
+    // entradas menos saídas. Quem não é o líder novo e tem saldo positivo recebe.
+    const liberadosOrfaos = [];
+    try {
+      const led = await sb(`reserva_ledger?select=user_id,direcao,valor&auction_id=eq.${encodeURIComponent(auctionId)}&limit=2000`);
+      const porPessoa = new Map();
+      for (const r of (Array.isArray(led.data) ? led.data : [])) {
+        const u = String(r.user_id || '');
+        if (!u) continue;
+        const v = money(r.valor);
+        porPessoa.set(u, money((porPessoa.get(u) || 0) + (r.direcao === 'entrada_reserva' ? v : -v)));
+      }
+      for (const [u, preso] of porPessoa) {
+        if (u === String(userId) || preso <= 0.009) continue;
+        if (releasedPrevious && u === String(releasedPrevious.user_id)) continue; // já devolvido acima
+        const dev = await releaseHold(u, preso, auctionId);
+        if (dev > 0) liberadosOrfaos.push({ user_id: u, valor: dev });
+      }
+    } catch (e) { console.warn('[BID] reservas órfãs:', e?.message); }
+
     return res.status(200).json({
       success: true,
       message: 'Lance registrado com sucesso!',
       released_previous: releasedPrevious,
+      released_orphans: liberadosOrfaos,
       new_state: {
         current_price: patchedRow.current_price,
         winner_name: patchedRow.winner_name,
