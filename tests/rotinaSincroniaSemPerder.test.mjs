@@ -32,10 +32,13 @@ const CRM = semComentarios(readFileSync(new URL('../src/components/licensing/Cen
 
 test('estaNaRotina casa hora E título — mesmo nome em horário diferente não é "já repete"', () => {
   assert.match(CRM, /const estaNaRotina = \(hora, titulo\) => rotina\.some\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\) && \(i\.hora \|\| ''\) === \(hora \|\| ''\)\);/);
-  // os 5 chamadores precisam ter migrado — nenhum "estaNaRotina(" com um só argumento sobrando
+  // os chamadores precisam ter migrado — nenhum "estaNaRotina(" com um só argumento sobrando
   // (a definição não entra aqui: "estaNaRotina = (hora, titulo)" não casa com "estaNaRotina(")
+  // 🗓️ 20/09/2026 — DIR-166.6: 6ª chamada — addTarefa confere antes de
+  // gravar na rotina quando a tarefa de hoje não nasce (dias escolhidos
+  // não batem com hoje).
   const chamadas = [...CRM.matchAll(/estaNaRotina\(([^)]*)\)/g)].map((m) => m[1]);
-  assert.equal(chamadas.length, 5, `esperava 5 chamadas, achou ${chamadas.length}`);
+  assert.equal(chamadas.length, 6, `esperava 6 chamadas, achou ${chamadas.length}`);
   for (const args of chamadas) {
     assert.ok(args.includes(','), `chamada "estaNaRotina(${args})" ainda passa só um argumento — hora sumiu`);
   }

@@ -61,7 +61,7 @@ import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
 import {
   rotinaEmVigor, estadoDaRotina, deveGerarSozinha, valeAPartirDe,
-  incluirNaRotina, editarNaRotina, excluirDaRotina,
+  incluirNaRotina, editarNaRotina, excluirDaRotina, itemValeNoDia,
 } from '@/lib/rotinaPessoal';
 import { rotinaComEventos } from '@/lib/eventosGamificacao';
 import { ferramentaDe } from '@/lib/ferramentaDaTarefa';
@@ -1817,6 +1817,26 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // põe na Jornada; "também no quadro" cria o card ligado (lib/destinos.js).
   const addTarefa = async () => {
     if (!novaTarefa.titulo.trim() || !uid) return;
+    // 🗓️ 20/09/2026 — DIR-166.6: dono, testando num domingo, escolhendo
+    // "segunda, terça, quarta e quinta": "hoje é domingo... ele não está
+    // pegando o dia... tem que chegar todo dia e falar bom dia, hoje é
+    // segunda, hoje é terça." "Nova tarefa DO DIA" sempre criava a tarefa
+    // de HOJE, mesmo quando os dias escolhidos não incluíam hoje — uma
+    // contradição: pedir "só seg-qui" e ver nascer no domingo mesmo assim.
+    // Quando os dias escolhidos excluem hoje, isto vira só um item de
+    // rotina futura (igual "incluir na minha rotina" já faz) — sem nascer
+    // tarefa hoje pra ninguém confundir com o dia certo.
+    const diaSemanaHoje = new Date(`${dia}T12:00:00`).getDay();
+    if (repetirNovaTarefa && diasNovaTarefa && !itemValeNoDia({ dias_semana: diasNovaTarefa }, diaSemanaHoje)) {
+      if (!estaNaRotina(novaTarefa.hora || '', novaTarefa.titulo)) {
+        const ok = await gravarRotina(incluirNaRotina(rotina, { hora: novaTarefa.hora || '', titulo: novaTarefa.titulo, dias_semana: diasNovaTarefa }));
+        if (!ok) return;
+      }
+      setNovaTarefa({ hora: '', titulo: '', noQuadro: false, listaId: novaTarefa.listaId });
+      setRepetirNovaTarefa(false);
+      setDiasNovaTarefa(null);
+      return;
+    }
     let listaId = novaTarefa.listaId || listasDoQuadro[0]?.id || null;
     let listaNome = listasDoQuadro.find((l) => l.id === listaId)?.nome || null;
     if (novaTarefa.noQuadro && !listaId) {

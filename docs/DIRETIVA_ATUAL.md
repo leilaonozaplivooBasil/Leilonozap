@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-166.6 — "nova tarefa do dia" não nasce mais num dia que ela mesma exclui
+
+**Emitida por:** dono, testando num domingo (20/09/2026), escolhendo "segunda, terça, quarta e quinta" pra uma tarefa nova, e vendo ela aparecer na Jornada de hoje mesmo assim: *"hoje é domingo e ele está colocando uma tarefa que eu só falei que era terça, quarta e quinta... ele não está pegando o dia. Então, se hoje é domingo, ele tem que botar hoje é domingo... tem que chegar todo dia e falar bom dia, hoje é segunda, hoje é terça, hoje é quarta, hoje é quinta, ele tem que puxar, pra ficar sincronizado com o horário de Brasília."*
+
+**Achado — não era fuso horário.** Auditoria direta no banco (`metodo_perfil`/`metodo_tarefas` do próprio dono): `dataISO()` já calcula "hoje" certo, sempre em America/Sao_Paulo (DIR-129/DIR-59) — 20/09/2026 é mesmo domingo, confirmado. O bug real: "nova tarefa do dia" (o campo do topo, DIR-166.2) SEMPRE criava a tarefa de HOJE, mesmo quando os dias escolhidos no seletor não incluíam hoje — só o item gravado na `rotina` (pro futuro) respeitava `dias_semana`; a instância de HOJE nascia sempre, sem passar por nenhum filtro. Escolher "só seg-qui" e ver a tarefa nascer no domingo mesmo assim era exatamente a contradição que ele apontou.
+
+**O que entra (`CrmMetodo.jsx`):** `addTarefa` agora calcula o dia da semana de HOJE (mesma conta segura em Brasília que `gerarTarefasDaRotina` já usa, DIR-166) e, quando os dias escolhidos não incluem hoje, NÃO cria a tarefa de hoje — só grava o item na rotina (`itemValeNoDia`, a mesma régua pura da DIR-166), que passa a valer a partir do próximo dia que bater. Sem restrição de dias (ou quando hoje é um dos dias escolhidos), nada muda — a tarefa nasce hoje normalmente, igual sempre foi.
+
+**Fora do escopo:** não mexe em tarefas JÁ criadas hoje antes desta correção (ex.: as que o próprio dono criou testando, incluindo os "HORÁRIO RESERVADO PARA REUNIÃO" das 14h/15h30/17h de hoje, restritos a seg-qui mas já existentes no banco pra hoje) — apagar dados já gravados é ação à parte, avisada e à espera de confirmação dele, não decidida sozinha aqui. Também não mexe no editor da tarefa de hoje (lápis) nem em "incluir na minha rotina" — nenhum dos dois tinha essa contradição: o lápis edita algo que já existe hoje (DIR-150), e "incluir na minha rotina" nunca cria tarefa de hoje (decisão da DIR-166.2).
+
+**Prova:** suíte completa (3041/3041, `tests/rotinaNaoNasceEmDiaErrado.test.mjs` novo + `tests/rotinaSincroniaSemPerder.test.mjs` atualizado pra 6 chamadas de `estaNaRotina`), lint limpo, `npm run build` sem erro. Mutação: desliguei a condição nova (`if (false && repetirNovaTarefa...)`) → 2 testes quebraram; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-166.5 — a frase pronta do atalho de setor sai em CAIXA ALTA, igual o padrão dele
 
 **Emitida por:** dono, minutos depois da DIR-166.4 ir pro ar, vendo "Reunião com o setor de Financeiro" aparecer em caixa baixa: *"tá quase perfeito. Só tem um negócio que eu gosto de botar as coisas em caixa alta e quando eu clico tá ficando em caixa baixa. Só edita para quando eu clicar ficar em caixa alta e seguir o padrão."*
