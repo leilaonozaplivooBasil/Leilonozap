@@ -107,6 +107,63 @@ describe('a persona', () => {
     assert.match(p, /NUNCA diga que "paga depois de arrematar"/);
   });
 
+  // 🔴 20/09/2026 — ACONTECEU EM PRODUÇÃO, NO WHATSAPP.
+  //
+  // Cliente perguntou: "se eu depositar e não conseguir arrematar, consigo
+  // sacar?". O Zeca respondeu: "o valor original que voltou pra sua carteira
+  // você pode sacar normalmente."
+  //
+  // É MENTIRA. `api/functions/requestWithdrawal.js` lê SÓ `commission_balance`
+  // — nunca toca em `saldo_disponivel`, que é onde o depósito cai e para onde o
+  // lance superado volta. E `withdrawal_requests` tem ZERO linhas na história
+  // da plataforma.
+  //
+  // Causa-raiz: a persona não dizia NADA sobre saque. Diante do silêncio, o
+  // modelo inventou a resposta mais simpática — que é a pior possível, porque
+  // faz a pessoa depositar achando que pode se arrepender.
+  //
+  // Estes testes existem para que o silêncio não volte.
+  test('🔴 a persona diz, com todas as letras, que não existe saque', () => {
+    const p = personaDaLeila({ nome: null, identificado: true, temMemoria: false });
+    assert.match(p, /NÃO EXISTE SAQUE DO SALDO DA CARTEIRA DE LANCES/);
+    assert.match(p, /não tem saque/i);
+    assert.match(p, /não tem PIX de volta/i);
+    assert.match(p, /não tem estorno/i);
+  });
+
+  test('🔴 a persona diz que "voltar para a carteira" não é "receber de volta"', () => {
+    // Foi exatamente aqui que o Zeca escorregou: ele acertou que o valor volta
+    // para a carteira e concluiu sozinho que dava para sacar.
+    const p = personaDaLeila({ nome: null, identificado: true, temMemoria: false });
+    assert.ok(
+      p.includes('"Voltar para a carteira" NÃO é') && p.includes('"receber de volta"'),
+      'sumiu a frase que separa "volta pra carteira" de "recebe de volta"',
+    );
+  });
+
+  test('🔴 o bônus de 10% nasce do DEPÓSITO, não de ter o lance superado', () => {
+    // A mesma resposta errada também dizia que o bônus vinha de ser superado.
+    // Ele vem do aporte de R$ 100+ (PCT_PASSAPORTE=10, DEPOSITO_MINIMO=100) e
+    // nasce bloqueado, liberando em fatias conforme a pessoa dá lance.
+    const p = personaDaLeila({ nome: null, identificado: true, temMemoria: false });
+    assert.match(p, /Nasce do DEPÓSITO de R\$ 100 ou mais, não de ter o lance superado/);
+    assert.match(p, /Nasce BLOQUEADO/);
+  });
+
+  test('🔴 a persona não promete saque em lugar nenhum', () => {
+    // O contraponto: de nada adianta escrever a proibição se, três parágrafos
+    // depois, outra linha oferecer saque. Varre a persona inteira.
+    const p = personaDaLeila({ nome: 'Kini', identificado: true, temMemoria: true });
+    // Varredura ESTRITA, sem exceção para linha que nega: a primeira versão
+    // disto acusou a própria linha da proibição, que perguntava "se dá para
+    // sacar". Em vez de afrouxar a prova, reescrevi a persona — o texto diz a
+    // mesma coisa sem ter forma de promessa. Prova estrita vale mais que
+    // persona bem escrita.
+    const promete = p.split('\n')
+      .filter((l) => /\b(pode|poderá|consegue|d[áa] para|d[áa] pra)\s+(sacar|resgatar|estornar)/i.test(l));
+    assert.deepEqual(promete, [], `a persona promete saque em: ${promete.join(' | ')}`);
+  });
+
   test('a proibição de falar de rede/comissão continua de pé', () => {
     const p = personaDaLeila({ nome: null, identificado: true, temMemoria: false });
     assert.match(p, /PROIBIÇÃO ABSOLUTA/);

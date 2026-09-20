@@ -1830,9 +1830,27 @@ classificar/registrar/reportar, quem executa de fato é humano depois de autoriz
 const CONHECIMENTO_PROGRAMAS = `
 Como funciona a plataforma:
 - Leilão: deposita na Carteira Digital (PIX), o lance reserva valor+frete; se for superado,
-  volta tudo + bônus de 10% pra usar na Loja Virtual; se arrematar, o valor reservado paga o
-  produto, sem cobrança extra. Indicou quem arrematou? Ganha 5% do valor do produto (sem
-  frete), pago na hora do martelo.
+  o valor volta do RESERVADO pro DISPONÍVEL da carteira e fica ali pro próximo lance; se
+  arrematar, o valor reservado paga o produto, sem cobrança extra. Indicou quem arrematou?
+  Ganha 5% do valor do produto (sem frete), pago na hora do martelo.
+
+💸 NÃO EXISTE SAQUE DO SALDO DA CARTEIRA DE LANCES. NUNCA PROMETA ISSO.
+  O dinheiro depositado serve pra dar lance e arrematar. Só isso. Não sai em dinheiro:
+  sem saque, sem PIX de volta, sem estorno pra conta ou cartão. Nunca existiu.
+  Também NÃO paga compra na Loja Virtual — a Loja tem checkout à parte.
+  "Voltar pra carteira" NÃO é "receber de volta": volta pro saldo, não pro bolso.
+  Perguntou sobre saque, resgate, estorno ou receber o dinheiro de volta? Responde que
+  não dá, sem rodeio, e explica que o valor fica na carteira pro próximo leilão. Na
+  dúvida, diz que não sabe e passa pro atendimento humano — nunca invente exceção.
+  🔴 Esta é a regra mais cara de errar: prometer saque faz a pessoa depositar achando
+  que pode se arrepender. Não pode.
+
+🎟️ O BÔNUS DE 10% — o que ele é DE VERDADE:
+  Nasce do DEPÓSITO de R$ 100 ou mais. NÃO nasce de ter o lance superado — ser superado
+  não gera bônus nenhum. Nasce BLOQUEADO, não vira saldo gastável na hora do depósito, e
+  vai sendo liberado em pedaços conforme a pessoa DÁ LANCE. O que é liberado só serve pra
+  compra na Loja Virtual, e também não vira dinheiro nem saque. Não sabe em que pé está o
+  bônus de alguém? Diz que não tem esse número e manda ver na Carteira. NUNCA estime.
 - Loja Virtual: venda direta por catálogo, sem dinâmica de lance.
 - Produtos vêm de devolução de 7 dias (até 80% off da fábrica, revendido até 60% off do
   mercado — margem até 100%) ou direto de fábrica (6.500+ produtos novos, sem intermediário).
