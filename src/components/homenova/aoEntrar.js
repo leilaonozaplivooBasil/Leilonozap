@@ -20,7 +20,17 @@ export function aoEntrar({ semMovimento = false, atraso = 0, distancia = 18 } = 
   return {
     initial: { opacity: 0, y: distancia },
     whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, amount: 0.15 },
+    // 🏃 19/09/2026 — A SEÇÃO ACENDE ANTES DE CHEGAR NA TELA.
+    //
+    // Com `amount: 0.15` a seção só começava a aparecer depois de 15% dela já
+    // estar visível: quem rola rápido (o flick de celular) passava por um bloco
+    // ainda apagado e via preto. Medido no print de página inteira: rolagem
+    // instantânea deixou a faixa de números e o carrossel de destaque invisíveis
+    // ocupando 900px de nada no meio da home.
+    //
+    // `amount: 0` + margem de 260px embaixo manda o observador disparar quando a
+    // seção ainda está ABAIXO da dobra. Quando a pessoa chega, já acendeu.
+    viewport: { once: true, amount: 0, margin: '0px 0px 260px 0px' },
     transition: { duration: 0.55, delay: atraso, ease: [0.16, 1, 0.3, 1] },
   };
 }

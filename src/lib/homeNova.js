@@ -35,12 +35,28 @@ export function numeroBonito(valor) {
  * o campo `auctions.category` é herança do Base44 e tem 52% em "outros", então
  * não serve de vitrine. Quem entrega essa conta é a view `vw_home_categorias`.
  *
- * Ordem: quem tem mais leilão acontecendo aparece primeiro; empate desempata
- * por produto na loja. Categoria sem nada dos dois não entra — card vazio é
- * porta fechada na cara de quem clicou.
+ * 🖼️ QUEM TEM FOTO VAI NA FRENTE — 19/09/2026.
+ *
+ * Antes a ordem era só volume de leilão. O dono mandou as artes de cinco
+ * categorias (Moda, Eletrônicos, Casa & Cozinha, Ferramentas, Games) e só UMA
+ * delas estava entre as seis mais movimentadas: as outras quatro ficariam de
+ * fora da home, com a arte encostada. Medido em 19/09: Moda é a 7ª, Ferramentas
+ * a 9ª, Video Games a 18ª.
+ *
+ * Escolher a foto de uma categoria É a decisão de colocá-la na vitrine — é a
+ * régua mais honesta que existe aqui, porque é a única que alguém tomou de
+ * propósito. O volume continua valendo para preencher o que sobrar, então a
+ * vitrine nunca encolhe: as sem foto entram com o ícone, como sempre.
+ *
+ * Dentro de cada grupo (com foto, sem foto) a ordem segue a de antes: mais
+ * leilão primeiro, empate por produto na loja, depois nome.
+ *
+ * Categoria sem nada dos dois não entra — card vazio é porta fechada na cara
+ * de quem clicou.
  */
 export function categoriasDaVitrine(linhas, quantas = 6) {
-  return (linhas || [])
+  const porMovimento = (a, b) => b.leiloes - a.leiloes || b.naLoja - a.naLoja || a.nome.localeCompare(b.nome, 'pt-BR');
+  const vivas = (linhas || [])
     .map((c) => ({
       id: c.id,
       nome: c.nome ?? c.name ?? '',
@@ -48,9 +64,13 @@ export function categoriasDaVitrine(linhas, quantas = 6) {
       naLoja: Number(c.produtos_na_loja) || 0,
       imagem: c.imagem ?? c.image_url ?? null,
     }))
-    .filter((c) => c.nome && (c.leiloes > 0 || c.naLoja > 0))
-    .sort((a, b) => b.leiloes - a.leiloes || b.naLoja - a.naLoja || a.nome.localeCompare(b.nome, 'pt-BR'))
-    .slice(0, quantas);
+    .filter((c) => c.nome && (c.leiloes > 0 || c.naLoja > 0));
+
+  const temFoto = (c) => typeof c.imagem === 'string' && c.imagem.trim() !== '';
+  return [
+    ...vivas.filter(temFoto).sort(porMovimento),
+    ...vivas.filter((c) => !temFoto(c)).sort(porMovimento),
+  ].slice(0, quantas);
 }
 
 /** Frase do card de categoria: só diz o que existe de verdade. */

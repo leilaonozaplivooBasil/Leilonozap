@@ -627,10 +627,23 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
           )}
 
-          {/* 🆕 SÓ MOSTRA BADGE SE FOR DE FÁBRICA */}
+          {/* 🆕 SÓ MOSTRA BADGE SE FOR DE FÁBRICA
+              🔴 19/09/2026 — o selo ficava em `top-2 left-2`, a MESMA posição dos
+              botões de compartilhar e favoritar logo abaixo. Como os botões estão
+              em z-20 e o selo em z-10, os botões cobriam o "✨ NOVO" e só sobrava
+              "Com Garantia" saindo de trás deles (print do dono, destaque do PS5).
+              Centralizar NÃO BASTOU, e foi a medição que mostrou: centralizado na
+              primeira linha o selo ia de 104 a 316 e continuava cruzando o coração,
+              que vai de 85 a 125. Por isso ele desce para a linha DE BAIXO dos
+              botões (top-14) — centralizado na horizontal, como pedido, e fora da
+              faixa ocupada. Medido em tests/navegador/seloDeGarantia.spec.mjs, com
+              os DOIS botões na tela. */}
           {auction.product_source === 'factory_new' && (
-            <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 pointer-events-none">
-              <Badge className="bg-green-600 text-white font-bold text-xs sm:text-sm">
+            <div
+              className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-10 max-w-[70%] pointer-events-none"
+              data-teste="selo-de-garantia"
+            >
+              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[11px] sm:text-sm">
                 ✨ NOVO - Com Garantia
               </Badge>
             </div>

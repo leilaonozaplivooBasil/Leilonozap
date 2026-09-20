@@ -71,7 +71,7 @@ export default function ExplorePorCategoria({ categorias = [] }) {
           </Link>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {categorias.map((c, i) => {
             const Icone = iconeDaCategoria(c.nome);
             return (
@@ -81,35 +81,42 @@ export default function ExplorePorCategoria({ categorias = [] }) {
               >
                 <Link
                   to={`/Loja-Virtual?categoria=${encodeURIComponent(c.id || c.nome)}`}
-                  className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-nz-noite-3 transition-all duration-300 hover:-translate-y-1 hover:border-nz-verde-claro/60 hover:shadow-[0_16px_34px_-18px_rgba(46,157,99,0.7)]"
+                  className="group relative block aspect-[3/4] overflow-hidden rounded-2xl border border-white/10 bg-nz-noite-3 transition-all duration-300 hover:-translate-y-1 hover:border-nz-verde-claro/60 hover:shadow-[0_18px_38px_-18px_rgba(46,157,99,0.75)]"
                   data-teste="card-categoria"
                 >
-                  <div className="relative h-[112px] overflow-hidden sm:h-[128px]">
-                    {c.imagem ? (
-                      <img
-                        src={c.imagem}
-                        alt={c.nome}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                  {c.imagem ? (
+                    <img
+                      src={c.imagem}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+                    />
+                  ) : (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: 'radial-gradient(120% 110% at 50% 0%, rgba(46,157,99,0.32) 0%, rgba(10,20,16,0) 72%)' }}
+                    >
+                      <Icone
+                        size={38}
+                        strokeWidth={1.5}
+                        className="text-nz-verde-menta/60 transition-all duration-300 group-hover:scale-110 group-hover:text-nz-verde-neon"
                       />
-                    ) : (
-                      <div
-                        className="flex h-full w-full items-center justify-center"
-                        style={{ background: 'radial-gradient(120% 110% at 50% 0%, rgba(46,157,99,0.32) 0%, rgba(10,20,16,0) 72%)' }}
-                      >
-                        <Icone
-                          size={34}
-                          strokeWidth={1.5}
-                          className="text-nz-verde-menta/60 transition-all duration-300 group-hover:scale-110 group-hover:text-nz-verde-neon"
-                        />
-                      </div>
-                    )}
-                    <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-12" style={{ background: 'linear-gradient(to top, rgba(15,28,22,1), transparent)' }} />
-                  </div>
-                  <div className="px-3 pb-3.5 pt-1">
+                    </div>
+                  )}
+
+                  {/* A cortina que faz o nome ser legível sobre QUALQUER foto.
+                      Sem ela o texto branco some numa arte clara — e as artes
+                      que o dono mandou têm fundo claro em duas das cinco. */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0"
+                    style={{ background: 'linear-gradient(to top, rgba(7,16,12,0.94) 0%, rgba(7,16,12,0.72) 26%, rgba(7,16,12,0.12) 58%, rgba(7,16,12,0.06) 100%)' }}
+                  />
+
+                  <div className="absolute inset-x-0 bottom-0 p-3">
                     <div className="text-[14px] font-semibold leading-tight text-white transition-colors group-hover:text-nz-verde-neon">{c.nome}</div>
-                    <div className="mt-1 text-[12px] text-white/45" data-teste="recado-categoria">
+                    <div className="mt-1 text-[12px] text-white/70" data-teste="recado-categoria">
                       {recadoDaCategoria(c)}
                     </div>
                   </div>

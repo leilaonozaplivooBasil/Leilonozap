@@ -203,3 +203,52 @@ test('🔴 o card NÃO carimba porcentagem de desconto num leilão aberto', () =
   // e a comparação honesta continua lá
   assert.match(tela, /data-teste="preco-na-loja"/);
 });
+
+// ── A régua nova: quem tem foto vai na frente (19/09/2026) ──────────────────
+//
+// O dono mandou as artes de cinco categorias e só UMA estava entre as seis mais
+// movimentadas. Sem esta régua, quatro artes ficariam encostadas.
+
+test('categoria com foto passa na frente de categoria mais movimentada sem foto', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'casa', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50, image_url: null },
+    { id: 'games', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/categorias/games.webp' },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Video Games', 'Casa & Construção']);
+});
+
+test('entre as que têm foto, quem tem mais leilão continua vindo primeiro', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'ferr', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, image_url: '/a.webp' },
+    { id: 'ele', nome: 'Eletrônicos', leiloes_ativos: 5, produtos_na_loja: 21, image_url: '/b.webp' },
+    { id: 'moda', nome: 'Moda', leiloes_ativos: 2, produtos_na_loja: 22, image_url: '/c.webp' },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Eletrônicos', 'Moda', 'Ferramentas']);
+});
+
+test('sem foto em nenhuma, a ordem é a de sempre — a vitrine não muda de cara', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'b', nome: 'Beleza & Saúde', leiloes_ativos: 11, produtos_na_loja: 23 },
+    { id: 'd', nome: 'Decoração', leiloes_ativos: 4, produtos_na_loja: 31 },
+    { id: 'c', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50 },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Casa & Construção', 'Beleza & Saúde', 'Decoração']);
+});
+
+test('string vazia não é foto — não pode promover categoria nenhuma', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'casa', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50, image_url: null },
+    { id: 'vazia', nome: 'Pets', leiloes_ativos: 2, produtos_na_loja: 7, image_url: '   ' },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Casa & Construção', 'Pets']);
+});
+
+test('a vitrine nunca encolhe: com foto ou sem, entrega até o teto pedido', () => {
+  const linhas = Array.from({ length: 9 }, (_, i) => ({
+    id: `c${i}`, nome: `Cat ${i}`, leiloes_ativos: 9 - i, produtos_na_loja: 1,
+    image_url: i === 8 ? '/so-a-ultima.webp' : null,
+  }));
+  const vitrine = categoriasDaVitrine(linhas, 6);
+  assert.equal(vitrine.length, 6);
+  assert.equal(vitrine[0].nome, 'Cat 8', 'a única com foto lidera');
+});

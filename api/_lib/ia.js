@@ -92,10 +92,23 @@ export async function saldoGateway(ia) {
  * existe (foi o caso do gemini), 401 é chave, 403 é permissão/plano (free
  * tier do gateway), 429 é limite, 5xx/529 é a IA fora, rede é rede.
  */
+// 🔴 O CORTE EM 400 ESCONDIA O DIAGNÓSTICO (19/09/2026).
+//
+// Um membro da equipe ficou 3 dias sem conseguir comprovar tarefa. O log dizia:
+//   status: 400, tipo: 'AI_APICallError',
+//   mensagem: '400 {"error":{...},"providerMetadata":{"gateway":{"routing":{...
+// e PARAVA AÍ — exatamente onde começaria o motivo. O corte de 400 caracteres
+// consumia o envelope do gateway inteiro e deixava de fora a mensagem do
+// provedor, que é a única parte que diz o que está errado.
+//
+// 1200 dá folga para o envelope + o motivo. Não é ilimitado de propósito:
+// isto vai para o log da Vercel e para `details` na resposta.
+const TETO_DA_MENSAGEM = 1200;
+
 export function detalhesDoErro(e) {
-  if (e instanceof Anthropic.APIConnectionError) return { status: 0, tipo: 'rede', mensagem: String(e.message || '').slice(0, 400) };
-  if (e instanceof Anthropic.APIError) return { status: e.status ?? 0, tipo: e.type || e.name || 'api', mensagem: String(e.message || '').slice(0, 400) };
-  return { status: 0, tipo: 'desconhecido', mensagem: String(e?.message || e).slice(0, 400) };
+  if (e instanceof Anthropic.APIConnectionError) return { status: 0, tipo: 'rede', mensagem: String(e.message || '').slice(0, TETO_DA_MENSAGEM) };
+  if (e instanceof Anthropic.APIError) return { status: e.status ?? 0, tipo: e.type || e.name || 'api', mensagem: String(e.message || '').slice(0, TETO_DA_MENSAGEM) };
+  return { status: 0, tipo: 'desconhecido', mensagem: String(e?.message || e).slice(0, TETO_DA_MENSAGEM) };
 }
 
 export { Anthropic };
