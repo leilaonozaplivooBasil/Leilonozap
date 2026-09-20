@@ -42,6 +42,7 @@
 // a DIAG_KEY. O cron da Vercel chama sem chave nenhuma, então nome de cliente
 // nunca sai por uma URL que qualquer um pode abrir.
 
+import { avisarAdmin } from '../_lib/avisarAdmin.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -63,6 +64,7 @@ export default async function handler(req, res) {
   }
   res.setHeader('Content-Type', 'application/json');
   try {
+    let avisoWhatsapp = { enviado: false, motivo: 'sem_orfao' };
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     // Detalhe por pessoa só com a chave de diagnóstico. O cron não manda chave.
@@ -124,6 +126,25 @@ export default async function handler(req, res) {
           }),
         });
       } catch (_) { /* o aviso é rede de segurança; nunca derruba a checagem */ }
+
+      // 📣 20/09/2026 — E AGORA O AVISO SAI DO BANCO E CHEGA EM ALGUÉM.
+      //
+      // Até hoje este vigia terminava na linha acima: escrevia em `system_logs`
+      // e parava. Funcionou como detector e falhou como alarme — o Alberto
+      // ficou com R$ 573,22 travados de 17 a 20/09 e este código apontou o nome
+      // dele, certinho, TRÊS DIAS SEGUIDOS, numa tabela que ninguém abre. Quem
+      // descobriu foi o cliente, reclamando.
+      //
+      // Falhar aqui não pode derrubar a checagem: `avisarAdmin` nunca lança, e
+      // o resultado vai na resposta pra ficar claro se saiu ou não.
+      avisoWhatsapp = await avisarAdmin(
+        `🔴 *Dinheiro de cliente travado*\n\n` +
+        `${achados.length} conta(s) com *R$ ${total.toFixed(2)}* reservados sem leilão em disputa. ` +
+        `Esse valor está na conta da pessoa e ela não consegue usar pra dar lance.\n\n` +
+        `${resumo}\n\n` +
+        `Para devolver: rodar *faxinaReservasOrfas* com confirmar='APLICAR'. ` +
+        `Ela recalcula, devolve só o que está órfão e deixa linha no razão.`
+      );
     }
 
     return res.status(200).json({
@@ -132,6 +153,7 @@ export default async function handler(req, res) {
       contas_analisadas: contas.length,
       contas_com_orfao: achados.length,
       total_travado_sem_motivo: total,
+      aviso_whatsapp: avisoWhatsapp,
       ...(achados.length
         ? { o_que_fazer: "Rodar faxinaReservasOrfas com confirmar='APLICAR' para devolver." }
         : {}),
