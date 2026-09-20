@@ -34,6 +34,10 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  // 🔴 O que aconteceu DE VERDADE com o e-mail: 'enviado' | 'falhou' | 'nao_pedido'.
+  // Antes a tela afirmava "E-mail enviado" só porque a caixa estava marcada —
+  // e a rota nem existia em produção (404 engolido pelo catch).
+  const [avisoDoEmail, setAvisoDoEmail] = useState('nao_pedido');
   const [currentArrematante, setCurrentArrematante] = useState(null);
   const [platformFee, setPlatformFee] = useState(0);
   // SEGURANÇA: Ref para bloquear submits duplicados mesmo se o estado async ainda não atualizou
@@ -116,16 +120,23 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
       });
 
       if (sendEmail) {
-        const resetLink = `https://leilaonozap.net/ResetPassword?token=${encodeURIComponent(resetToken)}`;
+        // 🔗 O link NÃO viaja mais daqui: o servidor lê o token no banco e monta
+        // o endereço com base fixa. Cliente que escolhe o destino do botão de um
+        // e-mail assinado com o nosso domínio é phishing pronto.
         try {
-          await sendWelcomeArrematante({
+          // quem está logado é o ator: o servidor só manda se for admin
+          let operador = null;
+          try { operador = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem sessão */ }
+          const r = await sendWelcomeArrematante({
+            actorId: operador?.id,
             email: normalizedEmail,
             fullName: fullName.trim(),
-            resetLink,
-            role: 'investidor'
+            role: 'investidor',
           });
+          setAvisoDoEmail(r?.success ? 'enviado' : 'falhou');
         } catch (emailErr) {
-          console.warn('E-mail de boas-vindas não enviado (não crítico):', emailErr.message);
+          console.warn('E-mail de acesso não enviado:', emailErr?.message || emailErr);
+          setAvisoDoEmail('falhou');
         }
       }
 
@@ -164,7 +175,15 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
               <CheckCircle2 className="text-emerald-400" size={28} />
             </div>
             <p className="text-white font-bold text-lg">Investidor cadastrado!</p>
-            {sendEmail && <p className="text-slate-400 text-sm mt-2">E-mail enviado com link de acesso.</p>}
+            {avisoDoEmail === 'enviado' && (
+              <p className="text-slate-400 text-sm mt-2">E-mail enviado com o link de acesso.</p>
+            )}
+            {avisoDoEmail === 'falhou' && (
+              <p className="text-amber-400 text-sm mt-2">
+                Cadastro feito, mas o <b>e-mail não saiu</b>. Use &quot;Definir senha&quot; no painel
+                ou envie o link de acesso por outro canal.
+              </p>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

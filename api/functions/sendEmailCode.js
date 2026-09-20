@@ -2,6 +2,7 @@
 // Usado no cadastro (purpose:'signup') e no esqueci-a-senha (purpose:'reset'). SEM link mágico.
 import crypto from 'crypto';
 import { estourouLimite, ipDoRequest } from '../_lib/rateLimit.js';
+import { registrarEmail, idDaBrevo } from '../_lib/registroDeEmail.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -77,10 +78,16 @@ export default async function handler(req, res) {
         textContent: `Seu código: ${code}\n\nExpira em 10 minutos. Se você não solicitou, ignore este e-mail.`,
       }),
     });
+    // 📧 REGISTRO — 🔴 o assunto NÃO vai daqui: ele contém o código
+    // ("483920 é seu código"). Mando um rótulo fixo, e o `limparAssunto` ainda
+    // é a segunda rede caso alguém mude isto um dia.
     if (!r.ok) {
       const t = await r.text().catch(() => '');
+      await registrarEmail({ para: email, assunto: `Código de ${purpose}`, tipo: 'codigo_acesso', ok: false, erro: t.slice(0, 200) });
       return res.status(200).json({ success: false, error: 'Falha ao enviar e-mail', details: t.slice(0, 200) });
     }
+    const corpo = await r.json().catch(() => null);
+    await registrarEmail({ para: email, assunto: `Código de ${purpose}`, tipo: 'codigo_acesso', ok: true, messageId: idDaBrevo(corpo) });
     return res.status(200).json({ success: true });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro ao enviar código', details: String(e?.message || e) });

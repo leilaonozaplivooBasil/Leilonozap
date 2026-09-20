@@ -14,7 +14,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   podeMostrar, configValida, leilaoAindaAberto, idDoLeilao, dadosDoPopup,
-  jaViuNestaSessao, marcarVisto, fotoDoLeilao, PAGINAS_PROIBIDAS, Z_INDEX, CHAVE_SESSAO,
+  paginaOndeFechou, marcarVisto, fotoDoLeilao, PAGINAS_PROIBIDAS, Z_INDEX, CHAVE_SESSAO,
 } from '../src/lib/popupLeilaoDestaque.js';
 
 const AGORA = new Date('2026-09-02T18:00:00Z').getTime();
@@ -28,7 +28,7 @@ const criarStorage = (inicial = {}) => {
 };
 const base = (over = {}) => ({
   config: CONFIG, leilao: ABERTO, paginaAtual: 'Home',
-  sessionStorage: criarStorage(), agora: AGORA, ...over,
+  paginaJaVista: '', agora: AGORA, ...over,
 });
 
 // ───────────────────── o caminho feliz ─────────────────────
@@ -107,20 +107,52 @@ test('a camada fica abaixo do consentimento e do pagamento', () => {
   assert.ok(Z_INDEX > 201, 'ficaria atrás do carrinho');
 });
 
-// ───────────────────── uma vez por sessão ─────────────────────
+// ──────────── uma vez por PÁGINA (a demanda de 20/09) ────────────
+//
+// O dono pediu: "cada vez que o usuário entrar em uma página é necessário que
+// estoure o pop-up". Antes era uma vez por SESSÃO. Estes testes são a diferença
+// entre as duas coisas — e o de "volta na página seguinte" é o que falharia se
+// alguém restaurasse o portão de sessão sem perceber.
 
-test('não repete na mesma sessão', () => {
-  const ss = criarStorage();
-  assert.equal(podeMostrar(base({ sessionStorage: ss })).mostrar, true);
-  marcarVisto(ss);
-  assert.equal(podeMostrar(base({ sessionStorage: ss })).motivo, 'ja_viu');
+test('fechado numa página, some naquela página', () => {
+  assert.equal(podeMostrar(base({ paginaAtual: 'Home', paginaJaVista: '' })).mostrar, true);
+  assert.equal(podeMostrar(base({ paginaAtual: 'Home', paginaJaVista: 'Home' })).motivo, 'ja_viu_nesta_pagina');
 });
 
-test('storage bloqueado (aba anônima) não vira pop-up repetido', () => {
+test('🔴 entrar em OUTRA página traz o pop-up de volta', () => {
+  // O coração do pedido. Fechou na Home, foi para a Loja: aparece de novo.
+  const v = podeMostrar(base({ paginaAtual: 'Loja-Virtual', paginaJaVista: 'Home' }));
+  assert.equal(v.mostrar, true, 'trocou de página e não voltou — virou uma-vez-por-sessão de novo');
+});
+
+test('voltar para a página onde fechou também traz de volta', () => {
+  // Home → (fecha) → Loja → Home. Ao voltar, a marca é 'Loja-Virtual'.
+  assert.equal(podeMostrar(base({ paginaAtual: 'Home', paginaJaVista: 'Loja-Virtual' })).mostrar, true);
+});
+
+test('a marca guarda o NOME da página, não um booleano', () => {
+  const ss = criarStorage();
+  marcarVisto(ss, 'Loja-Virtual');
+  assert.equal(paginaOndeFechou(ss), 'Loja-Virtual');
+  assert.equal(ss._dados[CHAVE_SESSAO], 'Loja-Virtual', 'gravou outra coisa no lugar do nome da página');
+});
+
+test('storage bloqueado (aba anônima) não derruba nem trava o fechamento', () => {
   const travado = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('bloqueado'); } };
-  assert.equal(jaViuNestaSessao(travado), true, 'sem storage, insistiria a cada página');
-  assert.doesNotThrow(() => marcarVisto(travado));
-  assert.doesNotThrow(() => marcarVisto(null));
+  assert.equal(paginaOndeFechou(travado), '', 'sem storage a lib não pode inventar página');
+  assert.doesNotThrow(() => marcarVisto(travado, 'Home'));
+  assert.doesNotThrow(() => marcarVisto(null, 'Home'));
+});
+
+test('🔴 as páginas de dinheiro continuam proibidas, mesmo com a frequência maior', () => {
+  // Subir a frequência NÃO pode cobrir quem está dando lance ou pagando.
+  for (const pag of ['AuctionRoom', 'Cart', 'Checkout', 'CatalogCheckout', 'Payment', 'PagamentoPix']) {
+    assert.equal(
+      podeMostrar(base({ paginaAtual: pag, paginaJaVista: '' })).motivo,
+      'pagina_proibida',
+      `${pag} deixou o pop-up passar`,
+    );
+  }
 });
 
 // ───────────────────── configuração ─────────────────────
