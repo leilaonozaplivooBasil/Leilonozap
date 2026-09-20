@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-166.3 — os dias da semana aparecem na lista do dia, não só dentro do editor
+
+**Emitida por:** dono, testando a versão da DIR-166.2 já no ar, com print da lista do dia mostrando várias tarefas com o selo "já repete todo dia" mas nenhuma indicação de QUAIS dias: *"tá quase perfeito... tem que aparecer ali também na visualização, só tá aparecendo por dentro. Os dias selecionados dessa tarefa... exemplo, 9 horas da manhã, mentalidade do CEO, segunda — aí tem que aparecer lá, toda segunda; leitura diária, terça, quarta e quinta... pra não confundir que tem duas tarefas no mesmo horário no dia."*
+
+**Achado.** As DIR-166/166.1/166.2 deixaram o seletor de dias sempre visível DENTRO do editor de cada item — mas a lista do dia (onde o dono realmente olha pra saber o que fazer agora) continuava mostrando só "já repete todo dia", igual pra um item de toda segunda e pra um de todo dia. Pra saber quais dias, era preciso abrir o lápis de cada tarefa uma por uma.
+
+**O que entra (`CrmMetodo.jsx`):** `diasRestritosDaRotina(titulo)` — acha o item da rotina pelo título (mesma busca que já existia no editor) e devolve os dias só quando o item é restrito, igual ao padrão que já existia dentro de "A minha rotina" (DIR-166: `item.dias_semana.length > 0`, sem badge pra item de todo dia). Usado direto na lista do dia, encostado no título de cada tarefa: `· seg`, `· ter, qua, qui`, etc.
+
+**Fora do escopo:** não mexe no cálculo de X-Pay nem na geração das tarefas (`gerarTarefasDaRotina`, já filtra por dia desde a DIR-166) — isto é só a lista mostrar uma informação que já existia por trás, não uma regra nova.
+
+**Prova:** suíte completa (3025/3025, 2 testes novos em `tests/rotinaDiasDaSemanaESetor.test.mjs`), lint limpo, `npm run build` sem erro. Mutação: forcei `diasRestritosDaRotina` a sempre devolver `null` → o teste do selo na lista quebrou; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-166.2 — o seletor de dias sai de trás do checkbox, em todo lugar, e entra também na "nova tarefa do dia"
 
 **Emitida por:** dono, testando de novo e batendo na MESMA queixa da DIR-166.1 pela segunda vez, agora com print mostrando o editor de tarefa aberto e o checkbox "repetir" desmarcado: *"Eu não tenho onde editar os dias, de botar recorrente nos dias... Faz análise primeiro e escreve aqui."* Depois, já com a análise escrita e confirmada, o pedido completo por voz: *"tanto a rotina de cima quando eu edito tem que ir para baixo, tanto a de baixo tem que ir para cima... eu tenho dois lugares para incluir tarefa... qualquer um dos dois que eu editar tem que alimentar um ou outro ou unificar essa porra aí pra ficar uma coisa melhor... também tem que ter no lapizinho os dias da semana... igual o relógio do despertador da Apple, igualzinho — colocar a semana toda, só as segundas."*

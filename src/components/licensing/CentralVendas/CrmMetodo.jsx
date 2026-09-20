@@ -1909,6 +1909,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // seguinte nascia sem aquela tarefa. Agora casa hora E título — o
   // mesmo item da rotina, não só um título parecido.
   const estaNaRotina = (hora, titulo) => rotina.some((i) => i.titulo.trim().toLowerCase() === String(titulo || '').trim().toLowerCase() && (i.hora || '') === (hora || ''));
+  // 🗓️ 20/09/2026 — DIR-166.3: dono, olhando a lista do dia com várias
+  // tarefas "já repete todo dia": "eu não vou confundir que tem duas
+  // tarefas no mesmo horário no dia" — o seletor de dias (DIR-166) só
+  // aparecia DENTRO do editor; a lista do dia (onde ele realmente olha)
+  // não dizia se aquele item era de toda segunda, só terça/quarta/quinta,
+  // etc. Acha o item da rotina pelo TÍTULO (mesma busca de sempre) e
+  // devolve os dias só quando ele é restrito — item de todo dia não ganha
+  // selo à toa, igual já valia dentro de "A minha rotina".
+  const diasRestritosDaRotina = (titulo) => {
+    const item = rotina.find((i) => i.titulo.trim().toLowerCase() === String(titulo || '').trim().toLowerCase());
+    return Array.isArray(item?.dias_semana) && item.dias_semana.length > 0 ? item.dias_semana : null;
+  };
   const tornarRecorrente = (t) => {
     if (estaNaRotina(t.hora, t.titulo)) { toast.error('Já está na sua rotina — repete todo dia.'); return; }
     gravarRotina(incluirNaRotina(rotina, { hora: t.hora, titulo: t.titulo }));
@@ -3051,6 +3063,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                     <>
                                       <p className={`text-sm break-words ${t.feito ? 'line-through text-nz-verde font-semibold' : 'text-nz-tinta font-medium'}`} data-teste={t.id === tarefasJogo[0]?.id ? 'titulo-tarefa' : undefined}>
                                         {horaEfetiva && <span className="font-bold">{t.hora_fim ? `${horaEfetiva}–${t.hora_fim}` : horaEfetiva} · </span>}{t.titulo}
+                                        {diasRestritosDaRotina(t.titulo) && (
+                                          <span className="ml-1.5 text-[10px] font-semibold text-nz-verde" data-teste="tarefa-dias-badge">
+                                            · {diasRestritosDaRotina(t.titulo).map((d) => DIAS_SEMANA[d].slice(0, 3)).join(', ')}
+                                          </span>
+                                        )}
                                       </p>
                                       {foiLiberada && (
                                         <p

@@ -96,3 +96,22 @@ test('o atalho de setor não trava nada — o campo de título continua livre pr
   assert.doesNotMatch(CRM, /data-teste="rotina-titulo"[^>]*disabled/);
   assert.doesNotMatch(CRM, /data-teste="rotina-nova-titulo"[^>]*disabled/);
 });
+
+// 🗓️ 20/09/2026 — DIR-166.3: dono, olhando a lista do dia com várias
+// tarefas "já repete todo dia": "tem que aparecer ali também na
+// visualização... para eu não confundir que tem duas tarefas no mesmo
+// horário no dia." Os dias só apareciam DENTRO do editor — a lista do
+// dia, onde ele realmente olha pra decidir o que fazer, não dizia nada.
+
+test('diasRestritosDaRotina acha o item da rotina pelo título e só devolve dias quando o item é restrito', () => {
+  assert.match(CRM, /const diasRestritosDaRotina = \(titulo\) => \{/);
+  assert.match(CRM, /const item = rotina\.find\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
+  assert.match(CRM, /return Array\.isArray\(item\?\.dias_semana\) && item\.dias_semana\.length > 0 \? item\.dias_semana : null;/);
+});
+
+test('a lista do dia mostra o selo de dias ao lado do título — não só dentro do editor', () => {
+  assert.match(CRM, /data-teste="tarefa-dias-badge"/);
+  assert.match(CRM, /\{diasRestritosDaRotina\(t\.titulo\)\.map\(\(d\) => DIAS_SEMANA\[d\]\.slice\(0, 3\)\)\.join\(', '\)\}/);
+  // encostado no título, na MESMA linha — não um bloco à parte
+  assert.match(CRM, /\{t\.titulo\}\s*\{diasRestritosDaRotina\(t\.titulo\) && \(/);
+});
