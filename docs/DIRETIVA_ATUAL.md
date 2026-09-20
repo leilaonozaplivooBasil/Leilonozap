@@ -12,6 +12,24 @@
 
 ---
 
+## DIR-168 — "marcar como lida" agora escreve de verdade no banco
+
+**Emitida por:** dono, ao vivo, batendo repetidas vezes no botão de uma notificação (Emannuel Lima, pergunta de sete dias atrás sobre a reunião de diretoria): *"essa mensagem aqui fica toda hora, eu fico marcando como lida, como lida, e ela volta toda vez que eu abro. Está com um bug."*
+
+**Achado — não era o código da tela, era a escrita no banco.** `SinoNotificacoes.jsx` e `MensagemProCeo.jsx` chamavam `supabase.from('xgame_mensagens').update({ lida: true })` direto do navegador. Auditoria direta no banco confirmou: esse UPDATE, rodando como o papel `anon`/`authenticated` (o que o navegador usa), afeta **ZERO linhas** — mesmo a policy de UPDATE valendo pra qualquer linha (`qual: true`, migration `20260909050751_xgame_mensagens_rls.sql`) e a coluna `lida` tendo GRANT UPDATE liberado pra esses papéis. A tela só atualizava o estado local (otimista) — a mensagem nunca tinha virado `lida: true` de verdade no banco nenhuma das vezes que ele clicou; a próxima busca (poll de 30s, ou reabrir a página) trazia `lida: false` de volta e o banner reaparecia. A mensagem específica dele estava com `lida: false` desde 13/09 — sete dias clicando num botão que não escrevia nada.
+
+**O que entra:** a escrita da coluna `lida` sai do navegador e passa a ir por uma rota nova de chave de serviço (`api/functions/xgameMensagensMarcarLida.js`), o mesmo padrão já usado pra LEITURA desta tabela (`xgameMensagensListar.js`, que também nega SELECT direto). A rota nova confere que a mensagem é mesmo endereçada a quem está marcando (pessoa ou papel coletivo dela) antes de escrever — ninguém marca como lida a mensagem de outra pessoa só adivinhando o id.
+
+**Correção pontual do dado:** a mensagem específica do dono (Emannuel Lima, 13/09) foi marcada como lida direto no banco — mesma correção que a rota nova aplica, aplicada uma vez à mensagem que já estava presa.
+
+**Fora do escopo:** não mexe na policy de UPDATE nem investiga a fundo por que exatamente ela não libera a escrita pro papel `anon` apesar de `qual: true` (confirmado por teste direto no banco, não só leitura da policy) — a rota de chave de serviço contorna o problema sem precisar entender a causa exata, e é o mesmo padrão que este arquivo já usa pra leitura.
+
+**Prova:** suíte completa (3076/3076 — 2 arquivos de teste novos: `tests/xgameMensagensMarcarLidaHandler.test.mjs` cobrindo a rota real com banco falso, `tests/marcarLidaViaRotaDeServico.test.mjs` confirmando que os dois componentes não voltam a chamar o UPDATE direto), lint limpo, `npm run build` sem erro. Mutação: (1) troquei a checagem de permissão da rota por `true` sempre → 2 testes quebraram; revertido. (2) voltei o `SinoNotificacoes.jsx` pro UPDATE direto antigo → o teste de "não chama mais o update direto" quebrou; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-167 — Dinheiro do lance nunca mais fica preso: devolução ao tirar o líder, cura no lance seguinte e vigia que devolve sozinho
 
 **Status:** EM VIGOR.

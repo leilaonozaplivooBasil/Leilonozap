@@ -72,10 +72,21 @@ export default function MensagemProCeo({ currentUser, cargo }) {
   const validacao = mensagemValida(rascunho);
   const faltam = Math.max(0, TAMANHO_MINIMO_TEXTO - rascunho.texto.trim().length);
 
+  // 🐛 20/09/2026 — dono, ao vivo, batendo em "marcar como lida" e a
+  // notificação voltando toda vez que reabria: "está com um bug." Achado —
+  // `supabase.from('xgame_mensagens').update(...)` direto do navegador
+  // afeta ZERO linhas (confirmado no banco: a policy de UPDATE não libera
+  // a escrita pro papel `anon`/`authenticated` na prática, só a coluna
+  // ficar sempre `lida: false` de verdade). A escrita passa a ir pela
+  // mesma rota de chave de serviço que já lê esta tabela (xgameMensagensListar).
   const marcarLida = async (m) => {
     if (m.lida) return;
     setMensagens((l) => l.map((x) => (x.id === m.id ? { ...x, lida: true } : x)));
-    await supabase.from('xgame_mensagens').update({ lida: true }).eq('id', m.id);
+    await fetch('/api/functions/xgameMensagensMarcarLida', {
+      method: 'POST',
+      headers: cabecalhosSessao({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ actorId: uid, mensagemId: m.id }),
+    }).catch(() => {});
   };
 
   const enviar = async () => {
