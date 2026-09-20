@@ -4,7 +4,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   HABITOS, ROTINA_PADRAO, periodoDe, gerarTarefasDaRotina, progressoDia,
-  linkGoogleAgenda, qualificacaoValida, partesDoHabito,
+  linkGoogleAgenda, qualificacaoValida, partesDoHabito, SETORES_EMPRESA, tituloReuniaoComSetor,
 } from '../src/lib/metodo.js';
 
 describe('conteúdo do método', () => {
@@ -85,6 +85,32 @@ describe('Master Task', () => {
     assert.equal(t.length, 2); // item sem título não entra
     assert.deepEqual(t[0], { user_id: 'u1', data: '2026-09-02', hora: '05:00', titulo: 'Acordar', detalhe: '', feito: false, ordem: 0 });
     assert.equal(t[1].ordem, 1);
+  });
+  // 🗓️ 20/09/2026 — dono: "igual um despertador que dá a opção de fazer
+  // segunda, terça, quarta... senão você sempre tem que parar pra fazer
+  // aqui de novo." Item com `dias_semana` só entra no dia certo.
+  test('gerarTarefasDaRotina: item com dias_semana só entra nos dias marcados', () => {
+    const rotina = [
+      { hora: '09:00', titulo: 'Mentalidade do CEO', dias_semana: [1] }, // só segunda
+      { hora: '10:00', titulo: 'Reunião diária' }, // todo dia (sem dias_semana)
+    ];
+    const segunda = gerarTarefasDaRotina(rotina, 'u1', '2026-09-07'); // segunda-feira
+    assert.deepEqual(segunda.map((t) => t.titulo), ['Mentalidade do CEO', 'Reunião diária']);
+    const terca = gerarTarefasDaRotina(rotina, 'u1', '2026-09-08'); // terça-feira
+    assert.deepEqual(terca.map((t) => t.titulo), ['Reunião diária']);
+  });
+  test('gerarTarefasDaRotina: item sem dias_semana continua valendo todo dia — nada muda pra quem nunca usou isso', () => {
+    const rotina = [{ hora: '05:00', titulo: 'Acordar' }];
+    for (const dia of ['2026-09-07', '2026-09-08', '2026-09-13']) {
+      assert.equal(gerarTarefasDaRotina(rotina, 'u1', dia).length, 1, `sumiu em ${dia}`);
+    }
+  });
+  test('SETORES_EMPRESA + tituloReuniaoComSetor: atalho de digitação pra reunião com um setor', () => {
+    assert.ok(SETORES_EMPRESA.includes('Marketing'));
+    assert.ok(SETORES_EMPRESA.length >= 5);
+    assert.equal(tituloReuniaoComSetor('Marketing'), 'Reunião com o setor de Marketing');
+    assert.equal(tituloReuniaoComSetor(''), '');
+    assert.equal(tituloReuniaoComSetor(), '');
   });
   test('progressoDia: feitas ÷ total; dia vazio = 0 sem inventar', () => {
     assert.deepEqual(progressoDia([{ feito: true }, { feito: false }]), { total: 2, feitas: 1, pct: 50 });

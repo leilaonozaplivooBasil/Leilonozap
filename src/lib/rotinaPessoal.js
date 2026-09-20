@@ -22,14 +22,35 @@ export function horaValida(hora) {
   return Number(m[1]) <= 23 && Number(m[2]) <= 59;
 }
 
-/** Um item da rotina, sempre com a mesma forma venha de onde vier. */
+/** Normaliza `dias_semana`: únicos, válidos (0-6), ordenados — ou `null`
+ *  quando vazio/ausente, que significa TODO DIA (o padrão de sempre, o
+ *  mesmo de todo item já salvo antes deste campo existir). */
+export function normalizarDiasSemana(dias) {
+  if (!Array.isArray(dias)) return null;
+  const validos = [...new Set(dias.map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort();
+  return validos.length ? validos : null;
+}
+
+/** Um item da rotina, sempre com a mesma forma venha de onde vier.
+ *  🗓️ 20/09/2026 — dono: "eu tenho que ter o dia da semana que eu escolho...
+ *  igual um despertador que dá a opção de fazer segunda, terça, quarta..."
+ *  `dias_semana` é OPCIONAL — sem ele (ou vazio), o item vale todo dia,
+ *  exatamente como sempre valeu. Só restringe quando a pessoa escolhe. */
 export function itemDaRotina(bruto = {}) {
   const hora = String(bruto.hora || '').trim();
   return {
     hora: horaValida(hora) ? hora : '',
     titulo: String(bruto.titulo || '').trim(),
     detalhe: String(bruto.detalhe || '').trim(),
+    dias_semana: normalizarDiasSemana(bruto.dias_semana),
   };
+}
+
+/** Este item vale no dia da semana `diaSemana` (0-6, 0=domingo)?
+ *  Sem `dias_semana` (ou lista vazia): vale todo dia — o padrão. */
+export function itemValeNoDia(item, diaSemana) {
+  const dias = normalizarDiasSemana(item?.dias_semana);
+  return !dias || dias.includes(Number(diaSemana));
 }
 
 /** Ordena pelo relógio; quem não tem hora vai pro fim, na ordem em que está. */

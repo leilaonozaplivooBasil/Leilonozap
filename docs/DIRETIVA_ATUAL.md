@@ -12,6 +12,24 @@
 
 ---
 
+## DIR-166 — dia da semana por item da rotina, "igual um despertador" + atalho de setor
+
+**Emitida por:** dono, olhando a própria rotina ("Mentalidade do CEO" toda segunda, reunião de marketing só na terça): *"eu não tenho como... eu tenho que ter o dia da semana que eu escolho, tipo todas as segundas... igual um despertador que dá a opção de fazer segunda, terça, quarta, quinta, sexta — porque senão você sempre tem que parar pra fazer aqui de novo."* E, no mesmo fôlego: *"até pra eu adicionar também é qual o setor da empresa que eu vou fazer reunião... ter essas paradas assim pra gente poder adicionar e não precisar ficar toda hora refazendo. Faz uma análise aí na gamificação e vê o que a gente pode adicionar pra ficar ainda mais fluido, mais solto e mais dinâmico."*
+
+**Duas peças pequenas, nenhuma migração** (tudo dentro do JSONB `metodo_perfil.rotina` já existente e do texto livre do título):
+
+1. **Dia da semana por item.** Cada item da rotina ganha `dias_semana` opcional (`src/lib/rotinaPessoal.js`: `normalizarDiasSemana`, `itemValeNoDia`) — sem ele, o item continua valendo TODO DIA, exatamente como sempre valeu (100% retrocompatível, nenhuma rotina existente muda de comportamento). `gerarTarefasDaRotina` (`src/lib/metodo.js`) filtra por `dias_semana` antes de gerar — é o ÚNICO funil de geração (botão "gerar", repetição automática, "regerar o dia" e o cron `gerarJornadaDoDia`), então o filtro vale pros quatro caminhos de uma vez. Na tela (`CrmMetodo.jsx`, "A minha rotina"): 7 chips dom/seg/ter/qua/qui/sex/sáb pra marcar em quais dias o item vale, tanto editando um item existente quanto incluindo um novo; a lista mostra um selo com os dias só quando o item é restrito (item de todo dia não ganha badge à toa).
+
+2. **Atalho de setor pra reunião.** `SETORES_EMPRESA` + `tituloReuniaoComSetor` (`src/lib/metodo.js`): um `<select>` de setores (Marketing, Tecnologia, Financeiro, Comercial, RH, Operações, Jurídico, Diretoria) nos dois campos de título ("incluir na minha rotina" e o editor de item) que monta a frase pronta ("Reunião com o setor de Marketing") — atalho de digitação, não trava nada: o texto continua livre pra editar depois, sem novo campo no banco.
+
+**Fora do escopo:** não mexe em `xgame_eventos` (Eventos da empresa, DIR-161) — aquele é admin-only, substitui a janela inteira pra um grupo de pessoas; isto é pessoal, um item por vez, na própria rotina de cada um. Não valida `dias_semana` contra nenhuma outra regra (liberação, evento) — um item restrito a um dia simplesmente não entra na geração daquele dia, igual a não existir.
+
+**Prova:** suíte completa (3019/3019, 13 testes novos entre `tests/rotinaPessoal.test.mjs`, `tests/metodo.test.mjs` e `tests/rotinaDiasDaSemanaESetor.test.mjs`), lint limpo, `npm run build` sem erro. Mutação: forcei `itemValeNoDia` a sempre devolver `true` (ignorando `dias_semana`) → 2 testes quebraram; revertido depois.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-165 — a rotina permanente parava de sincronizar sozinha, e a pessoa perdia dinheiro
 
 **Emitida por:** dono, olhando a rotina da Sophia ao vivo: *"quando eu edito lá em cima, automaticamente tem que editar ali embaixo... sincronizar uma com a outra... tá tendo esse erro. Aí lá em cima tá escrito já repete todo dia, mas ali embaixo não tá salvando... a pessoa escolhe repetir essas tarefas todos os dias, o sistema não gera automático pra ele... tem que deixar isso muito bem organizado, porque está tendo falha e a pessoa está perdendo dinheiro."*

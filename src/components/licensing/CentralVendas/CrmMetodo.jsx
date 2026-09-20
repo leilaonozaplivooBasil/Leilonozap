@@ -14,7 +14,7 @@ import {
   agendaDoDiaContatos, eventoGoogleDaReuniao, linhaDoTempoUnificada, plural,
   ultimoContato, proximasReunioes, RESULTADOS_CONTATO,
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
-  reunioesEmpresaDoDia, DIAS_SEMANA,
+  reunioesEmpresaDoDia, DIAS_SEMANA, SETORES_EMPRESA, tituloReuniaoComSetor,
 } from '@/lib/metodo';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
@@ -136,6 +136,41 @@ const personalizarScript = (texto, nomeCompleto) => {
   const primeiroNome = (nomeCompleto || '').trim().split(' ')[0] || 'essa pessoa';
   return String(texto || '').replace(/\{\s*nome\s*\}/gi, primeiroNome);
 };
+
+// 🗓️ 20/09/2026 — dono: "eu tenho que ter o dia da semana que eu escolho...
+// igual um despertador que dá a opção de fazer segunda, terça, quarta,
+// quinta, sexta... senão você sempre tem que parar pra fazer aqui de novo."
+// Liga/desliga um dia (0-6) na lista de `dias`; lista vazia volta a `null`
+// (o padrão "todo dia" — nunca fica um array vazio salvo, que é ambíguo
+// com "nenhum dia", o oposto do que a pessoa quer dizer).
+const alternarDia = (dias, dia) => {
+  const atuais = Array.isArray(dias) ? dias : [];
+  const novo = atuais.includes(dia) ? atuais.filter((d) => d !== dia) : [...atuais, dia].sort((a, b) => a - b);
+  return novo.length ? novo : null;
+};
+
+/** Os 7 chips dom/seg/ter/qua/qui/sex/sáb do editor da rotina — nenhum
+ *  marcado = vale todo dia (o padrão de sempre, sem precisar marcar nada). */
+function SeletorDiasSemana({ dias, onToggle, disabled }) {
+  return (
+    <div className="flex items-center gap-1 flex-wrap" data-teste="dias-semana" title="em quais dias da semana — vazio é todo dia">
+      {DIAS_SEMANA.map((nome, i) => {
+        const ativo = Array.isArray(dias) && dias.includes(i);
+        return (
+          <button
+            key={nome}
+            type="button"
+            disabled={disabled}
+            onClick={() => onToggle(i)}
+            title={nome}
+            data-teste={`dia-semana-${i}`}
+            className={`text-[10px] font-bold rounded px-1.5 py-1 uppercase shrink-0 disabled:opacity-50 ${ativo ? 'bg-nz-verde text-white' : 'bg-nz-tinta/10 text-nz-tinta-fraca hover:bg-nz-tinta/20'}`}
+          >{nome.slice(0, 3)}</button>
+        );
+      })}
+    </div>
+  );
+}
 
 // `visaoTotal` = o ESCOPO dos dados (está vendo a lista de todo mundo?);
 // `gestao` = as CAPACIDADES de gestão (relógio de teste, agenda da empresa) —
@@ -1817,8 +1852,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 📅 DIR-80 — o painel da ROTINA DELA (diferente de editar a tarefa de hoje)
   const [rotinaAberta, setRotinaAberta] = useState(false);
   const [editandoRotina, setEditandoRotina] = useState(null);
-  const [rascunho, setRascunho] = useState({ hora: '', titulo: '' });
-  const [novoDaRotina, setNovoDaRotina] = useState({ hora: '', titulo: '' });
+  const [rascunho, setRascunho] = useState({ hora: '', titulo: '', dias_semana: null });
+  const [novoDaRotina, setNovoDaRotina] = useState({ hora: '', titulo: '', dias_semana: null });
   // 🐛 20/09/2026 — dono, sobre a rotina da Sophia: "quando eu edito lá em
   // cima, automaticamente tem que editar ali embaixo... está tendo falha e a
   // pessoa está perdendo dinheiro." Achado: TODO botão que grava a rotina
@@ -3314,6 +3349,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             <>
                               <Input type="time" value={rascunho.hora} onChange={(e) => setRascunho({ ...rascunho, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="rotina-hora" />
                               <Input value={rascunho.titulo} onChange={(e) => setRascunho({ ...rascunho, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[150px]" data-teste="rotina-titulo" />
+                              <select value="" onChange={(e) => { if (e.target.value) setRascunho({ ...rascunho, titulo: tituloReuniaoComSetor(e.target.value) }); }} className="bg-white border border-nz-borda rounded text-nz-tinta text-[11px] h-9 px-1 shrink-0" data-teste="rotina-setor">
+                                <option value="">reunião com o setor…</option>
+                                {SETORES_EMPRESA.map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                              <SeletorDiasSemana dias={rascunho.dias_semana} disabled={salvando} onToggle={(dia) => setRascunho((r) => ({ ...r, dias_semana: alternarDia(r.dias_semana, dia) }))} />
                               <Button size="sm" disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-salvar"
                                 onClick={async () => { const ok = await gravarRotina(editarNaRotina(rotina, i, rascunho)); if (ok) setEditandoRotina(null); }}
                               >salvar</Button>
@@ -3322,9 +3362,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                           ) : (
                             <>
                               <span className="text-[12px] font-bold tabular-nums text-nz-tinta w-12 shrink-0">{item.hora || '—'}</span>
-                              <span className="text-[12px] text-nz-tinta flex-1 min-w-0 break-words">{item.titulo}</span>
+                              <span className="text-[12px] text-nz-tinta flex-1 min-w-0 break-words">
+                                {item.titulo}
+                                {/* 🗓️ 20/09/2026 — item restrito a alguns dias mostra QUAIS, sem
+                                    inventar rótulo em item que vale todo dia (o padrão, sem badge). */}
+                                {Array.isArray(item.dias_semana) && item.dias_semana.length > 0 && (
+                                  <span className="ml-1.5 text-[10px] font-semibold text-nz-verde" data-teste="rotina-dias-badge">
+                                    · {item.dias_semana.map((d) => DIAS_SEMANA[d].slice(0, 3)).join(', ')}
+                                  </span>
+                                )}
+                              </span>
                               <button type="button" title="editar na rotina — vale todo dia" data-teste="rotina-editar" disabled={salvando}
-                                onClick={() => { setEditandoRotina(i); setRascunho({ hora: item.hora || '', titulo: item.titulo }); }}
+                                onClick={() => { setEditandoRotina(i); setRascunho({ hora: item.hora || '', titulo: item.titulo, dias_semana: item.dias_semana || null }); }}
                                 className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0 disabled:opacity-50"><PenLine className="w-3.5 h-3.5" /></button>
                               <button type="button" title="tirar da rotina — some de todo dia, não só de hoje" data-teste="rotina-excluir" disabled={salvando}
                                 onClick={() => gravarRotina(excluirDaRotina(rotina, i))}
@@ -3337,8 +3386,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Input type="time" value={novoDaRotina.hora} onChange={(e) => setNovoDaRotina({ ...novoDaRotina, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="rotina-nova-hora" />
                       <Input value={novoDaRotina.titulo} onChange={(e) => setNovoDaRotina({ ...novoDaRotina, titulo: e.target.value })} placeholder="incluir na minha rotina..." className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[150px]" data-teste="rotina-nova-titulo" />
+                      <select value="" onChange={(e) => { if (e.target.value) setNovoDaRotina({ ...novoDaRotina, titulo: tituloReuniaoComSetor(e.target.value) }); }} className="bg-white border border-nz-borda rounded text-nz-tinta text-[11px] h-9 px-1 shrink-0" data-teste="rotina-nova-setor">
+                        <option value="">reunião com o setor…</option>
+                        {SETORES_EMPRESA.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <SeletorDiasSemana dias={novoDaRotina.dias_semana} disabled={salvando} onToggle={(dia) => setNovoDaRotina((r) => ({ ...r, dias_semana: alternarDia(r.dias_semana, dia) }))} />
                       <Button disabled={!novoDaRotina.titulo.trim() || salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="rotina-incluir"
-                        onClick={async () => { const ok = await gravarRotina(incluirNaRotina(rotina, novoDaRotina)); if (ok) setNovoDaRotina({ hora: '', titulo: '' }); }}
+                        onClick={async () => { const ok = await gravarRotina(incluirNaRotina(rotina, novoDaRotina)); if (ok) setNovoDaRotina({ hora: '', titulo: '', dias_semana: null }); }}
                       ><Plus className="w-4 h-4" /></Button>
                     </div>
                     <p className="text-[10px] text-nz-tinta-fraca">
