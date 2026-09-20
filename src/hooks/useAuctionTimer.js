@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getServerTime } from "@/functions/getServerTime";
+import { deixaAoCruzar, marcarCruzadas } from "@/lib/falaDoLeiloeiro";
 
 const COUNTDOWN_DURATION = 142;
 
-const NARRATOR_TRIGGERS = [
-  { time: 110, phase: 1, message: "Dou-lhe uma! O lote segue em disputa. Registre o seu lance." },
-  { time: 70, phase: 2, message: "Dou-lhe duas! A disputa continua aberta. Últimos lances." },
-  { time: 35, phase: 3, message: "Dou-lhe três! Última chamada antes do arremate." }
-];
+// 🔨 As deixas e a decisão de QUANDO falar moram em src/lib/falaDoLeiloeiro.js:
+// é JS puro, roda no teste do Node sem navegador, e o risco desta peça é
+// justamente o relógio — que é o que mais difícil se prova numa tela.
 
 export default function useAuctionTimer({ auction, onEndAuction, playSound }) {
   const [timeRemaining, setTimeRemaining] = useState(null);
@@ -19,6 +18,10 @@ export default function useAuctionTimer({ auction, onEndAuction, playSound }) {
   const lastOffsetCalibrationRef = useRef(0);
   const countdownIntervalRef = useRef(null);
   const hammerAnnounced = useRef({ first: false, second: false, third: false });
+  // Quantos segundos faltavam no tique PASSADO. É o que permite enxergar a
+  // travessia de uma marca quando o tique pula — aba em segundo plano, tela
+  // apagada, pausa de GC. `null` = ainda não houve tique anterior.
+  const segundosNoTiqueAnterior = useRef(null);
 
   const calibrateServerOffset = useCallback(async () => {
     try {
@@ -81,6 +84,7 @@ export default function useAuctionTimer({ auction, onEndAuction, playSound }) {
 
     setTimeRemaining(timeUntilEnd);
     hammerAnnounced.current = { first: false, second: false, third: false };
+    segundosNoTiqueAnterior.current = null;
 
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
@@ -107,18 +111,22 @@ export default function useAuctionTimer({ auction, onEndAuction, playSound }) {
       setTimeRemaining(remaining);
 
       if (auction.status === 'active') {
-        NARRATOR_TRIGGERS.forEach((trigger) => {
-          if (remaining === trigger.time) {
-            const hammerKey = trigger.phase === 1 ? 'first' : trigger.phase === 2 ? 'second' : 'third';
-            if (hammerKey && !hammerAnnounced.current[hammerKey]) {
-              hammerAnnounced.current[hammerKey] = true;
-              playSound('countdown');
-              setAuctioneerPhase(trigger.phase);
-              setAuctioneerMessage(trigger.message);
-              setShowAuctioneer(true);
-            }
-          }
-        });
+        // 🔴 Era `remaining === trigger.time`: igualdade exata num valor lido
+        // uma vez por segundo. Um tique pulado e a fala sumia PARA SEMPRE —
+        // e aba em segundo plano pula quase todos. Agora vale a TRAVESSIA.
+        const anterior = segundosNoTiqueAnterior.current;
+        const deixa = deixaAoCruzar({ anterior, agora: remaining, jaDitas: hammerAnnounced.current });
+        // Marca TODAS as marcas cruzadas, não só a falada: senão as que ficaram
+        // para trás disparam fora de hora se o relógio oscilar para cima.
+        hammerAnnounced.current = marcarCruzadas({ anterior, agora: remaining, jaDitas: hammerAnnounced.current });
+        segundosNoTiqueAnterior.current = remaining;
+
+        if (deixa) {
+          playSound('countdown');
+          setAuctioneerPhase(deixa.phase);
+          setAuctioneerMessage(deixa.message);
+          setShowAuctioneer(true);
+        }
       }
     }, 1000);
 
