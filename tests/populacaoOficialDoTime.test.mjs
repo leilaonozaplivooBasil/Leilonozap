@@ -112,6 +112,20 @@ test('textoCompartilharRanking: sem nada não quebra', () => {
 // informações pra gerar melhor entendimento." Clicar numa linha da tabela
 // abre o detalhe — a mesma moeda em fatias + os dois portões (caráter e
 // vendas) escritos por extenso, com o número exato que decidiu cada um.
+// 🎯 20/09/2026 — dono, no "escolha a pessoa…" do Quadro Geral: "aqui
+// preciso que todos que estão recebendo apareça aqui, exemplo Sophia
+// Sant'Anna não está aparecendo." O dropdown do Quadro Geral tem que listar
+// equipeQuadroGeral (equipe ∪ quem tem cadastro ativo) — não mais só equipe
+// (a hierarquia do painel, que deixa gente como Sophia, sem cargo de
+// diretor pra cima, de fora).
+test('src/components/licensing/CentralVendas/XPerformanceGestao.jsx: o "escolha a pessoa…" do Quadro Geral lista quem recebe, não só o time corporativo', async () => {
+  const fs = await import('node:fs');
+  const ARQ = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/XPerformanceGestao.jsx', import.meta.url), 'utf8');
+  assert.match(ARQ, /equipeQuadroGeral as equipeQuadroGeralDe/, "precisa importar a função pura de timeCorporativo.js — sem lógica paralela");
+  assert.match(ARQ, /\{equipeQuadroGeral\.map\(\(p\) => \(/, 'o dropdown "escolha a pessoa…" precisa mapear equipeQuadroGeral, não equipe');
+  assert.doesNotMatch(ARQ, /\{equipe\.map\(\(p\) => \(/, 'não pode sobrar a versão antiga (só o time corporativo) mapeando o dropdown');
+});
+
 test('src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx: a linha do ranking abre o detalhe da moeda (componentes + portões) ao clicar', async () => {
   const fs = await import('node:fs');
   const ARQ = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/XGameVisaoExecutiva.jsx', import.meta.url), 'utf8');

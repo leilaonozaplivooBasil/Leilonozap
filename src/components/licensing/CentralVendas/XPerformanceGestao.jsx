@@ -14,7 +14,7 @@ import {
   fixoDoParticipante, pesoReferenciaDe, PESO_DIA_COMPLETO, inicioCicloOficial, fimCiclo, dataISO, PARTICIPANTE_PADRAO,
   AVISOS_ANTES_DE_ZERAR, participantesVotaveis, resumoTimeHoje,
 } from '@/lib/xgame';
-import { timeCorporativo } from '@/lib/timeCorporativo';
+import { timeCorporativo, equipeQuadroGeral as equipeQuadroGeralDe } from '@/lib/timeCorporativo';
 import { ROTINA_PADRAO, gerarTarefasDaRotina } from '@/lib/metodo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, planejamentoDoDia, resumoPorMentalidade } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto } from '@/lib/catalogoAcoes';
@@ -258,6 +258,16 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
     const membro = equipe.find((x) => x.id === id);
     return { ...PARTICIPANTE_PADRAO, user_id: id, cargo: membro?.cargo || 'executivo', temFixo: false, semCadastro: true };
   }, [participantes, equipe]);
+
+  // 🎯 20/09/2026 — dono, olhando o "escolha a pessoa…" do Quadro Geral:
+  // "aqui preciso que todos que estão recebendo apareça aqui, exemplo
+  // Sophia Sant'Anna não está aparecendo." O Quadro Geral é sobre QUEM
+  // RECEBE dinheiro no jogo, não só a hierarquia do painel (equipe) — ver
+  // equipeQuadroGeral em timeCorporativo.js.
+  const equipeQuadroGeral = useMemo(
+    () => equipeQuadroGeralDe(equipe, participantes, usuariosPorId, nomeExibicao, nomeDe),
+    [equipe, participantes, usuariosPorId, nomeDe],
+  );
 
   const inicio = useMemo(() => inicioCicloOficial(cicloConfig, new Date(`${hoje}T12:00:00`)), [cicloConfig, hoje]);
   const diasCiclo = useMemo(() => diasDoCicloISO(inicio), [inicio]);
@@ -585,14 +595,14 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               data-teste="pessoa-fixo"
             >
               <option value="">escolha a pessoa…</option>
-              {equipe.map((p) => (
+              {equipeQuadroGeral.map((p) => (
                 <option key={p.id} value={p.id}>{p.nome} · {p.funcao}{funcaoTrabalho(p.id) && (funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome) !== p.funcao ? ` · ${funcaoTrabalho(p.id).curto || funcaoTrabalho(p.id).nome}` : ''}{participanteDe(p.id).empresa ? ` · ${rotuloDaEmpresa(participanteDe(p.id).empresa, participanteDe(p.id).empresa_via)}` : ''}{participanteDe(p.id).temFixo ? '' : ' · sem fixo'}</option>
               ))}
             </select>
             <Button size="sm" onClick={() => { if (pessoaFixo) setModalAberto(true); }} disabled={!pessoaFixo} className="bg-white/10 hover:bg-white/20 text-white h-8 text-[11px]" data-teste="abrir-pessoa">
               <UserRound className="w-3.5 h-3.5 mr-1" /> abrir
             </Button>
-            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipe.length} no time corporativo · {equipe.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
+            <span className="text-[10px] text-white/35">função, valores, metas, programa, semana, quadro e histórico · {equipeQuadroGeral.length} recebendo · {equipeQuadroGeral.filter((p) => participanteDe(p.id).temFixo).length} com fixo definido</span>
           </div>
         </div>
       )}

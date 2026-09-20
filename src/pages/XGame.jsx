@@ -7,7 +7,7 @@ import { supabase } from '@/api/supabaseClient';
 import {
   resumoDoDia, dataISO, minutosBrasilia, inicioCicloOficial, inicioDaSemana, fimCiclo, CICLO_DIAS_UTEIS, FRASES,
   VIRTUDES, podeSerVotado, votouEmTodosOsColegas, janelaVotacaoAberta, naJanelaIdeal, mvmManual, nomeExibicao,
-  ofensiva, OFENSIVA_META, missoesDaSemana, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
+  ofensiva, OFENSIVA_META, missoesDaSemana, historicoGanhosDaSemana, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO, ligaComPortoesDoCiclo,
   TOKEN_MAX, ligaDoToken, moedaModelo,
   estudoFdsEmDia, travarTopoPorEstudo, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
@@ -15,6 +15,7 @@ import {
 } from '@/lib/xgame';
 import { filtroOrDonoDaVenda, vendasDaPessoa } from '@/lib/vendasDoCiclo';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
+import { DIAS_SEMANA } from '@/lib/metodo';
 import { BarraProgresso } from '@/components/licensing/CentralVendas/VerificacaoUI';
 import XGameVisaoExecutiva from '@/components/licensing/CentralVendas/XGameVisaoExecutiva';
 import RadarEixos from '@/components/licensing/CentralVendas/RadarEixos';
@@ -291,6 +292,25 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
     }
     return missoesDaSemana(dias, agora);
   }, [historicoOfensiva, votosDias, resumo, agora]);
+
+  // 💰 20/09/2026 — dono, olhando o /XGame de uma pessoa: "preciso de uma
+  // atualização que tenha o histórico de ganhos, da semana... não está
+  // aparecendo quanto ela ganhou até agora." O dado (xpay_ganho/xpay_perdido)
+  // já é gravado todo dia no upsert logo abaixo — faltava juntar a semana
+  // numa lista, do mesmo jeito que Missões da semana já faz ali do lado.
+  const historicoGanhos = useMemo(() => {
+    const iniSemana = dataISO(inicioDaSemana(agora));
+    const dias = historicoOfensiva
+      .filter((d) => String(d.data).slice(0, 10) >= iniSemana)
+      .map((d) => ({
+        data: String(d.data).slice(0, 10),
+        ganho: Number(d.detalhes?.xpay_ganho) || 0,
+        perdido: Number(d.detalhes?.xpay_perdido) || 0,
+      }))
+      .reverse();
+    dias.push({ data: dataISO(agora), ganho: resumo.xpay?.ganho || 0, perdido: resumo.xpay?.perdido || 0 });
+    return { dias, ...historicoGanhosDaSemana(dias) };
+  }, [historicoOfensiva, agora, resumo]);
 
   // Fotografia do dia: grava/atualiza o placar sem bloquear a tela. Mesmo
   // formato de `detalhes` do Compromisso — inclui xpay_ganho/xpay_perdido,
@@ -736,6 +756,33 @@ export default function XGame({ userIdForcado = null, nomeForcado = null, modoAd
                   <span>{Math.round(pctDia)}%</span>
                 </div>
                 <BarraProgresso pct={pctDia} dialeto="escuro" altura="media" corClasse="bg-[#F4F4F4]" trilhoClasse="bg-[#2B2B2B]" />
+              </div>
+
+              <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4" data-teste="historico-ganhos-semana">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs uppercase tracking-widest text-[#817E8C]">Ganhos da semana</h2>
+                  <span className="text-xs font-bold text-nz-verde tabular-nums">R$ {fmt2(historicoGanhos.totalGanho)}</span>
+                </div>
+                <div className="space-y-1.5">
+                  {historicoGanhos.dias.map((d) => {
+                    const hojeStr = dataISO(agora);
+                    return (
+                      <div key={d.data} className="flex items-center justify-between text-[11px]" data-teste="dia-ganho">
+                        <span className="text-[#817E8C] capitalize">
+                          {DIAS_SEMANA[new Date(`${d.data}T12:00:00`).getDay()].slice(0, 3)} {d.data.slice(8, 10)}/{d.data.slice(5, 7)}
+                          {d.data === hojeStr ? ' · hoje' : ''}
+                        </span>
+                        <span className={`tabular-nums font-semibold ${d.ganho > 0 ? 'text-nz-verde' : 'text-[#4a4750]'}`}>
+                          {d.ganho > 0 ? `R$ ${fmt2(d.ganho)}` : '—'}
+                          {d.perdido > 0 && <span className="text-red-300/80 ml-1">− R$ {fmt2(d.perdido)}</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {historicoGanhos.totalPerdido > 0 && (
+                  <p className="mt-2 text-[10px] text-red-300/70">− R$ {fmt2(historicoGanhos.totalPerdido)} perdido na semana</p>
+                )}
               </div>
 
               <div className="rounded-2xl border border-[#2B2B2B] bg-[#0b0d14] p-4" data-teste="missoes-da-semana">

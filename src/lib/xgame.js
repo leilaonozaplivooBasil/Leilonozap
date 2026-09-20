@@ -1479,6 +1479,23 @@ export function missoesDaSemana(diasSemana = [], hoje = new Date()) {
   });
 }
 
+// 💰 20/09/2026 — dono, olhando o /XGame de uma pessoa: "preciso de uma
+// atualização que tenha o histórico de ganhos, da semana... não está
+// aparecendo quanto ela ganhou até agora." O dado já era gravado todo dia
+// (xpay_ganho/xpay_perdido, dentro de `detalhes` — ver o upsert de
+// XGame.jsx e CrmMetodo.jsx); só faltava somar a semana. Mesmo formato de
+// entrada que `missoesDaSemana` (um item por dia), só que somando dinheiro.
+/**
+ * @param {{ganho?:number, perdido?:number}[]} diasComXpay um item por dia, já filtrado pra semana
+ */
+export function historicoGanhosDaSemana(diasComXpay = []) {
+  const soma = (chave) => diasComXpay.reduce((s, d) => s + (Number(d[chave]) || 0), 0);
+  return {
+    totalGanho: Math.round(soma('ganho') * 100) / 100,
+    totalPerdido: Math.round(soma('perdido') * 100) / 100,
+  };
+}
+
 /** Segunda-feira da semana de `d` (a semana do jogo começa na segunda). */
 export function inicioDaSemana(d = new Date()) {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
