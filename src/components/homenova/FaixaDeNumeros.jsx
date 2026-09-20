@@ -44,12 +44,22 @@ function Ladrilho({ item, visivel }) {
   const ehNumero = /^\d/.test(String(item.valor)) && Number.isFinite(numero);
   const subindo = useSubida(ehNumero ? numero : 0, visivel && ehNumero);
 
+  // 🔠 19/09/2026 — NÚMERO E FATO NÃO PODEM TER O MESMO PESO.
+  //
+  // A faixa mostrava `56 · 235 · 2.853 · Brasil · PIX e cartão` com os cinco no
+  // mesmo verde gigante. "Brasil" não é uma contagem: pintado de métrica, ele
+  // rouba o olho dos três números que a casa tem de verdade. Agora o fato entra
+  // menor e em branco — continua dizendo o que diz, sem disputar o palco.
   return (
     <div className="min-w-[132px] text-center sm:text-left" data-teste="numero-da-casa">
-      <div className="font-slab text-[22px] font-extrabold leading-none text-nz-verde-neon sm:text-[27px]">
+      <div
+        className={ehNumero
+          ? 'font-slab text-[22px] font-extrabold leading-none text-nz-verde-neon sm:text-[27px]'
+          : 'text-[16px] font-semibold leading-none text-white/90 sm:text-[18px] sm:leading-none'}
+      >
         {ehNumero ? subindo.toLocaleString('pt-BR') : item.valor}
       </div>
-      <div className="mt-1.5 text-[13px] leading-tight text-white/50">{item.rotulo}</div>
+      <div className={`leading-tight text-white/50 ${ehNumero ? 'mt-1.5 text-[13px]' : 'mt-2 text-[12px]'}`}>{item.rotulo}</div>
     </div>
   );
 }
