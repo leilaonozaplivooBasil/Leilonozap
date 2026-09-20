@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, Send, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
 import NetworkFinanceBadges from "../components/network/NetworkFinanceBadges";
 import ConversionBox from "../components/network/ConversionBox";
 import PainelLucroDiario from "../components/network/PainelLucroDiario";
@@ -28,7 +28,15 @@ import { linkOrphanUsers } from "@/functions/linkOrphanUsers";
 import { cleanSiteDuplicates } from "@/functions/cleanSiteDuplicates"; // Updated import for new function
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import UserEditModal from "../components/admin/UserEditModal";
-import MessageDispatcher from "../components/admin/MessageDispatcher";
+// 📭 19/09/2026 — o botão "Disparar Mensagens" e o MessageDispatcher saíram daqui.
+// A tela existia e prometia disparo em massa, mas /api/functions/sendBulkMessages
+// NUNCA existiu na Vercel: em produção dava 404. Só havia a versão antiga do
+// Base44 (Deno), que não roda mais. E o conteúdo dos modelos falava de cargos
+// aposentados (licenciado_aplicativo, executivo, diretor…) e da moeda "VALORA
+// PAY", que não existe mais.
+// Disparo em massa agora é `scripts/campanha/` — que tem lista, modelo, lote,
+// remetente próprio (ofertas@) e link de descadastro assinado. Leia o
+// scripts/campanha/README.md antes de mandar qualquer coisa.
 import TreeHierarchy from "../components/network/TreeHierarchy";
 import PurgeUserDialog from "../components/network/PurgeUserDialog";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
@@ -255,7 +263,6 @@ export default function NetworkOverview() {
   const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
   const [isLinkingOrphans, setIsLinkingOrphans] = useState(false);
   const [editingUserFull, setEditingUserFull] = useState(null);
-  const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   // Faixa de estatísticas recolhível + árvore em tela cheia (mais espaço de trabalho)
@@ -1309,16 +1316,6 @@ export default function NetworkOverview() {
           title="Sistema de Alavancagem"
           subtitle="Visão completa da árvore genealógica"
           accentColor="green"
-          actions={
-            <Button
-              onClick={() => setShowMessageDispatcher(true)}
-              className="w-full sm:w-auto h-10 sm:h-9 bg-blue-600 hover:bg-blue-700"
-              size="sm"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Disparar Mensagens
-            </Button>
-          }
         />
 
         {/* Resumo da rede — faixa compacta e recolhível: ocupa pouca altura para
@@ -2236,14 +2233,6 @@ export default function NetworkOverview() {
         />
       )}
 
-      {/* MODAL DISPARADOR DE MENSAGENS */}
-      {showMessageDispatcher && (
-        <MessageDispatcher
-          isOpen={showMessageDispatcher}
-          onClose={() => setShowMessageDispatcher(false)}
-          allUsers={allUsers}
-        />
-      )}
     </div>
   );
 }
