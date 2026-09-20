@@ -278,12 +278,42 @@ test('entre as que têm ordem, vale o número — 1 antes de 5', () => {
   assert.deepEqual(vitrine.map((c) => c.nome), ['Moda', 'Video Games']);
 });
 
-test('ordem zero é uma ordem de verdade, não "sem ordem"', () => {
+// 🔴 ESTE TESTE ESTAVA AO CONTRÁRIO ATÉ 20/09, E A PRODUÇÃO DESMENTIU.
+//
+// Eu tinha escrito "ordem zero é uma ordem de verdade". Ao ligar a coluna no
+// banco real, medi: das 19 categorias-raiz ativas, ONZE estão com sort_order=0
+// e oito têm números de 11 a 20. Zero é o valor que a coluna nasce, não uma
+// escolha — e tratá-lo como ordem punha as onze não-numeradas na frente das
+// oito escolhidas a dedo. Casa & Construção, a com mais leilão ativo (11) e
+// numerada 18, caía para o último slot visível.
+test('ordem zero é campo em branco, não "primeiro lugar"', () => {
   const vitrine = categoriasDaVitrine([
-    { id: 'x', nome: 'Sem ordem', leiloes_ativos: 99, produtos_na_loja: 99, image_url: '/a.webp', ordem: null },
-    { id: 'y', nome: 'Primeira', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', ordem: 0 },
+    { id: 'y', nome: 'Zero', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', ordem: 0 },
+    { id: 'x', nome: 'Muito movimento', leiloes_ativos: 99, produtos_na_loja: 99, image_url: '/a.webp', ordem: null },
   ]);
-  assert.equal(vitrine[0].nome, 'Primeira', 'ordem 0 caiu no balde do "sem ordem"');
+  assert.equal(
+    vitrine[0].nome,
+    'Muito movimento',
+    'ordem 0 foi tratada como escolha e passou na frente de quem tem 99 leilões',
+  );
+});
+
+test('ordem 1 é escolha, e essa passa na frente mesmo com menos movimento', () => {
+  // O contraponto do teste acima: se NENHUM número contasse, a coluna seria
+  // inútil e ninguém perceberia. Quem escreve 1 quer aparecer primeiro.
+  const vitrine = categoriasDaVitrine([
+    { id: 'x', nome: 'Muito movimento', leiloes_ativos: 99, produtos_na_loja: 99, image_url: '/a.webp', ordem: null },
+    { id: 'y', nome: 'Escolhida', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', ordem: 1 },
+  ]);
+  assert.equal(vitrine[0].nome, 'Escolhida', 'a ordem escolhida parou de valer');
+});
+
+test('ordem negativa também não é escolha — e não pode furar a fila', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'x', nome: 'Muito movimento', leiloes_ativos: 99, produtos_na_loja: 99, image_url: '/a.webp', ordem: null },
+    { id: 'y', nome: 'Negativa', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', ordem: -5 },
+  ]);
+  assert.equal(vitrine[0].nome, 'Muito movimento', '-5 furou a fila');
 });
 
 test('quem tem foto continua na frente de quem não tem, mesmo com ordem definida do outro lado', () => {
