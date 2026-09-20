@@ -62,7 +62,9 @@ test('editar hora/título de hoje ganha a MESMA escolha, não só um aviso passi
   // salvarEdicao aplica a MESMA correção na rotina, achando pelo título
   // ORIGINAL (antes da edição) — nunca cria duplicata
   assert.match(CRM, /const idx = rotina\.findIndex\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(t\.titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
-  assert.match(CRM, /const novaRotina = idx >= 0 \? editarNaRotina\(rotina, idx, \{ hora, titulo \}\) : incluirNaRotina\(rotina, \{ hora, titulo \}\);/);
+  // 🗓️ 20/09/2026 — DIR-166.1: o dia da semana entra junto, no mesmo patch
+  assert.match(CRM, /const patch = \{ hora, titulo, dias_semana: edicao\.dias_semana \};/);
+  assert.match(CRM, /const novaRotina = idx >= 0 \? editarNaRotina\(rotina, idx, patch\) : incluirNaRotina\(rotina, patch\);/);
 });
 
 test('editar o Ritual não oferece "repetir" — o horário dele é definido nele mesmo, não na rotina genérica', () => {

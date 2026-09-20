@@ -1926,7 +1926,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   };
 
   const [editandoId, setEditandoId] = useState(null);
-  const [edicao, setEdicao] = useState({ hora: '', titulo: '' });
+  const [edicao, setEdicao] = useState({ hora: '', titulo: '', dias_semana: null });
   // 🔁 DIR-150 — a mesma escolha de "repetir todo dia" também vale pra
   // quando ela EDITA um horário/título — sem isto, corrigir a rotina
   // exigia editar hoje e DEPOIS abrir "A minha rotina" pra repetir a
@@ -1961,7 +1961,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // inclui como novo — nunca cria duplicata.
     if (repetirEdicao) {
       const idx = rotina.findIndex((i) => i.titulo.trim().toLowerCase() === String(t.titulo || '').trim().toLowerCase());
-      const novaRotina = idx >= 0 ? editarNaRotina(rotina, idx, { hora, titulo }) : incluirNaRotina(rotina, { hora, titulo });
+      // 🗓️ 20/09/2026 — dono: "você sempre tem que parar pra fazer aqui de
+      // novo" — o dia da semana entra JUNTO da correção, aqui mesmo, sem
+      // precisar depois abrir "A minha rotina" pra marcar os dias à parte.
+      const patch = { hora, titulo, dias_semana: edicao.dias_semana };
+      const novaRotina = idx >= 0 ? editarNaRotina(rotina, idx, patch) : incluirNaRotina(rotina, patch);
       await gravarRotina(novaRotina);
       setRepetirEdicao(false);
     }
@@ -3195,7 +3199,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               {!t.feito && (
                                 <button
                                   type="button"
-                                  onClick={() => { setEditandoId(t.id); setEdicao({ hora: t.hora || '', titulo: t.titulo || '' }); setRepetirEdicao(estaNaRotina(t.hora, t.titulo)); }}
+                                  onClick={() => {
+                                    setEditandoId(t.id);
+                                    const daRotina = rotina.find((i) => i.titulo.trim().toLowerCase() === String(t.titulo || '').trim().toLowerCase());
+                                    setEdicao({ hora: t.hora || '', titulo: t.titulo || '', dias_semana: daRotina?.dias_semana || null });
+                                    setRepetirEdicao(estaNaRotina(t.hora, t.titulo));
+                                  }}
                                   title="editar esta tarefa de hoje"
                                   data-teste="editar-tarefa"
                                   className="text-nz-tinta-fraca/60 hover:text-nz-verde shrink-0"
@@ -3252,10 +3261,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                     uma exceção) — e nunca aparece pro Ritual, que não
                                     é um item comum de rotina. */}
                                 {!ehTarefaDeGratidao(t.titulo) ? (
-                                  <label className="w-full flex items-center gap-1.5 text-[11px] text-nz-tinta-fraca" data-teste="repetir-na-edicao">
-                                    <input type="checkbox" checked={repetirEdicao} onChange={(e) => setRepetirEdicao(e.target.checked)} className="accent-nz-verde" />
-                                    🔁 repetir essa mudança todos os dias (senão, vale só hoje)
-                                  </label>
+                                  <>
+                                    <label className="w-full flex items-center gap-1.5 text-[11px] text-nz-tinta-fraca" data-teste="repetir-na-edicao">
+                                      <input type="checkbox" checked={repetirEdicao} onChange={(e) => setRepetirEdicao(e.target.checked)} className="accent-nz-verde" />
+                                      🔁 repetir essa mudança todos os dias (senão, vale só hoje)
+                                    </label>
+                                    {/* 🗓️ 20/09/2026 — dono: "você sempre tem que parar pra
+                                        fazer aqui de novo" — o dia da semana mora AQUI
+                                        também, junto da correção, não só lá embaixo em
+                                        "A minha rotina". Só aparece quando "repetir" está
+                                        marcado — sem repetir, dia da semana não significa nada. */}
+                                    {repetirEdicao && (
+                                      <div className="w-full flex items-center gap-1.5">
+                                        <span className="text-[10px] text-nz-tinta-fraca shrink-0">em quais dias:</span>
+                                        <SeletorDiasSemana dias={edicao.dias_semana} disabled={salvando} onToggle={(dia) => setEdicao((e) => ({ ...e, dias_semana: alternarDia(e.dias_semana, dia) }))} />
+                                      </div>
+                                    )}
+                                  </>
                                 ) : (
                                   <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — o horário do Ritual do Amanhecer é definido nele mesmo.</p>
                                 )}
