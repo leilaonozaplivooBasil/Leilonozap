@@ -54,8 +54,38 @@ export function numeroBonito(valor) {
  * Categoria sem nada dos dois não entra — card vazio é porta fechada na cara
  * de quem clicou.
  */
-export function categoriasDaVitrine(linhas, quantas = 6) {
+export const CATEGORIAS_NA_VITRINE = 12;
+
+/**
+ * 🔢 20/09/2026 — DE SEIS PARA DOZE, E A ORDEM GANHA DONO.
+ *
+ * Com as nove artes novas, catorze categorias passaram a ter foto e a vitrine
+ * mostrava seis: oito sumiam, e QUATRO das cinco que o dono escolheu a dedo
+ * estavam entre as que sumiam. Ter foto deixou de discriminar — quando todo
+ * mundo tem, o critério vira só o volume.
+ *
+ * Doze vagas resolvem pelo tamanho: sobram duas de fora em vez de oito, e a
+ * escolha deixa de ser dolorosa.
+ *
+ * Mas o volume de leilão MUDA TODO DIA — uma categoria entrava e saía da home
+ * entre uma visita e outra. Isso não é vitrine, é sorteio. Agora quem define a
+ * ordem é `categories.sort_order` (a coluna já existia, sem uso): quem tem
+ * número vem primeiro, na ordem que a pessoa escolheu, e o volume só desempata
+ * o resto. Ordem é decisão de quem vende, não sobra de contagem — e muda sem
+ * deploy.
+ */
+export function categoriasDaVitrine(linhas, quantas = CATEGORIAS_NA_VITRINE) {
   const porMovimento = (a, b) => b.leiloes - a.leiloes || b.naLoja - a.naLoja || a.nome.localeCompare(b.nome, 'pt-BR');
+  // quem tem ordem definida vem antes de quem não tem; entre as sem ordem, volume
+  const porOrdem = (a, b) => {
+    const temA = Number.isFinite(a.ordem);
+    const temB = Number.isFinite(b.ordem);
+    if (temA && temB) return a.ordem - b.ordem || porMovimento(a, b);
+    if (temA) return -1;
+    if (temB) return 1;
+    return porMovimento(a, b);
+  };
+
   const vivas = (linhas || [])
     .map((c) => ({
       id: c.id,
@@ -63,13 +93,16 @@ export function categoriasDaVitrine(linhas, quantas = 6) {
       leiloes: Number(c.leiloes_ativos) || 0,
       naLoja: Number(c.produtos_na_loja) || 0,
       imagem: c.imagem ?? c.image_url ?? null,
+      ordem: Number.isFinite(Number(c.ordem ?? c.sort_order)) && (c.ordem ?? c.sort_order) !== null
+        ? Number(c.ordem ?? c.sort_order)
+        : null,
     }))
     .filter((c) => c.nome && (c.leiloes > 0 || c.naLoja > 0));
 
   const temFoto = (c) => typeof c.imagem === 'string' && c.imagem.trim() !== '';
   return [
-    ...vivas.filter(temFoto).sort(porMovimento),
-    ...vivas.filter((c) => !temFoto(c)).sort(porMovimento),
+    ...vivas.filter(temFoto).sort(porOrdem),
+    ...vivas.filter((c) => !temFoto(c)).sort(porOrdem),
   ].slice(0, quantas);
 }
 

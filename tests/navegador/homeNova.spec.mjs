@@ -33,7 +33,7 @@ try { ({ chromium } = await import('playwright')); } catch { /* opcional */ }
 const semNavegador = chromium ? false : 'playwright não instalado — rode: npm i -D playwright';
 
 let navegador; let BASE; let servidor;
-const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png' };
+const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.mp4': 'video/mp4', '.webm': 'video/webm', '.jpg': 'image/jpeg' };
 
 async function garantirNavegador() {
   if (navegador) return navegador;
@@ -220,5 +220,252 @@ test('🔴 com prefers-reduced-motion, NENHUMA seção nasce invisível', { skip
     });
     assert.ok(opacidade > 0.9, `"${secao}" nasceu com opacidade ${opacidade.toFixed(2)} — some da tela`);
   }
+  await pagina.close();
+});
+
+// ── O que o dono pediu em 19/09: "mais interativo" ──────────────────────────
+//
+// Três interações que faltavam, e que só o navegador prova: a seta que sabe que
+// chegou ao fim, o arrasto com o mouse, e o relógio que esquenta quando falta
+// pouco. As duas primeiras são de comportamento; a terceira é de informação.
+
+test('🔴 a seta "anterior" nasce desligada, e a "próximo" desliga no fim do trilho', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const anterior = pagina.locator('[data-teste="carrossel-destaque"] [data-teste="seta-anterior"]');
+  const proximo = pagina.locator('[data-teste="carrossel-destaque"] [data-teste="seta-proximo"]');
+
+  assert.equal(await anterior.isDisabled(), true, 'no começo não há para onde voltar');
+  assert.equal(await proximo.isDisabled(), false, 'e há para onde ir');
+
+  // vai até o fim do trilho pelo próprio botão, como a pessoa faria
+  for (let i = 0; i < 12; i += 1) {
+    if (await proximo.isDisabled()) break;
+    await proximo.click();
+    await pagina.waitForTimeout(420);
+  }
+
+  assert.equal(await proximo.isDisabled(), true, 'no fim, o "próximo" não pode continuar aceso');
+  assert.equal(await anterior.isDisabled(), false, 'e o "anterior" acende');
+  await pagina.close();
+});
+
+test('🖱️ arrastar com o mouse move o trilho, e o clique parado continua chegando no card', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const trilho = pagina.locator('[data-teste="carrossel-destaque"] [role="group"]');
+  await trilho.scrollIntoViewIfNeeded();
+
+  // 🔴 A BANCA MONTA A HOME SOLTA, sem <Routes>: clicar num <Link> aqui NÃO muda
+  // a URL nem troca de tela. Conferir `pagina.url()` seria prova decorativa —
+  // passa igual com a proteção removida (medido: a mutação não derrubou nada).
+  // Então a prova conta os cliques que CHEGAM no link do card.
+  await pagina.evaluate(() => {
+    window.__cliquesNoCard = 0;
+    document.querySelectorAll('[data-teste="cartao-de-leilao"] a').forEach((a) => {
+      a.addEventListener('click', (e) => { window.__cliquesNoCard += 1; e.preventDefault(); });
+    });
+  });
+
+  // A ORDEM IMPORTA: os passos com o card vêm ANTES do arrasto longo. Depois de
+  // rolar, a primeira carta sai de vista e o clique naquela coordenada cai fora
+  // dela — foi o que derrubou a primeira versão desta prova.
+
+  // 1) CONTROLE: um clique parado PRECISA chegar no card. Sem isto, o passo 2
+  //    passaria por não existir clique nenhum, e não por haver proteção.
+  const cartao = pagina.locator('[data-teste="cartao-de-leilao"]').first();
+  const c1 = await cartao.boundingBox();
+  await pagina.mouse.move(c1.x + c1.width / 2, c1.y + 30);
+  await pagina.mouse.down();
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(150);
+  assert.equal(
+    await pagina.evaluate(() => window.__cliquesNoCard), 1,
+    'clique parado tem que chegar no card — senão esta prova não sabe medir nada',
+  );
+
+  // 2) 🚫 A ASSERÇÃO "arrastar não abre o leilão" NÃO MORA AQUI, e isso é uma
+  //    decisão, não um esquecimento.
+  //
+  //    Eu escrevi essa prova, ela ficou verde, e aí ela passou também com as
+  //    DUAS proteções removidas — sinal de que media o próprio silêncio.
+  //    Medido no Chromium da banca, com o DOM parado (trilho em scrollLeft 0,
+  //    arrasto para o lado que não rola):
+  //
+  //      clique parado ......... dispara click no <img> dentro do <a>
+  //      arrasto de 56px ....... NENHUM evento de clique
+  //      arrasto de 6px ........ NENHUM evento de clique
+  //
+  //    O próprio navegador já não transforma arrasto em clique. A trava
+  //    `engolirCliqueDeArrasto` continua no componente como cinto e suspensório
+  //    (outros navegadores não prometem o mesmo), mas AQUI ela é inverificável:
+  //    uma asserção que não pode falhar é ruído verde, e ruído verde é pior que
+  //    ausência — ensina a confiar no que não foi medido.
+  //
+  //    O passo 1 acima, esse sim, prova algo real: foi ele que pegou o
+  //    `setPointerCapture` que eu havia colocado no trilho e que redirecionava
+  //    TODO clique para ele, deixando os cards não-clicáveis.
+
+  // 3) arrasto longo: o trilho tem que andar de verdade
+  const caixa = await trilho.boundingBox();
+  const y = caixa.y + caixa.height / 2;
+  const antes = await trilho.evaluate((el) => el.scrollLeft);
+  await pagina.mouse.move(caixa.x + caixa.width - 60, y);
+  await pagina.mouse.down();
+  for (let x = 40; x <= 320; x += 40) await pagina.mouse.move(caixa.x + caixa.width - 60 - x, y);
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(250);
+  const depois = await trilho.evaluate((el) => el.scrollLeft);
+  assert.ok(depois > antes + 40, `o trilho tinha que ter andado — foi de ${antes} para ${depois}`);
+
+  await pagina.close();
+});
+
+test('⏳ o leilão que fecha em minutos vem marcado como crítico; o de dias, não', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const pilulas = pagina.locator('[data-teste="contagem-do-cartao"]');
+  const total = await pilulas.count();
+  assert.ok(total > 0, 'nenhuma pílula de contagem na tela');
+
+  const faixas = [];
+  for (let i = 0; i < total; i += 1) faixas.push(await pilulas.nth(i).getAttribute('data-urgencia'));
+
+  assert.ok(faixas.includes('critico'), `o banco tem um leilão de 6 minutos e nenhuma pílula ficou crítica: ${faixas.join(', ')}`);
+  assert.ok(faixas.includes('normal'), 'nenhuma pílula normal — se tudo fica crítico, nada chama atenção');
+
+  // o crítico pulsa; o normal não
+  const critica = pilulas.filter({ has: pagina.locator('xpath=.') }).first();
+  const classesCritica = await pagina.locator('[data-urgencia="critico"]').first().getAttribute('class');
+  const classesNormal = await pagina.locator('[data-urgencia="normal"]').first().getAttribute('class');
+  assert.match(classesCritica, /animate-pulse/, 'o crítico tinha que pulsar');
+  assert.doesNotMatch(classesNormal, /animate-pulse/, 'o normal não pode pulsar');
+  assert.ok(critica);
+  await pagina.close();
+});
+
+// ── O vídeo do herói (19/09): "sempre ativo e com som tocando" ─────────────
+//
+// O "com som" esbarra na regra de navegador que a casa já documentou em
+// `lib/somDoDestaque.js`: áudio antes de gesto é recusado, e o vídeo fica
+// parado. Então a promessa que dá para cumprir — e que estas provas medem — é:
+// nasce MUDO e tocando, e o primeiro gesto em qualquer lugar liga o som.
+
+test('🎬 o herói abre com o VÍDEO do produto, não com a foto', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+  assert.equal(await video.count(), 1, 'o herói tinha que trazer o vídeo do PS5');
+
+  const atributos = await video.evaluate((v) => ({
+    src: v.getAttribute('src'), autoplay: v.autoplay, loop: v.loop, preload: v.preload,
+    playsInline: v.playsInline, poster: v.getAttribute('poster'),
+  }));
+  // o NOME do arquivo é assunto da banca (aqui roda o vídeo local de 8 KB, em
+  // produção o do PS5); o que importa provar é que o herói montou um vídeo
+  assert.match(atributos.src, /\.(mp4|webm)$/, `src inesperado: ${atributos.src}`);
+  assert.equal(atributos.autoplay, true, 'sem autoplay o vídeo não é "sempre ativo"');
+  assert.equal(atributos.loop, true, '"sempre ativo" quer dizer que ele recomeça');
+  assert.equal(atributos.playsInline, true, 'sem playsInline o iPhone abre em tela cheia sozinho');
+  assert.ok(atributos.poster, 'sem cartaz o herói nasce preto enquanto o vídeo não chega');
+  assert.equal(atributos.preload, 'auto', 'com preload "metadata" o navegador fica no cartaz — foi o que fez o vídeo parecer foto');
+
+  // a foto do herói sai de cena quando há vídeo — as duas juntas seria ruído
+  assert.equal(await pagina.locator('[data-teste="hero-com-video"] img').count(), 0);
+  await pagina.close();
+});
+
+test('🔇 o vídeo do herói NASCE MUDO — é a única forma de ele tocar sozinho', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const mudoNoInicio = await pagina.locator('[data-teste="video-do-hero"]').evaluate((v) => v.muted);
+  assert.equal(mudoNoInicio, true, 'nascendo com som, o navegador recusa o play e o vídeo fica parado');
+  await pagina.close();
+});
+
+test('🔊 o PRIMEIRO clique em qualquer lugar da página liga o som', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+  assert.equal(await video.evaluate((v) => v.muted), true);
+
+  // um clique longe do vídeo: o ouvinte é da JANELA, não do player
+  await pagina.locator('[data-teste="faixa-numeros"]').click({ position: { x: 5, y: 5 } });
+  await pagina.waitForTimeout(300);
+
+  assert.equal(await video.evaluate((v) => v.muted), false, 'o gesto da pessoa tinha que ter tirado o mudo');
+  await pagina.close();
+});
+
+test('🔘 o botão de som existe e volta a mudar o estado', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+  const botao = pagina.locator('[data-teste="som-do-hero"]');
+  assert.equal(await botao.count(), 1, 'sem botão, quem está no trabalho não tem como calar');
+
+  await botao.click();                       // este clique já é um gesto: liga o som
+  await pagina.waitForTimeout(250);
+  const depoisDoPrimeiro = await video.evaluate((v) => v.muted);
+
+  await botao.click();
+  await pagina.waitForTimeout(250);
+  const depoisDoSegundo = await video.evaluate((v) => v.muted);
+
+  assert.notEqual(depoisDoPrimeiro, depoisDoSegundo, 'o botão tem que alternar o som, não travar num estado');
+  await pagina.close();
+});
+
+test('🖼️ o botão de som fica DENTRO do vídeo, e a moldura não sobra caixa vazia', { skip: semNavegador }, async () => {
+  const pagina = await abrirHome();
+  const moldura = await pagina.locator('[data-teste="hero-com-video"]').boundingBox();
+  const video = await pagina.locator('[data-teste="video-do-hero"]').boundingBox();
+  const botao = await pagina.locator('[data-teste="som-do-hero"]').boundingBox();
+
+  // 🔴 O DEFEITO QUE ISTO GUARDA (print do dono, 19/09): a caixa do <video>
+  // tinha altura fixa de 400px e o quadro 16:9 ficava no meio dela, deixando
+  // ~70px de vazio em cima e embaixo. O botão, ancorado no fundo da caixa,
+  // aparecia boiando no preto, longe do vídeo.
+  const proporcao = moldura.width / moldura.height;
+  assert.ok(
+    Math.abs(proporcao - 16 / 9) < 0.06,
+    `a moldura tinha que ter a proporção do vídeo (16:9 = 1.78) e tem ${proporcao.toFixed(2)}`,
+  );
+
+  // a moldura é do tamanho do vídeo: nada de caixa maior que o conteúdo.
+  // A folga de 3px é a BORDA (1px em cima, 1px embaixo) — medido: 292,5 contra
+  // 290,5. O defeito original deixava ~140px de diferença, então a régua pega.
+  assert.ok(Math.abs(moldura.height - video.height) < 3, `moldura ${moldura.height}px vs vídeo ${video.height}px`);
+
+  // e o botão cabe inteiro dentro dela
+  const dentro = botao.x >= moldura.x
+    && botao.y >= moldura.y
+    && botao.x + botao.width <= moldura.x + moldura.width + 1
+    && botao.y + botao.height <= moldura.y + moldura.height + 1;
+  assert.ok(dentro, `o botão de som saiu da moldura: botão ${JSON.stringify(botao)} · moldura ${JSON.stringify(moldura)}`);
+  await pagina.close();
+});
+
+test('▶️ o vídeo do herói ESTÁ TOCANDO sozinho — sem clique, sem mouse, sem nada', { skip: semNavegador }, async () => {
+  // 🔴 O DEFEITO (dono, 20/09): "o vídeo preenche a moldura, mas até que passe
+  // o mouse por cima, ele parece ser uma imagem."
+  //
+  // Era cartaz parado: `preload="metadata"` segurava o download e o atributo
+  // `autoplay`, sozinho, é um PEDIDO que o navegador pode engolir calado.
+  //
+  // Esta prova NÃO olha atributo — olha o relógio do vídeo andando. É a única
+  // pergunta que importa: ele está tocando sem ninguém encostar?
+  const pagina = await abrirHome();
+  const video = pagina.locator('[data-teste="video-do-hero"]');
+
+  await pagina.waitForFunction(
+    () => {
+      const v = document.querySelector('[data-teste="video-do-hero"]');
+      return v && !v.paused && v.currentTime > 0.05;
+    },
+    { timeout: 12000 },
+  );
+
+  const t1 = await video.evaluate((v) => v.currentTime);
+  await pagina.waitForTimeout(900);
+  const t2 = await video.evaluate((v) => v.currentTime);
+  assert.ok(t2 > t1, `o vídeo travou: ${t1}s -> ${t2}s`);
+
+  // e a barra de andamento acompanha — é o que diz para o olho "isto é vídeo"
+  const largura = await pagina.locator('[data-teste="andamento-do-video"] > div').evaluate((d) => d.getBoundingClientRect().width);
+  assert.ok(largura > 0, 'a barra de andamento ficou em zero com o vídeo tocando');
   await pagina.close();
 });

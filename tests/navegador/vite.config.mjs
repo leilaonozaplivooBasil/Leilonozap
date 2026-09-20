@@ -32,6 +32,9 @@ export default defineConfig({
       // o Quadro fala com o adapter direto — na banca é a mesma plataforma de mentira
       '@/api/plataformaAdapter': path.resolve(aqui, 'falso/plataformaClient.js'),
       '@/api/supabaseClient': path.resolve(aqui, 'falso/supabaseClient.js'),
+      // a régua do vídeo ganha um alcance a mais na banca (arquivo local de
+      // 8 KB), sem afrouxar a de produção — ver falso/videoDoProduto.js
+      '@/lib/videoDoProduto': path.resolve(aqui, 'falso/videoDoProduto.js'),
       '@': path.resolve(aqui, '../../src'),
     },
   },

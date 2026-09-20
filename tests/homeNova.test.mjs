@@ -252,3 +252,52 @@ test('a vitrine nunca encolhe: com foto ou sem, entrega até o teto pedido', () 
   assert.equal(vitrine.length, 6);
   assert.equal(vitrine[0].nome, 'Cat 8', 'a única com foto lidera');
 });
+
+// ── A vitrine cresce para doze, e a ordem ganha dono (20/09/2026) ───────────
+
+test('a vitrine entrega doze, não seis — com catorze com foto, só duas ficam de fora', () => {
+  const linhas = Array.from({ length: 14 }, (_, i) => ({
+    id: `c${i}`, nome: `Cat ${i}`, leiloes_ativos: 14 - i, produtos_na_loja: 1, image_url: '/f.webp',
+  }));
+  assert.equal(categoriasDaVitrine(linhas).length, 12);
+});
+
+test('🔴 quem tem ordem definida passa na frente de quem tem mais leilão', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'casa', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 51, image_url: '/a.webp', ordem: null },
+    { id: 'games', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', ordem: 5 },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Video Games', 'Casa & Construção']);
+});
+
+test('entre as que têm ordem, vale o número — 1 antes de 5', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'g', nome: 'Video Games', leiloes_ativos: 9, produtos_na_loja: 9, image_url: '/b.webp', ordem: 5 },
+    { id: 'm', nome: 'Moda', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/a.webp', ordem: 1 },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Moda', 'Video Games']);
+});
+
+test('ordem zero é uma ordem de verdade, não "sem ordem"', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'x', nome: 'Sem ordem', leiloes_ativos: 99, produtos_na_loja: 99, image_url: '/a.webp', ordem: null },
+    { id: 'y', nome: 'Primeira', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', ordem: 0 },
+  ]);
+  assert.equal(vitrine[0].nome, 'Primeira', 'ordem 0 caiu no balde do "sem ordem"');
+});
+
+test('quem tem foto continua na frente de quem não tem, mesmo com ordem definida do outro lado', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'sem', nome: 'Sem arte', leiloes_ativos: 99, produtos_na_loja: 99, image_url: null, ordem: 1 },
+    { id: 'com', nome: 'Com arte', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/a.webp', ordem: null },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Com arte', 'Sem arte']);
+});
+
+test('a coluna crua do banco (sort_order) também é aceita', () => {
+  const vitrine = categoriasDaVitrine([
+    { id: 'a', nome: 'Segunda', leiloes_ativos: 9, produtos_na_loja: 9, image_url: '/a.webp', sort_order: 2 },
+    { id: 'b', nome: 'Primeira', leiloes_ativos: 1, produtos_na_loja: 1, image_url: '/b.webp', sort_order: 1 },
+  ]);
+  assert.deepEqual(vitrine.map((c) => c.nome), ['Primeira', 'Segunda']);
+});

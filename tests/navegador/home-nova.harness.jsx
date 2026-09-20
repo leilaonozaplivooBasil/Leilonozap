@@ -24,6 +24,20 @@ import arteFerramentas from '../../public/categorias/ferramentas.webp';
 import arteGames from '../../public/categorias/games.webp';
 import arteModa from '../../public/categorias/moda.webp';
 
+// 🎬 VÍDEO DE VERDADE NA BANCA (20/09/2026).
+//
+// O vídeo do PS5 mora no Supabase e o contêiner não alcança `supabase.co`: com
+// o endereço de produção aqui, o <video> nunca carregava e a banca não tinha
+// como provar a única coisa que o dono reclamou — "parece uma imagem até passar
+// o mouse". Provar atributo não basta: `autoplay` é um PEDIDO, e o defeito era
+// justamente o pedido não virar reprodução.
+//
+// Então entra um arquivo nosso, 8 KB, 4 segundos, 320x180 (16:9 como o real),
+// gerado com ffmpeg em VP9/WebM — o Chromium de código aberto da banca NÃO
+// decodifica H.264, e um .mp4 aqui morre com DEMUXER_ERROR_NO_SUPPORTED_STREAMS. Ele é servido pela própria banca, toca de verdade, e a
+// prova pode olhar `paused` e `currentTime` em vez de olhar HTML.
+import videoDeProva from './falso/video-de-prova.webm';
+
 // `&` cru quebra o XML do SVG — vira imagem quebrada em "Beleza & Saúde".
 const escapar = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -62,7 +76,7 @@ const LEILOES_REAIS = [
   ['28ba4020ac69303dab9509bc', 'Chinelo Papete Moleca', 15.98, daquiAHoras(26), 39],
   ['e72311712bcd173faf1ad5b7', 'Relógio Masculino Automático Skeleton Transparente Pulseira Couro Caramelo', 53.6, daquiAHoras(26), 118],
   ['d8c11b27e57fb7d3fbf4aa4b', 'Relógio Masculino Couro Impermeável Luxo', 53.6, daquiAHoras(26), 118],
-  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, daquiAHoras(5), 32],
+  ['a8acdad72a7ae76c1a1e5aff', 'Bomba para tirar leite', 9.6, daquiAHoras(0.1), 32],
   ['624b1eaa212bd96e39c6e837', 'Sandália Flatform Feminina Donna Santa Papete 2026', 8.8, daquiAHoras(6), 26],
   ['78b615db73452b8149bf52ab', 'Cabo Hdmi 2.0 4k Blindado 5m Ponta Gold 60hz Aquário', 8, daquiAHoras(8), 24],
   ['efad72c84c3fd8dc71ffe0f9', 'Dermaroller System Rolinho 540 Microagulha Pele Barba', 6, daquiAHoras(10), 18],
@@ -97,7 +111,13 @@ const auctions = [
 // Os produtos LIGADOS aos leilões vêm à parte, com o preço da nossa loja: é ele
 // que ordena o "Em destaque" e que o card mostra ao lado do lance.
 const products = [
-  { id: 'p-ps5', catalog_active: true, price_catalog: 6000 },
+  // 🎬 O vídeo do PS5 é o de produção. O contêiner não alcança `supabase.co`,
+  // então o arquivo não baixa aqui — mas o que esta banca prova é a REGRA (o
+  // <video> existe, nasce mudo, e o primeiro clique tira o mudo), não o pixel.
+  {
+    id: 'p-ps5', catalog_active: true, price_catalog: 6000,
+    video_urls: [videoDeProva],
+  },
   ...LEILOES_REAIS.map(([id, , , , naLoja]) => ({ id: `p-${id}`, catalog_active: true, price_catalog: naLoja })),
   ...Array.from({ length: 2853 - 1 - LEILOES_REAIS.length }, (_, i) => ({
     id: `prod-${i}`, catalog_active: i < 235 - 1 - LEILOES_REAIS.length,
@@ -110,16 +130,29 @@ const featured_products = [PS5.id, ...LEILOES_REAIS.slice(0, 5).map(([id]) => id
 // 📊 Retrato de 19/09/2026 (contagem real do banco) e a régua nova: as CINCO
 // categorias que o dono fotografou vão na frente, mesmo não sendo as mais
 // movimentadas. A sexta vaga fica pra maior sem foto — aqui, Casa & Construção.
+// 📊 Retrato de 20/09/2026, com as CATORZE categorias que têm arte. A vitrine
+// passou a mostrar doze: a banca precisa de mais de doze para provar que o corte
+// acontece, e de `ordem` preenchida em algumas para provar que ela manda.
 const vw_home_categorias = [
-  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', leiloes_ativos: 2, produtos_na_loja: 22, imagem: arteModa },
-  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', leiloes_ativos: 5, produtos_na_loja: 21, imagem: arteEletronicos },
-  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', leiloes_ativos: 2, produtos_na_loja: 6, imagem: arteCasaCozinha },
-  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', leiloes_ativos: 1, produtos_na_loja: 9, imagem: arteFerramentas },
-  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', leiloes_ativos: 1, produtos_na_loja: 1, imagem: arteGames },
-  { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', leiloes_ativos: 11, produtos_na_loja: 50, imagem: null },
-  { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', leiloes_ativos: 11, produtos_na_loja: 23, imagem: null },
-  { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', leiloes_ativos: 4, produtos_na_loja: 31, imagem: null },
-  { id: '452df51b6fd1576e7c800543', nome: 'Automotivo', leiloes_ativos: 3, produtos_na_loja: 14, imagem: null },
+  // as cinco que o dono escolheu a dedo ganham ordem explícita
+  { id: '69e6cf37ec07dca9728835d5', nome: 'Moda', ordem: 1, leiloes_ativos: 2, produtos_na_loja: 22, imagem: arteModa },
+  { id: '6bb2b061e5bc7e0d17c75102', nome: 'Eletrônicos', ordem: 2, leiloes_ativos: 5, produtos_na_loja: 21, imagem: arteEletronicos },
+  { id: '69e43ae965e15c44236671b2', nome: 'Eletrodomésticos', ordem: 3, leiloes_ativos: 2, produtos_na_loja: 6, imagem: arteCasaCozinha },
+  { id: '69f2f0e0e67a0cff22fa7c89', nome: 'Ferramentas', ordem: 4, leiloes_ativos: 1, produtos_na_loja: 9, imagem: arteFerramentas },
+  { id: '69e40673c48bec7f8b0e948b', nome: 'Video Games', ordem: 5, leiloes_ativos: 1, produtos_na_loja: 1, imagem: arteGames },
+  // as nove novas entram sem ordem: quem manda entre elas é o volume
+  { id: '678afd453f2583f8a257265b', nome: 'Casa & Construção', ordem: null, leiloes_ativos: 11, produtos_na_loja: 51, imagem: placa('CASA & CONSTRUÇÃO', '#1A1410') },
+  { id: '5c22e40bcb598bf0f8407f53', nome: 'Beleza & Saúde', ordem: null, leiloes_ativos: 10, produtos_na_loja: 23, imagem: placa('BELEZA & SAÚDE', '#1B1018') },
+  { id: '6a13264e72ec22e8024c9713', nome: 'Decoração', ordem: null, leiloes_ativos: 3, produtos_na_loja: 33, imagem: placa('DECORAÇÃO', '#1A1608') },
+  { id: '452df51b6fd1576e7c800543', nome: 'Automotivo', ordem: null, leiloes_ativos: 3, produtos_na_loja: 14, imagem: placa('AUTOMOTIVO', '#0E1216') },
+  { id: 'd452e4ca83593ebcc8b681cb', nome: 'Esporte & Lazer', ordem: null, leiloes_ativos: 3, produtos_na_loja: 6, imagem: placa('ESPORTE & LAZER', '#101A12') },
+  { id: '69e7ad54cd426dd916b3f37f', nome: 'Pets', ordem: null, leiloes_ativos: 2, produtos_na_loja: 7, imagem: placa('PETS', '#1A1512') },
+  { id: 'd86b0f972f7c6629aed01b26', nome: 'Cama & Banho', ordem: null, leiloes_ativos: 1, produtos_na_loja: 3, imagem: placa('CAMA & BANHO', '#14181C') },
+  { id: '054058f1e8f9bde2073655d4', nome: 'Papelaria', ordem: null, leiloes_ativos: 0, produtos_na_loja: 12, imagem: placa('PAPELARIA', '#101418') },
+  { id: '69f2dee24631a895b2da09cd', nome: 'Cozinha', ordem: null, leiloes_ativos: 0, produtos_na_loja: 10, imagem: placa('COZINHA', '#181410') },
+  // sem arte: só entram se sobrar vaga — e não sobra
+  { id: 'sem-arte-1', nome: 'Organização', ordem: null, leiloes_ativos: 1, produtos_na_loja: 5, imagem: null },
+  { id: 'sem-arte-2', nome: 'Notebooks', ordem: null, leiloes_ativos: 0, produtos_na_loja: 4, imagem: null },
 ];
 
 window.__bancoFalso = { tabelas: { auctions, products, featured_products, vw_home_categorias }, escritas: [] };
