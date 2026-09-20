@@ -12,6 +12,20 @@
 
 ---
 
+## DIR-166.1 — o dia da semana também na edição da tarefa de hoje, não só em "A minha rotina"
+
+**Emitida por:** dono, minutos depois da DIR-166 ir pro ar, editando uma tarefa pelo lápis no topo do dia e não achando o seletor de dias ali: *"KD AS MELHORIAS QUE TE PEDI???? ENTROU AONDE, JÁ FOI COLOCADA EM PRODUÇÃO??"* — confirmado que sim (print do próprio painel de Deployments da Vercel), mas o seletor só existia dentro de "A minha rotina" (painel recolhido, lá embaixo), não no editor rápido de cada tarefa (o lápis, no topo do dia) — exatamente o lugar que ele abriu primeiro.
+
+**O que entra (`CrmMetodo.jsx`):** o mesmo `SeletorDiasSemana` da DIR-166 passa a aparecer também no editor inline da tarefa de HOJE, junto da caixa "repetir essa mudança todos os dias" — só quando ela está marcada (dia da semana não significa nada pra uma mudança que vale só hoje). Abrir o editor de uma tarefa que já é da rotina pré-carrega os dias que ela já tinha (acha o item pelo título, mesma busca que `salvarEdicao` já fazia pra aplicar a correção). Nenhuma lógica nova — reusa `alternarDia`, `SeletorDiasSemana` e `itemDaRotina` (DIR-166); só o mesmo controle aparecendo num segundo lugar, onde a pessoa efetivamente vai primeiro.
+
+**Fora do escopo:** o atalho de setor (`SETORES_EMPRESA`) não entrou aqui — o campo de título da tarefa de hoje é o componente compartilhado `EntradaComDestinos`, usado em mais de uma tela; mexer nele é um passo à parte, não pedido nesta rodada.
+
+**Prova:** suíte completa (3020/3020, 2 testes novos + 2 atualizados em `tests/rotinaDiasDaSemanaESetor.test.mjs`/`tests/rotinaClaraRecorrente.test.mjs`), lint limpo, `npm run build` sem erro.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-166 — dia da semana por item da rotina, "igual um despertador" + atalho de setor
 
 **Emitida por:** dono, olhando a própria rotina ("Mentalidade do CEO" toda segunda, reunião de marketing só na terça): *"eu não tenho como... eu tenho que ter o dia da semana que eu escolho, tipo todas as segundas... igual um despertador que dá a opção de fazer segunda, terça, quarta, quinta, sexta — porque senão você sempre tem que parar pra fazer aqui de novo."* E, no mesmo fôlego: *"até pra eu adicionar também é qual o setor da empresa que eu vou fazer reunião... ter essas paradas assim pra gente poder adicionar e não precisar ficar toda hora refazendo. Faz uma análise aí na gamificação e vê o que a gente pode adicionar pra ficar ainda mais fluido, mais solto e mais dinâmico."*

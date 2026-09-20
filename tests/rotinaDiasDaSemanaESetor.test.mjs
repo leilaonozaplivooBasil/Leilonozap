@@ -38,11 +38,22 @@ test('alternarDia: liga/desliga um dia; lista vazia volta a null (todo dia), nun
   assert.match(CRM, /return novo\.length \? novo : null;/);
 });
 
-test('o seletor de dias aparece tanto editando um item existente quanto incluindo um novo', () => {
+test('o seletor de dias aparece editando um item existente, incluindo um novo, E editando a tarefa de hoje com "repetir" marcado', () => {
+  // 🗓️ 20/09/2026 — DIR-166.1: dono, direto: "você sempre tem que parar pra
+  // fazer aqui de novo" — o seletor de dias passou a existir também no
+  // editor da tarefa de HOJE (não só em "A minha rotina"), pra não obrigar
+  // a pessoa a procurar em outro painel.
   const ocorrencias = (CRM.match(/<SeletorDiasSemana /g) || []).length;
-  assert.equal(ocorrencias, 2, 'esperava 2 usos — editar (rascunho) e incluir (novoDaRotina)');
+  assert.equal(ocorrencias, 3, 'esperava 3 usos — editar (rascunho), incluir (novoDaRotina) e a edição da tarefa de hoje (edicao)');
   assert.match(CRM, /dias=\{rascunho\.dias_semana\}/);
   assert.match(CRM, /dias=\{novoDaRotina\.dias_semana\}/);
+  assert.match(CRM, /dias=\{edicao\.dias_semana\}/);
+});
+
+test('o seletor na tarefa de hoje só aparece quando "repetir" está marcado, e pré-carrega os dias do item já existente na rotina', () => {
+  assert.match(CRM, /\{repetirEdicao && \(/);
+  assert.match(CRM, /const daRotina = rotina\.find\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(t\.titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
+  assert.match(CRM, /setEdicao\(\{ hora: t\.hora \|\| '', titulo: t\.titulo \|\| '', dias_semana: daRotina\?\.dias_semana \|\| null \}\);/);
 });
 
 test('editar um item pré-carrega os dias dele — não reseta pra "todo dia" sem querer', () => {
