@@ -38,22 +38,40 @@ test('alternarDia: liga/desliga um dia; lista vazia volta a null (todo dia), nun
   assert.match(CRM, /return novo\.length \? novo : null;/);
 });
 
-test('o seletor de dias aparece editando um item existente, incluindo um novo, E editando a tarefa de hoje com "repetir" marcado', () => {
-  // 🗓️ 20/09/2026 — DIR-166.1: dono, direto: "você sempre tem que parar pra
-  // fazer aqui de novo" — o seletor de dias passou a existir também no
-  // editor da tarefa de HOJE (não só em "A minha rotina"), pra não obrigar
-  // a pessoa a procurar em outro painel.
+test('o seletor de dias aparece nos QUATRO lugares onde se mexe numa tarefa — editar rotina, incluir na rotina, editar tarefa de hoje, nova tarefa de hoje', () => {
+  // 🗓️ 20/09/2026 — DIR-166.1/166.2: dono bateu duas vezes na mesma queixa
+  // ("cadê o seletor?") porque ele ficava escondido atrás de marcar
+  // "repetir" primeiro. Agora está sempre à vista nos quatro lugares.
   const ocorrencias = (CRM.match(/<SeletorDiasSemana /g) || []).length;
-  assert.equal(ocorrencias, 3, 'esperava 3 usos — editar (rascunho), incluir (novoDaRotina) e a edição da tarefa de hoje (edicao)');
+  assert.equal(ocorrencias, 4, 'esperava 4 usos — editar (rascunho), incluir (novoDaRotina), editar a tarefa de hoje (edicao) e nova tarefa de hoje (diasNovaTarefa)');
   assert.match(CRM, /dias=\{rascunho\.dias_semana\}/);
   assert.match(CRM, /dias=\{novoDaRotina\.dias_semana\}/);
   assert.match(CRM, /dias=\{edicao\.dias_semana\}/);
+  assert.match(CRM, /dias=\{diasNovaTarefa\}/);
 });
 
-test('o seletor na tarefa de hoje só aparece quando "repetir" está marcado, e pré-carrega os dias do item já existente na rotina', () => {
-  assert.match(CRM, /\{repetirEdicao && \(/);
+test('o seletor de dias NUNCA fica escondido atrás de marcar "repetir" primeiro — em nenhum dos quatro lugares', () => {
+  // 🐛 20/09/2026 — DIR-166.2: dono, batendo na mesma tecla pela segunda
+  // vez: "eu não tenho onde editar os dias" — porque o seletor só
+  // aparecia DEPOIS de marcar a caixa "repetir". Nenhuma condição pode
+  // mais esconder o `<SeletorDiasSemana` atrás de um estado de checkbox.
+  assert.doesNotMatch(CRM, /repetirEdicao && \(\s*<div[^>]*>\s*<span[^>]*>em quais dias/s, 'o seletor da tarefa de hoje voltou a ficar atrás do checkbox');
+  assert.doesNotMatch(CRM, /repetirNovaTarefa && \(\s*<div[^>]*>\s*<span[^>]*>em quais dias/s, 'o seletor da nova tarefa voltou a ficar atrás do checkbox');
+});
+
+test('marcar um dia liga "repetir" sozinho — escolher dia só faz sentido pra algo recorrente', () => {
+  const ocorrencias = (CRM.match(/setRepetirEdicao\(true\)|setRepetirNovaTarefa\(true\)/g) || []).length;
+  assert.equal(ocorrencias, 2, 'esperava os dois onToggle (edicao e novaTarefa) ligando "repetir" ao marcar um dia');
+});
+
+test('editar a tarefa de hoje pré-carrega os dias do item já existente na rotina (achado pelo título)', () => {
   assert.match(CRM, /const daRotina = rotina\.find\(\(i\) => i\.titulo\.trim\(\)\.toLowerCase\(\) === String\(t\.titulo \|\| ''\)\.trim\(\)\.toLowerCase\(\)\);/);
   assert.match(CRM, /setEdicao\(\{ hora: t\.hora \|\| '', titulo: t\.titulo \|\| '', dias_semana: daRotina\?\.dias_semana \|\| null \}\);/);
+});
+
+test('a nova tarefa de hoje grava os dias escolhidos na rotina, junto do resto', () => {
+  assert.match(CRM, /await gravarRotina\(incluirNaRotina\(rotina, \{ hora: novaTarefa\.hora \|\| '', titulo: novaTarefa\.titulo, dias_semana: diasNovaTarefa \}\)\);/);
+  assert.match(CRM, /setDiasNovaTarefa\(null\);/);
 });
 
 test('editar um item pré-carrega os dias dele — não reseta pra "todo dia" sem querer', () => {
