@@ -12,6 +12,22 @@
 
 ---
 
+## DIR-166.5 — a frase pronta do atalho de setor sai em CAIXA ALTA, igual o padrão dele
+
+**Emitida por:** dono, minutos depois da DIR-166.4 ir pro ar, vendo "Reunião com o setor de Financeiro" aparecer em caixa baixa: *"tá quase perfeito. Só tem um negócio que eu gosto de botar as coisas em caixa alta e quando eu clico tá ficando em caixa baixa. Só edita para quando eu clicar ficar em caixa alta e seguir o padrão."*
+
+**Achado.** `tituloReuniaoComSetor` (DIR-166) sempre montou a frase em capitalização normal de português ("Reunião com o setor de X") — nunca tinha sido pensada contra o padrão real dele, que digita tudo em maiúsculas (visível em toda a rotina: "TÉRMINO TREINO", "FILME MOTIVACIONAL" etc). O atalho existia pra evitar redigitação, mas devolvia um texto fora do padrão que ele teria que corrigir à mão de novo.
+
+**O que entra (`src/lib/metodo.js`):** `tituloReuniaoComSetor` agora devolve `REUNIÃO COM O SETOR DE ${setor.toUpperCase()}` — pura mudança de string, mesma função, mesma assinatura, usada pelos 4 lugares já existentes (DIR-166/166.4) sem tocar em nenhum deles.
+
+**Fora do escopo:** não força maiúsculas em NENHUM outro campo — nem no restante do título livre (a pessoa digita como quiser depois de escolher o setor), nem em outros atalhos de texto do sistema. É só esta frase pronta específica.
+
+**Prova:** suíte completa (3026/3026, `tests/metodo.test.mjs` atualizado pra esperar a frase em caixa alta), lint limpo, `npm run build` sem erro. Mutação: voltei a função pra caixa baixa → o teste quebrou; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-166.4 — o atalho de setor chega na tarefa de hoje (lápis e "nova tarefa do dia")
 
 **Emitida por:** dono, olhando a tela e achando que o botão de setor tinha sumido: *"tu tirou o botão seletor do setor, cara... o setor marketing, tecnologia, financeiro, pra eu selecionar e colocar ali."* Depois, esclarecendo qual parte faltava: *"na verdade você não tirou, só a parte de baixo que está. A parte de cima também tem que ter. E já aproveita e vê se tanto na parte de baixo e a de cima que tu vai adicionar, quando adicionar, vai ficar aparecendo ali na frente, na página."*
