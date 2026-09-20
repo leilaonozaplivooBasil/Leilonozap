@@ -161,3 +161,9 @@ garantia se cumpre sozinha, por construção da Vercel.
 4. Depois de mesclar um PR, sempre confirme direto na Vercel que
    `leilaonozap.net` já está servindo o commit novo antes de dizer "está no
    ar" — link de alias de branch não é prova de produção.
+
+## Onde moram os lances (antes de qualquer diagnóstico de leilão)
+
+- **Lance = linha em `auction_messages` com `message_type = 'bid'`** (`sender_id`, `bid_amount`, `frete_amount`, `created_date`). A tabela `bids` é herança vazia do Base44: **consultar `bids` e concluir "zero lances" é diagnóstico errado**. Em 16/09/2026 isso levou a remover à mão um líder legítimo (caso Alberto, PS5) e a prender R$ 573,22 por 4 dias.
+- Reserva de lance = `app_users.saldo_reservado`, com extrato em `reserva_ledger` (`entrada_reserva` / `saida_reserva`, por leilão e pessoa). Um primeiro lance legítimo deixa `current_price = starting_price`, `version = 1` e `end_time` intacto — isso NÃO é sinal de "vencedor sem lance".
+- Nunca zerar `winner_id` de um leilão por SQL. Use a aplicação (`entityWrite`), que devolve a reserva do líder antes de apagá-lo.
