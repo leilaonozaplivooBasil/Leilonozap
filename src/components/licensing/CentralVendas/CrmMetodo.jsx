@@ -3272,6 +3272,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                               <div className="mt-2 flex flex-wrap items-center gap-2" data-teste="editor-tarefa">
                                 <Input type="time" value={edicao.hora} onChange={(e) => setEdicao({ ...edicao, hora: e.target.value })} className="bg-white border-nz-borda text-nz-tinta w-28 shrink-0" data-teste="editar-hora" />
                                 <Input value={edicao.titulo} onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })} className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[160px]" data-teste="editar-titulo" />
+                                {/* 🏢 20/09/2026 — DIR-166.4: dono, achando que o atalho de
+                                    setor tinha sido removido daqui — nunca existiu neste
+                                    editor, só em "A minha rotina" (DIR-166.1 deixou de fora
+                                    de propósito, por causa do campo de título compartilhado
+                                    da "nova tarefa do dia"). Este editor (o lápis, DIR-80)
+                                    usa um Input comum, não o componente compartilhado — o
+                                    mesmo atalho cabe aqui sem mexer em mais nada. */}
+                                <select value="" onChange={(e) => { if (e.target.value) setEdicao({ ...edicao, titulo: tituloReuniaoComSetor(e.target.value) }); }} className="bg-white border border-nz-borda rounded text-nz-tinta text-[11px] h-9 px-1 shrink-0" data-teste="editar-setor">
+                                  <option value="">reunião com o setor…</option>
+                                  {SETORES_EMPRESA.map((s) => <option key={s} value={s}>{s}</option>)}
+                                </select>
                                 <Button size="sm" onClick={() => tentarSalvarEdicao(t)} disabled={salvando} className="bg-nz-verde hover:bg-nz-verde-claro text-white shrink-0" data-teste="editar-salvar">salvar</Button>
                                 <button type="button" onClick={() => setEditandoId(null)} className="text-[11px] text-nz-tinta-fraca hover:text-nz-tinta shrink-0">cancelar</button>
                                 {/* 🔁 DIR-150 — antes era só um AVISO ("pra mudar todo
@@ -3349,7 +3360,18 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <input type="checkbox" checked={repetirNovaTarefa} onChange={(e) => setRepetirNovaTarefa(e.target.checked)} className="accent-nz-verde" />
                 🔁 repetir esta tarefa todos os dias (vira parte da sua rotina, a partir de amanhã)
               </label>
-              {/* 🗓️ 20/09/2026 — dono: "igual o despertador da Apple" — o
+              {/* 🏢 20/09/2026 — DIR-166.4: dono, sobre o atalho de setor só
+                  existir "na parte de baixo" (incluir na minha rotina): "a
+                  parte de cima também tem que ter". O campo de título aqui é
+                  o `EntradaComDestinos` compartilhado (por isso a DIR-166.1
+                  deixou de fora) — mas o atalho não precisa MEXER nele, só
+                  ESCREVER no mesmo `novaTarefa.titulo` que ele já lê, igual
+                  o seletor de dias logo abaixo já faz sem tocar no
+                  componente. */}
+              <select value="" onChange={(e) => { if (e.target.value) setNovaTarefa((n) => ({ ...n, titulo: tituloReuniaoComSetor(e.target.value) })); }} className="mt-1.5 bg-white border border-nz-borda rounded text-nz-tinta text-[11px] h-9 px-1" data-teste="nova-tarefa-setor">
+                <option value="">reunião com o setor…</option>
+                {SETORES_EMPRESA.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>              {/* 🗓️ 20/09/2026 — dono: "igual o despertador da Apple" — o
                   seletor de dias fica sempre à vista, no mesmo lugar do
                   "repetir" (não escondido atrás de marcar a caixa primeiro,
                   que foi exatamente o que confundiu da última vez). Marcar
