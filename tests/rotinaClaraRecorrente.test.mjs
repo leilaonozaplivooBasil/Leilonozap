@@ -50,7 +50,9 @@ test('a escolha de repetir entra JUNTO de criar a tarefa nova — não só depoi
   assert.match(CRM, /const \[repetirNovaTarefa, setRepetirNovaTarefa\] = useState\(false\);/);
   assert.match(CRM, /data-teste="repetir-nova-tarefa"/);
   assert.match(CRM, /if \(repetirNovaTarefa && !estaNaRotina\(novaTarefa\.hora \|\| '', novaTarefa\.titulo\)\) \{/);
-  assert.match(CRM, /await gravarRotina\(incluirNaRotina\(rotina, \{ hora: novaTarefa\.hora \|\| '', titulo: novaTarefa\.titulo \}\)\);/);
+  // 🗓️ 20/09/2026 — DIR-166.2: o dia da semana escolhido na hora de criar
+  // a tarefa entra no mesmo gravarRotina, não num patch separado.
+  assert.match(CRM, /await gravarRotina\(incluirNaRotina\(rotina, \{ hora: novaTarefa\.hora \|\| '', titulo: novaTarefa\.titulo, dias_semana: diasNovaTarefa \}\)\);/);
 });
 
 test('editar hora/título de hoje ganha a MESMA escolha, não só um aviso passivo', () => {

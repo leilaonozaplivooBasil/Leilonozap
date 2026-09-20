@@ -227,6 +227,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // escolha entra JUNTO de criar a tarefa — não depois, como um segundo
   // passo que ela precisa lembrar de fazer.
   const [repetirNovaTarefa, setRepetirNovaTarefa] = useState(false);
+  // 🗓️ 20/09/2026 — dono: "igual o despertador da Apple" — os mesmos dias
+  // da semana da rotina, aqui também, pra quem já cria a tarefa sabendo
+  // que ela é só de alguns dias (ex.: reunião de marketing só terça).
+  const [diasNovaTarefa, setDiasNovaTarefa] = useState(null);
   const [listasDoQuadro, setListasDoQuadro] = useState([]); // 🔗 pra "também no quadro" da Lista
   const [guiaAberto, setGuiaAberto] = useState(null); // id da tarefa com o guia expandido
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
@@ -1833,10 +1837,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // se ela marcou a caixa (toast próprio, de gravarRotina — não cria
       // duplicata se por acaso já existir uma entrada igual na rotina).
       if (repetirNovaTarefa && !estaNaRotina(novaTarefa.hora || '', novaTarefa.titulo)) {
-        await gravarRotina(incluirNaRotina(rotina, { hora: novaTarefa.hora || '', titulo: novaTarefa.titulo }));
+        await gravarRotina(incluirNaRotina(rotina, { hora: novaTarefa.hora || '', titulo: novaTarefa.titulo, dias_semana: diasNovaTarefa }));
       }
       setNovaTarefa({ hora: '', titulo: '', noQuadro: false, listaId: novaTarefa.listaId });
       setRepetirNovaTarefa(false);
+      setDiasNovaTarefa(null);
       carregarTarefas();
     } catch { toast.error('Erro ao adicionar'); }
   };
@@ -3267,16 +3272,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                       🔁 repetir essa mudança todos os dias (senão, vale só hoje)
                                     </label>
                                     {/* 🗓️ 20/09/2026 — dono: "você sempre tem que parar pra
-                                        fazer aqui de novo" — o dia da semana mora AQUI
-                                        também, junto da correção, não só lá embaixo em
-                                        "A minha rotina". Só aparece quando "repetir" está
-                                        marcado — sem repetir, dia da semana não significa nada. */}
-                                    {repetirEdicao && (
-                                      <div className="w-full flex items-center gap-1.5">
-                                        <span className="text-[10px] text-nz-tinta-fraca shrink-0">em quais dias:</span>
-                                        <SeletorDiasSemana dias={edicao.dias_semana} disabled={salvando} onToggle={(dia) => setEdicao((e) => ({ ...e, dias_semana: alternarDia(e.dias_semana, dia) }))} />
-                                      </div>
-                                    )}
+                                        fazer aqui de novo... igual o despertador da Apple."
+                                        Antes o seletor só aparecia depois de marcar "repetir"
+                                        — e foi exatamente isso que ele não achou, achando que
+                                        o recurso tinha sumido. Agora fica sempre à vista, e
+                                        marcar um dia já liga "repetir" sozinho (escolher dia
+                                        só faz sentido pra algo recorrente). */}
+                                    <div className="w-full flex items-center gap-1.5">
+                                      <span className="text-[10px] text-nz-tinta-fraca shrink-0">em quais dias:</span>
+                                      <SeletorDiasSemana dias={edicao.dias_semana} disabled={salvando} onToggle={(dia) => { setEdicao((e) => ({ ...e, dias_semana: alternarDia(e.dias_semana, dia) })); setRepetirEdicao(true); }} />
+                                    </div>
                                   </>
                                 ) : (
                                   <p className="w-full text-[10px] text-nz-tinta-fraca">isto muda só o dia de hoje — o horário do Ritual do Amanhecer é definido nele mesmo.</p>
@@ -3327,6 +3332,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 <input type="checkbox" checked={repetirNovaTarefa} onChange={(e) => setRepetirNovaTarefa(e.target.checked)} className="accent-nz-verde" />
                 🔁 repetir esta tarefa todos os dias (vira parte da sua rotina, a partir de amanhã)
               </label>
+              {/* 🗓️ 20/09/2026 — dono: "igual o despertador da Apple" — o
+                  seletor de dias fica sempre à vista, no mesmo lugar do
+                  "repetir" (não escondido atrás de marcar a caixa primeiro,
+                  que foi exatamente o que confundiu da última vez). Marcar
+                  um dia já liga "repetir" sozinho — escolher dia só faz
+                  sentido pra algo recorrente. */}
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[10px] text-nz-tinta-fraca shrink-0">em quais dias:</span>
+                <SeletorDiasSemana dias={diasNovaTarefa} disabled={salvando} onToggle={(dia) => { setDiasNovaTarefa((d) => alternarDia(d, dia)); setRepetirNovaTarefa(true); }} />
+              </div>
             </div>
             )}
             {/* ══ 📅 DIR-80 — A MINHA ROTINA (o modelo, não o dia) ══

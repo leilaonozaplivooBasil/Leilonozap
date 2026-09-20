@@ -12,6 +12,26 @@
 
 ---
 
+## DIR-166.2 — o seletor de dias sai de trás do checkbox, em todo lugar, e entra também na "nova tarefa do dia"
+
+**Emitida por:** dono, testando de novo e batendo na MESMA queixa da DIR-166.1 pela segunda vez, agora com print mostrando o editor de tarefa aberto e o checkbox "repetir" desmarcado: *"Eu não tenho onde editar os dias, de botar recorrente nos dias... Faz análise primeiro e escreve aqui."* Depois, já com a análise escrita e confirmada, o pedido completo por voz: *"tanto a rotina de cima quando eu edito tem que ir para baixo, tanto a de baixo tem que ir para cima... eu tenho dois lugares para incluir tarefa... qualquer um dos dois que eu editar tem que alimentar um ou outro ou unificar essa porra aí pra ficar uma coisa melhor... também tem que ter no lapizinho os dias da semana... igual o relógio do despertador da Apple, igualzinho — colocar a semana toda, só as segundas."*
+
+**Achado — a DIR-166.1 corrigiu o lugar errado da falha.** O seletor de dias foi adicionado ao editor da tarefa de hoje, mas escondido atrás de `{repetirEdicao && (...)}` — só aparecia DEPOIS de marcar "repetir essa mudança todos os dias". No print do dono a caixa estava desmarcada, então o seletor simplesmente não existia na tela pra ele. Mesmo problema de fundo da DIR-166.1 (recurso real, mas invisível no primeiro lugar que ele olha), agora batido pela segunda vez.
+
+**O que entra (`CrmMetodo.jsx`):**
+1. O `SeletorDiasSemana` fica **sempre visível** nos dois lugares que já tinham a caixa de "repetir" (editor da tarefa de hoje e "nova tarefa do dia" no topo) — nenhuma condição de checkbox esconde mais o seletor. Marcar um dia agora **liga sozinho** o "repetir" correspondente (`setRepetirEdicao(true)` / `setRepetirNovaTarefa(true)`) — escolher um dia da semana só faz sentido pra algo recorrente, então o gesto natural já ativa a recorrência, sem passo extra.
+2. **"Nova tarefa do dia" (topo) ganha o seletor de dias**, que antes só existia em "A minha rotina" — novo estado `diasNovaTarefa`, gravado junto no mesmo `gravarRotina(incluirNaRotina(...))` que já existia pro "repetir esta tarefa todos os dias" (DIR-150).
+
+**Decisão sobre unificar os dois lugares de incluir tarefa:** o dono perguntou se dava pra ter só um. Mantive os dois, por serem coisas diferentes por baixo — "nova tarefa do dia" cria uma tarefa PARA HOJE (que pode opcionalmente virar recorrente), e "incluir na minha rotina" cria um item que só existe pra gerar dias FUTUROS, sem nascer uma tarefa hoje. Fundi o que causava a queixa (controles inconsistentes entre os dois — um tinha seletor de dias, o outro não) em vez de apagar um dos dois; ambos agora oferecem os mesmos controles (hora, título, setor, dias da semana). Fica registrado aqui pro dono dizer se quer ainda assim uma fusão mais profunda.
+
+**Fora do escopo:** não mexe em `EntradaComDestinos` (componente compartilhado) nem no atalho de setor da "nova tarefa do dia" — aquele campo de título continua sendo o componente compartilhado por outras telas, mesma fronteira já registrada na DIR-166.1.
+
+**Prova:** suíte completa (3023/3023, testes de `tests/rotinaDiasDaSemanaESetor.test.mjs` reescritos + 1 teste desatualizado corrigido em `tests/rotinaClaraRecorrente.test.mjs`), lint limpo, `npm run build` sem erro. Mutação: (1) recolocado `{repetirEdicao && (...)}` escondendo o seletor → teste "NUNCA fica escondido" quebrou; revertido. (2) removido `dias_semana: diasNovaTarefa` da gravação da nova tarefa → 2 testes quebraram; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-166.1 — o dia da semana também na edição da tarefa de hoje, não só em "A minha rotina"
 
 **Emitida por:** dono, minutos depois da DIR-166 ir pro ar, editando uma tarefa pelo lápis no topo do dia e não achando o seletor de dias ali: *"KD AS MELHORIAS QUE TE PEDI???? ENTROU AONDE, JÁ FOI COLOCADA EM PRODUÇÃO??"* — confirmado que sim (print do próprio painel de Deployments da Vercel), mas o seletor só existia dentro de "A minha rotina" (painel recolhido, lá embaixo), não no editor rápido de cada tarefa (o lápis, no topo do dia) — exatamente o lugar que ele abriu primeiro.
