@@ -5,6 +5,7 @@
 import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
+import { abativelPara } from '../../src/lib/passaporteNaCompra.js';
 import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
 import { exigirSessao } from '../_lib/sessao.js';
 
@@ -90,7 +91,7 @@ export default async function handler(req, res) {
     // debitarCupomDaVenda, no confirm do pagamento (FIFO por todos os cupons).
     let passaporte_desconto = 0;
     if (body?.use_passaporte === true && buyer?.id) {
-      const abativel = round2(Math.max(0, total - 1));
+      const abativel = abativelPara(total, 'CREDIT_CARD');
       const pc = abativel > 0 ? await calcularDesconto(buyer.id, abativel) : null;
       if (pc) { passaporte_desconto = pc.desconto; }
     }

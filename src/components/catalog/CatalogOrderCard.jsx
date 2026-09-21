@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star, FileText } from 'lucide-react';
 import { Stars } from '@/components/loja/StarRating';
 import { imagemPedido, imagemFallback } from '@/lib/imagemPedido';
+import { itensDoPedido, quantosItens } from '@/lib/itensDoPedido';
 import PagarNovamenteBotao from '@/components/catalog/PagarNovamenteBotao';
 
 // 🧩 Card de pedido da Loja Virtual — COMPARTILHADO entre MyCatalogOrders e a aba
@@ -65,6 +66,31 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
           <h3 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-green-300 transition-colors">
             {order.product_title}
           </h3>
+
+          {/* 📦 21/09/2026 — O PEDIDO PRECISA DIZER O QUE TEM DENTRO.
+              Antes só o primeiro produto aparecia aqui. Um cliente que comprou
+              quatro coisas por R$ 211,13, com o crédito cobrindo quase tudo,
+              leu "Kit 10 Lâmpada — Total: R$ 1,00" e entendeu que tinha levado
+              uma lâmpada e perdido o crédito. O painel do operador já mostrava
+              "4 itens"; a tela de quem pagou, não. */}
+          {(() => {
+            const itens = itensDoPedido(order);
+            if (!itens) return null;
+            return (
+              <div className="mt-2" data-teste="pedido-varios-itens">
+                <p className="text-[11px] font-bold text-green-400">
+                  {quantosItens(order)} itens neste pedido
+                </p>
+                <ul className="mt-1 space-y-0.5">
+                  {itens.map((it, i) => (
+                    <li key={`${it.title}-${i}`} className="text-[11px] text-gray-400 leading-snug line-clamp-1">
+                      {(Number(it.qty) || 1) > 1 ? `${it.qty}× ` : ''}{it.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
         </div>
 
         {/* DATA + HORA */}

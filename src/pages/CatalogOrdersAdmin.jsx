@@ -1,3 +1,4 @@
+import { itensDoPedido } from '@/lib/itensDoPedido';
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -122,22 +123,10 @@ const getFrete = (order) => {
   };
 };
 
-// 📦 PONTO 90 — itens do pedido. Pedidos com mais de um produto guardam a lista completa
-// em dois formatos diferentes, dependendo de onde a compra foi feita: items_json (coluna
-// própria, usada pela loja da rede /loja/:slug) ou raw_base44.items (Loja Virtual principal).
-// Sem isso, a separação só via o título resumido do pedido (ex: "Kit Drive +1 item(ns)")
-// e não sabia o que embalar além do item principal.
-const getItems = (order) => {
-  if (Array.isArray(order?.items_json) && order.items_json.length > 1) {
-    return order.items_json.map((it) => ({ title: it.title || it.product_name || 'Item', qty: it.qty || it.quantity || 1 }));
-  }
-  let raw = order?.raw_base44;
-  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
-  if (Array.isArray(raw?.items) && raw.items.length > 1) {
-    return raw.items.map((it) => ({ title: it.title || 'Item', qty: it.qty || 1 }));
-  }
-  return null;
-};
+// 📦 PONTO 90 — itens do pedido. A função saiu daqui em 21/09/2026: o cartão do
+// CLIENTE precisava da mesma conta e não tinha acesso a ela, então mostrava só o
+// primeiro produto (ver src/lib/itensDoPedido.js para o caso que provocou isso).
+const getItems = (order) => itensDoPedido(order);
 
 // 📦 Checklist SEMPRE mostra ao menos o produto principal como card clicável
 // (mesmo pedido de 1 item só) — não fica só em texto/descrição.

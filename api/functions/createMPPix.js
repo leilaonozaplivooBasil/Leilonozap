@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { oid } from '../_lib/oid.js';
 import { calcularDesconto } from '../_lib/passaporteCoupon.js';
 import { resolverFreteDoCheckout } from '../_lib/frete.js';
+import { abativelPara, MINIMO_COBRAVEL } from '../../src/lib/passaporteNaCompra.js';
 import { reservarItensDaVenda, devolverItem } from '../_lib/estoqueReserva.js';
 import { exigirSessao } from '../_lib/sessao.js';
 
@@ -125,14 +126,14 @@ export default async function handler(req, res) {
     // usuário, sem precisar saber qual cupom específico foi usado aqui.
     let passaporte_desconto = 0;
     if (body?.use_passaporte === true && buyer?.id) {
-      const abativel = round2(Math.max(0, total - 1));
+      const abativel = abativelPara(total, 'PIX');
       const pc = abativel > 0 ? await calcularDesconto(buyer.id, abativel) : null;
       if (pc) {
         passaporte_desconto = pc.desconto;
         total = round2(total - passaporte_desconto);
       }
     }
-    if (total < 1) return res.status(400).json({ success: false, error: 'Valor mínimo para pagamento: R$ 1,00' });
+    if (total < MINIMO_COBRAVEL) return res.status(400).json({ success: false, error: `Valor mínimo para pagamento: R$ ${MINIMO_COBRAVEL},00` });
 
     // 🚚 PONTO 74 — frete RECOTADO no servidor (o cliente só manda o ID da transportadora).
     // total_amount continua sendo SÓ produtos (base da comissão); o frete vai separado.
