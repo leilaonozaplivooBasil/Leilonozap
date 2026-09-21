@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Map, ListChecks, LayoutGrid, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
+import { Map, ListChecks, LayoutGrid, Network, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
 // 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Eu no Game"
@@ -44,6 +44,10 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
     { id: 'jornada', rotulo: 'Jornada', Icone: Map },
     { id: 'lista', rotulo: 'Lista', Icone: ListChecks },
     { id: 'quadro', rotulo: 'Quadro', Icone: LayoutGrid },
+    // 🗺️ 21/09/2026 — o quarto lado, pedido do dono em áudio de 19/09:
+    // "criar um mapa mental ali do lado, ligado ao quadro". Entra aqui, no
+    // mesmo seletor, e não num botão solto — é mais uma VISÃO da mesma mesa.
+    { id: 'mapa', rotulo: 'Mapa', Icone: Network },
   ];
 
   return (

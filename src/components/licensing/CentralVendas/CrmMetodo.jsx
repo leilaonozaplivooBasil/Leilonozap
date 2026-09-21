@@ -72,6 +72,7 @@ import { comBloco, statusDoRitual, seloDoRitual, pendenciasDoRitual, ritualRetom
 import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
+import MapaMental from './MapaMental';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
@@ -3018,7 +3019,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* 🗂️ DIR-75 — o nosso quadro é uma VISÃO do dia, e vem antes do
                 "dia vazio": a mesa da organização existe mesmo num dia sem
                 Master Task gerada. */}
-            {visao === 'quadro' ? (
+            {visao === 'mapa' ? (
+              /* 🗺️ O mapa mental. Não recebe usuário: o dono sai do crachá,
+                 no servidor — passar daqui seria oferecer ao navegador um
+                 jeito de pedir o mapa alheio. */
+              <MapaMental />
+            ) : visao === 'quadro' ? (
               <QuadroCompromisso
                 currentUser={currentUser}
                 hojeISO={dia}

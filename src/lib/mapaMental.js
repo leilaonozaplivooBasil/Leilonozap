@@ -127,3 +127,46 @@ export function renomearNo(nos, noId, texto) {
   if (!limpo) return nos || [];
   return (nos || []).map((n) => (n?.id === noId ? { ...n, texto: limpo } : n));
 }
+
+/** Tamanho do card na tela. A régua precisa saber para não empilhar dois. */
+export const LARGURA_NO = 172;
+export const ALTURA_NO = 44;
+/** Respiro entre cards. */
+const FOLGA_X = 56;
+const FOLGA_Y = 18;
+
+/** Dois cards se cobrem? */
+export function seSobrepoem(a, b) {
+  if (!a || !b) return false;
+  return (
+    a.x < b.x + LARGURA_NO && a.x + LARGURA_NO > b.x
+    && a.y < b.y + ALTURA_NO && a.y + ALTURA_NO > b.y
+  );
+}
+
+/**
+ * Onde pendurar um filho novo sem cobrir ninguém.
+ *
+ * 🔴 POR QUE ISTO EXISTE (21/09/2026)
+ * A primeira versão punha o filho em `pai.x + largura + folga`, descendo pelo
+ * número de irmãos. Funciona para UM ramo — e quebra assim que dois ramos
+ * crescem: o filho de um pai cai exatamente em cima do filho de outro, e o de
+ * baixo some da vista. Apareceu no primeiro print com o mapa cheio.
+ *
+ * Agora o lugar é à direita do pai e, se estiver ocupado, DESCE até achar vaga.
+ * Simples, previsível, e nunca esconde nada.
+ */
+export function lugarDoFilho(nos, paiId) {
+  const pai = (nos || []).find((n) => n?.id === paiId);
+  const x = (pai?.x || 0) + LARGURA_NO + FOLGA_X;
+  let y = pai?.y || 0;
+  // Desce de um card por vez até a vaga estar livre. O teto evita laço infinito
+  // se a tela estiver impossível — melhor empilhar que travar a aba.
+  for (let tentativa = 0; tentativa < 60; tentativa += 1) {
+    const candidato = { x, y };
+    const ocupado = (nos || []).some((n) => n && n.id !== paiId && seSobrepoem(candidato, n));
+    if (!ocupado) return candidato;
+    y += ALTURA_NO + FOLGA_Y;
+  }
+  return { x, y };
+}

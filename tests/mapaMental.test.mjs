@@ -12,7 +12,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   noNovo, filhosDe, raizDe, descendentesDe, podeVirarFilho, moverNo,
-  apagarNo, quantosCaemJunto, demandaDoNo, renomearNo,
+  apagarNo, quantosCaemJunto, demandaDoNo, renomearNo, lugarDoFilho, seSobrepoem,
+  LARGURA_NO, ALTURA_NO,
 } from '../src/lib/mapaMental.js';
 
 /*  raiz
@@ -147,5 +148,53 @@ describe('renomear', () => {
 
   test('🔴 texto vazio é recusado — nó sem texto não se acha de volta', () => {
     assert.deepEqual(renomearNo(ARVORE, 'b', '   '), ARVORE);
+  });
+});
+
+describe('🔴 onde o filho novo é pendurado — sem cobrir ninguém', () => {
+  test('o primeiro filho vai à direita do pai', () => {
+    const nos = [{ id: 'p', texto: 'pai', pai: null, x: 40, y: 100 }];
+    const lugar = lugarDoFilho(nos, 'p');
+    assert.equal(lugar.x, 40 + LARGURA_NO + 56);
+    assert.equal(lugar.y, 100);
+  });
+
+  test('🔴 se o lugar está ocupado, DESCE — não empilha em cima', () => {
+    // O defeito que o primeiro print mostrou: a conta antiga descia pelo número
+    // de IRMÃOS, o que funciona num ramo só. Com dois ramos crescendo, o filho
+    // de um pai caía exatamente em cima do filho do outro, e o de baixo sumia.
+    const x = 40 + LARGURA_NO + 56;
+    const nos = [
+      { id: 'p', texto: 'pai', pai: null, x: 40, y: 100 },
+      { id: 'intruso', texto: 'de outro ramo', pai: 'outro', x, y: 100 },
+    ];
+    const lugar = lugarDoFilho(nos, 'p');
+    assert.equal(lugar.x, x);
+    assert.ok(lugar.y >= 100 + ALTURA_NO, `caiu em cima do intruso (y=${lugar.y})`);
+  });
+
+  test('🔴 desce quantas vezes precisar', () => {
+    const x = 40 + LARGURA_NO + 56;
+    const nos = [
+      { id: 'p', texto: 'pai', pai: null, x: 40, y: 100 },
+      ...Array.from({ length: 4 }, (_, i) => ({
+        id: `i${i}`, texto: 'x', pai: 'outro', x, y: 100 + i * (ALTURA_NO + 18),
+      })),
+    ];
+    const lugar = lugarDoFilho(nos, 'p');
+    const bateu = nos.slice(1).some((n) => seSobrepoem({ ...lugar }, n));
+    assert.equal(bateu, false, 'o lugar escolhido cobre um card existente');
+  });
+
+  test('a sobreposição é medida pelo TAMANHO do card, não pelo ponto', () => {
+    // Dois cards a 10px um do outro se cobrem, mesmo com x e y diferentes.
+    assert.equal(seSobrepoem({ x: 0, y: 0 }, { x: 10, y: 10 }), true);
+    assert.equal(seSobrepoem({ x: 0, y: 0 }, { x: LARGURA_NO + 1, y: 0 }), false);
+    assert.equal(seSobrepoem({ x: 0, y: 0 }, { x: 0, y: ALTURA_NO + 1 }), false);
+  });
+
+  test('pai que não existe não derruba — devolve um lugar utilizável', () => {
+    const l = lugarDoFilho([], 'fantasma');
+    assert.ok(Number.isFinite(l.x) && Number.isFinite(l.y));
   });
 });
