@@ -425,6 +425,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     [rotina, eventosAtivos, dia, uid],
   );
   const estadoRotina = useMemo(() => estadoDaRotina(perfil), [perfil]);
+  // 🗓️ 21/09/2026 — dono: "precisa ter como ver a rotina pra frente com a
+  // data do dia seguinte, comprovando que está salva." O rótulo do dia em
+  // que a rotina automática passa a valer (dia da semana + data) — mesma
+  // conta de `valeAPartirDe`, só formatado pra tela.
+  const proximoDiaRotina = useMemo(() => {
+    const iso = valeAPartirDe(hojeStr());
+    if (!iso) return null;
+    const diaSemana = DIAS_SEMANA[new Date(`${iso}T12:00:00`).getDay()];
+    return `${diaSemana}, ${iso.split('-').reverse().slice(0, 2).join('/')}`;
+  }, []);
   const progresso = progressoDia(tarefas);
 
   // ══ 🎮 X-GAME por cima do Master Task (mesma tela, zero mudança de fluxo) ══
@@ -1894,9 +1904,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // via todo dia. `salvando` (que já trava "repetir o dia inteiro",
   // DIR-151) agora trava TODOS os botões que leem `rotina` — cada clique
   // espera o anterior voltar do banco antes de poder partir dele.
+  // 🐛 21/09/2026 — dono, achando o dia seguinte vazio mesmo tendo "clicado
+  // em salvar": SALVAR a rotina (aqui) nunca ligava a repetição automática
+  // — só o botão separado "gerar o dia" (`gerarDia`, DIR-80/81) fazia isso,
+  // e ele nunca tinha clicado nele (ou tinha clicado em "parar de gerar
+  // todo dia" antes e esquecido). Quem edita/salva a rotina quer ela
+  // repetindo — não devia depender de um segundo clique escondido num
+  // botão diferente pra isso valer de verdade. Agora SALVAR liga sozinho
+  // quando ainda não tava ligada (inclusive desfazendo um "parar" antigo),
+  // e o toast prova com a DATA e o DIA DA SEMANA em que passa a valer —
+  // não só "amanhã".
   const gravarRotina = async (nova) => {
-    const ok = await salvarPerfil({ rotina: nova });
-    if (ok) toast.success(`Rotina salva — vale a partir de ${valeAPartirDe(hojeStr())?.split('-').reverse().slice(0, 2).join('/') || 'amanhã'}.`);
+    const patch = { rotina: nova };
+    if (!estadoRotina.automatica) {
+      patch.rotina_automatica = true;
+      patch.rotina_automatica_recusada = false;
+      patch.rotina_automatica_desde = valeAPartirDe(hojeStr());
+    }
+    const ok = await salvarPerfil(patch);
+    if (ok) toast.success(`Rotina salva — ${proximoDiaRotina || 'amanhã'} já nasce com ela sozinho.`);
     else toast.error('Erro ao salvar a rotina');
     return ok;
   };
@@ -3418,16 +3444,22 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 >
                   <span className="text-[13px] font-bold text-nz-tinta">
                     📅 A minha rotina <span className="font-medium text-nz-tinta-fraca">· {rotina.length} itens · {estadoRotina.propria ? 'sua' : 'a padrão da casa'}</span>
+                    {/* 🗓️ 21/09/2026 — dono: "precisa ter como ver a rotina pra
+                        frente... comprovando que está salva" — visível SEM
+                        precisar abrir o painel. */}
+                    <span className={`ml-1.5 text-[11px] font-semibold ${estadoRotina.automatica ? 'text-nz-verde' : 'text-red-600'}`} data-teste="rotina-selo-automatica">
+                      {estadoRotina.automatica ? `· ✅ liga sozinha` : '· ⏸ parada'}
+                    </span>
                   </span>
                   <span className="text-[11px] font-semibold text-nz-verde shrink-0">{rotinaAberta ? '▾ fechar' : '▸ editar'}</span>
                 </button>
                 {rotinaAberta && (
                   <div className="px-3 pb-3 space-y-2">
                     <div className="flex flex-wrap items-center gap-2 rounded-lg bg-nz-verde-fundo px-2.5 py-2">
-                      <span className="text-[11px] text-nz-tinta">
+                      <span className="text-[11px] text-nz-tinta" data-teste="rotina-status-automatica">
                         {estadoRotina.automatica
-                          ? 'Está ligada: todo dia nasce com a sua rotina.'
-                          : 'Ainda não se repete. Gere um dia e ela passa a nascer sozinha.'}
+                          ? `✅ Está ligada — ${proximoDiaRotina || 'o próximo dia'} já nasce sozinho com ela.`
+                          : 'Ainda não se repete. Salve um item, ou gere um dia, e ela passa a nascer sozinha.'}
                       </span>
                       {estadoRotina.automatica && (
                         <button
