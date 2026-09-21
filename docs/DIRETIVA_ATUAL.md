@@ -12,6 +12,33 @@
 
 ---
 
+## DIR-170 — auditoria diligente do Ritual do Amanhecer: ajuda humana depois de tentar muito, o motivo da IA num lugar que dá pra ler, e a câmera parando de cortar a pessoa
+
+**Emitida por:** dono, vendo a Sophia Sant'anna (9 anos) travada no ritual, reprovada 11 vezes num único dia (22 no dia 17/09): *"faz uma auditoria no da Sofia... vamos fazer uma análise bem diligente em todo o ritual pra ver o que pode estar tá ruim, a cor, a comunicação."* Depois, com a análise na mão: *"essa chance de explicar tem que vir com um fundo, bem bonito, negrito... leia com atenção... e aí vinha o erro escrito com um fundo do texto, porque senão a pessoa não lê. A barra do vídeo precisa estar mais visual, os segundos precisa contar. O batimento das fotos precisa abrir melhor, maior a câmera — pegando praticamente o celular todo. Aplica tudo, sem quebrar o que já está funcionando."*
+
+**Achado 1 — a IA se contradisse na cara.** A foto do "acordei" da Sophia hoje: a própria IA descreveu "uma criança sorrindo, em pé numa sala de casa" — e mesmo assim reprovou dizendo "não aparece a pessoa responsável pela tarefa". A régua "pessoa errada é reprovação direta" (criada em 16/09 por causa de OUTRO caso dela, quando fotos de criança geravam só "dúvida" e quase passavam por brecha) endureceu demais: passou a tratar "não tenho certeza absoluta de quem é" como se fosse "é claramente outra pessoa" — e uma criança sem Instagram/print de story nunca vai ter como provar identidade com certeza absoluta.
+
+**Achado 2 — auditoria de produção confirma que é ela, não "todo mundo".** Nos últimos 7 dias, quase todo mundo fecha o ritual em ~4 tentativas. A Sophia teve 11 hoje, 22 em 17/09, 6 (reprovado) em 15/09 — a clara exceção, não a regra.
+
+**Achado 3 — sem regra pra "não tem pessoa nenhuma na imagem".** O vídeo da visualização dela (aparentemente um bichinho/quintal no frame) caiu num balde genérico de "reprova se for gritante", sem chance de explicar — podia ser só um frame ruim de um vídeo real.
+
+**Achado 4 — câmera cortada.** A câmera ao vivo do bloco Visualização era um círculo de 160×160px (`w-40 h-40 rounded-full`), cortando a pessoa pelos quatro cantos. A barra de progresso do vídeo (`DicaDaEtapa`) some assim que bate o mínimo de 120s — dos 2 aos 15 minutos de gravação, sobra só o número do cronômetro, sem barra nenhuma.
+
+**Correção pontual do dado:** o ritual de hoje da Sophia foi aprovado manualmente direto no banco (os dois vereditos originais da IA foram preservados como histórico, não apagados — só marcados como revisão manual).
+
+**O que entra:**
+1. `api/functions/xgameValidarPrint.js` — a régua de identidade ganha uma revisão: pessoa REAL e visível, sem sinal concreto de ser outra pessoa, vira aprovada mesmo sem prova de identidade (a régua antiga contra pessoa CLARAMENTE errada continua de pé). Imagem sem nenhuma pessoa (grama, animal, objeto) ganha regra própria: pergunta antes de reprovar, em vez de julgamento livre.
+2. `src/lib/ritualEmBlocos.js` — depois de 3 "refazer" no MESMO bloco (`REFAZER_ANTES_DE_AJUDA`), a pessoa ganha a opção de **pedir ajuda a um gestor**, sem perder o direito de continuar tentando. `CrmMetodo.jsx` grava o pedido (`pedirAjudaNoRitual`) sem mexer em status/valido — o ritual continua visível na fila de "em análise" do gestor.
+3. `XGameRitualAmanhecer.jsx` — o painel de atenção ganha um selo "⚠️ Leia com atenção" e o motivo real da IA vira uma caixa clara, em negrito (era texto translúcido, fácil de pular). Cada estado (refazer / dúvida / pode pedir ajuda / ajuda pedida) ganha um tom de cor próprio, mais forte que antes. A câmera da visualização passa a ocupar quase a largura toda da tela, em retrato, sem cortar em círculo. A barra de progresso do vídeo não some mais depois do mínimo — continua visível (em verde, "já vale") até o teto de segurança de 15 minutos.
+
+**Fora do escopo (conferido e descartado, não esquecido):** a câmera de foto comum (`XGameComprovarModal.jsx`, usada nas tarefas da Lista) já é `w-full aspect-video` — não é um "quadradinho cortado", não mexi. Jornada e Quadro dos Sonhos não têm câmera nenhuma (mapeado por agente dedicado) — não há o que aumentar lá.
+
+**Prova:** suíte completa (3127/3127, `tests/ritualAjudaHumanaEVisual.test.mjs` novo com 19 testes), lint limpo, `npm run build` sem erro. Mutação: (1) troquei `>=` por `>` no limite de ajuda → 2 testes quebraram; revertido. (2) desliguei a prioridade de `ajudaPedida` sobre `podePedirAjuda` → 2 testes quebraram; revertido. (3) troquei "trate como aprovada" por "reprovada" no prompt → 1 teste quebrou; revertido. (4) voltei a câmera pro círculo cortado antigo → 1 teste quebrou; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-169 — salvar a rotina passa a ligar a repetição sozinha, com a data à mostra
 
 **Emitida por:** dono (21/09/2026), depois da correção pontual que trouxe de volta os itens de hoje da rotina dele: *"eu cliquei em salvar, veja o botão se está funcionando. É melhor quando salvar a rotina precisa ter como ver a rotina pra frente com a data do dia seguinte comprovando que está salva."*

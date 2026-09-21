@@ -155,7 +155,7 @@ function BarraDosBlocos({ feitos, atual }) {
   );
 }
 
-export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir, onExplicar, onRefazer }) {
+export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir, onExplicar, onRefazer, onPedirAjuda }) {
   // 🙏 DIR-121 — a régua de HOJE, crescendo dia a dia (ver xgame.js).
   const metaMotivosHoje = metaMotivosGratidaoHoje(diaCorridoCiclo);
   const minSegHoje = gratidaoAudioMinSegHoje(diaCorridoCiclo);
@@ -477,6 +477,14 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     setPasso(PASSO_DO_BLOCO[bloco]);
   };
 
+  // 🆘 pedir ajuda humana não devolve a pessoa pro bloco nem tira a
+  // comprovação de casa — só registra o pedido. A tela continua mostrando o
+  // resto do ritual do jeito que está.
+  const pedirAjuda = async (bloco) => {
+    const nova = await onPedirAjuda?.(bloco);
+    if (nova) setComprovacao(nova);
+  };
+
   const salvarAcordei = async () => {
     if (!print) return;
     const hash = await hashDoArquivo(print).catch(() => '');
@@ -624,71 +632,117 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
             Dúvida → a pessoa CONTEXTUALIZA e a IA reavalia com a explicação.
             Reprovado, ou dúvida que sobreviveu à explicação → REFAZER só
             aquela etapa, com o resto do ritual intacto. */}
-        {blocosQuePedemAtencao(comprovacao).map((r) => (
-          <div
-            key={r.bloco}
-            data-teste={`atencao-${r.bloco}-${r.passo}`}
-            className={`xeos-cru rounded-2xl p-4 text-left space-y-2.5 ring-1 ${r.passo === 'refazer' ? 'bg-red-400/12 ring-red-300/40' : 'bg-amber-400/12 ring-amber-300/40'}`}
-          >
-            <p className={`text-[12px] font-extrabold flex items-center gap-1.5 ${r.passo === 'refazer' ? 'text-red-100' : 'text-amber-100'}`}>
-              <AlertTriangle className="w-4 h-4" strokeWidth={2.4} />{r.titulo}
-            </p>
-            {r.motivo && <p className="text-[12px] leading-relaxed text-white/85">{r.motivo}</p>}
-            <p className="text-[12px] font-bold text-white">{r.texto}</p>
+        {blocosQuePedemAtencao(comprovacao).map((r) => {
+          // 🎨 21/09/2026 — dono: "está colocando em cima e a pessoa fica
+          // parecendo que é erro... tem que botar uma explicação, leia com
+          // atenção, e aí vinha o erro escrito com um fundo do texto". Cada
+          // estado ganha um tom PRÓPRIO (não só vermelho/âmbar genérico), e o
+          // texto que a IA escreveu de verdade ganha uma caixa clara e em
+          // negrito por cima do painel translúcido — é ELE que a pessoa
+          // precisa ler, não só o título.
+          const tom = r.ajudaPedida
+            ? { fundo: 'bg-sky-500/20', anel: 'ring-sky-300/60', titulo: 'text-sky-50', selo: 'bg-sky-400/30 text-sky-50' }
+            : r.podePedirAjuda
+              ? { fundo: 'bg-violet-500/20', anel: 'ring-violet-300/60', titulo: 'text-violet-50', selo: 'bg-violet-400/30 text-violet-50' }
+              : r.passo === 'refazer'
+                ? { fundo: 'bg-red-500/20', anel: 'ring-red-300/60', titulo: 'text-red-50', selo: 'bg-red-500/35 text-red-50' }
+                : { fundo: 'bg-amber-400/20', anel: 'ring-amber-300/60', titulo: 'text-amber-50', selo: 'bg-amber-400/35 text-amber-50' };
+          return (
+            <div
+              key={r.bloco}
+              data-teste={`atencao-${r.bloco}-${r.passo}`}
+              className={`xeos-cru rounded-2xl p-4 text-left space-y-3 ring-2 ${tom.fundo} ${tom.anel}`}
+              style={{ boxShadow: '0 6px 24px rgba(0,0,0,0.25)' }}
+            >
+              <p className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${tom.selo}`} data-teste={`leia-com-atencao-${r.bloco}`}>
+                <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2.8} /> Leia com atenção
+              </p>
+              <p className={`text-[15px] font-extrabold leading-snug ${tom.titulo}`}>{r.titulo}</p>
+              {r.motivo && (
+                <p className="text-[13px] leading-relaxed font-bold text-[#3d1f3f] bg-white/95 rounded-xl px-3 py-2.5" data-teste={`motivo-${r.bloco}`}>
+                  {r.motivo}
+                </p>
+              )}
+              <p className="text-[12px] font-semibold text-white/90">{r.texto}</p>
 
-            {r.passo === 'explicar' ? (
-              explicando === r.bloco ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={textoExplicacao}
-                    onChange={(e) => setTextoExplicacao(e.target.value)}
-                    rows={3}
-                    autoFocus
-                    placeholder="Escreve aqui, com as suas palavras…"
-                    className="w-full rounded-xl bg-black/25 border border-white/25 text-white text-[13px] p-3 placeholder:text-white/40"
-                  />
+              {r.passo === 'explicar' ? (
+                explicando === r.bloco ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={textoExplicacao}
+                      onChange={(e) => setTextoExplicacao(e.target.value)}
+                      rows={3}
+                      autoFocus
+                      placeholder="Escreve aqui, com as suas palavras…"
+                      className="w-full rounded-xl bg-black/25 border border-white/25 text-white text-[13px] p-3 placeholder:text-white/40"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={!textoExplicacao.trim() || enviandoExplicacao}
+                        onClick={() => enviarExplicacao(r.bloco)}
+                        data-teste={`enviar-explicacao-${r.bloco}`}
+                        className="xeos-cru flex-1 rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 disabled:opacity-40"
+                      >{enviandoExplicacao ? 'mandando…' : 'Mandar minha explicação'}</button>
+                      <button
+                        type="button"
+                        onClick={() => { setExplicando(''); setTextoExplicacao(''); }}
+                        className="rounded-xl border border-white/30 text-white/80 text-[12px] font-bold px-3 py-2.5 hover:bg-white/10"
+                      >agora não</button>
+                    </div>
+                  </div>
+                ) : (
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      disabled={!textoExplicacao.trim() || enviandoExplicacao}
-                      onClick={() => enviarExplicacao(r.bloco)}
-                      data-teste={`enviar-explicacao-${r.bloco}`}
-                      className="xeos-cru flex-1 rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 disabled:opacity-40"
-                    >{enviandoExplicacao ? 'mandando…' : 'Mandar minha explicação'}</button>
+                      onClick={() => { setExplicando(r.bloco); setTextoExplicacao(''); }}
+                      data-teste={`explicar-${r.bloco}`}
+                      className="xeos-cru flex-1 rounded-xl bg-white/15 border border-white/30 text-white text-[12px] font-bold px-4 py-2.5 hover:bg-white/25"
+                    >Explicar</button>
+                    {/* quem prefere refazer direto não é obrigado a se justificar */}
                     <button
                       type="button"
-                      onClick={() => { setExplicando(''); setTextoExplicacao(''); }}
+                      onClick={() => refazerBloco(r.bloco)}
+                      data-teste={`refazer-direto-${r.bloco}`}
                       className="rounded-xl border border-white/30 text-white/80 text-[12px] font-bold px-3 py-2.5 hover:bg-white/10"
-                    >agora não</button>
+                    >refazer</button>
                   </div>
-                </div>
-              ) : (
+                )
+              ) : r.ajudaPedida ? (
+                // 🆘 já pediu — sem botão de ação obrigatória, mas continua
+                // podendo tentar de novo se quiser, enquanto espera.
+                <button
+                  type="button"
+                  onClick={() => refazerBloco(r.bloco)}
+                  data-teste={`refazer-${r.bloco}`}
+                  className="rounded-xl border border-white/30 text-white/80 text-[12px] font-bold px-3 py-2.5 hover:bg-white/10"
+                >tentar de novo mesmo assim</button>
+              ) : r.podePedirAjuda ? (
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => { setExplicando(r.bloco); setTextoExplicacao(''); }}
-                    data-teste={`explicar-${r.bloco}`}
-                    className="xeos-cru flex-1 rounded-xl bg-white/15 border border-white/30 text-white text-[12px] font-bold px-4 py-2.5 hover:bg-white/25"
-                  >Explicar</button>
-                  {/* quem prefere refazer direto não é obrigado a se justificar */}
+                    onClick={() => pedirAjuda(r.bloco)}
+                    data-teste={`pedir-ajuda-${r.bloco}`}
+                    className="xeos-cru flex-1 rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 hover:bg-violet-50"
+                  >Pedir ajuda a um gestor</button>
                   <button
                     type="button"
                     onClick={() => refazerBloco(r.bloco)}
-                    data-teste={`refazer-direto-${r.bloco}`}
+                    data-teste={`refazer-${r.bloco}`}
                     className="rounded-xl border border-white/30 text-white/80 text-[12px] font-bold px-3 py-2.5 hover:bg-white/10"
-                  >refazer</button>
+                  >tentar mais uma vez</button>
                 </div>
-              )
-            ) : (
-              <button
-                type="button"
-                onClick={() => refazerBloco(r.bloco)}
-                data-teste={`refazer-${r.bloco}`}
-                className="xeos-cru w-full rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 hover:bg-amber-50"
-              >Refazer {ROTULO_DO_BLOCO[r.bloco]}</button>
-            )}
-          </div>
-        ))}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => refazerBloco(r.bloco)}
+                  data-teste={`refazer-${r.bloco}`}
+                  className="xeos-cru w-full rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 hover:bg-amber-50"
+                >Refazer {ROTULO_DO_BLOCO[r.bloco]}</button>
+              )}
+            </div>
+          );
+        })}
 
         {passo === P.ABERTURA && (
           <>
@@ -910,7 +964,14 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
             {/* 🎥 a visualização gravada — a comprovação nasce do momento */}
             {gravando ? (
               <div className="space-y-2">
-                <video ref={videoAoVivoRef} playsInline muted className="mx-auto w-40 h-40 rounded-full object-cover ring-4 ring-amber-300/60" />
+                {/* 📷 21/09/2026 — dono: "abre só um quadradinho, a pessoa
+                    fica aparecendo cortada... tem que abrir uma foto real, a
+                    câmera real, pegando praticamente o celular todo". Era
+                    160×160px num círculo (`w-40 h-40 rounded-full`), cortando
+                    a pessoa pelos quatro cantos. Agora ocupa a largura quase
+                    toda da tela, em retrato (proporção de selfie), sem
+                    cortar em círculo. */}
+                <video ref={videoAoVivoRef} playsInline muted className="mx-auto w-full max-w-[300px] aspect-[3/4] rounded-3xl object-cover ring-4 ring-amber-300/60" />
                 {/* 🕐 DIR-93 — ordem do dono: "precisa de pelo menos 01 minuto
                     obrigatório e isso precisa ficar claro pra pessoa, e
                     deixar livre até a pessoa quiser". O piso (60s) é a única
@@ -934,7 +995,24 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                   />
                 )}
                 {faltaDaVisualizacao(gravSeg) === 0 && (
-                  <p className="text-white/60 text-[11px]">Olha os sonhos subindo. Respira. Visualiza você chegando lá.</p>
+                  // 📊 21/09/2026 — dono: "os segundos precisa contar, a barra
+                  // do vídeo precisa estar mais visual". A DicaDaEtapa some
+                  // assim que libera (ela é feita pra "meta batida, ✓" — não
+                  // pra gravação contínua); esta barra própria substitui ela
+                  // aqui, mostrando o progresso até o teto de segurança
+                  // (VISUALIZACAO_TETO_SEG) — a gravação nunca fica sem
+                  // nenhum indicador visual, do primeiro ao último segundo.
+                  <div className="space-y-1.5">
+                    <p className="text-emerald-200 text-[11px] font-bold">✅ já vale — grave mais se quiser, ou conclua quando estiver pronta</p>
+                    <div className="h-1.5 w-full rounded-full bg-black/25 overflow-hidden">
+                      <div
+                        data-teste="barra-visualizacao-extra"
+                        className="h-full rounded-full bg-emerald-300 transition-[width] duration-500 ease-out"
+                        style={{ width: `${Math.min(100, Math.round((gravSeg / VISUALIZACAO_TETO_SEG) * 100))}%` }}
+                      />
+                    </div>
+                    <p className="text-white/60 text-[11px]">Olha os sonhos subindo. Respira. Visualiza você chegando lá.</p>
+                  </div>
                 )}
                 <div className="flex items-center justify-center gap-2">
                   <button
@@ -1022,7 +1100,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
             </h2>
 
             {pendencias.length > 0 ? (
-              <div className="xeos-cru rounded-2xl bg-amber-400/12 ring-1 ring-amber-300/40 p-4 text-left space-y-2" data-teste="pendencias-do-ritual">
+              <div className="xeos-cru rounded-2xl bg-amber-400/20 ring-2 ring-amber-300/60 p-4 text-left space-y-2" data-teste="pendencias-do-ritual">
                 <p className="text-[12px] font-extrabold text-amber-100 flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4" strokeWidth={2.4} />
                   {selo === 'pendente_ia' ? 'Você entregou tudo — isto aqui não é sua pendência:' : 'Falta isto pra fechar com selo cheio:'}
@@ -1042,7 +1120,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 )}
               </div>
             ) : (
-              <p className="xeos-cru rounded-2xl bg-emerald-400/12 ring-1 ring-emerald-300/40 p-3 text-[12px] font-bold text-emerald-100">
+              <p className="xeos-cru rounded-2xl bg-emerald-400/20 ring-2 ring-emerald-300/60 p-3 text-[12px] font-bold text-emerald-50">
                 ⭐ Os três blocos entregues, com o vídeo. Isto é o selo BRILHANTE.
               </p>
             )}

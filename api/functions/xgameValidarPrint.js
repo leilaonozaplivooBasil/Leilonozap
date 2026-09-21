@@ -116,7 +116,9 @@ Se o link abre mas o conteúdo é ambíguo, responda "duvida".`,
   ritual: `A imagem é um FRAME do vídeo da visualização do Ritual do Amanhecer — a pessoa meditando/refletindo, olhando o Quadro dos Sonhos, bem cedo. O AMBIENTE tem que ser a CASA da pessoa, num momento de tranquilidade (quarto, sala, varanda, qualquer cômodo doméstico calmo).
 REPROVE diretamente (sem perguntar) se o ambiente for CLARAMENTE: o interior de um carro (parado ou em movimento — volante, painel, banco, cinto, vidro/estrada visível), uma ACADEMIA (aparelhos, pesos, espelho de parede tipo academia, esteira), ou um ESCRITÓRIO/local de trabalho (mesa corporativa, outras estações de trabalho, ambiente de empresa). Esses três NUNCA valem para o ritual, mesmo que a pessoa esteja quieta e concentrada.
 Se o ambiente for plausivelmente doméstico mas a imagem não deixar claro (enquadramento fechado no rosto, pouca luz, não dá pra ver o cômodo), responda "duvida" — não puna a falta de contexto visual como se fosse má-fé.
-REPROVE também, sem perguntar, se quem aparece no frame CLARAMENTE não é a pessoa da tarefa (uma criança, outro adulto): o ritual é dela, e a comprovação tem que mostrar ela. Peça pra refazer com ela na imagem.`,
+REPROVE também, sem perguntar, se quem aparece no frame CLARAMENTE não é a pessoa da tarefa (uma criança, outro adulto): o ritual é dela, e a comprovação tem que mostrar ela. Peça pra refazer com ela na imagem.
+
+🖼️ SE A IMAGEM NÃO MOSTRA NENHUMA PESSOA (só um objeto, chão, parede, animal de estimação, paisagem): isso NÃO é "gritante e óbvio" por si só — pode ser um frame ruim de um vídeo real (a câmera balançou, pegou o bichinho de estimação no colo dela, o enquadramento cortou a pessoa num instante). Responda "duvida" e pergunte, em vez de reprovar direto: peça pra mandar um frame em que ela apareça, ou confirmar que ela estava mesmo ali. SÓ reprove sem perguntar quando o vídeo inteiro for claramente outra coisa, sem nenhuma ligação com o ritual (ex.: gravação de uma rede social, de um jogo, de uma cena qualquer que não tem nada a ver com a casa da pessoa).`,
 };
 
 // 🎯 REGRA ESPECIAL — organização/planejamento do NEGÓCIO (não confundir com
@@ -164,14 +166,29 @@ ver mesmo perguntando).
 
 🔴 PESSOA ERRADA NA FOTO É REPROVAÇÃO, NÃO DÚVIDA (16/09/2026). Se a imagem
 mostra CLARAMENTE outra pessoa no lugar de quem fez a tarefa — uma criança, um
-familiar, um terceiro — REPROVE, e diga no "motivo" que a comprovação é dela e
-precisa mostrar ELA, pedindo pra refazer. Isso NÃO é falta de contexto visual:
-a régua de 16/09 que manda não punir enquadramento fechado, luz ruim ou cômodo
-indefinido vale pra IMAGEM RUIM, não pra PESSOA ERRADA. Sophia, 15/09: a foto
-do "acordei" e a da visualização eram de uma criança, você respondeu "duvida"
-nas duas, e dúvida deixou de reprovar — a comprovação de outra pessoa passaria.
-Só marque "duvida" aqui quando REALMENTE não der pra dizer quem está na imagem
-(rosto cortado, muito escuro, de costas); aí pergunte quem é.
+familiar, um terceiro, quando a conta é de OUTRA pessoa nitidamente diferente
+(outro sexo aparente, outra faixa etária muito distinta, um rosto que já
+apareceu antes como sendo de outra pessoa) — REPROVE, e diga no "motivo" que a
+comprovação é dela e precisa mostrar ELA, pedindo pra refazer. Isso NÃO é falta
+de contexto visual: a régua de 16/09 que manda não punir enquadramento
+fechado, luz ruim ou cômodo indefinido vale pra IMAGEM RUIM, não pra PESSOA
+ERRADA.
+
+⚠️ MAS ISSO NÃO É "NÃO TENHO CERTEZA ABSOLUTA DE QUEM É" (21/09/2026,
+revisão). Sophia (9 anos), 21/09: a foto do "acordei" mostrava uma criança
+sorrindo, em pé, fora da cama — você mesma descreveu isso em "o_que_viu" — e
+ainda assim reprovou dizendo que "não aparece a pessoa responsável pela
+tarefa". Isso é contraditório: ninguém tem foto de referência pra confirmar
+100% que é EXATAMENTE o dono da conta — nem de criança, nem de adulto — e
+exigir essa certeza absoluta pune quem fez o ritual direito. A pergunta certa
+não é "tenho certeza que é ela?", é "tem alguém aqui, plausível, fazendo o
+ritual, sem nenhum sinal concreto de que é outra pessoa?". Se SIM — pessoa
+real e visível, cena coerente, nenhum sinal de troca — trate como aprovada,
+mesmo sem prova de identidade. Só marque "duvida" (com pergunta) quando
+REALMENTE não der pra dizer quem está na imagem (rosto cortado, muito escuro,
+de costas) OU quando houver um sinal concreto e específico de que é outra
+pessoa (não só a ausência de confirmação). Reserve "reprovada" só pra quando
+esse sinal concreto for claro e forte.
 
 ANTI-RECICLAGEM: se vieram FOTOS ANTERIORES da mesma pessoa pra comparar,
 olhe se a foto NOVA é a MESMA cena/imagem reaproveitada (mesmo que

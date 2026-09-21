@@ -1201,6 +1201,21 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     return nova;
   };
 
+  // 🆘 PEDIR AJUDA HUMANA — quem já refez o MESMO bloco `REFAZER_ANTES_DE_AJUDA`
+  // vezes (ritualEmBlocos.js) ganha esta saída em vez de só "tenta de novo pra
+  // sempre". Não muda status nem valido: o ritual continua em andamento,
+  // visível na fila de "em análise" do gestor (Comprovacoes.jsx já trata
+  // `ritual_em_andamento` como em análise) — só marca QUE foi pedido, e QUANDO.
+  const pedirAjudaNoRitual = async (t, bloco) => {
+    const atual = t.comprovacao || {};
+    const nova = { ...atual, ajuda_solicitada: { ...(atual.ajuda_solicitada || {}), [bloco]: new Date().toISOString() } };
+    try {
+      await plataforma.entities.MetodoTarefa.update(t.id, { comprovacao: nova });
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? { ...x, comprovacao: nova } : x)));
+    } catch { /* a tela já mostra o pedido feito; a próxima sincronização tenta de novo */ }
+    return nova;
+  };
+
   // 🤖 o julgamento assíncrono: nunca lança, nunca trava, e quando responde
   // grava por cima do que estiver no banco NAQUELE momento (a pessoa pode já
   // ter salvado o bloco seguinte enquanto a IA pensava).
@@ -2411,6 +2426,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   onConcluir={(dados) => concluirRitual(t, dados)}
                   onExplicar={(bloco, texto, extra) => explicarBlocoDoRitual(t, bloco, texto, extra)}
                   onRefazer={(bloco) => refazerBlocoDoRitual(t, bloco)}
+                  onPedirAjuda={(bloco) => pedirAjudaNoRitual(t, bloco)}
                 />
               );
             })()}
