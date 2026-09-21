@@ -12,6 +12,20 @@
 
 ---
 
+## DIR-170.1 — Encontro da Mentalidade: vários livros, a trajetória do treinamento, a lista da Produção no lugar certo e o teclado que não pula lâmina
+
+**Status:** EM VIGOR. (Continuação da DIR-168 do Encontro; o número 168 já tinha sido usado por outra frente.)
+
+**Emitida por:** dono (21/09/2026, testando em produção): *"Preciso adicionar o livro do Napoleão Hill — ter espaço pra adicionar e retirar os livros. Quando eu aperto espaço editando, ele pula pra outra lâmina. Ver o que precisa melhorar pra ficar mais conexo às lâminas e à trajetória do treinamento. E a lista de coisas pra fazer: onde fica, tanto dentro da edição das lâminas como fora — um lugar pros diretores botarem as pautas e aparecer nessas duas horas finais."*
+
+1. **Vários livros** (`xperf_encontros.livros`, lista de até 6; o `livro` antigo vira o primeiro item): "adicionar livro" e "retirar", cada um com título, autor, capa e PDF. A lâmina da Leitura vira "os livros da semana" quando há mais de um, com as capas e um botão de PDF por livro; o treinamento diz "baseado em: A · B". Hoje: Salomão (capa e PDF já subidos pelo dono) e As 16 Leis do Triunfo (Napoleão Hill).
+2. **Teclado**: dentro de campo de texto (ou com o editor de lâmina aberto), espaço e setas são do texto — não navegam; ESC fecha só o editor. Antes o atalho global comia o espaço e trocava de lâmina no meio da frase.
+3. **A trajetória do treinamento**: a lâmina do treinamento vira a capa (título, quem treina, baseado em, "8 passos — um por lâmina") e cada passo ganha a própria lâmina ("passo 3 de 8", com o livro no rodapé e o PDF à mão). Oito passos numa lâmina só era uma parede de texto.
+4. **A lista da Produção abre as duas horas**: a lâmina "Produção · o que precisa ser conversado" vem logo depois do treinamento, antes dos tópicos; o Fechamento (última) diz quantos itens ficam pra próxima segunda. Dentro do editor dessa lâmina os diretores colocam e movem as pautas sem sair da apresentação (fora, a seção em três colunas continua).
+
+**Banco:** migração `20260921113053_encontro_varios_livros` aplicada (coluna `livros`, com o `livro` existente copiado pra lista). Arquivo no repositório com a mesma versão.
+
+**Testes:** +3 em `tests/encontroLivroLaminasPautaViva.test.mjs`; ids das lâminas atualizados em `tests/encontro.test.mjs`. Suíte 3117; eslint 0 erros; build ok; `npm run colisao` limpo.
 ## DIR-170 — auditoria diligente do Ritual do Amanhecer: ajuda humana depois de tentar muito, o motivo da IA num lugar que dá pra ler, e a câmera parando de cortar a pessoa
 
 **Emitida por:** dono, vendo a Sophia Sant'anna (9 anos) travada no ritual, reprovada 11 vezes num único dia (22 no dia 17/09): *"faz uma auditoria no da Sofia... vamos fazer uma análise bem diligente em todo o ritual pra ver o que pode estar tá ruim, a cor, a comunicação."* Depois, com a análise na mão: *"essa chance de explicar tem que vir com um fundo, bem bonito, negrito... leia com atenção... e aí vinha o erro escrito com um fundo do texto, porque senão a pessoa não lê. A barra do vídeo precisa estar mais visual, os segundos precisa contar. O batimento das fotos precisa abrir melhor, maior a câmera — pegando praticamente o celular todo. Aplica tudo, sem quebrar o que já está funcionando."*

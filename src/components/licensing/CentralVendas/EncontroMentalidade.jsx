@@ -14,7 +14,7 @@ import {
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
   ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
   normalizarTreinamento, temTreinamento, materialEhLink, treinamentoDoTexto, treinamentoDoRoteiro, TREINAMENTO_VAZIO,
-  horarioDoBloco, normalizarLivro, temLivro, LIVRO_VAZIO, STATUS_PAUTA, ordenarPautasVivas, seloDaPauta,
+  horarioDoBloco, normalizarLivros, LIVRO_VAZIO, MAX_LIVROS, STATUS_PAUTA, ordenarPautasVivas, seloDaPauta,
   normalizarLaminas, ajustarLamina, apagarLamina, restaurarLamina, novaLaminaDepois, ehLaminaExtra, laminasOcultas,
 } from '@/lib/encontro';
 import { timeCorporativo } from '@/lib/timeCorporativo';
@@ -202,7 +202,10 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   ), [treinamento, roteiro?.treinamento, treinamentoPor]);
 
   // 📖 o livro da semana: o gravado; sem gravado, o título que a IA/conversa deu à leitura
-  const livro = useMemo(() => normalizarLivro(encontro?.livro, { tituloSugerido: roteiro?.leitura?.titulo || '' }), [encontro?.livro, roteiro?.leitura?.titulo]);
+  // 📚 DIR-168.1 — VÁRIOS livros (dono: "adicionar o do Napoleão Hill; espaço pra
+  // adicionar e retirar"). `livros` é a lista; o `livro` antigo vira o 1º item.
+  const livros = useMemo(() => normalizarLivros(encontro?.livros, encontro?.livro), [encontro?.livros, encontro?.livro]);
+  const nomesLivros = livros.map((l) => l.titulo).filter(Boolean).join(' · ');
   const laminas = useMemo(() => normalizarLaminas(encontro?.laminas), [encontro?.laminas]);
 
   // 💾 gravar o encontro (uma linha por segunda; a primeira gravação cria)
@@ -215,18 +218,21 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     return salvo || linha;
   };
 
-  const salvarLivro = (patch) => salvarEncontro({ livro: { ...livro, ...patch } });
+  const salvarLivros = (lista) => salvarEncontro({ livros: lista, livro: lista[0] || null });
+  const mudarLivro = (i, patch) => salvarLivros(livros.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const adicionarLivro = () => { if (livros.length >= MAX_LIVROS) { toast.error(`No máximo ${MAX_LIVROS} livros por encontro.`); return; } salvarLivros([...livros, { ...LIVRO_VAZIO, titulo: 'Novo livro' }]); };
+  const retirarLivro = (i) => { if (window.confirm(`Retirar "${livros[i]?.titulo || 'este livro'}" da semana?`)) salvarLivros(livros.filter((_, idx) => idx !== i)); };
   // 📎 capa (imagem) e PDF do livro vão pro balde encontro-materiais e a URL fica no encontro
-  const subirArquivoDoLivro = async (file, tipo) => {
+  const subirArquivoDoLivro = async (file, tipo, i) => {
     const limite = tipo === 'pdf' ? 30 * 1024 * 1024 : 8 * 1024 * 1024;
     if (file.size > limite) { toast.error(tipo === 'pdf' ? 'O PDF passa de 30 MB.' : 'A imagem passa de 8 MB.'); return; }
-    setSubindo(tipo);
+    setSubindo(`${tipo}-${i}`);
     try {
       const nome = String(file.name || tipo).replace(/[^\w.-]+/g, '_').slice(-60);
       const r = await plataforma.integrations.Core.UploadFile({ file, path: `encontro/${dataEncontro}/${tipo}-${Date.now()}-${nome}`, bucket: 'encontro-materiais' });
       const url = r?.file_url || r?.url;
       if (!url) throw new Error('o servidor não devolveu a URL');
-      await salvarLivro(tipo === 'pdf' ? { pdf_url: url } : { capa_url: url });
+      await mudarLivro(i, tipo === 'pdf' ? { pdf_url: url } : { capa_url: url });
       toast.success(tipo === 'pdf' ? 'PDF do livro guardado.' : 'Capa do livro guardada.');
     } catch (e) { toast.error(`Não subiu o arquivo: ${e?.message || e}`); }
     finally { setSubindo(''); }
@@ -322,7 +328,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     // (importado ou editado antes), ele é o registro real e não é pisado.
     const seedTreinamento = temTreinamento(encontro?.treinamento) ? {} : { treinamento: treinamentoDoRoteiro(novo.treinamento, { por: treinamentoPor }) };
     // 📖 DIR-168 — o livro que a conversa perguntou ("qual vai ser o livro?") já entra como o livro da semana
-    const seedLivro = !temLivro(encontro?.livro) && extra.livro ? { livro: { ...LIVRO_VAZIO, titulo: String(extra.livro).trim() } } : {};
+    const seedLivro = !livros.length && extra.livro ? { livros: [{ ...LIVRO_VAZIO, titulo: String(extra.livro).trim() }], livro: { ...LIVRO_VAZIO, titulo: String(extra.livro).trim() } } : {};
     await salvarEncontro({ pautas: pautasTexto, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor, ...seedTreinamento, ...seedLivro });
     if (daConversa) setPautas(pautasTexto);
     setGerando(false);
@@ -420,7 +426,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   useEffect(() => { setEscolhas((e) => ({ ...e, livre: { pessoa: livre.pessoa, prazo: livre.prazo, hora: livre.hora, titulo: livre.titulo } })); }, [livre]);
 
   const producao = useMemo(() => producaoDaSemana({ demandas, tarefas, cards, hojeISO: hoje }), [demandas, tarefas, cards, hoje]);
-  const slides = useMemo(() => slidesDoEncontro({ data: fmtDia(dataEncontro), dataISO: dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento, livro, pautasVivas, laminas }), [dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento, livro, pautasVivas, laminas]);
+  const slides = useMemo(() => slidesDoEncontro({ data: fmtDia(dataEncontro), dataISO: dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento, livros, pautasVivas, laminas }), [dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento, livros, pautasVivas, laminas]);
   // apagou a lâmina que estava na tela → a apresentação não pode ficar apontando pro nada
   useEffect(() => { if (slide > slides.length - 1) setSlide(Math.max(0, slides.length - 1)); }, [slides.length, slide]);
 
@@ -428,13 +434,22 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   useEffect(() => {
     if (!apresentando) return undefined;
     const onKey = (ev) => {
+      // ✏️ DIR-168.1 — dono: "quando eu aperto espaço editando, ele pula pra outra
+      // lâmina". Dentro de campo de texto (ou com o editor aberto), o teclado é
+      // do texto: espaço e setas não navegam; ESC só fecha o editor.
+      const alvo = ev.target;
+      const digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable);
+      if (editandoLamina || digitando) {
+        if (ev.key === 'Escape') { setEditandoLamina(false); alvo?.blur?.(); }
+        return;
+      }
       if (ev.key === 'Escape') setApresentando(false);
       if (ev.key === 'ArrowRight' || ev.key === ' ') setSlide((s) => Math.min(slides.length - 1, s + 1));
       if (ev.key === 'ArrowLeft') setSlide((s) => Math.max(0, s - 1));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [apresentando, slides.length]);
+  }, [apresentando, slides.length, editandoLamina]);
   const abrirApresentacao = () => { const i = slides.findIndex((s) => s.bloco === estado.atual?.id); setSlide(i >= 0 ? i : 0); setApresentando(true); };
 
   const ehHoje = dataEncontro === hoje;
@@ -488,39 +503,46 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
               não fica definido em código. */}
           <div className="mt-1 rounded-lg border border-white/10 p-2.5" data-teste="livro-caixa">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-[10px] text-white/45 uppercase tracking-wider"><BookOpen className="w-3 h-3 inline mr-1" />a leitura · o livro da semana ({blocoLeitura.minutos} min · {horarioDoBloco(blocoLeitura)})</p>
-              {temLivro(livro)
-                ? <span className="text-[10px] font-bold text-nz-verde" data-teste="livro-pronto">{livro.pdf_url ? 'com PDF' : 'sem PDF'}{livro.capa_url ? ' · com capa' : ''}</span>
+              <p className="text-[10px] text-white/45 uppercase tracking-wider"><BookOpen className="w-3 h-3 inline mr-1" />a leitura · os livros da semana ({blocoLeitura.minutos} min · {horarioDoBloco(blocoLeitura)})</p>
+              {livros.length
+                ? <span className="text-[10px] font-bold text-nz-verde" data-teste="livro-pronto">{livros.length} livro{livros.length === 1 ? '' : 's'} · {livros.filter((l) => l.pdf_url).length} com PDF</span>
                 : <span className="text-[10px] text-amber-300/80" data-teste="livro-vazio">ainda sem livro</span>}
+              {podeConduzir && livros.length < MAX_LIVROS && <button type="button" onClick={adicionarLivro} className="ml-auto text-[10px] font-bold text-white/60 hover:text-white inline-flex items-center gap-1 min-h-[28px]" data-teste="livro-adicionar"><Plus className="w-3 h-3" /> adicionar livro</button>}
             </div>
-            <div className="mt-1.5 flex gap-3">
-              {livro.capa_url
-                ? <img src={livro.capa_url} alt={livro.titulo || 'capa do livro'} className="w-16 h-24 object-cover rounded-md border border-white/15 shrink-0" data-teste="livro-capa" />
-                : <div className="w-16 h-24 rounded-md border border-dashed border-white/20 grid place-items-center text-white/30 shrink-0"><BookOpen className="w-5 h-5" /></div>}
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <Input defaultValue={livro.titulo} key={`livro-t-${encontro?.id || 'novo'}-${livro.titulo}`} placeholder="o livro (ex.: O Homem Mais Rico que Já Existiu — Salomão)" disabled={!podeConduzir} onBlur={(ev) => { if (ev.target.value !== livro.titulo) salvarLivro({ titulo: ev.target.value }); }} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold normal-case" data-teste="livro-titulo" />
-                <Input defaultValue={livro.autor} key={`livro-a-${encontro?.id || 'novo'}`} placeholder="autor" disabled={!podeConduzir} onBlur={(ev) => { if (ev.target.value !== livro.autor) salvarLivro({ autor: ev.target.value }); }} className="h-7 border-white/15 bg-white/[0.06] text-white text-[11px] normal-case" data-teste="livro-autor" />
-                <div className="flex flex-wrap items-center gap-2">
-                  {podeConduzir && (
-                    <label className={`cursor-pointer inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-white min-h-[32px] ${subindo ? 'opacity-60 pointer-events-none' : ''}`}>
-                      <Upload className="w-3 h-3" /> {subindo === 'capa' ? 'subindo…' : livro.capa_url ? 'trocar a capa' : 'capa do livro'}
-                      <input type="file" accept="image/*" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) subirArquivoDoLivro(f, 'capa'); }} data-teste="livro-capa-arquivo" />
-                    </label>
-                  )}
-                  {podeConduzir && (
-                    <label className={`cursor-pointer inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-white min-h-[32px] ${subindo ? 'opacity-60 pointer-events-none' : ''}`}>
-                      <FileText className="w-3 h-3" /> {subindo === 'pdf' ? 'subindo…' : livro.pdf_url ? 'trocar o PDF' : 'PDF do livro'}
-                      <input type="file" accept="application/pdf" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) subirArquivoDoLivro(f, 'pdf'); }} data-teste="livro-pdf-arquivo" />
-                    </label>
-                  )}
-                  {livro.pdf_url && <a href={livro.pdf_url} target="_blank" rel="noreferrer" className="text-[10px] text-sky-300 underline inline-flex items-center gap-1 min-h-[32px]" data-teste="livro-pdf-abrir"><ExternalLink className="w-3 h-3" /> abrir o PDF pra ler</a>}
+            {!livros.length && podeConduzir && <p className="mt-1 text-[11px] text-white/45">Nenhum livro ainda — "adicionar livro" ou responda "qual vai ser o livro?" na conversa das pautas.</p>}
+            <div className="mt-1.5 space-y-2" data-teste="livros-lista">
+              {livros.map((l, i) => (
+                <div key={`livro-${i}-${encontro?.id || 'novo'}`} className="flex gap-3 rounded-md border border-white/10 p-2" data-teste="livro-item">
+                  {l.capa_url
+                    ? <img src={l.capa_url} alt={l.titulo || 'capa do livro'} className="w-14 h-20 object-cover rounded-md border border-white/15 shrink-0" data-teste="livro-capa" />
+                    : <div className="w-14 h-20 rounded-md border border-dashed border-white/20 grid place-items-center text-white/30 shrink-0"><BookOpen className="w-5 h-5" /></div>}
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Input defaultValue={l.titulo} key={`livro-t-${i}-${l.titulo}`} placeholder="o livro (ex.: As 16 Leis do Triunfo)" disabled={!podeConduzir} onBlur={(ev) => { if (ev.target.value !== l.titulo) mudarLivro(i, { titulo: ev.target.value }); }} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold normal-case" data-teste="livro-titulo" />
+                    <Input defaultValue={l.autor} key={`livro-a-${i}-${l.autor}`} placeholder="autor" disabled={!podeConduzir} onBlur={(ev) => { if (ev.target.value !== l.autor) mudarLivro(i, { autor: ev.target.value }); }} className="h-7 border-white/15 bg-white/[0.06] text-white text-[11px] normal-case" data-teste="livro-autor" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      {podeConduzir && (
+                        <label className={`cursor-pointer inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-white min-h-[32px] ${subindo ? 'opacity-60 pointer-events-none' : ''}`}>
+                          <Upload className="w-3 h-3" /> {subindo === `capa-${i}` ? 'subindo…' : l.capa_url ? 'trocar a capa' : 'capa do livro'}
+                          <input type="file" accept="image/*" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) subirArquivoDoLivro(f, 'capa', i); }} data-teste="livro-capa-arquivo" />
+                        </label>
+                      )}
+                      {podeConduzir && (
+                        <label className={`cursor-pointer inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-white min-h-[32px] ${subindo ? 'opacity-60 pointer-events-none' : ''}`}>
+                          <FileText className="w-3 h-3" /> {subindo === `pdf-${i}` ? 'subindo…' : l.pdf_url ? 'trocar o PDF' : 'PDF do livro'}
+                          <input type="file" accept="application/pdf" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) subirArquivoDoLivro(f, 'pdf', i); }} data-teste="livro-pdf-arquivo" />
+                        </label>
+                      )}
+                      {l.pdf_url && <a href={l.pdf_url} target="_blank" rel="noreferrer" className="text-[10px] text-sky-300 underline inline-flex items-center gap-1 min-h-[32px]" data-teste="livro-pdf-abrir"><ExternalLink className="w-3 h-3" /> abrir o PDF pra ler</a>}
+                      {podeConduzir && <button type="button" onClick={() => retirarLivro(i)} className="ml-auto text-[10px] text-white/35 hover:text-red-300 inline-flex items-center gap-1 min-h-[32px]" data-teste="livro-retirar"><Trash2 className="w-3 h-3" /> retirar</button>}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
           <div className="mt-1 rounded-lg border border-white/10 p-2.5" data-teste="treinamento-caixa">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento ({blocoTreinamento.minutos} min · {horarioDoBloco(blocoTreinamento)}{livro.titulo ? ` · baseado em: ${livro.titulo}` : ''})</p>
+              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento ({blocoTreinamento.minutos} min · {horarioDoBloco(blocoTreinamento)}{nomesLivros ? ` · baseado em: ${nomesLivros}` : ''})</p>
               {temTreinamento(treinamentoEfetivo)
                 ? <span className="text-[10px] font-bold text-nz-verde" data-teste="treinamento-pronto">pronto · {treinamentoEfetivo.passos.length} passo{treinamentoEfetivo.passos.length === 1 ? '' : 's'}</span>
                 : <span className="text-[10px] text-amber-300/80" data-teste="treinamento-vazio">ainda sem material</span>}
@@ -944,7 +966,28 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                     <p className="text-[10px] uppercase tracking-wider text-white/40">editando a lâmina {slide + 1} de {slides.length}{slides[slide].extra ? ' · lâmina extra' : slides[slide].ajustada ? ' · ajustada à mão' : ''}</p>
                     <Input defaultValue={slides[slide].titulo} key={`lt-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { titulo: ev.target.value })} placeholder="título" className="h-11 border-white/20 bg-white/[0.06] text-white text-[20px] font-extrabold normal-case" data-teste="lamina-titulo" />
                     <Input defaultValue={slides[slide].sub || ''} key={`ls-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { sub: ev.target.value })} placeholder="subtítulo (opcional)" className="h-8 border-white/20 bg-white/[0.06] text-white text-[13px] normal-case" data-teste="lamina-sub" />
-                    <Textarea defaultValue={(slides[slide].corpo || []).join('\n')} key={`lc-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { corpo: ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })} rows={8} placeholder="o corpo — uma linha por parágrafo" className="border-white/20 bg-white/[0.06] text-white text-[14px] leading-relaxed" data-teste="lamina-corpo" />
+                    {slides[slide].id === 'producao' ? (
+                      // 🗂️ DIR-168.1 — a lâmina da Produção É a lista viva: aqui os
+                      // diretores colocam e movem as pautas sem sair da apresentação.
+                      <div className="rounded-lg border border-white/15 p-2.5 space-y-2" data-teste="lamina-producao-lista">
+                        <p className="text-[10px] uppercase tracking-wider text-white/40">a lista do que precisa ser conversado (vale fora da apresentação também)</p>
+                        <div className="flex gap-1.5">
+                          <Input value={novaPauta.titulo} onChange={(ev) => setNovaPauta((n) => ({ ...n, titulo: ev.target.value }))} onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); adicionarPauta(); } }} placeholder="colocar na lista…" className="h-9 flex-1 border-white/20 bg-white/[0.06] text-white text-[13px] normal-case" data-teste="lamina-pauta-nova" />
+                          <Button size="sm" onClick={adicionarPauta} disabled={salvandoPauta || !novaPauta.titulo.trim()} className="h-9 bg-nz-verde hover:bg-nz-verde-claro text-white font-bold"><Plus className="w-3.5 h-3.5" /></Button>
+                        </div>
+                        <ul className="space-y-1 max-h-[40vh] overflow-y-auto pr-1">
+                          {ordenarPautasVivas(pautasVivas).filter((i) => (i.status || 'aberta') !== 'concluida').map((item) => (
+                            <li key={item.id} className="flex items-center gap-2 rounded-md border border-white/10 px-2 py-1.5 text-[13px]" data-teste="lamina-pauta-item">
+                              <span className={`flex-1 min-w-0 truncate ${item.status === 'conversada' ? 'text-white/50 line-through' : 'text-white'}`}>{item.titulo}{item.autor_nome ? <span className="text-white/35"> — {nomeCurto(item.autor_nome)}</span> : null}</span>
+                              {item.status !== 'conversada' && <button type="button" onClick={() => moverPauta(item, 'conversada')} className="text-[11px] text-sky-300 hover:text-white min-h-[28px]">conversado</button>}
+                              <button type="button" onClick={() => moverPauta(item, 'concluida')} className="text-[11px] text-nz-verde hover:text-white min-h-[28px]">concluído</button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <Textarea defaultValue={(slides[slide].corpo || []).join('\n')} key={`lc-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { corpo: ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })} rows={8} placeholder="o corpo — uma linha por parágrafo" className="border-white/20 bg-white/[0.06] text-white text-[14px] leading-relaxed" data-teste="lamina-corpo" />
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                       <Button size="sm" onClick={() => setEditandoLamina(false)} className="h-8 bg-white text-black hover:bg-white/90 font-bold" data-teste="lamina-concluir">concluir edição</Button>
                       <Button size="sm" onClick={() => novaLamina(slides[slide].id, slides[slide].bloco)} className="h-8 bg-white/10 hover:bg-white/20 text-white" data-teste="lamina-nova"><Plus className="w-3.5 h-3.5 mr-1" /> nova lâmina depois desta</Button>
@@ -964,10 +1007,22 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                       <div className="mt-6 space-y-3">
                         {(slides[slide].corpo || []).map((linha, i) => <p key={i} className={`leading-snug ${i === 0 ? 'text-[18px] sm:text-[26px] text-white/90' : 'text-[15px] sm:text-[20px] text-white/70'}`}>{linha}</p>)}
                       </div>
-                      {slides[slide].link && <a href={slides[slide].link.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-[14px] font-bold text-white min-h-[44px]" data-teste="slide-link"><FileText className="w-4 h-4" /> {slides[slide].link.rotulo}</a>}
+                      {(slides[slide].links?.length ? slides[slide].links : slides[slide].link ? [slides[slide].link] : []).length > 0 && (
+                        <div className="mt-6 flex flex-wrap gap-2">
+                          {(slides[slide].links?.length ? slides[slide].links : [slides[slide].link]).map((lk) => (
+                            <a key={lk.url} href={lk.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-[14px] font-bold text-white min-h-[44px]" data-teste="slide-link"><FileText className="w-4 h-4" /> {lk.rotulo}</a>
+                          ))}
+                        </div>
+                      )}
                       {slides[slide].rodape && <p className="mt-8 text-[12px] text-white/35 uppercase tracking-wider">{slides[slide].rodape}</p>}
                     </div>
-                    {slides[slide].imagem && <img src={slides[slide].imagem} alt={slides[slide].titulo} className="hidden sm:block w-[220px] max-h-[330px] object-contain rounded-xl border border-white/15 shadow-2xl shrink-0" data-teste="slide-capa" />}
+                    {(slides[slide].imagens?.length ? slides[slide].imagens : slides[slide].imagem ? [slides[slide].imagem] : []).length > 0 && (
+                      <div className="hidden sm:flex flex-col gap-3 shrink-0">
+                        {(slides[slide].imagens?.length ? slides[slide].imagens : [slides[slide].imagem]).slice(0, 3).map((img) => (
+                          <img key={img} src={img} alt={slides[slide].titulo} className={`${(slides[slide].imagens?.length || 1) > 1 ? 'w-[150px] max-h-[210px]' : 'w-[220px] max-h-[330px]'} object-contain rounded-xl border border-white/15 shadow-2xl`} data-teste="slide-capa" />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
