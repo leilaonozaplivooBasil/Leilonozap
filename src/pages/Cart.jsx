@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
 import { money } from '@/lib/format';
+import { descontoPrevisto, MINIMO_COBRAVEL } from '@/lib/passaporteNaCompra';
 import { linkWhatsAppOficial } from '@/lib/whatsappOficial';
 import { fetchPickupAddress, DEFAULT_PICKUP_ADDRESS } from '@/lib/pickupAddress';
 import { supabase } from '@/api/supabaseClient';
@@ -273,6 +274,14 @@ export default function Cart() {
     return () => { ativo = false; };
   }, [currentUser?.id]);
 
+  // 🧺 Esvaziar o carrinho — um lugar só. Antes eram três trechos iguais
+  // espalhados (contagem do PIX, saldo, e nenhum no cartão), e foi justamente
+  // o que faltava no cartão e no PIX-fora-da-tela que gerou a confusão de 21/09.
+  const limparCarrinho = React.useCallback(() => {
+    try { localStorage.setItem('catalogCart', '[]'); } catch { /* modo privado */ }
+    setCartItems([]);
+  }, []);
+
   // ⏱️ Contagem regressiva após detecção do pagamento
   useEffect(() => {
     if (!paymentDetected || countdown <= 0) return;
@@ -280,16 +289,16 @@ export default function Cart() {
       const timer = setTimeout(() => {
         setCountdown(0);
         setPixConfirmed(true);
-        // pagamento realizado → zera o carrinho de vez
-        localStorage.setItem('catalogCart', '[]');
-        setCartItems([]);
+        // o carrinho já foi esvaziado quando o pedido nasceu; aqui é só garantia
+        // para quem ficou na tela desde antes desta mudança.
+        limparCarrinho();
         toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
       }, 1000);
       return () => clearTimeout(timer);
     }
     const timer = setTimeout(() => setCountdown(prev => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [paymentDetected, countdown]);
+  }, [paymentDetected, countdown, limparCarrinho]);
 
   // 🔄 Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
@@ -386,9 +395,19 @@ export default function Cart() {
   const descontoCupom = appliedCoupon?.desconto || 0;
   // desconto do Passaporte: limitado ao saldo do cupom (o valor final é sempre
   // recalculado no servidor no momento do pagamento)
-  const descontoPassaporte = usarPassaporte && passaporteStatus?.liberado
-    ? Math.min(passaporteStatus.liberado.saldo, Math.max(0, calculateSubtotal() - descontoCupom))
-    : 0;
+  // 🔴 21/09/2026 — A TELA E O SERVIDOR FAZIAM CONTAS DIFERENTES.
+  // Aqui era `min(saldo, subtotal)`; no servidor, `min(saldo, subtotal - 1)`,
+  // porque o Mercado Pago não cria cobrança abaixo de R$ 1,00. O carrinho
+  // prometia desconto total, a cobrança vinha com R$ 1,00, e o cliente concluía
+  // que o crédito dele tinha sumido. A régua agora é uma só (passaporteNaCompra).
+  const previsaoPassaporte = usarPassaporte && passaporteStatus?.liberado
+    ? descontoPrevisto({
+      saldo: passaporteStatus.liberado.saldo,
+      total: Math.max(0, calculateSubtotal() - descontoCupom),
+      forma: paymentType,
+    })
+    : { desconto: 0, sobra: 0, travadoNoMinimo: false };
+  const descontoPassaporte = previsaoPassaporte.desconto;
   // 🚚 PONTO 74 — o frete entra no valor cobrado (por último, depois dos descontos).
   // O valor final é sempre RECOTADO no servidor no momento do pagamento.
   const valorFrete = deliveryMethod === 'delivery' ? (Number(freteSel?.preco) || 0) : 0;
@@ -726,8 +745,7 @@ export default function Cart() {
           return;
         }
         // sucesso — limpa carrinho e mostra confirmação
-        localStorage.setItem('catalogCart', '[]');
-        setCartItems([]);
+        limparCarrinho();
         setSaldo(Number(pay.novo_saldo) || 0);
         setCreatedSales([{ id: pay.sale_id }]);
         setSaldoOk(true);
@@ -754,6 +772,7 @@ export default function Cart() {
         toast.dismiss('checkout-loading');
         if (!st?.success || !st?.url) { toast.error('Erro ao iniciar pagamento: ' + (st?.error || 'tente novamente')); return; }
         if (roleGrant) { try { sessionStorage.removeItem('pendingRoleGrant'); } catch { /* ignora */ } }
+        limparCarrinho(); // o pedido já nasceu; sair daqui não pode deixar o carrinho cheio
         window.location.href = st.url; // checkout hospedado do Mercado Pago
         return;
       }
@@ -776,6 +795,13 @@ export default function Cart() {
         if (roleGrant) { try { sessionStorage.removeItem('pendingRoleGrant'); } catch { /* ignora */ } }
         setCheckoutItems([...cartItems]); // snapshot para o resumo enquanto o PIX está pendente
         setCreatedSales([{ id: mp.sale_id }]);
+        // 🔴 O CARRINHO ESVAZIA AQUI, e não no fim da contagem regressiva.
+        // Antes só a contagem limpava — e ela só roda para quem FICA na tela.
+        // Quem paga o PIX no app do banco e fecha a aba voltava e encontrava
+        // tudo ainda no carrinho, concluindo que a compra não tinha passado.
+        // O pedido já existe; se o PIX não for pago, ele fica pendente e o
+        // botão "pagar novamente" o recupera — o pedido É o carrinho agora.
+        limparCarrinho();
         setPixData({
           billing_type: 'PIX',
           payment_id: mp.payment_id,
@@ -1353,6 +1379,20 @@ export default function Cart() {
                         <span className="text-gray-400">Desconto Passaporte do Leilão</span>
                         <span className="text-green-400 font-medium">− {money(descontoPassaporte)}</span>
                       </div>
+                    )}
+                    {/* 🎟️ 21/09/2026 — O R$ 1,00 QUE NINGUÉM EXPLICAVA.
+                        Quando o crédito cobriria a compra inteira, o Mercado Pago
+                        ainda exige R$ 1,00 de cobrança. Sem esta linha o cliente vê
+                        crédito de sobra, paga R$ 1,00 mesmo assim e acha que o
+                        sistema comeu o dinheiro dele — foi exatamente o que
+                        aconteceu e virou chamado. */}
+                    {previsaoPassaporte.travadoNoMinimo && (
+                      <p className="text-[11px] leading-snug text-gray-400" data-teste="aviso-minimo-pix">
+                        Seu crédito cobriria tudo, mas o pagamento precisa ter ao menos{' '}
+                        <strong className="text-gray-300">{money(MINIMO_COBRAVEL)}</strong>.
+                        Você paga esse valor e os {money(previsaoPassaporte.sobra)} que sobram
+                        continuam guardados para a próxima compra.
+                      </p>
                     )}
                     <FreteResumo
                       opcoes={freteOpcoes}

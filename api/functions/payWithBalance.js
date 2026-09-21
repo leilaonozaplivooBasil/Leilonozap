@@ -113,8 +113,16 @@ export default async function handler(req, res) {
 
     // 🚚 PONTO 74 — frete RECOTADO no servidor. Reservamos o frete ANTES do RPC (CAS) e
     // devolvemos se a compra falhar: assim o saldo nunca fica pago pela metade.
+    // 🔴 21/09/2026 — ESTE VALOR PRECISA SOBREVIVER ATÉ O BANCO.
+    // Antes ele era calculado DENTRO da chamada abaixo, usado para cotar o
+    // frete, e jogado fora. Quem gera a etiqueta lê `raw_base44.delivery_type`
+    // e trata a AUSÊNCIA como retirada no balcão — então todo pedido pago com
+    // saldo virava "retirada na loja" na hora de imprimir, mesmo com o frete
+    // pago e o CEP na mão. Cinco pedidos travados entre 10 e 20/09, e ninguém
+    // soube: 'retirada_na_loja' está na lista de pulos que não geram log.
+    const entrega = body?.delivery_type || (body?.buyer_address === 'Retirada' ? 'pickup' : 'delivery');
     const fr = await resolverFreteDoCheckout({
-      delivery_type: body?.delivery_type || (body?.buyer_address === 'Retirada' ? 'pickup' : 'delivery'),
+      delivery_type: entrega,
       cep: body?.buyer_cep,
       items: cleanItems,
       frete_id: body?.frete_id,
@@ -158,17 +166,27 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: data?.error || 'Não foi possível concluir', saldo: data?.saldo, total: data?.total });
     }
 
-    // registra o frete cobrado na venda (fora de total_amount, que é a base da comissão)
-    if (frete.valor > 0) {
-      try {
-        const cur = await (await sb(`catalog_sales?select=raw_base44,total_amount&id=eq.${encodeURIComponent(data.sale_id)}&limit=1`)).json();
-        const base = (Array.isArray(cur) && cur[0]?.raw_base44) || {};
-        await sb(`catalog_sales?id=eq.${encodeURIComponent(data.sale_id)}`, {
-          method: 'PATCH', headers: { Prefer: 'return=minimal' },
-          body: JSON.stringify({ raw_base44: { ...base, frete, amount_charged: round2(Number(cur?.[0]?.total_amount || data.total) + frete.valor), frete_pago_com: { deposito: freteDoDeposito, comissao: freteDaComissao } } }),
-        });
-      } catch (_) { /* frete já debitado; registro é secundário */ }
-    }
+    // registra o tipo de entrega e o frete cobrado na venda (fora de
+    // total_amount, que é a base da comissão)
+    //
+    // 🔴 ESTA GRAVAÇÃO NÃO PODE FICAR DENTRO DE `if (frete.valor > 0)`.
+    // O `delivery_type` existe mesmo quando não há frete a cobrar — frete
+    // grátis é entrega, não retirada — e era justamente o pedido sem frete que
+    // saía do checkout sem nenhum `raw_base44` e caía no mesmo buraco.
+    try {
+      const cur = await (await sb(`catalog_sales?select=raw_base44,total_amount&id=eq.${encodeURIComponent(data.sale_id)}&limit=1`)).json();
+      const base = (Array.isArray(cur) && cur[0]?.raw_base44) || {};
+      const novo = { ...base, delivery_type: entrega };
+      if (frete.valor > 0) {
+        novo.frete = frete;
+        novo.amount_charged = round2(Number(cur?.[0]?.total_amount || data.total) + frete.valor);
+        novo.frete_pago_com = { deposito: freteDoDeposito, comissao: freteDaComissao };
+      }
+      await sb(`catalog_sales?id=eq.${encodeURIComponent(data.sale_id)}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ raw_base44: novo }),
+      });
+    } catch (_) { /* frete já debitado; registro é secundário */ }
 
     // conclui como venda de loja: comissão pro DONO da loja (modelo marketplace) + fulfillment.
     // Mesma rota de uma venda PIX paga (kind='loja' → fulfillStoreOrder no webhook).
