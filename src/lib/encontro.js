@@ -679,37 +679,52 @@ export function producaoDaSemana({ demandas = [], tarefas = [], cards = [], hoje
 }
 
 // ── 🎞️ os slides da apresentação ──
-export function slidesDoEncontro({ data, dataISO: dataEncontroISO = null, roteiro, mes, conduzidoPor, treinamentoPor, demandas = [], treinamento = null, livro = null, pautasVivas = [], laminas = null } = {}) {
+export function slidesDoEncontro({ data, dataISO: dataEncontroISO = null, roteiro, mes, conduzidoPor, treinamentoPor, demandas = [], treinamento = null, livro = null, livros = null, pautasVivas = [], laminas = null } = {}) {
   const r = roteiro || roteiroLocal({ mes });
   const fase = faseDoMes(mes);
-  // 📖 DIR-168 — o livro da semana entra na leitura (capa + PDF) e no treinamento ("baseado em")
-  const liv = normalizarLivro(livro);
+  // 📖 DIR-168.1 — os livros da semana (um ou mais: Salomão E Napoleão Hill) entram
+  // na leitura (capas + PDFs) e no treinamento ("baseado em")
+  const lista = normalizarLivros(livros, livro);
+  const liv = lista[0] || normalizarLivro(null);
+  const nomesLivros = lista.map((l) => l.titulo).filter(Boolean).join(' · ');
   const minTre = blocoDe('treinamento')?.minutos || 40;
   // 🎓 DIR-79 — o treinamento GRAVADO no encontro manda no slide. O que a IA
   // escreveu é o rascunho; o que a pessoa importou ou escreveu é o material de
   // verdade, e sobrevive à próxima geração do roteiro.
   const tre = normalizarTreinamento(treinamento, { por: treinamentoPor });
-  const subTreino = (por) => `${minTre} minutos · 09:20–10:00${por ? ` · quem treina: ${por}` : ''}${liv.titulo ? ` · baseado em: ${liv.titulo}` : ''}`;
-  const linkLivro = liv.pdf_url ? { url: liv.pdf_url, rotulo: 'abrir o livro (PDF)' } : null;
-  const slideTreino = temTreinamento(tre)
-    ? { id: 'treinamento', bloco: 'treinamento', titulo: tre.titulo || 'Treinamento',
-        sub: subTreino(tre.por),
-        corpo: [tre.material || null, ...tre.passos.map((p, i) => `${i + 1}. ${p}`)].filter(Boolean),
-        rodape: materialEhLink(tre.material) ? 'material: abra o link antes de começar' : null, link: linkLivro }
-    : { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: subTreino(treinamentoPor), corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null, link: linkLivro };
+  const subTreino = (por) => `${minTre} minutos · 09:20–10:00${por ? ` · quem treina: ${por}` : ''}${nomesLivros ? ` · baseado em: ${nomesLivros}` : ''}`;
+  const linksLivros = lista.filter((l) => l.pdf_url).map((l) => ({ url: l.pdf_url, rotulo: lista.length > 1 ? `PDF: ${l.titulo || 'livro'}` : 'abrir o livro (PDF)' }));
+  const linkLivro = linksLivros[0] || null;
+  const imagensLivros = lista.map((l) => l.capa_url).filter(Boolean);
+  // 🎓 DIR-168.1 — A TRAJETÓRIA DO TREINAMENTO: a capa do treinamento e depois
+  // UMA lâmina por passo (dono: "ficar mais conexo às lâminas e à trajetória do
+  // treinamento"). Oito passos numa lâmina só era uma parede de texto; cada
+  // passo agora tem a tela pra si, com "passo 3 de 8" e o livro no rodapé.
+  const rodapeLivro = nomesLivros ? `baseado em: ${nomesLivros}` : null;
+  const slidesTreino = temTreinamento(tre)
+    ? [
+        { id: 'treinamento', bloco: 'treinamento', titulo: tre.titulo || 'Treinamento',
+          sub: subTreino(tre.por),
+          corpo: [tre.material || null, tre.passos.length ? `${tre.passos.length} passo${tre.passos.length === 1 ? '' : 's'} — um por lâmina` : null].filter(Boolean),
+          rodape: materialEhLink(tre.material) ? 'material: abra o link antes de começar' : rodapeLivro, link: linkLivro, links: linksLivros },
+        ...tre.passos.map((p, i) => ({ id: `treinamento-passo-${i + 1}`, bloco: 'treinamento', titulo: `${i + 1}. ${p.split(/[:—–-]\s/)[0].slice(0, 70)}`, sub: `passo ${i + 1} de ${tre.passos.length} · ${tre.titulo || 'Treinamento'}`, corpo: [p], rodape: rodapeLivro, link: linkLivro })),
+      ]
+    : [{ id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: subTreino(treinamentoPor), corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: rodapeLivro, link: linkLivro, links: linksLivros }];
   const producao = pautasParaLamina(pautasVivas, { dataISO: dataEncontroISO });
+  const linhaLivros = lista.length > 1 ? `Livros: ${lista.map((l) => `${l.titulo}${l.autor ? ` (${l.autor})` : ''}`).join(' · ')}` : null;
   const mentalidade = aberturaDaMentalidade();
   const slides = [
     { id: 'capa', bloco: null, titulo: 'Encontro da Mentalidade', sub: `${data || ''}${fase ? ` · ${fase.fase}` : ''}`, corpo: [r.tema, conduzidoPor ? `conduz: ${conduzidoPor}` : null].filter(Boolean), rodape: 'Executivo · Diretor · CEO — um espaço só' },
     { id: 'mentalidade', bloco: 'mentalidade', titulo: mentalidade.titulo, sub: `5 minutos · 09:00–09:05${conduzidoPor ? ` · a palavra de ${conduzidoPor}` : ' · a palavra de quem conduz'}`, corpo: mentalidade.corpo, rodape: 'antes da leitura' },
     { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '09:00 mentalidade · 09:05 leitura · 09:20 treinamento · 10:00–12:00 produção', corpo: [r.abertura], rodape: null },
-    { id: 'leitura', bloco: 'leitura', titulo: liv.titulo || r.leitura?.titulo || 'Leitura', sub: `15 minutos · 09:05–09:20${liv.autor ? ` · ${liv.autor}` : ''}`, corpo: [r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação', imagem: liv.capa_url || null, link: linkLivro },
-    slideTreino,
-    ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min${t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),
-    { id: 'fechamento', bloco: null, titulo: 'Fechamento', sub: `${demandas.length} demanda${demandas.length === 1 ? '' : 's'} direcionada${demandas.length === 1 ? '' : 's'}`, corpo: [r.fechamento, ...demandas.slice(0, 8).map((d) => `• ${d.pessoa_nome || d.pessoa_id}: ${d.titulo}`)].filter(Boolean), rodape: 'até sexta' },
-    // 🗂️ DIR-168 — a ÚLTIMA lâmina é a lista viva do que precisa ser conversado
-    // (dono: "igual um Trello… e isso aparecer na última lâmina da apresentação").
+    { id: 'leitura', bloco: 'leitura', titulo: lista.length > 1 ? 'Leitura · os livros da semana' : (liv.titulo || r.leitura?.titulo || 'Leitura'), sub: `15 minutos · 09:05–09:20${lista.length === 1 && liv.autor ? ` · ${liv.autor}` : ''}`, corpo: [linhaLivros, r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação', imagem: imagensLivros[0] || null, imagens: imagensLivros, link: linkLivro, links: linksLivros },
+    ...slidesTreino,
+    // 🗂️ DIR-168.1 — a lista do que precisa ser conversado ABRE as duas horas de
+    // Produção (dono: "aparecer nessas duas horas finais"), antes dos tópicos.
     { id: 'producao', bloco: 'reuniao', titulo: 'Produção · o que precisa ser conversado', sub: `10:00–12:00 · ${producao.abertas} em aberto${producao.conversadas ? ` · ${producao.conversadas} conversado${producao.conversadas === 1 ? '' : 's'}` : ''}`, corpo: producao.linhas, rodape: 'o que não for concluído volta na próxima segunda' },
+    ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min${t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),
+    // o fechamento (última lâmina) fecha com as demandas E com o que ficou em aberto na lista
+    { id: 'fechamento', bloco: null, titulo: 'Fechamento', sub: `${demandas.length} demanda${demandas.length === 1 ? '' : 's'} direcionada${demandas.length === 1 ? '' : 's'}${producao.abertas ? ` · ${producao.abertas} item${producao.abertas === 1 ? '' : 's'} da lista ${producao.abertas === 1 ? 'fica' : 'ficam'} pra próxima segunda` : ''}`, corpo: [r.fechamento, ...demandas.slice(0, 8).map((d) => `• ${d.pessoa_nome || d.pessoa_id}: ${d.titulo}`)].filter(Boolean), rodape: 'até sexta' },
   ];
   return aplicarLaminas(slides, laminas);
 }
@@ -736,6 +751,15 @@ export function normalizarLivro(bruto, { tituloSugerido = '' } = {}) {
   };
 }
 export const temLivro = (l) => { const n = normalizarLivro(l); return !!(n.titulo || n.capa_url || n.pdf_url); };
+/** DIR-168.1 — VÁRIOS livros (dono: "adicionar o livro do Napoleão Hill; ter espaço pra adicionar e retirar os livros").
+ *  `livros` é a lista; `livro` (o campo antigo, um só) entra como primeiro item quando a lista ainda não existe. */
+export const MAX_LIVROS = 6;
+export function normalizarLivros(brutoLista, legado = null) {
+  const arr = Array.isArray(brutoLista) ? brutoLista : [];
+  const lista = arr.map((l) => normalizarLivro(l)).filter(temLivro).slice(0, MAX_LIVROS);
+  if (!lista.length && temLivro(legado)) return [normalizarLivro(legado)];
+  return lista;
+}
 
 /** A pauta viva (a lista tipo Trello): 3 colunas, com o que sobrou das semanas anteriores. */
 export const STATUS_PAUTA = [
