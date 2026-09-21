@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Brain, Play, Pause, SkipForward, Sparkles, Presentation, X, ChevronLeft, ChevronRight, Send, Loader2, Users, CheckCheck, RotateCcw, MessageSquare, PencilLine } from 'lucide-react';
+import { Brain, Play, Pause, SkipForward, Sparkles, Presentation, X, ChevronLeft, ChevronRight, Send, Loader2, Users, CheckCheck, RotateCcw, MessageSquare, PencilLine, BookOpen, Upload, ListTodo, Plus, Trash2, ArrowRight, Undo2, FileText, ExternalLink } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import {
   sugerirResponsavel, sextaDaSemana, demandaDoTopico, producaoDaSemana, slidesDoEncontro,
   ancoraDoEncontro, semanaVizinha, seloDaData, descartesDoRoteiro,
   normalizarTreinamento, temTreinamento, materialEhLink, treinamentoDoTexto, treinamentoDoRoteiro, TREINAMENTO_VAZIO,
+  horarioDoBloco, normalizarLivro, temLivro, LIVRO_VAZIO, STATUS_PAUTA, ordenarPautasVivas, seloDaPauta,
+  normalizarLaminas, ajustarLamina, apagarLamina, restaurarLamina, novaLaminaDepois, ehLaminaExtra, laminasOcultas,
 } from '@/lib/encontro';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { funcaoDaPessoaComOrigem } from '@/lib/funcoes';
@@ -116,18 +118,29 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   const [agora, setAgora] = useState(() => new Date().toISOString());
   const [escolhas, setEscolhas] = useState({}); // por tópico: {pessoa, prazo, hora, titulo}
   const [livre, setLivre] = useState({ titulo: '', pessoa: '', prazo: '', hora: '18:00' });
+  // 📖🗂️✏️ DIR-168 (dono, 21/09/2026) — o livro da semana (capa + PDF), a pauta
+  // viva (a lista tipo Trello do que precisa ser conversado) e a edição de cada
+  // lâmina da apresentação.
+  const [pautasVivas, setPautasVivas] = useState([]);
+  const [novaPauta, setNovaPauta] = useState({ titulo: '', detalhe: '' });
+  const [salvandoPauta, setSalvandoPauta] = useState(false);
+  const [subindo, setSubindo] = useState('');
+  const [editandoLamina, setEditandoLamina] = useState(false);
 
   // o relógio da tela: só pra desenhar; a verdade do tempo está no banco
   useEffect(() => { const t = setInterval(() => setAgora(new Date().toISOString()), 1000); return () => clearInterval(t); }, []);
 
   const carregar = useCallback(async () => {
-    const [enc, u, p, pr] = await Promise.all([
+    const [enc, u, p, pr, pv] = await Promise.all([
       supabase.from('xperf_encontros').select('*').eq('data', dataEncontro).maybeSingle(),
       supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level').order('full_name'),
       supabase.from('xgame_participantes').select('user_id,funcao_titulo,cargo').eq('ativo', true),
       supabase.from('xperf_programa').select('*').order('ordem'),
+      // 🗂️ a pauta viva: tudo que ainda não concluiu (de qualquer semana) + o que concluiu NESTA segunda
+      supabase.from('xperf_encontro_pautas').select('*').or(`status.neq.concluida,encontro_data.eq.${dataEncontro}`).order('ordem').order('created_at'),
     ]);
     setEncontro(enc.data || null);
+    setPautasVivas(pv?.data || []);
     setUsuarios(u.data || []);
     setParticipantes(p.data || []);
     setProgramaBanco(pr.data || []);
@@ -188,6 +201,10 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     temTreinamento(treinamento) ? treinamento : treinamentoDoRoteiro(roteiro?.treinamento, { por: treinamentoPor })
   ), [treinamento, roteiro?.treinamento, treinamentoPor]);
 
+  // 📖 o livro da semana: o gravado; sem gravado, o título que a IA/conversa deu à leitura
+  const livro = useMemo(() => normalizarLivro(encontro?.livro, { tituloSugerido: roteiro?.leitura?.titulo || '' }), [encontro?.livro, roteiro?.leitura?.titulo]);
+  const laminas = useMemo(() => normalizarLaminas(encontro?.laminas), [encontro?.laminas]);
+
   // 💾 gravar o encontro (uma linha por segunda; a primeira gravação cria)
   const salvarEncontro = async (patch) => {
     const linha = { data: dataEncontro, trilha: encontro?.trilha || 'diretor', blocos: encontro?.blocos || {}, ...patch, updated_at: new Date().toISOString(), criado_por_id: encontro?.criado_por_id || currentUser?.id || null, criado_por_nome: encontro?.criado_por_nome || currentUser?.full_name || null };
@@ -196,6 +213,62 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     const salvo = Array.isArray(data) ? data[0] : data;
     setEncontro((e) => ({ ...(e || {}), ...linha, ...(salvo || {}) }));
     return salvo || linha;
+  };
+
+  const salvarLivro = (patch) => salvarEncontro({ livro: { ...livro, ...patch } });
+  // 📎 capa (imagem) e PDF do livro vão pro balde encontro-materiais e a URL fica no encontro
+  const subirArquivoDoLivro = async (file, tipo) => {
+    const limite = tipo === 'pdf' ? 30 * 1024 * 1024 : 8 * 1024 * 1024;
+    if (file.size > limite) { toast.error(tipo === 'pdf' ? 'O PDF passa de 30 MB.' : 'A imagem passa de 8 MB.'); return; }
+    setSubindo(tipo);
+    try {
+      const nome = String(file.name || tipo).replace(/[^\w.-]+/g, '_').slice(-60);
+      const r = await plataforma.integrations.Core.UploadFile({ file, path: `encontro/${dataEncontro}/${tipo}-${Date.now()}-${nome}`, bucket: 'encontro-materiais' });
+      const url = r?.file_url || r?.url;
+      if (!url) throw new Error('o servidor não devolveu a URL');
+      await salvarLivro(tipo === 'pdf' ? { pdf_url: url } : { capa_url: url });
+      toast.success(tipo === 'pdf' ? 'PDF do livro guardado.' : 'Capa do livro guardada.');
+    } catch (e) { toast.error(`Não subiu o arquivo: ${e?.message || e}`); }
+    finally { setSubindo(''); }
+  };
+
+  // 🗂️ a pauta viva — a lista do que precisa ser conversado (qualquer administrador coloca durante a semana)
+  const adicionarPauta = async () => {
+    const tituloPauta = novaPauta.titulo.trim();
+    if (!tituloPauta) return;
+    setSalvandoPauta(true);
+    const linha = { titulo: tituloPauta, detalhe: novaPauta.detalhe.trim() || null, autor_id: currentUser?.id || null, autor_nome: currentUser?.full_name || currentUser?.nickname || null, status: 'aberta', ordem: pautasVivas.length, encontro_data: dataEncontro };
+    const { data, error } = await supabase.from('xperf_encontro_pautas').insert(linha).select();
+    setSalvandoPauta(false);
+    if (error) { toast.error('Não gravou o item da lista'); return; }
+    setPautasVivas((l) => [...l, ...(Array.isArray(data) ? data : [data])]);
+    setNovaPauta({ titulo: '', detalhe: '' });
+  };
+  const moverPauta = async (item, status) => {
+    const patch = { status, updated_at: new Date().toISOString(), concluida_em: status === 'concluida' ? new Date().toISOString() : null };
+    const { error } = await supabase.from('xperf_encontro_pautas').update(patch).eq('id', item.id);
+    if (error) { toast.error('Não moveu o item'); return; }
+    setPautasVivas((l) => l.map((x) => (x.id === item.id ? { ...x, ...patch } : x)));
+  };
+  const apagarPauta = async (item) => {
+    if (!window.confirm(`Apagar "${item.titulo}" da lista?`)) return;
+    const { error } = await supabase.from('xperf_encontro_pautas').delete().eq('id', item.id);
+    if (error) { toast.error('Não apagou'); return; }
+    setPautasVivas((l) => l.filter((x) => x.id !== item.id));
+  };
+  const pautaViraDemanda = (item) => {
+    setLivre((l) => ({ ...l, titulo: item.titulo }));
+    document.querySelector('[data-teste="direcionar"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // ✏️ as lâminas: editar, apagar, nova, restaurar — direto na apresentação
+  const mudarLamina = (id, patch) => salvarEncontro({ laminas: ajustarLamina(laminas, id, patch) });
+  const apagarLaminaAtual = (id) => { if (window.confirm('Apagar esta lâmina da apresentação?')) salvarEncontro({ laminas: apagarLamina(laminas, id) }); };
+  const restaurarLaminaAtual = (id) => salvarEncontro({ laminas: restaurarLamina(laminas, id) });
+  const novaLamina = (aposId, bloco) => {
+    const id = `extra-${Date.now().toString(36)}`;
+    salvarEncontro({ laminas: novaLaminaDepois(laminas, aposId, { id, bloco, titulo: 'Nova lâmina', sub: '', corpo: ['escreva aqui'] }) });
+    setSlide((s) => s + 1);
   };
 
   // ⏱️ o cronômetro
@@ -248,7 +321,9 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
     // logo depois de gerar um treinamento inteiro. Se já existe um gravado
     // (importado ou editado antes), ele é o registro real e não é pisado.
     const seedTreinamento = temTreinamento(encontro?.treinamento) ? {} : { treinamento: treinamentoDoRoteiro(novo.treinamento, { por: treinamentoPor }) };
-    await salvarEncontro({ pautas: pautasTexto, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor, ...seedTreinamento });
+    // 📖 DIR-168 — o livro que a conversa perguntou ("qual vai ser o livro?") já entra como o livro da semana
+    const seedLivro = !temLivro(encontro?.livro) && extra.livro ? { livro: { ...LIVRO_VAZIO, titulo: String(extra.livro).trim() } } : {};
+    await salvarEncontro({ pautas: pautasTexto, roteiro: novo, roteiro_origem: origem, tema: temaDoMes || novo.tema, conduzido_por_nome: conduzidoPor, treinamento_por_nome: treinamentoPor, ...seedTreinamento, ...seedLivro });
     if (daConversa) setPautas(pautasTexto);
     setGerando(false);
     setPautasAbertas(false);
@@ -345,7 +420,9 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
   useEffect(() => { setEscolhas((e) => ({ ...e, livre: { pessoa: livre.pessoa, prazo: livre.prazo, hora: livre.hora, titulo: livre.titulo } })); }, [livre]);
 
   const producao = useMemo(() => producaoDaSemana({ demandas, tarefas, cards, hojeISO: hoje }), [demandas, tarefas, cards, hoje]);
-  const slides = useMemo(() => slidesDoEncontro({ data: fmtDia(dataEncontro), roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento }), [dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento]);
+  const slides = useMemo(() => slidesDoEncontro({ data: fmtDia(dataEncontro), dataISO: dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento, livro, pautasVivas, laminas }), [dataEncontro, roteiro, mes, conduzidoPor, treinamentoPor, demandas, treinamento, livro, pautasVivas, laminas]);
+  // apagou a lâmina que estava na tela → a apresentação não pode ficar apontando pro nada
+  useEffect(() => { if (slide > slides.length - 1) setSlide(Math.max(0, slides.length - 1)); }, [slides.length, slide]);
 
   // 🎞️ a apresentação: setas e ESC
   useEffect(() => {
@@ -404,9 +481,46 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
           {/* 🎓 DIR-79 — o TREINAMENTO em si. Antes daqui só existia o nome de
               quem treina: o bloco de 45 min ia pra tela vazio, sem nada pra
               importar e nada pra abrir na hora de apresentar. */}
-          <div className="mt-2 rounded-lg border border-white/10 p-2.5" data-teste="treinamento-caixa">
+          <div className="sm:col-span-3 grid md:grid-cols-2 gap-2 mt-1">
+          {/* 📖 DIR-168 — O LIVRO DA SEMANA: a leitura de 15 min é dele, e o
+              treinamento de 40 min é baseado nele. Título, autor, capa e PDF —
+              o dono escolhe (hoje: "O Homem Mais Rico que Já Existiu", Salomão),
+              não fica definido em código. */}
+          <div className="mt-1 rounded-lg border border-white/10 p-2.5" data-teste="livro-caixa">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento ({blocoTreinamento.minutos} min)</p>
+              <p className="text-[10px] text-white/45 uppercase tracking-wider"><BookOpen className="w-3 h-3 inline mr-1" />a leitura · o livro da semana ({blocoLeitura.minutos} min · {horarioDoBloco(blocoLeitura)})</p>
+              {temLivro(livro)
+                ? <span className="text-[10px] font-bold text-nz-verde" data-teste="livro-pronto">{livro.pdf_url ? 'com PDF' : 'sem PDF'}{livro.capa_url ? ' · com capa' : ''}</span>
+                : <span className="text-[10px] text-amber-300/80" data-teste="livro-vazio">ainda sem livro</span>}
+            </div>
+            <div className="mt-1.5 flex gap-3">
+              {livro.capa_url
+                ? <img src={livro.capa_url} alt={livro.titulo || 'capa do livro'} className="w-16 h-24 object-cover rounded-md border border-white/15 shrink-0" data-teste="livro-capa" />
+                : <div className="w-16 h-24 rounded-md border border-dashed border-white/20 grid place-items-center text-white/30 shrink-0"><BookOpen className="w-5 h-5" /></div>}
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Input defaultValue={livro.titulo} key={`livro-t-${encontro?.id || 'novo'}-${livro.titulo}`} placeholder="o livro (ex.: O Homem Mais Rico que Já Existiu — Salomão)" disabled={!podeConduzir} onBlur={(ev) => { if (ev.target.value !== livro.titulo) salvarLivro({ titulo: ev.target.value }); }} className="h-7 border-white/15 bg-white/[0.06] text-white text-[12px] font-bold normal-case" data-teste="livro-titulo" />
+                <Input defaultValue={livro.autor} key={`livro-a-${encontro?.id || 'novo'}`} placeholder="autor" disabled={!podeConduzir} onBlur={(ev) => { if (ev.target.value !== livro.autor) salvarLivro({ autor: ev.target.value }); }} className="h-7 border-white/15 bg-white/[0.06] text-white text-[11px] normal-case" data-teste="livro-autor" />
+                <div className="flex flex-wrap items-center gap-2">
+                  {podeConduzir && (
+                    <label className={`cursor-pointer inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-white min-h-[32px] ${subindo ? 'opacity-60 pointer-events-none' : ''}`}>
+                      <Upload className="w-3 h-3" /> {subindo === 'capa' ? 'subindo…' : livro.capa_url ? 'trocar a capa' : 'capa do livro'}
+                      <input type="file" accept="image/*" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) subirArquivoDoLivro(f, 'capa'); }} data-teste="livro-capa-arquivo" />
+                    </label>
+                  )}
+                  {podeConduzir && (
+                    <label className={`cursor-pointer inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-[10px] font-bold text-white/70 hover:text-white min-h-[32px] ${subindo ? 'opacity-60 pointer-events-none' : ''}`}>
+                      <FileText className="w-3 h-3" /> {subindo === 'pdf' ? 'subindo…' : livro.pdf_url ? 'trocar o PDF' : 'PDF do livro'}
+                      <input type="file" accept="application/pdf" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) subirArquivoDoLivro(f, 'pdf'); }} data-teste="livro-pdf-arquivo" />
+                    </label>
+                  )}
+                  {livro.pdf_url && <a href={livro.pdf_url} target="_blank" rel="noreferrer" className="text-[10px] text-sky-300 underline inline-flex items-center gap-1 min-h-[32px]" data-teste="livro-pdf-abrir"><ExternalLink className="w-3 h-3" /> abrir o PDF pra ler</a>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-1 rounded-lg border border-white/10 p-2.5" data-teste="treinamento-caixa">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className="text-[10px] text-white/45 uppercase tracking-wider">o treinamento ({blocoTreinamento.minutos} min · {horarioDoBloco(blocoTreinamento)}{livro.titulo ? ` · baseado em: ${livro.titulo}` : ''})</p>
               {temTreinamento(treinamentoEfetivo)
                 ? <span className="text-[10px] font-bold text-nz-verde" data-teste="treinamento-pronto">pronto · {treinamentoEfetivo.passos.length} passo{treinamentoEfetivo.passos.length === 1 ? '' : 's'}</span>
                 : <span className="text-[10px] text-amber-300/80" data-teste="treinamento-vazio">ainda sem material</span>}
@@ -454,6 +568,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
               </div>
             ) : <p className="mt-1 text-[11px] text-white/40">quem conduz ainda não subiu o material.</p>}
           </div>
+          </div>
         </div>
       </div>
 
@@ -471,7 +586,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                   <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                     <div className="h-full" style={{ width: `${Math.round(b.pct * 100)}%`, background: b.estourou ? '#ef4444' : b.cor, transition: 'width 0.9s linear' }} />
                   </div>
-                  <p className={`mt-1 text-[11px] font-bold truncate ${b.rodando ? 'text-white' : b.feito ? 'text-white/60' : 'text-white/40'}`}>{b.n}. {b.nome} <span className="font-medium text-white/40">{b.minutos} min</span></p>
+                  <p className={`mt-1 text-[11px] font-bold truncate ${b.rodando ? 'text-white' : b.feito ? 'text-white/60' : 'text-white/40'}`}>{b.n}. {b.nome} <span className="font-medium text-white/40">{b.minutos} min · {horarioDoBloco(b)}</span></p>
                   <p className="text-[10px] text-white/40 tabular-nums">{b.decorrido ? `${fmtTempo(b.decorrido)}${b.estourou ? ` · estourou ${fmtTempo(b.estouro)}` : ''}` : b.descricao}</p>
                 </div>
               ))}
@@ -589,7 +704,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
             )}
           </div>
           {!roteiro ? (
-            <p className="mt-2 text-[12px] text-white/45">Digite as pautas e gere o tópico: a mentalidade de {blocoMentalidade.minutos} minutos, a leitura de {blocoLeitura.minutos}, o treinamento de {blocoTreinamento.minutos} e os tópicos das 2 horas de reunião, cada um com objetivo, decisão esperada, minutos e a demanda que sai dele.</p>
+            <p className="mt-2 text-[12px] text-white/45">Digite as pautas e gere o tópico: a mentalidade de {blocoMentalidade.minutos} minutos, a leitura de {blocoLeitura.minutos}, o treinamento de {blocoTreinamento.minutos} e os tópicos das 2 horas de produção, cada um com objetivo, decisão esperada, minutos e a demanda que sai dele.</p>
           ) : (
             <div className="mt-2 space-y-3">
               <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoMentalidade.cor}` }} data-teste="topico-mentalidade">
@@ -645,7 +760,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                 )}
               </div>
               <div className="rounded-lg border border-white/10 p-2.5" style={{ borderLeft: `3px solid ${blocoReuniao.cor}` }} data-teste="topico-reuniao">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">5 · Reunião estratégica · {blocoReuniao.minutos} min · {roteiro.reuniao?.topicos?.length || 0} tópicos</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">5 · Produção · {blocoReuniao.minutos} min · {horarioDoBloco(blocoReuniao)} · {roteiro.reuniao?.topicos?.length || 0} tópicos</p>
                 <ol className="mt-1 space-y-1.5">
                   {(roteiro.reuniao?.topicos || []).map((t, i) => (
                     <li key={`${t.titulo}-${i}`} className="text-[11px]" data-teste="topico-item">
@@ -676,6 +791,57 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── 🗂️ DIR-168 — a pauta viva: a lista do que precisa ser conversado (10:00–12:00) ──
+          Dono: "um espaço para a gente colocar a lista, igual um Trello, de tudo
+          que a gente tem que conversar — e isso aparecer na última lâmina da
+          apresentação; os administradores colocam previamente". Três colunas;
+          o que não conclui continua na lista na segunda seguinte. */}
+      <div className="rounded-xl border border-white/10 p-3 sm:p-4" style={caixa} data-teste="pauta-viva">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <p className={titulo}><ListTodo className="w-3 h-3 inline mr-1" />Produção · o que precisa ser conversado</p>
+          <span className="text-[10px] text-white/35">· {horarioDoBloco(blocoReuniao)} · é a última lâmina da apresentação · o que não for concluído volta na próxima segunda</span>
+        </div>
+        {podeConduzir && (
+          <div className="mt-2 flex flex-col sm:flex-row gap-1.5">
+            <Input value={novaPauta.titulo} onChange={(ev) => setNovaPauta((n) => ({ ...n, titulo: ev.target.value }))} onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); adicionarPauta(); } }} placeholder="o que precisa ser conversado na segunda" className="h-8 flex-1 border-white/15 bg-white/[0.06] text-white text-[12px] normal-case" data-teste="pauta-nova-titulo" />
+            <Input value={novaPauta.detalhe} onChange={(ev) => setNovaPauta((n) => ({ ...n, detalhe: ev.target.value }))} onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); adicionarPauta(); } }} placeholder="detalhe (opcional)" className="h-8 sm:w-64 border-white/15 bg-white/[0.06] text-white text-[12px] normal-case" data-teste="pauta-nova-detalhe" />
+            <Button size="sm" onClick={adicionarPauta} disabled={salvandoPauta || !novaPauta.titulo.trim()} className="h-8 bg-nz-verde hover:bg-nz-verde-claro text-white font-bold" data-teste="pauta-adicionar"><Plus className="w-3.5 h-3.5 mr-1" /> colocar na lista</Button>
+          </div>
+        )}
+        <div className="mt-2 grid md:grid-cols-3 gap-2" data-teste="pauta-colunas">
+          {STATUS_PAUTA.map((col) => {
+            const itens = ordenarPautasVivas(pautasVivas).filter((i) => (i.status || 'aberta') === col.id);
+            return (
+              <div key={col.id} className="rounded-lg border border-white/10 p-2" data-coluna={col.id}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">{col.nome} <span className="text-white/30 tabular-nums">{itens.length}</span></p>
+                <ul className="mt-1.5 space-y-1.5">
+                  {itens.map((item) => {
+                    const seloItem = seloDaPauta(item, dataEncontro);
+                    return (
+                      <li key={item.id} className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5" data-teste="pauta-item">
+                        <p className="text-[12px] font-bold text-white leading-snug">{item.titulo}</p>
+                        {item.detalhe && <p className="text-[11px] text-white/60 mt-0.5 whitespace-pre-line">{item.detalhe}</p>}
+                        <p className="text-[10px] text-white/35 mt-0.5">{item.autor_nome ? nomeCurto(item.autor_nome) : ''}{seloItem ? ` · ${seloItem}` : ''}</p>
+                        {podeConduzir && (
+                          <div className="mt-1 flex flex-wrap gap-2 text-[10px]">
+                            {col.id !== 'aberta' && <button type="button" onClick={() => moverPauta(item, col.id === 'concluida' ? 'conversada' : 'aberta')} className="text-white/45 hover:text-white inline-flex items-center gap-0.5 min-h-[28px]"><Undo2 className="w-3 h-3" /> voltar</button>}
+                            {col.id === 'aberta' && <button type="button" onClick={() => moverPauta(item, 'conversada')} className="text-sky-300 hover:text-white inline-flex items-center gap-0.5 min-h-[28px]" data-teste="pauta-conversada"><ArrowRight className="w-3 h-3" /> conversado</button>}
+                            {col.id !== 'concluida' && <button type="button" onClick={() => moverPauta(item, 'concluida')} className="text-nz-verde hover:text-white inline-flex items-center gap-0.5 min-h-[28px]" data-teste="pauta-concluir"><CheckCheck className="w-3 h-3" /> concluído</button>}
+                            {col.id !== 'concluida' && <button type="button" onClick={() => pautaViraDemanda(item)} className="text-amber-300 hover:text-white inline-flex items-center gap-0.5 min-h-[28px]" data-teste="pauta-vira-demanda"><Send className="w-3 h-3" /> vira demanda</button>}
+                            <button type="button" onClick={() => apagarPauta(item)} className="text-white/30 hover:text-red-300 inline-flex items-center gap-0.5 min-h-[28px]" data-teste="pauta-apagar"><Trash2 className="w-3 h-3" /> apagar</button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {!itens.length && <li className="text-[11px] text-white/30 px-1 py-2">{col.id === 'aberta' ? 'nada na fila' : '—'}</li>}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -759,22 +925,51 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
                   lâmina, sem precisar primeiro achar o botão certo lá embaixo
                   na tela normal. Fecha a apresentação e já abre a edição do
                   tópico inteiro (leitura/abertura/treinamento/tópicos). */}
+              {/* ✏️ DIR-168 — dono: "preciso ter o botão de editar os slides,
+                  apagar, editar; a edição de cada lâmina". O lápis agora edita
+                  A LÂMINA na própria apresentação (título, subtítulo, corpo),
+                  apaga, cria uma nova depois dela e restaura o original. */}
               {podeConduzir && (
-                <button type="button" onClick={() => { setApresentando(false); setEditando(true); setEditandoTreinamento(true); window.scrollTo({ top: 0 }); }} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="fechar e editar esta lâmina" title="fechar e editar" data-teste="apresentacao-editar"><PencilLine className="w-4 h-4" /></button>
+                <button type="button" onClick={() => setEditandoLamina((v) => !v)} className={`rounded-full border border-white/20 p-2 hover:bg-white/10 ${editandoLamina ? 'bg-white text-black' : ''}`} aria-label="editar esta lâmina" title="editar esta lâmina" data-teste="apresentacao-editar"><PencilLine className="w-4 h-4" /></button>
               )}
               <button type="button" onClick={() => setApresentando(false)} className="rounded-full border border-white/20 p-2 hover:bg-white/10" aria-label="fechar apresentação" data-teste="apresentacao-fechar"><X className="w-4 h-4" /></button>
             </div>
           </div>
           <div className="flex-1 flex items-center justify-center px-6 sm:px-16 py-6 overflow-y-auto">
             {slides[slide] && (
-              <div className="max-w-4xl w-full">
-                {slides[slide].bloco && <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3" style={{ color: BLOCOS.find((b) => b.id === slides[slide].bloco)?.cor }}>{BLOCOS.find((b) => b.id === slides[slide].bloco)?.n}. {BLOCOS.find((b) => b.id === slides[slide].bloco)?.nome}</p>}
-                <h2 className="text-[30px] sm:text-[48px] font-extrabold leading-[1.05] tracking-tight" data-teste="slide-titulo">{slides[slide].titulo}</h2>
-                {slides[slide].sub && <p className="mt-2 text-[14px] sm:text-[18px] text-white/55">{slides[slide].sub}</p>}
-                <div className="mt-6 space-y-3">
-                  {slides[slide].corpo.map((linha, i) => <p key={i} className={`leading-snug ${i === 0 ? 'text-[18px] sm:text-[26px] text-white/90' : 'text-[15px] sm:text-[20px] text-white/70'}`}>{linha}</p>)}
-                </div>
-                {slides[slide].rodape && <p className="mt-8 text-[12px] text-white/35 uppercase tracking-wider">{slides[slide].rodape}</p>}
+              <div className="max-w-5xl w-full">
+                {slides[slide].bloco && <p className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3" style={{ color: BLOCOS.find((b) => b.id === slides[slide].bloco)?.cor }}>{BLOCOS.find((b) => b.id === slides[slide].bloco)?.n}. {BLOCOS.find((b) => b.id === slides[slide].bloco)?.nome} · {horarioDoBloco(BLOCOS.find((b) => b.id === slides[slide].bloco))}</p>}
+                {editandoLamina && podeConduzir ? (
+                  <div className="space-y-2" data-teste="lamina-editor">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">editando a lâmina {slide + 1} de {slides.length}{slides[slide].extra ? ' · lâmina extra' : slides[slide].ajustada ? ' · ajustada à mão' : ''}</p>
+                    <Input defaultValue={slides[slide].titulo} key={`lt-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { titulo: ev.target.value })} placeholder="título" className="h-11 border-white/20 bg-white/[0.06] text-white text-[20px] font-extrabold normal-case" data-teste="lamina-titulo" />
+                    <Input defaultValue={slides[slide].sub || ''} key={`ls-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { sub: ev.target.value })} placeholder="subtítulo (opcional)" className="h-8 border-white/20 bg-white/[0.06] text-white text-[13px] normal-case" data-teste="lamina-sub" />
+                    <Textarea defaultValue={(slides[slide].corpo || []).join('\n')} key={`lc-${slides[slide].id}`} onBlur={(ev) => mudarLamina(slides[slide].id, { corpo: ev.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })} rows={8} placeholder="o corpo — uma linha por parágrafo" className="border-white/20 bg-white/[0.06] text-white text-[14px] leading-relaxed" data-teste="lamina-corpo" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={() => setEditandoLamina(false)} className="h-8 bg-white text-black hover:bg-white/90 font-bold" data-teste="lamina-concluir">concluir edição</Button>
+                      <Button size="sm" onClick={() => novaLamina(slides[slide].id, slides[slide].bloco)} className="h-8 bg-white/10 hover:bg-white/20 text-white" data-teste="lamina-nova"><Plus className="w-3.5 h-3.5 mr-1" /> nova lâmina depois desta</Button>
+                      {slides[slide].ajustada && !ehLaminaExtra(slides[slide].id) && <button type="button" onClick={() => restaurarLaminaAtual(slides[slide].id)} className="text-[11px] text-white/50 hover:text-white underline" data-teste="lamina-restaurar">restaurar o original</button>}
+                      <button type="button" onClick={() => apagarLaminaAtual(slides[slide].id)} className="text-[11px] text-red-300/80 hover:text-red-200 inline-flex items-center gap-1" data-teste="lamina-apagar"><Trash2 className="w-3.5 h-3.5" /> apagar esta lâmina</button>
+                      <button type="button" onClick={() => { setApresentando(false); setEditandoLamina(false); setEditando(true); setEditandoTreinamento(true); window.scrollTo({ top: 0 }); }} className="ml-auto text-[11px] text-white/40 hover:text-white underline" data-teste="apresentacao-editar-tudo">editar o tópico inteiro na tela</button>
+                    </div>
+                    {laminasOcultas(laminas).length > 0 && (
+                      <p className="text-[11px] text-white/40" data-teste="laminas-apagadas">lâminas apagadas: {laminasOcultas(laminas).map((id) => <button key={id} type="button" onClick={() => restaurarLaminaAtual(id)} className="ml-1 underline hover:text-white">{id} (restaurar)</button>)}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex gap-6 items-start">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-[30px] sm:text-[48px] font-extrabold leading-[1.05] tracking-tight" data-teste="slide-titulo">{slides[slide].titulo}</h2>
+                      {slides[slide].sub && <p className="mt-2 text-[14px] sm:text-[18px] text-white/55">{slides[slide].sub}</p>}
+                      <div className="mt-6 space-y-3">
+                        {(slides[slide].corpo || []).map((linha, i) => <p key={i} className={`leading-snug ${i === 0 ? 'text-[18px] sm:text-[26px] text-white/90' : 'text-[15px] sm:text-[20px] text-white/70'}`}>{linha}</p>)}
+                      </div>
+                      {slides[slide].link && <a href={slides[slide].link.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-[14px] font-bold text-white min-h-[44px]" data-teste="slide-link"><FileText className="w-4 h-4" /> {slides[slide].link.rotulo}</a>}
+                      {slides[slide].rodape && <p className="mt-8 text-[12px] text-white/35 uppercase tracking-wider">{slides[slide].rodape}</p>}
+                    </div>
+                    {slides[slide].imagem && <img src={slides[slide].imagem} alt={slides[slide].titulo} className="hidden sm:block w-[220px] max-h-[330px] object-contain rounded-xl border border-white/15 shadow-2xl shrink-0" data-teste="slide-capa" />}
+                  </div>
+                )}
               </div>
             )}
           </div>

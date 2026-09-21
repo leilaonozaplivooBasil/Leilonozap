@@ -48,6 +48,27 @@
 
 ---
 
+## DIR-168 — Encontro da Mentalidade: o livro da semana (capa + PDF), cada lâmina editável e a pauta viva na última lâmina
+
+**Status:** EM VIGOR.
+
+**Emitida por:** dono (21/09/2026, urgente): *"Preciso ter o botão de editar os slides, apagar, editar; a edição de cada lâmina. Um espaço de lista das reuniões para todos os participantes, igual um Trello, de tudo que a gente tem que conversar — e isso aparecer na última lâmina da apresentação. Os primeiros 5 minutos é a palavra de quem conduz; 15 minutos de leitura — eu escolho o livro, e precisa ter a imagem do livro e o PDF pra gente ler; 40 minutos de treinamento baseado no livro (hoje: O Homem Mais Rico que Já Existiu, Salomão — mas não fica definido). Isso dá 1 hora. E de 10 a meio-dia, produção: a lista de afazeres, que os administradores colocam previamente."*
+
+**O que já existia e ficou:** os quatro blocos com cronômetro (5/15/40/120), o tópico gerado pela IA/régua a partir das pautas (conversa ou texto colado), o treinamento gravado, as demandas direcionadas ao Painel Corporativo e a visão executiva da semana.
+
+**O que muda:**
+1. **Cronograma com hora marcada**: 09:00–09:05 Mentalidade (a palavra de quem conduz), 09:05–09:20 Leitura, 09:20–10:00 Treinamento, 10:00–12:00 **Produção** (o 4º bloco deixa de se chamar "Reunião estratégica"; o id `reuniao` fica, porque é o que está gravado nos cronômetros passados). Os horários aparecem no cronômetro, nas caixas e nas lâminas.
+2. **O livro da semana** (`xperf_encontros.livro`): título, autor, **capa** (imagem) e **PDF** — upload pelo próprio cartão para o balde `encontro-materiais` (30 MB; jpg/png/webp/pdf), com "abrir o PDF pra ler". A lâmina da Leitura mostra a capa e o botão do PDF; a do Treinamento diz "baseado em: <livro>" e também leva o PDF. Quando a conversa da IA pergunta "qual vai ser o livro?", a resposta já entra como o livro da semana (sem pisar num livro já escolhido).
+3. **Pauta viva** (`xperf_encontro_pautas`): a lista tipo Trello em três colunas — A conversar · Conversado · Concluído. Qualquer administrador que conduz coloca itens durante a semana; cada item vira demanda com um clique; **o que não for concluído volta na próxima segunda** com o selo "de dd/mm". **É a última lâmina da apresentação** ("Produção · o que precisa ser conversado").
+4. **Cada lâmina editável na própria apresentação** (`xperf_encontros.laminas`): o lápis abre título, subtítulo e corpo da lâmina em edição; **apagar esta lâmina**, **nova lâmina depois desta**, **restaurar o original**, e a lista das lâminas apagadas pra trazer de volta. "Editar o tópico inteiro na tela" continua a um clique. Tudo puro em `src/lib/encontro.js` (`aplicarLaminas`, `ajustarLamina`, `apagarLamina`, `novaLaminaDepois`, `restaurarLamina`).
+5. Corrigido de passagem: a lâmina do treinamento dizia "45 minutos" (número antigo) — agora lê os 40 do bloco.
+
+**Banco:** migração `20260921110434_encontro_livro_laminas_pauta_viva` aplicada na produção (colunas `livro`/`laminas`, tabela `xperf_encontro_pautas` com o mesmo regime de política do `xperf_encontros`, balde `encontro-materiais`). Arquivo no repositório com a mesma versão. `npm run colisao`: nenhum outro ramo nos mesmos arquivos.
+
+**Testes:** `tests/encontroLivroLaminasPautaViva.test.mjs` (6); três asserções antigas atualizadas (última lâmina, 40 min, lápis).
+
+---
+
 ## DIR-167 — Dinheiro do lance nunca mais fica preso: devolução ao tirar o líder, cura no lance seguinte e vigia que devolve sozinho
 
 **Status:** EM VIGOR.

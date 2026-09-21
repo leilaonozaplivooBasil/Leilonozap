@@ -168,7 +168,7 @@ test('o slide do Apresentar usa o treinamento GRAVADO, não o que a IA rascunhou
 test('sem treinamento gravado, o Apresentar continua funcionando como antes', () => {
   const s = slidesDoEncontro({ mes: '2026-09', treinamentoPor: 'Aline' }).find((x) => x.id === 'treinamento');
   assert.ok(s, 'o slide não pode sumir');
-  assert.match(s.sub, /45 minutos/);
+  assert.match(s.sub, /40 minutos · 09:20–10:00/); // DIR-168: o bloco é de 40 min, com hora marcada
 });
 
 test('os passos têm teto — treinamento colado gigante não estoura o slide', () => {

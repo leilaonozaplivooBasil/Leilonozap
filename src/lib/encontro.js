@@ -33,12 +33,21 @@ import { proximaSegunda } from './xperformance.js';
 // dos diretores e do CEO, cinco minutos, depois quinze de leitura, e mais
 // quarenta de treinamento" — 5 + 15 + 40 + 120, os mesmos 180 minutos de
 // sempre, só com a abertura ganhando um bloco próprio no cronômetro) ──
+// 🕘 DIR-168 (dono, 21/09/2026) — o cronograma da segunda, com hora marcada:
+//   09:00 → 09:05  Mentalidade — a palavra de quem conduz (5 min)
+//   09:05 → 09:20  Leitura — o livro da semana (15 min)
+//   09:20 → 10:00  Treinamento — baseado no livro (40 min)
+//   10:00 → 12:00  Produção — a lista do que precisa ser conversado (120 min)
+// O id 'reuniao' do quarto bloco FICA (é o que está gravado no cronômetro de
+// todo encontro passado); só o nome que a tela mostra virou "Produção".
 export const BLOCOS = [
-  { id: 'mentalidade', n: 1, nome: 'Mentalidade', minutos: 5, descricao: 'a mentalidade do Diretor e do CEO, explicada', cor: '#F5C451' },
-  { id: 'leitura', n: 2, nome: 'Leitura', minutos: 15, descricao: 'um trecho, uma pergunta, uma aplicação', cor: 'var(--topcollege-azul)' },
-  { id: 'treinamento', n: 3, nome: 'Treinamento', minutos: 40, descricao: 'quem treina apresenta; o time pratica', cor: 'var(--topcollege-magenta)' },
-  { id: 'reuniao', n: 4, nome: 'Reunião estratégica', minutos: 120, descricao: 'números, gargalo, decisões e as demandas de cada um', cor: '#22c55e' },
+  { id: 'mentalidade', n: 1, nome: 'Mentalidade', minutos: 5, inicio: '09:00', fim: '09:05', descricao: 'a palavra de quem conduz: a mentalidade do Diretor e do CEO', cor: '#F5C451' },
+  { id: 'leitura', n: 2, nome: 'Leitura', minutos: 15, inicio: '09:05', fim: '09:20', descricao: 'o livro da semana: um trecho, uma pergunta, uma aplicação', cor: 'var(--topcollege-azul)' },
+  { id: 'treinamento', n: 3, nome: 'Treinamento', minutos: 40, inicio: '09:20', fim: '10:00', descricao: 'baseado no livro: quem treina apresenta, o time pratica', cor: 'var(--topcollege-magenta)' },
+  { id: 'reuniao', n: 4, nome: 'Produção', minutos: 120, inicio: '10:00', fim: '12:00', descricao: 'a lista do que precisa ser conversado: decisões e as demandas de cada um', cor: '#22c55e' },
 ];
+/** "09:05–09:20" */
+export const horarioDoBloco = (b) => (b?.inicio && b?.fim ? `${b.inicio}–${b.fim}` : '');
 export const MINUTOS_TOTAL = BLOCOS.reduce((s, b) => s + b.minutos, 0); // 180
 export const blocoDe = (id) => BLOCOS.find((b) => b.id === id) || null;
 
@@ -670,31 +679,160 @@ export function producaoDaSemana({ demandas = [], tarefas = [], cards = [], hoje
 }
 
 // ── 🎞️ os slides da apresentação ──
-export function slidesDoEncontro({ data, roteiro, mes, conduzidoPor, treinamentoPor, demandas = [], treinamento = null } = {}) {
+export function slidesDoEncontro({ data, dataISO: dataEncontroISO = null, roteiro, mes, conduzidoPor, treinamentoPor, demandas = [], treinamento = null, livro = null, pautasVivas = [], laminas = null } = {}) {
   const r = roteiro || roteiroLocal({ mes });
   const fase = faseDoMes(mes);
+  // 📖 DIR-168 — o livro da semana entra na leitura (capa + PDF) e no treinamento ("baseado em")
+  const liv = normalizarLivro(livro);
+  const minTre = blocoDe('treinamento')?.minutos || 40;
   // 🎓 DIR-79 — o treinamento GRAVADO no encontro manda no slide. O que a IA
   // escreveu é o rascunho; o que a pessoa importou ou escreveu é o material de
   // verdade, e sobrevive à próxima geração do roteiro.
   const tre = normalizarTreinamento(treinamento, { por: treinamentoPor });
+  const subTreino = (por) => `${minTre} minutos · 09:20–10:00${por ? ` · quem treina: ${por}` : ''}${liv.titulo ? ` · baseado em: ${liv.titulo}` : ''}`;
+  const linkLivro = liv.pdf_url ? { url: liv.pdf_url, rotulo: 'abrir o livro (PDF)' } : null;
   const slideTreino = temTreinamento(tre)
     ? { id: 'treinamento', bloco: 'treinamento', titulo: tre.titulo || 'Treinamento',
-        sub: `45 minutos${tre.por ? ` · quem treina: ${tre.por}` : ''}`,
+        sub: subTreino(tre.por),
         corpo: [tre.material || null, ...tre.passos.map((p, i) => `${i + 1}. ${p}`)].filter(Boolean),
-        rodape: materialEhLink(tre.material) ? 'material: abra o link antes de começar' : null }
-    : { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: `45 minutos${treinamentoPor ? ` · quem treina: ${treinamentoPor}` : ''}`, corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null };
+        rodape: materialEhLink(tre.material) ? 'material: abra o link antes de começar' : null, link: linkLivro }
+    : { id: 'treinamento', bloco: 'treinamento', titulo: r.treinamento?.tema || 'Treinamento', sub: subTreino(treinamentoPor), corpo: [r.treinamento?.objetivo, ...(r.treinamento?.passos || []).map((p, i) => `${i + 1}. ${p}`), r.treinamento?.pratica ? `Prática: ${r.treinamento.pratica}` : null].filter(Boolean), rodape: null, link: linkLivro };
+  const producao = pautasParaLamina(pautasVivas, { dataISO: dataEncontroISO });
   const mentalidade = aberturaDaMentalidade();
   const slides = [
     { id: 'capa', bloco: null, titulo: 'Encontro da Mentalidade', sub: `${data || ''}${fase ? ` · ${fase.fase}` : ''}`, corpo: [r.tema, conduzidoPor ? `conduz: ${conduzidoPor}` : null].filter(Boolean), rodape: 'Executivo · Diretor · CEO — um espaço só' },
-    { id: 'mentalidade', bloco: 'mentalidade', titulo: mentalidade.titulo, sub: '5 minutos', corpo: mentalidade.corpo, rodape: 'antes da leitura' },
-    { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '5 mentalidade · 15 leitura · 40 treinamento · 120 reunião', corpo: [r.abertura], rodape: null },
-    { id: 'leitura', bloco: 'leitura', titulo: r.leitura?.titulo || 'Leitura', sub: '15 minutos', corpo: [r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação' },
+    { id: 'mentalidade', bloco: 'mentalidade', titulo: mentalidade.titulo, sub: `5 minutos · 09:00–09:05${conduzidoPor ? ` · a palavra de ${conduzidoPor}` : ' · a palavra de quem conduz'}`, corpo: mentalidade.corpo, rodape: 'antes da leitura' },
+    { id: 'abertura', bloco: null, titulo: 'Abertura', sub: '09:00 mentalidade · 09:05 leitura · 09:20 treinamento · 10:00–12:00 produção', corpo: [r.abertura], rodape: null },
+    { id: 'leitura', bloco: 'leitura', titulo: liv.titulo || r.leitura?.titulo || 'Leitura', sub: `15 minutos · 09:05–09:20${liv.autor ? ` · ${liv.autor}` : ''}`, corpo: [r.leitura?.trecho, ...(r.leitura?.perguntas || []).map((p) => `• ${p}`), r.leitura?.aplicacao ? `→ ${r.leitura.aplicacao}` : null].filter(Boolean), rodape: 'um trecho, uma pergunta, uma aplicação', imagem: liv.capa_url || null, link: linkLivro },
     slideTreino,
     ...(r.reuniao?.topicos || []).map((t, i) => ({ id: `topico-${i}`, bloco: 'reuniao', titulo: `${i + 1}. ${t.titulo}`, sub: `${t.minutos} min${t.apresentador ? ` · apresenta: ${t.apresentador}` : ''} · ${mentalidadeDe(t.mentalidade)?.nome || ''}${t.habito ? ` · H${t.habito}` : ''}`, corpo: [t.objetivo, t.decisao ? `Decisão: ${t.decisao}` : null, t.demanda ? `Demanda: ${t.demanda}` : null].filter(Boolean), rodape: t.responsavel_funcao ? `função responsável: ${t.responsavel_funcao.toUpperCase()}` : null })),
     { id: 'fechamento', bloco: null, titulo: 'Fechamento', sub: `${demandas.length} demanda${demandas.length === 1 ? '' : 's'} direcionada${demandas.length === 1 ? '' : 's'}`, corpo: [r.fechamento, ...demandas.slice(0, 8).map((d) => `• ${d.pessoa_nome || d.pessoa_id}: ${d.titulo}`)].filter(Boolean), rodape: 'até sexta' },
+    // 🗂️ DIR-168 — a ÚLTIMA lâmina é a lista viva do que precisa ser conversado
+    // (dono: "igual um Trello… e isso aparecer na última lâmina da apresentação").
+    { id: 'producao', bloco: 'reuniao', titulo: 'Produção · o que precisa ser conversado', sub: `10:00–12:00 · ${producao.abertas} em aberto${producao.conversadas ? ` · ${producao.conversadas} conversado${producao.conversadas === 1 ? '' : 's'}` : ''}`, corpo: producao.linhas, rodape: 'o que não for concluído volta na próxima segunda' },
   ];
-  return slides;
+  return aplicarLaminas(slides, laminas);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📖🗂️✏️ DIR-168 — O LIVRO DA SEMANA, A PAUTA VIVA E AS LÂMINAS EDITÁVEIS
+// ═══════════════════════════════════════════════════════════════════════════
+// Dono (21/09/2026): "preciso ter o botão de editar os slides, apagar, editar;
+// a edição de cada lâmina; um espaço de lista das reuniões, igual um Trello, de
+// tudo que a gente tem que conversar, e isso aparecer na última lâmina; a
+// leitura precisa ter a imagem do livro e o PDF do livro; o treinamento é
+// baseado no livro — eu escolho o livro, não fica definido."
+
+/** O livro da semana: título, autor, capa (imagem) e PDF — tudo opcional. */
+export const LIVRO_VAZIO = { titulo: '', autor: '', capa_url: '', pdf_url: '' };
+export function normalizarLivro(bruto, { tituloSugerido = '' } = {}) {
+  const o = bruto && typeof bruto === 'object' ? bruto : {};
+  const url = (v) => { const s = String(v || '').trim(); return /^https?:\/\/\S+$/i.test(s) ? s : ''; };
+  return {
+    titulo: String(o.titulo || '').trim() || String(tituloSugerido || '').trim(),
+    autor: String(o.autor || '').trim(),
+    capa_url: url(o.capa_url),
+    pdf_url: url(o.pdf_url),
+  };
+}
+export const temLivro = (l) => { const n = normalizarLivro(l); return !!(n.titulo || n.capa_url || n.pdf_url); };
+
+/** A pauta viva (a lista tipo Trello): 3 colunas, com o que sobrou das semanas anteriores. */
+export const STATUS_PAUTA = [
+  { id: 'aberta', nome: 'A conversar' },
+  { id: 'conversada', nome: 'Conversado' },
+  { id: 'concluida', nome: 'Concluído' },
+];
+const statusPauta = (s) => (STATUS_PAUTA.some((x) => x.id === s) ? s : 'aberta');
+export function ordenarPautasVivas(itens = []) {
+  return [...(Array.isArray(itens) ? itens : [])].sort((a, b) =>
+    (Number(a.ordem) || 0) - (Number(b.ordem) || 0) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
+}
+/** Que semana o item é: "de 14/09" quando veio de um encontro anterior ao desta segunda. */
+export function seloDaPauta(item, dataISO) {
+  const d = String(item?.encontro_data || '').slice(0, 10);
+  if (!d || !dataISO || d >= dataISO) return '';
+  const [, m, dd] = d.split('-');
+  return `de ${dd}/${m}`;
+}
+/** As linhas da última lâmina: o que está em aberto (e o que já foi conversado), com autor e semana. */
+export function pautasParaLamina(itens = [], { dataISO = null, limite = 12 } = {}) {
+  const lista = ordenarPautasVivas(itens).map((i) => ({ ...i, status: statusPauta(i.status) })).filter((i) => i.status !== 'concluida');
+  const abertas = lista.filter((i) => i.status === 'aberta');
+  const conversadas = lista.filter((i) => i.status === 'conversada');
+  const linha = (i) => {
+    const selo = seloDaPauta(i, dataISO);
+    return `${i.status === 'conversada' ? '✓ ' : '• '}${String(i.titulo || '').trim()}${i.autor_nome ? ` — ${String(i.autor_nome).split(' ')[0]}` : ''}${selo ? ` (${selo})` : ''}`;
+  };
+  const linhas = [...abertas, ...conversadas].slice(0, limite).map(linha);
+  const sobra = abertas.length + conversadas.length - linhas.length;
+  if (sobra > 0) linhas.push(`… e mais ${sobra}`);
+  if (!linhas.length) linhas.push('A lista está vazia — quem conduz e os administradores colocam aqui, durante a semana, tudo o que precisa ser conversado.');
+  return { linhas, abertas: abertas.length, conversadas: conversadas.length };
+}
+
+/** As lâminas ajustadas à mão: por id, o que muda (ou `oculta`); e as extras, com onde entram. */
+export const LAMINAS_VAZIAS = { ajustes: {}, extras: [] };
+export function normalizarLaminas(bruto) {
+  const o = bruto && typeof bruto === 'object' ? bruto : {};
+  const ajustes = {};
+  for (const [id, a] of Object.entries(o.ajustes && typeof o.ajustes === 'object' ? o.ajustes : {})) {
+    if (!a || typeof a !== 'object') continue;
+    const x = {};
+    if (typeof a.titulo === 'string') x.titulo = a.titulo;
+    if (typeof a.sub === 'string') x.sub = a.sub;
+    if (Array.isArray(a.corpo)) x.corpo = a.corpo.map((l) => String(l ?? '')).filter((l) => l.trim());
+    if (a.oculta) x.oculta = true;
+    if (Object.keys(x).length) ajustes[id] = x;
+  }
+  const extras = (Array.isArray(o.extras) ? o.extras : []).filter((e) => e && typeof e === 'object' && e.id).map((e) => ({
+    id: String(e.id), apos: e.apos ? String(e.apos) : null, bloco: e.bloco || null,
+    titulo: String(e.titulo || ''), sub: String(e.sub || ''), corpo: Array.isArray(e.corpo) ? e.corpo.map((l) => String(l ?? '')).filter((l) => l.trim()) : [],
+  }));
+  return { ajustes, extras };
+}
+export const ehLaminaExtra = (id) => /^extra-/.test(String(id || ''));
+/** Aplica os ajustes e encaixa as extras (cada uma logo depois da lâmina `apos`; sem `apos`, no fim). */
+export function aplicarLaminas(slides, laminas) {
+  const { ajustes, extras } = normalizarLaminas(laminas);
+  const base = (slides || []).filter((s) => !ajustes[s.id]?.oculta).map((s) => {
+    const a = ajustes[s.id];
+    if (!a) return s;
+    return { ...s, titulo: a.titulo ?? s.titulo, sub: a.sub ?? s.sub, corpo: a.corpo ?? s.corpo, ajustada: true };
+  });
+  const saida = [];
+  const pendentes = [...extras];
+  const encaixar = (aposId) => {
+    for (let i = 0; i < pendentes.length; i += 1) {
+      if ((pendentes[i].apos || null) === aposId) { saida.push({ ...pendentes[i], rodape: null, extra: true }); pendentes.splice(i, 1); i -= 1; }
+    }
+  };
+  for (const s of base) { saida.push(s); encaixar(s.id); }
+  for (const e of pendentes) saida.push({ ...e, rodape: null, extra: true }); // `apos` apagada ou nula → no fim
+  return saida;
+}
+export function ajustarLamina(laminas, id, patch) {
+  const l = normalizarLaminas(laminas);
+  if (ehLaminaExtra(id)) return { ...l, extras: l.extras.map((e) => (e.id === id ? { ...e, ...patch } : e)) };
+  return { ...l, ajustes: { ...l.ajustes, [id]: { ...(l.ajustes[id] || {}), ...patch } } };
+}
+export function apagarLamina(laminas, id) {
+  const l = normalizarLaminas(laminas);
+  if (ehLaminaExtra(id)) return { ...l, extras: l.extras.filter((e) => e.id !== id) };
+  return { ...l, ajustes: { ...l.ajustes, [id]: { ...(l.ajustes[id] || {}), oculta: true } } };
+}
+export function restaurarLamina(laminas, id) {
+  const l = normalizarLaminas(laminas);
+  const ajustes = { ...l.ajustes }; delete ajustes[id];
+  return { ...l, ajustes };
+}
+export function novaLaminaDepois(laminas, aposId, { id, bloco = null, titulo = 'Nova lâmina', sub = '', corpo = [] } = {}) {
+  const l = normalizarLaminas(laminas);
+  const novo = { id: String(id || `extra-${l.extras.length + 1}`), apos: aposId || null, bloco, titulo, sub, corpo };
+  return { ...l, extras: [...l.extras, novo] };
+}
+/** Apagou uma lâmina base à toa? `restaurarLamina` traz de volta; isto lista as ocultas pra tela oferecer. */
+export const laminasOcultas = (laminas) => Object.entries(normalizarLaminas(laminas).ajustes).filter(([, a]) => a.oculta).map(([id]) => id);
 
 // ── 👀 a visão executiva de todo mundo (dono: "quem fez a produção, quem não fez") ──
 /**

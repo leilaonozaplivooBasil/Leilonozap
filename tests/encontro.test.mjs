@@ -130,12 +130,14 @@ test('a produção da semana: o estado de cada demanda vem da tarefa/card; por p
 test('os slides: capa, mentalidade, abertura, leitura, treinamento, um por tópico, fechamento com as demandas', () => {
   const r = roteiroLocal({ pautas: ['A', 'B'], mes: '2026-09' });
   const s = slidesDoEncontro({ data: 'segunda, 07/09', roteiro: r, mes: '2026-09', conduzidoPor: 'Luiz', treinamentoPor: 'Karen', demandas: [{ pessoa_nome: 'Emanuel', titulo: 'Fazer A' }] });
-  assert.deepEqual(s.map((x) => x.id), ['capa', 'mentalidade', 'abertura', 'leitura', 'treinamento', 'topico-0', 'topico-1', 'fechamento']);
-  assert.deepEqual(s.map((x) => x.bloco), [null, 'mentalidade', null, 'leitura', 'treinamento', 'reuniao', 'reuniao', null]);
+  // DIR-168: a última lâmina é a pauta viva (Produção · o que precisa ser conversado)
+  assert.deepEqual(s.map((x) => x.id), ['capa', 'mentalidade', 'abertura', 'leitura', 'treinamento', 'topico-0', 'topico-1', 'fechamento', 'producao']);
+  assert.deepEqual(s.map((x) => x.bloco), [null, 'mentalidade', null, 'leitura', 'treinamento', 'reuniao', 'reuniao', null, 'reuniao']);
   assert.match(s[0].sub, /Estruturação/);
   assert.match(s[1].corpo.join(' '), /Diretor.*multiplica e mede/);
   assert.match(s[4].sub, /quem treina: Karen/);
-  assert.match(s.at(-1).corpo.join(' '), /Emanuel: Fazer A/);
+  assert.match(s.at(-2).corpo.join(' '), /Emanuel: Fazer A/);
+  assert.match(s.at(-1).titulo, /Produção/);
 });
 
 test('a visão executiva de todo mundo: quem planejou, quem produziu, a semana e as demandas de cada um — vermelho primeiro', async () => {
