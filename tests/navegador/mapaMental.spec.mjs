@@ -157,3 +157,62 @@ test('🔴 a raiz não tem botão de apagar — apagá-la levaria o mapa inteiro
   );
   await ctx.close();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ✈ O RETORNO DO BOTÃO — 21/09/2026
+//
+// Até hoje o ✈ gravava e não dizia nada. Botão que não responde é botão que a
+// pessoa clica três vezes achando que não pegou — e cada clique era uma linha
+// na fila do Painel Corporativo. A trava contra duplicata mora no servidor; o
+// que estas duas provas medem é a única parte que só a tela responde: que o
+// resultado APARECE, nos dois casos.
+
+/** Abre a banca já dizendo o que a rota `minhasDemandas` vai responder. */
+async function abrirComResposta(resposta) {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1100, height: 760 } });
+  const pagina = await ctx.newPage();
+  await pagina.addInitScript((r) => {
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.__plataformaFalsa) window.__plataformaFalsa.respostas.minhasDemandas = () => r;
+    });
+  }, resposta);
+  await pagina.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('[data-teste="mapa-no"]', { timeout: 20000 });
+  return { ctx, pagina };
+}
+
+/** Escreve num nó e aperta o ✈ dele — mesmo caminho da prova de escrever. */
+async function mandar(pagina, texto) {
+  const no = nos(pagina).first();
+  await no.locator('button').first().click();
+  const campo = pagina.locator('[data-teste="mapa-input"]');
+  await campo.waitFor({ timeout: 5000 });
+  await campo.fill(texto);
+  await campo.press('Enter');
+  await no.getByText(texto).waitFor({ timeout: 5000 });
+  await no.locator('[data-teste="mapa-demanda"]').first().click();
+}
+
+test('🔴 o ✈ diz que mandou — botão mudo vira clique repetido', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: false });
+  await mandar(pagina, 'ligar pro fornecedor');
+
+  await pagina.waitForSelector('[data-teste="mapa-recado"]', { timeout: 5000 });
+  assert.match(await pagina.locator('[data-teste="mapa-recado"]').innerText(), /mandado/i);
+  assert.equal(await pagina.locator('[data-teste="mapa-erro"]').count(), 0, 'acusou erro num envio que deu certo');
+  await ctx.close();
+});
+
+test('🔴 clicar de novo diz "já estava lá" — e NÃO acusa falha', { skip: semNavegador }, async () => {
+  // O servidor responde 200 com `jaExistia`. Se a tela tratasse isso como
+  // erro, o dono acharia que o primeiro clique não tinha pego — e procuraria
+  // no Painel uma demanda que já está lá.
+  const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: true });
+  await mandar(pagina, 'ligar pro fornecedor');
+
+  await pagina.waitForSelector('[data-teste="mapa-recado"]', { timeout: 5000 });
+  assert.match(await pagina.locator('[data-teste="mapa-recado"]').innerText(), /já estava/i);
+  assert.equal(await pagina.locator('[data-teste="mapa-erro"]').count(), 0, 'tratou "já existe" como falha');
+  await ctx.close();
+});

@@ -1,120 +1,117 @@
 /**
- * 🧠 A CAIXA DE ENTRADA DA MENTE — e o caminho dela até virar tarefa.
+ * 🧠 DO MAPA MENTAL PARA A FILA QUE JÁ EXISTE.
  *
  * PEDIDO DO DONO (áudio de 19/09/2026):
+ *   "criar um mapa mental ali do lado, ligado ao quadro… onde eu esvazio a
+ *    minha mente e dessa mente transformo em tarefa"
  *   "estou numa reunião, o pessoal está falando o que tem que fazer, eu só vou
- *    esvaziando a mente… entra numa lista com a data do dia que foi anotado.
- *    E automaticamente eu já transformo isso e direciono para onde eu quero."
+ *    esvaziando a mente… E automaticamente eu já transformo isso e direciono
+ *    para onde eu quero."
  *
- * A regra mora aqui, longe da tela, porque o risco desta peça não é o desenho:
- * é PERDER uma anotação, ou criar tarefa duplicada a partir da mesma demanda.
+ * 🔴 ESTE ARQUIVO JÁ FOI MAIOR, E ESTAVA ERRADO (21/09/2026).
+ *
+ * A primeira versão criava uma tabela `demandas` própria, com estado, caixa de
+ * entrada, agrupamento por dia e conversão em cartão — tudo isso já existia em
+ * `xperf_demandas`, a tabela do Encontro da Mentalidade, que alimenta o Painel
+ * Corporativo e a Performance da Equipe. Dois arquivos da casa avisavam contra
+ * o que eu estava fazendo; `src/pages/Demandas.jsx` com todas as letras:
+ *
+ *   "O QUE ESTA PÁGINA NÃO É: um segundo sistema de tarefas. (…) Uma terceira
+ *    lista de pendências na casa seria uma lista que ninguém olha."
+ *
+ * O dono decidiu em 21/09 reusar a fila que existe. Sobrou o que é de verdade
+ * novo: transformar um NÓ DO MAPA na linha certa, e não deixar o mesmo nó
+ * entrar duas vezes. O resto — estado, prazo, quem faz, virar tarefa ou cartão —
+ * é de `src/lib/encontro.js` e do Painel Corporativo, que já sabem fazer.
+ *
+ * "direciono para onde eu quero" é `pessoa_id`, e é justamente o que a minha
+ * tabela nova não tinha.
  */
 
-/** Estados possíveis. 'aberta' é o que aparece na caixa. */
-export const ABERTA = 'aberta';
-export const VIROU_TAREFA = 'virou_tarefa';
-export const DESCARTADA = 'descartada';
+/** Como a demanda nascida no mapa se identifica na fila. */
+export const ORIGEM_MAPA = 'mapa';
 
-/** De onde a demanda veio. */
-export const ORIGENS = ['app', 'whatsapp', 'mapa', 'encontro'];
+/** `xperf_demandas.status` só aceita recebida|agendada|devolvida (CHECK no banco). */
+export const RECEBIDA = 'recebida';
+
+/**
+ * Peso 3 de propósito, nunca `null`.
+ *
+ * O Painel Corporativo imprime "· peso {d.peso}" SEM condicional
+ * (PainelCorporativo.jsx:398). Com peso nulo a linha sai "· peso " pendurada,
+ * e quem lê acha que o dado sumiu. 3 é o meio da régua (1 a 6) — é o que uma
+ * anotação solta é antes de alguém decidir a prioridade dela.
+ */
+export const PESO_NEUTRO = 3;
+
+const MAX_TITULO = 300;
+
+/** Compara títulos como uma pessoa compararia: sem caixa, sem espaço sobrando. */
+function normalizar(texto) {
+  return String(texto ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * A linha de `xperf_demandas` que nasce de um nó do mapa.
+ *
+ * Mesma forma que `demandaDoTopico` (encontro.js) devolve, porque é a MESMA
+ * tabela: o Painel Corporativo não pode ter que saber de onde a linha veio.
+ *
+ * Sem `pessoaId` devolve null em vez de gravar com dono nulo: uma demanda sem
+ * dono não aparece em painel nenhum — some em silêncio, que é o pior destino
+ * possível para algo que a pessoa acabou de anotar.
+ *
+ * @param {{texto?: string}} no  o nó do mapa
+ * @param {{pessoaId: string, pessoaNome?: string|null}} quem
+ * @returns {object|null}
+ */
+export function demandaDoNo(no, { pessoaId, pessoaNome = null } = {}) {
+  const titulo = String(no?.texto ?? '').trim().slice(0, MAX_TITULO);
+  if (!titulo || !pessoaId) return null;
+  const dono = String(pessoaId);
+  return {
+    titulo,
+    detalhe: null,
+    pessoa_id: dono,
+    pessoa_nome: pessoaNome || null,
+    origem: ORIGEM_MAPA,
+    // quem anotou é quem vai fazer: é a própria mente dele sendo esvaziada.
+    // Redirecionar para outra pessoa é decisão do Painel, depois, não daqui.
+    criado_por_id: dono,
+    criado_por_nome: pessoaNome || null,
+    encontro_id: null,
+    status: RECEBIDA,
+    peso: PESO_NEUTRO,
+  };
+}
+
+/**
+ * 🔒 A TRAVA CONTRA DUPLICATA.
+ *
+ * O ✈ fica no nó e continua lá depois de mandar — nada impede o segundo
+ * clique, nem a mesma aba aberta duas vezes. Sem esta trava o dono passa a ver
+ * na fila trabalho que ele pediu UMA vez.
+ *
+ * Compara por título entre as demandas DO MAPA ainda abertas, não por id do
+ * nó: `xperf_demandas` não tem onde guardar o id do nó, e o título é o que a
+ * pessoa reconhece como "isso eu já mandei".
+ */
+export function jaEstaNaFila(abertas, titulo) {
+  const alvo = normalizar(titulo);
+  if (!alvo) return false;
+  return (abertas || []).some(
+    (d) => d && d.origem === ORIGEM_MAPA && normalizar(d.titulo) === alvo,
+  );
+}
 
 /** Rótulo curto da origem, para a tela não inventar cada uma o seu. */
 export function rotuloDaOrigem(origem) {
   switch (origem) {
-    case 'whatsapp': return 'pelo Zeca';
-    case 'mapa': return 'do mapa mental';
+    case ORIGEM_MAPA: return 'do mapa mental';
     case 'encontro': return 'do encontro';
-    default: return 'digitada';
+    case 'ceo': return 'do CEO';
+    case 'diretor': return 'de um diretor';
+    case 'gestao': return 'da gestão';
+    default: return String(origem || 'anotada');
   }
-}
-
-/**
- * O que a caixa mostra: só o que ainda espera destino, mais recente primeiro.
- *
- * 🔴 Ordena por `anotada_em`, NÃO por `created_at`. São diferentes de propósito:
- * uma demanda ditada ontem à noite e sincronizada hoje foi ANOTADA ontem, e é
- * na noite de ontem que o dono vai procurar por ela.
- */
-export function caixaDeEntrada(linhas) {
-  return (linhas || [])
-    .filter((d) => d && d.estado === ABERTA && String(d.titulo || '').trim())
-    .sort((a, b) => {
-      const qa = new Date(a.anotada_em ?? a.created_at ?? 0).getTime();
-      const qb = new Date(b.anotada_em ?? b.created_at ?? 0).getTime();
-      if (qb !== qa) return qb - qa;
-      return String(a.titulo).localeCompare(String(b.titulo), 'pt-BR');
-    });
-}
-
-/**
- * Agrupa por dia da anotação — é assim que o dono pediu para ver
- * ("entra numa lista com a data do dia que foi anotado").
- *
- * @returns {Array<{dia: string, demandas: object[]}>} dias do mais recente ao mais antigo
- */
-export function porDiaDeAnotacao(linhas) {
-  const caixa = caixaDeEntrada(linhas);
-  const mapa = new Map();
-  for (const d of caixa) {
-    const dia = diaDe(d.anotada_em ?? d.created_at);
-    if (!mapa.has(dia)) mapa.set(dia, []);
-    mapa.get(dia).push(d);
-  }
-  return [...mapa.entries()].map(([dia, demandas]) => ({ dia, demandas }));
-}
-
-/** 'AAAA-MM-DD' no fuso da casa. '' quando não há data legível. */
-export function diaDe(quando) {
-  const t = new Date(quando ?? NaN).getTime();
-  if (!Number.isFinite(t)) return '';
-  try {
-    // en-CA devolve AAAA-MM-DD, que ordena como texto.
-    return new Date(t).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Uma demanda pode virar tarefa?
- *
- * 🔒 A trava contra DUPLICATA. Sem ela, dois cliques no botão — ou o mesmo
- * botão em duas abas abertas — criam dois cartões para a mesma anotação, e o
- * dono passa a ver trabalho que não existe.
- */
-export function podeVirarTarefa(demanda) {
-  if (!demanda || typeof demanda !== 'object') return { pode: false, motivo: 'sem_demanda' };
-  if (!String(demanda.titulo || '').trim()) return { pode: false, motivo: 'sem_titulo' };
-  if (demanda.estado === VIROU_TAREFA) return { pode: false, motivo: 'ja_virou_tarefa' };
-  if (demanda.estado === DESCARTADA) return { pode: false, motivo: 'descartada' };
-  if (demanda.cartao_id) return { pode: false, motivo: 'ja_tem_cartao' };
-  return { pode: true, motivo: 'ok' };
-}
-
-/**
- * O cartão que nasce de uma demanda.
- *
- * O detalhe da anotação vira o PRIMEIRO item do checklist em vez de sumir: foi
- * ditado por algum motivo, e um cartão só com título perde o motivo.
- */
-export function cartaoDaDemanda(demanda, { userId, listaId = null, ordem = 0 } = {}) {
-  const titulo = String(demanda?.titulo || '').trim();
-  if (!titulo) return null;
-  const detalhe = String(demanda?.detalhe || '').trim();
-  return {
-    user_id: userId ?? demanda?.user_id ?? null,
-    titulo,
-    coluna: 'aberto',
-    prazo: demanda?.prazo || null,
-    lista_id: listaId,
-    ordem,
-    checklist: detalhe ? [{ texto: detalhe, feito: false }] : [],
-    // rastro de volta: dá para saber de qual anotação este cartão nasceu
-    origem_demanda_id: demanda?.id ?? null,
-  };
-}
-
-/** Quantas esperam destino — o número da bolinha na aba. */
-export function quantasEsperando(linhas) {
-  return caixaDeEntrada(linhas).length;
 }

@@ -1,173 +1,152 @@
 /**
- * 🧠 A CAIXA DE ENTRADA DA MENTE.
+ * 🧠 DO NÓ DO MAPA PARA A FILA QUE JÁ EXISTE.
  *
- * Pedido do dono (áudio de 19/09/2026): esvaziar a mente numa lista com a data
- * do dia em que foi anotado, e dali direcionar para o quadro.
+ * Pedido do dono (áudio de 19/09/2026): esvaziar a mente e "automaticamente eu
+ * já transformo isso e direciono para onde eu quero".
  *
- * O risco desta peça não é o desenho. É PERDER uma anotação, ou criar duas
- * tarefas a partir da mesma — e aí o dono vê trabalho que não existe.
+ * O risco desta peça não é o desenho. É PERDER uma anotação (linha sem dono,
+ * que não aparece em painel nenhum) ou GRAVAR a mesma duas vezes — e aí o dono
+ * vê na fila trabalho que ele pediu uma vez só.
+ *
+ * 🔴 Este arquivo já testou uma tabela `demandas` própria. Ela foi removida em
+ * 21/09: a casa já tinha `xperf_demandas`. O que sobrou para testar é só o que
+ * é de verdade novo.
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  caixaDeEntrada, porDiaDeAnotacao, diaDe, podeVirarTarefa, cartaoDaDemanda,
-  quantasEsperando, rotuloDaOrigem, ABERTA, VIROU_TAREFA, DESCARTADA,
+  demandaDoNo, jaEstaNaFila, rotuloDaOrigem,
+  ORIGEM_MAPA, RECEBIDA, PESO_NEUTRO,
 } from '../src/lib/demandas.js';
 
-const d = (over = {}) => ({
-  id: 'd1', user_id: 'u1', titulo: 'ligar pro fornecedor',
-  estado: ABERTA, anotada_em: '2026-09-19T13:32:00Z', ...over,
-});
+const no = (over = {}) => ({ id: 'n1', texto: 'ligar pro fornecedor', ...over });
+const QUEM = { pessoaId: 'u1', pessoaNome: 'Basil' };
 
-describe('o que aparece na caixa', () => {
-  test('só o que ainda espera destino', () => {
-    const caixa = caixaDeEntrada([
-      d({ id: 'a' }),
-      d({ id: 'b', estado: VIROU_TAREFA }),
-      d({ id: 'c', estado: DESCARTADA }),
-    ]);
-    assert.deepEqual(caixa.map((x) => x.id), ['a']);
+describe('demandaDoNo — a linha que nasce do mapa', () => {
+  test('monta a linha de xperf_demandas com o texto do nó', () => {
+    const d = demandaDoNo(no(), QUEM);
+    assert.equal(d.titulo, 'ligar pro fornecedor');
+    assert.equal(d.pessoa_id, 'u1');
+    assert.equal(d.pessoa_nome, 'Basil');
+    assert.equal(d.origem, ORIGEM_MAPA);
+    assert.equal(d.status, RECEBIDA);
   });
 
-  test('🔴 demanda sem título não entra — seria uma linha em branco na lista', () => {
-    for (const vazio of ['', '   ', null, undefined]) {
-      assert.equal(caixaDeEntrada([d({ titulo: vazio })]).length, 0, `aceitou ${JSON.stringify(vazio)}`);
-    }
+  test('quem anotou é quem faz — pessoa e criador são o mesmo', () => {
+    // é a mente DELE sendo esvaziada; redirecionar é decisão do Painel, depois.
+    const d = demandaDoNo(no(), QUEM);
+    assert.equal(d.criado_por_id, d.pessoa_id);
   });
 
-  test('mais recente primeiro', () => {
-    const caixa = caixaDeEntrada([
-      d({ id: 'velha', anotada_em: '2026-09-18T10:00:00Z' }),
-      d({ id: 'nova', anotada_em: '2026-09-19T10:00:00Z' }),
-    ]);
-    assert.deepEqual(caixa.map((x) => x.id), ['nova', 'velha']);
+  test('peso nunca sai nulo', () => {
+    // o Painel imprime "· peso {d.peso}" sem condicional: nulo vira "· peso "
+    // pendurado na linha, e quem lê acha que o dado sumiu.
+    const d = demandaDoNo(no(), QUEM);
+    assert.equal(d.peso, PESO_NEUTRO);
+    assert.ok(d.peso >= 1 && d.peso <= 6, 'o CHECK do banco é 1..6');
   });
 
-  test('🔴 ordena pela data da ANOTAÇÃO, não pela de criação da linha', () => {
-    // Uma demanda ditada ontem à noite e sincronizada hoje foi anotada ONTEM, e
-    // é na noite de ontem que o dono vai procurar por ela.
-    const caixa = caixaDeEntrada([
-      d({ id: 'ditada-ontem', anotada_em: '2026-09-18T22:00:00Z', created_at: '2026-09-19T09:00:00Z' }),
-      d({ id: 'digitada-hoje', anotada_em: '2026-09-19T08:00:00Z', created_at: '2026-09-19T08:00:00Z' }),
-    ]);
-    assert.deepEqual(caixa.map((x) => x.id), ['digitada-hoje', 'ditada-ontem']);
+  test('sem dono devolve null em vez de gravar órfã', () => {
+    // linha sem pessoa_id não aparece em painel nenhum: some em silêncio,
+    // que é o pior destino possível para algo recém-anotado.
+    assert.equal(demandaDoNo(no(), { pessoaId: null }), null);
+    assert.equal(demandaDoNo(no(), {}), null);
+    assert.equal(demandaDoNo(no()), null);
   });
 
-  test('sem anotada_em, cai no created_at em vez de sumir', () => {
-    const caixa = caixaDeEntrada([d({ anotada_em: null, created_at: '2026-09-19T10:00:00Z' })]);
-    assert.equal(caixa.length, 1, 'a demanda sumiu por falta de um campo');
+  test('nó vazio ou só com espaço não vira demanda', () => {
+    assert.equal(demandaDoNo(no({ texto: '' }), QUEM), null);
+    assert.equal(demandaDoNo(no({ texto: '   ' }), QUEM), null);
+    assert.equal(demandaDoNo(no({ texto: null }), QUEM), null);
+    assert.equal(demandaDoNo(null, QUEM), null);
   });
 
-  test('lixo na entrada não derruba a caixa', () => {
-    assert.doesNotThrow(() => caixaDeEntrada([null, undefined, {}, 'texto', 42]));
-    assert.equal(caixaDeEntrada(null).length, 0);
-  });
-});
-
-describe('agrupado por dia, como o dono pediu', () => {
-  test('cada dia com as suas, do mais recente ao mais antigo', () => {
-    const dias = porDiaDeAnotacao([
-      d({ id: 'a', anotada_em: '2026-09-19T13:00:00Z' }),
-      d({ id: 'b', anotada_em: '2026-09-19T18:00:00Z' }),
-      d({ id: 'c', anotada_em: '2026-09-18T13:00:00Z' }),
-    ]);
-    assert.deepEqual(dias.map((x) => x.dia), ['2026-09-19', '2026-09-18']);
-    assert.equal(dias[0].demandas.length, 2);
+  test('apara o espaço das pontas', () => {
+    assert.equal(demandaDoNo(no({ texto: '  comprar caixa  ' }), QUEM).titulo, 'comprar caixa');
   });
 
-  test('🔴 o dia é o de São Paulo, não o de Greenwich', () => {
-    // 02:00 UTC de dia 20 é ainda 23:00 do dia 19 no Brasil. Errar isto joga a
-    // anotação da noite para o dia seguinte, e o dono não acha.
-    assert.equal(diaDe('2026-09-20T02:00:00Z'), '2026-09-19');
-    assert.equal(diaDe('2026-09-20T12:00:00Z'), '2026-09-20');
+  test('corta título gigante em 300', () => {
+    const d = demandaDoNo(no({ texto: 'x'.repeat(500) }), QUEM);
+    assert.equal(d.titulo.length, 300);
   });
 
-  test('data ilegível não quebra o agrupamento', () => {
-    assert.equal(diaDe('ontem'), '');
-    assert.equal(diaDe(null), '');
-    assert.doesNotThrow(() => porDiaDeAnotacao([d({ anotada_em: 'ontem' })]));
+  test('sem nome a demanda ainda nasce — nome é enfeite', () => {
+    const d = demandaDoNo(no(), { pessoaId: 'u1' });
+    assert.equal(d.pessoa_nome, null);
+    assert.equal(d.titulo, 'ligar pro fornecedor');
+  });
+
+  test('não inventa encontro nem detalhe', () => {
+    const d = demandaDoNo(no(), QUEM);
+    assert.equal(d.encontro_id, null);
+    assert.equal(d.detalhe, null);
+  });
+
+  test('pessoaId numérico vira texto — a coluna é text', () => {
+    const d = demandaDoNo(no(), { pessoaId: 42 });
+    assert.equal(d.pessoa_id, '42');
+    assert.equal(typeof d.pessoa_id, 'string');
   });
 });
 
-describe('🔒 a trava contra tarefa duplicada', () => {
-  test('demanda aberta pode virar tarefa', () => {
-    assert.equal(podeVirarTarefa(d()).pode, true);
+describe('jaEstaNaFila — a trava contra duplicata', () => {
+  const fila = [
+    { id: 'a', titulo: 'ligar pro fornecedor', origem: ORIGEM_MAPA },
+    { id: 'b', titulo: 'fechar o caixa', origem: ORIGEM_MAPA },
+  ];
+
+  test('acha o que já está lá', () => {
+    assert.equal(jaEstaNaFila(fila, 'ligar pro fornecedor'), true);
   });
 
-  test('🔴 a que JÁ virou tarefa não vira de novo', () => {
-    // Dois cliques no botão, ou o mesmo botão em duas abas abertas, criariam
-    // dois cartões para a mesma anotação.
-    assert.equal(podeVirarTarefa(d({ estado: VIROU_TAREFA })).pode, false);
+  test('deixa passar o que é novo', () => {
+    assert.equal(jaEstaNaFila(fila, 'comprar etiqueta'), false);
   });
 
-  test('🔴 a que já tem cartão também não — mesmo que o estado não tenha sido gravado', () => {
-    // Cinto e suspensório: se a gravação do estado falhar depois de o cartão
-    // nascer, o `cartao_id` ainda barra a segunda tentativa.
-    const v = podeVirarTarefa(d({ estado: ABERTA, cartao_id: 'c123' }));
-    assert.equal(v.pode, false);
-    assert.equal(v.motivo, 'ja_tem_cartao');
+  test('ignora caixa e espaço sobrando — é o mesmo pedido', () => {
+    // o dono reescreve o nó com outra capitalização e clica de novo; para ele
+    // é a mesma coisa, e o sistema não pode discordar.
+    assert.equal(jaEstaNaFila(fila, 'LIGAR PRO FORNECEDOR'), true);
+    assert.equal(jaEstaNaFila(fila, '  ligar   pro  fornecedor  '), true);
   });
 
-  test('descartada não volta como tarefa', () => {
-    assert.equal(podeVirarTarefa(d({ estado: DESCARTADA })).pode, false);
+  test('demanda de OUTRA origem com o mesmo título não bloqueia', () => {
+    // uma demanda do encontro chamada igual é outra coisa, pedida por outra
+    // pessoa em outro contexto — barrar o mapa por causa dela esconderia o
+    // pedido do dono.
+    const comEncontro = [{ id: 'c', titulo: 'fechar o caixa', origem: 'encontro' }];
+    assert.equal(jaEstaNaFila(comEncontro, 'fechar o caixa'), false);
   });
 
-  test('sem título ou sem demanda, não passa', () => {
-    assert.equal(podeVirarTarefa(d({ titulo: '  ' })).pode, false);
-    assert.equal(podeVirarTarefa(null).pode, false);
-  });
-});
-
-describe('o cartão que nasce da demanda', () => {
-  test('leva o título e nasce aberto', () => {
-    const c = cartaoDaDemanda(d(), { userId: 'u1' });
-    assert.equal(c.titulo, 'ligar pro fornecedor');
-    assert.equal(c.coluna, 'aberto');
-    assert.equal(c.user_id, 'u1');
+  test('título vazio nunca conta como já existente', () => {
+    // senão um nó em branco seria tratado como duplicata e o erro real
+    // ("sem título") nunca apareceria.
+    assert.equal(jaEstaNaFila(fila, ''), false);
+    assert.equal(jaEstaNaFila(fila, '   '), false);
+    assert.equal(jaEstaNaFila(fila, null), false);
   });
 
-  test('🔴 o detalhe vira o primeiro item do checklist, em vez de sumir', () => {
-    // Foi ditado por algum motivo. Cartão só com título perde o motivo.
-    const c = cartaoDaDemanda(d({ detalhe: 'confirmar o prazo de 7 dias' }), { userId: 'u1' });
-    assert.deepEqual(c.checklist, [{ texto: 'confirmar o prazo de 7 dias', feito: false }]);
-  });
-
-  test('sem detalhe, checklist vazio — e não um item em branco', () => {
-    assert.deepEqual(cartaoDaDemanda(d(), { userId: 'u1' }).checklist, []);
-    assert.deepEqual(cartaoDaDemanda(d({ detalhe: '   ' }), { userId: 'u1' }).checklist, []);
-  });
-
-  test('🔴 guarda de qual demanda nasceu — é o rastro de volta', () => {
-    const c = cartaoDaDemanda(d({ id: 'dem-9' }), { userId: 'u1' });
-    assert.equal(c.origem_demanda_id, 'dem-9');
-  });
-
-  test('o prazo da demanda passa para o cartão', () => {
-    assert.equal(cartaoDaDemanda(d({ prazo: '2026-09-25' }), { userId: 'u1' }).prazo, '2026-09-25');
-  });
-
-  test('sem título, não nasce cartão nenhum', () => {
-    assert.equal(cartaoDaDemanda(d({ titulo: '' }), { userId: 'u1' }), null);
-    assert.equal(cartaoDaDemanda(null, { userId: 'u1' }), null);
+  test('aguenta fila vazia, nula e com buraco', () => {
+    assert.equal(jaEstaNaFila([], 'qualquer'), false);
+    assert.equal(jaEstaNaFila(null, 'qualquer'), false);
+    assert.equal(jaEstaNaFila(undefined, 'qualquer'), false);
+    assert.equal(jaEstaNaFila([null, undefined, ...fila], 'fechar o caixa'), true);
   });
 });
 
-describe('detalhes da tela', () => {
-  test('a bolinha conta só o que espera', () => {
-    assert.equal(quantasEsperando([d(), d({ id: 'b', estado: VIROU_TAREFA }), d({ id: 'c' })]), 2);
+describe('rotuloDaOrigem', () => {
+  test('o mapa tem nome próprio', () => {
+    assert.equal(rotuloDaOrigem(ORIGEM_MAPA), 'do mapa mental');
   });
 
-  test('cada origem tem um rótulo próprio, e nenhum fica vazio', () => {
-    const vistos = new Set();
-    for (const o of ['app', 'whatsapp', 'mapa', 'encontro']) {
-      const r = rotuloDaOrigem(o);
-      assert.ok(r && r.trim(), `origem ${o} ficou sem rótulo`);
-      vistos.add(r);
-    }
-    assert.equal(vistos.size, 4, 'duas origens dividem o mesmo rótulo');
+  test('as origens que já existiam seguem com o rótulo delas', () => {
+    assert.equal(rotuloDaOrigem('encontro'), 'do encontro');
+    assert.equal(rotuloDaOrigem('ceo'), 'do CEO');
   });
 
-  test('origem desconhecida não deixa a tela sem texto', () => {
-    assert.ok(rotuloDaOrigem('inventada').trim());
+  test('origem desconhecida devolve ela mesma, não quebra', () => {
+    assert.equal(rotuloDaOrigem('zeca'), 'zeca');
+    assert.equal(rotuloDaOrigem(''), 'anotada');
+    assert.equal(rotuloDaOrigem(null), 'anotada');
   });
 });

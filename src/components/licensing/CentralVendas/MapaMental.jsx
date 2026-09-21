@@ -34,6 +34,7 @@ export default function MapaMental({ onDemandaCriada }) {
   const [salvando, setSalvando] = useState(false);
   const [editando, setEditando] = useState(null);
   const [erro, setErro] = useState('');
+  const [recado, setRecado] = useState('');
   const telaRef = useRef(null);
   const arrasto = useRef(null);
   const salvarTimer = useRef(null);
@@ -99,17 +100,34 @@ export default function MapaMental({ onDemandaCriada }) {
     mudar(apagarNo(nos, id));
   };
 
+  // ✈ manda o nó para a fila de demandas — `xperf_demandas`, a MESMA que o
+  // Encontro alimenta e o Painel Corporativo mostra. Não existe fila separada
+  // do mapa: o dono decidiu em 21/09 que "esvaziar a mente" desemboca onde ele
+  // já olha todo dia.
+  //
+  // 🔴 O ✈ NÃO SOME DEPOIS DE CLICADO, e é de propósito: o nó continua no mapa
+  // porque o mapa é o desenho do pensamento, não uma fila de saída. Por isso o
+  // segundo clique é ESPERADO — quem barra a duplicata é o servidor, que
+  // responde `jaExistia` em vez de gravar de novo. Aqui só traduzimos isso.
   const mandarProQuadro = async (no) => {
     if (!String(no.texto || '').trim()) return;
+    setErro('');
     try {
-      await plataforma.functions.invoke('minhasDemandas', {
-        titulo: no.texto, origem: 'mapa', origem_ref: no.id,
-      });
+      const r = await plataforma.functions.invoke('minhasDemandas', { titulo: no.texto });
+      if (r && r.success === false) { setErro('Não consegui mandar para as demandas.'); return; }
+      setRecado(r?.jaExistia ? 'Essa já estava na fila.' : 'Mandado para as demandas.');
       onDemandaCriada?.(no);
     } catch {
       setErro('Não consegui mandar para as demandas.');
     }
   };
+
+  // o recado se apaga sozinho: é confirmação, não aviso que precise de ação.
+  useEffect(() => {
+    if (!recado) return undefined;
+    const t = setTimeout(() => setRecado(''), 2600);
+    return () => clearTimeout(t);
+  }, [recado]);
 
   // ── arrastar ─────────────────────────────────────────────────────────────
   // Ouvintes na JANELA, não no nó: soltar fora do card (ou fora da tela)
@@ -167,6 +185,14 @@ export default function MapaMental({ onDemandaCriada }) {
       {erro && (
         <p className="rounded-lg border border-nz-fogo/40 bg-nz-fogo/10 px-3 py-2 text-[11px] text-nz-fogo-claro" data-teste="mapa-erro">
           {erro}
+        </p>
+      )}
+
+      {/* ✈ sem retorno visual é ✈ que a pessoa clica três vezes achando que
+          não pegou. O recado some sozinho — é confirmação, não pendência. */}
+      {!erro && recado && (
+        <p className="rounded-lg border border-nz-verde-neon/40 bg-nz-verde-neon/10 px-3 py-2 text-[11px] text-nz-verde-neon" data-teste="mapa-recado">
+          {recado}
         </p>
       )}
 

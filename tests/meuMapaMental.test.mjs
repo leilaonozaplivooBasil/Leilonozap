@@ -97,61 +97,63 @@ describe('🧹 o que chega do navegador é limpo antes de gravar', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('🧠 a caixa de entrada (minhasDemandas)', () => {
+describe('🧠 o ✈ do mapa larga na fila que já existe (minhasDemandas)', () => {
   const ROTA_D = readFileSync(new URL('../api/functions/minhasDemandas.js', import.meta.url), 'utf8')
     .split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
 
-  test('🔴 a identidade também sai do crachá, e não do corpo', () => {
+  test('🔴 a identidade sai do crachá, nunca do corpo', () => {
+    // com `body.pessoa_id`, trocar um número plantaria demanda na fila de
+    // outra pessoa — e ela apareceria no Painel Corporativo dela.
     assert.match(ROTA_D, /conferirSessao\(req\)/);
-    assert.doesNotMatch(ROTA_D, /body\.user_id/, 'leria a caixa de entrada alheia');
+    assert.doesNotMatch(ROTA_D, /body\??\.pessoa_id/, 'gravaria na fila alheia');
+    assert.doesNotMatch(ROTA_D, /body\??\.user_id/, 'gravaria na fila alheia');
   });
 
-  test('🔴 só devolve as do DONO, e só as abertas', () => {
-    assert.match(ROTA_D, /user_id=eq\.\$\{enc\(dono\)\}/);
-    assert.match(ROTA_D, /estado=eq\.aberta/);
+  test('🔴 grava em xperf_demandas, e não numa tabela só do mapa', () => {
+    // 21/09: a decisão do dono foi reusar a fila que o Painel Corporativo, o
+    // Encontro e a Performance da Equipe já leem. Uma tabela própria seria a
+    // quarta lista de pendências da casa.
+    assert.match(ROTA_D, /sb\('xperf_demandas'/);
+    assert.doesNotMatch(ROTA_D, /sb\('demandas'/, 'voltou a criar fila paralela');
   });
 
-  test('🔴 `anotada_em` é carimbado no SERVIDOR', () => {
-    // Vindo do navegador, o relógio torto de um celular jogaria a anotação
-    // para outro dia — e é pelo dia que o dono vai procurar.
-    assert.match(ROTA_D, /anotada_em: new Date\(\)\.toISOString\(\)/);
-  });
-});
-
-describe('🧹 a demanda é limpa antes de gravar', () => {
-  test('sem título, não grava — não haveria o que achar depois', async () => {
-    const { limparDemanda } = await import('../api/functions/minhasDemandas.js');
-    for (const vazio of ['', '   ', null, undefined]) {
-      assert.equal(limparDemanda({ titulo: vazio }), null, `aceitou ${JSON.stringify(vazio)}`);
-    }
-    assert.equal(limparDemanda(null), null);
+  test('🔴 a trava contra duplicata roda ANTES do insert', () => {
+    // se o insert viesse primeiro, o segundo clique no mesmo nó já teria
+    // gravado quando a checagem rodasse.
+    const ondeChecagem = ROTA_D.indexOf('jaEstaNaFila(');
+    const ondeInsert = ROTA_D.indexOf("method: 'POST'");
+    assert.ok(ondeChecagem > 0, 'a trava sumiu da rota');
+    assert.ok(ondeInsert > 0);
+    assert.ok(ondeChecagem < ondeInsert, 'a trava está depois da gravação');
   });
 
-  test('🔴 origem desconhecida vira "app" em vez de derrubar a gravação', async () => {
-    // Perder a anotação por causa de um rótulo errado seria trocar um defeito
-    // pequeno por um grande: a pessoa esvaziou a mente e o sistema jogou fora.
-    const { limparDemanda } = await import('../api/functions/minhasDemandas.js');
-    assert.equal(limparDemanda({ titulo: 'x', origem: 'inventada' }).origem, 'app');
-    assert.equal(limparDemanda({ titulo: 'x', origem: 'mapa' }).origem, 'mapa');
+  test('🔴 só lê o que é do dono, do mapa, e ainda aberto', () => {
+    assert.match(ROTA_D, /pessoa_id=eq\.\$\{enc\(dono\)\}/);
+    assert.match(ROTA_D, /origem=eq\.\$\{enc\(ORIGEM_MAPA\)\}/);
+    assert.match(ROTA_D, /status=eq\.\$\{enc\(RECEBIDA\)\}/);
   });
 
-  test('prazo só passa no formato de data', async () => {
-    const { limparDemanda } = await import('../api/functions/minhasDemandas.js');
-    assert.equal(limparDemanda({ titulo: 'x', prazo: '2026-09-25' }).prazo, '2026-09-25');
-    assert.equal(limparDemanda({ titulo: 'x', prazo: 'amanhã' }).prazo, null);
-    assert.equal(limparDemanda({ titulo: 'x', prazo: "'; DROP" }).prazo, null);
+  test('clique repetido devolve 200 com jaExistia, não erro', () => {
+    // o ✈ continua no nó de propósito; o segundo clique é esperado, e acusar
+    // falha faria a pessoa achar que a primeira não pegou.
+    assert.match(ROTA_D, /jaExistia: true/);
+    assert.doesNotMatch(ROTA_D, /status\(409\)/);
   });
 
-  test('título e detalhe gigantes são cortados, não recusados', async () => {
-    const { limparDemanda } = await import('../api/functions/minhasDemandas.js');
-    const d = limparDemanda({ titulo: 'a'.repeat(900), detalhe: 'b'.repeat(9000) });
-    assert.equal(d.titulo.length, 300);
-    assert.equal(d.detalhe.length, 2000);
+  test('só aceita POST', () => {
+    assert.match(ROTA_D, /req\.method !== 'POST'/);
+    assert.match(ROTA_D, /status\(405\)/);
   });
 
-  test('campo extra não chega ao banco', async () => {
-    const { limparDemanda } = await import('../api/functions/minhasDemandas.js');
-    const d = limparDemanda({ titulo: 'x', estado: 'virou_tarefa', user_id: 'outro', cartao_id: 'c1' });
-    assert.deepEqual(Object.keys(d).sort(), ['detalhe', 'origem', 'origem_ref', 'prazo', 'titulo']);
+  test('sem título devolve 400 em vez de gravar linha vazia', () => {
+    assert.match(ROTA_D, /sem_titulo/);
+    assert.match(ROTA_D, /status\(400\)/);
+  });
+
+  test('a falha ao buscar o nome não derruba a gravação', () => {
+    // nome é enfeite na linha do Painel. Perder a anotação por causa dele
+    // seria trocar um defeito de exibição por um de dado.
+    const nomeDe = ROTA_D.slice(ROTA_D.indexOf('async function nomeDe'), ROTA_D.indexOf('export default'));
+    assert.match(nomeDe, /catch\s*\{[\s\S]*return null;/);
   });
 });

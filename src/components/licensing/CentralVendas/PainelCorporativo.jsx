@@ -70,7 +70,10 @@ const campo = 'rounded-lg border border-white/15 bg-white/[0.06] px-2 py-1 text-
 // o sistema desenha a lista a partir do fundo do próprio campo.
 const fmtDia = (iso) => { const d = new Date(`${iso}T12:00:00`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const amanha = (iso) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão' };
+// 🗺️ 21/09/2026 — 'mapa' entra aqui porque o ✈ do mapa mental larga a
+// anotação NESTA fila (xperf_demandas), e não numa lista própria. Sem o
+// rótulo, a linha saía com a palavra crua 'mapa' no lugar da frase.
+const ORIGEM = { encontro: 'do encontro de segunda', ceo: 'do CEO', diretor: 'de um diretor', gestao: 'da gestão', mapa: 'do mapa mental' };
 
 // `embutido`: dentro do detalhamento da X-Performance, que já mostra quem é, o
 // seletor, o PDF e a semana de todo mundo — aqui só metas e demandas.
