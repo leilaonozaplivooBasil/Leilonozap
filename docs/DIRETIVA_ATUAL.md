@@ -12,6 +12,24 @@
 
 ---
 
+## DIR-169 — salvar a rotina passa a ligar a repetição sozinha, com a data à mostra
+
+**Emitida por:** dono (21/09/2026), depois da correção pontual que trouxe de volta os itens de hoje da rotina dele: *"eu cliquei em salvar, veja o botão se está funcionando. É melhor quando salvar a rotina precisa ter como ver a rotina pra frente com a data do dia seguinte comprovando que está salva."*
+
+**Achado — o botão "salvar" nunca ligava a repetição.** A auditoria da rotina "desaparecida" (mesmo dia) achou a causa real: `rotina_automatica: false` + `rotina_automatica_recusada: true` no perfil dele — uma vez desligado (botão "parar de gerar todo dia"), nem o cron nem a abertura da tela voltavam a gerar o dia sozinhas. `gravarRotina` (o "salvar" que ele usa pra editar a rotina item por item) NUNCA ligava essa chave de volta — só `gerarDia`/`regerarDia` (botões separados, escondidos) faziam isso. Editar e salvar a rotina parecia, pra ele, que "agora ela repete" — mas silenciosamente não mexia em nada da automação se ela já tivesse sido desligada antes. Essa é a armadilha que causou o "sumiço".
+
+**O que entra (`CrmMetodo.jsx`):**
+1. `gravarRotina` agora liga `rotina_automatica` e desliga `rotina_automatica_recusada` sozinha, sempre que salva a rotina e a automação ainda não estava ligada — salvar passa a significar de verdade "isso repete", sem depender de um segundo clique escondido em outro botão.
+2. Prova visível e PERSISTENTE (não só um toast que some) de que está salva e de quando entra em vigor: um selo no cabeçalho recolhido de "A minha rotina" (`· ✅ liga sozinha` / `· ⏸ parada`, sem precisar abrir o painel) e, dentro do painel aberto, o dia da semana + a data concreta do próximo dia em que ela nasce sozinha (`proximoDiaRotina`, mesmo cálculo de `valeAPartirDe` já usado no resto do sistema). O toast de "rotina salva" também passa a citar essa data em vez de um "amanhã" genérico.
+
+**Fora do escopo:** não mexe no botão "parar de gerar todo dia" (continua desligando do jeito que já desligava, decisão explícita da pessoa) nem em `gerarDia`/`regerarDia` — a mudança é só em `gravarRotina` passar a ligar a automação quando ainda estava desligada, igual os outros dois botões já faziam.
+
+**Prova:** suíte completa (3108/3108, `tests/salvarRotinaLigaSozinha.test.mjs` novo com 5 testes), lint limpo, `npm run build` sem erro. Mutação: (1) troquei a condição `if (!estadoRotina.automatica)` por `if (false)` em `gravarRotina` → teste quebrou; revertido. (2) troquei o texto do selo do cabeçalho por um texto qualquer → teste quebrou; revertido. (3) troquei o texto do status dentro do painel por um texto qualquer → teste quebrou; revertido.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-168 — "marcar como lida" agora escreve de verdade no banco
 
 **Emitida por:** dono, ao vivo, batendo repetidas vezes no botão de uma notificação (Emannuel Lima, pergunta de sete dias atrás sobre a reunião de diretoria): *"essa mensagem aqui fica toda hora, eu fico marcando como lida, como lida, e ela volta toda vez que eu abro. Está com um bug."*
