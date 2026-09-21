@@ -291,8 +291,30 @@ export function passoDoBlocoJulgado(veredito) {
   return veredito.explicou ? 'refazer' : 'explicar';
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * 🆘 AJUDA HUMANA DEPOIS DE MUITO TENTAR SOZINHA (21/09/2026)
+ * ══════════════════════════════════════════════════════════════════════════
+ * Ordem do dono, depois da Sophia (9 anos) ter tentado o bloco Acordei 11
+ * vezes num único dia e o de 17/09 22 vezes: "refazer" sem fim não é uma
+ * segunda chance, é uma pessoa presa sozinha num loop. Quem já tentou muito o
+ * MESMO bloco no MESMO dia ganha uma SAÍDA — pedir pra um gestor olhar — sem
+ * perder o direito de continuar tentando, se quiser.
+ */
+export const REFAZER_ANTES_DE_AJUDA = 3;
+
+/** Já bateu tentativas suficientes NESTE bloco pra merecer a opção de pedir ajuda? */
+export function precisaDeAjudaHumana(comprovacao, nome) {
+  return Number(comprovacao?.refeitos?.[nome] || 0) >= REFAZER_ANTES_DE_AJUDA;
+}
+
+/** Já pediu ajuda humana pra este bloco especificamente? */
+export function ajudaJaPedida(comprovacao, nome) {
+  return !!comprovacao?.ajuda_solicitada?.[nome];
+}
+
 /** O texto que a pessoa lê na hora. Sem jargão, e sempre dizendo o que fazer. */
-export function recadoDoBloco(nome, veredito) {
+export function recadoDoBloco(nome, veredito, extra = {}) {
   const passo = passoDoBlocoJulgado(veredito);
   if (passo === 'nada') return null;
   const rotulo = ROTULO_DO_BLOCO[nome] || nome;
@@ -308,6 +330,23 @@ export function recadoDoBloco(nome, veredito) {
       motivo,
     };
   }
+  // passo === 'refazer' — três estados possíveis, do mais raro pro mais comum
+  if (extra.ajudaPedida) {
+    return {
+      bloco: nome, passo, ajudaPedida: true,
+      titulo: `${rotulo}: pedido de ajuda enviado`,
+      texto: 'Um gestor vai dar uma olhada com calma. Se quiser, ainda dá pra tentar de novo enquanto espera — mas não precisa.',
+      motivo,
+    };
+  }
+  if (extra.podePedirAjuda) {
+    return {
+      bloco: nome, passo, podePedirAjuda: true,
+      titulo: `${rotulo}: já tentou bastante — bora pedir ajuda?`,
+      texto: 'Você já tentou várias vezes essa etapa. Isso acontece, e não é o fim: dá pra pedir pra um gestor olhar com calma, sem precisar continuar tentando sozinha.',
+      motivo,
+    };
+  }
   return {
     bloco: nome, passo,
     titulo: `${rotulo}: precisa refazer`,
@@ -319,7 +358,10 @@ export function recadoDoBloco(nome, veredito) {
 /** Os blocos que pedem alguma coisa da pessoa, na ordem do ritual. */
 export function blocosQuePedemAtencao(comprovacao) {
   const b = blocosDaComprovacao(comprovacao);
-  return BLOCOS.map((nome) => recadoDoBloco(nome, b[nome]?.veredito_ia)).filter(Boolean);
+  return BLOCOS.map((nome) => recadoDoBloco(nome, b[nome]?.veredito_ia, {
+    podePedirAjuda: precisaDeAjudaHumana(comprovacao, nome) && !ajudaJaPedida(comprovacao, nome),
+    ajudaPedida: ajudaJaPedida(comprovacao, nome),
+  })).filter(Boolean);
 }
 
 /**
