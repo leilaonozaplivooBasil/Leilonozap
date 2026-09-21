@@ -107,7 +107,10 @@ test('EncontroMentalidade.jsx: dá pra editar direto de dentro da apresentação
   assert.ok(inicioApresentacao >= 0);
   const cabecalho = COMPONENTE.slice(inicioApresentacao, COMPONENTE.indexOf('data-teste="apresentacao-fechar"'));
   assert.match(cabecalho, /data-teste="apresentacao-editar"/, 'precisa ter um botão de editar dentro da própria tela cheia');
-  assert.match(cabecalho, /setApresentando\(false\); setEditando\(true\); setEditandoTreinamento\(true\)/, 'clicar precisa fechar a apresentação E já abrir a edição — sem caçar o botão certo depois');
+  // DIR-168: o lápis passou a editar a PRÓPRIA lâmina, na apresentação; fechar e
+  // editar o tópico inteiro continua existindo, como um clique dentro do editor.
+  assert.match(cabecalho, /setEditandoLamina\(\(v\) => !v\)/, 'o lápis abre a edição da lâmina na própria tela cheia');
+  assert.match(COMPONENTE, /data-teste="apresentacao-editar-tudo"[\s\S]{0,40}|setApresentando\(false\); setEditandoLamina\(false\); setEditando\(true\); setEditandoTreinamento\(true\)/, 'editar o tópico inteiro continua a um clique');
 });
 
 // ─── nada de estado de edição grudado ao trocar de encontro/apagar tudo ────
