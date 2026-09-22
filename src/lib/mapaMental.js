@@ -128,19 +128,190 @@ export function renomearNo(nos, noId, texto) {
   return (nos || []).map((n) => (n?.id === noId ? { ...n, texto: limpo } : n));
 }
 
-/** Tamanho do card na tela. A régua precisa saber para não empilhar dois. */
+/**
+ * Tamanho do card na tela — só o CHUTE INICIAL, usado antes da primeira
+ * medição.
+ *
+ * 🔴 22/09/2026 — a altura estava em 44 e o card mede 52 no navegador (medido,
+ * não estimado). Dois estragos de um número só: a linha entre pai e filho
+ * ancorava 5px acima do meio do card, e a régua do "não cobrir ninguém" achava
+ * o card 8px menor do que ele é. Agora a tela MEDE cada card e passa as
+ * medidas para cá; estes valores só valem no primeiro quadro, antes da medição
+ * chegar.
+ */
 export const LARGURA_NO = 172;
-export const ALTURA_NO = 44;
+export const ALTURA_NO = 52;
+/** Respiro da borda do quadro. */
+export const MARGEM = 24;
+
+/**
+ * A medida de um card: a que a tela mediu, ou o chute inicial.
+ * Texto longo faz o card crescer, então altura fixa é sempre mentira.
+ */
+export function medidaDe(medidas, id) {
+  const m = medidas?.[id];
+  const largura = Number(m?.largura);
+  const altura = Number(m?.altura);
+  return {
+    largura: Number.isFinite(largura) && largura > 0 ? largura : LARGURA_NO,
+    altura: Number.isFinite(altura) && altura > 0 ? altura : ALTURA_NO,
+  };
+}
+
+/**
+ * O tamanho do CONTEÚDO do mapa — não o da janela que o mostra.
+ *
+ * 🔴 POR QUE ISTO EXISTE (22/09/2026)
+ * O desenho das linhas ocupava a janela (`w-full h-full`), não o conteúdo.
+ * Assim que o mapa passava do tamanho visível, as linhas eram cortadas: os
+ * cards rolavam para dentro da vista e chegavam SEM LIGAÇÃO NENHUMA. Medido:
+ * numa corrente de 5 níveis, conteúdo de 1352px numa área de 1051px — uma
+ * linha inteira fora do desenho. Era o defeito que mais fazia o mapa parecer
+ * quebrado, porque parecia perda de dado e não erro de desenho.
+ */
+export function caixaDoMapa(nos, medidas = {}) {
+  let largura = 0;
+  let altura = 0;
+  for (const n of (nos || [])) {
+    if (!n) continue;
+    const m = medidaDe(medidas, n.id);
+    largura = Math.max(largura, (Number(n.x) || 0) + m.largura);
+    altura = Math.max(altura, (Number(n.y) || 0) + m.altura);
+  }
+  return { largura: largura + MARGEM, altura: altura + MARGEM };
+}
+
+/**
+ * A curva que liga pai e filho, do lado certo de cada um.
+ *
+ * Sai pela borda mais perto do filho e entra pela borda mais perto do pai:
+ * arrastar um filho para a ESQUERDA do pai deixava a reta antiga atravessar os
+ * dois cards. Quando um está por cima do outro na horizontal, liga centro a
+ * centro, que é o único traço que não cruza nada.
+ */
+export function ligacaoEntre(pai, filho, medidas = {}) {
+  if (!pai || !filho) return null;
+  const mp = medidaDe(medidas, pai.id);
+  const mf = medidaDe(medidas, filho.id);
+  const px = Number(pai.x) || 0; const py = Number(pai.y) || 0;
+  const fx = Number(filho.x) || 0; const fy = Number(filho.y) || 0;
+  const y1 = py + mp.altura / 2;
+  const y2 = fy + mf.altura / 2;
+
+  let x1; let x2;
+  if (fx >= px + mp.largura) { x1 = px + mp.largura; x2 = fx; }
+  else if (fx + mf.largura <= px) { x1 = px; x2 = fx + mf.largura; }
+  else { x1 = px + mp.largura / 2; x2 = fx + mf.largura / 2; }
+
+  const dir = x2 >= x1 ? 1 : -1;
+  const curva = Math.max(16, Math.abs(x2 - x1) / 2);
+  return { x1, y1, x2, y2, d: `M ${x1} ${y1} C ${x1 + curva * dir} ${y1}, ${x2 - curva * dir} ${y2}, ${x2} ${y2}` };
+}
+
+/**
+ * Qual card está embaixo deste ponto — o último desenhado ganha, porque é o
+ * que está por cima. `ignorar` tira o próprio nó arrastado e a galhada dele.
+ */
+export function noSob(nos, ponto, medidas = {}, ignorar = []) {
+  const fora = new Set(ignorar);
+  const lista = Array.isArray(nos) ? nos : [];
+  const x = Number(ponto?.x); const y = Number(ponto?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  for (let i = lista.length - 1; i >= 0; i -= 1) {
+    const n = lista[i];
+    if (!n || fora.has(n.id)) continue;
+    const m = medidaDe(medidas, n.id);
+    const nx = Number(n.x) || 0; const ny = Number(n.y) || 0;
+    if (x >= nx && x <= nx + m.largura && y >= ny && y <= ny + m.altura) return n;
+  }
+  return null;
+}
+
+/** Um irmão novo: mesmo pai do nó de referência. Enter cria isto. */
+export function irmaoNovo(nos, noId) {
+  const alvo = (nos || []).find((n) => n?.id === noId);
+  if (!alvo) return null;
+  // a raiz não tem irmão: um mapa com duas raízes tem metade invisível para
+  // quem percorre a árvore a partir de uma só.
+  if (!alvo.pai) return null;
+  return noNovo({ pai: alvo.pai, ...lugarDoFilho(nos, alvo.pai) });
+}
+
+/**
+ * 🧹 ARRUMAR O MAPA — o gesto que faltava.
+ *
+ * Empurra tudo para uma árvore limpa da esquerda para a direita: um nível por
+ * coluna, irmãos empilhados, e cada pai centrado no bloco dos filhos.
+ *
+ * Sem isto, arrastar por meia hora deixa o mapa impossível de ler e não existe
+ * volta — o que faz a pessoa evitar arrastar, e um mapa que ninguém reorganiza
+ * não é mapa mental, é lista torta.
+ *
+ * Mapa com ciclo (gravado por versão antiga, ou editado na mão) não trava e
+ * não perde nó: como cada nó tem UM pai só, uma volta fechada nunca é
+ * alcançável a partir da raiz — os nós dela caem no laço do fim, que é
+ * sequencial. O `vistos` é seguro extra contra lista com id repetido; tentei
+ * prová-lo quebrando de propósito e não consegui, e por isso não finjo que ele
+ * tem prova.
+ */
+export function arrumarMapa(nos, medidas = {}) {
+  const lista = Array.isArray(nos) ? nos : [];
+  const raiz = raizDe(lista);
+  if (!raiz) return lista;
+
+  const alturaDe = (id) => medidaDe(medidas, id).altura;
+  const lugares = new Map();
+  const vistos = new Set();
+  let linha = MARGEM;
+
+  /** Coloca o nó e devolve a altura do meio dele, para o pai se centrar. */
+  const colocar = (id, nivel) => {
+    if (vistos.has(id)) return null;
+    vistos.add(id);
+    const x = MARGEM + nivel * (LARGURA_NO + FOLGA_X);
+    const filhos = filhosDe(lista, id);
+
+    if (!filhos.length) {
+      const y = linha;
+      linha += alturaDe(id) + FOLGA_Y;
+      lugares.set(id, { x, y });
+      return y + alturaDe(id) / 2;
+    }
+
+    const meios = filhos.map((f) => colocar(f.id, nivel + 1)).filter((m) => m !== null);
+    const centro = meios.length ? (Math.min(...meios) + Math.max(...meios)) / 2 : linha;
+    lugares.set(id, { x, y: Math.max(MARGEM, centro - alturaDe(id) / 2) });
+    return centro;
+  };
+  colocar(raiz.id, 0);
+
+  // quem não foi alcançado (pai apontando para nó que não existe) desce para o
+  // fim em vez de ficar onde estava, por cima de alguém.
+  for (const n of lista) {
+    if (!n || lugares.has(n.id)) continue;
+    lugares.set(n.id, { x: MARGEM, y: linha });
+    linha += alturaDe(n.id) + FOLGA_Y;
+  }
+
+  return lista.map((n) => (n && lugares.has(n.id) ? { ...n, ...lugares.get(n.id) } : n));
+}
 /** Respiro entre cards. */
 const FOLGA_X = 56;
 const FOLGA_Y = 18;
 
-/** Dois cards se cobrem? */
-export function seSobrepoem(a, b) {
+/**
+ * Dois cards se cobrem?
+ *
+ * Aceita as medidas de verdade: com altura fixa de 44 num card de 52, a régua
+ * achava que cabia onde não cabe. Um card sem medida cai no chute inicial.
+ */
+export function seSobrepoem(a, b, medidas = {}) {
   if (!a || !b) return false;
+  const ma = medidaDe(medidas, a.id);
+  const mb = medidaDe(medidas, b.id);
   return (
-    a.x < b.x + LARGURA_NO && a.x + LARGURA_NO > b.x
-    && a.y < b.y + ALTURA_NO && a.y + ALTURA_NO > b.y
+    a.x < b.x + mb.largura && a.x + ma.largura > b.x
+    && a.y < b.y + mb.altura && a.y + ma.altura > b.y
   );
 }
 
@@ -156,15 +327,15 @@ export function seSobrepoem(a, b) {
  * Agora o lugar é à direita do pai e, se estiver ocupado, DESCE até achar vaga.
  * Simples, previsível, e nunca esconde nada.
  */
-export function lugarDoFilho(nos, paiId) {
+export function lugarDoFilho(nos, paiId, medidas = {}) {
   const pai = (nos || []).find((n) => n?.id === paiId);
-  const x = (pai?.x || 0) + LARGURA_NO + FOLGA_X;
+  const x = (pai?.x || 0) + medidaDe(medidas, paiId).largura + FOLGA_X;
   let y = pai?.y || 0;
   // Desce de um card por vez até a vaga estar livre. O teto evita laço infinito
   // se a tela estiver impossível — melhor empilhar que travar a aba.
   for (let tentativa = 0; tentativa < 60; tentativa += 1) {
     const candidato = { x, y };
-    const ocupado = (nos || []).some((n) => n && n.id !== paiId && seSobrepoem(candidato, n));
+    const ocupado = (nos || []).some((n) => n && n.id !== paiId && seSobrepoem(candidato, n, medidas));
     if (!ocupado) return candidato;
     y += ALTURA_NO + FOLGA_Y;
   }
