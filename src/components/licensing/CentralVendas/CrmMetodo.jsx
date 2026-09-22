@@ -16,6 +16,7 @@ import {
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
   reunioesEmpresaDoDia, DIAS_SEMANA, SETORES_EMPRESA, tituloReuniaoComSetor,
 } from '@/lib/metodo';
+import { ordenarAgenda, ordemValida, ORDENS, ORDEM_PADRAO } from '@/lib/ordemDaAgenda';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
 // o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
@@ -238,6 +239,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
   const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
+  // 🔎 22/09/2026 — a ordem da agenda. Padrão: mais recentes (ver ordemDaAgenda.js).
+  // Fica no localStorage porque é preferência de quem usa, não do dia: quem
+  // trabalha por temperatura escolhe uma vez e não escolhe de novo toda visita.
+  const [ordemLista, setOrdemLista] = useState(() => {
+    try { return ordemValida(localStorage.getItem('nz-ordem-agenda')); } catch { return ORDEM_PADRAO; }
+  });
+  const trocarOrdemLista = (id) => {
+    const nova = ordemValida(id);
+    setOrdemLista(nova);
+    try { localStorage.setItem('nz-ordem-agenda', nova); } catch { /* aba anônima: vale só nesta visita */ }
+  };
   const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
   const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato, editar:registro} = editar (DIR-50); {contato:null} = agendar livre
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
@@ -2100,18 +2112,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // DIR-46 — agenda qualificada: busca + ordenação por probabilidade de
   // fechamento (não qualificados por último, em ordem alfabética).
-  const listaOrdenada = useMemo(() => {
-    const termo = buscaLista.trim().toLowerCase();
-    const filtrados = clientesManuais.filter((c) => !termo
-      || String(c.full_name || '').toLowerCase().includes(termo)
-      || String(c.phone || '').toLowerCase().includes(termo)
-      || String(c.email || '').toLowerCase().includes(termo));
-    return [...filtrados].sort((a, b) => {
-      const pa = probabilidadeFechamento(a.qualificacao_network)?.pct ?? -1;
-      const pb = probabilidadeFechamento(b.qualificacao_network)?.pct ?? -1;
-      return pb - pa || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR');
-    });
-  }, [clientesManuais, buscaLista]);
+  // 🔎 22/09/2026 — a regra saiu daqui pra src/lib/ordemDaAgenda.js, onde dá
+  // pra testar sem navegador. Pedido do Ávilla: "os adicionados mais recentes
+  // devem ser vistos primeiro, e alterados também".
+  //
+  // O que estava errado não era falta de ordem — era a ordem CERTA pra outra
+  // pergunta. Vinha por probabilidade de fechamento, e quem acabou de ser
+  // cadastrado não tem qualificação: probabilidade nula, tratada como -1,
+  // último lugar. Entre 277 pessoas, a recém-adicionada sumia — e quem
+  // cadastrou achava que não tinha salvado.
+  //
+  // "Mais quentes" não morreu: virou a segunda opção do seletor. As duas
+  // perguntas existem ("quem eu ligo agora?" e "salvou?"); mudou só qual vem
+  // ligada por padrão.
+  const listaOrdenada = useMemo(
+    () => ordenarAgenda(clientesManuais, { termo: buscaLista, ordem: ordemLista }),
+    [clientesManuais, buscaLista, ordemLista],
+  );
   // 🖐️ 09/09/2026 — achado no tour: o botão "Qualificar" só existe pra quem
   // ainda não tem nota, e todo mundo nesse estado tinha o MESMO data-teste —
   // o alvo do tour não era necessariamente o primeiro da lista visível.
@@ -3661,12 +3678,35 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   )}
                 </div>
               </div>
-              <Input
-                value={buscaLista}
-                onChange={(e) => setBuscaLista(e.target.value)}
-                placeholder="🔎 buscar na agenda por nome, telefone ou e-mail..."
-                className="bg-white border-nz-borda text-nz-tinta"
-              />
+              {/* 🔎 22/09/2026 — a busca já existia; o que faltava era a ORDEM.
+                  Quem acabava de cadastrar alguém não achava a pessoa: sem
+                  qualificação ela caía pro fim da lista. Ver ordemDaAgenda.js. */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  value={buscaLista}
+                  onChange={(e) => setBuscaLista(e.target.value)}
+                  placeholder="🔎 buscar na agenda por nome, telefone ou e-mail..."
+                  className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[200px]"
+                  data-teste="busca-agenda"
+                />
+                <div className="inline-flex items-center rounded-lg border border-nz-borda bg-white p-0.5 shrink-0" role="group" aria-label="Ordem da agenda">
+                  {ORDENS.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => trocarOrdemLista(o.id)}
+                      title={o.dica}
+                      aria-pressed={ordemLista === o.id}
+                      data-teste={`ordem-agenda-${o.id}`}
+                      className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                        ordemLista === o.id ? 'bg-nz-verde text-white' : 'text-nz-tinta-fraca hover:text-nz-tinta'
+                      }`}
+                    >
+                      {o.rotulo}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {listaOrdenada.length === 0 ? (
                 <p className="text-sm text-nz-tinta-fraca py-4 text-center">
                   {clientesManuais.length === 0 ? 'Sua lista começa aqui — adicione as pessoas da sua agenda.' : 'Ninguém na agenda com essa busca.'}
