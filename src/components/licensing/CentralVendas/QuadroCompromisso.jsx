@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Loader2, Plus, Trash2, CalendarPlus, CalendarDays, ListChecks, CheckCircle2,
@@ -498,6 +498,89 @@ function Coluna({
   );
 }
 
+/**
+ * 📷 A foto do card (22/09/2026, pedido do Ávilla).
+ *
+ * DOIS caminhos de propósito, e não um só: `capture` abre a CÂMERA no celular —
+ * que é o caso do treino, tirar na hora — e o outro input pega da galeria ou do
+ * computador. Um input só não dá os dois: com `capture`, o Android nem oferece a
+ * galeria; sem ele, o iPhone não abre a câmera direto.
+ *
+ * Enquanto sobe, o botão vira "enviando…" e fica desligado — sem isso, dois
+ * toques no mesmo card sobem dois arquivos e o segundo sobrescreve o primeiro
+ * sem ninguém ver.
+ */
+function FotoDoCartao({ cartao, onMudar }) {
+  const daCamera = useRef(null);
+  const daGaleria = useRef(null);
+  const [subindo, setSubindo] = useState(false);
+
+  const enviar = async (arquivo) => {
+    if (!arquivo) return;
+    setSubindo(true);
+    try {
+      const r = await plataforma.integrations.Core.UploadFile({ file: arquivo });
+      const url = r?.file_url || r?.url || null;
+      if (!url) throw new Error('sem url');
+      onMudar({ ...cartao, foto_url: url });
+      toast.success('Foto anexada ao card.');
+    } catch (_) {
+      // o card continua exatamente como estava — nada meio-salvo
+      toast.error('Não consegui subir a foto. Tente de novo.');
+    } finally {
+      setSubindo(false);
+    }
+  };
+
+  return (
+    <div className="mt-2.5" data-teste="foto-do-cartao">
+      {cartao.foto_url ? (
+        <div className="relative">
+          <img
+            src={cartao.foto_url}
+            alt={`Foto de ${cartao.titulo || 'do card'}`}
+            className="w-full max-h-44 object-cover rounded-lg border border-white/10"
+          />
+          <button
+            type="button"
+            onClick={() => onMudar({ ...cartao, foto_url: null })}
+            title="Tirar a foto do card"
+            data-teste="remover-foto-do-cartao"
+            className="absolute top-1.5 right-1.5 rounded-full bg-black/60 p-1 text-white/70 hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3" style={{ fontSize: T.item }}>
+          <button
+            type="button"
+            disabled={subindo}
+            onClick={() => daCamera.current?.click()}
+            data-teste="tirar-foto-do-cartao"
+            className="text-white/45 hover:text-white/80 disabled:opacity-40"
+          >
+            {subindo ? 'enviando…' : '📷 tirar foto'}
+          </button>
+          <button
+            type="button"
+            disabled={subindo}
+            onClick={() => daGaleria.current?.click()}
+            data-teste="anexar-foto-do-cartao"
+            className="text-white/45 hover:text-white/80 disabled:opacity-40"
+          >
+            🖼️ anexar
+          </button>
+        </div>
+      )}
+      <input ref={daCamera} type="file" accept="image/*" capture="environment" hidden
+        onChange={(e) => { enviar(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={daGaleria} type="file" accept="image/*" hidden
+        onChange={(e) => { enviar(e.target.files?.[0]); e.target.value = ''; }} />
+    </div>
+  );
+}
+
 function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onExcluir, onVirarTarefa, onIr, onReordenar, onArrastandoSobre, autoEditar = false }) {
   const [novoItem, setNovoItem] = useState('');
   const [sobre, setSobre] = useState(null);
@@ -638,6 +721,14 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
             style={{ color: CARD.texto, fontSize: T.item }}
           />
         )}
+
+        {/* 📷 22/09/2026 — A FOTO NO CARD. Ávilla, depois de eu perguntar qual era
+            o pedido: "rotina de treino no card do quadro. lá deve ter opção de
+            tirar/anexar foto do treino tbm."
+            A foto de COMPROVAÇÃO já existia (XGameComprovarModal, com câmera ao vivo
+            e galeria). O que faltava era aqui, no card — e metodo_quadro não tinha
+            onde guardar (coluna foto_url, migração 20260922211851). */}
+        <FotoDoCartao cartao={cartao} onMudar={onMudar} />
 
         {/* ── RODAPÉ DE METADADOS, tudo em chip com ícone ── */}
         {/* 🔗 06/09 — ONDE ESTE CARD ESTÁ, dito por extenso (dono: "a pessoa não está
