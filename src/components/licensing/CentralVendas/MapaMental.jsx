@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Trash2, Send, Loader2, Network, Inbox, CalendarPlus, LayoutGrid, Check, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Send, Loader2, Network, Inbox, CalendarPlus, LayoutGrid, Check, Wand2, Link2 } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
 import {
   noNovo, raizDe, podeVirarFilho, moverNo, apagarNo, descendentesDe,
   quantosCaemJunto, renomearNo, lugarDoFilho, semearNoMapa,
   caixaDoMapa, ligacaoEntre, noSob, irmaoNovo, arrumarMapa,
+  ligar, desligar, podeLigar, estaoLigados, ligacoesDoMapa,
 } from '@/lib/mapaMental';
 
 /**
@@ -66,6 +67,8 @@ export default function MapaMental({ onDemandaCriada, semente = null, onSemeado 
   const [recado, setRecado] = useState('');
   const [destinoAberto, setDestinoAberto] = useState(null); // id do nó com o seletor aberto
   const [destacado, setDestacado] = useState(null);           // o nó recém-semeado, para a vista achar
+  // 🔗 22/09/2026 — de qual nó saiu o clique de "ligar". null = ninguém ligando.
+  const [ligandoDe, setLigandoDe] = useState(null);
   // 📏 o tamanho REAL de cada card, medido no navegador. Texto longo faz o
   // card crescer, então altura fixa é sempre mentira — e era ela que
   // desalinhava as linhas e enganava a régua do "não cobrir ninguém".
@@ -213,6 +216,40 @@ export default function MapaMental({ onDemandaCriada, semente = null, onSemeado 
     setRecado('Mapa arrumado.');
   };
 
+  /**
+   * 🔗 22/09/2026 — LIGAR UM NO OUTRO. Ávilla: "é preciso opção de ligar um no
+   * outro no mapa mental".
+   *
+   * DOIS CLIQUES, não arrastar. Arrastar já tem dono aqui (rependurar na
+   * árvore); empilhar dois sentidos no mesmo gesto é como se perdem os dois.
+   *
+   * O mesmo botão faz ida e volta: se os dois já estiverem ligados, o segundo
+   * clique DESLIGA. Sem isso, desfazer exigiria um terceiro botão — e o mapa
+   * tem "simples e objetivo" como requisito escrito lá em cima.
+   */
+  const alternarLigacao = (id) => {
+    // clicar de novo no mesmo nó = desistir
+    if (ligandoDe === id) { setLigandoDe(null); setRecado(''); return; }
+    if (!ligandoDe) {
+      setLigandoDe(id);
+      setRecado('Agora clique no 🔗 do outro item para ligar os dois.');
+      return;
+    }
+    const de = ligandoDe;
+    setLigandoDe(null);
+    if (estaoLigados(nos, de, id)) {
+      mudar(desligar(nos, de, id));
+      setRecado('Ligação desfeita.');
+      return;
+    }
+    const v = podeLigar(nos, de, id);
+    // 🔴 o motivo vem da regra e é MOSTRADO. Recusar calado é o que faz a
+    // pessoa clicar três vezes achando que o botão não pegou.
+    if (!v.pode) { setRecado(v.motivo); return; }
+    mudar(ligar(nos, de, id));
+    setRecado('Ligados.');
+  };
+
   // Fecha a edição. Nó recém-criado e deixado em branco é REMOVIDO: senão
   // sobra um card "escrever…" para sempre, que não vira demanda nem some.
   const fecharEdicao = (id, texto) => {
@@ -307,23 +344,59 @@ export default function MapaMental({ onDemandaCriada, semente = null, onSemeado 
         y: ev.clientY - (c?.top || 0) + (telaRef.current?.scrollTop || 0),
       };
     };
+    // 🖐️ 22/09/2026 — ARRASTO SUAVE. Ávilla: "só não é suave".
+    //
+    // O defeito era RITMO, não conta: `mover` chamava `setNos` a CADA evento de
+    // ponteiro. Ponteiro moderno dispara muito acima de 60 por segundo (mouse
+    // gamer e trackpad passam de 200), e cada chamada refazia a lista inteira,
+    // re-renderizava todos os cards e todas as linhas do SVG, e ainda rodava o
+    // `noSob` varrendo o mapa. O React engasgava e o card andava aos pulos.
+    //
+    // Agora o evento só ANOTA a posição, e no máximo uma vez por quadro de
+    // animação o navegador aplica a última. O dedo continua sendo lido na
+    // frequência dele; o que passou a ser 60/s é o DESENHO, que é o teto do que
+    // a tela mostra de qualquer jeito.
+    let quadro = null;
+    let ultimo = null;
+    const aplicar = () => {
+      quadro = null;
+      const a = arrasto.current;
+      if (!a || !ultimo) return;
+      const p = ultimo;
+      const x = Math.max(0, p.x - a.dx);
+      const y = Math.max(0, p.y - a.dy);
+      // 🔴 22/09/2026 — LÊ `arrasto.current` UMA VEZ, AQUI FORA.
+      //
+      // Dentro do `setNos` seria tarde: o React guarda a função e roda DEPOIS.
+      // Quando `soltar` aplica o último quadro (logo abaixo) e em seguida zera
+      // `arrasto.current`, a função já está agendada — e ao rodar encontra
+      // `null`, estourando em `arrasto.current.id`.
+      //
+      // Não é teoria: aconteceu. A tela inteira do mapa morria ao SOLTAR o
+      // card ("Cannot read properties of null"), e o mapa sumia. Quem pegou foi
+      // a prova nova do arrasto, antes de isto ir pro ar.
+      setNos((atual) => {
+        const lista = atual.map((n) => (n.id === a.id ? { ...n, x, y } : n));
+        const sob = noSob(lista, p, medidas, a.proibidos);
+        const idAlvo = sob?.id || null;
+        if (a.alvo !== idAlvo) { a.alvo = idAlvo; setAlvoDoSolto(idAlvo); }
+        return lista;
+      });
+    };
     const mover = (ev) => {
       if (!arrasto.current) return;
       arrasto.current.mexeu = true;
-      const p = ponto(ev);
-      const x = Math.max(0, p.x - arrasto.current.dx);
-      const y = Math.max(0, p.y - arrasto.current.dy);
-      setNos((atual) => {
-        const lista = atual.map((n) => (n.id === arrasto.current.id ? { ...n, x, y } : n));
-        const sob = noSob(lista, p, medidas, arrasto.current.proibidos);
-        const idAlvo = sob?.id || null;
-        if (arrasto.current.alvo !== idAlvo) { arrasto.current.alvo = idAlvo; setAlvoDoSolto(idAlvo); }
-        return lista;
-      });
+      ultimo = ponto(ev);
+      if (quadro === null) quadro = requestAnimationFrame(aplicar);
     };
     const soltar = () => {
       window.removeEventListener('pointermove', mover);
       window.removeEventListener('pointerup', soltar);
+      // 🔴 o último quadro TEM que ser aplicado antes de largar. Sem isto, o
+      // trecho entre o penúltimo quadro e o dedo levantando se perde e o card
+      // "volta" alguns pixels na hora de soltar — que é exatamente a sensação
+      // de arrasto que não gruda no dedo.
+      if (quadro !== null) { cancelAnimationFrame(quadro); quadro = null; aplicar(); }
       const dados = arrasto.current;
       arrasto.current = null;
       setAlvoDoSolto(null);
@@ -425,6 +498,26 @@ export default function MapaMental({ onDemandaCriada, semente = null, onSemeado 
                 />
               );
             })}
+
+            {/* 🔗 22/09/2026 — AS LIGAÇÕES LIVRES, pedido do Ávilla: "opção de
+                ligar um no outro". Desenhadas TRACEJADAS e em roxo, não verdes
+                contínuas como as da árvore: são coisas diferentes e precisam
+                parecer diferentes. A linha da árvore diz "isto está DENTRO
+                daquilo"; esta diz "isto tem a ver com aquilo". */}
+            {ligacoesDoMapa(nos).map(({ de, para, chave }) => {
+              const a = nos.find((n) => n.id === de);
+              const b = nos.find((n) => n.id === para);
+              const l = ligacaoEntre(a, b, medidas);
+              if (!l) return null;
+              return (
+                <path
+                  key={`liga-${chave}`} d={l.d} fill="none"
+                  stroke="rgba(167,139,250,0.75)" strokeWidth="2"
+                  strokeDasharray="6 5" strokeLinecap="round"
+                  data-teste="mapa-ligacao-livre" data-par={chave}
+                />
+              );
+            })}
           </svg>
 
           {nos.map((n) => (
@@ -495,6 +588,24 @@ export default function MapaMental({ onDemandaCriada, semente = null, onSemeado 
               <button type="button" onClick={() => criarFilho(n.id)} title="pendurar um item aqui"
                 className="rounded p-0.5 text-white/45 hover:bg-white/10 hover:text-nz-verde-neon" data-teste="mapa-filho">
                 <Plus className="h-3 w-3" />
+              </button>
+              {/* 🔗 22/09/2026 — LIGAR UM NO OUTRO (pedido do Ávilla).
+                  Dois cliques, não arrastar: clica aqui, clica no outro card.
+                  Arrastar já tem dono neste mapa (rependurar na árvore), e
+                  empilhar dois sentidos no mesmo gesto é como se perde os dois.
+                  O segundo clique também DESLIGA, se os dois já estiverem
+                  ligados — mesmo gesto, ida e volta. */}
+              <button
+                type="button"
+                onClick={() => alternarLigacao(n.id)}
+                title={ligandoDe === n.id ? 'escolha o outro item (ou clique aqui pra desistir)' : 'ligar este item a outro'}
+                aria-pressed={ligandoDe === n.id}
+                data-teste="mapa-ligar"
+                className={`rounded p-0.5 hover:bg-white/10 ${
+                  ligandoDe === n.id ? 'bg-violet-400/25 text-violet-200' : 'text-white/45 hover:text-violet-300'
+                }`}
+              >
+                <Link2 className="h-3 w-3" />
               </button>
               <button type="button" onClick={() => setDestinoAberto((a) => (a === n.id ? null : n.id))}
                 title="mandar para…" aria-expanded={destinoAberto === n.id}

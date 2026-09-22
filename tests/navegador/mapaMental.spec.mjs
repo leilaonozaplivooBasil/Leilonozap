@@ -569,3 +569,146 @@ test('🧹 arrumar põe tudo numa árvore sem card por cima de card', { skip: se
   assert.equal(cobre, 0, 'ficou card por cima de card depois de arrumar');
   await ctx.close();
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔗 LIGAR UM NO OUTRO + 🖐️ ARRASTO SUAVE (22/09/2026)
+// ═══════════════════════════════════════════════════════════════════════════
+// Ávilla: "só não é suave e nao interliga, é preciso opção de ligar um no
+// outro no mapa mental."
+
+/**
+ * Monta raiz + dois filhos (a árvore mínima pra provar ligação entre irmãos).
+ *
+ * ⚠️ NÃO usa Escape pra fechar a edição: num nó RECÉM-CRIADO, Escape apaga o nó
+ * (é a regra de não deixar card "escrever…" para sempre). Digitar e apertar
+ * Escape apagaria o que acabou de ser escrito. O jeito de gravar é sair do
+ * campo — o `onBlur` é que confirma o texto.
+ */
+async function abrirComTresNos() {
+  const { ctx, pagina } = await abrir();
+  for (const texto of ['Estoque atrasado', 'Reclamação do cliente']) {
+    await pagina.locator('[data-teste="mapa-filho"]').first().click();
+    await pagina.waitForSelector('[data-teste="mapa-input"]', { timeout: 5000 });
+    await pagina.keyboard.type(texto);
+    await pagina.locator('[data-teste="mapa-input"]').evaluate((el) => el.blur());
+    await pagina.waitForTimeout(250);
+  }
+  await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="mapa-no"]').length === 3, null, { timeout: 8000 });
+  return { ctx, pagina };
+}
+
+const livres = (p) => p.locator('[data-teste="mapa-ligacao-livre"]');
+const recado = (p) => p.locator('[data-teste="mapa-recado"]').textContent();
+
+test('🔴 🔗 dois cliques ligam dois itens de galhos diferentes', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComTresNos();
+  try {
+    assert.equal(await livres(pagina).count(), 0, 'nasceu com ligação livre do nada');
+
+    const botoes = pagina.locator('[data-teste="mapa-ligar"]');
+    await botoes.nth(1).click();
+    assert.match(await recado(pagina), /clique no .* do outro item/i,
+      'o primeiro clique não explicou o que fazer — a pessoa fica sem saber que começou');
+
+    await botoes.nth(2).click();
+    await pagina.waitForTimeout(300);
+
+    assert.equal(await livres(pagina).count(), 1, 'a linha da ligação não apareceu');
+    assert.match(await recado(pagina), /Ligados/);
+  } finally { await ctx.close(); }
+});
+
+test('🔴 🔗 o mesmo gesto DESLIGA — ida e volta no mesmo botão', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComTresNos();
+  try {
+    const botoes = pagina.locator('[data-teste="mapa-ligar"]');
+    await botoes.nth(1).click();
+    await botoes.nth(2).click();
+    await pagina.waitForTimeout(300);
+    assert.equal(await livres(pagina).count(), 1);
+
+    await botoes.nth(1).click();
+    await botoes.nth(2).click();
+    await pagina.waitForTimeout(300);
+    assert.equal(await livres(pagina).count(), 0, 'não desfez: desfazer exigiria um terceiro botão');
+    assert.match(await recado(pagina), /desfeita/i);
+  } finally { await ctx.close(); }
+});
+
+test('🔗 ligar pai com filho é RECUSADO com motivo — e não em silêncio', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComTresNos();
+  try {
+    const botoes = pagina.locator('[data-teste="mapa-ligar"]');
+    await botoes.nth(0).click();  // a raiz
+    await botoes.nth(1).click();  // um filho dela
+    await pagina.waitForTimeout(300);
+
+    assert.equal(await livres(pagina).count(), 0, 'desenhou uma segunda linha em cima da linha da árvore');
+    assert.match(await recado(pagina), /árvore/i,
+      'recusou calado — a pessoa clica de novo achando que o botão não pegou');
+  } finally { await ctx.close(); }
+});
+
+test('🔗 clicar duas vezes no MESMO item desiste, sem ligar nada', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComTresNos();
+  try {
+    const botoes = pagina.locator('[data-teste="mapa-ligar"]');
+    await botoes.nth(1).click();
+    await botoes.nth(1).click();
+    await pagina.waitForTimeout(250);
+    assert.equal(await livres(pagina).count(), 0);
+    // 🔬 a rodada de mutação mostrou que tirar o ramo de "desistir" NÃO mudava
+    // o estado: o clique no mesmo nó caía em `podeLigar`, que também recusa e
+    // também limpa o modo. O que muda é o RECADO — e isso não é detalhe: sem o
+    // ramo, desistir acusa "um item não se liga nele mesmo", como se a pessoa
+    // tivesse feito besteira. Desistir não é erro, e a tela não pode dizer que é.
+    const aoDesistir = await pagina.locator('[data-teste="mapa-recado"]').count()
+      ? await recado(pagina) : '';
+    assert.doesNotMatch(aoDesistir, /não se liga nele mesmo/i,
+      'desistir foi tratado como erro — o ramo de desistência sumiu');
+    // e o próximo par ainda funciona: desistir não pode deixar o modo preso
+    await botoes.nth(1).click();
+    await botoes.nth(2).click();
+    await pagina.waitForTimeout(300);
+    assert.equal(await livres(pagina).count(), 1, 'o modo ficou preso depois de desistir');
+  } finally { await ctx.close(); }
+});
+
+test('🔴 🖐️ o arrasto acompanha o dedo até o fim — sem voltar ao soltar', { skip: semNavegador }, async () => {
+  // O arrasto passou a aplicar a posição uma vez por quadro (rAF) em vez de a
+  // cada evento. O risco introduzido é PERDER o último trecho: se o quadro
+  // pendente for descartado no `pointerup`, o card para onde estava no
+  // penúltimo quadro e "volta" alguns pixels. Isto mede exatamente isso.
+  const { ctx, pagina } = await abrir();
+  try {
+    const no = nos(pagina).first();
+    const antes = await no.boundingBox();
+    await pagina.mouse.move(antes.x + 30, antes.y + 10);
+    await pagina.mouse.down();
+    await pagina.mouse.move(antes.x + 230, antes.y + 110, { steps: 20 });
+    await pagina.waitForTimeout(120); // deixa o rAF alcançar: daqui em diante nada está pendente
+
+    // 🔬 AQUI ESTÁ O PULO DO GATO, e ele veio da rodada de mutação: com
+    // `mouse.move(..., {steps})` o Playwright espaça os eventos o bastante pro
+    // quadro sempre alcançar — então descartar o último quadro no `pointerup`
+    // NÃO quebrava esta prova, e ela dizia medir algo que não media.
+    // Agora o último movimento e o soltar são disparados no MESMO tique de
+    // JavaScript: nenhum quadro de animação pode rodar entre os dois, então
+    // existe garantidamente um quadro pendente na hora de largar. Se ele for
+    // descartado, o card para no penúltimo — que é o defeito.
+    const alvo = { x: antes.x + 330, y: antes.y + 210 };
+    await pagina.evaluate(({ x, y }) => {
+      const comum = { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y };
+      window.dispatchEvent(new PointerEvent('pointermove', comum));
+      window.dispatchEvent(new PointerEvent('pointerup', comum));
+    }, alvo);
+    await pagina.waitForTimeout(300);
+
+    const depois = await no.boundingBox();
+    assert.ok(Math.hypot(depois.x - antes.x, depois.y - antes.y) > 250,
+      `o card não acompanhou o movimento inteiro (${Math.round(Math.hypot(depois.x - antes.x, depois.y - antes.y))}px)`);
+    // o card tem que estar onde o dedo largou, não onde estava um quadro antes
+    assert.ok(Math.abs((depois.x + 30) - alvo.x) < 14 && Math.abs((depois.y + 10) - alvo.y) < 14,
+      `o card VOLTOU ao soltar — parou em (${Math.round(depois.x + 30)}, ${Math.round(depois.y + 10)}) e o dedo largou em (${alvo.x}, ${alvo.y}); o último quadro do arrasto se perdeu`);
+  } finally { await ctx.close(); }
+});

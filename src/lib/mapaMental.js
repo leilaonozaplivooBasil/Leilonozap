@@ -95,7 +95,12 @@ export function moverNo(nos, noId, novoPaiId) {
  */
 export function apagarNo(nos, noId) {
   const cair = new Set([noId, ...descendentesDe(nos, noId).map((n) => n.id)]);
-  return (nos || []).filter((n) => n && !cair.has(n.id));
+  const ficam = (nos || []).filter((n) => n && !cair.has(n.id));
+  // 🔗 22/09/2026 — quem apontava pro nó apagado fica com o id na lista de
+  // ligações. `ligacoesDoMapa` já ignora ponta solta na hora de desenhar, mas
+  // deixar o lixo no jsonb faz a ligação RESSUSCITAR se um dia um nó nascer
+  // com o mesmo id. Limpa aqui, onde o nó some.
+  return limparLigacoesOrfas(ficam);
 }
 
 /** Quantos somem junto se este nó for apagado — o número que a tela avisa. */
@@ -384,4 +389,119 @@ export function semearNoMapa(nos, texto) {
     ? noNovo({ texto: limpo, pai: raiz.id, ...lugarDoFilho(lista, raiz.id) })
     : noNovo({ texto: limpo, x: 40, y: 140 });
   return { nos: [...lista, novo], id: novo.id, novo: true };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔗 LIGAÇÕES LIVRES — o nó que aponta pra outro fora da árvore (22/09/2026)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Pedido do Ávilla: "é preciso opção de ligar um no outro no mapa mental".
+//
+// O mapa era uma ÁRVORE PURA: cada nó tem um pai, e a única linha que existia
+// era pai→filho. Mapa mental de verdade não é assim — "estoque atrasado" se liga
+// a "reclamação do cliente" mesmo os dois pendurados em galhos diferentes.
+//
+// NÃO MEXE NA ÁRVORE. O `pai` continua mandando no layout, no `arrumarMapa`, no
+// arrastar-pra-repender. A ligação livre é uma segunda camada, só visual e de
+// sentido: some se o nó sumir, e não move nada de lugar.
+//
+// GUARDADA NO PRÓPRIO NÓ (`no.liga`), e não numa lista à parte, porque o mapa
+// inteiro já é um `nos` jsonb numa coluna só — assim não precisou de migração
+// nenhuma, e nó apagado leva as ligações dele junto por construção.
+//
+// A ligação é MÃO DUPLA no sentido, mas guardada UMA VEZ só: guardar nos dois
+// lados dobraria o desenho e faria "desligar" ter que acertar os dois — que é o
+// tipo de coisa que fica pela metade e vira linha fantasma.
+
+/** As ligações livres que saem deste nó (nunca `undefined`). */
+export function ligacoesDe(no) {
+  return Array.isArray(no?.liga) ? no.liga.filter(Boolean) : [];
+}
+
+/** Estes dois já estão ligados, em qualquer sentido? */
+export function estaoLigados(nos, a, b) {
+  const na = (nos || []).find((n) => n?.id === a);
+  const nb = (nos || []).find((n) => n?.id === b);
+  return ligacoesDe(na).includes(b) || ligacoesDe(nb).includes(a);
+}
+
+/** Um é pai do outro? Essa linha a árvore já desenha. */
+export function saoParentes(nos, a, b) {
+  const na = (nos || []).find((n) => n?.id === a);
+  const nb = (nos || []).find((n) => n?.id === b);
+  return (na?.pai || null) === b || (nb?.pai || null) === a;
+}
+
+/**
+ * Pode ligar A em B? Devolve o motivo em português — a tela mostra, não inventa.
+ */
+export function podeLigar(nos, a, b) {
+  if (!a || !b) return { pode: false, motivo: 'Escolha os dois itens.' };
+  if (a === b) return { pode: false, motivo: 'Um item não se liga nele mesmo.' };
+  const lista = nos || [];
+  if (!lista.some((n) => n?.id === a) || !lista.some((n) => n?.id === b)) {
+    return { pode: false, motivo: 'Um dos itens não existe mais.' };
+  }
+  if (saoParentes(lista, a, b)) {
+    return { pode: false, motivo: 'Estes dois já estão ligados pela árvore.' };
+  }
+  if (estaoLigados(lista, a, b)) {
+    return { pode: false, motivo: 'Estes dois já estão ligados.' };
+  }
+  return { pode: true, motivo: '' };
+}
+
+/** Liga A em B. Recusa em silêncio o que `podeLigar` reprova. */
+export function ligar(nos, a, b) {
+  if (!podeLigar(nos, a, b).pode) return nos;
+  return (nos || []).map((n) => (n?.id === a ? { ...n, liga: [...ligacoesDe(n), b] } : n));
+}
+
+/** Desliga os dois, nos DOIS sentidos — não importa de que lado foi guardado. */
+export function desligar(nos, a, b) {
+  return (nos || []).map((n) => {
+    if (!n) return n;
+    if (n.id !== a && n.id !== b) return n;
+    const outro = n.id === a ? b : a;
+    const ficam = ligacoesDe(n).filter((x) => x !== outro);
+    if (ficam.length === ligacoesDe(n).length) return n;
+    return { ...n, liga: ficam };
+  });
+}
+
+/**
+ * Os pares a desenhar, cada um UMA vez e sem ponta solta.
+ *
+ * Filtra ligação pra nó que não existe mais: `apagarNo` tira o nó, mas quem
+ * apontava pra ele continua com o id na lista. Limpar aqui, na leitura, é mais
+ * seguro que varrer o mapa na escrita — se uma ligação escapar por qualquer
+ * caminho, ela simplesmente não vira linha em vez de virar linha pro nada.
+ */
+export function ligacoesDoMapa(nos) {
+  const existe = new Set((nos || []).filter(Boolean).map((n) => n.id));
+  const vistos = new Set();
+  const pares = [];
+  for (const n of (nos || []).filter(Boolean)) {
+    for (const outro of ligacoesDe(n)) {
+      if (!existe.has(outro) || outro === n.id) continue;
+      const chave = [n.id, outro].sort().join('|');
+      if (vistos.has(chave)) continue;
+      vistos.add(chave);
+      pares.push({ de: n.id, para: outro, chave });
+    }
+  }
+  return pares;
+}
+
+/** Tira do mapa as ligações que apontam pra nós que não existem mais. */
+export function limparLigacoesOrfas(nos) {
+  const existe = new Set((nos || []).filter(Boolean).map((n) => n.id));
+  return (nos || []).map((n) => {
+    if (!n) return n;
+    const atuais = ligacoesDe(n);
+    if (!atuais.length) return n;
+    const ficam = atuais.filter((x) => existe.has(x) && x !== n.id);
+    if (ficam.length === atuais.length) return n;
+    return ficam.length ? { ...n, liga: ficam } : (() => { const { liga: _fora, ...resto } = n; return resto; })();
+  });
 }
