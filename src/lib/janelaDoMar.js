@@ -42,3 +42,34 @@ export function cenaDaLuz(luz) {
     noite: 1 - l * 0.5,
   };
 }
+
+// 🖼️ AS FOTOS DA SEMANA — 22/09/2026
+//
+// Dono: "vou te mandar mais duas pra completar a semana, e você vai colocar
+// ALEATÓRIO." Aleatório, aqui, não pode ser `Math.random()`: a pessoa abre o
+// ritual, fecha, reabre no meio dos 30 minutos — e a janela não pode virar
+// outra praia no meio do ritual dela. O sorteio é SEMEADO PELO DIA: muda
+// todo dia, e nunca no meio do mesmo dia. É a mesma régua que o Quadro dos
+// Sonhos já usa pra embaralhar as imagens da visualização.
+//
+// ⚠️ E O DIA É O DO APARELHO, não o de UTC: das 21h às 23h59 em Brasília o
+// UTC já virou amanhã, e a foto trocava no meio da noite (DIR-129/134).
+
+/**
+ * Qual foto da semana vale HOJE.
+ *
+ * @param {string} diaISO  a data de hoje em YYYY-MM-DD (fuso do aparelho)
+ * @param {number} quantas quantas fotos existem na pasta
+ * @returns {number} o índice da foto, ou -1 quando não há foto nenhuma
+ */
+export function fotoDoDia(diaISO, quantas) {
+  const n = Math.max(0, Math.trunc(Number(quantas) || 0));
+  if (!n) return -1;
+  // a semente é a soma dos dígitos da data: simples, estável, e sem Date()
+  // (data inválida ou vazia não pode virar NaN e apagar a foto do dia)
+  const digitos = String(diaISO || '').replace(/\D/g, '');
+  if (!digitos) return 0;
+  let semente = 0;
+  for (let i = 0; i < digitos.length; i++) semente = (semente * 31 + Number(digitos[i])) % 100003;
+  return semente % n;
+}
