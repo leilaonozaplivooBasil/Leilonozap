@@ -401,7 +401,15 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
         // 🔴 o véu também tinha degrau: com três stops, a borda dele desenhava um
         // ARCO no céu — e um arco no céu não é nascer do sol nenhum, é defeito.
         // O mesmo escuro no miolo, agora derramado até a borda da tela.
-        style={{ background: 'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(4,11,20,.50) 0%, rgba(4,11,20,.44) 30%, rgba(4,11,20,.34) 52%, rgba(4,11,20,.22) 70%, rgba(4,11,20,.11) 85%, rgba(4,11,20,0) 100%)' }}
+        // 📷 COM FOTO O VÉU PRECISA SER MAIS FUNDO, e isto foi medido: numa
+        // das fotos da semana (céu de nascer do sol, quase branco no meio) o
+        // título caía a 2,80:1 — reprovado até no mínimo frouxo de 3,0 pra
+        // texto grande. A cena desenhada é escura por construção; uma foto
+        // qualquer não é, e o véu é o que garante que QUALQUER foto que o
+        // dono mandar amanhã continue tendo texto legível por cima.
+        style={{ background: foto
+          ? 'radial-gradient(ellipse 72% 66% at 50% 50%, rgba(4,11,20,.70) 0%, rgba(4,11,20,.62) 30%, rgba(4,11,20,.50) 52%, rgba(4,11,20,.34) 70%, rgba(4,11,20,.18) 85%, rgba(4,11,20,0) 100%)'
+          : 'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(4,11,20,.50) 0%, rgba(4,11,20,.44) 30%, rgba(4,11,20,.34) 52%, rgba(4,11,20,.22) 70%, rgba(4,11,20,.11) 85%, rgba(4,11,20,0) 100%)' }}
       />
 
       <style>{`

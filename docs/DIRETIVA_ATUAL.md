@@ -12,6 +12,33 @@
 
 ---
 
+## DIR-173 — as fotos da semana entram na janela (e a decisão de barrar era minha, não era pra ser)
+
+**Emitida por:** dono (22/09/2026, testando em produção): *"confere a primeira lâmina — eu te dei 7 imagens da primeira lâmina pra ficar aleatório, lembra? por que elas não estão aqui?"*
+
+**A causa é minha, e fica escrita.** Na DIR-171 eu medi as fotos, achei a resolução baixa demais (a maior com 894px de largura, contra ~1.240 que um celular de 414pt em 3x pede), vi uma marca d'água e três fotos de produto, e **decidi não subir**. Avisar era o meu trabalho; decidir não era. O dono repetiu o pedido, e repetir é decidir.
+
+**O que entra:**
+1. Três fotos em `src/assets/ritual/` (`mar-passaros`, `sol-no-pier`, `janela-do-cafe`), convertidas pra WebP — a de 361KB virou 43KB, sem mudar o que se vê.
+2. `fotoDoDia(diaISO, quantas)` em `src/lib/janelaDoMar.js`: sorteio **semeado pelo dia**, não `Math.random()`. Aleatório instável faria a janela trocar de praia no meio dos 30 minutos do ritual da pessoa. O dia vem de `hojeStr()` (fuso do aparelho): com UTC, das 21h às 23h59 em Brasília a foto trocaria no meio da noite (DIR-129/134).
+3. `src/lib/fotosDoRitual.js` — a lista num arquivo só: trocar a semana de fotos é acrescentar ou tirar uma linha, sem abrir uma tela de 1.400 linhas.
+4. **O véu do texto fica mais fundo quando há foto.** Medido na tela, em 414×896 a 3x: com o véu da cena desenhada, o título caía a **2,80:1** em cima da foto mais clara — reprovado até no mínimo frouxo de 3,0 pra texto grande. Com o véu de foto: **5,16:1**. E isso vale pra qualquer foto que entrar amanhã, não só pra estas três.
+
+**Medido depois da correção**, nas três fotos, em celular a 3x: título 5,16 / 7,20 / 9,51 · subtítulo 7,79 / 8,09 / 7,74 · contrato 13,33 / 15,43 / 15,22. **Os 9 passam.**
+
+**O que NÃO entrou, e por quê (a decisão volta pro dono, com a prova na mão):**
+- uma das sete tem a **marca d'água da Dreamstime escrita em cima da água** — é visivelmente um arquivo de banco não licenciado, e ele iria pro time inteiro;
+- outra tem **192×146 pixels**: não existe tratamento que faça ela cobrir uma tela;
+- **duas das sete nunca chegaram** aqui — só cinco desceram no anexo. Faltam duas pra fechar a semana.
+
+**Sobre a resolução, dito na cara:** as três que entraram têm 894, 894 e 424 pixels de largura. Elas aparecem **mais macias** que a cena desenhada — isso está escrito no `fotosDoRitual.js`, não escondido. O grão de filme e o véu disfarçam bem, e na banca em 3x o resultado ficou bom. No dia em que existir foto licenciada em resolução alta, é trocar o arquivo: nada mais muda.
+
+**Prova de código:** suíte 3357/3357 (`tests/fotosDaJanela.test.mjs` novo, 9 testes), lint limpo, build ok, colisão limpa. Mutação: (1) troquei o sorteio por `Math.random()` → 2 testes quebraram; (2) devolvi o véu raso em cima da foto → teste quebrou; (3) troquei `hojeStr()` por UTC → teste quebrou. Todas revertidas.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-172 — a 2ª lâmina do ritual: o Despertar com a câmera na mão
 
 **Emitida por:** dono (22/09/2026), com o print da lâmina do "acordei" na mão: *"Segunda lâmina: uma imagem que reflita o Despertar. Uma força, que pegue a tela toda. Precisa ter também a câmera aqui pra bater a foto — é muito melhor isso, está dando trabalho manter todas as outras. Mix com textos melhores, mantendo limpo, porém que dê pra ler e aparecer legal no telefone."* Continuação direta da DIR-171 ("uma de cada vez").
