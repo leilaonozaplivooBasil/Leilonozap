@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Map, ListChecks, LayoutGrid, Network, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
+import { Map, ListChecks, LayoutGrid, Network, Inbox, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
 // 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Eu no Game"
@@ -36,7 +36,7 @@ import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 const GRADIENTE_TC = 'linear-gradient(135deg, var(--topcollege-azul, #3B6FF6), var(--topcollege-magenta, #E62E8B))';
 const GRADIENTE_VERDE = 'linear-gradient(135deg, #16a34a, #22c55e)';
 
-export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null }) {
+export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null, demandasEsperando = 0 }) {
   const [testeAberto, setTesteAberto] = useState(false);
   // DIR-75 — o terceiro lado: o nosso quadro. Entra aqui e não num botão solto
   // porque é uma VISÃO do mesmo dia, igual às outras duas.
@@ -48,6 +48,12 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
     // "criar um mapa mental ali do lado, ligado ao quadro". Entra aqui, no
     // mesmo seletor, e não num botão solto — é mais uma VISÃO da mesma mesa.
     { id: 'mapa', rotulo: 'Mapa', Icone: Network },
+    // 🧠 22/09/2026 — a quinta visão, pedida no MESMO áudio que pediu o mapa
+    // (19/09, 10h32): "no compromisso, a gente tem que criar uma aba de
+    // demandas… já vai aparecer ali um lugar com as demandas que eu posso
+    // transformar em tarefa". Entrou depois do mapa porque eu a tinha cortado
+    // por engano — o mapa sem ela larga a anotação num lugar que o dono não vê.
+    { id: 'demandas', rotulo: 'Demandas', Icone: Inbox },
   ];
 
   return (
@@ -75,6 +81,15 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
                 {/* 📱 com três lados (DIR-75) a faixa não cabia em 390px: no celular
                     só o lado ATIVO mostra a palavra; os outros ficam no ícone */}
                 <span className={ativo ? '' : 'hidden sm:inline'}>{rotulo}</span>
+                {/* 🔴 a bolinha aparece MESMO no celular, onde a palavra some:
+                    é o único sinal de que tem coisa esperando ali dentro. */}
+                {id === 'demandas' && demandasEsperando > 0 && (
+                  <span
+                    className={`ml-0.5 inline-flex min-w-[15px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-[15px] ${
+                      ativo ? 'bg-white/25 text-white' : 'bg-nz-verde-neon/25 text-nz-verde-neon'}`}
+                    data-teste="faixa-demandas-contador"
+                  >{demandasEsperando > 99 ? '99+' : demandasEsperando}</span>
+                )}
               </button>
             );
           })}

@@ -115,3 +115,96 @@ export function rotuloDaOrigem(origem) {
     default: return String(origem || 'anotada');
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// A CAIXA DE ENTRADA — o que a aba Demandas do Compromisso mostra.
+//
+// 🔴 ESTE TRECHO JÁ EXISTIU E FOI APAGADO POR MIM (21/09), junto com a tabela
+// própria. Só que o pedido do dono (áudio de 19/09, 10h32) nunca foi sobre a
+// tabela — foi sobre a TELA:
+//
+//   "eu abri o compromisso, já vai aparecer ali um lugar com as demandas que
+//    eu posso transformar em tarefa"
+//   "estou numa reunião, o pessoal está falando o que tem que fazer, eu só vou
+//    esvaziando a mente… entra numa lista COM A DATA DO DIA QUE FOI ANOTADO"
+//
+// Reusar `xperf_demandas` foi certo; concluir que a aba ficava desnecessária,
+// não. O Painel Corporativo é tela de gestão — não é "abro o Compromisso e já
+// vejo o que anotei". Voltou, agora lendo a fila que a casa já tem.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * O que ainda espera destino, do mais recente para o mais antigo.
+ *
+ * Em `xperf_demandas`, "esperando" é `status = 'recebida'`: 'agendada' já virou
+ * tarefa ou cartão e 'devolvida' foi recusada. Linha sem título fica de fora —
+ * não há o que mostrar nem o que transformar.
+ */
+export function caixaDeEntrada(linhas) {
+  return (linhas || [])
+    .filter((d) => d && d.status === RECEBIDA && String(d.titulo || '').trim())
+    .sort((a, b) => {
+      const qa = new Date(a.created_at ?? 0).getTime();
+      const qb = new Date(b.created_at ?? 0).getTime();
+      if (qb !== qa) return qb - qa;
+      return String(a.titulo).localeCompare(String(b.titulo), 'pt-BR');
+    });
+}
+
+/**
+ * Agrupa por dia da anotação — é assim que o dono pediu para ver.
+ *
+ * @returns {Array<{dia: string, demandas: object[]}>} do dia mais recente ao mais antigo
+ */
+export function porDiaDeAnotacao(linhas) {
+  const mapa = new Map();
+  for (const d of caixaDeEntrada(linhas)) {
+    const dia = diaDe(d.created_at);
+    if (!mapa.has(dia)) mapa.set(dia, []);
+    mapa.get(dia).push(d);
+  }
+  return [...mapa.entries()].map(([dia, demandas]) => ({ dia, demandas }));
+}
+
+/**
+ * 'AAAA-MM-DD' no fuso da casa. '' quando não há data legível.
+ *
+ * 🔴 O FUSO NÃO É DETALHE: das 21h às 23h59 de Brasília já é o dia seguinte em
+ * UTC. Sem forçar America/Sao_Paulo, a demanda ditada na reunião da noite
+ * apareceria agrupada em "amanhã" — e é pelo dia que o dono vai procurar.
+ */
+export function diaDe(quando) {
+  const t = new Date(quando ?? NaN).getTime();
+  if (!Number.isFinite(t)) return '';
+  try {
+    // en-CA devolve AAAA-MM-DD, que ordena como texto.
+    return new Date(t).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * O título do grupo: "Hoje", "Ontem" ou a data por extenso.
+ *
+ * `hojeISO` entra por parâmetro em vez de sair de `new Date()` aqui dentro para
+ * que a tela e o teste possam dizer que dia é hoje — e para obedecer ao relógio
+ * de teste do super admin, que já manda no resto do Compromisso.
+ */
+export function rotuloDoDia(dia, hojeISO) {
+  if (!dia) return 'Sem data';
+  if (dia === hojeISO) return 'Hoje';
+  const ontem = new Date(`${hojeISO}T12:00:00`);
+  if (Number.isFinite(ontem.getTime())) {
+    ontem.setDate(ontem.getDate() - 1);
+    const iso = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, '0')}-${String(ontem.getDate()).padStart(2, '0')}`;
+    if (dia === iso) return 'Ontem';
+  }
+  const [a, m, d] = String(dia).split('-');
+  return (a && m && d) ? `${d}/${m}/${a}` : String(dia);
+}
+
+/** Quantas esperando destino — o número da bolinha na aba. */
+export function quantasEsperando(linhas) {
+  return caixaDeEntrada(linhas).length;
+}
