@@ -12,6 +12,43 @@
 
 ---
 
+## DIR-176 — o sol e a linha do horizonte aparecem no celular (era colisão de layout, não cor)
+
+**Emitida por:** dono (22/09/2026, com o print do iPhone na mão): *"vamos melhorar a visualização no celular — tipo, o sol é extremamente importante aparecer, a linha do horizonte."* E logo depois: *"precisa ficar mais organizada no celular pra ver a imagem da praia e sol e tal."*
+
+**Achado 1 — o horizonte nascia DENTRO do selo.** Medindo a lâmina num iPhone de 393×852, elemento por elemento:
+
+| | onde cai |
+|---|---|
+| ícone do amanhecer | 13,6% – 20,2% |
+| título | 25,4% – 31,3% |
+| subtítulo | 34,1% – 39,8% |
+| **selo** | **42,6% – 46,0%** |
+| card do contrato | 48,8% – 79,5% |
+| botão | 82,3% – 88,7% |
+
+Com `HORIZONTE = 42`, a linha da água caía exatamente atrás da placa escura do selo — e o sol, que nasce colado nela, ficava **100% coberto**. O dono não estava vendo "pouco" o sol: não estava vendo nada. Não era sutileza de cor, era colisão de layout, e só apareceu medindo a tela de verdade. **`HORIZONTE` passa a 22%**, a única faixa livre da lâmina.
+
+**Achado 2 — mover o horizonte QUEBRAVA a cena.** As paradas do degradê do céu eram números fixos (9,7%, 21%, 29,1%…) calculados à mão pra um horizonte em 42%. Em 22% elas ficaram **fora de ordem**, e o CSS resolve isso grudando cada parada atrasada na anterior: o céu quente esticava até 41,7% e todas as cores do mar eram esmagadas nesse mesmo ponto. Na tela virava uma **tarja laranja com corte seco** atravessando a lâmina — um defeito que nenhuma leitura do código denuncia, só a foto. Agora cada parada é uma **fração**: do céu, entre o topo e a linha da água; do mar, entre a linha e o pé da tela (`MAR = 100 - HORIZONTE`). Nuvem, ondulação e faixa de onda idem. Mover o horizonte passa a **recompor** a cena em vez de quebrá-la.
+
+**Achado 3 — o sol era um caroço de 34px.** O disco media `8.6vmin`, e `vmin` num celular alto é a **largura**: num aparelho de 393px isso dá 34px. Agora é `clamp(58px, 9vmin, 104px)` — piso no celular, teto no computador.
+
+**Achado 4 — o disco era translúcido na abertura.** Ele era multiplicado pela força da luz e saía a 61% — invisível sobre um céu que já está clareando da faixa quente. O **miolo passa a ser opaco sempre**: quem varia com a luz é o brilho em volta (halo, caminho na água, bruma); o disco, quando aparece, aparece.
+
+**Achado 5 — o sol estava afogado.** O centro ficava 0,8 ponto **abaixo** da linha. Na foto, o que se via era quase só o reflexo: uma gota de luz em vez de um sol. *Mordido pela água* não é submerso — é o disco em cima da linha com a base cortada por ela. O centro sobe pra 1,4 ponto acima.
+
+**Achado 6 — dois sóis na mesma tela.** Com o sol de verdade nascendo a 24% da largura, a bolha do ícone do amanhecer virava uma **segunda esfera clara do mesmo tamanho** ao lado dele. Duas bolas o olho não lê como "ícone e sol", lê como mancha — e era isso que o dono chamava de desorganizado. Na **abertura** a bolha sai (`<Halo nu>`), ficando só o traço do ícone com brilho próprio. Nas outras lâminas ela continua: lá o fundo não é o assunto.
+
+**Também entra:** uma **linha** de horizonte de 1px, com máscara saindo do sol — até aqui existia só a bruma, borrada em 9px, que dá distância mas não desenha linha; e o sol vai de `SOL_X` 31% pra 24%, pra nascer com folga do ícone.
+
+**Prova medida:** contraste WCAG dos 7 textos, em **iPhone 393×852 a 3x** e em 1440×900 — os 14 passam, com o pior em 7,32:1 contra um mínimo de 3,0. Nenhum erro de página.
+
+**Prova de código:** suíte 3371/3371 (`janelaDoMar.test.mjs` sobe de 22 pra 28 testes), lint limpo, build ok, colisão limpa. Mutação: (1) devolvi paradas fixas ao degradê → teste quebrou; (2) devolvi o sol em `vmin` puro → teste quebrou; (3) devolvi o horizonte pra 42% → teste quebrou. Todas revertidas. Uma trava nova reprovou na primeira escrita por motivo errado (contava `100%`, que é a âncora do pé da tela): o **teste** foi corrigido, não o código.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-175 — a DIR-173 é desfeita: a cena desenhada venceu a foto, e o Instagram ganha a cor dele
 
 **Emitida por:** dono (22/09/2026, minutos depois de ver as fotos em produção): *"melhor deixar as imagens antigas mesmo, estão mais limpas, pode voltar como estava, ficou melhor as outras."* E, no print da lâmina do Despertar: *"aqui precisa entrar o ícone do Instagram com as cores dele, pode manter tamanho e tal, mas deixa a cor do Instagram."*
