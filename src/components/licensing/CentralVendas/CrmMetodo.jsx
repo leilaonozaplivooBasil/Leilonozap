@@ -18,6 +18,7 @@ import {
 } from '@/lib/metodo';
 import { ordenarAgenda, ordemValida, ORDENS, ORDEM_PADRAO } from '@/lib/ordemDaAgenda';
 import { seloDaDemanda } from '@/lib/seloDaDemanda';
+import { carimboParaCard } from '@/lib/espelhoDoDia';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
 // o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
@@ -76,7 +77,7 @@ import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import MapaMental from './MapaMental';
 import DemandasCompromisso from './DemandasCompromisso';
-import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
+import { cartaoDaTarefa, LISTAS_MODELO } from '@/lib/quadroCompromisso';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
@@ -1849,9 +1850,15 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     // isto a pessoa faz o trabalho no dia e ainda tem que ir marcar no quadro —
     // e é aí que o dado morre. Falha aqui não pode derrubar o marcar da tarefa:
     // é só o espelho, então engole o erro em silêncio.
+    //
+    // 🪞 22/09/2026 — o carimbo saiu daqui pra src/lib/espelhoDoDia.js, onde
+    // mora junto com o do caminho contrário (quadro → dia, que é a metade que
+    // faltava e entrou hoje). Os dois lados usando o MESMO par de carimbos é o
+    // que impede um de gravar "feito" e o outro "concluido" e a tela deixar de
+    // reconhecer o card como fechado.
     try {
       await supabase.from('metodo_quadro')
-        .update(!t.feito ? { coluna: ESTADO_FEITO, feito_em: new Date().toISOString() } : { coluna: ESTADO_ABERTO, feito_em: null })
+        .update(carimboParaCard(!t.feito))
         .eq('virou_tarefa_id', t.id);
     } catch { /* espelho — a tarefa já está salva */ }
   };
@@ -3088,6 +3095,14 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 onIr={onIr}
                 tarefasDoDia={tarefas}
                 onTarefaCriada={(t) => setTarefas((prev) => [...prev, t])}
+                /* 🪞 22/09/2026 — o quadro acabou de concluir (ou reabrir) uma
+                   tarefa do dia. O banco já foi gravado lá; aqui só a lista
+                   desta tela acompanha, senão a jornada e a Lista continuariam
+                   mostrando o estado velho até alguém recarregar — que é
+                   exatamente a queixa do "não sincroniza". */
+                onTarefaEspelhada={({ tarefaId, feito }) => setTarefas((prev) => prev.map(
+                  (x) => (x.id === tarefaId ? { ...x, feito, pronto_em: feito ? new Date().toISOString() : null } : x),
+                ))}
               />
             ) : tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
