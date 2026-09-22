@@ -174,7 +174,14 @@ test('o sol fica COLADO no horizonte — não boia no céu', () => {
   // com um vão no meio. Meia hora de amanhecer sobe pouco.
   const { solY } = cenaDaLuz(1);
   assert.ok(HORIZONTE - solY <= 3, `o sol subiu ${(HORIZONTE - solY).toFixed(1)} pontos acima do horizonte — descolou`);
-  assert.ok(cenaDaLuz(0).solY > HORIZONTE, 'na abertura o sol tem que estar mordido pela água');
+  // 🔄 22/09, 2ª rodada — A RÉGUA MUDOU DE LADO, DEPOIS DE OLHAR A FOTO.
+  // Este teste exigia o CENTRO do disco abaixo da linha ("mordido"). No
+  // celular do dono isso deixava o sol afogado: o que aparecia era quase só
+  // o reflexo, uma gota de luz em vez de um sol, e ele relatou não ver sol
+  // nenhum. Mordido pela água é o disco EM CIMA da linha com a base cortada
+  // por ela — o centro tem que estar acima, e perto.
+  assert.ok(cenaDaLuz(0).solY < HORIZONTE, 'o sol afundou de novo — na abertura o disco tem que estar VISÍVEL acima da linha');
+  assert.ok(HORIZONTE - cenaDaLuz(0).solY <= 2.5, 'o sol descolou da água já na abertura');
 });
 
 test('🔴 nem a vinheta nem o véu podem desenhar um arco no céu', () => {
@@ -213,4 +220,70 @@ test('o subtítulo tem folga de contraste em cima da faixa quente', () => {
   // #F2E3D2 dava 4,76:1 — passava por 0,26. #FFF1DF dá 5,4:1.
   assert.ok(!TELA.includes('text-[#F2E3D2]'), 'voltou o subtítulo antigo, que raspava no mínimo da WCAG');
   assert.match(TELA, /text-\[#FFF1DF\] text-\[15px\]/);
+});
+
+// ─── 3ª volta: o sol e o horizonte no CELULAR (22/09) ────────────────────
+
+test('🔴 o horizonte não pode cair em cima do conteúdo da lâmina', () => {
+  // medido num iPhone 393×852: o selo ocupa 42,6%–46,0% da tela. Com o
+  // horizonte em 42% a linha da água nascia DENTRO da placa escura do selo,
+  // e o sol — que nasce colado nela — ficava 100% coberto. O dono não estava
+  // vendo "pouco" o sol: não estava vendo nada. Isso é colisão de layout, e
+  // só apareceu medindo a tela.
+  assert.ok(HORIZONTE < 40, `o horizonte voltou pra faixa do conteúdo (${HORIZONTE}%)`);
+  assert.ok(HORIZONTE > 12, `o horizonte subiu demais (${HORIZONTE}%) — sobra céu de menos pro sol nascer`);
+});
+
+test('🔴 as paradas da cena são FRAÇÕES do horizonte, nunca pontos fixos', () => {
+  // este é o defeito que nenhuma leitura do código denuncia, só a foto:
+  // as paradas eram números fixos calculados pra um horizonte em 42%. Movendo
+  // o horizonte elas ficaram FORA DE ORDEM, o CSS grudou cada parada atrasada
+  // na anterior, e todas as cores do mar foram esmagadas num ponto só —
+  // uma tarja laranja com corte seco atravessando a lâmina.
+  const i = FUNDO.indexOf('linear-gradient(180deg,\n            rgba(5,14,26,');
+  assert.ok(i > 0, 'sumiu o degradê do céu');
+  const ceu = FUNDO.slice(i, FUNDO.indexOf('`,', i));
+  // 0% e 100% são as duas ÂNCORAS da cena — o topo do céu e o pé da tela.
+  // Elas são fixas por definição; qualquer outra parada em número solto é a
+  // volta do defeito.
+  const fixos = (ceu.match(/#[0-9A-Fa-f]{6} \d+(\.\d+)?%/g) || [])
+    .filter((p) => !/ (0|100)%$/.test(p));
+  assert.equal(fixos.length, 0, `voltaram paradas fixas no degradê: ${fixos.join(', ')}`);
+  assert.ok(ceu.includes('HORIZONTE *'), 'o céu precisa se medir como fração do horizonte');
+  assert.ok(ceu.includes('MAR *'), 'o mar precisa se medir como fração do que sobra de tela');
+  assert.match(FUNDO, /const MAR = 100 - HORIZONTE;/);
+});
+
+test('o sol tem tamanho de sol em qualquer tela', () => {
+  // `vmin` num celular alto é a LARGURA: 8,6vmin num aparelho de 393px dava
+  // 34px, um caroço. O piso do clamp é o que garante sol no celular.
+  const i = FUNDO.indexOf("width: 'clamp(");
+  assert.ok(i > 0, 'o disco do sol voltou a ser medido só em vmin');
+  assert.match(FUNDO.slice(i, i + 120), /clamp\((\d+)px, [\d.]+vmin, \d+px\)/);
+  const piso = Number(FUNDO.slice(i, i + 120).match(/clamp\((\d+)px/)[1]);
+  assert.ok(piso >= 50, `o piso do sol caiu pra ${piso}px — no celular ele some`);
+});
+
+test('o disco do sol é OPACO, mesmo na hora azul', () => {
+  // ele era multiplicado pela força da luz e saía a 61% na abertura:
+  // translúcido sobre um céu já clareando, ou seja, invisível. Quem varia
+  // com a luz é o brilho EM VOLTA; o disco, quando aparece, aparece.
+  const i = FUNDO.indexOf('rgba(255,251,236,');
+  assert.ok(i > 0, 'sumiu o miolo sólido do disco');
+  assert.match(FUNDO.slice(i, i + 60), /rgba\(255,251,236,1\)/, 'o miolo do sol voltou a ser translúcido');
+});
+
+test('existe uma LINHA do horizonte, não só bruma borrada', () => {
+  // bruma dá distância, mas não desenha linha — e sem linha o olho não sabe
+  // onde acaba o céu e começa a água
+  assert.match(FUNDO, /height: '1px',\s*\n\s*background: `rgba\(255,236,200,/);
+});
+
+test('na abertura o ícone perde a bolha — senão viram dois sóis', () => {
+  // com o sol de verdade nascendo a 24% da largura, a bolha do ícone virava
+  // uma segunda esfera clara do mesmo tamanho ao lado dele
+  assert.match(TELA, /function Halo\(\{ children, nu = false \}\)/);
+  assert.match(TELA, /<Halo nu><Sunrise/);
+  // e nas OUTRAS lâminas ela continua: lá o fundo não é o assunto
+  assert.match(TELA, /<Halo><HeartHandshake/);
 });

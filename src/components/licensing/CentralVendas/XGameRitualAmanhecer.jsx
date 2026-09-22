@@ -86,7 +86,23 @@ const PlayerYoutube = React.memo(function PlayerYoutube({ id, lista }) {
 
 /** O HALO: o ícone do passo num círculo de vidro com brilho — no lugar do
  *  emoji gigante, que virava um quadradinho feio na tela cheia. */
-function Halo({ children }) {
+// 🔵 A BOLHA do ícone. `nu` a desliga e deixa só o ícone com brilho próprio.
+//
+// 🔴 22/09, 2ª rodada, vendo a foto do celular: com o sol de verdade nascendo
+// a 24% da largura, a bolha virava uma SEGUNDA ESFERA CLARA do lado dele, do
+// mesmo tamanho. Duas bolas lado a lado o olho não lê como "ícone e sol" —
+// lê como mancha, e era isso que o dono chamava de desorganizado. Nas outras
+// lâminas ela continua: lá o fundo não é o assunto, e a bolha é o que segura
+// o ícone. Na ABERTURA, onde o nascer do sol É o assunto, ela sai.
+function Halo({ children, nu = false }) {
+  if (nu) {
+    return (
+      <span
+        className="mx-auto flex w-24 h-24 items-center justify-center"
+        style={{ filter: 'drop-shadow(0 0 22px rgba(255,196,107,.55)) drop-shadow(0 2px 4px rgba(4,12,22,.85))' }}
+      >{children}</span>
+    );
+  }
   return (
     <span className="mx-auto flex w-24 h-24 items-center justify-center rounded-full bg-[#FFC46B]/12 ring-1 ring-[#FFC46B]/35 backdrop-blur-sm"
       style={{ boxShadow: '0 0 70px rgba(255,196,107,0.40), inset 0 2px 14px rgba(255,240,215,0.22)' }}
@@ -875,7 +891,13 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
         {passo === P.ABERTURA && (
           <>
-            <Halo><Sunrise className="w-14 h-14 text-[#FFE7C2]" strokeWidth={1.5} /></Halo>
+            {/* 🔻 22/09, 2ª rodada — o ícone encolhe NO CELULAR. Ele foi
+                desenhado quando o fundo era um degradê roxo chapado; agora o
+                fundo É um nascer do sol, e um ícone de nascer do sol grande
+                na frente dele vira dois sóis disputando a mesma tela — no
+                aparelho, onde sobra menos espaço, era ele que empurrava o
+                horizonte pra baixo do selo. */}
+            <Halo nu><Sunrise className="w-10 h-10 sm:w-14 sm:h-14 text-[#FFE7C2]" strokeWidth={1.5} /></Halo>
             {/* 🔤 22/09 — dono: "preciso que esses textos fiquem mais
                 visíveis". Título com sombra própria: sobre o mar ele precisa
                 se destacar sem precisar de caixa por trás. */}

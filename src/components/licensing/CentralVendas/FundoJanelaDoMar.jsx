@@ -45,6 +45,10 @@ import { HORIZONTE, SOL_X, cenaDaLuz } from '@/lib/janelaDoMar';
  */
 export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }) {
   const { solY, solForca, noite } = cenaDaLuz(luz);
+  // o quanto de tela sobra pra água, abaixo da linha do horizonte. Tudo que
+  // é do mar se mede como fração DISTO, e não em pontos soltos de viewport:
+  // é o que permite mover o horizonte sem desmontar a cena.
+  const MAR = 100 - HORIZONTE;
   // a nuvem acende junto com o dia. Passa pelo mesmo aperto que `cenaDaLuz`
   // faz: `luz` vindo torto (NaN, texto, negativo) não pode apagar o céu.
   const luzSegura = Math.max(0, Math.min(1, Number(luz) || 0));
@@ -65,21 +69,33 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
           // aquele ar de lavado que denuncia a máquina. Aqui a faixa quente é
           // LARGA — começa quatro pontos antes da água — e é ela que faz o céu
           // parecer que está esquentando de verdade.
+          // 🔴 22/09, 2ª rodada — ESTAS PARADAS ERAM NÚMEROS FIXOS (9.7%, 21%,
+          // 29.1%…), calculados à mão pra um horizonte em 42%. Quando o
+          // horizonte subiu pra 22% elas ficaram FORA DE ORDEM, e o CSS
+          // resolve isso grudando cada parada atrasada na anterior: o céu
+          // quente esticava até 41,7% e TODAS as cores do mar eram esmagadas
+          // nesse mesmo ponto. Na tela virava uma tarja laranja com corte
+          // seco atravessando o meio da lâmina — um defeito que nenhuma
+          // leitura do código denuncia, só a foto.
+          //
+          // Agora cada parada é uma FRAÇÃO: do céu, entre o topo e a linha
+          // da água; do mar, entre a linha e o pé da tela. Mover o horizonte
+          // passa a recompor a cena inteira, em vez de quebrá-la.
           background: `linear-gradient(180deg,
             rgba(5,14,26,${noite}) 0%,
-            #0B2340 9.7%,
-            #14415F 21%,
-            #22637E 29.1%,
-            #4E8698 34.7%,
-            #9E8B80 38.4%,
-            #D79C6C 40.4%,
-            #F6BE81 41.7%,
+            #0B2340 ${(HORIZONTE * 0.231).toFixed(2)}%,
+            #14415F ${(HORIZONTE * 0.500).toFixed(2)}%,
+            #22637E ${(HORIZONTE * 0.693).toFixed(2)}%,
+            #4E8698 ${(HORIZONTE * 0.826).toFixed(2)}%,
+            #9E8B80 ${(HORIZONTE * 0.914).toFixed(2)}%,
+            #D79C6C ${(HORIZONTE * 0.962).toFixed(2)}%,
+            #F6BE81 ${(HORIZONTE * 0.993).toFixed(2)}%,
             #FFD79C ${HORIZONTE}%,
-            #9E8067 ${HORIZONTE + 0.8}%,
-            #2E6076 ${HORIZONTE + 2.9}%,
-            #1B4E64 ${HORIZONTE + 9.3}%,
-            #113B4F ${HORIZONTE + 23.2}%,
-            #0A2A3B ${HORIZONTE + 41.8}%,
+            #9E8067 ${(HORIZONTE + MAR * 0.014).toFixed(2)}%,
+            #2E6076 ${(HORIZONTE + MAR * 0.050).toFixed(2)}%,
+            #1B4E64 ${(HORIZONTE + MAR * 0.160).toFixed(2)}%,
+            #113B4F ${(HORIZONTE + MAR * 0.400).toFixed(2)}%,
+            #0A2A3B ${(HORIZONTE + MAR * 0.720).toFixed(2)}%,
             #061B27 100%)`,
         }}
       />
@@ -128,7 +144,7 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
       <div
         className="absolute inset-x-0"
         style={{
-          top: '17%', height: '22%', filter: 'url(#jmNuvens)', opacity: 0.16 + 0.14 * luzSegura,
+          top: `${(HORIZONTE * 0.40).toFixed(1)}%`, height: `${(HORIZONTE * 0.52).toFixed(1)}%`, filter: 'url(#jmNuvens)', opacity: 0.16 + 0.14 * luzSegura,
           maskImage: 'linear-gradient(180deg, transparent, #000 35%, #000 70%, transparent)',
           WebkitMaskImage: 'linear-gradient(180deg, transparent, #000 35%, #000 70%, transparent)',
         }}
@@ -136,7 +152,7 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
       <div
         className="absolute inset-x-0"
         style={{
-          top: '12%', height: '26%', filter: 'url(#jmNuvens2)', opacity: 0.10 + 0.10 * luzSegura,
+          top: `${(HORIZONTE * 0.28).toFixed(1)}%`, height: `${(HORIZONTE * 0.62).toFixed(1)}%`, filter: 'url(#jmNuvens2)', opacity: 0.10 + 0.10 * luzSegura,
           maskImage: 'linear-gradient(180deg, transparent, #000 40%, transparent)',
           WebkitMaskImage: 'linear-gradient(180deg, transparent, #000 40%, transparent)',
         }}
@@ -162,17 +178,28 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
         style={{
           left: `${SOL_X}%`,
           top: `${solY}%`,
-          width: '8.6vmin',
-          height: '8.6vmin',
+          // 🔴 ERA `8.6vmin`. `vmin` num celular alto é a LARGURA — 8,6vmin
+          // num aparelho de 393px dá 34px, um caroço. O sol tem que ter
+          // tamanho de sol em QUALQUER tela: o `clamp` garante um piso de
+          // 58px no celular e um teto de 104px no computador, sem virar
+          // uma bola no meio da tela grande.
+          width: 'clamp(58px, 9vmin, 104px)',
+          height: 'clamp(58px, 9vmin, 104px)',
           transform: 'translate(-50%, -50%)',
           borderRadius: '9999px',
+          // 🔴 o MIOLO do disco agora é OPACO, sempre. Ele era multiplicado
+          // pela força da luz e, na abertura, saía a 61% — translúcido em
+          // cima de um céu que já está clareando, ou seja, invisível. Quem
+          // varia com a luz é o BRILHO EM VOLTA (o halo, o caminho na água,
+          // a bruma); o disco, quando aparece, aparece.
           background: `radial-gradient(circle,
-            rgba(255,250,232,${0.99 * solForca}) 0%,
-            rgba(255,224,158,${0.96 * solForca}) 38%,
-            rgba(255,188,104,${0.72 * solForca}) 64%,
-            rgba(255,152,74,${0.30 * solForca}) 84%,
+            rgba(255,251,236,1) 0%,
+            rgba(255,238,190,1) 30%,
+            rgba(255,214,140,${Math.min(1, 1.02 * solForca)}) 56%,
+            rgba(255,176,92,${0.72 * solForca}) 78%,
+            rgba(255,150,74,${0.26 * solForca}) 92%,
             rgba(255,140,70,0) 100%)`,
-          filter: 'blur(1.5px)',
+          filter: 'blur(0.8px)',
         }}
       />
 
@@ -220,6 +247,24 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
           maskImage: `radial-gradient(ellipse 52% 100% at ${SOL_X}% 50%, #000 0%, rgba(0,0,0,.45) 45%, transparent 100%)`,
           WebkitMaskImage: `radial-gradient(ellipse 52% 100% at ${SOL_X}% 50%, #000 0%, rgba(0,0,0,.45) 45%, transparent 100%)`,
           filter: 'blur(9px)',
+        }}
+      />
+
+      {/* ➖ A LINHA DO HORIZONTE, 22/09 — dono: "o sol é extremamente
+          importante aparecer, a linha do horizonte". Até agora existia só a
+          bruma (borrada em 9px): ela dá distância, mas não desenha LINHA
+          nenhuma — e sem linha o olho não sabe onde acaba o céu e começa a
+          água. Um fio de 1px, claro, com máscara saindo do sol: forte perto
+          dele, morrendo nas pontas, que é como o horizonte se comporta
+          contra a luz. */}
+      <div
+        className="absolute inset-x-0"
+        style={{
+          top: `${HORIZONTE}%`,
+          height: '1px',
+          background: `rgba(255,236,200,${0.75 * solForca})`,
+          maskImage: `linear-gradient(90deg, transparent 0%, #000 ${SOL_X * 0.5}%, #000 ${50 + SOL_X * 0.4}%, transparent 100%)`,
+          WebkitMaskImage: `linear-gradient(90deg, transparent 0%, #000 ${SOL_X * 0.5}%, #000 ${50 + SOL_X * 0.4}%, transparent 100%)`,
         }}
       />
 
@@ -276,7 +321,7 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
         className="absolute inset-x-0 jm-mare"
         style={{
           top: `${HORIZONTE}%`,
-          height: '18%',
+          height: `${(MAR * 0.31).toFixed(1)}%`,
           filter: 'url(#jmAgua)',
           opacity: 0.34,
           mixBlendMode: 'soft-light',
@@ -287,7 +332,7 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }
       <div
         className="absolute inset-x-0 jm-mare-perto"
         style={{
-          top: `${HORIZONTE + 11}%`,
+          top: `${(HORIZONTE + MAR * 0.19).toFixed(1)}%`,
           bottom: 0,
           filter: 'url(#jmAgua2)',
           opacity: 0.20,
