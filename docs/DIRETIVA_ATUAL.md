@@ -12,6 +12,58 @@
 
 ---
 
+## DIR-171 — a lâmina de abertura do ritual vira uma janela pro mar (e o roxo de app-feito-por-IA sai)
+
+**Emitida por:** dono (22/09/2026), com o print da abertura do ritual na mão: *"Quero melhorar a X-Game, deixar as cores com MENOS CARA DE APLICATIVO FEITO POR IA e cores mais bonitas. Se possível, imagens de praia no fundo, como se fosse uma janela em frente ao mar... a música com a opção de expandir e diminuir igual o X-Music, só que um pouco menor — inclusive quero deixar o X-Music menor, acho que está ocupando muito espaço. Preciso que esses textos fiquem mais visíveis. Da uma repaginada e deixa foda... quero que ela sinta que está no mar nessa lâmina. Após essa, vamos para a próxima."*
+
+**Achado — os quatro culpados da "cara de IA", nomeados:**
+1. `bg-gradient-to-b from-[#141432] via-[#5b2a5e] to-[#f59e5b]` — roxo-escuro para laranja, em degradê chapado. É a assinatura visual de app gerado por IA, e era a primeira coisa que denunciava a tela.
+2. Nada tinha superfície: todo texto era branco translúcido (`white/40`, `/60`, `/70`) boiando no degradê. Sem superfície não há hierarquia — tudo parece do mesmo peso e tudo parece apagado.
+3. Zero textura. Plástico liso, sem luz, sem grão, sem foto.
+4. O player do YouTube (224×128px) ficava SEMPRE aberto no canto: era a primeira coisa que o olho via, brigando com o "Bom dia" que é o assunto da tela.
+
+**O que entra — A JANELA PRO MAR** (`src/components/licensing/CentralVendas/FundoJanelaDoMar.jsx`, novo): uma cena de amanhecer no mar vista de DENTRO DE CASA, em três camadas — a vista (céu da hora azul, o disco do sol fora do eixo, o caminho de luz na água, o brilho da superfície), a janela (a parede do cômodo em volta, a esquadria com chanfro, o peitoril e o reflexo do vidro) e o cômodo (a sombra funda nas bordas, que é o que diz "você está dentro olhando pra fora"). A luz ESQUENTA a cada bloco entregue: abre na hora azul e fecha com o sol alto (`LUZ_DO_PASSO`) — o mesmo movimento que a pessoa faz na vida dela naquela meia hora. A régua do nascer do sol é lib pura e testada (`src/lib/janelaDoMar.js`): o `node --test` não abre `.jsx`, e o próprio ritual já avisava que não teria terceira vez.
+
+**Por que CSS e não foto:** às 4h40, no 4G do celular, uma foto de 250KB é meio segundo de tela vazia no momento mais frágil do dia da pessoa. Isto pinta em zero byte e nunca falha. ⚠️ O ambiente de desenvolvimento também BLOQUEIA download de imagem externa (testado: Gamma, Unsplash e outros — todos negados pelo proxy), então nem havia como trazer a foto gerada pro projeto. Trocar por foto depois é UMA linha: um `<img>` por cima da camada 1, com janela, vidro e peitoril continuando por cima.
+
+**Paleta nova:** sai o roxo, entra o mar — `#0A1B2E` azul-noite, `#1D4E6B` azul-maré, `#E9A06B` pêssego, `#FFC46B` dourado do sol, `#FFF8F0` branco-areia (branco puro também é parte da cara de IA). O `text-[#5b2a5e]` roxo dos botões brancos virou `#0A1B2E` nos 9 lugares em que sobrevivia.
+
+**Textos visíveis:** título maior com sombra própria, subtítulo em areia sólida, "ANTECIPAÇÃO É PODER" com fio de luz dos dois lados, e o card do contrato — que era `bg-white/10`, quase invisível — virou vidro fosco com aro dourado e o número de cada bloco num círculo. Um véu suave só no miolo da tela dá chão pro texto sem transformar a janela numa tela cinza.
+
+**A música:** virou uma pílula fina que diz o que está tocando e expande num toque; a escolha fica no aparelho. 🔴 Encolher ESCONDE o player por CSS, nunca o desmonta — desmontar o iframe mata a música no meio do ritual (o mesmo cuidado que o X-Music global já tomava). E o X-Music global encolheu: player 168px → 120px, painel 320px → 272px, sem perder um controle sequer.
+
+**Fora do escopo:** só a lâmina de ABERTURA foi repaginada, por decisão do dono ("uma de cada vez"). As outras quatro (Acordei, Gratidão, Visualização, Fechamento) herdam o fundo, a paleta dos botões e a música, mas o conteúdo delas continua como estava — é a próxima rodada.
+
+**Prova:** suíte completa (3329/3329, `tests/janelaDoMar.test.mjs` novo com 15 testes), lint limpo, `npm run build` sem erro. Banca de navegador nova (`tests/navegador/janela-do-mar.html`) com a tela renderizada num Chromium de verdade, em desktop e celular, e `?luz=0..1` pra conferir a legibilidade em qualquer momento do nascer do sol. Mutação: (1) tirei a trava de 0..1 do `cenaDaLuz` → teste quebrou; (2) voltei o player da música pra render condicional → teste quebrou; (3) devolvi o X-Music pros 168px → teste quebrou; (4) devolvi o cone de holofote (`clip-path`) na água → teste quebrou. Todas revertidas.
+
+**Status:** EM VIGOR.
+
+---
+
+### DIR-171 · 2ª VOLTA (22/09) — "confere se ficou foda, se conectou com os textos, com prova, e publica"
+
+**Emitida por:** dono, depois de ver a 1ª volta: *"NÃO É ISSO QUE EU QUERO... desenha algumas imagens fodas aqui, pega aqui de mar real, sol, entendeu"* — e, na sequência, mandando 7 fotos de janela/mar. Depois: *"confere se ficou foda, se conectou com os textos, se ficaram lindos tipo empresas do Vale do Silício, com prova, e após isso publica."*
+
+**Decisão sobre as 7 fotos: NÃO entram, e a razão é medida, não opinião.** A maior tem 894px de largura (a menor, 192×146) — numa tela de celular de 414pt em 3x, isso é menos de um quarto da resolução necessária e aparece borrado; uma traz marca d'água da Dreamstime; três são fotos de PRODUTO (quadro em canvas pendurado numa parede), com moldura e sombra de parede dentro da imagem. Some-se o risco de direito autoral de banco de imagem numa tela que vai pra todo o time. **A tubulação da foto fica pronta e testada** (`foto` no fundo, `fotoDeFundo` no ritual): no dia em que existir foto licenciada em resolução alta, é um campo, sem tocar em janela, peitoril nem véu.
+
+**O que ficou ruim na 1ª volta, medido na tela e corrigido agora:**
+1. **O mar era listra de televisão.** As ondas eram `repeating-linear-gradient` de 1px repetido descendo o mar inteiro: o olho lia scanline, não água. Agora as duas camadas saem de **ruído fractal** (`feTurbulence`) esmagado na vertical — que é literalmente o que uma ondulação é. O `repeating-linear-gradient` sobrevive em UM lugar só: dentro da máscara apertada das faíscas em volta do reflexo do sol, onde o mesmo recurso lê como luz quebrando na crista da onda. O teste trava isso: mais de um no arquivo = a listra voltou.
+2. **O céu era matematicamente liso.** Degradê de CSS não tem nuvem, água não tem matéria e imagem não tem grão — e é essa perfeição que o olho lê como "feito por máquina". Entraram nuvem (duas camadas de ruído esticado na horizontal), textura da água e **grão de filme** por cima de tudo, inclusive da foto quando houver foto.
+3. **A paleta não foi escolhida no olho.** Quatro cenas de amanhecer foram desenhadas lado a lado e fotografadas num Chromium; a que ficou de pé virou a paleta do arquivo. A anterior tinha cinza (`#6E8492`, `#7E7C7C`) encostando no horizonte — cinza no meio de um nascer do sol dá o ar lavado que denuncia a máquina. Agora a faixa quente é larga e começa quatro pontos antes da água.
+4. **O sol boiava.** Subia 7 pontos até o fechamento, descolava da faixa quente e sobrava um vão entre ele e o próprio reflexo — coisa que sol nenhum faz. Amanhecer de verdade sobe pouco em meia hora: `solY` passa a subir 2,6 pontos e o caminho de luz sai de dentro do disco, sem emenda.
+5. **Tinha um ARCO atravessando o céu.** A vinheta e o véu do texto tinham dois/três stops só, e a borda do degradê aparecia como um arco — que na tela lê como defeito, não como céu. Os dois viraram degradês longos, de escurecimento lento.
+
+**Prova (medida, não achada):** um medidor de contraste WCAG roda a lâmina num Chromium de verdade, em **1440×900 e 414×896**, e para cada um dos 8 textos: lê a cor computada, pinta o texto de transparente (mantendo a placa própria do elemento — `visibility:hidden` apagava o fundo do botão junto e falseava a conta), fotografa o retângulo, tira a **mediana** do que ficou atrás dos glifos e calcula a razão. Depois repete a conta com o fundo do FECHAMENTO (`luz=1`, o momento mais claro do ritual) por baixo das mesmas caixas, empilhando as placas na mão. **Os 16 passam**, e os dois piores casos que a medição achou foram corrigidos:
+- o selo "ANTECIPAÇÃO É PODER" dava **4,43:1** no celular em cima da bruma clara do horizonte — abaixo do mínimo de 4,5:1 da WCAG. Ganhou placa escura própria: **9,94:1**, e 12,06:1 na luz máxima;
+- o subtítulo dava **4,76:1** — passava por 0,26. Em `#FFF1DF`: **5,38:1**.
+- Piores medidas finais: título 7,67:1 (mín. 3,0) · subtítulo 5,38:1 · selo 9,94:1 · contrato 12,05:1 · aviso 13,05:1 · botão 10,84:1 · pílula da música 16,35:1 (mín. 4,5).
+
+**Prova de código:** suíte completa 3336/3336 (`tests/janelaDoMar.test.mjs` sobe de 15 pra 22 testes), lint limpo, `npm run build` sem erro, banca de navegador verde. Mutação: (1) devolvi a listra no mar inteiro → 2 testes quebraram; (2) devolvi a subida de 7 pontos do sol → teste quebrou; (3) tirei a placa do selo → teste quebrou; (4) devolvi a vinheta de dois stops → teste quebrou. Todas revertidas, suíte de volta ao verde.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-170.1 — Encontro da Mentalidade: vários livros, a trajetória do treinamento, a lista da Produção no lugar certo e o teclado que não pula lâmina
 
 **Status:** EM VIGOR. (Continuação da DIR-168 do Encontro; o número 168 já tinha sido usado por outra frente.)
