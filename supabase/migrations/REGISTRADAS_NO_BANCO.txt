@@ -1,0 +1,153 @@
+# 🧾 O QUE O BANCO DE PRODUÇÃO DIZ QUE JÁ RODOU — retrato de 22/09/2026.
+#
+# POR QUE ESTE ARQUIVO EXISTE
+# Em 15/09/2026 três migrações foram aplicadas direto na produção sem deixar
+# arquivo aqui. Uma delas derrubou o login por e-mail, e sete dias se passaram
+# até alguém reparar — porque não havia onde ver que o banco tinha andado sem o
+# código andar junto. Este arquivo é esse lugar.
+#
+# COMO USAR
+# `npm test` compara esta lista com os arquivos de supabase/migrations/. Se
+# divergir, a prova quebra e diz exatamente qual dos dois lados está sozinho.
+#
+# DEPOIS DE APLICAR UMA MIGRAÇÃO NOVA, ATUALIZE AQUI:
+#   select version || ' ' || name from supabase_migrations.schema_migrations
+#   order by version;
+#
+# ⚠️ Esta lista é um RETRATO, não um espelho: ela não sabe o que foi aplicado
+# depois de 22/09. Conferir contra o banco antes de mesclar continua sendo
+# tarefa de gente — está na checklist do PR por isso.
+#
+# 🔴 Carimbo curto (AAAAMMDD, sem hora) nas migrações de julho e agosto NÃO é
+# defeito: é assim que o banco as registrou. Só não crie novas desse jeito.
+20260526000001 initial_schema_from_base44
+20260716 saldo_a_liberar
+20260716010000 saldo_a_liberar_cron
+20260730 wallet_held_balance
+20260730010000 concurso_checkin
+20260731 passaporte_coupons
+20260801 frete_leilao
+20260801010000 modo_chamada
+20260801020000 passaporte_bonus_imediato
+20260801030000 termo_adesao_auditoria
+20260802 frete_reservado_valor
+20260803 seller_credit_balance
+20260803010000 test_wallet_balance
+20260804 auction_messages_frete_amount
+20260804010000 melhor_envio_tokens
+20260805 favorite_auctions_colunas_reais
+20260805010000 recuperacao_pix
+20260805020000 system_logs_politica_insert
+20260805030000 system_logs_restaurar_colunas
+20260806 contrato_assinaturas
+20260806010000 documentos_assinados_storage
+20260806020000 oportunidades_do_dia
+20260806030000 termo_confidencialidade
+20260808 consignado
+20260808010000 estoque_proprio_credito
+20260808020000 saldo_operacao
+20260812 pix_key_app_users
+20260818 reserva_ledger
+20260819 passaporte_coupons_proporcional
+20260821 cancelamento_estorna
+20260821030000 estorno_carteira
+20260821040000 reserva_ledger_trava_devolucao
+20260821050000 estoque_baixa_atomica
+20260821060000 estoque_check_nao_negativo
+20260821070000 estoque_reservas
+20260822010000 whatsapp_router_idempotencia
+20260822020000 ai_conversas
+20260822030000 heloim_solicitacoes
+20260824 catalog_sales_buyer_cpf
+20260827 wa_mensagens_bot
+20260827020000 financial_income_cost_center
+20260827030000 recurring_group_id
+20260828 backfill_financial_income
+20260828010000 financial_expenses_payment_account
+20260830 financial_income_rls_select
+20260830140000 backfill_leilao_retido
+20260830170000 app_users_last_login
+20260831010000 captacao_oportunidades
+20260901120000 products_category_id
+20260901150000 captacao_indicacao
+20260901180000 captacao_aporte_externo
+20260901210000 metodo_form_ppv
+20260901230000 metodo_vivo
+20260902090000 products_condicao_estado
+20260902100000 products_product_source
+20260902230000 condicao_a_partir_dos_contadores
+20260903000000 view_categorias_vitrine
+20260903010000 market_value_limpeza
+20260903145856 lance_sem_data_criacao
+20260903150000 network_qualificacao
+20260903190000 contatos_metodo
+20260905120000 rotulos_financeiro_unificados
+20260905150000 reunioes_empresa
+20260905180000 demanda_rascunho
+20260905190000 xgame_pontos
+20260905203000 xgame_participantes_xpay
+20260905210000 demanda_citacao
+20260905215000 xgame_votacao_mvm
+20260905230000 xgame_validacao
+20260905235000 app_segredos
+20260906010000 backup_rotulos_rls
+20260906053000 xmusic_cache
+20260906120000 xperformance
+20260906140000 agenda_empresa_catalogo
+20260906160000 fixo_distribuido
+20260906180000 tarefa_mentalidade
+20260906190000 xperf_acoes
+20260906200000 tarefa_pronto
+20260906210000 quadro_compromisso
+20260906220000 quadro_listas
+20260906223000 participante_empresa_funcao
+20260906230000 xperf_metas_programa
+20260906234500 lista_icone_ficha
+20260907010000 horario_do_card
+20260907030000 encontro_mentalidade
+20260907040000 treinamento_do_encontro
+20260907050000 rotina_automatica
+20260907060000 rotina_automatica_padrao
+20260907070000 rotina_gerada_em
+20260907120000 tira_duvidas_chamados
+20260908100000 tipo_contato
+20260908174659 xgame_super_admin_votavel
+20260908180000 diario_bolso_entradas
+20260908190000 diario_bolso_semanas
+20260908200000 xgame_super_admin_votavel
+20260908221200 participante_em_mentoria
+20260908223124 participante_em_mentoria
+20260909003000 xgame_audios_bucket
+20260909010303 xgame_avisos_pronto
+20260909011511 xgame_mensagens
+20260909011958 perdao_zeragem
+20260909013000 perdao_zeragem
+20260909013453 xgame_mensagens_tipos_aviso_resposta
+20260909020000 xgame_videos_bucket
+20260909034253 script_contato_pontuado
+20260909050751 xgame_mensagens_rls
+20260909082446 metodo_tarefas_unique_user_data_hora_titulo
+20260909200000 script_contato_pontuado
+20260909210000 metodo_tarefas_unique_user_data_hora_titulo
+20260909230000 find_user_by_phone_sem_anon
+20260910230000 comparai_cache
+20260911190000 xgame_videos_teto_200mb
+20260911210000 expire_auctions_nao_rouba_arremate
+20260911233000 marketing_descadastro
+20260912000000 senha_do_google_sai_do_texto_plano
+20260915123622 auditoria_escrow_so_venda_de_verdade
+20260915123629 auditoria_rate_limit
+20260915125821 auditoria_app_users_colunas_publicas
+20260915132423 video_do_produto
+20260915190301 pode_distribuir_tarefa
+20260916114611 gamificacao_liberacao_e_eventos
+20260916120433 auditoria_de_leiloes
+20260916173052 saldo_de_deposito_compra_na_loja
+20260916195945 retirada_em_maos_no_leilao
+20260917032339 trava_do_leilao_sem_desconto_duplo
+20260919005235 vw_home_categorias
+20260920041812 registro_de_emails
+20260920114416 vw_home_categorias_ordem
+20260921110434 encontro_livro_laminas_pauta_viva
+20260921113053 encontro_varios_livros
+20260921173816 mapa_mental
