@@ -89,7 +89,17 @@ class Consulta {
 export const supabase = {
   from: (nome) => new Consulta(nome),
   auth: { getUser: async () => ({ data: { user: null } }), getSession: async () => ({ data: { session: null } }) },
-  rpc: async () => ({ data: null, error: null }),
+  // 🧪 RPC combinável (22/09/2026). Antes devolvia `{data:null}` pra tudo, então
+  // nenhuma banca conseguia exercitar tela que chama função do banco — e a do
+  // cupom chama `aplicar_cupom`. A banca põe a resposta em
+  // `window.__rpcFalso = { aplicar_cupom: {...} }` (ou uma função (args)=>resp).
+  // Sem combinar nada, o comportamento é o de antes: `{data:null}`.
+  rpc: async (nome, args) => {
+    (banco().rpcs ||= []).push({ nome, args });
+    const combinado = (typeof window !== 'undefined' && window.__rpcFalso) ? window.__rpcFalso[nome] : undefined;
+    if (combinado === undefined) return { data: null, error: null };
+    return { data: typeof combinado === 'function' ? combinado(args) : combinado, error: null };
+  },
   channel: () => ({ on() { return this; }, subscribe() { return this; }, unsubscribe() {} }),
   removeChannel() {},
 };
