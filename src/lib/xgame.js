@@ -1713,6 +1713,55 @@ export function gratidaoEntregue({ texto = '', audioSeg = 0, minSeg = GRATIDAO_A
   return { ok: false, por: 'texto', falta: Math.max(0, GRATIDAO_MIN - escrito) };
 }
 
+// 🎙️ O PAINEL DA GRATIDÃO ENQUANTO A PESSOA FALA (22/09/2026)
+//
+// Dono, testando ao vivo: "essa barrinha não está subindo, ela só sobe
+// depois que eu aperto, e também os segundos não estão contando. Lembra que
+// a pessoa está acordando de manhã, está com sono — essa comunicação tem
+// que ficar muito limpa."
+//
+// 🔴 A CAUSA: o painel lia `audioGratidaoSeg`, que só é escrito quando a
+// gravação PARA. Durante a fala ele valia 0, o painel caía no ramo do texto
+// e mostrava "0 de 20 letras · faltam 20" — cobrando LETRAS de quem estava
+// FALANDO. Pior: a barra ficava zerada exatamente no minuto em que ela mais
+// servia, que é o de dar noção de quanto falta.
+//
+// Os segundos ao vivo sempre existiram (`useDitado` conta e devolve em
+// `segundos`); a tela é que não usava. Esta função escolhe qual régua vale
+// AGORA, e mora aqui porque `node --test` não abre .jsx.
+
+/**
+ * Qual progresso mostrar no painel da gratidão, neste instante.
+ *
+ * @returns {{feito:number, meta:number, unidade:'s'|'letras', complemento:string}}
+ */
+export function progressoDaGratidao({ gravando = false, segundosAoVivo = 0, audioSeg = 0, texto = '', minSeg = GRATIDAO_AUDIO_MIN_SEG } = {}) {
+  const seguro = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  const alvo = Math.max(1, seguro(minSeg));
+  // 1º) FALANDO AGORA — a régua é de segundos, e eles correm na tela
+  if (gravando) {
+    const agora = seguro(segundosAoVivo);
+    return {
+      feito: agora,
+      meta: alvo,
+      unidade: 's',
+      complemento: agora >= alvo ? 'já vale — toca em "Pronto, terminei" quando acabar' : 'estou contando — fala com calma',
+    };
+  }
+  // 2º) JÁ FALOU — a régua continua de segundos: dizer "faltam 12 letras"
+  // pra quem acabou de falar é falar grego (conserto do chamado do Paim)
+  if (seguro(audioSeg) > 0) {
+    return { feito: seguro(audioSeg), meta: alvo, unidade: 's', complemento: 'ou escreve, se preferir' };
+  }
+  // 3º) NEM FALOU NEM ESCREVEU AINDA — aí sim a régua é de letras
+  return {
+    feito: String(texto || '').trim().length,
+    meta: GRATIDAO_MIN,
+    unidade: 'letras',
+    complemento: 'ou grava um áudio',
+  };
+}
+
 /** O que dizer embaixo do botão apagado, na unidade certa. */
 export function faltaDaGratidao({ texto = '', audioSeg = 0, minSeg = GRATIDAO_AUDIO_MIN_SEG } = {}) {
   const r = gratidaoEntregue({ texto, audioSeg, minSeg });

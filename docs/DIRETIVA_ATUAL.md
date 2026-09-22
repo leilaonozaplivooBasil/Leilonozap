@@ -12,6 +12,28 @@
 
 ---
 
+## DIR-174 — a barra da gratidão cresce enquanto a pessoa fala
+
+**Emitida por:** dono (22/09/2026, testando ao vivo no ritual): *"essa barrinha não está subindo, ela só sobe depois que eu aperto, e também os segundos não estão contando. Gostaria que deixasse melhor essas informações pra pessoa ler melhor quando começar a gravar o áudio, e contando os segundos, a barra ir crescendo — pra pessoa ter uma noção e ficar muito claro. Lembra que a pessoa está acordando de manhã, está com sono. Essa comunicação tem que ficar muito limpa."*
+
+**Achado — o painel cobrava LETRAS de quem estava FALANDO.** A pílula de progresso lia `audioGratidaoSeg`, que só é escrito quando a gravação **para**. Durante a fala ele valia 0, o ternário da tela caía no ramo do texto e mostrava *"0 de 20 letras · faltam 20"* — enquanto o botão logo acima já marcava *"Pronto, terminei · 0:18"*. Duas contagens na mesma tela, uma certa e uma errada, pra quem acabou de acordar. E a barra ficava zerada justo no minuto em que ela mais serve: o de dar noção de quanto falta.
+
+**Os segundos ao vivo sempre existiram.** `useDitado` conta e devolve em `segundos`; a tela é que não usava.
+
+**O que entra:**
+1. `progressoDaGratidao({ gravando, segundosAoVivo, audioSeg, texto, minSeg })` em `src/lib/xgame.js` — pura, testável, e é ela que escolhe a régua: **falando agora** → segundos ao vivo, contra a meta de hoje; **já falou** → segundos gravados (a régua de segundos não regride pra letras, conserto do chamado do Paim de 07/09); **nem falou nem escreveu** → aí sim, letras. Lixo na entrada (`NaN`, negativo, meta 0) não zera nem divide por zero.
+2. O painel passa a **aparecer também durante a fala** (`!entrega.ok || gravando`): mostrar o progresso só depois que a pessoa parou é mostrar quando já não adianta.
+3. **Ela fica sabendo na hora que pode parar**: ao cruzar a meta, a pílula vira verde, toca a notinha de etapa vencida e o texto diz *"já vale — toca em 'Pronto, terminei' quando acabar"*. Antes disso: *"estou contando — fala com calma"*.
+4. **Limpeza**: enquanto grava, o par *Falar / Escrever* sai da frente. Antes eles ficavam na tela junto com o botão de parar e com o painel — três coisas disputando o olho de quem está com sono.
+
+**Nota de teste:** a âncora do `gratidaoCrescente.test.mjs` mudou (eram duas chamadas de `DicaDaEtapa` escolhidas por um ternário na tela; agora é uma só, alimentada pelo lib). A **regra** que ele guarda não mudou — a meta é a de hoje, nunca o piso fixo — e continua travada.
+
+**Prova:** suíte 3366/3366 (`tests/gratidaoAoVivo.test.mjs` novo, 9 testes), lint limpo, build ok, colisão limpa. Mutação: (1) fiz a função ignorar a gravação em andamento → 3 testes quebraram; (2) a tela voltou a ler só os segundos do fim → teste quebrou; (3) o painel voltou a sumir durante a fala → teste quebrou; (4) *Falar/Escrever* voltaram a ficar na tela durante a fala → teste quebrou. Todas revertidas.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-173 — as fotos da semana entram na janela (e a decisão de barrar era minha, não era pra ser)
 
 **Emitida por:** dono (22/09/2026, testando em produção): *"confere a primeira lâmina — eu te dei 7 imagens da primeira lâmina pra ficar aleatório, lembra? por que elas não estão aqui?"*
