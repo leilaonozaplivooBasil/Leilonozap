@@ -96,12 +96,23 @@ export function demandaDoNo(no, { pessoaId, pessoaNome = null } = {}) {
  * nó: `xperf_demandas` não tem onde guardar o id do nó, e o título é o que a
  * pessoa reconhece como "isso eu já mandei".
  */
-export function jaEstaNaFila(abertas, titulo) {
+export function aQueJaEstaNaFila(abertas, titulo) {
   const alvo = normalizar(titulo);
-  if (!alvo) return false;
-  return (abertas || []).some(
+  if (!alvo) return null;
+  return (abertas || []).find(
     (d) => d && d.origem === ORIGEM_MAPA && normalizar(d.titulo) === alvo,
-  );
+  ) || null;
+}
+
+/**
+ * A MESMA trava, respondendo sim ou não.
+ *
+ * 22/09: o ✈ passou a mandar direto pro quadro/jornada, e aí saber QUE já
+ * existe deixou de bastar — é preciso saber QUAL, para mandar aquela pro
+ * destino escolhido em vez de dizer "já está lá" e não fazer nada.
+ */
+export function jaEstaNaFila(abertas, titulo) {
+  return aQueJaEstaNaFila(abertas, titulo) !== null;
 }
 
 /** Rótulo curto da origem, para a tela não inventar cada uma o seu. */

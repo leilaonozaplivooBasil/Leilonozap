@@ -182,8 +182,9 @@ async function abrirComResposta(resposta) {
   return { ctx, pagina };
 }
 
-/** Escreve num nó e aperta o ✈ dele — mesmo caminho da prova de escrever. */
-async function mandar(pagina, texto) {
+/** Escreve num nó e aperta o ✈ dele — mesmo caminho da prova de escrever.
+ *  Desde 22/09 o ✈ abre os destinos; `destino` diz qual escolher. */
+async function mandar(pagina, texto, destino = 'demandas') {
   const no = nos(pagina).first();
   await no.locator('button').first().click();
   const campo = pagina.locator('[data-teste="mapa-input"]');
@@ -192,7 +193,15 @@ async function mandar(pagina, texto) {
   await campo.press('Enter');
   await no.getByText(texto).waitFor({ timeout: 5000 });
   await no.locator('[data-teste="mapa-demanda"]').first().click();
+  await pagina.locator('[data-teste="mapa-destinos"]').waitFor({ timeout: 5000 });
+  await pagina.locator(`[data-teste="mapa-destinos"] [data-destino="${destino}"]`).click();
 }
+
+/** O que a tela mandou para a rota `minhasDemandas`, na última chamada. */
+const ultimoEnvio = (pagina) => pagina.evaluate(() => {
+  const cs = window.__plataformaFalsa.chamadas.filter((c) => c.nome === 'minhasDemandas');
+  return cs.length ? cs[cs.length - 1].corpo : null;
+});
 
 test('🔴 o ✈ diz que mandou — botão mudo vira clique repetido', { skip: semNavegador }, async () => {
   const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: false });
@@ -214,5 +223,62 @@ test('🔴 clicar de novo diz "já estava lá" — e NÃO acusa falha', { skip: 
   await pagina.waitForSelector('[data-teste="mapa-recado"]', { timeout: 5000 });
   assert.match(await pagina.locator('[data-teste="mapa-recado"]').innerText(), /já estava/i);
   assert.equal(await pagina.locator('[data-teste="mapa-erro"]').count(), 0, 'tratou "já existe" como falha');
+  await ctx.close();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ✈ O DESTINO DIRETO — 22/09/2026
+//
+// A outra metade do áudio de 19/09 (10h32): "quando eu esvazio a mente no mapa
+// mental, eu jogo para o meu quadro, para a minha lista e para a minha
+// jornada." O ✈ parava nas demandas, e o dono tinha que ir até a aba Demandas
+// terminar o serviço. Quem cria a tarefa e o cartão é o servidor; o que estas
+// provas medem é a única parte que só a tela responde — que o destino
+// ESCOLHIDO é o destino ENVIADO, e que o dono vê o que aconteceu.
+
+test('🔴 o ✈ abre os destinos em vez de decidir sozinho', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: false });
+  const no = nos(pagina).first();
+  await no.locator('[data-teste="mapa-demanda"]').first().click();
+  const destinos = pagina.locator('[data-teste="mapa-destinos"] button');
+  assert.equal(await destinos.count(), 4, 'esperava os 4 destinos');
+  assert.match(await destinos.first().innerText(), /demandas/i, '"só nas demandas" tem que vir primeiro');
+  // nada foi enviado só por abrir a lista
+  assert.equal(await ultimoEnvio(pagina), null, 'mandou para a rota só de abrir o seletor');
+  await ctx.close();
+});
+
+test('🔴 o destino escolhido é o destino ENVIADO', { skip: semNavegador }, async () => {
+  // se a tela mandasse sempre 'demandas', a escolha seria enfeite e o
+  // pensamento continuaria parando no meio do caminho.
+  for (const destino of ['dia', 'quadro', 'ambos']) {
+    const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: false, destino });
+    await mandar(pagina, 'fechar o caixa', destino);
+    const corpo = await ultimoEnvio(pagina);
+    assert.equal(corpo?.destino, destino, `o destino ${destino} não chegou na rota`);
+    assert.equal(corpo?.titulo, 'fechar o caixa');
+    await ctx.close();
+  }
+});
+
+test('🔴 o recado diz o que aconteceu, destino a destino', { skip: semNavegador }, async () => {
+  const esperado = { dia: /jornada/i, quadro: /quadro/i, ambos: /tarefa.*cart/i };
+  for (const [destino, regex] of Object.entries(esperado)) {
+    const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: false, destino });
+    await mandar(pagina, 'fechar o caixa', destino);
+    await pagina.waitForSelector('[data-teste="mapa-recado"]', { timeout: 5000 });
+    assert.match(await pagina.locator('[data-teste="mapa-recado"]').innerText(), regex, `recado errado para ${destino}`);
+    await ctx.close();
+  }
+});
+
+test('🔴 demanda repetida MANDADA pro quadro não diz só "já estava lá"', { skip: semNavegador }, async () => {
+  // o servidor manda a repetida pro destino escolhido. Se a tela insistisse em
+  // "já estava na fila", o dono acharia que o clique não pegou e iria procurar
+  // no quadro um cartão que ACABOU de ser criado.
+  const { ctx, pagina } = await abrirComResposta({ success: true, jaExistia: true, destino: 'quadro', cardId: 'c1' });
+  await mandar(pagina, 'ligar pro fornecedor', 'quadro');
+  await pagina.waitForSelector('[data-teste="mapa-recado"]', { timeout: 5000 });
+  assert.match(await pagina.locator('[data-teste="mapa-recado"]').innerText(), /quadro/i);
   await ctx.close();
 });
