@@ -17,6 +17,7 @@ import {
   reunioesEmpresaDoDia, DIAS_SEMANA, SETORES_EMPRESA, tituloReuniaoComSetor,
 } from '@/lib/metodo';
 import { ordenarAgenda, ordemValida, ORDENS, ORDEM_PADRAO } from '@/lib/ordemDaAgenda';
+import { seloDaDemanda } from '@/lib/seloDaDemanda';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
 // o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
@@ -56,7 +57,7 @@ import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import { BarraProgresso } from './VerificacaoUI';
-import EntradaComDestinos from './EntradaComDestinos';
+import EntradaComDestinos, { campoEscuro, estiloSelectEscuro } from './EntradaComDestinos';
 import PreviaJornadaModal from './PreviaJornadaModal';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
@@ -3202,6 +3203,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                           🚀 liberado pelo administrador (evento){liberacao.motivo ? ` — ${liberacao.motivo}` : ''}
                                         </p>
                                       )}
+                                      {/* 📥 22/09/2026 — pedido do Ávilla: "quando colocar
+                                          demanda na jornada, deve aparecer que é demanda vinda
+                                          do adm". O dado já estava gravado (origem 'xperf' +
+                                          criado_por_id); faltava a jornada mostrar. Ver
+                                          src/lib/seloDaDemanda.js. */}
+                                      {(() => {
+                                        const selo = seloDaDemanda(t, nomePorUsuarioId, currentUser?.id);
+                                        return selo ? (
+                                          <p
+                                            className="text-[10px] font-bold text-indigo-600"
+                                            title={selo.dica}
+                                            data-teste="selo-veio-do-adm"
+                                          >
+                                            {selo.rotulo}
+                                          </p>
+                                        ) : null;
+                                      })()}
                                     </>
                                   );
                                 })()}
@@ -3492,9 +3510,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   ESCREVER no mesmo `novaTarefa.titulo` que ele já lê, igual
                   o seletor de dias logo abaixo já faz sem tocar no
                   componente. */}
-              <select value="" onChange={(e) => { if (e.target.value) setNovaTarefa((n) => ({ ...n, titulo: tituloReuniaoComSetor(e.target.value) })); }} className="mt-1.5 bg-white border border-nz-borda rounded text-nz-tinta text-[11px] h-9 px-1" data-teste="nova-tarefa-setor">
-                <option value="">reunião com o setor…</option>
-                {SETORES_EMPRESA.map((s) => <option key={s} value={s}>{s}</option>)}
+              {/* 🌑 22/09/2026 — CAIXA BRANCA NO MEIO DO PAINEL ESCURO. Ávilla:
+                  "verificar ux do formulário, pois tem texto com fundo branco
+                  difícil de ler". É o MESMO defeito que o dono já tinha
+                  apontado duas vezes (09/09: "fundo branco em mais um campo
+                  descoberto") — este campo escapou das duas.
+                  As cores vêm de EntradaComDestinos, o vizinho de cima, em vez
+                  de copiadas: copiar é o que fez o bug voltar. E as <option>
+                  levam a mesma cor de propósito — sem isso a LISTA que o select
+                  abre volta a ser branca no Windows/Linux. */}
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) setNovaTarefa((n) => ({ ...n, titulo: tituloReuniaoComSetor(e.target.value) })); }}
+                className={`mt-1.5 ${campoEscuro} text-[11px]`}
+                style={estiloSelectEscuro}
+                data-teste="nova-tarefa-setor"
+              >
+                <option value="" style={estiloSelectEscuro}>reunião com o setor…</option>
+                {SETORES_EMPRESA.map((s) => <option key={s} value={s} style={estiloSelectEscuro}>{s}</option>)}
               </select>              {/* 🗓️ 20/09/2026 — dono: "igual o despertador da Apple" — o
                   seletor de dias fica sempre à vista, no mesmo lugar do
                   "repetir" (não escondido atrás de marcar a caixa primeiro,
