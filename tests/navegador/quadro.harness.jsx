@@ -27,6 +27,8 @@ window.__bancoFalso = {
       { id: 'q1', user_id: 'emanuel', lista_id: 'l1', titulo: 'Quinta — Empurrar B', coluna: 'aberto', checklist: [], ordem: 0 },
       { id: 'q2', user_id: 'emanuel', lista_id: 'l1', titulo: 'Segunda — Empurrar A', coluna: 'aberto', checklist: [], ordem: 1, virou_tarefa_id: 't2', virou_tarefa_em: '2026-09-07T06:00:00.000Z' },
       { id: 'q3', user_id: 'emanuel', lista_id: 'l1', titulo: 'Corrida leve', coluna: 'aberto', checklist: [], ordem: 2, hora: '07:00', virou_tarefa_id: 't3', virou_tarefa_em: '2026-09-07T06:00:00.000Z' },
+      // 📷 22/09/2026 — um card que JÁ tem foto, pra provar que ela aparece e que dá pra tirar
+      { id: 'q4', user_id: 'emanuel', lista_id: 'l1', titulo: 'Treino de ontem', coluna: 'aberto', checklist: [], ordem: 3, foto_url: 'https://exemplo/treino-de-ontem.jpg' },
     ],
     metodo_tarefas: [
       { id: 't2', user_id: 'emanuel', data: HOJE, hora: null, titulo: 'Segunda — Empurrar A', feito: false },

@@ -168,3 +168,61 @@ test('PRÉVIA DA JORNADA: hora que bate avisa e oferece o horário livre; usar o
   assert.deepEqual(erros, []);
   await ctx.close();
 });
+
+/**
+ * 📷 A FOTO NO CARD (22/09/2026).
+ *
+ * Ávilla, depois de eu perguntar qual era o pedido: "rotina de treino no card
+ * do quadro. lá deve ter opção de tirar/anexar foto do treino tbm."
+ *
+ * A foto de COMPROVAÇÃO já existia em outra tela. Aqui, no card, não havia nem
+ * botão nem coluna onde guardar (foto_url entrou na migração 20260922211851).
+ */
+test('📷 card SEM foto oferece os DOIS caminhos: tirar na hora e anexar', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    const semFoto = card(pagina, 'Corrida leve');
+    await semFoto.locator('[data-teste="tirar-foto-do-cartao"]').waitFor();
+    await semFoto.locator('[data-teste="anexar-foto-do-cartao"]').waitFor();
+
+    // um input só não dá os dois: com `capture` o Android não oferece a galeria,
+    // sem ele o iPhone não abre a câmera direto
+    const entradas = await semFoto.locator('input[type="file"]').evaluateAll(
+      (els) => els.map((e) => e.getAttribute('capture')),
+    );
+    assert.equal(entradas.length, 2, 'esperava os dois inputs — câmera e galeria');
+    assert.ok(entradas.includes('environment'), 'nenhum input abre a câmera');
+    assert.ok(entradas.includes(null), 'nenhum input pega da galeria');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});
+
+test('📷 card COM foto mostra a imagem, e não os botões', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    const comFoto = card(pagina, 'Treino de ontem');
+    const src = await comFoto.locator('img[alt*="Treino de ontem"]').getAttribute('src');
+    assert.equal(src, 'https://exemplo/treino-de-ontem.jpg');
+    assert.equal(await comFoto.locator('[data-teste="tirar-foto-do-cartao"]').count(), 0,
+      'com foto na tela, oferecer "tirar foto" de novo confunde — o caminho é remover e refazer');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});
+
+test('🔴 📷 remover a foto GRAVA no banco — não some só da tela', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    const comFoto = card(pagina, 'Treino de ontem');
+    await comFoto.locator('[data-teste="remover-foto-do-cartao"]').click();
+    await pagina.waitForTimeout(400);
+
+    assert.equal(await comFoto.locator('img[alt*="Treino de ontem"]').count(), 0, 'a imagem continuou na tela');
+    await comFoto.locator('[data-teste="tirar-foto-do-cartao"]').waitFor();
+
+    const gravou = (await escritas(pagina)).some(
+      (e) => e.tipo === 'update' && e.tabela === 'metodo_quadro' && e.patch?.foto_url === null,
+    );
+    assert.ok(gravou, 'sumiu da tela e não gravou: ao recarregar a foto voltaria');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});

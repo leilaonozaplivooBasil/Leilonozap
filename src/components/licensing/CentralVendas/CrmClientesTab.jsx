@@ -212,6 +212,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     last_contact: new Date().toISOString().split('T')[0],
     // 🎯 DIR-25 — acompanhamento no ato do cadastro (colunas já existentes)
     assigned_seller: '',
+    // 🤝 22/09/2026 — quem indicou (migração 20260922211943)
+    indicado_por_id: '',
+    indicado_por_nome: '',
     follow_up_date: '',
     next_steps: '',
     interested_products: []
@@ -657,6 +660,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
       address_zip_code: raw.address_zip_code || '',
       last_contact: raw.last_contact || new Date().toISOString().split('T')[0],
       assigned_seller: raw.assigned_seller || '',
+      indicado_por_id: raw.indicado_por_id || '',
+      indicado_por_nome: raw.indicado_por_nome || '',
       follow_up_date: raw.follow_up_date ? String(raw.follow_up_date).slice(0, 10) : '',
       next_steps: raw.next_steps || '',
       interested_products: raw.interested_products || []
@@ -806,6 +811,8 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
         address_zip_code: '',
         last_contact: new Date().toISOString().split('T')[0],
         assigned_seller: '',
+        indicado_por_id: '',
+        indicado_por_nome: '',
         follow_up_date: '',
         next_steps: '',
         interested_products: []
@@ -2512,13 +2519,41 @@ _Enviado via CRM Leilão NoZap_`;
                           </select>
                         </div>
                         <div>
-                          <Label className="text-gray-300">Vendedor responsável</Label>
-                          <select value={formData.assigned_seller} onChange={(e) => setFormData({ ...formData, assigned_seller: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600">
-                            <option value="">— Sem vendedor —</option>
+                          <Label className="text-gray-300">Executivo responsável</Label>
+                          <select value={formData.assigned_seller} onChange={(e) => setFormData({ ...formData, assigned_seller: e.target.value })} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600" data-teste="executivo-responsavel">
+                            <option value="">— Sem executivo —</option>
                             {vendedoresDoSeletor.map((sel) => (
                               <option key={sel.id} value={sel.name}>{sel.name}</option>
                             ))}
                           </select>
+                        </div>
+                        {/* 🤝 22/09/2026 — pedido do Ávilla: "no forms de novo cliente
+                            deve ter a opção de marcar quem indicou o cliente e quem é o
+                            executivo responsável pelo cliente."
+                            O EXECUTIVO já existia (é o `assigned_seller` aqui de cima —
+                            só estava rotulado "Vendedor responsável", que é o nome
+                            antigo do mesmo papel). Quem INDICOU não tinha onde morar:
+                            entrou na migração 20260922211943, em duas colunas.
+                            Guarda id E nome: o id liga, o nome faz a indicação
+                            sobreviver se a conta de quem indicou for apagada um dia. */}
+                        <div>
+                          <Label className="text-gray-300">Quem indicou</Label>
+                          <select
+                            value={formData.indicado_por_id || ''}
+                            onChange={(e) => {
+                              const id = e.target.value;
+                              const quem = vendedoresDoSeletor.find((s) => String(s.id) === String(id));
+                              setFormData({ ...formData, indicado_por_id: id || '', indicado_por_nome: quem?.name || '' });
+                            }}
+                            className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600"
+                            data-teste="quem-indicou"
+                          >
+                            <option value="">— Ninguém indicou —</option>
+                            {vendedoresDoSeletor.map((sel) => (
+                              <option key={sel.id} value={sel.id}>{sel.name}</option>
+                            ))}
+                          </select>
+                          <p className="text-[11px] text-gray-500 mt-1">Quem trouxe este cliente. Diferente do executivo, que é quem cuida dele daqui pra frente.</p>
                         </div>
                         <div>
                           <Label className="text-gray-300">Último Contato</Label>
