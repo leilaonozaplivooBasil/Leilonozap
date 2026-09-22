@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Brain, Trophy } from 'lucide-react';
+import { Brain, Trophy, Clock } from 'lucide-react';
 import EncontroMentalidade from '@/components/licensing/CentralVendas/EncontroMentalidade';
 import PerformanceEquipe from '@/components/licensing/CentralVendas/PerformanceEquipe';
+import OrganizacaoDoDia from '@/components/licensing/CentralVendas/OrganizacaoDoDia';
 import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
 import useTourDaTela from '@/hooks/useTourDaTela';
 import { dataISO } from '@/lib/xgame';
@@ -15,8 +16,17 @@ import { dataISO } from '@/lib/xgame';
 // dono (06/09/2026): "Mentalidade de segunda" (o cérebro fica) e, ao lado,
 // "X-Performance" — a visão executiva de todo o time. O administrativo (o
 // X-Game, distribuir tarefa, de cima pra baixo) virou "ADM X-Game" na faixa.
+// 🕥 19/09/2026 (áudio 10h33) — a terceira aba: "10h30, todo mundo começa a
+// organização… duas horas de organização diária. Após todo mundo parar na
+// empresa para fazer, isso tem que gerar um relatório bem fluido para o
+// Emanuel, eu, ver todas as demandas do dia. Esse relatório pode ser exportado
+// ou eu posso ser acompanhado em tempo real."
+// Fica AQUI e não numa tela nova porque a pergunta dela ("quem parou para
+// organizar hoje") é irmã das outras duas: o encontro é a cabeça, a
+// X-Performance é o hábito, a organização é a hora marcada do dia.
 const ABAS = [
   { id: 'encontro', rotulo: 'Mentalidade de segunda', Icone: Brain },
+  { id: 'organizacao', rotulo: 'Organização do dia', Icone: Clock },
   { id: 'performance', rotulo: 'X-Performance', Icone: Trophy },
 ];
 
@@ -44,7 +54,10 @@ export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir =
   // também decidia errado se hoje é segunda (a aba padrão).
   const hoje = hojeISO || dataISO();
   const ehSegunda = new Date(`${hoje}T12:00:00`).getDay() === 1;
-  const [aba, setAba] = useState(abaInicial || (ehSegunda ? 'encontro' : 'performance'));
+  // aba desconhecida não pode apagar a tela: com três abas, o ternário virou
+  // três condições e um id inválido não renderizaria nada.
+  const padrao = ehSegunda ? 'encontro' : 'performance';
+  const [aba, setAba] = useState(ABAS.some((a) => a.id === abaInicial) ? abaInicial : padrao);
   return (
     <div className="space-y-3 text-white" data-teste="mentalidade" data-aba={aba}>
       {/* 07/09 — a faixa das abas fica grudada no topo ao rolar */}
@@ -56,7 +69,9 @@ export default function MentalidadePagina({ currentUser, hojeISO, podeConduzir =
           </button>
         ))}
       </div>
-      {aba === 'encontro' ? <EncontroMentalidade currentUser={currentUser} hojeISO={hoje} podeConduzir={podeConduzir} /> : <PerformanceEquipe currentUser={currentUser} hojeISO={hoje} gestao={gestao} soEu={soEu} />}
+      {aba === 'encontro' && <EncontroMentalidade currentUser={currentUser} hojeISO={hoje} podeConduzir={podeConduzir} />}
+      {aba === 'organizacao' && <OrganizacaoDoDia hojeISO={hoje} />}
+      {aba === 'performance' && <PerformanceEquipe currentUser={currentUser} hojeISO={hoje} gestao={gestao} soEu={soEu} />}
       <TourGuiado ativo={tourAberto} passos={PASSOS_TOUR_ENCONTRO} onFechar={() => setTourAberto(false)} />
     </div>
   );
