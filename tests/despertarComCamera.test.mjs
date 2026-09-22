@@ -147,3 +147,21 @@ test('a foto escolhida aparece grande antes de comprovar', () => {
   assert.match(l.slice(i, i + 400), /max-w-\[300px\]/);
   assert.match(l, /data-teste="trocar-a-foto"/);
 });
+
+test('🌈 o ícone do Instagram usa as cores da marca, não o cinza do texto', () => {
+  // Dono, 22/09: "precisa entrar o ícone do Instagram com as cores dele, pode
+  // manter tamanho e tal, mas deixa a cor do Instagram." O degradê vai no
+  // TRAÇO do ícone — não num botão de fundo colorido, que foi exatamente o
+  // que saiu desta lâmina. A marca aparece; o peso do caminho não muda.
+  const l = laminaDoDespertar();
+  const i = l.indexOf('data-teste="abrir-instagram"');
+  assert.ok(i > 0, 'sumiu o caminho do Instagram');
+  const trecho = l.slice(i, i + 1600);
+  assert.match(trecho, /linearGradient id="corDoInstagram"/, 'o ícone voltou a ser monocromático');
+  for (const cor of ['#FFD600', '#FF7A00', '#FF0069', '#D300C5', '#7638FA']) {
+    assert.ok(trecho.includes(cor), `sumiu a parada ${cor} do degradê da marca`);
+  }
+  assert.match(trecho, /stroke="url\(#corDoInstagram\)"/, 'a cor precisa estar no TRAÇO');
+  assert.match(trecho, /text-\[12px\]/, 'o link cresceu — o tamanho é que diz qual é o caminho principal');
+  assert.ok(!/bg-gradient-to-r/.test(trecho), 'o degradê virou fundo de botão outra vez');
+});

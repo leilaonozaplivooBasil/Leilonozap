@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Volume2, VolumeX, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic, Music2 } from 'lucide-react';
+import { X, Volume2, VolumeX, Sunrise, HeartHandshake, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic, Music2 } from 'lucide-react';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import DicaDaEtapa from './DicaDaEtapa';
@@ -1051,7 +1051,32 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                   rel="noreferrer"
                   data-teste="abrir-instagram"
                   className="inline-flex items-center gap-1.5 text-[12px] text-[#FFF1DF]/70 underline hover:text-[#FFF1DF]"
-                ><Instagram className="w-3.5 h-3.5" strokeWidth={2} /> postar o bom dia no Instagram também</a>
+                >
+                  {/* 🌈 22/09 — dono: "precisa entrar o ícone do Instagram com
+                      as cores dele, pode manter tamanho e tal, mas deixa a cor
+                      do Instagram". O degradê da marca (amarelo → laranja →
+                      magenta → roxo) vai no TRAÇO do ícone, via
+                      `linearGradient` + `stroke`, e não num botão de fundo
+                      colorido — o botão de degradê foi justamente o que saiu
+                      desta lâmina. A marca aparece; o peso do caminho não muda.
+                      `aria-hidden` porque quem lê em voz alta já tem o texto
+                      do link logo ao lado. */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="corDoInstagram" x1="0" y1="24" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#FFD600" />
+                        <stop offset="26%" stopColor="#FF7A00" />
+                        <stop offset="54%" stopColor="#FF0069" />
+                        <stop offset="78%" stopColor="#D300C5" />
+                        <stop offset="100%" stopColor="#7638FA" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="2" y="2" width="20" height="20" rx="5.5" stroke="url(#corDoInstagram)" strokeWidth="2" />
+                    <circle cx="12" cy="12" r="4.2" stroke="url(#corDoInstagram)" strokeWidth="2" />
+                    <circle cx="17.6" cy="6.4" r="1.15" fill="url(#corDoInstagram)" />
+                  </svg>
+                  postar o bom dia no Instagram também
+                </a>
               </div>
             )}
 

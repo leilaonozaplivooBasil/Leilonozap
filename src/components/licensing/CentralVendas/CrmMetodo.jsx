@@ -80,8 +80,6 @@ import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import FaixaVisao from './FaixaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
-import { FOTOS_DA_JANELA } from '@/lib/fotosDoRitual';
-import { fotoDoDia } from '@/lib/janelaDoMar';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
 import SinoNotificacoes from '@/components/common/SinoNotificacoes';
@@ -2457,12 +2455,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   onExplicar={(bloco, texto, extra) => explicarBlocoDoRitual(t, bloco, texto, extra)}
                   onRefazer={(bloco) => refazerBlocoDoRitual(t, bloco)}
                   onPedirAjuda={(bloco) => pedirAjudaNoRitual(t, bloco)}
-                  /* 🖼️ a foto da janela de HOJE. `hojeStr()` é o dia no fuso
-                     do APARELHO: com UTC, das 21h às 23h59 em Brasília a foto
-                     trocava no meio da noite (DIR-129/134). O sorteio é
-                     semeado pelo dia, então ela não muda se a pessoa fechar e
-                     reabrir o ritual no meio dos 30 minutos. */
-                  fotoDeFundo={FOTOS_DA_JANELA[fotoDoDia(hojeStr(), FOTOS_DA_JANELA.length)] || null}
                 />
               );
             })()}
