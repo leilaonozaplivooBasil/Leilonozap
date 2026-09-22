@@ -3,6 +3,7 @@ import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
+import { supabase } from '@/api/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart, Copy, CheckCircle, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,6 +59,15 @@ export default function CatalogCheckout2() {
     const cardExpiry = '';
     const cardCvv = '';
     const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+    // 🎟️ 22/09/2026 — O CAMPO DE CUPOM DESTA TELA ERA ENFEITE.
+    // O input e o botão viviam `disabled`: o cliente digitava, clicava e nada
+    // acontecia. Quem precisasse usar cupom tinha que descobrir sozinho que só
+    // funcionava pelo carrinho. O servidor (createMPPix) sempre aceitou
+    // `coupon_code` e sempre validou por lá — faltava a tela mandar.
+    const [coupon, setCoupon] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, desconto }
+    const [couponMsg, setCouponMsg] = useState('');
+    const [applyingCoupon, setApplyingCoupon] = useState(false);
     const [currentSaleId, setCurrentSaleId] = useState(null);
     const pollingIntervalRef = useRef(null);
     const pollingTimeoutRef = useRef(null);
@@ -90,6 +100,39 @@ export default function CatalogCheckout2() {
         setAddressZip(v);
         if (v.replace(/\D/g, '').length === 8) searchCep(v);
     };
+
+    // 🎟️ Confere o cupom no banco (mesma RPC que o carrinho usa) e mostra uma
+    // prévia do desconto. É PRÉVIA: quem decide de verdade é o createMPPix, que
+    // revalida no servidor. Por isso, depois de gerar o PIX, a tela confere o
+    // veredito que voltou e corrige o que mostrou — ver handleCreatePreference.
+    const aplicarCupom = async () => {
+        const code = (coupon || '').trim();
+        if (!code) { setCouponMsg('Digite um cupom.'); return; }
+        if (!product?.price_catalog) { setCouponMsg('Aguarde o produto carregar.'); return; }
+        setApplyingCoupon(true); setCouponMsg('');
+        try {
+            const { data } = await supabase.rpc('aplicar_cupom', {
+                _code: code,
+                _subtotal: Number(product.price_catalog) || 0,
+                _seller: null,
+            });
+            if (data?.valido) {
+                setAppliedCoupon({ code: data.code, desconto: Number(data.desconto) || 0 });
+                setCouponMsg('');
+                toast.success(`🎉 Cupom ${data.code} aplicado! -R$ ${fmtBR(data.desconto)}`);
+            } else {
+                setAppliedCoupon(null);
+                setCouponMsg(data?.motivo || 'Cupom inválido');
+            }
+        } catch (_) {
+            setAppliedCoupon(null);
+            setCouponMsg('Não foi possível validar agora.');
+        } finally {
+            setApplyingCoupon(false);
+        }
+    };
+
+    const tirarCupom = () => { setAppliedCoupon(null); setCoupon(''); setCouponMsg(''); };
 
     const handleCreatePreference = async () => {
         // Validações básicas
@@ -161,6 +204,7 @@ export default function CatalogCheckout2() {
                 delivery_type: deliveryType,
                 address: { street: addressStreet, number: addressNumber, complement: addressComplement, neighborhood: addressNeighborhood, city: addressCity, state: addressState, zip: addressZip },
                 ref_code: referralCode || '',
+                coupon_code: appliedCoupon?.code || null,
             });
             const mpData = mp?.data || mp;
             setIsProcessing(false);
@@ -169,6 +213,20 @@ export default function CatalogCheckout2() {
             if (!mpData?.success) {
                 toast.error('Erro ao gerar PIX: ' + (mpData?.error || 'tente novamente'));
                 return;
+            }
+
+            // 🎟️ O SERVIDOR TEM A ÚLTIMA PALAVRA. O createMPPix engole cupom
+            // inválido de propósito (não derruba a compra) e cobra cheio. Se a
+            // tela ficasse calada, o cliente veria "-R$ 20,46" e receberia um PIX
+            // do valor inteiro. Aqui a tela se corrige e avisa.
+            if (appliedCoupon && !mpData.coupon_code) {
+                setAppliedCoupon(null);
+                setCouponMsg('O cupom não valeu para esta compra — o PIX saiu sem desconto.');
+                toast.error('O cupom não valeu para esta compra. O PIX foi gerado sem desconto.');
+            } else if (appliedCoupon && Number(mpData.desconto_cupom) !== Number(appliedCoupon.desconto)) {
+                // valeu, mas em outro valor (ex.: percentual sobre outro subtotal)
+                setAppliedCoupon({ code: mpData.coupon_code, desconto: Number(mpData.desconto_cupom) || 0 });
+                toast.info(`Cupom aplicado: -R$ ${fmtBR(mpData.desconto_cupom)}`);
             }
 
             setCurrentSaleId(mpData.sale_id);
@@ -613,13 +671,21 @@ export default function CatalogCheckout2() {
                                     <span className="text-gray-400">Total de itens (1 itens)</span>
                                     <span className="text-white font-semibold">R$ {fmtBR(product.price_catalog)}</span>
                                 </div>
+                                {appliedCoupon && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-400">Cupom {appliedCoupon.code}</span>
+                                        <span className="text-green-400 font-semibold">− R$ {fmtBR(appliedCoupon.desconto)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-400">Valor do frete</span>
                                     <span className="text-green-400 font-semibold">A combinar</span>
                                 </div>
                                 <div className="flex justify-between pt-3 border-t border-gray-700">
                                     <span className="text-white font-bold text-base">Valor total</span>
-                                    <span className="text-green-400 font-bold text-xl">R$ {fmtBR(product.price_catalog)}</span>
+                                    <span data-teste="valor-total" className="text-green-400 font-bold text-xl">
+                                        R$ {fmtBR(Math.max(0, Number(product.price_catalog || 0) - (appliedCoupon?.desconto || 0)))}
+                                    </span>
                                 </div>
                             </div>
 
@@ -627,20 +693,42 @@ export default function CatalogCheckout2() {
                             <div className="space-y-3 pt-4 border-t border-gray-700">
                                 <div>
                                     <p className="text-gray-400 text-sm mb-2">Aplicar cupom</p>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Insira o cupom aqui"
-                                            className="flex-1 px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500"
-                                            disabled
-                                        />
-                                        <button
-                                            className="px-4 py-2 bg-gray-600 text-gray-400 rounded-lg text-sm font-semibold cursor-not-allowed"
-                                            disabled
-                                        >
-                                            Aplicar
-                                        </button>
-                                    </div>
+                                    {appliedCoupon ? (
+                                        <div className="flex items-center justify-between gap-2 px-4 py-2 bg-green-500/10 border border-green-500/40 rounded-lg">
+                                            <span className="text-green-400 text-sm font-semibold">
+                                                {appliedCoupon.code} · − R$ {fmtBR(appliedCoupon.desconto)}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={tirarCupom}
+                                                disabled={!!pixData}
+                                                className="text-gray-400 hover:text-white text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                remover
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={coupon}
+                                                onChange={(e) => setCoupon(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); aplicarCupom(); } }}
+                                                placeholder="Insira o cupom aqui"
+                                                disabled={applyingCoupon || !!pixData}
+                                                className="flex-1 px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 disabled:opacity-50"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={aplicarCupom}
+                                                disabled={applyingCoupon || !coupon.trim() || !!pixData}
+                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors"
+                                            >
+                                                {applyingCoupon ? 'Conferindo…' : 'Aplicar'}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {couponMsg && <p className="text-red-400 text-xs mt-2">{couponMsg}</p>}
                                 </div>
 
                                 <div>

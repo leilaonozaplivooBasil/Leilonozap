@@ -458,26 +458,22 @@ export default function CheckoutPage() {
                                 </div>
                             </div>
 
-                            {/* Cupom e Observação */}
+                            {/* Observação */}
+                            {/* 🎟️ 22/09/2026 — O CAMPO DE CUPOM SAIU DAQUI, E NÃO FOI FEITO
+                                FUNCIONAR. Esta tela é o pagamento de ARREMATE de leilão: chama
+                                createMPWalletDeposit, que não conhece cupom nenhum e recebe o
+                                valor a cobrar do PRÓPRIO CLIENTE (`body.amount`). "Fazer o cupom
+                                funcionar" aqui seria a tela calcular o desconto e mandar o valor
+                                já abatido — ou seja, deixar o navegador dizer quanto a pessoa
+                                deve pagar. Isso é buraco de segurança, não é conserto.
+                                Fora isso, dar desconto sobre um lance que a pessoa já deu é
+                                decisão de negócio, não de código. Se um dia o dono quiser, o
+                                caminho é o servidor aplicar e devolver o valor — como o
+                                createMPPix da loja faz.
+                                Até lá, campo que não faz nada só ensina o cliente a desconfiar
+                                da tela. Na LOJA o cupom funciona (carrinho e checkout do
+                                produto). */}
                             <div className="space-y-3 pt-4 border-t border-gray-700">
-                                <div>
-                                    <p className="text-gray-400 text-sm mb-2">Aplicar cupom</p>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Insira o cupom aqui"
-                                            className="flex-1 px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500"
-                                            disabled
-                                        />
-                                        <button 
-                                            className="px-4 py-2 bg-gray-600 text-gray-400 rounded-lg text-sm font-semibold cursor-not-allowed"
-                                            disabled
-                                        >
-                                            Aplicar
-                                        </button>
-                                    </div>
-                                </div>
-
                                 <div>
                                     <p className="text-gray-400 text-sm mb-2">Adicionar uma observação</p>
                                     <textarea

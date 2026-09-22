@@ -239,6 +239,16 @@ export default async function handler(req, res) {
       payment_id: String(pay.id),
       status: pay.status,
       passaporte_desconto,
+      // 🎟️ 22/09/2026 — O VEREDITO DO CUPOM PASSA A VOLTAR PRA TELA.
+      // Lá em cima, cupom inválido é engolido de propósito ("ignora, cobra
+      // cheio") pra não derrubar a compra. Só que a tela não tinha como saber
+      // disso: ela mostrava "-R$ 20,46 aplicado" e o cliente recebia um PIX do
+      // valor cheio, sem um aviso sequer. É o mesmo desenho que já mordeu o
+      // Passaporte ("a tela prometia desconto, a cobrança vinha com R$ 1,00").
+      // Com estes dois campos a tela mostra o que o SERVIDOR fez, não o que ela
+      // supôs. Campos novos — quem não lê continua funcionando igual.
+      coupon_code,                              // null = nenhum cupom valeu
+      desconto_cupom: round2(discount_amount),  // só o cupom, sem o Passaporte
       pix_code: td.qr_code || null,            // copia-e-cola
       qr_code_base64: td.qr_code_base64 || null, // imagem QR (base64)
       ticket_url: td.ticket_url || null,        // link hospedado MP
