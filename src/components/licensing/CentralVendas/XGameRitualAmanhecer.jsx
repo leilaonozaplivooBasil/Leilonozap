@@ -6,7 +6,7 @@ import DicaDaEtapa from './DicaDaEtapa';
 import FundoJanelaDoMar from './FundoJanelaDoMar';
 import { juntarTexto } from '@/lib/ditado';
 import { restricoesDaCamera, opcoesDoGravador, avisoDoVideoGrande } from '@/lib/gravadorDeVideo';
-import { gratidaoEntregue, GRATIDAO_MIN, VISUALIZACAO_MIN_SEG, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
+import { gratidaoEntregue, progressoDaGratidao, VISUALIZACAO_MIN_SEG, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
 // 🧱 as regras dos três blocos moram FORA da tela (lib pura, testada em node).
 // Duas vezes nesta casa uma regra nasceu dentro de um .jsx e o teste não
 // conseguiu importar — não tem terceira.
@@ -1085,7 +1085,11 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 dizendo que estava fazendo o caminho torto. Agora a pessoa
                 ESCOLHE, com os dois lados pesando igual, e a escolha só abre o
                 que ela pediu — uma coisa de cada vez na tela. */}
-            {!audioGratidaoUrl && !modoEscrita && (
+            {/* 🧹 "essa comunicação tem que ficar muito limpa" — enquanto a
+                pessoa FALA, as duas portas de entrada saem da frente. Antes
+                elas ficavam na tela junto com o botão de parar e com o
+                painel: três coisas disputando o olho de quem está com sono. */}
+            {!audioGratidaoUrl && !modoEscrita && !ditadoGratidao.gravando && (
               <div className="grid grid-cols-2 gap-2" data-teste="duas-opcoes-da-gratidao">
                 <button
                   type="button"
@@ -1175,11 +1179,24 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                   conserto do chamado do Paim em 07/09. O que faltava era ser
                   VISTO, e contar o que já foi feito em vez do que falta.
                   Quem gravou 61 de 70s andou 87%; a barra mostra isso. */}
-              {!entrega.ok && (
-                audioGratidaoSeg > 0
-                  ? <DicaDaEtapa feito={audioGratidaoSeg} meta={minSegHoje} unidade="s" complemento="ou escreve, se preferir" teste="dica-gratidao" />
-                  : <DicaDaEtapa feito={String(gratidao || '').trim().length} meta={GRATIDAO_MIN} unidade="letras" complemento="ou grava um áudio" teste="dica-gratidao" />
-              )}
+              {/* 🔴 22/09 — ANTES ISTO LIA `audioGratidaoSeg`, que só é escrito
+                  quando a gravação PARA. Durante a fala ele valia 0, o painel
+                  caía no ramo do texto e mostrava "0 de 20 letras · faltam 20"
+                  — cobrando LETRAS de quem estava FALANDO — e a barra ficava
+                  zerada justo no minuto em que ela mais serve. Quem escolhe a
+                  régua agora é `progressoDaGratidao`, que enxerga a gravação
+                  em andamento. E o painel aparece TAMBÉM enquanto ela fala:
+                  é aí que a barra crescendo tem valor. */}
+              {(!entrega.ok || ditadoGratidao.gravando) && (() => {
+                const pg = progressoDaGratidao({
+                  gravando: ditadoGratidao.gravando,
+                  segundosAoVivo: ditadoGratidao.segundos,
+                  audioSeg: audioGratidaoSeg,
+                  texto: gratidao,
+                  minSeg: minSegHoje,
+                });
+                return <DicaDaEtapa feito={pg.feito} meta={pg.meta} unidade={pg.unidade} complemento={pg.complemento} teste="dica-gratidao" />;
+              })()}
             </div>
           </>
         )}
