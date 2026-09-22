@@ -18,7 +18,7 @@ import PreviaJornadaModal from './PreviaJornadaModal';
 const campoClaro = 'rounded-lg border px-2 text-[13px] outline-none';
 const estiloCampo = { background: '#FFFFFF', color: '#172B4D', borderColor: '#DFE1E6', height: 36 };
 // 🌑 DIR-90 — o mesmo campo, em vidro escuro pro quadro (que deixou de ser branco).
-const campoEscuro = 'rounded-lg border px-2 text-[13px] outline-none bg-transparent [color-scheme:dark]';
+export const campoEscuro = 'rounded-lg border px-2 text-[13px] outline-none bg-transparent [color-scheme:dark]';
 const estiloCampoEscuro = { color: '#F4F4F4', borderColor: 'rgba(255,255,255,0.18)', height: 36 };
 // 🌑 09/09/2026 — dono: "mais fundo branco", com print da lista ABERTA.
 //
@@ -31,7 +31,11 @@ const estiloCampoEscuro = { color: '#F4F4F4', borderColor: 'rgba(255,255,255,0.1
 // duas cópias do mesmo conserto é como metade dos <select> do sistema ficou
 // pra trás na primeira vez. Aqui sobra só o fundo OPACO do campo, que o
 // `campoEscuro` não tem (ele é `bg-transparent` de propósito, pro vidro).
-const estiloSelectEscuro = { ...estiloCampoEscuro, background: '#1F2937' };
+// 🌑 22/09/2026 — EXPORTADO. O mesmo <select> branco reapareceu num campo de
+// fora deste arquivo ("reunião com o setor", na visão Lista do CrmMetodo), e
+// copiar a cor pra lá recriaria o bug de 09/09 na próxima vez que ela mudasse.
+// Quem usar ISTO tem que pintar as <option> também — ver o comentário acima.
+export const estiloSelectEscuro = { ...estiloCampoEscuro, background: '#1F2937' };
 
 /**
  * @param {boolean} escuro — DIR-90: "O nosso quadro" mora num card de vidro

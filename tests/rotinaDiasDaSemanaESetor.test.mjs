@@ -95,8 +95,14 @@ test('o atalho de setor existe nos quatro campos de título (editar rotina, incl
   assert.match(CRM, /data-teste="rotina-nova-setor"/);
   assert.match(CRM, /data-teste="editar-setor"/);
   assert.match(CRM, /data-teste="nova-tarefa-setor"/);
-  const ocorrenciasOptions = (CRM.match(/\{SETORES_EMPRESA\.map\(\(s\) => <option key=\{s\} value=\{s\}>\{s\}<\/option>\)\}/g) || []).length;
-  assert.equal(ocorrenciasOptions, 4);
+  // 🌑 22/09/2026 — este regex casava a linha JSX INTEIRA, atributo por
+  // atributo. Ao pintar o select de "nova tarefa de hoje" de escuro (ele era
+  // uma caixa branca no meio do painel preto), o `style=` entrou na <option> e
+  // o teste caiu — sem que nada do que ele guarda tivesse mudado.
+  // O que importa é existirem QUATRO listas de setor montadas a partir de
+  // SETORES_EMPRESA; como cada <option> é estilizada não é assunto deste teste.
+  const ocorrenciasOptions = (CRM.match(/SETORES_EMPRESA\.map\(\(s\) => <option/g) || []).length;
+  assert.equal(ocorrenciasOptions, 4, 'esperava 4 listas de setor montadas de SETORES_EMPRESA');
 });
 
 test('o atalho de setor não trava nada — o campo de título continua livre pra editar depois', () => {

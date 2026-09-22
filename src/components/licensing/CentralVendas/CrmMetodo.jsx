@@ -16,6 +16,8 @@ import {
   idDoEventoGoogle, resumoSemanaReunioes, META_REUNIOES_SEMANA,
   reunioesEmpresaDoDia, DIAS_SEMANA, SETORES_EMPRESA, tituloReuniaoComSetor,
 } from '@/lib/metodo';
+import { ordenarAgenda, ordemValida, ORDENS, ORDEM_PADRAO } from '@/lib/ordemDaAgenda';
+import { seloDaDemanda } from '@/lib/seloDaDemanda';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
 // o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
@@ -55,7 +57,7 @@ import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import { BarraProgresso } from './VerificacaoUI';
-import EntradaComDestinos from './EntradaComDestinos';
+import EntradaComDestinos, { campoEscuro, estiloSelectEscuro } from './EntradaComDestinos';
 import PreviaJornadaModal from './PreviaJornadaModal';
 import CrmSonhoModal from './CrmSonhoModal';
 import XGameComprovarModal from './XGameComprovarModal';
@@ -238,6 +240,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const [confirmaRegerar, setConfirmaRegerar] = useState(false); // regerar dia já gerado (DIR-45.2)
   const [logicaAberta, setLogicaAberta] = useState(false); // a escada da narrativa
   const [buscaLista, setBuscaLista] = useState(''); // agenda: busca por nome/telefone (DIR-46)
+  // 🔎 22/09/2026 — a ordem da agenda. Padrão: mais recentes (ver ordemDaAgenda.js).
+  // Fica no localStorage porque é preferência de quem usa, não do dia: quem
+  // trabalha por temperatura escolhe uma vez e não escolhe de novo toda visita.
+  const [ordemLista, setOrdemLista] = useState(() => {
+    try { return ordemValida(localStorage.getItem('nz-ordem-agenda')); } catch { return ORDEM_PADRAO; }
+  });
+  const trocarOrdemLista = (id) => {
+    const nova = ordemValida(id);
+    setOrdemLista(nova);
+    try { localStorage.setItem('nz-ordem-agenda', nova); } catch { /* aba anônima: vale só nesta visita */ }
+  };
   const [qualificando, setQualificando] = useState(null); // contato aberto no modal de qualificação
   const [registroAberto, setRegistroAberto] = useState(null); // {contato} = registrar; {contato, agendar:true} = agendar direto; {contato, editar:registro} = editar (DIR-50); {contato:null} = agendar livre
   const [confirmaExcluir, setConfirmaExcluir] = useState(null); // DIR-50: id do registro esperando o 2º clique
@@ -2100,18 +2113,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // DIR-46 — agenda qualificada: busca + ordenação por probabilidade de
   // fechamento (não qualificados por último, em ordem alfabética).
-  const listaOrdenada = useMemo(() => {
-    const termo = buscaLista.trim().toLowerCase();
-    const filtrados = clientesManuais.filter((c) => !termo
-      || String(c.full_name || '').toLowerCase().includes(termo)
-      || String(c.phone || '').toLowerCase().includes(termo)
-      || String(c.email || '').toLowerCase().includes(termo));
-    return [...filtrados].sort((a, b) => {
-      const pa = probabilidadeFechamento(a.qualificacao_network)?.pct ?? -1;
-      const pb = probabilidadeFechamento(b.qualificacao_network)?.pct ?? -1;
-      return pb - pa || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'pt-BR');
-    });
-  }, [clientesManuais, buscaLista]);
+  // 🔎 22/09/2026 — a regra saiu daqui pra src/lib/ordemDaAgenda.js, onde dá
+  // pra testar sem navegador. Pedido do Ávilla: "os adicionados mais recentes
+  // devem ser vistos primeiro, e alterados também".
+  //
+  // O que estava errado não era falta de ordem — era a ordem CERTA pra outra
+  // pergunta. Vinha por probabilidade de fechamento, e quem acabou de ser
+  // cadastrado não tem qualificação: probabilidade nula, tratada como -1,
+  // último lugar. Entre 277 pessoas, a recém-adicionada sumia — e quem
+  // cadastrou achava que não tinha salvado.
+  //
+  // "Mais quentes" não morreu: virou a segunda opção do seletor. As duas
+  // perguntas existem ("quem eu ligo agora?" e "salvou?"); mudou só qual vem
+  // ligada por padrão.
+  const listaOrdenada = useMemo(
+    () => ordenarAgenda(clientesManuais, { termo: buscaLista, ordem: ordemLista }),
+    [clientesManuais, buscaLista, ordemLista],
+  );
   // 🖐️ 09/09/2026 — achado no tour: o botão "Qualificar" só existe pra quem
   // ainda não tem nota, e todo mundo nesse estado tinha o MESMO data-teste —
   // o alvo do tour não era necessariamente o primeiro da lista visível.
@@ -3185,6 +3203,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                           🚀 liberado pelo administrador (evento){liberacao.motivo ? ` — ${liberacao.motivo}` : ''}
                                         </p>
                                       )}
+                                      {/* 📥 22/09/2026 — pedido do Ávilla: "quando colocar
+                                          demanda na jornada, deve aparecer que é demanda vinda
+                                          do adm". O dado já estava gravado (origem 'xperf' +
+                                          criado_por_id); faltava a jornada mostrar. Ver
+                                          src/lib/seloDaDemanda.js. */}
+                                      {(() => {
+                                        const selo = seloDaDemanda(t, nomePorUsuarioId, currentUser?.id);
+                                        return selo ? (
+                                          <p
+                                            className="text-[10px] font-bold text-indigo-600"
+                                            title={selo.dica}
+                                            data-teste="selo-veio-do-adm"
+                                          >
+                                            {selo.rotulo}
+                                          </p>
+                                        ) : null;
+                                      })()}
                                     </>
                                   );
                                 })()}
@@ -3475,9 +3510,24 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   ESCREVER no mesmo `novaTarefa.titulo` que ele já lê, igual
                   o seletor de dias logo abaixo já faz sem tocar no
                   componente. */}
-              <select value="" onChange={(e) => { if (e.target.value) setNovaTarefa((n) => ({ ...n, titulo: tituloReuniaoComSetor(e.target.value) })); }} className="mt-1.5 bg-white border border-nz-borda rounded text-nz-tinta text-[11px] h-9 px-1" data-teste="nova-tarefa-setor">
-                <option value="">reunião com o setor…</option>
-                {SETORES_EMPRESA.map((s) => <option key={s} value={s}>{s}</option>)}
+              {/* 🌑 22/09/2026 — CAIXA BRANCA NO MEIO DO PAINEL ESCURO. Ávilla:
+                  "verificar ux do formulário, pois tem texto com fundo branco
+                  difícil de ler". É o MESMO defeito que o dono já tinha
+                  apontado duas vezes (09/09: "fundo branco em mais um campo
+                  descoberto") — este campo escapou das duas.
+                  As cores vêm de EntradaComDestinos, o vizinho de cima, em vez
+                  de copiadas: copiar é o que fez o bug voltar. E as <option>
+                  levam a mesma cor de propósito — sem isso a LISTA que o select
+                  abre volta a ser branca no Windows/Linux. */}
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) setNovaTarefa((n) => ({ ...n, titulo: tituloReuniaoComSetor(e.target.value) })); }}
+                className={`mt-1.5 ${campoEscuro} text-[11px]`}
+                style={estiloSelectEscuro}
+                data-teste="nova-tarefa-setor"
+              >
+                <option value="" style={estiloSelectEscuro}>reunião com o setor…</option>
+                {SETORES_EMPRESA.map((s) => <option key={s} value={s} style={estiloSelectEscuro}>{s}</option>)}
               </select>              {/* 🗓️ 20/09/2026 — dono: "igual o despertador da Apple" — o
                   seletor de dias fica sempre à vista, no mesmo lugar do
                   "repetir" (não escondido atrás de marcar a caixa primeiro,
@@ -3661,12 +3711,35 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   )}
                 </div>
               </div>
-              <Input
-                value={buscaLista}
-                onChange={(e) => setBuscaLista(e.target.value)}
-                placeholder="🔎 buscar na agenda por nome, telefone ou e-mail..."
-                className="bg-white border-nz-borda text-nz-tinta"
-              />
+              {/* 🔎 22/09/2026 — a busca já existia; o que faltava era a ORDEM.
+                  Quem acabava de cadastrar alguém não achava a pessoa: sem
+                  qualificação ela caía pro fim da lista. Ver ordemDaAgenda.js. */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  value={buscaLista}
+                  onChange={(e) => setBuscaLista(e.target.value)}
+                  placeholder="🔎 buscar na agenda por nome, telefone ou e-mail..."
+                  className="bg-white border-nz-borda text-nz-tinta flex-1 min-w-[200px]"
+                  data-teste="busca-agenda"
+                />
+                <div className="inline-flex items-center rounded-lg border border-nz-borda bg-white p-0.5 shrink-0" role="group" aria-label="Ordem da agenda">
+                  {ORDENS.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => trocarOrdemLista(o.id)}
+                      title={o.dica}
+                      aria-pressed={ordemLista === o.id}
+                      data-teste={`ordem-agenda-${o.id}`}
+                      className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                        ordemLista === o.id ? 'bg-nz-verde text-white' : 'text-nz-tinta-fraca hover:text-nz-tinta'
+                      }`}
+                    >
+                      {o.rotulo}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {listaOrdenada.length === 0 ? (
                 <p className="text-sm text-nz-tinta-fraca py-4 text-center">
                   {clientesManuais.length === 0 ? 'Sua lista começa aqui — adicione as pessoas da sua agenda.' : 'Ninguém na agenda com essa busca.'}

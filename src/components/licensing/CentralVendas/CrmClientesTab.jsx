@@ -28,6 +28,7 @@ import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
 import { alertasEsteira, vendaRealDoCliente, resumoEsteira } from '@/lib/esteiraCaptacao';
 import { linhaDoTempoCliente } from '@/lib/linhaDoTempoCliente';
+import { acharDuplicado, podeSalvar, aceitaConfirmacao, motivoEmPalavras } from '@/lib/duplicadoDeContato';
 import { membrosDoTopo } from '@/lib/timeCorporativo';
 import { isVendaReal, isPosMarco } from '@/lib/dinheiroReal';
 import { custoEstoqueRestante } from '@/lib/custoProduto';
@@ -731,22 +732,42 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
     });
   }, [productSearchTerm, availableProducts]);
 
-  // ⚠️ DIR-24 Fase 5 — anti-duplicado NO ATO: enquanto digita e-mail/telefone
-  // no cadastro, avisa se a pessoa já existe no CRM (antes o duplicado era
-  // escondido depois, silenciosamente — o vendedor nunca ficava sabendo).
-  const duplicadoNoCadastro = React.useMemo(() => {
-    if (editingCustomer) return null;
-    const email = (formData.email || '').trim().toLowerCase();
-    const fone = (formData.phone || '').replace(/\D/g, '');
-    if (!email && fone.length < 8) return null;
-    return unifiedCustomers.find((c) =>
-      (email && (c.email || '').toLowerCase() === email) ||
-      (fone.length >= 8 && (c.phone || '').replace(/\D/g, '') === fone)
-    ) || null;
-  }, [formData.email, formData.phone, unifiedCustomers, editingCustomer]);
+  // ⚠️ DIR-24 Fase 5 — anti-duplicado NO ATO: enquanto digita no cadastro,
+  // avisa se a pessoa já existe no CRM (antes o duplicado era escondido depois,
+  // silenciosamente — o vendedor nunca ficava sabendo).
+  //
+  // 🚫 22/09/2026 — a regra saiu daqui pra src/lib/duplicadoDeContato.js, onde
+  // dá pra testar sem navegador, e ganhou os dois pedaços que faltavam (pedido
+  // do Ávilla): pega pelo NOME — o exemplo dele, "joão paim", passava direto
+  // porque só e-mail e telefone eram conferidos — e agora IMPEDE em vez de só
+  // avisar com o Salvar clicável do lado.
+  //
+  // Também passou a valer na EDIÇÃO, ignorando o próprio registro. Antes a
+  // edição não era conferida de jeito nenhum: trocar o telefone de alguém pro
+  // telefone de outro cadastro passava batido.
+  const duplicadoNoCadastro = React.useMemo(
+    () => acharDuplicado(unifiedCustomers, formData, { ignorarId: editingCustomer?.id || null }),
+    [formData, unifiedCustomers, editingCustomer],
+  );
+  const [confirmouOutraPessoa, setConfirmouOutraPessoa] = React.useState(false);
+  // a confirmação é do duplicado que está na tela AGORA: mudou quem colidiu (ou
+  // sumiu a colisão), ela cai. Senão marcar uma vez liberaria o formulário pro
+  // resto da sessão, inclusive pra uma colisão diferente que nem foi lida.
+  const colisaoAtual = `${duplicadoNoCadastro?.pessoa?.id || ''}|${duplicadoNoCadastro?.motivo || ''}`;
+  React.useEffect(() => { setConfirmouOutraPessoa(false); }, [colisaoAtual]);
+  const travadoPorDuplicado = !podeSalvar(duplicadoNoCadastro, confirmouOutraPessoa);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // 🚫 cinto e suspensório: o botão já nasce desligado, mas Enter dentro de um
+    // campo de texto também submete o formulário — e aí o botão desligado não
+    // impede nada. A trava de verdade mora aqui.
+    if (travadoPorDuplicado) {
+      toast.error(aceitaConfirmacao(duplicadoNoCadastro?.motivo)
+        ? 'Já existe alguém com este nome. Confirme no aviso que é outra pessoa, ou abra a ficha que existe.'
+        : `Não dá pra salvar: ${motivoEmPalavras(duplicadoNoCadastro?.motivo)} já é de outra ficha.`);
+      return;
+    }
     try {
       // 💼 DIR-25 — o total estimado dos interesses (produtos + planos +
       // licenças, valores editáveis) vai junto em purchase_value: é o
@@ -2372,11 +2393,41 @@ _Enviado via CRM Leilão NoZap_`;
               <CardContent className="overflow-y-auto flex-1 p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {duplicadoNoCadastro && (
-                    <div className="rounded-lg border border-amber-500/60 bg-amber-500/10 p-3 flex items-start gap-2">
-                      <TriangleAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                      <p className="text-sm text-amber-300">
-                        <span className="font-semibold">{duplicadoNoCadastro.full_name}</span> já existe no seu CRM com este {(formData.email || '').trim() && (duplicadoNoCadastro.email || '').toLowerCase() === formData.email.trim().toLowerCase() ? 'e-mail' : 'telefone'} — salvar de novo cria um cadastro duplicado. Prefira abrir o perfil que já existe e anotar por lá.
-                      </p>
+                    <div
+                      className={`rounded-lg border p-3 flex items-start gap-2 ${
+                        aceitaConfirmacao(duplicadoNoCadastro.motivo)
+                          ? 'border-amber-500/60 bg-amber-500/10'
+                          : 'border-red-500/60 bg-red-500/10'
+                      }`}
+                      data-teste="aviso-duplicado"
+                    >
+                      <TriangleAlert className={`w-4 h-4 shrink-0 mt-0.5 ${aceitaConfirmacao(duplicadoNoCadastro.motivo) ? 'text-amber-400' : 'text-red-400'}`} />
+                      <div className={`text-sm ${aceitaConfirmacao(duplicadoNoCadastro.motivo) ? 'text-amber-300' : 'text-red-300'}`}>
+                        <p>
+                          <span className="font-semibold">{duplicadoNoCadastro.pessoa.full_name || 'Um cadastro'}</span> já existe
+                          no seu CRM com {motivoEmPalavras(duplicadoNoCadastro.motivo)}.
+                          {' '}Prefira abrir o perfil que já existe e anotar por lá.
+                        </p>
+                        {aceitaConfirmacao(duplicadoNoCadastro.motivo) ? (
+                          // 🔓 só o NOME abre. E-mail e telefone identificam a pessoa:
+                          // duas pessoas não dividem o mesmo celular. Já homônimo existe,
+                          // e trancar pelo nome sozinho deixaria quem cadastra sem saída.
+                          <label className="mt-2 flex items-start gap-2 text-[12px] font-semibold cursor-pointer" data-teste="confirmar-outra-pessoa">
+                            <input
+                              type="checkbox"
+                              checked={confirmouOutraPessoa}
+                              onChange={(e) => setConfirmouOutraPessoa(e.target.checked)}
+                              className="mt-0.5 accent-amber-400"
+                            />
+                            <span>Conferi: é <u>outra pessoa</u> com o mesmo nome — pode cadastrar assim mesmo.</span>
+                          </label>
+                        ) : (
+                          <p className="mt-1 text-[12px] font-semibold">
+                            🔒 Este cadastro não pode ser salvo: {motivoEmPalavras(duplicadoNoCadastro.motivo)} já é de outra ficha.
+                            {' '}Corrija o campo ou abra a ficha que existe.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                   {/* 🧭 DIR-25 — cadastro organizado em SEÇÕES: dados, endereço,
@@ -2651,7 +2702,13 @@ _Enviado via CRM Leilão NoZap_`;
                   </div>
 
                   <div className="flex gap-3 pt-4 border-t border-gray-700 sticky bottom-0 bg-gray-800 -mx-6 px-6 -mb-6 pb-6">
-                    <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-3">
+                    <Button
+                      type="submit"
+                      disabled={travadoPorDuplicado}
+                      data-teste="salvar-cliente"
+                      title={travadoPorDuplicado ? 'Há um cadastro igual — veja o aviso no topo do formulário' : undefined}
+                      className="flex-1 bg-green-600 hover:bg-green-700 py-3 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
                       <Save className="w-4 h-4 mr-2" />
                       {editingCustomer ? 'Atualizar Cliente' : 'Salvar Cliente'}
                     </Button>
