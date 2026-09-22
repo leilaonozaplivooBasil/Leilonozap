@@ -13,6 +13,10 @@
  *
  * `?foto=<url>` troca o fundo desenhado por uma FOTO qualquer — é assim que
  * se mede NA TELA o que a resolução de um arquivo aguenta, antes de decidir.
+ *
+ * Pra chegar na 2ª lâmina (o DESPERTAR), a banca aperta "Começar o ritual",
+ * igual a pessoa faria — nenhum atalho entra no componente só por causa
+ * de teste.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';

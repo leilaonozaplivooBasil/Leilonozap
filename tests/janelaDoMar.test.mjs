@@ -36,7 +36,7 @@ test('🔴 o degradê roxo→laranja saiu da tela do ritual e não pode voltar',
 
 test('o ritual pinta o fundo com a janela do mar, não com um degradê solto', () => {
   assert.match(TELA, /import FundoJanelaDoMar from '\.\/FundoJanelaDoMar'/);
-  assert.match(TELA, /<FundoJanelaDoMar luz=\{LUZ_DO_PASSO\[passo\] \?\? 0\} foto=\{fotoDeFundo\} \/>/);
+  assert.match(TELA, /<FundoJanelaDoMar luz=\{LUZ_DO_PASSO\[passo\] \?\? 0\} foto=\{fotoDeFundo\}/);
 });
 
 // ─── o dia nasce ─────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ test('a foto do fundo é opcional e não tapa a lâmina', () => {
   // a plumbing da foto existe pra trocar a vista desenhada por uma imagem sem
   // mexer em janela, peitoril nem véu. Ela entra DENTRO do fundo, que é
   // `pointer-events-none`, e nunca por cima do conteúdo do ritual.
-  assert.match(FUNDO, /export default function FundoJanelaDoMar\(\{ luz = 0, foto = null \}\)/);
+  assert.match(FUNDO, /export default function FundoJanelaDoMar\(\{ luz = 0, foto = null[^)]*\}\)/);
   assert.match(FUNDO, /data-teste="foto-da-janela"/);
   assert.ok(FUNDO.indexOf('data-teste="foto-da-janela"') < FUNDO.indexOf('boxShadow: `0 0 0 100vmax'),
     'a foto ficou DEPOIS da janela — ela tem que entrar como vista, com a moldura por cima');

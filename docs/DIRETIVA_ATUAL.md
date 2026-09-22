@@ -12,6 +12,31 @@
 
 ---
 
+## DIR-172 — a 2ª lâmina do ritual: o Despertar com a câmera na mão
+
+**Emitida por:** dono (22/09/2026), com o print da lâmina do "acordei" na mão: *"Segunda lâmina: uma imagem que reflita o Despertar. Uma força, que pegue a tela toda. Precisa ter também a câmera aqui pra bater a foto — é muito melhor isso, está dando trabalho manter todas as outras. Mix com textos melhores, mantendo limpo, porém que dê pra ler e aparecer legal no telefone."* Continuação direta da DIR-171 ("uma de cada vez").
+
+**Achado 1 — três caminhos concorrendo na mesma tela.** A lâmina tinha, do mesmo tamanho: *Abrir o Instagram* (num botão com degradê `from-purple-500 via-pink-500 to-orange-400` — a MESMA assinatura de app-feito-por-IA que a DIR-171 acabou de expulsar da abertura), *Escolher o print do bom dia* (galeria) e só então o *Comprovar*. Quem acorda às 4h40 não escolhe entre três coisas: ou tem uma porta óbvia, ou desiste.
+
+**Achado 2 — a galeria é a fábrica de reprovação.** O caminho de hoje devolve ARQUIVO ANTIGO. A pessoa abre a galeria de madrugada e toca no primeiro "bom dia" que aparece — e a IA reprova por print de outro dia. Não é sempre má-fé; é o caminho errado oferecido na hora errada.
+
+**O que entra:**
+1. **A câmera ao vivo NA PRÓPRIA LÂMINA** (`XGameRitualAmanhecer.jsx`): abre grande, em retrato, com botão *Bater a foto* e o virar-câmera da DIR-93. É o caminho principal. Foto tirada agora não pode ser print velho — o problema do achado 2 deixa de existir por construção, não por regra. A câmera da FOTO é deliberadamente separada da câmera do VÍDEO da visualização: aquela liga MediaRecorder, cronômetro e teto de segurança; esta só mostra a lente e congela um quadro. A lente desliga ao desmontar a tela e ao refazer o bloco.
+2. **A galeria e o Instagram viram linha de texto**, não botão — continuam existindo (quem não tem câmera liberada não pode ficar sem saída; quem já postou o story não precisa posar de novo), mas o tamanho é que diz qual é o caminho.
+3. **O Despertar tomando a tela** (`FundoJanelaDoMar.jsx`): a lâmina ganha `raios` — o leque de luz que sai do disco do sol, de ruído e degradê cônico, com o clarão do rompimento por baixo. A luz do passo sobe de 0,3 pra 0,46: nesta lâmina o sol está ROMPENDO, não é mais a hora azul da abertura. Os raios respeitam `prefers-reduced-motion`.
+4. **Textos curtos e medidos**: "Posta o teu bom dia / Um story simples — a janela, o café, o horário" (instrução de manual) vira **"Você levantou." / "Bate uma foto agora, do jeito que você está. É ela que marca a hora."**
+5. **A IA fica sabendo que a foto nasceu da lente** (`ao_vivo`, gravado no bloco e enviado nas DUAS análises). Sem isto a régua `[TIPO instagram]` continuaria procurando data na tela e desconfiando de imagem escura — e uma foto legítima de 4h40, num quarto com a luz apagada, viraria "dúvida" pra todo mundo, todo dia: o mesmo erro que pegou a Sophia em 21/09, aplicado à casa inteira de uma vez. O aviso entra no CONTEXTO da chamada, nunca no prefixo cacheado (o prefixo tem que ser idêntico em toda chamada, senão o cache de todo mundo quebra por causa de uma lâmina). O que ainda reprova continua escrito: pessoa dormindo/na cama e lente tapada.
+
+**Prova medida:** o mesmo medidor WCAG da DIR-171, agora na 2ª lâmina, em 1440×900 e 414×896 — e desta vez ele também compõe o texto translúcido sobre o fundo antes de contar (um texto a 70% de alfa NÃO tem a cor que está declarada; sem isso a conta mente a favor). Os 10 passam. A medição achou uma reprovação real e ela foi corrigida: o subtítulo dava **4,44:1** no celular em cima do clarão do rompimento — abaixo do mínimo de 4,5:1; em branco puro, com o clarão contido de 0,30 pra 0,17, dá **5,00:1**. Piores medidas finais: título 6,55:1 (mín. 3,0) · subtítulo 5,00:1 · botão da câmera 11,05:1 · links de serviço 6,83:1 (mín. 4,5).
+
+**Fora do escopo:** as lâminas 3, 4 e 5 (Gratidão, Visualização, Fechamento) herdam o fundo e a paleta, mas o conteúdo delas continua como está — é a próxima rodada, na ordem que o dono pediu.
+
+**Prova de código:** suíte completa 3348/3348 (`tests/despertarComCamera.test.mjs` novo, 12 testes), lint limpo, `npm run build` sem erro, colisão limpa. Mutação: (1) tirei o desligamento da lente ao fechar a tela; (2) devolvi o Instagram como botão de degradê roxo; (3) botei o aviso da IA dentro do prefixo cacheado; (4) fiz a 2ª análise esquecer que a foto veio da lente; (5) devolvi a lâmina pra penumbra (0,3). Cada uma quebrou o seu teste; todas revertidas. A mutação (3) NÃO quebrou na primeira tentativa — o teste procurava o `cache_control` no arquivo inteiro em vez de a partir do prefixo, e passava à toa; o TESTE foi corrigido, não o código, e só então a mutação pegou.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-171 — a lâmina de abertura do ritual vira uma janela pro mar (e o roxo de app-feito-por-IA sai)
 
 **Emitida por:** dono (22/09/2026), com o print da abertura do ritual na mão: *"Quero melhorar a X-Game, deixar as cores com MENOS CARA DE APLICATIVO FEITO POR IA e cores mais bonitas. Se possível, imagens de praia no fundo, como se fosse uma janela em frente ao mar... a música com a opção de expandir e diminuir igual o X-Music, só que um pouco menor — inclusive quero deixar o X-Music menor, acho que está ocupando muito espaço. Preciso que esses textos fiquem mais visíveis. Da uma repaginada e deixa foda... quero que ela sinta que está no mar nessa lâmina. Após essa, vamos para a próxima."*

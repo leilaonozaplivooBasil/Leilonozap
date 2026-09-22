@@ -95,12 +95,15 @@ function Halo({ children }) {
 }
 
 /** O botão principal do ritual: sólido, com lábio 3D, afundando ao clicar. */
-function BotaoRitual({ onClick, children, disabled }) {
+// `marca` vira `data-teste`: sem ela, todo botão desta tela é invisível pra
+// banca do navegador — e um botão que a prova não acha é um botão sem prova.
+function BotaoRitual({ onClick, children, disabled, marca }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      {...(marca ? { 'data-teste': marca } : {})}
       className="xeos-cru rounded-2xl bg-[#FFC46B] text-[#0A1B2E] text-[15px] sm:text-[16px] font-extrabold tracking-wide px-10 py-4 hover:bg-[#FFD9A0] disabled:opacity-30 transition-transform active:translate-y-[3px]"
       style={{ boxShadow: '0 5px 0 0 #A7703A, 0 14px 34px rgba(255,170,80,.28)' }}
     >{children}</button>
@@ -135,7 +138,7 @@ const P = Object.freeze({ ABERTURA: 0, ACORDEI: 1, GRATIDAO: 2, VISUALIZACAO: 3,
 // janela: abre na hora azul, fecha com o sol alto. Não é enfeite — é a mesma
 // coisa que ela está fazendo na vida dela naquela meia hora, acontecendo na
 // tela. (dono, 22/09: "quero que ela sinta que está no mar nessa lâmina")
-const LUZ_DO_PASSO = Object.freeze({ [P.ABERTURA]: 0, [P.ACORDEI]: 0.3, [P.GRATIDAO]: 0.55, [P.VISUALIZACAO]: 0.8, [P.FECHAMENTO]: 1 });
+const LUZ_DO_PASSO = Object.freeze({ [P.ABERTURA]: 0, [P.ACORDEI]: 0.46, [P.GRATIDAO]: 0.55, [P.VISUALIZACAO]: 0.8, [P.FECHAMENTO]: 1 });
 const PASSO_DO_BLOCO = Object.freeze({ acordei: P.ACORDEI, gratidao: P.GRATIDAO, visualizacao: P.VISUALIZACAO });
 
 /** A barra 1 · 2 · 3 — onde eu estou, e o que já está em casa. */
@@ -196,6 +199,9 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   // 📸 BLOCO 1 — o print do bom dia
   const [print, setPrint] = useState(null);      // File
   const [printUrlLocal, setPrintUrlLocal] = useState(null);
+  // 🤖 se a imagem nasceu da lente agora, a IA não pode reprovar por "pode
+  // ser de outro dia" nem por escuridão de 4h40 — ver xgameValidarPrint.
+  const [fotoAoVivo, setFotoAoVivo] = useState(false);
   const [gratidao, setGratidao] = useState('');
   const [acao, setAcao] = useState('');
   // 🎙️ o áudio de cada campo, pra virar acervo (o dono pediu pra guardar).
@@ -292,6 +298,17 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   const videoAoVivoRef = useRef(null);
   const timerRef = useRef(null);
   const [ladoCamera, setLadoCamera] = useState('user'); // DIR-93 — de qual lado a câmera está
+  // 📷 22/09 — A CÂMERA DO DESPERTAR, na própria lâmina.
+  // O dono: "precisa ter também a câmera aqui pra bater a foto, é muito
+  // melhor isso, está dando trabalho manter todas as outras." Ela é
+  // SEPARADA da câmera do vídeo da visualização de propósito: aquela liga
+  // MediaRecorder, cronômetro e teto de segurança; esta só mostra o que a
+  // lente vê e congela um quadro. Misturar as duas era herdar o gravador
+  // inteiro numa tela que não grava nada.
+  const [camFotoAberta, setCamFotoAberta] = useState(false);
+  const [ladoCameraFoto, setLadoCameraFoto] = useState('user');
+  const videoFotoRef = useRef(null);
+  const streamFotoRef = useRef(null);
 
   const usarLinkMusica = () => {
     const lista = extrairListaYoutube(linkMusica);
@@ -459,8 +476,63 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
     const v = validarPrint(f);
     if (!v.valido) { setAviso(v.motivo); setTimeout(() => setAviso(''), 7000); return; }
     setPrint(f);
+    setFotoAoVivo(false);
     setAviso('');
   };
+  // 📷 a câmera ao vivo da lâmina do despertar.
+  //
+  // 🔴 POR QUE ELA VIRA O CAMINHO PRINCIPAL: a galeria devolve arquivo
+  // antigo. Metade das reprovações do bloco "acordei" é print de outro dia
+  // — e a pessoa nem sempre está mentindo: ela abre a galeria às 4h40 e
+  // toca no primeiro "bom dia" que aparece. Foto tirada AGORA não tem esse
+  // problema: ela nasce na hora, com a luz da hora.
+  const pedirStreamFoto = async (lado) => {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: lado } }, audio: false });
+    streamFotoRef.current = stream;
+    // o <video> só existe depois do render — por isso o respiro
+    setTimeout(() => { if (videoFotoRef.current) { videoFotoRef.current.srcObject = stream; videoFotoRef.current.play().catch(() => {}); } }, 50);
+    return stream;
+  };
+  const fecharCameraFoto = () => {
+    streamFotoRef.current?.getTracks?.().forEach((t) => t.stop());
+    streamFotoRef.current = null;
+    setCamFotoAberta(false);
+  };
+  const abrirCameraFoto = async () => {
+    try {
+      await pedirStreamFoto(ladoCameraFoto);
+      setCamFotoAberta(true);
+      setAviso('');
+    } catch {
+      // sem permissão ou sem câmera: quem não consegue abrir a lente NÃO
+      // pode ficar sem caminho nenhum às 4h40 — a galeria continua ali.
+      setAviso('Não consegui abrir a câmera. Dá pra mandar um print que você já tirou, no link abaixo.');
+      setTimeout(() => setAviso(''), 8000);
+    }
+  };
+  const virarCameraFoto = async () => {
+    const novoLado = ladoCameraFoto === 'user' ? 'environment' : 'user';
+    // 📵 no celular a câmera é recurso exclusivo: parar a atual ANTES de
+    // pedir a outra, senão o navegador trava a promessa ou devolve a mesma.
+    streamFotoRef.current?.getTracks?.().forEach((t) => t.stop());
+    try { await pedirStreamFoto(novoLado); setLadoCameraFoto(novoLado); }
+    catch { try { await pedirStreamFoto(ladoCameraFoto); } catch { fecharCameraFoto(); } }
+  };
+  const baterFoto = () => {
+    const v = videoFotoRef.current;
+    if (!v || !v.videoWidth) return;
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    c.toBlob((blob) => {
+      if (blob) { setPrint(new File([blob], `despertar_${Date.now()}.jpg`, { type: 'image/jpeg' })); setFotoAoVivo(true); }
+      fecharCameraFoto();
+    }, 'image/jpeg', 0.92);
+  };
+  // desmontou a tela = a lente desliga. Sem isto, a luzinha da câmera fica
+  // acesa depois que a pessoa fecha o ritual.
+  useEffect(() => () => { streamFotoRef.current?.getTracks?.().forEach((t) => t.stop()); }, []);
+
   useEffect(() => {
     if (!print) { setPrintUrlLocal(null); return undefined; }
     const url = URL.createObjectURL(print);
@@ -495,7 +567,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   const refazerBloco = async (bloco) => {
     const nova = await onRefazer?.(bloco);
     if (nova) setComprovacao(nova);
-    if (bloco === 'acordei') { setPrint(null); }
+    if (bloco === 'acordei') { setPrint(null); setFotoAoVivo(false); fecharCameraFoto(); }
     if (bloco === 'gratidao') { setAudioGratidao(null); setAudioGratidaoSeg(0); setGratidao(''); }
     if (bloco === 'visualizacao') { setVideoBlob(null); setFrameBlob(null); setGravSeg(0); setAcao(''); setAudioAcao(null); }
     setExplicando(''); setTextoExplicacao('');
@@ -512,8 +584,15 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
   const salvarAcordei = async () => {
     if (!print) return;
+    // 📵 cinto e suspensório: no celular a câmera é recurso EXCLUSIVO. Se a
+    // lente da foto sobrevivesse até a lâmina da visualização, o
+    // `getUserMedia` do vídeo seria recusado e a pessoa levaria um "não
+    // consegui abrir a câmera" sem ter feito nada errado. Hoje nenhum
+    // caminho deixa a lente aberta aqui — mas o custo desta linha é zero e
+    // o custo do engano é o ritual inteiro travado às 4h40.
+    fecharCameraFoto();
     const hash = await hashDoArquivo(print).catch(() => '');
-    const ok = await salvarBloco('acordei', { file: print, hash });
+    const ok = await salvarBloco('acordei', { file: print, hash, aoVivo: fotoAoVivo });
     // 🔊 o som marca ETAPA VENCIDA, não clique. Clique que não salvou fica
     // mudo de propósito: um "ok" sonoro em cima de uma recusa mente pra pessoa.
     if (ok) { som('passo'); setPasso(P.GRATIDAO); }
@@ -551,7 +630,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070E18] overflow-hidden">
-      <FundoJanelaDoMar luz={LUZ_DO_PASSO[passo] ?? 0} foto={fotoDeFundo} />
+      <FundoJanelaDoMar luz={LUZ_DO_PASSO[passo] ?? 0} foto={fotoDeFundo} raios={passo === P.ACORDEI} />
       {/* o QUADRO DOS SONHOS na visualização: UM sonho de cada vez, ENORME
           (quase preenchendo a tela, no celular e no desktop), subindo devagar
           como numa meditação — um saindo, o próximo entrando, em ordem que
@@ -873,32 +952,110 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
             bloco 1 às cinco da manhã. */}
         {passo === P.ACORDEI && (
           <>
-            <Halo><Instagram className="w-12 h-12 text-white" strokeWidth={1.5} /></Halo>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Posta o teu bom dia.</h2>
-            <p className="text-white/70 text-[13px]">Um story simples — a janela, o café, o horário. Depois manda o print aqui: é ele que prova que você acordou.</p>
-            <a
-              href={LINK_ABRIR_INSTAGRAM}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 text-white font-bold px-6 py-3 hover:opacity-90"
-            ><span className="inline-flex items-center gap-2"><Instagram className="w-4 h-4" strokeWidth={2.2} /> Abrir o Instagram</span></a>
+            {/* ═══════════════════════════════════════════════════════════
+                🌅 O DESPERTAR — 22/09/2026, ordem do dono:
+                "Segunda lâmina: uma imagem que reflita o Despertar, uma
+                força, que pegue a tela toda. Precisa ter também a câmera
+                aqui pra bater a foto — é muito melhor isso, está dando
+                trabalho manter todas as outras. Mix com textos melhores,
+                mantendo limpo, porém que dê pra ler e aparecer legal no
+                telefone."
+
+                🔴 O QUE SAIU: três caminhos concorrendo na mesma tela —
+                "Abrir o Instagram" num botão com degradê roxo→rosa→laranja
+                (a MESMA assinatura de app-feito-por-IA que a lâmina 1
+                acabou de expulsar), "Escolher o print" do mesmo tamanho, e
+                só depois o comprovar. Quem acorda às 4h40 não escolhe entre
+                três coisas: ou tem uma porta óbvia, ou desiste.
+
+                🟢 O QUE ENTRA: UMA porta — a lente, aberta grande. As
+                outras duas viram linha de texto pequena, pra quem precisa.
+                ═══════════════════════════════════════════════════════ */}
+            <Halo><Sunrise className="w-12 h-12 text-[#FFE7C2]" strokeWidth={1.5} /></Halo>
+            <h2
+              className="text-[1.85rem] sm:text-4xl font-black tracking-tight text-[#FFF8F0]"
+              style={{ textShadow: '0 2px 24px rgba(4,12,22,.75), 0 1px 2px rgba(4,12,22,.9)' }}
+            >Você levantou.</h2>
+            {/* 🔦 medido no celular: em #FFF1DF esta linha dava 4,44:1 em cima
+                do clarão do rompimento — REPROVADA na WCAG. Em branco puro,
+                com o clarão mais contido, passa com folga. */}
+            <p className="text-white text-[15px] leading-relaxed max-w-xs mx-auto" style={{ textShadow: '0 1px 14px rgba(4,12,22,.85), 0 1px 2px rgba(4,12,22,.75)' }}>
+              Bate uma foto agora, do jeito que você está. É ela que marca a hora.
+            </p>
 
             {printUrlLocal ? (
-              <div className="xeos-cru rounded-2xl border border-emerald-300/40 bg-emerald-400/10 p-3 space-y-2" data-teste="print-escolhido">
-                <img src={printUrlLocal} alt="print do bom dia" className="mx-auto max-h-44 rounded-xl" />
-                <button type="button" onClick={() => { setPrint(null); setPrintUrlLocal(null); }} className="text-[11px] text-white/55 underline hover:text-white/80">trocar o print</button>
+              // ✅ a foto na mão: aparece GRANDE, no mesmo tamanho em que foi
+              // tirada. Miniatura de 44px fazia a pessoa apertar comprovar
+              // sem ter visto direito o que estava mandando.
+              <div className="xeos-cru rounded-3xl p-2 space-y-2 ring-1 ring-emerald-300/40" style={{ background: 'rgba(6,18,32,.72)' }} data-teste="print-escolhido">
+                <img src={printUrlLocal} alt="a foto do seu despertar" className="mx-auto w-full max-w-[300px] rounded-2xl" />
+                <button
+                  type="button"
+                  onClick={() => { setPrint(null); setPrintUrlLocal(null); setFotoAoVivo(false); }}
+                  data-teste="trocar-a-foto"
+                  className="text-[12px] font-bold text-[#FFC46B] underline hover:text-[#FFD79C]"
+                >tirar outra</button>
+              </div>
+            ) : camFotoAberta ? (
+              // 📷 a lente ABERTA. Retrato e quase a largura toda — o mesmo
+              // tamanho que a câmera da visualização ganhou na DIR-170,
+              // pelo mesmo motivo: num quadradinho a pessoa se vê cortada e
+              // acha que não está pegando.
+              <div className="space-y-2" data-teste="camera-do-despertar">
+                <video
+                  ref={videoFotoRef}
+                  playsInline
+                  muted
+                  className="mx-auto w-full max-w-[300px] aspect-[3/4] rounded-3xl object-cover ring-4 ring-[#FFC46B]/50 bg-black"
+                />
+                <div className="flex items-center justify-center gap-2">
+                  <BotaoRitual onClick={baterFoto} marca="bater-a-foto">
+                    <span className="inline-flex items-center gap-2"><Camera className="w-4 h-4" strokeWidth={2.4} /> Bater a foto</span>
+                  </BotaoRitual>
+                  <button
+                    type="button"
+                    onClick={virarCameraFoto}
+                    data-teste="virar-camera-do-despertar"
+                    aria-label="virar a câmera"
+                    className="xeos-cru rounded-2xl px-3 py-3 ring-1 ring-[#FFC46B]/40 text-[#FFC46B] hover:bg-white/10"
+                    style={{ background: 'rgba(6,18,32,.72)' }}
+                  ><SwitchCamera className="w-5 h-5" /></button>
+                </div>
+                <button type="button" onClick={fecharCameraFoto} className="text-[11px] text-[#FFF1DF]/60 underline hover:text-[#FFF1DF]">fechar a câmera</button>
               </div>
             ) : (
-              <label className="xeos-cru block cursor-pointer rounded-2xl bg-white/15 border border-white/30 text-white text-sm font-bold px-6 py-4 hover:bg-white/25">
-                <span className="inline-flex items-center gap-2"><Camera className="w-4 h-4" strokeWidth={2} /> Escolher o print do bom dia</span>
-                <input type="file" accept="image/*" className="hidden" data-teste="print-do-bom-dia" onChange={escolherPrint} />
-              </label>
+              <BotaoRitual onClick={abrirCameraFoto} marca="abrir-camera-do-despertar">
+                <span className="inline-flex items-center gap-2"><Camera className="w-5 h-5" strokeWidth={2.4} /> Abrir a câmera</span>
+              </BotaoRitual>
             )}
-            {aviso && <p className="xeos-cru text-xs font-semibold text-amber-200 bg-white/10 rounded-xl px-3 py-2">{aviso}</p>}
+
+            {aviso && <p className="xeos-cru text-xs font-bold text-[#0A1B2E] bg-[#FFD79C] rounded-xl px-3 py-2">{aviso}</p>}
+
             <BotaoRitual disabled={!print || !!salvando} onClick={salvarAcordei}>
               {salvando === 'acordei' ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> guardando…</span> : 'Comprovar que acordei'}
             </BotaoRitual>
-            <p className="text-white/40 text-[10px]">o print é guardado na hora — a conferência acontece depois, sem te travar aqui</p>
+
+            {/* 🚪 AS DUAS PORTAS DE SERVIÇO. Continuam existindo — quem não
+                tem câmera liberada não pode ficar sem saída, e quem já postou
+                o story não pode ser obrigado a posar de novo. Mas são LINHA
+                DE TEXTO, não botão: o tamanho é que diz qual é o caminho. */}
+            {!camFotoAberta && !printUrlLocal && (
+              <div className="flex flex-col items-center gap-1.5 pt-1" data-teste="portas-de-servico-do-despertar">
+                <label className="xeos-cru cursor-pointer text-[12px] text-[#FFF1DF]/70 underline hover:text-[#FFF1DF]">
+                  mandar um print que eu já tirei
+                  <input type="file" accept="image/*" className="hidden" data-teste="print-do-bom-dia" onChange={escolherPrint} />
+                </label>
+                <a
+                  href={LINK_ABRIR_INSTAGRAM}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-teste="abrir-instagram"
+                  className="inline-flex items-center gap-1.5 text-[12px] text-[#FFF1DF]/70 underline hover:text-[#FFF1DF]"
+                ><Instagram className="w-3.5 h-3.5" strokeWidth={2} /> postar o bom dia no Instagram também</a>
+              </div>
+            )}
+
+            <p className="text-[#FFF1DF]/45 text-[10px]">a foto é guardada na hora — a conferência acontece depois, sem te travar aqui</p>
           </>
         )}
 
