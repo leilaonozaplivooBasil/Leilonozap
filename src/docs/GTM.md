@@ -2,59 +2,71 @@
 
 Instalado em `index.html` em 22/09/2026, a pedido do Vinicius.
 
+> **Decisão do dono, 22/09/2026:** *"o que for velho pode retirar. o que manda
+> agora é o que o Vinicius traz."*
+> O contêiner é, a partir de hoje, o **único** rastreamento de marketing do site.
+> Nada de tag solta no código — nunca mais.
+
 ## Onde está
 
-- **`<head>`** — o snippet do contêiner, logo acima do bloco do gtag.js.
-  Fica depois dos `preconnect`/`preload` de propósito: o GTM é assíncrono e não
-  bloqueia a pintura, mas subir ele acima do `preload` do logo atrasaria o LCP
-  sem melhorar medição nenhuma.
+- **`<head>`** — o snippet do contêiner, depois dos `preconnect`/`preload`.
+  O GTM é assíncrono e não bloqueia a pintura, mas subir ele acima do `preload`
+  do logo atrasaria o LCP sem melhorar medição nenhuma.
 - **`<body>`** — o `<noscript>` com o iframe, na primeira linha do body, como a
   própria Google pede.
 
 Só existe **um** `index.html` de verdade no projeto. Os outros `.html` estão em
 `tests/navegador/` e são bancadas de teste — não levam tag.
 
-## ⚠️ Duas coisas pra quem for mexer no contêiner
+## 🧹 O que saiu junto (e precisa voltar DENTRO do contêiner)
 
-### 1. O GA4 já está no site por fora do GTM
+Estas três medições rodavam soltas no código. Foram removidas na mesma mudança.
+**Enquanto não forem recriadas no contêiner, elas não existem mais.**
 
-O `gtag.js` do **G-YS4W9104X6** continua carregado direto no `index.html`, como
-sempre esteve. Se o contêiner também tiver uma tag **GA4 Configuration** com
-esse mesmo ID, **o pageview conta duas vezes** e todo o relatório de sessões
-fica inflado.
+| O que era | ID | Onde estava | Quem precisa recriar |
+|---|---|---|---|
+| Google Analytics 4 | `G-YS4W9104X6` | `gtag.js` no `<head>` do `index.html` | tag **GA4 Configuration** |
+| Meta Pixel — leilões | `1765569374618252` | `Home.jsx` (PageView) e `Register.jsx` (Lead) | tag **Meta Pixel** |
+| Meta Pixel — Rank Premiado | `1434558685189211` | `ConcursoLeilaoNozap.jsx` (PageView) | tag **Meta Pixel** |
 
-Escolher um dos dois:
+O Datadog RUM (`index.html`) **ficou**: é monitoramento de erro e performance,
+não é marketing.
 
-- **A** — o contêiner NÃO mede GA4 (só Meta, Ads, etc.) e o `gtag.js` fica onde
-  está; ou
-- **B** — o GA4 passa a ser servido pelo contêiner e o bloco `gtag.js` sai do
-  `index.html`.
+## ⚠️ Três coisas pra quem for configurar o contêiner
 
-Hoje estamos no **A**. Trocar para o B é mudança de código — não dá pra fazer
-só pelo painel do GTM.
+### 1. O site é uma SPA — o Pageview padrão não basta
 
-### 2. O site é uma SPA — o pageview só dispara na primeira carga
+Navegar de `/Loja-Virtual` para `/leiloes` não recarrega a página. O gatilho
+**Pageview** só dispara na primeira carga; para o resto é o gatilho
+**History Change**.
 
-Navegar de `/Loja-Virtual` para `/leiloes` não recarrega a página, então o
-*History Change* do GTM **não** dispara sozinho com o gatilho padrão de
-Pageview. Quem for montar as tags precisa usar o gatilho **History Change** do
-próprio GTM, ou pedir um `dataLayer.push` a cada troca de rota no React Router.
+Isso não é detalhe: as duas páginas de maior tráfego (Home/leilões e Rank
+Premiado) são justamente as que o visitante mais alcança por navegação interna.
+Era exatamente por isso que existiam aqueles `useEffect` de PageView no código —
+o problema não sumiu, só mudou de dono.
 
-O mesmo vale para o `gtag.js` que já estava aqui: ele também só conta a primeira
-carga. Isso é anterior ao GTM e não foi alterado nesta instalação.
+### 2. Os dois funis não podem se misturar
 
-## Os pixels da Meta não passam por aqui
+O **Rank Premiado** (`/ConcursoLeilaoNozap`) e os **leilões** (`/Home`,
+`/leiloes`) são campanhas diferentes, de contratantes diferentes. Tinham pixels
+separados por isso — e a separação já quebrou uma vez, em 31/08/2026, quando um
+`track` genérico mandou o PageView de uma página para o pixel da outra.
 
-`src/lib/metaPixel.js` carrega dois pixels (leilões e Rank Premiado) com
-`trackSingle`. Se alguém puser esses mesmos pixels no contêiner também, cada
-evento vai contar em dobro. Ler o comentário do topo daquele arquivo antes.
+No contêiner, separar por **caminho da URL** ou pelo campo **`lead_type`** do
+evento `lead`. Se as duas campanhas caírem na mesma tag, o histórico de
+conversão das duas fica errado e não tem como desfazer depois.
+
+### 3. Não repita o que já está no dataLayer
+
+O site empurra evento próprio (tabela abaixo). Criar uma tag que dispara "em
+tudo" **e** uma tag em cima do evento nomeado conta a mesma coisa duas vezes.
 
 ## 🎁 O site já empurra 6 eventos pro dataLayer
 
 `src/lib/tracking.js` existe desde 11/08/2026 e foi escrito justamente para o dia
 em que o GTM entrasse. Ele nunca dependeu do GTM estar instalado — só empurra
-para `window.dataLayer`. Ou seja: **assim que o contêiner subir, esses eventos já
-estão disponíveis como gatilho, sem escrever uma linha de código nova.**
+para `window.dataLayer`. Ou seja: **esses eventos já estão disponíveis como
+gatilho, sem escrever uma linha de código nova.**
 
 | `event`           | Quando dispara                        | Campos                                              |
 |-------------------|---------------------------------------|-----------------------------------------------------|
@@ -63,8 +75,11 @@ estão disponíveis como gatilho, sem escrever uma linha de código nova.**
 | `cta_click`       | Clique em botão de ação               | `cta_name`, `page_section`                          |
 | `lead`            | **Cadastro efetuado** (definição do dono, 31/08/2026) | `lead_type`, `page_section`      |
 | `begin_checkout`  | Início de checkout                    | `checkout_type`, `value`, `currency` (`BRL`), `page_section` |
-| `purchase`        | Compra concluída                      | ver `src/lib/tracking.js`                           |
+| `purchase`        | Compra concluída                      | `transaction_type`, `value`, `currency` (`BRL`), `page_section` |
 
 Todos levam `timestamp` junto.
 
 No GTM, o gatilho é **Custom Event** com o nome exato da coluna `event`.
+
+`lead_type` vale `'cadastro'` ou `'cadastro_google'`. É por ele que se separa a
+origem do lead — ver o item 2 acima.

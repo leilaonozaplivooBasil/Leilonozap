@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { medirPagina, PIXEL_RANK_PREMIADO } from '@/lib/metaPixel';
 import logoNozap from '@/assets/leilao-nozap-logo.png';
 import HeroDailyPrize from '@/components/concurso/HeroDailyPrize';
 import CountdownTimer from '@/components/concurso/CountdownTimer';
@@ -125,34 +124,16 @@ export default function ConcursoLeilaoNozap() {
     try { return localStorage.getItem('concurso_checkin') === new Date().toISOString().slice(0, 10); } catch { return false; }
   });
 
-  // 📊 Meta Pixel — SÓ nesta página (Rank Premiado), autorizado por Heloim em 11/08/2026
-  // a pedido da Avilla Business. Não entra no index.html (carregaria em todas as páginas).
+  // 📊 22/09/2026 — saíram daqui duas medições soltas: o PageView do pixel da
+  // Meta do Rank Premiado e um page_view do GA4 via window.gtag. As duas existiam
+  // porque esta página também é aberta por navegação SPA, sem reload, e nesse
+  // caminho nenhum pageview nascia sozinho.
   //
-  // 31/08/2026 — o snippet solto que morava aqui foi trocado pelo helper compartilhado.
-  // Não é arrumação: com a entrada do segundo pixel (leilões, na Home) o desenho antigo
-  // quebrava ESTA página. O `if (!window.fbq)` protegia o script, não o init — quem
-  // abrisse a Home primeiro deixaria este pixel sem init, e o `track` genérico ainda
-  // mandaria o PageView daqui para o pixel dos leilões. O helper dá init por ID e
-  // dispara com `trackSingle`. Ver src/lib/metaPixel.js.
-  useEffect(() => {
-    // PageView a cada montagem, inclusive quando o visitante volta pra cá por
-    // navegação SPA (sem reload) — senão a visita não seria contada.
-    medirPagina(PIXEL_RANK_PREMIADO);
-  }, []);
-
-  // 📊 GA4 — o gtag.js do index.html carrega global e já registra o 1º acesso
-  // completo à URL, mas essa página também é aberta por navegação SPA (sem
-  // reload) vindo de outras telas do app, e nesse caso nenhum page_view novo
-  // dispara sozinho. Garante o evento aqui, sempre que a página monta.
-  useEffect(() => {
-    if (typeof window.gtag === 'function') {
-      window.gtag('event', 'page_view', {
-        page_path: window.location.pathname + window.location.search,
-        page_location: window.location.href,
-        page_title: 'Rank Premiado',
-      });
-    }
-  }, []);
+  // Isso continua verdade — o que mudou é QUEM resolve: agora é o contêiner do
+  // GTM, pelo gatilho History Change. ATENÇÃO de quem for configurar lá: esta
+  // página é um funil SEPARADO do funil dos leilões. Era exatamente essa mistura
+  // que o pixel próprio evitava aqui. No GTM, separar por caminho da URL (ou pelo
+  // `lead_type` do evento `lead`). Ver src/docs/GTM.md.
 
   // Trava o scroll do fundo enquanto o painel admin está em tela cheia + fecha no ESC.
   useEffect(() => {

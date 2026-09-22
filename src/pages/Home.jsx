@@ -33,11 +33,6 @@ import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { useSectionTracking } from '@/lib/tracking';
-// 📊 Pixel da Meta desta página (31/08/2026, pedido do dono). É o pixel das
-// campanhas de leilão — separado do pixel do Rank Premiado, que tem outro ID.
-// Ver src/lib/metaPixel.js: os dois convivem porque o init é por ID e o disparo
-// é `trackSingle`.
-import { medirPagina, PIXEL_LEILOES } from '@/lib/metaPixel';
 // 🔎 D4 — a busca precisa PARECER que buscou (áudio do dono, 11/09 às 14h08)
 import { mostrarBlocosDeDescoberta, recadoDaBusca } from '@/lib/buscaDaVitrine';
 
@@ -131,18 +126,11 @@ export default function Home() {
   // 🔥 TODOS OS HOOKS NO TOPO - NUNCA APÓS CONDICIONAIS OU RETURNS
   useSectionTracking('leiloes', 'Leilões Ativos');
 
-  // 📊 PageView do pixel da Meta. Dentro de useEffect (não no corpo) porque é
-  // efeito colateral: no corpo do componente rodaria de novo a cada re-render
-  // — e esta página re-renderiza muito (leilões chegam por realtime), o que
-  // multiplicaria a mesma visita por dezenas.
-  //
-  // Dispara a CADA montagem, de propósito. Esta página atende /Home e /leiloes,
-  // e o visitante volta pra ela navegando dentro do app, sem recarregar — nesse
-  // caminho nenhum PageView nasce sozinho, e a visita não seria contada. Mesmo
-  // raciocínio já aplicado ao GA4 em ConcursoLeilaoNozap.jsx.
-  useEffect(() => {
-    medirPagina(PIXEL_LEILOES);
-  }, []);
+  // 📊 22/09/2026 — o PageView do pixel da Meta que morava aqui saiu junto com
+  // o pixel. Esta página atende /Home e /leiloes e o visitante volta pra ela por
+  // navegação SPA, sem recarregar — então a visita continua precisando ser
+  // contada de propósito. Quem conta agora é o contêiner do GTM, pelo gatilho
+  // History Change. Ver src/docs/GTM.md.
   const navigate = useNavigate();
   const scrollerRef = useRef(null);
   const retryTimeoutRef = useRef(null);

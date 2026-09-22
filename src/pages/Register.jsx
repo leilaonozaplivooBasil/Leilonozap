@@ -12,7 +12,6 @@ import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { registrarAceiteTermo } from '@/lib/termoAdesao';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 import { useSectionTracking, trackLead } from '@/lib/tracking';
-import { PIXEL_LEILOES } from '@/lib/metaPixel';
 
 const AppUser = plataforma.entities.AppUser;
 
@@ -90,7 +89,7 @@ export default function Register() {
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
       registrarAceiteTermo(user);
-      trackLead('cadastro_google', 'cadastro', PIXEL_LEILOES);
+      trackLead('cadastro_google', 'cadastro');
       // ⚡ Sem espera artificial (eram 300ms somados a um fluxo já lento).
       redirectAfterAuth();
     } catch (error) {
@@ -326,7 +325,7 @@ export default function Register() {
 
       localStorage.setItem('currentUser', JSON.stringify(newUser));
       sessionStorage.setItem('isLoggedIn', 'true');
-      trackLead('cadastro', 'cadastro', PIXEL_LEILOES);
+      trackLead('cadastro', 'cadastro');
 
       // 📜 PONTO 67 — registra o aceite dado antes do cadastro
       registrarAceiteTermo(newUser);

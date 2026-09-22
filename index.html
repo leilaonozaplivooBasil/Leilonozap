@@ -62,25 +62,19 @@
          Fica DEPOIS dos preconnect/preload de propósito: o GTM é assíncrono e
          não bloqueia a pintura, mas subir ele acima do preload do logo atrasaria
          o LCP sem ganho nenhum de medição.
-         ⚠️ O gtag.js do GA4 (G-YS4W9104X6) logo abaixo continua ativo. Se o
-         contêiner também tiver uma tag GA4 com ESSE mesmo ID, o pageview conta
-         duas vezes. Ver src/docs/GTM.md. -->
+
+         🧹 22/09/2026 — decisão do dono: "o que for velho pode retirar, o que
+         manda agora é o que o Vinicius traz". Este é o ÚNICO rastreamento de
+         marketing do site. Saíram daqui o gtag.js do GA4 (G-YS4W9104X6) e, do
+         src/, os dois pixels da Meta. Quem quiser qualquer um deles de volta
+         põe DENTRO do contêiner — nunca mais solto no código.
+         Os IDs antigos e o porquê estão em src/docs/GTM.md. -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
     j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
     })(window,document,'script','dataLayer','GTM-K2KHK4CB');</script>
     <!-- End Google Tag Manager -->
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YS4W9104X6"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-YS4W9104X6');
-    </script>
 
     <!-- Login com Google (Google Identity Services) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>

@@ -1,9 +1,14 @@
-// 📊 DataLayer / GA4 / GTM — camada de rastreamento da jornada do lead.
+// 📊 DataLayer / GTM — camada de rastreamento da jornada do lead.
 // Autorizado pelo time de marketing (Ávila Business) em 11/08/2026.
 // Só empurra eventos para window.dataLayer — não depende de nenhum script
-// externo estar instalado ainda (GTM), então nunca quebra nada em produção.
+// externo estar instalado, então nunca quebra nada em produção.
+//
+// 🧹 22/09/2026 — este arquivo virou a ÚNICA porta de saída do rastreamento.
+// Antes ele também disparava o pixel da Meta direto daqui. Não dispara mais:
+// o dono definiu que o contêiner do GTM (GTM-K2KHK4CB) manda em tudo, e quem
+// quiser Meta, GA4 ou Ads configura lá dentro, em cima destes eventos.
+// Ver src/docs/GTM.md.
 import { useEffect, useRef } from 'react';
-import { iniciarPixel, rastrear } from '@/lib/metaPixel';
 
 function push(event) {
   try {
@@ -30,30 +35,26 @@ export function trackCtaClick(cta_name, page_section) {
 }
 
 /**
- * "Um lead aconteceu." Continua alimentando o dataLayer como sempre e, quando o
- * chamador informa um pixel, avisa a Meta também.
+ * "Um lead aconteceu."
  *
  * 📊 31/08/2026 — o dono definiu: lead é quem EFETUA O CADASTRO. O evento entra
  * aqui, e não no ponto de chamada, para que exista UM lugar que significa "lead":
- * quem criar um caminho novo de cadastro amanhã chama esta função e o Meta vai
- * junto, sem depender de alguém lembrar de duas linhas.
+ * quem criar um caminho novo de cadastro amanhã chama esta função e o rastreamento
+ * vai junto, sem depender de alguém lembrar de duas linhas.
  *
- * O pixel é PARÂMETRO, não fixo: o cadastro do Rank Premiado também passa por
- * aqui e não pode cair no pixel dos leilões — foi exatamente esse tipo de mistura
- * que o `trackSingle` de metaPixel.js veio corrigir. Sem pixel informado, nada é
- * enviado à Meta e o comportamento é o de antes.
+ * 🧹 22/09/2026 — saiu o terceiro parâmetro `pixelId`, que mandava o Lead direto
+ * pra Meta. Agora quem decide o destino é o contêiner do GTM: ele escuta o evento
+ * `lead` e reparte para Meta, GA4 ou Ads conforme configurado lá.
+ *
+ * `lead_type` continua distinguindo a origem ('cadastro' dos leilões x o do Rank
+ * Premiado). Era ISSO que o pixel separado resolvia antes, e é por `lead_type`
+ * que o GTM tem de separar agora — senão os dois funis se misturam de novo.
  *
  * @param {string} lead_type     ex.: 'cadastro', 'cadastro_google'
- * @param {string} page_section  seção de origem, para o GA4
- * @param {string} [pixelId]     pixel da Meta que deve receber este Lead
+ * @param {string} page_section  seção de origem
  */
-export function trackLead(lead_type, page_section, pixelId) {
+export function trackLead(lead_type, page_section) {
   push({ event: 'lead', lead_type, page_section });
-  if (!pixelId) return;
-  // Garante o init antes de disparar: se a pessoa recarregou a página no meio do
-  // cadastro, o fbq da visita anterior já morreu e o Lead se perderia calado.
-  iniciarPixel(pixelId);
-  rastrear(pixelId, 'Lead');
 }
 
 export function trackBeginCheckout(checkout_type, value, page_section) {
