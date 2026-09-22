@@ -43,8 +43,11 @@ import { HORIZONTE, SOL_X, cenaDaLuz } from '@/lib/janelaDoMar';
  * O fundo inteiro do ritual. Não recebe clique (`pointer-events-none`) e não
  * guarda estado: é pintura pura, o conteúdo vive por cima.
  */
-export default function FundoJanelaDoMar({ luz = 0 }) {
+export default function FundoJanelaDoMar({ luz = 0, foto = null }) {
   const { solY, solForca, noite } = cenaDaLuz(luz);
+  // a nuvem acende junto com o dia. Passa pelo mesmo aperto que `cenaDaLuz`
+  // faz: `luz` vindo torto (NaN, texto, negativo) não pode apagar o céu.
+  const luzSegura = Math.max(0, Math.min(1, Number(luz) || 0));
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" data-teste="fundo-janela-do-mar" aria-hidden="true">
@@ -55,20 +58,87 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
       <div
         className="absolute inset-0"
         style={{
+          // 🎨 22/09, 2ª volta — esta paleta NÃO foi escolhida no olho: ela veio
+          // da cena de amanhecer que ficou de pé entre quatro desenhadas lado
+          // a lado e fotografadas. A anterior tinha cinza (#6E8492, #7E7C7C)
+          // encostando no horizonte, e cinza no meio de um nascer do sol dá
+          // aquele ar de lavado que denuncia a máquina. Aqui a faixa quente é
+          // LARGA — começa quatro pontos antes da água — e é ela que faz o céu
+          // parecer que está esquentando de verdade.
           background: `linear-gradient(180deg,
             rgba(5,14,26,${noite}) 0%,
-            #0A2039 11%,
-            #123F5A 24%,
-            #1B5D77 32%,
-            #37798E 37%,
-            #6E8492 39.5%,
-            #7E7C7C ${HORIZONTE - 0.8}%,
-            #8F7F73 ${HORIZONTE}%,
-            #6E7076 ${HORIZONTE + 0.4}%,
-            #2F6577 ${HORIZONTE + 2}%,
-            #175267 ${HORIZONTE + 10}%,
-            #0E3A4E ${HORIZONTE + 28}%,
-            #082334 100%)`,
+            #0B2340 9.7%,
+            #14415F 21%,
+            #22637E 29.1%,
+            #4E8698 34.7%,
+            #9E8B80 38.4%,
+            #D79C6C 40.4%,
+            #F6BE81 41.7%,
+            #FFD79C ${HORIZONTE}%,
+            #9E8067 ${HORIZONTE + 0.8}%,
+            #2E6076 ${HORIZONTE + 2.9}%,
+            #1B4E64 ${HORIZONTE + 9.3}%,
+            #113B4F ${HORIZONTE + 23.2}%,
+            #0A2A3B ${HORIZONTE + 41.8}%,
+            #061B27 100%)`,
+        }}
+      />
+
+      {/* ☁️ 22/09 — O QUE TIRA A CARA DE PLÁSTICO.
+          Um degradê de CSS é matematicamente liso: cada faixa de cor é
+          perfeita, e é justamente essa perfeição que o olho lê como
+          "desenhado por máquina". Céu de verdade tem nuvem, água de verdade
+          tem ondulação, e foto de verdade tem grão. Os três nascem aqui de
+          RUÍDO FRACTAL (feTurbulence), que é ruído de imagem de verdade —
+          não é textura baixada, não pesa um byte de rede, e é o que separa
+          esta tela de um fundo de app genérico. */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          {/* nuvem: ruído esticado na horizontal, como nuvem de amanhecer */}
+          <filter id="jmNuvens" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.004 0.02" numOctaves="5" seed="7" result="n" />
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 1   0 0 0 0 0.86   0 0 0 0 0.72   0 0 0 -1.15 0.86" result="c" />
+            <feGaussianBlur in="c" stdDeviation="2" />
+          </filter>
+          <filter id="jmNuvens2" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.003 0.016" numOctaves="4" seed="21" result="n" />
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 1   0 0 0 0 0.72   0 0 0 0 0.55   0 0 0 -1.05 0.72" result="c" />
+            <feGaussianBlur in="c" stdDeviation="3" />
+          </filter>
+          {/* água: o mesmo ruído, esticado ao extremo na horizontal */}
+          <filter id="jmAgua" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.006 0.9" numOctaves="3" seed="3" result="n" />
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 -1.4 0.95" />
+          </filter>
+          {/* a mesma água, em escala grossa: é a ondulação de perto */}
+          <filter id="jmAgua2" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.004 0.35" numOctaves="2" seed="17" result="n" />
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 -1.6 1.05" />
+          </filter>
+          {/* grão de filme: fino, sem cor, por cima de tudo */}
+          <filter id="jmGrao">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="11" result="n" />
+            <feColorMatrix in="n" type="saturate" values="0" />
+          </filter>
+        </defs>
+      </svg>
+
+      {/* as nuvens: só na faixa do céu que encosta no horizonte, que é onde a
+          luz do sol nascente as acende. Em cima elas somem na noite. */}
+      <div
+        className="absolute inset-x-0"
+        style={{
+          top: '17%', height: '22%', filter: 'url(#jmNuvens)', opacity: 0.16 + 0.14 * luzSegura,
+          maskImage: 'linear-gradient(180deg, transparent, #000 35%, #000 70%, transparent)',
+          WebkitMaskImage: 'linear-gradient(180deg, transparent, #000 35%, #000 70%, transparent)',
+        }}
+      />
+      <div
+        className="absolute inset-x-0"
+        style={{
+          top: '12%', height: '26%', filter: 'url(#jmNuvens2)', opacity: 0.10 + 0.10 * luzSegura,
+          maskImage: 'linear-gradient(180deg, transparent, #000 40%, transparent)',
+          WebkitMaskImage: 'linear-gradient(180deg, transparent, #000 40%, transparent)',
         }}
       />
 
@@ -77,11 +147,11 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
         className="absolute inset-0 jm-respira"
         style={{
           background: `radial-gradient(circle at ${SOL_X}% ${solY}%,
-            rgba(255,226,178,${0.50 * solForca}) 0%,
-            rgba(255,198,132,${0.34 * solForca}) 9%,
-            rgba(255,176,105,${0.22 * solForca}) 18%,
-            rgba(255,150,80,${0.09 * solForca}) 30%,
-            transparent 48%)`,
+            rgba(255,222,164,${0.66 * solForca}) 0%,
+            rgba(255,190,118,${0.46 * solForca}) 9%,
+            rgba(255,164,90,${0.29 * solForca}) 19%,
+            rgba(255,138,66,${0.13 * solForca}) 32%,
+            transparent 52%)`,
         }}
       />
 
@@ -92,15 +162,16 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
         style={{
           left: `${SOL_X}%`,
           top: `${solY}%`,
-          width: '7.5vmin',
-          height: '7.5vmin',
+          width: '8.6vmin',
+          height: '8.6vmin',
           transform: 'translate(-50%, -50%)',
           borderRadius: '9999px',
           background: `radial-gradient(circle,
-            rgba(255,250,236,${0.98 * solForca}) 0%,
-            rgba(255,228,176,${0.92 * solForca}) 42%,
-            rgba(255,196,124,${0.55 * solForca}) 68%,
-            rgba(255,176,104,0) 100%)`,
+            rgba(255,250,232,${0.99 * solForca}) 0%,
+            rgba(255,224,158,${0.96 * solForca}) 38%,
+            rgba(255,188,104,${0.72 * solForca}) 64%,
+            rgba(255,152,74,${0.30 * solForca}) 84%,
+            rgba(255,140,70,0) 100%)`,
           filter: 'blur(1.5px)',
         }}
       />
@@ -136,44 +207,95 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
           // por mais borrão que levasse. Elipse não tem borda pra aparecer —
           // e é assim que a luz cai na água de verdade: forte junto do sol,
           // se desmanchando conforme chega perto de quem olha.
-          background: `radial-gradient(ellipse 14% 60% at ${SOL_X}% 0%,
-            rgba(255,226,170,${0.58 * solForca}) 0%,
-            rgba(255,200,135,${0.28 * solForca}) 28%,
-            rgba(255,184,115,${0.12 * solForca}) 55%,
+          background: `radial-gradient(ellipse 15% 62% at ${SOL_X}% 0%,
+            rgba(255,224,158,${0.74 * solForca}) 0%,
+            rgba(255,196,118,${0.38 * solForca}) 26%,
+            rgba(255,176,98,${0.16 * solForca}) 54%,
             transparent 80%)`,
           filter: 'blur(12px)',
         }}
       />
 
-      {/* o brilho quebrado da superfície. Duas camadas: linhas juntinhas
-          perto do horizonte (longe) e mais abertas embaixo (perto) — com uma
-          só, a água virava listra de televisão sem sinal. */}
+      {/* ✨ AS FAÍSCAS DO CAMINHO. Linhas curtas e claras, e sim: é o mesmo
+          `repeating-linear-gradient` que foi expulso do mar inteiro logo
+          abaixo. A diferença é a máscara. Espalhado pela tela toda ele lia
+          como scanline de televisão; apertado numa elipse de 11% em volta do
+          reflexo do sol, ele lê como o que é — a luz quebrando na crista das
+          ondas. O mesmo recurso, local, faz o trabalho oposto. */}
       <div
-        className="absolute inset-x-0 jm-ondas"
+        className="absolute inset-x-0 jm-respira"
         style={{
           top: `${HORIZONTE}%`,
-          height: '16%',
-          backgroundImage: 'repeating-linear-gradient(180deg, rgba(255,240,215,.10) 0px, rgba(255,240,215,.10) 1px, transparent 1px, transparent 5px)',
-          maskImage: 'linear-gradient(180deg, rgba(0,0,0,.9) 0%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,.9) 0%, transparent 100%)',
+          bottom: 0,
+          backgroundImage: `repeating-linear-gradient(180deg, rgba(255,246,220,${0.46 * solForca}) 0 1px, transparent 1px 6px)`,
+          maskImage: `radial-gradient(ellipse 11% 40% at ${SOL_X}% 0%, #000 0%, transparent 75%)`,
+          WebkitMaskImage: `radial-gradient(ellipse 11% 40% at ${SOL_X}% 0%, #000 0%, transparent 75%)`,
+        }}
+      />
+
+      {/* 🌊 O BRILHO QUEBRADO DA SUPERFÍCIE.
+          🔴 ISTO JÁ FOI `repeating-linear-gradient` — linhas de 1px repetidas
+          descendo o mar inteiro. Medido na tela, virava LISTRA DE TELEVISÃO
+          SEM SINAL: o olho lia scanline, não água, e era o maior delator de
+          "fundo feito por máquina" que sobrava na lâmina. Agora as duas
+          camadas saem do mesmo ruído fractal das nuvens, só que esmagado na
+          vertical — que é exatamente o que uma ondulação é: ruído esticado.
+          Longe do horizonte a ondulação é fina; perto de quem olha, grossa. */}
+      <div
+        className="absolute inset-x-0 jm-mare"
+        style={{
+          top: `${HORIZONTE}%`,
+          height: '18%',
+          filter: 'url(#jmAgua)',
+          opacity: 0.34,
+          mixBlendMode: 'soft-light',
+          maskImage: 'linear-gradient(180deg, rgba(0,0,0,.95) 0%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,.95) 0%, transparent 100%)',
         }}
       />
       <div
-        className="absolute inset-x-0 jm-ondas-perto"
+        className="absolute inset-x-0 jm-mare-perto"
         style={{
-          top: `${HORIZONTE + 12}%`,
+          top: `${HORIZONTE + 11}%`,
           bottom: 0,
-          backgroundImage: 'repeating-linear-gradient(180deg, rgba(210,235,245,.055) 0px, rgba(210,235,245,.055) 2px, transparent 2px, transparent 14px)',
-          maskImage: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,.85) 40%, rgba(0,0,0,.5) 100%)',
-          WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,.85) 40%, rgba(0,0,0,.5) 100%)',
+          filter: 'url(#jmAgua2)',
+          opacity: 0.20,
+          mixBlendMode: 'soft-light',
+          maskImage: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,.85) 35%, rgba(0,0,0,.55) 100%)',
+          WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,.85) 35%, rgba(0,0,0,.55) 100%)',
         }}
       />
+
+      {/* a textura da água: o ruído é o que faz a superfície ter matéria.
+          Sem ele, o mar era um degradê azul e lia como papel de parede. */}
+      <div
+        className="absolute inset-x-0"
+        style={{
+          top: `${HORIZONTE}%`, bottom: 0, filter: 'url(#jmAgua)', opacity: 0.30, mixBlendMode: 'overlay',
+          maskImage: 'linear-gradient(180deg, #000 0%, rgba(0,0,0,.5) 45%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(180deg, #000 0%, rgba(0,0,0,.5) 45%, transparent 100%)',
+        }}
+      />
+
+      {/* 📷 A FOTO, quando existe. A vista desenhada acima continua embaixo
+          dela: é o que a pessoa vê no meio segundo em que a foto ainda está
+          baixando, e é o que sobra se ela nunca baixar. Uma foto que já traz
+          a própria janela dispensa a janela desenhada — duas molduras, uma
+          por cima da outra, viram um erro visual. */}
+      {foto && (
+        <img
+          src={foto}
+          alt=""
+          data-teste="foto-da-janela"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
 
       {/* ── 2. A JANELA ───────────────────────────────────────────────────
           O truque da parede: este retângulo é o VÃO da janela, e a sombra
           que ele joga pra fora (0 0 0 100vmax) pinta a parede do cômodo em
           volta. Uma caixa só, sem imagem nenhuma. */}
-      <div
+      {!foto && (<><div
         className="absolute rounded-[2rem]"
         style={{
           inset: '3vmin',
@@ -216,6 +338,14 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
           inset: '3vmin',
           background: 'linear-gradient(115deg, rgba(255,255,255,.075) 0%, rgba(255,255,255,.028) 15%, transparent 32%)',
         }}
+      /></>)}
+
+      {/* o GRÃO DE FILME, por cima de tudo — inclusive da parede e da foto,
+          quando existe foto. É a última camada porque é ela que amarra tudo
+          numa imagem só: sem grão, cada camada continua parecendo uma camada. */}
+      <div
+        className="absolute inset-0"
+        style={{ filter: 'url(#jmGrao)', opacity: 0.10, mixBlendMode: 'overlay' }}
       />
 
       {/* ── 3. O CÔMODO ───────────────────────────────────────────────────
@@ -223,7 +353,11 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
           onde pisar, sem tapar a vista. */}
       <div
         className="absolute inset-0"
-        style={{ background: 'radial-gradient(125% 80% at 50% 30%, transparent 46%, rgba(4,10,18,.52) 100%)' }}
+        // 🔴 esta vinheta já teve dois stops só (transparente 46% → escuro 100%) e
+        // o salto desenhava um ARCO visível atravessando o céu, que na foto lia
+        // como defeito de tela. Escurecer tem que ser lento pra ninguém ver
+        // onde começa; por isso os degraus no meio.
+        style={{ background: 'radial-gradient(135% 92% at 50% 30%, transparent 30%, rgba(4,10,18,.10) 55%, rgba(4,10,18,.26) 75%, rgba(4,10,18,.44) 90%, rgba(4,10,18,.56) 100%)' }}
       />
 
       {/* 🔤 O VÉU DO TEXTO. A vista é bonita no meio da tela — que é
@@ -233,20 +367,23 @@ export default function FundoJanelaDoMar({ luz = 0 }) {
           o texto ganha chão sem a janela virar tela cinza. */}
       <div
         className="absolute inset-0"
-        style={{ background: 'radial-gradient(ellipse 52% 46% at 50% 52%, rgba(4,11,20,.50) 0%, rgba(4,11,20,.30) 55%, transparent 78%)' }}
+        // 🔴 o véu também tinha degrau: com três stops, a borda dele desenhava um
+        // ARCO no céu — e um arco no céu não é nascer do sol nenhum, é defeito.
+        // O mesmo escuro no miolo, agora derramado até a borda da tela.
+        style={{ background: 'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(4,11,20,.50) 0%, rgba(4,11,20,.44) 30%, rgba(4,11,20,.34) 52%, rgba(4,11,20,.22) 70%, rgba(4,11,20,.11) 85%, rgba(4,11,20,0) 100%)' }}
       />
 
       <style>{`
-        @keyframes jmOndas { from { background-position-y: 0px } to { background-position-y: 5px } }
-        @keyframes jmOndasPerto { from { background-position-y: 0px } to { background-position-y: 14px } }
+        @keyframes jmMare { 0%,100% { transform: translateY(0) } 50% { transform: translateY(2px) } }
+        @keyframes jmMarePerto { 0%,100% { transform: translateY(0) } 50% { transform: translateY(5px) } }
         @keyframes jmRespira { 0%,100% { opacity: .94 } 50% { opacity: 1 } }
         @keyframes jmCaminho { 0%,100% { transform: scaleX(1) } 50% { transform: scaleX(1.09) } }
-        .jm-ondas       { animation: jmOndas 6s linear infinite; }
-        .jm-ondas-perto { animation: jmOndasPerto 9s linear infinite; }
+        .jm-mare        { animation: jmMare 13s ease-in-out infinite; }
+        .jm-mare-perto  { animation: jmMarePerto 17s ease-in-out infinite; }
         .jm-respira     { animation: jmRespira 9s ease-in-out infinite; }
         .jm-caminho     { animation: jmCaminho 11s ease-in-out infinite; transform-origin: 50% 0; }
         @media (prefers-reduced-motion: reduce) {
-          .jm-ondas, .jm-ondas-perto, .jm-respira, .jm-caminho { animation: none; }
+          .jm-mare, .jm-mare-perto, .jm-respira, .jm-caminho { animation: none; }
         }
       `}</style>
     </div>

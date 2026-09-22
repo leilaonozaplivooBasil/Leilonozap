@@ -40,6 +40,30 @@
 
 ---
 
+### DIR-171 · 2ª VOLTA (22/09) — "confere se ficou foda, se conectou com os textos, com prova, e publica"
+
+**Emitida por:** dono, depois de ver a 1ª volta: *"NÃO É ISSO QUE EU QUERO... desenha algumas imagens fodas aqui, pega aqui de mar real, sol, entendeu"* — e, na sequência, mandando 7 fotos de janela/mar. Depois: *"confere se ficou foda, se conectou com os textos, se ficaram lindos tipo empresas do Vale do Silício, com prova, e após isso publica."*
+
+**Decisão sobre as 7 fotos: NÃO entram, e a razão é medida, não opinião.** A maior tem 894px de largura (a menor, 192×146) — numa tela de celular de 414pt em 3x, isso é menos de um quarto da resolução necessária e aparece borrado; uma traz marca d'água da Dreamstime; três são fotos de PRODUTO (quadro em canvas pendurado numa parede), com moldura e sombra de parede dentro da imagem. Some-se o risco de direito autoral de banco de imagem numa tela que vai pra todo o time. **A tubulação da foto fica pronta e testada** (`foto` no fundo, `fotoDeFundo` no ritual): no dia em que existir foto licenciada em resolução alta, é um campo, sem tocar em janela, peitoril nem véu.
+
+**O que ficou ruim na 1ª volta, medido na tela e corrigido agora:**
+1. **O mar era listra de televisão.** As ondas eram `repeating-linear-gradient` de 1px repetido descendo o mar inteiro: o olho lia scanline, não água. Agora as duas camadas saem de **ruído fractal** (`feTurbulence`) esmagado na vertical — que é literalmente o que uma ondulação é. O `repeating-linear-gradient` sobrevive em UM lugar só: dentro da máscara apertada das faíscas em volta do reflexo do sol, onde o mesmo recurso lê como luz quebrando na crista da onda. O teste trava isso: mais de um no arquivo = a listra voltou.
+2. **O céu era matematicamente liso.** Degradê de CSS não tem nuvem, água não tem matéria e imagem não tem grão — e é essa perfeição que o olho lê como "feito por máquina". Entraram nuvem (duas camadas de ruído esticado na horizontal), textura da água e **grão de filme** por cima de tudo, inclusive da foto quando houver foto.
+3. **A paleta não foi escolhida no olho.** Quatro cenas de amanhecer foram desenhadas lado a lado e fotografadas num Chromium; a que ficou de pé virou a paleta do arquivo. A anterior tinha cinza (`#6E8492`, `#7E7C7C`) encostando no horizonte — cinza no meio de um nascer do sol dá o ar lavado que denuncia a máquina. Agora a faixa quente é larga e começa quatro pontos antes da água.
+4. **O sol boiava.** Subia 7 pontos até o fechamento, descolava da faixa quente e sobrava um vão entre ele e o próprio reflexo — coisa que sol nenhum faz. Amanhecer de verdade sobe pouco em meia hora: `solY` passa a subir 2,6 pontos e o caminho de luz sai de dentro do disco, sem emenda.
+5. **Tinha um ARCO atravessando o céu.** A vinheta e o véu do texto tinham dois/três stops só, e a borda do degradê aparecia como um arco — que na tela lê como defeito, não como céu. Os dois viraram degradês longos, de escurecimento lento.
+
+**Prova (medida, não achada):** um medidor de contraste WCAG roda a lâmina num Chromium de verdade, em **1440×900 e 414×896**, e para cada um dos 8 textos: lê a cor computada, pinta o texto de transparente (mantendo a placa própria do elemento — `visibility:hidden` apagava o fundo do botão junto e falseava a conta), fotografa o retângulo, tira a **mediana** do que ficou atrás dos glifos e calcula a razão. Depois repete a conta com o fundo do FECHAMENTO (`luz=1`, o momento mais claro do ritual) por baixo das mesmas caixas, empilhando as placas na mão. **Os 16 passam**, e os dois piores casos que a medição achou foram corrigidos:
+- o selo "ANTECIPAÇÃO É PODER" dava **4,43:1** no celular em cima da bruma clara do horizonte — abaixo do mínimo de 4,5:1 da WCAG. Ganhou placa escura própria: **9,94:1**, e 12,06:1 na luz máxima;
+- o subtítulo dava **4,76:1** — passava por 0,26. Em `#FFF1DF`: **5,38:1**.
+- Piores medidas finais: título 7,67:1 (mín. 3,0) · subtítulo 5,38:1 · selo 9,94:1 · contrato 12,05:1 · aviso 13,05:1 · botão 10,84:1 · pílula da música 16,35:1 (mín. 4,5).
+
+**Prova de código:** suíte completa 3336/3336 (`tests/janelaDoMar.test.mjs` sobe de 15 pra 22 testes), lint limpo, `npm run build` sem erro, banca de navegador verde. Mutação: (1) devolvi a listra no mar inteiro → 2 testes quebraram; (2) devolvi a subida de 7 pontos do sol → teste quebrou; (3) tirei a placa do selo → teste quebrou; (4) devolvi a vinheta de dois stops → teste quebrou. Todas revertidas, suíte de volta ao verde.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-170.1 — Encontro da Mentalidade: vários livros, a trajetória do treinamento, a lista da Produção no lugar certo e o teclado que não pula lâmina
 
 **Status:** EM VIGOR. (Continuação da DIR-168 do Encontro; o número 168 já tinha sido usado por outra frente.)

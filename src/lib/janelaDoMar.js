@@ -29,8 +29,13 @@ export const SOL_X = 31;
 export function cenaDaLuz(luz) {
   const l = Math.max(0, Math.min(1, Number(luz) || 0));
   return {
-    // o sol nasce: começa mordido pela água e vai subindo
-    solY: HORIZONTE + 1 - l * 7,
+    // o sol nasce: começa mordido pela água e vai subindo.
+    // 🔴 a subida já foi de 7 pontos e, no fechamento, o disco ficava BOIANDO
+    // no céu, longe da faixa quente e com um vão entre ele e o próprio
+    // reflexo na água — duas coisas que sol nenhum faz. Amanhecer de verdade
+    // sobe pouco em meia hora: em 2,6 pontos o sol continua colado no
+    // horizonte, e o caminho de luz sai de dentro dele, sem emenda.
+    solY: HORIZONTE + 0.8 - l * 2.6,
     // e vai ficando mais forte
     solForca: 0.62 + l * 0.38,
     // o céu perde a noite

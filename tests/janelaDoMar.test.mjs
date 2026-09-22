@@ -36,7 +36,7 @@ test('🔴 o degradê roxo→laranja saiu da tela do ritual e não pode voltar',
 
 test('o ritual pinta o fundo com a janela do mar, não com um degradê solto', () => {
   assert.match(TELA, /import FundoJanelaDoMar from '\.\/FundoJanelaDoMar'/);
-  assert.match(TELA, /<FundoJanelaDoMar luz=\{LUZ_DO_PASSO\[passo\] \?\? 0\} \/>/);
+  assert.match(TELA, /<FundoJanelaDoMar luz=\{LUZ_DO_PASSO\[passo\] \?\? 0\} foto=\{fotoDeFundo\} \/>/);
 });
 
 // ─── o dia nasce ─────────────────────────────────────────────────────────
@@ -89,8 +89,8 @@ test('o mar tem sol, caminho de luz e janela — não é um degradê chapado', (
 test('quem pediu menos movimento não leva o mar se mexendo na cara', () => {
   assert.match(FUNDO, /@media \(prefers-reduced-motion: reduce\)/);
   const i = FUNDO.indexOf('prefers-reduced-motion');
-  const trecho = FUNDO.slice(i, i + 220);
-  for (const classe of ['jm-ondas', 'jm-respira', 'jm-caminho']) {
+  const trecho = FUNDO.slice(i, i + 260);
+  for (const classe of ['jm-mare', 'jm-mare-perto', 'jm-respira', 'jm-caminho']) {
     assert.ok(trecho.includes(classe), `${classe} continua animando com movimento reduzido`);
   }
 });
@@ -145,4 +145,72 @@ test('o X-Music global encolheu — player e painel', () => {
   assert.match(XMUSIC, /w-full h-\[120px\] overflow-hidden/);
   assert.ok(!/w-\[min\(88vw,20rem\)\]/.test(XMUSIC), 'o painel do X-Music voltou ao tamanho antigo');
   assert.match(XMUSIC, /w-\[min\(84vw,17rem\)\]/);
+});
+
+// ─── 2ª volta do fundo (22/09): o que tirou a cara de máquina ────────────
+
+test('🔴 o mar não pode voltar a ser listra de televisão', () => {
+  // `repeating-linear-gradient` espalhado pelo mar inteiro lia como scanline.
+  // Ele só sobrevive DENTRO da máscara apertada das faíscas, em volta do
+  // reflexo do sol — se aparecer com outra máscara, a listra voltou.
+  const pedacos = FUNDO.split('repeating-linear-gradient').slice(1);
+  assert.equal(pedacos.length, 1, 'tem mais de um repeating-linear-gradient no fundo — o mar listrado voltou');
+  assert.match(pedacos[0].slice(0, 400), /maskImage: `radial-gradient\(ellipse 11% 40% at \$\{SOL_X\}% 0%/,
+    'a listra ficou sem a máscara apertada das faíscas — isso é scanline, não reflexo');
+});
+
+test('a ondulação, a nuvem e o grão nascem de ruído fractal', () => {
+  // é o ruído que tira a cara de plástico do degradê. Se os filtros sumirem,
+  // a tela volta a ser matematicamente lisa — que é o que o dono reclamou.
+  for (const filtro of ['jmNuvens', 'jmNuvens2', 'jmAgua', 'jmAgua2', 'jmGrao']) {
+    assert.ok(FUNDO.includes(`id="${filtro}"`), `sumiu o filtro ${filtro}`);
+    assert.ok(FUNDO.includes(`url(#${filtro})`), `o filtro ${filtro} existe mas ninguém usa`);
+  }
+  assert.match(FUNDO, /feTurbulence type="fractalNoise"/);
+});
+
+test('o sol fica COLADO no horizonte — não boia no céu', () => {
+  // com 7 pontos de subida ele descolava da faixa quente e o reflexo ficava
+  // com um vão no meio. Meia hora de amanhecer sobe pouco.
+  const { solY } = cenaDaLuz(1);
+  assert.ok(HORIZONTE - solY <= 3, `o sol subiu ${(HORIZONTE - solY).toFixed(1)} pontos acima do horizonte — descolou`);
+  assert.ok(cenaDaLuz(0).solY > HORIZONTE, 'na abertura o sol tem que estar mordido pela água');
+});
+
+test('🔴 nem a vinheta nem o véu podem desenhar um arco no céu', () => {
+  // dois stops só (transparente → escuro) fazem a borda do degradê aparecer
+  // como um arco atravessando a tela. Escurecer tem que ser lento.
+  for (const marca of ['at 50% 30%', 'at 50% 52%']) {
+    const i = FUNDO.indexOf(marca);
+    assert.ok(i > 0, `sumiu o degradê ${marca}`);
+    const trecho = FUNDO.slice(i, FUNDO.indexOf(')', FUNDO.indexOf('100%', i)));
+    assert.ok((trecho.match(/rgba\(/g) || []).length >= 4, `o degradê ${marca} voltou a ter poucos stops — o arco volta`);
+  }
+});
+
+test('a foto do fundo é opcional e não tapa a lâmina', () => {
+  // a plumbing da foto existe pra trocar a vista desenhada por uma imagem sem
+  // mexer em janela, peitoril nem véu. Ela entra DENTRO do fundo, que é
+  // `pointer-events-none`, e nunca por cima do conteúdo do ritual.
+  assert.match(FUNDO, /export default function FundoJanelaDoMar\(\{ luz = 0, foto = null \}\)/);
+  assert.match(FUNDO, /data-teste="foto-da-janela"/);
+  assert.ok(FUNDO.indexOf('data-teste="foto-da-janela"') < FUNDO.indexOf('boxShadow: `0 0 0 100vmax'),
+    'a foto ficou DEPOIS da janela — ela tem que entrar como vista, com a moldura por cima');
+  assert.match(TELA, /fotoDeFundo = null/, 'o ritual precisa aceitar a foto com valor padrão nulo');
+});
+
+test('o selo do ritual carrega a própria placa escura', () => {
+  // medido: em cima da bruma clara do horizonte, no celular, o âmbar dava
+  // 4,43:1 — abaixo do mínimo de 4,5:1 da WCAG. A placa resolve em qualquer luz.
+  const i = TELA.indexOf('data-teste="selo-antecipacao"');
+  assert.ok(i > 0, 'sumiu o selo ANTECIPAÇÃO É PODER');
+  const trecho = TELA.slice(i, i + 420);
+  assert.match(trecho, /backgroundColor: 'rgba\(6,18,32,\.78\)'/, 'o selo perdeu a placa e volta a sumir na bruma');
+  assert.match(trecho, /text-\[#FFC46B\]/);
+});
+
+test('o subtítulo tem folga de contraste em cima da faixa quente', () => {
+  // #F2E3D2 dava 4,76:1 — passava por 0,26. #FFF1DF dá 5,4:1.
+  assert.ok(!TELA.includes('text-[#F2E3D2]'), 'voltou o subtítulo antigo, que raspava no mínimo da WCAG');
+  assert.match(TELA, /text-\[#FFF1DF\] text-\[15px\]/);
 });

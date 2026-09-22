@@ -164,7 +164,7 @@ function BarraDosBlocos({ feitos, atual }) {
   );
 }
 
-export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir, onExplicar, onRefazer, onPedirAjuda }) {
+export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCiclo = 1, comprovacaoAtual = null, onBloco, onFechar, onConcluir, onExplicar, onRefazer, onPedirAjuda, fotoDeFundo = null }) {
   // 🙏 DIR-121 — a régua de HOJE, crescendo dia a dia (ver xgame.js).
   const metaMotivosHoje = metaMotivosGratidaoHoje(diaCorridoCiclo);
   const minSegHoje = gratidaoAudioMinSegHoje(diaCorridoCiclo);
@@ -551,7 +551,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070E18] overflow-hidden">
-      <FundoJanelaDoMar luz={LUZ_DO_PASSO[passo] ?? 0} />
+      <FundoJanelaDoMar luz={LUZ_DO_PASSO[passo] ?? 0} foto={fotoDeFundo} />
       {/* o QUADRO DOS SONHOS na visualização: UM sonho de cada vez, ENORME
           (quase preenchendo a tela, no celular e no desktop), subindo devagar
           como numa meditação — um saindo, o próximo entrando, em ordem que
@@ -804,12 +804,24 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
               className="text-[2.1rem] sm:text-5xl font-black tracking-tight text-[#FFF8F0]"
               style={{ textShadow: '0 2px 24px rgba(4,12,22,.75), 0 1px 2px rgba(4,12,22,.9)' }}
             >Bom dia, {nome || 'campeão'}.</h2>
-            <p className="text-[#F2E3D2] text-[15px] sm:text-[16px] leading-relaxed max-w-sm mx-auto" style={{ textShadow: '0 1px 12px rgba(4,12,22,.7)' }}>
+            {/* 🔦 medido: em #F2E3D2 esta linha dava 4,76:1 contra a faixa quente
+                do horizonte, que é exatamente onde ela cai — passava na WCAG
+                por 0,26 de sobra. Em #FFF1DF dá 5,4:1 e continua mais quente
+                que o título, que é o que segura a hierarquia. */}
+            <p className="text-[#FFF1DF] text-[15px] sm:text-[16px] leading-relaxed max-w-sm mx-auto" style={{ textShadow: '0 1px 12px rgba(4,12,22,.75), 0 1px 2px rgba(4,12,22,.6)' }}>
               O dia ainda nem clareou — e você já está aqui.
             </p>
             {/* o selo: era um texto âmbar solto de 11px; agora tem fio de luz
-                dos dois lados e peso pra virar assinatura da tela */}
-            <p className="flex items-center justify-center gap-3 text-[11px] font-black tracking-[0.3em] text-[#FFC46B]">
+                dos dois lados e peso pra virar assinatura da tela.
+                🔦 22/09 — a placa escura NÃO é enfeite: medindo no celular o
+                âmbar caía a 4,43:1 em cima da bruma clara do horizonte, abaixo
+                do mínimo de 4,5:1 da WCAG. Com a placa ele carrega o próprio
+                fundo e passa em qualquer luz do nascer do sol. */}
+            <p
+              data-teste="selo-antecipacao"
+              className="inline-flex items-center justify-center gap-3 mx-auto rounded-full px-4 py-1.5 text-[11px] font-black tracking-[0.3em] text-[#FFC46B] ring-1 ring-[#FFC46B]/25"
+              style={{ backgroundColor: 'rgba(6,18,32,.78)' }}
+            >
               <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#FFC46B]/70" />
               ANTECIPAÇÃO É PODER
               <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#FFC46B]/70" />
