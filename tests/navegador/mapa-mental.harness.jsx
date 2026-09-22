@@ -20,8 +20,28 @@ window.__salvos = [];
 // com a raiz. `window.__respostas` deixa a prova escolher outra resposta.
 window.__respostas = window.__respostas || {};
 
+// 🌱 a semente ("abrir no mapa", vinda da aba Demandas). A prova escolhe o
+// texto em window.__semente ANTES de carregar; o componente só semeia depois
+// que o mapa chega, que é justamente o que há para medir.
+function Banca() {
+  const [semente, setSemente] = React.useState(
+    typeof window !== 'undefined' ? (window.__semente || null) : null,
+  );
+  // a prova manda outra semente sem recarregar a página: recarregar aqui
+  // perderia o mapa (a banca não guarda nada), e a prova de "não duplica"
+  // passaria sem medir nada.
+  React.useEffect(() => { window.__semeados = []; window.__semear = setSemente; }, []);
+  return (
+    <MapaMental
+      onDemandaCriada={(n) => window.__salvos.push(n)}
+      semente={semente}
+      onSemeado={(id) => { (window.__semeados ||= []).push(id); setSemente(null); }}
+    />
+  );
+}
+
 createRoot(document.getElementById('raiz')).render(
   <div style={{ padding: 16, background: '#0A1410', minHeight: '100vh' }}>
-    <MapaMental onDemandaCriada={(n) => window.__salvos.push(n)} />
+    <Banca />
   </div>,
 );

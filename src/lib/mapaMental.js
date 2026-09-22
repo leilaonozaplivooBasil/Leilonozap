@@ -170,3 +170,47 @@ export function lugarDoFilho(nos, paiId) {
   }
   return { x, y };
 }
+
+// ── 🌱 A DEMANDA QUE VIRA NÓ DO MAPA (22/09/2026) ──────────────────────────
+//
+// Dono (áudio de 19/09, 10h32), listando o que dá pra fazer com uma demanda:
+//   "dali eu transformo em ou mapa mental, PARA ABRIR O MAPA MENTAL, ou no
+//    quadro, que aí automaticamente já entra na lista e na jornada."
+//
+// É o caminho de volta do ✈: a anotação que ainda não é tarefa — porque ainda
+// não está pensada — vai pro mapa pra ser explodida em partes.
+//
+// 🔴 A demanda NÃO sai da caixa ao virar nó, e é de propósito: o mapa é o
+// desenho do pensamento, não um destino. Ela vira trabalho quando virar tarefa
+// ou cartão, não quando alguém resolve pensar nela.
+
+/** Mesma normalização da trava do ✈: acento e caixa não fazem item novo. */
+const mesmoTexto = (a, b) => String(a || '').trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  === String(b || '').trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/**
+ * Põe `texto` no mapa, pendurado na raiz, e diz qual nó é ele.
+ *
+ * Se já existir um nó com esse texto, NÃO cria outro: devolve o que já está
+ * lá. Mandar a mesma demanda pro mapa duas vezes é gesto esperado — o botão
+ * continua na caixa —, e duplicar encheria o mapa de cópias do mesmo
+ * pensamento, que é justamente o que um mapa mental não pode ter.
+ *
+ * @returns {{nos: object[], id: string|null, novo: boolean}}
+ */
+export function semearNoMapa(nos, texto) {
+  const lista = Array.isArray(nos) ? nos : [];
+  const limpo = String(texto || '').trim();
+  if (!limpo) return { nos: lista, id: null, novo: false };
+
+  const jaTem = lista.find((n) => n && mesmoTexto(n.texto, limpo));
+  if (jaTem) return { nos: lista, id: jaTem.id, novo: false };
+
+  // Sem raiz ainda (mapa vazio), o nó vira a própria raiz — senão ele nasceria
+  // solto, sem pai e sem lugar, que é o estado que `apagarNo` chama de órfão.
+  const raiz = raizDe(lista);
+  const novo = raiz
+    ? noNovo({ texto: limpo, pai: raiz.id, ...lugarDoFilho(lista, raiz.id) })
+    : noNovo({ texto: limpo, x: 40, y: 140 });
+  return { nos: [...lista, novo], id: novo.id, novo: true };
+}

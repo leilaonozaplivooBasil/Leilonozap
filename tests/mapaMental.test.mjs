@@ -11,9 +11,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  noNovo, filhosDe, raizDe, descendentesDe, podeVirarFilho, moverNo,
-  apagarNo, quantosCaemJunto, demandaDoNo, renomearNo, lugarDoFilho, seSobrepoem,
-  LARGURA_NO, ALTURA_NO,
+  noNovo, filhosDe, raizDe, descendentesDe, podeVirarFilho, moverNo, apagarNo, quantosCaemJunto, demandaDoNo, renomearNo, lugarDoFilho, seSobrepoem, LARGURA_NO, ALTURA_NO, semearNoMapa,
 } from '../src/lib/mapaMental.js';
 
 /*  raiz
@@ -196,5 +194,80 @@ describe('🔴 onde o filho novo é pendurado — sem cobrir ninguém', () => {
   test('pai que não existe não derruba — devolve um lugar utilizável', () => {
     const l = lugarDoFilho([], 'fantasma');
     assert.ok(Number.isFinite(l.x) && Number.isFinite(l.y));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🌱 A DEMANDA QUE VIRA NÓ (22/09/2026)
+//
+// Dono (áudio de 19/09, 10h32): "dali eu transformo em ou mapa mental, PARA
+// ABRIR o mapa mental, ou no quadro." É o caminho de volta do ✈: a anotação
+// que ainda não é tarefa porque ainda não está pensada.
+describe('🌱 semear a demanda no mapa', () => {
+  const comRaiz = () => [{ id: 'r', texto: 'Minha semana', pai: null, x: 40, y: 140 }];
+
+  test('pendura o texto novo na raiz, e diz qual nó é', () => {
+    const { nos, id, novo } = semearNoMapa(comRaiz(), 'ligar pro fornecedor');
+    assert.equal(novo, true);
+    assert.equal(nos.length, 2);
+    const posto = nos.find((n) => n.id === id);
+    assert.equal(posto.texto, 'ligar pro fornecedor');
+    assert.equal(posto.pai, 'r', 'nasceu solto — nó sem pai é órfão neste mapa');
+  });
+
+  test('🔴 não duplica: o mesmo texto devolve o nó que já está lá', () => {
+    // o botão continua na caixa, então mandar duas vezes é gesto esperado.
+    // Duplicar encheria o mapa de cópias do mesmo pensamento.
+    const base = semearNoMapa(comRaiz(), 'fechar o caixa').nos;
+    const { nos, id, novo } = semearNoMapa(base, 'fechar o caixa');
+    assert.equal(novo, false);
+    assert.equal(nos.length, base.length, 'criou um segundo nó igual');
+    assert.equal(nos.find((n) => n.id === id).texto, 'fechar o caixa');
+  });
+
+  test('🔴 acento e caixa não fazem item novo', () => {
+    // "Ligar pro Fornecedor" e "ligar pro fornecedor" são o mesmo pensamento —
+    // é a mesma normalização que trava a duplicata do ✈.
+    const base = semearNoMapa(comRaiz(), 'Comprar etiqueta térmica').nos;
+    const { nos, novo } = semearNoMapa(base, 'comprar ETIQUETA TERMICA');
+    assert.equal(novo, false);
+    assert.equal(nos.length, base.length);
+  });
+
+  test('🔴 mapa vazio: o nó vira a raiz em vez de nascer órfão', () => {
+    const { nos, id, novo } = semearNoMapa([], 'primeira ideia');
+    assert.equal(novo, true);
+    assert.equal(nos.length, 1);
+    assert.equal(nos[0].id, id);
+    assert.equal(nos[0].pai, null);
+    assert.equal(raizDe(nos)?.id, id, 'o mapa ficou sem raiz');
+  });
+
+  test('🔴 não cobre nenhum nó que já está no lugar', () => {
+    // é a mesma régua do "pendurar um item": nó por cima de nó esconde
+    // pensamento, que é o único jeito de perder coisa num mapa.
+    let nos = comRaiz();
+    for (const t of ['um', 'dois', 'três', 'quatro']) nos = semearNoMapa(nos, t).nos;
+    for (const a of nos) {
+      for (const b of nos) {
+        if (a.id !== b.id) assert.equal(seSobrepoem(a, b), false, `${a.texto} cobriu ${b.texto}`);
+      }
+    }
+  });
+
+  test('texto vazio não mexe no mapa', () => {
+    const base = comRaiz();
+    for (const vazio of ['', '   ', null, undefined]) {
+      const r = semearNoMapa(base, vazio);
+      assert.equal(r.novo, false);
+      assert.equal(r.id, null);
+      assert.equal(r.nos.length, base.length);
+    }
+  });
+
+  test('lista torta não derruba', () => {
+    const r = semearNoMapa(null, 'alguma coisa');
+    assert.equal(r.novo, true);
+    assert.equal(r.nos.length, 1);
   });
 });

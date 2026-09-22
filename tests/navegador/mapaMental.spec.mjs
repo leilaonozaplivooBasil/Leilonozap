@@ -282,3 +282,65 @@ test('🔴 demanda repetida MANDADA pro quadro não diz só "já estava lá"', {
   assert.match(await pagina.locator('[data-teste="mapa-recado"]').innerText(), /quadro/i);
   await ctx.close();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🌱 "ABRIR NO MAPA" — 22/09/2026
+//
+// A frase que faltava do áudio de 19/09 (10h32): "dali eu transformo em ou
+// mapa mental, PARA ABRIR o mapa mental, ou no quadro". A régua do
+// `semearNoMapa` tem 7 provas no Node; isto mede o que só a tela responde —
+// que a demanda CHEGA no mapa depois que ele carregou, aparece destacada, e
+// que voltar à aba não planta o mesmo nó duas vezes.
+
+/** Abre a banca com uma semente já escolhida — como se viesse da aba Demandas. */
+async function abrirComSemente(texto) {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1100, height: 760 } });
+  const pagina = await ctx.newPage();
+  await pagina.addInitScript((t) => { window.__semente = t; }, texto);
+  await pagina.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('[data-teste="mapa-no"]', { timeout: 20000 });
+  return { ctx, pagina };
+}
+
+test('🔴 a demanda vira nó do mapa, pendurada na raiz', { skip: semNavegador }, async () => {
+  // semear antes do mapa carregar penduraria o nó numa raiz que ainda não
+  // chegou — ele nasceria órfão, e órfão some quando alguém apaga um ramo.
+  const { ctx, pagina } = await abrirComSemente('ligar pro fornecedor');
+  await pagina.locator('[data-teste="mapa-no"]', { hasText: 'ligar pro fornecedor' }).waitFor({ timeout: 8000 });
+  assert.equal(await nos(pagina).count(), 2, 'esperava a raiz mais o nó semeado');
+  // a linha pai→filho é a prova de que ele está pendurado, não solto
+  assert.equal(await pagina.locator('[data-teste="mapa-linhas"] line').count(), 1);
+  await ctx.close();
+});
+
+test('🔴 o nó semeado chega DESTACADO — senão o dono não acha', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrirComSemente('fechar o caixa');
+  const destacado = pagina.locator('[data-teste="mapa-no"][data-destacado="sim"]');
+  await destacado.waitFor({ timeout: 8000 });
+  assert.match(await destacado.innerText(), /fechar o caixa/);
+  assert.equal(await destacado.count(), 1, 'destacou mais de um nó');
+  await ctx.close();
+});
+
+test('🔴 semear NÃO planta o mesmo nó duas vezes', { skip: semNavegador }, async () => {
+  // o botão continua na caixa de demandas: voltar à aba e clicar de novo é
+  // gesto esperado. Duplicar encheria o mapa de cópias do mesmo pensamento.
+  const { ctx, pagina } = await abrirComSemente('comprar etiqueta');
+  await pagina.locator('[data-teste="mapa-no"]', { hasText: 'comprar etiqueta' }).waitFor({ timeout: 8000 });
+  const antes = await nos(pagina).count();
+  assert.equal(antes, 2, 'a primeira semeadura não plantou nada');
+
+  // 🔴 SEM recarregar: a banca não guarda mapa nenhum, então um reload traria
+  // a raiz limpa e a contagem daria igual sozinha — a prova passaria sem
+  // medir coisa alguma. Aqui a mesma semente volta na tela que já tem o nó.
+  await pagina.evaluate(() => window.__semear('comprar etiqueta'));
+  await pagina.waitForTimeout(400);
+  assert.equal(await nos(pagina).count(), antes, 'plantou uma segunda cópia');
+
+  // e variando acento e caixa, que é o mesmo pensamento
+  await pagina.evaluate(() => window.__semear('COMPRAR ETIQUETA'));
+  await pagina.waitForTimeout(400);
+  assert.equal(await nos(pagina).count(), antes, 'caixa diferente virou nó novo');
+  await ctx.close();
+});

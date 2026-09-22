@@ -3,7 +3,7 @@ import { Plus, Trash2, Send, Loader2, Network, Inbox, CalendarPlus, LayoutGrid, 
 import { plataforma } from '@/api/plataformaClient';
 import {
   noNovo, raizDe, podeVirarFilho, moverNo, apagarNo,
-  quantosCaemJunto, renomearNo, lugarDoFilho,
+  quantosCaemJunto, renomearNo, lugarDoFilho, semearNoMapa,
 } from '@/lib/mapaMental';
 
 /**
@@ -54,7 +54,7 @@ const CONFIRMACAO = {
 
 // Não recebe `currentUser`: o dono do mapa sai do CRACHÁ, no servidor. Passar
 // o usuário daqui seria oferecer ao navegador um jeito de pedir o mapa alheio.
-export default function MapaMental({ onDemandaCriada }) {
+export default function MapaMental({ onDemandaCriada, semente = null, onSemeado = null }) {
   const [nos, setNos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -62,6 +62,7 @@ export default function MapaMental({ onDemandaCriada }) {
   const [erro, setErro] = useState('');
   const [recado, setRecado] = useState('');
   const [destinoAberto, setDestinoAberto] = useState(null); // id do nó com o seletor aberto
+  const [destacado, setDestacado] = useState(null);           // o nó recém-semeado, para a vista achar
   const telaRef = useRef(null);
   const arrasto = useRef(null);
   const salvarTimer = useRef(null);
@@ -107,6 +108,27 @@ export default function MapaMental({ onDemandaCriada }) {
   }, []);
 
   const mudar = useCallback((lista) => { setNos(lista); salvar(lista); }, [salvar]);
+
+  // 🌱 a demanda que veio da caixa para virar nó ("transformo em mapa mental,
+  // PARA ABRIR o mapa mental"). Só depois que o mapa carregou: semear antes
+  // penduraria o nó numa raiz que ainda não chegou — e ele nasceria órfão.
+  useEffect(() => {
+    if (carregando || !String(semente || '').trim()) return;
+    const { nos: lista, id, novo } = semearNoMapa(nos, semente);
+    if (novo) mudar(lista);
+    setDestacado(id);
+    setRecado(novo ? 'Está no seu mapa.' : 'Essa já estava no seu mapa.');
+    onSemeado?.(id);
+    // de propósito só com `semente` e `carregando`: incluir `nos` re-semearia
+    // a cada arrasto, e o mapa viraria uma fila de cópias.
+  }, [semente, carregando]);
+
+  // o destaque é sinal de "é este aqui", não estado: some junto com o recado.
+  useEffect(() => {
+    if (!destacado) return undefined;
+    const t = setTimeout(() => setDestacado(null), 6000);
+    return () => clearTimeout(t);
+  }, [destacado]);
 
   // ── gestos ───────────────────────────────────────────────────────────────
   const criarFilho = (paiId) => {
@@ -255,10 +277,13 @@ export default function MapaMental({ onDemandaCriada }) {
             key={n.id}
             data-teste="mapa-no"
             style={{ left: n.x, top: n.y, width: LARGURA }}
+            data-destacado={n.id === destacado ? 'sim' : undefined}
             className={`absolute rounded-xl border px-2.5 py-1.5 shadow-lg transition-colors ${
-              n.id === raiz?.id
-                ? 'border-nz-verde-neon/50 bg-nz-verde-neon/15'
-                : 'border-white/15 bg-white/[0.07] hover:border-nz-verde-neon/40'
+              n.id === destacado
+                ? 'border-nz-verde-neon bg-nz-verde-neon/25 ring-2 ring-nz-verde-neon/60'
+                : n.id === raiz?.id
+                  ? 'border-nz-verde-neon/50 bg-nz-verde-neon/15'
+                  : 'border-white/15 bg-white/[0.07] hover:border-nz-verde-neon/40'
             }`}
           >
             <div

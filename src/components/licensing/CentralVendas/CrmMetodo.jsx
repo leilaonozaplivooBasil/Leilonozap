@@ -937,6 +937,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
+  // 🌱 a demanda que o dono mandou "abrir no mapa": guarda o TÍTULO, não a
+  // linha, porque é só isso que o mapa precisa — e some assim que o mapa
+  // semeia, senão voltar à aba re-semearia o mesmo nó.
+  const [sementeDoMapa, setSementeDoMapa] = useState(null);
   // 🧠 o número da bolinha na aba Demandas. Conta só as que ESPERAM destino
   // (status 'recebida'); pede apenas a contagem ao banco, não as linhas.
   const [demandasEsperando, setDemandasEsperando] = useState(0);
@@ -3041,12 +3045,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 hojeISO={dia}
                 nome={currentUser?.full_name || null}
                 onMudou={() => { contarDemandas(); carregarTarefas(); }}
+                onAbrirNoMapa={(d) => { setSementeDoMapa(d?.titulo || null); setVisao('mapa'); }}
               />
             ) : visao === 'mapa' ? (
               /* 🗺️ O mapa mental. Não recebe usuário: o dono sai do crachá,
                  no servidor — passar daqui seria oferecer ao navegador um
                  jeito de pedir o mapa alheio. */
-              <MapaMental />
+              <MapaMental semente={sementeDoMapa} onSemeado={() => setSementeDoMapa(null)} />
             ) : visao === 'quadro' ? (
               <QuadroCompromisso
                 currentUser={currentUser}
