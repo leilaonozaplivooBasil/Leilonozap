@@ -8,7 +8,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { itensDoPedido, quantosItens, dinheiroDoPedido } from '../src/lib/itensDoPedido.js';
+import { itensDoPedido, quantosItens, dinheiroDoPedido, itensSemNome } from '../src/lib/itensDoPedido.js';
 
 const CASO_REAL = {
   product_title: 'Kit 10 Lâmpada Led Dicróica Mr16',
@@ -36,7 +36,10 @@ describe('itensDoPedido', () => {
 
   test('lê o formato da loja da rede (items_json)', () => {
     const p = { items_json: [{ title: 'A', qty: 1 }, { product_name: 'B', quantity: 3 }] };
-    assert.deepEqual(itensDoPedido(p), [{ title: 'A', qty: 1 }, { title: 'B', qty: 3 }]);
+    assert.deepEqual(itensDoPedido(p), [
+      { id: null, title: 'A', qty: 1 },
+      { id: null, title: 'B', qty: 3 },
+    ]);
   });
 
   test('aguenta raw_base44 vindo como texto', () => {
@@ -57,10 +60,29 @@ describe('itensDoPedido', () => {
     }
   });
 
-  test('item sem título vira "Item" em vez de sumir', () => {
-    // linha em branco na lista seria pior do que um rótulo genérico
-    const p = { raw_base44: { items: [{ title: 'A' }, { qty: 2 }] } };
-    assert.deepEqual(itensDoPedido(p)[1], { title: 'Item', qty: 2 });
+  test('🔴 item sem nome vem com título VAZIO — não com "Item"', () => {
+    // 🔴 22/09/2026 — esta prova exigia o contrário, e estava errada.
+    //
+    // Ela dizia: "linha em branco seria pior do que um rótulo genérico". Na
+    // prática o rótulo genérico foi MUITO pior: a loja da rede guarda só
+    // `{product_id, qty}`, e o operador abriu um pedido de cinco produtos
+    // lendo "Item · Item · Item · Item · Item". Não dava pra separar nada, e
+    // a tela não tinha como saber que aquilo não era nome — o `|| 'Item'`
+    // fabricava um. Título vazio + id é honesto: quem desenha vai buscar o
+    // nome, ou diz que não tem. "Item" não era nenhuma das duas coisas.
+    const p = { raw_base44: { items: [{ title: 'A' }, { qty: 2, id: 'p2' }] } };
+    assert.deepEqual(itensDoPedido(p)[1], { id: 'p2', title: '', qty: 2 });
+  });
+
+  test('🔴 o id do produto vem junto, pra tela poder buscar o nome', () => {
+    const daRede = { items_json: [{ qty: 1, product_id: 'aaa' }, { qty: 1, product_id: 'bbb' }] };
+    assert.deepEqual(itensDoPedido(daRede).map((i) => i.id), ['aaa', 'bbb']);
+    assert.deepEqual(itensSemNome(daRede), ['aaa', 'bbb'], 'a tela não saberia quais nomes buscar');
+  });
+
+  test('item que JÁ tem nome não entra na lista de buscar', () => {
+    const p = { raw_base44: { items: [{ title: 'A', id: 'a' }, { qty: 1, product_id: 'b' }] } };
+    assert.deepEqual(itensSemNome(p), ['b']);
   });
 });
 
@@ -193,5 +215,43 @@ describe('💰 dinheiroDoPedido — o caso que travou o envio', () => {
   test('quantidade maior que 1 multiplica', () => {
     const doisIguais = { total_amount: 0, raw_base44: { items: [{ qty: 3, price: 10 }] } };
     assert.equal(dinheiroDoPedido(doisIguais).produtos, 30);
+  });
+});
+
+// 🔴 A REGRESSÃO QUE EU QUASE MANDEI PRA PRODUÇÃO (22/09/2026, mesmo dia)
+//
+// `dinheiroDoPedido` somava os itens sempre que eles existissem. Os pedidos da
+// loja da rede guardam em `items_json` SÓ `product_id` e `qty` — sem preço
+// nenhum. A soma dava ZERO e a tela mostraria "Valor dos produtos: R$ 0,00"
+// num pedido de R$ 357,04, que é pior que o "R$ 1,00" que eu estava
+// consertando. Apareceu porque o dono mandou o print de um pedido desses.
+describe('💰 pedido da loja da rede — itens sem preço', () => {
+  // o pedido LZ2204A2FC, como está no banco
+  const DA_REDE = {
+    total_amount: 357.04, quantity: 5, store_slug: 'bangu',
+    items_json: [
+      { qty: 1, product_id: '69f011a6f23a8a14fe1b6980' },
+      { qty: 1, product_id: '69e3a5971b89d2825881c1d8' },
+      { qty: 1, product_id: '1038d119e04705765a5bcfa8' },
+      { qty: 1, product_id: '69f4d0f13f0158d362885cc2' },
+      { qty: 1, product_id: 'a790dfbbf8a8c273f23b48ed' },
+    ],
+    raw_base44: { frete: { valor: 21.69 }, amount_charged: 378.73 },
+  };
+
+  test('🔴 NÃO mostra R$ 0,00 — cai no valor cobrado', () => {
+    const d = dinheiroDoPedido(DA_REDE);
+    assert.equal(d.produtos, 357.04, 'voltou a somar item sem preço e zerou o pedido');
+    assert.equal(d.total, 378.73, 'o total do pedido ficou errado');
+  });
+
+  test('item com preço continua mandando na conta', () => {
+    // a soma dos itens é melhor QUANDO existe; o que não vale é somar zero.
+    const misto = { total_amount: 999, items_json: [{ qty: 2, price: 10 }, { qty: 1, price: 5 }] };
+    assert.equal(dinheiroDoPedido(misto).produtos, 25);
+  });
+
+  test('🔴 os 5 itens são contados, mesmo sem nome nem preço', () => {
+    assert.equal(quantosItens(DA_REDE), 5, 'o operador precisa saber quantas caixas conferir');
   });
 });

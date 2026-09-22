@@ -28,21 +28,40 @@
  * caso `product_title` já conta a história inteira, e uma lista de um item na
  * tela é ruído. Quem chama decide o que fazer com o `null`.
  *
- * @returns {Array<{title: string, qty: number}>|null}
+ * 🔴 22/09/2026 — O `id` PASSOU A VIR JUNTO, E SEM NOME O TÍTULO VEM VAZIO.
+ *
+ * Os pedidos da loja da rede guardam em `items_json` só `{product_id, qty}` —
+ * sem nome e sem preço. O operador abria a conferência de um pedido de cinco
+ * produtos e lia "Item · Item · Item · Item · Item": impossível saber o que
+ * separar. A culpa era daqui: o `|| 'Item'` FABRICAVA um nome e a tela não
+ * tinha como saber que aquilo não era nome nenhum.
+ *
+ * Agora `title` vem VAZIO quando não existe, e o `id` vem junto. Quem desenha
+ * decide: buscar o nome do produto, ou dizer "produto sem nome no pedido" —
+ * as duas coisas são honestas, e "Item" não era nenhuma das duas.
+ *
+ * @returns {Array<{id: string|null, title: string, qty: number}>|null}
  */
 export function itensDoPedido(pedido) {
+  const normal = (it) => ({
+    id: it.product_id || it.id || null,
+    title: String(it.title || it.product_name || it.description || '').trim(),
+    qty: it.qty || it.quantity || 1,
+  });
   if (Array.isArray(pedido?.items_json) && pedido.items_json.length > 1) {
-    return pedido.items_json.map((it) => ({
-      title: it.title || it.product_name || 'Item',
-      qty: it.qty || it.quantity || 1,
-    }));
+    return pedido.items_json.map(normal);
   }
   let raw = pedido?.raw_base44;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
   if (Array.isArray(raw?.items) && raw.items.length > 1) {
-    return raw.items.map((it) => ({ title: it.title || 'Item', qty: it.qty || 1 }));
+    return raw.items.map(normal);
   }
   return null;
+}
+
+/** Os ids dos itens que estão sem nome — quem desenha usa para ir buscar. */
+export function itensSemNome(pedido) {
+  return (itensDoPedido(pedido) || []).filter((it) => !it.title && it.id).map((it) => it.id);
 }
 
 /**
@@ -116,7 +135,13 @@ export function dinheiroDoPedido(pedido) {
   const credito = cent(raw?.passaporte_desconto);
   const cupom = Math.max(0, cent(descontoTotal - credito));
 
-  const produtos = itens && itens.length
+  // 🔴 22/09, MESMO DIA: a primeira versão somava os itens sempre que eles
+  // existissem. Os pedidos da loja da rede (`items_json`) guardam SÓ
+  // `product_id` e `qty` — sem preço. A soma dava ZERO, e a tela passaria a
+  // mostrar "Valor dos produtos: R$ 0,00" num pedido de R$ 357,04. Pior que o
+  // defeito que eu estava consertando. Só soma quando os itens têm preço.
+  const itensComPreco = itens && itens.some((it) => num(it.price) > 0);
+  const produtos = itensComPreco
     ? cent(itens.reduce((s, it) => s + num(it.price) * (num(it.qty) || num(it.quantity) || 1), 0))
     : cent(noPagamento + descontoTotal);
 

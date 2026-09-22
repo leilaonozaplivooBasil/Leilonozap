@@ -1,4 +1,4 @@
-import { itensDoPedido, dinheiroDoPedido } from '@/lib/itensDoPedido';
+import { itensDoPedido, dinheiroDoPedido, itensSemNome } from '@/lib/itensDoPedido';
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -135,9 +135,19 @@ const getItems = (order) => itensDoPedido(order);
 // itens (items_json/raw_base44.items) não grava imagem por item em lugar nenhum
 // do banco; sem inventar fonte nova, esse caso fica sem imagem e o
 // OrderItemsChecklist cai no ícone genérico.
-const getItemsForChecklist = (order) => {
+const getItemsForChecklist = (order, nomes = {}) => {
   const bundle = getItems(order);
-  if (bundle) return bundle;
+  // 🔴 22/09/2026 — os cinco "Item".
+  // A loja da rede guarda só {product_id, qty}: sem nome, a conferência virava
+  // "Item · Item · Item · Item · Item" e ninguém sabia o que separar. `nomes`
+  // é o que a tela foi buscar em `products`; sem ele, o card diz em português
+  // que o nome não veio no pedido — em vez de fingir que "Item" é um nome.
+  if (bundle) {
+    return bundle.map((it) => ({
+      ...it,
+      title: it.title || nomes[it.id] || (it.id ? 'Produto sem nome no pedido' : 'Item'),
+    }));
+  }
   return [{ title: order.product_title, qty: order.quantity || 1, image: order.product_image || null }];
 };
 
@@ -241,6 +251,32 @@ export default function CatalogOrdersAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('paid');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  // 📛 nome dos produtos que o pedido guardou só por id (loja da rede)
+  const [nomesDosItens, setNomesDosItens] = useState({});
+
+  // 📛 22/09/2026 — busca o nome dos produtos que o pedido guardou só por id.
+  // A loja da rede grava `items_json` com {product_id, qty} e mais nada; sem
+  // isto a conferência lista "Item" cinco vezes e o operador não sabe o que
+  // separar. Só busca o que falta, e uma vez por pedido aberto.
+  useEffect(() => {
+    const faltando = itensSemNome(selectedOrder).filter((id) => !nomesDosItens[id]);
+    if (!faltando.length) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const achados = await plataforma.entities.Product.filter({ id: faltando });
+        const lista = Array.isArray(achados) ? achados : [];
+        if (!vivo || !lista.length) return;
+        setNomesDosItens((atual) => {
+          const novo = { ...atual };
+          for (const p of lista) if (p?.id && p?.description) novo[p.id] = p.description;
+          return novo;
+        });
+      } catch { /* sem nome a tela já diz que o nome não veio; não vale quebrar a conferência */ }
+    })();
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrder?.id]);
   const [trackingCode, setTrackingCode] = useState('');
   const [newStatus, setNewStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -948,7 +984,7 @@ export default function CatalogOrdersAdmin() {
               {/* 📦 Itens do pedido em cards clicáveis — logística marca ao separar/embalar */}
               {!isPassaporte(selectedOrder) && (
                 <OrderItemsChecklist
-                  items={getItemsForChecklist(selectedOrder)}
+                  items={getItemsForChecklist(selectedOrder, nomesDosItens)}
                   packedIndices={getPackedItems(selectedOrder)}
                   onToggle={(idx) => handleTogglePacked(selectedOrder, idx)}
                 />
