@@ -138,7 +138,10 @@ const PlayerYT = React.memo(function PlayerYT({ alvo, ligado, onErro, onTitulo, 
     try { if (ligado) p.playVideo?.(); else p.pauseVideo?.(); } catch { /* ainda subindo */ }
   }, [ligado]);
 
-  return <div className="w-full h-[168px] overflow-hidden rounded-xl bg-black/40"><div ref={hostRef} /></div>;
+  // 📏 22/09/2026 — dono: "quero deixar o X-Music menor, acho que está
+  // ocupando muito espaço". 168px → 120px de player: o que encolheu foi a
+  // moldura, não a função — nenhum controle saiu.
+  return <div className="w-full h-[120px] overflow-hidden rounded-xl bg-black/40"><div ref={hostRef} /></div>;
 });
 
 export default function XMusic() {
@@ -455,7 +458,7 @@ export default function XMusic() {
             a altura da janela menos o espaço da pílula, e o que não couber
             rola DENTRO dele. Sem isto, com a busca aberta a lista passava do
             topo e o conteúdo de cima ficava cortado, inalcançável. */}
-        <div className="xeos-cru w-[min(88vw,20rem)] rounded-2xl border border-white/12 shadow-2xl p-3 space-y-3 overflow-y-auto overscroll-contain"
+        <div className="xeos-cru w-[min(84vw,17rem)] rounded-2xl border border-white/12 shadow-2xl p-2.5 space-y-2.5 overflow-y-auto overscroll-contain"
           style={{
             background: 'rgba(10,16,32,0.97)',
             backdropFilter: 'blur(12px)',
@@ -720,7 +723,7 @@ export default function XMusic() {
           <Radio className={`w-4 h-4 shrink-0 ${ligado ? 'text-nz-verde' : 'text-white/50'}`} />
           <span className="min-w-0">
             <span className="block text-[10px] font-extrabold tracking-[0.16em] text-white/50 leading-none">X-MUSIC</span>
-            <span className="block max-w-[9rem] truncate text-[11px] font-bold text-white leading-tight">
+            <span className="block max-w-[7rem] truncate text-[11px] font-bold text-white leading-tight">
               {ligado ? (estacao?.tocando || estacao?.nome || 'tocando') : 'desligado'}
             </span>
           </span>

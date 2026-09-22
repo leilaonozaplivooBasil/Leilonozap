@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Volume2, VolumeX, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic } from 'lucide-react';
+import { X, Volume2, VolumeX, Sunrise, HeartHandshake, Instagram, Video, Square, Check, Star, ChevronDown, ChevronRight, SwitchCamera, Camera, Loader2, AlertTriangle, Pencil, Mic, Music2 } from 'lucide-react';
 import useDitado from '@/hooks/useDitado';
 import BotaoDitado from '@/components/common/BotaoDitado';
 import DicaDaEtapa from './DicaDaEtapa';
+import FundoJanelaDoMar from './FundoJanelaDoMar';
 import { juntarTexto } from '@/lib/ditado';
 import { restricoesDaCamera, opcoesDoGravador, avisoDoVideoGrande } from '@/lib/gravadorDeVideo';
 import { gratidaoEntregue, GRATIDAO_MIN, VISUALIZACAO_MIN_SEG, gratidaoAudioMinSegHoje, metaMotivosGratidaoHoje, AVISO_COLAR, LINK_ABRIR_INSTAGRAM, VISUALIZACAO_TETO_SEG, faltaDaVisualizacao, textoDoCronometroVisualizacao, validarPrint, hashDoArquivo, dataISO } from '@/lib/xgame';
@@ -50,6 +51,8 @@ const salvarMusica = (id, lista = false) => {
 // ⭐ A PLAYLIST DO AMANHECER da pessoa (fica no aparelho): cada link que ela
 // joga pode ser favoritado — "salva isso pra amanhã" — e a coleção cresce.
 const CHAVE_PLAYLIST = 'xgame_playlist_amanhecer';
+/** A pessoa deixou o player aberto ou encolhido? Preferência DO APARELHO. */
+const CHAVE_MUSICA_ABERTA = 'xgame_musica_aberta';
 const lerPlaylist = () => {
   try { const j = JSON.parse(localStorage.getItem(CHAVE_PLAYLIST) || '[]'); return Array.isArray(j) ? j.slice(0, 20) : []; } catch { return []; }
 };
@@ -76,7 +79,7 @@ const PlayerYoutube = React.memo(function PlayerYoutube({ id, lista }) {
       title="música do amanhecer"
       src={fonteDoPlayer({ id, lista })}
       allow="autoplay; encrypted-media"
-      className="w-56 h-32 block"
+      className="w-full h-28 block"
     />
   );
 });
@@ -85,8 +88,8 @@ const PlayerYoutube = React.memo(function PlayerYoutube({ id, lista }) {
  *  emoji gigante, que virava um quadradinho feio na tela cheia. */
 function Halo({ children }) {
   return (
-    <span className="mx-auto flex w-24 h-24 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/25 backdrop-blur-sm"
-      style={{ boxShadow: '0 0 60px rgba(255,214,170,0.35), inset 0 2px 14px rgba(255,255,255,0.22)' }}
+    <span className="mx-auto flex w-24 h-24 items-center justify-center rounded-full bg-[#FFC46B]/12 ring-1 ring-[#FFC46B]/35 backdrop-blur-sm"
+      style={{ boxShadow: '0 0 70px rgba(255,196,107,0.40), inset 0 2px 14px rgba(255,240,215,0.22)' }}
     >{children}</span>
   );
 }
@@ -98,8 +101,8 @@ function BotaoRitual({ onClick, children, disabled }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] text-[15px] font-extrabold tracking-wide px-10 py-4 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
-      style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
+      className="xeos-cru rounded-2xl bg-[#FFC46B] text-[#0A1B2E] text-[15px] sm:text-[16px] font-extrabold tracking-wide px-10 py-4 hover:bg-[#FFD9A0] disabled:opacity-30 transition-transform active:translate-y-[3px]"
+      style={{ boxShadow: '0 5px 0 0 #A7703A, 0 14px 34px rgba(255,170,80,.28)' }}
     >{children}</button>
   );
 }
@@ -127,6 +130,12 @@ const ACAO_MIN = 10;
 // gravam sozinhos (Luiz, 10/09: "vamos dividir em três"), e número solto num
 // `passo === 2` espalhado pelo arquivo é como se troca a ordem sem perceber.
 const P = Object.freeze({ ABERTURA: 0, ACORDEI: 1, GRATIDAO: 2, VISUALIZACAO: 3, FECHAMENTO: 4 });
+
+// 🌅 O DIA NASCE ENQUANTO ELA FAZ. Cada bloco entregue esquenta a luz da
+// janela: abre na hora azul, fecha com o sol alto. Não é enfeite — é a mesma
+// coisa que ela está fazendo na vida dela naquela meia hora, acontecendo na
+// tela. (dono, 22/09: "quero que ela sinta que está no mar nessa lâmina")
+const LUZ_DO_PASSO = Object.freeze({ [P.ABERTURA]: 0, [P.ACORDEI]: 0.3, [P.GRATIDAO]: 0.55, [P.VISUALIZACAO]: 0.8, [P.FECHAMENTO]: 1 });
 const PASSO_DO_BLOCO = Object.freeze({ acordei: P.ACORDEI, gratidao: P.GRATIDAO, visualizacao: P.VISUALIZACAO });
 
 /** A barra 1 · 2 · 3 — onde eu estou, e o que já está em casa. */
@@ -231,7 +240,20 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   const escolhaInicial = () => musicaSalva() || lerPlaylist()[0] || PREVIAS_MUSICA[0];
   const [musicaId, setMusicaId] = useState(() => escolhaInicial().id);
   const [musicaLista, setMusicaLista] = useState(() => !!escolhaInicial().lista);
-  const [musicaAberta, setMusicaAberta] = useState(false);
+  // 🎵 22/09 — a música virou uma PÍLULA que expande (ordem do dono: "que ela
+  // tenha a opção de expandir e diminuir igual o X-Music, só que um pouco
+  // menor"). Quem gosta de ver o player deixa aberto: a escolha fica no
+  // aparelho, igual o silêncio e a playlist.
+  const [musicaAberta, setMusicaAberta] = useState(() => {
+    try { return localStorage.getItem(CHAVE_MUSICA_ABERTA) === '1'; } catch { return false; }
+  });
+  const alternarMusicaAberta = () => {
+    setMusicaAberta((v) => {
+      const novo = !v;
+      try { localStorage.setItem(CHAVE_MUSICA_ABERTA, novo ? '1' : '0'); } catch { /* sem storage */ }
+      return novo;
+    });
+  };
   const [linkMusica, setLinkMusica] = useState('');
   const trocarMusica = (m) => {
     setMusicaId(m.id);
@@ -240,6 +262,9 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   };
   const naPlaylist = playlist.some((m) => m.id === musicaId);
   const ehPrevia = PREVIAS_MUSICA.some((m) => m.id === musicaId);
+  // o nome que aparece na pílula quando o player está encolhido: sem ele, a
+  // pessoa não sabe o que está tocando sem abrir
+  const nomeDaMusicaDeHoje = [...playlist, ...PREVIAS_MUSICA].find((m) => m.id === musicaId)?.nome || 'sua música do dia';
   const favoritarAtual = async () => {
     const nome = (await buscarTitulo(musicaId, musicaLista)) || `Minha música ${playlist.length + 1}`;
     const nova = [...playlist.filter((m) => m.id !== musicaId), { id: musicaId, nome, lista: musicaLista }];
@@ -525,7 +550,8 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-b from-[#141432] via-[#5b2a5e] to-[#f59e5b] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#070E18] overflow-hidden">
+      <FundoJanelaDoMar luz={LUZ_DO_PASSO[passo] ?? 0} />
       {/* o QUADRO DOS SONHOS na visualização: UM sonho de cada vez, ENORME
           (quase preenchendo a tela, no celular e no desktop), subindo devagar
           como numa meditação — um saindo, o próximo entrando, em ordem que
@@ -549,7 +575,9 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
         </div>
       )}
 
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-72 h-36 rounded-t-full bg-gradient-to-t from-amber-300/70 to-transparent blur-2xl" />
+      {/* 🔴 22/09 — o antigo "sol" de brilho âmbar no pé da tela saiu: quem
+          faz o nascer do sol agora é o FundoJanelaDoMar, e os dois juntos
+          empastelavam a luz do horizonte. */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
         <button
           type="button"
@@ -567,23 +595,45 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
       </div>
       {/* 🎵 A MÚSICA DO AMANHECER — YouTube tocando automático; a pessoa
           escolhe a prévia ou cola a música do dia dela (fica salva) */}
-      <div className="absolute top-4 left-4 z-20 space-y-1.5">
-        <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-black/40">
-          <PlayerYoutube id={musicaId} lista={musicaLista} />
-        </div>
-        {/* ⭐ tocou um link novo? um toque salva na playlist — pra amanhã */}
-        {!naPlaylist && !ehPrevia && (
-          <button type="button" onClick={favoritarAtual} className="block w-56 rounded-full px-3 py-1 text-[11px] font-bold bg-amber-400/90 text-[#3b1d3e] hover:bg-amber-300">
-            <Star className="w-3 h-3" fill="currentColor" /> salvar na minha playlist pra amanhã
-          </button>
-        )}
+      {/* 🎵 22/09 — ANTES: o player do YouTube (224×128px) ficava SEMPRE
+          aberto no canto, e era a primeira coisa que o olho via ao abrir o
+          ritual — brigando com o "Bom dia" que é o assunto da tela. AGORA é
+          uma pílula fina; um toque abre o player e a playlist.
+
+          🔴 O PAINEL NUNCA SAI DO DOM. Desmontar o iframe MATA a música no
+          meio do ritual — encolher esconde por CSS (o mesmo jeito que o
+          X-Music global já faz). */}
+      <div className="absolute top-3 left-3 z-20 w-[13.5rem] max-w-[52vw]">
         <button
           type="button"
-          onClick={() => setMusicaAberta(!musicaAberta)}
-          className="xeos-cru rounded-full px-3 py-1 text-[11px] font-semibold bg-white/10 text-white/70 hover:text-white"
-        >{musicaAberta ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />} sua playlist do amanhecer</button>
-        {musicaAberta && (
-          <div className="w-56 rounded-2xl bg-black/50 backdrop-blur p-2.5 space-y-1.5 max-h-64 overflow-y-auto">
+          onClick={alternarMusicaAberta}
+          data-teste="musica-do-amanhecer"
+          aria-expanded={musicaAberta}
+          className="xeos-cru w-full flex items-center gap-2 rounded-full pl-1.5 pr-2 py-1.5 bg-[#08192A]/70 backdrop-blur-sm ring-1 ring-[#FFC46B]/25 text-left hover:ring-[#FFC46B]/50"
+        >
+          <span className="grid place-items-center w-6 h-6 shrink-0 rounded-full bg-[#FFC46B]/20 text-[#FFD9A0]">
+            <Music2 className="w-3.5 h-3.5" strokeWidth={2.4} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[8px] font-black uppercase tracking-[.16em] text-[#FFC46B]/75 leading-none">a música de hoje</span>
+            <span className="block truncate text-[11px] font-bold text-[#FFF8F0] leading-tight">{nomeDaMusicaDeHoje}</span>
+          </span>
+          {musicaAberta
+            ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-[#E6D5C3]" />
+            : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[#E6D5C3]" />}
+        </button>
+
+        <div className={musicaAberta ? 'mt-1.5 space-y-1.5' : 'absolute bottom-0 -left-[9999px] opacity-0 pointer-events-none'} aria-hidden={!musicaAberta}>
+          <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-[#FFC46B]/20 bg-black/40">
+            <PlayerYoutube id={musicaId} lista={musicaLista} />
+          </div>
+          {/* ⭐ tocou um link novo? um toque salva na playlist — pra amanhã */}
+          {!naPlaylist && !ehPrevia && (
+            <button type="button" onClick={favoritarAtual} className="block w-full rounded-full px-3 py-1 text-[11px] font-bold bg-[#FFC46B] text-[#0A1B2E] hover:bg-[#FFD9A0]">
+              <Star className="w-3 h-3" fill="currentColor" /> salvar na minha playlist pra amanhã
+            </button>
+          )}
+          <div className="w-full rounded-2xl bg-[#08192A]/75 backdrop-blur-sm ring-1 ring-[#FFC46B]/15 p-2.5 space-y-1.5 max-h-56 overflow-y-auto">
             {playlist.length > 0 && (
               <>
                 <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest"> a sua playlist</p>
@@ -615,10 +665,10 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 placeholder="cole um link do YouTube e toque"
                 className="xeos-cru flex-1 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-[10px] px-2 py-1.5 focus:outline-none"
               />
-              <button type="button" onClick={usarLinkMusica} className="xeos-cru rounded-lg bg-white text-[#5b2a5e] text-[10px] font-bold px-2">tocar</button>
+              <button type="button" onClick={usarLinkMusica} className="xeos-cru rounded-lg bg-[#FFC46B] text-[#0A1B2E] text-[10px] font-bold px-2">tocar</button>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="relative z-10 w-full max-w-md text-center text-white space-y-6">
@@ -682,7 +732,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                         disabled={!textoExplicacao.trim() || enviandoExplicacao}
                         onClick={() => enviarExplicacao(r.bloco)}
                         data-teste={`enviar-explicacao-${r.bloco}`}
-                        className="xeos-cru flex-1 rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 disabled:opacity-40"
+                        className="xeos-cru flex-1 rounded-xl bg-white text-[#0A1B2E] text-[12px] font-extrabold px-4 py-2.5 disabled:opacity-40"
                       >{enviandoExplicacao ? 'mandando…' : 'Mandar minha explicação'}</button>
                       <button
                         type="button"
@@ -723,7 +773,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                     type="button"
                     onClick={() => pedirAjuda(r.bloco)}
                     data-teste={`pedir-ajuda-${r.bloco}`}
-                    className="xeos-cru flex-1 rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 hover:bg-violet-50"
+                    className="xeos-cru flex-1 rounded-xl bg-white text-[#0A1B2E] text-[12px] font-extrabold px-4 py-2.5 hover:bg-violet-50"
                   >Pedir ajuda a um gestor</button>
                   <button
                     type="button"
@@ -737,7 +787,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                   type="button"
                   onClick={() => refazerBloco(r.bloco)}
                   data-teste={`refazer-${r.bloco}`}
-                  className="xeos-cru w-full rounded-xl bg-white text-[#5b2a5e] text-[12px] font-extrabold px-4 py-2.5 hover:bg-amber-50"
+                  className="xeos-cru w-full rounded-xl bg-white text-[#0A1B2E] text-[12px] font-extrabold px-4 py-2.5 hover:bg-amber-50"
                 >Refazer {ROTULO_DO_BLOCO[r.bloco]}</button>
               )}
             </div>
@@ -746,33 +796,53 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
         {passo === P.ABERTURA && (
           <>
-            <Halo><Sunrise className="w-14 h-14 text-white" strokeWidth={1.5} /></Halo>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Bom dia, {nome || 'campeão'}.</h2>
-            <p className="text-white/80 text-[15px] leading-relaxed max-w-sm mx-auto">
+            <Halo><Sunrise className="w-14 h-14 text-[#FFE7C2]" strokeWidth={1.5} /></Halo>
+            {/* 🔤 22/09 — dono: "preciso que esses textos fiquem mais
+                visíveis". Título com sombra própria: sobre o mar ele precisa
+                se destacar sem precisar de caixa por trás. */}
+            <h2
+              className="text-[2.1rem] sm:text-5xl font-black tracking-tight text-[#FFF8F0]"
+              style={{ textShadow: '0 2px 24px rgba(4,12,22,.75), 0 1px 2px rgba(4,12,22,.9)' }}
+            >Bom dia, {nome || 'campeão'}.</h2>
+            <p className="text-[#F2E3D2] text-[15px] sm:text-[16px] leading-relaxed max-w-sm mx-auto" style={{ textShadow: '0 1px 12px rgba(4,12,22,.7)' }}>
               O dia ainda nem clareou — e você já está aqui.
             </p>
-            <p className="text-[11px] font-extrabold tracking-[0.28em] text-amber-200">ANTECIPAÇÃO É PODER</p>
+            {/* o selo: era um texto âmbar solto de 11px; agora tem fio de luz
+                dos dois lados e peso pra virar assinatura da tela */}
+            <p className="flex items-center justify-center gap-3 text-[11px] font-black tracking-[0.3em] text-[#FFC46B]">
+              <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#FFC46B]/70" />
+              ANTECIPAÇÃO É PODER
+              <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#FFC46B]/70" />
+            </p>
             {/* 🧱 O CONTRATO, DITO ANTES — não depois de errar.
                 DIR-134 já tinha achado que a maior parte das reprovações do
                 ritual não é "esqueceu", é "não sabia a regra". Agora a regra
                 inteira cabe em três linhas, e elas vêm antes do primeiro
                 clique: o que são os três blocos, quanto tempo tem, e que
                 nada do que for entregue se perde no meio do caminho. */}
-            <div className="xeos-cru rounded-2xl bg-white/10 ring-1 ring-white/20 p-4 text-left space-y-2">
-              <p className="text-[12px] text-white/85 font-bold text-center tracking-wide">São três blocos, e cada um fica salvo na hora.</p>
+            {/* 🪟 o vidro fosco: é ele que faz o texto ser legível em cima do
+                mar, em qualquer luz. Antes era `bg-white/10` — quase nada, e
+                por isso o card sumia e o texto de 70% de branco também. */}
+            <div
+              className="xeos-cru rounded-2xl p-4 text-left space-y-2.5 backdrop-blur-md ring-1 ring-[#FFC46B]/30"
+              style={{ background: 'linear-gradient(180deg, rgba(10,27,46,.62), rgba(6,18,32,.72))', boxShadow: '0 10px 40px rgba(3,10,20,.45)' }}
+              data-teste="contrato-do-ritual"
+            >
+              <p className="text-[13px] text-[#FFF8F0] font-extrabold text-center tracking-wide">São três blocos, e cada um fica salvo na hora.</p>
               {BLOCOS.map((nome, i) => (
-                <p key={nome} className="text-[12px] text-white/70 flex gap-2">
-                  <span className="font-black text-amber-200">{i + 1}</span>
+                <p key={nome} className="text-[12.5px] text-[#EBDCC9] flex items-start gap-2.5 leading-snug">
+                  <span className="grid place-items-center shrink-0 w-5 h-5 mt-px rounded-full bg-[#FFC46B]/20 ring-1 ring-[#FFC46B]/45 text-[10px] font-black text-[#FFD9A0]">{i + 1}</span>
                   <span>
-                    <b className="text-white/90">{ROTULO_DO_BLOCO[nome]}</b>
+                    <b className="text-[#FFF8F0]">{ROTULO_DO_BLOCO[nome]}</b>
                     {nome === 'acordei' && ' — o print do seu bom dia no Instagram.'}
                     {nome === 'gratidao' && ' — fala ou escreve, você escolhe.'}
                     {nome === 'visualizacao' && ' — o vídeo olhando o seu sonho, e a ação de hoje.'}
                   </span>
                 </p>
               ))}
-              <p className="text-[11px] text-amber-200/90 pt-1 border-t border-white/15">
-                ⏱️ Você tem {RITUAL_MINUTOS_PARA_CONCLUIR} minutos a partir de agora. Se parar no meio, o que já entregou continua valendo.
+              <p className="flex items-start gap-2 text-[11.5px] font-semibold text-[#FFD9A0] pt-2 border-t border-[#FFC46B]/25">
+                <span aria-hidden="true">⏱️</span>
+                <span>Você tem {RITUAL_MINUTOS_PARA_CONCLUIR} minutos a partir de agora. Se parar no meio, o que já entregou continua valendo.</span>
               </p>
             </div>
             <BotaoRitual onClick={() => { som('passo'); setAbertoEm(new Date().toISOString()); setPasso(P.ACORDEI); }}>Começar o ritual</BotaoRitual>
@@ -928,7 +998,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 disabled={!entrega.ok || !!salvando}
                 onClick={salvarGratidao}
                 data-teste="gratidao-continuar"
-                className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
+                className="xeos-cru rounded-2xl bg-white text-[#0A1B2E] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-30 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               >{salvando === 'gratidao' ? 'guardando…' : 'Continuar'}</button>
               {/* 📣 ESTE É O TEXTO QUE O DONO CIRCULOU DE VERMELHO (18/09).
@@ -1073,7 +1143,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                   type="button"
                   disabled={acao.trim().length < ACAO_MIN || !!salvando}
                   onClick={continuarDoSonho}
-                  className="xeos-cru rounded-2xl bg-white text-[#5b2a5e] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
+                  className="xeos-cru rounded-2xl bg-white text-[#0A1B2E] font-bold px-8 py-3 hover:bg-amber-50 disabled:opacity-40"
                 >{salvando === 'visualizacao' ? 'guardando…' : 'Continuar'}</button>
                 {!videoBlob && (
                   <p className="text-white/40 text-[10px]">continuar sem o vídeo manda a comprovação pra análise manual</p>
@@ -1138,7 +1208,7 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
                 disabled={!!salvando}
                 data-teste="concluir-o-ritual"
                 onClick={() => { som('conclusao'); pararGravacao(); onConcluir({ gratidao: gratidao.trim(), acao: acao.trim(), videoBlob, frameBlob, gravSeg, audioGratidao, audioGratidaoSeg, metaMotivosHoje, transcricaoGratidao, audioAcao, tempoTelaS: Math.round((Date.now() - inicioRef.current) / 1000) }); }}
-                className="xeos-cru mt-2 rounded-2xl bg-white text-[#5b2a5e] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-40 transition-transform active:translate-y-[3px]"
+                className="xeos-cru mt-2 rounded-2xl bg-white text-[#0A1B2E] font-extrabold tracking-wide px-9 py-3.5 hover:bg-amber-50 disabled:opacity-40 transition-transform active:translate-y-[3px]"
                 style={{ boxShadow: '0 5px 0 0 rgba(0,0,0,0.28)' }}
               ><span className="inline-flex items-center gap-2">Concluir o ritual <Check className="w-4 h-4" strokeWidth={3} /></span></button>
             </div>
