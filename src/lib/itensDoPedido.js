@@ -58,3 +58,77 @@ export function quantosItens(pedido) {
   const uma = Number(pedido?.quantity) || 1;
   return uma > 0 ? uma : 1;
 }
+
+// ── 💰 O DINHEIRO DO PEDIDO (22/09/2026) ────────────────────────────────────
+//
+// 🔴 O CASO QUE PROVOCOU ISTO — e ele quase me enganou também.
+//
+// A operadora abriu o pedido de quatro produtos do mesmo cliente do caso acima
+// e leu, na tela dela: "Valor do produto: R$ 1,00 · Total cobrado do cliente:
+// R$ 21,82". Concluiu que só uma lâmpada tinha sido comprada, avisou que "a
+// batedeira sumiu da loja" e travou o envio.
+//
+// Estava tudo certo no banco: R$ 211,13 em produtos, R$ 20,82 de frete,
+// R$ 210,13 pagos com crédito Passaporte e R$ 1,00 no PIX — porque R$ 1,00 é o
+// mínimo que o Mercado Pago aceita cobrar, não dá para emitir PIX de zero.
+//
+// A tela mostrava `total_amount`, que guarda só a parte cobrada no meio de
+// pagamento. O crédito, que era 99,5% da compra, não aparecia em lugar nenhum.
+//
+// 🔴 E o estrago não é só confusão: conferindo este caso, eu mesmo quase
+// concluí que a loja tinha entregado R$ 210 de mercadoria de graça, porque a
+// carteira do cliente batia certinho com o que ele havia depositado — o
+// desconto não tinha saído dela. Só não errei porque fui atrás de onde o
+// crédito vinha. Um número que engana quem está com o banco aberto na frente
+// engana qualquer um.
+
+const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const cent = (v) => Math.round(num(v) * 100) / 100;
+
+/** O `raw_base44`, venha ele como objeto ou como texto. */
+function rawDe(pedido) {
+  let raw = pedido?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  return raw && typeof raw === 'object' ? raw : null;
+}
+
+/**
+ * Quanto o pedido custou, de onde veio cada parte, e quanto entrou em dinheiro.
+ *
+ * `produtos` sai da SOMA DOS ITENS quando eles existem — é o único número que
+ * não depende de nenhuma coluna ter sido preenchida certo. Sem itens, cai na
+ * conta que sempre vale: o que foi cobrado mais o que foi descontado.
+ *
+ * @returns {{produtos:number, credito:number, cupom:number, frete:number,
+ *            noPagamento:number, cobrado:number, total:number, temCredito:boolean}}
+ */
+export function dinheiroDoPedido(pedido) {
+  const raw = rawDe(pedido);
+
+  const itens = Array.isArray(pedido?.items_json) && pedido.items_json.length
+    ? pedido.items_json
+    : (Array.isArray(raw?.items) ? raw.items : null);
+
+  const noPagamento = cent(pedido?.total_amount ?? pedido?.sale_price ?? 0);
+  const descontoTotal = cent(pedido?.discount_amount);
+  // `discount_amount` guarda cupom + crédito somados (ver createMPPix); o
+  // crédito vem separado no raw, então o cupom é o que sobra.
+  const credito = cent(raw?.passaporte_desconto);
+  const cupom = Math.max(0, cent(descontoTotal - credito));
+
+  const produtos = itens && itens.length
+    ? cent(itens.reduce((s, it) => s + num(it.price) * (num(it.qty) || num(it.quantity) || 1), 0))
+    : cent(noPagamento + descontoTotal);
+
+  const frete = cent(raw?.frete?.valor);
+  // `amount_charged` é o que a maquininha viu. Sem ele, é o pagamento + frete.
+  const cobrado = raw?.amount_charged != null ? cent(raw.amount_charged) : cent(noPagamento + frete);
+
+  return {
+    produtos, credito, cupom, frete, noPagamento, cobrado,
+    total: cent(produtos + frete),
+    // 🔴 o sinal que faz a tela explicar em vez de mentir: sem isto, ninguém
+    // sabe que o número pequeno é só uma parte.
+    temCredito: credito > 0 || cupom > 0,
+  };
+}

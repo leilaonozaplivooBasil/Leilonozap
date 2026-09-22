@@ -8,7 +8,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { itensDoPedido, quantosItens } from '../src/lib/itensDoPedido.js';
+import { itensDoPedido, quantosItens, dinheiroDoPedido } from '../src/lib/itensDoPedido.js';
 
 const CASO_REAL = {
   product_title: 'Kit 10 Lâmpada Led Dicróica Mr16',
@@ -85,5 +85,113 @@ describe('quantosItens', () => {
     for (const vazio of [null, undefined, {}, { quantity: 0 }, { quantity: -2 }]) {
       assert.equal(quantosItens(vazio), 1, `devolveu errado para ${JSON.stringify(vazio)}`);
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 💰 O DINHEIRO DO PEDIDO — 22/09/2026
+//
+// O caso real: a operadora abriu o pedido de quatro produtos, leu na tela
+// "Valor do produto: R$ 1,00", concluiu que só uma lâmpada tinha sido comprada,
+// avisou que "a batedeira sumiu da loja" e TRAVOU O ENVIO.
+//
+// Estava tudo certo: R$ 211,13 em produtos, R$ 20,82 de frete, R$ 210,13 pagos
+// com crédito Passaporte e R$ 1,00 no PIX — o mínimo que o Mercado Pago aceita
+// cobrar. A tela mostrava `total_amount`, que guarda só a parte cobrada no meio
+// de pagamento, e o crédito (99,5% da compra) não aparecia em canto nenhum.
+//
+// 🔴 Conferindo este caso eu mesmo quase concluí que a loja tinha dado R$ 210
+// de mercadoria de graça: a carteira do cliente batia com o que ele depositou,
+// porque o desconto não saiu dela — saiu dos cupons. Um número que engana quem
+// está com o banco aberto na frente engana qualquer um.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// os números EXATOS do pedido LZ26D693EC, como estão no banco
+const PEDIDO_REAL = {
+  total_amount: 1,
+  sale_price: 1,
+  discount_amount: 210.13,
+  quantity: 4,
+  payment_method: 'pix_mp',
+  raw_base44: {
+    frete: { valor: 20.82, empresa: 'Jadlog', servico: '.Package' },
+    items: [
+      { id: 'a', qty: 1, price: 16.16, title: 'Kit 10 Lâmpada Led Dicróica' },
+      { id: 'b', qty: 1, price: 67, title: 'Relógios Masculinos ZXL' },
+      { id: 'c', qty: 1, price: 37.97, title: 'Maquina Acabamento Kemei' },
+      { id: 'd', qty: 1, price: 90, title: 'Batedeira Prática Mondial B-44-B' },
+    ],
+    amount_charged: 21.82,
+    passaporte_desconto: 210.13,
+  },
+};
+
+describe('💰 dinheiroDoPedido — o caso que travou o envio', () => {
+  test('🔴 mostra os R$ 211,13 de produtos, não o R$ 1,00 do PIX', () => {
+    // era o número que fazia a operadora ler "só uma lâmpada".
+    assert.equal(dinheiroDoPedido(PEDIDO_REAL).produtos, 211.13);
+  });
+
+  test('🔴 o crédito Passaporte aparece, com o valor certo', () => {
+    // 99,5% da compra. Sem isto, o pedido parece não ter sido pago.
+    assert.equal(dinheiroDoPedido(PEDIDO_REAL).credito, 210.13);
+    assert.equal(dinheiroDoPedido(PEDIDO_REAL).temCredito, true);
+  });
+
+  test('🔴 a conta fecha: produtos + frete = total, e crédito + cobrado = total', () => {
+    const d = dinheiroDoPedido(PEDIDO_REAL);
+    assert.equal(d.frete, 20.82);
+    assert.equal(d.total, 231.95, 'o total do pedido não fecha');
+    assert.equal(d.cobrado, 21.82, 'o que a maquininha viu');
+    // crédito + o que foi cobrado tem que dar o pedido inteiro
+    assert.equal(Math.round((d.credito + d.cobrado) * 100) / 100, d.total,
+      'sobrou ou faltou dinheiro na explicação — é isso que faz alguém achar que a loja deu de graça');
+  });
+
+  test('🔴 o valor dos produtos vem da SOMA DOS ITENS, não de coluna nenhuma', () => {
+    // se uma coluna for gravada errada (já aconteceu com o delivery_type), a
+    // soma dos itens continua certa. É o único número que não depende de ninguém.
+    const comColunaPodre = { ...PEDIDO_REAL, total_amount: 999, discount_amount: 999 };
+    assert.equal(dinheiroDoPedido(comColunaPodre).produtos, 211.13);
+  });
+
+  test('sem itens, cai na conta que sempre vale: cobrado + descontado', () => {
+    const semItens = { total_amount: 50, discount_amount: 30, raw_base44: { passaporte_desconto: 30 } };
+    assert.equal(dinheiroDoPedido(semItens).produtos, 80);
+  });
+
+  test('🔴 separa cupom de crédito — são coisas diferentes no extrato', () => {
+    // `discount_amount` guarda os dois somados; só o crédito vem separado.
+    const comCupom = { total_amount: 10, discount_amount: 50,
+      raw_base44: { passaporte_desconto: 30, items: [{ qty: 1, price: 60 }] } };
+    const d = dinheiroDoPedido(comCupom);
+    assert.equal(d.credito, 30);
+    assert.equal(d.cupom, 20);
+  });
+
+  test('pedido normal, sem crédito nenhum, não inventa explicação', () => {
+    const simples = { total_amount: 74.97, raw_base44: { frete: { valor: 15 }, amount_charged: 89.97 } };
+    const d = dinheiroDoPedido(simples);
+    assert.equal(d.temCredito, false, 'ia mostrar o quadro de crédito num pedido que não tem');
+    assert.equal(d.produtos, 74.97);
+    assert.equal(d.total, 89.97);
+  });
+
+  test('raw como TEXTO também é lido', () => {
+    const comTexto = { ...PEDIDO_REAL, raw_base44: JSON.stringify(PEDIDO_REAL.raw_base44) };
+    assert.equal(dinheiroDoPedido(comTexto).produtos, 211.13);
+    assert.equal(dinheiroDoPedido(comTexto).credito, 210.13);
+  });
+
+  test('pedido torto não derruba a tela', () => {
+    for (const ruim of [null, undefined, {}, { raw_base44: 'nao é json' }, { total_amount: 'abc' }]) {
+      const d = dinheiroDoPedido(ruim);
+      assert.ok(Number.isFinite(d.produtos) && Number.isFinite(d.total));
+    }
+  });
+
+  test('quantidade maior que 1 multiplica', () => {
+    const doisIguais = { total_amount: 0, raw_base44: { items: [{ qty: 3, price: 10 }] } };
+    assert.equal(dinheiroDoPedido(doisIguais).produtos, 30);
   });
 });

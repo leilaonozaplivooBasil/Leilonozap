@@ -1,4 +1,4 @@
-import { itensDoPedido } from '@/lib/itensDoPedido';
+import { itensDoPedido, dinheiroDoPedido } from '@/lib/itensDoPedido';
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -856,14 +856,42 @@ export default function CatalogOrdersAdmin() {
                 {selectedOrder._vendedor_nome && (
                   <p className="text-sm text-gray-400">Vinculado a: <span className="text-purple-300 font-medium">🔗 {selectedOrder._vendedor_nome}{selectedOrder._vendedor_cargo ? ` (${CARGO_LABEL[selectedOrder._vendedor_cargo] || selectedOrder._vendedor_cargo})` : ''}</span></p>
                 )}
-                <p className="text-sm text-gray-400">Valor do produto: <span className="text-green-400 font-bold">R$ {fmtBR((selectedOrder.total_amount || selectedOrder.sale_price || 0))}</span></p>
+                {/* 🔴 22/09/2026 — AQUI A TELA MENTIA, E TRAVOU UM ENVIO.
+                    Mostrava `total_amount`, que guarda só a parte cobrada no
+                    meio de pagamento. Num pedido de R$ 211,13 pago quase todo
+                    com crédito Passaporte, a operadora leu "R$ 1,00", concluiu
+                    que só uma lâmpada tinha sido comprada e segurou o pedido.
+                    Agora o valor dos PRODUTOS vem da soma dos itens, e o que
+                    veio de crédito aparece com nome. Ver dinheiroDoPedido(). */}
                 {(() => {
+                  const $$ = dinheiroDoPedido(selectedOrder);
                   const frete = getFrete(selectedOrder);
-                  if (!frete) return null;
                   return (
                     <>
-                      <p className="text-sm text-gray-400">Frete: <span className="text-amber-300 font-bold">R$ {fmtBR(frete.valor)}</span>{frete.transportadora ? <span className="text-gray-400"> — {frete.transportadora}</span> : null}</p>
-                      {frete.totalCobrado != null && (
+                      <p className="text-sm text-gray-400">Valor dos produtos: <span className="text-green-400 font-bold">R$ {fmtBR($$.produtos)}</span></p>
+                      {frete && (
+                        <p className="text-sm text-gray-400">Frete: <span className="text-amber-300 font-bold">R$ {fmtBR(frete.valor)}</span>{frete.transportadora ? <span className="text-gray-400"> — {frete.transportadora}</span> : null}</p>
+                      )}
+                      {$$.temCredito ? (
+                        <div className="mt-1.5 rounded-lg border border-nz-verde-neon/30 bg-nz-verde-neon/[0.07] px-3 py-2" data-teste="pedido-como-foi-pago">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-nz-verde-neon">Como o cliente pagou</p>
+                          <p className="mt-1 text-sm text-gray-300">Total do pedido: <span className="font-bold text-white">R$ {fmtBR($$.total)}</span></p>
+                          {$$.credito > 0 && (
+                            <p className="text-sm text-gray-300">Crédito Passaporte: <span className="font-bold text-nz-verde-neon">− R$ {fmtBR($$.credito)}</span></p>
+                          )}
+                          {$$.cupom > 0 && (
+                            <p className="text-sm text-gray-300">Cupom: <span className="font-bold text-nz-verde-neon">− R$ {fmtBR($$.cupom)}</span></p>
+                          )}
+                          <p className="text-sm text-gray-300">Pago no {selectedOrder.payment_method === 'credit_card_mp' ? 'cartão' : 'PIX'}: <span className="font-bold text-white">R$ {fmtBR($$.cobrado)}</span></p>
+                          {/* o R$ 1,00 assusta quem não sabe de onde ele vem */}
+                          {$$.noPagamento > 0 && $$.noPagamento <= 1 && (
+                            <p className="mt-1 text-[11.5px] leading-snug text-gray-400">
+                              O R$ 1,00 é o mínimo que o Mercado Pago aceita cobrar — não existe cobrança de zero.
+                              O resto dos produtos saiu do crédito. <b className="text-gray-300">O pedido está pago por inteiro.</b>
+                            </p>
+                          )}
+                        </div>
+                      ) : frete?.totalCobrado != null && (
                         <p className="text-sm text-gray-400">Total cobrado do cliente: <span className="text-white font-bold">R$ {fmtBR(frete.totalCobrado)}</span></p>
                       )}
                     </>
