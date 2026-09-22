@@ -73,6 +73,7 @@ import { rastroDa, comFalha } from '@/lib/rastroDaComprovacao';
 import OuvirGratidao from '@/components/common/OuvirGratidao';
 import QuadroCompromisso from './QuadroCompromisso';
 import MapaMental from './MapaMental';
+import DemandasCompromisso from './DemandasCompromisso';
 import { cartaoDaTarefa, LISTAS_MODELO, ESTADO_FEITO, ESTADO_ABERTO } from '@/lib/quadroCompromisso';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
@@ -936,6 +937,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   const [visao, setVisao] = useState('jornada');
+  // 🧠 o número da bolinha na aba Demandas. Conta só as que ESPERAM destino
+  // (status 'recebida'); pede apenas a contagem ao banco, não as linhas.
+  const [demandasEsperando, setDemandasEsperando] = useState(0);
+  const contarDemandas = useCallback(async () => {
+    if (!uid) return;
+    const { count } = await supabase
+      .from('xperf_demandas').select('id', { count: 'exact', head: true })
+      .eq('pessoa_id', uid).eq('status', 'recebida');
+    setDemandasEsperando(Number(count) || 0);
+  }, [uid]);
+  useEffect(() => { contarDemandas(); }, [contarDemandas]);
   // 📌 08/09/2026 — dono: "vamos deixar a opção de a pessoa deixar fixo ou
   // recolhendo, porque tem gente que vai querer deixar fixo." O aberto/
   // fechado do "Como estou" persiste (localStorage) — quem deixa aberto,
@@ -2525,6 +2537,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 placarAberto={painelAberto}
                 onPlacar={alternarPainel}
                 mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
+                demandasEsperando={demandasEsperando}
                 teste={podeGerir ? {
                   hora: horaTeste,
                   rascunho: horaRascunho,
@@ -3019,7 +3032,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* 🗂️ DIR-75 — o nosso quadro é uma VISÃO do dia, e vem antes do
                 "dia vazio": a mesa da organização existe mesmo num dia sem
                 Master Task gerada. */}
-            {visao === 'mapa' ? (
+            {visao === 'demandas' ? (
+              /* 🧠 A caixa de entrada da mente. Recebe `uid` e o dia porque
+                 lê e escreve nas MESMAS tabelas do resto do Compromisso —
+                 diferente do Mapa, cujo dono sai do crachá no servidor. */
+              <DemandasCompromisso
+                uid={uid}
+                hojeISO={dia}
+                nome={currentUser?.full_name || null}
+                onMudou={() => { contarDemandas(); carregarTarefas(); }}
+              />
+            ) : visao === 'mapa' ? (
               /* 🗺️ O mapa mental. Não recebe usuário: o dono sai do crachá,
                  no servidor — passar daqui seria oferecer ao navegador um
                  jeito de pedir o mapa alheio. */
