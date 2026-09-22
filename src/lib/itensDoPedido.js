@@ -28,21 +28,40 @@
  * caso `product_title` já conta a história inteira, e uma lista de um item na
  * tela é ruído. Quem chama decide o que fazer com o `null`.
  *
- * @returns {Array<{title: string, qty: number}>|null}
+ * 🔴 22/09/2026 — O `id` PASSOU A VIR JUNTO, E SEM NOME O TÍTULO VEM VAZIO.
+ *
+ * Os pedidos da loja da rede guardam em `items_json` só `{product_id, qty}` —
+ * sem nome e sem preço. O operador abria a conferência de um pedido de cinco
+ * produtos e lia "Item · Item · Item · Item · Item": impossível saber o que
+ * separar. A culpa era daqui: o `|| 'Item'` FABRICAVA um nome e a tela não
+ * tinha como saber que aquilo não era nome nenhum.
+ *
+ * Agora `title` vem VAZIO quando não existe, e o `id` vem junto. Quem desenha
+ * decide: buscar o nome do produto, ou dizer "produto sem nome no pedido" —
+ * as duas coisas são honestas, e "Item" não era nenhuma das duas.
+ *
+ * @returns {Array<{id: string|null, title: string, qty: number}>|null}
  */
 export function itensDoPedido(pedido) {
+  const normal = (it) => ({
+    id: it.product_id || it.id || null,
+    title: String(it.title || it.product_name || it.description || '').trim(),
+    qty: it.qty || it.quantity || 1,
+  });
   if (Array.isArray(pedido?.items_json) && pedido.items_json.length > 1) {
-    return pedido.items_json.map((it) => ({
-      title: it.title || it.product_name || 'Item',
-      qty: it.qty || it.quantity || 1,
-    }));
+    return pedido.items_json.map(normal);
   }
   let raw = pedido?.raw_base44;
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
   if (Array.isArray(raw?.items) && raw.items.length > 1) {
-    return raw.items.map((it) => ({ title: it.title || 'Item', qty: it.qty || 1 }));
+    return raw.items.map(normal);
   }
   return null;
+}
+
+/** Os ids dos itens que estão sem nome — quem desenha usa para ir buscar. */
+export function itensSemNome(pedido) {
+  return (itensDoPedido(pedido) || []).filter((it) => !it.title && it.id).map((it) => it.id);
 }
 
 /**
@@ -57,4 +76,84 @@ export function quantosItens(pedido) {
   if (lista) return lista.reduce((soma, it) => soma + (Number(it.qty) || 1), 0);
   const uma = Number(pedido?.quantity) || 1;
   return uma > 0 ? uma : 1;
+}
+
+// ── 💰 O DINHEIRO DO PEDIDO (22/09/2026) ────────────────────────────────────
+//
+// 🔴 O CASO QUE PROVOCOU ISTO — e ele quase me enganou também.
+//
+// A operadora abriu o pedido de quatro produtos do mesmo cliente do caso acima
+// e leu, na tela dela: "Valor do produto: R$ 1,00 · Total cobrado do cliente:
+// R$ 21,82". Concluiu que só uma lâmpada tinha sido comprada, avisou que "a
+// batedeira sumiu da loja" e travou o envio.
+//
+// Estava tudo certo no banco: R$ 211,13 em produtos, R$ 20,82 de frete,
+// R$ 210,13 pagos com crédito Passaporte e R$ 1,00 no PIX — porque R$ 1,00 é o
+// mínimo que o Mercado Pago aceita cobrar, não dá para emitir PIX de zero.
+//
+// A tela mostrava `total_amount`, que guarda só a parte cobrada no meio de
+// pagamento. O crédito, que era 99,5% da compra, não aparecia em lugar nenhum.
+//
+// 🔴 E o estrago não é só confusão: conferindo este caso, eu mesmo quase
+// concluí que a loja tinha entregado R$ 210 de mercadoria de graça, porque a
+// carteira do cliente batia certinho com o que ele havia depositado — o
+// desconto não tinha saído dela. Só não errei porque fui atrás de onde o
+// crédito vinha. Um número que engana quem está com o banco aberto na frente
+// engana qualquer um.
+
+const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const cent = (v) => Math.round(num(v) * 100) / 100;
+
+/** O `raw_base44`, venha ele como objeto ou como texto. */
+function rawDe(pedido) {
+  let raw = pedido?.raw_base44;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = null; } }
+  return raw && typeof raw === 'object' ? raw : null;
+}
+
+/**
+ * Quanto o pedido custou, de onde veio cada parte, e quanto entrou em dinheiro.
+ *
+ * `produtos` sai da SOMA DOS ITENS quando eles existem — é o único número que
+ * não depende de nenhuma coluna ter sido preenchida certo. Sem itens, cai na
+ * conta que sempre vale: o que foi cobrado mais o que foi descontado.
+ *
+ * @returns {{produtos:number, credito:number, cupom:number, frete:number,
+ *            noPagamento:number, cobrado:number, total:number, temCredito:boolean}}
+ */
+export function dinheiroDoPedido(pedido) {
+  const raw = rawDe(pedido);
+
+  const itens = Array.isArray(pedido?.items_json) && pedido.items_json.length
+    ? pedido.items_json
+    : (Array.isArray(raw?.items) ? raw.items : null);
+
+  const noPagamento = cent(pedido?.total_amount ?? pedido?.sale_price ?? 0);
+  const descontoTotal = cent(pedido?.discount_amount);
+  // `discount_amount` guarda cupom + crédito somados (ver createMPPix); o
+  // crédito vem separado no raw, então o cupom é o que sobra.
+  const credito = cent(raw?.passaporte_desconto);
+  const cupom = Math.max(0, cent(descontoTotal - credito));
+
+  // 🔴 22/09, MESMO DIA: a primeira versão somava os itens sempre que eles
+  // existissem. Os pedidos da loja da rede (`items_json`) guardam SÓ
+  // `product_id` e `qty` — sem preço. A soma dava ZERO, e a tela passaria a
+  // mostrar "Valor dos produtos: R$ 0,00" num pedido de R$ 357,04. Pior que o
+  // defeito que eu estava consertando. Só soma quando os itens têm preço.
+  const itensComPreco = itens && itens.some((it) => num(it.price) > 0);
+  const produtos = itensComPreco
+    ? cent(itens.reduce((s, it) => s + num(it.price) * (num(it.qty) || num(it.quantity) || 1), 0))
+    : cent(noPagamento + descontoTotal);
+
+  const frete = cent(raw?.frete?.valor);
+  // `amount_charged` é o que a maquininha viu. Sem ele, é o pagamento + frete.
+  const cobrado = raw?.amount_charged != null ? cent(raw.amount_charged) : cent(noPagamento + frete);
+
+  return {
+    produtos, credito, cupom, frete, noPagamento, cobrado,
+    total: cent(produtos + frete),
+    // 🔴 o sinal que faz a tela explicar em vez de mentir: sem isto, ninguém
+    // sabe que o número pequeno é só uma parte.
+    temCredito: credito > 0 || cupom > 0,
+  };
 }
