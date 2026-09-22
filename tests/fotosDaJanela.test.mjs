@@ -7,6 +7,12 @@
  * aqui?" — estavam paradas porque EU tinha decidido não subir por causa da
  * resolução. A decisão é dele; o meu trabalho era medir e avisar, não barrar.
  *
+ * 🔄 22/09, MESMO DIA: o dono desmontou depois de ver na tela — "melhor
+ * deixar as imagens antigas mesmo, estão mais limpas, pode voltar como
+ * estava". As fotos saíram; a CONTA ficou, porque o caminho continua aberto
+ * pro dia em que existir foto própria em resolução alta. Por isso estes
+ * testes agora guardam a régua, não a ligação na tela.
+ *
  * O que estes testes impedem:
  *  · o sorteio virar `Math.random()` — a janela trocaria de praia no meio dos
  *    30 minutos do ritual da pessoa;
@@ -23,8 +29,6 @@ import { fotoDoDia } from '../src/lib/janelaDoMar.js';
 import { semComentarios } from './_ajuda.mjs';
 
 const FUNDO = semComentarios(readFileSync(new URL('../src/components/licensing/CentralVendas/FundoJanelaDoMar.jsx', import.meta.url), 'utf8'));
-const CRM = semComentarios(readFileSync(new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url), 'utf8'));
-const LISTA = readFileSync(new URL('../src/lib/fotosDoRitual.js', import.meta.url), 'utf8');
 
 test('a foto do dia é sorteada, mas NÃO muda no meio do mesmo dia', () => {
   // é isto que separa "aleatório" de "instável": a pessoa abre o ritual,
@@ -65,18 +69,6 @@ test('🔴 o sorteio não pode virar Math.random()', () => {
   assert.ok(i > 0);
   assert.ok(!/Math\.random|new Date\(\)|Date\.now/.test(lib.slice(i)),
     'o sorteio ficou instável — a janela troca de praia no meio do ritual');
-});
-
-test('a tela pede a foto com o dia do APARELHO, não com UTC', () => {
-  assert.match(CRM, /fotoDeFundo=\{FOTOS_DA_JANELA\[fotoDoDia\(hojeStr\(\), FOTOS_DA_JANELA\.length\)\] \|\| null\}/);
-  assert.ok(!/fotoDoDia\(new Date\(\)\.toISOString/.test(CRM), 'voltou o UTC — a foto troca às 21h de Brasília');
-});
-
-test('as fotos moram numa lista só, fora da tela', () => {
-  // quem troca a semana de fotos não devia precisar abrir uma tela de 1.400
-  // linhas: é acrescentar ou tirar uma linha desta lista
-  assert.match(LISTA, /export const FOTOS_DA_JANELA = Object\.freeze\(\[/);
-  assert.equal((LISTA.match(/from '@\/assets\/ritual\//g) || []).length, 3);
 });
 
 test('🔦 com foto, o véu do texto fica mais fundo', () => {

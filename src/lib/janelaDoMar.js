@@ -45,8 +45,19 @@ export function cenaDaLuz(luz) {
 
 // 🖼️ AS FOTOS DA SEMANA — 22/09/2026
 //
-// Dono: "vou te mandar mais duas pra completar a semana, e você vai colocar
-// ALEATÓRIO." Aleatório, aqui, não pode ser `Math.random()`: a pessoa abre o
+// ⚠️ HOJE NINGUÉM CHAMA ESTA FUNÇÃO, E ISSO É DE PROPÓSITO.
+// As fotos subiram (DIR-173) e o dono desmontou no mesmo dia, vendo na tela:
+// "melhor deixar as imagens antigas mesmo, estão mais limpas, pode voltar
+// como estava, ficou melhor as outras." A cena desenhada venceu a foto de
+// banco — e venceu no olho dele, que é o tribunal que vale.
+//
+// A conta fica porque o caminho continua aberto: no dia em que existir foto
+// própria, em resolução alta, é religar uma linha no CrmMetodo. Apagar isto
+// seria jogar fora a única parte da DIR-173 que estava certa.
+//
+// Dono, quando pediu: "vou te mandar mais duas pra completar a semana, e
+// você vai colocar ALEATÓRIO." Aleatório, aqui, não pode ser `Math.random()`:
+// a pessoa abre o
 // ritual, fecha, reabre no meio dos 30 minutos — e a janela não pode virar
 // outra praia no meio do ritual dela. O sorteio é SEMEADO PELO DIA: muda
 // todo dia, e nunca no meio do mesmo dia. É a mesma régua que o Quadro dos

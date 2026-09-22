@@ -23,15 +23,12 @@ import { createRoot } from 'react-dom/client';
 import '@/index.css';
 import XGameRitualAmanhecer from '@/components/licensing/CentralVendas/XGameRitualAmanhecer';
 import FundoJanelaDoMar from '@/components/licensing/CentralVendas/FundoJanelaDoMar';
-import { FOTOS_DA_JANELA } from '@/lib/fotosDoRitual';
 const parametros = new URLSearchParams(window.location.search);
 const luz = parametros.get('luz');
 // `?foto=<url>` aceita QUALQUER endereço de imagem: é assim que se mede na
 // tela, antes de decidir, o que a resolução de um arquivo aguenta. Nenhuma
 // foto de banco entra no projeto — ver DIR-171.
-// `?foto=` aceita uma URL OU o índice (0,1,2) de uma das fotos da semana
-const pedida = parametros.get('foto');
-const foto = /^\d+$/.test(pedida || '') ? FOTOS_DA_JANELA[Number(pedida)] : pedida;
+const foto = parametros.get('foto');
 
 function Banca() {
   // só o fundo, pra olhar a pintura sem o conteúdo por cima

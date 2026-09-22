@@ -12,6 +12,29 @@
 
 ---
 
+## DIR-175 — a DIR-173 é desfeita: a cena desenhada venceu a foto, e o Instagram ganha a cor dele
+
+**Emitida por:** dono (22/09/2026, minutos depois de ver as fotos em produção): *"melhor deixar as imagens antigas mesmo, estão mais limpas, pode voltar como estava, ficou melhor as outras."* E, no print da lâmina do Despertar: *"aqui precisa entrar o ícone do Instagram com as cores dele, pode manter tamanho e tal, mas deixa a cor do Instagram."*
+
+**A DIR-173 sai de vigor no mesmo dia em que entrou, e isso não é desperdício — é o método funcionando.** Eu tinha barrado as fotos por medida; ele mandou subir; subiram medidas e com o véu corrigido; ele olhou na tela e decidiu que a cena desenhada era mais limpa. Ver na tela é o único tribunal que vale, e agora a decisão dele está tomada com a coisa na frente dele, não com a minha descrição dela.
+
+**O que sai:**
+- `src/assets/ritual/` (as três fotos) e `src/lib/fotosDoRitual.js`;
+- a ligação em `CrmMetodo.jsx` — a lâmina 1 volta a pintar a cena desenhada.
+
+**O que FICA, de propósito:**
+- `fotoDoDia()` em `src/lib/janelaDoMar.js` — a conta do sorteio semeado pelo dia, com o comentário dizendo em voz alta que hoje ninguém a chama e por quê. Apagar seria jogar fora a única parte da DIR-173 que estava certa: no dia em que existir foto própria em resolução alta, é religar uma linha.
+- a prop `foto` do `FundoJanelaDoMar` e **o véu mais fundo quando há foto**. O véu não é enfeite da DIR-173: ele é o que garante que qualquer foto que entrar amanhã tenha texto legível por cima (medido: sem ele, o título caía a 2,80:1).
+- `tests/fotosDaJanela.test.mjs`, reduzido de 9 pra 7 testes — perdeu as duas travas que apontavam pro que foi removido, guardou a régua.
+
+**O ícone do Instagram** (`XGameRitualAmanhecer.jsx`, lâmina do Despertar): o degradê da marca (#FFD600 → #FF7A00 → #FF0069 → #D300C5 → #7638FA) vai no **traço** do ícone, via `linearGradient` + `stroke` — e não num botão de fundo colorido, que foi exatamente o que a DIR-172 tirou desta lâmina. A marca aparece, o tamanho do link não muda, e o peso continua dizendo qual é o caminho principal (a câmera).
+
+**Prova:** suíte 3365/3365, lint limpo, build ok, colisão limpa. Confirmado na banca do navegador: a lâmina 1 renderiza sem `foto-da-janela` e com `fundo-janela-do-mar`, zero erro de página. Mutação: troquei o `id` do degradê do ícone → teste quebrou; revertida.
+
+**Status:** EM VIGOR. (A DIR-173 passa a REVOGADA — as fotos de banco não voltam sem foto própria em resolução alta.)
+
+---
+
 ## DIR-174 — a barra da gratidão cresce enquanto a pessoa fala
 
 **Emitida por:** dono (22/09/2026, testando ao vivo no ritual): *"essa barrinha não está subindo, ela só sobe depois que eu aperto, e também os segundos não estão contando. Gostaria que deixasse melhor essas informações pra pessoa ler melhor quando começar a gravar o áudio, e contando os segundos, a barra ir crescendo — pra pessoa ter uma noção e ficar muito claro. Lembra que a pessoa está acordando de manhã, está com sono. Essa comunicação tem que ficar muito limpa."*
