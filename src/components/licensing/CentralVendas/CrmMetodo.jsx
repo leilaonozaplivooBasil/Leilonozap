@@ -1040,7 +1040,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       const baseDev = devMarcas[t.id]?.comprovacao
         || { tipo: 'ritual', dev: true, aberto_em: abertoEm || new Date().toISOString(), aberto_dia: hojeStr() };
       const corpoDev = bloco === 'acordei'
-        ? { print_url: 'dev://print-do-bom-dia', hash: 'dev' }
+        ? { print_url: 'dev://print-do-bom-dia', hash: 'dev', ...(dados.aoVivo ? { ao_vivo: true } : {}) }
         : bloco === 'gratidao'
           ? { texto: dados.texto || '', entrada: dados.audioGratidao ? 'audio' : 'texto', audio_seg: dados.audioGratidaoSeg || 0, ...(dados.audioGratidao ? { audio_path: 'dev://voz' } : {}) }
           : { ...(dados.videoBlob ? { video_path: 'dev://video' } : {}), video_seg: dados.gravSeg || 0, acao: dados.acao || '' };
@@ -1066,7 +1066,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       const menor = await encolherSePreciso(dados.file);
       const up = await plataforma.integrations.Core.UploadFile({ file: menor }).catch((e) => { anotarFalha('print')(e?.message || 'upload falhou'); return null; });
       if (!up?.file_url) throw new Error('print não subiu');
-      corpo = { print_url: up.file_url, hash: dados.hash || '' };
+      // 🌅 `ao_vivo` fica GRAVADO no bloco, não só na chamada: a segunda
+      // olhada da IA (depois da explicação da pessoa) acontece muito depois,
+      // já sem o estado da tela — sem isto, a reavaliação voltaria a julgar
+      // uma foto da lente com a régua do print.
+      corpo = { print_url: up.file_url, hash: dados.hash || '', ...(dados.aoVivo ? { ao_vivo: true } : {}) };
     } else if (bloco === 'gratidao') {
       const voz = dados.audioGratidao
         ? await guardarAudio({ blob: dados.audioGratidao, caminho: caminhoDoAudio({ pasta: 'gratidao', uid, dia: hojeStr(), tarefaId: t.id, mime: dados.audioGratidao.type }), actorId: uid, aoFalhar: anotarFalha('audio') })
@@ -1185,6 +1189,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         titulo: t.titulo || 'Ritual do Amanhecer',
         hora: t.hora, data: hojeStr(),
         justificativa, tentativa: 2,
+        // a segunda olhada não pode esquecer que a imagem veio da lente
+        ...(bloco === 'acordei' && doBloco?.ao_vivo ? { ao_vivo: true } : {}),
       });
       if (!r || !['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) {
         return marcar({ ...(doBloco.veredito_ia || {}), veredito: 'duvida', motivo: 'A IA não respondeu a tempo pra rever a sua explicação. Refaz só esta etapa.' });
@@ -1255,6 +1261,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
         tipo: bloco === 'acordei' ? 'instagram' : 'ritual',
         titulo: alvo?.titulo || 'Ritual do Amanhecer',
         hora: alvo?.hora, data: hojeStr(),
+        // 🌅 22/09 — a foto do despertar agora nasce da LENTE, na própria
+        // lâmina. A IA precisa saber disso: sem esse aviso ela aplica a
+        // régua do print (procura data na tela, desconfia de imagem escura)
+        // e uma foto legítima de 4h40 vira dúvida pra todo mundo.
+        ...(bloco === 'acordei' && dados.aoVivo ? { ao_vivo: true } : {}),
       });
       if (!r || !['aprovada', 'reprovada', 'duvida'].includes(r.veredito)) return;
       setTarefas((prev) => prev.map((x) => {

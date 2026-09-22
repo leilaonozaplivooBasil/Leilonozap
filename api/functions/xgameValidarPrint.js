@@ -121,6 +121,22 @@ REPROVE também, sem perguntar, se quem aparece no frame CLARAMENTE não é a pe
 🖼️ SE A IMAGEM NÃO MOSTRA NENHUMA PESSOA (só um objeto, chão, parede, animal de estimação, paisagem): isso NÃO é "gritante e óbvio" por si só — pode ser um frame ruim de um vídeo real (a câmera balançou, pegou o bichinho de estimação no colo dela, o enquadramento cortou a pessoa num instante). Responda "duvida" e pergunte, em vez de reprovar direto: peça pra mandar um frame em que ela apareça, ou confirmar que ela estava mesmo ali. SÓ reprove sem perguntar quando o vídeo inteiro for claramente outra coisa, sem nenhuma ligação com o ritual (ex.: gravação de uma rede social, de um jogo, de uma cena qualquer que não tem nada a ver com a casa da pessoa).`,
 };
 
+// 🌅 A FOTO QUE NASCEU DA LENTE — 22/09/2026
+//
+// A lâmina do Despertar deixou de pedir arquivo: ela ABRE A CÂMERA e congela
+// um quadro na hora. Sem este aviso, a régua [TIPO instagram] continuaria
+// procurando data na tela e desconfiando de imagem escura — e uma foto
+// legítima de 4h40, num quarto sem luz acesa, viraria "duvida" pra todo
+// mundo, todo dia. É o mesmo erro que pegou a Sophia em 21/09, só que
+// agora aplicado à casa inteira de uma vez.
+const AVISO_AO_VIVO = `📷 ESTA IMAGEM NASCEU DA CÂMERA DO APP, AGORA: o aplicativo abriu a lente nesta tela e congelou este quadro. A pessoa NÃO escolheu um arquivo da galeria.
+Consequências, obrigatórias:
+- NÃO procure data, horário na barra do celular nem marca de story: não existe tela nenhuma aqui, é uma foto direta.
+- "Pode ser de outro dia" está DESCARTADO por construção. Não use isso como motivo de dúvida nem de reprovação.
+- Foto ESCURA, granulada, com pouca luz ou sem enquadramento caprichado é o ESPERADO: são 4h40 da manhã, num quarto com a luz ainda apagada. Isso NÃO é motivo de dúvida.
+- O que basta pra APROVAR: dá pra ver uma pessoa real, acordada, fora da cama, num ambiente real. Só isso.
+- REPROVE ainda: foto claramente de pessoa DORMINDO ou deitada na cama (é o contrário do que a tarefa pede), ou uma lente tapada/tela totalmente preta sem nada visível.`;
+
 // 🎯 REGRA ESPECIAL — organização/planejamento do NEGÓCIO (não confundir com
 // "organização do AMBIENTE", que é físico e continua aceitando foto real).
 // Dono, ao vivo (09/09): olhou uma comprovação de "Organização do negócio"
@@ -349,6 +365,11 @@ export default async function handler(req, res) {
       .map((u) => String(u || '').slice(0, 2000)).filter((u) => /^https?:\/\//.test(u)).slice(0, 4);
     const justificativa = String(body?.justificativa || '').slice(0, 800);
     const tentativa = Number(body?.tentativa) === 2 ? 2 : 1;
+    // 🌅 22/09/2026 — a imagem NASCEU da lente do app, agora, nesta tela (a
+    // lâmina do Despertar abre a câmera e congela um quadro; a pessoa não
+    // escolheu arquivo nenhum). Isso muda a régua: não existe "print de
+    // outro dia" a procurar, e escuridão de 4h40 é o normal, não suspeita.
+    const aoVivo = body?.ao_vivo === true || body?.ao_vivo === 'true';
     // 🔐 09/09/2026 — a imagem de HOJE pode vir por LINK (o caminho de sempre,
     // usado por print e foto, que já moram num bucket público) ou INLINE em
     // base64. O inline nasceu pro frame do Ritual: era a única imagem que
@@ -388,7 +409,7 @@ export default async function handler(req, res) {
       cache_control: { type: 'ephemeral' },
     }];
     const contexto = `TIPO DE COMPROVAÇÃO: ${tipoRegra} — aplique a regra [TIPO ${tipoRegra}].
-TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${RE_ORGANIZACAO_NEGOCIO.test(titulo) ? `\n${REGRA_ORGANIZACAO_NEGOCIO}` : ''}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE, e a última — não existe terceira chance nem análise humana depois desta: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence mas também não é evasiva ou contraditória, responda "duvida" (ela segue com o benefício da dúvida); reserve "reprovada" só pra explicação claramente falsa, evasiva ou contraditória com o que a imagem mostra.` : ''}`;
+TAREFA COMPROVADA: "${titulo}"${hora ? ` (horário da tarefa: ${hora})` : ''}${data ? `. HOJE É ${data}` : ''}.${resumo ? `\nRESUMO DIGITADO PELA PESSOA: "${resumo}"` : ''}${imagensAnteriores.length ? `\n\nA PRIMEIRA imagem anexada é a comprovação de HOJE, a ser julgada. As ${imagensAnteriores.length} seguinte(s) são comprovações ANTERIORES da MESMA pessoa pro MESMO tipo de tarefa — use-as SÓ pra checar reciclagem, não para julgar a tarefa de hoje.` : '\n\nA imagem anexada é a comprovação de HOJE, a ser julgada.'}${RE_ORGANIZACAO_NEGOCIO.test(titulo) ? `\n${REGRA_ORGANIZACAO_NEGOCIO}` : ''}${aoVivo ? `\n${AVISO_AO_VIVO}` : ''}${justificativa ? `\n\nESTA É A SEGUNDA ANÁLISE, e a última — não existe terceira chance nem análise humana depois desta: na primeira você teve dúvida e perguntou; a pessoa respondeu: "${justificativa}". Decida agora considerando a explicação dela — se a justificativa é plausível e coerente com a imagem, aprove; se ainda não convence mas também não é evasiva ou contraditória, responda "duvida" (ela segue com o benefício da dúvida); reserve "reprovada" só pra explicação claramente falsa, evasiva ou contraditória com o que a imagem mostra.` : ''}`;
 
     const conteudo = [
       { type: 'text', text: contexto },

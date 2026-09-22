@@ -43,7 +43,7 @@ import { HORIZONTE, SOL_X, cenaDaLuz } from '@/lib/janelaDoMar';
  * O fundo inteiro do ritual. Não recebe clique (`pointer-events-none`) e não
  * guarda estado: é pintura pura, o conteúdo vive por cima.
  */
-export default function FundoJanelaDoMar({ luz = 0, foto = null }) {
+export default function FundoJanelaDoMar({ luz = 0, foto = null, raios = false }) {
   const { solY, solForca, noite } = cenaDaLuz(luz);
   // a nuvem acende junto com o dia. Passa pelo mesmo aperto que `cenaDaLuz`
   // faz: `luz` vindo torto (NaN, texto, negativo) não pode apagar o céu.
@@ -175,6 +175,37 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null }) {
           filter: 'blur(1.5px)',
         }}
       />
+
+      {/* 🌅 OS RAIOS DO DESPERTAR — só na lâmina do "acordei" (22/09, dono:
+          "uma imagem que reflita o Despertar, uma força, que pegue a tela
+          toda"). Sol nascendo atrás de nuvem baixa abre leque de luz, e é
+          esse leque que o olho lê como FORÇA — não como clarão. Saem do
+          disco, com máscara que os apaga antes de encostar na borda, pra
+          não virarem listra de fundo de slide. */}
+      {raios && (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse 70% 42% at ${SOL_X}% ${solY}%,
+              rgba(255,214,150,${0.17 * solForca}) 0%,
+              rgba(255,186,110,${0.08 * solForca}) 34%,
+              transparent 72%)`,
+          }}
+        />
+      )}
+      {raios && (
+        <div
+          className="absolute inset-0 jm-raios"
+          style={{
+            background: `repeating-conic-gradient(from 192deg at ${SOL_X}% ${solY}%,
+              rgba(255,231,186,${0.40 * solForca}) 0deg 2.6deg,
+              transparent 2.6deg 9.5deg)`,
+            maskImage: `radial-gradient(ellipse 85% 70% at ${SOL_X}% ${solY}%, #000 0%, rgba(0,0,0,.75) 30%, rgba(0,0,0,.35) 60%, transparent 92%)`,
+            WebkitMaskImage: `radial-gradient(ellipse 85% 70% at ${SOL_X}% ${solY}%, #000 0%, rgba(0,0,0,.75) 30%, rgba(0,0,0,.35) 60%, transparent 92%)`,
+            filter: 'blur(7px)',
+          }}
+        />
+      )}
 
       {/* a bruma que deita em cima da água — é ela que dá distância */}
       <div
@@ -374,16 +405,18 @@ export default function FundoJanelaDoMar({ luz = 0, foto = null }) {
       />
 
       <style>{`
+        @keyframes jmRaios { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
         @keyframes jmMare { 0%,100% { transform: translateY(0) } 50% { transform: translateY(2px) } }
         @keyframes jmMarePerto { 0%,100% { transform: translateY(0) } 50% { transform: translateY(5px) } }
         @keyframes jmRespira { 0%,100% { opacity: .94 } 50% { opacity: 1 } }
         @keyframes jmCaminho { 0%,100% { transform: scaleX(1) } 50% { transform: scaleX(1.09) } }
+        .jm-raios       { animation: jmRaios 12s ease-in-out infinite; }
         .jm-mare        { animation: jmMare 13s ease-in-out infinite; }
         .jm-mare-perto  { animation: jmMarePerto 17s ease-in-out infinite; }
         .jm-respira     { animation: jmRespira 9s ease-in-out infinite; }
         .jm-caminho     { animation: jmCaminho 11s ease-in-out infinite; transform-origin: 50% 0; }
         @media (prefers-reduced-motion: reduce) {
-          .jm-mare, .jm-mare-perto, .jm-respira, .jm-caminho { animation: none; }
+          .jm-mare, .jm-mare-perto, .jm-respira, .jm-caminho, .jm-raios { animation: none; }
         }
       `}</style>
     </div>
