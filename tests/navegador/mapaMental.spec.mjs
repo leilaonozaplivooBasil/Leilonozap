@@ -83,12 +83,12 @@ test('🔴 pendurar um item cria o nó E a linha que liga ao pai', { skip: semNa
   // Conta só as linhas DOS CONECTORES. A primeira versão desta prova usava
   // `svg line` solto e contava as linhas dos ÍCONES junto — o "+" é feito de
   // dois <line>. Acusou 3 onde havia 1 conector.
-  const linhasAntes = await pagina.locator('[data-teste="mapa-linhas"] line').count();
+  const linhasAntes = await pagina.locator('[data-teste="mapa-linhas"] path').count();
 
   await pagina.locator('[data-teste="mapa-filho"]').first().click();
   await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="mapa-no"]').length === 2, null, { timeout: 5000 });
 
-  const linhasDepois = await pagina.locator('[data-teste="mapa-linhas"] line').count();
+  const linhasDepois = await pagina.locator('[data-teste="mapa-linhas"] path').count();
   assert.equal(linhasDepois, linhasAntes + 1, 'o nó nasceu solto, sem linha ligando ao pai');
   await ctx.close();
 });
@@ -310,7 +310,7 @@ test('🔴 a demanda vira nó do mapa, pendurada na raiz', { skip: semNavegador 
   await pagina.locator('[data-teste="mapa-no"]', { hasText: 'ligar pro fornecedor' }).waitFor({ timeout: 8000 });
   assert.equal(await nos(pagina).count(), 2, 'esperava a raiz mais o nó semeado');
   // a linha pai→filho é a prova de que ele está pendurado, não solto
-  assert.equal(await pagina.locator('[data-teste="mapa-linhas"] line').count(), 1);
+  assert.equal(await pagina.locator('[data-teste="mapa-linhas"] path').count(), 1);
   await ctx.close();
 });
 
@@ -342,5 +342,230 @@ test('🔴 semear NÃO planta o mesmo nó duas vezes', { skip: semNavegador }, a
   await pagina.evaluate(() => window.__semear('COMPRAR ETIQUETA'));
   await pagina.waitForTimeout(400);
   assert.equal(await nos(pagina).count(), antes, 'caixa diferente virou nó novo');
+  await ctx.close();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔧 "BUGADO E MAL FEITO" — a arrumação de 22/09/2026
+//
+// O dono reclamou; eu fui MEDIR no navegador em vez de supor. Tudo aqui
+// embaixo prova um defeito que eu vi com número, e não um que eu imaginei.
+// Por isso são provas de navegador e não de régua: os três piores eram de
+// geometria da tela, invisíveis para o Node.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** O último mapa que a tela mandou salvar — a verdade sobre quem é pai de quem.
+ *
+ * 🔴 22/09 — as duas provas de arrasto olhavam a POSIÇÃO do card, e por isso
+ * passavam verdes com o religar desligado: o card encaixava no lugar certo sem
+ * ter trocado de pai. Posição é enfeite; `pai` é o dado. Descoberto na rodada
+ * de mutação, não na suíte verde. */
+const mapaSalvo = (pagina) => pagina.evaluate(() => {
+  const c = window.__plataformaFalsa.chamadas.filter((x) => x.nome === 'meuMapaMental').pop();
+  return c?.corpo?.nos || [];
+});
+const paiDe = (mapa, texto) => {
+  const no = mapa.find((n) => n.texto === texto);
+  const pai = no && mapa.find((n) => n.id === no.pai);
+  return pai ? pai.texto : null;
+};
+
+/** Cria um filho do card indicado, escreve e sai da edição. */
+async function pendurar(pagina, alvo, texto) {
+  await alvo.locator('[data-teste="mapa-filho"]').click();
+  const campo = pagina.locator('[data-teste="mapa-input"]');
+  await campo.waitFor({ timeout: 5000 });
+  await campo.fill(texto);
+  await pagina.locator('[data-teste="mapa-tela"]').click({ position: { x: 4, y: 4 } });
+  await pagina.waitForTimeout(150);
+}
+
+test('🔴 as linhas continuam desenhadas quando o mapa passa da tela', { skip: semNavegador }, async () => {
+  // MEDIDO ANTES DO CONSERTO: corrente de 5 níveis = 1352px de conteúdo num
+  // desenho de 1051px, uma linha inteira fora e invisível. Os cards rolavam
+  // para dentro da vista SEM LIGAÇÃO — parecia dado perdido, era erro de
+  // desenho. O desenho agora tem o tamanho do mapa, não o da janela.
+  const { ctx, pagina } = await abrir();
+  for (let i = 0; i < 5; i += 1) await pendurar(pagina, nos(pagina).last(), `nivel ${i + 1}`);
+
+  const m = await pagina.evaluate(() => {
+    const svg = document.querySelector('[data-teste="mapa-linhas"]');
+    const janela = document.querySelector('[data-teste="mapa-tela"]');
+    const largura = Number(svg.getAttribute('width'));
+    const fora = [...svg.querySelectorAll('path')].filter((p) => {
+      const b = p.getBBox();
+      return b.x + b.width > largura + 1 || b.y + b.height > Number(svg.getAttribute('height')) + 1;
+    }).length;
+    return { linhas: svg.querySelectorAll('path').length, largura, janela: janela.clientWidth, fora };
+  });
+  assert.equal(m.linhas, 5, 'faltou linha');
+  assert.ok(m.largura > m.janela, 'o desenho voltou a ter o tamanho da janela');
+  assert.equal(m.fora, 0, 'tem linha fora da área desenhada — ela some na tela');
+  await ctx.close();
+});
+
+test('🔴 anotação longa aparece inteira — o card cresce', { skip: semNavegador }, async () => {
+  // MEDIDO ANTES: 488px de texto espremidos em 150px visíveis, o resto sumia.
+  // O mapa existe pra despejar frase, não palavra solta.
+  const { ctx, pagina } = await abrir();
+  await pendurar(pagina, nos(pagina).first(), 'comprar etiqueta térmica para a impressora nova do galpão e conferir o estoque');
+  const m = await pagina.evaluate(() => {
+    const n = [...document.querySelectorAll('[data-teste="mapa-no"]')].find((x) => x.innerText.includes('comprar'));
+    const b = n.querySelector('button');
+    return { altura: Math.round(n.getBoundingClientRect().height), cortado: b.scrollWidth > b.clientWidth + 1, escondido: b.scrollHeight - b.clientHeight };
+  });
+  assert.equal(m.cortado, false, 'o texto voltou a ser cortado na horizontal');
+  assert.equal(m.escondido, 0, 'sobrou texto escondido dentro do card');
+  assert.ok(m.altura > 60, `o card não cresceu com o texto (${m.altura}px)`);
+  await ctx.close();
+});
+
+test('🔴 a linha bate no MEIO do card, mesmo num card alto', { skip: semNavegador }, async () => {
+  // MEDIDO ANTES: 5px acima do meio em toda linha, porque a conta supunha 44
+  // de altura num card de 52.
+  const { ctx, pagina } = await abrir();
+  await pendurar(pagina, nos(pagina).first(), 'comprar etiqueta térmica para a impressora nova do galpão');
+  const erro = await pagina.evaluate(() => {
+    const d = document.querySelector('[data-teste="mapa-linhas"] path').getAttribute('d');
+    const y1 = Number(d.split(' ')[2]);
+    const camada = document.querySelector('[data-teste="mapa-conteudo"]').getBoundingClientRect();
+    const pai = document.querySelectorAll('[data-teste="mapa-no"]')[0].getBoundingClientRect();
+    return Math.round(pai.top - camada.top + pai.height / 2 - y1);
+  });
+  assert.ok(Math.abs(erro) <= 1, `a linha está ${erro}px fora do meio do card`);
+  await ctx.close();
+});
+
+test('🔴 arrastar um item PARA CIMA de outro repende — e mostra onde vai cair', { skip: semNavegador }, async () => {
+  // `moverNo` e `podeVirarFilho` existiam, com prova, e a tela NUNCA chamava:
+  // arrastar só mudava a posição e a linha continuava apontando pro pai
+  // antigo. Reorganizar o pensamento é metade do que um mapa mental faz.
+  const { ctx, pagina } = await abrir();
+  await pendurar(pagina, nos(pagina).first(), 'galho A');
+  await pendurar(pagina, nos(pagina).first(), 'galho B');
+
+  const b = await nos(pagina).nth(2).boundingBox();
+  const a = await nos(pagina).nth(1).boundingBox();
+  await pagina.mouse.move(b.x + 80, b.y + 12);
+  await pagina.mouse.down();
+  await pagina.mouse.move(a.x + 80, a.y + 20, { steps: 14 });
+  await pagina.waitForTimeout(150);
+  const realce = await pagina.locator('[data-teste="mapa-no"][data-alvo="sim"]').innerText();
+  assert.match(realce, /galho A/, 'não mostrou em qual card o item vai cair');
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(500);
+
+  // o que vale é o PAI gravado, não onde o card parou na tela
+  const mapa = await mapaSalvo(pagina);
+  assert.equal(paiDe(mapa, 'galho B'), 'galho A', 'o item não trocou de pai — só mudou de lugar');
+  assert.equal(paiDe(mapa, 'galho A'), 'Minha semana', 'o outro galho mudou de pai sem motivo');
+  assert.ok(mapa.find((n) => n.texto === 'galho B'), 'o item perdeu o texto ao ser rependurado');
+  await ctx.close();
+});
+
+test('🔴 arrastar NÃO abre o item para edição', { skip: semNavegador }, async () => {
+  // defeito antigo: soltar o card disparava um clique no texto e ele abria
+  // para edição sozinho, toda vez que alguém arrastava.
+  const { ctx, pagina } = await abrir();
+  await pendurar(pagina, nos(pagina).first(), 'galho A');
+  const c = await nos(pagina).nth(1).boundingBox();
+  await pagina.mouse.move(c.x + 80, c.y + 12);
+  await pagina.mouse.down();
+  await pagina.mouse.move(c.x + 200, c.y + 140, { steps: 12 });
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(300);
+  assert.equal(await pagina.locator('[data-teste="mapa-input"]').count(), 0, 'abriu a edição sozinho depois do arrasto');
+  await ctx.close();
+});
+
+test('🔴 o item não vira filho da própria galhada', { skip: semNavegador }, async () => {
+  // a volta fechada faz quem percorrer a árvore rodar para sempre: trava a aba.
+  const { ctx, pagina } = await abrir();
+  await pendurar(pagina, nos(pagina).first(), 'pai');
+  await pendurar(pagina, nos(pagina).nth(1), 'filho');
+  const pai = await nos(pagina).nth(1).boundingBox();
+  const filho = await nos(pagina).nth(2).boundingBox();
+  await pagina.mouse.move(pai.x + 80, pai.y + 12);
+  await pagina.mouse.down();
+  await pagina.mouse.move(filho.x + 80, filho.y + 20, { steps: 14 });
+  await pagina.waitForTimeout(150);
+  assert.equal(await pagina.locator('[data-teste="mapa-no"][data-alvo="sim"]').count(), 0,
+    'ofereceu o próprio filho como novo pai');
+  await pagina.mouse.up();
+  await pagina.waitForTimeout(500);
+
+  // e, acima de tudo, o parentesco não pode ter virado uma volta fechada
+  const mapa = await mapaSalvo(pagina);
+  assert.equal(paiDe(mapa, 'pai'), 'Minha semana', 'o pai virou filho do próprio filho — isso é a volta que trava a aba');
+  assert.equal(paiDe(mapa, 'filho'), 'pai', 'o filho perdeu o pai no caminho');
+  await ctx.close();
+});
+
+test('🔴 Enter põe o próximo item, Tab pendura embaixo', { skip: semNavegador }, async () => {
+  // o "tum, tum, tum" do áudio. Com a mão no mouse, card a card, não acontece.
+  const { ctx, pagina } = await abrir();
+  await nos(pagina).first().locator('[data-teste="mapa-filho"]').click();
+  let campo = pagina.locator('[data-teste="mapa-input"]');
+  await campo.waitFor(); await campo.fill('um'); await pagina.keyboard.press('Enter');
+  await pagina.waitForTimeout(200);
+  campo = pagina.locator('[data-teste="mapa-input"]');
+  await campo.waitFor(); await campo.fill('dois'); await pagina.keyboard.press('Tab');
+  await pagina.waitForTimeout(200);
+  campo = pagina.locator('[data-teste="mapa-input"]');
+  await campo.waitFor(); await campo.fill('tres');
+  await pagina.locator('[data-teste="mapa-tela"]').click({ position: { x: 4, y: 4 } });
+  await pagina.waitForTimeout(250);
+
+  const fim = await pagina.evaluate(() => [...document.querySelectorAll('[data-teste="mapa-no"]')]
+    .map((n) => ({ t: n.innerText.split('\n')[0], x: parseInt(n.style.left, 10) })));
+  const um = fim.find((n) => n.t === 'um');
+  const dois = fim.find((n) => n.t === 'dois');
+  const tres = fim.find((n) => n.t === 'tres');
+  assert.ok(um && dois && tres, `o texto se perdeu no encadeamento: ${JSON.stringify(fim)}`);
+  assert.equal(dois.x, um.x, 'o Enter desceu um nível — devia criar IRMÃO');
+  assert.ok(tres.x > dois.x, 'o Tab não pendurou embaixo');
+  await ctx.close();
+});
+
+test('🔴 item criado e deixado em branco some, em vez de virar card fantasma', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  const antes = await nos(pagina).count();
+  await nos(pagina).first().locator('[data-teste="mapa-filho"]').click();
+  await pagina.locator('[data-teste="mapa-input"]').waitFor();
+  await pagina.keyboard.press('Escape');
+  await pagina.waitForTimeout(300);
+  assert.equal(await nos(pagina).count(), antes, 'sobrou um card "escrever…" para sempre');
+  await ctx.close();
+});
+
+test('🧹 arrumar põe tudo numa árvore sem card por cima de card', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  await pendurar(pagina, nos(pagina).first(), 'um');
+  await pendurar(pagina, nos(pagina).first(), 'dois');
+  await pendurar(pagina, nos(pagina).nth(1), 'um.a');
+  // embaralha: joga todo mundo pro mesmo canto
+  const alvos = await nos(pagina).count();
+  for (let i = 1; i < alvos; i += 1) {
+    const c = await nos(pagina).nth(i).boundingBox();
+    await pagina.mouse.move(c.x + 80, c.y + 12);
+    await pagina.mouse.down();
+    await pagina.mouse.move(c.x + 5, c.y + 5, { steps: 6 });
+    await pagina.mouse.up();
+    await pagina.waitForTimeout(120);
+  }
+  await pagina.locator('[data-teste="mapa-arrumar"]').click();
+  await pagina.waitForTimeout(500);
+  const cobre = await pagina.evaluate(() => {
+    const ns = [...document.querySelectorAll('[data-teste="mapa-no"]')];
+    let n = 0;
+    for (let i = 0; i < ns.length; i += 1) {
+      for (let j = i + 1; j < ns.length; j += 1) {
+        const a = ns[i].getBoundingClientRect(); const b = ns[j].getBoundingClientRect();
+        if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) n += 1;
+      }
+    }
+    return n;
+  });
+  assert.equal(cobre, 0, 'ficou card por cima de card depois de arrumar');
   await ctx.close();
 });

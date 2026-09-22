@@ -11,7 +11,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  noNovo, filhosDe, raizDe, descendentesDe, podeVirarFilho, moverNo, apagarNo, quantosCaemJunto, demandaDoNo, renomearNo, lugarDoFilho, seSobrepoem, LARGURA_NO, ALTURA_NO, semearNoMapa,
+  noNovo, filhosDe, raizDe, descendentesDe, podeVirarFilho, moverNo, apagarNo, quantosCaemJunto, demandaDoNo, renomearNo, lugarDoFilho, seSobrepoem, LARGURA_NO, ALTURA_NO, semearNoMapa, medidaDe, caixaDoMapa, ligacaoEntre, noSob, irmaoNovo, arrumarMapa, MARGEM,
 } from '../src/lib/mapaMental.js';
 
 /*  raiz
@@ -269,5 +269,252 @@ describe('🌱 semear a demanda no mapa', () => {
     const r = semearNoMapa(null, 'alguma coisa');
     assert.equal(r.novo, true);
     assert.equal(r.nos.length, 1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔧 A ARRUMAÇÃO DE 22/09/2026
+//
+// O dono: "o mapa mental está bugado e mal feito". Fui medir no navegador em
+// vez de supor, e os defeitos eram de GEOMETRIA — o código tratava o card como
+// um retângulo fixo de 172×44 quando ele mede 52 de altura e cresce com o
+// texto. Daí saíam linhas cortadas, texto sumido e régua mentindo.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('📏 medidaDe — o card não tem altura fixa', () => {
+  test('usa a medida que a tela tirou', () => {
+    const m = medidaDe({ a: { largura: 172, altura: 117 } }, 'a');
+    assert.equal(m.altura, 117);
+  });
+
+  test('🔴 card sem medida cai no chute inicial, e o chute é o tamanho REAL', () => {
+    // era 44; medi 52 no navegador. 8px de mentira em toda conta de geometria.
+    assert.equal(ALTURA_NO, 52);
+    assert.deepEqual(medidaDe({}, 'x'), { largura: LARGURA_NO, altura: ALTURA_NO });
+  });
+
+  test('medida podre não passa', () => {
+    for (const ruim of [{ altura: 0 }, { altura: -5 }, { altura: 'alto' }, null]) {
+      assert.equal(medidaDe({ a: ruim }, 'a').altura, ALTURA_NO);
+    }
+  });
+});
+
+describe('📐 caixaDoMapa — o tamanho do MAPA, não o da janela', () => {
+  // 🔴 O defeito que mais fazia o mapa parecer quebrado: o desenho das linhas
+  // tinha o tamanho da área visível, então assim que o mapa crescia as linhas
+  // eram cortadas — os cards rolavam para dentro da vista SEM LIGAÇÃO.
+  test('cobre o nó mais à direita e o mais embaixo', () => {
+    const c = caixaDoMapa([{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 900, y: 500 }]);
+    assert.ok(c.largura >= 900 + LARGURA_NO, 'cortaria o nó da direita');
+    assert.ok(c.altura >= 500 + ALTURA_NO, 'cortaria o nó de baixo');
+  });
+
+  test('🔴 usa a altura MEDIDA — card alto não fica com o pé de fora', () => {
+    const c = caixaDoMapa([{ id: 'a', x: 0, y: 400 }], { a: { largura: 172, altura: 200 } });
+    assert.ok(c.altura >= 600, `cortaria o card alto (deu ${c.altura})`);
+  });
+
+  test('mapa vazio devolve só a margem', () => {
+    assert.deepEqual(caixaDoMapa([]), { largura: MARGEM, altura: MARGEM });
+  });
+});
+
+describe('〰️ ligacaoEntre — a curva sai do lado certo de cada card', () => {
+  const pai = { id: 'p', x: 100, y: 100 };
+  const med = { p: { largura: 172, altura: 52 }, f: { largura: 172, altura: 52 } };
+
+  test('🔴 ancora no MEIO do card, pela altura medida', () => {
+    // errava 5px em toda linha, porque supunha 44 num card de 52.
+    const l = ligacaoEntre(pai, { id: 'f', x: 400, y: 100 }, med);
+    assert.equal(l.y1, 126, 'não saiu do meio do pai');
+    assert.equal(l.y2, 126, 'não entrou no meio do filho');
+  });
+
+  test('🔴 card alto: a linha acompanha o meio de verdade', () => {
+    const l = ligacaoEntre(pai, { id: 'f', x: 400, y: 100 }, { ...med, f: { largura: 172, altura: 200 } });
+    assert.equal(l.y2, 200, 'entrou fora do meio do card alto');
+  });
+
+  test('filho à direita sai pela borda direita do pai', () => {
+    const l = ligacaoEntre(pai, { id: 'f', x: 400, y: 100 }, med);
+    assert.equal(l.x1, 272); // 100 + 172
+    assert.equal(l.x2, 400);
+  });
+
+  test('🔴 filho à ESQUERDA sai pela borda esquerda — a reta antiga atravessava os dois cards', () => {
+    const l = ligacaoEntre(pai, { id: 'f', x: -200, y: 100 }, med);
+    assert.equal(l.x1, 100, 'saiu pelo lado errado do pai');
+    assert.equal(l.x2, -28, 'entrou pelo lado errado do filho'); // -200 + 172
+  });
+
+  test('um por cima do outro liga centro a centro', () => {
+    const l = ligacaoEntre(pai, { id: 'f', x: 120, y: 300 }, med);
+    assert.equal(l.x1, 186);
+    assert.equal(l.x2, 206);
+  });
+
+  test('devolve um caminho SVG utilizável, sem NaN', () => {
+    const l = ligacaoEntre(pai, { id: 'f', x: 400, y: 260 }, med);
+    assert.match(l.d, /^M [\d.-]+ [\d.-]+ C /);
+    assert.ok(!l.d.includes('NaN'));
+  });
+
+  test('sem pai ou sem filho não quebra', () => {
+    assert.equal(ligacaoEntre(null, { id: 'f' }), null);
+    assert.equal(ligacaoEntre({ id: 'p' }, null), null);
+  });
+});
+
+describe('🎯 noSob — em qual card o item foi solto', () => {
+  const nos = [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 300, y: 0 }];
+
+  test('acha o card embaixo do ponto', () => {
+    assert.equal(noSob(nos, { x: 50, y: 20 })?.id, 'a');
+    assert.equal(noSob(nos, { x: 350, y: 20 })?.id, 'b');
+  });
+
+  test('vazio não é card nenhum', () => {
+    assert.equal(noSob(nos, { x: 250, y: 400 }), null);
+  });
+
+  test('🔴 o que está na lista de proibidos nunca é alvo', () => {
+    // é assim que o próprio nó e a galhada dele ficam de fora: virar filho de
+    // um descendente é a volta fechada que trava a aba.
+    assert.equal(noSob(nos, { x: 50, y: 20 }, {}, ['a']), null);
+  });
+
+  test('usa a altura medida — card alto é alvo na parte de baixo também', () => {
+    assert.equal(noSob(nos, { x: 50, y: 150 }, { a: { largura: 172, altura: 200 } })?.id, 'a');
+    assert.equal(noSob(nos, { x: 50, y: 150 }), null, 'sem medida, 150 já está fora');
+  });
+
+  test('ponto podre devolve nada', () => {
+    for (const p of [null, { x: 'a', y: 1 }, {}]) assert.equal(noSob(nos, p), null);
+  });
+});
+
+describe('⌨️ irmaoNovo — o Enter que põe o próximo item', () => {
+  const nos = [{ id: 'r', x: 0, y: 0, pai: null }, { id: 'a', x: 300, y: 0, pai: 'r' }];
+
+  test('nasce com o MESMO pai', () => {
+    assert.equal(irmaoNovo(nos, 'a').pai, 'r');
+  });
+
+  test('🔴 a raiz não ganha irmão', () => {
+    // duas raízes deixariam metade do mapa invisível para quem percorre a
+    // árvore a partir de uma só — é o mesmo estrago do nó órfão.
+    assert.equal(irmaoNovo(nos, 'r'), null);
+  });
+
+  test('nó que não existe devolve nada', () => {
+    assert.equal(irmaoNovo(nos, 'fantasma'), null);
+  });
+});
+
+describe('🧹 arrumarMapa — a volta de meia hora de arrasto', () => {
+  const mapa = () => ([
+    { id: 'r', pai: null, texto: 'raiz', x: 700, y: 900 },
+    { id: 'a', pai: 'r', texto: 'a', x: 10, y: 10 },
+    { id: 'b', pai: 'r', texto: 'b', x: 12, y: 12 },
+    { id: 'a1', pai: 'a', texto: 'a1', x: 14, y: 14 },
+    { id: 'a2', pai: 'a', texto: 'a2', x: 16, y: 16 },
+  ]);
+
+  test('🔴 nenhum card cobre outro depois de arrumar', () => {
+    // era o estado normal do mapa depois de arrastar: cards empilhados,
+    // ilegível, e sem volta.
+    const fora = arrumarMapa(mapa());
+    for (const a of fora) {
+      for (const b of fora) {
+        if (a.id !== b.id) assert.equal(seSobrepoem(a, b), false, `${a.texto} cobriu ${b.texto}`);
+      }
+    }
+  });
+
+  test('cada nível ganha a sua coluna, da esquerda pra direita', () => {
+    const fora = arrumarMapa(mapa());
+    const x = (id) => fora.find((n) => n.id === id).x;
+    assert.ok(x('r') < x('a'), 'a raiz não ficou à esquerda dos filhos');
+    assert.ok(x('a') < x('a1'), 'o neto não desceu de nível');
+    assert.equal(x('a'), x('b'), 'irmãos ficaram em colunas diferentes');
+    assert.equal(x('a1'), x('a2'));
+  });
+
+  test('🔴 o pai fica CENTRADO no bloco dos filhos', () => {
+    // sem isto vira escada: todo pai grudado no primeiro filho.
+    const fora = arrumarMapa(mapa(), {});
+    const meio = (id) => { const n = fora.find((x) => x.id === id); return n.y + ALTURA_NO / 2; };
+    assert.ok(Math.abs(meio('a') - (meio('a1') + meio('a2')) / 2) < 1, 'o pai não centrou nos filhos');
+  });
+
+  // 🔴 O QUE EU DESCOBRI TENTANDO PROVAR A TRAVA DE CICLO (22/09/2026)
+  //
+  // Quebrei a trava de propósito (tirei o `vistos` de `arrumarMapa`) e NENHUMA
+  // prova acusou — duas vezes, com dois formatos de ciclo. O motivo não é
+  // prova fraca: é que aqui cada nó tem UM pai só. Para 'a' e 'b' formarem uma
+  // volta, os dois têm de apontar um para o outro — e aí nenhum dos dois é
+  // alcançável a partir da raiz, então a recursão nunca entra na volta. Ela
+  // cai no laço do fim, que é sequencial e não trava.
+  //
+  // Deixei a trava onde está (é barata e protege de uma lista com id repetido,
+  // que a recursão percorreria duas vezes), mas NÃO invento prova para ela.
+  // O que estas duas provas garantem é o que de fato acontece: mapa com ciclo
+  // não trava e não perde nó nenhum de vista.
+  test('🔴 mapa com ciclo não trava, e nenhum nó some', () => {
+    const fora = arrumarMapa([
+      { id: 'r', pai: null, texto: 'raiz', x: 0, y: 0 },
+      { id: 'a', pai: 'b', texto: 'a', x: 0, y: 0 },
+      { id: 'b', pai: 'a', texto: 'b', x: 0, y: 0 },
+    ]);
+    assert.equal(fora.length, 3);
+    assert.ok(fora.every((n) => Number.isFinite(n.x) && Number.isFinite(n.y)), 'nó sem lugar some da tela');
+  });
+
+  test('🔴 nó apontando para si mesmo também não trava', () => {
+    const fora = arrumarMapa([
+      { id: 'r', pai: null, texto: 'raiz', x: 0, y: 0 },
+      { id: 'a', pai: 'a', texto: 'a', x: 0, y: 0 },
+    ]);
+    assert.equal(fora.length, 2);
+    assert.ok(fora.every((n) => Number.isFinite(n.x) && Number.isFinite(n.y)));
+  });
+
+  test('🔴 nó com pai que não existe aparece, em vez de sumir', () => {
+    const solto = [{ id: 'r', pai: null, x: 0, y: 0 }, { id: 'x', pai: 'ninguem', x: 0, y: 0 }];
+    const fora = arrumarMapa(solto);
+    const x = fora.find((n) => n.id === 'x');
+    assert.ok(Number.isFinite(x.x) && Number.isFinite(x.y));
+    assert.ok(x.y >= MARGEM);
+  });
+
+  test('usa a altura medida: card alto não encosta no de baixo', () => {
+    const fora = arrumarMapa(mapa(), { a1: { largura: 172, altura: 200 } });
+    const a1 = fora.find((n) => n.id === 'a1');
+    const a2 = fora.find((n) => n.id === 'a2');
+    assert.ok(a2.y >= a1.y + 200, 'o card alto ficou por cima do irmão');
+  });
+
+  test('mapa sem raiz é devolvido como veio', () => {
+    const orfaos = [{ id: 'a', pai: 'z', x: 5, y: 5 }];
+    assert.deepEqual(arrumarMapa(orfaos), orfaos);
+  });
+});
+
+describe('📏 seSobrepoem e lugarDoFilho com as medidas de verdade', () => {
+  test('🔴 card alto é reconhecido como ocupando o espaço dele', () => {
+    const a = { id: 'a', x: 0, y: 0 };
+    const b = { id: 'b', x: 0, y: 100 };
+    assert.equal(seSobrepoem(a, b), false, 'com altura padrão não se tocam');
+    assert.equal(seSobrepoem(a, b, { a: { largura: 172, altura: 200 } }), true, 'com 200 de altura, cobre');
+  });
+
+  test('o filho novo desvia de um irmão alto', () => {
+    const nos = [
+      { id: 'p', pai: null, x: 0, y: 0 },
+      { id: 'f1', pai: 'p', x: 228, y: 0 },
+    ];
+    const lugar = lugarDoFilho(nos, 'p', { f1: { largura: 172, altura: 200 } });
+    assert.ok(lugar.y >= 200, `nasceu por cima do irmão alto (y=${lugar.y})`);
   });
 });
