@@ -226,3 +226,81 @@ test('🔴 📷 remover a foto GRAVA no banco — não some só da tela', { skip
     assert.deepEqual(erros, []);
   } finally { await ctx.close(); }
 });
+
+/**
+ * 🪞 CONCLUIR NO QUADRO CONCLUI NO DIA (22/09/2026).
+ *
+ * Ávilla: "todas tarefas concluídas no quadro tbm é concluída nas demais
+ * (jornada e lista)".
+ *
+ * O caminho DIA → QUADRO já existia (DIR-76). Esta é a VOLTA, que não existia:
+ * a pessoa fechava o card e a jornada continuava cobrando a mesma coisa.
+ *
+ * Jornada e Lista são duas VISTAS da mesma linha de metodo_tarefas — então
+ * gravar nela é o que sincroniza as duas de uma vez. É isso que se mede aqui:
+ * a ESCRITA na tabela certa, não o desenho.
+ */
+const gravacoesEmTarefas = (pagina) => pagina.evaluate(
+  () => (window.__bancoFalso.escritas || []).filter((e) => e.tabela === 'metodo_tarefas'),
+);
+
+test('🔴 🪞 concluir um card LIGADO ao dia marca a tarefa — com o carimbo do pronto', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    // 'Segunda — Empurrar A' é o card já ligado à tarefa t2 (virou_tarefa_id)
+    const ligado = card(pagina, 'Segunda — Empurrar A');
+    await ligado.locator('[data-teste="concluir-cartao"]').click();
+    await pagina.waitForTimeout(500);
+
+    const gravou = await gravacoesEmTarefas(pagina);
+    assert.equal(gravou.length, 1, 'o card fechou e a tarefa do dia não foi marcada — é o buraco do pedido');
+    assert.equal(gravou[0].patch.feito, true);
+    assert.ok(gravou[0].patch.pronto_em,
+      'sem pronto_em a tarefa aparece como "pronto" sem hora na Fila do Pronto');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});
+
+test('🪞 reabrir o card desmarca a tarefa de volta', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    const ligado = card(pagina, 'Segunda — Empurrar A');
+    await ligado.locator('[data-teste="concluir-cartao"]').click();
+    await pagina.waitForTimeout(400);
+    await ligado.locator('[data-teste="concluir-cartao"]').click();
+    await pagina.waitForTimeout(500);
+
+    const gravou = await gravacoesEmTarefas(pagina);
+    assert.equal(gravou.length, 2, 'a reabertura não voltou pro dia');
+    assert.equal(gravou[1].patch.feito, false);
+    assert.equal(gravou[1].patch.pronto_em, null, 'hora de pronto em tarefa não feita é mentira guardada');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});
+
+test('🪞 card SOLTO (que nunca foi pro dia) não escreve em metodo_tarefas', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    // 'Quinta — Empurrar B' não tem virou_tarefa_id
+    await card(pagina, 'Quinta — Empurrar B').locator('[data-teste="concluir-cartao"]').click();
+    await pagina.waitForTimeout(500);
+    assert.deepEqual(await gravacoesEmTarefas(pagina), [],
+      'escreveu numa tarefa que não existe — card solto não tem par no dia');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});
+
+test('🔴 🪞 mexer no card SEM concluir não escreve no dia — é o que corta o laço', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir();
+  try {
+    // adicionar um item de checklist salva o card inteiro, sem mudar o feito
+    const ligado = card(pagina, 'Segunda — Empurrar A');
+    await ligado.locator('input[placeholder="lista de tarefas"]').fill('comprar caderno');
+    await ligado.locator('input[placeholder="lista de tarefas"]').press('Enter');
+    await pagina.waitForTimeout(500);
+
+    assert.deepEqual(await gravacoesEmTarefas(pagina), [],
+      'qualquer salvamento do card escreve no dia — é assim que as duas telas entram em laço');
+    assert.deepEqual(erros, []);
+  } finally { await ctx.close(); }
+});

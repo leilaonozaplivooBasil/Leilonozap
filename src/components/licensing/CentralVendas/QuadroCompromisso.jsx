@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaAdapter';
+import { espelhoDoCardNaTarefa, carimboParaTarefa } from '@/lib/espelhoDoDia';
 import { Button } from '@/components/ui/button';
 import useArrastavel from '@/hooks/useArrastavel';
 import {
@@ -680,6 +681,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
             type="button"
             onClick={() => onMudar(feito ? reabrir(cartao) : marcarFeito(cartao, agoraISO()))}
             title={feito ? 'reabrir' : 'marcar concluída'}
+            data-teste="concluir-cartao"
             className="mt-0.5 w-5 h-5 rounded-full border-2 shrink-0 inline-flex items-center justify-center transition-colors"
             style={feito ? { background: '#2FA36B', borderColor: '#2FA36B' } : { borderColor: 'rgba(255,255,255,0.3)' }}
           >{feito && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}</button>
@@ -884,7 +886,10 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
  *   Vem do CrmMetodo, que é quem já as carrega: buscar de novo aqui daria duas
  *   listas com a mesma verdade, e uma delas ficaria velha.
  */
-export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, tarefasDoDia = [] }) {
+// `onTarefaEspelhada` avisa a tela de fora (a jornada) que uma tarefa mudou por
+// causa do quadro — sem isso a jornada só saberia no próximo carregamento, e a
+// pessoa que tem as duas abertas veria a lista antiga.
+export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, onTarefaEspelhada, tarefasDoDia = [] }) {
   const uid = currentUser?.id || null;
   // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
   const hoje = hojeISO || dataISO();
@@ -1010,10 +1015,53 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
   };
 
   const mudar = async (cartaoNovo) => {
+    // 🪞 22/09/2026 — A DECISÃO DO ESPELHO É TOMADA AQUI, ANTES DE QUALQUER
+    // ESCRITA, e o "antes" é uma CÓPIA dos campos que interessam — nunca o
+    // objeto que está na lista.
+    //
+    // 🔴 Não é preciosismo. A primeira versão lia `cartoes.find(...)` DEPOIS do
+    // update e o espelho nunca disparava: o objeto guardado em `cartoes` é o
+    // MESMO que a camada de dados tem em mãos, e ao gravar ele é alterado por
+    // dentro. Na hora de comparar, o "antes" já era o "depois" — objeto
+    // comparado com ele mesmo nunca acusa mudança.
+    //
+    // Copiar e decidir antes tira a resposta da mão de quem guarda o dado. Em
+    // produção talvez não mordesse hoje; morderia no dia em que alguém passasse
+    // pra cá o próprio objeto do estado, e aí seria um "às vezes não
+    // sincroniza" impossível de reproduzir.
+    const antigo = cartoes.find((c) => c.id === cartaoNovo.id) || null;
+    const antes = antigo
+      ? { id: antigo.id, coluna: antigo.coluna, virou_tarefa_id: antigo.virou_tarefa_id }
+      : null;
+    const espelho = espelhoDoCardNaTarefa(antes, cartaoNovo);
+
     setCartoes((cs) => cs.map((c) => (c.id === cartaoNovo.id ? cartaoNovo : c)));
     const { id, created_date: _criado, ...resto } = cartaoNovo;
     const { error } = await supabase.from('metodo_quadro').update({ ...resto, updated_at: new Date().toISOString() }).eq('id', id);
-    if (error) { toast.error('Não salvou — recarregando'); carregar(); }
+    if (error) { toast.error('Não salvou — recarregando'); carregar(); return; }
+
+    // 🪞 A VOLTA QUE FALTAVA (Ávilla: "todas tarefas concluídas no quadro tbm é
+    // concluída nas demais — jornada e lista").
+    //
+    // O caminho DIA → QUADRO já existia desde a DIR-76. Esta é a volta: concluir
+    // aqui marca a tarefa do dia. Sem ela, a pessoa fechava o card e a jornada
+    // continuava cobrando a mesma coisa — e o X-Pay do dia não contava.
+    //
+    // Fica AQUI, no `mudar`, e não no botão de concluir, de propósito: toda
+    // conclusão passa por este ponto — o botão, o último item do checklist que
+    // fecha o card sozinho, e qualquer caminho novo que apareça amanhã. Preso ao
+    // botão, o checklist já teria ficado de fora hoje.
+    //
+    // Falha aqui NÃO derruba o card: ele já está salvo. É espelho, não origem.
+    // (a decisão foi tomada lá em cima, antes da gravação — ver o comentário)
+    if (espelho) {
+      try {
+        await supabase.from('metodo_tarefas')
+          .update(carimboParaTarefa(espelho.feito))
+          .eq('id', espelho.tarefaId);
+        onTarefaEspelhada?.(espelho);
+      } catch { /* espelho — o card já está guardado */ }
+    }
   };
   // 🖐️ arrastar um card sobre o outro, dentro da mesma lista
   const reordenarCard = async (id, alvoId) => {
