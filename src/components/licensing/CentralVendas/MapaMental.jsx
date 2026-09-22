@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Trash2, Send, Loader2, Network } from 'lucide-react';
+import { Plus, Trash2, Send, Loader2, Network, Inbox, CalendarPlus, LayoutGrid, Check } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
 import {
   noNovo, raizDe, podeVirarFilho, moverNo, apagarNo,
-  quantosCaemJunto, renomearNo, lugarDoFilho,
+  quantosCaemJunto, renomearNo, lugarDoFilho, semearNoMapa,
 } from '@/lib/mapaMental';
 
 /**
@@ -18,6 +18,14 @@ import {
  * quatro gestos — criar, escrever, arrastar, mandar pro quadro — e nada mais.
  * Cada botão a mais é um segundo a menos esvaziando a cabeça.
  *
+ * ✈ 22/09/2026 — O DESTINO DIRETO. A outra metade do mesmo áudio: "quando eu
+ * esvazio a mente no mapa mental, eu jogo para o meu quadro, para a minha
+ * lista e para a minha jornada." Até agora o ✈ parava nas demandas e o dono
+ * tinha que ir até a aba Demandas terminar o serviço — duas telas para um
+ * pensamento só. Agora o ✈ pergunta o destino ali mesmo.
+ * O botão continua UM: a escolha só aparece DEPOIS do clique, e "só nas
+ * demandas" segue em primeiro, que é o gesto de quem só quer largar a ideia.
+ *
  * A REGRA NÃO ESTÁ AQUI. Ciclo, órfão e "vira demanda" moram em
  * src/lib/mapaMental.js, em JS puro, com 19 provas no Node. Aqui só se desenha
  * e se arrasta — porque o risco desta peça é a árvore, não o traço.
@@ -26,15 +34,35 @@ import {
 const LARGURA = 172;
 const ALTURA = 44;
 
+// Os quatro destinos do ✈, na ordem de quem está esvaziando a cabeça: primeiro
+// o que não exige decisão nenhuma. Os três de baixo criam trabalho DE VERDADE
+// no servidor (metodo_tarefas / metodo_quadro), pelo mesmo caminho da aba
+// Demandas — não existe formato paralelo saindo do mapa.
+const DESTINOS = [
+  { id: 'demandas', rotulo: 'Só nas demandas', Icone: Inbox, dica: 'decido depois' },
+  { id: 'dia', rotulo: 'Minha jornada', Icone: CalendarPlus, dica: 'vira tarefa de hoje' },
+  { id: 'quadro', rotulo: 'Meu quadro', Icone: LayoutGrid, dica: 'vira cartão' },
+  { id: 'ambos', rotulo: 'Os dois', Icone: Check, dica: 'tarefa + cartão' },
+];
+
+const CONFIRMACAO = {
+  demandas: 'Mandado para as demandas.',
+  dia: 'Entrou na sua jornada de hoje.',
+  quadro: 'Foi pro seu quadro.',
+  ambos: 'Virou tarefa de hoje e cartão no quadro.',
+};
+
 // Não recebe `currentUser`: o dono do mapa sai do CRACHÁ, no servidor. Passar
 // o usuário daqui seria oferecer ao navegador um jeito de pedir o mapa alheio.
-export default function MapaMental({ onDemandaCriada }) {
+export default function MapaMental({ onDemandaCriada, semente = null, onSemeado = null }) {
   const [nos, setNos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [editando, setEditando] = useState(null);
   const [erro, setErro] = useState('');
   const [recado, setRecado] = useState('');
+  const [destinoAberto, setDestinoAberto] = useState(null); // id do nó com o seletor aberto
+  const [destacado, setDestacado] = useState(null);           // o nó recém-semeado, para a vista achar
   const telaRef = useRef(null);
   const arrasto = useRef(null);
   const salvarTimer = useRef(null);
@@ -81,6 +109,27 @@ export default function MapaMental({ onDemandaCriada }) {
 
   const mudar = useCallback((lista) => { setNos(lista); salvar(lista); }, [salvar]);
 
+  // 🌱 a demanda que veio da caixa para virar nó ("transformo em mapa mental,
+  // PARA ABRIR o mapa mental"). Só depois que o mapa carregou: semear antes
+  // penduraria o nó numa raiz que ainda não chegou — e ele nasceria órfão.
+  useEffect(() => {
+    if (carregando || !String(semente || '').trim()) return;
+    const { nos: lista, id, novo } = semearNoMapa(nos, semente);
+    if (novo) mudar(lista);
+    setDestacado(id);
+    setRecado(novo ? 'Está no seu mapa.' : 'Essa já estava no seu mapa.');
+    onSemeado?.(id);
+    // de propósito só com `semente` e `carregando`: incluir `nos` re-semearia
+    // a cada arrasto, e o mapa viraria uma fila de cópias.
+  }, [semente, carregando]);
+
+  // o destaque é sinal de "é este aqui", não estado: some junto com o recado.
+  useEffect(() => {
+    if (!destacado) return undefined;
+    const t = setTimeout(() => setDestacado(null), 6000);
+    return () => clearTimeout(t);
+  }, [destacado]);
+
   // ── gestos ───────────────────────────────────────────────────────────────
   const criarFilho = (paiId) => {
     // 🔴 O lugar sai da régua, não de uma conta aqui. A primeira versão
@@ -109,13 +158,19 @@ export default function MapaMental({ onDemandaCriada }) {
   // porque o mapa é o desenho do pensamento, não uma fila de saída. Por isso o
   // segundo clique é ESPERADO — quem barra a duplicata é o servidor, que
   // responde `jaExistia` em vez de gravar de novo. Aqui só traduzimos isso.
-  const mandarProQuadro = async (no) => {
+  const mandarProQuadro = async (no, destino = 'demandas') => {
     if (!String(no.texto || '').trim()) return;
     setErro('');
+    setDestinoAberto(null);
     try {
-      const r = await plataforma.functions.invoke('minhasDemandas', { titulo: no.texto });
+      const r = await plataforma.functions.invoke('minhasDemandas', { titulo: no.texto, destino });
       if (r && r.success === false) { setErro('Não consegui mandar para as demandas.'); return; }
-      setRecado(r?.jaExistia ? 'Essa já estava na fila.' : 'Mandado para as demandas.');
+      // "já estava na fila" só é o recado inteiro quando NADA mais foi feito.
+      // Se o destino era o quadro ou a jornada, a demanda repetida foi até lá
+      // — dizer só "já estava lá" faria o dono achar que o clique não pegou.
+      setRecado(r?.jaExistia && destino === 'demandas'
+        ? 'Essa já estava na fila.'
+        : CONFIRMACAO[destino] || CONFIRMACAO.demandas);
       onDemandaCriada?.(no);
     } catch {
       setErro('Não consegui mandar para as demandas.');
@@ -222,10 +277,13 @@ export default function MapaMental({ onDemandaCriada }) {
             key={n.id}
             data-teste="mapa-no"
             style={{ left: n.x, top: n.y, width: LARGURA }}
+            data-destacado={n.id === destacado ? 'sim' : undefined}
             className={`absolute rounded-xl border px-2.5 py-1.5 shadow-lg transition-colors ${
-              n.id === raiz?.id
-                ? 'border-nz-verde-neon/50 bg-nz-verde-neon/15'
-                : 'border-white/15 bg-white/[0.07] hover:border-nz-verde-neon/40'
+              n.id === destacado
+                ? 'border-nz-verde-neon bg-nz-verde-neon/25 ring-2 ring-nz-verde-neon/60'
+                : n.id === raiz?.id
+                  ? 'border-nz-verde-neon/50 bg-nz-verde-neon/15'
+                  : 'border-white/15 bg-white/[0.07] hover:border-nz-verde-neon/40'
             }`}
           >
             <div
@@ -258,7 +316,8 @@ export default function MapaMental({ onDemandaCriada }) {
                 className="rounded p-0.5 text-white/45 hover:bg-white/10 hover:text-nz-verde-neon" data-teste="mapa-filho">
                 <Plus className="h-3 w-3" />
               </button>
-              <button type="button" onClick={() => mandarProQuadro(n)} title="virar demanda"
+              <button type="button" onClick={() => setDestinoAberto((a) => (a === n.id ? null : n.id))}
+                title="mandar para…" aria-expanded={destinoAberto === n.id}
                 className="rounded p-0.5 text-white/45 hover:bg-white/10 hover:text-nz-verde-neon" data-teste="mapa-demanda">
                 <Send className="h-3 w-3" />
               </button>
@@ -269,13 +328,35 @@ export default function MapaMental({ onDemandaCriada }) {
                 </button>
               )}
             </div>
+
+            {/* ✈ o destino, só depois do clique — o botão continua sendo um. */}
+            {destinoAberto === n.id && (
+              <div
+                className="absolute left-0 top-full z-20 mt-1 w-[184px] overflow-hidden rounded-lg border border-white/15 bg-nz-noite-2 shadow-xl"
+                data-teste="mapa-destinos"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                {DESTINOS.map(({ id, rotulo, Icone, dica }) => (
+                  <button
+                    key={id} type="button" onClick={() => mandarProQuadro(n, id)} data-destino={id}
+                    className="flex w-full items-center gap-2 px-2.5 py-2 text-left hover:bg-white/10"
+                  >
+                    <Icone className="h-3.5 w-3.5 shrink-0 text-nz-verde-neon" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-[11.5px] font-bold text-white">{rotulo}</span>
+                      <span className="block truncate text-[10px] text-white/40">{dica}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
       <p className="px-1 text-[10px] text-white/35">
         Toque no texto pra escrever · <Plus className="inline h-2.5 w-2.5" /> pendura um item ·{' '}
-        <Send className="inline h-2.5 w-2.5" /> manda pras demandas · arraste pra organizar
+        <Send className="inline h-2.5 w-2.5" /> manda pras demandas, pro quadro ou pra jornada · arraste pra organizar
       </p>
     </div>
   );

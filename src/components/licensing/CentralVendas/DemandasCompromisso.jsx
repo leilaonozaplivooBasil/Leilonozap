@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Inbox, Loader2, CalendarPlus, LayoutGrid, X, Check } from 'lucide-react';
+import { Inbox, Loader2, CalendarPlus, LayoutGrid, X, Check, Network } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
 import { caixaDeEntrada, porDiaDeAnotacao, rotuloDoDia, rotuloDaOrigem } from '@/lib/demandas';
@@ -26,13 +26,22 @@ import { tarefaDaDemanda, cardDaDemanda } from '@/lib/encontro';
 // funções (`tarefaDaDemanda`, `cardDaDemanda`) — o destino é o quadro e a
 // jornada que já existem.
 
+// 🗺️ 22/09 — o quarto destino fecha a frase do áudio: "dali eu transformo em
+// ou mapa mental, PARA ABRIR o mapa mental, ou no quadro". É para a anotação
+// que ainda não é tarefa porque ainda não está pensada.
+//
+// 🔴 Ele é o único que NÃO tira a demanda da caixa: o mapa é o desenho do
+// pensamento, não um destino. Ela vira trabalho quando virar tarefa ou
+// cartão — não quando alguém resolve pensar nela. Por isso fica por último,
+// separado dos três que criam trabalho de verdade.
 const DESTINOS = [
   { id: 'dia', rotulo: 'Minha jornada', Icone: CalendarPlus, dica: 'vira tarefa do dia' },
   { id: 'quadro', rotulo: 'Meu quadro', Icone: LayoutGrid, dica: 'vira cartão' },
   { id: 'ambos', rotulo: 'Os dois', Icone: Check, dica: 'tarefa + cartão' },
+  { id: 'mapa', rotulo: 'Abrir no mapa', Icone: Network, dica: 'pensar antes — fica na caixa' },
 ];
 
-export default function DemandasCompromisso({ uid, hojeISO, nome = null, onMudou = null }) {
+export default function DemandasCompromisso({ uid, hojeISO, nome = null, onMudou = null, onAbrirNoMapa = null }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [abrindo, setAbrindo] = useState(null);   // id da demanda com o seletor aberto
@@ -54,6 +63,13 @@ export default function DemandasCompromisso({ uid, hojeISO, nome = null, onMudou
 
   // ✅ transformar em trabalho — MESMO caminho do Painel Corporativo.
   const transformar = async (d, destino) => {
+    // 🗺️ o mapa não é transformação: nada é criado, nada sai da caixa. Só
+    // leva o pensamento pra ser desenhado. Por isso sai antes de tudo.
+    if (destino === 'mapa') {
+      setAbrindo(null);
+      onAbrirNoMapa?.(d);
+      return;
+    }
     setSalvando(true);
     let tarefaId = null; let cardId = null;
     try {

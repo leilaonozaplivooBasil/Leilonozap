@@ -34,6 +34,9 @@ window.__bancoFalso = {
 
 createRoot(document.getElementById('raiz')).render(
   <div style={{ padding: 16, background: '#0A1410', minHeight: '100vh' }}>
-    <DemandasCompromisso uid="u1" hojeISO={HOJE} nome="Basil" />
+    <DemandasCompromisso
+      uid="u1" hojeISO={HOJE} nome="Basil"
+      onAbrirNoMapa={(d) => { (window.__proMapa ||= []).push(d?.titulo); }}
+    />
   </div>,
 );

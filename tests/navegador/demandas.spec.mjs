@@ -130,3 +130,27 @@ test('a origem aparece, para o dono saber de onde veio', { skip: semNavegador },
   assert.match(texto, /do encontro/);
   await ctx.close();
 });
+
+test('🔴 "Abrir no mapa" leva o título e NÃO tira a demanda da caixa', { skip: semNavegador }, async () => {
+  // Áudio de 19/09 (10h32): "dali eu transformo em ou mapa mental, PARA ABRIR
+  // o mapa mental, ou no quadro". O mapa é o desenho do pensamento, não um
+  // destino — a demanda vira trabalho quando virar tarefa ou cartão, não
+  // quando alguém resolve pensar nela. Tirá-la aqui a faria sumir sem nada
+  // ter sido criado.
+  const { ctx, pagina } = await abrir();
+  const antes = await demandas(pagina).count();
+  await demandas(pagina).first().locator('[data-teste="demanda-transformar"]').click();
+  await pagina.locator('[data-teste="demanda-destinos"] button').nth(3).click(); // "Abrir no mapa"
+
+  await pagina.waitForFunction(() => (window.__proMapa || []).length === 1, null, { timeout: 8000 });
+  assert.deepEqual(await pagina.evaluate(() => window.__proMapa), ['ligar pro fornecedor']);
+
+  assert.equal(await demandas(pagina).count(), antes, 'a demanda saiu da caixa só por ir pro mapa');
+  const { tarefas, demanda } = await pagina.evaluate(() => ({
+    tarefas: window.__bancoFalso.tabelas.metodo_tarefas,
+    demanda: window.__bancoFalso.tabelas.xperf_demandas.find((d) => d.id === 'd1'),
+  }));
+  assert.equal(tarefas.length, 0, 'criou tarefa para algo que era só pensamento');
+  assert.equal(demanda.status, 'recebida', 'marcou como agendada sem nada ter sido criado');
+  await ctx.close();
+});
