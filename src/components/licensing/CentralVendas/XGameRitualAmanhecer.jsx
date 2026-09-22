@@ -584,6 +584,13 @@ export default function XGameRitualAmanhecer({ nome, sonhos = [], diaCorridoCicl
 
   const salvarAcordei = async () => {
     if (!print) return;
+    // 📵 cinto e suspensório: no celular a câmera é recurso EXCLUSIVO. Se a
+    // lente da foto sobrevivesse até a lâmina da visualização, o
+    // `getUserMedia` do vídeo seria recusado e a pessoa levaria um "não
+    // consegui abrir a câmera" sem ter feito nada errado. Hoje nenhum
+    // caminho deixa a lente aberta aqui — mas o custo desta linha é zero e
+    // o custo do engano é o ritual inteiro travado às 4h40.
+    fecharCameraFoto();
     const hash = await hashDoArquivo(print).catch(() => '');
     const ok = await salvarBloco('acordei', { file: print, hash, aoVivo: fotoAoVivo });
     // 🔊 o som marca ETAPA VENCIDA, não clique. Clique que não salvou fica

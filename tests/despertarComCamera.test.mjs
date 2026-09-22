@@ -61,6 +61,10 @@ test('a lente desliga quando a tela morre', () => {
   assert.match(TELA, /const fecharCameraFoto = \(\) => \{/);
   // e refazer o bloco também fecha: senão a câmera fica aberta por trás
   assert.match(TELA, /if \(bloco === 'acordei'\) \{ setPrint\(null\); setFotoAoVivo\(false\); fecharCameraFoto\(\); \}/);
+  // 📵 e avançar de bloco também: no celular a câmera é recurso EXCLUSIVO,
+  // e uma lente esquecida aqui faz o vídeo da visualização ser recusado
+  const i = TELA.indexOf('const salvarAcordei');
+  assert.match(TELA.slice(i, i + 300), /fecharCameraFoto\(\);/, 'a lente da foto pode sobreviver até a lâmina do vídeo');
 });
 
 test('a câmera de FOTO é separada da câmera de VÍDEO', () => {
