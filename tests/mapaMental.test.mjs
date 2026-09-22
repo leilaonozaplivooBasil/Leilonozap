@@ -12,6 +12,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   noNovo, filhosDe, raizDe, descendentesDe, podeVirarFilho, moverNo, apagarNo, quantosCaemJunto, demandaDoNo, renomearNo, lugarDoFilho, seSobrepoem, LARGURA_NO, ALTURA_NO, semearNoMapa, medidaDe, caixaDoMapa, ligacaoEntre, noSob, irmaoNovo, arrumarMapa, MARGEM,
+  ligar, desligar, podeLigar, ligacoesDe, ligacoesDoMapa, limparLigacoesOrfas,
 } from '../src/lib/mapaMental.js';
 
 /*  raiz
@@ -516,5 +517,123 @@ describe('📏 seSobrepoem e lugarDoFilho com as medidas de verdade', () => {
     ];
     const lugar = lugarDoFilho(nos, 'p', { f1: { largura: 172, altura: 200 } });
     assert.ok(lugar.y >= 200, `nasceu por cima do irmão alto (y=${lugar.y})`);
+  });
+});
+
+/**
+ * 🔗 LIGAR UM NÓ NO OUTRO (22/09/2026).
+ *
+ * Ávilla: "é preciso opção de ligar um no outro no mapa mental".
+ *
+ * O mapa era ÁRVORE PURA: a única linha possível era pai→filho. Mapa mental de
+ * verdade liga coisas de galhos diferentes. A ligação livre é uma segunda
+ * camada — não mexe no `pai`, não move nada, e some junto com o nó.
+ */
+describe('ligações livres', () => {
+  // a ── b        e ── f  (raiz r; a e b irmãos; f filho de e)
+  const MAPA = [
+    { id: 'r', texto: 'raiz', pai: null, x: 0, y: 0 },
+    { id: 'a', texto: 'A', pai: 'r', x: 200, y: 0 },
+    { id: 'b', texto: 'B', pai: 'r', x: 200, y: 100 },
+    { id: 'e', texto: 'E', pai: 'r', x: 200, y: 200 },
+    { id: 'f', texto: 'F', pai: 'e', x: 400, y: 200 },
+  ];
+
+  test('🔴 liga dois nós de galhos diferentes — era o pedido', () => {
+    const r = ligar(MAPA, 'a', 'f');
+    assert.deepEqual(ligacoesDe(r.find((n) => n.id === 'a')), ['f']);
+    assert.equal(ligacoesDoMapa(r).length, 1);
+  });
+
+  test('a ligação NÃO mexe na árvore', () => {
+    const r = ligar(MAPA, 'a', 'f');
+    for (const n of r) {
+      const antes = MAPA.find((o) => o.id === n.id);
+      assert.equal(n.pai, antes.pai, `o pai de ${n.id} mudou`);
+      assert.equal(n.x, antes.x, `o x de ${n.id} mudou`);
+      assert.equal(n.y, antes.y, `o y de ${n.id} mudou`);
+    }
+  });
+
+  test('não liga nele mesmo', () => {
+    assert.equal(podeLigar(MAPA, 'a', 'a').pode, false);
+    assert.equal(ligar(MAPA, 'a', 'a'), MAPA, 'devolveu lista nova pra um gesto recusado');
+  });
+
+  test('🔴 não liga pai com filho — essa linha a árvore já desenha', () => {
+    const v = podeLigar(MAPA, 'e', 'f');
+    assert.equal(v.pode, false);
+    assert.match(v.motivo, /árvore/, 'o motivo tem que explicar, senão parece que o clique falhou');
+    assert.equal(podeLigar(MAPA, 'f', 'e').pode, false, 'e no sentido contrário também');
+  });
+
+  test('não liga duas vezes, nem invertendo os lados', () => {
+    const r = ligar(MAPA, 'a', 'b');
+    assert.equal(podeLigar(r, 'a', 'b').pode, false);
+    assert.equal(podeLigar(r, 'b', 'a').pode, false, 'inverter os lados criaria a MESMA linha duas vezes');
+    assert.equal(ligacoesDoMapa(ligar(r, 'b', 'a')).length, 1);
+  });
+
+  test('nó que não existe não entra', () => {
+    assert.equal(podeLigar(MAPA, 'a', 'fantasma').pode, false);
+    assert.equal(podeLigar(MAPA, 'fantasma', 'a').pode, false);
+    assert.equal(podeLigar(MAPA, null, 'a').pode, false);
+  });
+
+  test('desligar funciona dos DOIS lados', () => {
+    const r = ligar(MAPA, 'a', 'b');
+    assert.equal(ligacoesDoMapa(desligar(r, 'a', 'b')).length, 0);
+    assert.equal(ligacoesDoMapa(desligar(r, 'b', 'a')).length, 0,
+      'desligar só pelo lado onde foi guardado deixaria a linha na tela');
+  });
+
+  test('cada par desenha UMA linha só, com chave estável', () => {
+    const r = ligar(ligar(MAPA, 'a', 'b'), 'a', 'f');
+    const pares = ligacoesDoMapa(r);
+    assert.equal(pares.length, 2);
+    const chaves = pares.map((p) => p.chave);
+    assert.equal(new Set(chaves).size, 2, 'chave repetida faz o React reusar a linha errada');
+    assert.deepEqual([...chaves].sort(), ['a|b', 'a|f'], 'a chave tem que independer da ordem dos lados');
+  });
+
+  describe('nó apagado leva as ligações junto', () => {
+    test('🔴 apagar o nó limpa quem apontava pra ele', () => {
+      const r = apagarNo(ligar(MAPA, 'a', 'f'), 'f');
+      assert.equal(ligacoesDoMapa(r).length, 0);
+      assert.deepEqual(ligacoesDe(r.find((n) => n.id === 'a')), [],
+        'o id do nó morto ficou guardado — a ligação ressuscita se um nó nascer com esse id');
+    });
+
+    test('apagar leva junto as ligações dos DESCENDENTES', () => {
+      const r = apagarNo(ligar(MAPA, 'a', 'f'), 'e'); // f é filho de e
+      assert.equal(r.some((n) => n.id === 'f'), false);
+      assert.equal(ligacoesDoMapa(r).length, 0);
+    });
+
+    test('ligação pra nó inexistente não vira linha, mesmo sem limpeza', () => {
+      const sujo = MAPA.map((n) => (n.id === 'a' ? { ...n, liga: ['fantasma', 'a'] } : n));
+      assert.equal(ligacoesDoMapa(sujo).length, 0, 'linha pro nada e linha pra si mesmo não desenham');
+    });
+  });
+
+  describe('bordas', () => {
+    test('lista vazia e nula não quebram', () => {
+      assert.deepEqual(ligacoesDoMapa([]), []);
+      assert.deepEqual(ligacoesDoMapa(null), []);
+      assert.deepEqual(limparLigacoesOrfas(null), []);
+      assert.deepEqual(ligacoesDe(null), []);
+      assert.deepEqual(ligacoesDe({ liga: 'nao é lista' }), []);
+      assert.deepEqual(ligacoesDe({ liga: [null, 'x', undefined] }), ['x']);
+    });
+
+    test('limpar tira o campo `liga` quando não sobra nada', () => {
+      const r = limparLigacoesOrfas([{ id: 'a', liga: ['some'] }]);
+      assert.equal('liga' in r[0], false, 'deixar `liga: []` no jsonb é lixo que cresce sozinho');
+    });
+
+    test('limpar não mexe em quem está inteiro', () => {
+      const bom = [{ id: 'a', liga: ['b'] }, { id: 'b' }];
+      assert.equal(limparLigacoesOrfas(bom)[0], bom[0], 'trocou o objeto sem precisar — re-render à toa');
+    });
   });
 });
