@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
 
 const Auction = plataforma.entities.Auction;
 const AuctionMessage = plataforma.entities.AuctionMessage;
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, X, MessageSquare, Building2, Loader2, ChevronDown } from "lucide-react";
+import { destinoDoVoltar } from '@/lib/voltarDaSala';
 
 import AIMessage from "../components/chat/AIMessage";
 import PlacaLance from "../components/chat/PlacaLance";
@@ -55,6 +56,7 @@ const COUNTDOWN_DURATION = 142;
 const BID_EXTENSION_SECONDS = 22;
 
 export default function AuctionRoom() {
+  const navigate = useNavigate(); // ⬅️ 23/09 — o voltar sem histórico leva pra página do leilão
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
@@ -1176,7 +1178,16 @@ export default function AuctionRoom() {
       )}
 
       <header className="mobile-header">
-        <Button variant="ghost" size="icon" onClick={() => window.history.back()} className="text-white">
+        {/* ⬅️ 23/09/2026 — quem chega PELO LINK não tem histórico; `history.back()`
+            morria em silêncio. Sem histórico do site, o voltar leva pra página do
+            leilão (regra em src/lib/voltarDaSala.js). */}
+        <Button
+          variant="ghost" size="icon" className="text-white" data-teste="voltar-da-sala"
+          onClick={() => {
+            const d = destinoDoVoltar({ tamanhoDoHistorico: window.history.length, referrer: document.referrer, origem: window.location.origin, auctionId: auction?.id });
+            if (d.acao === 'historico') window.history.back(); else navigate(d.url);
+          }}
+        >
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
@@ -1189,6 +1200,8 @@ export default function AuctionRoom() {
             isWarMode={isWarMode}
             onInfo={() => setShowMobilePanel(true)}
             leaderName={auction?.winner_name}
+            thumbUrl={auction?.image_urls?.[0] || null}
+            titulo={auction?.title || ''}
           />
         </div>
 

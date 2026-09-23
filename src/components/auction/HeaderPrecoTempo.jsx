@@ -7,7 +7,7 @@ import { textoDeTermino } from '@/lib/relogioLeilao';
  * PONTO 84 — cabeçalho da sala: PREÇO à esquerda, RELÓGIO à direita.
  * Só apresentação — nenhuma regra de leilão vive aqui.
  */
-export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName, endTime }) {
+export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName, endTime, thumbUrl = null, titulo = '' }) {
   // 🔴 03/09/2026 — a data por extenso embaixo do cronômetro.
   // O cronômetro tem resolução de semana: fica parado em "1 semana" por sete
   // dias e um cliente abriu chamado achando o leilão travado. `endTime` é prop
@@ -15,6 +15,24 @@ export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionA
   const fimEmTexto = textoDeTermino(endTime);
   return (
     <div className="flex w-full items-center justify-between gap-2">
+      {/* 🖼️ 23/09/2026 — A MINIATURA DO PRODUTO, no celular. Dono: "quando o cara
+          clica no link ele cai direto na sala; precisa de uma imagem bem
+          pequena do videogame ali, sem poluir — no computador aparece, no
+          telefone não". Entra no lugar que já existia (o ⓘ abre o painel do
+          produto) e ocupa o que o ⓘ ocupava: nada de espaço novo. Sem foto,
+          a sala fica exatamente como era. */}
+      {thumbUrl && (
+        <button
+          type="button"
+          onClick={onInfo}
+          aria-label={`Ver o produto${titulo ? `: ${titulo}` : ''}`}
+          className="shrink-0 overflow-hidden rounded-lg"
+          style={{ width: 40, height: 40, border: '1px solid rgba(46,157,99,0.35)', boxShadow: '0 0 12px rgba(16,185,129,0.25)', background: '#fff' }}
+          data-teste="miniatura-produto"
+        >
+          <img src={thumbUrl} alt={titulo || 'produto'} className="h-full w-full object-cover" />
+        </button>
+      )}
       {/* PREÇO — esquerda */}
       <div className="flex min-w-0 flex-col items-start">
         <button
