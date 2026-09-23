@@ -12,11 +12,14 @@ import SellerWithdrawalModal from "../components/sellers/SellerWithdrawalModal";
 import SellerWithdrawalsHistoryModal from "../components/sellers/SellerWithdrawalsHistoryModal";
 import SellerLoginForm from "../components/sellers/SellerLoginForm";
 import SellerStoreCard from "../components/sellers/SellerStoreCard";
+import { saldoDoPainel } from "@/lib/pedidoDeSaque";
 
 export default function SellerPanel() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  // 💰 a carteira vem de getMyWallet — a rota que EXISTE. É dela que sai o saldo sacável.
+  const [carteira, setCarteira] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
@@ -53,19 +56,32 @@ export default function SellerPanel() {
     checkAccess();
   }, []);
 
-  // Buscar dashboard
+  // Buscar carteira (obrigatória) + dashboard de vendas (se existir)
+  //
+  // 🔴 23/09/2026 — esta página chamava SÓ `getSellerDashboardData`, rota que não
+  // existe no servidor. O cliente devolvia { ok:false, error:'not_implemented' },
+  // a tela lia `response.data` (undefined) e caía em "Erro ao carregar dados".
+  // Resultado: o corpo inteiro — inclusive o botão de saque — nunca desenhava.
+  // "Hoje ninguém consegue sacar" era isto.
+  //
+  // Agora o SALDO vem de getMyWallet (a mesma rota da Carteira, que funciona).
+  // O dashboard de vendas continua best-effort: se a rota existir um dia, aparece;
+  // se não, a página funciona sem ele, em vez de morrer inteira.
   const fetchDashboard = async () => {
     if (!user) return;
     try {
       setIsError(false);
-      const response = await plataforma.functions.invoke('getSellerDashboardData', { seller_id: user.id });
-      const data = response?.data;
-      if (data?.success) {
-        setDashboardData(data);
-      } else {
-        toast.error(data?.error || 'Erro ao carregar dashboard');
+      const w = await plataforma.functions.invoke('getMyWallet', { user_id: user.id });
+      if (!w?.success) {
+        toast.error(w?.error || 'Não consegui carregar sua carteira');
         setIsError(true);
+        return;
       }
+      setCarteira(w);
+      try {
+        const d = await plataforma.functions.invoke('getSellerDashboardData', { seller_id: user.id });
+        setDashboardData(d?.success === true ? d : null);
+      } catch { setDashboardData(null); }
     } catch (err) {
       console.error('[SellerPanel] Erro:', err);
       toast.error('Erro ao carregar dados');
@@ -84,13 +100,13 @@ export default function SellerPanel() {
   // Refresh com visibilitychange + focus
   useEffect(() => {
     const handleVisibility = async () => {
-      if (!document.hidden && dashboardData) {
+      if (!document.hidden && carteira) {
         await fetchDashboard();
       }
     };
 
     const handleFocus = async () => {
-      if (user && dashboardData) {
+      if (user && carteira) {
         await fetchDashboard();
       }
     };
@@ -102,7 +118,7 @@ export default function SellerPanel() {
       window.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [user, dashboardData]);
+  }, [user, carteira]);
 
   // Mostra login se não autenticado
   if (!isLoading && !user) {
@@ -125,6 +141,7 @@ export default function SellerPanel() {
   }
 
   const shortName = (user.full_name || '').split(' ').slice(0, 2).join(' ');
+  const painel = saldoDoPainel(carteira);
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 sm:p-6">
@@ -145,7 +162,7 @@ export default function SellerPanel() {
           </Button>
         </div>
 
-        {/* Stats Cards */}
+        {/* Saldo + vendas */}
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
@@ -157,30 +174,34 @@ export default function SellerPanel() {
               <p className="text-red-300">Erro ao carregar dados. Clique em Atualizar para tentar novamente.</p>
             </CardContent>
           </Card>
-        ) : dashboardData ? (
+        ) : carteira ? (
           <>
-            <SellerStatsCards data={dashboardData} />
+            {dashboardData && <SellerStatsCards data={dashboardData} />}
 
-            {/* Saldo Card */}
-            <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30 mb-6">
+            {/* Saldo Card — da carteira, sempre */}
+            <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30 mb-6" data-teste="card-saldo-saque">
               <CardHeader>
                 <CardTitle className="text-green-400">Saldo Disponível para Saque</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <div className="text-5xl font-bold text-white mb-2">
-                      R$ {fmtBR(dashboardData.saldo_liberado_final)}
+                    <div className="text-5xl font-bold text-white mb-2" data-teste="saldo-sacavel">
+                      R$ {fmtBR(painel.saldoSacavel)}
                     </div>
-                    {dashboardData.saques_total_pendentes > 0 && (
+                    {painel.emAnalise > 0 && (
                       <p className="text-yellow-300 text-sm">
-                        + R$ {fmtBR(dashboardData.saques_total_pendentes)} em saques pendentes
+                        + R$ {fmtBR(painel.emAnalise)} em saques pendentes
                       </p>
+                    )}
+                    {painel.kycStatus !== 'aprovado' && (
+                      <p className="text-yellow-300 text-sm" data-teste="aviso-kyc">Valide sua identidade na Carteira pra liberar o saque.</p>
                     )}
                   </div>
                   <Button
                     onClick={() => setShowWithdrawalModal(true)}
-                    className="bg-green-600 hover:bg-green-700 min-h-[44px] w-full sm:w-auto">
+                    className="bg-green-600 hover:bg-green-700 min-h-[44px] w-full sm:w-auto"
+                    data-teste="abrir-saque">
                     💰 Solicitar Saque
                   </Button>
                 </div>
@@ -190,26 +211,26 @@ export default function SellerPanel() {
             {/* Minha Loja */}
             <SellerStoreCard referralCode={user.referral_code} />
 
-            {/* Minhas Vendas */}
-            <Card className="bg-gray-800/50 border-gray-700 mb-6">
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle className="text-white">Minhas Vendas (Últimas 10)</CardTitle>
-                <Button
-                  onClick={() => setShowHistoryModal(true)}
-                  variant="outline"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                  size="sm">
-                  📜 Histórico
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {dashboardData.ultimas_10_vendas.length === 0 ? (
-                  <p className="text-gray-400 text-center py-8">Você ainda não fez vendas.</p>
-                ) : (
-                  <SellerSalesTable vendas={dashboardData.ultimas_10_vendas} />
-                )}
-              </CardContent>
-            </Card>
+            {/* Minhas Vendas — só quando o dashboard de vendas existir */}
+            {dashboardData && (
+              <Card className="bg-gray-800/50 border-gray-700 mb-6">
+                <CardHeader className="flex flex-row justify-between items-center">
+                  <CardTitle className="text-white">Minhas Vendas (Últimas 10)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(dashboardData.ultimas_10_vendas || []).length === 0 ? (
+                    <p className="text-gray-400 text-center py-8">Você ainda não fez vendas.</p>
+                  ) : (
+                    <SellerSalesTable vendas={dashboardData.ultimas_10_vendas} />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            <div className="flex justify-end mb-6">
+              <Button onClick={() => setShowHistoryModal(true)} variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700" size="sm">
+                📜 Histórico de saques
+              </Button>
+            </div>
           </>
         ) : null}
       </div>
@@ -218,14 +239,17 @@ export default function SellerPanel() {
       <SellerWithdrawalModal
         isOpen={showWithdrawalModal}
         onClose={() => setShowWithdrawalModal(false)}
-        saldoDisponivel={dashboardData?.saldo_liberado_final || 0}
+        saldoDisponivel={painel.saldoSacavel}
         onSuccess={fetchDashboard}
+        userId={user.id}
+        kycStatus={painel.kycStatus}
+        cpf={painel.cpf}
       />
 
       <SellerWithdrawalsHistoryModal
         isOpen={showHistoryModal}
         onClose={() => setShowHistoryModal(false)}
-        saques={dashboardData?.saques_recentes || []}
+        saques={painel.saques}
       />
     </div>
   );

@@ -1,85 +1,71 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { fmtBR } from '@/lib/money';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { plataforma } from "@/api/plataformaClient";
+import { podePedirSaque, lerRespostaDoSaque, MOTIVOS } from '@/lib/pedidoDeSaque';
 
-export default function SellerWithdrawalModal({
-  isOpen,
-  onClose,
-  saldoDisponivel,
-  onSuccess,
-}) {
-  const [amount, setAmount] = useState("");
-  const [pixKeyType, setPixKeyType] = useState("CPF");
-  const [pixKey, setPixKey] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+/**
+ * 💸 SOLICITAR SAQUE — Painel do Vendedor.
+ *
+ * 23/09/2026 — reescrito por cima de um modal que falhava de quatro jeitos ao
+ * mesmo tempo (ver o cabeçalho de src/lib/pedidoDeSaque.js). O que mudou:
+ *   • chama a rota que EXISTE (requestWithdrawal), com o que ela pede (user_id, valor);
+ *   • lê a resposta como ela vem (JSON direto), não `response.data`;
+ *   • sem KYC aprovado, em vez de um erro genérico, mostra o caminho: validar
+ *     identidade na Carteira;
+ *   • NÃO pede chave PIX. A rota ignora e força o PIX do CPF validado (antifraude).
+ *     Pedir uma chave que não vai ser usada é mentir pra pessoa.
+ */
+export default function SellerWithdrawalModal({ isOpen, onClose, saldoDisponivel, onSuccess, userId, kycStatus, cpf }) {
+  const [valor, setValor] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const navigate = useNavigate();
+
+  const irValidar = () => { onClose(); navigate('/Carteira'); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const amountNum = parseFloat(amount);
-    if (!amountNum || amountNum <= 0) {
-      toast.error("Valor inválido");
-      return;
+    const regra = podePedirSaque({ kycStatus, saldo: saldoDisponivel, valor });
+    if (!regra.ok) {
+      if (regra.motivo === MOTIVOS.KYC) { toast.error('Valide sua identidade antes de sacar.'); irValidar(); return; }
+      if (regra.motivo === MOTIVOS.VALOR) { toast.error('Informe um valor válido.'); return; }
+      toast.error(`Saldo insuficiente. Disponível: R$ ${fmtBR(saldoDisponivel)}`); return;
     }
+    if (!userId) { toast.error('Sessão inválida. Entre de novo.'); return; }
 
-    if (amountNum > saldoDisponivel) {
-      toast.error(`Saldo insuficiente. Disponível: R$ ${fmtBR(saldoDisponivel)}`);
-      return;
-    }
-
-    if (!pixKey.trim()) {
-      toast.error("Informe a chave PIX");
-      return;
-    }
-
-    setIsSubmitting(true);
+    setEnviando(true);
     try {
-      const response = await plataforma.functions.invoke("requestSellerWithdrawal", {
-        amount: amountNum,
-        pix_key: pixKey.trim(),
-        pix_key_type: pixKeyType,
-      });
-
-      const data = response?.data;
-      if (data?.success) {
-        toast.success(data.message || "Saque solicitado com sucesso!");
-        setAmount("");
-        setPixKey("");
-        setPixKeyType("CPF");
+      const r = await plataforma.functions.invoke('requestWithdrawal', { user_id: userId, valor: regra.valor });
+      const lido = lerRespostaDoSaque(r);
+      if (lido.ok) {
+        toast.success(lido.mensagem);
+        setValor("");
         onClose();
-        onSuccess();
+        onSuccess?.();
+      } else if (lido.precisaKyc) {
+        toast.error(lido.mensagem);
+        irValidar();
       } else {
-        toast.error(data?.error || "Erro ao solicitar saque");
+        toast.error(lido.mensagem);
       }
     } catch (err) {
-      toast.error(err.message || "Erro ao solicitar saque");
+      toast.error(err?.message || 'Erro ao solicitar saque');
     } finally {
-      setIsSubmitting(false);
+      setEnviando(false);
     }
   };
 
+  const aprovado = kycStatus === 'aprovado';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-700 max-w-md">
+      <DialogContent className="bg-gray-800 border-gray-700 max-w-md" data-teste="modal-saque">
         <DialogHeader>
           <DialogTitle className="text-white">Solicitar Saque</DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -87,73 +73,44 @@ export default function SellerWithdrawalModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label className="text-gray-300">Valor (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              max={saldoDisponivel}
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
-              disabled={isSubmitting}
-            />
+        {!aprovado ? (
+          <div className="space-y-4" data-teste="saque-precisa-kyc">
+            <div className="flex gap-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-yellow-300" />
+              <p className="text-sm text-yellow-100">
+                Pra sacar com segurança, valide sua identidade primeiro.{' '}
+                <strong className="text-white">O saque só vai pro PIX do seu CPF.</strong>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-gray-600 text-gray-300">Depois</Button>
+              <Button type="button" onClick={irValidar} className="flex-1 bg-green-600 hover:bg-green-700" data-teste="ir-validar-identidade">
+                Validar identidade
+              </Button>
+            </div>
           </div>
-
-          <div>
-            <Label className="text-gray-300">Tipo de Chave PIX</Label>
-            <Select value={pixKeyType} onValueChange={setPixKeyType} disabled={isSubmitting}>
-              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CPF">CPF</SelectItem>
-                <SelectItem value="PHONE">Telefone</SelectItem>
-                <SelectItem value="EMAIL">E-mail</SelectItem>
-                <SelectItem value="RANDOM">Aleatória</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-gray-300">Chave PIX</Label>
-            <Input
-              type="text"
-              placeholder="Digite sua chave PIX"
-              value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
-              className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="flex-1 border-gray-600 text-gray-300">
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !amount || !pixKey}
-              className="flex-1 bg-green-600 hover:bg-green-700">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Solicitando...
-                </>
-              ) : (
-                "Solicitar Saque"
-              )}
-            </Button>
-          </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4" data-teste="form-saque">
+            <div>
+              <Label className="text-gray-300">Valor (R$)</Label>
+              <Input
+                type="text" inputMode="decimal" placeholder="0,00" value={valor}
+                onChange={(e) => setValor(e.target.value)} disabled={enviando}
+                className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
+                data-teste="valor-saque"
+              />
+            </div>
+            <p className="text-xs text-gray-400">
+              O PIX vai pro seu CPF{cpf ? <> (<span className="text-white">{cpf}</span>)</> : null}, validado na identidade. Pago após aprovação.
+            </p>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={enviando} className="flex-1 border-gray-600 text-gray-300">Cancelar</Button>
+              <Button type="submit" disabled={enviando || !valor} className="flex-1 bg-green-600 hover:bg-green-700" data-teste="confirmar-saque">
+                {enviando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Solicitando...</> : 'Solicitar Saque'}
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
