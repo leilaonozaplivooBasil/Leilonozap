@@ -2,14 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import { Input } from '@/components/ui/input';
-import { Search, Landmark, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Landmark, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import ComissaoUsuarioCard from '@/components/comissoes/ComissaoUsuarioCard';
+import { AVISO_COMISSAO, LINK_APROVACAO } from '@/lib/comissaoSoConsulta';
 
-// 🏦 PAGAMENTOS DE COMISSÕES — "banco interno" pra pagar manualmente (12/08/2026)
-// Enquanto a integração com o banco/gateway automático não fecha, esta tela reúne
-// todas as comissões (leilão + catálogo) por pessoa, mostra a chave PIX de cada uma
-// e permite marcar como pago depois do PIX manual. Nada aqui envia dinheiro sozinho.
+// 🏦 PAGAMENTOS DE COMISSÕES — extrato por pessoa, SÓ CONSULTA (23/09/2026)
+// Nasceu em 12/08 como "banco interno" pra pagar PIX na mão e marcar pago. O
+// "marcar pago" nunca gravou (tabela fora do entityWrite) e não podia mesmo: a
+// comissão já está no commission_balance da pessoa, que saca pela plataforma
+// depois do KYC. Pagar por fora era pagar em dobro. Decisão do dono em 23/09:
+// comissão só pelo saque. A tela mostra quanto cada um tem e em que pé está o
+// KYC, e aponta pra fila de aprovação. Ver src/lib/comissaoSoConsulta.js.
 export default function PagamentosComissoes() {
   const [loading, setLoading] = useState(true);
   const [commissions, setCommissions] = useState([]);
@@ -45,8 +50,7 @@ export default function PagamentosComissoes() {
         byUser[c.user_id] = {
           user_id: c.user_id,
           user_name: c.user_name || u?.full_name || 'Sem nome',
-          pix_key: u?.pix_key || '',
-          pix_key_type: u?.pix_key_type || 'CPF',
+          kyc_status: u?.kyc_status || 'nao_iniciado',
           commissions: [],
           pendentes: [],
           totalPendente: 0,
@@ -78,28 +82,6 @@ export default function PagamentosComissoes() {
   const totalGeralPago = grupos.reduce((s, g) => s + g.totalPago, 0);
   const pessoasAPagar = grupos.filter((g) => g.totalPendente > 0).length;
 
-  const handleSalvarPix = async (userId, pixKey, pixType) => {
-    try {
-      await plataforma.entities.AppUser.update(userId, { pix_key: pixKey, pix_key_type: pixType });
-      toast.success('Chave PIX salva');
-      await carregar();
-    } catch (e) {
-      toast.error('Não foi possível salvar a chave PIX ainda. Fale com quem administra o banco de dados.');
-    }
-  };
-
-  const handleMarcarPago = async (ids) => {
-    try {
-      await Promise.all(ids.map((id) => plataforma.entities.CommissionRecord.update(id, { status: 'paid' })));
-      toast.success('Comissões marcadas como pagas');
-      await carregar();
-    } catch (e) {
-      toast.error('Erro ao marcar como pago: ' + (e?.message || e));
-    }
-  };
-
-  const handleMarcarPagoUm = async (id) => handleMarcarPago([id]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">
@@ -115,15 +97,20 @@ export default function PagamentosComissoes() {
           <Landmark className="w-7 h-7 text-green-400" />
           <h1 className="text-2xl font-black">Pagamentos de Comissões</h1>
         </div>
-        <p className="text-gray-400 text-sm mb-6">
-          Todas as comissões (leilão e loja virtual) organizadas por pessoa, como um extrato bancário.
-          Use enquanto o pagamento automático com o banco não está pronto: pague o PIX manualmente e
-          marque como pago aqui.
+        <p className="text-gray-400 text-sm mb-4">
+          Todas as comissões (leilão e loja virtual) organizadas por pessoa, como um extrato. Só consulta.
         </p>
+        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col md:flex-row md:items-center gap-3" data-teste="aviso-so-consulta">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-100 flex-1">{AVISO_COMISSAO}</p>
+          <Link to={LINK_APROVACAO} className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-3 py-2 whitespace-nowrap">
+            <ShieldCheck className="w-4 h-4" /> Aprovar KYC e saques
+          </Link>
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
           <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4">
-            <div className="text-xs text-amber-400">Total a pagar</div>
+            <div className="text-xs text-amber-400">Total no saldo das pessoas</div>
             <div className="text-2xl font-black text-amber-400">R$ {fmtBR(totalGeralPendente)}</div>
           </div>
           <div className="bg-gray-900 border border-green-900/50 rounded-xl p-4">
@@ -131,7 +118,7 @@ export default function PagamentosComissoes() {
             <div className="text-2xl font-black text-green-400">R$ {fmtBR(totalGeralPago)}</div>
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="text-xs text-gray-500">Pessoas com saldo a pagar</div>
+            <div className="text-xs text-gray-500">Pessoas com saldo a receber</div>
             <div className="text-2xl font-black">{pessoasAPagar}</div>
           </div>
         </div>
@@ -139,7 +126,7 @@ export default function PagamentosComissoes() {
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <div className="flex gap-2 bg-gray-900 border border-gray-800 rounded-lg p-1">
             {[
-              { id: 'a_pagar', label: 'A pagar' },
+              { id: 'a_pagar', label: 'A receber' },
               { id: 'pago', label: 'Já pago' },
               { id: 'todos', label: 'Todos' },
             ].map((t) => (
@@ -165,13 +152,7 @@ export default function PagamentosComissoes() {
 
         <div className="space-y-3">
           {filtrados.map((g) => (
-            <ComissaoUsuarioCard
-              key={g.user_id}
-              grupo={g}
-              onSalvarPix={handleSalvarPix}
-              onMarcarPago={handleMarcarPago}
-              onMarcarPagoUm={handleMarcarPagoUm}
-            />
+            <ComissaoUsuarioCard key={g.user_id} grupo={g} />
           ))}
           {filtrados.length === 0 && (
             <div className="text-center text-gray-500 py-16">Nenhuma comissão encontrada com esse filtro.</div>
