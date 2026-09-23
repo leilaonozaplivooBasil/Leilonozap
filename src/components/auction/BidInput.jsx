@@ -4,8 +4,12 @@ import { money, addMoney, gtMoney, gteMoney, fmtBR } from "@/lib/money";
 import { toast } from "sonner";
 import BidPopover from "./BidPopover";
 import { avisoDoTotalTravado } from "@/lib/saldoDoLance";
+import { ofertaDaLoja, fraseDaOferta } from "@/lib/arremateAgora";
 
-export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0, isFirstBid = false }) {
+export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0, isFirstBid = false, precoLoja = null, startingPrice = null }) {
+  // 🏷️ 23/09/2026 — "arremata com 5% de desconto da nossa loja": a frase só
+  // aparece quando o arremate gravado é MESMO loja − 5% (ver lib/arremateAgora).
+  const oferta = ofertaDaLoja({ buy_now_price: buyNowPrice, starting_price: startingPrice ?? currentPrice }, precoLoja);
   // 🩹 Sem lance ainda (isFirstBid): o primeiro lance vale o próprio currentPrice
   // (= starting_price publicado) — o incremento só soma a partir do segundo lance.
   const minBid = isFirstBid ? money(currentPrice) : addMoney(currentPrice, increment);
@@ -67,6 +71,11 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
         )}
       </div>
 
+      {oferta && (
+        <p className="mt-2 text-center text-[11px] sm:text-xs font-semibold text-orange-300" data-teste="oferta-da-loja">
+          {fraseDaOferta(oferta)}
+        </p>
+      )}
       <p className="mt-2 text-center text-[11px] sm:text-xs text-gray-500">
         {isFirstBid ? `Lance inicial: R$ ${fmtBR(money(currentPrice))}` : `Incremento mínimo: + R$ ${fmtBR(increment)}`}
         {avisoDoTotal && ` · ${avisoDoTotal}`}
