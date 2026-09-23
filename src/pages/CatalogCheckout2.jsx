@@ -1,3 +1,4 @@
+import { trackPurchaseLoja } from '@/lib/tracking';
 import React, { useState, useEffect, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate } from 'react-router-dom';
@@ -282,6 +283,7 @@ export default function CatalogCheckout2() {
                 const data = result?.data || result;
                 if (data?.found && data?.status === 'confirmed') {
                     setPaymentConfirmed(true);
+                    trackPurchaseLoja([{ ...product, quantity: 1 }], { transactionId: currentSaleId }); // 🛒 22/09 — Purchase
                     clearInterval(pollingIntervalRef.current);
                     clearTimeout(pollingTimeoutRef.current);
                     toast.success('✅ Pagamento confirmado! Seu pedido foi registrado.');

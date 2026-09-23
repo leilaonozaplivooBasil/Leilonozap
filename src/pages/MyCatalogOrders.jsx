@@ -15,7 +15,7 @@ import DetalhesPedidoModal from '@/components/catalog/DetalhesPedidoModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import MinhasComprasHeader from '@/components/catalog/MinhasComprasHeader';
-import { useSectionTracking } from '@/lib/tracking';
+import { trackPurchaseDoPedido, useSectionTracking } from '@/lib/tracking';
 
 export default function MyCatalogOrders() {
   useSectionTracking('meus_pedidos', 'Meus Pedidos');
@@ -88,6 +88,16 @@ export default function MyCatalogOrders() {
         const orders = await fetchOrders(user.id);
         // Popula o set com todos os IDs que JÁ estão pagos antes do polling começar
         orders.forEach(o => { if (o.status === 'paid') initialPaidIds.add(o.id); });
+        // 🛒 22/09/2026 — o CARTÃO volta do Mercado Pago direto pra cá (?paid=1),
+        // sem carrinho na memória. Pedido pago nos últimos 30 min vira Purchase
+        // (uma vez por pedido — guarda na sessão), a partir do items_json.
+        try {
+          const limite = Date.now() - 30 * 60 * 1000;
+          orders.forEach((o) => {
+            const quando = new Date(o.created_date || o.created_at || 0).getTime();
+            if (o.status === 'paid' && quando >= limite) trackPurchaseDoPedido(o);
+          });
+        } catch { /* rastreio nunca derruba a tela */ }
         currentOrdersSnapshot = orders;
         setOrders(orders);
       } catch (error) {
@@ -114,6 +124,7 @@ export default function MyCatalogOrders() {
             const oldOrder = currentOrdersSnapshot.find(o => o.id === order.id);
             if (oldOrder && oldOrder.status !== 'paid') {
               initialPaidIds.add(order.id); // Evita disparar de novo
+              trackPurchaseDoPedido(order); // 🛒 22/09 — virou pago nesta sessão: Purchase
               window.dispatchEvent(new CustomEvent('paymentConfirmed', {
                 detail: {
                   sale_id: order.id,

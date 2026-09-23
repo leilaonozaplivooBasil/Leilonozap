@@ -1,3 +1,4 @@
+import { trackViewItem, trackAddToCart, trackBeginCheckoutLoja } from '@/lib/tracking';
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
 import { textoParcelamento } from '@/lib/parcelamento';
@@ -36,6 +37,9 @@ export default function CatalogProductDetails() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  // 🛒 22/09/2026 — ViewContent: o Tag Assistant mostrou a página do produto
+  // MUDA. Dispara uma vez por produto carregado (currency + items + content_ids).
+  useEffect(() => { if (product?.id) trackViewItem(product); }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [licenseePhone, setLicenseePhone] = useState(null);
   const [storeRating, setStoreRating] = useState(null);
@@ -211,6 +215,11 @@ export default function CatalogProductDetails() {
   const irParaCheckout = () => {
     adicionarAoCarrinho();
     navigate(createPageUrl("Cart"));
+    // 🛒 22/09 — InitiateCheckout com o produto: currency + items + content_ids.
+    // Fica DEPOIS das duas linhas de propósito: o guarda D5 (auditoriaNoturna
+    // Decisoes) exige "{ adicionar → navigate(Cart)" colados — regra de negócio
+    // que o rastreio não pode afrouxar. O navigate não interrompe o fluxo.
+    trackBeginCheckoutLoja([{ ...product, quantity }]);
   };
 
   const getCanonicalProductUrl = () => {
@@ -346,6 +355,8 @@ export default function CatalogProductDetails() {
   };
 
   const adicionarAoCarrinho = () => {
+    // 🛒 22/09 — AddToCart pro GTM/Meta (a loja não mandava evento nenhum)
+    trackAddToCart(product, quantity);
     let cart = lerCarrinho();
 
     const existingIndex = cart.findIndex(item => item.id === product.id);

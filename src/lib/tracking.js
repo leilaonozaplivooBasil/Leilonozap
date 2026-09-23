@@ -4,6 +4,7 @@
 // externo estar instalado ainda (GTM), então nunca quebra nada em produção.
 import { useEffect, useRef } from 'react';
 import { iniciarPixel, rastrear } from '@/lib/metaPixel';
+import { eventoViewItem, eventoAddToCart, eventoBeginCheckout, eventoPurchase, eventoPurchaseDoPedido, empurrar, jaMarcouCompra, marcarCompra } from '@/lib/eventosDaLoja';
 
 function push(event) {
   try {
@@ -62,4 +63,27 @@ export function trackBeginCheckout(checkout_type, value, page_section) {
 
 export function trackPurchase(transaction_type, value, page_section) {
   push({ event: 'purchase', transaction_type, value, currency: 'BRL', page_section });
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// 🛒 E-COMMERCE DA LOJA (22/09/2026 — urgente)
+// ═══════════════════════════════════════════════════════════════════════════
+// O Tag Assistant mostrou a loja MUDA: nenhum view_item, add_to_cart,
+// begin_checkout ou purchase — e o Vinicius sem `currency` nem `content_ids`
+// pra mapear no container. O formato mora em src/lib/eventosDaLoja.js (GA4 +
+// Meta no mesmo push); aqui é só o atalho que as telas chamam.
+export function trackViewItem(produto) { return empurrar(eventoViewItem(produto)); }
+export function trackAddToCart(produto, quantidade = 1) { return empurrar(eventoAddToCart(produto, quantidade)); }
+export function trackBeginCheckoutLoja(carrinho, opts = {}) { return empurrar(eventoBeginCheckout(carrinho, opts)); }
+/** purchase UMA vez por pedido — PIX confirmado na tela e cartão voltando do MP passam por aqui. */
+export function trackPurchaseLoja(carrinho, { transactionId, valor = null, frete = null } = {}) {
+  if (jaMarcouCompra(transactionId)) return false;
+  const ok = empurrar(eventoPurchase(carrinho, { transactionId, valor, frete }));
+  if (ok) marcarCompra(transactionId);
+  return ok;
+}
+export function trackPurchaseDoPedido(pedido) {
+  if (!pedido?.id || jaMarcouCompra(pedido.id)) return false;
+  const ok = empurrar(eventoPurchaseDoPedido(pedido));
+  if (ok) marcarCompra(pedido.id);
+  return ok;
 }

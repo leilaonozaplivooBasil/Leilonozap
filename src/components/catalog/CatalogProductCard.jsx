@@ -1,3 +1,4 @@
+import { trackAddToCart } from '@/lib/tracking';
 import React, { useState, useEffect, memo } from "react";
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
@@ -87,6 +88,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
       setCartQuantity(1);
     }
 
+    // 🛒 22/09 — AddToCart pro GTM/Meta: uma unidade por clique
+    trackAddToCart(product, 1);
     localStorage.setItem('catalogCart', JSON.stringify(cart));
     setIsInCart(true);
 
