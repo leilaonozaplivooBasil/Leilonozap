@@ -43,8 +43,10 @@ describe('DIR-57 — a fronteira entre a faculdade e o caixa', () => {
     // de entrada de quem já joga. Continua sendo SEÇÃO, não item de menu.
     // 08/09/2026 — "Diário de bolso" (Fase 1, só leitura) entrou logo ABAIXO
     // do Guia do Usuário, por pedido do dono.
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-xperformance', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario']);
-    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'ADM X-Game', 'Carreira', 'Guia do Usuário', 'Diário de bolso']);
+    // 🤝 23/09/2026 — "Negociação" entrou logo depois de Time: é operação de
+    // venda (com quem eu falo agora), não gestão — por isso antes do ADM X-Game.
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.value), ['catalogo-crm', 'catalogo-encontro', 'catalogo-vendedores', 'catalogo-negociacao', 'catalogo-xperformance', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario']);
+    assert.deepEqual(SECOES_TOP_COLLEGE.map((s) => s.label), ['O Método', 'Mentalidade', 'Time', 'Negociação', 'ADM X-Game', 'Carreira', 'Guia do Usuário', 'Diário de bolso']);
   });
 
   test('o Admin X-GAME não é mais item de menu pra ninguém — mora dentro do X-Performance', () => {

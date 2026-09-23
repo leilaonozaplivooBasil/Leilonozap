@@ -52,7 +52,15 @@ export const plataforma = {
       b.escritas.push({ tipo: 'insert', tabela, linhas: [linha] });
       return linha;
     },
-    update: async (d) => d,
+    // 📝 23/09/2026 — o update passa a ser VISÍVEL pra prova (chamadas com tipo
+    // 'update'): a banca do lead precisa ver que o follow_up_date foi gravado.
+    // Também aplica na linha semeada, pra tela que relê enxergar o novo valor.
+    update: async (id, d) => {
+      estado.chamadas.push({ tipo: 'update', entidade, id, dados: d });
+      const linha = semeadas(entidade).find((l) => l.id === id);
+      if (linha) Object.assign(linha, d);
+      return { id, ...(linha || {}), ...(d || {}) };
+    },
     delete: async () => ({}),
   }) }),
   auth: { me: async () => null },

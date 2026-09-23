@@ -57,6 +57,7 @@ import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
 import RelatorioDoLeilao from '../components/licensing/CentralVendas/RelatorioDoLeilao';
+import Negociacao from '../components/licensing/CentralVendas/Negociacao';
 import { supabase } from '@/api/supabaseClient';
 import { podeDistribuirTarefa } from '@/lib/xgame';
 import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
@@ -164,7 +165,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario', 'catalogo-relatorio-leilao'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario', 'catalogo-relatorio-leilao', 'catalogo-negociacao'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1335,6 +1336,12 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsContent>
 
               {/* 🎖️ 06/09/2026 — CARREIRA (o plano + o evoluir de nível) como seção da Top College */}
+              {/* 🤝 23/09/2026 — NEGOCIAÇÃO: os leads por etapa do funil, vencido no topo.
+                  Escopo do Método: cada um a própria lista; super admin, todas. */}
+              <TabsContent value="catalogo-negociacao" className={naTopCollege ? 'mt-0' : 'mt-6'}>
+                <Negociacao currentUser={user} superAdmin={visPapel.superAdmin} />
+              </TabsContent>
+
               <TabsContent value="catalogo-carreira" className={naTopCollege ? 'mt-0' : 'mt-6'}>
                 <CarreiraSecao currentUser={user} />
               </TabsContent>
