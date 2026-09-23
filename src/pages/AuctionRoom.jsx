@@ -104,6 +104,18 @@ export default function AuctionRoom() {
   // 🚚 Frete: calculado UMA VEZ por sessão na sala (nunca por clique de lance) —
   // depende só do CEP + dimensões do produto, nunca do valor do lance.
   const [freteValor, setFreteValor] = useState(0);
+  // 🏷️ 23/09/2026 — preço da Loja Virtual do produto, só pra frase "5% abaixo
+  // da nossa loja" embaixo do ARREMATE. Best-effort: sem produto, sem frase.
+  const [precoLoja, setPrecoLoja] = useState(null);
+  useEffect(() => {
+    const pid = auction?.product_id;
+    if (!pid) { setPrecoLoja(null); return; }
+    let vivo = true;
+    plataforma.entities.Product.get(pid)
+      .then((p) => { if (vivo) setPrecoLoja(p?.price_catalog ?? null); })
+      .catch(() => { if (vivo) setPrecoLoja(null); });
+    return () => { vivo = false; };
+  }, [auction?.product_id]);
   // 🔏 BLOQUEADOR 4 (auditoria OpenAI, 21/08/2026): guardar só o PREÇO não serve.
   // O preço é sugestão; o SELO é o que o servidor aceita como prova de que foi
   // ele quem cotou. Sem guardar e devolver o selo, ligar FRETE_MODO=bloquear
@@ -1405,7 +1417,7 @@ export default function AuctionRoom() {
               onEditarEndereco={() => setFreteStatus('needs_address')}
             />
           )}
-          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} freteValor={freteValor} isFirstBid={!auction?.winner_id} />
+          <BidInput currentPrice={currentPrice} increment={safeIncrement} onSubmitBid={handleSubmitBidComTermo} isLoading={isSubmittingBid} buyNowPrice={precoArremateAgora(auction)} onBuyNow={handleBuyNow} freteValor={freteValor} isFirstBid={!auction?.winner_id} precoLoja={precoLoja} startingPrice={auction?.starting_price} />
         </footer>
       )}
       {isAuctionActive && auction?.is_investment_plan && (
