@@ -22,8 +22,8 @@ test('os cinco destinos são as visões do Compromisso, e o padrão é a Jornada
 });
 
 test('a URL leva à Central → Compromisso → a visão escolhida; destino inválido cai na Jornada', () => {
-  assert.equal(urlDoAtalho('quadro'), '/Licensing?tab=catalogo&catalogTab=catalogo-clientes&secao=compromisso&visao=quadro');
-  assert.equal(urlDoAtalho(undefined), '/Licensing?tab=catalogo&catalogTab=catalogo-clientes&secao=compromisso&visao=jornada');
+  assert.equal(urlDoAtalho('quadro'), '/Licensing?tab=catalogo&catalogTab=catalogo-crm&secao=compromisso&visao=quadro');
+  assert.equal(urlDoAtalho(undefined), '/Licensing?tab=catalogo&catalogTab=catalogo-crm&secao=compromisso&visao=jornada');
   assert.equal(urlDoAtalho('sonho'), urlDoAtalho('jornada'));
 });
 
@@ -72,6 +72,13 @@ test('o ícone está no cabeçalho (desktop e celular), a URL abre a seção e a
   assert.ok(ICONE.includes('to={urlDoAtalho(destino)}'));
   assert.ok(ICONE.includes('src="/marca/topcollege.webp"'));
   assert.ok(CRM.includes("useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search))"));
+  // 🔴 23/09 — o atalho clicado de DENTRO da Top College não remonta nada: os três níveis reagem à URL
+  assert.ok(CRM.includes("const s = secaoDaUrl(localizacao.search);\n    if (s) setSecao(s);"));
+  assert.ok(METODO.includes("const v = visaoDaUrl(localizacao.search);\n    if (v) setVisao(v);"));
+  const LIC = ler('../src/pages/Licensing.jsx');
+  assert.ok(LIC.includes("if (VALID_LICENSING_TABS.includes(t)) setActiveTab(t);"));
+  assert.ok(LIC.includes("if (VALID_CATALOG_SUBTABS.includes(c)) setCatalogSubTab(c);"));
+  assert.ok(LIC.includes("}, [localizacao.search]);"));
   assert.ok(METODO.includes("useState(() => visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search) || 'jornada')"));
   assert.ok(METODO.includes('if (p?.atalho_destino) setAtalho(gravarAtalho(p.atalho_destino));'));
   assert.ok(METODO.includes('salvarPerfil({ atalho_destino: d })'));

@@ -5,7 +5,7 @@ import { isAdminRole } from '@/lib/roles';
 const AppUser = plataforma.entities.AppUser;
 const Auction = plataforma.entities.Auction;
 import { createPageUrl } from '@/utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from "sonner";
 import { forceSyncStats } from "@/functions/forceSyncStats";
 import { resetTestData } from "@/functions/resetTestData";
@@ -190,6 +190,18 @@ const DashboardContent = ({ user, isAdmin }) => {
     } catch {}
   };
   const [catalogSubTab, setCatalogSubTab] = useState(getInitialCatalogSubTab);
+  // ⭐ 23/09/2026 — o ícone da Top College no cabeçalho troca só a query (?tab=…)
+  // quando a pessoa JÁ está nesta página: sem remount, o estado inicial não
+  // relia a URL e ela ficava na Visão Geral ("Alavancagem"). Agora a URL manda.
+  const localizacao = useLocation();
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(localizacao.search);
+      const t = params.get('tab'); const c = params.get('catalogTab');
+      if (VALID_LICENSING_TABS.includes(t)) setActiveTab(t);
+      if (VALID_CATALOG_SUBTABS.includes(c)) setCatalogSubTab(c);
+    } catch { /* URL estranha: fica como está */ }
+  }, [localizacao.search]); // eslint-disable-line react-hooks/exhaustive-deps
   // 🎓❓ 09/09/2026 — o modal do "Como Funciona": pergunta na hora, de
   // qualquer tela da Top College, sem navegar até achar a aba do Guia.
   const [comoFuncionaAberto, setComoFuncionaAberto] = useState(false);

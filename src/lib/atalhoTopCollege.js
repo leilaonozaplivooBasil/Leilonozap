@@ -44,7 +44,11 @@ export function rotuloDoDestino(destino) {
 
 /** A URL que o ícone abre: Top College → Central → Compromisso → a visão escolhida. */
 export function urlDoAtalho(destino) {
-  return `/Licensing?tab=catalogo&catalogTab=catalogo-clientes&secao=compromisso&visao=${normalizarDestino(destino)}`;
+  // 🔴 23/09 (dono: "está levando para a página de Alavancagem"): a sub-aba era
+  // catalogo-clientes (Venda Direta). O Método — os 8 Hábitos, o Compromisso —
+  // mora em catalogo-crm. E quem já estava na Top College precisava de remount:
+  // agora Licensing, a Central e o Compromisso reagem à URL (useLocation).
+  return `/Licensing?tab=catalogo&catalogTab=catalogo-crm&secao=compromisso&visao=${normalizarDestino(destino)}`;
 }
 
 /** Só quem está logado vê o ícone. */
