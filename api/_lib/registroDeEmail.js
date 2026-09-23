@@ -24,6 +24,7 @@ export const TIPOS = Object.freeze([
   'senha_definida',  // adminSetPassword
   'boas_vindas',     // sendWelcomeArrematante
   'campanha',        // scripts/campanha
+  'aviso',           // avisosPorEmail — cadastro, lance, superado, arremate, depósito…
   'outro',
 ]);
 

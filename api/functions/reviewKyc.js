@@ -1,5 +1,6 @@
 // reviewKyc — admin aprova/reprova o KYC do usuário.
 import { exigirSessao } from '../_lib/sessao.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 function sb(path, opts = {}) {
@@ -25,6 +26,8 @@ export default async function handler(req, res) {
     if (!await isAdmin(actor_id)) return res.status(403).json({ success: false, error: 'Apenas admin pode revisar KYC' });
     await sb(`app_users?id=eq.${encodeURIComponent(user_id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ kyc_status: decision }) });
     await sb(`kyc_data?user_id=eq.${encodeURIComponent(user_id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ reviewed_at: new Date().toISOString(), reject_reason: decision === 'reprovado' ? (reason || 'Documentos inválidos') : null }) });
+    // ✉️ "identidade validada" (23/09/2026) — best-effort
+    if (decision === 'aprovado') await enviarAviso({ tipo: 'kyc_aprovado', userId: user_id, chave: 'conta' });
     return res.status(200).json({ success: true });
   } catch (e) { return res.status(200).json({ success: false, error: String(e?.message || e) }); }
 }

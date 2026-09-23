@@ -110,6 +110,7 @@ async function releaseHold(userId, valor, auctionId = null) {
 // no log quem chamou sem crachá, pra a gente ver com tráfego real se sobrou
 // alguma tela do site que ainda não manda.
 import crypto from 'crypto';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 
 function _conferirCracha(req, idDoCorpo, rota) {
   const bloqueia = String(process.env.SESSAO_MODO || '').toLowerCase() === 'bloquear';
@@ -231,7 +232,7 @@ export default async function handler(req, res) {
     // coluna, e se a resposta não vier boa, relê exatamente o select antigo e
     // segue sem a conferência de produto. Nunca troca segurança de frete por
     // leilão parado.
-    const COLUNAS_BASE = 'id,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor';
+    const COLUNAS_BASE = 'id,title,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor';
     let getResp = await sb(
       `auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE},product_id`
     );
@@ -574,6 +575,15 @@ export default async function handler(req, res) {
     // cálculo de compromisso (_lib/compromissoLeilao.js) — não aqui.
     // Devolve o lance + o frete que ele tinha reservado junto. Só roda DEPOIS do
     // PATCH atômico ter vencido a corrida: se o lance não valeu, nada é devolvido.
+    // ✉️ avisos (23/09/2026) — "entrou no leilão" (1x por pessoa por leilão) e
+    // "superado" pro líder anterior (no máximo 1 a cada 10 min). Best-effort.
+    try {
+      await enviarAviso({ tipo: 'entrou_no_leilao', userId, chave: auctionId, dados: { produto: auction.title, valor: bidAmount, termina: patchedRow.end_time || auction.end_time, leilaoId: auctionId } });
+      if (auction.winner_id && auction.winner_id !== userId) {
+        await enviarAviso({ tipo: 'superado', userId: auction.winner_id, chave: auctionId, dados: { produto: auction.title, valorAtual: bidAmount, termina: patchedRow.end_time || auction.end_time, leilaoId: auctionId } });
+      }
+    } catch (_) { /* aviso nunca derruba lance */ }
+
     let releasedPrevious = null;
     if (auction.winner_id && auction.winner_id !== userId) {
       const valorAnterior = money(Number(auction.current_price || 0) + Number(auction.frete_reservado_valor || 0));

@@ -1,5 +1,6 @@
 // approveWithdrawal — admin aprova (paga) ou rejeita (devolve saldo) um pedido de saque.
 import { exigirSessao } from '../_lib/sessao.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -92,6 +93,8 @@ export default async function handler(req, res) {
       }
     }
 
+    // ✉️ "saque pago" (23/09/2026) — best-effort
+    if (decision === 'approve') await enviarAviso({ tipo: 'saque_pago', userId: w.user_id, chave: String(withdrawal_id), dados: { valor } });
     return res.status(200).json({ success: true, status: novoStatus });
   } catch (e) { return res.status(200).json({ success: false, error: String(e?.message || e) }); }
 }
