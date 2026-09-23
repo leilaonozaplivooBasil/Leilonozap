@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Radio, Play, Pause, Star, X, ChevronDown, Plus, Pencil, ListMusic, Search, Loader2 } from 'lucide-react';
+import { Radio, Play, Pause, Star, X, ChevronDown, ChevronUp, Plus, Pencil, ListMusic, Search, Loader2 } from 'lucide-react';
 import {
   lerEstacoes, gravarEstacaoDoSlot, anotarAcerto, carregarApiYoutube, buscarNoYoutube, resolverEstacao,
   extrairIdYoutube, extrairListaYoutube,
@@ -465,9 +465,19 @@ export default function XMusic() {
             maxHeight: tetoDoPainel,
           }}
         >
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-extrabold tracking-[0.2em] text-white/70">X-MUSIC</p>
-            <button type="button" onClick={() => setAberto(false)} className="text-white/40 hover:text-white">
+          <div className="flex items-center justify-between gap-2">
+            {/* 🎚️ 23/09/2026 — o nome e o "tocando/desligado" moram AQUI agora,
+                não na pílula: a pílula virou só o play (ver abaixo). */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Radio className={`w-4 h-4 shrink-0 ${ligado ? 'text-nz-verde' : 'text-white/50'}`} />
+              <span className="min-w-0">
+                <span className="block text-[10px] font-extrabold tracking-[0.2em] text-white/70 leading-none">X-MUSIC</span>
+                <span className="block truncate text-[11px] font-bold text-white leading-tight" data-teste="xmusic-status">
+                  {ligado ? (estacao?.tocando || estacao?.nome || 'tocando') : 'desligado'}
+                </span>
+              </span>
+            </div>
+            <button type="button" onClick={() => setAberto(false)} title="recolher" className="text-white/40 hover:text-white">
               <ChevronDown className="w-4 h-4" />
             </button>
           </div>
@@ -704,29 +714,30 @@ export default function XMusic() {
         >
           {ligado ? <Pause className="w-4 h-4" fill="currentColor" /> : <Play className="w-4 h-4" fill="currentColor" />}
         </button>
+        {/* 🎚️ 23/09/2026 — dono: "deve aparecer só o botão do play, ou expandir
+            sem perder a tela do YouTube; ele consome muito da tela". A pílula
+            recolhida é o play e uma setinha; nome e status foram pro
+            cabeçalho do painel. O painel nunca sai do DOM (ver PlayerYT acima),
+            então expandir/recolher não mexe no que está tocando. */}
         <button
           type="button"
           onClick={() => {
             vibrar(VIBRA_ABRIR);
-            // 🎧 mesmo princípio do Ritual das 5h: lá a música já entra
-            // quando a tela abre, ninguém precisa procurar o play. Aqui,
-            // abrir o painel com tudo parado já liga na última estação. E
-            // tem que ser DENTRO do clique: sem esse toque da pessoa o
-            // navegador bloqueia som que começa sozinho.
+            // 🎧 mesmo princípio do Ritual das 5h: abrir o painel com tudo
+            // parado já liga na última estação — e tem que ser DENTRO do
+            // clique, senão o navegador bloqueia som que começa sozinho.
             setAberto((v) => {
               if (!v && !ligado) setLigado(true);
               return !v;
             });
           }}
-          className="flex items-center gap-2 pr-3 py-1.5 text-left"
+          title={aberto ? 'recolher o X-Music' : 'abrir o X-Music'}
+          aria-label={aberto ? 'recolher o X-Music' : 'abrir o X-Music'}
+          aria-expanded={aberto}
+          data-teste="xmusic-expandir"
+          className="mr-1 w-6 h-8 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10"
         >
-          <Radio className={`w-4 h-4 shrink-0 ${ligado ? 'text-nz-verde' : 'text-white/50'}`} />
-          <span className="min-w-0">
-            <span className="block text-[10px] font-extrabold tracking-[0.16em] text-white/50 leading-none">X-MUSIC</span>
-            <span className="block max-w-[7rem] truncate text-[11px] font-bold text-white leading-tight">
-              {ligado ? (estacao?.tocando || estacao?.nome || 'tocando') : 'desligado'}
-            </span>
-          </span>
+          {aberto ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
       </div>
     </div>
