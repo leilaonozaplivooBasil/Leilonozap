@@ -35,6 +35,8 @@ import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
+import BarraDoApp from "@/components/nav/BarraDoApp";
+import { mostraBarraDoApp } from "@/lib/barraDoApp";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 // 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
 import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
@@ -1067,7 +1069,9 @@ export default function Layout({ children, currentPageName }) {
         {isLoggedIn && !isLandingPage && PAGINAS_COM_LATERAL.has(currentPageName) && (
           <NavegacaoLateralGlobal user={currentUser} />
         )}
-        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''}`}>
+        {/* 📱 23/09/2026 — a barra do app ocupa 3.75rem na base (até lg): o conteúdo
+            ganha o mesmo respiro pra nada terminar escondido atrás dela. */}
+        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''} ${mostraBarraDoApp(currentPageName) ? 'pb-[3.75rem] lg:pb-0' : ''}`}>
           {/* 🎛️ Barra do Painel de Controle (AdminTopNav) removida do NetworkOverview
               em 08/08/2026: a navegação por seções já existe no dropdown do avatar
               (UserAvatarMenu → "Visão Geral" abre o MiniCanvas). A barra aqui era
@@ -1082,6 +1086,8 @@ export default function Layout({ children, currentPageName }) {
         {/* 🧲 Dock dos flutuantes — define a altura única de ancoragem (sobe nas
             páginas com barra de ação fixa, pra não cobrir compra/lance) */}
         <FloatingDock currentPageName={currentPageName} />
+        {/* 📱 Comprar · Leilões · Lucre · Carrinho — fixos na base, só no site e só no celular */}
+        <BarraDoApp currentPageName={currentPageName} cartCount={cartCount} />
         {/* 📱 Voltar ao topo — global, só mobile (liquid glass, centro inferior) */}
         <BackToTopButton />
         {/* 📱 Convite de instalação do PWA — só mobile, dispensável */}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { mostraBarraDoApp } from '@/lib/barraDoApp';
 
 // 🧲 DOCK DOS FLUTUANTES — fonte ÚNICA da altura em que os botões flutuantes
 // (CompareAQUI, Fale com a Leila, Livoo Live, Voltar ao Topo) se ancoram.
@@ -43,8 +44,14 @@ export default function FloatingDock({ currentPageName }) {
   const temHero = PAGINAS_COM_HERO_INFERIOR.includes(currentPageName);
   const temNav = PAGINAS_COM_NAV_INFERIOR.includes(currentPageName);
   // Base: distância do fundo. Passo: espaço entre um flutuante e o de cima.
-  const base = temBarra ? '11.5rem' : temNav ? '6rem' : temHero ? '3.25rem' : '1.75rem';
-  const baseSm = temBarra ? '12rem' : temNav ? '6.5rem' : temHero ? '3.5rem' : '2rem';
+  const base0 = temBarra ? '11.5rem' : temNav ? '6rem' : temHero ? '3.25rem' : '1.75rem';
+  const baseSm0 = temBarra ? '12rem' : temNav ? '6.5rem' : temHero ? '3.5rem' : '2rem';
+  // 📱 23/09/2026 — a barra do app (Comprar · Leilões · Lucre · Carrinho) tem
+  // 3.75rem e vai até lg: nas páginas em que ela entra, tudo que flutua sobe
+  // junto — e volta ao normal em lg+, onde a barra some.
+  const temBarraDoApp = mostraBarraDoApp(currentPageName);
+  const base = temBarraDoApp ? `calc(${base0} + 3.75rem)` : base0;
+  const baseSm = temBarraDoApp ? `calc(${baseSm0} + 3.75rem)` : baseSm0;
 
   return (
     <style>{`
@@ -58,6 +65,10 @@ export default function FloatingDock({ currentPageName }) {
           --nz-dock-step: 6.25rem;
         }
       }
+      ${temBarraDoApp ? `
+      @media (min-width: 1024px) {
+        :root { --nz-dock-b: calc(${baseSm0} + env(safe-area-inset-bottom, 0px)); }
+      }` : ''}
       .nz-dock-bottom { bottom: var(--nz-dock-b) !important; }
       .nz-dock-bottom-2 { bottom: calc(var(--nz-dock-b) + var(--nz-dock-step)) !important; }
       /* PONTO 85 — terceira altura da coluna direita (Compartilhar, acima da Livoo) */
