@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaAdapter';
+import LeadDoCartao from './LeadDoCartao';
 import { espelhoDoCardNaTarefa, carimboParaTarefa } from '@/lib/espelhoDoDia';
 import { Button } from '@/components/ui/button';
 import useArrastavel from '@/hooks/useArrastavel';
@@ -731,6 +732,12 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
             e galeria). O que faltava era aqui, no card — e metodo_quadro não tinha
             onde guardar (coluna foto_url, migração 20260922211851). */}
         <FotoDoCartao cartao={cartao} onMudar={onMudar} />
+
+        {/* 🤝📅 23/09/2026 — o LEAD e a GOOGLE AGENDA no card ("qualificar lead +
+            Google Agenda pelo quadro"). Cliente vinculado ao card (cliente_id,
+            migração 20260923032810), qualificação pelo modal do CRM, e o evento
+            na agenda pela conexão do Método — com link pré-preenchido de fallback. */}
+        <LeadDoCartao cartao={cartao} dono={dono} hoje={hoje} onMudar={onMudar} />
 
         {/* ── RODAPÉ DE METADADOS, tudo em chip com ícone ── */}
         {/* 🔗 06/09 — ONDE ESTE CARD ESTÁ, dito por extenso (dono: "a pessoa não está

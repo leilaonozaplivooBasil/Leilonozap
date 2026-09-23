@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy, ClipboardList, NotebookText } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Award, Shield, Wallet, Package, PackagePlus, Gavel, Trophy, Store, Receipt, Handshake, BarChart3, Users, GraduationCap, UserRound, Brain, Wrench, LifeBuoy, ClipboardList, NotebookText, MessageSquareMore } from 'lucide-react';
 // caminho relativo (e não o atalho '@/') de propósito: assim este arquivo
 // também roda na suíte do node, que não resolve o alias do Vite. É o que
 // permite testar o agrupamento do menu como qualquer outra regra da casa.
@@ -104,6 +104,11 @@ export const SECOES_TOP_COLLEGE = [
   // 15+45+120 e as demandas direcionadas ao vivo.
   { value: 'catalogo-encontro', label: 'Mentalidade', icon: Brain },
   { value: 'catalogo-vendedores', label: 'Time', icon: Handshake },
+  // 🤝 23/09/2026 — NEGOCIAÇÃO: com quem eu falo agora. Os leads em negociação
+  // por etapa do funil que já existe (purchase_status), follow-up vencido no
+  // topo. Fica logo depois de Time, antes da administração: é operação de
+  // venda, não gestão.
+  { value: 'catalogo-negociacao', label: 'Negociação', icon: MessageSquareMore },
   // 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da diretoria. Fica
   // AQUI, e não solto no menu, porque é a Top College que forma — o quadro de
   // entregáveis é a mesma faculdade cobrando o que ensinou.
