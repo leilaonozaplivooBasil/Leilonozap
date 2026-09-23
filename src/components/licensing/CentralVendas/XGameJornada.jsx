@@ -12,6 +12,8 @@ import {
   vibrar, VIBRA_TOQUE, VIBRA_ABRIR, minutosBrasilia, ordenarPorHora,
 } from '@/lib/xgame';
 import { faixaDeHorario } from '@/lib/quadroCompromisso';
+import RodapeDaJornada from './RodapeDaJornada';
+import { ID_MOMENTO, itensDoRodape } from '@/lib/rodapeDaJornada';
 import { familiaDaTarefa } from '@/lib/capaDaTarefa';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
@@ -387,12 +389,32 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
   // ativa, pra não precisar de dois estados.
   const [previaSeta, setPreviaSeta] = useState(null);
   const refAtual = useRef(null);
-  // expandiu → a jornada rola sozinha até onde a pessoa está (o "você está aqui")
+  // 🦉 23/09/2026 — o rodapé estilo Duolingo: um ref por período (o troféu que
+  // abre a unidade) e o topo da tela; `alvo` é o período pedido pelo rodapé
+  // quando a jornada ainda estava recolhida — ela expande e só então rola.
+  const refTopo = useRef(null);
+  const refsPeriodo = useRef({});
+  // um ref, não estado: o alvo é consumido UMA vez na expansão — como estado,
+  // limpá-lo disparava o efeito de novo e a rolagem voltava pro "você está aqui"
+  const alvoRef = useRef(null);
+  const rolarAte = (el, block = 'center') => el?.scrollIntoView({ behavior: 'smooth', block });
+  // expandiu → a jornada rola sozinha até o período que o rodapé pediu, ou,
+  // sem pedido, até onde a pessoa está (o "você está aqui")
   useEffect(() => {
     if (!expandida) return undefined;
-    const t = setTimeout(() => refAtual.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+    const alvo = alvoRef.current;
+    alvoRef.current = null;
+    const t = setTimeout(() => {
+      if (alvo) rolarAte(refsPeriodo.current[alvo], 'start');
+      else rolarAte(refAtual.current);
+    }, 120);
     return () => clearTimeout(t);
   }, [expandida]);
+  const irPeloRodape = (id) => {
+    if (id === ID_MOMENTO) { setExpandida(false); setTimeout(() => rolarAte(refTopo.current, 'start'), 60); return; }
+    if (!expandida) { alvoRef.current = id; setExpandida(true); return; }
+    rolarAte(refsPeriodo.current[id], 'start');
+  };
 
   const feitas = tarefas.filter((t) => t.feito);
   const pendentes = tarefas.filter((t) => !t.feito);
@@ -406,27 +428,32 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
   const paradaAnterior = idxFoco > 0 ? pendentes[idxFoco - 1] : null;
   const proximaParada = idxFoco >= 0 && idxFoco < pendentes.length - 1 ? pendentes[idxFoco + 1] : null;
   const irParaPasso = (t) => { vibrar(VIBRA_TOQUE); setFocoId(t.id); setPreviaSeta(null); };
+  // as "unidades" do dia (por período, na ordem do dia) — servem à jornada
+  // expandida e ao rodapé
+  const grupos = useMemo(() => {
+    const gs = [];
+    tarefas.forEach((t) => {
+      const [, rotulo, grad] = periodoDe(t);
+      const g = gs[gs.length - 1];
+      if (!g || g.rotulo !== rotulo) gs.push({ rotulo, grad, itens: [t] });
+      else g.itens.push(t);
+    });
+    return gs;
+  }, [tarefas]);
+  const periodoAtual = atual ? periodoDe(atual) : PERIODOS[PERIODOS.length - 1];
+  const rodape = <RodapeDaJornada itens={itensDoRodape({ grupos, periodoAtual: periodoAtual[1], expandida })} onIr={irPeloRodape} />;
 
   // ══ A JORNADA EXPANDIDA — estilo Duolingo, de baixo pra cima: o dia SOBE.
   //    Sem linha; períodos com cor própria; a parada atual ACESA com balão
   //    COMEÇAR; as futuras apagadas; baú fecha cada período; a tela rola
   //    sozinha até onde a pessoa está. ══
   if (expandida) {
-    // as "unidades" do dia: agrupa por período na ordem do dia...
-    const grupos = [];
-    tarefas.forEach((t) => {
-      const [, rotulo, grad] = periodoDe(t);
-      const g = grupos[grupos.length - 1];
-      if (!g || g.rotulo !== rotulo) grupos.push({ rotulo, grad, itens: [t] });
-      else g.itens.push(t);
-    });
     // ...e sobe: o último período no topo, dentro de cada um a última tarefa primeiro
     const gruposSubida = [...grupos].reverse().map((g) => ({
       ...g,
       itens: [...g.itens].reverse(),
       completo: g.itens.length > 0 && g.itens.every((t) => t.feito),
     }));
-    const periodoAtual = atual ? periodoDe(atual) : PERIODOS[PERIODOS.length - 1];
     const gradBanner = completou ? 'from-amber-400 to-yellow-500' : periodoAtual[2];
     const mensagem = completou
       ? 'DIA PERFEITO — você subiu a jornada inteira!'
@@ -440,7 +467,8 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
     let zig = 0; // o zigue-zague contínuo da trilha
 
     return (
-      <div className="w-full">
+      <div className="w-full pb-24" ref={refTopo}>
+        {rodape}
         <style>{'@keyframes xgHalo { 0% { transform: scale(1); opacity: .8 } 70% { transform: scale(1.3); opacity: 0 } 100% { transform: scale(1.3); opacity: 0 } }'}</style>
 
         {/* o banner da "unidade" (como o cartão verde do Duolingo) — agora
@@ -491,7 +519,9 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
               <React.Fragment key={g.rotulo}>
                 {/* o troféu do período */}
                 <div
-                  className="relative flex flex-col items-center"
+                  ref={(el) => { refsPeriodo.current[g.rotulo] = el; }}
+                  data-periodo={g.rotulo}
+                  className="relative flex flex-col items-center scroll-mt-24"
                   title={g.completo ? `${g.rotulo} completo — troféu garantido!` : `Feche ${g.rotulo === 'AMANHECER' ? 'o' : 'a'} ${g.rotulo} inteiro pro troféu`}
                 >
                   {g.completo ? (
@@ -597,7 +627,8 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
   //   preto no preto (era o "Boa noite" quase invisível).
   const estado = foco?.estado?.id;
   return (
-    <div className="relative w-full overflow-hidden">
+    <div className="relative w-full overflow-hidden pb-24" ref={refTopo}>
+      {rodape}
       {/* A CAPA DO MOMENTO: a cena que representa a tarefa, de marca d'água.
           Vem mascarada num radial — se dissolve no fundo, sem moldura. */}
       {foco && <XGameCapa titulo={foco.titulo} capaUrl={foco.capa_url} habito={foco.habito} />}
