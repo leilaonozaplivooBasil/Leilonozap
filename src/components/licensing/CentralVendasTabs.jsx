@@ -1,7 +1,7 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check, ShoppingBag, GraduationCap } from 'lucide-react';
-import { SECOES_LOJA, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
+import { secoesDaLoja, SECOES_TOP_COLLEGE } from '@/lib/licensingTabs';
 import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 
 // 🛍️ NAVEGAÇÃO DA CENTRAL DE VENDAS (13/08/2026)
@@ -19,11 +19,15 @@ import MarcaOuIcone from '@/components/common/MarcaOuIcone';
 //     não cabe, nunca sai da tela, e entra com um respiro (fade + descida);
 //   • no celular vira uma coluna só, com rolagem própria e altura limitada.
 
-const FAMILIAS = [
-  { id: 'loja', titulo: 'Loja & Vendas', legenda: 'o caixa: vender, receber, entregar', icone: ShoppingBag, itens: SECOES_LOJA },
+// 📊 23/09/2026 — a família "Loja & Vendas" deixou de ser lista fixa: o
+// Relatório de Leilão entra só pra quem pode mandar demanda (ver
+// secoesDaLoja em @/lib/licensingTabs). Por isso as famílias são montadas
+// DENTRO do componente — antes eram constantes de módulo, e constante de
+// módulo não sabe quem está logado.
+const familiasPara = (podeDistribuir) => [
+  { id: 'loja', titulo: 'Loja & Vendas', legenda: 'o caixa: vender, receber, entregar', icone: ShoppingBag, itens: secoesDaLoja({ podeDistribuir }) },
   { id: 'top', titulo: 'Top College', legenda: 'o que forma: método, encontro, time, carreira', icone: GraduationCap, marca: '/marca/marca-topcollege.webp', itens: SECOES_TOP_COLLEGE },
 ];
-const ITENS = FAMILIAS.flatMap((f) => f.itens);
 // 2ª limpeza (07/09) — dono: "esse painel está muito grande, puxa mais pra
 // cá": 620px de menu abrindo a partir de um botão de 384px (sm:max-w-sm)
 // deixava o painel flutuando longe do próprio gatilho, "no meio" da tela.
@@ -31,7 +35,9 @@ const ITENS = FAMILIAS.flatMap((f) => f.itens);
 const LARGURA_DESEJADA = 520;
 const MARGEM = 12;
 
-export default function CentralVendasTabs({ value, onChange, clientesCount = 0, escuro = false }) {
+export default function CentralVendasTabs({ value, onChange, clientesCount = 0, escuro = false, podeDistribuir = false }) {
+  const FAMILIAS = useMemo(() => familiasPara(podeDistribuir), [podeDistribuir]);
+  const ITENS = useMemo(() => FAMILIAS.flatMap((f) => f.itens), [FAMILIAS]);
   const [aberto, setAberto] = useState(false);
   const [posicao, setPosicao] = useState(null);
   const [entrou, setEntrou] = useState(false);

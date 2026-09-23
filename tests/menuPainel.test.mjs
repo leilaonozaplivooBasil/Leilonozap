@@ -14,6 +14,8 @@ import {
   entradaFlutuante,
   SECOES_LOJA,
   SECOES_TOP_COLLEGE,
+  SECAO_RELATORIO_LEILAO,
+  secoesDaLoja,
 } from '../src/lib/licensingTabs.js';
 
 const dono = { role: 'super_admin', career_levels: ['ceo'] };
@@ -160,5 +162,47 @@ describe('DIR-57 — entrada do menu flutuante (uma função só pro desktop e o
     const e = entradaFlutuante({ type: 'link', to: '/Metas', label: 'Metas' }, () => {});
     assert.equal(e.to, '/Metas');
     assert.equal(e.onClick, undefined);
+  });
+});
+
+// 📊 23/09/2026 — RELATÓRIO DE LEILÃO na Loja & Vendas, só pra quem pode mandar
+// demanda. Este bloco guarda DUAS coisas diferentes, e é importante não
+// confundi-las:
+//   • que o item aparece pra quem pode (senão o dono não acha o que pediu);
+//   • que ele NÃO aparece pra quem não pode (o relatório traz nome e valor de
+//     cliente, e a Loja & Vendas é vista por todo lojista).
+// A segurança de verdade mora em api/functions/relatorioDoLeilao.js; aqui é o
+// menu não oferecer o que a pessoa não pode abrir.
+describe('relatório de leilão — quem vê a seção', () => {
+  test('quem NÃO pode mandar demanda não vê o item', () => {
+    const itens = secoesDaLoja({ podeDistribuir: false });
+    assert.equal(itens.some((i) => i.value === 'catalogo-relatorio-leilao'), false);
+  });
+
+  test('sem opção nenhuma também não vê — o padrão é fechado', () => {
+    assert.equal(secoesDaLoja().some((i) => i.value === 'catalogo-relatorio-leilao'), false);
+  });
+
+  test('quem pode mandar demanda vê o item, por ÚLTIMO', () => {
+    const itens = secoesDaLoja({ podeDistribuir: true });
+    assert.equal(itens[itens.length - 1].value, 'catalogo-relatorio-leilao');
+    assert.equal(itens.length, SECOES_LOJA.length + 1);
+  });
+
+  test('a lista base não é modificada no caminho', () => {
+    // 🔴 `[...SECOES_LOJA, extra]` é cópia; um `push` aqui contaminaria TODO
+    // mundo depois da primeira chamada de quem pode — e o vazamento só
+    // apareceria na segunda tela aberta.
+    const antes = SECOES_LOJA.length;
+    secoesDaLoja({ podeDistribuir: true });
+    secoesDaLoja({ podeDistribuir: true });
+    assert.equal(SECOES_LOJA.length, antes);
+    assert.equal(SECOES_LOJA.some((i) => i.value === 'catalogo-relatorio-leilao'), false);
+  });
+
+  test('o item tem rótulo e ícone — menu sem rótulo fica mudo', () => {
+    assert.equal(SECAO_RELATORIO_LEILAO.value, 'catalogo-relatorio-leilao');
+    assert.ok(SECAO_RELATORIO_LEILAO.label);
+    assert.ok(SECAO_RELATORIO_LEILAO.icon);
   });
 });

@@ -56,6 +56,7 @@ import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
 import GuiaXGame from '../components/licensing/CentralVendas/GuiaXGame';
+import RelatorioDoLeilao from '../components/licensing/CentralVendas/RelatorioDoLeilao';
 import { supabase } from '@/api/supabaseClient';
 import { podeDistribuirTarefa } from '@/lib/xgame';
 import ComoFuncionaModal from '../components/licensing/ComoFuncionaModal';
@@ -163,7 +164,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   // 🛍️ Sub-aba da Central de Vendas também vem do ?catalogTab= — permite que a
   // lateral pule direto pra uma seção (Loja Virtual, Pedidos, Vendedores…).
-  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario'];
+  const VALID_CATALOG_SUBTABS = ['catalogo-home', 'catalogo-pedidos', 'catalogo-clientes', 'catalogo-produtos', 'catalogo-vendedores', 'catalogo-comissoes', 'catalogo-crm', 'catalogo-xperformance', 'catalogo-encontro', 'catalogo-carreira', 'catalogo-guia', 'catalogo-diario', 'catalogo-relatorio-leilao'];
   const getInitialCatalogSubTab = () => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1141,6 +1142,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         onChange={setCatalogSubTab}
         clientesCount={myClients.length}
         escuro={naTopCollege}
+        podeDistribuir={podeDistribuir}
       />
       {naTopCollege && botaoComoFunciona}
     </div>
@@ -1298,6 +1300,19 @@ const DashboardContent = ({ user, isAdmin }) => {
               <TabsContent value="catalogo-produtos" className="mt-6">
                 <CatalogTabComponent isSaiDeBaixo={isSaiDeBaixo} user={user} />
               </TabsContent>
+
+              {/* 📊 23/09/2026 — RELATÓRIO DE LEILÃO. O dono: "esse relatório de
+                  um leilão específico deve ser uma opção para todos que podem
+                  enviar demanda". Fica na Loja & Vendas (é caixa, não formação)
+                  e só aparece com `podeDistribuir` — a MESMA régua de mandar
+                  demanda. O `&&` aqui é cortesia: quem chegar por link direto
+                  esbarra no servidor (api/functions/relatorioDoLeilao.js), que é
+                  onde a permissão vale de verdade. */}
+              {podeDistribuir && (
+                <TabsContent value="catalogo-relatorio-leilao" className="mt-6">
+                  <RelatorioDoLeilao currentUser={user} />
+                </TabsContent>
+              )}
 
               {/* 🏛️ DIR-72 — X-PERFORMANCE: o planejamento executivo da
                   diretoria. Sem <Card> em volta de propósito — dentro da Top

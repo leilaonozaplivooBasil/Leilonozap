@@ -64,6 +64,31 @@ export const SECOES_LOJA = [
   { value: 'catalogo-clientes', label: 'Venda Direta', icon: Users },
   { value: 'catalogo-comissoes', label: 'Comissões', icon: Wallet },
 ];
+// 📊 23/09/2026 — RELATÓRIO DE LEILÃO. O dono recebeu à mão o relatório de
+// depósitos do leilão do PS5 e decidiu: "esse relatório de um leilão específico
+// deve ser uma opção para todos que podem enviar demanda".
+//
+// 🔐 POR QUE NÃO ENTRA NA LISTA FIXA: o relatório mostra NOME DE CLIENTE e
+// QUANTO CADA UM PAGOU. As outras seções da Loja & Vendas são do caixa da
+// própria pessoa; esta é da casa. Por isso ela só existe pra quem tem a mesma
+// régua de mandar demanda (src/lib/xgame.js → podeDistribuirTarefa).
+//
+// ⚠️ Esconder o item NÃO é a segurança — a segurança está em
+// api/functions/relatorioDoLeilao.js, que confere a régua no servidor. Aqui é
+// só não oferecer o que a pessoa não pode abrir.
+export const SECAO_RELATORIO_LEILAO = { value: 'catalogo-relatorio-leilao', label: 'Relatório de Leilão', icon: Gavel };
+
+/**
+ * As seções da Loja & Vendas para ESTE usuário.
+ *
+ * Existe como função (e não como segunda constante) pra não nascer uma lista
+ * paralela: quem desenha o menu chama daqui, e a decisão de quem vê o quê fica
+ * num lugar só.
+ */
+export function secoesDaLoja({ podeDistribuir = false } = {}) {
+  return podeDistribuir ? [...SECOES_LOJA, SECAO_RELATORIO_LEILAO] : SECOES_LOJA;
+}
+
 export const SECOES_TOP_COLLEGE = [
   // "CRM" morreu como nome (DIR-57): palavra genérica de software não combina
   // com uma faculdade própria. O valor da aba continua o mesmo — link antigo
