@@ -1,3 +1,4 @@
+import { fichaDoLeilao } from '@/lib/fichaDoLeilao';
 import React, { useState, useEffect, useRef } from "react";
 import { fmtBR } from '@/lib/money';
 import { useLocation, Link } from "react-router-dom";
@@ -160,6 +161,8 @@ export default function AuctionDetails() {
     outros: "🎯"
   };
 
+  // 🧾 a ficha (origem/condição/garantia/selo) deste leilão, uma vez por render
+  const ficha = fichaDoLeilao(auction);
   return (
     <div className="min-h-screen bg-gray-950 text-white relative overflow-hidden">
       <LiquidGlassStyles />
@@ -311,9 +314,11 @@ export default function AuctionDetails() {
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-emerald-300">Produto Testado</h3>
+                  {/* 🧾 23/09/2026 — o selo segue a ORIGEM do leilão (src/lib/fichaDoLeilao.js).
+                      Era fixo "Produto Testado" para tudo — inclusive pro PS5 novo de fábrica. */}
+                  <h3 className="font-semibold text-emerald-300" data-teste="selo-titulo">{ficha.selo.titulo}</h3>
                   <p className="text-sm text-emerald-400/70">
-                    100% funcional, verificado pela nossa equipe técnica
+                    {ficha.selo.texto}
                   </p>
                 </div>
               </div>
@@ -356,10 +361,14 @@ export default function AuctionDetails() {
                 </h3>
               </div>
               <div className="px-6 pb-5 space-y-0">
+                {/* 🧾 23/09/2026 — origem, condição e garantia saem de auctions.product_source
+                    (regra em src/lib/fichaDoLeilao.js). Estava fixo "Devolução/Arremate ·
+                    Testado · Sem Garantia*" para TODO leilão — o PS5 novo, lacrado e com
+                    garantia aparecia como devolução sem garantia. */}
                 {[
-                  { label: 'Origem', value: 'Devolução/Arremate' },
-                  { label: 'Condição', value: 'Testado e Funcional' },
-                  { label: 'Garantia', value: 'Sem Garantia*' },
+                  { label: 'Origem', value: ficha.origem },
+                  { label: 'Condição', value: ficha.condicao },
+                  { label: 'Garantia', value: ficha.garantia },
                   { label: 'Categoria', value: auction.category?.replace('_', ' '), capitalize: true },
                 ].map((item, i, arr) => (
                   <div key={item.label} className={`flex justify-between py-3`} style={i < arr.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,0.04)' } : {}}>
@@ -367,9 +376,11 @@ export default function AuctionDetails() {
                     <span className={`font-medium text-gray-300 text-sm ${item.capitalize ? 'capitalize' : ''}`}>{item.value}</span>
                   </div>
                 ))}
-                <p className="text-xs text-gray-600 mt-4 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                  * Produtos sem garantia de fábrica, por isso o preço especial.
-                </p>
+                {ficha.notaRodape && (
+                  <p className="text-xs text-gray-600 mt-4 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }} data-teste="nota-garantia">
+                    {ficha.notaRodape}
+                  </p>
+                )}
               </div>
             </div>
           </div>
