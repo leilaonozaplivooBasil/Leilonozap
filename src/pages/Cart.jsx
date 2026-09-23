@@ -43,6 +43,7 @@ import { getReferral } from '@/lib/referral';
 import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 import FreteResumo from '@/components/cart/FreteResumo';
+import LeveJunto from '@/components/cart/LeveJunto';
 import { useSectionTracking, trackBeginCheckoutLoja, trackPurchaseLoja } from '@/lib/tracking';
 import { lerCarrinho, lerJSON } from '@/lib/storageSeguro';
 
@@ -371,6 +372,22 @@ export default function Cart() {
     setCartItems(newCart);
     localStorage.setItem('catalogCart', JSON.stringify(newCart));
     window.dispatchEvent(new Event('cartUpdated'));
+  };
+
+  // 🧺 23/09/2026 — "Leve junto": soma 1 unidade do recomendado (ou cria o item),
+  // respeitando o estoque, pelo MESMO updateCart que a lista usa.
+  const adicionarRecomendado = (item) => {
+    const atual = lerCarrinho();
+    const i = atual.findIndex((x) => x.id === item.id);
+    if (i >= 0) {
+      const qtd = Number(atual[i].quantity) || 0;
+      if (qtd >= (Number(item.availableStock) || 0)) { toast.error('Este produto já está no carrinho com todo o estoque disponível.'); return; }
+      atual[i] = { ...atual[i], quantity: qtd + 1, availableStock: item.availableStock };
+    } else {
+      atual.push(item);
+    }
+    updateCart(atual);
+    toast.success('Adicionado ao carrinho');
   };
 
   const removeItem = (productId) => {
@@ -1317,6 +1334,7 @@ export default function Cart() {
                     <ShoppingCart className="w-4 h-4 mr-2" />
                     Ver produtos da loja
                   </Button>
+                  <div className="text-left"><LeveJunto carrinho={[]} onAdicionar={adicionarRecomendado} /></div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1372,6 +1390,8 @@ export default function Cart() {
                       );
                     })}
                   </div>
+
+                  {!pixData && <LeveJunto carrinho={cartItems} onAdicionar={adicionarRecomendado} />}
 
                   <div className="border-t border-gray-600 pt-6 mt-6 space-y-3">
                     <div className="flex justify-between text-base">
