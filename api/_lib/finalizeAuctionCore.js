@@ -8,6 +8,7 @@
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 import { cancelarCuponsBloqueados, liberarCupomPassaporte } from './passaporteCoupon.js';
+import { enviarAviso } from './avisosPorEmail.js';
 import { recolherBonusPorArremate } from './passaporteBonus.js';
 import { oid } from './oid.js';
 // 📒 Livro-caixa da reserva. Import de MESMO diretório (./) — a forma segura já
@@ -417,6 +418,9 @@ export async function finalizeOneAuction(auction) {
       // Ordem: modelo A primeiro — os cupons dele são sempre os mais antigos (FIFO
       // de verdade) — e o modelo B só cobra o que SOBROU do alvo. Cupom já LIBERADO
       // (de uma derrota em outro leilão) permanece intacto nos dois.
+      // ✉️ "você arrematou" (23/09/2026) — 1x por leilão, best-effort
+      try { await enviarAviso({ tipo: 'arrematou', userId: winnerId, chave: auctionId, dados: { produto: auction.title, valor: finalPrice, pagoComSaldo: false } }); } catch (_) { /* nunca segura a apuração */ }
+
       let jaRecolhidoDaCarteira = 0;
       try {
         const r = await recolherBonusPorArremate(winnerId, auctionId, finalPrice);

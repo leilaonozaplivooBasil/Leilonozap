@@ -2,6 +2,7 @@
 // (não confia no corpo), marca a venda como paga e PAGA as comissões pela cadeia (telescópio, teto 20%).
 // Idempotente: se a venda já está paga, não repaga.
 import crypto from 'crypto';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 import { oid } from '../_lib/oid.js';
 import { fulfillStoreOrder } from '../_lib/storeFulfill.js';
 import { gerarEnvioAutomatico } from '../_lib/melhorEnvioShipment.js';
@@ -611,6 +612,8 @@ export default async function handler(req, res) {
       // 🎟️ Cupom de 10% também no aporte de carteira (>= R$ 100) — bloqueado, à
       // parte do saldo de lance (mesma regra do passaporte, ver comentário acima).
       const bonus = sale.kind === 'wallet_deposit' ? await criarCupomPassaporte(sale) : null;
+      // ✉️ "depósito confirmado" (23/09/2026) — best-effort
+      if (sale.kind === 'wallet_deposit') await enviarAviso({ tipo: 'deposito', userId: sale.buyer_id, chave: sale.id, dados: { valor: sale.total_amount, saldo: r?.new_balance ?? null } });
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, deposit: true, ...r, bonus });
     }
     if (sale.kind === 'adesao') {
@@ -645,6 +648,8 @@ export default async function handler(req, res) {
       await registrarReceita({ description: `Comissão — venda Loja Virtual #${sale.id}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: r?.commission, source: 'venda', saleId: sale.id });
       // 🎓 "primeira compra" de Vendedor/Licenciado (ver concederCargoDaPrimeiraCompra acima)
       const cargo = await concederCargoDaPrimeiraCompra(sale);
+      // ✉️ "pedido confirmado" (23/09/2026) — best-effort
+      await enviarAviso({ tipo: 'compra_confirmada', userId: sale.buyer_id, chave: sale.id, dados: { pedido: (sale.tracking_code || sale.id).slice(0, 10), valor: sale.total_amount } });
       return res.status(200).json({ ok: true, paid: true, sale_id: sale.id, ...r, cupom, envio, cargo });
     }
     // 💰 PLANO DIRETOR também para venda de produto (antes usava o motor velho, que não

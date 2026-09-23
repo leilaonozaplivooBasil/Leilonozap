@@ -2,6 +2,7 @@
 // de estoque). Recebe a TABELA já resolvida + payload já mapeado pelo adapter. Whitelist de tabelas
 // de conteúdo (tabelas sensíveis — app_users, wallets, saques, pagamentos — NÃO entram aqui; têm rota própria).
 import crypto from 'crypto';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 import { oid } from '../_lib/oid.js';
 import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -439,6 +440,11 @@ export default async function handler(req, res) {
     const patch = semColunasAusentes(table, { ...(body?.payload || {}), updated_date: now });
     const ur = await writeResilient('PATCH', table, id, patch);
     if (!ur.ok) return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: ur.details });
+    // ✉️ "pedido a caminho" (23/09/2026) — o painel marca status 'shipped' (+ rastreio)
+    if (table === 'catalog_sales' && body?.payload?.status === 'shipped') {
+      const venda = ur.rows?.[0] || {};
+      await enviarAviso({ tipo: 'compra_enviada', userId: venda.buyer_id, chave: id, dados: { pedido: String(venda.id || id).slice(0, 10), rastreio: body.payload.tracking_code || venda.tracking_code || '' } });
+    }
 
     // 🔴 CANCELAR leilão devolve o dinheiro igual a APAGAR (18/08/2026).
     // Era o irmão esquecido do bug: o admin cancelava pela tela e o saldo do líder
