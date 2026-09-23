@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { secaoDaUrl } from '@/lib/atalhoTopCollege';
 import { toast } from 'sonner';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
 import { fmtBR, parseValorBR } from '@/lib/money';
@@ -139,7 +140,9 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // 🧭 DIR-24 Fase 3 — o CRM virou 3 seções navegáveis (Visão Executiva /
   // Clientes / Expansão). null = ainda não escolheu: visão total abre na
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
-  const [secao, setSecao] = useState(null);
+  // ⭐ 23/09/2026 — ?secao=compromisso (o atalho do cabeçalho) abre a seção
+  // direto; sem o parâmetro, o padrão de sempre (ver atalhoTopCollege.js).
+  const [secao, setSecao] = useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search));
   const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
   // 🔦 09/09/2026 — DIR-111.2, dono: "eu cliquei nessa pessoa, ela me
   // levou pra página seguinte, eu não posso ter a sensação que estou

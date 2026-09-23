@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Map, ListChecks, LayoutGrid, Network, Inbox, BarChart3, ChevronDown, FlaskConical, X } from 'lucide-react';
+import { Map, ListChecks, LayoutGrid, Network, Inbox, BarChart3, ChevronDown, FlaskConical, X, Star } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
 // 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Eu no Game"
@@ -36,7 +36,8 @@ import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 const GRADIENTE_TC = 'linear-gradient(135deg, var(--topcollege-azul, #3B6FF6), var(--topcollege-magenta, #E62E8B))';
 const GRADIENTE_VERDE = 'linear-gradient(135deg, #16a34a, #22c55e)';
 
-export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null, demandasEsperando = 0 }) {
+export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null, demandasEsperando = 0, atalho = null, onAtalho = null }) {
+  const ehOAtalho = Boolean(onAtalho) && atalho === visao;
   const [testeAberto, setTesteAberto] = useState(false);
   // DIR-75 — o terceiro lado: o nosso quadro. Entra aqui e não num botão solto
   // porque é uma VISÃO do mesmo dia, igual às outras duas.
@@ -94,6 +95,23 @@ export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mos
             );
           })}
         </div>
+
+        {/* ⭐ 23/09/2026 — fixa a visão aberta como destino do ícone da Top
+            College no cabeçalho (ver src/lib/atalhoTopCollege.js). */}
+        {onAtalho && (
+          <button
+            type="button"
+            onClick={() => { if (!ehOAtalho) { vibrar(VIBRA_TOQUE); onAtalho(visao); } }}
+            aria-pressed={ehOAtalho}
+            title={ehOAtalho ? 'O ícone da Top College já abre aqui' : 'Fixar esta visão como meu atalho da Top College'}
+            data-teste="fixar-atalho"
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-all ${
+              ehOAtalho ? 'text-amber-300 bg-amber-400/15' : 'border border-nz-borda/50 text-nz-tinta-fraca hover:text-amber-300'}`}
+          >
+            <Star className="w-3.5 h-3.5" fill={ehOAtalho ? 'currentColor' : 'none'} />
+            <span className="hidden sm:inline">{ehOAtalho ? 'meu atalho' : 'fixar atalho'}</span>
+          </button>
+        )}
 
         {/* ── "Eu no Game" — o placar completo, agora colado no grupo das
             visões, não solto lá longe perto do relógio de teste ── */}

@@ -34,6 +34,7 @@ import NavegacaoLateralGlobal from "@/components/common/NavegacaoLateralGlobal";
 import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
+import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 // 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
 import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
@@ -1023,6 +1024,8 @@ export default function Layout({ children, currentPageName }) {
                       <span className="text-[10px] font-bold uppercase tracking-wide text-white">Carteira</span>
                     </button>
                   )}
+                  {/* ⭐ 23/09/2026 — ícone da Top College ao lado do menu (só logado) */}
+                  <AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} />
                   <button
                     type="button"
                     aria-label="Abrir menu"

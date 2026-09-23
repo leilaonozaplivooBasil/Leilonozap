@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { lerAtalho, gravarAtalho, visaoDaUrl, normalizarDestino } from '@/lib/atalhoTopCollege';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -282,6 +283,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       .then((rows) => {
         const p = Array.isArray(rows) ? rows[0] : null;
         setPerfil(p || null);
+        // ⭐ o perfil manda: vale em qualquer aparelho
+        if (p?.atalho_destino) setAtalho(gravarAtalho(p.atalho_destino));
         setScript(p?.script || '');
         setApresentacaoUrl(p?.apresentacao_url || '');
       })
@@ -950,7 +953,10 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   };
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
-  const [visao, setVisao] = useState('jornada');
+  // ⭐ 23/09/2026 — ?visao=quadro (o atalho do cabeçalho) abre a visão direto.
+  const [visao, setVisao] = useState(() => visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search) || 'jornada');
+  // a visão que a pessoa fixou como atalho — aparelho primeiro, perfil manda
+  const [atalho, setAtalho] = useState(() => lerAtalho());
   // 🌱 a demanda que o dono mandou "abrir no mapa": guarda o TÍTULO, não a
   // linha, porque é só isso que o mapa precisa — e some assim que o mapa
   // semeia, senão voltar à aba re-semearia o mesmo nó.
@@ -2574,6 +2580,13 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               <FaixaVisao
                 visao={visao}
                 onVisao={setVisao}
+                atalho={atalho}
+                onAtalho={(id) => {
+                  const d = normalizarDestino(id);
+                  setAtalho(gravarAtalho(d));
+                  // best-effort: sem perfil ainda, cria; se falhar, o aparelho já guardou
+                  salvarPerfil({ atalho_destino: d }).catch(() => {});
+                }}
                 placarAberto={painelAberto}
                 onPlacar={alternarPainel}
                 mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
