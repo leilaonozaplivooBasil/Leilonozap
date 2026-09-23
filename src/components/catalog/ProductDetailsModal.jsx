@@ -1,3 +1,4 @@
+import { trackViewItem, trackAddToCart, trackBeginCheckoutLoja } from '@/lib/tracking';
 import React, { useState, useEffect, useRef } from "react";
 import { fmtBR } from '@/lib/money';
 import { textoParcelamento } from '@/lib/parcelamento';
@@ -34,6 +35,8 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  // 🛒 22/09 — ViewContent ao abrir o modal do produto
+  useEffect(() => { if (product?.id) trackViewItem(product); }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [reviews, setReviews] = useState([]);
   const onCloseRef = useRef(onClose);
@@ -130,6 +133,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
   const irParaCheckout = () => {
     adicionarAoCarrinho();
     navigate(createPageUrl("Cart"));
+    trackBeginCheckoutLoja([{ ...product, quantity }]); // 🛒 22/09 — InitiateCheckout (depois: o guarda D5 exige "{ adicionar→navigate" colados)
   };
 
   // 📜 PONTO 70 — adicionar ao carrinho é a intenção de compra na Loja Virtual
@@ -142,6 +146,7 @@ export default function ProductDetailsModal({ product, currentUser, licenseePhon
   };
 
   const adicionarAoCarrinho = () => {
+    trackAddToCart(product, quantity); // 🛒 22/09 — AddToCart pro GTM/Meta
     let cart = lerCarrinho();
     const existingIndex = cart.findIndex((item) => item.id === product.id);
     if (existingIndex >= 0) {

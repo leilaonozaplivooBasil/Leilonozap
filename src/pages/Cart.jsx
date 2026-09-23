@@ -43,7 +43,7 @@ import { getReferral } from '@/lib/referral';
 import { resolverRefCodeDaVenda } from '@/lib/donoDaVenda';
 import PassaporteCouponBanner from '@/components/cart/PassaporteCouponBanner';
 import FreteResumo from '@/components/cart/FreteResumo';
-import { useSectionTracking } from '@/lib/tracking';
+import { useSectionTracking, trackBeginCheckoutLoja, trackPurchaseLoja } from '@/lib/tracking';
 import { lerCarrinho, lerJSON } from '@/lib/storageSeguro';
 
 export default function Cart() {
@@ -86,6 +86,14 @@ export default function Cart() {
   const [countdown, setCountdown] = useState(0);
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
+  // 🛒 22/09/2026 — InitiateCheckout UMA vez por visita ao carrinho com itens
+  // (currency + items + content_ids). O Tag Assistant mostrou o checkout mudo.
+  const checkoutMarcado = useRef(false);
+  useEffect(() => {
+    if (checkoutMarcado.current || !cartItems.length) return;
+    checkoutMarcado.current = true;
+    trackBeginCheckoutLoja(cartItems);
+  }, [cartItems]);
   const pollingIntervalRef = useRef(null); // Ref para gerenciar o intervalo de polling
   // 🎓 Primeira compra de Vendedor/Licenciado (vinda de VendedorEscolherProdutos): o
   // carrinho vira uma compra normal da loja, só que com um valor mínimo obrigatório e,
@@ -289,6 +297,8 @@ export default function Cart() {
       const timer = setTimeout(() => {
         setCountdown(0);
         setPixConfirmed(true);
+        // 🛒 22/09 — Purchase de verdade: PIX confirmado, com o pedido (transaction_id)
+        trackPurchaseLoja(checkoutItems.length ? checkoutItems : cartItems, { transactionId: createdSales[0]?.id, valor: calcularTotalFinal(), frete: valorFrete });
         // o carrinho já foi esvaziado quando o pedido nasceu; aqui é só garantia
         // para quem ficou na tela desde antes desta mudança.
         limparCarrinho();
