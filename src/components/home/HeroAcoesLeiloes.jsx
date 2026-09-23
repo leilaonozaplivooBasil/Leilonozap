@@ -41,7 +41,14 @@ export default function HeroAcoesLeiloes({ count = 0 }) {
   const compararTap = useCliqueSemArrasto(() => window.dispatchEvent(new Event("openComparai")));
 
   return (
-    <div className="mt-4 flex items-center gap-4 overflow-x-auto px-3 py-1 nz-no-scrollbar sm:mt-5 sm:gap-6 sm:px-4">
+    // 🫧 23/09/2026 — dono: "o brilho dos ícones na parte de baixo parece
+    // estar por baixo dos cards". Era o `overflow-x-auto` desta fileira: com um
+    // eixo rolável o outro vira `auto` também, e a sombra de 30px de cada
+    // ícone (0 8px 22px) era cortada 4px abaixo do círculo — o corte reto
+    // parecia o card de baixo passando por cima. Três ícones cabem em qualquer
+    // celular sem rolar, então a fileira deixa de rolar e ganha a folga da
+    // sombra; `relative z-10` garante que o brilho pinta POR CIMA do carrossel.
+    <div className="relative z-10 mt-4 flex items-center gap-4 px-3 pt-1 pb-5 sm:mt-5 sm:gap-6 sm:px-4" data-teste="acoes-leiloes">
       {/* PONTO 88 — pulso de luz branca da logo do CompareAQUI (local, não vaza pro app) */}
       <style>{`
         .nz-cmp-anel {
