@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { lerAtalho, gravarAtalho, visaoDaUrl, normalizarDestino } from '@/lib/atalhoTopCollege';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -955,6 +956,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   // ⭐ 23/09/2026 — ?visao=quadro (o atalho do cabeçalho) abre a visão direto.
   const [visao, setVisao] = useState(() => visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search) || 'jornada');
+  const localizacao = useLocation();
+  useEffect(() => {
+    const v = visaoDaUrl(localizacao.search);
+    if (v) setVisao(v);
+  }, [localizacao.search]);
   // a visão que a pessoa fixou como atalho — aparelho primeiro, perfil manda
   const [atalho, setAtalho] = useState(() => lerAtalho());
   // 🌱 a demanda que o dono mandou "abrir no mapa": guarda o TÍTULO, não a

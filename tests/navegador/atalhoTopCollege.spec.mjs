@@ -51,14 +51,14 @@ test('⭐ logado: o ícone leva pra Jornada; abre o Quadro, fixa pela estrela, e
   const { ctx, pagina, erros } = await abrir();
   try {
     const href = () => pagina.$eval('[data-teste="atalho-topcollege"]', (a) => a.getAttribute('href'));
-    assert.equal(await href(), '/Licensing?tab=catalogo&catalogTab=catalogo-clientes&secao=compromisso&visao=jornada');
+    assert.equal(await href(), '/Licensing?tab=catalogo&catalogTab=catalogo-crm&secao=compromisso&visao=jornada');
     assert.equal(await pagina.$eval('[data-teste="fixar-atalho"]', (b) => b.getAttribute('aria-pressed')), 'true', 'a Jornada já é o atalho padrão');
     await pagina.click('[role="tab"][aria-label="Quadro"]');
     assert.equal(await pagina.$eval('[data-teste="fixar-atalho"]', (b) => b.getAttribute('aria-pressed')), 'false');
     await pagina.click('[data-teste="fixar-atalho"]');
     assert.equal(await pagina.$eval('[data-teste="fixar-atalho"]', (b) => b.getAttribute('aria-pressed')), 'true');
     assert.equal(await pagina.evaluate(() => localStorage.getItem('nz_atalho_topcollege')), 'quadro');
-    assert.equal(await href(), '/Licensing?tab=catalogo&catalogTab=catalogo-clientes&secao=compromisso&visao=quadro');
+    assert.equal(await href(), '/Licensing?tab=catalogo&catalogTab=catalogo-crm&secao=compromisso&visao=quadro');
     if (process.env.FOTO_BANCA) await pagina.screenshot({ path: process.env.FOTO_BANCA });
     assert.deepEqual(erros, []);
   } finally { await ctx.close(); }

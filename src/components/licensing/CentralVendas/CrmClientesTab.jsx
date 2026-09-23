@@ -16,7 +16,7 @@ import { Search, Filter, X, Save, Send, CheckCircle, Package,
   GitBranch, BellRing, Trophy, ArrowRight
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { buildUnifiedCustomers, getNetworkDescendantIds, ROLE_LABEL } from '@/lib/crmUnifiedCustomers';
 import { DONOS_DA_VENDA } from '@/lib/vendasDoCiclo';
 import { CAREER_LEVELS } from '@/lib/careerLevels';
@@ -143,6 +143,11 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // ⭐ 23/09/2026 — ?secao=compromisso (o atalho do cabeçalho) abre a seção
   // direto; sem o parâmetro, o padrão de sempre (ver atalhoTopCollege.js).
   const [secao, setSecao] = useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search));
+  const localizacao = useLocation();
+  useEffect(() => {
+    const s = secaoDaUrl(localizacao.search);
+    if (s) setSecao(s);
+  }, [localizacao.search]);
   const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
   // 🔦 09/09/2026 — DIR-111.2, dono: "eu cliquei nessa pessoa, ela me
   // levou pra página seguinte, eu não posso ter a sensação que estou
