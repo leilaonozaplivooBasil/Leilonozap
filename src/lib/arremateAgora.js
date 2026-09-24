@@ -54,20 +54,20 @@ export function normalizarArremateAgora(valorDigitado, precoInicial) {
   return parseFloat(preco.toFixed(2));
 }
 // ══════════════════════════════════════════════════════════════════════════════
-// 🏷️ ARREMATE JÁ = PREÇO DA LOJA − 5% (23/09/2026)
+// 🏷️ ARREMATE JÁ = PREÇO DA LOJA − 15% (23/09/2026; era 5%, o dono corrigiu pra 15% em 24/09)
 // ══════════════════════════════════════════════════════════════════════════════
 // Decisão do dono: nos leilões de baixo custo (de preferência os reativados),
-// o arremate imediato é o preço da Loja Virtual com 5% de desconto, e a sala
+// o arremate imediato é o preço da Loja Virtual com 15% de desconto, e a sala
 // DIZ isso embaixo do botão. A frase só sai quando o número bate mesmo: um
 // leilão com arremate gravado à mão (PS5, Camiseta) não pode anunciar um
 // desconto que não existe.
-export const PCT_DESCONTO_LOJA = 5;
+export const PCT_DESCONTO_LOJA = 15;
 
 /**
  * A oferta "loja − X%" deste leilão, ou null quando o arremate não segue a regra.
  * @param {object} auction   leilão (buy_now_price + starting_price)
  * @param {number|string} precoLoja  products.price_catalog
- * @param {number} pct  desconto em %, padrão 5
+ * @param {number} pct  desconto em %, padrão 15
  * @returns {{arremate:number, loja:number, pct:number}|null}
  */
 export function ofertaDaLoja(auction, precoLoja, pct = PCT_DESCONTO_LOJA) {

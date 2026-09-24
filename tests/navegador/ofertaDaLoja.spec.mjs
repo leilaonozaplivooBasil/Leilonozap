@@ -47,11 +47,11 @@ async function abrir(q = '') {
   return { ctx, pagina, erros };
 }
 
-test('🏷️ com arremate = loja − 5%, a frase aparece embaixo do ARREMATE, dentro dos 390px', { skip: semNavegador }, async () => {
+test('🏷️ com arremate = loja − 15%, a frase aparece embaixo do ARREMATE, dentro dos 390px', { skip: semNavegador }, async () => {
   const { ctx, pagina, erros } = await abrir();
   try {
     const txt = await pagina.$eval('[data-teste="oferta-da-loja"]', (n) => n.innerText);
-    assert.equal(txt, 'Arremate já por R$ 47,47 — 5% abaixo do preço da nossa loja (R$ 49,97)');
+    assert.equal(txt, 'Arremate já por R$ 42,47 — 15% abaixo do preço da nossa loja (R$ 49,97)');
     const ordem = await pagina.evaluate(() => {
       const b = [...document.querySelectorAll('button')].find((x) => /ARREMATE/.test(x.innerText)).getBoundingClientRect();
       const f = document.querySelector('[data-teste="oferta-da-loja"]').getBoundingClientRect();

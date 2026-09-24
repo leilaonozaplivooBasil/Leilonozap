@@ -7,8 +7,8 @@ import { avisoDoTotalTravado } from "@/lib/saldoDoLance";
 import { ofertaDaLoja, fraseDaOferta } from "@/lib/arremateAgora";
 
 export default function BidInput({ currentPrice, increment, onSubmitBid, isLoading, buyNowPrice, onBuyNow, freteValor = 0, isFirstBid = false, precoLoja = null, startingPrice = null }) {
-  // 🏷️ 23/09/2026 — "arremata com 5% de desconto da nossa loja": a frase só
-  // aparece quando o arremate gravado é MESMO loja − 5% (ver lib/arremateAgora).
+  // 🏷️ 23/09/2026 — "arremata com 15% de desconto da nossa loja": a frase só
+  // aparece quando o arremate gravado é MESMO loja − 15% (ver lib/arremateAgora).
   const oferta = ofertaDaLoja({ buy_now_price: buyNowPrice, starting_price: startingPrice ?? currentPrice }, precoLoja);
   // 🩹 Sem lance ainda (isFirstBid): o primeiro lance vale o próprio currentPrice
   // (= starting_price publicado) — o incremento só soma a partir do segundo lance.
