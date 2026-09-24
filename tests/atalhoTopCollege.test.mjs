@@ -79,7 +79,8 @@ test('o ícone está no cabeçalho (desktop e celular), a URL abre a seção e a
   assert.ok(ICONE.includes('className="h-10 w-10 sm:h-11 sm:w-11 object-contain"'));
   assert.ok(ICONE.includes("style={{ filter: temaClaro ? SOMBRA_3D_CLARO : SOMBRA_3D }}"));
   // 🎯 centro visual da logo (ponta do balão embaixo): o símbolo desce 3px e não fica colado
-  assert.ok(ICONE.includes("style={{ transform: 'translateY(3px)' }}"));
+  assert.ok(ICONE.includes('translate-y-[3px] transition-transform duration-200 hover:scale-110'));
+  assert.ok(!ICONE.includes("transform: 'translateY"), 'transform em linha engole o hover:scale');
   assert.ok(existsSync(new URL('../public/marca/topcollege-3d.webp', import.meta.url)));
   assert.ok(CRM.includes("useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search))"));
   // 🔴 23/09 — o atalho clicado de DENTRO da Top College não remonta nada: os três níveis reagem à URL

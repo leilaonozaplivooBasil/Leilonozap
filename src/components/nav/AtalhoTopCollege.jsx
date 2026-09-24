@@ -23,12 +23,15 @@ export default function AtalhoTopCollege({ currentUser, temaClaro = false, class
       aria-label={rotulo}
       title={rotulo}
       data-teste="atalho-topcollege"
-      className={`grid shrink-0 place-items-center transition-transform hover:scale-[1.08] active:scale-95 ${className}`}
       // 🎯 24/09 (2º print do dono): "faceando com o martelo dá impressão de
       // descentralizado". A logo tem a ponta do balão embaixo, então o centro
       // VISUAL dela fica abaixo do centro da caixa — o símbolo desce 3px pra
       // ficar entre o martelo e a ponta do balão.
-      style={{ transform: 'translateY(3px)' }}
+      // ✋ 24/09 (3º pedido): "quando passo o mouse na logo ela vem pra frente;
+      // na Top College está parada". O deslocamento era um `transform` em linha,
+      // que engolia o `hover:scale`. Agora os dois são classes e se somam:
+      // desce 3px E cresce no hover, igual à logo (hover:scale-105).
+      className={`grid shrink-0 place-items-center translate-y-[3px] transition-transform duration-200 hover:scale-110 active:scale-95 ${className}`}
     >
       <img
         src="/marca/topcollege-3d.webp"
