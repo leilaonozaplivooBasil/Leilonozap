@@ -233,8 +233,11 @@ export default async function handler(req, res) {
     // segue sem a conferência de produto. Nunca troca segurança de frete por
     // leilão parado.
     const COLUNAS_BASE = 'id,title,current_price,starting_price,increment,status,end_time,version,winner_id,winner_name,modo_chamada,data_abertura_lances,frete_reservado_valor';
+    // 🤝 `permite_retirada` entra junto com `product_id` (24/09/2026): é o que
+    // libera o frete ZERO do selo 'a_combinar', logo abaixo. Se a coluna
+    // faltar, a volta segura relê sem as duas — e sem ela zero NÃO passa.
     let getResp = await sb(
-      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE},product_id`
+      `auctions?id=eq.${encodeURIComponent(auctionId)}&select=${COLUNAS_BASE},product_id,permite_retirada`
     );
     // 🔴 BLOQUEADOR 16 (auditoria OpenAI, 21/08/2026) — A VOLTA SEGURA ESTAVA
     //    ABRINDO A PORTA EM VEZ DE FECHAR.
@@ -359,7 +362,19 @@ export default async function handler(req, res) {
     // existe caso legítimo de lance com frete zero, então recusar aqui não
     // derruba ninguém honesto — só fecha a chamada direta de API que manda
     // `frete_valor: 0` e ficaria esperando o FRETE_MODO ser ligado.
-    if (!(freteValor > 0)) {
+    //
+    // 🤝 A ÚNICA EXCEÇÃO (24/09/2026, caso Harley 117 — decisão do dono): o lote
+    // que NENHUMA transportadora aceita pelo volume, e em que a casa ligou
+    // `permite_retirada`. Aí o cotarFrete emitiu um selo VÁLIDO com id
+    // 'a_combinar' e valor zero (api/_lib/freteACombinar.js). Zero só passa se
+    // as duas coisas batem AQUI, no banco, na hora do lance: selo íntegro com
+    // esse id E `permite_retirada = true` no leilão lido acima. `frete_valor: 0`
+    // solto no corpo continua recusado, como sempre.
+    const _freteACombinar = _freteOk && String(_frete.id || '') === 'a_combinar' && auction.permite_retirada === true;
+    if (_freteACombinar) {
+      console.log(`[FRETE] submitAtomicBid: lance com FRETE A COMBINAR no leilão ${auctionId} (lote grande, coluna ligada).`);
+    }
+    if (!(freteValor > 0) && !_freteACombinar) {
       console.error(`[FRETE] submitAtomicBid: RECUSADO lance com frete ZERO no leilão ${auctionId} (selo: ${_freteMotivo}).`);
       return res.status(400).json({
         success: false, sem_frete: true, motivo: 'frete_zero',
