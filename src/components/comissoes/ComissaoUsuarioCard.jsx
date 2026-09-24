@@ -55,6 +55,12 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
 
       {aberto && (
         <div className="border-t border-gray-800 p-4 bg-gray-950/40 space-y-4">
+          {/* 24/09/2026 — em produção TODO registro está "confirmed" (1.446) ou
+              "reversed" (85); nenhum nunca virou "paid". "Confirmado" só
+              quer dizer "comissão gerada" — mostrar isso depois de pagar fazia
+              parecer que a pessoa ainda tinha a receber. Quem diz o que falta
+              pagar é o saldo lá em cima. */}
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wide -mb-2">Vendas que geraram a comissão</div>
           <div className="overflow-x-auto rounded-lg border border-gray-800">
             <table className="w-full text-sm">
               <thead className="bg-gray-800/60 text-gray-400">
@@ -79,9 +85,7 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
                       ) : c.status === 'canceled' || c.status === 'reversed' ? (
                         <span className="text-gray-500 text-xs font-bold bg-gray-500/10 px-2 py-1 rounded">{c.status === 'reversed' ? 'Estornado' : 'Cancelado'}</span>
                       ) : (
-                        <span className="text-amber-400 text-xs font-bold bg-amber-400/10 px-2 py-1 rounded">
-                          {c.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
-                        </span>
+                        <span className="text-gray-300 text-xs font-bold bg-gray-400/10 px-2 py-1 rounded" data-teste="status-gerada">Gerada</span>
                       )}
                     </td>
                   </tr>

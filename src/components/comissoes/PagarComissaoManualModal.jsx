@@ -109,10 +109,10 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
             />
           </div>
           <p className="text-xs text-gray-400">
-            Ao confirmar, R$ {fmtBR(saldoDisponivel)} vira o novo saldo menos o valor pago — na hora, sem espera.
+            Ao confirmar, o valor sai do saldo da pessoa na hora e fica registrado no histórico. Faça o PIX antes de confirmar.
           </p>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={fechar} disabled={enviando} className="flex-1 border-gray-600 text-gray-300">Cancelar</Button>
+            <Button type="button" variant="outline" onClick={fechar} disabled={enviando} className="flex-1 bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white">Cancelar</Button>
             <Button type="submit" disabled={enviando || !valor || !pixKeyUsada.trim()} className="flex-1 bg-green-600 hover:bg-green-700" data-teste="confirmar-pagamento-manual">
               {enviando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Registrando…</> : 'Confirmar pagamento'}
             </Button>
