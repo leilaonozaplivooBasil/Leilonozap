@@ -933,7 +933,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'var(--nz-entalhe)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className={`relative flex justify-between items-center ${isRecepcao ? 'h-14' : 'h-14 sm:h-16'}`}>
 
@@ -1079,7 +1079,7 @@ export default function Layout({ children, currentPageName }) {
         )}
         {/* 📱 23/09/2026 — a barra do app ocupa 3.75rem na base (até lg): o conteúdo
             ganha o mesmo respiro pra nada terminar escondido atrás dela. */}
-        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''} ${mostraBarraDoApp(currentPageName) ? 'pb-[3.75rem] lg:pb-0' : ''}`}>
+        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "nz-abaixo-da-barra-baixa" : "nz-abaixo-da-barra")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''} ${mostraBarraDoApp(currentPageName) ? 'pb-[3.75rem] lg:pb-0' : ''}`}>
           {/* 🎛️ Barra do Painel de Controle (AdminTopNav) removida do NetworkOverview
               em 08/08/2026: a navegação por seções já existe no dropdown do avatar
               (UserAvatarMenu → "Visão Geral" abre o MiniCanvas). A barra aqui era
