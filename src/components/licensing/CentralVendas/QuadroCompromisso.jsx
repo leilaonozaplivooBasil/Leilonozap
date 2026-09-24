@@ -920,6 +920,11 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
     setCarregando(false);
   }, [uid]);
   useEffect(() => { carregar(); }, [carregar]);
+  // 📝 24/09/2026 — o bloco de demandas (botão "D") criou um card: recarrega.
+  useEffect(() => {
+    window.addEventListener('demandaAnotada', carregar);
+    return () => window.removeEventListener('demandaAnotada', carregar);
+  }, [carregar]);
 
   const resumo = useMemo(() => resumoDoQuadro(cartoes, hoje), [cartoes, hoje]);
   const orfaos = useMemo(() => semLista(cartoes), [cartoes]);

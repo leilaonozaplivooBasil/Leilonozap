@@ -49,7 +49,9 @@ class Consulta {
   _executar() {
     const t = tabela(this.nome);
     if (this.modo === 'insert') {
-      const novas = this.carga.map((l) => ({ id: novoId(), ...l }));
+      // 24/09/2026 — como o banco de verdade: created_at nasce sozinho quando a
+      // tela não manda (as listas "mais recente primeiro" dependem disso)
+      const novas = this.carga.map((l) => ({ id: novoId(), created_at: new Date().toISOString(), ...l }));
       t.push(...novas);
       banco().escritas.push({ tipo: 'insert', tabela: this.nome, linhas: novas });
       return { data: this.unico ? (novas[0] ?? null) : novas, error: null }; // .single() depois do insert devolve A linha, não a lista

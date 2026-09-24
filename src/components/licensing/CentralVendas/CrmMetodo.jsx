@@ -327,6 +327,12 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   }, [uid, dia]);
   useEffect(() => { setDiaLido(null); }, [dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
+  // 📝 24/09/2026 — o bloco de demandas (botão "D" do cabeçalho) acabou de
+  // criar uma tarefa de hoje: a Jornada/Lista aberta recarrega na hora.
+  useEffect(() => {
+    window.addEventListener('demandaAnotada', carregarTarefas);
+    return () => window.removeEventListener('demandaAnotada', carregarTarefas);
+  }, [carregarTarefas]);
 
   // ═══════════════════════════════════════════════════════════════════════
   // 🌅 FECHAMENTO AUTOMÁTICO DO RITUAL ENTREGUE (16/09/2026)

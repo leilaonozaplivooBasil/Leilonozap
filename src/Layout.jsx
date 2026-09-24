@@ -36,6 +36,7 @@ import { buildAdminMenu } from "@/lib/adminMenu";
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
+import BlocoDeDemandas from "@/components/nav/BlocoDeDemandas";
 import BarraDoApp from "@/components/nav/BarraDoApp";
 import { mostraBarraDoApp } from "@/lib/barraDoApp";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
@@ -968,6 +969,8 @@ export default function Layout({ children, currentPageName }) {
                     "mais próxima da logo, sem o quadrado, mais em 3D". Vale no celular
                     e no computador — saiu do NavDesktop e do cluster do menu mobile. */}
                 <AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} className="ml-1 md:ml-0" />
+                {/* 📝 24/09/2026 — o botão "D": bloco de notas rápido de demandas (só logado). */}
+                <BlocoDeDemandas currentUser={currentUser} temaClaro={isPainelClaro} className="ml-1" />
                 {/* PONTO 91 — na sala de leilão: Favoritar e Compartilhar entre a logo e a Carteira */}
                 {currentPageName === 'AuctionRoom' && <AcoesTopoSala />}
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
