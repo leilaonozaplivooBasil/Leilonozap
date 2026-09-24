@@ -40,7 +40,6 @@ const ciclo = { total: 14.31, liga: { emoji: '🥇', label: 'Ouro' }, estudoEmDi
 const liberacao = (caso === 'zerado' || caso === 'liberado') ? { ate_hora: '09:00', motivo: 'corrida da empresa' } : null;
 
 function Banca() {
-  const [aberto, setAberto] = React.useState(false);
   const [hora, setHora] = React.useState('');
   const [rascunho, setRascunho] = React.useState('');
   return (
@@ -52,12 +51,10 @@ function Banca() {
         fogo={{ dias: 3, congelou: true }}
         hojeFechou={false}
         ehHoje
-        aberto={aberto}
-        onAbrir={() => setAberto((v) => !v)}
         liberacao={liberacao}
         teste={{ hora, rascunho, onRascunho: setRascunho, entrar: () => setHora(rascunho), sair: () => { setHora(''); setRascunho(''); } }}
       />
-      <span data-teste="estado-placar">{JSON.stringify({ aberto, hora })}</span>
+      <span data-teste="estado-placar">{JSON.stringify({ hora })}</span>
     </div>
   );
 }

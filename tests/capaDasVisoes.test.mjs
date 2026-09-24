@@ -112,3 +112,41 @@ test('a tela usa a lib: dois estados, e o placar NÃO aparece dentro de uma vis�
   // a fileira antiga (que convivia com tudo) não pode ter sobrado
   assert.ok(!M.includes('<FaixaVisao'), 'a fileira antiga voltou — os dois estados viram um de novo');
 });
+
+// 🪙 DIR-184 — dono, olhando o DIR-183: "ficou quase perfeito. As moedas só
+// têm que aparecer quando eu abrir o quadro. Cliquei na Jornada, vai sumir
+// tudo, vai aparecer só a Jornada."
+//
+// 🔴 O QUE EU ERREI: prendi o PlacarDoDia à capa e esqueci que a moeda em
+// fatias, o Modelo, o "Onde estou", as Missões e a votação do MvM são blocos
+// SEPARADOS, todos presos a `mostrarPainel` — que ainda tinha dois escapes
+// (`visao === 'lista' && !celular` e `painelAberto`, este último GRAVADO no
+// aparelho). Quem já tinha o painel aberto via a moeda dentro de toda visão.
+//
+// Este teste existe pra esse erro não poder voltar por nenhum dos dois lados:
+// nem soltando a frase do `mostrarPainel`, nem criando um bloco novo do placar
+// que esqueça de se prender a ela.
+test('DIR-184 · as moedas só existem na CAPA — a regra é uma frase só, sem escape', () => {
+  const M = ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx');
+  assert.match(M, /const mostrarPainel = naCapaDasVisoes;/, 'o mostrarPainel voltou a ter escape — a moeda vaza pra dentro da visão');
+  assert.ok(!/const mostrarPainel = .*painelAberto/.test(M), 'o painelAberto (gravado no aparelho) voltou a abrir o placar dentro da visão');
+  assert.ok(!/const mostrarPainel = .*visao === 'lista'/.test(M), "a Lista voltou a mostrar a moeda por dentro");
+  // o botão morto não pode ressuscitar: sem os dois estados, ele não alterna nada
+  assert.ok(!M.includes('painelAberto'), 'o estado morto do "Eu no Game" voltou');
+  assert.ok(!M.includes('xgame_placar_aberto'), 'a memória do painel morto voltou pro aparelho');
+});
+
+test('DIR-184 · TODO bloco do placar está preso à capa — nenhum solto', () => {
+  const M = ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx');
+  // os blocos pesados do placar, um por um, pelo que os identifica na tela
+  const BLOCOS = ['data-teste="moeda-pizza"', 'data-teste="moeda-pizza-modelo"', 'data-teste="votacao-mvm-toggle"'];
+  for (const marca of BLOCOS) {
+    const i = M.indexOf(marca);
+    assert.ok(i > 0, `sumiu da tela: ${marca}`);
+    // a guarda do bloco mora nas ~400 letras antes dele
+    const antes = M.slice(Math.max(0, i - 400), i);
+    assert.ok(/mostrarPainel|naCapaDasVisoes/.test(antes), `${marca} não está preso à capa — ele vaza pra dentro da visão`);
+  }
+  // e o PlacarDoDia da capa continua sendo o da capa
+  assert.ok(M.includes('{xgame && naCapaDasVisoes && ('), 'o placar se soltou da capa');
+});

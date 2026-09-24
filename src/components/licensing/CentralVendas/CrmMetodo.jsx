@@ -995,25 +995,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setDemandasEsperando(Number(count) || 0);
   }, [uid]);
   useEffect(() => { contarDemandas(); }, [contarDemandas]);
-  // 📌 08/09/2026 — dono: "vamos deixar a opção de a pessoa deixar fixo ou
-  // recolhendo, porque tem gente que vai querer deixar fixo." O aberto/
-  // fechado do "Como estou" persiste (localStorage) — quem deixa aberto,
-  // abre aberto da próxima vez; quem fecha, fecha.
-  const [painelAberto, setPainelAberto] = useState(() => {
-    try { return localStorage.getItem('xgame_placar_aberto') === '1'; } catch { return false; }
-  });
-  const alternarPainel = () => {
-    setPainelAberto((prev) => {
-      const novo = !prev;
-      try { localStorage.setItem('xgame_placar_aberto', novo ? '1' : '0'); } catch { /* sem storage, só não persiste */ }
-      return novo;
-    });
-  };
-  // 📱 no celular o placar completo NÃO abre sozinho na visão "lista" — só pelo
-  // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
-  // "muito texto explicando"). No desktop segue como sempre foi.
+  // 🗑️ DIR-184 — o "Eu no Game" (recolher/fixar o placar, pedido de 08/09)
+  // MORREU aqui, e de propósito: a capa existe justamente pra ser o lugar
+  // onde tudo aparece, e dentro de uma visão nada de placar aparece. Um
+  // botão que não tem mais os dois estados pra alternar é botão morto — e
+  // estado morto gravado no aparelho é o tipo de coisa que volta a assombrar
+  // seis meses depois. A escolha do dono virou a estrutura da tela.
   const celular = useEhCelular();
-  const mostrarPainel = naCapaDasVisoes || (visao === 'lista' && !celular) || painelAberto;
+  // 🪙 DIR-184 (24/09/2026) — dono, olhando o DIR-183: "ficou quase perfeito.
+  // As moedas só têm que aparecer quando eu abrir o quadro. Cliquei na
+  // Jornada, vai sumir tudo, vai aparecer só a Jornada."
+  //
+  // 🔴 O VAZAMENTO: eu prendi o PlacarDoDia à capa, mas esqueci que a moeda em
+  // fatias, o Modelo, o "Onde estou × Executivo Ideal", as Missões e a votação
+  // do MvM são blocos SEPARADOS, todos presos a `mostrarPainel` — e
+  // `mostrarPainel` ainda tinha dois escapes:
+  //   • `visao === 'lista' && !celular`  → dentro da Lista, no computador
+  //   • `painelAberto`                   → que vem GRAVADO no aparelho, então
+  //     quem já tinha o painel aberto via as moedas dentro de TODA visão.
+  // Prender metade do placar à capa e deixar a outra metade solta não é meio
+  // conserto: é o defeito inteiro, porque quem vazava era justamente a moeda.
+  //
+  // Agora é uma frase só, e ela não tem escape: painel = capa.
+  const mostrarPainel = naCapaDasVisoes;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
   // 📣 DIR-134 — o aviso "como funciona o ritual", dos 10min antes da
@@ -2646,9 +2650,6 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 fogo={fogo}
                 hojeFechou={hojeFechou}
                 ehHoje={ehHoje}
-                aberto={painelAberto}
-                onAbrir={alternarPainel}
-                mostrarBotao={false}
                 liberacao={liberacao}
                 teste={podeGerir ? {
                   hora: horaTeste,

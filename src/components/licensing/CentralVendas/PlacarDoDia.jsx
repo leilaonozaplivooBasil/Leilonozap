@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, ChevronDown, Info, X } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import {
   vibrar, VIBRA_TOQUE, fmtReais, CICLO_DIAS_UTEIS, TOKEN_MAX, META_VENDAS_CICLO,
   AVISOS_ANTES_DE_ZERAR, OFENSIVA_META, horaDeMin, VOTACAO_INICIO_MIN, VOTACAO_FIM_MIN,
@@ -40,7 +40,7 @@ const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 //    abre uma folha por baixo, com o texto inteiro.
 export default function PlacarDoDia({
   xgame, ciclo = null, recebido, fogo, hojeFechou = false, ehHoje = true,
-  aberto = false, onAbrir = null, mostrarBotao = true, liberacao = null, teste = null,
+  liberacao = null, teste = null,
   // 🎴 DIR-183 — dentro de uma visão o placar inteiro some ("some a moeda,
   // some tudo"), mas o DIA ZERADO não pode sumir: ele é de hora marcada e
   // custa o dia inteiro. Neste modo só ele aparece, e mais nada.
@@ -113,7 +113,7 @@ export default function PlacarDoDia({
       )}
 
       <div className="rounded-2xl border border-nz-borda bg-white p-4">
-        {/* ── o cabeçalho: o FOGO e o botão do placar completo, juntos ── */}
+        {/* ── o cabeçalho: o FOGO do dia ── */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             {ehHoje && (
@@ -131,20 +131,6 @@ export default function PlacarDoDia({
               </>
             )}
           </div>
-          {mostrarBotao && onAbrir && (
-            <button
-              type="button"
-              onClick={() => { vibrar(VIBRA_TOQUE); onAbrir(); }}
-              aria-expanded={aberto}
-              data-teste="placar-botao"
-              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${
-                aberto ? 'bg-nz-verde text-white shadow-lg' : 'border border-nz-borda text-nz-tinta-fraca hover:text-nz-tinta hover:border-nz-verde/50'}`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              Eu no Game
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${aberto ? 'rotate-180' : ''}`} />
-            </button>
-          )}
         </div>
 
         {/* ── O NÚMERO. Um só. É ele que é o jogo. ── */}

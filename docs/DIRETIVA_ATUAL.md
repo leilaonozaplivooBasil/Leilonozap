@@ -1,44 +1,41 @@
-## 🎴 DIR-183 — A capa das visões do Compromisso (24/09/2026)
+## 🪙 DIR-184 — As moedas vazavam pra dentro das visões (24/09/2026)
 
-**Dono:** "eu preciso da mesma função igual os 08 Hábitos do Sucesso: quando eu
-clicar em Jornada vai sumir os outros, sumir a moeda, sumir TUDO e aparecer só
-o card — exatamente como está funcionando os Hábitos. E eu posso passar
-lateralmente com a seta ou clicando nos quadrados, e ter a página principal
-onde aparecem as moedas e etc."
+**Dono, olhando o DIR-183:** "ficou quase perfeito. As moedas só têm que
+aparecer quando eu abrir o quadro. Cliquei na Jornada, vai sumir tudo, vai
+aparecer só a Jornada."
 
-É o padrão do DIR-179 um nível abaixo. **A causa era a mesma:** `visao` caía em
-`'jornada'` quando nada casava, então a tela NUNCA teve o estado "nenhuma visão
-aberta" — os 5 botões e o conteúdo de uma visão conviviam sempre. Agora são
-dois estados, e nunca os dois juntos:
+**🔴 O que eu errei no DIR-183:** prendi o `PlacarDoDia` à capa e **esqueci que
+a moeda em fatias, o Modelo, o "Onde estou × Executivo Ideal", as Missões e a
+votação do MvM são blocos SEPARADOS**, todos presos a `mostrarPainel` — e o
+`mostrarPainel` ainda tinha dois escapes:
 
-| | |
-|---|---|
-| **CAPA** (`visao === null`) | os 5 quadrados (`PortasDasVisoes`) + o placar inteiro: Human Token, moeda em fatias, fogo, X-Pay |
-| **VISÃO ABERTA** | a barra fina grudada (`BarraDaVisao`: ‹ Nome › + "02 / 05" + ⭐) e só o conteúdo dela |
+```
+const mostrarPainel = naCapaDasVisoes || (visao === 'lista' && !celular) || painelAberto;
+                                          └─ dentro da Lista, no computador   └─ GRAVADO no aparelho
+```
 
-**Duas decisões do dono, com o custo na mesa:**
-- **só o DIA ZERADO fura o foco.** Dentro de uma visão some tudo — menos os
-  avisos de hora marcada que custam o dia inteiro (`furaOFoco()`). O aviso do
-  Ritual do Amanhecer já aparecia acima da faixa e continua aparecendo.
-- **o placar fica só na capa.** É o que dá motivo pra capa existir.
+O segundo é o grave: `painelAberto` vem do `localStorage`, então **quem já
+tinha o painel aberto via a moeda dentro de TODA visão** — exatamente o que o
+dono viu. Prender metade do placar à capa e deixar a outra metade solta não é
+meio conserto: é o defeito inteiro, porque quem vazava era justo a moeda.
 
-**O preço, dito na hora:** um toque a mais pra chegar na Jornada na primeira
-vez do dia. Mitigado por lembrar a última visão + a URL `?visao=` + o atalho ⭐,
-que continuam caindo direto onde a pessoa parou.
+Agora é uma frase só, sem escape: `const mostrarPainel = naCapaDasVisoes;`
+
+**🗑️ E o "Eu no Game" morreu junto**, de propósito. Ele recolhia/fixava o
+placar (pedido de 08/09). Com a capa sendo o lugar onde tudo aparece e a visão
+o lugar onde nada de placar aparece, ele não tem mais dois estados pra
+alternar — botão morto, e estado morto gravado no aparelho é o que volta a
+assombrar seis meses depois. A escolha do dono virou a estrutura da tela.
 
 **Provas:**
-- `tests/capaDasVisoes.test.mjs` (9) — ordem, volta do ‹ ›, precedência
-  URL > aparelho > capa, memória que APAGA ao voltar pra capa, aparelho sem
-  storage, e quem fura o foco.
-- `tests/navegador/guia.spec.mjs` (13) e `atalhoTopCollege.spec.mjs` (2) —
-  Chromium real: dentro de uma visão os outros 4 quadrados somem; o ‹ › dá a
-  volta (05/05 → 01/05); voltar mostra a capa com os cinco e o contador das
-  Demandas; a barra gruda encostada na barra do app com fundo sólido.
-- Mutação: pus a memória na frente da URL → caíram 2 testes (o do atalho
-  junto); fiz o aviso âmbar furar o foco → caiu o teste do foco. Restaurei.
-- Suíte 3689/3689 · lint 0 erro · build OK.
-- `FaixaVisao.jsx` foi apagada: ela era o estado único que esta diretiva
-  desmancha.
+- `tests/capaDasVisoes.test.mjs` (11) — dois testes novos travam a regra pelos
+  DOIS lados: a frase do `mostrarPainel` não pode ganhar escape, e todo bloco
+  do placar tem que estar preso a ela (varre `moeda-pizza`, `moeda-pizza-modelo`
+  e `votacao-mvm-toggle` no arquivo e exige a guarda antes de cada um).
+- Mutação: repus o escape do `painelAberto` → caiu o 1º; soltei a moeda em
+  fatias da capa → caiu o 2º. Restaurei, verde.
+- `tests/navegador/placarDoDia.spec.mjs` (5) no Chromium real.
+- Suíte **3691/3691** · lint 0 erro · build OK.
 
 ---
 

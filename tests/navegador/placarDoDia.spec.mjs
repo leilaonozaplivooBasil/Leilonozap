@@ -119,18 +119,13 @@ test('📱 tocar no número abre a folha com a explicação — nos quatro', { s
   } finally { await ctx.close(); }
 });
 
-test('"Eu no Game" abre e fecha daqui — e o relógio de teste mora no PÉ do placar, longe da navegação', { skip: semNavegador }, async () => {
+// 🗑️ DIR-184 — o "Eu no Game" morreu: a capa existe pra ser o lugar onde
+//    tudo aparece, e dentro de uma visão nada de placar aparece. Sobrou a
+//    prova que ainda vale: o relógio de teste no PÉ, longe da navegação.
+test('o relógio de teste mora no PÉ do placar, longe da navegação', { skip: semNavegador }, async () => {
   const { ctx, pagina, erros } = await abrir('?caso=limpo');
   try {
-    const estado = async () => JSON.parse(await pagina.locator('[data-teste="estado-placar"]').textContent());
-    const botao = pagina.locator('[data-teste="placar-botao"]');
-    await botao.tap();
-    assert.equal((await estado()).aberto, true);
-    assert.equal(await botao.getAttribute('aria-expanded'), 'true');
-    await botao.tap();
-    assert.equal((await estado()).aberto, false);
-
-    // 🧪 o relógio de teste está DEPOIS dos números, no pé do bloco
+    assert.equal(await pagina.$('[data-teste="placar-botao"]'), null, 'o botão morto voltou');
     const ordem = await pagina.evaluate(() => {
       const n = document.querySelector('[data-teste="numero-token"]').getBoundingClientRect().top;
       const t = document.querySelector('[data-teste="modo-teste-pastilha"]').getBoundingClientRect().top;
