@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { secaoDaUrl } from '@/lib/atalhoTopCollege';
+import { habitoDeEntrada, lerUltimoHabito, gravarUltimoHabito, vizinhosDoHabito, numeroDoHabito } from '@/lib/capaDosHabitos';
+import CicloDoXGame from './CicloDoXGame';
+import PortasDosHabitos from './PortasDosHabitos';
+import BarraDoHabito from './BarraDoHabito';
 import { toast } from 'sonner';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
 import { fmtBR, parseValorBR } from '@/lib/money';
@@ -82,7 +86,7 @@ const MASCARA_COSTURA_PALCO = [
 // mesmo alvo do passo 1 de todo tour do app (o grid dos 8 Hábitos).
 const PASSOS_TOUR_ACOMPANHAMENTO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Estes são os seus 8 Hábitos',
     texto: 'Você está no Hábito 6 — Acompanhamento e Fechamento. É aqui que o cliente vive depois da apresentação: negociação, fechamento, ou virar oportunidade na Esteira.',
   },
@@ -99,7 +103,7 @@ const PASSOS_TOUR_ACOMPANHAMENTO = [
 ];
 const PASSOS_TOUR_VERIFICACAO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Estes são os seus 8 Hábitos',
     texto: 'Você está no Hábito 7 — Verificação do Progresso. "O que não se mede não se corrige": é aqui que os números de todo mundo aparecem juntos.',
   },
@@ -142,12 +146,22 @@ export default function CrmClientesTab({ isAdmin, currentUser }) {
   // Executiva (os números da diretoria), o resto abre direto em Clientes.
   // ⭐ 23/09/2026 — ?secao=compromisso (o atalho do cabeçalho) abre a seção
   // direto; sem o parâmetro, o padrão de sempre (ver atalhoTopCollege.js).
-  const [secao, setSecao] = useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search));
+  // 🎴 24/09 — `null` agora É UM ESTADO: a CAPA (as 8 portas + o ciclo da
+  // gamificação). Até aqui a tela caía sempre num hábito, e por isso a grade
+  // e o conteúdo conviviam pra sempre — a causa do "estou sentindo muita
+  // informação". Onde a página abre é régua testável (capaDosHabitos.js).
+  const [secao, setSecao] = useState(() => habitoDeEntrada({
+    daUrl: secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search),
+    doAparelho: lerUltimoHabito(),
+  }));
   const localizacao = useLocation();
   useEffect(() => {
     const s = secaoDaUrl(localizacao.search);
     if (s) setSecao(s);
   }, [localizacao.search]);
+  // quem abriu um hábito volta nele amanhã; quem voltou pra capa quis SAIR do
+  // hábito, e reabrir a página não pode arrastá-lo de volta pra dentro dele.
+  useEffect(() => { gravarUltimoHabito(secao); }, [secao]);
   const [subAcomp, setSubAcomp] = useState('clientes'); // DIR-43 — sub-aba do Hábito 6
   // 🔦 09/09/2026 — DIR-111.2, dono: "eu cliquei nessa pessoa, ela me
   // levou pra página seguinte, eu não posso ter a sensação que estou
@@ -1520,7 +1534,14 @@ _Enviado via CRM Leilão NoZap_`;
 
   // 🧭 DIR-24 Fase 3 — seção ativa e a faixa de resumo (os 4 números que
   // importam, sempre visíveis, pro leitor apressado e pro alto nível).
-  const secaoAtiva = secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento');
+  // 🔴 ANTES: `secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento')`.
+  // Esse `||` era a raiz do problema: não existia "nenhum hábito aberto", e os
+  // blocos `secaoAtiva === 'x'` sempre encontravam um dono. Deixando `null`
+  // passar, TODOS eles se apagam de uma vez — sem precisar embrulhar 500
+  // linhas de JSX num condicional novo, que é onde um erro se esconderia.
+  const secaoAtiva = secao;
+  const naCapa = !secao;
+  const { anterior: habitoAnterior, proximo: habitoProximo } = vizinhosDoHabito(secaoAtiva);
   secaoAtivaRef.current = secaoAtiva; // 🐛 DIR-124 — ver comentário do listener de tour, acima
   // dentro do Hábito 6: alterna entre 👥 Clientes e 🚀 Esteira/Expansão
   const brl = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1723,37 +1744,24 @@ _Enviado via CRM Leilão NoZap_`;
         {/* 🏆 Navegação pelos 8 Hábitos (DIR-43) — trilho escuro, ícone de
             traço no lugar do emoji e o hábito ativo carregando o gradiente
             da Top College (DIR-56). */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 sm:mb-7" data-teste="nav-habitos">
-          {SECOES.map(({ id, n, nome, Icone }) => {
-            const ativo = secaoAtiva === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setSecao(id)}
-                className={`group relative overflow-hidden rounded-xl border px-3 py-3 text-left transition-all ${
-                  ativo
-                    ? 'border-white/25 shadow-lg'
-                    : 'border-white/10 hover:border-white/25 hover:bg-white/[0.04]'
-                }`}
-                style={ativo ? { background: 'linear-gradient(120deg, var(--topcollege-azul), var(--topcollege-roxo) 55%, var(--topcollege-magenta))' } : undefined}
-              >
-                <span className="flex items-center gap-2.5">
-                  <Icone className={`w-[18px] h-[18px] shrink-0 ${ativo ? 'text-white' : 'text-white/45 group-hover:text-white/75'}`} />
-                  <span className="min-w-0">
-                    <span className={`block text-[10px] font-bold tracking-[0.18em] ${ativo ? 'text-white/75' : 'text-white/35'}`}>
-                      {String(n).padStart(2, '0')}
-                    </span>
-                    <span className={`block text-[13px] sm:text-sm font-bold leading-tight truncate ${ativo ? 'text-white' : 'text-white/70'}`}>
-                      {nome}
-                    </span>
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+        {naCapa && (
+        <div className="mb-8 sm:mb-12">
+          <PortasDosHabitos secoes={SECOES} aoAbrir={setSecao} />
         </div>
+      )}
 
+      {!naCapa && (
+        <div className="mb-5 sm:mb-7">
+          <BarraDoHabito
+            numero={numeroDoHabito(secaoAtiva)}
+            aoVoltar={() => setSecao(null)}
+            aoAnterior={() => setSecao(habitoAnterior)}
+            aoProximo={() => setSecao(habitoProximo)}
+          />
+        </div>
+      )}
+
+        {!naCapa && (<>
         {/* 🖼️ DIR-56 — a faixa do brandbook do Hábito aberto: cada hábito tem a
             sua imagem oficial, com o nome por cima. É o que amarra o painel ao
             universo da marca em vez de deixar a tela solta. */}
@@ -1827,6 +1835,7 @@ _Enviado via CRM Leilão NoZap_`;
             style={{ background: 'linear-gradient(90deg, var(--topcollege-azul), var(--topcollege-roxo), var(--topcollege-magenta))' }}
           />
         </div>
+        </>)}
 
         {/* ══ 🏆 HÁBITOS 1-5 e 8 — O MÉTODO VIVO ══
             🔒 06/09 — a lista, o contato e o agendamento são INDIVIDUAIS: só o
@@ -2773,6 +2782,41 @@ _Enviado via CRM Leilão NoZap_`;
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* 🔄 O DESENHO DO CICLO — só na capa, e é ele que responde a pergunta
+            que a tela antiga nunca respondia: por que estas oito portas e o
+            X-Game são a MESMA coisa, e não um método de um lado e um placar
+            do outro. Dentro de um hábito ele não aparece: lá a pessoa já
+            escolheu, e explicação vira ruído. */}
+        {naCapa && (
+          <div className="mt-2 mb-4">
+            <CicloDoXGame />
+          </div>
+        )}
+
+        {/* ▶ O PRÓXIMO HÁBITO, NO PÉ. A barra de cima serve pra quem quer
+            pular; esta serve pra quem LEU até o fim e continua — sem ter que
+            rolar a tela inteira de volta. */}
+        {!naCapa && habitoProximo && (
+          <button
+            type="button"
+            onClick={() => { setSecao(habitoProximo); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            data-teste="proximo-habito-no-pe"
+            className="group mt-10 w-full rounded-2xl border border-white/10 hover:border-white/30 hover:bg-white/[0.05] px-5 py-4 text-left transition-all"
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block text-[10px] font-bold tracking-[0.18em] text-white/35">
+                  PRÓXIMO · {String(numeroDoHabito(habitoProximo)).padStart(2, '0')}
+                </span>
+                <span className="block text-[15px] sm:text-base font-extrabold text-white/85 group-hover:text-white truncate">
+                  {(SECOES.find((x) => x.id === habitoProximo) || {}).nome}
+                </span>
+              </span>
+              <ArrowRight className="w-4 h-4 shrink-0 text-white/40 group-hover:text-white/80 group-hover:translate-x-1 transition-all" />
+            </span>
+          </button>
         )}
 
         {/* 🖼️ DIR-56 — a frase oficial do brandbook fecha o painel. É imagem da

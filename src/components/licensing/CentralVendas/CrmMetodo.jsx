@@ -4378,9 +4378,16 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 // de explicar — a plataforma ensinando, não só narrando.
 
 // Hábito 2 — Compromisso, a tela que a pessoa vive todo dia
+// 🔴 24/09/2026 — TODOS OS PRIMEIROS PASSOS APONTAVAM PRA `nav-habitos`, a
+// grade das 8 portas. Desde a DIR-179 essa grade só existe na CAPA: dentro de
+// um hábito ela some (foi exatamente o pedido do dono). Como estes tours são
+// abertos DE DENTRO do hábito — é lá que a pessoa aperta "Como Funciona" —, a
+// mãozinha passou a apontar pro vazio. A suíte pegou antes de subir, em seis
+// tours de uma vez. Agora eles miram na BARRA do hábito, que é o que ocupa
+// aquele lugar e é, literalmente, o caminho de volta pros 8.
 const PASSOS_TOUR_METODO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Estes são os seus 8 Hábitos',
     texto: 'Sabe qual você vai usar todo santo dia? O Hábito 2 — Compromisso. Os outros sete entram conforme a etapa do seu negócio, mas é aqui que o jogo acontece.',
   },
@@ -4409,7 +4416,7 @@ const PASSOS_TOUR_METODO = [
 // Hábito 1 — Quadro dos Sonhos
 const PASSOS_TOUR_SONHO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Estes são os seus 8 Hábitos',
     texto: 'Você está no Hábito 1 — Sonho. É por aqui que tudo começa: sem saber onde quer chegar, a energia se espalha.',
   },
@@ -4428,7 +4435,7 @@ const PASSOS_TOUR_SONHO = [
 // Hábito 3 — Lista de Networking
 const PASSOS_TOUR_LISTA = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Hábito 3 — Lista de Networking',
     texto: 'Sabe quem você já conhece que podia virar cliente ou parceiro? É isso que essa lista organiza — as pessoas da sua agenda, qualificadas de 1 a 5.',
   },
@@ -4447,7 +4454,7 @@ const PASSOS_TOUR_LISTA = [
 // Hábito 4 — Contato e Convite
 const PASSOS_TOUR_CONTATO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Hábito 4 — Contato e Convite',
     texto: 'Já qualificou alguém no Hábito 3? Essas pessoas aparecem aqui, na fila de quem contatar — as mais qualificadas primeiro.',
   },
@@ -4471,7 +4478,7 @@ const PASSOS_TOUR_CONTATO = [
 // Hábito 5 — Apresentação de Sucesso
 const PASSOS_TOUR_APRESENTACAO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Hábito 5 — Apresentação de Sucesso',
     texto: 'A reunião marcada no Hábito 4 chega aqui. Sabe a meta do método? 3 apresentações por dia, de 45 a 60 minutos cada.',
   },
@@ -4490,7 +4497,7 @@ const PASSOS_TOUR_APRESENTACAO = [
 // Hábito 8 — Duplicação
 const PASSOS_TOUR_DUPLICACAO = [
   {
-    alvo: 'nav-habitos',
+    alvo: 'barra-do-habito',
     titulo: 'Hábito 8 — Duplicação',
     texto: 'Sabe o que separa quem cresce sozinho de quem constrói um time? Ensinar os outros 7 Hábitos pra frente — é isso que esse hábito é.',
   },
