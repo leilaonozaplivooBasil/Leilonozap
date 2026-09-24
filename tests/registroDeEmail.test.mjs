@@ -107,14 +107,14 @@ test('o id da Brevo é lido sem quebrar com corpo estranho', () => {
 test('🔐 a tabela NÃO é legível pela chave pública', () => {
   // A convenção daqui é `USING (true)`, que libera leitura para o anônimo.
   // Aqui seria entregar a lista de e-mail de todo cliente a quem abrir o site.
-  const sql = ler('supabase/migrations/20260919_registro_de_emails.sql');
+  const sql = ler('supabase/migrations/20260920041812_registro_de_emails.sql');
   assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
   assert.match(sql, /REVOKE ALL ON public\.emails_enviados FROM anon, authenticated/);
   assert.ok(!/CREATE POLICY/.test(sql), 'qualquer política aqui abre a lista de e-mails');
 });
 
 test('a tabela não tem coluna para o corpo da mensagem', () => {
-  const sql = semComentarios(ler('supabase/migrations/20260919_registro_de_emails.sql'));
+  const sql = semComentarios(ler('supabase/migrations/20260920041812_registro_de_emails.sql'));
   for (const proibida of ['corpo', 'html', 'body', 'senha', 'token', 'codigo']) {
     assert.ok(!new RegExp(`^\\s+${proibida}\\s`, 'mi').test(sql), `coluna "${proibida}" não pode existir`);
   }

@@ -78,3 +78,72 @@ test('e o arquivo que ia derrubar o deploy está guardado', () => {
   assert.match(sql, /if not exists \(\s*select 1 from pg_constraint/i);
   assert.match(sql, /42710/, 'o arquivo precisa explicar o erro que ele evita');
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🧾 O RETRATO DO BANCO — 22/09/2026
+//
+// O bloco acima protege as órfãs de 09/09, uma a uma, por versão. Isso pega o
+// que já aconteceu; não pega a PRÓXIMA. Em 15/09 três novas foram aplicadas
+// direto na produção sem arquivo, e uma delas derrubou o login por e-mail —
+// sete dias sem ninguém reparar, porque não havia onde ver que o banco tinha
+// andado sem o código andar junto.
+//
+// Daí o retrato em `supabase/migrations/REGISTRADAS_NO_BANCO.txt`: a lista do
+// que o banco diz ter rodado, conferida contra a pasta. Vale para qualquer
+// migração, não só para as que já morderam.
+//
+// 🔴 DUAS REGRAS QUE EU TENTEI ESCREVER AQUI E ESTAVAM ERRADAS
+// A primeira versão exigia carimbo longo em todo arquivo e nome único. As duas
+// quebraram na hora — e os "defeitos" que acusaram são o estado REAL e correto
+// do banco: julho e agosto estão registrados com carimbo curto mesmo, e cinco
+// nomes aparecem duas vezes porque foram aplicados duas vezes. Eu estava
+// inventando regra em vez de medir.
+//
+// 🔴 O QUE ISTO NÃO GARANTE: que o banco não ganhou migração nova HOJE. Um
+// retrato não vira espelho sozinho — conferir antes de mesclar segue na
+// checklist do PR.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** "20260915123622_auditoria_rate_limit.sql" → "20260915123622 auditoria_rate_limit" */
+const chaveDoArquivo = (f) => {
+  const m = /^(\d+)_(.+)\.sql$/.exec(f);
+  return m ? `${m[1]} ${m[2]}` : null;
+};
+
+const retrato = ler('REGISTRADAS_NO_BANCO.txt')
+  .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+
+test('o retrato do banco está legível e completo', () => {
+  assert.ok(retrato.length > 100, `só ${retrato.length} linhas no retrato — o arquivo encolheu?`);
+  assert.deepEqual(retrato.filter((l) => !/^\d+ \S+$/.test(l)), [], 'linha fora do formato "versao nome"');
+  assert.deepEqual(arquivos.filter((f) => chaveDoArquivo(f) === null), [], 'arquivo .sql sem carimbo no nome');
+});
+
+test('🔴 nenhuma migração rodou no banco sem deixar arquivo aqui', () => {
+  // É ISTO que derrubou o login em 15/09. Se esta prova quebrar, alguém
+  // aplicou migração direto na produção: pegue o SQL em
+  // supabase_migrations.schema_migrations e escreva o arquivo COM A VERSÃO DELE.
+  const noRepo = new Set(arquivos.map(chaveDoArquivo));
+  const orfas = retrato.filter((l) => !noRepo.has(l));
+  assert.deepEqual(orfas, [], `aplicada no banco e SEM ARQUIVO aqui:\n  ${orfas.join('\n  ')}`);
+});
+
+test('🔴 nenhum arquivo aqui está por aplicar sem ninguém saber', () => {
+  // O outro lado do mesmo buraco: arquivo que o banco não conhece é reaplicado
+  // no próximo push — e migração que roda duas vezes quebra o que não for
+  // idempotente, que é exatamente a armadilha do ADD CONSTRAINT acima.
+  const noBanco = new Set(retrato);
+  const sozinhos = arquivos.map(chaveDoArquivo).filter((c) => !noBanco.has(c));
+  assert.deepEqual(sozinhos, [], `arquivo que o banco não registra:\n  ${sozinhos.join('\n  ')}`);
+});
+
+test('🔴 as três de 15/09 continuam aqui, com o aviso de não reaplicar', () => {
+  for (const versao of ['20260915123622', '20260915123629', '20260915125821']) {
+    const f = arquivos.find((x) => x.startsWith(versao));
+    assert.ok(f, `sumiu a migração recuperada ${versao}`);
+    const sql = ler(f);
+    assert.match(sql, /RECUPERADO DO BANCO/, `${f}: sem o aviso, alguém apaga achando que é lixo`);
+    assert.match(sql, /NÃO REAPLICAR/, `${f}: perdeu o aviso de não reaplicar`);
+    assert.match(sql, /timestamp NOVO não resolve/, `${f}: precisa ensinar por que outro timestamp não conserta`);
+  }
+});

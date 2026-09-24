@@ -517,7 +517,7 @@ Com `HORIZONTE = 42`, a linha da água caía exatamente atrás da placa escura d
 **2. 📅 Eventos da empresa** (`xgame_eventos`) — evento recorrente por dia da semana (ex.: Mentalidade do CEO, toda segunda 9h-13h), com sua própria lista de tarefas. Decidido com o dono: a rotina do evento **SUBSTITUI** a normal na janela de horário (não soma), e uma vez que a pessoa é marcada no evento, ele **aplica sozinho toda semana** — sem precisar reativar. Implementado em `src/lib/eventosGamificacao.js` (`eventoAplicavelHoje`, `substituirJanelaDoEvento`, `rotinaComEventos`), plugado no cron `gerarJornadaDoDia.js` e nos três lugares que geram o dia sob demanda (ADM X-Game e o próprio Compromisso da pessoa).
 
 **O que entra:**
-1. `xgame_liberacoes` (data, user_id, ate_hora, motivo) + `xgame_eventos` (nome, dia_semana, hora_inicio, hora_fim, tarefas, participantes, ativo) — migração `20260916120000_gamificacao_liberacao_e_eventos.sql`.
+1. `xgame_liberacoes` (data, user_id, ate_hora, motivo) + `xgame_eventos` (nome, dia_semana, hora_inicio, hora_fim, tarefas, participantes, ativo) — migração `20260916114611_gamificacao_liberacao_e_eventos.sql`.
 2. `resumoDoDia` ganha `liberadoAteMin` — aplicado ANTES de qualquer outro cálculo do dia (estado, MvM, X-Pay, pontos, atraso do pronto já enxergam a hora adiada).
 3. ADM X-Game ganha duas abas novas: **🚀 Liberação de evento** (data + horário + seleção múltipla de quem foi liberado, com histórico do dia) e **📅 Eventos da empresa** (criar/editar/ativar/excluir evento, com editor de tarefas e seleção múltipla de participantes).
 4. `CrmMetodo.jsx`/`XGame.jsx` buscam a liberação de hoje da própria pessoa e já geram/mostram o dia com o evento sobreposto (mesma fonte, sem tela nova pra ela ver).
