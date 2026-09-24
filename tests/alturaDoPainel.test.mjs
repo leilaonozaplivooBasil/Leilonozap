@@ -30,20 +30,24 @@ const DEMANDAS = leia('src/pages/Demandas.jsx');
 
 test('a utilidade existe e desconta exatamente o cabeçalho, nos dois tamanhos', () => {
   assert.match(CSS, /\.nz-tela-cheia\s*\{/);
-  assert.match(CSS, /min-height:\s*calc\(100vh - 3\.5rem\)/);
-  assert.match(CSS, /min-height:\s*calc\(100vh - 4rem\)/);
+  // 📱 24/09/2026 — o desconto passou a incluir o ENTALHE do iPhone junto da
+  // altura da barra: é exatamente o que o <main> empurra pra baixo. Sem ele o
+  // painel nasce com o tamanho do entalhe sobrando pra fora do rodapé.
+  assert.match(CSS, /min-height:\s*calc\(100vh - 3\.5rem - var\(--nz-entalhe\)\)/);
+  assert.match(CSS, /min-height:\s*calc\(100vh - 4rem - var\(--nz-entalhe\)\)/);
   // dvh no celular: 100vh conta a barra do navegador que some ao rolar
-  assert.match(CSS, /calc\(100dvh - 3\.5rem\)/);
-  assert.match(CSS, /calc\(100dvh - 4rem\)/);
+  assert.match(CSS, /calc\(100dvh - 3\.5rem - var\(--nz-entalhe\)\)/);
+  assert.match(CSS, /calc\(100dvh - 4rem - var\(--nz-entalhe\)\)/);
 });
 
 test('o desconto BATE com o que o Layout empurra — os dois não podem divergir', () => {
   // se um dia o cabeçalho mudar de altura, este teste cai junto e obriga a
   // mexer nos dois lugares
-  assert.match(LAYOUT, /pt-14 sm:pt-16/, 'o main mudou de offset');
+  assert.match(LAYOUT, /nz-abaixo-da-barra/, 'o main mudou de offset');
   assert.match(LAYOUT, /h-14 sm:h-16/, 'o cabeçalho mudou de altura');
-  // pt-14 = 3.5rem e pt-16 = 4rem — é o que .nz-tela-cheia desconta
-  assert.ok(CSS.includes('calc(100vh - 3.5rem)') && CSS.includes('calc(100vh - 4rem)'));
+  // o main empurra 3.5rem/4rem + entalhe — é EXATAMENTE o que a tela cheia desconta
+  assert.ok(CSS.includes('padding-top: calc(3.5rem + var(--nz-entalhe))') && CSS.includes('padding-top: calc(4rem + var(--nz-entalhe))'));
+  assert.ok(CSS.includes('calc(100vh - 3.5rem - var(--nz-entalhe))') && CSS.includes('calc(100vh - 4rem - var(--nz-entalhe))'));
 });
 
 test('o painel da Top College não pede mais 100vh inteiros', () => {
