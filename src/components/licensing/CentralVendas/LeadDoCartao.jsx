@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Handshake, CalendarPlus, Star, Loader2, X, Search } from 'lucide-react';
+import { Handshake, CalendarPlus, Star, Loader2, X, Search, LayoutPanelTop } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
+import CrmContatoRegistroModal from './CrmContatoRegistroModal';
+import ModalDoLead from './ModalDoLead';
 import { eventoDoCartao, linkGoogleAgenda, diaDoEvento } from '@/lib/agendaDoQuadro';
-import { tokenDoGoogle, invalidarTokenSePreciso, statusDoErro } from '@/lib/googleAgenda';
+import { tokenDoGoogle, invalidarTokenSePreciso, statusDoErro, erroDoGoogle } from '@/lib/googleAgenda';
+import { eventoGoogleDaReuniao } from '@/lib/metodo';
+import { meusContatos, filtrarPorNome, registroComCarimbo, historicoComRegistro } from '@/lib/leadDoQuadro';
 
 /**
  * 🤝📅 O LEAD E A AGENDA, DENTRO DO CARD DO QUADRO.
@@ -25,6 +29,14 @@ import { tokenDoGoogle, invalidarTokenSePreciso, statusDoErro } from '@/lib/goog
  * Nos dois, o follow_up_date do cliente é gravado, e a aba Negociação passa a
  * cobrar na data.
  *
+ * 🧩 24/09/2026 — "TUDO AQUI" (dono: "modal no quadro para que tudo possa ser
+ * feito lá — lista, contatos, e mais. Da qualificação do lead à criação do
+ * contato novo, sem sair do quadro"). O chip abre o ModalDoLead: a minha
+ * lista, cadastrar contato novo (com a trava de duplicado do CRM), qualificar,
+ * registrar o contato (Hábito 4, append em contatos_metodo com carimbo) e
+ * agendar. As regras estão em src/lib/leadDoQuadro.js. Os chips antigos
+ * (Lead · Qualificar · Google Agenda) continuam — são o caminho curto.
+ *
  * Autocontido de propósito: carrega os clientes SÓ quando a pessoa clica —
  * o quadro tem dezenas de cards, e cada um puxando a lista no mount seria
  * dezenas de leituras iguais.
@@ -37,7 +49,9 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
   const [qualificando, setQualificando] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [agendando, setAgendando] = useState(false);
-  const uid = dono?.id || null;
+  const [modalAberto, setModalAberto] = useState(false);
+  const [contatando, setContatando] = useState(null);
+  const [salvandoRegistro, setSalvandoRegistro] = useState(false);
 
   const carregarClientes = async () => {
     if (clientes) return clientes;
@@ -45,7 +59,7 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
     try {
       const todos = await plataforma.entities.Customer.list();
       // a MESMA régua do Método: cada um só a própria lista; super admin todas
-      const meus = dono?.role === 'super_admin' ? (todos || []) : (todos || []).filter((c) => c?.created_by_id && c.created_by_id === uid);
+      const meus = meusContatos(todos, dono);
       setClientes(meus);
       return meus;
     } catch { toast.error('Não consegui carregar seus clientes'); return []; }
@@ -53,6 +67,7 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
   };
 
   const abrirEscolha = async () => { setEscolhendo(true); await carregarClientes(); };
+  const abrirModal = async () => { setModalAberto(true); await carregarClientes(); };
 
   const vincular = async (c) => {
     await onMudar({ ...cartao, cliente_id: c.id, cliente_nome: c.full_name || 'Cliente' });
@@ -77,6 +92,45 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
       setQualificando(null);
     } catch { toast.error('Não salvou a qualificação'); }
     finally { setSalvando(false); }
+  };
+
+  // 📜 Hábito 4 pelo card: o MESMO append-only de customers.contatos_metodo,
+  // com o carimbo de quem registrou (ver handleRegistrarContatoMetodo no CRM).
+  const registrarContato = async (contato, registro) => {
+    setSalvandoRegistro(true);
+    try {
+      const completo = registroComCarimbo(registro, dono);
+      const historico = historicoComRegistro(contato, completo);
+      await plataforma.entities.Customer.update(contato.id, { contatos_metodo: historico });
+      setClientes((l) => (l || []).map((x) => (x.id === contato.id ? { ...x, contatos_metodo: historico } : x)));
+      toast.success(registro.resultado === 'agendado' ? `Reunião agendada com ${contato.full_name || 'o contato'}` : `Contato registrado: ${contato.full_name || ''}`);
+      setContatando(null);
+    } catch { toast.error('Não salvou o registro do contato'); }
+    finally { setSalvandoRegistro(false); }
+  };
+  // o evento da reunião AGENDADA no registro — a mesma criação do Método
+  const criarEventoNoGoogle = async (registro, cliente) => {
+    try {
+      const corpo = eventoGoogleDaReuniao({
+        titulo: registro.titulo_reuniao || `Reunião — ${cliente?.full_name || 'contato'} (Leilão NoZap)`,
+        inicio: registro.quando, duracaoMin: registro.duracao_min || 60,
+        detalhes: registro.obs || 'Apresentação de sucesso — Leilão NoZap', local: registro.local || '',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
+      });
+      if (!corpo) return null;
+      const token = await tokenDoGoogle();
+      const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo),
+      });
+      if (!resp.ok) throw erroDoGoogle(resp);
+      const j = await resp.json();
+      if (j?.id) registro.google_event_id = j.id;
+      return j?.htmlLink || null;
+    } catch (e) {
+      invalidarTokenSePreciso(statusDoErro(e));
+      toast.info('Não deu pra criar no Google agora — o agendamento foi salvo no histórico do contato.');
+      return null;
+    }
   };
 
   const agendar = async () => {
@@ -105,7 +159,14 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
     setAgendando(false);
   };
 
-  const filtrados = (clientes || []).filter((c) => !termo || String(c.full_name || '').toLowerCase().includes(termo.toLowerCase())).slice(0, 8);
+  // o contato novo cadastrado pelo painel: entra na lista, vira o cliente do
+  // card e já abre a qualificação — o mesmo fluxo de escolher um da lista
+  const aoCriarContato = async (c) => {
+    setClientes((l) => [c, ...(l || [])]);
+    await vincular(c);
+  };
+
+  const filtrados = filtrarPorNome(clientes || [], termo, 8);
 
   return (
     <div className="mt-2.5" data-teste="lead-do-cartao">
@@ -128,6 +189,9 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
         <button type="button" onClick={agendar} disabled={agendando} className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/10 disabled:opacity-50" data-teste="agendar-google">
           {agendando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />} Google Agenda
         </button>
+        <button type="button" onClick={abrirModal} title="Lista, contato novo, qualificar, registrar contato e agendar — sem sair do quadro" className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/10" data-teste="abrir-modal-lead">
+          <LayoutPanelTop className="w-3.5 h-3.5 text-nz-verde" /> Tudo aqui
+        </button>
       </div>
 
       {escolhendo && (
@@ -149,7 +213,21 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
         </div>
       )}
 
+      {/* o painel "Tudo aqui" vem ANTES dos dois modais abaixo de propósito: os
+          três são sobrepostos fixos z-50, e quem monta depois fica por cima */}
+      <ModalDoLead
+        aberto={modalAberto} onFechar={() => setModalAberto(false)}
+        cartao={cartao} dono={dono} hoje={hoje} clientes={clientes || []} carregando={carregando}
+        onVincular={vincular} onDesvincular={desvincular}
+        onQualificar={(c) => setQualificando(c)} onContatar={(c) => setContatando(c)}
+        onAgendar={agendar} agendando={agendando} onCriado={aoCriarContato}
+      />
       <CrmNetworkQualificacaoModal contato={qualificando} onFechar={() => setQualificando(null)} onSalvar={salvarQualificacao} salvando={salvando} />
+      <CrmContatoRegistroModal
+        aberto={contatando !== null} contatoInicial={contatando} contatos={clientes || []}
+        onFechar={() => setContatando(null)} onSalvar={registrarContato} salvando={salvandoRegistro}
+        criarNoGoogleFn={criarEventoNoGoogle} autor={dono}
+      />
     </div>
   );
 }

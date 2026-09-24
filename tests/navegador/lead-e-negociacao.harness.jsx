@@ -17,6 +17,9 @@ import Negociacao from '@/components/licensing/CentralVendas/Negociacao';
 const tela = new URLSearchParams(window.location.search).get('tela') || 'quadro';
 const EU = { id: 'a1b2c3d4e5f60718293a4b5c', full_name: 'Verônica Teste', role: 'user' };
 const HOJE = '2026-09-23';
+// a Negociação usa o dia REAL (não recebe hojeISO) — o follow-up "de hoje" do
+// José tem que acompanhar o calendário, senão a banca envelhece em um dia
+const HOJE_REAL = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
 // abrir aba nova não existe na banca — guardo a URL pra prova ler
 window.__abriu = [];
@@ -25,7 +28,7 @@ window.open = (url) => { window.__abriu.push(String(url)); return null; };
 window.__entidadesFalsas = {
   Customer: [
     { id: 'c1', full_name: 'Ângela Conceição', created_by_id: EU.id, purchase_status: 'em_negociacao', follow_up_date: '2026-09-10', next_steps: 'mandar proposta' },
-    { id: 'c2', full_name: 'José Antônio', created_by_id: EU.id, purchase_status: 'em_negociacao', follow_up_date: '2026-09-23', qualificacao_network: { abertura: 5, necessidade: 4, poder: 3 } },
+    { id: 'c2', full_name: 'José Antônio', created_by_id: EU.id, purchase_status: 'em_negociacao', follow_up_date: HOJE_REAL, qualificacao_network: { produto: 'parceiro', confianca: 5, financeiro: 4, apetite: 3 } },
     { id: 'c3', full_name: 'Luís Gonçalves', created_by_id: EU.id, purchase_status: 'em_negociacao' },
     { id: 'c4', full_name: 'Cliente de Outro', created_by_id: 'outra-pessoa', purchase_status: 'em_negociacao', follow_up_date: '2026-09-01' },
     { id: 'c5', full_name: 'Já Pagou', created_by_id: EU.id, purchase_status: 'pago' },
