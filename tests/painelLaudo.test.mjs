@@ -38,11 +38,15 @@ test('🔴 nenhum botão de decisão entrou junto', () => {
 test('🔴 a tela se esconde sozinha de quem não pode', () => {
   // A guarda mora DENTRO do componente, e não em quem o desenha: assim ela
   // não depende de a próxima tela que o usar lembrar de checar.
-  assert.match(PAINEL, /const liberado = podeVerLaudo\(currentUser\)/, 'a tela parou de perguntar quem está olhando');
+  // 24/09/2026 — a pergunta virou "qual o escopo?" (todos × só o próprio),
+  // e liberado é "tem algum escopo". Quem não tem, continua sem tela.
+  assert.match(PAINEL, /const escopo = escopoDoLaudo\(currentUser\)/, 'a tela parou de perguntar quem está olhando');
+  assert.match(PAINEL, /const liberado = !!escopo/, 'liberado deixou de derivar do escopo');
   assert.match(PAINEL, /if \(!liberado\) return null;/, 'sumiu o desligamento da tela pra quem não tem permissão');
   // E a busca no banco também espera a permissão — senão ela iria buscar os
-  // dados de todo mundo antes de decidir que não podia mostrar.
-  assert.match(PAINEL, /if \(!liberado\) return;/, 'a tela passou a buscar dado antes de checar a permissão');
+  // dados de todo mundo antes de decidir que não podia mostrar. (Quem só vê
+  // o próprio dia nem chega a buscar a equipe.)
+  assert.match(PAINEL, /if \(!liberado \|\| soOProprio\) return;/, 'a tela passou a buscar a equipe antes de checar a permissão');
 });
 
 test('⚠️ ela só puxa a pessoa escolhida, nunca a base inteira', () => {
