@@ -28,7 +28,9 @@
 
 **Prova de código:** suíte 3632/3632 (`atalhoTopCollege.test.mjs` atualizado: sai do NavDesktop, um só no Layout, sem placa, arquivo 3D existe), lint 0 erros, build ok.
 
-**Status:** NO PREVIEW OFICIAL, aguardando o OK do dono para produção.
+**Ajustes no preview (mesmo dia, três rodadas com o dono):** (1) *"faceando com o martelo dá impressão de descentralizado"* — a logo tem a ponta do balão embaixo, o centro visual dela fica abaixo do centro da caixa: o símbolo desce 3px e ganha respiro à direita; (2) *"quando passo o mouse na logo ela vem pra frente; na Top College está parada"* — o deslocamento era um `transform` em linha e engolia o `hover:scale`; virou classe e os dois se somam; (3) a barra do app (DIR-177) vira **vidro** como o bloco Leilões Ativos — fundo quase sem cor própria, desfoque forte, rótulo com sombra de texto — e a linha divisória cai a 4% (*"praticamente imperceptível sem ficar feio"*). Cada rodada foi ao preview oficial antes; produção só com o "PODE COLOCAR EM PRODUÇÃO" do dono.
+
+**Status:** EM VIGOR.
 
 ---
 
