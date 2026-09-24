@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { lerAtalho, gravarAtalho, visaoDaUrl, normalizarDestino } from '@/lib/atalhoTopCollege';
+import {
+  visaoDeEntrada, lerUltimaVisao, gravarUltimaVisao, vizinhasDaVisao,
+} from '@/lib/capaDasVisoes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,7 +35,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  ordenarPorHora, horaEntre, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  ordenarPorHora, horaEntre, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -43,7 +46,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, deveAvisarRitual, janelaDoRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
   minutosDeHora,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
@@ -57,7 +60,6 @@ import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 import { vendasDaPessoa, filtroOrDonoDaVenda } from '@/lib/vendasDoCiclo';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
-import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import { BarraProgresso } from './VerificacaoUI';
 import EntradaComDestinos, { campoEscuro, estiloSelectEscuro } from './EntradaComDestinos';
@@ -83,7 +85,9 @@ import { cartaoDaTarefa, LISTAS_MODELO } from '@/lib/quadroCompromisso';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
-import FaixaVisao from './FaixaVisao';
+import PlacarDoDia from './PlacarDoDia';
+import PortasDasVisoes from './PortasDasVisoes';
+import BarraDaVisao from './BarraDaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -955,12 +959,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   // ⭐ 23/09/2026 — ?visao=quadro (o atalho do cabeçalho) abre a visão direto.
-  const [visao, setVisao] = useState(() => visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search) || 'jornada');
+  // 🎴 DIR-183 — a visão pode ser NULL, e null É A CAPA. Antes ela caía em
+  // 'jornada' quando nada casava, então a tela NUNCA teve um estado "nenhuma
+  // visão aberta" — os 5 botões e o conteúdo de uma visão conviviam sempre,
+  // que é exatamente o peso que o dono sentiu. Ver src/lib/capaDasVisoes.js.
+  const [visao, setVisao] = useState(() => visaoDeEntrada({
+    daUrl: visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search),
+    doAparelho: lerUltimaVisao(),
+  }));
   const localizacao = useLocation();
   useEffect(() => {
     const v = visaoDaUrl(localizacao.search);
     if (v) setVisao(v);
   }, [localizacao.search]);
+  // 🎴 DIR-183 — lembra a última visão neste aparelho. Voltar pra capa APAGA
+  // a memória de propósito (gravarUltimaVisao(null)): quem voltou quis sair.
+  useEffect(() => { gravarUltimaVisao(visao); }, [visao]);
+  // os dois estados da tela, e nada no meio: ou a capa, ou UMA visão aberta.
+  const naCapaDasVisoes = !visao;
+  const vizinhas = vizinhasDaVisao(visao);
   // a visão que a pessoa fixou como atalho — aparelho primeiro, perfil manda
   const [atalho, setAtalho] = useState(() => lerAtalho());
   // 🌱 a demanda que o dono mandou "abrir no mapa": guarda o TÍTULO, não a
@@ -978,25 +995,29 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setDemandasEsperando(Number(count) || 0);
   }, [uid]);
   useEffect(() => { contarDemandas(); }, [contarDemandas]);
-  // 📌 08/09/2026 — dono: "vamos deixar a opção de a pessoa deixar fixo ou
-  // recolhendo, porque tem gente que vai querer deixar fixo." O aberto/
-  // fechado do "Como estou" persiste (localStorage) — quem deixa aberto,
-  // abre aberto da próxima vez; quem fecha, fecha.
-  const [painelAberto, setPainelAberto] = useState(() => {
-    try { return localStorage.getItem('xgame_placar_aberto') === '1'; } catch { return false; }
-  });
-  const alternarPainel = () => {
-    setPainelAberto((prev) => {
-      const novo = !prev;
-      try { localStorage.setItem('xgame_placar_aberto', novo ? '1' : '0'); } catch { /* sem storage, só não persiste */ }
-      return novo;
-    });
-  };
-  // 📱 no celular o placar completo NÃO abre sozinho na visão "lista" — só pelo
-  // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
-  // "muito texto explicando"). No desktop segue como sempre foi.
+  // 🗑️ DIR-184 — o "Eu no Game" (recolher/fixar o placar, pedido de 08/09)
+  // MORREU aqui, e de propósito: a capa existe justamente pra ser o lugar
+  // onde tudo aparece, e dentro de uma visão nada de placar aparece. Um
+  // botão que não tem mais os dois estados pra alternar é botão morto — e
+  // estado morto gravado no aparelho é o tipo de coisa que volta a assombrar
+  // seis meses depois. A escolha do dono virou a estrutura da tela.
   const celular = useEhCelular();
-  const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
+  // 🪙 DIR-184 (24/09/2026) — dono, olhando o DIR-183: "ficou quase perfeito.
+  // As moedas só têm que aparecer quando eu abrir o quadro. Cliquei na
+  // Jornada, vai sumir tudo, vai aparecer só a Jornada."
+  //
+  // 🔴 O VAZAMENTO: eu prendi o PlacarDoDia à capa, mas esqueci que a moeda em
+  // fatias, o Modelo, o "Onde estou × Executivo Ideal", as Missões e a votação
+  // do MvM são blocos SEPARADOS, todos presos a `mostrarPainel` — e
+  // `mostrarPainel` ainda tinha dois escapes:
+  //   • `visao === 'lista' && !celular`  → dentro da Lista, no computador
+  //   • `painelAberto`                   → que vem GRAVADO no aparelho, então
+  //     quem já tinha o painel aberto via as moedas dentro de TODA visão.
+  // Prender metade do placar à capa e deixar a outra metade solta não é meio
+  // conserto: é o defeito inteiro, porque quem vazava era justamente a moeda.
+  //
+  // Agora é uma frase só, e ela não tem escape: painel = capa.
+  const mostrarPainel = naCapaDasVisoes;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
   // 📣 DIR-134 — o aviso "como funciona o ritual", dos 10min antes da
@@ -2579,24 +2600,57 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
-            {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
-                A faixa inteira (seletor, placar e o relógio de teste temporário)
-                mora em FaixaVisao — bonita, funcional e com prova em navegador. */}
-            {(tarefas.length > 0 || visao === 'quadro') && (
-              <FaixaVisao
+            {/* ══ 🎴 DIR-183 — OS DOIS ESTADOS DA TELA ══
+                Dono: "eu preciso da mesma função igual os 08 Hábitos do
+                Sucesso: quando eu clicar em Jornada vai sumir os outros,
+                sumir a moeda, sumir TUDO e aparecer só o card... e ter a
+                página principal onde aparecem as moedas."
+
+                CAPA         → os 5 quadrados (+ o placar, logo abaixo)
+                VISÃO ABERTA → a barra fina grudada, e só o conteúdo dela
+                Nunca os dois. Regras em src/lib/capaDasVisoes.js. */}
+            {naCapaDasVisoes ? (
+              <PortasDasVisoes aoAbrir={setVisao} demandasEsperando={demandasEsperando} />
+            ) : (
+              <BarraDaVisao
                 visao={visao}
-                onVisao={setVisao}
-                atalho={atalho}
-                onAtalho={(id) => {
+                aoVoltar={() => setVisao(null)}
+                aoAnterior={() => setVisao(vizinhas.anterior)}
+                aoProxima={() => setVisao(vizinhas.proxima)}
+                ehOAtalho={atalho === visao}
+                aoFixarAtalho={(id) => {
                   const d = normalizarDestino(id);
                   setAtalho(gravarAtalho(d));
                   // best-effort: sem perfil ainda, cria; se falhar, o aparelho já guardou
                   salvarPerfil({ atalho_destino: d }).catch(() => {});
                 }}
-                placarAberto={painelAberto}
-                onPlacar={alternarPainel}
-                mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
-                demandasEsperando={demandasEsperando}
+              />
+            )}
+
+            {/* ══ 🎯 O PLACAR DO DIA — DIR-180 (24/09/2026) ══
+                Dono, com o print da tela no celular: "pra gente deixar isso
+                ainda mais limpo... a pessoa entender melhor."
+
+                Aqui moravam SEIS blocos empilhados: a linha do 🔥, quatro
+                avisos condicionais e a grade dos quatro cartões. Com dois
+                avisos disparando junto a pessoa lia três blocos vermelhos
+                ANTES do próprio número — e os dois vermelhos dizem a mesma
+                coisa ("DIA ZERADO"). Tudo isso virou UM bloco só, com UM
+                alerta (o mais grave) e UM número grande: PlacarDoDia.jsx,
+                com a regra do alerta em src/lib/placarDoDia.js. */}
+            {/* 🎴 DIR-183 — o placar é da CAPA. Dentro de uma visão "some a
+                moeda, some tudo" (ordem do dono). O que NÃO some é o DIA
+                ZERADO: ele é de hora marcada e custa o dia inteiro da
+                pessoa — ver furaOFoco() em src/lib/capaDasVisoes.js. */}
+            {xgame && naCapaDasVisoes && (
+              <PlacarDoDia
+                xgame={xgame}
+                ciclo={ciclo}
+                recebido={recebido}
+                fogo={fogo}
+                hojeFechou={hojeFechou}
+                ehHoje={ehHoje}
+                liberacao={liberacao}
                 teste={podeGerir ? {
                   hora: horaTeste,
                   rascunho: horaRascunho,
@@ -2606,118 +2660,23 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 } : null}
               />
             )}
-
-            {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
-            {xgame && ehHoje && (
-              <div className="flex items-center justify-between gap-2 flex-wrap border-t border-nz-borda/40 pt-3">
-                <p className="text-sm font-bold text-nz-tinta">
-                  🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
-                  {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-600">🧊 congelador usado</span>}
-                </p>
-                <p className="text-[11px] text-nz-tinta-fraca">
-                  {hojeFechou
-                    ? 'hoje FECHADO ✔ — o fogo continua'
-                    : `feche ${Math.round(OFENSIVA_META * 100)}% do dia pra ${fogo.dias > 0 ? 'manter o fogo' : 'acender o fogo'}`}
-                  {!fogo.congelou && ' · 1 congelador automático por ofensiva'}
-                </p>
-              </div>
+            {/* 🚨 DIR-183 — o único que fura o foco: DIA ZERADO. Decisão do
+                dono, com o custo na mesa. Quem estiver dentro da Jornada
+                precisa saber que perdeu o dia; o resto espera na capa. */}
+            {xgame && !naCapaDasVisoes && (
+              <PlacarDoDia
+                somenteAlertaQueFura
+                xgame={xgame}
+                ciclo={ciclo}
+                recebido={recebido}
+                fogo={fogo}
+                ehHoje={ehHoje}
+                liberacao={liberacao}
+              />
             )}
             {xgame && ehHoje && progressoJogo.pct >= 100 && (
               <div className="py-2 text-center animate-pulse">
                 <p className="text-sm font-bold text-nz-verde">🎊 💎 DIA PERFEITO — BRILHANTE! PARABÉNS! 🎊</p>
-              </div>
-            )}
-
-            {/* 🚀 16/09/2026 — dono, ao vivo, testando a liberação de evento
-                (corrida da empresa às 4h): "eu preciso que apareça na história
-                dele que foi liberado pelo administrador pelo evento... só essa
-                comunicação que tem que melhorar." Sem isto, a pessoa via os
-                números mudarem mas não sabia POR QUÊ — a régua ficou clara
-                pro dono no ADM, mas muda pro jogador sem explicação nenhuma. */}
-            {xgame && ehHoje && liberacao?.ate_hora && mostrarPainel && (
-              <div className="rounded-lg border-2 border-nz-verde bg-emerald-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-emerald-700">🚀 LIBERADO PELO ADMINISTRADOR até as {liberacao.ate_hora}{liberacao.motivo ? ` — ${liberacao.motivo}` : ''}</p>
-                <p className="text-[11px] text-emerald-600 mt-0.5">
-                  Suas tarefas de hoje com horário antes desse não perdem MvM, pontos nem X-Pay por atraso — a empresa liberou pra você por causa do evento. Depois das {liberacao.ate_hora}, a régua normal volta a valer.
-                </p>
-              </div>
-            )}
-
-            {/* 🔥 08/09/2026 — dono: "não vou, perde o dinheiro, perde a MvM,
-                perde tudo do dia... precisa ser radical." Não é um detalhe
-                dentro do bloco de votação (que pode estar recolhido) — é um
-                alerta do tamanho real do problema, no topo do placar: o dia
-                inteiro, dinheiro incluído, não só a MvM. */}
-            {xgame && ehHoje && xgame.perdeu_por_nao_votar && mostrarPainel && (
-              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-red-700">🗳️ DIA ZERADO — você não votou em todos os colegas até as {horaDeMin(VOTACAO_FIM_MIN)}</p>
-                <p className="text-[11px] text-red-600 mt-0.5">Não é só a MvM: hoje o Human Token, os pontos e o X-Pay que você ganharia também zeraram. Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
-              </div>
-            )}
-
-            {/* ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto],
-                além de ele perder o dinheiro, isso tem que tirar pontos dele."
-                A mensagem pro cara, na hora, do mesmo jeito grave do não-votar. */}
-            {xgame && ehHoje && xgame.perdeu_por_atraso_pronto && mostrarPainel && (
-              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-red-700">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
-                <p className="text-[11px] text-red-600 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
-              </div>
-            )}
-
-            {/* 🟡 09/09/2026 — DIR-105: 1º-3º atraso é só aviso/treino (perde
-                pontos, resto do dia intacto) — só o 4º em diante vira o zero
-                radical acima. */}
-            {xgame && ehHoje && xgame.em_aviso_pronto && mostrarPainel && (
-              <div className="rounded-lg border-2 border-amber-500 bg-amber-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-amber-700">⚠️ AVISO {xgame.avisos_pronto + 1} DE {AVISOS_ANTES_DE_ZERAR} — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
-                <p className="text-[11px] text-amber-700/90 mt-0.5">
-                  Você perdeu pontos hoje por isso, mas MvM, Human Token e X-Pay continuam de pé. {xgame.avisos_pronto + 1 >= AVISOS_ANTES_DE_ZERAR
-                    ? 'Da próxima vez o dia INTEIRO zera — sem exceção.'
-                    : `Da próxima vez o aviso sobe pra ${xgame.avisos_pronto + 2} de ${AVISOS_ANTES_DE_ZERAR}. No ${AVISOS_ANTES_DE_ZERAR + 1}º, zera tudo.`}
-                </p>
-              </div>
-            )}
-
-            {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
-            {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze, abaixo de 8 barra a Platina. Ligas: 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima (só abre batendo os dois portões: caráter e 100% da meta de vendas). Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{ciclo ? ciclo.liga.emoji : xgame.faixa.medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}</p>
-                </div>
-                {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o
-                    MVM dele é sete, vai aparecer sete, não sete ponto
-                    setenta e cinco e nove em cima" — o número GRANDE virava
-                    o automático (mvm_dia), com o de verdade (a votação, o
-                    único que entra na moeda) escondido no rodapé pequeno.
-                    Trocado: o número grande agora É o oficial. */}
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`Só a VOTAÇÃO DO CICLO (as notas que você recebe dos colegas, 1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}) entra no Human Token — é este número. O "automático" (o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta) é só uma estimativa de humor do dia — NÃO conta pra moeda.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM (oficial) ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{recebido.media !== null ? fmtToken(recebido.media) : '—'}</p>
-                  <p className={`text-[10px] font-semibold ${recebido.media !== null && recebido.media < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
-                    {recebido.media !== null ? `${xgame.frase_mvm} · o que conta na moeda` : 'ainda sem voto recebido neste ciclo'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
-                </div>
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ ${DIAS_FIXO} dias de operação = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
-                  <p className="text-xl font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">
-                    {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
-                  </p>
-                  {/* 💰 06/09/2026 — o dia vale o fixo ÷ 22; com menos tarefas que o mínimo, paga proporcional */}
-                  {xgame.xpay.pesoFalta > 0 && (
-                    <p className="text-[10px] text-amber-600 font-semibold" data-teste="xpay-faltam">
-                      dia vale {fmtReais(xgame.xpay.valorDia)} · peso {xgame.xpay.somaPesos} de {xgame.xpay.pesoReferencia}: falta {xgame.xpay.pesoFalta} pro dia completo
-                    </p>
-                  )}
-                </div>
               </div>
             )}
 
@@ -2775,7 +2734,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 oficiais da planilha ("Onde Estou" e "Executivo Ideal", ditados
                 pelo dono ao pé da letra), ícone + card + barra grossa por
                 eixo. Reaparece nas 3 visões (Jornada/Lista/Quadro) porque o
-                "meu placar" agora também abre no Quadro (FaixaVisao acima). */}
+                "meu placar" agora também abre no Quadro. DIR-183: e SÓ na capa. */}
             {xgame && ciclo && mostrarPainel && (
               <div className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/20 p-4 sm:p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -3091,7 +3050,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* 🗂️ DIR-75 — o nosso quadro é uma VISÃO do dia, e vem antes do
                 "dia vazio": a mesa da organização existe mesmo num dia sem
                 Master Task gerada. */}
-            {visao === 'demandas' ? (
+            {/* 🎴 DIR-183 — na CAPA nenhuma visão renderiza. Sem esta guarda o
+                último `else` da cadeia (que é a LISTA) apareceria na capa. */}
+            {naCapaDasVisoes ? null : visao === 'demandas' ? (
               /* 🧠 A caixa de entrada da mente. Recebe `uid` e o dia porque
                  lê e escreve nas MESMAS tabelas do resto do Compromisso —
                  diferente do Mapa, cujo dono sai do crachá no servidor. */

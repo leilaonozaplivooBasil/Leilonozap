@@ -7,6 +7,7 @@ import {
   DESTINOS_DO_ATALHO, DESTINO_PADRAO, CHAVE_ATALHO, normalizarDestino, rotuloDoDestino, urlDoAtalho,
   mostraAtalho, lerAtalho, gravarAtalho, secaoDaUrl, visaoDaUrl,
 } from '../src/lib/atalhoTopCollege.js';
+import { visaoDeEntrada } from '../src/lib/capaDasVisoes.js';
 import { habitoDeEntrada } from '../src/lib/capaDosHabitos.js';
 
 const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
@@ -66,7 +67,11 @@ test('o ícone está no cabeçalho (desktop e celular), a URL abre a seção e a
   const ICONE = ler('../src/components/nav/AtalhoTopCollege.jsx');
   const CRM = ler('../src/components/licensing/CentralVendas/CrmClientesTab.jsx');
   const METODO = ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx');
-  const FAIXA = ler('../src/components/licensing/CentralVendas/FaixaVisao.jsx');
+  // 🎴 24/09 (DIR-183) — a fileira das visões virou DOIS estados, igual aos 8
+  // Hábitos: PortasDasVisoes (a capa) e BarraDaVisao (a visão aberta). A
+  // estrela mudou de casa junto — ela age sobre a visão ABERTA, então mora na
+  // barra. A regra que este teste guarda é a mesma.
+  const BARRA = ler('../src/components/licensing/CentralVendas/BarraDaVisao.jsx');
   // 🧊 24/09 — a Top College mora colada na logo (Layout, celular E computador); saiu do NavDesktop e do canto do menu mobile
   assert.ok(!NAV.includes('<AtalhoTopCollege'));
   assert.ok(LAYOUT.includes('<AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} className="ml-1 md:ml-0" />'));
@@ -100,9 +105,15 @@ test('o ícone está no cabeçalho (desktop e celular), a URL abre a seção e a
   assert.ok(LIC.includes("if (VALID_LICENSING_TABS.includes(t)) setActiveTab(t);"));
   assert.ok(LIC.includes("if (VALID_CATALOG_SUBTABS.includes(c)) setCatalogSubTab(c);"));
   assert.ok(LIC.includes("}, [localizacao.search]);"));
-  assert.ok(METODO.includes("useState(() => visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search) || 'jornada')"));
+  // o estado inicial da VISÃO passou pela mesma régua que o do hábito: a URL
+  // manda, depois o aparelho, e null é a capa (visaoDeEntrada, capaDasVisoes.js)
+  assert.ok(METODO.includes('visaoDeEntrada({'), 'o estado inicial da visão saiu da régua testável');
+  assert.ok(METODO.includes("daUrl: visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search)"));
+  assert.ok(METODO.includes('doAparelho: lerUltimaVisao()'));
+  assert.equal(visaoDeEntrada({ daUrl: 'quadro', doAparelho: 'lista' }), 'quadro', 'a URL precisa vencer a memória da visão também');
   assert.ok(METODO.includes('if (p?.atalho_destino) setAtalho(gravarAtalho(p.atalho_destino));'));
   assert.ok(METODO.includes('salvarPerfil({ atalho_destino: d })'));
-  assert.ok(FAIXA.includes('data-teste="fixar-atalho"'));
-  assert.ok(FAIXA.includes('const ehOAtalho = Boolean(onAtalho) && atalho === visao;'));
+  assert.ok(BARRA.includes('data-teste="fixar-atalho"'));
+  assert.ok(BARRA.includes('aria-pressed={ehOAtalho}'));
+  assert.ok(METODO.includes('ehOAtalho={atalho === visao}'), 'a barra não sabe mais qual visão é o atalho');
 });

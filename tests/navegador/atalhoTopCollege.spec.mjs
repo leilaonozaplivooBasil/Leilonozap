@@ -53,7 +53,11 @@ test('⭐ logado: o ícone leva pra Jornada; abre o Quadro, fixa pela estrela, e
     const href = () => pagina.$eval('[data-teste="atalho-topcollege"]', (a) => a.getAttribute('href'));
     assert.equal(await href(), '/Licensing?tab=catalogo&catalogTab=catalogo-crm&secao=compromisso&visao=jornada');
     assert.equal(await pagina.$eval('[data-teste="fixar-atalho"]', (b) => b.getAttribute('aria-pressed')), 'true', 'a Jornada já é o atalho padrão');
-    await pagina.click('[role="tab"][aria-label="Quadro"]');
+    // 🎴 DIR-183 — não existem mais 5 abas na tela ao mesmo tempo: dentro de
+    // uma visão passa-se de lado com o ‹ ›. Jornada → Lista → Quadro.
+    await pagina.click('[data-teste="visao-proxima"]');
+    await pagina.click('[data-teste="visao-proxima"]');
+    assert.match(await pagina.$eval('[data-teste="barra-da-visao"]', (n) => n.innerText), /Quadro/);
     assert.equal(await pagina.$eval('[data-teste="fixar-atalho"]', (b) => b.getAttribute('aria-pressed')), 'false');
     await pagina.click('[data-teste="fixar-atalho"]');
     assert.equal(await pagina.$eval('[data-teste="fixar-atalho"]', (b) => b.getAttribute('aria-pressed')), 'true');

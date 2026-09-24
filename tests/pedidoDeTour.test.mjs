@@ -24,6 +24,12 @@ const MODAL = fs.readFileSync(new URL('../src/components/licensing/ComoFuncionaM
 // num alvo que existe — e manda a próxima pessoa caçar um defeito que não há.
 const PORTAS = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PortasDosHabitos.jsx', import.meta.url), 'utf8');
 const BARRA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/BarraDoHabito.jsx', import.meta.url), 'utf8');
+// 🎯 24/09/2026 (DIR-180) — a linha do fogo, os quatro avisos e a grade dos
+// quatro números saíram do CrmMetodo (que ficou com seis blocos empilhados)
+// pro PlacarDoDia.jsx. As marcas continuam vivas na tela; só mudaram de casa
+// — igual às portas dos 8 Hábitos no DIR-179. Sem somar este arquivo aqui, o
+// teste acusaria "alvo apontando pro vazio" pra alvo que existe.
+const PLACAR = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PlacarDoDia.jsx', import.meta.url), 'utf8');
 
 test('pedirTour/ouvirPedidoDeTour: pub/sub simples — avisa quem está ouvindo, e desinscrever para de avisar', () => {
   const recebidos = [];
@@ -66,7 +72,7 @@ test('PASSOS_POR_PAINEL: um Hábito por chave, e todo alvo existe de verdade na 
   // TourGuiado usa document.querySelector — o elemento pode morar em
   // qualquer componente da mesma tela, não só no CrmMetodo. nav-habitos, por
   // exemplo, é a navegação dos 8 Hábitos, em CrmClientesTab.jsx.
-  const telaInteira = METODO + CLIENTES_TAB + '\n' + PORTAS + '\n' + BARRA;
+  const telaInteira = METODO + CLIENTES_TAB + '\n' + PORTAS + '\n' + BARRA + '\n' + PLACAR;
   for (const alvo of alvos) {
     // 🖐️ DIR-124 — alguns alvos moram dentro de `.map()` e viraram
     // condicionais (`data-teste={i === 0 ? 'alvo' : undefined}`) pra não

@@ -7,7 +7,8 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import '@/index.css';
 import AtalhoTopCollege from '@/components/nav/AtalhoTopCollege';
-import FaixaVisao from '@/components/licensing/CentralVendas/FaixaVisao';
+import BarraDaVisao from '@/components/licensing/CentralVendas/BarraDaVisao';
+import { vizinhasDaVisao } from '@/lib/capaDasVisoes';
 import { lerAtalho, gravarAtalho } from '@/lib/atalhoTopCollege';
 
 const logado = new URLSearchParams(window.location.search).get('logado') !== '0';
@@ -23,8 +24,17 @@ function Banca() {
         <span className="text-white text-xs">cabeçalho</span>
       </div>
       <div className="mt-4 nz-painel">
-        <FaixaVisao visao={visao} onVisao={setVisao} placarAberto={false} onPlacar={() => {}} mostrarPlacar={false}
-          atalho={atalho} onAtalho={(id) => setAtalho(gravarAtalho(id))} />
+        {/* 🎴 24/09 (DIR-183) — a estrela agora mora na BARRA da visão aberta,
+            porque é sobre ELA que o botão age: "o ícone da Top College passa
+            a abrir aqui". A banca monta a barra, não a fileira antiga. */}
+        <BarraDaVisao
+          visao={visao}
+          aoVoltar={() => {}}
+          aoAnterior={() => setVisao(vizinhasDaVisao(visao).anterior)}
+          aoProxima={() => setVisao(vizinhasDaVisao(visao).proxima)}
+          ehOAtalho={atalho === visao}
+          aoFixarAtalho={(id) => setAtalho(gravarAtalho(id))}
+        />
       </div>
     </div>
   );

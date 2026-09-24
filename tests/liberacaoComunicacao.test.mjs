@@ -31,7 +31,12 @@ test('CrmMetodo: o motivo da liberação (por que o admin liberou) aparece no se
 });
 
 test('CrmMetodo: banner no topo do dia também avisa — não só na tarefa individual', () => {
-  assert.match(CRM, /LIBERADO PELO ADMINISTRADOR até as \{liberacao\.ate_hora\}/);
+  // 🎯 24/09/2026 (DIR-180) — o banner do topo virou UM alerta só (o mais
+  // grave do dia) e o texto dele saiu do JSX pra lib pura, onde dá pra testar
+  // a REGRA e não só a string. O CrmMetodo continua entregando a liberação.
+  const LIB = readFileSync(new URL('../src/lib/placarDoDia.js', import.meta.url), 'utf8');
+  assert.match(LIB, /LIBERADO PELO ADMINISTRADOR até as \$\{liberacao\.ate_hora\}/);
+  assert.match(CRM, /liberacao=\{liberacao\}/, 'o Compromisso precisa passar a liberação pro placar');
 });
 
 test('CrmMetodo: busca a liberação com o motivo junto (não só o horário) — precisa pro selo explicar o porquê', () => {

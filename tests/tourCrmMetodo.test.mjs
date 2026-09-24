@@ -25,7 +25,13 @@ const CLIENTES_TAB = fs.readFileSync(new URL('../src/components/licensing/Centra
 // pessoa perderia uma tarde atrás de um defeito que não existe.
 const PORTAS = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PortasDosHabitos.jsx', import.meta.url), 'utf8');
 const BARRA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/BarraDoHabito.jsx', import.meta.url), 'utf8');
-const TELA = `${METODO}\n${CLIENTES_TAB}\n${PORTAS}\n${BARRA}`;
+// 🎯 24/09/2026 (DIR-180) — a linha do fogo, os quatro avisos e a grade dos
+// quatro números saíram do CrmMetodo (que ficou com seis blocos empilhados)
+// pro PlacarDoDia.jsx. As marcas continuam vivas na tela; só mudaram de casa
+// — igual às portas dos 8 Hábitos no DIR-179. Sem somar este arquivo aqui, o
+// teste acusaria "alvo apontando pro vazio" pra alvo que existe.
+const PLACAR = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PlacarDoDia.jsx', import.meta.url), 'utf8');
+const TELA = `${METODO}\n${CLIENTES_TAB}\n${PORTAS}\n${BARRA}\n${PLACAR}`;
 
 const PASSOS = ['PASSOS_TOUR_METODO', 'PASSOS_TOUR_SONHO', 'PASSOS_TOUR_LISTA', 'PASSOS_TOUR_CONTATO', 'PASSOS_TOUR_APRESENTACAO', 'PASSOS_TOUR_DUPLICACAO'];
 

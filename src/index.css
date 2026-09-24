@@ -485,6 +485,23 @@ body.pc-tema .livoo-brilho-forte {
      altura da barra? Troque aqui junto — é o mesmo número, nos dois lugares. */
   .nz-abaixo-da-barra { padding-top: calc(3.5rem + var(--nz-entalhe)); }
   @media (min-width: 640px) { .nz-abaixo-da-barra { padding-top: calc(4rem + var(--nz-entalhe)); } }
+  /* 🧭 A FILEIRA DAS VISÕES GRUDADA — DIR-182 (24/09/2026)
+     Dono: "eu quero que a barra da Jornada, Lista, Quadro e tal agora fique
+     FIXA no local mais estratégico pra guiar a organização."
+     Ela cola LOGO ABAIXO da barra do app — que é a altura da barra MAIS o
+     entalhe, a mesma conta do .nz-abaixo-da-barra (é por isso que a medida do
+     entalhe virou uma variável só, no DIR-181). O rodapé de baixo já é do
+     botão AGORA da Jornada; o topo é onde a pessoa olha pra se orientar. */
+  .nz-faixa-grudada { position: sticky; top: calc(3.5rem + var(--nz-entalhe)); z-index: 30; }
+  /* 🩹 O fundo NÃO pode ser um `bg-white` do Tailwind: o palco escuro repinta
+     TODO [class*="bg-white"] pra vidro de 4,5% com !important (ver .xeos-palco
+     mais abaixo) — e uma barra grudada translúcida vira sopa de texto, com o
+     conteúdo passando por baixo. Então ela tem fundo PRÓPRIO, opaco, um por
+     tema, com um nome que aquela regra não alcança. */
+  .nz-faixa-fundo { background-color: rgba(255, 255, 255, 0.97); }
+  .xeos-palco .nz-faixa-fundo { background-color: rgba(10, 14, 22, 0.97); }
+  @media (min-width: 640px) { .nz-faixa-grudada { top: calc(4rem + var(--nz-entalhe)); } }
+
   /* a Recepção tem cabeçalho baixinho e não cresce no desktop */
   .nz-abaixo-da-barra-baixa { padding-top: calc(3.5rem + var(--nz-entalhe)); }
 
@@ -615,9 +632,18 @@ body.pc-tema .livoo-brilho-forte {
   }
 
   /* 🛡️ Guarda anti-overflow horizontal no mobile: nenhum elemento largo demais
-     deve permitir scroll lateral nem cortar conteúdo na borda direita. */
+     deve permitir scroll lateral nem cortar conteúdo na borda direita.
+     ⚠️ 24/09/2026 (DIR-182) — `overflow-x: hidden` aqui MATAVA `position:
+     sticky` em toda a página: hidden transforma o body num CONTÊINER DE
+     ROLAGEM, e aí o elemento grudado passa a se medir por ele, que não rola —
+     resultado, ele rolava junto e ia embora. Medido na banca: a fileira das
+     visões terminava em -425px depois de 900px de rolagem.
+     `overflow-x: clip` corta exatamente igual e NÃO cria contêiner de
+     rolagem. O `hidden` fica antes como reserva pra navegador velho que não
+     conheça `clip` (lá o sticky segue como era, sem piorar nada). */
   html, body {
     overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100%;
     overscroll-behavior-x: contain;
   }

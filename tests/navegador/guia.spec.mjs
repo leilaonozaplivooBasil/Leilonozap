@@ -171,28 +171,51 @@ test('CELULAR: o modal abre assinado pelas duas marcas, no preto da faculdade', 
 
 const estadoFaixa = async (pagina) => JSON.parse(await pagina.locator('[data-teste="estado-faixa"]').textContent());
 
-test('FAIXA: Jornada × Lista é um controle só, e trocar de lado funciona', { skip: semNavegador }, async () => {
+// 🎴 DIR-183 — DOIS estados, igual aos 8 Hábitos. Dono: "quando eu clicar em
+// Jornada vai sumir os outros, sumir a moeda, sumir TUDO e aparecer só o card
+// ... e eu posso passar lateralmente com a seta ou clicando nos quadrados."
+test('VISÕES: dentro de uma visão os outros 4 quadrados SOMEM; o ‹ › passa de lado e dá a volta', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir({ celular: true });
-  assert.equal(await pagina.getByRole('tab', { name: 'Jornada' }).getAttribute('aria-selected'), 'true');
-  await pagina.getByRole('tab', { name: 'Lista' }).tap();
+  // começa na Jornada (uma visão aberta): a grade dos 5 não pode estar na tela
+  assert.equal(await pagina.$('[data-teste="portas-das-visoes"]'), null, 'os 5 quadrados ficaram junto com a visão aberta');
+  assert.match(await pagina.$eval('[data-teste="barra-da-visao"]', (n) => n.innerText), /Jornada/);
+  assert.equal(await pagina.$eval('[data-teste="visao-contador"]', (n) => n.textContent.trim()), '01 / 05');
+
+  await pagina.locator('[data-teste="visao-proxima"]').tap();
   assert.equal((await estadoFaixa(pagina)).visao, 'lista');
-  assert.equal(await pagina.getByRole('tab', { name: 'Lista' }).getAttribute('aria-selected'), 'true');
+  assert.equal(await pagina.$eval('[data-teste="visao-contador"]', (n) => n.textContent.trim()), '02 / 05');
+
+  // 🔁 dá a volta: da primeira pra trás cai na última
+  await pagina.locator('[data-teste="visao-anterior"]').tap();
+  await pagina.locator('[data-teste="visao-anterior"]').tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'demandas', 'o ‹ › não deu a volta');
+  assert.equal(await pagina.$eval('[data-teste="visao-contador"]', (n) => n.textContent.trim()), '05 / 05');
   assert.deepEqual(erros, []);
   await ctx.close();
 });
 
-test('FAIXA: "meu placar" é botão de verdade e abre/fecha', { skip: semNavegador }, async () => {
-  const { pagina, ctx } = await abrir({ celular: true });
-  const botao = pagina.locator('[data-teste="placar-botao"]');
-  await botao.tap();
-  assert.equal((await estadoFaixa(pagina)).placar, true);
-  assert.equal(await botao.getAttribute('aria-expanded'), 'true');
-  await botao.tap();
-  assert.equal((await estadoFaixa(pagina)).placar, false);
+test('VISÕES: voltar mostra a CAPA com os 5 quadrados — e clicar num quadrado abre só ele', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir({ celular: true });
+  await pagina.locator('[data-teste="voltar-as-visoes"]').tap();
+  // na capa: os 5 quadrados, e NENHUMA visão aberta
+  assert.equal(await pagina.$('[data-teste="barra-da-visao"]'), null, 'a barra da visão ficou na capa');
+  const nomes = await pagina.$$eval('[data-teste="portas-das-visoes"] button', (bs) => bs.map((b) => b.getAttribute('data-teste')));
+  assert.deepEqual(nomes, ['porta-visao-jornada', 'porta-visao-lista', 'porta-visao-quadro', 'porta-visao-mapa', 'porta-visao-demandas']);
+  // o que espera nas Demandas aparece na capa — é a única tela que mostra as cinco
+  assert.equal(await pagina.$eval('[data-teste="porta-demandas-contador"]', (n) => n.textContent.trim()), '3');
+  if (process.env.FOTO_BANCA) await pagina.screenshot({ path: path.join(FOTOS, 'capa-das-visoes.png') });
+
+  await pagina.locator('[data-teste="porta-visao-quadro"]').tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'quadro');
+  assert.equal(await pagina.$('[data-teste="portas-das-visoes"]'), null, 'os quadrados não sumiram ao abrir a visão');
+  assert.deepEqual(erros, []);
   await ctx.close();
 });
 
-test('FAIXA: o relógio de teste fica discreto — só abre o campo quando alguém toca, e sair volta ao normal', { skip: semNavegador }, async () => {
+// 🧹 DIR-180 — "Eu no Game" saiu da faixa (ele é o placar, não uma visão):
+// a prova dele agora vive na banca do placar, em placar-do-dia.spec.mjs.
+
+test('RELÓGIO DE TESTE (fora da fileira, DIR-180): fica discreto — só abre o campo quando alguém toca, e sair volta ao normal', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   assert.equal(await pagina.locator('input[type="time"]').count(), 0, 'o campo de hora nasceu aberto, gritando');
   await pagina.locator('[data-teste="modo-teste-pastilha"]').tap();
@@ -201,20 +224,76 @@ test('FAIXA: o relógio de teste fica discreto — só abre o campo quando algu�
   await pagina.getByRole('button', { name: 'aplicar' }).tap();
   await pagina.locator('[data-teste="modo-teste-ligado"]').waitFor();
   assert.equal((await estadoFaixa(pagina)).hora, '09:30');
-  await pagina.locator('[data-teste="faixa-visao"]').screenshot({ path: path.join(FOTOS, 'faixa-teste-ligado.png') });
+  await pagina.locator('[data-teste="pe-do-placar"]').screenshot({ path: path.join(FOTOS, 'relogio-teste-ligado.png') });
   await pagina.getByRole('button', { name: /sair/ }).tap();
   await pagina.locator('[data-teste="modo-teste-pastilha"]').waitFor();
   assert.equal((await estadoFaixa(pagina)).hora, '');
   await ctx.close();
 });
 
-test('FAIXA: no celular cabe numa linha só; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
+// 🧹 DIR-180 — o que o dono reclamou no print NÃO era a altura: era que no
+// celular só o botão ATIVO mostrava a palavra, e os outros quatro ficavam
+// ícone pelado ("ninguém adivinha que ⛓ é Mapa"). A prova mudou pra isso:
+// UMA fileira só (todos os azulejos no mesmo topo) e TODO nome inteiro,
+// medido no navegador de verdade — scrollWidth > clientWidth é texto cortado.
+test('CAPA: os cinco quadrados com o nome INTEIRO no celular; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
   for (const celular of [true, false]) {
     const { pagina, ctx } = await abrir({ celular });
-    const faixa = pagina.locator('[data-teste="faixa-visao"]');
-    const caixa = await faixa.boundingBox();
-    if (celular) assert.ok(caixa.height < 48, `a faixa quebrou em duas fileiras no celular: altura=${caixa.height}`);
-    await faixa.screenshot({ path: path.join(FOTOS, `faixa-${celular ? 'celular' : 'desktop'}.png`) });
+    // click, não tap: este teste roda também no desktop, que não tem toque
+    await pagina.locator('[data-teste="voltar-as-visoes"]').click();
+    const faixa = pagina.locator('[data-teste="portas-das-visoes"]');
+    const medida = await faixa.evaluate((el) => [...el.querySelectorAll('button')].map((b) => {
+      const nome = b.querySelectorAll('span')[1];
+      return { texto: nome.textContent, corta: nome.scrollHeight > nome.clientHeight + 1 };
+    }));
+    assert.equal(medida.length, 5, 'a capa precisa ter as cinco visões');
+    assert.deepEqual(medida.map((m) => m.texto), ['Jornada', 'Lista', 'Quadro', 'Mapa', 'Demandas']);
+    const cortados = medida.filter((m) => m.corta).map((m) => m.texto);
+    assert.deepEqual(cortados, [], `nome cortado no ${celular ? 'celular' : 'desktop'}: ${cortados}`);
+    await faixa.screenshot({ path: path.join(FOTOS, `capa-visoes-${celular ? 'celular' : 'desktop'}.png`) });
     await ctx.close();
   }
+});
+
+// ── 🧭 DIR-182 — a fileira gruda embaixo da barra do app ──
+// Dono: "que a barra da Jornada, Lista, Quadro e tal fique FIXA no local mais
+// estratégico pra guiar a organização." Antes ela rolava junto e sumia: quem
+// descia pra ver a lista do dia perdia o mapa de onde estava.
+test('BARRA DA VISÃO: rolar a página NÃO leva a barra embora — ela gruda embaixo da barra do app', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir({ celular: true });
+  const topo = () => pagina.$eval('[data-teste="barra-da-visao"]', (n) => Math.round(n.getBoundingClientRect().top));
+  const barra = await pagina.$eval('[data-teste="barra-do-app-falsa"]', (n) => Math.round(n.getBoundingClientRect().bottom));
+
+  const antes = await topo();
+  await pagina.evaluate(() => window.scrollTo(0, 900));
+  await pagina.waitForTimeout(250);
+  const depois = await topo();
+
+  assert.ok(await pagina.evaluate(() => window.scrollY) > 500, 'a banca não rolou — a prova não valeria nada');
+  assert.ok(depois >= barra - 2, `a fileira subiu por baixo da barra do app (topo=${depois}, barra acaba em ${barra})`);
+  assert.ok(depois <= barra + 12, `a fileira não encostou na barra (topo=${depois}, barra acaba em ${barra})`);
+  // 🩹 ela COMEÇA abaixo da dobra e SOBE até encostar — subir é o certo. O que
+  // não pode é ela continuar subindo e sumir: sem grudar, 900px de rolagem a
+  // levariam pra ~-425px (foi o que a banca mediu antes do conserto).
+  assert.ok(depois > 0, `a fileira rolou junto e foi embora: ${antes} → ${depois}`);
+  assert.ok(antes - depois < 900, 'a fileira acompanhou a rolagem inteira — não grudou');
+
+  // e continua clicável depois de grudada — sticky que não recebe toque é enfeite
+  await pagina.locator('[data-teste="visao-proxima"]').tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'lista');
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+// 🩹 grudada, a fileira tem conteúdo passando POR BAIXO dela: translúcida vira
+//    sopa de texto. O fundo tem que ser sólido de verdade.
+test('BARRA DA VISÃO: grudada, o fundo é sólido — nada de texto aparecendo por baixo', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir({ celular: true });
+  const alfa = await pagina.$eval('[data-teste="barra-da-visao"]', (n) => {
+    const m = getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/);
+    const partes = m[1].split(',').map((x) => parseFloat(x));
+    return partes.length === 4 ? partes[3] : 1;
+  });
+  assert.ok(alfa >= 0.9, `o fundo da fileira grudada está transparente demais (alfa=${alfa})`);
+  await ctx.close();
 });
