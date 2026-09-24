@@ -24,6 +24,9 @@ export const CATEGORIA_POR_TIPO = Object.freeze({
   compra_enviada: 'conta',
   kyc_aprovado: 'conta',
   saque_pago: 'conta',
+  // 💸 24/09/2026 — comissão paga na mão pela Beatriz (fora do saque da
+  // plataforma), com débito atômico do saldo. Ver payCommissionManually.js.
+  comissao_paga_manual: 'conta',
 });
 export const TIPOS_DE_AVISO = Object.freeze(Object.keys(CATEGORIA_POR_TIPO));
 
@@ -120,6 +123,11 @@ export function montarAviso(tipo, d = {}) {
     case 'saque_pago':
       assunto = `Saque de ${reais(d.valor)} pago no PIX do seu CPF`;
       linhas = [`Seu saque de ${reais(d.valor)} foi pago no PIX do seu CPF. Se não aparecer na sua conta em algumas horas, responda este e-mail.`];
+      botao = { rotulo: 'Ver a Carteira', url: `${SITE}/Carteira` };
+      break;
+    case 'comissao_paga_manual':
+      assunto = `Comissão de ${reais(d.valor)} paga`;
+      linhas = [`Sua comissão de ${reais(d.valor)} foi paga${d.pixKeyUsada ? ` no PIX informado (${d.pixKeyUsada})` : ' no PIX combinado com você'}. Se não aparecer na sua conta em algumas horas, responda este e-mail.`];
       botao = { rotulo: 'Ver a Carteira', url: `${SITE}/Carteira` };
       break;
     default:

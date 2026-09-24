@@ -1,10 +1,11 @@
-// ✉️ Os textos dos 8 avisos aprovados pelo dono em 23/09/2026
+// ✉️ Os textos dos 8 avisos aprovados pelo dono em 23/09/2026, + o pagamento
+// manual de comissão (24/09/2026, ver payCommissionManually.js).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { montarAviso, TIPOS_DE_AVISO, CATEGORIA_POR_TIPO, reais, quandoBR, faltaBR, SITE } from '../api/_lib/textosDosAvisos.js';
 
-test('os 10 tipos (8 gatilhos, dois deles com 2 e-mails) e a categoria de cada um', () => {
-  assert.deepEqual(TIPOS_DE_AVISO, ['cadastro', 'entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora', 'deposito', 'compra_confirmada', 'compra_enviada', 'kyc_aprovado', 'saque_pago']);
+test('os 11 tipos (8 gatilhos, dois deles com 2 e-mails, + o pagamento manual) e a categoria de cada um', () => {
+  assert.deepEqual(TIPOS_DE_AVISO, ['cadastro', 'entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora', 'deposito', 'compra_confirmada', 'compra_enviada', 'kyc_aprovado', 'saque_pago', 'comissao_paga_manual']);
   assert.deepEqual(TIPOS_DE_AVISO.filter((t) => CATEGORIA_POR_TIPO[t] === 'leilao'), ['entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora']);
   assert.equal(montarAviso('inventado', {}), null);
 });
@@ -63,6 +64,17 @@ test('depósito, compra confirmada/enviada, KYC e saque', () => {
   assert.equal(montarAviso('compra_enviada', { pedido: 'LZ1234' }).assunto, 'Pedido #LZ1234 a caminho');
   assert.match(montarAviso('kyc_aprovado', { nome: 'Ana' }).texto, /vai pro PIX do seu CPF/);
   assert.equal(montarAviso('saque_pago', { valor: 178.39 }).assunto, 'Saque de R$ 178,39 pago no PIX do seu CPF');
+});
+
+test('🔴 comissão paga manualmente: diferente do saque, não promete "seu CPF" — cita a chave usada de verdade', () => {
+  const m = montarAviso('comissao_paga_manual', { valor: 120.5, pixKeyUsada: '11999999999' });
+  assert.equal(m.assunto, 'Comissão de R$ 120,50 paga');
+  assert.match(m.texto, /Sua comissão de R\$ 120,50 foi paga no PIX informado \(11999999999\)/);
+  assert.doesNotMatch(m.texto, /seu CPF/);
+  assert.equal(m.categoria, 'conta');
+  // sem a chave, não inventa que foi pro CPF — fala do combinado
+  const semChave = montarAviso('comissao_paga_manual', { valor: 10 });
+  assert.match(semChave.texto, /no PIX combinado com você/);
 });
 
 test('rodapé LGPD: o link de sair entra no texto e no html, e o html escapa o que vem do banco', () => {
