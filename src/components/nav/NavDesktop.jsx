@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
-import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
 
 import { SECTORS } from "@/lib/sectors";
 import SectorLink from "@/components/nav/SectorLink";
@@ -180,9 +179,7 @@ export default function NavDesktop({
           Ordem do mockup do Gabriel (26/07): avatar primeiro, carrinho no meio,
           rank no canto. Tudo em items-center no mesmo eixo dos setores centrais. */}
       <div className="flex items-center gap-x-5">
-        {/* ⭐ 23/09/2026 — o ícone da Top College: só logado, leva pro Compromisso
-            (na visão que a pessoa fixou). Ver src/lib/atalhoTopCollege.js */}
-        <AtalhoTopCollege currentUser={currentUser} temaClaro={temaClaro} />
+        {/* ⭐ A Top College saiu daqui (24/09): mora colada na logo, no Layout. */}
         {/* === RANK PREMIADO — agrupado com a loja, antes do perfil (essência dourada → bege da paleta).
             Escondido na própria página do Rank Premiado: não faz sentido linkar pra onde já se está. */}
         {currentPageName === "ConcursoLeilaoNozap" ? null : temaClaro ? (
