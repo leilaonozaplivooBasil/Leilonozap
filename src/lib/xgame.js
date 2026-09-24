@@ -782,6 +782,24 @@ export function podeDistribuirTarefa({ role, pode_distribuir } = {}) {
   return pode_distribuir === true;
 }
 
+/**
+ * 🧳 AFASTADO DO JOGO (24/09/2026) — dono: "tirar Karen e Jean da produção,
+ * da votação e etc. do Top College. Eles estão afastados da empresa… quando
+ * eles voltarem, eu aviso."
+ *
+ * Afastar é `xgame_participantes.ativo = false` — a mesma chave que já tirava
+ * a pessoa da lista votável e dos números do time. O que faltava: a rotina
+ * automática (api/functions/gerarJornadaDoDia.js) não olhava essa chave e
+ * seguia nascendo 160 tarefas por semana pra quem não estava trabalhando.
+ *
+ * `=== false` de propósito: quem nem tem linha no X-Game (ativo indefinido)
+ * continua recebendo jornada como sempre recebeu. O fixo (`fixo_mes`) não é
+ * tocado — ele só entra na conta do valor do dia, não paga nada sozinho.
+ */
+export function afastadoDoJogo(participante) {
+  return participante?.ativo === false;
+}
+
 export function podeSerVotado({ role, aceita_ser_votado } = {}) {
   if (role === 'super_admin') return aceita_ser_votado === true;
   return aceita_ser_votado !== false;
