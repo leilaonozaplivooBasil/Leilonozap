@@ -27,6 +27,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
 import { saveReferral, getReferral, clearReferral, saveInfluencerCode, getInfluencerCode } from "@/lib/referral";
+import { abreFormularioDeConvite } from "@/lib/formularioDeConvite";
 // 🔐 Ao sair da conta, o aparelho deixa de ser "aparelho autorizado" da captação privada
 import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 // 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
@@ -258,16 +259,19 @@ export default function Layout({ children, currentPageName }) {
 
   // 🎯 Popup de cadastro por indicação: quem chega por um link ?ref= (influenciador/licenciado)
   // e ainda não é logado recebe o convite pra se cadastrar vinculado a quem indicou.
+  // 🚫 24/09/2026 — DESLIGADO ATÉ SEGUNDA ORDEM (dono: estratégia do marketing,
+  // "está atrapalhando a metrificação"). O interruptor e a regra inteira moram
+  // em src/lib/formularioDeConvite.js; o ?ref= continua sendo capturado.
   useEffect(() => {
-    if (isLoading) return;
-    const isLogged = currentUser && currentUser.email;
-    if (isLogged) return;
     const ref = getReferral();
-    if (!ref) return;
-    if (sessionStorage.getItem('refRegisterDismissed')) return;
-    // não abre em cima da própria tela de cadastro/login
-    const path = (window.location.pathname || '').toLowerCase();
-    if (path.includes('register') || path.includes('cadastro')) return;
+    const abre = abreFormularioDeConvite({
+      carregando: isLoading,
+      logado: !!(currentUser && currentUser.email),
+      ref,
+      dispensado: !!sessionStorage.getItem('refRegisterDismissed'),
+      caminho: window.location.pathname || '',
+    });
+    if (!abre) return;
     // busca o nome de quem indicou (SELECT anon), pra mostrar no popup
     (async () => {
       try {
