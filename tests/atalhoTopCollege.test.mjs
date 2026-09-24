@@ -1,7 +1,7 @@
 // ⭐ O ícone da Top College no cabeçalho — 23/09/2026
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { semComentarios } from './_ajuda.mjs';
 import {
   DESTINOS_DO_ATALHO, DESTINO_PADRAO, CHAVE_ATALHO, normalizarDestino, rotuloDoDestino, urlDoAtalho,
@@ -66,11 +66,19 @@ test('o ícone está no cabeçalho (desktop e celular), a URL abre a seção e a
   const CRM = ler('../src/components/licensing/CentralVendas/CrmClientesTab.jsx');
   const METODO = ler('../src/components/licensing/CentralVendas/CrmMetodo.jsx');
   const FAIXA = ler('../src/components/licensing/CentralVendas/FaixaVisao.jsx');
-  assert.ok(NAV.includes('<AtalhoTopCollege currentUser={currentUser} temaClaro={temaClaro} />'));
-  assert.ok(LAYOUT.includes('<AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} />'));
+  // 🧊 24/09 — a Top College mora colada na logo (Layout, celular E computador); saiu do NavDesktop e do canto do menu mobile
+  assert.ok(!NAV.includes('<AtalhoTopCollege'));
+  assert.ok(LAYOUT.includes('<AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} className="-ml-1 md:-ml-2" />'));
+  assert.equal(LAYOUT.split('<AtalhoTopCollege').length - 1, 1, 'um só ícone no cabeçalho');
   assert.ok(ICONE.includes('if (!mostraAtalho(currentUser)) return null;'));
   assert.ok(ICONE.includes('to={urlDoAtalho(destino)}'));
-  assert.ok(ICONE.includes('src="/marca/topcollege.webp"'));
+  // sem placa em volta: só o símbolo 3D, do tamanho da logo, com sombra solta
+  assert.ok(ICONE.includes('src="/marca/topcollege-3d.webp"'));
+  assert.ok(!ICONE.includes("background: 'rgba(255,255,255,0.06)'"));
+  assert.ok(!ICONE.includes('rounded-xl'));
+  assert.ok(ICONE.includes('className="h-10 w-10 sm:h-11 sm:w-11 object-contain"'));
+  assert.ok(ICONE.includes("style={{ filter: temaClaro ? SOMBRA_3D_CLARO : SOMBRA_3D }}"));
+  assert.ok(existsSync(new URL('../public/marca/topcollege-3d.webp', import.meta.url)));
   assert.ok(CRM.includes("useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search))"));
   // 🔴 23/09 — o atalho clicado de DENTRO da Top College não remonta nada: os três níveis reagem à URL
   assert.ok(CRM.includes("const s = secaoDaUrl(localizacao.search);\n    if (s) setSecao(s);"));

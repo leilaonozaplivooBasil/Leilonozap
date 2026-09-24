@@ -12,6 +12,26 @@
 
 ---
 
+## DIR-178 — a Top College sai da placa, cola na logo e ganha relevo 3D
+
+**Emitida por:** dono (24/09/2026, com o print do cabeçalho do celular): *"não estou gostando de onde a Top College está. Precisa tirar o quadrado em torno da logo e deixar ela chapada igual à logo do Leilão NoZap, precisa estar mais próxima da logo, e precisa estar mais em 3D, puxando para o 3D da logo."*
+
+**O que estava:** o atalho (DIR de 23/09) era a marca completa da Top College — colunas + letreiro "TOP COLLEGE / FACULTY OF ENTREPRENEURS" — encolhida a 28px dentro de uma placa de 40px com fundo e borda, no canto direito, entre a carteira e o botão de menu. A 28px o letreiro virava um risco ilegível, a placa fazia dela "mais um botão", e ela ficava longe da logo, que é 3D e solta.
+
+**O que muda:**
+
+- **Só o símbolo, em 3D.** Nasce `public/marca/topcollege-3d.webp`: as colunas recortadas da marca original (sem o letreiro), com extrusão em 14 camadas escurecidas para baixo/direita, um fio de brilho por cima e sombra difusa no chão — gerado por script com o `sharp` do próprio projeto, a partir do `topcollege.webp` que já existia. O arquivo antigo continua no lugar para quem mais o usa.
+- **Sem placa.** `AtalhoTopCollege.jsx` perde fundo, borda e `rounded-xl`; fica o símbolo do tamanho da logo (40px no celular, 44px no computador) com sombra solta em CSS (`SOMBRA_3D`: sombra dura curta + sombra difusa + um halo roxo discreto; versão mais leve no tema claro).
+- **Colada na logo.** Sai do cluster direito do celular e do `NavDesktop`; entra no `Layout.jsx`, logo depois da logo do Leilão NoZap, e vale em qualquer largura. Um só ícone no cabeçalho.
+
+**Prova visual:** cabeçalho logado a 390px e a 1366px — logo, símbolo 3D ao lado, nada em volta.
+
+**Prova de código:** suíte 3632/3632 (`atalhoTopCollege.test.mjs` atualizado: sai do NavDesktop, um só no Layout, sem placa, arquivo 3D existe), lint 0 erros, build ok.
+
+**Status:** NO PREVIEW OFICIAL, aguardando o OK do dono para produção.
+
+---
+
 ## DIR-177 — a barra do app veste os azulejos verdes do menu, e o carrinho desce do cabeçalho
 
 **Emitida por:** dono (24/09/2026, com dois prints na mão — a barra de baixo Comprar · Leilões · Lucre · Carrinho e a grade "Atalhos" do menu): *"tá muito bom, só que tem que puxar o mesmo padrão. Tem que duplicar esses ícones que estão ali, não é retirar de lá. E o carrinho, tirar dali de cima, do lado da Top College, e botar aqui pra baixo, puxando esse padrão de desenho."* E, no segundo print: *"eu quero que você siga o padrão que está nesse print aqui — duplique daqui para lá esses botões."*
