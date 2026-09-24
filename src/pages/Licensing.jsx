@@ -76,6 +76,7 @@ import SalesTrendChart from '../components/licensing/SalesTrendChart';
 import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 import { useSectionTracking } from '@/lib/tracking';
+import { marcarTopCollege } from '@/lib/areaTopCollege';
 
 const Product = plataforma.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
@@ -1113,6 +1114,12 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🎓 DIR-62 — a pessoa está numa seção da Top College? É isso que liga a
   // faixa da academia (e o tema escuro do seletor logo abaixo dela).
   const naTopCollege = activeTab === 'catalogo' && SECOES_TOP_COLLEGE.some((s) => s.value === catalogSubTab);
+  // 🎓 24/09/2026 — o cabeçalho (fora desta árvore) precisa saber: o botão "D"
+  // só existe na Top College. Levanta a bandeira aqui, abaixa ao sair.
+  useEffect(() => {
+    marcarTopCollege(naTopCollege);
+    return () => marcarTopCollege(false);
+  }, [naTopCollege]);
   // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
   // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
   // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.

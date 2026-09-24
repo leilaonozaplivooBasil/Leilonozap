@@ -15,10 +15,35 @@ import { rotuloDaOrigem } from '../src/lib/demandas.js';
 
 const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
-test('quem vê o "D": a mesma régua do ícone da Top College (logado com e-mail)', () => {
-  assert.equal(mostraBloco({ id: '1', email: 'a@b.c' }), true);
-  assert.equal(mostraBloco({ id: '1' }), false);
-  assert.equal(mostraBloco(null), false);
+test('quem vê o "D": logado (régua do ícone da Top College) E dentro da Top College', () => {
+  assert.equal(mostraBloco({ id: '1', email: 'a@b.c' }, true), true);
+  // 24/09 (dono): "só pode aparecer nas áreas/telas/páginas da Top College"
+  assert.equal(mostraBloco({ id: '1', email: 'a@b.c' }, false), false, 'fora da Top College não aparece');
+  assert.equal(mostraBloco({ id: '1', email: 'a@b.c' }), false, 'sem bandeira = fora');
+  assert.equal(mostraBloco({ id: '1', email: 'a@b.c' }, 'true'), false, 'string não é bandeira');
+  assert.equal(mostraBloco({ id: '1' }, true), false);
+  assert.equal(mostraBloco(null, true), false);
+});
+
+test('🎓 a bandeira "na Top College": quem levanta é o Licensing, quem lê é o cabeçalho', async () => {
+  const { marcarTopCollege, estaNaTopCollege, assinarTopCollege, _zerarTopCollege } = await import('../src/lib/areaTopCollege.js');
+  _zerarTopCollege();
+  assert.equal(estaNaTopCollege(), false);
+  let avisos = 0; const parar = assinarTopCollege(() => { avisos += 1; });
+  marcarTopCollege(true); assert.equal(estaNaTopCollege(), true); assert.equal(avisos, 1);
+  marcarTopCollege(true); assert.equal(avisos, 1, 'repetir o mesmo valor não avisa de novo');
+  marcarTopCollege('sim'); assert.equal(estaNaTopCollege(), false, 'só true liga');
+  parar(); marcarTopCollege(true); assert.equal(avisos, 2, 'depois de cancelar não avisa');
+  _zerarTopCollege();
+  // o Licensing levanta com o MESMO naTopCollege da faixa preta, e abaixa ao sair
+  const L = ler('../src/pages/Licensing.jsx');
+  assert.match(L, /const naTopCollege = activeTab === 'catalogo' && SECOES_TOP_COLLEGE\.some/);
+  assert.match(L, /marcarTopCollege\(naTopCollege\);\s*return \(\) => marcarTopCollege\(false\);/);
+  // o botão lê a bandeira pelo store, não pela URL
+  const B = ler('../src/components/nav/BlocoDeDemandas.jsx');
+  assert.match(B, /useSyncExternalStore\(assinarTopCollege, estaNaTopCollege/);
+  assert.match(B, /mostraBloco\(currentUser, naTopCollege\)/);
+  assert.doesNotMatch(B, /catalogTab|location\.search/);
 });
 
 test('a anotação vira uma demanda do bloco, com dono, peso neutro e status recebida', () => {
@@ -101,7 +126,7 @@ test('🔴 o botão está no cabeçalho, colado à Top College, e as três telas
 
 test('a ordem das gravações no modal: demanda → tarefa → card → fechamento (nunca fecha antes de existir trabalho)', () => {
   const B = ler('../src/components/nav/BlocoDeDemandas.jsx');
-  const corpo = B.slice(B.indexOf('const anotar = async'), B.indexOf('if (!mostraBloco(currentUser)) return null;'));
+  const corpo = B.slice(B.indexOf('const anotar = async'), B.indexOf('const naTopCollege = useSyncExternalStore'));
   const ordem = ["from('xperf_demandas').insert(", "from('metodo_tarefas').insert(", "from('metodo_quadro').insert(", "from('xperf_demandas').update("].map((x) => corpo.indexOf(x));
   assert.ok(ordem.every((i) => i > -1), 'faltou uma das quatro gravações');
   assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, 'a ordem das gravações mudou');

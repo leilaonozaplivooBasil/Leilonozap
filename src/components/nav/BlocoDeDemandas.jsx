@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Loader2, Send, CalendarPlus, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { dataISO, nomeExibicao } from '@/lib/xgame';
 import { SOMBRA_3D } from '@/components/nav/AtalhoTopCollege';
+import { assinarTopCollege, estaNaTopCollege } from '@/lib/areaTopCollege';
 import {
   mostraBloco, demandaDoBloco, pecasDaAnotacao, fechamentoDaAnotacao, anotacoesRecentes, ondeFoiParar, EVENTO_ANOTACAO, ORIGEM_BLOCO,
 } from '@/lib/blocoDeDemandas';
@@ -90,7 +91,9 @@ export default function BlocoDeDemandas({ currentUser, temaClaro = false, classN
     }
   };
 
-  if (!mostraBloco(currentUser)) return null;
+  // 🎓 só dentro da Top College — a bandeira que o Licensing levanta
+  const naTopCollege = useSyncExternalStore(assinarTopCollege, estaNaTopCollege, () => false);
+  if (!mostraBloco(currentUser, naTopCollege)) return null;
 
   return (
     <>
