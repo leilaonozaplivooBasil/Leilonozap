@@ -1,14 +1,25 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Gavel, TrendingUp, ShoppingCart } from 'lucide-react';
+import { ShoppingBag, Gavel, DollarSign, ShoppingCart } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import { SECTORS } from '@/lib/sectors';
 import { ITENS_DA_BARRA, mostraBarraDoApp, itemAtivo, contadorDoCarrinho } from '@/lib/barraDoApp';
+import { TILE, P, Rotulo } from '@/components/nav/AtalhosGrid';
 
-const ICONES = { comprar: ShoppingBag, leiloes: Gavel, lucre: TrendingUp, carrinho: ShoppingCart };
+// 🧩 24/09/2026 — os ícones são os MESMOS azulejos dos Atalhos do menu (Comprar,
+// Leilões, Lucre vêm de sectors.js, como lá; Carrinho é o mesmo ShoppingCart).
+// Pedido do dono: "duplique daqui para lá esses botões, para seguir o padrão".
+const RESERVA = { comprar: ShoppingBag, leiloes: Gavel, lucre: DollarSign, carrinho: ShoppingCart };
+export function iconeDaBarra(item) {
+  const setor = SECTORS.find((s) => s?.href?.page === item.pagina);
+  return setor?.icon || RESERVA[item.id];
+}
 
 // 📱 A barra do app: quatro atalhos fixos na base da tela, só no site e só
 // até lg (ver src/lib/barraDoApp.js). Altura: 3.75rem + a área segura do
 // aparelho — o FloatingDock soma a mesma medida pra nada ficar por baixo.
+// Visual: o azulejo verde 3D + rótulo em caixa alta do AtalhosGrid (mesma fonte
+// de estilo: TILE / Rotulo). O carrinho saiu do cabeçalho do celular e mora aqui.
 export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
   if (!mostraBarraDoApp(currentPageName)) return null;
   const ativo = itemAtivo(currentPageName);
@@ -20,7 +31,7 @@ export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
       className="fixed inset-x-0 bottom-0 z-40 lg:hidden"
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        background: 'rgba(14, 22, 18, 0.92)',
+        background: 'rgba(14, 22, 18, 0.94)',
         backdropFilter: 'blur(16px) saturate(1.5)',
         WebkitBackdropFilter: 'blur(16px) saturate(1.5)',
         borderTop: '1px solid rgba(153,193,152,0.14)',
@@ -29,7 +40,7 @@ export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
     >
       <ul className="grid h-[3.75rem] grid-cols-4">
         {ITENS_DA_BARRA.map((item) => {
-          const Icone = ICONES[item.id];
+          const Icone = iconeDaBarra(item);
           const aceso = ativo === item.id;
           return (
             <li key={item.id} className="min-w-0">
@@ -37,20 +48,22 @@ export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
                 to={createPageUrl(item.pagina)}
                 aria-current={aceso ? 'page' : undefined}
                 data-teste={`barra-${item.id}`}
-                className={`relative flex h-full flex-col items-center justify-center gap-0.5 text-[10px] font-bold tracking-wide transition-colors active:scale-95 ${
-                  aceso ? 'text-emerald-300' : 'text-gray-400 hover:text-gray-200'}`}
+                className="flex h-full flex-col items-center justify-center gap-1 transition-transform active:scale-95"
               >
-                <span className="relative">
-                  <Icone className="h-5 w-5" strokeWidth={aceso ? 2.4 : 1.8} />
+                <span
+                  className="relative flex h-[38px] w-[38px] items-center justify-center rounded-xl"
+                  style={aceso ? { ...TILE, border: `1px solid ${P.beige}`, boxShadow: `${TILE.boxShadow}, 0 0 0 2px rgba(218,187,152,0.35)` } : TILE}
+                >
+                  <Icone className="h-[19px] w-[19px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
                   {item.id === 'carrinho' && badge && (
                     <span
-                      className="absolute -right-2.5 -top-1.5 grid h-4 min-w-[1rem] place-items-center rounded-full bg-green-500 px-1 text-[9px] font-extrabold text-white"
+                      className="absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-extrabold leading-none"
+                      style={{ background: `linear-gradient(150deg, #ecd3ae, ${P.beige})`, color: P.navy, border: '2px solid #131418' }}
                       data-teste="barra-carrinho-contador"
                     >{badge}</span>
                   )}
                 </span>
-                <span className="truncate">{item.rotulo}</span>
-                {aceso && <span aria-hidden="true" className="absolute top-0 h-0.5 w-8 rounded-b bg-emerald-400" />}
+                <Rotulo tom={aceso ? 'beige' : undefined}>{item.rotulo}</Rotulo>
               </Link>
             </li>
           );

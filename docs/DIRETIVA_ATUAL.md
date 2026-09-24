@@ -12,6 +12,28 @@
 
 ---
 
+## DIR-177 — a barra do app veste os azulejos verdes do menu, e o carrinho desce do cabeçalho
+
+**Emitida por:** dono (24/09/2026, com dois prints na mão — a barra de baixo Comprar · Leilões · Lucre · Carrinho e a grade "Atalhos" do menu): *"tá muito bom, só que tem que puxar o mesmo padrão. Tem que duplicar esses ícones que estão ali, não é retirar de lá. E o carrinho, tirar dali de cima, do lado da Top College, e botar aqui pra baixo, puxando esse padrão de desenho."* E, no segundo print: *"eu quero que você siga o padrão que está nesse print aqui — duplique daqui para lá esses botões."*
+
+**O que estava:** a barra do app (DIR da barra, 23/09) nasceu com ícone de linha fina em cinza, acendendo em verde-esmeralda — um desenho só dela. O menu tem outro: o azulejo verde 3D (degradê sálvia → floresta, borda clara, sombra interna) com o rótulo em caixa alta bem pequeno. Duas linguagens pra quatro atalhos iguais. E no celular o carrinho aparecia **duas vezes** nas páginas da loja: no cabeçalho, ao lado da Top College, e na barra.
+
+**O que muda:**
+
+- `BarraDoApp.jsx` passa a montar cada item com o **mesmo `TILE` e o mesmo `Rotulo` do `AtalhosGrid`** — importados, não copiados. Se o azulejo do menu mudar, a barra muda junto. Os ícones de Comprar/Leilões/Lucre vêm de `sectors.js`, a mesma fonte do menu (o Lucre volta a ser o cifrão, como no print; a barra usava uma seta de tendência).
+- O item da página atual ganha só uma borda bege e o rótulo em bege — o mesmo bege do RANK — sem mudar o desenho.
+- O contador do carrinho é a mesma bolinha bege com número escuro dos Atalhos.
+- No `Layout.jsx`, o carrinho do cabeçalho do celular **some onde a barra aparece** (`isCatalogPage && !mostraBarraDoApp(...)`). Nas telas de checkout, pedidos e rastreio, que não têm barra, ele continua lá em cima — senão a pessoa perderia o caminho de volta ao carrinho.
+- O menu não perde nada: a grade de Atalhos continua inteira. Era **duplicar**, não mover.
+
+**Prova visual:** print do celular (390×844) na Loja Virtual — cabeçalho só com logo e menu, barra com os quatro azulejos, COMPRAR aceso em bege. Na Home a barra também entra e o cabeçalho não tem carrinho.
+
+**Prova de código:** suíte 3632/3632 (`barraDoAppAzulejos.test.mjs` novo, 4 testes: importa TILE/Rotulo do grid, ícones vêm de sectors.js, bolinha bege, carrinho fora do cabeçalho onde há barra), lint 0 erros, build ok, colisão limpa.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-176 — o sol e a linha do horizonte aparecem no celular (era colisão de layout, não cor)
 
 **Emitida por:** dono (22/09/2026, com o print do iPhone na mão): *"vamos melhorar a visualização no celular — tipo, o sol é extremamente importante aparecer, a linha do horizonte."* E logo depois: *"precisa ficar mais organizada no celular pra ver a imagem da praia e sol e tal."*
