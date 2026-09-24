@@ -3,6 +3,7 @@
 import crypto from 'crypto';
 import { estourouLimite, ipDoRequest } from '../_lib/rateLimit.js';
 import { registrarEmail, idDaBrevo } from '../_lib/registroDeEmail.js';
+import { modeloDeEmail, p, blocoDeCodigo } from '../_lib/modeloDeEmail.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,17 +24,18 @@ function sb(path, opts = {}) {
   });
 }
 
-function emailHtml(code, purpose) {
-  const titulo = purpose === 'reset' ? 'Redefinir sua senha' : 'Confirme seu e-mail';
-  const txt = purpose === 'reset'
-    ? 'Use o código abaixo para redefinir sua senha no Leilão NoZap:'
-    : 'Use o código abaixo para confirmar seu cadastro no Leilão NoZap:';
-  return `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0d1f17;border-radius:16px;color:#e8ece9">
-    <h2 style="color:#34d399;margin:0 0 8px">${titulo}</h2>
-    <p style="color:#bfe8d6;font-size:14px;margin:0 0 20px">${txt}</p>
-    <div style="background:#15241d;border:1px solid #2f6f55;border-radius:12px;padding:18px;text-align:center;font-size:34px;font-weight:900;letter-spacing:10px;color:#fff">${code}</div>
-    <p style="color:#9aa3a0;font-size:12px;margin:18px 0 0">O código expira em 10 minutos. Se você não solicitou, ignore este e-mail.</p>
-  </div>`;
+export function emailHtml(code, purpose) {
+  const reset = purpose === 'reset';
+  return modeloDeEmail({
+    titulo: reset ? 'Redefinir sua senha' : 'Confirme seu e-mail',
+    preheader: `Seu código: ${code}`,
+    corpo: [
+      p(reset ? 'Use o código abaixo para redefinir sua senha no Leilão NoZap:' : 'Use o código abaixo para confirmar seu cadastro no Leilão NoZap:'),
+      blocoDeCodigo(code),
+    ],
+    avisoFinal: 'O código expira em 10 minutos. Se você não solicitou, ignore este e-mail.',
+    motivo: 'Você recebe este e-mail porque alguém usou este endereço no Leilão NoZap.',
+  });
 }
 
 export default async function handler(req, res) {

@@ -15,6 +15,7 @@ import { fixoDoParticipante, dataISO } from '@/lib/xgame';
 import XPerformanceGestao from '@/components/licensing/CentralVendas/XPerformanceGestao';
 import MensagemProCeo from '@/components/licensing/CentralVendas/MensagemProCeo';
 import PainelLaudo from '@/components/licensing/CentralVendas/PainelLaudo';
+import { escopoDoLaudo } from '@/lib/quemVeOLaudo';
 import { GRUPO, VISAO, MISSAO, VALORES, PILARES } from '@/lib/grupo';
 import TourGuiado from '@/components/licensing/CentralVendas/TourGuiado';
 import useTourDaTela from '@/hooks/useTourDaTela';
@@ -408,6 +409,11 @@ export default function XPerformance({ currentUser, visaoTotal = false, gestao =
     // painel realmente usa.
     return (
       <div className="space-y-4">
+        {/* 📄 24/09/2026 — dono: "dê ao Emannuel no ADM do X-Game a opção de
+            gerar seu próprio laudo em PDF." Quem está na gestão sem poder ver
+            o laudo dos outros (escopo 'proprio') ganha o painel travado em si
+            mesmo, aqui em cima; o gestor admin já tem o botão na fila. */}
+        {escopoDoLaudo(currentUser) === 'proprio' && <PainelLaudo currentUser={currentUser} hojeISO={hoje} />}
         <XPerformanceGestao currentUser={currentUser} hojeISO={hoje} />
       </div>
     );

@@ -61,6 +61,39 @@ Aqui moravam SEIS blocos empilhados.
 
 **Status:** no preview oficial (`claude/project-structure-analysis-r1prad`).
 Produção só com o OK do dono.
+## 🚨 DIR-181 — O banner da home nasceu cortado no iPhone (24/09/2026)
+
+**Dono, com o print da home no celular:** "AGORA ESTÁ CORTANDO OS BANNERS,
+PRECISA DESCER MAIS UM POUCO. JÁ CORRIGE E COLOCA EM PRODUÇÃO DIRETO."
+
+**O "agora" é literal — o defeito nasceu hoje, no PR #481 (DIR-179).** Aquele
+PR pôs `viewport-fit=cover` no `index.html` pra resolver a barra de baixo. Com
+isso o iOS passou a reportar DE VERDADE `env(safe-area-inset-top)` — que antes
+vinha 0. A barra fixa do topo já recuava por ela (`padding-top: env(...)`) e
+CRESCEU ~59px num iPhone com Dynamic Island. Só que o `<main>` descia uma
+altura FIXA (`pt-14`). Os 59px de diferença sumiram atrás da barra — e o que
+estava lá era o topo do banner.
+
+**Conserto:** o entalhe virou UMA medida só, `--nz-entalhe` (src/index.css), e
+os dois lados leem ela:
+- a barra do topo (`Layout.jsx`) recua `var(--nz-entalhe)`;
+- o conteúdo desce `.nz-abaixo-da-barra` = `calc(3.5rem + var(--nz-entalhe))`
+  (e `4rem` no sm), que é a altura da barra MAIS o entalhe;
+- `.nz-tela-cheia` desconta a mesma soma — senão o painel de altura cheia
+  passaria a estourar o rodapé exatamente o tamanho do entalhe.
+
+**Provas:**
+- `tests/entalheDoTopo.test.mjs` (5) — trava o contrato: uma medida só, a
+  barra lendo a variável, e a altura fixa antiga não podendo voltar.
+- `tests/navegador/entalheDoTopo.spec.mjs` (2) — Chromium a 393px MEDE: com
+  entalhe de 59px o banner começa em 115px, exatamente onde a barra acaba
+  (0px escondido); sem entalhe nada muda (56px).
+- Mutação: desfiz o `+ var(--nz-entalhe)` do `.nz-abaixo-da-barra` e a prova
+  com entalhe falhou; restaurei e voltou verde.
+- Suíte 3650/3650 · lint 0 erro · build OK.
+
+**Status:** direto pra produção, sozinho — ordem do dono. O DIR-180 (a faxina
+do Compromisso) segue no preview, sem se misturar com este.
 
 ---
 

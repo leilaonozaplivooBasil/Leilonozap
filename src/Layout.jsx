@@ -27,6 +27,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { normalizeLevels } from "@/lib/careerLevels";
 import { fastTap } from "@/lib/fastTap";
 import { saveReferral, getReferral, clearReferral, saveInfluencerCode, getInfluencerCode } from "@/lib/referral";
+import { abreFormularioDeConvite } from "@/lib/formularioDeConvite";
 // 🔐 Ao sair da conta, o aparelho deixa de ser "aparelho autorizado" da captação privada
 import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 // 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
@@ -258,16 +259,19 @@ export default function Layout({ children, currentPageName }) {
 
   // 🎯 Popup de cadastro por indicação: quem chega por um link ?ref= (influenciador/licenciado)
   // e ainda não é logado recebe o convite pra se cadastrar vinculado a quem indicou.
+  // 🚫 24/09/2026 — DESLIGADO ATÉ SEGUNDA ORDEM (dono: estratégia do marketing,
+  // "está atrapalhando a metrificação"). O interruptor e a regra inteira moram
+  // em src/lib/formularioDeConvite.js; o ?ref= continua sendo capturado.
   useEffect(() => {
-    if (isLoading) return;
-    const isLogged = currentUser && currentUser.email;
-    if (isLogged) return;
     const ref = getReferral();
-    if (!ref) return;
-    if (sessionStorage.getItem('refRegisterDismissed')) return;
-    // não abre em cima da própria tela de cadastro/login
-    const path = (window.location.pathname || '').toLowerCase();
-    if (path.includes('register') || path.includes('cadastro')) return;
+    const abre = abreFormularioDeConvite({
+      carregando: isLoading,
+      logado: !!(currentUser && currentUser.email),
+      ref,
+      dispensado: !!sessionStorage.getItem('refRegisterDismissed'),
+      caminho: window.location.pathname || '',
+    });
+    if (!abre) return;
     // busca o nome de quem indicou (SELECT anon), pra mostrar no popup
     (async () => {
       try {
@@ -933,7 +937,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'var(--nz-entalhe)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className={`relative flex justify-between items-center ${isRecepcao ? 'h-14' : 'h-14 sm:h-16'}`}>
 
@@ -1079,7 +1083,7 @@ export default function Layout({ children, currentPageName }) {
         )}
         {/* 📱 23/09/2026 — a barra do app ocupa 3.75rem na base (até lg): o conteúdo
             ganha o mesmo respiro pra nada terminar escondido atrás dela. */}
-        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "pt-14" : "pt-14 sm:pt-16")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''} ${mostraBarraDoApp(currentPageName) ? 'pb-[3.75rem] lg:pb-0' : ''}`}>
+        <main className={`flex-1 min-w-0 ${isLandingPage ? "" : (isRecepcao ? "nz-abaixo-da-barra-baixa" : "nz-abaixo-da-barra")} ${PAGINAS_TEMA_CLARO.has(currentPageName) ? 'nz-painel' : ''} ${mostraBarraDoApp(currentPageName) ? 'pb-[3.75rem] lg:pb-0' : ''}`}>
           {/* 🎛️ Barra do Painel de Controle (AdminTopNav) removida do NetworkOverview
               em 08/08/2026: a navegação por seções já existe no dropdown do avatar
               (UserAvatarMenu → "Visão Geral" abre o MiniCanvas). A barra aqui era

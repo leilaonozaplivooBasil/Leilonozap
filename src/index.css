@@ -13,6 +13,14 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
 /* 🌿 Tokens institucionais da Recepção (verde clean, padrão vitrine) */
 @layer base {
   :root {
+    /* 📱 O ENTALHE DO IPHONE — 24/09/2026
+       Desde que o index.html ganhou `viewport-fit=cover` (DIR-179), o iOS
+       passou a reportar de verdade a área segura do topo. A barra fixa do
+       cabeçalho já recuava por ela (`padding-top: env(...)`), mas o <main>
+       descia uma altura FIXA (pt-14) — então a barra cresceu ~59px e o topo
+       da página ficou ATRÁS dela: era o banner da home aparecendo cortado.
+       Os dois passam a ler a MESMA medida daqui, pra nunca mais desencontrar. */
+    --nz-entalhe: env(safe-area-inset-top, 0px);
     --nz-verde: #1B7A48;
     --nz-verde-fundo: #F1F7F3;
     --nz-verde-escuro: #0C1F16;
@@ -472,6 +480,14 @@ body.pc-tema .livoo-brilho-forte {
 }
 
 @layer utilities {
+  /* 📱 Abaixo da barra fixa do topo: a altura dela (h-14 / sm:h-16) MAIS o
+     entalhe, que é exatamente o que a barra usa de padding-top. Trocar a
+     altura da barra? Troque aqui junto — é o mesmo número, nos dois lugares. */
+  .nz-abaixo-da-barra { padding-top: calc(3.5rem + var(--nz-entalhe)); }
+  @media (min-width: 640px) { .nz-abaixo-da-barra { padding-top: calc(4rem + var(--nz-entalhe)); } }
+  /* a Recepção tem cabeçalho baixinho e não cresce no desktop */
+  .nz-abaixo-da-barra-baixa { padding-top: calc(3.5rem + var(--nz-entalhe)); }
+
   @keyframes nzFloat {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-9px); }
@@ -1253,14 +1269,18 @@ body.pc-tema .livoo-brilho-forte {
  * Use isto no lugar de `min-h-screen` em QUALQUER tela que renderiza dentro
  * do <main> do Layout. É o mesmo 100vh, menos o cabeçalho.
  */
+/* 📱 24/09/2026 — o desconto inclui o ENTALHE, pela mesma razão do
+   .nz-abaixo-da-barra: o que o <main> empurra pra baixo é a altura da barra
+   MAIS o entalhe. Descontando só a altura, o painel de tela cheia estoura o
+   rodapé exatamente o tamanho do entalhe e nasce com rolagem sobrando. */
 .nz-tela-cheia {
-  min-height: calc(100vh - 3.5rem);
-  min-height: calc(100dvh - 3.5rem);   /* celular: desconta a barra do navegador */
+  min-height: calc(100vh - 3.5rem - var(--nz-entalhe));
+  min-height: calc(100dvh - 3.5rem - var(--nz-entalhe));   /* celular: desconta a barra do navegador */
 }
 @media (min-width: 640px) {
   .nz-tela-cheia {
-    min-height: calc(100vh - 4rem);
-    min-height: calc(100dvh - 4rem);
+    min-height: calc(100vh - 4rem - var(--nz-entalhe));
+    min-height: calc(100dvh - 4rem - var(--nz-entalhe));
   }
 }
 

@@ -3,6 +3,7 @@
 import bcrypt from 'bcryptjs';
 import { exigirSessao } from '../_lib/sessao.js';
 import { registrarEmail, idDaBrevo } from '../_lib/registroDeEmail.js';
+import { modeloDeEmail, p, tabelaDeDados } from '../_lib/modeloDeEmail.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,41 +19,21 @@ function sb(path, opts = {}) {
 // Layout em TABELA (clientes de e-mail não entendem flex/grid), logo clicável,
 // botão de entrar e botão de trocar a senha no Perfil.
 const SITE = 'https://leilaonozap.net';
-const LOGO = `${SITE}/brand/logo-horizontal-og.jpg`;
 
-function emailSenhaDefinida({ nome, email, senha }) {
+export function emailSenhaDefinida({ nome, email, senha }) {
   const primeiro = String(nome || '').split(' ')[0] || 'Olá';
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d1f17;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
-  <tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#12241c;border:1px solid #2f6f55;border-radius:14px">
-      <tr><td align="center" style="padding:22px 20px 6px">
-        <a href="${SITE}" target="_blank"><img src="${LOGO}" alt="Leilão NoZap" width="200" style="display:block;border:0;max-width:200px;height:auto"></a>
-      </td></tr>
-      <tr><td style="padding:8px 24px 0;color:#ffffff;font-size:19px;font-weight:bold">${primeiro}, sua senha de acesso foi definida</td></tr>
-      <tr><td style="padding:8px 24px 0;color:#bfe8d6;font-size:14px;line-height:21px">
-        Use os dados abaixo para entrar na sua conta do Leilão NoZap:
-      </td></tr>
-      <tr><td style="padding:14px 24px 0">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d1f17;border:1px solid #2f6f55;border-radius:10px">
-          <tr><td style="padding:12px 14px;color:#9aa3a0;font-size:12px">E-mail</td>
-              <td style="padding:12px 14px;color:#ffffff;font-size:14px;font-weight:bold" align="right">${email}</td></tr>
-          <tr><td style="padding:0 14px 12px;color:#9aa3a0;font-size:12px">Senha</td>
-              <td style="padding:0 14px 12px;color:#34d399;font-size:16px;font-weight:bold" align="right">${senha}</td></tr>
-        </table>
-      </td></tr>
-      <tr><td align="center" style="padding:20px 24px 0">
-        <a href="${SITE}/Loja-Virtual" target="_blank" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:14px 26px;border-radius:10px">Entrar na minha conta</a>
-      </td></tr>
-      <tr><td align="center" style="padding:10px 24px 0">
-        <a href="${SITE}/Profile#senha" target="_blank" style="display:inline-block;background:#0d1f17;color:#34d399;text-decoration:none;font-size:14px;font-weight:bold;padding:13px 22px;border-radius:10px;border:1px solid #2f6f55">Trocar minha senha</a>
-      </td></tr>
-      <tr><td style="padding:16px 24px 24px;color:#9aa3a0;font-size:12px;line-height:18px">
-        Se quiser, troque a senha a qualquer momento em <b>Perfil → Editar → Alterar Senha</b>.
-        Não compartilhe esta senha com ninguém.
-      </td></tr>
-    </table>
-  </td></tr>
-</table>`;
+  return modeloDeEmail({
+    titulo: `${primeiro}, sua senha de acesso foi definida`,
+    preheader: 'Seus dados de acesso ao Leilão NoZap.',
+    corpo: [
+      p('Use os dados abaixo para entrar na sua conta do Leilão NoZap:'),
+      tabelaDeDados([['E-mail', email], ['Senha', senha]]),
+    ],
+    botao: { rotulo: 'Entrar na minha conta', url: `${SITE}/Loja-Virtual` },
+    botaoSecundario: { rotulo: 'Trocar minha senha', url: `${SITE}/Profile#senha` },
+    avisoFinal: 'Se quiser, troque a senha a qualquer momento em Perfil → Editar → Alterar Senha. Não compartilhe esta senha com ninguém.',
+    motivo: 'Você recebe este e-mail porque um administrador definiu sua senha no Leilão NoZap.',
+  });
 }
 
 async function avisarPorEmail({ nome, email, senha, atorId }) {
