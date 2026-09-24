@@ -24,6 +24,11 @@ export default function AtalhoTopCollege({ currentUser, temaClaro = false, class
       title={rotulo}
       data-teste="atalho-topcollege"
       className={`grid shrink-0 place-items-center transition-transform hover:scale-[1.08] active:scale-95 ${className}`}
+      // 🎯 24/09 (2º print do dono): "faceando com o martelo dá impressão de
+      // descentralizado". A logo tem a ponta do balão embaixo, então o centro
+      // VISUAL dela fica abaixo do centro da caixa — o símbolo desce 3px pra
+      // ficar entre o martelo e a ponta do balão.
+      style={{ transform: 'translateY(3px)' }}
     >
       <img
         src="/marca/topcollege-3d.webp"

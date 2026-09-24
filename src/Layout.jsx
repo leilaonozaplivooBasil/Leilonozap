@@ -963,7 +963,7 @@ export default function Layout({ children, currentPageName }) {
                     Antes ficava no canto direito, dentro de uma placa; o dono pediu
                     "mais próxima da logo, sem o quadrado, mais em 3D". Vale no celular
                     e no computador — saiu do NavDesktop e do cluster do menu mobile. */}
-                <AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} className="-ml-1 md:-ml-2" />
+                <AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} className="ml-1 md:ml-0" />
                 {/* PONTO 91 — na sala de leilão: Favoritar e Compartilhar entre a logo e a Carteira */}
                 {currentPageName === 'AuctionRoom' && <AcoesTopoSala />}
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
