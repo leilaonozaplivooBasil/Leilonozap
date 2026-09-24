@@ -34,3 +34,11 @@ test('o contador do carrinho é a mesma bolinha bege dos Atalhos', () => {
 test('o carrinho sai do cabeçalho do celular onde a barra aparece (e fica no checkout/pedidos, sem barra)', () => {
   assert.ok(LAYOUT.includes('{isCatalogPage && !mostraBarraDoApp(currentPageName) && ('));
 });
+
+test('a barra é de vidro, como o bloco Leilões Ativos: quase sem cor própria, desfoque forte, fio claro no topo', () => {
+  assert.ok(BARRA.includes("rgba(10, 16, 14, 0.42)"), 'fundo translúcido (o de antes era 0.94, chapado)');
+  assert.ok(BARRA.includes("backdropFilter: 'blur(22px) saturate(1.7)'"));
+  assert.ok(BARRA.includes("borderTop: '1px solid rgba(255,255,255,0.12)'"));
+  assert.ok(BARRA.includes("textShadow: '0 1px 2px rgba(0,0,0,0.6)'"), 'rótulo legível sobre foto clara');
+  assert.ok(!BARRA.includes('rgba(14, 22, 18, 0.9'));
+});
