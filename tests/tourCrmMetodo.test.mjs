@@ -18,7 +18,14 @@ const METODO = fs.readFileSync(new URL('../src/components/licensing/CentralVenda
 // DOM inteiro em tempo de execução, não só dentro deste arquivo. Por isso
 // a checagem olha os dois arquivos, não só o de CrmMetodo.
 const CLIENTES_TAB = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/CrmClientesTab.jsx', import.meta.url), 'utf8');
-const TELA = `${METODO}\n${CLIENTES_TAB}`;
+// 🧩 24/09/2026 — a grade das 8 portas e a barra do hábito saíram do
+// CrmClientesTab (2.900 linhas) pros seus próprios arquivos. As marcas
+// continuam existindo no app; só mudaram de casa. Sem somar estes dois aqui,
+// o teste acusaria "sobra de merge" pra alvo que está vivo — e a próxima
+// pessoa perderia uma tarde atrás de um defeito que não existe.
+const PORTAS = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PortasDosHabitos.jsx', import.meta.url), 'utf8');
+const BARRA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/BarraDoHabito.jsx', import.meta.url), 'utf8');
+const TELA = `${METODO}\n${CLIENTES_TAB}\n${PORTAS}\n${BARRA}`;
 
 const PASSOS = ['PASSOS_TOUR_METODO', 'PASSOS_TOUR_SONHO', 'PASSOS_TOUR_LISTA', 'PASSOS_TOUR_CONTATO', 'PASSOS_TOUR_APRESENTACAO', 'PASSOS_TOUR_DUPLICACAO'];
 

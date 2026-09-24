@@ -23,6 +23,13 @@ import fs from 'node:fs';
 const METODO = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/CrmMetodo.jsx', import.meta.url), 'utf8');
 const CLIENTES_TAB = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/CrmClientesTab.jsx', import.meta.url), 'utf8');
 const ESTEIRA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/CrmEsteiraCaptacao.jsx', import.meta.url), 'utf8');
+// 🧩 24/09/2026 — a grade das 8 portas (`nav-habitos`) e a barra do hábito
+// (`barra-do-habito`) saíram do CrmClientesTab, que tinha 2.900 linhas, pros
+// seus próprios arquivos. As marcas continuam VIVAS no app; só mudaram de
+// casa. Sem somar os dois aqui, este teste acusa mãozinha apontando pro vazio
+// num alvo que existe — e manda a próxima pessoa caçar um defeito que não há.
+const PORTAS = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PortasDosHabitos.jsx', import.meta.url), 'utf8');
+const BARRA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/BarraDoHabito.jsx', import.meta.url), 'utf8');
 
 // ── 1. os alvos que viviam duplicados dentro de .map() agora são únicos ──
 const CASOS_DUPLICADOS = [
@@ -52,7 +59,7 @@ test('Hábito 6 (Acompanhamento/Clientes) tem tour próprio, com todos os alvos 
   const alvos = [...trecho.matchAll(/alvo:\s*'([^']+)'/g)].map((m) => m[1]);
   assert.ok(alvos.length >= 3, 'PASSOS_TOUR_ACOMPANHAMENTO tem poucos passos');
   for (const alvo of alvos) {
-    assert.match(CLIENTES_TAB, new RegExp(`data-teste="${alvo}"`), `alvo "${alvo}" sem elemento correspondente`);
+    assert.match(`${CLIENTES_TAB}\n${PORTAS}\n${BARRA}`, new RegExp(`data-teste="${alvo}"`), `alvo "${alvo}" sem elemento correspondente`);
   }
   assert.match(CLIENTES_TAB, /<TourGuiado ativo=\{tourAcompanhamentoAberto\} passos=\{PASSOS_TOUR_ACOMPANHAMENTO\}/);
 });
@@ -65,7 +72,7 @@ test('Hábito 7 (Verificação) tem tour próprio, com todos os alvos de verdade
   const alvos = [...trecho.matchAll(/alvo:\s*'([^']+)'/g)].map((m) => m[1]);
   assert.ok(alvos.length >= 3, 'PASSOS_TOUR_VERIFICACAO tem poucos passos');
   for (const alvo of alvos) {
-    assert.match(CLIENTES_TAB, new RegExp(`data-teste="${alvo}"`), `alvo "${alvo}" sem elemento correspondente`);
+    assert.match(`${CLIENTES_TAB}\n${PORTAS}\n${BARRA}`, new RegExp(`data-teste="${alvo}"`), `alvo "${alvo}" sem elemento correspondente`);
   }
   assert.match(CLIENTES_TAB, /<TourGuiado ativo=\{tourVerificacaoAberto\} passos=\{PASSOS_TOUR_VERIFICACAO\}/);
 });
