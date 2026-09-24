@@ -12,6 +12,28 @@
 
 ---
 
+## 🏷️ REGRA DA CASA — como nomear o commit (24/09/2026)
+
+**Emitida por:** dono, olhando a lista de Deployments da Vercel: *"aqui no começo vamos inserir o nome do chat e emoji com o nome da ação que está fazendo. Tem várias pessoas e vários chats, precisamos identificar quem é quem."*
+
+**O problema:** na lista da Vercel cabem ~36 caracteres antes de cortar. Com o assunto começando em `DIR-178:`, duas linhas de **chats diferentes** ficam idênticas na tela — e o dono não sabe qual build é de quem sem abrir uma por uma. Pior: um commit de junção nasce com o assunto `Merge branch 'x' into y`, que é exatamente o que vai pro alto da lista e não diz nada.
+
+**O formato, e a ordem importa:**
+
+```
+<emoji> <NOME DO CHAT> · <DIR-nnn> · <a ação, em minúscula>
+```
+
+1. **o emoji primeiro** — é o que o olho acha antes de ler;
+2. **o nome do chat em seguida** — dentro dos ~36 caracteres visíveis, é ele que responde "de quem é isto";
+3. **a DIR e a ação depois** — quem quer o detalhe abre o commit.
+
+Exemplo real desta rodada: `🎮 TOP COLLEGE / X-GAME · DIR-179 · a capa dos 8 hábitos`.
+
+⚠️ **Vale também para commit de junção (merge).** É ele que fica no topo do ramo e é ele que a Vercel mostra — deixar o texto automático do git ali desperdiça a única linha que o dono lê.
+
+---
+
 ## DIR-179 — os 8 Hábitos ganham CAPA: clicar num hábito apaga os outros sete
 
 > 🔢 **Era DIR-178 e virou 179**: o chat da logo da Top College já tinha
@@ -55,7 +77,9 @@ A analogia do dono é a solução exata — um catálogo tem **dois estados**, g
 
 **Prova de código:** suíte 3632/3632 (`atalhoTopCollege.test.mjs` atualizado: sai do NavDesktop, um só no Layout, sem placa, arquivo 3D existe), lint 0 erros, build ok.
 
-**Status:** NO PREVIEW OFICIAL, aguardando o OK do dono para produção.
+**Ajustes no preview (mesmo dia, três rodadas com o dono):** (1) *"faceando com o martelo dá impressão de descentralizado"* — a logo tem a ponta do balão embaixo, o centro visual dela fica abaixo do centro da caixa: o símbolo desce 3px e ganha respiro à direita; (2) *"quando passo o mouse na logo ela vem pra frente; na Top College está parada"* — o deslocamento era um `transform` em linha e engolia o `hover:scale`; virou classe e os dois se somam; (3) a barra do app (DIR-177) vira **vidro** como o bloco Leilões Ativos — fundo quase sem cor própria, desfoque forte, rótulo com sombra de texto — e a linha divisória cai a 4% (*"praticamente imperceptível sem ficar feio"*). Cada rodada foi ao preview oficial antes; produção só com o "PODE COLOCAR EM PRODUÇÃO" do dono.
+
+**Status:** EM VIGOR.
 
 ---
 
