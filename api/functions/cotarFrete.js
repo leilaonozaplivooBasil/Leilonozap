@@ -13,6 +13,7 @@
 import { cotarOpcoes } from '../_lib/frete.js';
 import { cotarFreteDoLeilao, salvarCepSeVazio } from '../_lib/freteLeilao.js';
 import { emitirSelo } from '../_lib/freteSelo.js';
+import { MENSAGEM_PRODUTO_GRANDE } from '../_lib/freteACombinar.js';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 🔴 BLOQUEADOR 3 (auditoria OpenAI, 21/08/2026) — ASSINAR O QUE O CLIENTE MANDOU
@@ -113,6 +114,11 @@ export default async function handler(req, res) {
 
       const cot = await cotarFreteDoLeilao({ auctionId, userId: donoDaCotacao });
       if (!cot.ok) {
+        // 🤝 24/09/2026 — produto grande demais NÃO é problema de CEP. O motivo
+        // sobe com nome próprio pra sala parar de mandar "confira o seu CEP".
+        if (cot.submotivo === 'produto_grande') {
+          return res.status(200).json({ success: false, configured: true, motivo: 'produto_grande', error: MENSAGEM_PRODUTO_GRANDE });
+        }
         return res.status(200).json({ success: false, configured: true, motivo: cot.motivo, error: {
           sem_cep: 'Cadastre seu CEP no perfil para calcularmos o frete.',
           produto_nao_vinculado: 'Este leilão está sem produto vinculado. Avise o suporte.',
@@ -132,6 +138,8 @@ export default async function handler(req, res) {
       }));
       return res.status(200).json({
         success: true, configured: true, opcoes, cep: cot.cep,
+        // 🤝 lote grande com retirada ligada: a sala mostra "frete a combinar"
+        frete_a_combinar: cot.aCombinar === true,
         endereco_completo: cot.enderecoCompleto,
         endereco_atual: cot.enderecoAtual,
       });

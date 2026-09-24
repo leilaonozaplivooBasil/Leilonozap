@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Truck, MapPin, Search, LogIn, Pencil, Check } from "lucide-react";
+import { Loader2, Truck, MapPin, Search, LogIn, Pencil, Check, Handshake, PackageX } from "lucide-react";
 import { fmtBR } from "@/lib/money";
+import { MENSAGEM_PRODUTO_GRANDE, MENSAGEM_A_COMBINAR } from "@/lib/freteDoLance";
 
 /**
  * PONTO 82 — CEP em UMA linha: input + botão + resultado.
@@ -34,6 +35,32 @@ export default function FreteLanceBanner({
             <Pencil className="h-3.5 w-3.5" />
           </button>
         )}
+      </div>
+    );
+  }
+
+  // 🤝 24/09/2026 — lote grande com retirada ligada: nada de frete no lance.
+  if (status === "a_combinar") {
+    return (
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.25)' }}
+        data-teste="frete-a-combinar">
+        <Handshake className="h-4 w-4 shrink-0 text-emerald-400" />
+        <span className="min-w-0 flex-1 text-xs text-emerald-100">{MENSAGEM_A_COMBINAR}</span>
+        <span className="shrink-0 text-sm font-bold text-emerald-300">R$ 0,00</span>
+      </div>
+    );
+  }
+
+  // 📦 Transportadoras recusaram o VOLUME e o lote não permite retirada: o CEP
+  // está certo — não adianta pedir outro. A saída é falar com a equipe.
+  if (status === "produto_grande") {
+    return (
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.40)' }}
+        data-teste="frete-produto-grande">
+        <PackageX className="h-4 w-4 shrink-0 text-amber-400" />
+        <span className="min-w-0 flex-1 text-xs text-amber-100">{MENSAGEM_PRODUTO_GRANDE}</span>
       </div>
     );
   }

@@ -13,6 +13,7 @@
 // escolhe transportadora e preço por um pacote que não existe. Era o defeito F8,
 // e era meu.
 import { cotarOpcoes } from './frete.js';
+import { cabeFreteACombinar, opcaoACombinar, FRETE_A_COMBINAR_ID } from './freteACombinar.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -94,7 +95,7 @@ export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, au
 
   let leilao = auction;
   if (!leilao) {
-    const rows = await (await sb(`auctions?select=id,product_id,current_price,starting_price&id=eq.${enc(auctionId)}&limit=1`)).json();
+    const rows = await (await sb(`auctions?select=id,product_id,current_price,starting_price,permite_retirada&id=eq.${enc(auctionId)}&limit=1`)).json();
     leilao = Array.isArray(rows) ? rows[0] : null;
   }
   if (!leilao) return { ok: false, motivo: 'leilao_nao_encontrado', frete: null, opcoes: [] };
@@ -131,7 +132,33 @@ export async function cotarFreteDoLeilao({ auctionId, userId, freteId = null, au
     return { ok: false, motivo: 'cotacao_indisponivel', erro: String(e?.message || e), frete: null, opcoes: [] };
   }
   if (!r?.ok || !Array.isArray(r.opcoes) || !r.opcoes.length) {
-    return { ok: false, motivo: 'cotacao_indisponivel', erro: r?.error || null, frete: null, opcoes: [] };
+    // 🤝 FRETE A COMBINAR (24/09/2026, caso Harley 117) — as transportadoras
+    // recusaram o VOLUME e a casa ligou a retirada neste lote: o frete vira
+    // zero, com selo próprio ('a_combinar'). Ver api/_lib/freteACombinar.js.
+    // Quem chamou com o leilão já lido pode não ter trazido a coluna — aí lê
+    // só ela, e só neste caso (é raro e não está no caminho quente do lance).
+    let permiteRetirada = leilao.permite_retirada;
+    if (permiteRetirada === undefined && r?.motivo === 'produto_grande') {
+      const aRows = await (await sb(`auctions?select=permite_retirada&id=eq.${enc(auctionId)}&limit=1`)).json();
+      permiteRetirada = Array.isArray(aRows) ? aRows[0]?.permite_retirada : undefined;
+    }
+    if (cabeFreteACombinar({ motivo: r?.motivo, permiteRetirada })) {
+      const opcao = opcaoACombinar();
+      return {
+        ok: true, motivo: 'frete_a_combinar', aCombinar: true, opcoes: [opcao],
+        productId: String(leilao.product_id), cep: cepUsar, enderecoCompleto,
+        enderecoAtual: {
+          street: usuario?.address_street || null, number: usuario?.address_number || null,
+          complement: usuario?.address_complement || null, neighborhood: usuario?.address_neighborhood || null,
+          city: usuario?.address_city || null, state: usuario?.address_state || null,
+        },
+        frete: { id: FRETE_A_COMBINAR_ID, valor: 0, empresa: opcao.empresa, servico: opcao.nome, prazo: null, cep: cepUsar, productId: String(leilao.product_id) },
+      };
+    }
+    // `submotivo` é o que a Melhor Envio disse de verdade (produto_grande ·
+    // sem_transportadora) — a sala precisa dele pra não mandar conferir o CEP
+    // quando o problema é o tamanho da peça.
+    return { ok: false, motivo: 'cotacao_indisponivel', submotivo: r?.motivo || null, erro: r?.error || null, frete: null, opcoes: [] };
   }
 
   const escolhida = freteId

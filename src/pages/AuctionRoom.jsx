@@ -18,6 +18,7 @@ import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, fmtBR } from '@/lib/money';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+import { statusDaCotacao, bloqueioDoFrete } from '@/lib/freteDoLance';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
@@ -578,16 +579,20 @@ export default function AuctionRoom() {
         cep,
       });
       const data = result?.data || result;
-      if (data?.success && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
-        const escolhida = data.opcoes[0];
-        setFreteValor(money(escolhida.preco));
-        setFreteSelo(escolhida.selo || null);
-        setEnderecoAtual(data.endereco_atual || null);
+      // 🤝 24/09/2026 — a leitura da resposta saiu para src/lib/freteDoLance.js
+      // (caso Harley 117: transportadora recusando o VOLUME virava "confira o
+      // CEP"). Cada resposta vira um status com nome: ok · a_combinar ·
+      // needs_address · needs_cep · needs_login · produto_grande · error.
+      const lido = statusDaCotacao(data);
+      if (lido.status === 'ok' || lido.status === 'needs_address' || lido.status === 'a_combinar') {
+        setFreteValor(lido.valor);
+        setFreteSelo(lido.selo);
+        setEnderecoAtual(lido.endereco);
         // 📮 CEP cota o frete, mas despachar exige RUA + NÚMERO. Sem isso o
         // pedido nasce igual ao AR3BEF1939: pago, mas sem como sair do galpão.
         // A caixinha de endereço abre no lugar do "frete calculado" até
         // confirmar — mesmo padrão visual do CEP, sem página nova.
-        setFreteStatus(data.endereco_completo ? 'ok' : 'needs_address');
+        setFreteStatus(lido.status);
       } else {
         setFreteValor(0);
         setFreteSelo(null);
@@ -606,11 +611,7 @@ export default function AuctionRoom() {
         // → e o botão de lance ficaria travado para sempre, num leilão ao vivo,
         // com uma instrução que não resolve nada, porque o CEP delas está certo.
         // Aqui a tela diz a verdade e manda entrar de novo, que é o que resolve.
-        if (data?.error === 'nao_autenticado') {
-          setFreteStatus('needs_login');
-        } else {
-          setFreteStatus(data?.motivo === 'sem_cep' ? 'needs_cep' : 'error');
-        }
+        setFreteStatus(lido.status);
       }
     } catch (e) {
       console.warn('⚠️ [FRETE] Erro ao calcular frete do leilão:', e.message);
@@ -647,20 +648,14 @@ export default function AuctionRoom() {
   // Agora nenhum lance e nenhum arremate passa sem frete cotado. O texto diz o que
   // fazer em cada caso, porque "erro" no meio de um leilão ao vivo sem instrução
   // faz a pessoa desistir.
-  const freteBloqueia = useCallback(() => {
-    if (freteStatus === 'ok' && freteValor > 0 && freteSelo) return null;
-    // selo ausente com cotação "ok" só acontece se a rota antiga responder — e aí
-    // o lance seria recusado no servidor assim que FRETE_MODO=bloquear subir.
-    if (freteStatus === 'ok' && freteValor > 0 && !freteSelo) {
-      return 'Não conseguimos confirmar o frete com o servidor. Recarregue a página e tente de novo.';
-    }
-    if (freteStatus === 'needs_login') return 'Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.';
-    if (freteStatus === 'needs_address') return 'Complete seu endereço de entrega para dar o lance.';
-    if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
-    if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
-    if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
-    return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
-  }, [freteStatus, freteValor, freteCep, freteSelo]);
+  //
+  // 🤝 24/09/2026 — a régua mora em src/lib/freteDoLance.js (bloqueioDoFrete).
+  // Única exceção ao "sem frete não passa": o selo 'a_combinar' de lote grande
+  // com retirada ligada pela casa — o servidor confere de novo no lance.
+  const freteBloqueia = useCallback(
+    () => bloqueioDoFrete({ status: freteStatus, valor: freteValor, selo: freteSelo, cep: freteCep }),
+    [freteStatus, freteValor, freteCep, freteSelo],
+  );
 
   // 📮 Salva rua/número (e o resto que o CEP já trouxe) e libera o lance na
   // hora — sem recotar frete de novo, o valor já é o mesmo.
