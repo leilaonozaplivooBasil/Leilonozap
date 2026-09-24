@@ -35,7 +35,7 @@
 // movimento de dinheiro. Se o quadro de alguém falhar, os outros continuam.
 import { gerarTarefasDaRotina, ROTINA_PADRAO } from '../../src/lib/metodo.js';
 import { contaNaLixeira } from '../_lib/contaAtiva.js';
-import { pesoAutomatico } from '../../src/lib/xgame.js';
+import { pesoAutomatico, afastadoDoJogo } from '../../src/lib/xgame.js';
 import { rotinaEmVigor, devePreAbrirAutomatico, jaGerouHoje } from '../../src/lib/rotinaPessoal.js';
 import { rotinaComEventos } from '../../src/lib/eventosGamificacao.js';
 import { temDireitoAoXGame } from '../../src/lib/careerLevels.js';
@@ -86,8 +86,13 @@ export default async function handler(req, res) {
     // O filtro é em JavaScript, e não na consulta, porque a regra é `=== false`:
     // conta com o campo nulo é conta normal e continua recebendo.
     const usuarios = arr(await j(await sb('app_users?select=id,career_levels,active')));
+    // 🧳 24/09/2026 — afastado do X-Game (ativo = false) também não recebe
+    // jornada: sem isto, Karen e Jean seguiam com 160 tarefas por semana
+    // cada, zero feitas, enquanto estavam fora da empresa. Ver afastadoDoJogo.
+    const afastados = new Set(arr(await j(await sb('xgame_participantes?select=user_id,ativo&ativo=eq.false')))
+      .filter(afastadoDoJogo).map((p) => p.user_id));
     const ids = usuarios
-      .filter((u) => !contaNaLixeira(u) && temDireitoAoXGame(u.career_levels))
+      .filter((u) => !contaNaLixeira(u) && temDireitoAoXGame(u.career_levels) && !afastados.has(u.id))
       .map((u) => u.id);
     if (!ids.length) return res.status(200).json({ success: true, elegiveis: 0 });
 
