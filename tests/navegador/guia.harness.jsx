@@ -24,18 +24,25 @@ import RelogioDeTeste from '@/components/licensing/CentralVendas/RelogioDeTeste'
 // 🧹 DIR-180 — a faixa ficou SÓ com as 5 visões. O relógio de teste saiu
 // dela (RelogioDeTeste.jsx) e é montado longe da fileira — no app, no pé do
 // placar. Aqui a banca monta os dois separados, como a tela faz.
+// 🩹 DIR-182 — SEM caixa própria em volta: `position: sticky` só gruda
+// enquanto o PAI está na tela, e um <div> curtinho levaria a faixa embora
+// junto com ele. No app o pai é o painel inteiro do Compromisso; aqui é o
+// palco. A banca tem que espelhar isso, senão ela aprova o que quebra.
 function FaixaViva() {
   const [visao, setVisao] = React.useState('jornada');
   const [hora, setHora] = React.useState('');
   const [rascunho, setRascunho] = React.useState('');
   return (
-    <div className="mb-5">
+    <>
+      {/* 🧭 DIR-182 — a banca precisa de uma barra fixa no topo e de página
+          alta o bastante pra rolar, senão "grudou" não significa nada. */}
+      <div className="fixed top-0 left-0 right-0 z-50" data-teste="barra-do-app-falsa" style={{ height: 'calc(3.5rem + var(--nz-entalhe))', background: 'rgba(33,34,43,0.9)' }} />
       <FaixaVisao visao={visao} onVisao={setVisao} />
       <div className="mt-2 flex justify-end" data-teste="pe-do-placar">
         <RelogioDeTeste teste={{ hora, rascunho, onRascunho: setRascunho, entrar: () => setHora(rascunho), sair: () => { setHora(''); setRascunho(''); } }} />
       </div>
       <span data-teste="estado-faixa">{JSON.stringify({ visao, hora })}</span>
-    </div>
+    </>
   );
 }
 
@@ -45,7 +52,7 @@ function Banca() {
   return (
     <MemoryRouter>
       <div style={{ minHeight: '100vh', background: 'var(--xeos-preto, #00020C)' }}>
-        <div className="px-4 pt-4" data-teste="navegacao">
+        <div className="nz-abaixo-da-barra px-4" data-teste="navegacao">
           <MobileNavSheet user={USUARIO} activeTab="catalogo" onTabChange={() => {}} topCollege />
         </div>
         <HeroTopCollege saudacao="Bom dia" nome="LUIZ" seletor={null} />
@@ -61,6 +68,10 @@ function Banca() {
           <button type="button" data-teste="primeira-acao" className="mt-4 rounded-full bg-nz-verde text-white text-xs font-bold px-4 py-2">
             + adicionar sonho
           </button>
+          {/* 🧭 DIR-182 — página alta o bastante pra existir rolagem de verdade:
+              sem rolagem, provar que a fileira "gruda" não significa nada.
+              Fica no FIM, depois de tudo, pra não empurrar o resto da banca. */}
+          <div data-teste="conteudo-comprido" style={{ height: 1800 }} className="mt-4 rounded-xl bg-white/5" />
         </div>
       </div>
     </MemoryRouter>

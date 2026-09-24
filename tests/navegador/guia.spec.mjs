@@ -225,3 +225,46 @@ test('FAIXA: uma fileira só e TODOS os cinco nomes inteiros no celular; fotos n
     await ctx.close();
   }
 });
+
+// ── 🧭 DIR-182 — a fileira gruda embaixo da barra do app ──
+// Dono: "que a barra da Jornada, Lista, Quadro e tal fique FIXA no local mais
+// estratégico pra guiar a organização." Antes ela rolava junto e sumia: quem
+// descia pra ver a lista do dia perdia o mapa de onde estava.
+test('FAIXA: rolar a página NÃO leva a fileira embora — ela gruda embaixo da barra do app', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir({ celular: true });
+  const topo = () => pagina.$eval('[data-teste="faixa-visao"]', (n) => Math.round(n.getBoundingClientRect().top));
+  const barra = await pagina.$eval('[data-teste="barra-do-app-falsa"]', (n) => Math.round(n.getBoundingClientRect().bottom));
+
+  const antes = await topo();
+  await pagina.evaluate(() => window.scrollTo(0, 900));
+  await pagina.waitForTimeout(250);
+  const depois = await topo();
+
+  assert.ok(await pagina.evaluate(() => window.scrollY) > 500, 'a banca não rolou — a prova não valeria nada');
+  assert.ok(depois >= barra - 2, `a fileira subiu por baixo da barra do app (topo=${depois}, barra acaba em ${barra})`);
+  assert.ok(depois <= barra + 12, `a fileira não encostou na barra (topo=${depois}, barra acaba em ${barra})`);
+  // 🩹 ela COMEÇA abaixo da dobra e SOBE até encostar — subir é o certo. O que
+  // não pode é ela continuar subindo e sumir: sem grudar, 900px de rolagem a
+  // levariam pra ~-425px (foi o que a banca mediu antes do conserto).
+  assert.ok(depois > 0, `a fileira rolou junto e foi embora: ${antes} → ${depois}`);
+  assert.ok(antes - depois < 900, 'a fileira acompanhou a rolagem inteira — não grudou');
+
+  // e continua clicável depois de grudada — sticky que não recebe toque é enfeite
+  await pagina.getByRole('tab', { name: 'Quadro' }).tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'quadro');
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+// 🩹 grudada, a fileira tem conteúdo passando POR BAIXO dela: translúcida vira
+//    sopa de texto. O fundo tem que ser sólido de verdade.
+test('FAIXA: grudada, o fundo é sólido — nada de texto aparecendo por baixo', { skip: semNavegador }, async () => {
+  const { pagina, ctx } = await abrir({ celular: true });
+  const alfa = await pagina.$eval('[data-teste="faixa-visao"]', (n) => {
+    const m = getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/);
+    const partes = m[1].split(',').map((x) => parseFloat(x));
+    return partes.length === 4 ? partes[3] : 1;
+  });
+  assert.ok(alfa >= 0.9, `o fundo da fileira grudada está transparente demais (alfa=${alfa})`);
+  await ctx.close();
+});

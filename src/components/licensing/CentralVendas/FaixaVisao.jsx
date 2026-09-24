@@ -43,64 +43,73 @@ export default function FaixaVisao({ visao, onVisao, demandasEsperando = 0, atal
   const ehOAtalho = Boolean(onAtalho) && atalho === visao;
 
   return (
-    <div
-      className="grid grid-cols-5 gap-1 rounded-2xl border border-nz-borda/50 bg-white/[0.04] p-1"
-      role="tablist"
-      aria-label="Visão do dia"
-      data-teste="faixa-visao"
-    >
-      {OPCOES.map(({ id, rotulo, Icone }) => {
-        const ativo = visao === id;
-        return (
-          <div key={id} className="relative">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={ativo}
-              aria-label={rotulo}
-              title={rotulo}
-              data-teste={`visao-${id}`}
-              onClick={() => { if (!ativo) { vibrar(VIBRA_TOQUE); onVisao(id); } }}
-              className={`flex w-full flex-col items-center gap-1 rounded-xl px-0.5 py-2 transition-all ${
-                ativo ? 'text-white shadow-lg' : 'text-nz-tinta-fraca hover:text-nz-tinta'}`}
-              style={ativo ? { background: GRADIENTE_TC, boxShadow: '0 4px 14px -2px rgba(59,111,246,0.5)' } : undefined}
-            >
-              <Icone className="w-4 h-4 shrink-0" strokeWidth={ativo ? 2.4 : 2} />
-              {/* 📱 o nome NÃO some mais no celular: ícone em cima, palavra
-                  embaixo, e cada azulejo tem a largura inteira da coluna —
-                  o mesmo conserto do "Acompanha…" cortado no DIR-179. */}
-              <span className="w-full text-center text-[10px] font-bold leading-none">{rotulo}</span>
-            </button>
-
-            {/* 🔴 o que está esperando dentro das Demandas — o único sinal de
-                que tem coisa ali; fica por cima do azulejo, não na fileira. */}
-            {id === 'demandas' && demandasEsperando > 0 && (
-              <span
-                className={`pointer-events-none absolute -top-0.5 right-0.5 inline-flex min-w-[15px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-[15px] ${
-                  ativo ? 'bg-white text-nz-tinta' : 'bg-nz-verde-neon text-nz-tinta'}`}
-                data-teste="faixa-demandas-contador"
-              >{demandasEsperando > 99 ? '99+' : demandasEsperando}</span>
-            )}
-
-            {/* ⭐ 23/09/2026 — fixa a visão aberta como destino do ícone da Top
-                College no cabeçalho (src/lib/atalhoTopCollege.js). DIR-180: só
-                aparece no azulejo ATIVO, porque é sobre ELE que o botão age. */}
-            {onAtalho && ativo && (
+    /* 🧭 DIR-182 — a fileira GRUDA embaixo da barra do app e para de rolar
+       junto. Dono: "que fique fixa no local mais estratégico pra guiar a
+       organização." O rodapé de baixo já é do botão AGORA da Jornada; o topo
+       é onde a pessoa olha pra se orientar — e agora ele nunca some.
+       O fundo aqui é SÓLIDO de propósito: grudada, ela tem conteúdo passando
+       por baixo, e translúcida ela viraria uma sopa de texto. */
+    <div className="nz-faixa-grudada -mt-1 pt-1 pb-1.5" data-teste="faixa-grudada">
+      <div
+        className="nz-faixa-fundo grid grid-cols-5 gap-1 rounded-2xl border border-nz-borda/60 p-1 backdrop-blur-xl"
+        role="tablist"
+        aria-label="Visão do dia"
+        data-teste="faixa-visao"
+        style={{ boxShadow: '0 6px 20px -8px rgba(0,0,0,0.25)' }}
+      >
+        {OPCOES.map(({ id, rotulo, Icone }) => {
+          const ativo = visao === id;
+          return (
+            <div key={id} className="relative">
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); if (!ehOAtalho) { vibrar(VIBRA_TOQUE); onAtalho(visao); } }}
-                aria-pressed={ehOAtalho}
-                title={ehOAtalho ? 'O ícone da Top College já abre aqui' : 'Fixar esta visão como meu atalho da Top College'}
-                data-teste="fixar-atalho"
-                className={`absolute -top-1 -left-1 grid h-5 w-5 place-items-center rounded-full border transition-colors ${
-                  ehOAtalho ? 'border-amber-300 bg-amber-300 text-amber-900' : 'border-nz-borda bg-white/90 text-nz-tinta-fraca hover:text-amber-500'}`}
+                role="tab"
+                aria-selected={ativo}
+                aria-label={rotulo}
+                title={rotulo}
+                data-teste={`visao-${id}`}
+                onClick={() => { if (!ativo) { vibrar(VIBRA_TOQUE); onVisao(id); } }}
+                className={`flex w-full flex-col items-center gap-1 rounded-xl px-0.5 py-2 transition-all ${
+                  ativo ? 'text-white shadow-lg' : 'text-nz-tinta-fraca hover:text-nz-tinta'}`}
+                style={ativo ? { background: GRADIENTE_TC, boxShadow: '0 4px 14px -2px rgba(59,111,246,0.5)' } : undefined}
               >
-                <Star className="w-3 h-3" fill={ehOAtalho ? 'currentColor' : 'none'} strokeWidth={2.4} />
+                <Icone className="w-4 h-4 shrink-0" strokeWidth={ativo ? 2.4 : 2} />
+                {/* 📱 o nome NÃO some mais no celular: ícone em cima, palavra
+                    embaixo, e cada azulejo tem a largura inteira da coluna —
+                    o mesmo conserto do "Acompanha…" cortado no DIR-179. */}
+                <span className="w-full text-center text-[10px] font-bold leading-none">{rotulo}</span>
               </button>
-            )}
-          </div>
-        );
-      })}
+
+              {/* 🔴 o que está esperando dentro das Demandas — o único sinal de
+                  que tem coisa ali; fica por cima do azulejo, não na fileira. */}
+              {id === 'demandas' && demandasEsperando > 0 && (
+                <span
+                  className={`pointer-events-none absolute -top-0.5 right-0.5 inline-flex min-w-[15px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-[15px] ${
+                    ativo ? 'bg-white text-nz-tinta' : 'bg-nz-verde-neon text-nz-tinta'}`}
+                  data-teste="faixa-demandas-contador"
+                >{demandasEsperando > 99 ? '99+' : demandasEsperando}</span>
+              )}
+
+              {/* ⭐ 23/09/2026 — fixa a visão aberta como destino do ícone da Top
+                  College no cabeçalho (src/lib/atalhoTopCollege.js). DIR-180: só
+                  aparece no azulejo ATIVO, porque é sobre ELE que o botão age. */}
+              {onAtalho && ativo && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); if (!ehOAtalho) { vibrar(VIBRA_TOQUE); onAtalho(visao); } }}
+                  aria-pressed={ehOAtalho}
+                  title={ehOAtalho ? 'O ícone da Top College já abre aqui' : 'Fixar esta visão como meu atalho da Top College'}
+                  data-teste="fixar-atalho"
+                  className={`absolute -top-1 -left-1 grid h-5 w-5 place-items-center rounded-full border transition-colors ${
+                    ehOAtalho ? 'border-amber-300 bg-amber-300 text-amber-900' : 'border-nz-borda bg-white/90 text-nz-tinta-fraca hover:text-amber-500'}`}
+                >
+                  <Star className="w-3 h-3" fill={ehOAtalho ? 'currentColor' : 'none'} strokeWidth={2.4} />
+                </button>
+              )}
+            </div>
+            );
+          })}
+      </div>
     </div>
   );
 }
