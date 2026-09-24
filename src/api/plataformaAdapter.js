@@ -57,6 +57,10 @@ const TABLE_MAP = {
   CatalogVisit: 'catalog_visits',
   Category: 'categories',
   CommissionRecord: 'commission_records',
+  // 💸 24/09/2026 — só LEITURA pelo cliente (o histórico da tela). A escrita é
+  // exclusiva de api/functions/payCommissionManually.js, com a chave de
+  // serviço — ver o comentário na migração da tabela.
+  ComissaoPagamentoManual: 'comissao_pagamentos_manuais',
   ComparaiLog: 'comparai_logs',
   CaptacaoOportunidade: 'captacao_oportunidades',
   MetodoPerfil: 'metodo_perfil', // 📖 DIR-43 — sonhos, rotina, script, apresentação
