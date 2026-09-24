@@ -1,34 +1,44 @@
-## 🧭 DIR-182 — A fileira das visões gruda no topo (24/09/2026)
+## 🎴 DIR-183 — A capa das visões do Compromisso (24/09/2026)
 
-**Dono:** "eu quero que a barra da Jornada, Lista, Quadro e tal agora fique
-FIXA no local mais estratégico pra guiar a organização."
+**Dono:** "eu preciso da mesma função igual os 08 Hábitos do Sucesso: quando eu
+clicar em Jornada vai sumir os outros, sumir a moeda, sumir TUDO e aparecer só
+o card — exatamente como está funcionando os Hábitos. E eu posso passar
+lateralmente com a seta ou clicando nos quadrados, e ter a página principal
+onde aparecem as moedas e etc."
 
-Ela cola **logo abaixo da barra do app** — `calc(3.5rem + var(--nz-entalhe))`,
-a mesma conta do `.nz-abaixo-da-barra` (é pra isso que a medida do entalhe
-virou variável única no DIR-181). O rodapé de baixo já é do botão AGORA da
-Jornada; o topo é onde a pessoa olha pra se orientar.
+É o padrão do DIR-179 um nível abaixo. **A causa era a mesma:** `visao` caía em
+`'jornada'` quando nada casava, então a tela NUNCA teve o estado "nenhuma visão
+aberta" — os 5 botões e o conteúdo de uma visão conviviam sempre. Agora são
+dois estados, e nunca os dois juntos:
 
-**Dois defeitos que a banca achou no caminho, os dois de verdade:**
+| | |
+|---|---|
+| **CAPA** (`visao === null`) | os 5 quadrados (`PortasDasVisoes`) + o placar inteiro: Human Token, moeda em fatias, fogo, X-Pay |
+| **VISÃO ABERTA** | a barra fina grudada (`BarraDaVisao`: ‹ Nome › + "02 / 05" + ⭐) e só o conteúdo dela |
 
-1. 🔴 **`overflow-x: hidden` no `body` estava matando `position: sticky` na
-   APLICAÇÃO INTEIRA.** `hidden` transforma o body num contêiner de rolagem, e
-   o elemento grudado passa a se medir por ele — que não rola. Medido: a
-   fileira terminava em −425px depois de 900px de rolagem. Trocado por
-   `overflow-x: clip`, que corta idêntico e NÃO cria contêiner; o `hidden`
-   fica antes como reserva pra navegador velho. Nenhuma barra grudada
-   funcionaria em lugar nenhum do app antes disso.
+**Duas decisões do dono, com o custo na mesa:**
+- **só o DIA ZERADO fura o foco.** Dentro de uma visão some tudo — menos os
+  avisos de hora marcada que custam o dia inteiro (`furaOFoco()`). O aviso do
+  Ritual do Amanhecer já aparecia acima da faixa e continua aparecendo.
+- **o placar fica só na capa.** É o que dá motivo pra capa existir.
 
-2. 🔴 **O palco escuro repinta todo `[class*="bg-white"]` pra vidro de 4,5%
-   com `!important`.** Uma barra grudada translúcida vira sopa de texto, com o
-   conteúdo passando por baixo. A faixa ganhou fundo próprio (`.nz-faixa-fundo`),
-   opaco, um por tema, com nome que aquela regra não alcança.
+**O preço, dito na hora:** um toque a mais pra chegar na Jornada na primeira
+vez do dia. Mitigado por lembrar a última visão + a URL `?visao=` + o atalho ⭐,
+que continuam caindo direto onde a pessoa parou.
 
-**Provas:** `tests/navegador/guia.spec.mjs` (12/12) — rola 900px e mede que a
-fileira trava encostada na barra (475px → 60px, com a barra acabando em 56) e
-continua clicável depois de grudada; e mede o alfa do fundo (≥ 0,9).
-A banca foi corrigida pra ESPELHAR o app: sem caixa própria em volta da faixa
-(sticky só gruda enquanto o pai está na tela) e respeitando a barra do topo.
-Suíte 3680/3680 · lint 0 erro · build OK.
+**Provas:**
+- `tests/capaDasVisoes.test.mjs` (9) — ordem, volta do ‹ ›, precedência
+  URL > aparelho > capa, memória que APAGA ao voltar pra capa, aparelho sem
+  storage, e quem fura o foco.
+- `tests/navegador/guia.spec.mjs` (13) e `atalhoTopCollege.spec.mjs` (2) —
+  Chromium real: dentro de uma visão os outros 4 quadrados somem; o ‹ › dá a
+  volta (05/05 → 01/05); voltar mostra a capa com os cinco e o contador das
+  Demandas; a barra gruda encostada na barra do app com fundo sólido.
+- Mutação: pus a memória na frente da URL → caíram 2 testes (o do atalho
+  junto); fiz o aviso âmbar furar o foco → caiu o teste do foco. Restaurei.
+- Suíte 3689/3689 · lint 0 erro · build OK.
+- `FaixaVisao.jsx` foi apagada: ela era o estado único que esta diretiva
+  desmancha.
 
 ---
 

@@ -18,7 +18,9 @@ import '@/index.css';
 import MobileNavSheet from '@/components/licensing/MobileNavSheet';
 import HeroTopCollege from '@/components/licensing/HeroTopCollege';
 import GuiaMovel from '@/components/licensing/CentralVendas/GuiaMovel';
-import FaixaVisao from '@/components/licensing/CentralVendas/FaixaVisao';
+import PortasDasVisoes from '@/components/licensing/CentralVendas/PortasDasVisoes';
+import BarraDaVisao from '@/components/licensing/CentralVendas/BarraDaVisao';
+import { vizinhasDaVisao } from '@/lib/capaDasVisoes';
 import RelogioDeTeste from '@/components/licensing/CentralVendas/RelogioDeTeste';
 
 // 🧹 DIR-180 — a faixa ficou SÓ com as 5 visões. O relógio de teste saiu
@@ -37,7 +39,18 @@ function FaixaViva() {
       {/* 🧭 DIR-182 — a banca precisa de uma barra fixa no topo e de página
           alta o bastante pra rolar, senão "grudou" não significa nada. */}
       <div className="fixed top-0 left-0 right-0 z-50" data-teste="barra-do-app-falsa" style={{ height: 'calc(3.5rem + var(--nz-entalhe))', background: 'rgba(33,34,43,0.9)' }} />
-      <FaixaVisao visao={visao} onVisao={setVisao} />
+      {/* 🎴 DIR-183 — DOIS estados, nunca os dois juntos: a capa com os 5
+          quadrados, ou UMA visão aberta com a barra fina grudada. */}
+      {visao ? (
+        <BarraDaVisao
+          visao={visao}
+          aoVoltar={() => setVisao(null)}
+          aoAnterior={() => setVisao(vizinhasDaVisao(visao).anterior)}
+          aoProxima={() => setVisao(vizinhasDaVisao(visao).proxima)}
+        />
+      ) : (
+        <PortasDasVisoes aoAbrir={setVisao} demandasEsperando={3} />
+      )}
       <div className="mt-2 flex justify-end" data-teste="pe-do-placar">
         <RelogioDeTeste teste={{ hora, rascunho, onRascunho: setRascunho, entrar: () => setHora(rascunho), sair: () => { setHora(''); setRascunho(''); } }} />
       </div>

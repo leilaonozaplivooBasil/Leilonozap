@@ -6,6 +6,7 @@ import {
 } from '@/lib/xgame';
 import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { alertaDoDia, explicacoesDoPlacar } from '@/lib/placarDoDia';
+import { furaOFoco } from '@/lib/capaDasVisoes';
 import RelogioDeTeste from './RelogioDeTeste';
 
 const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
@@ -40,6 +41,10 @@ const fmtToken = (n) => Number(n ?? 0).toFixed(2).replace('.', ',');
 export default function PlacarDoDia({
   xgame, ciclo = null, recebido, fogo, hojeFechou = false, ehHoje = true,
   aberto = false, onAbrir = null, mostrarBotao = true, liberacao = null, teste = null,
+  // 🎴 DIR-183 — dentro de uma visão o placar inteiro some ("some a moeda,
+  // some tudo"), mas o DIA ZERADO não pode sumir: ele é de hora marcada e
+  // custa o dia inteiro. Neste modo só ele aparece, e mais nada.
+  somenteAlertaQueFura = false,
 }) {
   const [folha, setFolha] = useState(null);
   const abrir = (id) => { vibrar(VIBRA_TOQUE); setFolha(id); };
@@ -70,6 +75,21 @@ export default function PlacarDoDia({
   const medalha = ciclo ? ciclo.liga.emoji : xgame.faixa.medalha;
   const ligaLabel = ciclo ? ciclo.liga.label : xgame.faixa.label;
   const estudoEmDia = !ciclo || ciclo.estudoEmDiaCompleto;
+
+  if (somenteAlertaQueFura) {
+    if (!alerta || !furaOFoco(alerta.tipo)) return null;
+    return (
+      <div
+        data-teste="alerta-do-dia"
+        data-tipo={alerta.tipo}
+        data-fura-o-foco="sim"
+        className="rounded-xl border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center"
+      >
+        <p className="text-sm font-extrabold text-red-700">{alerta.titulo}</p>
+        <p className="mt-0.5 text-[11px] text-red-600">{alerta.texto}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3" data-teste="placar-do-dia">

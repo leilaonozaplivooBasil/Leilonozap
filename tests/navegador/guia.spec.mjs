@@ -171,12 +171,43 @@ test('CELULAR: o modal abre assinado pelas duas marcas, no preto da faculdade', 
 
 const estadoFaixa = async (pagina) => JSON.parse(await pagina.locator('[data-teste="estado-faixa"]').textContent());
 
-test('FAIXA: Jornada × Lista é um controle só, e trocar de lado funciona', { skip: semNavegador }, async () => {
+// 🎴 DIR-183 — DOIS estados, igual aos 8 Hábitos. Dono: "quando eu clicar em
+// Jornada vai sumir os outros, sumir a moeda, sumir TUDO e aparecer só o card
+// ... e eu posso passar lateralmente com a seta ou clicando nos quadrados."
+test('VISÕES: dentro de uma visão os outros 4 quadrados SOMEM; o ‹ › passa de lado e dá a volta', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir({ celular: true });
-  assert.equal(await pagina.getByRole('tab', { name: 'Jornada' }).getAttribute('aria-selected'), 'true');
-  await pagina.getByRole('tab', { name: 'Lista' }).tap();
+  // começa na Jornada (uma visão aberta): a grade dos 5 não pode estar na tela
+  assert.equal(await pagina.$('[data-teste="portas-das-visoes"]'), null, 'os 5 quadrados ficaram junto com a visão aberta');
+  assert.match(await pagina.$eval('[data-teste="barra-da-visao"]', (n) => n.innerText), /Jornada/);
+  assert.equal(await pagina.$eval('[data-teste="visao-contador"]', (n) => n.textContent.trim()), '01 / 05');
+
+  await pagina.locator('[data-teste="visao-proxima"]').tap();
   assert.equal((await estadoFaixa(pagina)).visao, 'lista');
-  assert.equal(await pagina.getByRole('tab', { name: 'Lista' }).getAttribute('aria-selected'), 'true');
+  assert.equal(await pagina.$eval('[data-teste="visao-contador"]', (n) => n.textContent.trim()), '02 / 05');
+
+  // 🔁 dá a volta: da primeira pra trás cai na última
+  await pagina.locator('[data-teste="visao-anterior"]').tap();
+  await pagina.locator('[data-teste="visao-anterior"]').tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'demandas', 'o ‹ › não deu a volta');
+  assert.equal(await pagina.$eval('[data-teste="visao-contador"]', (n) => n.textContent.trim()), '05 / 05');
+  assert.deepEqual(erros, []);
+  await ctx.close();
+});
+
+test('VISÕES: voltar mostra a CAPA com os 5 quadrados — e clicar num quadrado abre só ele', { skip: semNavegador }, async () => {
+  const { pagina, ctx, erros } = await abrir({ celular: true });
+  await pagina.locator('[data-teste="voltar-as-visoes"]').tap();
+  // na capa: os 5 quadrados, e NENHUMA visão aberta
+  assert.equal(await pagina.$('[data-teste="barra-da-visao"]'), null, 'a barra da visão ficou na capa');
+  const nomes = await pagina.$$eval('[data-teste="portas-das-visoes"] button', (bs) => bs.map((b) => b.getAttribute('data-teste')));
+  assert.deepEqual(nomes, ['porta-visao-jornada', 'porta-visao-lista', 'porta-visao-quadro', 'porta-visao-mapa', 'porta-visao-demandas']);
+  // o que espera nas Demandas aparece na capa — é a única tela que mostra as cinco
+  assert.equal(await pagina.$eval('[data-teste="porta-demandas-contador"]', (n) => n.textContent.trim()), '3');
+  if (process.env.FOTO_BANCA) await pagina.screenshot({ path: path.join(FOTOS, 'capa-das-visoes.png') });
+
+  await pagina.locator('[data-teste="porta-visao-quadro"]').tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'quadro');
+  assert.equal(await pagina.$('[data-teste="portas-das-visoes"]'), null, 'os quadrados não sumiram ao abrir a visão');
   assert.deepEqual(erros, []);
   await ctx.close();
 });
@@ -205,23 +236,21 @@ test('RELÓGIO DE TESTE (fora da fileira, DIR-180): fica discreto — só abre o
 // ícone pelado ("ninguém adivinha que ⛓ é Mapa"). A prova mudou pra isso:
 // UMA fileira só (todos os azulejos no mesmo topo) e TODO nome inteiro,
 // medido no navegador de verdade — scrollWidth > clientWidth é texto cortado.
-test('FAIXA: uma fileira só e TODOS os cinco nomes inteiros no celular; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
+test('CAPA: os cinco quadrados com o nome INTEIRO no celular; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
   for (const celular of [true, false]) {
     const { pagina, ctx } = await abrir({ celular });
-    const faixa = pagina.locator('[data-teste="faixa-visao"]');
-    const medida = await faixa.evaluate((el) => {
-      const abas = [...el.querySelectorAll('[role="tab"]')];
-      return abas.map((b) => {
-        const nome = b.querySelector('span');
-        return { texto: nome.textContent, topo: Math.round(b.getBoundingClientRect().top), corta: nome.scrollWidth > nome.clientWidth + 1 };
-      });
-    });
-    assert.equal(medida.length, 5, 'a faixa precisa ter as cinco visões');
+    // click, não tap: este teste roda também no desktop, que não tem toque
+    await pagina.locator('[data-teste="voltar-as-visoes"]').click();
+    const faixa = pagina.locator('[data-teste="portas-das-visoes"]');
+    const medida = await faixa.evaluate((el) => [...el.querySelectorAll('button')].map((b) => {
+      const nome = b.querySelectorAll('span')[1];
+      return { texto: nome.textContent, corta: nome.scrollHeight > nome.clientHeight + 1 };
+    }));
+    assert.equal(medida.length, 5, 'a capa precisa ter as cinco visões');
     assert.deepEqual(medida.map((m) => m.texto), ['Jornada', 'Lista', 'Quadro', 'Mapa', 'Demandas']);
-    assert.equal(new Set(medida.map((m) => m.topo)).size, 1, `a faixa quebrou em mais de uma fileira: topos=${medida.map((m) => m.topo)}`);
     const cortados = medida.filter((m) => m.corta).map((m) => m.texto);
     assert.deepEqual(cortados, [], `nome cortado no ${celular ? 'celular' : 'desktop'}: ${cortados}`);
-    await faixa.screenshot({ path: path.join(FOTOS, `faixa-${celular ? 'celular' : 'desktop'}.png`) });
+    await faixa.screenshot({ path: path.join(FOTOS, `capa-visoes-${celular ? 'celular' : 'desktop'}.png`) });
     await ctx.close();
   }
 });
@@ -230,9 +259,9 @@ test('FAIXA: uma fileira só e TODOS os cinco nomes inteiros no celular; fotos n
 // Dono: "que a barra da Jornada, Lista, Quadro e tal fique FIXA no local mais
 // estratégico pra guiar a organização." Antes ela rolava junto e sumia: quem
 // descia pra ver a lista do dia perdia o mapa de onde estava.
-test('FAIXA: rolar a página NÃO leva a fileira embora — ela gruda embaixo da barra do app', { skip: semNavegador }, async () => {
+test('BARRA DA VISÃO: rolar a página NÃO leva a barra embora — ela gruda embaixo da barra do app', { skip: semNavegador }, async () => {
   const { pagina, ctx, erros } = await abrir({ celular: true });
-  const topo = () => pagina.$eval('[data-teste="faixa-visao"]', (n) => Math.round(n.getBoundingClientRect().top));
+  const topo = () => pagina.$eval('[data-teste="barra-da-visao"]', (n) => Math.round(n.getBoundingClientRect().top));
   const barra = await pagina.$eval('[data-teste="barra-do-app-falsa"]', (n) => Math.round(n.getBoundingClientRect().bottom));
 
   const antes = await topo();
@@ -250,17 +279,17 @@ test('FAIXA: rolar a página NÃO leva a fileira embora — ela gruda embaixo da
   assert.ok(antes - depois < 900, 'a fileira acompanhou a rolagem inteira — não grudou');
 
   // e continua clicável depois de grudada — sticky que não recebe toque é enfeite
-  await pagina.getByRole('tab', { name: 'Quadro' }).tap();
-  assert.equal((await estadoFaixa(pagina)).visao, 'quadro');
+  await pagina.locator('[data-teste="visao-proxima"]').tap();
+  assert.equal((await estadoFaixa(pagina)).visao, 'lista');
   assert.deepEqual(erros, []);
   await ctx.close();
 });
 
 // 🩹 grudada, a fileira tem conteúdo passando POR BAIXO dela: translúcida vira
 //    sopa de texto. O fundo tem que ser sólido de verdade.
-test('FAIXA: grudada, o fundo é sólido — nada de texto aparecendo por baixo', { skip: semNavegador }, async () => {
+test('BARRA DA VISÃO: grudada, o fundo é sólido — nada de texto aparecendo por baixo', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
-  const alfa = await pagina.$eval('[data-teste="faixa-visao"]', (n) => {
+  const alfa = await pagina.$eval('[data-teste="barra-da-visao"]', (n) => {
     const m = getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/);
     const partes = m[1].split(',').map((x) => parseFloat(x));
     return partes.length === 4 ? partes[3] : 1;

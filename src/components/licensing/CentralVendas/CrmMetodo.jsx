@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { lerAtalho, gravarAtalho, visaoDaUrl, normalizarDestino } from '@/lib/atalhoTopCollege';
+import {
+  visaoDeEntrada, lerUltimaVisao, gravarUltimaVisao, vizinhasDaVisao,
+} from '@/lib/capaDasVisoes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -82,8 +85,9 @@ import { cartaoDaTarefa, LISTAS_MODELO } from '@/lib/quadroCompromisso';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
-import FaixaVisao from './FaixaVisao';
 import PlacarDoDia from './PlacarDoDia';
+import PortasDasVisoes from './PortasDasVisoes';
+import BarraDaVisao from './BarraDaVisao';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -955,12 +959,25 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
 
   // 🗺️ F11 — JORNADA (padrão) × lista; o placar completo fica recolhido na jornada
   // ⭐ 23/09/2026 — ?visao=quadro (o atalho do cabeçalho) abre a visão direto.
-  const [visao, setVisao] = useState(() => visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search) || 'jornada');
+  // 🎴 DIR-183 — a visão pode ser NULL, e null É A CAPA. Antes ela caía em
+  // 'jornada' quando nada casava, então a tela NUNCA teve um estado "nenhuma
+  // visão aberta" — os 5 botões e o conteúdo de uma visão conviviam sempre,
+  // que é exatamente o peso que o dono sentiu. Ver src/lib/capaDasVisoes.js.
+  const [visao, setVisao] = useState(() => visaoDeEntrada({
+    daUrl: visaoDaUrl(typeof window === 'undefined' ? '' : window.location.search),
+    doAparelho: lerUltimaVisao(),
+  }));
   const localizacao = useLocation();
   useEffect(() => {
     const v = visaoDaUrl(localizacao.search);
     if (v) setVisao(v);
   }, [localizacao.search]);
+  // 🎴 DIR-183 — lembra a última visão neste aparelho. Voltar pra capa APAGA
+  // a memória de propósito (gravarUltimaVisao(null)): quem voltou quis sair.
+  useEffect(() => { gravarUltimaVisao(visao); }, [visao]);
+  // os dois estados da tela, e nada no meio: ou a capa, ou UMA visão aberta.
+  const naCapaDasVisoes = !visao;
+  const vizinhas = vizinhasDaVisao(visao);
   // a visão que a pessoa fixou como atalho — aparelho primeiro, perfil manda
   const [atalho, setAtalho] = useState(() => lerAtalho());
   // 🌱 a demanda que o dono mandou "abrir no mapa": guarda o TÍTULO, não a
@@ -996,7 +1013,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // botão. Era o bloco mais denso da tela nascendo aberto (ordem do dono:
   // "muito texto explicando"). No desktop segue como sempre foi.
   const celular = useEhCelular();
-  const mostrarPainel = (visao === 'lista' && !celular) || painelAberto;
+  const mostrarPainel = naCapaDasVisoes || (visao === 'lista' && !celular) || painelAberto;
   // 🌅 F11 — o Ritual do Amanhecer (a tarefa de gratidão abre experiência, não formulário)
   const [ritualId, setRitualId] = useState(null);
   // 📣 DIR-134 — o aviso "como funciona o ritual", dos 10min antes da
@@ -2579,21 +2596,30 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
               </div>
             )}
 
-            {/* ══ 🗺️ F11 — JORNADA (padrão, limpa) × 📋 LISTA (pra quem clicar) ══
-                A faixa inteira (seletor, placar e o relógio de teste temporário)
-                mora em FaixaVisao — bonita, funcional e com prova em navegador. */}
-            {(tarefas.length > 0 || visao === 'quadro') && (
-              <FaixaVisao
+            {/* ══ 🎴 DIR-183 — OS DOIS ESTADOS DA TELA ══
+                Dono: "eu preciso da mesma função igual os 08 Hábitos do
+                Sucesso: quando eu clicar em Jornada vai sumir os outros,
+                sumir a moeda, sumir TUDO e aparecer só o card... e ter a
+                página principal onde aparecem as moedas."
+
+                CAPA         → os 5 quadrados (+ o placar, logo abaixo)
+                VISÃO ABERTA → a barra fina grudada, e só o conteúdo dela
+                Nunca os dois. Regras em src/lib/capaDasVisoes.js. */}
+            {naCapaDasVisoes ? (
+              <PortasDasVisoes aoAbrir={setVisao} demandasEsperando={demandasEsperando} />
+            ) : (
+              <BarraDaVisao
                 visao={visao}
-                onVisao={setVisao}
-                atalho={atalho}
-                onAtalho={(id) => {
+                aoVoltar={() => setVisao(null)}
+                aoAnterior={() => setVisao(vizinhas.anterior)}
+                aoProxima={() => setVisao(vizinhas.proxima)}
+                ehOAtalho={atalho === visao}
+                aoFixarAtalho={(id) => {
                   const d = normalizarDestino(id);
                   setAtalho(gravarAtalho(d));
                   // best-effort: sem perfil ainda, cria; se falhar, o aparelho já guardou
                   salvarPerfil({ atalho_destino: d }).catch(() => {});
                 }}
-                demandasEsperando={demandasEsperando}
               />
             )}
 
@@ -2608,7 +2634,11 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 coisa ("DIA ZERADO"). Tudo isso virou UM bloco só, com UM
                 alerta (o mais grave) e UM número grande: PlacarDoDia.jsx,
                 com a regra do alerta em src/lib/placarDoDia.js. */}
-            {xgame && (
+            {/* 🎴 DIR-183 — o placar é da CAPA. Dentro de uma visão "some a
+                moeda, some tudo" (ordem do dono). O que NÃO some é o DIA
+                ZERADO: ele é de hora marcada e custa o dia inteiro da
+                pessoa — ver furaOFoco() em src/lib/capaDasVisoes.js. */}
+            {xgame && naCapaDasVisoes && (
               <PlacarDoDia
                 xgame={xgame}
                 ciclo={ciclo}
@@ -2618,7 +2648,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 ehHoje={ehHoje}
                 aberto={painelAberto}
                 onAbrir={alternarPainel}
-                mostrarBotao={visao === 'jornada' || visao === 'quadro' || celular}
+                mostrarBotao={false}
                 liberacao={liberacao}
                 teste={podeGerir ? {
                   hora: horaTeste,
@@ -2627,6 +2657,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   entrar: () => { setDevMarcas({}); setHoraTeste(horaRascunho); },
                   sair: () => { setHoraTeste(''); setHoraRascunho(''); setDevMarcas({}); },
                 } : null}
+              />
+            )}
+            {/* 🚨 DIR-183 — o único que fura o foco: DIA ZERADO. Decisão do
+                dono, com o custo na mesa. Quem estiver dentro da Jornada
+                precisa saber que perdeu o dia; o resto espera na capa. */}
+            {xgame && !naCapaDasVisoes && (
+              <PlacarDoDia
+                somenteAlertaQueFura
+                xgame={xgame}
+                ciclo={ciclo}
+                recebido={recebido}
+                fogo={fogo}
+                ehHoje={ehHoje}
+                liberacao={liberacao}
               />
             )}
             {xgame && ehHoje && progressoJogo.pct >= 100 && (
@@ -2689,7 +2733,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 oficiais da planilha ("Onde Estou" e "Executivo Ideal", ditados
                 pelo dono ao pé da letra), ícone + card + barra grossa por
                 eixo. Reaparece nas 3 visões (Jornada/Lista/Quadro) porque o
-                "meu placar" agora também abre no Quadro (FaixaVisao acima). */}
+                "meu placar" agora também abre no Quadro. DIR-183: e SÓ na capa. */}
             {xgame && ciclo && mostrarPainel && (
               <div className="rounded-2xl border-2 border-nz-verde/25 bg-nz-verde-fundo/20 p-4 sm:p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -3005,7 +3049,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
             {/* 🗂️ DIR-75 — o nosso quadro é uma VISÃO do dia, e vem antes do
                 "dia vazio": a mesa da organização existe mesmo num dia sem
                 Master Task gerada. */}
-            {visao === 'demandas' ? (
+            {/* 🎴 DIR-183 — na CAPA nenhuma visão renderiza. Sem esta guarda o
+                último `else` da cadeia (que é a LISTA) apareceria na capa. */}
+            {naCapaDasVisoes ? null : visao === 'demandas' ? (
               /* 🧠 A caixa de entrada da mente. Recebe `uid` e o dia porque
                  lê e escreve nas MESMAS tabelas do resto do Compromisso —
                  diferente do Mapa, cujo dono sai do crachá no servidor. */
