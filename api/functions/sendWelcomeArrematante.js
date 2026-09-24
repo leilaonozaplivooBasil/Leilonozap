@@ -24,6 +24,7 @@
 import { exigirSessao } from '../_lib/sessao.js';
 import { estourouLimite, ipDoRequest } from '../_lib/rateLimit.js';
 import { registrarEmail, idDaBrevo } from '../_lib/registroDeEmail.js';
+import { modeloDeEmail, p, linkCopiavel } from '../_lib/modeloDeEmail.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -49,35 +50,18 @@ function sb(path, opts = {}) {
 
 /** Layout em TABELA: cliente de e-mail não entende flex nem grid. */
 export function corpoDoEmail({ primeiroNome, rotulo, cor, link }) {
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0a0f0d;font-family:Arial,Helvetica,sans-serif">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f0d;padding:28px 0">
-  <tr><td align="center">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0f1614;border:1px solid #1f2d27;border-radius:16px;overflow:hidden">
-      <tr><td style="background:linear-gradient(135deg,#052e1e,#064e3b);padding:28px 32px;text-align:center">
-        <img src="${SITE}/brand/icon-3d-256.png" alt="Leilão NoZap" width="88" style="display:block;margin:0 auto 8px;height:auto;border:0" />
-        <div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:1px">LEILÃO <span style="color:#34d399">NOZAP</span></div>
-        <div style="margin-top:8px;display:inline-block;background:rgba(52,211,153,.12);border:1px solid ${cor}66;color:${cor};font-size:12px;font-weight:700;padding:4px 14px;border-radius:999px">${rotulo}</div>
-      </td></tr>
-      <tr><td style="padding:28px 32px">
-        <h1 style="margin:0 0 10px;color:#fff;font-size:21px">Bem-vindo(a), ${primeiroNome}!</h1>
-        <p style="margin:0 0 20px;color:#cbd5e1;font-size:15px;line-height:1.6">
-          Sua conta de ${rotulo} no Leilão NoZap foi criada. Para entrar, crie a sua senha no botão abaixo.
-        </p>
-        <a href="${link}" style="display:block;text-align:center;background:#16a34a;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:14px;border-radius:12px">Criar minha senha →</a>
-        <p style="margin:18px 0 0;color:#94a3b8;font-size:12px;line-height:1.6">
-          Se o botão não abrir, copie este endereço no navegador:<br>
-          <span style="color:#64748b;word-break:break-all">${link}</span>
-        </p>
-        <p style="margin:18px 0 0;color:#64748b;font-size:12px">O link vale por 24 horas. Se você não esperava este e-mail, ignore-o.</p>
-      </td></tr>
-      <tr><td style="background:#0a1310;padding:16px 32px;text-align:center;color:#64748b;font-size:12px">
-        leilaonozap.net · Qualquer dúvida, é só responder este e-mail.
-      </td></tr>
-    </table>
-  </td></tr>
-</table></body></html>`;
+  void cor; // a cor do papel ficava no selo escuro; no modelo claro o papel vai em texto
+  return modeloDeEmail({
+    titulo: `Bem-vindo(a), ${primeiroNome}!`,
+    preheader: `Sua conta de ${rotulo} está criada — falta só a senha.`,
+    corpo: [
+      p(`Sua conta de ${rotulo} no Leilão NoZap foi criada. Para entrar, crie a sua senha no botão abaixo.`),
+    ],
+    botao: { rotulo: 'Criar minha senha', url: link },
+    avisoFinal: 'O link vale por 24 horas. Se você não esperava este e-mail, ignore-o.',
+    motivo: 'Você recebe este e-mail porque uma conta foi criada para você no Leilão NoZap.',
+    depoisDoBotao: [linkCopiavel(link)],
+  });
 }
 
 export default async function handler(req, res) {
