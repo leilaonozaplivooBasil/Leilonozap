@@ -37,6 +37,8 @@ export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
       // continuar legível sobre foto clara.
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
         background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%), rgba(10, 16, 14, 0.42)',
         backdropFilter: 'blur(22px) saturate(1.7)',
         WebkitBackdropFilter: 'blur(22px) saturate(1.7)',

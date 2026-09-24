@@ -43,3 +43,11 @@ test('a barra é de vidro, como o bloco Leilões Ativos: quase sem cor própria,
   assert.ok(BARRA.includes("textShadow: '0 1px 2px rgba(0,0,0,0.6)'"), 'rótulo legível sobre foto clara');
   assert.ok(!BARRA.includes('rgba(14, 22, 18, 0.9'));
 });
+
+test('área segura do iPhone: viewport-fit=cover no index.html, e cabeçalho + barra recuam nas laterais (celular deitado)', () => {
+  const INDEX = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(INDEX.includes('content="width=device-width, initial-scale=1.0, viewport-fit=cover"'));
+  assert.ok(BARRA.includes("paddingBottom: 'env(safe-area-inset-bottom, 0px)'"));
+  assert.ok(BARRA.includes("paddingLeft: 'env(safe-area-inset-left, 0px)'"));
+  assert.ok(LAYOUT.includes("paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)'"));
+});

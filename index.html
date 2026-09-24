@@ -2,7 +2,11 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 📱 24/09/2026 — viewport-fit=cover: sem isto o iPhone não informa
+         env(safe-area-inset-*) de forma confiável, e a barra do app ficava
+         debaixo da barrinha de "voltar ao início". Cabeçalho, barra do app e
+         flutuantes já reservam esses recuos. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta http-equiv="Content-Language" content="pt-BR" />
 
     <!-- SEO & Social -->

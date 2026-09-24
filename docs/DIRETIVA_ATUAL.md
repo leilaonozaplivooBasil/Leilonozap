@@ -127,6 +127,22 @@ A analogia do dono é a solução exata — um catálogo tem **dois estados**, g
 
 **Nota de teste:** quatro arquivos de teste liam uma lista fixa de arquivos e acusavam alvo inexistente pra marca que apenas **mudou de casa**. Foram somados os dois componentes novos, com o porquê escrito — sem isso, a próxima pessoa caçaria um defeito que não existe. E a âncora do `atalhoTopCollege.test.mjs` foi atualizada (o estado inicial deixou de ser só a URL): a regra que ele guarda não mudou, e agora a precedência da URL sobre a memória é **medida**, não só lida.
 
+## DIR-179 — a barra do app respeita a área segura do iPhone
+
+**Emitida por:** dono (24/09/2026, com a foto da tela do iPhone): *"vamos fazer uma verificação para os telefones e modelos, não crie nada, vamos analisar de forma diligente"* — e, sobre o achado, *"pode colocar em produção"*.
+
+**A verificação (sem mexer em nada):** cabeçalho e barra medidos em 10 telas (iPhone SE 320, SE/8 375, 12–14 390, 15 393, Pro Max 430, Android 360, Pixel 412, iPad em pé 768, celular deitado 844×390, iPad deitado 1024) × 4 páginas (Home, Loja, Carrinho, Lucre), logado. Nenhuma rolagem lateral, nenhum transbordo, nenhum rótulo cortado, barra sempre dentro da tela, conteúdo reservando a altura dela, flutuantes acima dela, iPad deitado e computador sem barra, zero erros de JS.
+
+**O achado:** no print do dono os rótulos ficam a ~8px da borda de baixo; num iPhone com Dynamic Island a faixa da barrinha de "voltar ao início" tem 34px. A barra já reservava `env(safe-area-inset-bottom)`, mas a tag de viewport do `index.html` não tinha `viewport-fit=cover` — e é isso que faz o iOS informar essa medida de forma confiável.
+
+**O que muda:** `viewport-fit=cover` na tag de viewport; cabeçalho e barra ganham `padding-left/right: env(safe-area-inset-left/right)` para, no celular deitado, a logo e o primeiro azulejo não caírem debaixo do recorte da câmera. Nada muda em telas sem recortes (o `env()` vale 0).
+
+**Prova:** suíte completa verde, lint 0 erros, build ok.
+
+**Status:** EM VIGOR.
+
+---
+
 ## DIR-178 — a Top College sai da placa, cola na logo e ganha relevo 3D
 
 **Emitida por:** dono (24/09/2026, com o print do cabeçalho do celular): *"não estou gostando de onde a Top College está. Precisa tirar o quadrado em torno da logo e deixar ela chapada igual à logo do Leilão NoZap, precisa estar mais próxima da logo, e precisa estar mais em 3D, puxando para o 3D da logo."*
