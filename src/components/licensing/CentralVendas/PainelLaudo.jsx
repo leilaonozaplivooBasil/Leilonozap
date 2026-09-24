@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient';
 import { nomeExibicao, dataISO } from '@/lib/xgame';
 import { timeCorporativo } from '@/lib/timeCorporativo';
 import { laudoDoDia, resumoDoLaudo, linhaTecnica, diasComComprovacao } from '@/lib/relatorioComprovacoes';
-import { podeVerLaudo } from '@/lib/quemVeOLaudo';
+import { escopoDoLaudo } from '@/lib/quemVeOLaudo';
 import BotaoLaudoPdf from './PdfComprovacoes';
 
 // 📄 A TELA SÓ-LAUDO — 10/09/2026.
@@ -38,21 +38,30 @@ export default function PainelLaudo({ currentUser = null, hojeISO = null }) {
   const [itens, setItens] = useState([]);
   const [carregando, setCarregando] = useState(false);
 
-  const liberado = podeVerLaudo(currentUser);
+  // 📄 24/09/2026 — 'todos' escolhe a pessoa; 'proprio' (Emannuel) trava
+  // nele mesmo: nem a lista da equipe é carregada, pra não existir na tela
+  // o que ele não pode ver.
+  const escopo = escopoDoLaudo(currentUser);
+  const liberado = !!escopo;
+  const soOProprio = escopo === 'proprio';
 
   useEffect(() => {
-    if (!liberado) return;
+    if (!liberado || soOProprio) return;
     supabase.from('app_users').select('id,full_name,nickname,role,career_levels,primary_career_level').order('full_name')
       .then(({ data }) => setUsuarios(data || []));
-  }, [liberado]);
+  }, [liberado, soOProprio]);
 
   const equipe = useMemo(() => timeCorporativo(usuarios, nomeExibicao), [usuarios]);
   const nomeDe = useCallback((id) => {
+    if (soOProprio && id && id === String(currentUser?.id || '')) return nomeExibicao(currentUser);
     const u = usuarios.find((x) => x.id === id);
     return u ? nomeExibicao(u) : (id ? String(id).slice(0, 6) : '—');
-  }, [usuarios]);
+  }, [usuarios, soOProprio, currentUser]);
 
-  useEffect(() => { if (!pessoa && equipe.length) setPessoa(equipe[0].id); }, [equipe, pessoa]);
+  useEffect(() => {
+    if (soOProprio) { setPessoa(String(currentUser?.id || '')); return; }
+    if (!pessoa && equipe.length) setPessoa(equipe[0].id);
+  }, [equipe, pessoa, soOProprio, currentUser]);
 
   // As comprovações da pessoa escolhida — só dela, e só leitura. O recorte de
   // 60 dias existe porque a reclamação é sempre recente; puxar o histórico
@@ -98,18 +107,22 @@ export default function PainelLaudo({ currentUser = null, hojeISO = null }) {
       <div className="flex items-center gap-2 flex-wrap">
         <FileText className="w-4 h-4 text-nz-verde" />
         <p className="text-[10px] font-bold tracking-[0.28em] text-white/50 uppercase">Laudo de comprovações</p>
-        <span className="text-[10px] text-white/35">· só leitura — pra conferir se foi erro do sistema ou não</span>
+        <span className="text-[10px] text-white/35">{soOProprio ? '· o seu próprio dia, só leitura — pra conferir se foi erro do sistema ou não' : '· só leitura — pra conferir se foi erro do sistema ou não'}</span>
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
-        <select
-          value={pessoa}
-          onChange={(e) => setPessoa(e.target.value)}
-          className="lista-escura h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
-          data-teste="laudo-pessoa"
-        >
-          {equipe.map((p) => <option key={p.id} value={p.id}>{nomeDe(p.id)}</option>)}
-        </select>
+        {soOProprio ? (
+          <span className="h-7 inline-flex items-center text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-2 font-bold" data-teste="laudo-pessoa-fixa">{nomeDe(pessoa)}</span>
+        ) : (
+          <select
+            value={pessoa}
+            onChange={(e) => setPessoa(e.target.value)}
+            className="lista-escura h-7 text-[11px] rounded-lg border border-white/10 bg-white/[0.04] text-white px-1.5"
+            data-teste="laudo-pessoa"
+          >
+            {equipe.map((p) => <option key={p.id} value={p.id}>{nomeDe(p.id)}</option>)}
+          </select>
+        )}
         <select
           value={dia}
           onChange={(e) => setDia(e.target.value)}

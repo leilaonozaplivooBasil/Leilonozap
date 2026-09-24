@@ -15,7 +15,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { podeVerLaudo, LAUDO_LIBERADO_POR_PESSOA } from '../src/lib/quemVeOLaudo.js';
+import { podeVerLaudo, escopoDoLaudo, LAUDO_LIBERADO_POR_PESSOA, LAUDO_DO_PROPRIO_DIA } from '../src/lib/quemVeOLaudo.js';
 import { semComentarios } from './_ajuda.mjs';
 
 const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -107,4 +107,70 @@ test('🔴 o limite honesto está escrito no arquivo, não só na minha cabeça'
   const licensing = semComentarios(ler('../src/pages/Licensing.jsx'));
   assert.match(licensing, /gestao=\{podeDistribuir\}/, 'a premissa do aviso mudou: reveja quemVeOLaudo.js');
   assert.match(licensing, /useState\(false\)/, 'a fila do gestor deixou de nascer fechada');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📄 24/09/2026 — O LAUDO DO PRÓPRIO DIA (Emannuel)
+// ═══════════════════════════════════════════════════════════════════════════
+// Dono: "dê ao Emannuel no ADM do X-Game a opção de gerar seu próprio
+// relatório (laudo) em PDF." É uma porta mais estreita que a de cima: quem
+// entra por ela vê SÓ o próprio dia. O perigo aqui é o inverso do de sempre —
+// não é a porta ficar fechada, é ela abrir mais do que o dono pediu.
+const EMANNUEL = { id: '2b7c054de6c3ae61deea8d74', role: 'user', career_levels: ['diretoria_operacao'] };
+
+test('Emannuel abre SÓ o próprio laudo — e a porta larga continua fechada pra ele', () => {
+  assert.equal(escopoDoLaudo(EMANNUEL), 'proprio');
+  assert.equal(podeVerLaudo(EMANNUEL), false, 'o botão da fila (laudo de qualquer um) NÃO pode aparecer pra ele');
+  assert.equal(escopoDoLaudo({ ...EMANNUEL, id: '2b7c054de6c3ae61deea8d75' }), null, 'id parecido não passa');
+  assert.equal(escopoDoLaudo({ ...EMANNUEL, id: '2B7C054DE6C3AE61DEEA8D74' }), null, 'comparação exata');
+});
+
+test('quem já podia tudo continua com escopo "todos"; quem não podia nada continua com null', () => {
+  assert.equal(escopoDoLaudo({ id: '1', role: 'super_admin' }), 'todos');
+  assert.equal(escopoDoLaudo({ id: '2', role: 'admin' }), 'todos');
+  assert.equal(escopoDoLaudo({ id: 'af8f3ea05853e7bd96077e70', role: 'user' }), 'todos', 'Ailton');
+  assert.equal(escopoDoLaudo({ id: '3', role: 'admin_financeiro' }), null);
+  assert.equal(escopoDoLaudo({ id: '4', role: 'user', career_levels: ['diretoria_operacao'] }), null, 'ser diretor não basta: é pelo id');
+  assert.equal(escopoDoLaudo(null), null);
+  assert.equal(escopoDoLaudo({}), null);
+  assert.equal(escopoDoLaudo({ id: '' }), null);
+});
+
+test('⚠️ a lista do próprio dia é dívida — declarada como tal, e separada da lista larga', () => {
+  assert.ok(LAUDO_DO_PROPRIO_DIA.length <= 3, `a exceção virou regra: ${LAUDO_DO_PROPRIO_DIA.length} pessoas`);
+  LAUDO_DO_PROPRIO_DIA.forEach((p) => {
+    assert.ok(p.quem, 'entrou id sem nome de gente');
+    assert.match(p.quando, /^\d{4}-\d{2}-\d{2}$/, 'entrou liberação sem data');
+    assert.ok(String(p.porQue || '').length > 20, 'entrou liberação sem o motivo escrito');
+    assert.ok(!LAUDO_LIBERADO_POR_PESSOA.some((q) => q.id === p.id), `${p.quem} está nas DUAS listas — a estreita perderia o sentido`);
+  });
+  assert.ok(Object.isFrozen(LAUDO_DO_PROPRIO_DIA));
+});
+
+test('🔴 no painel só-laudo, o escopo "proprio" trava a pessoa e não carrega a equipe', () => {
+  const s = semComentarios(ler('../src/components/licensing/CentralVendas/PainelLaudo.jsx'));
+  assert.match(s, /const escopo = escopoDoLaudo\(currentUser\)/, 'o painel parou de perguntar o escopo');
+  assert.match(s, /const liberado = !!escopo/);
+  assert.match(s, /const soOProprio = escopo === 'proprio'/);
+  // a lista da equipe (app_users) NÃO é buscada pra quem só vê o próprio dia
+  assert.match(s, /if \(!liberado \|\| soOProprio\) return;\s*supabase\.from\('app_users'\)/, 'a equipe inteira estaria sendo carregada pra quem não pode vê-la');
+  // a pessoa é o próprio usuário, sempre — e a tela mostra um rótulo fixo, não um menu
+  assert.match(s, /if \(soOProprio\) \{ setPessoa\(String\(currentUser\?\.id \|\| ''\)\); return; \}/);
+  assert.match(s, /soOProprio \? \(\s*<span[^>]*data-teste="laudo-pessoa-fixa"/);
+  assert.match(s, /\) : \(\s*<select[\s\S]*?data-teste="laudo-pessoa"/);
+  // e o PDF continua saindo pela mesma peça, com a pessoa travada
+  assert.match(s, /<BotaoLaudoPdf itens=\{doDia\} data=\{dia\} pessoaId=\{pessoa\}/);
+});
+
+test('🔴 no ADM X-Game (gestão), quem tem escopo "proprio" ganha o painel — e só ele', () => {
+  // Emannuel tem pode_distribuir, então cai no ramo `gestao` de XPerformance,
+  // onde o painel só-laudo NÃO era montado. Sem esta linha a permissão
+  // existiria no papel.
+  const s = semComentarios(ler('../src/components/licensing/CentralVendas/XPerformance.jsx'));
+  assert.match(s, /import \{ escopoDoLaudo \} from '@\/lib\/quemVeOLaudo'/);
+  const gestao = s.slice(s.indexOf('if (gestao) {'), s.indexOf('<XPerformanceGestao'));
+  assert.match(gestao, /escopoDoLaudo\(currentUser\) === 'proprio' && <PainelLaudo currentUser=\{currentUser\} hojeISO=\{hoje\} \/>/, 'no ramo da gestão o painel não chega a quem só vê o próprio dia');
+  // e o ramo comum (quem não é gestão) continua montando o painel como antes
+  const comum = s.slice(s.indexOf('<XPerformanceGestao'));
+  assert.match(comum, /<PainelLaudo currentUser=\{currentUser\} hojeISO=\{hoje\} \/>/);
 });

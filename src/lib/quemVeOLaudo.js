@@ -50,7 +50,41 @@ export const LAUDO_LIBERADO_POR_PESSOA = Object.freeze([
   }),
 ]);
 
-/** Quem pode gerar o laudo em PDF. */
+/**
+ * 📄 24/09/2026 — O LAUDO DO PRÓPRIO DIA: quem pode gerar o laudo SÓ DE SI.
+ *
+ * Dono: "dê ao Emannuel no ADM do X-Game a opção de gerar seu próprio
+ * relatório (laudo) em PDF."
+ *
+ * É uma porta diferente da de cima, de propósito: quem está aqui NÃO vê o
+ * laudo de mais ninguém — o seletor de pessoa trava nele mesmo. Emannuel é
+ * diretor de operação com `role: 'user'`; a matriz de papéis não o alcança
+ * e liberá-lo pela lista de cima entregaria o dia de toda a equipe junto.
+ * Mesma dívida, mesma regra: quem, quando e por quê.
+ */
+export const LAUDO_DO_PROPRIO_DIA = Object.freeze([
+  Object.freeze({
+    id: '2b7c054de6c3ae61deea8d74',
+    quem: 'Emannuel Alves de Lima',
+    quando: '2026-09-24',
+    porQue: 'pedido do dono: ele quer conferir o próprio dia (a pendência do acordar) e levar o PDF, sem ver o de mais ninguém',
+  }),
+]);
+
+/**
+ * O alcance do laudo pra quem está olhando:
+ *   'todos'   — gestor admin e a lista nominal de cima (escolhe a pessoa);
+ *   'proprio' — só o próprio dia (o seletor trava na própria pessoa);
+ *   null      — não abre.
+ */
+export function escopoDoLaudo(usuario) {
+  if (podeVerLaudo(usuario)) return 'todos';
+  const id = String(usuario?.id || '');
+  if (id && LAUDO_DO_PROPRIO_DIA.some((p) => p.id === id)) return 'proprio';
+  return null;
+}
+
+/** Quem pode gerar o laudo em PDF de QUALQUER pessoa da equipe. */
 export function podeVerLaudo(usuario) {
   if (!usuario) return false;
   const vis = visibilidadeDoUsuario(usuario);
