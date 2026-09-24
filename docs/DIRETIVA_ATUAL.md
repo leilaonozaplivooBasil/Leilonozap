@@ -12,6 +12,33 @@
 
 ---
 
+## DIR-179 — os 8 Hábitos ganham CAPA: clicar num hábito apaga os outros sete
+
+> 🔢 **Era DIR-178 e virou 179**: o chat da logo da Top College já tinha
+> tomado o 178 no ramo compartilhado (três commits, 24/09). Número de
+> diretiva é endereço — dois donos no mesmo endereço é o começo de alguém
+> ler a diretiva errada quando for entender por que uma tela é como é.
+
+**Emitida por:** dono (24/09/2026): *"quando eu clicar no Sonho, o quadro do Compromisso, Lista, Contato, Apresentação, Acompanhamento, Verificação e Duplicação precisa sumir... aparece só o carro do quadro dos sonhos, e já aparecem os sonhos. Para quê? Para limpar mais a página... A ideia funciona igual a lupa da loja virtual quando eu procuro um produto... e me dando a possibilidade de ir para frente e para trás. Eu quero algo tudo muito limpo e muito fluido, porque eu estou sentindo muita informação."*
+
+**A causa, achada no código ANTES de mexer.** `secaoAtiva` era `secao || (isSuperAdmin ? 'verificacao' : 'acompanhamento')`. Esse `||` garantia que **nunca existisse "nenhum hábito aberto"** — então a grade das 8 portas e o conteúdo de um hábito conviviam sempre. A página era menu **e** mesa de trabalho ao mesmo tempo, o tempo todo. Não era excesso de texto em cada hábito: era a estrutura.
+
+A analogia do dono é a solução exata — um catálogo tem **dois estados**, grade e produto, nunca os dois juntos.
+
+**O que entra — dois estados:**
+1. **A CAPA** (`secao === null`): as 8 portas, agora maiores e com o complemento do nome ("de Networking", "e Convite") que a grade apertada não tinha onde pôr; a Visão Executiva X-GAME; e **o desenho do ciclo da gamificação** — seis passos que fecham um círculo: sonho → rotina com horário → comprovação → moeda → posição no time → e a posição paga o sonho. Era a coisa que a tela nunca dizia: as pessoas viam oito portas soltas e o X-Game como um placar à parte.
+2. **O HÁBITO ABERTO**: a grade some inteira; no lugar dela, três coisas e nada mais — `← os 8 hábitos`, `‹`, `›`, com o contador `03 / 08`. O ‹ › **dá a volta** (o 8 leva ao 1), porque no método o ciclo recomeça e um seletor que apaga na ponta faz a pessoa achar que travou. No pé, o próximo hábito, pra quem leu até o fim.
+
+**Onde a página abre** (`capaDosHabitos.js`, régua testável): 1º a URL (`?secao=`, que é o que um link compartilhado promete), 2º o último hábito aberto no aparelho, 3º a capa. O dono escolheu isso **com o custo na mesa**: o Compromisso é a tela do dia a dia, e a capa como porta fixa custaria um clique a mais toda manhã, pra sempre. Voltar pra capa **apaga** a memória — quem voltou quis sair.
+
+**🔴 O DEFEITO QUE EU CRIEI, E A SUÍTE PEGOU ANTES DE SUBIR.** Os primeiros passos de **oito tours** ("Como Funciona") apontavam a mãozinha pra `nav-habitos`, a grade — que agora só existe na capa. Como esses tours são abertos **de dentro** do hábito, a mãozinha passou a apontar pro vazio. Dez testes reprovaram de uma vez. Os passos foram reapontados pra `barra-do-habito`, que é o que ocupa aquele lugar e é, literalmente, o caminho de volta pros 8.
+
+**Faxina que veio junto:** a grade e a barra saíram do `CrmClientesTab.jsx` (2.900 linhas) pros seus próprios arquivos. Não é organização por gosto: uma grade que não dá pra abrir sozinha é uma grade que ninguém confere antes de subir — e foi exatamente na banca, em dois segundos, que apareceu que "Acompanha…" e "dos 8 Hábitos do …" estavam cortados, e depois que "Acompanhamento" **vazava pra fora do cartão**. Duas tentativas (encolher a fonte, deixar quebrar) só escolhiam entre dois defeitos; a terceira tirou a causa — o ícone subiu pra cima do texto e o nome ficou com o cartão inteiro.
+
+**Prova:** suíte 3639/3639 (`tests/capaDosHabitos.test.mjs` novo, 11 testes), lint limpo, build ok. Banca de navegador nova (`tests/navegador/capa-dos-habitos.html`) com os dois estados num Chromium de verdade: clicar no Sonho leva as portas de **8 para 0**, a barra aparece, o `›` anda pra 02/08 e o voltar restaura as 8 — medido, não lido. Mutação: (1) devolvi o `||` que impedia a capa de existir → teste quebrou; (2) tirei a volta do ‹ › → quebrou; (3) fiz a capa não apagar a memória → quebrou; (4) devolvi o `truncate` no nome → quebrou. Todas revertidas.
+
+**Nota de teste:** quatro arquivos de teste liam uma lista fixa de arquivos e acusavam alvo inexistente pra marca que apenas **mudou de casa**. Foram somados os dois componentes novos, com o porquê escrito — sem isso, a próxima pessoa caçaria um defeito que não existe. E a âncora do `atalhoTopCollege.test.mjs` foi atualizada (o estado inicial deixou de ser só a URL): a regra que ele guarda não mudou, e agora a precedência da URL sobre a memória é **medida**, não só lida.
+
 ## DIR-178 — a Top College sai da placa, cola na logo e ganha relevo 3D
 
 **Emitida por:** dono (24/09/2026, com o print do cabeçalho do celular): *"não estou gostando de onde a Top College está. Precisa tirar o quadrado em torno da logo e deixar ela chapada igual à logo do Leilão NoZap, precisa estar mais próxima da logo, e precisa estar mais em 3D, puxando para o 3D da logo."*

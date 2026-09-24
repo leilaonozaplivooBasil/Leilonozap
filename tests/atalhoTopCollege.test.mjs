@@ -7,6 +7,7 @@ import {
   DESTINOS_DO_ATALHO, DESTINO_PADRAO, CHAVE_ATALHO, normalizarDestino, rotuloDoDestino, urlDoAtalho,
   mostraAtalho, lerAtalho, gravarAtalho, secaoDaUrl, visaoDaUrl,
 } from '../src/lib/atalhoTopCollege.js';
+import { habitoDeEntrada } from '../src/lib/capaDosHabitos.js';
 
 const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
 const memoria = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) }; };
@@ -82,7 +83,16 @@ test('o ícone está no cabeçalho (desktop e celular), a URL abre a seção e a
   assert.ok(ICONE.includes('translate-y-[3px] transition-transform duration-200 hover:scale-110'));
   assert.ok(!ICONE.includes("transform: 'translateY"), 'transform em linha engole o hover:scale');
   assert.ok(existsSync(new URL('../public/marca/topcollege-3d.webp', import.meta.url)));
-  assert.ok(CRM.includes("useState(() => secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search))"));
+  // 🔄 24/09 — A ÂNCORA MUDOU, A REGRA NÃO. O estado inicial deixou de ser só
+  // a URL: agora passa por `habitoDeEntrada`, porque `null` virou um estado de
+  // verdade (a CAPA das 8 portas) e existe memória do último hábito. O que
+  // este teste guarda continua sendo o mesmo — e é o que o atalho promete:
+  // ?secao= ABRE A SEÇÃO, mandando em cima de qualquer memória.
+  assert.ok(CRM.includes('habitoDeEntrada({'), 'o estado inicial da seção saiu da régua testável');
+  assert.ok(CRM.includes("daUrl: secaoDaUrl(typeof window === 'undefined' ? '' : window.location.search)"));
+  assert.ok(CRM.includes('doAparelho: lerUltimoHabito()'));
+  // e a precedência é medida, não só lida: a URL vence a memória
+  assert.equal(habitoDeEntrada({ daUrl: 'compromisso', doAparelho: 'duplicacao' }), 'compromisso');
   // 🔴 23/09 — o atalho clicado de DENTRO da Top College não remonta nada: os três níveis reagem à URL
   assert.ok(CRM.includes("const s = secaoDaUrl(localizacao.search);\n    if (s) setSecao(s);"));
   assert.ok(METODO.includes("const v = visaoDaUrl(localizacao.search);\n    if (v) setVisao(v);"));

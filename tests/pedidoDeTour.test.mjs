@@ -17,6 +17,13 @@ const METODO = fs.readFileSync(new URL('../src/components/licensing/CentralVenda
 const CLIENTES_TAB = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/CrmClientesTab.jsx', import.meta.url), 'utf8');
 const PAGINA = fs.readFileSync(new URL('../src/pages/Licensing.jsx', import.meta.url), 'utf8');
 const MODAL = fs.readFileSync(new URL('../src/components/licensing/ComoFuncionaModal.jsx', import.meta.url), 'utf8');
+// 🧩 24/09/2026 — a grade das 8 portas (`nav-habitos`) e a barra do hábito
+// (`barra-do-habito`) saíram do CrmClientesTab, que tinha 2.900 linhas, pros
+// seus próprios arquivos. As marcas continuam VIVAS no app; só mudaram de
+// casa. Sem somar os dois aqui, este teste acusa mãozinha apontando pro vazio
+// num alvo que existe — e manda a próxima pessoa caçar um defeito que não há.
+const PORTAS = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PortasDosHabitos.jsx', import.meta.url), 'utf8');
+const BARRA = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/BarraDoHabito.jsx', import.meta.url), 'utf8');
 
 test('pedirTour/ouvirPedidoDeTour: pub/sub simples — avisa quem está ouvindo, e desinscrever para de avisar', () => {
   const recebidos = [];
@@ -59,7 +66,7 @@ test('PASSOS_POR_PAINEL: um Hábito por chave, e todo alvo existe de verdade na 
   // TourGuiado usa document.querySelector — o elemento pode morar em
   // qualquer componente da mesma tela, não só no CrmMetodo. nav-habitos, por
   // exemplo, é a navegação dos 8 Hábitos, em CrmClientesTab.jsx.
-  const telaInteira = METODO + CLIENTES_TAB;
+  const telaInteira = METODO + CLIENTES_TAB + '\n' + PORTAS + '\n' + BARRA;
   for (const alvo of alvos) {
     // 🖐️ DIR-124 — alguns alvos moram dentro de `.map()` e viraram
     // condicionais (`data-teste={i === 0 ? 'alvo' : undefined}`) pra não
