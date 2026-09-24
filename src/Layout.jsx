@@ -992,8 +992,12 @@ export default function Layout({ children, currentPageName }) {
                       aparecem com nome dentro da barra de ações do bloco "Leilões
                       Ativos" (HeroAcoesLeiloes). Tê-los nos dois lugares era
                       repetição e poluía o cabeçalho. Desktop (sm+) inalterado. */}
-                  {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
-                  {isCatalogPage && (
+                  {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO.
+                      🛒 24/09/2026 — onde a barra do app aparece (loja, carrinho,
+                      vitrine) o carrinho saiu daqui de cima e mora na barra de
+                      baixo, no azulejo verde (pedido do dono). Nas telas de
+                      checkout/pedidos, sem barra, ele continua no cabeçalho. */}
+                  {isCatalogPage && !mostraBarraDoApp(currentPageName) && (
                     <button
                       type="button"
                       aria-label="Carrinho"
