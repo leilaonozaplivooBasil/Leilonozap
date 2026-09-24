@@ -181,18 +181,10 @@ test('FAIXA: Jornada × Lista é um controle só, e trocar de lado funciona', { 
   await ctx.close();
 });
 
-test('FAIXA: "meu placar" é botão de verdade e abre/fecha', { skip: semNavegador }, async () => {
-  const { pagina, ctx } = await abrir({ celular: true });
-  const botao = pagina.locator('[data-teste="placar-botao"]');
-  await botao.tap();
-  assert.equal((await estadoFaixa(pagina)).placar, true);
-  assert.equal(await botao.getAttribute('aria-expanded'), 'true');
-  await botao.tap();
-  assert.equal((await estadoFaixa(pagina)).placar, false);
-  await ctx.close();
-});
+// 🧹 DIR-180 — "Eu no Game" saiu da faixa (ele é o placar, não uma visão):
+// a prova dele agora vive na banca do placar, em placar-do-dia.spec.mjs.
 
-test('FAIXA: o relógio de teste fica discreto — só abre o campo quando alguém toca, e sair volta ao normal', { skip: semNavegador }, async () => {
+test('RELÓGIO DE TESTE (fora da fileira, DIR-180): fica discreto — só abre o campo quando alguém toca, e sair volta ao normal', { skip: semNavegador }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   assert.equal(await pagina.locator('input[type="time"]').count(), 0, 'o campo de hora nasceu aberto, gritando');
   await pagina.locator('[data-teste="modo-teste-pastilha"]').tap();
@@ -201,19 +193,34 @@ test('FAIXA: o relógio de teste fica discreto — só abre o campo quando algu�
   await pagina.getByRole('button', { name: 'aplicar' }).tap();
   await pagina.locator('[data-teste="modo-teste-ligado"]').waitFor();
   assert.equal((await estadoFaixa(pagina)).hora, '09:30');
-  await pagina.locator('[data-teste="faixa-visao"]').screenshot({ path: path.join(FOTOS, 'faixa-teste-ligado.png') });
+  await pagina.locator('[data-teste="pe-do-placar"]').screenshot({ path: path.join(FOTOS, 'relogio-teste-ligado.png') });
   await pagina.getByRole('button', { name: /sair/ }).tap();
   await pagina.locator('[data-teste="modo-teste-pastilha"]').waitFor();
   assert.equal((await estadoFaixa(pagina)).hora, '');
   await ctx.close();
 });
 
-test('FAIXA: no celular cabe numa linha só; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
+// 🧹 DIR-180 — o que o dono reclamou no print NÃO era a altura: era que no
+// celular só o botão ATIVO mostrava a palavra, e os outros quatro ficavam
+// ícone pelado ("ninguém adivinha que ⛓ é Mapa"). A prova mudou pra isso:
+// UMA fileira só (todos os azulejos no mesmo topo) e TODO nome inteiro,
+// medido no navegador de verdade — scrollWidth > clientWidth é texto cortado.
+test('FAIXA: uma fileira só e TODOS os cinco nomes inteiros no celular; fotos nos dois tamanhos', { skip: semNavegador }, async () => {
   for (const celular of [true, false]) {
     const { pagina, ctx } = await abrir({ celular });
     const faixa = pagina.locator('[data-teste="faixa-visao"]');
-    const caixa = await faixa.boundingBox();
-    if (celular) assert.ok(caixa.height < 48, `a faixa quebrou em duas fileiras no celular: altura=${caixa.height}`);
+    const medida = await faixa.evaluate((el) => {
+      const abas = [...el.querySelectorAll('[role="tab"]')];
+      return abas.map((b) => {
+        const nome = b.querySelector('span');
+        return { texto: nome.textContent, topo: Math.round(b.getBoundingClientRect().top), corta: nome.scrollWidth > nome.clientWidth + 1 };
+      });
+    });
+    assert.equal(medida.length, 5, 'a faixa precisa ter as cinco visões');
+    assert.deepEqual(medida.map((m) => m.texto), ['Jornada', 'Lista', 'Quadro', 'Mapa', 'Demandas']);
+    assert.equal(new Set(medida.map((m) => m.topo)).size, 1, `a faixa quebrou em mais de uma fileira: topos=${medida.map((m) => m.topo)}`);
+    const cortados = medida.filter((m) => m.corta).map((m) => m.texto);
+    assert.deepEqual(cortados, [], `nome cortado no ${celular ? 'celular' : 'desktop'}: ${cortados}`);
     await faixa.screenshot({ path: path.join(FOTOS, `faixa-${celular ? 'celular' : 'desktop'}.png`) });
     await ctx.close();
   }

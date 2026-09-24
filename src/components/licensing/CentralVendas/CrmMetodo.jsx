@@ -32,7 +32,7 @@ import {
 // 🎮 X-GAME — o motor da gamificação por cima do Master Task (a planilha
 // "X-GAME — Guia Prático do Sucesso" traduzida em função pura; nada muda no fluxo).
 import {
-  ordenarPorHora, horaEntre, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, CICLO_DIAS_UTEIS, fmtReais, TOKEN_MAX,
+  ordenarPorHora, horaEntre, resumoDoDia, dataISO, somarDiasISO, minutosBrasilia, inicioCicloOficial, diaCorridoDoCiclo, fmtReais, TOKEN_MAX,
   VIRTUDES, janelaVotacaoAberta, naJanelaIdeal, VOTACAO_INICIO_MIN, VOTACAO_IDEAL_FIM_MIN, VOTACAO_FIM_MIN, horaDeMin,
   mvmManual, podeSerVotado, votouEmTodosOsColegas,
   tokenDoCiclo, formacaoExecutivoIdeal, EXECUTIVO_IDEAL, META_VENDAS_CICLO,
@@ -43,7 +43,7 @@ import {
   hashDoArquivo, validarPrint,
   ehTarefaDeGratidao, deveAvisarRitual, janelaDoRitual, nomeExibicao,
   vibrar, VIBRA_CONCLUIU, VIBRA_CONQUISTA, VIBRA_ERRO,
-  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, AVISOS_ANTES_DE_ZERAR, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
+  pesoAutomatico, ehFimDeSemana, podeRecuperarNoFds, EIXOS_EXECUTIVO_IDEAL, proporcoesExecutivoIdeal,
   minutosDeHora,
 } from '@/lib/xgame';
 import { imagensParaComparar, decisaoAposIA } from '@/lib/xgameValidacao';
@@ -57,7 +57,6 @@ import MoedaPizza from '@/components/licensing/CentralVendas/MoedaPizza';
 import { vendasDaPessoa, filtroOrDonoDaVenda } from '@/lib/vendasDoCiclo';
 import { supabase } from '@/api/supabaseClient';
 import { carimboDoPronto, rotuloDoPrazo, estadoDoPronto } from '@/lib/pronto';
-import { DIAS_FIXO } from '@/lib/distribuicaoFixo';
 import { planoDeEntrada, ligarCartaoATarefa, fraseEntrou } from '@/lib/destinos';
 import { BarraProgresso } from './VerificacaoUI';
 import EntradaComDestinos, { campoEscuro, estiloSelectEscuro } from './EntradaComDestinos';
@@ -84,6 +83,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import XGameJornada from './XGameJornada';
 import GuiaMovel, { useEhCelular } from './GuiaMovel';
 import FaixaVisao from './FaixaVisao';
+import PlacarDoDia from './PlacarDoDia';
 import XGameRitualAmanhecer from './XGameRitualAmanhecer';
 import CrmNetworkQualificacaoModal from './CrmNetworkQualificacaoModal';
 import CrmContatoRegistroModal from './CrmContatoRegistroModal';
@@ -2593,10 +2593,33 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                   // best-effort: sem perfil ainda, cria; se falhar, o aparelho já guardou
                   salvarPerfil({ atalho_destino: d }).catch(() => {});
                 }}
-                placarAberto={painelAberto}
-                onPlacar={alternarPainel}
-                mostrarPlacar={visao === 'jornada' || visao === 'quadro' || celular}
                 demandasEsperando={demandasEsperando}
+              />
+            )}
+
+            {/* ══ 🎯 O PLACAR DO DIA — DIR-180 (24/09/2026) ══
+                Dono, com o print da tela no celular: "pra gente deixar isso
+                ainda mais limpo... a pessoa entender melhor."
+
+                Aqui moravam SEIS blocos empilhados: a linha do 🔥, quatro
+                avisos condicionais e a grade dos quatro cartões. Com dois
+                avisos disparando junto a pessoa lia três blocos vermelhos
+                ANTES do próprio número — e os dois vermelhos dizem a mesma
+                coisa ("DIA ZERADO"). Tudo isso virou UM bloco só, com UM
+                alerta (o mais grave) e UM número grande: PlacarDoDia.jsx,
+                com a regra do alerta em src/lib/placarDoDia.js. */}
+            {xgame && (
+              <PlacarDoDia
+                xgame={xgame}
+                ciclo={ciclo}
+                recebido={recebido}
+                fogo={fogo}
+                hojeFechou={hojeFechou}
+                ehHoje={ehHoje}
+                aberto={painelAberto}
+                onAbrir={alternarPainel}
+                mostrarBotao={visao === 'jornada' || visao === 'quadro' || celular}
+                liberacao={liberacao}
                 teste={podeGerir ? {
                   hora: horaTeste,
                   rascunho: horaRascunho,
@@ -2606,118 +2629,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 } : null}
               />
             )}
-
-            {/* ══ 🔥 F7 — OFENSIVA (o streak) + 💎 DIA PERFEITO ══ */}
-            {xgame && ehHoje && (
-              <div className="flex items-center justify-between gap-2 flex-wrap border-t border-nz-borda/40 pt-3">
-                <p className="text-sm font-bold text-nz-tinta">
-                  🔥 {fogo.dias} {fogo.dias === 1 ? 'dia' : 'dias'} de ofensiva
-                  {fogo.congelou && <span className="ml-2 text-[10px] font-semibold text-sky-600">🧊 congelador usado</span>}
-                </p>
-                <p className="text-[11px] text-nz-tinta-fraca">
-                  {hojeFechou
-                    ? 'hoje FECHADO ✔ — o fogo continua'
-                    : `feche ${Math.round(OFENSIVA_META * 100)}% do dia pra ${fogo.dias > 0 ? 'manter o fogo' : 'acender o fogo'}`}
-                  {!fogo.congelou && ' · 1 congelador automático por ofensiva'}
-                </p>
-              </div>
-            )}
             {xgame && ehHoje && progressoJogo.pct >= 100 && (
               <div className="py-2 text-center animate-pulse">
                 <p className="text-sm font-bold text-nz-verde">🎊 💎 DIA PERFEITO — BRILHANTE! PARABÉNS! 🎊</p>
-              </div>
-            )}
-
-            {/* 🚀 16/09/2026 — dono, ao vivo, testando a liberação de evento
-                (corrida da empresa às 4h): "eu preciso que apareça na história
-                dele que foi liberado pelo administrador pelo evento... só essa
-                comunicação que tem que melhorar." Sem isto, a pessoa via os
-                números mudarem mas não sabia POR QUÊ — a régua ficou clara
-                pro dono no ADM, mas muda pro jogador sem explicação nenhuma. */}
-            {xgame && ehHoje && liberacao?.ate_hora && mostrarPainel && (
-              <div className="rounded-lg border-2 border-nz-verde bg-emerald-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-emerald-700">🚀 LIBERADO PELO ADMINISTRADOR até as {liberacao.ate_hora}{liberacao.motivo ? ` — ${liberacao.motivo}` : ''}</p>
-                <p className="text-[11px] text-emerald-600 mt-0.5">
-                  Suas tarefas de hoje com horário antes desse não perdem MvM, pontos nem X-Pay por atraso — a empresa liberou pra você por causa do evento. Depois das {liberacao.ate_hora}, a régua normal volta a valer.
-                </p>
-              </div>
-            )}
-
-            {/* 🔥 08/09/2026 — dono: "não vou, perde o dinheiro, perde a MvM,
-                perde tudo do dia... precisa ser radical." Não é um detalhe
-                dentro do bloco de votação (que pode estar recolhido) — é um
-                alerta do tamanho real do problema, no topo do placar: o dia
-                inteiro, dinheiro incluído, não só a MvM. */}
-            {xgame && ehHoje && xgame.perdeu_por_nao_votar && mostrarPainel && (
-              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-red-700">🗳️ DIA ZERADO — você não votou em todos os colegas até as {horaDeMin(VOTACAO_FIM_MIN)}</p>
-                <p className="text-[11px] text-red-600 mt-0.5">Não é só a MvM: hoje o Human Token, os pontos e o X-Pay que você ganharia também zeraram. Votar em todo mundo, todo dia, não é opcional. Amanhã dá pra recomeçar.</p>
-              </div>
-            )}
-
-            {/* ⏰ 08/09/2026 — dono: "se o cara se atrasou [na Fila do Pronto],
-                além de ele perder o dinheiro, isso tem que tirar pontos dele."
-                A mensagem pro cara, na hora, do mesmo jeito grave do não-votar. */}
-            {xgame && ehHoje && xgame.perdeu_por_atraso_pronto && mostrarPainel && (
-              <div className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-red-700">⏰ DIA ZERADO — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
-                <p className="text-[11px] text-red-600 mt-0.5">MvM, Human Token, pontos e o X-Pay que você ganharia hoje zeraram junto com o atraso. Dá o pronto assim que puder — amanhã o dia recomeça do zero.</p>
-              </div>
-            )}
-
-            {/* 🟡 09/09/2026 — DIR-105: 1º-3º atraso é só aviso/treino (perde
-                pontos, resto do dia intacto) — só o 4º em diante vira o zero
-                radical acima. */}
-            {xgame && ehHoje && xgame.em_aviso_pronto && mostrarPainel && (
-              <div className="rounded-lg border-2 border-amber-500 bg-amber-50 px-3 py-2.5 text-center">
-                <p className="text-sm font-extrabold text-amber-700">⚠️ AVISO {xgame.avisos_pronto + 1} DE {AVISOS_ANTES_DE_ZERAR} — uma tarefa da gestão passou do "pronto até" sem você dar o pronto</p>
-                <p className="text-[11px] text-amber-700/90 mt-0.5">
-                  Você perdeu pontos hoje por isso, mas MvM, Human Token e X-Pay continuam de pé. {xgame.avisos_pronto + 1 >= AVISOS_ANTES_DE_ZERAR
-                    ? 'Da próxima vez o dia INTEIRO zera — sem exceção.'
-                    : `Da próxima vez o aviso sobe pra ${xgame.avisos_pronto + 2} de ${AVISOS_ANTES_DE_ZERAR}. No ${AVISOS_ANTES_DE_ZERAR + 1}º, zera tudo.`}
-                </p>
-              </div>
-            )}
-
-            {/* ══ 🎮 X-GAME — o placar do dia por cima do Master Task ══ */}
-            {xgame && mostrarPainel && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-nz-borda/40 pt-4" data-teste="placar-do-dia">
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`"O Human Token é a moeda da metodologia X-EOS que foi desenvolvida para a humanidade. Ela valida o desempenho e aplicabilidade do ser humano. Cada integrante do nosso Método é uma moeda. E essa moeda tem uma cotação diária que é gerada através do MvM + Produtividade." — Soma 5 componentes no ciclo: MvM da votação do grupo + Produção + Real Time + Bônus/Estudo + Vendas REAIS da sua loja, contadas automático (meta ${META_VENDAS_CICLO} no ciclo — reunião conta uma fração, venda de alto valor satura na hora). "Recrutamos caráter e treinamos habilidade": o MvM é PORTÃO, não só peso — abaixo de 7 trava tudo em Bronze, abaixo de 8 barra a Platina. Ligas: 🥉 bronze até 6,65 · 🥈 prata até 12,21 · 🥇 ouro até 17,77 · 🏆 platina de 17,78 pra cima (só abre batendo os dois portões: caráter e 100% da meta de vendas). Ouro dá pra chegar sem estudar em casa (produção/MvM/vendas bastam) — só a Platina exige leitura de semana + estudo de fim de semana em dia.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Human Token ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{ciclo ? ciclo.liga.emoji : xgame.faixa.medalha} {fmtToken(ciclo ? ciclo.total : xgame.token_dia)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">{!ciclo || ciclo.estudoEmDiaCompleto ? `${ciclo ? ciclo.liga.label : xgame.faixa.label} do ciclo · teto 22,22` : 'trava 19,99 pra Platina — estudo em atraso no ciclo'}</p>
-                </div>
-                {/* 🩹 09/09/2026 — DIR-113.2, dono, revendo o placar: "se o
-                    MVM dele é sete, vai aparecer sete, não sete ponto
-                    setenta e cinco e nove em cima" — o número GRANDE virava
-                    o automático (mvm_dia), com o de verdade (a votação, o
-                    único que entra na moeda) escondido no rodapé pequeno.
-                    Trocado: o número grande agora É o oficial. */}
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`Só a VOTAÇÃO DO CICLO (as notas que você recebe dos colegas, 1 a 10 nas 10 Virtudes, das ${horaDeMin(VOTACAO_INICIO_MIN)} às ${horaDeMin(VOTACAO_FIM_MIN)}) entra no Human Token — é este número. O "automático" (o dia começa em 10 e cada tarefa que passa da hora sem marcar desconta) é só uma estimativa de humor do dia — NÃO conta pra moeda.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">MvM (oficial) ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{recebido.media !== null ? fmtToken(recebido.media) : '—'}</p>
-                  <p className={`text-[10px] font-semibold ${recebido.media !== null && recebido.media < 4 ? 'text-red-600' : 'text-nz-tinta-fraca'}`}>
-                    {recebido.media !== null ? `${xgame.frase_mvm} · o que conta na moeda` : 'ainda sem voto recebido neste ciclo'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={'COTAÇÃO — no dia 1 do ciclo o ponto vale 1,00 e cai 0,01 por dia útil até 0,80 no dia 22. Fazer antes vale mais: ANTECIPAÇÃO É PODER.'}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">Cotação do dia ⓘ</p>
-                  <p className="text-xl font-bold text-nz-tinta tabular-nums">{fmtToken(xgame.cotacao)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">dia {xgame.dia_util} de {CICLO_DIAS_UTEIS} · antecipação é poder</p>
-                </div>
-                <div className="rounded-xl border border-nz-borda bg-white p-3" title={`X-PAY — o valor do seu dia em R$: o seu fixo ÷ ${DIAS_FIXO} dias de operação = ${fmtReais(xgame.xpay.valorDia)} por dia; dentro do dia o PESO de cada tarefa reparte esse valor (a soma das tarefas é sempre o dia inteiro). O dia completo é a Rotina Perfeita (peso ${xgame.xpay.pesoReferencia}); com menos peso que isso, paga proporcional. Venda NÃO paga aqui — a venda da sua loja já remunera pelas comissões da plataforma. Tarefa PERDIDA é dinheiro que sai do seu resultado.`}>
-                  <p className="text-[10px] font-semibold text-nz-tinta-fraca uppercase tracking-wide">💰 X-Pay {ehHoje ? 'de hoje' : 'do dia'} ⓘ</p>
-                  <p className="text-xl font-bold text-nz-verde tabular-nums">{fmtReais(xgame.xpay.ganho)}</p>
-                  <p className="text-[10px] text-nz-tinta-fraca">
-                    {xgame.pontos} pts · {xgame.xpay.perdido > 0 ? <span className="text-red-600 font-semibold">− {fmtReais(xgame.xpay.perdido)} perdido</span> : `${fmtReais(xgame.xpay.emJogo)} em jogo`}
-                  </p>
-                  {/* 💰 06/09/2026 — o dia vale o fixo ÷ 22; com menos tarefas que o mínimo, paga proporcional */}
-                  {xgame.xpay.pesoFalta > 0 && (
-                    <p className="text-[10px] text-amber-600 font-semibold" data-teste="xpay-faltam">
-                      dia vale {fmtReais(xgame.xpay.valorDia)} · peso {xgame.xpay.somaPesos} de {xgame.xpay.pesoReferencia}: falta {xgame.xpay.pesoFalta} pro dia completo
-                    </p>
-                  )}
-                </div>
               </div>
             )}
 

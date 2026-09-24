@@ -23,7 +23,7 @@ function Banca() {
         <span className="text-white text-xs">cabeçalho</span>
       </div>
       <div className="mt-4 nz-painel">
-        <FaixaVisao visao={visao} onVisao={setVisao} placarAberto={false} onPlacar={() => {}} mostrarPlacar={false}
+        <FaixaVisao visao={visao} onVisao={setVisao}
           atalho={atalho} onAtalho={(id) => setAtalho(gravarAtalho(id))} />
       </div>
     </div>

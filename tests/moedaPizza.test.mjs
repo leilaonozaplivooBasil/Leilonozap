@@ -173,8 +173,14 @@ test('pages/XGame.jsx: só desenha a moeda direto em modoAdmin (onde a XGameVisa
 // nas DUAS telas que têm esse card (CrmMetodo e a página /XGame).
 test('CrmMetodo.jsx e pages/XGame.jsx: o card de MvM mostra GRANDE o oficial (votação), não o automático', () => {
   const XGAME = fs.readFileSync(new URL('../src/pages/XGame.jsx', import.meta.url), 'utf8');
-  assert.match(METODO, /MvM \(oficial\) ⓘ/, 'CrmMetodo.jsx: o título do card precisa deixar claro que este é o oficial');
-  assert.match(METODO, /\{recebido\.media !== null \? fmtToken\(recebido\.media\) : '—'\}/, 'CrmMetodo.jsx: o número GRANDE tem que ser a votação (recebido.media), não xgame.mvm_dia');
+  // 🎯 24/09/2026 (DIR-180) — o placar do Compromisso saiu do CrmMetodo pro
+  // PlacarDoDia.jsx. A REGRA do DIR-113.2 é a mesma: a palavra "oficial" tem
+  // que estar na tela (senão ninguém sabe qual dos dois MvM está vendo) e o
+  // número tem que ser a VOTAÇÃO, nunca o automático.
+  const PLACAR = fs.readFileSync(new URL('../src/components/licensing/CentralVendas/PlacarDoDia.jsx', import.meta.url), 'utf8');
+  assert.match(PLACAR, /rotulo="MvM oficial"/, 'PlacarDoDia.jsx: o rótulo precisa deixar claro que este é o oficial');
+  assert.match(PLACAR, /valor=\{recebido\.media !== null \? fmtToken\(recebido\.media\) : '—'\}/, 'PlacarDoDia.jsx: o número tem que ser a votação (recebido.media), não xgame.mvm_dia');
+  assert.doesNotMatch(PLACAR, /xgame\.mvm_dia/, 'o automático (mvm_dia) não pode voltar pro placar');
   assert.match(XGAME, /titulo="MvM \(oficial\)" valor=\{recebido\.media !== null \? fmt2\(recebido\.media\) : '—'\}/, 'pages/XGame.jsx: o número GRANDE tem que ser a votação (recebido.media), não resumo.mvm_dia');
 });
 

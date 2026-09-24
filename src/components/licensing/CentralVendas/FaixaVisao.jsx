@@ -1,189 +1,106 @@
-import React, { useState } from 'react';
-import { Map, ListChecks, LayoutGrid, Network, Inbox, BarChart3, ChevronDown, FlaskConical, X, Star } from 'lucide-react';
+import React from 'react';
+import { Map, ListChecks, LayoutGrid, Network, Inbox, Star } from 'lucide-react';
 import { vibrar, VIBRA_TOQUE } from '@/lib/xgame';
 
-// 🎚️ A FAIXA DE VISÃO do Compromisso: Jornada × Lista × Quadro, "Eu no Game"
-// (o placar completo) e, por enquanto, o relógio de teste.
+// 🎚️ A FAIXA DE VISÃO do Compromisso: as CINCO visões do mesmo dia.
 //
-// Ordem do dono (06/09/2026), olhando a faixa antiga — dois botões soltos,
-// um relógio "--:--" e um botão âmbar "Entrar no modo dev" gritando ao lado
-// de um link "▸ meu placar completo": "vamos deixar isso mais bonito e mais
-// funcional; o modo desenvolvedor a gente tira depois — essa semana fica só
-// pra galera testar".
+// 🧹 DIR-180 (24/09/2026) — dono, com o print da fileira no celular: "eu
+// quero que esses botões apareçam ali de uma forma organizada... pra ficar
+// ainda melhor visual e a pessoa entender melhor."
+//
+// O QUE ESTAVA ERRADO — eram OITO controles numa linha só, com TRÊS
+// gramáticas diferentes misturadas no mesmo tamanho e na mesma altura:
+//   • 5 VISÕES (trocam a tela)   • ⭐ um AJUSTE (não troca nada)
+//   • 📊 um PAINEL (abre/fecha)  • ⚗ uma FERRAMENTA DE DEV (temporária)
+// E no celular só o botão ATIVO mostrava a palavra — os outros quatro
+// ficavam ícone pelado. Ninguém adivinha que ⛓ é Mapa e ✉ é Demandas.
 //
 // O QUE MUDOU:
-//   • Jornada × Lista virou UM controle segmentado (uma pílula com dois
-//     lados), com ícone em vez de emoji e o gradiente da faculdade no lado
-//     ativo. Dois botões soltos viram uma escolha só, que é o que são.
-//   • "meu placar completo" virou botão de verdade, com ícone e seta que
-//     gira — não um link de texto perdido.
-//   • 🧪 O RELÓGIO DE TESTE ficou DISCRETO: uma pastilha "teste" que só abre
-//     o campo de hora quando alguém toca. Ligado, vira uma pastilha âmbar
-//     clara ("TESTE · 09:30 · nada é salvo") com o "sair". As funções são
-//     EXATAMENTE as mesmas de antes (aplicar hora, sair, zerar marcas).
-//     ⏳ TEMPORÁRIO: sai depois da semana de testes — quando sair, é só
-//     parar de passar a prop `teste`; nada mais depende dele.
-//
-// 🎨 08/09/2026 — dono, olhando de novo: "dar esse nome no meu placar pra
-// ficar mais... como estou no jogo... mais pra perto aqui do quadro, da
-// lista e da jornada... vamos deixar isso aqui dos circuitões mais bonito,
-// mais chamativo, deixar só o teste lá no fundo." Virou "Eu no Game" — não
-// "Jornada" pra não colidir com a visão que já tem esse nome — colado no
-// mesmo grupo do seletor (não mais lá longe, do lado do relógio de teste);
-// o teste ficou sozinho, empurrado pro canto. O aberto/fechado agora também
-// PERSISTE (localStorage) — "tem gente que vai querer deixar fixo": quem
-// deixa aberto, abre aberto da próxima vez; quem fecha, fecha.
+//   • A fileira virou SÓ as 5 visões, em grade de 5 colunas, largura cheia,
+//     ÍCONE EM CIMA e PALAVRA EMBAIXO — o mesmo padrão que já provamos nas
+//     portas dos 8 Hábitos (DIR-179), que foi o que resolveu o nome cortado.
+//     Agora TODA visão tem nome no celular, sempre.
+//   • ⭐ virou um selo no CANTO DO AZULEJO ATIVO — o controle passou a morar
+//     na coisa sobre a qual ele age ("fixar ESTA visão"), em vez de disputar
+//     espaço como se fosse um sexto destino.
+//   • 📊 "Eu no Game" saiu daqui: ele não é irmão das visões, é o placar —
+//     mora junto dos números agora (PlacarDoDia.jsx).
+//   • ⚗ o relógio de teste saiu daqui (RelogioDeTeste.jsx) — ferramenta de
+//     dev que apaga marcas não divide fileira com navegação de verdade.
 const GRADIENTE_TC = 'linear-gradient(135deg, var(--topcollege-azul, #3B6FF6), var(--topcollege-magenta, #E62E8B))';
-const GRADIENTE_VERDE = 'linear-gradient(135deg, #16a34a, #22c55e)';
 
-export default function FaixaVisao({ visao, onVisao, placarAberto, onPlacar, mostrarPlacar = true, teste = null, demandasEsperando = 0, atalho = null, onAtalho = null }) {
+// DIR-75 (Quadro), DIR-? (Mapa, 21/09) e Demandas (22/09) entraram aqui, e não
+// em botões soltos, porque as três são VISÕES do mesmo dia — igual às outras.
+const OPCOES = [
+  { id: 'jornada', rotulo: 'Jornada', Icone: Map },
+  { id: 'lista', rotulo: 'Lista', Icone: ListChecks },
+  { id: 'quadro', rotulo: 'Quadro', Icone: LayoutGrid },
+  { id: 'mapa', rotulo: 'Mapa', Icone: Network },
+  { id: 'demandas', rotulo: 'Demandas', Icone: Inbox },
+];
+
+export default function FaixaVisao({ visao, onVisao, demandasEsperando = 0, atalho = null, onAtalho = null }) {
   const ehOAtalho = Boolean(onAtalho) && atalho === visao;
-  const [testeAberto, setTesteAberto] = useState(false);
-  // DIR-75 — o terceiro lado: o nosso quadro. Entra aqui e não num botão solto
-  // porque é uma VISÃO do mesmo dia, igual às outras duas.
-  const opcoes = [
-    { id: 'jornada', rotulo: 'Jornada', Icone: Map },
-    { id: 'lista', rotulo: 'Lista', Icone: ListChecks },
-    { id: 'quadro', rotulo: 'Quadro', Icone: LayoutGrid },
-    // 🗺️ 21/09/2026 — o quarto lado, pedido do dono em áudio de 19/09:
-    // "criar um mapa mental ali do lado, ligado ao quadro". Entra aqui, no
-    // mesmo seletor, e não num botão solto — é mais uma VISÃO da mesma mesa.
-    { id: 'mapa', rotulo: 'Mapa', Icone: Network },
-    // 🧠 22/09/2026 — a quinta visão, pedida no MESMO áudio que pediu o mapa
-    // (19/09, 10h32): "no compromisso, a gente tem que criar uma aba de
-    // demandas… já vai aparecer ali um lugar com as demandas que eu posso
-    // transformar em tarefa". Entrou depois do mapa porque eu a tinha cortado
-    // por engano — o mapa sem ela larga a anotação num lugar que o dono não vê.
-    { id: 'demandas', rotulo: 'Demandas', Icone: Inbox },
-  ];
 
   return (
-    <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap" data-teste="faixa-visao">
-      {/* ── o grupo principal: as 3 visões + "Eu no Game", coladas — dono:
-          "mais pra perto aqui do quadro, da lista e da jornada" ── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="inline-flex items-center rounded-full border border-nz-borda/50 bg-white/[0.04] p-0.5" role="tablist" aria-label="Visão do dia">
-          {opcoes.map(({ id, rotulo, Icone }) => {
-            const ativo = visao === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={ativo}
-                aria-label={rotulo}
-                title={rotulo}
-                onClick={() => { if (!ativo) { vibrar(VIBRA_TOQUE); onVisao(id); } }}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition-all ${
-                  ativo ? 'text-white shadow-lg scale-[1.03]' : 'text-nz-tinta-fraca hover:text-nz-tinta'}`}
-                style={ativo ? { background: GRADIENTE_TC, boxShadow: '0 4px 14px -2px rgba(59,111,246,0.5)' } : undefined}
-              >
-                <Icone className="w-3.5 h-3.5" />
-                {/* 📱 com três lados (DIR-75) a faixa não cabia em 390px: no celular
-                    só o lado ATIVO mostra a palavra; os outros ficam no ícone */}
-                <span className={ativo ? '' : 'hidden sm:inline'}>{rotulo}</span>
-                {/* 🔴 a bolinha aparece MESMO no celular, onde a palavra some:
-                    é o único sinal de que tem coisa esperando ali dentro. */}
-                {id === 'demandas' && demandasEsperando > 0 && (
-                  <span
-                    className={`ml-0.5 inline-flex min-w-[15px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-[15px] ${
-                      ativo ? 'bg-white/25 text-white' : 'bg-nz-verde-neon/25 text-nz-verde-neon'}`}
-                    data-teste="faixa-demandas-contador"
-                  >{demandasEsperando > 99 ? '99+' : demandasEsperando}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ⭐ 23/09/2026 — fixa a visão aberta como destino do ícone da Top
-            College no cabeçalho (ver src/lib/atalhoTopCollege.js). */}
-        {onAtalho && (
-          <button
-            type="button"
-            onClick={() => { if (!ehOAtalho) { vibrar(VIBRA_TOQUE); onAtalho(visao); } }}
-            aria-pressed={ehOAtalho}
-            title={ehOAtalho ? 'O ícone da Top College já abre aqui' : 'Fixar esta visão como meu atalho da Top College'}
-            data-teste="fixar-atalho"
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-all ${
-              ehOAtalho ? 'text-amber-300 bg-amber-400/15' : 'border border-nz-borda/50 text-nz-tinta-fraca hover:text-amber-300'}`}
-          >
-            <Star className="w-3.5 h-3.5" fill={ehOAtalho ? 'currentColor' : 'none'} />
-            <span className="hidden sm:inline">{ehOAtalho ? 'meu atalho' : 'fixar atalho'}</span>
-          </button>
-        )}
-
-        {/* ── "Eu no Game" — o placar completo, agora colado no grupo das
-            visões, não solto lá longe perto do relógio de teste ── */}
-        {mostrarPlacar && (
-          <button
-            type="button"
-            onClick={() => { vibrar(VIBRA_TOQUE); onPlacar(); }}
-            aria-expanded={placarAberto}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] font-bold transition-all ${
-              placarAberto ? 'text-white shadow-lg scale-[1.03]' : 'border border-nz-borda/50 text-nz-tinta-fraca hover:text-nz-tinta hover:border-nz-verde/50'}`}
-            style={placarAberto ? { background: GRADIENTE_VERDE, boxShadow: '0 4px 14px -2px rgba(34,197,94,0.5)' } : undefined}
-            data-teste="placar-botao"
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            {/* 📱 mesma regra da faixa (DIR-75): "Eu no Game" é comprido —
-                no celular vira só ícone, senão a faixa quebra em duas linhas */}
-            <span className="hidden sm:inline">Eu no Game</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${placarAberto ? 'rotate-180' : ''}`} />
-          </button>
-        )}
-      </div>
-
-      {/* ── 🧪 relógio de teste — sozinho, discreto, empurrado pro fundo ── */}
-      {teste && (
-        <span className="flex items-center">
-          {teste.hora ? (
-            <span
-              className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-200 text-[10px] font-bold px-2.5 py-1"
-              data-teste="modo-teste-ligado"
-            >
-              <FlaskConical className="w-3 h-3" />
-              TESTE · {teste.hora} · nada é salvo
-              <button
-                type="button"
-                onClick={() => { vibrar(VIBRA_TOQUE); teste.sair(); setTesteAberto(false); }}
-                title="sair do modo de teste"
-                className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/20 hover:bg-amber-400/35 px-1.5 py-0.5"
-              ><X className="w-3 h-3" /> sair</button>
-            </span>
-          ) : testeAberto ? (
-            <span className="inline-flex items-center gap-1.5" data-teste="modo-teste-aberto">
-              <input
-                type="time"
-                value={teste.rascunho}
-                onChange={(e) => teste.onRascunho(e.target.value)}
-                title="Relógio de TESTE (só super admin): escolha um horário e aplique — o jogo inteiro obedece."
-                className="rounded-full border border-amber-400/40 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-amber-200 outline-none focus:border-amber-300"
-              />
-              <button
-                type="button"
-                disabled={!teste.rascunho}
-                onClick={() => { vibrar(VIBRA_TOQUE); teste.entrar(); }}
-                className="rounded-full bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-amber-950 text-[10px] font-extrabold px-3 py-1.5"
-              >aplicar</button>
-              <button type="button" onClick={() => setTesteAberto(false)} className="text-nz-tinta-fraca hover:text-nz-tinta" title="fechar">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </span>
-          ) : (
+    <div
+      className="grid grid-cols-5 gap-1 rounded-2xl border border-nz-borda/50 bg-white/[0.04] p-1"
+      role="tablist"
+      aria-label="Visão do dia"
+      data-teste="faixa-visao"
+    >
+      {OPCOES.map(({ id, rotulo, Icone }) => {
+        const ativo = visao === id;
+        return (
+          <div key={id} className="relative">
             <button
               type="button"
-              onClick={() => { vibrar(VIBRA_TOQUE); setTesteAberto(true); }}
-              title="Relógio de teste (só super admin, temporário)"
-              className="inline-flex items-center gap-1 rounded-full border border-amber-400/15 text-amber-300/40 hover:text-amber-200 hover:border-amber-400/50 text-[10px] font-bold px-2 py-0.5 opacity-60 hover:opacity-100 transition-opacity"
-              data-teste="modo-teste-pastilha"
+              role="tab"
+              aria-selected={ativo}
+              aria-label={rotulo}
+              title={rotulo}
+              data-teste={`visao-${id}`}
+              onClick={() => { if (!ativo) { vibrar(VIBRA_TOQUE); onVisao(id); } }}
+              className={`flex w-full flex-col items-center gap-1 rounded-xl px-0.5 py-2 transition-all ${
+                ativo ? 'text-white shadow-lg' : 'text-nz-tinta-fraca hover:text-nz-tinta'}`}
+              style={ativo ? { background: GRADIENTE_TC, boxShadow: '0 4px 14px -2px rgba(59,111,246,0.5)' } : undefined}
             >
-              {/* no celular só o ícone: com a palavra, a fileira não cabia em 390px */}
-              <FlaskConical className="w-3 h-3" /><span className="hidden sm:inline">teste</span>
+              <Icone className="w-4 h-4 shrink-0" strokeWidth={ativo ? 2.4 : 2} />
+              {/* 📱 o nome NÃO some mais no celular: ícone em cima, palavra
+                  embaixo, e cada azulejo tem a largura inteira da coluna —
+                  o mesmo conserto do "Acompanha…" cortado no DIR-179. */}
+              <span className="w-full text-center text-[10px] font-bold leading-none">{rotulo}</span>
             </button>
-          )}
-        </span>
-      )}
+
+            {/* 🔴 o que está esperando dentro das Demandas — o único sinal de
+                que tem coisa ali; fica por cima do azulejo, não na fileira. */}
+            {id === 'demandas' && demandasEsperando > 0 && (
+              <span
+                className={`pointer-events-none absolute -top-0.5 right-0.5 inline-flex min-w-[15px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-[15px] ${
+                  ativo ? 'bg-white text-nz-tinta' : 'bg-nz-verde-neon text-nz-tinta'}`}
+                data-teste="faixa-demandas-contador"
+              >{demandasEsperando > 99 ? '99+' : demandasEsperando}</span>
+            )}
+
+            {/* ⭐ 23/09/2026 — fixa a visão aberta como destino do ícone da Top
+                College no cabeçalho (src/lib/atalhoTopCollege.js). DIR-180: só
+                aparece no azulejo ATIVO, porque é sobre ELE que o botão age. */}
+            {onAtalho && ativo && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (!ehOAtalho) { vibrar(VIBRA_TOQUE); onAtalho(visao); } }}
+                aria-pressed={ehOAtalho}
+                title={ehOAtalho ? 'O ícone da Top College já abre aqui' : 'Fixar esta visão como meu atalho da Top College'}
+                data-teste="fixar-atalho"
+                className={`absolute -top-1 -left-1 grid h-5 w-5 place-items-center rounded-full border transition-colors ${
+                  ehOAtalho ? 'border-amber-300 bg-amber-300 text-amber-900' : 'border-nz-borda bg-white/90 text-nz-tinta-fraca hover:text-amber-500'}`}
+              >
+                <Star className="w-3 h-3" fill={ehOAtalho ? 'currentColor' : 'none'} strokeWidth={2.4} />
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

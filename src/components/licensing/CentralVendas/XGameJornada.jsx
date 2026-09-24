@@ -13,7 +13,7 @@ import {
 } from '@/lib/xgame';
 import { faixaDeHorario } from '@/lib/quadroCompromisso';
 import RodapeDaJornada from './RodapeDaJornada';
-import { ID_MOMENTO, itensDoRodape } from '@/lib/rodapeDaJornada';
+import { ID_MOMENTO, ID_DIA_INTEIRO, barraDaJornada } from '@/lib/rodapeDaJornada';
 import { familiaDaTarefa } from '@/lib/capaDaTarefa';
 
 // 🗺️ X-GAME — O MOMENTO + A JORNADA (ordem do dono, 05/09):
@@ -411,7 +411,17 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
     return () => clearTimeout(t);
   }, [expandida]);
   const irPeloRodape = (id) => {
-    if (id === ID_MOMENTO) { setExpandida(false); setTimeout(() => rolarAte(refTopo.current, 'start'), 60); return; }
+    // 🧹 DIR-180 — "ver o dia inteiro" abre a jornada; "voltar pro agora"
+    // devolve o foco pro passo de verdade (as setas do momento tiram a
+    // pessoa dele, e antes nada trazia ela de volta) e sobe.
+    if (id === ID_DIA_INTEIRO) { setExpandida(true); return; }
+    if (id === ID_MOMENTO) {
+      setFocoId(null);
+      setPreviaSeta(null);
+      setExpandida(false);
+      setTimeout(() => rolarAte(refTopo.current, 'start'), 60);
+      return;
+    }
     if (!expandida) { alvoRef.current = id; setExpandida(true); return; }
     rolarAte(refsPeriodo.current[id], 'start');
   };
@@ -441,7 +451,19 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
     return gs;
   }, [tarefas]);
   const periodoAtual = atual ? periodoDe(atual) : PERIODOS[PERIODOS.length - 1];
-  const rodape = <RodapeDaJornada itens={itensDoRodape({ grupos, periodoAtual: periodoAtual[1], expandida })} onIr={irPeloRodape} />;
+  // 🧹 DIR-180 — a barra muda com a tela: um botão no Momento, o mapa dos
+  // períodos só na jornada aberta. `foraDoAgora` é o que as setas fizeram:
+  // o foco está num passo que NÃO é o de agora.
+  const foraDoAgora = Boolean(foco && atual && foco.id !== atual.id);
+  const rodape = (
+    <RodapeDaJornada
+      barra={barraDaJornada({
+        grupos, periodoAtual: periodoAtual[1], expandida,
+        foraDoAgora, feitas: feitas.length, total: tarefas.length,
+      })}
+      onIr={irPeloRodape}
+    />
+  );
 
   // ══ A JORNADA EXPANDIDA — estilo Duolingo, de baixo pra cima: o dia SOBE.
   //    Sem linha; períodos com cor própria; a parada atual ACESA com balão

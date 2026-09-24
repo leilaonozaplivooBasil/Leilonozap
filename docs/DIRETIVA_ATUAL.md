@@ -1,3 +1,69 @@
+## 🧹 DIR-180 — A faxina do Compromisso: fileira, rodapé e placar (24/09/2026)
+
+**Dono, com três prints da tela do Compromisso/Jornada no celular:** "eu quero
+que esses botões do primeiro print apareçam ali de uma forma organizada... eu
+até gostei do botão agora, que leva pro que está agora... e aí você vai sumir
+com esse manhã, tarde e noite... o que você ainda melhoraria pra ficar ainda
+mais bonito?" — e depois da análise: **"VOU NA QUE VOCÊ RECOMENDA, DEIXE FODA
+ESSE CUSTOMER EXPERIENCE."**
+
+### P1+P2 — a fileira (`FaixaVisao.jsx`)
+Eram OITO controles numa linha, com TRÊS gramáticas misturadas no mesmo
+tamanho: 5 visões, 1 ajuste (⭐), 1 painel (📊) e 1 ferramenta de dev (⚗). E no
+celular só o ATIVO mostrava a palavra — os outros quatro ficavam ícone pelado
+("ninguém adivinha que ⛓ é Mapa").
+- virou SÓ as 5 visões, em grade de 5 colunas, **ícone em cima e palavra
+  embaixo** (o mesmo padrão do DIR-179 que resolveu o "Acompanha…" cortado);
+- ⭐ virou selo no canto do azulejo ATIVO — o controle mora na coisa sobre a
+  qual ele age;
+- 📊 "Eu no Game" foi pro placar (ele é o placar, não uma visão);
+- ⚗ virou `RelogioDeTeste.jsx` e mora no PÉ do placar. Ele apaga marcas do dia
+  e estava a um toque dos botões de todo dia.
+
+### P3 — o rodapé (`RodapeDaJornada.jsx` + `barraDaJornada()`)
+O dono estava certo, e o motivo é **estrutural**: na tela do Momento os quatro
+períodos não navegavam pra lugar nenhum — `irPeloRodape` só EXPANDIA a jornada.
+Quatro botões, um resultado. Agora a barra **muda com a tela**:
+- **Momento** → UM botão, com o rótulo certo da hora: espiando outro passo com
+  as setas → "VOLTAR PRO AGORA"; já no agora → "VER O DIA INTEIRO", com o
+  trilho do dia por dentro;
+- **Jornada aberta** → os períodos VOLTAM, porque ali eles navegam de verdade.
+- 🎯 De quebra, consertou um buraco: as setas do momento TIRAVAM a pessoa do
+  passo de agora e **nada** trazia ela de volta (o "AGORA" antigo só rolava).
+- 🩹 Período sem parada deixou de ser um bloco cinza apagado (o olho lia como
+  "bloqueado/perdi") e passou a DIZER "sem parada".
+
+### P4+P5 — o placar (`PlacarDoDia.jsx` + `placarDoDia.js`)
+Aqui moravam SEIS blocos empilhados.
+- **Um alerta por vez, o mais grave** (`alertaDoDia()`): com dois disparando
+  junto a pessoa lia três blocos vermelhos ANTES do próprio número — e os dois
+  vermelhos dizem a mesma coisa. Bônus: os alertas saíram de trás do
+  `mostrarPainel`; um DIA ZERADO não pode ficar escondido num painel fechado.
+- **Hierarquia**: os quatro números tinham o mesmo tamanho e o mesmo cartão —
+  nada dizia qual importa, sendo que o Human Token JÁ É a soma dos outros.
+  Agora ele é o número grande, sozinho, com a liga; MvM oficial, Cotação e
+  X-Pay viram uma linha fina. E o resumo ficou SEMPRE à vista.
+- **📱 O ⓘ passou a existir no celular**: os textos moravam em `title=`, que só
+  abre com o mouse parado em cima. A explicação do Human Token são ~1000
+  caracteres que ninguém no telefone alcançava. Agora tocar no número abre uma
+  folha por baixo.
+
+### Provas
+- `tests/placarDoDia.test.mjs` (6) e `tests/rodapeDaJornada.test.mjs` (+4).
+- Bancas no Chromium real: `rodapeJornada.spec.mjs` (4, a 390px),
+  `placarDoDia.spec.mjs` (5, a 393px) e `guia.spec.mjs` (10) — esta última com
+  a prova nova que mede o que o dono reclamou: UMA fileira e os CINCO nomes
+  inteiros (`scrollWidth > clientWidth` = texto cortado).
+- Mutação: inverti a ordem de gravidade do alerta → caiu o teste do alerta;
+  forcei a barra a devolver sempre o mapa → caíram os dois do botão único.
+  Restaurei, voltou verde.
+- Suíte **3654/3654** · lint **0 erro** · build **OK**.
+
+**Status:** no preview oficial (`claude/project-structure-analysis-r1prad`).
+Produção só com o OK do dono.
+
+---
+
 # DIRETIVA ATUAL — Leilão NoZap
 
 > Este arquivo contém **só a diretiva de engenharia em vigor agora** — o que

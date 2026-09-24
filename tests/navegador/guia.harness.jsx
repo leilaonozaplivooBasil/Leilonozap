@@ -19,23 +19,22 @@ import MobileNavSheet from '@/components/licensing/MobileNavSheet';
 import HeroTopCollege from '@/components/licensing/HeroTopCollege';
 import GuiaMovel from '@/components/licensing/CentralVendas/GuiaMovel';
 import FaixaVisao from '@/components/licensing/CentralVendas/FaixaVisao';
+import RelogioDeTeste from '@/components/licensing/CentralVendas/RelogioDeTeste';
 
-// a faixa Jornada × Lista com o placar e o relógio de teste, com estado de verdade
+// 🧹 DIR-180 — a faixa ficou SÓ com as 5 visões. O relógio de teste saiu
+// dela (RelogioDeTeste.jsx) e é montado longe da fileira — no app, no pé do
+// placar. Aqui a banca monta os dois separados, como a tela faz.
 function FaixaViva() {
   const [visao, setVisao] = React.useState('jornada');
-  const [placar, setPlacar] = React.useState(false);
   const [hora, setHora] = React.useState('');
   const [rascunho, setRascunho] = React.useState('');
   return (
     <div className="mb-5">
-      <FaixaVisao
-        visao={visao}
-        onVisao={setVisao}
-        placarAberto={placar}
-        onPlacar={() => setPlacar((v) => !v)}
-        teste={{ hora, rascunho, onRascunho: setRascunho, entrar: () => setHora(rascunho), sair: () => { setHora(''); setRascunho(''); } }}
-      />
-      <span data-teste="estado-faixa">{JSON.stringify({ visao, placar, hora })}</span>
+      <FaixaVisao visao={visao} onVisao={setVisao} />
+      <div className="mt-2 flex justify-end" data-teste="pe-do-placar">
+        <RelogioDeTeste teste={{ hora, rascunho, onRascunho: setRascunho, entrar: () => setHora(rascunho), sair: () => { setHora(''); setRascunho(''); } }} />
+      </div>
+      <span data-teste="estado-faixa">{JSON.stringify({ visao, hora })}</span>
     </div>
   );
 }
