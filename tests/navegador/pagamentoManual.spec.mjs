@@ -63,6 +63,7 @@ test('💸 pagar na mão: botão só com saldo, aviso sem KYC, rota certa, saldo
     assert.ok(await pagina.locator('[data-teste="aviso-sem-kyc"]').isVisible(), 'sem KYC e sem aviso');
     const confirmar = pagina.locator('[data-teste="confirmar-pagamento-manual"]');
     assert.equal(await confirmar.isDisabled(), true, 'confirmar habilitado sem valor e sem chave');
+    await pagina.waitForTimeout(500); // a janela abre com animação — a foto espera ela assentar
     await foto(pagina, '2-modal-vazio');
 
     await pagina.fill('[data-teste="valor-pagamento-manual"]', '324,65');
