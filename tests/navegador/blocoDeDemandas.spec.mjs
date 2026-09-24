@@ -47,6 +47,11 @@ test('📝 anotar no "D": demanda + tarefa de hoje (sem horário) + card ligado 
     // só logado: o segundo (deslogado) não desenha nada
     assert.equal(await pagina.locator('[data-teste="botao-d-demandas"]').count(), 1);
     assert.equal(await pagina.locator('[data-teste="deslogado"]').evaluate((n) => n.children.length), 0);
+    // 🎓 24/09 — fora da Top College o "D" some na hora; ao voltar, reaparece
+    await pagina.evaluate(() => window.__sairDaTopCollege());
+    await pagina.waitForFunction(() => document.querySelectorAll('[data-teste="botao-d-demandas"]').length === 0, null, { timeout: 5000 });
+    await pagina.evaluate(() => window.__voltarParaTopCollege());
+    await pagina.waitForSelector('[data-teste="botao-d-demandas"]', { timeout: 5000 });
     if (process.env.FOTO_BANCA) await pagina.screenshot({ path: process.env.FOTO_BANCA.replace('.png', '-cabecalho.png') });
 
     await pagina.click('[data-teste="botao-d-demandas"]');

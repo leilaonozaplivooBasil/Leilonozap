@@ -11,6 +11,7 @@ import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import '@/index.css';
 import BlocoDeDemandas from '@/components/nav/BlocoDeDemandas';
+import { marcarTopCollege } from '@/lib/areaTopCollege';
 
 window.__bancoFalso = {
   tabelas: {
@@ -25,6 +26,12 @@ window.__bancoFalso = {
 };
 window.__eventos = [];
 window.addEventListener('demandaAnotada', () => window.__eventos.push('demandaAnotada'));
+
+// a bandeira que o Licensing levanta na Top College — aqui a banca levanta
+// (e o botão "sair" abaixa, pra provar que o "D" some fora dela)
+marcarTopCollege(true);
+window.__sairDaTopCollege = () => marcarTopCollege(false);
+window.__voltarParaTopCollege = () => marcarTopCollege(true);
 
 createRoot(document.getElementById('raiz')).render(
   <div style={{ padding: 16, background: '#0b1f18', minHeight: '100vh' }}>

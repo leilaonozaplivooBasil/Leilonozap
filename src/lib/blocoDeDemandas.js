@@ -29,9 +29,14 @@ export const EVENTO_ANOTACAO = 'demandaAnotada';
 export const MAX_TITULO = 300;
 export const MAX_RECENTES = 8;
 
-/** Quem vê o botão "D": a mesma régua do ícone da Top College (logado). */
-export function mostraBloco(usuario) {
-  return mostraAtalho(usuario);
+/**
+ * Quem vê o botão "D": logado (a régua do ícone da Top College) E dentro da
+ * Top College. 24/09 (dono, print do WhatsApp): "só pode aparecer nas
+ * áreas/telas/páginas da Top College" — a bandeira vem de areaTopCollege.js,
+ * levantada pelo próprio Licensing (o mesmo `naTopCollege` da faixa preta).
+ */
+export function mostraBloco(usuario, naTopCollege = false) {
+  return mostraAtalho(usuario) && naTopCollege === true;
 }
 
 /**
