@@ -8,7 +8,9 @@
 // Este arquivo é PURO: recebe dados, devolve assunto/texto/html. Nada de
 // rede, nada de env — é o que os testes leem. Quem envia é avisosPorEmail.js.
 
-export const SITE = 'https://leilaonozap.net';
+import { modeloDeEmail, p, SITE } from './modeloDeEmail.js';
+
+export { SITE };
 
 // A categoria decide qual "desligar avisos" a pessoa clicou.
 export const CATEGORIA_POR_TIPO = Object.freeze({
@@ -51,7 +53,6 @@ export function faltaBR(iso, agora = Date.now()) {
 }
 
 const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || '';
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /**
  * O aviso pronto.
@@ -130,11 +131,13 @@ export function montarAviso(tipo, d = {}) {
     : 'Você recebe este aviso porque tem conta no Leilão NoZap.';
   const sair = d.linkSair ? `${rodape} Não quer mais receber ${categoria === 'leilao' ? 'avisos de leilão' : 'estes avisos'}? ${d.linkSair}` : rodape;
   const texto = `${linhas.join('\n\n')}\n\n${botao.rotulo}: ${botao.url}\n\n— Leilão NoZap\n${sair}`;
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0d1f17;border-radius:16px;color:#e8ece9">
-    <h2 style="color:#34d399;margin:0 0 14px;font-size:20px">${esc(assunto)}</h2>
-    ${linhas.map((l) => `<p style="color:#e8ece9;font-size:15px;line-height:1.5;margin:0 0 14px">${esc(l)}</p>`).join('')}
-    <p style="margin:22px 0 0"><a href="${esc(botao.url)}" style="display:inline-block;background:#1B7F4B;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px">${esc(botao.rotulo)}</a></p>
-    <p style="color:#9aa3a0;font-size:12px;margin:26px 0 0">${esc(rodape)}${d.linkSair ? ` <a href="${esc(d.linkSair)}" style="color:#9aa3a0">Não quero mais receber ${categoria === 'leilao' ? 'avisos de leilão' : 'estes avisos'}.</a>` : ''}</p>
-  </div>`;
+  const html = modeloDeEmail({
+    titulo: assunto,
+    preheader: linhas[0],
+    corpo: linhas.map(p),
+    botao,
+    motivo: rodape,
+    sair: d.linkSair ? { url: d.linkSair, rotulo: `Não quero mais receber ${categoria === 'leilao' ? 'avisos de leilão' : 'estes avisos'}.` } : null,
+  });
   return { assunto, texto, html, categoria };
 }
