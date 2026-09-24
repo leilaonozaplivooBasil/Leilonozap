@@ -40,8 +40,11 @@ export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
         background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%), rgba(10, 16, 14, 0.42)',
         backdropFilter: 'blur(22px) saturate(1.7)',
         WebkitBackdropFilter: 'blur(22px) saturate(1.7)',
-        borderTop: '1px solid rgba(255,255,255,0.12)',
-        boxShadow: '0 -8px 28px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08)',
+        // 🫥 24/09 — dono: "a linha que divide pode ser praticamente imperceptível?"
+        // Fio a 4% (era 12% + brilho interno de 8%, que somavam uma linha nítida).
+        // Fica só um sopro pra o vidro não parecer cortado; a sombra suave faz o resto.
+        borderTop: '1px solid rgba(255,255,255,0.04)',
+        boxShadow: '0 -10px 30px rgba(0,0,0,0.18)',
       }}
     >
       <ul className="grid h-[3.75rem] grid-cols-4" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
