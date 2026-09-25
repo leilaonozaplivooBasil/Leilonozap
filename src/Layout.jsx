@@ -43,6 +43,7 @@ import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 // 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
 import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
 import { lerCarrinho } from '@/lib/storageSeguro';
+import { capturarOrigemDoTrafego } from '@/lib/origemDoTrafego';
 
 const AppUser = plataforma.entities.AppUser;
 const User = { me: () => plataforma.auth.me() };
@@ -111,6 +112,12 @@ const PAGINAS_COM_LATERAL = new Set([
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  // 📣 25/09/2026 — o PRIMEIRO toque de tráfego (utm/fbclid/gclid) fica no
+  // aparelho até a pessoa se cadastrar; aí sobe com o cadastro. É o que
+  // responde "quantos leads vieram do Meta Ads".
+  useEffect(() => {
+    try { capturarOrigemDoTrafego(window.location.search, { referrer: document.referrer, landing: window.location.pathname }); } catch { /* medição, nunca derruba */ }
+  }, []);
   const navigate = useNavigate();
   // Logo/favicon gerenciados pelo Painel de Mídia (fallback: assets estáticos)
   const { logoUrl } = useSiteMedia();

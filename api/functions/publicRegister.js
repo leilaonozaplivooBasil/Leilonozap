@@ -6,6 +6,8 @@ import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
 import { emitirSessao } from '../_lib/sessao.js';
+import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
+import { sanearOrigem } from '../_lib/origemDoTrafego.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -105,6 +107,8 @@ export default async function handler(req, res) {
       display_last_name: extra.display_last_name || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : null),
       role: 'user', career_levels: ['usuario'], primary_career_level: 'usuario',
       referred_by_id, referral_code, terms_accepted: true,
+      // 📣 25/09 — de onde a pessoa veio (utm/fbclid), pra medir o Meta Ads
+      origem_trafego: sanearOrigem(body?.origem_trafego),
       created_date: now, updated_date: now,
       address_street: extra.address_street, address_number: extra.address_number,
       address_complement: extra.address_complement, address_neighborhood: extra.address_neighborhood,
@@ -118,6 +122,11 @@ export default async function handler(req, res) {
     }
     // senha em bcrypt na tabela isolada (só service_role lê); app_users.password fica null
     await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
+
+    // 🌳 25/09/2026 — o indicado vira contato na lista de quem indicou (só o
+    // indicador direto; conta do site não; sem sobrepor). Best-effort: o
+    // cadastro já aconteceu, isto é espelho — nunca atrasa nem derruba.
+    criarContatoDaIndicacao(rows[0]).catch(() => {});
 
     // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
     // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio. Fire-and-forget:

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User as UserIcon, Sparkles, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { getReferral } from '@/lib/referral';
+import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 // 📜 PONTO 70 — este convite NÃO exibe mais o Termo de Adesão: o termo só aparece
 // na intenção de compra (1º lance no leilão / adicionar ao carrinho na loja).
 
@@ -139,7 +140,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
       // O indicador é resolvido no servidor pelo ref_code (link de indicação).
       let createdUser;
       try {
-        const resp = await plataforma.functions.invoke('publicRegister', {
+        const resp = await plataforma.functions.invoke('publicRegister', { origem_trafego: lerOrigemDoTrafego(),
           full_name: fullName.trim(),
           email: normalizedEmail,
           password,
