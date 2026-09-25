@@ -19,7 +19,7 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Zap, Volume2, VolumeX } from "lucide-react";
+import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Volume2, VolumeX } from "lucide-react";
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
@@ -30,10 +30,7 @@ import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import FavoriteButton from '../recommendations/FavoriteButton';
 import { proxyImage } from "@/functions/proxyImage";
 // 📣 PONTO 69 — Modo Chamada (pré-lançamento): selo de contagem + lance travado
-import SeloChamada from './SeloChamada';
 import useChamada from '@/hooks/useChamada';
-// 🛡️ PONTO 70 — Compre Já só aparece com preço real (nunca valor residual de R$ 1,00)
-import { precoArremateAgora } from '@/lib/arremateAgora';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { textoDeTermino } from '@/lib/relogioLeilao';
 // 🃏 25/09/2026 — padrão dos cards (opção A, escolhida pelo dono na banca): título em 2
@@ -745,10 +742,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             <p data-teste="linha-do-lider" className={`text-xs font-semibold truncate mt-0.5 min-h-[1rem] ${isActive && auction.winner_name ? 'text-amber-400' : secondaryTextColor}`}>
               {isActive && auction.winner_name ? `🏆 ${auction.winner_name}` : isActive ? '🔥 Seja o primeiro' : ''}
             </p>
-            {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." */}
-            {isActive && chamada.preLancamento && (
-              <div className="mt-1"><SeloChamada auction={auction} /></div>
-            )}
+            {/* 🚫 25/09/2026 — o selo "Abre em … / ABERTO AGORA!" saiu do card (dono:
+                "está feio e poluindo os cards"). O Modo Chamada segue valendo: o
+                botão de lance continua travado até a abertura (chamada.emChamada,
+                abaixo) e o selo continua na sala. */}
           </div>
 
           {/* 🃏 esta linha tem altura reservada mesmo sem lances e sem "Compre já":
@@ -770,13 +767,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 </>
               )}
             </div>
-            {/* 🛡️ PONTO 70 — só mostra Compre Já com preço REAL (acima do lance inicial) */}
-            {isActive && precoArremateAgora(auction) !== null && (
-              <div className="flex items-center gap-1 whitespace-nowrap max-w-full text-[10px] sm:text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-1.5 sm:px-2 py-0.5 sm:py-1">
-                <Zap className="w-3.5 h-3.5" />
-                Compre já: R$ {fmtBR(precoArremateAgora(auction))}
-              </div>
-            )}
+            {/* 🚫 25/09/2026 — o "Compre já: R$ X" SAIU do card (dono: "deve aparecer
+                só na sala do leilão; na página dos leilões fica feio e prejudica a
+                lógica"). A oferta continua existindo onde já existia: na sala
+                (AuctionRoom), só para os leilões que já têm buy_now_price — nada
+                foi ativado nem desativado em leilão nenhum. */}
           </div>
 
           {!isActive && auction.status !== 'paused' && auction.status !== 'scheduled' && (
