@@ -642,12 +642,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               o selo sai do MEIO da foto — onde cobria o produto, ver print do
               PS5 e do liquidificador — e vai pro CANTO SUPERIOR DIREITO, na
               mesma linha dos botões (que ficam à esquerda). Foto limpa, selo
-              visível de cara. Em tela MUITO estreita (< 400px, onde a primeira
-              linha não cabe ao lado do coração) ele desce uma linha, ainda no
-              canto direito. Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
+              visível de cara. No celular a vitrine mostra 2 cards por linha
+              (25/09, como a loja virtual), então o card é estreito e a primeira
+              linha não cabe ao lado do coração: abaixo de sm ele desce uma
+              linha, ainda no canto direito. Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
           {auction.product_source === 'factory_new' && (
             <div
-              className="absolute top-14 min-[400px]:top-2 sm:top-3 right-2 sm:right-3 z-10 max-w-[62%] pointer-events-none"
+              className="absolute top-14 sm:top-3 right-2 sm:right-3 z-10 max-w-[62%] pointer-events-none"
               data-teste="selo-de-garantia"
             >
               <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[11px] sm:text-sm">

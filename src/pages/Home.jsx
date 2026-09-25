@@ -1067,7 +1067,7 @@ export default function Home() {
           }
 
             {isLoading ?
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {Array(9).fill(0).map((_, i) =>
             <div key={i} className="skeleton-glass rounded-2xl p-4 sm:p-6">
                     <div className="w-full aspect-square skeleton-inner rounded-xl mb-4"></div>
@@ -1099,7 +1099,7 @@ export default function Home() {
               </div> :
 
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6" data-teste="grade-leiloes">
               {paginatedAuctions.map((auction) => {
                 if (!auction || !auction.id) return null;
                 return (
