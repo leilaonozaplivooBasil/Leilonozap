@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+// 🔗 25/09/2026 — o adesivo de link do story do Instagram só aceita URL pura
+import { copiarLinkLimpo, mensagemSemLink } from '@/lib/compartilhar';
 import CompareAquiModal from '../comparai/CompareAquiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
@@ -179,6 +181,9 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
     const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     const imageUrl = product.image_urls?.[0];
+    // 🔗 25/09/2026 — link LIMPO na área de transferência antes da folha (adesivo do story do Instagram)
+    const linkCopiado = await copiarLinkLimpo(productUrl);
+    if (linkCopiado) toast({ title: 'Link copiado', description: 'Cole onde quiser — story, bio, WhatsApp.' });
 
     // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
@@ -212,7 +217,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
           if (navigator.canShare(shareData)) {
             await navigator.share({
               title: product.description,
-              text: shareMessage,
+              text: mensagemSemLink(shareMessage, productUrl),
               url: productUrl,
               files: [file]
             });
@@ -228,7 +233,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     // NÍVEL 2: Share só texto (sem imagem)
     if (navigator.share) {
       try {
-        await navigator.share({ title: product.description, text: shareMessage, url: productUrl });
+        await navigator.share({ title: product.description, text: mensagemSemLink(shareMessage, productUrl), url: productUrl });
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;

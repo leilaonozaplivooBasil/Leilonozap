@@ -40,6 +40,9 @@ import { textoDeTermino } from '@/lib/relogioLeilao';
 // linhas, prazo curto ao lado de "Lance atual", linhas reservadas, botões no rodapé
 import { prazoDoCard, CLASSES_DO_TITULO_FIXO } from '@/lib/padraoDoCard';
 import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
+// 🔗 25/09/2026 — o adesivo de link do story do Instagram só aceita URL pura
+import { copiarLinkLimpo, mensagemSemLink } from '@/lib/compartilhar';
+import { toast } from 'sonner';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
@@ -263,6 +266,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 💰 Lance: R$ ${fmtBR(currentPrice)}
 
 ⚡ Dê seu lance: ${productUrl}`;
+    // 🔗 25/09/2026 — dono: "copia o link, cola no adesivo do story do Instagram
+    // e dá link inválido". O link é curto; o que a pessoa colava era a MENSAGEM
+    // inteira (o "Copiar" da folha junta texto + link). Então o link LIMPO vai
+    // pra área de transferência ANTES da folha abrir — cancelou, é só colar.
+    const linkCopiado = await copiarLinkLimpo(productUrl);
+    if (linkCopiado) toast.success('Link copiado. Cole onde quiser — story, bio, WhatsApp.', { duration: 3500 });
 
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -298,7 +307,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             const nome = `${(displayTitle || 'leilao').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}.mp4`;
             const arquivo = new File([blob], nome, { type: blob.type || 'video/mp4' });
             if (navigator.canShare({ files: [arquivo] })) {
-              await navigator.share({ title: `🔨📦 ${displayTitle}`, text: shareMessage, url: productUrl, files: [arquivo] });
+              await navigator.share({ title: `🔨📦 ${displayTitle}`, text: mensagemSemLink(shareMessage, productUrl), url: productUrl, files: [arquivo] });
               return;
             }
           }
@@ -343,7 +352,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           if (navigator.canShare(shareData)) {
             await navigator.share({
               title: `🔨📦 ${displayTitle}`,
-              text: shareMessage,
+              text: mensagemSemLink(shareMessage, productUrl),
               url: productUrl,
               files: [file]
             });
@@ -359,7 +368,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     // NÍVEL 2: Share só texto (sem imagem)
     if (navigator.share) {
       try {
-        await navigator.share({ title: `🔨📦 ${displayTitle}`, text: shareMessage, url: productUrl });
+        await navigator.share({ title: `🔨📦 ${displayTitle}`, text: mensagemSemLink(shareMessage, productUrl), url: productUrl });
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;
