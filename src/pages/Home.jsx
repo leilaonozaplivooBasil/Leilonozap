@@ -30,6 +30,8 @@ import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
+import LancesAoVivo from '../components/home/LancesAoVivo';
+import ProvasSociais from '../components/home/ProvasSociais';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { useSectionTracking } from '@/lib/tracking';
@@ -1033,6 +1035,9 @@ export default function Home() {
             {/* Glow separator */}
             <div className="glow-line mb-8 mx-4 opacity-50" />
 
+            {/* 🔔 24/09/2026 — o alerta de lances recentes, acima da lista (dono) */}
+            <LancesAoVivo />
+
             {loadError && auctions.length === 0 &&
           <div className="mb-8 glass-card rounded-2xl p-6" style={{ borderColor: 'rgba(234, 179, 8, 0.2)' }}>
                 <div className="flex items-start gap-4">
@@ -1195,6 +1200,9 @@ export default function Home() {
             <div className="text-center text-sm text-gray-500 mt-2">
               Mostrando {Math.min(paginatedAuctions.length, ITEMS_PER_PAGE)} de {filteredAuctions.length} leilões
             </div>
+
+            {/* 🏆 24/09/2026 — quem já arrematou + maiores arrematadores (dono) */}
+            <ProvasSociais />
           </>
           }
         </div>
