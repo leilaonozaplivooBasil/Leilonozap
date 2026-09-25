@@ -11,6 +11,7 @@ import { useCopiarPix } from '@/hooks/useCopiarPix';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { saveSession } from '@/lib/session';
 import { getReferral, saveReferral } from '@/lib/referral';
+import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -115,7 +116,7 @@ export default function Cadastro() {
     if (code.length < 4) { toast.error('Digite o código recebido.'); return; }
     setSending(true);
     try {
-      const r = await plataforma.functions.invoke('registerNetworkUser', {
+      const r = await plataforma.functions.invoke('registerNetworkUser', { origem_trafego: lerOrigemDoTrafego(),
         full_name: form.full_name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,

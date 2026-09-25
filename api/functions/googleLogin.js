@@ -2,6 +2,8 @@
 // automático em app_users. Espelha base44/functions/googleLogin/entry.ts (Deno),
 // mas roda como função Vercel (mesmo runtime das outras rotas de auth em produção).
 import crypto from 'crypto';
+import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
+import { sanearOrigem } from '../_lib/origemDoTrafego.js';
 
 import { emitirSessao } from '../_lib/sessao.js';
 import { contaNaLixeira, AVISO_CONTA_NA_LIXEIRA } from '../_lib/contaAtiva.js';
@@ -166,6 +168,7 @@ export default async function handler(req, res) {
           phone: '',
           referred_by_id,
           referral_code,
+          origem_trafego: sanearOrigem(body?.origem_trafego),
           role: 'user',
           career_levels: ['usuario'],
           primary_career_level: 'usuario',
@@ -174,6 +177,8 @@ export default async function handler(req, res) {
         })
       })).json();
       user = Array.isArray(created) ? created[0] : created;
+      // 🌳 25/09 — o indicado vira contato na lista de quem indicou (best-effort)
+      if (user?.id) criarContatoDaIndicacao(user).catch(() => {});
       // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
       // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio.
       if (fallback_motivo && user?.id) {

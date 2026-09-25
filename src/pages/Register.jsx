@@ -13,6 +13,7 @@ import { registrarAceiteTermo } from '@/lib/termoAdesao';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 import { useSectionTracking, trackLead } from '@/lib/tracking';
 import { PIXEL_LEILOES } from '@/lib/metaPixel';
+import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 
 const AppUser = plataforma.entities.AppUser;
 
@@ -80,7 +81,7 @@ export default function Register() {
     try {
       // Passa o código do link de indicação: sem ele o cadastro por Google caía
       // no Site Oficial e o indicador real perdia a pessoa da árvore.
-      const result = await plataforma.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
+      const result = await plataforma.functions.invoke('googleLogin', { origem_trafego: lerOrigemDoTrafego(), credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível continuar com o Google.'));
         setIsGoogleLoading(false);
@@ -299,7 +300,7 @@ export default function Register() {
 
       // 🔒 Cadastro via backend service_role (anon não pode inserir em app_users por RLS).
       const refForBackend = getReferral() || getInfluencerCode() || '';
-      const reg = await plataforma.functions.invoke('publicRegister', {
+      const reg = await plataforma.functions.invoke('publicRegister', { origem_trafego: lerOrigemDoTrafego(),
         full_name: fullName.trim(),
         display_first_name: firstName || null,
         display_last_name: lastName || null,

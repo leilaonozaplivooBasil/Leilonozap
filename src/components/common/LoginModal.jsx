@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, X, UserPlus, AlertCircle, Mail, Eye, EyeOff, KeyRound, CheckCircle } from 'lucide-react';
+import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 
 export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, theme }) {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     try {
       // Entrar com Google também CRIA conta na primeira vez: sem o código do link
       // a pessoa entrava solta e caía no Site Oficial, tirando-a da árvore de quem indicou.
-      const result = await plataforma.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
+      const result = await plataforma.functions.invoke('googleLogin', { origem_trafego: lerOrigemDoTrafego(), credential: response.credential, ref_code: getReferral() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível entrar com o Google.'));
         setIsLogging(false);
