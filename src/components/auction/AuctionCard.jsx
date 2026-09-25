@@ -623,11 +623,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               linha, ainda no canto direito. Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
           {auction.product_source === 'factory_new' && (
             <div
-              className="absolute top-14 sm:top-3 right-2 sm:right-3 z-10 max-w-[62%] pointer-events-none"
+              className="absolute top-14 sm:top-3 right-2 sm:right-3 z-10 max-w-[75%] sm:max-w-[62%] pointer-events-none"
               data-teste="selo-de-garantia"
             >
-              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[11px] sm:text-sm">
-                ✨ NOVO - Com Garantia
+              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[10px] sm:text-sm px-1.5 sm:px-2.5">
+                {/* no card de ~170px (2 por linha) o texto inteiro não cabe: encurta */}
+                <span className="sm:hidden">✨ NOVO · Garantia</span>
+                <span className="hidden sm:inline">✨ NOVO - Com Garantia</span>
               </Badge>
             </div>
           )}
@@ -683,20 +685,23 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
         </div>
 
         <CardContent className="p-3 sm:p-4 md:p-5" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
-          <h3 className={`font-bold text-sm sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
+          <h3 className={`font-bold text-xs sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
             {displayTitle}
           </h3>
 
           {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
-          <div className="flex items-center justify-between mb-3 gap-2">
+          {/* 📱 25/09/2026 — com 2 cards por linha no celular o card tem ~170px: preço e
+              "Termina" lado a lado quebravam o R$ letra por letra. Abaixo de sm eles
+              empilham; de sm pra cima continuam lado a lado. */}
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between mb-3 sm:gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <div className="flex items-center gap-2 mb-0.5 sm:mb-1 flex-wrap">
                 <p className={`text-xs sm:text-sm ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
                   {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
+              <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
                 R$ {fmtBR(currentPrice)}
               </p>
               {/* 🏆 quem está ganhando agora — visível também com o leilão ativo, não só depois de encerrar */}
@@ -709,14 +714,14 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
             {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." no lugar do "Termina" */}
             {isActive && chamada.preLancamento && (
-              <div className="text-right flex-shrink-0">
+              <div className="text-left sm:text-right flex-shrink-0">
                 <SeloChamada auction={auction} />
               </div>
             )}
 
             {isActive && !chamada.emChamada && timeRemaining && timeRemaining.text !== "Encerrado" && (
-              <div className="text-right flex-shrink-0">
-                <div className={`flex items-center gap-1 ${secondaryTextColor} mb-1`}>
+              <div className="text-left sm:text-right flex-shrink-0 flex items-baseline gap-x-1.5 flex-wrap sm:block">
+                <div className={`flex items-center gap-1 ${secondaryTextColor} sm:mb-1`}>
                   <Clock className="w-3 h-3" />
                   <span className="text-xs">Termina</span>
                 </div>
@@ -732,8 +737,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
 
             {auction.status === 'scheduled' && timeRemaining && (
-              <div className="text-right flex-shrink-0">
-                <div className="flex items-center gap-1 text-sky-400 mb-1">
+              <div className="text-left sm:text-right flex-shrink-0 flex items-baseline gap-x-1.5 flex-wrap sm:block">
+                <div className="flex items-center gap-1 text-sky-400 sm:mb-1">
                   <Clock className="w-3 h-3" />
                   <span className="text-xs font-bold">Começa em</span>
                 </div>
@@ -744,8 +749,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
           </div>
 
-          <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
-            <div className="flex items-center gap-4 min-w-0">
+          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs sm:text-sm ${secondaryTextColor} mb-3 sm:mb-4`}>
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {temLancesReais && (
                 <>
                   {Number(bidStats?.users) > 0 && (
@@ -763,7 +768,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
             {/* 🛡️ PONTO 70 — só mostra Compre Já com preço REAL (acima do lance inicial) */}
             {isActive && precoArremateAgora(auction) !== null && (
-              <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2 py-1">
+              <div className="flex items-center gap-1 whitespace-nowrap max-w-full text-[10px] sm:text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-1.5 sm:px-2 py-0.5 sm:py-1">
                 <Zap className="w-3.5 h-3.5" />
                 Compre já: R$ {fmtBR(precoArremateAgora(auction))}
               </div>
@@ -814,8 +819,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   variant="outline"
                   className={variant === "sai_de_baixo"
-                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
-                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                    ? "w-full min-h-[40px] sm:min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'rgba(255,255,255,0.12)',
                     border: '1px solid rgba(255,255,255,0.2)',
@@ -833,8 +838,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   setShowComparai(true);
                 }}
                 className={variant === "sai_de_baixo"
-                  ? "w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
-                  : "w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"}
+                  ? "w-full min-h-[40px] sm:min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-xs sm:text-base"
+                  : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-bold text-xs sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"}
                 style={variant !== "sai_de_baixo" ? {
                   background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                   boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
@@ -853,7 +858,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   disabled
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-sky-200 disabled:opacity-100 cursor-not-allowed"
+                  className="w-full min-h-[48px] rounded-xl font-bold text-xs sm:text-base border-0 text-sky-200 disabled:opacity-100 cursor-not-allowed"
                   style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.35)' }}
                 >
                   <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -864,7 +869,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   onClick={handleEnterAuction}
                   className={variant === "sai_de_baixo"
                     ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
-                    : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
+                    : "w-full min-h-[48px] rounded-xl font-bold text-xs sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'linear-gradient(135deg, #f59e0b, #ea580c, #dc2626)',
                     boxShadow: '0 4px 16px rgba(234,88,12,0.4)',
@@ -886,8 +891,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   variant="outline"
                   className={variant === "sai_de_baixo"
-                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
-                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                    ? "w-full min-h-[40px] sm:min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.08)',
@@ -900,7 +905,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               {/* 🆕 COMPARAI também nos lotes encerrados/arrematados */}
               <Button
                 onClick={(e) => { e.stopPropagation(); setShowComparai(true); }}
-                className="w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                className="w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-bold text-xs sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', boxShadow: '0 4px 16px rgba(59,130,246,0.35)' }}
               >
                 <img
@@ -918,8 +923,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   variant="outline"
                   className={variant === "sai_de_baixo"
-                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
-                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                    ? "w-full min-h-[40px] sm:min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.08)',
