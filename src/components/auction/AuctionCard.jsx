@@ -36,11 +36,13 @@ import useChamada from '@/hooks/useChamada';
 import { precoArremateAgora } from '@/lib/arremateAgora';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+// 🃏 25/09/2026 — padrão dos cards (preview A/B para o dono escolher; 'atual' = produção)
+import { contagemCurta, nomeDoLider, CLASSES_DO_TITULO_FIXO } from '@/lib/padraoDoCard';
 import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
-function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null, videoAtivo = false }) {
+function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null, padrao = "atual", videoAtivo = false }) {
   // 🎞️ PONTO 91 — as fotos passam sozinhas em qualquer aparelho, pausam no
   // toque/hover e podem ser arrastadas pros lados (hook único reutilizável).
 
@@ -461,6 +463,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     '--hover-shadow': '0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(16,185,129,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
   } : {};
 
+  // 🃏 nos padrões A/B o card estica até a altura da linha da grade (auto-rows-fr),
+  // e os botões descem pro rodapé (mt-auto): todos os cards da linha ficam iguais.
+  const padronizado = padrao !== 'atual';
+  const classesDoCard = padronizado ? `${cardStyles} h-full flex flex-col` : cardStyles;
+  const textoDoPrazo = timeRemaining?.text ?? '';
+  const mostraPrazo = isActive && !chamada.emChamada && Boolean(timeRemaining) && textoDoPrazo !== 'Encerrado';
+
   const textColor = variant === "sai_de_baixo" ? "text-gray-900" : "text-gray-100";
   const secondaryTextColor = variant === "sai_de_baixo" ? "text-gray-600" : "text-gray-400";
 
@@ -476,7 +485,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   return (
     <>
       <Card
-        className={cardStyles}
+        className={classesDoCard}
         style={glassStyle}
         onClick={handleCardClick}
         onMouseEnter={(e) => {
@@ -676,6 +685,24 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
           )}
 
+          {/* 🃏 PADRÃO B — prazo e líder viram pílulas sobre a foto; o corpo fica só com
+              título, preço, lances e botões. Sem o bloco "Termina … data". */}
+          {padrao === 'b' && (mostraPrazo || (isActive && auction.winner_name)) && (
+            <div className="absolute bottom-2 left-2 right-2 z-10 flex flex-wrap items-center gap-1 pointer-events-none">
+              {mostraPrazo && (
+                <span data-teste="pilula-prazo" className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] sm:text-xs font-mono font-bold tabular-nums shadow-lg backdrop-blur-sm shrink-0 ${timeRemaining.isUrgent ? 'bg-red-600 text-white animate-pulse' : 'bg-black/65 text-white'}`}>
+                  <Clock className="w-3 h-3" />
+                  {textoDoPrazo}
+                </span>
+              )}
+              {isActive && auction.winner_name && (
+                <span data-teste="pilula-lider" className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] sm:text-xs font-semibold bg-amber-400/95 text-gray-900 shadow-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                  🏆 {nomeDoLider(auction.winner_name)}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* 🆕 BADGE DE PECHINCHA - REMOVIDO */}
           {/* {showPechincaBadge && (
             <PechincaBadge savingsPercent={savingsPercent} savings={savings} />
@@ -684,15 +711,56 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
         </div>
 
-        <CardContent className="p-3 sm:p-4 md:p-5" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
-          <h3 className={`font-bold text-xs sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
+        <CardContent className={`p-3 sm:p-4 md:p-5 ${padronizado ? 'flex-1 flex flex-col' : ''}`} style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
+          <h3 className={`font-bold text-xs sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere ${padronizado ? CLASSES_DO_TITULO_FIXO : ''}`}>
             {displayTitle}
           </h3>
+
+          {/* 🃏 PADRÕES A/B — preço enxuto. No A o prazo curto ("1 sem", "4 dias",
+              "00:09:12") fica na MESMA linha do preço e a linha do líder é sempre
+              reservada; no B prazo e líder estão na foto. A data por extenso sai do
+              card nos dois (segue na sala e nos detalhes). */}
+          {padronizado && (
+            <div className="mb-3" data-teste="bloco-preco-padrao">
+              <div className="flex items-center justify-between gap-2 mb-0.5 sm:mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className={`text-xs sm:text-sm whitespace-nowrap ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
+                    {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+                  </p>
+                  <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
+                </div>
+                {padrao === 'a' && mostraPrazo && (
+                  <span data-teste="prazo-compacto" className={`flex items-center gap-1 font-mono text-[11px] sm:text-sm font-bold whitespace-nowrap shrink-0 ${timeRemaining.isUrgent ? 'text-red-500 animate-pulse' : 'text-gray-200'}`}>
+                    <Clock className="w-3 h-3" />
+                    {contagemCurta(textoDoPrazo)}
+                  </span>
+                )}
+                {padrao === 'a' && auction.status === 'scheduled' && timeRemaining && (
+                  <span className="flex items-center gap-1 font-mono text-xs sm:text-sm font-bold text-sky-400 whitespace-nowrap shrink-0">
+                    <Clock className="w-3 h-3" />
+                    {contagemCurta(textoDoPrazo)}
+                  </span>
+                )}
+              </div>
+              <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
+                R$ {fmtBR(currentPrice)}
+              </p>
+              {padrao === 'a' && (
+                <p data-teste="linha-do-lider" className={`text-xs font-semibold truncate mt-0.5 min-h-[1rem] ${isActive && auction.winner_name ? 'text-amber-400' : secondaryTextColor}`}>
+                  {isActive && auction.winner_name ? `🏆 ${auction.winner_name}` : isActive ? '🔥 Seja o primeiro' : ''}
+                </p>
+              )}
+              {isActive && chamada.preLancamento && (
+                <div className="mt-1"><SeloChamada auction={auction} /></div>
+              )}
+            </div>
+          )}
 
           {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
           {/* 📱 25/09/2026 — com 2 cards por linha no celular o card tem ~170px: preço e
               "Termina" lado a lado quebravam o R$ letra por letra. Abaixo de sm eles
               empilham; de sm pra cima continuam lado a lado. */}
+          {!padronizado && (
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between mb-3 sm:gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5 sm:mb-1 flex-wrap">
@@ -748,8 +816,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               </div>
             )}
           </div>
+          )}
 
-          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs sm:text-sm ${secondaryTextColor} mb-3 sm:mb-4`}>
+          {/* 🃏 nos padrões A/B esta linha tem altura reservada mesmo sem lances e sem
+              "Compre já": o botão de baixo nasce na mesma altura em todos os cards */}
+          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs sm:text-sm ${secondaryTextColor} mb-3 sm:mb-4 ${padronizado ? 'min-h-[24px] sm:min-h-[28px]' : ''}`}>
             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {temLancesReais && (
                 <>
@@ -809,7 +880,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           )}
 
           {isActive ? (
-            <div className="space-y-2 sm:space-y-3">
+            <div className={`space-y-2 sm:space-y-3 ${padronizado ? 'mt-auto' : ''}`}>
               {/* O link "Mais Informações" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
@@ -881,7 +952,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               )}
             </div>
           ) : (
-            <div className="space-y-2 sm:space-y-3">
+            <div className={`space-y-2 sm:space-y-3 ${padronizado ? 'mt-auto' : ''}`}>
               {/* O link "Ver Detalhes do Lote" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
